@@ -465,21 +465,27 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const lit = signLight(B.biz, mode, inText ? k : -1, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
       // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
       const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
-      // close enough for a letter to cover 5x5 cells: it is drawn as its 5x7 pattern of bulbs instead of a glyph
-      const bulbs = LETTER_W / dAlong >= 5 && 0.56 / dz >= 5;
+      // a letter at least 4 rows tall and 3 columns wide is drawn as its 5x7 pattern of bulbs; smaller,
+      // the bulbs blur together and the glyph reads better
+      const bulbs = LETTER_W / dAlong >= 3 && 0.56 / dz >= 4;
       if (bulbs && col >= 0 && col < signN && z > 2.72 && z < 3.28) {
         let fu = signU / LETTER_W - col - 1;
         if (rev) fu = 1 - fu; // seen from the other side, the pattern mirrors with the reading order
-        const kk = rev ? signN - 1 - col : col;
-        const px = (fu * LETTER_W - 0.05) / 0.09, pz = (3.28 - z) / 0.08, bx = Math.floor(px), by = Math.floor(pz);
+        const kk = rev ? signN - 1 - col : col, cc = text.charCodeAt(kk);
         const on = signLight(B.biz, mode, kk, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
-        if (bx >= 0 && bx < 5 && by < 7 && bulbOn(text.charCodeAt(kk), bx, by)) {
-          // the bulb in the cell nearest its center, its glow in the cells around it
-          const ou = (px - bx - 0.5) * 0.09, oz = (pz - by - 0.5) * 0.08;
-          const cen = ou >= -dAlong / 2 && ou < dAlong / 2 && oz >= -dz / 2 && oz < dz / 2; // half-open, so exactly one cell
-          const q = cen ? on : on * 0.4;
-          ch = cen ? G.o : 32; r = B.sign[0] * q; g = B.sign[1] * q; b = B.sign[2] * q;
-          if (cen && on > 0.5) { r += 60; g += 60; b += 60; } // a lit bulb burns whiter than its tint
+        // this cell's footprint in bulb units (0.09 m across, 0.08 m down): count the bulbs whose centers fall in it,
+        // so each bulb lands in exactly one cell and, when bulbs are smaller than cells, several share one
+        const px = (fu * LETTER_W - 0.05) / 0.09, pz = (3.28 - z) / 0.08, hx = dAlong / 0.18, hz = dz / 0.16;
+        let n = 0;
+        for (let by = Math.max(0, Math.ceil(pz - hz - 0.5)); by <= Math.min(6, Math.ceil(pz + hz - 0.5) - 1); by++) {
+          for (let bx = Math.max(0, Math.ceil(px - hx - 0.5)); bx <= Math.min(4, Math.ceil(px + hx - 0.5) - 1); bx++) if (bulbOn(cc, bx, by)) n++;
+        }
+        const bx = Math.floor(px), by = Math.floor(pz);
+        if (n) {
+          ch = n > 1 ? G.at : G.o; r = B.sign[0] * on; g = B.sign[1] * on; b = B.sign[2] * on;
+          if (on > 0.5) { r += 60; g += 60; b += 60; } // a lit bulb burns whiter than its tint
+        } else if (bx >= 0 && bx < 5 && by < 7 && bulbOn(cc, bx, by)) {
+          ch = 32; r = B.sign[0] * on * 0.4; g = B.sign[1] * on * 0.4; b = B.sign[2] * on * 0.4; // glow around a bulb
         } else { ch = 32; r = 14; g = 12; b = 16; } // plain board between the bulbs
       } else if (inText && c !== 32 && (!letters || center)) {
         ch = letters ? c : G.eq;
