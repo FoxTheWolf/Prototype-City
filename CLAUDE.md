@@ -146,6 +146,8 @@ Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simu
 - **Shadows of Doubt:** dark noir, cidade em que se entra em qualquer prédio, cidadãos com rotinas. O usuário gosta muito do **aconchego de entrar num interior numa noite de chuva** e ficar protegido dela. Isso é um objetivo de sensação para as etapas 5 e 7: som da chuva abafado do lado de dentro, janelas molhadas, luz quente no interior contra a rua fria.
 - **GTA IV:** Liberty City como modelo de cidade americana em grade, época ~2008, celular como objeto e acesso à internet em lugares físicos (já citado nas decisões).
 
+- **Megaestruturas (dito pelo usuário em 2026-09-30):** o usuário adora megaestruturas, como o elevador espacial do Ace Combat 7 (ele disse "Combat 8"), ou estruturas tão grandes que dá para ver do espaço. **Pode não ser relevante**, porque foge bastante do escopo de uma tecnologia de ~2008. Fica como inspiração para guiar decisões futuras. Um caminho que respeita a época seria uma obra colossal plausível para o retrofuturismo noir: uma arcologia ou megatorre inacabada, visível da cidade inteira, ou uma estrutura gigante ligada à zona de fogo.
+
 Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos e rotinas), Grey Hack (hacking), HighFleet (interfaces físicas com som) e Else Heart.Break() (impacto sistêmico).
 
 ## Decisões tomadas
@@ -191,6 +193,12 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
   - **A noite continua sendo o visual principal.** O dia é enevoado e nublado, com céu claro e dessaturado, glifos mais apagados e janelas e postes apagados. É o "visual de serviço". O entardecer e o amanhecer têm céu colorido e são os momentos bonitos da transição.
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. Ainda falta decidir a escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
+
+- **Decisões da etapa 4 (2026-09-30):**
+  - **Paleta:** 2 ou 3 paletas alternáveis por tecla (sódio âmbar, neon noir, verde terminal) para o usuário comparar jogando. Depois fica a escolhida.
+  - **Fundo colorido:** ligado por padrão, com uma tecla para voltar ao modo só caracteres.
+  - **Caracteres Unicode de bloco e de caixa (`░▒▓█─│┌`):** alternáveis por tecla contra ASCII puro, para o usuário comparar e escolher.
+  - **Som:** o módulo de áudio (Web Audio, sintetizado, sem arquivos) nasce na etapa 4, com os sons de ambiente: zumbido de neon que falha junto com o letreiro, zumbido de poste de sódio, cidade distante e tom grave perto da zona de fogo.
 
 ## Pedidos do usuário para etapas futuras (2026-09-30)
 
@@ -353,6 +361,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 ## Como trabalhar neste projeto
 
 - **Uma sessão por etapa ou funcionalidade.** Ler só os arquivos e as imagens de referência daquela etapa.
+- **Testar por subetapa (pedido do usuário em 2026-09-30):** ao terminar uma subetapa (4a, 4b...), fazer o commit e pedir que o usuário teste. Só seguir para a próxima depois da aprovação dele.
 - **Ao terminar uma etapa:** atualizar "Estado atual" e o "Roteiro" deste arquivo, e fazer um commit no Git.
 - **Testar de verdade:** abrir o jogo no navegador do app com `preview_start` (configuração `vite`, já em `.claude/launch.json`) para ver funcionando, em vez de só checar a sintaxe. Rodar `npm run build`, que também checa os tipos. Veja "Como testar no navegador do app".
 - **Explicar ao usuário como rodar:** o comando do servidor de desenvolvimento, e de preferência um atalho `.bat` para iniciar com duplo clique.
@@ -394,10 +403,10 @@ Isso pede um módulo de áudio simples (Web Audio), criado na primeira etapa que
 ## Perguntas em aberto
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
-- **Etapa 5:** escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
-- **Etapa 8:** forma do painel lateral diegético. Com a época de 2008, o celular é o candidato natural.
-- **Etapa 10:** se haverá helicóptero de passeio no lugar do táxi aéreo.
-- **Etapa 4:** a paleta final (hoje, noite com postes de sódio e HUD âmbar/ciano).
+- **Etapa 5 (respondido em 2026-09-30):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
+- **Etapa 8:** forma do painel lateral diegético. Em 2026-09-30, o usuário disse que o celular serve, mas quer confirmar de novo quando a etapa chegar, porque pode ter outras ideias até lá.
+- **Etapa 10:** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
+- **Etapa 4:** a paleta final, escolhida entre as paletas alternáveis (veja as decisões da etapa 4).
 
 ## Ideias futuras (não decididas)
 
