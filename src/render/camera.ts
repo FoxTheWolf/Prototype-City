@@ -4,12 +4,13 @@
  */
 export class Camera {
   yaw = -Math.PI / 2;
-  /** Horizon shift as a fraction of screen height (y-shearing, keeps verticals vertical). */
+  /** Look angle up/down in radians. Rendered by y-shearing, so verticals stay vertical. */
   pitch = 0;
   targetYaw = this.yaw;
   targetPitch = 0;
 
-  static readonly MAX_PITCH = 0.35;
+  /** ~60 degrees. Beyond this, y-shearing stretches the image too much. */
+  static readonly MAX_PITCH = 1.05;
   /** Higher = snappier. 1/SMOOTH is roughly the lag in seconds. */
   static readonly SMOOTH = 22;
 

@@ -23,6 +23,8 @@ const overlay = document.getElementById('overlay')!;
 const renderer = new GlyphRenderer(canvas);
 const input = new Input(canvas);
 const camera = new Camera();
+// Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
+if (import.meta.env.DEV) Object.assign(window, { world, camera });
 let grid: CharGrid;
 let layout: Layout;
 let running = false;
@@ -68,7 +70,7 @@ function frame(now: number) {
 
   // camera first, so this frame's movement uses the heading the player sees
   const [mx, my] = input.takeMouse();
-  camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS * 0.7);
+  camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   const turn = (input.down('ArrowRight', 'KeyE') ? 1 : 0) - (input.down('ArrowLeft', 'KeyQ') ? 1 : 0);
   if (running) camera.look(turn * 2.2 * dt, 0);
   else camera.look(dt * 0.08, 0); // idle drift behind the title

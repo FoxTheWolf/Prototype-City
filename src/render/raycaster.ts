@@ -7,7 +7,7 @@ export interface View {
   x: number;
   y: number;
   yaw: number;
-  /** Horizon shift as a fraction of screen height. */
+  /** Look angle up/down in radians. */
   pitch: number;
   /** Eye height in world units. */
   eye: number;
@@ -51,7 +51,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const plX = -dirY * PLANE, plY = dirX * PLANE;
   // Rows per world unit of height at distance 1: horizontal scale converted by the cell aspect.
   const scale = (cols / 2) / PLANE * v.cellAspect;
-  const hor = rows / 2 + v.pitch * rows;
+  // y-shearing: the horizon moves by the vertical focal length times tan(pitch)
+  const hor = rows / 2 + Math.tan(v.pitch) * scale;
   const eye = v.eye, px = v.x, py = v.y;
   // Stars live on a fixed ring of azimuth slots, one slot per column at screen center.
   const starSlots = Math.round(cols * Math.PI / Math.atan(PLANE));

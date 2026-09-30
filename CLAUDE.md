@@ -152,12 +152,41 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
   - `src/render/`: `camera.ts` (o mouse move um alvo e a câmera o segue suavemente), `raycaster.ts` (preenche a `CharGrid`), `glRenderer.ts` + `atlas.ts` (WebGL2: um triângulo de tela cheia, atlas de glifos com células de pixels inteiros, um único draw).
   - Grade: sempre 80 linhas; as colunas seguem a proporção da janela (célula 0,6). Posições do jogador e dos carros são interpoladas entre ticks, sem balanço de cabeça, e as árvores usam coordenadas locais, para não tremer.
   - O HUD lateral e os controles de toque do protótipo 1 ficaram de fora; voltam na etapa 7. A cidade ainda é a de 12×12 quarteirões do protótipo.
+  - Na parte de baixo da tela fica só uma linha de status (semente, posição, velocidade, grade, FPS). O artifact publicado continua sendo o protótipo 1.
+- **Retorno do usuário sobre a etapa 1:** achou ótimo. A única queixa era o ângulo vertical limitado (só ~15°); foi corrigido para ~60° (`Camera.MAX_PITCH`). No PC dele o jogo roda a ~180 FPS (monitor de alta taxa). Isso não é problema: a simulação tem passo fixo e a suavização da câmera não depende do FPS.
+
+## Notas técnicas (para as próximas sessões)
+
+- **Regras da arquitetura:**
+  - `src/sim/` nunca importa nada de `src/render/` nem do DOM. O render só lê o estado da simulação.
+  - Toda aleatoriedade da simulação vem de `world.rng`, nunca de `Math.random`, para manter o determinismo.
+  - Detalhes só visuais (textura do chão, janelas acesas) saem de `hash3` da posição. São fixos e não piscam.
+- **Interpolação:** tudo o que se move na simulação guarda a posição do tick anterior (`px`, `py`), e o render interpola com `alpha`. Qualquer entidade nova que se mova deve seguir esse padrão, senão treme.
+- **Projeção:**
+  - `PLANE = tan(FOV horizontal / 2) = 0.72`.
+  - `scale = (cols/2) / PLANE * cellAspect` = linhas por unidade de altura à distância 1.
+  - Olhar para cima e para baixo é *y-shearing*: `horizonte = rows/2 + tan(pitch) * scale`. Um raycaster por coluna não consegue girar a câmera de verdade; perto de 60° a imagem estica. Olhando para baixo, vê-se só o chão perto dos pés.
+  - Uma célula pertence a uma parede ou sprite quando o *centro* dela está dentro do intervalo projetado (`Math.ceil(y - 0.5)`).
+- **Unidades:** 1 tile = 1 unidade. O quarteirão tem 12 tiles, a rua 3, a calçada 1. O andar tem 0,55 e o olho está a 0,48. **Ainda não há conversão para metros**; vale decidir isso na etapa 2, junto com a cidade grande.
+- **Atlas de glifos:** o índice do glifo é o próprio código do caractere, e só o ASCII 33–126 está desenhado. Para usar caracteres de bloco ou de caixa (`░▒▓█─│`), é preciso mapear o codepoint para uma posição livre do atlas (0–31 ou 127–255) em `atlas.ts`.
+- **`CharGrid`** usa `Uint8ClampedArray`: as cores saturam sozinhas em 0–255, então não precisa limitar valores antes do `put`.
+- **Textos dentro do jogo** estão em inglês, herdados do protótipo. O idioma do jogo ainda não foi decidido.
+
+## Como testar no navegador do app
+
+- O painel tem só ~800×450, então as células ficam com ~3×5 px e o texto da linha de status é ilegível nas capturas. Serve para ver a composição, não para ler detalhes.
+- **O pointer lock não funciona no painel** (`WrongDocumentError`); é esperado. Para testar:
+  - Em modo dev, `window.world` e `window.camera` ficam expostos. Por exemplo: `camera.look(0, 2)` olha para cima, `world.player` mostra a posição.
+  - Teclas se simulam com `dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyW'}))` e o `keyup` correspondente.
+- Cada recarga (inclusive a do HMR) sorteia uma semente nova. Use `?seed=42` para comparar sempre a mesma cidade.
+- Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina.
+- A pasta `referencias/` está no `.gitignore` (são quadros do vídeo de outra pessoa) e existe só no disco.
 
 ## Como trabalhar neste projeto
 
 - **Uma sessão por etapa ou funcionalidade.** Ler só os arquivos e as imagens de referência daquela etapa.
 - **Ao terminar uma etapa:** atualizar "Estado atual" e o "Roteiro" deste arquivo, e fazer um commit no Git.
-- **Testar de verdade:** depois que o Vite existir, configurar `.claude/launch.json` e abrir o jogo no navegador do app com `preview_start` para ver funcionando, em vez de só checar a sintaxe.
+- **Testar de verdade:** abrir o jogo no navegador do app com `preview_start` (configuração `vite`, já em `.claude/launch.json`) para ver funcionando, em vez de só checar a sintaxe. Rodar `npm run build`, que também checa os tipos. Veja "Como testar no navegador do app".
 - **Explicar ao usuário como rodar:** o comando do servidor de desenvolvimento, e de preferência um atalho `.bat` para iniciar com duplo clique.
 
 ## Roteiro
