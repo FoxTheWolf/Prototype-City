@@ -153,6 +153,9 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 - **Máquinas virtuais com hardware real:** cada computador do jogo tem especificações próprias (CPU, memória, disco, placa de rede, sistema operacional) que o terminal mostra e que **limitam de verdade** o que roda nele (programas que não cabem na memória, processamento lento numa CPU fraca etc.). O limite é do computador virtual, não do PC de quem joga.
 - **Impacto sistêmico, no estilo Else Heart.Break():** as ações de hacking mexem com a simulação a ponto de poder causar consequências enormes, até apocalípticas, se o jogador quiser ou não tomar cuidado: quebrar a economia, alterar preços de mercadorias, bagunçar o trânsito, causar acidentes, afetar a vida das pessoas. Mais profundo que Watch Dogs, que é mais roteirizado. Devem existir muitos lugares e sistemas hackeáveis.
 - **Época: por volta de 2008 (decidido em 2026-09-30),** no estilo GTA IV. É a época dos primeiros smartphones e da primeira loja de apps, do boom das redes sociais, dos celulares com câmera de baixa resolução, do 3G/EDGE lento, do Wi-Fi com senha, dos cybercafés e dos orelhões ainda em uso. Smartphones convivem com celulares comuns: cada cidadão tem um aparelho diferente. Tudo o que for tecnologia no jogo deve ser plausível para essa época.
+- **Tamanho da cidade (decidido em 2026-09-30):** o padrão é uma cidade **média, de ~2×2 km**. O tamanho deve ser **um parâmetro da geração**, e não algo fixo no código. No futuro, uma opção de menu antes de criar o mundo vai permitir aumentar ou diminuir o tamanho se o desempenho aguentar; o menu não é para agora. O desempenho deve se adaptar ao tamanho (nível de detalhe e janela carregada em volta do jogador), e não depender de a cidade ser pequena.
+- **Estilo urbano: americano, em grade (decidido em 2026-09-30),** como a Liberty City do GTA IV: grade regular, avenidas largas, arranha-céus no centro e bairros mais baixos em volta.
+- **Unidades: 1 unidade = 1 metro (decidido em 2026-09-30).** A conversão da escala atual (andar de 0,55 e olho a 0,48, cerca de 1 unidade para 3,5 m) é feita na etapa 2. Valores de referência: olho a ~1,7 m, andar de ~3,5 m, faixa de rua de ~3,5 m.
 - **Painel lateral no estilo do ASCII City:** fica, desde que seja diegético (por exemplo, um PDA, o celular ou o notebook). Deve ter o visual de terminal com texto composto aos poucos. A forma exata ainda está a decidir.
 - **Os dados da simulação são a matéria do hacking:** registros de moradores e funcionários, logs de telefone, câmeras, controle de portas e semáforos vêm da simulação e não são inventados à parte.
 - **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
@@ -224,7 +227,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: etapa 2 (cidade grande).** Numa sessão nova, ler `src/sim/city.ts`, `src/render/raycaster.ts` e as referências 01, 13 e 26. Decidir antes a conversão de unidades para metros e o tamanho da cidade (veja "Perguntas em aberto").
+- **Próximo passo: etapa 2 (cidade grande).** Numa sessão nova, ler `src/sim/city.ts`, `src/render/raycaster.ts` e as referências 01, 13 e 26. Já decidido: cidade de ~2×2 km com tamanho configurável, grade americana e 1 unidade = 1 metro. Avaliar também a câmera com giro vertical de verdade (veja as notas técnicas).
 - *Histórico:* `terminal-city.html` é o primeiro protótipo (2026-09-30), hoje substituído pelo projeto Vite. Tinha:
   - uma cidade procedural de 12×12 quarteirões (tamanho 12, ruas com 3 de largura);
   - prédios com janelas acesas e letreiros de loja, parques com árvores e postes com poças de luz no chão;
@@ -308,7 +311,6 @@ Isso pede um módulo de áudio simples (Web Audio), criado na primeira etapa que
 ## Perguntas em aberto
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
-- **Etapa 2:** conversão de unidades para metros e tamanho da cidade. Provavelmente menor que a do ASCII City, porque cada cidadão é detalhado.
 - **Etapa 5:** escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
 - **Etapa 8:** forma do painel lateral diegético. Com a época de 2008, o celular é o candidato natural.
 - **Etapa 10:** se haverá helicóptero de passeio no lugar do táxi aéreo.
