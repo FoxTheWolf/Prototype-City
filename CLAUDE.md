@@ -94,19 +94,39 @@ Inspiração visual e técnica. O vídeo de referência é "Everything in ASCII 
 
 **Imagens de referência:** a pasta `referencias/` guarda quadros do vídeo, para uso pessoal como referência. Abra **só as imagens relevantes à etapa atual**, porque cada imagem custa bastante do limite de uso.
 - `01-prototipo1-skyline`: o protótipo 1, com prédios coloridos e o chão de linhas (etapas 1 e 2)
-- `02-andar-alto-vista`: vista de um andar alto pela janela (etapa 6)
-- `03-visual-solido-carros`: fundo colorido nos glifos e carros volumétricos (etapas 4 e 5)
+- `02-andar-alto-vista`: vista de um andar alto pela janela (etapa 7)
+- `03-visual-solido-carros`: fundo colorido nos glifos e carros volumétricos (etapas 4 e 6)
 - `04-rua-poste-predios`: rua com poste, prédios e densidade de caracteres (etapas 1 e 4)
-- `05-hud-mapa-local`: painel completo e mapa local (etapa 7)
-- `06-mapa-setor` e `07-mapa-cidade`: mapas de setor e de cidade (etapa 7)
-- `08-distrito-chuva-pedestre`: distrito com chuva, pedestre e mapa (etapas 3 e 5)
-- `09-abertura-dissolvendo`: a abertura em que a imagem sólida se desfaz em células (etapa 8)
-- `10-taxi-rua-perto`: táxi de perto na rua, com o chão e as calçadas (etapas 4 e 5)
-- `11-taxi-menu-destino`: dentro do táxi, com o menu de destino (etapa 9)
-- `12-monotrilho-plataforma`: plataforma do monotrilho (etapa 9)
-- `13-taxi-aereo-horizonte`: horizonte distante visto do alto (etapas 2 e 9)
+- `05-hud-mapa-local`: painel completo e mapa local (etapa 8)
+- `06-mapa-setor` e `07-mapa-cidade`: mapas de setor e de cidade (etapa 8)
+- `08-distrito-chuva-pedestre`: distrito com chuva, pedestre e mapa (etapas 3, 5 e 6)
+- `09-abertura-dissolvendo`: a abertura em que a imagem sólida se desfaz em células (etapa 9)
+- `10-taxi-rua-perto`: táxi de perto na rua, com o chão e as calçadas (etapas 4 e 6)
+- `11-taxi-menu-destino`: dentro do táxi, com o menu de destino (etapa 10)
+- `12-monotrilho-plataforma`: plataforma do monotrilho (etapa 10)
+- `13-taxi-aereo-horizonte`: horizonte distante visto do alto (etapas 2 e 10)
+- `14-interior-janela-cidade`: interior de prédio com a janela mostrando a cidade real (etapa 7)
+- `15-interior-moveis`: interior com móveis pseudo-volumétricos diante das janelas (etapa 7)
+- `16-fachada-janelas-internas`: fachada de perto, com cômodos coloridos vistos pelas janelas (etapa 7)
+- `17-escultura-praca`: escultura/monumento numa praça, feito de caracteres (etapas 3 e 4)
+- `18-fachadas-vitrines` e `19-fachada-vidro`: fachadas de perto, vitrines e prédio de vidro (etapas 4 e 7)
+- `20-praca-objeto-dourado`: praça com um objeto dourado volumétrico (escultura ou fonte) (etapas 3 e 4)
+- `21-marco-estatua-cupula`: marco da cidade, com estátua e cúpula num parque (etapa 3)
+- `22-fachadas-historicas`: distrito de prédios antigos com fachadas ornamentadas (etapa 3)
+- `23-cabine-telefonica`: cabine telefônica vermelha na calçada (etapa 9)
+- `24-trem-interior-lua`: interior do trem com uma lua grande no céu (etapas 5 e 10)
+- `25-taxi-aereo-interior`: interior do táxi aéreo (etapa 10)
+- `26-horizonte-torres-marco`: horizonte com torres-marco art déco vistas do alto (etapas 2 e 3)
 
-O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The Story So Far - Grow Now! Games (1080p, h264).mp4`. Dá para extrair mais quadros com Python + OpenCV (`cv2`), que já está instalado.
+O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The Story So Far - Grow Now! Games (1080p, h264).mp4`. Dá para extrair mais quadros com Python + OpenCV (`cv2`), que já está instalado: `cap.set(cv2.CAP_PROP_POS_MSEC, t*1000)` e depois `cap.read()`. Para achar um trecho, monte primeiro folhas de miniaturas com o tempo escrito (uma a cada 8 s cabe em 8 folhas de 6×6) e só depois extraia em resolução cheia.
+
+**Mapa do vídeo** (minuto:segundo → assunto), para achar trechos sem varrer o vídeo inteiro de novo:
+- **0:00–2:50:** abertura e passeio.
+- **2:58–8:58, protótipo 1** (imagem pequena no centro da tela): 3:30 resolução; 4:50 prédios atrás de prédios; 5:14 objetos pseudo-volumétricos; 5:38 WebGL; 6:18 mundo maior; 6:42–7:14 interiores e janelas internas; 7:22 vários andares; 7:30 vista de cima; 8:02 abertura.
+- **8:58–12:42, Update 2 (trânsito e detalhe):** 9:06 visual novo; 9:38 carros; 10:10 trânsito; 10:42–11:06 detalhes do mundo; 11:14–11:30 vitrines; 11:38 modos novos; 12:10 otimização.
+- **12:50–21:14, Update 3 (mapas e navegação):** 13:14 passeio automático; 14:58 mapa local; 15:30 distrito; 16:18 setor; 16:50 cidade; 17:38 timelapse; 18:34 marcos; 18:42 detalhes; 18:58 distritos; 19:30 rede de telefones; 20:10 abertura nova.
+- **21:22–24:34:** transmissão ao vivo (ASCIICITY.LIVE).
+- **24:42–34:26, Update 4:** 25:22 táxi terrestre; 26:34 hierarquia de ruas; 27:06 tocador de música; 27:38 monotrilho; 28:42 viagem de trem; 30:34 táxi aéreo; 32:10 táxi aéreo em velocidade 2x; 32:58 protótipo 3; 34:10 prévia do que vem.
 
 **Regra de originalidade:** copiar a técnica e o gênero é permitido. Os nomes, a história, os marcos e a identidade visual específica do ASCII City **não** devem ser copiados. Criamos os nossos.
 
@@ -135,6 +155,10 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 - **Época:** ainda não decidida. Tendência: anos 2000 ou um pouco depois (celular físico, orelhão, cybercafé, Wi-Fi com senha).
 - **Painel lateral no estilo do ASCII City:** fica, desde que seja diegético (por exemplo, um PDA, o celular ou o notebook). Deve ter o visual de terminal com texto composto aos poucos. A forma exata ainda está a decidir.
 - **Os dados da simulação são a matéria do hacking:** registros de moradores e funcionários, logs de telefone, câmeras, controle de portas e semáforos vêm da simulação e não são inventados à parte.
+- **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
+  - O *estado* do clima (se chove, a intensidade, o vento), a data e a hora ficam na simulação, com semente, porque um dia vão afetar as pessoas e o trânsito.
+  - As partículas são só render.
+  - **Em aberto:** haverá ciclo de dia e noite, ou noite permanente como no ASCII City? As fases da lua pedem um calendário de jogo, e as rotinas dos cidadãos (etapa 11) já pedem um relógio.
 
 ## Estado atual
 
@@ -151,9 +175,9 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
   - `src/sim/`: cidade, trânsito e jogador, com semente e passo fixo de 60 Hz (`TICK`). Não conhece a tela; a única entrada é `PlayerInput`.
   - `src/render/`: `camera.ts` (o mouse move um alvo e a câmera o segue suavemente), `raycaster.ts` (preenche a `CharGrid`), `glRenderer.ts` + `atlas.ts` (WebGL2: um triângulo de tela cheia, atlas de glifos com células de pixels inteiros, um único draw).
   - Grade: sempre 80 linhas; as colunas seguem a proporção da janela (célula 0,6). Posições do jogador e dos carros são interpoladas entre ticks, sem balanço de cabeça, e as árvores usam coordenadas locais, para não tremer.
-  - O HUD lateral e os controles de toque do protótipo 1 ficaram de fora; voltam na etapa 7. A cidade ainda é a de 12×12 quarteirões do protótipo.
+  - O HUD lateral e os controles de toque do protótipo 1 ficaram de fora; voltam na etapa 8. A cidade ainda é a de 12×12 quarteirões do protótipo.
   - Na parte de baixo da tela fica só uma linha de status (semente, posição, velocidade, grade, FPS). O artifact publicado continua sendo o protótipo 1.
-- **Retorno do usuário sobre a etapa 1:** achou ótimo. A única queixa era o ângulo vertical limitado (só ~15°); foi corrigido para ~60° (`Camera.MAX_PITCH`). No PC dele o jogo roda a ~180 FPS (monitor de alta taxa). Isso não é problema: a simulação tem passo fixo e a suavização da câmera não depende do FPS.
+- **Retorno do usuário sobre a etapa 1:** achou ótimo. A única queixa era o ângulo vertical limitado (só ~15°); foi corrigido para ~60° (`Camera.MAX_PITCH`). Depois disso, o FOV pareceu pequeno e passou a ser fixado na vertical (veja as notas técnicas). No PC dele o jogo roda a ~180 FPS (monitor de alta taxa). Isso não é problema: a simulação tem passo fixo e a suavização da câmera não depende do FPS.
 
 ## Notas técnicas (para as próximas sessões)
 
@@ -163,8 +187,9 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
   - Detalhes só visuais (textura do chão, janelas acesas) saem de `hash3` da posição. São fixos e não piscam.
 - **Interpolação:** tudo o que se move na simulação guarda a posição do tick anterior (`px`, `py`), e o render interpola com `alpha`. Qualquer entidade nova que se mova deve seguir esse padrão, senão treme.
 - **Projeção:**
-  - `PLANE = tan(FOV horizontal / 2) = 0.72`.
-  - `scale = (cols/2) / PLANE * cellAspect` = linhas por unidade de altura à distância 1.
+  - O FOV é fixado na **vertical** (`VFOV = 60°`), e o horizontal segue a proporção da janela (~92° em 16:9). Antes era fixado na horizontal (72°), o que deixava só ~44° na vertical, e o usuário achou apertado ao olhar para cima e para baixo.
+  - `scale = (rows/2) / tan(VFOV/2)` = linhas por unidade de altura à distância 1.
+  - `plane = (cols/2) * cellAspect / scale` = tan(FOV horizontal / 2).
   - Olhar para cima e para baixo é *y-shearing*: `horizonte = rows/2 + tan(pitch) * scale`. Um raycaster por coluna não consegue girar a câmera de verdade; perto de 60° a imagem estica. Olhando para baixo, vê-se só o chão perto dos pés.
   - Uma célula pertence a uma parede ou sprite quando o *centro* dela está dentro do intervalo projetado (`Math.ceil(y - 0.5)`).
 - **Unidades:** 1 tile = 1 unidade. O quarteirão tem 12 tiles, a rua 3, a calçada 1. O andar tem 0,55 e o olho está a 0,48. **Ainda não há conversão para metros**; vale decidir isso na etapa 2, junto com a cidade grande.
@@ -197,14 +222,15 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 2. **Cidade grande:** mundo enorme com uma janela deslizante em volta do jogador, prédios com identidade fixa pela posição, horizonte distante barato, prédios altos visíveis atrás de outros.
 3. **Estrutura da cidade:** setores, distritos e quarteirões com nomes; tipos de distrito que mudam a geração; parques variados.
 4. **Visual sólido:** fundo colorido atrás dos glifos (alternável), objetos pseudo-volumétricos (árvores, bancos, postes, cabines).
-5. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; carros voadores (a confirmar, conforme a época); pedestres.
-6. **Interiores:** entrar nos prédios, janelas que mostram a cidade real, andares altos com vista de cima, vitrines.
-7. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
-8. **Rede de telefones:** orelhões e celular físicos, abertura do jogo.
-9. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens, e talvez táxi aéreo.
-10. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
-11. **Economia:** empresas, preços, estoques e salários interligados.
-12. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, impacto sistêmico.
+5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido.
+6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; carros voadores (a confirmar, conforme a época); pedestres.
+7. **Interiores:** entrar nos prédios, janelas que mostram a cidade real, andares altos com vista de cima, vitrines.
+8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
+9. **Rede de telefones:** orelhões e celular físicos, abertura do jogo.
+10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens, e talvez táxi aéreo.
+11. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
+12. **Economia:** empresas, preços, estoques e salários interligados.
+13. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, impacto sistêmico.
 
 ## Ideias futuras (não decididas)
 

@@ -19,8 +19,8 @@ export interface View {
 
 /** Draw distance in tiles. */
 const FAR = 48;
-/** tan(horizontal FOV / 2). */
-const PLANE = 0.72;
+/** Vertical field of view. The horizontal one follows the window shape (wider window, wider view). */
+const VFOV = (60 * Math.PI) / 180;
 
 const C = (s: string) => s.charCodeAt(0);
 const G = {
@@ -48,21 +48,23 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   grid.clear();
 
   const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw);
-  const plX = -dirY * PLANE, plY = dirX * PLANE;
-  // Rows per world unit of height at distance 1: horizontal scale converted by the cell aspect.
-  const scale = (cols / 2) / PLANE * v.cellAspect;
+  // Rows per world unit of height at distance 1, from the vertical FOV.
+  const scale = rows / 2 / Math.tan(VFOV / 2);
+  // tan(horizontal FOV / 2): the same focal length converted to columns by the cell aspect.
+  const plane = ((cols / 2) * v.cellAspect) / scale;
+  const plX = -dirY * plane, plY = dirX * plane;
   // y-shearing: the horizon moves by the vertical focal length times tan(pitch)
   const hor = rows / 2 + Math.tan(v.pitch) * scale;
   const eye = v.eye, px = v.x, py = v.y;
   // Stars live on a fixed ring of azimuth slots, one slot per column at screen center.
-  const starSlots = Math.round(cols * Math.PI / Math.atan(PLANE));
+  const starSlots = Math.round(cols * Math.PI / Math.atan(plane));
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
     const rdx = dirX + plX * camX, rdy = dirY + plY * camX;
 
     // ---- sky: gradient background + stars fixed to the sky
-    const az = v.yaw + Math.atan(camX * PLANE);
+    const az = v.yaw + Math.atan(camX * plane);
     const slot = Math.floor((((az / (2 * Math.PI)) % 1 + 1) % 1) * starSlots);
     for (let y = 0; y < rows; y++) {
       const i = y * cols + x;
@@ -170,7 +172,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     }
   }
 
-  drawSprites(grid, collectSprites(world, v), v, dirX, dirY, plX, plY, scale, hor);
+  drawSprites(grid, collectSprites(world, v), v, dirX, dirY, plX, plY, plane, scale, hor);
 }
 
 function collectSprites(world: World, v: View): Sprite[] {
@@ -185,7 +187,7 @@ function collectSprites(world: World, v: View): Sprite[] {
   return out;
 }
 
-function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, dirY: number, plX: number, plY: number, scale: number, hor: number) {
+function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, dirY: number, plX: number, plY: number, plane: number, scale: number, hor: number) {
   const { cols, rows } = grid;
   const invDet = 1 / (plX * dirY - dirX * plY);
   const vis: [number, number, Sprite, number, number][] = [];
@@ -199,7 +201,7 @@ function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, d
   vis.sort((a, b) => b[0] - a[0]);
 
   for (const [tY, tX, s, rx, ry] of vis) {
-    const cx = (cols / 2) * (1 + tX / tY), half = ((s.w / tY) * (cols / 2)) / PLANE / 2;
+    const cx = (cols / 2) * (1 + tX / tY), half = ((s.w / tY) * (cols / 2)) / plane / 2;
     const top = hor - ((s.z1 - v.eye) * scale) / tY, bot = hor + (v.eye * scale) / tY;
     const x0 = Math.max(0, Math.ceil(cx - half - 0.5)), x1 = Math.min(cols, Math.ceil(cx + half - 0.5));
     const y0 = Math.max(0, Math.ceil(top - 0.5)), y1 = Math.min(rows, Math.ceil(bot - 0.5));
