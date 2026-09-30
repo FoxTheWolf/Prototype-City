@@ -176,6 +176,8 @@ export interface Block {
  */
 export interface City {
   businesses: Business[];
+  /** Every street lamp, in a fixed order: the index is the lamp's identity (for its failures now, the power grid later). */
+  lamps: Prop[];
   w: number;
   h: number;
   xb: number[];
@@ -575,7 +577,7 @@ export function generateCity(seed: number, size: number): City {
   if (tallest) landmarks.push({ kind: 'tower', x: (tallest.x0 + tallest.x1) / 2, y: (tallest.y0 + tallest.y1) / 2 });
 
   const { vents, floodlights } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, businesses, sectors: SECTORS, nameSeed };
+  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
 }
 
 /**

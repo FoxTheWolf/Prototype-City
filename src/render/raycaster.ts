@@ -1,8 +1,10 @@
 import { hash3 } from '../core/rng';
-import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City } from '../sim/city';
+import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
+import { lampId } from './lamps';
+import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
@@ -60,6 +62,11 @@ const LITTER: [number, number, number, number, number, number, number][] = [
   [C('.'), 225, 150, 90, 2, 0.03, 0.012], [C(','), 200, 190, 170, 2, 0.03, 0.012], // cigarette butts
 ];
 const light = new LightWindow();
+const dyn = new DynLights();
+/** Light reaching a point, filled by lightAt. */
+const LT = new Float32Array(3);
+/** Dynamic lights (cars, signs) are gathered this close to the viewer. */
+const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
@@ -94,7 +101,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
   frameCity = city; frameSec = time / 60;
-  const [lr, lg, lb] = LAMP;
+  light.update(frameSec);
+  gatherLights(world, v, frameSec);
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
@@ -127,7 +135,6 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       if (wx < 0 || wy < 0 || wx >= city.w || wy >= city.h) { burnGround(grid, i, city, wx, wy, rd, time); continue; }
       if (rd > GROUND_FAR) { grid.put(i, G.dot, 28, 24, 32); continue; }
       const fog = 1 - (rd / GROUND_FAR) * 0.9;
-      const glow = light.at(wx, wy) * fog;
       const cx = city.xCell[wx | 0], cy = city.yCell[wy | 0];
       const hv = hash3(Math.floor(wx * 1.2), Math.floor(wy * 1.2), 3);
       let ch = G.dot, r = 38, g = 38, b = 46;
@@ -190,7 +197,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           if (hit) { ch = L[0]; r = L[1]; g = L[2]; b = L[3]; }
         }
       }
-      grid.put(i, ch, r * fog + glow * lr, g * fog + glow * lg, b * fog + glow * lb);
+      lightAt(wx, wy, 0);
+      grid.put(i, ch, (r + LT[0]) * fog, (g + LT[1]) * fog, (b + LT[2]) * fog);
     }
 
     // ---- walls: walk the street grid front to back. Inside each block, hit its buildings in
@@ -241,7 +249,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
                 const rr = (B.x1 - B.x0) / 2, nx = (px + t * rdx - B.x0 - rr) / rr, ny = (py + t * rdy - B.y0 - rr) / rr;
                 along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx);
               } else { along = side === 0 ? py + t * rdy : px + t * rdx; lightK = side ? 0.72 : 1; }
-              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW, side === 0 ? rdx < 0 : rdy > 0, (colW * t) / Math.max(1e-6, Math.abs(side === 0 ? rdx : rdy)), t < LIT_FAR ? light.at(px + t * rdx, py + t * rdy) : 0);
+              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW, side === 0 ? rdx < 0 : rdy > 0, (colW * t) / Math.max(1e-6, Math.abs(side === 0 ? rdx : rdy)), px + t * rdx, py + t * rdy);
             }
             clipTop = Math.min(clipTop, Math.max(0, top));
           }
@@ -256,7 +264,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
-  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, glow: (x, y) => light.at(x, y), lamp: LAMP });
+  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: (x, y, z) => { lightAt(x, y, z); return LT; } });
   finish(grid, v.look);
 }
 
@@ -369,7 +377,7 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
 }
 
 /** One building face in one column, rows y0..y1. `along` is where the ray hit the face; `top` is the unclipped roof row. */
-function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number, glow: number) {
+function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number, hx: number, hy: number) {
   // side 2 is a cylinder: no corners
   const f0 = side === 0 ? B.y0 : side === 1 ? B.x0 : -1e9, f1 = side === 0 ? B.y1 : side === 1 ? B.x1 : 1e9;
   const fogK = 1 - Math.exp(-t / FOG);
@@ -465,9 +473,9 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const lit = signLight(B.biz, mode, inText ? k : -1, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
       // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
       const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
-      // a letter at least 4 rows tall and 3 columns wide is drawn as its 5x7 pattern of bulbs; smaller,
-      // the bulbs blur together and the glyph reads better
-      const bulbs = LETTER_W / dAlong >= 3 && 0.56 / dz >= 4;
+      // a letter at least 2.6 rows tall and 3 columns wide (up to ~15 m, mid-avenue seen from the far
+      // sidewalk: the user's pick) is drawn as its 5x7 pattern of bulbs; smaller, the glyph reads better
+      const bulbs = LETTER_W / dAlong >= 3 && 0.56 / dz >= 2.6;
       if (bulbs && col >= 0 && col < signN && z > 2.72 && z < 3.28) {
         let fu = signU / LETTER_W - col - 1;
         if (rev) fu = 1 - fu; // seen from the other side, the pattern mirrors with the reading order
@@ -553,10 +561,11 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
-    if (glow > 0 && z < LIT_H) {
-      // street lamps light the lower floors; the light fades with height above the lamp's pool
-      const k = glow * (1 - Math.max(0, z - 1) / (LIT_H - 1)) * 1.3 * shade;
-      r += LAMP[0] * k; g += LAMP[1] * k; b += LAMP[2] * k;
+    if (z < LIT_H && t < LIT_FAR) {
+      // street lamps, headlights and signs light the lower floors
+      lightAt(hx, hy, z);
+      const k = 1.3 * shade;
+      r += LT[0] * k; g += LT[1] * k; b += LT[2] * k;
     }
     grid.put(i, ch, r, g, b);
     grid.setBg(i, 7, 8, 12);
@@ -564,18 +573,63 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   }
 }
 
+/**
+ * All the light reaching a point, into LT: the street lamps' pools (fading above 1 m, gone at LIT_H)
+ * and this frame's dynamic lights.
+ */
+function lightAt(x: number, y: number, z: number) {
+  const zk = z <= 1 ? 1 : 1 - (z - 1) / (LIT_H - 1), g = zk > 0 ? light.at(x, y) * zk : 0;
+  LT[0] = LAMP[0] * g; LT[1] = LAMP[1] * g; LT[2] = LAMP[2] * g;
+  dyn.sample(x, y, z, LT);
+}
+
+/** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
+function gatherLights(world: World, v: View, sec: number) {
+  const { city } = world;
+  dyn.begin(v.x, v.y);
+  for (const c of world.cars) {
+    const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
+    if (Math.abs(x - v.x) > DYN_FAR || Math.abs(y - v.y) > DYN_FAR) continue;
+    dyn.cone(x + c.dx * 2.3, y + c.dy * 2.3, c.dx, c.dy, 0.87, 24, 1, 4, 150, 140, 115);
+    dyn.point(x - c.dx * 2.4, y - c.dy * 2.4, 4, 1, 2, 120, 12, 8);
+  }
+  // each sign lights the sidewalk in front of it and the wall around it, in its own color and flicker
+  for (const blk of city.blocks) {
+    if (blk.x1 < v.x - DYN_FAR || blk.x0 > v.x + DYN_FAR || blk.y1 < v.y - DYN_FAR || blk.y0 > v.y + DYN_FAR) continue;
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const B = city.buildings[k];
+      if (B.biz < 0 || B.round) continue;
+      const mode = signMode(city, B.biz), lit = signLight(B.biz, mode, -1, signText(city, B.biz, 255).length, sec);
+      const [sr, sg, sb] = B.sign, q = 0.4 * lit;
+      for (let f = 0; f < 4; f++) {
+        const alongX = f >= 2, len = alongX ? B.x1 - B.x0 : B.y1 - B.y0;
+        const n = signText(city, B.biz, Math.floor((len - 1.2) / LETTER_W) - 2).length;
+        if (n < 3) continue;
+        const half = ((n + 2) * LETTER_W) / 2, mid = alongX ? (B.x0 + B.x1) / 2 : (B.y0 + B.y1) / 2;
+        const edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
+        if (alongX) dyn.segment(mid - half, edge, mid + half, edge, 0, out, 7, 3.5, 7, sr * q, sg * q, sb * q);
+        else dyn.segment(edge, mid - half, edge, mid + half, out, 0, 7, 3.5, 7, sr * q, sg * q, sb * q);
+      }
+    }
+  }
+}
+
 /** Props of the blocks near the viewer, plus nearby cars. Far away they are too small to matter. */
 function collectObjects(world: World, v: View): Obj[] {
   const out: Obj[] = [];
   const { city } = world;
-  const lamp = lampModel(LAMP);
   const cl = (a: number, n: number) => Math.min(n - 1, Math.max(0, a | 0));
   const cx0 = city.xCell[cl(v.x - SPRITE_FAR, city.w)], cx1 = city.xCell[cl(v.x + SPRITE_FAR, city.w)];
   const cy0 = city.yCell[cl(v.y - SPRITE_FAR, city.h)], cy1 = city.yCell[cl(v.y + SPRITE_FAR, city.h)];
   for (let cy = cy0 | 1; cy <= cy1; cy += 2) for (let cx = cx0 | 1; cx <= cx1; cx += 2) {
     const blk = cityBlock(city, cx, cy);
     if (blk) for (const p of blk.props) {
-      if (p.kind === 'lamp') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lamp, r: 2.1, h: 6.7, seed: 0 });
+      if (p.kind === 'lamp') {
+        // the head glows as bright and as warm as the lamp is right now (dim red while it strikes, amber when warm)
+        const n = lampId(city, p), lv = Math.round(light.level[n] * 8) / 8, wm = Math.round(light.warm[n] * 8) / 8;
+        const head: RGB = [Math.max(30, (230 + 25 * wm) * lv), Math.max(30, (50 + 138 * wm) * lv), Math.max(30, (25 + 69 * wm) * lv)];
+        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lampModel(head), r: 2.1, h: 6.7, seed: 0 });
+      }
       else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
       else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
       else {

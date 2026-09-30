@@ -1,3 +1,4 @@
+import { lampId, lampMode, LampMode, lampState, lampStutter } from '../render/lamps';
 import { signLight, signMode, SignMode, signStutter, signText } from '../render/signs';
 import { type City } from '../sim/city';
 
@@ -15,6 +16,8 @@ export class Sound {
   private master: GainNode;
   private hum: GainNode;
   private humPan: StereoPannerNode;
+  private humCrackle: GainNode;
+  private st = new Float32Array(2);
   private neon: GainNode;
   private crackle: GainNode;
   private neonPan: StereoPannerNode;
@@ -43,6 +46,7 @@ export class Sound {
     this.hum = gain(ctx, 0, this.humPan);
     tone(ctx, 'sine', 120, 1, this.hum);
     tone(ctx, 'sine', 240, 0.35, this.hum);
+    this.humCrackle = gain(ctx, 0, this.humPan);
 
     // neon: a buzzy 120 Hz sawtooth through a band-pass, plus crackle for a failing tube
     this.neonPan = ctx.createStereoPanner();
@@ -52,7 +56,9 @@ export class Sound {
     bp.connect(this.neon);
     tone(ctx, 'sawtooth', 120, 1, bp);
     this.crackle = gain(ctx, 0, this.neonPan);
-    src().connect(filter(ctx, 'highpass', 3500, 0.7)).connect(this.crackle);
+    const hiss = src().connect(filter(ctx, 'highpass', 3500, 0.7));
+    hiss.connect(this.crackle);
+    hiss.connect(this.humCrackle);
 
     // burning seam: a deep roar
     this.fire = gain(ctx, 0, this.master);
@@ -75,13 +81,13 @@ export class Sound {
     const rx = -Math.sin(yaw), ry = Math.cos(yaw);
     const pan = (px: number, py: number) => { const d = Math.hypot(px - x, py - y) || 1; return ((px - x) * rx + (py - y) * ry) / d; };
 
-    let lamp = 1e9, lx = 0, ly = 0, sign = 1e9, sx = 0, sy = 0, biz = -1;
+    let lamp = 1e9, lx = 0, ly = 0, lid = -1, sign = 1e9, sx = 0, sy = 0, biz = -1;
     for (const b of city.blocks) {
       if (x < b.x0 - SIGN_R || x > b.x1 + SIGN_R || y < b.y0 - SIGN_R || y > b.y1 + SIGN_R) continue;
       for (const p of b.props) {
         if (p.kind !== 'lamp') continue;
         const d = Math.hypot(p.x - x, p.y - y);
-        if (d < lamp) { lamp = d; lx = p.x; ly = p.y; }
+        if (d < lamp) { lamp = d; lx = p.x; ly = p.y; lid = lampId(city, p); }
       }
       for (let k = b.b0; k < b.b1; k++) {
         const B = city.buildings[k];
@@ -93,8 +99,16 @@ export class Sound {
       }
     }
 
-    const hum = lamp < LAMP_R ? 0.05 * (1 - lamp / LAMP_R) ** 2 : 0;
-    this.hum.gain.setTargetAtTime(hum, now, 0.2);
+    // the hum follows the lamp: silent when out, cutting out and crackling when it fails
+    let hum = 0, hcr = 0;
+    if (lid >= 0 && lamp < LAMP_R) {
+      const near = (1 - lamp / LAMP_R) ** 2;
+      lampState(lid, sec, this.st);
+      hum = 0.05 * near * this.st[0];
+      if (lampMode(lid) === LampMode.Stutter && lampStutter(lid, sec)) hcr = 0.04 * near;
+    }
+    this.hum.gain.setTargetAtTime(hum, now, 0.03);
+    this.humCrackle.gain.setTargetAtTime(hcr, now, 0.01);
     if (hum) this.humPan.pan.setTargetAtTime(pan(lx, ly) * 0.8, now, 0.1);
 
     let neon = 0, crackle = 0;

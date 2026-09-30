@@ -45,9 +45,8 @@ export interface Cam {
   plane: number; scale: number; hor: number;
   /** Fog reaches its end here. */
   far: number;
-  /** Street-lamp light on the ground at a world point (0..1), and its color. */
-  glow: (x: number, y: number) => number;
-  lamp: RGB;
+  /** All the light reaching a world point at a height, as r, g, b. */
+  light: (x: number, y: number, z: number) => Float32Array;
 }
 
 const C = (s: string) => s.charCodeAt(0);
@@ -174,10 +173,10 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         }
         let r = q.col[0] * k, g = q.col[1] * k, b = q.col[2] * k;
         if (q.mat !== Mat.Glow) {
-          // lamp light where the ray hit, strongest on tops and low down, so a car lights up as it passes under a lamp
+          // the light where the ray hit, strongest on tops: a car lights up under a lamp or in another's headlights
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;
-          const gl = v.glow(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c) * (1 - Math.min(1, Math.max(0, hz - 1) / 8)) * (face === 2 ? 1.5 : 1.1) * fog;
-          r += v.lamp[0] * gl; g += v.lamp[1] * gl; b += v.lamp[2] * gl;
+          const L = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz), gl = (face === 2 ? 1.5 : 1.1) * fog;
+          r += L[0] * gl; g += L[1] * gl; b += L[2] * gl;
         }
         grid.put(i, ch, r, g, b);
         depth[i] = best;

@@ -32,12 +32,11 @@ export function carModel(col: RGB, taxi: boolean): Part[] {
 }
 
 const lamps = new Map<string, Part[]>();
-/** Street lamp: a pole on a base, with an arm reaching over the street (+x) to the lamp head. */
-export function lampModel(light: RGB): Part[] {
-  const key = light.join();
+/** Street lamp: a pole on a base, with an arm reaching over the street (+x) to the lamp head, glowing `head`. */
+export function lampModel(head: RGB): Part[] {
+  const key = head.join();
   let m = lamps.get(key);
   if (m) return m;
-  const s = 255 / Math.max(...light), head: RGB = [light[0] * s, light[1] * s, light[2] * s];
   m = [
     part(Cyl, -0.18, -0.18, 0, 0.18, 0.18, 0.6, STEEL, Solid, '#', '='),
     part(Cyl, -0.08, -0.08, 0, 0.08, 0.08, 6.6, STEEL, Solid, '|', '.'),
