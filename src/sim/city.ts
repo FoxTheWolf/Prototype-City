@@ -72,7 +72,7 @@ const FURNITURE: Record<DistrictType, [PropKind, number][]> = {
   commercial: [['bin', 3], ['news', 2], ['payphone', 2], ['bench', 2], ['mailbox', 1], ['shelter', 1]],
   residential: [['bin', 2], ['bench', 1], ['mailbox', 1], ['payphone', 1], ['dumpster', 1]],
   historic: [['bench', 3], ['bin', 2], ['payphone', 1], ['mailbox', 1]],
-  industrial: [['dumpster', 2], ['debris', 3], ['bin', 1]],
+  industrial: [['dumpster', 2], ['bin', 1]],
 };
 
 const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot: number; lotCore: number; open: OpenKind; openP: number; empty: number; shop: number }> = {
@@ -465,7 +465,7 @@ export function generateCity(seed: number, size: number): City {
         let pick = fr() * total, kind = kinds[0][0];
         for (const [k, wgt] of kinds) { if ((pick -= wgt) < 0) { kind = k; break; } }
         // dumpsters and rubble sit against the buildings, the rest near the curb
-        const back = kind === 'dumpster' || kind === 'debris' ? 2.2 : kind === 'shelter' ? 1.3 : 0.7;
+        const back = kind === 'dumpster' ? 2.2 : kind === 'shelter' ? 1.3 : 0.7;
         block.props.push({ kind, x: ax + ux * d - nx * back, y: ay + uy * d - ny * back, w: 0, z1: 0, seed: (fr() * 1e6) | 0, a });
       }
     }

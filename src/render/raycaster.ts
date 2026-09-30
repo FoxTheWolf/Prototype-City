@@ -6,7 +6,7 @@ import { BLOCK } from './atlas';
 import { LightWindow } from './lightmap';
 import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
-import { PALETTES, type Look } from './palette';
+import { LAMP, type Look } from './palette';
 
 export interface View {
   x: number;
@@ -31,6 +31,8 @@ const GROUND_FAR = 600;
 const SPRITE_FAR = 250;
 /** Distance where building fog reaches ~63%. Long, so the skyline reads across the whole city. */
 const FOG = 1500;
+/** Litter on the ground is drawn only this close. */
+const LITTER_FAR = 14;
 /** Width of one window bay on a facade. */
 const BAY = 1.6;
 
@@ -41,9 +43,17 @@ const G = {
   o: C('o'), lb: C('['), rb: C(']'), sl: C('/'), bs: C('\\'), caret: C('^'), x: C('x'), tilde: C('~'), lp: C('('), rp: C(')'),
 };
 
+/** Litter by tenths of its kind roll: glyph and color. The first two are bags, the last a cigarette butt. */
+const LITTER: [number, number, number, number][] = [
+  [C('@'), 38, 38, 44], [C('@'), 60, 58, 50], // trash bags
+  [C('u'), 225, 220, 205], [C('u'), 200, 60, 50], // paper cups
+  [C('o'), 175, 180, 190], [C('='), 190, 50, 45], // cans
+  [C('#'), 205, 200, 180], [C('~'), 190, 185, 160], [C('%'), 150, 120, 80], // paper, newspaper, cardboard
+  [C('.'), 230, 150, 90], // cigarette butt
+];
 const light = new LightWindow();
 /** Solid mode: the background behind a glyph is its own color at this strength. */
-const SOLID = 0.36;
+const SOLID = 0.24;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -73,7 +83,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   // metres covered by one column at distance 1, to pick the level of facade detail
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
-  const [lr, lg, lb] = PALETTES[v.look.palette].lamp;
+  const [lr, lg, lb] = LAMP;
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
@@ -110,6 +120,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       const cx = city.xCell[wx | 0], cy = city.yCell[wy | 0];
       const hv = hash3(Math.floor(wx * 1.2), Math.floor(wy * 1.2), 3);
       let ch = G.dot, r = 38, g = 38, b = 46;
+      let dens = 0; // litter per 0.5 m square
       const roadX = !(cx & 1), roadY = !(cy & 1);
       if (roadX || roadY) {
         ch = hv < 0.5 ? G.dot : hv < 0.8 ? G.com : G.tick;
@@ -122,6 +133,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           const m = a % LANE_W;
           if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
           else if (a < 0.3) { ch = roadX ? G.bar : G.dash; r = 210; g = 170; b = 60; }
+          else if ((b0[bc + 1] - b0[bc]) / 2 - a < 1.2) dens = 0.07; // the gutter collects what the wind blows
           else if (Math.min(m, LANE_W - m) < 0.12 && a < lanesOf(b0, bc >> 1) * LANE_W - 1 && Math.floor(along / 3) % 2 === 0) {
             ch = roadX ? G.bar : G.dash; r = 150; g = 150; b = 150;
           }
@@ -132,7 +144,9 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
         if (edge < SIDEWALK) {
           const fx = wx / 1.5 - Math.floor(wx / 1.5), fy = wy / 1.5 - Math.floor(wy / 1.5);
           ch = fx < 0.08 || fy < 0.08 ? G.plus : G.col; r = 78; g = 74; b = 78;
+          dens = city.districts[blk.district].type === 'industrial' ? 0.06 : 0.025;
         } else if (blk.open === 'park') {
+          dens = 0.01;
           const mx = (blk.x0 + blk.x1) / 2, my = (blk.y0 + blk.y1) / 2;
           if (Math.abs(wx - mx) < 1.5 || Math.abs(wy - my) < 1.5) { ch = hv < 0.5 ? G.dot : G.com; r = 95; g = 85; b = 70; } // gravel paths
           else { ch = hv < 0.4 ? G.quo : hv < 0.7 ? G.com : G.semi; r = 40; g = 95 + hv * 40; b = 45; }
@@ -148,6 +162,19 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           else if (a > 1.2 && a < 3.3 && u % 0.8 < 0.25) { ch = long ? G.bar : G.eq; r = 70; g = 52; b = 40; }
           else { ch = hv < 0.6 ? G.dot : G.com; r = 55; g = 50; b = 48; }
         } else { ch = hv < 0.7 ? G.dot : G.com; r = 50; g = 48; b = 52; }
+      }
+      if (dens && rd < LITTER_FAR) {
+        // litter: at most one item per 0.5 m square, fixed to the ground; at a distance an item
+        // grows to the ground one row covers, so it does not slip between rows
+        const gx = Math.floor(wx * 2), gy = Math.floor(wy * 2), h = hash3(gx, gy, 17);
+        if (h < dens) {
+          const kind = hash3(gx, gy, 18), size = kind < 0.2 ? 0.26 : kind < 0.9 ? 0.14 : 0.05;
+          const reach = Math.max(size, (rd * rd) / (eye * scale) * 0.5);
+          if (Math.hypot(wx - (gx + 0.25 + 0.5 * hash3(gx, gy, 19)) / 2, wy - (gy + 0.25 + 0.5 * hash3(gx, gy, 20)) / 2) < reach) {
+            const L = LITTER[Math.min(LITTER.length - 1, Math.floor(kind * 10))];
+            ch = L[0]; r = L[1]; g = L[2]; b = L[3];
+          }
+        }
       }
       grid.put(i, ch, r * fog + glow * lr, g * fog + glow * lg, b * fog + glow * lb);
     }
@@ -474,7 +501,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
 function collectObjects(world: World, v: View): Obj[] {
   const out: Obj[] = [];
   const { city } = world;
-  const lamp = lampModel(PALETTES[v.look.palette].lamp);
+  const lamp = lampModel(LAMP);
   const cl = (a: number, n: number) => Math.min(n - 1, Math.max(0, a | 0));
   const cx0 = city.xCell[cl(v.x - SPRITE_FAR, city.w)], cx1 = city.xCell[cl(v.x + SPRITE_FAR, city.w)];
   const cy0 = city.yCell[cl(v.y - SPRITE_FAR, city.h)], cy1 = city.yCell[cl(v.y + SPRITE_FAR, city.h)];
