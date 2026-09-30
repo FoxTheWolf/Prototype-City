@@ -462,7 +462,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
       const col = Math.floor(signU / LETTER_W) - 1, inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
       const k = rev ? signN - 1 - col : col, c = inText ? text.charCodeAt(k) : 32;
-      const lit = signLight(B.biz, mode, inText ? k : -1, signN, frameSec) * winLight;
+      const lit = signLight(B.biz, mode, inText ? k : -1, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
       // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
       const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
       if (inText && c !== 32 && (!letters || center)) {

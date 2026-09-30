@@ -1,3 +1,4 @@
+import { Sound } from './audio/sound';
 import { Input } from './input';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
@@ -53,7 +54,8 @@ let solidStep = 1; // 0.16, the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
+  if (e.code === 'KeyM') sound?.toggleMute();
+  else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
 });
 
@@ -79,7 +81,12 @@ function readInput(): PlayerInput {
   return { forward: running ? f : 0, strafe: running ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
+// audio can only start from a click, so it is made on entering the city
+let sound: Sound | null = null;
+
 function begin() {
+  sound ??= new Sound();
+  sound.resume();
   overlay.hidden = true;
   running = true;
   input.lock();
@@ -129,7 +136,7 @@ function frame(now: number) {
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'} `;
+    + `[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
@@ -138,6 +145,7 @@ function frame(now: number) {
   city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
+  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60);
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }

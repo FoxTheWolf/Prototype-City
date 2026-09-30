@@ -33,8 +33,9 @@ export function signMode(city: City, biz: number): number {
 }
 
 /**
- * Brightness 0..1 of letter k of n at time `sec` (seconds). Unlit tubes stay faintly visible.
- * k = -1 asks for the whole sign (used for the frame).
+ * Brightness 0..1 of letter k at time `sec` (seconds). Unlit tubes stay faintly visible.
+ * k = -1 asks for the whole sign (used for the frame). n is the length of the full name, so the
+ * timing is the same on every face (a narrow face shows a shortened name) and for the sound.
  */
 export function signLight(biz: number, mode: number, k: number, n: number, sec: number): number {
   const OFF = 0.12;
