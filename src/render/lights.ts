@@ -20,6 +20,12 @@ export class DynLights {
   /** Full strength up to height zFull, fading to nothing at zTop. */
   private zFull = new Float32Array(MAX); private zTop = new Float32Array(MAX);
   private r = new Float32Array(MAX); private g = new Float32Array(MAX); private b = new Float32Array(MAX);
+  /**
+   * Segment: brightness of the pieces along it (the letters of a sign), as running sums in `lv`
+   * starting at lv0, lvN pieces; lvN = 0 means evenly lit.
+   */
+  private lv0 = new Int32Array(MAX); private lvN = new Uint16Array(MAX); private lvH = new Float32Array(MAX);
+  private lv = new Float32Array(MAX * 8); private lvUsed = 0;
   private buckets: number[][] = Array.from({ length: SIDE * SIDE }, () => []);
   private used: number[] = [];
   private bx = 0; private by = 0;
@@ -28,7 +34,7 @@ export class DynLights {
   begin(x: number, y: number) {
     for (const k of this.used) this.buckets[k].length = 0;
     this.used.length = 0;
-    this.n = 0;
+    this.n = 0; this.lvUsed = 0;
     this.bx = Math.floor(x / CELL) - SIDE / 2; this.by = Math.floor(y / CELL) - SIDE / 2;
   }
 
@@ -46,11 +52,38 @@ export class DynLights {
       Math.min(x0, x1) - range, Math.min(y0, y1) - range, Math.max(x0, x1) + range, Math.max(y0, y1) + range);
   }
 
+  /**
+   * A segment made of pieces with their own brightness (0..1, in order from (x0, y0)): a point takes
+   * the brightness of the pieces around its nearest spot on the strip, over a stretch that widens
+   * with the distance (right against the wall only the piece in front counts).
+   */
+  pieces(x0: number, y0: number, x1: number, y1: number, nx: number, ny: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number, levels: number[]) {
+    const n = levels.length;
+    if (this.lvUsed + n + 1 > this.lv.length || this.n >= MAX) return;
+    if (levels.every((l) => l === levels[0])) {
+      // all pieces alike (a steady or blinking sign): an ordinary segment
+      this.segment(x0, y0, x1, y1, nx, ny, range, zFull, zTop, r * levels[0], g * levels[0], b * levels[0]);
+      return;
+    }
+    this.segment(x0, y0, x1, y1, nx, ny, range, zFull, zTop, r, g, b);
+    const i = this.n - 1, o = this.lvUsed;
+    this.lv0[i] = o; this.lvN[i] = n; this.lvH[i] = n / Math.hypot(x1 - x0, y1 - y0); this.lv[o] = 0;
+    for (let k = 0; k < n; k++) this.lv[o + k + 1] = this.lv[o + k] + levels[k];
+    this.lvUsed += n + 1;
+  }
+
+  /** Running sum of the pieces of light i up to position p (in pieces, may be fractional). */
+  private lvSum(i: number, p: number) {
+    const o = this.lv0[i], k = Math.floor(p);
+    return k >= this.lvN[i] ? this.lv[o + k] : this.lv[o + k] + (this.lv[o + k + 1] - this.lv[o + k]) * (p - k);
+  }
+
   private add(kind: number, x: number, y: number, u: number, w: number, nx: number, ny: number, range: number, zFull: number, zTop: number,
     r: number, g: number, b: number, ax: number, ay: number, bx: number, by: number) {
     if (this.n >= MAX) return;
     const i = this.n++;
     this.kind[i] = kind; this.x[i] = x; this.y[i] = y; this.u[i] = u; this.w[i] = w; this.nx[i] = nx; this.ny[i] = ny;
+    this.lvN[i] = 0;
     this.range[i] = range; this.zFull[i] = zFull; this.zTop[i] = zTop; this.r[i] = r; this.g[i] = g; this.b[i] = b;
     const i0 = Math.max(0, Math.floor(ax / CELL) - this.bx), i1 = Math.min(SIDE - 1, Math.floor(bx / CELL) - this.bx);
     const j0 = Math.max(0, Math.floor(ay / CELL) - this.by), j1 = Math.min(SIDE - 1, Math.floor(by / CELL) - this.by);
@@ -69,7 +102,7 @@ export class DynLights {
       const zk = pz <= this.zFull[k] ? 1 : (this.zTop[k] - pz) / (this.zTop[k] - this.zFull[k]);
       if (zk <= 0) continue;
       const R = this.range[k];
-      let dx = px - this.x[k], dy = py - this.y[k], f = 0;
+      let dx = px - this.x[k], dy = py - this.y[k], f = 0, lvl = 1;
       const kind = this.kind[k];
       if (kind === LightKind.Segment) {
         // distance to the strip, only on the side it faces
@@ -77,6 +110,11 @@ export class DynLights {
         const sx = this.u[k] - this.x[k], sy = this.w[k] - this.y[k];
         const t = Math.max(0, Math.min(1, (dx * sx + dy * sy) / (sx * sx + sy * sy)));
         dx -= sx * t; dy -= sy * t;
+        const n = this.lvN[k];
+        if (n) {
+          const h = (0.3 + 0.5 * Math.hypot(dx, dy)) * this.lvH[k], c = t * n, a = Math.max(0, c - h), b = Math.min(n, c + h);
+          lvl = (this.lvSum(k, b) - this.lvSum(k, a)) / (b - a);
+        }
       }
       const d = Math.hypot(dx, dy);
       if (d >= R) continue;
@@ -86,7 +124,7 @@ export class DynLights {
         if (c <= c0) continue;
         f *= Math.min(1, (c - c0) / ((1 - c0) * 0.5));
       }
-      f *= zk;
+      f *= zk * lvl;
       out[0] += this.r[k] * f; out[1] += this.g[k] * f; out[2] += this.b[k] * f;
     }
   }

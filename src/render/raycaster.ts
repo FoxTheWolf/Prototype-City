@@ -584,6 +584,8 @@ function lightAt(x: number, y: number, z: number) {
   dyn.sample(x, y, z, LT);
 }
 
+const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
+
 /** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
 function gatherLights(world: World, v: View, sec: number) {
   const { city } = world;
@@ -600,16 +602,27 @@ function gatherLights(world: World, v: View, sec: number) {
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
       if (B.biz < 0 || B.round) continue;
-      const mode = signMode(city, B.biz), lit = signLight(B.biz, mode, -1, signText(city, B.biz, 255).length, sec);
-      const [sr, sg, sb] = B.sign, q = 0.4 * lit;
+      const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
+      const [sr, sg, sb] = B.sign, q = 0.4, whole = signLight(B.biz, mode, -1, full, sec);
+      // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims
+      // its own spot; farther away the sign is lit evenly, as a whole
+      const near = Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < SIGN_LETTER_LIGHT;
       for (let f = 0; f < 4; f++) {
         const alongX = f >= 2, len = alongX ? B.x1 - B.x0 : B.y1 - B.y0;
         const n = signText(city, B.biz, Math.floor((len - 1.2) / LETTER_W) - 2).length;
         if (n < 3) continue;
         const half = ((n + 2) * LETTER_W) / 2, mid = alongX ? (B.x0 + B.x1) / 2 : (B.y0 + B.y1) / 2;
         const edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
-        if (alongX) dyn.segment(mid - half, edge, mid + half, edge, 0, out, 7, 3.5, 7, sr * q, sg * q, sb * q);
-        else dyn.segment(edge, mid - half, edge, mid + half, out, 0, 7, 3.5, 7, sr * q, sg * q, sb * q);
+        // the letters in order of increasing coordinate, with the frame's padding at both ends
+        const rev = f === 1 || f === 2; // same reading order as wallColumn
+        const x0 = alongX ? mid - half : edge, y0 = alongX ? edge : mid - half, x1 = alongX ? mid + half : edge, y1 = alongX ? edge : mid + half;
+        const nx = alongX ? 0 : out, ny = alongX ? out : 0;
+        if (near) {
+          LEVELS.length = 0;
+          for (let col = 0; col < n; col++) LEVELS[col + 1] = signLight(B.biz, mode, rev ? n - 1 - col : col, full, sec);
+          LEVELS[0] = LEVELS[n + 1] = whole;
+          dyn.pieces(x0, y0, x1, y1, nx, ny, 7, 3.5, 7, sr * q, sg * q, sb * q, LEVELS);
+        } else dyn.segment(x0, y0, x1, y1, nx, ny, 7, 3.5, 7, sr * q * whole, sg * q * whole, sb * q * whole);
       }
     }
   }
