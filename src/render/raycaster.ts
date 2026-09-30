@@ -32,6 +32,8 @@ const GROUND_FAR = 600;
 const SPRITE_FAR = 250;
 /** Distance where building fog reaches ~63%. Long, so the skyline reads across the whole city. */
 const FOG = 1500;
+/** Street lamps light walls and objects up to this height, and this far from the viewer. */
+const LIT_H = 9, LIT_FAR = 600;
 /** Litter on the ground is drawn only this close. */
 const LITTER_FAR = 14;
 /** Width of one window bay on a facade. */
@@ -239,7 +241,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
                 const rr = (B.x1 - B.x0) / 2, nx = (px + t * rdx - B.x0 - rr) / rr, ny = (py + t * rdy - B.y0 - rr) / rr;
                 along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx);
               } else { along = side === 0 ? py + t * rdy : px + t * rdx; lightK = side ? 0.72 : 1; }
-              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW, side === 0 ? rdx < 0 : rdy > 0, (colW * t) / Math.max(1e-6, Math.abs(side === 0 ? rdx : rdy)));
+              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW, side === 0 ? rdx < 0 : rdy > 0, (colW * t) / Math.max(1e-6, Math.abs(side === 0 ? rdx : rdy)), t < LIT_FAR ? light.at(px + t * rdx, py + t * rdy) : 0);
             }
             clipTop = Math.min(clipTop, Math.max(0, top));
           }
@@ -254,7 +256,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
-  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR });
+  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, glow: (x, y) => light.at(x, y), lamp: LAMP });
   finish(grid, v.look);
 }
 
@@ -367,7 +369,7 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
 }
 
 /** One building face in one column, rows y0..y1. `along` is where the ray hit the face; `top` is the unclipped roof row. */
-function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number) {
+function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number, glow: number) {
   // side 2 is a cylinder: no corners
   const f0 = side === 0 ? B.y0 : side === 1 ? B.x0 : -1e9, f1 = side === 0 ? B.y1 : side === 1 ? B.x1 : 1e9;
   const fogK = 1 - Math.exp(-t / FOG);
@@ -529,6 +531,11 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
+    if (glow > 0 && z < LIT_H) {
+      // street lamps light the lower floors; the light fades with height above the lamp's pool
+      const k = glow * (1 - Math.max(0, z - 1) / (LIT_H - 1)) * 1.3 * shade;
+      r += LAMP[0] * k; g += LAMP[1] * k; b += LAMP[2] * k;
+    }
     grid.put(i, ch, r, g, b);
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = t;
