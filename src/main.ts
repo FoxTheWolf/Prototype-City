@@ -10,7 +10,7 @@ import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
-import { PRESETS } from './sim/weather';
+import { lightning, PRESETS } from './sim/weather';
 import { createWorld, cycleWeather, skipHours, stepWorld, TICK, type PlayerInput } from './sim/world';
 
 /** The grid always has this many rows; columns follow the window shape. */
@@ -100,6 +100,7 @@ function begin() {
 overlay.addEventListener('click', begin);
 canvas.addEventListener('click', () => { if (!input.locked) input.lock(); });
 
+const bolt = new Float64Array(2);
 let last = performance.now();
 let acc = 0;
 let fps = 60;
@@ -155,7 +156,8 @@ function frame(now: number) {
   city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
-  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time));
+  const W = world.weather;
+  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1]);
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }

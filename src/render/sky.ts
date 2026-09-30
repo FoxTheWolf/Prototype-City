@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { type City } from '../sim/city';
 import { moonDir, moonPhase, sunDir } from '../sim/clock';
-import { type Weather } from '../sim/weather';
+import { lightning, type Weather } from '../sim/weather';
 import { type CharGrid } from './grid';
 
 /**
@@ -46,6 +46,8 @@ export interface SkyFrame {
   moonlight: number;
   cloud: number;
   precip: number;
+  /** Lightning flash 0..1. */
+  flash: number;
   /** Wind drift of the cloud texture in metres. */
   driftX: number;
   driftY: number;
@@ -61,7 +63,8 @@ export function daylight(t: number) {
   return smooth(-0.1, 0.1, sunDir(t, tmp)[0]);
 }
 
-export function prepareSky(city: City, w: Weather, t: number, sec: number): SkyFrame {
+const bolt = new Float64Array(2);
+export function prepareSky(city: City, w: Weather, seed: number, t: number, sec: number): SkyFrame {
   sunDir(t, tmp);
   const sunEl = tmp[0], sunA = heading(tmp[1]);
   moonDir(t, tmp);
@@ -71,7 +74,7 @@ export function prepareSky(city: City, w: Weather, t: number, sec: number): SkyF
   return {
     day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, moonA, moonEl, phase,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) : 0,
-    cloud: w.cloud, precip: w.precip, driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city,
+    cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city,
   };
 }
 
@@ -163,6 +166,8 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
         qr += grey; qg += grey * 1.01; qb += grey * 1.06;
         // dusk paints the undersides on the sun's side; the moon silvers thin edges
         qr += 150 * S.dusk * toSun * (1 - thick * 0.5); qg += 60 * S.dusk * toSun; qb += 30 * S.dusk;
+        // lightning lights the deck from inside, white-violet
+        qr += 190 * S.flash; qg += 185 * S.flash; qb += 230 * S.flash;
         const ml = S.moonlight * (1 - thick) * 60;
         qr += ml; qg += ml; qb += ml * 1.15;
         if (moonA) { qr += cr * 0.3 * (1 - thick); qg += cg * 0.3 * (1 - thick); qb += cb * 0.3 * (1 - thick); }

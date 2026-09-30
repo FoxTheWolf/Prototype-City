@@ -55,6 +55,8 @@ export interface Cam {
   far: number;
   /** All the light reaching a world point at a height, as r, g, b. */
   light: (x: number, y: number, z: number) => Float32Array;
+  /** Snow lying on top faces, 0..1. */
+  snow?: number;
 }
 
 const C = (s: string) => s.charCodeAt(0);
@@ -210,6 +212,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           } else ch = face === 2 ? q.top : face === 0 && q.shape === Shape.Box ? q.end : q.side;
         }
         let r = q.col[0] * k, g = q.col[1] * k, b = q.col[2] * k;
+        if (face === 2 && v.snow && q.mat !== Mat.Glow && q.mat !== Mat.Text) { const sk = v.snow * 0.85; r += (185 - r) * sk; g += (190 - g) * sk; b += (200 - b) * sk; }
         if (q.mat !== Mat.Glow && q.mat !== Mat.Text) {
           // the light where the ray hit, strongest on tops: a car lights up under a lamp or in another's headlights
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;

@@ -1,6 +1,7 @@
 import { LAMP_LIGHT, lampId, lampMode, LampMode, lampState, lampStutter, photocell } from '../render/lamps';
 import { signLight, signMode, SignMode, signStutter, signText } from '../render/signs';
 import { type City } from '../sim/city';
+import { type Weather } from '../sim/weather';
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
@@ -22,6 +23,11 @@ export class Sound {
   private crackle: GainNode;
   private neonPan: StereoPannerNode;
   private fire: GainNode;
+  private city: GainNode;
+  private rain: GainNode;
+  private rainLow: GainNode;
+  private noise: AudioBuffer;
+  private lastBolt = -1;
   muted = false;
 
   constructor() {
@@ -30,11 +36,13 @@ export class Sound {
     const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = noise;
     const src = () => { const s = ctx.createBufferSource(); s.buffer = noise; s.loop = true; s.start(); return s; };
 
     // city rumble: low-passed noise whose cutoff drifts slowly, like traffic far away
     const cityLp = filter(ctx, 'lowpass', 260, 0.7);
-    src().connect(cityLp).connect(gain(ctx, 0.35, this.master));
+    this.city = gain(ctx, 0.35, this.master);
+    src().connect(cityLp).connect(this.city);
     const drift = ctx.createOscillator();
     drift.frequency.value = 0.06;
     drift.connect(gain(ctx, 120, cityLp.frequency));
@@ -60,10 +68,33 @@ export class Sound {
     hiss.connect(this.crackle);
     hiss.connect(this.humCrackle);
 
+    // rain: a hiss of drops on the pavement, and in a downpour the low roar of water everywhere
+    this.rain = gain(ctx, 0, this.master);
+    src().connect(filter(ctx, 'bandpass', 2600, 0.5)).connect(this.rain);
+    this.rainLow = gain(ctx, 0, this.master);
+    src().connect(filter(ctx, 'lowpass', 500, 0.6)).connect(this.rainLow);
+
     // burning seam: a deep roar
     this.fire = gain(ctx, 0, this.master);
     tone(ctx, 'sine', 38, 0.6, this.fire);
     src().connect(filter(ctx, 'lowpass', 110, 0.8)).connect(gain(ctx, 1.2, this.fire));
+  }
+
+  /** Thunder after `delay` seconds: a crack, then a long low roll that fades. */
+  private thunder(delay: number) {
+    const ctx = this.ctx, t0 = ctx.currentTime + delay;
+    const s = ctx.createBufferSource();
+    s.buffer = this.noise; s.loop = true;
+    const lp = filter(ctx, 'lowpass', 900, 0.7), g = gain(ctx, 0, this.master);
+    s.connect(lp).connect(g);
+    lp.frequency.setValueAtTime(900, t0);
+    lp.frequency.exponentialRampToValueAtTime(90, t0 + 3);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.9, t0 + 0.08);
+    g.gain.setTargetAtTime(0.35, t0 + 0.3, 0.4);
+    g.gain.setTargetAtTime(0, t0 + 1.5, 1.6);
+    s.start(t0);
+    s.stop(t0 + 9);
   }
 
   /** Browsers only start audio after a click; call from one. */
@@ -74,10 +105,19 @@ export class Sound {
     this.master.gain.setTargetAtTime(this.muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
   }
 
-  /** Follow the listener: position, heading and the time in seconds (the signs' clock). */
-  /** day: 0 at night .. 1 in daylight, for the lamps' photocells. */
-  update(city: City, x: number, y: number, yaw: number, sec: number, day: number) {
+  /**
+   * Follow the listener: position, heading and the time in seconds (the signs' clock); day (0 at
+   * night .. 1 in daylight) for the lamps' photocells; the weather; and the lightning bolt now
+   * flashing (-1 for none), whose thunder follows once, a few seconds later.
+   */
+  update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number) {
     const now = this.ctx.currentTime;
+    const rain = w.snow ? 0 : w.precip;
+    this.rain.gain.setTargetAtTime(0.28 * Math.min(1, rain * 1.4), now, 0.4);
+    this.rainLow.gain.setTargetAtTime(0.35 * Math.max(0, rain - 0.4), now, 0.6);
+    // falling and lying snow muffle the city
+    this.city.gain.setTargetAtTime(0.35 * (1 - 0.6 * Math.max(w.snow ? w.precip : 0, w.snowCover)), now, 1);
+    if (bolt >= 0 && bolt !== this.lastBolt) { this.lastBolt = bolt; this.thunder(1 + ((bolt * 7919) % 50) / 10); }
     // screen-right direction, for panning
     const rx = -Math.sin(yaw), ry = Math.cos(yaw);
     const pan = (px: number, py: number) => { const d = Math.hypot(px - x, py - y) || 1; return ((px - x) * rx + (py - y) * ry) / d; };

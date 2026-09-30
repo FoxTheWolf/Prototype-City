@@ -10,6 +10,7 @@ import { bladeText } from '../locale/names';
 import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
+import { drawFall } from './precip';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
@@ -74,7 +75,7 @@ const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
-let frameCity: City, frameSec = 0, frameDay = 0;
+let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -106,8 +107,10 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const time = world.tick + v.alpha;
   frameCity = city; frameSec = time / 60;
   const D = city.diagonal, diagGlyph = D.ex * D.ey > 0 ? G.bs : G.sl;
-  const sky = prepareSky(city, world.weather, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
+  const sky = prepareSky(city, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
   frameDay = sky.day;
+  // what the weather leaves on the ground: wet streets that mirror the lights, splashes, snow
+  const W = world.weather, wet = W.wet, snowC = (frameSnow = W.snowCover), rain = W.snow ? 0 : W.precip;
   light.update(frameSec, sky.day);
   gatherLights(world, v, frameSec);
 
@@ -208,8 +211,33 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           if (hit) { ch = L[0]; r = L[1]; g = L[2]; b = L[3]; }
         }
       }
+      let lk = 1;
+      if (snowC > 0.02) {
+        // snow lies thickest on sidewalks and in parks; traffic keeps the roadway half clear
+        const sk = snowC * (roadX || roadY || pastD < 0 ? 0.5 : 1);
+        r += (200 - r) * sk; g += (205 - g) * sk; b += (218 - b) * sk;
+        // a snowy surface reads as dense, pale glyphs; markings and litter disappear under it
+        if (sk > 0.35) ch = hv < 0.55 ? G.col : hv < 0.85 ? G.semi : G.dot;
+      }
+      if (wet > 0.02) {
+        // wet asphalt is darker and throws the lamps' light back, rippling while it rains
+        const wk = wet * (1 - snowC);
+        r *= 1 - 0.35 * wk; g *= 1 - 0.35 * wk; b *= 1 - 0.3 * wk;
+        lk = 1 + 1.1 * wk * (rain > 0 ? 0.75 + 0.25 * Math.sin(frameSec * 7 + hv * 30) : 1);
+        if (rain > 0 && rd < 22) {
+          // splashes: a ring and a drop for a blink, here and there, more in a downpour
+          // a ring that grows from a random spot of each 0.33 m square; a cell at a distance covers
+          // more ground (e), so there it shrinks to a dot
+          const gx = Math.floor(wx * 3), gy = Math.floor(wy * 3), ph = (frameSec * 2.3 + hash3(gx, gy, 41)) % 1;
+          if (hash3(gx, gy, 42) < rain * 0.3 && ph < 0.09) {
+            const d = Math.hypot(wx - (gx + 0.2 + 0.6 * hash3(gx, gy, 43)) / 3, wy - (gy + 0.2 + 0.6 * hash3(gx, gy, 44)) / 3);
+            const e = ((rd * rd) / (eye * scale)) * 0.5, rr = 0.02 + ph * 1.1;
+            if (Math.abs(d - rr) < Math.max(0.015, e)) { ch = rr < 0.05 || e > 0.04 ? G.tick : G.o; r = g = 150; b = 165; }
+          }
+        }
+      }
       lightAt(wx, wy, 0);
-      grid.put(i, ch, (r + LT[0]) * fog, (g + LT[1]) * fog, (b + LT[2]) * fog);
+      grid.put(i, ch, (r + LT[0] * lk) * fog, (g + LT[1] * lk) * fog, (b + LT[2] * lk) * fog);
     }
 
     // ---- walls: walk the street grid front to back. Inside each block, hit its buildings in
@@ -292,7 +320,9 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
-  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: (x, y, z) => { lightAt(x, y, z); return LT; } });
+  const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
+  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
+  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit);
   finish(grid, v.look, sky);
 }
 
@@ -302,8 +332,8 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
   // by day the world is brighter and sinks into a pale haze with distance: the "service" look
   const day = sky.day;
   for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
-    if (day > 0.01 && depth[i] < 1e9) {
-      const f = day * (0.25 + 0.6 * (1 - Math.exp(-depth[i] / 1500))), amb = 1 + 0.7 * day;
+    if ((day > 0.01 || sky.flash > 0) && depth[i] < 1e9) {
+      const f = day * (0.25 + 0.6 * (1 - Math.exp(-depth[i] / 1500))), amb = 1 + 0.7 * day + sky.flash * 0.6;
       cells[k + 1] = cells[k + 1] * amb * (1 - f) + 138 * f; cells[k + 2] = cells[k + 2] * amb * (1 - f) + 146 * f; cells[k + 3] = cells[k + 3] * amb * (1 - f) + 156 * f;
     }
     if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
@@ -473,7 +503,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       if (z > B.h - 1) { ch = G.star; r = B.win[0] * winLight; g = B.win[1] * winLight; b = B.win[2] * winLight; }
       else if (S === 'chimney' && ((z > B.h - 6 && z < B.h - 4.5) || (z > B.h - 10 && z < B.h - 8.5))) wall(G.eq, 1.9);
       else wall(S === 'chimney' && detailed ? G.eq : G.bar, S === 'spire' ? 1.2 : 1);
-    } else if (y === top || z > B.h - 0.6) wall(G.us, 1.5);
+    } else if (y === top || z > B.h - 0.6) {
+      wall(G.us, 1.5);
+      if (frameSnow > 0.05) { const k = frameSnow * 0.8; r += (190 - r) * k; g += (195 - g) * k; b += (205 - b) * k; } // snow on the ledge
+    }
     else if (clockR && Math.hypot(du, z - clockZ) < clockR) {
       // lit face, a ring, and hands at ten past ten (they will follow the sim clock once it exists)
       const dz = z - clockZ, d = Math.hypot(du, dz);

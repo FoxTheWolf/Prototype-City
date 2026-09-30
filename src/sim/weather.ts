@@ -68,3 +68,23 @@ export function stepWeather(w: Weather, seed: number, t: number, dt: number) {
   // snow builds up over a couple of hours of steady snowfall and melts above freezing
   w.snowCover = clamp(w.snowCover + dt * (fall / 7200 - Math.max(0, w.temp) / 36000 - rain / 3600));
 }
+
+/**
+ * Lightning in a storm, from the seed and the game time: in every 5-minute slot a bolt may strike
+ * at a random moment, flashing twice. Returns the flash 0..1 in out[0] and the bolt's number in
+ * out[1] (-1 when none is flashing), so the thunder can follow it once.
+ */
+export function lightning(seed: number, t: number, precip: number, out: Float64Array) {
+  out[0] = 0; out[1] = -1;
+  const p = Math.max(0, (precip - 0.7) / 0.3) * 0.6;
+  if (p <= 0) return out;
+  const slot = Math.floor(t / 300);
+  for (const k of [slot, slot - 1]) {
+    if (hash3(seed, k, 31) >= p) continue;
+    const dt = t - (k * 300 + hash3(seed, k, 32) * 290);
+    if (dt < 0 || dt > 9) continue; // a flash lasts about a third of a real second
+    out[0] = Math.max(dt < 3 ? 1 - dt / 3 : 0, dt > 4.5 && dt < 9 ? 0.7 * (1 - (dt - 4.5) / 4.5) : 0);
+    out[1] = k;
+  }
+  return out;
+}
