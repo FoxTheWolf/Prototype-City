@@ -4,7 +4,7 @@ import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
 import { CharGrid } from './render/grid';
 import { renderWorld } from './render/raycaster';
-import { cityName, districtName, districtType, roadName, sectorCode } from './locale/names';
+import { cityName, compass, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { districtAt, nearestRoad } from './sim/city';
 import { createWorld, stepWorld, TICK, type PlayerInput } from './sim/world';
 
@@ -108,7 +108,10 @@ function frame(now: number) {
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
     + `${roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
-  grid.text(1, 0, where, [120, 220, 255], [8, 10, 14]);
+  let lm = 0;
+  city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
+  const L = city.landmarks[lm];
+  grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }

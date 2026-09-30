@@ -57,15 +57,27 @@ export interface District {
   pick: number;
 }
 
+/** A block without buildings: a park with trees, a paved plaza or an industrial rail yard. */
+export type OpenKind = 'park' | 'plaza' | 'yard';
+
 /** How each district type shapes its blocks. */
-const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot: number; lotCore: number; park: number; empty: number; shop: number }> = {
-  //            floors at the edge, x downtown growth, max floors, lot size (+ downtown), park/empty/shop chance
-  financial: { base: 3, tall: 1, cap: 999, lot: 14, lotCore: 36, park: 0.02, empty: 0.04, shop: 0.6 },
-  commercial: { base: 3, tall: 0.7, cap: 30, lot: 14, lotCore: 20, park: 0.03, empty: 0.06, shop: 0.8 },
-  residential: { base: 3, tall: 0.5, cap: 14, lot: 12, lotCore: 10, park: 0.08, empty: 0.05, shop: 0.12 },
-  historic: { base: 4, tall: 0.3, cap: 9, lot: 10, lotCore: 8, park: 0.07, empty: 0.02, shop: 0.5 },
-  industrial: { base: 1.5, tall: 0.1, cap: 4, lot: 30, lotCore: 20, park: 0.01, empty: 0.15, shop: 0.04 },
+const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot: number; lotCore: number; open: OpenKind; openP: number; empty: number; shop: number }> = {
+  //            floors at the edge, x downtown growth, max floors, lot size (+ downtown), open block kind and chance, empty lot/shop chance
+  financial: { base: 3, tall: 1, cap: 999, lot: 14, lotCore: 36, open: 'plaza', openP: 0.03, empty: 0.04, shop: 0.6 },
+  commercial: { base: 3, tall: 0.7, cap: 30, lot: 14, lotCore: 20, open: 'plaza', openP: 0.03, empty: 0.06, shop: 0.8 },
+  residential: { base: 3, tall: 0.5, cap: 14, lot: 12, lotCore: 10, open: 'park', openP: 0.08, empty: 0.05, shop: 0.12 },
+  historic: { base: 4, tall: 0.3, cap: 9, lot: 10, lotCore: 8, open: 'park', openP: 0.07, empty: 0.02, shop: 0.5 },
+  industrial: { base: 1.5, tall: 0.1, cap: 4, lot: 30, lotCore: 20, open: 'yard', openP: 0.12, empty: 0.15, shop: 0.04 },
 };
+
+export type LandmarkKind = 'tower' | 'hall' | 'memorial' | 'power' | 'park';
+
+/** A named place people navigate by. (x, y) is its middle. */
+export interface Landmark {
+  kind: LandmarkKind;
+  x: number;
+  y: number;
+}
 
 /** Map sectors per side (the city is split into sectors x sectors squares for map codes like "C3"). */
 const SECTORS = 4;
@@ -78,7 +90,8 @@ export interface Block {
   x1: number;
   y1: number;
   district: number;
-  park: boolean;
+  /** Set when the block has no buildings. */
+  open: OpenKind | null;
   /** This block's buildings are city.buildings[b0 .. b1). */
   b0: number;
   b1: number;
@@ -108,6 +121,7 @@ export interface City {
   cx: number;
   cy: number;
   districts: District[];
+  landmarks: Landmark[];
   sectors: number;
   /** Chooses the words of every place name (see locale/names.ts). */
   nameSeed: number;
@@ -136,6 +150,37 @@ function placeDistricts(rng: Rng, w: number, h: number, cx: number, cy: number, 
     if (types[k] === 'residential' && da < 0.7) types[k] = 'industrial';
   });
   return pts.map((p, k) => ({ type: types[k], x: p.x, y: p.y, pick: (rng() * 1e9) | 0 }));
+}
+
+/**
+ * Blocks that hold a landmark, by block index: a memorial plaza downtown, city hall in the old
+ * town, a big park (two blocks) in the residential district nearest downtown and a power station
+ * in the farthest industrial district.
+ */
+function pickLandmarkBlocks(xb: number[], yb: number[], nbx: number, nby: number, districts: District[], cx: number, cy: number) {
+  const out = new Map<number, LandmarkKind | 'park2'>();
+  const nearest = (x: number, y: number) => {
+    let best = 0, bd = Infinity;
+    for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
+      const d = Math.hypot((xb[2 * i + 1] + xb[2 * i + 2]) / 2 - x, (yb[2 * j + 1] + yb[2 * j + 2]) / 2 - y);
+      if (d < bd && !out.has(j * nbx + i)) { bd = d; best = j * nbx + i; }
+    }
+    return best;
+  };
+  const dist = (d: District) => Math.hypot(d.x - cx, d.y - cy);
+  const byType = (t: DistrictType) => districts.filter((d) => d.type === t).sort((a, b) => dist(a) - dist(b));
+  out.set(nearest(cx, cy), 'memorial');
+  const hist = byType('historic')[0];
+  if (hist) out.set(nearest(hist.x, hist.y), 'hall');
+  const res = byType('residential')[0];
+  if (res) {
+    const k = nearest(res.x, res.y);
+    out.set(k, 'park');
+    if (k % nbx < nbx - 1 && !out.has(k + 1)) out.set(k + 1, 'park2');
+  }
+  const ind = byType('industrial').pop();
+  if (ind) out.set(nearest(ind.x, ind.y), 'power');
+  return out;
 }
 
 /** 1 downtown, ~0 at the edges of the city. */
@@ -220,6 +265,7 @@ export function generateCity(seed: number, size: number): City {
   const nameSeed = (rng() * 1e9) | 0;
   const blocks: Block[] = [];
   const buildings: Building[] = [];
+  const special = pickLandmarkBlocks(xb, yb, nbx, nby, districts, cx, cy);
 
   for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
     const br = mulberry32((hash3(seed, i, j) * 4294967296) | 0);
@@ -230,8 +276,9 @@ export function generateCity(seed: number, size: number): City {
     let district = 0;
     districts.forEach((d, k) => { if (Math.hypot(d.x - mx, d.y - my) < Math.hypot(districts[district].x - mx, districts[district].y - my)) district = k; });
     const K = KIND[districts[district].type];
-    const park = br() < K.park;
-    const block: Block = { x0, y0, x1, y1, district, park, b0: buildings.length, b1: 0, maxH: 0, props: [] };
+    const lm = special.get(j * nbx + i);
+    const open = lm === 'memorial' || lm === 'hall' ? 'plaza' : lm === 'park' || lm === 'park2' ? 'park' : lm === 'power' ? null : br() < K.openP ? K.open : null;
+    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [] };
     blocks.push(block);
 
     // street lamps along the curb, about every 28 m
@@ -244,14 +291,7 @@ export function generateCity(seed: number, size: number): City {
     }
 
     const ix0 = x0 + SIDEWALK, iy0 = y0 + SIDEWALK, ix1 = x1 - SIDEWALK, iy1 = y1 - SIDEWALK;
-    if (park) {
-      const trees = Math.round(((ix1 - ix0) * (iy1 - iy0)) / 140);
-      for (let t = 0; t < trees; t++) {
-        block.props.push({ kind: 'tree', x: ix0 + 2 + br() * (ix1 - ix0 - 4), y: iy0 + 2 + br() * (iy1 - iy0 - 4), w: 3.5 + br() * 2, z1: 5 + br() * 4, seed: (br() * 1e6) | 0 });
-      }
-      block.b1 = buildings.length;
-      continue;
-    }
+    const tree = (x: number, y: number) => block.props.push({ kind: 'tree', x, y, w: 3.5 + br() * 2, z1: 5 + br() * 4, seed: (br() * 1e6) | 0 });
 
     // split the block into lots; downtown lots are bigger, for towers
     const maxLot = K.lot + K.lotCore * core;
@@ -295,6 +335,13 @@ export function generateCity(seed: number, size: number): City {
       buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br() });
       block.maxH = Math.max(block.maxH, h);
     };
+    /** Drum with windows, then a dome of stacked rings and a small lantern on top. */
+    const dome = (x: number, y: number, R: number, base: number, frame: RGB, win: RGB) => {
+      part(x, y, R, base, 'historic', true, frame, win);
+      const n = 5;
+      for (let k = 1; k <= n; k++) part(x, y, R * Math.cos(((k - 1) / n) * Math.PI / 2), base + R * Math.sin((k / n) * Math.PI / 2), 'dome', true, [70, 140, 120], [255, 220, 150]);
+      part(x, y, Math.max(0.8, R * 0.15), base + R + 3, 'dome', true, [70, 140, 120], [255, 220, 150]);
+    };
     // what stands on a roof depends on the building: crowns and spires on towers, domes on old
     // civic buildings, water tanks on walk-ups, chimneys in the industrial areas, machinery on offices
     const roof = (B: Building, floors: number) => {
@@ -308,12 +355,7 @@ export function generateCity(seed: number, size: number): City {
       } else if (B.style === 'glass' && floors > 25 && r < 0.4) {
         part(mx, my, 0.6, B.h + 15 + br() * 20, 'spire', false, [150, 150, 160], [255, 40, 40]);
       } else if (B.style === 'historic' && m >= 14 && r < 0.2) {
-        // drum with windows, then a dome of stacked rings and a small lantern on top
-        const R = m * 0.32, base = B.h + 4;
-        part(mx, my, R, base, 'historic', true, B.frame, B.win);
-        const n = 5;
-        for (let k = 1; k <= n; k++) part(mx, my, R * Math.cos(((k - 1) / n) * Math.PI / 2), base + R * Math.sin((k / n) * Math.PI / 2), 'dome', true, [70, 140, 120], [255, 220, 150]);
-        part(mx, my, Math.max(0.8, R * 0.15), base + R + 3, 'dome', true, [70, 140, 120], [255, 220, 150]);
+        dome(mx, my, m * 0.32, B.h + 4, B.frame, B.win);
       } else if ((B.style === 'office' || B.style === 'glass') && m > 12 && r < 0.6) {
         part(mx, my, m * (0.25 + br() * 0.1), B.h + 3 + br() * 2, 'mech', false, [70, 72, 78], [255, 60, 50]);
       } else if ((B.style === 'brick' || B.style === 'residential') && m > 8 && B.h < 60 && r < 0.35) {
@@ -324,11 +366,47 @@ export function generateCity(seed: number, size: number): City {
         part(B.x0 + cr + 2 + br() * (w - 2 * cr - 4), B.y0 + cr + 2 + br() * (d - 2 * cr - 4), cr, 30 + br() * 35, 'chimney', true, [115, 55, 42], [255, 40, 40]);
       }
     };
-    lot(ix0, iy0, ix1, iy1);
+    if (open === 'park') {
+      // trees, leaving the two crossing paths through the middle clear
+      const trees = Math.round(((ix1 - ix0) * (iy1 - iy0)) / 140);
+      for (let t = 0; t < trees; t++) {
+        const x = ix0 + 2 + br() * (ix1 - ix0 - 4), y = iy0 + 2 + br() * (iy1 - iy0 - 4);
+        if (Math.abs(x - mx) > 3 && Math.abs(y - my) > 3) tree(x, y);
+      }
+    } else if (open === 'plaza') {
+      for (const [x, y] of [[ix0 + 4, iy0 + 4], [ix1 - 4, iy0 + 4], [ix1 - 4, iy1 - 4], [ix0 + 4, iy1 - 4]]) tree(x, y);
+      if (lm === 'memorial') {
+        // an obelisk on a stepped plinth
+        part(mx, my, 5, 1, 'historic', false, [150, 135, 110], [255, 220, 160]);
+        part(mx, my, 3.5, 3, 'historic', false, [150, 135, 110], [255, 220, 160]);
+        part(mx, my, 1.4, 42, 'spire', false, [170, 155, 125], [255, 235, 190]);
+      } else if (lm === 'hall') {
+        const hw = (ix1 - ix0) * 0.3, hd = (iy1 - iy0) * 0.3, frame: RGB = [150, 135, 110], win: RGB = [255, 220, 150];
+        buildings.push({ x0: mx - hw, y0: my - hd, x1: mx + hw, y1: my + hd, h: 18, round: false, style: 'historic', win, frame, lit: 0.5, shop: false, sign: win, feat: 0 });
+        block.maxH = Math.max(block.maxH, 18);
+        dome(mx, my, Math.min(hw, hd) * 0.7, 22, frame, win);
+      }
+    } else if (lm === 'power') {
+      // turbine hall with a row of tall chimneys beside it
+      const frame: RGB = [115, 55, 42], win: RGB = [255, 200, 120];
+      const long = ix1 - ix0 > iy1 - iy0;
+      buildings.push({ x0: ix0 + 4, y0: iy0 + 4, x1: long ? ix1 - 4 : mx, y1: long ? my : iy1 - 4, h: 24, round: false, style: 'brick', win, frame, lit: 0.4, shop: false, sign: win, feat: 1 });
+      block.maxH = Math.max(block.maxH, 24);
+      for (let k = 0; k < 3; k++) {
+        const u = 0.25 + 0.25 * k;
+        part(long ? ix0 + (ix1 - ix0) * u : mx + 10, long ? my + 10 : iy0 + (iy1 - iy0) * u, 3, 80 + br() * 15, 'chimney', true, frame, [255, 40, 40]);
+      }
+    } else if (!open) lot(ix0, iy0, ix1, iy1);
     block.b1 = buildings.length;
   }
 
-  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, sectors: SECTORS, nameSeed };
+  const landmarks: Landmark[] = [];
+  for (const [k, kind] of special) if (kind !== 'park2') landmarks.push({ kind, x: (blocks[k].x0 + blocks[k].x1) / 2, y: (blocks[k].y0 + blocks[k].y1) / 2 });
+  let tallest = buildings[0];
+  for (const B of buildings) if (B.h > tallest.h) tallest = B;
+  if (tallest) landmarks.push({ kind: 'tower', x: (tallest.x0 + tallest.x1) / 2, y: (tallest.y0 + tallest.y1) / 2 });
+
+  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, sectors: SECTORS, nameSeed };
 }
 
 /** District of the block nearest to a point (roads belong to the block beside them). */

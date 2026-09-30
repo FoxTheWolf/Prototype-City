@@ -129,8 +129,21 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
         if (edge < SIDEWALK) {
           const fx = wx / 1.5 - Math.floor(wx / 1.5), fy = wy / 1.5 - Math.floor(wy / 1.5);
           ch = fx < 0.08 || fy < 0.08 ? G.plus : G.col; r = 78; g = 74; b = 78;
-        } else if (blk.park) {
-          ch = hv < 0.4 ? G.quo : hv < 0.7 ? G.com : G.semi; r = 40; g = 95 + hv * 40; b = 45;
+        } else if (blk.open === 'park') {
+          const mx = (blk.x0 + blk.x1) / 2, my = (blk.y0 + blk.y1) / 2;
+          if (Math.abs(wx - mx) < 1.5 || Math.abs(wy - my) < 1.5) { ch = hv < 0.5 ? G.dot : G.com; r = 95; g = 85; b = 70; } // gravel paths
+          else { ch = hv < 0.4 ? G.quo : hv < 0.7 ? G.com : G.semi; r = 40; g = 95 + hv * 40; b = 45; }
+        } else if (blk.open === 'plaza') {
+          // stone slabs
+          const fx = wx / 2.5 - Math.floor(wx / 2.5), fy = wy / 2.5 - Math.floor(wy / 2.5);
+          ch = fx < 0.06 || fy < 0.06 ? G.plus : G.col; r = 92; g = 86; b = 80;
+        } else if (blk.open === 'yard') {
+          // rail tracks along the block's long side: two rails on sleepers, 4.5 m apart
+          const long = blk.x1 - blk.x0 > blk.y1 - blk.y0;
+          const a = ((long ? wy : wx) - (long ? blk.y0 : blk.x0)) % 4.5, u = long ? wx : wy;
+          if (Math.abs(a - 1.5) < 0.12 || Math.abs(a - 2.95) < 0.12) { ch = long ? G.eq : G.bar; r = 120; g = 115; b = 115; }
+          else if (a > 1.2 && a < 3.3 && u % 0.8 < 0.25) { ch = long ? G.bar : G.eq; r = 70; g = 52; b = 40; }
+          else { ch = hv < 0.6 ? G.dot : G.com; r = 55; g = 50; b = 48; }
         } else { ch = hv < 0.7 ? G.dot : G.com; r = 50; g = 48; b = 52; }
       }
       grid.put(i, ch, r * fog + glow * 95, g * fog + glow * 70, b * fog + glow * 35);

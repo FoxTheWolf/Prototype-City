@@ -55,6 +55,17 @@ export function roadName(city: City, avenue: boolean, k: number): string {
 /** The first road of each axis is always a wide one (see layoutAxis). */
 const isWide = (b: number[], k: number) => b[2 * k + 1] - b[2 * k] >= b[1] - b[0];
 
+/** Landmarks take their roots from the end of the list, away from the other slots. */
+export function landmarkName(city: City, k: number): string {
+  return fill(L.landmark[city.landmarks[k].kind], L.roots[(city.nameSeed + (L.roots.length - 1 - k) * 7919) % L.roots.length]);
+}
+
+const COMPASS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+/** Compass point from one place to another. North is -y (sectors are numbered from the north). */
+export function compass(dx: number, dy: number): string {
+  return COMPASS[Math.round(((Math.atan2(dy, dx) / (2 * Math.PI)) * 8 + 8)) % 8];
+}
+
 /** Map sector code like "C3": letter = column from the west, number = row from the north. */
 export function sectorCode(city: City, x: number, y: number): string {
   const sx = Math.min(city.sectors - 1, Math.max(0, Math.floor((x / city.w) * city.sectors)));

@@ -26,6 +26,13 @@
     "historic": "historic",
     "industrial": "industrial"
   },
+  "landmark": {
+    "tower": "{r} Tower",
+    "hall": "City Hall",
+    "memorial": "{r} Memorial",
+    "power": "{r} Power Station",
+    "park": "{r} Park"
+  },
   "avenue": "{n} Ave",
   "street": "{n} St",
   "wideAvenue": "{r} Blvd",
