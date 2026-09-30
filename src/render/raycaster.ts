@@ -152,13 +152,24 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           let n = 0;
           for (let k = blk.b0; k < blk.b1; k++) {
             const B = city.buildings[k];
-            const ax = (B.x0 - px) * ix, bx = (B.x1 - px) * ix, ay = (B.y0 - py) * iy, by = (B.y1 - py) * iy;
-            const nx = Math.min(ax, bx), ny = Math.min(ay, by);
-            const tNear = Math.max(nx, ny), tFar = Math.min(Math.max(ax, bx), Math.max(ay, by));
-            if (tNear <= 0.01 || tNear >= tFar) continue;
+            let tNear: number, side: number;
+            if (B.round) {
+              // upright cylinder inscribed in the box: nearest root of |p + t*d - c| = r
+              const rr = (B.x1 - B.x0) / 2, ox = px - (B.x0 + rr), oy = py - (B.y0 + rr);
+              const qa = rdx * rdx + rdy * rdy, qb = ox * rdx + oy * rdy, disc = qb * qb - qa * (ox * ox + oy * oy - rr * rr);
+              if (disc <= 0) continue;
+              tNear = (-qb - Math.sqrt(disc)) / qa; side = 2;
+              if (tNear <= 0.01) continue;
+            } else {
+              const ax = (B.x0 - px) * ix, bx = (B.x1 - px) * ix, ay = (B.y0 - py) * iy, by = (B.y1 - py) * iy;
+              const nx = Math.min(ax, bx), ny = Math.min(ay, by);
+              tNear = Math.max(nx, ny);
+              if (tNear <= 0.01 || tNear >= Math.min(Math.max(ax, bx), Math.max(ay, by))) continue;
+              side = nx > ny ? 0 : 1;
+            }
             let s = n++;
             while (s > 0 && hitT[s - 1] > tNear) { hitT[s] = hitT[s - 1]; hitId[s] = hitId[s - 1]; hitSide[s] = hitSide[s - 1]; s--; }
-            hitT[s] = tNear; hitId[s] = k; hitSide[s] = nx > ny ? 0 : 1;
+            hitT[s] = tNear; hitId[s] = k; hitSide[s] = side;
           }
           for (let s = 0; s < n && clipTop > 0; s++) {
             const t = hitT[s], id = hitId[s], B = city.buildings[id];
@@ -166,8 +177,14 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
             const top = Math.ceil(yt - 0.5);
             const y0 = Math.max(0, top), y1 = Math.min(rows, Math.ceil(yb2 - 0.5), clipTop);
             if (y0 < y1) {
-              const side = hitSide[s], along = side === 0 ? py + t * rdy : px + t * rdx;
-              wallColumn(grid, x, B, id, t, side, along, y0, y1, top, hor, scale, eye, colW);
+              const side = hitSide[s];
+              let along: number, lightK: number;
+              if (side === 2) {
+                // position around the cylinder in metres of arc; lit like a box face turned the same way
+                const rr = (B.x1 - B.x0) / 2, nx = (px + t * rdx - B.x0 - rr) / rr, ny = (py + t * rdy - B.y0 - rr) / rr;
+                along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx);
+              } else { along = side === 0 ? py + t * rdy : px + t * rdx; lightK = side ? 0.72 : 1; }
+              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW);
             }
             clipTop = Math.min(clipTop, Math.max(0, top));
           }
@@ -183,10 +200,11 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
 }
 
 /** One building face in one column, rows y0..y1. `along` is where the ray hit the face; `top` is the unclipped roof row. */
-function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number) {
-  const f0 = side === 0 ? B.y0 : B.x0, f1 = side === 0 ? B.y1 : B.x1;
+function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number) {
+  // side 2 is a cylinder: no corners
+  const f0 = side === 0 ? B.y0 : side === 1 ? B.x0 : -1e9, f1 = side === 0 ? B.y1 : side === 1 ? B.x1 : 1e9;
   const fogK = 1 - Math.exp(-t / FOG);
-  const shade = (side ? 0.72 : 1) * (1 - fogK * 0.6);
+  const shade = lightK * (1 - fogK * 0.6);
   const winLight = 1 - fogK * 0.45;
   const [fr, fg, fb] = B.frame;
   // rows per floor and columns per window bay decide how much of the facade fits in a cell
@@ -218,7 +236,24 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     const i = y * grid.cols + x;
     const z = eye + ((hor - (y + 0.5)) / scale) * t;
     const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
-    if (y === top || z > B.h - 0.6) wall(G.us, 1.5);
+    if (S === 'spire' || S === 'chimney') {
+      // red beacon at the tip; chimneys also get two pale bands near the top
+      if (z > B.h - 1) { ch = G.star; r = B.win[0] * winLight; g = B.win[1] * winLight; b = B.win[2] * winLight; }
+      else if (S === 'chimney' && ((z > B.h - 6 && z < B.h - 4.5) || (z > B.h - 10 && z < B.h - 8.5))) wall(G.eq, 1.9);
+      else wall(S === 'chimney' && detailed ? G.eq : G.bar, S === 'spire' ? 1.2 : 1);
+    } else if (y === top || z > B.h - 0.6) wall(G.us, 1.5);
+    else if (S === 'crown') {
+      // vertical light strips between dark ribs
+      if (Math.floor(along / (detailed ? 0.8 : 1.6)) & 1) { ch = G.bar; const k = winLight * 0.9; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
+      else wall(G.bar, 1.2);
+    } else if (S === 'dome') wall(detailed && along % 2 < 0.3 ? G.bar : G.col, 1.2);
+    else if (S === 'mech') wall(detailed && fw < 0.5 ? G.eq : G.hash, 0.9);
+    else if (S === 'tank') {
+      // wooden tank on steel legs, with hoops and a pointed lid
+      if (z < B.h - 4.3) wall(along % 1.6 < 0.3 ? G.bar : G.dot, 0.6);
+      else if (z > B.h - 1.3) wall(G.caret, 1);
+      else wall(Math.abs(z - (B.h - 2.3)) < 0.2 || Math.abs(z - (B.h - 3.6)) < 0.2 ? G.eq : G.bar, 1);
+    }
     else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv);
       if (hh < B.lit) {

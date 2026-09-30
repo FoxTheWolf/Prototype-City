@@ -8,16 +8,25 @@ export const LANE_W = 3.5;
 
 export type RGB = readonly [number, number, number];
 
-/** How a facade looks. Chosen per lot from the district type; drawn by the renderer. */
-export type Facade = 'office' | 'glass' | 'brick' | 'historic' | 'residential' | 'warehouse';
+/**
+ * How a facade looks, drawn by the renderer. The first six are chosen per lot from the district
+ * type; the rest are rooftop parts (tower crowns, spires, domes, water tanks, chimneys, machinery).
+ */
+export type Facade = 'office' | 'glass' | 'brick' | 'historic' | 'residential' | 'warehouse'
+  | 'crown' | 'spire' | 'dome' | 'tank' | 'chimney' | 'mech';
 
-/** An axis-aligned box standing on the ground. Towers with setbacks are several nested boxes. */
+/**
+ * A shape standing on the ground: an axis-aligned box, or with `round` the upright cylinder inscribed
+ * in that box. Towers with setbacks, crowns and domes are several nested shapes; parts on a roof
+ * also start at the ground, hidden inside the building below them.
+ */
 export interface Building {
   x0: number;
   y0: number;
   x1: number;
   y1: number;
   h: number;
+  round: boolean;
   style: Facade;
   win: RGB;
   frame: RGB;
@@ -139,7 +148,7 @@ const WARM: RGB[] = [[255, 206, 110], [255, 170, 90], [255, 240, 200], [150, 190
 const FRAME: RGB[] = [[92, 72, 50], [58, 66, 88], [76, 60, 84], [52, 64, 62], [88, 80, 70]];
 
 /** Per style: wall colors, window colors, share of lit windows [min, max]. */
-const LOOK: Record<Facade, { frame: RGB[]; win: RGB[]; lit: [number, number] }> = {
+const LOOK: Partial<Record<Facade, { frame: RGB[]; win: RGB[]; lit: [number, number] }>> = {
   office: { frame: FRAME, win: WIN, lit: [0.18, 0.68] },
   glass: { frame: [[40, 90, 120], [30, 105, 100], [50, 70, 130], [85, 60, 115], [30, 85, 70], [110, 95, 60]], win: WIN, lit: [0.15, 0.55] },
   brick: { frame: [[120, 52, 38], [100, 60, 45], [130, 72, 50], [85, 45, 40], [110, 80, 60]], win: WARM, lit: [0.2, 0.55] },
@@ -258,7 +267,7 @@ export function generateCity(seed: number, size: number): City {
       let floors = Math.max(1, Math.round((K.base + 55 * K.tall * core ** 1.5) * (0.35 + br() * 0.9)));
       if (br() < 0.05) floors = Math.round(floors * 1.5);
       floors = Math.min(floors, K.cap);
-      const facade = pickStyle(br(), MIX[districts[district].type]), look = LOOK[facade];
+      const facade = pickStyle(br(), MIX[districts[district].type]), look = LOOK[facade]!;
       const style = {
         style: facade, win: pick(look.win), frame: pick(look.frame), lit: look.lit[0] + br() * (look.lit[1] - look.lit[0]),
         shop: facade !== 'warehouse' && br() < K.shop, sign: pick(WIN), feat: br(),
@@ -268,13 +277,51 @@ export function generateCity(seed: number, size: number): City {
       // towers stand back from the lot edge and step in as they rise
       let inset = floors > 25 && Math.min(lw, lh) > 20 ? 2 + br() * 3 : 0;
       const tiers = floors > 30 ? 1 + ((br() * 3) | 0) : 1;
+      let top: Building | null = null;
       for (let k = 1; k <= tiers; k++) {
         if (Math.min(lw, lh) - 2 * inset < 8) break;
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
         const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
-        buildings.push({ x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, ...style, shop: style.shop && k === 1 });
+        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1 };
+        buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
         inset += 3 + br() * 3;
+      }
+      if (top) roof(top, floors);
+    };
+
+    /** A rooftop shape centered at (x, y) with half-size (or radius) s, reaching height h. */
+    const part = (x: number, y: number, s: number, h: number, style: Facade, round: boolean, frame: RGB, win: RGB) => {
+      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br() });
+      block.maxH = Math.max(block.maxH, h);
+    };
+    // what stands on a roof depends on the building: crowns and spires on towers, domes on old
+    // civic buildings, water tanks on walk-ups, chimneys in the industrial areas, machinery on offices
+    const roof = (B: Building, floors: number) => {
+      const w = B.x1 - B.x0, d = B.y1 - B.y0, m = Math.min(w, d), mx = (B.x0 + B.x1) / 2, my = (B.y0 + B.y1) / 2;
+      const r = br();
+      if ((B.style === 'office' || B.style === 'historic') && floors > 28 && r < 0.7) {
+        // art deco crown: narrowing steps with lit ribs, then a spire with a red beacon
+        let s = m / 2, z = B.h;
+        for (let k = 2 + ((br() * 3) | 0); k > 0 && s * 0.72 >= 2; k--) { s *= 0.72; z += 3 + br() * 3; part(mx, my, s, z, 'crown', false, B.frame, B.sign); }
+        if (br() < 0.8) part(mx, my, 0.8, z + 12 + br() * 25, 'spire', false, [150, 150, 160], [255, 40, 40]);
+      } else if (B.style === 'glass' && floors > 25 && r < 0.4) {
+        part(mx, my, 0.6, B.h + 15 + br() * 20, 'spire', false, [150, 150, 160], [255, 40, 40]);
+      } else if (B.style === 'historic' && m >= 14 && r < 0.2) {
+        // drum with windows, then a dome of stacked rings and a small lantern on top
+        const R = m * 0.32, base = B.h + 4;
+        part(mx, my, R, base, 'historic', true, B.frame, B.win);
+        const n = 5;
+        for (let k = 1; k <= n; k++) part(mx, my, R * Math.cos(((k - 1) / n) * Math.PI / 2), base + R * Math.sin((k / n) * Math.PI / 2), 'dome', true, [70, 140, 120], [255, 220, 150]);
+        part(mx, my, Math.max(0.8, R * 0.15), base + R + 3, 'dome', true, [70, 140, 120], [255, 220, 150]);
+      } else if ((B.style === 'office' || B.style === 'glass') && m > 12 && r < 0.6) {
+        part(mx, my, m * (0.25 + br() * 0.1), B.h + 3 + br() * 2, 'mech', false, [70, 72, 78], [255, 60, 50]);
+      } else if ((B.style === 'brick' || B.style === 'residential') && m > 8 && B.h < 60 && r < 0.35) {
+        const tr = 1.8 + br() * 0.6;
+        part(B.x0 + tr + 1 + br() * (w - 2 * tr - 2), B.y0 + tr + 1 + br() * (d - 2 * tr - 2), tr, B.h + 5 + br() * 2, 'tank', true, [110, 75, 50], [110, 75, 50]);
+      } else if (B.style === 'warehouse' && m > 10 && r < 0.18) {
+        const cr = 1.5 + br();
+        part(B.x0 + cr + 2 + br() * (w - 2 * cr - 4), B.y0 + cr + 2 + br() * (d - 2 * cr - 4), cr, 30 + br() * 35, 'chimney', true, [115, 55, 42], [255, 40, 40]);
       }
     };
     lot(ix0, iy0, ix1, iy1);
