@@ -33,7 +33,7 @@ const C = (s: string) => s.charCodeAt(0);
 const G = {
   dot: C('.'), com: C(','), tick: C('`'), col: C(':'), semi: C(';'), dash: C('-'), eq: C('='), plus: C('+'),
   hash: C('#'), pct: C('%'), at: C('@'), bar: C('|'), us: C('_'), star: C('*'), quo: C('"'), amp: C('&'),
-  o: C('o'), lb: C('['), rb: C(']'),
+  o: C('o'), lb: C('['), rb: C(']'), sl: C('/'), bs: C('\\'), caret: C('^'),
 };
 
 interface Sprite {
@@ -196,36 +196,87 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const kv = rpf >= 1 ? 0 : Math.ceil(Math.log2(1 / rpf)), kh = cpb >= 1 ? 0 : Math.ceil(Math.log2(1 / cpb));
   const bay = along / BAY, wi = Math.floor(bay), fw = bay - wi;
   const corner = along - f0 < 0.35 || f1 - along < 0.35;
+  const S = B.style;
+  const farWall = S === 'brick' ? G.eq : S === 'warehouse' ? G.bar : G.col;
+  const farK = S === 'glass' ? 1.25 : 1;
+  // brick walk-ups: an iron fire escape two bays wide, repeating along the facade
+  const esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner;
+  const escU = ((wi % 7) - 2 + fw) / 2;
+  const balcony = S === 'residential' && B.feat < 0.5;
+  let ch = 0, r = 0, g = 0, b = 0;
+  const wall = (c: number, k: number) => { ch = c; r = fr * k * shade; g = fg * k * shade; b = fb * k * shade; };
+  // a window: lit ones glow in the building's window color, dark ones are deep blue glass
+  const pane = (fl: number, litCh: number) => {
+    const hh = hash3(id, wi, fl);
+    if (hh < B.lit) {
+      ch = hh < B.lit * 0.3 ? G.at : litCh;
+      const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
+      r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
+    } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
+  };
   for (let y = y0; y < y1; y++) {
     const i = y * grid.cols + x;
     const z = eye + ((hor - (y + 0.5)) / scale) * t;
-    let ch: number, r: number, g: number, b: number;
-    if (y === top || z > B.h - 0.6) { ch = G.us; r = fr * 1.5 * shade; g = fg * 1.5 * shade; b = fb * 1.5 * shade; }
+    const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
+    if (y === top || z > B.h - 0.6) wall(G.us, 1.5);
     else if (!detailed) {
-      const hh = hash3(id, wi >> kh, Math.floor(z / FLOOR_H) >> kv);
+      const hh = hash3(id, wi >> kh, fl >> kv);
       if (hh < B.lit) {
         ch = hh < B.lit * 0.4 ? G.o : G.col;
         const k = winLight * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
-      } else { ch = G.col; r = fr * shade; g = fg * shade; b = fb * shade; }
+      } else wall(farWall, farK);
     } else if (z < FLOOR_H && B.shop) {
       if (z > 2.7 && z < 3.3) { ch = G.eq; const k = winLight * (0.7 + 0.3 * hash3(id, wi, 99)); r = B.sign[0] * k; g = B.sign[1] * k; b = B.sign[2] * k; }
       else if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = fw < 0.2 ? G.lb : fw > 0.8 ? G.rb : G.col; r = 180 * winLight; g = 150 * winLight; b = 100 * winLight; }
-      else { ch = G.bar; r = fr * shade; g = fg * shade; b = fb * shade; }
-    } else {
-      const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
-      if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
-        const hh = hash3(id, wi, fl);
-        if (hh < B.lit) {
-          ch = hh < B.lit * 0.3 ? G.at : hh < B.lit * 0.7 ? G.hash : G.pct;
-          const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
-          r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
-        } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
-      } else {
-        ch = corner ? G.bar : t > 60 ? G.dot : G.col;
-        r = fr * shade; g = fg * shade; b = fb * shade;
+      else wall(G.bar, 1);
+    } else if (S === 'glass') {
+      // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
+      if (fz < 0.08) wall(G.dash, 0.8);
+      else if (fw < 0.07 || corner) wall(G.bar, 1.5);
+      else if (hash3(id, wi, fl) < B.lit) pane(fl, G.col);
+      else {
+        const sheen = 0.5 + 0.5 * Math.sin(along * 0.35 + z * 0.5);
+        wall(sheen > 0.85 ? G.sl : sheen > 0.4 ? G.col : G.dot, 1.3 + 0.9 * sheen);
       }
-    }
+    } else if (S === 'warehouse') {
+      const door = z < 4.5 && Math.floor(along / 6) % 3 === 1, dp = along % 6;
+      if (z > B.h - 3.2 && z < B.h - 1.4) { // clerestory strip under the roof
+        if (fw > 0.08 && fw < 0.92) {
+          if (hash3(id, wi, 0) < B.lit * 2) { ch = G.hash; const k = winLight * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
+          else { ch = G.eq; r = 22 * shade + 8; g = 26 * shade + 8; b = 36 * shade + 10; }
+        } else wall(G.bar, 1.2);
+      } else if (door && !corner) wall(dp < 0.4 || dp > 5.6 ? G.bar : z > 4.1 ? G.eq : G.dash, dp < 0.4 || dp > 5.6 ? 1.3 : 1.15);
+      else wall(G.bar, Math.floor(along / 0.6) & 1 ? 1 : 0.78); // corrugated metal
+    } else if (esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || Math.abs((fl & 1 ? 1 - escU : escU) - fz) < 0.1)) {
+      // fire escape: landings, rails and a zigzag stair between floors
+      ch = fz < 0.08 ? G.eq : escU < 0.04 || escU > 0.96 ? G.bar : fl & 1 ? G.bs : G.sl;
+      r = 95 * shade; g = 95 * shade; b = 105 * shade;
+    } else if (S === 'historic') {
+      if (z > B.h - 2.2) wall(z > B.h - 1.2 ? G.eq : (fw * 4) & 1 ? G.col : G.quo, 1.3); // cornice with dentils
+      else if (z < FLOOR_H * 1.2) wall(Math.floor(z / 0.7) & 1 ? G.eq : G.hash, 0.9); // rusticated base
+      else if ((wi % 3 === 0 && fw < 0.28) || corner) wall(G.bar, 1.25); // pilasters
+      else if (fz < 0.08) wall(G.dash, 1.1);
+      else if (fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82) { if (fz > 0.7) wall(G.caret, 1.3); else pane(fl, G.hash); }
+      else wall(G.col, 1);
+    } else if (S === 'brick') {
+      if (fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78 && !corner) pane(fl, G.hash);
+      else {
+        const course = Math.floor(z / 0.5), off = (course & 1) * 0.6;
+        wall(corner ? G.bar : G.eq, 0.8 + 0.35 * hash3(course, Math.floor((along + off) / 1.2), id));
+      }
+    } else if (S === 'residential') {
+      if (balcony && z > FLOOR_H && fz < 0.25 && fw > 0.1 && fw < 0.9) wall(fz < 0.07 ? G.eq : G.bar, 1.3);
+      else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) pane(fl, G.hash);
+      else wall(corner ? G.bar : G.dot, 1);
+    } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
+      const hh = hash3(id, wi, fl);
+      if (hh < B.lit) {
+        ch = hh < B.lit * 0.3 ? G.at : hh < B.lit * 0.7 ? G.hash : G.pct;
+        const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
+        r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
+      } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
+    } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
     grid.put(i, ch, r, g, b);
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = t;

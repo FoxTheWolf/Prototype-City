@@ -8,6 +8,9 @@ export const LANE_W = 3.5;
 
 export type RGB = readonly [number, number, number];
 
+/** How a facade looks. Chosen per lot from the district type; drawn by the renderer. */
+export type Facade = 'office' | 'glass' | 'brick' | 'historic' | 'residential' | 'warehouse';
+
 /** An axis-aligned box standing on the ground. Towers with setbacks are several nested boxes. */
 export interface Building {
   x0: number;
@@ -15,11 +18,14 @@ export interface Building {
   x1: number;
   y1: number;
   h: number;
+  style: Facade;
   win: RGB;
   frame: RGB;
   lit: number;
   shop: boolean;
   sign: RGB;
+  /** Random per lot, for variants within a style (balconies, fire escapes). Shared by all tiers of a tower. */
+  feat: number;
 }
 
 export interface Prop {
@@ -129,7 +135,35 @@ function coreAt(x: number, y: number, cx: number, cy: number, radius: number) {
 }
 
 const WIN: RGB[] = [[255, 206, 110], [120, 220, 255], [90, 150, 255], [255, 150, 70], [190, 255, 170], [255, 130, 200], [255, 240, 200]];
+const WARM: RGB[] = [[255, 206, 110], [255, 170, 90], [255, 240, 200], [150, 190, 255]];
 const FRAME: RGB[] = [[92, 72, 50], [58, 66, 88], [76, 60, 84], [52, 64, 62], [88, 80, 70]];
+
+/** Per style: wall colors, window colors, share of lit windows [min, max]. */
+const LOOK: Record<Facade, { frame: RGB[]; win: RGB[]; lit: [number, number] }> = {
+  office: { frame: FRAME, win: WIN, lit: [0.18, 0.68] },
+  glass: { frame: [[40, 90, 120], [30, 105, 100], [50, 70, 130], [85, 60, 115], [30, 85, 70], [110, 95, 60]], win: WIN, lit: [0.15, 0.55] },
+  brick: { frame: [[120, 52, 38], [100, 60, 45], [130, 72, 50], [85, 45, 40], [110, 80, 60]], win: WARM, lit: [0.2, 0.55] },
+  historic: { frame: [[140, 125, 100], [120, 110, 95], [150, 130, 110], [110, 100, 90], [130, 100, 80]], win: WARM, lit: [0.15, 0.45] },
+  residential: { frame: [[90, 95, 110], [110, 90, 80], [80, 100, 90], [120, 110, 90], [100, 85, 100]], win: WARM, lit: [0.2, 0.6] },
+  warehouse: { frame: [[80, 85, 90], [95, 80, 65], [70, 78, 72], [100, 70, 55]], win: [[200, 220, 180], [255, 200, 120]], lit: [0.05, 0.25] },
+};
+
+/** Facade styles per district type, as [style, weight]. */
+const MIX: Record<DistrictType, [Facade, number][]> = {
+  financial: [['glass', 45], ['office', 40], ['historic', 15]],
+  commercial: [['office', 40], ['brick', 25], ['glass', 15], ['residential', 20]],
+  residential: [['residential', 55], ['brick', 45]],
+  historic: [['historic', 65], ['brick', 35]],
+  industrial: [['warehouse', 75], ['brick', 25]],
+};
+
+function pickStyle(r: number, mix: [Facade, number][]): Facade {
+  let total = 0;
+  for (const [, w] of mix) total += w;
+  r *= total;
+  for (const [s, w] of mix) { if (r < w) return s; r -= w; }
+  return mix[0][0];
+}
 
 /** Road/block boundaries along one axis: a wide road every `wideEvery` roads, blocks of random length between. */
 function layoutAxis(rng: Rng, size: number, blockMin: number, blockMax: number, road: number, wide: number, wideEvery: number): number[] {
@@ -224,14 +258,20 @@ export function generateCity(seed: number, size: number): City {
       let floors = Math.max(1, Math.round((K.base + 55 * K.tall * core ** 1.5) * (0.35 + br() * 0.9)));
       if (br() < 0.05) floors = Math.round(floors * 1.5);
       floors = Math.min(floors, K.cap);
-      const style = { win: pick(WIN), frame: pick(FRAME), lit: 0.18 + br() * 0.5, shop: br() < K.shop, sign: pick(WIN) };
+      const facade = pickStyle(br(), MIX[districts[district].type]), look = LOOK[facade];
+      const style = {
+        style: facade, win: pick(look.win), frame: pick(look.frame), lit: look.lit[0] + br() * (look.lit[1] - look.lit[0]),
+        shop: facade !== 'warehouse' && br() < K.shop, sign: pick(WIN), feat: br(),
+      };
+      // warehouses have one or two tall open floors
+      if (facade === 'warehouse') floors = Math.min(floors, 2);
       // towers stand back from the lot edge and step in as they rise
       let inset = floors > 25 && Math.min(lw, lh) > 20 ? 2 + br() * 3 : 0;
       const tiers = floors > 30 ? 1 + ((br() * 3) | 0) : 1;
       for (let k = 1; k <= tiers; k++) {
         if (Math.min(lw, lh) - 2 * inset < 8) break;
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
-        const bh = f * FLOOR_H + 1;
+        const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
         buildings.push({ x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, ...style, shop: style.shop && k === 1 });
         block.maxH = Math.max(block.maxH, bh);
         inset += 3 + br() * 3;

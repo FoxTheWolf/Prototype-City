@@ -27,7 +27,15 @@ const renderer = new GlyphRenderer(canvas);
 const input = new Input(canvas);
 const camera = new Camera();
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
-if (import.meta.env.DEV) Object.assign(window, { world, camera });
+// gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
+if (import.meta.env.DEV) Object.assign(window, {
+  world, camera,
+  gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
+    let s = '';
+    for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
+    return s;
+  },
+});
 let grid: CharGrid;
 let layout: Layout;
 let running = false;
