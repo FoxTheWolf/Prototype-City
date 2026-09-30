@@ -38,8 +38,10 @@ export interface Building {
   feat: number;
 }
 
+export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris';
+
 export interface Prop {
-  kind: 'lamp' | 'tree';
+  kind: PropKind;
   x: number;
   y: number;
   w: number;
@@ -64,6 +66,15 @@ export interface District {
 export type OpenKind = 'park' | 'plaza' | 'yard';
 
 /** How each district type shapes its blocks. */
+/** Street furniture by district: relative weights of what stands on the sidewalk. */
+const FURNITURE: Record<DistrictType, [PropKind, number][]> = {
+  financial: [['bin', 3], ['news', 3], ['payphone', 2], ['mailbox', 2], ['bench', 1], ['shelter', 1]],
+  commercial: [['bin', 3], ['news', 2], ['payphone', 2], ['bench', 2], ['mailbox', 1], ['shelter', 1]],
+  residential: [['bin', 2], ['bench', 1], ['mailbox', 1], ['payphone', 1], ['dumpster', 1]],
+  historic: [['bench', 3], ['bin', 2], ['payphone', 1], ['mailbox', 1]],
+  industrial: [['dumpster', 2], ['debris', 3], ['bin', 1]],
+};
+
 const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot: number; lotCore: number; open: OpenKind; openP: number; empty: number; shop: number }> = {
   //            floors at the edge, x downtown growth, max floors, lot size (+ downtown), open block kind and chance, empty lot/shop chance
   financial: { base: 3, tall: 1, cap: 999, lot: 14, lotCore: 36, open: 'plaza', openP: 0.03, empty: 0.04, shop: 0.6 },
@@ -313,6 +324,8 @@ export function generateCity(seed: number, size: number): City {
 
   for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
     const br = mulberry32((hash3(seed, i, j) * 4294967296) | 0);
+    // furniture has its own generator, so adding or changing it never moves the buildings
+    const fr = mulberry32((hash3(seed ^ 0x2c1b3c6d, i, j) * 4294967296) | 0);
     const pick = <T>(a: T[]) => a[(br() * a.length) | 0];
     const x0 = xb[2 * i + 1], x1 = xb[2 * i + 2], y0 = yb[2 * j + 1], y1 = yb[2 * j + 2];
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
@@ -347,7 +360,13 @@ export function generateCity(seed: number, size: number): City {
         else { const s = Math.round(ay0 + lh * t); lot(ax0, ay0, ax1, s); lot(ax0, s, ax1, ay1); }
         return;
       }
-      if (br() < K.empty) return; // empty lot
+      if (br() < K.empty) {
+        // empty lot: rubble piles
+        for (let n = 1 + ((fr() * 3) | 0); n > 0; n--) {
+          block.props.push({ kind: 'debris', x: ax0 + 1.5 + fr() * Math.max(0, lw - 3), y: ay0 + 1.5 + fr() * Math.max(0, lh - 3), w: 0, z1: 0, seed: (fr() * 1e6) | 0, a: fr() * 6.28 });
+        }
+        return;
+      }
       let floors = Math.max(1, Math.round((K.base + 55 * K.tall * core ** 1.5) * (0.35 + br() * 0.9)));
       if (br() < 0.05) floors = Math.round(floors * 1.5);
       floors = Math.min(floors, K.cap);
@@ -428,6 +447,37 @@ export function generateCity(seed: number, size: number): City {
         const x = ix0 + 2 + br() * (ix1 - ix0 - 4), y = iy0 + 2 + br() * (iy1 - iy0 - 4);
         if (Math.abs(x - mx) > 3 && Math.abs(y - my) > 3) tree(x, y);
       }
+    }
+
+    // street furniture on the sidewalk, facing the street, clear of the corners and of the lamps
+    const kinds = FURNITURE[districts[district].type];
+    const total = kinds.reduce((a, k) => a + k[1], 0);
+    for (let e = 0; e < 4; e++) {
+      const [ax, ay] = corners[e], [bx, by] = corners[(e + 1) % 4], a = [-Math.PI / 2, 0, Math.PI / 2, Math.PI][e];
+      const len = Math.hypot(bx - ax, by - ay), ux = (bx - ax) / len, uy = (by - ay) / len;
+      const nx = Math.cos(a), ny = Math.sin(a); // toward the street
+      const lampStep = len / Math.max(1, Math.round(len / 28));
+      // a hydrant near one end of every side
+      if (fr() < 0.7) block.props.push({ kind: 'hydrant', x: ax + ux * 6 - nx * 0.6, y: ay + uy * 6 - ny * 0.6, w: 0, z1: 0, seed: 0, a });
+      for (let d = 9 + fr() * 6; d < len - 9; d += 7 + fr() * 9) {
+        const lampGap = d % lampStep;
+        if (lampGap < 2.5 || lampStep - lampGap < 2.5 || fr() < 0.35) continue;
+        let pick = fr() * total, kind = kinds[0][0];
+        for (const [k, wgt] of kinds) { if ((pick -= wgt) < 0) { kind = k; break; } }
+        // dumpsters and rubble sit against the buildings, the rest near the curb
+        const back = kind === 'dumpster' || kind === 'debris' ? 2.2 : kind === 'shelter' ? 1.3 : 0.7;
+        block.props.push({ kind, x: ax + ux * d - nx * back, y: ay + uy * d - ny * back, w: 0, z1: 0, seed: (fr() * 1e6) | 0, a });
+      }
+    }
+    if (open === 'park' || open === 'plaza') {
+      // benches along the paths through the middle, facing them
+      for (const s of [-1, 1]) for (let k = 1; k <= 2; k++) {
+        const off = open === 'park' ? 2.6 : 6;
+        const dx = (ix1 - ix0) * 0.18 * k, dy = (iy1 - iy0) * 0.18 * k;
+        block.props.push({ kind: 'bench', x: mx + s * dx, y: my + off, w: 0, z1: 0, seed: 0, a: -Math.PI / 2 });
+        block.props.push({ kind: 'bench', x: mx - off, y: my + s * dy, w: 0, z1: 0, seed: 0, a: 0 });
+      }
+      if (fr() < 0.5) block.props.push({ kind: 'bin', x: mx + 2.2, y: my + 2.2, w: 0, z1: 0, seed: 0, a: 0 });
     }
 
     if (lm === 'memorial') {

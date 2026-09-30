@@ -4,7 +4,7 @@ import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LightWindow } from './lightmap';
-import { carModel, FLOOD, lampModel, treeModel } from './models';
+import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { PALETTES, type Look } from './palette';
 
@@ -482,7 +482,12 @@ function collectObjects(world: World, v: View): Obj[] {
     const blk = cityBlock(city, cx, cy);
     if (blk) for (const p of blk.props) {
       if (p.kind === 'lamp') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lamp, r: 2.1, h: 6.7, seed: 0 });
-      else out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
+      else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
+      else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
+      else {
+        const f = FURNITURE[p.kind];
+        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: f.parts, r: f.r, h: f.h, seed: p.seed });
+      }
     }
   }
   for (const f of city.floodlights) {
