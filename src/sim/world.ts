@@ -1,6 +1,8 @@
-import { mulberry32, type Rng } from '../core/rng';
+import { hash3, mulberry32, type Rng } from '../core/rng';
 import { generateCity, isSolid, SIDEWALK, type City } from './city';
+import { TIME_SCALE } from './clock';
 import { spawnCars, stepCars, type Car } from './traffic';
+import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
 /** Simulation rate. The sim always advances in steps of exactly this size. */
 export const TICK = 1 / 60;
@@ -29,6 +31,10 @@ export interface World {
   city: City;
   cars: Car[];
   player: Player;
+  /** Game time in seconds since midnight, January 1st 2008 (see clock.ts), and at the previous tick. */
+  time: number;
+  ptime: number;
+  weather: Weather;
 }
 
 /** Default city side in metres. */
@@ -42,7 +48,23 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   let start = city.blocks[0];
   for (const b of city.blocks) if (Math.hypot(b.x0 - city.cx, b.y0 - city.cy) < Math.hypot(start.x0 - city.cx, start.y0 - city.cy)) start = b;
   const x = start.x0 + SIDEWALK / 2, y = (start.y0 + start.y1) / 2;
-  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0 } };
+  // every city starts on a day of 2008 of its own, at nine in the evening
+  const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
+  const weather = newWeather();
+  stepWeather(weather, seed, time, 0);
+  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0 }, time, ptime: time, weather };
+}
+
+/** Debug: jump the clock by some hours (sleeping will do this for real). */
+export function skipHours(w: World, h: number) {
+  w.time = w.ptime = Math.max(0, w.time + h * 3600);
+  stepWeather(w.weather, w.seed, w.time, 0);
+}
+
+/** Debug: step through the fixed skies, then back to the forecast. */
+export function cycleWeather(w: World) {
+  w.weather.preset = w.weather.preset + 1 >= PRESETS.length ? -1 : w.weather.preset + 1;
+  stepWeather(w.weather, w.seed, w.time, 0);
 }
 
 export function stepWorld(w: World, input: PlayerInput) {
@@ -62,5 +84,8 @@ export function stepWorld(w: World, input: PlayerInput) {
   if (!isSolid(w.city, p.x - R * 0.7, ny + Math.sign(vy) * R) && !isSolid(w.city, p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
 
   stepCars(w.city, w.cars, w.rng, TICK, p.x, p.y);
+  w.ptime = w.time;
+  w.time += TICK * TIME_SCALE;
+  stepWeather(w.weather, w.seed, w.time, TICK * TIME_SCALE);
   w.tick++;
 }
