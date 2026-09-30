@@ -72,3 +72,13 @@ export function sectorCode(city: City, x: number, y: number): string {
   const sy = Math.min(city.sectors - 1, Math.max(0, Math.floor((y / city.h) * city.sectors)));
   return String.fromCharCode(65 + sx) + (sy + 1);
 }
+
+/** A business's name, from its name pick: a template for its kind filled with surnames and brand words. */
+export function businessName(city: City, k: number): string {
+  const b = city.businesses[k], n = b.name;
+  const tpls = L.business[b.kind];
+  return tpls[n % tpls.length]
+    .replace('{s}', L.surnames[(n >>> 3) % L.surnames.length])
+    .replace('{s2}', L.surnames[(n >>> 9) % L.surnames.length])
+    .replace('{w}', L.words[(n >>> 15) % L.words.length]);
+}

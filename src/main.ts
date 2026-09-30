@@ -49,8 +49,8 @@ let layout: Layout;
 let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
-let solidStep = 0;
-const look: Look = { solid: SOLID[0], blocks: false };
+let solidStep = 1; // 0.16, the user's pick
+const look: Look = { solid: SOLID[solidStep], blocks: false };
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];

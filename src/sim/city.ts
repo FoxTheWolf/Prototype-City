@@ -34,11 +34,37 @@ export interface Building {
   lit: number;
   shop: boolean;
   sign: RGB;
+  /** The business on the ground floor (index into city.businesses), or -1. */
+  biz: number;
   /** Random per lot, for variants within a style (balconies, fire escapes). Shared by all tiers of a tower. */
   feat: number;
 }
 
 export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris';
+
+/**
+ * What a business does. Kept as data the rest of the game builds on: the shop sign shows its name
+ * now; interiors (stage 7) and the economy (stage 13) will hang their own data on the same record.
+ */
+export type BusinessKind = 'diner' | 'bar' | 'cafe' | 'pharmacy' | 'grocery' | 'laundry' | 'pawn' | 'electronics'
+  | 'liquor' | 'hotel' | 'bank' | 'cinema' | 'books' | 'tailor' | 'autoparts';
+
+export interface Business {
+  kind: BusinessKind;
+  /** The building it occupies. */
+  building: number;
+  /** Picks the name; the words live in the locale, like the other names. */
+  name: number;
+}
+
+/** Which businesses open on the ground floor, by district. */
+const SHOPS: Record<DistrictType, BusinessKind[]> = {
+  financial: ['bank', 'cafe', 'electronics', 'diner', 'pharmacy', 'bar'],
+  commercial: ['diner', 'bar', 'electronics', 'pawn', 'cinema', 'hotel', 'pharmacy', 'liquor', 'cafe'],
+  residential: ['grocery', 'laundry', 'liquor', 'pharmacy', 'diner', 'bar'],
+  historic: ['cafe', 'bar', 'books', 'tailor', 'hotel', 'diner'],
+  industrial: ['autoparts', 'diner', 'bar', 'liquor'],
+};
 
 export interface Prop {
   kind: PropKind;
@@ -149,6 +175,7 @@ export interface Block {
  * even cells are roads, odd cells are blocks. The city starts and ends with a road.
  */
 export interface City {
+  businesses: Business[];
   w: number;
   h: number;
   xb: number[];
@@ -320,6 +347,7 @@ export function generateCity(seed: number, size: number): City {
   const nameSeed = (rng() * 1e9) | 0;
   const blocks: Block[] = [];
   const buildings: Building[] = [];
+  const businesses: Business[] = [];
   const special = pickLandmarkBlocks(seed, xb, yb, nbx, nby, districts);
 
   for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
@@ -373,7 +401,7 @@ export function generateCity(seed: number, size: number): City {
       const facade = pickStyle(br(), MIX[districts[district].type]), look = LOOK[facade]!;
       const style = {
         style: facade, win: pick(look.win), frame: pick(look.frame), lit: look.lit[0] + br() * (look.lit[1] - look.lit[0]),
-        shop: facade !== 'warehouse' && br() < K.shop, sign: pick(WIN), feat: br(),
+        shop: facade !== 'warehouse' && br() < K.shop, sign: pick(WIN), feat: br(), biz: -1,
       };
       // warehouses have one or two tall open floors
       if (facade === 'warehouse') floors = Math.min(floors, 2);
@@ -395,7 +423,7 @@ export function generateCity(seed: number, size: number): City {
 
     /** A rooftop shape centered at (x, y) with half-size (or radius) s, reaching height h. */
     const part = (x: number, y: number, s: number, h: number, style: Facade, round: boolean, frame: RGB, win: RGB) => {
-      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br() });
+      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1 });
       block.maxH = Math.max(block.maxH, h);
     };
     /** Drum with windows, then a dome of stacked rings and a small lantern on top. */
@@ -434,7 +462,7 @@ export function generateCity(seed: number, size: number): City {
     const stone: RGB = [150, 135, 110], warm: RGB = [255, 220, 150], copper: RGB = [70, 140, 120];
     /** A plain building of this landmark. */
     const house = (bx0: number, by0: number, bx1: number, by1: number, bh: number, style: Facade, frame: RGB, win: RGB, lit: number) => {
-      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1 });
+      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1 });
       block.maxH = Math.max(block.maxH, bh);
     };
     const long = ix1 - ix0 > iy1 - iy0;
@@ -528,6 +556,15 @@ export function generateCity(seed: number, size: number): City {
         part(long ? ix0 + (ix1 - ix0) * u : mx + 10, long ? my + 10 : iy0 + (iy1 - iy0) * u, 3, 80 + br() * 15, 'chimney', true, frame, [255, 40, 40]);
       }
     } else if (!open) lot(ix0, iy0, ix1, iy1);
+    // one business per shop front; kind and name come from the building's position, so they stay put
+    const shops = SHOPS[districts[district].type];
+    for (let k = block.b0; k < buildings.length; k++) {
+      const B = buildings[k];
+      if (!B.shop) continue;
+      const bx = Math.floor(B.x0), by = Math.floor(B.y0);
+      B.biz = businesses.length;
+      businesses.push({ kind: shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by) * shops.length)], building: k, name: Math.floor(hash3(seed ^ 0x3b9ac1, bx, by) * 1e9) });
+    }
     block.b1 = buildings.length;
   }
 
@@ -538,7 +575,7 @@ export function generateCity(seed: number, size: number): City {
   if (tallest) landmarks.push({ kind: 'tower', x: (tallest.x0 + tallest.x1) / 2, y: (tallest.y0 + tallest.y1) / 2 });
 
   const { vents, floodlights } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, sectors: SECTORS, nameSeed };
+  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, businesses, sectors: SECTORS, nameSeed };
 }
 
 /**

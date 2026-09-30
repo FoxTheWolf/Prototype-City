@@ -7,6 +7,7 @@ import { LightWindow } from './lightmap';
 import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { LAMP, type Look } from './palette';
+import { marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
 export interface View {
   x: number;
@@ -57,6 +58,10 @@ const LITTER: [number, number, number, number, number, number, number][] = [
   [C('.'), 225, 150, 90, 2, 0.03, 0.012], [C(','), 200, 190, 170, 2, 0.03, 0.012], // cigarette butts
 ];
 const light = new LightWindow();
+/** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
+const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
+// the current frame's city and time in seconds, for the signs
+let frameCity: City, frameSec = 0;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -86,6 +91,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   // metres covered by one column at distance 1, to pick the level of facade detail
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
+  frameCity = city; frameSec = time / 60;
   const [lr, lg, lb] = LAMP;
 
   for (let x = 0; x < cols; x++) {
@@ -233,7 +239,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
                 const rr = (B.x1 - B.x0) / 2, nx = (px + t * rdx - B.x0 - rr) / rr, ny = (py + t * rdy - B.y0 - rr) / rr;
                 along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx);
               } else { along = side === 0 ? py + t * rdy : px + t * rdx; lightK = side ? 0.72 : 1; }
-              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW);
+              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW, side === 0 ? rdx < 0 : rdy > 0, (colW * t) / Math.max(1e-6, Math.abs(side === 0 ? rdx : rdy)));
             }
             clipTop = Math.min(clipTop, Math.max(0, top));
           }
@@ -361,7 +367,7 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
 }
 
 /** One building face in one column, rows y0..y1. `along` is where the ray hit the face; `top` is the unclipped roof row. */
-function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number) {
+function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number) {
   // side 2 is a cylinder: no corners
   const f0 = side === 0 ? B.y0 : side === 1 ? B.x0 : -1e9, f1 = side === 0 ? B.y1 : side === 1 ? B.x1 : 1e9;
   const fogK = 1 - Math.exp(-t / FOG);
@@ -386,6 +392,17 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const escU = ((wi % 7) - 2 + fw) / 2;
   const balcony = S === 'residential' && B.feat < 0.5;
   let ch = 0, r = 0, g = 0, b = 0;
+  // the shop sign on this face: the business name centered on it, if at least 3 letters fit
+  let signN = 0, signU = 0, text = '', mode = 0;
+  if (B.biz >= 0 && side !== 2) {
+    text = signText(frameCity, B.biz, Math.floor((f1 - f0 - 1.2) / LETTER_W) - 2);
+    signN = text.length >= 3 ? text.length : 0;
+    signU = along - (f0 + f1) / 2 + ((signN + 2) * LETTER_W) / 2;
+    if (signU < 0 || signU >= (signN + 2) * LETTER_W) signN = 0;
+    mode = signMode(frameCity, B.biz);
+  }
+  // metres of facade per column (dAlong, grows when the face is seen at a slant) and per row
+  const letters = LETTER_W / dAlong >= 0.9, dz = t / scale; // below one column per letter it is just a glowing bar
   const wall = (c: number, k: number) => { ch = c; r = fr * k * shade; g = fg * k * shade; b = fb * k * shade; };
   // a window: lit ones glow in the building's window color, dark ones are deep blue glass
   const pane = (fl: number, litCh: number) => {
@@ -439,6 +456,22 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else if (z > lid) wall(G.caret, 1);
       else wall(Math.abs(z - (base + 0.33 * (lid - base))) < 0.2 || Math.abs(z - (base + 0.7 * (lid - base))) < 0.2 ? G.eq : G.bar, 1);
     }
+    else if (signN && z > SIGN_Z0 && z < SIGN_Z1) {
+      // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
+      const col = Math.floor(signU / LETTER_W) - 1, inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
+      const k = rev ? signN - 1 - col : col, c = inText ? text.charCodeAt(k) : 32;
+      const lit = signLight(B.biz, mode, inText ? k : -1, signN, frameSec) * winLight;
+      // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
+      const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
+      if (inText && c !== 32 && (!letters || center)) {
+        ch = letters ? c : G.eq;
+        r = B.sign[0] * lit; g = B.sign[1] * lit; b = B.sign[2] * lit;
+      } else if (inText) { ch = 32; r = B.sign[0] * lit * 0.35; g = B.sign[1] * lit * 0.35; b = B.sign[2] * lit * 0.35; } else if (mode === SignMode.Marquee && !inText) {
+        const on = marqueeBulb(signU, frameSec);
+        ch = on ? G.o : G.dot; const q = on ? 1 : 0.3; r = 255 * q; g = 225 * q; b = 150 * q;
+      } else if (!inText && (z < 2.72 || z > 3.28)) { ch = G.dash; r = B.sign[0] * lit * 0.45; g = B.sign[1] * lit * 0.45; b = B.sign[2] * lit * 0.45; }
+      else { ch = G.dot; r = 14; g = 12; b = 16; } // dark backing board
+    }
     else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv);
       if (hh < B.lit) {
@@ -447,8 +480,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else wall(farWall, farK);
     } else if (z < FLOOR_H && B.shop) {
-      if (z > 2.7 && z < 3.3) { ch = G.eq; const k = winLight * (0.7 + 0.3 * hash3(id, wi, 99)); r = B.sign[0] * k; g = B.sign[1] * k; b = B.sign[2] * k; }
-      else if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = fw < 0.2 ? G.lb : fw > 0.8 ? G.rb : G.col; r = 180 * winLight; g = 150 * winLight; b = 100 * winLight; }
+      if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = fw < 0.2 ? G.lb : fw > 0.8 ? G.rb : G.col; r = 180 * winLight; g = 150 * winLight; b = 100 * winLight; }
       else wall(G.bar, 1);
     } else if (S === 'glass') {
       // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen

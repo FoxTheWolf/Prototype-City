@@ -41,5 +41,33 @@
   "street": "{n} St",
   "wideAvenue": "{r} Blvd",
   "wideStreet": "{r} St",
-  "ordinal": { "one": "st", "two": "nd", "few": "rd", "other": "th" }
+  "ordinal": { "one": "st", "two": "nd", "few": "rd", "other": "th" },
+  "business": {
+    "diner": ["{s}'s Diner", "{w} Diner", "{s}'s", "Eat at {s}'s", "{w} Grill"],
+    "bar": ["{s}'s Bar", "The {w}", "{w} Tavern", "{s}'s Pub", "{w} Lounge"],
+    "cafe": ["{w} Coffee", "Cafe {s}", "{s}'s Coffee", "{w} Espresso"],
+    "pharmacy": ["{s} Drugs", "{w} Pharmacy", "{s} Pharmacy", "Drugs 24h"],
+    "grocery": ["{s} Grocery", "{w} Market", "{s} Deli", "{w} Food Mart"],
+    "laundry": ["{w} Laundromat", "{s} Cleaners", "Wash & Fold", "{w} Laundry"],
+    "pawn": ["{s} Pawn", "{w} Pawn & Loan", "Cash 4 Gold", "{s} Loans"],
+    "electronics": ["{w} Electronics", "{s} TV & Radio", "{w} Tech", "{w} Mobile"],
+    "liquor": ["{w} Liquor", "{s} Liquors", "Beer Wine Liquor", "{w} Spirits"],
+    "hotel": ["Hotel {s}", "{w} Hotel", "The {s}", "{w} Inn"],
+    "bank": ["{s} Savings", "{w} Trust", "{s} & {s2} Bank", "{w} Federal"],
+    "cinema": ["{w} Theater", "The {w}", "{s} Cinema", "{w} Pictures"],
+    "books": ["{s} Books", "{w} Books", "{s} & Sons"],
+    "tailor": ["{s} Tailors", "{s} & {s2}", "{w} Alterations"],
+    "autoparts": ["{s} Auto Parts", "{w} Auto", "{s} Tire", "{w} Motors"]
+  },
+  "surnames": [
+    "Rossi", "Kowalski", "O'Neil", "Chen", "Nguyen", "Morales", "Novak", "Park", "Weiss", "Kaplan",
+    "Russo", "Murphy", "Lee", "Santos", "Ivanov", "Adler", "Byrne", "Costa", "Doyle", "Esposito",
+    "Fischer", "Greco", "Hanley", "Jansen", "Klein", "Lombardi", "Moran", "Nolan", "Petrov", "Quinn",
+    "Reyes", "Silva", "Tanaka", "Vega", "Walsh", "Yuen", "Zhang", "Dutch", "Mack", "Sal"
+  ],
+  "words": [
+    "Star", "Lucky", "Golden", "Atlas", "Nova", "Ace", "Metro", "Liberty", "Royal", "Empire",
+    "Midnight", "Neon", "Crown", "Eagle", "Paradise", "Diamond", "Rialto", "Majestic", "Orbit", "Regal",
+    "Silver", "Blue Moon", "Red Door", "Night Owl", "Eastside", "Union", "Jupiter", "Rex", "Galaxy", "Ember"
+  ]
 }
