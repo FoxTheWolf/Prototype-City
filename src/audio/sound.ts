@@ -1,4 +1,4 @@
-import { LAMP_LIGHT, lampId, lampMode, LampMode, lampState, lampStutter } from '../render/lamps';
+import { LAMP_LIGHT, lampId, lampMode, LampMode, lampState, lampStutter, photocell } from '../render/lamps';
 import { signLight, signMode, SignMode, signStutter, signText } from '../render/signs';
 import { type City } from '../sim/city';
 
@@ -75,7 +75,8 @@ export class Sound {
   }
 
   /** Follow the listener: position, heading and the time in seconds (the signs' clock). */
-  update(city: City, x: number, y: number, yaw: number, sec: number) {
+  /** day: 0 at night .. 1 in daylight, for the lamps' photocells. */
+  update(city: City, x: number, y: number, yaw: number, sec: number, day: number) {
     const now = this.ctx.currentTime;
     // screen-right direction, for panning
     const rx = -Math.sin(yaw), ry = Math.cos(yaw);
@@ -105,6 +106,7 @@ export class Sound {
     if (lid >= 0 && lamp < LAMP_R && LAMP_LIGHT[type].hum) {
       const near = (1 - lamp / LAMP_R) ** 2;
       lampState(lid, sec, this.st, type);
+      photocell(lid, day, this.st);
       hum = 0.05 * near * this.st[0];
       if (lampMode(lid, type) === LampMode.Stutter && lampStutter(lid, sec)) hcr = 0.04 * near;
     }

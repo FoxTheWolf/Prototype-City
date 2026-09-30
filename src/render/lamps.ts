@@ -63,3 +63,15 @@ export function lampId(city: City, p: Prop): number {
   if (!m) { m = new Map(city.lamps.map((l, k) => [l, k])); ids.set(city, m); }
   return m.get(p) ?? -1;
 }
+
+/**
+ * The photocell on every lamp: it switches on when the daylight (0 night .. 1 day) drops below its
+ * own threshold, so the street lights come on one by one at dusk and go off at dawn. Right after
+ * switching on, a discharge lamp is still warming up: st[1] (warmth) follows the dusk down. Scales
+ * st[0] (level) and st[1] in place.
+ */
+export function photocell(id: number, day: number, st: Float32Array) {
+  const thr = 0.25 + 0.35 * hash3(id, 3, 77);
+  if (day >= thr) { st[0] = 0; return; }
+  st[1] = Math.min(st[1], (thr - day) / 0.12);
+}

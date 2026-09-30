@@ -10,6 +10,7 @@ import { bladeText } from '../locale/names';
 import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
+import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
 export interface View {
@@ -73,7 +74,7 @@ const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
-let frameCity: City, frameSec = 0;
+let frameCity: City, frameSec = 0, frameDay = 0;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -105,30 +106,20 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const time = world.tick + v.alpha;
   frameCity = city; frameSec = time / 60;
   const D = city.diagonal, diagGlyph = D.ex * D.ey > 0 ? G.bs : G.sl;
-  light.update(frameSec);
+  const sky = prepareSky(city, world.weather, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
+  frameDay = sky.day;
+  light.update(frameSec, sky.day);
   gatherLights(world, v, frameSec);
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
     const rdx = dirX + plX * camX, rdy = dirY + plY * camX;
 
-    // ---- sky: gradient background + stars fixed to the sky
+    // ---- sky: gradient, stars, moon and clouds (sky.ts); below the horizon a dark base
     const az = v.yaw + Math.atan(camX * plane);
     const slot = Math.floor((((az / (2 * Math.PI)) % 1 + 1) % 1) * starSlots);
-    for (let y = 0; y < rows; y++) {
-      const i = y * cols + x;
-      const t = Math.max(0, Math.min(1, (y + 0.5) / Math.max(1, hor)));
-      if (y + 0.5 < hor) {
-        // the burning seam all around lights the low sky orange
-        const t4 = t * t * t * t;
-        grid.setBg(i, 5 + 21 * t * t + 30 * t4, 6 + 10 * t * t + 8 * t4, 11 + 21 * t * t - 6 * t4);
-        const h = hash3(slot, Math.floor(y - hor), 7);
-        if (h < 0.012 && y < hor - 3) { const b = 120 + h * 8000; grid.put(i, h < 0.003 ? G.star : G.dot, b, b, b + 30); }
-        else if (y >= hor - 2) grid.put(i, G.dot, 70, 40, 60);
-      } else {
-        grid.setBg(i, 7, 8, 12);
-      }
-    }
+    skyColumn(grid, x, sky, az, rdx, rdy, px, py, eye, hor, scale, slot);
+    for (let y = Math.max(0, Math.ceil(hor - 0.5)); y < rows; y++) grid.setBg(y * cols + x, 7, 8, 12);
 
     // ---- ground: each cell below the horizon maps to one point on the floor
     for (let y = Math.max(0, Math.ceil(hor - 0.5)); y < rows; y++) {
@@ -302,13 +293,19 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: (x, y, z) => { lightAt(x, y, z); return LT; } });
-  finish(grid, v.look);
+  finish(grid, v.look, sky);
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
-function finish(grid: CharGrid, look: Look) {
+function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
   const { cells, bg, depth } = grid;
+  // by day the world is brighter and sinks into a pale haze with distance: the "service" look
+  const day = sky.day;
   for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
+    if (day > 0.01 && depth[i] < 1e9) {
+      const f = day * (0.25 + 0.6 * (1 - Math.exp(-depth[i] / 1500))), amb = 1 + 0.7 * day;
+      cells[k + 1] = cells[k + 1] * amb * (1 - f) + 138 * f; cells[k + 2] = cells[k + 2] * amb * (1 - f) + 146 * f; cells[k + 3] = cells[k + 3] * amb * (1 - f) + 156 * f;
+    }
     if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
     if (look.blocks && BLOCKS[cells[k]]) cells[k] = BLOCKS[cells[k]];
   }
@@ -425,6 +422,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const shade = lightK * (1 - fogK * 0.6);
   const winLight = 1 - fogK * 0.45;
   const [fr, fg, fb] = B.frame;
+  // by day most lights in the windows are off
+  const litK = B.lit * (1 - 0.75 * frameDay);
   // rows per floor and columns per window bay decide how much of the facade fits in a cell
   const rpf = (FLOOR_H * scale) / t, cpb = BAY / (colW * t);
   const detailed = rpf >= 2.2 && cpb >= 1.5;
@@ -459,8 +458,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   // a window: lit ones glow in the building's window color, dark ones are deep blue glass
   const pane = (fl: number, litCh: number) => {
     const hh = hash3(id, wi, fl);
-    if (hh < B.lit) {
-      ch = hh < B.lit * 0.3 ? G.at : litCh;
+    if (hh < litK) {
+      ch = hh < litK * 0.3 ? G.at : litCh;
       const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
       r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
     } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
@@ -548,8 +547,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     }
     else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv);
-      if (hh < B.lit) {
-        ch = hh < B.lit * 0.4 ? G.o : G.col;
+      if (hh < litK) {
+        ch = hh < litK * 0.4 ? G.o : G.col;
         const k = winLight * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else wall(farWall, farK);
@@ -560,7 +559,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
       if (fz < 0.08) wall(G.dash, 0.8);
       else if (fw < 0.07 || corner) wall(G.bar, 1.5);
-      else if (hash3(id, wi, fl) < B.lit) pane(fl, G.col);
+      else if (hash3(id, wi, fl) < litK) pane(fl, G.col);
       else {
         const sheen = 0.5 + 0.5 * Math.sin(along * 0.35 + z * 0.5);
         wall(sheen > 0.85 ? G.sl : sheen > 0.4 ? G.col : G.dot, 1.3 + 0.9 * sheen);
@@ -569,7 +568,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const door = z < 4.5 && Math.floor(along / 6) % 3 === 1, dp = along % 6;
       if (z > B.h - 3.2 && z < B.h - 1.4) { // clerestory strip under the roof
         if (fw > 0.08 && fw < 0.92) {
-          if (hash3(id, wi, 0) < B.lit * 2) { ch = G.hash; const k = winLight * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
+          if (hash3(id, wi, 0) < litK * 2) { ch = G.hash; const k = winLight * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
           else { ch = G.eq; r = 22 * shade + 8; g = 26 * shade + 8; b = 36 * shade + 10; }
         } else wall(G.bar, 1.2);
       } else if (door && !corner) wall(dp < 0.4 || dp > 5.6 ? G.bar : z > 4.1 ? G.eq : G.dash, dp < 0.4 || dp > 5.6 ? 1.3 : 1.15);
@@ -597,8 +596,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else wall(corner ? G.bar : G.dot, 1);
     } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
       const hh = hash3(id, wi, fl);
-      if (hh < B.lit) {
-        ch = hh < B.lit * 0.3 ? G.at : hh < B.lit * 0.7 ? G.hash : G.pct;
+      if (hh < litK) {
+        ch = hh < litK * 0.3 ? G.at : hh < litK * 0.7 ? G.hash : G.pct;
         const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }

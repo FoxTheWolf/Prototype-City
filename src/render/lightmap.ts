@@ -1,5 +1,5 @@
 import { type City } from '../sim/city';
-import { LAMP_LIGHT, lampState } from './lamps';
+import { LAMP_LIGHT, lampState, photocell } from './lamps';
 
 /** Side of the baked window in metres. */
 const W = 1024;
@@ -52,12 +52,13 @@ export class LightWindow {
     });
   }
 
-  /** Update the lamps' failures for this frame. */
-  update(sec: number) {
+  /** Update the lamps' failures and photocells for this frame (day: 0 night .. 1 daylight). */
+  update(sec: number, day: number) {
     const lamps = this.city!.lamps, c = this.col;
     for (const n of this.inWindow) {
       const t = lamps[n].lampType ?? 'hps', L = LAMP_LIGHT[t];
       lampState(n, sec, this.st, t);
+      photocell(n, day, this.st);
       const lv = (this.level[n] = this.st[0]), w = (this.warm[n] = this.st[1]);
       for (let k = 0; k < 3; k++) c[n * 3 + k] = (L.cold[k] + (L.warm[k] - L.cold[k]) * w) * lv;
     }

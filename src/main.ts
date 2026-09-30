@@ -6,9 +6,12 @@ import { GlyphRenderer, type Layout } from './render/glRenderer';
 import { CharGrid } from './render/grid';
 import { type Look } from './render/palette';
 import { renderWorld } from './render/raycaster';
+import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from './sim/city';
-import { createWorld, stepWorld, TICK, type PlayerInput } from './sim/world';
+import { calendar } from './sim/clock';
+import { PRESETS } from './sim/weather';
+import { createWorld, cycleWeather, skipHours, stepWorld, TICK, type PlayerInput } from './sim/world';
 
 /** The grid always has this many rows; columns follow the window shape. */
 const ROWS = 80;
@@ -57,6 +60,9 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyM') sound?.toggleMute();
   else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
+  // debug: T / shift+T move the clock an hour, Y steps through the weather presets
+  else if (e.code === 'KeyT') skipHours(world, e.shiftKey ? -1 : 1);
+  else if (e.code === 'KeyY') cycleWeather(world);
 });
 
 function computeLayout(): Layout {
@@ -138,6 +144,10 @@ function frame(now: number) {
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
+  const cal = calendar(world.time), wx = world.weather;
+  const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
+    + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY `;
+  grid.text(grid.cols - clock.length - 1, grid.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
     + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
@@ -145,7 +155,7 @@ function frame(now: number) {
   city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
-  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60);
+  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time));
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }
