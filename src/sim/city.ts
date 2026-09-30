@@ -72,14 +72,14 @@ export interface Diagonal {
 
 export const DIAG_W = 21;
 
-export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris';
+export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris' | 'blade';
 
 /**
  * What a business does. Kept as data the rest of the game builds on: the shop sign shows its name
  * now; interiors (stage 7) and the economy (stage 13) will hang their own data on the same record.
  */
 export type BusinessKind = 'diner' | 'bar' | 'cafe' | 'pharmacy' | 'grocery' | 'laundry' | 'pawn' | 'electronics'
-  | 'liquor' | 'hotel' | 'bank' | 'cinema' | 'books' | 'tailor' | 'autoparts';
+  | 'liquor' | 'hotel' | 'bank' | 'cinema' | 'books' | 'tailor' | 'autoparts' | 'parking';
 
 export interface Business {
   kind: BusinessKind;
@@ -91,8 +91,8 @@ export interface Business {
 
 /** Which businesses open on the ground floor, by district. */
 const SHOPS: Record<DistrictType, BusinessKind[]> = {
-  financial: ['bank', 'cafe', 'electronics', 'diner', 'pharmacy', 'bar'],
-  commercial: ['diner', 'bar', 'electronics', 'pawn', 'cinema', 'hotel', 'pharmacy', 'liquor', 'cafe'],
+  financial: ['bank', 'cafe', 'electronics', 'diner', 'pharmacy', 'bar', 'parking'],
+  commercial: ['diner', 'bar', 'electronics', 'pawn', 'cinema', 'hotel', 'pharmacy', 'liquor', 'cafe', 'parking'],
   residential: ['grocery', 'laundry', 'liquor', 'pharmacy', 'diner', 'bar'],
   historic: ['cafe', 'bar', 'books', 'tailor', 'hotel', 'diner'],
   industrial: ['autoparts', 'diner', 'bar', 'liquor'],
@@ -110,6 +110,16 @@ export interface Prop {
   /** For street lamps: the kind of lamp in the head. */
   lampType?: LampType;
 }
+
+/**
+ * Chance that a business hangs a blade sign (a vertical sign sticking out of the facade, for the
+ * street to see) next to its shop sign.
+ */
+const BLADE: Partial<Record<BusinessKind, number>> = {
+  hotel: 1, cinema: 1, parking: 1, bar: 0.6, pawn: 0.6, liquor: 0.4, cafe: 0.4, diner: 0.4, pharmacy: 0.3,
+};
+/** A blade sign's panel starts this high and has one letter every BLADE_LETTER metres. */
+export const BLADE_Z = 3.8, BLADE_LETTER = 0.75;
 
 /**
  * Street-lamp technology around 2008 in an American city: high-pressure sodium (amber) almost
@@ -742,7 +752,9 @@ export function generateCity(seed: number, size: number): City {
       if (!B.shop) continue;
       const bx = Math.floor(B.x0), by = Math.floor(B.y0);
       B.biz = businesses.length;
-      businesses.push({ kind: shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by) * shops.length)], building: k, name: Math.floor(hash3(seed ^ 0x3b9ac1, bx, by) * 1e9) });
+      const kind = shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by) * shops.length)];
+      businesses.push({ kind, building: k, name: Math.floor(hash3(seed ^ 0x3b9ac1, bx, by) * 1e9) });
+      if (hash3(seed ^ 0x7b1ade, bx, by) < (BLADE[kind] ?? 0)) bladeSign(block, B, hash3(seed ^ 0x7b1ade, by, bx));
     }
     block.b1 = buildings.length;
   }
@@ -757,6 +769,28 @@ export function generateCity(seed: number, size: number): City {
   diagonalLamps(seed, diagonal, w, h, xb, yb, xCell, yCell, nbx, blocks, districts);
   const { vents, floodlights } = generateBorder(seed, w, h);
   return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+}
+
+/**
+ * A blade sign on one of the building's faces toward a street, near one end of it; seed is the
+ * business. The renderer stacks its letters and makes it as tall as its word (up to 8 letters),
+ * so it is only hung where the building is tall enough.
+ */
+function bladeSign(block: Block, B: Building, r: number) {
+  if (B.h < BLADE_Z + 8 * BLADE_LETTER + 1) return;
+  const ix0 = block.x0 + SIDEWALK, iy0 = block.y0 + SIDEWALK, ix1 = block.x1 - SIDEWALK, iy1 = block.y1 - SIDEWALK;
+  // faces on the sidewalk: the sides on the block's edge, and a face cut by the diagonal
+  const faces = [B.x0 <= ix0 + 0.01, B.x1 >= ix1 - 0.01, B.y0 <= iy0 + 0.01, B.y1 >= iy1 - 0.01, !!B.cut];
+  const open = faces.map((f, k) => (f ? k : -1)).filter((k) => k >= 0);
+  if (!open.length) return;
+  const f = open[Math.floor(r * open.length)], sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
+  if (hi - lo < 4) return;
+  const u = (r * 7) % 1 < 0.5 ? lo + 1.2 : hi - 1.2;
+  let x: number, y: number, a: number;
+  if (f === 4) { const K = B.cut!; x = K.nx * K.c + K.ny * u; y = K.ny * K.c - K.nx * u; a = Math.atan2(K.ny, K.nx); }
+  else if (f < 2) { x = f === 0 ? B.x0 : B.x1; y = u; a = f === 0 ? Math.PI : 0; }
+  else { x = u; y = f === 2 ? B.y0 : B.y1; a = f === 2 ? -Math.PI / 2 : Math.PI / 2; }
+  block.props.push({ kind: 'blade', x, y, w: 0, z1: 0, seed: B.biz, a });
 }
 
 /** A piece of block cut off by the diagonal and smaller than this (m²) is left as a plaza. */

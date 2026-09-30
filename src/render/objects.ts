@@ -11,8 +11,12 @@ import { type CharGrid } from './grid';
  * the same depth the walls and ground write to the depth buffer.
  */
 export const Shape = { Box: 0, Cyl: 1, Ball: 2 } as const;
-/** Solid: shaded glyphs. Leaf: glyph noise fixed to the surface. Glow: a light, unshaded. */
-export const Mat = { Solid: 0, Leaf: 1, Glow: 2 } as const;
+/**
+ * Solid: shaded glyphs. Leaf: glyph noise fixed to the surface. Glow: a light, unshaded. Text: a lit
+ * panel with the part's text stacked top to bottom on its two broad (y) faces, one letter every
+ * `(z1 - z0) / text.length` metres.
+ */
+export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3 } as const;
 
 export interface Part {
   shape: number;
@@ -24,6 +28,7 @@ export interface Part {
   side: number;
   top: number;
   end: number;
+  text?: string;
 }
 
 export interface Obj {
@@ -160,6 +165,16 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         const q = o.parts[bk];
         let ch: number, k: number;
         if (q.mat === Mat.Glow) { ch = q.side; k = 0.6 + 0.4 * fog; }
+        else if (q.mat === Mat.Text && face === 1 && q.text) {
+          // a letter goes in the one cell holding its center (the cell's size on the face: metres
+          // along x per column, and metres per row); the rest of the panel glows faintly
+          const hx = ox + dx * best, hz = oz + dz * best, n = q.text.length, lh = (q.z1 - q.z0) / n;
+          const li = Math.min(n - 1, Math.floor((q.z1 - hz) / lh)), zc = q.z1 - (li + 0.5) * lh;
+          const perCol = (colW * best) / Math.max(1e-6, Math.abs(dy)), perRow = best / v.scale;
+          const center = Math.abs(hx - (q.x0 + q.x1) / 2) < Math.max(perCol, 0.05) / 2 && Math.abs(hz - zc) < perRow / 2 + 0.01;
+          const small = perRow > lh * 0.9; // far away the letters blur into a lit bar
+          ch = small ? C('|') : center ? q.text.charCodeAt(li) : 32; k = small ? 0.7 : center ? 1 : 0.3;
+        }
         else {
           // lit like the buildings: faces turned along x brighter, tops brightest
           const wn = Math.abs(nx * o.c - ny * o.s) / (Math.hypot(nx, ny) || 1);
@@ -172,7 +187,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           } else ch = face === 2 ? q.top : face === 0 && q.shape === Shape.Box ? q.end : q.side;
         }
         let r = q.col[0] * k, g = q.col[1] * k, b = q.col[2] * k;
-        if (q.mat !== Mat.Glow) {
+        if (q.mat !== Mat.Glow && q.mat !== Mat.Text) {
           // the light where the ray hit, strongest on tops: a car lights up under a lamp or in another's headlights
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;
           const L = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz), gl = (face === 2 ? 1.5 : 1.1) * fog;

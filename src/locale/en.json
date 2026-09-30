@@ -42,6 +42,10 @@
   "wideAvenue": "{r} Blvd",
   "wideStreet": "{r} St",
   "diagonal": "{r} Way",
+  "blade": {
+    "hotel": "{name}", "cinema": "{name}", "parking": "PARK", "bar": "BAR", "pawn": "PAWN", "liquor": "LIQUOR",
+    "cafe": "CAFE", "diner": "EAT", "pharmacy": "DRUGS"
+  },
   "ordinal": { "one": "st", "two": "nd", "few": "rd", "other": "th" },
   "business": {
     "diner": ["{s}'s Diner", "{w} Diner", "{s}'s", "Eat at {s}'s", "{w} Grill"],
@@ -58,7 +62,8 @@
     "cinema": ["{w} Theater", "The {w}", "{s} Cinema", "{w} Pictures"],
     "books": ["{s} Books", "{w} Books", "{s} & Sons"],
     "tailor": ["{s} Tailors", "{s} & {s2}", "{w} Alterations"],
-    "autoparts": ["{s} Auto Parts", "{w} Auto", "{s} Tire", "{w} Motors"]
+    "autoparts": ["{s} Auto Parts", "{w} Auto", "{s} Tire", "{w} Motors"],
+    "parking": ["{s} Parking", "{w} Garage", "Park 24h", "{w} Park & Lock"]
   },
   "surnames": [
     "Rossi", "Kowalski", "O'Neil", "Chen", "Nguyen", "Morales", "Novak", "Park", "Weiss", "Kaplan",

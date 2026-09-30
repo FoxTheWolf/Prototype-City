@@ -3,7 +3,7 @@ import { type RGB } from '../sim/city';
 import { Mat, part, Shape, type Part } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
-const { Solid, Leaf, Glow } = Mat;
+const { Solid, Leaf, Glow, Text } = Mat;
 
 const GLASS: RGB = [45, 65, 95];
 const TIRE: RGB = [28, 28, 32];
@@ -165,3 +165,25 @@ export const FLOOD: Part[] = [
   part(Box, -0.1, -0.9, 12.6, 0.2, 0.9, 12.8, STEEL, Solid, '=', '='),
   part(Box, 0.2, -0.8, 12.8, 0.5, 0.8, 14.2, [255, 250, 225], Glow, '#'),
 ];
+
+const blades = new Map<string, Part[]>();
+/**
+ * Blade sign, sticking out of a wall along +x: two steel arms, a dark frame and the lit panel with
+ * its word stacked from the top. `col` is the neon's color at its current brightness.
+ */
+export function bladeModel(text: string, col: RGB, z0: number, letter: number): Part[] {
+  const key = text + col.join();
+  let m = blades.get(key);
+  if (m) return m;
+  const z1 = z0 + text.length * letter + 0.3;
+  m = [
+    part(Box, 0, -0.04, z1 - 0.35, 0.4, 0.04, z1 - 0.25, STEEL, Solid, '-', '-', '|'),
+    part(Box, 0, -0.04, z0 + 0.25, 0.4, 0.04, z0 + 0.35, STEEL, Solid, '-', '-', '|'),
+    part(Box, 0.4, -0.16, z0, 1.3, 0.16, z1, [40, 36, 44], Solid, '|', '=', '|'),
+    part(Box, 0.46, -0.18, z0 + 0.15, 1.24, 0.18, z1 - 0.15, col, Text, ' '),
+  ];
+  m[3].text = text;
+  if (blades.size > 4000) blades.clear();
+  blades.set(key, m);
+  return m;
+}

@@ -78,6 +78,17 @@ export function sectorCode(city: City, x: number, y: number): string {
   return String.fromCharCode(65 + sx) + (sy + 1);
 }
 
+/**
+ * The word on a business's blade sign: what it is (BAR, PAWN, PARK), or for hotels and cinemas the
+ * most telling word of its name. At most 8 letters, upper case.
+ */
+export function bladeText(city: City, k: number): string {
+  const t = (L.blade as Record<string, string>)[city.businesses[k].kind] ?? '';
+  if (t !== '{name}') return t.slice(0, 8);
+  const words = businessName(city, k).toUpperCase().split(' ').filter((w) => !['THE', 'HOTEL', 'CINEMA', 'INN', '&'].includes(w));
+  return (words.sort((a, b) => b.length - a.length)[0] ?? 'OPEN').replace(/[^A-Z0-9']/g, '').slice(0, 8);
+}
+
 /** A business's name, from its name pick: a template for its kind filled with surnames and brand words. */
 export function businessName(city: City, k: number): string {
   const b = city.businesses[k], n = b.name;

@@ -1,12 +1,13 @@
 import { hash3 } from '../core/rng';
-import { BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BLADE_LETTER, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
-import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
+import { bladeText } from '../locale/names';
+import { bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
@@ -637,6 +638,12 @@ function gatherLights(world: World, v: View, sec: number) {
   // each sign lights the sidewalk in front of it and the wall around it, in its own color and flicker
   for (const blk of city.blocks) {
     if (blk.x1 < v.x - DYN_FAR || blk.x0 > v.x + DYN_FAR || blk.y1 < v.y - DYN_FAR || blk.y0 > v.y + DYN_FAR) continue;
+    for (const p of blk.props) {
+      if (p.kind !== 'blade') continue;
+      const B = city.buildings[city.businesses[p.seed].building];
+      const q = 0.3 * signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, sec);
+      dyn.point(p.x + Math.cos(p.a) * 0.9, p.y + Math.sin(p.a) * 0.9, 6, 9, 12, B.sign[0] * q, B.sign[1] * q, B.sign[2] * q);
+    }
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
       if (B.biz < 0 || B.round) continue;
@@ -693,6 +700,12 @@ function collectObjects(world: World, v: View): Obj[] {
         out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lampModel(head), r: 2.1, h: 6.7, seed: 0 });
       }
       else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
+      else if (p.kind === 'blade') {
+        // lit and flickering like the business's shop sign (brightness in eighths, so models are reused)
+        const B = city.buildings[city.businesses[p.seed].building], text = bladeText(city, p.seed);
+        const lit = Math.round(signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, frameSec) * 8) / 8;
+        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, BLADE_LETTER), r: 1.4, h: BLADE_Z + text.length * BLADE_LETTER + 0.3, seed: 0 });
+      }
       else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
       else {
         const f = FURNITURE[p.kind];
