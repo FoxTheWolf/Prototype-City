@@ -41,6 +41,8 @@ const LIT_H = 9, LIT_FAR = 600;
 const LITTER_FAR = 14;
 /** Width of one window bay on a facade. */
 const BAY = 1.6;
+/** Spacing of the floodlights along the foot of a floodlit facade. */
+const FLOOD_GAP = 6;
 
 const C = (s: string) => s.charCodeAt(0);
 const G = {
@@ -452,6 +454,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   }
   // metres of facade per column (dAlong, grows when the face is seen at a slant) and per row
   const letters = LETTER_W / dAlong >= 0.9, dz = t / scale; // below one column per letter it is just a glowing bar
+  const floodBase = side === 2 ? 0 : f0; // floodlights line up from the face's start
   const wall = (c: number, k: number) => { ch = c; r = fr * k * shade; g = fg * k * shade; b = fb * k * shade; };
   // a window: lit ones glow in the building's window color, dark ones are deep blue glass
   const pane = (fl: number, litCh: number) => {
@@ -600,6 +603,20 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
+    if (B.flood && z < B.floodH) {
+      // floodlights every FLOOD_GAP metres at the foot of the wall, each a cone of light widening
+      // upward (the two nearest count) and fading out toward floodH; far away, the average
+      const w = 0.35 + 0.18 * z, fz = Math.min(1, z / 1.5) * (1 - z / B.floodH) ** 1.2;
+      let I: number;
+      if (dAlong > FLOOD_GAP * 0.4) I = fz * Math.min(1, (1.77 * w) / FLOOD_GAP);
+      else {
+        const fr = ((((along - floodBase) / FLOOD_GAP) % 1) + 1) % 1, d = Math.abs(fr - 0.5) * FLOOD_GAP, d2 = FLOOD_GAP - d;
+        I = fz * (Math.exp(-((d / w) ** 2)) + Math.exp(-((d2 / w) ** 2)));
+        if (z < 0.35 && d < 0.3) { ch = G.star; r = 240; g = 230; b = 200; } // the lamp itself
+      }
+      const k = I * winLight;
+      r += B.flood[0] * k; g += B.flood[1] * k; b += B.flood[2] * k;
+    }
     if (z < LIT_H && t < LIT_FAR) {
       // street lamps, headlights and signs light the lower floors
       lightAt(hx, hy, z);
