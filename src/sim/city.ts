@@ -70,6 +70,20 @@ const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot:
   industrial: { base: 1.5, tall: 0.1, cap: 4, lot: 30, lotCore: 20, open: 'yard', openP: 0.12, empty: 0.15, shop: 0.04 },
 };
 
+/**
+ * A crack in the burning coal seam outside the city, where smoke and gas come out. (x, y) is
+ * outside the city; r is the width of the smoke column at its base and h how high it rises.
+ */
+export interface Vent {
+  x: number;
+  y: number;
+  r: number;
+  h: number;
+}
+
+/** Outside the city the ground burns; this far past the fence it starts to crack and glow. */
+export const BURN_START = 40;
+
 export type LandmarkKind = 'tower' | 'hall' | 'memorial' | 'power' | 'park';
 
 /** A named place people navigate by. (x, y) is its middle. */
@@ -122,6 +136,9 @@ export interface City {
   cy: number;
   districts: District[];
   landmarks: Landmark[];
+  /** The burning seam around the city: smoke vents, and floodlight towers on the cordon fence (which runs along the city edge). */
+  vents: Vent[];
+  floodlights: { x: number; y: number }[];
   sectors: number;
   /** Chooses the words of every place name (see locale/names.ts). */
   nameSeed: number;
@@ -406,7 +423,31 @@ export function generateCity(seed: number, size: number): City {
   for (const B of buildings) if (B.h > tallest.h) tallest = B;
   if (tallest) landmarks.push({ kind: 'tower', x: (tallest.x0 + tallest.x1) / 2, y: (tallest.y0 + tallest.y1) / 2 });
 
-  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, sectors: SECTORS, nameSeed };
+  const { vents, floodlights } = generateBorder(seed, w, h);
+  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, sectors: SECTORS, nameSeed };
+}
+
+/**
+ * The burning seam that surrounds the city, and the cordon on its edge. It has its own random
+ * stream, so it never shifts the city itself.
+ */
+function generateBorder(seed: number, w: number, h: number) {
+  const rng = mulberry32((hash3(seed, 7777, 1) * 4294967296) | 0);
+  const vents: Vent[] = [];
+  const n = Math.round((w + h) / 50);
+  for (let k = 0; k < n; k++) {
+    // a point on the perimeter, pushed outward
+    let s = rng() * 2 * (w + h), x: number, y: number, nx: number, ny: number;
+    if (s < w) { x = s; y = 0; nx = 0; ny = -1; } else if ((s -= w) < h) { x = w; y = s; nx = 1; ny = 0; }
+    else if ((s -= h) < w) { x = s; y = h; nx = 0; ny = 1; } else { s -= w; x = 0; y = s; nx = -1; ny = 0; }
+    const out = BURN_START + 40 + rng() ** 1.5 * 900;
+    vents.push({ x: x + nx * out, y: y + ny * out, r: 4 + rng() * 10, h: 50 + rng() * 110 });
+  }
+  const floodlights: { x: number; y: number }[] = [];
+  const GAP = 120, OFF = 3;
+  for (let x = GAP / 2; x < w; x += GAP) floodlights.push({ x, y: -OFF }, { x, y: h + OFF });
+  for (let y = GAP / 2; y < h; y += GAP) floodlights.push({ x: -OFF, y }, { x: w + OFF, y });
+  return { vents, floodlights };
 }
 
 /** District of the block nearest to a point (roads belong to the block beside them). */

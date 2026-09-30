@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { LightWindow } from './lightmap';
@@ -33,11 +33,11 @@ const C = (s: string) => s.charCodeAt(0);
 const G = {
   dot: C('.'), com: C(','), tick: C('`'), col: C(':'), semi: C(';'), dash: C('-'), eq: C('='), plus: C('+'),
   hash: C('#'), pct: C('%'), at: C('@'), bar: C('|'), us: C('_'), star: C('*'), quo: C('"'), amp: C('&'),
-  o: C('o'), lb: C('['), rb: C(']'), sl: C('/'), bs: C('\\'), caret: C('^'),
+  o: C('o'), lb: C('['), rb: C(']'), sl: C('/'), bs: C('\\'), caret: C('^'), x: C('x'), tilde: C('~'), lp: C('('), rp: C(')'),
 };
 
 interface Sprite {
-  kind: 'lamp' | 'tree' | 'car';
+  kind: 'lamp' | 'tree' | 'car' | 'flood';
   x: number;
   y: number;
   w: number;
@@ -74,6 +74,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const starSlots = Math.round(cols * Math.PI / Math.atan(plane));
   // metres covered by one column at distance 1, to pick the level of facade detail
   const colW = (2 * plane) / cols;
+  const time = world.tick + v.alpha;
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
@@ -86,7 +87,9 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       const i = y * cols + x;
       const t = Math.max(0, Math.min(1, (y + 0.5) / Math.max(1, hor)));
       if (y + 0.5 < hor) {
-        grid.setBg(i, 5 + 21 * t * t, 6 + 10 * t * t, 11 + 21 * t * t);
+        // the burning seam all around lights the low sky orange
+        const t4 = t * t * t * t;
+        grid.setBg(i, 5 + 21 * t * t + 30 * t4, 6 + 10 * t * t + 8 * t4, 11 + 21 * t * t - 6 * t4);
         const h = hash3(slot, Math.floor(y - hor), 7);
         if (h < 0.012 && y < hor - 3) { const b = 120 + h * 8000; grid.put(i, h < 0.003 ? G.star : G.dot, b, b, b + 30); }
         else if (y >= hor - 2) grid.put(i, G.dot, 70, 40, 60);
@@ -101,7 +104,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       const rd = (eye * scale) / (y + 0.5 - hor);
       const wx = px + rdx * rd, wy = py + rdy * rd;
       grid.depth[i] = rd;
-      if (rd > GROUND_FAR || wx < 0 || wy < 0 || wx >= city.w || wy >= city.h) { grid.put(i, G.dot, 28, 24, 32); continue; }
+      if (wx < 0 || wy < 0 || wx >= city.w || wy >= city.h) { burnGround(grid, i, city, wx, wy, rd, time); continue; }
+      if (rd > GROUND_FAR) { grid.put(i, G.dot, 28, 24, 32); continue; }
       const fog = 1 - (rd / GROUND_FAR) * 0.9;
       const glow = light.at(wx, wy) * fog;
       const cx = city.xCell[wx | 0], cy = city.yCell[wy | 0];
@@ -207,9 +211,111 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= xb.length - 1) break; tx = ((rdx < 0 ? xb[cx] : xb[cx + 1]) - px) * ix; }
       else { cy += stY; tIn = ty; if (cy < 0 || cy >= yb.length - 1) break; ty = ((rdy < 0 ? yb[cy] : yb[cy + 1]) - py) * iy; }
     }
+
+    fenceColumn(grid, x, city, px, py, rdx, rdy, hor, scale, eye);
   }
 
+  drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
   drawSprites(grid, collectSprites(world, v), v, dirX, dirY, plX, plY, plane, scale, hor);
+}
+
+/** Scorched ground outside the fence, split by cracks that glow where the coal burns underneath. */
+function burnGround(grid: CharGrid, i: number, city: City, wx: number, wy: number, rd: number, time: number) {
+  const out = Math.max(-wx, wx - city.w, -wy, wy - city.h);
+  const fog = 1 - Math.min(1, rd / 2500) * 0.85;
+  const hv = hash3(Math.floor(wx * 1.2), Math.floor(wy * 1.2), 5);
+  let ch = hv < 0.6 ? G.dot : hv < 0.85 ? G.com : G.tick, r = 42 * fog, g = 32 * fog, b = 30 * fog;
+  const heat = Math.min(1, Math.max(0, (out - BURN_START) / 200));
+  if (heat > 0) {
+    // cracks are the edges of a cellular pattern: where the two nearest feature points are almost equally far
+    const S = 14, gx = Math.floor(wx / S), gy = Math.floor(wy / S);
+    let d1 = 1e9, d2 = 1e9, near = 0;
+    for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) {
+      const cx = gx + k, cy = gy + j;
+      const d = Math.hypot((cx + hash3(cx, cy, 11)) * S - wx, (cy + hash3(cx, cy, 12)) * S - wy);
+      if (d < d1) { d2 = d1; d1 = d; near = hash3(cx, cy, 13); } else if (d < d2) d2 = d;
+    }
+    // far away a crack is thinner than a cell: widen it and dim it so it reads as a glow line
+    const width = 0.7 + rd * 0.004;
+    if (d2 - d1 < width && near < 0.75) {
+      const k = heat * (0.55 + 0.45 * Math.sin(time * 0.05 + near * 40)) * (0.6 + 0.4 * fog) * Math.min(1, 1.2 / (1 + rd * 0.002));
+      ch = d2 - d1 < width * 0.4 && rd < 150 ? G.star : G.eq;
+      r = 60 + 220 * k; g = 30 + 90 * k * k; b = 20 + 20 * k;
+    }
+  }
+  grid.put(i, ch, r, g, b);
+}
+
+/**
+ * The cordon fence on the city edge, seen from inside: chain link on posts with barbed wire on top.
+ * Drawn after the walls and only where nothing nearer was drawn, so the burning ground shows through.
+ */
+function fenceColumn(grid: CharGrid, x: number, city: City, px: number, py: number, rdx: number, rdy: number, hor: number, scale: number, eye: number) {
+  const tX = rdx > 0 ? (city.w - px) / rdx : rdx < 0 ? -px / rdx : 1e9;
+  const tY = rdy > 0 ? (city.h - py) / rdy : rdy < 0 ? -py / rdy : 1e9;
+  const t = Math.min(tX, tY);
+  if (t <= 0.05 || t > 2000) return;
+  const along = tX < tY ? py + t * rdy : px + t * rdx;
+  const H = 4.2;
+  const y0 = Math.max(0, Math.ceil(hor - ((H - eye) * scale) / t - 0.5)), y1 = Math.min(grid.rows, Math.ceil(hor + (eye * scale) / t - 0.5));
+  const post = along % 3 < 0.15 + t * 0.002, k = 1 - Math.min(1, t / 1500) * 0.7;
+  for (let y = y0; y < y1; y++) {
+    const i = y * grid.cols + x;
+    if (grid.depth[i] <= t) continue;
+    const z = eye + ((hor - (y + 0.5)) / scale) * t;
+    let ch = 0;
+    if (z > H - 0.5) ch = Math.floor(along / 0.4) & 1 ? G.x : G.tilde; // barbed wire
+    else if (post) ch = G.bar;
+    else if (t < 30) {
+      // chain link: two sets of diagonal wires 0.6 m apart; thinner than a cell further away, so it fades out
+      const a = (((along + z) % 0.6) + 0.6) % 0.6 < 0.07, b = (((along - z) % 0.6) + 0.6) % 0.6 < 0.07;
+      ch = a && b ? G.x : a ? G.sl : b ? G.bs : 0;
+    }
+    if (!ch) continue;
+    grid.put(i, ch, 120 * k, 120 * k, 130 * k);
+    grid.depth[i] = t;
+  }
+}
+
+/**
+ * Smoke columns rising from the vents of the burning seam, seen from far away: sparse glyphs
+ * drifting upward, glowing orange at the base.
+ */
+function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: number, plX: number, plY: number, plane: number, scale: number, hor: number, time: number) {
+  const { cols, rows } = grid;
+  const invDet = 1 / (plX * dirY - dirX * plY);
+  for (const s of city.vents) {
+    const rx = s.x - v.x, ry = s.y - v.y;
+    const tY = invDet * (-plY * rx + plX * ry);
+    if (tY < 5) continue;
+    const tX = invDet * (dirY * rx - dirX * ry);
+    const cx = (cols / 2) * (1 + tX / tY), colsPerM = cols / 2 / plane / tY;
+    const top = hor - ((s.h - v.eye) * scale) / tY, bot = hor + (v.eye * scale) / tY;
+    const maxHalf = s.r * 2.2 * colsPerM;
+    const x0 = Math.max(0, Math.floor(cx - maxHalf)), x1 = Math.min(cols, Math.ceil(cx + maxHalf));
+    const y0 = Math.max(0, Math.ceil(top - 0.5)), y1 = Math.min(rows, Math.ceil(bot - 0.5));
+    if (x0 >= x1 || y0 >= y1) continue;
+    const fog = 1 - Math.min(1, tY / 2500) * 0.7;
+    for (let y = y0; y < y1; y++) {
+      const vv = (y + 0.5 - top) / (bot - top); // 0 at the top of the column, 1 at the ground
+      const rise = 1 - vv;
+      // the column widens and leans downwind as it rises
+      const half = s.r * (0.5 + 1.7 * rise) * colsPerM, mid = cx + rise * rise * s.r * 1.5 * colsPerM;
+      const row = Math.floor(vv * 30 + time * 0.03 * (30 / Math.max(1, s.h / 10)));
+      for (let x = Math.max(x0, Math.floor(mid - half)); x < Math.min(x1, Math.ceil(mid + half)); x++) {
+        const i = y * cols + x;
+        if (grid.depth[i] <= tY) continue;
+        const u = (x + 0.5 - mid) / half; // -1 .. 1 across the column
+        const dens = (1 - u * u) * (0.25 + 0.75 * vv);
+        const hh = hash3(Math.floor(u * 5 + s.x), row, s.y | 0);
+        if (hh > dens * 0.9) continue;
+        const glow = vv > 0.7 ? (vv - 0.7) / 0.3 : 0;
+        const ch = hh < 0.15 ? G.tilde : hh < 0.35 ? G.lp : hh < 0.55 ? G.rp : hh < 0.75 ? G.col : G.dot;
+        const g0 = (85 + 45 * vv) * fog;
+        grid.put(i, ch, g0 + 180 * glow, g0 + 60 * glow, g0 * 1.05);
+      }
+    }
+  }
 }
 
 /** One building face in one column, rows y0..y1. `along` is where the ray hit the face; `top` is the unclipped roof row. */
@@ -343,6 +449,9 @@ function collectSprites(world: World, v: View): Sprite[] {
     const blk = cityBlock(city, cx, cy);
     if (blk) for (const p of blk.props) out.push({ ...p, dx: 0, dy: 0, taxi: false, col: none });
   }
+  for (const f of city.floodlights) {
+    if (Math.abs(f.x - v.x) < SPRITE_FAR * 2 && Math.abs(f.y - v.y) < SPRITE_FAR * 2) out.push({ kind: 'flood', x: f.x, y: f.y, w: 1.6, z1: 14, seed: 0, dx: 0, dy: 0, taxi: false, col: none });
+  }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate
     const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
@@ -404,6 +513,10 @@ function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, d
             const hv = hash3(s.seed, Math.floor(u * 8), Math.floor(vv * 10));
             ch = hv < 0.4 ? G.at : hv < 0.7 ? G.amp : G.pct; r = 40 * fog; g = (100 + hv * 80) * fog; b = 45 * fog;
           } else if (vv > 0.6 && Math.abs(u - 0.5) < 0.09) { ch = G.bar; r = 90 * fog; g = 60 * fog; b = 35 * fog; }
+        } else if (s.kind === 'flood') {
+          // floodlight tower: a bank of lamps on a lattice mast
+          if (vv < 0.08) { ch = G.hash; r = 255; g = 250; b = 225; }
+          else if (Math.abs(u - 0.5) < 0.18) { ch = Math.floor(vv * 40) & 1 ? G.x : G.bar; r = 100 * fog; g = 100 * fog; b = 108 * fog; }
         } else if (vv < 0.07) { ch = G.star; r = 255; g = 200; b = 120; }
         else if (Math.abs(u - 0.5) < 0.3) { ch = G.bar; r = 110 * fog; g = 110 * fog; b = 118 * fog; }
         if (ch) { grid.put(i, ch, r, g, b); grid.depth[i] = tY; }
