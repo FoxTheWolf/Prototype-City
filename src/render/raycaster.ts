@@ -43,17 +43,20 @@ const G = {
   o: C('o'), lb: C('['), rb: C(']'), sl: C('/'), bs: C('\\'), caret: C('^'), x: C('x'), tilde: C('~'), lp: C('('), rp: C(')'),
 };
 
-/** Litter by tenths of its kind roll: glyph and color. The first two are bags, the last a cigarette butt. */
-const LITTER: [number, number, number, number][] = [
-  [C('@'), 38, 38, 44], [C('@'), 60, 58, 50], // trash bags
-  [C('u'), 225, 220, 205], [C('u'), 200, 60, 50], // paper cups
-  [C('o'), 175, 180, 190], [C('='), 190, 50, 45], // cans
-  [C('#'), 205, 200, 180], [C('~'), 190, 185, 160], [C('%'), 150, 120, 80], // paper, newspaper, cardboard
-  [C('.'), 230, 150, 90], // cigarette butt
+/**
+ * Litter items: glyph, color, shape (0 round, 1 flat rectangle, 2 long and thin) and half sizes in metres.
+ * Colors are muted, so the street keeps its sodium palette.
+ */
+const LITTER: [number, number, number, number, number, number, number][] = [
+  [C('@'), 38, 38, 44, 0, 0.22, 0], [C('@'), 50, 66, 100, 0, 0.19, 0], [C('&'), 165, 165, 160, 0, 0.16, 0], // black, blue and white bags
+  [C('u'), 225, 220, 205, 0, 0.08, 0], [C('u'), 185, 60, 50, 0, 0.08, 0], [C('o'), 120, 90, 60, 0, 0.07, 0], // cups, a coffee lid
+  [C('='), 175, 180, 190, 2, 0.08, 0.035], [C('='), 175, 50, 45, 2, 0.08, 0.035], // cans lying down
+  [C('-'), 70, 125, 80, 2, 0.13, 0.04], [C('-'), 115, 78, 40, 2, 0.13, 0.04], // green and brown bottles
+  [C('#'), 205, 200, 180, 1, 0.14, 0.1], [C('~'), 165, 162, 148, 1, 0.22, 0.16], [C('%'), 145, 115, 78, 1, 0.22, 0.17], // paper, newspaper, cardboard
+  [C('*'), 195, 165, 60, 1, 0.06, 0.04], [C('*'), 90, 130, 150, 1, 0.06, 0.04], // candy wrappers
+  [C('.'), 225, 150, 90, 2, 0.03, 0.012], [C(','), 200, 190, 170, 2, 0.03, 0.012], // cigarette butts
 ];
 const light = new LightWindow();
-/** Solid mode: the background behind a glyph is its own color at this strength. */
-const SOLID = 0.24;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -168,12 +171,15 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
         // grows to the ground one row covers, so it does not slip between rows
         const gx = Math.floor(wx * 2), gy = Math.floor(wy * 2), h = hash3(gx, gy, 17);
         if (h < dens) {
-          const kind = hash3(gx, gy, 18), size = kind < 0.2 ? 0.26 : kind < 0.9 ? 0.14 : 0.05;
-          const reach = Math.max(size, (rd * rd) / (eye * scale) * 0.5);
-          if (Math.hypot(wx - (gx + 0.25 + 0.5 * hash3(gx, gy, 19)) / 2, wy - (gy + 0.25 + 0.5 * hash3(gx, gy, 20)) / 2) < reach) {
-            const L = LITTER[Math.min(LITTER.length - 1, Math.floor(kind * 10))];
-            ch = L[0]; r = L[1]; g = L[2]; b = L[3];
-          }
+          const L = LITTER[Math.floor(hash3(gx, gy, 18) * LITTER.length)];
+          // a random spot and turn inside the square
+          const half = Math.max(L[5], L[6]), room = Math.max(0, 0.5 - 2 * half);
+          const ux = wx - (gx / 2 + half + room * hash3(gx, gy, 19)), uy = wy - (gy / 2 + half + room * hash3(gx, gy, 20));
+          const ang = hash3(gx, gy, 21) * Math.PI, ca = Math.cos(ang), sa = Math.sin(ang);
+          const u = Math.abs(ux * ca + uy * sa), w = Math.abs(-ux * sa + uy * ca);
+          const e = ((rd * rd) / (eye * scale)) * 0.5;
+          const hit = L[4] === 0 ? Math.hypot(u, w) < Math.max(L[5], e) : u < Math.max(L[5], e) && w < Math.max(L[6], e);
+          if (hit) { ch = L[0]; r = L[1]; g = L[2]; b = L[3]; }
         }
       }
       grid.put(i, ch, r * fog + glow * lr, g * fog + glow * lg, b * fog + glow * lb);
@@ -250,7 +256,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
 function finish(grid: CharGrid, look: Look) {
   const { cells, bg, depth } = grid;
   for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
-    if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * SOLID; bg[k + 1] = cells[k + 2] * SOLID; bg[k + 2] = cells[k + 3] * SOLID; }
+    if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
     if (look.blocks && BLOCKS[cells[k]]) cells[k] = BLOCKS[cells[k]];
   }
 }

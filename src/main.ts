@@ -47,11 +47,13 @@ if (import.meta.env.DEV) Object.assign(window, {
 let grid: CharGrid;
 let layout: Layout;
 let running = false;
-// display switches: B the solid background, U the block glyphs
-const look: Look = { solid: true, blocks: false };
+// display switches: B steps the solid background darker until it is off, U the block glyphs
+const SOLID = [0.24, 0.16, 0.08, 0];
+let solidStep = 0;
+const look: Look = { solid: SOLID[0], blocks: false };
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (e.code === 'KeyB') look.solid = !look.solid;
+  if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
 });
 
@@ -127,7 +129,7 @@ function frame(now: number) {
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[B] BG ${look.solid ? 'ON' : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'} `;
+    + `[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `

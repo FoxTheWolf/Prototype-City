@@ -147,6 +147,7 @@ Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simu
 - **GTA IV:** Liberty City como modelo de cidade americana em grade, época ~2008, celular como objeto e acesso à internet em lugares físicos (já citado nas decisões).
 
 - **Megaestruturas (dito pelo usuário em 2026-09-30):** o usuário adora megaestruturas, como o elevador espacial do Ace Combat 7 (ele disse "Combat 8"), ou estruturas tão grandes que dá para ver do espaço. **Pode não ser relevante**, porque foge bastante do escopo de uma tecnologia de ~2008. Fica como inspiração para guiar decisões futuras. 
+  - **Forma decidida em 2026-09-30: o Sarcófago com uma chaminé de tiragem.** É uma cúpula de contenção colossal e **inacabada** sobre a cratera principal do fogo, com ~3 km de largura, ~400 m de altura e uns 5 km depois da cerca. Tem esqueleto de treliça, painéis faltando e guindastes parados no topo; o laranja do fogo vaza por baixo e pelas frestas. Ela se junta a uma **torre de tiragem** (a ideia de usar o calor do fogo para gerar energia), mas **larga e baixa**, com diâmetro grande em vez de altura, para não aparecer do centro. A inspiração real é o arco de Chernobyl. Para a história e o hacking, é uma obra parada por falência ou corrupção, com telemetria, sensores e guindastes ainda ligados.
   - **Decidido em 2026-09-30:** a megaestrutura fica **ligada à zona de fogo** e pode servir à história no futuro. Fica **longe, além do cordão**, e **não aparece do centro**, para não mexer na skyline. Só aparece no horizonte quando o jogador se aproxima da borda da cidade, perto da cerca, e aí deve transmitir a escala, para que se perceba o tamanho enorme dela. O que ela é ainda está a definir, sempre plausível para ~2008 no tom retrofuturista (etapa 5, junto com o horizonte).
 - **Curvatura do horizonte (pedido em 2026-09-30):** simular uma curvatura **bem leve**, com o chão e os objetos distantes descendo um pouco (queda ≈ d²/2R, com um R falso bem menor que o da Terra, porque o real dá só ~0,3 m a 2 km). Não pode dar a impressão de cidade cilíndrica (etapa 5, junto com o céu).
 
@@ -198,8 +199,8 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 - **Decisões da etapa 4 (2026-09-30):**
   - **Paleta: sódio âmbar (escolhida pelo usuário em 2026-09-30,** depois de comparar com neon noir e verde terminal). As outras foram removidas.
-  - **Fundo colorido:** ligado por padrão, com uma tecla (**B**) para voltar ao modo só caracteres. O usuário achou 0,36 da cor do glifo claro e sólido demais; baixou para 0,24 (`SOLID`).
-  - **Caracteres Unicode de bloco e de caixa (`░▒▓█─│┌`):** alternáveis por tecla contra ASCII puro, para o usuário comparar e escolher.
+  - **Fundo colorido:** o usuário gosta das duas versões, com e sem fundo. A tecla **B** passa por estágios: 0,24 da cor do glifo (o padrão e o mais claro), 0,16, 0,08 e desligado (`SOLID` em `main.ts`). Antes era 0,36, que ele achou claro e sólido demais.
+  - **Caracteres:** o usuário prefere **ASCII**, que é o padrão. Os blocos Unicode (`░▒▓█─│┌`) ficam como opção na tecla **U**, enquanto não atrapalharem o desenvolvimento.
   - **Som:** o módulo de áudio (Web Audio, sintetizado, sem arquivos) nasce na etapa 4, com os sons de ambiente: zumbido de neon que falha junto com o letreiro, zumbido de poste de sódio, cidade distante e tom grave perto da zona de fogo.
 
 ## Pedidos do usuário para etapas futuras (2026-09-30)
@@ -279,7 +280,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - Em modo dev, `bench(n)` desenha a vista atual n vezes numa grade 256×80 própria e devolve os ms médios. Funciona mesmo com o painel oculto, quando o laço de quadros para.
   - **Lixo:** é desenhado no próprio chão, no passe do solo (`LITTER` em `raycaster.ts`), preso a quadrados de 0,5 m pelo `hash3`: sacolas, copos, latas, papel, jornal, papelão e bitucas. Fica mais denso na sarjeta (1,2 m junto ao meio-fio) e nas calçadas do industrial, e só aparece até 14 m (`LITTER_FAR`).
   - **Entulho:** agora só nos lotes vazios, dentro do quarteirão.
-  - **Ainda a decidir:** ASCII ou blocos (tecla U); o usuário não comentou.
+  - Depois do teste: o fundo passou a ter estágios na tecla B. O lixo ganhou formas (discos, retângulos girados, peças compridas como latas e garrafas deitadas) e 17 tipos de cores sóbrias, dentro da paleta de sódio.
 - **Próximo passo: grupo 4d–4f.** Depois dele vem o grupo 4d–4f: letreiros com o nome da empresa e efeitos de neon (corrigindo a listra `=` vista de lado), luz dinâmica dos postes sobre objetos e fachadas, e o módulo de áudio com os sons de ambiente.
 - **Etapa 4, grupo 4a–4c feito (2026-09-30), falta o teste do usuário:**
   - **4a:** teclas **P** (paleta: `SODIUM`, `NEON NOIR`, `TERMINAL`), **B** (fundo sólido, ligado por padrão) e **U** (glifos de bloco). As paletas ficam em `render/palette.ts`: cada uma é uma correção de cor no shader (`grade` em `glRenderer.ts`, aplicada à tela inteira, HUD incluído) mais a cor da luz dos postes. O fundo sólido e a troca de glifos são uma passada final (`finish` em `raycaster.ts`): cada célula do mundo (com profundidade) ganha de fundo a própria cor × `SOLID` (0,36). Os blocos e as linhas de caixa são desenhados como formas exatas no atlas, nas posições 128+ (`BLOCK` em `atlas.ts`), e a tabela `BLOCKS` diz qual ASCII vira qual bloco.
@@ -405,6 +406,12 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 12. **Rede social da cidade:** posts de cidadãos a partir dos eventos da simulação e das rotinas, com fotos renderizadas do ponto de vista deles, acessível pelo celular e pelo notebook (veja "Design: rede social da cidade").
 13. **Economia:** empresas, preços, estoques e salários interligados.
 14. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, apps de hacker instalados por fora da loja, impacto sistêmico.
+
+15. **Refinamento visual** (pedido do usuário em 2026-09-30): uma etapa dedicada a refinar o visual quando houver mais sistemas e o jogo estiver mais estável. Pode vir antes da 15, a qualquer momento depois da etapa 11, se fizer sentido. Inclui:
+   - carros menos arcaicos: rodas girando, pessoas visíveis dentro, modelos e formatos variados;
+   - pesquisar **fotos de referência reais na internet**, por exemplo da Times Square;
+   - um **distrito cheio de neon, no estilo da Times Square** (pode exigir um tipo de distrito novo);
+   - os defeitos visuais conhecidos que ainda estiverem abertos (veja as notas técnicas).
 
 **Transversal, em todas as etapas: som.** O retorno sonoro é prioridade do usuário e não pode ficar para o fim. Cada etapa traz os sons do que cria:
 - chuva e vento na etapa 5;
