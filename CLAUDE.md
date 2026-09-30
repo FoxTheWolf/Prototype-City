@@ -140,10 +140,12 @@ Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simu
 - **Project Zomboid** (principalmente pelo nível de simulação): cidade inteira em que se entra em qualquer casa, com luz, água e objetos reais; a passagem do tempo e as rotinas importam; cada ação física tem custo.
 - **Hacknet:** terminal realista, comandos, redes, portas e logs (já citado no estilo de hacking).
 - **Uplink:** hacking impactante e divertido, com consequências no mundo (já citado no estilo de hacking).
-- **Cyberpunk 2077:** clima de cidade noturna densa e vertical, neon e hacking de sistemas do ambiente. Vale para o clima e a estética; a tecnologia continua limitada à época de 2008.
+- **Cyberpunk 2077 e o Cyberpunk de mesa:** clima de cidade noturna densa e vertical, neon e hacking de sistemas do ambiente. O que o usuário mais gosta é o **netrunning e a Blackwall**: a estética de se aventurar dentro da rede lembra o visual em caracteres deste jogo. Também vale a lição do jogo de mesa, escrito nos anos 80 e 90 sobre um futuro próximo, e por isso **retrofuturista** (veja "Época e tom" nas decisões).
+- **Matrix:** referência forte. A chuva de código, o texto que derrete e se desfaz (a abertura do ASCII City já aponta para isso) e o clima verde de terminal.
+- **Shadows of Doubt:** dark noir, cidade em que se entra em qualquer prédio, cidadãos com rotinas. O usuário gosta muito do **aconchego de entrar num interior numa noite de chuva** e ficar protegido dela. Isso é um objetivo de sensação para as etapas 5 e 7: som da chuva abafado do lado de dentro, janelas molhadas, luz quente no interior contra a rua fria.
 - **GTA IV:** Liberty City como modelo de cidade americana em grade, época ~2008, celular como objeto e acesso à internet em lugares físicos (já citado nas decisões).
 
-Também servem de referência, pelo que já está nas decisões: Shadows of Doubt e RDR2 (cidadãos e rotinas), Grey Hack (hacking), HighFleet (interfaces físicas com som) e Else Heart.Break() (impacto sistêmico).
+Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos e rotinas), Grey Hack (hacking), HighFleet (interfaces físicas com som) e Else Heart.Break() (impacto sistêmico).
 
 ## Decisões tomadas
 
@@ -168,6 +170,14 @@ Também servem de referência, pelo que já está nas decisões: Shadows of Doub
 - **Máquinas virtuais com hardware real:** cada computador do jogo tem especificações próprias (CPU, memória, disco, placa de rede, sistema operacional) que o terminal mostra e que **limitam de verdade** o que roda nele (programas que não cabem na memória, processamento lento numa CPU fraca etc.). O limite é do computador virtual, não do PC de quem joga.
 - **Impacto sistêmico, no estilo Else Heart.Break():** as ações de hacking mexem com a simulação a ponto de poder causar consequências enormes, até apocalípticas, se o jogador quiser ou não tomar cuidado: quebrar a economia, alterar preços de mercadorias, bagunçar o trânsito, causar acidentes, afetar a vida das pessoas. Mais profundo que Watch Dogs, que é mais roteirizado. Devem existir muitos lugares e sistemas hackeáveis.
 - **Época: por volta de 2008 (decidido em 2026-09-30),** no estilo GTA IV. É a época dos primeiros smartphones e da primeira loja de apps, do boom das redes sociais, dos celulares com câmera de baixa resolução, do 3G/EDGE lento, do Wi-Fi com senha, dos cybercafés e dos orelhões ainda em uso. Smartphones convivem com celulares comuns: cada cidadão tem um aparelho diferente. Tudo o que for tecnologia no jogo deve ser plausível para essa época.
+- **Época e tom: retrofuturismo noir (ajustado em 2026-09-30).** 2008 é a base das **capacidades** tecnológicas (velocidade de rede, câmeras de baixa resolução, celulares, poder dos computadores), mas o mundo **não precisa se limitar ao que existia de fato em 2008**. A leitura é a de um 2008 imaginado por alguém dos anos 80 e 90, como o Cyberpunk de mesa: mais sombrio, mais noir, com ecos de ficção científica daquela época (terminais verdes, rede vista "por dentro", corporações, cidade vertical). O tom é **dark noir**, no estilo Shadows of Doubt. Continua proibido o que quebra as capacidades (carros voadores, IA conversacional, realidade aumentada).
+- **Borda da cidade: zona de fogo subterrâneo + cordão (decidido em 2026-09-30).** A borda não é água nem rodovia, e sim um limite com consequência real, no estilo do deserto de Mad Max:
+  - A cidade fica ao lado de uma bacia de carvão que pegou fogo há décadas e nunca apagou (inspirada em Centralia, na Pensilvânia). Em volta há uma faixa abandonada, com asfalto rachado, fumaça saindo do chão, crateras que afundam e monóxido de carbono.
+  - Entrar na faixa faz subir um medidor de CO: tontura, visão escurecendo e desmaio. O chão pode ceder.
+  - O governo cercou a borda da zona com um cordão: cerca, torres com holofotes, postos de controle e patrulhas. Chegar perto aciona alerta; cruzar dá prisão.
+  - No horizonte noturno aparecem fendas brilhando em laranja e colunas de fumaça. A fumaça segue o vento do clima (etapa 5) e pode chegar aos bairros da borda.
+  - Para o hacking: a agência que monitora a zona tem sensores de gás; o cordão tem câmeras, rádio e listas de autorização.
+- **Idioma dos textos do jogo (decidido em 2026-09-30):** inglês por padrão, inclusive os nomes gerados (distritos, ruas, marcos, lojas). Os textos ficam em arquivos de locale, para dar para trocar o idioma depois. As respostas ao usuário continuam em português.
 - **Tamanho da cidade (decidido em 2026-09-30):** o padrão é uma cidade **média, de ~2×2 km**. O tamanho deve ser **um parâmetro da geração**, e não algo fixo no código. No futuro, uma opção de menu antes de criar o mundo vai permitir aumentar ou diminuir o tamanho se o desempenho aguentar; o menu não é para agora. O desempenho deve se adaptar ao tamanho (nível de detalhe e janela carregada em volta do jogador), e não depender de a cidade ser pequena.
 - **Estilo urbano: americano, em grade (decidido em 2026-09-30),** como a Liberty City do GTA IV: grade regular, avenidas largas, arranha-céus no centro e bairros mais baixos em volta.
 - **Unidades: 1 unidade = 1 metro (decidido em 2026-09-30).** A conversão da escala atual (andar de 0,55 e olho a 0,48, cerca de 1 unidade para 3,5 m) é feita na etapa 2. Valores de referência: olho a ~1,7 m, andar de ~3,5 m, faixa de rua de ~3,5 m.
@@ -298,7 +308,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - O nível de detalhe da fachada ignora a obliquidade da face, então fachadas vistas muito de lado usam o modo detalhado e as janelas se misturam.
   - As silhuetas distantes são escuras, porque as cores das molduras (`FRAME`) são apagadas. Isso fica para a paleta e o fundo sólido da etapa 4.
   - Além da borda da cidade não há nada, só chão vazio até o horizonte, e o jogador não consegue sair.
-- **Textos dentro do jogo** estão em inglês, herdados do protótipo. O idioma do jogo ainda não foi decidido.
+- **Textos dentro do jogo** estão em inglês, herdados do protótipo. O padrão é inglês com arquivos de locale (veja as decisões); os textos atuais ainda não passam por eles.
 
 ## Como testar no navegador do app
 
@@ -330,7 +340,9 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - tipos de distrito que mudam a geração (centro financeiro, comercial, residencial, histórico, industrial, portuário);
    - **estilos de fachada** por tipo de distrito: torre de vidro, prédio histórico ornamentado, tijolo, residencial, galpão (referências 18, 19 e 22);
    - variedade de forma: topos de torre, pontas, cúpulas;
-   - parques variados e marcos da cidade (referências 17, 20, 21 e 26).
+   - parques variados e marcos da cidade (referências 17, 20, 21 e 26);
+   - a borda: zona de fogo subterrâneo com o cordão (veja as decisões). Nesta etapa, a geometria e o visual do horizonte; o medidor de CO e as patrulhas vêm depois;
+   - nomes em inglês já lidos de um arquivo de locale.
 4. **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais.
 5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido.
 6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos).
@@ -354,11 +366,9 @@ Isso pede um módulo de áudio simples (Web Audio), criado na primeira etapa que
 ## Perguntas em aberto
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
-- **Etapa 3:** o que cerca a cidade além da borda: rio ou mar (como a Liberty City, que é feita de ilhas), rodovia, subúrbio ou outra coisa.
 - **Etapa 5:** escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
 - **Etapa 8:** forma do painel lateral diegético. Com a época de 2008, o celular é o candidato natural.
 - **Etapa 10:** se haverá helicóptero de passeio no lugar do táxi aéreo.
-- **Quando houver textos na tela:** o idioma dos textos do jogo (hoje em inglês).
 - **Etapa 4:** a paleta final (hoje, noite com postes de sódio e HUD âmbar/ciano).
 
 ## Ideias futuras (não decididas)
