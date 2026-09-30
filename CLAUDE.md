@@ -130,6 +130,21 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 
 **Regra de originalidade:** copiar a técnica e o gênero é permitido. Os nomes, a história, os marcos e a identidade visual específica do ASCII City **não** devem ser copiados. Criamos os nossos.
 
+## Inspirações (jogos de que o usuário gosta)
+
+Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simulação. O que tirar de cada um é uma leitura inicial, a confirmar com ele quando a etapa chegar. A mesma regra de originalidade vale para todos.
+
+- **Dwarf Fortress:** simulação profunda e sistêmica, em que as histórias surgem dos sistemas e não de roteiro; mundo e personagens gerados com muito detalhe; tudo desenhado em caracteres.
+- **Caves of Qud:** ASCII com cor e personalidade forte; mundo procedural rico em detalhes e texto; sistemas que se combinam de jeitos inesperados.
+- **Cataclysm: Dark Days Ahead:** cidade procedural em caracteres com prédios e interiores reais; cada objeto e item existe e tem função; simulação detalhada do dia a dia.
+- **Project Zomboid** (principalmente pelo nível de simulação): cidade inteira em que se entra em qualquer casa, com luz, água e objetos reais; a passagem do tempo e as rotinas importam; cada ação física tem custo.
+- **Hacknet:** terminal realista, comandos, redes, portas e logs (já citado no estilo de hacking).
+- **Uplink:** hacking impactante e divertido, com consequências no mundo (já citado no estilo de hacking).
+- **Cyberpunk 2077:** clima de cidade noturna densa e vertical, neon e hacking de sistemas do ambiente. Vale para o clima e a estética; a tecnologia continua limitada à época de 2008.
+- **GTA IV:** Liberty City como modelo de cidade americana em grade, época ~2008, celular como objeto e acesso à internet em lugares físicos (já citado nas decisões).
+
+Também servem de referência, pelo que já está nas decisões: Shadows of Doubt e RDR2 (cidadãos e rotinas), Grey Hack (hacking), HighFleet (interfaces físicas com som) e Else Heart.Break() (impacto sistêmico).
+
 ## Decisões tomadas
 
 - **Plataforma:** navegador. O protótipo 1 foi um único HTML com JavaScript puro; daqui em diante vale a decisão de stack abaixo (Vite + TypeScript, vários arquivos).
