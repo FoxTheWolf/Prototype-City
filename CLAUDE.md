@@ -197,8 +197,8 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. Ainda falta decidir a escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
 
 - **Decisões da etapa 4 (2026-09-30):**
-  - **Paleta:** 2 ou 3 paletas alternáveis por tecla (sódio âmbar, neon noir, verde terminal) para o usuário comparar jogando. Depois fica a escolhida.
-  - **Fundo colorido:** ligado por padrão, com uma tecla para voltar ao modo só caracteres.
+  - **Paleta: sódio âmbar (escolhida pelo usuário em 2026-09-30,** depois de comparar com neon noir e verde terminal). As outras foram removidas.
+  - **Fundo colorido:** ligado por padrão, com uma tecla (**B**) para voltar ao modo só caracteres. O usuário achou 0,36 da cor do glifo claro e sólido demais; baixou para 0,24 (`SOLID`).
   - **Caracteres Unicode de bloco e de caixa (`░▒▓█─│┌`):** alternáveis por tecla contra ASCII puro, para o usuário comparar e escolher.
   - **Som:** o módulo de áudio (Web Audio, sintetizado, sem arquivos) nasce na etapa 4, com os sons de ambiente: zumbido de neon que falha junto com o letreiro, zumbido de poste de sódio, cidade distante e tom grave perto da zona de fogo.
 
@@ -273,7 +273,14 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: o usuário testa o grupo 4a–4c.** Depois dele vem o grupo 4d–4f: letreiros com o nome da empresa e efeitos de neon (corrigindo a listra `=` vista de lado), luz dinâmica dos postes sobre objetos e fachadas, e o módulo de áudio com os sons de ambiente.
+- **Retorno do usuário sobre 4a–4c (2026-09-30):** boas impressões. Escolheu a paleta de sódio e pediu o fundo sólido mais escuro. Não viu pop-in; os objetos distantes deformam, o que é esperado. Pediu lixo espalhado (copos, papéis), e não só montes de entulho, e o entulho longe da calçada. Viu o FPS oscilar (80–180, com uma queda a 40).
+  - **Causa da oscilação:** os objetos da 4b chegavam a 26 ms por quadro. Um objeto muito perto tinha a tela inteira como área de busca, e cada célula testava todas as peças. Corrigido com um recorte por coluna em `drawObjects`: o raio da coluna contra o círculo que envolve o objeto dá o trecho de profundidade [ta, tb] e, dali, só as linhas possíveis; células já cobertas mais perto que `ta` são puladas. O quadro inteiro caiu para 2–7 ms, e os objetos para ≤ 3 ms. O recálculo do mapa de luz custa ~2 ms.
+  - A linha de status agora mostra `DRAW x ms (MAX y)`: o tempo médio de desenho do mundo e o pior do último segundo. É o número a observar, porque o FPS fica preso ao monitor.
+  - Em modo dev, `bench(n)` desenha a vista atual n vezes numa grade 256×80 própria e devolve os ms médios. Funciona mesmo com o painel oculto, quando o laço de quadros para.
+  - **Lixo:** é desenhado no próprio chão, no passe do solo (`LITTER` em `raycaster.ts`), preso a quadrados de 0,5 m pelo `hash3`: sacolas, copos, latas, papel, jornal, papelão e bitucas. Fica mais denso na sarjeta (1,2 m junto ao meio-fio) e nas calçadas do industrial, e só aparece até 14 m (`LITTER_FAR`).
+  - **Entulho:** agora só nos lotes vazios, dentro do quarteirão.
+  - **Ainda a decidir:** ASCII ou blocos (tecla U); o usuário não comentou.
+- **Próximo passo: grupo 4d–4f.** Depois dele vem o grupo 4d–4f: letreiros com o nome da empresa e efeitos de neon (corrigindo a listra `=` vista de lado), luz dinâmica dos postes sobre objetos e fachadas, e o módulo de áudio com os sons de ambiente.
 - **Etapa 4, grupo 4a–4c feito (2026-09-30), falta o teste do usuário:**
   - **4a:** teclas **P** (paleta: `SODIUM`, `NEON NOIR`, `TERMINAL`), **B** (fundo sólido, ligado por padrão) e **U** (glifos de bloco). As paletas ficam em `render/palette.ts`: cada uma é uma correção de cor no shader (`grade` em `glRenderer.ts`, aplicada à tela inteira, HUD incluído) mais a cor da luz dos postes. O fundo sólido e a troca de glifos são uma passada final (`finish` em `raycaster.ts`): cada célula do mundo (com profundidade) ganha de fundo a própria cor × `SOLID` (0,36). Os blocos e as linhas de caixa são desenhados como formas exatas no atlas, nas posições 128+ (`BLOCK` em `atlas.ts`), e a tabela `BLOCKS` diz qual ASCII vira qual bloco.
   - **4b:** os billboards viraram objetos com volume (`render/objects.ts`). Como o y-shearing é linear, cada célula é um raio 3D reto (`z = eye + t·(hor − linha)/scale`), então cada peça (caixa, cilindro vertical ou elipsoide, no referencial do objeto) é cruzada exatamente. O `t` é a mesma profundidade do buffer, então os objetos se escondem atrás das paredes e uns dos outros sem ordenar. Peças mais finas que meia célula são alargadas para não piscar ao longe. Materiais: `Solid` (glifo por face), `Leaf` (ruído preso à superfície) e `Glow` (luz, sem sombra). Os modelos ficam em `render/models.ts`: carro (carroceria, cabine de vidro, rodas, faróis e lanternas, luminoso de táxi), poste com base, braço sobre a rua e luminária (`Prop.a` é o lado da rua), árvore com copa em 6–9 elipsoides e holofote do cordão.
