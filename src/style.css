@@ -1,0 +1,27 @@
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+:root {
+  --bg: #07080c;
+  --amber: #ffb04a;
+  --amber-dim: #9a6a2c;
+  --cyan: #6fd6e8;
+  --fg: #d8cfbf;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--mono); overflow: hidden; }
+#screen { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+#overlay {
+  position: fixed; inset: 0; display: grid; place-items: center; background: rgba(7, 8, 12, .72);
+  cursor: pointer; text-align: center; padding-inline: 16px;
+}
+#overlay[hidden] { display: none; }
+#overlay h1 { font-size: clamp(28px, 6vw, 64px); letter-spacing: .12em; color: var(--amber); margin: 0 0 10px; font-weight: 600;
+  text-shadow: 0 0 18px rgba(255, 176, 74, .35); }
+#overlay p { margin: 4px 0; font-size: 13px; }
+#overlay .hint { color: var(--amber-dim); }
+#overlay button { margin-top: 18px; font: 600 13px var(--mono); letter-spacing: .1em; color: var(--bg); background: var(--amber);
+  border: 0; padding: 10px 22px; cursor: pointer; }
+#overlay button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }

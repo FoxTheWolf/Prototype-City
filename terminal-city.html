@@ -1,0 +1,513 @@
+<title>Terminal City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: full-bleed ASCII viewport, sodium-lamp terminal HUD docked right (stacks below on phones). Single dark look by choice. */
+:root {
+  --bg: #07080c;
+  --panel: #0c0e14;
+  --line: #2a2418;
+  --amber: #ffb04a;
+  --amber-dim: #9a6a2c;
+  --cyan: #6fd6e8;
+  --red: #ff5a4e;
+  --fg: #d8cfbf;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--mono); overflow: hidden; }
+#app { display: flex; height: 100%; gap: 0; }
+#view { position: relative; flex: 1; min-width: 0; background: var(--bg); }
+canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+#hud {
+  width: 330px; flex: none; background: var(--panel); border-left: 1px solid var(--line);
+  padding: 14px 16px; overflow-y: auto; font-size: 11.5px; line-height: 1.45; color: var(--amber);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.sec h2 { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--amber); margin: 0 0 4px;
+  border-bottom: 1px dashed var(--line); padding-bottom: 3px; }
+.sec pre { margin: 0; font-family: var(--mono); white-space: pre; font-size: 11.5px; color: var(--amber); }
+.k { color: var(--amber-dim); }
+.c { color: var(--cyan); }
+.r { color: var(--red); }
+.w { color: var(--fg); }
+#map { line-height: 1.05; font-size: 11px; }
+#map .b1 { color: #4b3f2e; } #map .b2 { color: #8a6a3c; } #map .b3 { color: #d9a25a; }
+#map .rd { color: #2c2e38; } #map .sw { color: #4a4a52; } #map .pk { color: #3f7a3a; }
+#map .car { color: var(--fg); } #map .tx { color: #ffd23c; } #map .me { color: var(--red); font-weight: 600; }
+#overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; background: rgba(7,8,12,.72);
+  cursor: pointer; text-align: center; padding-inline: 16px;
+}
+#overlay h1 { font-size: clamp(28px, 6vw, 64px); letter-spacing: .12em; color: var(--amber); margin: 0 0 10px; font-weight: 600;
+  text-shadow: 0 0 18px rgba(255,176,74,.35); text-wrap: balance; }
+#overlay p { margin: 4px 0; color: var(--fg); font-size: 13px; }
+#overlay .hint { color: var(--amber-dim); }
+#overlay button { margin-top: 18px; font: 600 13px var(--mono); letter-spacing: .1em; color: var(--bg); background: var(--amber);
+  border: 0; padding: 10px 22px; cursor: pointer; }
+#overlay button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+#touch { position: absolute; inset: 0; display: none; }
+#overlay[hidden] { display: none; }
+@media (max-width: 760px) {
+  #app { flex-direction: column; }
+  #hud { width: auto; height: 34%; border-left: 0; border-top: 1px solid var(--line); padding: 10px 16px; }
+  #mapsec { display: none; }
+}
+@media (hover: none) { #touch { display: block; } }
+</style>
+
+<div id="app">
+  <div id="view">
+    <canvas id="c"></canvas>
+    <div id="touch"></div>
+    <div id="overlay">
+      <div>
+        <h1>TERMINAL CITY</h1>
+        <p>A night walk through a procedural city drawn in characters.</p>
+        <p class="hint">WASD / arrows move &middot; mouse looks &middot; SHIFT runs &middot; ESC frees the cursor</p>
+        <p class="hint">On touch: drag left half to walk, right half to look</p>
+        <button id="start" type="button">ENTER THE CITY</button>
+      </div>
+    </div>
+  </div>
+  <aside id="hud">
+    <div class="sec"><h2>01 :: NAVIGATION</h2><pre id="nav"></pre></div>
+    <div class="sec" id="mapsec"><h2>02 :: CITY_MAP // LOCAL</h2><pre id="map"></pre>
+      <pre class="k">  <span class="me">^</span> YOU  <span class="b3">#</span> TOWER  <span class="pk">"</span> PARK  <span class="tx">T</span> TAXI  <span class="car">c</span> CAR</pre></div>
+    <div class="sec"><h2>03 :: STREET_CONTEXT</h2><pre id="ctx"></pre></div>
+    <div class="sec"><h2>04 :: SYSTEM</h2><pre id="sys"></pre></div>
+  </aside>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------- RNG / hash ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const rng = mulberry32(90210);
+function hash3(a,b,c){let h=Math.imul(a|0,374761393)^Math.imul(b|0,668265263)^Math.imul(c|0,2147483647);h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+
+// ---------- City generation ----------
+const BLOCKS = 12, BS = 12, N = BLOCKS*BS;
+const ROAD=0, WALK=1, BLD=2, PARK=3;
+const type = new Uint8Array(N*N), bidMap = new Int32Array(N*N).fill(-1);
+const blds = [];
+const WIN = [[255,206,110],[120,220,255],[90,150,255],[255,150,70],[190,255,170],[255,130,200],[255,240,200]];
+const FRAME = [[92,72,50],[58,66,88],[76,60,84],[52,64,62],[88,80,70]];
+const parks = [];
+const sprites = [];
+const hNames = ['ASHGROVE','BELLWETHER','CINDER','DOVETAIL','EMBER','FALLOW','GASLIGHT','HALCYON','IRONWOOD','JUNIPER','KILN','LODESTAR'].map(s=>s+' ST');
+const vNames = ['MARROW','NOCTURNE','OSPREY','PEWTER','QUARRY','RIVET','SALTMARSH','TALLOW','UMBER','VESPER','WHARF','YARROW'].map(s=>s+' AVE');
+const districts = [['OLD PORT','FOUNDRY ROW','LANTERN HILL'],['CANAL QUARTER','CENTRAL','GLASSWORKS'],['SOUTHGATE','TANNERS YARD','ECHO FIELDS']];
+function splits(){const r=rng();if(r<0.25)return[7];if(r<0.5)return[3,4];if(r<0.75)return[4,3];return[2,3,2];}
+
+for (let by=0; by<BLOCKS; by++) for (let bx=0; bx<BLOCKS; bx++) {
+  const isPark = rng()<0.09 && !(bx===6&&by===6);
+  for (let ly=0; ly<BS; ly++) for (let lx=0; lx<BS; lx++) {
+    const i=(by*BS+ly)*N + bx*BS+lx;
+    if (lx<3||ly<3) type[i]=ROAD;
+    else if (lx===3||lx===11||ly===3||ly===11) type[i]=WALK;
+    else type[i]= isPark?PARK:BLD;
+  }
+  // street lamps at the four sidewalk corners
+  for (const [ox,oy] of [[3.5,3.5],[11.5,3.5],[3.5,11.5],[11.5,11.5]]) sprites.push({kind:'lamp',x:bx*BS+ox,y:by*BS+oy,w:0.25,z0:0,z1:1.7});
+  if (isPark) {
+    for (let t=0;t<9;t++) sprites.push({kind:'tree',x:bx*BS+4.6+rng()*5.8,y:by*BS+4.6+rng()*5.8,w:1.3,z0:0,z1:1.9+rng()*0.8,seed:(rng()*1e6)|0});
+    continue;
+  }
+  const d = Math.hypot(bx-5.5, by-5.5)/7.8;
+  let x0=4;
+  for (const sw of splits()) {
+    let y0=4;
+    for (const sh of splits()) {
+      const id=blds.length;
+      let h = 1.6 + Math.pow(Math.max(0,1-d),2)*20*(0.35+rng()*0.9) + rng()*2.5;
+      if (rng()<0.08) h*=1.7;
+      blds.push({h, win:WIN[(rng()*WIN.length)|0], frame:FRAME[(rng()*FRAME.length)|0], lit:0.18+rng()*0.5,
+        shop: rng()<0.6, sign: WIN[(rng()*WIN.length)|0], bx, by});
+      for (let yy=0;yy<sh;yy++) for (let xx=0;xx<sw;xx++) bidMap[(by*BS+y0+yy)*N + bx*BS+x0+xx]=id;
+      y0+=sh;
+    }
+    x0+=sw;
+  }
+}
+
+// ---------- Cars ----------
+const CAR_COLS = [[180,40,40],[40,90,170],[200,200,210],[40,40,48],[60,140,90],[150,90,40],[120,60,150]];
+const cars = [];
+const DIRS=[[1,0],[0,1],[-1,0],[0,-1]];
+function laneOff(dx,dy){return [-dy*0.75, dx*0.75];}
+for (let k=0;k<70;k++){
+  const horiz = rng()<0.5, road=(rng()*BLOCKS)|0, seg=(rng()*(BLOCKS-1))|0;
+  const di = horiz ? (rng()<0.5?0:2) : (rng()<0.5?1:3);
+  const [dx,dy]=DIRS[di];
+  const [ox,oy]=laneOff(dx,dy);
+  const along = seg*BS+1.5+6;
+  const car = {dx,dy,v:0,max:2.6+rng()*2.2,taxi:rng()<0.22,kind:'car',w:0.85,z0:0,z1:0.62};
+  car.col = car.taxi?[255,200,40]:CAR_COLS[(rng()*CAR_COLS.length)|0];
+  if (horiz){car.x=along; car.y=road*BS+1.5+oy; car.target=(dx>0?seg+1:seg)*BS+1.5;}
+  else {car.y=along; car.x=road*BS+1.5+ox; car.target=(dy>0?seg+1:seg)*BS+1.5;}
+  cars.push(car); sprites.push(car);
+}
+function updateCars(dt){
+  for (const c of cars){
+    let want=c.max;
+    // yield to player
+    const rx=P.x-c.x, ry=P.y-c.y, ahead=rx*c.dx+ry*c.dy, lat=Math.abs(rx*c.dy-ry*c.dx);
+    if (ahead>0 && ahead<2.6 && lat<0.9) want=0;
+    // keep distance from car in front
+    for (const o of cars){ if(o===c||o.dx!==c.dx||o.dy!==c.dy) continue;
+      const ox=o.x-c.x, oy=o.y-c.y, a=ox*c.dx+oy*c.dy, l=Math.abs(ox*c.dy-oy*c.dx);
+      if (a>0 && a<1.7 && l<0.4){want=0;break;} }
+    c.v += Math.sign(want-c.v)*Math.min(Math.abs(want-c.v), dt*(want<c.v?9:3));
+    const before = c.dx? c.x : c.y;
+    c.x+=c.dx*c.v*dt; c.y+=c.dy*c.v*dt;
+    const after = c.dx? c.x : c.y, dirSign = c.dx||c.dy;
+    if ((after-c.target)*dirSign >= 0 && (before-c.target)*dirSign < 0){
+      // at an intersection: pick straight / left / right, stay inside the map
+      const ci = c.dx ? Math.round((c.target-1.5)/BS) : Math.round((c.x - laneOff(c.dx,c.dy)[0] - 1.5)/BS);
+      const cj = c.dy ? Math.round((c.target-1.5)/BS) : Math.round((c.y - laneOff(c.dx,c.dy)[1] - 1.5)/BS);
+      const opts=[];
+      for (const [dx,dy] of DIRS){ if(dx===-c.dx&&dy===-c.dy) continue;
+        const ni=ci+dx, nj=cj+dy; if(ni<0||nj<0||ni>=BLOCKS||nj>=BLOCKS) continue;
+        opts.push([dx,dy], ...(dx===c.dx&&dy===c.dy?[[dx,dy]]:[])); }
+      let nd = opts.length? opts[(Math.random()*opts.length)|0] : [-c.dx,-c.dy];
+      c.dx=nd[0]; c.dy=nd[1];
+      const [ox,oy]=laneOff(c.dx,c.dy), cx=ci*BS+1.5, cy=cj*BS+1.5;
+      c.x=cx+ox; c.y=cy+oy;
+      c.target = c.dx ? (ci+c.dx)*BS+1.5 : (cj+c.dy)*BS+1.5;
+    }
+  }
+}
+
+// ---------- Player ----------
+const P = {x:6*BS+3.5, y:6*BS+7, a:-Math.PI/2, pitch:0, camH:0.48, speed:0};
+function solid(x,y){const tx=Math.floor(x),ty=Math.floor(y);if(tx<0||ty<0||tx>=N||ty>=N)return true;return type[ty*N+tx]===BLD;}
+const keys = {};
+addEventListener('keydown',e=>{keys[e.code]=true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+
+// ---------- Canvas / text grid ----------
+const cv = document.getElementById('c'), ctx = cv.getContext('2d', {alpha:false});
+const view = document.getElementById('view');
+let COLS=0, ROWS=0, cw=0, chh=0, fontPx=12, dpr=1;
+let chars, colors, depth;
+const FONT_STACK = '"IBM Plex Mono", ui-monospace, Consolas, monospace';
+function resize(){
+  dpr = Math.min(2, devicePixelRatio||1);
+  const W=view.clientWidth, H=view.clientHeight;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  const targetCols = Math.max(70, Math.min(190, Math.floor(W/7)));
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.font = `100px ${FONT_STACK}`;
+  const ratio = ctx.measureText('M').width/100;
+  fontPx = W/targetCols/ratio;
+  cw = fontPx*ratio; chh = fontPx*1.12;
+  COLS = Math.floor(W/cw); ROWS = Math.floor(H/chh);
+  chars = new Uint16Array(COLS*ROWS); colors = new Int32Array(COLS*ROWS); depth = new Float32Array(COLS*ROWS);
+}
+addEventListener('resize', resize);
+
+const colorCache = new Map();
+function colStr(c){let s=colorCache.get(c);if(!s){s=`rgb(${c>>16&255},${c>>8&255},${c&255})`;colorCache.set(c,s);}return s;}
+function pack(r,g,b){r=r<0?0:r>255?255:r;g=g<0?0:g>255?255:g;b=b<0?0:b>255?255:b;return ((r&0xF8)<<16)|((g&0xF8)<<8)|(b&0xF8);}
+const C = s=>s.charCodeAt(0);
+const CH = {dot:C('.'),com:C(','),tick:C('`'),col:C(':'),semi:C(';'),dash:C('-'),eq:C('='),plus:C('+'),hash:C('#'),pct:C('%'),at:C('@'),bar:C('|'),us:C('_'),star:C('*'),quo:C('"'),amp:C('&'),o:C('o'),lb:C('['),rb:C(']'),x:C('x'),sp:32};
+const FAR = 38;
+
+// ---------- Renderer ----------
+function render(){
+  const cols=COLS, rows=ROWS;
+  chars.fill(32); depth.fill(1e9);
+  const dirX=Math.cos(P.a), dirY=Math.sin(P.a), pl=0.72, plX=-dirY*pl, plY=dirX*pl;
+  const scale=(cols/2)/pl*(cw/chh);
+  const hor = Math.floor(rows/2 + P.pitch*rows);
+  const camH=P.camH, px=P.x, py=P.y;
+
+  for (let x=0;x<cols;x++){
+    const camX=2*(x+0.5)/cols-1, rdx=dirX+plX*camX, rdy=dirY+plY*camX;
+    // sky: stars fixed to heading
+    const az = P.a + Math.atan(camX*pl);
+    const sx = Math.floor(az*cols/2.2);
+    for (let y=0;y<Math.min(hor,rows);y++){
+      const i=y*cols+x, hh=hash3(sx,y,7);
+      if (hh<0.012 && y<hor-3){ chars[i]= hh<0.003?CH.star:CH.dot; const b=120+hh*8000; colors[i]=pack(b,b,b+30); }
+      else if (y>=hor-2){ chars[i]=CH.dot; colors[i]=pack(70,40,60); }
+    }
+    // ground
+    for (let y=Math.max(hor,0);y<rows;y++){
+      const i=y*cols+x;
+      const rd = camH*scale/(y-hor+0.5);
+      const wx=px+rdx*rd, wy=py+rdy*rd;
+      depth[i]=rd;
+      if (rd>FAR || wx<0||wy<0||wx>=N||wy>=N){ chars[i]=CH.dot; colors[i]=pack(28,24,32); continue; }
+      const tx=wx|0, ty=wy|0, t=type[ty*N+tx];
+      const lxf = wx - Math.floor(wx/BS)*BS, lyf = wy - Math.floor(wy/BS)*BS;
+      const lx=lxf|0, ly=lyf|0;
+      // lamp glow pools
+      const dxl=Math.min(Math.abs(lxf-3.5),Math.abs(lxf-11.5),Math.abs(lxf+0.5));
+      const dyl=Math.min(Math.abs(lyf-3.5),Math.abs(lyf-11.5),Math.abs(lyf+0.5));
+      const glow=Math.max(0,1-(dxl*dxl+dyl*dyl)/10);
+      const fog=1-Math.min(1,rd/FAR)*0.9;
+      const hv=hash3(Math.floor(wx*4),Math.floor(wy*4),3);
+      let ch=CH.dot, r=38,g=38,b=46;
+      if (t===ROAD){
+        ch = hv<0.5?CH.dot:(hv<0.8?CH.com:CH.tick);
+        const vRoad=lx<3, hRoad=ly<3;
+        if (vRoad && !hRoad){
+          if (ly===3||ly===11){ if(((lxf*3)|0)%2===0){ch=CH.eq;r=150;g=150;b=150;} }
+          else if (Math.abs(lxf-1.5)<0.06 && ((wy*1.3)|0)%2===0){ch=CH.bar;r=210;g=170;b=60;}
+        } else if (hRoad && !vRoad){
+          if (lx===3||lx===11){ if(((lyf*3)|0)%2===0){ch=CH.bar;r=150;g=150;b=150;} }
+          else if (Math.abs(lyf-1.5)<0.06 && ((wx*1.3)|0)%2===0){ch=CH.dash;r=210;g=170;b=60;}
+        }
+      } else if (t===WALK){
+        const fx=wx-tx, fy=wy-ty;
+        ch = (fx<0.08||fy<0.08)?CH.plus:CH.col; r=78;g=74;b=78;
+      } else if (t===PARK){
+        ch = hv<0.4?CH.quo:(hv<0.7?CH.com:CH.semi); r=40;g=95+hv*40;b=45;
+      } else { ch=CH.hash; r=60;g=50;b=45; }
+      r=r*fog+glow*95; g=g*fog+glow*70; b=b*fog+glow*35;
+      chars[i]=ch; colors[i]=pack(r,g,b);
+    }
+    // walls: DDA front-to-back with variable heights
+    let mx=Math.floor(px), my=Math.floor(py);
+    const ddx=Math.abs(1/rdx), ddy=Math.abs(1/rdy);
+    const stX=rdx<0?-1:1, stY=rdy<0?-1:1;
+    let sdx=(rdx<0?px-mx:mx+1-px)*ddx, sdy=(rdy<0?py-my:my+1-py)*ddy;
+    let clipTop=rows, cur=bidMap[my*N+mx];
+    for (let s=0;s<200;s++){
+      let side;
+      if (sdx<sdy){sdx+=ddx;mx+=stX;side=0;} else {sdy+=ddy;my+=stY;side=1;}
+      if (mx<0||my<0||mx>=N||my>=N) break;
+      const perp = side===0? sdx-ddx : sdy-ddy;
+      if (perp>FAR) break;
+      const b=bidMap[my*N+mx];
+      if (b===cur) continue;
+      cur=b;
+      if (b<0) continue;
+      const B=blds[b];
+      const yb = hor + camH*scale/perp, yt = hor - (B.h-camH)*scale/perp;
+      const y0=Math.max(0,Math.floor(yt)), y1=Math.min(rows,Math.ceil(yb),clipTop);
+      const along = side===0? py+perp*rdy : px+perp*rdx;
+      const fogK = Math.min(1,perp/FAR);
+      const light = (side?0.72:1)*(1-fogK*0.85);
+      const winLight = 1-fogK*0.55;
+      const wxw=along*3, wi=Math.floor(wxw), fw=wxw-wi;
+      const edge = Math.abs(along-Math.round(along))<0.04;
+      for (let y=y0;y<y1;y++){
+        const i=y*cols+x;
+        const z = camH + (hor-(y+0.5))/scale*perp;
+        let ch, r,g,bb;
+        const fl=Math.floor(z/0.55), fz=z/0.55-fl;
+        if (z>B.h-0.18){ ch=CH.us; r=B.frame[0]*1.5*light; g=B.frame[1]*1.5*light; bb=B.frame[2]*1.5*light; }
+        else if (z<0.5 && B.shop){
+          if (z>0.36){ ch=CH.eq; const k=winLight*(0.7+0.3*hash3(b,wi,99)); r=B.sign[0]*k; g=B.sign[1]*k; bb=B.sign[2]*k; }
+          else if (fw>0.12&&fw<0.88&&z>0.04){ ch=CH.lb+((wi&1)?0:0); ch=(fw<0.2)?CH.lb:(fw>0.8?CH.rb:CH.col); r=180*winLight;g=150*winLight;bb=100*winLight; }
+          else { ch=CH.bar; r=B.frame[0]*light; g=B.frame[1]*light; bb=B.frame[2]*light; }
+        }
+        else if (fw>0.2&&fw<0.8&&fz>0.28&&fz<0.8 && !edge){
+          const hh=hash3(b,wi,fl);
+          if (hh<B.lit){ ch= hh<B.lit*0.3?CH.at:(hh<B.lit*0.7?CH.hash:CH.pct); const k=winLight*(0.65+0.35*hash3(wi,fl,b)); r=B.win[0]*k; g=B.win[1]*k; bb=B.win[2]*k; }
+          else { ch=CH.eq; r=30*light+8; g=36*light+8; bb=58*light+12; }
+        } else {
+          ch = edge?CH.bar:(perp>18?CH.dot:CH.col);
+          r=B.frame[0]*light; g=B.frame[1]*light; bb=B.frame[2]*light;
+        }
+        chars[i]=ch; colors[i]=pack(r,g,bb); depth[i]=perp;
+      }
+      if (yt<clipTop) clipTop=Math.floor(yt);
+      if (clipTop<=0) break;
+    }
+  }
+
+  // sprites
+  const invDet=1/(plX*dirY-dirX*plY);
+  const vis=[];
+  for (const s of sprites){
+    const rx=s.x-px, ry=s.y-py; if (rx*rx+ry*ry>FAR*FAR) continue;
+    const tY=invDet*(-plY*rx+plX*ry); if (tY<0.15) continue;
+    const tX=invDet*(dirY*rx-dirX*ry);
+    vis.push([tY,tX,s,rx,ry]);
+  }
+  vis.sort((a,b)=>b[0]-a[0]);
+  for (const [tY,tX,s,rx,ry] of vis){
+    const cx=(cols/2)*(1+tX/tY), half=s.w/tY*(cols/2)/pl/2;
+    const top=hor-(s.z1-camH)*scale/tY, bot=hor+(camH-s.z0)*scale/tY;
+    const x0=Math.max(0,Math.floor(cx-half)), x1=Math.min(cols,Math.ceil(cx+half));
+    const y0=Math.max(0,Math.floor(top)), y1=Math.min(rows,Math.ceil(bot));
+    if (x0>=x1||y0>=y1) continue;
+    const fog=1-Math.min(1,tY/FAR)*0.8;
+    let facing=0; if (s.kind==='car'){ const dl=Math.hypot(rx,ry)||1; facing=(s.dx*rx+s.dy*ry)/dl; }
+    for (let x=x0;x<x1;x++){
+      const u=(x+0.5-(cx-half))/(2*half);
+      for (let y=y0;y<y1;y++){
+        const i=y*cols+x; if (depth[i]<=tY) continue;
+        const v=(y+0.5-top)/(bot-top);
+        let ch=0,r=0,g=0,b=0;
+        if (s.kind==='car'){
+          const bodyTop = 0.42;
+          if (v<0.12){ if(u>0.15&&u<0.85){ ch=s.taxi&&u>0.4&&u<0.6?CH.hash:CH.us; [r,g,b]=s.taxi&&u>0.4&&u<0.6?[255,230,120]:s.col; } }
+          else if (v<bodyTop){ if(u>0.1&&u<0.9){ ch=CH.eq; r=45;g=65;b=95; if(u<0.14||u>0.86){ch=CH.bar;[r,g,b]=s.col;} } }
+          else if (v<0.86){ ch=CH.hash; [r,g,b]=s.col;
+            if (v>0.72 && (u<0.2||u>0.8)){ if(facing>0.35){ch=CH.at;r=255;g=40;b=40;} else if(facing<-0.35){ch=CH.at;r=255;g=245;b=200;} }
+          } else { if (u<0.3||u>0.7){ch=CH.o;r=30;g=30;b=34;} else {ch=CH.dash;r=20;g=20;b=24;} }
+          r*=fog;g*=fog;b*=fog;
+        } else if (s.kind==='tree'){
+          const du=(u-0.5)/0.5, dv=(v-0.34)/0.34;
+          if (du*du+dv*dv<1){ const hv=hash3(s.seed,x,y); ch=hv<0.4?CH.at:(hv<0.7?CH.amp:CH.pct); r=40;g=(100+hv*80);b=45; r*=fog;g*=fog;b*=fog; }
+          else if (v>0.6 && Math.abs(u-0.5)<0.09){ ch=CH.bar; r=90*fog;g=60*fog;b=35*fog; }
+        } else if (s.kind==='lamp'){
+          if (v<0.07){ ch=CH.star; r=255;g=200;b=120; }
+          else if (Math.abs(u-0.5)<0.3){ ch=CH.bar; r=110*fog;g=110*fog;b=118*fog; }
+        }
+        if (ch){ chars[i]=ch; colors[i]=pack(r,g,b); depth[i]=tY; }
+      }
+    }
+  }
+
+  // blit
+  const W=cv.width/dpr, H=cv.height/dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const grd=ctx.createLinearGradient(0,0,0,Math.max(1,hor*chh));
+  grd.addColorStop(0,'#05060b'); grd.addColorStop(1,'#1a1020');
+  ctx.fillStyle='#07080c'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=grd; ctx.fillRect(0,0,W,Math.max(0,hor*chh));
+  ctx.font=`${fontPx}px ${FONT_STACK}`; ctx.textBaseline='top';
+  const ox=(W-COLS*cw)/2, oy=(H-ROWS*chh)/2;
+  let last=-1;
+  for (let y=0;y<rows;y++){
+    const yy=oy+y*chh;
+    for (let x=0;x<cols;x++){
+      const i=y*cols+x, ch=chars[i]; if (ch===32) continue;
+      const c=colors[i]; if (c!==last){ ctx.fillStyle=colStr(c); last=c; }
+      ctx.fillText(String.fromCharCode(ch), ox+x*cw, yy);
+    }
+  }
+  // crosshair / status strip
+  ctx.fillStyle='rgba(255,176,74,.85)';
+  ctx.fillText(`WALKING // ${streetName()} // ${P.speed>4?'RUN':'WALK'} ${P.speed.toFixed(1)} u/s`, ox+cw, oy+(ROWS-1)*chh);
+}
+
+// ---------- Locations ----------
+function streetInfo(x,y){
+  const bx=Math.floor(x/BS), by=Math.floor(y/BS), lx=x-bx*BS, ly=y-by*BS;
+  const onV = lx<3, onH = ly<3;
+  if (onV&&onH) return {road:true, name:`${vNames[bx]} x ${hNames[by]}`, main:vNames[bx], cross:hNames[by]};
+  if (onV) return {road:true, name:vNames[bx], main:vNames[bx], cross: ly<7.5?hNames[by]:hNames[Math.min(BLOCKS-1,by+1)]};
+  if (onH) return {road:true, name:hNames[by], main:hNames[by], cross: lx<7.5?vNames[bx]:vNames[Math.min(BLOCKS-1,bx+1)]};
+  const dl=lx-1.5, dr=BS+1.5-lx, du=ly-1.5, dd=BS+1.5-ly, m=Math.min(dl,dr,du,dd);
+  const main = m===dl?vNames[bx]:m===dr?vNames[Math.min(BLOCKS-1,bx+1)]:m===du?hNames[by]:hNames[Math.min(BLOCKS-1,by+1)];
+  const cross = (m===dl||m===dr) ? (ly<7.5?hNames[by]:hNames[Math.min(BLOCKS-1,by+1)]) : (lx<7.5?vNames[bx]:vNames[Math.min(BLOCKS-1,bx+1)]);
+  return {road:false, name:main, main, cross};
+}
+function streetName(){ return streetInfo(P.x,P.y).name; }
+function district(){ const bx=Math.floor(P.x/BS), by=Math.floor(P.y/BS); return districts[Math.min(2,(by/4)|0)][Math.min(2,(bx/4)|0)]; }
+function bearing(){ let d=(Math.atan2(Math.cos(P.a), -Math.sin(P.a))*180/Math.PI+360)%360; return d; }
+const COMPASS=['NORTH','NORTH-EAST','EAST','SOUTH-EAST','SOUTH','SOUTH-WEST','WEST','NORTH-WEST'];
+
+// ---------- HUD ----------
+const $nav=document.getElementById('nav'), $map=document.getElementById('map'), $ctx=document.getElementById('ctx'), $sys=document.getElementById('sys');
+const pad=(s,n)=>s+'.'.repeat(Math.max(1,n-s.length));
+function nearestTaxi(){ let best=null,bd=1e9; for(const c of cars){ if(!c.taxi)continue; const d=Math.hypot(c.x-P.x,c.y-P.y); if(d<bd){bd=d;best=c;} } return best?{d:bd,c:best}:null; }
+function dirWord(dx,dy){ const a=(Math.atan2(dx,-dy)*180/Math.PI+360)%360; return ['N','NE','E','SE','S','SW','W','NW'][Math.round(a/45)%8]; }
+let fps=60;
+function updateHud(){
+  const si=streetInfo(P.x,P.y), br=bearing(), t=nearestTaxi();
+  const bld = (()=>{ // tallest building within 6 tiles
+    let best=null; for(let yy=-6;yy<=6;yy++)for(let xx=-6;xx<=6;xx++){const tx=(P.x|0)+xx,ty=(P.y|0)+yy;if(tx<0||ty<0||tx>=N||ty>=N)continue;const b=bidMap[ty*N+tx];if(b>=0&&(!best||blds[b].h>best.h))best=blds[b];} return best; })();
+  $nav.innerHTML =
+`<span class="k">&gt;</span> ${pad('DISTRICT',12)} <span class="w">${district()}</span>
+<span class="k">&gt;</span> ${pad('BLOCK',12)} <span class="w">${Math.floor(P.x/BS)}-${Math.floor(P.y/BS)}</span>
+<span class="k">&gt;</span> ${pad('STREET',12)} <span class="w">${si.main}</span>
+<span class="k">&gt;</span> ${pad('CROSS',12)} <span class="w">${si.cross}</span>
+<span class="k">&gt;</span> ${pad('SURFACE',12)} <span class="w">${si.road?'ROADWAY':'SIDEWALK'}</span>
+<span class="k">&gt;</span> ${pad('TAXI',12)} <span class="c">${t?`${Math.round(t.d*4)}M ${dirWord(t.c.x-P.x,t.c.y-P.y)}`:'NONE'}</span>
+<span class="k">&gt;</span> ${pad('BEARING',12)} <span class="w">${String(Math.round(br)).padStart(3,'0')} DEG / ${COMPASS[Math.round(br/45)%8]}</span>`;
+  // minimap, north up
+  const MW=29, MH=15, SX=1, SY=2;
+  const carAt=new Map(); for(const c of cars){ carAt.set(((c.y/SY)|0)*10000+((c.x/SX)|0), c.taxi?'tx':'car'); }
+  const arrow=['^','/','>','\\','v','/','<','\\'][Math.round(br/45)%8];
+  let out='';
+  const cx=Math.floor(P.x/SX), cy=Math.floor(P.y/SY);
+  for(let r=0;r<MH;r++){ let line='';
+    for(let q=0;q<MW;q++){
+      const mx=cx+q-(MW>>1), my=cy+r-(MH>>1);
+      if (q===(MW>>1)&&r===(MH>>1)){ line+=`<span class="me">${arrow==='\\'?'\\':arrow}</span>`; continue; }
+      const car=carAt.get(my*10000+mx);
+      if (car){ line+=`<span class="${car}">${car==='tx'?'T':'c'}</span>`; continue; }
+      const tx=mx*SX, ty=my*SY;
+      if (tx<0||ty<0||tx>=N||ty>=N){ line+=' '; continue; }
+      const t=type[ty*N+tx];
+      if (t===BLD){ const h=blds[bidMap[ty*N+tx]].h; line+=`<span class="${h>14?'b3':h>6?'b2':'b1'}">#</span>`; }
+      else if (t===PARK) line+='<span class="pk">"</span>';
+      else if (t===WALK) line+='<span class="sw">:</span>';
+      else line+='<span class="rd">.</span>';
+    }
+    out+=line+'\n'; }
+  $map.innerHTML=out+`<span class="k">  NORTH ^   1 CHAR = 1 x 2 TILES</span>`;
+  const moving=cars.filter(c=>Math.hypot(c.x-P.x,c.y-P.y)<14);
+  $ctx.innerHTML =
+`<span class="k">&gt;</span> ON FOOT // ${district()}
+<span class="k">&gt;</span> TRAFFIC NEARBY.. <span class="w">${moving.length} VEHICLES</span>
+<span class="k">&gt;</span> NEAREST TOWER... <span class="w">${bld?Math.round(bld.h*3.5)+' FLOORS':'--'}</span>
+<span class="k">&gt;</span> CARS YIELD WHEN YOU STEP INTO THE LANE`;
+  const now=new Date();
+  $sys.innerHTML =
+`<span class="k">&gt;</span> LOCAL TIME...... <span class="w">${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}</span>
+<span class="k">&gt;</span> GRID............ <span class="w">${COLS}x${ROWS} CHARS</span>
+<span class="k">&gt;</span> FRAME RATE...... <span class="w">${Math.round(fps)} FPS</span>
+<span class="k">&gt;</span> WASD MOVE  SHIFT RUN  MOUSE LOOK`;
+}
+
+// ---------- Input: mouse, touch ----------
+const overlay=document.getElementById('overlay');
+let running=false;
+function begin(){ overlay.hidden=true; running=true; try{ const p=cv.requestPointerLock&&cv.requestPointerLock(); if(p&&p.catch)p.catch(()=>{}); }catch(e){} }
+document.getElementById('start').addEventListener('click',e=>{e.stopPropagation();begin();});
+overlay.addEventListener('click',begin);
+cv.addEventListener('click',()=>{ if(document.pointerLockElement!==cv){ try{const p=cv.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}catch(e){} } });
+addEventListener('mousemove',e=>{ if(document.pointerLockElement!==cv) return; P.a+=e.movementX*0.0026; P.pitch=Math.max(-0.35,Math.min(0.35,P.pitch-e.movementY*0.0015)); });
+const touch={move:null,look:null,mx:0,my:0};
+const tEl=document.getElementById('touch');
+tEl.addEventListener('touchstart',e=>{ if(!running)begin(); for(const t of e.changedTouches){ const left=t.clientX<view.getBoundingClientRect().left+view.clientWidth/2;
+  if(left&&!touch.move) touch.move={id:t.identifier,x:t.clientX,y:t.clientY}; else if(!touch.look) touch.look={id:t.identifier,x:t.clientX,y:t.clientY}; } e.preventDefault(); },{passive:false});
+tEl.addEventListener('touchmove',e=>{ for(const t of e.changedTouches){
+  if(touch.move&&t.identifier===touch.move.id){ touch.mx=Math.max(-1,Math.min(1,(t.clientX-touch.move.x)/60)); touch.my=Math.max(-1,Math.min(1,(t.clientY-touch.move.y)/60)); }
+  if(touch.look&&t.identifier===touch.look.id){ P.a+=(t.clientX-touch.look.x)*0.006; P.pitch=Math.max(-0.35,Math.min(0.35,P.pitch-(t.clientY-touch.look.y)*0.003)); touch.look.x=t.clientX; touch.look.y=t.clientY; } } e.preventDefault(); },{passive:false});
+tEl.addEventListener('touchend',e=>{ for(const t of e.changedTouches){ if(touch.move&&t.identifier===touch.move.id){touch.move=null;touch.mx=touch.my=0;} if(touch.look&&t.identifier===touch.look.id)touch.look=null; } });
+
+// ---------- Loop ----------
+let lastT=performance.now(), hudT=0;
+function step(now){
+  const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+  fps = fps*0.95 + (1/Math.max(dt,1e-3))*0.05;
+  if (running){
+    if (keys.ArrowLeft||keys.KeyQ) P.a-=2.2*dt;
+    if (keys.ArrowRight||keys.KeyE) P.a+=2.2*dt;
+    let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0) - touch.my;
+    let st=(keys.KeyD?1:0)-(keys.KeyA?1:0) + touch.mx;
+    const run = keys.ShiftLeft||keys.ShiftRight;
+    const sp = run?6.5:2.8;
+    const len=Math.hypot(f,st); if(len>1){f/=len;st/=len;}
+    const dx=Math.cos(P.a), dy=Math.sin(P.a);
+    const vx=(dx*f - dy*st)*sp, vy=(dy*f + dx*st)*sp;
+    P.speed = Math.hypot(vx,vy);
+    const R=0.22;
+    const nx=P.x+vx*dt; if(!solid(nx+Math.sign(vx)*R,P.y-R*0.7)&&!solid(nx+Math.sign(vx)*R,P.y+R*0.7)) P.x=nx;
+    const ny=P.y+vy*dt; if(!solid(P.x-R*0.7,ny+Math.sign(vy)*R)&&!solid(P.x+R*0.7,ny+Math.sign(vy)*R)) P.y=ny;
+    P.camH = 0.48 + (P.speed>0.1? Math.sin(now/ (run?85:130))*0.012:0);
+  } else {
+    P.a += dt*0.08; // idle drift behind the title
+  }
+  updateCars(dt);
+  render();
+  hudT-=dt; if(hudT<=0){ updateHud(); hudT=0.2; }
+  requestAnimationFrame(step);
+}
+function start(){ resize(); updateHud(); requestAnimationFrame(step); }
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start, start);
+})();
+</script>
