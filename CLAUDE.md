@@ -192,6 +192,16 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. Ainda falta decidir a escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
 
+## Pedidos do usuário para etapas futuras (2026-09-30)
+
+Dados enquanto jogava a etapa 3. Cada um está também no roteiro, na etapa em que cabe.
+- **Escadas de incêndio físicas:** hoje são só desenho na fachada. Devem ser objetos em que se sobe de verdade (etapa 7, junto com os interiores e a subida de andares).
+- **Letreiros nas fachadas:** com o nome da empresa que de fato funciona ali (vem da simulação, não é enfeite) e com luzes que piscam e fazem efeitos (letras acendendo em sequência, contornos correndo, falhas de neon). O visual e os efeitos cabem na etapa 4; os nomes reais das empresas vêm da etapa 13 (economia), mas podem ser gerados antes, desde que fiquem ligados ao prédio.
+- **Interiores físicos, como em Shadows of Doubt:** o interior existe no mesmo espaço que a cidade. Entrar num prédio é atravessar a porta, sem tela de carregamento, sem teleporte e sem fade. É preciso vigiar o desempenho (etapa 7).
+- **Elevadores funcionais:** você entra, aperta o botão e é levado para cima de verdade, sem fade. Alguns elevadores com parede de vidro, para ver a cidade enquanto sobe (etapa 7). Isso depende da câmera com giro vertical de verdade ou pelo menos da altura do olho variável (veja as notas de projeção).
+- **Iluminação dinâmica:** os postes e os faróis dos carros iluminam o mundo em volta de verdade, e a luz se move com os carros (etapa 4 para a base da luz, etapa 6 para os faróis).
+- **Objetos espalhados:** entulho, bancos e mobiliário urbano (etapa 4).
+
 ## Design: rede social da cidade (proposta, 2026-09-30)
 
 Ideia do usuário: uma rede social interna em que os cidadãos da simulação publicam sobre o dia a dia, inclusive coisas banais, e sobre o que acontece na cidade (uma batida, um apagão), às vezes com foto. É um jeito de **ver as consequências** do que o jogador faz, mesmo longe do lugar. A análise abaixo mostra que é viável e combina com a arquitetura.
@@ -253,7 +263,8 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: o usuário jogar a etapa 3 e dar retorno.** Depois, etapa 4 (visual sólido). A etapa 3 ainda não foi vista pelo usuário; ajustes de quantidade (caixas-d'água, fumaça, respiros, largura da zona) são esperados.
+- **Próximo passo: etapa 4 (visual sólido).**
+- **Retorno do usuário sobre a etapa 3 (2026-09-30):** achou ótimo ("tá perfeito"). Roda a 180 FPS no PC dele, sem queda. A fumaça está ótima. A quantidade de caixas-d'água está boa. Pediu tamanhos variados de caixa-d'água e uma **biblioteca de marcos** sorteados e espalhados pela geração, em vez de marcos sempre nos mesmos lugares (feitos logo depois, veja abaixo).
 - **Etapa 3 feita (2026-09-30), em cinco commits (3a–3e):**
   - **Distritos:** ~25 por cidade (um a cada ~400 m, grade com variação), tipos `financial`, `commercial`, `residential`, `historic`, `industrial`. O centro é financeiro; o anel em volta é comercial com 1 ou 2 históricos; a periferia é residencial, com uma cunha industrial num lado. Cada quarteirão pertence ao distrito cujo ponto está mais perto. A tabela `KIND` em `city.ts` diz como cada tipo gera (altura, limite de andares, tamanho de lote, bloco aberto, lojas). Setores são só códigos de mapa 4×4 ("C3").
   - **Sem porto:** como a cidade não tem água, o distrito portuário do roteiro virou **pátios ferroviários** (blocos `yard`) dentro do industrial.
@@ -359,10 +370,10 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - parques variados e marcos da cidade (referências 17, 20, 21 e 26);
    - a borda: zona de fogo subterrâneo com o cordão (veja as decisões). Nesta etapa, a geometria e o visual do horizonte; o medidor de CO e as patrulhas vêm depois;
    - nomes em inglês já lidos de um arquivo de locale.
-4. **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais.
+4. **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais. Entulho e mobiliário urbano espalhados. Letreiros nas fachadas com luzes que piscam e fazem efeitos. Base da iluminação dinâmica (postes que iluminam o que passa perto).
 5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido.
-6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos).
-7. **Interiores:** entrar nos prédios, cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas.
+6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos). Faróis dos carros que iluminam a rua e as fachadas enquanto passam.
+7. **Interiores:** entrar nos prédios **sem carregamento nem teleporte** (o interior existe no mesmo espaço da cidade), cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas. Elevadores que sobem de verdade, alguns com vidro. Escadas de incêndio em que se sobe.
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
 9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
