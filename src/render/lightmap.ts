@@ -1,5 +1,5 @@
 import { type City } from '../sim/city';
-import { lampState } from './lamps';
+import { LAMP_LIGHT, lampState } from './lamps';
 
 /** Side of the baked window in metres. */
 const W = 1024;
@@ -16,8 +16,10 @@ export class LightWindow {
   private lamp = new Int32Array(W * W);
   /** Brightness of every lamp this frame, by lamp id; only the lamps in the window are updated. */
   level = new Float32Array(0);
-  /** Warmth of every lamp this frame (0 red, just struck, to 1 full amber). */
+  /** Warmth of every lamp this frame (0 just struck, 1 warmed up). */
   warm = new Float32Array(0);
+  /** Color every lamp throws this frame, by lamp id: r, g, b. */
+  private col = new Float32Array(0);
   private inWindow: number[] = [];
   private ox = 0;
   private oy = 0;
@@ -29,6 +31,7 @@ export class LightWindow {
     if (this.city !== city) {
       this.level = new Float32Array(city.lamps.length).fill(1);
       this.warm = new Float32Array(city.lamps.length).fill(1);
+      this.col = new Float32Array(city.lamps.length * 3);
     }
     this.city = city;
     const ox = (this.ox = Math.floor(x - W / 2)), oy = (this.oy = Math.floor(y - W / 2));
@@ -51,15 +54,27 @@ export class LightWindow {
 
   /** Update the lamps' failures for this frame. */
   update(sec: number) {
-    for (const n of this.inWindow) { lampState(n, sec, this.st); this.level[n] = this.st[0]; this.warm[n] = this.st[1]; }
+    const lamps = this.city!.lamps, c = this.col;
+    for (const n of this.inWindow) {
+      const t = lamps[n].lampType ?? 'hps', L = LAMP_LIGHT[t];
+      lampState(n, sec, this.st, t);
+      const lv = (this.level[n] = this.st[0]), w = (this.warm[n] = this.st[1]);
+      for (let k = 0; k < 3; k++) c[n * 3 + k] = (L.cold[k] + (L.warm[k] - L.cold[k]) * w) * lv;
+    }
   }
 
-  /** Glow at a world point, bilinear between metres; 0 outside the window. */
-  at(x: number, y: number): number {
+  /** Add the lamps' light at a world point, times k, to out[0..2]: bilinear between metres, nothing outside the window. */
+  add(x: number, y: number, k: number, out: Float32Array) {
     const fx = x - this.ox, fy = y - this.oy;
     const ix = Math.floor(fx), iy = Math.floor(fy);
-    if (ix < 0 || iy < 0 || ix >= W - 1 || iy >= W - 1) return 0;
-    const tx = fx - ix, ty = fy - iy, k = iy * W + ix, m = this.map, id = this.lamp, L = this.level;
-    return (m[k] * L[id[k]] * (1 - tx) + m[k + 1] * L[id[k + 1]] * tx) * (1 - ty) + (m[k + W] * L[id[k + W]] * (1 - tx) + m[k + W + 1] * L[id[k + W + 1]] * tx) * ty;
+    if (ix < 0 || iy < 0 || ix >= W - 1 || iy >= W - 1) return;
+    const tx = fx - ix, ty = fy - iy, i0 = iy * W + ix, m = this.map, id = this.lamp, c = this.col;
+    const corner = (i: number, f: number) => {
+      const g = m[i] * f * k;
+      if (g <= 0) return;
+      const n = id[i] * 3;
+      out[0] += c[n] * g; out[1] += c[n + 1] * g; out[2] += c[n + 2] * g;
+    };
+    corner(i0, (1 - tx) * (1 - ty)); corner(i0 + 1, tx * (1 - ty)); corner(i0 + W, (1 - tx) * ty); corner(i0 + W + 1, tx * ty);
   }
 }

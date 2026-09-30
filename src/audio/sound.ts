@@ -1,4 +1,4 @@
-import { lampId, lampMode, LampMode, lampState, lampStutter } from '../render/lamps';
+import { LAMP_LIGHT, lampId, lampMode, LampMode, lampState, lampStutter } from '../render/lamps';
 import { signLight, signMode, SignMode, signStutter, signText } from '../render/signs';
 import { type City } from '../sim/city';
 
@@ -101,11 +101,12 @@ export class Sound {
 
     // the hum follows the lamp: silent when out, cutting out and crackling when it fails
     let hum = 0, hcr = 0;
-    if (lid >= 0 && lamp < LAMP_R) {
+    const type = lid >= 0 ? city.lamps[lid].lampType ?? 'hps' : 'hps';
+    if (lid >= 0 && lamp < LAMP_R && LAMP_LIGHT[type].hum) {
       const near = (1 - lamp / LAMP_R) ** 2;
-      lampState(lid, sec, this.st);
+      lampState(lid, sec, this.st, type);
       hum = 0.05 * near * this.st[0];
-      if (lampMode(lid) === LampMode.Stutter && lampStutter(lid, sec)) hcr = 0.04 * near;
+      if (lampMode(lid, type) === LampMode.Stutter && lampStutter(lid, sec)) hcr = 0.04 * near;
     }
     this.hum.gain.setTargetAtTime(hum, now, 0.03);
     this.humCrackle.gain.setTargetAtTime(hcr, now, 0.01);

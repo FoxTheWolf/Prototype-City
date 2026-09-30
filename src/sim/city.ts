@@ -75,7 +75,25 @@ export interface Prop {
   seed: number;
   /** Facing in radians; a lamp's arm points this way, over the street. */
   a: number;
+  /** For street lamps: the kind of lamp in the head. */
+  lampType?: LampType;
 }
+
+/**
+ * Street-lamp technology around 2008 in an American city: high-pressure sodium (amber) almost
+ * everywhere, metal halide (white) downtown and on commercial strips, old mercury vapor (bluish
+ * green, being phased out) in older neighborhoods, low-pressure sodium (deep yellow) in industry,
+ * and the first pilot LED lamps downtown.
+ */
+export type LampType = 'hps' | 'mh' | 'mv' | 'lps' | 'led';
+
+const LAMPS: Record<DistrictType, [LampType, number][]> = {
+  financial: [['mh', 0.7], ['led', 0.1], ['hps', 0.2]],
+  commercial: [['hps', 0.5], ['mh', 0.45], ['led', 0.05]],
+  historic: [['hps', 0.6], ['mv', 0.3], ['mh', 0.1]],
+  residential: [['hps', 0.75], ['mv', 0.25]],
+  industrial: [['hps', 0.55], ['lps', 0.35], ['mv', 0.1]],
+};
 
 export type DistrictType = 'financial' | 'commercial' | 'residential' | 'historic' | 'industrial';
 
@@ -374,7 +392,10 @@ export function generateCity(seed: number, size: number): City {
     for (let e = 0; e < 4; e++) {
       const [ax, ay] = corners[e], [bx, by] = corners[(e + 1) % 4], a = [-Math.PI / 2, 0, Math.PI / 2, Math.PI][e];
       const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 28));
-      for (let k = 0; k < n; k++) block.props.push({ kind: 'lamp', x: ax + ((bx - ax) * k) / n, y: ay + ((by - ay) * k) / n, w: 0.3, z1: 6.5, seed: 0, a });
+      // one lamp type per side of the block, the way a street gets relamped
+      let roll = hash3(seed ^ 0x1a3b5c, i * 4 + e, j), lampType: LampType = 'hps';
+      for (const [t, w] of LAMPS[districts[district].type]) { if ((roll -= w) < 0) { lampType = t; break; } }
+      for (let k = 0; k < n; k++) block.props.push({ kind: 'lamp', x: ax + ((bx - ax) * k) / n, y: ay + ((by - ay) * k) / n, w: 0.3, z1: 6.5, seed: 0, a, lampType });
     }
 
     const ix0 = x0 + SIDEWALK, iy0 = y0 + SIDEWALK, ix1 = x1 - SIDEWALK, iy1 = y1 - SIDEWALK;

@@ -3,12 +3,12 @@ import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type Cit
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
-import { lampId } from './lamps';
+import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
-import { LAMP, type Look } from './palette';
+import { type Look } from './palette';
 import { bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
 export interface View {
@@ -578,8 +578,9 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
  * and this frame's dynamic lights.
  */
 function lightAt(x: number, y: number, z: number) {
-  const zk = z <= 1 ? 1 : 1 - (z - 1) / (LIT_H - 1), g = zk > 0 ? light.at(x, y) * zk : 0;
-  LT[0] = LAMP[0] * g; LT[1] = LAMP[1] * g; LT[2] = LAMP[2] * g;
+  const zk = z <= 1 ? 1 : 1 - (z - 1) / (LIT_H - 1);
+  LT[0] = LT[1] = LT[2] = 0;
+  if (zk > 0) light.add(x, y, zk, LT);
   dyn.sample(x, y, z, LT);
 }
 
@@ -625,9 +626,10 @@ function collectObjects(world: World, v: View): Obj[] {
     const blk = cityBlock(city, cx, cy);
     if (blk) for (const p of blk.props) {
       if (p.kind === 'lamp') {
-        // the head glows as bright and as warm as the lamp is right now (dim red while it strikes, amber when warm)
+        // the head glows in its lamp's color, as bright and as warm as the lamp is right now
         const n = lampId(city, p), lv = Math.round(light.level[n] * 8) / 8, wm = Math.round(light.warm[n] * 8) / 8;
-        const head: RGB = [Math.max(30, (230 + 25 * wm) * lv), Math.max(30, (50 + 138 * wm) * lv), Math.max(30, (25 + 69 * wm) * lv)];
+        const L = LAMP_LIGHT[p.lampType ?? 'hps'], hc = [0, 1, 2].map((k) => L.cold[k] + (L.warm[k] - L.cold[k]) * wm);
+        const s = 255 / Math.max(...hc), head: RGB = [Math.max(30, hc[0] * s * lv), Math.max(30, hc[1] * s * lv), Math.max(30, hc[2] * s * lv)];
         out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lampModel(head), r: 2.1, h: 6.7, seed: 0 });
       }
       else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
