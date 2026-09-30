@@ -7,7 +7,7 @@ import { LightWindow } from './lightmap';
 import { carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { LAMP, type Look } from './palette';
-import { marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
+import { bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
 export interface View {
   x: number;
@@ -465,7 +465,23 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const lit = signLight(B.biz, mode, inText ? k : -1, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
       // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
       const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
-      if (inText && c !== 32 && (!letters || center)) {
+      // close enough for a letter to cover 5x5 cells: it is drawn as its 5x7 pattern of bulbs instead of a glyph
+      const bulbs = LETTER_W / dAlong >= 5 && 0.56 / dz >= 5;
+      if (bulbs && col >= 0 && col < signN && z > 2.72 && z < 3.28) {
+        let fu = signU / LETTER_W - col - 1;
+        if (rev) fu = 1 - fu; // seen from the other side, the pattern mirrors with the reading order
+        const kk = rev ? signN - 1 - col : col;
+        const px = (fu * LETTER_W - 0.05) / 0.09, pz = (3.28 - z) / 0.08, bx = Math.floor(px), by = Math.floor(pz);
+        const on = signLight(B.biz, mode, kk, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
+        if (bx >= 0 && bx < 5 && by < 7 && bulbOn(text.charCodeAt(kk), bx, by)) {
+          // the bulb in the cell nearest its center, its glow in the cells around it
+          const ou = (px - bx - 0.5) * 0.09, oz = (pz - by - 0.5) * 0.08;
+          const cen = ou >= -dAlong / 2 && ou < dAlong / 2 && oz >= -dz / 2 && oz < dz / 2; // half-open, so exactly one cell
+          const q = cen ? on : on * 0.4;
+          ch = cen ? G.o : 32; r = B.sign[0] * q; g = B.sign[1] * q; b = B.sign[2] * q;
+          if (cen && on > 0.5) { r += 60; g += 60; b += 60; } // a lit bulb burns whiter than its tint
+        } else { ch = 32; r = 14; g = 12; b = 16; } // plain board between the bulbs
+      } else if (inText && c !== 32 && (!letters || center)) {
         ch = letters ? c : G.eq;
         r = B.sign[0] * lit; g = B.sign[1] * lit; b = B.sign[2] * lit;
       } else if (inText) { ch = 32; r = B.sign[0] * lit * 0.35; g = B.sign[1] * lit * 0.35; b = B.sign[2] * lit * 0.35; } else if (mode === SignMode.Marquee && !inText) {
