@@ -227,7 +227,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: etapa 2 (cidade grande).** Numa sessão nova, ler `src/sim/city.ts`, `src/render/raycaster.ts` e as referências 01, 13 e 26. Já decidido: cidade de ~2×2 km com tamanho configurável, grade americana e 1 unidade = 1 metro. Avaliar também a câmera com giro vertical de verdade (veja as notas técnicas).
+- **Próximo passo: etapa 3 (estrutura da cidade).** Numa sessão nova, ler `src/sim/city.ts` e as referências 21, 22 e 26. Os setores, distritos e nomes se apoiam na grade da etapa 2 (quarteirão `(i, j)`, `city.cx/cy` como centro do centro).
 - *Histórico:* `terminal-city.html` é o primeiro protótipo (2026-09-30), hoje substituído pelo projeto Vite. Tinha:
   - uma cidade procedural de 12×12 quarteirões (tamanho 12, ruas com 3 de largura);
   - prédios com janelas acesas e letreiros de loja, parques com árvores e postes com poças de luz no chão;
@@ -243,6 +243,15 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - Grade: sempre 80 linhas; as colunas seguem a proporção da janela (célula 0,6). Posições do jogador e dos carros são interpoladas entre ticks, sem balanço de cabeça, e as árvores usam coordenadas locais, para não tremer.
   - O HUD lateral e os controles de toque do protótipo 1 ficaram de fora; voltam na etapa 8. A cidade ainda é a de 12×12 quarteirões do protótipo.
   - Na parte de baixo da tela fica só uma linha de status (semente, posição, velocidade, grade, FPS). O artifact publicado continua sendo o protótipo 1.
+- **Etapa 2 concluída (2026-09-30):** cidade grande em metros.
+  - `city.ts`: a cidade não é mais uma grade de tiles. Cada eixo é uma lista de limites (`xb`, `yb`): as células pares são ruas e as ímpares são quarteirões. `xCell`/`yCell` dão a célula de cada metro com uma leitura. Os prédios são retângulos em metros (`Building.x0..y1, h`), e as torres com recuo são várias caixas aninhadas, todas a partir do chão.
+  - Grade: avenidas N–S a cada 150–200 m (21 m de largura, 28 m a cada 4ª), ruas L–O a cada 60–80 m (14 m, 21 m a cada 5ª), calçada de 4 m dentro do quarteirão, faixas de 3,5 m. O tamanho é parâmetro de `createWorld(seed, size)` (padrão `CITY_SIZE = 2000`). Com a semente 42: 207 quarteirões, ~11 mil caixas, torre mais alta de 253 m, mediana de 12 m.
+  - Identidade fixa: cada quarteirão usa o próprio gerador, `mulberry32(hash3(seed, i, j))`. Mudar um quarteirão não altera os outros, e dá para gerar sob demanda se um dia a cidade crescer.
+  - Raycaster: percorre a grade de ruas e quarteirões (~60 células num raio de 2 km), testa as caixas do quarteirão, ordena por distância e continua atrás dos prédios próximos. Pula o quarteirão inteiro quando nem o prédio mais alto dele (`maxH`) apareceria acima do que já foi desenhado. Traça até a borda da cidade.
+  - Dois níveis de fachada: detalhada quando o andar tem ≥ 2,2 linhas e a janela ≥ 1,5 coluna. Mais longe, andares e janelas são agrupados em potências de 2, para o padrão não tremer.
+  - Janela deslizante: `render/lightmap.ts` guarda a luz dos postes no chão num quadrado de 1024 m em volta do jogador, a 1 m por célula, e recalcula quando ele se afasta mais de 256 m do meio. Objetos e carros só são desenhados até 250 m; o chão, até 600 m.
+  - Olho a 1,7 m, andar a 3,5 m, caminhada a 3,5 m/s, corrida a 9 m/s. São 300 carros a 8–14 m/s, com a mesma lógica de antes adaptada à grade nova (a curva ainda "teleporta" de faixa; isso fica para a etapa 6).
+  - No painel do app, o quadro leva ~5,6 ms (limitado pela taxa do painel).
 - **Retorno do usuário sobre a etapa 1:** achou ótimo. A única queixa era o ângulo vertical limitado (só ~15°); foi corrigido para ~60° (`Camera.MAX_PITCH`) e depois reduzido para ~40° por causa da distorção (veja as notas técnicas). Depois disso, o FOV pareceu pequeno e passou a ser fixado na vertical (veja as notas técnicas). No PC dele o jogo roda a ~180 FPS (monitor de alta taxa). Isso não é problema: a simulação tem passo fixo e a suavização da câmera não depende do FPS.
 
 ## Notas técnicas (para as próximas sessões)
@@ -251,15 +260,16 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - `src/sim/` nunca importa nada de `src/render/` nem do DOM. O render só lê o estado da simulação.
   - Toda aleatoriedade da simulação vem de `world.rng`, nunca de `Math.random`, para manter o determinismo.
   - Detalhes só visuais (textura do chão, janelas acesas) saem de `hash3` da posição. São fixos e não piscam.
+  - A geração da cidade é a exceção a `world.rng`: a grade usa `mulberry32(seed)` e cada quarteirão usa `mulberry32(hash3(seed, i, j))`. Continua determinística, e cada prédio tem identidade pela posição.
 - **Interpolação:** tudo o que se move na simulação guarda a posição do tick anterior (`px`, `py`), e o render interpola com `alpha`. Qualquer entidade nova que se mova deve seguir esse padrão, senão treme.
 - **Projeção:**
   - O FOV é fixado na **vertical** (`VFOV = 60°`), e o horizontal segue a proporção da janela (~92° em 16:9). Antes era fixado na horizontal (72°), o que deixava só ~44° na vertical, e o usuário achou apertado ao olhar para cima e para baixo.
   - `scale = (rows/2) / tan(VFOV/2)` = linhas por unidade de altura à distância 1.
   - `plane = (cols/2) * cellAspect / scale` = tan(FOV horizontal / 2).
   - Olhar para cima e para baixo é *y-shearing*: `horizonte = rows/2 + tan(pitch) * scale`. Um raycaster por coluna não consegue girar a câmera de verdade. O limite foi a 60° e o usuário mostrou a distorção: telhados viram "pirâmides" inclinadas ao olhar para cima e girar. Por isso o limite voltou para **~40°** (`Camera.MAX_PITCH = 0.7`), o que com o VFOV de 60° ainda mostra até ~70° acima do horizonte.
-  - **A avaliar na etapa 2:** câmera com giro vertical de verdade, lançando um raio 3D por célula (ou fazendo o raycast no shader do GPU) em vez de um raio por coluna. As verticais passariam a convergir ao olhar para cima, e isso destravaria vistas do alto, voo e janelas de andares altos. O custo em JS é da ordem de 20 mil raios por frame, cada um com vários passos de DDA; no GPU seria trivial. Decidir junto com a reescrita do render para a cidade grande e o horizonte distante.
+  - **Decidido na etapa 2: fica o raio por coluna.** A câmera com giro vertical de verdade volta a ser avaliada na etapa 7 (vista de andares altos) ou na 10 (voo). A ideia original era: lançando um raio 3D por célula (ou fazendo o raycast no shader do GPU) em vez de um raio por coluna. As verticais passariam a convergir ao olhar para cima, e isso destravaria vistas do alto, voo e janelas de andares altos. O custo em JS é da ordem de 20 mil raios por frame, cada um com vários passos de DDA; no GPU seria trivial. Decidir junto com a reescrita do render para a cidade grande e o horizonte distante.
   - Uma célula pertence a uma parede ou sprite quando o *centro* dela está dentro do intervalo projetado (`Math.ceil(y - 0.5)`).
-- **Unidades:** 1 tile = 1 unidade. O quarteirão tem 12 tiles, a rua 3, a calçada 1. O andar tem 0,55 e o olho está a 0,48. **Ainda não há conversão para metros**; vale decidir isso na etapa 2, junto com a cidade grande.
+- **Unidades:** 1 unidade = 1 metro desde a etapa 2. As medidas estão em `city.ts` (`FLOOR_H`, `SIDEWALK`, `LANE_W`).
 - **Atlas de glifos:** o índice do glifo é o próprio código do caractere, e só o ASCII 33–126 está desenhado. Para usar caracteres de bloco ou de caixa (`░▒▓█─│`), é preciso mapear o codepoint para uma posição livre do atlas (0–31 ou 127–255) em `atlas.ts`.
 - **`CharGrid`** usa `Uint8ClampedArray`: as cores saturam sozinhas em 0–255, então não precisa limitar valores antes do `put`.
 - **Textos dentro do jogo** estão em inglês, herdados do protótipo. O idioma do jogo ainda não foi decidido.
@@ -270,6 +280,8 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **O pointer lock não funciona no painel** (`WrongDocumentError`); é esperado. Para testar:
   - Em modo dev, `window.world` e `window.camera` ficam expostos. Por exemplo: `camera.look(0, 2)` olha para cima, `world.player` mostra a posição.
   - Teclas se simulam com `dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyW'}))` e o `keyup` correspondente.
+- O laço de quadros só roda com o painel visível. Se `world.tick` não sobe, tire uma captura de tela antes de medir.
+- Se a porta 5173 estiver ocupada pelo servidor de outra conversa, use a configuração `vite-5174` do `.claude/launch.json`.
 - Cada recarga (inclusive a do HMR) sorteia uma semente nova. Use `?seed=42` para comparar sempre a mesma cidade.
 - Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina.
 - A pasta `referencias/` está no `.gitignore` (são quadros do vídeo de outra pessoa) e existe só no disco.
@@ -286,7 +298,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depende da anterior. Depois vêm as camadas próprias deste jogo.
 
 1. ✅ **Motor:** Git, Vite + TypeScript, grade de ~180×80 caracteres, raycaster com perspectiva correta, câmera suave (o mouse move um alvo que a câmera segue), sem tremor, desenho final via WebGL com atlas de glifos. Simulação separada da renderização desde o início.
-2. **Cidade grande:** mundo enorme com uma janela deslizante em volta do jogador, prédios com identidade fixa pela posição, horizonte distante barato, prédios altos visíveis atrás de outros.
+2. ✅ **Cidade grande:** mundo enorme com uma janela deslizante em volta do jogador, prédios com identidade fixa pela posição, horizonte distante barato, prédios altos visíveis atrás de outros.
 3. **Estrutura da cidade:** setores, distritos e quarteirões com nomes; tipos de distrito que mudam a geração; parques variados.
 4. **Visual sólido:** fundo colorido atrás dos glifos (alternável), objetos pseudo-volumétricos (árvores, bancos, postes, cabines).
 5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido.

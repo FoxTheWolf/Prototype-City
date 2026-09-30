@@ -10,7 +10,8 @@ import { createWorld, stepWorld, TICK, type PlayerInput } from './sim/world';
 const ROWS = 80;
 /** Cell width / height, close to a monospace glyph. */
 const CELL_ASPECT = 0.6;
-const EYE = 0.48;
+/** Eye height in metres. */
+const EYE = 1.7;
 const MOUSE_SENS = 0.0022;
 
 // ?seed=123 reproduces a city; otherwise every game rolls a new one.
@@ -92,7 +93,7 @@ function frame(now: number) {
     alpha,
     cellAspect: layout.cellW / layout.cellH,
   });
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} u/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS `;
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   renderer.draw(grid);
   requestAnimationFrame(frame);
