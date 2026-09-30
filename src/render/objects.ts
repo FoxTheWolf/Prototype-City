@@ -67,20 +67,22 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
     if (tY + o.r < 0.3 || tY - o.r > v.far) continue;
     const tX = invDet * (v.dirY * rx - v.dirX * ry);
 
-    // screen area: the bounding cylinder seen at its nearest and farthest depth
-    const tn = Math.max(0.3, tY - o.r), tf = tY + o.r;
-    let x0: number, x1: number;
-    if (tY - o.r < 0.3) { x0 = 0; x1 = cols; }
-    else {
-      const a = (tX - o.r) / tn, b = (tX + o.r) / tn, c = (tX - o.r) / tf, d = (tX + o.r) / tf;
-      x0 = Math.max(0, Math.floor((cols / 2) * (1 + Math.min(a, c) / v.plane)));
-      x1 = Math.min(cols, Math.ceil((cols / 2) * (1 + Math.max(b, d) / v.plane)));
+    // screen area: project the four corners of the bounding square (camera space: depth tY, side tX).
+    // A corner at or behind the near plane stretches the area to the screen edge on its side.
+    let sx0 = 1e9, sx1 = -1e9, behind = false;
+    for (let k = 0; k < 4; k++) {
+      const cy = tY + (k & 1 ? o.r : -o.r), cx = tX + (k & 2 ? o.r : -o.r);
+      if (cy < 0.3) { behind = true; continue; }
+      const sx = (cols / 2) * (1 + cx / cy / v.plane);
+      sx0 = Math.min(sx0, sx); sx1 = Math.max(sx1, sx);
     }
-    const up = o.h - v.eye;
-    const y0 = Math.max(0, Math.floor(v.hor - (up * v.scale) / (up > 0 ? tn : tf)));
-    const y1 = Math.min(rows, Math.ceil(v.hor + (v.eye * v.scale) / tn));
-    if (x0 >= x1 || y0 >= y1) continue;
-
+    if (behind) {
+      // where the square crosses the near plane it runs off the screen: left, right, or both if it surrounds the eye
+      if (tX - o.r < 0) sx0 = -1e9;
+      if (tX + o.r > 0) sx1 = 1e9;
+    }
+    const x0 = Math.max(0, Math.floor(sx0)), x1 = Math.min(cols, Math.ceil(sx1));
+    if (x0 >= x1) continue;
     // parts thinner than a cell at this distance are widened to half a cell, so poles do not flicker
     const mh = 0.5 * colW * Math.max(tY, 0.3), mz = (0.5 * Math.max(tY, 0.3)) / v.scale;
     const n = o.parts.length;
@@ -97,8 +99,19 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
       const camX = (2 * (x + 0.5)) / cols - 1;
       const rdx = v.dirX + v.plX * camX, rdy = v.dirY + v.plY * camX;
       const dx = rdx * o.c + rdy * o.s, dy = -rdx * o.s + rdy * o.c;
+      // this column's ray against the bounding circle: the depths [ta, tb] where the object can be,
+      // hence the only rows it can cover
+      const R = o.r + mh, qa = dx * dx + dy * dy, qb = ox * dx + oy * dy, disc = qb * qb - qa * (ox * ox + oy * oy - R * R);
+      if (disc < 0) continue;
+      const sq = Math.sqrt(disc), tb = (-qb + sq) / qa;
+      if (tb < 0.05) continue;
+      const ta = Math.max(0.05, (-qb - sq) / qa), up = o.h - v.eye;
+      const y0 = Math.max(0, Math.floor(v.hor - (up * v.scale) / (up > 0 ? ta : tb)));
+      const y1 = Math.min(rows, Math.ceil(v.hor + (v.eye * v.scale) / ta));
       for (let y = y0; y < y1; y++) {
         const i = y * cols + x;
+        // cells where something nearer than the whole object is already drawn
+        if (depth[i] <= ta) continue;
         const dz = (v.hor - (y + 0.5)) / v.scale;
         let best = depth[i], bk = -1, face = 0, nx = 0, ny = 0, nz = 0;
         for (let k = 0; k < n; k++) {

@@ -36,6 +36,12 @@
       "runtimeArgs": ["vite"],
       "port": 5176,
       "autoPort": true
+    },
+    {
+      "name": "claude-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5180"],
+      "port": 5180
     }
   ]
 }

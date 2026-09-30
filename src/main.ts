@@ -36,6 +36,13 @@ if (import.meta.env.DEV) Object.assign(window, {
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
     return s;
   },
+  // renders the current view n times without the frame loop (it stops while the pane is hidden); returns the mean ms
+  // on a 256x80 grid of its own, as in a 16:9 window
+  bench: (n = 10) => {
+    const p = world.player, g = new CharGrid(256, ROWS), t0 = performance.now();
+    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE, alpha: 0, cellAspect: 0.6, look });
+    return (performance.now() - t0) / n;
+  },
 });
 let grid: CharGrid;
 let layout: Layout;
@@ -82,6 +89,8 @@ canvas.addEventListener('click', () => { if (!input.locked) input.lock(); });
 let last = performance.now();
 let acc = 0;
 let fps = 60;
+/** Time spent drawing the world: smoothed, and the worst of the last second. */
+let renderMs = 0, worstMs = 0, worstShown = 0, worstAt = 0;
 
 function frame(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000);
@@ -103,6 +112,7 @@ function frame(now: number) {
   const alpha = acc / TICK;
 
   const p = world.player;
+  const r0 = performance.now();
   renderWorld(grid, world, {
     x: p.px + (p.x - p.px) * alpha,
     y: p.py + (p.y - p.py) * alpha,
@@ -113,7 +123,11 @@ function frame(now: number) {
     cellAspect: layout.cellW / layout.cellH,
     look,
   });
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  `
+  const ms = performance.now() - r0;
+  renderMs += (ms - renderMs) * 0.05;
+  worstMs = Math.max(worstMs, ms);
+  if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[P] ${PALETTES[look.palette].name}  [B] BG ${look.solid ? 'ON' : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const { city } = world, d = districtAt(city, p.x, p.y);
