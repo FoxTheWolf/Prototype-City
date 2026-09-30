@@ -227,7 +227,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: etapa 3 (estrutura da cidade).** Numa sessão nova, ler `src/sim/city.ts` e as referências 21, 22 e 26. Os setores, distritos e nomes se apoiam na grade da etapa 2 (quarteirão `(i, j)`, `city.cx/cy` como centro do centro).
+- **Próximo passo: etapa 3 (estrutura da cidade).** Numa sessão nova, ler `src/sim/city.ts`, a função `wallColumn` de `src/render/raycaster.ts` e as referências 18, 19, 21, 22 e 26. O foco pedido pelo usuário é **variedade**: tipos de distrito e estilos de fachada (veja o roteiro). Os setores, distritos e nomes se apoiam na grade da etapa 2 (quarteirão `(i, j)`, `city.cx/cy` como centro do centro).
 - *Histórico:* `terminal-city.html` é o primeiro protótipo (2026-09-30), hoje substituído pelo projeto Vite. Tinha:
   - uma cidade procedural de 12×12 quarteirões (tamanho 12, ruas com 3 de largura);
   - prédios com janelas acesas e letreiros de loja, parques com árvores e postes com poças de luz no chão;
@@ -241,7 +241,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - `src/sim/`: cidade, trânsito e jogador, com semente e passo fixo de 60 Hz (`TICK`). Não conhece a tela; a única entrada é `PlayerInput`.
   - `src/render/`: `camera.ts` (o mouse move um alvo e a câmera o segue suavemente), `raycaster.ts` (preenche a `CharGrid`), `glRenderer.ts` + `atlas.ts` (WebGL2: um triângulo de tela cheia, atlas de glifos com células de pixels inteiros, um único draw).
   - Grade: sempre 80 linhas; as colunas seguem a proporção da janela (célula 0,6). Posições do jogador e dos carros são interpoladas entre ticks, sem balanço de cabeça, e as árvores usam coordenadas locais, para não tremer.
-  - O HUD lateral e os controles de toque do protótipo 1 ficaram de fora; voltam na etapa 8. A cidade ainda é a de 12×12 quarteirões do protótipo.
+  - O HUD lateral e os controles de toque do protótipo 1 ficaram de fora; voltam na etapa 8. Nessa etapa, a cidade ainda era a de 12×12 quarteirões do protótipo.
   - Na parte de baixo da tela fica só uma linha de status (semente, posição, velocidade, grade, FPS). O artifact publicado continua sendo o protótipo 1.
 - **Etapa 2 concluída (2026-09-30):** cidade grande em metros.
   - `city.ts`: a cidade não é mais uma grade de tiles. Cada eixo é uma lista de limites (`xb`, `yb`): as células pares são ruas e as ímpares são quarteirões. `xCell`/`yCell` dão a célula de cada metro com uma leitura. Os prédios são retângulos em metros (`Building.x0..y1, h`), e as torres com recuo são várias caixas aninhadas, todas a partir do chão.
@@ -252,6 +252,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - Janela deslizante: `render/lightmap.ts` guarda a luz dos postes no chão num quadrado de 1024 m em volta do jogador, a 1 m por célula, e recalcula quando ele se afasta mais de 256 m do meio. Objetos e carros só são desenhados até 250 m; o chão, até 600 m.
   - Olho a 1,7 m, andar a 3,5 m, caminhada a 3,5 m/s, corrida a 9 m/s. São 300 carros a 8–14 m/s, com a mesma lógica de antes adaptada à grade nova (a curva ainda "teleporta" de faixa; isso fica para a etapa 6).
   - No painel do app, o quadro leva ~5,6 ms (limitado pela taxa do painel).
+- **Retorno do usuário sobre a etapa 2:** achou ótimo. A velocidade de caminhada, a escala dos quarteirões e a altura do centro estão boas e não devem mudar sem motivo. O que falta, para ele, é **variedade**: hoje todos os prédios são caixas com o mesmo padrão de janelas, só mudando as cores e a altura.
 - **Retorno do usuário sobre a etapa 1:** achou ótimo. A única queixa era o ângulo vertical limitado (só ~15°); foi corrigido para ~60° (`Camera.MAX_PITCH`) e depois reduzido para ~40° por causa da distorção (veja as notas técnicas). Depois disso, o FOV pareceu pequeno e passou a ser fixado na vertical (veja as notas técnicas). No PC dele o jogo roda a ~180 FPS (monitor de alta taxa). Isso não é problema: a simulação tem passo fixo e a suavização da câmera não depende do FPS.
 
 ## Notas técnicas (para as próximas sessões)
@@ -272,6 +273,16 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Unidades:** 1 unidade = 1 metro desde a etapa 2. As medidas estão em `city.ts` (`FLOOR_H`, `SIDEWALK`, `LANE_W`).
 - **Atlas de glifos:** o índice do glifo é o próprio código do caractere, e só o ASCII 33–126 está desenhado. Para usar caracteres de bloco ou de caixa (`░▒▓█─│`), é preciso mapear o codepoint para uma posição livre do atlas (0–31 ou 127–255) em `atlas.ts`.
 - **`CharGrid`** usa `Uint8ClampedArray`: as cores saturam sozinhas em 0–255, então não precisa limitar valores antes do `put`.
+- **Onde mexer para dar variedade (etapa 3 em diante):**
+  - A geometria fica na simulação (`Building` em `city.ts`: caixa, altura, cores, `lit`, `shop`). A aparência da fachada fica no render, em `wallColumn` (`raycaster.ts`), que recebe o prédio, a distância e o ponto `along` onde o raio bateu na face.
+  - Um estilo de fachada novo é um campo a mais em `Building` (por exemplo `style`) e um ramo a mais em `wallColumn`. Todo estilo precisa ter os dois níveis: o detalhado e o distante agrupado em potências de 2, senão treme ao longe.
+  - Formas que não são caixas (cúpulas, pontas de torre, telhados) ainda não existem. Recuos já funcionam como caixas aninhadas a partir do chão; uma forma nova precisa entrar no teste de raio do quarteirão.
+  - Postes, árvores e carros ainda são *billboards* planos (`drawSprites`). A etapa 4 os troca por objetos pseudo-volumétricos.
+- **Defeitos visuais conhecidos, ainda não resolvidos:**
+  - O letreiro de loja (faixa `=` a 2,7–3,3 m) vira uma listra diagonal larga quando visto de lado, porque é contínuo ao longo do prédio inteiro.
+  - O nível de detalhe da fachada ignora a obliquidade da face, então fachadas vistas muito de lado usam o modo detalhado e as janelas se misturam.
+  - As silhuetas distantes são escuras, porque as cores das molduras (`FRAME`) são apagadas. Isso fica para a paleta e o fundo sólido da etapa 4.
+  - Além da borda da cidade não há nada, só chão vazio até o horizonte, e o jogador não consegue sair.
 - **Textos dentro do jogo** estão em inglês, herdados do protótipo. O idioma do jogo ainda não foi decidido.
 
 ## Como testar no navegador do app
@@ -299,11 +310,16 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 
 1. ✅ **Motor:** Git, Vite + TypeScript, grade de ~180×80 caracteres, raycaster com perspectiva correta, câmera suave (o mouse move um alvo que a câmera segue), sem tremor, desenho final via WebGL com atlas de glifos. Simulação separada da renderização desde o início.
 2. ✅ **Cidade grande:** mundo enorme com uma janela deslizante em volta do jogador, prédios com identidade fixa pela posição, horizonte distante barato, prédios altos visíveis atrás de outros.
-3. **Estrutura da cidade:** setores, distritos e quarteirões com nomes; tipos de distrito que mudam a geração; parques variados.
-4. **Visual sólido:** fundo colorido atrás dos glifos (alternável), objetos pseudo-volumétricos (árvores, bancos, postes, cabines).
+3. **Estrutura e variedade da cidade:**
+   - setores, distritos e quarteirões com nomes;
+   - tipos de distrito que mudam a geração (centro financeiro, comercial, residencial, histórico, industrial, portuário);
+   - **estilos de fachada** por tipo de distrito: torre de vidro, prédio histórico ornamentado, tijolo, residencial, galpão (referências 18, 19 e 22);
+   - variedade de forma: topos de torre, pontas, cúpulas;
+   - parques variados e marcos da cidade (referências 17, 20, 21 e 26).
+4. **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais.
 5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido.
 6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos).
-7. **Interiores:** entrar nos prédios, janelas que mostram a cidade real, andares altos com vista de cima, vitrines.
+7. **Interiores:** entrar nos prédios, cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas.
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
 9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
@@ -323,6 +339,7 @@ Isso pede um módulo de áudio simples (Web Audio), criado na primeira etapa que
 ## Perguntas em aberto
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
+- **Etapa 3:** o que cerca a cidade além da borda: rio ou mar (como a Liberty City, que é feita de ilhas), rodovia, subúrbio ou outra coisa.
 - **Etapa 5:** escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
 - **Etapa 8:** forma do painel lateral diegético. Com a época de 2008, o celular é o candidato natural.
 - **Etapa 10:** se haverá helicóptero de passeio no lugar do táxi aéreo.
@@ -334,4 +351,3 @@ Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa cor
 - Rede da cidade como dado do jogo: nós (telefones, câmeras, semáforos, prédios) com endereços e níveis de acesso.
 - Notebook do hacker como objeto físico no jogo, com teclado, tela de terminal e sons.
 - Transmissão ao vivo determinística (como o "ASCII City Live"): a mesma semente e a mesma hora mostram a mesma cena.
-- Tamanho da cidade: provavelmente menor que a do ASCII City, porque cada cidadão é detalhado (como no Shadows of Doubt).
