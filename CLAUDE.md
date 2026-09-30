@@ -244,6 +244,28 @@ Ideia do usuário: uma rede social interna em que os cidadãos da simulação pu
 
 **O que preparar antes:** a fila de eventos pode nascer já na etapa 6 (trânsito), com as batidas e os engarrafamentos, mesmo sem ninguém lendo. Assim a rede social, as notícias e os logs de câmera consomem a mesma fonte depois.
 
+## Design: rede elétrica e blackout (proposta, 2026-09-30)
+
+Pedido do usuário, inspirado no blackout do Watch Dogs 1 (a regra de originalidade vale: técnica e sensação sim, sons e visual copiados não). No fim, será uma ação de hacking. Antes disso, entra como uma **tecla de debug**, para acertar o efeito.
+
+**A rede na simulação (pensando nas etapas seguintes).** O blackout não é um efeito de tela: é o **estado de uma rede elétrica** que existe na simulação. As subestações ficam em pontos fixos da cidade (a usina da etapa 3 alimenta a rede). Cada prédio, poste, letreiro e, mais tarde, cada semáforo pertence a uma subestação. Desligar uma subestação apaga tudo o que ela alimenta, e o render só lê esse estado. Assim, a mesma rede depois:
+- apaga os semáforos e causa acidentes e engarrafamentos (etapa 6);
+- tranca e destranca portas e para os elevadores (etapa 7);
+- derruba as antenas de celular e o Wi-Fi (etapa 9);
+- mexe com as rotinas dos cidadãos e vira assunto na rede social (etapas 11 e 12);
+- fecha lojas e para a economia (etapa 13);
+- é hackeada pelo jogador (etapa 14).
+
+**O efeito:**
+- **Apagão progressivo:** uma onda que parte da subestação e se espalha em alguns segundos. Janelas, postes e letreiros apagam em sequência, com falhas e piscadas antes de morrer, e nunca todos de uma vez.
+- **Som:** estouro de transformador (um estalo grave com chiado elétrico), arcos e zumbidos subindo de tom até cortar, relés e chaves estalando "enlouquecidos", e depois o silêncio de uma cidade sem zumbido. O rumor da cidade abafa.
+- **Não fica tudo preto:** o luar ilumina a cidade com uma luz fria e fraca, e dá para ver os contornos. Também continuam acesos os faróis dos carros, as janelas de quem tem gerador (hospital, alguns prédios) e as brasas da zona de fogo no horizonte, que ficam em destaque.
+- **A volta da energia:** também progressiva, com o zumbido dos transformadores voltando, lâmpadas de sódio acendendo devagar (primeiro um vermelho fraco, depois o âmbar, como as de verdade), e letreiros piscando até estabilizar.
+
+**Quando implementar: logo depois da etapa 5**, como uma etapa curta 5b. Ela precisa do luar, que só existe a partir da etapa 5; sem ele, o blackout ficaria só preto. Precisa também da luz dos postes e dos letreiros (etapa 4, já feitos) e do módulo de áudio (4f). A tecla de debug liga e desliga uma subestação. O hacking de verdade vem na etapa 14.
+
+**Referência:** o usuário ofereceu um vídeo e o som do Watch Dogs 1. O vídeo ajuda, porque dá para extrair quadros com o OpenCV, como foi feito com o do ASCII City, e medir o ritmo do apagão. O som dele não entra no jogo (tem direitos autorais e fere a regra de originalidade). Serve como referência para descrever o que se quer, já que os sons daqui são sintetizados.
+
 ## Design: celular e apps (proposta, 2026-09-30)
 
 Ideia do usuário: o celular do jogador tem vários apps com funções reais e uma loja de apps. A época de 2008 (primeiro iPhone e primeira loja de apps) resolve o dilema "a loja não existia nos anos 2000" e deixa a rede social funcionar no celular.
@@ -405,6 +427,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - nomes em inglês já lidos de um arquivo de locale.
 4. **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais. Entulho e mobiliário urbano espalhados. Letreiros nas fachadas com luzes que piscam e fazem efeitos. Base da iluminação dinâmica (postes que iluminam o que passa perto).
 5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido. Curvatura leve do horizonte e a megaestrutura da zona de fogo, visível só perto da borda (veja as inspirações).
+5b. **Rede elétrica e blackout** (veja "Design: rede elétrica e blackout"): subestações na simulação, prédios, postes e letreiros ligados a elas, apagão e volta progressivos com som, luar iluminando a cidade apagada. Acionado por uma tecla de debug até o hacking existir.
 6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos). Faróis dos carros que iluminam a rua e as fachadas enquanto passam.
 7. **Interiores:** entrar nos prédios **sem carregamento nem teleporte** (o interior existe no mesmo espaço da cidade), cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas. Elevadores que sobem de verdade, alguns com vidro. Escadas de incêndio em que se sobe.
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
