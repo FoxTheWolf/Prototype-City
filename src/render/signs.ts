@@ -90,6 +90,38 @@ export function bulbOn(c: number, bx: number, by: number): boolean {
   return !!rows && ((rows[by] >> (4 - bx)) & 1) === 1;
 }
 
+/** The 5x7 bulb rows of a letter (high bit = left column), or undefined. */
+export function fontRows(c: number): number[] | undefined {
+  return FONT[String.fromCharCode(c)];
+}
+
+/**
+ * 9x9 bulb symbols at the top of some blade signs, the way real ones announce what is inside: a
+ * circled P for parking, the pawnbroker's three balls, a cross for a drugstore, a cocktail glass
+ * for a bar. `far` is the glyph they shrink to.
+ */
+export const SYMBOLS: { rows: number[]; far: number }[] = [
+  { rows: [124, 130, 377, 325, 377, 321, 321, 130, 124], far: 'P'.charCodeAt(0) },
+  { rows: [511, 68, 238, 238, 68, 16, 56, 56, 16], far: '8'.charCodeAt(0) },
+  { rows: [56, 56, 56, 511, 511, 511, 56, 56, 56], far: '+'.charCodeAt(0) },
+  { rows: [511, 130, 68, 40, 16, 16, 16, 16, 124], far: 'Y'.charCodeAt(0) },
+];
+/** Which symbol a business kind's blade sign carries, if any. */
+export const BLADE_SYMBOL: Record<string, number> = { parking: 0, pawn: 1, pharmacy: 2, bar: 3 };
+
+/**
+ * Bulbs of a w-wide bitmap whose centers fall inside a cell's footprint (center px, pz and half
+ * sizes hx, hz, in bulb units), so each bulb lands in exactly one cell and, when bulbs are smaller
+ * than cells, several share one.
+ */
+export function bulbsIn(rows: number[], w: number, px: number, pz: number, hx: number, hz: number): number {
+  let n = 0;
+  for (let by = Math.max(0, Math.ceil(pz - hz - 0.5)); by <= Math.min(rows.length - 1, Math.ceil(pz + hz - 0.5) - 1); by++) {
+    for (let bx = Math.max(0, Math.ceil(px - hx - 0.5)); bx <= Math.min(w - 1, Math.ceil(px + hx - 0.5) - 1); bx++) if ((rows[by] >> (w - 1 - bx)) & 1) n++;
+  }
+  return n;
+}
+
 /** Marquee bulbs around the sign: every third one lit, running along. */
 export function marqueeBulb(u: number, sec: number): boolean {
   return (Math.floor(u / 0.3) + Math.floor(sec * 7)) % 3 === 0;

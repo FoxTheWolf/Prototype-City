@@ -801,7 +801,7 @@ export function generateCity(seed: number, size: number): City {
  * so it is only hung where the building is tall enough.
  */
 function bladeSign(block: Block, B: Building, r: number) {
-  if (B.h < BLADE_Z + 8 * BLADE_LETTER + 1) return;
+  if (B.h < BLADE_Z + 8 * BLADE_LETTER + 2) return; // room for the longest word and a symbol
   const ix0 = block.x0 + SIDEWALK, iy0 = block.y0 + SIDEWALK, ix1 = block.x1 - SIDEWALK, iy1 = block.y1 - SIDEWALK;
   // faces on the sidewalk: the sides on the block's edge, and a face cut by the diagonal
   const faces = [B.x0 <= ix0 + 0.01, B.x1 >= ix1 - 0.01, B.y0 <= iy0 + 0.01, B.y1 >= iy1 - 0.01, !!B.cut];

@@ -167,15 +167,19 @@ export const FLOOD: Part[] = [
 ];
 
 const blades = new Map<string, Part[]>();
+/** Height of a blade sign's panel: its letters, a square symbol on top if it has one, and the frame. */
+export function bladeHeight(text: string, sym: number, letter: number) {
+  return text.length * letter + (sym >= 0 ? 0.78 : 0) + 0.3;
+}
 /**
  * Blade sign, sticking out of a wall along +x: two steel arms, a dark frame and the lit panel with
  * its word stacked from the top. `col` is the neon's color at its current brightness.
  */
-export function bladeModel(text: string, col: RGB, z0: number, letter: number): Part[] {
-  const key = text + col.join();
+export function bladeModel(text: string, sym: number, col: RGB, z0: number, letter: number): Part[] {
+  const key = text + sym + col.join();
   let m = blades.get(key);
   if (m) return m;
-  const z1 = z0 + text.length * letter + 0.3;
+  const z1 = z0 + bladeHeight(text, sym, letter);
   m = [
     part(Box, 0, -0.04, z1 - 0.35, 0.4, 0.04, z1 - 0.25, STEEL, Solid, '-', '-', '|'),
     part(Box, 0, -0.04, z0 + 0.25, 0.4, 0.04, z0 + 0.35, STEEL, Solid, '-', '-', '|'),
@@ -183,6 +187,7 @@ export function bladeModel(text: string, col: RGB, z0: number, letter: number): 
     part(Box, 0.46, -0.18, z0 + 0.15, 1.24, 0.18, z1 - 0.15, col, Text, ' '),
   ];
   m[3].text = text;
+  if (sym >= 0) m[3].sym = sym;
   if (blades.size > 4000) blades.clear();
   blades.set(key, m);
   return m;

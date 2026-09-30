@@ -7,10 +7,10 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
+import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
-import { bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
+import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
 export interface View {
   x: number;
@@ -721,7 +721,8 @@ function collectObjects(world: World, v: View): Obj[] {
         // lit and flickering like the business's shop sign (brightness in eighths, so models are reused)
         const B = city.buildings[city.businesses[p.seed].building], text = bladeText(city, p.seed);
         const lit = Math.round(signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, frameSec) * 8) / 8;
-        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, BLADE_LETTER), r: 1.4, h: BLADE_Z + text.length * BLADE_LETTER + 0.3, seed: 0 });
+        const sym = BLADE_SYMBOL[city.businesses[p.seed].kind] ?? -1;
+        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, sym, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, BLADE_LETTER), r: 1.4, h: BLADE_Z + bladeHeight(text, sym, BLADE_LETTER), seed: 0 });
       }
       else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
       else {

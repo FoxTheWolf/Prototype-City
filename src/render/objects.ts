@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import { type RGB } from '../sim/city';
 import { type CharGrid } from './grid';
+import { bulbsIn, fontRows, SYMBOLS } from './signs';
 
 /**
  * Street objects built from a few solid parts (boxes, upright cylinders, ellipsoids) in the
@@ -13,8 +14,9 @@ import { type CharGrid } from './grid';
 export const Shape = { Box: 0, Cyl: 1, Ball: 2 } as const;
 /**
  * Solid: shaded glyphs. Leaf: glyph noise fixed to the surface. Glow: a light, unshaded. Text: a lit
- * panel with the part's text stacked top to bottom on its two broad (y) faces, one letter every
- * `(z1 - z0) / text.length` metres.
+ * panel with the part's text stacked top to bottom on its two broad (y) faces, under a square
+ * symbol when `sym` is set (see SYMBOLS). Up close letters and symbol are drawn as bulbs, like the
+ * shop signs; farther, as glyphs; farther still, a lit bar.
  */
 export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3 } as const;
 
@@ -29,6 +31,7 @@ export interface Part {
   top: number;
   end: number;
   text?: string;
+  sym?: number;
 }
 
 export interface Obj {
@@ -80,7 +83,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
     for (let k = 0; k < 4; k++) {
       const cy = tY + (k & 1 ? o.r : -o.r), cx = tX + (k & 2 ? o.r : -o.r);
       if (cy < 0.3) { behind = true; continue; }
-      const sx = (cols / 2) * (1 + cx / cy / v.plane);
+      const sx = (cols / 2) * (1 + cx / cy);
       sx0 = Math.min(sx0, sx); sx1 = Math.max(sx1, sx);
     }
     if (behind) {
@@ -166,14 +169,34 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         let ch: number, k: number;
         if (q.mat === Mat.Glow) { ch = q.side; k = 0.6 + 0.4 * fog; }
         else if (q.mat === Mat.Text && face === 1 && q.text) {
-          // a letter goes in the one cell holding its center (the cell's size on the face: metres
-          // along x per column, and metres per row); the rest of the panel glows faintly
-          const hx = ox + dx * best, hz = oz + dz * best, n = q.text.length, lh = (q.z1 - q.z0) / n;
-          const li = Math.min(n - 1, Math.floor((q.z1 - hz) / lh)), zc = q.z1 - (li + 0.5) * lh;
+          // the cell's size on the face: metres along x per column, and metres per row
+          const hx = ox + dx * best, hz = oz + dz * best, W = q.x1 - q.x0;
           const perCol = (colW * best) / Math.max(1e-6, Math.abs(dy)), perRow = best / v.scale;
-          const center = Math.abs(hx - (q.x0 + q.x1) / 2) < Math.max(perCol, 0.05) / 2 && Math.abs(hz - zc) < perRow / 2 + 0.01;
-          const small = perRow > lh * 0.9; // far away the letters blur into a lit bar
-          ch = small ? C('|') : center ? q.text.charCodeAt(li) : 32; k = small ? 0.7 : center ? 1 : 0.3;
+          const sym = q.sym ?? -1, symH = sym >= 0 ? W : 0, n = q.text.length, lh = (q.z1 - q.z0 - symH) / n;
+          // the slot this cell is in: the symbol square on top, or one letter; its box and bulb grid
+          let rows: number[] | undefined, bw: number, bh: number, sx0: number, sz0: number, sw: number, sh: number, far: number;
+          if (hz > q.z1 - symH) { rows = SYMBOLS[sym].rows; bw = bh = 9; sw = sh = W * 0.9; sx0 = q.x0 + W * 0.05; sz0 = q.z1 - W * 0.05; far = SYMBOLS[sym].far; }
+          else {
+            const li = Math.min(n - 1, Math.floor((q.z1 - symH - hz) / lh));
+            far = q.text.charCodeAt(li); rows = fontRows(far); bw = 5; bh = 7;
+            sw = Math.min(W * 0.66, lh * 0.62); sh = lh * 0.8; sx0 = (q.x0 + q.x1 - sw) / 2; sz0 = q.z1 - symH - li * lh - lh * 0.1;
+          }
+          const small = perRow > lh * 0.9; // far away the panel blurs into a lit bar
+          if (small) { ch = C('|'); k = 0.7; }
+          else if (rows && sw / perCol >= 3 && sh / perRow >= 2.6) {
+            // up close: bulbs, counted per cell (bulb units across and down)
+            // read left to right from either side: seen from -y, +x is to the viewer's left
+            const ux = sw / bw, uz = sh / bh, px = (oy < 0 ? sx0 + sw - hx : hx - sx0) / ux, pz = (sz0 - hz) / uz;
+            const nb = bulbsIn(rows, bw, px, pz, perCol / ux / 2, perRow / uz / 2);
+            const bx = Math.floor(px), by = Math.floor(pz);
+            if (nb) { ch = nb > 1 ? C('@') : C('o'); k = 1.25; }
+            else if (bx >= 0 && bx < bw && by >= 0 && by < bh && (rows[by] >> (bw - 1 - bx)) & 1) { ch = 32; k = 0.45; }
+            else { ch = 32; k = 0.12; }
+          } else {
+            // a glyph in the one cell holding the slot's center; the rest of the panel glows faintly
+            const center = Math.abs(hx - (sx0 + sw / 2)) < Math.max(perCol, 0.05) / 2 && Math.abs(hz - (sz0 - sh / 2)) < perRow / 2 + 0.01;
+            ch = center ? far : 32; k = center ? 1 : 0.3;
+          }
         }
         else {
           // lit like the buildings: faces turned along x brighter, tops brightest
