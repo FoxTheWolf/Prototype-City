@@ -4,6 +4,8 @@ import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
 import { CharGrid } from './render/grid';
 import { renderWorld } from './render/raycaster';
+import { cityName, districtName, districtType, roadName, sectorCode } from './locale/names';
+import { districtAt, nearestRoad } from './sim/city';
 import { createWorld, stepWorld, TICK, type PlayerInput } from './sim/world';
 
 /** The grid always has this many rows; columns follow the window shape. */
@@ -95,6 +97,10 @@ function frame(now: number) {
   });
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
+  const { city } = world, d = districtAt(city, p.x, p.y);
+  const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
+    + `${roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
+  grid.text(1, 0, where, [120, 220, 255], [8, 10, 14]);
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }

@@ -1,0 +1,34 @@
+{
+  "lang": "en",
+  "roots": [
+    "Ashford", "Kessler", "Marlow", "Greyhaven", "Calloway", "Thornbury", "Holloway", "Brandt",
+    "Sable", "Mercer", "Dunmore", "Carver", "Radley", "Whitlock", "Garrison", "Blackmoor",
+    "Fenwick", "Harlan", "Corrigan", "Lockwood", "Pruitt", "Stanton", "Vickery", "Moreau",
+    "Delacroix", "Hadley", "Quinlan", "Barlow", "Everett", "Kingsley", "Draper", "Osgood",
+    "Pemberton", "Rook", "Sterling", "Tolliver", "Ulrich", "Vail", "Wexford", "Yardley",
+    "Ambrose", "Beckett", "Colfax", "Dorsey", "Easton", "Faraday", "Gallagher", "Hawthorne",
+    "Irving", "Jericho", "Kimball", "Latimer", "Monroe", "Nash", "Orwell", "Prescott",
+    "Redfield", "Sawyer", "Thorne", "Underhill", "Vanderlee", "Winslow", "Crane", "Maddox"
+  ],
+  "city": ["{r}", "{r} City", "New {r}"],
+  "seam": "{r} Seam",
+  "district": {
+    "financial": ["{r} Exchange", "{r} Center", "{r} Plaza", "Downtown {r}"],
+    "commercial": ["{r} Square", "{r} Market", "{r} Cross", "{r} Mile"],
+    "residential": ["{r} Heights", "{r} Park", "{r} Gardens", "{r} Hill", "{r} Terrace"],
+    "historic": ["Old {r}", "{r} Quarter", "{r} Commons"],
+    "industrial": ["{r} Yards", "{r} Works", "{r} Flats", "{r} Junction"]
+  },
+  "districtType": {
+    "financial": "financial",
+    "commercial": "commercial",
+    "residential": "residential",
+    "historic": "historic",
+    "industrial": "industrial"
+  },
+  "avenue": "{n} Ave",
+  "street": "{n} St",
+  "wideAvenue": "{r} Blvd",
+  "wideStreet": "{r} St",
+  "ordinal": { "one": "st", "two": "nd", "few": "rd", "other": "th" }
+}

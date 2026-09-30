@@ -31,11 +31,38 @@ export interface Prop {
   seed: number;
 }
 
+export type DistrictType = 'financial' | 'commercial' | 'residential' | 'historic' | 'industrial';
+
+/** A named part of the city. Its blocks are the ones closer to (x, y) than to any other district's point. */
+export interface District {
+  type: DistrictType;
+  x: number;
+  y: number;
+  /** Random number the name formatter uses to choose a name pattern. */
+  pick: number;
+}
+
+/** How each district type shapes its blocks. */
+const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot: number; lotCore: number; park: number; empty: number; shop: number }> = {
+  //            floors at the edge, x downtown growth, max floors, lot size (+ downtown), park/empty/shop chance
+  financial: { base: 3, tall: 1, cap: 999, lot: 14, lotCore: 36, park: 0.02, empty: 0.04, shop: 0.6 },
+  commercial: { base: 3, tall: 0.7, cap: 30, lot: 14, lotCore: 20, park: 0.03, empty: 0.06, shop: 0.8 },
+  residential: { base: 3, tall: 0.5, cap: 14, lot: 12, lotCore: 10, park: 0.08, empty: 0.05, shop: 0.12 },
+  historic: { base: 4, tall: 0.3, cap: 9, lot: 10, lotCore: 8, park: 0.07, empty: 0.02, shop: 0.5 },
+  industrial: { base: 1.5, tall: 0.1, cap: 4, lot: 30, lotCore: 20, park: 0.01, empty: 0.15, shop: 0.04 },
+};
+
+/** Map sectors per side (the city is split into sectors x sectors squares for map codes like "C3"). */
+const SECTORS = 4;
+/** Rough side of a district in metres. */
+const DISTRICT_SIZE = 400;
+
 export interface Block {
   x0: number;
   y0: number;
   x1: number;
   y1: number;
+  district: number;
   park: boolean;
   /** This block's buildings are city.buildings[b0 .. b1). */
   b0: number;
@@ -65,6 +92,40 @@ export interface City {
   /** Middle of downtown, where the towers are. */
   cx: number;
   cy: number;
+  districts: District[];
+  sectors: number;
+  /** Chooses the words of every place name (see locale/names.ts). */
+  nameSeed: number;
+}
+
+/**
+ * Districts on a jittered grid. Downtown is financial, the ring around it commercial with one or
+ * two historic districts, the outskirts residential, except for an industrial wedge on one side.
+ */
+function placeDistricts(rng: Rng, w: number, h: number, cx: number, cy: number, radius: number): District[] {
+  const nx = Math.max(1, Math.round(w / DISTRICT_SIZE)), ny = Math.max(1, Math.round(h / DISTRICT_SIZE));
+  const pts: { x: number; y: number; core: number }[] = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const x = ((i + 0.2 + rng() * 0.6) * w) / nx, y = ((j + 0.2 + rng() * 0.6) * h) / ny;
+    pts.push({ x, y, core: coreAt(x, y, cx, cy, radius) });
+  }
+  const types: DistrictType[] = pts.map((p) => (p.core > 0.5 ? 'financial' : p.core > 0.12 ? 'commercial' : 'residential'));
+  let center = 0;
+  pts.forEach((p, k) => { if (p.core > pts[center].core) center = k; });
+  types[center] = 'financial';
+  const ring = types.map((t, k) => (t === 'commercial' ? k : -1)).filter((k) => k >= 0);
+  for (let n = rng() < 0.5 ? 2 : 1; n > 0 && ring.length; n--) types[ring.splice((rng() * ring.length) | 0, 1)[0]] = 'historic';
+  const wedge = rng() * 2 * Math.PI;
+  pts.forEach((p, k) => {
+    const da = Math.abs(((Math.atan2(p.y - cy, p.x - cx) - wedge + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+    if (types[k] === 'residential' && da < 0.7) types[k] = 'industrial';
+  });
+  return pts.map((p, k) => ({ type: types[k], x: p.x, y: p.y, pick: (rng() * 1e9) | 0 }));
+}
+
+/** 1 downtown, ~0 at the edges of the city. */
+function coreAt(x: number, y: number, cx: number, cy: number, radius: number) {
+  return Math.exp(-((Math.hypot(x - cx, y - cy) / radius / 0.35) ** 2));
 }
 
 const WIN: RGB[] = [[255, 206, 110], [120, 220, 255], [90, 150, 255], [255, 150, 70], [190, 255, 170], [255, 130, 200], [255, 240, 200]];
@@ -112,6 +173,8 @@ export function generateCity(seed: number, size: number): City {
   const nbx = (xb.length - 2) / 2, nby = (yb.length - 2) / 2;
   const cx = w * (0.4 + rng() * 0.2), cy = h * (0.4 + rng() * 0.2);
   const radius = Math.min(w, h) / 2;
+  const districts = placeDistricts(rng, w, h, cx, cy, radius);
+  const nameSeed = (rng() * 1e9) | 0;
   const blocks: Block[] = [];
   const buildings: Building[] = [];
 
@@ -119,10 +182,13 @@ export function generateCity(seed: number, size: number): City {
     const br = mulberry32((hash3(seed, i, j) * 4294967296) | 0);
     const pick = <T>(a: T[]) => a[(br() * a.length) | 0];
     const x0 = xb[2 * i + 1], x1 = xb[2 * i + 2], y0 = yb[2 * j + 1], y1 = yb[2 * j + 2];
-    // 1 downtown, ~0 at the edges of the city
-    const core = Math.exp(-((Math.hypot((x0 + x1) / 2 - cx, (y0 + y1) / 2 - cy) / radius / 0.35) ** 2));
-    const park = br() < 0.02 + 0.05 * (1 - core);
-    const block: Block = { x0, y0, x1, y1, park, b0: buildings.length, b1: 0, maxH: 0, props: [] };
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const core = coreAt(mx, my, cx, cy, radius);
+    let district = 0;
+    districts.forEach((d, k) => { if (Math.hypot(d.x - mx, d.y - my) < Math.hypot(districts[district].x - mx, districts[district].y - my)) district = k; });
+    const K = KIND[districts[district].type];
+    const park = br() < K.park;
+    const block: Block = { x0, y0, x1, y1, district, park, b0: buildings.length, b1: 0, maxH: 0, props: [] };
     blocks.push(block);
 
     // street lamps along the curb, about every 28 m
@@ -145,7 +211,7 @@ export function generateCity(seed: number, size: number): City {
     }
 
     // split the block into lots; downtown lots are bigger, for towers
-    const maxLot = 14 + 36 * core;
+    const maxLot = K.lot + K.lotCore * core;
     const lot = (ax0: number, ay0: number, ax1: number, ay1: number) => {
       const lw = ax1 - ax0, lh = ay1 - ay0;
       if (Math.max(lw, lh) > maxLot) {
@@ -154,10 +220,11 @@ export function generateCity(seed: number, size: number): City {
         else { const s = Math.round(ay0 + lh * t); lot(ax0, ay0, ax1, s); lot(ax0, s, ax1, ay1); }
         return;
       }
-      if (br() < 0.06) return; // empty lot
-      let floors = Math.max(1, Math.round((3 + 55 * core ** 1.5) * (0.35 + br() * 0.9)));
+      if (br() < K.empty) return; // empty lot
+      let floors = Math.max(1, Math.round((K.base + 55 * K.tall * core ** 1.5) * (0.35 + br() * 0.9)));
       if (br() < 0.05) floors = Math.round(floors * 1.5);
-      const style = { win: pick(WIN), frame: pick(FRAME), lit: 0.18 + br() * 0.5, shop: br() < 0.3 + 0.4 * core, sign: pick(WIN) };
+      floors = Math.min(floors, K.cap);
+      const style = { win: pick(WIN), frame: pick(FRAME), lit: 0.18 + br() * 0.5, shop: br() < K.shop, sign: pick(WIN) };
       // towers stand back from the lot edge and step in as they rise
       let inset = floors > 25 && Math.min(lw, lh) > 20 ? 2 + br() * 3 : 0;
       const tiers = floors > 30 ? 1 + ((br() * 3) | 0) : 1;
@@ -174,7 +241,21 @@ export function generateCity(seed: number, size: number): City {
     block.b1 = buildings.length;
   }
 
-  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy };
+  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, sectors: SECTORS, nameSeed };
+}
+
+/** District of the block nearest to a point (roads belong to the block beside them). */
+export function districtAt(city: City, x: number, y: number): number {
+  const i = Math.min(city.nbx - 1, (city.xCell[Math.min(city.w - 1, Math.max(0, x | 0))] - 1) >> 1);
+  const j = Math.min(city.nby - 1, (city.yCell[Math.min(city.h - 1, Math.max(0, y | 0))] - 1) >> 1);
+  return city.blocks[Math.max(0, j) * city.nbx + Math.max(0, i)].district;
+}
+
+/** Index of the road nearest to coordinate v along one axis (b = city.xb gives avenues, city.yb streets). */
+export function nearestRoad(b: number[], cells: Uint16Array, v: number): number {
+  const c = cells[Math.min(cells.length - 1, Math.max(0, v | 0))];
+  if (!(c & 1)) return c >> 1;
+  return v - b[c] < b[c + 1] - v ? c >> 1 : (c >> 1) + 1;
 }
 
 /** The block containing a point, or null on a road or outside the city. */
