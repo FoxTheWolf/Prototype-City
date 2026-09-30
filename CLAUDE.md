@@ -273,7 +273,12 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: etapa 4 (visual sólido).**
+- **Próximo passo: o usuário testa o grupo 4a–4c.** Depois dele vem o grupo 4d–4f: letreiros com o nome da empresa e efeitos de neon (corrigindo a listra `=` vista de lado), luz dinâmica dos postes sobre objetos e fachadas, e o módulo de áudio com os sons de ambiente.
+- **Etapa 4, grupo 4a–4c feito (2026-09-30), falta o teste do usuário:**
+  - **4a:** teclas **P** (paleta: `SODIUM`, `NEON NOIR`, `TERMINAL`), **B** (fundo sólido, ligado por padrão) e **U** (glifos de bloco). As paletas ficam em `render/palette.ts`: cada uma é uma correção de cor no shader (`grade` em `glRenderer.ts`, aplicada à tela inteira, HUD incluído) mais a cor da luz dos postes. O fundo sólido e a troca de glifos são uma passada final (`finish` em `raycaster.ts`): cada célula do mundo (com profundidade) ganha de fundo a própria cor × `SOLID` (0,36). Os blocos e as linhas de caixa são desenhados como formas exatas no atlas, nas posições 128+ (`BLOCK` em `atlas.ts`), e a tabela `BLOCKS` diz qual ASCII vira qual bloco.
+  - **4b:** os billboards viraram objetos com volume (`render/objects.ts`). Como o y-shearing é linear, cada célula é um raio 3D reto (`z = eye + t·(hor − linha)/scale`), então cada peça (caixa, cilindro vertical ou elipsoide, no referencial do objeto) é cruzada exatamente. O `t` é a mesma profundidade do buffer, então os objetos se escondem atrás das paredes e uns dos outros sem ordenar. Peças mais finas que meia célula são alargadas para não piscar ao longe. Materiais: `Solid` (glifo por face), `Leaf` (ruído preso à superfície) e `Glow` (luz, sem sombra). Os modelos ficam em `render/models.ts`: carro (carroceria, cabine de vidro, rodas, faróis e lanternas, luminoso de táxi), poste com base, braço sobre a rua e luminária (`Prop.a` é o lado da rua), árvore com copa em 6–9 elipsoides e holofote do cordão.
+  - **4c:** mobiliário por tipo de distrito (`FURNITURE` em `city.ts`): banco, lixeira, hidrante, caixa de correio, caixa de jornal, orelhão (capa azul, voltado para a calçada), ponto de ônibus com cartaz aceso, caçamba e entulho. Bancos nos caminhos de parques e praças; entulho nos lotes vazios. Tudo sai de um **gerador próprio por quarteirão** (`fr`), então a cidade de uma semente continua igual. Com a semente 42 são ~7 mil peças de mobiliário, e o painel segue a ~90 FPS.
+  - Ainda não são sólidos: o jogador atravessa postes, bancos e caçambas.
 - **Retorno do usuário sobre a etapa 3 (2026-09-30):** achou ótimo ("tá perfeito"). Roda a 180 FPS no PC dele, sem queda. A fumaça está ótima. A quantidade de caixas-d'água está boa. Pediu tamanhos variados de caixa-d'água e uma **biblioteca de marcos** sorteados e espalhados pela geração, em vez de marcos sempre nos mesmos lugares (feitos logo depois, veja abaixo). O relógio da torre está parado em 10h10 até existir o relógio da simulação (etapa 5).
 - **Etapa 3 feita (2026-09-30), em cinco commits (3a–3e):**
   - **Distritos:** ~25 por cidade (um a cada ~400 m, grade com variação), tipos `financial`, `commercial`, `residential`, `historic`, `industrial`. O centro é financeiro; o anel em volta é comercial com 1 ou 2 históricos; a periferia é residencial, com uma cunha industrial num lado. Cada quarteirão pertence ao distrito cujo ponto está mais perto. A tabela `KIND` em `city.ts` diz como cada tipo gera (altura, limite de andares, tamanho de lote, bloco aberto, lojas). Setores são só códigos de mapa 4×4 ("C3").
@@ -334,7 +339,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - A geometria fica na simulação (`Building` em `city.ts`: caixa ou cilindro, altura, `style`, cores, `lit`, `shop`, `feat`). A aparência fica no render, em `wallColumn` (`raycaster.ts`), que recebe o prédio, a distância, o lado (0/1 = faces da caixa, 2 = cilindro), a luz da face e o ponto `along` onde o raio bateu (no cilindro, metros de arco).
   - Um estilo novo é um valor a mais em `Facade` e um ramo a mais em `wallColumn`. Todo estilo precisa funcionar nos dois níveis: o detalhado e o distante (`!detailed`), senão treme ao longe.
   - Formas que não partem do chão ainda não existem; tudo é caixa ou cilindro do chão até `h`, e as peças de telhado ficam escondidas dentro do prédio de baixo. Telhados inclinados ou formas flutuantes exigiriam um `z0` no teste de raio.
-  - Postes, árvores, carros e holofotes ainda são *billboards* planos (`drawSprites`). A etapa 4 os troca por objetos pseudo-volumétricos. A fumaça tem passe próprio (`drawSmoke`) porque é vista até 2,5 km.
+  - Postes, árvores, carros, holofotes e mobiliário são objetos com volume (`objects.ts` e `models.ts`, desde a etapa 4b). Um objeto novo é uma lista de peças `part(...)` em `models.ts` e um ramo em `collectObjects`. A fumaça tem passe próprio (`drawSmoke`) porque é vista até 2,5 km.
   - `burnGround`, `fenceColumn` e `drawSmoke` em `raycaster.ts` desenham a borda.
 - **Defeitos visuais conhecidos, ainda não resolvidos:**
   - O letreiro de loja (faixa `=` a 2,7–3,3 m) vira uma listra diagonal larga quando visto de lado, porque é contínuo ao longo do prédio inteiro.
@@ -355,7 +360,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - O zoom de captura não funciona no painel.
   - Teclas se simulam com `dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyW'}))` e o `keyup` correspondente.
 - O laço de quadros só roda com o painel visível. Se `world.tick` não sobe, tire uma captura de tela antes de medir.
-- Se a porta 5173 estiver ocupada pelo servidor de outra conversa, use a configuração `vite-5174` ou `vite-5175` do `.claude/launch.json`.
+- Se a porta 5173 estiver ocupada pelo servidor de outra conversa, use a configuração `vite-auto` do `.claude/launch.json` (porta livre via `PORT`, lida no `vite.config.ts`); `vite-5174` e `vite-5175` também existem.
 - Cada recarga (inclusive a do HMR) sorteia uma semente nova. Use `?seed=42` para comparar sempre a mesma cidade.
 - Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina. Para edições grandes em lote, grave um script Python no scratchpad com Write e rode-o.
 - A pasta `referencias/` está no `.gitignore` (são quadros do vídeo de outra pessoa) e existe só no disco.
