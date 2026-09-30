@@ -1,9 +1,11 @@
 import { hash3 } from '../core/rng';
-import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City } from '../sim/city';
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LightWindow } from './lightmap';
+import { carModel, FLOOD, lampModel, treeModel } from './models';
+import { drawObjects, type Obj } from './objects';
 import { PALETTES, type Look } from './palette';
 
 export interface View {
@@ -38,19 +40,6 @@ const G = {
   hash: C('#'), pct: C('%'), at: C('@'), bar: C('|'), us: C('_'), star: C('*'), quo: C('"'), amp: C('&'),
   o: C('o'), lb: C('['), rb: C(']'), sl: C('/'), bs: C('\\'), caret: C('^'), x: C('x'), tilde: C('~'), lp: C('('), rp: C(')'),
 };
-
-interface Sprite {
-  kind: 'lamp' | 'tree' | 'car' | 'flood';
-  x: number;
-  y: number;
-  w: number;
-  z1: number;
-  seed: number;
-  dx: number;
-  dy: number;
-  taxi: boolean;
-  col: RGB;
-}
 
 const light = new LightWindow();
 /** Solid mode: the background behind a glyph is its own color at this strength. */
@@ -226,7 +215,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
-  drawSprites(grid, collectSprites(world, v), v, dirX, dirY, plX, plY, plane, scale, hor);
+  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR });
   finish(grid, v.look);
 }
 
@@ -482,25 +471,31 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
 }
 
 /** Props of the blocks near the viewer, plus nearby cars. Far away they are too small to matter. */
-function collectSprites(world: World, v: View): Sprite[] {
-  const out: Sprite[] = [];
-  const none: RGB = [0, 0, 0];
+function collectObjects(world: World, v: View): Obj[] {
+  const out: Obj[] = [];
   const { city } = world;
+  const lamp = lampModel(PALETTES[v.look.palette].lamp);
   const cl = (a: number, n: number) => Math.min(n - 1, Math.max(0, a | 0));
   const cx0 = city.xCell[cl(v.x - SPRITE_FAR, city.w)], cx1 = city.xCell[cl(v.x + SPRITE_FAR, city.w)];
   const cy0 = city.yCell[cl(v.y - SPRITE_FAR, city.h)], cy1 = city.yCell[cl(v.y + SPRITE_FAR, city.h)];
   for (let cy = cy0 | 1; cy <= cy1; cy += 2) for (let cx = cx0 | 1; cx <= cx1; cx += 2) {
     const blk = cityBlock(city, cx, cy);
-    if (blk) for (const p of blk.props) out.push({ ...p, dx: 0, dy: 0, taxi: false, col: none });
+    if (blk) for (const p of blk.props) {
+      if (p.kind === 'lamp') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lamp, r: 2.1, h: 6.7, seed: 0 });
+      else out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
+    }
   }
   for (const f of city.floodlights) {
-    if (Math.abs(f.x - v.x) < SPRITE_FAR * 2 && Math.abs(f.y - v.y) < SPRITE_FAR * 2) out.push({ kind: 'flood', x: f.x, y: f.y, w: 1.6, z1: 14, seed: 0, dx: 0, dy: 0, taxi: false, col: none });
+    if (Math.abs(f.x - v.x) > SPRITE_FAR * 2 || Math.abs(f.y - v.y) > SPRITE_FAR * 2) continue;
+    // lamps face the city
+    const a = Math.atan2(city.h / 2 - f.y, city.w / 2 - f.x);
+    out.push({ x: f.x, y: f.y, c: Math.cos(a), s: Math.sin(a), parts: FLOOD, r: 1.2, h: 14.2, seed: 0 });
   }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate
     const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
     if (Math.abs(x - v.x) > SPRITE_FAR || Math.abs(y - v.y) > SPRITE_FAR) continue;
-    out.push({ kind: 'car', x, y, w: 2.2, z1: 1.5, seed: 0, dx: c.dx, dy: c.dy, taxi: c.taxi, col: c.col });
+    out.push({ x, y, c: c.dx, s: c.dy, parts: carModel(c.col, c.taxi), r: 2.5, h: 1.8, seed: 0 });
   }
   return out;
 }
@@ -508,64 +503,4 @@ function collectSprites(world: World, v: View): Sprite[] {
 function cityBlock(city: City, cx: number, cy: number) {
   const i = cx >> 1, j = cy >> 1;
   return i < city.nbx && j < city.nby ? city.blocks[j * city.nbx + i] : null;
-}
-
-function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, dirY: number, plX: number, plY: number, plane: number, scale: number, hor: number) {
-  const { cols, rows } = grid;
-  const invDet = 1 / (plX * dirY - dirX * plY);
-  const [lr, lg, lb] = PALETTES[v.look.palette].lamp;
-  const vis: [number, number, Sprite, number, number][] = [];
-  for (const s of sprites) {
-    const rx = s.x - v.x, ry = s.y - v.y;
-    if (rx * rx + ry * ry > SPRITE_FAR * SPRITE_FAR) continue;
-    const tY = invDet * (-plY * rx + plX * ry);
-    if (tY < 0.3) continue;
-    vis.push([tY, invDet * (dirY * rx - dirX * ry), s, rx, ry]);
-  }
-  vis.sort((a, b) => b[0] - a[0]);
-
-  for (const [tY, tX, s, rx, ry] of vis) {
-    const cx = (cols / 2) * (1 + tX / tY), half = ((s.w / tY) * (cols / 2)) / plane / 2;
-    const top = hor - ((s.z1 - v.eye) * scale) / tY, bot = hor + (v.eye * scale) / tY;
-    const x0 = Math.max(0, Math.ceil(cx - half - 0.5)), x1 = Math.min(cols, Math.ceil(cx + half - 0.5));
-    const y0 = Math.max(0, Math.ceil(top - 0.5)), y1 = Math.min(rows, Math.ceil(bot - 0.5));
-    if (x0 >= x1 || y0 >= y1) continue;
-    const fog = 1 - Math.min(1, tY / SPRITE_FAR) * 0.8;
-    let facing = 0;
-    if (s.kind === 'car') { const dl = Math.hypot(rx, ry) || 1; facing = (s.dx * rx + s.dy * ry) / dl; }
-    for (let x = x0; x < x1; x++) {
-      const u = (x + 0.5 - (cx - half)) / (2 * half);
-      for (let y = y0; y < y1; y++) {
-        const i = y * cols + x;
-        if (grid.depth[i] <= tY) continue;
-        const vv = (y + 0.5 - top) / (bot - top);
-        let ch = 0, r = 0, g = 0, b = 0;
-        if (s.kind === 'car') {
-          const roofSign = s.taxi && u > 0.4 && u < 0.6;
-          if (vv < 0.12) { if (u > 0.15 && u < 0.85) { ch = roofSign ? G.hash : G.us; [r, g, b] = roofSign ? [255, 230, 120] : s.col; } }
-          else if (vv < 0.42) { if (u > 0.1 && u < 0.9) { ch = G.eq; r = 45; g = 65; b = 95; if (u < 0.14 || u > 0.86) { ch = G.bar; [r, g, b] = s.col; } } }
-          else if (vv < 0.86) {
-            ch = G.hash; [r, g, b] = s.col;
-            if (vv > 0.72 && (u < 0.2 || u > 0.8)) {
-              if (facing > 0.35) { ch = G.at; r = 255; g = 40; b = 40; }
-              else if (facing < -0.35) { ch = G.at; r = 255; g = 245; b = 200; }
-            }
-          } else if (u < 0.3 || u > 0.7) { ch = G.o; r = 30; g = 30; b = 34; } else { ch = G.dash; r = 20; g = 20; b = 24; }
-          r *= fog; g *= fog; b *= fog;
-        } else if (s.kind === 'tree') {
-          const du = (u - 0.5) / 0.5, dv = (vv - 0.34) / 0.34;
-          if (du * du + dv * dv < 1) {
-            const hv = hash3(s.seed, Math.floor(u * 8), Math.floor(vv * 10));
-            ch = hv < 0.4 ? G.at : hv < 0.7 ? G.amp : G.pct; r = 40 * fog; g = (100 + hv * 80) * fog; b = 45 * fog;
-          } else if (vv > 0.6 && Math.abs(u - 0.5) < 0.09) { ch = G.bar; r = 90 * fog; g = 60 * fog; b = 35 * fog; }
-        } else if (s.kind === 'flood') {
-          // floodlight tower: a bank of lamps on a lattice mast
-          if (vv < 0.08) { ch = G.hash; r = 255; g = 250; b = 225; }
-          else if (Math.abs(u - 0.5) < 0.18) { ch = Math.floor(vv * 40) & 1 ? G.x : G.bar; r = 100 * fog; g = 100 * fog; b = 108 * fog; }
-        } else if (vv < 0.07) { ch = G.star; const m = 255 / Math.max(lr, lg, lb); r = lr * m; g = lg * m; b = lb * m; }
-        else if (Math.abs(u - 0.5) < 0.3) { ch = G.bar; r = 110 * fog; g = 110 * fog; b = 118 * fog; }
-        if (ch) { grid.put(i, ch, r, g, b); grid.depth[i] = tY; }
-      }
-    }
-  }
 }

@@ -45,6 +45,8 @@ export interface Prop {
   w: number;
   z1: number;
   seed: number;
+  /** Facing in radians; a lamp's arm points this way, over the street. */
+  a: number;
 }
 
 export type DistrictType = 'financial' | 'commercial' | 'residential' | 'historic' | 'industrial';
@@ -327,13 +329,13 @@ export function generateCity(seed: number, size: number): City {
     const L = 0.8;
     const corners = [[x0 + L, y0 + L], [x1 - L, y0 + L], [x1 - L, y1 - L], [x0 + L, y1 - L]];
     for (let e = 0; e < 4; e++) {
-      const [ax, ay] = corners[e], [bx, by] = corners[(e + 1) % 4];
+      const [ax, ay] = corners[e], [bx, by] = corners[(e + 1) % 4], a = [-Math.PI / 2, 0, Math.PI / 2, Math.PI][e];
       const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 28));
-      for (let k = 0; k < n; k++) block.props.push({ kind: 'lamp', x: ax + ((bx - ax) * k) / n, y: ay + ((by - ay) * k) / n, w: 0.3, z1: 6.5, seed: 0 });
+      for (let k = 0; k < n; k++) block.props.push({ kind: 'lamp', x: ax + ((bx - ax) * k) / n, y: ay + ((by - ay) * k) / n, w: 0.3, z1: 6.5, seed: 0, a });
     }
 
     const ix0 = x0 + SIDEWALK, iy0 = y0 + SIDEWALK, ix1 = x1 - SIDEWALK, iy1 = y1 - SIDEWALK;
-    const tree = (x: number, y: number) => block.props.push({ kind: 'tree', x, y, w: 3.5 + br() * 2, z1: 5 + br() * 4, seed: (br() * 1e6) | 0 });
+    const tree = (x: number, y: number) => block.props.push({ kind: 'tree', x, y, w: 3.5 + br() * 2, z1: 5 + br() * 4, seed: (br() * 1e6) | 0, a: 0 });
 
     // split the block into lots; downtown lots are bigger, for towers
     const maxLot = K.lot + K.lotCore * core;
