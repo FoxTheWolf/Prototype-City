@@ -2,7 +2,9 @@ import { hash3 } from '../core/rng';
 import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
+import { BLOCK } from './atlas';
 import { LightWindow } from './lightmap';
+import { PALETTES, type Look } from './palette';
 
 export interface View {
   x: number;
@@ -16,6 +18,7 @@ export interface View {
   alpha: number;
   /** Cell width / cell height in pixels, needed for correct vertical scale. */
   cellAspect: number;
+  look: Look;
 }
 
 /** Vertical field of view. The horizontal one follows the window shape (wider window, wider view). */
@@ -50,6 +53,12 @@ interface Sprite {
 }
 
 const light = new LightWindow();
+/** Solid mode: the background behind a glyph is its own color at this strength. */
+const SOLID = 0.36;
+/** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
+const BLOCKS = new Uint8Array(256);
+for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
+  ['+', BLOCK.cross], ['=', BLOCK.dh], ['/', BLOCK.up], ['\\', BLOCK.down], ['x', BLOCK.x]] as const) BLOCKS[C(c)] = b;
 // per-block ray hits, reused every column
 const hitT = new Float64Array(1024);
 const hitId = new Int32Array(1024);
@@ -75,6 +84,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   // metres covered by one column at distance 1, to pick the level of facade detail
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
+  const [lr, lg, lb] = PALETTES[v.look.palette].lamp;
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
@@ -150,7 +160,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           else { ch = hv < 0.6 ? G.dot : G.com; r = 55; g = 50; b = 48; }
         } else { ch = hv < 0.7 ? G.dot : G.com; r = 50; g = 48; b = 52; }
       }
-      grid.put(i, ch, r * fog + glow * 95, g * fog + glow * 70, b * fog + glow * 35);
+      grid.put(i, ch, r * fog + glow * lr, g * fog + glow * lg, b * fog + glow * lb);
     }
 
     // ---- walls: walk the street grid front to back. Inside each block, hit its buildings in
@@ -217,6 +227,16 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
   drawSprites(grid, collectSprites(world, v), v, dirX, dirY, plX, plY, plane, scale, hor);
+  finish(grid, v.look);
+}
+
+/** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
+function finish(grid: CharGrid, look: Look) {
+  const { cells, bg, depth } = grid;
+  for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
+    if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * SOLID; bg[k + 1] = cells[k + 2] * SOLID; bg[k + 2] = cells[k + 3] * SOLID; }
+    if (look.blocks && BLOCKS[cells[k]]) cells[k] = BLOCKS[cells[k]];
+  }
 }
 
 /** Scorched ground outside the fence, split by cracks that glow where the coal burns underneath. */
@@ -493,6 +513,7 @@ function cityBlock(city: City, cx: number, cy: number) {
 function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, dirY: number, plX: number, plY: number, plane: number, scale: number, hor: number) {
   const { cols, rows } = grid;
   const invDet = 1 / (plX * dirY - dirX * plY);
+  const [lr, lg, lb] = PALETTES[v.look.palette].lamp;
   const vis: [number, number, Sprite, number, number][] = [];
   for (const s of sprites) {
     const rx = s.x - v.x, ry = s.y - v.y;
@@ -541,7 +562,7 @@ function drawSprites(grid: CharGrid, sprites: Sprite[], v: View, dirX: number, d
           // floodlight tower: a bank of lamps on a lattice mast
           if (vv < 0.08) { ch = G.hash; r = 255; g = 250; b = 225; }
           else if (Math.abs(u - 0.5) < 0.18) { ch = Math.floor(vv * 40) & 1 ? G.x : G.bar; r = 100 * fog; g = 100 * fog; b = 108 * fog; }
-        } else if (vv < 0.07) { ch = G.star; r = 255; g = 200; b = 120; }
+        } else if (vv < 0.07) { ch = G.star; const m = 255 / Math.max(lr, lg, lb); r = lr * m; g = lg * m; b = lb * m; }
         else if (Math.abs(u - 0.5) < 0.3) { ch = G.bar; r = 110 * fog; g = 110 * fog; b = 118 * fog; }
         if (ch) { grid.put(i, ch, r, g, b); grid.depth[i] = tY; }
       }

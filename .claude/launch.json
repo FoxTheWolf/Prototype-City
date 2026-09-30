@@ -29,6 +29,13 @@
         "5175"
       ],
       "port": 5175
+    },
+    {
+      "name": "vite-auto",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite"],
+      "port": 5176,
+      "autoPort": true
     }
   ]
 }

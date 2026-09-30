@@ -3,6 +3,7 @@ import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
 import { CharGrid } from './render/grid';
+import { PALETTES, type Look } from './render/palette';
 import { renderWorld } from './render/raycaster';
 import { cityName, compass, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { districtAt, nearestRoad } from './sim/city';
@@ -39,6 +40,14 @@ if (import.meta.env.DEV) Object.assign(window, {
 let grid: CharGrid;
 let layout: Layout;
 let running = false;
+// display switches: P cycles the palette, B the solid background, U the block glyphs
+const look: Look = { palette: 0, solid: true, blocks: false };
+addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.code === 'KeyP') look.palette = (look.palette + 1) % PALETTES.length;
+  else if (e.code === 'KeyB') look.solid = !look.solid;
+  else if (e.code === 'KeyU') look.blocks = !look.blocks;
+});
 
 function computeLayout(): Layout {
   const dpr = devicePixelRatio || 1;
@@ -102,8 +111,10 @@ function frame(now: number) {
     eye: EYE,
     alpha,
     cellAspect: layout.cellW / layout.cellH,
+    look,
   });
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS `;
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  `
+    + `[P] ${PALETTES[look.palette].name}  [B] BG ${look.solid ? 'ON' : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
@@ -112,7 +123,7 @@ function frame(now: number) {
   city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
-  renderer.draw(grid);
+  renderer.draw(grid, PALETTES[look.palette].grade);
   requestAnimationFrame(frame);
 }
 

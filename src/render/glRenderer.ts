@@ -20,7 +20,25 @@ uniform ivec2 uCell;
 uniform ivec2 uOrigin;
 uniform ivec2 uGrid;
 uniform float uHeight;
+uniform int uGrade;
 out vec4 outColor;
+// Color grading for the palettes (see palette.ts): 0 leaves colors as drawn.
+vec3 grade(vec3 c) {
+  float l = dot(c, vec3(0.3, 0.59, 0.11));
+  if (uGrade == 1) {
+    // neon noir: grey-blue streets; saturated lights survive, warm hues turned toward magenta
+    float s = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+    vec3 cold = l * vec3(0.72, 0.88, 1.3);
+    vec3 neon = c.r > c.b ? c.rbg * 1.15 : c * vec3(0.8, 1.1, 1.2);
+    return mix(cold, neon, smoothstep(0.12, 0.45, s));
+  }
+  if (uGrade == 2) {
+    // green phosphor: brightness only, lifted a little so dim glyphs still read
+    float k = pow(l, 0.8);
+    return vec3(0.3, 1.1, 0.45) * k;
+  }
+  return c;
+}
 void main() {
   ivec2 p = ivec2(int(gl_FragCoord.x), int(uHeight - gl_FragCoord.y)) - uOrigin;
   ivec2 c = p / uCell;
@@ -30,7 +48,7 @@ void main() {
   int glyph = int(cell.r * 255.0 + 0.5);
   ivec2 a = ivec2(glyph % ${ATLAS_COLS}, glyph / ${ATLAS_COLS}) * uCell + (p - c * uCell);
   float cov = texelFetch(uAtlas, a, 0).r;
-  outColor = vec4(mix(bg, cell.gba, cov), 1.0);
+  outColor = vec4(grade(mix(bg, cell.gba, cov)), 1.0);
 }`;
 
 export interface Layout {
@@ -58,7 +76,7 @@ export class GlyphRenderer {
     this.gl = gl;
     this.prog = link(gl, VS, FS);
     gl.useProgram(this.prog);
-    for (const n of ['uCells', 'uBg', 'uAtlas', 'uCell', 'uOrigin', 'uGrid', 'uHeight']) this.u[n] = gl.getUniformLocation(this.prog, n);
+    for (const n of ['uCells', 'uBg', 'uAtlas', 'uCell', 'uOrigin', 'uGrid', 'uHeight', 'uGrade']) this.u[n] = gl.getUniformLocation(this.prog, n);
     gl.uniform1i(this.u.uCells, 0);
     gl.uniform1i(this.u.uBg, 1);
     gl.uniform1i(this.u.uAtlas, 2);
@@ -86,8 +104,9 @@ export class GlyphRenderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  draw(grid: CharGrid) {
+  draw(grid: CharGrid, grade: number) {
     const gl = this.gl, l = this.layout!;
+    gl.uniform1i(this.u.uGrade, grade);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.cellsTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, l.cols, l.rows, gl.RGBA, gl.UNSIGNED_BYTE, grid.cells);
