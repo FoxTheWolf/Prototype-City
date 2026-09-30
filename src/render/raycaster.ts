@@ -333,7 +333,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const kv = rpf >= 1 ? 0 : Math.ceil(Math.log2(1 / rpf)), kh = cpb >= 1 ? 0 : Math.ceil(Math.log2(1 / cpb));
   const bay = along / BAY, wi = Math.floor(bay), fw = bay - wi;
   const corner = along - f0 < 0.35 || f1 - along < 0.35;
-  const S = B.style;
+  // a clock tower is a historic facade with a clock face near the top of each side
+  const S = B.style === 'clock' ? 'historic' : B.style;
+  const clockR = B.style === 'clock' && side !== 2 ? Math.min(3, (f1 - f0) * 0.32) : 0, clockZ = B.h - clockR - 2;
+  const du = along - (f0 + f1) / 2;
   const farWall = S === 'brick' ? G.eq : S === 'warehouse' ? G.bar : G.col;
   const farK = S === 'glass' ? 1.25 : 1;
   // brick walk-ups: an iron fire escape two bays wide, repeating along the facade
@@ -361,6 +364,26 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else if (S === 'chimney' && ((z > B.h - 6 && z < B.h - 4.5) || (z > B.h - 10 && z < B.h - 8.5))) wall(G.eq, 1.9);
       else wall(S === 'chimney' && detailed ? G.eq : G.bar, S === 'spire' ? 1.2 : 1);
     } else if (y === top || z > B.h - 0.6) wall(G.us, 1.5);
+    else if (clockR && Math.hypot(du, z - clockZ) < clockR) {
+      // lit face, a ring, and hands at ten past ten (they will follow the sim clock once it exists)
+      const dz = z - clockZ, d = Math.hypot(du, dz);
+      const hand = (a: number, len: number) => { const s = du * Math.cos(a) + dz * Math.sin(a); return s > 0 && s < len && Math.abs(-du * Math.sin(a) + dz * Math.cos(a)) < 0.22; };
+      if (d > clockR * 0.82) wall(G.o, 1.6);
+      else if (hand((150 * Math.PI) / 180, clockR * 0.5) || hand((30 * Math.PI) / 180, clockR * 0.75)) { ch = G.hash; r = 40; g = 30; b = 20; }
+      else { ch = d < 0.3 ? G.o : G.col; r = 250 * winLight; g = 230 * winLight; b = 170 * winLight; }
+    } else if (S === 'mast') {
+      // steel lattice with red aircraft-warning lights every 30 m and on the corners
+      const edge = corner;
+      if (z % 30 < 1 && edge) { ch = G.star; r = B.win[0] * winLight; g = B.win[1] * winLight; b = B.win[2] * winLight; }
+      else if (!detailed) wall(G.bar, 1);
+      else if (edge) wall(G.bar, 1.3);
+      else { const a = (((along + z) % 3) + 3) % 3 < 0.35, c = (((along - z) % 3) + 3) % 3 < 0.35; wall(a && c ? G.x : a ? G.sl : c ? G.bs : G.dot, a || c ? 1.2 : 0.35); }
+    } else if (S === 'gasholder') {
+      // guide columns around the tank, tied by rings
+      if (along % 7 < 0.5) wall(G.bar, 1.4);
+      else if (z % 6 < 0.45) wall(G.eq, 1.3);
+      else wall(detailed ? G.col : G.dot, 0.75);
+    }
     else if (S === 'crown') {
       // vertical light strips between dark ribs
       if (Math.floor(along / (detailed ? 0.8 : 1.6)) & 1) { ch = G.bar; const k = winLight * 0.9; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
@@ -369,9 +392,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     else if (S === 'mech') wall(detailed && fw < 0.5 ? G.eq : G.hash, 0.9);
     else if (S === 'tank') {
       // wooden tank on steel legs, with hoops and a pointed lid
-      if (z < B.h - 4.3) wall(along % 1.6 < 0.3 ? G.bar : G.dot, 0.6);
-      else if (z > B.h - 1.3) wall(G.caret, 1);
-      else wall(Math.abs(z - (B.h - 2.3)) < 0.2 || Math.abs(z - (B.h - 3.6)) < 0.2 ? G.eq : G.bar, 1);
+      const tr = (B.x1 - B.x0) / 2, lid = B.h - 0.6 * tr, base = lid - 1.7 * tr;
+      if (z < base) wall(along % 1.6 < 0.3 ? G.bar : G.dot, 0.6);
+      else if (z > lid) wall(G.caret, 1);
+      else wall(Math.abs(z - (base + 0.33 * (lid - base))) < 0.2 || Math.abs(z - (base + 0.7 * (lid - base))) < 0.2 ? G.eq : G.bar, 1);
     }
     else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv);

@@ -31,7 +31,11 @@
     "hall": "City Hall",
     "memorial": "{r} Memorial",
     "power": "{r} Power Station",
-    "park": "{r} Park"
+    "park": "{r} Park",
+    "clock": "{r} Clock Tower",
+    "church": "{r} Chapel",
+    "mast": "{r} Transmitter",
+    "gasworks": "{r} Gasworks"
   },
   "avenue": "{n} Ave",
   "street": "{n} St",
