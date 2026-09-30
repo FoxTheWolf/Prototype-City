@@ -253,7 +253,16 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
-- **Próximo passo: etapa 3 (estrutura da cidade).** Numa sessão nova, ler `src/sim/city.ts`, a função `wallColumn` de `src/render/raycaster.ts` e as referências 18, 19, 21, 22 e 26. O foco pedido pelo usuário é **variedade**: tipos de distrito e estilos de fachada (veja o roteiro). Os setores, distritos e nomes se apoiam na grade da etapa 2 (quarteirão `(i, j)`, `city.cx/cy` como centro do centro).
+- **Próximo passo: o usuário jogar a etapa 3 e dar retorno.** Depois, etapa 4 (visual sólido). A etapa 3 ainda não foi vista pelo usuário; ajustes de quantidade (caixas-d'água, fumaça, respiros, largura da zona) são esperados.
+- **Etapa 3 feita (2026-09-30), em cinco commits (3a–3e):**
+  - **Distritos:** ~25 por cidade (um a cada ~400 m, grade com variação), tipos `financial`, `commercial`, `residential`, `historic`, `industrial`. O centro é financeiro; o anel em volta é comercial com 1 ou 2 históricos; a periferia é residencial, com uma cunha industrial num lado. Cada quarteirão pertence ao distrito cujo ponto está mais perto. A tabela `KIND` em `city.ts` diz como cada tipo gera (altura, limite de andares, tamanho de lote, bloco aberto, lojas). Setores são só códigos de mapa 4×4 ("C3").
+  - **Sem porto:** como a cidade não tem água, o distrito portuário do roteiro virou **pátios ferroviários** (blocos `yard`) dentro do industrial.
+  - **Nomes:** a simulação guarda só números (`city.nameSeed`, `District.pick`); as palavras ficam em `src/locale/en.json` e são montadas por `src/locale/names.ts`. Avenidas e ruas comuns são numeradas ("3rd Ave", "14th St"); as largas têm nome ("Blackmoor Blvd"). O cabeçalho em cima mostra cidade, distrito, tipo, setor, esquina e o marco mais perto com distância e direção (é provisório, até o painel da etapa 8).
+  - **Fachadas** (`Building.style`): `office` (a antiga), `glass` (montantes, lajes e reflexo diagonal), `brick` (fiadas e escada de incêndio em zigue-zague), `historic` (pilastras, arcos `^`, cornija com dentículos, base rusticada), `residential` (varandas), `warehouse` (chapa ondulada, janelas altas, portas de carga). A mistura por tipo de distrito está em `MIX`, e as cores por estilo em `LOOK`.
+  - **Formas:** o raycaster agora testa **cilindros** (`Building.round`, inscrito na caixa). Topos: coroas art déco com faixas acesas e ponta com luz vermelha nas torres altas, antenas no vidro, cúpulas em prédios históricos, caixas-d'água de madeira em prédios de tijolo e residenciais, chaminés no industrial, casas de máquinas nos escritórios. Todos são formas que partem do chão, escondidas dentro do prédio de baixo (função `roof` em `city.ts`).
+  - **Blocos abertos** (`Block.open`): `park` (árvores e caminhos em cruz), `plaza` (lajes de pedra), `yard` (trilhos).
+  - **Marcos** (`city.landmarks`): obelisco numa praça no centro, prefeitura com cúpula verde no distrito histórico, parque de dois quarteirões no residencial mais central, usina com três chaminés de 80–95 m no industrial mais distante e a torre mais alta.
+  - **Borda:** a cerca do cordão fica exatamente no limite da cidade (malha em losango de perto, arame farpado em cima, postes) com torres de holofote a cada 120 m (`city.floodlights`). Do lado de fora, o chão queimado racha (padrão celular) com brasas que pulsam a partir de 40 m (`BURN_START`); `city.vents` são ~76 respiros com colunas de fumaça que sobem e brilham laranja na base; o céu baixo ficou alaranjado em volta toda. A borda tem gerador próprio (`generateBorder`) e não altera a cidade.
 - *Histórico:* `terminal-city.html` é o primeiro protótipo (2026-09-30), hoje substituído pelo projeto Vite. Tinha:
   - uma cidade procedural de 12×12 quarteirões (tamanho 12, ruas com 3 de largura);
   - prédios com janelas acesas e letreiros de loja, parques com árvores e postes com poças de luz no chão;
@@ -299,28 +308,34 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Unidades:** 1 unidade = 1 metro desde a etapa 2. As medidas estão em `city.ts` (`FLOOR_H`, `SIDEWALK`, `LANE_W`).
 - **Atlas de glifos:** o índice do glifo é o próprio código do caractere, e só o ASCII 33–126 está desenhado. Para usar caracteres de bloco ou de caixa (`░▒▓█─│`), é preciso mapear o codepoint para uma posição livre do atlas (0–31 ou 127–255) em `atlas.ts`.
 - **`CharGrid`** usa `Uint8ClampedArray`: as cores saturam sozinhas em 0–255, então não precisa limitar valores antes do `put`.
-- **Onde mexer para dar variedade (etapa 3 em diante):**
-  - A geometria fica na simulação (`Building` em `city.ts`: caixa, altura, cores, `lit`, `shop`). A aparência da fachada fica no render, em `wallColumn` (`raycaster.ts`), que recebe o prédio, a distância e o ponto `along` onde o raio bateu na face.
-  - Um estilo de fachada novo é um campo a mais em `Building` (por exemplo `style`) e um ramo a mais em `wallColumn`. Todo estilo precisa ter os dois níveis: o detalhado e o distante agrupado em potências de 2, senão treme ao longe.
-  - Formas que não são caixas (cúpulas, pontas de torre, telhados) ainda não existem. Recuos já funcionam como caixas aninhadas a partir do chão; uma forma nova precisa entrar no teste de raio do quarteirão.
-  - Postes, árvores e carros ainda são *billboards* planos (`drawSprites`). A etapa 4 os troca por objetos pseudo-volumétricos.
+- **Onde mexer na variedade:**
+  - A geometria fica na simulação (`Building` em `city.ts`: caixa ou cilindro, altura, `style`, cores, `lit`, `shop`, `feat`). A aparência fica no render, em `wallColumn` (`raycaster.ts`), que recebe o prédio, a distância, o lado (0/1 = faces da caixa, 2 = cilindro), a luz da face e o ponto `along` onde o raio bateu (no cilindro, metros de arco).
+  - Um estilo novo é um valor a mais em `Facade` e um ramo a mais em `wallColumn`. Todo estilo precisa funcionar nos dois níveis: o detalhado e o distante (`!detailed`), senão treme ao longe.
+  - Formas que não partem do chão ainda não existem; tudo é caixa ou cilindro do chão até `h`, e as peças de telhado ficam escondidas dentro do prédio de baixo. Telhados inclinados ou formas flutuantes exigiriam um `z0` no teste de raio.
+  - Postes, árvores, carros e holofotes ainda são *billboards* planos (`drawSprites`). A etapa 4 os troca por objetos pseudo-volumétricos. A fumaça tem passe próprio (`drawSmoke`) porque é vista até 2,5 km.
+  - `burnGround`, `fenceColumn` e `drawSmoke` em `raycaster.ts` desenham a borda.
 - **Defeitos visuais conhecidos, ainda não resolvidos:**
   - O letreiro de loja (faixa `=` a 2,7–3,3 m) vira uma listra diagonal larga quando visto de lado, porque é contínuo ao longo do prédio inteiro.
   - O nível de detalhe da fachada ignora a obliquidade da face, então fachadas vistas muito de lado usam o modo detalhado e as janelas se misturam.
   - As silhuetas distantes são escuras, porque as cores das molduras (`FRAME`) são apagadas. Isso fica para a paleta e o fundo sólido da etapa 4.
-  - Além da borda da cidade não há nada, só chão vazio até o horizonte, e o jogador não consegue sair.
-- **Textos dentro do jogo** estão em inglês, herdados do protótipo. O padrão é inglês com arquivos de locale (veja as decisões); os textos atuais ainda não passam por eles.
+  - O jogador não sai da cidade (`isSolid` é verdadeiro fora dela). A zona de fogo existe só no visual; o medidor de CO e as patrulhas ainda não.
+  - Da rua, a zona de fogo aparece quase só como a faixa perto do horizonte, a fumaça e o céu. Deve ficar mais bonita vista do alto (etapa 7 ou 10).
+  - As faixas acesas das coroas e as costuras do cilindro (onde o ângulo dá a volta) podem tremer ao longe.
+- **Textos dentro do jogo:** os nomes de lugares já vêm de `src/locale/en.json`. A tela de título e a linha de status ainda têm textos fixos em inglês no código.
 
 ## Como testar no navegador do app
 
 - O painel tem só ~800×450, então as células ficam com ~3×5 px e o texto da linha de status é ilegível nas capturas. Serve para ver a composição, não para ler detalhes.
 - **O pointer lock não funciona no painel** (`WrongDocumentError`); é esperado. Para testar:
   - Em modo dev, `window.world` e `window.camera` ficam expostos. Por exemplo: `camera.look(0, 2)` olha para cima, `world.player` mostra a posição.
+  - Para posicionar: mudar `world.player.x/y` **e** `px/py` (senão a interpolação desliza), e `camera.yaw`/`targetYaw`, `pitch`/`targetPitch`.
+  - `gridText(x0, y0, x1, y1)` devolve os caracteres de uma região da tela como texto. As capturas são pequenas demais para ver detalhes de fachada; isso resolve. Troque `\0` por outro caractere antes de imprimir e mantenha a região pequena (~90×40), senão a saída estoura o limite.
+  - O zoom de captura não funciona no painel.
   - Teclas se simulam com `dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyW'}))` e o `keyup` correspondente.
 - O laço de quadros só roda com o painel visível. Se `world.tick` não sobe, tire uma captura de tela antes de medir.
-- Se a porta 5173 estiver ocupada pelo servidor de outra conversa, use a configuração `vite-5174` do `.claude/launch.json`.
+- Se a porta 5173 estiver ocupada pelo servidor de outra conversa, use a configuração `vite-5174` ou `vite-5175` do `.claude/launch.json`.
 - Cada recarga (inclusive a do HMR) sorteia uma semente nova. Use `?seed=42` para comparar sempre a mesma cidade.
-- Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina.
+- Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina. Para edições grandes em lote, grave um script Python no scratchpad com Write e rode-o.
 - A pasta `referencias/` está no `.gitignore` (são quadros do vídeo de outra pessoa) e existe só no disco.
 
 ## Como trabalhar neste projeto
@@ -336,9 +351,9 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 
 1. ✅ **Motor:** Git, Vite + TypeScript, grade de ~180×80 caracteres, raycaster com perspectiva correta, câmera suave (o mouse move um alvo que a câmera segue), sem tremor, desenho final via WebGL com atlas de glifos. Simulação separada da renderização desde o início.
 2. ✅ **Cidade grande:** mundo enorme com uma janela deslizante em volta do jogador, prédios com identidade fixa pela posição, horizonte distante barato, prédios altos visíveis atrás de outros.
-3. **Estrutura e variedade da cidade:**
+3. ✅ **Estrutura e variedade da cidade** (falta o retorno do usuário):
    - setores, distritos e quarteirões com nomes;
-   - tipos de distrito que mudam a geração (centro financeiro, comercial, residencial, histórico, industrial, portuário);
+   - tipos de distrito que mudam a geração (centro financeiro, comercial, residencial, histórico, industrial com pátios ferroviários; sem porto, porque não há água);
    - **estilos de fachada** por tipo de distrito: torre de vidro, prédio histórico ornamentado, tijolo, residencial, galpão (referências 18, 19 e 22);
    - variedade de forma: topos de torre, pontas, cúpulas;
    - parques variados e marcos da cidade (referências 17, 20, 21 e 26);
