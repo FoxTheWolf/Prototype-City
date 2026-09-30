@@ -9,8 +9,8 @@ export class Camera {
   targetYaw = this.yaw;
   targetPitch = 0;
 
-  /** ~60 degrees. Beyond this, y-shearing stretches the image too much. */
-  static readonly MAX_PITCH = 1.05;
+  /** ~40 degrees. Beyond this, y-shearing stretches the image too much (rooflines turn into slanted pyramids). */
+  static readonly MAX_PITCH = 0.7;
   /** Higher = snappier. 1/SMOOTH is roughly the lag in seconds. */
   static readonly SMOOTH = 22;
 
