@@ -147,12 +147,12 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 - **O acesso depende do lugar físico (estilo GTA IV):**
   - Para usar a internet, é preciso ir a um lugar com rede (um cybercafé, por exemplo), digitar a senha dele, e o sinal do Wi-Fi depende da distância física até o ponto.
   - Um sistema fora da rede (um semáforo, por exemplo) só se hackeia indo até ele, achando a porta de acesso física e conectando o notebook nela.
-  - O celular é um objeto: você o tira do bolso e disca números. Também há orelhões.
+  - O celular é um objeto: você o tira do bolso e disca números. Também há orelhões. Veja "Design: celular e apps".
   - O táxi se pede ligando para a central ou fazendo sinal na rua. Dentro dele, o destino é escolhido falando com o motorista ou no painel do táxi, e não num menu abstrato.
 - **Terminais progressivos e verbosos:** o usuário adora terminais em que o texto vai sendo composto aos poucos (como uma saída de boot ou de comando), em vez de aparecer de uma vez. Termos técnicos e verbosidade são bem-vindos, **desde que correspondam a algo real no jogo**.
 - **Máquinas virtuais com hardware real:** cada computador do jogo tem especificações próprias (CPU, memória, disco, placa de rede, sistema operacional) que o terminal mostra e que **limitam de verdade** o que roda nele (programas que não cabem na memória, processamento lento numa CPU fraca etc.). O limite é do computador virtual, não do PC de quem joga.
 - **Impacto sistêmico, no estilo Else Heart.Break():** as ações de hacking mexem com a simulação a ponto de poder causar consequências enormes, até apocalípticas, se o jogador quiser ou não tomar cuidado: quebrar a economia, alterar preços de mercadorias, bagunçar o trânsito, causar acidentes, afetar a vida das pessoas. Mais profundo que Watch Dogs, que é mais roteirizado. Devem existir muitos lugares e sistemas hackeáveis.
-- **Época:** ainda não decidida. Tendência: anos 2000 ou um pouco depois (celular físico, orelhão, cybercafé, Wi-Fi com senha).
+- **Época: por volta de 2008 (decidido em 2026-09-30),** no estilo GTA IV. É a época dos primeiros smartphones e da primeira loja de apps, do boom das redes sociais, dos celulares com câmera de baixa resolução, do 3G/EDGE lento, do Wi-Fi com senha, dos cybercafés e dos orelhões ainda em uso. Smartphones convivem com celulares comuns: cada cidadão tem um aparelho diferente. Tudo o que for tecnologia no jogo deve ser plausível para essa época.
 - **Painel lateral no estilo do ASCII City:** fica, desde que seja diegético (por exemplo, um PDA, o celular ou o notebook). Deve ter o visual de terminal com texto composto aos poucos. A forma exata ainda está a decidir.
 - **Os dados da simulação são a matéria do hacking:** registros de moradores e funcionários, logs de telefone, câmeras, controle de portas e semáforos vêm da simulação e não são inventados à parte.
 - **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
@@ -170,12 +170,16 @@ Ideia do usuário: uma rede social interna em que os cidadãos da simulação pu
 **Como funciona**
 - **Fila de eventos da simulação.** A simulação publica fatos estruturados: `{tipo, lugar, hora, gravidade, envolvidos}`. Exemplos: batida, engarrafamento, apagão, preço que subiu, chuva forte, semáforo quebrado. Os posts **nunca são inventados à parte**: cada um aponta para um evento real ou para um estado real da rotina de alguém. É a mesma regra de "os dados da simulação são a matéria do hacking".
 - **Quem publica.** Depois de um evento, os cidadãos que o testemunharam (estavam perto, acordados, com celular) ou que foram afetados (ficaram presos no trânsito, perderam a luz, pagaram mais caro) *podem* publicar. A chance e o atraso dependem da personalidade de cada um: uns falam muito, outros nada, alguns só reclamam. Também há posts de rotina ("indo pro trabalho", "almoço", "que chuva"), para a rede não existir só por causa do jogador.
-- **Fotos.** O render é uma função pura: `renderWorld(grid, world, view)`. Então a foto é um render pequeno (~48×20 células), feito da posição e da direção do cidadão **no momento do evento**, e congelado como dados de glifos (alguns KB). O custo é de um render minúsculo por foto. Numa época de anos 2000, a baixa resolução passa por câmera de celular antiga. Só tira foto quem estava lá e tinha câmera.
+- **Fotos.** O render é uma função pura: `renderWorld(grid, world, view)`. Então a foto é um render pequeno (~48×20 células), feito da posição e da direção do cidadão **no momento do evento**, e congelado como dados de glifos (alguns KB). O custo é de um render minúsculo por foto. Em 2008, a baixa resolução passa por câmera de celular da época. Só tira foto quem estava lá e tinha um celular com câmera.
 - **Texto.** Modelos com lacunas e uma gramática gerativa (no estilo Tracery), com a "voz" de cada pessoa: gírias, maiúsculas, erros de digitação, emojis da época. Tudo com semente: mesma semente e mesmas ações geram o mesmo feed. Nada de LLM, para funcionar offline e manter o determinismo.
 - **Reações.** Respostas, compartilhamentos e assuntos em alta. Um evento grande vira uma onda de posts, que funciona como um "medidor de consequência" diegético.
 - **Nível de detalhe.** Cidadãos longe do jogador não andam de verdade. As testemunhas saem da posição dada pela rotina ("às 14h está no trabalho, a 2 quarteirões"). Texto e foto são gerados no momento do evento, mas limitados por hora, para não pesar.
 
-**Onde se acessa:** no celular (feed lento, tela pequena e sinal da antena) ou no notebook (precisa de internet, por exemplo num cybercafé). É diegético, como todo o resto.
+**Onde se acessa:**
+- No celular, como app, pelos dados móveis (3G/EDGE lento, que depende do sinal das antenas) ou por Wi-Fi.
+- No notebook, pelo site, que precisa de internet (num cybercafé, por exemplo).
+
+É diegético, como todo o resto.
 
 **Por que é bom para o hacking**
 - **OSINT:** posts revelam rotinas, check-ins, nomes de bichos e datas, que são pistas de senha, e mostram quem mora onde.
@@ -189,9 +193,39 @@ Ideia do usuário: uma rede social interna em que os cidadãos da simulação pu
 
 **O que preparar antes:** a fila de eventos pode nascer já na etapa 6 (trânsito), com as batidas e os engarrafamentos, mesmo sem ninguém lendo. Assim a rede social, as notícias e os logs de câmera consomem a mesma fonte depois.
 
+## Design: celular e apps (proposta, 2026-09-30)
+
+Ideia do usuário: o celular do jogador tem vários apps com funções reais e uma loja de apps. A época de 2008 (primeiro iPhone e primeira loja de apps) resolve o dilema "a loja não existia nos anos 2000" e deixa a rede social funcionar no celular.
+
+**O aparelho**
+- **É um computador virtual como os outros:** CPU, memória, armazenamento, rádio (EDGE/3G, Wi-Fi, Bluetooth), câmera de poucos megapixels e bateria. Esses limites são reais: um app que não cabe na memória não roda, e o armazenamento enche.
+- **É um objeto físico:** o jogador tira o celular do bolso, e ele aparece na mão, ocupando parte da tela. A interface é uma `CharGrid` à parte, desenhada pelo mesmo compositor de glifos. Os botões fazem som, e o texto é composto aos poucos, como nos terminais.
+
+**Conectividade (é daqui que vem a jogabilidade)**
+- **Dados móveis:** vêm das antenas da cidade, que existem na simulação. O sinal depende da distância e dos prédios no caminho. São lentos e custam dinheiro do jogo (há um plano de dados).
+- **Wi-Fi:** em cybercafés e outros lugares com senha, com alcance físico.
+- **Downloads grandes só por Wi-Fi.** Em 2008, a loja real limitava os downloads por rede celular a ~10 MB. Assim, os apps pequenos baixam na rua, e os grandes exigem ir a um cybercafé. A rede social funciona no celular pelos dados móveis, e ir ao cybercafé continua tendo motivo.
+
+**A loja de apps**
+- É uma empresa da cidade, com servidores reais na simulação, e portanto pode ser hackeada.
+- Há apps pagos com dinheiro do jogo.
+
+**Apps com função real,** cada um ligado a um sistema da simulação. Cada um nasce na etapa do sistema a que pertence:
+- **Etapa 9:** discador, SMS e câmera. A foto é um render pequeno e pode ser postada.
+- **Etapa 5:** clima, que lê o estado real do clima.
+- **Etapa 8:** mapa e GPS, com a posição dada pelas antenas ou pelo GPS.
+- **Etapa 10:** táxi, que liga para a central, e horários do monotrilho, com os horários reais dos trens.
+- **Etapa 12:** rede social.
+- **Etapa 13:** banco, com o saldo real; notícias; tocador de música.
+
+**Apps de hacker não estão na loja.** São instalados por fora, pelo cabo do notebook (um "desbloqueio", como o jailbreak da época). Exemplos: scanner de Wi-Fi, farejador de Bluetooth e captura de pacotes, todos limitados pelo hardware fraco do celular. O notebook continua sendo a ferramenta principal.
+
+**Os celulares dos cidadãos também existem:** modelo, apps instalados, contatos e mensagens são dados hackeáveis. Um app falso publicado na loja pode se espalhar pelos celulares da população, o que é um impacto sistêmico.
+
 ## Estado atual
 
-- `terminal-city.html` é o primeiro protótipo (2026-09-30). Tem:
+- **Próximo passo: etapa 2 (cidade grande).** Numa sessão nova, ler `src/sim/city.ts`, `src/render/raycaster.ts` e as referências 01, 13 e 26. Decidir antes a conversão de unidades para metros e o tamanho da cidade (veja "Perguntas em aberto").
+- *Histórico:* `terminal-city.html` é o primeiro protótipo (2026-09-30), hoje substituído pelo projeto Vite. Tinha:
   - uma cidade procedural de 12×12 quarteirões (tamanho 12, ruas com 3 de largura);
   - prédios com janelas acesas e letreiros de loja, parques com árvores e postes com poças de luz no chão;
   - ~70 carros e táxis que fazem curvas nos cruzamentos, mantêm distância do carro da frente e param para o jogador;
@@ -252,15 +286,33 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 3. **Estrutura da cidade:** setores, distritos e quarteirões com nomes; tipos de distrito que mudam a geração; parques variados.
 4. **Visual sólido:** fundo colorido atrás dos glifos (alternável), objetos pseudo-volumétricos (árvores, bancos, postes, cabines).
 5. **Clima e céu:** chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido.
-6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; carros voadores (a confirmar, conforme a época); pedestres. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos).
+6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos).
 7. **Interiores:** entrar nos prédios, janelas que mostram a cidade real, andares altos com vista de cima, vitrines.
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
-9. **Rede de telefones:** orelhões e celular físicos, abertura do jogo.
-10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens, e talvez táxi aéreo.
+9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
+10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
 11. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
 12. **Rede social da cidade:** posts de cidadãos a partir dos eventos da simulação e das rotinas, com fotos renderizadas do ponto de vista deles, acessível pelo celular e pelo notebook (veja "Design: rede social da cidade").
 13. **Economia:** empresas, preços, estoques e salários interligados.
-14. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, impacto sistêmico.
+14. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, apps de hacker instalados por fora da loja, impacto sistêmico.
+
+**Transversal, em todas as etapas: som.** O retorno sonoro é prioridade do usuário e não pode ficar para o fim. Cada etapa traz os sons do que cria:
+- chuva e vento na etapa 5;
+- motores, buzinas e passos na 6;
+- portas e ambiente interno na 7;
+- teclas, bipes e toques na 9.
+
+Isso pede um módulo de áudio simples (Web Audio), criado na primeira etapa que precisar de som.
+
+## Perguntas em aberto
+
+Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
+- **Etapa 2:** conversão de unidades para metros e tamanho da cidade. Provavelmente menor que a do ASCII City, porque cada cidadão é detalhado.
+- **Etapa 5:** escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
+- **Etapa 8:** forma do painel lateral diegético. Com a época de 2008, o celular é o candidato natural.
+- **Etapa 10:** se haverá helicóptero de passeio no lugar do táxi aéreo.
+- **Quando houver textos na tela:** o idioma dos textos do jogo (hoje em inglês).
+- **Etapa 4:** a paleta final (hoje, noite com postes de sódio e HUD âmbar/ciano).
 
 ## Ideias futuras (não decididas)
 
