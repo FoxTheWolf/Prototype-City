@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { BURN_START, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -101,6 +101,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
   frameCity = city; frameSec = time / 60;
+  const D = city.diagonal, diagGlyph = D.ex * D.ey > 0 ? G.bs : G.sl;
   light.update(frameSec);
   gatherLights(world, v, frameSec);
 
@@ -140,14 +141,26 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       let ch = G.dot, r = 38, g = 38, b = 46;
       let dens = 0; // litter per 0.5 m square
       const roadX = !(cx & 1), roadY = !(cy & 1);
-      if (roadX || roadY) {
+      // distance from the diagonal avenue's center line, and how far past its curb
+      const sD = diagS(D, wx, wy), aD = Math.abs(sD), pastD = aD - D.w / 2;
+      if (pastD < 0) {
+        ch = hv < 0.5 ? G.dot : hv < 0.8 ? G.com : G.tick;
+        if (!roadX && !roadY && rd < 200) {
+          // the diagonal between two cross streets (the crossings stay plain asphalt)
+          const al = (wx - D.ox) * D.ex + (wy - D.oy) * D.ey, m = aD % LANE_W;
+          if (aD < 0.3) { ch = diagGlyph; r = 210; g = 170; b = 60; }
+          else if (pastD > -1.2) dens = 0.07;
+          else if (Math.min(m, LANE_W - m) < 0.12 && aD < Math.floor(D.w / 2 / LANE_W) * LANE_W - 1 && Math.floor(al / 3) % 2 === 0) { ch = diagGlyph; r = 150; g = 150; b = 150; }
+        }
+      } else if (roadX || roadY) {
         ch = hv < 0.5 ? G.dot : hv < 0.8 ? G.com : G.tick;
         if (roadX !== roadY && rd < 200) {
           // a road segment between two intersections: center line, lane dashes, crosswalks at the ends
           const b0 = roadX ? city.xb : city.yb, bc = roadX ? cx : cy;
           const e0 = roadX ? city.yb : city.xb, ec = roadX ? cy : cx;
           const across = (roadX ? wx : wy) - (b0[bc] + b0[bc + 1]) / 2, along = roadX ? wy : wx;
-          const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along);
+          // a street segment ends at the cross streets, and where it meets the diagonal
+          const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, pastD);
           const m = a % LANE_W;
           if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
           else if (a < 0.3) { ch = roadX ? G.bar : G.dash; r = 210; g = 170; b = 60; }
@@ -158,11 +171,15 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
         }
       } else {
         const blk = city.blocks[(cy >> 1) * city.nbx + (cx >> 1)];
-        const edge = Math.min(wx - blk.x0, blk.x1 - wx, wy - blk.y0, blk.y1 - wy);
+        const edge = Math.min(wx - blk.x0, blk.x1 - wx, wy - blk.y0, blk.y1 - wy, blk.diag ? pastD : 1e9);
         if (edge < SIDEWALK) {
           const fx = wx / 1.5 - Math.floor(wx / 1.5), fy = wy / 1.5 - Math.floor(wy / 1.5);
           ch = fx < 0.08 || fy < 0.08 ? G.plus : G.col; r = 78; g = 74; b = 78;
           dens = city.districts[blk.district].type === 'industrial' ? 0.06 : 0.025;
+        } else if (blk.diag & (sD > 0 ? 4 : 2)) {
+          // plaza on the sliver the diagonal cut off
+          const fx = wx / 2.5 - Math.floor(wx / 2.5), fy = wy / 2.5 - Math.floor(wy / 2.5);
+          ch = fx < 0.06 || fy < 0.06 ? G.plus : G.col; r = 92; g = 86; b = 80;
         } else if (blk.open === 'park') {
           dens = 0.01;
           const mx = (blk.x0 + blk.x1) / 2, my = (blk.y0 + blk.y1) / 2;
@@ -228,9 +245,18 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
             } else {
               const ax = (B.x0 - px) * ix, bx = (B.x1 - px) * ix, ay = (B.y0 - py) * iy, by = (B.y1 - py) * iy;
               const nx = Math.min(ax, bx), ny = Math.min(ay, by);
+              let tFar = Math.min(Math.max(ax, bx), Math.max(ay, by));
               tNear = Math.max(nx, ny);
-              if (tNear <= 0.01 || tNear >= Math.min(Math.max(ax, bx), Math.max(ay, by))) continue;
               side = nx > ny ? 0 : 1;
+              const K = B.cut;
+              if (K) {
+                // also inside the half-plane of the cut: entering it may be the nearest face (side 3)
+                const dn = K.nx * rdx + K.ny * rdy, th = (K.c - K.nx * px - K.ny * py) / dn;
+                if (dn < 0) { if (th > tNear) { tNear = th; side = 3; } }
+                else if (dn > 0) tFar = Math.min(tFar, th);
+                else if (K.nx * px + K.ny * py > K.c) continue;
+              }
+              if (tNear <= 0.01 || tNear >= tFar) continue;
             }
             let s = n++;
             while (s > 0 && hitT[s - 1] > tNear) { hitT[s] = hitT[s - 1]; hitId[s] = hitId[s - 1]; hitSide[s] = hitSide[s - 1]; s--; }
@@ -243,13 +269,21 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
             const y0 = Math.max(0, top), y1 = Math.min(rows, Math.ceil(yb2 - 0.5), clipTop);
             if (y0 < y1) {
               const side = hitSide[s];
-              let along: number, lightK: number;
+              let along: number, lightK: number, face = 0, rev = false, dn: number;
+              const hx = px + t * rdx, hy = py + t * rdy;
               if (side === 2) {
                 // position around the cylinder in metres of arc; lit like a box face turned the same way
-                const rr = (B.x1 - B.x0) / 2, nx = (px + t * rdx - B.x0 - rr) / rr, ny = (py + t * rdy - B.y0 - rr) / rr;
-                along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx);
-              } else { along = side === 0 ? py + t * rdy : px + t * rdx; lightK = side ? 0.72 : 1; }
-              wallColumn(grid, x, B, id, t, side, lightK, along, y0, y1, top, hor, scale, eye, colW, side === 0 ? rdx < 0 : rdy > 0, (colW * t) / Math.max(1e-6, Math.abs(side === 0 ? rdx : rdy)), px + t * rdx, py + t * rdy);
+                const rr = (B.x1 - B.x0) / 2, nx = (hx - B.x0 - rr) / rr, ny = (hy - B.y0 - rr) / rr;
+                along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx); dn = 1;
+              } else if (side === 3) {
+                // the face along the diagonal: measured along (ny, -nx), which reads left to right
+                const K = B.cut!;
+                along = hx * K.ny - hy * K.nx; lightK = 0.72 + 0.28 * Math.abs(K.nx); face = 4; dn = K.nx * rdx + K.ny * rdy;
+              } else {
+                along = side === 0 ? hy : hx; lightK = side ? 0.72 : 1;
+                rev = side === 0 ? rdx < 0 : rdy > 0; face = side === 0 ? (rdx < 0 ? 1 : 0) : (rdy > 0 ? 2 : 3); dn = side === 0 ? rdx : rdy;
+              }
+              wallColumn(grid, x, B, id, t, side, face, lightK, along, y0, y1, top, hor, scale, eye, colW, rev, (colW * t) / Math.max(1e-6, Math.abs(dn)), hx, hy);
             }
             clipTop = Math.min(clipTop, Math.max(0, top));
           }
@@ -377,9 +411,13 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
 }
 
 /** One building face in one column, rows y0..y1. `along` is where the ray hit the face; `top` is the unclipped roof row. */
-function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number, hx: number, hy: number) {
-  // side 2 is a cylinder: no corners
-  const f0 = side === 0 ? B.y0 : side === 1 ? B.x0 : -1e9, f1 = side === 0 ? B.y1 : side === 1 ? B.x1 : 1e9;
+function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: number, side: number, face: number, lightK: number, along: number, y0: number, y1: number, top: number, hor: number, scale: number, eye: number, colW: number, rev: boolean, dAlong: number, hx: number, hy: number) {
+  // side 2 is a cylinder: no corners. A face of a cut building is shorter than its box side.
+  let f0 = -1e9, f1 = 1e9;
+  if (side !== 2) {
+    if (B.cut) { const sp = faceSpan(B, face); f0 = sp[0]; f1 = sp[1]; }
+    else { f0 = side === 0 ? B.y0 : B.x0; f1 = side === 0 ? B.y1 : B.x1; }
+  }
   const fogK = 1 - Math.exp(-t / FOG);
   const shade = lightK * (1 - fogK * 0.6);
   const winLight = 1 - fogK * 0.45;
@@ -607,16 +645,25 @@ function gatherLights(world: World, v: View, sec: number) {
       // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims
       // its own spot; farther away the sign is lit evenly, as a whole
       const near = Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < SIGN_LETTER_LIGHT;
-      for (let f = 0; f < 4; f++) {
-        const alongX = f >= 2, len = alongX ? B.x1 - B.x0 : B.y1 - B.y0;
-        const n = signText(city, B.biz, Math.floor((len - 1.2) / LETTER_W) - 2).length;
+      const K = B.cut;
+      for (let f = 0; f < (K ? 5 : 4); f++) {
+        const sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
+        const n = signText(city, B.biz, Math.floor((hi - lo - 1.2) / LETTER_W) - 2).length;
         if (n < 3) continue;
-        const half = ((n + 2) * LETTER_W) / 2, mid = alongX ? (B.x0 + B.x1) / 2 : (B.y0 + B.y1) / 2;
-        const edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
+        const half = ((n + 2) * LETTER_W) / 2, mid = (lo + hi) / 2;
         // the letters in order of increasing coordinate, with the frame's padding at both ends
         const rev = f === 1 || f === 2; // same reading order as wallColumn
-        const x0 = alongX ? mid - half : edge, y0 = alongX ? edge : mid - half, x1 = alongX ? mid + half : edge, y1 = alongX ? edge : mid + half;
-        const nx = alongX ? 0 : out, ny = alongX ? out : 0;
+        let x0: number, y0: number, x1: number, y1: number, nx: number, ny: number;
+        if (f === 4) {
+          // points on the cut face are n * c + (ny, -nx) * u
+          nx = K!.nx; ny = K!.ny;
+          x0 = nx * K!.c + ny * (mid - half); y0 = ny * K!.c - nx * (mid - half);
+          x1 = nx * K!.c + ny * (mid + half); y1 = ny * K!.c - nx * (mid + half);
+        } else {
+          const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
+          x0 = alongX ? mid - half : edge; y0 = alongX ? edge : mid - half; x1 = alongX ? mid + half : edge; y1 = alongX ? edge : mid + half;
+          nx = alongX ? 0 : out; ny = alongX ? out : 0;
+        }
         if (near) {
           LEVELS.length = 0;
           for (let col = 0; col < n; col++) LEVELS[col + 1] = signLight(B.biz, mode, rev ? n - 1 - col : col, full, sec);

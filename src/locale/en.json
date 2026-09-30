@@ -41,6 +41,7 @@
   "street": "{n} St",
   "wideAvenue": "{r} Blvd",
   "wideStreet": "{r} St",
+  "diagonal": "{r} Way",
   "ordinal": { "one": "st", "two": "nd", "few": "rd", "other": "th" },
   "business": {
     "diner": ["{s}'s Diner", "{w} Diner", "{s}'s", "Eat at {s}'s", "{w} Grill"],

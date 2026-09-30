@@ -55,6 +55,11 @@ export function roadName(city: City, avenue: boolean, k: number): string {
 /** The first road of each axis is always a wide one (see layoutAxis). */
 const isWide = (b: number[], k: number) => b[2 * k + 1] - b[2 * k] >= b[1] - b[0];
 
+/** The diagonal avenue, named from a slot between the roads' and the landmarks'. */
+export function diagonalName(city: City): string {
+  return fill(L.diagonal, L.roots[(city.nameSeed + (L.roots.length - 21) * 7919) % L.roots.length]);
+}
+
 /** Landmarks take their roots from the end of the list, away from the other slots. */
 export function landmarkName(city: City, k: number): string {
   return fill(L.landmark[city.landmarks[k].kind], L.roots[(city.nameSeed + (L.roots.length - 1 - k) * 7919) % L.roots.length]);

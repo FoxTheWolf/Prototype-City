@@ -17,9 +17,23 @@ export type Facade = 'office' | 'glass' | 'brick' | 'historic' | 'residential' |
   | 'clock' | 'mast' | 'gasholder';
 
 /**
+ * The side of a building cut by the diagonal avenue: the building keeps the part of its box where
+ * nx*x + ny*y <= c; (nx, ny) is the unit normal pointing out of that face. u0..u1 is the face's
+ * extent along (ny, -nx), which reads left to right for someone looking at it.
+ */
+export interface Cut {
+  nx: number;
+  ny: number;
+  c: number;
+  u0: number;
+  u1: number;
+}
+
+/**
  * A shape standing on the ground: an axis-aligned box, or with `round` the upright cylinder inscribed
  * in that box. Towers with setbacks, crowns and domes are several nested shapes; parts on a roof
- * also start at the ground, hidden inside the building below them.
+ * also start at the ground, hidden inside the building below them. Next to the diagonal avenue a
+ * box can be cut by it (`cut`), which gives wedge-shaped buildings on the sharp corners.
  */
 export interface Building {
   x0: number;
@@ -38,7 +52,25 @@ export interface Building {
   biz: number;
   /** Random per lot, for variants within a style (balconies, fire escapes). Shared by all tiers of a tower. */
   feat: number;
+  cut: Cut | null;
 }
+
+/**
+ * An avenue that runs straight across the grid at a slant, like Broadway: through (ox, oy) along
+ * the unit vector (ex, ey). (nx, ny) = (ey, -ex) is its normal; s = (p - o) . n is the signed
+ * distance of a point from its center line. The roadway is |s| < w / 2, then a sidewalk.
+ */
+export interface Diagonal {
+  ox: number;
+  oy: number;
+  ex: number;
+  ey: number;
+  nx: number;
+  ny: number;
+  w: number;
+}
+
+export const DIAG_W = 21;
 
 export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris';
 
@@ -186,6 +218,11 @@ export interface Block {
   /** Tallest building, so the renderer can skip blocks hidden behind nearer ones. */
   maxH: number;
   props: Prop[];
+  /**
+   * The diagonal avenue and this block: bit 1 when it crosses the block, bit 2 / bit 4 when the
+   * piece left on its negative / positive side is too small for buildings and is a plaza.
+   */
+  diag: number;
 }
 
 /**
@@ -216,6 +253,7 @@ export interface City {
   /** The burning seam around the city: smoke vents, and floodlight towers on the cordon fence (which runs along the city edge). */
   vents: Vent[];
   floodlights: { x: number; y: number }[];
+  diagonal: Diagonal;
   sectors: number;
   /** Chooses the words of every place name (see locale/names.ts). */
   nameSeed: number;
@@ -257,7 +295,7 @@ function nearestDistrict(districts: District[], x: number, y: number): number {
  * Blocks that hold a landmark, by block index, drawn from LIBRARY. Landmarks never touch each
  * other (not even diagonally), except a big park, which takes a second block to its east ('park2').
  */
-function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: number, nby: number, districts: District[]) {
+function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: number, nby: number, districts: District[], diag: Diagonal) {
   const rng = mulberry32((hash3(seed, 5555, 2) * 4294967296) | 0);
   const out = new Map<number, LandmarkKind | 'park2'>();
   const type: DistrictType[] = [];
@@ -266,6 +304,7 @@ function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: numbe
   }
   const free = (k: number) => {
     const i = k % nbx, j = (k / nbx) | 0;
+    if (diagRange(diag, xb[2 * i + 1], yb[2 * j + 1], xb[2 * i + 2], yb[2 * j + 2]).touches) return false;
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
       const ii = i + di, jj = j + dj;
       if (ii >= 0 && jj >= 0 && ii < nbx && jj < nby && out.has(jj * nbx + ii)) return false;
@@ -283,6 +322,103 @@ function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: numbe
     }
   }
   return out;
+}
+
+/**
+ * The diagonal avenue: through downtown, 18-32 degrees off the avenues. It has its own random
+ * stream, so the grid and the districts stay the same.
+ */
+function placeDiagonal(seed: number, cx: number, cy: number): Diagonal {
+  const rng = mulberry32((hash3(seed, 9999, 4) * 4294967296) | 0);
+  const a = ((18 + rng() * 14) * Math.PI) / 180 * (rng() < 0.5 ? -1 : 1);
+  const ex = Math.sin(a), ey = Math.cos(a);
+  return { ox: cx + (rng() - 0.5) * 240, oy: cy + (rng() - 0.5) * 120, ex, ey, nx: ey, ny: -ex, w: DIAG_W };
+}
+
+/** Signed distance of a point from the diagonal's center line. */
+export function diagS(d: Diagonal, x: number, y: number): number {
+  return (x - d.ox) * d.nx + (y - d.oy) * d.ny;
+}
+
+/** Range of s over a box, and whether the avenue with its sidewalks reaches into it. */
+function diagRange(d: Diagonal, x0: number, y0: number, x1: number, y1: number) {
+  const a = diagS(d, x0, y0), b = diagS(d, x1, y0), c = diagS(d, x0, y1), e = diagS(d, x1, y1);
+  const lo = Math.min(a, b, c, e), hi = Math.max(a, b, c, e), R = d.w / 2 + SIDEWALK;
+  return { lo, hi, touches: lo < R && hi > -R };
+}
+
+/** Area of the box x0..y1 where nx*x + ny*y <= c (the box clipped by a half-plane). */
+function clippedArea(x0: number, y0: number, x1: number, y1: number, nx: number, ny: number, c: number) {
+  const pts = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], out: number[][] = [];
+  for (let k = 0; k < 4; k++) {
+    const P = pts[k], Q = pts[(k + 1) % 4], fp = nx * P[0] + ny * P[1] - c, fq = nx * Q[0] + ny * Q[1] - c;
+    if (fp <= 0) out.push(P);
+    if ((fp < 0) !== (fq < 0) && fp !== fq) { const t = fp / (fp - fq); out.push([P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t]); }
+  }
+  let a = 0;
+  for (let k = 0; k < out.length; k++) { const P = out[k], Q = out[(k + 1) % out.length]; a += P[0] * Q[1] - Q[0] * P[1]; }
+  return Math.abs(a) / 2;
+}
+
+/** The cut of box x0..y1 by the half-plane nx*x + ny*y <= c, with the extent of the cut face. */
+function makeCut(x0: number, y0: number, x1: number, y1: number, nx: number, ny: number, c: number): Cut {
+  // points on the face line are (nx, ny) * c + (ny, -nx) * u; keep the u inside the box
+  let u0 = -1e9, u1 = 1e9;
+  const clamp = (base: number, k: number, lo: number, hi: number) => {
+    if (Math.abs(k) < 1e-9) return;
+    const a = (lo - base) / k, b = (hi - base) / k;
+    u0 = Math.max(u0, Math.min(a, b)); u1 = Math.min(u1, Math.max(a, b));
+  };
+  clamp(nx * c, ny, x0, x1);
+  clamp(ny * c, -nx, y0, y1);
+  return { nx, ny, c, u0, u1 };
+}
+
+const SPAN = new Float64Array(2);
+/**
+ * Extent of one face of a box building along the face, in SPAN: face 0 / 1 are the x0 / x1 sides
+ * (measured along y), 2 / 3 the y0 / y1 sides (along x), 4 the cut face (along its u).
+ */
+export function faceSpan(B: Building, face: number): Float64Array {
+  const C = B.cut;
+  if (face === 4) { SPAN[0] = C!.u0; SPAN[1] = C!.u1; return SPAN; }
+  const alongY = face < 2, at = face === 0 ? B.x0 : face === 1 ? B.x1 : face === 2 ? B.y0 : B.y1;
+  let lo = alongY ? B.y0 : B.x0, hi = alongY ? B.y1 : B.x1;
+  if (C) {
+    // on this side nx*x + ny*y <= c leaves: k * along <= c - (the fixed coordinate's term)
+    const k = alongY ? C.ny : C.nx, rest = C.c - (alongY ? C.nx : C.ny) * at;
+    if (Math.abs(k) < 1e-9) { if (rest < 0) hi = lo; }
+    else if (k > 0) hi = Math.min(hi, rest / k);
+    else lo = Math.max(lo, rest / k);
+  }
+  SPAN[0] = lo; SPAN[1] = hi;
+  return SPAN;
+}
+
+/**
+ * Cut the buildings of one block, buildings[from..], by the diagonal: parts on its roadway and
+ * sidewalk go, a box across its edge is cut (or split in two when it spans the whole avenue),
+ * cylinders that reach it go, and so does whatever is left too small to stand.
+ */
+function cutByDiagonal(buildings: Building[], from: number, d: Diagonal) {
+  const R = d.w / 2 + SIDEWALK, o = d.ox * d.nx + d.oy * d.ny, kept: Building[] = [];
+  for (const B of buildings.splice(from)) {
+    if (B.round) {
+      const r = (B.x1 - B.x0) / 2;
+      if (Math.abs(diagS(d, B.x0 + r, B.y0 + r)) >= R + r) kept.push(B);
+      continue;
+    }
+    const { lo, hi } = diagRange(d, B.x0, B.y0, B.x1, B.y1);
+    if (lo >= R || hi <= -R) { kept.push(B); continue; }
+    let first = true;
+    // the side where s >= R keeps -n.p <= -(R + o), the side where s <= -R keeps n.p <= o - R
+    for (const [nx, ny, c, has] of [[-d.nx, -d.ny, -(R + o), hi > R], [d.nx, d.ny, o - R, lo < -R]] as const) {
+      if (!has || clippedArea(B.x0, B.y0, B.x1, B.y1, nx, ny, c) < 40) continue;
+      kept.push({ ...B, cut: makeCut(B.x0, B.y0, B.x1, B.y1, nx, ny, c), shop: B.shop && first });
+      first = false;
+    }
+  }
+  buildings.push(...kept);
 }
 
 /** 1 downtown, ~0 at the edges of the city. */
@@ -368,7 +504,8 @@ export function generateCity(seed: number, size: number): City {
   const blocks: Block[] = [];
   const buildings: Building[] = [];
   const businesses: Business[] = [];
-  const special = pickLandmarkBlocks(seed, xb, yb, nbx, nby, districts);
+  const diagonal = placeDiagonal(seed, cx, cy);
+  const special = pickLandmarkBlocks(seed, xb, yb, nbx, nby, districts, diagonal);
 
   for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
     const br = mulberry32((hash3(seed, i, j) * 4294967296) | 0);
@@ -383,7 +520,7 @@ export function generateCity(seed: number, size: number): City {
     const lm = special.get(j * nbx + i);
     const LM_OPEN: Record<string, OpenKind | null> = { memorial: 'plaza', hall: 'plaza', clock: 'plaza', mast: 'plaza', park: 'park', park2: 'park', church: 'park', gasworks: 'yard', power: null };
     const open = lm ? LM_OPEN[lm] : br() < K.openP ? K.open : null;
-    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [] };
+    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [], diag: 0 };
     blocks.push(block);
 
     // street lamps along the curb, about every 28 m
@@ -436,7 +573,7 @@ export function generateCity(seed: number, size: number): City {
         if (Math.min(lw, lh) - 2 * inset < 8) break;
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
         const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
-        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1 };
+        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null };
         buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
         inset += 3 + br() * 3;
@@ -446,7 +583,7 @@ export function generateCity(seed: number, size: number): City {
 
     /** A rooftop shape centered at (x, y) with half-size (or radius) s, reaching height h. */
     const part = (x: number, y: number, s: number, h: number, style: Facade, round: boolean, frame: RGB, win: RGB) => {
-      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1 });
+      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null });
       block.maxH = Math.max(block.maxH, h);
     };
     /** Drum with windows, then a dome of stacked rings and a small lantern on top. */
@@ -485,7 +622,7 @@ export function generateCity(seed: number, size: number): City {
     const stone: RGB = [150, 135, 110], warm: RGB = [255, 220, 150], copper: RGB = [70, 140, 120];
     /** A plain building of this landmark. */
     const house = (bx0: number, by0: number, bx1: number, by1: number, bh: number, style: Facade, frame: RGB, win: RGB, lit: number) => {
-      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1 });
+      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null });
       block.maxH = Math.max(block.maxH, bh);
     };
     const long = ix1 - ix0 > iy1 - iy0;
@@ -579,6 +716,25 @@ export function generateCity(seed: number, size: number): City {
         part(long ? ix0 + (ix1 - ix0) * u : mx + 10, long ? my + 10 : iy0 + (iy1 - iy0) * u, 3, 80 + br() * 15, 'chimney', true, frame, [255, 40, 40]);
       }
     } else if (!open) lot(ix0, iy0, ix1, iy1);
+    const dr = diagRange(diagonal, x0, y0, x1, y1);
+    if (dr.touches) {
+      block.diag = 1;
+      // a sliver left between the diagonal and the cross streets is too small to build on: a plaza
+      const R = diagonal.w / 2 + SIDEWALK, o = diagonal.ox * diagonal.nx + diagonal.oy * diagonal.ny;
+      const neg = clippedArea(ix0, iy0, ix1, iy1, diagonal.nx, diagonal.ny, o - R);
+      const pos = clippedArea(ix0, iy0, ix1, iy1, -diagonal.nx, -diagonal.ny, -(R + o));
+      if (neg > 0 && neg < PLAZA_AREA) block.diag |= 2;
+      if (pos > 0 && pos < PLAZA_AREA) block.diag |= 4;
+      cutByDiagonal(buildings, block.b0, diagonal);
+      for (let k = buildings.length - 1; k >= block.b0; k--) {
+        const B = buildings[k], sB = diagS(diagonal, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+        if (block.diag & (sB > 0 ? 4 : 2)) buildings.splice(k, 1);
+      }
+      block.maxH = 0;
+      for (let k = block.b0; k < buildings.length; k++) block.maxH = Math.max(block.maxH, buildings[k].h);
+      // nothing stands on the roadway; trees keep off its sidewalks too
+      block.props = block.props.filter((p) => Math.abs(diagS(diagonal, p.x, p.y)) > diagonal.w / 2 + (p.kind === 'tree' ? SIDEWALK + 1 : 0.4));
+    }
     // one business per shop front; kind and name come from the building's position, so they stay put
     const shops = SHOPS[districts[district].type];
     for (let k = block.b0; k < buildings.length; k++) {
@@ -597,8 +753,35 @@ export function generateCity(seed: number, size: number): City {
   for (const B of buildings) if (B.h > tallest.h) tallest = B;
   if (tallest) landmarks.push({ kind: 'tower', x: (tallest.x0 + tallest.x1) / 2, y: (tallest.y0 + tallest.y1) / 2 });
 
+  const xCell = cellTable(xb), yCell = cellTable(yb);
+  diagonalLamps(seed, diagonal, w, h, xb, yb, xCell, yCell, nbx, blocks, districts);
   const { vents, floodlights } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell: cellTable(xb), yCell: cellTable(yb), nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+}
+
+/** A piece of block cut off by the diagonal and smaller than this (m²) is left as a plaza. */
+const PLAZA_AREA = 1200;
+
+/**
+ * Street lamps along both curbs of the diagonal, every 28 m, arms over the roadway. Each goes to
+ * the block it stands in; spots on the cross streets or too near their corners are skipped.
+ */
+function diagonalLamps(seed: number, d: Diagonal, w: number, h: number, xb: number[], yb: number[], xCell: Uint16Array, yCell: Uint16Array, nbx: number, blocks: Block[], districts: District[]) {
+  const L = Math.hypot(w, h);
+  for (const side of [-1, 1]) {
+    const off = side * (d.w / 2 + 0.8), a = Math.atan2(-side * d.ny, -side * d.nx);
+    for (let k = Math.floor(-L / 28); k <= L / 28; k++) {
+      const u = k * 28 + (side > 0 ? 14 : 0), x = d.ox + d.ex * u + d.nx * off, y = d.oy + d.ey * u + d.ny * off;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const cx = xCell[x | 0], cy = yCell[y | 0];
+      if (!(cx & 1) || !(cy & 1)) continue;
+      if (Math.min(x - xb[cx], xb[cx + 1] - x, y - yb[cy], yb[cy + 1] - y) < 3) continue;
+      const blk = blocks[(cy >> 1) * nbx + (cx >> 1)];
+      let roll = hash3(seed ^ 0x6d1a9e, k, side), lampType: LampType = 'hps';
+      for (const [t, wt] of LAMPS[districts[blk.district].type]) { if ((roll -= wt) < 0) { lampType = t; break; } }
+      blk.props.push({ kind: 'lamp', x, y, w: 0.3, z1: 6.5, seed: 0, a, lampType });
+    }
+  }
 }
 
 /**
@@ -652,7 +835,7 @@ export function isSolid(city: City, x: number, y: number): boolean {
   if (!b) return false;
   for (let k = b.b0; k < b.b1; k++) {
     const B = city.buildings[k];
-    if (x >= B.x0 && x < B.x1 && y >= B.y0 && y < B.y1) return true;
+    if (x >= B.x0 && x < B.x1 && y >= B.y0 && y < B.y1 && (!B.cut || B.cut.nx * x + B.cut.ny * y <= B.cut.c)) return true;
   }
   return false;
 }
