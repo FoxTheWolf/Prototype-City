@@ -8,6 +8,7 @@ import { type CharGrid } from '../render/grid';
 import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 import { Wifi } from './wifi';
+import { Editor } from './textinput';
 import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
 import en from '../locale/en.json';
@@ -166,6 +167,10 @@ export class Phone {
   csel = 0;
   /** The contact being written: its name (typed by multi-tap), its number, and which of them is being typed. */
   edit = { name: '', number: '', step: 0 };
+  /** The text fields, typed in Abc, T9 or 123 (see textinput.ts): notes, a text message, a contact's name. */
+  readonly noteEd = new Editor(400);
+  readonly smsEd = new Editor(160);
+  readonly nameEd = new Editor(20, true);
   /** Text messages received (from, text, game time, read) and sent (to, text, game time). */
   readonly inbox: { from: string; text: string; at: number; read: boolean }[] = [];
   readonly sent: { to: string; text: string; at: number }[] = [];
@@ -187,11 +192,8 @@ export class Phone {
   us = { code: '', path: [] as string[], text: '', menu: false, input: '', at: 0 };
   /** Calculator: the number on the display, the one kept, the operation waiting, and whether the next digit starts a new number. */
   calc = { cur: '0', acc: 0, op: '', fresh: true };
-  /** Notes: the text, and the key last tapped with when (a tap within a second picks its next letter). */
+  /** Notes: the text (typed through noteEd). */
   note = '';
-  tapKey = '';
-  tapAt = 0;
-  tapN = 0;
   /** Clock: the stopwatch, running since `swAt` (or -1), with `swAcc` seconds before. */
   swAt = -1;
   swAcc = 0;
@@ -268,6 +270,8 @@ export class Phone {
     if (this.screen === 'settings' && s !== 'settings') this.cue = 'stop';
     this.screen = s; this.since = now; this.scroll = 0;
     if (s === 'settings') { this.setPage = 'root'; this.setSel = 0; }
+    if (s === 'compose') this.smsEd.set(this.draft.text);
+    if (s === 'contact') this.nameEd.set(this.edit.name);
     if (s === 'map') this.panX = this.panY = 0;
   }
 
@@ -380,13 +384,11 @@ export class Phone {
       case 'calc':
         return this.calcKey(k, now);
       case 'notes': {
-        if (k === 'rsoft') { this.open('menu', now); return true; }
-        if (k === '*') { this.note = this.note.slice(0, -1); this.tapKey = ''; return true; }
-        if (k === '#') { this.note += '\n'; this.tapKey = ''; return true; }
-        const t = this.tap(this.note, k, now, 400);
-        if (t === null) return false;
-        this.note = t;
-        return true;
+        // the right soft key deletes, and goes back once there is nothing left
+        if (k === 'rsoft') { if (!this.noteEd.del()) this.open('menu', now); this.note = this.noteEd.value(); return true; }
+        const ok = this.noteEd.key(k, now);
+        this.note = this.noteEd.value();
+        return ok;
       }
       case 'contacts': {
         const n = this.contacts.length;
@@ -484,8 +486,12 @@ export class Phone {
       case 'compose': {
         // the number, then the text by multi-tap (0 a space, * deletes); OK sends
         const D = this.draft;
-        if (k === 'rsoft') { if (D.step === 1 && !D.text) D.step = 0; else this.open('messages', now); return true; }
-        if (k === 'up' || k === 'down') { D.step = k === 'down' ? 1 : 0; this.tapKey = ''; return true; }
+        if (k === 'rsoft') {
+          if (D.step === 1 && this.smsEd.del()) { D.text = this.smsEd.value(); return true; }
+          if (D.step === 1) D.step = 0; else this.open('messages', now);
+          return true;
+        }
+        if (k === 'up' || k === 'down') { D.step = k === 'down' ? 1 : 0; return true; }
         if (k === 'ok' || k === 'lsoft' || k === 'send') {
           if (D.step === 0 && D.to) { D.step = 1; return true; }
           if (D.to && D.text) { const ok = this.send(now); this.box = 1; this.msel = 0; this.open('messages', now); this.sfx.push(ok ? ['sent'] : ['fail']); return true; }
@@ -496,30 +502,29 @@ export class Phone {
           if (/^[0-9#]$/.test(k) && D.to.length < 16) { D.to += k; return true; }
           return false;
         }
-        if (k === '*') { D.text = D.text.slice(0, -1); this.tapKey = ''; return true; }
-        if (k === '#') { D.text += '.'; this.tapKey = ''; return true; }
-        const t = this.tap(D.text, k, now, 160);
-        if (t === null) return false;
-        D.text = t;
-        return true;
+        const ok = this.smsEd.key(k, now);
+        D.text = this.smsEd.value();
+        return ok;
       }
       case 'contact': {
         // a new contact: the name by multi-tap (# goes on to the number), then the number; OK saves
         const E = this.edit;
-        if (k === 'rsoft') { if (E.step === 1 && !E.number) E.step = 0; else this.open('contacts', now); return true; }
+        if (k === 'rsoft') {
+          if (E.step === 0 && this.nameEd.del()) { E.name = this.nameEd.value(); return true; }
+          if (E.step === 1 && E.number) { E.number = E.number.slice(0, -1); return true; }
+          if (E.step === 1) E.step = 0; else this.open('contacts', now);
+          return true;
+        }
         if ((k === 'ok' || k === 'lsoft') && E.name && E.number) {
           if (this.contacts.length < 250) this.contacts.push({ name: E.name, number: E.number });
           this.csel = this.contacts.length - 1; this.open('contacts', now);
           return true;
         }
-        if (k === 'down' || k === 'up') { E.step = k === 'down' ? 1 : 0; this.tapKey = ''; return true; }
+        if (k === 'down' || k === 'up') { E.step = k === 'down' ? 1 : 0; return true; }
         if (E.step === 0) {
-          if (k === '#') { E.step = 1; this.tapKey = ''; return true; }
-          if (k === '*') { E.name = E.name.slice(0, -1); this.tapKey = ''; return true; }
-          const t = this.tap(E.name, k, now, 20);
-          if (t === null) return false;
-          E.name = t.length === 1 || /\s.$/.test(t) ? t.slice(0, -1) + t.slice(-1).toUpperCase() : t;
-          return true;
+          const ok = this.nameEd.key(k, now);
+          E.name = this.nameEd.value();
+          return ok;
         }
         if (k === '*' && E.number) { E.number = E.number.slice(0, -1); return true; }
         if (/^[0-9#]$/.test(k) && E.number.length < 16) { E.number += k; return true; }
@@ -681,16 +686,6 @@ export class Phone {
     if (r.sms) this.receive(operatorName(this.world.city), r.sms, this.us.at + 4);
   }
 
-  /** Multi-tap: a key tapped again within a second picks its next letter; returns the text, or null for a key without letters. */
-  private tap(text: string, k: Key, now: number, max: number): string | null {
-    const letters = TAPS[k];
-    if (!letters) return null;
-    if (k === this.tapKey && now - this.tapAt < 1) { this.tapN = (this.tapN + 1) % letters.length; text = text.slice(0, -1); }
-    else this.tapN = 0;
-    if (text.length < max) text += letters[this.tapN];
-    this.tapKey = k; this.tapAt = now;
-    return text;
-  }
 
   /** The calculator: digits, # the point, the arrows + - x /, OK =, * clears. */
   private calcKey(k: Key, now: number): boolean {

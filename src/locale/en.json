@@ -779,6 +779,7 @@
         "downloading": "Downloading", "none": "No apps installed.", "gameOver": "GAME OVER", "again": "OK to play again", "score": "SCORE", "best": "BEST",
         "newsWait": "Fetching headlines...", "newsNone": "No data connection." },
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
+      "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
       "set": {
         "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)" },
@@ -811,7 +812,7 @@
       "calling": "CALLING", "ringing": "RINGING", "noNetwork": "NO NETWORK", "busy": "NETWORK BUSY", "noAnswer": "NO ANSWER", "callEnded": "CALL ENDED", "care": "Customer Care", "save": "Save", "new": "New", "end": "End", "name": "Name", "numberF": "Number", "noContacts": "No contacts. New adds one.", "sim": "SIM {n}/250", "cost": "Cost {c}", "callFailed": "CALL FAILED", "dialHint": "Type a number", "call": "Call", "clear": "Clear",
       "stopwatch": "STOPWATCH", "stopwatchHint": "* reset", "start": "Start", "stop": "Stop",
       "calcHint": ["^ +   v -   < x   > /", "OK =   * clear   # ."],
-      "notesHint": "Tap the keys: 2 abc .. 9 wxyz",
+      "notesHint": "Tap the keys: 2 abc .. 9 wxyz  (# for T9)",
       "model": "Model", "cameraRow": "Camera", "os": "Software", "cpu": "Processor", "ram": "Memory", "flash": "Storage", "display": "Display", "radio": "Radio", "network": "Network",
       "wlan": "WLAN", "gps": "GPS receiver", "gpsNow": "GPS now", "imei": "IMEI",
       "gpsFix": "FIX", "gpsSearch": "SEARCHING", "gpsLost": "NO SIGNAL", "gpsOff": "OFF (opens with Maps)"

@@ -14,7 +14,7 @@ import { expose, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { tickerText } from '../locale/news';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APPS, EDGE_LIMIT_KB, STORE, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, TAPS, type App, type Key, type Phone } from './phone';
+import { APPS, EDGE_LIMIT_KB, STORE, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 
 /**
  * The phone's menu and its apps besides the map. Those that need nothing more work for real
@@ -146,8 +146,9 @@ function contactEdit(S: Lcd, P: Phone, now: number) {
   S.text(1, 5, E.name + (E.step === 0 && blink ? '_' : ''), WHITE, LCD);
   S.text(1, 8, A.numberF, E.step === 1 ? HI : DIM, LCD);
   S.text(1, 9, E.number + (E.step === 1 && blink ? '_' : ''), WHITE, LCD);
-  S.text(1, SH - 3, E.step === 0 ? A.notesHint : '* <-', DIM, LCD);
-  softKeys(S, E.name && E.number ? A.save : '', T.back);
+  title(S, `${name('contacts').toUpperCase()} +`, 1, E.step === 0 ? P.nameEd.label() : '123');
+  S.text(1, SH - 3, E.step === 0 ? P.nameEd.tapping(now) || A.modeHint : 'v number', DIM, LCD);
+  softKeys(S, E.name && E.number ? A.save : '', (E.step === 0 ? E.name : E.number) ? A.clear : T.back);
 }
 
 /** Messages: the inbox (unread count), the sent ones, and a new message. */
@@ -185,15 +186,15 @@ function msgRead(S: Lcd, P: Phone, t: number) {
 
 function compose(S: Lcd, P: Phone, now: number) {
   const D = P.draft, blink = Math.floor(now * 2) & 1;
-  title(S, A.newMsg.toUpperCase(), 1, `${D.text.length}/160`);
+  title(S, A.newMsg.toUpperCase(), 1, `${D.step === 1 ? P.smsEd.label() : '123'} ${D.text.length}/160`);
   S.text(1, 3, A.to, D.step === 0 ? HI : DIM, LCD);
   S.text(5, 3, nameOf(P, D.to) + (D.step === 0 && blink ? '_' : ''), WHITE, LCD);
   S.text(1, 5, A.text, D.step === 1 ? HI : DIM, LCD);
   const lines = wrap(D.text, SW - 2);
   lines.slice(-(SH - 10)).forEach((l, k) => S.text(1, 6 + k, l, WHITE, LCD));
   if (D.step === 1 && blink) S.put(1 + (lines[lines.length - 1]?.length ?? 0), 6 + Math.max(0, Math.min(lines.length, SH - 10) - 1), ch('_'), WHITE, LCD);
-  S.text(1, SH - 3, D.step === 0 ? '* <-   v text' : A.notesHint, DIM, LCD);
-  softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', T.back);
+  S.text(1, SH - 3, D.step === 0 ? '* <-   v text' : P.smsEd.tapping(now) || A.modeHint, DIM, LCD);
+  softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', D.step === 1 && D.text ? A.clear : T.back);
 }
 
 /** The operator's service menu: "running" for a moment, then its text and, on a menu, the answer being typed. */
@@ -233,19 +234,21 @@ function calc(S: Lcd, P: Phone, t: number) {
   softKeys(S, '=', T.back);
 }
 
-/** Notes: the text typed by tapping the keypad (a tap within a second picks the key's next letter). */
+/** Notes: the text typed on the keypad (Abc, T9 or 123, see textinput.ts). */
 function notes(S: Lcd, P: Phone, t: number, now: number) {
-  title(S, name('notes').toUpperCase(), t, `${P.note.length}/400`);
+  title(S, name('notes').toUpperCase(), t, `${P.noteEd.label()} ${P.note.length}/400`);
   // wrap to the screen, keeping the end in view
   const lines: string[] = [];
   for (const para of P.note.split('\n')) { let s = para; do { lines.push(s.slice(0, SW - 2)); s = s.slice(SW - 2); } while (s.length); }
   const rows = SH - 6, shown = lines.slice(-rows);
   shown.forEach((l, k) => S.text(1, 3 + k, l, INK, LCD));
-  const last = shown.length ? shown[shown.length - 1] : '', tapping = P.tapKey && now - P.tapAt < 1;
-  if (Math.floor(now * 2) & 1 || tapping) S.put(1 + last.length - (tapping ? 1 : 0), 2 + Math.max(1, shown.length), tapping ? ch(last[last.length - 1] || ' ') : ch('_'), tapping ? LCD : INK, tapping ? INK : LCD);
+  // the word being typed (a multi-tap letter, or T9's guess) in inverse; a blinking cursor after it
+  const ed = P.noteEd, live = ed.seq ? ed.word().length : ed.tapping(now) ? 1 : 0, last = shown.length ? shown[shown.length - 1] : '', y = 2 + Math.max(1, shown.length);
+  for (let n = 0; n < live; n++) { const x = last.length - live + n; if (x >= 0) S.put(1 + x, y, ch(last[x]), LCD, INK); }
+  if (Math.floor(now * 2) & 1 && !live) S.put(1 + last.length, y, ch('_'), INK, LCD);
   if (!P.note) S.center(10, typed(A.notesHint, t - 0.2), DIM, LCD);
-  if (tapping) S.text(1, SH - 2, TAPS[P.tapKey], DIM, LCD);
-  softKeys(S, '', T.back);
+  S.text(1, SH - 2, ed.tapping(now) || A.modeHint, DIM, LCD);
+  softKeys(S, '', P.note ? A.clear : T.back);
 }
 
 /** About the phone: its hardware, its radios, and what the GPS is doing. */
