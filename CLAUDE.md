@@ -267,7 +267,7 @@ Pedido do usuário em 2026-10-01: amigos dele que aparecem no jogo como agradeci
 - Léo Fennix
 - Masotan Braun
 
-**Como implementar (proposta):** uma lista em `src/locale/` (dados, não texto traduzível) e, na geração, um sorteio por nome entre os "lugares" disponíveis naquela etapa do projeto (hoje: nome de empresa, nome de rua com nome, manchete de flavor; depois: cidadão, contato, post da rede social). Cada lugar novo que surgir nas etapas seguintes entra no sorteio. Garantir que o nome não se repita em outro lugar da mesma cidade.
+**Implementado na 9.2:** a lista fica em `src/locale/thanks.json` e o sorteio em `thanks()` (`names.ts`). Hoje os lugares são loja, avenida ou rua larga, marco com nome e distrito. **Cada lugar novo das etapas seguintes (cidadão, contato, post, manchete) deve entrar no sorteio de `thanks()`.** Nunca dois nomes no mesmo lugar, e cada nome uma vez só.
 
 ## Pedidos do usuário para planejar (2026-09-30, segunda lista)
 
@@ -385,12 +385,13 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 ### Resumo para começar uma sessão (atualizado em 2026-10-01)
 
 - **Etapas 1 a 8 (e 5b) concluídas.** A 8 (navegação: o celular, o mapa em 4 zooms e de interior, o GPS de 2008 e os outros apps) fechou em 2026-10-01; o grupo C dela foi feito sem rodada de teste, a pedido do usuário, então **o retorno dele sobre o GPS e os apps pode chegar no começo da próxima sessão**. O que ele achou de errado nas etapas 6–8 está em "Bugs conhecidos" (para a etapa de bugfix e otimização, que vem antes da 15), em "Refinamento: anotações" e em "Pedidos do usuário durante a etapa 8". A nota "perguntar sobre a etapa 6" é para o **começo da etapa 15**.
-- **A próxima etapa no roteiro é a 9** (rede de telefones e celular: orelhões, antenas e sinal, loja de apps, discador, SMS e câmera de verdade, a abertura). Ela parte do celular da etapa 8: `src/phone/` já tem o aparelho, o hardware (`sim/device.ts`), a grade de apps e as telas do discador, contatos, mensagens e câmera esperando a rede. Perguntar ao usuário se ele prefere antes a etapa de bugfix e otimização (o theater district está perto de 30 FPS no PC dele).
+- **Etapa 9 em andamento:** grupo A feito (9.1–9.3), esperando o teste do usuário; depois vêm B e C (veja "Etapa 9" no Histórico).
+- **(Antigo) A próxima etapa no roteiro era a 9** (rede de telefones e celular: orelhões, antenas e sinal, loja de apps, discador, SMS e câmera de verdade, a abertura). Ela parte do celular da etapa 8: `src/phone/` já tem o aparelho, o hardware (`sim/device.ts`), a grade de apps e as telas do discador, contatos, mensagens e câmera esperando a rede. Perguntar ao usuário se ele prefere antes a etapa de bugfix e otimização (o theater district está perto de 30 FPS no PC dele).
 - **Antes de começar qualquer etapa, leia as seções "Lições da etapa N"** nas notas técnicas: são o conhecimento acumulado das sessões anteriores (a 7 tem como testar a simulação sem o jogador; a 8, como testar o celular).
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E (e as setas laterais) giram;
-  - celular (como no GTA IV): **seta para cima** (ou P) tira; com ele fora, setas = d-pad, Enter ou botão esquerdo = OK, Backspace ou botão direito = Voltar (na tela inicial, guarda), dígitos = teclado, + = \*, − ou . = #, **Space** = tecla verde (abre o discador, liga), **Delete** = tecla vermelha (volta à tela inicial); no menu, a tecla do lugar do app na grade 3×4 abre direto; no mapa, 1–4, \*/# ou a roda do mouse = zoom, OK = lista de lugares (ou centralizar);
+  - celular (como no GTA IV): **seta para cima** (ou P, ou o **botão do meio**) tira; com ele fora, o mouse move um cursor que clica nas teclas (segurar o botão direito olha em volta); com ele fora, setas = d-pad, Enter ou botão esquerdo = OK, Backspace ou botão direito = Voltar (na tela inicial, guarda), dígitos = teclado, + = \*, − ou . = #, **Space** = tecla verde (abre o discador, liga), **Delete** = tecla vermelha (volta à tela inicial); no menu, a tecla do lugar do app na grade 3×4 abre direto; no mapa, 1–4, \*/# ou a roda do mouse = zoom, OK = lista de lugares (ou centralizar);
   - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **M** som;
   - interiores: entrar pela porta; escadas andando; no elevador, mirar na botoeira e clicar (botão esquerdo); escadas de incêndio dos prédios de tijolo andando pela borda de fora do patamar;
   - debug: **T** e Shift+T mudam a hora em ±1 h (o trânsito e os pedestres seguem a hora); **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda; **PageUp/PageDown** sobem e descem um andar dentro de um prédio (até existirem escadas e elevadores).
@@ -405,6 +406,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `clock.ts`: tempo, calendário, sol e lua.
     - `weather.ts`: previsão pura, chão molhado e neve.
     - `power.ts`: subestações, geradores e quem alimenta o quê.
+    - `telco.ts`: antenas (cell sites), a energia e a bateria delas, e a linha pré-paga do jogador (crédito, pacote de dados).
     - `interior.ts`: plantas dos andares (sob demanda, em cache), portas de rua (a principal e as das lojas), móveis, escadas internas, escadas de incêndio, elevadores (de vidro também) e a colisão de tudo isso.
   - **`src/render/`:**
     - `raycaster.ts`: a ordem do quadro; `wallColumn` desenha as fachadas.
@@ -418,9 +420,9 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `lamps.ts`: falhas e fotocélula.
     - `power.ts`: o efeito do blackout, uma função pura.
     - `interior.ts`: o andar em volta do jogador (paredes, piso, teto, lâmpadas, degraus, botoeira do elevador, janelas e vidro) e os interiores vistos de fora pelas janelas (`peekInto`/`peekCell`).
-  - **`src/phone/`** (a interface do celular, como o `main.ts`: lê a simulação, não é lida por ela): `phone.ts` (estado, teclas e a lógica dos apps), `draw.ts` (o aparelho na mão, a luz nele, o boot, o mapa da cidade e o de interior, a lista de lugares), `apps.ts` (o menu em grade e as telas dos outros apps), `lcd.ts` (a tela: tamanho, cores, texto digitando, barra de status, teclas laterais, letras grandes), `gps.ts` (o receptor com os limites de 2008), `mapdata.ts` (o raster da cidade para o mapa). O hardware do aparelho fica em `sim/device.ts`. A luz nas mãos (`VIEW_LIGHT`, `VIEW_GLINT`) vem do fim de `renderWorld`.
+  - **`src/phone/`** (a interface do celular, como o `main.ts`: lê a simulação, não é lida por ela): `phone.ts` (estado, teclas e a lógica dos apps), `draw.ts` (o aparelho na mão, a luz nele, o boot, o mapa da cidade e o de interior, a lista de lugares), `apps.ts` (o menu em grade e as telas dos outros apps), `lcd.ts` (a tela: tamanho, cores, texto digitando, barra de status, teclas laterais, letras grandes), `gps.ts` (o receptor com os limites de 2008), `radio.ts` (o rádio GSM/EDGE: sinal, barras, registro, dados), `mapdata.ts` (o raster da cidade para o mapa). O hardware do aparelho fica em `sim/device.ts`. A luz nas mãos (`VIEW_LIGHT`, `VIEW_GLINT`) vem do fim de `renderWorld`.
   - **`src/audio/`:** `sound.ts` (ambiente, chuva, trovão, zumbidos) e `blackout.ts` (o som do apagão, versão A).
-  - **`src/locale/`:** `en.json` e `names.ts`.
+  - **`src/locale/`:** `en.json`, `names.ts` (nomes, operadora e os agradecimentos), `news.ts` e `thanks.json` (os nomes dos amigos).
 - **Ordem do quadro** (`renderWorld`):
   1. Por coluna: dentro de um prédio, primeiro o andar (`interiorColumn`), que ocupa as células e a profundidade e deixa livres só as janelas; depois céu (`skyColumn`, que pula células ocupadas) e Sarcófago, chão (com a curvatura e testando a profundidade), paredes (DDA na grade; telhados quando o olho está acima deles) e cerca.
   2. Depois: fumaça, guindastes, objetos, `glassPass` (o vidro das janelas por cima da cidade: escurece, reflete a lâmpada, gotas de chuva) e `finish` (fundo sólido, névoa do dia, luar, glifos de bloco).
@@ -443,6 +445,24 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Referências** (`referencias/`): 02, 14, 15, 16, 18, 19.
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
+
+- **Etapa 9, rede de telefones e celular: decisões e grupos (2026-10-01).** O usuário decidiu no início:
+  - **Grupos:**
+    - **A:** o celular mais confortável (sobe para digitar, o botão do meio tira e guarda, as teclas são clicáveis com o cursor), os easter eggs dos amigos, as antenas na simulação, o sinal real e os dados móveis com franquia.
+    - **B:** ligações e orelhões, SMS, a operadora, os códigos `*…#` e vários modelos e marcas de celular.
+    - **C:** câmera com fotos, a loja de apps (limite do EDGE e Wi-Fi) e a abertura do jogo.
+  - **Clique nas teclas: cursor livre.** Com o celular fora, o mouse solta a câmera e vira uma seta que clica nas teclas; para olhar em volta, segura-se o botão direito ou guarda-se o celular.
+  - **Quem atende até a etapa 11:** as empresas e figurantes, com **mensagens de flavor** (gravações, atendentes, "fechado", fila de espera, engano, secretária eletrônica). Gerar **umas mil** variações já pensando no que vem depois (como as 602 manchetes de `news.flavor`, com lacunas e nomes reais da cidade). Números que não existem dão o aviso da operadora.
+  - **Contatos:** o "0 of 250" é a capacidade do chip SIM, não um limite de números na cidade, que pode ter milhares. O aparelho vem só com os **contatos essenciais** (emergência e a operadora: atendimento, saldo); o resto o jogador **adiciona à mão**.
+  - **Códigos de serviço (USSD), como os da época:** digitar algo como `*100#` e ligar abre um menu de texto da operadora: consultar e recarregar créditos (o plano pode ser **pré-pago**), comprar pacote de dados, ver a franquia, o próprio número. Os códigos são da operadora da cidade (inventados, não copiados de operadoras reais).
+- **9.1, celular mais confortável (grupo A, 2026-10-01):** nas telas de digitar (`TYPING` em `phone.ts`: discador, calculadora, notas) o aparelho sobe até o teclado inteiro aparecer (`Phone.lift`; `origin` em `draw.ts`). O **botão do meio** tira e guarda. Com o celular fora, o mouse move um **cursor** (`Phone.cx/cy`, em células; a célula em inverso) em vez da câmera; a tecla sob ele clareia (`hover`) e o clique esquerdo a aperta (`keyAt`); fora das teclas, o esquerdo é OK. **Segurar o botão direito olha em volta**; um clique curto (< 0,3 s, sem arrastar) é Voltar. O clique não pôde ser testado no painel (sem pointer lock): o teste é do usuário.
+- **9.2, agradecimentos:** `src/locale/thanks.json` e `thanks()` em `names.ts`: cada nome cai uma vez por cidade em loja (40%), avenida ou rua larga, marco com nome ou distrito, nunca dois no mesmo lugar (semente 42: "Masotan Braun Grocery" e o distrito "Léo Fennix Commons"). O atlas ganhou Latin-1 (códigos 161–255; os blocos ficam em 128–138), e as lâmpadas dos letreiros usam a letra sem acento (`fontRows`).
+- **9.3, rede móvel (grupo A):**
+  - **Antenas** (`sim/telco.ts`, `world.telco`): uma a cada ~450 m (16 com a semente 42), num canto do telhado do prédio mais alto de cada trecho, a 6 m acima dele (`MAST`). Seguem a subestação, com bateria de 2–6 h de jogo no apagão (`siteUp`; com Shift+K: 16 no ar no começo, 12 em 3 h, 0 em 7 h). As do centro também são 3G (`umts`, para o futuro; o celular do jogador é só GSM/EDGE). Desenhadas como objeto (`mastModel`: armário, poste, três painéis, luz vermelha piscando, que fica acesa no blackout) junto com os outdoors (`gatherBoards`).
+  - **A linha do jogador** (`Account`): número `(área) 555-01xx` (o bloco reservado para ficção), pré-pago com $20,00 e pacote de 5 MB (`useData`).
+  - **O rádio do celular** (`phone/radio.ts`): a cada 0,5 s (~0,06 ms) ouve todas as antenas no ar: perda urbana a 900 MHz pela distância 3D até as antenas (`EIRP_STREET` = 40 dBm já com a perda da rua), −10 dB por prédio no caminho (lido do raster do mapa, até −40), −14 dentro de prédio, −22 na cabine do elevador, sombreamento de ±3 dB numa grade de 5 m. Registra em 3 s, troca de antena só com 4 dB a mais, perde o serviço abaixo de −110 dBm. Barras em −104/−95/−85/−75. Medido com a semente 42: na rua quase sempre 3–4 barras; dentro de 0 a 4 (2% sem serviço); andares altos melhores.
+  - **Dados:** `Radio.fetch` abre a sessão (1,6 s, "GPRS attach", "PDP context") e baixa no ritmo do EDGE pelo sinal (30–200 kbit/s), descontando do pacote a cada quadro; sem sinal falha, sem pacote para ("Data bundle used up"). Na barra de status, `E` pisca enquanto há dados.
+  - **Na tela:** barras reais (`Y||..`, `x` sem serviço, piscando procurando), o nome da operadora na tela inicial (`operatorName`), configurações com rede, sinal em dBm, célula, número, crédito e dados. O **app de clima** baixa a previsão (12 KB, guardada por 1 h de jogo; OK atualiza): agora, +3, +6, +12 e +24 h com céu, nuvens, vento e °F, e a fase da lua. Web e loja dizem "Coming soon" com rede (grupo C). A chamada com rede falha com "NETWORK BUSY" até o grupo B.
 
 - **Etapa 8, navegação: decisões e grupos (2026-10-01).** O usuário decidiu no início:
   - **O painel é o celular:** sai do bolso com uma tecla e aparece na mão, ocupando parte da tela; o mapa é um app dele. É o mesmo aparelho da etapa 9 (discador, SMS, câmera), então nasce já como o objeto do "Design: celular e apps".
