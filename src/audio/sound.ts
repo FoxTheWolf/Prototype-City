@@ -191,6 +191,30 @@ export class Sound {
     o.start(t); o.stop(t + 0.2);
   }
 
+  /** A key on the dialer: its touch-tone (DTMF), the two frequencies of its row and column, for a moment. */
+  dtmf(key: string) {
+    const n = '123456789*0#'.indexOf(key);
+    if (n < 0) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (const f of [[697, 770, 852, 941][Math.floor(n / 3)], [1209, 1336, 1477][n % 3]]) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.frequency.value = f; o.connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.045, t + 0.005); g.gain.setValueAtTime(0.045, t + 0.13); g.gain.linearRampToValueAtTime(0, t + 0.14);
+      o.start(t); o.stop(t + 0.2);
+    }
+  }
+
+  /** A call that cannot go through: after a moment of silence, the network's three rising tones. */
+  callFail() {
+    const ctx = this.ctx, t = ctx.currentTime + 1.6;
+    [[950, 0], [1400, 0.33], [1800, 0.66]].forEach(([f, d]) => {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.frequency.value = f; o.connect(g);
+      g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(0.04, t + d + 0.01); g.gain.setValueAtTime(0.04, t + d + 0.3); g.gain.linearRampToValueAtTime(0, t + d + 0.32);
+      o.start(t + d); o.stop(t + d + 0.4);
+    });
+  }
+
   /** The phone out of the pocket (or back in): cloth rustling, and the knock of it in the hand. */
   phoneSlide(out: boolean) {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);

@@ -734,6 +734,23 @@
     "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide", "places": "Places", "placesTitle": "PLACES", "show": "Show",
     "zoom": ["LOCAL", "DISTR", "SECTOR", "CITY"], "floor": "FLOOR", "ground": "G",
     "room": { "lobby": "LOBBY", "hall": "HALL", "stair": "STAIRS", "lift": "LIFT", "foyer": "FOYER", "living": "LIVING", "bedroom": "BED", "kitchen": "KITCHEN", "bath": "BATH", "office": "OFFICE", "open": "OFFICE", "shop": "SHOP" },
-    "app": { "map": "Maps" }
+    "app": { "map": "Maps", "calls": "Calls", "contacts": "Contacts", "messages": "Messages", "camera": "Camera", "web": "Web", "clock": "Clock", "calc": "Calc", "notes": "Notes", "weather": "Weather", "store": "Store", "settings": "Settings" },
+    "gps": { "search": "SEARCHING SATELLITES", "lost": "NO GPS SIGNAL", "inView": "IN VIEW", "lastKnown": "LAST KNOWN POSITION", "indoor": "WEAK SIGNAL INDOORS", "acc": "+-{n}m" },
+    "apps": {
+      "contacts": ["No contacts", "SIM card: 0 of 250 used", "Numbers come with the network"],
+      "camera": ["2.0 MP camera", "Coming soon", "(with the phone network)"],
+      "web": ["No data connection", "EDGE: no service", "WLAN is off"],
+      "weather": ["No data connection", "Forecasts download over EDGE", "or a Wi-Fi hotspot"],
+      "store": ["No data connection", "Apps download over EDGE", "or a Wi-Fi hotspot"],
+      "boxes": ["Inbox", "Sent", "Drafts", "Outbox"],
+      "messages": ["No network", "Messages cannot be sent"],
+      "calling": "CALLING", "noNetwork": "NO NETWORK", "callFailed": "CALL FAILED", "dialHint": "Type a number", "call": "Call", "clear": "Clear",
+      "stopwatch": "STOPWATCH", "stopwatchHint": "* reset", "start": "Start", "stop": "Stop",
+      "calcHint": ["^ +   v -   < x   > /", "OK =   * clear   # ."],
+      "notesHint": "Tap the keys: 2 abc .. 9 wxyz",
+      "model": "Model", "os": "Software", "cpu": "Processor", "ram": "Memory", "flash": "Storage", "display": "Display", "radio": "Radio", "network": "Network",
+      "wlan": "WLAN", "gps": "GPS receiver", "gpsNow": "GPS now", "imei": "IMEI",
+      "gpsFix": "FIX", "gpsSearch": "SEARCHING", "gpsLost": "NO SIGNAL", "gpsOff": "OFF (opens with Maps)"
+    }
   }
 }

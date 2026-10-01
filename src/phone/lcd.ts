@@ -1,0 +1,75 @@
+import en from '../locale/en.json';
+import { type CharGrid } from '../render/grid';
+import { fontRows } from '../render/signs';
+import { calendar } from '../sim/clock';
+import { type World } from '../sim/world';
+import { type GpsState } from './gps';
+
+/** The phone's screen: its size in cells, its colors, and the pieces every app draws with. */
+export const SW = 42, SH = 26;
+export type C3 = readonly [number, number, number];
+export const T = en.phone;
+export const LCD: C3 = [8, 15, 20], INK: C3 = [170, 225, 245], DIM: C3 = [80, 120, 140], BAR: C3 = [28, 62, 82], HI: C3 = [255, 196, 90];
+export const BAD: C3 = [255, 120, 90], SEL: C3 = [40, 90, 120], WHITE: C3 = [255, 255, 255];
+export const ch = (s: string) => s.charCodeAt(0);
+
+/** The screen's cells, clipped to the grid: (x, y) are screen columns and rows. */
+export class Lcd {
+  constructor(private g: CharGrid, private x0: number, private y0: number) {}
+  put(x: number, y: number, c: number, fg: C3, bg: C3) {
+    const gx = this.x0 + x, gy = this.y0 + y, g = this.g;
+    if (x < 0 || y < 0 || x >= SW || y >= SH || gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
+    const i = gy * g.cols + gx;
+    g.put(i, c, fg[0], fg[1], fg[2]); g.setBg(i, bg[0], bg[1], bg[2]);
+  }
+  text(x: number, y: number, s: string, fg: C3, bg: C3) { for (let k = 0; k < s.length; k++) this.put(x + k, y, s.charCodeAt(k), fg, bg); }
+  fill(y: number, bg: C3) { for (let x = 0; x < SW; x++) this.put(x, y, 32, bg, bg); }
+  /** Text centered on row y. */
+  center(y: number, s: string, fg: C3, bg: C3) { this.text((SW - s.length) >> 1, y, s, fg, bg); }
+}
+
+/** Text that types in: as much of s as `cps` characters a second have written since t = 0. */
+export const typed = (s: string, t: number, cps = 60) => s.slice(0, Math.max(0, Math.floor(t * cps)));
+
+export const hhmm = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0')}:${String(Math.floor((hour % 1) * 60)).padStart(2, '0')}`;
+
+/** The top row: no network yet (the city's antennas come with stage 9), the GPS while it runs, the time, the battery. */
+export function statusBar(S: Lcd, world: World, gps: GpsState, now: number) {
+  S.fill(0, BAR);
+  S.text(1, 0, 'Y', INK, BAR); S.text(2, 0, 'x', BAD, BAR);
+  // GPS: blinking while it searches, steady with a fix, dim when it lost the satellites
+  if (gps === 'fix') S.text(5, 0, 'GPS', [120, 255, 150], BAR);
+  else if (gps === 'search' && Math.floor(now * 2) & 1) S.text(5, 0, 'GPS', [255, 220, 120], BAR);
+  else if (gps === 'lost') S.text(5, 0, 'GPS', [110, 110, 110], BAR);
+  S.text(SW - 13, 0, hhmm(calendar(world.time).hour), INK, BAR);
+  S.text(SW - 6, 0, '[###]', [150, 230, 150], BAR);
+}
+
+export function softKeys(S: Lcd, left: string, right: string) {
+  S.fill(SH - 1, BAR);
+  S.text(1, SH - 1, left, INK, BAR);
+  S.text(SW - 1 - right.length, SH - 1, right, INK, BAR);
+}
+
+/** A title on row 1. */
+export function title(S: Lcd, s: string, t: number, right = '') {
+  S.fill(1, [16, 30, 40]);
+  S.text(1, 1, typed(s, t), HI, [16, 30, 40]);
+  if (right) S.text(SW - right.length - 1, 1, right, DIM, [16, 30, 40]);
+}
+
+/** Big 5x7 characters made of lit cells, centered on row y. */
+export function bigText(S: Lcd, y: number, s: string, col: C3, t = 1e9) {
+  const x0 = (SW - (s.length * 6 - 1)) >> 1;
+  for (let n = 0; n < s.length; n++) {
+    const rows = fontRows(s.charCodeAt(n));
+    if (!rows) continue;
+    for (let r = 0; r < 7; r++) {
+      if (r > t * 30) break; // draws in from the top
+      for (let b = 0; b < 5; b++) if ((rows[r] >> (4 - b)) & 1) S.put(x0 + n * 6 + b, y + r, 32, col, col);
+    }
+  }
+}
+
+export const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+export const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];

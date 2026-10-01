@@ -63,8 +63,11 @@ let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
-  const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));
-  sound?.phoneKey(/^\d$/.test(pk), done !== false);
+  const now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));
+  // the dialer plays touch-tones, and a call fails for want of a network
+  if (phone.screen === 'calls' && done && /^[0-9*#]$/.test(pk)) sound?.dtmf(pk);
+  else sound?.phoneKey(/^\d$/.test(pk), done !== false);
+  if (phone.screen === 'calls' && done && phone.callAt === now) sound?.callFail();
   if (done === 'away') sound?.phoneSlide(false);
 }
 function phoneToggle() {
@@ -192,7 +195,7 @@ function frame(now: number) {
   });
   const ms = performance.now() - r0;
   phone.update(dt, now / 1000);
-  drawPhone(grid, phone, world, camera.yaw, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
+  drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
