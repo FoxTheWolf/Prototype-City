@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { type RGB } from '../sim/city';
 import { type CharGrid } from './grid';
-import { bulbsIn, fontRows, SYMBOLS } from './signs';
+import { bulbOn, bulbsIn, fontRows, SYMBOLS } from './signs';
 
 /**
  * Street objects built from a few solid parts (boxes, upright cylinders, ellipsoids) in the
@@ -16,9 +16,10 @@ export const Shape = { Box: 0, Cyl: 1, Ball: 2 } as const;
  * Solid: shaded glyphs. Leaf: glyph noise fixed to the surface. Glow: a light, unshaded. Text: a lit
  * panel with the part's text stacked top to bottom on its two broad (y) faces, under a square
  * symbol when `sym` is set (see SYMBOLS). Up close letters and symbol are drawn as bulbs, like the
- * shop signs; farther, as glyphs; farther still, a lit bar.
+ * shop signs; farther, as glyphs; farther still, a lit bar. Board: a painted billboard facing +x,
+ * its text across it in 5x7 block letters (`col2` on `col`), lit from below by `lamp` (0..1).
  */
-export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3 } as const;
+export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3, Board: 4 } as const;
 
 export interface Part {
   shape: number;
@@ -32,6 +33,8 @@ export interface Part {
   end: number;
   text?: string;
   sym?: number;
+  col2?: RGB;
+  lamp?: number;
 }
 
 export interface Obj {
@@ -45,6 +48,8 @@ export interface Obj {
   r: number;
   h: number;
   seed: number;
+  /** Height of its lowest part, when it does not stand on the ground (a rooftop billboard). */
+  z0?: number;
 }
 
 export interface Cam {
@@ -119,9 +124,9 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
       if (disc < 0) continue;
       const sq = Math.sqrt(disc), tb = (-qb + sq) / qa;
       if (tb < 0.05) continue;
-      const ta = Math.max(0.05, (-qb - sq) / qa), up = o.h - v.eye;
+      const ta = Math.max(0.05, (-qb - sq) / qa), up = o.h - v.eye, down = v.eye - (o.z0 ?? 0);
       const y0 = Math.max(0, Math.floor(v.hor - (up * v.scale) / (up > 0 ? ta : tb)));
-      const y1 = Math.min(rows, Math.ceil(v.hor + (v.eye * v.scale) / (v.eye > 0 ? ta : tb)));
+      const y1 = Math.min(rows, Math.ceil(v.hor + (down * v.scale) / (down > 0 ? ta : tb)));
       for (let y = y0; y < y1; y++) {
         const i = y * cols + x;
         // cells where something nearer than the whole object is already drawn
@@ -170,8 +175,31 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         }
         if (bk < 0) continue;
         const q = o.parts[bk];
-        let ch: number, k: number;
+        let ch: number, k: number, col = q.col;
         if (q.mat === Mat.Glow) { ch = q.side; k = 0.6 + 0.4 * fog; }
+        else if (q.mat === Mat.Board && face === 0 && ox > q.x1 && q.text) {
+          // the billboard's face, read left to right from the front (+x): from +y toward -y
+          const hy = oy + dy * best, hz = oz + dz * best, W = q.y1 - q.y0, H = q.z1 - q.z0, n = q.text.length;
+          const perCol = (colW * best) / Math.max(1e-6, Math.abs(dx)), perRow = best / v.scale;
+          const lw = Math.min((W - 0.8) / n, (H * 0.62) / 1.4), lh = lw * 1.4, start = (W - n * lw) / 2;
+          const u = q.y1 - hy - start, li = Math.floor(u / lw), fz = ((q.z0 + q.z1) / 2 + lh / 2 - hz) / lh;
+          const frame = Math.min(hy - q.y0, q.y1 - hy) < Math.max(0.2, perCol / 2) || Math.min(hz - q.z0, q.z1 - hz) < Math.max(0.2, perRow / 2);
+          let fg = false;
+          ch = C('.');
+          if (frame) ch = C('=');
+          else if (li >= 0 && li < n && fz >= 0 && fz < 1) {
+            const c = q.text.charCodeAt(li), fu = (u / lw - li) * 1.25 - 0.12;
+            if (lw / perCol >= 3 && lh / perRow >= 2.6) { fg = fu >= 0 && fu < 1 && bulbOn(c, Math.floor(fu * 5), Math.floor(fz * 7)); if (fg) ch = C('#'); }
+            else if (lw / perCol >= 0.9 && lh / perRow >= 0.9) {
+              // one glyph in the cell holding the letter's center
+              fg = Math.abs(u - (li + 0.5) * lw) < perCol / 2 && Math.abs(fz - 0.5) * lh < perRow / 2 + 0.01;
+              if (fg) ch = c;
+            } else { fg = hash3(li, 1, 9) < 0.6; ch = C('='); }
+          }
+          if (frame) col = [60, 58, 55]; else if (fg) col = q.col2 ?? col;
+          // gooseneck lamps along the bottom light it from below, fading upward
+          k = (0.55 + 0.25 * hash3(Math.floor(hy * 2), Math.floor(hz * 2), 7)) * fog + (q.lamp ?? 0) * 1.3 * Math.max(0, 1 - (hz - q.z0) / H);
+        }
         else if (q.mat === Mat.Text && face === 1 && q.text) {
           // the cell's size on the face: metres along x per column, and metres per row
           const hx = ox + dx * best, hz = oz + dz * best, W = q.x1 - q.x0;
@@ -213,9 +241,10 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
             k *= 0.55 + 0.45 * h + 0.25 * nz;
           } else ch = face === 2 ? q.top : face === 0 && q.shape === Shape.Box ? q.end : q.side;
         }
-        let r = q.col[0] * k, g = q.col[1] * k, b = q.col[2] * k;
-        if (face === 2 && v.snow && q.mat !== Mat.Glow && q.mat !== Mat.Text) { const sk = v.snow * 0.85; r += (185 - r) * sk; g += (190 - g) * sk; b += (200 - b) * sk; }
-        if (q.mat !== Mat.Glow && q.mat !== Mat.Text) {
+        let r = col[0] * k, g = col[1] * k, b = col[2] * k;
+        const painted = q.mat === Mat.Glow || q.mat === Mat.Text || (q.mat === Mat.Board && face === 0);
+        if (face === 2 && v.snow && !painted) { const sk = v.snow * 0.85; r += (185 - r) * sk; g += (190 - g) * sk; b += (200 - b) * sk; }
+        if (!painted) {
           // the light where the ray hit, strongest on tops: a car lights up under a lamp or in another's headlights
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;
           const L = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz), gl = (face === 2 ? 1.5 : 1.1) * fog;

@@ -70,6 +70,24 @@ export interface Building {
   crown: RGB | null;
   shed: boolean;
   ad: number;
+  /** A billboard on the roof advertising a business, facing a street; null when there is none. */
+  board: Board | null;
+  /** Neon tubes along the corners and the roof line, in this color; null when there are none. */
+  neon: RGB | null;
+}
+
+/**
+ * A rooftop billboard: the panel's middle at (x, y), facing the street along angle a, w metres
+ * wide and h tall, standing on legs from the roof up to z. biz is the business it advertises.
+ */
+export interface Board {
+  biz: number;
+  x: number;
+  y: number;
+  a: number;
+  w: number;
+  h: number;
+  z: number;
 }
 
 /**
@@ -135,8 +153,11 @@ export interface Prop {
 const BLADE: Partial<Record<BusinessKind, number>> = {
   hotel: 1, cinema: 1, parking: 1, bar: 0.6, pawn: 0.6, liquor: 0.4, cafe: 0.4, diner: 0.4, pharmacy: 0.3,
 };
-/** A blade sign's panel starts this high and has one letter every BLADE_LETTER metres. */
-export const BLADE_Z = 3.8, BLADE_LETTER = 0.75;
+/**
+ * A blade sign's panel starts this high and has one letter every BLADE_LETTER metres; hotels and
+ * cinemas on tall enough buildings hang a tall one instead, BLADE_TALL metres a letter, over several floors.
+ */
+export const BLADE_Z = 3.8, BLADE_LETTER = 0.75, BLADE_TALL = 1.5;
 
 /**
  * Street-lamp technology around 2008 in an American city: high-pressure sodium (amber) almost
@@ -475,6 +496,9 @@ function coreAt(x: number, y: number, cx: number, cy: number, radius: number) {
 }
 
 /** Colors a tower's top is washed in at night: warm white, gold, red, blue, violet, green. */
+/** Neon tube colors: pink, cyan, violet, green, red, amber. */
+const NEON: RGB[] = [[255, 70, 170], [60, 230, 255], [170, 90, 255], [90, 255, 140], [255, 60, 60], [255, 170, 50]];
+
 const CROWNS: RGB[] = [[255, 235, 190], [255, 190, 80], [255, 70, 60], [80, 140, 255], [190, 100, 255], [90, 230, 170]];
 
 const WIN: RGB[] = [[255, 206, 110], [120, 220, 255], [90, 150, 255], [255, 150, 70], [190, 255, 170], [255, 130, 200], [255, 240, 200]];
@@ -640,7 +664,7 @@ export function generateCity(seed: number, size: number): City {
         if (Math.min(lw, lh) - 2 * inset < 8) break;
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
         const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
-        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1 };
+        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1, board: null, neon: null };
         if (k === 1 && fl) { const u = hash3(seed, ax0 | 0, ay0 | 0); top.flood = fl; top.floodH = Math.min(bh, fl === FLOOD_WARM ? 14 + u * 30 : 30 + u * 60); }
         buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
@@ -651,7 +675,7 @@ export function generateCity(seed: number, size: number): City {
 
     /** A rooftop shape centered at (x, y) with half-size (or radius) s, reaching height h. */
     const part = (x: number, y: number, s: number, h: number, style: Facade, round: boolean, frame: RGB, win: RGB) => {
-      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null, flood: null, floodH: 0, tier: 0, crown: null, shed: false, ad: -1 });
+      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null, flood: null, floodH: 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null });
       block.maxH = Math.max(block.maxH, h);
     };
     /** Drum with windows, then a dome of stacked rings and a small lantern on top. */
@@ -691,7 +715,7 @@ export function generateCity(seed: number, size: number): City {
     /** A plain building of this landmark. */
     const house = (bx0: number, by0: number, bx1: number, by1: number, bh: number, style: Facade, frame: RGB, win: RGB, lit: number) => {
       const civic = lm === 'hall' || lm === 'church' || lm === 'clock';
-      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null, flood: civic ? FLOOD_WARM : null, floodH: civic ? Math.min(bh, 28) : 0, tier: 0, crown: null, shed: false, ad: -1 });
+      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null, flood: civic ? FLOOD_WARM : null, floodH: civic ? Math.min(bh, 28) : 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null });
       block.maxH = Math.max(block.maxH, bh);
     };
     const long = ix1 - ix0 > iy1 - iy0;
@@ -813,7 +837,7 @@ export function generateCity(seed: number, size: number): City {
       B.biz = businesses.length;
       const kind = shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by) * shops.length)];
       businesses.push({ kind, building: k, name: Math.floor(hash3(seed ^ 0x3b9ac1, bx, by) * 1e9) });
-      if (hash3(seed ^ 0x7b1ade, bx, by) < (BLADE[kind] ?? 0)) bladeSign(block, B, hash3(seed ^ 0x7b1ade, by, bx));
+      if (hash3(seed ^ 0x7b1ade, bx, by) < (BLADE[kind] ?? 0)) bladeSign(block, B, hash3(seed ^ 0x7b1ade, by, bx), kind);
     }
     // facade dressing, from each building's position so nothing else moves: lit crowns on towers,
     // sidewalk sheds (scaffolding) along the street, ads painted high on the walls of walk-ups
@@ -822,6 +846,23 @@ export function generateCity(seed: number, size: number): City {
       if (B.tier >= 1 && floors > 22 && (B.style === 'office' || B.style === 'glass' || B.style === 'historic') && hash3(seed ^ 0xc0f1, bx, by) < 0.55) B.crown = CROWNS[Math.floor(hash3(seed ^ 0xc0f2, bx, by) * CROWNS.length)];
       if (B.tier === 1 && B.style !== 'warehouse' && !B.round && hash3(seed ^ 0x5bed, bx, by) < 0.07) B.shed = true;
       if (B.tier === 1 && !B.round && businesses.length && (B.style === 'brick' || B.style === 'residential' || B.style === 'warehouse') && B.h > 10 && hash3(seed ^ 0xadad, bx, by) < 0.3) B.ad = Math.floor(hash3(seed ^ 0xadae, bx, by) * businesses.length);
+      // neon tubes on the corners and roof line: common on the commercial strips, rarer on towers
+      const type = districts[district].type;
+      const neonP = B.tier < 1 || B.style === 'warehouse' ? 0 : type === 'commercial' ? 0.18 : type === 'financial' ? 0.08 : type === 'residential' ? 0.03 : 0;
+      if (hash3(seed ^ 0x4e0e, bx, by) < neonP) B.neon = NEON[Math.floor(hash3(seed ^ 0x4e0f, bx, by) * NEON.length)];
+      // a billboard on the roof of a low or middling building (its top box), facing a street
+      const topBox = B.tier >= 1 && !(k + 1 < buildings.length && buildings[k + 1].tier === B.tier + 1);
+      if (topBox && !B.round && businesses.length && B.h > 7 && B.h < 90 && !B.crown && type !== 'historic' && hash3(seed ^ 0xb0a4, bx, by) < 0.14) {
+        B.board = billboard(block, B, Math.floor(hash3(seed ^ 0xb0a5, bx, by) * businesses.length), hash3(seed ^ 0xb0a6, bx, by));
+        // not where a water tank or machinery already stands on the roof
+        const Bd = B.board;
+        if (Bd) for (let q = block.b0; q < buildings.length; q++) {
+          const P = buildings[q], pr = (P.x1 - P.x0) / 2, cx = P.x0 + pr, cy = P.y0 + pr;
+          if (P.tier !== 0 || P.h <= B.h || cx < B.x0 || cx > B.x1 || cy < B.y0 || cy > B.y1) continue;
+          const ux = -Math.sin(Bd.a), uy = Math.cos(Bd.a), u = (cx - Bd.x) * ux + (cy - Bd.y) * uy, n = (cx - Bd.x) * uy - (cy - Bd.y) * ux;
+          if (Math.abs(u) < Bd.w / 2 + pr + 0.5 && Math.abs(n) < pr + 1.5) { B.board = null; break; }
+        }
+      }
     }
     block.b1 = buildings.length;
   }
@@ -838,26 +879,52 @@ export function generateCity(seed: number, size: number): City {
   return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
 }
 
+/** Faces of a building on the sidewalk: the sides on the block's edge, and a face cut by the diagonal. */
+function streetFaces(block: Block, B: Building): number[] {
+  const ix0 = block.x0 + SIDEWALK, iy0 = block.y0 + SIDEWALK, ix1 = block.x1 - SIDEWALK, iy1 = block.y1 - SIDEWALK;
+  const faces = [B.x0 <= ix0 + 0.01, B.x1 >= ix1 - 0.01, B.y0 <= iy0 + 0.01, B.y1 >= iy1 - 0.01, !!B.cut];
+  return faces.map((f, k) => (f ? k : -1)).filter((k) => k >= 0);
+}
+
+/** Point at u along face f of a building, pushed `out` metres outward, and the face's outward angle. */
+function onFace(B: Building, f: number, u: number, out: number): [number, number, number] {
+  if (f === 4) { const K = B.cut!; return [K.nx * (K.c + out) + K.ny * u, K.ny * (K.c + out) - K.nx * u, Math.atan2(K.ny, K.nx)]; }
+  if (f < 2) return [f === 0 ? B.x0 - out : B.x1 + out, u, f === 0 ? Math.PI : 0];
+  return [u, f === 2 ? B.y0 - out : B.y1 + out, f === 2 ? -Math.PI / 2 : Math.PI / 2];
+}
+
+/**
+ * A rooftop billboard over the widest street face, set 1.5 m back from it and facing out, as wide
+ * as the face allows (up to 14 m) and a third as tall; r picks the face when several are as good.
+ */
+function billboard(block: Block, B: Building, biz: number, r: number): Board | null {
+  const open = streetFaces(block, B);
+  let best = -1, len = 0;
+  for (const f of open) { const sp = faceSpan(B, f), l = sp[1] - sp[0] + r * 0.5; if (l > len) { len = l; best = f; } }
+  if (best < 0) return null;
+  const sp = faceSpan(B, best), w = Math.min(14, sp[1] - sp[0] - 2);
+  if (w < 6) return null;
+  const [x, y, a] = onFace(B, best, (sp[0] + sp[1]) / 2, -1.5);
+  return { biz, x, y, a, w, h: Math.max(2.5, Math.min(4.5, w / 3)), z: B.h + 1.6 + r };
+}
+
 /**
  * A blade sign on one of the building's faces toward a street, near one end of it; seed is the
  * business. The renderer stacks its letters and makes it as tall as its word (up to 8 letters),
  * so it is only hung where the building is tall enough.
  */
-function bladeSign(block: Block, B: Building, r: number) {
-  if (B.h < BLADE_Z + 8 * BLADE_LETTER + 2) return; // room for the longest word and a symbol
-  const ix0 = block.x0 + SIDEWALK, iy0 = block.y0 + SIDEWALK, ix1 = block.x1 - SIDEWALK, iy1 = block.y1 - SIDEWALK;
-  // faces on the sidewalk: the sides on the block's edge, and a face cut by the diagonal
-  const faces = [B.x0 <= ix0 + 0.01, B.x1 >= ix1 - 0.01, B.y0 <= iy0 + 0.01, B.y1 >= iy1 - 0.01, !!B.cut];
-  const open = faces.map((f, k) => (f ? k : -1)).filter((k) => k >= 0);
+function bladeSign(block: Block, B: Building, r: number, kind: BusinessKind) {
+  // hotels and cinemas hang a tall sign over several floors where there is room for one
+  const letter = (kind === 'hotel' || kind === 'cinema') && B.h >= BLADE_Z + 8 * BLADE_TALL + 3 ? BLADE_TALL : BLADE_LETTER;
+  if (B.h < BLADE_Z + 8 * letter + 2) return; // room for the longest word and a symbol
+  const open = streetFaces(block, B);
   if (!open.length) return;
   const f = open[Math.floor(r * open.length)], sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
   if (hi - lo < 4) return;
   const u = (r * 7) % 1 < 0.5 ? lo + 1.2 : hi - 1.2;
-  let x: number, y: number, a: number;
-  if (f === 4) { const K = B.cut!; x = K.nx * K.c + K.ny * u; y = K.ny * K.c - K.nx * u; a = Math.atan2(K.ny, K.nx); }
-  else if (f < 2) { x = f === 0 ? B.x0 : B.x1; y = u; a = f === 0 ? Math.PI : 0; }
-  else { x = u; y = f === 2 ? B.y0 : B.y1; a = f === 2 ? -Math.PI / 2 : Math.PI / 2; }
-  block.props.push({ kind: 'blade', x, y, w: 0, z1: 0, seed: B.biz, a });
+  const [x, y, a] = onFace(B, f, u, 0);
+  // z1 carries the letter size
+  block.props.push({ kind: 'blade', x, y, w: 0, z1: letter, seed: B.biz, a });
 }
 
 /** A piece of block cut off by the diagonal and smaller than this (m²) is left as a plaza. */

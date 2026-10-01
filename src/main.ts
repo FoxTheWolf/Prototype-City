@@ -56,7 +56,7 @@ let layout: Layout;
 let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
-let solidStep = 2; // 0.08, the user's pick
+let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 // the lift car's panel: aim at a button and click it
 addEventListener('mousedown', (e) => {

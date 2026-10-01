@@ -3,7 +3,7 @@ import { type RGB } from '../sim/city';
 import { Mat, part, Shape, type Part } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
-const { Solid, Leaf, Glow, Text } = Mat;
+const { Solid, Leaf, Glow, Text, Board } = Mat;
 
 const GLASS: RGB = [45, 65, 95];
 const TIRE: RGB = [28, 28, 32];
@@ -169,25 +169,42 @@ export const FLOOD: Part[] = [
 const blades = new Map<string, Part[]>();
 /** Height of a blade sign's panel: its letters, a square symbol on top if it has one, and the frame. */
 export function bladeHeight(text: string, sym: number, letter: number) {
-  return text.length * letter + (sym >= 0 ? 0.78 : 0) + 0.3;
+  return text.length * letter + (sym >= 0 ? letter * 1.04 : 0) + 0.3;
+}
+/** Reach of a blade sign from the wall. */
+export function bladeReach(letter: number) {
+  return 0.4 + letter * 1.2;
 }
 /**
  * Blade sign, sticking out of a wall along +x: two steel arms, a dark frame and the lit panel with
- * its word stacked from the top. `col` is the neon's color at its current brightness.
+ * its word stacked from the top. `col` is the neon's color at its current brightness. A tall one
+ * (bigger letters) has more arms and bulbs chasing up its two edges.
  */
-export function bladeModel(text: string, sym: number, col: RGB, z0: number, letter: number): Part[] {
-  const key = text + sym + col.join();
+export function bladeModel(text: string, sym: number, col: RGB, z0: number, letter: number, chase = 0): Part[] {
+  const key = text + sym + col.join() + letter + chase;
   let m = blades.get(key);
   if (m) return m;
-  const z1 = z0 + bladeHeight(text, sym, letter);
+  const z1 = z0 + bladeHeight(text, sym, letter), x1 = bladeReach(letter), wy = 0.16 * letter / 0.75;
   m = [
-    part(Box, 0, -0.04, z1 - 0.35, 0.4, 0.04, z1 - 0.25, STEEL, Solid, '-', '-', '|'),
-    part(Box, 0, -0.04, z0 + 0.25, 0.4, 0.04, z0 + 0.35, STEEL, Solid, '-', '-', '|'),
-    part(Box, 0.4, -0.16, z0, 1.3, 0.16, z1, [40, 36, 44], Solid, '|', '=', '|'),
-    part(Box, 0.46, -0.18, z0 + 0.15, 1.24, 0.18, z1 - 0.15, col, Text, ' '),
+    part(Box, 0.4, -wy, z0, x1, wy, z1, [40, 36, 44], Solid, '|', '=', '|'),
+    part(Box, 0.46, -wy - 0.02, z0 + 0.15, x1 - 0.06, wy + 0.02, z1 - 0.15, col, Text, ' '),
   ];
-  m[3].text = text;
-  if (sym >= 0) m[3].sym = sym;
+  m[1].text = text;
+  if (sym >= 0) m[1].sym = sym;
+  const arms = letter > 1 ? 4 : 2;
+  for (let k = 0; k < arms; k++) {
+    const z = z0 + 0.3 + ((z1 - z0 - 0.6) * k) / (arms - 1);
+    m.push(part(Box, 0, -0.04, z - 0.05, 0.4, 0.04, z + 0.05, STEEL, Solid, '-', '-', '|'));
+  }
+  if (letter > 1) {
+    // bulbs up the front and back edges, every third one lit, climbing
+    const n = Math.floor((z1 - z0) / 0.5);
+    for (let k = 0; k < n && m.length < 30; k += 1) {
+      if ((k + chase) % 3) continue;
+      const z = z0 + 0.25 + k * 0.5;
+      m.push(part(Box, x1 - 0.02, -wy - 0.06, z - 0.08, x1 + 0.06, wy + 0.06, z + 0.08, [255, 230, 160], Glow, 'o'));
+    }
+  }
   if (blades.size > 4000) blades.clear();
   blades.set(key, m);
   return m;
@@ -312,5 +329,39 @@ export function shedModel(len: number): Part[] {
     part(Ball, -0.08, -0.08, 2.75, 0.08, 0.08, 2.95, [255, 225, 160], Glow, 'o'),
   ];
   shedModels.set(key, m);
+  return m;
+}
+
+const boards = new Map<string, Part[]>();
+/**
+ * Rooftop billboard facing +x, w wide and h tall, standing on a roof at height `base` with its
+ * panel's foot at `top` (both world heights): a painted panel with `text` (fg on bg), steel legs and braces behind it, a catwalk along
+ * its foot and gooseneck lamps over the catwalk, lit at `lamp` (0..1, in eighths).
+ */
+export function boardModel(text: string, w: number, h: number, base: number, top: number, bg: RGB, fg: RGB, lamp: number): Part[] {
+  const key = `${text}|${w.toFixed(1)}|${h.toFixed(1)}|${base.toFixed(1)}|${top.toFixed(1)}|${bg.join()}|${fg.join()}|${lamp}`;
+  let m = boards.get(key);
+  if (m) return m;
+  const hw = w / 2, z0 = top, z1 = top + h;
+  m = [part(Box, -0.12, -hw, z0, 0.12, hw, z1, [70, 70, 75], Board, '#', '=', '#')];
+  m[0].text = text; m[0].col = bg; m[0].col2 = fg; m[0].lamp = lamp;
+  // legs and braces behind the panel
+  const legs = Math.max(2, Math.round(w / 4) + 1);
+  for (let k = 0; k < legs; k++) {
+    const y = -hw + 0.4 + ((w - 0.8) * k) / (legs - 1);
+    m.push(part(Box, -0.5, y - 0.1, base, -0.3, y + 0.1, z1 - 0.3, STEEL, Solid, '|', '.'));
+    m.push(part(Box, -0.3, y - 0.05, z0 - 0.2, -0.12, y + 0.05, z1 - 0.3, STEEL, Solid, '|'));
+  }
+  m.push(part(Box, -0.5, -hw, (base + z0) / 2 - 0.06, -0.3, hw, (base + z0) / 2 + 0.06, STEEL, Solid, '-', '='));
+  // catwalk with its rail, and the lamps on their arms
+  m.push(part(Box, 0.12, -hw, z0 - 0.12, 0.95, hw, z0 - 0.02, STEEL, Solid, '=', '#'));
+  m.push(part(Box, 0.9, -hw, z0 - 0.02, 0.95, hw, z0 + 0.06, STEEL, Solid, '-'));
+  const lamps = Math.max(2, Math.round(w / 3.5));
+  for (let k = 0; k < lamps && m.length < 31; k++) {
+    const y = -hw + (w * (k + 0.5)) / lamps;
+    m.push(part(Box, 0.75, y - 0.12, z0 + 0.06, 1.0, y + 0.12, z0 + 0.22, lamp > 0.05 ? [255 * lamp + 40, 235 * lamp + 38, 190 * lamp + 36] : [70, 70, 72], lamp > 0.05 ? Glow : Solid, lamp > 0.05 ? '*' : '-'));
+  }
+  if (boards.size > 2000) boards.clear();
+  boards.set(key, m);
   return m;
 }

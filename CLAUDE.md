@@ -213,7 +213,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 - **Decisões da etapa 4 (2026-09-30):**
   - **Paleta: sódio âmbar (escolhida pelo usuário em 2026-09-30,** depois de comparar com neon noir e verde terminal). As outras foram removidas.
-  - **Fundo colorido:** o usuário gosta das duas versões, com e sem fundo. A tecla **B** passa por estágios: 0,24 da cor do glifo, 0,16, **0,08 (o padrão desde 2026-10-01, o "3/3" escolhido pelo usuário; antes era 0,16)** e desligado (`SOLID` em `main.ts`). Antes era 0,36, que ele achou claro e sólido demais.
+  - **Fundo colorido:** o usuário gosta das duas versões, com e sem fundo. A tecla **B** passa por estágios: **0,24 da cor do glifo (o padrão, o "1/3" escolhido pelo usuário em 2026-10-01)**, 0,16, 0,08 e desligado (`SOLID` em `main.ts`). Antes era 0,36, que ele achou claro e sólido demais.
   - **Caracteres:** o usuário prefere **ASCII**, que é o padrão. Os blocos Unicode (`░▒▓█─│┌`) ficam como opção na tecla **U**, enquanto não atrapalharem o desenvolvimento.
   - **Som:** o módulo de áudio (Web Audio, sintetizado, sem arquivos) nasce na etapa 4, com os sons de ambiente: zumbido de neon que falha junto com o letreiro, zumbido de poste de sódio, cidade distante e tom grave perto da zona de fogo.
 

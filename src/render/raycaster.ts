@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, carModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, boardModel, carModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -383,6 +383,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
   drawEscapes(grid, world, v, dirX, dirY, plX, plY, plane, scale, hor);
+  const boardObjs = gatherBoards(world, v, sky.day);
+  if (boardObjs.length) drawObjects(grid, boardObjs, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: BOARD_FAR, light: lit, snow: snowC });
   if (sheds.length) drawObjects(grid, sheds, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
   if (inside) {
     // the floor's furniture, lit by its rooms' lamps
@@ -618,6 +620,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   // metres of facade per column (dAlong, grows when the face is seen at a slant) and per row
   const letters = LETTER_W / dAlong >= 0.9, dz = t / scale; // below one column per letter it is just a glowing bar
   const floodBase = side === 2 ? 0 : f0; // floodlights line up from the face's start
+  const neonK = pw * (1 - 0.55 * frameDay), neonChase = hash3(id, 3, 31) < 0.35;
   const wall = (c: number, k: number) => { ch = c; r = fr * k * shade; g = fg * k * shade; b = fb * k * shade; };
   // a window: lit ones glow in the building's window color, dark ones are deep blue glass
   const pane = (fl: number, litCh: number) => {
@@ -815,6 +818,17 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         r += GL[0] * k; g += GL[1] * k; b += GL[2] * k;
       }
     }
+    if (B.neon) {
+      // neon tubes up the corners and along the roof line (a few chase), and their glow on the wall
+      const eA = Math.min(along - f0, f1 - along), dTop = Math.abs(z - (B.h - 0.3));
+      const tw = Math.max(0.1, dAlong * 0.6), tz = Math.max(0.1, dz * 0.6), onTube = (eA < tw && z < B.h - 0.3 + tz) || dTop < tz;
+      const s = eA < tw ? z : along, run = neonChase && Math.floor((s - frameSec * 5) / 1.4) % 3 === 0 ? 0.25 : 1, k = neonK * run;
+      if (onTube) { ch = eA < tw ? G.bar : G.dash; r = B.neon[0] * k + 70 * k; g = B.neon[1] * k + 70 * k; b = B.neon[2] * k + 70 * k; }
+      else {
+        const hk = Math.max(0, 1 - Math.min(eA, dTop) / 1.6) ** 2 * 0.5 * k;
+        r += B.neon[0] * hk; g += B.neon[1] * hk; b += B.neon[2] * hk;
+      }
+    }
     if (B.crown && z > B.h - CROWN_H) {
       // the top washed in light at night, brightest at the very top
       const k = ((z - (B.h - CROWN_H)) / CROWN_H) ** 1.4 * 0.95 * pw * (1 - 0.85 * frameDay);
@@ -928,6 +942,29 @@ function gatherRoofs(world: World, v: View) {
   }
 }
 
+/** Rooftop billboards are drawn this far. */
+const BOARD_FAR = 500;
+const boardList: Obj[] = [];
+/** The rooftop billboards within BOARD_FAR, lit by their lamps at night on their building's power. */
+function gatherBoards(world: World, v: View, day: number): Obj[] {
+  boardList.length = 0;
+  const { city } = world;
+  for (const blk of city.blocks) {
+    if (blk.x1 < v.x - BOARD_FAR || blk.x0 > v.x + BOARD_FAR || blk.y1 < v.y - BOARD_FAR || blk.y0 > v.y + BOARD_FAR) continue;
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const Bd = city.buildings[k].board;
+      if (!Bd || Math.hypot(Bd.x - v.x, Bd.y - v.y) > BOARD_FAR) continue;
+      const text = signText(city, Bd.biz, Math.floor((Bd.w - 0.8) / 0.9));
+      if (text.length < 2) continue;
+      const pal = Math.floor(hash3(k, Bd.biz, 79) * AD_BG.length);
+      const lamp = Math.round(Math.max(0, Math.min(1, (1 - day) * buildingPower(world, k, frameSec))) * 8) / 8;
+      const B = city.buildings[k];
+      boardList.push({ x: Bd.x, y: Bd.y, c: Math.cos(Bd.a), s: Math.sin(Bd.a), parts: boardModel(text, Bd.w, Bd.h, B.h, Bd.z, AD_BG[pal], AD_FG[pal], lamp), r: Bd.w / 2 + 1.2, h: Bd.z + Bd.h + 0.1, z0: B.h, seed: k });
+    }
+  }
+  return boardList;
+}
+
 /** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
 function gatherLights(world: World, v: View, sec: number) {
   const { city } = world;
@@ -1021,10 +1058,13 @@ function collectObjects(world: World, v: View): Obj[] {
       else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
       else if (p.kind === 'blade') {
         // lit and flickering like the business's shop sign (brightness in eighths, so models are reused)
-        const bi = city.businesses[p.seed].building, B = city.buildings[bi], text = bladeText(city, p.seed);
-        const lit = Math.round(signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, frameSec) * Math.min(1.25, buildingPower(world, bi, frameSec)) * 8) / 8;
+        const bi = city.businesses[p.seed].building, B = city.buildings[bi], text = bladeText(city, p.seed), letter = p.z1 || BLADE_LETTER;
+        const pw = buildingPower(world, bi, frameSec);
+        const lit = Math.round(signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, frameSec) * Math.min(1.25, pw) * 8) / 8;
         const sym = BLADE_SYMBOL[city.businesses[p.seed].kind] ?? -1;
-        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, sym, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, BLADE_LETTER), r: 1.4, h: BLADE_Z + bladeHeight(text, sym, BLADE_LETTER), seed: 0 });
+        // a tall sign's edge bulbs climb, on the building's power
+        const chase = letter > 1 && pw > 0.05 ? Math.floor(frameSec * 6) % 3 : letter > 1 ? 1.5 : 0;
+        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, sym, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, letter, chase), r: bladeReach(letter) + 0.3, h: BLADE_Z + bladeHeight(text, sym, letter), seed: 0 });
       }
       else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
       else {
