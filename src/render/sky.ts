@@ -154,6 +154,7 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
   const top = Math.min(grid.rows, Math.ceil(hor - 0.5));
   for (let y = 0; y < top; y++) {
     const i = y * cols + x;
+    if (grid.depth[i] < 1e9) continue; // a room's ceiling or wall is in front
     const up = (hor - (y + 0.5)) / scale / L; // tan of the elevation
     const t = Math.max(0, Math.min(1, (y + 0.5) / Math.max(1, hor)));
     // gradient: night, day haze, and the dusk color low on the sun's side; the seam lights the low sky orange

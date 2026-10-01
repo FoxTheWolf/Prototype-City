@@ -1,5 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
-import { generateCity, isSolid, SIDEWALK, type City } from './city';
+import { generateCity, SIDEWALK, type City } from './city';
+import { baseAt, blocked } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { spawnCars, stepCars, type Car } from './traffic';
@@ -15,6 +16,9 @@ export interface Player {
   px: number;
   py: number;
   speed: number;
+  /** Storey the player stands on (0 = the street), and the building around them (its ground volume), or -1. */
+  floor: number;
+  inside: number;
 }
 
 /** What the player asks for this tick. The only way the outside world affects the sim. */
@@ -54,7 +58,7 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
-  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0 }, time, ptime: time, weather, power: buildPower(seed, city) };
+  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1 }, time, ptime: time, weather, power: buildPower(seed, city) };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -90,9 +94,12 @@ export function stepWorld(w: World, input: PlayerInput) {
   p.speed = Math.hypot(vx, vy);
   const R = 0.3;
   const nx = p.x + vx * TICK;
-  if (!isSolid(w.city, nx + Math.sign(vx) * R, p.y - R * 0.7) && !isSolid(w.city, nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
+  // probes ahead of the player on both shoulders; walls, doorways and the street door are in interior.ts
+  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y);
+  if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
-  if (!isSolid(w.city, p.x - R * 0.7, ny + Math.sign(vy) * R) && !isSolid(w.city, p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
+  if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
+  p.inside = baseAt(w.city, p.x, p.y);
 
   stepCars(w.city, w.cars, w.rng, TICK, p.x, p.y);
   w.ptime = w.time;

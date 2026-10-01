@@ -38,7 +38,7 @@ let taken = new Uint8Array(0);
  * Draw the fall. yaw, plane and scale are the camera's; light(x, y, z) is the light at a world
  * point (lamps, signs, headlights) as r, g, b.
  */
-export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: number, yaw: number, plane: number, scale: number, hor: number, light: (x: number, y: number, z: number) => Float32Array) {
+export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: number, yaw: number, plane: number, scale: number, hor: number, light: (x: number, y: number, z: number) => Float32Array, nearT?: Float32Array) {
   if (f.amount <= 0.01) return;
   const { cols, rows, depth, cells, bg } = grid;
   // cells already holding a nearer drop this frame (the depth buffer stays the world's)
@@ -61,6 +61,7 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
     const glyph = f.snow ? 0 : Math.abs(cross) < 0.1 ? C('|') : cross > 0 ? C('/') : C('\\');
     for (let s = 0; s < SHELLS.length; s++) {
       const t = SHELLS[s], dist = t / L; // depth along the ray param
+      if (nearT && dist <= nearT[x]) continue; // indoors: only beyond the window
       // the drops of this column in each 3 m band of the fall, from the ground up to TOP
       const cap = f.snow ? 1 : Math.max(1.5, 6 - s * 0.6);
       const near = 1 - s / SHELLS.length;

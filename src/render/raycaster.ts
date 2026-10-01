@@ -1,6 +1,8 @@
 import { hash3 } from '../core/rng';
-import { BLADE_LETTER, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BAY, BLADE_LETTER, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
+import { baseAt, DOOR_H, doorOf, habitable, planOf } from '../sim/interior';
+import { glassPass, interiorColumn, prepareInside, type Inside } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
@@ -25,6 +27,8 @@ export interface View {
   pitch: number;
   /** Eye height in metres. */
   eye: number;
+  /** Storey the viewer stands on, 0 at street level. */
+  floor: number;
   /** Interpolation factor between the previous and current sim tick. */
   alpha: number;
   /** Cell width / cell height in pixels, needed for correct vertical scale. */
@@ -44,8 +48,6 @@ const FOG = 1500;
 const LIT_H = 9, LIT_FAR = 600;
 /** Litter on the ground is drawn only this close. */
 const LITTER_FAR = 14;
-/** Width of one window bay on a facade. */
-const BAY = 1.6;
 /** Spacing of the floodlights along the foot of a floodlit facade. */
 const FLOOD_GAP = 6;
 
@@ -78,7 +80,7 @@ const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
-let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0;
+let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0, frameInside = false;
 let framePower: PowerGrid;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
@@ -88,6 +90,8 @@ for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], ['
 const hitT = new Float64Array(1024);
 const hitId = new Int32Array(1024);
 const hitSide = new Uint8Array(1024);
+/** Per column: distance to the window glass when indoors, so the rain is not drawn in the room. */
+let nearT = new Float32Array(0);
 
 export function renderWorld(grid: CharGrid, world: World, v: View) {
   const { cols, rows } = grid;
@@ -117,10 +121,24 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const W = world.weather, wet = W.wet, snowC = (frameSnow = W.snowCover), rain = W.snow ? 0 : W.precip;
   light.update(frameSec, sky.day, world.power);
   gatherLights(world, v, frameSec);
+  // indoors: the floor is drawn over the city, which shows only through the windows; the building's
+  // own boxes (setbacks, rooftop parts) are left out of the city
+  if (nearT.length !== cols) nearT = new Float32Array(cols); else nearT.fill(0);
+  const kIn = baseAt(city, px, py), plan = kIn >= 0 ? planOf(city, kIn, v.floor) : null;
+  let inside: Inside | null = null, skip: Building | null = null;
+  if (plan) {
+    skip = city.buildings[kIn];
+    inside = { city, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, door: doorOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
+    prepareInside(inside, px, py);
+  }
+  frameInside = !!inside;
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
     const rdx = dirX + plX * camX, rdy = dirY + plY * camX, L = Math.hypot(rdx, rdy);
+
+    // indoors the room comes first; the city fills only the cells its windows leave open
+    if (inside) interiorColumn(grid, x, inside, px, py, rdx, rdy, eye, hor, scale, nearT);
 
     // ---- sky: gradient, stars, moon and clouds (sky.ts); below the horizon a dark base
     const az = v.yaw + Math.atan(camX * plane);
@@ -265,6 +283,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           let n = 0;
           for (let k = blk.b0; k < blk.b1; k++) {
             const B = city.buildings[k];
+            if (skip && B.x0 >= skip.x0 - 0.01 && B.x1 <= skip.x1 + 0.01 && B.y0 >= skip.y0 - 0.01 && B.y1 <= skip.y1 + 0.01) continue;
             let tNear: number, side: number;
             if (B.round) {
               // upright cylinder inscribed in the box: nearest root of |p + t*d - c| = r
@@ -334,9 +353,10 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   drawCranes(grid, city, v.x, v.y, eye, dirX, dirY, plX, plY, scale, hor, frameSec);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
+  if (inside) glassPass(grid, inside, eye, hor, scale);
   finish(grid, v.look, sky);
   // after finish, so the drops keep the background of what is behind them
-  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit);
+  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT);
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
@@ -502,6 +522,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner;
   const escU = ((wi % 7) - 2 + fw) / 2;
   const balcony = S === 'residential' && B.feat < 0.5;
+  const door = B.tier === 1 && habitable(B) ? doorOf(frameCity, id) : null;
   let ch = 0, r = 0, g = 0, b = 0;
   // the shop sign on this face: the business name centered on it, if at least 3 letters fit
   let signN = 0, signU = 0, text = '', mode = 0;
@@ -527,6 +548,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   };
   for (let y = y0; y < y1; y++) {
     const i = y * grid.cols + x;
+    if (frameInside && grid.depth[i] < t + 0.5) continue; // the room around the viewer is in front (a neighbour may touch its wall)
     const z = eye + ((hor - (y + 0.5)) / scale) * t;
     const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
     if (S === 'spire' || S === 'chimney') {
@@ -610,7 +632,12 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       } else if (!inText && (z < 2.72 || z > 3.28)) { ch = G.dash; r = B.sign[0] * lit * 0.45; g = B.sign[1] * lit * 0.45; b = B.sign[2] * lit * 0.45; }
       else { ch = G.dot; r = 14; g = 12; b = 16; } // dark backing board
     }
-    else if (!detailed) {
+    else if (door && face === door.face && along > door.a0 && along < door.a1 && z < DOOR_H + 0.35) {
+      // the street door: a frame, two glass leaves and a transom, lit from the lobby
+      const e = Math.min(along - door.a0, door.a1 - along);
+      if (e < 0.12 || z > DOOR_H + 0.22) wall(e < 0.12 ? G.bar : G.eq, 1.5);
+      else { const k = 0.55 * elec; ch = z > DOOR_H ? G.dash : Math.abs(along - (door.a0 + door.a1) / 2) < 0.06 ? G.bar : G.col; r = 255 * k; g = 220 * k; b = 160 * k; }
+    } else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv), wp = hh < litK ? winPow(wi >> kh, fl >> kv) : 0;
       if (wp > 0.04) {
         ch = hh < litK * 0.4 ? G.o : G.col;
