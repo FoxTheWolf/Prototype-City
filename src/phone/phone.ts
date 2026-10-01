@@ -3,6 +3,7 @@ import { type World } from '../sim/world';
 import { Gps } from './gps';
 import { Call, type Sfx } from './call';
 import { takePhoto, type Photo } from './camera';
+import { CONVERT, Snake } from './store';
 import { type CharGrid } from '../render/grid';
 import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
@@ -28,7 +29,7 @@ import { hash3 } from '../core/rng';
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
@@ -79,7 +80,9 @@ const SYSTEM_KB = 40 * 1024;
  * The store's catalog: id, size in KB, price in cents. Small apps download over EDGE; past
  * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
  */
-export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['solitaire', 220, 199], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999]];
+export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999]];
+/** Kilobytes the news reader downloads each time. */
+const NEWS_KB = 8;
 export const EDGE_LIMIT_KB = 10 * 1024;
 
 /** Kilobytes of a weather forecast download. */
@@ -112,6 +115,13 @@ export class Phone {
   readonly apps: number[] = [];
   ssel = 0;
   stab = 0;
+  /** The app from the store that is open (an index into STORE), and the apps' state. */
+  appId = 0;
+  readonly snake = new Snake();
+  conv = { pair: 0, input: '' };
+  /** The store: a note on the last try (no Wi-Fi, no credit, no storage). */
+  storeNote = '';
+  newsAt = -1e9;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
   constructor(private world: World) {
@@ -233,6 +243,14 @@ export class Phone {
     }
     const J = this.radio.job;
     if (J?.what === 'weather' && J.state === 'done') { this.wxAt = this.world.time; this.radio.job = null; }
+    // an app finished downloading: installed (and paid for on the operator's bill)
+    if (J?.what.startsWith('app:') && J.state === 'done') {
+      const i = +J.what.slice(4);
+      if (!this.apps.includes(i)) { this.apps.push(i); this.world.telco.player.credit -= STORE[i][2]; this.sfx.push(['sent']); }
+      this.radio.job = null;
+    }
+    if (J?.what === 'news' && J.state === 'done') { this.newsAt = this.world.time; this.radio.job = null; }
+    if (this.screen === 'app' && STORE[this.appId][0] === 'snake' && this.snake.update(now)) this.sfx.push(['beep']);
     // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
     // again once the signal is back after a failed try; not with the bundle used up)
     const busy = this.radio.job === J && J?.what === 'weather' && (J.state === 'connecting' || J.state === 'loading' || J.state === 'nodata');
@@ -399,6 +417,25 @@ export class Phone {
         if (k === 'rsoft') { this.open('camera', now); return true; }
         return false;
       }
+      case 'store': {
+        // two tabs: the catalog (OK downloads) and the apps installed (OK opens)
+        const list = this.stab === 0 ? STORE.map((_, i) => i) : this.apps, n = list.length;
+        if (k === 'left' || k === 'right') { this.stab = 1 - this.stab; this.ssel = 0; this.storeNote = ''; return true; }
+        if (n && (k === 'up' || k === 'down')) { this.ssel = (this.ssel + (k === 'up' ? -1 : 1) + n) % n; this.storeNote = ''; return true; }
+        if (n && (k === 'ok' || k === 'lsoft')) {
+          const i = list[this.ssel], [, kb, price] = STORE[i];
+          if (this.stab === 1 || this.apps.includes(i)) { this.openApp(i, now); return true; }
+          if (this.radio.state !== 'service') this.storeNote = 'signal';
+          else if (kb > EDGE_LIMIT_KB) this.storeNote = 'wifi';
+          else if (this.freeKB() < kb) this.storeNote = 'full';
+          else if (this.world.telco.player.credit < price) this.storeNote = 'credit';
+          else { this.radio.fetch(`app:${i}`, kb, now); this.storeNote = ''; }
+          return true;
+        }
+        if (k === 'rsoft') { this.open('menu', now); return true; }
+        return false;
+      }
+      case 'app': return this.appKey(k, now);
       case 'messages': {
         // the boxes, and a new message
         if (k === 'up' || k === 'down') { this.box = (this.box + (k === 'up' ? 2 : 1)) % 3; return true; }
@@ -522,6 +559,36 @@ export class Phone {
     // hear what was picked
     if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
     return true;
+  }
+
+  private openApp(i: number, now: number) {
+    this.appId = i; this.open('app', now);
+    const id = STORE[i][0];
+    if (id === 'snake') this.snake.reset(now);
+    if (id === 'news' && this.world.time - this.newsAt > 3600 && this.radio.state === 'service') this.radio.fetch('news', NEWS_KB, now);
+  }
+
+  /** The keys of the app open. */
+  private appKey(k: Key, now: number): boolean {
+    const id = STORE[this.appId][0];
+    if (k === 'rsoft') { this.stab = 1; this.open('store', now); return true; }
+    if (id === 'snake') {
+      const S = this.snake;
+      if (S.over && (k === 'ok' || k === '5')) { S.reset(now); return true; }
+      const d: Record<string, [number, number]> = { up: [0, -1], '2': [0, -1], down: [0, 1], '8': [0, 1], left: [-1, 0], '4': [-1, 0], right: [1, 0], '6': [1, 0] };
+      if (d[k]) { S.steer(...d[k]); return true; }
+      return false;
+    }
+    if (id === 'news') { if ((k === 'ok' || k === 'lsoft') && this.radio.state === 'service') { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; } return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false; }
+    if (id === 'convert') {
+      const C = this.conv;
+      if (k === 'up' || k === 'down') { C.pair = (C.pair + (k === 'up' ? -1 : 1) + CONVERT.length) % CONVERT.length; return true; }
+      if (/^[0-9]$/.test(k) && C.input.length < 9) { C.input += k; return true; }
+      if (k === '#' && !C.input.includes('.')) { C.input += '.'; return true; }
+      if (k === '*') { C.input = C.input.slice(0, -1); return true; }
+      return false;
+    }
+    return false;
   }
 
   /** Storage left in KB: the flash less the system, the photos and the apps installed. */

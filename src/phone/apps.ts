@@ -1,4 +1,5 @@
 import { hash3 } from '../core/rng';
+import en from '../locale/en.json';
 import { cityName, operatorName } from '../locale/names';
 import { calendar, moonPhase } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
@@ -10,7 +11,9 @@ import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
 import { expose, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
-import { APPS, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, TAPS, type App, type Key, type Phone } from './phone';
+import { tickerText } from '../locale/news';
+import { CONVERT, SNAKE_H, SNAKE_W } from './store';
+import { APPS, EDGE_LIMIT_KB, STORE, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, TAPS, type App, type Key, type Phone } from './phone';
 
 /**
  * The phone's menu and its apps besides the map. Those that need nothing more work for real
@@ -60,7 +63,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'camera': return cameraScreen(S, P, now);
     case 'web': return notice(S, t, name('web').toUpperCase(), P.radio.state === 'service' ? A.soon : A.web, P.radio.state === 'service' ? HI : BAD);
     case 'weather': return weather(S, P, world, t, now);
-    case 'store': return notice(S, t, `${P.maker.toUpperCase()} ${name('store').toUpperCase()}`, P.radio.state === 'service' ? A.soon : A.store, P.radio.state === 'service' ? HI : BAD);
+    case 'store': return store(S, P, t, now);
     case 'clock': return clock(S, P, world, t, now);
     case 'calc': return calc(S, P, t);
     case 'notes': return notes(S, P, t, now);
@@ -70,6 +73,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'contact') return contactEdit(S, P, now);
       if (P.screen === 'ussd') return ussdScreen(S, P, t, now);
       if (P.screen === 'photos') return photosScreen(S, P, t);
+      if (P.screen === 'app') return appScreen(S, P, world, t, now);
       if (P.screen === 'msglist') return msgList(S, P, t);
       if (P.screen === 'msg') return msgRead(S, P, t);
       if (P.screen === 'compose') return compose(S, P, now);
@@ -487,4 +491,74 @@ function photosScreen(S: Lcd, P: Phone, t: number) {
   const c = calendar(p.at);
   S.text(1, SH - 2, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}  ${p.kb} KB  ${A.del}`, DIM, LCD);
   softKeys(S, '< >', T.back);
+}
+
+const ST = A.shop;
+const appName = (i: number) => (ST.names as Record<string, string>)[STORE[i][0]];
+
+/** The store: the catalog (size, price, whether it fits over EDGE) and the apps installed; a download's progress. */
+function store(S: Lcd, P: Phone, t: number, now: number) {
+  title(S, `${P.maker.toUpperCase()} ${name('store').toUpperCase()}`, t);
+  ST.tabs.forEach((tb, k) => S.text(2 + k * 14, 3, k === P.stab ? `[${tb}]` : ` ${tb} `, k === P.stab ? HI : DIM, LCD));
+  const list = P.stab === 0 ? STORE.map((_, i) => i) : P.apps;
+  if (!list.length) S.center(10, ST.none, DIM, LCD);
+  list.forEach((i, n) => {
+    const [id, kb, price] = STORE[i], y = 5 + n * 2, sel = n === P.ssel, bg = sel ? SEL : LCD, have = P.apps.includes(i);
+    if (sel) S.fill(y, bg);
+    const right = P.stab === 1 ? '' : have ? ST.installed : `${kb >= 1024 ? `${(kb / 1024).toFixed(0)}MB` : `${kb}KB`} ${price ? `$${(price / 100).toFixed(2)}` : ST.free}`;
+    S.text(1, y, typed(appName(i), t - n * 0.04), sel ? WHITE : kb > EDGE_LIMIT_KB && !have ? DIM : INK, bg);
+    S.text(SW - right.length - 1, y, right, sel ? WHITE : DIM, bg);
+    if (sel && P.stab === 0) S.text(1, SH - 4, (ST.about as Record<string, string>)[id], DIM, LCD);
+  });
+  const J = P.radio.job;
+  if (J?.what.startsWith('app:') && (J.state === 'connecting' || J.state === 'loading')) {
+    const f = J.done / J.kb, n = Math.round(f * (SW - 16));
+    S.text(1, SH - 3, `${ST.downloading} [${'#'.repeat(n).padEnd(SW - 16, '.')}]`, HI, LCD);
+  } else if (P.storeNote) S.text(1, SH - 3, (ST.notes as Record<string, string>)[P.storeNote], BAD, LCD);
+  softKeys(S, P.stab === 1 || P.apps.includes(list[P.ssel]) ? ST.open : ST.get, T.back);
+  void now;
+}
+
+/** The app from the store that is open. */
+function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
+  const id = STORE[P.appId][0];
+  if (id === 'torch') {
+    // the whole screen white, as bright as it goes
+    for (let y = 0; y < SH; y++) S.fill(y, [255, 255, 250]);
+    return;
+  }
+  title(S, appName(P.appId).toUpperCase(), t);
+  if (id === 'snake') {
+    const G = P.snake, x0 = 1, y0 = 3;
+    for (let y = -1; y <= SNAKE_H; y++) for (let x = -1; x <= SNAKE_W; x++) if (x < 0 || y < 0 || x === SNAKE_W || y === SNAKE_H) S.put(x0 + x, y0 + y, ch('#'), DIM, LCD);
+    S.put(x0 + G.food[0], y0 + G.food[1], ch('@'), HI, LCD);
+    G.body.forEach(([x, y], n) => S.put(x0 + x, y0 + y, n ? 32 : ch('O'), [120, 255, 150], n ? [60, 170, 80] : LCD));
+    S.text(1, 1, `${ST.score} ${G.score}  ${ST.best} ${G.best}`, HI, [16, 30, 40]);
+    if (G.over) { S.center(10, ` ${ST.gameOver} `, BAD, LCD); S.center(12, ` ${ST.again} `, DIM, LCD); }
+    return softKeys(S, '', T.back);
+  }
+  if (id === 'news') {
+    const J = P.radio.job, loading = J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading');
+    if (loading || world.time - P.newsAt > 3600) {
+      S.center(10, P.radio.state === 'service' ? ST.newsWait : ST.newsNone, P.radio.state === 'service' ? DIM : BAD, LCD);
+      return softKeys(S, '', T.back);
+    }
+    // the same headlines the city's news tickers run
+    const lines = tickerText(world).split(en.news.sep).filter(Boolean).flatMap((h) => [...wrap(h, SW - 3), '']);
+    const top = Math.min(P.scroll, Math.max(0, lines.length - (SH - 5)));
+    lines.slice(top, top + SH - 5).forEach((l, k) => S.text(1, 3 + k, typed(l, t - k * 0.03, 120), l ? INK : DIM, LCD));
+    return softKeys(S, A.wx.refresh, T.back);
+  }
+  if (id === 'convert') {
+    const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');
+    S.center(4, `< ${what} >`, HI, LCD);
+    S.text(4, 8, `${C.input || '0'} ${from}`, WHITE, LCD);
+    S.text(4, 11, `= ${+f(v).toFixed(3)} ${to}`, [120, 255, 150], LCD);
+    S.text(1, SH - 3, '^ v units   # .   * <-', DIM, LCD);
+    return softKeys(S, '', T.back);
+  }
+  // too big to have come over EDGE: nothing to show yet
+  S.center(10, (ST.about as Record<string, string>)[id], DIM, LCD);
+  softKeys(S, '', T.back);
+  void now;
 }
