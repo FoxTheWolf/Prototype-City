@@ -94,22 +94,22 @@ Inspiração visual e técnica. O vídeo de referência é "Everything in ASCII 
 
 **Imagens de referência:** a pasta `referencias/` guarda quadros do vídeo, para uso pessoal como referência. Abra **só as imagens relevantes à etapa atual**, porque cada imagem custa bastante do limite de uso.
 - `01-prototipo1-skyline`: o protótipo 1, com prédios coloridos e o chão de linhas (etapas 1 e 2)
-- `02-andar-alto-vista`: vista de um andar alto pela janela (etapa 7)
-- `03-visual-solido-carros`: fundo colorido nos glifos e carros volumétricos (etapas 4 e 6)
+- `02-andar-alto-vista`: vista de um andar alto pela janela (etapa 6)
+- `03-visual-solido-carros`: fundo colorido nos glifos e carros volumétricos (etapas 4 e 7)
 - `04-rua-poste-predios`: rua com poste, prédios e densidade de caracteres (etapas 1 e 4)
 - `05-hud-mapa-local`: painel completo e mapa local (etapa 8)
 - `06-mapa-setor` e `07-mapa-cidade`: mapas de setor e de cidade (etapa 8)
-- `08-distrito-chuva-pedestre`: distrito com chuva, pedestre e mapa (etapas 3, 5 e 6)
+- `08-distrito-chuva-pedestre`: distrito com chuva, pedestre e mapa (etapas 3, 5 e 7)
 - `09-abertura-dissolvendo`: a abertura em que a imagem sólida se desfaz em células (etapa 9)
-- `10-taxi-rua-perto`: táxi de perto na rua, com o chão e as calçadas (etapas 4 e 6)
+- `10-taxi-rua-perto`: táxi de perto na rua, com o chão e as calçadas (etapas 4 e 7)
 - `11-taxi-menu-destino`: dentro do táxi, com o menu de destino (etapa 10)
 - `12-monotrilho-plataforma`: plataforma do monotrilho (etapa 10)
 - `13-taxi-aereo-horizonte`: horizonte distante visto do alto (etapas 2 e 10)
-- `14-interior-janela-cidade`: interior de prédio com a janela mostrando a cidade real (etapa 7)
-- `15-interior-moveis`: interior com móveis pseudo-volumétricos diante das janelas (etapa 7)
-- `16-fachada-janelas-internas`: fachada de perto, com cômodos coloridos vistos pelas janelas (etapa 7)
+- `14-interior-janela-cidade`: interior de prédio com a janela mostrando a cidade real (etapa 6)
+- `15-interior-moveis`: interior com móveis pseudo-volumétricos diante das janelas (etapa 6)
+- `16-fachada-janelas-internas`: fachada de perto, com cômodos coloridos vistos pelas janelas (etapa 6)
 - `17-escultura-praca`: escultura/monumento numa praça, feito de caracteres (etapas 3 e 4)
-- `18-fachadas-vitrines` e `19-fachada-vidro`: fachadas de perto, vitrines e prédio de vidro (etapas 4 e 7)
+- `18-fachadas-vitrines` e `19-fachada-vidro`: fachadas de perto, vitrines e prédio de vidro (etapas 4 e 6)
 - `20-praca-objeto-dourado`: praça com um objeto dourado volumétrico (escultura ou fonte) (etapas 3 e 4)
 - `21-marco-estatua-cupula`: marco da cidade, com estátua e cúpula num parque (etapa 3)
 - `22-fachadas-historicas`: distrito de prédios antigos com fachadas ornamentadas (etapa 3)
@@ -143,13 +143,13 @@ Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simu
 - **Cyberpunk 2077 e o Cyberpunk de mesa:** clima de cidade noturna densa e vertical, neon e hacking de sistemas do ambiente. O usuário gosta muito do **visual** do netrunning e da Blackwall, que lembra o visual em caracteres deste jogo. Também vale a lição do jogo de mesa, escrito nos anos 80 e 90 sobre um futuro próximo, e por isso **retrofuturista** (veja "Época e tom" nas decisões).
 - **Matrix:** referência forte. A chuva de código, o texto que derrete e se desfaz (a abertura do ASCII City já aponta para isso) e o clima verde de terminal.
 - **Cyberpunk e Matrix entram só como estética e clima, nunca como tecnologia (esclarecido pelo usuário em 2026-09-30).** Não há netrunning no sentido de entrar fisicamente ou mentalmente na rede, nem ciberespaço navegável, implantes, *quickhacks* ou hackear algo só olhando para ele. O hacking continua sendo o de 2008: terminal, cabos, Wi-Fi e portas físicas (veja "Estilo de hacking"). O visual inspirado neles pode aparecer em telas, terminais, transições e na abertura, mas não vira fantasia tecnológica.
-- **Shadows of Doubt:** dark noir, cidade em que se entra em qualquer prédio, cidadãos com rotinas. O usuário gosta muito do **aconchego de entrar num interior numa noite de chuva** e ficar protegido dela. Isso é um objetivo de sensação para as etapas 5 e 7: som da chuva abafado do lado de dentro, janelas molhadas, luz quente no interior contra a rua fria.
+- **Shadows of Doubt:** dark noir, cidade em que se entra em qualquer prédio, cidadãos com rotinas. O usuário gosta muito do **aconchego de entrar num interior numa noite de chuva** e ficar protegido dela. Isso é um objetivo de sensação para as etapas 5 e 6: som da chuva abafado do lado de dentro, janelas molhadas, luz quente no interior contra a rua fria.
 - **GTA IV:** Liberty City como modelo de cidade americana em grade, época ~2008, celular como objeto e acesso à internet em lugares físicos (já citado nas decisões).
 
 - **Megaestruturas (dito pelo usuário em 2026-09-30):** o usuário adora megaestruturas, como o elevador espacial do Ace Combat 7 (ele disse "Combat 8"), ou estruturas tão grandes que dá para ver do espaço. **Pode não ser relevante**, porque foge bastante do escopo de uma tecnologia de ~2008. Fica como inspiração para guiar decisões futuras. 
-  - **Forma decidida em 2026-09-30: o Sarcófago com uma chaminé de tiragem.** É uma cúpula de contenção colossal e **inacabada** sobre a cratera principal do fogo, com ~3 km de largura, ~400 m de altura e uns 5 km depois da cerca. Tem esqueleto de treliça, painéis faltando e guindastes parados no topo; o laranja do fogo vaza por baixo e pelas frestas. Ela se junta a uma **torre de tiragem** (a ideia de usar o calor do fogo para gerar energia), mas **larga e baixa**, com diâmetro grande em vez de altura, para não aparecer do centro. A inspiração real é o arco de Chernobyl. Para a história e o hacking, é uma obra parada por falência ou corrupção, com telemetria, sensores e guindastes ainda ligados.
+  - **Forma decidida em 2026-09-30: o Sarcófago com uma chaminé de tiragem.** É uma cúpula de contenção colossal e **inacabada** sobre a cratera principal do fogo, com ~3 km de largura, ~400 m de altura (feita com **600 m**, para a escala aparecer na grade; veja a 5.11) e uns 5 km depois da cerca. Tem esqueleto de treliça, painéis faltando e guindastes parados no topo; o laranja do fogo vaza por baixo e pelas frestas. Ela se junta a uma **torre de tiragem** (a ideia de usar o calor do fogo para gerar energia), mas **larga e baixa**, com diâmetro grande em vez de altura, para não aparecer do centro. A inspiração real é o arco de Chernobyl. Para a história e o hacking, é uma obra parada por falência ou corrupção, com telemetria, sensores e guindastes ainda ligados.
   - **Decidido em 2026-09-30:** a megaestrutura fica **ligada à zona de fogo** e pode servir à história no futuro. Fica **longe, além do cordão**, e **não aparece do centro**, para não mexer na skyline. Só aparece no horizonte quando o jogador se aproxima da borda da cidade, perto da cerca, e aí deve transmitir a escala, para que se perceba o tamanho enorme dela. O que ela é ainda está a definir, sempre plausível para ~2008 no tom retrofuturista (etapa 5, junto com o horizonte).
-- **Curvatura do horizonte (pedido em 2026-09-30):** simular uma curvatura **bem leve**, com o chão e os objetos distantes descendo um pouco (queda ≈ d²/2R, com um R falso bem menor que o da Terra, porque o real dá só ~0,3 m a 2 km). Não pode dar a impressão de cidade cilíndrica (etapa 5, junto com o céu).
+- **Curvatura do horizonte (pedido em 2026-09-30, feita na 5.10 com R = 400 km):** simular uma curvatura **bem leve**, com o chão e os objetos distantes descendo um pouco (queda ≈ d²/2R, com um R falso bem menor que o da Terra, porque o real dá só ~0,3 m a 2 km). Não pode dar a impressão de cidade cilíndrica (etapa 5, junto com o céu).
 
 Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos e rotinas), Grey Hack (hacking), HighFleet (interfaces físicas com som) e Else Heart.Break() (impacto sistêmico).
 
@@ -157,7 +157,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 - **Plataforma:** navegador. O protótipo 1 foi um único HTML com JavaScript puro; daqui em diante vale a decisão de stack abaixo (Vite + TypeScript, vários arquivos).
 - **Renderização:** raycaster por coluna com prédios de alturas diferentes, desenhado em uma grade de caracteres.
-- **Estética do protótipo 1:** noite com a luz amarela de postes de sódio e HUD âmbar/ciano, para se distinguir do verde do ASCII City. É só um ponto de partida; a paleta final ainda está aberta.
+- **Estética:** noite com a luz amarela de postes de sódio e HUD âmbar/ciano, para se distinguir do verde do ASCII City. A paleta final é a de sódio (decidida na etapa 4).
 - **Ritmo de trabalho:** avançar aos poucos, respeitando o limite de uso do usuário. De preferência, uma sessão nova para cada funcionalidade.
 - **Idioma:** o usuário escreve em português, então as respostas são em português.
 - **Stack (decidido em 2026-09-30):** Vite + TypeScript, rodando no navegador. O servidor de desenvolvimento é necessário porque Workers e módulos não funcionam em arquivos abertos com duplo clique. Git para versionar. O `terminal-city.html` fica como referência do protótipo 1.
@@ -188,7 +188,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **Estilo urbano: americano, em grade (decidido em 2026-09-30),** como a Liberty City do GTA IV: grade regular, avenidas largas, arranha-céus no centro e bairros mais baixos em volta.
 - **Unidades: 1 unidade = 1 metro (decidido em 2026-09-30).** A conversão da escala atual (andar de 0,55 e olho a 0,48, cerca de 1 unidade para 3,5 m) é feita na etapa 2. Valores de referência: olho a ~1,7 m, andar de ~3,5 m, faixa de rua de ~3,5 m.
 - **Painel lateral no estilo do ASCII City:** fica, desde que seja diegético (por exemplo, um PDA, o celular ou o notebook). Deve ter o visual de terminal com texto composto aos poucos. A forma exata ainda está a decidir.
-- **Projetar pensando nas próximas etapas (pedido do usuário em 2026-09-30):** toda decisão de projeto deve considerar as etapas que vêm depois. O que é feito agora como visual deve nascer ligado a dados da simulação, de forma modular, para ser ampliado depois sem reescrever. Exemplo: os letreiros da etapa 4 mostram o nome de uma empresa que existe na simulação (`city.businesses`). Os interiores (etapa 7) e a economia (etapa 13) usam e ampliam esse mesmo registro, em vez de inventar nomes à parte.
+- **Projetar pensando nas próximas etapas (pedido do usuário em 2026-09-30):** toda decisão de projeto deve considerar as etapas que vêm depois. O que é feito agora como visual deve nascer ligado a dados da simulação, de forma modular, para ser ampliado depois sem reescrever. Exemplo: os letreiros da etapa 4 mostram o nome de uma empresa que existe na simulação (`city.businesses`). Os interiores (etapa 6) e a economia (etapa 13) usam e ampliam esse mesmo registro, em vez de inventar nomes à parte.
 - **Os dados da simulação são a matéria do hacking:** registros de moradores e funcionários, logs de telefone, câmeras, controle de portas e semáforos vêm da simulação e não são inventados à parte.
 - **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
   - O *estado* do clima (se chove, a intensidade, o vento), a data e a hora ficam na simulação, com semente, porque um dia vão afetar as pessoas e o trânsito.
@@ -196,7 +196,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **Ciclo de dia e noite, com calendário (decidido em 2026-09-30, com ressalva de estética):** o usuário tende a querer, porque as rotinas dos cidadãos, as estações, a passagem do ano e as fases da lua dependem disso. A preocupação dele é o dia estragar o clima de hacker. Proposta para preservar a estética (a validar quando for implementada):
   - **A noite continua sendo o visual principal.** O dia é enevoado e nublado, com céu claro e dessaturado, glifos mais apagados e janelas e postes apagados. É o "visual de serviço". O entardecer e o amanhecer têm céu colorido e são os momentos bonitos da transição.
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
-  - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. Ainda falta decidir a escala de tempo (quantos minutos reais dura um dia do jogo) e se o jogador pode dormir ou pular tempo.
+  - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. **Decidido:** um dia dura 48 minutos reais e o jogador pode dormir e pular o tempo (feito na 5.5; o dia ainda é um visual provisório).
 
 - **Decisões da etapa 4 (2026-09-30):**
   - **Paleta: sódio âmbar (escolhida pelo usuário em 2026-09-30,** depois de comparar com neon noir e verde terminal). As outras foram removidas.
@@ -207,11 +207,11 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 ## Pedidos do usuário para etapas futuras (2026-09-30)
 
 Dados enquanto jogava a etapa 3. Cada um está também no roteiro, na etapa em que cabe.
-- **Escadas de incêndio físicas:** hoje são só desenho na fachada. Devem ser objetos em que se sobe de verdade (etapa 7, junto com os interiores e a subida de andares).
+- **Escadas de incêndio físicas:** hoje são só desenho na fachada. Devem ser objetos em que se sobe de verdade (etapa 6, junto com os interiores e a subida de andares).
 - **Letreiros nas fachadas:** com o nome da empresa que de fato funciona ali (vem da simulação, não é enfeite) e com luzes que piscam e fazem efeitos (letras acendendo em sequência, contornos correndo, falhas de neon). O visual e os efeitos cabem na etapa 4; os nomes reais das empresas vêm da etapa 13 (economia), mas podem ser gerados antes, desde que fiquem ligados ao prédio.
-- **Interiores físicos, como em Shadows of Doubt:** o interior existe no mesmo espaço que a cidade. Entrar num prédio é atravessar a porta, sem tela de carregamento, sem teleporte e sem fade. É preciso vigiar o desempenho (etapa 7).
-- **Elevadores funcionais:** você entra, aperta o botão e é levado para cima de verdade, sem fade. Alguns elevadores com parede de vidro, para ver a cidade enquanto sobe (etapa 7). Isso depende da câmera com giro vertical de verdade ou pelo menos da altura do olho variável (veja as notas de projeção).
-- **Iluminação dinâmica:** os postes e os faróis dos carros iluminam o mundo em volta de verdade, e a luz se move com os carros (etapa 4 para a base da luz, etapa 6 para os faróis).
+- **Interiores físicos, como em Shadows of Doubt:** o interior existe no mesmo espaço que a cidade. Entrar num prédio é atravessar a porta, sem tela de carregamento, sem teleporte e sem fade. É preciso vigiar o desempenho (etapa 6; o usuário quer medir o custo antes de confirmar que fica sem carregamento).
+- **Elevadores funcionais:** você entra, aperta o botão e é levado para cima de verdade, sem fade. Alguns elevadores com parede de vidro, para ver a cidade enquanto sobe (etapa 6). Isso depende da câmera com giro vertical de verdade ou pelo menos da altura do olho variável (veja as notas de projeção).
+- **Iluminação dinâmica:** os postes e os faróis dos carros iluminam o mundo em volta de verdade, e a luz se move com os carros (etapa 4 para a base da luz, feita; os faróis já iluminam desde a 4; faltam os do trânsito novo, na etapa 7).
 - **Objetos espalhados:** entulho, bancos e mobiliário urbano (etapa 4).
 
 ## Pedidos do usuário para planejar (2026-09-30, segunda lista)
@@ -222,7 +222,7 @@ Dados antes de começar a etapa 5. Ainda não têm etapa decidida; a sugestão d
 - **Placas perpendiculares à fachada** (*blade signs*): estacionamento, café, hotel, bar, penhor, feitas para quem vem pela rua e pela calçada. Mostram o tipo e o nome da empresa do prédio. No render, são objetos com volume (como os da 4b), presos à parede, e não pintados na fachada. *(Feitas na 5.2.)*
 - **Sistema de notícias:** notícias de *flavor* e notícias que correspondem ao que de fato acontece, vindas da mesma fila de eventos da rede social (etapa 12). Prédios com letreiros de notícias correndo (como o *news zipper* da Times Square) mostram essas manchetes na cidade.
 - **Distrito no estilo Times Square:** abundância extrema de neon, telões e publicidade. Já estava na etapa 15; provavelmente é um tipo de distrito novo (`KIND` em `city.ts`), com poucos por cidade.
-- **Avenidas diagonais que cortam os quarteirões, como a Broadway em Manhattan.** É uma mudança estrutural: hoje a malha é só ortogonal (`xb`/`yb`) e o raycaster percorre essa grade; os prédios são caixas ou cilindros. Uma diagonal pede lotes triangulares e trapezoidais (prédios no estilo Flatiron, que exigem prismas de base poligonal no teste de raio), praças nos cruzamentos em X e um trecho da malha que o DDA precisa testar à parte. **Deve vir antes da etapa 6**, porque o trânsito e os semáforos dependem do desenho das ruas. *(Feita na 5.1, a pedido do usuário: "o mais cedo possível, antes de causar problemas".)*
+- **Avenidas diagonais que cortam os quarteirões, como a Broadway em Manhattan.** É uma mudança estrutural: hoje a malha é só ortogonal (`xb`/`yb`) e o raycaster percorre essa grade; os prédios são caixas ou cilindros. Uma diagonal pede lotes triangulares e trapezoidais (prédios no estilo Flatiron, que exigem prismas de base poligonal no teste de raio), praças nos cruzamentos em X e um trecho da malha que o DDA precisa testar à parte. **Deve vir antes do trânsito**, porque o trânsito e os semáforos dependem do desenho das ruas. *(Feita na 5.1, a pedido do usuário: "o mais cedo possível, antes de causar problemas".)*
 - **Deep sim / life sim imersivo:** ter um apartamento, stats do personagem, customização do personagem em termos de lore (história, origem, habilidades, e não aparência). Provavelmente nas últimas etapas, depois dos cidadãos (11) e da economia (13).
 
 ## Design: rede social da cidade (proposta, 2026-09-30)
@@ -260,8 +260,8 @@ Ideia do usuário: uma rede social interna em que os cidadãos da simulação pu
 Pedido do usuário, inspirado no blackout do Watch Dogs 1 (a regra de originalidade vale: técnica e sensação sim, sons e visual copiados não). No fim, será uma ação de hacking. Antes disso, entra como uma **tecla de debug**, para acertar o efeito.
 
 **A rede na simulação (pensando nas etapas seguintes).** O blackout não é um efeito de tela: é o **estado de uma rede elétrica** que existe na simulação. As subestações ficam em pontos fixos da cidade (a usina da etapa 3 alimenta a rede). Cada prédio, poste, letreiro e, mais tarde, cada semáforo pertence a uma subestação. Desligar uma subestação apaga tudo o que ela alimenta, e o render só lê esse estado. Assim, a mesma rede depois:
-- apaga os semáforos e causa acidentes e engarrafamentos (etapa 6);
-- tranca e destranca portas e para os elevadores (etapa 7);
+- tranca e destranca portas e para os elevadores (etapa 6, interiores);
+- apaga os semáforos e causa acidentes e engarrafamentos (etapa 7, trânsito);
 - derruba as antenas de celular e o Wi-Fi (etapa 9);
 - mexe com as rotinas dos cidadãos e vira assunto na rede social (etapas 11 e 12);
 - fecha lojas e para a economia (etapa 13);
@@ -320,6 +320,60 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ## Estado atual
 
+### Resumo para começar uma sessão (atualizado em 2026-09-30)
+
+- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A próxima é a 6, interiores** (trocada com o trânsito, que virou a 7). Antes de codar, ler "Preparação da etapa 6" abaixo.
+- **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
+- **Teclas:**
+  - jogo: WASD, mouse, Shift corre, Q/E giram;
+  - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **M** som;
+  - debug: **T** e Shift+T mudam a hora em ±1 h; **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda.
+  - A linha de status mostra semente, posição, `DRAW x ms (MAX y)` e os modos. A linha de cima dela mostra data, hora, clima e `POWER x/y`.
+- **Desempenho:** o quadro fica em ~3–8 ms no painel (o usuário tem monitor de 180 Hz; ele nota quedas). `bench(n)` mede a vista atual numa grade 256×80. Toda novidade deve ser medida com `bench` antes e depois.
+- **Mapa dos módulos** (o que está em cada arquivo):
+  - **`src/sim/`** (nunca importa `render` nem o DOM):
+    - `city.ts`: grade, quarteirões, prédios (caixas, cilindros e caixas cortadas pela diagonal), empresas, props, marcos, borda e Sarcófago.
+    - `world.ts`: o passo fixo de 60 Hz e as teclas de debug.
+    - `traffic.ts`: carros simples.
+    - `clock.ts`: tempo, calendário, sol e lua.
+    - `weather.ts`: previsão pura, chão molhado e neve.
+    - `power.ts`: subestações, geradores e quem alimenta o quê.
+  - **`src/render/`:**
+    - `raycaster.ts`: a ordem do quadro; `wallColumn` desenha as fachadas.
+    - `sky.ts`: gradiente, nuvens, lua e sol.
+    - `precip.ts`: chuva e neve.
+    - `sarcophagus.ts`: a cúpula e a constante `CURVE_R`.
+    - `objects.ts` e `models.ts`: objetos com volume.
+    - `signs.ts`: letreiros, lâmpadas e símbolos.
+    - `lights.ts`: luzes dinâmicas.
+    - `lightmap.ts`: poças de luz dos postes.
+    - `lamps.ts`: falhas e fotocélula.
+    - `power.ts`: o efeito do blackout, uma função pura.
+  - **`src/audio/`:** `sound.ts` (ambiente, chuva, trovão, zumbidos) e `blackout.ts` (o som do apagão, versão A).
+  - **`src/locale/`:** `en.json` e `names.ts`.
+- **Ordem do quadro** (`renderWorld`):
+  1. Por coluna: céu (`skyColumn`) e Sarcófago, chão (com a curvatura e testando a profundidade), paredes (DDA na grade) e cerca.
+  2. Depois: fumaça, guindastes, objetos e `finish` (fundo sólido, névoa do dia, luar, glifos de bloco).
+  3. Por fim: chuva e neve, que vêm depois do `finish` para manter o fundo do que está atrás.
+- **Flags para religar depois:** `SEAM_LIGHTS_CLOUDS` (`sky.ts`), as brasas iluminando as nuvens, para religar com a câmera 3D.
+- **Bugs registrados para depois:** veja "Bugs conhecidos".
+
+### Preparação da etapa 6 (interiores)
+
+- **Decisões a tomar com o usuário no início** (veja também "Perguntas em aberto"):
+  - interiores no mesmo espaço físico da cidade (o pedido original, sem carregamento) ou com carregamento, decidindo depois de medir o custo;
+  - se a câmera 3D de verdade (raio por célula, em JS ou no shader) entra agora, porque elevadores com vidro, vistas de andares altos e olhar para cima dependem dela. O usuário já disse que espera por essa câmera para olhar mais para cima.
+- **O que já existe e deve ser reaproveitado** (veja "Projetar pensando nas próximas etapas"):
+  - **Prédios:** caixas, cilindros e caixas cortadas pela diagonal (`Building.cut`, polígono convexo; **os prédios cortados também terão interior**). As torres com recuo são caixas aninhadas que partem do chão, e as peças de telhado ficam escondidas dentro do prédio de baixo; um interior precisa saber qual caixa é o volume real de cada andar.
+  - **Janelas:** as da fachada já têm grade fixa (`BAY` = 1,6 m, `FLOOR_H` = 3,5 m, índices `wi` e `fl` em `wallColumn`), e cada uma tem identidade (acesa ou não por `hash3(id, wi, fl)`, energia própria em `winPow`). Os cômodos devem bater com essa grade, para que a janela acesa vista de fora seja a do cômodo aceso de dentro.
+  - **Lojas:** `Building.shop` e `biz` (a empresa do térreo), com a vitrine desenhada em `wallColumn`; o interior da loja vem daí.
+  - **Energia:** cada prédio já tem subestação e gerador (`world.power`), então a luz interna e os elevadores devem seguir esse estado.
+  - **Clima:** `world.weather` (chuva abafada e janelas molhadas por dentro, que é o "aconchego" pedido em Shadows of Doubt).
+- **Pedidos que caem nesta etapa:** as janelas iluminando a fachada (como os letreiros fazem), escadas de incêndio em que se sobe, elevadores reais (alguns com vidro), andares altos com vista, vitrines com o interior das lojas, e pesquisar fotos de referência de fachadas e placas.
+- **Referências** (`referencias/`): 02, 14, 15, 16, 18, 19.
+
+### Histórico (registro por etapa; os itens mais antigos ficam no fim)
+
 - **Retorno do usuário sobre 4a–4c (2026-09-30):** boas impressões. Escolheu a paleta de sódio e pediu o fundo sólido mais escuro. Não viu pop-in; os objetos distantes deformam, o que é esperado. Pediu lixo espalhado (copos, papéis), e não só montes de entulho, e o entulho longe da calçada. Viu o FPS oscilar (80–180, com uma queda a 40).
   - **Causa da oscilação:** os objetos da 4b chegavam a 26 ms por quadro. Um objeto muito perto tinha a tela inteira como área de busca, e cada célula testava todas as peças. Corrigido com um recorte por coluna em `drawObjects`: o raio da coluna contra o círculo que envolve o objeto dá o trecho de profundidade [ta, tb] e, dali, só as linhas possíveis; células já cobertas mais perto que `ta` são puladas. O quadro inteiro caiu para 2–7 ms, e os objetos para ≤ 3 ms. O recálculo do mapa de luz custa ~2 ms.
   - A linha de status agora mostra `DRAW x ms (MAX y)`: o tempo médio de desenho do mundo e o pior do último segundo. É o número a observar, porque o FPS fica preso ao monitor.
@@ -341,20 +395,20 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Tipos de poste (pedido em 2026-09-30, feito):** `Prop.lampType` na simulação, um tipo por lado de quarteirão, sorteado por distrito (`LAMPS` em `city.ts`): sódio de alta pressão (âmbar, a maioria), vapor metálico (branco, centro e comércio), mercúrio (branco-esverdeado, bairros antigos), sódio de baixa pressão (amarelo intenso, industrial) e LED piloto no centro (sem aquecimento e sem zumbido). As cores e o aquecimento ficam em `LAMP_LIGHT` (`lamps.ts`); o `LightWindow` guarda a cor de cada poste por quadro (`add`).
 - **Luz por letra (pedido do usuário, feito em 2026-09-30):** a letra que falha afeta a luz do letreiro. A primeira tentativa, uma luz por letra, dobrou o tempo de desenho (8,5 → 20 ms), porque cada ponto somava dezenas de luzes. A versão final mantém **uma luz por face** (`DynLights.pieces` em `lights.ts`) que carrega o brilho de cada letra em somas acumuladas. Cada ponto pega a média das letras em volta do ponto mais próximo da faixa, num trecho que cresce com a distância (0,3 m + metade da distância): colado na parede, só a letra da frente conta (a parede atrás de uma letra morta cai de 94 para 37); na calçada, a 3 m, a diferença quase some. Só vale para letreiros a menos de 40 m (`SIGN_LETTER_LIGHT`); mais longe, e quando todas as letras estão iguais (letreiro fixo ou piscando), é um segmento comum. Custo: até ~1,5 ms a mais no `bench` parado na frente de um letreiro; o quadro real ficou em ~3,3 ms.
 - **Etapa 4 fechada (2026-09-30):** o usuário testou 4d–4f e aprovou tudo ("os sons e as luzes estão ótimos"; não precisa mais mexer).
-- **Etapa 5, primeiro grupo (5.1–5.3), feito em 2026-09-30, falta o teste do usuário.** O usuário pediu que as diagonais viessem já, "antes de causar problemas", e junto as placas perpendiculares e os holofotes, porque a base para isso já existia. A numeração com ponto (5.1, 5.2…) evita confusão com a 5b, que continua sendo o blackout.
+- **Etapa 5, primeiro grupo (5.1–5.3), feito e aprovado em 2026-09-30.** O usuário pediu que as diagonais viessem já, "antes de causar problemas", e junto as placas perpendiculares e os holofotes, porque a base para isso já existia. A numeração com ponto (5.1, 5.2…) evita confusão com a 5b, que continua sendo o blackout.
   - **5.1, avenida diagonal** (`Diagonal` em `city.ts`, `city.diagonal`): uma por cidade, reta, de borda a borda. Passa perto do centro a 18–32° das avenidas, com 21 m de largura e calçada de 4 m. Tem gerador próprio (`placeDiagonal`), então a grade e os distritos não mudam. `diagS(d, x, y)` dá a distância com sinal até a linha central. O nome ("{r} Way") vem de `diagonalName` e aparece no cabeçalho quando se está nela.
     - **Prédios cortados:** um lote que a diagonal atravessa vira **caixa ∩ semiplano** (`Building.cut: Cut`, com a normal para fora, `c` e a extensão `u0..u1` da face cortada). Uma caixa que atravessa a avenida inteira vira dois prédios. Cilindros que encostam na faixa e sobras com menos de 40 m² são tirados (`cutByDiagonal`). Os telhados e as camadas das torres são cortados pelo mesmo plano, então ficam coerentes. Nas quinas agudas ficam as cunhas estilo Flatiron. Com a semente 42: 107 prédios cortados, 26 quarteirões atravessados e 7 praças.
-    - **Interiores (lembrete do usuário em 2026-09-30):** os prédios cortados **também terão interior** na etapa 7. A pegada deles é um polígono convexo exato (4 ou 5 lados: a caixa recortada pelo semiplano), e é esse o dado que a divisão em andares e cômodos deve usar, não um caso especial.
+    - **Interiores (lembrete do usuário em 2026-09-30):** os prédios cortados **também terão interior** na etapa 6. A pegada deles é um polígono convexo exato (4 ou 5 lados: a caixa recortada pelo semiplano), e é esse o dado que a divisão em andares e cômodos deve usar, não um caso especial.
     - **Raycaster:** o teste da caixa ganha o semiplano (`side` 3 = face diagonal). `faceSpan(B, face)` dá a extensão real de cada face (0/1 = x0/x1, 2/3 = y0/y1, 4 = cortada), usada nos cantos, nos letreiros e nas luzes deles. A face cortada é medida ao longo de (ny, −nx), que lê da esquerda para a direita, então nunca precisa de `rev`.
     - **Chão:** asfalto com linha central amarela e faixas em `/` ou `\`; nos cruzamentos o asfalto é liso. As ruas que chegam à diagonal terminam com faixa de pedestre. Os pedaços de quarteirão com menos de 1200 m² (`PLAZA_AREA`) viram praça de lajes (`Block.diag`, bits 2 e 4), como a Times Square e a Herald Square. Os postes vêm dos dois lados, a cada 28 m (`diagonalLamps`), e o mobiliário que caía na pista foi tirado.
-    - **Ainda não:** carros na diagonal (etapa 6), curvas ou segunda diagonal.
+    - **Ainda não:** carros na diagonal (etapa 7, trânsito), curvas ou segunda diagonal.
   - **5.2, placas perpendiculares** (`blade` em `Prop`, `bladeSign` em `city.ts`, `bladeModel` em `models.ts`, material `Mat.Text` em `objects.ts`): um painel vertical num braço de aço, saindo da fachada (lado da calçada ou face diagonal), perto de uma ponta, com as letras empilhadas de cima para baixo (lêem igual dos dois lados). Hotel, cinema e estacionamento sempre têm; bar e penhor às vezes, e café, diner, farmácia e loja de bebidas menos (`BLADE`). O texto vem de `bladeText` (`en.json`, `blade`): o tipo (BAR, PAWN, PARK, EAT…) ou, em hotéis e cinemas, a palavra mais marcante do nome. A placa pisca junto com o letreiro da empresa (`signLight`) e ilumina a calçada (luz pontual em `gatherLights`). Novo tipo de empresa: **`parking`** (garagem), no financeiro e no comercial. Com a semente 42 são 334 placas, que custam ~0,8 ms com uma bem na frente.
   - **5.3, holofotes de fachada** (`Building.flood`, a cor, e `floodH`, a altura que a luz alcança): são dados da simulação, para a rede elétrica da 5b poder apagar. Prefeitura, igreja e torre do relógio sempre têm, em luz quente; parte dos prédios históricos também (30% no distrito histórico). Parte das torres de vidro e de escritório do centro financeiro tem luz branca fria ou colorida (azul, violeta, verde-água), subindo 30–90 m (`floodFor`). No render, os refletores ficam a cada 6 m na base (`FLOOD_GAP`), cada um um cone que se abre para cima (0,35 m + 0,18 por metro de altura). O desenho de "vieiras" aparece até uns 3 andares e depois se funde. Longe, usa a média, sem tremer. Com a semente 42 são 95 prédios com holofote.
   - **Retorno do usuário sobre 5.1–5.3 (2026-09-30):** tudo certo, exceto o bug das calçadas da diagonal (veja "Bugs conhecidos"), que fica para depois.
   - **5.4, lâmpadas e símbolos nas placas perpendiculares** (pedido do usuário): de perto, as letras das placas perpendiculares viram lâmpadas, como nos letreiros de fachada. Também ganharam um **símbolo** em cima, de 9×9 lâmpadas (`SYMBOLS` e `BLADE_SYMBOL` em `signs.ts`): P num círculo (estacionamento), as três bolas do penhor, uma cruz (farmácia) e uma taça (bar). A contagem de lâmpadas por célula é a mesma dos letreiros (`bulbsIn`) e lê da esquerda para a direita dos dois lados. De longe viram glifos; mais longe, uma barra acesa.
     - De quebra, foi corrigido um erro em `drawObjects`: a área de tela dos objetos dividia por `plane` duas vezes. No jogo `plane` ≈ 1,04, então o efeito era pequeno (objetos na borda da tela podiam perder uma lasca).
-  - **Pedido para mais tarde:** pesquisar na internet fotos de placas de negócios reais e de fachadas (Times Square etc.) e salvar como referência. O usuário disse que isso fica para a etapa de interiores (7) ou para o refinamento visual (15).
-- **Etapa 5, grupos A e B do clima (5.5–5.9), feitos em 2026-09-30, falta o teste do usuário.** O usuário pediu para ir direto ao clima e acrescentou as **nuvens**: céu limpo, nuvens parciais e cobertura total na chuva e na tempestade, com a luz da cidade batendo embaixo delas.
+  - **Pedido para mais tarde:** pesquisar na internet fotos de placas de negócios reais e de fachadas (Times Square etc.) e salvar como referência. O usuário disse que isso fica para a etapa de interiores (6) ou para o refinamento visual (15).
+- **Etapa 5, grupos A e B do clima (5.5–5.9), feitos e aprovados em 2026-09-30.** O usuário pediu para ir direto ao clima e acrescentou as **nuvens**: céu limpo, nuvens parciais e cobertura total na chuva e na tempestade, com a luz da cidade batendo embaixo delas.
   - **5.5, relógio e clima na simulação.**
     - `sim/clock.ts`: o tempo do jogo (`world.time`, em segundos desde 2008-01-01 00:00, e `ptime` para interpolar) corre `TIME_SCALE` = 30× (um dia = `DAY_REAL_MIN` = 48 min reais, como pedido). O calendário é o real de 2008 (bissexto; 1º de janeiro foi terça). Cada semente começa num dia de 2008, às 21h.
     - Sol e lua são calculados para 41°N (`sunDir`, `moonDir`, com elevação e azimute a partir do norte). A lua segue o sol atrasada pela fase, e a fase (`moonPhase`) parte de uma lua nova real (2008-01-08 11:37 UTC).
@@ -365,7 +419,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **Gradiente pelo sol:** a noite continua sendo o visual principal. O entardecer e o amanhecer são coloridos, mais fortes do lado do sol. O dia é claro, enevoado e dessaturado.
     - **Dia ("visual de serviço"), provisório:** em `finish`, o mundo clareia e se perde numa névoa pálida com a distância; ~75% das janelas apagam (`litK`). Os postes têm **fotocélula** (`photocell` em `lamps.ts`): acendem um a um ao entardecer, com o aquecimento de sódio (do vermelho ao âmbar), e apagam ao amanhecer; o zumbido segue.
     - **Estrelas:** somem com a luz do dia e atrás das nuvens.
-    - **Nuvens:** uma camada a 1200 m (`CLOUD_H`) com ruído em 3 escalas que corre com o vento. As escalas finas são descartadas perto do horizonte, para não tremer. A cobertura vem de `weather.cloud`, e com 100% o céu fecha. Por baixo, as nuvens recebem a **luz de sódio da cidade** (mais forte sobre o centro), o **vermelho do fogo** num anel além da cerca e escuro sobre o nada (`glowBelow`). Na chuva a camada fica mais clara. O céu distante vira uma névoa aquecida pela cidade. De dia as nuvens são cinza, no entardecer são pintadas do lado do sol, e a lua prateia as bordas finas. O relâmpago as acende por dentro.
+    - **Nuvens:** uma camada a 1200 m (`CLOUD_H`) com ruído em 3 escalas que corre com o vento, **só em cor** (sem glifos, a pedido). As escalas finas são descartadas perto do horizonte, para não tremer. A cobertura vem de `weather.cloud`, e com 100% o céu fecha. Por baixo, as nuvens recebem a **luz de sódio da cidade** (redonda e apagada, seguindo a energia) e o vermelho da cratera do Sarcófago (`glowBelow`); o anel das brasas está desligado (`SEAM_LIGHTS_CLOUDS`). Na chuva a camada fica mais clara. O céu distante vira uma névoa aquecida pela cidade. De dia as nuvens são cinza, no entardecer são pintadas do lado do sol, e a lua prateia as bordas finas. O relâmpago as acende por dentro.
     - **Lua:** disco grande (raio de 3,4°, exagerado de propósito), com a fase certa (o crescente acende à direita), mares por ruído, luz cinérea fraca, halo e visibilidade através das nuvens finas. `SkyFrame.moonlight` já dá a força do luar para o blackout da 5b.
   - **5.8–5.9, chuva e neve** (`render/precip.ts`):
     - **Gotas:** ficam em 9 cascas em volta de quem olha (1,6 a 28 m), em colunas presas à bússola (girar não as arrasta), e caem em faixas de 3 m (1,2 m na neve). Cada gota é calculada diretamente por coluna e faixa, e não célula por célula (custa ~0,4 ms). O risco tem comprimento em linhas (6 perto, 2 longe). As gotas se escondem atrás de paredes e objetos e **acendem perto dos postes**. A inclinação pelo vento aparece só no glifo (`/`, `|`, `\`).
@@ -373,13 +427,13 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **Chão:** o asfalto molhado escurece e devolve mais a luz dos postes e letreiros, ondulando enquanto chove. Os respingos são anéis que crescem, e ao longe viram pontos. A neve cobre calçadas e parques (a rua pela metade), beirais e topos de objetos (`Cam.snow`).
     - **Tempestade:** relâmpagos a cada ~5 min de jogo (clarão duplo nas nuvens e no mundo) com trovão atrasado de 1 a 6 s.
     - **Som:** chiado de chuva mais o ronco grave num temporal, trovão, e a neve abafando o rumor da cidade.
-  - **Ainda não:** chuva abafada dentro dos prédios (etapa 7), carros e pessoas reagindo ao clima (6 e 11), neblina, vento com som próprio, curvatura do horizonte e megaestrutura (grupo C).
+  - **Ainda não:** chuva abafada dentro dos prédios (etapa 6), carros e pessoas reagindo ao clima (7 e 11), neblina e vento com som próprio.
   - **Retorno do usuário sobre A e B (2026-09-30), já corrigido:**
     - **Nuvens só em cor**, sem glifos ASCII: com caracteres o céu ficava sujo.
     - **Precipitação sem caixas pretas:** a gota substituía o fundo da célula. Agora `drawFall` roda depois de `finish`, mantém o fundo do que está atrás e desenha a gota como essa cor clareada (a neve, embranquecida), o que parece transparência. Não escreve mais no buffer de profundidade (usa `taken`). Ficou menos densa e mais rápida (7–12 m/s).
     - **Lua:** em 2008-03-07 era lua nova real, então ela estava junto do sol e se pondo com ele, o que está certo. O erro era desenhar o lado escuro: agora, de dia, só aparece a parte iluminada, e a luz cinérea só de noite.
     - **Sol:** ganhou um brilho suave (sem disco), aplicado depois das nuvens e atenuado por elas.
-    - **Limite de olhar para cima:** com o y-shearing, a câmera vai até ~40° (`MAX_PITCH`) e mostra até ~70° acima do horizonte, então a lua alta fica fora da vista. Opções levadas ao usuário: subir o limite aceitando alguma distorção, ou esperar a câmera 3D de verdade (etapa 7 ou 10).
+    - **Limite de olhar para cima:** com o y-shearing, a câmera vai até ~40° (`MAX_PITCH`) e mostra até ~70° acima do horizonte, então a lua alta fica fora da vista. Opções levadas ao usuário: subir o limite aceitando alguma distorção, ou esperar a câmera 3D de verdade (etapa 6 ou 10).
   - **Retorno seguinte (2026-09-30):** o usuário aprovou e decidiu **esperar a câmera 3D** para olhar mais para cima (o limite de ~40° fica). Pediu só para tirar a faixa que cortava o brilho do sol: o brilho era calculado só até 0,8 rad do sol; agora é calculado no céu inteiro. Depois disso, mandou seguir sozinho para o grupo C e o 5b, sem pedir teste.
 - **Grupo C (5.10–5.11), feito em 2026-09-30:**
   - **5.10, curvatura:** queda d²/2R com `CURVE_R` = 400 km (em `render/sarcophagus.ts`). O chão (raiz exata da equação, numa forma estável), as fachadas (o olho efetivo `eyeD` sobe com a distância), a cerca e a fumaça afundam juntos. Na escala da cidade quase não se nota (~5 m a 2 km), mas a 6 km a queda é de ~50 m. Comecei com 150 km, o que comia demais a base do Sarcófago.
@@ -390,18 +444,18 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **Visibilidade:** a névoa do fogo a esconde, então só aparece a menos de ~6,8 km do centro dela, ou seja, perto daquela borda (`visibility`). Do centro da cidade não aparece.
     - As nuvens sobre a cratera ficam avermelhadas (`glowBelow`).
     - **Ainda não:** telemetria e sensores, que são dados para a etapa 14.
-- **5b, rede elétrica e blackout, feita em 2026-09-30** (falta o teste do usuário, inclusive comparar os sons A e B):
+- **5b, rede elétrica e blackout, feita e aprovada em 2026-09-30.** Abaixo, a primeira versão; os ajustes pedidos depois estão nos dois "Retorno" no fim e valem por cima dela.
   - **Simulação** (`sim/power.ts`, `world.power`):
     - Uma subestação a cada ~650 m (9 com a semente 42). Cada prédio e cada poste pertence à mais próxima (`building`, `lamp`), e os letreiros, as placas perpendiculares e os holofotes seguem o prédio.
     - **Geradores** (`generator`): a prefeitura e ~4% dos prédios com mais de 40 m.
-    - `subAt` é uma busca rápida (grade 64×64) para saber qual subestação alimenta um ponto. `switchSub` guarda o tick da troca. Ainda não há fila de eventos (fica para a etapa 6).
+    - `subAt` é uma busca rápida (grade 64×64) para saber qual subestação alimenta um ponto. `switchSub` guarda o tick da troca e o ponto de origem. Ainda não há fila de eventos (fica para a etapa 7, trânsito).
   - **Efeito** (`render/power.ts`, `power(...)`, uma função pura como as falhas dos letreiros):
-    - **Apagão:** a onda sai da subestação a 1400 m/s, com uma variação de até 0,25 s por elemento. 0,6 s antes do apagão, um surto leva a luz a até 1,35; depois vêm faíscas e piscadas por 0,3 s e o apagão. Com gerador, a luz volta a 55% depois de 3 s.
+    - **Apagão (primeira versão, depois mudada: veja o último retorno):** a onda sai da subestação a 1400 m/s, com uma variação de até 0,25 s por elemento. 0,6 s antes do apagão, um surto leva a luz a até 1,35; depois vêm faíscas e piscadas por 0,3 s e o apagão. Com gerador, a luz volta a 55% depois de 3 s.
     - **Volta:** cada elemento volta no seu momento (0,4–13 s, mais o atraso pela distância), piscando 0,7 s; os postes refazem o aquecimento do sódio.
     - **O que apaga:** janelas, vitrines, letreiros (e a luz que eles jogam), placas perpendiculares, holofotes, faixas das coroas, o relógio aceso e os postes, com luz e zumbido.
     - **O que fica:** as luzes de aviação (bateria) e os faróis dos carros.
     - As nuvens sobre um distrito apagado perdem o laranja, e a névoa distante segue a parte da cidade acesa (`cityLit`). Um luar frio e fraco (`finish`) deixa ver os contornos.
-  - **Som** (`audio/blackout.ts`): o atraso segue a velocidade do som (343 m/s), e o volume e o pan seguem a distância e a direção da subestação.
+  - **Som** (`audio/blackout.ts`): o atraso segue a velocidade do som (343 m/s), e o volume e o pan seguem a distância e a direção do ponto de origem.
     - **Versão A, fiel à receita:**
       - sub e drone descendo de 121 a 82 Hz (de B2 a E2), com saturação e passa-baixa ressonante;
       - corpo de ruído em 300 Hz;
@@ -409,7 +463,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
       - 28 estalos de 1,5 a 5 kHz;
       - reverb curto e escuro só nas camadas médias;
       - rearticulação do grave em 55–80 Hz e corte em 12 s.
-    - **Versão B, interpretação própria:**
+    - **Versão B, interpretação própria (removida depois, porque o usuário preferiu a A):**
       - baque e estalo do transformador estourando;
       - arco que sobe de 120 a 260 Hz gaguejando e é cortado seco;
       - zumbido que morre de 120 a 25 Hz;
@@ -417,22 +471,22 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
       - ecos de outros transformadores mais longe.
     - **No escuro:** relés, zumbidos gaguejando e baques graves a cada 1,5–6,5 s. A cidade abafa (`hush`).
     - **Na volta:** um contator fechando, relés e o zumbido subindo de 60 a 120 Hz.
-  - **Teclas:** **K** liga e desliga a subestação mais próxima, **Shift+K** liga e desliga todas, e **J** troca o som entre A e B. A linha do clima mostra `POWER x/y` e a versão.
+  - **Teclas:** **K** liga e desliga a subestação mais próxima, e **Shift+K** liga e desliga todas (a tecla J, que trocava o som entre A e B, saiu com a versão B). A linha do clima mostra `POWER x/y`.
   - **Não testado de ouvido:** o Claude não ouve o áudio. O código roda sem erros, mas o som precisa do retorno do usuário.
   - **Retorno do usuário sobre C e 5b (2026-09-30), já corrigido:**
     - **Som:** preferiu a **versão A** (a da receita). A versão B e a tecla J saíram. O som dos estouros (arcos curtos com filtro muito ressonante, Q 5–10) parecia "bolinhas de sinuca batendo". Agora os arcos são **chiados** (`sizzle`: ruído em banda larga, Q 1,4, picotado num gaguejar rápido e saturado), e os estalos e relés são **cliques secos** (`tick`: 1 ms de ruído em passa-alta, sem tom).
     - **Nuvens de noite** laranja demais e com um **quadrado laranja** no céu fechado: o brilho seguia a borda quadrada da cidade. Agora é redondo e suave (`spread`), com cor mais apagada (marrom-alaranjado).
     - **Blackout nas nuvens** com cortes: cada nuvem seguia a sua subestação, e as divisas apareciam. Agora a parte acesa é misturada entre as subestações vizinhas (gaussiana de 450 m), numa grade 32×32 calculada uma vez por quadro (`buildLit`/`litAt`), que custa quase nada.
-    - **Janelas** apagavam e acendiam todas juntas por prédio. Agora cada janela tem o próprio momento (`winPow` em `wallColumn`, com `power` por janela e o ponto atingido como posição): morre com a onda e volta piscando, em ordem aleatória.
+    - **Janelas** apagavam e acendiam todas juntas por prédio. Agora cada janela tem o próprio momento (`winPow` em `wallColumn`, com `power` por janela): morre com a onda e volta piscando, em ordem aleatória.
     - **Fumaça ao longe** (pedido no meio): agora é só cor, como as nuvens (véus que escurecem o que está atrás, alaranjados na base), sem glifos.
     - **Janelas iluminando a fachada, como os letreiros:** fica para a etapa de interiores, porque é lá que as janelas passam a ser cômodos de verdade, com a própria luz.
   - **Último retorno da etapa 5 (2026-09-30), já corrigido:**
     - O **neon branco das marquises** (cinema, hotel) continuava aceso no blackout. Agora segue a energia do prédio.
     - **Céu no blackout geral:** perde o laranja e fica cinza. O piso de 12% de luz da cidade saiu, a base das nuvens à noite vira um cinza apagado quando a cidade está escura, o laranja baixo do céu segue `cityLit`, e o anel de fogo ficou estreito (não soma mais nada sobre a cidade). Depois o usuário pediu para tirar também o avermelhado sobre as brasas, que com a câmera atual não se lê como fogo: a flag `SEAM_LIGHTS_CLOUDS` em `sky.ts` está desligada e deve ser **religada quando a câmera for 3D de verdade**. A cratera do Sarcófago continua avermelhando as nuvens sobre ela.
     - **Onda do blackout:** agora sai de onde a tecla foi apertada (`Substation.ox/oy`, a posição do jogador por enquanto) em círculo, a **120 m/s** (antes 1400, quase instantânea), e alcança primeiro os prédios mais perto. Quando chega a um prédio, as janelas dele apagam em ordem aleatória ao longo de 1,5 s (`power(..., group, spread)`: o grupo é o prédio, com a mesma posição para todas as janelas). Na volta, os prédios voltam em ordem aleatória ao longo de ~10 s, e dentro de cada um as janelas também, piscando. O som também é ouvido a partir do ponto de origem.
-- **Etapa 5 concluída (2026-09-30).** A próxima é a dos **interiores** (veja o roteiro: trocada com o trânsito a pedido do usuário). Depois vem o grupo C: a curvatura leve do horizonte e a megaestrutura (o Sarcófago) perto da borda.
-- **Etapa 4, grupo 4a–4c feito (2026-09-30), falta o teste do usuário:**
-  - **4a:** teclas **P** (paleta: `SODIUM`, `NEON NOIR`, `TERMINAL`), **B** (fundo sólido, ligado por padrão) e **U** (glifos de bloco). As paletas ficam em `render/palette.ts`: cada uma é uma correção de cor no shader (`grade` em `glRenderer.ts`, aplicada à tela inteira, HUD incluído) mais a cor da luz dos postes. O fundo sólido e a troca de glifos são uma passada final (`finish` em `raycaster.ts`): cada célula do mundo (com profundidade) ganha de fundo a própria cor × `SOLID` (0,36). Os blocos e as linhas de caixa são desenhados como formas exatas no atlas, nas posições 128+ (`BLOCK` em `atlas.ts`), e a tabela `BLOCKS` diz qual ASCII vira qual bloco.
+- **Etapa 5 concluída (2026-09-30).** A próxima é a dos **interiores** (veja o roteiro: trocada com o trânsito a pedido do usuário).
+- **Etapa 4, grupo 4a–4c feito e aprovado (2026-09-30):**
+  - **4a:** teclas **P** (paleta: `SODIUM`, `NEON NOIR`, `TERMINAL`; a tecla P e as outras paletas saíram quando o usuário escolheu o sódio), **B** (fundo sólido, ligado por padrão) e **U** (glifos de bloco). As paletas ficam em `render/palette.ts`: cada uma é uma correção de cor no shader (`grade` em `glRenderer.ts`, aplicada à tela inteira, HUD incluído) mais a cor da luz dos postes. O fundo sólido e a troca de glifos são uma passada final (`finish` em `raycaster.ts`): cada célula do mundo (com profundidade) ganha de fundo a própria cor × `SOLID` (0,36). Os blocos e as linhas de caixa são desenhados como formas exatas no atlas, nas posições 128+ (`BLOCK` em `atlas.ts`), e a tabela `BLOCKS` diz qual ASCII vira qual bloco.
   - **4b:** os billboards viraram objetos com volume (`render/objects.ts`). Como o y-shearing é linear, cada célula é um raio 3D reto (`z = eye + t·(hor − linha)/scale`), então cada peça (caixa, cilindro vertical ou elipsoide, no referencial do objeto) é cruzada exatamente. O `t` é a mesma profundidade do buffer, então os objetos se escondem atrás das paredes e uns dos outros sem ordenar. Peças mais finas que meia célula são alargadas para não piscar ao longe. Materiais: `Solid` (glifo por face), `Leaf` (ruído preso à superfície) e `Glow` (luz, sem sombra). Os modelos ficam em `render/models.ts`: carro (carroceria, cabine de vidro, rodas, faróis e lanternas, luminoso de táxi), poste com base, braço sobre a rua e luminária (`Prop.a` é o lado da rua), árvore com copa em 6–9 elipsoides e holofote do cordão.
   - **4c:** mobiliário por tipo de distrito (`FURNITURE` em `city.ts`): banco, lixeira, hidrante, caixa de correio, caixa de jornal, orelhão (capa azul, voltado para a calçada), ponto de ônibus com cartaz aceso, caçamba e entulho. Bancos nos caminhos de parques e praças; entulho nos lotes vazios. Tudo sai de um **gerador próprio por quarteirão** (`fr`), então a cidade de uma semente continua igual. Com a semente 42 são ~7 mil peças de mobiliário, e o painel segue a ~90 FPS.
   - Ainda não são sólidos: o jogador atravessa postes, bancos e caçambas.
@@ -477,7 +531,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 ## Bugs conhecidos (para uma etapa de correção mais adiante)
 
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
-- **Calçadas da avenida diagonal quebradas (5.1):** em vez de atravessar a rua de forma coerente, as calçadas fazem curvas sem sentido ou desaparecem. A causa provável é a regra do chão em `raycaster.ts`: a calçada da diagonal (`pastD < SIDEWALK` dentro do quarteirão) e a calçada normal do quarteirão (a 4 m da borda) se somam e são cortadas pelas ruas transversais. O usuário sugeriu arrumar junto com o trânsito (etapa 6), quando o desenho dos cruzamentos da diagonal for refeito.
+- **Calçadas da avenida diagonal quebradas (5.1):** em vez de atravessar a rua de forma coerente, as calçadas fazem curvas sem sentido ou desaparecem. A causa provável é a regra do chão em `raycaster.ts`: a calçada da diagonal (`pastD < SIDEWALK` dentro do quarteirão) e a calçada normal do quarteirão (a 4 m da borda) se somam e são cortadas pelas ruas transversais. O usuário sugeriu arrumar junto com o trânsito (agora etapa 7), quando o desenho dos cruzamentos da diagonal for refeito.
 
 ## Notas técnicas (para as próximas sessões)
 
@@ -492,13 +546,13 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
   - `scale = (rows/2) / tan(VFOV/2)` = linhas por unidade de altura à distância 1.
   - `plane = (cols/2) * cellAspect / scale` = tan(FOV horizontal / 2).
   - Olhar para cima e para baixo é *y-shearing*: `horizonte = rows/2 + tan(pitch) * scale`. Um raycaster por coluna não consegue girar a câmera de verdade. O limite foi a 60° e o usuário mostrou a distorção: telhados viram "pirâmides" inclinadas ao olhar para cima e girar. Por isso o limite voltou para **~40°** (`Camera.MAX_PITCH = 0.7`), o que com o VFOV de 60° ainda mostra até ~70° acima do horizonte.
-  - **Decidido na etapa 2: fica o raio por coluna.** A câmera com giro vertical de verdade volta a ser avaliada na etapa 7 (vista de andares altos) ou na 10 (voo). A ideia original era: lançando um raio 3D por célula (ou fazendo o raycast no shader do GPU) em vez de um raio por coluna. As verticais passariam a convergir ao olhar para cima, e isso destravaria vistas do alto, voo e janelas de andares altos. O custo em JS é da ordem de 20 mil raios por frame, cada um com vários passos de DDA; no GPU seria trivial. Decidir junto com a reescrita do render para a cidade grande e o horizonte distante.
+  - **Decidido na etapa 2: fica o raio por coluna.** A câmera com giro vertical de verdade volta a ser avaliada na etapa 6 (interiores: vista de andares altos, elevadores de vidro) ou na 10 (voo). O usuário decidiu esperar por ela para olhar mais para cima. A ideia original era: lançando um raio 3D por célula (ou fazendo o raycast no shader do GPU) em vez de um raio por coluna. As verticais passariam a convergir ao olhar para cima, e isso destravaria vistas do alto, voo e janelas de andares altos. O custo em JS é da ordem de 20 mil raios por frame, cada um com vários passos de DDA; no GPU seria trivial. Decidir junto com a reescrita do render para a cidade grande e o horizonte distante.
   - Uma célula pertence a uma parede ou sprite quando o *centro* dela está dentro do intervalo projetado (`Math.ceil(y - 0.5)`).
 - **Unidades:** 1 unidade = 1 metro desde a etapa 2. As medidas estão em `city.ts` (`FLOOR_H`, `SIDEWALK`, `LANE_W`).
-- **Atlas de glifos:** o índice do glifo é o próprio código do caractere, e só o ASCII 33–126 está desenhado. Para usar caracteres de bloco ou de caixa (`░▒▓█─│`), é preciso mapear o codepoint para uma posição livre do atlas (0–31 ou 127–255) em `atlas.ts`.
+- **Atlas de glifos:** o índice do glifo é o próprio código do caractere (ASCII 33–126). Os blocos e as linhas de caixa estão nas posições 128+ (`BLOCK` em `atlas.ts`, usados pela tecla U). Um glifo novo precisa de uma posição livre do atlas.
 - **`CharGrid`** usa `Uint8ClampedArray`: as cores saturam sozinhas em 0–255, então não precisa limitar valores antes do `put`.
 - **Onde mexer na variedade:**
-  - A geometria fica na simulação (`Building` em `city.ts`: caixa ou cilindro, altura, `style`, cores, `lit`, `shop`, `feat`). A aparência fica no render, em `wallColumn` (`raycaster.ts`), que recebe o prédio, a distância, o lado (0/1 = faces da caixa, 2 = cilindro), a luz da face e o ponto `along` onde o raio bateu (no cilindro, metros de arco).
+  - A geometria fica na simulação (`Building` em `city.ts`: caixa, cilindro ou caixa cortada (`cut`), altura, `style`, cores, `lit`, `shop`, `biz`, `feat`, `flood`). A aparência fica no render, em `wallColumn` (`raycaster.ts`), que recebe o prédio, a distância, o lado (0/1 = faces da caixa, 2 = cilindro, 3 = face cortada), a face (`faceSpan`), a luz da face e o ponto `along` onde o raio bateu (no cilindro, metros de arco).
   - Um estilo novo é um valor a mais em `Facade` e um ramo a mais em `wallColumn`. Todo estilo precisa funcionar nos dois níveis: o detalhado e o distante (`!detailed`), senão treme ao longe.
   - Formas que não partem do chão ainda não existem; tudo é caixa ou cilindro do chão até `h`, e as peças de telhado ficam escondidas dentro do prédio de baixo. Telhados inclinados ou formas flutuantes exigiriam um `z0` no teste de raio.
   - Postes, árvores, carros, holofotes e mobiliário são objetos com volume (`objects.ts` e `models.ts`, desde a etapa 4b). Um objeto novo é uma lista de peças `part(...)` em `models.ts` e um ramo em `collectObjects`. A fumaça tem passe próprio (`drawSmoke`) porque é vista até 2,5 km.
@@ -506,9 +560,10 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 - **Defeitos visuais conhecidos, ainda não resolvidos:**
   - O letreiro de loja (faixa `=` a 2,7–3,3 m) vira uma listra diagonal larga quando visto de lado, porque é contínuo ao longo do prédio inteiro.
   - O nível de detalhe da fachada ignora a obliquidade da face, então fachadas vistas muito de lado usam o modo detalhado e as janelas se misturam.
-  - As silhuetas distantes são escuras, porque as cores das molduras (`FRAME`) são apagadas. Isso fica para a paleta e o fundo sólido da etapa 4.
   - O jogador não sai da cidade (`isSolid` é verdadeiro fora dela). A zona de fogo existe só no visual; o medidor de CO e as patrulhas ainda não.
-  - Da rua, a zona de fogo aparece quase só como a faixa perto do horizonte, a fumaça e o céu. Deve ficar mais bonita vista do alto (etapa 7 ou 10).
+  - Da rua, a zona de fogo aparece quase só como a faixa perto do horizonte, a fumaça e o céu. Deve ficar mais bonita vista do alto (com a câmera 3D).
+  - O dia ainda é o "visual de serviço" provisório: a cidade fica escura contra o céu claro (o usuário viu e não pediu mudança por enquanto).
+  - Os objetos (postes, bancos, caçambas) ainda não são sólidos: o jogador os atravessa.
   - As faixas acesas das coroas e as costuras do cilindro (onde o ângulo dá a volta) podem tremer ao longe.
 - **Textos dentro do jogo:** os nomes de lugares já vêm de `src/locale/en.json`. A tela de título e a linha de status ainda têm textos fixos em inglês no código.
 
@@ -526,13 +581,24 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 - Cada recarga (inclusive a do HMR) sorteia uma semente nova. Use `?seed=42` para comparar sempre a mesma cidade.
 - Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina. Para edições grandes em lote, grave um script Python no scratchpad com Write e rode-o.
 - A pasta `referencias/` está no `.gitignore` (são quadros do vídeo de outra pessoa) e existe só no disco.
+- **Lições desta máquina (2026-09-30):**
+  - **O Vite às vezes serve um módulo velho** depois de edições por script (aparecem erros como "does not provide an export" ou funções com a assinatura antiga). Rodar `touch` nos arquivos editados e navegar de novo para a URL. Para conferir, `fetch('/src/...ts')` mostra o que está sendo servido.
+  - **Esconder o overlay à mão** (`#overlay.hidden = true`) deixa o jogo no modo título, em que a câmera gira sozinha devagar. Reposicione a câmera logo antes de cada captura, ou entre de verdade: `find` em "ENTER THE CITY" e um clique (isso também cria o som).
+  - **Uma edição de código faz o HMR recarregar a página** e perder o estado (posição, hora, clima). Reaplique depois de cada build.
+  - **Painel oculto:** o laço para e a captura mostra um quadro velho; tire uma captura antes, para acordar o laço.
+  - **Testes isolados:** dá para importar módulos direto no console (`await import('/src/render/objects.ts')`) e desenhar numa `CharGrid` própria. Foi assim que apareceu o erro de projeção dos objetos.
+  - **Limite de 5 servidores de preview por pasta,** contando as outras conversas; reaproveite o que já está rodando (`preview_list`).
+  - **Nunca use `git checkout <arquivo>` para desfazer uma linha de debug:** isso apaga também o trabalho não commitado do arquivo (aconteceu com o `main.ts`). Desfaça a linha com uma edição.
+  - **Barra invertida em scripts Python que geram TypeScript:** `C('\\')` sai errado com facilidade; para strings com `\`, use a ferramenta Edit.
 
 ## Como trabalhar neste projeto
 
 - **Uma sessão por etapa ou funcionalidade.** Ler só os arquivos e as imagens de referência daquela etapa.
 - **Testes agrupados (pedido do usuário em 2026-09-30):** cada etapa tem **2 ou 3 rodadas de teste**, cada uma cobrindo um grupo de subetapas (por exemplo, 4a–4c e depois 4d–4f). Cada subetapa tem o próprio commit. Ao fim de cada grupo, pedir que o usuário teste, e só seguir para o próximo grupo depois da aprovação dele.
 - **Ao terminar uma etapa:** atualizar "Estado atual" e o "Roteiro" deste arquivo, e fazer um commit no Git.
-- **Testar de verdade:** abrir o jogo no navegador do app com `preview_start` (configuração `claude-dev`, porta 5180, em `.claude/launch.json`) para ver funcionando, em vez de só checar a sintaxe. Rodar `npm run build`, que também checa os tipos. Veja "Como testar no navegador do app".
+- **Testar de verdade:** abrir o jogo no navegador do app com `preview_start` (configuração `claude-dev`, porta 5180, em `.claude/launch.json`) para ver funcionando, em vez de só checar a sintaxe. Rodar `npm run build`, que também checa os tipos. Medir com `bench` antes e depois de mudanças no render. Veja "Como testar no navegador do app".
+- **Som:** o Claude não ouve o áudio. Ao criar ou mudar sons, dizer ao usuário que o teste de ouvido é dele, e descrever o que esperar.
+- **Quando o usuário pede para seguir sozinho** ("não precisa pedir teste"), continuar pelos grupos seguintes e juntar o teste no fim. Sem isso, vale a regra dos testes agrupados.
 - **Explicar ao usuário como rodar:** o comando do servidor de desenvolvimento, e de preferência um atalho `.bat` para iniciar com duplo clique.
 
 ## Roteiro
@@ -541,7 +607,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 
 1. ✅ **Motor:** Git, Vite + TypeScript, grade de ~180×80 caracteres, raycaster com perspectiva correta, câmera suave (o mouse move um alvo que a câmera segue), sem tremor, desenho final via WebGL com atlas de glifos. Simulação separada da renderização desde o início.
 2. ✅ **Cidade grande:** mundo enorme com uma janela deslizante em volta do jogador, prédios com identidade fixa pela posição, horizonte distante barato, prédios altos visíveis atrás de outros.
-3. ✅ **Estrutura e variedade da cidade** (falta o retorno do usuário):
+3. ✅ **Estrutura e variedade da cidade:**
    - setores, distritos e quarteirões com nomes;
    - tipos de distrito que mudam a geração (centro financeiro, comercial, residencial, histórico, industrial com pátios ferroviários; sem porto, porque não há água);
    - **estilos de fachada** por tipo de distrito: torre de vidro, prédio histórico ornamentado, tijolo, residencial, galpão (referências 18, 19 e 22);
@@ -552,9 +618,13 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 4. ✅ **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais. Entulho e mobiliário urbano espalhados. Letreiros nas fachadas com luzes que piscam e fazem efeitos. Base da iluminação dinâmica (postes que iluminam o que passa perto).
 5. ✅ **Clima e céu** (o grupo 5.1–5.3 trouxe antes a avenida diagonal, as placas perpendiculares e os holofotes de fachada): chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido. Curvatura leve do horizonte e a megaestrutura da zona de fogo, visível só perto da borda (veja as inspirações).
 5b. ✅ **Rede elétrica e blackout** (veja "Design: rede elétrica e blackout"): subestações na simulação, prédios, postes e letreiros ligados a elas, apagão e volta progressivos com som, luar iluminando a cidade apagada. Acionado por uma tecla de debug até o hacking existir.
-6. **Interiores** (trocada com o trânsito a pedido do usuário em 2026-09-30: dá exploração e gameplay já, e permite medir cedo o custo de ter interiores na cidade inteira). **Decidir nesta etapa:** interiores no mesmo espaço físico da cidade (como pedido antes, sem carregamento) ou com carregamento, conforme o desempenho medido. Inclui tudo o que era a etapa 7 (veja abaixo) e as janelas que iluminam a fachada.
-7. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos). Faróis dos carros que iluminam a rua e as fachadas enquanto passam.
-7b. *(conteúdo dos interiores, agora na etapa 6)* **Interiores:** entrar nos prédios **sem carregamento nem teleporte** (o interior existe no mesmo espaço da cidade), cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas. Elevadores que sobem de verdade, alguns com vidro. Escadas de incêndio em que se sobe.
+6. **Interiores** (trocada com o trânsito a pedido do usuário em 2026-09-30: dá exploração e gameplay já, e permite medir cedo o custo de ter interiores na cidade inteira). Todos os prédios devem ter interior, inclusive os cortados pela diagonal.
+   - **Decidir no início:** interiores no mesmo espaço físico da cidade (o pedido original: atravessar a porta, sem carregamento nem teleporte) ou com carregamento, conforme o desempenho medido; e se a câmera 3D de verdade entra agora.
+   - Cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas.
+   - Elevadores que sobem de verdade, alguns com vidro. Escadas de incêndio em que se sobe.
+   - As janelas iluminando a fachada (como os letreiros), a chuva abafada do lado de dentro e a luz interna ligada à rede elétrica.
+   - Veja "Preparação da etapa 6" no Estado atual.
+7. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
 9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
@@ -576,17 +646,18 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 **Ainda sem lugar no roteiro:** o sistema de notícias com telões (junto com a etapa 12). Decidir com o usuário.
 
 **Transversal, em todas as etapas: som.** O retorno sonoro é prioridade do usuário e não pode ficar para o fim. Cada etapa traz os sons do que cria:
-- chuva e vento na etapa 5;
-- motores, buzinas e passos na 6;
-- portas e ambiente interno na 7;
+- chuva, trovão e blackout na etapa 5 (feitos; falta o vento);
+- portas, passos e ambiente interno na 6;
+- motores e buzinas na 7;
 - teclas, bipes e toques na 9.
 
-Isso pede um módulo de áudio simples (Web Audio), criado na primeira etapa que precisar de som.
+O módulo de áudio já existe (`src/audio/`, Web Audio, tudo sintetizado, sem arquivos).
 
 ## Perguntas em aberto
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
 - **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
+- **Etapa 6 (perguntar no início):** interiores no espaço físico ou com carregamento (medir primeiro); câmera 3D agora ou depois; por quais prédios começar (todos são pedidos, mas pode haver uma primeira versão por tipo: loja, residencial, escritório).
 - **Etapa 8:** forma do painel lateral diegético. Em 2026-09-30, o usuário disse que o celular serve, mas quer confirmar de novo quando a etapa chegar, porque pode ter outras ideias até lá.
 - **Etapa 10:** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
 
