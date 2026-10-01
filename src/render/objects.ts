@@ -50,6 +50,14 @@ export interface Obj {
   seed: number;
   /** Height of its lowest part, when it does not stand on the ground (a rooftop billboard). */
   z0?: number;
+  /**
+   * A vehicle's body on its springs: parts off the ground move up and down by lift, and by pitch
+   * (nose down) and roll (toward +y) about the middle; the wheels (on the ground) show their turn.
+   */
+  pitch?: number;
+  roll?: number;
+  lift?: number;
+  wheel?: number;
 }
 
 export interface Cam {
@@ -68,6 +76,7 @@ export interface Cam {
 
 const C = (s: string) => s.charCodeAt(0);
 const LEAF = [C('@'), C('&'), C('%'), C('#'), C('*')];
+const SPOKE = C('o'), SPOKES = [C('|'), C('/'), C('-'), C('\\')];
 
 export function part(shape: number, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, col: RGB, mat: number, side: string, top = side, end = side): Part {
   return { shape, x0, y0, z0, x1, y1, z1, col, mat, side: C(side), top: C(top), end: C(end) };
@@ -108,6 +117,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
     for (let k = 0; k < n; k++) {
       const q = o.parts[k], j = k * 6;
       P[j] = (q.x0 + q.x1) / 2; P[j + 1] = (q.y0 + q.y1) / 2; P[j + 2] = (q.z0 + q.z1) / 2;
+      if (o.lift !== undefined && q.z0 > 0) P[j + 2] += o.lift - o.pitch! * P[j] - o.roll! * P[j + 1];
       P[j + 3] = Math.max((q.x1 - q.x0) / 2, mh); P[j + 4] = Math.max((q.y1 - q.y0) / 2, mh); P[j + 5] = Math.max((q.z1 - q.z0) / 2, mz);
     }
     const fog = 1 - Math.min(1, tY / v.far) * 0.8;
@@ -245,6 +255,8 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
             ch = LEAF[(h * LEAF.length) | 0];
             k *= 0.55 + 0.45 * h + 0.25 * nz;
           } else ch = face === 2 ? q.top : face === 0 && q.shape === Shape.Box ? q.end : q.side;
+          // a wheel seen from the side turns: its glyph follows the angle
+          if (o.wheel !== undefined && q.z0 === 0 && q.side === SPOKE && face === 1) ch = SPOKES[Math.floor((o.wheel / Math.PI) * 4) & 3];
         }
         let r = col[0] * k, g = col[1] * k, b = col[2] * k;
         const painted = q.mat === Mat.Glow || q.mat === Mat.Text || (q.mat === Mat.Board && face === 0);

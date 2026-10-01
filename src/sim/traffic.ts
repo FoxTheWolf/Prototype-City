@@ -25,6 +25,12 @@ export interface Car {
   /** A bus: the along-coordinate of the last stop it served, and the tick its doors close at a stop (0 when not at one). */
   served: number;
   dwell: number;
+  /**
+   * The body on its springs (see stepBody): pitch (rad, nose down positive), roll (rad, toward
+   * +y of the car positive) and lift (m), with their rates; the wheels' turn (rad); the heading
+   * last tick, for the sideways pull in a turn.
+   */
+  pitch: number; pitchV: number; roll: number; rollV: number; lift: number; liftV: number; wheel: number; ph: number;
   x: number;
   y: number;
   /** Position at the previous tick, for render interpolation. */
@@ -75,8 +81,35 @@ const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0
 function newVehicle(rng: Rng) {
   let r = rng();
   const V = VEHICLES.find((q) => (r -= q.share) < 0) ?? VEHICLES[VEHICLES.length - 1];
-  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0 };
+  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0 };
 }
+/**
+ * Grip of the road: dry asphalt holds a hard stop (~0.8 g), wet less, snow little. Drivers know it:
+ * they go slower and keep more distance (the braking itself is limited by it, which is what will
+ * make cars fail to stop in time when it snows).
+ */
+export function roadGrip(wet: number, snow: number): number {
+  return snow > 0.3 ? 0.3 : 0.8 - 0.3 * wet;
+}
+
+/** Springs of the body: stiffness (1/s², ~1.2 Hz) and damping, and how far it leans per m/s² (softer for big vehicles). */
+const SPRING = 60, DAMP = 5.5;
+/** One tick of the body on its springs, from the acceleration along and across the car, and the road's bumps. */
+function stepBody(c: Car, a: number, dt: number) {
+  const soft = c.len > 6 ? 1.6 : 1;
+  // the turn rate from the change of heading: sideways pull v * omega
+  const h = Math.atan2(c.dy, c.dx), dh = Math.atan2(Math.sin(h - c.ph), Math.cos(h - c.ph)), lat = (c.v * dh) / dt;
+  c.ph = h;
+  const pT = Math.max(-0.06, Math.min(0.06, -a * 0.007 * soft)), rT = Math.max(-0.06, Math.min(0.06, -lat * 0.012 * soft));
+  c.pitchV += (-SPRING * (c.pitch - pT) - DAMP * c.pitchV) * dt; c.pitch += c.pitchV * dt;
+  c.rollV += (-SPRING * (c.roll - rT) - DAMP * c.rollV) * dt; c.roll += c.rollV * dt;
+  // seams and potholes every few metres kick the body up a little, harder the faster it goes
+  const bump = Math.floor((c.x + c.y) / 3.1), hit = Math.floor((c.x + c.y - c.v * dt) / 3.1) !== bump;
+  if (hit && c.v > 1) c.liftV += (hash3(bump, 5, 11) - 0.35) * c.v * 0.02;
+  c.liftV += (-SPRING * 1.5 * c.lift - DAMP * c.liftV) * dt; c.lift += c.liftV * dt;
+  c.wheel = (c.wheel + (c.v * dt) / 0.33) % (Math.PI * 2);
+}
+
 /** Seconds a bus waits at a stop. */
 const BUS_DWELL = 10;
 /** The stop line, this far before the intersection (behind the crosswalk). */
@@ -415,8 +448,10 @@ function headingOfExit(c: Car) {
 }
 
 /** Advance traffic one tick: follow, stop at lights and stop signs, turn, yield to the player. */
-export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt: number, tick: number, playerX: number, playerY: number) {
+export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt: number, tick: number, playerX: number, playerY: number, grip = 0.8) {
   const sec = tick * dt;
+  // the most a driver can brake on this road, and how careful they are on it
+  const maxBrake = grip * 9.81, care = 0.6 + 0.5 * grip;
   // ---- who is where: lanes sorted by progress; a car crossing an intersection counts in the lane
   // it came from (for a while) and in the one it is heading into
   for (const b of lanes.values()) b.length = 0;
@@ -448,7 +483,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
 
   for (const c of cars) {
     c.px = c.x; c.py = c.y;
-    let v0 = c.max, gap = 1e9, vl = 0;
+    let v0 = c.max * care, gap = 1e9, vl = 0;
     const obstacle = (g: number, v: number) => { if (g < gap) { gap = g; vl = v; } };
 
     if (c.turn) {
@@ -482,11 +517,13 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     if (ahead > 0 && ahead < 14 + c.len / 2 && lat < 1.6) obstacle(ahead - c.len / 2 - 0.5, 0);
 
     // intelligent driver model
-    const sStar = GAP0 + Math.max(0, c.v * HEADWAY + (c.v * (c.v - vl)) / (2 * Math.sqrt(c.acc * BRAKE)));
+    const sStar = GAP0 + Math.max(0, (c.v * HEADWAY) / care + (c.v * (c.v - vl)) / (2 * Math.sqrt(c.acc * BRAKE)));
     let acc = c.acc * (1 - (c.v / Math.max(0.1, v0)) ** 4) - c.acc * (sStar / Math.max(0.1, gap)) ** 2;
-    acc = Math.max(-9, acc);
+    acc = Math.max(-maxBrake, Math.min(acc, maxBrake));
     c.v = Math.max(0, c.v + acc * dt);
     if (gap < 0.3) c.v = Math.min(c.v, 0.5); // never into what is ahead
+
+    stepBody(c, acc, dt);
 
     // move
     const d = c.v * dt;

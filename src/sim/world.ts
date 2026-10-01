@@ -4,7 +4,7 @@ import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, stairStep }
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
-import { queues, spawnCars, stepCars, type Car } from './traffic';
+import { queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
 import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
 /** Simulation rate. The sim always advances in steps of exactly this size. */
@@ -178,7 +178,7 @@ export function stepWorld(w: World, input: PlayerInput) {
     else if (z !== null) { p.z = z; p.floor = Math.floor((z + 0.01) / FLOOR_H); }
   }
 
-  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y);
+  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover));
   // every 10 s, a queue longer than a red light makes is a jam (logged again only after 5 min)
   if (w.tick % 600 === 599) queues(w.city, w.cars, (i, j, hd, n) => {
     if (n < JAM_CARS) return;
