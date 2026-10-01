@@ -322,8 +322,9 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
-  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit);
   finish(grid, v.look, sky);
+  // after finish, so the drops keep the background of what is behind them
+  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit);
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */

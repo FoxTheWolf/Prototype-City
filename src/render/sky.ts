@@ -29,16 +29,16 @@ function noise(x: number, y: number) {
 const smooth = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 const C = (s: string) => s.charCodeAt(0);
-const CLOUD_GLYPH = [C('.'), C(':'), C('~'), C('-'), C('='), C('~'), C(':'), C('%')];
 const MOON_GLYPH = [C('.'), C(':'), C('o'), C('%'), C('@')];
 
 /** What every sky cell of this frame shares. */
 export interface SkyFrame {
   /** 0 at night, 1 in daylight (the sun a few degrees up). */
   day: number;
-  /** How much of the dusk or dawn color there is, and the sun's heading (world angle). */
+  /** How much of the dusk or dawn color there is, and the sun's heading (world angle) and elevation. */
   dusk: number;
   sunA: number;
+  sunEl: number;
   moonA: number;
   moonEl: number;
   phase: number;
@@ -72,7 +72,7 @@ export function prepareSky(city: City, w: Weather, seed: number, t: number, sec:
   const day = smooth(-0.1, 0.1, sunEl);
   // real-time drift, so clouds move at the wind's speed as you watch
   return {
-    day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, moonA, moonEl, phase,
+    day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) : 0,
     cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city,
   };
@@ -118,6 +118,12 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
     const dk = S.dusk * t4 * (0.35 + 0.65 * toSun);
     r += 190 * dk; g += 80 * dk; b += 30 * dk - 10 * dk * toSun;
     let ch = 0, cr = 0, cg = 0, cb = 0;
+    let sunK = 0, cover = 0;
+    if (S.sunEl > -0.15 && Math.abs(dS) < 0.8) {
+      // a soft glow where the sun is (no disk: it would be a white blot), added after the clouds
+      const el = Math.atan(up), ang = Math.hypot(dS * Math.cos(el), el - S.sunEl);
+      sunK = (Math.exp(-ang / 0.09) * 0.8 + Math.exp(-ang / 0.35) * 0.25) * Math.min(1, (S.sunEl + 0.15) / 0.2);
+    }
 
     // stars, behind everything
     const hs = hash3(slot, Math.floor(y - hor), 7);
@@ -132,11 +138,14 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
       if (d2 < 1) {
         const wz = Math.sqrt(1 - d2), f = 2 * Math.PI * S.phase;
         let lit = Math.max(0, u * Math.sin(f) - wz * Math.cos(f));
-        lit = lit * (0.72 + 0.28 * noise(u * 3 + 40, v * 3 + 40)) + 0.05; // maria, and faint earthshine
-        const k = Math.min(1, lit) * (0.35 + 0.65 * night);
-        ch = MOON_GLYPH[Math.min(4, Math.floor(k * 5))]; cr = 235 * k + 20; cg = 228 * k + 20; cb = 200 * k + 26;
-        r += 13 + 40 * k; g += 12 + 38 * k; b += 11 + 34 * k;
-        moonA = 1; star = 0;
+        lit = lit * (0.72 + 0.28 * noise(u * 3 + 40, v * 3 + 40)) + 0.05 * night * night; // maria, and faint earthshine at night
+        // by day only the sunlit part shows, pale against the blue; the dark side is just sky
+        if (lit > 0.04 + 0.2 * S.day) {
+          const k = Math.min(1, lit) * (0.35 + 0.65 * night);
+          ch = MOON_GLYPH[Math.min(4, Math.floor(k * 5))]; cr = 235 * k + 20 + r * S.day; cg = 228 * k + 20 + g * S.day; cb = 200 * k + 26 + b * S.day;
+          r += (13 + 40 * k) * night + 60 * k * S.day; g += (12 + 38 * k) * night + 60 * k * S.day; b += (11 + 34 * k) * night + 55 * k * S.day;
+          moonA = 1; star = 0;
+        }
       } else if (d2 < 9) {
         // halo around it, by how much of it is lit
         const hk = ((1 - Math.cos(2 * Math.PI * S.phase)) / 2) * night * Math.exp(-(Math.sqrt(d2) - 1) * 1.6) * 18;
@@ -175,13 +184,16 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
         const hz = 1 - Math.exp(-D / 12000), hk = 0.4 * night * (0.6 + 0.6 * S.precip);
         qr += (26 + 55 * hk + 90 * S.day - qr) * hz; qg += (22 + 32 * hk + 95 * S.day - qg) * hz; qb += (26 + 22 * hk + 102 * S.day - qb) * hz;
         r += (qr - r) * a; g += (qg - g) * a; b += (qb - b) * a;
+        cover = a;
         star *= 1 - a;
-        if (a > 0.35 && (!moonA || thick > 0.6)) {
-          // a glyph fixed to the cloud texture, a little brighter than the cloud
-          const gi = Math.floor(noise(ox / 60 + 5, oy / 60 + 9) * 8);
-          ch = CLOUD_GLYPH[gi & 7]; cr = r * 1.45; cg = g * 1.45; cb = b * 1.45;
-        } else if (moonA) { cr *= 1 - a * 0.8; cg *= 1 - a * 0.8; cb *= 1 - a * 0.8; }
+        // clouds are color only (glyphs on them looked dirty); they hide the moon as they thicken
+        if (moonA) { if (thick > 0.6) ch = 0; else { cr *= 1 - a * 0.8; cg *= 1 - a * 0.8; cb *= 1 - a * 0.8; } }
       }
+    }
+    if (sunK > 0.003) {
+      // through clouds the glow dims but spreads: a bright patch and lit edges near the sun
+      const sk = sunK * (1 - 0.55 * cover);
+      r += 230 * sk; g += (205 - 60 * S.dusk) * sk; b += (170 - 90 * S.dusk) * sk;
     }
     grid.setBg(i, r, g, b);
     if (star > r + 25 && !moonA) grid.put(i, hs < 0.003 ? C('*') : C('.'), star, star, star + 30);
