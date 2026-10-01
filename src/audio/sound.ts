@@ -273,6 +273,25 @@ export class Sound {
       this.ringNodes.push(o);
     }
   }
+  /** A coin dropping into a payphone: a bright metallic clink, and its rattle down the chute. */
+  coin(at = 0) {
+    const ctx = this.ctx, t = ctx.currentTime + at;
+    for (const [f, d, v] of [[3200, 0, 0.06], [4700, 0.004, 0.04], [2100, 0.09, 0.03], [2600, 0.16, 0.02]]) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.type = 'sine'; o.frequency.value = f * (0.97 + Math.random() * 0.06); o.connect(g);
+      g.gain.setValueAtTime(v, t + d); g.gain.exponentialRampToValueAtTime(0.0005, t + d + 0.12);
+      o.start(t + d); o.stop(t + d + 0.15);
+    }
+  }
+  /** Coins falling back into the return cup. */
+  coinsBack() { for (let k = 0; k < 3; k++) this.coin(0.05 + k * 0.11); }
+  /** A payphone's handset lifted off (or put back on) its hook: a heavy clunk. */
+  hook() {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', 420, 2)).connect(g);
+    g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.09);
+    s.start(t, Math.random()); s.stop(t + 0.12);
+  }
   /** A text arriving: two short bright notes. */
   smsTone() { this.dual(1760, 1760, 0, 0.12, 0.04); this.dual(2093, 2093, 0.16, 0.18, 0.04); }
   /** A text sent: a soft rising chirp. */

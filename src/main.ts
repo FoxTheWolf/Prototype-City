@@ -2,6 +2,9 @@ import { Sound } from './audio/sound';
 import { Input } from './input';
 import { drawPhone, keyAt, mapView } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
+import { drawPayphone, Payphone } from './phone/payphone';
+import { type Sfx } from './phone/call';
+import en from './locale/en.json';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
@@ -37,10 +40,11 @@ const renderer = new GlyphRenderer(canvas);
 const input = new Input(canvas);
 const camera = new Camera();
 const phone = new Phone(world);
+const payphone = new Payphone(world);
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, VIEW_LIGHT, VIEW_GLINT,
+  world, camera, pickedButton, callLift, phone, payphone, VIEW_LIGHT, VIEW_GLINT,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -73,6 +77,29 @@ function phonePress(pk: Key) {
   }
   if (done === 'away') sound?.phoneSlide(false);
 }
+/** Sounds the phones asked for. */
+function playSfx(list: Sfx[]) {
+  for (const f of list) {
+    if (!sound) break;
+    switch (f[0]) {
+      case 'fail': sound.callFail(); break;
+      case 'stop': sound.stopRing(); break;
+      case 'sms': if (phone.prefs.profile === 0) sound.smsTone(); else if (phone.prefs.profile === 1) sound.vibrate(0.8); break;
+      case 'sent': if (phone.prefs.profile === 0) sound.sentTone(); break;
+      case 'hook': sound.hook(); break;
+      case 'coin': sound.coin(); break;
+      case 'coins': sound.coinsBack(); break;
+      case 'ringback': sound.ringback(); break;
+      case 'busy': sound.busy(); break;
+      case 'intercept': sound.intercept(); break;
+      case 'click': sound.stopRing(); sound.hangClick(); break;
+      case 'beep': sound.beep(true); break;
+      case 'hold': sound.holdMusic(f[1]); break;
+      case 'voice': sound.voice(f[1], f[2], f[3]); break;
+    }
+  }
+  list.length = 0;
+}
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
   // with the phone out the system cursor is free to click its keys; put away, the view takes the mouse again
@@ -100,9 +127,20 @@ function cellAtClient(cx: number, cy: number): [number, number] {
   return [Math.floor(((cx - r.left) * dpr - layout.originX) / layout.cellW), Math.floor(((cy - r.top) * dpr - layout.originY) / layout.cellH)];
 }
 addEventListener('mousemove', (e) => { [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY); });
+/** A payphone's key pressed: its sound, and the payphone. */
+function payPress(k: Key) {
+  if (/^[0-9*#]$/.test(k)) sound?.dtmf(k); else sound?.phoneKey(false);
+  payphone.press(k, performance.now() / 1000);
+  if (!payphone.active) input.lock();
+}
 addEventListener('mousedown', (e) => {
   if (!running) return;
-  if (e.button === 1) { e.preventDefault(); phoneToggle(); return; }
+  if (e.button === 1) { e.preventDefault(); if (!payphone.active) phoneToggle(); return; }
+  if (payphone.active) {
+    if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(grid.cols, grid.rows, x, y); if (k) payPress(k); }
+    else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; }
+    return;
+  }
   if (phone.out) {
     if (e.button === 0) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
@@ -117,10 +155,18 @@ addEventListener('mousedown', (e) => {
 });
 addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
-  if (phone.out && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
+  if (phone.out && !payphone.active && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
 });
 addEventListener('keydown', (e) => {
+  // a payphone in use takes the keys; F lifts the handset of the one in front, or hangs it up
+  if (e.code === 'KeyF' && running && !e.repeat) {
+    if (payphone.active) { payphone.close(); input.lock(); return; }
+    const k = payphone.near();
+    if (k >= 0 && !phone.out) { payphone.open(k); input.unlock(); return; }
+  }
+  const pp = payphone.active ? phoneKey(e.code) : null;
+  if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
   // the phone: Up (or P) takes it out; while it is out, its keys (see phone.ts)
   const pk = phone.out ? phoneKey(e.code) : null;
   if (pk) {
@@ -229,23 +275,14 @@ function frame(now: number) {
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);
-  for (const f of phone.sfx) {
-    if (!sound) break;
-    switch (f[0]) {
-      case 'fail': sound.callFail(); break;
-      case 'stop': sound.stopRing(); break;
-      case 'sms': if (phone.prefs.profile === 0) sound.smsTone(); else if (phone.prefs.profile === 1) sound.vibrate(0.8); break;
-      case 'sent': if (phone.prefs.profile === 0) sound.sentTone(); break;
-      case 'ringback': sound.ringback(); break;
-      case 'busy': sound.busy(); break;
-      case 'intercept': sound.intercept(); break;
-      case 'click': sound.stopRing(); sound.hangClick(); break;
-      case 'beep': sound.beep(true); break;
-      case 'hold': sound.holdMusic(f[1]); break;
-      case 'voice': sound.voice(f[1], f[2], f[3]); break;
-    }
-  }
-  phone.sfx.length = 0;
+  payphone.update(now / 1000);
+  payphone.hover = payphone.active ? payphone.keyAt(grid.cols, grid.rows, phone.cx, phone.cy) : null;
+  playSfx(phone.sfx);
+  playSfx(payphone.sfx);
+  drawPayphone(grid, payphone, world, now / 1000, VIEW_LIGHT);
+  // a payphone in front: how to use it
+  const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
+  if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; grid.text((grid.cols - s.length) >> 1, grid.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
   phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, phone.cx, phone.cy) : null;
   drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);

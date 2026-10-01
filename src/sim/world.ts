@@ -26,6 +26,8 @@ export interface Player {
   z: number;
   /** The floor a lift is taking the player to, or -1 when not riding one. */
   liftTo: number;
+  /** Cash in the pocket, in cents (coins for payphones now; the economy, stage 13, will use it). */
+  cash: number;
 }
 
 /** What the player asks for this tick. The only way the outside world affects the sim. */
@@ -86,7 +88,7 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   stepWeather(weather, seed, time, 0);
   const peds = spawnPeds(city, rng, pedsWanted(time, 0), x, y);
   const power = buildPower(seed, city);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power, telco: buildTelco(seed, city, power), events: newEventLog() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, telco: buildTelco(seed, city, power), events: newEventLog() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

@@ -731,6 +731,7 @@
     "Silver", "Blue Moon", "Red Door", "Night Owl", "Eastside", "Union", "Jupiter", "Rex", "Galaxy", "Ember"
   ],
   "phone": {
+    "payphone": { "lift": "LIFT & DIAL", "coin": "COIN", "dial": "DIAL", "hang": "HANG UP", "noCoins": "NO COINS", "deposit": "DEPOSIT 50c", "deposited": "PAID", "cash": "CASH", "use": "[F] USE PAYPHONE", "leave": "[F] HANG UP" },
     "ussd": {
       "root": ["{op}", "1 Balance", "2 Data bundles", "3 Top up", "4 My number", "5 Data usage"],
       "balance": "Your balance is {c}. Data left: {d}.",

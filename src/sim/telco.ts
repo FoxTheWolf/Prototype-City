@@ -46,6 +46,8 @@ export interface Telco {
   bizNum: string[];
   /** Local number to business index. */
   byNum: Map<string, number>;
+  /** The street payphones: where, which way they face (as their props), and their numbers. */
+  payphones: { x: number; y: number; a: number; num: string }[];
   /** Top-up card codes already used. */
   spent: Set<string>;
   sites: CellSite[];
@@ -98,7 +100,14 @@ export function buildTelco(seed: number, city: City, power: PowerGrid): Telco {
     byNum.set(n, k);
     return n;
   });
-  return { area, bizNum, byNum, spent: new Set(), sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
+  // the payphones on the sidewalks have numbers of their own too (they ring; nobody answers yet)
+  const payphones = city.blocks.flatMap((b) => b.props.filter((p) => p.kind === 'payphone')).map((p, i) => {
+    let num = '';
+    for (let t = 0; !num || byNum.has(num); t++) num = localNumber(seed, 70000 + i * 31 + t);
+    byNum.set(num, -1 - i);
+    return { x: p.x, y: p.y, a: p.a, num };
+  });
+  return { area, bizNum, byNum, payphones, spent: new Set(), sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
 }
 
 /** A made-up local number (7 digits): an exchange from 200 to 999 (never 555 or an N11), and a line. */
@@ -126,7 +135,7 @@ export function isOpen(kind: string, hour: number): boolean {
 /** Who a dialed number reaches. */
 export type Callee =
   | { kind: 'biz'; k: number } | { kind: 'res'; id: number } | { kind: 'operator' } | { kind: 'emergency' }
-  | { kind: 'directory' } | { kind: 'self' } | { kind: 'none' };
+  | { kind: 'directory' } | { kind: 'self' } | { kind: 'payphone'; k: number } | { kind: 'none' };
 
 /**
  * The number dialed, as the exchange routes it: the service codes (911, 411, 611), a local number
@@ -144,7 +153,7 @@ export function lookup(T: Telco, seed: number, dialed: string): Callee {
   if (d.length !== 7 || d[0] < '2') return { kind: 'none' };
   if (d === T.player.number.replace('-', '')) return { kind: 'self' };
   const k = T.byNum.get(d);
-  if (k !== undefined) return { kind: 'biz', k };
+  if (k !== undefined) return k >= 0 ? { kind: 'biz', k } : { kind: 'payphone', k: -1 - k };
   if (d.startsWith('555')) return { kind: 'none' };
   const h = hash3(seed, +d, 4242);
   return h < 0.35 ? { kind: 'res', id: Math.floor(h * 1e9) } : { kind: 'none' };
