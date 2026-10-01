@@ -50,13 +50,16 @@ export interface World {
   events: EventLog;
 }
 
+/** Cars on the grid (and 12% more on the diagonal), for the default city size. */
+const CARS = 1500;
+
 /** Default city side in metres. */
 export const CITY_SIZE = 2000;
 
 export function createWorld(seed: number, size = CITY_SIZE): World {
   const rng = mulberry32(seed);
   const city = generateCity(seed, size);
-  const cars = spawnCars(city, rng, 300);
+  const cars = spawnCars(city, rng, CARS);
   // start on the sidewalk of the block closest to downtown
   let start = city.blocks[0];
   for (const b of city.blocks) if (Math.hypot(b.x0 - city.cx, b.y0 - city.cy) < Math.hypot(start.x0 - city.cx, start.y0 - city.cy)) start = b;

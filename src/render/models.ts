@@ -31,6 +31,22 @@ export function carModel(col: RGB, taxi: boolean): Part[] {
   return m;
 }
 
+const farCars = new Map<string, Part[]>();
+/** A car far off: the body, the cabin and a strip of lights at each end. */
+export function carFarModel(col: RGB, taxi: boolean): Part[] {
+  const key = col.join() + taxi;
+  let m = farCars.get(key);
+  if (m) return m;
+  m = [
+    part(Box, -2.2, -0.9, 0.2, 2.2, 0.9, 0.95, col, Solid, '#', '=', '#'),
+    part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.5, taxi ? col : GLASS, Solid, '=', '-', '='),
+    part(Box, 2.19, -0.8, 0.62, 2.25, 0.8, 0.82, [255, 245, 200], Glow, '@'),
+    part(Box, -2.25, -0.8, 0.62, -2.19, 0.8, 0.82, [255, 40, 40], Glow, '@'),
+  ];
+  farCars.set(key, m);
+  return m;
+}
+
 const lamps = new Map<string, Part[]>();
 /** Street lamp: a pole on a base, with an arm reaching over the street (+x) to the lamp head, glowing `head`. */
 export function lampModel(head: RGB): Part[] {

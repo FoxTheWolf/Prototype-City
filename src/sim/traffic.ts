@@ -180,8 +180,11 @@ export interface Zone {
 export interface DiagRoad { u0: number; u1: number; lanes: number; zones: Zone[]; byRoad: Map<number, Zone[]>; touched: Set<number>; xOf: Map<number, Zone> }
 const diagRoads = new WeakMap<City, DiagRoad>();
 const ZKEY = 1 << 22;
-/** A zone within this of a grid intersection's box joins it; a longer one is an X. */
-const MERGE = 8, SHARED = 45;
+/**
+ * A zone within this of a grid intersection's box joins it (closer, a car would not fit between
+ * the two stops and they could wait on each other for ever); a longer one is an X.
+ */
+const MERGE = 15, SHARED = 45;
 /** An X's cycle (three phases) and its all-red, long enough to clear it. */
 const CYCLE_X = 96, ALL_RED_X = 8;
 const roadKey = (vert: boolean, k: number) => (vert ? 1024 : 0) + k;

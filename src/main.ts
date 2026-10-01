@@ -189,7 +189,7 @@ function frame(now: number) {
   // footsteps: one every stride, longer when running
   stride += Math.hypot(p.x - lastX, p.y - lastY);
   lastX = p.x; lastY = p.y;
-  if (stride > (p.speed > 4 ? 1.3 : 0.75)) { stride = 0; sound?.step(p.inside >= 0, world.weather.wet, p.z % FLOOR_H > 0.05); }
+  if (stride > (p.speed > 4 ? 2.6 : 1.6)) { stride = 0; sound?.step(p.inside >= 0, world.weather.wet, p.z % FLOOR_H > 0.05); }
   const W = world.weather;
   // indoors: office tubes buzz while the building has power
   let tubes = 0;
