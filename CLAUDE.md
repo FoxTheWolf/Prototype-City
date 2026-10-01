@@ -410,6 +410,15 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
 
+- **Etapa 8, navegação: decisões e grupos (2026-10-01).** O usuário decidiu no início:
+  - **O painel é o celular:** sai do bolso com uma tecla e aparece na mão, ocupando parte da tela; o mapa é um app dele. É o mesmo aparelho da etapa 9 (discador, SMS, câmera), então nasce já como o objeto do "Design: celular e apps".
+  - **Não pausa:** o mundo continua andando, e dá para andar com o celular na mão.
+  - **Posição:** primeiro o GPS sempre exato. **Os limites do GPS de 2008 são o último grupo desta etapa (8C), obrigatório, não esquecer:** demora para achar os satélites ao ligar (*cold start*), erro e salto perto de prédios altos (cânion urbano), sem sinal dentro dos prédios e debaixo de coberturas, e a última posição conhecida piscando enquanto não há sinal. O usuário gostou muito da ideia. Não depende das antenas (etapa 9); a precisão por antena entra lá.
+  - **Grupos planejados:**
+    - **A:** o celular como objeto (tirar e guardar, na mão, botões com som, texto composto aos poucos) e o app de mapa no nível local (ruas, prédios, marcos, a posição e a direção do jogador).
+    - **B:** os outros zooms (distrito, setor, cidade), rótulos de ruas e distritos, a lista de marcos.
+    - **C:** os limites do GPS de 2008 (veja acima).
+
 - **Etapa 7, grupo A (7.1–7.4), feito em 2026-10-01:**
   - **7.1, faixas e semáforos** (`sim/traffic.ts`): cada carro anda numa faixa (`hd`, `road`, `lane`; 0 = a mais perto do centro, mão direita) e segue o da frente pelo modelo IDM (aceleração 2, frenagem 3, folga 2 m, 1,2 s). No cruzamento, segue uma curva quadrática do ponto de entrada ao de saída (`startTurn`; esquerda pela faixa interna, direita pela externa, reto por qualquer uma), escolhendo já a manobra do cruzamento seguinte (`plan`). Não entra se a faixa de saída está cheia (`laneFree`), e a conversão à esquerda no verde cede ao tráfego oposto (`oncoming`).
     - **Semáforos** (`signal`, função pura do cruzamento e de `tick/60`, ou seja, **tempo real**, não o relógio do jogo que anda 30×): ciclo de 64 s, amarelo 3,5 s, todos no vermelho 2 s, verde maior na avenida larga, onda verde subindo as avenidas. Esquinas calmas (residencial e industrial, ruas estreitas) têm ~55% de paradas obrigatórias (`hasSignal`). Sem energia na subestação, o semáforo apaga e vira parada obrigatória: para, espera 0,8 s e vai por ordem de chegada, um por vez (`arrive`, `gate`, `busy`, `firstWait`).
@@ -859,7 +868,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - As janelas iluminando a fachada (como os letreiros), a chuva abafada do lado de dentro e a luz interna ligada à rede elétrica.
    - Veja "Preparação da etapa 6" no Estado atual.
 7. ✅ **Trânsito** *(feita em 2026-10-01, grupos A, B e C; veja o Histórico)*: avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
-8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos. (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
+8. **Navegação** *(em andamento desde 2026-10-01; veja "Etapa 8" no Histórico)*: o celular como painel diegético com terminal progressivo, mapas em 4 níveis, marcos, e por último os limites do GPS de 2008 (grupo 8C). (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
 9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
 11. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
@@ -894,7 +903,7 @@ O módulo de áudio já existe (`src/audio/`, Web Audio, tudo sintetizado, sem a
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
 - **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
 - **Etapa 6 (respondido em 2026-09-30):** interiores no espaço físico; câmera 3D depois; começar por residencial e escritório.
-- **Etapa 8:** forma do painel lateral diegético. Em 2026-09-30, o usuário disse que o celular serve, mas quer confirmar de novo quando a etapa chegar, porque pode ter outras ideias até lá.
+- **Etapa 8 (respondido em 2026-10-01):** o painel é o celular, não pausa, GPS exato primeiro e os limites de 2008 no grupo 8C.
 - **Etapa 10:** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
 
 ## Ideias futuras (não decididas)
