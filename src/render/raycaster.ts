@@ -449,12 +449,16 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
         if (grid.depth[i] <= tY) continue;
         const u = (x + 0.5 - mid) / half; // -1 .. 1 across the column
         const dens = (1 - u * u) * (0.25 + 0.75 * vv);
+        // color only, like the clouds (glyphs made it stand apart from the sky): the cell behind is
+        // veiled by the smoke, in puffs that rise, glowing orange at the base
         const hh = hash3(Math.floor(u * 5 + s.x), row, s.y | 0);
-        if (hh > dens * 0.9) continue;
+        const a = dens * 0.55 * (0.55 + 0.45 * hh);
+        if (a < 0.02) continue;
         const glow = vv > 0.7 ? (vv - 0.7) / 0.3 : 0;
-        const ch = hh < 0.15 ? G.tilde : hh < 0.35 ? G.lp : hh < 0.55 ? G.rp : hh < 0.75 ? G.col : G.dot;
-        const g0 = (85 + 45 * vv) * fog;
-        grid.put(i, ch, g0 + 180 * glow, g0 + 60 * glow, g0 * 1.05);
+        const g0 = (60 + 30 * vv) * fog, sr = g0 + 120 * glow, sg = g0 + 40 * glow, sb = g0 * 1.05;
+        const k = i * 4, { cells, bg } = grid;
+        grid.setBg(i, bg[k] + (sr - bg[k]) * a, bg[k + 1] + (sg - bg[k + 1]) * a, bg[k + 2] + (sb - bg[k + 2]) * a);
+        if (cells[k] !== 32 && cells[k] !== 0) grid.put(i, cells[k], cells[k + 1] + (sr - cells[k + 1]) * a, cells[k + 2] + (sg - cells[k + 2]) * a, cells[k + 3] + (sb - cells[k + 3]) * a);
       }
     }
   }
@@ -477,7 +481,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const elec = winLight * pw;
   const [fr, fg, fb] = B.frame;
   // by day most lights in the windows are off
-  const litK = pw < 0.05 ? 0 : B.lit * (1 - 0.75 * frameDay);
+  const litK = B.lit * (1 - 0.75 * frameDay);
+  // each window on its own: it dies with the passing wave and flickers back at its own moment
+  const sub = framePower.building[id], gen = framePower.generator[id], switched = framePower.subs[sub].changed >= 0;
+  const winPow = (a: number, fl: number) => (switched ? power(framePower, sub, hx, hy, (id * 131 + a * 977 + fl * 7) | 0, gen, frameSec)[0] * winLight : winLight);
   // rows per floor and columns per window bay decide how much of the facade fits in a cell
   const rpf = (FLOOR_H * scale) / t, cpb = BAY / (colW * t);
   const detailed = rpf >= 2.2 && cpb >= 1.5;
@@ -511,10 +518,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const wall = (c: number, k: number) => { ch = c; r = fr * k * shade; g = fg * k * shade; b = fb * k * shade; };
   // a window: lit ones glow in the building's window color, dark ones are deep blue glass
   const pane = (fl: number, litCh: number) => {
-    const hh = hash3(id, wi, fl);
-    if (hh < litK) {
+    const hh = hash3(id, wi, fl), wp = hh < litK ? winPow(wi, fl) : 0;
+    if (wp > 0.04) {
       ch = hh < litK * 0.3 ? G.at : litCh;
-      const k = elec * (0.65 + 0.35 * hash3(wi, fl, id));
+      const k = wp * (0.65 + 0.35 * hash3(wi, fl, id));
       r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
     } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
   };
@@ -603,10 +610,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else { ch = G.dot; r = 14; g = 12; b = 16; } // dark backing board
     }
     else if (!detailed) {
-      const hh = hash3(id, wi >> kh, fl >> kv);
-      if (hh < litK) {
+      const hh = hash3(id, wi >> kh, fl >> kv), wp = hh < litK ? winPow(wi >> kh, fl >> kv) : 0;
+      if (wp > 0.04) {
         ch = hh < litK * 0.4 ? G.o : G.col;
-        const k = elec * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
+        const k = wp * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else wall(farWall, farK);
     } else if (z < FLOOR_H && B.shop) {
@@ -625,7 +632,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const door = z < 4.5 && Math.floor(along / 6) % 3 === 1, dp = along % 6;
       if (z > B.h - 3.2 && z < B.h - 1.4) { // clerestory strip under the roof
         if (fw > 0.08 && fw < 0.92) {
-          if (hash3(id, wi, 0) < litK * 2) { ch = G.hash; const k = elec * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
+          if (hash3(id, wi, 0) < litK * 2 && winPow(wi, 0) > 0.04) { ch = G.hash; const k = winPow(wi, 0) * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
           else { ch = G.eq; r = 22 * shade + 8; g = 26 * shade + 8; b = 36 * shade + 10; }
         } else wall(G.bar, 1.2);
       } else if (door && !corner) wall(dp < 0.4 || dp > 5.6 ? G.bar : z > 4.1 ? G.eq : G.dash, dp < 0.4 || dp > 5.6 ? 1.3 : 1.15);
@@ -652,10 +659,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) pane(fl, G.hash);
       else wall(corner ? G.bar : G.dot, 1);
     } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
-      const hh = hash3(id, wi, fl);
-      if (hh < litK) {
+      const hh = hash3(id, wi, fl), wp = hh < litK ? winPow(wi, fl) : 0;
+      if (wp > 0.04) {
         ch = hh < litK * 0.3 ? G.at : hh < litK * 0.7 ? G.hash : G.pct;
-        const k = elec * (0.65 + 0.35 * hash3(wi, fl, id));
+        const k = wp * (0.65 + 0.35 * hash3(wi, fl, id));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);

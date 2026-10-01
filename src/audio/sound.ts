@@ -4,7 +4,7 @@ import { type City } from '../sim/city';
 import { type Weather } from '../sim/weather';
 import { type PowerGrid } from '../sim/power';
 import { power } from '../render/power';
-import { blackoutA, blackoutB, darkEvent, Kit, restore } from './blackout';
+import { blackout, darkEvent, Kit, restore } from './blackout';
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
@@ -31,8 +31,6 @@ export class Sound {
   private rainLow: GainNode;
   private noise: AudioBuffer;
   private lastBolt = -1;
-  /** Blackout sound: A follows the analysed recipe (docs/blackout-som-receita.md), B is our own take. */
-  blackoutVersion: 'A' | 'B' = 'A';
   private kit: Kit;
   private seen: number[] = [];
   private nextDark = 0;
@@ -142,7 +140,7 @@ export class Sound {
       const d = Math.hypot(s.x - x, s.y - y);
       if (d > 1400) return;
       const g = (1 - d / 1400) ** 1.3, at = now + d / 343, pn = pan(s.x, s.y) * 0.6;
-      if (!s.on) (this.blackoutVersion === 'A' ? blackoutA : blackoutB)(this.kit, at, g, pn);
+      if (!s.on) blackout(this.kit, at, g, pn);
       else restore(this.kit, at, g, pn);
     });
     // in a dark district the city hush falls; now and then a relay or a transformer fights back

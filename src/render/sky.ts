@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import { type City } from '../sim/city';
 import { moonDir, moonPhase, sunDir } from '../sim/clock';
 import { lightning, type Weather } from '../sim/weather';
-import { subAt, type PowerGrid } from '../sim/power';
+import { type PowerGrid } from '../sim/power';
 import { power } from './power';
 import { type CharGrid } from './grid';
 
@@ -71,6 +71,7 @@ export function daylight(t: number) {
 
 const bolt = new Float64Array(2);
 export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number, t: number, sec: number): SkyFrame {
+  buildLit(city, grid, sec);
   sunDir(t, tmp);
   const sunEl = tmp[0], sunA = heading(tmp[1]);
   moonDir(t, tmp);
@@ -92,16 +93,40 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
 function glowBelow(S0: SkyFrame, x: number, y: number, out: Float32Array) {
   const c = S0.city;
   const dx = Math.max(0, -x, x - c.w), dy = Math.max(0, -y, y - c.h), out_ = Math.hypot(dx, dy);
+  // the city's glow, round and soft (following the city's square edge drew a square on the deck)
+  const half = Math.min(c.w, c.h) / 2, rc = Math.hypot(x - c.w / 2, y - c.h / 2) / half;
+  const spread = Math.exp(-(rc ** 2.4) * 0.9);
   const core = Math.exp(-((Math.hypot(x - c.cx, y - c.cy) / (Math.min(c.w, c.h) * 0.45)) ** 2));
-  // a blacked-out district stops lighting the clouds over it
-  const lit = power(S0.grid, subAt(S0.grid, c, x, y), x, y, 7, 0, S0.sec)[0] * 0.88 + 0.12;
-  const city = (out_ > 0 ? Math.exp(-out_ / 500) : 1) * (0.55 + 0.45 * core) * lit;
+  // a blacked-out district stops lighting the clouds over it, blended over the substations around
+  // (light scatters: a hard switch at each substation's border showed as cut-out shapes)
+  const lit = litAt(S0, x, y) * 0.88 + 0.12;
+  const city = spread * (0.6 + 0.4 * core) * lit;
   // the seam's fires in a ring outside the fence, and the great crater under the Sarcophagus
   const S = c.sarcophagus, crater = Math.exp(-((Math.hypot(x - S.x, y - S.y) / (S.r * 1.3)) ** 2));
   const fire = Math.exp(-(((out_ - 450) / 420) ** 2)) + 1.6 * crater;
-  out[0] = 105 * city + 90 * fire; out[1] = 60 * city + 28 * fire; out[2] = 38 * city + 12 * fire;
+  // muted: a sodium city lights its overcast a dull brown-orange, not a bright one
+  out[0] = 62 * city + 70 * fire; out[1] = 42 * city + 24 * fire; out[2] = 34 * city + 12 * fire;
 }
 const GLOW = new Float32Array(3);
+
+/** The lit-share grid over the city and a margin around it, rebuilt every frame (cheap: LG x LG points). */
+const LG = 32, MARGIN = 1500, LIT = new Float32Array(LG * LG);
+function buildLit(c: City, grid: PowerGrid, sec: number) {
+  const pw = grid.subs.map((s, k) => Math.min(1, power(grid, k, s.x, s.y, 7, 0, sec)[0]));
+  for (let j = 0; j < LG; j++) for (let i = 0; i < LG; i++) {
+    const x = -MARGIN + ((c.w + 2 * MARGIN) * i) / (LG - 1), y = -MARGIN + ((c.h + 2 * MARGIN) * j) / (LG - 1);
+    let lw = 0, ls = 0;
+    grid.subs.forEach((s, k) => { const w = Math.exp(-((s.x - x) ** 2 + (s.y - y) ** 2) / (2 * 450 * 450)) + 1e-9; lw += w; ls += w * pw[k]; });
+    LIT[j * LG + i] = ls / lw;
+  }
+}
+/** Bilinear lookup in the lit-share grid (1 outside it). */
+function litAt(S: SkyFrame, x: number, y: number) {
+  const c = S.city, fx = ((x + MARGIN) / (c.w + 2 * MARGIN)) * (LG - 1), fy = ((y + MARGIN) / (c.h + 2 * MARGIN)) * (LG - 1);
+  if (fx < 0 || fy < 0 || fx >= LG - 1 || fy >= LG - 1) return 1;
+  const i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, k = j * LG + i;
+  return (LIT[k] * (1 - tx) + LIT[k + 1] * tx) * (1 - ty) + (LIT[k + LG] * (1 - tx) + LIT[k + LG + 1] * tx) * ty;
+}
 
 /**
  * The sky of one column, rows above the horizon. az is the column's world heading, (rdx, rdy) its

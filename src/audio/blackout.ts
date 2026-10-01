@@ -1,7 +1,7 @@
 /**
- * The sounds of the power grid, all synthesized: a substation going down (two versions to compare,
- * A after the analysed recipe in docs/blackout-som-receita.md, B our own take), the power coming
- * back, and the odd relay or transformer fighting back in the dark.
+ * The sounds of the power grid, all synthesized: a substation going down (after the analysed recipe
+ * in docs/blackout-som-receita.md; the user picked it over our own take), the power coming back, and
+ * the odd relay or transformer fighting back in the dark.
  */
 
 /** Shared pieces: the noise buffer and a short dark reverb. */
@@ -69,26 +69,35 @@ function filt(K: Kit, type: BiquadFilterType, f: number, q: number, to: AudioNod
   return b;
 }
 
-/** One short burst of filtered noise: an arc, a glitch, a click. */
-function burst(K: Kit, t: number, f: number, q: number, dur: number, peak: number, pan: number, verb: number, dist = false) {
+/**
+ * An electric sizzle: broad band-passed noise chopped in a fast irregular stutter, so it crackles
+ * like an arc instead of ringing (narrow, short bursts rang like billiard balls knocking).
+ */
+function sizzle(K: Kit, t: number, f: number, dur: number, peak: number, pan: number, verb: number) {
   const p = panner(K, pan, K.out);
-  const g = env(K, t, [[0.002, peak], [dur, 0]], p);
+  const g = env(K, t, [[0.004, peak], [dur * 0.7, peak * 0.6], [dur, 0]], p);
+  for (let k = 0; k < dur / 0.012; k++) g.gain.setValueAtTime(Math.random() < 0.45 ? 0 : peak * (0.3 + Math.random() * 0.7), t + 0.004 + k * 0.012);
+  g.gain.setValueAtTime(0, t + dur);
   if (verb) { const s = K.ctx.createGain(); s.gain.value = verb; g.connect(s); s.connect(K.reverb); }
-  let into: AudioNode = g;
-  if (dist) { const sh = shaper(K.ctx, 5); sh.connect(g); into = sh; }
-  const b = filt(K, 'bandpass', f, q, into);
-  b.frequency.setValueAtTime(f, t);
-  b.frequency.linearRampToValueAtTime(f * (0.8 + Math.random() * 0.4), t + dur);
-  noiseSrc(K, t, t + dur + 0.02, b);
+  const sh = shaper(K.ctx, 3); sh.connect(g);
+  noiseSrc(K, t, t + dur + 0.02, filt(K, 'bandpass', f, 1.4, sh));
+}
+
+/** A dry click: a millisecond of high-passed noise, no pitch to it. */
+function tick(K: Kit, t: number, peak: number, pan: number, verb: number) {
+  const p = panner(K, pan, K.out);
+  const g = env(K, t, [[0.0005, peak], [0.0025, 0]], p);
+  if (verb) { const s = K.ctx.createGain(); s.gain.value = verb; g.connect(s); s.connect(K.reverb); }
+  noiseSrc(K, t, t + 0.01, filt(K, 'highpass', 2500, 0.7, g));
 }
 
 /**
- * A: after the recipe. A saturated sub and a power drone gliding down ~121 -> 82 Hz (B2 to E2)
+ * After the recipe. A saturated sub and a power drone gliding down ~121 -> 82 Hz (B2 to E2)
  * through a resonant low-pass; a band-passed noise body; short arc bursts around 0.7-1.8 kHz (most
  * near 1.2 kHz), few at first and many later; clicks up to 5 kHz; a short dark reverb on the
  * middle layers only; a last hard re-strike of the low end at 55-80 Hz, then a fast cut. ~12 s.
  */
-export function blackoutA(K: Kit, t0: number, gain: number, pan: number) {
+export function blackout(K: Kit, t0: number, gain: number, pan: number) {
   const out = K.ctx.createGain();
   out.gain.value = 0.9 * gain;
   out.connect(K.out);
@@ -113,50 +122,20 @@ export function blackoutA(K: Kit, t0: number, gain: number, pan: number) {
   for (let k = 0; k < 26; k++) {
     const t = k < 5 ? 0.8 + Math.random() * 4.7 : 5.5 + Math.random() * 6.3;
     const f = Math.random() < 0.6 ? 1100 + Math.random() * 200 : 700 + Math.random() * 1100;
-    burst(K, t0 + t, f, 5 + Math.random() * 5, 0.02 + Math.random() * 0.1, 0.32 * gain, pan + (Math.random() - 0.5) * 0.8, 0.4, true);
+    sizzle(K, t0 + t, f, 0.05 + Math.random() * 0.15, 0.3 * gain, pan + (Math.random() - 0.5) * 0.8, 0.4);
   }
   for (let k = 0; k < 28; k++) {
     const t = k < 22 ? 3 + Math.random() ** 0.6 * 8.6 : 11.6 + Math.random() * 0.4;
-    burst(K, t0 + t, 1500 + Math.random() * 3500, 3, 0.002 + Math.random() * 0.006, 0.25 * gain, pan + (Math.random() - 0.5) * 0.9, 0.2);
+    tick(K, t0 + t, 0.2 * gain, pan + (Math.random() - 0.5) * 0.9, 0.2);
   }
-}
-
-/**
- * B: our own take on a transformer dying in the street: a deep thump and a crack as it blows, an
- * arc buzzing up in pitch until it snaps off, relays clattering down the line, the mains hum winding
- * down to nothing, and other transformers going a little further off.
- */
-export function blackoutB(K: Kit, t0: number, gain: number, pan: number) {
-  const out = panner(K, pan * 0.5, K.out);
-  const g = (v: number) => v * gain;
-  // the blow: thump, crack, and a low boom rolling off
-  osc(K, 'sine', t0, t0 + 0.7, [[0, 58], [0.25, 28]], env(K, t0, [[0.01, g(0.9)], [0.6, 0]], out));
-  burst(K, t0, 2200, 1, 0.12, g(0.7), pan, 0.5);
-  noiseSrc(K, t0, t0 + 1.6, filt(K, 'lowpass', 150, 0.7, env(K, t0, [[0.02, g(0.6)], [1.5, 0]], out)));
-  // the arc: a buzzing saw climbing, stuttering, cut dead
-  const arcG = env(K, t0, [[0.05, g(0.25)], [1.3, g(0.35)], [1.32, 0]], out);
-  for (let k = 0; k < 18; k++) arcG.gain.setValueAtTime(g(0.08 + Math.random() * 0.32), t0 + 0.06 + k * 0.07);
-  arcG.gain.setValueAtTime(0, t0 + 1.32);
-  const arcF = filt(K, 'bandpass', 900, 2, arcG);
-  const sh = shaper(K.ctx, 6); sh.connect(arcF);
-  osc(K, 'sawtooth', t0, t0 + 1.4, [[0, 120], [1.3, 260]], sh);
-  for (let k = 0; k < 15; k++) burst(K, t0 + Math.random() * 1.3, 2500 + Math.random() * 2500, 2, 0.004, g(0.3), pan + (Math.random() - 0.5), 0.2);
-  // the hum winding down
-  const humG = env(K, t0, [[0.05, g(0.3)], [4.5, 0]], out);
-  osc(K, 'sine', t0, t0 + 4.6, [[0, 120], [4.5, 25]], humG);
-  const h2 = K.ctx.createGain(); h2.gain.value = 0.4; h2.connect(humG);
-  osc(K, 'sine', t0, t0 + 4.6, [[0, 240], [4.5, 50]], h2);
-  // relays clattering, and other transformers further off
-  for (let k = 0; k < 12; k++) burst(K, t0 + 0.2 + Math.random() * 2.3, 3000, 8, 0.006, g(0.45), (Math.random() - 0.5) * 1.8, 0.3);
-  for (const t of [1.2, 2.3, 3.4]) noiseSrc(K, t0 + t, t0 + t + 1.2, filt(K, 'lowpass', 120, 0.7, env(K, t0 + t, [[0.02, g(0.25)], [1, 0]], panner(K, (Math.random() - 0.5) * 1.6, K.out))));
 }
 
 /** The power back: a heavy contactor closing, a few relays, the hum swelling up to pitch. */
 export function restore(K: Kit, t0: number, gain: number, pan: number) {
   const out = panner(K, pan * 0.5, K.out);
   osc(K, 'sine', t0, t0 + 0.3, [[0, 70], [0.2, 45]], env(K, t0, [[0.01, 0.7 * gain], [0.25, 0]], out));
-  burst(K, t0, 1800, 2, 0.05, 0.35 * gain, pan, 0.4);
-  for (let k = 0; k < 5; k++) burst(K, t0 + 0.1 + Math.random() * 0.8, 3000, 8, 0.006, 0.35 * gain, (Math.random() - 0.5) * 1.6, 0.3);
+  sizzle(K, t0, 1800, 0.08, 0.3 * gain, pan, 0.4);
+  for (let k = 0; k < 5; k++) tick(K, t0 + 0.1 + Math.random() * 0.8, 0.3 * gain, (Math.random() - 0.5) * 1.6, 0.3);
   const humG = env(K, t0, [[0.6, 0.22 * gain], [2.4, 0.12 * gain], [3.2, 0]], out);
   osc(K, 'sine', t0, t0 + 3.3, [[0, 60], [1.8, 120]], humG);
 }
@@ -164,7 +143,7 @@ export function restore(K: Kit, t0: number, gain: number, pan: number) {
 /** In the dark, now and then: a relay snapping, a transformer buzzing in a stutter, a low thump. */
 export function darkEvent(K: Kit, t0: number, pan: number) {
   const r = Math.random(), g = 0.25 + Math.random() * 0.25;
-  if (r < 0.45) { burst(K, t0, 3000, 8, 0.006, g, pan, 0.3); burst(K, t0 + 0.05 + Math.random() * 0.1, 2600, 8, 0.005, g * 0.7, pan, 0.3); }
+  if (r < 0.45) { tick(K, t0, g, pan, 0.3); tick(K, t0 + 0.05 + Math.random() * 0.1, g * 0.7, pan, 0.3); }
   else if (r < 0.8) {
     const bg = env(K, t0, [[0.02, g * 0.6], [0.3, g * 0.4], [0.32, 0]], panner(K, pan, K.out));
     for (let k = 0; k < 6; k++) bg.gain.setValueAtTime(Math.random() < 0.5 ? 0 : g * 0.5, t0 + 0.03 + k * 0.045);
