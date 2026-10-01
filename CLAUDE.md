@@ -358,6 +358,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E giram;
+  - celular: **P** tira e guarda; com ele fora, setas = d-pad, Enter = OK, Backspace = Voltar, dígitos = teclado;
   - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **M** som;
   - interiores: entrar pela porta; escadas andando; no elevador, mirar na botoeira e clicar (botão esquerdo); escadas de incêndio dos prédios de tijolo andando pela borda de fora do patamar;
   - debug: **T** e Shift+T mudam a hora em ±1 h (o trânsito e os pedestres seguem a hora); **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda; **PageUp/PageDown** sobem e descem um andar dentro de um prédio (até existirem escadas e elevadores).
@@ -385,6 +386,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `lamps.ts`: falhas e fotocélula.
     - `power.ts`: o efeito do blackout, uma função pura.
     - `interior.ts`: o andar em volta do jogador (paredes, piso, teto, lâmpadas, degraus, botoeira do elevador, janelas e vidro) e os interiores vistos de fora pelas janelas (`peekInto`/`peekCell`).
+  - **`src/phone/`** (a interface do celular, como o `main.ts`: lê a simulação, não é lida por ela): `phone.ts` (estado e teclas), `draw.ts` (o aparelho e os apps), `mapdata.ts` (o raster da cidade para o mapa). O hardware do aparelho fica em `sim/device.ts`.
   - **`src/audio/`:** `sound.ts` (ambiente, chuva, trovão, zumbidos) e `blackout.ts` (o som do apagão, versão A).
   - **`src/locale/`:** `en.json` e `names.ts`.
 - **Ordem do quadro** (`renderWorld`):
@@ -418,6 +420,12 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **A:** o celular como objeto (tirar e guardar, na mão, botões com som, texto composto aos poucos) e o app de mapa no nível local (ruas, prédios, marcos, a posição e a direção do jogador).
     - **B:** os outros zooms (distrito, setor, cidade), rótulos de ruas e distritos, a lista de marcos.
     - **C:** os limites do GPS de 2008 (veja acima).
+- **8.1, o celular e o mapa local (grupo A, 2026-10-01), aguarda o teste do usuário:**
+  - **O aparelho** (`src/phone/`, fora de `sim` e de `render`, como o `main.ts`): `phone.ts` guarda o estado (no bolso ou na mão, a tela, o menu, a vista do mapa, quando cada tecla foi apertada) e traduz o teclado; `draw.ts` desenha o celular sobre a vista, no canto de baixo à direita (50 colunas, 46 linhas visíveis; a última fileira do teclado fica fora da tela), com tela de 42×26 células. **P** tira e guarda (sobe em ~0,25 s, com som de pano e o toque na mão). Com o celular fora, as **setas** são o d-pad, **Enter** é o OK (e a tecla lateral esquerda), **Backspace** é Voltar e os **dígitos** são o teclado; WASD continuam andando e Q/E girando. As teclas acendem por trás com o aparelho ligado e afundam ao serem apertadas, com clique e tom (`phoneKey`, `phoneSlide`, `phoneBoot` em `sound.ts`).
+  - **O hardware é um dado** (`sim/device.ts`, `Device` e `PLAYER_PHONE`: Kestrel 7300 Navigator, KOS 3.1, ARM11 332 MHz, 128 MB, GSM/EDGE, Wi-Fi b/g, GPS). O boot (na primeira vez que sai do bolso) mostra o logotipo e lista o hardware digitando aos poucos; o rádio diz NO SERVICE porque as antenas ainda não existem (etapa 9). Na etapa 9 esses limites passam a valer de verdade.
+  - **Telas:** espera (relógio grande na fonte 5×7 dos letreiros, data), menu (só Maps por enquanto; `APPS` em `phone.ts`) e o mapa. Ao tirar do bolso a tela redesenha (a luz de fundo acorda).
+  - **Mapa local** (`mapdata.ts` e `map` em `draw.ts`): a cidade é rasterizada uma vez em quadrados de 2 m (`mapRaster`: rua, calçada, lote, prédio com altura, parque, praça, pátio; ~26 ms, durante o boot). Cada célula do mapa mostra o chão mais comum nos seus quadrados e o prédio mais alto, em âmbar mais claro quanto mais alto (`^` acima de 200 m). Norte para cima, 8 m por linha (a coluna é 8 × a proporção da célula, então não estica): ~200 × 176 m. O mapa se desenha linha a linha (celular lento), com o distrito e a escala no topo, marcos com `*` e nome, o jogador piscando com uma seta na direção do olhar, e embaixo a esquina. O d-pad move a vista um quarto de tela (mostra a distância e a direção de volta), e OK centraliza de novo.
+  - **Custo:** ~0,4 ms por quadro com o mapa aberto.
 
 - **Etapa 7, grupo A (7.1–7.4), feito em 2026-10-01:**
   - **7.1, faixas e semáforos** (`sim/traffic.ts`): cada carro anda numa faixa (`hd`, `road`, `lane`; 0 = a mais perto do centro, mão direita) e segue o da frente pelo modelo IDM (aceleração 2, frenagem 3, folga 2 m, 1,2 s). No cruzamento, segue uma curva quadrática do ponto de entrada ao de saída (`startTurn`; esquerda pela faixa interna, direita pela externa, reto por qualquer uma), escolhendo já a manobra do cruzamento seguinte (`plan`). Não entra se a faixa de saída está cheia (`laneFree`), e a conversão à esquerda no verde cede ao tráfego oposto (`oncoming`).
