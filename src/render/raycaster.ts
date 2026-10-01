@@ -121,9 +121,10 @@ const roofs: Roof[] = [];
 export const VIEW_LIGHT = new Float32Array([1, 1, 1]);
 /**
  * The light that glints off what they hold: its side (-1 left .. 1 right of the view), strength
- * (0..1, more for a light behind them, as a screen facing them mirrors) and color (r, g, b, 0..1).
+ * (0..1, more for a light behind them, as a screen facing them mirrors), color (r, g, b, 0..1),
+ * and how much it is behind them (-1 ahead .. 1 behind).
  */
-export const VIEW_GLINT = new Float32Array([0, 0, 1, 1, 1]);
+export const VIEW_GLINT = new Float32Array([0, 0, 1, 1, 1, 0]);
 
 export function renderWorld(grid: CharGrid, world: World, v: View) {
   const { cols, rows } = grid;
@@ -442,7 +443,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     const m = Math.max(1, S[0], S[1], S[2]);
     VIEW_GLINT[0] = lat;
     VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
-    VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m;
+    VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
   }
   // after finish, so the drops keep the background of what is behind them
   drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);

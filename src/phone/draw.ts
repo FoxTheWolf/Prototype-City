@@ -5,8 +5,9 @@ import { fontRows } from '../render/signs';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
-import { Ground, MAP_RES, mapRaster, type MapRaster } from './mapdata';
-import { APPS, BOOT_LOG_S, ZOOM_ROW_M, type Key, type Phone } from './phone';
+import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
+import { APPS, BOOT_LOG_S, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
+import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
 
 /**
  * The phone drawn in the player's hand, over the bottom right of the view: a 2008 handset with a
@@ -23,7 +24,10 @@ const SHOWN = 46;
 const SX = 4, SY = 4, SW = 42, SH = 26;
 const MAP_ROWS = SH - 4;
 /** Metres the map shows across and down, for a cell aspect (width / height) and zoom (a column is the cell aspect of a row, so nothing is stretched). */
-export const mapView = (aspect: number, zoom: number): [number, number] => [SW * ZOOM_ROW_M[zoom] * aspect, MAP_ROWS * ZOOM_ROW_M[zoom]];
+export const mapView = (aspect: number, zoom: number, indoor = false): [number, number] => {
+  const r = (indoor ? INDOOR_ROW_M : ZOOM_ROW_M)[zoom];
+  return [SW * r * aspect, MAP_ROWS * r];
+};
 
 type C3 = readonly [number, number, number];
 const T = en.phone;
@@ -48,7 +52,7 @@ class Lcd {
 const typed = (s: string, t: number, cps = 60) => s.slice(0, Math.max(0, Math.floor(t * cps)));
 
 /** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
-const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, adapt: 1, at: 0 };
+const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
 
 export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
   if (P.raise < 0.01) return;
@@ -58,7 +62,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
   GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
-  GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
+  GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
   // the eye adapts in a second or two: in the dark the screen looks brighter and blooms, under a
   // strong light it looks a little dimmer
   GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
@@ -108,38 +112,40 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
 
   // keys: lit from behind while the phone is on, sunk for a moment when pressed
   const on = P.screen !== 'off';
-  const key = (k: Key, x0: number, y0: number, w: number, h: number, label: string, col?: C3) => {
-    const t = P.pressed.get(k), down = t !== undefined && now - t < 0.14;
-    const fg: C3 = col ?? (on ? [150, 205, 255] : [125, 128, 138]);
-    // a cap in relief, unless pushed in: lit along its top edge with a shadow under it; the edge
-    // facing the nearest light catches its glint, and a short shadow falls on the side away from it
+  const CY = SY + SH + 2;
+  const KEYS: [Key, number, number, number, number, string, C3?][] = [
+    ['lsoft', 3, CY, 10, 2, '--'], ['rsoft', 37, CY, 10, 2, '--'],
+    ['send', 3, CY + 3, 10, 2, 'SEND', [80, 230, 120]], ['end', 37, CY + 3, 10, 2, 'END', [255, 80, 70]],
+    ['up', 21, CY, 8, 1, '^'], ['left', 16, CY + 1, 4, 3, '<'], ['right', 30, CY + 1, 4, 3, '>'], ['ok', 21, CY + 1, 8, 3, 'OK'], ['down', 21, CY + 4, 8, 1, 'v'],
+  ];
+  (['1 .,', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'] as const).forEach((label, n) =>
+    KEYS.push([label[0] as Key, 3 + (n % 3) * 16, CY + 6 + Math.floor(n / 3) * 3, 12, 2, label]));
+  const isDown = (k: Key) => { const t = P.pressed.get(k); return t !== undefined && now - t < 0.14; };
+  // first the keys' shadows on the body, cast away from the light: sideways by the light's side,
+  // down for a light ahead (from above the phone), up for one behind (always some, from the room
+  // around); then the caps over them, so a shadow never darkens a neighbouring key
+  const vx = -GL.lat, vy = Math.max(-1, Math.min(1, 0.55 - 0.9 * GL.back)), dark = 0.2 + 0.4 * GL.str;
+  const sx = Math.abs(vx) > 0.3 ? Math.sign(vx) : 0, sy = Math.abs(vy) > 0.3 ? Math.sign(vy) : 0;
+  for (const [k, x0, y0, w, h] of KEYS) {
+    if (isDown(k)) continue;
+    const ex = sx > 0 ? x0 + w : x0 - 1, ey = sy > 0 ? y0 + h : y0 - 1;
+    if (sx) for (let y = 0; y < h; y++) shade(ex, y0 + y, dark * Math.abs(vx));
+    if (sy) for (let x = 0; x < w; x++) shade(x0 + x, ey, dark * Math.abs(vy));
+    if (sx && sy) shade(ex, ey, dark * Math.min(Math.abs(vx), Math.abs(vy)));
+  }
+  // the caps in relief, unless pushed in: lit along the top edge; the edge facing the nearest light
+  // catches its glint; lit from behind while the phone is on
+  const side = GL.lat > 0 ? 1 : 0, rim = GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
+  for (const [k, x0, y0, w, h, label, col] of KEYS) {
+    const down = isDown(k), fg: C3 = col ?? (on ? [150, 205, 255] : [125, 128, 138]);
     const capAt = (y: number): C3 => (down ? CAP_DOWN : y === 0 && h > 1 ? CAP_TOP : CAP);
-    const side = GL.lat > 0 ? w - 1 : 0, rim = down ? 0 : GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
-      if (x === side && rim > 1) addBg(x0 + x, y0 + y, rim);
-    }
-    if (!down) {
-      for (let x = 0; x < w; x++) cell(x0 + x, y0 + h, 32, BODY, [18, 19, 22], 0.1);
-      const sx = GL.lat > 0 ? x0 - 1 : x0 + w, dark = Math.min(0.55, rim / 80);
-      if (dark > 0.05) for (let y = 0; y <= h; y++) shade(sx, y0 + y + 1, dark);
+      if (!down && rim > 1 && x === side * (w - 1)) addBg(x0 + x, y0 + y, rim);
     }
     const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
     for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? [fg[0] * 0.7, fg[1] * 0.7, fg[2] * 0.7] : fg, capAt(ly - y0), 0.5, on);
-  };
-  const CY = SY + SH + 2;
-  key('lsoft', 3, CY, 10, 2, '--');
-  key('rsoft', 37, CY, 10, 2, '--');
-  key('send', 3, CY + 3, 10, 2, 'SEND', [80, 230, 120]);
-  key('end', 37, CY + 3, 10, 2, 'END', [255, 80, 70]);
-  // (each key's shadow falls on the row under it, so the lower ones are drawn after)
-  key('up', 21, CY, 8, 1, '^');
-  key('left', 16, CY + 1, 4, 3, '<');
-  key('right', 30, CY + 1, 4, 3, '>');
-  key('ok', 21, CY + 1, 8, 3, 'OK');
-  key('down', 21, CY + 4, 8, 1, 'v');
-  const KEYS: [Key, string][] = [['1', '1 .,'], ['2', '2 abc'], ['3', '3 def'], ['4', '4 ghi'], ['5', '5 jkl'], ['6', '6 mno'], ['7', '7 pqrs'], ['8', '8 tuv'], ['9', '9 wxyz'], ['*', '* +'], ['0', '0 _'], ['#', '# ^']];
-  KEYS.forEach(([k, label], n) => key(k, 3 + (n % 3) * 16, CY + 6 + Math.floor(n / 3) * 3, 12, 2, label));
+  }
 
   // the screen
   const S = new Lcd(g, ox + SX, oy + SY);
@@ -332,6 +338,7 @@ const ROAD: C3 = [52, 58, 72], LABEL: C3 = [150, 195, 215], TB: C3 = [16, 30, 40
  * by type; landmarks are stars, named while there is room.
  */
 function map(S: Lcd, P: Phone, world: World, yaw: number, aspect: number, t: number, now: number) {
+  if (world.player.inside >= 0) return indoorMap(S, P, world, yaw, aspect, t, now);
   const { city, player } = world, m = mapRaster(city), zoom = P.zoom, rowM = ZOOM_ROW_M[zoom], colM = rowM * aspect;
   const cx = player.x + P.panX, cy = player.y + P.panY;
   const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, D = city.diagonal;
@@ -438,6 +445,71 @@ function map(S: Lcd, P: Phone, world: World, yaw: number, aspect: number, t: num
     S.text(SW - back.length - 1, SH - 2, back, DIM, TB);
   }
   softKeys(S, panned ? T.center : T.places, T.back);
+}
+
+/** Floor colors of the rooms on the indoor map, by kind; the stairs and the lift get a glyph. */
+const ROOM_BG: Record<RoomKind, C3> = {
+  lobby: [92, 88, 80], hall: [70, 64, 56], stair: [58, 62, 70], lift: [64, 70, 84], foyer: [86, 74, 60], living: [110, 86, 60],
+  bedroom: [84, 76, 104], kitchen: [96, 100, 84], bath: [70, 104, 112], office: [74, 84, 98], open: [80, 90, 102], shop: [118, 96, 54],
+};
+const ROOM_CH: Partial<Record<RoomKind, number>> = { stair: ch('='), lift: ch('X') };
+
+/**
+ * The map inside a building: the plan of the floor the player is on, around them (rooms tinted by
+ * what they are and named where they fit, walls, doorways, the stairs and the lift), and the street
+ * past the outer walls. The same zoom keys pick the scale.
+ */
+function indoorMap(S: Lcd, P: Phone, world: World, yaw: number, aspect: number, t: number, now: number) {
+  const { city, player } = world, B = city.buildings[player.inside], plan = planOf(city, player.inside, player.floor);
+  const rowM = INDOOR_ROW_M[P.zoom], colM = rowM * aspect, cx = player.x + P.panX, cy = player.y + P.panY;
+  const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, m = mapRaster(city);
+  const where = `${T.floor} ${player.floor === 0 ? T.ground : player.floor}`, scale = `|${'--'}| ${(4 * colM).toFixed(0)}m N^`;
+  S.fill(1, TB);
+  S.text(1, 1, typed(where, t), HI, TB);
+  S.text(SW - scale.length - 1, 1, scale, DIM, TB);
+  const WALL: C3 = [30, 32, 36], OUT: C3 = [14, 16, 20];
+  for (let r = 0; r < MAP_ROWS; r++) {
+    if (t < 0.15 + r * 0.03) break;
+    for (let c = 0; c < SW; c++) {
+      const x0 = X0 + c * colM, y0 = Y0 + r * rowM;
+      // 3x3 points per cell: one room all over is its floor; two rooms meeting is a wall, unless both sides are a doorway
+      let first = -1, mixed = false, door = true, any = false;
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
+        const v = plan ? cellAt(plan, x0 + ((i + 0.5) / 3) * colM, y0 + ((j + 0.5) / 3) * rowM) : 0, room = v & 127;
+        if (room) any = true;
+        if (!(v & DOOR)) door = false;
+        if (first < 0) first = room; else if (room !== first) mixed = true;
+      }
+      if (!any) {
+        // past the outer walls: the street, or a neighbor's wall
+        const k = groundAt(m, x0 + colM / 2, y0 + rowM / 2);
+        S.put(c, 2 + r, k === Ground.Building ? ch(':') : 32, [50, 46, 40], k === Ground.Building ? [36, 32, 28] : OUT);
+      } else if (mixed && !door) S.put(c, 2 + r, ch('#'), [70, 72, 78], WALL);
+      else {
+        const R = plan!.rooms[first - 1], bg = R ? ROOM_BG[R.kind] : WALL;
+        S.put(c, 2 + r, mixed ? 32 : R ? ROOM_CH[R.kind] ?? 32 : 32, [200, 205, 215], mixed ? [bg[0] * 1.3, bg[1] * 1.3, bg[2] * 1.3] : bg);
+      }
+    }
+  }
+  const drawn = Math.max(0, Math.floor((t - 0.15) / 0.03));
+  // the rooms' names, at their middles, where they fit
+  if (plan && P.zoom <= 1) plan.rooms.forEach((R, n) => {
+    const mx = (R.x0 + R.x1) / 2, my = (R.y0 + R.y1) / 2;
+    if ((cellAt(plan, mx, my) & 127) !== n + 1) return;
+    const name = (T.room as Record<string, string>)[R.kind], c = Math.floor((mx - X0) / colM) - (name.length >> 1), r = Math.floor((my - Y0) / rowM);
+    if (r < 0 || r >= MAP_ROWS || r >= drawn || c < 0 || c + name.length > SW || name.length * colM > R.x1 - R.x0 + 0.5) return;
+    S.text(c, 2 + r, name, [235, 235, 240], ROOM_BG[R.kind]);
+  });
+  const pc = Math.floor((player.x - X0) / colM), pr = Math.floor((player.y - Y0) / rowM);
+  if (pc >= 0 && pc < SW && pr >= 0 && pr < MAP_ROWS && pr < drawn) {
+    const blink = Math.floor(now * 3) & 1, o = Math.round((yaw / (Math.PI / 4))) & 7;
+    S.put(pc, 2 + pr, ch(ARROWS[o]), blink ? [255, 255, 255] : [90, 255, 255], blink ? [0, 120, 150] : [0, 60, 80]);
+  }
+  // the address: the building's corner
+  const addr = `${roadName(city, true, nearestRoad(city.xb, city.xCell, (B.x0 + B.x1) / 2))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, (B.y0 + B.y1) / 2))}`;
+  S.fill(SH - 2, TB);
+  S.text(1, SH - 2, typed(addr.slice(0, SW - 2), t - 0.3), INK, TB);
+  softKeys(S, P.panX || P.panY ? T.center : T.places, T.back);
 }
 
 /** The list of places: the city's landmarks, nearest first, with how far and which way. */

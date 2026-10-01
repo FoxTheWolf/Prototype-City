@@ -427,7 +427,8 @@ export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, s
     // slides as the camera turns and never hides the city behind it (colors only, no glyphs)
     const fres = 0.14 + 0.6 * (1 - gC[x]) ** 3, keep = 1 - 0.55 * fres;
     for (let y = 0; y < rows; y++) {
-      if (!glass[y * cols + x]) continue;
+      // (not over what stands in the room in front of the window: the furniture)
+      if (!glass[y * cols + x] || grid.depth[y * cols + x] < t - 0.05) continue;
       const k4 = (y * cols + x) * 4;
       const e = (hor - (y + 0.5)) / scale, z = eye + e * t;
       const streak = (0.5 + 0.5 * Math.sin(gH[x] * 2.2 + e * 1.7 + 0.6)) ** 10, m = fres * (60 + 150 * streak);

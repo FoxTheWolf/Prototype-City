@@ -21,6 +21,8 @@ export const APPS: Screen[] = ['map'];
 export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
 /** The map's zoom levels (local, district, sector, city): metres per screen row. */
 export const ZOOM_ROW_M = [8, 18, 36, 96];
+/** Inside a building the map shows the floor plan instead, at these scales. */
+export const INDOOR_ROW_M = [1, 2, 3.5, 6];
 
 export class Phone {
   readonly device: Device = PLAYER_PHONE;

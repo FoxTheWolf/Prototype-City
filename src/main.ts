@@ -63,7 +63,7 @@ let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
-  const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH, phone.zoom));
+  const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));
   sound?.phoneKey(/^\d$/.test(pk), done !== false);
   if (done === 'away') sound?.phoneSlide(false);
 }
