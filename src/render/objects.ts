@@ -95,6 +95,12 @@ export function part(shape: number, x0: number, y0: number, z0: number, x1: numb
 
 // part centers and half sizes of the current object, widened so thin parts never fall between cells
 const P = new Float64Array(32 * 6);
+// per column: the parts its ray can meet (seen from above), and the rows each of them can cover
+const CAND = new Int16Array(32), CY0 = new Int32Array(32), CY1 = new Int32Array(32);
+// the light last sampled in this column, reused for points close to it
+const LC = new Float32Array(3);
+/** Metres a leaning body can move a part sideways or up (springs, small angles). */
+const LEAN = 0.3;
 
 export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
   const { cols, rows, depth } = grid;
@@ -148,6 +154,25 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
       const ta = Math.max(0.05, (-qb - sq) / qa), up = o.h - v.eye, down = v.eye - (o.z0 ?? 0);
       const y0 = Math.max(0, Math.floor(v.hor - (up * v.scale) / (up > 0 ? ta : tb)));
       const y1 = Math.min(rows, Math.ceil(v.hor + (down * v.scale) / (down > 0 ? ta : tb)));
+      // the parts this column can meet: their box seen from above against the ray, and from the
+      // depths where it does, the rows they can reach (a leaning body's parts get some slack)
+      let nc = 0;
+      const leans = o.lift !== undefined;
+      for (let k = 0; k < n; k++) {
+        const j = k * 6, sl = leans && o.parts[k].z0 > 0 ? LEAN : 0;
+        const hx = P[j + 3] + sl, hy = P[j + 4] + sl;
+        let tA = 0.05, tB = 1e9;
+        if (Math.abs(dx) < 1e-9) { if (Math.abs(ox - P[j]) > hx) continue; }
+        else { let a = (P[j] - hx - ox) / dx, b = (P[j] + hx - ox) / dx; if (a > b) { const t = a; a = b; b = t; } tA = Math.max(tA, a); tB = Math.min(tB, b); }
+        if (Math.abs(dy) < 1e-9) { if (Math.abs(oy - P[j + 1]) > hy) continue; }
+        else { let a = (P[j + 1] - hy - oy) / dy, b = (P[j + 1] + hy - oy) / dy; if (a > b) { const t = a; a = b; b = t; } tA = Math.max(tA, a); tB = Math.min(tB, b); }
+        if (tA > tB) continue;
+        const zhi = P[j + 2] + P[j + 5] + sl - oz, zlo = P[j + 2] - P[j + 5] - sl - oz;
+        const eMax = zhi / (zhi > 0 ? tA : tB), eMin = zlo / (zlo > 0 ? tB : tA);
+        CAND[nc] = k; CY0[nc] = Math.floor(v.hor - eMax * v.scale - 1.5); CY1[nc] = Math.ceil(v.hor - eMin * v.scale + 0.5); nc++;
+      }
+      if (!nc) continue;
+      let lx = 1e9, ly = 1e9, lz = 1e9;
       for (let y = y0; y < y1; y++) {
         const i = y * cols + x;
         // cells where something nearer than the whole object is already drawn
@@ -159,8 +184,9 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         const tilt = o.lift !== undefined, pt = o.pitch ?? 0, rl = o.roll ?? 0;
         const bOx = ox - pt * (oz - PIVOT), bOy = oy - rl * (oz - PIVOT), bOz = oz + pt * ox + rl * oy - (o.lift ?? 0);
         const bDx = dx - pt * dz, bDy = dy - rl * dz, bDz = dz + pt * dx + rl * dy;
-        for (let k = 0; k < n; k++) {
-          const j = k * 6, cx = P[j], cy = P[j + 1], cz = P[j + 2], hx = P[j + 3], hy = P[j + 4], hz = P[j + 5];
+        for (let m = 0; m < nc; m++) {
+          if (y < CY0[m] || y > CY1[m]) continue;
+          const k = CAND[m], j = k * 6, cx = P[j], cy = P[j + 1], cz = P[j + 2], hx = P[j + 3], hy = P[j + 4], hz = P[j + 5];
           const part = o.parts[k], shape = part.shape, body = tilt && part.z0 > 0, glassy = part.mat === Mat.Glass;
           const ox = body ? bOx : ox0, oy = body ? bOy : oy0, oz = body ? bOz : oz0, dx = body ? bDx : dx0, dy = body ? bDy : dy0, dz = body ? bDz : dz0;
           if (shape === Shape.Box) {
@@ -300,8 +326,13 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         if (face === 2 && v.snow && !painted) { const sk = v.snow * 0.85; r += (185 - r) * sk; g += (190 - g) * sk; b += (200 - b) * sk; }
         if (!painted) {
           // the light where the ray hit, strongest on tops: a car lights up under a lamp or in another's headlights
+          // (points close together in the column share one sample of the light)
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;
-          const L = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz), gl = (face === 2 ? 1.5 : 1.1) * fog;
+          if ((hx - lx) ** 2 + (hy - ly) ** 2 + (hz - lz) ** 2 > 0.0625) {
+            const S = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz);
+            LC[0] = S[0]; LC[1] = S[1]; LC[2] = S[2]; lx = hx; ly = hy; lz = hz;
+          }
+          const L = LC, gl = (face === 2 ? 1.5 : 1.1) * fog;
           if (v.mul) { r *= L[0]; g *= L[1]; b *= L[2]; } else { r += L[0] * gl; g += L[1] * gl; b += L[2] * gl; }
         }
         if (glassT < best) {

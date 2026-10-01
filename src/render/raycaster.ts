@@ -311,7 +311,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           }
         }
       }
-      lightAt(wx, wy, 0);
+      lightNear(wx, wy, 0);
       grid.put(i, ch, (r + LT[0] * lk) * fog, (g + LT[1] * lk) * fog, (b + LT[2] * lk) * fog);
     }
 
@@ -1025,8 +1025,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       }
     }
     if (z < LIT_H && t < LIT_FAR) {
-      // street lamps, headlights and signs light the lower floors
-      lightAt(hx, hy, z);
+      // street lamps, headlights and signs light the lower floors (cells close together share a sample)
+      lightNear(hx, hy, z);
       const k = 1.3 * shade;
       r += LT[0] * k; g += LT[1] * k; b += LT[2] * k;
     }
@@ -1119,7 +1119,14 @@ function reliefOf(B: Building): boolean {
  * All the light reaching a point, into LT: the street lamps' pools (fading above 1 m, gone at LIT_H)
  * and this frame's dynamic lights.
  */
+/** Where the light in LT was last sampled: lightNear reuses it for points closer than 0.3 m. */
+let lnX = 1e9, lnY = 1e9, lnZ = 1e9;
+function lightNear(x: number, y: number, z: number) {
+  if ((x - lnX) ** 2 + (y - lnY) ** 2 + (z - lnZ) ** 2 < 0.09) return;
+  lightAt(x, y, z);
+}
 function lightAt(x: number, y: number, z: number) {
+  lnX = x; lnY = y; lnZ = z;
   const zk = z <= 1 ? 1 : 1 - (z - 1) / (LIT_H - 1);
   LT[0] = LT[1] = LT[2] = 0;
   if (zk > 0) light.add(x, y, zk, LT);
