@@ -125,7 +125,7 @@ export class Sound {
   private drop(t: number, g: number, pan: number) {
     const ctx = this.ctx, s = ctx.createBufferSource();
     s.buffer = this.noise;
-    const bp = filter(ctx, 'bandpass', 2200 + Math.random() * 3000, 4 + Math.random() * 4), p = ctx.createStereoPanner(), v = gain(ctx, 0, p);
+    const bp = filter(ctx, 'bandpass', 900 + Math.random() * 1500, 4 + Math.random() * 4), p = ctx.createStereoPanner(), v = gain(ctx, 0, p);
     p.pan.value = pan; p.connect(this.master);
     s.connect(bp).connect(v);
     v.gain.setValueAtTime(g, t);

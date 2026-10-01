@@ -598,6 +598,9 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 - **Calçadas da avenida diagonal quebradas (5.1):** em vez de atravessar a rua de forma coerente, as calçadas fazem curvas sem sentido ou desaparecem. A causa provável é a regra do chão em `raycaster.ts`: a calçada da diagonal (`pastD < SIDEWALK` dentro do quarteirão) e a calçada normal do quarteirão (a 4 m da borda) se somam e são cortadas pelas ruas transversais. O usuário sugeriu arrumar junto com o trânsito (agora etapa 7), quando o desenho dos cruzamentos da diagonal for refeito.
 
+- **Prédios sem acesso ao corredor (6.x, relatado em 2026-09-30):** em alguns prédios, provavelmente os cortados pela diagonal, não dá para chegar ao corredor a partir da porta de rua (o recorte tira o saguão, a porta ou parte do corredor). Revisar `makePlan` em `sim/interior.ts` para prédios com `cut`.
+- **Grupo B (escadas e elevadores) e fachadas:** o usuário deixou a ordem à escolha do Claude, pedindo o caminho mais barato em processamento e tokens. Sugestão: escadas e elevadores antes, porque reaproveitam o render de dentro que já existe; as fachadas pedem um passe novo e mais caro.
+
 ## Notas técnicas (para as próximas sessões)
 
 - **Regras da arquitetura:**
