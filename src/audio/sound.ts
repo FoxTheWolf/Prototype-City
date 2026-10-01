@@ -134,6 +134,26 @@ export class Sound {
     s.stop(t + 0.05);
   }
 
+  /** A key of the lift panel: a short square beep (higher when refused). */
+  beep(ok = true) {
+    const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'square'; o.frequency.value = ok ? 1320 : 440;
+    o.connect(filter(ctx, 'lowpass', 3000, 0.7)).connect(g);
+    g.gain.setValueAtTime(0.05, t); g.gain.setTargetAtTime(0, t + (ok ? 0.05 : 0.15), 0.01);
+    o.start(t); o.stop(t + 0.3);
+  }
+
+  /** The car arriving: a soft two-note chime. */
+  ding() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    [[988, 0], [784, 0.35]].forEach(([f, d]) => {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.frequency.value = f; o.connect(g);
+      g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(0.12, t + d + 0.01); g.gain.setTargetAtTime(0, t + d + 0.02, 0.5);
+      o.start(t + d); o.stop(t + d + 3);
+    });
+  }
+
   /** Browsers only start audio after a click; call from one. */
   resume() { if (this.ctx.state !== 'running') this.ctx.resume(); }
 

@@ -13,7 +13,7 @@ import { diagS, districtAt, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
-import { createWorld, cycleWeather, debugFloor, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
+import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
 /** The grid always has this many rows; columns follow the window shape. */
 const ROWS = 80;
@@ -57,8 +57,17 @@ let running = false;
 const SOLID = [0.24, 0.16, 0.08, 0];
 let solidStep = 1; // 0.16, the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
+// the lift car's panel: type a floor and press Enter
+let liftKeys = '';
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
+  if (liftFloors(world) && (e.code.startsWith('Digit') || e.code.startsWith('Numpad') || e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Backspace')) {
+    const d = e.code.match(/(\d)$/);
+    if (d && liftKeys.length < 2) { liftKeys += d[1]; sound?.beep(); }
+    else if (e.code === 'Backspace') { liftKeys = liftKeys.slice(0, -1); sound?.beep(); }
+    else if (e.code.endsWith('Enter') && liftKeys) { sound?.beep(callLift(world, Number(liftKeys))); liftKeys = ''; }
+    return;
+  }
   if (e.code === 'KeyM') sound?.toggleMute();
   else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
@@ -95,6 +104,7 @@ function readInput(): PlayerInput {
 
 // audio can only start from a click, so it is made on entering the city
 let sound: Sound | null = null;
+let wasRiding = false;
 
 function begin() {
   sound ??= new Sound();
@@ -165,6 +175,20 @@ function frame(now: number) {
   city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
+  // the panel, while standing in a lift car; the chime when it arrives
+  const nFloors = liftFloors(world);
+  if (nFloors) {
+    const box = [
+      '+-- LIFT --------+',
+      `| AT ${String(p.floor).padStart(2, '0')}   ${p.liftTo >= 0 ? (p.liftTo > p.floor ? 'UP  ' : 'DOWN') + ' ' + String(p.liftTo).padStart(2, '0') : '       '} |`,
+      `| FLOOR [${liftKeys.padEnd(2, '_')}] 0-${String(nFloors - 1).padStart(2, '0')} |`,
+      '| 0-9  ENT  BKSP |',
+      '+----------------+',
+    ];
+    box.forEach((s, k) => grid.text(grid.cols - s.length - 2, 3 + k, s, [255, 176, 74], [12, 10, 8]));
+  }
+  if (wasRiding && p.liftTo < 0) sound?.ding();
+  wasRiding = p.liftTo >= 0;
   const W = world.weather;
   // indoors: office tubes buzz while the building has power
   let tubes = 0;

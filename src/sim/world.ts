@@ -95,6 +95,24 @@ export function debugFloor(w: World, d: number) {
   if (P && cellAt(P, p.x, p.y)) { p.floor = f; p.z = f * FLOOR_H; }
 }
 
+/** The lift car the player stands in: the number of floors it serves, or 0 when not in one. */
+export function liftFloors(w: World): number {
+  const p = w.player;
+  if (p.inside < 0) return 0;
+  const P = planOf(w.city, p.inside, p.floor), c = P ? cellAt(P, p.x, p.y) & 127 : 0;
+  if (!c || P!.rooms[c - 1].kind !== 'lift') return 0;
+  let n = p.floor + 1;
+  for (;;) { const Q = planOf(w.city, p.inside, n), q = Q ? cellAt(Q, p.x, p.y) & 127 : 0; if (!q || Q!.rooms[q - 1].kind !== 'lift') return n; n++; }
+}
+
+/** Press a floor on the car's panel: it rides there (true), or the floor does not exist (false). */
+export function callLift(w: World, f: number): boolean {
+  const n = liftFloors(w), p = w.player;
+  if (!n || f < 0 || f >= n || f === (p.liftTo >= 0 ? p.liftTo : p.floor)) return false;
+  p.liftTo = f;
+  return true;
+}
+
 /** Lift speed in m/s, with a gentle start and stop. */
 const LIFT_V = 2.5;
 function stepLift(p: Player) {
