@@ -248,7 +248,7 @@ export class Sound {
       const d = Math.abs(c.x - x) + Math.abs(c.y - y);
       if (d > ENGINE_R * 1.5) continue;
       const e = Math.hypot(c.x - x, c.y - y);
-      if (e < ENGINE_R) near.push([e, c]);
+      if (e < ENGINE_R && c.kind !== 'bike') near.push([e, c]); // a bicycle is silent
       // a horn: two detuned square waves, a short blast (a truck's or a bus's deeper)
       if (c.honk && this.honks.get(c) !== c.honk && e < HORN_R) { this.honks.set(c, c.honk); this.horn(now + e / 343, (1 - e / HORN_R) ** 1.5, pan(c.x, c.y), c.len > 6); }
       // a bus pulling up at a stop lets out its air brakes

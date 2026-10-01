@@ -107,8 +107,37 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
   vehicles.set(key, m);
   return m;
 }
+const bikes = new Map<string, Part[]>();
+/**
+ * A bicycle and its rider, facing +x: two thin wheels, the frame, the rider leaning over the bars,
+ * legs at the pedals' turn (`crank`, 0..3), a small front lamp.
+ */
+export function bikeModel(col: RGB, who: number, crank: number): Part[] {
+  const key = col.join() + '|' + (who & 31) + '|' + crank;
+  let m = bikes.get(key);
+  if (m) return m;
+  const shirt = CLOTHES[who % CLOTHES.length], pants = CLOTHES[(who >> 2) % CLOTHES.length], skin = SKIN[(who >> 3) % SKIN.length];
+  const r = 0.33, a = (crank * Math.PI) / 2, f = 0.17 * Math.cos(a), g = 0.17 * Math.sin(a);
+  m = [
+    part(Ball, -0.95, -0.04, 0, -0.29, 0.04, 2 * r, TIRE, Wheel, 'o'),
+    part(Ball, 0.29, -0.04, 0, 0.95, 0.04, 2 * r, TIRE, Wheel, 'o'),
+    part(Box, -0.62, -0.03, 0.38, 0.62, 0.03, 0.46, col, Solid, '=', '=', '='),
+    part(Box, -0.3, -0.03, 0.4, -0.22, 0.03, 0.92, col, Solid, '|'),
+    part(Box, 0.5, -0.03, 0.4, 0.58, 0.03, 1.05, col, Solid, '|'),
+    part(Box, 0.48, -0.28, 1.0, 0.56, 0.28, 1.06, STEEL, Solid, '-'),
+    // the rider: legs at the cranks, torso leaning forward, head
+    part(Box, -0.24 + f, 0.08, 0.3 + g, -0.12 + f, 0.2, 0.95, pants, Solid, '|'),
+    part(Box, -0.24 - f, -0.2, 0.3 - g, -0.12 - f, -0.08, 0.95, pants, Solid, '|'),
+    part(Box, -0.3, -0.2, 0.95, 0.25, 0.2, 1.45, shirt, Solid, '#', '=', '#'),
+    part(Ball, 0.12, -0.12, 1.45, 0.36, 0.12, 1.72, skin, Solid, '@'),
+    part(Box, 0.6, -0.06, 0.88, 0.66, 0.06, 0.98, [255, 245, 210], Glow, '*'),
+  ];
+  bikes.set(key, m);
+  return m;
+}
+
 /** Each kind's half length and height, for its bounds. */
-export const VEHICLE_SIZE: Record<string, [number, number]> = { sedan: [2.3, 1.8], taxi: [2.3, 1.8], van: [2.7, 2.4], truck: [4.3, 3.6], bus: [6.1, 3.3], police: [2.5, 1.8] };
+export const VEHICLE_SIZE: Record<string, [number, number]> = { bike: [1.0, 1.8], sedan: [2.3, 1.8], taxi: [2.3, 1.8], van: [2.7, 2.4], truck: [4.3, 3.6], bus: [6.1, 3.3], police: [2.5, 1.8] };
 
 const farCars = new Map<string, Part[]>();
 /** A car far off: the body, the cabin and a strip of lights at each end. */

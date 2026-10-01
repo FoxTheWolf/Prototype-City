@@ -13,7 +13,7 @@ import { subAt, type PowerGrid } from './power';
  * crosses a grid road there are lights too (see Zone).
  */
 /** What a vehicle is: its size and how it drives come from VEHICLES. */
-export type VehicleKind = 'sedan' | 'taxi' | 'van' | 'truck' | 'bus' | 'police';
+export type VehicleKind = 'sedan' | 'taxi' | 'van' | 'truck' | 'bus' | 'police' | 'bike';
 
 export interface Car {
   /** Identity, fixed for the vehicle's life (who drives it, later). */
@@ -86,6 +86,7 @@ const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0
   { kind: 'truck', share: 0.06, len: 8.5, acc: 1.1, v0: 6, v1: 10, cols: [[230, 230, 230], [190, 60, 40], [50, 80, 150], [210, 170, 50]] },
   { kind: 'bus', share: 0.04, len: 12, acc: 1, v0: 6, v1: 9, cols: [[40, 110, 170], [200, 200, 205]] },
   { kind: 'police', share: 0.04, len: 4.8, acc: 2.4, v0: 9, v1: 15, cols: [[30, 32, 40]] },
+  { kind: 'bike', share: 0.05, len: 1.8, acc: 1.2, v0: 4, v1: 7, cols: [[180, 40, 40], [40, 90, 170], [230, 230, 235], [30, 30, 34], [60, 150, 90], [230, 180, 40]] },
   { kind: 'sedan', share: 1, len: 4.5, acc: 2, v0: 8, v1: 14, cols: CAR_COLS },
 ];
 /** A new vehicle's kind and specs, from the traffic stream. */
@@ -111,7 +112,8 @@ function stepBody(c: Car, a: number, dt: number) {
   // the turn rate from the change of heading: sideways pull v * omega
   const h = Math.atan2(c.dy, c.dx), dh = Math.atan2(Math.sin(h - c.ph), Math.cos(h - c.ph)), lat = (c.v * dh) / dt;
   c.ph = h;
-  const pT = Math.max(-0.12, Math.min(0.12, -a * 0.02 * soft)), rT = Math.max(-0.13, Math.min(0.13, -lat * 0.035 * soft));
+  const bike = c.kind === 'bike';
+  const pT = bike ? 0 : Math.max(-0.12, Math.min(0.12, -a * 0.02 * soft)), rT = bike ? Math.max(-0.45, Math.min(0.45, lat * 0.1)) : Math.max(-0.13, Math.min(0.13, -lat * 0.035 * soft));
   c.pitchV += (-SPRING * (c.pitch - pT) - DAMP * c.pitchV) * dt; c.pitch += c.pitchV * dt;
   c.rollV += (-SPRING * (c.roll - rT) - DAMP * c.rollV) * dt; c.roll += c.rollV * dt;
   // seams and potholes every few metres kick the body up a little, harder the faster it goes
@@ -129,7 +131,7 @@ const RECKLESS = 0.00015, RECKLESS_DARK = 0.004, TOW = 240;
 /** Crashes this tick, for the event queue: where, how hard (closing speed, m/s), and the cars. */
 export const crashes: { x: number; y: number; v: number }[] = [];
 /** Half width of a vehicle. */
-const halfW = (c: Car) => (c.len > 6 ? 1.2 : c.len > 5 ? 1.0 : 0.9);
+const halfW = (c: Car) => (c.len > 6 ? 1.2 : c.len > 5 ? 1.0 : c.len < 2 ? 0.35 : 0.9);
 
 /** Whether two vehicles' footprints (oriented rectangles) overlap. */
 function overlap(a: Car, b: Car): boolean {
@@ -413,7 +415,7 @@ export function spawnCars(city: City, rng: Rng, count: number, existing: Car[] =
     const a0 = exitS(city, hd, pi, pj) + V.len / 2, a1 = entryS(city, hd, ni, nj) - STOP_BACK - V.len;
     if (a1 - a0 < 6) continue;
     const s = a0 + 3 + rng() * (a1 - a0 - 3);
-    const plan = choosePlan(city, rng, hd, ni, nj, bus), lanes = lanesFor(city, hd, road), lane = bus ? lanes - 1 : laneFor(rng, lanes, turnOf(hd, plan));
+    const plan = choosePlan(city, rng, hd, ni, nj, bus), lanes = lanesFor(city, hd, road), lane = bus || V.kind === 'bike' ? lanes - 1 : laneFor(rng, lanes, turnOf(hd, plan));
     const [ox, oy] = laneOff(hd, lane);
     const x = hd & 1 ? roadCenter(city.xb, road) + ox : s * dx + ox;
     const y = hd & 1 ? s * dy + oy : roadCenter(city.yb, road) + oy;
@@ -469,7 +471,7 @@ function startTurn(city: City, rng: Rng, c: Car) {
   const to = c.plan, [ex, ey] = DIRS[to];
   const road = roadOf(to, c.ni, c.nj), oi = c.ni + ex, oj = c.nj + ey;
   const bus = c.kind === 'bus', nl = lanesFor(city, to, road);
-  let next = choosePlan(city, rng, to, oi, oj, bus), lane = bus ? nl - 1 : Math.min(laneFor(rng, nl, turnOf(to, next)), nl - 1);
+  let next = choosePlan(city, rng, to, oi, oj, bus), lane = bus || c.kind === 'bike' ? nl - 1 : Math.min(laneFor(rng, nl, turnOf(to, next)), nl - 1);
   if (!laneFree(city, to, road, lane, c.ni, c.nj)) {
     // the lane it wanted is backed up: take one with room, and go on straight from it if it can
     for (let l = 0; l < lanesFor(city, to, road); l++) if (laneFree(city, to, road, l, c.ni, c.nj)) { lane = l; break; }

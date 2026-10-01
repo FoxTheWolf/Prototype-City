@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, boardModel, carFarModel, carModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -1181,9 +1181,9 @@ function gatherLights(world: World, v: View, sec: number) {
   for (const c of world.cars) {
     const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
     if (Math.abs(x - v.x) > CAR_LIGHT_FAR || Math.abs(y - v.y) > CAR_LIGHT_FAR) continue;
-    const hl = c.len / 2;
-    dyn.cone(x + c.dx * hl, y + c.dy * hl, c.dx, c.dy, 0.87, 24, 1, 4, 150, 140, 115);
-    dyn.point(x - c.dx * (hl + 0.1), y - c.dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
+    const hl = c.len / 2, bike = c.kind === 'bike';
+    dyn.cone(x + c.dx * hl, y + c.dy * hl, c.dx, c.dy, 0.87, bike ? 8 : 24, 1, 4, bike ? 60 : 150, bike ? 58 : 140, bike ? 50 : 115);
+    if (!bike) dyn.point(x - c.dx * (hl + 0.1), y - c.dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
     // a police beacon throws red and blue around it in turns
     // a wreck's hazard lights blink amber
     if (c.wreck && Math.floor(sec * 1.6) & 1) dyn.point(x, y, 6, 1, 3, 150, 90, 10);
@@ -1411,7 +1411,8 @@ function collectObjects(world: World, v: View): Obj[] {
     if (Math.abs(x - v.x) > SPRITE_FAR || Math.abs(y - v.y) > SPRITE_FAR) continue;
     const near = Math.abs(x - v.x) < CAR_NEAR && Math.abs(y - v.y) < CAR_NEAR, [hl, h] = VEHICLE_SIZE[c.kind];
     const who = c.id & 63;
-    const parts = c.kind === 'sedan' || c.kind === 'taxi' ? (near ? carModel(c.col, c.taxi, who) : carFarModel(c.col, c.taxi)) : vehicleModel(c.kind, c.col, c.beacon ? 1 + (Math.floor(frameSec * 3) & 1) : 0, near ? who : 0);
+    const parts = c.kind === 'bike' ? bikeModel(c.col, who, Math.floor(c.wheel / (Math.PI / 2)) & 3)
+      : c.kind === 'sedan' || c.kind === 'taxi' ? (near ? carModel(c.col, c.taxi, who) : carFarModel(c.col, c.taxi)) : vehicleModel(c.kind, c.col, c.beacon ? 1 + (Math.floor(frameSec * 3) & 1) : 0, near ? who : 0);
     const o: Obj = { x, y, c: c.dx, s: c.dy, parts, r: hl + 0.3, h: h + 0.1, seed: 0 };
     if (near) { o.pitch = c.pitch; o.roll = c.roll; o.lift = c.lift; o.wheel = c.wheel; }
     out.push(o);
