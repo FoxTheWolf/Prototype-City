@@ -119,6 +119,11 @@ const roofs: Roof[] = [];
 
 /** The light on the viewer's hands after the last renderWorld, per channel (~0.3 in the dark, 1 in daylight). */
 export const VIEW_LIGHT = new Float32Array([1, 1, 1]);
+/**
+ * The light that glints off what they hold: its side (-1 left .. 1 right of the view), strength
+ * (0..1, more for a light behind them, as a screen facing them mirrors) and color (r, g, b, 0..1).
+ */
+export const VIEW_GLINT = new Float32Array([0, 0, 1, 1, 1]);
 
 export function renderWorld(grid: CharGrid, world: World, v: View) {
   const { cols, rows } = grid;
@@ -418,11 +423,26 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   finish(grid, v.look, sky);
   // the light on the viewer's hands, for what they hold (the phone): the room's lamps indoors; outside
   // the sky, the street lamps and the passing lights at chest height, and the lightning
+  // the brightest light's side and color, for the glint on what they hold: the light sampled 2 m
+  // around them gives the way it gets brighter; a light behind reflects best off a screen facing them
+  const I0 = inside, sample = (x: number, y: number, out: Float32Array) => {
+    if (I0) { const L = insideLight(I0, x, y); out[0] = L[0] * 150; out[1] = L[1] * 150; out[2] = L[2] * 150; }
+    else { lightAt(x, y, 1.6); out[0] = LT[0]; out[1] = LT[1]; out[2] = LT[2]; }
+    return out[0] + out[1] + out[2];
+  };
+  const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
+  const here = sample(px, py, S), g = Math.hypot(ex, ey);
   if (inside) { const L = insideLight(inside, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
   else {
-    lightAt(px, py, 1.2);
     const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
-    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + LT[c] / 150);
+    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
+  }
+  {
+    const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0;
+    const m = Math.max(1, S[0], S[1], S[2]);
+    VIEW_GLINT[0] = lat;
+    VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
+    VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m;
   }
   // after finish, so the drops keep the background of what is behind them
   drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);

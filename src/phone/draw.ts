@@ -49,23 +49,35 @@ class Lcd {
 /** Text that types in: as much of s as `cps` characters a second have written since t = 0. */
 const typed = (s: string, t: number, cps = 60) => s.slice(0, Math.max(0, Math.floor(t * cps)));
 
-export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspect: number, now: number, light: Float32Array) {
+/** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
+const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, adapt: 1, at: 0 };
+
+export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
   if (P.raise < 0.01) return;
   const e = 1 - (1 - P.raise) ** 3;
   const ox = g.cols - PHONE_W - 6, oy = g.rows - Math.round(SHOWN * e);
   const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
-  // the sheen: a soft diagonal band of reflected light that slides across as the view turns
-  const s0 = ((((yaw / (Math.PI * 2)) * 140) % 140) + 140) % 140 - 40;
-  const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 4) ** 2));
-  // a cell of the phone's surface: lit by the scene, darker toward the bottom, the sheen on top in
+  const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
+  GL.at = now;
+  GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
+  GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
+  // the eye adapts in a second or two: in the dark the screen looks brighter and blooms, under a
+  // strong light it looks a little dimmer
+  GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
+  const gain = Math.min(1.25, Math.max(0.8, 1.35 - 0.35 * GL.adapt)), bloom = Math.min(1, Math.max(0, (0.75 - GL.adapt) / 0.4));
+  // the glint: the brightest light nearby mirrored in the phone, a soft diagonal band on the side
+  // it comes from, in its color, stronger for a light behind the player
+  const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
+  const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 5) ** 2));
+  // a cell of the phone's surface: lit by the scene, darker toward the bottom, the glint on top in
   // proportion to its gloss; `glow` is light of its own (backlit key labels) the scene does not dim
   const cell = (x: number, y: number, c: number, fg: C3, bg: C3, gloss = 0.25, glow = false) => {
     const gx = ox + x, gy = oy + y;
     if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
-    const i = gy * g.cols + gx, k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * (25 + 45 * Lm);
-    g.setBg(i, bg[0] * Lr * k + sh, bg[1] * Lg * k + sh, bg[2] * Lb * k + sh * 1.1);
+    const i = gy * g.cols + gx, k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * amp;
+    g.setBg(i, bg[0] * Lr * k + sh * GL.r, bg[1] * Lg * k + sh * GL.g, bg[2] * Lb * k + sh * GL.b);
     if (glow) g.put(i, c, Math.max(fg[0], fg[0] * Lr), Math.max(fg[1], fg[1] * Lg), Math.max(fg[2], fg[2] * Lb));
-    else g.put(i, c, fg[0] * Lr * k + sh, fg[1] * Lg * k + sh, fg[2] * Lb * k + sh);
+    else g.put(i, c, fg[0] * Lr * k + sh * GL.r, fg[1] * Lg * k + sh * GL.g, fg[2] * Lb * k + sh * GL.b);
   };
   // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
   for (let y = 0; y < PHONE_H; y++) {
@@ -123,13 +135,28 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
       else if (P.screen === 'map') map(S, P, world, yaw, aspect, t, now);
     }
   }
-  // the glass over the screen: a faint wash of the scene's light, and the sheen
+  // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
+  let ar = 0, ag = 0, ab = 0, n = 0;
   for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
     const gx = ox + SX + x, gy = oy + SY + y;
     if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
-    const k = (gy * g.cols + gx) * 4, sh = sheen(SX + x, SY + y) * (10 + 26 * Lm);
-    g.bg[k] += 3 * Lr + sh; g.bg[k + 1] += 3 * Lg + sh; g.bg[k + 2] += 4 * Lb + sh * 1.15;
-    g.cells[k + 1] += sh * 0.5; g.cells[k + 2] += sh * 0.5; g.cells[k + 3] += sh * 0.6;
+    const k = (gy * g.cols + gx) * 4, sh = sheen(SX + x, SY + y) * amp * 0.45, C = g.cells, B = g.bg;
+    for (let c = 1; c < 4; c++) C[k + c] *= gain;
+    for (let c = 0; c < 3; c++) B[k + c] *= gain;
+    ar += B[k] + C[k + 1] * 0.3; ag += B[k + 1] + C[k + 2] * 0.3; ab += B[k + 2] + C[k + 3] * 0.3; n++;
+    B[k] += 3 * Lr + sh * GL.r; B[k + 1] += 3 * Lg + sh * GL.g; B[k + 2] += 4 * Lb + sh * GL.b;
+    C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;
+  }
+  if (bloom > 0.01 && n && on) {
+    // bloom in the dark: the screen's own light haloes over the glass and spills on the bezel around it
+    ar /= n; ag /= n; ab /= n;
+    for (let y = SY - 3; y <= SY + SH + 2; y++) for (let x = SX - 3; x <= SX + SW + 2; x++) {
+      const gx = ox + x, gy = oy + y;
+      if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
+      const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
+      const w = bloom * (d === 0 ? 0.12 : 0.45 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
+      g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
+    }
   }
 }
 

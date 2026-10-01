@@ -9,7 +9,7 @@ import { CharGrid } from './render/grid';
 import { type Look } from './render/palette';
 import { power } from './render/power';
 import { pickedButton } from './render/interior';
-import { renderWorld, VIEW_LIGHT } from './render/raycaster';
+import { renderWorld, VIEW_GLINT, VIEW_LIGHT } from './render/raycaster';
 import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
@@ -40,7 +40,7 @@ const phone = new Phone();
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, VIEW_LIGHT,
+  world, camera, pickedButton, callLift, phone, VIEW_LIGHT, VIEW_GLINT,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -187,7 +187,7 @@ function frame(now: number) {
   });
   const ms = performance.now() - r0;
   phone.update(dt, now / 1000);
-  drawPhone(grid, phone, world, camera.yaw, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT);
+  drawPhone(grid, phone, world, camera.yaw, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
