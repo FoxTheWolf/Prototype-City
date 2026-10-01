@@ -1,5 +1,5 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
-import { generateCity, SIDEWALK, type City } from './city';
+import { FLOOR_H, generateCity, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, planOf } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
@@ -19,6 +19,10 @@ export interface Player {
   /** Storey the player stands on (0 = the street), and the building around them (its ground volume), or -1. */
   floor: number;
   inside: number;
+  /** Feet height in metres: floor * FLOOR_H, except while riding a lift. */
+  z: number;
+  /** The floor a lift is taking the player to, or -1 when not riding one. */
+  liftTo: number;
 }
 
 /** What the player asks for this tick. The only way the outside world affects the sim. */
@@ -58,7 +62,7 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
-  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1 }, time, ptime: time, weather, power: buildPower(seed, city) };
+  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city) };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -80,8 +84,25 @@ export function togglePower(w: World, all: boolean) {
 export function debugFloor(w: World, d: number) {
   const p = w.player;
   if (p.inside < 0) return;
+  // in a lift car the buttons call it: it rides there for real, doors shut
+  const here = planOf(w.city, p.inside, p.floor), c = here ? cellAt(here, p.x, p.y) & 127 : 0;
+  if (c && here!.rooms[c - 1].kind === 'lift') {
+    const f = (p.liftTo >= 0 ? p.liftTo : p.floor) + d, P = f >= 0 ? planOf(w.city, p.inside, f) : null;
+    if (P && (cellAt(P, p.x, p.y) & 127) && P.rooms[(cellAt(P, p.x, p.y) & 127) - 1].kind === 'lift') p.liftTo = f;
+    return;
+  }
   const f = Math.max(0, p.floor + d), P = planOf(w.city, p.inside, f);
-  if (P && cellAt(P, p.x, p.y)) p.floor = f;
+  if (P && cellAt(P, p.x, p.y)) { p.floor = f; p.z = f * FLOOR_H; }
+}
+
+/** Lift speed in m/s, with a gentle start and stop. */
+const LIFT_V = 2.5;
+function stepLift(p: Player) {
+  const goal = p.liftTo * FLOOR_H, d = goal - p.z;
+  p.z += Math.sign(d) * Math.min(Math.abs(d), Math.min(LIFT_V, 0.6 + Math.abs(d) * 1.5) * TICK);
+  // the storey whose plan surrounds the car
+  p.floor = Math.round(p.z / FLOOR_H);
+  if (Math.abs(goal - p.z) < 1e-3) { p.z = goal; p.floor = p.liftTo; p.liftTo = -1; }
 }
 
 /** Debug: step through the fixed skies, then back to the forecast. */
@@ -96,7 +117,8 @@ export function stepWorld(w: World, input: PlayerInput) {
   let f = input.forward, st = input.strafe;
   const len = Math.hypot(f, st);
   if (len > 1) { f /= len; st /= len; }
-  const sp = input.run ? 9 : 3.5;
+  const sp = p.liftTo >= 0 ? 0 : input.run ? 9 : 3.5; // a moving car holds the player still
+  if (p.liftTo >= 0) stepLift(p);
   const dx = Math.cos(input.heading), dy = Math.sin(input.heading);
   const vx = (dx * f - dy * st) * sp, vy = (dy * f + dx * st) * sp;
   p.speed = Math.hypot(vx, vy);

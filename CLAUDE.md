@@ -344,7 +344,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Resumo para começar uma sessão (atualizado em 2026-09-30)
 
-- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) foi aprovado com pedidos; a 6.4 (correções e interiores vistos de fora) aguarda o teste. Veja "Etapa 6: decisões e grupos" no Histórico e "Pedidos do usuário durante a etapa 6".
+- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) foi aprovado com pedidos; a 6.4 (correções e interiores vistos de fora) e a 6.5 (elevador, início do grupo B) aguardam o teste. Veja "Etapa 6: decisões e grupos" no Histórico e "Pedidos do usuário durante a etapa 6".
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E giram;
@@ -408,6 +408,8 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **C:** de fora, os cômodos vistos pelas janelas (batendo com a luz de dentro; feito antes, na 6.4) e as janelas iluminando a fachada.
     - **D:** lojas e vitrines abertas, móveis, escadas de incêndio, os outros tipos de prédio.
 - **Retorno do usuário sobre o grupo A (2026-09-30):** gostou ("tá ótimo"). Pediu correções e novidades, feitas na 6.4: chovia dentro dos prédios; o som devia ficar bem mais abafado, quase sem a chuva, mas com o "tec, tec" das gotas na janela; ver os interiores do lado de fora; os pontos de ônibus não apagavam no blackout; sem chuva debaixo do ponto de ônibus, com a água escorrendo do telhado. Os pedidos de fachada estão em "Pedidos do usuário durante a etapa 6".
+- **6.5, elevador (grupo B, 2026-09-30):** dentro da cabine (cômodo `lift`), PageUp/PageDown são os botões: cada toque soma um andar ao destino (`Player.liftTo`), e a cabine sobe ou desce de verdade a até 2,5 m/s, com partida e parada suaves (`stepLift` em `world.ts`). `Player.z` é a altura dos pés (contínua), e o olho é `z + 1,7`. Durante a viagem o jogador fica parado e as portas ficam fechadas (`Inside.closed`); o piso e o teto seguem a cabine (`Inside.z0`). Fora da cabine, PageUp/PageDown continuam sendo o pulo de andar de debug.
+  - **Falta (próxima sessão):** escadas em que se sobe de verdade; elevadores de vidro; som do elevador (motor, sino de chegada, portas); botões diegéticos no painel da cabine; o bug dos prédios cortados sem acesso ao corredor.
 - **6.4, correções e interiores vistos de fora (2026-09-30):**
   - **Chuva dentro:** nas colunas em que uma parede interna fecha a vista (sem janela), a chuva não é mais desenhada (`nearT` = infinito).
   - **Som:** dentro do prédio, a rua passa por um passa-baixa de 220 Hz e cai para 28%. A chuva quase some, e no lugar entram gotas batendo no vidro, uma a uma: ruído de poucos milissegundos num passa-banda de 2,2–5,2 kHz, com volume e pan sorteados, mais frequentes quanto mais forte a chuva (`drop` em `sound.ts`). O teste de ouvido é do usuário.

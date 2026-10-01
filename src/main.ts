@@ -9,7 +9,7 @@ import { power } from './render/power';
 import { renderWorld } from './render/raycaster';
 import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
-import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
+import { diagS, districtAt, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
@@ -46,7 +46,7 @@ if (import.meta.env.DEV) Object.assign(window, {
   // on a 256x80 grid of its own, as in a 16:9 window
   bench: (n = 10) => {
     const p = world.player, g = new CharGrid(256, ROWS), t0 = performance.now();
-    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + p.floor * FLOOR_H, floor: p.floor, alpha: 0, cellAspect: 0.6, look });
+    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + p.z, floor: p.floor, z: p.z, lift: p.liftTo >= 0, alpha: 0, cellAspect: 0.6, look });
     return (performance.now() - t0) / n;
   },
 });
@@ -139,8 +139,10 @@ function frame(now: number) {
     y: p.py + (p.y - p.py) * alpha,
     yaw: camera.yaw,
     pitch: camera.pitch,
-    eye: EYE + p.floor * FLOOR_H,
+    eye: EYE + p.z,
     floor: p.floor,
+    z: p.z,
+    lift: p.liftTo >= 0,
     alpha,
     cellAspect: layout.cellW / layout.cellH,
     look,

@@ -17,6 +17,9 @@ export interface Inside {
   box: Building;
   boxId: number;
   floor: number;
+  /** Height of the floor under the viewer (the lift car's floor while it rides), and doors shut. */
+  z0: number;
+  closed: boolean;
   door: Door | null;
   /** The building's electric light (blackouts), daylight 0..1, seconds, rain 0..1. */
   elec: number;
@@ -195,7 +198,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   if (glass.length !== cols * rows) glass = new Uint8Array(cols * rows);
   gT[x] = 0;
   for (let y = 0; y < rows; y++) glass[y * cols + x] = 0;
-  const z0 = I.floor * FLOOR_H, zc = z0 + CEIL;
+  const z0 = I.z0, zc = z0 + CEIL;
 
   // where the ray leaves the box (and the cut): that outer wall closes the column
   let tExit = 1e9, face = 0;
@@ -238,7 +241,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
         wallPaint(R, z - z0, u, P4);
         put(y, tn, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
       };
-      if (cur & nv & DOOR) {
+      if (cur & nv & DOOR && !I.closed) {
         // a doorway: the lintel above it, and on through
         span(tn, z0 + DOOR_H, zc, (y, z) => { lightIn(I, r, hx, hy, tn); const k = z < z0 + DOOR_H + 0.08 ? 1.3 : 1; put(y, tn, G.eq, 120 * L3[0] * k, 95 * L3[1] * k, 70 * L3[2] * k); });
       } else { span(tn, z0, zc, paint); closed = true; break; }
