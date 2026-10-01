@@ -130,7 +130,11 @@ function phoneToggle() {
 // button elsewhere is OK and a click of the right one Back (as in GTA IV); holding the right button
 // looks around instead. The middle button takes the phone out and puts it away.
 // Otherwise, in a lift car, aim at a button of its panel and click it.
-addEventListener('contextmenu', (e) => e.preventDefault());
+// no browser menu on the right button (it is Back and look-around): stopped early, on the canvas and the document
+const noMenu = (e: Event) => { e.preventDefault(); e.stopPropagation(); return false; };
+document.addEventListener('contextmenu', noMenu, true);
+canvas.addEventListener('contextmenu', noMenu, true);
+canvas.oncontextmenu = noMenu;
 // the mouse wheel zooms the phone's map, steps through the menu's apps and scrolls its lists
 addEventListener('wheel', (e) => {
   if (!phone.out || !e.deltaY) return;
@@ -153,6 +157,7 @@ function payPress(k: Key) {
   if (!payphone.active) input.lock();
 }
 addEventListener('mousedown', (e) => {
+  if (e.button === 2) e.preventDefault();
   if (!running) return;
   if (e.button === 1) { e.preventDefault(); if (!payphone.active) phoneToggle(); return; }
   if (payphone.active) {
@@ -178,8 +183,9 @@ addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
-  // the pointer was held while looking around; the cursor is free again over the phone or the payphone
-  if (phone.out || payphone.active) input.unlock();
+  // the pointer was held while looking around; the cursor is free again over the phone or the payphone,
+  // a moment later: freed during the click, the browser could still open its menu where the cursor lands
+  if (phone.out || payphone.active) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active)) input.unlock(); }, 60);
 });
 addEventListener('keydown', (e) => {
   // a payphone in use takes the keys; F lifts the handset of the one in front, or hangs it up

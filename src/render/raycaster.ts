@@ -478,6 +478,16 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
  * A light held at the eye: everything drawn gets brighter by its distance (from the depth buffer),
  * strongest near the middle of the view, whiter the closer. Works the same indoors and out.
  */
+/**
+ * A sign's bulbs burn in its own color (as the walk signal's): the pale tints of the shop signs are
+ * pushed toward their hue and brightened, so up close they read colored, not white.
+ */
+const HUE = new Float32Array(3);
+function bulbHue(c: readonly number[]): Float32Array {
+  const lo = Math.min(c[0], c[1], c[2]) * 0.75, hi = Math.max(1, Math.max(c[0], c[1], c[2]) - lo), k = 255 / hi;
+  HUE[0] = (c[0] - lo) * k; HUE[1] = (c[1] - lo) * k; HUE[2] = (c[2] - lo) * k;
+  return HUE;
+}
 function handLight(grid: CharGrid, k: number) {
   const { cols, rows, cells, bg, depth } = grid;
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
@@ -906,10 +916,11 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         }
         const bx = Math.floor(px), by = Math.floor(pz);
         if (n) {
-          ch = bulbGlyph(n, hx, hz); r = B.sign[0] * on; g = B.sign[1] * on; b = B.sign[2] * on;
-          if (on > 0.5) { r += 60; g += 60; b += 60; } // a lit bulb burns whiter than its tint
+          // the bulbs burn in the sign's own color (as the walk signal's), brightened without washing out to white
+          const S = bulbHue(B.sign);
+          ch = bulbGlyph(n, hx, hz); r = S[0] * on; g = S[1] * on; b = S[2] * on;
         } else if (bx >= 0 && bx < 5 && by < 7 && bulbOn(cc, bx, by)) {
-          ch = 32; r = B.sign[0] * on * 0.4; g = B.sign[1] * on * 0.4; b = B.sign[2] * on * 0.4; // glow around a bulb
+          const S = bulbHue(B.sign); ch = 32; r = S[0] * on * 0.35; g = S[1] * on * 0.35; b = S[2] * on * 0.35; // glow around a bulb
         } else { ch = 32; r = 14; g = 12; b = 16; } // plain board between the bulbs
       } else if (inText && c !== 32 && (!letters || center)) {
         ch = letters ? c : G.eq;
