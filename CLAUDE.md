@@ -387,7 +387,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Etapa 9:** discador, SMS e câmera. A foto é um render pequeno e pode ser postada.
 - **Etapa 5:** clima, que lê o estado real do clima.
 - **Etapa 8:** mapa e GPS, com a posição dada pelas antenas ou pelo GPS.
-- **Etapa 10:** táxi, que liga para a central, e horários do monotrilho, com os horários reais dos trens.
+- **Etapa 11b (transporte):** táxi, que liga para a central, e horários do monotrilho, com os horários reais dos trens.
 - **Etapa 12:** rede social.
 - **Etapa 13:** banco, com o saldo real; notícias; tocador de música.
 
@@ -400,9 +400,10 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 ### Resumo para começar uma sessão (atualizado em 2026-10-01)
 
 - **Etapas 1 a 9 (e 5b) concluídas.** A 9 (rede de telefones e celular) fechou em 2026-10-01: o grupo A foi testado e ajustado (9.4); B e C foram feitos sem rodada de teste, a pedido do usuário ("pode prosseguir, não precisa pedir meu feedback de novo"), então **o retorno dele sobre ligações, SMS, orelhões, câmera, loja e abertura pode chegar no começo da próxima sessão.** O que ele achou de errado nas etapas 6–9 está em "Bugs conhecidos", "Refinamento: anotações" e nas seções "Pedidos do usuário…". A nota "perguntar sobre a etapa 6" é para o **começo da etapa 15**.
-- **Em andamento: a etapa de bugfix e otimização.** A primeira parte foi feita em 2026-10-01, com o Wi-Fi inicial e o T9; a segunda parte também (portas entre cômodos, chuva que invertia, reflexo do vidro, faixas da diagonal, pingos do andaime, cache de luz), junto com o **modo visual suave** (tecla V) e os ajustes do celular (veja o Histórico). **Esperando o retorno do usuário sobre tudo isso; se aprovar, seguir para a etapa 10 (transporte)**, como ele pediu. O que sobrou da triagem está em "Bugs conhecidos".
+- **Em andamento: a etapa de bugfix e otimização.** A primeira parte foi feita em 2026-10-01, com o Wi-Fi inicial e o T9; a segunda parte também (portas entre cômodos, chuva que invertia, reflexo do vidro, faixas da diagonal, pingos do andaime, cache de luz), junto com o **modo visual suave** (tecla V) e os ajustes do celular (veja o Histórico). O usuário aprovou (2026-10-01). O que sobrou da triagem está em "Bugs conhecidos".
+- **Próxima: a etapa 10, notebook e primeiro hacking** (decidida em 2026-10-01: o gameplay vem antes do transporte, que foi para depois dos cidadãos como 11b). O plano está em "Plano da etapa 10" logo abaixo. Começar numa conversa nova.
 - **Antes de começar qualquer etapa, leia as seções "Lições da etapa N"** nas notas técnicas: são o conhecimento acumulado das sessões anteriores (a 7 tem como testar a simulação sem o jogador; a 8, como testar o celular).
-- **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
+- **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade; `?mute` começa sem som.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E (e as setas laterais) giram; **F** na frente de um orelhão tira o fone (e desliga);
   - celular (como no GTA IV): **seta para cima** (ou P, ou o **botão do meio**) tira; com ele fora, o ponteiro do sistema fica livre e clica nas teclas (segurar o botão direito olha em volta; a roda anda pelo menu e pelas listas); com ele fora, setas = d-pad, Enter ou botão esquerdo = OK, Backspace ou botão direito = Voltar (na tela inicial, guarda), dígitos = teclado, + = \*, − ou . = #, **Space** = tecla verde (abre o discador, liga), **Delete** = tecla vermelha (volta à tela inicial); no menu, a tecla do lugar do app na grade 3×4 abre direto; no mapa, 1–4, \*/# ou a roda do mouse = zoom, OK = lista de lugares (ou centralizar);
@@ -447,6 +448,14 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Flags para religar depois:** `SEAM_LIGHTS_CLOUDS` (`sky.ts`), as brasas iluminando as nuvens, para religar com a câmera 3D.
 - **Bugs registrados para depois:** veja "Bugs conhecidos".
 
+### Plano da etapa 10: notebook e primeiro hacking (aprovado pelo usuário em 2026-10-01)
+
+A ideia é uma primeira fatia jogável com o que a cidade já tem: ir a um café, entrar no Wi-Fi, varrer a rede, invadir um sistema e ver a consequência na cidade (um bairro apagando, um cruzamento travando, a manchete no letreiro). Os alvos já existem na simulação: a rede elétrica (`sim/power.ts`, o blackout), os semáforos (`sim/traffic.ts`, com batidas), as antenas e a operadora (`sim/telco.ts`), os roteadores (`sim/wifi.ts`), os orelhões e a fila de eventos (`sim/events.ts`).
+- **A, o notebook:** objeto físico tirado da mochila (como o celular, diegético, sem pausa, teclas com som), tela de terminal com o texto composto aos poucos, o computador virtual com hardware real (CPU, memória, disco, placa de rede, SO) que limita o que roda, e o sistema de arquivos.
+- **B, a rede:** o Wi-Fi dos lugares (já existe para o celular em `phone/wifi.ts`), os pacotes simulados materializados a partir de sessões só quando algo captura (veja "Design: pacotes de rede simulados"), os programas de varredura e captura com nomes fictícios (veja "Conteúdo seguro"), e portas, serviços, senhas e logs.
+- **C, os primeiros alvos:** uma subestação (o blackout que hoje é a tecla K vira ação de hacking) e o controle de semáforos. Aqui entra a **IA de direção sem trilhos** perto do jogador (veja a proposta do usuário no Histórico, na primeira parte do bugfix), para as batidas causadas pelo hacking ficarem físicas. Os eventos vão para a fila e para o letreiro de notícias.
+- **Decidir no início com o usuário:** a tecla do notebook; se ele só abre parado (sentado, numa mesa) ou também em pé; o SO fictício e o tom do terminal.
+
 ### Preparação da etapa 6 (interiores) — *superada: a etapa foi feita; mantida como registro das decisões iniciais*
 
 - **Decisões a tomar com o usuário no início** (veja também "Perguntas em aberto"):
@@ -463,6 +472,9 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
 
+- **Ajustes antes da etapa 10 (2026-10-01):**
+  - **Serrilhado (aliasing) dos glifos, mitigado:** nos modos com blocos, o glifo se funde ao bloco com a distância (de 25 a 150 m, `finish` em `raycaster.ts`): longe sobra o padrão de cores, sem as formas das letras tremendo quando a vista se move. O usuário pediu "pelo menos mitigar"; esperar o retorno dele.
+  - **`?mute`** na URL começa com o som desligado (o usuário acompanha os testes do Claude no navegador e ouvia o som).
 - **Retorno do usuário sobre a segunda parte do bugfix (2026-10-01):** aprovou praticamente tudo. Gostou do modo suave; o SOFT+ era quase melhor, mas o aliasing dos glifos nas paredes distraía. **Os modos foram renomeados e invertidos** (`Look.sharp` em `palette.ts`, tecla V): **SOFT** (o padrão; chão, objetos e paredes em blocos, as paredes mais escuras que o antigo SOFT+: fundo 0,34 e glifo 0,85), **SHARP** (o antigo SOFT: chão e objetos), **SHARPER** (só o chão) e **SHARPEST** (desligado, o antigo SHARP).
 
 - **Retorno do usuário sobre a primeira parte (2026-10-01, numa conversa nova, com capturas do jogo e do ASCII City), e a segunda parte do bugfix:**
@@ -895,6 +907,7 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 
 - **Postes do andaime e dos pontos de ônibus não são sólidos.**
 - **Desempenho caindo (relatado em 2026-10-01):** no PC do usuário, o jogo começou preso em 180 FPS e hoje, nas mesmas situações, chega perto de 60 FPS. Fazer uma **etapa de otimização junto com a de bugfix**: perfilar o quadro (`wallColumn`, interiores vistos de fora, objetos, luzes dinâmicas), medir com `bench` e considerar mover partes para Workers ou para o GPU.
+- **Fachada fictícia "brigando" com os interiores vistos de fora (relatado em 2026-10-01, com captura):** numa torre perto, as janelas alternam entre o cômodo de verdade (`peekCell`) e a janela desenhada (`pane`, padrão `@@`), e a troca muda com a vista, parecendo z-fighting. Suspeitas, a confirmar: `peekFor` falha em algumas colunas e cai no desenho antigo (o `peekInto` não acha a entrada do raio na planta perto das bordas dos vãos ou da caixa, ou `P.box !== id` em torres com recuo, já que `peeks[1]` guarda um resultado só para todos os andares de cima da coluna), ou o orçamento de plantas (`PLANS_PER_FRAME`) e o descarte do cache (`PLAN_KEEP`) fazem a mesma janela alternar entre quadros. Para depurar: congelar a câmera diante da torre, contar por coluna quantas janelas caíram em `pane` e por quê.
 - **Picos de tempo de desenho:** o `MAX` da linha de status chega a ~20–55 ms às vezes perto de prédios novos (provavelmente a geração das plantas, até 4 por quadro, ~0,2 ms cada, mais os móveis); medir com o perfilador antes de mexer.
 - **Móveis invisíveis de fora (relatado em 2026-10-01):** os interiores vistos pelas janelas (`peekCell`) mostram parede, piso e teto, mas não os móveis. O usuário achou esquisito; fica para a etapa de bugfix.
 
@@ -1023,6 +1036,7 @@ Ajustes que o usuário pediu para deixar para a etapa de refinamento e variedade
 - O laço de quadros só roda com o painel visível. Se `world.tick` não sobe, tire uma captura de tela antes de medir.
 - **Portas (pedido do usuário em 2026-09-30):** a **5173** é do usuário, que joga pelo `iniciar.bat` enquanto o Claude programa. O Claude testa sempre pela configuração **`claude-dev`** (porta **5180**). Se ela estiver ocupada por outra conversa, use a configuração `vite-auto` do `.claude/launch.json` (porta livre via `PORT`, lida no `vite.config.ts`); `vite-5174` e `vite-5175` também existem.
 - Cada recarga (inclusive a do HMR) sorteia uma semente nova. Use `?seed=42` para comparar sempre a mesma cidade.
+- **Testar sem som (pedido do usuário em 2026-10-01):** o usuário acompanha os testes no navegador do app e ouve o som. Abrir sempre com `?mute` (por exemplo `http://localhost:5180/?seed=42&mute`).
 - Para criar arquivos, use a ferramenta Write. Um heredoc grande pelo Bash falhou com erro de aspas nesta máquina. Para edições grandes em lote, grave um script Python no scratchpad com Write e rode-o.
 - A pasta `referencias/` está no `.gitignore` (são quadros do vídeo de outra pessoa) e existe só no disco.
 - **Lições desta máquina (2026-09-30):**
@@ -1075,11 +1089,12 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 7. ✅ **Trânsito** *(feita em 2026-10-01, grupos A, B e C; veja o Histórico)*: avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
 8. ✅ **Navegação** *(feita em 2026-10-01, grupos A, B e C; veja "Etapa 8" no Histórico)*: o celular como painel diegético com terminal progressivo, mapas em 4 níveis e de interior, marcos, os limites do GPS de 2008, e a grade de apps com os que não dependem da rede funcionando. (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
 9. ✅ **Rede de telefones e celular** *(feita em 2026-10-01; veja 9.1–9.11 no Histórico)*: orelhões; antenas e sinal (a barra "Yx" do celular passa a mostrar o sinal de verdade); loja de apps; discador, SMS e câmera funcionando (as telas já existem desde a 8.7); os limites do hardware valendo; a abertura do jogo. O celular como objeto na mão já existe (etapa 8). Veja "Design: celular e apps". Também os pedidos do começo da etapa: o celular subindo para digitar, o botão do meio do mouse, as teclas clicáveis, o plano de dados com franquia e vários modelos de aparelho (veja "Pedidos do usuário no começo da etapa 9").
-10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
+10. **Notebook e primeiro hacking** (decidido em 2026-10-01; antes era o transporte): o notebook como objeto, o computador virtual, a rede por pacotes, e os primeiros alvos (subestação e semáforos) com a IA de direção perto do jogador. Veja "Plano da etapa 10" no Estado atual.
 11. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
+11b. **Transporte** (movido da 10 em 2026-10-01): táxi (pedido por telefone ou sinal, destino dado ao motorista; com os cidadãos, o motorista é uma pessoa), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
 12. **Rede social da cidade:** posts de cidadãos a partir dos eventos da simulação e das rotinas, com fotos renderizadas do ponto de vista deles, acessível pelo celular e pelo notebook (veja "Design: rede social da cidade").
 13. **Economia:** empresas, preços, estoques e salários interligados. Os fabricantes de eletrônicos e de chips da cidade dão a marca dos celulares e dos chips (pedido na etapa 8).
-14. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, apps de hacker instalados por fora da loja, impacto sistêmico.
+14. **Hacking completo** (a base nasce na 10): computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, apps de hacker instalados por fora da loja, impacto sistêmico.
 
 15. **Refinamento e variedade** (pedido do usuário em 2026-09-30; ampliado em 2026-10-01): uma etapa para refinar o visual **e acrescentar variedade** em vários elementos do jogo (modelos, eventos, fachadas etc.), quando houver mais sistemas e o jogo estiver mais estável. **O usuário testou a etapa 6 e tem opiniões sobre ela, que vai dar nesta etapa: perguntar no começo.** Pode vir a qualquer momento depois da etapa 11, se fizer sentido. Inclui:
    - carros menos arcaicos: rodas girando, pessoas visíveis dentro, modelos e formatos variados;
@@ -1111,10 +1126,11 @@ Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa cor
 - **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
 - **Etapa 6 (respondido em 2026-09-30):** interiores no espaço físico; câmera 3D depois; começar por residencial e escritório.
 - **Etapa 8 (respondido em 2026-10-01):** o painel é o celular, não pausa, GPS exato primeiro e os limites de 2008 no grupo 8C.
-- **Etapa 10:** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
+- **Etapa 11b (transporte):** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
 
 ## Ideias futuras (não decididas)
 
+- **Modo CCTV (pedido do usuário em 2026-10-01; o ASCII City tem algo parecido, e a regra de originalidade vale: a técnica sim, o visual e os nomes não):** uma opção na tela de título ao lado de "ENTER THE CITY": a vista de uma câmera de vigilância presa num poste, girando devagar de um lado para o outro, com efeito de tela de CCTV (linhas de varredura, ruído, data e hora e o nome da câmera no canto, talvez em preto e branco ou monocromático), trocando de câmera de tempos em tempos. Combina com o hacking: as câmeras podem ser objetos da simulação, e o mesmo efeito serve depois para o jogador ver câmeras invadidas no notebook. Fazer junto da etapa 10 (grupo C) ou como um extra curto antes dela.
 - Rede da cidade como dado do jogo: nós (telefones, câmeras, semáforos, prédios) com endereços e níveis de acesso.
 - Notebook do hacker como objeto físico no jogo, com teclado, tela de terminal e sons.
 - Transmissão ao vivo determinística (como o "ASCII City Live"): a mesma semente e a mesma hora mostram a mesma cena.

@@ -30,7 +30,7 @@ const CELL_ASPECT = 0.6;
 const EYE = 1.7;
 const MOUSE_SENS = 0.0022;
 
-// ?seed=123 reproduces a city; otherwise every game rolls a new one.
+// ?seed=123 reproduces a city; otherwise every game rolls a new one. ?mute starts with the sound off.
 const seedParam = new URLSearchParams(location.search).get('seed');
 const seed = seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 const world = createWorld(seed);
@@ -243,7 +243,7 @@ let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 /** When the player first entered the city (the opening plays from there), or -1. */
 let introAt = -1;
 function begin() {
-  sound ??= new Sound();
+  if (!sound) { sound = new Sound(); if (new URLSearchParams(location.search).has('mute')) sound.toggleMute(); }
   sound.resume();
   if (introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
   overlay.hidden = true;

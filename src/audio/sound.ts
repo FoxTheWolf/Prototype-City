@@ -526,7 +526,10 @@ export class Sound {
 
   toggleMute() {
     this.muted = !this.muted;
-    this.master.gain.setTargetAtTime(this.muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
+    this.master.gain.cancelScheduledValues(this.ctx.currentTime);
+    // muting cuts at once (no blip of the intro when it starts muted); unmuting fades in
+    if (this.muted) this.master.gain.setValueAtTime(0, this.ctx.currentTime);
+    else this.master.gain.setTargetAtTime(0.5, this.ctx.currentTime, 0.05);
   }
 
   /**
