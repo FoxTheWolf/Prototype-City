@@ -609,10 +609,18 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   // ground floor's plan and one into the floors above, made the first time a window needs them
   const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
   const rdx = (hx - frameX) / t, rdy = (hy - frameY) / t;
+  // how fast the hit moves along the face, per unit of t
+  const da = side === 0 ? rdy : side === 1 ? rdx : side === 3 ? rdx * B.cut!.ny - rdy * B.cut!.nx : 0;
+  // scaffolding 1 m out from a street face: where the ray crosses its plane
+  let sT = 0, sA = 0, sTop = 0;
+  if (B.scaffold && side !== 2 && face < 4 && scaffoldFace(B, face)) {
+    const sb = (SCAF_D * dAlong) / (colW * t);
+    sA = along - da * sb; sT = t - sb;
+    if (sA > f0 + 0.1 && sA < f1 - 0.1) sTop = B.scaffold;
+  }
   // a bay, pilaster or pier in front of the wall plane: where the ray meets it first (front or side)
   let rMode = 0, rT = 0, rA = 0, rCur = 0;
   if (detailed && side !== 2 && reliefOf(B)) {
-    const da = side === 0 ? rdy : side === 1 ? rdx : rdx * B.cut!.ny - rdy * B.cut!.nx;
     const sb = (REL.d * dAlong) / (colW * t), af = along - da * sb, lo = Math.min(af, along), hi = Math.max(af, along), per = REL.P * BAY, o = REL.off * BAY + REL.a;
     let best = 2;
     for (let k = Math.floor((lo - o - REL.w) / per); k <= Math.floor((hi - o) / per); k++) {
@@ -887,6 +895,28 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const k = I * elec;
       r += B.flood[0] * k; g += B.flood[1] * k; b += B.flood[2] * k;
     }
+    if (sTop) {
+      // the scaffolding in front: steel tubes (standards every 2.4 m, ledgers every 2 m, a brace
+      // in every other bay), boards on each lift, and over the rest a mesh net or nothing
+      const zs = eye + ((hor - (y + 0.5)) / scale) * sT;
+      if (zs > SHED_Z + 1.1 && zs < sTop) {
+        const u = sA - f0, tw = Math.max(0.05, dAlong * 0.5), tz = Math.max(0.05, dz * 0.5), lz = (zs - SHED_Z) % 2;
+        const std = u % 2.4 < tw || f1 - sA < tw, led = lz < tz || zs > sTop - tz, board = lz < 0.14 + tz;
+        const brace = Math.floor(u / 2.4) % 2 === 0 && Math.abs(((u % 2.4) / 2.4) * 2 - lz) < Math.max(0.08, tw * 1.5);
+        let k = 0;
+        if (std || led || brace || board) {
+          ch = std ? G.bar : board && !led ? G.eq : brace ? G.sl : G.dash;
+          k = board && !led && !std ? 0.9 : 1.1;
+          const c = board && !led && !std ? SCAF_BOARD : SCAF_STEEL;
+          r = c[0] * k * shade0; g = c[1] * k * shade0; b = c[2] * k * shade0; T = sT;
+        } else if (B.net) {
+          // the net veils the wall behind it
+          const c = NETS[B.net - 1], q = 0.55;
+          r = r * (1 - q) + c[0] * q * shade0; g = g * (1 - q) + c[1] * q * shade0; b = b * (1 - q) + c[2] * q * shade0;
+          if (t < 40 && ch !== G.at && ch !== G.hash) ch = (Math.floor(u / 0.3) + Math.floor(zs / 0.3)) & 1 ? G.col : G.dot;
+        }
+      }
+    }
     if (z < LIT_H && t < LIT_FAR) {
       // street lamps, headlights and signs light the lower floors
       lightAt(hx, hy, z);
@@ -897,6 +927,17 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = T;
   }
+}
+
+/** Scaffolding: its distance from the wall, and the colors of its tubes, boards and nets (green, blue, white, orange, black, green). */
+const SCAF_D = 1, SCAF_STEEL: RGB = [140, 140, 150], SCAF_BOARD: RGB = [120, 95, 60];
+const NETS: RGB[] = [[50, 110, 70], [50, 80, 140], [170, 170, 165], [190, 100, 40], [35, 35, 40], [70, 120, 60]];
+/** Whether face f (0..3) of a building faces a street, where its sidewalk shed and scaffolding go. */
+function scaffoldFace(B: Building, f: number): boolean {
+  const blk = blockAt(frameCity, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+  if (!blk) return false;
+  const gap = f === 0 ? B.x0 - blk.x0 : f === 1 ? blk.x1 - B.x1 : f === 2 ? B.y0 - blk.y0 : blk.y1 - B.y1;
+  return gap <= SIDEWALK + 0.5;
 }
 
 /** Window glyphs per building, brightest first, as in the dense facades of the references. */

@@ -74,6 +74,9 @@ export interface Building {
   board: Board | null;
   /** Neon tubes along the corners and the roof line, in this color; null when there are none. */
   neon: RGB | null;
+  /** Scaffolding up the street faces above the sidewalk shed, to this height (0: none); netting color index + 1 (0: bare). */
+  scaffold: number;
+  net: number;
 }
 
 /**
@@ -664,7 +667,7 @@ export function generateCity(seed: number, size: number): City {
         if (Math.min(lw, lh) - 2 * inset < 8) break;
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
         const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
-        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1, board: null, neon: null };
+        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0 };
         if (k === 1 && fl) { const u = hash3(seed, ax0 | 0, ay0 | 0); top.flood = fl; top.floodH = Math.min(bh, fl === FLOOD_WARM ? 14 + u * 30 : 30 + u * 60); }
         buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
@@ -675,7 +678,7 @@ export function generateCity(seed: number, size: number): City {
 
     /** A rooftop shape centered at (x, y) with half-size (or radius) s, reaching height h. */
     const part = (x: number, y: number, s: number, h: number, style: Facade, round: boolean, frame: RGB, win: RGB) => {
-      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null, flood: null, floodH: 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null });
+      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null, flood: null, floodH: 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0 });
       block.maxH = Math.max(block.maxH, h);
     };
     /** Drum with windows, then a dome of stacked rings and a small lantern on top. */
@@ -715,7 +718,7 @@ export function generateCity(seed: number, size: number): City {
     /** A plain building of this landmark. */
     const house = (bx0: number, by0: number, bx1: number, by1: number, bh: number, style: Facade, frame: RGB, win: RGB, lit: number) => {
       const civic = lm === 'hall' || lm === 'church' || lm === 'clock';
-      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null, flood: civic ? FLOOD_WARM : null, floodH: civic ? Math.min(bh, 28) : 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null });
+      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null, flood: civic ? FLOOD_WARM : null, floodH: civic ? Math.min(bh, 28) : 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0 });
       block.maxH = Math.max(block.maxH, bh);
     };
     const long = ix1 - ix0 > iy1 - iy0;
@@ -845,6 +848,12 @@ export function generateCity(seed: number, size: number): City {
       const B = buildings[k], bx = Math.floor(B.x0), by = Math.floor(B.y0), floors = (B.h - 1) / FLOOR_H;
       if (B.tier >= 1 && floors > 22 && (B.style === 'office' || B.style === 'glass' || B.style === 'historic') && hash3(seed ^ 0xc0f1, bx, by) < 0.55) B.crown = CROWNS[Math.floor(hash3(seed ^ 0xc0f2, bx, by) * CROWNS.length)];
       if (B.tier === 1 && B.style !== 'warehouse' && !B.round && hash3(seed ^ 0x5bed, bx, by) < 0.07) B.shed = true;
+      // on almost half of those the scaffolding climbs the wall, all the way up on low buildings
+      if (B.shed && B.h > 9 && hash3(seed ^ 0x5caf, bx, by) < 0.45) {
+        const u = hash3(seed ^ 0x5cb0, bx, by);
+        B.scaffold = Math.min(B.h + 1, Math.max(10, 4.1 + 2 * Math.round((B.h < 30 ? B.h : 12 + u * 24) / 2)));
+        B.net = u < 0.5 ? 1 + Math.floor(u * 6) : 0;
+      }
       if (B.tier === 1 && !B.round && businesses.length && (B.style === 'brick' || B.style === 'residential' || B.style === 'warehouse') && B.h > 10 && hash3(seed ^ 0xadad, bx, by) < 0.3) B.ad = Math.floor(hash3(seed ^ 0xadae, bx, by) * businesses.length);
       // neon tubes on the corners and roof line: common on the commercial strips, rarer on towers
       const type = districts[district].type;
