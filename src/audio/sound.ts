@@ -38,9 +38,9 @@ export class Sound {
   /** Everything outdoors reaches the ear through this: muffled by the walls indoors. */
   private out: GainNode;
   private wall: BiquadFilterNode;
-  /** Indoors: rain drumming on the windows, and the buzz of office tubes. */
-  private patter: GainNode;
+  /** Indoors: the buzz of office tubes, and when the next raindrop hits the glass. */
   private tubes: GainNode;
+  private nextDrop = 0;
   muted = false;
 
   constructor() {
@@ -97,9 +97,7 @@ export class Sound {
     tone(ctx, 'sine', 38, 0.6, this.fire);
     src().connect(filter(ctx, 'lowpass', 110, 0.8)).connect(gain(ctx, 1.2, this.fire));
 
-    // indoors: the rain heard as a soft drumming on the glass, and fluorescent tubes buzzing
-    this.patter = gain(ctx, 0, this.master);
-    src().connect(filter(ctx, 'bandpass', 800, 0.9)).connect(this.patter);
+    // indoors: fluorescent tubes buzzing
     this.tubes = gain(ctx, 0, this.master);
     const tb = filter(ctx, 'bandpass', 1500, 2.5);
     tb.connect(this.tubes);
@@ -123,6 +121,19 @@ export class Sound {
     s.stop(t0 + 9);
   }
 
+  /** One raindrop hitting a window: a few milliseconds of bright noise, ringing a little. */
+  private drop(t: number, g: number, pan: number) {
+    const ctx = this.ctx, s = ctx.createBufferSource();
+    s.buffer = this.noise;
+    const bp = filter(ctx, 'bandpass', 2200 + Math.random() * 3000, 4 + Math.random() * 4), p = ctx.createStereoPanner(), v = gain(ctx, 0, p);
+    p.pan.value = pan; p.connect(this.master);
+    s.connect(bp).connect(v);
+    v.gain.setValueAtTime(g, t);
+    v.gain.exponentialRampToValueAtTime(0.0005, t + 0.012 + Math.random() * 0.02);
+    s.start(t, Math.random() * 1.5);
+    s.stop(t + 0.05);
+  }
+
   /** Browsers only start audio after a click; call from one. */
   resume() { if (this.ctx.state !== 'running') this.ctx.resume(); }
 
@@ -140,9 +151,16 @@ export class Sound {
     const now = this.ctx.currentTime;
     const rain = w.snow ? 0 : w.precip;
     // walls: the street goes low and quiet, the room's own sounds come up
-    this.wall.frequency.setTargetAtTime(indoors ? 480 : 20000, now, 0.15);
-    this.out.gain.setTargetAtTime(indoors ? 0.5 : 1, now, 0.15);
-    this.patter.gain.setTargetAtTime(indoors ? 0.12 * Math.min(1, rain * 1.5) : 0, now, 0.3);
+    this.wall.frequency.setTargetAtTime(indoors ? 220 : 20000, now, 0.15);
+    this.out.gain.setTargetAtTime(indoors ? 0.28 : 1, now, 0.15);
+    // the rain itself is barely heard indoors; the drops tapping on the glass are, one by one
+    if (indoors && rain > 0.02) {
+      if (this.nextDrop < now) this.nextDrop = now + 0.02;
+      while (this.nextDrop < now + 0.2) {
+        this.drop(this.nextDrop, 0.04 + Math.random() * 0.14, (Math.random() - 0.5) * 1.4);
+        this.nextDrop += -Math.log(1 - Math.random()) / (2 + rain * 22);
+      }
+    }
     this.tubes.gain.setTargetAtTime(indoors ? 0.012 * tubes : 0, now, 0.1);
     this.rain.gain.setTargetAtTime(0.28 * Math.min(1, rain * 1.4), now, 0.4);
     this.rainLow.gain.setTargetAtTime(0.35 * Math.max(0, rain - 0.4), now, 0.6);

@@ -31,6 +31,19 @@ function h3(a: number, b: number, c: number) {
   return (h >>> 0) / 4294967296;
 }
 
+/** A roof that keeps the rain off (bus shelters, for now): center, heading, half sizes, underside height. */
+export interface Roof { x: number; y: number; c: number; s: number; hx: number; hy: number; z: number }
+
+/** Whether (x, y, z) is under one of the roofs. */
+export function underRoof(roofs: Roof[], x: number, y: number, z: number): boolean {
+  for (const R of roofs) {
+    if (z > R.z) continue;
+    const dx = x - R.x, dy = y - R.y, lx = dx * R.c + dy * R.s, ly = -dx * R.s + dy * R.c;
+    if (Math.abs(lx) < R.hx && Math.abs(ly) < R.hy) return true;
+  }
+  return false;
+}
+
 const C = (s: string) => s.charCodeAt(0);
 let taken = new Uint8Array(0);
 
@@ -38,7 +51,7 @@ let taken = new Uint8Array(0);
  * Draw the fall. yaw, plane and scale are the camera's; light(x, y, z) is the light at a world
  * point (lamps, signs, headlights) as r, g, b.
  */
-export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: number, yaw: number, plane: number, scale: number, hor: number, light: (x: number, y: number, z: number) => Float32Array, nearT?: Float32Array) {
+export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: number, yaw: number, plane: number, scale: number, hor: number, light: (x: number, y: number, z: number) => Float32Array, nearT?: Float32Array, roofs: Roof[] = []) {
   if (f.amount <= 0.01) return;
   const { cols, rows, depth, cells, bg } = grid;
   // cells already holding a nearer drop this frame (the depth buffer stays the world's)
@@ -76,6 +89,7 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
         if (h3(colI, b, s) > dens) continue;
         const zd = b * PERIOD + h3(colI, b, s + 17) * PERIOD - off;
         if (zd < base || zd > base + TOP) continue;
+        if (roofs.length && underRoof(roofs, px + (rdx / L) * t, py + (rdy / L) * t, zd)) continue; // sheltered
         // the streak in rows, from the drop's head upward: longer for near drops, which cross the view faster
         const yHead = hor - ((zd - eye) * scale) / dist, len = Math.min((streak * scale) / dist, cap);
         const y1 = Math.min(rows, Math.floor(yHead) + 1);
@@ -94,6 +108,38 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
           const add = (f.snow ? 120 : 60) * q + 200 * f.flash;
           const ch = f.snow ? (s < 3 ? C('*') : C('.')) : s > 5 ? C(':') : glyph;
           grid.put(i, ch, br * 1.2 + add + lt[0] * lk, bgc * 1.2 + add + lt[1] * lk, bb * 1.2 + add * 1.1 + lt[2] * lk);
+          taken[i] = 1;
+        }
+      }
+    }
+  }
+
+  // water running off the roofs: drops falling from their edges (the open front and the two ends)
+  if (f.snow) return;
+  for (let n = 0; n < roofs.length; n++) {
+    const R = roofs[n];
+    const edges: [number, number, number, number][] = [[R.hx, -R.hy, R.hx, R.hy], [-R.hx, -R.hy, R.hx, -R.hy], [-R.hx, R.hy, R.hx, R.hy]];
+    let k = 0;
+    for (const [ax, ay, bx, by] of edges) {
+      const len = Math.hypot(bx - ax, by - ay), m = Math.floor(len / 0.3);
+      for (let q = 0; q <= m; q++, k++) {
+        if (h3(n, k, 71) > f.amount * 0.55) continue;
+        const lx = ax + ((bx - ax) * q) / m, ly = ay + ((by - ay) * q) / m;
+        const wx = R.x + lx * R.c - ly * R.s - px, wy = R.y + lx * R.s + ly * R.c - py;
+        const d = wx * dirX + wy * dirY;
+        if (d < 0.4) continue;
+        const camX = (wx * -dirY + wy * dirX) / (d * plane);
+        const x = Math.floor(((camX + 1) / 2) * cols);
+        if (x < 0 || x >= cols) continue;
+        // a drop every ~0.6 s from each point, falling at 5 m/s
+        const z = R.z - ((f.sec / 0.6 + h3(n, k, 72)) % 1) * 3;
+        if (z < 0) continue;
+        const yHead = hor - ((z - eye) * scale) / d, y1 = Math.min(rows, Math.floor(yHead) + 1), y0 = Math.max(0, Math.floor(yHead - Math.min(3, (0.3 * scale) / d)) + 1);
+        for (let y = y0; y < y1; y++) {
+          const i = y * cols + x;
+          if (depth[i] <= d || taken[i]) continue;
+          const k4 = i * 4, lt = light(wx + px, wy + py, z);
+          grid.put(i, y === y1 - 1 ? C(',') : C('|'), Math.max(bg[k4], cells[k4 + 1] * 0.5) * 1.2 + 70 + lt[0] * 2, Math.max(bg[k4 + 1], cells[k4 + 2] * 0.5) * 1.2 + 75 + lt[1] * 2, Math.max(bg[k4 + 2], cells[k4 + 3] * 0.5) * 1.2 + 85 + lt[2] * 2);
           taken[i] = 1;
         }
       }

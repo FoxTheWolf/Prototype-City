@@ -1,20 +1,20 @@
 import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
-import { baseAt, DOOR_H, doorOf, habitable, planOf } from '../sim/interior';
-import { glassPass, interiorColumn, prepareInside, type Inside } from './interior';
+import { baseAt, cachedPlan, DOOR_H, doorOf, habitable, lotOf, planOf, type Plan } from '../sim/interior';
+import { glassPass, interiorColumn, peekCell, peekInto, prepareInside, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, treeModel } from './models';
+import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, poweredFurniture, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
-import { drawFall } from './precip';
+import { drawFall, underRoof, type Roof } from './precip';
 import { power } from './power';
-import { type PowerGrid } from '../sim/power';
+import { subAt, type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
@@ -80,7 +80,12 @@ const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
-let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0, frameInside = false;
+let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0, frameInside = false, frameX = 0, frameY = 0;
+/** Rooms are seen through the windows this close; floor plans not made yet are made a few per frame. */
+const PEEK_FAR = 80, PLANS_PER_FRAME = 4;
+let planBudget = 0;
+const peeks: (Peek & { plan: Plan | null; state: number })[] = [0, 1].map(() => ({ d: 0, r: 0, u: 0, shade: 1, plan: null, state: 0 }));
+const P4 = [0, 0, 0, 0];
 let framePower: PowerGrid;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
@@ -93,6 +98,8 @@ const hitSide = new Uint8Array(1024);
 const hitF = new Float64Array(1024);
 /** Per column: distance to the window glass when indoors, so the rain is not drawn in the room. */
 let nearT = new Float32Array(0);
+/** This frame's roofs near the viewer that keep the rain off. */
+const roofs: Roof[] = [];
 
 export function renderWorld(grid: CharGrid, world: World, v: View) {
   const { cols, rows } = grid;
@@ -122,6 +129,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const W = world.weather, wet = W.wet, snowC = (frameSnow = W.snowCover), rain = W.snow ? 0 : W.precip;
   light.update(frameSec, sky.day, world.power);
   gatherLights(world, v, frameSec);
+  gatherRoofs(world, v);
   // indoors: the floor is drawn over the city, which shows only through the windows; the building's
   // own boxes (setbacks, rooftop parts) are left out of the city
   if (nearT.length !== cols) nearT = new Float32Array(cols); else nearT.fill(0);
@@ -133,6 +141,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     prepareInside(inside, px, py);
   }
   frameInside = !!inside;
+  frameX = px; frameY = py; planBudget = PLANS_PER_FRAME;
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
@@ -252,7 +261,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
         const wk = wet * (1 - snowC);
         r *= 1 - 0.35 * wk; g *= 1 - 0.35 * wk; b *= 1 - 0.3 * wk;
         lk = 1 + 1.1 * wk * (rain > 0 ? 0.75 + 0.25 * Math.sin(frameSec * 7 + hv * 30) : 1);
-        if (rain > 0 && rd < 22) {
+        if (rain > 0 && rd < 22 && !(roofs.length && underRoof(roofs, wx, wy, 0.1))) {
           // splashes: a ring and a drop for a blink, here and there, more in a downpour
           // a ring that grows from a random spot of each 0.33 m square; a cell at a distance covers
           // more ground (e), so there it shrinks to a dot
@@ -369,7 +378,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   if (inside) glassPass(grid, inside, eye, hor, scale);
   finish(grid, v.look, sky);
   // after finish, so the drops keep the background of what is behind them
-  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT);
+  drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
@@ -555,6 +564,20 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const escU = ((wi % 7) - 2 + fw) / 2;
   const balcony = S === 'residential' && B.feat < 0.5;
   const door = B.tier === 1 && habitable(B) ? doorOf(frameCity, id) : null;
+  // the rooms behind the windows, near enough to make out (see interior.ts): one look into the
+  // ground floor's plan and one into the floors above, made the first time a window needs them
+  const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
+  const rdx = (hx - frameX) / t, rdy = (hy - frameY) / t;
+  peeks[0].state = peeks[1].state = 0;
+  const peekFor = (fl: number) => {
+    const pk = peeks[fl === 0 ? 0 : 1];
+    if (pk.state) return pk.state === 1 ? pk : null;
+    let P = cachedPlan(frameCity, lot, fl);
+    if (P === undefined) { if (planBudget <= 0) return null; planBudget--; P = planOf(frameCity, lot, fl); }
+    pk.state = P && P.box === id && peekInto(P, B, hx, hy, rdx, rdy, pk) ? 1 : 2;
+    pk.plan = P;
+    return pk.state === 1 ? pk : null;
+  };
   let ch = 0, r = 0, g = 0, b = 0;
   // the shop sign on this face: the business name centered on it, if at least 3 letters fit
   let signN = 0, signU = 0, text = '', mode = 0;
@@ -583,6 +606,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     if (frameInside && grid.depth[i] < t + 0.5) continue; // the room around the viewer is in front (a neighbour may touch its wall)
     const z = eye + ((hor - (y + 0.5)) / scale) * t;
     const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
+    const escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || Math.abs((fl & 1 ? 1 - escU : escU) - fz) < 0.1);
+    let pk: ReturnType<typeof peekFor> = null;
     if (S === 'spire' || S === 'chimney') {
       // red beacon at the tip; chimneys also get two pale bands near the top
       if (z > B.h - 1) { ch = G.star; r = B.win[0] * winLight; g = B.win[1] * winLight; b = B.win[2] * winLight; }
@@ -669,6 +694,10 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const e = Math.min(along - door.a0, door.a1 - along);
       if (e < 0.12 || z > DOOR_H + 0.22) wall(e < 0.12 ? G.bar : G.eq, 1.5);
       else { const k = 0.55 * elec; ch = z > DOOR_H ? G.dash : Math.abs(along - (door.a0 + door.a1) / 2) < 0.06 ? G.bar : G.col; r = 255 * k; g = 220 * k; b = 160 * k; }
+    } else if (lot >= 0 && !corner && !escCell && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0) && (pk = peekFor(fl))) {
+      // a window: the room behind it, lit by its own lamps
+      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), frameDay);
+      ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3];
     } else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv), wp = hh < litK ? winPow(wi >> kh, fl >> kv) : 0;
       if (wp > 0.04) {
@@ -697,7 +726,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         } else wall(G.bar, 1.2);
       } else if (door && !corner) wall(dp < 0.4 || dp > 5.6 ? G.bar : z > 4.1 ? G.eq : G.dash, dp < 0.4 || dp > 5.6 ? 1.3 : 1.15);
       else wall(G.bar, Math.floor(along / 0.6) & 1 ? 1 : 0.78); // corrugated metal
-    } else if (esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || Math.abs((fl & 1 ? 1 - escU : escU) - fz) < 0.1)) {
+    } else if (escCell) {
       // fire escape: landings, rails and a zigzag stair between floors
       ch = fz < 0.08 ? G.eq : escU < 0.04 || escU > 0.96 ? G.bar : fl & 1 ? G.bs : G.sl;
       r = 95 * shade; g = 95 * shade; b = 105 * shade;
@@ -769,6 +798,16 @@ const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
 function buildingPower(world: World, k: number, sec: number) {
   const P = world.power, B = world.city.buildings[k];
   return power(P, P.building[k], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, k, P.generator[k], sec)[0];
+}
+
+/** Bus shelters within 40 m: their roofs keep the rain off (see precip.ts). */
+function gatherRoofs(world: World, v: View) {
+  roofs.length = 0;
+  const { city } = world;
+  for (const blk of city.blocks) {
+    if (v.x < blk.x0 - 40 || v.x > blk.x1 + 40 || v.y < blk.y0 - 40 || v.y > blk.y1 + 40) continue;
+    for (const p of blk.props) if (p.kind === 'shelter' && Math.hypot(p.x - v.x, p.y - v.y) < 40) roofs.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), hx: 0.95, hy: 2.05, z: 2.3 });
+  }
 }
 
 /** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
@@ -856,7 +895,10 @@ function collectObjects(world: World, v: View): Obj[] {
       else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
       else {
         const f = FURNITURE[p.kind];
-        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: f.parts, r: f.r, h: f.h, seed: p.seed });
+        // the shelter's poster and the phone's sign are on the street's power
+        const P = world.power, lit = p.kind === 'shelter' || p.kind === 'payphone';
+        const parts = lit ? poweredFurniture(p.kind, power(P, subAt(P, city, p.x, p.y), p.x, p.y, p.seed, 0, frameSec)[0]) : f.parts;
+        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts, r: f.r, h: f.h, seed: p.seed });
       }
     }
   }

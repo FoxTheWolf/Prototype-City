@@ -118,6 +118,19 @@ Inspiração visual e técnica. O vídeo de referência é "Everything in ASCII 
 - `25-taxi-aereo-interior`: interior do táxi aéreo (etapa 10)
 - `26-horizonte-torres-marco`: horizonte com torres-marco art déco vistas do alto (etapas 2 e 3)
 
+Enviadas pelo usuário em 2026-09-30. As de `v2` são capturas dele jogando o protótipo 2 do ASCII City (o único a que teve acesso); as de `ny` são fotos reais de Nova York:
+- `27-v2-rua-cabines-vermelhas`: rua com cabines/portais vermelhos volumétricos, árvores e fachadas com padrões de caracteres coloridos (modelos e fachadas)
+- `28-v2-fachadas-arvore`: fachadas variadas de perto, com padrões ricos (`@ 8 # o`), letreiros e uma árvore grande (fachadas, etapa 15)
+- `29-v2-fachadas-altas-neon`: fachadas altas com padrões grandes de janelas e neons roxos na parede (fachadas e letreiros)
+- `30-v2-torres-coloridas`: torres com coroas escalonadas e padrões de caracteres em várias cores (`X Z 0 8 +`), céu com chuva (fachadas e topos)
+- `31-v2-modelo-torre-de-cima`: uma torre e um objeto amarelo vistos de cima, sobre um chão de linhas (vista do alto, câmera 3D)
+- `32-ny-fachada-tijolo-historica`: Carnegie Hall: tijolo, arcos, cornijas em vários níveis, escada de incêndio lateral, bandeiras e marquise (fachadas históricas)
+- `33-ny-entrada-marquise`: entrada de hotel com marquise e letreiro, mastros com bandeiras, vitrines de farmácia ao lado (entradas e térreo)
+- `34-ny-rua-letreiros`: rua de Manhattan de dia com muitos letreiros, outdoors e placas perpendiculares (densidade de publicidade)
+- `35-ny-times-square`: Times Square, telões e anúncios cobrindo as fachadas (distrito de neon)
+- `36-ny-noite-vista-alta`: Manhattan à noite vista do alto: topos de torres iluminados (coroas acesas, como o Empire State), ruas como rios de luz (iluminação noturna, vista do alto)
+- `37-bug-chuva-dentro`: captura do bug da chuva caindo dentro de um prédio no 17º andar (corrigido)
+
 O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The Story So Far - Grow Now! Games (1080p, h264).mp4`. Dá para extrair mais quadros com Python + OpenCV (`cv2`), que já está instalado: `cap.set(cv2.CAP_PROP_POS_MSEC, t*1000)` e depois `cap.read()`. Para achar um trecho, monte primeiro folhas de miniaturas com o tempo escrito (uma a cada 8 s cabe em 8 folhas de 6×6) e só depois extraia em resolução cheia.
 
 **Mapa do vídeo** (minuto:segundo → assunto), para achar trechos sem varrer o vídeo inteiro de novo:
@@ -213,6 +226,15 @@ Dados enquanto jogava a etapa 3. Cada um está também no roteiro, na etapa em q
 - **Elevadores funcionais:** você entra, aperta o botão e é levado para cima de verdade, sem fade. Alguns elevadores com parede de vidro, para ver a cidade enquanto sobe (etapa 6). Isso depende da câmera com giro vertical de verdade ou pelo menos da altura do olho variável (veja as notas de projeção).
 - **Iluminação dinâmica:** os postes e os faróis dos carros iluminam o mundo em volta de verdade, e a luz se move com os carros (etapa 4 para a base da luz, feita; os faróis já iluminam desde a 4; faltam os do trânsito novo, na etapa 7).
 - **Objetos espalhados:** entulho, bancos e mobiliário urbano (etapa 4).
+
+## Pedidos do usuário durante a etapa 6 (2026-09-30)
+
+Dados ao testar o grupo A dos interiores, junto com as referências 27–36.
+- **Fachadas mais complexas:** hoje são simples demais. Os prédios de Nova York, mesmo quadrados, têm cornijas em vários níveis, arcos, pilastras, bases diferentes do corpo, coroas e muitos detalhes (referências 28–30 e 32). Também andaimes (*scaffolding*), que são comuns em Manhattan.
+- **Áreas cobertas da chuva:** debaixo de um andaime ou de um ponto de ônibus não chove, e a água escorre pela borda do telhado. *(Feito para o ponto de ônibus; o andaime vem junto com ele.)*
+- **Muito mais letreiros e publicidade nos prédios,** como em Manhattan (referências 34 e 35). Liga-se ao pedido anterior de anúncios ligados às empresas da simulação.
+- **Iluminação dos topos à noite:** além dos holofotes de baixo, coroas e topos acesos, como o Empire State (referência 36).
+- **Ver os interiores de fora:** *(feito na 6.4, veja o Histórico).*
 
 ## Pedidos do usuário para planejar (2026-09-30, segunda lista)
 
@@ -322,7 +344,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Resumo para começar uma sessão (atualizado em 2026-09-30)
 
-- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) está feito e aguarda o teste do usuário. Veja "Etapa 6: decisões e grupos" no Histórico.
+- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) foi aprovado com pedidos; a 6.4 (correções e interiores vistos de fora) aguarda o teste. Veja "Etapa 6: decisões e grupos" no Histórico e "Pedidos do usuário durante a etapa 6".
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E giram;
@@ -383,8 +405,18 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - **Grupos planejados:**
     - **A (6.1–6.3):** planta, porta, entrar, render de dentro, telhados e vista do alto, som abafado (feito).
     - **B:** escadas em que se sobe de verdade e elevadores (alguns de vidro), sem fade.
-    - **C:** de fora, os cômodos vistos pelas janelas (batendo com a luz de dentro) e as janelas iluminando a fachada.
+    - **C:** de fora, os cômodos vistos pelas janelas (batendo com a luz de dentro; feito antes, na 6.4) e as janelas iluminando a fachada.
     - **D:** lojas e vitrines abertas, móveis, escadas de incêndio, os outros tipos de prédio.
+- **Retorno do usuário sobre o grupo A (2026-09-30):** gostou ("tá ótimo"). Pediu correções e novidades, feitas na 6.4: chovia dentro dos prédios; o som devia ficar bem mais abafado, quase sem a chuva, mas com o "tec, tec" das gotas na janela; ver os interiores do lado de fora; os pontos de ônibus não apagavam no blackout; sem chuva debaixo do ponto de ônibus, com a água escorrendo do telhado. Os pedidos de fachada estão em "Pedidos do usuário durante a etapa 6".
+- **6.4, correções e interiores vistos de fora (2026-09-30):**
+  - **Chuva dentro:** nas colunas em que uma parede interna fecha a vista (sem janela), a chuva não é mais desenhada (`nearT` = infinito).
+  - **Som:** dentro do prédio, a rua passa por um passa-baixa de 220 Hz e cai para 28%. A chuva quase some, e no lugar entram gotas batendo no vidro, uma a uma: ruído de poucos milissegundos num passa-banda de 2,2–5,2 kHz, com volume e pan sorteados, mais frequentes quanto mais forte a chuva (`drop` em `sound.ts`). O teste de ouvido é do usuário.
+  - **Pontos de ônibus e orelhões** seguem a energia da subestação do lugar (`poweredFurniture` em `models.ts`).
+  - **Abrigo da chuva** (`Roof` e `underRoof` em `precip.ts`, `gatherRoofs` em `raycaster.ts`): os telhados dos pontos de ônibus a menos de 40 m tiram as gotas e os respingos debaixo deles, e a água pinga das bordas (a frente aberta e as pontas). O andaime vai usar o mesmo mecanismo.
+  - **Interiores vistos de fora** (`peekInto` e `peekCell` em `render/interior.ts`, ramo novo em `wallColumn`): até 80 m (`PEEK_FAR`), e só no nível detalhado da fachada, cada célula de janela continua o raio para dentro da planta daquele andar: parede do fundo, piso ou teto, com a luz do próprio cômodo. Por coluna e prédio, a planta é percorrida uma vez para o térreo e uma para os andares de cima (que são iguais).
+    - **A luz bate com a de dentro:** o cômodo aceso visto de fora é o mesmo aceso por dentro (`roomLamp`, usado pelos dois lados). Além de 80 m continua o sorteio por janela antigo, então o padrão pode mudar um pouco ao se aproximar.
+    - **Geração aos poucos:** no máximo 4 plantas novas por quadro (`PLANS_PER_FRAME`); até lá a janela usa o desenho antigo. O cache guarda até 4000 plantas e descarta as mais antigas (`PLAN_KEEP`). `lotOf` liga cada caixa (inclusive os recuos) ao seu lote.
+    - **Custo:** quase nenhum. No `bench`, diante de uma fachada de tijolo, 7,1 ms (antes ~7–8 ms); diante de uma torre de vidro, 6 ms.
 - **6.1–6.2, plantas e render de dentro (2026-09-30):**
   - **Simulação** (`sim/interior.ts`):
     - Cada andar é uma grade de células de 0,4 m (`CELL`) com o índice do cômodo; a parede é a divisa entre cômodos diferentes; a porta é o bit `DOOR` nas células dos dois lados. As paredes ficam em múltiplos de `BAY` (1,6 m, agora exportado de `city.ts`), na mesma grade das janelas da fachada.

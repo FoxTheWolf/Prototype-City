@@ -45,14 +45,18 @@ export function prepareInside(I: Inside, x: number, y: number) {
   const here = (cellAt(I.plan, x, y) & 127) - 1;
   const R = I.plan.rooms, n = R.length;
   if (lamp.length < n * 3) lamp = new Float32Array(n * 3 + 96);
-  const litK = I.base.lit * (1 - 0.75 * I.day) * 1.3, office = isOffice(I.base);
-  for (let r = 0; r < n; r++) {
-    const kind = R[r].kind, common = R[r].unit < 0;
-    const on = common || r === here || hash3(I.boxId, r * 31 + I.floor, 11) < litK;
-    const c = !on ? null : kind === 'lobby' ? LOBBY : office || kind === 'stair' || kind === 'lift' ? TUBE : WARM;
-    const k = c ? I.elec * (kind === 'stair' ? 0.7 : 1) : 0;
-    lamp[r * 3] = c ? (c[0] / 255) * k : 0; lamp[r * 3 + 1] = c ? (c[1] / 255) * k : 0; lamp[r * 3 + 2] = c ? (c[2] / 255) * k : 0;
-  }
+  for (let r = 0; r < n; r++) roomLamp(I.base, I.boxId, R[r], r, I.floor, I.elec, I.day, r === here, lamp, r * 3);
+}
+
+/**
+ * The lamp of room r on floor f of box boxId, into out[o..o+2] (0..1 per channel, times the power):
+ * common parts always on, the others when someone is home (or `on`), as seen from outside too.
+ */
+function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, elec: number, day: number, on: boolean, out: Float32Array, o: number) {
+  on ||= R.unit < 0 || hash3(boxId, r * 31 + f, 11) < base.lit * (1 - 0.75 * day) * 1.3;
+  const c = !on ? null : R.kind === 'lobby' ? LOBBY : isOffice(base) || R.kind === 'stair' || R.kind === 'lift' ? TUBE : WARM;
+  const k = c ? elec * (R.kind === 'stair' ? 0.7 : 1) : 0;
+  out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
 }
 
 /** Squared distance from (x, y) to the nearest ceiling lamp of a room: they hang about every 4 m. */
@@ -65,14 +69,18 @@ function lampD2(R: Room, x: number, y: number) {
 const L3 = new Float32Array(3);
 /** Light at a point of room r into L3: its lamps, plus ambient. */
 function lightIn(I: Inside, r: number, x: number, y: number, t: number) {
-  const k = (0.5 + 0.9 / (1 + lampD2(I.plan.rooms[r], x, y) / 5)) / (1 + t * 0.03);
+  lit3(I.plan.rooms[r], lamp, r * 3, x, y, t, I.day);
+}
+/** L3 from a lamp color (lp[o..o+2]) falling off from the room's lamps, plus the ambient light. */
+function lit3(R: Room, lp: Float32Array, o: number, x: number, y: number, t: number, day: number) {
+  const k = (0.5 + 0.9 / (1 + lampD2(R, x, y) / 5)) / (1 + t * 0.03);
   // a dark room still gets the city's glow through the windows; by day, the daylight
-  const a = 0.14 + 0.5 * I.day;
-  L3[0] = lamp[r * 3] * k + a; L3[1] = lamp[r * 3 + 1] * k + a * 1.05; L3[2] = lamp[r * 3 + 2] * k + a * 1.25;
+  const a = 0.14 + 0.5 * day;
+  L3[0] = lp[o] * k + a; L3[1] = lp[o + 1] * k + a * 1.05; L3[2] = lp[o + 2] * k + a * 1.25;
 }
 
 /** Window openings of a facade style, as wallColumn draws them: fw across the bay, fz up the storey. */
-function windowHole(B: Building, fw: number, fz: number, z: number, ground: boolean): boolean {
+export function windowHole(B: Building, fw: number, fz: number, z: number, ground: boolean): boolean {
   if (ground && B.shop) return fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6;
   switch (B.style) {
     case 'glass': return fw >= 0.07 && fz >= 0.08;
@@ -144,10 +152,9 @@ function floorPaint(kind: RoomKind, office: boolean, x: number, y: number, out: 
 }
 
 /** Ceiling at (x, y) of room r: tubes in offices, a lamp in the middle of the rooms at home. */
-function ceilPaint(I: Inside, r: number, x: number, y: number, out: number[]) {
-  const R = I.plan.rooms[r], on = lamp[r * 3] + lamp[r * 3 + 1] > 0.05;
+function ceilPaint(R: Room, office: boolean, on: boolean, x: number, y: number, out: number[]) {
   out[0] = G.dot; out[1] = 150; out[2] = 148; out[3] = 142;
-  if (isOffice(I.base) || R.kind === 'stair' || R.kind === 'lift') {
+  if (office || R.kind === 'stair' || R.kind === 'lift') {
     // ceiling tiles with a light panel every 2.4 x 1.2 m
     const fx = ((x / 2.4) % 1 + 1) % 1, fy = ((y / 1.2) % 1 + 1) % 1;
     if (fx > 0.3 && fx < 0.7 && fy > 0.25 && fy < 0.75) { out[0] = G.eq; const k = on ? 2.2 : 0.6; out[1] = 200 * k; out[2] = 210 * k; out[3] = 220 * k; return; }
@@ -265,7 +272,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
       put(y, t, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
     });
   }
-  if (closed) nearT[x] = 0;
+  if (closed) nearT[x] = 1e9; // no window in this column: no rain at all
 
   // floor and ceiling in the rows left: each row meets them at its own distance
   for (let y = 0; y < rows; y++) {
@@ -279,7 +286,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const r = (c & 127) - 1;
     if (r < 0 || r >= P.rooms.length) continue;
     lightIn(I, r, wx, wy, t);
-    if (below) floorPaint(P.rooms[r].kind, office, wx, wy, P4); else ceilPaint(I, r, wx, wy, P4);
+    if (below) floorPaint(P.rooms[r].kind, office, wx, wy, P4); else ceilPaint(P.rooms[r], office, lamp[r * 3] + lamp[r * 3 + 1] > 0.05, wx, wy, P4);
     put(y, t, P4[0], P4[1] * L3[0], P4[2] * L3[1], P4[3] * L3[2]);
   }
 }
@@ -307,4 +314,78 @@ export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, s
       }
     }
   }
+}
+
+/**
+ * Looking into a window from outside: where the ray, entering a plan at (hx, hy), meets its first
+ * wall. The rooms behind the glass are then drawn cell by cell (peekCell): back wall, floor or
+ * ceiling, lit by their own lamps.
+ */
+export interface Peek {
+  /** Ray distance from the glass to the wall, the room whose wall it is, and the position along it. */
+  d: number;
+  r: number;
+  u: number;
+  shade: number;
+}
+
+export function peekInto(P: Plan, B: Building, hx: number, hy: number, rdx: number, rdy: number, out: Peek): boolean {
+  // the far side of the box (and the cut), from the entry point
+  let tEnd = 1e9;
+  if (rdx > 0) tEnd = Math.min(tEnd, (B.x1 - hx) / rdx); else if (rdx < 0) tEnd = Math.min(tEnd, (B.x0 - hx) / rdx);
+  if (rdy > 0) tEnd = Math.min(tEnd, (B.y1 - hy) / rdy); else if (rdy < 0) tEnd = Math.min(tEnd, (B.y0 - hy) / rdy);
+  const K = B.cut;
+  if (K) { const dn = K.nx * rdx + K.ny * rdy; if (dn > 0) tEnd = Math.min(tEnd, (K.c - K.nx * hx - K.ny * hy) / dn); }
+  // step in a little, so the first cell is inside
+  const e = 0.03 / Math.hypot(rdx, rdy), sx = hx + rdx * e, sy = hy + rdy * e;
+  let i = Math.floor(sx / CELL) - P.gx, j = Math.floor(sy / CELL) - P.gy;
+  const stX = rdx < 0 ? -1 : 1, stY = rdy < 0 ? -1 : 1;
+  const dX = rdx !== 0 ? Math.abs(CELL / rdx) : 1e12, dY = rdy !== 0 ? Math.abs(CELL / rdy) : 1e12;
+  let tX = rdx !== 0 ? ((P.gx + i + (rdx > 0 ? 1 : 0)) * CELL - sx) / rdx : 1e12;
+  let tY = rdy !== 0 ? ((P.gy + j + (rdy > 0 ? 1 : 0)) * CELL - sy) / rdy : 1e12;
+  const at = (a: number, b: number) => (a < 0 || b < 0 || a >= P.nx || b >= P.ny ? 0 : P.cells[b * P.nx + a]);
+  let cur = at(i, j);
+  if (!cur) return false;
+  for (let guard = 0; guard < 300; guard++) {
+    const xStep = tX < tY, tn = xStep ? tX : tY;
+    if (tn + e >= tEnd) { out.d = tEnd; out.r = (cur & 127) - 1; out.u = 0; out.shade = 0.8; return true; }
+    if (xStep) { i += stX; tX += dX; } else { j += stY; tY += dY; }
+    const nv = at(i, j);
+    if (!nv) continue;
+    if ((nv & 127) !== (cur & 127) && !(cur & nv & DOOR)) {
+      out.d = tn + e; out.r = (cur & 127) - 1; out.u = xStep ? sy + rdy * tn : sx + rdx * tn; out.shade = xStep ? 1 : 0.82;
+      return true;
+    }
+    cur = nv;
+  }
+  return false;
+}
+
+const PL = new Float32Array(3);
+/**
+ * One window cell's view of the room behind it, into out (glyph, r, g, b): the ray goes on from the
+ * glass at distance t, rising kz metres per unit of distance, to the back wall, or down to the floor
+ * or up to the ceiling of storey f.
+ */
+export function peekCell(out: number[], base: Building, boxId: number, P: Plan, pk: Peek, f: number, px: number, py: number, rdx: number, rdy: number, eye: number, kz: number, t: number, elec: number, day: number) {
+  const z0 = f * FLOOR_H, zc = z0 + CEIL, tw = t + pk.d, zw = eye + kz * tw, office = isOffice(base);
+  let r = pk.r, x: number, y: number, tt: number, part: number;
+  if (zw < z0 || zw > zc) {
+    // floor or ceiling, in whichever room the ray meets it
+    part = zw < z0 ? 0 : 2;
+    tt = ((part ? zc : z0) - eye) / kz;
+    x = px + rdx * tt; y = py + rdy * tt;
+    const c = cellAt(P, x, y) & 127;
+    if (c) r = c - 1;
+  } else { part = 1; tt = tw; x = px + rdx * tw; y = py + rdy * tw; }
+  const R = P.rooms[r];
+  if (!R) { out[0] = G.eq; out[1] = 20; out[2] = 24; out[3] = 40; return; }
+  roomLamp(base, boxId, R, r, f, elec, day, false, PL, 0);
+  lit3(R, PL, 0, x, y, 0, day);
+  if (part === 0) floorPaint(R.kind, office, x, y, out);
+  else if (part === 2) ceilPaint(R, office, PL[0] + PL[1] > 0.05, x, y, out);
+  else wallPaint(R, zw - z0, pk.u, out);
+  const sh = part === 1 ? pk.shade : 1;
+  // through the glass: a little darker and bluer
+  out[1] = out[1] * L3[0] * sh * 0.85 + 6; out[2] = out[2] * L3[1] * sh * 0.85 + 8; out[3] = out[3] * L3[2] * sh * 0.85 + 16;
 }

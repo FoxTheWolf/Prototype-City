@@ -185,6 +185,8 @@ function frameOf(city: City, k: number): Frame {
 }
 
 const planCache = new Map<number, Plan | null>();
+/** Plans kept at most; the oldest go first (they are remade the same when needed again). */
+const PLAN_KEEP = 4000;
 /** Floor f of lot k (its ground volume's index), or null above the roof. */
 export function planOf(city: City, k: number, f: number): Plan | null {
   const j = storeyBox(city, k, f);
@@ -192,8 +194,34 @@ export function planOf(city: City, k: number, f: number): Plan | null {
   // the floors of one box above the ground are alike
   const key = j * 2 + (f === 0 ? 0 : 1);
   let P = planCache.get(key);
-  if (P === undefined) { P = makePlan(city, k, j, f === 0); planCache.set(key, P); }
+  if (P === undefined) {
+    P = makePlan(city, k, j, f === 0);
+    planCache.set(key, P);
+    if (planCache.size > PLAN_KEEP) { let n = 500; for (const old of planCache.keys()) { planCache.delete(old); if (--n === 0) break; } }
+  }
   return P;
+}
+
+/** Floor f of lot k if it was already made (undefined if not yet), so a caller can spread the work over frames. */
+export function cachedPlan(city: City, k: number, f: number): Plan | null | undefined {
+  const j = storeyBox(city, k, f);
+  return j < 0 ? null : planCache.get(j * 2 + (f === 0 ? 0 : 1));
+}
+
+const lotCache = new Map<number, number>();
+/** The lot (ground volume with an inside) a box belongs to: itself, the base of a setback, or -1. */
+export function lotOf(city: City, j: number): number {
+  let k = lotCache.get(j);
+  if (k !== undefined) return k;
+  const B = city.buildings[j];
+  k = -1;
+  if (B.tier === 1) k = habitable(B) ? j : -1;
+  else if (B.tier > 1) {
+    const cx = (B.x0 + B.x1) / 2, cy = (B.y0 + B.y1) / 2, b = blockAt(city, cx, cy);
+    if (b) for (let q = b.b0; q < b.b1; q++) { const T = city.buildings[q]; if (T.tier === 1 && T.style === B.style && habitable(T) && inside(T, cx, cy)) { k = q; break; } }
+  }
+  lotCache.set(j, k);
+  return k;
 }
 
 function makePlan(city: City, k: number, j: number, ground: boolean): Plan {

@@ -192,3 +192,15 @@ export function bladeModel(text: string, sym: number, col: RGB, z0: number, lett
   blades.set(key, m);
   return m;
 }
+
+const dimmed = new Map<string, Part[]>();
+/** A piece of street furniture with its lights (poster, phone sign) at power k, in eighths so models are reused. */
+export function poweredFurniture(kind: string, k: number): Part[] {
+  const q = Math.round(Math.min(1.25, k) * 8) / 8, key = kind + q;
+  let m = dimmed.get(key);
+  if (!m) {
+    m = FURNITURE[kind].parts.map((p) => (p.mat === Mat.Glow ? { ...p, col: [p.col[0] * q, p.col[1] * q, p.col[2] * q] as RGB } : p));
+    dimmed.set(key, m);
+  }
+  return m;
+}
