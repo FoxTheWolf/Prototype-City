@@ -41,6 +41,8 @@ export interface Part {
   sym?: number;
   col2?: RGB;
   lamp?: number;
+  /** Board: the letters are lamps (bulbs up close, lit glyphs farther), not paint. */
+  bulbs?: boolean;
 }
 
 export interface Obj {
@@ -224,21 +226,24 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           // the billboard's face, read left to right from the front (+x): from +y toward -y
           const hy = oy + dy * best, hz = oz + dz * best, W = q.y1 - q.y0, H = q.z1 - q.z0, n = q.text.length;
           const perCol = (colW * best) / Math.max(1e-6, Math.abs(dx)), perRow = best / v.scale;
-          const lw = Math.min((W - 0.8) / n, (H * 0.62) / 1.4), lh = lw * 1.4, start = (W - n * lw) / 2;
+          // margins scale down on small panels (a walk signal); a billboard keeps 0.8 m and a 0.2 m rim
+          const lw = Math.min((W - Math.min(0.8, W * 0.2)) / n, (H * 0.62) / 1.4), lh = lw * 1.4, start = (W - n * lw) / 2;
           const u = q.y1 - hy - start, li = Math.floor(u / lw), fz = ((q.z0 + q.z1) / 2 + lh / 2 - hz) / lh;
-          const frame = Math.min(hy - q.y0, q.y1 - hy) < Math.max(0.2, perCol / 2) || Math.min(hz - q.z0, q.z1 - hz) < Math.max(0.2, perRow / 2);
+          // lamp letters (a walk signal) have no rim, are bulbs only when they span 4 rows, and keep
+          // a glyph per letter as long as each has a column, even when shorter than a row
+          const frame = !q.bulbs && (Math.min(hy - q.y0, q.y1 - hy) < Math.max(Math.min(0.2, W * 0.05), perCol / 2) || Math.min(hz - q.z0, q.z1 - hz) < Math.max(Math.min(0.2, H * 0.08), perRow / 2));
           let fg = false;
           ch = C('.');
           if (frame) ch = C('=');
-          else if (li >= 0 && li < n && fz >= 0 && fz < 1) {
+          else if (li >= 0 && li < n && ((fz >= 0 && fz < 1) || q.bulbs)) {
             const c = q.text.charCodeAt(li), fu = (u / lw - li) * 1.25 - 0.12;
-            if (lw / perCol >= BULB_COLS && lh / perRow >= BULB_ROWS) {
+            if (q.bulbs ? lw / perCol >= 3.5 && lh / perRow >= 4 : lw / perCol >= BULB_COLS && lh / perRow >= BULB_ROWS) {
               // block letters painted as a 5x7 grid (0.8 of the slot across), counted per cell like the bulbs
               const rows = fontRows(c), ux = (lw * 0.8) / 5, uz = lh / 7, hx = perCol / ux / 2, hz = perRow / uz / 2;
               const nb = rows ? bulbsIn(rows, 5, fu * 5, fz * 7, hx, hz) : 0;
-              fg = nb > 0; if (fg) ch = bulbGlyph(nb, hx, hz) === 58 ? C(':') : C('#');
+              fg = nb > 0; if (fg) ch = q.bulbs ? bulbGlyph(nb, hx, hz) : bulbGlyph(nb, hx, hz) === 58 ? C(':') : C('#');
             }
-            else if (lw / perCol >= 0.9 && lh / perRow >= 0.9) {
+            else if (lw / perCol >= 0.9 && (q.bulbs || lh / perRow >= 0.9)) {
               // one glyph in the cell holding the letter's center
               fg = Math.abs(u - (li + 0.5) * lw) < perCol / 2 && Math.abs(fz - 0.5) * lh < perRow / 2 + 0.01;
               if (fg) ch = c;
@@ -247,6 +252,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           if (frame) col = [60, 58, 55]; else if (fg) col = q.col2 ?? col;
           // gooseneck lamps along the bottom light it from below, fading upward
           k = (0.55 + 0.25 * hash3(Math.floor(hy * 2), Math.floor(hz * 2), 7)) * fog + (q.lamp ?? 0) * 1.3 * Math.max(0, 1 - (hz - q.z0) / H);
+          if (q.bulbs && fg) k = 0.75 + 0.45 * fog; // lit letters glow through the fog
         }
         else if (q.mat === Mat.Text && face === 1 && q.text) {
           // the cell's size on the face: metres along x per column, and metres per row

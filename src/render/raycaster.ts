@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, signalPole, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -1400,7 +1400,14 @@ function collectObjects(world: World, v: View): Obj[] {
     if (!near && S.lit < 0) return;
     // the walk light shows the people across the street when they may cross alongside this traffic (blinking on its yellow)
     const walkOf = (st: number) => st === Sig.Green ? 1 : st === Sig.Yellow ? (Math.floor(frameSec * 2) & 1 ? 2 : 0) : st === Sig.Red ? 2 : 0;
-    if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: signalPole(walkOf(S.state), walkOf(S.cross)), r: 0.45, h: 6.3, seed: 0 });
+    if (near) {
+      // two walk signals, one for each crosswalk starting at this corner, facing the people at its far
+      // end: one facing the traffic (the crosswalk alongside it), one along the arm (+y: across this
+      // traffic's road beyond the intersection), turned a quarter for that
+      out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: SIGNAL_POLE, r: 0.25, h: 6.3, seed: 0 });
+      out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: walkSignal(walkOf(S.state)), r: 0.6, h: 3, z0: 2.35, seed: 0 });
+      out.push({ x: S.x, y: S.y, c: -S.s, s: S.c, parts: walkSignal(walkOf(S.cross)), r: 0.6, h: 3, z0: 2.35, seed: 0 });
+    }
     // the arm and its heads, around the arm's middle, hanging above the street (far off, just the lit lamps)
     const m = (Math.max(...S.at) + 0.4) / 2, at = S.at.map((y) => y - m);
     out.push({ x: S.x - S.s * m, y: S.y + S.c * m, c: S.c, s: S.s, parts: near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), r: m + 0.3, h: 6.2, z0: 4.7, seed: 0 });

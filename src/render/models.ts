@@ -585,29 +585,23 @@ export function signalFarModel(at: number[], lit: number): Part[] {
   return m;
 }
 
-/** A traffic light's pole on its base. */
-const poles = new Map<number, Part[]>();
+/** A traffic light's pole on its base (the walk signals on it are walkSignal). */
+export const SIGNAL_POLE: Part[] = [
+  part(Cyl, -0.2, -0.2, 0, 0.2, 0.2, 0.5, STEEL, Solid, '#', '='),
+  part(Cyl, -0.12, -0.12, 0, 0.12, 0.12, 6.3, HOUSING, Solid, '|', '.'),
+];
+const walks: Part[][] = [];
 /**
- * A traffic light's pole on its base, with two pedestrian signals, one for each crosswalk that
- * starts at this corner, facing the people at its other end: `walk` facing +x (the crosswalk
- * alongside this traffic), `walk2` along the arm (+y, the one across this traffic's road beyond
- * the intersection). 1 the white walking figure, 2 the orange hand, 0 dark.
+ * A walk signal on a pole, facing +x: a lamp panel that reads GO in green when people may cross,
+ * a red X when they may not, like the shop signs (bulbs up close, glyphs farther). 1 GO, 2 X, 0 dark.
+ * The panel is a little larger than a real one, so the word reads from across an avenue.
  */
-export function signalPole(walk: number, walk2 = 0): Part[] {
-  const key = walk * 4 + walk2;
-  let m = poles.get(key);
+export function walkSignal(w: number): Part[] {
+  let m = walks[w];
   if (m) return m;
-  const lamp = (w: number): RGB => (w === 1 ? [235, 240, 245] : w === 2 ? [255, 120, 30] : [40, 36, 34]);
-  m = [
-    part(Cyl, -0.2, -0.2, 0, 0.2, 0.2, 0.5, STEEL, Solid, '#', '='),
-    part(Cyl, -0.12, -0.12, 0, 0.12, 0.12, 6.3, HOUSING, Solid, '|', '.'),
-    part(Box, 0.1, -0.2, 2.45, 0.38, 0.2, 2.95, HOUSING, Solid, '#', '=', '#'),
-    part(Box, 0.38, -0.15, 2.5, 0.41, 0.15, 2.9, lamp(walk), walk ? Glow : Solid, walk === 1 ? 'i' : walk === 2 ? '#' : '.'),
-    // the second, facing along the arm: the crosswalk over the road the arm reaches across
-    part(Box, -0.2, 0.1, 2.45, 0.2, 0.38, 2.95, HOUSING, Solid, '#', '=', '#'),
-    part(Box, -0.15, 0.38, 2.5, 0.15, 0.41, 2.9, lamp(walk2), walk2 ? Glow : Solid, walk2 === 1 ? 'i' : walk2 === 2 ? '#' : '.'),
-  ];
-  poles.set(key, m);
+  const plate = part(Box, 0.38, -0.35, 2.38, 0.41, 0.35, 2.98, [16, 15, 14], Board, '.');
+  if (w) { plate.text = w === 1 ? 'GO' : 'X'; plate.col2 = w === 1 ? [70, 255, 120] : [255, 45, 35]; plate.bulbs = true; }
+  m = walks[w] = [part(Box, 0.1, -0.37, 2.35, 0.38, 0.37, 3.0, HOUSING, Solid, '#', '=', '#'), plate];
   return m;
 }
 
