@@ -1050,10 +1050,10 @@ function generateBorder(seed: number, w: number, h: number) {
     const out = BURN_START + 40 + rng() ** 1.5 * 900;
     vents.push({ x: x + nx * out, y: y + ny * out, r: 4 + rng() * 10, h: 50 + rng() * 110 });
   }
-  // the Sarcophagus on one side: its near edge 5 km past the fence
+  // the Sarcophagus on one side: its near edge 2.5 km past the fence
   const a = rng() * 2 * Math.PI, dx = Math.cos(a), dy = Math.sin(a);
   const edge = Math.min(Math.abs(w / 2 / (dx || 1e-9)), Math.abs(h / 2 / (dy || 1e-9)));
-  const R = 1500, H = 600, far = edge + 5000 + R;
+  const R = 1500, H = 600, far = edge + 2500 + R;
   const sx = w / 2 + dx * far, sy = h / 2 + dy * far;
   const side = rng() < 0.5 ? -1 : 1;
   const tr = 420, tower = { tx: sx + dx * 300 - dy * side * (R + tr * 0.6), ty: sy + dy * 300 + dx * side * (R + tr * 0.6), tr, th: 230 };

@@ -22,8 +22,10 @@ import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
 import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
-/** The grid always has this many rows; columns follow the window shape. */
-const ROWS = 80;
+/** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
+const RES_ROWS = [80, 100, 120];
+let resStep = 0;
+const ROWS = 80; // the bench's grid, kept the same to compare
 /** Cell width / height, close to a monospace glyph. */
 const CELL_ASPECT = 0.6;
 /** Eye height in metres. */
@@ -203,6 +205,7 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
   else if (e.code === 'KeyV') look.sharp = (look.sharp + 1) % 4;
   else if (e.code === 'KeyG') look.fuse = !look.fuse;
+  else if (e.code === 'KeyR') { resStep = (resStep + 1) % RES_ROWS.length; resize(); }
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
   else if (e.code === 'KeyT') skipHours(world, e.shiftKey ? -1 : 1);
   else if (e.code === 'KeyY') cycleWeather(world);
@@ -216,10 +219,11 @@ function computeLayout(): Layout {
   const dpr = devicePixelRatio || 1;
   const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
   canvas.width = w; canvas.height = h;
-  const cellH = Math.max(4, Math.floor(h / ROWS));
+  const rows = RES_ROWS[resStep];
+  const cellH = Math.max(4, Math.floor(h / rows));
   const cellW = Math.max(3, Math.round(cellH * CELL_ASPECT));
   const cols = Math.floor(w / cellW);
-  return { cols, rows: ROWS, cellW, cellH, originX: (w - cols * cellW) >> 1, originY: (h - ROWS * cellH) >> 1 };
+  return { cols, rows, cellW, cellH, originX: (w - cols * cellW) >> 1, originY: (h - rows * cellH) >> 1 };
 }
 
 function resize() {
@@ -320,7 +324,7 @@ function frame(now: number) {
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[P] PHONE  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+    + `[P] PHONE  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
   const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `

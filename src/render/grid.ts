@@ -1,5 +1,9 @@
-/** What drew a cell: other (sky, signs, lights, fence), the ground (and roofs seen from above), a wall, a solid object, a room indoors. */
-export const KIND = { other: 0, ground: 1, wall: 2, object: 3, room: 4 } as const;
+/**
+ * What drew a cell: other (sky, signs, lights, fence), the ground (and roofs seen from above), a wall,
+ * a solid object, a room indoors, or a block: a big far surface drawn as solid color (the fire zone's
+ * ground, the Sarcophagus), its glyph shown only where something glints.
+ */
+export const KIND = { other: 0, ground: 1, wall: 2, object: 3, room: 4, block: 5 } as const;
 
 /**
  * The character screen: one glyph + foreground + background per cell.
@@ -14,18 +18,22 @@ export class CharGrid {
   readonly depth: Float32Array;
   /** Per cell: what drew it (the soft look fills these as blocks). See KIND. */
   readonly kind: Uint8Array;
+  /** Per cell: 0 not lit by the day; else 1 + 254 x the share of direct sun on that surface (walls, objects). */
+  readonly sun: Uint8Array;
 
   constructor(readonly cols: number, readonly rows: number) {
     this.cells = new Uint8ClampedArray(cols * rows * 4);
     this.bg = new Uint8ClampedArray(cols * rows * 4);
     this.depth = new Float32Array(cols * rows);
     this.kind = new Uint8Array(cols * rows);
+    this.sun = new Uint8Array(cols * rows);
   }
 
   clear() {
     for (let i = 0; i < this.cells.length; i += 4) this.cells[i] = 32;
     this.depth.fill(1e9);
     this.kind.fill(0);
+    this.sun.fill(0);
   }
 
   put(i: number, ch: number, r: number, g: number, b: number) {

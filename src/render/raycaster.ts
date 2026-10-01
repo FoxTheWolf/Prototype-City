@@ -105,6 +105,9 @@ let planBudget = 0;
 const peeks: (Peek & { plan: Plan | null; state: number })[] = [0, 1].map(() => ({ d: 0, r: 0, u: 0, shade: 1, plan: null, state: 0 }));
 const P4 = [0, 0, 0, 0], GL = [0, 0, 0];
 let framePower: PowerGrid;
+/** Toward the sun (z up; the elevation clamped at the horizon), and the share of it on the face being drawn. */
+const SUN = [0, 0, 0];
+let wallSun = 0;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -152,6 +155,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const D = city.diagonal, diagGlyph = D.ex * D.ey > 0 ? G.bs : G.sl;
   const sky = prepareSky(city, world.power, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
   frameDay = sky.day;
+  { const ce = Math.cos(sky.sunEl); SUN[0] = Math.cos(sky.sunA) * ce; SUN[1] = Math.sin(sky.sunA) * ce; SUN[2] = Math.max(0, Math.sin(sky.sunEl)); }
   // what the weather leaves on the ground: wet streets that mirror the lights, splashes, snow
   const W = world.weather, wet = W.wet, snowC = (frameSnow = W.snowCover), rain = W.snow ? 0 : W.precip;
   light.update(frameSec, sky.day, world.power);
@@ -185,7 +189,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     const az = v.yaw + Math.atan(camX * plane);
     const slot = Math.floor((((az / (2 * Math.PI)) % 1 + 1) % 1) * starSlots);
     skyColumn(grid, x, sky, az, rdx, rdy, px, py, eye, hor, scale, slot);
-    sarcophagusColumn(grid, x, city, px, py, rdx, rdy, eye, hor, scale, frameSec, sky.day);
+    sarcophagusColumn(grid, x, city, px, py, rdx, rdy, eye, hor, scale, frameSec, sky.day, SUN);
     for (let y = Math.max(0, Math.ceil(hor - 0.5)); y < rows; y++) grid.setBg(y * cols + x, 7, 8, 12);
 
     // ---- ground: each cell below the horizon maps to one point on the floor
@@ -401,13 +405,16 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
                 // position around the cylinder in metres of arc; lit like a box face turned the same way
                 const rr = (B.x1 - B.x0) / 2, nx = (hx - B.x0 - rr) / rr, ny = (hy - B.y0 - rr) / rr;
                 along = (Math.atan2(ny, nx) + Math.PI) * rr; lightK = 0.72 + 0.28 * Math.abs(nx); dn = 1;
+                wallSun = nx * SUN[0] + ny * SUN[1];
               } else if (side === 3) {
                 // the face along the diagonal: measured along (ny, -nx), which reads left to right
                 const K = B.cut!;
                 along = hx * K.ny - hy * K.nx; lightK = 0.72 + 0.28 * Math.abs(K.nx); face = 4; dn = K.nx * rdx + K.ny * rdy;
+                wallSun = K.nx * SUN[0] + K.ny * SUN[1];
               } else {
                 along = side === 0 ? hy : hx; lightK = side ? 0.72 : 1;
                 rev = side === 0 ? rdx < 0 : rdy > 0; face = side === 0 ? (rdx < 0 ? 1 : 0) : (rdy > 0 ? 2 : 3); dn = side === 0 ? rdx : rdy;
+                wallSun = face === 0 ? -SUN[0] : face === 1 ? SUN[0] : face === 2 ? -SUN[1] : SUN[1];
               }
               wallColumn(grid, x, B, id, t, side, face, lightK, along, y0, y1, top, hor, scale, eyeD, colW, rev, (colW * t) / Math.max(1e-6, Math.abs(dn)), hx, hy);
             }
@@ -426,11 +433,11 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
   drawCranes(grid, city, v.x, v.y, eye, dirX, dirY, plX, plY, scale, hor, frameSec);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
-  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
+  drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC, sun: SUN });
   drawEscapes(grid, world, v, dirX, dirY, plX, plY, plane, scale, hor);
   const boardObjs = gatherBoards(world, v, sky.day);
-  if (boardObjs.length) drawObjects(grid, boardObjs, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: BOARD_FAR, light: lit, snow: snowC });
-  if (sheds.length) drawObjects(grid, sheds, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
+  if (boardObjs.length) drawObjects(grid, boardObjs, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: BOARD_FAR, light: lit, snow: snowC, sun: SUN });
+  if (sheds.length) drawObjects(grid, sheds, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC, sun: SUN });
   if (inside) {
     // the floor's furniture, lit by its rooms' lamps
     const I = inside, objs: Obj[] = I.plan.furn.map((f) => ({ x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }));
@@ -484,8 +491,18 @@ function handLight(grid: CharGrid, k: number) {
   }
 }
 
+/** How much daylight brightens an outdoor surface, and the grey it adds to the darkest ones. */
+const G_DAY = 2.2, LIFT_DAY = 24;
+/** The day's haze, the pale blue of the sky near the horizon. */
+const HAZE = [150, 160, 176];
+
 function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
-  const { cells, bg, depth, kind } = grid;
+  const { cells, bg, depth, kind, sun } = grid;
+  // daylight: the sky's light (brighter and flatter under clouds) and the sun's (gone behind them),
+  // its color warming to orange as it nears the horizon
+  const low = 1 - Math.min(1, Math.max(0, sky.sunEl / 0.35));
+  const skyK = sky.day * (0.36 + 0.3 * sky.cloud), dirK = 1.6 * sky.day * (1 - 0.85 * sky.cloud);
+  const sunR = 1.05, sunG = 0.95 - 0.3 * low, sunB = 0.85 - 0.5 * low;
   // by day the world is brighter and sinks into a pale haze with distance: the "service" look
   const day = sky.day;
   // a blackout of the whole city at night: with no light anywhere, everything sinks very dark (the
@@ -498,8 +515,18 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
       cells[k + 1] += m * 0.7; cells[k + 2] += m * 0.8; cells[k + 3] += m * 1.15;
     }
     if ((day > 0.01 || sky.flash > 0) && depth[i] < 1e9) {
-      const f = day * (0.25 + 0.6 * (1 - Math.exp(-depth[i] / 1500))), amb = 1 + 0.7 * day + sky.flash * 0.6;
-      cells[k + 1] = cells[k + 1] * amb * (1 - f) + 138 * f; cells[k + 2] = cells[k + 2] * amb * (1 - f) + 146 * f; cells[k + 3] = cells[k + 3] * amb * (1 - f) + 156 * f;
+      const kd = kind[i], f = day * (0.1 + 0.42 * (1 - Math.exp(-depth[i] / 2500)));
+      if (day > 0.01 && (kd === KIND.ground || sun[i] || kd === KIND.block)) {
+        // daylight on an outdoor surface: the sky's light on all of it, the sun's on the faces turned
+        // to it (the ground takes it by the sun's height), warm when the sun is low
+        const share = sun[i] ? (sun[i] - 1) / 254 : kd === KIND.ground ? SUN[2] : 0, d = dirK * share;
+        const gr = 1 + G_DAY * (skyK * 0.92 + d * sunR) + sky.flash * 0.6, gg = 1 + G_DAY * (skyK * 0.97 + d * sunG) + sky.flash * 0.6, gb = 1 + G_DAY * (skyK * 1.08 + d * sunB) + sky.flash * 0.6;
+        const lift = LIFT_DAY * (skyK + d);
+        cells[k + 1] = (cells[k + 1] * gr + lift * sunR) * (1 - f) + HAZE[0] * f; cells[k + 2] = (cells[k + 2] * gg + lift * sunG) * (1 - f) + HAZE[1] * f; cells[k + 3] = (cells[k + 3] * gb + lift * sunB) * (1 - f) + HAZE[2] * f;
+      } else {
+        const amb = 1 + 0.7 * day + sky.flash * 0.6;
+        cells[k + 1] = cells[k + 1] * amb * (1 - f) + HAZE[0] * f; cells[k + 2] = cells[k + 2] * amb * (1 - f) + HAZE[1] * f; cells[k + 3] = cells[k + 3] * amb * (1 - f) + HAZE[2] * f;
+      }
     }
     if (dark < 0.999 && depth[i] < 1e9) { cells[k + 1] *= dark; cells[k + 2] *= dark; cells[k + 3] *= dark; bg[k] *= dark; bg[k + 1] *= dark; bg[k + 2] *= dark; }
     if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
@@ -518,16 +545,23 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
         cells[k + 1] *= glyph; cells[k + 2] *= glyph; cells[k + 3] *= glyph;
       }
     }
+    if (kind[i] === KIND.block) {
+      // solid color; a glyph left on it is a glint, brighter than the surface
+      bg[k] = cells[k + 1]; bg[k + 1] = cells[k + 2]; bg[k + 2] = cells[k + 3];
+      if (cells[k] !== 32) { cells[k + 1] = cells[k + 1] * 1.4 + 50; cells[k + 2] = cells[k + 2] * 1.4 + 50; cells[k + 3] = cells[k + 3] * 1.4 + 46; }
+    }
     if (look.blocks && BLOCKS[cells[k]]) cells[k] = BLOCKS[cells[k]];
   }
 }
 
 /** Scorched ground outside the fence, split by cracks that glow where the coal burns underneath. */
 function burnGround(grid: CharGrid, i: number, city: City, wx: number, wy: number, rd: number, time: number) {
+  // drawn as solid color (KIND.block): a glyph only where a crack burns hottest, up close at night
   const out = Math.max(-wx, wx - city.w, -wy, wy - city.h);
   const fog = 1 - Math.min(1, rd / 2500) * 0.85;
-  const hv = hash3(Math.floor(wx * 1.2), Math.floor(wy * 1.2), 5);
-  let ch = hv < 0.6 ? G.dot : hv < 0.85 ? G.com : G.tick, r = 42 * fog, g = 32 * fog, b = 30 * fog;
+  // ash and scorched earth in soft patches; at night only the faint shade of it
+  const hv = hash3(Math.floor(wx / 6), Math.floor(wy / 6), 5), tex = (0.9 + 0.15 * hv) * fog * (0.45 + 0.55 * frameDay);
+  let ch = 32, r = (42 - 14 * frameDay) * tex, g = (32 - 5 * frameDay) * tex, b = (30 - 2 * frameDay) * tex;
   const heat = Math.min(1, Math.max(0, (out - BURN_START) / 200));
   if (heat > 0) {
     // cracks are the edges of a cellular pattern: where the two nearest feature points are almost equally far
@@ -539,14 +573,18 @@ function burnGround(grid: CharGrid, i: number, city: City, wx: number, wy: numbe
       if (d < d1) { d2 = d1; d1 = d; near = hash3(cx, cy, 13); } else if (d < d2) d2 = d;
     }
     // far away a crack is thinner than a cell: widen it and dim it so it reads as a glow line
-    const width = 0.7 + rd * 0.004;
+    const width = 0.6 + rd * 0.0025;
     if (d2 - d1 < width && near < 0.75) {
-      const k = heat * (0.55 + 0.45 * Math.sin(time * 0.05 + near * 40)) * (0.6 + 0.4 * fog) * Math.min(1, 1.2 / (1 + rd * 0.002));
-      ch = d2 - d1 < width * 0.4 && rd < 150 ? G.star : G.eq;
-      r = 60 + 220 * k; g = 30 + 90 * k * k; b = 20 + 20 * k;
+      const k = heat * (0.55 + 0.45 * Math.sin(time * 0.05 + near * 40)) * (0.6 + 0.4 * fog) * Math.min(1, 1.2 / (1 + rd * 0.002)) * (1 - 0.6 * frameDay);
+      if (d2 - d1 < width * 0.4 && rd < 150 && k > 0.5) ch = G.star;
+      // by day the cracks read as fissures a little darker than the ash
+      const dk = 0.97 * frameDay;
+      r = (24 + 130 * k) * (1 - dk) + r * 0.7 * dk; g = (10 + 50 * k * k) * (1 - dk) + g * 0.7 * dk; b = (8 + 10 * k) * (1 - dk) + b * 0.7 * dk;
     }
   }
   grid.put(i, ch, r, g, b);
+  grid.kind[i] = KIND.block;
+  grid.sun[i] = 1 + SUN[2] * 254;
 }
 
 /**
@@ -1074,6 +1112,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = T;
     grid.kind[i] = KIND.wall;
+    grid.sun[i] = 1 + Math.max(0, wallSun) * 254;
   }
 }
 

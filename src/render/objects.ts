@@ -80,6 +80,8 @@ export interface Cam {
   snow?: number;
   /** Indoors: light multiplies the colors (the room's lamps) instead of adding to them. */
   mul?: boolean;
+  /** Toward the sun (unit vector, z up), for daylight on the faces turned to it; none indoors. */
+  sun?: readonly number[];
 }
 
 const C = (s: string) => s.charCodeAt(0);
@@ -202,7 +204,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
             if (tmin > tmax || tmin <= 0.05 || tmin >= best) continue;
             if (glassy) { glassT = Math.min(glassT, tmin); continue; }
             best = tmin; bk = k; face = ax;
-            nx = ax === 0 ? 1 : 0; ny = ax === 1 ? 1 : 0; nz = ax === 2 ? 1 : 0;
+            nx = ax === 0 ? -Math.sign(dx) : 0; ny = ax === 1 ? -Math.sign(dy) : 0; nz = ax === 2 ? -Math.sign(dz) : 0;
           } else {
             // upright elliptic cylinder or ellipsoid, solved in the space where it is a unit shape
             const X = (ox - cx) / hx, Y = (oy - cy) / hy, DX = dx / hx, DY = dy / hy;
@@ -344,6 +346,11 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         grid.put(i, ch, r, g, b);
         depth[i] = best;
         grid.kind[i] = q.mat === Mat.Solid && !painted ? KIND.object : KIND.other;
+        if (v.sun && !painted && q.mat !== Mat.Glow) {
+          // the share of direct sun on this face, turned into the world
+          const S = v.sun, wx = nx * o.c - ny * o.s, wy = nx * o.s + ny * o.c, nl = Math.hypot(wx, wy, nz) || 1;
+          grid.sun[i] = 1 + Math.max(0, (wx * S[0] + wy * S[1] + nz * S[2]) / nl) * 254;
+        }
       }
     }
   }
