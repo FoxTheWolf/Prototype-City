@@ -246,6 +246,29 @@ Dados ao testar o grupo B da navegação. Cada um também está no roteiro, na e
 - **Greebles nos prédios** (o termo que o usuário procurava: os detalhes de relevo sem função das naves de Star Wars, chamados *greebles* ou *nurnies*): caixas, painéis, saliências e peças miúdas na fachada e no topo, só para o prédio não parecer um paralelepípedo. Etapa 15.
 - **Indústria que solta fumaça de verdade:** chaminés de fábrica nos distritos industriais com colunas de fumaça (como as da zona de fogo). Hoje há chaminés (`chimney`) sem fumaça. Etapa 15, ou antes se couber.
 
+## Pedidos do usuário no começo da etapa 9 (2026-10-01)
+
+Anotados por ele enquanto testava o fim da etapa 8. Gostou da digitação por multi-tap.
+- **O celular sobe para digitar (como no GTA IV):** hoje a última fileira do teclado fica fora da tela. Quando a tela pede digitação (discador, SMS, notas, calculadora), o aparelho sobe mais, até o teclado inteiro aparecer; nas outras telas volta à altura atual. Etapa 9, grupo A.
+- **Botão do meio do mouse tira e guarda o celular.** Etapa 9, grupo A.
+- **Clicar nas teclas do celular com o mouse:** o usuário não tem teclado numérico, e digitar e usar a calculadora pelo teclado do PC é chato. As teclas do aparelho na tela devem ser clicáveis (o cursor livre aparece com o celular fora, ou uma mira), com o mesmo afundar, clique e som. Etapa 9, grupo A.
+- **Plano de dados com limite (ideia de uma amiga do usuário):** os dados móveis têm franquia em MB; acabou, ou se compra outro pacote ou fica sem 3G/EDGE. Mais um gasto do dinheiro do jogador, bom para a jogabilidade. A operadora é uma empresa da cidade (hackeável depois). O contador de uso nasce na etapa 9 com os dados móveis; a compra com dinheiro de verdade depende da economia (etapa 13), então até lá o saldo pode ser um valor fixo de debug.
+- **Marca e modelos de celular vindos das empresas da simulação** (reforço do pedido da etapa 8): o "Kestrel" fixo deve virar o nome de um fabricante da cidade, e deve haver **vários modelos** com hardware diferente (CPU, memória, câmera, rádios), aparência e cores diferentes. Os cidadãos têm aparelhos diferentes (etapa 9 para o dado `Device` por modelo; a ligação com fabricantes reais da economia, etapa 13).
+- **Portas difíceis de achar,** para entrar e para sair:
+  - por dentro, **placas verdes de saída de emergência** (EXIT) e setas indicando o caminho até a porta de rua;
+  - **por dentro a porta de rua não é desenhada** (aparece uma janela no lugar): é bug, para a etapa de bugfix.
+- **Pessoas dentro dos prédios,** só para mostrar que são habitados, antes das rotinas da etapa 11 (poucos figurantes parados ou andando no cômodo, com `pedModel`). Etapa de bugfix/refinamento ou começo da 11.
+- **Interior falso nas janelas (parallax / *interior mapping*, como o cube map dos jogos):** cada janela mostra um cômodo falso com profundidade, escolhido pelo tipo de prédio (escritório, apartamento, loja), barato. Serve para os prédios distantes (além de `PEEK_FAR`) e, **enquanto os móveis não aparecem nos interiores vistos de fora, para todos os prédios**. Etapa de bugfix e otimização.
+
+## Agradecimentos (easter eggs)
+
+Pedido do usuário em 2026-10-01: amigos dele que aparecem no jogo como agradecimento. **Cada nome aparece exatamente uma vez em toda cidade gerada, num lugar diferente conforme a semente:** numa semente é o nome de uma empresa, em outra um cidadão, uma rua, um marco, uma manchete, um contato no celular etc. A escolha do lugar sai da semente (determinística). Os nomes são escritos exatamente como abaixo, sem tradução.
+
+- Léo Fennix
+- Masotan Braun
+
+**Como implementar (proposta):** uma lista em `src/locale/` (dados, não texto traduzível) e, na geração, um sorteio por nome entre os "lugares" disponíveis naquela etapa do projeto (hoje: nome de empresa, nome de rua com nome, manchete de flavor; depois: cidadão, contato, post da rede social). Cada lugar novo que surgir nas etapas seguintes entra no sorteio. Garantir que o nome não se repita em outro lugar da mesma cidade.
+
 ## Pedidos do usuário para planejar (2026-09-30, segunda lista)
 
 Dados antes de começar a etapa 5. Ainda não têm etapa decidida; a sugestão de onde cabem está em cada item e no roteiro.
@@ -337,7 +360,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **É um objeto físico:** o jogador tira o celular do bolso, e ele aparece na mão, ocupando parte da tela. A tela é uma região da própria grade de caracteres (`Lcd` em `src/phone/lcd.ts`), desenhada depois do mundo. Os botões fazem som, e o texto é composto aos poucos, como nos terminais. *(Feito na etapa 8.)*
 
 **Conectividade (é daqui que vem a jogabilidade)**
-- **Dados móveis:** vêm das antenas da cidade, que existem na simulação. O sinal depende da distância e dos prédios no caminho. São lentos e custam dinheiro do jogo (há um plano de dados).
+- **Dados móveis:** vêm das antenas da cidade, que existem na simulação. O sinal depende da distância e dos prédios no caminho. São lentos e custam dinheiro do jogo: há um plano de dados com franquia em MB, e quando acaba é preciso comprar outro pacote (veja "Pedidos do usuário no começo da etapa 9").
 - **Wi-Fi:** em cybercafés e outros lugares com senha, com alcance físico.
 - **Downloads grandes só por Wi-Fi.** Em 2008, a loja real limitava os downloads por rede celular a ~10 MB. Assim, os apps pequenos baixam na rua, e os grandes exigem ir a um cybercafé. A rede social funciona no celular pelos dados móveis, e ir ao cybercafé continua tendo motivo.
 
@@ -769,6 +792,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 - **Faixas de pedestre tortas e cortadas perto da diagonal (relatado em 2026-10-01, com capturas):** o que o usuário chamava de "calçadas que fazem curva" eram faixas de pedestre. Nas ruas que chegam à diagonal, a faixa é medida a partir da borda inclinada da diagonal (`end` com `pastD` em `raycaster.ts`) e se junta à faixa do cruzamento, formando uma faixa em curva ou em "L"; em outros pontos ela aparece cortada pelo asfalto da diagonal. Uma faixa deve ser sempre reta, atravessando a rua perpendicular a ela. A faixa zebrada que corria ao longo do X foi tirada na 7.5.
 
+- **Porta de rua invisível por dentro (relatado em 2026-10-01):** de dentro do prédio, no lugar da porta de rua aparece uma janela. Junto, fazer as placas de saída (veja "Pedidos do usuário no começo da etapa 9").
 - **Escadas de incêndio na frente de portas (relatado em 2026-10-01):** algumas escadas de incêndio (`escapesOf` em `sim/interior.ts`) são geradas diante da porta de um negócio. Devem evitar os vãos de todas as portas de rua (`exitsOf`).
 - **Bugs relatados no teste do grupo B do trânsito (2026-10-01):**
   - **Móveis gerados na frente da porta:** em alguns prédios um móvel fica bem na porta e é impossível entrar (`furnish` em `sim/interior.ts` deveria manter livre a faixa em frente a toda porta, inclusive a de rua e as das lojas).
@@ -933,7 +957,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - Veja "Preparação da etapa 6" no Estado atual.
 7. ✅ **Trânsito** *(feita em 2026-10-01, grupos A, B e C; veja o Histórico)*: avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
 8. ✅ **Navegação** *(feita em 2026-10-01, grupos A, B e C; veja "Etapa 8" no Histórico)*: o celular como painel diegético com terminal progressivo, mapas em 4 níveis e de interior, marcos, os limites do GPS de 2008, e a grade de apps com os que não dependem da rede funcionando. (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
-9. **Rede de telefones e celular:** orelhões; antenas e sinal (a barra "Yx" do celular passa a mostrar o sinal de verdade); loja de apps; discador, SMS e câmera funcionando (as telas já existem desde a 8.7); os limites do hardware valendo; a abertura do jogo. O celular como objeto na mão já existe (etapa 8). Veja "Design: celular e apps".
+9. **Rede de telefones e celular:** orelhões; antenas e sinal (a barra "Yx" do celular passa a mostrar o sinal de verdade); loja de apps; discador, SMS e câmera funcionando (as telas já existem desde a 8.7); os limites do hardware valendo; a abertura do jogo. O celular como objeto na mão já existe (etapa 8). Veja "Design: celular e apps". Também os pedidos do começo da etapa: o celular subindo para digitar, o botão do meio do mouse, as teclas clicáveis, o plano de dados com franquia e vários modelos de aparelho (veja "Pedidos do usuário no começo da etapa 9").
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
 11. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
 12. **Rede social da cidade:** posts de cidadãos a partir dos eventos da simulação e das rotinas, com fotos renderizadas do ponto de vista deles, acessível pelo celular e pelo notebook (veja "Design: rede social da cidade").
