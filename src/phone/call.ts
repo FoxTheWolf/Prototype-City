@@ -16,7 +16,7 @@ import { type World } from '../sim/world';
  * the number, the hour and the call, so a call made twice the same hour goes the same way. Calls
  * cost credit by the started minute; 911 and the operator's line are free.
  */
-export type Sfx = ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
+export type Sfx = ['shutter'] | ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
 export interface Line { who: 'them' | 'rec' | 'sys'; text: string; at: number; dur: number }
 type Step = { who: Line['who'] | 'act'; text: string; gap: number };
 

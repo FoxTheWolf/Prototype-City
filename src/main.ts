@@ -41,6 +41,8 @@ const input = new Input(canvas);
 const camera = new Camera();
 const phone = new Phone(world);
 const payphone = new Payphone(world);
+// the phone's camera sees the player's view
+phone.render = (g) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: layout.cellW / layout.cellH, look });
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
@@ -87,6 +89,7 @@ function playSfx(list: Sfx[]) {
       case 'sms': if (phone.prefs.profile === 0) sound.smsTone(); else if (phone.prefs.profile === 1) sound.vibrate(0.8); break;
       case 'sent': if (phone.prefs.profile === 0) sound.sentTone(); break;
       case 'hook': sound.hook(); break;
+      case 'shutter': if (phone.prefs.profile === 0) sound.shutter(); break;
       case 'coin': sound.coin(); break;
       case 'coins': sound.coinsBack(); break;
       case 'ringback': sound.ringback(); break;
@@ -271,6 +274,7 @@ function frame(now: number) {
     look,
   });
   const ms = performance.now() - r0;
+  phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
   phone.update(dt, now / 1000);
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;

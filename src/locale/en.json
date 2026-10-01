@@ -772,6 +772,7 @@
       "soon": ["Connected over EDGE", "Coming soon"],
       "running": "USSD code running...", "reply": "Reply:", "send": "Send", "to": "To", "text": "Text", "inbox": "Inbox", "sent": "Sent", "newMsg": "New message", "noMsgs": "No messages", "replyK": "Reply", "from": "From", "smsSent": "Message sent", "smsFail": "Sending failed",
       "voucher": "Top-up card (unused)",
+      "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
       "set": {
         "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "about": "About phone", "debug": "Debug (game)" },
         "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "temp": "Temperature", "dist": "Distance" },

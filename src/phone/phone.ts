@@ -2,6 +2,8 @@ import { playerPhone, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
 import { Call, type Sfx } from './call';
+import { takePhoto, type Photo } from './camera';
+import { type CharGrid } from '../render/grid';
 import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 import { ussd } from './ussd';
@@ -26,7 +28,7 @@ import { hash3 } from '../core/rng';
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
@@ -71,6 +73,14 @@ export function fmtDist(m: number, feet: number): string {
 const CONTACTS: [string, string][] = [['Emergency', '911'], ['Customer Care', '611'], ['Balance & Data', '*100#'], ['Directory', '411']];
 
 const SMS = en.phone.sms;
+/** The flash the system takes, in KB. */
+const SYSTEM_KB = 40 * 1024;
+/**
+ * The store's catalog: id, size in KB, price in cents. Small apps download over EDGE; past
+ * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
+ */
+export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['solitaire', 220, 199], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999]];
+export const EDGE_LIMIT_KB = 10 * 1024;
 
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
@@ -98,6 +108,10 @@ export class Phone {
   private autoAt = 0;
   /** LCD test: the color shown. */
   lcdStep = 0;
+  /** Apps from the store: installed (indexes into STORE), the one picked, the tab (0 catalog, 1 installed). */
+  readonly apps: number[] = [];
+  ssel = 0;
+  stab = 0;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
   constructor(private world: World) {
@@ -146,6 +160,12 @@ export class Phone {
   draft = { to: '', text: '', step: 0 };
   /** Messages on their way to the phone: from, text, and when they arrive (real seconds). */
   private incoming: { from: string; text: string; at: number }[] = [];
+  /** The camera: what it sees (main hands it the player's view), the light there, the photos, the one shown, the last shot. */
+  render: ((g: CharGrid) => void) | null = null;
+  light = 1;
+  readonly photos: Photo[] = [];
+  phsel = 0;
+  shotAt = -9;
   /** Operator notices already sent: welcome, low data, no data. */
   private told = { welcome: false, low: false, out: false };
   /** A USSD session: the code, the answers so far, what came back, what is being typed, when it was asked. */
@@ -360,6 +380,25 @@ export class Phone {
         if ((k === 'ok' || k === 'send' || k === 'lsoft') && U.input) { U.path.push(U.input); U.at = now; this.since = now; this.ask(); return true; }
         return false;
       }
+      case 'camera':
+        // OK (or the green key) takes a photo, if the storage holds it
+        if ((k === 'ok' || k === 'send') && this.render) {
+          if (this.freeKB() < 600) { this.sfx.push(['fail']); return false; }
+          const p = this.world.player;
+          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light, this.world.time, p.x, p.y, this.world.seed));
+          this.shotAt = now; this.sfx.push(['shutter']);
+          return true;
+        }
+        if (k === 'lsoft') { this.phsel = 0; this.open('photos', now); return true; }
+        if (k === 'rsoft') { this.open('menu', now); return true; }
+        return false;
+      case 'photos': {
+        const n = this.photos.length;
+        if (n && (k === 'left' || k === 'right' || k === 'up' || k === 'down')) { this.phsel = (this.phsel + (k === 'left' || k === 'up' ? -1 : 1) + n) % n; return true; }
+        if (n && k === '*') { this.photos.splice(this.phsel, 1); this.phsel = Math.min(this.phsel, this.photos.length - 1); return true; }
+        if (k === 'rsoft') { this.open('camera', now); return true; }
+        return false;
+      }
       case 'messages': {
         // the boxes, and a new message
         if (k === 'up' || k === 'down') { this.box = (this.box + (k === 'up' ? 2 : 1)) % 3; return true; }
@@ -483,6 +522,11 @@ export class Phone {
     // hear what was picked
     if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
     return true;
+  }
+
+  /** Storage left in KB: the flash less the system, the photos and the apps installed. */
+  freeKB(): number {
+    return this.device.flashMB * 1024 - SYSTEM_KB - this.photos.reduce((a, p) => a + p.kb, 0) - this.apps.reduce((a, k) => a + STORE[k][1], 0);
   }
 
   /** A text message on its way to the phone, arriving at `at` (once there is signal). */

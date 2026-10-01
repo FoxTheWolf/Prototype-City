@@ -273,6 +273,16 @@ export class Sound {
       this.ringNodes.push(o);
     }
   }
+  /** A phone camera's shutter: the fake click handsets played, two quick clacks. */
+  shutter() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (const d of [0, 0.07]) {
+      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', d ? 1800 : 2600, 1.2)).connect(g);
+      g.gain.setValueAtTime(0.1, t + d); g.gain.exponentialRampToValueAtTime(0.0005, t + d + 0.035);
+      s.start(t + d, Math.random()); s.stop(t + d + 0.05);
+    }
+  }
   /** A coin dropping into a payphone: a bright metallic clink, and its rattle down the chute. */
   coin(at = 0) {
     const ctx = this.ctx, t = ctx.currentTime + at;

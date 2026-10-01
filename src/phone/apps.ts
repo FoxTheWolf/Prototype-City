@@ -4,10 +4,12 @@ import { calendar, moonPhase } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
-import { bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
+import { BAR, bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
+import { expose, type Photo } from './camera';
+import { type CharGrid } from '../render/grid';
 import { APPS, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, TAPS, type App, type Key, type Phone } from './phone';
 
 /**
@@ -55,7 +57,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'calls': return calls(S, P, world, t, now);
     case 'contacts': return contacts(S, P, t);
     case 'messages': return messages(S, P, t);
-    case 'camera': return notice(S, t, name('camera').toUpperCase(), A.camera, HI);
+    case 'camera': return cameraScreen(S, P, now);
     case 'web': return notice(S, t, name('web').toUpperCase(), P.radio.state === 'service' ? A.soon : A.web, P.radio.state === 'service' ? HI : BAD);
     case 'weather': return weather(S, P, world, t, now);
     case 'store': return notice(S, t, `${P.maker.toUpperCase()} ${name('store').toUpperCase()}`, P.radio.state === 'service' ? A.soon : A.store, P.radio.state === 'service' ? HI : BAD);
@@ -67,6 +69,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'code') return service(S, P, world, t, now);
       if (P.screen === 'contact') return contactEdit(S, P, now);
       if (P.screen === 'ussd') return ussdScreen(S, P, t, now);
+      if (P.screen === 'photos') return photosScreen(S, P, t);
       if (P.screen === 'msglist') return msgList(S, P, t);
       if (P.screen === 'msg') return msgRead(S, P, t);
       if (P.screen === 'compose') return compose(S, P, now);
@@ -450,4 +453,38 @@ function version(S: Lcd, P: Phone, world: World, t: number) {
   ];
   rows.forEach(([a, b], n) => { S.text(1, 3 + n * 2, typed(a, t - n * 0.05), DIM, LCD); S.text(SW - b.length - 1, 3 + n * 2, typed(b, t - n * 0.05), INK, LCD); });
   S.center(SH - 3, typed(C.eng, t - 0.5), BAD, LCD);
+}
+
+/** A picture (w x h cells) shown over the screen's rows y0..y1, scaled to fit. */
+function picture(S: Lcd, cells: Uint8ClampedArray, bg: Uint8ClampedArray, w: number, h: number, y0: number, y1: number) {
+  const rows = y1 - y0, k = Math.max(w / SW, h / rows), dw = Math.floor(w / k), dh = Math.floor(h / k), x0 = (SW - dw) >> 1, top = y0 + ((rows - dh) >> 1);
+  for (let y = 0; y < dh; y++) for (let x = 0; x < dw; x++) {
+    const i = Math.floor(y * k) * w + Math.floor(x * k), q = i * 4;
+    S.put(x0 + x, top + y, cells[q] || 32, [cells[q + 1], cells[q + 2], cells[q + 3]], [bg[q], bg[q + 1], bg[q + 2]]);
+  }
+}
+
+let finder: CharGrid | null = null, finderAt = -1, finderN = 0;
+/** The camera: the viewfinder live (15 times a second), a white flash on a shot, how many fit in the storage. */
+function cameraScreen(S: Lcd, P: Phone, now: number) {
+  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++); finderAt = now; }
+  if (finder) picture(S, finder.cells, finder.bg, SW, SH - 2, 1, SH - 1);
+  if (now - P.shotAt < 0.15) for (let y = 1; y < SH - 1; y++) S.fill(y, WHITE);
+  // the frame's corners, the resolution and the photos left
+  for (const [x, y, c] of [[1, 2, '+'], [SW - 2, 2, '+'], [1, SH - 3, '+'], [SW - 2, SH - 3, '+']] as const) S.put(x, y, ch(c), WHITE, [0, 0, 0]);
+  const left = Math.max(0, Math.floor(P.freeKB() / (P.device.cameraMP * 340)));
+  S.text(1, 1, ` ${P.device.cameraMP}MP  ${left} `, WHITE, [0, 0, 0]);
+  softKeys(S, `${A.photos} (${P.photos.length})`, T.back);
+  S.text((SW - A.shoot.length) >> 1, SH - 1, A.shoot, HI, BAR);
+}
+
+/** The photos taken: one at a time, with when it was taken. */
+function photosScreen(S: Lcd, P: Phone, t: number) {
+  const p: Photo | undefined = P.photos[P.phsel];
+  title(S, `${A.photos.toUpperCase()} ${p ? `${P.phsel + 1}/${P.photos.length}` : ''}`, t);
+  if (!p) { S.center(10, A.noPhotos, DIM, LCD); return softKeys(S, '', T.back); }
+  picture(S, p.cells, p.bg, p.w, p.h, 2, SH - 2);
+  const c = calendar(p.at);
+  S.text(1, SH - 2, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}  ${p.kb} KB  ${A.del}`, DIM, LCD);
+  softKeys(S, '< >', T.back);
 }
