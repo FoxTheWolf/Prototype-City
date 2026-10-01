@@ -1,5 +1,7 @@
 import { hash3 } from '../core/rng';
-import { calendar } from '../sim/clock';
+import { cityName, operatorName } from '../locale/names';
+import { calendar, moonPhase } from '../sim/clock';
+import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
 import { bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
 import { APPS, GRID_KEYS, TAPS, type App, type Phone } from './phone';
@@ -50,9 +52,9 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'contacts': return notice(S, t, `${name('contacts').toUpperCase()} (0)`, A.contacts, INK);
     case 'messages': return messages(S, t);
     case 'camera': return notice(S, t, name('camera').toUpperCase(), A.camera, HI);
-    case 'web': return notice(S, t, name('web').toUpperCase(), A.web);
-    case 'weather': return notice(S, t, name('weather').toUpperCase(), A.weather);
-    case 'store': return notice(S, t, `${P.device.maker.toUpperCase()} ${name('store').toUpperCase()}`, A.store);
+    case 'web': return notice(S, t, name('web').toUpperCase(), P.radio.state === 'service' ? A.soon : A.web, P.radio.state === 'service' ? HI : BAD);
+    case 'weather': return weather(S, P, world, t, now);
+    case 'store': return notice(S, t, `${P.device.maker.toUpperCase()} ${name('store').toUpperCase()}`, P.radio.state === 'service' ? A.soon : A.store, P.radio.state === 'service' ? HI : BAD);
     case 'clock': return clock(S, P, world, t, now);
     case 'calc': return calc(S, P, t);
     case 'notes': return notes(S, P, t, now);
@@ -70,7 +72,7 @@ function calls(S: Lcd, P: Phone, t: number, now: number) {
     // (the frame's time can be a little earlier than the key's)
     const u = Math.max(0, now - P.callAt);
     S.center(15, `${A.calling} ${d}${'.'.repeat(Math.floor(u * 3) % 4)}`, HI, LCD);
-    if (u > 1.6) { S.center(17, A.noNetwork, BAD, LCD); S.center(19, A.callFailed, BAD, LCD); }
+    if (u > 1.6) { S.center(17, P.radio.state === 'service' ? A.busy : A.noNetwork, BAD, LCD); S.center(19, A.callFailed, BAD, LCD); }
     return softKeys(S, '', T.back);
   }
   if (!d) S.center(15, typed(A.dialHint, t - 0.2), DIM, LCD);
@@ -128,9 +130,13 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
   const D = P.device, g = P.gps;
   const imei = String(Math.floor(hash3(world.seed, 7, 7) * 1e15)).padStart(15, '0');
   const gps = g.state === 'fix' ? `${A.gpsFix} ${g.sats} SAT +-${g.acc}m` : g.state === 'search' ? `${A.gpsSearch} ${g.sats} SAT` : g.state === 'lost' ? A.gpsLost : A.gpsOff;
+  const R = P.radio, acc = world.telco.player, site = R.site >= 0 ? world.telco.sites[R.site] : null;
+  const net = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
   const rows: [string, string][] = [
+    [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
+    [A.number, acc.number], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
     [A.model, `${D.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
-    [A.display, D.screen], [A.radio, D.radio], [A.network, T.noService], [A.wlan, `${D.wlan} ${T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
+    [A.display, D.screen], [A.radio, D.radio], [A.wlan, `${D.wlan} ${T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
   ];
   const view = SH - 5, top = Math.min(P.scroll, Math.max(0, rows.length * 2 - view));
   P.scroll = top;
@@ -141,4 +147,58 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
     S.text(SW - v.length - 1, y, typed(v, t - 0.05 * n - 0.1), v === T.noService || v.endsWith(T.off) ? BAD : INK, LCD);
   });
   softKeys(S, '', T.back);
+}
+
+const kbText = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${Math.round(kb)} KB`);
+
+const ahead: Weather = newWeather();
+function skyWord(w: Weather): string {
+  const W = A.wx.sky;
+  if (w.precip > 0.02) return w.snow ? W.snow : w.precip > 0.75 ? W.storm : w.precip < 0.25 ? W.drizzle : W.rain;
+  return w.cloud > 0.75 ? W.cloudy : w.cloud > 0.35 ? W.partly : W.clear;
+}
+
+/**
+ * Weather: the forecast comes down over EDGE (the session set up, then the kilobytes as fast as
+ * the signal allows, out of the data bundle), then shows now and the hours ahead, from the same
+ * forecast the city's weather follows. It keeps for an hour; OK downloads it again.
+ */
+function weather(S: Lcd, P: Phone, world: World, t: number, now: number) {
+  const R = P.radio, J = R.job?.what === 'weather' ? R.job : null, W = A.wx;
+  const fresh = world.time - P.wxAt < 3600;
+  if (!fresh && (!J || J.state === 'nosignal') && R.state !== 'service') return notice(S, t, name('weather').toUpperCase(), A.weather);
+  title(S, `${name('weather').toUpperCase()} ${cityName(world.city).toUpperCase()}`, t);
+  if (J && J.state !== 'done') {
+    // the download, as a terminal would show it
+    const u = Math.max(0, now - J.at);
+    const lines = [`${W.attach} ...`, `${W.pdp} ...`, W.get.replace('{city}', cityName(world.city).toLowerCase().replace(/ /g, '_'))];
+    lines.forEach((l, k) => { if (u > k * 0.6) S.text(1, 4 + k, l, DIM, LCD); });
+    if (J.state === 'loading') {
+      const f = J.done / J.kb, n = Math.round(f * (SW - 4));
+      S.text(2, 9, '['.padEnd(n + 1, '#').padEnd(SW - 3, '.') + ']', INK, LCD);
+      S.center(11, W.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', String(J.kb)), DIM, LCD);
+    }
+    if (J.state === 'nosignal') S.center(12, W.lost, BAD, LCD);
+    if (J.state === 'nodata') { S.center(12, W.noData, BAD, LCD); S.center(14, W.buy, DIM, LCD); }
+    return softKeys(S, R.state === 'service' ? W.refresh : '', T.back);
+  }
+  // the forecast: now and the hours ahead
+  const base = P.wxAt;
+  ahead.preset = world.weather.preset;
+  ([0, 3, 6, 12, 24] as const).forEach((h, k) => {
+    if (t < 0.1 + k * 0.12) return;
+    const at = base + h * 3600;
+    forecast(world.seed, at, ahead);
+    const c = calendar(at), label = h ? W.in.replace('{h}', String(h)) : W.now, y = 3 + k * 3;
+    const tf = `${Math.round(ahead.temp * 1.8 + 32)}F`;
+    S.text(1, y, label.padEnd(5), HI, LCD);
+    S.text(7, y, hhmm(c.hour), DIM, LCD);
+    S.text(13, y, skyWord(ahead), INK, LCD);
+    S.text(SW - tf.length - 1, y, tf, WHITE, LCD);
+    S.text(13, y + 1, `${Math.round(ahead.cloud * 100)}% cloud  wind ${Math.round(Math.hypot(ahead.windX, ahead.windY))} m/s`, DIM, LCD);
+  });
+  const ph = W.phases[Math.round(moonPhase(world.time) * 8) % 8];
+  S.text(1, SH - 3, `${W.moon}: ${ph}`, DIM, LCD);
+  S.text(1, SH - 2, W.updated.replace('{t}', hhmm(calendar(base).hour)), DIM, LCD);
+  softKeys(S, R.state === 'service' ? W.refresh : '', T.back);
 }

@@ -4,6 +4,7 @@ import { fontRows } from '../render/signs';
 import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
 import { type GpsState } from './gps';
+import { type Radio } from './radio';
 
 /** The phone's screen: its size in cells, its colors, and the pieces every app draws with. */
 export const SW = 42, SH = 26;
@@ -33,14 +34,21 @@ export const typed = (s: string, t: number, cps = 60) => s.slice(0, Math.max(0, 
 
 export const hhmm = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0')}:${String(Math.floor((hour % 1) * 60)).padStart(2, '0')}`;
 
-/** The top row: no network yet (the city's antennas come with stage 9), the GPS while it runs, the time, the battery. */
-export function statusBar(S: Lcd, world: World, gps: GpsState, now: number) {
+/**
+ * The top row: the antenna and its bars (x with no service, blinking while it searches), E while
+ * data moves over EDGE, the GPS while it runs, the time, the battery.
+ */
+export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio) {
   S.fill(0, BAR);
-  S.text(1, 0, 'Y', INK, BAR); S.text(2, 0, 'x', BAD, BAR);
+  S.text(1, 0, 'Y', INK, BAR);
+  if (radio.state === 'service') for (let b = 0; b < 4; b++) S.put(2 + b, 0, ch(b < radio.bars ? '|' : '.'), b < radio.bars ? [150, 230, 150] : DIM, BAR);
+  else if (radio.state !== 'search' || Math.floor(now * 2) & 1) S.text(2, 0, 'x', BAD, BAR);
+  const J = radio.job;
+  if (J && (J.state === 'connecting' || J.state === 'loading') && Math.floor(now * 6) & 1) S.text(7, 0, 'E', HI, BAR);
   // GPS: blinking while it searches, steady with a fix, dim when it lost the satellites
-  if (gps === 'fix') S.text(5, 0, 'GPS', [120, 255, 150], BAR);
-  else if (gps === 'search' && Math.floor(now * 2) & 1) S.text(5, 0, 'GPS', [255, 220, 120], BAR);
-  else if (gps === 'lost') S.text(5, 0, 'GPS', [110, 110, 110], BAR);
+  if (gps === 'fix') S.text(9, 0, 'GPS', [120, 255, 150], BAR);
+  else if (gps === 'search' && Math.floor(now * 2) & 1) S.text(9, 0, 'GPS', [255, 220, 120], BAR);
+  else if (gps === 'lost') S.text(9, 0, 'GPS', [110, 110, 110], BAR);
   S.text(SW - 13, 0, hhmm(calendar(world.time).hour), INK, BAR);
   S.text(SW - 6, 0, '[###]', [150, 230, 150], BAR);
 }

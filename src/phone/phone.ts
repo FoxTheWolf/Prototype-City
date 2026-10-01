@@ -1,6 +1,7 @@
 import { PLAYER_PHONE, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
+import { Radio } from './radio';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -29,6 +30,8 @@ export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
 export const ZOOM_ROW_M = [8, 18, 36, 96];
 /** Inside a building the map shows the floor plan instead, at these scales. */
 export const INDOOR_ROW_M = [1, 2, 3.5, 6];
+/** Kilobytes of a weather forecast download. */
+const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
 export const TYPING: Screen[] = ['calls', 'calc', 'notes'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
@@ -37,6 +40,9 @@ export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3':
 export class Phone {
   readonly device: Device = PLAYER_PHONE;
   readonly gps = new Gps();
+  readonly radio = new Radio();
+  /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
+  wxAt = -1e9;
   constructor(private world: World) {}
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
@@ -93,6 +99,13 @@ export class Phone {
     if (this.screen === 'boot' && now - this.since > BOOT_S) this.open('standby', now);
     // the GPS runs while the map is open, in the hand or not
     this.gps.update(this.world, this.screen === 'map' || this.screen === 'places', now, dt);
+    this.radio.update(this.world, this.screen !== 'off', now, dt);
+    const J = this.radio.job;
+    if (J?.what === 'weather' && J.state === 'done') { this.wxAt = this.world.time; this.radio.job = null; }
+    // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
+    // again once the signal is back after a failed try; not with the bundle used up)
+    const busy = this.radio.job === J && J?.what === 'weather' && (J.state === 'connecting' || J.state === 'loading' || J.state === 'nodata');
+    if (this.screen === 'weather' && !busy && this.world.time - this.wxAt > 3600 && this.radio.state === 'service') this.radio.fetch('weather', WEATHER_KB, now);
   }
 
   open(s: Screen, now: number) {
@@ -204,6 +217,11 @@ export class Phone {
         return false;
       case 'settings':
         if (k === 'up' || k === 'down') { this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)); return true; }
+        if (k === 'rsoft') { this.open('menu', now); return true; }
+        return false;
+      case 'weather':
+        // OK downloads it again
+        if ((k === 'ok' || k === 'lsoft') && this.radio.state === 'service') { this.radio.fetch('weather', WEATHER_KB, now); this.since = now; return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       default:

@@ -149,3 +149,8 @@ export function businessName(city: City, k: number): string {
     .replace('{s2}', L.surnames[(n >>> 9) % L.surnames.length])
     .replace('{w}', L.words[(n >>> 15) % L.words.length]);
 }
+
+/** The mobile operator, named from a slot of its own. */
+export function operatorName(city: City): string {
+  return fill(L.operator[city.nameSeed % L.operator.length], L.roots[(city.nameSeed + (L.roots.length - 23) * 7919) % L.roots.length]);
+}

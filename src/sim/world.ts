@@ -3,6 +3,7 @@ import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city'
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, stairStep } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
+import { buildTelco, type Telco } from './telco';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
 import { crossers, pedsWanted, spawnPeds, stepPeds, type Ped } from './peds';
@@ -49,6 +50,8 @@ export interface World {
   ptime: number;
   weather: Weather;
   power: PowerGrid;
+  /** The mobile network: cell sites and the player's line (see telco.ts). */
+  telco: Telco;
   /** What has happened (see events.ts). */
   events: EventLog;
 }
@@ -82,7 +85,8 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
   const peds = spawnPeds(city, rng, pedsWanted(time, 0), x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city), events: newEventLog() };
+  const power = buildPower(seed, city);
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power, telco: buildTelco(seed, city, power), events: newEventLog() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

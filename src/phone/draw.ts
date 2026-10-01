@@ -1,4 +1,4 @@
-import { compass, cityName, diagonalName, districtName, landmarkName, roadName } from '../locale/names';
+import { compass, cityName, operatorName, diagonalName, districtName, landmarkName, roadName } from '../locale/names';
 import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
@@ -150,8 +150,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const t = now - P.since;
     if (P.screen === 'boot') boot(S, P, world, t);
     else {
-      statusBar(S, world, P.gps.state, now);
-      if (P.screen === 'standby') standby(S, world, t);
+      statusBar(S, world, P.gps.state, now, P.radio);
+      if (P.screen === 'standby') standby(S, P, world, t, now);
       else if (P.screen === 'menu') menu(S, P, t);
       else if (P.screen === 'map') map(S, P, world, aspect, t, now);
       else if (P.screen === 'places') places(S, P, world, t);
@@ -210,7 +210,7 @@ function boot(S: Lcd, P: Phone, world: World, t: number) {
     line(`LCD ${D.screen}`, T.ok),
     line(`GPS ${D.gps}`, T.ok),
     line(`WLAN ${D.wlan}`, T.off),
-    line(`RADIO ${D.radio}`, T.noService),
+    line(`RADIO ${D.radio}`, T.ok),
     line(`${T.mapsDb} ${cityName(world.city).toUpperCase()}`, T.ok),
     '',
     T.ready,
@@ -234,12 +234,14 @@ function splash(S: Lcd, maker: string, model: string, u: number) {
   for (let x = 0; x < 24; x++) S.put(9 + x, 19, x < n ? 32 : ch('.'), DIM, x < n ? HI : [10, 17, 34]);
 }
 
-function standby(S: Lcd, world: World, t: number) {
+function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   const c = calendar(world.time);
   bigText(S, 4, hhmm(c.hour), INK, t);
   const date = `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`;
   S.text((SW - date.length) >> 1, 13, typed(date, t - 0.2), DIM, LCD);
-  S.text((SW - T.noService.length) >> 1, 16, typed(T.noService, t - 0.5), [255, 120, 90], LCD);
+  // the network it is on, as phones then showed it under the clock
+  const R = P.radio, op = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
+  S.text((SW - op.length) >> 1, 16, typed(op, t - 0.5), R.state === 'service' ? INK : [255, 120, 90], LCD);
   softKeys(S, T.menu, T.hide);
 }
 

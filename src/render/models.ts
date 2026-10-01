@@ -546,6 +546,31 @@ export function boardModel(text: string, w: number, h: number, base: number, top
   return m;
 }
 
+const masts = new Map<string, Part[]>();
+/**
+ * A cell site's mast on a roof at `base`: an equipment cabinet, the pole, three panel antennas
+ * around its top (one per sector), and the red aviation light, `lit` while it blinks on.
+ */
+export function mastModel(base: number, lit: boolean): Part[] {
+  const key = base.toFixed(1) + (lit ? '*' : '');
+  let m = masts.get(key);
+  if (m) return m;
+  const z = base;
+  m = [
+    part(Box, -1.6, -0.6, z, -0.8, 0.6, z + 1.6, [120, 122, 118], Solid, '#', '='),
+    part(Cyl, -0.15, -0.15, z, 0.15, 0.15, z + 8.2, STEEL, Solid, '|', '.'),
+    part(Box, -0.2, -0.2, z + 3.5, 0.2, 0.2, z + 3.6, STEEL, Solid, '-'),
+  ];
+  for (let k = 0; k < 3; k++) {
+    // a panel 1.4 m tall facing out, at 0, 120 and 240 degrees
+    const a = (k * 2 * Math.PI) / 3, c = Math.cos(a), s2 = Math.sin(a), cx = c * 0.45, cy = s2 * 0.45;
+    m.push(part(Box, cx - 0.16, cy - 0.16, z + 5.3, cx + 0.16, cy + 0.16, z + 6.7, [205, 205, 200], Solid, '[', '|'));
+  }
+  m.push(part(Ball, -0.14, -0.14, z + 8.2, 0.14, 0.14, z + 8.5, lit ? [255, 40, 30] : [70, 18, 16], lit ? Glow : Solid, lit ? '*' : 'o'));
+  masts.set(key, m);
+  return m;
+}
+
 const signals = new Map<string, Part[]>();
 const HOUSING: RGB = [34, 36, 30];
 /** Lamp colors of a traffic light, top to bottom, lit and dark. */

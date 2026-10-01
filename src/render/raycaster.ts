@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { mastModel, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -1205,6 +1205,12 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
       boardList.push({ x: Bd.x, y: Bd.y, c: Math.cos(Bd.a), s: Math.sin(Bd.a), parts: boardModel(text, Bd.w, Bd.h, B.h, Bd.z, AD_BG[pal], AD_FG[pal], lamp), r: Bd.w / 2 + 1.2, h: Bd.z + Bd.h + 0.1, z0: B.h, seed: k });
     }
   }
+  // the cell sites' masts, their red lights blinking (on batteries, so through a blackout too)
+  world.telco.sites.forEach((S, k) => {
+    if (Math.hypot(S.x - v.x, S.y - v.y) > BOARD_FAR) return;
+    const base = city.buildings[S.building].h, lit = (frameSec + k * 0.37) % 1.5 < 0.5;
+    boardList.push({ x: S.x, y: S.y, c: 1, s: 0, parts: mastModel(base, lit), r: 1.8, h: base + 8.6, z0: base, seed: 9000 + k });
+  });
   return boardList;
 }
 
