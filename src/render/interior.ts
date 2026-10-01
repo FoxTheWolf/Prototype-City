@@ -248,6 +248,8 @@ function builtUp(city: City, x: number, y: number, z: number): boolean {
 
 /** Per column: the window glass (distance, position along the wall, door), and the room's light on it. */
 let gT = new Float32Array(0), gA = new Float32Array(0), gL = new Float32Array(0), gDoor = new Uint8Array(0);
+/** Per column, the window's facing: |cos| of the ray against the pane's normal, and the ray's heading. */
+let gC = new Float32Array(0), gH = new Float32Array(0);
 /** Per cell: 1 where a window leaves the city to show through. */
 let glass = new Uint8Array(0);
 
@@ -260,7 +262,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   const { cols, rows, depth } = grid, P = I.plan, B = I.box, office = isOffice(I.base);
   if (rowState.length < rows) rowState = new Uint8Array(rows);
   rowState.fill(0);
-  if (gT.length !== cols) { gT = new Float32Array(cols); gA = new Float32Array(cols); gL = new Float32Array(cols * 3); gDoor = new Uint8Array(cols); }
+  if (gT.length !== cols) { gT = new Float32Array(cols); gA = new Float32Array(cols); gL = new Float32Array(cols * 3); gDoor = new Uint8Array(cols); gC = new Float32Array(cols); gH = new Float32Array(cols); }
   if (glass.length !== cols * rows) glass = new Uint8Array(cols * rows);
   gT[x] = 0;
   for (let y = 0; y < rows; y++) glass[y * cols + x] = 0;
@@ -347,6 +349,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     nearT[x] = t; tClose = t;
     lightIn(I, r0, hx, hy, t);
     gT[x] = t; gA[x] = along; gDoor[x] = isDoor ? 1 : 0; gL[x * 3] = L3[0]; gL[x * 3 + 1] = L3[1]; gL[x * 3 + 2] = L3[2];
+    gC[x] = Math.abs(nX * rdx + nY * rdy) / Math.hypot(rdx, rdy); gH[x] = Math.atan2(rdy, rdx);
     span(t, wz0, wzc, (y, z) => {
       const fz = z / FLOOR_H - Math.floor(z / FLOOR_H);
       if ((isDoor && z < z0 + DOOR_H) || (liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
@@ -419,13 +422,16 @@ export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, s
     if (!t) continue;
     const along = gA[x], lr = gL[x * 3], lg = gL[x * 3 + 1], lb = gL[x * 3 + 2];
     const col = Math.floor(along * 9), speed = 0.25 + hash3(col, 1, 7) * 0.5, ph = hash3(col, 2, 7) * 9, slides = hash3(col, 3, 7) < I.rain * 0.5;
+    // the glass as a material, not paint on the pane: it reflects more the more it is seen edge on
+    // (Fresnel), and what it reflects (the lit room, a soft streak) follows the view direction, so it
+    // slides as the camera turns and never hides the city behind it (colors only, no glyphs)
+    const fres = 0.14 + 0.6 * (1 - gC[x]) ** 3, keep = 1 - 0.55 * fres;
     for (let y = 0; y < rows; y++) {
       if (!glass[y * cols + x]) continue;
       const k4 = (y * cols + x) * 4;
-      // from inside: the room's lamp mirrored in the glass, the city behind it tinted
-      const z = eye + ((hor - (y + 0.5)) / scale) * t, s = sheenAt(along, z) ** 3;
-      cells[k4 + 1] = cells[k4 + 1] * 0.62 + 14 + (20 + 90 * s) * lr; cells[k4 + 2] = cells[k4 + 2] * 0.66 + 24 + (20 + 90 * s) * lg; cells[k4 + 3] = cells[k4 + 3] * 0.7 + 32 + (24 + 100 * s) * lb;
-      if (s > 0.75 && cells[k4] === 32) cells[k4] = C('/');
+      const e = (hor - (y + 0.5)) / scale, z = eye + e * t;
+      const streak = (0.5 + 0.5 * Math.sin(gH[x] * 2.2 + e * 1.7 + 0.6)) ** 10, m = fres * (60 + 150 * streak);
+      cells[k4 + 1] = cells[k4 + 1] * keep * 0.8 + 10 + m * lr; cells[k4 + 2] = cells[k4 + 2] * keep * 0.88 + 16 + m * lg; cells[k4 + 3] = cells[k4 + 3] * keep * 0.95 + 22 + m * lb;
       if (I.rain > 0 && !gDoor[x]) {
         const dz = ((z - z0) + I.sec * speed + ph) % 3;
         const slide = slides && dz < (t / scale) * 1.2;
@@ -530,7 +536,6 @@ export function peekCell(out: number[], base: Building, boxId: number, P: Plan, 
 export function glassOver(out: number[], r: number, g: number, b: number, sheen: number, day: number) {
   const s = sheen * sheen, k = 0.55 - 0.2 * day - 0.3 * s;
   out[1] = r * k + 16 + s * 95 + day * 55; out[2] = g * k + 30 + s * 110 + day * 65; out[3] = b * k + 40 + s * 130 + day * 80;
-  if (s > 0.6 && r + g + b < 220) out[0] = s > 0.85 ? C('/') : C(':');
 }
 
 /** Where on a pane the reflections run: diagonal bands across the facade. */
