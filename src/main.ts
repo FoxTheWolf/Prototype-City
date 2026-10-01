@@ -47,7 +47,7 @@ if (import.meta.env.DEV) Object.assign(window, {
   // on a 256x80 grid of its own, as in a 16:9 window
   bench: (n = 10) => {
     const p = world.player, g = new CharGrid(256, ROWS), t0 = performance.now();
-    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + p.z, floor: p.floor, z: p.z, lift: p.liftTo >= 0, alpha: 0, cellAspect: 0.6, look });
+    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + p.z, floor: viewFloor(), z: p.z, lift: p.liftTo >= 0, alpha: 0, cellAspect: 0.6, look });
     return (performance.now() - t0) / n;
   },
 });
@@ -102,6 +102,8 @@ function readInput(): PlayerInput {
 
 // audio can only start from a click, so it is made on entering the city
 let sound: Sound | null = null;
+/** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
+const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
 let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 
 function begin() {
@@ -148,7 +150,7 @@ function frame(now: number) {
     yaw: camera.yaw,
     pitch: camera.pitch,
     eye: EYE + p.z,
-    floor: p.floor,
+    floor: viewFloor(),
     z: p.z,
     lift: p.liftTo >= 0,
     alpha,

@@ -57,9 +57,12 @@ export function prepareInside(I: Inside, x: number, y: number) {
   if (lamp.length < n * 3) lamp = new Float32Array(n * 3 + 96);
   for (let r = 0; r < n; r++) roomLamp(I.base, I.boxId, R[r], r, I.floor, I.elec, I.day, r === here, lamp, r * 3);
   stairRoom = here >= 0 && R[here].kind === 'stair' ? here : -1;
+  stairIdx = R.findIndex((q) => q.kind === 'stair');
 }
 /** The stair room the viewer is in, or -1: its well is open a storey up and down. */
 let stairRoom = -1;
+/** The floor's stair room, or -1: its steps are drawn wherever a ray crosses it. */
+let stairIdx = -1;
 
 /**
  * The lamp of room r on floor f of box boxId, into out[o..o+2] (0..1 per channel, times the power):
@@ -338,25 +341,30 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   }
   if (closed) nearT[x] = 1e9; // no window in this column: no rain at all
 
-  if (well) {
-    // the steps: march out along the ray over the stairs' heights, filling each row up to the
-    // top of what stands there (the flight climbing ahead, the one going down beside it)
+  if (stairIdx >= 0) {
+    // the steps, wherever the ray crosses the stair room (from inside it, or through its door):
+    // march out along the ray over the stairs' heights, filling each row up to the top of what
+    // stands there (the flight climbing ahead, the one going down beside it); elsewhere the flat
+    // floor only raises the line, and the plain floor below fills it
     let yLow = rows;
-    const eyeRel = eye - z0, sr = P.rooms[stairRoom];
-    for (let t = 0.08; t < Math.min(tClose, 12); t += 0.03 + t * 0.02) {
+    const eyeRel = eye - z0, sr = P.rooms[stairIdx];
+    for (let t = 0.08; t < Math.min(tClose, 14); t += 0.03 + t * 0.02) {
       const wx = px + rdx * t, wy = py + rdy * t;
+      const onStairs = stairLocal(I.city, I.k, wx, wy);
       let H = 0, edge = false;
-      if (stairLocal(I.city, I.k, wx, wy)) {
+      if (onStairs) {
         H = stairH(SL[0], SL[1], SL[2], SL[3]);
-        if (H > eyeRel - 0.3) H -= FLOOR_H;
-        if (I.floor === 0 && H < 0) H = 0;
         const b = SL[1] - STAIR_LAND, run = SL[3] - 2 * STAIR_LAND;
+        // beside the flight going up, the one coming up from the floor below
+        // (on the ground floor there is none: the second flight stands solid on the floor)
+        if (I.floor > 0 && SL[0] >= SL[2] / 2 && b > 0 && b < run && H > eyeRel - 0.3) H -= FLOOR_H;
         edge = b > 0 && b < run && (b / 0.29) % 1 < 0.2;
       }
       const yT = Math.max(0, Math.ceil(hor - ((z0 + H - eye) * scale) / t - 0.5));
+      if (!onStairs) { yLow = Math.min(yLow, yT); continue; }
       for (let y = yT; y < yLow; y++) {
         if (rowState[y] === 2 || (rowState[y] === 1 && depth[y * cols + x] <= t)) continue; // glass, or a nearer wall
-        lit3(sr, lamp, stairRoom * 3, wx, wy, t, I.day);
+        lit3(sr, lamp, stairIdx * 3, wx, wy, t, I.day);
         const k = edge ? 1.35 : 1;
         put(y, t, edge ? G.us : G.eq, 125 * L3[0] * k, 125 * L3[1] * k, 120 * L3[2] * k);
       }
@@ -396,8 +404,9 @@ export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, s
       if (!glass[y * cols + x]) continue;
       const k4 = (y * cols + x) * 4;
       // from inside: the room's lamp mirrored in the glass, the city behind it tinted
-      const z = eye + ((hor - (y + 0.5)) / scale) * t, s = sheenAt(along, z) ** 4;
-      cells[k4 + 1] = cells[k4 + 1] * 0.8 + 10 + (14 + 40 * s) * lr; cells[k4 + 2] = cells[k4 + 2] * 0.8 + 14 + (14 + 40 * s) * lg; cells[k4 + 3] = cells[k4 + 3] * 0.83 + 20 + (16 + 45 * s) * lb;
+      const z = eye + ((hor - (y + 0.5)) / scale) * t, s = sheenAt(along, z) ** 3;
+      cells[k4 + 1] = cells[k4 + 1] * 0.62 + 14 + (20 + 90 * s) * lr; cells[k4 + 2] = cells[k4 + 2] * 0.66 + 24 + (20 + 90 * s) * lg; cells[k4 + 3] = cells[k4 + 3] * 0.7 + 32 + (24 + 100 * s) * lb;
+      if (s > 0.75 && cells[k4] === 32) cells[k4] = C('/');
       if (I.rain > 0 && !gDoor[x]) {
         const dz = ((z - z0) + I.sec * speed + ph) % 3;
         const slide = slides && dz < (t / scale) * 1.2;
@@ -492,9 +501,9 @@ export function peekCell(out: number[], base: Building, boxId: number, P: Plan, 
  * city mirrored in it as soft diagonal bands (sheen 0..1 along the pane); by day the reflection wins.
  */
 export function glassOver(out: number[], r: number, g: number, b: number, sheen: number, day: number) {
-  const s = sheen * sheen * sheen, k = 0.72 - 0.25 * day - 0.2 * s;
-  out[1] = r * k + 10 + s * 55 + day * 45; out[2] = g * k + 16 + s * 65 + day * 55; out[3] = b * k + 22 + s * 80 + day * 70;
-  if (s > 0.7 && r + g + b < 120) out[0] = C('/');
+  const s = sheen * sheen, k = 0.55 - 0.2 * day - 0.3 * s;
+  out[1] = r * k + 16 + s * 95 + day * 55; out[2] = g * k + 30 + s * 110 + day * 65; out[3] = b * k + 40 + s * 130 + day * 80;
+  if (s > 0.6 && r + g + b < 220) out[0] = s > 0.85 ? C('/') : C(':');
 }
 
 /** Where on a pane the reflections run: diagonal bands across the facade. */
