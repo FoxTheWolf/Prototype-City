@@ -121,7 +121,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
       if (tb < 0.05) continue;
       const ta = Math.max(0.05, (-qb - sq) / qa), up = o.h - v.eye;
       const y0 = Math.max(0, Math.floor(v.hor - (up * v.scale) / (up > 0 ? ta : tb)));
-      const y1 = Math.min(rows, Math.ceil(v.hor + (v.eye * v.scale) / ta));
+      const y1 = Math.min(rows, Math.ceil(v.hor + (v.eye * v.scale) / (v.eye > 0 ? ta : tb)));
       for (let y = y0; y < y1; y++) {
         const i = y * cols + x;
         // cells where something nearer than the whole object is already drawn

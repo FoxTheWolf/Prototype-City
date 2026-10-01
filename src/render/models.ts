@@ -263,3 +263,32 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
   furns.set(key, m);
   return m;
 }
+
+const escapes = new Map<string, Part[]>();
+/**
+ * One storey of a fire escape, facing +x out of the wall, centered along it (2 bays): the landing's
+ * grating at z 0 with its rails (from the first floor up), and the flight up to the next landing in
+ * the outer half, climbing toward +y (up) or -y.
+ */
+export function escapeModel(landing: boolean, flight: number, half: number, odd: boolean): Part[] {
+  const key = `${landing}${flight}${half}${odd}`;
+  let m = escapes.get(key);
+  if (m) return m;
+  const IRON: RGB = [95, 95, 105];
+  m = [];
+  if (landing) {
+    m.push(part(Box, 0.02, -half, -0.06, 1, half, 0, IRON, Solid, '=', '#'));
+    m.push(part(Box, 0.96, -half, 0, 1, half, 1, IRON, Solid, '|', '-'));
+    m.push(part(Box, 0.02, -half, 0, 1, -half + 0.04, 1, IRON, Solid, '|', '-'));
+    m.push(part(Box, 0.02, half - 0.04, 0, 1, half, 1, IRON, Solid, '|', '-'));
+  }
+  if (flight) {
+    for (let i = 0; i < 10; i++) {
+      const u = (i + 0.5) / 10, y = -half + 2 * half * (flight > 0 ? u : 1 - u), z = 3.5 * (i + 1) / 10;
+      m.push(part(Box, odd ? 0.73 : 0.46, y - half / 10, z - 0.04, odd ? 0.97 : 0.71, y + half / 10, z, IRON, Solid, '_', '='));
+    }
+    m.push(part(Box, 0.95, -half, 0.9, 0.99, half, 0.95, IRON, Solid, '/', '-'));
+  }
+  escapes.set(key, m);
+  return m;
+}

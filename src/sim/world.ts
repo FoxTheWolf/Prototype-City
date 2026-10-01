@@ -1,6 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { FLOOR_H, generateCity, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, planOf, stairStep } from './interior';
+import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, stairStep } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { spawnCars, stepCars, type Car } from './traffic';
@@ -147,7 +147,16 @@ export function stepWorld(w: World, input: PlayerInput) {
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
+  const wasOut = p.inside < 0;
   p.inside = baseAt(w.city, p.x, p.y);
+  // outdoors up a fire escape: the feet follow its landings and flights, and there is no walking off it
+  if (p.inside < 0 && (p.x !== p.px || p.y !== p.py)) {
+    const z = escapeAt(w.city, p.x, p.y) ? escapeZ(ESC_AT.e!, ESC_AT.u, ESC_AT.d, p.z) : p.z > 0.01 ? NaN : 0;
+    if (Number.isNaN(z)) { p.x = p.px; p.y = p.py; }
+    else { p.z = z; p.floor = Math.floor((z + 0.01) / FLOOR_H); }
+  }
+  // in through a fire escape's window: onto that floor
+  if (p.inside >= 0 && wasOut && p.liftTo < 0) p.z = p.floor * FLOOR_H;
   // on the stairs the feet follow the steps; the floor is the storey they are in
   if (p.inside >= 0 && p.liftTo < 0 && (p.x !== p.px || p.y !== p.py)) {
     const z = stairStep(w.city, p.inside, p.x, p.y, p.z);

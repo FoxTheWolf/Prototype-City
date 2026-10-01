@@ -287,6 +287,88 @@ export function exitsOf(city: City, k: number, made = false): Door[] {
   return out;
 }
 
+/**
+ * Fire escapes: on brick walk-ups, two bays wide every seven bays, where the facade draws them, on
+ * the faces with open ground in front. A landing at every floor, 1 m deep, and flights zigzagging
+ * up the outer half (ESC_RAMP..ESC_D out from the wall), from the street to the top floor.
+ */
+export const ESC_D = 1, ESC_RAMP = 0.45, ESC_MID = 0.72;
+export interface Escape {
+  k: number;
+  face: number;
+  /** Where it starts on the facade (along the face), the point there, the outward normal and the direction along. */
+  a0: number;
+  ox: number;
+  oy: number;
+  nx: number;
+  ny: number;
+  ux: number;
+  uy: number;
+  /** The top floor it reaches. */
+  top: number;
+}
+const escCache = new Map<number, Escape[]>();
+export function escapesOf(city: City, k: number): Escape[] {
+  let E = escCache.get(k);
+  if (E) return E;
+  E = [];
+  const B = city.buildings[k];
+  if (B.tier === 1 && B.style === 'brick' && B.feat < 0.45 && B.h > 12) {
+    for (let face = 0; face < 4; face++) {
+      const sp = faceSpan(B, face), lo = sp[0], hi = sp[1];
+      for (let m = Math.floor(lo / BAY / 7) - 1; (7 * m + 2) * BAY < hi; m++) {
+        const a0 = (7 * m + 2) * BAY;
+        if (a0 < lo + 0.35 || a0 + 2 * BAY > hi - 0.35) continue;
+        const [x, y, nx, ny] = facePoint(B, face, a0), [mx, my] = facePoint(B, face, a0 + BAY);
+        if (isSolid(city, mx + nx * 0.6, my + ny * 0.6) || (B.cut && B.cut.nx * mx + B.cut.ny * my > B.cut.c - 0.1)) continue;
+        E.push({ k, face, a0, ox: x, oy: y, nx, ny, ux: face < 2 ? 0 : 1, uy: face < 2 ? 1 : 0, top: floorsOf(B) - 1 });
+      }
+    }
+  }
+  escCache.set(k, E);
+  return E;
+}
+
+/** The fire escape at (x, y), with the point's place on it: u along (0..1) and d out from the wall. */
+export const ESC_AT = { e: null as Escape | null, u: 0, d: 0 };
+export function escapeAt(city: City, x: number, y: number): boolean {
+  const b = blockAt(city, x, y);
+  if (!b) return false;
+  for (let k = b.b0; k < b.b1; k++) {
+    const B = city.buildings[k];
+    if (B.style !== 'brick' || B.tier !== 1 || x < B.x0 - ESC_D - 0.1 || x > B.x1 + ESC_D + 0.1 || y < B.y0 - ESC_D - 0.1 || y > B.y1 + ESC_D + 0.1) continue;
+    for (const e of escapesOf(city, k)) {
+      const dx = x - e.ox, dy = y - e.oy, d = dx * e.nx + dy * e.ny, a = dx * e.ux + dy * e.uy;
+      if (d > 0 && d < ESC_D && a > 0 && a < 2 * BAY) { ESC_AT.e = e; ESC_AT.u = a / (2 * BAY); ESC_AT.d = d; return true; }
+    }
+  }
+  return false;
+}
+
+/** Height of the fire escape under feet at z (landing, flight or the street), or NaN out of reach. */
+export function escapeZ(e: Escape, u: number, d: number, z: number): number {
+  // a flight within reach wins (stepping onto it is climbing it); even flights run in the inner
+  // band of the outer half, odd ones in the outer band, so going up and going down are side by side
+  if (d >= ESC_RAMP) for (let f = d < ESC_MID ? 0 : 1; f < e.top; f += 2) {
+    const h = f * FLOOR_H + FLOOR_H * (f & 1 ? 1 - u : u);
+    if (Math.abs(h - z) <= 0.45) return h;
+  }
+  let best = 0;
+  for (let f = 1; f <= e.top; f++) if (Math.abs(f * FLOOR_H - z) < Math.abs(best - z)) best = f * FLOOR_H;
+  return Math.abs(best - z) <= 0.45 ? best : NaN;
+}
+
+/** Whether a step through face `face` of lot k at `along`, on floor f, goes through a fire escape's window. */
+function escapeWindow(city: City, k: number, face: number, along: number, f: number): boolean {
+  if (f < 1) return false;
+  for (const e of escapesOf(city, k)) {
+    if (e.face !== face || f > e.top) continue;
+    const a = along - e.a0, fw = (a / BAY) % 1;
+    if (a > 0 && a < 2 * BAY && fw > 0.3 && fw < 0.7) return true;
+  }
+  return false;
+}
+
 const planCache = new Map<number, Plan | null>();
 /** Plans kept at most; the oldest go first (they are remade the same when needed again). */
 const PLAN_KEEP = 4000;
@@ -658,7 +740,15 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
   if (ka !== kb) {
     if (ka >= 0 && kb >= 0) return true;
     const k = ka >= 0 ? ka : kb, B = city.buildings[k];
-    if (f !== 0) return true;
+    if (f !== 0) {
+      // up a floor, only through the window onto a fire escape
+      for (let face = 0; face < 4; face++) {
+        const [px, py, nx, ny] = facePoint(B, face, 0);
+        const sa = (ax - px) * nx + (ay - py) * ny, sb = (bx - px) * nx + (by - py) * ny;
+        if (sa > 0 !== sb > 0 && escapeWindow(city, k, face, alongFace(B, face, (ax + bx) / 2, (ay + by) / 2), f)) return false;
+      }
+      return true;
+    }
     // through one of the street doors: the main one or a shop's
     for (const D of exitsOf(city, k)) {
       const [px, py, nx, ny] = facePoint(B, D.face, D.a0);

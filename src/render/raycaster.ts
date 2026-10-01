@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { liftFloors, type World } from '../sim/world';
-import { baseAt, cachedPlan, DOOR_H, doorOf, exitsOf, habitable, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
+import { baseAt, cachedPlan, DOOR_H, doorOf, escapesOf, exitsOf, habitable, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
 import { glassPass, insideLight, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
+import { bladeHeight, bladeModel, carModel, debrisModel, escapeModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -377,6 +377,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   drawCranes(grid, city, v.x, v.y, eye, dirX, dirY, plX, plY, scale, hor, frameSec);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
+  drawEscapes(grid, world, v, dirX, dirY, plX, plY, plane, scale, hor);
   if (inside) {
     // the floor's furniture, lit by its rooms' lamps
     const I = inside, objs: Obj[] = I.plan.furn.map((f) => ({ x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }));
@@ -816,6 +817,30 @@ const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
 function buildingPower(world: World, k: number, sec: number) {
   const P = world.power, B = world.city.buildings[k];
   return power(P, P.building[k], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, k, P.generator[k], sec)[0];
+}
+
+/** The fire escapes within 50 m, as iron: each storey drawn on its own, from its height. */
+function drawEscapes(grid: CharGrid, world: World, v: View, dirX: number, dirY: number, plX: number, plY: number, plane: number, scale: number, hor: number) {
+  const { city } = world, one: Obj[] = [{ x: 0, y: 0, c: 1, s: 0, parts: [], r: 2, h: 4.6, seed: 0 }];
+  for (const blk of city.blocks) {
+    if (v.x < blk.x0 - 50 || v.x > blk.x1 + 50 || v.y < blk.y0 - 50 || v.y > blk.y1 + 50) continue;
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const B = city.buildings[k];
+      if (B.style !== 'brick' || B.tier !== 1 || B.feat >= 0.45) continue;
+      for (const e of escapesOf(city, k)) {
+        const cx = e.ox + e.ux * BAY, cy = e.oy + e.uy * BAY;
+        if (Math.hypot(cx - v.x, cy - v.y) > 50) continue;
+        // local +x out of the wall, +y along the facade
+        const o = one[0];
+        o.x = cx; o.y = cy; o.c = e.nx; o.s = e.ny;
+        const flip = e.nx * e.uy - e.ny * e.ux > 0 ? 1 : -1;
+        for (let f = 0; f <= e.top; f++) {
+          o.parts = escapeModel(f > 0, f < e.top ? (f & 1 ? -flip : flip) : 0, BAY, (f & 1) === 1);
+          drawObjects(grid, one, { x: v.x, y: v.y, eye: v.eye - f * FLOOR_H, dirX, dirY, plX, plY, plane, scale, hor, far: 60, light: (x, y, z) => { lightAt(x, y, z + f * FLOOR_H); return LT; }, snow: frameSnow });
+        }
+      }
+    }
+  }
 }
 
 /** Bus shelters within 40 m: their roofs keep the rain off (see precip.ts). */
