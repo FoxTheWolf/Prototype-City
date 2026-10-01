@@ -77,6 +77,9 @@ export interface Building {
   /** Scaffolding up the street faces above the sidewalk shed, to this height (0: none); netting color index + 1 (0: bare). */
   scaffold: number;
   net: number;
+  /** Video screens: bit f set for a screen on face f (see faceSpan); a news ticker running around the building. */
+  screen: number;
+  ticker: boolean;
 }
 
 /**
@@ -134,6 +137,7 @@ const SHOPS: Record<DistrictType, BusinessKind[]> = {
   residential: ['grocery', 'laundry', 'liquor', 'pharmacy', 'diner', 'bar'],
   historic: ['cafe', 'bar', 'books', 'tailor', 'hotel', 'diner'],
   industrial: ['autoparts', 'diner', 'bar', 'liquor'],
+  theater: ['cinema', 'hotel', 'bar', 'diner', 'electronics', 'cinema', 'hotel', 'cafe', 'pharmacy', 'parking'],
 };
 
 export interface Prop {
@@ -176,9 +180,11 @@ const LAMPS: Record<DistrictType, [LampType, number][]> = {
   historic: [['hps', 0.6], ['mv', 0.3], ['mh', 0.1]],
   residential: [['hps', 0.75], ['mv', 0.25]],
   industrial: [['hps', 0.55], ['lps', 0.35], ['mv', 0.1]],
+  theater: [['mh', 0.8], ['led', 0.2]],
 };
 
-export type DistrictType = 'financial' | 'commercial' | 'residential' | 'historic' | 'industrial';
+/** The theater district is one per city, the commercial district nearest downtown: all neon, screens and tickers. */
+export type DistrictType = 'financial' | 'commercial' | 'residential' | 'historic' | 'industrial' | 'theater';
 
 /** A named part of the city. Its blocks are the ones closer to (x, y) than to any other district's point. */
 export interface District {
@@ -200,6 +206,7 @@ const FURNITURE: Record<DistrictType, [PropKind, number][]> = {
   residential: [['bin', 2], ['bench', 1], ['mailbox', 1], ['payphone', 1], ['dumpster', 1]],
   historic: [['bench', 3], ['bin', 2], ['payphone', 1], ['mailbox', 1]],
   industrial: [['dumpster', 2], ['bin', 1]],
+  theater: [['news', 3], ['bin', 3], ['payphone', 2], ['bench', 1], ['mailbox', 1]],
 };
 
 const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot: number; lotCore: number; open: OpenKind; openP: number; empty: number; shop: number }> = {
@@ -209,6 +216,7 @@ const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot:
   residential: { base: 3, tall: 0.5, cap: 14, lot: 12, lotCore: 10, open: 'park', openP: 0.08, empty: 0.05, shop: 0.12 },
   historic: { base: 4, tall: 0.3, cap: 9, lot: 10, lotCore: 8, open: 'park', openP: 0.07, empty: 0.02, shop: 0.5 },
   industrial: { base: 1.5, tall: 0.1, cap: 4, lot: 30, lotCore: 20, open: 'yard', openP: 0.12, empty: 0.15, shop: 0.04 },
+  theater: { base: 5, tall: 0.8, cap: 45, lot: 14, lotCore: 18, open: 'plaza', openP: 0.02, empty: 0.02, shop: 0.95 },
 };
 
 /**
@@ -348,6 +356,10 @@ function placeDistricts(rng: Rng, w: number, h: number, cx: number, cy: number, 
   types[center] = 'financial';
   const ring = types.map((t, k) => (t === 'commercial' ? k : -1)).filter((k) => k >= 0);
   for (let n = rng() < 0.5 ? 2 : 1; n > 0 && ring.length; n--) types[ring.splice((rng() * ring.length) | 0, 1)[0]] = 'historic';
+  // the commercial district nearest downtown is the theater district
+  let theater = -1;
+  types.forEach((t, k) => { if (t === 'commercial' && (theater < 0 || pts[k].core > pts[theater].core)) theater = k; });
+  if (theater >= 0) types[theater] = 'theater';
   const wedge = rng() * 2 * Math.PI;
   pts.forEach((p, k) => {
     const da = Math.abs(((Math.atan2(p.y - cy, p.x - cx) - wedge + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
@@ -540,6 +552,7 @@ const MIX: Record<DistrictType, [Facade, number][]> = {
   residential: [['residential', 55], ['brick', 45]],
   historic: [['historic', 65], ['brick', 35]],
   industrial: [['warehouse', 75], ['brick', 25]],
+  theater: [['office', 45], ['historic', 20], ['glass', 20], ['brick', 15]],
 };
 
 function pickStyle(r: number, mix: [Facade, number][]): Facade {
@@ -667,7 +680,7 @@ export function generateCity(seed: number, size: number): City {
         if (Math.min(lw, lh) - 2 * inset < 8) break;
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
         const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
-        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0 };
+        top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0, screen: 0, ticker: false };
         if (k === 1 && fl) { const u = hash3(seed, ax0 | 0, ay0 | 0); top.flood = fl; top.floodH = Math.min(bh, fl === FLOOD_WARM ? 14 + u * 30 : 30 + u * 60); }
         buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
@@ -678,7 +691,7 @@ export function generateCity(seed: number, size: number): City {
 
     /** A rooftop shape centered at (x, y) with half-size (or radius) s, reaching height h. */
     const part = (x: number, y: number, s: number, h: number, style: Facade, round: boolean, frame: RGB, win: RGB) => {
-      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null, flood: null, floodH: 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0 });
+      buildings.push({ x0: x - s, y0: y - s, x1: x + s, y1: y + s, h, round, style, win, frame, lit: 0, shop: false, sign: win, feat: br(), biz: -1, cut: null, flood: null, floodH: 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0, screen: 0, ticker: false });
       block.maxH = Math.max(block.maxH, h);
     };
     /** Drum with windows, then a dome of stacked rings and a small lantern on top. */
@@ -718,7 +731,7 @@ export function generateCity(seed: number, size: number): City {
     /** A plain building of this landmark. */
     const house = (bx0: number, by0: number, bx1: number, by1: number, bh: number, style: Facade, frame: RGB, win: RGB, lit: number) => {
       const civic = lm === 'hall' || lm === 'church' || lm === 'clock';
-      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null, flood: civic ? FLOOD_WARM : null, floodH: civic ? Math.min(bh, 28) : 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0 });
+      buildings.push({ x0: bx0, y0: by0, x1: bx1, y1: by1, h: bh, round: false, style, win, frame, lit, shop: false, sign: win, feat: 1, biz: -1, cut: null, flood: civic ? FLOOD_WARM : null, floodH: civic ? Math.min(bh, 28) : 0, tier: 0, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0, screen: 0, ticker: false });
       block.maxH = Math.max(block.maxH, bh);
     };
     const long = ix1 - ix0 > iy1 - iy0;
@@ -846,6 +859,7 @@ export function generateCity(seed: number, size: number): City {
     // sidewalk sheds (scaffolding) along the street, ads painted high on the walls of walk-ups
     for (let k = block.b0; k < buildings.length; k++) {
       const B = buildings[k], bx = Math.floor(B.x0), by = Math.floor(B.y0), floors = (B.h - 1) / FLOOR_H;
+      const type = districts[district].type;
       if (B.tier >= 1 && floors > 22 && (B.style === 'office' || B.style === 'glass' || B.style === 'historic') && hash3(seed ^ 0xc0f1, bx, by) < 0.55) B.crown = CROWNS[Math.floor(hash3(seed ^ 0xc0f2, bx, by) * CROWNS.length)];
       if (B.tier === 1 && B.style !== 'warehouse' && !B.round && hash3(seed ^ 0x5bed, bx, by) < 0.07) B.shed = true;
       // on almost half of those the scaffolding climbs the wall, all the way up on low buildings
@@ -854,14 +868,18 @@ export function generateCity(seed: number, size: number): City {
         B.scaffold = Math.min(B.h + 1, Math.max(10, 4.1 + 2 * Math.round((B.h < 30 ? B.h : 12 + u * 24) / 2)));
         B.net = u < 0.5 ? 1 + Math.floor(u * 6) : 0;
       }
+      if (type === 'theater' && B.tier === 1 && !B.round) {
+        // a news ticker around some buildings (most of the wedges on the diagonal), screens on most street faces
+        if (B.h >= 18 && hash3(seed ^ 0x71c4, bx, by) < (B.cut ? 0.35 : 0.04)) B.ticker = true;
+        if (B.h >= 14) for (const f of streetFaces(block, B)) if (hash3(seed ^ 0x5c4e, bx + f, by) < 0.6) B.screen |= 1 << f;
+      }
       if (B.tier === 1 && !B.round && businesses.length && (B.style === 'brick' || B.style === 'residential' || B.style === 'warehouse') && B.h > 10 && hash3(seed ^ 0xadad, bx, by) < 0.3) B.ad = Math.floor(hash3(seed ^ 0xadae, bx, by) * businesses.length);
       // neon tubes on the corners and roof line: common on the commercial strips, rarer on towers
-      const type = districts[district].type;
-      const neonP = B.tier < 1 || B.style === 'warehouse' ? 0 : type === 'commercial' ? 0.18 : type === 'financial' ? 0.08 : type === 'residential' ? 0.03 : 0;
+      const neonP = B.tier < 1 || B.style === 'warehouse' ? 0 : type === 'theater' ? 0.7 : type === 'commercial' ? 0.18 : type === 'financial' ? 0.08 : type === 'residential' ? 0.03 : 0;
       if (hash3(seed ^ 0x4e0e, bx, by) < neonP) B.neon = NEON[Math.floor(hash3(seed ^ 0x4e0f, bx, by) * NEON.length)];
       // a billboard on the roof of a low or middling building (its top box), facing a street
       const topBox = B.tier >= 1 && !(k + 1 < buildings.length && buildings[k + 1].tier === B.tier + 1);
-      if (topBox && !B.round && businesses.length && B.h > 7 && B.h < 90 && !B.crown && type !== 'historic' && hash3(seed ^ 0xb0a4, bx, by) < 0.14) {
+      if (topBox && !B.round && businesses.length && B.h > 7 && B.h < (type === 'theater' ? 140 : 90) && !B.crown && type !== 'historic' && hash3(seed ^ 0xb0a4, bx, by) < (type === 'theater' ? 0.45 : 0.14)) {
         B.board = billboard(block, B, Math.floor(hash3(seed ^ 0xb0a5, bx, by) * businesses.length), hash3(seed ^ 0xb0a6, bx, by));
         // not where a water tank or machinery already stands on the roof
         const Bd = B.board;

@@ -17,14 +17,16 @@
     "commercial": ["{r} Square", "{r} Market", "{r} Cross", "{r} Mile"],
     "residential": ["{r} Heights", "{r} Park", "{r} Gardens", "{r} Hill", "{r} Terrace"],
     "historic": ["Old {r}", "{r} Quarter", "{r} Commons"],
-    "industrial": ["{r} Yards", "{r} Works", "{r} Flats", "{r} Junction"]
+    "industrial": ["{r} Yards", "{r} Works", "{r} Flats", "{r} Junction"],
+    "theater": ["{r} Square", "{r} Lights", "The {r} Strip", "{r} Circle"]
   },
   "districtType": {
     "financial": "financial",
     "commercial": "commercial",
     "residential": "residential",
     "historic": "historic",
-    "industrial": "industrial"
+    "industrial": "industrial",
+    "theater": "theater district"
   },
   "landmark": {
     "tower": "{r} Tower",
@@ -45,6 +47,33 @@
   "blade": {
     "hotel": "{name}", "cinema": "{name}", "parking": "PARK", "bar": "BAR", "pawn": "PAWN", "liquor": "LIQUOR",
     "cafe": "CAFE", "diner": "EAT", "pharmacy": "DRUGS"
+  },
+  "news": {
+    "sep": "   +++   ",
+    "date": "{wd} {mon} {d} {y}",
+    "weekdays": ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"],
+    "months": ["JAN", "FEB", "MAR", "APR", "MAY", "JUNE", "JULY", "AUG", "SEPT", "OCT", "NOV", "DEC"],
+    "blackout": ["POWER FAILURE IN {district} - CREWS ON THE SCENE", "BLACKOUT HITS {district}, UTILITY SILENT ON CAUSE", "{district} IN THE DARK AFTER SUBSTATION FAILS"],
+    "restored": ["POWER RESTORED IN {district}", "LIGHTS BACK ON IN {district}"],
+    "weather": "{city} WEATHER: {now}, {temp}F - TONIGHT: {later}",
+    "sky": { "clear": "CLEAR", "cloudy": "CLOUDY", "drizzle": "DRIZZLE", "rain": "RAIN", "storm": "THUNDERSTORMS", "snow": "SNOW" },
+    "flavor": [
+      "{biz} TO OPEN SECOND LOCATION ON {road}",
+      "CITY COUNCIL DELAYS VOTE ON {district} REZONING",
+      "{seam} FIRE BURNS INTO ITS {n}TH YEAR - CORDON STAYS",
+      "SARCOPHAGUS CONTRACTOR STILL OWES WORKERS ${m} MILLION",
+      "MAYOR PROMISES NEW STREETLIGHTS FOR {district}",
+      "CO LEVELS AT CORDON 'WITHIN LIMITS', SAYS AGENCY",
+      "TRANSIT AUTHORITY WEIGHS FARE HIKE TO ${p}",
+      "{district} TENANTS RALLY AGAINST RENT HIKES",
+      "STOCKS SLIDE AS BANKS REPORT LOSSES",
+      "OIL TOPS ${o} A BARREL",
+      "NEW SMARTPHONE SELLS OUT IN HOURS",
+      "{biz} OWNER DENIES HEALTH CODE CHARGES",
+      "{landmark} TO CLOSE FOR REPAIRS NEXT MONTH",
+      "STATE PANEL TO REVIEW {seam} BUYOUT CLAIMS",
+      "CITY HIRES {m}00 NEW POLICE OFFICERS"
+    ]
   },
   "ordinal": { "one": "st", "two": "nd", "few": "rd", "other": "th" },
   "business": {

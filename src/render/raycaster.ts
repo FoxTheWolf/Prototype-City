@@ -17,7 +17,8 @@ import { power } from './power';
 import { subAt, type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
-import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
+import { BLADE_SYMBOL, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
+import { tickerText } from '../locale/news';
 
 export interface View {
   x: number;
@@ -87,6 +88,7 @@ const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
+let frameTicker = '';
 let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0, frameInside = false, frameX = 0, frameY = 0;
 /** Rooms are seen through the windows this close; floor plans not made yet are made a few per frame. */
 const PEEK_FAR = 80, PLANS_PER_FRAME = 4;
@@ -128,7 +130,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   // metres covered by one column at distance 1, to pick the level of facade detail
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
-  frameCity = city; frameSec = time / 60; framePower = world.power;
+  frameCity = city; frameSec = time / 60; framePower = world.power; frameTicker = tickerText(world);
   const D = city.diagonal, diagGlyph = D.ex * D.ey > 0 ? G.bs : G.sl;
   const sky = prepareSky(city, world.power, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
   frameDay = sky.day;
@@ -605,6 +607,12 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const h = Math.floor(hash3(id, 8, 77) * AD_BG.length); adBg = AD_BG[h]; adFg = AD_FG[h];
     }
   }
+  // a video screen on this face, above the shop sign (and the ticker), as wide as the face allows
+  let scA0 = 0, scA1 = 0, scZ0 = 0, scZ1 = 0;
+  if (B.screen && side !== 2 && B.screen & (1 << face)) {
+    const w = Math.min(f1 - f0 - 1.5, 16), mid = (f0 + f1) / 2;
+    if (w > 4) { scA0 = mid - w / 2; scA1 = mid + w / 2; scZ0 = B.ticker ? TICK_Z1 + 1.2 : 5.2; scZ1 = Math.min(B.h - 1.5, scZ0 + Math.min(12, w * 0.75)); }
+  }
   // the rooms behind the windows, near enough to make out (see interior.ts): one look into the
   // ground floor's plan and one into the floors above, made the first time a window needs them
   const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
@@ -760,6 +768,30 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         ch = on ? G.o : G.dot; const q = (on ? 1 : 0.3) * Math.min(pw, 1.3); r = 255 * q; g = 225 * q; b = 150 * q;
       } else if (!inText && (z < 2.72 || z > 3.28)) { ch = G.dash; r = B.sign[0] * lit * 0.45; g = B.sign[1] * lit * 0.45; b = B.sign[2] * lit * 0.45; }
       else { ch = G.dot; r = 14; g = 12; b = 16; } // dark backing board
+    }
+    else if (B.ticker && side !== 2 && z > TICK_Z0 - 0.15 && z < TICK_Z1 + 0.15) {
+      // the news ticker: headlines in amber bulbs running right to left around the building
+      if (z < TICK_Z0 || z > TICK_Z1) wall(G.eq, 0.7);
+      else {
+        const n = frameTicker.length, p = (rev ? -along : along) + frameSec * TICK_SPEED, li = Math.floor(p / TICK_LW), fu = p / TICK_LW - li;
+        const c = frameTicker.charCodeAt(((li % n) + n) % n), lh = TICK_Z1 - TICK_Z0, on = elec;
+        if (TICK_LW / dAlong >= 3 && lh / dz >= 2.6) {
+          // up close, bulbs (0.14 m apart), counted per cell like the shop signs'
+          const rows = fontRows(c), bz = (lh - 0.2) / 7;
+          const nb = rows ? bulbsIn(rows, 5, (fu * TICK_LW - 0.08) / 0.14, (TICK_Z1 - 0.1 - z) / bz, dAlong / 0.28, dz / bz / 2) : 0;
+          if (nb) { ch = nb > 1 ? G.at : G.o; r = 255 * on; g = 150 * on; b = 45 * on; } else { ch = G.dot; r = 34; g = 20; b = 12; }
+        } else if (TICK_LW / dAlong >= 0.9) {
+          const center = Math.abs(fu - 0.45) * TICK_LW < dAlong / 2 && Math.abs(z - (TICK_Z0 + TICK_Z1) / 2) < dz / 2 + 0.01;
+          ch = center ? c : 32; const q = center ? on : 0.12 * on; r = 255 * q; g = 150 * q; b = 45 * q;
+        } else { ch = G.eq; r = 160 * on; g = 95 * on; b = 30 * on; }
+      }
+    } else if (scZ1 > scZ0 && along > scA0 && along < scA1 && z > scZ0 && z < scZ1) {
+      // a video screen behind a dark bezel
+      if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) wall(G.hash, 0.45);
+      else {
+        screenPixel(id, rev ? scA1 - along : along - scA0, scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz, frameSec);
+        ch = P4[0]; r = P4[1] * elec; g = P4[2] * elec; b = P4[3] * elec;
+      }
     }
     else if (door && z < DOOR_H + 0.35) {
       // the street door: a frame, two glass leaves and a transom, lit from the lobby
@@ -927,6 +959,51 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = T;
   }
+}
+
+/** The news ticker's band, its letters' width and its speed (m/s). */
+const TICK_Z0 = 9.8, TICK_Z1 = 11, TICK_LW = 0.85, TICK_SPEED = 3.2;
+const SCREEN_PAL: RGB[] = [[255, 60, 130], [60, 200, 255], [255, 210, 60], [110, 255, 120], [190, 90, 255], [255, 120, 40], [240, 240, 255]];
+const RAMP = [C('.'), C(':'), C('-'), C('='), C('+'), C('*'), C('%'), C('#'), C('@')];
+/** The scene showing on screen `id` now (it changes every 6 s): its kind (0 ad, 1 video, 2 color bars) and colors. */
+function screenScene(id: number, sec: number) {
+  const scene = Math.floor(sec / 6 + hash3(id, 0, 91) * 7);
+  return { scene, kind: Math.floor(hash3(id, scene, 92) * 3), a: SCREEN_PAL[Math.floor(hash3(id, scene, 94) * SCREEN_PAL.length)], b: SCREEN_PAL[Math.floor(hash3(id, scene, 95) * SCREEN_PAL.length)], t: (sec % 6) };
+}
+/**
+ * One cell of a video screen W x H metres, at u metres from its left edge (as read) and v down from
+ * its top, into P4: an ad for a business of the city in block letters, an ASCII "video", or bars of
+ * color sweeping across. Pixels are 0.3 m, so up close it reads as a screen.
+ */
+function screenPixel(id: number, u: number, v: number, W: number, H: number, dAlong: number, dz: number, sec: number) {
+  const S = screenScene(id, sec), px = Math.floor(u / 0.3) * 0.3, pz = Math.floor(v / 0.3) * 0.3;
+  let k: number, col: RGB;
+  if (S.kind === 0 && frameCity.businesses.length) {
+    const text = signText(frameCity, Math.floor(hash3(id, S.scene, 93) * frameCity.businesses.length), Math.max(1, Math.floor((W - 1) / 1.2)));
+    const n = text.length, lw = Math.min((W - 1) / n, (H * 0.55) / 1.4), lh = lw * 1.4, x0 = (W - n * lw) / 2, y0 = (H - lh) / 2;
+    const li = Math.floor((u - x0) / lw), fu = ((u - x0) / lw - li) * 1.25 - 0.12, fv = (v - y0) / lh;
+    // the letters type in, one every 0.12 s
+    const on = li >= 0 && li < n && li < S.t / 0.12 && fu >= 0 && fu < 1 && fv >= 0 && fv < 1 && bulbOn(text.charCodeAt(li), Math.floor(fu * 5), Math.floor(fv * 7));
+    const glyphs = lw / dAlong >= 3 && lh / dz >= 2.6;
+    if (!glyphs && lw / dAlong >= 0.9 && li >= 0 && li < n && li < S.t / 0.12 && Math.abs(u - x0 - (li + 0.5) * lw) < dAlong / 2 && Math.abs(v - H / 2) < dz / 2 + 0.01) {
+      P4[0] = text.charCodeAt(li); P4[1] = 255; P4[2] = 250; P4[3] = 235; return;
+    }
+    k = on && glyphs ? 1 : 0.3 + 0.25 * (pz / H); col = on && glyphs ? [255, 250, 235] : S.a;
+    P4[0] = on && glyphs ? G.hash : G.col;
+  } else if (S.kind === 1) {
+    // plasma: three moving waves, mapped to a ramp of glyphs and blended between two colors
+    const val = (Math.sin(px * 0.9 + sec * 1.3 + S.scene) + Math.sin(pz * 1.1 - sec * 0.9) + Math.sin((px + pz) * 0.6 + sec * 2.1)) / 6 + 0.5;
+    k = 0.25 + 0.75 * val; const m = val;
+    col = [S.a[0] * (1 - m) + S.b[0] * m, S.a[1] * (1 - m) + S.b[1] * m, S.a[2] * (1 - m) + S.b[2] * m];
+    P4[0] = RAMP[Math.min(RAMP.length - 1, Math.floor(val * RAMP.length))];
+  } else {
+    // diagonal bars of color sweeping across, with a bright band
+    const s = (px + pz * 0.6 - sec * 3) / 1.5, band = ((s % 3) + 3) % 3;
+    col = band < 1 ? S.a : band < 2 ? S.b : [30, 30, 40];
+    k = band < 2 ? 0.75 + 0.25 * Math.sin(s * 3) : 0.6;
+    P4[0] = band < 2 ? (band % 1 < 0.15 ? G.at : G.hash) : G.col;
+  }
+  P4[1] = col[0] * k; P4[2] = col[1] * k; P4[3] = col[2] * k;
 }
 
 /** Scaffolding: its distance from the wall, and the colors of its tubes, boards and nets (green, blue, white, orange, black, green). */
@@ -1107,6 +1184,19 @@ function gatherLights(world: World, v: View, sec: number) {
         }
       }
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
+      if (B.screen && Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < 80) {
+        // the screens wash the street with their current scene's color
+        const S = screenScene(k, sec), q = 0.22 * buildingPower(world, k, sec), cr = (S.a[0] + S.b[0]) / 2 * q, cg = (S.a[1] + S.b[1]) / 2 * q, cb = (S.a[2] + S.b[2]) / 2 * q;
+        for (let f = 0; f < (B.cut ? 5 : 4); f++) {
+          if (!(B.screen & (1 << f))) continue;
+          const sp = faceSpan(B, f), mid = (sp[0] + sp[1]) / 2, hw = Math.min(sp[1] - sp[0] - 1.5, 16) / 2, Kc = B.cut;
+          if (f === 4) dyn.segment(Kc!.nx * Kc!.c + Kc!.ny * (mid - hw), Kc!.ny * Kc!.c - Kc!.nx * (mid - hw), Kc!.nx * Kc!.c + Kc!.ny * (mid + hw), Kc!.ny * Kc!.c - Kc!.nx * (mid + hw), Kc!.nx, Kc!.ny, 14, 6, 12, cr, cg, cb);
+          else {
+            const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
+            dyn.segment(alongX ? mid - hw : edge, alongX ? edge : mid - hw, alongX ? mid + hw : edge, alongX ? edge : mid + hw, alongX ? 0 : out, alongX ? out : 0, 14, 6, 12, cr, cg, cb);
+          }
+        }
+      }
       const [sr, sg, sb] = B.sign, q = 0.4 * buildingPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
       // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims
       // its own spot; farther away the sign is lit evenly, as a whole
