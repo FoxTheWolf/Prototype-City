@@ -579,7 +579,13 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   for (const [u0, v0, u1, v1] of doors) fill(u0, v0, u1, v1, DOOR, true);
   connect(cells, nx, ny, rooms);
   const P: Plan = { box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny };
-  furnish(P, rnd, office);
+  // the street doors (the main one and the shops'), so nothing is put in front of them
+  const streets: [number, number][] = [];
+  if (ground) {
+    const main = doorOf(city, k);
+    for (const D of main ? [main, ...exits] : exits) { const [x, y] = facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2); streets.push([x, y]); }
+  }
+  furnish(P, rnd, office, streets);
   return P;
 }
 
@@ -632,13 +638,18 @@ function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
  * shelves), only where all its floor and a strip in front of it are that room's, away from the
  * doorways and the other pieces, so the rooms stay walkable.
  */
-function furnish(P: Plan, rnd: () => number, office: boolean) {
+/** Metres kept clear around doorways when furnishing. */
+const CLEAR = 0.9;
+function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number][]) {
   const F = P.furn;
   const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
     for (let y = y0 + 0.1; y < y1; y += 0.2) for (let x = x0 + 0.1; x < x1; x += 0.2) {
       const c = cellAt(P, x, y);
       if ((c & 127) !== r + 1 || c & DOOR) return false;
     }
+    // keep a metre clear in front of every doorway, and 1.6 m in front of the street doors
+    for (let y = y0 - CLEAR; y < y1 + CLEAR; y += 0.2) for (let x = x0 - CLEAR; x < x1 + CLEAR; x += 0.2) if (cellAt(P, x, y) & DOOR) return false;
+    for (const [sx, sy] of streets) if (sx > x0 - 1.6 && sx < x1 + 1.6 && sy > y0 - 1.6 && sy < y1 + 1.6) return false;
     for (const f of F) {
       const ex = Math.abs(f.c) * f.hx + Math.abs(f.s) * f.hy, ey = Math.abs(f.s) * f.hx + Math.abs(f.c) * f.hy;
       if (x0 < f.x + ex && x1 > f.x - ex && y0 < f.y + ey && y1 > f.y - ey) return false;

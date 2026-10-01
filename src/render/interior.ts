@@ -90,6 +90,21 @@ const L3 = new Float32Array(3);
 function lightIn(I: Inside, r: number, x: number, y: number, t: number) {
   lit3(I.plan.rooms[r], lamp, r * 3, x, y, t, I.day);
 }
+/**
+ * An EXIT sign's cell: green letters lit on their own (on a battery, so through a blackout too),
+ * `u` 0..1 across the sign as the viewer reads it. Writes into out (glyph, r, g, b).
+ */
+const EXIT = 'EXIT';
+/** `du`: how much of the sign one column covers; each letter goes only in the column holding its middle. */
+function exitCell(u: number, v: number, du: number, out: number[]) {
+  const slots = EXIT.length + 2, n = Math.floor(u * slots - 0.5), c = (n + 1) / slots;
+  const letter = n >= 0 && n < EXIT.length && Math.abs(u - c) < du / 2 && v > 0.1 && v < 0.9;
+  out[0] = letter ? EXIT.charCodeAt(n) : G.eq;
+  out[1] = letter ? 90 : 30; out[2] = 255; out[3] = letter ? 140 : 110;
+}
+/** Whether a reading direction along a wall runs to the viewer's right: the right of a ray (rdx, rdy) is (-rdy, rdx). */
+const toRight = (ax: number, ay: number, rdx: number, rdy: number) => ax * -rdy + ay * rdx >= 0;
+
 /** L3 from a lamp color (lp[o..o+2]) falling off from the room's lamps, plus the ambient light. */
 function lit3(R: Room, lp: Float32Array, o: number, x: number, y: number, t: number, day: number) {
   const k = (0.5 + 0.9 / (1 + lampD2(R, x, y) / 5)) / (1 + t * 0.03);
@@ -324,8 +339,33 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
         put(y, tn, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
       };
       if (cur & nv & DOOR && !I.closed) {
-        // a doorway: the lintel above it, and on through
-        span(tn, z0 + DOOR_H, zc, (y, z) => { lightIn(I, r, hx, hy, tn); const k = z < z0 + DOOR_H + 0.08 ? 1.3 : 1; put(y, tn, G.eq, 120 * L3[0] * k, 95 * L3[1] * k, 70 * L3[2] * k); });
+        // a doorway: the lintel above it, and on through; over the way to the stairs or out to the
+        // lobby, a green EXIT sign
+        const k2 = P.rooms[(nv & 127) - 1]?.kind, k1 = R.kind;
+        const toExit = k2 === 'stair' || (k2 === 'lobby' && k1 !== 'lobby');
+        let s0 = 0, s1 = 0;
+        if (toExit) {
+          // the doorway's extent along the wall: the run of door cells on both sides
+          const wi = xStep ? i - stX : i, wj = xStep ? j : j - stY;
+          let a = 0, b = 0;
+          const both = (q: number) => (xStep ? at(wi, j + q) & at(i, j + q) : at(i + q, wj) & at(i + q, j)) & DOOR;
+          while (a > -8 && both(a - 1)) a--;
+          while (b < 8 && both(b + 1)) b++;
+          const base = xStep ? (P.gy + j) * CELL : (P.gx + i) * CELL;
+          s0 = base + a * CELL; s1 = base + (b + 1) * CELL;
+        }
+        const rd = xStep ? toRight(0, 1, rdx, rdy) : toRight(1, 0, rdx, rdy);
+        span(tn, z0 + DOOR_H, zc, (y, z) => {
+          const zz = z - z0;
+          if (toExit && zz > DOOR_H + 0.06 && zz < DOOR_H + 0.32) {
+            const w = (u - s0) / (s1 - s0), m = 0.5 - 0.3 / (s1 - s0);
+            if (w > 0.5 - m && w < 0.5 + m) {
+              const du = (I.colW * tn) / Math.max(1e-6, Math.abs(xStep ? rdx : rdy)) / ((s1 - s0) * 2 * m);
+              exitCell(rd ? (w - 0.5 + m) / (2 * m) : (0.5 + m - w) / (2 * m), (zz - DOOR_H - 0.06) / 0.26, du, P4); put(y, tn, P4[0], P4[1], P4[2], P4[3]); return;
+            }
+          }
+          lightIn(I, r, hx, hy, tn); const k = z < z0 + DOOR_H + 0.08 ? 1.3 : 1; put(y, tn, G.eq, 120 * L3[0] * k, 95 * L3[1] * k, 70 * L3[2] * k);
+        });
       } else { span(tn, wz0, wzc, paint); closed = true; tClose = tn; break; }
     }
     cur = nv;
@@ -338,8 +378,12 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const along = face < 2 ? hy : face < 4 ? hx : hx * K!.ny - hy * K!.nx;
     const sp = faceSpan(B, face), corner = along - sp[0] < 0.35 || sp[1] - along < 0.35;
     const bay = along / BAY, fw = bay - Math.floor(bay), ground = I.floor === 0;
-    let isDoor = false;
-    if (ground) for (const D of I.exits) if (D.face === face && along > D.a0 && along < D.a1) isDoor = true;
+    let isDoor = false, du = 0, doorW = 1;
+    if (ground) for (const D of I.exits) if (D.face === face && along > D.a0 && along < D.a1) { isDoor = true; du = (along - D.a0) / (D.a1 - D.a0); doorW = D.a1 - D.a0; }
+    // metres of wall one column covers there
+    const colA = (I.colW * t) / Math.max(1e-6, Math.abs(face < 2 ? rdx : face < 4 ? rdy : K!.nx * rdx + K!.ny * rdy));
+    // reading left to right from inside: along the face's direction, or against it
+    const fax = face < 2 ? 0 : face < 4 ? 1 : K!.ny, fay = face < 2 ? 1 : face < 4 ? 0 : -K!.nx, rdF = toRight(fax, fay, rdx, rdy);
     // a wall against the next building has no windows, up to that building's roof
     const nX = face === 0 ? -1 : face === 1 ? 1 : face === 4 ? K!.nx : 0, nY = face === 2 ? -1 : face === 3 ? 1 : face === 4 ? K!.ny : 0;
     const blind = builtUp(I.city, hx + nX * 0.3, hy + nY * 0.3, z0 + 1);
@@ -352,7 +396,19 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     gC[x] = Math.abs(nX * rdx + nY * rdy) / Math.hypot(rdx, rdy); gH[x] = Math.atan2(rdy, rdx);
     span(t, wz0, wzc, (y, z) => {
       const fz = z / FLOOR_H - Math.floor(z / FLOOR_H);
-      if ((isDoor && z < z0 + DOOR_H) || (liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
+      if (isDoor) {
+        // the street door from inside: a metal frame, the middle stile, a push bar and the top rail
+        // around its two glass leaves; over it the green EXIT sign
+        const zz = z - z0;
+        if (zz > DOOR_H + 0.06 && zz < DOOR_H + 0.34 && du > 0.25 && du < 0.75) { exitCell(rdF ? (du - 0.25) * 2 : (0.75 - du) * 2, (zz - DOOR_H - 0.06) / 0.28, colA / (doorW * 0.5), P4); put(y, t, P4[0], P4[1], P4[2], P4[3]); return; }
+        if (zz < DOOR_H) {
+          const frame = du < 0.05 || du > 0.95 || Math.abs(du - 0.5) < 0.025 || zz > DOOR_H - 0.1 || zz < 0.08;
+          const bar = zz > 0.95 && zz < 1.08 && Math.abs(du - 0.5) > 0.08 && Math.abs(du - 0.5) < 0.42;
+          if (frame || bar) { lightIn(I, r0, hx, hy, t); put(y, t, frame ? G.bar : G.eq, (bar ? 190 : 95) * L3[0], (bar ? 190 : 98) * L3[1], (bar ? 195 : 105) * L3[2]); return; }
+          rowState[y] = 2; glass[y * cols + x] = 1; return;
+        }
+      }
+      if ((liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
       lightIn(I, r0, hx, hy, t);
       const zr = zrOf(z);
       // the sill: just under a window
