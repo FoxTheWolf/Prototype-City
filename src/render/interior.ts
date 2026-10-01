@@ -104,6 +104,8 @@ export function windowHole(B: Building, fw: number, fz: number, z: number, groun
     case 'glass': return fw >= 0.07 && fz >= 0.08;
     case 'residential': return fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78;
     case 'brick': return fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78;
+    // tall arched windows over a rusticated base that has none
+    case 'historic': return !ground && fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82;
     default: return fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8;
   }
 }

@@ -65,7 +65,7 @@ export interface Door {
   a1: number;
 }
 
-const HABITABLE = new Set(['office', 'glass', 'residential', 'brick']);
+const HABITABLE = new Set(['office', 'glass', 'residential', 'brick', 'historic']);
 /** Buildings with an inside, for now: apartments and offices. */
 export function habitable(B: Building): boolean {
   return B.tier === 1 && !B.round && HABITABLE.has(B.style);
