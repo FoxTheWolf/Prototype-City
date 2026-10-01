@@ -164,7 +164,7 @@ export function stepWorld(w: World, input: PlayerInput) {
     else if (z !== null) { p.z = z; p.floor = Math.floor((z + 0.01) / FLOOR_H); }
   }
 
-  stepCars(w.city, w.cars, w.rng, TICK, p.x, p.y);
+  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y);
   w.ptime = w.time;
   w.time += TICK * TIME_SCALE;
   stepWeather(w.weather, w.seed, w.time, TICK * TIME_SCALE);
