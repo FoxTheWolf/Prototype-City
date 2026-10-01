@@ -6,6 +6,7 @@ import { GlyphRenderer, type Layout } from './render/glRenderer';
 import { CharGrid } from './render/grid';
 import { type Look } from './render/palette';
 import { power } from './render/power';
+import { pickedButton } from './render/interior';
 import { renderWorld } from './render/raycaster';
 import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
@@ -36,7 +37,7 @@ const camera = new Camera();
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera,
+  world, camera, pickedButton, callLift,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -57,17 +58,14 @@ let running = false;
 const SOLID = [0.24, 0.16, 0.08, 0];
 let solidStep = 2; // 0.08, the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
-// the lift car's panel: type a floor and press Enter
-let liftKeys = '';
+// the lift car's panel: aim at a button and click it
+addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || !input.locked || !liftFloors(world)) return;
+  const b = pickedButton();
+  if (b >= 0) sound?.beep(callLift(world, b));
+});
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (liftFloors(world) && (e.code.startsWith('Digit') || e.code.startsWith('Numpad') || e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Backspace')) {
-    const d = e.code.match(/(\d)$/);
-    if (d && liftKeys.length < 2) { liftKeys += d[1]; sound?.beep(); }
-    else if (e.code === 'Backspace') { liftKeys = liftKeys.slice(0, -1); sound?.beep(); }
-    else if (e.code.endsWith('Enter') && liftKeys) { sound?.beep(callLift(world, Number(liftKeys))); liftKeys = ''; }
-    return;
-  }
   if (e.code === 'KeyM') sound?.toggleMute();
   else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
@@ -178,14 +176,9 @@ function frame(now: number) {
   // the panel, while standing in a lift car; the chime when it arrives
   const nFloors = liftFloors(world);
   if (nFloors) {
-    const box = [
-      '+-- LIFT --------+',
-      `| AT ${String(p.floor).padStart(2, '0')}   ${p.liftTo >= 0 ? (p.liftTo > p.floor ? 'UP  ' : 'DOWN') + ' ' + String(p.liftTo).padStart(2, '0') : '       '} |`,
-      `| FLOOR [${liftKeys.padEnd(2, '_')}] 0-${String(nFloors - 1).padStart(2, '0')} |`,
-      '| 0-9  ENT  BKSP |',
-      '+----------------+',
-    ];
-    box.forEach((s, k) => grid.text(grid.cols - s.length - 2, 3 + k, s, [255, 176, 74], [12, 10, 8]));
+    // a small sight in the middle, to aim at the panel's buttons
+    const i = (grid.rows >> 1) * grid.cols + (grid.cols >> 1), on = pickedButton() >= 0;
+    grid.put(i, '+'.charCodeAt(0), on ? 255 : 200, on ? 200 : 200, on ? 80 : 200);
   }
   if (wasRiding && p.liftTo < 0) { sound?.ding(); sound?.doors(); }
   if (!wasRiding && p.liftTo >= 0) sound?.doors();

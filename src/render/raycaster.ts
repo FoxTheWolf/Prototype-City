@@ -1,8 +1,8 @@
 import { hash3 } from '../core/rng';
-import { BAY, BLADE_LETTER, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
-import { type World } from '../sim/world';
+import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { liftFloors, type World } from '../sim/world';
 import { baseAt, cachedPlan, DOOR_H, doorOf, habitable, liftGlassAt, lotOf, planOf, type Plan } from '../sim/interior';
-import { glassPass, interiorColumn, peekCell, peekInto, prepareInside, windowHole, type Inside, type Peek } from './interior';
+import { glassPass, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
@@ -87,7 +87,7 @@ let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0, frameInside = fa
 const PEEK_FAR = 80, PLANS_PER_FRAME = 4;
 let planBudget = 0;
 const peeks: (Peek & { plan: Plan | null; state: number })[] = [0, 1].map(() => ({ d: 0, r: 0, u: 0, shade: 1, plan: null, state: 0 }));
-const P4 = [0, 0, 0, 0];
+const P4 = [0, 0, 0, 0], GL = [0, 0, 0];
 let framePower: PowerGrid;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
@@ -139,7 +139,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   let inside: Inside | null = null, skip: Building | null = null;
   if (plan) {
     skip = city.buildings[kIn];
-    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, door: doorOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
+    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
     prepareInside(inside, px, py);
   }
   frameInside = !!inside;
@@ -571,6 +571,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
   const rdx = (hx - frameX) / t, rdy = (hy - frameY) / t;
   peeks[0].state = peeks[1].state = 0;
+  let glowFl = -1;
   const peekFor = (fl: number) => {
     const pk = peeks[fl === 0 ? 0 : 1];
     if (pk.state) return pk.state === 1 ? pk : null;
@@ -609,7 +610,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     const z = eye + ((hor - (y + 0.5)) / scale) * t;
     const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
     const escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || Math.abs((fl & 1 ? 1 - escU : escU) - fz) < 0.1);
-    let pk: ReturnType<typeof peekFor> = null;
+    let pk: ReturnType<typeof peekFor> = null, isWin = false;
     if (S === 'spire' || S === 'chimney') {
       // red beacon at the tip; chimneys also get two pale bands near the top
       if (z > B.h - 1) { ch = G.star; r = B.win[0] * winLight; g = B.win[1] * winLight; b = B.win[2] * winLight; }
@@ -698,8 +699,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else { const k = 0.55 * elec; ch = z > DOOR_H ? G.dash : Math.abs(along - (door.a0 + door.a1) / 2) < 0.06 ? G.bar : G.col; r = 255 * k; g = 220 * k; b = 160 * k; }
     } else if (lot >= 0 && !escCell && ((!corner && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0)) || (fz > 0.04 && fz < 0.9 && liftGlassAt(frameCity, lot, hx, hy))) && (pk = peekFor(fl))) {
       // a window: the room behind it, lit by its own lamps
-      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), frameDay);
-      ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3];
+      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), frameDay, sheenAt(along, z));
+      ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3]; isWin = true;
     } else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv), wp = hh < litK ? winPow(wi >> kh, fl >> kv) : 0;
       if (wp > 0.04) {
@@ -757,6 +758,14 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
+    if (lot >= 0 && !isWin && !corner && z < B.h - 0.6 && (pk ??= peekFor(fl))) {
+      // a lit room's light spills onto the wall around its window
+      if (fl !== glowFl) { const L = roomGlow(frameCity.buildings[lot], id, pk.plan!, pk.r, fl, winPow(wi, fl), frameDay); glowFl = fl; GL[0] = L[0]; GL[1] = L[1]; GL[2] = L[2]; }
+      if (GL[0] + GL[1] + GL[2] > 0.02) {
+        const d = Math.hypot((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H), k = 120 * Math.max(0, 1 - d / 1.5) ** 2;
+        r += GL[0] * k; g += GL[1] * k; b += GL[2] * k;
+      }
+    }
     if (B.flood && z < B.floodH) {
       // floodlights every FLOOD_GAP metres at the foot of the wall, each a cone of light widening
       // upward (the two nearest count) and fading out toward floodH; far away, the average
@@ -834,6 +843,22 @@ function gatherLights(world: World, v: View, sec: number) {
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
       if (B.biz < 0 || B.round) continue;
+      const K0 = B.cut;
+      if (B.shop && Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < 60) {
+        // the lit shop windows spill warm light on the sidewalk in front of them (faces on the street)
+        const w = 0.3 * buildingPower(world, k, sec), blk = blockAt(city, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+        for (let f = 0; f < (K0 ? 5 : 4); f++) {
+          const sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
+          if (hi - lo < 2) continue;
+          const gap = !blk ? 0 : f === 0 ? B.x0 - blk.x0 : f === 1 ? blk.x1 - B.x1 : f === 2 ? B.y0 - blk.y0 : f === 3 ? blk.y1 - B.y1 : 0;
+          if (gap > SIDEWALK + 0.5) continue;
+          if (f === 4) dyn.segment(K0!.nx * K0!.c + K0!.ny * lo, K0!.ny * K0!.c - K0!.nx * lo, K0!.nx * K0!.c + K0!.ny * hi, K0!.ny * K0!.c - K0!.nx * hi, K0!.nx, K0!.ny, 5, 1.5, 4, 200 * w, 165 * w, 110 * w);
+          else {
+            const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
+            dyn.segment(alongX ? lo : edge, alongX ? edge : lo, alongX ? hi : edge, alongX ? edge : hi, alongX ? 0 : out, alongX ? out : 0, 5, 1.5, 4, 200 * w, 165 * w, 110 * w);
+          }
+        }
+      }
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
       const [sr, sg, sb] = B.sign, q = 0.4 * buildingPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
       // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims

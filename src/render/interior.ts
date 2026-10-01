@@ -22,6 +22,11 @@ export interface Inside {
   /** Height of the floor under the viewer (the lift car's floor while it rides), and doors shut. */
   z0: number;
   closed: boolean;
+  /** In a lift car: the floors it serves (0 if not in one), and where it is going (-1 standing). */
+  liftN: number;
+  liftTo: number;
+  /** Metres one column covers at distance 1 (for the panel's lettering). */
+  colW: number;
   door: Door | null;
   /** The building's electric light (blackouts), daylight 0..1, seconds, rain 0..1. */
   elec: number;
@@ -98,8 +103,40 @@ export function windowHole(B: Building, fw: number, fz: number, z: number, groun
   }
 }
 
-/** While the viewer's lift car rides: its panel lights a button. */
-let riding = false, litButton = 0;
+/**
+ * The lift car's panel: one, on a long side wall, centered on it. A display of the floor the car is
+ * at, over a button per floor the lift serves, numbered, the bottom row the ground floor. The
+ * button under the screen's center is noted, so a click can press it (pickedButton).
+ */
+const PANEL_W = 0.44, PANEL_Z0 = 0.85, PANEL_Z1 = 1.65;
+let picked = -1;
+export const pickedButton = () => picked;
+/** Paint a cell of the panel at (pu across it, 0..1 left to right; zr), or return false off it. */
+function panelPaint(I: Inside, pu: number, zr: number, cu: number, cz: number, out: number[]): number {
+  const n = I.liftN, cols = n > 12 ? 4 : 2, rows = Math.ceil(n / cols);
+  if (pu < 0 || pu > 1 || zr < PANEL_Z0 || zr > PANEL_Z1 + 0.14) return -2;
+  out[1] = 70; out[2] = 72; out[3] = 80; out[0] = G.hash;
+  if (zr > PANEL_Z1 + 0.02) {
+    // the floor display: amber digits on black
+    // each digit in the one cell holding its center
+    const s = String(I.floor).padStart(2, '0'), zc = PANEL_Z1 + 0.09;
+    out[0] = G.dot; out[1] = 60; out[2] = 25; out[3] = 10;
+    for (let c = 0; c < 2; c++) if (Math.abs(pu - (0.42 + c * 0.16)) < cu / 2 && Math.abs(zr - zc) < cz / 2 + 0.005) { out[0] = s.charCodeAt(c); out[1] = 255; out[2] = 140; out[3] = 40; }
+    return -1;
+  }
+  const bu = pu * cols, bz = ((zr - PANEL_Z0) / (PANEL_Z1 - PANEL_Z0)) * rows;
+  const col = Math.floor(bu), row = Math.floor(bz), f = row * cols + col, fu = bu - col, fz = bz - row;
+  if (f >= n) return -1;
+  if (fu < 0.12 || fu > 0.88 || fz < 0.15 || fz > 0.85) return f; // the plate around it: still that button's
+  const lit = f === I.liftTo || (I.liftTo < 0 && f === I.floor);
+  // a round steel button with its number, each digit in the one cell holding its center
+  const s = String(f), cuB = cu * cols, czB = (cz / (PANEL_Z1 - PANEL_Z0)) * rows;
+  out[0] = G.o; out[1] = lit ? 255 : 150; out[2] = lit ? 170 : 152; out[3] = lit ? 60 : 160;
+  if (Math.abs(fz - 0.5) < czB / 2 + 0.01) for (let d = 0; d < s.length; d++) {
+    if (Math.abs(fu - (0.5 + (d - (s.length - 1) / 2) * 0.22)) < cuB / 2) { out[0] = s.charCodeAt(d); out[1] = lit ? 255 : 230; out[2] = lit ? 190 : 230; out[3] = lit ? 90 : 225; }
+  }
+  return f;
+}
 
 /** Paint of a room's walls: glyph and color at height zr above its floor, u along the wall. */
 function wallPaint(R: Room, zr: number, u: number, out: number[]) {
@@ -121,21 +158,7 @@ function wallPaint(R: Room, zr: number, u: number, out: number[]) {
       if (zr < 1) { const p = ((u / 0.8) % 1 + 1) % 1; out[0] = p < 0.08 ? G.bar : zr > 0.92 ? G.eq : G.col; out[1] = 110; out[2] = 76; out[3] = 50; return; }
       out[0] = G.col; out[1] = 165; out[2] = 155; out[3] = 135; return;
     case 'stair': out[0] = G.semi; out[1] = 135; out[2] = 135; out[3] = 130; return;
-    case 'lift': {
-      // the car's panel by the door, on every wall: a lit display over two columns of buttons,
-      // one of them glowing while the car rides
-      const pu = ((u / BAY) % 1 + 1) % 1;
-      if (pu > 0.62 && pu < 0.88 && zr > 0.85 && zr < 1.75) {
-        if (zr > 1.6) { out[0] = G.eq; out[1] = 255; out[2] = 120; out[3] = 40; return; }
-        const bc = Math.floor((pu - 0.62) / 0.13), br = Math.floor((zr - 0.85) / 0.12), cu = (pu - 0.62) % 0.13, cz = (zr - 0.85) % 0.12;
-        if (cu > 0.03 && cu < 0.1 && cz > 0.03 && cz < 0.09 && br < 6) {
-          const lit = riding && (br * 2 + bc) === litButton;
-          out[0] = G.o; out[1] = lit ? 255 : 210; out[2] = lit ? 170 : 210; out[3] = lit ? 60 : 200; return;
-        }
-        out[0] = G.hash; out[1] = 95; out[2] = 98; out[3] = 105; return;
-      }
-      out[0] = G.bar; out[1] = 165; out[2] = 170; out[3] = 175; return;
-    }
+    case 'lift': out[0] = G.bar; out[1] = 165; out[2] = 170; out[3] = 175; return;
     case 'office': case 'open': case 'shop': out[0] = G.col; out[1] = 165; out[2] = 165; out[3] = 160; return;
     default: {
       // homes: each one papered or painted in its own way
@@ -221,7 +244,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   gT[x] = 0;
   for (let y = 0; y < rows; y++) glass[y * cols + x] = 0;
   const z0 = I.z0, zc = z0 + CEIL;
-  riding = I.closed; litButton = I.floor % 12;
+  if (x === (cols >> 1)) picked = -1;
   // in the stairwell the walls go on a storey up and down, and the ceiling is the next floor's
   const well = stairRoom >= 0, wz0 = well ? z0 - FLOOR_H : z0, wzc = well ? zc + FLOOR_H : zc;
   const zrOf = (z: number) => (well ? (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H : z - z0);
@@ -263,9 +286,18 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     if ((nv & 127) !== (cur & 127)) {
       const r = (cur & 127) - 1, R = P.rooms[r], hx = px + rdx * tn, hy = py + rdy * tn;
       const u = xStep ? hy : hx, shade = xStep ? 1 : 0.82;
+      // the lift's panel: on the long wall at the low coordinate, read left to right from inside
+      let pw = -1;
+      if (R.kind === 'lift' && I.liftN) {
+        const longX = R.x1 - R.x0 >= R.y1 - R.y0;
+        if (longX && !xStep && Math.abs(hy - R.y0) < 0.05) pw = (hx - ((R.x0 + R.x1) / 2 - PANEL_W / 2)) / PANEL_W;
+        else if (!longX && xStep && Math.abs(hx - R.x0) < 0.05) pw = ((R.y0 + R.y1) / 2 + PANEL_W / 2 - hy) / PANEL_W;
+      }
       const paint = (y: number, z: number) => {
         lightIn(I, r, hx, hy, tn);
-        wallPaint(R, zrOf(z), u, P4);
+        const b = pw >= 0 && pw <= 1 ? panelPaint(I, pw, z - z0, (I.colW * tn) / Math.max(1e-6, Math.abs(xStep ? rdx : rdy)) / PANEL_W, tn / scale, P4) : -2;
+        if (b === -2) wallPaint(R, zrOf(z), u, P4);
+        if (b >= 0 && x === (cols >> 1) && y === (rows >> 1)) picked = b;
         put(y, tn, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
       };
       if (cur & nv & DOOR && !I.closed) {
@@ -363,9 +395,11 @@ export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, s
     for (let y = 0; y < rows; y++) {
       if (!glass[y * cols + x]) continue;
       const k4 = (y * cols + x) * 4;
-      cells[k4 + 1] = cells[k4 + 1] * 0.82 + 14 * lr; cells[k4 + 2] = cells[k4 + 2] * 0.82 + 14 * lg; cells[k4 + 3] = cells[k4 + 3] * 0.85 + 16 * lb;
+      // from inside: the room's lamp mirrored in the glass, the city behind it tinted
+      const z = eye + ((hor - (y + 0.5)) / scale) * t, s = sheenAt(along, z) ** 4;
+      cells[k4 + 1] = cells[k4 + 1] * 0.8 + 10 + (14 + 40 * s) * lr; cells[k4 + 2] = cells[k4 + 2] * 0.8 + 14 + (14 + 40 * s) * lg; cells[k4 + 3] = cells[k4 + 3] * 0.83 + 20 + (16 + 45 * s) * lb;
       if (I.rain > 0 && !gDoor[x]) {
-        const z = eye + ((hor - (y + 0.5)) / scale) * t, dz = ((z - z0) + I.sec * speed + ph) % 3;
+        const dz = ((z - z0) + I.sec * speed + ph) % 3;
         const slide = slides && dz < (t / scale) * 1.2;
         const bead = hash3(Math.floor(along * 14), Math.floor(z * 14), 8) < I.rain * 0.06;
         if (slide || bead) { cells[k4] = slide ? G.com : G.dot; cells[k4 + 1] += 50; cells[k4 + 2] += 55; cells[k4 + 3] += 65; }
@@ -420,12 +454,18 @@ export function peekInto(P: Plan, B: Building, hx: number, hy: number, rdx: numb
 }
 
 const PL = new Float32Array(3);
+/** The lamp (0..1 per channel) of room r on floor f, as seen from outside: for the glow around its windows. */
+export function roomGlow(base: Building, boxId: number, P: Plan, r: number, f: number, elec: number, day: number): Float32Array {
+  const R = P.rooms[r];
+  if (R) roomLamp(base, boxId, R, r, f, elec, day, false, PL, 0); else PL[0] = PL[1] = PL[2] = 0;
+  return PL;
+}
 /**
  * One window cell's view of the room behind it, into out (glyph, r, g, b): the ray goes on from the
  * glass at distance t, rising kz metres per unit of distance, to the back wall, or down to the floor
  * or up to the ceiling of storey f.
  */
-export function peekCell(out: number[], base: Building, boxId: number, P: Plan, pk: Peek, f: number, px: number, py: number, rdx: number, rdy: number, eye: number, kz: number, t: number, elec: number, day: number) {
+export function peekCell(out: number[], base: Building, boxId: number, P: Plan, pk: Peek, f: number, px: number, py: number, rdx: number, rdy: number, eye: number, kz: number, t: number, elec: number, day: number, sheen: number) {
   const z0 = f * FLOOR_H, zc = z0 + CEIL, tw = t + pk.d, zw = eye + kz * tw, office = isOffice(base);
   let r = pk.r, x: number, y: number, tt: number, part: number;
   if (zw < z0 || zw > zc) {
@@ -444,6 +484,18 @@ export function peekCell(out: number[], base: Building, boxId: number, P: Plan, 
   else if (part === 2) ceilPaint(R, office, PL[0] + PL[1] > 0.05, x, y, out);
   else wallPaint(R, zw - z0, pk.u, out);
   const sh = part === 1 ? pk.shade : 1;
-  // through the glass: a little darker and bluer
-  out[1] = out[1] * L3[0] * sh * 0.85 + 6; out[2] = out[2] * L3[1] * sh * 0.85 + 8; out[3] = out[3] * L3[2] * sh * 0.85 + 16;
+  glassOver(out, out[1] * L3[0] * sh, out[2] * L3[1] * sh, out[3] * L3[2] * sh, sheen, day);
 }
+
+/**
+ * Glass over what is behind it (r, g, b), into out: a faint blue-green tint, and the sky and the
+ * city mirrored in it as soft diagonal bands (sheen 0..1 along the pane); by day the reflection wins.
+ */
+export function glassOver(out: number[], r: number, g: number, b: number, sheen: number, day: number) {
+  const s = sheen * sheen * sheen, k = 0.72 - 0.25 * day - 0.2 * s;
+  out[1] = r * k + 10 + s * 55 + day * 45; out[2] = g * k + 16 + s * 65 + day * 55; out[3] = b * k + 22 + s * 80 + day * 70;
+  if (s > 0.7 && r + g + b < 120) out[0] = C('/');
+}
+
+/** Where on a pane the reflections run: diagonal bands across the facade. */
+export const sheenAt = (along: number, z: number) => 0.5 + 0.5 * Math.sin(along * 0.35 + z * 0.5);
