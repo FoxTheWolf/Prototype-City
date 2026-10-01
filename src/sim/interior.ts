@@ -33,6 +33,8 @@ export interface Plan {
   /** The box this floor fills: the ground volume, or a setback higher up. */
   box: number;
   rooms: Room[];
+  /** Doors to the street besides the main one: each shop's own, in its shop front. */
+  exits: Door[];
   /** Room index + 1 per cell (0 outside), with the DOOR bit. Cell (i, j) is at ((gx + i), (gy + j)) * CELL. */
   cells: Uint8Array;
   gx: number;
@@ -259,6 +261,17 @@ export function liftGlassAt(city: City, k: number, x: number, y: number): boolea
   return u > F.su1 + 0.08 && u < F.lu1 - 0.08 && v > F.cv0 - 0.3 && v < F.cv1 + 0.3;
 }
 
+/**
+ * Every street door of lot k: the main one, then the shops' own. With `made`, only from a ground
+ * plan already made (for the renderer, which must not make plans for every far facade).
+ */
+export function exitsOf(city: City, k: number, made = false): Door[] {
+  const D = doorOf(city, k), P = made ? cachedPlan(city, k, 0) : planOf(city, k, 0);
+  const out = D ? [D] : [];
+  if (P) out.push(...P.exits);
+  return out;
+}
+
 const planCache = new Map<number, Plan | null>();
 /** Plans kept at most; the oldest go first (they are remade the same when needed again). */
 const PLAN_KEEP = 4000;
@@ -339,6 +352,16 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
 
   const office = isOffice(base), shop = ground && base.shop;
   let unit = 0;
+  /** A shop's own street door: one bay in the middle of its front on the outer wall at v = vf. */
+  const exits: Door[] = [];
+  const shopExit = (a: number, b: number, vf: number) => {
+    const face = vf <= V0 + 0.01 ? (ax ? 2 : 0) : (ax ? 3 : 1), m = (a + b) / 2, a0 = Math.floor(m / BAY) * BAY;
+    if (a0 < a + 0.3 || a0 + BAY > b - 0.3) return;
+    const [x, y, nX, nY] = facePoint(B, face, a0 + BAY / 2);
+    if (C && C.nx * x + C.ny * y > C.c - 0.3) return;
+    if (isSolid(city, x + nX * 0.6, y + nY * 0.6)) return;
+    exits.push({ face, a0, a1: a0 + BAY });
+  };
 
   /** An apartment from a to b along u, its depth running from the corridor wall at cv toward vf. */
   const apartment = (a: number, b: number, cv: number, vf: number) => {
@@ -384,7 +407,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   /** Split [a, b] along u into units of a few bays and fill each. */
   const units = (a: number, b: number, cv: number, vf: number) => {
     if (b - a < 1.2) return;
-    if (shop) { room('shop', unit++, a, Math.min(cv, vf), b, Math.max(cv, vf)); return; }
+    if (shop) { room('shop', unit++, a, Math.min(cv, vf), b, Math.max(cv, vf)); shopExit(a, b, vf); return; }
     if (office) { offices(a, b, cv, vf); return; }
     for (let u = a; u < b - 0.5;) {
       const n = 4 + ((rnd() * 4) | 0);
@@ -438,7 +461,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     const outer = core < 0 ? V0 : V1, back = core < 0 ? F.cv0 : F.cv1;
     if (Math.abs(outer - back) > 1.2) {
       const v0 = Math.min(outer, back), v1 = Math.max(outer, back), vm = (v0 + v1) / 2;
-      const c = cellAt({ box: j, rooms, cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & 127;
+      const c = cellAt({ box: j, rooms, exits, cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & 127;
       const next = c && rooms[c - 1].unit >= 0 ? rooms[c - 1] : null; // not a corridor or the lobby
       room(next ? (next.kind === 'shop' || next.kind === 'open' || next.kind === 'office' ? next.kind : 'bedroom') : office ? 'office' : 'bedroom', next ? next.unit : unit++, F.su0, v0, F.lu1, v1);
       if (next && next.kind !== 'shop') doorU(F.su0, vm - 0.6);
@@ -447,7 +470,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   } else {
     // walk-up: stairs at one end, the rest is one home (or a shop downstairs)
     room('stair', -1, U0, V0, F.su1, V1);
-    if (shop) room('shop', unit++, F.su1, V0, U1, V1);
+    if (shop) { room('shop', unit++, F.su1, V0, U1, V1); shopExit(F.su1, U1, V0); if (!exits.length) shopExit(F.su1, U1, V1); }
     else if (office) { room('office', unit++, F.su1, V0, U1, V1); doorU(F.su1, V0 + 0.4); }
     else {
       const n = (U1 - F.su1) / BAY, id = unit++;
@@ -458,7 +481,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   }
   for (const [u0, v0, u1, v1] of doors) fill(u0, v0, u1, v1, DOOR, true);
   connect(cells, nx, ny, rooms);
-  return { box: j, rooms, cells, gx, gy, nx, ny };
+  return { box: j, rooms, exits, cells, gx, gy, nx, ny };
 }
 
 /**
@@ -521,13 +544,17 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
   if (kb < 0 && isSolid(city, bx, by)) return true;
   if (ka !== kb) {
     if (ka >= 0 && kb >= 0) return true;
-    const k = ka >= 0 ? ka : kb, D = f === 0 ? doorOf(city, k) : null;
-    if (!D) return true;
-    const B = city.buildings[k], [px, py, nx, ny] = facePoint(B, D.face, D.a0);
-    const sa = (ax - px) * nx + (ay - py) * ny, sb = (bx - px) * nx + (by - py) * ny;
-    if (sa > 0 === sb > 0) return true; // left through another face
-    const ua = alongFace(B, D.face, ax, ay), ub = alongFace(B, D.face, bx, by);
-    return Math.min(ua, ub) < D.a0 + 0.05 || Math.max(ua, ub) > D.a1 - 0.05;
+    const k = ka >= 0 ? ka : kb, B = city.buildings[k];
+    if (f !== 0) return true;
+    // through one of the street doors: the main one or a shop's
+    for (const D of exitsOf(city, k)) {
+      const [px, py, nx, ny] = facePoint(B, D.face, D.a0);
+      const sa = (ax - px) * nx + (ay - py) * ny, sb = (bx - px) * nx + (by - py) * ny;
+      if (sa > 0 === sb > 0) continue; // not crossing this face
+      const ua = alongFace(B, D.face, ax, ay), ub = alongFace(B, D.face, bx, by);
+      if (Math.min(ua, ub) >= D.a0 + 0.05 && Math.max(ua, ub) <= D.a1 - 0.05) return false;
+    }
+    return true;
   }
   if (ka < 0) return false;
   const P = planOf(city, ka, f);

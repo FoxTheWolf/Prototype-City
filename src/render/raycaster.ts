@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { liftFloors, type World } from '../sim/world';
-import { baseAt, cachedPlan, DOOR_H, doorOf, habitable, liftGlassAt, lotOf, planOf, type Plan } from '../sim/interior';
+import { baseAt, cachedPlan, DOOR_H, doorOf, exitsOf, habitable, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
 import { glassPass, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -139,7 +139,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   let inside: Inside | null = null, skip: Building | null = null;
   if (plan) {
     skip = city.buildings[kIn];
-    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
+    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
     prepareInside(inside, px, py);
   }
   frameInside = !!inside;
@@ -565,7 +565,9 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner;
   const escU = ((wi % 7) - 2 + fw) / 2;
   const balcony = S === 'residential' && B.feat < 0.5;
-  const door = B.tier === 1 && habitable(B) ? doorOf(frameCity, id) : null;
+  // the street doors on this face: the main one, and the shops' (once the ground plan is made)
+  let door: Door | null = null;
+  if (B.tier === 1 && habitable(B)) for (const D of exitsOf(frameCity, id, true)) if (D.face === face && along > D.a0 && along < D.a1) door = D;
   // the rooms behind the windows, near enough to make out (see interior.ts): one look into the
   // ground floor's plan and one into the floors above, made the first time a window needs them
   const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
@@ -692,7 +694,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       } else if (!inText && (z < 2.72 || z > 3.28)) { ch = G.dash; r = B.sign[0] * lit * 0.45; g = B.sign[1] * lit * 0.45; b = B.sign[2] * lit * 0.45; }
       else { ch = G.dot; r = 14; g = 12; b = 16; } // dark backing board
     }
-    else if (door && face === door.face && along > door.a0 && along < door.a1 && z < DOOR_H + 0.35) {
+    else if (door && z < DOOR_H + 0.35) {
       // the street door: a frame, two glass leaves and a transom, lit from the lobby
       const e = Math.min(along - door.a0, door.a1 - along);
       if (e < 0.12 || z > DOOR_H + 0.22) wall(e < 0.12 ? G.bar : G.eq, 1.5);

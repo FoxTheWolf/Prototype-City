@@ -28,6 +28,8 @@ export interface Inside {
   /** Metres one column covers at distance 1 (for the panel's lettering). */
   colW: number;
   door: Door | null;
+  /** All its street doors (the main one and the shops'), for the ground floor. */
+  exits: Door[];
   /** The building's electric light (blackouts), daylight 0..1, seconds, rain 0..1. */
   elec: number;
   day: number;
@@ -69,7 +71,7 @@ let stairIdx = -1;
  * common parts always on, the others when someone is home (or `on`), as seen from outside too.
  */
 function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, elec: number, day: number, on: boolean, out: Float32Array, o: number) {
-  on ||= R.unit < 0 || hash3(boxId, r * 31 + f, 11) < base.lit * (1 - 0.75 * day) * 1.3;
+  on ||= R.unit < 0 || hash3(boxId, r * 31 + f, 11) < (R.kind === 'shop' ? 0.8 : base.lit * (1 - 0.75 * day) * 1.3);
   const c = !on ? null : R.kind === 'lobby' ? LOBBY : isOffice(base) || R.kind === 'stair' || R.kind === 'lift' ? TUBE : WARM;
   const k = c ? elec : 0;
   out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
@@ -318,7 +320,8 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const along = face < 2 ? hy : face < 4 ? hx : hx * K!.ny - hy * K!.nx;
     const sp = faceSpan(B, face), corner = along - sp[0] < 0.35 || sp[1] - along < 0.35;
     const bay = along / BAY, fw = bay - Math.floor(bay), ground = I.floor === 0;
-    const D = I.door, isDoor = ground && D && D.face === face && along > D.a0 && along < D.a1;
+    let isDoor = false;
+    if (ground) for (const D of I.exits) if (D.face === face && along > D.a0 && along < D.a1) isDoor = true;
     // a wall against the next building has no windows, up to that building's roof
     const nX = face === 0 ? -1 : face === 1 ? 1 : face === 4 ? K!.nx : 0, nY = face === 2 ? -1 : face === 3 ? 1 : face === 4 ? K!.ny : 0;
     const blind = builtUp(I.city, hx + nX * 0.3, hy + nY * 0.3, z0 + 1);
