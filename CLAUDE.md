@@ -253,7 +253,7 @@ Ideia do usuário: uma rede social interna em que os cidadãos da simulação pu
 - **Volume:** precisa de um limite de posts por hora e de uma priorização por relevância.
 - **Coerência:** uma testemunha só fala do que podia ver.
 
-**O que preparar antes:** a fila de eventos pode nascer já na etapa 6 (trânsito), com as batidas e os engarrafamentos, mesmo sem ninguém lendo. Assim a rede social, as notícias e os logs de câmera consomem a mesma fonte depois.
+**O que preparar antes:** a fila de eventos pode nascer já na etapa 7 (trânsito), com as batidas e os engarrafamentos, mesmo sem ninguém lendo. Assim a rede social, as notícias e os logs de câmera consomem a mesma fonte depois.
 
 ## Design: rede elétrica e blackout (proposta, 2026-09-30)
 
