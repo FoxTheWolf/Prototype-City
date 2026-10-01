@@ -406,7 +406,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E (e as setas laterais) giram; **F** na frente de um orelhão tira o fone (e desliga);
   - celular (como no GTA IV): **seta para cima** (ou P, ou o **botão do meio**) tira; com ele fora, o ponteiro do sistema fica livre e clica nas teclas (segurar o botão direito olha em volta; a roda anda pelo menu e pelas listas); com ele fora, setas = d-pad, Enter ou botão esquerdo = OK, Backspace ou botão direito = Voltar (na tela inicial, guarda), dígitos = teclado, + = \*, − ou . = #, **Space** = tecla verde (abre o discador, liga), **Delete** = tecla vermelha (volta à tela inicial); no menu, a tecla do lugar do app na grade 3×4 abre direto; no mapa, 1–4, \*/# ou a roda do mouse = zoom, OK = lista de lugares (ou centralizar);
-  - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **V** modo suave (SHARP, SOFT, SOFT+; veja o Histórico), **M** som;
+  - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **V** quanto os glifos aparecem (SOFT, o padrão, SHARP, SHARPER, SHARPEST; veja o Histórico), **M** som;
   - interiores: entrar pela porta; subir de elevador (as escadas internas saíram por enquanto): mirar na botoeira e clicar (botão esquerdo); escadas de incêndio dos prédios de tijolo andando pela borda de fora do patamar;
   - debug: **T** e Shift+T mudam a hora em ±1 h (o trânsito e os pedestres seguem a hora); **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda; **PageUp/PageDown** sobem e descem um andar dentro de um prédio (até existirem escadas e elevadores).
   - A linha de status mostra semente, posição, `DRAW x ms (MAX y)` e os modos. A linha de cima dela mostra data, hora, clima e `POWER x/y`.
@@ -462,6 +462,8 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Referências** (`referencias/`): 02, 14, 15, 16, 18, 19.
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
+
+- **Retorno do usuário sobre a segunda parte do bugfix (2026-10-01):** aprovou praticamente tudo. Gostou do modo suave; o SOFT+ era quase melhor, mas o aliasing dos glifos nas paredes distraía. **Os modos foram renomeados e invertidos** (`Look.sharp` em `palette.ts`, tecla V): **SOFT** (o padrão; chão, objetos e paredes em blocos, as paredes mais escuras que o antigo SOFT+: fundo 0,34 e glifo 0,85), **SHARP** (o antigo SOFT: chão e objetos), **SHARPER** (só o chão) e **SHARPEST** (desligado, o antigo SHARP).
 
 - **Retorno do usuário sobre a primeira parte (2026-10-01, numa conversa nova, com capturas do jogo e do ASCII City), e a segunda parte do bugfix:**
   - **O pedido sobre o visual:** a cidade "dói nos olhos": a imagem é muito pontilhada. Nas capturas do ASCII City, as fachadas são áreas grandes de caracteres densos com cor forte e janelas escuras sólidas, e o chão é liso. O usuário sugeriu misturar blocos: o chão em blocos, objetos retos em blocos, as paredes não tanto. Como é subjetivo, pediu um **modo separado com toggle**, para ele escolher.

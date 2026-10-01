@@ -10,8 +10,9 @@ export interface Look {
   /** Swap some ASCII glyphs for block and box shapes. */
   blocks: boolean;
   /**
-   * Easier on the eyes (a toggle, to compare): 0 off; 1 the ground and solid objects drawn as color
-   * blocks, their glyphs faint; 2 the walls filled denser too.
+   * How much the glyphs show (key V): 0 SOFT, the ground, solid objects and walls filled as color
+   * blocks with the glyphs faint (the walls darker); 1 SHARP, the ground and objects only; 2 SHARPER,
+   * the ground only; 3 SHARPEST, plain glyphs.
    */
-  soft: number;
+  sharp: number;
 }

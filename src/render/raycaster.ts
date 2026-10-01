@@ -503,12 +503,13 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
     }
     if (dark < 0.999 && depth[i] < 1e9) { cells[k + 1] *= dark; cells[k + 2] *= dark; cells[k + 3] *= dark; bg[k] *= dark; bg[k + 1] *= dark; bg[k + 2] *= dark; }
     if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
-    if (look.soft && depth[i] < 1e9) {
-      // the soft look: the ground and solid objects become blocks of their color, with the glyph
-      // only a faint texture on them; at 2 the walls are filled denser too
-      const kd = kind[i], fill = kd === KIND.ground ? 0.5 : kd === KIND.object ? 0.7 : look.soft > 1 && (kd === KIND.wall || kd === KIND.room) ? 0.42 : 0;
+    if (look.sharp < 3 && depth[i] < 1e9) {
+      // the soft looks: the ground (up to SHARPER), solid objects (up to SHARP) and walls (SOFT) become
+      // blocks of their color, with the glyph only a faint texture on them; the walls kept darker
+      const kd = kind[i], s = look.sharp;
+      const fill = kd === KIND.ground ? 0.5 : kd === KIND.object && s < 2 ? 0.7 : s === 0 && (kd === KIND.wall || kd === KIND.room) ? 0.34 : 0;
       if (fill) {
-        const glyph = kd === KIND.ground ? 0.82 : kd === KIND.object ? 0.95 : 1;
+        const glyph = kd === KIND.ground ? 0.82 : kd === KIND.object ? 0.95 : 0.85;
         bg[k] = cells[k + 1] * fill; bg[k + 1] = cells[k + 2] * fill; bg[k + 2] = cells[k + 3] * fill;
         cells[k + 1] *= glyph; cells[k + 2] *= glyph; cells[k + 3] *= glyph;
       }
