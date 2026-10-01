@@ -1,6 +1,7 @@
 import { PLAYER_PHONE, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
+import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 
 /**
@@ -12,13 +13,14 @@ import { Radio } from './radio';
  * Controls, after GTA IV on PC: Up takes it out (P too, both ways); with it out, the arrows are
  * the d-pad, Enter or the left mouse button its middle (OK, and the left soft key's action),
  * Backspace or a click of the right mouse button the right soft key (Back), which on the standby
- * screen puts it away; the middle button takes it out and puts it away. With it out the mouse moves
- * a cursor instead of the view (hold the right button to look around), and a click on a key presses it; the digit keys are the keypad, + / numpad * its * key, - and . its # key, Space the
+ * screen puts it away; the middle button takes it out and puts it away. With it out the system
+ * cursor is free (hold the right button to look around), a click on a key presses it, and the wheel
+ * steps through the menu and scrolls lists; the digit keys are the keypad, + / numpad * its * key, - and . its # key, Space the
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
@@ -30,6 +32,35 @@ export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
 export const ZOOM_ROW_M = [8, 18, 36, 96];
 /** Inside a building the map shows the floor plan instead, at these scales. */
 export const INDOOR_ROW_M = [1, 2, 3.5, 6];
+/**
+ * The phone's settings: a list of pages; the sound, display and unit pages are rows of options
+ * (left/right or OK change them), "about" lists the hardware and the line, "debug" holds what is
+ * there for testing the game (the secret codes, to dial them; to go once gameplay replaces it).
+ */
+export type SetPage = 'root' | 'sound' | 'display' | 'units' | 'about' | 'debug';
+export const SET_PAGES: SetPage[] = ['sound', 'display', 'units', 'about', 'debug'];
+export interface Prefs {
+  /** 0 normal, 1 vibrate, 2 silent. */
+  profile: number;
+  ring: number;
+  /** Keypad tones: 0 beep, 1 click only, 2 touch-tones, 3 off. */
+  keys: number;
+  theme: number;
+  /** 0 Fahrenheit, 1 Celsius. */
+  temp: number;
+  /** 0 metres, 1 feet. */
+  dist: number;
+}
+export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'keys'], display: ['theme'], units: ['temp', 'dist'] };
+/** How many values each option has (their names are in the locale). */
+export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, keys: 4, theme: 6, temp: 2, dist: 2 };
+
+/** A distance as the phone shows it, in the units picked in its settings. */
+export function fmtDist(m: number, feet: number): string {
+  if (feet) { const f = m * 3.281; return f < 5280 ? `${Math.round(f)}ft` : `${(f / 5280).toFixed(1)}mi`; }
+  return m < 1000 ? `${Math.round(m)}m` : `${(m / 1000).toFixed(1)}km`;
+}
+
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
@@ -41,6 +72,19 @@ export class Phone {
   readonly device: Device = PLAYER_PHONE;
   readonly gps = new Gps();
   readonly radio = new Radio();
+  prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, temp: 0, dist: 0 };
+  /** Settings: the page open and the row picked on it. */
+  setPage: SetPage = 'root';
+  setSel = 0;
+  /** A sound the last key asks for (main plays it): a ringtone preview, the buzz of vibrate, or silence. */
+  cue: 'ring' | 'vibrate' | 'stop' | null = null;
+  /** The service screen a secret code opened. */
+  code: CodeKind = 'imei';
+  /** A code being dialed by itself (from the debug settings): the keys left, and when the next one goes. */
+  private autoQ = '';
+  private autoAt = 0;
+  /** LCD test: the color shown. */
+  lcdStep = 0;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
   constructor(private world: World) {}
@@ -49,7 +93,7 @@ export class Phone {
   raise = 0;
   /** 0 .. 1: held higher, the whole keypad in sight, while the screen wants typing (as in GTA IV). */
   lift = 0;
-  /** The mouse cursor while the phone is out, in grid cells, and the key under it. */
+  /** The grid cell under the system cursor, and the key there. */
   cx = -1;
   cy = -1;
   hover: Key | null = null;
@@ -98,7 +142,7 @@ export class Phone {
     this.lift += ((this.out && TYPING.includes(this.screen) ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     if (this.screen === 'boot' && now - this.since > BOOT_S) this.open('standby', now);
     // the GPS runs while the map is open, in the hand or not
-    this.gps.update(this.world, this.screen === 'map' || this.screen === 'places', now, dt);
+    this.gps.update(this.world, this.screen === 'map' || this.screen === 'places' || (this.screen === 'code' && this.code === 'gps'), now, dt);
     this.radio.update(this.world, this.screen !== 'off', now, dt);
     const J = this.radio.job;
     if (J?.what === 'weather' && J.state === 'done') { this.wxAt = this.world.time; this.radio.job = null; }
@@ -109,8 +153,19 @@ export class Phone {
   }
 
   open(s: Screen, now: number) {
+    if (this.screen === 'settings' && s !== 'settings') this.cue = 'stop';
     this.screen = s; this.since = now; this.scroll = 0;
+    if (s === 'settings') { this.setPage = 'root'; this.setSel = 0; }
     if (s === 'map') this.panX = this.panY = 0;
+  }
+
+  /** The next key of a code dialing itself, when its time has come. */
+  autoKey(now: number): Key | null {
+    if (this.screen !== 'calls') { this.autoQ = ''; return null; }
+    if (!this.autoQ || now < this.autoAt) return null;
+    const k = this.autoQ[0] as Key;
+    this.autoQ = this.autoQ.slice(1); this.autoAt = now + 0.2;
+    return k;
   }
 
   /** Where the map is: the GPS position (or the last known one), or the city's middle before any fix. */
@@ -192,7 +247,13 @@ export class Phone {
       }
       case 'calls':
         if (this.callAt >= 0) { if (k === 'rsoft') { this.callAt = -1; return true; } return false; }
-        if (/^[0-9*#]$/.test(k)) { if (this.dial.length < 16) this.dial += k; return true; }
+        if (/^[0-9*#]$/.test(k)) {
+          if (this.dial.length < 16) this.dial += k;
+          // a secret code runs as soon as its last # is in
+          const c = k === '#' ? codeKind(this.world.seed, this.dial) : null;
+          if (c) { this.code = c; this.lcdStep = 0; this.dial = ''; this.open('code', now + 0.25); }
+          return true;
+        }
         if ((k === 'send' || k === 'ok' || k === 'lsoft') && this.dial) { this.callAt = now; return true; }
         if (k === 'rsoft') { if (this.dial) this.dial = this.dial.slice(0, -1); else this.open('menu', now); return true; }
         return false;
@@ -216,9 +277,11 @@ export class Phone {
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       case 'settings':
-        if (k === 'up' || k === 'down') { this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)); return true; }
-        if (k === 'rsoft') { this.open('menu', now); return true; }
-        return false;
+        return this.settingsKey(k, now);
+      case 'code':
+        if (k === 'rsoft') { this.open('calls', now); return true; }
+        if (this.code === 'lcd' && (k === 'ok' || k === 'lsoft')) { this.lcdStep++; return true; }
+        return this.code === 'keys';
       case 'weather':
         // OK downloads it again
         if ((k === 'ok' || k === 'lsoft') && this.radio.state === 'service') { this.radio.fetch('weather', WEATHER_KB, now); this.since = now; return true; }
@@ -229,6 +292,38 @@ export class Phone {
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
     }
+  }
+
+  private settingsKey(k: Key, now: number): boolean {
+    const pg = this.setPage;
+    const back = () => { this.setSel = SET_PAGES.indexOf(pg); this.setPage = 'root'; this.since = now; this.cue = 'stop'; return true; };
+    if (pg === 'root') {
+      if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + SET_PAGES.length) % SET_PAGES.length; return true; }
+      if (k === 'ok' || k === 'lsoft') { this.setPage = SET_PAGES[this.setSel]; this.setSel = 0; this.scroll = 0; this.since = now; return true; }
+      if (k === 'rsoft') { this.open('menu', now); return true; }
+      return false;
+    }
+    if (k === 'rsoft') return back();
+    if (pg === 'about') {
+      if (k === 'up' || k === 'down') { this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)); return true; }
+      return false;
+    }
+    if (pg === 'debug') {
+      const C = secretCodes(this.world.seed);
+      if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + C.length) % C.length; return true; }
+      // OK dials the code: the dialer opens and its keys go in one by one, with their tones
+      if (k === 'ok' || k === 'lsoft') { this.dial = ''; this.callAt = -1; this.open('calls', now); this.autoQ = C[this.setSel].code; this.autoAt = now + 0.5; return true; }
+      return false;
+    }
+    const rows = PREF_ROWS[pg];
+    if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + rows.length) % rows.length; return true; }
+    const less = k === 'left';
+    if (!(less || k === 'right' || k === 'ok' || k === 'lsoft')) return false;
+    const key = rows[this.setSel], n = PREF_N[key];
+    this.prefs[key] = (this.prefs[key] + (less ? -1 : 1) + n) % n;
+    // hear what was picked
+    if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
+    return true;
   }
 
   /** The calculator: digits, # the point, the arrows + - x /, OK =, * clears. */

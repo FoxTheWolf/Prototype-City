@@ -3,10 +3,10 @@ import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, menu } from './apps';
-import { BAD, bigText, ch, DAYS, DIM, HI, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
+import { applyTheme, BAD, bigText, ch, DAYS, DIM, HI, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
-import { BOOT_LOG_S, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
+import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
 import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
 
 /**
@@ -60,6 +60,7 @@ const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
 export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
   if (P.raise < 0.01) return;
   const [ox, oy] = origin(g.cols, g.rows, P);
+  applyTheme(P.prefs.theme);
   const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
@@ -181,14 +182,6 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
     }
   }
-  // the mouse cursor: a cell in inverse, its glyph dark on white
-  if (P.out && P.cx >= 0) {
-    const x = Math.floor(P.cx), y = Math.floor(P.cy);
-    if (x >= 0 && y >= 0 && x < g.cols && y < g.rows) {
-      const i = y * g.cols + x, c = g.cells[i * 4];
-      g.put(i, c > 32 ? c : ch('+'), 20, 20, 24); g.setBg(i, 240, 240, 235);
-    }
-  }
 }
 
 /**
@@ -307,7 +300,7 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
   const [hx, hy] = P.here(), cx = hx + P.panX, cy = hy + P.panY;
   const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, D = city.diagonal;
   // title: the district at the view's middle (the city, all zoomed out), the zoom, the scale and north
-  const bar = 6, scale = `${T.zoom[zoom]} |${'-'.repeat(bar - 2)}| ${Math.round(bar * colM)}m N^`;
+  const bar = 6, scale = `${T.zoom[zoom]} |${'-'.repeat(bar - 2)}| ${fmtDist(bar * colM, P.prefs.dist)} N^`;
   S.fill(1, TB);
   const title = zoom === 3 ? cityName(city) : districtName(city, districtAt(city, cx, cy));
   S.text(1, 1, typed(title.toUpperCase().slice(0, Math.max(0, SW - scale.length - 3)), t), HI, TB);
@@ -400,7 +393,7 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
   const panned = P.panX !== 0 || P.panY !== 0;
   if (panned) {
     // moved off the position: which way back to it
-    const back = `${Math.round(Math.hypot(P.panX, P.panY))}m ${compass(-P.panX, -P.panY)}`;
+    const back = `${fmtDist(Math.hypot(P.panX, P.panY), P.prefs.dist)} ${compass(-P.panX, -P.panY)}`;
     S.text(SW - back.length - 1, SH - 2, back, DIM, TB);
   }
   gpsInfo(S, P, now, false);
@@ -434,7 +427,7 @@ function gpsInfo(S: Lcd, P: Phone, now: number, indoor: boolean) {
       for (let x = 0; x < 20; x++) S.put(11 + x, 13, x < n ? 32 : ch('.'), DIM, x < n ? HI : box);
     } else if (g.known && Math.floor(now * 2) & 1) S.center(13, G.lastKnown, DIM, box);
   } else if (g.state === 'fix') {
-    const a = G.acc.replace('{n}', String(g.acc));
+    const a = G.acc.replace('{n}m', fmtDist(g.acc, P.prefs.dist));
     S.text(SW - a.length - 1, 1, a, g.acc > 30 ? BAD : DIM, [16, 30, 40]);
   }
 }
@@ -455,7 +448,7 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
   const { city, player } = world, B = city.buildings[player.inside], plan = planOf(city, player.inside, player.floor);
   const rowM = INDOOR_ROW_M[P.zoom], colM = rowM * aspect, [hx, hy] = P.here(), cx = hx + P.panX, cy = hy + P.panY;
   const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, m = mapRaster(city);
-  const where = `${T.floor} ${player.floor === 0 ? T.ground : player.floor}`, scale = `|${'--'}| ${(4 * colM).toFixed(0)}m N^`;
+  const where = `${T.floor} ${player.floor === 0 ? T.ground : player.floor}`, scale = `|${'--'}| ${fmtDist(4 * colM, P.prefs.dist)} N^`;
   S.fill(1, TB);
   S.text(1, 1, typed(where, t), HI, TB);
   S.text(SW - scale.length - 1, 1, scale, DIM, TB);
@@ -508,7 +501,7 @@ function places(S: Lcd, P: Phone, world: World, t: number) {
   const rows = SH - 5, top = Math.max(0, Math.min(P.psel - (rows >> 1), P.places.length - rows));
   for (let n = 0; n < rows && top + n < P.places.length; n++) {
     const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? [40, 90, 120] : LCD;
-    const far = P.gps.known ? `${Math.round(Math.hypot(L.x - hx, L.y - hy))}m ${compass(L.x - hx, L.y - hy)}` : '--';
+    const far = P.gps.known ? `${fmtDist(Math.hypot(L.x - hx, L.y - hy), P.prefs.dist)} ${compass(L.x - hx, L.y - hy)}` : '--';
     const name = landmarkName(city, k).slice(0, SW - far.length - 5);
     if (sel) S.fill(3 + n, bg);
     S.text(1, 3 + n, typed(`* ${name}`, t - 0.1 - n * 0.04), sel ? [255, 255, 255] : INK, bg);

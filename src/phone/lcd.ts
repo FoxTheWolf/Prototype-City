@@ -14,6 +14,27 @@ export const LCD: C3 = [8, 15, 20], INK: C3 = [170, 225, 245], DIM: C3 = [80, 12
 export const BAD: C3 = [255, 120, 90], SEL: C3 = [40, 90, 120], WHITE: C3 = [255, 255, 255];
 export const ch = (s: string) => s.charCodeAt(0);
 
+/**
+ * The phone's themes (its settings): each sets the screen's colors. The color arrays above are
+ * changed in place, so every app follows without passing a theme around.
+ */
+const THEMES: [C3, C3, C3, C3, C3, C3][] = [
+  // screen, ink, dim, bar, highlight, selection
+  [[8, 15, 20], [170, 225, 245], [80, 120, 140], [28, 62, 82], [255, 196, 90], [40, 90, 120]],
+  [[18, 10, 4], [255, 190, 100], [150, 100, 50], [70, 40, 12], [255, 230, 160], [110, 60, 20]],
+  [[4, 14, 6], [130, 255, 140], [60, 140, 70], [16, 60, 24], [220, 255, 120], [30, 90, 40]],
+  [[196, 202, 184], [30, 36, 30], [90, 98, 86], [150, 160, 140], [140, 40, 20], [160, 175, 150]],
+  [[20, 8, 14], [255, 170, 210], [150, 90, 120], [80, 30, 56], [255, 220, 140], [110, 40, 80]],
+  [[10, 10, 10], [230, 230, 230], [120, 120, 120], [50, 50, 50], [255, 255, 255], [80, 80, 80]],
+];
+let theme = 0;
+export function applyTheme(k: number) {
+  if (k === theme) return;
+  theme = k;
+  const T = THEMES[k];
+  [LCD, INK, DIM, BAR, HI, SEL].forEach((c, i) => { const m = c as unknown as number[]; m[0] = T[i][0]; m[1] = T[i][1]; m[2] = T[i][2]; });
+}
+
 /** The screen's cells, clipped to the grid: (x, y) are screen columns and rows. */
 export class Lcd {
   constructor(private g: CharGrid, private x0: number, private y0: number) {}

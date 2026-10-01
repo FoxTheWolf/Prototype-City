@@ -746,6 +746,30 @@
         "sky": { "clear": "Clear", "partly": "Partly cloudy", "cloudy": "Cloudy", "drizzle": "Drizzle", "rain": "Rain", "storm": "Thunderstorm", "snow": "Snow" },
         "phases": ["New", "Waxing crescent", "First quarter", "Waxing gibbous", "Full", "Waning gibbous", "Last quarter", "Waning crescent"] },
       "soon": ["Connected over EDGE", "Coming soon"],
+      "set": {
+        "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "about": "About phone", "debug": "Debug (game)" },
+        "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "temp": "Temperature", "dist": "Distance" },
+        "values": {
+          "profile": ["Normal", "Vibrate", "Silent"],
+          "ring": ["Desk Bell", "Trill", "Nocturne", "Arcade", "Pulse", "Noir"],
+          "keys": ["Beep", "Click", "Touch-tone", "Off"],
+          "theme": ["Ice", "Amber", "Green", "Paper", "Rose", "Mono"],
+          "temp": ["°F", "°C"],
+          "dist": ["Metres", "Feet"]
+        },
+        "hint": "< > change   OK next",
+        "debugHint": ["Secret codes of this firmware.", "In the game they are to be found", "out there. OK dials one."],
+        "dial": "Dial"
+      },
+      "code": {
+        "imei": "IMEI", "sv": "SV 07",
+        "gps": "GPS TEST", "sat": "SAT", "el": "EL", "az": "AZ", "snr": "SNR", "use": "USE", "fix": "FIX", "noFix": "NO FIX",
+        "field": "FIELD TEST", "serving": "SERVING CELL", "neighbours": "NEIGHBOURS", "lac": "LAC", "arfcn": "ARFCN", "ta": "TA", "rxlev": "RXLEV", "noCell": "NO CELL",
+        "sensors": "SENSORS", "battery": "Battery", "volt": "Voltage", "btemp": "Batt temp", "light": "Ambient light", "uptime": "Uptime", "rf": "RF level", "radioTemp": "PA temp",
+        "keys": "KEY TEST", "keysHint": "Press every key",
+        "lcd": "LCD TEST", "lcdHint": "OK next color",
+        "version": "VERSION", "build": "Build", "date": "Date", "baseband": "Baseband", "bootloader": "Bootloader", "hw": "HW rev", "eng": "ENGINEERING BUILD - NOT FOR SALE"
+      },
       "number": "My number", "credit": "Credit", "dataLeft": "Data left", "dataUsed": "Data used", "signal": "Signal", "cell": "Cell", "searching": "SEARCHING",
       "store": ["No data connection", "Apps download over EDGE", "or a Wi-Fi hotspot"],
       "boxes": ["Inbox", "Sent", "Drafts", "Outbox"],

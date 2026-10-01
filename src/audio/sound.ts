@@ -178,12 +178,14 @@ export class Sound {
    * A phone key: the snap of its rubber dome (a click of bright noise) and the handset's short
    * keypad tone, a little higher for the d-pad than the digits, low when the key does nothing.
    */
-  phoneKey(digit: boolean, ok = true) {
+  phoneKey(digit: boolean, ok = true, tone = true) {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), c = gain(ctx, 0, this.master);
     s.buffer = this.noise;
     s.connect(filter(ctx, 'highpass', 2500, 0.7)).connect(c);
     c.gain.setValueAtTime(0.09, t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.012);
     s.start(t, Math.random() * 1.5); s.stop(t + 0.02);
+    // the keypad tone can be turned off in the phone's settings: only the dome's click then
+    if (!tone) return;
     const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
     o.type = 'sine'; o.frequency.value = !ok ? 520 : digit ? 1180 : 1560;
     o.connect(g);
@@ -201,6 +203,62 @@ export class Sound {
       o.frequency.value = f; o.connect(g);
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.045, t + 0.005); g.gain.setValueAtTime(0.045, t + 0.13); g.gain.linearRampToValueAtTime(0, t + 0.14);
       o.start(t); o.stop(t + 0.2);
+    }
+  }
+
+  private ringNodes: AudioScheduledSourceNode[] = [];
+  /** Stop a ringtone that is playing. */
+  stopRing() { for (const n of this.ringNodes) try { n.stop(); } catch { /* already stopped */ } this.ringNodes = []; }
+  /**
+   * A ringtone, synthesized as the handsets of the time played them (a few voices of square and
+   * sine), for `secs` seconds; k picks it (see RINGTONES in phone/phone.ts). The phone's settings play
+   * it as a preview; incoming calls (stage 9B) ring with it.
+   */
+  ring(k: number, secs = 3) {
+    this.stopRing();
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.05;
+    const note = (f: number, at: number, len: number, type: OscillatorType = 'square', v = 0.03) => {
+      if (at > secs) return;
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.type = type; o.frequency.value = f;
+      o.connect(filter(ctx, 'lowpass', 3500, 0.7)).connect(g);
+      g.gain.setValueAtTime(0, t0 + at); g.gain.linearRampToValueAtTime(v, t0 + at + 0.01); g.gain.setValueAtTime(v, t0 + at + len - 0.02); g.gain.linearRampToValueAtTime(0, t0 + at + len);
+      o.start(t0 + at); o.stop(t0 + at + len + 0.02);
+      this.ringNodes.push(o);
+    };
+    const m = (n: number) => 440 * 2 ** ((n - 69) / 12);
+    switch (k) {
+      case 0: // the bell of a desk phone: two tones warbling, 2 s on, 4 s off
+        for (let a = 0; a < secs; a += 6) for (let b = 0; b < 2; b += 0.05) { note(440 * (b % 0.1 < 0.05 ? 1 : 1.09), a + b, 0.05, 'triangle', 0.04); }
+        break;
+      case 1: // trill: a fast high warble in bursts
+        for (let a = 0; a < secs; a += 1.2) for (let b = 0; b < 0.6; b += 0.06) note(b % 0.12 < 0.06 ? 1400 : 1750, a + b, 0.06, 'square', 0.02);
+        break;
+      case 2: // nocturne: a slow minor arpeggio
+        [69, 72, 76, 81, 76, 72, 69, 64].forEach((n, i) => { for (let a = 0; a < secs; a += 3.4) note(m(n), a + i * 0.4, 0.38, 'triangle', 0.045); });
+        break;
+      case 3: // arcade: a bright rising run
+        [72, 76, 79, 84, 79, 84, 88, 91].forEach((n, i) => { for (let a = 0; a < secs; a += 1.8) note(m(n), a + i * 0.12, 0.1, 'square', 0.022); });
+        break;
+      case 4: // pulse: two notes, insistent
+        for (let a = 0; a < secs; a += 0.5) note(a % 1 < 0.5 ? m(76) : m(71), a, 0.22, 'square', 0.025);
+        break;
+      default: // noir: a muted walking bass and a high answer
+        [[45, 0], [48, 0.35], [50, 0.7], [52, 1.05], [76, 1.5], [74, 1.8]].forEach(([n, at]) => { for (let a = 0; a < secs; a += 2.6) note(m(n), a + at, n > 60 ? 0.25 : 0.3, n > 60 ? 'sine' : 'triangle', n > 60 ? 0.04 : 0.06); });
+    }
+  }
+
+  /** The phone vibrating against the hand (silent profiles): a low buzz in bursts. */
+  vibrate(secs = 1.6) {
+    this.stopRing();
+    const ctx = this.ctx, t0 = ctx.currentTime;
+    for (let a = 0; a < secs; a += 0.8) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.type = 'sawtooth'; o.frequency.value = 150;
+      o.connect(filter(ctx, 'lowpass', 400, 1)).connect(g);
+      g.gain.setValueAtTime(0, t0 + a); g.gain.linearRampToValueAtTime(0.05, t0 + a + 0.03); g.gain.setValueAtTime(0.05, t0 + a + 0.42); g.gain.linearRampToValueAtTime(0, t0 + a + 0.47);
+      o.start(t0 + a); o.stop(t0 + a + 0.5);
+      this.ringNodes.push(o);
     }
   }
 

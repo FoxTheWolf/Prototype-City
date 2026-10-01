@@ -63,17 +63,21 @@ let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
-  const now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));
-  // the dialer plays touch-tones, and a call fails for want of a network
-  if (phone.screen === 'calls' && done && /^[0-9*#]$/.test(pk)) sound?.dtmf(pk);
-  else sound?.phoneKey(/^\d$/.test(pk), done !== false);
+  const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));
+  // keypad tones as the settings say: none in silent or with them off, the dome's click only, or a
+  // tone (touch-tones on the dialer, or on every digit); a call fails for want of a network
+  const pr = phone.prefs;
+  if (pr.profile !== 2 && pr.keys !== 3) {
+    if (done && /^[0-9*#]$/.test(pk) && (pr.keys === 2 || (pr.keys === 0 && was === 'calls'))) sound?.dtmf(pk);
+    else sound?.phoneKey(/^\d$/.test(pk), done !== false, pr.keys !== 1);
+  }
   if (phone.screen === 'calls' && done && phone.callAt === now) sound?.callFail();
   if (done === 'away') sound?.phoneSlide(false);
 }
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
-  // the cursor starts on the middle of the phone's screen
-  if (r !== 'in') { phone.cx = grid.cols - 31.5; phone.cy = grid.rows - 28.5; }
+  // with the phone out the system cursor is free to click its keys; put away, the view takes the mouse again
+  if (r === 'in') input.lock(); else input.unlock();
   sound?.phoneSlide(r !== 'in');
   if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
 }
@@ -82,21 +86,32 @@ function phoneToggle() {
 // looks around instead. The middle button takes the phone out and puts it away.
 // Otherwise, in a lift car, aim at a button of its panel and click it.
 addEventListener('contextmenu', (e) => e.preventDefault());
-// the mouse wheel zooms the phone's map
+// the mouse wheel zooms the phone's map, steps through the menu's apps and scrolls its lists
 addEventListener('wheel', (e) => {
-  if (!phone.out || phone.screen !== 'map' || !e.deltaY) return;
-  if (phone.setZoom(phone.zoom + Math.sign(e.deltaY), performance.now() / 1000)) sound?.phoneKey(false);
+  if (!phone.out || !e.deltaY) return;
+  const d = Math.sign(e.deltaY);
+  if (phone.screen === 'map') { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
+  phonePress(phone.screen === 'menu' ? (d > 0 ? 'right' : 'left') : d > 0 ? 'down' : 'up');
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
 let rightAt = -1, rightMoved = 0;
+/** The grid cell under the system cursor. */
+function cellAtClient(cx: number, cy: number): [number, number] {
+  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  return [Math.floor(((cx - r.left) * dpr - layout.originX) / layout.cellW), Math.floor(((cy - r.top) * dpr - layout.originY) / layout.cellH)];
+}
+addEventListener('mousemove', (e) => { [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY); });
 addEventListener('mousedown', (e) => {
-  if (!input.locked) return;
-  if (e.button === 1) { e.preventDefault(); if (running) phoneToggle(); return; }
+  if (!running) return;
+  if (e.button === 1) { e.preventDefault(); phoneToggle(); return; }
   if (phone.out) {
-    if (e.button === 0) phonePress(keyAt(grid.cols, grid.rows, phone, Math.floor(phone.cx), Math.floor(phone.cy)) ?? 'ok');
-    else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; }
+    if (e.button === 0) {
+      const [x, y] = cellAtClient(e.clientX, e.clientY);
+      phonePress(keyAt(grid.cols, grid.rows, phone, x, y) ?? 'ok');
+    } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; }
     return;
   }
+  if (!input.locked) return;
   if (e.button !== 0 || !liftFloors(world)) return;
   const b = pickedButton();
   if (b >= 0) sound?.beep(callLift(world, b));
@@ -104,7 +119,7 @@ addEventListener('mousedown', (e) => {
 addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
-  rightAt = -1;
+  rightAt = -1; input.drag = false;
 });
 addEventListener('keydown', (e) => {
   // the phone: Up (or P) takes it out; while it is out, its keys (see phone.ts)
@@ -166,7 +181,7 @@ function begin() {
   input.lock();
 }
 overlay.addEventListener('click', begin);
-canvas.addEventListener('click', () => { if (!input.locked) input.lock(); });
+canvas.addEventListener('click', () => { if (!input.locked && !phone.out) input.lock(); });
 
 const bolt = new Float64Array(2);
 let last = performance.now();
@@ -182,12 +197,7 @@ function frame(now: number) {
 
   // camera first, so this frame's movement uses the heading the player sees
   const [mx, my] = input.takeMouse();
-  if (phone.out && rightAt < 0) {
-    // the mouse moves the phone's cursor, a cell per cell's width of travel
-    const dpr = devicePixelRatio || 1;
-    phone.cx = Math.max(0, Math.min(grid.cols - 0.01, phone.cx + (mx * dpr) / layout.cellW));
-    phone.cy = Math.max(0, Math.min(grid.rows - 0.01, phone.cy + (my * dpr) / layout.cellH));
-  } else camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
+  camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
   const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
   if (running) camera.look(turn * 2.2 * dt, 0);
@@ -217,7 +227,11 @@ function frame(now: number) {
   });
   const ms = performance.now() - r0;
   phone.update(dt, now / 1000);
-  phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, Math.floor(phone.cx), Math.floor(phone.cy)) : null;
+  // a code dialing itself (from the debug settings), and the sounds the phone asked for
+  const ak = phone.out ? phone.autoKey(now / 1000) : null;
+  if (ak) phonePress(ak);
+  if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
+  phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, phone.cx, phone.cy) : null;
   drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);

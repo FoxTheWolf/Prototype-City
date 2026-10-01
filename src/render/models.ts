@@ -428,10 +428,16 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
       part(Box, -hx, -hy, 0.45, -hx + 0.22, hy, 0.85, FAB, Solid, '#', '='),
       part(Box, -hx, -hy, 0.45, hx, -hy + 0.18, 0.65, FAB, Solid, '#', '='),
       part(Box, -hx, hy - 0.18, 0.45, hx, hy, 0.65, FAB, Solid, '#', '=')]; break;
-    case 'coffee': case 'table': m = [
-      part(Box, -hx, -hy, kind === 'table' ? 0.72 : 0.38, hx, hy, kind === 'table' ? 0.77 : 0.43, WOOD, Solid, '-', '='),
-      part(Box, -hx + 0.05, -hy + 0.05, 0, -hx + 0.1, -hy + 0.1, 0.72, WOOD, Solid, '|'),
-      part(Box, hx - 0.1, hy - 0.1, 0, hx - 0.05, hy - 0.05, 0.72, WOOD, Solid, '|')]; break;
+    case 'coffee': case 'table': {
+      // the top, and a leg under each corner up to it
+      const top = kind === 'table' ? 0.72 : 0.38;
+      m = [part(Box, -hx, -hy, top, hx, hy, top + 0.05, WOOD, Solid, '-', '=')];
+      for (const [lx, ly] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const cx = lx * (hx - 0.08), cy = ly * (hy - 0.08);
+        m.push(part(Box, cx - 0.03, cy - 0.03, 0, cx + 0.03, cy + 0.03, top, WOOD, Solid, '|'));
+      }
+      break;
+    }
     case 'tv': m = [part(Box, -hx, -hy, 0, hx, hy, 0.5, WOOD, Solid, '=', '_'), part(Box, -0.05, -hy + 0.1, 0.5, 0.03, hy - 0.1, 1.15, DARK, Solid, '#'), part(Box, 0.03, -hy + 0.15, 0.55, 0.05, hy - 0.15, 1.1, [90, 140, 200], Glow, ':')]; break;
     case 'counter': m = [part(Box, -hx, -hy, 0, hx, hy, 0.88, WHITE, Solid, '#', '='), part(Box, -hx, -hy, 0.88, hx, hy, 0.93, [70, 70, 75], Solid, '-', '_')]; break;
     case 'fridge': m = [part(Box, -hx, -hy, 0, hx, hy, 1.8, WHITE, Solid, '|', '=', '|'), part(Box, hx, -hy + 0.1, 1.1, hx + 0.03, -hy + 0.15, 1.4, [150, 150, 155], Solid, '|')]; break;

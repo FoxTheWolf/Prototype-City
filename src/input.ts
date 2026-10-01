@@ -3,6 +3,8 @@ export class Input {
   readonly keys = new Set<string>();
   private mdx = 0;
   private mdy = 0;
+  /** With the pointer free (the phone out), the mouse still turns the view while this is set (the right button held). */
+  drag = false;
 
   constructor(private target: HTMLElement) {
     addEventListener('keydown', (e) => {
@@ -12,7 +14,7 @@ export class Input {
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
     addEventListener('mousemove', (e) => {
-      if (!this.locked) return;
+      if (!this.locked && !this.drag) return;
       // Some browsers report huge spikes on pointer lock; drop them.
       if (Math.abs(e.movementX) > 300 || Math.abs(e.movementY) > 300) return;
       this.mdx += e.movementX;
@@ -37,6 +39,9 @@ export class Input {
     this.mdx = this.mdy = 0;
     return d;
   }
+
+  /** Free the pointer: the system cursor shows. */
+  unlock() { if (this.locked) document.exitPointerLock(); }
 
   down(...codes: string[]) { return codes.some((c) => this.keys.has(c)); }
 }

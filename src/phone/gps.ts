@@ -33,6 +33,11 @@ export class Gps {
   /** Searching: seconds left to the first fix, out of how many. */
   wait = 0;
   waitOf = 0;
+  /** Every satellite, for the service screen: azimuth and elevation (radians), signal (dB-Hz, 0 not heard), in use. */
+  readonly satAz = new Float32Array(SATS);
+  readonly satEl = new Float32Array(SATS);
+  readonly satSnr = new Float32Array(SATS);
+  readonly satUse = new Uint8Array(SATS);
   /** Whether it ever had a fix (x, y is then the last known position). */
   known = false;
   private lastFix = -1e9;
@@ -66,9 +71,12 @@ export class Gps {
       const az = hash3(world.seed, s, 1) * Math.PI * 2 + t * 0.26 * (hash3(world.seed, s, 2) - 0.5);
       const el = 0.15 + 1.2 * Math.abs(Math.sin(hash3(world.seed, s, 3) * 6.28 + t * 0.13));
       const sky = this.sky[Math.floor(((az / (Math.PI * 2)) % 1 + 1) % 1 * AZ)], flick = hash3(s, Math.floor(now / 2), 9);
-      if (indoor) { if (el > 0.55 && flick < 0.5) n++; }
-      else if (el > sky) n++;
-      else if (el > sky - 0.35 && flick < 0.6) { n++; bounced++; }
+      const before = n, q = hash3(world.seed, s, 4);
+      let snr = 0;
+      if (indoor) { if (el > 0.55 && flick < 0.5) { n++; snr = 20 + 8 * q; } }
+      else if (el > sky) { n++; snr = 36 + 12 * q; }
+      else if (el > sky - 0.35 && flick < 0.6) { n++; bounced++; snr = 24 + 8 * q; }
+      this.satAz[s] = az; this.satEl[s] = el; this.satSnr[s] = snr; this.satUse[s] = n > before ? 1 : 0;
     }
     this.sats = n;
     this.bounced = bounced;

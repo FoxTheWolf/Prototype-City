@@ -4,7 +4,9 @@ import { calendar, moonPhase } from '../sim/clock';
 import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
 import { bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
-import { APPS, GRID_KEYS, TAPS, type App, type Phone } from './phone';
+import { VIEW_LIGHT } from '../render/raycaster';
+import { secretCodes } from './codes';
+import { APPS, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, TAPS, type App, type Key, type Phone } from './phone';
 
 /**
  * The phone's menu and its apps besides the map. Those that need nothing more work for real
@@ -59,6 +61,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'calc': return calc(S, P, t);
     case 'notes': return notes(S, P, t, now);
     case 'settings': return settings(S, P, world, t);
+    default: if (P.screen === 'code') return service(S, P, world, t, now);
   }
 }
 
@@ -125,11 +128,39 @@ function notes(S: Lcd, P: Phone, t: number, now: number) {
 }
 
 /** About the phone: its hardware, its radios, and what the GPS is doing. */
+const SET = A.set;
+/** A row of a list, picked or not: the label on the left, a value on the right. */
+function row(S: Lcd, y: number, label: string, value: string, sel: boolean, t: number) {
+  const bg = sel ? SEL : LCD;
+  if (sel) S.fill(y, bg);
+  S.text(1, y, typed(label, t), sel ? WHITE : INK, bg);
+  if (value) S.text(SW - value.length - 1, y, typed(value, t - 0.1), sel ? WHITE : DIM, bg);
+}
+
+/** Settings: the list of pages, the pages of options, about the phone, and the debug page. */
 function settings(S: Lcd, P: Phone, world: World, t: number) {
-  title(S, name('settings').toUpperCase(), t);
+  const pg = P.setPage;
+  if (pg === 'root') {
+    title(S, name('settings').toUpperCase(), t);
+    SET_PAGES.forEach((p, n) => row(S, 3 + n * 2, `${n + 1} ${SET.pages[p as keyof typeof SET.pages]}`, '>', n === P.setSel, t - 0.05 * n));
+    return softKeys(S, T.open, T.back);
+  }
+  title(S, SET.pages[pg].toUpperCase(), t);
+  if (pg === 'about') return about(S, P, world, t);
+  if (pg === 'debug') {
+    SET.debugHint.forEach((l, k) => S.text(1, 3 + k, typed(l, t - 0.05 * k), DIM, LCD));
+    secretCodes(world.seed).forEach((c, n) => row(S, 7 + n * 2, c.code, A.code[c.kind], n === P.setSel, t - 0.2 - 0.05 * n));
+    return softKeys(S, SET.dial, T.back);
+  }
+  PREF_ROWS[pg].forEach((key, n) => row(S, 3 + n * 2, SET.rows[key], `< ${SET.values[key][P.prefs[key]]} >`, n === P.setSel, t - 0.05 * n));
+  S.center(SH - 3, SET.hint, DIM, LCD);
+  softKeys(S, T.ok, T.back);
+}
+
+function about(S: Lcd, P: Phone, world: World, t: number) {
   const D = P.device, g = P.gps;
-  const imei = String(Math.floor(hash3(world.seed, 7, 7) * 1e15)).padStart(15, '0');
-  const gps = g.state === 'fix' ? `${A.gpsFix} ${g.sats} SAT +-${g.acc}m` : g.state === 'search' ? `${A.gpsSearch} ${g.sats} SAT` : g.state === 'lost' ? A.gpsLost : A.gpsOff;
+  const imei = imeiOf(world.seed);
+  const gps = g.state === 'fix' ? `${A.gpsFix} ${g.sats} SAT +-${fmtDist(g.acc, P.prefs.dist)}` : g.state === 'search' ? `${A.gpsSearch} ${g.sats} SAT` : g.state === 'lost' ? A.gpsLost : A.gpsOff;
   const R = P.radio, acc = world.telco.player, site = R.site >= 0 ? world.telco.sites[R.site] : null;
   const net = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
   const rows: [string, string][] = [
@@ -190,7 +221,7 @@ function weather(S: Lcd, P: Phone, world: World, t: number, now: number) {
     const at = base + h * 3600;
     forecast(world.seed, at, ahead);
     const c = calendar(at), label = h ? W.in.replace('{h}', String(h)) : W.now, y = 3 + k * 3;
-    const tf = `${Math.round(ahead.temp * 1.8 + 32)}F`;
+    const tf = P.prefs.temp ? `${Math.round(ahead.temp)}°C` : `${Math.round(ahead.temp * 1.8 + 32)}°F`;
     S.text(1, y, label.padEnd(5), HI, LCD);
     S.text(7, y, hhmm(c.hour), DIM, LCD);
     S.text(13, y, skyWord(ahead), INK, LCD);
@@ -201,4 +232,109 @@ function weather(S: Lcd, P: Phone, world: World, t: number, now: number) {
   S.text(1, SH - 3, `${W.moon}: ${ph}`, DIM, LCD);
   S.text(1, SH - 2, W.updated.replace('{t}', hhmm(calendar(base).hour)), DIM, LCD);
   softKeys(S, R.state === 'service' ? W.refresh : '', T.back);
+}
+
+const C = A.code;
+const imeiOf = (seed: number) => String(Math.floor(hash3(seed, 7, 7) * 1e15)).padStart(15, '0');
+
+/** The service screens the secret codes open (see codes.ts). */
+function service(S: Lcd, P: Phone, world: World, t: number, now: number) {
+  const k = P.code;
+  if (k === 'lcd') return lcdTest(S, P);
+  title(S, `${C[k]}`, t);
+  if (k === 'imei') {
+    const im = imeiOf(world.seed);
+    S.center(8, C.imei, DIM, LCD);
+    S.center(10, typed(`${im.slice(0, 2)} ${im.slice(2, 8)} ${im.slice(8, 14)} ${im[14]}`, t, 30), WHITE, LCD);
+    S.center(12, typed(C.sv, t - 0.6), DIM, LCD);
+  } else if (k === 'gps') gpsTest(S, P, t);
+  else if (k === 'field') fieldTest(S, P, world, t);
+  else if (k === 'sensors') sensors(S, P, world, t, now);
+  else if (k === 'keys') keyTest(S, P, now);
+  else if (k === 'version') version(S, P, world, t);
+  softKeys(S, '', T.back);
+}
+
+/** GPS test: the sky as a plot (north up, the horizon the ring, overhead the middle) and each satellite's signal. */
+function gpsTest(S: Lcd, P: Phone, t: number) {
+  const g = P.gps, cx = 13, cy = 12, R = 8, RX = 13;
+  for (let a = 0; a < 64; a++) S.put(Math.round(cx + Math.cos((a / 64) * 6.283) * RX), Math.round(cy + Math.sin((a / 64) * 6.283) * R), ch('.'), DIM, LCD);
+  for (let a = 0; a < 32; a++) S.put(Math.round(cx + Math.cos((a / 32) * 6.283) * RX / 2), Math.round(cy + Math.sin((a / 32) * 6.283) * R / 2), ch('.'), DIM, LCD);
+  S.put(cx, cy - R - 1, ch('N'), INK, LCD); S.put(cx, cy, ch('+'), DIM, LCD);
+  for (let s = 0; s < g.satAz.length; s++) {
+    const r = 1 - Math.min(1, g.satEl[s] / (Math.PI / 2)), x = Math.round(cx + Math.cos(g.satAz[s]) * r * RX), y = Math.round(cy + Math.sin(g.satAz[s]) * r * R);
+    const col: C3 = g.satUse[s] ? [120, 255, 150] : g.satSnr[s] ? HI : DIM;
+    S.put(x, y, ch('0123456789AB'[s]), col, LCD);
+    // the list: id, signal, a bar, in use
+    if (t < 0.1 + s * 0.05) continue;
+    const snr = Math.round(g.satSnr[s]), ly = 3 + s * 2;
+    S.text(29, ly, `${'0123456789AB'[s]} ${String(snr).padStart(2)}`, col, LCD);
+    S.text(35, ly, '#'.repeat(Math.round(snr / 10)).padEnd(5, '.'), col, LCD);
+    if (g.satUse[s]) S.put(41, ly, ch('*'), col, LCD);
+  }
+  const st = g.state === 'fix' ? `${C.fix} ${g.sats} ${C.sat} +-${fmtDist(g.acc, P.prefs.dist)}` : `${C.noFix} ${g.sats} ${C.sat}`;
+  S.text(1, SH - 2, st, g.state === 'fix' ? [120, 255, 150] : BAD, LCD);
+}
+
+/** Field test: the cell it camps on (id, area, channel, level, timing advance) and the neighbours it hears. */
+function fieldTest(S: Lcd, P: Phone, world: World, t: number) {
+  const R = P.radio, T2 = world.telco, p = world.player;
+  const lac = (k: number) => 1000 + Math.floor(hash3(world.seed, T2.sites[k].building, 77) * 8) * 111;
+  const arfcn = (k: number) => 1 + Math.floor(hash3(world.seed, k, 78) * 124);
+  if (R.site < 0) { S.center(8, C.noCell, BAD, LCD); return; }
+  const s = T2.sites[R.site], d = Math.hypot(s.x - p.x, s.y - p.y);
+  S.text(1, 3, C.serving, HI, LCD);
+  const rows: [string, string][] = [['CID', String(s.id)], [C.lac, String(lac(R.site))], [C.arfcn, String(arfcn(R.site))], [C.rxlev, `${R.dbm} dBm`], [C.ta, `${Math.round(d / 550)} (${fmtDist(d, P.prefs.dist)})`]];
+  rows.forEach(([a, b], n) => { S.text(2, 4 + n, typed(a, t - n * 0.05), DIM, LCD); S.text(12, 4 + n, typed(b, t - n * 0.05), INK, LCD); });
+  S.text(1, 10, C.neighbours, HI, LCD);
+  R.heard.filter(([k]) => k !== R.site).slice(0, 6).forEach(([k, dbm], n) => {
+    S.text(2, 11 + n * 2, typed(`${String(T2.sites[k].id).padEnd(7)}${String(arfcn(k)).padStart(4)}  ${dbm} dBm`, t - 0.3 - n * 0.05), INK, LCD);
+  });
+}
+
+/** Sensors: the battery, its temperature, the ambient light sensor (from the light in the hands), the radio. */
+function sensors(S: Lcd, P: Phone, world: World, t: number, now: number) {
+  const pct = Math.max(5, Math.round(100 - world.tick / 60 / 600)), lux = Math.round(((VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3) * 420);
+  const btemp = world.player.inside >= 0 ? 29 : 24 + world.weather.temp * 0.25, R = P.radio;
+  const temp = (c: number) => (P.prefs.temp ? `${c.toFixed(1)}°C` : `${(c * 1.8 + 32).toFixed(1)}°F`);
+  const rows: [string, string][] = [
+    [C.battery, `${pct}%`], [C.volt, `${(3.55 + pct * 0.0065).toFixed(3)} V`], [C.btemp, temp(btemp + (hash3(Math.floor(now), 1, 1) - 0.5) * 0.2)],
+    [C.light, `${lux} lx`], [C.rf, R.state === 'service' ? `${R.dbm} dBm` : '-'], [C.radioTemp, temp(btemp + 3 + (R.job ? 4 : 0))],
+    [C.uptime, `${Math.floor(world.tick / 3600)}:${String(Math.floor(world.tick / 60) % 60).padStart(2, '0')}`],
+  ];
+  rows.forEach(([a, b], n) => { S.text(1, 3 + n * 2, typed(a, t - n * 0.05), DIM, LCD); S.text(SW - b.length - 1, 3 + n * 2, b, INK, LCD); });
+}
+
+const TEST_KEYS: Key[] = ['lsoft', 'up', 'rsoft', 'left', 'ok', 'right', 'send', 'down', 'end', '1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+/** Key test: every key, lit once pressed since the screen opened, bright while held. */
+function keyTest(S: Lcd, P: Phone, now: number) {
+  S.center(3, C.keysHint, DIM, LCD);
+  TEST_KEYS.forEach((k, n) => {
+    const at = P.pressed.get(k) ?? -1, seen = at >= P.since, hot = now - at < 0.2;
+    const x = 4 + (n % 3) * 13, y = 5 + Math.floor(n / 3) * 3, bg: C3 = hot ? WHITE : seen ? [40, 140, 70] : SEL;
+    for (let dx = 0; dx < 10; dx++) S.put(x + dx, y, 32, bg, bg);
+    S.text(x + ((10 - k.length) >> 1), y, k.toUpperCase(), hot ? LCD : WHITE, bg);
+  });
+}
+
+/** LCD test: the whole screen in one color after another (OK for the next). */
+function lcdTest(S: Lcd, P: Phone) {
+  const cols: C3[] = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255], [0, 0, 0]];
+  const n = P.lcdStep % (cols.length + 1);
+  for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+    const c: C3 = n < cols.length ? cols[n] : [Math.round((x / SW) * 255), Math.round((y / SH) * 255), 128];
+    S.put(x, y, 32, c, c);
+  }
+  S.text(1, SH - 1, `${C.lcd} ${n + 1}/${cols.length + 1}  ${C.lcdHint}`, n === 3 ? [0, 0, 0] : WHITE, n < cols.length ? cols[n] : [0, 0, 0]);
+}
+
+/** Version: the firmware's build, as an engineering screen lists it. */
+function version(S: Lcd, P: Phone, world: World, t: number) {
+  const D = P.device, h = (q: number) => hash3(world.seed, 31, q);
+  const rows: [string, string][] = [
+    [C.build, `${D.os}.${Math.floor(h(1) * 9)}.${100 + Math.floor(h(2) * 800)}`], [C.date, `2008-0${1 + Math.floor(h(3) * 2)}-${10 + Math.floor(h(4) * 18)}`],
+    [C.baseband, `BB ${(h(5) * 0xffff | 0).toString(16).toUpperCase()}`], [C.bootloader, `BL 1.${Math.floor(h(6) * 9)}`], [C.hw, `R${1 + Math.floor(h(7) * 4)}`], [C.imei, imeiOf(world.seed)],
+  ];
+  rows.forEach(([a, b], n) => { S.text(1, 3 + n * 2, typed(a, t - n * 0.05), DIM, LCD); S.text(SW - b.length - 1, 3 + n * 2, typed(b, t - n * 0.05), INK, LCD); });
+  S.center(SH - 3, typed(C.eng, t - 0.5), BAD, LCD);
 }

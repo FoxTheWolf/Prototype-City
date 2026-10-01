@@ -40,6 +40,8 @@ export class Radio {
   site = -1;
   dbm = -130;
   bars = 0;
+  /** The sites heard at the last scan, strongest first: [site, dBm] (the field test screen lists them). */
+  heard: [number, number][] = [];
   /** The data transfer under way or last finished, if any. */
   job: Transfer | null = null;
   private next = 0;
@@ -71,13 +73,16 @@ export class Radio {
   private scan(world: World, now: number) {
     const T = world.telco, p = world.player, lift = liftFloors(world) > 0;
     let best = -1, bestDbm = -999, cur = -999;
+    this.heard.length = 0;
     for (let k = 0; k < T.sites.length; k++) {
       if (!siteUp(T, world.power, k, world.tick)) continue;
       const d = this.rssi(world, k, p.x, p.y, p.z + 1.4, lift, now);
       if (k === this.site) cur = d;
+      if (d > FLOOR_DBM - 6) this.heard.push([k, Math.round(d)]);
       if (d > bestDbm) { bestDbm = d; best = k; }
     }
     // hand over only to a clearly stronger site
+    this.heard.sort((a, b) => b[1] - a[1]);
     if (this.site >= 0 && cur > FLOOR_DBM && bestDbm < cur + 4) { best = this.site; bestDbm = cur; }
     if (best < 0 || bestDbm < FLOOR_DBM) {
       // lost: look again for a while before giving up
