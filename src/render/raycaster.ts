@@ -204,9 +204,14 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           const e0 = roadX ? city.yb : city.xb, ec = roadX ? cy : cx;
           const across = (roadX ? wx : wy) - (b0[bc] + b0[bc + 1]) / 2, along = roadX ? wy : wx;
           // a street segment ends at the cross streets, and where it meets the diagonal
-          const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, pastD);
+          // (an avenue meets the diagonal at a shallow angle, in an X: its crosswalks are at the cross streets only)
+          const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, roadX ? 1e9 : pastD);
+          const X = roadX ? xAt(city, bc >> 1) : null;
           const m = a % LANE_W;
           if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
+          else if (X && a < (b0[bc + 1] - b0[bc]) / 2 - 0.3 && ((across < 0 && X.a0 - along > 4.6 && X.a0 - along < 5.05) || (across > 0 && along - X.a1 > 4.6 && along - X.a1 < 5.05))) {
+            ch = G.eq; r = 170; g = 170; b = 170; // the X's stop lines, where the avenue's traffic waits for it
+          }
           else if (end > 4.6 && end < 5.05 && a < (b0[bc + 1] - b0[bc]) / 2 - 0.3 && (along - e0[ec] < e0[ec + 1] - along ? across > 0 : across < 0) === roadX) {
             // the stop line, across the half of the road coming in to the intersection
             ch = roadX ? G.eq : G.bar; r = 170; g = 170; b = 170;
@@ -1287,6 +1292,7 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
   for (const z of D.zones) {
     diagPoint(d, (z.u0 + z.u1) / 2, 1, 0, Q2);
     if (Math.abs(Q2[0] - v.x) > far + 30 || Math.abs(Q2[1] - v.y) > far + 30) continue;
+    if (z.x) continue; // a crossing inside an X: the X's own lights stand at its edges
     for (const dg of [1, -1]) {
       diagPoint(d, (dg > 0 ? z.u1 : z.u0) + dg * 0.7, dg, hw + 0.7, Q2);
       SP.x = Q2[0]; SP.y = Q2[1]; SP.c = -d.ex * dg; SP.s = -d.ey * dg;
@@ -1294,7 +1300,7 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
       SP.at = lanesAt(D.lanes, hw);
       cb(SP);
     }
-    if (z.i >= 0) continue;
+    if (z.i >= 0 && !z.isX) continue;
     const b = z.vert ? city.xb : city.yb, rc = (b[2 * z.road] + b[2 * z.road + 1]) / 2, half = (b[2 * z.road + 1] - b[2 * z.road]) / 2;
     for (const hd of z.vert ? [1, 3] : [0, 2]) {
       const [dx, dy] = DIRS[hd], aFar = dx + dy > 0 ? z.a1 + 0.7 : z.a0 - 0.7;
@@ -1307,6 +1313,12 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
   }
 }
 const Q2 = [0, 0];
+/** The X on avenue k, if the diagonal makes one there. */
+function xAt(city: City, k: number) {
+  const zs = diagRoad(city).byRoad.get(1024 + k);
+  if (zs) for (const z of zs) if (z.isX) return z;
+  return null;
+}
 function setState(st: number) {
   SP.state = st; SP.lit = st === Sig.Green ? 2 : st === Sig.Yellow ? 1 : st === Sig.Red ? 0 : -1;
 }

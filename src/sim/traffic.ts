@@ -99,6 +99,8 @@ export function signal(city: City, power: PowerGrid, i: number, j: number, axis:
   if (!hasSignal(city, i, j)) return Sig.Stop;
   const x = roadCenter(city.xb, i), y = roadCenter(city.yb, j);
   if (!power.subs[subAt(power, city, x, y)].on) return Sig.Dark;
+  const X = diagRoad(city).xOf.get(iKey(i, j));
+  if (X) return xPhase(X, axis, sec);
   if (touched(city, i, j)) {
     // the diagonal runs through it: three phases, the avenue, the street, the diagonal
     const p = (((sec + hash3(city.nameSeed, i, j) * 20) % CYCLE3) + CYCLE3) % CYCLE3, ph = CYCLE3 / 3, k = Math.floor(p / ph), q = p - k * ph;
@@ -163,14 +165,25 @@ function laneFor(rng: Rng, lanes: number, turn: number): number {
  * intersection (i, j) it is part of it (three-phase lights); between two it has lights of its own.
  * `key` is the stop's identity for all-way stops (the intersection's when merged).
  */
-export interface Zone { vert: boolean; road: number; a0: number; a1: number; u0: number; u1: number; i: number; j: number; key: number }
+export interface Zone {
+  vert: boolean; road: number; a0: number; a1: number; u0: number; u1: number; i: number; j: number; key: number;
+  /**
+   * An X: where the diagonal runs over an avenue at its shallow angle, the long stretch they share
+   * (like Times Square). It is one junction with the cross streets inside it (`js`), three phases
+   * (the avenue, the diagonal, the streets) and a long all-red to clear it. A crossing of one of
+   * those streets with the diagonal belongs to it (`x`).
+   */
+  isX: boolean; js: number[]; x: Zone | null;
+}
 
 /** The diagonal's extent inside the city (u along it), its lanes per side, its zones (by u, and by grid road). */
-export interface DiagRoad { u0: number; u1: number; lanes: number; zones: Zone[]; byRoad: Map<number, Zone[]>; touched: Set<number> }
+export interface DiagRoad { u0: number; u1: number; lanes: number; zones: Zone[]; byRoad: Map<number, Zone[]>; touched: Set<number>; xOf: Map<number, Zone> }
 const diagRoads = new WeakMap<City, DiagRoad>();
 const ZKEY = 1 << 22;
-/** A zone within this of a grid intersection's box joins it; a longer one is a shared stretch. */
+/** A zone within this of a grid intersection's box joins it; a longer one is an X. */
 const MERGE = 8, SHARED = 45;
+/** An X's cycle (three phases) and its all-red, long enough to clear it. */
+const CYCLE_X = 96, ALL_RED_X = 8;
 const roadKey = (vert: boolean, k: number) => (vert ? 1024 : 0) + k;
 
 export function diagRoad(city: City): DiagRoad {
@@ -184,7 +197,7 @@ export function diagRoad(city: City): DiagRoad {
     const a = (6 - o) / e, b = (lim - 6 - o) / e;
     u0 = Math.max(u0, Math.min(a, b)); u1 = Math.min(u1, Math.max(a, b));
   }
-  const zones: Zone[] = [], byRoad = new Map<number, Zone[]>(), tset = new Set<number>();
+  const zones: Zone[] = [], byRoad = new Map<number, Zone[]>(), tset = new Set<number>(), xOf = new Map<number, Zone>();
   const NX = NXof(city), NY = NYof(city);
   for (const vert of [true, false]) {
     const b = vert ? city.xb : city.yb, n = vert ? NX : NY;
@@ -197,31 +210,51 @@ export function diagRoad(city: City): DiagRoad {
         ua.push((q - oq - sv * nq) / eq);
         aa.push(oa + (sv - (q - oq) * nq) / na);
       }
-      const z: Zone = { vert, road: k, a0: Math.min(...aa), a1: Math.max(...aa), u0: Math.min(...ua), u1: Math.max(...ua), i: -1, j: -1, key: 0 };
+      const z: Zone = { vert, road: k, a0: Math.min(...aa), a1: Math.max(...aa), u0: Math.min(...ua), u1: Math.max(...ua), i: -1, j: -1, key: 0, isX: false, js: [], x: null };
       if (z.u1 < u0 || z.u0 > u1) continue;
-      // where it runs along an avenue at a shallow angle the two share the pavement for a long
-      // stretch: no crossing of their own there, the cross streets' lights rule it
-      if (z.a1 - z.a0 > SHARED) continue;
-      // next to an intersection on this road?
       const cb = vert ? city.yb : city.xb, m = vert ? NY : NX;
-      for (let c = 0; c < m; c++) if (z.a1 > cb[2 * c] - MERGE && z.a0 < cb[2 * c + 1] + MERGE) { z.i = vert ? k : c; z.j = vert ? c : k; }
-      z.key = z.i >= 0 ? iKey(z.i, z.j) : ZKEY + zones.length;
-      if (z.i >= 0) tset.add(iKey(z.i, z.j));
+      if (z.a1 - z.a0 > SHARED) {
+        // an X (the diagonal is steep to the streets, so only along an avenue): its cross streets
+        if (!vert) continue;
+        z.isX = true; z.i = k; z.key = ZKEY + zones.length;
+        const mid = (z.a0 + z.a1) / 2;
+        for (let c = 0; c < m; c++) if (z.a1 > cb[2 * c] - MERGE && z.a0 < cb[2 * c + 1] + MERGE) {
+          z.js.push(c); xOf.set(iKey(k, c), z); tset.add(iKey(k, c));
+          if (z.j < 0 || Math.abs(roadCenter(cb, c) - mid) < Math.abs(roadCenter(cb, z.j) - mid)) z.j = c;
+        }
+      } else {
+        // next to an intersection on this road? (one inside an X is part of the X)
+        for (let c = 0; c < m; c++) if (z.a1 > cb[2 * c] - MERGE && z.a0 < cb[2 * c + 1] + MERGE) { z.i = vert ? k : c; z.j = vert ? c : k; }
+        z.x = z.i >= 0 ? xOf.get(iKey(z.i, z.j)) ?? null : null;
+        // the X reaches over its streets' crossings with the diagonal: its edge is before them all
+        if (z.x) { z.x.u0 = Math.min(z.x.u0, z.u0); z.x.u1 = Math.max(z.x.u1, z.u1); }
+        z.key = z.x ? z.x.key : z.i >= 0 ? iKey(z.i, z.j) : ZKEY + zones.length;
+        if (z.i >= 0) tset.add(iKey(z.i, z.j));
+      }
       zones.push(z);
       byRoad.set(roadKey(vert, k), [...(byRoad.get(roadKey(vert, k)) ?? []), z]);
     }
   }
   zones.sort((p, q) => p.u0 - q.u0);
-  D = { u0, u1, lanes: Math.max(1, Math.floor(hw / LANE_W)), zones, byRoad, touched: tset };
+  D = { u0, u1, lanes: Math.max(1, Math.floor(hw / LANE_W)), zones, byRoad, touched: tset, xOf };
   diagRoads.set(city, D);
   return D;
 }
 
 const touched = (city: City, i: number, j: number) => diagRoad(city).touched.has(iKey(i, j));
+/** The stop an intersection is part of: its own, or its X's. */
+const interKey = (city: City, i: number, j: number) => diagRoad(city).xOf.get(iKey(i, j))?.key ?? iKey(i, j);
+
+/** An X's light for the avenue (axis 1), the streets inside it (0) or the diagonal (2). */
+function xPhase(X: Zone, axis: number, sec: number): number {
+  const ph = CYCLE_X / 3, p = (((sec + X.key * 7.3) % CYCLE_X) + CYCLE_X) % CYCLE_X, k = Math.floor(p / ph), q = p - k * ph;
+  const mine = axis === 1 ? 0 : axis === 2 ? 1 : 2;
+  return k !== mine ? Sig.Red : q < ph - YELLOW - ALL_RED_X ? Sig.Green : q < ph - ALL_RED_X ? Sig.Yellow : Sig.Red;
+}
 
 /** The light at a zone, for the diagonal (diag) or for the grid road. */
 export function zoneSignal(city: City, power: PowerGrid, z: Zone, diag: boolean, sec: number): number {
-  if (z.i >= 0) return signal(city, power, z.i, z.j, diag ? 2 : z.vert ? 1 : 0, sec);
+  if (z.i >= 0) return signal(city, power, z.i, z.j, diag ? 2 : z.vert ? 1 : 0, sec); // an X's goes through its center street
   const d = city.diagonal, u = (z.u0 + z.u1) / 2;
   if (!power.subs[subAt(power, city, d.ox + d.ex * u, d.oy + d.ey * u)].on) return Sig.Dark;
   const p = (((sec + hash3(city.nameSeed, z.key, 77) * CYCLE_Z) % CYCLE_Z) + CYCLE_Z) % CYCLE_Z;
@@ -371,7 +404,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       continue;
     }
     const to = headingOfExit(c);
-    inc(iKey(c.ni, c.nj));
+    inc(interKey(city, c.ni, c.nj));
     bucket(to, c.road, c.lane).push({ c, s: along(to, c.t1x, c.t1y) - (1 - c.ts) * c.tlen });
   }
   for (const b of lanes.values()) b.sort((p, q) => p.s - q.s);
@@ -436,7 +469,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     } else {
       c.x += c.dx * d; c.y += c.dy * d;
       if (along(c.hd, c.x, c.y) >= entryS(city, c.hd, c.ni, c.nj)) {
-        const k = iKey(c.ni, c.nj);
+        const k = interKey(city, c.ni, c.nj);
         busy.set(k, (busy.get(k) ?? 0) + 1); // the next in line waits for this one
         startTurn(city, rng, c);
       }
@@ -462,18 +495,19 @@ function gateOf(city: City, power: PowerGrid, c: Car, front: number, sec: number
   if (c.dg) {
     G.start = 1e9; G.inter = false;
     for (const z of D.zones) {
+      if (z.x) continue; // inside an X there is no stopping: its edge is the line
       const zs = c.dg > 0 ? z.u0 : -z.u1;
       if (zs - STOP_BACK - front > -0.5 && zs < G.start) { G.start = zs; G.end = c.dg > 0 ? z.u1 : -z.u0; G.key = z.key; G.sig = zoneSignal(city, power, z, true, sec); }
     }
     return;
   }
   const e = entryS(city, c.hd, c.ni, c.nj), pos = c.dx + c.dy > 0;
-  G.start = e; G.end = exitS(city, c.hd, c.ni, c.nj); G.key = iKey(c.ni, c.nj); G.inter = true;
+  G.start = e; G.end = exitS(city, c.hd, c.ni, c.nj); G.key = interKey(city, c.ni, c.nj); G.inter = true;
   G.sig = signal(city, power, c.ni, c.nj, c.hd & 1, sec);
   const zs = D.byRoad.get(roadKey((c.hd & 1) === 1, c.road));
   if (zs) for (const z of zs) {
     const a = pos ? z.a0 : -z.a1, b = pos ? z.a1 : -z.a0;
-    if (z.i === c.ni && z.j === c.nj) { if (a < G.start) G.start = a; }
+    if (z.isX ? z.i === c.ni && z.js.includes(c.nj) : z.i === c.ni && z.j === c.nj) { if (a < G.start) G.start = a; }
     // (a crossing that belongs to another intersection runs on that one's phases: not a stop of its own)
     else if (z.i < 0 && a - STOP_BACK - front > -0.5 && a < G.start) { G.start = a; G.end = b; G.key = z.key; G.inter = false; G.sig = zoneSignal(city, power, z, false, sec); }
   }

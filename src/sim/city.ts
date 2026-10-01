@@ -112,6 +112,8 @@ export interface Diagonal {
 }
 
 export const DIAG_W = 21;
+/** The diagonal's angle off the avenues, in degrees (fixed: every city has the same one). */
+export const DIAG_ANGLE = 24;
 
 export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris' | 'blade';
 
@@ -409,14 +411,18 @@ function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: numbe
 }
 
 /**
- * The diagonal avenue: through downtown, 18-32 degrees off the avenues. It has its own random
- * stream, so the grid and the districts stay the same.
+ * The diagonal avenue, the same in every city: DIAG_ANGLE off the avenues, through the center of
+ * the avenue intersection nearest (px, py) (the theater district's point), so the X it makes with
+ * that avenue is centered on a cross street, like Times Square. The grid and districts stay the same.
  */
-function placeDiagonal(seed: number, cx: number, cy: number): Diagonal {
-  const rng = mulberry32((hash3(seed, 9999, 4) * 4294967296) | 0);
-  const a = ((18 + rng() * 14) * Math.PI) / 180 * (rng() < 0.5 ? -1 : 1);
-  const ex = Math.sin(a), ey = Math.cos(a);
-  return { ox: cx + (rng() - 0.5) * 240, oy: cy + (rng() - 0.5) * 120, ex, ey, nx: ey, ny: -ex, w: DIAG_W };
+function placeDiagonal(xb: number[], yb: number[], px: number, py: number): Diagonal {
+  const a = (DIAG_ANGLE * Math.PI) / 180, ex = Math.sin(a), ey = Math.cos(a);
+  let ox = 0, oy = 0, bd = Infinity;
+  for (let i = 1; i < xb.length / 2 - 1; i++) for (let j = 1; j < yb.length / 2 - 1; j++) {
+    const x = roadCenter(xb, i), y = roadCenter(yb, j), d = (x - px) ** 2 + (y - py) ** 2;
+    if (d < bd) { bd = d; ox = x; oy = y; }
+  }
+  return { ox, oy, ex, ey, nx: ey, ny: -ex, w: DIAG_W };
 }
 
 /** Signed distance of a point from the diagonal's center line. */
@@ -610,7 +616,8 @@ export function generateCity(seed: number, size: number): City {
   const blocks: Block[] = [];
   const buildings: Building[] = [];
   const businesses: Business[] = [];
-  const diagonal = placeDiagonal(seed, cx, cy);
+  const theater = districts.find((d) => d.type === 'theater');
+  const diagonal = placeDiagonal(xb, yb, theater ? theater.x : cx, theater ? theater.y : cy);
   const special = pickLandmarkBlocks(seed, xb, yb, nbx, nby, districts, diagonal);
 
   for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
