@@ -115,7 +115,7 @@ export const DIAG_W = 21;
 /** The diagonal's angle off the avenues, in degrees (fixed: every city has the same one). */
 export const DIAG_ANGLE = 24;
 
-export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris' | 'blade';
+export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox' | 'news' | 'payphone' | 'shelter' | 'dumpster' | 'debris' | 'blade' | 'table' | 'planter' | 'steps';
 
 /**
  * What a business does. Kept as data the rest of the game builds on: the shop sign shows its name
@@ -304,6 +304,8 @@ export interface Block {
    * piece left on its negative / positive side is too small for buildings and is a plaza.
    */
   diag: number;
+  /** Next to the theater district's X (its "Times Square"): its slivers are the square's plazas. */
+  square: boolean;
 }
 
 /**
@@ -633,7 +635,7 @@ export function generateCity(seed: number, size: number): City {
     const lm = special.get(j * nbx + i);
     const LM_OPEN: Record<string, OpenKind | null> = { memorial: 'plaza', hall: 'plaza', clock: 'plaza', mast: 'plaza', park: 'park', park2: 'park', church: 'park', gasworks: 'yard', power: null };
     const open = lm ? LM_OPEN[lm] : br() < K.openP ? K.open : null;
-    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [], diag: 0 };
+    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [], diag: 0, square: false };
     blocks.push(block);
 
     // street lamps along the curb, about every 28 m
@@ -839,8 +841,11 @@ export function generateCity(seed: number, size: number): City {
       const R = diagonal.w / 2 + SIDEWALK, o = diagonal.ox * diagonal.nx + diagonal.oy * diagonal.ny;
       const neg = clippedArea(ix0, iy0, ix1, iy1, diagonal.nx, diagonal.ny, o - R);
       const pos = clippedArea(ix0, iy0, ix1, iy1, -diagonal.nx, -diagonal.ny, -(R + o));
-      if (neg > 0 && neg < PLAZA_AREA) block.diag |= 2;
-      if (pos > 0 && pos < PLAZA_AREA) block.diag |= 4;
+      // around the theater district's X the slivers are bigger: the square's plazas
+      block.square = Math.hypot(mx - diagonal.ox, my - diagonal.oy) < SQUARE_R;
+      const plaza = block.square ? SQUARE_PLAZA : PLAZA_AREA;
+      if (neg > 0 && neg < plaza) block.diag |= 2;
+      if (pos > 0 && pos < plaza) block.diag |= 4;
       cutByDiagonal(buildings, block.b0, diagonal);
       for (let k = buildings.length - 1; k >= block.b0; k--) {
         const B = buildings[k], sB = diagS(diagonal, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
@@ -850,6 +855,7 @@ export function generateCity(seed: number, size: number): City {
       for (let k = block.b0; k < buildings.length; k++) block.maxH = Math.max(block.maxH, buildings[k].h);
       // nothing stands on the roadway; trees keep off its sidewalks too
       block.props = block.props.filter((p) => Math.abs(diagS(diagonal, p.x, p.y)) > diagonal.w / 2 + (p.kind === 'tree' ? SIDEWALK + 1 : 0.4));
+      if (block.square) furnishSquare(block, diagonal, fr);
     }
     // one business per shop front; kind and name come from the building's position, so they stay put
     const shops = SHOPS[districts[district].type];
@@ -878,7 +884,8 @@ export function generateCity(seed: number, size: number): City {
       if (type === 'theater' && B.tier === 1 && !B.round) {
         // a news ticker around some buildings (most of the wedges on the diagonal), screens on most street faces
         if (B.h >= 18 && hash3(seed ^ 0x71c4, bx, by) < (B.cut ? 0.35 : 0.04)) B.ticker = true;
-        if (B.h >= 14) for (const f of streetFaces(block, B)) if (hash3(seed ^ 0x5c4e, bx + f, by) < 0.6) B.screen |= 1 << f;
+        if (B.h >= 14) for (const f of streetFaces(block, B)) if (hash3(seed ^ 0x5c4e, bx + f, by) < 0.6 || (block.square && facesX(B, f, diagonal))) B.screen |= 1 << f;
+        if (block.square && B.cut && B.h >= 18) B.ticker = true;
       }
       if (B.tier === 1 && !B.round && businesses.length && (B.style === 'brick' || B.style === 'residential' || B.style === 'warehouse') && B.h > 10 && hash3(seed ^ 0xadad, bx, by) < 0.3) B.ad = Math.floor(hash3(seed ^ 0xadae, bx, by) * businesses.length);
       // neon tubes on the corners and roof line: common on the commercial strips, rarer on towers
@@ -963,6 +970,46 @@ function bladeSign(block: Block, B: Building, r: number, kind: BusinessKind) {
 
 /** A piece of block cut off by the diagonal and smaller than this (m²) is left as a plaza. */
 const PLAZA_AREA = 1200;
+/** The square around the theater district's X: blocks this close to its center, and how big a sliver it turns into plaza. */
+const SQUARE_R = 190, SQUARE_PLAZA = 4000;
+
+/** Whether face f of a building looks out onto the square (toward the X's center). */
+function facesX(B: Building, f: number, d: Diagonal): boolean {
+  const mx = (B.x0 + B.x1) / 2, my = (B.y0 + B.y1) / 2;
+  const [nx, ny] = f === 4 ? [B.cut!.nx, B.cut!.ny] : f === 0 ? [-1, 0] : f === 1 ? [1, 0] : f === 2 ? [0, -1] : [0, 1];
+  const dx = d.ox - mx, dy = d.oy - my, L = Math.hypot(dx, dy) || 1;
+  return (nx * dx + ny * dy) / L > 0.35;
+}
+
+/**
+ * The square's plazas, on a block's slivers: cafe tables with chairs, planters, benches and bins
+ * on a 4 m grid, and on the biggest sliver the red steps people sit on to watch the screens,
+ * turned to the X. From the block's furniture stream, so the buildings stay put.
+ */
+function furnishSquare(block: Block, d: Diagonal, fr: Rng) {
+  const ix0 = block.x0 + SIDEWALK + 1, iy0 = block.y0 + SIDEWALK + 1, ix1 = block.x1 - SIDEWALK - 1, iy1 = block.y1 - SIDEWALK - 1;
+  const inPlaza = (x: number, y: number) => {
+    if (x < ix0 || x > ix1 || y < iy0 || y > iy1) return false;
+    const sv = diagS(d, x, y);
+    return Math.abs(sv) > d.w / 2 + SIDEWALK + 1 && (block.diag & (sv > 0 ? 4 : 2)) !== 0;
+  };
+  const toX = (x: number, y: number) => Math.atan2(d.oy - y, d.ox - x);
+  // the steps: the free spot (8 x 6 m around it) nearest the X
+  let best: [number, number] | null = null, bd = Infinity;
+  for (let y = iy0 + 4; y <= iy1 - 4; y += 2) for (let x = ix0 + 4; x <= ix1 - 4; x += 2) {
+    const ok = [[-4, -4], [4, -4], [-4, 4], [4, 4], [0, 0]].every(([a, b]) => inPlaza(x + a, y + b));
+    const dd = Math.hypot(x - d.ox, y - d.oy);
+    if (ok && dd < bd) { bd = dd; best = [x, y]; }
+  }
+  if (best) block.props.push({ kind: 'steps', x: best[0], y: best[1], w: 0, z1: 0, seed: 0, a: toX(best[0], best[1]) });
+  for (let y = iy0 + 1; y <= iy1 - 1; y += 4) for (let x = ix0 + 1; x <= ix1 - 1; x += 4) {
+    const px = x + (fr() - 0.5) * 1.5, py = y + (fr() - 0.5) * 1.5;
+    if (!inPlaza(px, py) || (best && Math.hypot(px - best[0], py - best[1]) < 6.5)) continue;
+    const r = fr(), a = fr() * Math.PI * 2;
+    const kind: PropKind | null = r < 0.3 ? 'table' : r < 0.42 ? 'planter' : r < 0.52 ? 'bench' : r < 0.58 ? 'bin' : null;
+    if (kind) block.props.push({ kind, x: px, y: py, w: 0, z1: 0, seed: (fr() * 1e6) | 0, a: kind === 'bench' ? toX(px, py) : a });
+  }
+}
 
 /**
  * Street lamps along both curbs of the diagonal, every 28 m, arms over the roadway. Each goes to

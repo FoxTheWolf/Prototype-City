@@ -136,6 +136,31 @@ export const FURNITURE: Record<string, { parts: Part[]; r: number; h: number }> 
       part(Box, -0.32, -0.36, 1.8, 0.2, 0.36, 2.1, [40, 80, 165], Solid, '=', '_', '='),
     ],
   },
+  table: {
+    // a cafe table with its folding chairs, the square's kind
+    r: 1.1, h: 0.95, parts: [
+      part(Cyl, -0.4, -0.4, 0.72, 0.4, 0.4, 0.76, [70, 110, 80], Solid, '=', 'O'),
+      part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, 0.72, DARK, Solid, '|'),
+      part(Box, 0.55, -0.2, 0.42, 0.95, 0.2, 0.46, [70, 110, 80], Solid, '=', '='),
+      part(Box, 0.9, -0.2, 0.46, 0.95, 0.2, 0.92, [70, 110, 80], Solid, '|', '-', '#'),
+      part(Box, -0.95, -0.2, 0.42, -0.55, 0.2, 0.46, [70, 110, 80], Solid, '=', '='),
+      part(Box, -0.95, -0.2, 0.46, -0.9, 0.2, 0.92, [70, 110, 80], Solid, '|', '-', '#'),
+    ],
+  },
+  planter: {
+    // a square planter with a shrub
+    r: 0.8, h: 1.6, parts: [
+      part(Box, -0.6, -0.6, 0, 0.6, 0.6, 0.6, [120, 115, 105], Solid, '#', '=', '#'),
+      part(Ball, -0.55, -0.55, 0.5, 0.55, 0.55, 1.55, [50, 120, 60], Leaf, '@'),
+    ],
+  },
+  steps: {
+    // red steps to sit on, rising away from their front (+x), their risers lit from inside
+    r: 5.2, h: 3.1, parts: [
+      ...[0, 1, 2, 3, 4, 5].map((k) => part(Box, 3 - k - 1, -4, 0, 3 - k, 4, 0.5 * (k + 1), [150, 30, 35], Solid, '#', '=', '#')),
+      ...[0, 1, 2, 3, 4, 5].map((k) => part(Box, 3 - k, -3.9, 0.5 * k + 0.08, 3 - k + 0.04, 3.9, 0.5 * k + 0.42, [255, 70, 70], Glow, '=')),
+    ],
+  },
   shelter: {
     // bus shelter: a roof on posts, a glass back and a lit poster at one end
     r: 2.3, h: 2.5, parts: [

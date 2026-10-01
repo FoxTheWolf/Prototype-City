@@ -193,8 +193,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       const sD = diagS(D, wx, wy), aD = Math.abs(sD), pastD = aD - D.w / 2;
       if (pastD < 0) {
         ch = hv < 0.5 ? G.dot : hv < 0.8 ? G.com : G.tick;
-        if (!roadX && !roadY && rd < 200) {
-          // the diagonal between two cross streets (the crossings stay plain asphalt)
+        if (!roadY && rd < 200) {
+          // the diagonal between two cross streets, over an avenue too in an X (the crossings stay plain asphalt)
           const al = (wx - D.ox) * D.ex + (wy - D.oy) * D.ey, m = aD % LANE_W;
           if (aD < 0.3) { ch = diagGlyph; r = 210; g = 170; b = 60; }
           else if (pastD > -1.2) dens = 0.07;
@@ -212,7 +212,8 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, roadX ? 1e9 : pastD);
           const X = roadX ? xAt(city, bc >> 1) : null;
           const m = a % LANE_W;
-          if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
+          if (X && pastD < 0.25 && along > X.a0 && along < X.a1) { ch = G.bar; r = 175; g = 175; b = 175; } // in an X: the line where the diagonal's lanes end
+          else if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
           else if (X && a < (b0[bc + 1] - b0[bc]) / 2 - 0.3 && ((across < 0 && X.a0 - along > 4.6 && X.a0 - along < 5.05) || (across > 0 && along - X.a1 > 4.6 && along - X.a1 < 5.05))) {
             ch = G.eq; r = 170; g = 170; b = 170; // the X's stop lines, where the avenue's traffic waits for it
           }
@@ -234,9 +235,10 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           ch = fx < 0.08 || fy < 0.08 ? G.plus : G.col; r = 78; g = 74; b = 78;
           dens = city.districts[blk.district].type === 'industrial' ? 0.06 : 0.025;
         } else if (blk.diag & (sD > 0 ? 4 : 2)) {
-          // plaza on the sliver the diagonal cut off
+          // plaza on the sliver the diagonal cut off; the square's are granite in a checker of two greys
           const fx = wx / 2.5 - Math.floor(wx / 2.5), fy = wy / 2.5 - Math.floor(wy / 2.5);
           ch = fx < 0.06 || fy < 0.06 ? G.plus : G.col; r = 92; g = 86; b = 80;
+          if (blk.square) { const dark = (Math.floor(wx / 2.5) + Math.floor(wy / 2.5)) & 1; r = dark ? 62 : 108; g = dark ? 60 : 104; b = dark ? 66 : 108; if (!dark && fx > 0.45 && fx < 0.55 && fy > 0.45 && fy < 0.55) ch = G.o; }
         } else if (blk.open === 'park') {
           dens = 0.01;
           const mx = (blk.x0 + blk.x1) / 2, my = (blk.y0 + blk.y1) / 2;
@@ -1377,7 +1379,7 @@ function collectObjects(world: World, v: View): Obj[] {
       else {
         const f = FURNITURE[p.kind];
         // the shelter's poster and the phone's sign are on the street's power
-        const P = world.power, lit = p.kind === 'shelter' || p.kind === 'payphone';
+        const P = world.power, lit = p.kind === 'shelter' || p.kind === 'payphone' || p.kind === 'steps';
         const parts = lit ? poweredFurniture(p.kind, power(P, subAt(P, city, p.x, p.y), p.x, p.y, p.seed, 0, frameSec)[0]) : f.parts;
         out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts, r: f.r, h: f.h, seed: p.seed });
       }
