@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { type World } from '../sim/world';
-import { baseAt, cachedPlan, DOOR_H, doorOf, habitable, lotOf, planOf, type Plan } from '../sim/interior';
+import { baseAt, cachedPlan, DOOR_H, doorOf, habitable, liftGlassAt, lotOf, planOf, type Plan } from '../sim/interior';
 import { glassPass, interiorColumn, peekCell, peekInto, prepareInside, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -696,7 +696,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const e = Math.min(along - door.a0, door.a1 - along);
       if (e < 0.12 || z > DOOR_H + 0.22) wall(e < 0.12 ? G.bar : G.eq, 1.5);
       else { const k = 0.55 * elec; ch = z > DOOR_H ? G.dash : Math.abs(along - (door.a0 + door.a1) / 2) < 0.06 ? G.bar : G.col; r = 255 * k; g = 220 * k; b = 160 * k; }
-    } else if (lot >= 0 && !corner && !escCell && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0) && (pk = peekFor(fl))) {
+    } else if (lot >= 0 && !escCell && ((!corner && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0)) || (fz > 0.04 && fz < 0.9 && liftGlassAt(frameCity, lot, hx, hy))) && (pk = peekFor(fl))) {
       // a window: the room behind it, lit by its own lamps
       peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), frameDay);
       ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3];

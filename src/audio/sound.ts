@@ -169,6 +169,27 @@ export class Sound {
   }
   private motor: GainNode | null = null;
 
+  /**
+   * A footstep: a soft thud with a scuff on top. Indoors on hard floors it is drier and brighter,
+   * on wet streets it splashes, on the stairs it is a little sharper.
+   */
+  step(indoors: boolean, wet: number, stairs: boolean) {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise;
+    const f = (indoors ? 900 : 600) * (stairs ? 1.4 : 1) * (0.85 + Math.random() * 0.3);
+    s.connect(filter(ctx, 'bandpass', f, 1.1)).connect(g);
+    const v = (indoors ? 0.11 : 0.08) * (0.8 + Math.random() * 0.4);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.09);
+    s.start(t, Math.random() * 1.5); s.stop(t + 0.12);
+    if (wet > 0.3 && !indoors) {
+      // the splash of a puddle: a short bright hiss
+      const w = ctx.createBufferSource(), h = gain(ctx, 0, this.master);
+      w.buffer = this.noise; w.connect(filter(ctx, 'highpass', 2500, 0.7)).connect(h);
+      h.gain.setValueAtTime(0.05 * wet, t + 0.01); h.gain.exponentialRampToValueAtTime(0.0005, t + 0.15);
+      w.start(t + 0.01, Math.random() * 1.5); w.stop(t + 0.2);
+    }
+  }
+
   /** The car arriving: a soft two-note chime. */
   ding() {
     const ctx = this.ctx, t = ctx.currentTime;

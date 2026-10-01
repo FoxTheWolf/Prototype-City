@@ -145,6 +145,8 @@ interface Frame {
   lu1: number;
   cv0: number;
   cv1: number;
+  /** A panoramic lift: the core stands against the facade and the car's outer wall is glass. */
+  glass: boolean;
 }
 
 const snap = (v: number) => Math.round(v / BAY) * BAY;
@@ -177,7 +179,9 @@ function frameOf(city: City, k: number): Frame {
     else if (c1 === V1) sideA = true;
     else if (dv < c0) sideA = false;
     else if (dv > c1) sideA = true;
-    const depth = Math.min(3 * BAY, sideA ? c0 - V0 : V1 - c1);
+    // some office towers have a glass lift: the core reaches the facade
+    const glass = lift && isOffice(B) && tall > 12 && hash3(Math.round(B.x0), Math.round(B.y0), 313) < 0.45;
+    const depth = glass ? (sideA ? c0 - V0 : V1 - c1) : Math.min(3 * BAY, sideA ? c0 - V0 : V1 - c1);
     let su0 = snap(mid - coreW / 2);
     // when the door is on the core's side, its lobby (three bays around it) must not cross the core
     const doorSide = dv < c0 ? sideA : dv > c1 ? !sideA : false;
@@ -185,11 +189,11 @@ function frameOf(city: City, k: number): Frame {
       const l0 = Math.floor(du / BAY) * BAY - BAY, l1 = l0 + 3 * BAY;
       if (su0 < l1 && su0 + coreW > l0) su0 = l1 + coreW <= U1 - 0.4 ? l1 : l0 - coreW >= U0 + 0.4 ? l0 - coreW : su0;
     }
-    F = { alongX, c0, c1, su0, su1: su0 + 2 * BAY, lu1: su0 + coreW, cv0: sideA ? c0 - depth : c1, cv1: sideA ? c0 : c1 + depth };
+    F = { alongX, c0, c1, su0, su1: su0 + 2 * BAY, lu1: su0 + coreW, cv0: sideA ? c0 - depth : c1, cv1: sideA ? c0 : c1 + depth, glass };
   } else {
     // a narrow walk-up: the stairs across one end, no corridor
     const su0 = U0 - 1, su1 = snap(U0) + 2 * BAY;
-    F = { alongX, c0, c1, su0, su1, lu1: su1, cv0: V0 - 1, cv1: V1 + 1 };
+    F = { alongX, c0, c1, su0, su1, lu1: su1, cv0: V0 - 1, cv1: V1 + 1, glass: false };
   }
   frameCache.set(k, F);
   return F;
@@ -245,6 +249,14 @@ export function stairStep(city: City, k: number, x: number, y: number, z: number
     if (Number.isNaN(best) || Math.abs(zz - z) < Math.abs(best - z)) best = zz;
   }
   return Number.isNaN(best) || Math.abs(best - z) > 0.5 ? NaN : best;
+}
+
+/** Whether (x, y), on the facade of lot k, is the glass wall of its panoramic lift shaft. */
+export function liftGlassAt(city: City, k: number, x: number, y: number): boolean {
+  const F = frameOf(city, k);
+  if (!F.glass) return false;
+  const u = F.alongX ? x : y, v = F.alongX ? y : x;
+  return u > F.su1 + 0.08 && u < F.lu1 - 0.08 && v > F.cv0 - 0.3 && v < F.cv1 + 0.3;
 }
 
 const planCache = new Map<number, Plan | null>();
@@ -412,7 +424,16 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     room(corr, -1, U0, F.c0, U1, F.c1);
     room('stair', -1, F.su0, F.cv0, F.su1, F.cv1);
     doorV(core < 0 ? F.c0 : F.c1, F.su0 + 0.4);
-    if (F.lu1 > F.su1) { room('lift', -1, F.su1, F.cv0, F.lu1, F.cv1); doorV(core < 0 ? F.c0 : F.c1, F.su1 + 0.4); }
+    if (F.lu1 > F.su1) {
+      if (F.glass && F.cv1 - F.cv0 > 4) {
+        // the glass car stands at the facade, 2.4 m deep, behind a small hall off the corridor
+        const at = core < 0 ? F.cv0 + 2.4 : F.cv1 - 2.4;
+        room('hall', -1, F.su1, F.cv0, F.lu1, F.cv1);
+        room('lift', -1, F.su1, core < 0 ? F.cv0 : at, F.lu1, core < 0 ? at : F.cv1);
+        doorV(at, F.su1 + 0.2);
+      } else room('lift', -1, F.su1, F.cv0, F.lu1, F.cv1);
+      doorV(core < 0 ? F.c0 : F.c1, F.su1 + 0.4);
+    }
     // behind a shallow core, a room of the unit next to it
     const outer = core < 0 ? V0 : V1, back = core < 0 ? F.cv0 : F.cv1;
     if (Math.abs(outer - back) > 1.2) {

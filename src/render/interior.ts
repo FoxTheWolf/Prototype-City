@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, type Building, type City, type RGB } from '../sim/city';
-import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, SL, STAIR_LAND, stairH, stairLocal, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
+import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
 import { type CharGrid } from './grid';
 
 /**
@@ -287,13 +287,15 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     // a wall against the next building has no windows, up to that building's roof
     const nX = face === 0 ? -1 : face === 1 ? 1 : face === 4 ? K!.nx : 0, nY = face === 2 ? -1 : face === 3 ? 1 : face === 4 ? K!.ny : 0;
     const blind = builtUp(I.city, hx + nX * 0.3, hy + nY * 0.3, z0 + 1);
+    // a panoramic lift: glass from the car's floor to its ceiling
+    const liftGlass = R && R.kind === 'lift' && liftGlassAt(I.city, I.k, hx, hy);
     const shade = face === 4 ? 0.9 : face < 2 ? 1 : 0.82;
     nearT[x] = t; tClose = t;
     lightIn(I, r0, hx, hy, t);
     gT[x] = t; gA[x] = along; gDoor[x] = isDoor ? 1 : 0; gL[x * 3] = L3[0]; gL[x * 3 + 1] = L3[1]; gL[x * 3 + 2] = L3[2];
     span(t, wz0, wzc, (y, z) => {
       const fz = z / FLOOR_H - Math.floor(z / FLOOR_H);
-      if ((isDoor && z < z0 + DOOR_H) || (!corner && !blind && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
+      if ((isDoor && z < z0 + DOOR_H) || (liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
       lightIn(I, r0, hx, hy, t);
       const zr = zrOf(z);
       // the sill: just under a window

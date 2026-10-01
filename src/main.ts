@@ -9,7 +9,7 @@ import { power } from './render/power';
 import { renderWorld } from './render/raycaster';
 import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
-import { diagS, districtAt, nearestRoad, SIDEWALK } from './sim/city';
+import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
@@ -104,7 +104,7 @@ function readInput(): PlayerInput {
 
 // audio can only start from a click, so it is made on entering the city
 let sound: Sound | null = null;
-let wasRiding = false;
+let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 
 function begin() {
   sound ??= new Sound();
@@ -191,6 +191,10 @@ function frame(now: number) {
   if (!wasRiding && p.liftTo >= 0) sound?.doors();
   wasRiding = p.liftTo >= 0;
   sound?.liftMotor(p.liftTo >= 0 ? 1 : 0);
+  // footsteps: one every stride, longer when running
+  stride += Math.hypot(p.x - lastX, p.y - lastY);
+  lastX = p.x; lastY = p.y;
+  if (stride > (p.speed > 4 ? 1.3 : 0.75)) { stride = 0; sound?.step(p.inside >= 0, world.weather.wet, p.z % FLOOR_H > 0.05); }
   const W = world.weather;
   // indoors: office tubes buzz while the building has power
   let tubes = 0;
