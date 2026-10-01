@@ -11,6 +11,7 @@ import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampM
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall } from './precip';
+import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 
@@ -116,18 +117,23 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
 
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
-    const rdx = dirX + plX * camX, rdy = dirY + plY * camX;
+    const rdx = dirX + plX * camX, rdy = dirY + plY * camX, L = Math.hypot(rdx, rdy);
 
     // ---- sky: gradient, stars, moon and clouds (sky.ts); below the horizon a dark base
     const az = v.yaw + Math.atan(camX * plane);
     const slot = Math.floor((((az / (2 * Math.PI)) % 1 + 1) % 1) * starSlots);
     skyColumn(grid, x, sky, az, rdx, rdy, px, py, eye, hor, scale, slot);
+    sarcophagusColumn(grid, x, city, px, py, rdx, rdy, eye, hor, scale, frameSec, sky.day);
     for (let y = Math.max(0, Math.ceil(hor - 0.5)); y < rows; y++) grid.setBg(y * cols + x, 7, 8, 12);
 
     // ---- ground: each cell below the horizon maps to one point on the floor
     for (let y = Math.max(0, Math.ceil(hor - 0.5)); y < rows; y++) {
       const i = y * cols + x;
-      const rd = (eye * scale) / (y + 0.5 - hor);
+      // the ground falls away d^2 / 2R over the curve: eye - t*m = -(t*L)^2 / 2R, the near root
+      // in a form that stays exact when the curve is slight
+      const m = (y + 0.5 - hor) / scale, A = (L * L) / (2 * CURVE_R), disc = m * m - 4 * A * eye;
+      const rd = disc > 0 ? (2 * eye) / (m + Math.sqrt(disc)) : 1e7;
+      if (grid.depth[i] < rd) continue; // the Sarcophagus's foot, nearer than this far ground
       const wx = px + rdx * rd, wy = py + rdy * rd;
       grid.depth[i] = rd;
       if (wx < 0 || wy < 0 || wx >= city.w || wy >= city.h) { burnGround(grid, i, city, wx, wy, rd, time); continue; }
@@ -286,7 +292,9 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           }
           for (let s = 0; s < n && clipTop > 0; s++) {
             const t = hitT[s], id = hitId[s], B = city.buildings[id];
-            const yt = hor - ((B.h - eye) * scale) / t, yb2 = hor + (eye * scale) / t;
+            // far buildings sink a little over the curve of the ground
+            const eyeD = eye + (t * L) ** 2 / (2 * CURVE_R);
+            const yt = hor - ((B.h - eyeD) * scale) / t, yb2 = hor + (eyeD * scale) / t;
             const top = Math.ceil(yt - 0.5);
             const y0 = Math.max(0, top), y1 = Math.min(rows, Math.ceil(yb2 - 0.5), clipTop);
             if (y0 < y1) {
@@ -305,7 +313,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
                 along = side === 0 ? hy : hx; lightK = side ? 0.72 : 1;
                 rev = side === 0 ? rdx < 0 : rdy > 0; face = side === 0 ? (rdx < 0 ? 1 : 0) : (rdy > 0 ? 2 : 3); dn = side === 0 ? rdx : rdy;
               }
-              wallColumn(grid, x, B, id, t, side, face, lightK, along, y0, y1, top, hor, scale, eye, colW, rev, (colW * t) / Math.max(1e-6, Math.abs(dn)), hx, hy);
+              wallColumn(grid, x, B, id, t, side, face, lightK, along, y0, y1, top, hor, scale, eyeD, colW, rev, (colW * t) / Math.max(1e-6, Math.abs(dn)), hx, hy);
             }
             clipTop = Math.min(clipTop, Math.max(0, top));
           }
@@ -320,6 +328,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
+  drawCranes(grid, city, v.x, v.y, eye, dirX, dirY, plX, plY, scale, hor, frameSec);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
   finish(grid, v.look, sky);
@@ -380,6 +389,7 @@ function fenceColumn(grid: CharGrid, x: number, city: City, px: number, py: numb
   if (t <= 0.05 || t > 2000) return;
   const along = tX < tY ? py + t * rdy : px + t * rdx;
   const H = 4.2;
+  eye += (t * Math.hypot(rdx, rdy)) ** 2 / (2 * CURVE_R); // the fence far off sinks with the ground
   const y0 = Math.max(0, Math.ceil(hor - ((H - eye) * scale) / t - 0.5)), y1 = Math.min(grid.rows, Math.ceil(hor + (eye * scale) / t - 0.5));
   const post = along % 3 < 0.15 + t * 0.002, k = 1 - Math.min(1, t / 1500) * 0.7;
   for (let y = y0; y < y1; y++) {
@@ -413,7 +423,8 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
     if (tY < 5) continue;
     const tX = invDet * (dirY * rx - dirX * ry);
     const cx = (cols / 2) * (1 + tX / tY), colsPerM = cols / 2 / plane / tY;
-    const top = hor - ((s.h - v.eye) * scale) / tY, bot = hor + (v.eye * scale) / tY;
+    const eyeS = v.eye + (rx * rx + ry * ry) / (2 * CURVE_R); // sunk by the curve
+    const top = hor - ((s.h - eyeS) * scale) / tY, bot = hor + (eyeS * scale) / tY;
     const maxHalf = s.r * 2.2 * colsPerM;
     const x0 = Math.max(0, Math.floor(cx - maxHalf)), x1 = Math.min(cols, Math.ceil(cx + maxHalf));
     const y0 = Math.max(0, Math.ceil(top - 0.5)), y1 = Math.min(rows, Math.ceil(bot - 0.5));

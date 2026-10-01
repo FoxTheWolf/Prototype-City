@@ -187,6 +187,26 @@ export interface Vent {
   h: number;
 }
 
+/**
+ * The Sarcophagus: a colossal containment dome, never finished, over the main crater of the fire,
+ * some 5 km past the fence on one side. A shallow cap of radius r and height h centered at (x, y);
+ * beside it, joined to it, a squat draft tower (center tx, ty, radius tr, height th) meant to turn
+ * the fire's heat into power. Work stopped (bankruptcy or graft, for the story to tell); its cranes
+ * still stand on top, and its telemetry and sensors are still live.
+ */
+export interface Sarcophagus {
+  x: number;
+  y: number;
+  r: number;
+  h: number;
+  tx: number;
+  ty: number;
+  tr: number;
+  th: number;
+  /** Tower cranes standing on the dome: position and height of the mast top. */
+  cranes: { x: number; y: number; z: number; a: number }[];
+}
+
 /** Outside the city the ground burns; this far past the fence it starts to crack and glow. */
 export const BURN_START = 40;
 
@@ -269,6 +289,7 @@ export interface City {
   /** The burning seam around the city: smoke vents, and floodlight towers on the cordon fence (which runs along the city edge). */
   vents: Vent[];
   floodlights: { x: number; y: number }[];
+  sarcophagus: Sarcophagus;
   diagonal: Diagonal;
   sectors: number;
   /** Chooses the words of every place name (see locale/names.ts). */
@@ -791,8 +812,8 @@ export function generateCity(seed: number, size: number): City {
 
   const xCell = cellTable(xb), yCell = cellTable(yb);
   diagonalLamps(seed, diagonal, w, h, xb, yb, xCell, yCell, nbx, blocks, districts);
-  const { vents, floodlights } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+  const { vents, floodlights, sarcophagus } = generateBorder(seed, w, h);
+  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
 }
 
 /**
@@ -858,11 +879,26 @@ function generateBorder(seed: number, w: number, h: number) {
     const out = BURN_START + 40 + rng() ** 1.5 * 900;
     vents.push({ x: x + nx * out, y: y + ny * out, r: 4 + rng() * 10, h: 50 + rng() * 110 });
   }
+  // the Sarcophagus on one side: its near edge 5 km past the fence
+  const a = rng() * 2 * Math.PI, dx = Math.cos(a), dy = Math.sin(a);
+  const edge = Math.min(Math.abs(w / 2 / (dx || 1e-9)), Math.abs(h / 2 / (dy || 1e-9)));
+  const R = 1500, H = 600, far = edge + 5000 + R;
+  const sx = w / 2 + dx * far, sy = h / 2 + dy * far;
+  const side = rng() < 0.5 ? -1 : 1;
+  const tr = 420, tower = { tx: sx + dx * 300 - dy * side * (R + tr * 0.6), ty: sy + dy * 300 + dx * side * (R + tr * 0.6), tr, th: 230 };
+  const cranes: Sarcophagus['cranes'] = [];
+  for (let k = 0; k < 5; k++) {
+    // on the dome's upper slopes, where the work stopped
+    const ca = rng() * 2 * Math.PI, cr = (0.15 + rng() * 0.45) * R;
+    const Rs = (R * R + H * H) / (2 * H), surf = Math.sqrt(Rs * Rs - cr * cr) - (Rs - H);
+    cranes.push({ x: sx + Math.cos(ca) * cr, y: sy + Math.sin(ca) * cr, z: surf + 60 + rng() * 30, a: rng() * 2 * Math.PI });
+  }
+  const sarcophagus: Sarcophagus = { x: sx, y: sy, r: R, h: H, ...tower, cranes };
   const floodlights: { x: number; y: number }[] = [];
   const GAP = 120, OFF = 3;
   for (let x = GAP / 2; x < w; x += GAP) floodlights.push({ x, y: -OFF }, { x, y: h + OFF });
   for (let y = GAP / 2; y < h; y += GAP) floodlights.push({ x: -OFF, y }, { x: w + OFF, y });
-  return { vents, floodlights };
+  return { vents, floodlights, sarcophagus };
 }
 
 /** District of the block nearest to a point (roads belong to the block beside them). */

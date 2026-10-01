@@ -86,7 +86,9 @@ function glowBelow(c: City, x: number, y: number, out: Float32Array) {
   const dx = Math.max(0, -x, x - c.w), dy = Math.max(0, -y, y - c.h), out_ = Math.hypot(dx, dy);
   const core = Math.exp(-((Math.hypot(x - c.cx, y - c.cy) / (Math.min(c.w, c.h) * 0.45)) ** 2));
   const city = (out_ > 0 ? Math.exp(-out_ / 500) : 1) * (0.55 + 0.45 * core);
-  const fire = Math.exp(-(((out_ - 450) / 420) ** 2));
+  // the seam's fires in a ring outside the fence, and the great crater under the Sarcophagus
+  const S = c.sarcophagus, crater = Math.exp(-((Math.hypot(x - S.x, y - S.y) / (S.r * 1.3)) ** 2));
+  const fire = Math.exp(-(((out_ - 450) / 420) ** 2)) + 1.6 * crater;
   out[0] = 105 * city + 90 * fire; out[1] = 60 * city + 28 * fire; out[2] = 38 * city + 12 * fire;
 }
 const GLOW = new Float32Array(3);
