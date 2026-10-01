@@ -731,7 +731,8 @@
   ],
   "phone": {
     "ok": "OK", "off": "OFF", "noService": "NO SERVICE", "ready": "READY.", "mapsDb": "MAPS DB",
-    "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide",
+    "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide", "places": "Places", "placesTitle": "PLACES", "show": "Show",
+    "zoom": ["LOCAL", "DISTR", "SECTOR", "CITY"],
     "app": { "map": "Maps" }
   }
 }

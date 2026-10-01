@@ -6,7 +6,7 @@ import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
 import { Ground, MAP_RES, mapRaster, type MapRaster } from './mapdata';
-import { APPS, BOOT_LOG_S, type Key, type Phone } from './phone';
+import { APPS, BOOT_LOG_S, ZOOM_ROW_M, type Key, type Phone } from './phone';
 
 /**
  * The phone drawn in the player's hand, over the bottom right of the view: a 2008 handset with a
@@ -21,11 +21,9 @@ const PHONE_H = 52;
 /** How much of it shows when held up (the rest is below the screen edge). */
 const SHOWN = 46;
 const SX = 4, SY = 4, SW = 42, SH = 26;
-/** Map scale: metres per screen row (a column is the cell aspect of that, so nothing is stretched). */
-export const MAP_ROW_M = 8;
 const MAP_ROWS = SH - 4;
-/** Metres the map shows across and down, for a cell aspect (width / height). */
-export const mapView = (aspect: number): [number, number] => [SW * MAP_ROW_M * aspect, MAP_ROWS * MAP_ROW_M];
+/** Metres the map shows across and down, for a cell aspect (width / height) and zoom (a column is the cell aspect of a row, so nothing is stretched). */
+export const mapView = (aspect: number, zoom: number): [number, number] => [SW * ZOOM_ROW_M[zoom] * aspect, MAP_ROWS * ZOOM_ROW_M[zoom]];
 
 type C3 = readonly [number, number, number];
 const T = en.phone;
@@ -79,6 +77,19 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
     if (glow) g.put(i, c, Math.max(fg[0], fg[0] * Lr), Math.max(fg[1], fg[1] * Lg), Math.max(fg[2], fg[2] * Lb));
     else g.put(i, c, fg[0] * Lr * k + sh * GL.r, fg[1] * Lg * k + sh * GL.g, fg[2] * Lb * k + sh * GL.b);
   };
+  // the glint's light added to a cell's background; a cell darkened by a shadow
+  const addBg = (x: number, y: number, v: number) => {
+    const gx = ox + x, gy = oy + y;
+    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
+    const k = (gy * g.cols + gx) * 4;
+    g.bg[k] += v * GL.r; g.bg[k + 1] += v * GL.g; g.bg[k + 2] += v * GL.b;
+  };
+  const shade = (x: number, y: number, f: number) => {
+    const gx = ox + x, gy = oy + y;
+    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
+    const k = (gy * g.cols + gx) * 4;
+    for (let c = 0; c < 3; c++) { g.bg[k + c] *= 1 - f; g.cells[k + c + 1] *= 1 - f; }
+  };
   // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
   for (let y = 0; y < PHONE_H; y++) {
     const inset = y === 0 || y === PHONE_H - 1 ? 3 : y === 1 || y === PHONE_H - 2 ? 1 : 0;
@@ -100,10 +111,19 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
   const key = (k: Key, x0: number, y0: number, w: number, h: number, label: string, col?: C3) => {
     const t = P.pressed.get(k), down = t !== undefined && now - t < 0.14;
     const fg: C3 = col ?? (on ? [150, 205, 255] : [125, 128, 138]);
-    // a cap: lit along its top edge with a shadow under it, unless pushed in
+    // a cap in relief, unless pushed in: lit along its top edge with a shadow under it; the edge
+    // facing the nearest light catches its glint, and a short shadow falls on the side away from it
     const capAt = (y: number): C3 => (down ? CAP_DOWN : y === 0 && h > 1 ? CAP_TOP : CAP);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
-    if (!down) for (let x = 0; x < w; x++) cell(x0 + x, y0 + h, 32, BODY, [18, 19, 22], 0.1);
+    const side = GL.lat > 0 ? w - 1 : 0, rim = down ? 0 : GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
+      if (x === side && rim > 1) addBg(x0 + x, y0 + y, rim);
+    }
+    if (!down) {
+      for (let x = 0; x < w; x++) cell(x0 + x, y0 + h, 32, BODY, [18, 19, 22], 0.1);
+      const sx = GL.lat > 0 ? x0 - 1 : x0 + w, dark = Math.min(0.55, rim / 80);
+      if (dark > 0.05) for (let y = 0; y <= h; y++) shade(sx, y0 + y + 1, dark);
+    }
     const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
     for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? [fg[0] * 0.7, fg[1] * 0.7, fg[2] * 0.7] : fg, capAt(ly - y0), 0.5, on);
   };
@@ -133,6 +153,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
       if (P.screen === 'standby') standby(S, world, t);
       else if (P.screen === 'menu') menu(S, P, t);
       else if (P.screen === 'map') map(S, P, world, yaw, aspect, t, now);
+      else if (P.screen === 'places') places(S, P, world, t);
     }
   }
   // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
@@ -260,11 +281,14 @@ const G_CH = [ch('.'), 32, 32, ch('.'), 32, ch('"'), ch('+'), ch('=')];
 const G_FG: C3[] = [[110, 46, 22], [0, 0, 0], [0, 0, 0], [58, 58, 56], [0, 0, 0], [60, 130, 72], [84, 84, 90], [96, 84, 72]];
 const ARROWS = ['>', '\\', 'v', '/', '<', '\\', '^', '/'];
 
-/** What a map cell shows: the most common ground over its 2 m squares (buildings win ties), and the tallest building in it. */
+/**
+ * What a map cell shows: the most common ground over its 2 m squares (buildings win ties; at most
+ * 4x4 samples, so the far zooms stay cheap), and the tallest building in it.
+ */
 function sample(m: MapRaster, x0: number, y0: number, w: number, h: number, out: Int32Array) {
-  const counts = [0, 0, 0, 0, 0, 0, 0, 0];
+  const counts = [0, 0, 0, 0, 0, 0, 0, 0], sx = Math.max(MAP_RES, w / 4), sy = Math.max(MAP_RES, h / 4);
   let hmax = 0;
-  for (let y = y0 + MAP_RES / 2; y < y0 + h; y += MAP_RES) for (let x = x0 + MAP_RES / 2; x < x0 + w; x += MAP_RES) {
+  for (let y = y0 + sy / 2; y < y0 + h; y += sy) for (let x = x0 + sx / 2; x < x0 + w; x += sx) {
     const i = Math.floor(x / MAP_RES), j = Math.floor(y / MAP_RES);
     if (i < 0 || j < 0 || i >= m.w || j >= m.h) { counts[Ground.Out]++; continue; }
     const q = j * m.w + i, k = m.kind[q];
@@ -276,40 +300,126 @@ function sample(m: MapRaster, x0: number, y0: number, w: number, h: number, out:
   out[0] = best; out[1] = hmax * 2;
 }
 
-/** The map app: north up, centered on the GPS position (or moved off it with the d-pad), drawing in row by row. */
+const isWideRoad = (b: number[], k: number) => b[2 * k + 1] - b[2 * k] >= b[1] - b[0];
+
+/**
+ * Whether a road runs inside [a0, a1) along one axis (b: its boundaries, cells: the cell of every
+ * metre); wide: only the wide ones. Zoomed out, a road is far thinner than a cell, so it is drawn
+ * as a line where it falls instead of being outvoted by the blocks around it.
+ */
+function roadIn(b: number[], cells: Uint16Array, a0: number, a1: number, wide: boolean): boolean {
+  const n = cells.length - 1;
+  if (a1 < 0 || a0 > n) return false;
+  const c0 = cells[Math.max(0, Math.min(n, Math.floor(a0)))], c1 = cells[Math.max(0, Math.min(n, Math.floor(a1)))];
+  for (let c = c0; c <= c1; c++) if (!(c & 1) && (!wide || isWideRoad(b, c >> 1))) return true;
+  return false;
+}
+
+/** The roads crossing the view: [index, middle] of the avenues (x) or streets (y) whose middle is in [a0, a1). */
+function roadsIn(b: number[], a0: number, a1: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (let c = 0; c + 1 < b.length; c += 2) { const m = (b[c] + b[c + 1]) / 2; if (m >= a0 && m < a1) out.push([c >> 1, m]); }
+  return out;
+}
+
+/** District tints for the far zooms, by type. */
+const D_TINT: Record<string, C3> = { financial: [70, 110, 190], commercial: [200, 140, 60], residential: [90, 150, 90], historic: [170, 110, 80], industrial: [120, 120, 120], theater: [210, 80, 200] };
+const ROAD: C3 = [52, 58, 72], LABEL: C3 = [150, 195, 215], TB: C3 = [16, 30, 40];
+
+/**
+ * The map app: north up, centered on the GPS position (or moved off it with the d-pad), drawing in
+ * row by row, at one of four zooms. Up close it names the streets; farther out the districts, tinted
+ * by type; landmarks are stars, named while there is room.
+ */
 function map(S: Lcd, P: Phone, world: World, yaw: number, aspect: number, t: number, now: number) {
-  const { city, player } = world, m = mapRaster(city), rowM = MAP_ROW_M, colM = MAP_ROW_M * aspect;
+  const { city, player } = world, m = mapRaster(city), zoom = P.zoom, rowM = ZOOM_ROW_M[zoom], colM = rowM * aspect;
   const cx = player.x + P.panX, cy = player.y + P.panY;
-  const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM;
-  // title: the district at the view's middle, the scale and north
-  const d = districtAt(city, cx, cy), bar = 6, scale = `|${'-'.repeat(bar - 2)}| ${Math.round(bar * colM)}m  N^`;
-  S.fill(1, [16, 30, 40]);
-  S.text(1, 1, typed(districtName(city, d).toUpperCase().slice(0, SW - scale.length - 3), t), HI, [16, 30, 40]);
-  S.text(SW - scale.length - 1, 1, scale, DIM, [16, 30, 40]);
+  const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, D = city.diagonal;
+  // title: the district at the view's middle (the city, all zoomed out), the zoom, the scale and north
+  const bar = 6, scale = `${T.zoom[zoom]} |${'-'.repeat(bar - 2)}| ${Math.round(bar * colM)}m N^`;
+  S.fill(1, TB);
+  const title = zoom === 3 ? cityName(city) : districtName(city, districtAt(city, cx, cy));
+  S.text(1, 1, typed(title.toUpperCase().slice(0, Math.max(0, SW - scale.length - 3)), t), HI, TB);
+  S.text(SW - scale.length - 1, 1, scale, DIM, TB);
   const out = new Int32Array(2);
+  const colRoad: boolean[] = [], rowRoad: boolean[] = [];
+  if (zoom > 0) {
+    // zoomed out, the roads are lines: all of them up to the sector zoom; for the city, the avenues and the wide streets
+    for (let c = 0; c < SW; c++) colRoad[c] = roadIn(city.xb, city.xCell, X0 + c * colM, X0 + (c + 1) * colM, false);
+    for (let r = 0; r < MAP_ROWS; r++) rowRoad[r] = roadIn(city.yb, city.yCell, Y0 + r * rowM, Y0 + (r + 1) * rowM, zoom === 3);
+  }
+  const diagHalf = Math.max(D.w / 2, 0.45 * Math.max(colM, rowM));
   for (let r = 0; r < MAP_ROWS; r++) {
     if (t < 0.15 + r * 0.03) break; // the slow phone draws the map in from the top
     for (let c = 0; c < SW; c++) {
-      sample(m, X0 + c * colM, Y0 + r * rowM, colM, rowM, out);
+      const x0 = X0 + c * colM, y0 = Y0 + r * rowM, mx = x0 + colM / 2, my = y0 + rowM / 2;
+      const inCity = mx >= 0 && my >= 0 && mx < city.w && my < city.h;
+      if (zoom > 0 && inCity && (colRoad[c] || rowRoad[r] || Math.abs(diagS(D, mx, my)) < diagHalf)) { S.put(c, 2 + r, 32, ROAD, ROAD); continue; }
+      sample(m, x0, y0, colM, rowM, out);
       const k = out[0];
+      let bg: C3, fg: C3 = G_FG[k], glyph = G_CH[k];
       if (k === Ground.Building) {
         const f = Math.min(1, out[1] / 120);
-        const bg: C3 = [70 + 150 * f, 58 + 110 * f, 44 + 50 * f];
+        bg = [70 + 150 * f, 58 + 110 * f, 44 + 50 * f]; fg = [255, 240, 200];
         // the skyline's few giants get a mark, to steer by
-        S.put(c, 2 + r, out[1] > 200 ? ch('^') : 32, [255, 240, 200], bg);
-      } else S.put(c, 2 + r, G_CH[k], G_FG[k], G_BG[k]);
+        glyph = out[1] > 200 ? ch('^') : 32;
+      } else bg = G_BG[k];
+      if (zoom >= 2 && inCity && k !== Ground.Out) {
+        // the districts, tinted by type
+        const tint = D_TINT[city.districts[districtAt(city, mx, my)].type];
+        bg = [bg[0] * 0.7 + tint[0] * 0.3, bg[1] * 0.7 + tint[1] * 0.3, bg[2] * 0.7 + tint[2] * 0.3];
+      }
+      S.put(c, 2 + r, glyph, fg, bg);
     }
   }
   const drawn = Math.max(0, Math.floor((t - 0.15) / 0.03));
   const at = (x: number, y: number) => [Math.floor((x - X0) / colM), Math.floor((y - Y0) / rowM)];
-  // landmarks: a star, and the name where it fits
+  // labels never overlap each other or a landmark's star (one cell apart); the ones placed first win
+  const used = new Uint8Array(SW * MAP_ROWS);
+  const free = (x: number, r: number, n: number) => { for (let c = Math.max(0, x - 1); c < Math.min(SW, x + n + 1); c++) if (used[r * SW + c]) return false; return true; };
+  const label = (c: number, r: number, s: string, fg: C3, bg: C3) => {
+    if (r < 0 || r >= MAP_ROWS || r >= drawn) return;
+    s = s.slice(0, SW);
+    const x = Math.max(0, Math.min(SW - s.length, c));
+    if (!free(x, r, s.length)) return;
+    for (let k = 0; k < s.length; k++) used[r * SW + x + k] = 1;
+    S.text(x, 2 + r, s, fg, bg);
+  };
+  // landmarks: a star (named below, where there is room)
+  const stars: [number, number, number][] = [];
   city.landmarks.forEach((L, k) => {
     const [c, r] = at(L.x, L.y);
     if (c < 0 || c >= SW || r < 0 || r >= MAP_ROWS || r >= drawn) return;
     S.put(c, 2 + r, ch('*'), [255, 230, 90], [60, 40, 10]);
-    const name = landmarkName(city, k).toUpperCase(), room = SW - c - 2;
-    if (room >= 5) S.text(c + 2, 2 + r, name.slice(0, room), [255, 220, 120], [30, 22, 8]);
+    used[r * SW + c] = 1;
+    stars.push([k, c, r]);
   });
+  // up close, their names beside them, before any street name
+  if (zoom <= 1) for (const [k, c, r] of stars) {
+    const room = SW - c - 2;
+    if (room >= 5) label(c + 2, r, landmarkName(city, k).toUpperCase().slice(0, room), [255, 220, 120], [30, 22, 8]);
+  }
+  if (zoom <= 1) {
+    // street names: the avenues across the top, the streets along their own rows (zoomed out, only the wide ones)
+    for (const [k, x] of roadsIn(city.xb, X0, X0 + SW * colM)) {
+      if (zoom === 1 && !isWideRoad(city.xb, k)) continue;
+      const name = roadName(city, true, k);
+      label(Math.floor((x - X0) / colM) - (name.length >> 1), 0, name, LABEL, ROAD);
+    }
+    for (const [k, y] of roadsIn(city.yb, Y0 + rowM, Y0 + MAP_ROWS * rowM)) {
+      if (zoom === 1 && !isWideRoad(city.yb, k)) continue;
+      label(2, Math.floor((y - Y0) / rowM), roadName(city, false, k), LABEL, ROAD);
+    }
+    // the diagonal, named at the point of it nearest the view's middle
+    const s = diagS(D, cx, cy), [dc, dr] = at(cx - s * D.nx, cy - s * D.ny);
+    if (dc >= 0 && dc < SW) { const n = diagonalName(city); label(dc - (n.length >> 1), dr, n, LABEL, ROAD); }
+  } else {
+    // district names at their middles, the ones nearest the view's middle first
+    city.districts.map((Dd, k) => [k, Math.hypot(Dd.x - cx, Dd.y - cy)]).sort((a, b) => a[1] - b[1]).forEach(([k]) => {
+      const Dd = city.districts[k], [c, r] = at(Dd.x, Dd.y), n = districtName(city, k).toUpperCase();
+      if (c >= 0 && c < SW) label(c - (n.length >> 1), r, n, [255, 236, 200], [30, 34, 40]);
+    });
+  }
   // where the player is, pointing the way they face; blinking
   const [pc, pr] = at(player.x, player.y);
   if (pc >= 0 && pc < SW && pr >= 0 && pr < MAP_ROWS && pr < drawn) {
@@ -317,15 +427,31 @@ function map(S: Lcd, P: Phone, world: World, yaw: number, aspect: number, t: num
     S.put(pc, 2 + pr, ch(ARROWS[o]), blink ? [255, 255, 255] : [90, 255, 255], blink ? [0, 120, 150] : [0, 60, 80]);
   }
   // the street at the view's middle
-  const onDiag = Math.abs(diagS(city.diagonal, cx, cy)) < city.diagonal.w / 2 + SIDEWALK;
+  const onDiag = Math.abs(diagS(D, cx, cy)) < D.w / 2 + SIDEWALK;
   const street = `${onDiag ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, cx))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, cy))}`;
-  S.fill(SH - 2, [16, 30, 40]);
-  S.text(1, SH - 2, typed(street.slice(0, SW - 2), t - 0.3), INK, [16, 30, 40]);
+  S.fill(SH - 2, TB);
+  S.text(1, SH - 2, typed(street.slice(0, SW - 2), t - 0.3), INK, TB);
   const panned = P.panX !== 0 || P.panY !== 0;
   if (panned) {
     // moved off the position: which way back to it
     const back = `${Math.round(Math.hypot(P.panX, P.panY))}m ${compass(-P.panX, -P.panY)}`;
-    S.text(SW - back.length - 1, SH - 2, back, DIM, [16, 30, 40]);
+    S.text(SW - back.length - 1, SH - 2, back, DIM, TB);
   }
-  softKeys(S, panned ? T.center : '', T.back);
+  softKeys(S, panned ? T.center : T.places, T.back);
+}
+
+/** The list of places: the city's landmarks, nearest first, with how far and which way. */
+function places(S: Lcd, P: Phone, world: World, t: number) {
+  const { city, player } = world;
+  S.text(1, 1, typed(T.placesTitle, t), HI, LCD);
+  const rows = SH - 5, top = Math.max(0, Math.min(P.psel - (rows >> 1), P.places.length - rows));
+  for (let n = 0; n < rows && top + n < P.places.length; n++) {
+    const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? [40, 90, 120] : LCD;
+    const far = `${Math.round(Math.hypot(L.x - player.x, L.y - player.y))}m ${compass(L.x - player.x, L.y - player.y)}`;
+    const name = landmarkName(city, k).slice(0, SW - far.length - 5);
+    if (sel) S.fill(3 + n, bg);
+    S.text(1, 3 + n, typed(`* ${name}`, t - 0.1 - n * 0.04), sel ? [255, 255, 255] : INK, bg);
+    S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? [255, 255, 255] : DIM, bg);
+  }
+  softKeys(S, T.show, T.back);
 }

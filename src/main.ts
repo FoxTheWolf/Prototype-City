@@ -36,7 +36,7 @@ const overlay = document.getElementById('overlay')!;
 const renderer = new GlyphRenderer(canvas);
 const input = new Input(canvas);
 const camera = new Camera();
-const phone = new Phone();
+const phone = new Phone(world);
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
@@ -63,7 +63,7 @@ let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
-  const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH));
+  const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH, phone.zoom));
   sound?.phoneKey(/^\d$/.test(pk), done !== false);
   if (done === 'away') sound?.phoneSlide(false);
 }
@@ -75,6 +75,11 @@ function phoneToggle() {
 // with the phone out the mouse buttons are its OK and Back (as in GTA IV);
 // otherwise, in a lift car, aim at a button of its panel and click it
 addEventListener('contextmenu', (e) => e.preventDefault());
+// the mouse wheel zooms the phone's map
+addEventListener('wheel', (e) => {
+  if (!phone.out || phone.screen !== 'map' || !e.deltaY) return;
+  if (phone.setZoom(phone.zoom + Math.sign(e.deltaY), performance.now() / 1000)) sound?.phoneKey(false);
+});
 addEventListener('mousedown', (e) => {
   if (!input.locked) return;
   if (phone.out) { if (e.button === 0 || e.button === 2) phonePress(e.button === 0 ? 'ok' : 'rsoft'); return; }
