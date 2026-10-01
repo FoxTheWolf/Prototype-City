@@ -731,7 +731,7 @@
   ],
   "phone": {
     "ok": "OK", "off": "OFF", "noService": "NO SERVICE", "ready": "READY.", "mapsDb": "MAPS DB",
-    "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center",
+    "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide",
     "app": { "map": "Maps" }
   }
 }

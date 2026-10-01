@@ -5,17 +5,18 @@ import { PLAYER_PHONE, type Device } from '../sim/device';
  * it shows, and which of its keys was pressed when (they light up and click). No DOM here: main
  * passes keys in, draw.ts reads the state. Times are real seconds (performance.now / 1000).
  *
- * Keyboard to phone: P takes it out and puts it away; with it out, the arrows are the d-pad,
- * Enter its middle (OK, and the left soft key's action), Backspace the right soft key (Back),
- * the digit keys the keypad.
+ * Controls, after GTA IV on PC: Up takes it out (P too, both ways); with it out, the arrows are
+ * the d-pad, Enter or the left mouse button its middle (OK, and the left soft key's action),
+ * Backspace or the right mouse button the right soft key (Back), which on the standby screen puts
+ * it away; the digit keys are the keypad.
  */
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'map';
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The apps on the menu, in order (the digit keys pick them). */
 export const APPS: Screen[] = ['map'];
-/** Seconds the boot log takes before the standby screen. */
-export const BOOT_S = 5.2;
+/** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
+export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
 
 export class Phone {
   readonly device: Device = PLAYER_PHONE;
@@ -52,12 +53,16 @@ export class Phone {
     if (s === 'map') this.panX = this.panY = 0;
   }
 
-  /** A key pressed; returns false when it does nothing here (the click still sounds). */
-  press(k: Key, now: number, viewW: number, viewH: number): boolean {
+  /** A key pressed; returns false when it does nothing here (the click still sounds), 'away' when it went back in the pocket. */
+  press(k: Key, now: number, viewW: number, viewH: number): boolean | 'away' {
     this.pressed.set(k, now);
     switch (this.screen) {
+      case 'boot':
+        if (k === 'rsoft') { this.out = false; return 'away'; }
+        return false;
       case 'standby':
         if (k === 'ok' || k === 'lsoft') { this.open('menu', now); return true; }
+        if (k === 'rsoft') { this.out = false; return 'away'; }
         return false;
       case 'menu': {
         if (k === 'up' || k === 'down') { this.sel = (this.sel + (k === 'up' ? -1 : 1) + APPS.length) % APPS.length; return true; }

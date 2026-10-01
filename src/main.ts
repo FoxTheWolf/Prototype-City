@@ -1,7 +1,7 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
 import { drawPhone, mapView } from './phone/draw';
-import { Phone, phoneKey } from './phone/phone';
+import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
@@ -9,7 +9,7 @@ import { CharGrid } from './render/grid';
 import { type Look } from './render/palette';
 import { power } from './render/power';
 import { pickedButton } from './render/interior';
-import { renderWorld } from './render/raycaster';
+import { renderWorld, VIEW_LIGHT } from './render/raycaster';
 import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
@@ -40,7 +40,7 @@ const phone = new Phone();
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone,
+  world, camera, pickedButton, callLift, phone, VIEW_LIGHT,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -61,28 +61,38 @@ let running = false;
 const SOLID = [0.24, 0.16, 0.08, 0];
 let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
-// the lift car's panel: aim at a button and click it
+// the phone's keys (see phone.ts): sounds, and the slide back into the pocket
+function phonePress(pk: Key) {
+  const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH));
+  sound?.phoneKey(/^\d$/.test(pk), done !== false);
+  if (done === 'away') sound?.phoneSlide(false);
+}
+function phoneToggle() {
+  const r = phone.toggle(performance.now() / 1000);
+  sound?.phoneSlide(r !== 'in');
+  if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
+}
+// with the phone out the mouse buttons are its OK and Back (as in GTA IV);
+// otherwise, in a lift car, aim at a button of its panel and click it
+addEventListener('contextmenu', (e) => e.preventDefault());
 addEventListener('mousedown', (e) => {
-  if (e.button !== 0 || !input.locked || !liftFloors(world)) return;
+  if (!input.locked) return;
+  if (phone.out) { if (e.button === 0 || e.button === 2) phonePress(e.button === 0 ? 'ok' : 'rsoft'); return; }
+  if (e.button !== 0 || !liftFloors(world)) return;
   const b = pickedButton();
   if (b >= 0) sound?.beep(callLift(world, b));
 });
 addEventListener('keydown', (e) => {
-  // the phone: P takes it out or puts it away; while it is out, its keys (see phone.ts)
+  // the phone: Up (or P) takes it out; while it is out, its keys (see phone.ts)
   const pk = phone.out ? phoneKey(e.code) : null;
   if (pk) {
     e.preventDefault();
     if (e.repeat && pk !== 'up' && pk !== 'down' && pk !== 'left' && pk !== 'right') return;
-    const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH));
-    sound?.phoneKey(/^\d$/.test(pk), done);
+    phonePress(pk);
     return;
   }
   if (e.repeat) return;
-  if (e.code === 'KeyP' && running) {
-    const r = phone.toggle(performance.now() / 1000);
-    sound?.phoneSlide(r !== 'in');
-    if (r === 'boot') sound?.phoneBoot(0.35);
-  }
+  if ((e.code === 'KeyP' || (e.code === 'ArrowUp' && !phone.out)) && running) phoneToggle();
   else if (e.code === 'KeyM') sound?.toggleMute();
   else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
@@ -112,8 +122,8 @@ function resize() {
 }
 
 function readInput(): PlayerInput {
-  // with the phone out the arrows are its d-pad; WASD still walk
-  const f = (input.down('KeyW', phone.out ? 'KeyW' : 'ArrowUp') ? 1 : 0) - (input.down('KeyS', phone.out ? 'KeyS' : 'ArrowDown') ? 1 : 0);
+  // the up and down arrows belong to the phone (as in GTA IV); WASD walk
+  const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
   return { forward: running ? f : 0, strafe: running ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
@@ -177,7 +187,7 @@ function frame(now: number) {
   });
   const ms = performance.now() - r0;
   phone.update(dt, now / 1000);
-  drawPhone(grid, phone, world, camera.yaw, layout.cellW / layout.cellH, now / 1000);
+  drawPhone(grid, phone, world, camera.yaw, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT);
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }

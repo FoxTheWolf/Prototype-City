@@ -117,6 +117,9 @@ let nearT = new Float32Array(0);
 /** This frame's roofs near the viewer that keep the rain off. */
 const roofs: Roof[] = [];
 
+/** The light on the viewer's hands after the last renderWorld, per channel (~0.3 in the dark, 1 in daylight). */
+export const VIEW_LIGHT = new Float32Array([1, 1, 1]);
+
 export function renderWorld(grid: CharGrid, world: World, v: View) {
   const { cols, rows } = grid;
   const { city } = world;
@@ -413,6 +416,14 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     glassPass(grid, inside, eye, hor, scale);
   }
   finish(grid, v.look, sky);
+  // the light on the viewer's hands, for what they hold (the phone): the room's lamps indoors; outside
+  // the sky, the street lamps and the passing lights at chest height, and the lightning
+  if (inside) { const L = insideLight(inside, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
+  else {
+    lightAt(px, py, 1.2);
+    const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
+    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + LT[c] / 150);
+  }
   // after finish, so the drops keep the background of what is behind them
   drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);
 }

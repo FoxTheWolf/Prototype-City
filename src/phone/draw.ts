@@ -6,13 +6,15 @@ import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
 import { Ground, MAP_RES, mapRaster, type MapRaster } from './mapdata';
-import { APPS, type Key, type Phone } from './phone';
+import { APPS, BOOT_LOG_S, type Key, type Phone } from './phone';
 
 /**
  * The phone drawn in the player's hand, over the bottom right of the view: a 2008 handset with a
  * colour screen above a d-pad, soft keys, call and end keys and the number keys, whose bottom row
  * runs off the screen. Keys light while the phone is on and sink when pressed. The screen is a
  * small character display of its own; its text types in and the map draws in, as on a slow phone.
+ * It sits in the scene's light (VIEW_LIGHT: street lamps, signs, headlights, the room's lamps), with
+ * a lit edge on top and left, and a sheen on its metal rim and its glass that slides as you turn.
  */
 export const PHONE_W = 50;
 const PHONE_H = 52;
@@ -27,7 +29,7 @@ export const mapView = (aspect: number): [number, number] => [SW * MAP_ROW_M * a
 
 type C3 = readonly [number, number, number];
 const T = en.phone;
-const BODY: C3 = [30, 32, 37], EDGE: C3 = [58, 61, 68], BEZEL: C3 = [7, 7, 9], CAP: C3 = [48, 50, 57], CAP_DOWN: C3 = [22, 23, 26];
+const BODY: C3 = [30, 32, 37], EDGE: C3 = [58, 61, 68], BEZEL: C3 = [7, 7, 9], CAP: C3 = [48, 50, 57], CAP_TOP: C3 = [64, 67, 75], CAP_DOWN: C3 = [22, 23, 26];
 const LCD: C3 = [8, 15, 20], INK: C3 = [170, 225, 245], DIM: C3 = [80, 120, 140], BAR: C3 = [28, 62, 82], HI: C3 = [255, 196, 90];
 const ch = (s: string) => s.charCodeAt(0);
 
@@ -47,22 +49,31 @@ class Lcd {
 /** Text that types in: as much of s as `cps` characters a second have written since t = 0. */
 const typed = (s: string, t: number, cps = 60) => s.slice(0, Math.max(0, Math.floor(t * cps)));
 
-export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspect: number, now: number) {
+export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspect: number, now: number, light: Float32Array) {
   if (P.raise < 0.01) return;
   const e = 1 - (1 - P.raise) ** 3;
   const ox = g.cols - PHONE_W - 6, oy = g.rows - Math.round(SHOWN * e);
-  const cell = (x: number, y: number, c: number, fg: C3, bg: C3) => {
+  const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
+  // the sheen: a soft diagonal band of reflected light that slides across as the view turns
+  const s0 = ((((yaw / (Math.PI * 2)) * 140) % 140) + 140) % 140 - 40;
+  const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 4) ** 2));
+  // a cell of the phone's surface: lit by the scene, darker toward the bottom, the sheen on top in
+  // proportion to its gloss; `glow` is light of its own (backlit key labels) the scene does not dim
+  const cell = (x: number, y: number, c: number, fg: C3, bg: C3, gloss = 0.25, glow = false) => {
     const gx = ox + x, gy = oy + y;
     if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
-    const i = gy * g.cols + gx;
-    g.put(i, c, fg[0], fg[1], fg[2]); g.setBg(i, bg[0], bg[1], bg[2]);
+    const i = gy * g.cols + gx, k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * (25 + 45 * Lm);
+    g.setBg(i, bg[0] * Lr * k + sh, bg[1] * Lg * k + sh, bg[2] * Lb * k + sh * 1.1);
+    if (glow) g.put(i, c, Math.max(fg[0], fg[0] * Lr), Math.max(fg[1], fg[1] * Lg), Math.max(fg[2], fg[2] * Lb));
+    else g.put(i, c, fg[0] * Lr * k + sh, fg[1] * Lg * k + sh, fg[2] * Lb * k + sh);
   };
-  // the body, rounded at the corners, a lighter rim along its sides
+  // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
   for (let y = 0; y < PHONE_H; y++) {
     const inset = y === 0 || y === PHONE_H - 1 ? 3 : y === 1 || y === PHONE_H - 2 ? 1 : 0;
     for (let x = inset; x < PHONE_W - inset; x++) {
-      const rim = x === inset || x === PHONE_W - 1 - inset || y === 0;
-      cell(x, y, 32, BODY, rim ? EDGE : BODY);
+      const left = x === inset, right = x === PHONE_W - 1 - inset, top = y === 0 || (inset > 0 && (left || right));
+      const col: C3 = top || left ? EDGE : right ? [20, 21, 25] : BODY;
+      cell(x, y, 32, col, col, left || right || top ? 0.9 : 0.2);
     }
   }
   // earpiece, front camera, maker's name
@@ -77,33 +88,49 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, yaw: number, aspe
   const key = (k: Key, x0: number, y0: number, w: number, h: number, label: string, col?: C3) => {
     const t = P.pressed.get(k), down = t !== undefined && now - t < 0.14;
     const fg: C3 = col ?? (on ? [150, 205, 255] : [125, 128, 138]);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cell(x0 + x, y0 + y, 32, fg, down ? CAP_DOWN : CAP);
+    // a cap: lit along its top edge with a shadow under it, unless pushed in
+    const capAt = (y: number): C3 => (down ? CAP_DOWN : y === 0 && h > 1 ? CAP_TOP : CAP);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
+    if (!down) for (let x = 0; x < w; x++) cell(x0 + x, y0 + h, 32, BODY, [18, 19, 22], 0.1);
     const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
-    for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? [fg[0] * 0.7, fg[1] * 0.7, fg[2] * 0.7] : fg, down ? CAP_DOWN : CAP);
+    for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? [fg[0] * 0.7, fg[1] * 0.7, fg[2] * 0.7] : fg, capAt(ly - y0), 0.5, on);
   };
   const CY = SY + SH + 2;
   key('lsoft', 3, CY, 10, 2, '--');
   key('rsoft', 37, CY, 10, 2, '--');
   key('send', 3, CY + 3, 10, 2, 'SEND', [80, 230, 120]);
   key('end', 37, CY + 3, 10, 2, 'END', [255, 80, 70]);
+  // (each key's shadow falls on the row under it, so the lower ones are drawn after)
   key('up', 21, CY, 8, 1, '^');
-  key('down', 21, CY + 4, 8, 1, 'v');
   key('left', 16, CY + 1, 4, 3, '<');
   key('right', 30, CY + 1, 4, 3, '>');
   key('ok', 21, CY + 1, 8, 3, 'OK');
+  key('down', 21, CY + 4, 8, 1, 'v');
   const KEYS: [Key, string][] = [['1', '1 .,'], ['2', '2 abc'], ['3', '3 def'], ['4', '4 ghi'], ['5', '5 jkl'], ['6', '6 mno'], ['7', '7 pqrs'], ['8', '8 tuv'], ['9', '9 wxyz'], ['*', '* +'], ['0', '0 _'], ['#', '# ^']];
   KEYS.forEach(([k, label], n) => key(k, 3 + (n % 3) * 16, CY + 6 + Math.floor(n / 3) * 3, 12, 2, label));
 
   // the screen
   const S = new Lcd(g, ox + SX, oy + SY);
-  if (!on) { for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]); return; }
-  for (let y = 0; y < SH; y++) S.fill(y, LCD);
-  const t = now - P.since;
-  if (P.screen === 'boot') return boot(S, P, world, t);
-  statusBar(S, world, P.screen === 'map');
-  if (P.screen === 'standby') standby(S, world, t);
-  else if (P.screen === 'menu') menu(S, P, t);
-  else if (P.screen === 'map') map(S, P, world, yaw, aspect, t, now);
+  if (!on) for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]);
+  else {
+    for (let y = 0; y < SH; y++) S.fill(y, LCD);
+    const t = now - P.since;
+    if (P.screen === 'boot') boot(S, P, world, t);
+    else {
+      statusBar(S, world, P.screen === 'map');
+      if (P.screen === 'standby') standby(S, world, t);
+      else if (P.screen === 'menu') menu(S, P, t);
+      else if (P.screen === 'map') map(S, P, world, yaw, aspect, t, now);
+    }
+  }
+  // the glass over the screen: a faint wash of the scene's light, and the sheen
+  for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+    const gx = ox + SX + x, gy = oy + SY + y;
+    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
+    const k = (gy * g.cols + gx) * 4, sh = sheen(SX + x, SY + y) * (10 + 26 * Lm);
+    g.bg[k] += 3 * Lr + sh; g.bg[k + 1] += 3 * Lg + sh; g.bg[k + 2] += 4 * Lb + sh * 1.15;
+    g.cells[k + 1] += sh * 0.5; g.cells[k + 2] += sh * 0.5; g.cells[k + 3] += sh * 0.6;
+  }
 }
 
 function statusBar(S: Lcd, world: World, gps: boolean) {
@@ -135,12 +162,15 @@ function bigText(S: Lcd, y: number, s: string, col: C3, t = 1e9) {
   }
 }
 
-/** Power on: the maker's logo, then the boot log listing the hardware as it is found. */
+/**
+ * Power on, in two stages: the hardware check scrolls by fast, listing what it finds; then the
+ * splash screen, the maker's logo drawing in over the model's name and a loading bar.
+ */
 function boot(S: Lcd, P: Phone, world: World, t: number) {
   if (t < 0) { for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]); return; }
   const D = P.device;
-  if (t < 1.3) { bigText(S, 9, D.maker.toUpperCase(), [Math.min(255, t * 400), Math.min(196, t * 300), Math.min(90, t * 140)], t); return; }
-  mapRaster(world.city); // the map database loads during the boot (built once per city)
+  if (t >= BOOT_LOG_S) return splash(S, D.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
+  mapRaster(world.city); // the map database loads during the check (built once per city)
   const line = (a: string, b: string) => a + ' ' + '.'.repeat(Math.max(2, SW - 4 - a.length - b.length)) + ' ' + b;
   const L = [
     `${D.os}  ${D.maker} ${D.model}`,
@@ -156,13 +186,23 @@ function boot(S: Lcd, P: Phone, world: World, t: number) {
     '',
     T.ready,
   ];
-  let left = Math.floor((t - 1.3) * 90);
+  let left = Math.floor(t * 320);
   for (let k = 0; k < L.length && left >= 0; k++) {
     const s = L[k].slice(0, left), bad = L[k].endsWith(T.noService) || L[k].endsWith(T.off);
-    S.text(1, 1 + k, s, k === 0 ? HI : bad && s.length === L[k].length ? [255, 120, 90] : INK, LCD);
+    S.text(1, 1 + k, s, k === 0 ? HI : bad && s.length === L[k].length ? [255, 120, 90] : DIM, LCD);
     left -= L[k].length + 3;
-    if (left < 0 && Math.floor(t * 3) & 1) S.put(1 + s.length, 1 + k, ch('_'), INK, LCD);
+    if (left < 0 && Math.floor(t * 8) & 1) S.put(1 + s.length, 1 + k, ch('_'), INK, LCD);
   }
+}
+
+/** The splash: a deep blue field brightening from the top, the logo drawing in, the model's name, a bar filling. */
+function splash(S: Lcd, maker: string, model: string, u: number) {
+  const f = Math.min(1, u / 0.5);
+  for (let y = 0; y < SH; y++) { const k = f * (1 - y / SH); S.fill(y, [8 + 12 * k, 12 + 28 * k, 22 + 60 * k]); }
+  bigText(S, 6, maker, [Math.min(255, u * 500), Math.min(196, u * 400), Math.min(90, u * 180)], u - 0.2);
+  S.text((SW - model.length) >> 1, 15, typed(model, u - 0.6, 30), INK, [12, 22, 44]);
+  const n = Math.round(Math.max(0, Math.min(1, (u - 0.9) / 1.5)) * 24);
+  for (let x = 0; x < 24; x++) S.put(9 + x, 19, x < n ? 32 : ch('.'), DIM, x < n ? HI : [10, 17, 34]);
 }
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -174,7 +214,7 @@ function standby(S: Lcd, world: World, t: number) {
   const date = `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`;
   S.text((SW - date.length) >> 1, 13, typed(date, t - 0.2), DIM, LCD);
   S.text((SW - T.noService.length) >> 1, 16, typed(T.noService, t - 0.5), [255, 120, 90], LCD);
-  softKeys(S, T.menu, '');
+  softKeys(S, T.menu, T.hide);
 }
 
 function menu(S: Lcd, P: Phone, t: number) {
