@@ -356,7 +356,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     if (Math.abs(outer - back) > 1.2) {
       const v0 = Math.min(outer, back), v1 = Math.max(outer, back), vm = (v0 + v1) / 2;
       const c = cellAt({ box: j, rooms, cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & 127;
-      const next = c ? rooms[c - 1] : null;
+      const next = c && rooms[c - 1].unit >= 0 ? rooms[c - 1] : null; // not a corridor or the lobby
       room(next ? (next.kind === 'shop' || next.kind === 'open' || next.kind === 'office' ? next.kind : 'bedroom') : office ? 'office' : 'bedroom', next ? next.unit : unit++, F.su0, v0, F.lu1, v1);
       if (next && next.kind !== 'shop') doorU(F.su0, vm - 0.6);
     }

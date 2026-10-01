@@ -93,6 +93,9 @@ export function windowHole(B: Building, fw: number, fz: number, z: number, groun
   }
 }
 
+/** While the viewer's lift car rides: its panel lights a button. */
+let riding = false, litButton = 0;
+
 /** Paint of a room's walls: glyph and color at height zr above its floor, u along the wall. */
 function wallPaint(R: Room, zr: number, u: number, out: number[]) {
   const kind = R.kind;
@@ -113,11 +116,25 @@ function wallPaint(R: Room, zr: number, u: number, out: number[]) {
       if (zr < 1) { const p = ((u / 0.8) % 1 + 1) % 1; out[0] = p < 0.08 ? G.bar : zr > 0.92 ? G.eq : G.col; out[1] = 110; out[2] = 76; out[3] = 50; return; }
       out[0] = G.col; out[1] = 165; out[2] = 155; out[3] = 135; return;
     case 'stair': out[0] = G.semi; out[1] = 135; out[2] = 135; out[3] = 130; return;
-    case 'lift': out[0] = G.bar; out[1] = 165; out[2] = 170; out[3] = 175; return;
+    case 'lift': {
+      // the car's panel by the door, on every wall: a lit display over two columns of buttons,
+      // one of them glowing while the car rides
+      const pu = ((u / BAY) % 1 + 1) % 1;
+      if (pu > 0.62 && pu < 0.88 && zr > 0.85 && zr < 1.75) {
+        if (zr > 1.6) { out[0] = G.eq; out[1] = 255; out[2] = 120; out[3] = 40; return; }
+        const bc = Math.floor((pu - 0.62) / 0.13), br = Math.floor((zr - 0.85) / 0.12), cu = (pu - 0.62) % 0.13, cz = (zr - 0.85) % 0.12;
+        if (cu > 0.03 && cu < 0.1 && cz > 0.03 && cz < 0.09 && br < 6) {
+          const lit = riding && (br * 2 + bc) === litButton;
+          out[0] = G.o; out[1] = lit ? 255 : 210; out[2] = lit ? 170 : 210; out[3] = lit ? 60 : 200; return;
+        }
+        out[0] = G.hash; out[1] = 95; out[2] = 98; out[3] = 105; return;
+      }
+      out[0] = G.bar; out[1] = 165; out[2] = 170; out[3] = 175; return;
+    }
     case 'office': case 'open': case 'shop': out[0] = G.col; out[1] = 165; out[2] = 165; out[3] = 160; return;
     default: {
       // homes: each one papered or painted in its own way
-      const c = PAINT[(R.unit * 7 + 3) % PAINT.length], h = hash3(R.unit, 5, 9);
+      const c = PAINT[(((R.unit * 7 + 3) % PAINT.length) + PAINT.length) % PAINT.length], h = hash3(R.unit, 5, 9);
       const pu = ((u / 0.4) % 1 + 1) % 1;
       out[0] = h < 0.35 ? (pu < 0.5 ? G.bar : G.col) : h < 0.6 ? ((((u / 0.3) | 0) + ((zr / 0.3) | 0)) & 1 ? G.dot : G.quo) : G.col;
       out[1] = c[0]; out[2] = c[1]; out[3] = c[2];
@@ -199,6 +216,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   gT[x] = 0;
   for (let y = 0; y < rows; y++) glass[y * cols + x] = 0;
   const z0 = I.z0, zc = z0 + CEIL;
+  riding = I.closed; litButton = I.floor % 12;
 
   // where the ray leaves the box (and the cut): that outer wall closes the column
   let tExit = 1e9, face = 0;

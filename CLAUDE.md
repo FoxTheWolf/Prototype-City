@@ -213,7 +213,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 - **Decisões da etapa 4 (2026-09-30):**
   - **Paleta: sódio âmbar (escolhida pelo usuário em 2026-09-30,** depois de comparar com neon noir e verde terminal). As outras foram removidas.
-  - **Fundo colorido:** o usuário gosta das duas versões, com e sem fundo. A tecla **B** passa por estágios: 0,24 da cor do glifo, **0,16 (o padrão, escolhido pelo usuário)**, 0,08 e desligado (`SOLID` em `main.ts`). Antes era 0,36, que ele achou claro e sólido demais.
+  - **Fundo colorido:** o usuário gosta das duas versões, com e sem fundo. A tecla **B** passa por estágios: 0,24 da cor do glifo, 0,16, **0,08 (o padrão desde 2026-10-01, o "3/3" escolhido pelo usuário; antes era 0,16)** e desligado (`SOLID` em `main.ts`). Antes era 0,36, que ele achou claro e sólido demais.
   - **Caracteres:** o usuário prefere **ASCII**, que é o padrão. Os blocos Unicode (`░▒▓█─│┌`) ficam como opção na tecla **U**, enquanto não atrapalharem o desenvolvimento.
   - **Som:** o módulo de áudio (Web Audio, sintetizado, sem arquivos) nasce na etapa 4, com os sons de ambiente: zumbido de neon que falha junto com o letreiro, zumbido de poste de sódio, cidade distante e tom grave perto da zona de fogo.
 
@@ -410,7 +410,9 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Retorno do usuário sobre o grupo A (2026-09-30):** gostou ("tá ótimo"). Pediu correções e novidades, feitas na 6.4: chovia dentro dos prédios; o som devia ficar bem mais abafado, quase sem a chuva, mas com o "tec, tec" das gotas na janela; ver os interiores do lado de fora; os pontos de ônibus não apagavam no blackout; sem chuva debaixo do ponto de ônibus, com a água escorrendo do telhado. Os pedidos de fachada estão em "Pedidos do usuário durante a etapa 6".
 - **6.5, elevador (grupo B, 2026-09-30):** dentro da cabine (cômodo `lift`), PageUp/PageDown são os botões: cada toque soma um andar ao destino (`Player.liftTo`), e a cabine sobe ou desce de verdade a até 2,5 m/s, com partida e parada suaves (`stepLift` em `world.ts`). `Player.z` é a altura dos pés (contínua), e o olho é `z + 1,7`. Durante a viagem o jogador fica parado e as portas ficam fechadas (`Inside.closed`); o piso e o teto seguem a cabine (`Inside.z0`). Fora da cabine, PageUp/PageDown continuam sendo o pulo de andar de debug.
   - **6.6, painel da cabine:** de pé na cabine, aparece o painel do elevador no canto da tela (andar atual, sentido e destino, os andares servidos). Os números do teclado digitam o andar, Backspace apaga e Enter confirma (`callLift` e `liftFloors` em `world.ts`). Cada tecla faz um bipe; um andar que não existe faz um bipe grave; a chegada toca um sino de duas notas (`beep` e `ding` em `sound.ts`).
-  - **Falta (próxima sessão):** escadas em que se sobe de verdade; elevadores de vidro (pedem a cabine numa parede externa, com vidro, e a cabine vista de fora); som do motor e das portas do elevador; um painel desenhado na própria parede da cabine, em vez do canto da tela; o bug dos prédios cortados sem acesso ao corredor.
+  - **Botoeira na parede da cabine:** um mostrador âmbar sobre duas colunas de botões, perto da porta, em todas as paredes do `lift`; um botão acende enquanto a cabine anda. O painel no canto da tela continua, porque mostra o andar digitado.
+  - **Crash corrigido (2026-10-01):** a faixa atrás do núcleo virava cômodo de apartamento com unidade -1 quando a vizinha era o corredor, e a cor da parede saía indefinida (`wallPaint`).
+  - **Falta (próxima sessão):** escadas em que se sobe de verdade; elevadores de vidro (pedem a cabine numa parede externa, com vidro, e a cabine vista de fora); som do motor e das portas do elevador;  o bug dos prédios cortados sem acesso ao corredor.
 - **6.4, correções e interiores vistos de fora (2026-09-30):**
   - **Chuva dentro:** nas colunas em que uma parede interna fecha a vista (sem janela), a chuva não é mais desenhada (`nearT` = infinito).
   - **Som:** dentro do prédio, a rua passa por um passa-baixa de 220 Hz e cai para 28%. A chuva quase some, e no lugar entram gotas batendo no vidro, uma a uma: ruído de poucos milissegundos num passa-banda de 2,2–5,2 kHz, com volume e pan sorteados, mais frequentes quanto mais forte a chuva (`drop` em `sound.ts`). O teste de ouvido é do usuário.
@@ -713,6 +715,8 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 **Etapa de correção de bugs** (pedido do usuário em 2026-09-30): sem número fixo ainda, entra quando fizer sentido; a lista está em "Bugs conhecidos".
 
 16. **Vida do personagem** (pedido do usuário em 2026-09-30): deep sim / life sim. Apartamento próprio, stats, necessidades, customização do personagem pela lore. Depende dos cidadãos (11) e da economia (13).
+
+**Para avaliar (pedido em 2026-10-01): iluminação dinâmica com sombras,** do sol (e da lua) e das luzes (postes, faróis, letreiros, janelas). Verificar se é viável no raycaster por coluna (por exemplo, um raio de sombra por ponto iluminado contra a grade de prédios, ou mapas de sombra por luz na janela deslizante), medir o impacto com `bench`, e talvez criar uma etapa própria para isso.
 
 **Ainda sem lugar no roteiro:** o sistema de notícias com telões (junto com a etapa 12). Decidir com o usuário.
 

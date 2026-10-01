@@ -55,7 +55,7 @@ let layout: Layout;
 let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
-let solidStep = 1; // 0.16, the user's pick
+let solidStep = 2; // 0.08, the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false };
 // the lift car's panel: type a floor and press Enter
 let liftKeys = '';
