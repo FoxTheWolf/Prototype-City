@@ -19,7 +19,7 @@ import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
-import { DIRS, Sig, signal } from '../sim/traffic';
+import { diagPoint, diagRoad, DIRS, Sig, signal, zoneSignal } from '../sim/traffic';
 
 export interface View {
   x: number;
@@ -1273,16 +1273,49 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
         const st = signal(city, world.power, i, j, hd & 1, sec), rx = -dy, ry = dx; // the right-hand side
         const ahead = st === Sig.Stop ? -(aH + 0.7) : aH + 0.7;
         SP.x = mx + dx * ahead + rx * (halfW + 0.7); SP.y = my + dy * ahead + ry * (halfW + 0.7);
-        SP.c = -dx; SP.s = -dy; SP.state = st;
-        SP.lit = st === Sig.Green ? 2 : st === Sig.Yellow ? 1 : st === Sig.Red ? 0 : -1;
-        const n = Math.max(1, lanesOf(hd & 1 ? city.xb : city.yb, hd & 1 ? i : j)), key = n + '|' + halfW;
-        let at = atCache.get(key);
-        if (!at) { at = []; for (let l = 0; l < n; l++) at.push(0.7 + halfW - LANE_W * (l + 0.5)); atCache.set(key, at); }
-        SP.at = at;
+        SP.c = -dx; SP.s = -dy;
+        setState(st);
+        SP.at = lanesAt(Math.max(1, lanesOf(hd & 1 ? city.xb : city.yb, hd & 1 ? i : j)), halfW);
+        if (Math.abs(diagS(city.diagonal, SP.x, SP.y)) < city.diagonal.w / 2 + 0.5) continue; // its corner is on the diagonal's roadway
         cb(SP);
       }
     }
   }
+  // where the diagonal crosses: its own lights on the far right of each crossing, and the grid
+  // road's at crossings between two intersections
+  const D = diagRoad(city), d = city.diagonal, hw = d.w / 2;
+  for (const z of D.zones) {
+    diagPoint(d, (z.u0 + z.u1) / 2, 1, 0, Q2);
+    if (Math.abs(Q2[0] - v.x) > far + 30 || Math.abs(Q2[1] - v.y) > far + 30) continue;
+    for (const dg of [1, -1]) {
+      diagPoint(d, (dg > 0 ? z.u1 : z.u0) + dg * 0.7, dg, hw + 0.7, Q2);
+      SP.x = Q2[0]; SP.y = Q2[1]; SP.c = -d.ex * dg; SP.s = -d.ey * dg;
+      setState(zoneSignal(city, world.power, z, true, sec));
+      SP.at = lanesAt(D.lanes, hw);
+      cb(SP);
+    }
+    if (z.i >= 0) continue;
+    const b = z.vert ? city.xb : city.yb, rc = (b[2 * z.road] + b[2 * z.road + 1]) / 2, half = (b[2 * z.road + 1] - b[2 * z.road]) / 2;
+    for (const hd of z.vert ? [1, 3] : [0, 2]) {
+      const [dx, dy] = DIRS[hd], aFar = dx + dy > 0 ? z.a1 + 0.7 : z.a0 - 0.7;
+      SP.x = z.vert ? rc - dy * (half + 0.7) : aFar; SP.y = z.vert ? aFar : rc + dx * (half + 0.7);
+      SP.c = -dx; SP.s = -dy;
+      setState(zoneSignal(city, world.power, z, false, sec));
+      SP.at = lanesAt(Math.max(1, lanesOf(b, z.road)), half);
+      cb(SP);
+    }
+  }
+}
+const Q2 = [0, 0];
+function setState(st: number) {
+  SP.state = st; SP.lit = st === Sig.Green ? 2 : st === Sig.Yellow ? 1 : st === Sig.Red ? 0 : -1;
+}
+/** Heads over each of n lanes on a road half `halfW` wide, measured from a pole 0.7 m off its edge. */
+function lanesAt(n: number, halfW: number) {
+  const key = n + '|' + halfW;
+  let at = atCache.get(key);
+  if (!at) { at = []; for (let l = 0; l < n; l++) at.push(0.7 + halfW - LANE_W * (l + 0.5)); atCache.set(key, at); }
+  return at;
 }
 
 function collectObjects(world: World, v: View): Obj[] {

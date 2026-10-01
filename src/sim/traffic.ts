@@ -1,5 +1,5 @@
 import { hash3, type Rng } from '../core/rng';
-import { districtAt, LANE_W, lanesOf, roadCenter, type City, type RGB } from './city';
+import { districtAt, LANE_W, lanesOf, roadCenter, type City, type Diagonal, type RGB } from './city';
 import { subAt, type PowerGrid } from './power';
 
 /**
@@ -9,7 +9,8 @@ import { subAt, type PowerGrid } from './power';
  * traffic lights, or stop signs on quiet corners: the lights run on the power grid, and a dark
  * one is an all-way stop, first come first served. Signal timing is a pure function of the
  * intersection and the real-time clock (the tick), so the renderer and later the hacking read
- * the same state.
+ * the same state. Cars also run both ways along the diagonal avenue, edge to edge; where it
+ * crosses a grid road there are lights too (see Zone).
  */
 export interface Car {
   x: number;
@@ -36,8 +37,12 @@ export interface Car {
   /** Crossing the intersection: the curve (quadratic, from p0 by control c to p1), its length and progress 0..1. */
   turn: boolean;
   t0x: number; t0y: number; tcx: number; tcy: number; t1x: number; t1y: number; tlen: number; ts: number;
-  /** Tick it came to a halt at an all-way stop, or -1. */
+  /** Tick it came to a halt at an all-way stop, or -1, and that stop's key (see gateOf). */
   arrive: number;
+  gate: number;
+  /** On the diagonal avenue: 1 or -1 along its direction (0 on the grid), and how far along it is. */
+  dg: number;
+  u: number;
 }
 
 /** E, S, W, N as (dx, dy). */
@@ -62,12 +67,15 @@ export function laneOff(hd: number, lane: number): [number, number] {
 export const Sig = { Green: 0, Yellow: 1, Red: 2, Dark: 3, Stop: 4 } as const;
 /** Cycle length (real seconds), yellow and all-red clearance. */
 export const CYCLE = 64, YELLOW = 3.5, ALL_RED = 2;
+/** Cycle where the diagonal crosses an intersection (three phases) or a road between two (two phases, the diagonal's longer). */
+const CYCLE3 = 75, CYCLE_Z = 60;
 
 const wideX = (city: City, i: number) => city.xb[2 * i + 1] - city.xb[2 * i] > 22;
 const wideY = (city: City, j: number) => city.yb[2 * j + 1] - city.yb[2 * j] > 15;
 
 /** Whether intersection (i, j) has lights (else stop signs): quiet corners away from downtown and wide roads do not. */
 export function hasSignal(city: City, i: number, j: number): boolean {
+  if (touched(city, i, j)) return true;
   let t = signalled.get(city);
   if (!t) {
     const NX = NXof(city), NY = NYof(city);
@@ -91,6 +99,12 @@ export function signal(city: City, power: PowerGrid, i: number, j: number, axis:
   if (!hasSignal(city, i, j)) return Sig.Stop;
   const x = roadCenter(city.xb, i), y = roadCenter(city.yb, j);
   if (!power.subs[subAt(power, city, x, y)].on) return Sig.Dark;
+  if (touched(city, i, j)) {
+    // the diagonal runs through it: three phases, the avenue, the street, the diagonal
+    const p = (((sec + hash3(city.nameSeed, i, j) * 20) % CYCLE3) + CYCLE3) % CYCLE3, ph = CYCLE3 / 3, k = Math.floor(p / ph), q = p - k * ph;
+    const mine = axis === 1 ? 0 : axis === 0 ? 1 : 2;
+    return k !== mine ? Sig.Red : q < ph - YELLOW - ALL_RED ? Sig.Green : q < ph - ALL_RED ? Sig.Yellow : Sig.Red;
+  }
   const off = y / 11 + hash3(city.nameSeed, i, j) * 6;
   const p = (((sec + off) % CYCLE) + CYCLE) % CYCLE;
   const gA = Math.round(CYCLE * (wideX(city, i) ? 0.58 : 0.5)) - YELLOW - ALL_RED; // the avenue's green
@@ -141,6 +155,89 @@ function laneFor(rng: Rng, lanes: number, turn: number): number {
   return turn < 0 ? 0 : turn > 0 ? lanes - 1 : (rng() * lanes) | 0;
 }
 
+// ---- the diagonal
+
+/**
+ * Where the diagonal avenue crosses a grid road: the stretch of that road it covers (a0..a1, in x
+ * on a street, in y on an avenue) and of the diagonal the road covers (u0..u1). Next to a grid
+ * intersection (i, j) it is part of it (three-phase lights); between two it has lights of its own.
+ * `key` is the stop's identity for all-way stops (the intersection's when merged).
+ */
+export interface Zone { vert: boolean; road: number; a0: number; a1: number; u0: number; u1: number; i: number; j: number; key: number }
+
+/** The diagonal's extent inside the city (u along it), its lanes per side, its zones (by u, and by grid road). */
+export interface DiagRoad { u0: number; u1: number; lanes: number; zones: Zone[]; byRoad: Map<number, Zone[]>; touched: Set<number> }
+const diagRoads = new WeakMap<City, DiagRoad>();
+const ZKEY = 1 << 22;
+/** A zone within this of a grid intersection's box joins it; a longer one is a shared stretch. */
+const MERGE = 8, SHARED = 45;
+const roadKey = (vert: boolean, k: number) => (vert ? 1024 : 0) + k;
+
+export function diagRoad(city: City): DiagRoad {
+  let D = diagRoads.get(city);
+  if (D) return D;
+  const d = city.diagonal, hw = d.w / 2;
+  // the line inside the city, a little in from the edges
+  let u0 = -1e9, u1 = 1e9;
+  for (const [o, e, lim] of [[d.ox, d.ex, city.w], [d.oy, d.ey, city.h]]) {
+    if (Math.abs(e) < 1e-9) continue;
+    const a = (6 - o) / e, b = (lim - 6 - o) / e;
+    u0 = Math.max(u0, Math.min(a, b)); u1 = Math.min(u1, Math.max(a, b));
+  }
+  const zones: Zone[] = [], byRoad = new Map<number, Zone[]>(), tset = new Set<number>();
+  const NX = NXof(city), NY = NYof(city);
+  for (const vert of [true, false]) {
+    const b = vert ? city.xb : city.yb, n = vert ? NX : NY;
+    // across the road (q) and along it (a): q = oq + u eq + s nq, and s = (q - oq) nq + (a - oa) na
+    const eq = vert ? d.ex : d.ey, nq = vert ? d.nx : d.ny, oq = vert ? d.ox : d.oy, oa = vert ? d.oy : d.ox, na = vert ? d.ny : d.nx;
+    if (Math.abs(eq) < 1e-6 || Math.abs(na) < 1e-6) continue;
+    for (let k = 0; k < n; k++) {
+      const ua: number[] = [], aa: number[] = [];
+      for (const q of [b[2 * k], b[2 * k + 1]]) for (const sv of [-hw, hw]) {
+        ua.push((q - oq - sv * nq) / eq);
+        aa.push(oa + (sv - (q - oq) * nq) / na);
+      }
+      const z: Zone = { vert, road: k, a0: Math.min(...aa), a1: Math.max(...aa), u0: Math.min(...ua), u1: Math.max(...ua), i: -1, j: -1, key: 0 };
+      if (z.u1 < u0 || z.u0 > u1) continue;
+      // where it runs along an avenue at a shallow angle the two share the pavement for a long
+      // stretch: no crossing of their own there, the cross streets' lights rule it
+      if (z.a1 - z.a0 > SHARED) continue;
+      // next to an intersection on this road?
+      const cb = vert ? city.yb : city.xb, m = vert ? NY : NX;
+      for (let c = 0; c < m; c++) if (z.a1 > cb[2 * c] - MERGE && z.a0 < cb[2 * c + 1] + MERGE) { z.i = vert ? k : c; z.j = vert ? c : k; }
+      z.key = z.i >= 0 ? iKey(z.i, z.j) : ZKEY + zones.length;
+      if (z.i >= 0) tset.add(iKey(z.i, z.j));
+      zones.push(z);
+      byRoad.set(roadKey(vert, k), [...(byRoad.get(roadKey(vert, k)) ?? []), z]);
+    }
+  }
+  zones.sort((p, q) => p.u0 - q.u0);
+  D = { u0, u1, lanes: Math.max(1, Math.floor(hw / LANE_W)), zones, byRoad, touched: tset };
+  diagRoads.set(city, D);
+  return D;
+}
+
+const touched = (city: City, i: number, j: number) => diagRoad(city).touched.has(iKey(i, j));
+
+/** The light at a zone, for the diagonal (diag) or for the grid road. */
+export function zoneSignal(city: City, power: PowerGrid, z: Zone, diag: boolean, sec: number): number {
+  if (z.i >= 0) return signal(city, power, z.i, z.j, diag ? 2 : z.vert ? 1 : 0, sec);
+  const d = city.diagonal, u = (z.u0 + z.u1) / 2;
+  if (!power.subs[subAt(power, city, d.ox + d.ex * u, d.oy + d.ey * u)].on) return Sig.Dark;
+  const p = (((sec + hash3(city.nameSeed, z.key, 77) * CYCLE_Z) % CYCLE_Z) + CYCLE_Z) % CYCLE_Z;
+  const gD = CYCLE_Z * 0.55 - YELLOW - ALL_RED, gR = CYCLE_Z * 0.45 - YELLOW - ALL_RED;
+  const a = p < gD ? Sig.Green : p < gD + YELLOW ? Sig.Yellow : Sig.Red;
+  const q = p - gD - YELLOW - ALL_RED;
+  const b = q >= 0 && q < gR ? Sig.Green : q >= gR && q < gR + YELLOW ? Sig.Yellow : Sig.Red;
+  return diag ? a : b;
+}
+
+/** Point of the diagonal at u, `off` to the right of travel direction dg. */
+export function diagPoint(d: Diagonal, u: number, dg: number, off: number, out: number[]) {
+  out[0] = d.ox + d.ex * u - d.ey * dg * off;
+  out[1] = d.oy + d.ey * u + d.ex * dg * off;
+}
+
 // ---- spawning
 
 export function spawnCars(city: City, rng: Rng, count: number): Car[] {
@@ -164,7 +261,18 @@ export function spawnCars(city: City, rng: Rng, count: number): Car[] {
     if (cars.some((c) => Math.abs(c.x - x) < 8 && Math.abs(c.y - y) < 2)) continue;
     const taxi = rng() < 0.22;
     const col: RGB = taxi ? [255, 200, 40] : CAR_COLS[(rng() * CAR_COLS.length) | 0];
-    cars.push({ x, y, px: x, py: y, dx, dy, v: 0, max: 8 + rng() * 6, taxi, col, hd, road, lane, ni, nj, plan, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1 });
+    cars.push({ x, y, px: x, py: y, dx, dy, v: 0, max: 8 + rng() * 6, taxi, col, hd, road, lane, ni, nj, plan, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg: 0, u: 0 });
+    k++;
+  }
+  // and some on the diagonal, both ways, between its crossings
+  const D = diagRoad(city), d = city.diagonal, Q = [0, 0];
+  for (let k = 0, tries = 0; k < Math.round(count * 0.12) && tries < count * 4; tries++) {
+    const dg = rng() < 0.5 ? 1 : -1, u = D.u0 + 10 + rng() * (D.u1 - D.u0 - 20), lane = (rng() * D.lanes) | 0;
+    if (D.zones.some((z) => u > z.u0 - 6 && u < z.u1 + 6)) continue;
+    if (cars.some((c) => c.dg === dg && c.lane === lane && Math.abs(c.u - u) < 8)) continue;
+    diagPoint(d, u, dg, LANE_W * (lane + 0.5), Q);
+    const taxi = rng() < 0.22, col: RGB = taxi ? [255, 200, 40] : CAR_COLS[(rng() * CAR_COLS.length) | 0];
+    cars.push({ x: Q[0], y: Q[1], px: Q[0], py: Q[1], dx: d.ex * dg, dy: d.ey * dg, v: 0, max: 9 + rng() * 6, taxi, col, hd: 0, road: 0, lane, ni: 0, nj: 0, plan: 0, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg, u });
     k++;
   }
   return cars;
@@ -246,16 +354,30 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
   // it came from (for a while) and in the one it is heading into
   for (const b of lanes.values()) b.length = 0;
   busy.clear();
+  const D = diagRoad(city), dgn = city.diagonal;
+  const inc = (k: number) => busy.set(k, (busy.get(k) ?? 0) + 1);
   for (const c of cars) {
-    if (!c.turn) { bucket(c.hd, c.road, c.lane).push({ c, s: along(c.hd, c.x, c.y) }); continue; }
+    if (c.dg) {
+      // on the diagonal: a lane each way, and in a crossing while inside one
+      bucket(c.dg > 0 ? 4 : 5, 0, c.lane).push({ c, s: c.u * c.dg });
+      for (const z of D.zones) if (c.u > z.u0 && c.u < z.u1) inc(z.key);
+      continue;
+    }
+    if (!c.turn) {
+      const s = along(c.hd, c.x, c.y);
+      bucket(c.hd, c.road, c.lane).push({ c, s });
+      const zs = D.byRoad.get(roadKey((c.hd & 1) === 1, c.road));
+      if (zs) for (const z of zs) { const a = c.hd & 1 ? c.y : c.x; if (a > z.a0 && a < z.a1) inc(z.key); }
+      continue;
+    }
     const to = headingOfExit(c);
-    busy.set(iKey(c.ni, c.nj), (busy.get(iKey(c.ni, c.nj)) ?? 0) + 1);
+    inc(iKey(c.ni, c.nj));
     bucket(to, c.road, c.lane).push({ c, s: along(to, c.t1x, c.t1y) - (1 - c.ts) * c.tlen });
   }
   for (const b of lanes.values()) b.sort((p, q) => p.s - q.s);
   // the earliest arrival at each all-way stop goes first
   firstWait.clear();
-  for (const c of cars) if (c.arrive >= 0) { const k = iKey(c.ni, c.nj), f = firstWait.get(k); if (f === undefined || c.arrive < f) firstWait.set(k, c.arrive); }
+  for (const c of cars) if (c.arrive >= 0) { const f = firstWait.get(c.gate); if (f === undefined || c.arrive < f) firstWait.set(c.gate, c.arrive); }
 
   for (const c of cars) {
     c.px = c.x; c.py = c.y;
@@ -271,13 +393,20 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       const b = bucket(to, c.road, c.lane), me = along(to, c.t1x, c.t1y) - (1 - c.ts) * c.tlen, out = along(to, c.t1x, c.t1y);
       for (const q of b) if (q.c !== c && q.s > me && (q.c.turn ? q.c.ni === c.ni && q.c.nj === c.nj : q.s > out - 0.5)) { obstacle(q.s - me - CAR_L, q.c.v); break; }
     } else {
-      const s = along(c.hd, c.x, c.y), b = bucket(c.hd, c.road, c.lane);
-      for (const q of b) if (q.c !== c && q.s > s) { obstacle(q.s - s - CAR_L, q.c.v); break; }
-      const ent = entryS(city, c.hd, c.ni, c.nj), front = s + CAR_L / 2, dStop = ent - STOP_BACK - front;
+      const s = c.dg ? c.u * c.dg : along(c.hd, c.x, c.y), b = c.dg ? bucket(c.dg > 0 ? 4 : 5, 0, c.lane) : bucket(c.hd, c.road, c.lane);
+      let lead: { c: Car; s: number } | null = null;
+      for (const q of b) if (q.c !== c && q.s > s) { lead = q; obstacle(q.s - s - CAR_L, q.c.v); break; }
+      const front = s + CAR_L / 2;
       // slow down ahead of a turn
-      if (c.plan !== c.hd) v0 = Math.min(v0, Math.sqrt(TURN_V * TURN_V + 2 * 1.5 * Math.max(0, ent - front)));
-      // a red light, a stop sign or a full lane beyond: an obstacle at the line (the jam gap behind it)
-      if (dStop > -0.5 && dStop < 60 && !mayGo(city, power, c, dStop, sec, tick)) obstacle(dStop + GAP0, 0);
+      if (!c.dg && c.plan !== c.hd) v0 = Math.min(v0, Math.sqrt(TURN_V * TURN_V + 2 * 1.5 * Math.max(0, entryS(city, c.hd, c.ni, c.nj) - front)));
+      // the next stop line: a red light, a stop sign or a full lane beyond is an obstacle there (the jam gap behind it)
+      gateOf(city, power, c, front, sec);
+      if (c.arrive >= 0 && c.gate !== G.key) c.arrive = -1; // past the stop it was waiting at
+      const dStop = G.start - STOP_BACK - front;
+      if (dStop > -0.5 && dStop < 60 && !mayGo(city, c, dStop, tick, lead)) obstacle(dStop + GAP0, 0);
+      else if (dStop < -0.5 && c.arrive >= 0 && c.gate === G.key) c.arrive = -1;
+      // halted at an all-way stop: note when
+      if (c.v < 0.2 && c.arrive < 0 && (G.sig === Sig.Dark || G.sig === Sig.Stop) && dStop < 2.5 && dStop > -1) { c.arrive = tick; c.gate = G.key; }
     }
 
     // the player on the road: brake and wait (no running anyone over yet)
@@ -291,16 +420,16 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     c.v = Math.max(0, c.v + acc * dt);
     if (gap < 0.3) c.v = Math.min(c.v, 0.5); // never into what is ahead
 
-    // halted at an all-way stop: note when
-    if (!c.turn && c.v < 0.2 && c.arrive < 0) {
-      const sg = signal(city, power, c.ni, c.nj, c.hd & 1, sec);
-      const dStop = entryS(city, c.hd, c.ni, c.nj) - STOP_BACK - (along(c.hd, c.x, c.y) + CAR_L / 2);
-      if ((sg === Sig.Dark || sg === Sig.Stop) && dStop < 2.5 && dStop > -1) c.arrive = tick;
-    }
-
     // move
     const d = c.v * dt;
-    if (c.turn) {
+    if (c.dg) {
+      c.u += c.dg * d;
+      // at the end of the avenue, back the other way (at the city's edge, by the fence)
+      if (c.u > D.u1 || c.u < D.u0) { c.dg = -c.dg; c.u = Math.max(D.u0, Math.min(D.u1, c.u)); c.v = 0; c.arrive = -1; }
+      diagPoint(dgn, c.u, c.dg, LANE_W * (c.lane + 0.5), P);
+      c.x = P[0]; c.y = P[1]; c.dx = dgn.ex * c.dg; c.dy = dgn.ey * c.dg;
+      if (c.u === D.u0 || c.u === D.u1) { c.px = c.x; c.py = c.y; } // a turnaround, not a glide across
+    } else if (c.turn) {
       c.ts += d / c.tlen;
       if (c.ts >= 1) { const over = (c.ts - 1) * c.tlen; endTurn(c); c.x += c.dx * over; c.y += c.dy * over; }
       else { curveAt(c, c.ts, P); c.x = P[0]; c.y = P[1]; c.dx = P[2]; c.dy = P[3]; }
@@ -322,22 +451,49 @@ function turnHeadingIn(c: Car) {
   return Math.abs(tx) > Math.abs(ty) ? (tx > 0 ? 0 : 2) : ty > 0 ? 1 : 3;
 }
 
-/** Whether a car dStop metres from its stop line may go on into the intersection. */
-function mayGo(city: City, power: PowerGrid, c: Car, dStop: number, sec: number, tick: number): boolean {
-  const sg = signal(city, power, c.ni, c.nj, c.hd & 1, sec);
+/**
+ * The next stop line ahead of a car, into G: the intersection it heads to (its line moved back
+ * when the diagonal crosses just before it), or a crossing of the diagonal on the way there; for a
+ * car on the diagonal, the next crossing. `start` is where it begins along the car's way.
+ */
+const G = { start: 0, end: 0, key: 0, sig: 0, inter: false };
+function gateOf(city: City, power: PowerGrid, c: Car, front: number, sec: number) {
+  const D = diagRoad(city);
+  if (c.dg) {
+    G.start = 1e9; G.inter = false;
+    for (const z of D.zones) {
+      const zs = c.dg > 0 ? z.u0 : -z.u1;
+      if (zs - STOP_BACK - front > -0.5 && zs < G.start) { G.start = zs; G.end = c.dg > 0 ? z.u1 : -z.u0; G.key = z.key; G.sig = zoneSignal(city, power, z, true, sec); }
+    }
+    return;
+  }
+  const e = entryS(city, c.hd, c.ni, c.nj), pos = c.dx + c.dy > 0;
+  G.start = e; G.end = exitS(city, c.hd, c.ni, c.nj); G.key = iKey(c.ni, c.nj); G.inter = true;
+  G.sig = signal(city, power, c.ni, c.nj, c.hd & 1, sec);
+  const zs = D.byRoad.get(roadKey((c.hd & 1) === 1, c.road));
+  if (zs) for (const z of zs) {
+    const a = pos ? z.a0 : -z.a1, b = pos ? z.a1 : -z.a0;
+    if (z.i === c.ni && z.j === c.nj) { if (a < G.start) G.start = a; }
+    // (a crossing that belongs to another intersection runs on that one's phases: not a stop of its own)
+    else if (z.i < 0 && a - STOP_BACK - front > -0.5 && a < G.start) { G.start = a; G.end = b; G.key = z.key; G.inter = false; G.sig = zoneSignal(city, power, z, false, sec); }
+  }
+}
+
+/** Whether a car dStop metres from its stop line (G) may go on. */
+function mayGo(city: City, c: Car, dStop: number, tick: number, lead: { c: Car; s: number } | null): boolean {
+  const sg = G.sig;
   if (sg === Sig.Red) return false;
   if (sg === Sig.Yellow && dStop > (c.v * c.v) / (2 * 3.5) + 1) return false; // can stop in time: stop
   // not into a full lane on the far side (no blocking the box)
-  if (!exitClear(city, c)) return false;
+  if (G.inter ? !exitClear(city, c) : lead && lead.c.v < 2 && lead.s - G.end < CAR_L + 2) return false;
   if (sg === Sig.Dark || sg === Sig.Stop) {
     // an all-way stop: halt, then go in order of arrival, one at a time
-    if (c.arrive < 0 || tick - c.arrive < 50) return false;
-    const k = iKey(c.ni, c.nj);
-    if (busy.get(k)) return false;
-    return firstWait.get(k) === c.arrive;
+    if (c.arrive < 0 || c.gate !== G.key || tick - c.arrive < 50) return false;
+    if (busy.get(G.key)) return false;
+    return firstWait.get(G.key) === c.arrive;
   }
   // a left turn on green yields to oncoming traffic
-  if (turnOf(c.hd, c.plan) < 0 && oncoming(city, c)) return false;
+  if (G.inter && turnOf(c.hd, c.plan) < 0 && oncoming(city, c)) return false;
   return true;
 }
 
@@ -378,7 +534,7 @@ function oncoming(city: City, c: Car): boolean {
 export function queues(city: City, cars: Car[], cb: (i: number, j: number, hd: number, n: number) => void) {
   const count = new Map<number, number>();
   for (const c of cars) {
-    if (c.turn || c.v > 1) continue;
+    if (c.dg || c.turn || c.v > 1) continue;
     if (entryS(city, c.hd, c.ni, c.nj) - along(c.hd, c.x, c.y) > 80) continue;
     const k = iKey(c.ni, c.nj) * 4 + c.hd;
     count.set(k, (count.get(k) ?? 0) + 1);
