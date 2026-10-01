@@ -55,7 +55,7 @@ export function tickerText(world: World): string {
   const hour = Math.floor(world.time / 3600);
   const recent = (s: { changed: number }) => s.changed >= 0 && world.tick - s.changed < RESTORED_NEWS * 60;
   // jams from the event queue, while they are fresh
-  const jams = world.events.list.filter((e) => e.kind === 'jam' && world.tick - e.tick < JAM_NEWS * 60);
+  const jams = world.events.list.filter((e) => (e.kind === 'jam' || e.kind === 'crash') && world.tick - e.tick < JAM_NEWS * 60);
   const k = `${hour}|${power.subs.map((s) => (s.on ? (recent(s) ? 2 : 1) : 0)).join('')}|${world.weather.preset}|${jams.map((e) => e.id).join()}`;
   if (k === key) return text;
   key = k;
@@ -68,7 +68,7 @@ export function tickerText(world: World): string {
   });
   for (const e of jams.slice(-3)) {
     const [i, j, hd] = e.refs, avenue = (hd & 1) === 1;
-    items.push(pick(N.jam, 300 + e.id).replace('{road}', roadName(city, avenue, avenue ? i : j).toUpperCase()).replace('{cross}', roadName(city, !avenue, avenue ? j : i).toUpperCase()));
+    items.push(pick(e.kind === 'crash' ? N.crash : N.jam, 300 + e.id).replace('{road}', roadName(city, avenue, avenue ? i : j).toUpperCase()).replace('{cross}', roadName(city, !avenue, avenue ? j : i).toUpperCase()));
   }
   const W = world.weather, c = calendar(world.time);
   ahead.preset = W.preset;

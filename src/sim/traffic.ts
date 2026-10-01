@@ -31,6 +31,13 @@ export interface Car {
    * last tick, for the sideways pull in a turn.
    */
   pitch: number; pitchV: number; roll: number; rollV: number; lift: number; liftV: number; wheel: number; ph: number;
+  /**
+   * A careless driver at this stop (`rgate`): runs the red or the stop sign. Also set when it could
+   * not stop in time. `lastD` is last tick's distance to the stop line.
+   */
+  reckless: boolean; rgate: number; lastD: number;
+  /** Crashed at this tick (0 = not): a wreck sliding on its own (velocity, spin) until it stops, then towed. */
+  wreck: number; vx: number; vy: number; spin: number;
   x: number;
   y: number;
   /** Position at the previous tick, for render interpolation. */
@@ -81,7 +88,7 @@ const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0
 function newVehicle(rng: Rng) {
   let r = rng();
   const V = VEHICLES.find((q) => (r -= q.share) < 0) ?? VEHICLES[VEHICLES.length - 1];
-  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0 };
+  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0 };
 }
 /**
  * Grip of the road: dry asphalt holds a hard stop (~0.8 g), wet less, snow little. Drivers know it:
@@ -108,6 +115,54 @@ function stepBody(c: Car, a: number, dt: number) {
   if (hit && c.v > 1) c.liftV += (hash3(bump, 5, 11) - 0.35) * c.v * 0.02;
   c.liftV += (-SPRING * 1.5 * c.lift - DAMP * c.liftV) * dt; c.lift += c.liftV * dt;
   c.wheel = (c.wheel + (c.v * dt) / 0.33) % (Math.PI * 2);
+}
+
+/**
+ * Careless drivers: the chance one runs a given red light (or a stop sign, or a dark signal, where
+ * it is likelier), times more at night and on a slippery road. Wrecks wait this long to be towed.
+ */
+const RECKLESS = 0.00015, RECKLESS_DARK = 0.004, TOW = 240;
+/** Crashes this tick, for the event queue: where, how hard (closing speed, m/s), and the cars. */
+export const crashes: { x: number; y: number; v: number }[] = [];
+/** Half width of a vehicle. */
+const halfW = (c: Car) => (c.len > 6 ? 1.2 : c.len > 5 ? 1.0 : 0.9);
+
+/** Whether two vehicles' footprints (oriented rectangles) overlap. */
+function overlap(a: Car, b: Car): boolean {
+  const ax = [a.dx, a.dy], ay = [-a.dy, a.dx], bx = [b.dx, b.dy], by = [-b.dy, b.dx];
+  const tx = b.x - a.x, ty = b.y - a.y, ha = [a.len / 2, halfW(a)], hb = [b.len / 2, halfW(b)];
+  for (const [nx, ny] of [ax, ay, bx, by]) {
+    const ra = ha[0] * Math.abs(ax[0] * nx + ax[1] * ny) + ha[1] * Math.abs(ay[0] * nx + ay[1] * ny);
+    const rb = hb[0] * Math.abs(bx[0] * nx + bx[1] * ny) + hb[1] * Math.abs(by[0] * nx + by[1] * ny);
+    if (Math.abs(tx * nx + ty * ny) > ra + rb) return false;
+  }
+  return true;
+}
+
+/** Two vehicles collide: they share their momentum (by mass, ~ length), push apart and spin, and become wrecks. */
+function crash(a: Car, b: Car, rng: Rng, tick: number) {
+  const ma = a.len, mb = b.len, vax = a.dx * a.v, vay = a.dy * a.v, vbx = b.dx * b.v, vby = b.dy * b.v;
+  const cx = (ma * vax + mb * vbx) / (ma + mb), cy = (ma * vay + mb * vby) / (ma + mb), rel = Math.hypot(vax - vbx, vay - vby);
+  let nx = a.x - b.x, ny = a.y - b.y; const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+  const push = 0.6 + rel * 0.15;
+  for (const [c, sgn, m] of [[a, 1, ma], [b, -1, mb]] as const) {
+    c.vx = cx + sgn * nx * push * (mb + ma - m) / (ma + mb) * 2; c.vy = cy + sgn * ny * push * (mb + ma - m) / (ma + mb) * 2;
+    c.spin = (rng() - 0.5) * rel * 0.35;
+    c.wreck = tick; c.turn = false; c.reckless = false; c.arrive = -1; c.dwell = 0;
+    c.liftV += 0.3 + rel * 0.04; c.rollV += (rng() - 0.5) * rel * 0.1; c.pitchV += (rng() - 0.5) * rel * 0.1;
+  }
+  crashes.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, v: rel });
+}
+
+/** A wreck slides and spins down to a stop on the road's grip. */
+function stepWreck(c: Car, maxBrake: number, dt: number) {
+  const sp = Math.hypot(c.vx, c.vy), k = sp > 0 ? Math.max(0, sp - maxBrake * 0.8 * dt) / sp : 0;
+  c.vx *= k; c.vy *= k; c.v = sp * k;
+  c.x += c.vx * dt; c.y += c.vy * dt;
+  c.spin *= Math.max(0, 1 - 2.5 * dt);
+  const h = Math.atan2(c.dy, c.dx) + c.spin * dt;
+  c.dx = Math.cos(h); c.dy = Math.sin(h);
+  stepBody(c, 0, dt);
 }
 
 /** Seconds a bus waits at a stop. */
@@ -340,7 +395,7 @@ export function diagPoint(d: Diagonal, u: number, dg: number, off: number, out: 
 
 // ---- spawning
 
-export function spawnCars(city: City, rng: Rng, count: number): Car[] {
+export function spawnCars(city: City, rng: Rng, count: number, existing: Car[] = [], away = { x: 0, y: 0, r: 0 }): Car[] {
   const cars: Car[] = [];
   const NX = NXof(city), NY = NYof(city);
   for (let k = 0, tries = 0; k < count && tries < count * 20; tries++) {
@@ -358,8 +413,9 @@ export function spawnCars(city: City, rng: Rng, count: number): Car[] {
     const [ox, oy] = laneOff(hd, lane);
     const x = hd & 1 ? roadCenter(city.xb, road) + ox : s * dx + ox;
     const y = hd & 1 ? s * dy + oy : roadCenter(city.yb, road) + oy;
-    // not on top of another car
-    if (cars.some((c) => !c.dg && Math.abs(along(hd, c.x, c.y) - s) < (c.len + V.len) / 2 + 2 && Math.abs(c.hd & 1 ? c.x - x : c.y - y) < 2)) continue;
+    // not on top of another car (nor where the player could see it pop up)
+    if (Math.hypot(x - away.x, y - away.y) < away.r) continue;
+    if ((existing.length ? existing : cars).some((c) => !c.dg && Math.abs(along(hd, c.x, c.y) - s) < (c.len + V.len) / 2 + 2 && Math.abs(c.hd & 1 ? c.x - x : c.y - y) < 2)) continue;
     cars.push({ ...V, x, y, px: x, py: y, dx, dy, v: 0, hd, road, lane, ni, nj, plan, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg: 0, u: 0 });
     k++;
   }
@@ -435,7 +491,7 @@ function startTurn(city: City, rng: Rng, c: Car) {
 
 /** Leave the intersection onto the road it turned into. */
 function endTurn(c: Car) {
-  c.turn = false;
+  c.turn = false; c.reckless = false;
   const to = headingOfExit(c);
   c.hd = to; c.dx = DIRS[to][0]; c.dy = DIRS[to][1];
   c.x = c.t1x; c.y = c.t1y;
@@ -448,8 +504,10 @@ function headingOfExit(c: Car) {
 }
 
 /** Advance traffic one tick: follow, stop at lights and stop signs, turn, yield to the player. */
-export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt: number, tick: number, playerX: number, playerY: number, grip = 0.8) {
+export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt: number, tick: number, playerX: number, playerY: number, grip = 0.8, night = false) {
   const sec = tick * dt;
+  crashes.length = 0;
+  const wrecks: Car[] = [], careless = (night ? 2.5 : 1) * (0.8 / grip);
   // the most a driver can brake on this road, and how careful they are on it
   const maxBrake = grip * 9.81, care = 0.6 + 0.5 * grip;
   // ---- who is where: lanes sorted by progress; a car crossing an intersection counts in the lane
@@ -459,6 +517,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
   const D = diagRoad(city), dgn = city.diagonal;
   const inc = (k: number) => busy.set(k, (busy.get(k) ?? 0) + 1);
   for (const c of cars) {
+    if (c.wreck) { wrecks.push(c); continue; }
     if (c.dg) {
       // on the diagonal: a lane each way, and in a crossing while inside one
       bucket(c.dg > 0 ? 4 : 5, 0, c.lane).push({ c, s: c.u * c.dg });
@@ -479,10 +538,16 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
   for (const b of lanes.values()) b.sort((p, q) => p.s - q.s);
   // the earliest arrival at each all-way stop goes first
   firstWait.clear();
-  for (const c of cars) if (c.arrive >= 0) { const f = firstWait.get(c.gate); if (f === undefined || c.arrive < f) firstWait.set(c.gate, c.arrive); }
+  for (const c of cars) if (c.arrive >= 0 && !c.wreck) { const f = firstWait.get(c.gate); if (f === undefined || c.arrive < f) firstWait.set(c.gate, c.arrive); }
 
   for (const c of cars) {
     c.px = c.x; c.py = c.y;
+    if (c.wreck) {
+      stepWreck(c, maxBrake, dt);
+      // towed away after a while: the car comes back somewhere out of the player's sight
+      if (tick - c.wreck > TOW * 60) { const n = spawnCars(city, rng, 1, cars, { x: playerX, y: playerY, r: 300 })[0]; if (n) Object.assign(c, n); }
+      continue;
+    }
     let v0 = c.max * care, gap = 1e9, vl = 0;
     const obstacle = (g: number, v: number) => { if (g < gap) { gap = g; vl = v; } };
 
@@ -506,6 +571,10 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       gateOf(city, power, c, front, sec);
       if (c.arrive >= 0 && c.gate !== G.key) c.arrive = -1; // past the stop it was waiting at
       const dStop = G.start - STOP_BACK - front;
+      // a new stop ahead: is this driver going to ignore it? And one past its line on red could not stop
+      if (c.rgate !== G.key) { c.rgate = G.key; c.reckless = rng() < (G.sig === Sig.Dark || G.sig === Sig.Stop ? RECKLESS_DARK : RECKLESS) * careless; }
+      if (c.lastD > -0.5 && dStop <= -0.5 && G.sig === Sig.Red && c.v > 2) c.reckless = true;
+      c.lastD = dStop;
       if (dStop > -0.5 && dStop < 60 && !mayGo(city, c, dStop, tick, lead)) obstacle(dStop + GAP0, 0);
       else if (dStop < -0.5 && c.arrive >= 0 && c.gate === G.key) c.arrive = -1;
       // halted at an all-way stop: note when
@@ -515,6 +584,11 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     // the player on the road: brake and wait (no running anyone over yet)
     const rx = playerX - c.x, ry = playerY - c.y, ahead = rx * c.dx + ry * c.dy, lat = Math.abs(rx * c.dy - ry * c.dx);
     if (ahead > 0 && ahead < 14 + c.len / 2 && lat < 1.6) obstacle(ahead - c.len / 2 - 0.5, 0);
+    // wrecks in the way
+    for (const w of wrecks) {
+      const wx = w.x - c.x, wy = w.y - c.y, wa = wx * c.dx + wy * c.dy;
+      if (wa > 0 && wa < 30 && Math.abs(wx * c.dy - wy * c.dx) < 2.6) obstacle(wa - c.len / 2 - w.len / 2 - 0.5, 0);
+    }
 
     // intelligent driver model
     const sStar = GAP0 + Math.max(0, (c.v * HEADWAY) / care + (c.v * (c.v - vl)) / (2 * Math.sqrt(c.acc * BRAKE)));
@@ -545,6 +619,12 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
         busy.set(k, (busy.get(k) ?? 0) + 1); // the next in line waits for this one
         startTurn(city, rng, c);
       }
+    }
+    // a careless driver hits whatever it runs into (the careful ones keep their distance)
+    if (c.reckless && c.v > 1) for (const o of cars) {
+      if (o === c || o.wreck || Math.abs(o.x - c.x) > 9 || Math.abs(o.y - c.y) > 9) continue;
+      if (!c.turn && !o.turn && o.hd === c.hd && o.road === c.road && o.lane === c.lane && o.dg === c.dg) continue;
+      if (overlap(c, o)) { crash(c, o, rng, tick); break; }
     }
   }
 }
@@ -627,6 +707,7 @@ function busStop(city: City, c: Car, front: number, tick: number, obstacle: (g: 
 /** Whether a car dStop metres from its stop line (G) may go on. */
 function mayGo(city: City, c: Car, dStop: number, tick: number, lead: { c: Car; s: number } | null): boolean {
   const sg = G.sig;
+  if (c.reckless && c.rgate === G.key) return true; // careless: through it, whatever the light
   if (sg === Sig.Red) return false;
   if (sg === Sig.Yellow && dStop > (c.v * c.v) / (2 * 3.5) + 1) return false; // can stop in time: stop
   // not into a full lane on the far side (no blocking the box)
@@ -679,7 +760,7 @@ function oncoming(city: City, c: Car): boolean {
 export function queues(city: City, cars: Car[], cb: (i: number, j: number, hd: number, n: number) => void) {
   const count = new Map<number, number>();
   for (const c of cars) {
-    if (c.dg || c.turn || c.v > 1) continue;
+    if (c.dg || c.turn || c.wreck || c.v > 1) continue;
     if (entryS(city, c.hd, c.ni, c.nj) - along(c.hd, c.x, c.y) > 80) continue;
     const k = iKey(c.ni, c.nj) * 4 + c.hd;
     count.set(k, (count.get(k) ?? 0) + 1);

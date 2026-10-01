@@ -1185,6 +1185,8 @@ function gatherLights(world: World, v: View, sec: number) {
     dyn.cone(x + c.dx * hl, y + c.dy * hl, c.dx, c.dy, 0.87, 24, 1, 4, 150, 140, 115);
     dyn.point(x - c.dx * (hl + 0.1), y - c.dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
     // a police beacon throws red and blue around it in turns
+    // a wreck's hazard lights blink amber
+    if (c.wreck && Math.floor(sec * 1.6) & 1) dyn.point(x, y, 6, 1, 3, 150, 90, 10);
     if (c.beacon) { const red = (Math.floor(sec * 3) & 1) === 0; dyn.point(x, y, 14, 2, 8, red ? 140 : 20, red ? 15 : 30, red ? 15 : 160); }
   }
   // each lit traffic light throws its color on the street in front of it (and on wet asphalt, far)

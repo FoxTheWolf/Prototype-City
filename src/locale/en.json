@@ -55,6 +55,12 @@
     "months": ["JAN", "FEB", "MAR", "APR", "MAY", "JUNE", "JULY", "AUG", "SEPT", "OCT", "NOV", "DEC"],
     "blackout": ["POWER FAILURE IN {district} - CREWS ON THE SCENE", "BLACKOUT HITS {district}, UTILITY SILENT ON CAUSE", "{district} IN THE DARK AFTER SUBSTATION FAILS"],
     "restored": ["POWER RESTORED IN {district}", "LIGHTS BACK ON IN {district}"],
+    "crash": [
+      "CRASH AT {road} AND {cross} - EXPECT DELAYS",
+      "COLLISION SNARLS {road} NEAR {cross}",
+      "CARS COLLIDE AT {road} AND {cross}, POLICE ON SCENE",
+      "WRECK BLOCKS {road} AT {cross}"
+    ],
     "jam": [
       "TRAFFIC BACKED UP ON {road} AT {cross}",
       "GRIDLOCK AT {road} AND {cross}",

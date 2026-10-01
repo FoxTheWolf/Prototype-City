@@ -1,10 +1,10 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
-import { FLOOR_H, generateCity, SIDEWALK, type City } from './city';
+import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, stairStep } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
-import { queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
+import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
 import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
 /** Simulation rate. The sim always advances in steps of exactly this size. */
@@ -178,7 +178,12 @@ export function stepWorld(w: World, input: PlayerInput) {
     else if (z !== null) { p.z = z; p.floor = Math.floor((z + 0.01) / FLOOR_H); }
   }
 
-  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover));
+  const hour = (w.time / 3600) % 24;
+  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5);
+  for (const k of crashes) {
+    const i = nearestRoad(w.city.xb, w.city.xCell, k.x), j = nearestRoad(w.city.yb, w.city.yCell, k.y);
+    logEvent(w.events, 'crash', w.tick, w.time, k.x, k.y, Math.min(1, k.v / 15), [i, j]);
+  }
   // every 10 s, a queue longer than a red light makes is a jam (logged again only after 5 min)
   if (w.tick % 600 === 599) queues(w.city, w.cars, (i, j, hd, n) => {
     if (n < JAM_CARS) return;
