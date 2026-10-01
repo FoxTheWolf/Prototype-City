@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, boardModel, carModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, boardModel, carModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -19,6 +19,7 @@ import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
+import { DIRS, Sig, signal } from '../sim/traffic';
 
 export interface View {
   x: number;
@@ -206,6 +207,10 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, pastD);
           const m = a % LANE_W;
           if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
+          else if (end > 4.6 && end < 5.05 && a < (b0[bc + 1] - b0[bc]) / 2 - 0.3 && (along - e0[ec] < e0[ec + 1] - along ? across > 0 : across < 0) === roadX) {
+            // the stop line, across the half of the road coming in to the intersection
+            ch = roadX ? G.eq : G.bar; r = 170; g = 170; b = 170;
+          }
           else if (a < 0.3) { ch = roadX ? G.bar : G.dash; r = 210; g = 170; b = 60; }
           else if ((b0[bc + 1] - b0[bc]) / 2 - a < 1.2) dens = 0.07; // the gutter collects what the wind blows
           else if (Math.min(m, LANE_W - m) < 0.12 && a < lanesOf(b0, bc >> 1) * LANE_W - 1 && Math.floor(along / 3) % 2 === 0) {
@@ -1156,6 +1161,12 @@ function gatherLights(world: World, v: View, sec: number) {
     dyn.cone(x + c.dx * 2.3, y + c.dy * 2.3, c.dx, c.dy, 0.87, 24, 1, 4, 150, 140, 115);
     dyn.point(x - c.dx * 2.4, y - c.dy * 2.4, 4, 1, 2, 120, 12, 8);
   }
+  // each lit traffic light throws its color on the street in front of it (and on wet asphalt, far)
+  forSignals(world, v, SIGNAL_LIGHT_FAR, (S) => {
+    if (S.lit < 0) return;
+    const col = SIG_GLOW[S.lit], mid = S.at[S.at.length >> 1];
+    dyn.point(S.x - S.s * mid + S.c * 1.5, S.y + S.c * mid + S.s * 1.5, 9, 0.5, 7, col[0], col[1], col[2]);
+  });
   // each sign lights the sidewalk in front of it and the wall around it, in its own color and flicker
   for (const blk of city.blocks) {
     if (blk.x1 < v.x - DYN_FAR || blk.x0 > v.x + DYN_FAR || blk.y1 < v.y - DYN_FAR || blk.y0 > v.y + DYN_FAR) continue;
@@ -1233,6 +1244,47 @@ function gatherLights(world: World, v: View, sec: number) {
 }
 
 /** Props of the blocks near the viewer, plus nearby cars. Far away they are too small to matter. */
+/** Traffic lights are drawn this close (whole, or far off just their lit lamps) and cast their color this close; their glow on the street, red, yellow, green. */
+const SIGNAL_LIGHT_FAR = 80, SIGNAL_FAR = 200, SIGNAL_NEAR = 60;
+const SIG_GLOW: RGB[] = [[110, 14, 10], [100, 70, 10], [20, 100, 55]];
+interface SignalPost { x: number; y: number; c: number; s: number; state: number; lit: number; at: number[] }
+const SP: SignalPost = { x: 0, y: 0, c: 0, s: 0, state: 0, lit: -1, at: [] };
+const atCache = new Map<string, number[]>();
+
+/**
+ * Every approach to the intersections within `far` of the viewer: a traffic light pole on the far
+ * right corner, facing the oncoming cars, its arm (+y in its frame) over their lanes; or, at a
+ * stop sign corner, the sign on the near right corner. On real time (the tick), like the sim.
+ */
+function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => void) {
+  const { city } = world, sec = (world.tick + v.alpha) / 60;
+  const NX = city.xb.length / 2, NY = city.yb.length / 2;
+  for (let i = 0; i < NX; i++) {
+    const X0 = city.xb[2 * i], X1 = city.xb[2 * i + 1];
+    if (X1 < v.x - far || X0 > v.x + far) continue;
+    for (let j = 0; j < NY; j++) {
+      const Y0 = city.yb[2 * j], Y1 = city.yb[2 * j + 1];
+      if (Y1 < v.y - far || Y0 > v.y + far) continue;
+      const mx = (X0 + X1) / 2, my = (Y0 + Y1) / 2;
+      for (let hd = 0; hd < 4; hd++) {
+        const [dx, dy] = DIRS[hd], pi = i - dx, pj = j - dy;
+        if (pi < 0 || pj < 0 || pi >= NX || pj >= NY) continue; // no road comes in from off the map
+        const aH = hd & 1 ? (Y1 - Y0) / 2 : (X1 - X0) / 2, halfW = hd & 1 ? (X1 - X0) / 2 : (Y1 - Y0) / 2;
+        const st = signal(city, world.power, i, j, hd & 1, sec), rx = -dy, ry = dx; // the right-hand side
+        const ahead = st === Sig.Stop ? -(aH + 0.7) : aH + 0.7;
+        SP.x = mx + dx * ahead + rx * (halfW + 0.7); SP.y = my + dy * ahead + ry * (halfW + 0.7);
+        SP.c = -dx; SP.s = -dy; SP.state = st;
+        SP.lit = st === Sig.Green ? 2 : st === Sig.Yellow ? 1 : st === Sig.Red ? 0 : -1;
+        const n = Math.max(1, lanesOf(hd & 1 ? city.xb : city.yb, hd & 1 ? i : j)), key = n + '|' + halfW;
+        let at = atCache.get(key);
+        if (!at) { at = []; for (let l = 0; l < n; l++) at.push(0.7 + halfW - LANE_W * (l + 0.5)); atCache.set(key, at); }
+        SP.at = at;
+        cb(SP);
+      }
+    }
+  }
+}
+
 function collectObjects(world: World, v: View): Obj[] {
   const out: Obj[] = [];
   const { city } = world;
@@ -1270,6 +1322,15 @@ function collectObjects(world: World, v: View): Obj[] {
       }
     }
   }
+  forSignals(world, v, SIGNAL_FAR, (S) => {
+    const near = Math.hypot(S.x - v.x, S.y - v.y) < SIGNAL_NEAR;
+    if (S.state === Sig.Stop) { if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: STOP_SIGN, r: 0.5, h: 2.9, seed: 0 }); return; }
+    if (!near && S.lit < 0) return;
+    if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: SIGNAL_POLE, r: 0.3, h: 6.3, seed: 0 });
+    // the arm and its heads, around the arm's middle, hanging above the street (far off, just the lit lamps)
+    const m = (Math.max(...S.at) + 0.4) / 2, at = S.at.map((y) => y - m);
+    out.push({ x: S.x - S.s * m, y: S.y + S.c * m, c: S.c, s: S.s, parts: near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), r: m + 0.3, h: 6.2, z0: 4.7, seed: 0 });
+  });
   for (const f of city.floodlights) {
     if (Math.abs(f.x - v.x) > SPRITE_FAR * 2 || Math.abs(f.y - v.y) > SPRITE_FAR * 2) continue;
     // lamps face the city

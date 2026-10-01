@@ -365,3 +365,55 @@ export function boardModel(text: string, w: number, h: number, base: number, top
   boards.set(key, m);
   return m;
 }
+
+const signals = new Map<string, Part[]>();
+const HOUSING: RGB = [34, 36, 30];
+/** Lamp colors of a traffic light, top to bottom, lit and dark. */
+const SIG_LIT: RGB[] = [[255, 40, 30], [255, 180, 30], [60, 255, 140]];
+const SIG_DARK: RGB[] = [[60, 16, 14], [60, 46, 14], [14, 50, 30]];
+/**
+ * A traffic light's mast arm, facing +x (the oncoming traffic), drawn as its own object centered on
+ * the arm so its bounds stay small: the arm along y from `y0` (at the pole) to past the farthest
+ * head, one head per lane at `at` (y, same frame). `lit` is the lamp that is on (0 red, 1 yellow,
+ * 2 green), or -1 when it is dark. The pole is SIGNAL_POLE.
+ */
+export function signalModel(at: number[], y0: number, lit: number): Part[] {
+  const key = at.join() + '|' + y0 + '|' + lit;
+  let m = signals.get(key);
+  if (m) return m;
+  const reach = Math.max(...at) + 0.4;
+  m = [part(Box, -0.06, y0, 5.95, 0.06, reach, 6.12, HOUSING, Solid, '-', '=', '|')];
+  for (const y of at) {
+    m.push(part(Box, -0.18, y - 0.2, 4.75, 0.18, y + 0.2, 5.95, HOUSING, Solid, '#', '=', '#'));
+    for (let k = 0; k < 3; k++) {
+      const z = 5.6 - k * 0.38;
+      m.push(part(Box, 0.18, y - 0.13, z - 0.13, 0.24, y + 0.13, z + 0.13, k === lit ? SIG_LIT[k] : SIG_DARK[k], k === lit ? Glow : Solid, k === lit ? '@' : 'o'));
+    }
+  }
+  signals.set(key, m);
+  return m;
+}
+
+/** Far away, only the lamp that is lit in each head: what the eye picks out down an avenue at night. */
+export function signalFarModel(at: number[], lit: number): Part[] {
+  const key = 'far|' + at.join() + '|' + lit;
+  let m = signals.get(key);
+  if (m) return m;
+  const z = 5.6 - lit * 0.38;
+  m = at.map((y) => part(Box, 0.05, y - 0.18, z - 0.18, 0.24, y + 0.18, z + 0.18, SIG_LIT[lit], Glow, '@'));
+  signals.set(key, m);
+  return m;
+}
+
+/** A traffic light's pole on its base. */
+export const SIGNAL_POLE: Part[] = [
+  part(Cyl, -0.2, -0.2, 0, 0.2, 0.2, 0.5, STEEL, Solid, '#', '='),
+  part(Cyl, -0.12, -0.12, 0, 0.12, 0.12, 6.3, HOUSING, Solid, '|', '.'),
+];
+
+/** A stop sign facing +x on its post. */
+export const STOP_SIGN: Part[] = [
+  part(Cyl, -0.05, -0.05, 0, 0.05, 0.05, 2.5, STEEL, Solid, '|', '.'),
+  part(Box, 0.05, -0.38, 2.1, 0.1, 0.38, 2.86, [200, 30, 30], Solid, '#', '=', '#'),
+  part(Box, 0.1, -0.26, 2.42, 0.12, 0.26, 2.54, [235, 235, 235], Solid, '=', '=', '='),
+];
