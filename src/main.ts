@@ -1,5 +1,7 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
+import { drawPhone, mapView } from './phone/draw';
+import { Phone, phoneKey } from './phone/phone';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
@@ -34,10 +36,11 @@ const overlay = document.getElementById('overlay')!;
 const renderer = new GlyphRenderer(canvas);
 const input = new Input(canvas);
 const camera = new Camera();
+const phone = new Phone();
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift,
+  world, camera, pickedButton, callLift, phone,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -65,8 +68,22 @@ addEventListener('mousedown', (e) => {
   if (b >= 0) sound?.beep(callLift(world, b));
 });
 addEventListener('keydown', (e) => {
+  // the phone: P takes it out or puts it away; while it is out, its keys (see phone.ts)
+  const pk = phone.out ? phoneKey(e.code) : null;
+  if (pk) {
+    e.preventDefault();
+    if (e.repeat && pk !== 'up' && pk !== 'down' && pk !== 'left' && pk !== 'right') return;
+    const done = phone.press(pk, performance.now() / 1000, ...mapView(layout.cellW / layout.cellH));
+    sound?.phoneKey(/^\d$/.test(pk), done);
+    return;
+  }
   if (e.repeat) return;
-  if (e.code === 'KeyM') sound?.toggleMute();
+  if (e.code === 'KeyP' && running) {
+    const r = phone.toggle(performance.now() / 1000);
+    sound?.phoneSlide(r !== 'in');
+    if (r === 'boot') sound?.phoneBoot(0.35);
+  }
+  else if (e.code === 'KeyM') sound?.toggleMute();
   else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
@@ -95,7 +112,8 @@ function resize() {
 }
 
 function readInput(): PlayerInput {
-  const f = (input.down('KeyW', 'ArrowUp') ? 1 : 0) - (input.down('KeyS', 'ArrowDown') ? 1 : 0);
+  // with the phone out the arrows are its d-pad; WASD still walk
+  const f = (input.down('KeyW', phone.out ? 'KeyW' : 'ArrowUp') ? 1 : 0) - (input.down('KeyS', phone.out ? 'KeyS' : 'ArrowDown') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
   return { forward: running ? f : 0, strafe: running ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
@@ -131,7 +149,7 @@ function frame(now: number) {
   // camera first, so this frame's movement uses the heading the player sees
   const [mx, my] = input.takeMouse();
   camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
-  const turn = (input.down('ArrowRight', 'KeyE') ? 1 : 0) - (input.down('ArrowLeft', 'KeyQ') ? 1 : 0);
+  const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
   if (running) camera.look(turn * 2.2 * dt, 0);
   else camera.look(dt * 0.08, 0); // idle drift behind the title
   camera.update(dt);
@@ -158,11 +176,13 @@ function frame(now: number) {
     look,
   });
   const ms = performance.now() - r0;
+  phone.update(dt, now / 1000);
+  drawPhone(grid, phone, world, camera.yaw, layout.cellW / layout.cellH, now / 1000);
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+    + `[P] PHONE  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
   const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `

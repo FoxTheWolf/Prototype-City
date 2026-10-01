@@ -174,6 +174,50 @@ export class Sound {
     o.start(t); o.stop(t + 0.3);
   }
 
+  /**
+   * A phone key: the snap of its rubber dome (a click of bright noise) and the handset's short
+   * keypad tone, a little higher for the d-pad than the digits, low when the key does nothing.
+   */
+  phoneKey(digit: boolean, ok = true) {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), c = gain(ctx, 0, this.master);
+    s.buffer = this.noise;
+    s.connect(filter(ctx, 'highpass', 2500, 0.7)).connect(c);
+    c.gain.setValueAtTime(0.09, t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.012);
+    s.start(t, Math.random() * 1.5); s.stop(t + 0.02);
+    const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'sine'; o.frequency.value = !ok ? 520 : digit ? 1180 : 1560;
+    o.connect(g);
+    g.gain.setValueAtTime(0, t + 0.004); g.gain.linearRampToValueAtTime(0.035, t + 0.008); g.gain.setTargetAtTime(0, t + 0.06, 0.012);
+    o.start(t); o.stop(t + 0.2);
+  }
+
+  /** The phone out of the pocket (or back in): cloth rustling, and the knock of it in the hand. */
+  phoneSlide(out: boolean) {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise;
+    s.connect(filter(ctx, 'bandpass', out ? 1700 : 1300, 0.9)).connect(g);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t + 0.06); g.gain.linearRampToValueAtTime(0.02, t + 0.15); g.gain.linearRampToValueAtTime(0, t + 0.28);
+    s.start(t, Math.random()); s.stop(t + 0.3);
+    const k = ctx.createBufferSource(), h = gain(ctx, 0, this.master);
+    k.buffer = this.noise; k.connect(filter(ctx, 'bandpass', 380, 2)).connect(h);
+    const at = t + (out ? 0.24 : 0.02);
+    h.gain.setValueAtTime(0.12, at); h.gain.exponentialRampToValueAtTime(0.0005, at + 0.05);
+    k.start(at, Math.random()); k.stop(at + 0.08);
+  }
+
+  /** The phone powering on: three soft rising notes, a bell on top. */
+  phoneBoot(delay = 0) {
+    const ctx = this.ctx, t = ctx.currentTime + delay;
+    [[523, 0], [784, 0.16], [1047, 0.32]].forEach(([f, d]) => {
+      for (const [type, mul, v] of [['triangle', 1, 0.05], ['sine', 2, 0.015]] as const) {
+        const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+        o.type = type; o.frequency.value = f * mul; o.connect(g);
+        g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(v, t + d + 0.01); g.gain.setTargetAtTime(0, t + d + 0.03, d === 0.32 ? 0.45 : 0.12);
+        o.start(t + d); o.stop(t + d + 2.5);
+      }
+    });
+  }
+
   /** Lift doors sliding: a soft rumble of filtered noise that swells and dies. */
   doors() {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);

@@ -728,5 +728,10 @@
     "Star", "Lucky", "Golden", "Atlas", "Nova", "Ace", "Metro", "Liberty", "Royal", "Empire",
     "Midnight", "Neon", "Crown", "Eagle", "Paradise", "Diamond", "Rialto", "Majestic", "Orbit", "Regal",
     "Silver", "Blue Moon", "Red Door", "Night Owl", "Eastside", "Union", "Jupiter", "Rex", "Galaxy", "Ember"
-  ]
+  ],
+  "phone": {
+    "ok": "OK", "off": "OFF", "noService": "NO SERVICE", "ready": "READY.", "mapsDb": "MAPS DB",
+    "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center",
+    "app": { "map": "Maps" }
+  }
 }
