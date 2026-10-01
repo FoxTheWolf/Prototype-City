@@ -119,9 +119,10 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
     r += 190 * dk; g += 80 * dk; b += 30 * dk - 10 * dk * toSun;
     let ch = 0, cr = 0, cg = 0, cb = 0;
     let sunK = 0, cover = 0;
-    if (S.sunEl > -0.15 && Math.abs(dS) < 0.8) {
+    if (S.sunEl > -0.15) {
       // a soft glow where the sun is (no disk: it would be a white blot), added after the clouds
       const el = Math.atan(up), ang = Math.hypot(dS * Math.cos(el), el - S.sunEl);
+      // computed over the whole sky: the wide halo has no edge to cut it off
       sunK = (Math.exp(-ang / 0.09) * 0.8 + Math.exp(-ang / 0.35) * 0.25) * Math.min(1, (S.sunEl + 0.15) / 0.2);
     }
 
