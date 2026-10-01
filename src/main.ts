@@ -24,7 +24,7 @@ import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours,
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 100, 120];
-let resStep = 0;
+let resStep = 1; // 100 rows, the user's choice
 const ROWS = 80; // the bench's grid, kept the same to compare
 /** Cell width / height, close to a monospace glyph. */
 const CELL_ASPECT = 0.6;
@@ -77,7 +77,7 @@ let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
 let solidStep = 0; // 0.24 ("1/3"), the user's pick
-const look: Look = { solid: SOLID[solidStep], blocks: false, sharp: 0, fuse: true };
+const look: Look = { solid: SOLID[solidStep], blocks: false, sharp: 0, fuse: false };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
   const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));

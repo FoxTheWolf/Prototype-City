@@ -1255,6 +1255,9 @@ function lightAt(x: number, y: number, z: number) {
   // hue: the sum never burns out to flat white
   const m = Math.max(LT[0], LT[1], LT[2]);
   if (m > LIGHT_KNEE) { const k = (LIGHT_KNEE + (m - LIGHT_KNEE) * 0.3) / m; LT[0] *= k; LT[1] *= k; LT[2] *= k; }
+  // against the sun, lamps, signs and headlights barely tell; daylight multiplies the colors later,
+  // so their light is taken down first, or it burns into saturated yellow smears
+  if (frameDay > 0) { const k = 1 - 0.85 * frameDay; LT[0] *= k; LT[1] *= k; LT[2] *= k; }
 }
 /** Where the summed light starts to be compressed. */
 const LIGHT_KNEE = 150;
