@@ -159,21 +159,32 @@ function frameOf(city: City, k: number): Frame {
   const lift = isOffice(B) || tall > 5;
   // which side of the corridor the door is on: the core goes on the other one
   const D = doorOf(city, k);
-  let dv = (V0 + V1) / 2;
-  if (D) { const [x, y] = facePoint(B, D.face, (D.a0 + D.a1) / 2); dv = alongX ? y : x; }
+  let dv = (V0 + V1) / 2, du = -1e9;
+  if (D) { const [x, y] = facePoint(B, D.face, (D.a0 + D.a1) / 2); dv = alongX ? y : x; du = alongX ? x : y; }
   let c0: number, c1: number;
   if (W >= 10.5) { c0 = snap((V0 + V1) / 2 - BAY / 2); c1 = c0 + BAY; }
-  else if (W >= 7) { c0 = V0; c1 = snap(V0) + BAY; if (c1 - V0 < 1.2) c1 += BAY; } // along one wall
+  else if (W >= 7) {
+    // along one wall: the door's, so the door opens straight into it
+    if (dv > (V0 + V1) / 2) { c1 = V1; c0 = snap(V1) - BAY; if (V1 - c0 < 1.2) c0 -= BAY; }
+    else { c0 = V0; c1 = snap(V0) + BAY; if (c1 - V0 < 1.2) c1 += BAY; }
+  }
   else { c0 = c1 = V0; }
   const mid = (U0 + U1) / 2, coreW = (lift ? 3 : 2) * BAY;
   if (c1 > c0) {
     // the core on the deeper side, unless the door opens there
     let sideA = c0 - V0 > V1 - c1;
     if (c0 === V0) sideA = false;
+    else if (c1 === V1) sideA = true;
     else if (dv < c0) sideA = false;
     else if (dv > c1) sideA = true;
     const depth = Math.min(3 * BAY, sideA ? c0 - V0 : V1 - c1);
-    const su0 = snap(mid - coreW / 2);
+    let su0 = snap(mid - coreW / 2);
+    // when the door is on the core's side, its lobby (three bays around it) must not cross the core
+    const doorSide = dv < c0 ? sideA : dv > c1 ? !sideA : false;
+    if (doorSide) {
+      const l0 = Math.floor(du / BAY) * BAY - BAY, l1 = l0 + 3 * BAY;
+      if (su0 < l1 && su0 + coreW > l0) su0 = l1 + coreW <= U1 - 0.4 ? l1 : l0 - coreW >= U0 + 0.4 ? l0 - coreW : su0;
+    }
     F = { alongX, c0, c1, su0, su1: su0 + 2 * BAY, lu1: su0 + coreW, cv0: sideA ? c0 - depth : c1, cv1: sideA ? c0 : c1 + depth };
   } else {
     // a narrow walk-up: the stairs across one end, no corridor
@@ -402,7 +413,6 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     room('stair', -1, F.su0, F.cv0, F.su1, F.cv1);
     doorV(core < 0 ? F.c0 : F.c1, F.su0 + 0.4);
     if (F.lu1 > F.su1) { room('lift', -1, F.su1, F.cv0, F.lu1, F.cv1); doorV(core < 0 ? F.c0 : F.c1, F.su1 + 0.4); }
-    if (lSide) { room('lobby', -1, lu0, lSide < 0 ? V0 : F.c1, lu1, lSide < 0 ? F.c0 : V1); doorV(lSide < 0 ? F.c0 : F.c1, lu0 + BAY + 0.2); }
     // behind a shallow core, a room of the unit next to it
     const outer = core < 0 ? V0 : V1, back = core < 0 ? F.cv0 : F.cv1;
     if (Math.abs(outer - back) > 1.2) {
@@ -412,6 +422,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
       room(next ? (next.kind === 'shop' || next.kind === 'open' || next.kind === 'office' ? next.kind : 'bedroom') : office ? 'office' : 'bedroom', next ? next.unit : unit++, F.su0, v0, F.lu1, v1);
       if (next && next.kind !== 'shop') doorU(F.su0, vm - 0.6);
     }
+    if (lSide) { room('lobby', -1, lu0, lSide < 0 ? V0 : F.c1, lu1, lSide < 0 ? F.c0 : V1); doorV(lSide < 0 ? F.c0 : F.c1, (Math.max(lu0, U0) + Math.min(lu1, U1)) / 2 - 0.6); }
   } else {
     // walk-up: stairs at one end, the rest is one home (or a shop downstairs)
     room('stair', -1, U0, V0, F.su1, V1);
@@ -425,7 +436,52 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     }
   }
   for (const [u0, v0, u1, v1] of doors) fill(u0, v0, u1, v1, DOOR, true);
+  connect(cells, nx, ny, rooms);
   return { box: j, rooms, cells, gx, gy, nx, ny };
+}
+
+/**
+ * Make every room reachable from the stairs (shops stay closed): where the cut of the diagonal,
+ * or a tight lot, left a room with no way in, open a doorway to a neighbour that has one.
+ */
+function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
+  const seen = new Uint8Array(nx * ny), stack: number[] = [];
+  // from the stairs; where the cut took them away, from the lobby or the corridor
+  let start = cells.findIndex((v) => v !== 0 && rooms[(v & 127) - 1].kind === 'stair');
+  if (start < 0) start = cells.findIndex((v) => v !== 0 && (rooms[(v & 127) - 1].kind === 'lobby' || rooms[(v & 127) - 1].kind === 'hall'));
+  if (start < 0) return;
+  for (let guard = 0; guard < 60; guard++) {
+    seen.fill(0); stack.length = 0; stack.push(start); seen[start] = 1;
+    while (stack.length) {
+      const c = stack.pop()!, v = cells[c], i = c % nx, j = (c - i) / nx;
+      for (const d of [1, -1, nx, -nx]) {
+        if ((d === 1 && i === nx - 1) || (d === -1 && i === 0) || (d === nx && j === ny - 1) || (d === -nx && j === 0)) continue;
+        const e = c + d, w = cells[e];
+        if (!w || seen[e] || ((w & 127) !== (v & 127) && !(w & v & DOOR))) continue;
+        seen[e] = 1; stack.push(e);
+      }
+    }
+    // the first wall between a reached cell and a room still closed off: a doorway three cells wide
+    let made = false;
+    for (let c = 0; c < nx * ny && !made; c++) {
+      const i = c % nx;
+      for (const d of [1, nx]) {
+        if (d === 1 && i === nx - 1) continue;
+        for (const [a, b] of [[c, c + d], [c + d, c]]) {
+          if (b >= nx * ny || a < 0 || !cells[b] || seen[b] || !seen[a] || rooms[(cells[b] & 127) - 1].kind === 'shop') continue;
+          const side = d === 1 ? nx : 1;
+          for (const o of [-side, 0, side]) {
+            const p = a + o, q = b + o;
+            if (p < 0 || q < 0 || p >= nx * ny || q >= nx * ny) continue;
+            if ((cells[p] & 127) === (cells[a] & 127) && (cells[q] & 127) === (cells[b] & 127)) { cells[p] |= DOOR; cells[q] |= DOOR; }
+          }
+          made = true; break;
+        }
+        if (made) break;
+      }
+    }
+    if (!made) return;
+  }
 }
 
 /** The cell value at a point (room + 1 with the DOOR bit), 0 outside the plan. */
