@@ -1,5 +1,7 @@
 import { type City } from '../sim/city';
 import { LAMP_LIGHT, lampState, photocell } from './lamps';
+import { power } from './power';
+import { type PowerGrid } from '../sim/power';
 
 /** Side of the baked window in metres. */
 const W = 1024;
@@ -53,12 +55,16 @@ export class LightWindow {
   }
 
   /** Update the lamps' failures and photocells for this frame (day: 0 night .. 1 daylight). */
-  update(sec: number, day: number) {
+  update(sec: number, day: number, grid: PowerGrid) {
     const lamps = this.city!.lamps, c = this.col;
     for (const n of this.inWindow) {
       const t = lamps[n].lampType ?? 'hps', L = LAMP_LIGHT[t];
       lampState(n, sec, this.st, t);
       photocell(n, day, this.st);
+      // the power grid: dark in a blackout; when it comes back a discharge lamp warms up again
+      const pw = power(grid, grid.lamp[n], lamps[n].x, lamps[n].y, n + 100000, 0, sec);
+      this.st[0] *= Math.min(1.3, pw[0]);
+      if (pw[1] >= 0 && t !== 'led') this.st[1] = Math.min(this.st[1], pw[1] / 9);
       const lv = (this.level[n] = this.st[0]), w = (this.warm[n] = this.st[1]);
       for (let k = 0; k < 3; k++) c[n * 3 + k] = (L.cold[k] + (L.warm[k] - L.cold[k]) * w) * lv;
     }

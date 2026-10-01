@@ -2,6 +2,8 @@ import { hash3 } from '../core/rng';
 import { type City } from '../sim/city';
 import { moonDir, moonPhase, sunDir } from '../sim/clock';
 import { lightning, type Weather } from '../sim/weather';
+import { subAt, type PowerGrid } from '../sim/power';
+import { power } from './power';
 import { type CharGrid } from './grid';
 
 /**
@@ -52,6 +54,10 @@ export interface SkyFrame {
   driftX: number;
   driftY: number;
   city: City;
+  grid: PowerGrid;
+  sec: number;
+  /** Share of the city with its lights on: the haze over it glows with them. */
+  cityLit: number;
 }
 
 const tmp = new Float64Array(2);
@@ -64,7 +70,7 @@ export function daylight(t: number) {
 }
 
 const bolt = new Float64Array(2);
-export function prepareSky(city: City, w: Weather, seed: number, t: number, sec: number): SkyFrame {
+export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number, t: number, sec: number): SkyFrame {
   sunDir(t, tmp);
   const sunEl = tmp[0], sunA = heading(tmp[1]);
   moonDir(t, tmp);
@@ -74,7 +80,8 @@ export function prepareSky(city: City, w: Weather, seed: number, t: number, sec:
   return {
     day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) : 0,
-    cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city,
+    cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,
+    cityLit: grid.subs.reduce((a, s, k) => a + Math.min(1, power(grid, k, s.x, s.y, 7, 0, sec)[0]), 0) / grid.subs.length,
   };
 }
 
@@ -82,10 +89,13 @@ export function prepareSky(city: City, w: Weather, seed: number, t: number, sec:
  * How much the ground under a point lights the clouds: the city (brighter downtown), fading over
  * the dark seam, and the seam's own fires in a ring outside the fence.
  */
-function glowBelow(c: City, x: number, y: number, out: Float32Array) {
+function glowBelow(S0: SkyFrame, x: number, y: number, out: Float32Array) {
+  const c = S0.city;
   const dx = Math.max(0, -x, x - c.w), dy = Math.max(0, -y, y - c.h), out_ = Math.hypot(dx, dy);
   const core = Math.exp(-((Math.hypot(x - c.cx, y - c.cy) / (Math.min(c.w, c.h) * 0.45)) ** 2));
-  const city = (out_ > 0 ? Math.exp(-out_ / 500) : 1) * (0.55 + 0.45 * core);
+  // a blacked-out district stops lighting the clouds over it
+  const lit = power(S0.grid, subAt(S0.grid, c, x, y), x, y, 7, 0, S0.sec)[0] * 0.88 + 0.12;
+  const city = (out_ > 0 ? Math.exp(-out_ / 500) : 1) * (0.55 + 0.45 * core) * lit;
   // the seam's fires in a ring outside the fence, and the great crater under the Sarcophagus
   const S = c.sarcophagus, crater = Math.exp(-((Math.hypot(x - S.x, y - S.y) / (S.r * 1.3)) ** 2));
   const fire = Math.exp(-(((out_ - 450) / 420) ** 2)) + 1.6 * crater;
@@ -170,7 +180,7 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
       const a = smooth(lo - 0.18, lo + 0.12, d) * (0.55 + 0.45 * Math.min(1, S.cloud * 1.3));
       if (a > 0.02) {
         // lit from below by the city and the seam, grey in daylight; rain makes the deck lower and brighter
-        glowBelow(S.city, wx, wy, GLOW);
+        glowBelow(S, wx, wy, GLOW);
         const thick = Math.min(1, a * (0.5 + d));
         const gk = (0.35 + 0.65 * thick) * (0.8 + 0.5 * S.precip) * night;
         let qr = 12 + GLOW[0] * gk, qg = 12 + GLOW[1] * gk, qb = 18 + GLOW[2] * gk;
@@ -184,7 +194,7 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
         qr += ml; qg += ml; qb += ml * 1.15;
         if (moonA) { qr += cr * 0.3 * (1 - thick); qg += cg * 0.3 * (1 - thick); qb += cb * 0.3 * (1 - thick); }
         // the far deck sinks into the haze, which the city's light warms too
-        const hz = 1 - Math.exp(-D / 12000), hk = 0.4 * night * (0.6 + 0.6 * S.precip);
+        const hz = 1 - Math.exp(-D / 12000), hk = 0.4 * night * (0.6 + 0.6 * S.precip) * (0.25 + 0.75 * S.cityLit);
         qr += (26 + 55 * hk + 90 * S.day - qr) * hz; qg += (22 + 32 * hk + 95 * S.day - qg) * hz; qb += (26 + 22 * hk + 102 * S.day - qb) * hz;
         r += (qr - r) * a; g += (qg - g) * a; b += (qb - b) * a;
         cover = a;

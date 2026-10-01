@@ -2,6 +2,9 @@ import { LAMP_LIGHT, lampId, lampMode, LampMode, lampState, lampStutter, photoce
 import { signLight, signMode, SignMode, signStutter, signText } from '../render/signs';
 import { type City } from '../sim/city';
 import { type Weather } from '../sim/weather';
+import { type PowerGrid } from '../sim/power';
+import { power } from '../render/power';
+import { blackoutA, blackoutB, darkEvent, Kit, restore } from './blackout';
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
@@ -28,6 +31,12 @@ export class Sound {
   private rainLow: GainNode;
   private noise: AudioBuffer;
   private lastBolt = -1;
+  /** Blackout sound: A follows the analysed recipe (docs/blackout-som-receita.md), B is our own take. */
+  blackoutVersion: 'A' | 'B' = 'A';
+  private kit: Kit;
+  private seen: number[] = [];
+  private nextDark = 0;
+  private hush = 0;
   muted = false;
 
   constructor() {
@@ -67,6 +76,8 @@ export class Sound {
     const hiss = src().connect(filter(ctx, 'highpass', 3500, 0.7));
     hiss.connect(this.crackle);
     hiss.connect(this.humCrackle);
+
+    this.kit = new Kit(ctx, this.master, noise);
 
     // rain: a hiss of drops on the pavement, and in a downpour the low roar of water everywhere
     this.rain = gain(ctx, 0, this.master);
@@ -110,17 +121,34 @@ export class Sound {
    * night .. 1 in daylight) for the lamps' photocells; the weather; and the lightning bolt now
    * flashing (-1 for none), whose thunder follows once, a few seconds later.
    */
-  update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number) {
+  update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number, grid: PowerGrid) {
     const now = this.ctx.currentTime;
     const rain = w.snow ? 0 : w.precip;
     this.rain.gain.setTargetAtTime(0.28 * Math.min(1, rain * 1.4), now, 0.4);
     this.rainLow.gain.setTargetAtTime(0.35 * Math.max(0, rain - 0.4), now, 0.6);
     // falling and lying snow muffle the city
-    this.city.gain.setTargetAtTime(0.35 * (1 - 0.6 * Math.max(w.snow ? w.precip : 0, w.snowCover)), now, 1);
+    this.city.gain.setTargetAtTime(0.35 * (1 - 0.6 * Math.max(w.snow ? w.precip : 0, w.snowCover)) * (1 - 0.55 * this.hush), now, 1);
+    this.hush = grid.subs.some((s) => !s.on && Math.hypot(s.x - x, s.y - y) < 700) ? 1 : 0;
     if (bolt >= 0 && bolt !== this.lastBolt) { this.lastBolt = bolt; this.thunder(1 + ((bolt * 7919) % 50) / 10); }
     // screen-right direction, for panning
     const rx = -Math.sin(yaw), ry = Math.cos(yaw);
     const pan = (px: number, py: number) => { const d = Math.hypot(px - x, py - y) || 1; return ((px - x) * rx + (py - y) * ry) / d; };
+
+    // the grid: a substation switching within earshot is heard, late by the speed of sound
+    grid.subs.forEach((s, k) => {
+      if (this.seen[k] === undefined) { this.seen[k] = s.changed; return; }
+      if (s.changed === this.seen[k]) return;
+      this.seen[k] = s.changed;
+      const d = Math.hypot(s.x - x, s.y - y);
+      if (d > 1400) return;
+      const g = (1 - d / 1400) ** 1.3, at = now + d / 343, pn = pan(s.x, s.y) * 0.6;
+      if (!s.on) (this.blackoutVersion === 'A' ? blackoutA : blackoutB)(this.kit, at, g, pn);
+      else restore(this.kit, at, g, pn);
+    });
+    // in a dark district the city hush falls; now and then a relay or a transformer fights back
+    let here = 0;
+    grid.subs.forEach((s, k) => { if (!s.on && Math.hypot(s.x - x, s.y - y) < 700) here = Math.max(here, 1 - power(grid, k, x, y, 7, 0, sec)[0]); });
+    if (here > 0.8 && now > this.nextDark) { darkEvent(this.kit, now, (Math.random() - 0.5) * 1.6); this.nextDark = now + 1.5 + Math.random() * 5; }
 
     let lamp = 1e9, lx = 0, ly = 0, lid = -1, sign = 1e9, sx = 0, sy = 0, biz = -1;
     for (const b of city.blocks) {
@@ -147,7 +175,7 @@ export class Sound {
       const near = (1 - lamp / LAMP_R) ** 2;
       lampState(lid, sec, this.st, type);
       photocell(lid, day, this.st);
-      hum = 0.05 * near * this.st[0];
+      hum = 0.05 * near * this.st[0] * Math.min(1, power(grid, grid.lamp[lid], lx, ly, lid + 100000, 0, sec)[0]);
       if (lampMode(lid, type) === LampMode.Stutter && lampStutter(lid, sec)) hcr = 0.04 * near;
     }
     this.hum.gain.setTargetAtTime(hum, now, 0.03);
@@ -157,7 +185,8 @@ export class Sound {
     let neon = 0, crackle = 0;
     if (biz >= 0 && sign < SIGN_R) {
       const near = (1 - sign / SIGN_R) ** 2, mode = signMode(city, biz);
-      const lit = signLight(biz, mode, -1, signText(city, biz, 255).length, sec);
+      const bk = city.businesses[biz].building, Bb = city.buildings[bk];
+      const lit = signLight(biz, mode, -1, signText(city, biz, 255).length, sec) * Math.min(1, power(grid, grid.building[bk], (Bb.x0 + Bb.x1) / 2, (Bb.y0 + Bb.y1) / 2, bk, grid.generator[bk], sec)[0]);
       const stutter = mode === SignMode.Broken && signStutter(biz, sec);
       neon = 0.035 * near * (lit > 0.5 ? (stutter ? 0.25 : 1) : 0);
       crackle = stutter ? 0.05 * near : 0;

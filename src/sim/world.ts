@@ -1,6 +1,7 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { generateCity, isSolid, SIDEWALK, type City } from './city';
 import { TIME_SCALE } from './clock';
+import { buildPower, switchSub, type PowerGrid } from './power';
 import { spawnCars, stepCars, type Car } from './traffic';
 import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
@@ -35,6 +36,7 @@ export interface World {
   time: number;
   ptime: number;
   weather: Weather;
+  power: PowerGrid;
 }
 
 /** Default city side in metres. */
@@ -52,13 +54,22 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
-  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0 }, time, ptime: time, weather };
+  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0 }, time, ptime: time, weather, power: buildPower(seed, city) };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
 export function skipHours(w: World, h: number) {
   w.time = w.ptime = Math.max(0, w.time + h * 3600);
   stepWeather(w.weather, w.seed, w.time, 0);
+}
+
+/** Debug: switch the substation nearest the player, or (all) every one: all off if any is on. */
+export function togglePower(w: World, all: boolean) {
+  const P = w.power, p = w.player;
+  if (all) { const off = P.subs.some((s) => s.on); P.subs.forEach((_, k) => switchSub(P, k, !off, w.tick)); return; }
+  let k = 0;
+  P.subs.forEach((s, n) => { if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(P.subs[k].x - p.x, P.subs[k].y - p.y)) k = n; });
+  switchSub(P, k, !P.subs[k].on, w.tick);
 }
 
 /** Debug: step through the fixed skies, then back to the forecast. */

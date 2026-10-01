@@ -11,6 +11,8 @@ import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampM
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall } from './precip';
+import { power } from './power';
+import { type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, bulbOn, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
@@ -77,6 +79,7 @@ const DYN_FAR = 200;
 const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
 let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0;
+let framePower: PowerGrid;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
 const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
@@ -106,13 +109,13 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   // metres covered by one column at distance 1, to pick the level of facade detail
   const colW = (2 * plane) / cols;
   const time = world.tick + v.alpha;
-  frameCity = city; frameSec = time / 60;
+  frameCity = city; frameSec = time / 60; framePower = world.power;
   const D = city.diagonal, diagGlyph = D.ex * D.ey > 0 ? G.bs : G.sl;
-  const sky = prepareSky(city, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
+  const sky = prepareSky(city, world.power, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
   frameDay = sky.day;
   // what the weather leaves on the ground: wet streets that mirror the lights, splashes, snow
   const W = world.weather, wet = W.wet, snowC = (frameSnow = W.snowCover), rain = W.snow ? 0 : W.precip;
-  light.update(frameSec, sky.day);
+  light.update(frameSec, sky.day, world.power);
   gatherLights(world, v, frameSec);
 
   for (let x = 0; x < cols; x++) {
@@ -342,6 +345,11 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
   // by day the world is brighter and sinks into a pale haze with distance: the "service" look
   const day = sky.day;
   for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
+    if (sky.moonlight > 0.02 && depth[i] < 1e9 && depth[i] > 0) {
+      // the moon's cold light on everything: faint, it only tells once the city lights are out
+      const m = sky.moonlight * (1 - 0.7 * sky.cloud) * 14;
+      cells[k + 1] += m * 0.7; cells[k + 2] += m * 0.8; cells[k + 3] += m * 1.15;
+    }
     if ((day > 0.01 || sky.flash > 0) && depth[i] < 1e9) {
       const f = day * (0.25 + 0.6 * (1 - Math.exp(-depth[i] / 1500))), amb = 1 + 0.7 * day + sky.flash * 0.6;
       cells[k + 1] = cells[k + 1] * amb * (1 - f) + 138 * f; cells[k + 2] = cells[k + 2] * amb * (1 - f) + 146 * f; cells[k + 3] = cells[k + 3] * amb * (1 - f) + 156 * f;
@@ -463,9 +471,13 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const fogK = 1 - Math.exp(-t / FOG);
   const shade = lightK * (1 - fogK * 0.6);
   const winLight = 1 - fogK * 0.45;
+  // the building's electric light right now (blackouts, the surge before, the flicker back);
+  // aircraft warning lights run on batteries and stay on
+  const pw = power(framePower, framePower.building[id], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, id, framePower.generator[id], frameSec)[0];
+  const elec = winLight * pw;
   const [fr, fg, fb] = B.frame;
   // by day most lights in the windows are off
-  const litK = B.lit * (1 - 0.75 * frameDay);
+  const litK = pw < 0.05 ? 0 : B.lit * (1 - 0.75 * frameDay);
   // rows per floor and columns per window bay decide how much of the facade fits in a cell
   const rpf = (FLOOR_H * scale) / t, cpb = BAY / (colW * t);
   const detailed = rpf >= 2.2 && cpb >= 1.5;
@@ -502,7 +514,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     const hh = hash3(id, wi, fl);
     if (hh < litK) {
       ch = hh < litK * 0.3 ? G.at : litCh;
-      const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
+      const k = elec * (0.65 + 0.35 * hash3(wi, fl, id));
       r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
     } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
   };
@@ -525,7 +537,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const hand = (a: number, len: number) => { const s = du * Math.cos(a) + dz * Math.sin(a); return s > 0 && s < len && Math.abs(-du * Math.sin(a) + dz * Math.cos(a)) < 0.22; };
       if (d > clockR * 0.82) wall(G.o, 1.6);
       else if (hand((150 * Math.PI) / 180, clockR * 0.5) || hand((30 * Math.PI) / 180, clockR * 0.75)) { ch = G.hash; r = 40; g = 30; b = 20; }
-      else { ch = d < 0.3 ? G.o : G.col; r = 250 * winLight; g = 230 * winLight; b = 170 * winLight; }
+      else { ch = d < 0.3 ? G.o : G.col; r = 250 * elec; g = 230 * elec; b = 170 * elec; }
     } else if (S === 'mast') {
       // steel lattice with red aircraft-warning lights every 30 m and on the corners
       const edge = corner;
@@ -541,7 +553,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     }
     else if (S === 'crown') {
       // vertical light strips between dark ribs
-      if (Math.floor(along / (detailed ? 0.8 : 1.6)) & 1) { ch = G.bar; const k = winLight * 0.9; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
+      if (Math.floor(along / (detailed ? 0.8 : 1.6)) & 1) { ch = G.bar; const k = elec * 0.9; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
       else wall(G.bar, 1.2);
     } else if (S === 'dome') wall(detailed && along % 2 < 0.3 ? G.bar : G.col, 1.2);
     else if (S === 'mech') wall(detailed && fw < 0.5 ? G.eq : G.hash, 0.9);
@@ -556,7 +568,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
       const col = Math.floor(signU / LETTER_W) - 1, inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
       const k = rev ? signN - 1 - col : col, c = inText ? text.charCodeAt(k) : 32;
-      const lit = signLight(B.biz, mode, inText ? k : -1, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
+      const lit = signLight(B.biz, mode, inText ? k : -1, signText(frameCity, B.biz, 255).length, frameSec) * elec;
       // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
       const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
       // a letter at least 2.6 rows tall and 3 columns wide (up to ~15 m, mid-avenue seen from the far
@@ -566,7 +578,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         let fu = signU / LETTER_W - col - 1;
         if (rev) fu = 1 - fu; // seen from the other side, the pattern mirrors with the reading order
         const kk = rev ? signN - 1 - col : col, cc = text.charCodeAt(kk);
-        const on = signLight(B.biz, mode, kk, signText(frameCity, B.biz, 255).length, frameSec) * winLight;
+        const on = signLight(B.biz, mode, kk, signText(frameCity, B.biz, 255).length, frameSec) * elec;
         // this cell's footprint in bulb units (0.09 m across, 0.08 m down): count the bulbs whose centers fall in it,
         // so each bulb lands in exactly one cell and, when bulbs are smaller than cells, several share one
         const px = (fu * LETTER_W - 0.05) / 0.09, pz = (3.28 - z) / 0.08, hx = dAlong / 0.18, hz = dz / 0.16;
@@ -594,11 +606,11 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const hh = hash3(id, wi >> kh, fl >> kv);
       if (hh < litK) {
         ch = hh < litK * 0.4 ? G.o : G.col;
-        const k = winLight * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
+        const k = elec * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else wall(farWall, farK);
     } else if (z < FLOOR_H && B.shop) {
-      if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = fw < 0.2 ? G.lb : fw > 0.8 ? G.rb : G.col; r = 180 * winLight; g = 150 * winLight; b = 100 * winLight; }
+      if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = fw < 0.2 ? G.lb : fw > 0.8 ? G.rb : G.col; r = 180 * elec; g = 150 * elec; b = 100 * elec; }
       else wall(G.bar, 1);
     } else if (S === 'glass') {
       // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
@@ -613,7 +625,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const door = z < 4.5 && Math.floor(along / 6) % 3 === 1, dp = along % 6;
       if (z > B.h - 3.2 && z < B.h - 1.4) { // clerestory strip under the roof
         if (fw > 0.08 && fw < 0.92) {
-          if (hash3(id, wi, 0) < litK * 2) { ch = G.hash; const k = winLight * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
+          if (hash3(id, wi, 0) < litK * 2) { ch = G.hash; const k = elec * 0.75; r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k; }
           else { ch = G.eq; r = 22 * shade + 8; g = 26 * shade + 8; b = 36 * shade + 10; }
         } else wall(G.bar, 1.2);
       } else if (door && !corner) wall(dp < 0.4 || dp > 5.6 ? G.bar : z > 4.1 ? G.eq : G.dash, dp < 0.4 || dp > 5.6 ? 1.3 : 1.15);
@@ -643,7 +655,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const hh = hash3(id, wi, fl);
       if (hh < litK) {
         ch = hh < litK * 0.3 ? G.at : hh < litK * 0.7 ? G.hash : G.pct;
-        const k = winLight * (0.65 + 0.35 * hash3(wi, fl, id));
+        const k = elec * (0.65 + 0.35 * hash3(wi, fl, id));
         r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
@@ -658,7 +670,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         I = fz * (Math.exp(-((d / w) ** 2)) + Math.exp(-((d2 / w) ** 2)));
         if (z < 0.35 && d < 0.3) { ch = G.star; r = 240; g = 230; b = 200; } // the lamp itself
       }
-      const k = I * winLight;
+      const k = I * elec;
       r += B.flood[0] * k; g += B.flood[1] * k; b += B.flood[2] * k;
     }
     if (z < LIT_H && t < LIT_FAR) {
@@ -686,6 +698,12 @@ function lightAt(x: number, y: number, z: number) {
 
 const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
 
+/** The electric light of building k at time sec (see power.ts). */
+function buildingPower(world: World, k: number, sec: number) {
+  const P = world.power, B = world.city.buildings[k];
+  return power(P, P.building[k], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, k, P.generator[k], sec)[0];
+}
+
 /** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
 function gatherLights(world: World, v: View, sec: number) {
   const { city } = world;
@@ -701,15 +719,15 @@ function gatherLights(world: World, v: View, sec: number) {
     if (blk.x1 < v.x - DYN_FAR || blk.x0 > v.x + DYN_FAR || blk.y1 < v.y - DYN_FAR || blk.y0 > v.y + DYN_FAR) continue;
     for (const p of blk.props) {
       if (p.kind !== 'blade') continue;
-      const B = city.buildings[city.businesses[p.seed].building];
-      const q = 0.3 * signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, sec);
+      const bi = city.businesses[p.seed].building, B = city.buildings[bi];
+      const q = 0.3 * signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, sec) * buildingPower(world, bi, sec);
       dyn.point(p.x + Math.cos(p.a) * 0.9, p.y + Math.sin(p.a) * 0.9, 6, 9, 12, B.sign[0] * q, B.sign[1] * q, B.sign[2] * q);
     }
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
       if (B.biz < 0 || B.round) continue;
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
-      const [sr, sg, sb] = B.sign, q = 0.4, whole = signLight(B.biz, mode, -1, full, sec);
+      const [sr, sg, sb] = B.sign, q = 0.4 * buildingPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
       // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims
       // its own spot; farther away the sign is lit evenly, as a whole
       const near = Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < SIGN_LETTER_LIGHT;
@@ -763,8 +781,8 @@ function collectObjects(world: World, v: View): Obj[] {
       else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
       else if (p.kind === 'blade') {
         // lit and flickering like the business's shop sign (brightness in eighths, so models are reused)
-        const B = city.buildings[city.businesses[p.seed].building], text = bladeText(city, p.seed);
-        const lit = Math.round(signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, frameSec) * 8) / 8;
+        const bi = city.businesses[p.seed].building, B = city.buildings[bi], text = bladeText(city, p.seed);
+        const lit = Math.round(signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, frameSec) * Math.min(1.25, buildingPower(world, bi, frameSec)) * 8) / 8;
         const sym = BLADE_SYMBOL[city.businesses[p.seed].kind] ?? -1;
         out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, sym, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, BLADE_LETTER), r: 1.4, h: BLADE_Z + bladeHeight(text, sym, BLADE_LETTER), seed: 0 });
       }

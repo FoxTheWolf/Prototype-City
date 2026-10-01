@@ -11,7 +11,7 @@ import { cityName, compass, diagonalName, districtName, districtType, landmarkNa
 import { diagS, districtAt, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { lightning, PRESETS } from './sim/weather';
-import { createWorld, cycleWeather, skipHours, stepWorld, TICK, type PlayerInput } from './sim/world';
+import { createWorld, cycleWeather, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
 /** The grid always has this many rows; columns follow the window shape. */
 const ROWS = 80;
@@ -63,6 +63,9 @@ addEventListener('keydown', (e) => {
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
   else if (e.code === 'KeyT') skipHours(world, e.shiftKey ? -1 : 1);
   else if (e.code === 'KeyY') cycleWeather(world);
+  // debug: K switches the nearest substation (shift: all of them), J the blackout sound version
+  else if (e.code === 'KeyK') togglePower(world, e.shiftKey);
+  else if (e.code === 'KeyJ' && sound) sound.blackoutVersion = sound.blackoutVersion === 'A' ? 'B' : 'A';
 });
 
 function computeLayout(): Layout {
@@ -147,7 +150,7 @@ function frame(now: number) {
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
   const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
-    + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY `;
+    + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY  POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} [K] [J] SOUND ${sound?.blackoutVersion ?? 'A'} `;
   grid.text(grid.cols - clock.length - 1, grid.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
@@ -157,7 +160,7 @@ function frame(now: number) {
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
   const W = world.weather;
-  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1]);
+  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power);
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }
