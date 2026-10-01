@@ -66,10 +66,10 @@ export function skipHours(w: World, h: number) {
 /** Debug: switch the substation nearest the player, or (all) every one: all off if any is on. */
 export function togglePower(w: World, all: boolean) {
   const P = w.power, p = w.player;
-  if (all) { const off = P.subs.some((s) => s.on); P.subs.forEach((_, k) => switchSub(P, k, !off, w.tick)); return; }
+  if (all) { const off = P.subs.some((s) => s.on); P.subs.forEach((_, k) => switchSub(P, k, !off, w.tick, p.x, p.y)); return; }
   let k = 0;
   P.subs.forEach((s, n) => { if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(P.subs[k].x - p.x, P.subs[k].y - p.y)) k = n; });
-  switchSub(P, k, !P.subs[k].on, w.tick);
+  switchSub(P, k, !P.subs[k].on, w.tick, p.x, p.y);
 }
 
 /** Debug: step through the fixed skies, then back to the forecast. */

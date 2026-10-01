@@ -484,7 +484,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const litK = B.lit * (1 - 0.75 * frameDay);
   // each window on its own: it dies with the passing wave and flickers back at its own moment
   const sub = framePower.building[id], gen = framePower.generator[id], switched = framePower.subs[sub].changed >= 0;
-  const winPow = (a: number, fl: number) => (switched ? power(framePower, sub, hx, hy, (id * 131 + a * 977 + fl * 7) | 0, gen, frameSec)[0] * winLight : winLight);
+  const winPow = (a: number, fl: number) => (switched ? power(framePower, sub, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, (id * 131 + a * 977 + fl * 7) | 0, gen, frameSec, id, 1.5)[0] * winLight : winLight);
   // rows per floor and columns per window bay decide how much of the facade fits in a cell
   const rpf = (FLOOR_H * scale) / t, cpb = BAY / (colW * t);
   const detailed = rpf >= 2.2 && cpb >= 1.5;
@@ -604,8 +604,9 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         ch = letters ? c : G.eq;
         r = B.sign[0] * lit; g = B.sign[1] * lit; b = B.sign[2] * lit;
       } else if (inText) { ch = 32; r = B.sign[0] * lit * 0.35; g = B.sign[1] * lit * 0.35; b = B.sign[2] * lit * 0.35; } else if (mode === SignMode.Marquee && !inText) {
-        const on = marqueeBulb(signU, frameSec);
-        ch = on ? G.o : G.dot; const q = on ? 1 : 0.3; r = 255 * q; g = 225 * q; b = 150 * q;
+        // the marquee's white bulbs are on the building's power too
+        const on = marqueeBulb(signU, frameSec) && pw > 0.05;
+        ch = on ? G.o : G.dot; const q = (on ? 1 : 0.3) * Math.min(pw, 1.3); r = 255 * q; g = 225 * q; b = 150 * q;
       } else if (!inText && (z < 2.72 || z > 3.28)) { ch = G.dash; r = B.sign[0] * lit * 0.45; g = B.sign[1] * lit * 0.45; b = B.sign[2] * lit * 0.45; }
       else { ch = G.dot; r = 14; g = 12; b = 16; } // dark backing board
     }

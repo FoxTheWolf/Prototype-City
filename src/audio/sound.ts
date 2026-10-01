@@ -137,9 +137,10 @@ export class Sound {
       if (this.seen[k] === undefined) { this.seen[k] = s.changed; return; }
       if (s.changed === this.seen[k]) return;
       this.seen[k] = s.changed;
-      const d = Math.hypot(s.x - x, s.y - y);
+      // heard from where it was thrown (for now, where the player is)
+      const d = Math.hypot(s.ox - x, s.oy - y);
       if (d > 1400) return;
-      const g = (1 - d / 1400) ** 1.3, at = now + d / 343, pn = pan(s.x, s.y) * 0.6;
+      const g = (1 - d / 1400) ** 1.3, at = now + d / 343, pn = pan(s.ox, s.oy) * 0.6;
       if (!s.on) blackout(this.kit, at, g, pn);
       else restore(this.kit, at, g, pn);
     });

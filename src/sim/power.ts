@@ -14,6 +14,9 @@ export interface Substation {
   on: boolean;
   /** Tick of the last switch, or -1 if it never switched (so it has always been on). */
   changed: number;
+  /** Where that switch was thrown: the blackout ring spreads out from here. */
+  ox: number;
+  oy: number;
 }
 
 export interface PowerGrid {
@@ -40,7 +43,7 @@ export function buildPower(seed: number, city: City): PowerGrid {
   const nx = Math.max(1, Math.round(city.w / SPACING)), ny = Math.max(1, Math.round(city.h / SPACING));
   const subs: Substation[] = [];
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    subs.push({ x: ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y: ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny, on: true, changed: -1 });
+    subs.push({ x: ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y: ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny, on: true, changed: -1, ox: 0, oy: 0 });
   }
   const building = new Uint8Array(city.buildings.length), generator = new Uint8Array(city.buildings.length);
   const hall = city.landmarks.find((l) => l.kind === 'hall');
@@ -63,9 +66,9 @@ export function subAt(p: PowerGrid, city: City, x: number, y: number) {
   return p.cell[j * GRID + i];
 }
 
-/** Switch a substation, at this tick. */
-export function switchSub(p: PowerGrid, k: number, on: boolean, tick: number) {
+/** Switch a substation, at this tick, from the point (x, y) (for now the player's position). */
+export function switchSub(p: PowerGrid, k: number, on: boolean, tick: number, x: number, y: number) {
   const s = p.subs[k];
   if (s.on === on) return;
-  s.on = on; s.changed = tick;
+  s.on = on; s.changed = tick; s.ox = x; s.oy = y;
 }

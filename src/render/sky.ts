@@ -99,11 +99,12 @@ function glowBelow(S0: SkyFrame, x: number, y: number, out: Float32Array) {
   const core = Math.exp(-((Math.hypot(x - c.cx, y - c.cy) / (Math.min(c.w, c.h) * 0.45)) ** 2));
   // a blacked-out district stops lighting the clouds over it, blended over the substations around
   // (light scatters: a hard switch at each substation's border showed as cut-out shapes)
-  const lit = litAt(S0, x, y) * 0.88 + 0.12;
+  const lit = litAt(S0, x, y);
   const city = spread * (0.6 + 0.4 * core) * lit;
   // the seam's fires in a ring outside the fence, and the great crater under the Sarcophagus
   const S = c.sarcophagus, crater = Math.exp(-((Math.hypot(x - S.x, y - S.y) / (S.r * 1.3)) ** 2));
-  const fire = Math.exp(-(((out_ - 450) / 420) ** 2)) + 1.6 * crater;
+  // (the ring is narrow, so over the city it adds nothing: a blacked-out city's sky goes grey)
+  const fire = Math.exp(-(((out_ - 450) / 260) ** 2)) + 1.6 * crater;
   // muted: a sodium city lights its overcast a dull brown-orange, not a bright one
   out[0] = 62 * city + 70 * fire; out[1] = 42 * city + 24 * fire; out[2] = 34 * city + 12 * fire;
 }
@@ -149,9 +150,10 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
     const t = Math.max(0, Math.min(1, (y + 0.5) / Math.max(1, hor)));
     // gradient: night, day haze, and the dusk color low on the sun's side; the seam lights the low sky orange
     const t2 = t * t, t4 = t2 * t2;
-    let r = (5 + 21 * t2 + 30 * t4) * night + (62 + 80 * t2) * S.day;
-    let g = (6 + 10 * t2 + 8 * t4) * night + (84 + 72 * t2) * S.day;
-    let b = (11 + 21 * t2 - 6 * t4) * night + (118 + 44 * t2) * S.day;
+    const cl = 0.3 + 0.7 * S.cityLit; // the warm low sky is the city's light too
+    let r = (5 + 21 * t2 + 30 * t4 * cl) * night + (62 + 80 * t2) * S.day;
+    let g = (6 + 10 * t2 + 8 * t4 * cl) * night + (84 + 72 * t2) * S.day;
+    let b = (11 + 21 * t2 - 6 * t4 * cl) * night + (118 + 44 * t2) * S.day;
     const dk = S.dusk * t4 * (0.35 + 0.65 * toSun);
     r += 190 * dk; g += 80 * dk; b += 30 * dk - 10 * dk * toSun;
     let ch = 0, cr = 0, cg = 0, cb = 0;
@@ -208,7 +210,9 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
         glowBelow(S, wx, wy, GLOW);
         const thick = Math.min(1, a * (0.5 + d));
         const gk = (0.35 + 0.65 * thick) * (0.8 + 0.5 * S.precip) * night;
-        let qr = 12 + GLOW[0] * gk, qg = 12 + GLOW[1] * gk, qb = 18 + GLOW[2] * gk;
+        // unlit from below, a night overcast is a dull grey
+        const base = 12 + 12 * (1 - S.cityLit) * night;
+        let qr = base + GLOW[0] * gk, qg = base + GLOW[1] * gk, qb = base + 5 + GLOW[2] * gk;
         const grey = (150 - 60 * thick - 35 * S.precip) * S.day;
         qr += grey; qg += grey * 1.01; qb += grey * 1.06;
         // dusk paints the undersides on the sun's side; the moon silvers thin edges
