@@ -1,6 +1,6 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, mapView } from './phone/draw';
+import { drawPhone, keyAt, mapView } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
@@ -72,23 +72,39 @@ function phonePress(pk: Key) {
 }
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
+  // the cursor starts on the middle of the phone's screen
+  if (r !== 'in') { phone.cx = grid.cols - 31.5; phone.cy = grid.rows - 28.5; }
   sound?.phoneSlide(r !== 'in');
   if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
 }
-// with the phone out the mouse buttons are its OK and Back (as in GTA IV);
-// otherwise, in a lift car, aim at a button of its panel and click it
+// with the phone out the mouse moves a cursor: a click on one of its keys presses it, the left
+// button elsewhere is OK and a click of the right one Back (as in GTA IV); holding the right button
+// looks around instead. The middle button takes the phone out and puts it away.
+// Otherwise, in a lift car, aim at a button of its panel and click it.
 addEventListener('contextmenu', (e) => e.preventDefault());
 // the mouse wheel zooms the phone's map
 addEventListener('wheel', (e) => {
   if (!phone.out || phone.screen !== 'map' || !e.deltaY) return;
   if (phone.setZoom(phone.zoom + Math.sign(e.deltaY), performance.now() / 1000)) sound?.phoneKey(false);
 });
+/** The right button held down: since when, and how far the mouse went (a short still click is Back). */
+let rightAt = -1, rightMoved = 0;
 addEventListener('mousedown', (e) => {
   if (!input.locked) return;
-  if (phone.out) { if (e.button === 0 || e.button === 2) phonePress(e.button === 0 ? 'ok' : 'rsoft'); return; }
+  if (e.button === 1) { e.preventDefault(); if (running) phoneToggle(); return; }
+  if (phone.out) {
+    if (e.button === 0) phonePress(keyAt(grid.cols, grid.rows, phone, Math.floor(phone.cx), Math.floor(phone.cy)) ?? 'ok');
+    else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; }
+    return;
+  }
   if (e.button !== 0 || !liftFloors(world)) return;
   const b = pickedButton();
   if (b >= 0) sound?.beep(callLift(world, b));
+});
+addEventListener('mouseup', (e) => {
+  if (e.button !== 2 || rightAt < 0) return;
+  if (phone.out && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
+  rightAt = -1;
 });
 addEventListener('keydown', (e) => {
   // the phone: Up (or P) takes it out; while it is out, its keys (see phone.ts)
@@ -166,7 +182,13 @@ function frame(now: number) {
 
   // camera first, so this frame's movement uses the heading the player sees
   const [mx, my] = input.takeMouse();
-  camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
+  if (phone.out && rightAt < 0) {
+    // the mouse moves the phone's cursor, a cell per cell's width of travel
+    const dpr = devicePixelRatio || 1;
+    phone.cx = Math.max(0, Math.min(grid.cols - 0.01, phone.cx + (mx * dpr) / layout.cellW));
+    phone.cy = Math.max(0, Math.min(grid.rows - 0.01, phone.cy + (my * dpr) / layout.cellH));
+  } else camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
+  if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
   const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
   if (running) camera.look(turn * 2.2 * dt, 0);
   else camera.look(dt * 0.08, 0); // idle drift behind the title
@@ -195,6 +217,7 @@ function frame(now: number) {
   });
   const ms = performance.now() - r0;
   phone.update(dt, now / 1000);
+  phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, Math.floor(phone.cx), Math.floor(phone.cy)) : null;
   drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);

@@ -10,8 +10,9 @@ import { Gps } from './gps';
  *
  * Controls, after GTA IV on PC: Up takes it out (P too, both ways); with it out, the arrows are
  * the d-pad, Enter or the left mouse button its middle (OK, and the left soft key's action),
- * Backspace or the right mouse button the right soft key (Back), which on the standby screen puts
- * it away; the digit keys are the keypad, + / numpad * its * key, - and . its # key, Space the
+ * Backspace or a click of the right mouse button the right soft key (Back), which on the standby
+ * screen puts it away; the middle button takes it out and puts it away. With it out the mouse moves
+ * a cursor instead of the view (hold the right button to look around), and a click on a key presses it; the digit keys are the keypad, + / numpad * its * key, - and . its # key, Space the
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
@@ -28,6 +29,8 @@ export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
 export const ZOOM_ROW_M = [8, 18, 36, 96];
 /** Inside a building the map shows the floor plan instead, at these scales. */
 export const INDOOR_ROW_M = [1, 2, 3.5, 6];
+/** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
+export const TYPING: Screen[] = ['calls', 'calc', 'notes'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -38,6 +41,12 @@ export class Phone {
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
   raise = 0;
+  /** 0 .. 1: held higher, the whole keypad in sight, while the screen wants typing (as in GTA IV). */
+  lift = 0;
+  /** The mouse cursor while the phone is out, in grid cells, and the key under it. */
+  cx = -1;
+  cy = -1;
+  hover: Key | null = null;
   screen: Screen = 'off';
   /** When the current screen was opened (or redrawn): text types and the map draws in from here. */
   since = 0;
@@ -80,6 +89,7 @@ export class Phone {
 
   update(dt: number, now: number) {
     this.raise += ((this.out ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
+    this.lift += ((this.out && TYPING.includes(this.screen) ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     if (this.screen === 'boot' && now - this.since > BOOT_S) this.open('standby', now);
     // the GPS runs while the map is open, in the hand or not
     this.gps.update(this.world, this.screen === 'map' || this.screen === 'places', now, dt);

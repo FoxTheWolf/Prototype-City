@@ -29,6 +29,29 @@ export const mapView = (aspect: number, zoom: number, indoor = false): [number, 
   return [SW * r * aspect, MAP_ROWS * r];
 };
 
+/** The keys on the phone's face: key, column, row, width, height, label, label color. */
+const CY = SY + SH + 2;
+const KEYS: [Key, number, number, number, number, string, C3?][] = [
+  ['lsoft', 3, CY, 10, 2, '--'], ['rsoft', 37, CY, 10, 2, '--'],
+  ['send', 3, CY + 3, 10, 2, 'SEND', [80, 230, 120]], ['end', 37, CY + 3, 10, 2, 'END', [255, 80, 70]],
+  ['up', 21, CY, 8, 1, '^'], ['left', 16, CY + 1, 4, 3, '<'], ['right', 30, CY + 1, 4, 3, '>'], ['ok', 21, CY + 1, 8, 3, 'OK'], ['down', 21, CY + 4, 8, 1, 'v'],
+];
+(['1 .,', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'] as const).forEach((label, n) =>
+  KEYS.push([label[0] as Key, 3 + (n % 3) * 16, CY + 6 + Math.floor(n / 3) * 3, 12, 2, label]));
+
+/** Where the phone's top left corner is on the grid: held up higher while typing, the whole keypad in sight. */
+function origin(cols: number, rows: number, P: Phone): [number, number] {
+  const e = 1 - (1 - P.raise) ** 3;
+  return [cols - PHONE_W - 6, rows - Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e)];
+}
+
+/** The key under a grid cell, if any. */
+export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number): Key | null {
+  const [ox, oy] = origin(cols, rows, P);
+  for (const [k, x0, y0, w, h] of KEYS) if (x >= ox + x0 && x < ox + x0 + w && y >= oy + y0 && y < oy + y0 + h) return k;
+  return null;
+}
+
 const BODY: C3 = [30, 32, 37], EDGE: C3 = [58, 61, 68], BEZEL: C3 = [7, 7, 9], CAP: C3 = [48, 50, 57], CAP_TOP: C3 = [64, 67, 75], CAP_DOWN: C3 = [22, 23, 26];
 
 /** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
@@ -36,8 +59,7 @@ const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
 
 export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
   if (P.raise < 0.01) return;
-  const e = 1 - (1 - P.raise) ** 3;
-  const ox = g.cols - PHONE_W - 6, oy = g.rows - Math.round(SHOWN * e);
+  const [ox, oy] = origin(g.cols, g.rows, P);
   const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
@@ -92,14 +114,6 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
 
   // keys: lit from behind while the phone is on, sunk for a moment when pressed
   const on = P.screen !== 'off';
-  const CY = SY + SH + 2;
-  const KEYS: [Key, number, number, number, number, string, C3?][] = [
-    ['lsoft', 3, CY, 10, 2, '--'], ['rsoft', 37, CY, 10, 2, '--'],
-    ['send', 3, CY + 3, 10, 2, 'SEND', [80, 230, 120]], ['end', 37, CY + 3, 10, 2, 'END', [255, 80, 70]],
-    ['up', 21, CY, 8, 1, '^'], ['left', 16, CY + 1, 4, 3, '<'], ['right', 30, CY + 1, 4, 3, '>'], ['ok', 21, CY + 1, 8, 3, 'OK'], ['down', 21, CY + 4, 8, 1, 'v'],
-  ];
-  (['1 .,', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'] as const).forEach((label, n) =>
-    KEYS.push([label[0] as Key, 3 + (n % 3) * 16, CY + 6 + Math.floor(n / 3) * 3, 12, 2, label]));
   const isDown = (k: Key) => { const t = P.pressed.get(k); return t !== undefined && now - t < 0.14; };
   // first the keys' shadows on the body, cast away from the light: sideways by the light's side,
   // down for a light ahead (from above the phone), up for one behind (always some, from the room
@@ -118,7 +132,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const side = GL.lat > 0 ? 1 : 0, rim = GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
   for (const [k, x0, y0, w, h, label, col] of KEYS) {
     const down = isDown(k), fg: C3 = col ?? (on ? [150, 205, 255] : [125, 128, 138]);
-    const capAt = (y: number): C3 => (down ? CAP_DOWN : y === 0 && h > 1 ? CAP_TOP : CAP);
+    const hov = P.hover === k && !down ? 1.35 : 1;
+    const capAt = (y: number): C3 => { const c = down ? CAP_DOWN : y === 0 && h > 1 ? CAP_TOP : CAP; return [c[0] * hov, c[1] * hov, c[2] * hov]; };
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
       if (!down && rim > 1 && x === side * (w - 1)) addBg(x0 + x, y0 + y, rim);
@@ -164,6 +179,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
       const w = bloom * (d === 0 ? 0.12 : 0.45 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
       g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
+    }
+  }
+  // the mouse cursor: a cell in inverse, its glyph dark on white
+  if (P.out && P.cx >= 0) {
+    const x = Math.floor(P.cx), y = Math.floor(P.cy);
+    if (x >= 0 && y >= 0 && x < g.cols && y < g.rows) {
+      const i = y * g.cols + x, c = g.cells[i * 4];
+      g.put(i, c > 32 ? c : ch('+'), 20, 20, 24); g.setBg(i, 240, 240, 235);
     }
   }
 }
