@@ -344,7 +344,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Resumo para começar uma sessão (atualizado em 2026-09-30)
 
-- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) foi aprovado com pedidos; a 6.4 (correções e interiores vistos de fora) e a 6.5 (elevador, início do grupo B) aguardam o teste. Veja "Etapa 6: decisões e grupos" no Histórico e "Pedidos do usuário durante a etapa 6".
+- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) foi aprovado com pedidos; a 6.4 (correções e interiores vistos de fora) e o grupo B até a 6.7 (elevador com painel e som, escadas) aguardam o teste; falta o elevador de vidro. Veja "Etapa 6: decisões e grupos" no Histórico e "Pedidos do usuário durante a etapa 6".
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E giram;
@@ -412,7 +412,11 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - **6.6, painel da cabine:** de pé na cabine, aparece o painel do elevador no canto da tela (andar atual, sentido e destino, os andares servidos). Os números do teclado digitam o andar, Backspace apaga e Enter confirma (`callLift` e `liftFloors` em `world.ts`). Cada tecla faz um bipe; um andar que não existe faz um bipe grave; a chegada toca um sino de duas notas (`beep` e `ding` em `sound.ts`).
   - **Botoeira na parede da cabine:** um mostrador âmbar sobre duas colunas de botões, perto da porta, em todas as paredes do `lift`; um botão acende enquanto a cabine anda. O painel no canto da tela continua, porque mostra o andar digitado.
   - **Crash corrigido (2026-10-01):** a faixa atrás do núcleo virava cômodo de apartamento com unidade -1 quando a vizinha era o corredor, e a cor da parede saía indefinida (`wallPaint`).
-  - **Falta (próxima sessão):** escadas em que se sobe de verdade; elevadores de vidro (pedem a cabine numa parede externa, com vidro, e a cabine vista de fora); som do motor e das portas do elevador;  o bug dos prédios cortados sem acesso ao corredor.
+  - **6.7, escadas e som do elevador (2026-10-01):**
+    - **Escadas de verdade:** toda caixa de escada é uma escada em U (`stairLocal`, `stairH` e `stairStep` em `sim/interior.ts`). Do patamar junto à porta, um lance sobe pela primeira metade da largura até o patamar do fundo (meio andar acima), e o segundo lance volta pela outra metade até o patamar do andar de cima, logo acima do primeiro. Os pés seguem os degraus (`Player.z`), e o andar é o do pavimento em que se está. O corrimão entre os lances bloqueia, porque a altura nova não pode saltar mais de 0,5 m. Não se desce abaixo do térreo nem se sobe acima do último andar.
+    - **Render:** dentro da caixa de escada, as paredes vão um andar acima e um abaixo, e o teto é o do andar de cima. Os degraus são desenhados marchando ao longo do raio sobre as alturas da escada (como um mapa de altura), com a borda de cada degrau marcada. O lance que desce aparece ao lado do que sobe.
+    - **Som do elevador:** portas deslizando (ruído grave que cresce e some, com o baque delas se encontrando) ao sair e ao chegar, e o zumbido grave do motor durante a viagem (`doors` e `liftMotor` em `sound.ts`). O teste de ouvido é do usuário.
+  - **Falta (próxima sessão):** elevadores de vidro (pedem a cabine numa parede externa, com vidro, e a cabine vista de fora); passos e degraus com som;  o bug dos prédios cortados sem acesso ao corredor.
 - **6.4, correções e interiores vistos de fora (2026-09-30):**
   - **Chuva dentro:** nas colunas em que uma parede interna fecha a vista (sem janela), a chuva não é mais desenhada (`nearT` = infinito).
   - **Som:** dentro do prédio, a rua passa por um passa-baixa de 220 Hz e cai para 28%. A chuva quase some, e no lugar entram gotas batendo no vidro, uma a uma: ruído de poucos milissegundos num passa-banda de 2,2–5,2 kHz, com volume e pan sorteados, mais frequentes quanto mais forte a chuva (`drop` em `sound.ts`). O teste de ouvido é do usuário.

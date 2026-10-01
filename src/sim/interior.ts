@@ -184,6 +184,58 @@ function frameOf(city: City, k: number): Frame {
   return F;
 }
 
+/**
+ * Stairs: every stair room is a U-shaped stair. From the landing by its door (depth b < STAIR_LAND)
+ * one flight climbs along the first half of its width to a landing at the back, half a storey up,
+ * and the second flight climbs back along the other half to the landing of the floor above, right
+ * over the first. SL gets the point's position in the room: across (a, of width W) and in from the
+ * door side (b, of depth D).
+ */
+export const STAIR_LAND = 0.9;
+export const SL = new Float64Array(4);
+export function stairLocal(city: City, k: number, x: number, y: number): boolean {
+  const F = frameOf(city, k), B = city.buildings[k], u = F.alongX ? x : y, v = F.alongX ? y : x;
+  if (F.c1 > F.c0) {
+    if (u < F.su0 || u > F.su1 || v < F.cv0 || v > F.cv1) return false;
+    const near = F.cv0 < F.c0 ? F.cv1 : F.cv0;
+    SL[0] = u - F.su0; SL[1] = Math.abs(v - near); SL[2] = F.su1 - F.su0; SL[3] = F.cv1 - F.cv0;
+  } else {
+    // a walk-up: the stairs fill one end, the door on the side of the home
+    const U0 = F.alongX ? B.x0 : B.y0, V0 = F.alongX ? B.y0 : B.x0, V1 = F.alongX ? B.y1 : B.x1;
+    if (u < U0 || u > F.su1 || v < V0 || v > V1) return false;
+    SL[0] = v - V0; SL[1] = F.su1 - u; SL[2] = V1 - V0; SL[3] = F.su1 - U0;
+  }
+  return true;
+}
+
+/** Height of the stairs above their storey's floor at (a, b) of a W x D stair room: 0 to FLOOR_H. */
+export function stairH(a: number, b: number, W: number, D: number): number {
+  const run = D - 2 * STAIR_LAND, half = FLOOR_H / 2;
+  if (run < 1 || b < STAIR_LAND) return 0;
+  if (b > D - STAIR_LAND) return half;
+  const t = (b - STAIR_LAND) / run;
+  return a < W / 2 ? half * t : half + half * (1 - t);
+}
+
+/**
+ * Walking on stairs: the new height at (x, y) for someone whose feet were at z, or null away from
+ * the stairs, or NaN where the step is not possible (over the rail between the flights, below the
+ * ground floor, above the top one).
+ */
+export function stairStep(city: City, k: number, x: number, y: number, z: number): number | null {
+  if (!stairLocal(city, k, x, y)) return null;
+  const H = stairH(SL[0], SL[1], SL[2], SL[3]), f = Math.floor((z + 0.01) / FLOOR_H);
+  let top = 0;
+  for (const j of tiersOf(city, k)) top = Math.max(top, floorsOf(city.buildings[j]) - 1);
+  let best = NaN;
+  for (let g = f - 1; g <= f + 1; g++) {
+    const zz = g * FLOOR_H + H;
+    if (g < 0 || zz > top * FLOOR_H + 0.01) continue;
+    if (Number.isNaN(best) || Math.abs(zz - z) < Math.abs(best - z)) best = zz;
+  }
+  return Number.isNaN(best) || Math.abs(best - z) > 0.5 ? NaN : best;
+}
+
 const planCache = new Map<number, Plan | null>();
 /** Plans kept at most; the oldest go first (they are remade the same when needed again). */
 const PLAN_KEEP = 4000;

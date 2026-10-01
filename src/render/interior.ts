@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, type Building, type City, type RGB } from '../sim/city';
-import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
+import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, SL, STAIR_LAND, stairH, stairLocal, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
 import { type CharGrid } from './grid';
 
 /**
@@ -11,6 +11,8 @@ import { type CharGrid } from './grid';
  */
 export interface Inside {
   city: City;
+  /** The lot (its ground volume's index). */
+  k: number;
   plan: Plan;
   /** The lot's ground volume (style, door, shop) and the box this floor fills. */
   base: Building;
@@ -49,7 +51,10 @@ export function prepareInside(I: Inside, x: number, y: number) {
   const R = I.plan.rooms, n = R.length;
   if (lamp.length < n * 3) lamp = new Float32Array(n * 3 + 96);
   for (let r = 0; r < n; r++) roomLamp(I.base, I.boxId, R[r], r, I.floor, I.elec, I.day, r === here, lamp, r * 3);
+  stairRoom = here >= 0 && R[here].kind === 'stair' ? here : -1;
 }
+/** The stair room the viewer is in, or -1: its well is open a storey up and down. */
+let stairRoom = -1;
 
 /**
  * The lamp of room r on floor f of box boxId, into out[o..o+2] (0..1 per channel, times the power):
@@ -58,7 +63,7 @@ export function prepareInside(I: Inside, x: number, y: number) {
 function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, elec: number, day: number, on: boolean, out: Float32Array, o: number) {
   on ||= R.unit < 0 || hash3(boxId, r * 31 + f, 11) < base.lit * (1 - 0.75 * day) * 1.3;
   const c = !on ? null : R.kind === 'lobby' ? LOBBY : isOffice(base) || R.kind === 'stair' || R.kind === 'lift' ? TUBE : WARM;
-  const k = c ? elec * (R.kind === 'stair' ? 0.7 : 1) : 0;
+  const k = c ? elec : 0;
   out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
 }
 
@@ -217,6 +222,10 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   for (let y = 0; y < rows; y++) glass[y * cols + x] = 0;
   const z0 = I.z0, zc = z0 + CEIL;
   riding = I.closed; litButton = I.floor % 12;
+  // in the stairwell the walls go on a storey up and down, and the ceiling is the next floor's
+  const well = stairRoom >= 0, wz0 = well ? z0 - FLOOR_H : z0, wzc = well ? zc + FLOOR_H : zc;
+  const zrOf = (z: number) => (well ? (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H : z - z0);
+  let tClose = 0;
 
   // where the ray leaves the box (and the cut): that outer wall closes the column
   let tExit = 1e9, face = 0;
@@ -256,13 +265,13 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
       const u = xStep ? hy : hx, shade = xStep ? 1 : 0.82;
       const paint = (y: number, z: number) => {
         lightIn(I, r, hx, hy, tn);
-        wallPaint(R, z - z0, u, P4);
+        wallPaint(R, zrOf(z), u, P4);
         put(y, tn, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
       };
       if (cur & nv & DOOR && !I.closed) {
         // a doorway: the lintel above it, and on through
         span(tn, z0 + DOOR_H, zc, (y, z) => { lightIn(I, r, hx, hy, tn); const k = z < z0 + DOOR_H + 0.08 ? 1.3 : 1; put(y, tn, G.eq, 120 * L3[0] * k, 95 * L3[1] * k, 70 * L3[2] * k); });
-      } else { span(tn, z0, zc, paint); closed = true; break; }
+      } else { span(tn, wz0, wzc, paint); closed = true; tClose = tn; break; }
     }
     cur = nv;
   }
@@ -279,14 +288,14 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const nX = face === 0 ? -1 : face === 1 ? 1 : face === 4 ? K!.nx : 0, nY = face === 2 ? -1 : face === 3 ? 1 : face === 4 ? K!.ny : 0;
     const blind = builtUp(I.city, hx + nX * 0.3, hy + nY * 0.3, z0 + 1);
     const shade = face === 4 ? 0.9 : face < 2 ? 1 : 0.82;
-    nearT[x] = t;
+    nearT[x] = t; tClose = t;
     lightIn(I, r0, hx, hy, t);
     gT[x] = t; gA[x] = along; gDoor[x] = isDoor ? 1 : 0; gL[x * 3] = L3[0]; gL[x * 3 + 1] = L3[1]; gL[x * 3 + 2] = L3[2];
-    span(t, z0, zc, (y, z) => {
-      const fz = z / FLOOR_H - I.floor;
+    span(t, wz0, wzc, (y, z) => {
+      const fz = z / FLOOR_H - Math.floor(z / FLOOR_H);
       if ((isDoor && z < z0 + DOOR_H) || (!corner && !blind && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
       lightIn(I, r0, hx, hy, t);
-      const zr = z - z0;
+      const zr = zrOf(z);
       // the sill: just under a window
       if (!corner && !blind && zr < 1.5 && windowHole(I.base, fw, fz + 0.1 / FLOOR_H, zr + 0.1, ground)) { put(y, t, G.eq, 150 * L3[0], 140 * L3[1], 125 * L3[2]); return; }
       wallPaint(R, zr, along, P4);
@@ -295,11 +304,37 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   }
   if (closed) nearT[x] = 1e9; // no window in this column: no rain at all
 
+  if (well) {
+    // the steps: march out along the ray over the stairs' heights, filling each row up to the
+    // top of what stands there (the flight climbing ahead, the one going down beside it)
+    let yLow = rows;
+    const eyeRel = eye - z0, sr = P.rooms[stairRoom];
+    for (let t = 0.08; t < Math.min(tClose, 12); t += 0.03 + t * 0.02) {
+      const wx = px + rdx * t, wy = py + rdy * t;
+      let H = 0, edge = false;
+      if (stairLocal(I.city, I.k, wx, wy)) {
+        H = stairH(SL[0], SL[1], SL[2], SL[3]);
+        if (H > eyeRel - 0.3) H -= FLOOR_H;
+        if (I.floor === 0 && H < 0) H = 0;
+        const b = SL[1] - STAIR_LAND, run = SL[3] - 2 * STAIR_LAND;
+        edge = b > 0 && b < run && (b / 0.29) % 1 < 0.2;
+      }
+      const yT = Math.max(0, Math.ceil(hor - ((z0 + H - eye) * scale) / t - 0.5));
+      for (let y = yT; y < yLow; y++) {
+        if (rowState[y] === 2 || (rowState[y] === 1 && depth[y * cols + x] <= t)) continue; // glass, or a nearer wall
+        lit3(sr, lamp, stairRoom * 3, wx, wy, t, I.day);
+        const k = edge ? 1.35 : 1;
+        put(y, t, edge ? G.us : G.eq, 125 * L3[0] * k, 125 * L3[1] * k, 120 * L3[2] * k);
+      }
+      yLow = Math.min(yLow, yT);
+    }
+  }
+
   // floor and ceiling in the rows left: each row meets them at its own distance
   for (let y = 0; y < rows; y++) {
     if (rowState[y]) continue;
     const m = (y + 0.5 - hor) / scale;
-    const below = m > 0, t = below ? (eye - z0) / m : (zc - eye) / -m;
+    const below = m > 0, t = below ? (eye - z0) / m : (wzc - eye) / -m;
     if (!(t > 0) || t > 200) continue;
     const wx = px + rdx * t, wy = py + rdy * t;
     let c = at(Math.floor(wx / CELL) - P.gx, Math.floor(wy / CELL) - P.gy);

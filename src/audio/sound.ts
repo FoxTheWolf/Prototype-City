@@ -143,6 +143,32 @@ export class Sound {
     o.start(t); o.stop(t + 0.3);
   }
 
+  /** Lift doors sliding: a soft rumble of filtered noise that swells and dies. */
+  doors() {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise;
+    s.connect(filter(ctx, 'bandpass', 350, 1.2)).connect(g);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.14, t + 0.3); g.gain.linearRampToValueAtTime(0, t + 0.9);
+    s.start(t, Math.random()); s.stop(t + 1);
+    // the clunk of them meeting
+    const o = ctx.createOscillator(), h = gain(ctx, 0, this.master);
+    o.frequency.value = 70; o.connect(h);
+    h.gain.setValueAtTime(0.18, t + 0.9); h.gain.setTargetAtTime(0, t + 0.92, 0.04);
+    o.start(t + 0.9); o.stop(t + 1.2);
+  }
+
+  /** The car moving (0..1 of its speed): a low motor hum and a faint whine. */
+  liftMotor(k: number) {
+    if (!this.motor) {
+      this.motor = gain(this.ctx, 0, this.master);
+      const lp = filter(this.ctx, 'lowpass', 260, 0.8);
+      lp.connect(this.motor);
+      tone(this.ctx, 'sawtooth', 55, 0.6, lp);
+    }
+    this.motor.gain.setTargetAtTime(0.08 * k, this.ctx.currentTime, 0.2);
+  }
+  private motor: GainNode | null = null;
+
   /** The car arriving: a soft two-note chime. */
   ding() {
     const ctx = this.ctx, t = ctx.currentTime;

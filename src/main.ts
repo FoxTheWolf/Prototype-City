@@ -187,8 +187,10 @@ function frame(now: number) {
     ];
     box.forEach((s, k) => grid.text(grid.cols - s.length - 2, 3 + k, s, [255, 176, 74], [12, 10, 8]));
   }
-  if (wasRiding && p.liftTo < 0) sound?.ding();
+  if (wasRiding && p.liftTo < 0) { sound?.ding(); sound?.doors(); }
+  if (!wasRiding && p.liftTo >= 0) sound?.doors();
   wasRiding = p.liftTo >= 0;
+  sound?.liftMotor(p.liftTo >= 0 ? 1 : 0);
   const W = world.weather;
   // indoors: office tubes buzz while the building has power
   let tubes = 0;

@@ -1,6 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { FLOOR_H, generateCity, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, planOf } from './interior';
+import { baseAt, blocked, cellAt, planOf, stairStep } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { spawnCars, stepCars, type Car } from './traffic';
@@ -148,6 +148,12 @@ export function stepWorld(w: World, input: PlayerInput) {
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
   p.inside = baseAt(w.city, p.x, p.y);
+  // on the stairs the feet follow the steps; the floor is the storey they are in
+  if (p.inside >= 0 && p.liftTo < 0 && (p.x !== p.px || p.y !== p.py)) {
+    const z = stairStep(w.city, p.inside, p.x, p.y, p.z);
+    if (z !== null && Number.isNaN(z)) { p.x = p.px; p.y = p.py; }
+    else if (z !== null) { p.z = z; p.floor = Math.floor((z + 0.01) / FLOOR_H); }
+  }
 
   stepCars(w.city, w.cars, w.rng, TICK, p.x, p.y);
   w.ptime = w.time;

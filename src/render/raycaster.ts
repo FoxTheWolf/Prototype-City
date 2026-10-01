@@ -139,7 +139,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   let inside: Inside | null = null, skip: Building | null = null;
   if (plan) {
     skip = city.buildings[kIn];
-    inside = { city, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.z, closed: v.lift, door: doorOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
+    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, door: doorOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
     prepareInside(inside, px, py);
   }
   frameInside = !!inside;
