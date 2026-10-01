@@ -156,6 +156,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const W = world.weather, wet = W.wet, snowC = (frameSnow = W.snowCover), rain = W.snow ? 0 : W.precip;
   light.update(frameSec, sky.day, world.power);
   gatherLights(world, v, frameSec);
+  glFrame = (glFrame + 1) >>> 0 || 1;
   gatherRoofs(world, v);
   // indoors: the floor is drawn over the city, which shows only through the windows; the building's
   // own boxes (setbacks, rooftop parts) are left out of the city
@@ -323,7 +324,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           }
         }
       }
-      lightNear(wx, wy, 0);
+      groundLight(wx, wy, rd);
       grid.put(i, ch, (r + LT[0] * lk) * fog, (g + LT[1] * lk) * fog, (b + LT[2] * lk) * fog);
       grid.kind[i] = KIND.ground;
     }
@@ -1060,7 +1061,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     }
     if (z < LIT_H && t < LIT_FAR) {
       // street lamps, headlights and signs light the lower floors (cells close together share a sample)
-      lightNear(hx, hy, z);
+      wallLight(hx, hy, z, t);
       const k = 1.3 * shade;
       r += LT[0] * k; g += LT[1] * k; b += LT[2] * k;
     }
@@ -1154,14 +1155,54 @@ function reliefOf(B: Building): boolean {
  * All the light reaching a point, into LT: the street lamps' pools (fading above 1 m, gone at LIT_H)
  * and this frame's dynamic lights.
  */
-/** Where the light in LT was last sampled: lightNear reuses it for points closer than 0.3 m. */
-let lnX = 1e9, lnY = 1e9, lnZ = 1e9;
-function lightNear(x: number, y: number, z: number) {
-  if ((x - lnX) ** 2 + (y - lnY) ** 2 + (z - lnZ) ** 2 < 0.09) return;
-  lightAt(x, y, z);
+/**
+ * The light on the ground, sampled once per frame on a grid that coarsens with distance (1 m near,
+ * 8 m far) and blended between the four nearest samples: many cells of the ground share them, and
+ * the light changes little over a cell's ground far away. The samples live in a small hash table
+ * that a frame stamp clears.
+ */
+const GL_N = 1 << 15, glKey = new Int32Array(GL_N), glStamp = new Uint32Array(GL_N), glRGB = new Float32Array(GL_N * 3);
+let glFrame = 1;
+const glLast = new Float64Array(8).fill(-1e9);
+/** The slot (times 3) holding the light at (x, y, z) under this key, sampled now if it is not there yet. */
+function glAt(key: number, x: number, y: number, z: number): number {
+  let h = Math.imul(key, 0x9e3779b1) >>> 17;
+  for (let probe = 0; ; probe++) {
+    if (glStamp[h] !== glFrame || probe > 32) {
+      glStamp[h] = glFrame; glKey[h] = key;
+      lightAt(x, y, z);
+      glRGB[h * 3] = LT[0]; glRGB[h * 3 + 1] = LT[1]; glRGB[h * 3 + 2] = LT[2];
+      return h * 3;
+    }
+    if (glKey[h] === key) return h * 3;
+    h = (h + 1) & (GL_N - 1);
+  }
+}
+const glSample = (lod: number, s: number, ix: number, iy: number) => glAt((lod << 28) | ((ix & 0x3fff) << 14) | (iy & 0x3fff), ix * s, iy * s, 0);
+/**
+ * The light on a wall, the same way: the spot snapped to a grid that coarsens with distance
+ * (0.25 m near, 4 m far), blended between the two samples above and below it.
+ */
+function wallLight(x: number, y: number, z: number, t: number) {
+  const lod = t < 20 ? 0 : t < 60 ? 1 : t < 150 ? 2 : 3, s = lod === 0 ? 0.25 : lod === 1 ? 0.5 : lod === 2 ? 1.5 : 4;
+  const ix = Math.round(x / s), iy = Math.round(y / s), fz = Math.max(0, z) / s, iz = Math.floor(fz), az = fz - iz;
+  const base = ((8 + lod) << 28) | ((ix & 0x1ff) << 19) | ((iy & 0x1ff) << 10);
+  const a = glAt(base | (iz & 0x3ff), ix * s, iy * s, iz * s), b = glAt(base | ((iz + 1) & 0x3ff), ix * s, iy * s, (iz + 1) * s);
+  for (let k = 0; k < 3; k++) LT[k] = glRGB[a + k] * (1 - az) + glRGB[b + k] * az;
+}
+function groundLight(x: number, y: number, rd: number) {
+  const lod = rd < 18 ? 0 : rd < 45 ? 1 : rd < 110 ? 2 : 3, s = 1 << lod;
+  const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy;
+  // rows next to each other often fall between the same four samples
+  if (ix !== glLast[0] || iy !== glLast[1] || lod !== glLast[2] || glFrame !== glLast[3]) {
+    glLast[0] = ix; glLast[1] = iy; glLast[2] = lod; glLast[3] = glFrame;
+    glLast[4] = glSample(lod, s, ix, iy); glLast[5] = glSample(lod, s, ix + 1, iy); glLast[6] = glSample(lod, s, ix, iy + 1); glLast[7] = glSample(lod, s, ix + 1, iy + 1);
+  }
+  const a = glLast[4], b = glLast[5], c = glLast[6], d = glLast[7];
+  const wa = (1 - ax) * (1 - ay), wb = ax * (1 - ay), wc = (1 - ax) * ay, wd = ax * ay;
+  for (let k = 0; k < 3; k++) LT[k] = glRGB[a + k] * wa + glRGB[b + k] * wb + glRGB[c + k] * wc + glRGB[d + k] * wd;
 }
 function lightAt(x: number, y: number, z: number) {
-  lnX = x; lnY = y; lnZ = z;
   const zk = z <= 1 ? 1 : 1 - (z - 1) / (LIT_H - 1);
   LT[0] = LT[1] = LT[2] = 0;
   if (zk > 0) light.add(x, y, zk, LT);
