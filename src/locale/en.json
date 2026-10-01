@@ -778,9 +778,10 @@
         "notes": { "signal": "No data connection.", "wifi": "Over 10 MB: Wi-Fi only.", "full": "Not enough storage.", "credit": "Not enough credit. Dial *100#." },
         "downloading": "Downloading", "none": "No apps installed.", "gameOver": "GAME OVER", "again": "OK to play again", "score": "SCORE", "best": "BEST",
         "newsWait": "Fetching headlines...", "newsNone": "No data connection." },
+      "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
       "set": {
-        "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "about": "About phone", "debug": "Debug (game)" },
+        "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)" },
         "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "temp": "Temperature", "dist": "Distance" },
         "values": {
           "profile": ["Normal", "Vibrate", "Silent"],

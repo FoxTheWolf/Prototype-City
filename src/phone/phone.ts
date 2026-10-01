@@ -7,6 +7,8 @@ import { CONVERT, Snake } from './store';
 import { type CharGrid } from '../render/grid';
 import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
+import { Wifi } from './wifi';
+import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
 import en from '../locale/en.json';
 import { businessName, makerName, operatorName } from '../locale/names';
@@ -29,7 +31,7 @@ import { hash3 } from '../core/rng';
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
@@ -46,8 +48,8 @@ export const INDOOR_ROW_M = [1, 2, 3.5, 6];
  * (left/right or OK change them), "about" lists the hardware and the line, "debug" holds what is
  * there for testing the game (the secret codes, to dial them; to go once gameplay replaces it).
  */
-export type SetPage = 'root' | 'sound' | 'display' | 'units' | 'about' | 'debug';
-export const SET_PAGES: SetPage[] = ['sound', 'display', 'units', 'about', 'debug'];
+export type SetPage = 'root' | 'sound' | 'display' | 'units' | 'wifi' | 'about' | 'debug';
+export const SET_PAGES: SetPage[] = ['sound', 'display', 'units', 'wifi', 'about', 'debug'];
 export interface Prefs {
   /** 0 normal, 1 vibrate, 2 silent. */
   profile: number;
@@ -88,7 +90,7 @@ export const EDGE_LIMIT_KB = 10 * 1024;
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
-export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose'];
+export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose', 'wifikey'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -98,6 +100,9 @@ export class Phone {
   readonly maker: string;
   readonly gps = new Gps();
   readonly radio = new Radio();
+  readonly wifi = new Wifi();
+  /** Wi-Fi: the network whose key is being typed (index into world.wifi), and the key. */
+  wkey = { ap: -1, key: '' };
   prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, temp: 0, dist: 0 };
   /** Settings: the page open and the row picked on it. */
   setPage: SetPage = 'root';
@@ -215,6 +220,8 @@ export class Phone {
     if (this.screen === 'boot' && now - this.since > BOOT_S) this.open('standby', now);
     // the GPS runs while the map is open, in the hand or not
     this.gps.update(this.world, this.screen === 'map' || this.screen === 'places' || (this.screen === 'code' && this.code === 'gps'), now, dt);
+    this.wifi.update(this.world, this.screen !== 'off', now);
+    this.radio.wifiKbps = this.wifi.kbps();
     this.radio.update(this.world, this.screen !== 'off', now, dt);
     // text messages arriving; the operator's notices
     for (let i = this.incoming.length - 1; i >= 0; i--) {
@@ -254,7 +261,7 @@ export class Phone {
     // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
     // again once the signal is back after a failed try; not with the bundle used up)
     const busy = this.radio.job === J && J?.what === 'weather' && (J.state === 'connecting' || J.state === 'loading' || J.state === 'nodata');
-    if (this.screen === 'weather' && !busy && this.world.time - this.wxAt > 3600 && this.radio.state === 'service') this.radio.fetch('weather', WEATHER_KB, now);
+    if (this.screen === 'weather' && !busy && this.world.time - this.wxAt > 3600 && this.online()) this.radio.fetch('weather', WEATHER_KB, now);
   }
 
   open(s: Screen, now: number) {
@@ -427,8 +434,8 @@ export class Phone {
         if (n && (k === 'ok' || k === 'lsoft')) {
           const i = list[this.ssel], [, kb, price] = STORE[i];
           if (this.stab === 1 || this.apps.includes(i)) { this.openApp(i, now); return true; }
-          if (this.radio.state !== 'service') this.storeNote = 'signal';
-          else if (kb > EDGE_LIMIT_KB) this.storeNote = 'wifi';
+          if (!this.online()) this.storeNote = 'signal';
+          else if (kb > EDGE_LIMIT_KB && this.wifi.state !== 'up') this.storeNote = 'wifi';
           else if (this.freeKB() < kb) this.storeNote = 'full';
           else if (this.world.telco.player.credit < price) this.storeNote = 'credit';
           else { this.radio.fetch(`app:${i}`, kb, now); this.storeNote = ''; }
@@ -438,6 +445,16 @@ export class Phone {
         return false;
       }
       case 'app': return this.appKey(k, now);
+      case 'wifikey': {
+        // the network's key: digits, * deletes, OK joins
+        const K = this.wkey;
+        const back = () => { this.open('settings', now); this.setPage = 'wifi'; this.setSel = 0; };
+        if (k === 'rsoft') { back(); return true; }
+        if (/^[0-9]$/.test(k) && K.key.length < 16) { K.key += k; return true; }
+        if (k === '*' && K.key) { K.key = K.key.slice(0, -1); return true; }
+        if ((k === 'ok' || k === 'lsoft' || k === 'send') && K.key) { this.wifi.connect(this.world, K.ap, K.key, now); back(); return true; }
+        return false;
+      }
       case 'messages': {
         // the boxes, and a new message
         if (k === 'up' || k === 'down') { this.box = (this.box + (k === 'up' ? 2 : 1)) % 3; return true; }
@@ -521,7 +538,7 @@ export class Phone {
         return this.code === 'keys';
       case 'weather':
         // OK downloads it again
-        if ((k === 'ok' || k === 'lsoft') && this.radio.state === 'service') { this.radio.fetch('weather', WEATHER_KB, now); this.since = now; return true; }
+        if ((k === 'ok' || k === 'lsoft') && this.online()) { this.radio.fetch('weather', WEATHER_KB, now); this.since = now; return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       default:
@@ -545,6 +562,19 @@ export class Phone {
       if (k === 'up' || k === 'down') { this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)); return true; }
       return false;
     }
+    if (pg === 'wifi') {
+      // the first row switches the Wi-Fi; the networks found below it; OK joins one (or leaves it)
+      const W = this.wifi, n = 1 + Math.min(8, W.list.length);
+      if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + n) % n; return true; }
+      if (k !== 'ok' && k !== 'lsoft') return false;
+      if (this.setSel === 0) { W.on = !W.on; if (!W.on) W.disconnect(); this.setSel = 0; return true; }
+      const i = W.list[this.setSel - 1]?.[0];
+      if (i === undefined) return false;
+      if (i === W.ap && W.state !== 'idle') { W.disconnect(); return true; }
+      if (this.world.wifi[i].sec === Sec.Open) W.connect(this.world, i, '', now);
+      else { this.wkey = { ap: i, key: '' }; this.open('wifikey', now); }
+      return true;
+    }
     if (pg === 'debug') {
       const C = secretCodes(this.world.seed);
       if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + C.length) % C.length; return true; }
@@ -567,7 +597,7 @@ export class Phone {
     this.appId = i; this.open('app', now);
     const id = STORE[i][0];
     if (id === 'snake') this.snake.reset(now);
-    if (id === 'news' && this.world.time - this.newsAt > 3600 && this.radio.state === 'service') this.radio.fetch('news', NEWS_KB, now);
+    if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
   }
 
   /** The keys of the app open. */
@@ -581,7 +611,7 @@ export class Phone {
       if (d[k]) { S.steer(...d[k]); return true; }
       return false;
     }
-    if (id === 'news') { if ((k === 'ok' || k === 'lsoft') && this.radio.state === 'service') { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; } return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false; }
+    if (id === 'news') { if ((k === 'ok' || k === 'lsoft') && this.online()) { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; } return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false; }
     if (id === 'convert') {
       const C = this.conv;
       if (k === 'up' || k === 'down') { C.pair = (C.pair + (k === 'up' ? -1 : 1) + CONVERT.length) % CONVERT.length; return true; }
@@ -592,6 +622,9 @@ export class Phone {
     }
     return false;
   }
+
+  /** Whether data can go anywhere: the cell network, or a Wi-Fi joined. */
+  online(): boolean { return this.radio.state === 'service' || this.wifi.state === 'up'; }
 
   /** Whether the torch app is lit. */
   torch(): boolean { return this.screen === 'app' && STORE[this.appId][0] === 'torch'; }

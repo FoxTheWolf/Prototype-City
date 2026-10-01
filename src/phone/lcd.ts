@@ -5,6 +5,7 @@ import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
 import { type GpsState } from './gps';
 import { type Radio } from './radio';
+import { type Wifi } from './wifi';
 
 /** The phone's screen: its size in cells, its colors, and the pieces every app draws with. */
 export const SW = 42, SH = 26;
@@ -59,8 +60,13 @@ export const hhmm = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0
  * The top row: the antenna and its bars (x with no service, blinking while it searches), E while
  * data moves over EDGE, the GPS while it runs, the time, the battery.
  */
-export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false) {
+export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false, wifi: Wifi | null = null) {
   S.fill(0, BAR);
+  // Wi-Fi: a W and its bars while joined, blinking while it joins
+  if (wifi && (wifi.state === 'up' || ((wifi.state === 'assoc' || wifi.state === 'dhcp') && Math.floor(now * 3) & 1))) {
+    S.text(18, 0, 'W', [150, 230, 255], BAR);
+    for (let b = 0; b < 3; b++) S.put(19 + b, 0, ch(b < Math.ceil(wifi.bars * 0.75) ? ')' : '.'), [150, 230, 255], BAR);
+  }
   // an envelope while there are unread messages
   if (unread) S.text(14, 0, '[=]', Math.floor(now * 1.5) & 1 ? HI : INK, BAR);
   S.text(1, 0, 'Y', INK, BAR);

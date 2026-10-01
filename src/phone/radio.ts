@@ -42,6 +42,8 @@ export class Radio {
   bars = 0;
   /** The sites heard at the last scan, strongest first: [site, dBm] (the field test screen lists them). */
   heard: [number, number][] = [];
+  /** Throughput of the Wi-Fi joined (kbit/s), 0 when there is none: data then goes over it, free. */
+  wifiKbps = 0;
   /** The data transfer under way or last finished, if any. */
   job: Transfer | null = null;
   private next = 0;
@@ -53,12 +55,13 @@ export class Radio {
     if (now >= this.next) { this.next = now + 0.5; this.scan(world, now); }
     const J = this.job;
     if (J && (J.state === 'connecting' || J.state === 'loading')) {
-      if (this.state !== 'service') J.state = 'nosignal';
-      else if (now - J.at < ATTACH) J.state = 'connecting';
+      const wifi = this.wifiKbps > 0;
+      if (!wifi && this.state !== 'service') J.state = 'nosignal';
+      else if (now - J.at < (wifi ? 0.4 : ATTACH)) J.state = 'connecting';
       else {
         J.state = 'loading';
-        const kb = Math.min(J.kb - J.done, (RATE[this.bars] / 8) * dt);
-        if (!useData(world.telco.player, kb)) J.state = 'nodata';
+        const kb = Math.min(J.kb - J.done, ((wifi ? this.wifiKbps : RATE[this.bars]) / 8) * dt);
+        if (!wifi && !useData(world.telco.player, kb)) J.state = 'nodata';
         else if ((J.done += kb) >= J.kb - 1e-6) J.state = 'done';
       }
     }

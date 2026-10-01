@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import en from '../locale/en.json';
-import { cityName, operatorName } from '../locale/names';
+import { cityName, operatorName, wifiName } from '../locale/names';
+import { Sec } from '../sim/wifi';
 import { calendar, moonPhase } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { forecast, newWeather, type Weather } from '../sim/weather';
@@ -61,7 +62,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'contacts': return contacts(S, P, t);
     case 'messages': return messages(S, P, t);
     case 'camera': return cameraScreen(S, P, now);
-    case 'web': return notice(S, t, name('web').toUpperCase(), P.radio.state === 'service' ? A.soon : A.web, P.radio.state === 'service' ? HI : BAD);
+    case 'web': return notice(S, t, name('web').toUpperCase(), P.online() ? A.soon : A.web, P.online() ? HI : BAD);
     case 'weather': return weather(S, P, world, t, now);
     case 'store': return store(S, P, t, now);
     case 'clock': return clock(S, P, world, t, now);
@@ -74,6 +75,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'ussd') return ussdScreen(S, P, t, now);
       if (P.screen === 'photos') return photosScreen(S, P, t);
       if (P.screen === 'app') return appScreen(S, P, world, t, now);
+      if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
       if (P.screen === 'msglist') return msgList(S, P, t);
       if (P.screen === 'msg') return msgRead(S, P, t);
       if (P.screen === 'compose') return compose(S, P, now);
@@ -266,6 +268,7 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
   }
   title(S, SET.pages[pg].toUpperCase(), t);
   if (pg === 'about') return about(S, P, world, t);
+  if (pg === 'wifi') return wifiPage(S, P, world, t);
   if (pg === 'debug') {
     SET.debugHint.forEach((l, k) => S.text(1, 3 + k, typed(l, t - 0.05 * k), DIM, LCD));
     secretCodes(world.seed).forEach((c, n) => row(S, 7 + n * 2, c.code, A.code[c.kind], n === P.setSel, t - 0.2 - 0.05 * n));
@@ -287,7 +290,7 @@ function about(S: Lcd, P: Phone, world: World, t: number) {
     [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
     [A.number, formatNumber(world.telco, acc.number.replace('-', ''))], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
     [A.model, `${P.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
-    [A.display, D.screen], [A.cameraRow, D.cameraMP ? `${D.cameraMP} MP` : T.off], [A.radio, D.radio], [A.wlan, `${D.wlan} ${T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
+    [A.display, D.screen], [A.cameraRow, D.cameraMP ? `${D.cameraMP} MP` : T.off], [A.radio, D.radio], [A.wlan, P.wifi.state === 'up' ? `${wifiName(world.city, world.wifi[P.wifi.ap])} ${P.wifi.ip}` : `${D.wlan} ${P.wifi.on ? '' : T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
   ];
   const view = SH - 5, top = Math.min(P.scroll, Math.max(0, rows.length * 2 - view));
   P.scroll = top;
@@ -317,7 +320,7 @@ function skyWord(w: Weather): string {
 function weather(S: Lcd, P: Phone, world: World, t: number, now: number) {
   const R = P.radio, J = R.job?.what === 'weather' ? R.job : null, W = A.wx;
   const fresh = world.time - P.wxAt < 3600;
-  if (!fresh && (!J || J.state === 'nosignal') && R.state !== 'service') return notice(S, t, name('weather').toUpperCase(), A.weather);
+  if (!fresh && (!J || J.state === 'nosignal') && !P.online()) return notice(S, t, name('weather').toUpperCase(), A.weather);
   title(S, `${name('weather').toUpperCase()} ${cityName(world.city).toUpperCase()}`, t);
   if (J && J.state !== 'done') {
     // the download, as a terminal would show it
@@ -540,7 +543,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   if (id === 'news') {
     const J = P.radio.job, loading = J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading');
     if (loading || world.time - P.newsAt > 3600) {
-      S.center(10, P.radio.state === 'service' ? ST.newsWait : ST.newsNone, P.radio.state === 'service' ? DIM : BAD, LCD);
+      S.center(10, P.online() ? ST.newsWait : ST.newsNone, P.online() ? DIM : BAD, LCD);
       return softKeys(S, '', T.back);
     }
     // the same headlines the city's news tickers run
@@ -561,4 +564,35 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   S.center(10, (ST.about as Record<string, string>)[id], DIM, LCD);
   softKeys(S, '', T.back);
   void now;
+}
+
+const WF = A.wifi;
+/** Wi-Fi: on or off, the networks around with their signal and lock, the one joined; for now the selected one's key shows (debug). */
+function wifiPage(S: Lcd, P: Phone, world: World, t: number) {
+  const W = P.wifi;
+  row(S, 3, WF.wifi, `< ${W.on ? WF.on : WF.off} >`, P.setSel === 0, t);
+  const st = W.state === 'assoc' ? WF.assoc : W.state === 'dhcp' ? WF.dhcp : W.state === 'badkey' ? WF.badKey : W.state === 'up' ? `${WF.up} ${W.ip}` : '';
+  if (st) S.text(1, 4, st.slice(0, SW - 2), W.state === 'badkey' ? BAD : W.state === 'up' ? [120, 255, 150] : HI, LCD);
+  if (W.on && !W.list.length) S.center(10, WF.none, DIM, LCD);
+  W.list.slice(0, 8).forEach(([i, dbm], n) => {
+    const A = world.wifi[i], bars = [-85, -76, -67, -58].reduce((c, b) => (dbm >= b ? c + 1 : c), 0);
+    const mark = i === W.ap && W.state === 'up' ? '>' : ' ', lock = A.sec === Sec.Open ? ' ' : A.sec === Sec.WEP ? 'w' : '*';
+    row(S, 6 + n * 2, `${mark}${wifiName(world.city, A)}`.slice(0, SW - 9), `${lock} ${'|'.repeat(bars).padEnd(4, '.')}`, P.setSel === n + 1, t - 0.04 * n);
+  });
+  // (debug, until the game has ways to learn them) the picked network's key
+  const sel = W.list[P.setSel - 1];
+  if (sel) { const A = world.wifi[sel[0]]; S.text(1, SH - 3, `${WF.debugKey} ${A.sec === Sec.Open ? WF.openNet : A.key}`, DIM, LCD); }
+  softKeys(S, P.setSel === 0 ? T.ok : WF.join, T.back);
+}
+
+/** Typing a network's key. */
+function wifiKey(S: Lcd, P: Phone, world: World, now: number) {
+  const A = world.wifi[P.wkey.ap];
+  title(S, WF.keyTitle, 1);
+  S.text(1, 4, wifiName(world.city, A), WHITE, LCD);
+  S.text(1, 5, A.sec === Sec.WEP ? 'WEP' : 'WPA-PSK', DIM, LCD);
+  S.text(1, 8, WF.key, HI, LCD);
+  S.text(1, 9, '*'.repeat(Math.max(0, P.wkey.key.length - 1)) + P.wkey.key.slice(-1) + (Math.floor(now * 2) & 1 ? '_' : ''), WHITE, LCD);
+  S.text(1, SH - 3, '0-9   * <-', DIM, LCD);
+  softKeys(S, P.wkey.key ? WF.join : '', T.back);
 }
