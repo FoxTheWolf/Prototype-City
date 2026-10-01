@@ -19,7 +19,12 @@ export const Shape = { Box: 0, Cyl: 1, Ball: 2 } as const;
  * shop signs; farther, as glyphs; farther still, a lit bar. Board: a painted billboard facing +x,
  * its text across it in 5x7 block letters (`col2` on `col`), lit from below by `lamp` (0..1).
  */
-export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3, Board: 4 } as const;
+export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3, Board: 4, Wheel: 5, Glass: 6 } as const;
+/*
+ * Wheel: a tyre (an ellipsoid flattened along y), drawn from the side as hub, spokes and a rubber
+ * ring with a scuff of dirt, all turning by the object's `wheel` angle. Glass: see-through; the
+ * ray goes on to what is behind (in the object or the world) and only tints it and catches a sheen.
+ */
 
 export interface Part {
   shape: number;
@@ -76,7 +81,10 @@ export interface Cam {
 
 const C = (s: string) => s.charCodeAt(0);
 const LEAF = [C('@'), C('&'), C('%'), C('#'), C('*')];
-const SPOKE = C('o'), SPOKES = [C('|'), C('/'), C('-'), C('\\')];
+const TYRE: RGB = [52, 52, 56], HUB: RGB = [170, 170, 175], RIM: RGB = [140, 140, 148], DIRT: RGB = [110, 90, 62];
+const SPOKES = [C('|'), C('/'), C('-'), C('\\')];
+/** Height the body leans about. */
+const PIVOT = 0.7;
 
 export function part(shape: number, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, col: RGB, mat: number, side: string, top = side, end = side): Part {
   return { shape, x0, y0, z0, x1, y1, z1, col, mat, side: C(side), top: C(top), end: C(end) };
@@ -117,17 +125,17 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
     for (let k = 0; k < n; k++) {
       const q = o.parts[k], j = k * 6;
       P[j] = (q.x0 + q.x1) / 2; P[j + 1] = (q.y0 + q.y1) / 2; P[j + 2] = (q.z0 + q.z1) / 2;
-      if (o.lift !== undefined && q.z0 > 0) P[j + 2] += o.lift - o.pitch! * P[j] - o.roll! * P[j + 1];
       P[j + 3] = Math.max((q.x1 - q.x0) / 2, mh); P[j + 4] = Math.max((q.y1 - q.y0) / 2, mh); P[j + 5] = Math.max((q.z1 - q.z0) / 2, mz);
     }
     const fog = 1 - Math.min(1, tY / v.far) * 0.8;
     // camera in the object's frame
     const ox = (v.x - o.x) * o.c + (v.y - o.y) * o.s, oy = -(v.x - o.x) * o.s + (v.y - o.y) * o.c, oz = v.eye;
+    const ox0 = ox, oy0 = oy, oz0 = oz;
 
     for (let x = x0; x < x1; x++) {
       const camX = (2 * (x + 0.5)) / cols - 1;
       const rdx = v.dirX + v.plX * camX, rdy = v.dirY + v.plY * camX;
-      const dx = rdx * o.c + rdy * o.s, dy = -rdx * o.s + rdy * o.c;
+      const dx = rdx * o.c + rdy * o.s, dy = -rdx * o.s + rdy * o.c, dx0 = dx, dy0 = dy;
       // this column's ray against the bounding circle: the depths [ta, tb] where the object can be,
       // hence the only rows it can cover
       const R = o.r + mh, qa = dx * dx + dy * dy, qb = ox * dx + oy * dy, disc = qb * qb - qa * (ox * ox + oy * oy - R * R);
@@ -141,11 +149,17 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         const i = y * cols + x;
         // cells where something nearer than the whole object is already drawn
         if (depth[i] <= ta) continue;
-        const dz = (v.hor - (y + 0.5)) / v.scale;
-        let best = depth[i], bk = -1, face = 0, nx = 0, ny = 0, nz = 0;
+        const dz = (v.hor - (y + 0.5)) / v.scale, dz0 = dz;
+        let best = depth[i], bk = -1, face = 0, nx = 0, ny = 0, nz = 0, glassT = 1e9;
+        // a vehicle's body leans on its springs: its parts off the ground are hit by the ray turned
+        // (and lifted) into the body's frame, pivoting about its middle (small angles)
+        const tilt = o.lift !== undefined, pt = o.pitch ?? 0, rl = o.roll ?? 0;
+        const bOx = ox - pt * (oz - PIVOT), bOy = oy - rl * (oz - PIVOT), bOz = oz + pt * ox + rl * oy - (o.lift ?? 0);
+        const bDx = dx - pt * dz, bDy = dy - rl * dz, bDz = dz + pt * dx + rl * dy;
         for (let k = 0; k < n; k++) {
           const j = k * 6, cx = P[j], cy = P[j + 1], cz = P[j + 2], hx = P[j + 3], hy = P[j + 4], hz = P[j + 5];
-          const shape = o.parts[k].shape;
+          const part = o.parts[k], shape = part.shape, body = tilt && part.z0 > 0, glassy = part.mat === Mat.Glass;
+          const ox = body ? bOx : ox0, oy = body ? bOy : oy0, oz = body ? bOz : oz0, dx = body ? bDx : dx0, dy = body ? bDy : dy0, dz = body ? bDz : dz0;
           if (shape === Shape.Box) {
             let tmin = -1e9, tmax = 1e9, ax = 0;
             if (Math.abs(dx) < 1e-9) { if (Math.abs(ox - cx) > hx) continue; }
@@ -155,6 +169,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
             if (Math.abs(dz) < 1e-9) { if (Math.abs(oz - cz) > hz) continue; }
             else { let a = (cz - hz - oz) / dz, b = (cz + hz - oz) / dz; if (a > b) { const t = a; a = b; b = t; } if (a > tmin) { tmin = a; ax = 2; } if (b < tmax) tmax = b; }
             if (tmin > tmax || tmin <= 0.05 || tmin >= best) continue;
+            if (glassy) { glassT = Math.min(glassT, tmin); continue; }
             best = tmin; bk = k; face = ax;
             nx = ax === 0 ? 1 : 0; ny = ax === 1 ? 1 : 0; nz = ax === 2 ? 1 : 0;
           } else {
@@ -166,6 +181,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
               let t = (-b - Math.sqrt(disc)) / a;
               if (t > 0.05 && Math.abs(oz + dz * t - cz) <= hz) {
                 if (t >= best) continue;
+                if (glassy) { glassT = Math.min(glassT, t); continue; }
                 best = t; bk = k; face = 1; nx = X + DX * t; ny = Y + DY * t; nz = 0;
               } else if (dz < 0 && oz > cz + hz) {
                 t = (cz + hz - oz) / dz;
@@ -179,14 +195,30 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
               if (disc < 0) continue;
               const t = (-b - Math.sqrt(disc)) / a;
               if (t <= 0.05 || t >= best) continue;
+              if (glassy) { glassT = Math.min(glassT, t); continue; }
               best = t; bk = k; nx = X + DX * t; ny = Y + DY * t; nz = Z + DZ * t; face = nz > 0.75 ? 2 : 1;
             }
           }
         }
-        if (bk < 0) continue;
+        if (bk < 0) {
+          // only glass in the way: what is already drawn behind it shows through, tinted
+          if (glassT < depth[i]) { const k4 = i * 4, c = grid.cells; c[k4 + 1] = c[k4 + 1] * 0.62 + 18; c[k4 + 2] = c[k4 + 2] * 0.68 + 26; c[k4 + 3] = c[k4 + 3] * 0.74 + 34; }
+          continue;
+        }
         const q = o.parts[bk];
         let ch: number, k: number, col = q.col;
         if (q.mat === Mat.Glow) { ch = q.side; k = 0.6 + 0.4 * fog; }
+        else if (q.mat === Mat.Wheel) {
+          // from the side: the hub, five spokes and the tyre with a scuff, turned by the wheel angle;
+          // from the front or back, just the tread
+          const j = bk * 6, wx = (ox + dx * best - P[j]) / P[j + 3], wz = (oz + dz * best - P[j + 2]) / P[j + 5];
+          const rr = Math.hypot(wx, wz), ang = Math.atan2(wz, wx) + (o.wheel ?? 0), sec = (((ang / (Math.PI * 2)) % 1) + 1) % 1;
+          k = (0.75 + 0.25 * Math.abs(ny)) * fog;
+          if (Math.abs(ny) < 0.55) { ch = Math.floor(sec * 16) & 1 ? C('=') : C('-'); col = TYRE; }
+          else if (rr < 0.28) { ch = C('o'); col = HUB; }
+          else if (rr < 0.62) { const f = (sec * 5) % 1; ch = f < 0.3 ? SPOKES[Math.floor(sec * 20) & 3] : C('.'); col = f < 0.3 ? RIM : TYRE; }
+          else { ch = sec > 0.08 && sec < 0.16 ? C('%') : Math.floor(sec * 12) & 1 ? C('#') : C('*'); col = sec > 0.08 && sec < 0.16 ? DIRT : TYRE; }
+        }
         else if (q.mat === Mat.Board && face === 0 && ox > q.x1 && q.text) {
           // the billboard's face, read left to right from the front (+x): from +y toward -y
           const hy = oy + dy * best, hz = oz + dz * best, W = q.y1 - q.y0, H = q.z1 - q.z0, n = q.text.length;
@@ -255,8 +287,6 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
             ch = LEAF[(h * LEAF.length) | 0];
             k *= 0.55 + 0.45 * h + 0.25 * nz;
           } else ch = face === 2 ? q.top : face === 0 && q.shape === Shape.Box ? q.end : q.side;
-          // a wheel seen from the side turns: its glyph follows the angle
-          if (o.wheel !== undefined && q.z0 === 0 && q.side === SPOKE && face === 1) ch = SPOKES[Math.floor((o.wheel / Math.PI) * 4) & 3];
         }
         let r = col[0] * k, g = col[1] * k, b = col[2] * k;
         const painted = q.mat === Mat.Glow || q.mat === Mat.Text || (q.mat === Mat.Board && face === 0);
@@ -266,6 +296,10 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;
           const L = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz), gl = (face === 2 ? 1.5 : 1.1) * fog;
           if (v.mul) { r *= L[0]; g *= L[1]; b *= L[2]; } else { r += L[0] * gl; g += L[1] * gl; b += L[2] * gl; }
+        }
+        if (glassT < best) {
+          // seen through glass: darker and colder, with a faint sheen
+          r = r * 0.6 + 16; g = g * 0.66 + 24; b = b * 0.72 + 34;
         }
         grid.put(i, ch, r, g, b);
         depth[i] = best;

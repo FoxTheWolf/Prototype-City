@@ -16,6 +16,8 @@ import { subAt, type PowerGrid } from './power';
 export type VehicleKind = 'sedan' | 'taxi' | 'van' | 'truck' | 'bus' | 'police';
 
 export interface Car {
+  /** Identity, fixed for the vehicle's life (who drives it, later). */
+  id: number;
   kind: VehicleKind;
   /** Length (m) and maximum acceleration (m/s²). */
   len: number;
@@ -90,7 +92,7 @@ const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0
 function newVehicle(rng: Rng) {
   let r = rng();
   const V = VEHICLES.find((q) => (r -= q.share) < 0) ?? VEHICLES[VEHICLES.length - 1];
-  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0, held: 0, honk: 0 };
+  return { id: (rng() * 2 ** 31) | 0, kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0, held: 0, honk: 0 };
 }
 /**
  * Grip of the road: dry asphalt holds a hard stop (~0.8 g), wet less, snow little. Drivers know it:
@@ -102,19 +104,19 @@ export function roadGrip(wet: number, snow: number): number {
 }
 
 /** Springs of the body: stiffness (1/s², ~1.2 Hz) and damping, and how far it leans per m/s² (softer for big vehicles). */
-const SPRING = 60, DAMP = 5.5;
+const SPRING = 22, DAMP = 2.6;
 /** One tick of the body on its springs, from the acceleration along and across the car, and the road's bumps. */
 function stepBody(c: Car, a: number, dt: number) {
   const soft = c.len > 6 ? 1.6 : 1;
   // the turn rate from the change of heading: sideways pull v * omega
   const h = Math.atan2(c.dy, c.dx), dh = Math.atan2(Math.sin(h - c.ph), Math.cos(h - c.ph)), lat = (c.v * dh) / dt;
   c.ph = h;
-  const pT = Math.max(-0.06, Math.min(0.06, -a * 0.007 * soft)), rT = Math.max(-0.06, Math.min(0.06, -lat * 0.012 * soft));
+  const pT = Math.max(-0.12, Math.min(0.12, -a * 0.02 * soft)), rT = Math.max(-0.13, Math.min(0.13, -lat * 0.035 * soft));
   c.pitchV += (-SPRING * (c.pitch - pT) - DAMP * c.pitchV) * dt; c.pitch += c.pitchV * dt;
   c.rollV += (-SPRING * (c.roll - rT) - DAMP * c.rollV) * dt; c.roll += c.rollV * dt;
   // seams and potholes every few metres kick the body up a little, harder the faster it goes
   const bump = Math.floor((c.x + c.y) / 3.1), hit = Math.floor((c.x + c.y - c.v * dt) / 3.1) !== bump;
-  if (hit && c.v > 1) c.liftV += (hash3(bump, 5, 11) - 0.35) * c.v * 0.02;
+  if (hit && c.v > 1) c.liftV += (hash3(bump, 5, 11) - 0.35) * c.v * 0.045;
   c.liftV += (-SPRING * 1.5 * c.lift - DAMP * c.liftV) * dt; c.lift += c.liftV * dt;
   c.wheel = (c.wheel + (c.v * dt) / 0.33) % (Math.PI * 2);
 }

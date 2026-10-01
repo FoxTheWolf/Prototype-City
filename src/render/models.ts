@@ -3,24 +3,38 @@ import { type RGB } from '../sim/city';
 import { Mat, part, Shape, type Part } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
-const { Solid, Leaf, Glow, Text, Board } = Mat;
+const { Solid, Leaf, Glow, Text, Board, Wheel, Glass } = Mat;
 
 const GLASS: RGB = [45, 65, 95];
 const TIRE: RGB = [28, 28, 32];
 const STEEL: RGB = [100, 100, 110];
 
+/** Clothes and skin for the people seen in vehicles (and, later, on the sidewalks). */
+export const CLOTHES: RGB[] = [[150, 40, 45], [40, 60, 110], [70, 70, 75], [180, 170, 150], [50, 100, 70], [120, 80, 50], [200, 200, 205], [30, 30, 34]];
+export const SKIN: RGB[] = [[225, 185, 150], [190, 140, 100], [140, 95, 65], [95, 65, 45]];
+
+/** A person sitting in a vehicle at (x, y), seat at z: torso and head, colors from `who`. */
+function seated(m: Part[], x: number, y: number, z: number, who: number) {
+  const shirt = CLOTHES[who % CLOTHES.length], skin = SKIN[(who >> 3) % SKIN.length];
+  m.push(part(Box, x - 0.18, y - 0.2, z, x + 0.12, y + 0.2, z + 0.45, shirt, Solid, '#', '=', '#'));
+  m.push(part(Ball, x - 0.12, y - 0.11, z + 0.47, x + 0.12, y + 0.11, z + 0.76, skin, Solid, '@'));
+}
+
 const cars = new Map<string, Part[]>();
-/** A sedan 4.4 m long; taxis carry a lit roof sign. */
-export function carModel(col: RGB, taxi: boolean): Part[] {
-  const key = col.join() + taxi;
+/** A sedan 4.4 m long, with see-through windows and the driver inside (and a passenger, by `who`); taxis carry a lit roof sign. */
+export function carModel(col: RGB, taxi: boolean, who = 0): Part[] {
+  const key = col.join() + taxi + who;
   let m = cars.get(key);
   if (m) return m;
   m = [
     part(Box, -2.2, -0.9, 0.35, 2.2, 0.9, 0.95, col, Solid, '#', '=', '#'),
-    part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.4, GLASS, Solid, '=', '=', '='),
+    part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.4, GLASS, Glass, '=', '=', '='),
     part(Box, -1.0, -0.8, 1.4, 0.8, 0.8, 1.5, col, Solid, '-', '_', '-'),
+    part(Box, -0.6, -0.75, 0.6, -0.48, 0.75, 1.25, [40, 38, 42], Solid, '|', '=', '|'),
   ];
-  for (const wx of [-1.4, 1.4]) for (const wy of [-1, 1]) m.push(part(Box, wx - 0.33, wy * 0.95 - 0.12, 0, wx + 0.33, wy * 0.95 + 0.12, 0.62, TIRE, Solid, 'o'));
+  seated(m, -0.15, 0.42, 0.62, who);
+  if (who & 4) seated(m, -0.15, -0.42, 0.62, who * 7 + 3);
+  for (const wx of [-1.4, 1.4]) for (const wy of [-1, 1]) m.push(part(Ball, wx - 0.34, wy * 0.95 - 0.13, 0, wx + 0.34, wy * 0.95 + 0.13, 0.68, TIRE, Wheel, 'o'));
   for (const wy of [-1, 1]) {
     const a = wy * 0.45, b = wy * 0.8;
     m.push(part(Box, 2.19, Math.min(a, b), 0.62, 2.25, Math.max(a, b), 0.82, [255, 245, 200], Glow, '@'));
@@ -33,8 +47,8 @@ export function carModel(col: RGB, taxi: boolean): Part[] {
 
 const HEAD: RGB = [255, 245, 200], TAIL: RGB = [255, 40, 40];
 /** Wheels at the given x positions, and head and tail lamps at the ends (half length hl, half width hw). */
-function running(m: Part[], xs: number[], hl: number, hw: number, r = 0.33) {
-  for (const wx of xs) for (const wy of [-1, 1]) m.push(part(Box, wx - r, wy * hw - 0.12, 0, wx + r, wy * hw + 0.12, r * 1.9, TIRE, Solid, 'o'));
+function running(m: Part[], xs: number[], hl: number, hw: number, r = 0.34) {
+  for (const wx of xs) for (const wy of [-1, 1]) m.push(part(Ball, wx - r, wy * hw - 0.13, 0, wx + r, wy * hw + 0.13, r * 2, TIRE, Wheel, 'o'));
   for (const wy of [-1, 1]) {
     const a = wy * (hw - 0.45), b = wy * (hw - 0.1);
     m.push(part(Box, hl - 0.01, Math.min(a, b), 0.62, hl + 0.05, Math.max(a, b), 0.85, HEAD, Glow, '@'));
@@ -48,36 +62,43 @@ const vehicles = new Map<string, Part[]>();
  * windows and destination sign, and a police car whose beacon flashes red and blue (`flash`: 0 off,
  * 1 red side lit, 2 blue side lit).
  */
-export function vehicleModel(kind: string, col: RGB, flash = 0): Part[] {
-  const key = kind + col.join() + flash;
+export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[] {
+  const key = kind + col.join() + flash + '|' + who;
   let m = vehicles.get(key);
   if (m) return m;
   switch (kind) {
     case 'van': m = [
-      part(Box, -2.6, -1.0, 0.35, 2.6, 1.0, 2.3, col, Solid, '#', '=', '#'),
-      part(Box, 1.95, -0.96, 1.3, 2.62, 0.96, 2.05, GLASS, Solid, '=', '=', '='),
-      part(Box, -1.6, -1.02, 1.35, 1.4, 1.02, 1.9, GLASS, Solid, ':', '=', ':'),
-    ]; running(m, [-1.7, 1.7], 2.6, 1.0); break;
+      part(Box, -2.6, -1.0, 0.35, 1.3, 1.0, 2.3, col, Solid, '#', '=', '#'),
+      part(Box, 1.3, -1.0, 0.35, 2.6, 1.0, 1.2, col, Solid, '#', '=', '#'),
+      part(Box, 1.3, -1.0, 2.05, 2.6, 1.0, 2.3, col, Solid, '=', '=', '='),
+      part(Box, 1.3, -1.0, 1.2, 2.62, 1.0, 2.05, GLASS, Glass, '=', '=', '='),
+    ]; seated(m, 1.75, 0.45, 0.95, who); running(m, [-1.7, 1.7], 2.6, 1.0); break;
     case 'truck': m = [
-      part(Box, 2.0, -1.05, 0.4, 4.25, 1.05, 2.6, col, Solid, '#', '=', '#'),
-      part(Box, 3.7, -1.0, 1.5, 4.27, 1.0, 2.3, GLASS, Solid, '=', '=', '='),
+      part(Box, 2.0, -1.05, 0.4, 4.25, 1.05, 1.5, col, Solid, '#', '=', '#'),
+      part(Box, 2.0, -1.05, 2.3, 4.25, 1.05, 2.6, col, Solid, '=', '=', '='),
+      part(Box, 2.0, -1.05, 1.5, 4.27, 1.05, 2.3, GLASS, Glass, '=', '=', '='),
       part(Box, -4.25, -1.2, 0.65, 1.9, 1.2, 3.5, [215, 215, 210], Solid, '|', '=', '#'),
       part(Box, -4.25, -1.22, 2.9, 1.9, 1.22, 3.1, col, Solid, '=', '=', '='),
-    ]; running(m, [-3.2, -2.1, 3.2], 4.25, 1.05, 0.45); break;
+    ]; seated(m, 3.1, 0.5, 1.15, who); running(m, [-3.2, -2.1, 3.2], 4.25, 1.05, 0.45); break;
     case 'bus': m = [
-      part(Box, -6, -1.25, 0.35, 6, 1.25, 3.1, col, Solid, '#', '=', '#'),
-      part(Box, -5.5, -1.27, 1.35, 5.4, 1.27, 2.45, [255, 225, 160], Glow, ':'),
-      part(Box, 5.5, -1.2, 1.2, 6.03, 1.2, 2.5, GLASS, Solid, '=', '=', '='),
+      part(Box, -6, -1.25, 0.35, 6, 1.25, 1.35, col, Solid, '#', '=', '#'),
+      part(Box, -6, -1.25, 2.45, 6, 1.25, 3.1, col, Solid, '#', '=', '#'),
+      part(Box, -6, -1.25, 1.35, 6, 1.25, 2.45, GLASS, Glass, ':', '=', ':'),
+      part(Box, -5.8, -0.9, 2.3, 5.6, 0.9, 2.42, [255, 225, 160], Glow, '='),
       part(Box, 6.0, -0.9, 2.6, 6.05, 0.9, 2.95, [255, 170, 40], Glow, '='),
       part(Box, -6.0, -1.25, 3.1, 6.0, 1.25, 3.2, [180, 180, 185], Solid, '=', '_'),
-    ]; running(m, [-4, 4.2], 6, 1.25, 0.5); break;
+    ];
+    seated(m, 5.2, 0.6, 1.0, who);
+    for (let k = 0; k < 6; k++) if ((who >> k) & 1 || k < 2) seated(m, -4.5 + k * 1.6, k & 1 ? -0.6 : 0.6, 1.0, who * 13 + k * 5);
+    running(m, [-4, 4.2], 6, 1.25, 0.5); break;
     default: { // police: a dark sedan with white doors and a beacon on the roof
       m = [
         part(Box, -2.4, -0.9, 0.35, 2.4, 0.9, 0.95, col, Solid, '#', '=', '#'),
         part(Box, -0.9, -0.92, 0.45, 0.9, 0.92, 0.9, [225, 225, 230], Solid, '=', '=', '='),
-        part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.4, GLASS, Solid, '=', '=', '='),
+        part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.4, GLASS, Glass, '=', '=', '='),
         part(Box, -1.0, -0.8, 1.4, 0.8, 0.8, 1.5, col, Solid, '-', '_', '-'),
       ];
+      seated(m, -0.15, 0.42, 0.62, who); seated(m, -0.15, -0.42, 0.62, who + 1);
       running(m, [-1.5, 1.5], 2.4, 0.9);
       m.push(part(Box, -0.25, -0.55, 1.5, 0.15, 0, 1.68, flash === 1 ? [255, 40, 40] : [90, 20, 20], flash === 1 ? Glow : Solid, '#'));
       m.push(part(Box, -0.25, 0, 1.5, 0.15, 0.55, 1.68, flash === 2 ? [60, 90, 255] : [20, 25, 90], flash === 2 ? Glow : Solid, '#'));
