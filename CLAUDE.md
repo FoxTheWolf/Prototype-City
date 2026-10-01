@@ -322,12 +322,12 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Resumo para começar uma sessão (atualizado em 2026-09-30)
 
-- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A próxima é a 6, interiores** (trocada com o trânsito, que virou a 7). Antes de codar, ler "Preparação da etapa 6" abaixo.
+- **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está em andamento:** o grupo A (6.1–6.3) está feito e aguarda o teste do usuário. Veja "Etapa 6: decisões e grupos" no Histórico.
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E giram;
   - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **M** som;
-  - debug: **T** e Shift+T mudam a hora em ±1 h; **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda.
+  - debug: **T** e Shift+T mudam a hora em ±1 h; **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda; **PageUp/PageDown** sobem e descem um andar dentro de um prédio (até existirem escadas e elevadores).
   - A linha de status mostra semente, posição, `DRAW x ms (MAX y)` e os modos. A linha de cima dela mostra data, hora, clima e `POWER x/y`.
 - **Desempenho:** o quadro fica em ~3–8 ms no painel (o usuário tem monitor de 180 Hz; ele nota quedas). `bench(n)` mede a vista atual numa grade 256×80. Toda novidade deve ser medida com `bench` antes e depois.
 - **Mapa dos módulos** (o que está em cada arquivo):
@@ -338,6 +338,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `clock.ts`: tempo, calendário, sol e lua.
     - `weather.ts`: previsão pura, chão molhado e neve.
     - `power.ts`: subestações, geradores e quem alimenta o quê.
+    - `interior.ts`: plantas dos andares (sob demanda, em cache), porta de rua, colisão com paredes e portas.
   - **`src/render/`:**
     - `raycaster.ts`: a ordem do quadro; `wallColumn` desenha as fachadas.
     - `sky.ts`: gradiente, nuvens, lua e sol.
@@ -349,11 +350,12 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `lightmap.ts`: poças de luz dos postes.
     - `lamps.ts`: falhas e fotocélula.
     - `power.ts`: o efeito do blackout, uma função pura.
+    - `interior.ts`: o andar em volta do jogador (paredes, piso, teto, lâmpadas, janelas e vidro).
   - **`src/audio/`:** `sound.ts` (ambiente, chuva, trovão, zumbidos) e `blackout.ts` (o som do apagão, versão A).
   - **`src/locale/`:** `en.json` e `names.ts`.
 - **Ordem do quadro** (`renderWorld`):
-  1. Por coluna: céu (`skyColumn`) e Sarcófago, chão (com a curvatura e testando a profundidade), paredes (DDA na grade) e cerca.
-  2. Depois: fumaça, guindastes, objetos e `finish` (fundo sólido, névoa do dia, luar, glifos de bloco).
+  1. Por coluna: dentro de um prédio, primeiro o andar (`interiorColumn`), que ocupa as células e a profundidade e deixa livres só as janelas; depois céu (`skyColumn`, que pula células ocupadas) e Sarcófago, chão (com a curvatura e testando a profundidade), paredes (DDA na grade; telhados quando o olho está acima deles) e cerca.
+  2. Depois: fumaça, guindastes, objetos, `glassPass` (o vidro das janelas por cima da cidade: escurece, reflete a lâmpada, gotas de chuva) e `finish` (fundo sólido, névoa do dia, luar, glifos de bloco).
   3. Por fim: chuva e neve, que vêm depois do `finish` para manter o fundo do que está atrás.
 - **Flags para religar depois:** `SEAM_LIGHTS_CLOUDS` (`sky.ts`), as brasas iluminando as nuvens, para religar com a câmera 3D.
 - **Bugs registrados para depois:** veja "Bugs conhecidos".
@@ -373,6 +375,37 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Referências** (`referencias/`): 02, 14, 15, 16, 18, 19.
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
+
+- **Etapa 6: decisões e grupos (2026-09-30).** O usuário decidiu no início:
+  - **Interiores no mesmo espaço da cidade**, sem carregamento: entrar é atravessar a porta. O custo foi medido (veja abaixo) e ficou mais barato que a rua.
+  - **Câmera 3D depois:** fica o raycaster por coluna, com o olho na altura do andar e os telhados desenhados. A câmera 3D entra mais tarde, como subetapa própria (talvez na 10).
+  - **Começar por residencial e escritório** (estilos `office`, `glass`, `residential`, `brick`). Histórico, galpão, cilindros e marcos ficam sólidos por enquanto.
+  - **Grupos planejados:**
+    - **A (6.1–6.3):** planta, porta, entrar, render de dentro, telhados e vista do alto, som abafado (feito).
+    - **B:** escadas em que se sobe de verdade e elevadores (alguns de vidro), sem fade.
+    - **C:** de fora, os cômodos vistos pelas janelas (batendo com a luz de dentro) e as janelas iluminando a fachada.
+    - **D:** lojas e vitrines abertas, móveis, escadas de incêndio, os outros tipos de prédio.
+- **6.1–6.2, plantas e render de dentro (2026-09-30):**
+  - **Simulação** (`sim/interior.ts`):
+    - Cada andar é uma grade de células de 0,4 m (`CELL`) com o índice do cômodo; a parede é a divisa entre cômodos diferentes; a porta é o bit `DOOR` nas células dos dois lados. As paredes ficam em múltiplos de `BAY` (1,6 m, agora exportado de `city.ts`), na mesma grade das janelas da fachada.
+    - `Building.tier` (novo): 1 é o volume térreo do lote (o que tem porta e andares), 2+ são os recuos da torre, 0 são peças de telhado e de marcos. `tiersOf` acha os recuos, e `storeyBox` diz qual caixa cada andar ocupa.
+    - **Moldura do lote** (`frameOf`): eixo longo, corredor central de 1,6 m (ou junto a uma parede, se o prédio é estreito; nenhum abaixo de 7 m) e o núcleo (escada de 2 vãos e elevador de 1 vão se o prédio é de escritório ou tem mais de 5 andares), igual em todos os andares e recuos, para a escada alinhar. O núcleo fica do lado oposto à porta; atrás de um núcleo raso entra um cômodo da unidade vizinha.
+    - **Porta de rua** (`doorOf`): um vão na face mais perto da rua que tenha chão livre na frente; no meio da face, ou perto de uma ponta quando o térreo é loja. Dá para o saguão, que liga ao corredor.
+    - **Unidades:** apartamentos de 4–7 vãos (hall de entrada, banheiro, cozinha, sala, quarto, com portas entre eles) ou escritórios (planta aberta ou salas de 2–3 vãos). No térreo de prédio com loja, as lojas são cômodos fechados por enquanto. Os andares de uma caixa acima do térreo são iguais (cache por caixa).
+    - **Colisão** (`blocked`, usada por `stepWorld`): o passo do centro do jogador até cada sonda é verificado em pulos de 0,1 m; a parede externa só se atravessa pela porta e no térreo. `Player.floor` e `Player.inside` são novos.
+  - **Render** (`render/interior.ts`):
+    - Por coluna, o DDA anda nas células da planta: troca de cômodo sem porta é parede inteira; com porta, só o lintel (acima de 2,2 m) e segue. A parede externa fecha a coluna, com as janelas do mesmo jeito da fachada (`windowHole`, por estilo), a porta de rua aberta e **paredes cegas** onde um prédio vizinho encosta (até a altura dele).
+    - Piso, teto e paredes por tipo de cômodo: tábuas, ladrilhos, mármore no saguão, carpete e forro com luminárias no escritório, papel de parede por apartamento, lambri no corredor, rodapé e peitoril.
+    - **Luz:** lâmpadas a cada ~4 m (`lampD2`). As partes comuns ficam sempre acesas, os cômodos acendem pelo `lit` do prédio, e **o cômodo onde o jogador está acende**, como se ele achasse o interruptor. Tudo segue a energia do prédio (o blackout apaga). Ambiente fraco de noite, forte de dia.
+    - **Vidro:** a cidade aparece pelas janelas, um pouco escurecida, com o reflexo da lâmpada e, na chuva, gotas escorrendo e paradas no vidro. A chuva que cai não é desenhada dentro do cômodo (`nearT` em `drawFall`).
+    - Na fachada, a porta de rua aparece com batente, duas folhas de vidro e bandeira, acesa pelo saguão.
+  - **Custo** (`bench`, 256×80): dentro de um apartamento 4–7 ms, no corredor 4 ms, na rua 7–8 ms. O andar é desenhado antes da cidade, e a cidade só preenche as janelas.
+- **6.3, vista do alto e som (2026-09-30):**
+  - **Telhados** no raycaster (`roofRows`): quando o olho está acima de um prédio, o telhado vai da borda da frente até a de trás, ou até uma caixa mais alta em cima dele (recuo, caixa-d'água). O teste que pula quarteirões usa a borda de trás quando o olho está acima.
+  - **PageUp/PageDown** (debug, `debugFloor`) trocam de andar dentro do prédio. A faixa de chuva acompanha a altura do olho.
+  - **Som:** tudo o que é de fora passa por um passa-baixa (480 Hz) e cai pela metade dentro do prédio; a chuva vira um tamborilar no vidro, e os escritórios têm o zumbido das lâmpadas fluorescentes (segue a energia).
+  - **Custo:** do 40º andar, ~9 ms no `bench`.
+  - **Limitações conhecidas:** atrás de uma caixa-d'água ou de um recuo, o resto do telhado não é desenhado (aparece o chão); olhando muito para baixo, as fachadas viram faixas verticais (y-shearing, até a câmera 3D); prédios cortados podem ter cômodos recortados ou sem porta.
 
 - **Retorno do usuário sobre 4a–4c (2026-09-30):** boas impressões. Escolheu a paleta de sódio e pediu o fundo sólido mais escuro. Não viu pop-in; os objetos distantes deformam, o que é esperado. Pediu lixo espalhado (copos, papéis), e não só montes de entulho, e o entulho longe da calçada. Viu o FPS oscilar (80–180, com uma queda a 40).
   - **Causa da oscilação:** os objetos da 4b chegavam a 26 ms por quadro. Um objeto muito perto tinha a tela inteira como área de busca, e cada célula testava todas as peças. Corrigido com um recorte por coluna em `drawObjects`: o raio da coluna contra o círculo que envolve o objeto dá o trecho de profundidade [ta, tb] e, dali, só as linhas possíveis; células já cobertas mais perto que `ta` são puladas. O quadro inteiro caiu para 2–7 ms, e os objetos para ≤ 3 ms. O recálculo do mapa de luz custa ~2 ms.
@@ -657,7 +690,7 @@ O módulo de áudio já existe (`src/audio/`, Web Audio, tudo sintetizado, sem a
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
 - **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
-- **Etapa 6 (perguntar no início):** interiores no espaço físico ou com carregamento (medir primeiro); câmera 3D agora ou depois; por quais prédios começar (todos são pedidos, mas pode haver uma primeira versão por tipo: loja, residencial, escritório).
+- **Etapa 6 (respondido em 2026-09-30):** interiores no espaço físico; câmera 3D depois; começar por residencial e escritório.
 - **Etapa 8:** forma do painel lateral diegético. Em 2026-09-30, o usuário disse que o celular serve, mas quer confirmar de novo quando a etapa chegar, porque pode ter outras ideias até lá.
 - **Etapa 10:** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
 
