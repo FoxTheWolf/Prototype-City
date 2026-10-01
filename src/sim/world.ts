@@ -3,7 +3,8 @@ import { FLOOR_H, generateCity, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, stairStep } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
-import { spawnCars, stepCars, type Car } from './traffic';
+import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
+import { queues, spawnCars, stepCars, type Car } from './traffic';
 import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
 /** Simulation rate. The sim always advances in steps of exactly this size. */
@@ -45,6 +46,8 @@ export interface World {
   ptime: number;
   weather: Weather;
   power: PowerGrid;
+  /** What has happened (see events.ts). */
+  events: EventLog;
 }
 
 /** Default city side in metres. */
@@ -62,7 +65,7 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
-  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city) };
+  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city), events: newEventLog() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -74,10 +77,15 @@ export function skipHours(w: World, h: number) {
 /** Debug: switch the substation nearest the player, or (all) every one: all off if any is on. */
 export function togglePower(w: World, all: boolean) {
   const P = w.power, p = w.player;
-  if (all) { const off = P.subs.some((s) => s.on); P.subs.forEach((_, k) => switchSub(P, k, !off, w.tick, p.x, p.y)); return; }
+  const flip = (k: number, on: boolean) => {
+    if (P.subs[k].on === on) return;
+    switchSub(P, k, on, w.tick, p.x, p.y);
+    logEvent(w.events, on ? 'restored' : 'blackout', w.tick, w.time, P.subs[k].x, P.subs[k].y, 0.8, [k]);
+  };
+  if (all) { const off = P.subs.some((s) => s.on); P.subs.forEach((_, k) => flip(k, !off)); return; }
   let k = 0;
   P.subs.forEach((s, n) => { if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(P.subs[k].x - p.x, P.subs[k].y - p.y)) k = n; });
-  switchSub(P, k, !P.subs[k].on, w.tick, p.x, p.y);
+  flip(k, !P.subs[k].on);
 }
 
 /** Debug: go up or down a storey inside a building (until it has stairs and lifts), where that floor has room to stand. */
@@ -129,6 +137,9 @@ export function cycleWeather(w: World) {
   stepWeather(w.weather, w.seed, w.time, 0);
 }
 
+/** Cars waiting at one approach to call it a jam, and ticks before the same jam is news again. */
+const JAM_CARS = 7, JAM_AGAIN = 60 * 300;
+
 export function stepWorld(w: World, input: PlayerInput) {
   const p = w.player;
   p.px = p.x; p.py = p.y;
@@ -165,6 +176,13 @@ export function stepWorld(w: World, input: PlayerInput) {
   }
 
   stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y);
+  // every 10 s, a queue longer than a red light makes is a jam (logged again only after 5 min)
+  if (w.tick % 600 === 599) queues(w.city, w.cars, (i, j, hd, n) => {
+    if (n < JAM_CARS) return;
+    const refs = [i, j, hd], last = lastEvent(w.events, 'jam', refs);
+    if (last && w.tick - last.tick < JAM_AGAIN) return;
+    logEvent(w.events, 'jam', w.tick, w.time, (w.city.xb[2 * i] + w.city.xb[2 * i + 1]) / 2, (w.city.yb[2 * j] + w.city.yb[2 * j + 1]) / 2, Math.min(1, n / 15), refs);
+  });
   w.ptime = w.time;
   w.time += TICK * TIME_SCALE;
   stepWeather(w.weather, w.seed, w.time, TICK * TIME_SCALE);

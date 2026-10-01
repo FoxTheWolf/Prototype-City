@@ -55,6 +55,11 @@
     "months": ["JAN", "FEB", "MAR", "APR", "MAY", "JUNE", "JULY", "AUG", "SEPT", "OCT", "NOV", "DEC"],
     "blackout": ["POWER FAILURE IN {district} - CREWS ON THE SCENE", "BLACKOUT HITS {district}, UTILITY SILENT ON CAUSE", "{district} IN THE DARK AFTER SUBSTATION FAILS"],
     "restored": ["POWER RESTORED IN {district}", "LIGHTS BACK ON IN {district}"],
+    "jam": [
+      "TRAFFIC BACKED UP ON {road} AT {cross}",
+      "GRIDLOCK AT {road} AND {cross}",
+      "DELAYS ON {road} NEAR {cross} - AVOID THE AREA"
+    ],
     "weather": "{city} WEATHER: {now}, {temp}F - TONIGHT: {later}",
     "sky": { "clear": "CLEAR", "cloudy": "CLOUDY", "drizzle": "DRIZZLE", "rain": "RAIN", "storm": "THUNDERSTORMS", "snow": "SNOW" },
     "flavor": {

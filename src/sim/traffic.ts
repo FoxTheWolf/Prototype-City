@@ -370,3 +370,18 @@ function oncoming(city: City, c: Car): boolean {
   for (const [, b] of lanes) for (const q of b) if (q.c.turn && q.c.ni === c.ni && q.c.nj === c.nj && turnHeadingIn(q.c) === opp && turnOf(opp, headingOfExit(q.c)) >= 0) return true;
   return false;
 }
+
+/**
+ * Queues of stopped cars, per approach: intersection (i, j) and the heading cars come in by, with
+ * how many wait within 80 m of it. For the event queue to tell a jam from a red light.
+ */
+export function queues(city: City, cars: Car[], cb: (i: number, j: number, hd: number, n: number) => void) {
+  const count = new Map<number, number>();
+  for (const c of cars) {
+    if (c.turn || c.v > 1) continue;
+    if (entryS(city, c.hd, c.ni, c.nj) - along(c.hd, c.x, c.y) > 80) continue;
+    const k = iKey(c.ni, c.nj) * 4 + c.hd;
+    count.set(k, (count.get(k) ?? 0) + 1);
+  }
+  for (const [k, n] of count) cb(Math.floor(k / 4 / 1024), (k >> 2) % 1024, k & 3, n);
+}
