@@ -308,11 +308,16 @@ export interface Escape {
   top: number;
 }
 const escCache = new Map<number, Escape[]>();
+/** Lots whose escapes were worked out before their ground floor's plan (its shop doors) existed. */
+const escEarly = new Set<number>();
 export function escapesOf(city: City, k: number): Escape[] {
   let E = escCache.get(k);
-  if (E) return E;
+  if (E && !(escEarly.has(k) && cachedPlan(city, k, 0))) return E;
+  escEarly.delete(k);
   E = [];
   const B = city.buildings[k];
+  // never in front of a street door (the shops' are known once the ground floor's plan is made)
+  const plan = cachedPlan(city, k, 0), doors = B.tier === 1 && B.style === 'brick' ? exitsOf(city, k, true) : [];
   if (B.tier === 1 && B.style === 'brick' && B.feat < 0.45 && B.h > 12) {
     for (let face = 0; face < 4; face++) {
       const sp = faceSpan(B, face), lo = sp[0], hi = sp[1];
@@ -321,11 +326,14 @@ export function escapesOf(city: City, k: number): Escape[] {
         if (a0 < lo + 0.35 || a0 + 2 * BAY > hi - 0.35) continue;
         const [x, y, nx, ny] = facePoint(B, face, a0), [mx, my] = facePoint(B, face, a0 + BAY);
         if (isSolid(city, mx + nx * 0.6, my + ny * 0.6) || (B.cut && B.cut.nx * mx + B.cut.ny * my > B.cut.c - 0.1)) continue;
+        if (doors.some((D) => D.face === face && D.a1 > a0 - 0.3 && D.a0 < a0 + 2 * BAY + 0.3)) continue;
         E.push({ k, face, a0, ox: x, oy: y, nx, ny, ux: face < 2 ? 0 : 1, uy: face < 2 ? 1 : 0, top: floorsOf(B) - 1 });
       }
     }
   }
+  // worked out again once the shops' doors are known
   escCache.set(k, E);
+  if (!plan && B.tier === 1 && B.style === 'brick') escEarly.add(k);
   return E;
 }
 

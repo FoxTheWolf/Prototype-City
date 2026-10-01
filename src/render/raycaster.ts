@@ -652,12 +652,14 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const farWall = S === 'brick' ? G.eq : S === 'warehouse' ? G.bar : G.col;
   const farK = S === 'glass' ? 1.25 : 1;
   // brick walk-ups: an iron fire escape two bays wide, repeating along the facade
-  let esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner;
+  // (only where there is one: not over a street door, nor where something stands in front)
+  const hasEsc = (a: number) => S === 'brick' && B.feat < 0.45 && B.h > 12 && B.tier === 1 && escapesOf(frameCity, id).some((e) => e.face === face && a >= e.a0 && a < e.a0 + 2 * BAY);
+  let esc = hasEsc(along) && !corner;
   let escU = ((wi % 7) - 2 + fw) / 2;
   /** Move the hit along the face (onto a bay or pier standing out of it), with what follows from it. */
   const setAlong = (a: number) => {
     along = a; bay = a / BAY; wi = Math.floor(bay); fw = bay - wi; corner = a - f0 < 0.35 || f1 - a < 0.35;
-    esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner; escU = ((wi % 7) - 2 + fw) / 2;
+    esc = hasEsc(a) && !corner; escU = ((wi % 7) - 2 + fw) / 2;
   };
   const balcony = S === 'residential' && B.feat < 0.5, balK = Math.floor(((B.feat * 131) % 1) * 4);
   // balconies: railings on every floor, solid parapets on every other, glass ones stacked in pairs, or one long slab
@@ -1122,7 +1124,13 @@ function lightAt(x: number, y: number, z: number) {
   LT[0] = LT[1] = LT[2] = 0;
   if (zk > 0) light.add(x, y, zk, LT);
   dyn.sample(x, y, z, LT);
+  // lights add up (a car's headlights under a street lamp), but softly past a knee, keeping the
+  // hue: the sum never burns out to flat white
+  const m = Math.max(LT[0], LT[1], LT[2]);
+  if (m > LIGHT_KNEE) { const k = (LIGHT_KNEE + (m - LIGHT_KNEE) * 0.3) / m; LT[0] *= k; LT[1] *= k; LT[2] *= k; }
 }
+/** Where the summed light starts to be compressed. */
+const LIGHT_KNEE = 150;
 
 const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
 

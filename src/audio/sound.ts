@@ -597,11 +597,16 @@ export class Sound {
     const rx = -Math.sin(yaw), ry = Math.cos(yaw);
     const pan = (px: number, py: number) => { const d = Math.hypot(px - x, py - y) || 1; return ((px - x) * rx + (py - y) * ry) / d; };
 
-    // the grid: a substation switching within earshot is heard, late by the speed of sound
+    // the grid: a substation switching within earshot is heard, late by the speed of sound; several
+    // thrown together (the same tick, from the same spot) are one sound, not a pile of them
+    const heard = new Set<string>();
     grid.subs.forEach((s, k) => {
       if (this.seen[k] === undefined) { this.seen[k] = s.changed; return; }
       if (s.changed === this.seen[k]) return;
       this.seen[k] = s.changed;
+      const key = `${s.changed}|${s.ox}|${s.oy}|${s.on}`;
+      if (heard.has(key)) return;
+      heard.add(key);
       // heard from where it was thrown (for now, where the player is)
       const d = Math.hypot(s.ox - x, s.oy - y);
       if (d > 1400) return;

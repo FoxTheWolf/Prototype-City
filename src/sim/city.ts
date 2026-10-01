@@ -647,7 +647,8 @@ export function generateCity(seed: number, size: number): City {
       // one lamp type per side of the block, the way a street gets relamped
       let roll = hash3(seed ^ 0x1a3b5c, i * 4 + e, j), lampType: LampType = 'hps';
       for (const [t, w] of LAMPS[districts[district].type]) { if ((roll -= w) < 0) { lampType = t; break; } }
-      for (let k = 0; k < n; k++) block.props.push({ kind: 'lamp', x: ax + ((bx - ax) * k) / n, y: ay + ((by - ay) * k) / n, w: 0.3, z1: 6.5, seed: 0, a, lampType });
+      // in the middle of each stretch: the corners are the traffic lights' and the stop signs'
+      for (let k = 0; k < n; k++) block.props.push({ kind: 'lamp', x: ax + ((bx - ax) * (k + 0.5)) / n, y: ay + ((by - ay) * (k + 0.5)) / n, w: 0.3, z1: 6.5, seed: 0, a, lampType });
     }
 
     const ix0 = x0 + SIDEWALK, iy0 = y0 + SIDEWALK, ix1 = x1 - SIDEWALK, iy1 = y1 - SIDEWALK;
