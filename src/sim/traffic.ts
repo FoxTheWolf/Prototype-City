@@ -12,7 +12,19 @@ import { subAt, type PowerGrid } from './power';
  * the same state. Cars also run both ways along the diagonal avenue, edge to edge; where it
  * crosses a grid road there are lights too (see Zone).
  */
+/** What a vehicle is: its size and how it drives come from VEHICLES. */
+export type VehicleKind = 'sedan' | 'taxi' | 'van' | 'truck' | 'bus' | 'police';
+
 export interface Car {
+  kind: VehicleKind;
+  /** Length (m) and maximum acceleration (m/s²). */
+  len: number;
+  acc: number;
+  /** A police car with its beacon on. */
+  beacon: boolean;
+  /** A bus: the along-coordinate of the last stop it served, and the tick its doors close at a stop (0 when not at one). */
+  served: number;
+  dwell: number;
   x: number;
   y: number;
   /** Position at the previous tick, for render interpolation. */
@@ -48,11 +60,29 @@ export interface Car {
 /** E, S, W, N as (dx, dy). */
 export const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]] as const;
 const CAR_COLS: RGB[] = [[180, 40, 40], [40, 90, 170], [200, 200, 210], [40, 40, 48], [60, 140, 90], [150, 90, 40], [120, 60, 150]];
+/** A typical car's length, for room checks. */
 const CAR_L = 4.5;
+/** Per kind: share of the traffic, length, acceleration, top speed range (m/s), colors. */
+const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0: number; v1: number; cols: RGB[] }[] = [
+  { kind: 'taxi', share: 0.18, len: 4.6, acc: 2.2, v0: 9, v1: 15, cols: [[255, 200, 40]] },
+  { kind: 'van', share: 0.1, len: 5.2, acc: 1.6, v0: 7, v1: 12, cols: [[210, 210, 215], [60, 70, 90], [150, 40, 40], [200, 190, 160]] },
+  { kind: 'truck', share: 0.06, len: 8.5, acc: 1.1, v0: 6, v1: 10, cols: [[230, 230, 230], [190, 60, 40], [50, 80, 150], [210, 170, 50]] },
+  { kind: 'bus', share: 0.04, len: 12, acc: 1, v0: 6, v1: 9, cols: [[40, 110, 170], [200, 200, 205]] },
+  { kind: 'police', share: 0.04, len: 4.8, acc: 2.4, v0: 9, v1: 15, cols: [[30, 32, 40]] },
+  { kind: 'sedan', share: 1, len: 4.5, acc: 2, v0: 8, v1: 14, cols: CAR_COLS },
+];
+/** A new vehicle's kind and specs, from the traffic stream. */
+function newVehicle(rng: Rng) {
+  let r = rng();
+  const V = VEHICLES.find((q) => (r -= q.share) < 0) ?? VEHICLES[VEHICLES.length - 1];
+  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0 };
+}
+/** Seconds a bus waits at a stop. */
+const BUS_DWELL = 10;
 /** The stop line, this far before the intersection (behind the crosswalk). */
 export const STOP_BACK = 5;
-/** Driver model: max acceleration, comfortable braking, jam gap, time headway. */
-const ACC = 2, BRAKE = 3, GAP0 = 2, HEADWAY = 1.2;
+/** Driver model: comfortable braking, jam gap, time headway (the acceleration is per vehicle). */
+const BRAKE = 3, GAP0 = 2, HEADWAY = 1.2;
 /** Speed through a turn. */
 const TURN_V = 5.5;
 
@@ -139,8 +169,9 @@ const lanesFor = (city: City, hd: number, road: number) => Math.max(1, lanesOf(h
 /** A turn: 0 straight, 1 right, -1 left (right-hand traffic: E then S is a right turn, y grows south). */
 const turnOf = (from: number, to: number) => (to === from ? 0 : to === ((from + 1) & 3) ? 1 : -1);
 
-/** Pick where a car heading hd leaves intersection (i, j): straight twice as likely, never back or off the map. */
-function choosePlan(city: City, rng: Rng, hd: number, i: number, j: number): number {
+/** Pick where a car heading hd leaves intersection (i, j): straight twice as likely, never back or off the map; a bus goes straight while it can. */
+function choosePlan(city: City, rng: Rng, hd: number, i: number, j: number, bus = false): number {
+  if (bus && i + DIRS[hd][0] >= 0 && j + DIRS[hd][1] >= 0 && i + DIRS[hd][0] < NXof(city) && j + DIRS[hd][1] < NYof(city)) return hd;
   const opts: number[] = [];
   for (let d = 0; d < 4; d++) {
     if (d === ((hd + 2) & 3)) continue;
@@ -286,18 +317,17 @@ export function spawnCars(city: City, rng: Rng, count: number): Car[] {
     const seg = (rng() * (n - 1)) | 0, next = dx + dy > 0 ? seg + 1 : seg;
     const ni = hd & 1 ? road : next, nj = hd & 1 ? next : road;
     const pi = ni - dx, pj = nj - dy;
-    const a0 = exitS(city, hd, pi, pj), a1 = entryS(city, hd, ni, nj) - STOP_BACK - CAR_L;
+    const V = newVehicle(rng), bus = V.kind === 'bus';
+    const a0 = exitS(city, hd, pi, pj) + V.len / 2, a1 = entryS(city, hd, ni, nj) - STOP_BACK - V.len;
     if (a1 - a0 < 6) continue;
     const s = a0 + 3 + rng() * (a1 - a0 - 3);
-    const plan = choosePlan(city, rng, hd, ni, nj), lane = laneFor(rng, lanesFor(city, hd, road), turnOf(hd, plan));
+    const plan = choosePlan(city, rng, hd, ni, nj, bus), lanes = lanesFor(city, hd, road), lane = bus ? lanes - 1 : laneFor(rng, lanes, turnOf(hd, plan));
     const [ox, oy] = laneOff(hd, lane);
     const x = hd & 1 ? roadCenter(city.xb, road) + ox : s * dx + ox;
     const y = hd & 1 ? s * dy + oy : roadCenter(city.yb, road) + oy;
     // not on top of another car
-    if (cars.some((c) => Math.abs(c.x - x) < 8 && Math.abs(c.y - y) < 2)) continue;
-    const taxi = rng() < 0.22;
-    const col: RGB = taxi ? [255, 200, 40] : CAR_COLS[(rng() * CAR_COLS.length) | 0];
-    cars.push({ x, y, px: x, py: y, dx, dy, v: 0, max: 8 + rng() * 6, taxi, col, hd, road, lane, ni, nj, plan, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg: 0, u: 0 });
+    if (cars.some((c) => !c.dg && Math.abs(along(hd, c.x, c.y) - s) < (c.len + V.len) / 2 + 2 && Math.abs(c.hd & 1 ? c.x - x : c.y - y) < 2)) continue;
+    cars.push({ ...V, x, y, px: x, py: y, dx, dy, v: 0, hd, road, lane, ni, nj, plan, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg: 0, u: 0 });
     k++;
   }
   // and some on the diagonal, both ways, between its crossings
@@ -305,10 +335,10 @@ export function spawnCars(city: City, rng: Rng, count: number): Car[] {
   for (let k = 0, tries = 0; k < Math.round(count * 0.12) && tries < count * 4; tries++) {
     const dg = rng() < 0.5 ? 1 : -1, u = D.u0 + 10 + rng() * (D.u1 - D.u0 - 20), lane = (rng() * D.lanes) | 0;
     if (D.zones.some((z) => u > z.u0 - 6 && u < z.u1 + 6)) continue;
-    if (cars.some((c) => c.dg === dg && c.lane === lane && Math.abs(c.u - u) < 8)) continue;
+    const V = newVehicle(rng);
+    if (cars.some((c) => c.dg === dg && c.lane === lane && Math.abs(c.u - u) < (c.len + V.len) / 2 + 2)) continue;
     diagPoint(d, u, dg, LANE_W * (lane + 0.5), Q);
-    const taxi = rng() < 0.22, col: RGB = taxi ? [255, 200, 40] : CAR_COLS[(rng() * CAR_COLS.length) | 0];
-    cars.push({ x: Q[0], y: Q[1], px: Q[0], py: Q[1], dx: d.ex * dg, dy: d.ey * dg, v: 0, max: 9 + rng() * 6, taxi, col, hd: 0, road: 0, lane, ni: 0, nj: 0, plan: 0, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg, u });
+    cars.push({ ...V, x: Q[0], y: Q[1], px: Q[0], py: Q[1], dx: d.ex * dg, dy: d.ey * dg, v: 0, hd: 0, road: 0, lane, ni: 0, nj: 0, plan: 0, turn: false, t0x: 0, t0y: 0, tcx: 0, tcy: 0, t1x: 0, t1y: 0, tlen: 1, ts: 0, arrive: -1, gate: -1, dg, u });
     k++;
   }
   return cars;
@@ -345,7 +375,8 @@ const P = [0, 0, 0, 0];
 function startTurn(city: City, rng: Rng, c: Car) {
   const to = c.plan, [ex, ey] = DIRS[to];
   const road = roadOf(to, c.ni, c.nj), oi = c.ni + ex, oj = c.nj + ey;
-  let next = choosePlan(city, rng, to, oi, oj), lane = Math.min(laneFor(rng, lanesFor(city, to, road), turnOf(to, next)), lanesFor(city, to, road) - 1);
+  const bus = c.kind === 'bus', nl = lanesFor(city, to, road);
+  let next = choosePlan(city, rng, to, oi, oj, bus), lane = bus ? nl - 1 : Math.min(laneFor(rng, nl, turnOf(to, next)), nl - 1);
   if (!laneFree(city, to, road, lane, c.ni, c.nj)) {
     // the lane it wanted is backed up: take one with room, and go on straight from it if it can
     for (let l = 0; l < lanesFor(city, to, road); l++) if (laneFree(city, to, road, l, c.ni, c.nj)) { lane = l; break; }
@@ -427,12 +458,13 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       // the car ahead in the lane it is turning into: past this intersection, or crossing it
       // too (not those still waiting to come in from the far side)
       const b = bucket(to, c.road, c.lane), me = along(to, c.t1x, c.t1y) - (1 - c.ts) * c.tlen, out = along(to, c.t1x, c.t1y);
-      for (const q of b) if (q.c !== c && q.s > me && (q.c.turn ? q.c.ni === c.ni && q.c.nj === c.nj : q.s > out - 0.5)) { obstacle(q.s - me - CAR_L, q.c.v); break; }
+      for (const q of b) if (q.c !== c && q.s > me && (q.c.turn ? q.c.ni === c.ni && q.c.nj === c.nj : q.s > out - 0.5)) { obstacle(q.s - me - (q.c.len + c.len) / 2, q.c.v); break; }
     } else {
       const s = c.dg ? c.u * c.dg : along(c.hd, c.x, c.y), b = c.dg ? bucket(c.dg > 0 ? 4 : 5, 0, c.lane) : bucket(c.hd, c.road, c.lane);
       let lead: { c: Car; s: number } | null = null;
-      for (const q of b) if (q.c !== c && q.s > s) { lead = q; obstacle(q.s - s - CAR_L, q.c.v); break; }
-      const front = s + CAR_L / 2;
+      for (const q of b) if (q.c !== c && q.s > s) { lead = q; obstacle(q.s - s - (q.c.len + c.len) / 2, q.c.v); break; }
+      const front = s + c.len / 2;
+      if (c.kind === 'bus' && !c.dg) busStop(city, c, front, tick, obstacle);
       // slow down ahead of a turn
       if (!c.dg && c.plan !== c.hd) v0 = Math.min(v0, Math.sqrt(TURN_V * TURN_V + 2 * 1.5 * Math.max(0, entryS(city, c.hd, c.ni, c.nj) - front)));
       // the next stop line: a red light, a stop sign or a full lane beyond is an obstacle there (the jam gap behind it)
@@ -447,11 +479,11 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
 
     // the player on the road: brake and wait (no running anyone over yet)
     const rx = playerX - c.x, ry = playerY - c.y, ahead = rx * c.dx + ry * c.dy, lat = Math.abs(rx * c.dy - ry * c.dx);
-    if (ahead > 0 && ahead < 14 && lat < 1.6) obstacle(ahead - CAR_L / 2 - 0.5, 0);
+    if (ahead > 0 && ahead < 14 + c.len / 2 && lat < 1.6) obstacle(ahead - c.len / 2 - 0.5, 0);
 
     // intelligent driver model
-    const sStar = GAP0 + Math.max(0, c.v * HEADWAY + (c.v * (c.v - vl)) / (2 * Math.sqrt(ACC * BRAKE)));
-    let acc = ACC * (1 - (c.v / Math.max(0.1, v0)) ** 4) - ACC * (sStar / Math.max(0.1, gap)) ** 2;
+    const sStar = GAP0 + Math.max(0, c.v * HEADWAY + (c.v * (c.v - vl)) / (2 * Math.sqrt(c.acc * BRAKE)));
+    let acc = c.acc * (1 - (c.v / Math.max(0.1, v0)) ** 4) - c.acc * (sStar / Math.max(0.1, gap)) ** 2;
     acc = Math.max(-9, acc);
     c.v = Math.max(0, c.v + acc * dt);
     if (gap < 0.3) c.v = Math.min(c.v, 0.5); // never into what is ahead
@@ -516,13 +548,52 @@ function gateOf(city: City, power: PowerGrid, c: Car, front: number, sec: number
   }
 }
 
+/**
+ * Bus stops: the shelters on the sidewalks, by the lane they serve (heading and road) as sorted
+ * along-coordinates. A shelter on a block's north edge serves the eastbound side of the street
+ * above it (its right-hand side), and so on round the block.
+ */
+const busStops = new WeakMap<City, Map<number, number[]>>();
+function stopsOf(city: City) {
+  let M = busStops.get(city);
+  if (M) return M;
+  M = new Map();
+  for (let n = 0; n < city.blocks.length; n++) {
+    const blk = city.blocks[n], i = n % city.nbx, j = Math.floor(n / city.nbx);
+    for (const p of blk.props) {
+      if (p.kind !== 'shelter') continue;
+      const e = [p.y - blk.y0, blk.y1 - p.y, p.x - blk.x0, blk.x1 - p.x], m = Math.min(...e), side = e.indexOf(m);
+      // north edge: street j, eastbound; south: street j + 1, westbound; west: avenue i, northbound; east: avenue i + 1, southbound
+      const hd = [0, 2, 3, 1][side], road = [j, j + 1, i, i + 1][side], k = laneKey(hd, road, 0);
+      M.set(k, [...(M.get(k) ?? []), along(hd, p.x, p.y)].sort((a, b) => a - b));
+    }
+  }
+  busStops.set(city, M);
+  return M;
+}
+
+/** A bus pulls up at the next stop on its side of the street, opens its doors a while, and goes on. */
+function busStop(city: City, c: Car, front: number, tick: number, obstacle: (g: number, v: number) => void) {
+  const list = stopsOf(city).get(laneKey(c.hd, c.road, 0));
+  if (!list) return;
+  for (const st of list) {
+    const at = st + c.len / 2 - 2; // the front door just past the shelter
+    if (at <= c.served || at < front - 1.5) continue;
+    if (at - front > 45) break;
+    if (c.dwell && tick >= c.dwell) { c.served = at; c.dwell = 0; return; }
+    if (!c.dwell && Math.abs(at - front) < 1.5 && c.v < 0.3) c.dwell = tick + BUS_DWELL * 60;
+    obstacle(Math.max(0, at - front) + GAP0, 0);
+    return;
+  }
+}
+
 /** Whether a car dStop metres from its stop line (G) may go on. */
 function mayGo(city: City, c: Car, dStop: number, tick: number, lead: { c: Car; s: number } | null): boolean {
   const sg = G.sig;
   if (sg === Sig.Red) return false;
   if (sg === Sig.Yellow && dStop > (c.v * c.v) / (2 * 3.5) + 1) return false; // can stop in time: stop
   // not into a full lane on the far side (no blocking the box)
-  if (G.inter ? !exitClear(city, c) : lead && lead.c.v < 2 && lead.s - G.end < CAR_L + 2) return false;
+  if (G.inter ? !exitClear(city, c) : lead && lead.c.v < 2 && lead.s - lead.c.len / 2 - G.end < c.len + 2) return false;
   if (sg === Sig.Dark || sg === Sig.Stop) {
     // an all-way stop: halt, then go in order of arrival, one at a time
     if (c.arrive < 0 || c.gate !== G.key || tick - c.arrive < 50) return false;
@@ -555,7 +626,7 @@ function oncoming(city: City, c: Car): boolean {
     const b = lanes.get(laneKey(opp, road, l));
     if (b) for (const q of b) {
       if (q.c.turn || turnOf(opp, q.c.plan) < 0) continue;
-      const d = ent - (q.s + CAR_L / 2);
+      const d = ent - (q.s + q.c.len / 2);
       if (d > -1 && d < 32 && (q.c.v > 1 || d < 6)) return true;
     }
   }

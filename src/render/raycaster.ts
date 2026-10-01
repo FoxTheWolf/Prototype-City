@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, boardModel, carFarModel, carModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, boardModel, carFarModel, carModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -1181,8 +1181,11 @@ function gatherLights(world: World, v: View, sec: number) {
   for (const c of world.cars) {
     const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
     if (Math.abs(x - v.x) > CAR_LIGHT_FAR || Math.abs(y - v.y) > CAR_LIGHT_FAR) continue;
-    dyn.cone(x + c.dx * 2.3, y + c.dy * 2.3, c.dx, c.dy, 0.87, 24, 1, 4, 150, 140, 115);
-    dyn.point(x - c.dx * 2.4, y - c.dy * 2.4, 4, 1, 2, 120, 12, 8);
+    const hl = c.len / 2;
+    dyn.cone(x + c.dx * hl, y + c.dy * hl, c.dx, c.dy, 0.87, 24, 1, 4, 150, 140, 115);
+    dyn.point(x - c.dx * (hl + 0.1), y - c.dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
+    // a police beacon throws red and blue around it in turns
+    if (c.beacon) { const red = (Math.floor(sec * 3) & 1) === 0; dyn.point(x, y, 14, 2, 8, red ? 140 : 20, red ? 15 : 30, red ? 15 : 160); }
   }
   // each lit traffic light throws its color on the street in front of it (and on wet asphalt, far)
   forSignals(world, v, SIGNAL_LIGHT_FAR, (S) => {
@@ -1404,8 +1407,9 @@ function collectObjects(world: World, v: View): Obj[] {
     // interpolate between ticks so motion is smooth at any frame rate
     const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
     if (Math.abs(x - v.x) > SPRITE_FAR || Math.abs(y - v.y) > SPRITE_FAR) continue;
-    const near = Math.abs(x - v.x) < CAR_NEAR && Math.abs(y - v.y) < CAR_NEAR;
-    out.push({ x, y, c: c.dx, s: c.dy, parts: near ? carModel(c.col, c.taxi) : carFarModel(c.col, c.taxi), r: 2.5, h: 1.8, seed: 0 });
+    const near = Math.abs(x - v.x) < CAR_NEAR && Math.abs(y - v.y) < CAR_NEAR, [hl, h] = VEHICLE_SIZE[c.kind];
+    const parts = c.kind === 'sedan' || c.kind === 'taxi' ? (near ? carModel(c.col, c.taxi) : carFarModel(c.col, c.taxi)) : vehicleModel(c.kind, c.col, c.beacon ? 1 + (Math.floor(frameSec * 3) & 1) : 0);
+    out.push({ x, y, c: c.dx, s: c.dy, parts, r: hl + 0.3, h: h + 0.1, seed: 0 });
   }
   return out;
 }

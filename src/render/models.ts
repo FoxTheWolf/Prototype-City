@@ -31,6 +31,64 @@ export function carModel(col: RGB, taxi: boolean): Part[] {
   return m;
 }
 
+const HEAD: RGB = [255, 245, 200], TAIL: RGB = [255, 40, 40];
+/** Wheels at the given x positions, and head and tail lamps at the ends (half length hl, half width hw). */
+function running(m: Part[], xs: number[], hl: number, hw: number, r = 0.33) {
+  for (const wx of xs) for (const wy of [-1, 1]) m.push(part(Box, wx - r, wy * hw - 0.12, 0, wx + r, wy * hw + 0.12, r * 1.9, TIRE, Solid, 'o'));
+  for (const wy of [-1, 1]) {
+    const a = wy * (hw - 0.45), b = wy * (hw - 0.1);
+    m.push(part(Box, hl - 0.01, Math.min(a, b), 0.62, hl + 0.05, Math.max(a, b), 0.85, HEAD, Glow, '@'));
+    m.push(part(Box, -hl - 0.05, Math.min(a, b), 0.62, -hl + 0.01, Math.max(a, b), 0.85, TAIL, Glow, '@'));
+  }
+}
+
+const vehicles = new Map<string, Part[]>();
+/**
+ * The other vehicles, facing +x and centered: a delivery van, a box truck, a city bus with its lit
+ * windows and destination sign, and a police car whose beacon flashes red and blue (`flash`: 0 off,
+ * 1 red side lit, 2 blue side lit).
+ */
+export function vehicleModel(kind: string, col: RGB, flash = 0): Part[] {
+  const key = kind + col.join() + flash;
+  let m = vehicles.get(key);
+  if (m) return m;
+  switch (kind) {
+    case 'van': m = [
+      part(Box, -2.6, -1.0, 0.35, 2.6, 1.0, 2.3, col, Solid, '#', '=', '#'),
+      part(Box, 1.95, -0.96, 1.3, 2.62, 0.96, 2.05, GLASS, Solid, '=', '=', '='),
+      part(Box, -1.6, -1.02, 1.35, 1.4, 1.02, 1.9, GLASS, Solid, ':', '=', ':'),
+    ]; running(m, [-1.7, 1.7], 2.6, 1.0); break;
+    case 'truck': m = [
+      part(Box, 2.0, -1.05, 0.4, 4.25, 1.05, 2.6, col, Solid, '#', '=', '#'),
+      part(Box, 3.7, -1.0, 1.5, 4.27, 1.0, 2.3, GLASS, Solid, '=', '=', '='),
+      part(Box, -4.25, -1.2, 0.65, 1.9, 1.2, 3.5, [215, 215, 210], Solid, '|', '=', '#'),
+      part(Box, -4.25, -1.22, 2.9, 1.9, 1.22, 3.1, col, Solid, '=', '=', '='),
+    ]; running(m, [-3.2, -2.1, 3.2], 4.25, 1.05, 0.45); break;
+    case 'bus': m = [
+      part(Box, -6, -1.25, 0.35, 6, 1.25, 3.1, col, Solid, '#', '=', '#'),
+      part(Box, -5.5, -1.27, 1.35, 5.4, 1.27, 2.45, [255, 225, 160], Glow, ':'),
+      part(Box, 5.5, -1.2, 1.2, 6.03, 1.2, 2.5, GLASS, Solid, '=', '=', '='),
+      part(Box, 6.0, -0.9, 2.6, 6.05, 0.9, 2.95, [255, 170, 40], Glow, '='),
+      part(Box, -6.0, -1.25, 3.1, 6.0, 1.25, 3.2, [180, 180, 185], Solid, '=', '_'),
+    ]; running(m, [-4, 4.2], 6, 1.25, 0.5); break;
+    default: { // police: a dark sedan with white doors and a beacon on the roof
+      m = [
+        part(Box, -2.4, -0.9, 0.35, 2.4, 0.9, 0.95, col, Solid, '#', '=', '#'),
+        part(Box, -0.9, -0.92, 0.45, 0.9, 0.92, 0.9, [225, 225, 230], Solid, '=', '=', '='),
+        part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.4, GLASS, Solid, '=', '=', '='),
+        part(Box, -1.0, -0.8, 1.4, 0.8, 0.8, 1.5, col, Solid, '-', '_', '-'),
+      ];
+      running(m, [-1.5, 1.5], 2.4, 0.9);
+      m.push(part(Box, -0.25, -0.55, 1.5, 0.15, 0, 1.68, flash === 1 ? [255, 40, 40] : [90, 20, 20], flash === 1 ? Glow : Solid, '#'));
+      m.push(part(Box, -0.25, 0, 1.5, 0.15, 0.55, 1.68, flash === 2 ? [60, 90, 255] : [20, 25, 90], flash === 2 ? Glow : Solid, '#'));
+    }
+  }
+  vehicles.set(key, m);
+  return m;
+}
+/** Each kind's half length and height, for its bounds. */
+export const VEHICLE_SIZE: Record<string, [number, number]> = { sedan: [2.3, 1.8], taxi: [2.3, 1.8], van: [2.7, 2.4], truck: [4.3, 3.6], bus: [6.1, 3.3], police: [2.5, 1.8] };
+
 const farCars = new Map<string, Part[]>();
 /** A car far off: the body, the cabin and a strip of lights at each end. */
 export function carFarModel(col: RGB, taxi: boolean): Part[] {
