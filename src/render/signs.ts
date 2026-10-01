@@ -129,3 +129,19 @@ export function bulbsIn(rows: number[], w: number, px: number, pz: number, hx: n
 export function marqueeBulb(u: number, sec: number): boolean {
   return (Math.floor(u / 0.3) + Math.floor(sec * 7)) % 3 === 0;
 }
+
+/**
+ * Letters at least this many columns wide and rows tall are drawn as their bulbs rather than as a
+ * glyph (about 28 m away for a shop sign). Below ~3 x 2.6 cells several bulbs share a cell, and
+ * bulbGlyph shades it by how many of its bulb spots are lit, so the letter still reads as a shape.
+ */
+export const BULB_COLS = 1.6, BULB_ROWS = 1.4;
+
+/** Glyph for a cell holding n lit bulbs, its footprint hx x hz half-sizes in bulb units; 0 if none. */
+export function bulbGlyph(n: number, hx: number, hz: number): number {
+  if (!n) return 0;
+  const spots = 4 * hx * hz;
+  if (spots <= 1.5) return n > 1 ? 64 : 111; // '@' : 'o'
+  const f = n / spots;
+  return f > 0.5 ? 64 : f > 0.22 ? 111 : 58; // '@' 'o' ':'
+}

@@ -2,6 +2,7 @@ import { hash3 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, type Building, type City, type RGB } from '../sim/city';
 import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
 import { type CharGrid } from './grid';
+import { bulbGlyph, bulbsIn, fontRows } from './signs';
 
 /**
  * The floor the viewer stands in, drawn column by column over the city: walls where the plan's rooms
@@ -124,25 +125,38 @@ function panelPaint(I: Inside, pu: number, zr: number, cu: number, cz: number, o
   if (pu < 0 || pu > 1 || zr < PANEL_Z0 || zr > PANEL_Z1 + 0.14) return -2;
   out[1] = 70; out[2] = 72; out[3] = 80; out[0] = G.hash;
   if (zr > PANEL_Z1 + 0.02) {
-    // the floor display: amber digits on black
-    // each digit in the one cell holding its center
-    const s = String(I.floor).padStart(2, '0'), zc = PANEL_Z1 + 0.09;
-    out[0] = G.dot; out[1] = 60; out[2] = 25; out[3] = 10;
-    for (let c = 0; c < 2; c++) if (Math.abs(pu - (0.42 + c * 0.16)) < cu / 2 && Math.abs(zr - zc) < cz / 2 + 0.005) { out[0] = s.charCodeAt(c); out[1] = 255; out[2] = 140; out[3] = 40; }
+    // the floor display: amber lamp digits on black
+    const g = digitLamps(String(I.floor).padStart(2, '0'), 0.3, 0.7, PANEL_Z1 + 0.135, PANEL_Z1 + 0.035, pu, zr, cu, cz);
+    if (g) { out[0] = g; out[1] = 255; out[2] = 140; out[3] = 40; } else { out[0] = G.dot; out[1] = 60; out[2] = 25; out[3] = 10; }
     return -1;
   }
   const bu = pu * cols, bz = ((zr - PANEL_Z0) / (PANEL_Z1 - PANEL_Z0)) * rows;
   const col = Math.floor(bu), row = Math.floor(bz), f = row * cols + col, fu = bu - col, fz = bz - row;
   if (f >= n) return -1;
-  if (fu < 0.12 || fu > 0.88 || fz < 0.15 || fz > 0.85) return f; // the plate around it: still that button's
   const lit = f === I.liftTo || (I.liftTo < 0 && f === I.floor);
-  // a round steel button with its number, each digit in the one cell holding its center
-  const s = String(f), cuB = cu * cols, czB = (cz / (PANEL_Z1 - PANEL_Z0)) * rows;
-  out[0] = G.o; out[1] = lit ? 255 : 150; out[2] = lit ? 170 : 152; out[3] = lit ? 60 : 160;
-  if (Math.abs(fz - 0.5) < czB / 2 + 0.01) for (let d = 0; d < s.length; d++) {
-    if (Math.abs(fu - (0.5 + (d - (s.length - 1) / 2) * 0.22)) < cuB / 2) { out[0] = s.charCodeAt(d); out[1] = lit ? 255 : 230; out[2] = lit ? 190 : 230; out[3] = lit ? 90 : 225; }
-  }
+  // the button's number in little lamps, behind the steel plate: amber on the floor it goes to
+  const s = String(f), w = Math.min(0.66, 0.3 * s.length);
+  const g = digitLamps(s, 0.5 - w / 2, 0.5 + w / 2, 0.8, 0.2, fu, fz, cu * cols, (cz / (PANEL_Z1 - PANEL_Z0)) * rows);
+  if (g) { out[0] = g; out[1] = lit ? 255 : 200; out[2] = lit ? 160 : 205; out[3] = lit ? 50 : 210; return f; }
+  if (fu < 0.12 || fu > 0.88 || fz < 0.15 || fz > 0.85) return f; // the plate around it: still that button's
+  out[0] = G.dot; out[1] = lit ? 120 : 95; out[2] = lit ? 80 : 98; out[3] = lit ? 40 : 105; // the button's face
   return f;
+}
+
+/**
+ * Glyph of the lamps of 5x7 digits s laid out in the box u0..u1 (across) by zTop..zBot, at a cell
+ * centered at (u, z) of size cu x cz in the same units, or 0 where no lamp falls in it. Lamps, not
+ * glyphs, at any distance: far away the digits blur into a block of light.
+ */
+function digitLamps(s: string, u0: number, u1: number, zTop: number, zBot: number, u: number, z: number, cu: number, cz: number): number {
+  const bw = (u1 - u0) / (6 * s.length - 1), bh = (zTop - zBot) / 7, hx = cu / bw / 2, hz = cz / bh / 2;
+  const px = (u - u0) / bw, pz = (zTop - z) / bh;
+  let nb = 0;
+  for (let k = 0; k < s.length; k++) {
+    const rows = fontRows(s.charCodeAt(k));
+    if (rows) nb += bulbsIn(rows, 5, px - 6 * k, pz, hx, hz);
+  }
+  return bulbGlyph(nb, hx, hz);
 }
 
 /** Paint of a room's walls: glyph and color at height zr above its floor, u along the wall. */

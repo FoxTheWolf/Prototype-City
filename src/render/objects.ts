@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { type RGB } from '../sim/city';
 import { type CharGrid } from './grid';
-import { bulbOn, bulbsIn, fontRows, SYMBOLS } from './signs';
+import { BULB_COLS, BULB_ROWS, bulbGlyph, bulbsIn, fontRows, SYMBOLS } from './signs';
 
 /**
  * Street objects built from a few solid parts (boxes, upright cylinders, ellipsoids) in the
@@ -189,7 +189,12 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           if (frame) ch = C('=');
           else if (li >= 0 && li < n && fz >= 0 && fz < 1) {
             const c = q.text.charCodeAt(li), fu = (u / lw - li) * 1.25 - 0.12;
-            if (lw / perCol >= 3 && lh / perRow >= 2.6) { fg = fu >= 0 && fu < 1 && bulbOn(c, Math.floor(fu * 5), Math.floor(fz * 7)); if (fg) ch = C('#'); }
+            if (lw / perCol >= BULB_COLS && lh / perRow >= BULB_ROWS) {
+              // block letters painted as a 5x7 grid (0.8 of the slot across), counted per cell like the bulbs
+              const rows = fontRows(c), ux = (lw * 0.8) / 5, uz = lh / 7, hx = perCol / ux / 2, hz = perRow / uz / 2;
+              const nb = rows ? bulbsIn(rows, 5, fu * 5, fz * 7, hx, hz) : 0;
+              fg = nb > 0; if (fg) ch = bulbGlyph(nb, hx, hz) === 58 ? C(':') : C('#');
+            }
             else if (lw / perCol >= 0.9 && lh / perRow >= 0.9) {
               // one glyph in the cell holding the letter's center
               fg = Math.abs(u - (li + 0.5) * lw) < perCol / 2 && Math.abs(fz - 0.5) * lh < perRow / 2 + 0.01;
@@ -215,13 +220,13 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           }
           const small = perRow > lh * 0.9; // far away the panel blurs into a lit bar
           if (small) { ch = C('|'); k = 0.7; }
-          else if (rows && sw / perCol >= 3 && sh / perRow >= 2.6) {
+          else if (rows && sw / perCol >= BULB_COLS && sh / perRow >= BULB_ROWS) {
             // up close: bulbs, counted per cell (bulb units across and down)
             // read left to right from either side: seen from -y, +x is to the viewer's left
             const ux = sw / bw, uz = sh / bh, px = (oy < 0 ? sx0 + sw - hx : hx - sx0) / ux, pz = (sz0 - hz) / uz;
             const nb = bulbsIn(rows, bw, px, pz, perCol / ux / 2, perRow / uz / 2);
             const bx = Math.floor(px), by = Math.floor(pz);
-            if (nb) { ch = nb > 1 ? C('@') : C('o'); k = 1.25; }
+            if (nb) { ch = bulbGlyph(nb, perCol / ux / 2, perRow / uz / 2); k = 1.25; }
             else if (bx >= 0 && bx < bw && by >= 0 && by < bh && (rows[by] >> (bw - 1 - bx)) & 1) { ch = 32; k = 0.45; }
             else { ch = 32; k = 0.12; }
           } else {

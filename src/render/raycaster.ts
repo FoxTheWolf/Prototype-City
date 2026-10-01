@@ -17,7 +17,7 @@ import { power } from './power';
 import { subAt, type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
-import { BLADE_SYMBOL, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
+import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
 
 export interface View {
@@ -739,7 +739,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const center = Math.abs((signU / LETTER_W - col - 1.5) * LETTER_W) < dAlong / 2 && Math.abs(z - 3) < dz / 2 + 0.01;
       // a letter at least 2.6 rows tall and 3 columns wide (up to ~15 m, mid-avenue seen from the far
       // sidewalk: the user's pick) is drawn as its 5x7 pattern of bulbs; smaller, the glyph reads better
-      const bulbs = LETTER_W / dAlong >= 3 && 0.56 / dz >= 2.6;
+      const bulbs = LETTER_W / dAlong >= BULB_COLS && 0.56 / dz >= BULB_ROWS;
       if (bulbs && col >= 0 && col < signN && z > 2.72 && z < 3.28) {
         let fu = signU / LETTER_W - col - 1;
         if (rev) fu = 1 - fu; // seen from the other side, the pattern mirrors with the reading order
@@ -754,7 +754,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         }
         const bx = Math.floor(px), by = Math.floor(pz);
         if (n) {
-          ch = n > 1 ? G.at : G.o; r = B.sign[0] * on; g = B.sign[1] * on; b = B.sign[2] * on;
+          ch = bulbGlyph(n, hx, hz); r = B.sign[0] * on; g = B.sign[1] * on; b = B.sign[2] * on;
           if (on > 0.5) { r += 60; g += 60; b += 60; } // a lit bulb burns whiter than its tint
         } else if (bx >= 0 && bx < 5 && by < 7 && bulbOn(cc, bx, by)) {
           ch = 32; r = B.sign[0] * on * 0.4; g = B.sign[1] * on * 0.4; b = B.sign[2] * on * 0.4; // glow around a bulb
@@ -775,11 +775,12 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else {
         const n = frameTicker.length, p = (rev ? -along : along) + frameSec * TICK_SPEED, li = Math.floor(p / TICK_LW), fu = p / TICK_LW - li;
         const c = frameTicker.charCodeAt(((li % n) + n) % n), lh = TICK_Z1 - TICK_Z0, on = elec;
-        if (TICK_LW / dAlong >= 3 && lh / dz >= 2.6) {
+        if (TICK_LW / dAlong >= BULB_COLS && lh / dz >= BULB_ROWS) {
           // up close, bulbs (0.14 m apart), counted per cell like the shop signs'
           const rows = fontRows(c), bz = (lh - 0.2) / 7;
-          const nb = rows ? bulbsIn(rows, 5, (fu * TICK_LW - 0.08) / 0.14, (TICK_Z1 - 0.1 - z) / bz, dAlong / 0.28, dz / bz / 2) : 0;
-          if (nb) { ch = nb > 1 ? G.at : G.o; r = 255 * on; g = 150 * on; b = 45 * on; } else { ch = G.dot; r = 34; g = 20; b = 12; }
+          const hx = dAlong / 0.28, hz = dz / bz / 2;
+          const nb = rows ? bulbsIn(rows, 5, (fu * TICK_LW - 0.08) / 0.14, (TICK_Z1 - 0.1 - z) / bz, hx, hz) : 0;
+          if (nb) { ch = bulbGlyph(nb, hx, hz); r = 255 * on; g = 150 * on; b = 45 * on; } else { ch = G.dot; r = 34; g = 20; b = 12; }
         } else if (TICK_LW / dAlong >= 0.9) {
           const center = Math.abs(fu - 0.45) * TICK_LW < dAlong / 2 && Math.abs(z - (TICK_Z0 + TICK_Z1) / 2) < dz / 2 + 0.01;
           ch = center ? c : 32; const q = center ? on : 0.12 * on; r = 255 * q; g = 150 * q; b = 45 * q;
