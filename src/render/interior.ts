@@ -465,6 +465,14 @@ export function peekInto(P: Plan, B: Building, hx: number, hy: number, rdx: numb
   return false;
 }
 
+/** Light at a point of the viewer's floor, as a multiplier (for the furniture). */
+export function insideLight(I: Inside, x: number, y: number): Float32Array {
+  const c = cellAt(I.plan, x, y) & 127, r = c ? c - 1 : 0;
+  if (!I.plan.rooms[r]) { L3[0] = L3[1] = L3[2] = 0.3; return L3; }
+  lit3(I.plan.rooms[r], lamp, r * 3, x, y, 0, I.day);
+  return L3;
+}
+
 const PL = new Float32Array(3);
 /** The lamp (0..1 per channel) of room r on floor f, as seen from outside: for the glow around its windows. */
 export function roomGlow(base: Building, boxId: number, P: Plan, r: number, f: number, elec: number, day: number): Float32Array {

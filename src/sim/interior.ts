@@ -35,12 +35,27 @@ export interface Plan {
   rooms: Room[];
   /** Doors to the street besides the main one: each shop's own, in its shop front. */
   exits: Door[];
+  /** The furniture of the floor; it is solid. */
+  furn: Furn[];
   /** Room index + 1 per cell (0 outside), with the DOOR bit. Cell (i, j) is at ((gx + i), (gy + j)) * CELL. */
   cells: Uint8Array;
   gx: number;
   gy: number;
   nx: number;
   ny: number;
+}
+
+/** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
+export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table';
+export interface Furn {
+  kind: FurnKind;
+  x: number;
+  y: number;
+  c: number;
+  s: number;
+  hx: number;
+  hy: number;
+  seed: number;
 }
 
 /** The street door: on face 0..4 (as faceSpan numbers them), from a0 to a1 along it. */
@@ -461,7 +476,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     const outer = core < 0 ? V0 : V1, back = core < 0 ? F.cv0 : F.cv1;
     if (Math.abs(outer - back) > 1.2) {
       const v0 = Math.min(outer, back), v1 = Math.max(outer, back), vm = (v0 + v1) / 2;
-      const c = cellAt({ box: j, rooms, exits, cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & 127;
+      const c = cellAt({ box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & 127;
       const next = c && rooms[c - 1].unit >= 0 ? rooms[c - 1] : null; // not a corridor or the lobby
       room(next ? (next.kind === 'shop' || next.kind === 'open' || next.kind === 'office' ? next.kind : 'bedroom') : office ? 'office' : 'bedroom', next ? next.unit : unit++, F.su0, v0, F.lu1, v1);
       if (next && next.kind !== 'shop') doorU(F.su0, vm - 0.6);
@@ -481,7 +496,9 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   }
   for (const [u0, v0, u1, v1] of doors) fill(u0, v0, u1, v1, DOOR, true);
   connect(cells, nx, ny, rooms);
-  return { box: j, rooms, exits, cells, gx, gy, nx, ny };
+  const P: Plan = { box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny };
+  furnish(P, rnd, office);
+  return P;
 }
 
 /**
@@ -528,6 +545,102 @@ function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
   }
 }
 
+/**
+ * Furnish every room by its kind. A piece goes against a wall (or in a grid, for desks and shop
+ * shelves), only where all its floor and a strip in front of it are that room's, away from the
+ * doorways and the other pieces, so the rooms stay walkable.
+ */
+function furnish(P: Plan, rnd: () => number, office: boolean) {
+  const F = P.furn;
+  const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
+    for (let y = y0 + 0.1; y < y1; y += 0.2) for (let x = x0 + 0.1; x < x1; x += 0.2) {
+      const c = cellAt(P, x, y);
+      if ((c & 127) !== r + 1 || c & DOOR) return false;
+    }
+    for (const f of F) {
+      const ex = Math.abs(f.c) * f.hx + Math.abs(f.s) * f.hy, ey = Math.abs(f.s) * f.hx + Math.abs(f.c) * f.hy;
+      if (x0 < f.x + ex && x1 > f.x - ex && y0 < f.y + ey && y1 > f.y - ey) return false;
+    }
+    return true;
+  };
+  /** Put a piece of depth L and width W facing (c, s) with its back at (bx, by); front: clear strip in front. */
+  const put = (r: number, kind: FurnKind, bx: number, by: number, c: number, s: number, L: number, W: number, front: number): Furn | null => {
+    const x = bx + c * L / 2, y = by + s * L / 2, ex = Math.abs(c) * L / 2 + Math.abs(s) * W / 2, ey = Math.abs(s) * L / 2 + Math.abs(c) * W / 2;
+    const fx = c * (L / 2 + front / 2), fy = s * (L / 2 + front / 2), fex = Math.abs(c) * front / 2 + Math.abs(s) * W / 2, fey = Math.abs(s) * front / 2 + Math.abs(c) * W / 2;
+    if (!free(r, x - ex, y - ey, x + ex, y + ey)) return null;
+    if (front > 0 && !free(r, x + fx - fex, y + fy - fey, x + fx + fex, y + fy + fey)) return null;
+    const f: Furn = { kind, x, y, c, s, hx: L / 2, hy: W / 2, seed: (rnd() * 1e6) | 0 };
+    F.push(f);
+    return f;
+  };
+  /** Against one of the room's walls, trying them (and spots along them) in turn. */
+  const wall = (r: number, R: Room, kind: FurnKind, L: number, W: number, front: number, spots = [0.5, 0.3, 0.7]): Furn | null => {
+    const walls: [number, number, number, number, number][] = [
+      [R.x0 + 0.05, 0, 1, 0, R.y1 - R.y0], [R.x1 - 0.05, 0, -1, 0, R.y1 - R.y0], [0, R.y0 + 0.05, 0, 1, R.x1 - R.x0], [0, R.y1 - 0.05, 0, -1, R.x1 - R.x0]];
+    const start = (rnd() * 4) | 0;
+    for (const t of spots) for (let k = 0; k < 4; k++) {
+      const [wx, wy, c, s, len] = walls[(start + k) % 4];
+      if (len < W + 0.2) continue;
+      const along = (c ? R.y0 : R.x0) + 0.1 + W / 2 + t * (len - W - 0.2);
+      const f = c ? put(r, kind, wx, along, c, s, L, W, front) : put(r, kind, along, wy, c, s, L, W, front);
+      if (f) return f;
+    }
+    return null;
+  };
+  P.rooms.forEach((R, r) => {
+    const w = R.x1 - R.x0, d = R.y1 - R.y0;
+    switch (R.kind) {
+      case 'bedroom': {
+        const b = wall(r, R, 'bed', 2.05, w > 2.6 && d > 2.6 ? 1.5 : 1, 0.6);
+        if (b) put(r, 'nightstand', b.x - b.c * (b.hx - 0.22) - b.s * (b.hy + 0.3), b.y - b.s * (b.hx - 0.22) + b.c * (b.hy + 0.3), b.c, b.s, 0.45, 0.45, 0);
+        break;
+      }
+      case 'living': {
+        const sofa = wall(r, R, 'sofa', 0.9, 2, 1.4);
+        if (sofa) put(r, 'coffee', sofa.x + sofa.c * 1.05, sofa.y + sofa.s * 1.05, sofa.c, sofa.s, 0.55, 1, 0);
+        wall(r, R, 'tv', 0.45, 1.2, 1.5);
+        if (w * d > 14) wall(r, R, 'table', 0.9, 1.2, 0.8, [0.3, 0.7]);
+        if (rnd() < 0.6) wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
+        break;
+      }
+      case 'kitchen': wall(r, R, 'counter', 0.62, Math.min(3, Math.max(w, d) - 0.6), 0.9); wall(r, R, 'fridge', 0.7, 0.75, 0.9, [0.05, 0.95]); break;
+      case 'bath': wall(r, R, 'tub', 0.75, 1.65, 0.6); wall(r, R, 'toilet', 0.65, 0.45, 0.6, [0.2, 0.8]); break;
+      case 'office': { const dk = wall(r, R, 'desk', 0.75, 1.5, 1.1); if (dk) put(r, 'chair', dk.x + dk.c * 1.0, dk.y + dk.s * 1.0, -dk.c, -dk.s, 0.5, 0.5, 0); if (rnd() < 0.5) wall(r, R, 'shelf', 0.4, 1.8, 0.7); break; }
+      case 'open':
+        // rows of desks, each with its chair, in a grid with aisles
+        for (let y = R.y0 + 1.6; y < R.y1 - 1.2; y += 3) for (let x = R.x0 + 1.4; x < R.x1 - 1.4; x += 2.2) {
+          const dk = put(r, 'desk', x, y, 0, 1, 0.75, 1.5, 0);
+          if (dk) put(r, 'chair', dk.x, dk.y + 1.0, 0, -1, 0.5, 0.5, 0);
+        }
+        wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
+        break;
+      case 'shop': {
+        // shelves in rows down the long side, the till near the front
+        const long = w > d;
+        for (let a = (long ? R.y0 : R.x0) + 2.2; a < (long ? R.y1 : R.x1) - 1.6; a += 2.4) {
+          if (long) put(r, 'shelf', R.x0 + 1.2, a, 1, 0, 0.5, Math.max(1, w - 3.6), 0);
+          else put(r, 'shelf', a, R.y0 + 1.2, 0, 1, 0.5, Math.max(1, d - 3.6), 0);
+        }
+        wall(r, R, 'till', 0.7, 1.8, 1.1);
+        break;
+      }
+      case 'lobby':
+        if (office) wall(r, R, 'reception', 0.8, 2.2, 1.2);
+        wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
+        break;
+    }
+  });
+}
+
+/** Whether (x, y) is inside a piece of the plan's furniture. */
+export function inFurniture(P: Plan, x: number, y: number): boolean {
+  for (const f of P.furn) {
+    const dx = x - f.x, dy = y - f.y, u = dx * f.c + dy * f.s, v = -dx * f.s + dy * f.c;
+    if (Math.abs(u) < f.hx + 0.05 && Math.abs(v) < f.hy + 0.05) return true;
+  }
+  return false;
+}
+
 /** The cell value at a point (room + 1 with the DOOR bit), 0 outside the plan. */
 export function cellAt(P: Plan, x: number, y: number): number {
   const i = Math.floor(x / CELL) - P.gx, j = Math.floor(y / CELL) - P.gy;
@@ -559,6 +672,7 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
   if (ka < 0) return false;
   const P = planOf(city, ka, f);
   if (!P) return true;
+  if (inFurniture(P, bx, by)) return true;
   // walk the step in short hops; a wall is a change of room without the DOOR bit on both sides
   const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 0.1);
   let prev = cellAt(P, ax, ay);

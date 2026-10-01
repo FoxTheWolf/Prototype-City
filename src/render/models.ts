@@ -204,3 +204,62 @@ export function poweredFurniture(kind: string, k: number): Part[] {
   }
   return m;
 }
+
+const GOODS: RGB[] = [[200, 60, 50], [60, 120, 200], [230, 200, 60], [80, 170, 90], [220, 220, 210]];
+const furns = new Map<string, Part[]>();
+/**
+ * Furniture, facing +x (its front), centered, hx deep and hy wide (half sizes), as volumes like the
+ * street furniture. Colors vary a little with the seed.
+ */
+export function furnitureModel(kind: string, seed: number, hx: number, hy: number): Part[] {
+  const v = seed % 4, key = kind + v + hx.toFixed(2) + hy.toFixed(2);
+  let m = furns.get(key);
+  if (m) return m;
+  const pick = <T>(a: T[]) => a[v % a.length];
+  const WOOD = pick<RGB>([[120, 80, 50], [95, 65, 45], [140, 105, 70], [80, 60, 50]]);
+  const FAB = pick<RGB>([[120, 60, 55], [60, 80, 120], [90, 110, 80], [130, 120, 100]]);
+  const WHITE: RGB = [200, 200, 195], DARK: RGB = [45, 45, 50];
+  switch (kind) {
+    case 'bed': m = [
+      part(Box, -hx, -hy, 0, hx, hy, 0.3, WOOD, Solid, '=', '='),
+      part(Box, -hx + 0.05, -hy + 0.05, 0.3, hx - 0.05, hy - 0.05, 0.5, FAB, Solid, '~', '~'),
+      part(Box, -hx + 0.05, -hy + 0.15, 0.5, -hx + 0.45, hy - 0.15, 0.62, WHITE, Solid, 'o', 'o'),
+      part(Box, -hx, -hy, 0, -hx + 0.08, hy, 1.0, WOOD, Solid, '#', '=')]; break;
+    case 'nightstand': m = [part(Box, -hx, -hy, 0, hx, hy, 0.55, WOOD, Solid, '=', '_'), part(Ball, -0.08, -0.08, 0.55, 0.08, 0.08, 0.8, [255, 220, 150], Glow, 'o')]; break;
+    case 'sofa': m = [
+      part(Box, -hx, -hy, 0.1, hx, hy, 0.45, FAB, Solid, '=', '~'),
+      part(Box, -hx, -hy, 0.45, -hx + 0.22, hy, 0.85, FAB, Solid, '#', '='),
+      part(Box, -hx, -hy, 0.45, hx, -hy + 0.18, 0.65, FAB, Solid, '#', '='),
+      part(Box, -hx, hy - 0.18, 0.45, hx, hy, 0.65, FAB, Solid, '#', '=')]; break;
+    case 'coffee': case 'table': m = [
+      part(Box, -hx, -hy, kind === 'table' ? 0.72 : 0.38, hx, hy, kind === 'table' ? 0.77 : 0.43, WOOD, Solid, '-', '='),
+      part(Box, -hx + 0.05, -hy + 0.05, 0, -hx + 0.1, -hy + 0.1, 0.72, WOOD, Solid, '|'),
+      part(Box, hx - 0.1, hy - 0.1, 0, hx - 0.05, hy - 0.05, 0.72, WOOD, Solid, '|')]; break;
+    case 'tv': m = [part(Box, -hx, -hy, 0, hx, hy, 0.5, WOOD, Solid, '=', '_'), part(Box, -0.05, -hy + 0.1, 0.5, 0.03, hy - 0.1, 1.15, DARK, Solid, '#'), part(Box, 0.03, -hy + 0.15, 0.55, 0.05, hy - 0.15, 1.1, [90, 140, 200], Glow, ':')]; break;
+    case 'counter': m = [part(Box, -hx, -hy, 0, hx, hy, 0.88, WHITE, Solid, '#', '='), part(Box, -hx, -hy, 0.88, hx, hy, 0.93, [70, 70, 75], Solid, '-', '_')]; break;
+    case 'fridge': m = [part(Box, -hx, -hy, 0, hx, hy, 1.8, WHITE, Solid, '|', '=', '|'), part(Box, hx, -hy + 0.1, 1.1, hx + 0.03, -hy + 0.15, 1.4, [150, 150, 155], Solid, '|')]; break;
+    case 'tub': m = [part(Box, -hx, -hy, 0, hx, hy, 0.55, WHITE, Solid, '#', 'o'), part(Box, -hx + 0.1, -hy + 0.1, 0.35, hx - 0.1, hy - 0.1, 0.56, [110, 150, 170], Solid, '~')]; break;
+    case 'toilet': m = [part(Ball, -hx + 0.1, -hy, 0, hx, hy, 0.42, WHITE, Solid, 'o'), part(Box, -hx, -hy, 0.3, -hx + 0.2, hy, 0.8, WHITE, Solid, '#', '=')]; break;
+    case 'desk': m = [
+      part(Box, -hx, -hy, 0.72, hx, hy, 0.76, WOOD, Solid, '-', '='),
+      part(Box, -hx, -hy, 0, hx, -hy + 0.05, 0.72, WOOD, Solid, '|'), part(Box, -hx, hy - 0.05, 0, hx, hy, 0.72, WOOD, Solid, '|'),
+      part(Box, -hx + 0.08, -0.25, 0.76, -hx + 0.14, 0.25, 1.1, DARK, Solid, '#'), part(Box, -hx + 0.14, -0.22, 0.79, -hx + 0.16, 0.22, 1.07, [120, 200, 160], Glow, ':')]; break;
+    case 'chair': m = [part(Box, -hx, -hy, 0.42, hx, hy, 0.48, DARK, Solid, '=', '='), part(Box, -hx, -hy, 0.48, -hx + 0.08, hy, 0.95, DARK, Solid, '#'), part(Box, -0.04, -0.04, 0, 0.04, 0.04, 0.42, [90, 90, 95], Solid, '|')]; break;
+    case 'shelf': {
+      m = [part(Box, -hx, -hy, 0, hx, hy, 1.8, WOOD, Solid, '|', '=')];
+      // goods on the shelves, in bright packaging
+      for (let z = 0.3; z < 1.7; z += 0.42) for (let y = -hy + 0.1; y < hy - 0.2; y += 0.3) {
+        const h = hash3(seed, Math.round(y * 10), Math.round(z * 10));
+        if (h < 0.25) continue;
+        m.push(part(Box, hx - 0.02, y, z, hx + 0.02, y + 0.22, z + 0.25, GOODS[(h * GOODS.length) | 0], Solid, '#'));
+      }
+      break;
+    }
+    case 'till': m = [part(Box, -hx, -hy, 0, hx, hy, 1.0, WOOD, Solid, '#', '='), part(Box, -0.15, -0.2, 1.0, 0.1, 0.2, 1.25, DARK, Solid, '#'), part(Box, 0.1, -0.15, 1.05, 0.12, 0.15, 1.2, [120, 255, 140], Glow, ':')]; break;
+    case 'reception': m = [part(Box, -hx, -hy, 0, hx, hy, 1.05, [70, 60, 55], Solid, '#', '='), part(Box, -hx, -hy, 1.05, hx + 0.1, hy, 1.12, [170, 160, 140], Solid, '-', '_')]; break;
+    case 'plant': m = [part(Cyl, -hx * 0.6, -hy * 0.6, 0, hx * 0.6, hy * 0.6, 0.4, [150, 90, 60], Solid, '|', 'o'), part(Ball, -hx, -hy, 0.35, hx, hy, 1.2, [60, 130, 70], Leaf, '@')]; break;
+    default: m = [part(Box, -hx, -hy, 0, hx, hy, 0.8, WOOD, Solid, '#')];
+  }
+  furns.set(key, m);
+  return m;
+}

@@ -2,14 +2,14 @@ import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { liftFloors, type World } from '../sim/world';
 import { baseAt, cachedPlan, DOOR_H, doorOf, exitsOf, habitable, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
-import { glassPass, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
+import { glassPass, insideLight, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, lampModel, poweredFurniture, treeModel } from './models';
+import { bladeHeight, bladeModel, carModel, debrisModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -377,7 +377,12 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   drawCranes(grid, city, v.x, v.y, eye, dirX, dirY, plX, plY, scale, hor, frameSec);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
-  if (inside) glassPass(grid, inside, eye, hor, scale);
+  if (inside) {
+    // the floor's furniture, lit by its rooms' lamps
+    const I = inside, objs: Obj[] = I.plan.furn.map((f) => ({ x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }));
+    drawObjects(grid, objs, { x: px, y: py, eye: eye - I.z0, dirX, dirY, plX, plY, plane, scale, hor, far: 40, light: (x, y) => insideLight(I, x, y), mul: true });
+    glassPass(grid, inside, eye, hor, scale);
+  }
   finish(grid, v.look, sky);
   // after finish, so the drops keep the background of what is behind them
   drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);

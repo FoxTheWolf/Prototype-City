@@ -57,6 +57,8 @@ export interface Cam {
   light: (x: number, y: number, z: number) => Float32Array;
   /** Snow lying on top faces, 0..1. */
   snow?: number;
+  /** Indoors: light multiplies the colors (the room's lamps) instead of adding to them. */
+  mul?: boolean;
 }
 
 const C = (s: string) => s.charCodeAt(0);
@@ -217,7 +219,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           // the light where the ray hit, strongest on tops: a car lights up under a lamp or in another's headlights
           const hx = ox + dx * best, hy = oy + dy * best, hz = oz + dz * best;
           const L = v.light(o.x + hx * o.c - hy * o.s, o.y + hx * o.s + hy * o.c, hz), gl = (face === 2 ? 1.5 : 1.1) * fog;
-          r += L[0] * gl; g += L[1] * gl; b += L[2] * gl;
+          if (v.mul) { r *= L[0]; g *= L[1]; b *= L[2]; } else { r += L[0] * gl; g += L[1] * gl; b += L[2] * gl; }
         }
         grid.put(i, ch, r, g, b);
         depth[i] = best;
