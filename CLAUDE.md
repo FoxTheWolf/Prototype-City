@@ -201,7 +201,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **Tamanho da cidade (decidido em 2026-09-30):** o padrão é uma cidade **média, de ~2×2 km**. O tamanho deve ser **um parâmetro da geração**, e não algo fixo no código. No futuro, uma opção de menu antes de criar o mundo vai permitir aumentar ou diminuir o tamanho se o desempenho aguentar; o menu não é para agora. O desempenho deve se adaptar ao tamanho (nível de detalhe e janela carregada em volta do jogador), e não depender de a cidade ser pequena.
 - **Estilo urbano: americano, em grade (decidido em 2026-09-30),** como a Liberty City do GTA IV: grade regular, avenidas largas, arranha-céus no centro e bairros mais baixos em volta.
 - **Unidades: 1 unidade = 1 metro (decidido em 2026-09-30).** A conversão da escala atual (andar de 0,55 e olho a 0,48, cerca de 1 unidade para 3,5 m) é feita na etapa 2. Valores de referência: olho a ~1,7 m, andar de ~3,5 m, faixa de rua de ~3,5 m.
-- **Painel lateral no estilo do ASCII City:** fica, desde que seja diegético (por exemplo, um PDA, o celular ou o notebook). Deve ter o visual de terminal com texto composto aos poucos. A forma exata ainda está a decidir.
+- **Painel lateral no estilo do ASCII City:** fica, desde que seja diegético. Deve ter o visual de terminal com texto composto aos poucos. **Decidido na etapa 8: é o celular** na mão do jogador (veja a etapa 8 no Histórico).
 - **Projetar pensando nas próximas etapas (pedido do usuário em 2026-09-30):** toda decisão de projeto deve considerar as etapas que vêm depois. O que é feito agora como visual deve nascer ligado a dados da simulação, de forma modular, para ser ampliado depois sem reescrever. Exemplo: os letreiros da etapa 4 mostram o nome de uma empresa que existe na simulação (`city.businesses`). Os interiores (etapa 6) e a economia (etapa 13) usam e ampliam esse mesmo registro, em vez de inventar nomes à parte.
 - **Os dados da simulação são a matéria do hacking:** registros de moradores e funcionários, logs de telefone, câmeras, controle de portas e semáforos vêm da simulação e não são inventados à parte.
 - **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
@@ -236,6 +236,15 @@ Dados ao testar o grupo A dos interiores, junto com as referências 27–36.
 - **Muito mais letreiros e publicidade nos prédios,** como em Manhattan (referências 34 e 35). Liga-se ao pedido anterior de anúncios ligados às empresas da simulação.
 - **Iluminação dos topos à noite:** além dos holofotes de baixo, coroas e topos acesos, como o Empire State (referência 36).
 - **Ver os interiores de fora:** *(feito na 6.4, veja o Histórico).*
+
+## Pedidos do usuário durante a etapa 8 (2026-10-01)
+
+Dados ao testar o grupo B da navegação. Cada um também está no roteiro, na etapa em que cabe.
+- **Luz do sol nos prédios:** de dia, os lados virados para o sol iluminados e os outros na sombra, e o horizonte iluminado (hoje fica todo preto de dia; o usuário mandou captura). Depois, um mapa de sombras para os prédios fazerem sombra uns nos outros e no chão. Junta-se à avaliação da "iluminação dinâmica com sombras" no roteiro; o usuário quer ver isso explicitamente.
+- **A marca do celular e dos chips vem das empresas da cidade:** o aparelho hoje é "Kestrel" fixo no código. Deve ser o nome de uma empresa de eletrônicos que existe na simulação (`city.businesses`, ou fabricantes da economia), e a splash screen mostra essa marca. Os chips de dentro (CPU, rádio) também com marcas de fabricantes que existem no mundo. É simulação: entra com a economia (etapa 13) e com os celulares dos cidadãos (etapa 9); o `Device` em `sim/device.ts` já é o lugar.
+- **Detalhe nos telhados de perto:** ar-condicionado, dutos, casas de máquinas, antenas e afins quando se chega perto de um telhado (de um andar alto, o telhado vizinho aparece liso demais). Etapa 15.
+- **Greebles nos prédios** (o termo que o usuário procurava: os detalhes de relevo sem função das naves de Star Wars, chamados *greebles* ou *nurnies*): caixas, painéis, saliências e peças miúdas na fachada e no topo, só para o prédio não parecer um paralelepípedo. Etapa 15.
+- **Indústria que solta fumaça de verdade:** chaminés de fábrica nos distritos industriais com colunas de fumaça (como as da zona de fogo). Hoje há chaminés (`chimney`) sem fumaça. Etapa 15, ou antes se couber.
 
 ## Pedidos do usuário para planejar (2026-09-30, segunda lista)
 
@@ -325,7 +334,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 **O aparelho**
 - **É um computador virtual como os outros:** CPU, memória, armazenamento, rádio (EDGE/3G, Wi-Fi, Bluetooth), câmera de poucos megapixels e bateria. Esses limites são reais: um app que não cabe na memória não roda, e o armazenamento enche.
-- **É um objeto físico:** o jogador tira o celular do bolso, e ele aparece na mão, ocupando parte da tela. A interface é uma `CharGrid` à parte, desenhada pelo mesmo compositor de glifos. Os botões fazem som, e o texto é composto aos poucos, como nos terminais.
+- **É um objeto físico:** o jogador tira o celular do bolso, e ele aparece na mão, ocupando parte da tela. A tela é uma região da própria grade de caracteres (`Lcd` em `src/phone/lcd.ts`), desenhada depois do mundo. Os botões fazem som, e o texto é composto aos poucos, como nos terminais. *(Feito na etapa 8.)*
 
 **Conectividade (é daqui que vem a jogabilidade)**
 - **Dados móveis:** vêm das antenas da cidade, que existem na simulação. O sinal depende da distância e dos prédios no caminho. São lentos e custam dinheiro do jogo (há um plano de dados).
@@ -352,18 +361,18 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Resumo para começar uma sessão (atualizado em 2026-10-01)
 
-- **Etapas 1 a 7 (e 5b) concluídas e aprovadas pelo usuário.** O que ele achou de errado na 6 e na 7 está em "Bugs conhecidos" (para a etapa de bugfix e otimização, que vem antes da 15) e em "Refinamento: anotações" (para a 15). **A etapa 8 (navegação) começou em 2026-10-01.** A nota "perguntar sobre a etapa 6" é para o **começo da etapa 15**, não da 8.
-- **Antes de mexer no trânsito, leia "Lições da etapa 7"** (nas notas técnicas): como testar a simulação sem o jogador e os erros que travavam os cruzamentos.
-- **Antes de começar qualquer etapa, leia as seções "Lições da etapa N"** nas notas técnicas: são o conhecimento acumulado das sessões anteriores.
+- **Etapas 1 a 8 (e 5b) concluídas.** A 8 (navegação: o celular, o mapa em 4 zooms e de interior, o GPS de 2008 e os outros apps) fechou em 2026-10-01; o grupo C dela foi feito sem rodada de teste, a pedido do usuário, então **o retorno dele sobre o GPS e os apps pode chegar no começo da próxima sessão**. O que ele achou de errado nas etapas 6–8 está em "Bugs conhecidos" (para a etapa de bugfix e otimização, que vem antes da 15), em "Refinamento: anotações" e em "Pedidos do usuário durante a etapa 8". A nota "perguntar sobre a etapa 6" é para o **começo da etapa 15**.
+- **A próxima etapa no roteiro é a 9** (rede de telefones e celular: orelhões, antenas e sinal, loja de apps, discador, SMS e câmera de verdade, a abertura). Ela parte do celular da etapa 8: `src/phone/` já tem o aparelho, o hardware (`sim/device.ts`), a grade de apps e as telas do discador, contatos, mensagens e câmera esperando a rede. Perguntar ao usuário se ele prefere antes a etapa de bugfix e otimização (o theater district está perto de 30 FPS no PC dele).
+- **Antes de começar qualquer etapa, leia as seções "Lições da etapa N"** nas notas técnicas: são o conhecimento acumulado das sessões anteriores (a 7 tem como testar a simulação sem o jogador; a 8, como testar o celular).
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
   - jogo: WASD, mouse, Shift corre, Q/E (e as setas laterais) giram;
-  - celular (como no GTA IV): **seta para cima** (ou P) tira; com ele fora, setas = d-pad, Enter ou botão esquerdo = OK, Backspace ou botão direito = Voltar (na tela inicial, guarda), dígitos = teclado; no mapa, 1–4, \*/# (+/−) ou a roda do mouse = zoom, OK = lista de lugares (ou centralizar);
+  - celular (como no GTA IV): **seta para cima** (ou P) tira; com ele fora, setas = d-pad, Enter ou botão esquerdo = OK, Backspace ou botão direito = Voltar (na tela inicial, guarda), dígitos = teclado, + = \*, − ou . = #, **Space** = tecla verde (abre o discador, liga), **Delete** = tecla vermelha (volta à tela inicial); no menu, a tecla do lugar do app na grade 3×4 abre direto; no mapa, 1–4, \*/# ou a roda do mouse = zoom, OK = lista de lugares (ou centralizar);
   - visual: **B** fundo sólido (4 estágios), **U** glifos de bloco, **M** som;
   - interiores: entrar pela porta; escadas andando; no elevador, mirar na botoeira e clicar (botão esquerdo); escadas de incêndio dos prédios de tijolo andando pela borda de fora do patamar;
   - debug: **T** e Shift+T mudam a hora em ±1 h (o trânsito e os pedestres seguem a hora); **Y** percorre os climas fixos e volta ao automático; **K** liga e desliga a subestação mais próxima; **Shift+K** liga e desliga a cidade toda; **PageUp/PageDown** sobem e descem um andar dentro de um prédio (até existirem escadas e elevadores).
   - A linha de status mostra semente, posição, `DRAW x ms (MAX y)` e os modos. A linha de cima dela mostra data, hora, clima e `POWER x/y`.
-- **Desempenho:** o quadro fica em ~3–8 ms no painel (o usuário tem monitor de 180 Hz; ele nota quedas). `bench(n)` mede a vista atual numa grade 256×80. Toda novidade deve ser medida com `bench` antes e depois.
+- **Desempenho:** no PC do usuário (monitor de 180 Hz; ele nota quedas), o `DRAW` passou de ~3–8 ms nas primeiras etapas para ~17–20 ms em lugares densos (40–55 FPS) e chega perto de 30 FPS no theater district: é a prioridade da etapa de otimização. O celular custa ~0,5 ms. `bench(n)` mede a vista atual numa grade 256×80. Toda novidade deve ser medida com `bench` antes e depois.
 - **Mapa dos módulos** (o que está em cada arquivo):
   - **`src/sim/`** (nunca importa `render` nem o DOM):
     - `city.ts`: grade, quarteirões, prédios (caixas, cilindros e caixas cortadas pela diagonal), empresas, props, marcos, borda e Sarcófago.
@@ -386,7 +395,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `lamps.ts`: falhas e fotocélula.
     - `power.ts`: o efeito do blackout, uma função pura.
     - `interior.ts`: o andar em volta do jogador (paredes, piso, teto, lâmpadas, degraus, botoeira do elevador, janelas e vidro) e os interiores vistos de fora pelas janelas (`peekInto`/`peekCell`).
-  - **`src/phone/`** (a interface do celular, como o `main.ts`: lê a simulação, não é lida por ela): `phone.ts` (estado e teclas), `draw.ts` (o aparelho e os apps), `mapdata.ts` (o raster da cidade para o mapa). O hardware do aparelho fica em `sim/device.ts`.
+  - **`src/phone/`** (a interface do celular, como o `main.ts`: lê a simulação, não é lida por ela): `phone.ts` (estado, teclas e a lógica dos apps), `draw.ts` (o aparelho na mão, a luz nele, o boot, o mapa da cidade e o de interior, a lista de lugares), `apps.ts` (o menu em grade e as telas dos outros apps), `lcd.ts` (a tela: tamanho, cores, texto digitando, barra de status, teclas laterais, letras grandes), `gps.ts` (o receptor com os limites de 2008), `mapdata.ts` (o raster da cidade para o mapa). O hardware do aparelho fica em `sim/device.ts`. A luz nas mãos (`VIEW_LIGHT`, `VIEW_GLINT`) vem do fim de `renderWorld`.
   - **`src/audio/`:** `sound.ts` (ambiente, chuva, trovão, zumbidos) e `blackout.ts` (o som do apagão, versão A).
   - **`src/locale/`:** `en.json` e `names.ts`.
 - **Ordem do quadro** (`renderWorld`):
@@ -420,7 +429,24 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **A:** o celular como objeto (tirar e guardar, na mão, botões com som, texto composto aos poucos) e o app de mapa no nível local (ruas, prédios, marcos, a posição e a direção do jogador).
     - **B:** os outros zooms (distrito, setor, cidade), rótulos de ruas e distritos, a lista de marcos.
     - **C:** os limites do GPS de 2008 (veja acima) e, pedido do usuário em 2026-10-01, **os outros apps de um celular de 2008**: os que não dependem da simulação funcionando de verdade (calculadora, relógio/alarme, cronômetro, bloco de notas e afins), os que dependem dela com a base pronta mas sem função ainda (discador interativo que não completa a ligação, contatos vazios, mensagens) e os que precisam de rede ou de etapas futuras como entradas que dizem "sem 3G" ou "coming soon", já com o layout. É a fundação dos apps da etapa 9.
-- **8.1, o celular e o mapa local (grupo A, 2026-10-01), aguarda o teste do usuário:**
+- **Etapa 8 concluída em 2026-10-01** (grupos A, B e C; A e B testados e aprovados pelo usuário; o C foi feito a pedido dele sem rodada de teste, e o retorno pode vir na sessão seguinte).
+- **8.5, correções do retorno do grupo B e mapa de interior (2026-10-01):**
+  - **Vidro sobre os móveis:** `glassPass` (`render/interior.ts`) tingia por coluna todas as células de janela, inclusive as de um móvel na frente dela; agora pula as células com algo mais perto que o vidro (`depth < t`).
+  - **Sombras das teclas:** em duas passadas (todas as sombras, depois todas as teclas por cima, para nenhuma sombra escurecer a tecla vizinha), do tamanho da tecla, para o lado oposto à luz e para baixo (luz à frente, que vem de cima do aparelho) ou para cima (luz atrás); sempre há um pouco, da luz do ambiente. `VIEW_GLINT[5]` diz quanto a luz está atrás.
+  - **Mapa de interior** (`indoorMap` em `draw.ts`): dentro de um prédio, o app de mapa mostra a planta do andar em volta (`planOf`), amostrando 3×3 pontos por célula: um cômodo só é o piso dele, colorido pelo tipo (`ROOM_BG`); dois cômodos encontrando-se é parede `#`, a menos que os dois lados sejam porta; escada `=`, elevador `X`; fora das paredes, a rua ou um vizinho (`:`). Os nomes dos cômodos (`en.json` → `phone.room`) vão no meio deles, onde cabem. As mesmas teclas de zoom escolhem a escala de dentro (`INDOOR_ROW_M`: 1, 2, 3,5 e 6 m por linha). Embaixo, a esquina do prédio.
+- **8.6, os limites do GPS de 2008 (grupo C, 2026-10-01)** (`src/phone/gps.ts`, `Phone.gps`): o receptor liga com o app de mapa (ou a lista de lugares) e desliga ao sair.
+  - **Satélites:** 11, cada um com azimute e elevação que mudam devagar com a hora do jogo (`hash3` da semente). O céu visível em volta do jogador é um perfil de 16 direções lido do raster do mapa (a elevação do prédio mais alto até 160 m, recalculada a cada 0,5 s). Um satélite acima do perfil conta; um até 0,35 rad abaixo dele às vezes passa refletido nos prédios (com mais erro); dentro de um prédio só passam os altos, fracos e intermitentes.
+  - **Fixação:** precisa de 4. Partida a frio 25 s (a primeira vez), morna 8 s, quente 2 s (fixou há menos de 2 min); a contagem anda mais devagar com poucos satélites e para com menos de 3. A fixação aguenta 3 s com menos de 4 antes de se perder.
+  - **Erro:** sigma = 3 m + 12/(satélites − 3) + 18 × (elevação média do horizonte) + 5 por satélite refletido, até 60 m; o erro é um passeio aleatório (multipath) que muda a cada segundo. Dentro: 12 m e posição a cada 3 s (fora, a cada 1 s). Medido com a semente 42: céu aberto, fixa em 25 s com erro de 2–5 m; no centro, a frio em 40–70 s, ~18 m de erro médio e perdas curtas; dentro de prédio, ~40 s e perdas curtas.
+  - **No mapa:** a vista segue a posição do GPS (antes da primeira fixação, o meio da cidade); sem bússola, a seta segue o deslocamento (parado, `o`); sem fixação, a última posição conhecida pisca como `?`. Uma caixa diz "SEARCHING SATELLITES" com os satélites à vista e uma barra até a fixação, ou "NO GPS SIGNAL" com a última posição; com fixação, a precisão (±m) fica no título, em vermelho acima de 30 m. Na barra de status, "GPS" pisca procurando, fica verde com fixação e cinza sem sinal. A lista de lugares mede a distância a partir do GPS.
+- **8.7, os outros apps (grupo C, pedido do usuário, 2026-10-01)** (`src/phone/apps.ts`; as peças comuns da tela foram para `src/phone/lcd.ts`):
+  - **Menu em grade 3×4**, como nos celulares da época: cada app numa moldura com símbolo e cor, na posição da sua tecla no teclado (1 Maps, 2 Calls, 3 Contacts, 4 Messages, 5 Camera, 6 Web, 7 Clock, 8 Calc, 9 Notes, * Weather, 0 Store, # Settings); setas andam pela grade, a tecla do lugar abre direto.
+  - **Funcionam de verdade:** calculadora (dígitos, # o ponto, as setas + − × ÷, OK =, * limpa), relógio (a hora da cidade e um cronômetro em segundos reais: OK começa e para, * zera), notas por multi-tap (a mesma tecla em menos de 1 s troca a letra; 0 espaço, * apaga, # nova linha; até 400 caracteres), configurações (o hardware de `Device`, rede, Wi-Fi, o estado do GPS agora, IMEI).
+  - **Com a base pronta, sem rede ainda:** discador (os dígitos em letras grandes, tons DTMF de verdade em `sound.dtmf`, a tecla verde liga, "CALLING…" e depois "NO NETWORK / CALL FAILED" com os três tons da operadora em `sound.callFail`), contatos (vazio, "SIM card: 0 of 250"), mensagens (caixas vazias, não envia).
+  - **Esperando a rede ou uma etapa futura:** câmera ("coming soon", com a rede na etapa 9), web, clima e loja ("no data connection"; clima e loja baixam por EDGE ou Wi-Fi).
+  - **Teclas novas:** **Space** = tecla verde (do menu ou da tela inicial abre o discador), **Delete** = tecla vermelha (volta à tela inicial), **.** também é o # (o ponto da calculadora).
+  - **Crash corrigido no teste:** o quadro usa a hora do começo dele, que pode ser um pouco anterior à da tecla; `now - callAt` dava negativo e `repeat(-1)` derrubava o laço de quadros.
+- **8.1, o celular e o mapa local (grupo A, 2026-10-01), aprovado:**
   - **O aparelho** (`src/phone/`, fora de `sim` e de `render`, como o `main.ts`): `phone.ts` guarda o estado (no bolso ou na mão, a tela, o menu, a vista do mapa, quando cada tecla foi apertada) e traduz o teclado; `draw.ts` desenha o celular sobre a vista, no canto de baixo à direita (50 colunas, 46 linhas visíveis; a última fileira do teclado fica fora da tela), com tela de 42×26 células. **P** tira e guarda (sobe em ~0,25 s, com som de pano e o toque na mão). Com o celular fora, as **setas** são o d-pad, **Enter** é o OK (e a tecla lateral esquerda), **Backspace** é Voltar e os **dígitos** são o teclado; WASD continuam andando e Q/E girando. As teclas acendem por trás com o aparelho ligado e afundam ao serem apertadas, com clique e tom (`phoneKey`, `phoneSlide`, `phoneBoot` em `sound.ts`).
   - **O hardware é um dado** (`sim/device.ts`, `Device` e `PLAYER_PHONE`: Kestrel 7300 Navigator, KOS 3.1, ARM11 332 MHz, 128 MB, GSM/EDGE, Wi-Fi b/g, GPS). O boot (na primeira vez que sai do bolso) mostra o logotipo e lista o hardware digitando aos poucos; o rádio diz NO SERVICE porque as antenas ainda não existem (etapa 9). Na etapa 9 esses limites passam a valer de verdade.
   - **Telas:** espera (relógio grande na fonte 5×7 dos letreiros, data), menu (só Maps por enquanto; `APPS` em `phone.ts`) e o mapa. Ao tirar do bolso a tela redesenha (a luz de fundo acorda).
@@ -436,10 +462,11 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - **Reflexo da luz mais forte por perto** (`VIEW_GLINT` em `raycaster.ts`): a luz é amostrada a 2 m em volta do jogador (4 pontos e o centro, a 1,6 m de altura; dentro do prédio, a lâmpada do cômodo); o gradiente dá o lado de onde ela vem em relação à vista (−1 esquerda .. 1 direita) e a cor é a da luz ali. A força cresce com a luz atrás do jogador (a tela voltada para ele espelha o que está às costas). No celular (`GL` em `draw.ts`, suavizado em ~0,25 s), a faixa do reflexo fica do lado da luz e na cor dela, no metal e no vidro.
   - **Relevo das teclas:** a aresta de cada tecla voltada para a luz pega o reflexo, e uma sombra curta cai do lado oposto (e um pouco para baixo), pelo mesmo lado e força.
   - **Adaptação do olho** (suavizada em ~1,5 s): no escuro a tela parece mais clara (até ×1,25) e faz bloom no vidro e na moldura em volta; sob luz forte fica um pouco mais apagada (até ×0,8).
-- **8.4, os zooms do mapa, os rótulos e a lista de lugares (grupo B, 2026-10-01), aguarda o teste do usuário:**
+- **8.4, os zooms do mapa, os rótulos e a lista de lugares (grupo B, 2026-10-01), aprovado:**
   - **Quatro zooms** (`ZOOM_ROW_M` em `phone.ts`: 8, 18, 36 e 96 m por linha; local ~200 m, distrito ~450 m, setor ~900 m, cidade ~2,4 km): teclas **1–4**, **\*** e **#** (ou + e − do teclado) e a **roda do mouse**. O d-pad move um quarto da vista do zoom atual, e a vista não sai da cidade e da borda (300 m).
   - **De longe, as ruas são linhas:** num zoom afastado a rua é mais fina que uma célula, então cada coluna ou linha que contém uma rua (`roadIn`) é desenhada como rua (no zoom da cidade, só as avenidas e as ruas largas), e a diagonal também. Cada célula amostra no máximo 4×4 pontos do raster, para os zooms afastados não pesarem (~0,5 ms em qualquer zoom). Nos zooms de setor e cidade, a cor dos distritos tinge o mapa pelo tipo (financeiro azul, comercial âmbar, residencial verde, histórico marrom, industrial cinza, theater magenta).
   - **Rótulos:** no local, os nomes das avenidas no topo, das ruas nas próprias linhas e da diagonal; no distrito, só as largas; no setor e na cidade, os nomes dos distritos (os mais perto do centro da vista primeiro). Os marcos são estrelas, com o nome até o zoom de distrito. Nenhum rótulo cobre outro nem uma estrela (`used` em `map`).
+  - **Retorno do usuário sobre o grupo B (2026-10-01):** "tá ótimo". Corrigido na 8.5: o vidro das janelas tingia os móveis na frente dele; as sombras das teclas do d-pad saíam do tamanho da tecla e não iam para cima ou para baixo conforme a luz. Pedido e feito na 8.5: mapa do interior no GPS. Os pedidos para depois estão em "Pedidos do usuário durante a etapa 8". O usuário mandou seguir até o fim da etapa e fechar o CLAUDE.md, porque pode não voltar a esta conversa.
   - **Lista de lugares** (tela `places`): **OK** no mapa (com a vista no jogador; com a vista deslocada, OK centraliza) abre os marcos, do mais perto ao mais longe, com distância e direção; **Show** leva o mapa até o marco escolhido, num zoom em que ele cabe, e a linha de baixo mostra a distância e a direção de volta.
 
 - **Etapa 7, grupo A (7.1–7.4), feito em 2026-10-01:**
@@ -756,8 +783,6 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 - **Picos de tempo de desenho:** o `MAX` da linha de status chega a ~20–55 ms às vezes perto de prédios novos (provavelmente a geração das plantas, até 4 por quadro, ~0,2 ms cada, mais os móveis); medir com o perfilador antes de mexer.
 - **Móveis invisíveis de fora (relatado em 2026-10-01):** os interiores vistos pelas janelas (`peekCell`) mostram parede, piso e teto, mas não os móveis. O usuário achou esquisito; fica para a etapa de bugfix.
 - **Chão invisível em alguns lugares, como elevadores e escadas (relatado em 2026-10-01):** o chão some (deixa ver o que estiver por trás) em certos pontos da cabine do elevador e da caixa de escada. Suspeitas: na cabine em movimento, o piso usa `Inside.z0` = altura da cabine, mas a marcha dos degraus ou o recorte do poço (`wz0`/`wzc`) não consideram isso; na caixa de escada, as linhas que a marcha não preenche e que ficam abaixo do piso plano. Fica para a etapa de bugfix.
-- *(Corrigido na 6.8.)* **Prédios sem acesso ao corredor (relatado em 2026-09-30):** em alguns prédios, provavelmente os cortados pela diagonal, não dá para chegar ao corredor a partir da porta de rua (o recorte tira o saguão, a porta ou parte do corredor). Revisar `makePlan` em `sim/interior.ts` para prédios com `cut`.
-- **Grupo B (escadas e elevadores) e fachadas:** o usuário deixou a ordem à escolha do Claude, pedindo o caminho mais barato em processamento e tokens. Sugestão: escadas e elevadores antes, porque reaproveitam o render de dentro que já existe; as fachadas pedem um passe novo e mais caro.
 
 ## Refinamento: anotações (para a etapa 15)
 
@@ -768,6 +793,19 @@ Ajustes que o usuário pediu para deixar para a etapa de refinamento e variedade
 - **A praça do X do theater district** e o X em geral: mais decoração (veja a 7.5 e a 7.6).
 
 ## Notas técnicas (para as próximas sessões)
+
+### Lições da etapa 8 (navegação e celular), para não repetir
+
+- **Testar o celular no painel:** `phone` fica em `window` (dev). Depois de entrar ("ENTER THE CITY"), as teclas se simulam com `dispatchEvent(new KeyboardEvent('keydown', {code}))` e o `keyup`: `ArrowUp` tira o celular, e o boot leva ~5 s antes de aceitar Enter. A tela fica em `gridText(c0, oy + 4, c0 + 42, oy + 30)` com `c0 = cols − 56 + 4`, `oy = 34` (celular erguido); `cols = gridText().split('\n')[0].length`. **Não** passar coordenadas além da grade para `gridText` (ele lê lixo). Letras grandes (`bigText`) são células acesas sem glifo: não aparecem no texto; conferir o estado (`phone.calc.cur`, `phone.dial`) ou uma captura.
+- **O HMR volta à tela de título:** toda edição de código recarrega a página, e o jogo fica parado (`running` falso): as teclas do celular são ignoradas até clicar em "ENTER THE CITY" de novo. Antes de cada teste depois de uma edição, navegar de novo e entrar.
+- **Se `world.tick` não sobe, procurar um erro no console antes de achar que é o painel oculto:** uma exceção dentro do quadro derruba o `requestAnimationFrame` e o jogo congela sem aviso. Foi o que aconteceu com `'.'.repeat(-1)`: a hora do quadro (`now` do `requestAnimationFrame`) pode ser **anterior** à hora de uma tecla (`performance.now()` no evento), então `now - quandoApertou` pode dar negativo. Sempre limitar com `Math.max(0, ...)`.
+- **Testar sistemas do celular sem esperar o tempo real:** criar uma instância própria (`new Gps()` importando `/src/phone/gps.ts?t=...`) e chamar `update` em laço com um `now` falso (60 passos por segundo simulado). Assim 2 minutos de GPS rodam em milissegundos, em vários pontos da cidade (mudar `world.player.x/y` e `inside` e restaurar depois).
+- **O GPS realista demais trava o jogo:** a primeira versão exigia 4 satélites totalmente visíveis e no centro só via 3, então ficava procurando para sempre. Receptores de verdade usam sinais refletidos e difratados; aceitar satélites logo abaixo do horizonte, com mais erro, deixa realista sem travar. Medir sempre em céu aberto, no centro e dentro de prédio.
+- **Sobreposição em desenho por camadas:** sombras de teclas (ou qualquer coisa que escurece vizinhos) precisam de duas passadas: primeiro todas as sombras, depois todas as peças por cima; senão a sombra de uma tecla escurece a seguinte, ou a seguinte apaga a sombra.
+- **Efeitos de tela por coluna precisam respeitar a profundidade:** o vidro da janela (`glassPass`) era aplicado à coluna inteira e tingia os móveis na frente. Todo passe que pinta "por cima" deve conferir `grid.depth` da célula.
+- **Rótulos de mapa:** sem controle de colisão, os nomes se atropelam nos zooms afastados. Um `Uint8Array` de células ocupadas, com prioridade para o que está mais perto do centro da vista, resolve barato.
+- **Rua mais fina que a célula:** amostrar o chão pela maioria faz as ruas sumirem nos zooms afastados. Testar se a coluna ou a linha contém uma rua (`roadIn`) e desenhá-la como linha.
+- **O heredoc grande no Bash continua falhando nesta máquina** (erro de aspas); scripts Python de edição vão para o scratchpad pela ferramenta Write e rodam com `python <arquivo>`. Heredocs pequenos às vezes passam.
 
 ### Lições da etapa 7 (trânsito), para não repetir
 
@@ -894,12 +932,12 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - As janelas iluminando a fachada (como os letreiros), a chuva abafada do lado de dentro e a luz interna ligada à rede elétrica.
    - Veja "Preparação da etapa 6" no Estado atual.
 7. ✅ **Trânsito** *(feita em 2026-10-01, grupos A, B e C; veja o Histórico)*: avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
-8. **Navegação** *(em andamento desde 2026-10-01; veja "Etapa 8" no Histórico)*: o celular como painel diegético com terminal progressivo, mapas em 4 níveis, marcos, e por último os limites do GPS de 2008 (grupo 8C). (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
-9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
+8. ✅ **Navegação** *(feita em 2026-10-01, grupos A, B e C; veja "Etapa 8" no Histórico)*: o celular como painel diegético com terminal progressivo, mapas em 4 níveis e de interior, marcos, os limites do GPS de 2008, e a grade de apps com os que não dependem da rede funcionando. (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
+9. **Rede de telefones e celular:** orelhões; antenas e sinal (a barra "Yx" do celular passa a mostrar o sinal de verdade); loja de apps; discador, SMS e câmera funcionando (as telas já existem desde a 8.7); os limites do hardware valendo; a abertura do jogo. O celular como objeto na mão já existe (etapa 8). Veja "Design: celular e apps".
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
 11. **Cidadãos e rotinas:** casa, trabalho, relações e horários, com nível de detalhe da simulação.
 12. **Rede social da cidade:** posts de cidadãos a partir dos eventos da simulação e das rotinas, com fotos renderizadas do ponto de vista deles, acessível pelo celular e pelo notebook (veja "Design: rede social da cidade").
-13. **Economia:** empresas, preços, estoques e salários interligados.
+13. **Economia:** empresas, preços, estoques e salários interligados. Os fabricantes de eletrônicos e de chips da cidade dão a marca dos celulares e dos chips (pedido na etapa 8).
 14. **Hacking:** computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, apps de hacker instalados por fora da loja, impacto sistêmico.
 
 15. **Refinamento e variedade** (pedido do usuário em 2026-09-30; ampliado em 2026-10-01): uma etapa para refinar o visual **e acrescentar variedade** em vários elementos do jogo (modelos, eventos, fachadas etc.), quando houver mais sistemas e o jogo estiver mais estável. **O usuário testou a etapa 6 e tem opiniões sobre ela, que vai dar nesta etapa: perguntar no começo.** Pode vir a qualquer momento depois da etapa 11, se fizer sentido. Inclui:
@@ -907,12 +945,13 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - pesquisar **fotos de referência reais na internet**, por exemplo da Times Square;
    - um **distrito cheio de neon, no estilo da Times Square** (pode exigir um tipo de distrito novo);
    - os defeitos visuais conhecidos que ainda estiverem abertos (veja as notas técnicas);
+   - (etapa 8) detalhes nos telhados de perto, greebles nas fachadas e topos, chaminés industriais com fumaça (veja "Pedidos do usuário durante a etapa 8");
    - (segunda lista) placas perpendiculares, holofotes e neons de prédio, outdoors ligados às empresas e telões de notícias, se não tiverem entrado antes (veja "Pedidos do usuário para planejar").
 **Etapa de correção de bugs e otimização** (pedido do usuário em 2026-09-30; a otimização foi juntada a ela em 2026-10-01, por causa da queda de 180 para ~60 FPS): **vem antes da etapa 15** (decidido em 2026-10-01); a lista está em "Bugs conhecidos".
 
 16. **Vida do personagem** (pedido do usuário em 2026-09-30): deep sim / life sim. Apartamento próprio, stats, necessidades, customização do personagem pela lore. Depende dos cidadãos (11) e da economia (13).
 
-**Para avaliar (pedido em 2026-10-01): iluminação dinâmica com sombras,** do sol (e da lua) e das luzes (postes, faróis, letreiros, janelas). Verificar se é viável no raycaster por coluna (por exemplo, um raio de sombra por ponto iluminado contra a grade de prédios, ou mapas de sombra por luz na janela deslizante), medir o impacto com `bench`, e talvez criar uma etapa própria para isso.
+**Para avaliar (pedido em 2026-10-01; reforçado na etapa 8, veja "Pedidos do usuário durante a etapa 8"): luz do sol nos prédios (lados iluminados, horizonte iluminado de dia) e iluminação dinâmica com sombras,** do sol (e da lua) e das luzes (postes, faróis, letreiros, janelas). Verificar se é viável no raycaster por coluna (por exemplo, um raio de sombra por ponto iluminado contra a grade de prédios, ou mapas de sombra por luz na janela deslizante), medir o impacto com `bench`, e talvez criar uma etapa própria para isso.
 
 **Ainda sem lugar no roteiro:** o sistema de notícias com telões (junto com a etapa 12). Decidir com o usuário.
 
@@ -920,7 +959,8 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 - chuva, trovão e blackout na etapa 5 (feitos; falta o vento);
 - portas, passos e ambiente interno na 6;
 - motores e buzinas na 7;
-- teclas, bipes e toques na 9.
+- teclas do celular, boot, tons DTMF e chamada falhando na 8 (feitos);
+- toques de chamada, SMS e orelhões na 9.
 
 O módulo de áudio já existe (`src/audio/`, Web Audio, tudo sintetizado, sem arquivos).
 
