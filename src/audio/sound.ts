@@ -34,6 +34,10 @@ export class Sound {
   private city: GainNode;
   private rain: GainNode;
   private rainLow: GainNode;
+  private wind: GainNode;
+  private windLp: BiquadFilterNode;
+  private whistle: GainNode;
+  private whistleBp: BiquadFilterNode;
   private noise: AudioBuffer;
   private lastBolt = -1;
   private kit: Kit;
@@ -102,6 +106,14 @@ export class Sound {
     src().connect(filter(ctx, 'bandpass', 2600, 0.5)).connect(this.rain);
     this.rainLow = gain(ctx, 0, this.out);
     src().connect(filter(ctx, 'lowpass', 500, 0.6)).connect(this.rainLow);
+
+    // wind: a low rush of air with a whistle over it, in gusts (through the walls indoors, muffled)
+    this.wind = gain(ctx, 0, this.out);
+    this.windLp = filter(ctx, 'lowpass', 400, 0.7);
+    src().connect(this.windLp).connect(this.wind);
+    this.whistle = gain(ctx, 0, this.out);
+    this.whistleBp = filter(ctx, 'bandpass', 700, 6);
+    src().connect(this.whistleBp).connect(this.whistle);
 
     // burning seam: a deep roar
     this.fire = gain(ctx, 0, this.out);
@@ -583,10 +595,17 @@ export class Sound {
       if (this.nextDrop < now) this.nextDrop = now + 0.02;
       while (this.nextDrop < now + 0.2) {
         this.drop(this.nextDrop, 0.04 + Math.random() * 0.14, (Math.random() - 0.5) * 1.4);
-        this.nextDrop += -Math.log(1 - Math.random()) / (2 + rain * 22);
+        this.nextDrop += -Math.log(1 - Math.random()) / (6 + rain * 60);
       }
     }
     this.tubes.gain.setTargetAtTime(indoors ? 0.012 * tubes : 0, now, 0.1);
+    // the wind: stronger with its speed and in a storm, in gusts; a whistle when it blows hard
+    const ws = Math.hypot(w.windX, w.windY), gust = 0.55 + 0.45 * Math.sin(sec * 0.7) * Math.sin(sec * 0.23 + 1.3) + 0.15 * Math.sin(sec * 2.9);
+    const wk = Math.max(0, Math.min(1, (ws - 3) / 12)) * (1 + 1.2 * rain) * Math.max(0.15, gust);
+    this.wind.gain.setTargetAtTime(0.22 * wk, now, 0.3);
+    this.windLp.frequency.setTargetAtTime(250 + 600 * wk, now, 0.3);
+    this.whistle.gain.setTargetAtTime(0.03 * Math.max(0, wk - 0.5), now, 0.4);
+    this.whistleBp.frequency.setTargetAtTime(600 + 500 * gust, now, 0.5);
     this.rain.gain.setTargetAtTime(0.28 * Math.min(1, rain * 1.4), now, 0.4);
     this.rainLow.gain.setTargetAtTime(0.35 * Math.max(0, rain - 0.4), now, 0.6);
     // falling and lying snow muffle the city
