@@ -345,6 +345,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Resumo para começar uma sessão (atualizado em 2026-09-30)
 
+- **Etapa 7 (trânsito) em andamento:** o grupo A (7.1–7.4) está feito e **aguarda o teste do usuário**, com uma pergunta sobre as calçadas da diagonal (veja "Bugs conhecidos"). Depois: o grupo B (tipos de veículo, batidas, densidade pelo horário, sons) e o C (pedestres e ciclistas). Veja "Etapa 7" no Histórico.
 - **Etapas 1 a 5 e 5b concluídas e aprovadas pelo usuário.** **A etapa 6 (interiores) está praticamente fechada:** os grupos A–E estão feitos e aprovados (o usuário testou D e E em 2026-10-01). **Grupo F, a segunda passada nas fachadas:** a 1ª rodada (6.15–6.16) foi aprovada; a 2ª (6.17 andaimes de fachada, 6.18 theater district com telões e letreiro de notícias) está feita e **aguarda o teste do usuário**. Com ela a etapa 6 fecha. Depois: a etapa 7 (trânsito), ou a de **bugfix e otimização** (veja "Bugs conhecidos" e o roteiro). **Histórico da etapa 6:** o grupo A (6.1–6.3) foi aprovado com pedidos; a 6.4 (correções e interiores vistos de fora) o grupo B completo (6.5–6.8: elevador com painel, som e vidro, escadas, passos, bug do corredor) a 6.9 (botoeira clicável, vidro com reflexo, grupo C: janelas e vitrines iluminando) e o grupo D (6.10–6.13: lojas abertas, móveis, prédios históricos, escadas de incêndio) aguardam o teste. Depois: as fachadas (grupo E). Veja "Etapa 6: decisões e grupos" no Histórico e "Pedidos do usuário durante a etapa 6".
 - **Rodar:** `iniciar.bat` ou `npm run dev` (porta 5173, a do usuário). O Claude usa a configuração `claude-dev` (5180) ou `vite-auto`. `?seed=42` fixa a cidade.
 - **Teclas:**
@@ -358,7 +359,8 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - **`src/sim/`** (nunca importa `render` nem o DOM):
     - `city.ts`: grade, quarteirões, prédios (caixas, cilindros e caixas cortadas pela diagonal), empresas, props, marcos, borda e Sarcófago.
     - `world.ts`: o passo fixo de 60 Hz e as teclas de debug.
-    - `traffic.ts`: carros simples.
+    - `traffic.ts`: trânsito por faixas (IDM), curvas nos cruzamentos, semáforos (`signal`, `zoneSignal`), paradas obrigatórias, a diagonal (`diagRoad`, zonas), filas (`queues`).
+    - `events.ts`: a fila de eventos (apagão, energia de volta, engarrafamento; batidas na 7B).
     - `clock.ts`: tempo, calendário, sol e lua.
     - `weather.ts`: previsão pura, chão molhado e neve.
     - `power.ts`: subestações, geradores e quem alimenta o quê.
@@ -368,7 +370,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - `sky.ts`: gradiente, nuvens, lua e sol.
     - `precip.ts`: chuva e neve.
     - `sarcophagus.ts`: a cúpula e a constante `CURVE_R`.
-    - `objects.ts` e `models.ts`: objetos com volume.
+    - `objects.ts` e `models.ts`: objetos com volume (inclusive semáforos e placas de PARE, `signalModel`, `signalFarModel`).
     - `signs.ts`: letreiros, lâmpadas e símbolos.
     - `lights.ts`: luzes dinâmicas.
     - `lightmap.ts`: poças de luz dos postes.
@@ -400,6 +402,14 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
 
+- **Etapa 7, grupo A (7.1–7.4), feito em 2026-10-01:**
+  - **7.1, faixas e semáforos** (`sim/traffic.ts`): cada carro anda numa faixa (`hd`, `road`, `lane`; 0 = a mais perto do centro, mão direita) e segue o da frente pelo modelo IDM (aceleração 2, frenagem 3, folga 2 m, 1,2 s). No cruzamento, segue uma curva quadrática do ponto de entrada ao de saída (`startTurn`; esquerda pela faixa interna, direita pela externa, reto por qualquer uma), escolhendo já a manobra do cruzamento seguinte (`plan`). Não entra se a faixa de saída está cheia (`laneFree`), e a conversão à esquerda no verde cede ao tráfego oposto (`oncoming`).
+    - **Semáforos** (`signal`, função pura do cruzamento e de `tick/60`, ou seja, **tempo real**, não o relógio do jogo que anda 30×): ciclo de 64 s, amarelo 3,5 s, todos no vermelho 2 s, verde maior na avenida larga, onda verde subindo as avenidas. Esquinas calmas (residencial e industrial, ruas estreitas) têm ~55% de paradas obrigatórias (`hasSignal`). Sem energia na subestação, o semáforo apaga e vira parada obrigatória: para, espera 0,8 s e vai por ordem de chegada, um por vez (`arrive`, `gate`, `busy`, `firstWait`).
+    - Testado sem o jogador: 15 min sem impasse (a parada mais longa é um vermelho, ~50 s); no blackout geral também flui. 300 carros custam ~0,25 ms por tick; 1500, ~0,8 ms.
+  - **7.2, semáforos desenhados** (`forSignals` em `raycaster.ts`, `signalModel`/`SIGNAL_POLE`/`STOP_SIGN` em `models.ts`): um poste na esquina da direita do outro lado do cruzamento para cada aproximação, com o braço sobre as faixas e um grupo focal por faixa (vermelho, amarelo e verde; acesa é `Glow`). Placa de PARE na esquina da direita antes do cruzamento. Até 60 m o semáforo inteiro (poste e braço são objetos separados, o braço centrado nele e com `z0` = 4,7 m); de 60 a 200 m, só a lâmpada acesa (`signalFarModel`), porque os distantes eram caros (~3,5 ms). Cada lâmpada acesa joga a cor no asfalto até 80 m (`SIGNAL_LIGHT_FAR`). Linha de parada no chão, 4,6–5 m antes do cruzamento, na metade que chega. **Custo:** ~+1,5 ms no `bench` numa esquina do centro.
+  - **7.3, fila de eventos** (`sim/events.ts`, `world.events`): `logEvent(kind, tick, time, x, y, weight, refs)`, guarda os últimos 1000. Hoje: `blackout` e `restored` (em `togglePower`, com a subestação) e `jam` (a cada 10 s, 7+ carros parados a até 80 m de uma aproximação; repete só depois de 5 min). O letreiro de notícias mostra os engarrafamentos dos últimos 3 min (`news.jam` em `en.json`). As batidas (7B) vão entrar aqui.
+  - **7.4, a diagonal** (`diagRoad`, `Zone`, `zoneSignal`): ~12% a mais de carros correm nos dois sentidos da diagonal (`dg`, `u`; 3 faixas por sentido), de borda a borda, e dão meia-volta no fim (perto da cerca). Onde ela cruza uma rua da grade há uma **zona**: perto de um cruzamento (até 8 m) ele vira um semáforo de **3 fases** (avenida, rua, diagonal; ciclo de 75 s) e a linha de parada recua até o começo da zona; no meio da quadra, semáforo próprio de 2 fases (60 s, 55% para a diagonal). Onde a diagonal corre sobre uma avenida em ângulo raso (zona com mais de 45 m, `SHARED`), as duas dividem a pista sem parada própria: valem os cruzamentos com as ruas dentro do trecho (limitação: carros das duas podem se sobrepor ali). Postes de semáforo da diagonal na direita depois de cada zona; postes da grade que cairiam na pista da diagonal não são desenhados. Testado em 3 sementes, com e sem energia, sem impasse.
+  - **Ainda não:** carros não entram nem saem da diagonal pela grade (só correm nela); não há linha de parada desenhada na diagonal.
 - **Etapa 7, trânsito: decisões e grupos (2026-10-01).** O usuário decidiu no início:
   - **Batidas reais:** com o semáforo apagado (blackout, depois hacking) ou um motorista furando o vermelho, os carros podem bater de verdade; o carro batido para, forma fila e gera um evento na fila de eventos.
   - **Pedestres ambientes com ID:** andam pelas calçadas e faixas perto do jogador e obedecem o sinal de pedestre; cada um tem um ID fixo, para a etapa 11 ligá-lo a um cidadão com casa e rotina.
@@ -662,7 +672,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 ## Bugs conhecidos (para uma etapa de correção mais adiante)
 
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
-- **Calçadas da avenida diagonal quebradas (5.1):** em vez de atravessar a rua de forma coerente, as calçadas fazem curvas sem sentido ou desaparecem. A causa provável é a regra do chão em `raycaster.ts`: a calçada da diagonal (`pastD < SIDEWALK` dentro do quarteirão) e a calçada normal do quarteirão (a 4 m da borda) se somam e são cortadas pelas ruas transversais. O usuário sugeriu arrumar junto com o trânsito (agora etapa 7), quando o desenho dos cruzamentos da diagonal for refeito.
+- **Calçadas da avenida diagonal quebradas (5.1):** em vez de atravessar a rua de forma coerente, as calçadas fazem curvas sem sentido ou desaparecem. **Diagnóstico na 7.4** (mapa visto de cima no console): onde a diagonal corre sobre uma avenida em ângulo raso (trechos de ~130 m), a calçada dela some do lado em que fica o asfalto da avenida e reaparece do outro lado mais adiante, e sobram cunhas de asfalto da avenida entre a diagonal e o quarteirão. Proposta levada ao usuário: transformar o encontro num "X" à moda da Times Square/Herald Square, com as cunhas virando praças e a avenida desviando as faixas; aguarda confirmação de que é esse o problema que ele vê.
 
 - **Pingos no meio do andaime de calçada:** cada face com andaime é um só telhado de chuva, mas se houver trechos de faces diferentes encostados, as pontas pingam onde não há borda. Os postes do andaime e dos pontos de ônibus não são sólidos.
 - **Desempenho caindo (relatado em 2026-10-01):** no PC do usuário, o jogo começou preso em 180 FPS e hoje, nas mesmas situações, chega perto de 60 FPS. Fazer uma **etapa de otimização junto com a de bugfix**: perfilar o quadro (`wallColumn`, interiores vistos de fora, objetos, luzes dinâmicas), medir com `bench` e considerar mover partes para Workers ou para o GPU.
@@ -763,7 +773,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - Elevadores que sobem de verdade, alguns com vidro. Escadas de incêndio em que se sobe.
    - As janelas iluminando a fachada (como os letreiros), a chuva abafada do lado de dentro e a luz interna ligada à rede elétrica.
    - Veja "Preparação da etapa 6" no Estado atual.
-7. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
+7. **Trânsito** *(grupo A feito em 2026-10-01, aguardando teste; B e C a fazer; veja o Histórico)*: avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos, e também os apagões da rede elétrica). Carros na avenida diagonal, semáforos ligados à rede elétrica, e o conserto das calçadas da diagonal (veja "Bugs conhecidos").
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos. (O passeio automático e o modo cidade vazia do ASCII City saíram: o usuário não quer no nosso jogo, decidido em 2026-10-01.)
 9. **Rede de telefones e celular:** orelhões; o celular como objeto na mão, com hardware próprio; antenas e sinal; loja de apps; os primeiros apps (discador, SMS, câmera); a abertura do jogo. Veja "Design: celular e apps".
 10. **Transporte:** táxi (pedido por telefone ou sinal, destino dado ao motorista), monotrilho com estações e trens. Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
