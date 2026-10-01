@@ -38,6 +38,8 @@ export interface Car {
   reckless: boolean; rgate: number; lastD: number;
   /** Crashed at this tick (0 = not): a wreck sliding on its own (velocity, spin) until it stops, then towed. */
   wreck: number; vx: number; vy: number; spin: number;
+  /** Ticks it has been held up (by the player, or behind a car on a green), and the tick it last honked. */
+  held: number; honk: number;
   x: number;
   y: number;
   /** Position at the previous tick, for render interpolation. */
@@ -88,7 +90,7 @@ const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0
 function newVehicle(rng: Rng) {
   let r = rng();
   const V = VEHICLES.find((q) => (r -= q.share) < 0) ?? VEHICLES[VEHICLES.length - 1];
-  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0 };
+  return { kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0, held: 0, honk: 0 };
 }
 /**
  * Grip of the road: dry asphalt holds a hard stop (~0.8 g), wet less, snow little. Drivers know it:
@@ -583,7 +585,8 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
 
     // the player on the road: brake and wait (no running anyone over yet)
     const rx = playerX - c.x, ry = playerY - c.y, ahead = rx * c.dx + ry * c.dy, lat = Math.abs(rx * c.dy - ry * c.dx);
-    if (ahead > 0 && ahead < 14 + c.len / 2 && lat < 1.6) obstacle(ahead - c.len / 2 - 0.5, 0);
+    const byPlayer = ahead > 0 && ahead < 14 + c.len / 2 && lat < 1.6;
+    if (byPlayer) obstacle(ahead - c.len / 2 - 0.5, 0);
     // wrecks in the way
     for (const w of wrecks) {
       const wx = w.x - c.x, wy = w.y - c.y, wa = wx * c.dx + wy * c.dy;
@@ -598,6 +601,10 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     if (gap < 0.3) c.v = Math.min(c.v, 0.5); // never into what is ahead
 
     stepBody(c, acc, dt);
+    // impatience: stuck behind the player, or behind a stopped car while the light is green, a driver honks
+    const held = c.v < 0.3 && (byPlayer || (!c.turn && G.sig === Sig.Green && gap < 6 && vl < 0.3));
+    c.held = held ? c.held + 1 : 0;
+    if (c.held > (byPlayer ? 90 : 240) && tick - c.honk > 300 && rng() < 0.02) c.honk = tick;
 
     // move
     const d = c.v * dt;

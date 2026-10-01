@@ -5,6 +5,11 @@ import { type Weather } from '../sim/weather';
 import { type PowerGrid } from '../sim/power';
 import { power } from '../render/power';
 import { blackout, darkEvent, Kit, restore } from './blackout';
+import { type Car } from '../sim/traffic';
+import { type EventLog } from '../sim/events';
+
+/** Engines heard at once (the nearest), and how far an engine, a horn and a crash carry. */
+const ENGINES = 3, ENGINE_R = 45, HORN_R = 120, CRASH_R = 600;
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
@@ -42,6 +47,11 @@ export class Sound {
   private tubes: GainNode;
   private nextDrop = 0;
   muted = false;
+
+  private engines: { osc: OscillatorNode; lp: BiquadFilterNode; g: GainNode; tyre: GainNode; wet: GainNode; pan: StereoPannerNode }[] = [];
+  private lastEvent = -1;
+  private dwelling = new Set<Car>();
+  private honks = new Map<Car, number>();
 
   constructor() {
     const ctx = (this.ctx = new AudioContext());
@@ -96,6 +106,18 @@ export class Sound {
     this.fire = gain(ctx, 0, this.out);
     tone(ctx, 'sine', 38, 0.6, this.fire);
     src().connect(filter(ctx, 'lowpass', 110, 0.8)).connect(gain(ctx, 1.2, this.fire));
+
+    // the nearest vehicles: a motor each (a sawtooth through a low-pass that opens with speed),
+    // tyres on the asphalt and, on a wet road, their hiss
+    for (let k = 0; k < ENGINES; k++) {
+      const pan = ctx.createStereoPanner(); pan.connect(this.out);
+      const g = gain(ctx, 0, pan), lp = filter(ctx, 'lowpass', 300, 1.2);
+      lp.connect(g);
+      const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 40; osc.connect(lp); osc.start();
+      const tyre = gain(ctx, 0, pan); src().connect(filter(ctx, 'bandpass', 900, 0.8)).connect(tyre);
+      const wet = gain(ctx, 0, pan); src().connect(filter(ctx, 'highpass', 2800, 0.7)).connect(wet);
+      this.engines.push({ osc, lp, g, tyre, wet, pan });
+    }
 
     // indoors: fluorescent tubes buzzing
     this.tubes = gain(ctx, 0, this.master);
@@ -214,6 +236,84 @@ export class Sound {
    * night .. 1 in daylight) for the lamps' photocells; the weather; and the lightning bolt now
    * flashing (-1 for none), whose thunder follows once, a few seconds later.
    */
+  /**
+   * The traffic around the listener: the nearest engines and tyres, horns, buses' air brakes at their
+   * stops, and crashes from the event queue, late by the speed of sound.
+   */
+  traffic(cars: Car[], events: EventLog, x: number, y: number, yaw: number, wet: number, tick: number) {
+    const now = this.ctx.currentTime, rx = -Math.sin(yaw), ry = Math.cos(yaw);
+    const pan = (px: number, py: number) => { const d = Math.hypot(px - x, py - y) || 1; return ((px - x) * rx + (py - y) * ry) / d; };
+    const near: [number, Car][] = [];
+    for (const c of cars) {
+      const d = Math.abs(c.x - x) + Math.abs(c.y - y);
+      if (d > ENGINE_R * 1.5) continue;
+      const e = Math.hypot(c.x - x, c.y - y);
+      if (e < ENGINE_R) near.push([e, c]);
+      // a horn: two detuned square waves, a short blast (a truck's or a bus's deeper)
+      if (c.honk && this.honks.get(c) !== c.honk && e < HORN_R) { this.honks.set(c, c.honk); this.horn(now + e / 343, (1 - e / HORN_R) ** 1.5, pan(c.x, c.y), c.len > 6); }
+      // a bus pulling up at a stop lets out its air brakes
+      if (c.kind === 'bus') {
+        if (c.dwell && !this.dwelling.has(c)) { this.dwelling.add(c); if (e < 60) this.psst(now + e / 343, (1 - e / 60) ** 1.5, pan(c.x, c.y)); }
+        else if (!c.dwell) this.dwelling.delete(c);
+      }
+    }
+    if (this.honks.size > 500) this.honks.clear();
+    near.sort((a, b) => a[0] - b[0]);
+    this.engines.forEach((E, k) => {
+      const n = near[k];
+      if (!n) { E.g.gain.setTargetAtTime(0, now, 0.2); E.tyre.gain.setTargetAtTime(0, now, 0.2); E.wet.gain.setTargetAtTime(0, now, 0.2); return; }
+      const [d, c] = n, big = c.len > 6, k2 = (1 - d / ENGINE_R) ** 2, sp = Math.min(1, c.v / 14);
+      E.osc.frequency.setTargetAtTime((big ? 28 : 38) + sp * (big ? 30 : 55), now, 0.15);
+      E.lp.frequency.setTargetAtTime(180 + sp * 600, now, 0.15);
+      E.g.gain.setTargetAtTime(k2 * (big ? 0.16 : 0.1) * (0.35 + 0.65 * sp), now, 0.1);
+      E.tyre.gain.setTargetAtTime(k2 * 0.05 * sp, now, 0.1);
+      E.wet.gain.setTargetAtTime(k2 * 0.09 * sp * wet, now, 0.1);
+      E.pan.pan.setTargetAtTime(pan(c.x, c.y) * 0.85, now, 0.1);
+    });
+    // crashes: a heavy thump, metal crumpling and glass, heard from where they happened
+    for (const e of events.list) {
+      if (e.id <= this.lastEvent) continue;
+      this.lastEvent = e.id;
+      if (e.kind !== 'crash' || tick - e.tick > 60) continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < CRASH_R) this.smash(now + d / 343, (1 - d / CRASH_R) ** 1.6 * (0.5 + e.weight), pan(e.x, e.y));
+    }
+  }
+
+  private burst(t: number, len: number, v: number, pan: number, f: number, type: BiquadFilterType, q: number) {
+    const ctx = this.ctx, s = ctx.createBufferSource(), p = ctx.createStereoPanner(), g = gain(ctx, 0, p);
+    p.pan.value = pan; p.connect(this.out);
+    s.buffer = this.noise; s.connect(filter(ctx, type, f, q)).connect(g);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0005, t + len);
+    s.start(t, Math.random() * 1.5); s.stop(t + len + 0.05);
+  }
+
+  private horn(t: number, v: number, pan: number, big: boolean) {
+    const ctx = this.ctx, p = ctx.createStereoPanner(), g = gain(ctx, 0, p), lp = filter(ctx, 'lowpass', 1800, 0.7);
+    p.pan.value = pan; p.connect(this.out); lp.connect(g);
+    const len = 0.25 + Math.random() * 0.45;
+    for (const f of big ? [180, 227] : [400, 505]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(t + len + 0.05); }
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07 * v, t + 0.02); g.gain.setValueAtTime(0.07 * v, t + len); g.gain.linearRampToValueAtTime(0, t + len + 0.04);
+  }
+
+  private psst(t: number, v: number, pan: number) {
+    this.burst(t, 0.7, 0.12 * v, pan, 3200, 'highpass', 0.7);
+  }
+
+  private smash(t: number, v: number, pan: number) {
+    this.burst(t, 0.45, 0.6 * v, pan, 140, 'lowpass', 0.9);
+    // the crumple: a rattle of short mid bursts
+    for (let k = 0; k < 7; k++) this.burst(t + 0.01 + k * 0.025 + Math.random() * 0.02, 0.06, 0.25 * v * (1 - k / 8), pan, 700 + Math.random() * 900, 'bandpass', 2);
+    // glass: bright pings scattering
+    for (let k = 0; k < 10; k++) {
+      const ctx = this.ctx, o = ctx.createOscillator(), p = ctx.createStereoPanner(), g = gain(ctx, 0, p), at = t + 0.05 + Math.random() * 0.35;
+      p.pan.value = Math.max(-1, Math.min(1, pan + (Math.random() - 0.5) * 0.4)); p.connect(this.out);
+      o.frequency.value = 3000 + Math.random() * 4000; o.connect(g);
+      g.gain.setValueAtTime(0.03 * v, at); g.gain.exponentialRampToValueAtTime(0.0003, at + 0.08);
+      o.start(at); o.stop(at + 0.1);
+    }
+  }
+
   update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number, grid: PowerGrid, indoors: boolean, tubes: number) {
     const now = this.ctx.currentTime;
     const rain = w.snow ? 0 : w.precip;
@@ -292,7 +392,7 @@ export class Sound {
     if (biz >= 0 && sign < SIGN_R) {
       const near = (1 - sign / SIGN_R) ** 2, mode = signMode(city, biz);
       const bk = city.businesses[biz].building, Bb = city.buildings[bk];
-      const lit = signLight(biz, mode, -1, signText(city, biz, 255).length, sec) * Math.min(1, power(grid, grid.building[bk], (Bb.x0 + Bb.x1) / 2, (Bb.y0 + Bb.y1) / 2, bk, grid.generator[bk], sec)[0]);
+      const lit = signLight(biz, mode, -1, signText(city, biz, 255).length, sec) * Math.min(1, power(grid, grid.building[bk], (Bb.x0 + Bb.x1) / 2, (Bb.y0 + Bb.y1) / 2, bk, 0, sec)[0]);
       const stutter = mode === SignMode.Broken && signStutter(biz, sec);
       neon = 0.035 * near * (lit > 0.5 ? (stutter ? 0.25 : 1) : 0);
       crackle = stutter ? 0.05 * near : 0;

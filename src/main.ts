@@ -197,6 +197,7 @@ function frame(now: number) {
     const B = city.buildings[p.inside], P = world.power;
     tubes = power(P, P.building[p.inside], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, p.inside, P.generator[p.inside], (world.tick + alpha) / 60)[0];
   }
+  sound?.traffic(world.cars, world.events, p.x, p.y, camera.yaw, world.weather.wet, world.tick);
   sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power, p.inside >= 0, tubes);
   renderer.draw(grid);
   requestAnimationFrame(frame);
