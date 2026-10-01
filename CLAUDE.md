@@ -400,6 +400,17 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
 
+- **Etapa 7, trânsito: decisões e grupos (2026-10-01).** O usuário decidiu no início:
+  - **Batidas reais:** com o semáforo apagado (blackout, depois hacking) ou um motorista furando o vermelho, os carros podem bater de verdade; o carro batido para, forma fila e gera um evento na fila de eventos.
+  - **Pedestres ambientes com ID:** andam pelas calçadas e faixas perto do jogador e obedecem o sinal de pedestre; cada um tem um ID fixo, para a etapa 11 ligá-lo a um cidadão com casa e rotina.
+  - **Atropelar o jogador:** por enquanto, não (os carros param diante dele, para teste e debug). Quando o jogo estiver mais "gamificado", haverá consequência.
+  - **Grupos planejados:**
+    - **A:** malha viária como grafo (faixas por sentido, cruzamentos, a diagonal), semáforos por cruzamento ligados à rede elétrica (no blackout apagam ou piscam), carros seguindo faixas com curvas suaves e filas no vermelho, o objeto do semáforo com as lâmpadas acesas, a fila de eventos da simulação, e o conserto das calçadas da diagonal.
+    - **B:** tipos de veículo (sedã, táxi, van, caminhão, ônibus com pontos, viatura), batidas reais e o evento delas, densidade pelo horário, sons (motores, buzinas, pneus no molhado).
+    - **C:** pedestres e ciclistas, com o sinal de pedestre e nível de detalhe (longe, a simulação é grosseira).
+- **Manchetes de flavor (2026-10-01):** 602 modelos em 13 categorias (`en.json` → `news.flavor`: city, crime, economy, business, transit, fire, tech, culture, sports, health, world, odd, night). `FLAVOR_BY`, `FLAVOR` e `fillHeadline` em `locale/news.ts` servem para reaproveitar em jornais, rádio e rede social. Lacunas: `{biz} {road} {district} {landmark} {seam} {city} {n} {nth} {m} {p} {o}`.
+- **Lâmpadas mais longe (2026-10-01):** letreiros, letreiro de notícias, placas e outdoors viram lâmpadas a partir de 1,6 colunas × 1,4 linhas por letra (`BULB_COLS`/`BULB_ROWS` em `signs.ts`, ~28 m num letreiro; antes 3 × 2,6, ~15 m). Com várias lâmpadas por célula, `bulbGlyph` escolhe `@`, `o` ou `:` pela densidade. O painel do elevador desenha os números em lâmpadas a qualquer distância (`digitLamps` em `render/interior.ts`).
+
 - **Etapa 6: decisões e grupos (2026-09-30).** O usuário decidiu no início:
   - **Interiores no mesmo espaço da cidade**, sem carregamento: entrar é atravessar a porta. O custo foi medido (veja abaixo) e ficou mais barato que a rua.
   - **Câmera 3D depois:** fica o raycaster por coluna, com o olho na altura do andar e os telhados desenhados. A câmera 3D entra mais tarde, como subetapa própria (talvez na 10).
