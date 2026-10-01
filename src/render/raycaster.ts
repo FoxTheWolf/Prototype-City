@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, signalPole, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -1396,7 +1396,9 @@ function collectObjects(world: World, v: View): Obj[] {
     const near = Math.hypot(S.x - v.x, S.y - v.y) < SIGNAL_NEAR;
     if (S.state === Sig.Stop) { if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: STOP_SIGN, r: 0.5, h: 2.9, seed: 0 }); return; }
     if (!near && S.lit < 0) return;
-    if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: SIGNAL_POLE, r: 0.3, h: 6.3, seed: 0 });
+    // the walk light shows the people across the street when they may cross alongside this traffic (blinking on its yellow)
+    const walk = S.state === Sig.Green ? 1 : S.state === Sig.Yellow ? (Math.floor(frameSec * 2) & 1 ? 2 : 0) : S.state === Sig.Red ? 2 : 0;
+    if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: signalPole(walk), r: 0.45, h: 6.3, seed: 0 });
     // the arm and its heads, around the arm's middle, hanging above the street (far off, just the lit lamps)
     const m = (Math.max(...S.at) + 0.4) / 2, at = S.at.map((y) => y - m);
     out.push({ x: S.x - S.s * m, y: S.y + S.c * m, c: S.c, s: S.s, parts: near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), r: m + 0.3, h: 6.2, z0: 4.7, seed: 0 });

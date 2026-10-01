@@ -555,7 +555,7 @@ const SIG_DARK: RGB[] = [[60, 16, 14], [60, 46, 14], [14, 50, 30]];
  * A traffic light's mast arm, facing +x (the oncoming traffic), drawn as its own object centered on
  * the arm so its bounds stay small: the arm along y from `y0` (at the pole) to past the farthest
  * head, one head per lane at `at` (y, same frame). `lit` is the lamp that is on (0 red, 1 yellow,
- * 2 green), or -1 when it is dark. The pole is SIGNAL_POLE.
+ * 2 green), or -1 when it is dark. The pole is signalPole.
  */
 export function signalModel(at: number[], y0: number, lit: number): Part[] {
   const key = at.join() + '|' + y0 + '|' + lit;
@@ -586,10 +586,23 @@ export function signalFarModel(at: number[], lit: number): Part[] {
 }
 
 /** A traffic light's pole on its base. */
-export const SIGNAL_POLE: Part[] = [
-  part(Cyl, -0.2, -0.2, 0, 0.2, 0.2, 0.5, STEEL, Solid, '#', '='),
-  part(Cyl, -0.12, -0.12, 0, 0.12, 0.12, 6.3, HOUSING, Solid, '|', '.'),
-];
+const poles = new Map<number, Part[]>();
+/**
+ * A traffic light's pole on its base, with the pedestrian signal facing the far side of the street:
+ * `walk` 1 the white walking figure, 2 the orange hand, 0 dark.
+ */
+export function signalPole(walk: number): Part[] {
+  let m = poles.get(walk);
+  if (m) return m;
+  m = [
+    part(Cyl, -0.2, -0.2, 0, 0.2, 0.2, 0.5, STEEL, Solid, '#', '='),
+    part(Cyl, -0.12, -0.12, 0, 0.12, 0.12, 6.3, HOUSING, Solid, '|', '.'),
+    part(Box, 0.1, -0.2, 2.45, 0.38, 0.2, 2.95, HOUSING, Solid, '#', '=', '#'),
+    part(Box, 0.38, -0.15, 2.5, 0.41, 0.15, 2.9, walk === 1 ? [235, 240, 245] : walk === 2 ? [255, 120, 30] : [40, 36, 34], walk ? Glow : Solid, walk === 1 ? 'i' : walk === 2 ? '#' : '.'),
+  ];
+  poles.set(walk, m);
+  return m;
+}
 
 /** A stop sign facing +x on its post. */
 export const STOP_SIGN: Part[] = [

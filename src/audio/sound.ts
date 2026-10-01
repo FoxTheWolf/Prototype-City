@@ -9,7 +9,7 @@ import { type Car } from '../sim/traffic';
 import { type EventLog } from '../sim/events';
 
 /** Engines heard at once (the nearest), and how far an engine, a horn and a crash carry. */
-const ENGINES = 3, ENGINE_R = 45, HORN_R = 120, CRASH_R = 600;
+const ENGINES = 3, ENGINE_R = 45, HORN_R = 120, CRASH_R = 600, CROWD_R = 30;
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
@@ -50,6 +50,7 @@ export class Sound {
 
   private engines: { osc: OscillatorNode; lp: BiquadFilterNode; g: GainNode; tyre: GainNode; wet: GainNode; pan: StereoPannerNode }[] = [];
   private lastEvent = -1;
+  private crowd!: GainNode;
   private dwelling = new Set<Car>();
   private honks = new Map<Car, number>();
 
@@ -117,6 +118,14 @@ export class Sound {
       const tyre = gain(ctx, 0, pan); src().connect(filter(ctx, 'bandpass', 900, 0.8)).connect(tyre);
       const wet = gain(ctx, 0, pan); src().connect(filter(ctx, 'highpass', 2800, 0.7)).connect(wet);
       this.engines.push({ osc, lp, g, tyre, wet, pan });
+    }
+
+    // a crowd: voices blurred into a murmur, band-passed noise whose loudness wanders like talk
+    this.crowd = gain(ctx, 0, this.out);
+    for (const [f, rate] of [[480, 0.9], [900, 1.3], [1400, 0.7]]) {
+      const g = gain(ctx, 0.5, this.crowd), lfo = ctx.createOscillator();
+      src().connect(filter(ctx, 'bandpass', f, 3)).connect(g);
+      lfo.frequency.value = rate; lfo.connect(gain(ctx, 0.45, g.gain)); lfo.start();
     }
 
     // indoors: fluorescent tubes buzzing
@@ -240,8 +249,12 @@ export class Sound {
    * The traffic around the listener: the nearest engines and tyres, horns, buses' air brakes at their
    * stops, and crashes from the event queue, late by the speed of sound.
    */
-  traffic(cars: Car[], events: EventLog, x: number, y: number, yaw: number, wet: number, tick: number) {
+  traffic(cars: Car[], events: EventLog, x: number, y: number, yaw: number, wet: number, tick: number, people: { x: number; y: number }[] = []) {
     const now = this.ctx.currentTime, rx = -Math.sin(yaw), ry = Math.cos(yaw);
+    // the people around: the more within earshot, the louder the murmur
+    let crowd = 0;
+    for (const p of people) { const d = Math.abs(p.x - x) + Math.abs(p.y - y); if (d < CROWD_R) crowd += 1 - d / CROWD_R; }
+    this.crowd.gain.setTargetAtTime(0.09 * Math.min(1, crowd / 8), now, 0.8);
     const pan = (px: number, py: number) => { const d = Math.hypot(px - x, py - y) || 1; return ((px - x) * rx + (py - y) * ry) / d; };
     const near: [number, Car][] = [];
     for (const c of cars) {
