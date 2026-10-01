@@ -1,0 +1,63 @@
+{
+  "first": ["Ann", "Ben", "Carla", "Dave", "Elena", "Frank", "Grace", "Hank", "Iris", "Joe", "Kate", "Leo", "Maria", "Nick", "Olga", "Paul", "Rosa", "Sam", "Tina", "Walt"],
+  "greet": {
+    "generic": ["{biz}, this is {name}.", "{biz}, how can I help you?", "Good evening, {biz}.", "{biz}, {name} speaking.", "Hello, {biz}."],
+    "diner": ["{biz}, are you calling for takeout?", "{biz}, kitchen's open, what can I get you?"],
+    "bar": ["{biz}, it's a bit loud in here, go ahead.", "{biz}, we're open till late."],
+    "cafe": ["{biz}, fresh pot just brewed.", "{biz}, what can I get started for you?"],
+    "pharmacy": ["{biz} pharmacy counter, {name} speaking.", "{biz}, are you calling about a prescription?"],
+    "grocery": ["{biz}, we're open, how can I help?", "{biz}, deli counter."],
+    "laundry": ["{biz}, is this about a pickup?", "{biz}, we have your order ready if you have your ticket."],
+    "pawn": ["{biz}, buying and selling.", "{biz}, what are you looking for?"],
+    "electronics": ["{biz}, we fix radios, TVs and phones.", "{biz}, service desk."],
+    "liquor": ["{biz}, how can I help you?"],
+    "hotel": ["{biz}, front desk, {name} speaking.", "Good evening, {biz}, how may I direct your call?"],
+    "bank": ["{biz}, customer service."],
+    "cinema": ["{biz} box office."],
+    "books": ["{biz}, can I help you find a title?"],
+    "tailor": ["{biz}, alterations and fittings."],
+    "autoparts": ["{biz}, parts counter.", "{biz}, what make and model?"],
+    "parking": ["{biz}, attendant on duty."]
+  },
+  "silence": ["Hello?", "Hello, can you hear me?", "Are you there?", "I think we have a bad line.", "Sorry, I can't hear you.", "Hello? Anyone there?"],
+  "hangup": ["I'll let you go. Try calling back.", "The line must be bad. Goodbye.", "Okay, have a good night.", "I'm going to hang up now. Bye.", "Call us back if you need anything."],
+  "background": {
+    "generic": ["(voices in the background)", "(a radio playing somewhere)", "(a door chime)"],
+    "diner": ["(plates clattering)", "(someone calls out an order)"],
+    "bar": ["(music and chatter)", "(glasses clinking)"],
+    "cafe": ["(an espresso machine hisses)"],
+    "hotel": ["(a quiet lobby, a bell rings)"],
+    "electronics": ["(a TV humming on the bench)"],
+    "laundry": ["(dryers turning)"]
+  },
+  "closed": ["You've reached {biz}. We are closed right now. Our hours are {open} to {close}. Thank you for calling.", "Thank you for calling {biz}. Please call back during business hours, {open} to {close}.", "{biz} is closed. We open again at {open}."],
+  "hold": ["Please hold.", "All of our staff are busy. Please stay on the line.", "Your call is important to us. Please continue to hold."],
+  "res": {
+    "hello": ["Hello?", "Yes, hello?", "Hi, who's calling?", "Hello, this is the {surname} residence."],
+    "who": ["Who is this?", "Hello? I can't hear anything.", "Is someone there?"],
+    "hangup": ["Must be a wrong number. Bye.", "I'm hanging up now.", "Okay. Goodbye."],
+    "machine": ["Hi, you've reached the {surname}s. Leave a message after the beep.", "This is {name}. I can't come to the phone. Leave a message.", "You've reached {name} {surname}. Please leave your name and number."]
+  },
+  "notInService": ["The number you have dialed is not in service. Please check the number and dial again."],
+  "busy": "BUSY",
+  "ivr": {
+    "welcome": "Thank you for calling {biz}.",
+    "menu": {
+      "bank": ["For branch hours, press 1.", "For card services, press 2.", "To speak to a representative, press 0."],
+      "cinema": ["For tonight's showtimes, press 1.", "For our address, press 2."],
+      "hotel": ["For reservations, press 1.", "For the front desk, press 0."],
+      "operator": ["For your balance, press 1.", "For data bundles, press 2.", "To speak to an agent, press 0."]
+    },
+    "hours": "We are open from {open} to {close}.",
+    "address": "We are on {road}, in {district}.",
+    "showtimes": "Tonight: {film} at {t1}, and {film2} at {t2}.",
+    "balance": "Your balance is {credit}. You have {data} of data left.",
+    "dataInfo": "To buy a data bundle, dial star one zero zero pound.",
+    "agent": "All of our agents are busy. Please hold.",
+    "invalid": "Sorry, that is not a valid option.",
+    "bye": "Thank you for calling. Goodbye."
+  },
+  "films": ["Night Shift", "The Long Rain", "Neon Harbor", "Last Train Home", "City of Glass", "The Quiet Hour", "Static", "Paper Moon Motel"],
+  "emergency": ["Emergency services. Please stay on the line.", "This line is for emergencies only."],
+  "directory": ["Directory assistance. We will send nearby listings to your phone by text.", "Your listings are on the way. Thank you."]
+}

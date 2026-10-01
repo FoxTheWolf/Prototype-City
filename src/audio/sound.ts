@@ -262,6 +262,62 @@ export class Sound {
     }
   }
 
+  /** Two tones together for a while, through the earpiece's narrow band (call progress tones). */
+  private dual(f1: number, f2: number, at: number, len: number, v = 0.03) {
+    const ctx = this.ctx, t = ctx.currentTime + at;
+    for (const f of [f1, f2]) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.frequency.value = f; o.connect(filter(ctx, 'bandpass', 900, 0.6)).connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.01); g.gain.setValueAtTime(v, t + len - 0.02); g.gain.linearRampToValueAtTime(0, t + len);
+      o.start(t); o.stop(t + len + 0.02);
+      this.ringNodes.push(o);
+    }
+  }
+  /** The ringback the caller hears: 440 + 480 Hz for 2 seconds (one ring of the far phone). */
+  ringback() { this.dual(440, 480, 0, 2); }
+  /** Busy: 480 + 620 Hz, half a second on, half off. */
+  busy(secs = 4) { for (let a = 0; a < secs; a += 1) this.dual(480, 620, a, 0.5); }
+  /** The three rising tones before a recorded intercept (number not in service). */
+  intercept() { [[914, 0, 0.27], [1371, 0.28, 0.27], [1777, 0.56, 0.38]].forEach(([f, a, l]) => this.dual(f, f, a, l, 0.035)); }
+  /** The click of the other side hanging up. */
+  hangClick() {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', 1200, 1.5)).connect(g);
+    g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.04);
+    s.start(t, Math.random()); s.stop(t + 0.06);
+  }
+  /**
+   * A voice on the line, without words: noise shaped into syllables (a band that moves like
+   * formants, bursts of 120-250 ms) through the phone's narrow band. `pitch` sets the voice, a
+   * recording sounds flatter and more even.
+   */
+  voice(secs: number, pitch = 1, rec = false) {
+    const ctx = this.ctx, t0 = ctx.currentTime;
+    for (let a = 0; a < secs; ) {
+      const len = rec ? 0.16 : 0.12 + Math.random() * 0.13, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise;
+      const f = filter(ctx, 'bandpass', (500 + Math.random() * 900) * pitch, rec ? 6 : 4);
+      s.connect(f).connect(filter(ctx, 'bandpass', 1000, 0.5)).connect(g);
+      const v = 0.05 + (rec ? 0 : Math.random() * 0.04), t = t0 + a;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.03); g.gain.linearRampToValueAtTime(0, t + len);
+      s.start(t, Math.random() * 1.5); s.stop(t + len + 0.02);
+      this.ringNodes.push(s);
+      a += len + (Math.random() < 0.15 ? 0.18 : 0.03);
+    }
+  }
+  /** Hold music: a slow tune through the earpiece, for `secs`. */
+  holdMusic(secs = 8) {
+    const ctx = this.ctx, t0 = ctx.currentTime, tune = [67, 71, 74, 72, 71, 69, 67, 64];
+    for (let a = 0, i = 0; a < secs; a += 0.5, i++) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master), t = t0 + a;
+      o.type = 'triangle'; o.frequency.value = 440 * 2 ** ((tune[i % tune.length] - 69) / 12);
+      o.connect(filter(ctx, 'bandpass', 900, 0.7)).connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03, t + 0.02); g.gain.linearRampToValueAtTime(0, t + 0.48);
+      o.start(t); o.stop(t + 0.5);
+      this.ringNodes.push(o);
+    }
+  }
+
   /** A call that cannot go through: after a moment of silence, the network's three rising tones. */
   callFail() {
     const ctx = this.ctx, t = ctx.currentTime + 1.6;

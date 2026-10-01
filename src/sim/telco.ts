@@ -41,6 +41,11 @@ export interface Account {
 }
 
 export interface Telco {
+  /** The city's area code, and every business's local number (7 digits) by business index. */
+  area: string;
+  bizNum: string[];
+  /** Local number to business index. */
+  byNum: Map<string, number>;
   sites: CellSite[];
   /** Substation of every site. */
   sub: Uint8Array;
@@ -81,9 +86,66 @@ export function buildTelco(seed: number, city: City, power: PowerGrid): Telco {
   });
   const sub = new Uint8Array(sites.map((s) => subAt(power, city, s.x, s.y)));
   // the player's number: a local area code, and a line from the 555-01xx block kept for fiction
-  const area = 200 + Math.floor(hash3(seed, 555, 1) * 700);
+  const area = String(200 + Math.floor(hash3(seed, 555, 1) * 700));
   const line = String(Math.floor(hash3(seed, 555, 2) * 100)).padStart(2, '0');
-  return { sites, sub, player: { number: `(${area}) 555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
+  // every business has a number of its own
+  const byNum = new Map<string, number>();
+  const bizNum = city.businesses.map((_, k) => {
+    let n = '';
+    for (let t = 0; !n || byNum.has(n); t++) n = localNumber(seed, k * 31 + t);
+    byNum.set(n, k);
+    return n;
+  });
+  return { area, bizNum, byNum, sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
+}
+
+/** A made-up local number (7 digits): an exchange from 200 to 999 (never 555 or an N11), and a line. */
+function localNumber(seed: number, q: number): string {
+  let ex = 0;
+  for (let t = 0; !ex || ex === 555 || ex % 100 === 11; t++) ex = 200 + Math.floor(hash3(seed, q, 900 + t) * 800);
+  return String(ex) + String(Math.floor(hash3(seed, q, 901) * 10000)).padStart(4, '0');
+}
+
+/** A number as phones of the city show it: (area) xxx-xxxx for a local one, short codes as they are. */
+export function formatNumber(T: Telco, local: string): string {
+  return local.length === 7 ? `(${T.area}) ${local.slice(0, 3)}-${local.slice(3)}` : local;
+}
+
+/** Opening hours of each kind of business (from, to; to past 24 for after midnight; 0-24 always open). */
+export const BIZ_HOURS: Record<string, [number, number]> = {
+  diner: [6, 23], bar: [16, 26], cafe: [6, 20], pharmacy: [8, 22], grocery: [7, 23], laundry: [7, 21], pawn: [10, 19], electronics: [10, 20],
+  liquor: [10, 23], hotel: [0, 24], bank: [9, 17], cinema: [12, 24], books: [10, 21], tailor: [9, 18], autoparts: [8, 19], parking: [0, 24],
+};
+export function isOpen(kind: string, hour: number): boolean {
+  const [a, b] = BIZ_HOURS[kind] ?? [9, 17];
+  return (hour >= a && hour < b) || hour + 24 < b;
+}
+
+/** Who a dialed number reaches. */
+export type Callee =
+  | { kind: 'biz'; k: number } | { kind: 'res'; id: number } | { kind: 'operator' } | { kind: 'emergency' }
+  | { kind: 'directory' } | { kind: 'self' } | { kind: 'none' };
+
+/**
+ * The number dialed, as the exchange routes it: the service codes (911, 411, 611), a local number
+ * (7 digits, or 10 with the city's area code, with or without a leading 1). A business answers its
+ * own; of the other numbers about a third are homes, whose people answer (stage 11 will put the
+ * citizens behind them); the rest are not in service.
+ */
+export function lookup(T: Telco, seed: number, dialed: string): Callee {
+  if (dialed === '911') return { kind: 'emergency' };
+  if (dialed === '411') return { kind: 'directory' };
+  if (dialed === '611') return { kind: 'operator' };
+  let d = dialed.replace(/\D/g, '');
+  if (d.length === 11 && d[0] === '1') d = d.slice(1);
+  if (d.length === 10) { if (d.slice(0, 3) !== T.area) return { kind: 'none' }; d = d.slice(3); }
+  if (d.length !== 7 || d[0] < '2') return { kind: 'none' };
+  if (d === T.player.number.replace('-', '')) return { kind: 'self' };
+  const k = T.byNum.get(d);
+  if (k !== undefined) return { kind: 'biz', k };
+  if (d.startsWith('555')) return { kind: 'none' };
+  const h = hash3(seed, +d, 4242);
+  return h < 0.35 ? { kind: 'res', id: Math.floor(h * 1e9) } : { kind: 'none' };
 }
 
 /** Whether site k is on the air at this tick: on mains power, or on its batteries for a while after it went down. */

@@ -1,6 +1,7 @@
 import { PLAYER_PHONE, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
+import { Call, type Sfx } from './call';
 import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 
@@ -20,7 +21,7 @@ import { Radio } from './radio';
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
@@ -61,10 +62,13 @@ export function fmtDist(m: number, feet: number): string {
   return m < 1000 ? `${Math.round(m)}m` : `${(m / 1000).toFixed(1)}km`;
 }
 
+/** The contacts that come with the line: emergency, the operator's care line and its service menu, directory assistance. */
+const CONTACTS: [string, string][] = [['Emergency', '911'], ['Customer Care', '611'], ['Balance & Data', '*100#'], ['Directory', '411']];
+
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
-export const TYPING: Screen[] = ['calls', 'calc', 'notes'];
+export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -110,9 +114,19 @@ export class Phone {
   /** The list of places: landmarks nearest first, and the one picked. */
   places: number[] = [];
   psel = 0;
-  /** Calls: the number being dialled, and when the green key was pressed on it (-1: not calling). */
+  /** Calls: the number being dialled, the call under way (or just ended), the numbers called last. */
   dial = '';
-  callAt = -1;
+  call: Call | null = null;
+  readonly redial: string[] = [];
+  /** Sounds the phone asks main to play (the call's tones and voices). */
+  readonly sfx: Sfx[] = [];
+  /** The contacts on the SIM (it holds 250): a few come with the line, the rest are added by hand. */
+  readonly contacts: { name: string; number: string }[] = [];
+  csel = 0;
+  /** The contact being written: its name (typed by multi-tap), its number, and which of them is being typed. */
+  edit = { name: '', number: '', step: 0 };
+  /** Text messages received: from, text, game time, read. */
+  readonly inbox: { from: string; text: string; at: number; read: boolean }[] = [];
   /** Calculator: the number on the display, the one kept, the operation waiting, and whether the next digit starts a new number. */
   calc = { cur: '0', acc: 0, op: '', fresh: true };
   /** Notes: the text, and the key last tapped with when (a tap within a second picks its next letter). */
@@ -132,7 +146,12 @@ export class Phone {
   toggle(now: number): 'out' | 'in' | 'boot' {
     this.out = !this.out;
     if (!this.out) return 'in';
-    if (this.screen === 'off') { this.screen = 'boot'; this.since = now + 0.35; return 'boot'; }
+    if (this.screen === 'off') {
+      this.screen = 'boot'; this.since = now + 0.35;
+      // the numbers that come with the line
+      for (const [name, number] of CONTACTS) this.contacts.push({ name, number });
+      return 'boot';
+    }
     this.since = now; // the backlight wakes up: the screen draws in again
     return 'out';
   }
@@ -144,6 +163,16 @@ export class Phone {
     // the GPS runs while the map is open, in the hand or not
     this.gps.update(this.world, this.screen === 'map' || this.screen === 'places' || (this.screen === 'code' && this.code === 'gps'), now, dt);
     this.radio.update(this.world, this.screen !== 'off', now, dt);
+    // the call: its tones and voices; ended, it is paid for and, a moment later, put away
+    const c = this.call;
+    if (c) {
+      c.update(now, this.sfx);
+      if (c.state === 'ended' && now > c.endAt + 2.5) {
+        this.world.telco.player.credit -= c.cost();
+        for (const [name, num] of c.listings) this.inbox.unshift({ from: '411', text: `${name} ${num}`, at: this.world.time, read: false });
+        this.call = null;
+      }
+    }
     const J = this.radio.job;
     if (J?.what === 'weather' && J.state === 'done') { this.wxAt = this.world.time; this.radio.job = null; }
     // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
@@ -195,7 +224,8 @@ export class Phone {
     this.pressed.set(k, now);
     const s = this.screen;
     // the red key always goes home; the green one opens the dialer
-    if (k === 'end' && s !== 'boot' && s !== 'standby') { this.callAt = -1; this.open('standby', now); return true; }
+    if (k === 'end' && this.call && this.call.state !== 'ended') { this.call.hangUp(now); this.sfx.push(['stop']); return true; }
+    if (k === 'end' && s !== 'boot' && s !== 'standby') { this.open('standby', now); return true; }
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
     switch (s) {
       case 'boot':
@@ -246,7 +276,11 @@ export class Phone {
         return false;
       }
       case 'calls':
-        if (this.callAt >= 0) { if (k === 'rsoft') { this.callAt = -1; return true; } return false; }
+        if (this.call) {
+          if (k === 'rsoft') { this.call.hangUp(now); this.sfx.push(['stop']); return true; }
+          if (/^[0-9*#]$/.test(k)) { this.call.key(k, now); return true; }
+          return false;
+        }
         if (/^[0-9*#]$/.test(k)) {
           if (this.dial.length < 16) this.dial += k;
           // a secret code runs as soon as its last # is in
@@ -254,7 +288,10 @@ export class Phone {
           if (c) { this.code = c; this.lcdStep = 0; this.dial = ''; this.open('code', now + 0.25); }
           return true;
         }
-        if ((k === 'send' || k === 'ok' || k === 'lsoft') && this.dial) { this.callAt = now; return true; }
+        if ((k === 'send' || k === 'ok') && this.dial) { this.place(this.dial, now); return true; }
+        // the green key on an empty dialer brings back the last number called
+        if (k === 'send' && this.redial.length) { this.dial = this.redial[0]; return true; }
+        if (k === 'lsoft' && this.dial) { this.edit = { name: '', number: this.dial, step: 0 }; this.open('contact', now); return true; }
         if (k === 'rsoft') { if (this.dial) this.dial = this.dial.slice(0, -1); else this.open('menu', now); return true; }
         return false;
       case 'calc':
@@ -263,13 +300,40 @@ export class Phone {
         if (k === 'rsoft') { this.open('menu', now); return true; }
         if (k === '*') { this.note = this.note.slice(0, -1); this.tapKey = ''; return true; }
         if (k === '#') { this.note += '\n'; this.tapKey = ''; return true; }
-        const letters = TAPS[k];
-        if (!letters) return false;
-        if (k === this.tapKey && now - this.tapAt < 1) { this.tapN = (this.tapN + 1) % letters.length; this.note = this.note.slice(0, -1); }
-        else this.tapN = 0;
-        if (this.note.length < 400) this.note += letters[this.tapN];
-        this.tapKey = k; this.tapAt = now;
+        const t = this.tap(this.note, k, now, 400);
+        if (t === null) return false;
+        this.note = t;
         return true;
+      }
+      case 'contacts': {
+        const n = this.contacts.length;
+        if (n && (k === 'up' || k === 'down')) { this.csel = (this.csel + (k === 'up' ? -1 : 1) + n) % n; return true; }
+        if (n && (k === 'ok' || k === 'send')) { this.open('calls', now); this.place(this.contacts[this.csel].number, now); return true; }
+        if (k === 'lsoft') { this.edit = { name: '', number: '', step: 0 }; this.open('contact', now); return true; }
+        if (k === 'rsoft') { this.open('menu', now); return true; }
+        return false;
+      }
+      case 'contact': {
+        // a new contact: the name by multi-tap (# goes on to the number), then the number; OK saves
+        const E = this.edit;
+        if (k === 'rsoft') { if (E.step === 1 && !E.number) E.step = 0; else this.open('contacts', now); return true; }
+        if ((k === 'ok' || k === 'lsoft') && E.name && E.number) {
+          if (this.contacts.length < 250) this.contacts.push({ name: E.name, number: E.number });
+          this.csel = this.contacts.length - 1; this.open('contacts', now);
+          return true;
+        }
+        if (k === 'down' || k === 'up') { E.step = k === 'down' ? 1 : 0; this.tapKey = ''; return true; }
+        if (E.step === 0) {
+          if (k === '#') { E.step = 1; this.tapKey = ''; return true; }
+          if (k === '*') { E.name = E.name.slice(0, -1); this.tapKey = ''; return true; }
+          const t = this.tap(E.name, k, now, 20);
+          if (t === null) return false;
+          E.name = t.length === 1 || /\s.$/.test(t) ? t.slice(0, -1) + t.slice(-1).toUpperCase() : t;
+          return true;
+        }
+        if (k === '*' && E.number) { E.number = E.number.slice(0, -1); return true; }
+        if (/^[0-9#]$/.test(k) && E.number.length < 16) { E.number += k; return true; }
+        return false;
       }
       case 'clock':
         if (k === 'ok' || k === 'lsoft') { if (this.swAt >= 0) { this.swAcc += now - this.swAt; this.swAt = -1; } else this.swAt = now; return true; }
@@ -312,7 +376,7 @@ export class Phone {
       const C = secretCodes(this.world.seed);
       if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + C.length) % C.length; return true; }
       // OK dials the code: the dialer opens and its keys go in one by one, with their tones
-      if (k === 'ok' || k === 'lsoft') { this.dial = ''; this.callAt = -1; this.open('calls', now); this.autoQ = C[this.setSel].code; this.autoAt = now + 0.5; return true; }
+      if (k === 'ok' || k === 'lsoft') { this.dial = ''; this.call = null; this.open('calls', now); this.autoQ = C[this.setSel].code; this.autoAt = now + 0.5; return true; }
       return false;
     }
     const rows = PREF_ROWS[pg];
@@ -324,6 +388,26 @@ export class Phone {
     // hear what was picked
     if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
     return true;
+  }
+
+  /** Call a number: the exchange decides who answers (see call.ts). */
+  place(number: string, now: number) {
+    this.call = new Call(this.world, number, now, this.radio.state !== 'service');
+    if (this.call.state === 'ended') this.sfx.push(['fail']);
+    this.dial = number;
+    if (this.redial[0] !== number) this.redial.unshift(number);
+    if (this.redial.length > 10) this.redial.pop();
+  }
+
+  /** Multi-tap: a key tapped again within a second picks its next letter; returns the text, or null for a key without letters. */
+  private tap(text: string, k: Key, now: number, max: number): string | null {
+    const letters = TAPS[k];
+    if (!letters) return null;
+    if (k === this.tapKey && now - this.tapAt < 1) { this.tapN = (this.tapN + 1) % letters.length; text = text.slice(0, -1); }
+    else this.tapN = 0;
+    if (text.length < max) text += letters[this.tapN];
+    this.tapKey = k; this.tapAt = now;
+    return text;
   }
 
   /** The calculator: digits, # the point, the arrows + - x /, OK =, * clears. */

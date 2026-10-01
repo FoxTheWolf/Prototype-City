@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import { cityName, operatorName } from '../locale/names';
 import { calendar, moonPhase } from '../sim/clock';
+import { formatNumber } from '../sim/telco';
 import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
 import { bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
@@ -50,9 +51,9 @@ function notice(S: Lcd, t: number, head: string, lines: string[], col: C3 = BAD)
 
 export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
   switch (P.screen as App) {
-    case 'calls': return calls(S, P, t, now);
-    case 'contacts': return notice(S, t, `${name('contacts').toUpperCase()} (0)`, A.contacts, INK);
-    case 'messages': return messages(S, t);
+    case 'calls': return calls(S, P, world, t, now);
+    case 'contacts': return contacts(S, P, t);
+    case 'messages': return messages(S, P, t);
     case 'camera': return notice(S, t, name('camera').toUpperCase(), A.camera, HI);
     case 'web': return notice(S, t, name('web').toUpperCase(), P.radio.state === 'service' ? A.soon : A.web, P.radio.state === 'service' ? HI : BAD);
     case 'weather': return weather(S, P, world, t, now);
@@ -61,31 +62,85 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'calc': return calc(S, P, t);
     case 'notes': return notes(S, P, t, now);
     case 'settings': return settings(S, P, world, t);
-    default: if (P.screen === 'code') return service(S, P, world, t, now);
+    default:
+      if (P.screen === 'code') return service(S, P, world, t, now);
+      if (P.screen === 'contact') return contactEdit(S, P, now);
   }
 }
 
-/** The dialer: the number in big digits; the green key calls, and with no network the call fails. */
-function calls(S: Lcd, P: Phone, t: number, now: number) {
+/** Text wrapped to a width. */
+function wrap(s: string, w: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const word of s.split(' ')) {
+    if (line && line.length + 1 + word.length > w) { out.push(line); line = word; }
+    else line = line ? `${line} ${word}` : word;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+/**
+ * The dialer: the number in big digits; the green key calls (Save makes it a contact). During a
+ * call: who, its state and time, and what is said, typing in as it is spoken.
+ */
+function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
   title(S, name('calls').toUpperCase(), t);
-  const d = P.dial;
-  if (d.length <= 7) bigText(S, 6, d, INK);
-  else S.center(9, d, INK, LCD);
-  if (P.callAt >= 0) {
-    // (the frame's time can be a little earlier than the key's)
-    const u = Math.max(0, now - P.callAt);
-    S.center(15, `${A.calling} ${d}${'.'.repeat(Math.floor(u * 3) % 4)}`, HI, LCD);
-    if (u > 1.6) { S.center(17, P.radio.state === 'service' ? A.busy : A.noNetwork, BAD, LCD); S.center(19, A.callFailed, BAD, LCD); }
-    return softKeys(S, '', T.back);
+  const d = P.dial, c = P.call, who = P.contacts.find((x) => x.number === d)?.name;
+  if (!c) {
+    if (d.length <= 7) bigText(S, 6, d, INK);
+    else S.center(9, d, INK, LCD);
+    if (who) S.center(14, who, HI, LCD);
+    if (!d) S.center(15, typed(A.dialHint, t - 0.2), DIM, LCD);
+    return softKeys(S, d ? A.save : '', d ? A.clear : T.back);
   }
-  if (!d) S.center(15, typed(A.dialHint, t - 0.2), DIM, LCD);
-  softKeys(S, d ? A.call : '', d ? A.clear : T.back);
+  S.center(3, who ?? (d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d), WHITE, LCD);
+  const u = Math.max(0, now - (c.connectAt >= 0 ? c.connectAt : now)), tm = `${String(Math.floor(u / 60)).padStart(2, '0')}:${String(Math.floor(u % 60)).padStart(2, '0')}`;
+  const state = c.state === 'dialing' ? `${A.calling}${'.'.repeat(Math.floor(now * 3) % 4)}` : c.state === 'ringing' ? `${A.ringing} (${c.rings})` : c.state === 'talk' ? tm : c.reason;
+  S.center(5, state, c.state === 'ended' ? BAD : c.state === 'talk' ? [120, 255, 150] : HI, LCD);
+  if (c.state === 'ended' && c.cost()) S.center(6, A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`), DIM, LCD);
+  // what is said, the latest at the bottom
+  const rows: [string, C3][] = [];
+  for (const L of c.lines) {
+    const shown = L.text.slice(0, Math.ceil(((now - L.at) / L.dur) * L.text.length));
+    const col: C3 = L.who === 'them' ? INK : L.who === 'rec' ? HI : DIM;
+    for (const l of wrap(L.who === 'rec' ? `~ ${shown}` : shown, SW - 2)) rows.push([l, col]);
+  }
+  rows.slice(-(SH - 10)).forEach(([l, col], k) => S.text(1, 8 + k, l, col, LCD));
+  softKeys(S, '', c.state === 'ended' ? '' : A.end);
 }
 
-function messages(S: Lcd, t: number) {
+/** Contacts: the SIM's list; OK calls, New adds one. */
+function contacts(S: Lcd, P: Phone, t: number) {
+  title(S, name('contacts').toUpperCase(), t, A.sim.replace('{n}', String(P.contacts.length)));
+  if (!P.contacts.length) S.center(10, A.noContacts, DIM, LCD);
+  const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.csel - view + 1, P.contacts.length - view));
+  P.contacts.slice(top, top + view).forEach((c, n) => {
+    const k = top + n, sel = k === P.csel, y = 3 + n * 2, bg = sel ? SEL : LCD;
+    if (sel) S.fill(y, bg);
+    S.text(1, y, typed(c.name, t - 0.04 * n), sel ? WHITE : INK, bg);
+    S.text(SW - c.number.length - 1, y, c.number, sel ? WHITE : DIM, bg);
+  });
+  softKeys(S, A.new, T.back);
+}
+
+/** A new contact: the name typed by multi-tap, then the number. */
+function contactEdit(S: Lcd, P: Phone, now: number) {
+  const E = P.edit, blink = Math.floor(now * 2) & 1;
+  title(S, `${name('contacts').toUpperCase()} +`, 1);
+  S.text(1, 4, A.name, E.step === 0 ? HI : DIM, LCD);
+  S.text(1, 5, E.name + (E.step === 0 && blink ? '_' : ''), WHITE, LCD);
+  S.text(1, 8, A.numberF, E.step === 1 ? HI : DIM, LCD);
+  S.text(1, 9, E.number + (E.step === 1 && blink ? '_' : ''), WHITE, LCD);
+  S.text(1, SH - 3, E.step === 0 ? A.notesHint : '* <-', DIM, LCD);
+  softKeys(S, E.name && E.number ? A.save : '', T.back);
+}
+
+function messages(S: Lcd, P: Phone, t: number) {
   title(S, name('messages').toUpperCase(), t);
-  A.boxes.forEach((b, k) => S.text(2, 3 + k * 2, typed(`${b} (0)`, t - 0.1 - k * 0.05), INK, LCD));
-  A.messages.forEach((l, k) => S.center(13 + k * 2, typed(l, t - 0.4 - k * 0.15), k === 0 ? BAD : DIM, LCD));
+  const n = P.inbox.length;
+  A.boxes.forEach((b, k) => S.text(2, 3 + k * 2, typed(`${b} (${k === 0 ? n : 0})`, t - 0.1 - k * 0.05), INK, LCD));
+  P.inbox.slice(0, 6).forEach((m, k) => S.text(2, 12 + k * 2, `${m.from}: ${m.text}`.slice(0, SW - 3), m.read ? DIM : WHITE, LCD));
   softKeys(S, '', T.back);
 }
 
@@ -165,7 +220,7 @@ function about(S: Lcd, P: Phone, world: World, t: number) {
   const net = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
   const rows: [string, string][] = [
     [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
-    [A.number, acc.number], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
+    [A.number, formatNumber(world.telco, acc.number.replace('-', ''))], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
     [A.model, `${D.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
     [A.display, D.screen], [A.radio, D.radio], [A.wlan, `${D.wlan} ${T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
   ];

@@ -71,7 +71,6 @@ function phonePress(pk: Key) {
     if (done && /^[0-9*#]$/.test(pk) && (pr.keys === 2 || (pr.keys === 0 && was === 'calls'))) sound?.dtmf(pk);
     else sound?.phoneKey(/^\d$/.test(pk), done !== false, pr.keys !== 1);
   }
-  if (phone.screen === 'calls' && done && phone.callAt === now) sound?.callFail();
   if (done === 'away') sound?.phoneSlide(false);
 }
 function phoneToggle() {
@@ -230,6 +229,21 @@ function frame(now: number) {
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);
+  for (const f of phone.sfx) {
+    if (!sound) break;
+    switch (f[0]) {
+      case 'fail': sound.callFail(); break;
+      case 'stop': sound.stopRing(); break;
+      case 'ringback': sound.ringback(); break;
+      case 'busy': sound.busy(); break;
+      case 'intercept': sound.intercept(); break;
+      case 'click': sound.stopRing(); sound.hangClick(); break;
+      case 'beep': sound.beep(true); break;
+      case 'hold': sound.holdMusic(f[1]); break;
+      case 'voice': sound.voice(f[1], f[2], f[3]); break;
+    }
+  }
+  phone.sfx.length = 0;
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
   phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, phone.cx, phone.cy) : null;
   drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
