@@ -407,6 +407,97 @@ export class Sound {
     });
   }
 
+  /**
+   * A notebook key: the scissor switch's short snap (bright noise) over a soft thock of the keycap
+   * bottoming out; the space bar and the big keys deeper and a bit louder. Each press a little different.
+   */
+  lapKey(kind: 'key' | 'space' | 'enter') {
+    const ctx = this.ctx, t = ctx.currentTime, big = kind !== 'key';
+    const s = ctx.createBufferSource(), c = gain(ctx, 0, this.master);
+    s.buffer = this.noise;
+    s.connect(filter(ctx, 'bandpass', (big ? 2200 : 3200) + Math.random() * 900, 1.2)).connect(c);
+    c.gain.setValueAtTime((big ? 0.08 : 0.06) * (0.8 + Math.random() * 0.4), t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.018);
+    s.start(t, Math.random() * 1.5); s.stop(t + 0.03);
+    const k = ctx.createBufferSource(), h = gain(ctx, 0, this.master);
+    k.buffer = this.noise;
+    k.connect(filter(ctx, 'bandpass', kind === 'space' ? 260 : big ? 380 : 520 + Math.random() * 120, 2)).connect(h);
+    const at = t + 0.006;
+    h.gain.setValueAtTime(kind === 'space' ? 0.16 : big ? 0.11 : 0.07, at); h.gain.exponentialRampToValueAtTime(0.0005, at + (kind === 'space' ? 0.05 : 0.03));
+    k.start(at, Math.random() * 1.5); k.stop(at + 0.07);
+  }
+  /** The backpack's zipper: a run of tiny teeth clicking past, then the bag's cloth. */
+  zipper() {
+    const ctx = this.ctx, t0 = ctx.currentTime;
+    for (let n = 0; n < 34; n++) {
+      const t = t0 + n * (0.011 + Math.random() * 0.004), s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', 2600 + Math.random() * 1500, 1.5)).connect(g);
+      g.gain.setValueAtTime(0.03 + Math.random() * 0.02, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.008);
+      s.start(t, Math.random() * 1.5); s.stop(t + 0.012);
+    }
+    this.phoneSlide(true);
+  }
+  /** The lid: the hinge's friction as it swings, and the clack of it shutting (or the knock of it open). */
+  lid(open: boolean) {
+    const ctx = this.ctx, t = ctx.currentTime, len = open ? 0.4 : 0.28;
+    const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master), f = filter(ctx, 'bandpass', 700, 3);
+    s.buffer = this.noise; s.connect(f).connect(g);
+    f.frequency.setValueAtTime(open ? 500 : 900, t); f.frequency.linearRampToValueAtTime(open ? 900 : 500, t + len);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.025, t + 0.05); g.gain.linearRampToValueAtTime(0, t + len);
+    s.start(t, Math.random()); s.stop(t + len + 0.05);
+    const k = ctx.createBufferSource(), h = gain(ctx, 0, this.master), at = t + len;
+    k.buffer = this.noise; k.connect(filter(ctx, 'bandpass', open ? 300 : 650, 2)).connect(h);
+    h.gain.setValueAtTime(open ? 0.05 : 0.16, at); h.gain.exponentialRampToValueAtTime(0.0005, at + 0.06);
+    k.start(at, Math.random()); k.stop(at + 0.1);
+  }
+  /** The drive seeking: the head's arm ticking across the platter. */
+  seek() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (const [d, f, v] of [[0, 1700 + Math.random() * 600, 0.05], [0.004 + Math.random() * 0.006, 900, 0.03]]) {
+      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, 3)).connect(g);
+      g.gain.setValueAtTime(v * (0.6 + Math.random() * 0.5), t + d); g.gain.exponentialRampToValueAtTime(0.0005, t + d + 0.006);
+      s.start(t + d, Math.random() * 1.5); s.stop(t + d + 0.01);
+    }
+  }
+  /** The BIOS's beep from the little speaker: short, square and thin. */
+  biosBeep() {
+    const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'square'; o.frequency.value = 1000; o.connect(filter(ctx, 'bandpass', 1400, 1)).connect(g);
+    g.gain.setValueAtTime(0.035, t); g.gain.setValueAtTime(0.035, t + 0.12); g.gain.linearRampToValueAtTime(0, t + 0.13);
+    o.start(t); o.stop(t + 0.15);
+  }
+  /** The power button's click. */
+  powerClick() {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(filter(ctx, 'highpass', 3000, 0.7)).connect(g);
+    g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.01);
+    s.start(t, Math.random()); s.stop(t + 0.02);
+  }
+  private lapHum: { spin: OscillatorNode; whine: OscillatorNode; sg: GainNode; fan: GainNode } | null = null;
+  /**
+   * The notebook running: the drive's platter (5400 rpm, a hum at 90 Hz with a faint whine) and the
+   * fan's soft hiss. `spin` 0..1 is the platter's speed (it spins up at boot and down at halt).
+   */
+  laptopHum(on: boolean, spin: number) {
+    const ctx = this.ctx, t = ctx.currentTime;
+    if (!this.lapHum) {
+      const sg = gain(ctx, 0, this.master), fan = gain(ctx, 0, this.master);
+      const spinO = ctx.createOscillator(), whine = ctx.createOscillator();
+      spinO.type = 'triangle'; whine.type = 'sine';
+      spinO.connect(filter(ctx, 'lowpass', 400, 0.7)).connect(sg);
+      const wg = gain(ctx, 0.08, sg); whine.connect(wg);
+      spinO.start(); whine.start();
+      const n = ctx.createBufferSource(); n.buffer = this.noise; n.loop = true;
+      n.connect(filter(ctx, 'lowpass', 1100, 0.6)).connect(fan); n.start();
+      this.lapHum = { spin: spinO, whine, sg, fan };
+    }
+    const H = this.lapHum;
+    H.spin.frequency.setTargetAtTime(15 + 75 * spin, t, 0.1);
+    H.whine.frequency.setTargetAtTime(400 + 4100 * spin, t, 0.1);
+    H.sg.gain.setTargetAtTime(on ? 0.02 * spin : 0, t, 0.2);
+    H.fan.gain.setTargetAtTime(on ? 0.008 : 0, t, 0.6);
+  }
+
   /** The phone out of the pocket (or back in): cloth rustling, and the knock of it in the hand. */
   phoneSlide(out: boolean) {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);

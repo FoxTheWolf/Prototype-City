@@ -4,6 +4,8 @@ import { drawPhone, keyAt, mapView } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { type Sfx } from './phone/call';
+import { Laptop, type LapSound } from './laptop/laptop';
+import { drawLaptop } from './laptop/draw';
 import en from './locale/en.json';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
@@ -44,10 +46,16 @@ const input = new Input(canvas);
 const camera = new Camera();
 const phone = new Phone(world);
 const payphone = new Payphone(world);
+const laptop = new Laptop(world);
+/** Eye height over the feet: lower while sitting at the notebook (or leaning on a counter). */
+function eyeNow(): number {
+  const s = laptop.seat, k = 1 - (1 - laptop.raise) ** 2;
+  return s ? EYE + (s.eye - EYE) * k : EYE;
+}
 payphone.outgoing = () => phone.call;
 phone.incomingCall = () => (payphone.call && payphone.active ? [payphone.call, world.telco.payphones[payphone.k].num] : null);
 // the phone's camera sees the player's view
-phone.render = (g) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: layout.cellW / layout.cellH, look, hand: handLightNow() });
+phone.render = (g) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: eyeNow() + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: layout.cellW / layout.cellH, look, hand: handLightNow() });
 /** The light in the player's hand now: the camera's flash for a moment after a shot, the torch app while the phone is out. */
 function handLightNow(): number {
   const t = performance.now() / 1000;
@@ -57,7 +65,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, VIEW_LIGHT, VIEW_GLINT,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -67,7 +75,7 @@ if (import.meta.env.DEV) Object.assign(window, {
   // on a 256x80 grid of its own, as in a 16:9 window
   bench: (n = 10) => {
     const p = world.player, g = new CharGrid(256, ROWS), t0 = performance.now();
-    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + p.z, floor: viewFloor(), z: p.z, lift: p.liftTo >= 0, alpha: 0, cellAspect: 0.6, look });
+    for (let k = 0; k < n; k++) renderWorld(g, world, { x: p.x, y: p.y, yaw: camera.yaw, pitch: camera.pitch, eye: eyeNow() + p.z, floor: viewFloor(), z: p.z, lift: p.liftTo >= 0, alpha: 0, cellAspect: 0.6, look });
     return (performance.now() - t0) / n;
   },
 });
@@ -119,6 +127,24 @@ function playSfx(list: Sfx[]) {
   }
   list.length = 0;
 }
+let lapSpin = 0;
+/** Sounds the notebook asked for. */
+function playLap(list: LapSound[]) {
+  for (const f of list) {
+    if (!sound) break;
+    switch (f) {
+      case 'key': case 'space': case 'enter': sound.lapKey(f); break;
+      case 'zip': sound.zipper(); break;
+      case 'open': sound.lid(true); break;
+      case 'close': sound.lid(false); break;
+      case 'seek': sound.seek(); break;
+      case 'beep': sound.biosBeep(); break;
+      case 'power': sound.powerClick(); break;
+      case 'spin': case 'spindown': break; // the hum follows the power (laptopHum)
+    }
+  }
+  list.length = 0;
+}
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
   // with the phone out the system cursor is free to click its keys; put away, the view takes the mouse again
@@ -137,6 +163,7 @@ canvas.addEventListener('contextmenu', noMenu, true);
 canvas.oncontextmenu = noMenu;
 // the mouse wheel zooms the phone's map, steps through the menu's apps and scrolls its lists
 addEventListener('wheel', (e) => {
+  if (laptop.open && e.deltaY) { laptop.scroll(-Math.sign(e.deltaY) * 3); return; }
   if (!phone.out || !e.deltaY) return;
   const d = Math.sign(e.deltaY);
   if (phone.screen === 'map') { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
@@ -159,6 +186,10 @@ function payPress(k: Key) {
 addEventListener('mousedown', (e) => {
   if (e.button === 2) e.preventDefault();
   if (!running) return;
+  if (laptop.open) {
+    if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
+    return;
+  }
   if (e.button === 1) { e.preventDefault(); if (!payphone.active) phoneToggle(); return; }
   if (payphone.active) {
     if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(grid.cols, grid.rows, x, y); if (k) payPress(k); }
@@ -178,16 +209,30 @@ addEventListener('mousedown', (e) => {
   if (b >= 0) sound?.beep(callLift(world, b));
 });
 // the lock arrives a moment after it is asked for: if the right button is already up, free the cursor again
-document.addEventListener('pointerlockchange', () => { if (input.locked && rightAt < 0 && (phone.out || payphone.active)) input.unlock(); });
+document.addEventListener('pointerlockchange', () => { if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); });
 addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
-  if (phone.out && !payphone.active && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
+  if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
   // the pointer was held while looking around; the cursor is free again over the phone or the payphone,
   // a moment later: freed during the click, the browser could still open its menu where the cursor lands
-  if (phone.out || payphone.active) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active)) input.unlock(); }, 60);
+  if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
 });
 addEventListener('keydown', (e) => {
+  // the notebook open takes the whole keyboard; Esc closes the lid and stands up
+  if (laptop.open) {
+    e.preventDefault();
+    if (e.code === 'Escape') { if (!e.repeat) { laptop.close(performance.now() / 1000); input.lock(); } return; }
+    if (e.repeat && !['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'].includes(e.code) && e.key.length !== 1) return;
+    laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
+    return;
+  }
+  // N: take the notebook out, where it can be used (sitting or leaning)
+  if (e.code === 'KeyN' && running && !e.repeat && !payphone.active && laptop.raise === 0) {
+    if (phone.out) phoneToggle();
+    if (laptop.take(performance.now() / 1000)) input.unlock();
+    return;
+  }
   // a payphone in use takes the keys; F lifts the handset of the one in front, or hangs it up
   if (e.code === 'KeyF' && running && !e.repeat) {
     if (payphone.active) { payphone.close(); input.lock(); return; }
@@ -242,7 +287,8 @@ function readInput(): PlayerInput {
   // the up and down arrows belong to the phone (as in GTA IV); WASD walk
   const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
-  return { forward: running ? f : 0, strafe: running ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
+  const go = running && laptop.raise === 0;
+  return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
 // audio can only start from a click, so it is made on entering the city
@@ -262,7 +308,7 @@ function begin() {
   input.lock();
 }
 overlay.addEventListener('click', begin);
-canvas.addEventListener('click', () => { if (!input.locked && !phone.out) input.lock(); });
+canvas.addEventListener('click', () => { if (!input.locked && !phone.out && !laptop.open) input.lock(); });
 
 const bolt = new Float64Array(2);
 let last = performance.now();
@@ -281,7 +327,7 @@ function frame(now: number) {
   camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
   const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
-  if (running) camera.look(turn * 2.2 * dt, 0);
+  if (running && !laptop.open) camera.look(turn * 2.2 * dt, 0);
   else camera.look(dt * 0.08, 0); // idle drift behind the title
   camera.update(dt);
 
@@ -298,7 +344,7 @@ function frame(now: number) {
     y: p.py + (p.y - p.py) * alpha,
     yaw: camera.yaw,
     pitch: camera.pitch,
-    eye: EYE + p.z,
+    eye: eyeNow() + p.z,
     floor: viewFloor(),
     z: p.z,
     lift: p.liftTo >= 0,
@@ -326,11 +372,19 @@ function frame(now: number) {
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
   phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, phone.cx, phone.cy) : null;
   drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
+  // the notebook: its schedule, its sounds, the drive's hum, and on screen
+  laptop.update(dt, now / 1000);
+  playLap(laptop.sfx);
+  const lapOn = laptop.lid > 0 && laptop.pc.bootAt >= 0 && laptop.shell.state !== 'off';
+  lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
+  sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin);
+  drawLaptop(grid, laptop, world, now / 1000, VIEW_LIGHT);
+  if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; grid.text((grid.cols - s.length) >> 1, grid.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[P] PHONE  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+    + `[P] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
   const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `

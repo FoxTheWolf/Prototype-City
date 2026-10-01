@@ -1,0 +1,585 @@
+import { hash3 } from '../core/rng';
+import { calendar } from '../sim/clock';
+import { type Computer, type FsNode } from '../sim/computer';
+import { type World } from '../sim/world';
+import L from '../locale/laptop.en.json';
+
+/**
+ * A Unix-like shell on a Computer: the commands, the text they print and how long they take. The
+ * screen is a terminal of TERM_W x TERM_H characters; what a command prints is scheduled line by
+ * line at the pace of the real work behind it (the disk reading, the processor hashing), so the
+ * text types in as fast as the machine would give it, and Ctrl+C stops what has not happened yet.
+ *
+ * It runs on any Computer: the player's notebook now, the city's machines over the network later.
+ * Times are real seconds; file times and the clock are the game's.
+ */
+export const TERM_W = 80, TERM_H = 22;
+/** How the terminal writes a line: a moment per line and per character (fast, but it is seen to scroll). */
+const LINE_S = 0.012, CHAR_S = 1 / 5000;
+const KEEP = 800;
+
+/** 0 normal, 1 dim, 2 bright. */
+export type Ink = 0 | 1 | 2;
+export interface Line { text: string; ink: Ink }
+/** A sound the shell asks for: a seek of the drive, the BIOS beep, the drive spinning up or down. */
+export type LapSfx = 'seek' | 'beep' | 'spin' | 'spindown';
+
+interface Item { at: number; text?: string; ink?: Ink; replace?: boolean; sfx?: LapSfx; fn?: () => void; always?: boolean }
+
+/** The programs installed with the system: where, size on disk (KB) and memory to run (KB). */
+const PROGRAMS: [string, string, number, number][] = [
+  ['/bin', 'ls', 92, 420], ['/bin', 'cat', 46, 300], ['/bin', 'cp', 72, 380], ['/bin', 'mv', 76, 380], ['/bin', 'rm', 48, 320],
+  ['/bin', 'mkdir', 36, 300], ['/bin', 'rmdir', 30, 290], ['/bin', 'touch', 40, 300], ['/bin', 'echo', 26, 260], ['/bin', 'pwd', 26, 260],
+  ['/bin', 'ps', 70, 900], ['/bin', 'kill', 22, 270], ['/bin', 'date', 52, 330], ['/bin', 'uname', 24, 260], ['/bin', 'hostname', 14, 250],
+  ['/bin', 'dmesg', 18, 600], ['/bin', 'sleep', 22, 250], ['/bin', 'sh', 680, 1800],
+  ['/usr/bin', 'head', 36, 300], ['/usr/bin', 'wc', 34, 300], ['/usr/bin', 'find', 168, 1100], ['/usr/bin', 'du', 82, 700], ['/usr/bin', 'uptime', 12, 300],
+  ['/usr/bin', 'free', 14, 320], ['/usr/bin', 'df', 64, 420], ['/usr/bin', 'whoami', 22, 260], ['/usr/bin', 'id', 30, 270],
+  ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
+  ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
+];
+/** What the shell does itself, with no program on the disk. */
+const BUILTINS = new Set(['cd', 'help', 'history', 'exit', 'logout']);
+const PATH = ['/bin', '/usr/bin', '/sbin'];
+
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const p2 = (n: number) => String(n).padStart(2, '0');
+const fill = (s: string, v: Record<string, string>) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
+
+/** Install the system on a fresh disk: the directories, the programs, the manual, the owner's files. */
+export function install(pc: Computer, t: number) {
+  const u = pc.hw.user, H = `/home/${u}`, ago = (d: number) => Math.max(0, t - 86400 * d); // the clock starts in 2008
+  for (const d of ['/boot', '/dev', '/etc', '/lib', '/mnt', '/proc', '/root', '/tmp', '/usr/lib', '/usr/share/man/man1', '/var/log', '/var/tmp']) pc.mkdirs(d, 'root', t);
+  for (const [dir, name, kb, mem] of PROGRAMS) pc.put(`${dir}/${name}`, kb * 1024, 'root', t, name, mem);
+  for (const [name, text] of Object.entries(L.man)) pc.put(`/usr/share/man/man1/${name}.1`, text + '\n', 'root', t);
+  pc.put('/boot/vmlinuz-' + pc.hw.kernel, 1_930_000, 'root', t);
+  pc.put('/boot/initrd.img-' + pc.hw.kernel, 7_400_000, 'root', t);
+  pc.put('/lib/libc.so.6', 1_290_000, 'root', t);
+  pc.put('/etc/hostname', pc.hw.host + '\n', 'root', t);
+  pc.put('/etc/issue', `${pc.hw.os} \\n \\l\n`, 'root', t);
+  pc.put('/etc/passwd', `root:x:0:0:root:/root:/bin/sh\n${u}:x:1000:1000:${u}:${H}:/bin/sh\n`, 'root', t);
+  pc.put('/etc/fstab', '/dev/sda1  /      ext3  defaults  0 1\n/dev/sda5  none   swap  sw        0 0\nproc       /proc  proc  defaults  0 0\n', 'root', t);
+  pc.put('/etc/hosts', `127.0.0.1  localhost\n127.0.1.1  ${pc.hw.host}\n`, 'root', t);
+  pc.put('/etc/resolv.conf', '', 'root', t);
+  for (const n of ['cpuinfo', 'meminfo', 'uptime', 'version']) pc.put(`/proc/${n}`, 0, 'root', t);
+  pc.mkdirs(H, u, t);
+  for (const [name, text] of Object.entries(L.home)) pc.put(`${H}/${name}`, text, u, ago(2 + Math.floor(hash3(name.length, 3, 5) * 30)));
+  pc.mkdirs(`${H}/bin`, u, t);
+  // an old backup: big enough to take a while to read
+  pc.put(`${H}/media/backup-2007.tar`, 734_003_200, u, ago(61));
+  pc.put(`${H}/media/photos/IMG_0412.JPG`, 1_184_311, u, ago(40));
+  pc.put(`${H}/media/photos/IMG_0413.JPG`, 1_090_822, u, ago(40));
+}
+
+export class Shell {
+  lines: Line[] = [];
+  private queue: Item[] = [];
+  /** Scheduling cursor: the time the last queued item happens. */
+  private tq = 0;
+  /** No prompt until this time (a command at work); the screen is off, booting or ready. */
+  busyUntil = 0;
+  state: 'off' | 'boot' | 'ready' = 'off';
+  input = '';
+  cur = 0;
+  readonly hist: string[] = [];
+  private hi = -1;
+  cwd: string;
+  /** Lines scrolled back from the bottom. */
+  scroll = 0;
+  /** 0 amber, 1 green. */
+  ink = 0;
+  readonly sfx: LapSfx[] = [];
+  /** The kernel's messages since boot (dmesg). */
+  private kmsg: string[] = [];
+  /** Game time of the last boot. */
+  private bootT = 0;
+  private shellPid = 0;
+  /** The process a command is running as, until it ends. */
+  private job = 0;
+  /** Asked to power off (shutdown): the notebook reads it. */
+  halted = false;
+
+  constructor(readonly pc: Computer, private world: World) {
+    this.cwd = `/home/${pc.hw.user}`;
+  }
+  get prompt() {
+    const H = `/home/${this.pc.hw.user}`, w = this.cwd === H ? '~' : this.cwd.startsWith(H + '/') ? '~' + this.cwd.slice(H.length) : this.cwd;
+    return `${this.pc.hw.user}@${this.pc.hw.host}:${w}$ `;
+  }
+  get ready() { return this.state === 'ready' && performance.now() / 1000 >= this.busyUntil && !this.queue.length; }
+
+  // ---- the schedule ----
+  private at(now: number, delay: number) { this.tq = Math.max(this.tq, now) + delay; return this.tq; }
+  /** Print a line after `delay`, plus the moment the terminal takes to write it. */
+  say(now: number, text: string, ink: Ink = 0, delay = 0) {
+    text = text.replace(/[^	]*	/g, (m) => m.slice(0, -1).padEnd((Math.floor((m.length - 1) / 8) + 1) * 8));
+    for (let k = 0; k === 0 || k < text.length; k += TERM_W) {
+      this.queue.push({ at: this.at(now, (k ? 0 : delay) + LINE_S + Math.min(TERM_W, text.length - k) * CHAR_S), text: text.slice(k, k + TERM_W), ink });
+    }
+  }
+  private redo(now: number, text: string, delay: number) { this.queue.push({ at: this.at(now, delay), text, replace: true }); }
+  private sound(now: number, s: LapSfx, delay = 0) { this.queue.push({ at: this.at(now, delay), sfx: s }); }
+  private then(now: number, fn: () => void, delay = 0, always = false) { this.queue.push({ at: this.at(now, delay), fn, always }); }
+  /** Drive activity for `s` seconds from the cursor: a seek every so often, as a working drive clicks. */
+  private seeks(now: number, s: number, rate = 5) {
+    const t0 = Math.max(this.tq, now);
+    for (let k = 0, t = 0; t < s; k++) {
+      t += (0.4 + hash3(k, Math.floor(t0 * 10), 77) * 1.2) / rate;
+      if (t < s) this.queue.push({ at: t0 + t, sfx: 'seek' });
+    }
+    this.queue.sort((a, b) => a.at - b.at);
+  }
+
+  update(now: number) {
+    let n = 0;
+    while (n < this.queue.length && this.queue[n].at <= now) {
+      const q = this.queue[n++];
+      if (q.text !== undefined) {
+        if (q.replace && this.lines.length) this.lines[this.lines.length - 1] = { text: q.text, ink: q.ink ?? 0 };
+        else this.lines.push({ text: q.text, ink: q.ink ?? 0 });
+      }
+      if (q.sfx) this.sfx.push(q.sfx);
+      q.fn?.();
+    }
+    if (n) {
+      this.queue.splice(0, n);
+      if (this.lines.length > KEEP) this.lines.splice(0, this.lines.length - KEEP);
+    }
+  }
+  /** Ctrl+C: what has not happened yet does not happen (its clean-up still runs). */
+  private interrupt(now: number) {
+    const left = this.queue.filter((q) => q.always);
+    this.queue = [];
+    for (const q of left) q.fn?.();
+    this.lines.push({ text: '^C', ink: 0 });
+    this.tq = now; this.busyUntil = now;
+  }
+
+  // ---- power ----
+  /** Cold boot: the BIOS, the boot loader, the kernel, the services, the login. */
+  boot(now: number) {
+    const pc = this.pc, H = pc.hw, w = this.world;
+    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0;
+    pc.halt(); pc.bootAt = now; this.bootT = w.time;
+    this.say(now, '', 0, 0.5);
+    this.sound(now, 'beep', 0.1);
+    this.say(now, `${H.bios.startsWith('v') ? 'PhoenixLike' : ''}`.replace('PhoenixLike', `NB BIOS ${H.bios}, an Energy Star Ally`), 1, 0.1);
+    this.say(now, `CPU: ${H.cpu} @ ${(H.cpuMHz / 1000).toFixed(2)}GHz`, 0, 0.3);
+    this.say(now, 'Memory Test:      0K', 0, 0.2);
+    // counts up as fast as the BIOS checks it: ~1.6 GB a second
+    const steps = 12, kb = H.ramMB * 1024;
+    for (let k = 1; k <= steps; k++) this.redo(now, `Memory Test: ${String(Math.round((kb * k) / steps)).padStart(7)}K${k === steps ? ' OK' : ''}`, H.ramMB / 1600 / steps);
+    this.say(now, `Primary Master: ${H.disk}  ${Math.round(H.diskMB / 1000)}GB`, 0, 0.35);
+    this.sound(now, 'spin', 0);
+    this.say(now, 'Booting from Hard Disk...', 0, 0.9);
+    this.say(now, '', 0, 0.2);
+    this.say(now, `Loading ${H.os} ${H.kernel} .....`, 0, 0.3);
+    this.seeks(now, 1.4, 6);
+    // the kernel: timestamped as it goes; the slower the machine, the longer it takes
+    const slow = 1800 / H.cpuMHz, kern = [
+      `${H.os} version ${H.kernel} (builder@osprey) #1 SMP`, `BIOS-provided physical RAM map: ${H.ramMB}MB LOWMEM available.`,
+      `Detected ${H.cpuMHz}.${Math.floor(hash3(H.cpuMHz, 1, 2) * 900 + 100)} MHz processor.`, `Memory: ${kb - 38 * 1024}k/${kb}k available`,
+      `CPU0: ${H.cpu} stepping 0${1 + Math.floor(hash3(H.cpuMHz, 3, 3) * 9)}`, ...(H.cores > 1 ? ['Booting processor 1/2 eip 2000', 'Total of 2 processors activated.'] : []),
+      'NET: Registered protocol family 2', 'PCI: Probing PCI hardware', 'ACPI: AC Adapter [AC] (off-line)', 'ACPI: Battery Slot [BAT0] (battery present)',
+      `ata1.00: ATA-7: ${H.disk}, max UDMA/100`, `sd 0:0:0:0: [sda] ${Math.round(H.diskMB * 1953.125)} 512-byte hardware sectors`, ' sda: sda1 sda2 < sda5 >',
+      `eth0: ${H.eth}, link down`, `wlan0: ${H.wlan} card, firmware 4.1`, 'EXT3-fs: mounted filesystem with ordered data mode.', 'Adding 1004052k swap on /dev/sda5.',
+    ];
+    let ts = 0;
+    for (const k of kern) {
+      ts += (0.02 + hash3(ts * 1000, 5, 6) * 0.12) * slow;
+      const s = `[${ts.toFixed(6).padStart(12)}] ${k}`;
+      this.kmsg.push(s);
+      this.say(now, s, 1, (0.03 + hash3(k.length, 7, 8) * 0.14) * slow);
+      if (k.startsWith('ata') || k.startsWith('EXT3')) this.seeks(now, 0.3, 8);
+    }
+    this.say(now, '', 0, 0.2);
+    // the services: each takes its time and its memory
+    const svc: [string, string, number][] = [['Starting system log daemon', 'syslogd', 620], ['Starting kernel log daemon', 'klogd', 410], ['Loading hardware drivers', 'udevd', 760],
+      ['Checking file systems', '', 0], ['Starting periodic command scheduler', 'crond', 540], ['Configuring network interfaces', '', 0]];
+    this.then(now, () => { pc.spawn('init', 'root', 310, now); });
+    for (const [label, name, mem] of svc) {
+      this.say(now, `${label}...`, 0, 0.1 * slow);
+      this.seeks(now, 0.25 * slow, 7);
+      this.redo(now, `${label}...`.padEnd(TERM_W - 8) + '[ OK ]', 0.15 + 0.35 * slow * hash3(label.length, 9, 9));
+      if (name) this.then(now, () => { pc.spawn(name, 'root', mem, now); });
+    }
+    this.say(now, '', 0, 0.3);
+    this.say(now, `${H.os} ${H.host} tty1`, 0, 0.2);
+    this.say(now, '', 0, 0);
+    this.login(now);
+  }
+  private login(now: number) {
+    const H = this.pc.hw;
+    this.say(now, `${H.host} login: ${H.user}`, 0, 0.4);
+    this.say(now, 'Password:', 0, 0.5);
+    this.seeks(now, 0.3, 6);
+    const last = calendar(this.world.time - 3600 * 26);
+    this.say(now, `Last login: ${WDAY[last.weekday]} ${MON[last.month - 1]} ${String(last.day).padStart(2)} ${p2(Math.floor(last.hour))}:${p2(Math.floor((last.hour % 1) * 60))} on tty1`, 0, 0.6);
+    for (const m of L.motd) this.say(now, fill(m, { os: H.os, kernel: H.kernel, host: H.host, user: H.user }), 1);
+    this.then(now, () => {
+      const p = this.pc.spawn('sh', H.user, 1800, now);
+      this.shellPid = p?.pid ?? 0;
+      this.state = 'ready'; this.cwd = `/home/${H.user}`;
+    });
+    this.busyUntil = this.tq;
+  }
+  /** Back from suspend (the lid was closed): the screen comes back as it was. */
+  resume(now: number) {
+    this.tq = now;
+    this.say(now, '', 1, 0.9);
+    this.redo(now, '', 0);
+    this.busyUntil = this.tq;
+  }
+  shutdown(now: number, reboot: boolean) {
+    const pc = this.pc;
+    this.state = 'boot';
+    this.say(now, '');
+    this.say(now, `Broadcast message from ${pc.hw.user}@${pc.hw.host} (tty1):`, 0, 0.1);
+    this.say(now, `The system is going down for ${reboot ? 'reboot' : 'system halt'} NOW!`, 0, 0.1);
+    for (const s of ['Stopping periodic command scheduler', 'Stopping kernel log daemon', 'Stopping system log daemon', 'Unmounting local filesystems', 'Deactivating swap']) {
+      this.say(now, `${s}...`, 0, 0.15);
+      this.seeks(now, 0.2, 8);
+      this.redo(now, `${s}...`.padEnd(TERM_W - 8) + '[ OK ]', 0.2);
+    }
+    this.say(now, reboot ? 'Will now restart.' : 'Will now halt.', 0, 0.3);
+    this.sound(now, 'spindown', 0.3);
+    if (reboot) this.then(now, () => this.boot(performance.now() / 1000), 1.2);
+    else this.then(now, () => { pc.halt(); this.state = 'off'; this.halted = true; this.lines = []; }, 0.8);
+    this.busyUntil = this.tq;
+  }
+
+  // ---- the keyboard ----
+  /** A key typed at the prompt (`key` as the browser names it). */
+  key(key: string, ctrl: boolean, now: number) {
+    if (this.state !== 'ready') return;
+    if (ctrl && (key === 'c' || key === 'C')) {
+      if (!this.ready) this.interrupt(now);
+      else { this.lines.push({ text: this.prompt + this.input + '^C', ink: 0 }); this.input = ''; this.cur = 0; }
+      return;
+    }
+    if (ctrl && (key === 'l' || key === 'L')) { this.lines = []; return; }
+    if (!this.ready) return; // what is typed while a command works is lost (no type-ahead yet)
+    this.scroll = 0;
+    const s = this.input;
+    if (key === 'Enter') { this.run(s, now); return; }
+    if (key === 'Backspace') { if (this.cur > 0) { this.input = s.slice(0, this.cur - 1) + s.slice(this.cur); this.cur--; } return; }
+    if (key === 'Delete') { this.input = s.slice(0, this.cur) + s.slice(this.cur + 1); return; }
+    if (key === 'ArrowLeft') { this.cur = Math.max(0, this.cur - 1); return; }
+    if (key === 'ArrowRight') { this.cur = Math.min(s.length, this.cur + 1); return; }
+    if (key === 'Home') { this.cur = 0; return; }
+    if (key === 'End') { this.cur = s.length; return; }
+    if (key === 'ArrowUp' || key === 'ArrowDown') {
+      if (!this.hist.length) return;
+      this.hi = key === 'ArrowUp' ? (this.hi < 0 ? this.hist.length - 1 : Math.max(0, this.hi - 1)) : this.hi < 0 ? -1 : this.hi + 1;
+      if (this.hi >= this.hist.length) this.hi = -1;
+      this.input = this.hi < 0 ? '' : this.hist[this.hi]; this.cur = this.input.length;
+      return;
+    }
+    if (key === 'Tab') { this.complete(); return; }
+    if (key.length === 1 && s.length < 200) { this.input = s.slice(0, this.cur) + key + s.slice(this.cur); this.cur++; }
+  }
+  /** Tab: the command's name, or the path being typed, as far as it is the only way to go. */
+  private complete() {
+    const s = this.input.slice(0, this.cur), k = s.lastIndexOf(' ') + 1, word = s.slice(k);
+    let names: string[], dir = '';
+    if (k === 0) names = [...BUILTINS, ...PATH.flatMap((d) => [...(this.pc.get(d)?.kids?.keys() ?? [])])];
+    else {
+      const j = word.lastIndexOf('/');
+      dir = j >= 0 ? word.slice(0, j + 1) : '';
+      const n = this.pc.get(this.pc.abs(this.cwd, dir || '.'));
+      names = n?.kids ? [...n.kids.values()].map((f) => f.name + (f.dir ? '/' : '')) : [];
+    }
+    const base = word.slice(dir.length), hits = [...new Set(names)].filter((n) => n.startsWith(base) && (base.startsWith('.') || !n.startsWith('.')));
+    if (!hits.length) return;
+    let pre = hits[0];
+    for (const h of hits) while (!h.startsWith(pre)) pre = pre.slice(0, -1);
+    if (hits.length > 1 && pre === base) { this.lines.push({ text: this.prompt + this.input, ink: 0 }, { text: hits.sort().join('  ').slice(0, TERM_W * 3), ink: 0 }); return; }
+    const add = pre.slice(base.length) + (hits.length === 1 && k === 0 ? ' ' : '');
+    this.input = s + add + this.input.slice(this.cur); this.cur += add.length;
+  }
+
+  // ---- the commands ----
+  private run(line: string, now: number) {
+    this.lines.push({ text: this.prompt + line, ink: 2 });
+    this.input = ''; this.cur = 0; this.hi = -1; this.tq = now;
+    const t = line.trim();
+    if (!t) return;
+    if (this.hist[this.hist.length - 1] !== t) this.hist.push(t);
+    // > and >> send what it prints to a file
+    let redir: [string, boolean] | null = null;
+    const m = /^(.*?)\s*(>>?)\s*(\S+)\s*$/.exec(t);
+    let cmd = t;
+    if (m) { cmd = m[1]; redir = [m[3], m[2] === '>>']; }
+    const argv = cmd.match(/"[^"]*"|'[^']*'|\S+/g)?.map((a) => a.replace(/^["']|["']$/g, '')) ?? [];
+    if (!argv.length) return;
+    const name = argv[0], pc = this.pc;
+    // a program has to be on the disk and fit in the memory
+    let prog: FsNode | null = null;
+    if (!BUILTINS.has(name)) {
+      for (const d of name.includes('/') ? [''] : PATH) { const f = pc.get(d ? `${d}/${name}` : pc.abs(this.cwd, name)); if (f?.exec) { prog = f; break; } }
+      if (!prog) { this.say(now, fill(L.err.notfound, { c: name })); this.busyUntil = this.tq; return; }
+      const p = pc.spawn(prog.exec!, pc.hw.user, prog.memKB, now);
+      if (!p) { this.say(now, fill(L.err.nomem, { c: name }), 0, 0.05); this.busyUntil = this.tq; return; }
+      this.job = p.pid;
+      this.seeks(now, 0.01 + pc.workS(prog.size, 1) * 0.5, 30);
+      this.at(now, pc.workS(prog.size, 1) * 0.3); // loading it (most of it is in the cache)
+    }
+    const out: string[] = [];
+    const work = this.exec(prog?.exec ?? name, argv.slice(1), out, now);
+    if (redir) {
+      const path = pc.abs(this.cwd, redir[0]), [dir, base] = pc.parent(path), f = pc.get(path);
+      const text = out.join('\n') + (out.length ? '\n' : '');
+      if (!dir?.dir) out.splice(0, out.length, fill(L.err.nofile, { c: 'sh', p: redir[0] }));
+      else if (f?.dir) out.splice(0, out.length, fill(L.err.isdir, { c: 'sh', p: redir[0] }));
+      else if (!pc.writable(path, pc.hw.user)) out.splice(0, out.length, fill(L.err.denied, { c: 'sh', p: redir[0] }));
+      else { const old = redir[1] && f?.data ? f.data : ''; pc.put(path, old + text, pc.hw.user, this.world.time); dir.mtime = this.world.time; void base; out.length = 0; }
+    }
+    // what it prints comes as the work gets done: spread over its time, or at the terminal's pace
+    if (work > 0) {
+      this.seeks(now, work, 6);
+      const each = work / Math.max(1, out.length);
+      if (!out.length) this.at(now, work);
+      for (const s of out) this.say(now, s, 0, each);
+    } else for (const s of out) this.say(now, s);
+    const pid = this.job;
+    if (pid) this.then(now, () => { this.pc.kill(pid); if (this.job === pid) this.job = 0; }, 0, true);
+    this.busyUntil = this.tq;
+  }
+
+  private err(out: string[], k: keyof typeof L.err, c: string, p = '') { out.push(fill(L.err[k], { c, p, u: p })); }
+  /** Run a command; it prints into `out` and returns the seconds of work it took (0: none to speak of). */
+  private exec(c: string, a: string[], out: string[], now: number): number {
+    const pc = this.pc, H = pc.hw, u = H.user, w = this.world;
+    const flags = new Set(a.filter((x) => x.startsWith('-')).flatMap((x) => [...x.slice(1)])), args = a.filter((x) => !x.startsWith('-'));
+    const path = (p: string) => pc.abs(this.cwd, p);
+    const when = (t: number) => { const k = calendar(t); return `${MON[k.month - 1]} ${String(k.day).padStart(2)} ${p2(Math.floor(k.hour))}:${p2(Math.floor((k.hour % 1) * 60))}`; };
+    switch (c) {
+      case 'help': out.push(...L.help); return 0;
+      case 'man': {
+        if (!args[0]) { this.err(out, 'usage', c, 'man command'); return 0; }
+        const f = pc.get(`/usr/share/man/man1/${args[0]}.1`);
+        if (!f?.data) { this.err(out, 'noman', c, args[0]); return 0; }
+        out.push(`${args[0].toUpperCase()}(1)`.padEnd(TERM_W - 18) + 'User Commands', '', ...f.data.trimEnd().split('\n'), '');
+        return pc.workS(f.size, 1);
+      }
+      case 'cd': {
+        const p = path(args[0] ?? '~'), n = pc.get(p);
+        if (!n) this.err(out, 'nofile', c, args[0]); else if (!n.dir) this.err(out, 'notdir', c, args[0]); else this.cwd = p;
+        return 0;
+      }
+      case 'pwd': out.push(this.cwd); return 0;
+      case 'ls': {
+        let files = 0;
+        for (const p of args.length ? args : ['.']) {
+          const n = pc.get(path(p));
+          if (!n) { this.err(out, 'nofile', c, p); continue; }
+          const list = n.dir ? [...n.kids!.values()].filter((f) => flags.has('a') || !f.name.startsWith('.')).sort((x, y) => x.name.localeCompare(y.name)) : [n];
+          files += list.length;
+          if (args.length > 1) out.push(`${p}:`);
+          if (flags.has('l')) {
+            out.push(`total ${Math.ceil(list.reduce((s, f) => s + f.size, 0) / 1024)}`);
+            for (const f of list) out.push(`${f.dir ? 'drwxr-xr-x' : f.exec ? '-rwxr-xr-x' : '-rw-r--r--'} 1 ${f.owner.padEnd(5)} ${f.owner.padEnd(5)} ${String(f.size).padStart(10)} ${when(f.mtime)} ${f.name}${f.dir ? '/' : ''}`);
+          } else {
+            const names = list.map((f) => f.name + (f.dir ? '/' : f.exec ? '*' : '')), wd = Math.min(TERM_W, Math.max(...names.map((x) => x.length), 1) + 2), per = Math.max(1, Math.floor(TERM_W / wd));
+            for (let k = 0; k < names.length; k += per) out.push(names.slice(k, k + per).map((x) => x.padEnd(wd)).join('').trimEnd());
+          }
+        }
+        return files > 40 ? pc.workS(0, Math.ceil(files / 40)) : 0;
+      }
+      case 'cat': case 'head': case 'wc': {
+        const nLines = c === 'head' ? Number(a[a.indexOf('-n') + 1]) || 10 : Infinity;
+        let bytes = 0, files = 0;
+        for (const p of args.filter((x) => c !== 'head' || x !== String(nLines))) {
+          const n = pc.get(path(p));
+          if (!n) { this.err(out, 'nofile', c, p); continue; }
+          if (n.dir) { this.err(out, 'isdir', c, p); continue; }
+          const text = p.startsWith('/proc/') || path(p).startsWith('/proc/') ? this.proc(path(p), now) : n.data;
+          files++; bytes += n.size;
+          if (c === 'wc') { const t = text ?? ''; out.push(`${String(t.split('\n').length - 1).padStart(7)} ${String(t.split(/\s+/).filter(Boolean).length).padStart(7)} ${String(n.size).padStart(9)} ${p}`); continue; }
+          if (text === null) { out.push(...this.binary(n, Math.min(nLines, 12))); continue; }
+          out.push(...text.replace(/\n$/, '').split('\n').slice(0, nLines));
+        }
+        return pc.workS(Math.min(bytes, 64 * 1024), files);
+      }
+      case 'touch': case 'mkdir': {
+        for (const p of args) {
+          const q = path(p), [dir] = pc.parent(q), n = pc.get(q);
+          if (!dir?.dir) { this.err(out, 'nofile', c, p); continue; }
+          if (!pc.writable(q, u)) { this.err(out, 'denied', c, p); continue; }
+          if (c === 'mkdir') { if (n) this.err(out, 'exists', c, p); else pc.mkdirs(q, u, w.time); }
+          else if (n) n.mtime = w.time; else pc.put(q, '', u, w.time);
+          dir.mtime = w.time;
+        }
+        return 0;
+      }
+      case 'rm': case 'rmdir': {
+        let files = 0;
+        for (const p of args) {
+          const q = path(p), [dir, base] = pc.parent(q), n = pc.get(q);
+          if (!n || !dir) { this.err(out, 'nofile', c, p); continue; }
+          if (!pc.writable(q, u) || q === `/home/${u}`) { this.err(out, 'denied', c, p); continue; }
+          if (c === 'rmdir' && !n.dir) { this.err(out, 'notdir', c, p); continue; }
+          if (c === 'rmdir' && n.kids!.size) { this.err(out, 'notempty', c, p); continue; }
+          if (c === 'rm' && n.dir && !flags.has('r')) { this.err(out, 'isdir', c, p); continue; }
+          files += n.dir ? this.count(n) : 1;
+          dir.kids!.delete(base); dir.mtime = w.time;
+          if (this.cwd === q || this.cwd.startsWith(q + '/')) this.cwd = q.slice(0, q.lastIndexOf('/')) || '/';
+        }
+        return files > 3 ? pc.workS(0, files) : 0;
+      }
+      case 'cp': case 'mv': {
+        if (args.length !== 2) { this.err(out, 'usage', c, `${c} source dest`); return 0; }
+        const s = path(args[0]), n = pc.get(s);
+        if (!n) { this.err(out, 'nofile', c, args[0]); return 0; }
+        let d = path(args[1]);
+        if (pc.get(d)?.dir) d = `${d}/${n.name}`;
+        const [dir, base] = pc.parent(d), [sdir, sbase] = pc.parent(s);
+        if (!dir?.dir) { this.err(out, 'nofile', c, args[1]); return 0; }
+        if (!pc.writable(d, u) || (c === 'mv' && !pc.writable(s, u))) { this.err(out, 'denied', c, c === 'mv' && !pc.writable(s, u) ? args[0] : args[1]); return 0; }
+        if (c === 'mv') { sdir!.kids!.delete(sbase); n.name = base; dir.kids!.set(base, n); dir.mtime = w.time; return 0; }
+        if (n.dir) { this.err(out, 'isdir', c, args[0]); return 0; }
+        if (n.size / 1048576 > pc.freeMB()) { this.err(out, 'nospace', c, args[1]); return pc.workS(pc.freeMB() * 1048576, 1); }
+        // the copy is there once it has been read and written
+        const work = pc.workS(n.size * 2, 2);
+        this.at(now, work);
+        this.then(now, () => { const f = pc.put(d, n.data ?? n.size, u, w.time, n.exec, n.memKB); f.size = n.size; });
+        this.seeks(now - work, work, 6);
+        return 0;
+      }
+      case 'echo': out.push(args.join(' ')); return 0;
+      case 'find': {
+        const root = path(args[0] && !a[0].startsWith('-') ? args[0] : '.'), n = pc.get(root), pat = a.includes('-name') ? a[a.indexOf('-name') + 1] : null;
+        if (!n) { this.err(out, 'nofile', c, args[0]); return 0; }
+        const re = pat ? new RegExp('^' + pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$') : null;
+        const walk = (f: FsNode, p: string) => {
+          if (!re || re.test(f.name)) out.push(p || '/');
+          if (f.dir) for (const k of [...f.kids!.values()].sort((x, y) => x.name.localeCompare(y.name))) walk(k, `${p === '/' ? '' : p}/${k.name}`);
+        };
+        walk(n, root === '/' ? '/' : root);
+        return pc.workS(0, Math.ceil(this.count(n) / 8));
+      }
+      case 'du': {
+        const p = path(args[0] ?? '.'), n = pc.get(p);
+        if (!n) { this.err(out, 'nofile', c, args[0]); return 0; }
+        if (!flags.has('s') && n.dir) for (const k of n.kids!.values()) if (k.dir) out.push(`${Math.ceil(pc.du(k) / 1024)}\t${args[0] ?? '.'}/${k.name}`);
+        out.push(`${Math.ceil(pc.du(n) / 1024)}\t${args[0] ?? '.'}`);
+        return pc.workS(0, Math.ceil(this.count(n) / 8));
+      }
+      case 'uname': out.push(flags.has('a') ? `OspreyUX ${H.host} ${H.kernel} #1 SMP i686 ${H.cpu}` : 'OspreyUX'); return 0;
+      case 'uptime': {
+        const up = (w.time - this.bootT) / 60, k = calendar(w.time), load = (0.02 + pc.procs.length * 0.01).toFixed(2);
+        out.push(` ${p2(Math.floor(k.hour))}:${p2(Math.floor((k.hour % 1) * 60))}:${p2(Math.floor(((k.hour * 60) % 1) * 60))} up ${Math.floor(up / 60)}:${p2(Math.floor(up % 60))},  1 user,  load average: ${load}, ${load}, 0.00`);
+        return 0;
+      }
+      case 'date': {
+        const k = calendar(w.time);
+        out.push(`${WDAY[k.weekday]} ${MON[k.month - 1]} ${String(k.day).padStart(2)} ${p2(Math.floor(k.hour))}:${p2(Math.floor((k.hour % 1) * 60))}:${p2(Math.floor(((k.hour * 60) % 1) * 60))} EST ${k.year}`);
+        return 0;
+      }
+      case 'ps': {
+        out.push('  PID USER       RSS COMMAND');
+        for (const p of pc.procs) out.push(`${String(p.pid).padStart(5)} ${p.user.padEnd(6)} ${String(p.memKB).padStart(8)} ${p.name}`);
+        return 0;
+      }
+      case 'kill': {
+        const pid = Number(args[0]), p = pc.procs.find((x) => x.pid === pid);
+        if (!args[0]) this.err(out, 'usage', c, 'kill pid');
+        else if (!p) this.err(out, 'nosuch', c, args[0]);
+        else if (p.user !== u) this.err(out, 'noperm', c, args[0]);
+        else if (pid === this.shellPid) { this.then(now, () => this.logout(performance.now() / 1000)); }
+        else pc.kill(pid);
+        return 0;
+      }
+      case 'free': {
+        const m = flags.has('m') ? 1024 : 1, tot = H.ramMB * 1024, used = pc.usedKB(), f = (n: number) => String(Math.round(n / m)).padStart(11);
+        out.push('             total       used       free', `Mem:   ${f(tot)}${f(used)}${f(tot - used)}`, `Swap:  ${f(1004052)}${f(0)}${f(1004052)}`);
+        return 0;
+      }
+      case 'df': {
+        const h = flags.has('h'), g = (mb: number) => (h ? `${(mb / 1000).toFixed(1)}G` : String(Math.round(mb * 1000))).padStart(h ? 7 : 11);
+        out.push(`Filesystem   ${h ? '   Size    Used   Avail' : '  1K-blocks       Used  Available'} Use% Mounted on`);
+        out.push(`/dev/sda1    ${g(H.diskMB)} ${g(pc.usedMB())} ${g(pc.freeMB())} ${String(Math.round((pc.usedMB() / H.diskMB) * 100)).padStart(3)}% /`);
+        return 0;
+      }
+      case 'dmesg': out.push(...this.kmsg); return 0;
+      case 'whoami': out.push(u); return 0;
+      case 'id': out.push(`uid=1000(${u}) gid=1000(${u}) groups=1000(${u}),20(dialout),24(cdrom),44(video),46(plugdev),110(netdev)`); return 0;
+      case 'hostname': out.push(H.host); return 0;
+      case 'history': this.hist.forEach((h, k) => out.push(`${String(k + 1).padStart(5)}  ${h}`)); return 0;
+      case 'lshw': {
+        out.push(`${H.host}`, `    description: Notebook`, `    product: ${H.model}`, `  *-cpu`, `       product: ${H.cpu}`, `       size: ${H.cpuMHz}MHz`, `       cores: ${H.cores}`,
+          `  *-memory`, `       size: ${H.ramMB}MiB`, `  *-disk`, `       product: ${H.disk}`, `       size: ${Math.round(H.diskMB / 1000)}GB`, `       capabilities: 5400rpm, ${H.diskMBs}MB/s`,
+          `  *-network:0`, `       logical name: eth0`, `       product: ${H.eth}`, `       serial: ${this.mac(0)}`, `  *-network:1`, `       logical name: wlan0`, `       product: ${H.wlan}`, `       serial: ${this.mac(1)}`);
+        return 0.4 * (1800 / H.cpuMHz);
+      }
+      case 'ifconfig': {
+        out.push(`eth0      Link encap:Ethernet  HWaddr ${this.mac(0)}`, '          UP BROADCAST MULTICAST  MTU:1500  Metric:1', '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
+        out.push('lo        Link encap:Local Loopback', '          inet addr:127.0.0.1  Mask:255.0.0.0', '          UP LOOPBACK RUNNING  MTU:16436  Metric:1', '');
+        out.push(`wlan0     Link encap:Ethernet  HWaddr ${this.mac(1)}`, '          UP BROADCAST MULTICAST  MTU:1500  Metric:1', '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
+        return 0;
+      }
+      case 'iwconfig': {
+        out.push('lo        no wireless extensions.', '', 'eth0      no wireless extensions.', '');
+        out.push('wlan0     IEEE 802.11bg  ESSID:off/any', '          Mode:Managed  Frequency:2.412 GHz  Access Point: Not-Associated', '          Tx-Power=20 dBm', '          Link Quality:0  Signal level:0  Noise level:0', '');
+        return 0;
+      }
+      case 'sha1sum': {
+        let work = 0;
+        for (const p of args) {
+          const n = pc.get(path(p));
+          if (!n) { this.err(out, 'nofile', c, p); continue; }
+          if (n.dir) { this.err(out, 'isdir', c, p); continue; }
+          let h = '';
+          const key = (n.data ?? '') + n.size;
+          for (let k = 0; k < 5; k++) h += Math.floor(hash3(key.length * 131 + n.size, k, key.charCodeAt(k % Math.max(1, key.length)) | 0) * 2 ** 32).toString(16).padStart(8, '0');
+          out.push(`${h}  ${p}`);
+          // read off the disk, 15 cycles a byte through the hash
+          work += pc.workS(n.size, 1, 15);
+        }
+        return work;
+      }
+      case 'sleep': return Math.min(600, Math.max(0, Number(args[0]) || 0));
+      case 'clear': this.then(now, () => { this.lines = []; }); return 0;
+      case 'color': {
+        if (args[0] === 'green') this.ink = 1; else if (args[0] === 'amber') this.ink = 0;
+        else out.push(`color: ${this.ink ? 'green' : 'amber'} (color amber|green)`);
+        return 0;
+      }
+      case 'exit': case 'logout': this.then(now, () => this.logout(performance.now() / 1000)); return 0;
+      case 'shutdown': case 'reboot': this.then(now, () => this.shutdown(performance.now() / 1000, c === 'reboot')); return 0;
+    }
+    this.err(out, 'notfound', c);
+    return 0;
+  }
+  private logout(now: number) {
+    this.pc.kill(this.shellPid);
+    this.state = 'boot';
+    this.tq = now;
+    this.say(now, 'logout');
+    this.say(now, '', 0, 0.3);
+    this.login(now);
+  }
+  private count(n: FsNode): number { return n.dir ? 1 + [...n.kids!.values()].reduce((s, k) => s + this.count(k), 0) : 1; }
+  private mac(k: number) {
+    return [0, 0x1b, 0, 0, 0, 0].map((v, i) => (i < 2 ? v + k * 2 : Math.floor(hash3(this.world.seed, 411 + k, i) * 256)).toString(16).padStart(2, '0')).join(':').toUpperCase();
+  }
+  /** A binary file printed as text: what reads of it on a terminal. */
+  private binary(n: FsNode, rows: number): string[] {
+    const out: string[] = [], junk = '@#$%^&*~`|\\/<>{}[]?;:.,_-+=';
+    for (let r = 0; r < rows; r++) { let s = r === 0 ? '\x7fELF' : ''; for (let k = s.length; k < 60; k++) s += junk[Math.floor(hash3(n.size, r, k) * junk.length)]; out.push(s); }
+    return out;
+  }
+  /** The files in /proc: made as they are read, from the hardware and the memory now. */
+  private proc(p: string, now: number): string {
+    const H = this.pc.hw;
+    if (p === '/proc/cpuinfo') {
+      let s = '';
+      for (let k = 0; k < H.cores; k++) s += `processor\t: ${k}\nmodel name\t: ${H.cpu}\ncpu MHz\t\t: ${H.cpuMHz}.000\ncache size\t: ${H.cores > 1 ? 2048 : 1024} KB\nbogomips\t: ${(H.cpuMHz * 1.995).toFixed(2)}\n\n`;
+      return s;
+    }
+    if (p === '/proc/meminfo') { const t = H.ramMB * 1024; return `MemTotal:     ${String(t).padStart(8)} kB\nMemFree:      ${String(this.pc.freeKB()).padStart(8)} kB\nSwapTotal:    ${String(1004052).padStart(8)} kB\nSwapFree:     ${String(1004052).padStart(8)} kB\n`; }
+    if (p === '/proc/uptime') return `${(now - this.pc.bootAt).toFixed(2)} ${((now - this.pc.bootAt) * 0.9).toFixed(2)}\n`;
+    if (p === '/proc/version') return `${H.os} version ${H.kernel} (builder@osprey) #1 SMP\n`;
+    return '';
+  }
+}

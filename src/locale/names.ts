@@ -170,3 +170,8 @@ export function wifiName(city: City, A: { biz: number; bssid: string; building: 
   const k = parseInt(tail, 16);
   return [`HOME-${tail}`, `WLAN_${tail}`, `${L.surnames[k % L.surnames.length].replace(/[^A-Za-z]/g, '')}Net`, `default`, `NET_${tail.slice(0, 2)}`][k % 5];
 }
+
+/** The computer maker k of the city (see sim/computer.ts), named from slots of their own. */
+export function computerMakerName(city: City, k: number): string {
+  return L.roots[(city.nameSeed + (L.roots.length - 29 - k) * 7919) % L.roots.length];
+}
