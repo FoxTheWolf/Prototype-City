@@ -292,3 +292,25 @@ export function escapeModel(landing: boolean, flight: number, half: number, odd:
   escapes.set(key, m);
   return m;
 }
+
+const shedModels = new Map<number, Part[]>();
+/**
+ * A piece of sidewalk shed, `len` long along the wall (y), 2.6 m out (x, from -1.3 to 1.3, the wall
+ * at -1.3): a green plywood deck at 3 m on steel posts at the curb side, with a lit bulb under it.
+ */
+export function shedModel(len: number): Part[] {
+  const key = Math.round(len * 10);
+  let m = shedModels.get(key);
+  if (m) return m;
+  const h = len / 2, PLY: RGB = [55, 95, 60], PIPE: RGB = [120, 120, 125];
+  m = [
+    part(Box, -1.3, -h, 3, 1.3, h, 3.25, PLY, Solid, '=', '#'),
+    part(Box, 1.25, -h, 3.25, 1.3, h, 4.1, PLY, Solid, '#', '='),
+    part(Box, 1.15, -h + 0.05, 0, 1.25, -h + 0.15, 3, PIPE, Solid, '|'),
+    part(Box, 1.15, h - 0.15, 0, 1.25, h - 0.05, 3, PIPE, Solid, '|'),
+    part(Box, 1.15, -h, 2.85, 1.25, h, 2.95, PIPE, Solid, '-'),
+    part(Ball, -0.08, -0.08, 2.75, 0.08, 0.08, 2.95, [255, 225, 160], Glow, 'o'),
+  ];
+  shedModels.set(key, m);
+  return m;
+}

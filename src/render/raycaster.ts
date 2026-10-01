@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, carModel, debrisModel, escapeModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
+import { bladeHeight, bladeModel, carModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -50,6 +50,11 @@ const FOG = 1500;
 const LIT_H = 9, LIT_FAR = 600;
 /** Litter on the ground is drawn only this close. */
 const LITTER_FAR = 14;
+/** Height of a tower's lit crown band; width of an ad's letters; the ads' boards and paint. */
+const CROWN_H = 16, AD_LETTER = 1.25;
+const AD_BG: RGB[] = [[170, 40, 35], [35, 60, 130], [200, 170, 60], [215, 210, 195], [40, 100, 70], [25, 25, 30]];
+const AD_FG: RGB[] = [[240, 230, 210], [240, 200, 70], [40, 30, 30], [180, 40, 35], [235, 225, 200], [230, 60, 60]];
+const FRAME_AD: RGB = [60, 55, 50];
 /** Spacing of the floodlights along the foot of a floodlit facade. */
 const FLOOD_GAP = 6;
 
@@ -378,6 +383,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
   drawEscapes(grid, world, v, dirX, dirY, plX, plY, plane, scale, hor);
+  if (sheds.length) drawObjects(grid, sheds, { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC });
   if (inside) {
     // the floor's furniture, lit by its rooms' lamps
     const I = inside, objs: Obj[] = I.plan.furn.map((f) => ({ x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }));
@@ -574,6 +580,16 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   // the street doors on this face: the main one, and the shops' (once the ground plan is made)
   let door: Door | null = null;
   if (B.tier === 1 && habitable(B)) for (const D of exitsOf(frameCity, id, true)) if (D.face === face && along > D.a0 && along < D.a1) door = D;
+  // a painted ad high on this face: the business's name in big block letters on a colored board
+  let adA0 = 0, adA1 = 0, adZ0 = 0, adZ1 = 0, adText = '', adBg: RGB = AD_BG[0], adFg: RGB = AD_FG[0];
+  if (B.ad >= 0 && side !== 2 && face === Math.floor(hash3(id, 7, 77) * (B.cut ? 5 : 4))) {
+    const w = Math.min(f1 - f0 - 2, 16), mid = (f0 + f1) / 2;
+    if (w > 5) {
+      adText = signText(frameCity, B.ad, Math.floor((w - 1) / AD_LETTER));
+      adA0 = mid - w / 2; adA1 = mid + w / 2; adZ1 = B.h - 1.6; adZ0 = Math.max(FLOOR_H * 1.5, adZ1 - 5.5);
+      const h = Math.floor(hash3(id, 8, 77) * AD_BG.length); adBg = AD_BG[h]; adFg = AD_FG[h];
+    }
+  }
   // the rooms behind the windows, near enough to make out (see interior.ts): one look into the
   // ground floor's plan and one into the floors above, made the first time a window needs them
   const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
@@ -705,10 +721,35 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const e = Math.min(along - door.a0, door.a1 - along);
       if (e < 0.12 || z > DOOR_H + 0.22) wall(e < 0.12 ? G.bar : G.eq, 1.5);
       else { const k = 0.55 * elec; ch = z > DOOR_H ? G.dash : Math.abs(along - (door.a0 + door.a1) / 2) < 0.06 ? G.bar : G.col; r = 255 * k; g = 220 * k; b = 160 * k; }
+    } else if (adText && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
+      // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint
+      const n = adText.length, lw = AD_LETTER, start = (adA0 + adA1) / 2 - (n * lw) / 2, zc = (adZ0 + adZ1) / 2;
+      const col = Math.floor((along - start) / lw), k = rev ? n - 1 - col : col;
+      const fu = ((along - start) / lw - col) * 1.25 - 0.12, fzz = (zc + 1.1 - z) / 2.2;
+      let on = false;
+      if (col >= 0 && col < n && fu >= 0 && fu < 1 && fzz >= 0 && fzz < 1) on = bulbOn(adText.charCodeAt(k), Math.floor((rev ? 1 - fu : fu) * 5), Math.floor(fzz * 7));
+      const edge = along - adA0 < 0.25 || adA1 - along < 0.25 || z - adZ0 < 0.25 || adZ1 - z < 0.25;
+      const c = edge ? FRAME_AD : on ? adFg : adBg, wk = (0.75 + 0.25 * hash3(Math.floor(along * 3), Math.floor(z * 3), id)) * shade;
+      ch = edge ? G.eq : on ? G.hash : hash3(Math.floor(along * 2), Math.floor(z * 2), 5) < 0.2 ? G.col : G.dot;
+      r = c[0] * wk; g = c[1] * wk; b = c[2] * wk;
+      // lit from below by gooseneck lamps at night
+      const lamp = (1 - frameDay) * pw * Math.max(0, 1 - (z - adZ0) / (adZ1 - adZ0)) * 0.9;
+      r += 120 * lamp; g += 105 * lamp; b += 80 * lamp;
     } else if (lot >= 0 && !escCell && ((!corner && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0)) || (fz > 0.04 && fz < 0.9 && liftGlassAt(frameCity, lot, hx, hy))) && (pk = peekFor(fl))) {
       // a window: the room behind it, lit by its own lamps
       peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), frameDay, sheenAt(along, z));
       ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3]; isWin = true;
+    } else if (detailed && S !== 'glass' && S !== 'warehouse' && S !== 'historic' && z > B.h - 1.3) {
+      // cornice with dentils
+      wall(z > B.h - 0.95 ? G.eq : ((along * 4) | 0) & 1 ? G.quo : G.dot, 1.4);
+    } else if (detailed && (S === 'office' || S === 'brick' || S === 'residential') && fl > 1 && fl % (4 + ((B.feat * 3) | 0)) === 0 && fz < 0.07) {
+      wall(G.eq, 1.3); // a belt course every few floors
+    } else if (detailed && S === 'brick' && !corner && fw > 0.27 && fw < 0.73 && ((fz > 0.78 && fz < 0.86) || (fz > 0.25 && fz < 0.3))) {
+      wall(fz > 0.5 ? G.dash : G.us, 1.3); // stone lintel and sill
+    } else if (detailed && S === 'office' && B.feat > 0.6 && wi % 2 === 0 && fw < 0.18) {
+      wall(G.bar, 1.3); // art deco piers
+    } else if (detailed && (S === 'office' || S === 'residential') && z < FLOOR_H && !B.shop && !corner) {
+      wall(Math.floor(z / 0.5) & 1 ? G.eq : G.hash, 0.95); // a stone base
     } else if (!detailed) {
       const hh = hash3(id, wi >> kh, fl >> kv), wp = hh < litK ? winPow(wi >> kh, fl >> kv) : 0;
       if (wp > 0.04) {
@@ -773,6 +814,11 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         const d = Math.hypot((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H), k = 120 * Math.max(0, 1 - d / 1.5) ** 2;
         r += GL[0] * k; g += GL[1] * k; b += GL[2] * k;
       }
+    }
+    if (B.crown && z > B.h - CROWN_H) {
+      // the top washed in light at night, brightest at the very top
+      const k = ((z - (B.h - CROWN_H)) / CROWN_H) ** 1.4 * 0.95 * pw * (1 - 0.85 * frameDay);
+      r += B.crown[0] * k; g += B.crown[1] * k; b += B.crown[2] * k;
     }
     if (B.flood && z < B.floodH) {
       // floodlights every FLOOD_GAP metres at the foot of the wall, each a cone of light widening
@@ -843,13 +889,42 @@ function drawEscapes(grid: CharGrid, world: World, v: View, dirX: number, dirY: 
   }
 }
 
-/** Bus shelters within 40 m: their roofs keep the rain off (see precip.ts). */
+/**
+ * Bus shelters and sidewalk sheds near the viewer: their roofs keep the rain off (see precip.ts).
+ * The sheds (scaffolding over the sidewalk along a building's street faces) are also gathered as
+ * objects, in pieces of SHED_SEG metres: a plywood deck on posts, with a bulb under it.
+ */
+const SHED_SEG = 4.8, SHED_D = 2.6, SHED_Z = 3;
+const sheds: Obj[] = [];
 function gatherRoofs(world: World, v: View) {
-  roofs.length = 0;
+  roofs.length = 0; sheds.length = 0;
   const { city } = world;
   for (const blk of city.blocks) {
-    if (v.x < blk.x0 - 40 || v.x > blk.x1 + 40 || v.y < blk.y0 - 40 || v.y > blk.y1 + 40) continue;
+    if (v.x < blk.x0 - 60 || v.x > blk.x1 + 60 || v.y < blk.y0 - 60 || v.y > blk.y1 + 60) continue;
     for (const p of blk.props) if (p.kind === 'shelter' && Math.hypot(p.x - v.x, p.y - v.y) < 40) roofs.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), hx: 0.95, hy: 2.05, z: 2.3 });
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const B = city.buildings[k];
+      if (!B.shed) continue;
+      for (let f = 0; f < 4; f++) {
+        const gap = f === 0 ? B.x0 - blk.x0 : f === 1 ? blk.x1 - B.x1 : f === 2 ? B.y0 - blk.y0 : blk.y1 - B.y1;
+        if (gap > SIDEWALK + 0.5) continue;
+        const sp = faceSpan(B, f), lo = sp[0] + 0.3, hi = sp[1] - 0.3;
+        if (hi - lo < 3) continue;
+        const nx = f === 0 ? -1 : f === 1 ? 1 : 0, ny = f === 2 ? -1 : f === 3 ? 1 : 0, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1;
+        const at = (a: number, out: number): [number, number] => (f < 2 ? [edge + nx * out, a] : [a, edge + ny * out]);
+        const [mx, my] = at((lo + hi) / 2, SHED_D / 2);
+        if (Math.hypot(mx - v.x, my - v.y) > 60 + (hi - lo) / 2) continue;
+        // local +x out from the wall, +y along it (for the rain: one roof for the whole face)
+        const c = nx, s = ny;
+        roofs.push({ x: mx, y: my, c, s, hx: SHED_D / 2, hy: (hi - lo) / 2, z: SHED_Z });
+        const n = Math.max(1, Math.round((hi - lo) / SHED_SEG)), seg = (hi - lo) / n;
+        for (let q = 0; q < n; q++) {
+          const [x, y] = at(lo + (q + 0.5) * seg, SHED_D / 2);
+          if (Math.hypot(x - v.x, y - v.y) > SPRITE_FAR) continue;
+          sheds.push({ x, y, c, s, parts: shedModel(seg), r: Math.hypot(SHED_D, seg) / 2 + 0.3, h: SHED_Z + 0.5, seed: 0 });
+        }
+      }
+    }
   }
 }
 
