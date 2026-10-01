@@ -38,6 +38,8 @@ export interface View {
   /** Cell width / cell height in pixels, needed for correct vertical scale. */
   cellAspect: number;
   look: Look;
+  /** A light in the player's hand (the phone's screen as a torch, a camera flash): its strength, 0 for none. */
+  hand?: number;
 }
 
 /** Vertical field of view. The horizontal one follows the window shape (wider window, wider view). */
@@ -422,6 +424,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     glassPass(grid, inside, eye, hor, scale);
   }
   finish(grid, v.look, sky);
+  if (v.hand) handLight(grid, v.hand);
   // the light on the viewer's hands, for what they hold (the phone): the room's lamps indoors; outside
   // the sky, the street lamps and the passing lights at chest height, and the lightning
   // the brightest light's side and color, for the glint on what they hold: the light sampled 2 m
@@ -450,6 +453,23 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
+/**
+ * A light held at the eye: everything drawn gets brighter by its distance (from the depth buffer),
+ * strongest near the middle of the view, whiter the closer. Works the same indoors and out.
+ */
+function handLight(grid: CharGrid, k: number) {
+  const { cols, rows, cells, bg, depth } = grid;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const i = y * cols + x, d = depth[i];
+    if (d > 40) continue;
+    const cx = (x - cols / 2) / cols, cy = (y - rows / 2) / rows, aim = 0.55 + 0.45 * Math.exp(-(cx * cx + cy * cy) * 6);
+    const f = (k * aim) / (1 + (d / 2.2) ** 2);
+    if (f < 0.01) continue;
+    const q = i * 4, mul = 1 + f * 2.2, add = f * 70;
+    for (let c = 0; c < 3; c++) { cells[q + 1 + c] = cells[q + 1 + c] * mul + add * 1.4; bg[q + c] = bg[q + c] * mul + add; }
+  }
+}
+
 function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
   const { cells, bg, depth } = grid;
   // by day the world is brighter and sinks into a pale haze with distance: the "service" look

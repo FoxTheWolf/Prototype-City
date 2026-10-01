@@ -299,6 +299,20 @@ export class Sound {
       s.start(t + d, Math.random()); s.stop(t + d + 0.05);
     }
   }
+  /** A payphone ringing on the street: its bell for two seconds, as loud and from where the distance and the bearing say. */
+  bell(dist: number, pan: number) {
+    const v = 0.08 / (1 + (dist / 12) ** 2);
+    if (v < 0.002) return;
+    const ctx = this.ctx, t0 = ctx.currentTime, p = ctx.createStereoPanner();
+    p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(this.master);
+    for (let a = 0; a < 2; a += 0.05) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = (a % 0.1 < 0.05 ? 1020 : 1280); o.connect(g).connect(p);
+      g.gain.setValueAtTime(v, t0 + a); g.gain.exponentialRampToValueAtTime(v * 0.2, t0 + a + 0.05);
+      o.start(t0 + a); o.stop(t0 + a + 0.05);
+      this.ringNodes.push(o);
+    }
+  }
   /** A coin dropping into a payphone: a bright metallic clink, and its rattle down the chute. */
   coin(at = 0) {
     const ctx = this.ctx, t = ctx.currentTime + at;

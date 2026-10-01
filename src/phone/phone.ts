@@ -402,9 +402,11 @@ export class Phone {
         // OK (or the green key) takes a photo, if the storage holds it
         if ((k === 'ok' || k === 'send') && this.render) {
           if (this.freeKB() < 600) { this.sfx.push(['fail']); return false; }
+          // the flash fires as the picture is taken (it lights the scene the sensor sees)
           const p = this.world.player;
-          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light, this.world.time, p.x, p.y, this.world.seed));
-          this.shotAt = now; this.sfx.push(['shutter']);
+          this.shotAt = performance.now() / 1000;
+          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light + 0.9, this.world.time, p.x, p.y, this.world.seed));
+          this.sfx.push(['shutter']);
           return true;
         }
         if (k === 'lsoft') { this.phsel = 0; this.open('photos', now); return true; }
@@ -590,6 +592,9 @@ export class Phone {
     }
     return false;
   }
+
+  /** Whether the torch app is lit. */
+  torch(): boolean { return this.screen === 'app' && STORE[this.appId][0] === 'torch'; }
 
   /** Storage left in KB: the flash less the system, the photos and the apps installed. */
   freeKB(): number {

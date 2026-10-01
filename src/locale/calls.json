@@ -40,6 +40,7 @@
   },
   "notInService": ["The number you have dialed is not in service. Please check the number and dial again."],
   "busy": "BUSY",
+  "selfLine": "(your own breathing, on both phones)",
   "ivr": {
     "welcome": "Thank you for calling {biz}.",
     "menu": {

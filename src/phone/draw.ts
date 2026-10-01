@@ -71,7 +71,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   // the eye adapts in a second or two: in the dark the screen looks brighter and blooms, under a
   // strong light it looks a little dimmer
   GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
-  const gain = Math.min(1.25, Math.max(0.8, 1.35 - 0.35 * GL.adapt)), bloom = Math.min(1, Math.max(0, (0.75 - GL.adapt) / 0.4));
+  const gain = Math.min(1.55, Math.max(0.55, 1.7 - 0.75 * GL.adapt)), bloom = Math.min(1, Math.max(0, (0.9 - GL.adapt) / 0.5));
   // the glint: the brightest light nearby mirrored in the phone, a soft diagonal band on the side
   // it comes from, in its color, stronger for a light behind the player
   const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
@@ -180,7 +180,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       const gx = ox + x, gy = oy + y;
       if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
       const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
-      const w = bloom * (d === 0 ? 0.12 : 0.45 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
+      const w = bloom * (d === 0 ? 0.22 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
       g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
     }
   }

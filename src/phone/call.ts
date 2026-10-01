@@ -16,7 +16,7 @@ import { type World } from '../sim/world';
  * the number, the hour and the call, so a call made twice the same hour goes the same way. Calls
  * cost credit by the started minute; 911 and the operator's line are free.
  */
-export type Sfx = ['shutter'] | ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
+export type Sfx = ['bell', number] | ['shutter'] | ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
 export interface Line { who: 'them' | 'rec' | 'sys'; text: string; at: number; dur: number }
 type Step = { who: Line['who'] | 'act'; text: string; gap: number };
 
@@ -77,6 +77,8 @@ export class Call {
       else if (now >= this.ringAt) {
         if (this.rings >= MAX_RINGS) { this.end(now, en.phone.apps.noAnswer); return; }
         this.rings++; this.ringAt += 6; sfx.push(['ringback']);
+        // a payphone being called rings out on its street
+        if (this.callee.kind === 'payphone') sfx.push(['bell', this.callee.k]);
         return;
       }
       else return;
@@ -111,6 +113,13 @@ export class Call {
     const pick = this.choice(k);
     if (!pick) return;
     this.waitUntil = -1; this.q = pick; this.nextAt = now + 0.5;
+  }
+
+  /** Answered at the other end by the player (a payphone they picked up): the line between their two phones. */
+  answerHere(now: number) {
+    if (this.state !== 'ringing') return;
+    this.state = 'talk'; this.connectAt = now;
+    this.q = [{ who: 'sys', text: C.selfLine, gap: 0.5 }]; this.nextAt = now;
   }
 
   /** Hang up (the player), or the far end did. */

@@ -450,6 +450,13 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 ### Histórico (registro por etapa; os itens mais antigos ficam no fim)
 
+- **Etapa de bugfix e otimização, primeira parte, e Wi-Fi inicial (2026-10-01).** Retorno do usuário sobre a etapa 9:
+  - segurando o botão direito para olhar com o celular fora, o cursor do sistema bate na borda da tela e a câmera para de virar: o ponteiro deve ser preso enquanto o botão está segurado;
+  - o flash da câmera e a lanterna não iluminam em volta;
+  - quer saber se os orelhões tocam quando se liga para eles; **no futuro, um pedestre poderia atender** (etapa 11);
+  - pediu para começar a etapa de bugfix e otimização com uma **triagem**: o mais crítico agora, o resto para outra etapa;
+  - propôs uma **versão inicial do Wi-Fi**, sem hotspot elaborado: modems e roteadores em lugares, fácil de testar.
+
 - **Etapa 9, rede de telefones e celular: decisões e grupos (2026-10-01).** O usuário decidiu no início:
   - **Grupos:**
     - **A:** o celular mais confortável (sobe para digitar, o botão do meio tira e guarda, as teclas são clicáveis com o cursor), os easter eggs dos amigos, as antenas na simulação, o sinal real e os dados móveis com franquia.

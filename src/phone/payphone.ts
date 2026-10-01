@@ -50,7 +50,13 @@ export class Payphone {
     return best;
   }
 
-  open(k: number) { this.k = k; this.dial = ''; this.coins = 0; this.call = null; this.note = PAY.lift; this.sfx.push(['hook']); }
+  /** The call the player's own phone is making, if any (a payphone they call and pick up answers it). */
+  outgoing: () => Call | null = () => null;
+
+  open(k: number) {
+    const c = this.outgoing();
+    if (c && c.callee.kind === 'payphone' && c.callee.k === k) c.answerHere(performance.now() / 1000);
+    this.k = k; this.dial = ''; this.coins = 0; this.call = null; this.note = PAY.lift; this.sfx.push(['hook']); }
 
   /** Put the handset back: unused coins come back. */
   close() {

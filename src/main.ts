@@ -42,8 +42,15 @@ const input = new Input(canvas);
 const camera = new Camera();
 const phone = new Phone(world);
 const payphone = new Payphone(world);
+payphone.outgoing = () => phone.call;
 // the phone's camera sees the player's view
-phone.render = (g) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: layout.cellW / layout.cellH, look });
+phone.render = (g) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: EYE + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: layout.cellW / layout.cellH, look, hand: handLightNow() });
+/** The light in the player's hand now: the camera's flash for a moment after a shot, the torch app while the phone is out. */
+function handLightNow(): number {
+  const t = performance.now() / 1000;
+  if (t - phone.shotAt < 0.12) return 1.8;
+  return phone.out && phone.torch() ? 0.6 : 0;
+}
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
@@ -90,6 +97,11 @@ function playSfx(list: Sfx[]) {
       case 'sms': if (phone.prefs.profile === 0) sound.smsTone(); else if (phone.prefs.profile === 1) sound.vibrate(0.8); break;
       case 'sent': if (phone.prefs.profile === 0) sound.sentTone(); break;
       case 'hook': sound.hook(); break;
+      case 'bell': {
+        const q = world.telco.payphones[f[1]], p = world.player, dx = q.x - p.x, dy = q.y - p.y;
+        sound.bell(Math.hypot(dx, dy), Math.sin(Math.atan2(dy, dx) - camera.yaw));
+        break;
+      }
       case 'shutter': if (phone.prefs.profile === 0) sound.shutter(); break;
       case 'coin': sound.coin(); break;
       case 'coins': sound.coinsBack(); break;
@@ -142,14 +154,14 @@ addEventListener('mousedown', (e) => {
   if (e.button === 1) { e.preventDefault(); if (!payphone.active) phoneToggle(); return; }
   if (payphone.active) {
     if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(grid.cols, grid.rows, x, y); if (k) payPress(k); }
-    else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; }
+    else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
   if (phone.out) {
     if (e.button === 0) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
       phonePress(keyAt(grid.cols, grid.rows, phone, x, y) ?? 'ok');
-    } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; }
+    } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
   if (!input.locked) return;
@@ -157,10 +169,14 @@ addEventListener('mousedown', (e) => {
   const b = pickedButton();
   if (b >= 0) sound?.beep(callLift(world, b));
 });
+// the lock arrives a moment after it is asked for: if the right button is already up, free the cursor again
+document.addEventListener('pointerlockchange', () => { if (input.locked && rightAt < 0 && (phone.out || payphone.active)) input.unlock(); });
 addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
+  // the pointer was held while looking around; the cursor is free again over the phone or the payphone
+  if (phone.out || payphone.active) input.unlock();
 });
 addEventListener('keydown', (e) => {
   // a payphone in use takes the keys; F lifts the handset of the one in front, or hangs it up
@@ -276,6 +292,7 @@ function frame(now: number) {
     alpha,
     cellAspect: layout.cellW / layout.cellH,
     look,
+    hand: handLightNow(),
   });
   const ms = performance.now() - r0;
   phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
