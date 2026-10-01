@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { type RGB } from '../sim/city';
-import { type CharGrid } from './grid';
+import { type CharGrid, KIND } from './grid';
 import { BULB_COLS, BULB_ROWS, bulbGlyph, bulbsIn, fontRows, SYMBOLS } from './signs';
 
 /**
@@ -343,6 +343,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
         }
         grid.put(i, ch, r, g, b);
         depth[i] = best;
+        grid.kind[i] = q.mat === Mat.Solid && !painted ? KIND.object : KIND.other;
       }
     }
   }

@@ -47,7 +47,8 @@ export class Call {
   private holdUntil = -1;
   private h: (q: number) => number;
 
-  constructor(private world: World, readonly number: string, private start: number, noNetwork: boolean) {
+  /** landline: made from a payphone (the player's own mobile number then rings the handset in the pocket). */
+  constructor(private world: World, readonly number: string, private start: number, noNetwork: boolean, readonly landline = false) {
     this.callee = lookup(world.telco, world.seed, number);
     const hour = Math.floor(world.time / 3600);
     this.h = (q) => hash3(world.seed ^ hour, number.length * 1000 + +number.replace(/\D/g, '').slice(-6), q);
@@ -60,7 +61,7 @@ export class Call {
     if (this.state === 'dialing') {
       if (now < this.start + 1.5) return;
       const c = this.callee;
-      if (c.kind === 'self' || (c.kind === 'biz' && isOpen(this.kindOf(), this.hour()) && this.h(1) < 0.08)) { sfx.push(['busy']); this.end(now, C.busy); return; }
+      if ((c.kind === 'self' && !this.landline) || (c.kind === 'biz' && isOpen(this.kindOf(), this.hour()) && this.h(1) < 0.08)) { sfx.push(['busy']); this.end(now, C.busy); return; }
       if (c.kind === 'none') {
         sfx.push(['intercept']);
         this.state = 'talk'; this.connectAt = now;
@@ -70,7 +71,8 @@ export class Call {
       }
       this.state = 'ringing'; this.ringAt = now;
       const n = this.ringsBefore();
-      this.answerAt = n < 0 ? Infinity : now + (n - 1) * 6 + 3;
+      // the player's own mobile, called from a payphone: only the player can pick it up
+      this.answerAt = c.kind === 'self' ? Infinity : n < 0 ? Infinity : now + (n - 1) * 6 + 3;
     }
     if (this.state === 'ringing') {
       if (now >= this.answerAt) { this.state = 'talk'; this.connectAt = now; this.q = this.script(); this.nextAt = now + 0.4; }
@@ -121,6 +123,9 @@ export class Call {
     this.state = 'talk'; this.connectAt = now;
     this.q = [{ who: 'sys', text: C.selfLine, gap: 0.5 }]; this.nextAt = now;
   }
+
+  /** The far phone cannot take the call (the mobile out of service, or already on a call). */
+  refuse(now: number, why: string, sfx: Sfx[]) { if (this.state === 'ringing') { sfx.push(['busy']); this.end(now, why); } }
 
   /** Hang up (the player), or the far end did. */
   hangUp(now: number) { if (this.state !== 'ended') this.end(now, en.phone.apps.callEnded); }

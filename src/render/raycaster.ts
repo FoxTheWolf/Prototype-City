@@ -3,7 +3,7 @@ import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR
 import { liftFloors, type World } from '../sim/world';
 import { baseAt, cachedPlan, DOOR_H, doorOf, escapesOf, exitsOf, habitable, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
 import { glassPass, insideLight, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
-import { type CharGrid } from './grid';
+import { type CharGrid, KIND } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
@@ -194,6 +194,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       if (grid.depth[i] < rd) continue; // the Sarcophagus's foot, nearer than this far ground
       const wx = px + rdx * rd, wy = py + rdy * rd;
       grid.depth[i] = rd;
+      grid.kind[i] = KIND.ground;
       if (wx < 0 || wy < 0 || wx >= city.w || wy >= city.h) { burnGround(grid, i, city, wx, wy, rd, time); continue; }
       if (rd > GROUND_FAR) { grid.put(i, G.dot, 28, 24, 32); continue; }
       const fog = 1 - (rd / GROUND_FAR) * 0.9;
@@ -313,6 +314,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       }
       lightNear(wx, wy, 0);
       grid.put(i, ch, (r + LT[0] * lk) * fog, (g + LT[1] * lk) * fog, (b + LT[2] * lk) * fog);
+      grid.kind[i] = KIND.ground;
     }
 
     // ---- walls: walk the street grid front to back. Inside each block, hit its buildings in
@@ -471,7 +473,7 @@ function handLight(grid: CharGrid, k: number) {
 }
 
 function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
-  const { cells, bg, depth } = grid;
+  const { cells, bg, depth, kind } = grid;
   // by day the world is brighter and sinks into a pale haze with distance: the "service" look
   const day = sky.day;
   // a blackout of the whole city at night: with no light anywhere, everything sinks very dark (the
@@ -489,6 +491,16 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
     }
     if (dark < 0.999 && depth[i] < 1e9) { cells[k + 1] *= dark; cells[k + 2] *= dark; cells[k + 3] *= dark; bg[k] *= dark; bg[k + 1] *= dark; bg[k + 2] *= dark; }
     if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
+    if (look.soft && depth[i] < 1e9) {
+      // the soft look: the ground and solid objects become blocks of their color, with the glyph
+      // only a faint texture on them; at 2 the walls are filled denser too
+      const kd = kind[i], fill = kd === KIND.ground ? 0.5 : kd === KIND.object ? 0.7 : look.soft > 1 && (kd === KIND.wall || kd === KIND.room) ? 0.42 : 0;
+      if (fill) {
+        const glyph = kd === KIND.ground ? 0.82 : kd === KIND.object ? 0.95 : 1;
+        bg[k] = cells[k + 1] * fill; bg[k + 1] = cells[k + 2] * fill; bg[k + 2] = cells[k + 3] * fill;
+        cells[k + 1] *= glyph; cells[k + 2] *= glyph; cells[k + 3] *= glyph;
+      }
+    }
     if (look.blocks && BLOCKS[cells[k]]) cells[k] = BLOCKS[cells[k]];
   }
 }
@@ -549,6 +561,7 @@ function fenceColumn(grid: CharGrid, x: number, city: City, px: number, py: numb
     if (!ch) continue;
     grid.put(i, ch, 120 * k, 120 * k, 130 * k);
     grid.depth[i] = t;
+    grid.kind[i] = KIND.other;
   }
 }
 
@@ -614,6 +627,7 @@ function roofRows(grid: CharGrid, x: number, B: Building, ya: number, yb: number
     grid.put(i, ch, r * k, g * k, b * k);
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = t;
+    grid.kind[i] = KIND.ground;
   }
 }
 
@@ -1037,6 +1051,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     grid.put(i, ch, r, g, b);
     grid.setBg(i, 7, 8, 12);
     grid.depth[i] = T;
+    grid.kind[i] = KIND.wall;
   }
 }
 

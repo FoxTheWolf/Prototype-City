@@ -1,7 +1,7 @@
 import { hash3 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, type Building, type City, type RGB } from '../sim/city';
 import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
-import { type CharGrid } from './grid';
+import { type CharGrid, KIND } from './grid';
 import { bulbGlyph, bulbsIn, fontRows } from './signs';
 
 /**
@@ -337,7 +337,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   };
   const put = (y: number, t: number, ch: number, r: number, g: number, b: number) => {
     const i = y * cols + x;
-    grid.put(i, ch, r, g, b); grid.setBg(i, 7, 8, 12); depth[i] = t; rowState[y] = 1;
+    grid.put(i, ch, r, g, b); grid.setBg(i, 7, 8, 12); depth[i] = t; grid.kind[i] = KIND.room; rowState[y] = 1;
   };
 
   // walk the plan's cells; a change of room is a wall, unless both cells are a doorway

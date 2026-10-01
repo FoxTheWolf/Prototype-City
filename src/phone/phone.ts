@@ -110,6 +110,14 @@ export class Phone {
   setSel = 0;
   /** A sound the last key asks for (main plays it): a ringtone preview, the buzz of vibrate, or silence. */
   cue: 'ring' | 'vibrate' | 'stop' | null = null;
+  /** Vibrating until this time (real seconds), for this long: the phone shakes on screen with the buzz. */
+  buzzUntil = 0;
+  buzzLen = 0;
+  /** The call on the line is coming in (from a payphone): the far end pays and runs it; ringing again at nextRing. */
+  callIn = false;
+  private nextRing = 0;
+  /** A call ringing the player's own number (main hands it the payphone's), with the number it comes from. */
+  incomingCall: () => [Call, string] | null = () => null;
   /** The service screen a secret code opened. */
   code: CodeKind = 'imei';
   /** A code being dialed by itself (from the debug settings): the keys left, and when the next one goes. */
@@ -202,6 +210,8 @@ export class Phone {
   /** When each key was last pressed, for its light. */
   readonly pressed = new Map<Key, number>();
 
+  buzz(now: number, secs: number) { this.buzzUntil = now + secs; this.buzzLen = secs; }
+
   /** Out of the pocket or back in; it boots the first time. Returns what to play. */
   toggle(now: number): 'out' | 'in' | 'boot' {
     this.out = !this.out;
@@ -232,6 +242,7 @@ export class Phone {
       this.incoming.splice(i, 1);
       this.inbox.unshift({ from: m.from, text: m.text, at: this.world.time, read: false });
       this.sfx.push(['sms']);
+      if (this.prefs.profile === 1) this.buzz(now, 0.8);
     }
     if (this.radio.state === 'service') {
       const A = this.world.telco.player, op = operatorName(this.world.city);
@@ -241,8 +252,24 @@ export class Phone {
       if (A.dataKB > 500) this.told.low = this.told.out = false;
     }
     // the call: its tones and voices; ended, it is paid for and, a moment later, put away
+    // a call to the player's own number: it rings here (or cannot get through)
+    const ic = this.incomingCall();
+    if (ic && ic[0].state === 'ringing' && this.call !== ic[0]) {
+      if (this.screen === 'off' || this.radio.state !== 'service') ic[0].refuse(now, en.phone.apps.unreachable, this.sfx);
+      else if (this.call) ic[0].refuse(now, en.phone.apps.busy, this.sfx);
+      else { this.call = ic[0]; this.callIn = true; this.dial = ic[1]; this.nextRing = now; this.open('calls', now); }
+    }
     const c = this.call;
-    if (c) {
+    if (c && this.callIn) {
+      // ringing as the profile says: the ringtone, the buzz, or nothing; it stops once answered or gone
+      if (c.state === 'ringing' && now >= this.nextRing) {
+        this.nextRing = now + 4;
+        if (this.prefs.profile === 0) this.cue = 'ring';
+        else if (this.prefs.profile === 1) { this.cue = 'vibrate'; this.buzz(now, 1.6); }
+      }
+      if (c.state !== 'ringing' && this.nextRing > 0) { this.nextRing = 0; this.cue = 'stop'; this.buzzUntil = 0; }
+      if (c.state === 'ended' && now > c.endAt + 2.5) { this.call = null; this.callIn = false; this.dial = ''; }
+    } else if (c) {
       c.update(now, this.sfx);
       if (c.state === 'ended' && now > c.endAt + 2.5) {
         this.world.telco.player.credit -= c.cost();
@@ -365,6 +392,12 @@ export class Phone {
         return false;
       }
       case 'calls':
+        if (this.call && this.callIn && this.call.state === 'ringing') {
+          // answer with the green key, OK or Answer; Reject (the right soft key) hangs up
+          if (k === 'send' || k === 'ok' || k === 'lsoft') { this.call.answerHere(now); return true; }
+          if (k === 'rsoft') { this.call.hangUp(now); return true; }
+          return false;
+        }
         if (this.call) {
           if (k === 'rsoft') { this.call.hangUp(now); this.sfx.push(['stop']); return true; }
           if (/^[0-9*#]$/.test(k)) { this.call.key(k, now); return true; }
@@ -597,6 +630,7 @@ export class Phone {
     this.prefs[key] = (this.prefs[key] + (less ? -1 : 1) + n) % n;
     // hear what was picked
     if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
+    if (this.cue === 'vibrate') this.buzz(performance.now() / 1000, 1.6);
     return true;
   }
 

@@ -110,9 +110,9 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
   }
   S.center(3, who ?? (d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d), WHITE, LCD);
   const u = Math.max(0, now - (c.connectAt >= 0 ? c.connectAt : now)), tm = `${String(Math.floor(u / 60)).padStart(2, '0')}:${String(Math.floor(u % 60)).padStart(2, '0')}`;
-  const state = c.state === 'dialing' ? `${A.calling}${'.'.repeat(Math.floor(now * 3) % 4)}` : c.state === 'ringing' ? `${A.ringing} (${c.rings})` : c.state === 'talk' ? tm : c.reason;
+  const state = P.callIn && c.state === 'ringing' ? A.incoming : c.state === 'dialing' ? `${A.calling}${'.'.repeat(Math.floor(now * 3) % 4)}` : c.state === 'ringing' ? `${A.ringing} (${c.rings})` : c.state === 'talk' ? tm : c.reason;
   S.center(5, state, c.state === 'ended' ? BAD : c.state === 'talk' ? [120, 255, 150] : HI, LCD);
-  if (c.state === 'ended' && c.cost()) S.center(6, A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`), DIM, LCD);
+  if (c.state === 'ended' && !P.callIn && c.cost()) S.center(6, A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`), DIM, LCD);
   // what is said, the latest at the bottom
   const rows: [string, C3][] = [];
   for (const L of c.lines) {
@@ -121,6 +121,7 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
     for (const l of wrap(L.who === 'rec' ? `~ ${shown}` : shown, SW - 2)) rows.push([l, col]);
   }
   rows.slice(-(SH - 10)).forEach(([l, col], k) => S.text(1, 8 + k, l, col, LCD));
+  if (P.callIn && c.state === 'ringing') return softKeys(S, A.answer, A.end);
   softKeys(S, '', c.state === 'ended' ? '' : A.end);
 }
 

@@ -98,7 +98,7 @@ export class Payphone {
     }
     if (k === 'send' && this.dial) {
       if (this.dial !== '911' && this.coins < FARE) { this.note = PAY.deposit; return; }
-      this.call = new Call(this.world, this.dial, now, false);
+      this.call = new Call(this.world, this.dial, now, false, true);
     }
   }
 

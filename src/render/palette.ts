@@ -9,4 +9,9 @@ export interface Look {
   solid: number;
   /** Swap some ASCII glyphs for block and box shapes. */
   blocks: boolean;
+  /**
+   * Easier on the eyes (a toggle, to compare): 0 off; 1 the ground and solid objects drawn as color
+   * blocks, their glyphs faint; 2 the walls filled denser too.
+   */
+  soft: number;
 }

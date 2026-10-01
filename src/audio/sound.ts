@@ -220,14 +220,17 @@ export class Sound {
 
   private ringNodes: AudioScheduledSourceNode[] = [];
   /** Stop a ringtone that is playing. */
-  stopRing() { for (const n of this.ringNodes) try { n.stop(); } catch { /* already stopped */ } this.ringNodes = []; }
+  stopRing() { for (const n of this.ringNodes) try { n.stop(); } catch { /* already stopped */ } this.ringNodes = []; this.stopTone(); }
+  /** The handset's own ringtone and buzz, apart from the call tones in the earpiece (a payphone's ringback goes on under them). */
+  private toneNodes: AudioScheduledSourceNode[] = [];
+  private stopTone() { for (const n of this.toneNodes) try { n.stop(); } catch { /* already stopped */ } this.toneNodes = []; }
   /**
    * A ringtone, synthesized as the handsets of the time played them (a few voices of square and
    * sine), for `secs` seconds; k picks it (see RINGTONES in phone/phone.ts). The phone's settings play
    * it as a preview; incoming calls (stage 9B) ring with it.
    */
   ring(k: number, secs = 3) {
-    this.stopRing();
+    this.stopTone();
     const ctx = this.ctx, t0 = ctx.currentTime + 0.05;
     const note = (f: number, at: number, len: number, type: OscillatorType = 'square', v = 0.03) => {
       if (at > secs) return;
@@ -236,7 +239,7 @@ export class Sound {
       o.connect(filter(ctx, 'lowpass', 3500, 0.7)).connect(g);
       g.gain.setValueAtTime(0, t0 + at); g.gain.linearRampToValueAtTime(v, t0 + at + 0.01); g.gain.setValueAtTime(v, t0 + at + len - 0.02); g.gain.linearRampToValueAtTime(0, t0 + at + len);
       o.start(t0 + at); o.stop(t0 + at + len + 0.02);
-      this.ringNodes.push(o);
+      this.toneNodes.push(o);
     };
     const m = (n: number) => 440 * 2 ** ((n - 69) / 12);
     switch (k) {
@@ -262,7 +265,7 @@ export class Sound {
 
   /** The phone vibrating against the hand (silent profiles): a low buzz in bursts. */
   vibrate(secs = 1.6) {
-    this.stopRing();
+    this.stopTone();
     const ctx = this.ctx, t0 = ctx.currentTime;
     for (let a = 0; a < secs; a += 0.8) {
       const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
@@ -270,7 +273,7 @@ export class Sound {
       o.connect(filter(ctx, 'lowpass', 400, 1)).connect(g);
       g.gain.setValueAtTime(0, t0 + a); g.gain.linearRampToValueAtTime(0.05, t0 + a + 0.03); g.gain.setValueAtTime(0.05, t0 + a + 0.42); g.gain.linearRampToValueAtTime(0, t0 + a + 0.47);
       o.start(t0 + a); o.stop(t0 + a + 0.5);
-      this.ringNodes.push(o);
+      this.toneNodes.push(o);
     }
   }
 

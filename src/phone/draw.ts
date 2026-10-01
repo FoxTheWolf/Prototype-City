@@ -42,7 +42,10 @@ const KEYS: [Key, number, number, number, number, string, C3?][] = [
 /** Where the phone's top left corner is on the grid: held up higher while typing, the whole keypad in sight. */
 function origin(cols: number, rows: number, P: Phone): [number, number] {
   const e = 1 - (1 - P.raise) ** 3;
-  return [cols - PHONE_W - 6, rows - Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e)];
+  // vibrating: the phone shakes in the hand in the same bursts as the buzz (0.47 s on every 0.8 s)
+  const t = performance.now() / 1000, u = P.buzzUntil - t, on = u > 0 && (P.buzzLen - u) % 0.8 < 0.47;
+  const sx = on ? (Math.floor(t * 34) % 2 ? 1 : -1) : 0, sy = on && Math.floor(t * 23) % 3 === 0 ? 1 : 0;
+  return [cols - PHONE_W - 6 + sx, rows - Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e) + sy];
 }
 
 /** The key under a grid cell, if any. */

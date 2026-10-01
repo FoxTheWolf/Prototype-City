@@ -39,7 +39,6 @@ function noise(x: number, y: number) {
 const smooth = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 const C = (s: string) => s.charCodeAt(0);
-const MOON_GLYPH = [C('.'), C(':'), C('o'), C('%'), C('@')];
 
 /** What every sky cell of this frame shares. */
 export interface SkyFrame {
@@ -170,9 +169,10 @@ export function skyColumn(grid: CharGrid, x: number, S: SkyFrame, az: number, rd
         lit = lit * (0.72 + 0.28 * noise(u * 3 + 40, v * 3 + 40)) + 0.05 * night * night; // maria, and faint earthshine at night
         // by day only the sunlit part shows, pale against the blue; the dark side is just sky
         if (lit > 0.04 + 0.2 * S.day) {
-          const k = Math.min(1, lit) * (0.35 + 0.65 * night);
-          ch = MOON_GLYPH[Math.min(4, Math.floor(k * 5))]; cr = 235 * k + 20 + r * S.day; cg = 228 * k + 20 + g * S.day; cb = 200 * k + 26 + b * S.day;
-          r += (13 + 40 * k) * night + 60 * k * S.day; g += (12 + 38 * k) * night + 60 * k * S.day; b += (11 + 34 * k) * night + 55 * k * S.day;
+          // color only, a solid disk (glyphs on it looked dotted, as on the clouds), soft at the rim
+          const k = Math.min(1, lit) * (0.35 + 0.65 * night), e = Math.min(1, (1 - d2) * 5);
+          cr = 235 * k + 20 + r * S.day; cg = 228 * k + 20 + g * S.day; cb = 200 * k + 26 + b * S.day;
+          r += (cr - r) * e; g += (cg - g) * e; b += (cb - b) * e;
           moonA = 1; star = 0;
         }
       } else if (d2 < 9) {
