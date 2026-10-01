@@ -185,10 +185,10 @@ addEventListener('keydown', (e) => {
     const k = payphone.near();
     if (k >= 0 && !phone.out) { payphone.open(k); input.unlock(); return; }
   }
-  const pp = payphone.active ? phoneKey(e.code) : null;
+  const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
   // the phone: Up (or P) takes it out; while it is out, its keys (see phone.ts)
-  const pk = phone.out ? phoneKey(e.code) : null;
+  const pk = phone.out ? phoneKey(e.code, e.key) : null;
   if (pk) {
     e.preventDefault();
     if (e.repeat && pk !== 'up' && pk !== 'down' && pk !== 'left' && pk !== 'right') return;

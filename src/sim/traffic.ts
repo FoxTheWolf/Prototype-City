@@ -127,7 +127,9 @@ function stepBody(c: Car, a: number, dt: number) {
  * Careless drivers: the chance one runs a given red light (or a stop sign, or a dark signal, where
  * it is likelier), times more at night and on a slippery road. Wrecks wait this long to be towed.
  */
-const RECKLESS = 0.00015, RECKLESS_DARK = 0.004, TOW = 240;
+const RECKLESS = 0.0006, RECKLESS_DARK = 0.02, TOW = 240;
+/** Chance the first in line at an all-way stop goes while another car is still crossing. */
+const MISJUDGE = 0.08;
 /** Crashes this tick, for the event queue: where, how hard (closing speed, m/s), and the cars. */
 export const crashes: { x: number; y: number; v: number }[] = [];
 /** Half width of a vehicle. */
@@ -746,7 +748,12 @@ function mayGo(city: City, c: Car, dStop: number, tick: number, lead: { c: Car; 
   if (stopLike(sg)) {
     // an all-way stop: halt, then go in order of arrival, one at a time
     if (c.arrive < 0 || c.gate !== G.key || tick - c.arrive < 50) return false;
-    if (busy.get(G.key)) return false;
+    if (busy.get(G.key)) {
+      // now and then the next in line misjudges and goes while the other is still crossing: it is
+      // then as careless as a red-light runner, and the two may meet (fixed by the car and its wait)
+      if (firstWait.get(G.key) === c.arrive && hash3(c.id, c.arrive, 71) < MISJUDGE) { c.reckless = true; c.rgate = G.key; return true; }
+      return false;
+    }
     return firstWait.get(G.key) === c.arrive;
   }
   // a left turn on green yields to oncoming traffic

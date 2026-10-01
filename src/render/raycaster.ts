@@ -474,6 +474,9 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
   const { cells, bg, depth } = grid;
   // by day the world is brighter and sinks into a pale haze with distance: the "service" look
   const day = sky.day;
+  // a blackout of the whole city at night: with no light anywhere, everything sinks very dark (the
+  // phone's torch, applied after this, still lights what is near)
+  const dark = 1 - 0.72 * (1 - sky.cityLit) ** 1.5 * (1 - day);
   for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
     if (sky.moonlight > 0.02 && depth[i] < 1e9 && depth[i] > 0) {
       // the moon's cold light on everything: faint, it only tells once the city lights are out
@@ -484,6 +487,7 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
       const f = day * (0.25 + 0.6 * (1 - Math.exp(-depth[i] / 1500))), amb = 1 + 0.7 * day + sky.flash * 0.6;
       cells[k + 1] = cells[k + 1] * amb * (1 - f) + 138 * f; cells[k + 2] = cells[k + 2] * amb * (1 - f) + 146 * f; cells[k + 3] = cells[k + 3] * amb * (1 - f) + 156 * f;
     }
+    if (dark < 0.999 && depth[i] < 1e9) { cells[k + 1] *= dark; cells[k + 2] *= dark; cells[k + 3] *= dark; bg[k] *= dark; bg[k + 1] *= dark; bg[k + 2] *= dark; }
     if (look.solid && depth[i] < 1e9) { bg[k] = cells[k + 1] * look.solid; bg[k + 1] = cells[k + 2] * look.solid; bg[k + 2] = cells[k + 3] * look.solid; }
     if (look.blocks && BLOCKS[cells[k]]) cells[k] = BLOCKS[cells[k]];
   }

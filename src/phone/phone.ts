@@ -320,6 +320,8 @@ export class Phone {
         return false;
       case 'standby':
         if (k === 'ok' || k === 'lsoft') { this.open('menu', now); return true; }
+        // a number typed on the standby screen opens the dialer with it, as phones did
+        if (/^[0-9*#]$/.test(k)) { this.dial = k; this.call = null; this.open('calls', now); return true; }
         if (k === 'rsoft') { this.out = false; return 'away'; }
         return false;
       case 'menu': {
@@ -715,7 +717,10 @@ export class Phone {
 }
 
 /** The phone key a keyboard key stands for, while the phone is out. */
-export function phoneKey(code: string): Key | null {
+export function phoneKey(code: string, key = ''): Key | null {
+  // * and # by the character typed (Shift+8 and Shift+3 without a number pad, any layout)
+  if (key === '*') return '*';
+  if (key === '#') return '#';
   const m = /^(?:Digit|Numpad)(\d)$/.exec(code);
   if (m) return m[1] as Key;
   switch (code) {

@@ -94,9 +94,9 @@ export function part(shape: number, x0: number, y0: number, z0: number, x1: numb
 }
 
 // part centers and half sizes of the current object, widened so thin parts never fall between cells
-const P = new Float64Array(32 * 6);
+let P = new Float64Array(32 * 6);
 // per column: the parts its ray can meet (seen from above), and the rows each of them can cover
-const CAND = new Int16Array(32), CY0 = new Int32Array(32), CY1 = new Int32Array(32);
+let CAND = new Int16Array(32), CY0 = new Int32Array(32), CY1 = new Int32Array(32);
 // the light last sampled in this column, reused for points close to it
 const LC = new Float32Array(3);
 /** Metres a leaning body can move a part sideways or up (springs, small angles). */
@@ -131,6 +131,8 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
     // parts thinner than a cell at this distance are widened to half a cell, so poles do not flicker
     const mh = 0.5 * colW * Math.max(tY, 0.3), mz = (0.5 * Math.max(tY, 0.3)) / v.scale;
     const n = o.parts.length;
+    // (the work arrays grow to the largest object seen)
+    if (n > CAND.length) { P = new Float64Array(n * 6); CAND = new Int16Array(n); CY0 = new Int32Array(n); CY1 = new Int32Array(n); }
     for (let k = 0; k < n; k++) {
       const q = o.parts[k], j = k * 6;
       P[j] = (q.x0 + q.x1) / 2; P[j + 1] = (q.y0 + q.y1) / 2; P[j + 2] = (q.z0 + q.z1) / 2;
