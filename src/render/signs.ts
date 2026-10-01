@@ -89,13 +89,14 @@ const FONT: Record<string, number[]> = {
 
 /** Whether the bulb at column bx (0..4, from the left) and row by (0..6, from the top) of a letter is there. */
 export function bulbOn(c: number, bx: number, by: number): boolean {
-  const rows = FONT[String.fromCharCode(c)];
+  const rows = fontRows(c);
   return !!rows && ((rows[by] >> (4 - bx)) & 1) === 1;
 }
 
 /** The 5x7 bulb rows of a letter (high bit = left column), or undefined. */
 export function fontRows(c: number): number[] | undefined {
-  return FONT[String.fromCharCode(c)];
+  // accented letters light the bulbs of their plain letter: the accent does not fit a 5x7 grid
+  return FONT[String.fromCharCode(c)] ?? (c > 127 ? FONT[String.fromCharCode(c).normalize('NFD')[0]] : undefined);
 }
 
 /**

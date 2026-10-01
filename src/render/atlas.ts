@@ -24,7 +24,9 @@ export function buildAtlas(cellW: number, cellH: number): HTMLCanvasElement {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#fff';
-  for (let code = 33; code < 127; code++) {
+  // printable ASCII, and Latin-1 from 160 (accented letters in names: the slots below are the blocks')
+  for (let code = 33; code < 256; code++) {
+    if (code >= 127 && code < 161) continue;
     const sx = (code % ATLAS_COLS) * cellW, sy = Math.floor(code / ATLAS_COLS) * cellH;
     ctx.fillText(String.fromCharCode(code), sx + cellW / 2, sy + cellH / 2);
   }

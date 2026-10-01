@@ -1,5 +1,7 @@
 import { type City, type District } from '../sim/city';
+import { hash3 } from '../core/rng';
 import en from './en.json';
+import THANKS from './thanks.json';
 
 /**
  * Names of places, read from the locale file. The sim only stores numbers (a name seed per
@@ -31,10 +33,49 @@ export function seamName(city: City): string {
   return fill(L.seam, root(city, SLOT_SEAM));
 }
 
+/**
+ * Friends of the author, thanked by name (see CLAUDE.md, "Agradecimentos"): each one shows up
+ * exactly once in every city, in a place its seed picks: a shop, a boulevard, a landmark or a
+ * district takes the name. Later stages add places to the draw (a citizen, a contact, a post).
+ * The key is `kind:ref`; the value, the name.
+ */
+const thanked = new WeakMap<City, Map<string, string>>();
+function thanks(city: City): Map<string, string> {
+  let m = thanked.get(city);
+  if (m) return m;
+  m = new Map();
+  const wide: string[] = [];
+  for (const avenue of [true, false]) {
+    const b = avenue ? city.xb : city.yb;
+    for (let k = 0; k < b.length / 2; k++) if (isWide(b, k)) wide.push(`road:${avenue ? 1 : 0}${k}`);
+  }
+  const marks = city.landmarks.map((l, k) => (L.landmark[l.kind].includes('{r}') ? `landmark:${k}` : '')).filter(Boolean);
+  const places = [
+    [0.4, city.businesses.map((_, k) => `biz:${k}`)],
+    [0.2, wide],
+    [0.2, marks],
+    [0.2, city.districts.map((_, k) => `district:${k}`)],
+  ] as const;
+  THANKS.forEach((name, n) => {
+    for (let tries = 0; tries < 50; tries++) {
+      const h = (q: number) => hash3(city.nameSeed, 0x7a1 + n * 64 + tries, q);
+      let r = h(0), kind = 0;
+      while (kind < places.length - 1 && r > places[kind][0]) r -= places[kind][0], kind++;
+      const list = places[kind][1];
+      if (!list.length) continue;
+      const key = list[Math.floor(h(1) * list.length)];
+      if (!m!.has(key)) { m!.set(key, name); return; }
+    }
+  });
+  thanked.set(city, m);
+  return m;
+}
+
 export function districtName(city: City, d: number): string {
+  const t = thanks(city).get(`district:${d}`);
   const D: District = city.districts[d];
   const tpls = L.district[D.type];
-  return fill(tpls[D.pick % tpls.length], root(city, SLOT_DISTRICT + d));
+  return fill(tpls[D.pick % tpls.length], t ?? root(city, SLOT_DISTRICT + d));
 }
 
 export function districtType(city: City, d: number): string {
@@ -45,6 +86,8 @@ export function districtType(city: City, d: number): string {
 export function roadName(city: City, avenue: boolean, k: number): string {
   const b = avenue ? city.xb : city.yb;
   if (!isWide(b, k)) return fill(avenue ? L.avenue : L.street, '', ordinal(k + 1));
+  const t = thanks(city).get(`road:${avenue ? 1 : 0}${k}`);
+  if (t) return fill(avenue ? L.wideAvenue : L.wideStreet, t);
   // wide roads are numbered in order, avenues first, so their slots stay compact
   let slot = SLOT_DISTRICT + city.districts.length;
   if (!avenue) for (let a = 0; a < city.xb.length / 2; a++) if (isWide(city.xb, a)) slot++;
@@ -62,6 +105,8 @@ export function diagonalName(city: City): string {
 
 /** Landmarks take their roots from the end of the list, away from the other slots. */
 export function landmarkName(city: City, k: number): string {
+  const t = thanks(city).get(`landmark:${k}`);
+  if (t) return fill(L.landmark[city.landmarks[k].kind], t);
   return fill(L.landmark[city.landmarks[k].kind], L.roots[(city.nameSeed + (L.roots.length - 1 - k) * 7919) % L.roots.length]);
 }
 
@@ -93,6 +138,12 @@ export function bladeText(city: City, k: number): string {
 export function businessName(city: City, k: number): string {
   const b = city.businesses[k], n = b.name;
   const tpls = L.business[b.kind];
+  const t = thanks(city).get(`biz:${k}`);
+  if (t) {
+    // a template with the one surname slot, the friend's full name in it
+    const own = tpls.filter((s) => s.includes('{s}') && !s.includes('{s2}') && !s.includes('{w}'));
+    return (own[n % own.length] ?? '{s}').replace('{s}', t);
+  }
   return tpls[n % tpls.length]
     .replace('{s}', L.surnames[(n >>> 3) % L.surnames.length])
     .replace('{s2}', L.surnames[(n >>> 9) % L.surnames.length])
