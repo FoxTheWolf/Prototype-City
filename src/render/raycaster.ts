@@ -1374,12 +1374,14 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
         const [dx, dy] = DIRS[hd], pi = i - dx, pj = j - dy;
         if (pi < 0 || pj < 0 || pi >= NX || pj >= NY) continue; // no road comes in from off the map
         const aH = hd & 1 ? (Y1 - Y0) / 2 : (X1 - X0) / 2, halfW = hd & 1 ? (X1 - X0) / 2 : (Y1 - Y0) / 2;
-        const st = signal(city, world.power, i, j, hd & 1, sec), rx = -dy, ry = dx; // the right-hand side
+        const pw = power(world.power, subAt(world.power, city, mx, my), mx, my, 700000 + i * 997 + j, 0, sec)[0];
+        const st = shown(signal(city, world.power, i, j, hd & 1, sec), signal(city, world.power, i, j, hd & 1, sec, true), pw, sec), rx = -dy, ry = dx; // the right-hand side
         const ahead = st === Sig.Stop ? -(aH + 0.7) : aH + 0.7;
         SP.x = mx + dx * ahead + rx * (halfW + 0.7); SP.y = my + dy * ahead + ry * (halfW + 0.7);
         SP.c = -dx; SP.s = -dy;
         setState(st);
-        SP.cross = signal(city, world.power, i, j, (hd & 1) ^ 1, sec);
+        SP.cross = shown(signal(city, world.power, i, j, (hd & 1) ^ 1, sec), signal(city, world.power, i, j, (hd & 1) ^ 1, sec, true), pw, sec);
+        if (SP.cross === Sig.Yellow && st === Sig.Yellow) SP.cross = Sig.Dark; // flashing: the walk signs stay dark
         SP.at = lanesAt(Math.max(1, lanesOf(hd & 1 ? city.xb : city.yb, hd & 1 ? i : j)), halfW);
         if (Math.abs(diagS(city.diagonal, SP.x, SP.y)) < city.diagonal.w / 2 + 0.5) continue; // its corner is on the diagonal's roadway
         cb(SP);
@@ -1393,10 +1395,11 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
     diagPoint(d, (z.u0 + z.u1) / 2, 1, 0, Q2);
     if (Math.abs(Q2[0] - v.x) > far + 30 || Math.abs(Q2[1] - v.y) > far + 30) continue;
     if (z.x) continue; // a crossing inside an X: the X's own lights stand at its edges
+    const zpw = power(world.power, subAt(world.power, city, Q2[0], Q2[1]), Q2[0], Q2[1], 800000 + z.key, 0, sec)[0];
     for (const dg of [1, -1]) {
       diagPoint(d, (dg > 0 ? z.u1 : z.u0) + dg * 0.7, dg, hw + 0.7, Q2);
       SP.x = Q2[0]; SP.y = Q2[1]; SP.c = -d.ex * dg; SP.s = -d.ey * dg;
-      setState(zoneSignal(city, world.power, z, true, sec));
+      setState(shown(zoneSignal(city, world.power, z, true, sec), zoneSignal(city, world.power, z, true, sec, true), zpw, sec));
       SP.at = lanesAt(D.lanes, hw);
       cb(SP);
     }
@@ -1406,7 +1409,7 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
       const [dx, dy] = DIRS[hd], aFar = dx + dy > 0 ? z.a1 + 0.7 : z.a0 - 0.7;
       SP.x = z.vert ? rc - dy * (half + 0.7) : aFar; SP.y = z.vert ? aFar : rc + dx * (half + 0.7);
       SP.c = -dx; SP.s = -dy;
-      setState(zoneSignal(city, world.power, z, false, sec));
+      setState(shown(zoneSignal(city, world.power, z, false, sec), zoneSignal(city, world.power, z, false, sec, true), zpw, sec));
       SP.at = lanesAt(Math.max(1, lanesOf(b, z.road)), half);
       cb(SP);
     }
@@ -1418,6 +1421,18 @@ function xAt(city: City, k: number) {
   const zs = diagRoad(city).byRoad.get(1024 + k);
   if (zs) for (const z of zs) if (z.isX) return z;
   return null;
+}
+/**
+ * What a light shows, from what the traffic system says (`st`), the cycle it would be in (`raw`)
+ * and its lamp's own power (`pw`, the blackout's wave): going dark one by one after the system is
+ * already down, coming back one by one flashing yellow.
+ */
+function shown(st: number, raw: number, pw: number, sec: number): number {
+  if (st === Sig.Stop) return st;
+  if (pw < 0.35) return Sig.Dark;
+  if (st === Sig.Dark) return raw;
+  if (st === Sig.Flash) return Math.floor(sec * 1.25) & 1 ? Sig.Yellow : Sig.Dark;
+  return st;
 }
 function setState(st: number) {
   SP.state = st; SP.lit = st === Sig.Green ? 2 : st === Sig.Yellow ? 1 : st === Sig.Red ? 0 : -1;

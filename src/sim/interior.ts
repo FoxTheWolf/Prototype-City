@@ -175,7 +175,9 @@ function frameOf(city: City, k: number): Frame {
   const B = city.buildings[k], alongX = B.x1 - B.x0 >= B.y1 - B.y0;
   const U0 = alongX ? B.x0 : B.y0, U1 = alongX ? B.x1 : B.y1, V0 = alongX ? B.y0 : B.x0, V1 = alongX ? B.y1 : B.x1;
   const W = V1 - V0, tall = Math.max(...tiersOf(city, k).map((j) => floorsOf(city.buildings[j])));
-  const lift = isOffice(B) || tall > 5;
+  // no stairs inside for now (decided 2026-10-01: they caused too much trouble): every building of
+  // more than one storey has a lift
+  const lift = tall > 1;
   // which side of the corridor the door is on: the core goes on the other one
   const D = doorOf(city, k);
   let dv = (V0 + V1) / 2, du = -1e9;
@@ -550,7 +552,8 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
       units(u, U1, cv, vf);
     }
     room(corr, -1, U0, F.c0, U1, F.c1);
-    room('stair', -1, F.su0, F.cv0, F.su1, F.cv1);
+    // where the stairs were (they are left out for now): a nook of the corridor
+    room('hall', -1, F.su0, F.cv0, F.su1, F.cv1);
     doorV(core < 0 ? F.c0 : F.c1, F.su0 + 0.4);
     if (F.lu1 > F.su1) {
       if (F.glass && F.cv1 - F.cv0 > 4) {
@@ -574,7 +577,8 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     if (lSide) { room('lobby', -1, lu0, lSide < 0 ? V0 : F.c1, lu1, lSide < 0 ? F.c0 : V1); doorV(lSide < 0 ? F.c0 : F.c1, (Math.max(lu0, U0) + Math.min(lu1, U1)) / 2 - 0.6); }
   } else {
     // walk-up: stairs at one end, the rest is one home (or a shop downstairs)
-    room('stair', -1, U0, V0, F.su1, V1);
+    // a walk-up: its end is a lift (the stairs are left out for now)
+    room(floorsOf(city.buildings[k]) > 1 ? 'lift' : 'hall', -1, U0, V0, F.su1, V1);
     if (shop) { room('shop', unit++, F.su1, V0, U1, V1); shopExit(F.su1, U1, V0); if (!exits.length) shopExit(F.su1, U1, V1); }
     else if (office) { room('office', unit++, F.su1, V0, U1, V1); doorU(F.su1, V0 + 0.4); }
     else {
@@ -604,7 +608,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
 function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
   const seen = new Uint8Array(nx * ny), stack: number[] = [];
   // from the stairs; where the cut took them away, from the lobby or the corridor
-  let start = cells.findIndex((v) => v !== 0 && rooms[(v & 127) - 1].kind === 'stair');
+  let start = cells.findIndex((v) => v !== 0 && (rooms[(v & 127) - 1].kind === 'stair' || rooms[(v & 127) - 1].kind === 'lift'));
   if (start < 0) start = cells.findIndex((v) => v !== 0 && (rooms[(v & 127) - 1].kind === 'lobby' || rooms[(v & 127) - 1].kind === 'hall'));
   if (start < 0) return;
   for (let guard = 0; guard < 60; guard++) {

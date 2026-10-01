@@ -188,7 +188,20 @@ export function laneOff(hd: number, lane: number): [number, number] {
 
 // ---- signals
 
-export const Sig = { Green: 0, Yellow: 1, Red: 2, Dark: 3, Stop: 4 } as const;
+export const Sig = { Green: 0, Yellow: 1, Red: 2, Dark: 3, Stop: 4, Flash: 5 } as const;
+/** Whether a light means an all-way stop: a stop sign, a light that is dark, or one flashing yellow. */
+export const stopLike = (sg: number) => sg === Sig.Dark || sg === Sig.Stop || sg === Sig.Flash;
+/**
+ * A blackout takes the whole signal system of a substation down at once; when the power comes back
+ * its lights flash yellow (an all-way stop) for 15-30 s, then start their cycles again together.
+ * (The lamps themselves go dark and come back one by one: that is the renderer's, see power().)
+ */
+function gridDown(power: PowerGrid, k: number, sec: number): number {
+  const S = power.subs[k];
+  if (!S.on) return Sig.Dark;
+  if (S.changed >= 0 && sec - S.changed / 60 < 15 + 15 * hash3(k, S.changed, 5)) return Sig.Flash;
+  return -1;
+}
 /** Cycle length (real seconds), yellow and all-red clearance. */
 export const CYCLE = 64, YELLOW = 3.5, ALL_RED = 2;
 /** Cycle where the diagonal crosses an intersection (three phases) or a road between two (two phases, the diagonal's longer). */
@@ -219,10 +232,11 @@ const signalled = new WeakMap<City, Uint8Array>();
  * y, on the avenue) at intersection (i, j), at real time `sec`. The avenue gets the longer green;
  * offsets make a green wave up the avenues.
  */
-export function signal(city: City, power: PowerGrid, i: number, j: number, axis: number, sec: number): number {
+export function signal(city: City, power: PowerGrid, i: number, j: number, axis: number, sec: number, ignorePower = false): number {
   if (!hasSignal(city, i, j)) return Sig.Stop;
   const x = roadCenter(city.xb, i), y = roadCenter(city.yb, j);
-  if (!power.subs[subAt(power, city, x, y)].on) return Sig.Dark;
+  const down = ignorePower ? -1 : gridDown(power, subAt(power, city, x, y), sec);
+  if (down >= 0) return down;
   const X = diagRoad(city).xOf.get(iKey(i, j));
   if (X) return xPhase(X, axis, sec);
   if (touched(city, i, j)) {
@@ -381,10 +395,11 @@ function xPhase(X: Zone, axis: number, sec: number): number {
 }
 
 /** The light at a zone, for the diagonal (diag) or for the grid road. */
-export function zoneSignal(city: City, power: PowerGrid, z: Zone, diag: boolean, sec: number): number {
-  if (z.i >= 0) return signal(city, power, z.i, z.j, diag ? 2 : z.vert ? 1 : 0, sec); // an X's goes through its center street
+export function zoneSignal(city: City, power: PowerGrid, z: Zone, diag: boolean, sec: number, ignorePower = false): number {
+  if (z.i >= 0) return signal(city, power, z.i, z.j, diag ? 2 : z.vert ? 1 : 0, sec, ignorePower); // an X's goes through its center street
   const d = city.diagonal, u = (z.u0 + z.u1) / 2;
-  if (!power.subs[subAt(power, city, d.ox + d.ex * u, d.oy + d.ey * u)].on) return Sig.Dark;
+  const down = ignorePower ? -1 : gridDown(power, subAt(power, city, d.ox + d.ex * u, d.oy + d.ey * u), sec);
+  if (down >= 0) return down;
   const p = (((sec + hash3(city.nameSeed, z.key, 77) * CYCLE_Z) % CYCLE_Z) + CYCLE_Z) % CYCLE_Z;
   const gD = CYCLE_Z * 0.55 - YELLOW - ALL_RED, gR = CYCLE_Z * 0.45 - YELLOW - ALL_RED;
   const a = p < gD ? Sig.Green : p < gD + YELLOW ? Sig.Yellow : Sig.Red;
@@ -578,13 +593,13 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       if (c.arrive >= 0 && c.gate !== G.key) c.arrive = -1; // past the stop it was waiting at
       const dStop = G.start - STOP_BACK - front;
       // a new stop ahead: is this driver going to ignore it? And one past its line on red could not stop
-      if (c.rgate !== G.key) { c.rgate = G.key; c.reckless = rng() < (G.sig === Sig.Dark || G.sig === Sig.Stop ? RECKLESS_DARK : RECKLESS) * careless; }
+      if (c.rgate !== G.key) { c.rgate = G.key; c.reckless = rng() < (stopLike(G.sig) ? RECKLESS_DARK : RECKLESS) * careless; }
       if (c.lastD > -0.5 && dStop <= -0.5 && G.sig === Sig.Red && c.v > 2) c.reckless = true;
       c.lastD = dStop;
       if (dStop > -0.5 && dStop < 60 && !mayGo(city, c, dStop, tick, lead)) obstacle(dStop + GAP0, 0);
       else if (dStop < -0.5 && c.arrive >= 0 && c.gate === G.key) c.arrive = -1;
       // halted at an all-way stop: note when
-      if (c.v < 0.2 && c.arrive < 0 && (G.sig === Sig.Dark || G.sig === Sig.Stop) && dStop < 2.5 && dStop > -1) { c.arrive = tick; c.gate = G.key; }
+      if (c.v < 0.2 && c.arrive < 0 && stopLike(G.sig) && dStop < 2.5 && dStop > -1) { c.arrive = tick; c.gate = G.key; }
     }
 
     // the player on the road: brake and wait (no running anyone over yet)
@@ -728,7 +743,7 @@ function mayGo(city: City, c: Car, dStop: number, tick: number, lead: { c: Car; 
   if (sg === Sig.Yellow && dStop > (c.v * c.v) / (2 * 3.5) + 1) return false; // can stop in time: stop
   // not into a full lane on the far side (no blocking the box)
   if (G.inter ? !exitClear(city, c) : lead && lead.c.v < 2 && lead.s - lead.c.len / 2 - G.end < c.len + 2) return false;
-  if (sg === Sig.Dark || sg === Sig.Stop) {
+  if (stopLike(sg)) {
     // an all-way stop: halt, then go in order of arrival, one at a time
     if (c.arrive < 0 || c.gate !== G.key || tick - c.arrive < 50) return false;
     if (busy.get(G.key)) return false;

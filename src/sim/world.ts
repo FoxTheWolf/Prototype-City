@@ -1,6 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, stairStep } from './interior';
+import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
@@ -194,12 +194,6 @@ export function stepWorld(w: World, input: PlayerInput) {
   }
   // in through a fire escape's window: onto that floor
   if (p.inside >= 0 && wasOut && p.liftTo < 0) p.z = p.floor * FLOOR_H;
-  // on the stairs the feet follow the steps; the floor is the storey they are in
-  if (p.inside >= 0 && p.liftTo < 0 && (p.x !== p.px || p.y !== p.py)) {
-    const z = stairStep(w.city, p.inside, p.x, p.y, p.z);
-    if (z !== null && Number.isNaN(z)) { p.x = p.px; p.y = p.py; }
-    else if (z !== null) { p.z = z; p.floor = Math.floor((z + 0.01) / FLOOR_H); }
-  }
 
   const hour = (w.time / 3600) % 24;
   stepPeds(w.city, w.power, w.peds, w.cars, w.rng, TICK, w.tick, p.x, p.y, pedsWanted(w.time, w.weather.precip));

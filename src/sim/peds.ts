@@ -1,7 +1,7 @@
 import { type Rng } from '../core/rng';
 import { SIDEWALK, type Block, type City } from './city';
 import { type PowerGrid } from './power';
-import { Sig, signal, type Car } from './traffic';
+import { Sig, signal, stopLike, type Car } from './traffic';
 
 /**
  * Pedestrians: the people on the sidewalks around the player. Each walks round a block on its
@@ -155,7 +155,7 @@ export function stepPeds(city: City, power: PowerGrid, peds: Ped[], cars: Car[],
         if (dd < 0.3) {
           const sg = signal(city, power, p.ci, p.cj, p.axis, sec);
           // a walk light: go; a stop sign or a dark signal: after a look both ways, when nothing is coming
-          const go = sg === Sig.Green || ((sg === Sig.Dark || sg === Sig.Stop) && p.wait > 30 && p.wait % 15 === 0 && !traffic(cars, wx, wy));
+          const go = sg === Sig.Green || (stopLike(sg) && p.wait > 30 && p.wait % 15 === 0 && !traffic(cars, wx, wy));
           if (!go) { p.wait++; v = 0; }
           else p.wi = 1;
         }
