@@ -97,13 +97,14 @@ export function title(S: Lcd, s: string, t: number, right = '') {
 
 /** Big 5x7 characters made of lit cells, centered on row y. */
 export function bigText(S: Lcd, y: number, s: string, col: C3, t = 1e9) {
-  const x0 = (SW - (s.length * 6 - 1)) >> 1;
+  // a column between letters while they fit; set tight when one more would not
+  const step = s.length * 6 - 1 <= SW ? 6 : 5, x0 = (SW - (s.length * step - (step - 5))) >> 1;
   for (let n = 0; n < s.length; n++) {
     const rows = fontRows(s.charCodeAt(n));
     if (!rows) continue;
     for (let r = 0; r < 7; r++) {
       if (r > t * 30) break; // draws in from the top
-      for (let b = 0; b < 5; b++) if ((rows[r] >> (4 - b)) & 1) S.put(x0 + n * 6 + b, y + r, 32, col, col);
+      for (let b = 0; b < 5; b++) if ((rows[r] >> (4 - b)) & 1) S.put(x0 + n * step + b, y + r, 32, col, col);
     }
   }
 }

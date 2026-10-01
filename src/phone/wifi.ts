@@ -15,8 +15,8 @@ import { MAP_RES, mapRaster } from './mapdata';
 export type WifiState = 'off' | 'idle' | 'assoc' | 'dhcp' | 'up' | 'badkey';
 /** dBm at or above which 1..4 bars show; below the floor a network is out of reach. */
 const BARS = [-85, -76, -67, -58], FLOOR_DBM = -88;
-/** Seconds to associate and to get an address. */
-const ASSOC = 1.2, DHCP = 1.4;
+/** Seconds to associate and to get an address; between scans of all the channels (the joined network is checked every second). */
+const ASSOC = 1.2, DHCP = 1.4, SCAN = 8;
 
 export class Wifi {
   on = true;
@@ -30,12 +30,23 @@ export class Wifi {
   list: [number, number][] = [];
   private at = 0;
   private next = 0;
+  private nextScan = 0;
   private keyOk = true;
+
+  /** Scan again right away (the Wi-Fi settings page opening). */
+  scanNow() { this.nextScan = 0; }
 
   update(world: World, phoneOn: boolean, now: number) {
     if (!phoneOn || !this.on) { this.state = this.on ? 'idle' : 'off'; this.ap = -1; this.list = []; return; }
     if (this.state === 'off') this.state = 'idle';
-    if (now >= this.next) { this.next = now + 1; this.scan(world); }
+    // a sweep of all the channels now and then; the network joined, every second
+    if (now >= this.nextScan) { this.nextScan = now + SCAN; this.next = now + 1; this.scan(world); }
+    else if (now >= this.next && this.ap >= 0) {
+      this.next = now + 1;
+      const d = this.rssi(world, this.ap), e = this.list.find(([i]) => i === this.ap);
+      if (e) e[1] = d; else if (d >= FLOOR_DBM) this.list.push([this.ap, d]);
+      if (d < FLOOR_DBM) this.list = this.list.filter(([i]) => i !== this.ap);
+    }
     if (this.ap >= 0) {
       const heard = this.list.find(([i]) => i === this.ap);
       this.dbm = heard ? heard[1] : -120;
@@ -63,11 +74,17 @@ export class Wifi {
   kbps(): number { return this.state === 'up' ? [0, 300, 900, 1800, 2400][this.bars] : 0; }
 
   private scan(world: World) {
-    const p = world.player, eye = p.z + 1.4, m = mapRaster(world.city), floor = Math.floor((p.z + 0.5) / FLOOR_H);
     this.list.length = 0;
-    world.wifi.forEach((A, i) => {
+    world.wifi.forEach((_, i) => { const d = this.rssi(world, i); if (d >= FLOOR_DBM) this.list.push([i, d]); });
+    this.list.sort((a, b) => b[1] - a[1]);
+  }
+
+  /** What the phone hears from access point i, in dBm (-200 when far out of reach). */
+  private rssi(world: World, i: number): number {
+    const p = world.player, eye = p.z + 1.4, m = mapRaster(world.city), floor = Math.floor((p.z + 0.5) / FLOOR_H), A = world.wifi[i];
+    {
       const dx = A.x - p.x, dy = A.y - p.y, d2 = Math.hypot(dx, dy);
-      if (d2 > 150) return;
+      if (d2 > 150) return -200;
       // 15 dBm out of the router, the free-space loss at 2.4 GHz (indoor exponent 3)
       let dbm = 15 - (40 + 30 * Math.log10(Math.max(1, Math.hypot(d2, A.z - eye))));
       if (p.inside === A.building) dbm -= 12 * Math.abs(Math.floor(A.z / FLOOR_H) - floor);
@@ -84,8 +101,7 @@ export class Wifi {
         dbm -= Math.max(0, walls - 1) * 12;
       }
       dbm += (hash3(i, Math.floor(p.x / 3), Math.floor(p.y / 3)) - 0.5) * 6;
-      if (dbm >= FLOOR_DBM) this.list.push([i, Math.round(dbm)]);
-    });
-    this.list.sort((a, b) => b[1] - a[1]);
+      return Math.round(dbm);
+    }
   }
 }

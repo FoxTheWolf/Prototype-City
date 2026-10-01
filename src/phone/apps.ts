@@ -596,6 +596,7 @@ function wifiKey(S: Lcd, P: Phone, world: World, now: number) {
   S.text(1, 5, A.sec === Sec.WEP ? 'WEP' : 'WPA-PSK', DIM, LCD);
   S.text(1, 8, WF.key, HI, LCD);
   S.text(1, 9, '*'.repeat(Math.max(0, P.wkey.key.length - 1)) + P.wkey.key.slice(-1) + (Math.floor(now * 2) & 1 ? '_' : ''), WHITE, LCD);
+  S.text(1, SH - 4, `${WF.debugKey} ${A.key}`, DIM, LCD);
   S.text(1, SH - 3, '0-9   * <-', DIM, LCD);
   softKeys(S, P.wkey.key ? WF.join : '', T.back);
 }

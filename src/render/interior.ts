@@ -121,13 +121,13 @@ const EXIT = 'EXIT';
  * its middle.
  */
 function exitCell(u: number, v: number, du: number, dv: number, out: number[]) {
-  const slots = EXIT.length + 2, n = Math.floor(u * slots - 0.5), c = (n + 1) / slots;
+  const slots = EXIT.length + 2, n = Math.floor(u * slots) - 1, c = (n + 1.5) / slots; // a margin slot each side
   out[0] = G.eq; out[1] = 25; out[2] = 120; out[3] = 55;
   if (n < 0 || n >= EXIT.length || v < 0.1 || v > 0.9) return;
   const rows = fontRows(EXIT.charCodeAt(n))!;
   if (0.8 / dv >= 4 && 1 / slots / du >= 3) {
     // points: the bulbs in this cell
-    const px = (u * slots - (n + 1) + 0.5) * 6 - 0.5, pz = ((v - 0.1) / 0.8) * 7 - 0.5;
+    const px = (u * slots - (n + 1)) * 6 - 1, pz = ((v - 0.1) / 0.8) * 7 - 0.5;
     const hx = (du * slots * 6) / 2, hz = ((dv / 0.8) * 7) / 2, b = bulbsIn(rows, 5, px, pz, hx, hz);
     if (b) { out[0] = bulbGlyph(b, hx, hz); out[1] = 225; out[2] = 255; out[3] = 230; }
     return;
@@ -452,6 +452,10 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
           if (frame || bar) { lightIn(I, r0, hx, hy, t); put(y, t, frame ? G.bar : G.eq, (bar ? 190 : 95) * L3[0], (bar ? 190 : 98) * L3[1], (bar ? 195 : 105) * L3[2]); return; }
           rowState[y] = 2; glass[y * cols + x] = 1; return;
         }
+        // above the door and its sign: wall, never a window
+        lightIn(I, r0, hx, hy, t); wallPaint(R, zrOf(z), along, P4);
+        put(y, t, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
+        return;
       }
       if ((liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(I.base, fw, fz, z - z0, ground))) { rowState[y] = 2; glass[y * cols + x] = 1; return; }
       lightIn(I, r0, hx, hy, t);

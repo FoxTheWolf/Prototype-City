@@ -223,7 +223,10 @@ function boot(S: Lcd, P: Phone, world: World, t: number) {
 function splash(S: Lcd, maker: string, model: string, u: number) {
   const f = Math.min(1, u / 0.5);
   for (let y = 0; y < SH; y++) { const k = f * (1 - y / SH); S.fill(y, [8 + 12 * k, 12 + 28 * k, 22 + 60 * k]); }
-  bigText(S, 6, maker, [Math.min(255, u * 500), Math.min(196, u * 400), Math.min(90, u * 180)], u - 0.2);
+  // the maker's name in big letters while it fits the screen; a long one spelled out in capitals
+  const mc: C3 = [Math.min(255, u * 500), Math.min(196, u * 400), Math.min(90, u * 180)];
+  if (maker.length * 5 <= SW) bigText(S, 6, maker, mc, u - 0.2);
+  else { const sp = maker.split('').join(' '); S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.2, 30), mc, [12, 22, 44]); }
   S.text((SW - model.length) >> 1, 15, typed(model, u - 0.6, 30), INK, [12, 22, 44]);
   const n = Math.round(Math.max(0, Math.min(1, (u - 0.9) / 1.5)) * 24);
   for (let x = 0; x < 24; x++) S.put(9 + x, 19, x < n ? 32 : ch('.'), DIM, x < n ? HI : [10, 17, 34]);
