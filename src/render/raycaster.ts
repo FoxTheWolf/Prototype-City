@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -48,6 +48,8 @@ const GROUND_FAR = 600;
 const SPRITE_FAR = 250;
 /** Cars closer than this get their full model (wheels, lamps); farther, a simple one. */
 const CAR_NEAR = 70;
+/** People are drawn this close, in detail closer than PED_NEAR. */
+const PED_DRAW = 130, PED_NEAR = 40;
 /** Headlights and tail lights light the street this close (farther, the lamps on the car still show). */
 const CAR_LIGHT_FAR = 90;
 /** Distance where building fog reaches ~63%. Long, so the skyline reads across the whole city. */
@@ -1404,6 +1406,14 @@ function collectObjects(world: World, v: View): Obj[] {
     // lamps face the city
     const a = Math.atan2(city.h / 2 - f.y, city.w / 2 - f.x);
     out.push({ x: f.x, y: f.y, c: Math.cos(a), s: Math.sin(a), parts: FLOOD, r: 1.2, h: 14.2, seed: 0 });
+  }
+  // the people on the sidewalks, under umbrellas in the rain
+  const W = world.weather, wet = W.precip > 0.1 && !W.snow;
+  for (const p of world.peds) {
+    const x = p.px + (p.x - p.px) * v.alpha, y = p.py + (p.y - p.py) * v.alpha;
+    if (Math.abs(x - v.x) > PED_DRAW || Math.abs(y - v.y) > PED_DRAW) continue;
+    const far = Math.abs(x - v.x) > PED_NEAR || Math.abs(y - v.y) > PED_NEAR, step = p.v > 0.1 ? Math.floor(p.stride / 0.45) & 3 : 0;
+    out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(p.id, step, wet && (p.id & 7) < 6, far), r: 0.8, h: 2.3, seed: 0 });
   }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate

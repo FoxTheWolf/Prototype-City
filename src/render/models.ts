@@ -107,6 +107,37 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
   vehicles.set(key, m);
   return m;
 }
+const peds = new Map<string, Part[]>();
+const UMBRELLAS: RGB[] = [[30, 30, 34], [150, 30, 40], [40, 60, 120], [200, 180, 60], [60, 110, 70], [150, 150, 155]];
+/**
+ * A person standing or walking, facing +x: legs and arms swinging with the step (`step`, 0..3),
+ * coat, trousers and skin from `who`, under an umbrella in the rain. Far away just the figure.
+ */
+export function pedModel(who: number, step: number, umbrella: boolean, far: boolean): Part[] {
+  const key = (who & 255) + '|' + step + '|' + umbrella + far;
+  let m = peds.get(key);
+  if (m) return m;
+  const coat = CLOTHES[who % CLOTHES.length], pants = CLOTHES[(who >> 3) % CLOTHES.length], skin = SKIN[(who >> 5) % SKIN.length];
+  if (far) m = [part(Box, -0.13, -0.22, 0, 0.13, 0.22, 1.45, coat, Solid, '|', '=', '|'), part(Ball, -0.13, -0.13, 1.45, 0.13, 0.13, 1.75, skin, Solid, '@')];
+  else {
+    const sw = 0.2 * Math.sin((step * Math.PI) / 2);
+    m = [
+      part(Box, -0.07 + sw, 0.03, 0, 0.07 + sw, 0.17, 0.86, pants, Solid, '|'),
+      part(Box, -0.07 - sw, -0.17, 0, 0.07 - sw, -0.03, 0.86, pants, Solid, '|'),
+      part(Box, -0.13, -0.22, 0.84, 0.13, 0.22, 1.47, coat, Solid, '#', '=', '#'),
+      part(Box, -0.06 - sw * 0.7, 0.22, 0.88, 0.06 - sw * 0.7, 0.32, 1.42, coat, Solid, '|'),
+      part(Box, -0.06 + sw * 0.7, -0.32, 0.88, 0.06 + sw * 0.7, -0.22, 1.42, coat, Solid, '|'),
+      part(Ball, -0.12, -0.12, 1.47, 0.14, 0.12, 1.76, skin, Solid, '@'),
+    ];
+    if (umbrella) {
+      m.push(part(Box, 0.08, 0.2, 1.3, 0.11, 0.23, 2.0, [40, 40, 44], Solid, '|'));
+      m.push(part(Ball, -0.5, -0.38, 1.92, 0.66, 0.78, 2.22, UMBRELLAS[(who >> 2) % UMBRELLAS.length], Solid, '^', '^', '^'));
+    }
+  }
+  peds.set(key, m);
+  return m;
+}
+
 const bikes = new Map<string, Part[]>();
 /**
  * A bicycle and its rider, facing +x: two thin wheels, the frame, the rider leaning over the bars,

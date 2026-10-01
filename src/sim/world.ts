@@ -5,6 +5,7 @@ import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
+import { crossers, pedsWanted, spawnPeds, stepPeds, type Ped } from './peds';
 import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
 /** Simulation rate. The sim always advances in steps of exactly this size. */
@@ -40,6 +41,8 @@ export interface World {
   rng: Rng;
   city: City;
   cars: Car[];
+  /** The people on the sidewalks near the player. */
+  peds: Ped[];
   player: Player;
   /** Game time in seconds since midnight, January 1st 2008 (see clock.ts), and at the previous tick. */
   time: number;
@@ -78,7 +81,8 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
 
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
-  return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city), events: newEventLog() };
+  const peds = spawnPeds(city, rng, pedsWanted(time, 0), x, y);
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city), events: newEventLog() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -189,7 +193,8 @@ export function stepWorld(w: World, input: PlayerInput) {
   }
 
   const hour = (w.time / 3600) % 24;
-  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5);
+  stepPeds(w.city, w.power, w.peds, w.cars, w.rng, TICK, w.tick, p.x, p.y, pedsWanted(w.time, w.weather.precip));
+  stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5, crossers);
   // the streets fill up and empty with the hour, out of the player's sight
   if (w.tick % 30 === 0) {
     const want = carsWanted(w.time), cs = w.cars;

@@ -510,7 +510,7 @@ function headingOfExit(c: Car) {
 }
 
 /** Advance traffic one tick: follow, stop at lights and stop signs, turn, yield to the player. */
-export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt: number, tick: number, playerX: number, playerY: number, grip = 0.8, night = false) {
+export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt: number, tick: number, playerX: number, playerY: number, grip = 0.8, night = false, walkers: number[] = []) {
   const sec = tick * dt;
   crashes.length = 0;
   const wrecks: Car[] = [], careless = (night ? 2.5 : 1) * (0.8 / grip);
@@ -591,6 +591,11 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     const rx = playerX - c.x, ry = playerY - c.y, ahead = rx * c.dx + ry * c.dy, lat = Math.abs(rx * c.dy - ry * c.dx);
     const byPlayer = ahead > 0 && ahead < 14 + c.len / 2 && lat < 1.6;
     if (byPlayer) obstacle(ahead - c.len / 2 - 0.5, 0);
+    // people on the crosswalk ahead: stop for them
+    for (let k = 0; k < walkers.length; k += 2) {
+      const wx = walkers[k] - c.x, wy = walkers[k + 1] - c.y, wa = wx * c.dx + wy * c.dy;
+      if (wa > 0 && wa < 25 && Math.abs(wx * c.dy - wy * c.dx) < 1.8) obstacle(wa - c.len / 2 - 1.5, 0);
+    }
     // wrecks in the way
     for (const w of wrecks) {
       const wx = w.x - c.x, wy = w.y - c.y, wa = wx * c.dx + wy * c.dy;
