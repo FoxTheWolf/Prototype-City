@@ -310,9 +310,11 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   for (let y = 0; y < rows; y++) glass[y * cols + x] = 0;
   const z0 = I.z0, zc = z0 + CEIL;
   if (x === (cols >> 1)) picked = -1;
-  // in the stairwell the walls go on a storey up and down, and the ceiling is the next floor's
-  const well = stairRoom >= 0, wz0 = well ? z0 - FLOOR_H : z0, wzc = well ? zc + FLOOR_H : zc;
-  const zrOf = (z: number) => (well ? (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H : z - z0);
+  // the stairwell is a shaft: its walls go on a storey up and down; every other room keeps to its
+  // own floor and ceiling
+  const well = stairRoom >= 0, FH = FLOOR_H;
+  const zrOf = (z: number) => (((z - z0) % FH) + FH) % FH;
+  const lo = (r: number) => (r === stairIdx ? z0 - FH : z0), hi = (r: number) => (r === stairIdx ? zc + FH : zc);
   let tClose = 0;
 
   // where the ray leaves the box (and the cut): that outer wall closes the column
@@ -365,7 +367,18 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
         if (b >= 0 && x === (cols >> 1) && y === (rows >> 1)) picked = b;
         put(y, tn, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
       };
-      if (cur & nv & DOOR && !I.closed) {
+      const r2 = (nv & 127) - 1;
+      if (cur & nv & DOOR && !I.closed && well && (r === stairIdx || r2 === stairIdx)) {
+        // a door of the shaft seen from inside it: open on this storey; a storey up or down, a dark
+        // doorway (that floor is not drawn); the shaft's wall around them
+        span(tn, z0 - FH, zc + FH, (y, z) => {
+          const zz = z - z0, k = ((zz % FH) + FH) % FH, st = Math.floor(zz / FH);
+          if (st === 0 && zz < DOOR_H) return; // open: on through
+          if (k < DOOR_H) { put(y, tn, G.col, 10, 10, 12); return; }
+          paint(y, z);
+        });
+        // through the opening only rows of this storey's doorway are left
+      } else if (cur & nv & DOOR && !I.closed) {
         // a doorway: the lintel above it, and on through; over the way to the stairs or out to the
         // lobby, a green EXIT sign
         const k2 = P.rooms[(nv & 127) - 1]?.kind, k1 = R.kind;
@@ -393,7 +406,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
           }
           lightIn(I, r, hx, hy, tn); const k = z < z0 + DOOR_H + 0.08 ? 1.3 : 1; put(y, tn, G.eq, 120 * L3[0] * k, 95 * L3[1] * k, 70 * L3[2] * k);
         });
-      } else { span(tn, wz0, wzc, paint); closed = true; tClose = tn; break; }
+      } else { span(tn, lo(r), hi(r), paint); closed = true; tClose = tn; break; }
     }
     cur = nv;
   }
@@ -421,7 +434,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     lightIn(I, r0, hx, hy, t);
     gT[x] = t; gA[x] = along; gDoor[x] = isDoor ? 1 : 0; gL[x * 3] = L3[0]; gL[x * 3 + 1] = L3[1]; gL[x * 3 + 2] = L3[2];
     gC[x] = Math.abs(nX * rdx + nY * rdy) / Math.hypot(rdx, rdy); gH[x] = Math.atan2(rdy, rdx);
-    span(t, wz0, wzc, (y, z) => {
+    span(t, lo(r0), hi(r0), (y, z) => {
       const fz = z / FLOOR_H - Math.floor(z / FLOOR_H);
       if (isDoor) {
         // the street door from inside: a metal frame, the middle stile, a push bar and the top rail
@@ -447,47 +460,55 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   if (closed) nearT[x] = 1e9; // no window in this column: no rain at all
 
   if (stairIdx >= 0) {
-    // the steps, wherever the ray crosses the stair room (from inside it, or through its door):
-    // march out along the ray over the stairs' heights, filling each row up to the top of what
-    // stands there (the flight climbing ahead, the one going down beside it); elsewhere the flat
-    // floor only raises the line, and the plain floor below fills it
-    let yLow = rows;
-    const eyeRel = eye - z0, sr = P.rooms[stairIdx];
+    // the stairwell, wherever the ray crosses it (from inside, or through its door): the flights
+    // repeat every storey, so at each point there is the stair surface right under the eye (a
+    // flight, a landing, or the floor of the storey below) and, over it, the underside of the
+    // flight a storey higher. March out along the ray filling rows from the bottom up to the
+    // surface below and from the top down to the underside above; outside the well the room's own
+    // floor and ceiling only bound what is left.
+    let yLow = rows, yHigh = 0;
+    const sr = P.rooms[stairIdx];
+    const rowOf = (z: number, t: number) => Math.max(0, Math.min(rows, Math.ceil(hor - ((z - eye) * scale) / t - 0.5)));
     for (let t = 0.08; t < Math.min(tClose, 14); t += 0.03 + t * 0.02) {
       const wx = px + rdx * t, wy = py + rdy * t;
-      const onStairs = stairLocal(I.city, I.k, wx, wy);
-      let H = 0, edge = false;
-      if (onStairs) {
-        H = stairH(SL[0], SL[1], SL[2], SL[3]);
-        const b = SL[1] - STAIR_LAND, run = SL[3] - 2 * STAIR_LAND;
-        // beside the flight going up, the one coming up from the floor below
-        // (on the ground floor there is none: the second flight stands solid on the floor)
-        if (I.floor > 0 && SL[0] >= SL[2] / 2 && b > 0 && b < run && H > eyeRel - 0.3) H -= FLOOR_H;
-        edge = b > 0 && b < run && (b / 0.29) % 1 < 0.2;
+      if (!stairLocal(I.city, I.k, wx, wy) || (cellAt(P, wx, wy) & 127) - 1 !== stairIdx) {
+        yLow = Math.min(yLow, rowOf(z0, t)); yHigh = Math.max(yHigh, rowOf(zc, t));
+        continue;
       }
-      const yT = Math.max(0, Math.ceil(hor - ((z0 + H - eye) * scale) / t - 0.5));
-      if (!onStairs) { yLow = Math.min(yLow, yT); continue; }
+      const S = z0 + stairH(SL[0], SL[1], SL[2], SL[3]);
+      // the copy of the stairs just under the eye (never below the ground), and the one over it
+      const h0 = S + FH * Math.floor((eye - 0.05 - S) / FH), hf = Math.max(0, h0), hc = h0 + FH - 0.22;
+      const b = SL[1] - STAIR_LAND, run = SL[3] - 2 * STAIR_LAND, inRun = b > 0 && b < run;
+      const edge = inRun && (b / 0.29) % 1 < 0.2;
+      const yT = rowOf(hf, t), yB = rowOf(hc, t);
+      lit3(sr, lamp, stairIdx * 3, wx, wy, t, I.day);
       for (let y = yT; y < yLow; y++) {
         if (rowState[y] === 2 || (rowState[y] === 1 && depth[y * cols + x] <= t)) continue; // glass, or a nearer wall
-        lit3(sr, lamp, stairIdx * 3, wx, wy, t, I.day);
         const k = edge ? 1.35 : 1;
         put(y, t, edge ? G.us : G.eq, 125 * L3[0] * k, 125 * L3[1] * k, 120 * L3[2] * k);
       }
-      yLow = Math.min(yLow, yT);
+      for (let y = yHigh; y < yB; y++) {
+        if (rowState[y] === 2 || (rowState[y] === 1 && depth[y * cols + x] <= t)) continue;
+        // the underside of a flight (concrete, its steps' rhythm), or of a landing
+        put(y, t, inRun && (b / 0.29) % 1 < 0.15 ? G.dash : G.dot, 80 * L3[0], 80 * L3[1], 84 * L3[2]);
+      }
+      yLow = Math.min(yLow, yT); yHigh = Math.max(yHigh, yB);
     }
   }
 
-  // floor and ceiling in the rows left: each row meets them at its own distance
+  // floor and ceiling in the rows left: each row meets them at its own distance; past the reach of
+  // the stairwell's march (or a storey away in it), the dark of the shaft
   for (let y = 0; y < rows; y++) {
     if (rowState[y]) continue;
     const m = (y + 0.5 - hor) / scale;
-    const below = m > 0, t = below ? (eye - z0) / m : (wzc - eye) / -m;
+    const below = m > 0, t = below ? (eye - z0) / m : (zc - eye) / -m;
     if (!(t > 0) || t > 200) continue;
     const wx = px + rdx * t, wy = py + rdy * t;
     let c = at(Math.floor(wx / CELL) - P.gx, Math.floor(wy / CELL) - P.gy);
     if (!c) c = cur || 1;
     const r = (c & 127) - 1;
     if (r < 0 || r >= P.rooms.length) continue;
+    if (r === stairIdx) { put(y, t, 32, 0, 0, 0); continue; }
     lightIn(I, r, wx, wy, t);
     if (below) floorPaint(P.rooms[r].kind, office, wx, wy, P4); else ceilPaint(P.rooms[r], office, lamp[r * 3] + lamp[r * 3 + 1] > 0.05, wx, wy, P4);
     put(y, t, P4[0], P4[1] * L3[0], P4[2] * L3[1], P4[3] * L3[2]);
