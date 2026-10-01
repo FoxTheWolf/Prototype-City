@@ -273,6 +273,22 @@ export class Sound {
       this.ringNodes.push(o);
     }
   }
+  /** The opening: a low swell rising under the typing, and a breath of noise as the city comes apart into glyphs. */
+  intro() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(55, t); o.frequency.linearRampToValueAtTime(82, t + 4);
+    o.connect(filter(ctx, 'lowpass', 300, 2)).connect(g);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t + 1.8); g.gain.linearRampToValueAtTime(0, t + 4.6);
+    o.start(t); o.stop(t + 4.7);
+    const s = ctx.createBufferSource(), h = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.loop = true;
+    const f = filter(ctx, 'bandpass', 800, 0.8);
+    f.frequency.setValueAtTime(400, t + 1.8); f.frequency.exponentialRampToValueAtTime(3500, t + 4.4);
+    s.connect(f).connect(h);
+    h.gain.setValueAtTime(0, t + 1.8); h.gain.linearRampToValueAtTime(0.05, t + 2.4); h.gain.linearRampToValueAtTime(0, t + 4.4);
+    s.start(t + 1.8); s.stop(t + 4.5);
+  }
   /** A phone camera's shutter: the fake click handsets played, two quick clacks. */
   shutter() {
     const ctx = this.ctx, t = ctx.currentTime;

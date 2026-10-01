@@ -13,8 +13,9 @@ import { type Look } from './render/palette';
 import { power } from './render/power';
 import { pickedButton } from './render/interior';
 import { renderWorld, VIEW_GLINT, VIEW_LIGHT } from './render/raycaster';
+import { intro, INTRO_S } from './render/intro';
 import { daylight } from './render/sky';
-import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
+import { operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { isOffice } from './sim/interior';
@@ -221,9 +222,12 @@ let sound: Sound | null = null;
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
 let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 
+/** When the player first entered the city (the opening plays from there), or -1. */
+let introAt = -1;
 function begin() {
   sound ??= new Sound();
   sound.resume();
+  if (introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
   overlay.hidden = true;
   running = true;
   input.lock();
@@ -331,6 +335,15 @@ function frame(now: number) {
   }
   sound?.traffic(world.cars, world.events, p.x, p.y, camera.yaw, world.weather.wet, world.tick, world.peds);
   sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power, p.inside >= 0, tubes);
+  // the opening, over everything the first seconds
+  if (introAt >= 0 && now / 1000 - introAt < INTRO_S) {
+    const c = calendar(world.time), hh = String(Math.floor(c.hour)).padStart(2, '0'), mm = String(Math.floor((c.hour % 1) * 60)).padStart(2, '0');
+    intro(grid, now / 1000 - introAt, [
+      cityName(city).toUpperCase(),
+      `${districtName(city, d).toUpperCase()}  ${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')} ${hh}:${mm}`,
+      `${operatorName(city).toUpperCase()} ... SIGNAL OK`,
+    ]);
+  }
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }
