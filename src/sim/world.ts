@@ -50,8 +50,17 @@ export interface World {
   events: EventLog;
 }
 
-/** Cars on the grid (and 12% more on the diagonal), for the default city size. */
+/** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
 const CARS = 1500;
+/** Share of CARS on the streets at each hour of the day: quiet before dawn, full at the rush hours. */
+const RUSH = [0.3, 0.25, 0.22, 0.22, 0.25, 0.35, 0.6, 0.9, 1, 0.95, 0.8, 0.8, 0.85, 0.8, 0.8, 0.85, 0.95, 1, 1, 0.85, 0.7, 0.6, 0.5, 0.4];
+/** Cars wanted at game time t (seconds), the hours blended. */
+function carsWanted(t: number) {
+  const h = (t / 3600) % 24, a = Math.floor(h), f = h - a;
+  return Math.round(CARS * 1.12 * (RUSH[a] * (1 - f) + RUSH[(a + 1) % 24] * f));
+}
+/** How far from the player cars leave or join the streets, and how many per step (every half second). */
+const HIDE_R = 300, TURNOVER = 4;
 
 /** Default city side in metres. */
 export const CITY_SIZE = 2000;
@@ -59,13 +68,14 @@ export const CITY_SIZE = 2000;
 export function createWorld(seed: number, size = CITY_SIZE): World {
   const rng = mulberry32(seed);
   const city = generateCity(seed, size);
-  const cars = spawnCars(city, rng, CARS);
+  // every city starts on a day of 2008 of its own, at nine in the evening
+  const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
+  const cars = spawnCars(city, rng, Math.round(carsWanted(time) / 1.12));
   // start on the sidewalk of the block closest to downtown
   let start = city.blocks[0];
   for (const b of city.blocks) if (Math.hypot(b.x0 - city.cx, b.y0 - city.cy) < Math.hypot(start.x0 - city.cx, start.y0 - city.cy)) start = b;
   const x = start.x0 + SIDEWALK / 2, y = (start.y0 + start.y1) / 2;
-  // every city starts on a day of 2008 of its own, at nine in the evening
-  const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
+
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
   return { seed, tick: 0, rng, city, cars, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1 }, time, ptime: time, weather, power: buildPower(seed, city), events: newEventLog() };
@@ -180,6 +190,19 @@ export function stepWorld(w: World, input: PlayerInput) {
 
   const hour = (w.time / 3600) % 24;
   stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5);
+  // the streets fill up and empty with the hour, out of the player's sight
+  if (w.tick % 30 === 0) {
+    const want = carsWanted(w.time), cs = w.cars;
+    if (cs.length > want) {
+      for (let n = 0, k = cs.length - 1; k >= 0 && n < TURNOVER && cs.length > want; k--) {
+        const c = cs[k];
+        if (c.turn || c.wreck || Math.hypot(c.x - p.x, c.y - p.y) < HIDE_R) continue;
+        cs.splice(k, 1); n++;
+      }
+    } else if (cs.length < want) {
+      for (const c of spawnCars(w.city, w.rng, Math.min(TURNOVER, want - cs.length) + (w.tick % 300 === 0 ? 4 : 0), cs, { x: p.x, y: p.y, r: HIDE_R })) cs.push(c);
+    }
+  }
   for (const k of crashes) {
     const i = nearestRoad(w.city.xb, w.city.xCell, k.x), j = nearestRoad(w.city.yb, w.city.yCell, k.y);
     logEvent(w.events, 'crash', w.tick, w.time, k.x, k.y, Math.min(1, k.v / 15), [i, j]);
