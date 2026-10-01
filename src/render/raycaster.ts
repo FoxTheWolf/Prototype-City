@@ -550,7 +550,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     else { f0 = side === 0 ? B.y0 : B.x0; f1 = side === 0 ? B.y1 : B.x1; }
   }
   const fogK = 1 - Math.exp(-t / FOG);
-  const shade = lightK * (1 - fogK * 0.6);
+  const shade0 = lightK * (1 - fogK * 0.6);
+  let shade = shade0;
   const winLight = 1 - fogK * 0.45;
   // the building's electric light right now (blackouts, the surge before, the flicker back);
   // aircraft warning lights run on batteries and stay on
@@ -567,8 +568,9 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const detailed = rpf >= 2.2 && cpb >= 1.5;
   // far away several floors/bays share a cell: group them in powers of two so the pattern holds still
   const kv = rpf >= 1 ? 0 : Math.ceil(Math.log2(1 / rpf)), kh = cpb >= 1 ? 0 : Math.ceil(Math.log2(1 / cpb));
-  const bay = along / BAY, wi = Math.floor(bay), fw = bay - wi;
-  const corner = along - f0 < 0.35 || f1 - along < 0.35;
+  const along0 = along;
+  let bay = along / BAY, wi = Math.floor(bay), fw = bay - wi;
+  let corner = along - f0 < 0.35 || f1 - along < 0.35;
   // a clock tower is a historic facade with a clock face near the top of each side
   const S = B.style === 'clock' ? 'historic' : B.style;
   const clockR = B.style === 'clock' && side !== 2 ? Math.min(3, (f1 - f0) * 0.32) : 0, clockZ = B.h - clockR - 2;
@@ -576,9 +578,20 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const farWall = S === 'brick' ? G.eq : S === 'warehouse' ? G.bar : G.col;
   const farK = S === 'glass' ? 1.25 : 1;
   // brick walk-ups: an iron fire escape two bays wide, repeating along the facade
-  const esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner;
-  const escU = ((wi % 7) - 2 + fw) / 2;
-  const balcony = S === 'residential' && B.feat < 0.5;
+  let esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner;
+  let escU = ((wi % 7) - 2 + fw) / 2;
+  /** Move the hit along the face (onto a bay or pier standing out of it), with what follows from it. */
+  const setAlong = (a: number) => {
+    along = a; bay = a / BAY; wi = Math.floor(bay); fw = bay - wi; corner = a - f0 < 0.35 || f1 - a < 0.35;
+    esc = S === 'brick' && B.feat < 0.45 && B.h > 12 && (wi % 7 === 2 || wi % 7 === 3) && !corner; escU = ((wi % 7) - 2 + fw) / 2;
+  };
+  const balcony = S === 'residential' && B.feat < 0.5, balK = Math.floor(((B.feat * 131) % 1) * 4);
+  // balconies: railings on every floor, solid parapets on every other, glass ones stacked in pairs, or one long slab
+  const balconyAt = (fl: number) => balK === 3 || (balK === 2 ? wi % 4 < 2 && fw > 0.04 && fw < 0.96 : fw > 0.1 && fw < 0.9 && (balK !== 1 || (fl & 1) === 1));
+  // the building's window pattern (glyphs) and, on some, a second color in bands of floors
+  const pIdx = Math.floor(((B.feat * 977) % 1) * PATS.length), pat = PATS[pIdx];
+  const band = (B.feat * 311) % 1 < 0.35 ? 1 + Math.floor(((B.feat * 53) % 1) * 3) : 0;
+  const wc = (fl: number) => (band && Math.floor(fl / band) & 1 ? B.sign : B.win);
   // the street doors on this face: the main one, and the shops' (once the ground plan is made)
   let door: Door | null = null;
   if (B.tier === 1 && habitable(B)) for (const D of exitsOf(frameCity, id, true)) if (D.face === face && along > D.a0 && along < D.a1) door = D;
@@ -596,6 +609,22 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   // ground floor's plan and one into the floors above, made the first time a window needs them
   const lot = detailed && t < PEEK_FAR && side !== 2 ? lotOf(frameCity, id) : -1;
   const rdx = (hx - frameX) / t, rdy = (hy - frameY) / t;
+  // a bay, pilaster or pier in front of the wall plane: where the ray meets it first (front or side)
+  let rMode = 0, rT = 0, rA = 0, rCur = 0;
+  if (detailed && side !== 2 && reliefOf(B)) {
+    const da = side === 0 ? rdy : side === 1 ? rdx : rdx * B.cut!.ny - rdy * B.cut!.nx;
+    const sb = (REL.d * dAlong) / (colW * t), af = along - da * sb, lo = Math.min(af, along), hi = Math.max(af, along), per = REL.P * BAY, o = REL.off * BAY + REL.a;
+    let best = 2;
+    for (let k = Math.floor((lo - o - REL.w) / per); k <= Math.floor((hi - o) / per); k++) {
+      const s0 = k * per + o, s1 = s0 + REL.w;
+      if (s0 < f0 + 0.5 || s1 > f1 - 0.5) continue;
+      let l0: number, l1: number;
+      if (Math.abs(along - af) < 1e-9) { if (af < s0 || af > s1) continue; l0 = 0; l1 = 1; }
+      else { const a = (s0 - af) / (along - af), b = (s1 - af) / (along - af); l0 = Math.max(0, Math.min(a, b)); l1 = Math.min(1, Math.max(a, b)); }
+      if (l0 <= l1 && l0 < best) best = l0;
+    }
+    if (best <= 1) { rMode = best < 1e-6 ? 1 : 2; rT = t - sb + sb * best; rA = af + (along - af) * best; }
+  }
   peeks[0].state = peeks[1].state = 0;
   let glowFl = -1;
   const peekFor = (fl: number) => {
@@ -626,15 +655,19 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const pane = (fl: number, litCh: number) => {
     const hh = hash3(id, wi, fl), wp = hh < litK ? winPow(wi, fl) : 0;
     if (wp > 0.04) {
-      ch = hh < litK * 0.3 ? G.at : litCh;
-      const k = wp * (0.65 + 0.35 * hash3(wi, fl, id));
-      r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
+      ch = hh < litK * 0.3 ? pat[0] : pIdx ? pat[1] : litCh;
+      const k = wp * (0.65 + 0.35 * hash3(wi, fl, id)), W = wc(fl);
+      r = W[0] * k; g = W[1] * k; b = W[2] * k;
     } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
   };
   for (let y = y0; y < y1; y++) {
     const i = y * grid.cols + x;
     if (frameInside && grid.depth[i] < t + 0.5) continue; // the room around the viewer is in front (a neighbour may touch its wall)
-    const z = eye + ((hor - (y + 0.5)) / scale) * t;
+    // rows where the bay or pier stands: nearer, its own spot along the face, lit by its own side
+    let T = t, rs = 0;
+    if (rMode) { const zr = eye + ((hor - (y + 0.5)) / scale) * rT; if (zr > REL.z0 && zr < REL.z1) { T = rT; rs = rMode; } }
+    if (rs !== rCur) { rCur = rs; setAlong(rs ? rA : along0); shade = shade0 * (rs === 2 ? 0.68 : rs === 1 ? 1.08 : 1); }
+    const z = eye + ((hor - (y + 0.5)) / scale) * T;
     const fl = Math.floor(z / FLOOR_H), fz = z / FLOOR_H - fl;
     const escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || Math.abs((fl & 1 ? 1 - escU : escU) - fz) < 0.1);
     let pk: ReturnType<typeof peekFor> = null, isWin = false;
@@ -647,6 +680,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       wall(G.us, 1.5);
       if (frameSnow > 0.05) { const k = frameSnow * 0.8; r += (190 - r) * k; g += (195 - g) * k; b += (205 - b) * k; } // snow on the ledge
     }
+    else if (rs === 2) wall(S === 'brick' ? G.eq : G.bar, 1); // the side of a bay or pier
     else if (clockR && Math.hypot(du, z - clockZ) < clockR) {
       // lit face, a ring, and hands at ten past ten (they will follow the sim clock once it exists)
       const dz = z - clockZ, d = Math.hypot(du, dz);
@@ -757,8 +791,8 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       const hh = hash3(id, wi >> kh, fl >> kv), wp = hh < litK ? winPow(wi >> kh, fl >> kv) : 0;
       if (wp > 0.04) {
         ch = hh < litK * 0.4 ? G.o : G.col;
-        const k = wp * (0.65 + 0.35 * hash3(wi >> kh, id, 5));
-        r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
+        const k = wp * (0.65 + 0.35 * hash3(wi >> kh, id, 5)), W = wc((fl >> kv) << kv);
+        r = W[0] * k; g = W[1] * k; b = W[2] * k;
       } else wall(farWall, farK);
     } else if (z < FLOOR_H && B.shop) {
       if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = fw < 0.2 ? G.lb : fw > 0.8 ? G.rb : G.col; r = 180 * elec; g = 150 * elec; b = 100 * elec; }
@@ -799,15 +833,20 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
         wall(corner ? G.bar : G.eq, 0.8 + 0.35 * hash3(course, Math.floor((along + off) / 1.2), id));
       }
     } else if (S === 'residential') {
-      if (balcony && z > FLOOR_H && fz < 0.25 && fw > 0.1 && fw < 0.9) wall(fz < 0.07 ? G.eq : G.bar, 1.3);
+      if (balcony && z > FLOOR_H && fz < 0.25 && balconyAt(fl)) {
+        if (fz < 0.07) wall(G.eq, 1.35);
+        else if (balK === 1) wall(G.hash, 1.1);
+        else if (balK === 2) { ch = G.col; r = 110 * shade + 10; g = 140 * shade + 10; b = 160 * shade + 12; }
+        else wall(balK === 3 ? G.dash : G.bar, 1.3);
+      }
       else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) pane(fl, G.hash);
       else wall(corner ? G.bar : G.dot, 1);
     } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
       const hh = hash3(id, wi, fl), wp = hh < litK ? winPow(wi, fl) : 0;
       if (wp > 0.04) {
-        ch = hh < litK * 0.3 ? G.at : hh < litK * 0.7 ? G.hash : G.pct;
-        const k = wp * (0.65 + 0.35 * hash3(wi, fl, id));
-        r = B.win[0] * k; g = B.win[1] * k; b = B.win[2] * k;
+        ch = hh < litK * 0.3 ? pat[0] : hh < litK * 0.7 ? pat[1] : pat[2];
+        const k = wp * (0.65 + 0.35 * hash3(wi, fl, id)), W = wc(fl);
+        r = W[0] * k; g = W[1] * k; b = W[2] * k;
       } else { ch = G.eq; r = 30 * shade + 8; g = 36 * shade + 8; b = 58 * shade + 12; }
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
     if (lot >= 0 && !isWin && !corner && z < B.h - 0.6 && (pk ??= peekFor(fl))) {
@@ -856,8 +895,31 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     }
     grid.put(i, ch, r, g, b);
     grid.setBg(i, 7, 8, 12);
-    grid.depth[i] = t;
+    grid.depth[i] = T;
   }
+}
+
+/** Window glyphs per building, brightest first, as in the dense facades of the references. */
+const PATS = [[G.at, G.hash, G.pct], [C('8'), G.o, G.col], [C('X'), C('Z'), G.plus], [C('0'), G.o, G.eq], [C('H'), G.hash, G.eq]];
+/**
+ * What stands out of a facade, filled by reliefOf: a piece every P bays (from bay off, plus a
+ * metres), w wide and d deep, between heights z0 and z1.
+ */
+const REL = { P: 0, off: 0, a: 0, w: 0, d: 0, z0: 0, z1: 0 };
+/** Oriel bays on some walk-ups, pilasters on old facades, piers on art deco offices (where the facade draws them). */
+function reliefOf(B: Building): boolean {
+  const h = (B.feat * 7919) % 1;
+  if (B.style === 'brick' && B.feat >= 0.45 && B.feat < 0.8 && B.h > 10 && B.ad < 0) {
+    REL.P = 3 + Math.floor(h * 3); REL.off = 1; REL.a = 0.15; REL.w = 2 * BAY - 0.3; REL.d = 0.6; REL.z0 = FLOOR_H + 0.3; REL.z1 = B.h - 1.6;
+  } else if (B.style === 'residential' && B.feat >= 0.6 && B.h > 7 && B.ad < 0) {
+    const wide = h < 0.5 ? 1 : 2;
+    REL.P = wide + 1 + (Math.floor(h * 4) % 2); REL.off = 0; REL.a = 0.15; REL.w = wide * BAY - 0.3; REL.d = 0.7; REL.z0 = FLOOR_H + 0.3; REL.z1 = B.h - 0.9;
+  } else if (B.style === 'historic') {
+    REL.P = 3; REL.off = 0; REL.a = 0; REL.w = 0.45; REL.d = 0.25; REL.z0 = FLOOR_H * 1.2; REL.z1 = B.h - 2.2;
+  } else if (B.style === 'office' && B.feat > 0.6) {
+    REL.P = 2; REL.off = 0; REL.a = 0; REL.w = 0.29; REL.d = 0.3; REL.z0 = FLOOR_H; REL.z1 = B.h - 1.3;
+  } else return false;
+  return REL.z1 > REL.z0 + 2;
 }
 
 /**
