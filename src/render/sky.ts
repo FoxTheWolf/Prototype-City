@@ -13,6 +13,14 @@ import { type CharGrid } from './grid';
  * a real city lights its overcast.
  */
 
+/**
+ * Whether the burning seam's ring of embers outside the fence lights the clouds above it. Off for
+ * now: with the limited look-up of the current camera the reddish band reads as a stray orange in
+ * the sky, not as the fire below. Turn it back on with the true 3D camera (stage 6 or 10), when the
+ * embers and the clouds over them can be seen together.
+ */
+const SEAM_LIGHTS_CLOUDS = false;
+
 /** Height of the cloud deck in metres. */
 const CLOUD_H = 1200;
 /** The moon drawn this big (the real one is 0.26 degrees across in radius terms; this reads on a grid). */
@@ -104,7 +112,7 @@ function glowBelow(S0: SkyFrame, x: number, y: number, out: Float32Array) {
   // the seam's fires in a ring outside the fence, and the great crater under the Sarcophagus
   const S = c.sarcophagus, crater = Math.exp(-((Math.hypot(x - S.x, y - S.y) / (S.r * 1.3)) ** 2));
   // (the ring is narrow, so over the city it adds nothing: a blacked-out city's sky goes grey)
-  const fire = Math.exp(-(((out_ - 450) / 260) ** 2)) + 1.6 * crater;
+  const fire = (SEAM_LIGHTS_CLOUDS ? Math.exp(-(((out_ - 450) / 260) ** 2)) : 0) + 1.6 * crater;
   // muted: a sodium city lights its overcast a dull brown-orange, not a bright one
   out[0] = 62 * city + 70 * fire; out[1] = 42 * city + 24 * fire; out[2] = 34 * city + 12 * fire;
 }
