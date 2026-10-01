@@ -380,7 +380,46 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
     - **Lua:** em 2008-03-07 era lua nova real, então ela estava junto do sol e se pondo com ele, o que está certo. O erro era desenhar o lado escuro: agora, de dia, só aparece a parte iluminada, e a luz cinérea só de noite.
     - **Sol:** ganhou um brilho suave (sem disco), aplicado depois das nuvens e atenuado por elas.
     - **Limite de olhar para cima:** com o y-shearing, a câmera vai até ~40° (`MAX_PITCH`) e mostra até ~70° acima do horizonte, então a lua alta fica fora da vista. Opções levadas ao usuário: subir o limite aceitando alguma distorção, ou esperar a câmera 3D de verdade (etapa 7 ou 10).
-  - **Próximo passo:** o usuário testa de novo. Depois vem o grupo C (curvatura e Sarcófago). Depois vem o grupo C: a curvatura leve do horizonte e a megaestrutura (o Sarcófago) perto da borda.
+  - **Retorno seguinte (2026-09-30):** o usuário aprovou e decidiu **esperar a câmera 3D** para olhar mais para cima (o limite de ~40° fica). Pediu só para tirar a faixa que cortava o brilho do sol: o brilho era calculado só até 0,8 rad do sol; agora é calculado no céu inteiro. Depois disso, mandou seguir sozinho para o grupo C e o 5b, sem pedir teste.
+- **Grupo C (5.10–5.11), feito em 2026-09-30:**
+  - **5.10, curvatura:** queda d²/2R com `CURVE_R` = 400 km (em `render/sarcophagus.ts`). O chão (raiz exata da equação, numa forma estável), as fachadas (o olho efetivo `eyeD` sobe com a distância), a cerca e a fumaça afundam juntos. Na escala da cidade quase não se nota (~5 m a 2 km), mas a 6 km a queda é de ~50 m. Comecei com 150 km, o que comia demais a base do Sarcófago.
+  - **5.11, o Sarcófago** (`city.sarcophagus`, gerado em `generateBorder` com o gerador da borda, então não muda a cidade):
+    - **Cúpula:** calota esférica de **3 km de largura e 600 m de altura** (a decisão dizia ~400 m; a 6,5 km, 400 m davam só ~3 linhas na grade de 80, então subi a altura para a escala aparecer), com a borda perto a 5 km da cerca, num lado sorteado.
+    - **Desenho por coluna** (`sarcophagusColumn`, marchando 24 passos pela corda): borda `_`, painéis de 2,5° × 50 m em `#` e `|`, um terço faltando (`:` laranja, o fogo por dentro) e o fogo vazando pela base (`~`).
+    - **Ao lado:** a torre de tiragem larga e baixa (raio de 420 m, 230 m de altura), com a borda acesa pelo calor e luzes vermelhas, e 5 guindastes parados no topo (`drawCranes`), com luz vermelha piscando.
+    - **Visibilidade:** a névoa do fogo a esconde, então só aparece a menos de ~6,8 km do centro dela, ou seja, perto daquela borda (`visibility`). Do centro da cidade não aparece.
+    - As nuvens sobre a cratera ficam avermelhadas (`glowBelow`).
+    - **Ainda não:** telemetria e sensores, que são dados para a etapa 14.
+- **5b, rede elétrica e blackout, feita em 2026-09-30** (falta o teste do usuário, inclusive comparar os sons A e B):
+  - **Simulação** (`sim/power.ts`, `world.power`):
+    - Uma subestação a cada ~650 m (9 com a semente 42). Cada prédio e cada poste pertence à mais próxima (`building`, `lamp`), e os letreiros, as placas perpendiculares e os holofotes seguem o prédio.
+    - **Geradores** (`generator`): a prefeitura e ~4% dos prédios com mais de 40 m.
+    - `subAt` é uma busca rápida (grade 64×64) para saber qual subestação alimenta um ponto. `switchSub` guarda o tick da troca. Ainda não há fila de eventos (fica para a etapa 6).
+  - **Efeito** (`render/power.ts`, `power(...)`, uma função pura como as falhas dos letreiros):
+    - **Apagão:** a onda sai da subestação a 1400 m/s, com uma variação de até 0,25 s por elemento. 0,6 s antes do apagão, um surto leva a luz a até 1,35; depois vêm faíscas e piscadas por 0,3 s e o apagão. Com gerador, a luz volta a 55% depois de 3 s.
+    - **Volta:** cada elemento volta no seu momento (0,4–13 s, mais o atraso pela distância), piscando 0,7 s; os postes refazem o aquecimento do sódio.
+    - **O que apaga:** janelas, vitrines, letreiros (e a luz que eles jogam), placas perpendiculares, holofotes, faixas das coroas, o relógio aceso e os postes, com luz e zumbido.
+    - **O que fica:** as luzes de aviação (bateria) e os faróis dos carros.
+    - As nuvens sobre um distrito apagado perdem o laranja, e a névoa distante segue a parte da cidade acesa (`cityLit`). Um luar frio e fraco (`finish`) deixa ver os contornos.
+  - **Som** (`audio/blackout.ts`): o atraso segue a velocidade do som (343 m/s), e o volume e o pan seguem a distância e a direção da subestação.
+    - **Versão A, fiel à receita:**
+      - sub e drone descendo de 121 a 82 Hz (de B2 a E2), com saturação e passa-baixa ressonante;
+      - corpo de ruído em 300 Hz;
+      - 26 arcos de 0,7 a 1,8 kHz (60% perto de 1,2 kHz), poucos no início e muitos depois;
+      - 28 estalos de 1,5 a 5 kHz;
+      - reverb curto e escuro só nas camadas médias;
+      - rearticulação do grave em 55–80 Hz e corte em 12 s.
+    - **Versão B, interpretação própria:**
+      - baque e estalo do transformador estourando;
+      - arco que sobe de 120 a 260 Hz gaguejando e é cortado seco;
+      - zumbido que morre de 120 a 25 Hz;
+      - relés em cascata;
+      - ecos de outros transformadores mais longe.
+    - **No escuro:** relés, zumbidos gaguejando e baques graves a cada 1,5–6,5 s. A cidade abafa (`hush`).
+    - **Na volta:** um contator fechando, relés e o zumbido subindo de 60 a 120 Hz.
+  - **Teclas:** **K** liga e desliga a subestação mais próxima, **Shift+K** liga e desliga todas, e **J** troca o som entre A e B. A linha do clima mostra `POWER x/y` e a versão.
+  - **Não testado de ouvido:** o Claude não ouve o áudio. O código roda sem erros, mas o som precisa do retorno do usuário.
+  - **Próximo passo:** o usuário testa o grupo C e o 5b. Depois a etapa 5 fecha e vem a 6 (trânsito, junto com o bug das calçadas da diagonal). Depois vem o grupo C: a curvatura leve do horizonte e a megaestrutura (o Sarcófago) perto da borda.
 - **Etapa 4, grupo 4a–4c feito (2026-09-30), falta o teste do usuário:**
   - **4a:** teclas **P** (paleta: `SODIUM`, `NEON NOIR`, `TERMINAL`), **B** (fundo sólido, ligado por padrão) e **U** (glifos de bloco). As paletas ficam em `render/palette.ts`: cada uma é uma correção de cor no shader (`grade` em `glRenderer.ts`, aplicada à tela inteira, HUD incluído) mais a cor da luz dos postes. O fundo sólido e a troca de glifos são uma passada final (`finish` em `raycaster.ts`): cada célula do mundo (com profundidade) ganha de fundo a própria cor × `SOLID` (0,36). Os blocos e as linhas de caixa são desenhados como formas exatas no atlas, nas posições 128+ (`BLOCK` em `atlas.ts`), e a tabela `BLOCKS` diz qual ASCII vira qual bloco.
   - **4b:** os billboards viraram objetos com volume (`render/objects.ts`). Como o y-shearing é linear, cada célula é um raio 3D reto (`z = eye + t·(hor − linha)/scale`), então cada peça (caixa, cilindro vertical ou elipsoide, no referencial do objeto) é cruzada exatamente. O `t` é a mesma profundidade do buffer, então os objetos se escondem atrás das paredes e uns dos outros sem ordenar. Peças mais finas que meia célula são alargadas para não piscar ao longe. Materiais: `Solid` (glifo por face), `Leaf` (ruído preso à superfície) e `Glow` (luz, sem sombra). Os modelos ficam em `render/models.ts`: carro (carroceria, cabine de vidro, rodas, faróis e lanternas, luminoso de táxi), poste com base, braço sobre a rua e luminária (`Prop.a` é o lado da rua), árvore com copa em 6–9 elipsoides e holofote do cordão.
@@ -501,7 +540,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - nomes em inglês já lidos de um arquivo de locale.
 4. ✅ **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais. Entulho e mobiliário urbano espalhados. Letreiros nas fachadas com luzes que piscam e fazem efeitos. Base da iluminação dinâmica (postes que iluminam o que passa perto).
 5. **Clima e céu** (em andamento; o grupo 5.1–5.3 trouxe antes a avenida diagonal, as placas perpendiculares e os holofotes de fachada): chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido. Curvatura leve do horizonte e a megaestrutura da zona de fogo, visível só perto da borda (veja as inspirações).
-5b. **Rede elétrica e blackout** (veja "Design: rede elétrica e blackout"): subestações na simulação, prédios, postes e letreiros ligados a elas, apagão e volta progressivos com som, luar iluminando a cidade apagada. Acionado por uma tecla de debug até o hacking existir.
+5b. ✅ **Rede elétrica e blackout** (falta o teste do usuário) (veja "Design: rede elétrica e blackout"): subestações na simulação, prédios, postes e letreiros ligados a elas, apagão e volta progressivos com som, luar iluminando a cidade apagada. Acionado por uma tecla de debug até o hacking existir.
 6. **Trânsito:** avenidas, coletoras e calçadões; semáforos; filas; tipos de veículo; ciclistas; pedestres. Sem carros voadores, porque não combinam com 2008. Criar aqui a fila de eventos da simulação (batidas, engarrafamentos). Faróis dos carros que iluminam a rua e as fachadas enquanto passam.
 7. **Interiores:** entrar nos prédios **sem carregamento nem teleporte** (o interior existe no mesmo espaço da cidade), cômodos coloridos vistos de fora pelas janelas (referência 16), janelas que mostram a cidade real, andares altos com vista de cima, vitrines com o interior das lojas. Elevadores que sobem de verdade, alguns com vidro. Escadas de incêndio em que se sobe.
 8. **Navegação:** painel diegético com terminal progressivo, mapas em 4 níveis, marcos, passeio automático com A\*, modo cidade vazia.
