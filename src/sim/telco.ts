@@ -46,6 +46,8 @@ export interface Telco {
   bizNum: string[];
   /** Local number to business index. */
   byNum: Map<string, number>;
+  /** Top-up card codes already used. */
+  spent: Set<string>;
   sites: CellSite[];
   /** Substation of every site. */
   sub: Uint8Array;
@@ -96,7 +98,7 @@ export function buildTelco(seed: number, city: City, power: PowerGrid): Telco {
     byNum.set(n, k);
     return n;
   });
-  return { area, bizNum, byNum, sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
+  return { area, bizNum, byNum, spent: new Set(), sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
 }
 
 /** A made-up local number (7 digits): an exchange from 200 to 999 (never 555 or an N11), and a line. */

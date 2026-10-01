@@ -234,6 +234,8 @@ function frame(now: number) {
     switch (f[0]) {
       case 'fail': sound.callFail(); break;
       case 'stop': sound.stopRing(); break;
+      case 'sms': if (phone.prefs.profile === 0) sound.smsTone(); else if (phone.prefs.profile === 1) sound.vibrate(0.8); break;
+      case 'sent': if (phone.prefs.profile === 0) sound.sentTone(); break;
       case 'ringback': sound.ringback(); break;
       case 'busy': sound.busy(); break;
       case 'intercept': sound.intercept(); break;

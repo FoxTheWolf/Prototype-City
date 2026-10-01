@@ -273,6 +273,10 @@ export class Sound {
       this.ringNodes.push(o);
     }
   }
+  /** A text arriving: two short bright notes. */
+  smsTone() { this.dual(1760, 1760, 0, 0.12, 0.04); this.dual(2093, 2093, 0.16, 0.18, 0.04); }
+  /** A text sent: a soft rising chirp. */
+  sentTone() { this.dual(1200, 1200, 0, 0.06, 0.03); this.dual(1600, 1600, 0.07, 0.08, 0.03); }
   /** The ringback the caller hears: 440 + 480 Hz for 2 seconds (one ring of the far phone). */
   ringback() { this.dual(440, 480, 0, 2); }
   /** Busy: 480 + 620 Hz, half a second on, half off. */

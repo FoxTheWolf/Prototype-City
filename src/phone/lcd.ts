@@ -59,8 +59,10 @@ export const hhmm = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0
  * The top row: the antenna and its bars (x with no service, blinking while it searches), E while
  * data moves over EDGE, the GPS while it runs, the time, the battery.
  */
-export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio) {
+export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false) {
   S.fill(0, BAR);
+  // an envelope while there are unread messages
+  if (unread) S.text(14, 0, '[=]', Math.floor(now * 1.5) & 1 ? HI : INK, BAR);
   S.text(1, 0, 'Y', INK, BAR);
   if (radio.state === 'service') for (let b = 0; b < 4; b++) S.put(2 + b, 0, ch(b < radio.bars ? '|' : '.'), b < radio.bars ? [150, 230, 150] : DIM, BAR);
   else if (radio.state !== 'search' || Math.floor(now * 2) & 1) S.text(2, 0, 'x', BAD, BAR);

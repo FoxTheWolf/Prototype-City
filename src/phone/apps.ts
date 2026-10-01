@@ -7,6 +7,7 @@ import { type World } from '../sim/world';
 import { bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
+import { freeVoucher } from './ussd';
 import { APPS, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, TAPS, type App, type Key, type Phone } from './phone';
 
 /**
@@ -65,6 +66,10 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     default:
       if (P.screen === 'code') return service(S, P, world, t, now);
       if (P.screen === 'contact') return contactEdit(S, P, now);
+      if (P.screen === 'ussd') return ussdScreen(S, P, t, now);
+      if (P.screen === 'msglist') return msgList(S, P, t);
+      if (P.screen === 'msg') return msgRead(S, P, t);
+      if (P.screen === 'compose') return compose(S, P, now);
   }
 }
 
@@ -136,12 +141,64 @@ function contactEdit(S: Lcd, P: Phone, now: number) {
   softKeys(S, E.name && E.number ? A.save : '', T.back);
 }
 
+/** Messages: the inbox (unread count), the sent ones, and a new message. */
 function messages(S: Lcd, P: Phone, t: number) {
   title(S, name('messages').toUpperCase(), t);
-  const n = P.inbox.length;
-  A.boxes.forEach((b, k) => S.text(2, 3 + k * 2, typed(`${b} (${k === 0 ? n : 0})`, t - 0.1 - k * 0.05), INK, LCD));
-  P.inbox.slice(0, 6).forEach((m, k) => S.text(2, 12 + k * 2, `${m.from}: ${m.text}`.slice(0, SW - 3), m.read ? DIM : WHITE, LCD));
-  softKeys(S, '', T.back);
+  const unread = P.inbox.filter((m) => !m.read).length;
+  [`${A.inbox} (${unread}/${P.inbox.length})`, `${A.sent} (${P.sent.length})`, A.newMsg].forEach((l, k) => row(S, 3 + k * 2, l, '>', k === P.box, t - 0.05 * k));
+  softKeys(S, T.open, T.back);
+}
+
+/** Who a message is from (or to): the contact's name when there is one. */
+const nameOf = (P: Phone, n: string) => P.contacts.find((c) => c.number === n)?.name ?? n;
+
+function msgList(S: Lcd, P: Phone, t: number) {
+  const L = P.box === 0 ? P.inbox.map((m) => [m.from, m.text, m.read] as const) : P.sent.map((m) => [m.to, m.text, true] as const);
+  title(S, P.box === 0 ? A.inbox.toUpperCase() : A.sent.toUpperCase(), t);
+  if (!L.length) S.center(10, A.noMsgs, DIM, LCD);
+  const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.msel - view + 1, L.length - view));
+  L.slice(top, top + view).forEach(([who, text, read], n) => {
+    const sel = top + n === P.msel, y = 3 + n * 2, bg = sel ? SEL : LCD;
+    if (sel) S.fill(y, bg);
+    S.text(1, y, `${read ? ' ' : '*'}${nameOf(P, who)}: ${text}`.slice(0, SW - 2), sel ? WHITE : read ? DIM : INK, bg);
+  });
+  softKeys(S, A.new, T.back);
+}
+
+function msgRead(S: Lcd, P: Phone, t: number) {
+  const m = P.box === 0 ? P.inbox[P.msel] : null, s = P.box === 1 ? P.sent[P.msel] : null;
+  const who = m ? m.from : s?.to ?? '', text = m ? m.text : s?.text ?? '', at = m ? m.at : s?.at ?? 0, c = calendar(at);
+  title(S, `${P.box === 0 ? A.from : A.to}: ${nameOf(P, who)}`.slice(0, SW - 2), t);
+  S.text(1, 3, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`, DIM, LCD);
+  wrap(text, SW - 2).slice(0, SH - 8).forEach((l, k) => S.text(1, 5 + k, typed(l, t - k * 0.05), WHITE, LCD));
+  softKeys(S, /^[0-9*#]+$/.test(who) ? A.replyK : '', T.back);
+}
+
+function compose(S: Lcd, P: Phone, now: number) {
+  const D = P.draft, blink = Math.floor(now * 2) & 1;
+  title(S, A.newMsg.toUpperCase(), 1, `${D.text.length}/160`);
+  S.text(1, 3, A.to, D.step === 0 ? HI : DIM, LCD);
+  S.text(5, 3, nameOf(P, D.to) + (D.step === 0 && blink ? '_' : ''), WHITE, LCD);
+  S.text(1, 5, A.text, D.step === 1 ? HI : DIM, LCD);
+  const lines = wrap(D.text, SW - 2);
+  lines.slice(-(SH - 10)).forEach((l, k) => S.text(1, 6 + k, l, WHITE, LCD));
+  if (D.step === 1 && blink) S.put(1 + (lines[lines.length - 1]?.length ?? 0), 6 + Math.max(0, Math.min(lines.length, SH - 10) - 1), ch('_'), WHITE, LCD);
+  S.text(1, SH - 3, D.step === 0 ? '* <-   v text' : A.notesHint, DIM, LCD);
+  softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', T.back);
+}
+
+/** The operator's service menu: "running" for a moment, then its text and, on a menu, the answer being typed. */
+function ussdScreen(S: Lcd, P: Phone, t: number, now: number) {
+  const U = P.us;
+  title(S, U.code, t);
+  if (now - U.at < 1.4) { S.center(10, `${A.running}${'.'.repeat(Math.floor(now * 3) % 4)}`.slice(0, SW - 2), DIM, LCD); return softKeys(S, '', T.back); }
+  const lines = U.text.split('\n').flatMap((l) => wrap(l, SW - 4));
+  lines.forEach((l, k) => S.text(2, 3 + k, typed(l, now - U.at - 1.4 - k * 0.05, 90), k === 0 ? HI : WHITE, LCD));
+  if (U.menu) {
+    S.text(2, SH - 4, `${A.reply} ${U.input}${Math.floor(now * 2) & 1 ? '_' : ''}`, INK, LCD);
+    return softKeys(S, U.input ? A.send : '', T.back);
+  }
+  softKeys(S, T.ok, T.back);
 }
 
 /** The time of day (the city's), the date, and a stopwatch on real seconds. */
@@ -205,6 +262,7 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
   if (pg === 'debug') {
     SET.debugHint.forEach((l, k) => S.text(1, 3 + k, typed(l, t - 0.05 * k), DIM, LCD));
     secretCodes(world.seed).forEach((c, n) => row(S, 7 + n * 2, c.code, A.code[c.kind], n === P.setSel, t - 0.2 - 0.05 * n));
+    S.text(1, 22, A.voucher, DIM, LCD); S.text(1, 23, freeVoucher(world), INK, LCD);
     return softKeys(S, SET.dial, T.back);
   }
   PREF_ROWS[pg].forEach((key, n) => row(S, 3 + n * 2, SET.rows[key], `< ${SET.values[key][P.prefs[key]]} >`, n === P.setSel, t - 0.05 * n));

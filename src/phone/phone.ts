@@ -4,6 +4,11 @@ import { Gps } from './gps';
 import { Call, type Sfx } from './call';
 import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
+import { ussd } from './ussd';
+import en from '../locale/en.json';
+import { businessName, operatorName } from '../locale/names';
+import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
+import { hash3 } from '../core/rng';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -21,7 +26,7 @@ import { Radio } from './radio';
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
@@ -65,10 +70,12 @@ export function fmtDist(m: number, feet: number): string {
 /** The contacts that come with the line: emergency, the operator's care line and its service menu, directory assistance. */
 const CONTACTS: [string, string][] = [['Emergency', '911'], ['Customer Care', '611'], ['Balance & Data', '*100#'], ['Directory', '411']];
 
+const SMS = en.phone.sms;
+
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
-export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact'];
+export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -125,8 +132,19 @@ export class Phone {
   csel = 0;
   /** The contact being written: its name (typed by multi-tap), its number, and which of them is being typed. */
   edit = { name: '', number: '', step: 0 };
-  /** Text messages received: from, text, game time, read. */
+  /** Text messages received (from, text, game time, read) and sent (to, text, game time). */
   readonly inbox: { from: string; text: string; at: number; read: boolean }[] = [];
+  readonly sent: { to: string; text: string; at: number }[] = [];
+  /** Messages: the box open (0 inbox, 1 sent), the one picked, the message being written. */
+  box = 0;
+  msel = 0;
+  draft = { to: '', text: '', step: 0 };
+  /** Messages on their way to the phone: from, text, and when they arrive (real seconds). */
+  private incoming: { from: string; text: string; at: number }[] = [];
+  /** Operator notices already sent: welcome, low data, no data. */
+  private told = { welcome: false, low: false, out: false };
+  /** A USSD session: the code, the answers so far, what came back, what is being typed, when it was asked. */
+  us = { code: '', path: [] as string[], text: '', menu: false, input: '', at: 0 };
   /** Calculator: the number on the display, the one kept, the operation waiting, and whether the next digit starts a new number. */
   calc = { cur: '0', acc: 0, op: '', fresh: true };
   /** Notes: the text, and the key last tapped with when (a tap within a second picks its next letter). */
@@ -163,13 +181,28 @@ export class Phone {
     // the GPS runs while the map is open, in the hand or not
     this.gps.update(this.world, this.screen === 'map' || this.screen === 'places' || (this.screen === 'code' && this.code === 'gps'), now, dt);
     this.radio.update(this.world, this.screen !== 'off', now, dt);
+    // text messages arriving; the operator's notices
+    for (let i = this.incoming.length - 1; i >= 0; i--) {
+      const m = this.incoming[i];
+      if (now < m.at || this.radio.state !== 'service') continue;
+      this.incoming.splice(i, 1);
+      this.inbox.unshift({ from: m.from, text: m.text, at: this.world.time, read: false });
+      this.sfx.push(['sms']);
+    }
+    if (this.radio.state === 'service') {
+      const A = this.world.telco.player, op = operatorName(this.world.city);
+      if (!this.told.welcome) { this.told.welcome = true; this.receive(op, SMS.welcome.replace('{op}', op), now + 4); }
+      if (A.dataKB < 500 && !this.told.low) { this.told.low = true; this.receive(op, SMS.lowData, now + 2); }
+      if (A.dataKB < 1 && !this.told.out) { this.told.out = true; this.receive(op, SMS.noData, now + 2); }
+      if (A.dataKB > 500) this.told.low = this.told.out = false;
+    }
     // the call: its tones and voices; ended, it is paid for and, a moment later, put away
     const c = this.call;
     if (c) {
       c.update(now, this.sfx);
       if (c.state === 'ended' && now > c.endAt + 2.5) {
         this.world.telco.player.credit -= c.cost();
-        for (const [name, num] of c.listings) this.inbox.unshift({ from: '411', text: `${name} ${num}`, at: this.world.time, read: false });
+        for (const [name, num] of c.listings) this.receive('411', `${name} ${formatNumber(this.world.telco, num)}`, now + 3);
         this.call = null;
       }
     }
@@ -313,6 +346,63 @@ export class Phone {
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       }
+      case 'ussd': {
+        const U = this.us;
+        if (k === 'rsoft' || (k === 'end')) { this.open('calls', now); return true; }
+        if (!U.menu) return k === 'ok' ? (this.open('calls', now), true) : false;
+        if (/^[0-9]$/.test(k) && U.input.length < 12) { U.input += k; return true; }
+        if (k === '*' && U.input) { U.input = U.input.slice(0, -1); return true; }
+        if ((k === 'ok' || k === 'send' || k === 'lsoft') && U.input) { U.path.push(U.input); U.at = now; this.since = now; this.ask(); return true; }
+        return false;
+      }
+      case 'messages': {
+        // the boxes, and a new message
+        if (k === 'up' || k === 'down') { this.box = (this.box + (k === 'up' ? 2 : 1)) % 3; return true; }
+        if (k === 'ok' || k === 'lsoft') {
+          if (this.box === 2) { this.draft = { to: '', text: '', step: 0 }; this.open('compose', now); }
+          else { this.msel = 0; this.open('msglist', now); }
+          return true;
+        }
+        if (k === 'rsoft') { this.open('menu', now); return true; }
+        return false;
+      }
+      case 'msglist': {
+        const n = this.box === 0 ? this.inbox.length : this.sent.length;
+        if (n && (k === 'up' || k === 'down')) { this.msel = (this.msel + (k === 'up' ? -1 : 1) + n) % n; return true; }
+        if (n && k === 'ok') { if (this.box === 0) this.inbox[this.msel].read = true; this.open('msg', now); return true; }
+        if (k === 'lsoft') { this.draft = { to: '', text: '', step: 0 }; this.open('compose', now); return true; }
+        if (k === 'rsoft') { this.open('messages', now); return true; }
+        return false;
+      }
+      case 'msg': {
+        const m = this.box === 0 ? this.inbox[this.msel] : null, who = m ? m.from : this.sent[this.msel]?.to ?? '';
+        if (k === 'lsoft' && /^[0-9*#]+$/.test(who)) { this.draft = { to: who, text: '', step: 1 }; this.open('compose', now); return true; }
+        if (k === 'send' && /^[0-9]+$/.test(who)) { this.open('calls', now); this.place(who, now); return true; }
+        if (k === 'rsoft') { this.open('msglist', now); return true; }
+        return false;
+      }
+      case 'compose': {
+        // the number, then the text by multi-tap (0 a space, * deletes); OK sends
+        const D = this.draft;
+        if (k === 'rsoft') { if (D.step === 1 && !D.text) D.step = 0; else this.open('messages', now); return true; }
+        if (k === 'up' || k === 'down') { D.step = k === 'down' ? 1 : 0; this.tapKey = ''; return true; }
+        if (k === 'ok' || k === 'lsoft' || k === 'send') {
+          if (D.step === 0 && D.to) { D.step = 1; return true; }
+          if (D.to && D.text) { const ok = this.send(now); this.box = 1; this.msel = 0; this.open('messages', now); this.sfx.push(ok ? ['sent'] : ['fail']); return true; }
+          return false;
+        }
+        if (D.step === 0) {
+          if (k === '*' && D.to) { D.to = D.to.slice(0, -1); return true; }
+          if (/^[0-9#]$/.test(k) && D.to.length < 16) { D.to += k; return true; }
+          return false;
+        }
+        if (k === '*') { D.text = D.text.slice(0, -1); this.tapKey = ''; return true; }
+        if (k === '#') { D.text += '.'; this.tapKey = ''; return true; }
+        const t = this.tap(D.text, k, now, 160);
+        if (t === null) return false;
+        D.text = t;
+        return true;
+      }
       case 'contact': {
         // a new contact: the name by multi-tap (# goes on to the number), then the number; OK saves
         const E = this.edit;
@@ -390,13 +480,51 @@ export class Phone {
     return true;
   }
 
-  /** Call a number: the exchange decides who answers (see call.ts). */
+  /** A text message on its way to the phone, arriving at `at` (once there is signal). */
+  receive(from: string, text: string, at: number) { this.incoming.push({ from, text, at }); }
+
+  /**
+   * Send a text (10 cents): the network carries it if there is signal; a business may answer with
+   * an automatic reply, a home now and then; a number not in service bounces back.
+   */
+  private send(now: number): boolean {
+    const D = this.draft, A = this.world.telco.player;
+    if (this.radio.state !== 'service' || A.credit < 10) return false;
+    A.credit -= 10;
+    this.sent.unshift({ to: D.to, text: D.text, at: this.world.time });
+    const c = lookup(this.world.telco, this.world.seed, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q);
+    const op = operatorName(this.world.city);
+    if (c.kind === 'none') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5);
+    else if (c.kind === 'self') this.receive(D.to, D.text, now + 3);
+    else if (c.kind === 'biz' && h(1) < 0.6) {
+      const b = this.world.city.businesses[c.k], [o, z] = BIZ_HOURS[b.kind] ?? [9, 17], hh = (x: number) => `${((x + 11) % 12) + 1}${x % 24 < 12 ? 'am' : 'pm'}`;
+      const t = SMS.biz[Math.floor(h(2) * SMS.biz.length)].replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
+      this.receive(D.to, t, now + 8 + h(3) * 20);
+    } else if (c.kind === 'res' && h(1) < 0.4) this.receive(D.to, SMS.res[Math.floor(h(2) * SMS.res.length)], now + 15 + h(3) * 40);
+    return true;
+  }
+
+  /** Call a number: the exchange decides who answers (see call.ts); a *code# opens the operator's service menu. */
   place(number: string, now: number) {
+    if (/^\*[0-9*]*#$/.test(number)) {
+      if (this.radio.state !== 'service') { this.sfx.push(['fail']); return; }
+      this.us = { code: number, path: [], text: '', menu: false, input: '', at: now };
+      this.ask();
+      this.open('ussd', now);
+      return;
+    }
     this.call = new Call(this.world, number, now, this.radio.state !== 'service');
     if (this.call.state === 'ended') this.sfx.push(['fail']);
     this.dial = number;
     if (this.redial[0] !== number) this.redial.unshift(number);
     if (this.redial.length > 10) this.redial.pop();
+  }
+
+  /** Ask the operator's menu for the answer to the path so far. */
+  private ask() {
+    const r = ussd(this.world, this.us.code, this.us.path);
+    this.us.text = r.text.replace('{op}', operatorName(this.world.city)); this.us.menu = r.menu; this.us.input = '';
+    if (r.sms) this.receive(operatorName(this.world.city), r.sms, this.us.at + 4);
   }
 
   /** Multi-tap: a key tapped again within a second picks its next letter; returns the text, or null for a key without letters. */

@@ -731,6 +731,29 @@
     "Silver", "Blue Moon", "Red Door", "Night Owl", "Eastside", "Union", "Jupiter", "Rex", "Galaxy", "Ember"
   ],
   "phone": {
+    "ussd": {
+      "root": ["{op}", "1 Balance", "2 Data bundles", "3 Top up", "4 My number", "5 Data usage"],
+      "balance": "Your balance is {c}. Data left: {d}.",
+      "bundlesHead": "Data bundles:",
+      "bought": "You bought a {n} data bundle. Your balance is {c}.",
+      "noCredit": "Not enough credit ({c}). Top up with a card from any store.",
+      "topupAsk": "Enter the 12-digit code on your top-up card:",
+      "topped": "{v} added. Your balance is {c}.",
+      "used": "This card has already been used.",
+      "badCode": "Invalid code. Please check the card and try again.",
+      "number": "Your number is {n}.",
+      "usage": "Data used: {u}. Data left: {d}.",
+      "invalid": "Invalid option.",
+      "unknown": "Unknown service code."
+    },
+    "sms": {
+      "welcome": "Welcome to {op}! Dial *100# for your balance and data bundles.",
+      "lowData": "You have less than 500 KB of data left. Dial *100# to buy a bundle.",
+      "noData": "Your data bundle is used up. Dial *100# to buy a new one.",
+      "failed": "Your message to {to} could not be delivered.",
+      "biz": ["Thanks for your message! Please call us at {num}.", "We got your message. Our hours are {open} to {close}.", "Thank you for contacting {biz}. We will reply soon."],
+      "res": ["Who is this?", "Sorry, I think you have the wrong number.", "Hi! Who's this?", "Do I know you?", "Wrong number, sorry."]
+    },
     "ok": "OK", "off": "OFF", "noService": "NO SERVICE", "ready": "READY.", "mapsDb": "MAPS DB",
     "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide", "places": "Places", "placesTitle": "PLACES", "show": "Show",
     "zoom": ["LOCAL", "DISTR", "SECTOR", "CITY"], "floor": "FLOOR", "ground": "G",
@@ -746,6 +769,8 @@
         "sky": { "clear": "Clear", "partly": "Partly cloudy", "cloudy": "Cloudy", "drizzle": "Drizzle", "rain": "Rain", "storm": "Thunderstorm", "snow": "Snow" },
         "phases": ["New", "Waxing crescent", "First quarter", "Waxing gibbous", "Full", "Waning gibbous", "Last quarter", "Waning crescent"] },
       "soon": ["Connected over EDGE", "Coming soon"],
+      "running": "USSD code running...", "reply": "Reply:", "send": "Send", "to": "To", "text": "Text", "inbox": "Inbox", "sent": "Sent", "newMsg": "New message", "noMsgs": "No messages", "replyK": "Reply", "from": "From", "smsSent": "Message sent", "smsFail": "Sending failed",
+      "voucher": "Top-up card (unused)",
       "set": {
         "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "about": "About phone", "debug": "Debug (game)" },
         "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "temp": "Temperature", "dist": "Distance" },
