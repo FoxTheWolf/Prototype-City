@@ -164,7 +164,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   let inside: Inside | null = null, skip: Building | null = null;
   if (plan) {
     skip = city.buildings[kIn];
-    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), day: sky.day, sec: frameSec, rain };
+    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day: sky.day, sec: frameSec, rain };
     prepareInside(inside, px, py);
   }
   frameInside = !!inside;
@@ -887,7 +887,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       r += 120 * lamp; g += 105 * lamp; b += 80 * lamp;
     } else if (lot >= 0 && !escCell && ((!corner && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0)) || (fz > 0.04 && fz < 0.9 && liftGlassAt(frameCity, lot, hx, hy))) && (pk = peekFor(fl))) {
       // a window: the room behind it, lit by its own lamps
-      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), frameDay, sheenAt(along, z));
+      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), framePower.backup[lot], frameDay, sheenAt(along, z));
       ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3]; isWin = true;
     } else if (detailed && S !== 'glass' && S !== 'warehouse' && S !== 'historic' && z > B.h - 1.3) {
       // cornice with dentils
@@ -964,7 +964,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
     } else wall(corner ? G.bar : t > 60 ? G.dot : G.col, 1);
     if (lot >= 0 && !isWin && !corner && z < B.h - 0.6 && (pk ??= peekFor(fl))) {
       // a lit room's light spills onto the wall around its window
-      if (fl !== glowFl) { const L = roomGlow(frameCity.buildings[lot], id, pk.plan!, pk.r, fl, winPow(wi, fl), frameDay); glowFl = fl; GL[0] = L[0]; GL[1] = L[1]; GL[2] = L[2]; }
+      if (fl !== glowFl) { const L = roomGlow(frameCity.buildings[lot], id, pk.plan!, pk.r, fl, winPow(wi, fl), framePower.backup[lot], frameDay); glowFl = fl; GL[0] = L[0]; GL[1] = L[1]; GL[2] = L[2]; }
       if (GL[0] + GL[1] + GL[2] > 0.02) {
         const d = Math.hypot((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H), k = 120 * Math.max(0, 1 - d / 1.5) ** 2;
         r += GL[0] * k; g += GL[1] * k; b += GL[2] * k;

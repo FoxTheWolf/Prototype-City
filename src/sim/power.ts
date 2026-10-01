@@ -26,11 +26,20 @@ export interface PowerGrid {
   lamp: Uint8Array;
   /** Buildings with a backup generator: their lights come back dimmer after a few seconds. */
   generator: Uint8Array;
+  /**
+   * What keeps each building lit with its substation down (Backup): nothing, battery emergency
+   * lights, a generator for the common parts ("half light"), or a critical generator (near normal).
+   * Old brick and historic buildings mostly have nothing; newer offices have the emergency lights.
+   * Kinds of building to come (hospitals, stations, police) pick theirs here.
+   */
+  backup: Uint8Array;
   /** Coarse lookup of the substation feeding a point: GRID x GRID cells over the city. */
   cell: Uint8Array;
 }
 
 const SPACING = 650, GRID = 64;
+/** A building's backup power, see PowerGrid.backup. */
+export const Backup = { None: 0, Battery: 1, Generator: 2, Critical: 3 } as const;
 
 /** Index of the substation nearest to a point. */
 function nearest(subs: Substation[], x: number, y: number) {
@@ -45,19 +54,22 @@ export function buildPower(seed: number, city: City): PowerGrid {
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     subs.push({ x: ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y: ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny, on: true, changed: -1, ox: 0, oy: 0 });
   }
-  const building = new Uint8Array(city.buildings.length), generator = new Uint8Array(city.buildings.length);
+  const building = new Uint8Array(city.buildings.length), generator = new Uint8Array(city.buildings.length), backup = new Uint8Array(city.buildings.length);
   const hall = city.landmarks.find((l) => l.kind === 'hall');
   city.buildings.forEach((B, k) => {
     const mx = (B.x0 + B.x1) / 2, my = (B.y0 + B.y1) / 2;
     building[k] = nearest(subs, mx, my);
     const civic = hall && Math.hypot(mx - hall.x, my - hall.y) < 40;
     generator[k] = civic || (B.h > 40 && hash3(seed ^ 0x6e7, mx | 0, my | 0) < 0.04) ? 1 : 0;
+    const h = hash3(seed ^ 0xb4c, mx | 0, my | 0);
+    backup[k] = civic ? Backup.Critical : generator[k] ? Backup.Generator
+      : h < ({ office: 0.9, glass: 0.95, residential: 0.5, brick: 0.25, historic: 0.3, warehouse: 0.2 } as Record<string, number>)[B.style] ? Backup.Battery : Backup.None;
   });
   const lamp = new Uint8Array(city.lamps.length);
   city.lamps.forEach((p, k) => { lamp[k] = nearest(subs, p.x, p.y); });
   const cell = new Uint8Array(GRID * GRID);
   for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++) cell[j * GRID + i] = nearest(subs, ((i + 0.5) * city.w) / GRID, ((j + 0.5) * city.h) / GRID);
-  return { subs, building, lamp, generator, cell };
+  return { subs, building, lamp, generator, backup, cell };
 }
 
 /** The substation feeding a point of the city (outside it, the nearest edge's). */

@@ -33,6 +33,8 @@ export interface Inside {
   exits: Door[];
   /** The building's electric light (blackouts), daylight 0..1, seconds, rain 0..1. */
   elec: number;
+  /** Its backup power when the substation is down (sim/power.ts Backup). */
+  backup: number;
   day: number;
   sec: number;
   rain: number;
@@ -58,7 +60,7 @@ export function prepareInside(I: Inside, x: number, y: number) {
   const here = (cellAt(I.plan, x, y) & 127) - 1;
   const R = I.plan.rooms, n = R.length;
   if (lamp.length < n * 3) lamp = new Float32Array(n * 3 + 96);
-  for (let r = 0; r < n; r++) roomLamp(I.base, I.boxId, R[r], r, I.floor, I.elec, I.day, r === here, lamp, r * 3);
+  for (let r = 0; r < n; r++) roomLamp(I.base, I.boxId, R[r], r, I.floor, I.elec, I.backup, I.day, r === here, lamp, r * 3);
   stairRoom = here >= 0 && R[here].kind === 'stair' ? here : -1;
   stairIdx = R.findIndex((q) => q.kind === 'stair');
 }
@@ -71,13 +73,16 @@ let stairIdx = -1;
  * The lamp of room r on floor f of box boxId, into out[o..o+2] (0..1 per channel, times the power):
  * common parts always on, the others when someone is home (or `on`), as seen from outside too.
  */
-function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, elec: number, day: number, on: boolean, out: Float32Array, o: number) {
+function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, elec: number, backup: number, day: number, on: boolean, out: Float32Array, o: number) {
   const common = R.unit < 0, h = hash3(boxId, r * 31 + f, 12);
-  if (elec < MAINS) {
-    // off the mains. On the building's generator: its own dimmer, amber light in the common parts
-    // and a few rooms, red lamps here and there in the halls. With nothing: the battery emergency
-    // lights, faint, only where people must find their way out (halls, stairs, the lobby)
-    const gen = elec > 0.25, lit = common || (gen && (on || h < 0.25)), red = common && h < (gen ? 0.3 : 0.4);
+  // off the mains, by the building's backup (sim/power.ts): a critical generator keeps it nearly as
+  // usual; a generator gives its own dimmer, amber "half light" in the common parts and a few rooms,
+  // red lamps here and there in the halls; batteries give the emergency lights, faint, only where
+  // people must find their way out (halls, stairs, the lobby); with nothing it is dark
+  if (elec < MAINS && backup === 3) elec = 0.85;
+  else if (elec < MAINS) {
+    if (backup === 0 || (backup === 1 && !common)) { out[o] = out[o + 1] = out[o + 2] = 0; return; }
+    const gen = backup === 2 && elec > 0.25, lit = common || (gen && (on || h < 0.25)), red = common && h < (gen ? 0.3 : 0.4);
     const c = !lit ? null : red ? EMERG_RED : gen ? GEN : EMERG;
     const k = !c ? 0 : gen ? Math.min(1, elec * 1.1) : 0.6;
     out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
@@ -602,9 +607,9 @@ export function insideLight(I: Inside, x: number, y: number): Float32Array {
 
 const PL = new Float32Array(3);
 /** The lamp (0..1 per channel) of room r on floor f, as seen from outside: for the glow around its windows. */
-export function roomGlow(base: Building, boxId: number, P: Plan, r: number, f: number, elec: number, day: number): Float32Array {
+export function roomGlow(base: Building, boxId: number, P: Plan, r: number, f: number, elec: number, backup: number, day: number): Float32Array {
   const R = P.rooms[r];
-  if (R) roomLamp(base, boxId, R, r, f, elec, day, false, PL, 0); else PL[0] = PL[1] = PL[2] = 0;
+  if (R) roomLamp(base, boxId, R, r, f, elec, backup, day, false, PL, 0); else PL[0] = PL[1] = PL[2] = 0;
   return PL;
 }
 /**
@@ -612,7 +617,7 @@ export function roomGlow(base: Building, boxId: number, P: Plan, r: number, f: n
  * glass at distance t, rising kz metres per unit of distance, to the back wall, or down to the floor
  * or up to the ceiling of storey f.
  */
-export function peekCell(out: number[], base: Building, boxId: number, P: Plan, pk: Peek, f: number, px: number, py: number, rdx: number, rdy: number, eye: number, kz: number, t: number, elec: number, day: number, sheen: number) {
+export function peekCell(out: number[], base: Building, boxId: number, P: Plan, pk: Peek, f: number, px: number, py: number, rdx: number, rdy: number, eye: number, kz: number, t: number, elec: number, backup: number, day: number, sheen: number) {
   const z0 = f * FLOOR_H, zc = z0 + CEIL, tw = t + pk.d, zw = eye + kz * tw, office = isOffice(base);
   let r = pk.r, x: number, y: number, tt: number, part: number;
   if (zw < z0 || zw > zc) {
@@ -625,7 +630,7 @@ export function peekCell(out: number[], base: Building, boxId: number, P: Plan, 
   } else { part = 1; tt = tw; x = px + rdx * tw; y = py + rdy * tw; }
   const R = P.rooms[r];
   if (!R) { out[0] = G.eq; out[1] = 20; out[2] = 24; out[3] = 40; return; }
-  roomLamp(base, boxId, R, r, f, elec, day, false, PL, 0);
+  roomLamp(base, boxId, R, r, f, elec, backup, day, false, PL, 0);
   lit3(R, PL, 0, x, y, 0, day);
   if (part === 0) floorPaint(R.kind, office, x, y, out);
   else if (part === 2) ceilPaint(R, office, PL[0] + PL[1] > 0.05, x, y, out);
