@@ -507,13 +507,13 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
       // the soft looks: the ground (up to SHARPER), solid objects (up to SHARP) and walls (SOFT) become
       // blocks of their color, with the glyph only a faint texture on them; the walls kept darker
       const kd = kind[i], s = look.sharp;
-      const fill = kd === KIND.ground ? 0.5 : kd === KIND.object && s < 2 ? 0.7 : s === 0 && (kd === KIND.wall || kd === KIND.room) ? 0.34 : 0;
+      const fill = kd === KIND.ground ? 0.5 : kd === KIND.object && s < 2 ? 0.7 : s === 0 && (kd === KIND.wall || kd === KIND.room) ? 0.28 : 0;
       if (fill) {
         // far away the cells are too coarse for the glyph shapes, which only shimmer as the view
         // moves (aliasing): the glyph fades into its block, leaving the color pattern
-        const fa = Math.min(1, Math.max(0, (depth[i] - 25) / 125)), f = fa * fa * (3 - 2 * fa);
-        const glyph = (kd === KIND.ground ? 0.82 : kd === KIND.object ? 0.95 : 0.85) - 0.3 * f;
-        const fl = fill + (0.55 - fill) * 0.8 * f;
+        const fa = look.fuse ? Math.min(1, Math.max(0, (depth[i] - 40) / 220)) : 0, f = fa * fa * (3 - 2 * fa);
+        const glyph = (kd === KIND.ground ? 0.82 : kd === KIND.object ? 0.95 : 0.78) - 0.15 * f;
+        const fl = fill + (0.5 - fill) * 0.45 * f;
         bg[k] = cells[k + 1] * fl; bg[k + 1] = cells[k + 2] * fl; bg[k + 2] = cells[k + 3] * fl;
         cells[k + 1] *= glyph; cells[k + 2] *= glyph; cells[k + 3] *= glyph;
       }

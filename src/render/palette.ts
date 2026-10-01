@@ -15,4 +15,6 @@ export interface Look {
    * the ground only; 3 SHARPEST, plain glyphs.
    */
   sharp: number;
+  /** Far glyphs fade into their blocks in the soft looks, against aliasing (key G). */
+  fuse: boolean;
 }
