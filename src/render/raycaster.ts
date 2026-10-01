@@ -1277,8 +1277,9 @@ function gatherLights(world: World, v: View, sec: number) {
 /** Traffic lights are drawn this close (whole, or far off just their lit lamps) and cast their color this close; their glow on the street, red, yellow, green. */
 const SIGNAL_LIGHT_FAR = 80, SIGNAL_FAR = 200, SIGNAL_NEAR = 60;
 const SIG_GLOW: RGB[] = [[110, 14, 10], [100, 70, 10], [20, 100, 55]];
-interface SignalPost { x: number; y: number; c: number; s: number; state: number; lit: number; at: number[] }
-const SP: SignalPost = { x: 0, y: 0, c: 0, s: 0, state: 0, lit: -1, at: [] };
+interface SignalPost { x: number; y: number; c: number; s: number; state: number; lit: number; at: number[]; cross: number }
+/** cross: the light of the other road's traffic here (for the second walk signal). */
+const SP: SignalPost = { x: 0, y: 0, c: 0, s: 0, state: 0, lit: -1, at: [], cross: Sig.Stop };
 const atCache = new Map<string, number[]>();
 
 /**
@@ -1305,6 +1306,7 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
         SP.x = mx + dx * ahead + rx * (halfW + 0.7); SP.y = my + dy * ahead + ry * (halfW + 0.7);
         SP.c = -dx; SP.s = -dy;
         setState(st);
+        SP.cross = signal(city, world.power, i, j, (hd & 1) ^ 1, sec);
         SP.at = lanesAt(Math.max(1, lanesOf(hd & 1 ? city.xb : city.yb, hd & 1 ? i : j)), halfW);
         if (Math.abs(diagS(city.diagonal, SP.x, SP.y)) < city.diagonal.w / 2 + 0.5) continue; // its corner is on the diagonal's roadway
         cb(SP);
@@ -1397,8 +1399,8 @@ function collectObjects(world: World, v: View): Obj[] {
     if (S.state === Sig.Stop) { if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: STOP_SIGN, r: 0.5, h: 2.9, seed: 0 }); return; }
     if (!near && S.lit < 0) return;
     // the walk light shows the people across the street when they may cross alongside this traffic (blinking on its yellow)
-    const walk = S.state === Sig.Green ? 1 : S.state === Sig.Yellow ? (Math.floor(frameSec * 2) & 1 ? 2 : 0) : S.state === Sig.Red ? 2 : 0;
-    if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: signalPole(walk), r: 0.45, h: 6.3, seed: 0 });
+    const walkOf = (st: number) => st === Sig.Green ? 1 : st === Sig.Yellow ? (Math.floor(frameSec * 2) & 1 ? 2 : 0) : st === Sig.Red ? 2 : 0;
+    if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: signalPole(walkOf(S.state), walkOf(S.cross)), r: 0.45, h: 6.3, seed: 0 });
     // the arm and its heads, around the arm's middle, hanging above the street (far off, just the lit lamps)
     const m = (Math.max(...S.at) + 0.4) / 2, at = S.at.map((y) => y - m);
     out.push({ x: S.x - S.s * m, y: S.y + S.c * m, c: S.c, s: S.s, parts: near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), r: m + 0.3, h: 6.2, z0: 4.7, seed: 0 });

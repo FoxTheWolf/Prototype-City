@@ -5,7 +5,8 @@ import { BULB_COLS, BULB_ROWS, bulbGlyph, bulbsIn, fontRows, SYMBOLS } from './s
 
 /**
  * Street objects built from a few solid parts (boxes, upright cylinders, ellipsoids) in the
- * object's own frame: +x forward, +y left, z up, in metres.
+ * object's own frame: +x forward, +y to its right (the world's y grows south, so a heading's
+ * right-hand side is +y), z up, in metres.
  *
  * With y-shearing, every screen cell is a straight 3D ray: from the eye, t metres forward along
  * the column's ray, rising (hor - row) / scale per metre. So each part is hit exactly, and t is

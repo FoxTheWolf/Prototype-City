@@ -32,8 +32,8 @@ export function carModel(col: RGB, taxi: boolean, who = 0): Part[] {
     part(Box, -1.0, -0.8, 1.4, 0.8, 0.8, 1.5, col, Solid, '-', '_', '-'),
     part(Box, -0.6, -0.75, 0.6, -0.48, 0.75, 1.25, [40, 38, 42], Solid, '|', '=', '|'),
   ];
-  seated(m, -0.15, 0.42, 0.62, who);
-  if (who & 4) seated(m, -0.15, -0.42, 0.62, who * 7 + 3);
+  seated(m, -0.15, -0.42, 0.62, who); // the driver on the left (-y)
+  if (who & 4) seated(m, -0.15, 0.42, 0.62, who * 7 + 3);
   for (const wx of [-1.4, 1.4]) for (const wy of [-1, 1]) m.push(part(Ball, wx - 0.34, wy * 0.95 - 0.13, 0, wx + 0.34, wy * 0.95 + 0.13, 0.68, TIRE, Wheel, 'o'));
   for (const wy of [-1, 1]) {
     const a = wy * 0.45, b = wy * 0.8;
@@ -72,14 +72,14 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
       part(Box, 1.3, -1.0, 0.35, 2.6, 1.0, 1.2, col, Solid, '#', '=', '#'),
       part(Box, 1.3, -1.0, 2.05, 2.6, 1.0, 2.3, col, Solid, '=', '=', '='),
       part(Box, 1.3, -1.0, 1.2, 2.62, 1.0, 2.05, GLASS, Glass, '=', '=', '='),
-    ]; seated(m, 1.75, 0.45, 0.95, who); running(m, [-1.7, 1.7], 2.6, 1.0); break;
+    ]; seated(m, 1.75, -0.45, 0.95, who); running(m, [-1.7, 1.7], 2.6, 1.0); break;
     case 'truck': m = [
       part(Box, 2.0, -1.05, 0.4, 4.25, 1.05, 1.5, col, Solid, '#', '=', '#'),
       part(Box, 2.0, -1.05, 2.3, 4.25, 1.05, 2.6, col, Solid, '=', '=', '='),
       part(Box, 2.0, -1.05, 1.5, 4.27, 1.05, 2.3, GLASS, Glass, '=', '=', '='),
       part(Box, -4.25, -1.2, 0.65, 1.9, 1.2, 3.5, [215, 215, 210], Solid, '|', '=', '#'),
       part(Box, -4.25, -1.22, 2.9, 1.9, 1.22, 3.1, col, Solid, '=', '=', '='),
-    ]; seated(m, 3.1, 0.5, 1.15, who); running(m, [-3.2, -2.1, 3.2], 4.25, 1.05, 0.45); break;
+    ]; seated(m, 3.1, -0.5, 1.15, who); running(m, [-3.2, -2.1, 3.2], 4.25, 1.05, 0.45); break;
     case 'bus': m = [
       part(Box, -6, -1.25, 0.35, 6, 1.25, 1.35, col, Solid, '#', '=', '#'),
       part(Box, -6, -1.25, 2.45, 6, 1.25, 3.1, col, Solid, '#', '=', '#'),
@@ -88,7 +88,7 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
       part(Box, 6.0, -0.9, 2.6, 6.05, 0.9, 2.95, [255, 170, 40], Glow, '='),
       part(Box, -6.0, -1.25, 3.1, 6.0, 1.25, 3.2, [180, 180, 185], Solid, '=', '_'),
     ];
-    seated(m, 5.2, 0.6, 1.0, who);
+    seated(m, 5.2, -0.6, 1.0, who);
     for (let k = 0; k < 6; k++) if ((who >> k) & 1 || k < 2) seated(m, -4.5 + k * 1.6, k & 1 ? -0.6 : 0.6, 1.0, who * 13 + k * 5);
     running(m, [-4, 4.2], 6, 1.25, 0.5); break;
     default: { // police: a dark sedan with white doors and a beacon on the roof
@@ -98,7 +98,7 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
         part(Box, -1.1, -0.82, 0.95, 0.9, 0.82, 1.4, GLASS, Glass, '=', '=', '='),
         part(Box, -1.0, -0.8, 1.4, 0.8, 0.8, 1.5, col, Solid, '-', '_', '-'),
       ];
-      seated(m, -0.15, 0.42, 0.62, who); seated(m, -0.15, -0.42, 0.62, who + 1);
+      seated(m, -0.15, -0.42, 0.62, who); seated(m, -0.15, 0.42, 0.62, who + 1);
       running(m, [-1.5, 1.5], 2.4, 0.9);
       m.push(part(Box, -0.25, -0.55, 1.5, 0.15, 0, 1.68, flash === 1 ? [255, 40, 40] : [90, 20, 20], flash === 1 ? Glow : Solid, '#'));
       m.push(part(Box, -0.25, 0, 1.5, 0.15, 0.55, 1.68, flash === 2 ? [60, 90, 255] : [20, 25, 90], flash === 2 ? Glow : Solid, '#'));
@@ -588,19 +588,26 @@ export function signalFarModel(at: number[], lit: number): Part[] {
 /** A traffic light's pole on its base. */
 const poles = new Map<number, Part[]>();
 /**
- * A traffic light's pole on its base, with the pedestrian signal facing the far side of the street:
- * `walk` 1 the white walking figure, 2 the orange hand, 0 dark.
+ * A traffic light's pole on its base, with two pedestrian signals, one for each crosswalk that
+ * starts at this corner, facing the people at its other end: `walk` facing +x (the crosswalk
+ * alongside this traffic), `walk2` along the arm (+y, the one across this traffic's road beyond
+ * the intersection). 1 the white walking figure, 2 the orange hand, 0 dark.
  */
-export function signalPole(walk: number): Part[] {
-  let m = poles.get(walk);
+export function signalPole(walk: number, walk2 = 0): Part[] {
+  const key = walk * 4 + walk2;
+  let m = poles.get(key);
   if (m) return m;
+  const lamp = (w: number): RGB => (w === 1 ? [235, 240, 245] : w === 2 ? [255, 120, 30] : [40, 36, 34]);
   m = [
     part(Cyl, -0.2, -0.2, 0, 0.2, 0.2, 0.5, STEEL, Solid, '#', '='),
     part(Cyl, -0.12, -0.12, 0, 0.12, 0.12, 6.3, HOUSING, Solid, '|', '.'),
     part(Box, 0.1, -0.2, 2.45, 0.38, 0.2, 2.95, HOUSING, Solid, '#', '=', '#'),
-    part(Box, 0.38, -0.15, 2.5, 0.41, 0.15, 2.9, walk === 1 ? [235, 240, 245] : walk === 2 ? [255, 120, 30] : [40, 36, 34], walk ? Glow : Solid, walk === 1 ? 'i' : walk === 2 ? '#' : '.'),
+    part(Box, 0.38, -0.15, 2.5, 0.41, 0.15, 2.9, lamp(walk), walk ? Glow : Solid, walk === 1 ? 'i' : walk === 2 ? '#' : '.'),
+    // the second, facing along the arm: the crosswalk over the road the arm reaches across
+    part(Box, -0.2, 0.1, 2.45, 0.2, 0.38, 2.95, HOUSING, Solid, '#', '=', '#'),
+    part(Box, -0.15, 0.38, 2.5, 0.15, 0.41, 2.9, lamp(walk2), walk2 ? Glow : Solid, walk2 === 1 ? 'i' : walk2 === 2 ? '#' : '.'),
   ];
-  poles.set(walk, m);
+  poles.set(key, m);
   return m;
 }
 
