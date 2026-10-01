@@ -302,6 +302,8 @@ function frame(now: number) {
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);
+  for (const [k] of world.doorSfx) sound?.swing(k > 0);
+  world.doorSfx.length = 0;
   payphone.update(now / 1000);
   payphone.hover = payphone.active ? payphone.keyAt(grid.cols, grid.rows, phone.cx, phone.cy) : null;
   playSfx(phone.sfx);

@@ -1,8 +1,8 @@
 import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
-import { liftFloors, type World } from '../sim/world';
-import { baseAt, cachedPlan, DOOR_H, doorOf, escapesOf, exitsOf, habitable, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
-import { glassPass, insideLight, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, sheenAt, windowHole, type Inside, type Peek } from './interior';
+import { doorKey, liftFloors, type World } from '../sim/world';
+import { baseAt, cachedPlan, DOOR_H, doorOf, escapesOf, exitsOf, habitable, leavesOf, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
+import { glassPass, insideLight, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, windowHole, type Inside, type Peek } from './interior';
 import { type CharGrid, KIND } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
@@ -164,7 +164,10 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   let inside: Inside | null = null, skip: Building | null = null;
   if (plan) {
     skip = city.buildings[kIn];
-    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day: sky.day, sec: frameSec, rain };
+    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day: sky.day, sec: frameSec, rain, leaves: [], leafA: [] };
+    // the doors between rooms, swung as far as they are open (eased: fast at first, settling at the end)
+    inside.leaves = leavesOf(plan);
+    inside.leafA = inside.leaves.map((_, n) => { const a = world.doors.get(doorKey(kIn, v.floor, n)) ?? 0; return (1 - (1 - a) ** 2) * Math.PI * 0.5; });
     prepareInside(inside, px, py);
   }
   frameInside = !!inside;
@@ -223,10 +226,18 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
           const across = (roadX ? wx : wy) - (b0[bc] + b0[bc + 1]) / 2, along = roadX ? wy : wx;
           // a street segment ends at the cross streets, and where it meets the diagonal
           // (an avenue meets the diagonal at a shallow angle, in an X: its crosswalks are at the cross streets only)
-          const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, roadX ? 1e9 : pastD);
+          // past the diagonal's curb, measured straight along the street: from where the slanted curb
+          // reaches furthest into it, so the crosswalk and the stop line run square across the street
+          let dEnd = 1e9;
+          if (!roadX && Math.abs(D.nx) > 0.05) {
+            const hw = (b0[bc + 1] - b0[bc]) / 2, yc = (b0[bc] + b0[bc + 1]) / 2, sg = sD > 0 ? 1 : -1;
+            dEnd = (Math.min(sg * diagS(D, wx, yc - hw), sg * diagS(D, wx, yc + hw)) - D.w / 2) / Math.abs(D.nx);
+          }
+          const a = Math.abs(across), end = Math.min(along - e0[ec], e0[ec + 1] - along, dEnd);
           const X = roadX ? xAt(city, bc >> 1) : null;
           const m = a % LANE_W;
           if (X && pastD < 0.25 && along > X.a0 && along < X.a1) { ch = G.bar; r = 175; g = 175; b = 175; } // in an X: the line where the diagonal's lanes end
+          else if (dEnd < 1) { /* plain asphalt between the slanted curb and the crosswalk */ }
           else if (end > 1 && end < 4.5) { if (Math.floor((across + 100) / 0.9) % 2 === 0) { ch = roadX ? G.eq : G.bar; r = 150; g = 150; b = 150; } }
           else if (X && a < (b0[bc + 1] - b0[bc]) / 2 - 0.3 && ((across < 0 && X.a0 - along > 4.6 && X.a0 - along < 5.05) || (across > 0 && along - X.a1 > 4.6 && along - X.a1 < 5.05))) {
             ch = G.eq; r = 170; g = 170; b = 170; // the X's stop lines, where the avenue's traffic waits for it
@@ -711,6 +722,11 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
   const rdx = (hx - frameX) / t, rdy = (hy - frameY) / t;
   // how fast the hit moves along the face, per unit of t
   const da = side === 0 ? rdy : side === 1 ? rdx : side === 3 ? rdx * B.cut!.ny - rdy * B.cut!.nx : 0;
+  // the glass mirrors the sky and the far city: what it shows depends on the direction it is seen
+  // from, not on the spot of the facade, so the bands slide over the glass as the viewer moves
+  let tang = da;
+  if (side === 2) { const nx = hx - (B.x0 + B.x1) / 2, ny = hy - (B.y0 + B.y1) / 2, n = Math.hypot(nx, ny) || 1; tang = (rdx * -ny + rdy * nx) / n; }
+  const sheenOf = (z: number) => 0.5 + 0.5 * Math.sin(tang * 6 + ((z - eye) / t) * 4 + (id % 7));
   // scaffolding 1 m out from a street face: where the ray crosses its plane
   let sT = 0, sA = 0, sTop = 0;
   if (B.scaffold && side !== 2 && face < 4 && scaffoldFace(B, face)) {
@@ -907,7 +923,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       r += 120 * lamp; g += 105 * lamp; b += 80 * lamp;
     } else if (lot >= 0 && !escCell && ((!corner && windowHole(B, fw, fz, z - fl * FLOOR_H, fl === 0)) || (fz > 0.04 && fz < 0.9 && liftGlassAt(frameCity, lot, hx, hy))) && (pk = peekFor(fl))) {
       // a window: the room behind it, lit by its own lamps
-      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), framePower.backup[lot], frameDay, sheenAt(along, z));
+      peekCell(P4, frameCity.buildings[lot], id, pk.plan!, pk, fl, frameX, frameY, rdx, rdy, eye, (hor - (y + 0.5)) / scale, t, winPow(wi, fl), framePower.backup[lot], frameDay, sheenOf(z));
       ch = P4[0]; r = P4[1]; g = P4[2]; b = P4[3]; isWin = true;
     } else if (detailed && S !== 'glass' && S !== 'warehouse' && S !== 'historic' && z > B.h - 1.3) {
       // cornice with dentils
@@ -936,7 +952,7 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
       else if (fw < 0.07 || corner) wall(G.bar, 1.5);
       else if (hash3(id, wi, fl) < litK) pane(fl, G.col);
       else {
-        const sheen = 0.5 + 0.5 * Math.sin(along * 0.35 + z * 0.5);
+        const sheen = sheenOf(z);
         wall(sheen > 0.85 ? G.sl : sheen > 0.4 ? G.col : G.dot, 1.3 + 0.9 * sheen);
       }
     } else if (S === 'warehouse') {

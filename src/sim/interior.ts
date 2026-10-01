@@ -746,6 +746,45 @@ export function inFurniture(P: Plan, x: number, y: number): boolean {
   return false;
 }
 
+/**
+ * A door in a doorway between two rooms: hinged at (hx, hy) on the wall, lying along (ax, ay) when
+ * shut and swinging open toward (nx, ny) (into the private room, off the corridor); w wide; its
+ * middle at (cx, cy). Wide openings (over 1.7 m) and the lift's and stairs' openings have none.
+ */
+export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number }
+const leafCache = new WeakMap<Plan, Leaf[]>();
+const COMMON = new Set<RoomKind>(['hall', 'lobby', 'foyer']);
+export function leavesOf(P: Plan): Leaf[] {
+  let L = leafCache.get(P);
+  if (L) return L;
+  L = [];
+  const { cells, nx, ny, rooms } = P;
+  // d 0: walls between columns i and i + 1 (the run goes along y); d 1: between rows j and j + 1
+  for (let d = 0; d < 2; d++) {
+    const nA = d ? ny - 1 : nx - 1, nB = d ? nx : ny;
+    for (let a = 0; a < nA; a++) {
+      let run = -1, ra = 0, rb = 0;
+      for (let b = 0; b <= nB; b++) {
+        const p = b < nB ? (d ? cells[a * nx + b] : cells[b * nx + a]) : 0, q = b < nB ? (d ? cells[(a + 1) * nx + b] : cells[b * nx + a + 1]) : 0;
+        const ok = !!(p & q & DOOR) && (p & 127) !== (q & 127);
+        if (run >= 0 && (!ok || (p & 127) !== ra || (q & 127) !== rb)) {
+          const w = (b - run) * CELL, A = rooms[ra - 1], B = rooms[rb - 1];
+          if (w <= 1.7 && A && B && A.kind !== 'lift' && B.kind !== 'lift' && A.kind !== 'stair' && B.kind !== 'stair') {
+            // it swings into the room off the common parts; between two private rooms, into the later one
+            const intoB = COMMON.has(A.kind) !== COMMON.has(B.kind) ? COMMON.has(A.kind) : rb > ra, n = intoB ? 1 : -1;
+            const wc = ((d ? P.gy : P.gx) + a + 1) * CELL, s0 = ((d ? P.gx : P.gy) + run) * CELL;
+            L.push(d ? { hx: s0, hy: wc, ax: 1, ay: 0, nx: 0, ny: n, w, cx: s0 + w / 2, cy: wc } : { hx: wc, hy: s0, ax: 0, ay: 1, nx: n, ny: 0, w, cx: wc, cy: s0 + w / 2 });
+          }
+          run = -1;
+        }
+        if (ok && run < 0) { run = b; ra = p & 127; rb = q & 127; }
+      }
+    }
+  }
+  leafCache.set(P, L);
+  return L;
+}
+
 /** The cell value at a point (room + 1 with the DOOR bit), 0 outside the plan. */
 export function cellAt(P: Plan, x: number, y: number): number {
   const i = Math.floor(x / CELL) - P.gx, j = Math.floor(y / CELL) - P.gy;

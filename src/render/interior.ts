@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, type Building, type City, type RGB } from '../sim/city';
-import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Plan, type Room, type RoomKind } from '../sim/interior';
+import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Leaf, type Plan, type Room, type RoomKind } from '../sim/interior';
 import { type CharGrid, KIND } from './grid';
 import { bulbGlyph, bulbsIn, fontRows } from './signs';
 
@@ -38,6 +38,9 @@ export interface Inside {
   day: number;
   sec: number;
   rain: number;
+  /** The doors between rooms on this floor, and how far each has swung open (radians). */
+  leaves: Leaf[];
+  leafA: number[];
 }
 
 const C = (s: string) => s.charCodeAt(0);
@@ -348,8 +351,35 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   let tY = rdy !== 0 ? (((P.gy + j + (rdy > 0 ? 1 : 0)) * CELL - py) / rdy) : 1e12;
   const at = (a: number, b: number) => (a < 0 || b < 0 || a >= P.nx || b >= P.ny ? 0 : P.cells[b * P.nx + a]);
   let cur = at(i, j), closed = false;
+  // the nearest door leaf this column's ray meets, drawn once the walk gets that far
+  let lt = 1e9, lu = 0, lk = 1;
+  for (let n = 0; n < I.leaves.length; n++) {
+    const D = I.leaves[n], c = Math.cos(I.leafA[n]), s = Math.sin(I.leafA[n]);
+    const ex = (D.ax * c + D.nx * s) * D.w, ey = (D.ay * c + D.ny * s) * D.w, den = rdx * ey - rdy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const qx = D.hx - px, qy = D.hy - py, t = (qx * ey - qy * ex) / den, u = (qx * rdy - qy * rdx) / den;
+    if (t > 0.05 && t < lt && u >= 0 && u <= 1) { lt = t; lu = u; lk = 0.7 + 0.3 * Math.abs(-ey * rdx + ex * rdy) / (D.w * Math.hypot(rdx, rdy)); }
+  }
+  const leafUpTo = (limit: number) => {
+    if (lt >= limit) return;
+    const hx = px + rdx * lt, hy = py + rdy * lt, rr = (cellAt(P, hx, hy) & 127) - 1, office = isOffice(I.base);
+    span(lt, z0, z0 + DOOR_H - 0.02, (y, z) => {
+      const zz = z - z0;
+      lightIn(I, Math.max(0, rr), hx, hy, lt);
+      // a panel door: its edges, two recessed panels, and the knob near the far edge
+      const edge = lu < 0.06 || lu > 0.94 || zz > DOOR_H - 0.1 || zz < 0.06;
+      const knob = lu > 0.82 && lu < 0.9 && zz > 0.92 && zz < 1.06;
+      const panel = !edge && lu > 0.16 && lu < 0.84 && ((zz > 0.25 && zz < 0.85) || (zz > 1.2 && zz < DOOR_H - 0.3));
+      const col = office ? [118, 122, 130] : [118, 78, 46], k = lk * (edge ? 0.8 : panel ? 1.1 : 1);
+      const ch = knob ? G.o : edge ? G.bar : panel ? G.col : G.eq;
+      if (knob) put(y, lt, ch, 210 * L3[0], 175 * L3[1], 90 * L3[2]);
+      else put(y, lt, ch, col[0] * k * L3[0], col[1] * k * L3[1], col[2] * k * L3[2]);
+    });
+    lt = 1e9;
+  };
   for (let guard = 0; guard < 400; guard++) {
     const xStep = tX < tY, tn = xStep ? tX : tY;
+    leafUpTo(Math.min(tn, tExit));
     if (tn >= tExit) break;
     if (xStep) { i += stX; tX += dX; } else { j += stY; tY += dY; }
     const nv = at(i, j);
@@ -652,5 +682,3 @@ export function glassOver(out: number[], r: number, g: number, b: number, sheen:
   out[1] = r * k + 16 + s * 95 + day * 55; out[2] = g * k + 30 + s * 110 + day * 65; out[3] = b * k + 40 + s * 130 + day * 80;
 }
 
-/** Where on a pane the reflections run: diagonal bands across the facade. */
-export const sheenAt = (along: number, z: number) => 0.5 + 0.5 * Math.sin(along * 0.35 + z * 0.5);

@@ -46,6 +46,11 @@ export function underRoof(roofs: Roof[], x: number, y: number, z: number): boole
 
 const C = (s: string) => s.charCodeAt(0);
 let taken = new Uint8Array(0);
+/**
+ * How far the drops have fallen, integrated frame by frame: speed x time would run backwards
+ * (the rain stopping in the air and rising) whenever the speed drops as the rain eases.
+ */
+let fallen = 0, lastSec = -1;
 
 /**
  * Draw the fall. yaw, plane and scale are the camera's; light(x, y, z) is the light at a world
@@ -64,7 +69,9 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
   const streak = f.snow ? 0.06 : 0.25 + 0.35 * f.amount;
   // how often a column holds a drop, per 3 m of height
   const dens = f.snow ? 0.06 + 0.22 * f.amount : 0.03 + 0.3 * f.amount;
-  const PERIOD = f.snow ? 1.2 : 3, TOP = 12, off = speed * f.sec;
+  // (a second view drawn in the same frame, the camera's, does not add to it)
+  if (f.sec > lastSec) { if (lastSec >= 0) fallen += speed * Math.min(0.25, f.sec - lastSec); lastSec = f.sec; }
+  const PERIOD = f.snow ? 1.2 : 3, TOP = 12, off = fallen;
   // the band of falling drops follows the eye up a building, from the ground at street level
   const base = Math.max(0, eye - 6);
   for (let x = 0; x < cols; x++) {
@@ -118,14 +125,18 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
   if (f.snow) return;
   for (let n = 0; n < roofs.length; n++) {
     const R = roofs[n];
-    const edges: [number, number, number, number][] = [[R.hx, -R.hy, R.hx, R.hy], [-R.hx, -R.hy, R.hx, -R.hy], [-R.hx, R.hy, R.hx, R.hy]];
+    // each edge with the way out of the roof across it
+    const edges: [number, number, number, number, number, number][] = [[R.hx, -R.hy, R.hx, R.hy, 1, 0], [-R.hx, -R.hy, R.hx, -R.hy, 0, -1], [-R.hx, R.hy, R.hx, R.hy, 0, 1]];
     let k = 0;
-    for (const [ax, ay, bx, by] of edges) {
+    for (const [ax, ay, bx, by, ox, oy] of edges) {
       const len = Math.hypot(bx - ax, by - ay), m = Math.floor(len / 0.3);
       for (let q = 0; q <= m; q++, k++) {
         if (h3(n, k, 71) > f.amount * 0.55) continue;
         const lx = ax + ((bx - ax) * q) / m, ly = ay + ((by - ay) * q) / m;
         const wx = R.x + lx * R.c - ly * R.s - px, wy = R.y + lx * R.s + ly * R.c - py;
+        // no drip where the next roof goes on (scaffold sheds of two faces meeting, end to end)
+        const qx = lx + ox * 0.2, qy = ly + oy * 0.2;
+        if (underRoof(roofs, R.x + qx * R.c - qy * R.s, R.y + qx * R.s + qy * R.c, R.z - 0.1)) continue;
         const d = wx * dirX + wy * dirY;
         if (d < 0.4) continue;
         const camX = (wx * -dirY + wy * dirX) / (d * plane);

@@ -1,6 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf } from './interior';
+import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, leavesOf, planOf } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
@@ -57,6 +57,13 @@ export interface World {
   telco: Telco;
   /** The Wi-Fi routers of shops and homes (see wifi.ts). */
   wifi: AccessPoint[];
+  /**
+   * How open each door between rooms is, 0 shut .. 1 open, by doorKey; doors not listed are shut.
+   * They open by themselves as the player comes near and close behind (until they get handles).
+   */
+  doors: Map<number, number>;
+  /** Doors that just started to open (+1) or just closed (-1), with where, for main to sound. */
+  doorSfx: [number, number, number][];
   /** What has happened (see events.ts). */
   events: EventLog;
 }
@@ -91,7 +98,7 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   stepWeather(weather, seed, time, 0);
   const peds = spawnPeds(city, rng, pedsWanted(time, 0), x, y);
   const power = buildPower(seed, city);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, telco: buildTelco(seed, city, power), wifi: buildWifi(seed, city, x, y), events: newEventLog() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco: buildTelco(seed, city, power), wifi: buildWifi(seed, city, x, y), events: newEventLog() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -157,6 +164,29 @@ function stepLift(p: Player) {
   if (Math.abs(goal - p.z) < 1e-3) { p.z = goal; p.floor = p.liftTo; p.liftTo = -1; }
 }
 
+/** A door's key in world.doors: the lot, the storey and its index in leavesOf. */
+export const doorKey = (k: number, f: number, n: number) => (k * 256 + f) * 128 + n;
+const DOOR_NEAR = 1.7, DOOR_OPEN_S = 0.45, DOOR_SHUT_S = 0.7;
+/** Doors open as the player comes within reach and swing shut once they are past it. */
+function stepDoors(w: World) {
+  const p = w.player, near = new Set<number>();
+  const P = p.inside >= 0 && p.liftTo < 0 ? planOf(w.city, p.inside, p.floor) : null;
+  if (P) leavesOf(P).forEach((L, n) => {
+    if (Math.hypot(p.x - L.cx, p.y - L.cy) > DOOR_NEAR) return;
+    const key = doorKey(p.inside, p.floor, n), a = w.doors.get(key) ?? 0;
+    near.add(key);
+    if (a === 0) w.doorSfx.push([1, L.cx, L.cy]);
+    w.doors.set(key, Math.min(1, a + TICK / DOOR_OPEN_S));
+  });
+  for (const [key, a] of w.doors) {
+    if (near.has(key)) continue;
+    const b = a - TICK / DOOR_SHUT_S;
+    if (b > 0) { w.doors.set(key, b); continue; }
+    w.doors.delete(key);
+    w.doorSfx.push([-1, 0, 0]);
+  }
+}
+
 /** Debug: step through the fixed skies, then back to the forecast. */
 export function cycleWeather(w: World) {
   w.weather.preset = w.weather.preset + 1 >= PRESETS.length ? -1 : w.weather.preset + 1;
@@ -194,6 +224,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   }
   // in through a fire escape's window: onto that floor
   if (p.inside >= 0 && wasOut && p.liftTo < 0) p.z = p.floor * FLOOR_H;
+  stepDoors(w);
 
   const hour = (w.time / 3600) % 24;
   stepPeds(w.city, w.power, w.peds, w.cars, w.rng, TICK, w.tick, p.x, p.y, pedsWanted(w.time, w.weather.precip));

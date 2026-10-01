@@ -448,6 +448,35 @@ export class Sound {
     o.start(t + 0.9); o.stop(t + 1.2);
   }
 
+  /**
+   * A door between rooms: opening, the latch's click and a short rub of the hinge; shutting, the
+   * latch and a soft knock of the leaf in its frame.
+   */
+  swing(open: boolean) {
+    const ctx = this.ctx, t = ctx.currentTime;
+    const click = (at: number, f: number, v: number) => {
+      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, 3)).connect(g);
+      g.gain.setValueAtTime(v, t + at); g.gain.setTargetAtTime(0, t + at + 0.004, 0.012);
+      s.start(t + at, Math.random()); s.stop(t + at + 0.08);
+    };
+    click(0, 2600, 0.12);
+    if (open) {
+      // the hinge: a faint rub of noise rising a little in pitch
+      const s = ctx.createBufferSource(), bp = filter(ctx, 'bandpass', 700, 6), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(bp).connect(g);
+      bp.frequency.setValueAtTime(600, t + 0.05); bp.frequency.linearRampToValueAtTime(900, t + 0.4);
+      g.gain.setValueAtTime(0, t + 0.05); g.gain.linearRampToValueAtTime(0.05, t + 0.15); g.gain.linearRampToValueAtTime(0, t + 0.45);
+      s.start(t + 0.05, Math.random()); s.stop(t + 0.5);
+    } else {
+      const o = ctx.createOscillator(), h = gain(ctx, 0, this.master);
+      o.frequency.value = 95; o.connect(h);
+      h.gain.setValueAtTime(0.16, t); h.gain.setTargetAtTime(0, t + 0.01, 0.05);
+      o.start(t); o.stop(t + 0.3);
+      click(0.02, 1400, 0.08);
+    }
+  }
+
   /** The car moving (0..1 of its speed): a low motor hum and a faint whine. */
   liftMotor(k: number) {
     if (!this.motor) {
