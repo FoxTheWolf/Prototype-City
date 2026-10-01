@@ -154,3 +154,8 @@ export function businessName(city: City, k: number): string {
 export function operatorName(city: City): string {
   return fill(L.operator[city.nameSeed % L.operator.length], L.roots[(city.nameSeed + (L.roots.length - 23) * 7919) % L.roots.length]);
 }
+
+/** The phone maker k of the city (see sim/device.ts), named from a slot of its own. */
+export function makerName(city: City, k: number): string {
+  return L.roots[(city.nameSeed + (L.roots.length - 25 - k) * 7919) % L.roots.length];
+}

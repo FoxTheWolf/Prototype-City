@@ -1,4 +1,4 @@
-import { PLAYER_PHONE, type Device } from '../sim/device';
+import { playerPhone, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
 import { Call, type Sfx } from './call';
@@ -6,7 +6,7 @@ import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 import { ussd } from './ussd';
 import en from '../locale/en.json';
-import { businessName, operatorName } from '../locale/names';
+import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { hash3 } from '../core/rng';
 
@@ -80,7 +80,9 @@ export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'c
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
 export class Phone {
-  readonly device: Device = PLAYER_PHONE;
+  readonly device: Device;
+  /** The maker's name, from the city. */
+  readonly maker: string;
   readonly gps = new Gps();
   readonly radio = new Radio();
   prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, temp: 0, dist: 0 };
@@ -98,7 +100,10 @@ export class Phone {
   lcdStep = 0;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
-  constructor(private world: World) {}
+  constructor(private world: World) {
+    this.device = playerPhone(world.seed);
+    this.maker = makerName(world.city, this.device.maker);
+  }
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
   raise = 0;

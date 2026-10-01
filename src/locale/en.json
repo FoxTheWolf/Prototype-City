@@ -804,7 +804,7 @@
       "stopwatch": "STOPWATCH", "stopwatchHint": "* reset", "start": "Start", "stop": "Stop",
       "calcHint": ["^ +   v -   < x   > /", "OK =   * clear   # ."],
       "notesHint": "Tap the keys: 2 abc .. 9 wxyz",
-      "model": "Model", "os": "Software", "cpu": "Processor", "ram": "Memory", "flash": "Storage", "display": "Display", "radio": "Radio", "network": "Network",
+      "model": "Model", "cameraRow": "Camera", "os": "Software", "cpu": "Processor", "ram": "Memory", "flash": "Storage", "display": "Display", "radio": "Radio", "network": "Network",
       "wlan": "WLAN", "gps": "GPS receiver", "gpsNow": "GPS now", "imei": "IMEI",
       "gpsFix": "FIX", "gpsSearch": "SEARCHING", "gpsLost": "NO SIGNAL", "gpsOff": "OFF (opens with Maps)"
     }

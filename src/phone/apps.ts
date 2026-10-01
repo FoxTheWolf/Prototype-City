@@ -58,7 +58,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'camera': return notice(S, t, name('camera').toUpperCase(), A.camera, HI);
     case 'web': return notice(S, t, name('web').toUpperCase(), P.radio.state === 'service' ? A.soon : A.web, P.radio.state === 'service' ? HI : BAD);
     case 'weather': return weather(S, P, world, t, now);
-    case 'store': return notice(S, t, `${P.device.maker.toUpperCase()} ${name('store').toUpperCase()}`, P.radio.state === 'service' ? A.soon : A.store, P.radio.state === 'service' ? HI : BAD);
+    case 'store': return notice(S, t, `${P.maker.toUpperCase()} ${name('store').toUpperCase()}`, P.radio.state === 'service' ? A.soon : A.store, P.radio.state === 'service' ? HI : BAD);
     case 'clock': return clock(S, P, world, t, now);
     case 'calc': return calc(S, P, t);
     case 'notes': return notes(S, P, t, now);
@@ -279,8 +279,8 @@ function about(S: Lcd, P: Phone, world: World, t: number) {
   const rows: [string, string][] = [
     [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
     [A.number, formatNumber(world.telco, acc.number.replace('-', ''))], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
-    [A.model, `${D.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
-    [A.display, D.screen], [A.radio, D.radio], [A.wlan, `${D.wlan} ${T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
+    [A.model, `${P.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
+    [A.display, D.screen], [A.cameraRow, D.cameraMP ? `${D.cameraMP} MP` : T.off], [A.radio, D.radio], [A.wlan, `${D.wlan} ${T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
   ];
   const view = SH - 5, top = Math.min(P.scroll, Math.max(0, rows.length * 2 - view));
   P.scroll = top;

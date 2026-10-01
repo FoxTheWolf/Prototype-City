@@ -52,7 +52,7 @@ export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number
   return null;
 }
 
-const BODY: C3 = [30, 32, 37], EDGE: C3 = [58, 61, 68], BEZEL: C3 = [7, 7, 9], CAP: C3 = [48, 50, 57], CAP_TOP: C3 = [64, 67, 75], CAP_DOWN: C3 = [22, 23, 26];
+const BEZEL: C3 = [7, 7, 9], CAP: C3 = [48, 50, 57], CAP_TOP: C3 = [64, 67, 75], CAP_DOWN: C3 = [22, 23, 26];
 
 /** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
@@ -61,6 +61,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   if (P.raise < 0.01) return;
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
+  // the body in the model's color, its rim lit on top and left, dark on the right
+  const BODY = P.device.body, EDGE: C3 = [BODY[0] * 1.5 + 18, BODY[1] * 1.5 + 18, BODY[2] * 1.5 + 18], DARKE: C3 = [BODY[0] * 0.6, BODY[1] * 0.6, BODY[2] * 0.6];
   const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
@@ -102,14 +104,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const inset = y === 0 || y === PHONE_H - 1 ? 3 : y === 1 || y === PHONE_H - 2 ? 1 : 0;
     for (let x = inset; x < PHONE_W - inset; x++) {
       const left = x === inset, right = x === PHONE_W - 1 - inset, top = y === 0 || (inset > 0 && (left || right));
-      const col: C3 = top || left ? EDGE : right ? [20, 21, 25] : BODY;
+      const col: C3 = top || left ? EDGE : right ? DARKE : BODY;
       cell(x, y, 32, col, col, left || right || top ? 0.9 : 0.2);
     }
   }
   // earpiece, front camera, maker's name
   for (let x = 20; x < 30; x++) cell(x, 1, ch('='), [16, 16, 18], [20, 20, 23]);
   cell(38, 1, ch('o'), [70, 80, 100], [12, 12, 14]);
-  const brand = P.device.maker.toUpperCase().split('').join(' ');
+  const brand = P.maker.toUpperCase().split('').join(' ');
   for (let k = 0; k < brand.length; k++) cell(25 - (brand.length >> 1) + k, 2, brand.charCodeAt(k), [150, 156, 168], BODY);
   for (let y = SY - 1; y <= SY + SH; y++) for (let x = SX - 1; x <= SX + SW; x++) cell(x, y, 32, BEZEL, BEZEL);
 
@@ -191,11 +193,11 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
 function boot(S: Lcd, P: Phone, world: World, t: number) {
   if (t < 0) { for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]); return; }
   const D = P.device;
-  if (t >= BOOT_LOG_S) return splash(S, D.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
+  if (t >= BOOT_LOG_S) return splash(S, P.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
   mapRaster(world.city); // the map database loads during the check (built once per city)
   const line = (a: string, b: string) => a + ' ' + '.'.repeat(Math.max(2, SW - 4 - a.length - b.length)) + ' ' + b;
   const L = [
-    `${D.os}  ${D.maker} ${D.model}`,
+    `${D.os}  ${P.maker} ${D.model}`,
     '',
     line(`CPU ${D.cpu} ${D.cpuMHz} MHz`, T.ok),
     line(`RAM ${D.ramMB} MB`, T.ok),
