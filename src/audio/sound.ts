@@ -35,11 +35,20 @@ export class Sound {
   private seen: number[] = [];
   private nextDark = 0;
   private hush = 0;
+  /** Everything outdoors reaches the ear through this: muffled by the walls indoors. */
+  private out: GainNode;
+  private wall: BiquadFilterNode;
+  /** Indoors: rain drumming on the windows, and the buzz of office tubes. */
+  private patter: GainNode;
+  private tubes: GainNode;
   muted = false;
 
   constructor() {
     const ctx = (this.ctx = new AudioContext());
     this.master = gain(ctx, 0.5, ctx.destination);
+    this.wall = filter(ctx, 'lowpass', 20000, 0.7);
+    this.wall.connect(this.master);
+    this.out = gain(ctx, 1, this.wall);
     const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -48,7 +57,7 @@ export class Sound {
 
     // city rumble: low-passed noise whose cutoff drifts slowly, like traffic far away
     const cityLp = filter(ctx, 'lowpass', 260, 0.7);
-    this.city = gain(ctx, 0.35, this.master);
+    this.city = gain(ctx, 0.35, this.out);
     src().connect(cityLp).connect(this.city);
     const drift = ctx.createOscillator();
     drift.frequency.value = 0.06;
@@ -57,7 +66,7 @@ export class Sound {
 
     // sodium lamp: mains hum at 120 Hz with a weaker overtone
     this.humPan = ctx.createStereoPanner();
-    this.humPan.connect(this.master);
+    this.humPan.connect(this.out);
     this.hum = gain(ctx, 0, this.humPan);
     tone(ctx, 'sine', 120, 1, this.hum);
     tone(ctx, 'sine', 240, 0.35, this.hum);
@@ -65,7 +74,7 @@ export class Sound {
 
     // neon: a buzzy 120 Hz sawtooth through a band-pass, plus crackle for a failing tube
     this.neonPan = ctx.createStereoPanner();
-    this.neonPan.connect(this.master);
+    this.neonPan.connect(this.out);
     this.neon = gain(ctx, 0, this.neonPan);
     const bp = filter(ctx, 'bandpass', 2400, 1.2);
     bp.connect(this.neon);
@@ -75,18 +84,26 @@ export class Sound {
     hiss.connect(this.crackle);
     hiss.connect(this.humCrackle);
 
-    this.kit = new Kit(ctx, this.master, noise);
+    this.kit = new Kit(ctx, this.out, noise);
 
     // rain: a hiss of drops on the pavement, and in a downpour the low roar of water everywhere
-    this.rain = gain(ctx, 0, this.master);
+    this.rain = gain(ctx, 0, this.out);
     src().connect(filter(ctx, 'bandpass', 2600, 0.5)).connect(this.rain);
-    this.rainLow = gain(ctx, 0, this.master);
+    this.rainLow = gain(ctx, 0, this.out);
     src().connect(filter(ctx, 'lowpass', 500, 0.6)).connect(this.rainLow);
 
     // burning seam: a deep roar
-    this.fire = gain(ctx, 0, this.master);
+    this.fire = gain(ctx, 0, this.out);
     tone(ctx, 'sine', 38, 0.6, this.fire);
     src().connect(filter(ctx, 'lowpass', 110, 0.8)).connect(gain(ctx, 1.2, this.fire));
+
+    // indoors: the rain heard as a soft drumming on the glass, and fluorescent tubes buzzing
+    this.patter = gain(ctx, 0, this.master);
+    src().connect(filter(ctx, 'bandpass', 800, 0.9)).connect(this.patter);
+    this.tubes = gain(ctx, 0, this.master);
+    const tb = filter(ctx, 'bandpass', 1500, 2.5);
+    tb.connect(this.tubes);
+    tone(ctx, 'sawtooth', 120, 1, tb);
   }
 
   /** Thunder after `delay` seconds: a crack, then a long low roll that fades. */
@@ -94,7 +111,7 @@ export class Sound {
     const ctx = this.ctx, t0 = ctx.currentTime + delay;
     const s = ctx.createBufferSource();
     s.buffer = this.noise; s.loop = true;
-    const lp = filter(ctx, 'lowpass', 900, 0.7), g = gain(ctx, 0, this.master);
+    const lp = filter(ctx, 'lowpass', 900, 0.7), g = gain(ctx, 0, this.out);
     s.connect(lp).connect(g);
     lp.frequency.setValueAtTime(900, t0);
     lp.frequency.exponentialRampToValueAtTime(90, t0 + 3);
@@ -119,9 +136,14 @@ export class Sound {
    * night .. 1 in daylight) for the lamps' photocells; the weather; and the lightning bolt now
    * flashing (-1 for none), whose thunder follows once, a few seconds later.
    */
-  update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number, grid: PowerGrid) {
+  update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number, grid: PowerGrid, indoors: boolean, tubes: number) {
     const now = this.ctx.currentTime;
     const rain = w.snow ? 0 : w.precip;
+    // walls: the street goes low and quiet, the room's own sounds come up
+    this.wall.frequency.setTargetAtTime(indoors ? 480 : 20000, now, 0.15);
+    this.out.gain.setTargetAtTime(indoors ? 0.5 : 1, now, 0.15);
+    this.patter.gain.setTargetAtTime(indoors ? 0.12 * Math.min(1, rain * 1.5) : 0, now, 0.3);
+    this.tubes.gain.setTargetAtTime(indoors ? 0.012 * tubes : 0, now, 0.1);
     this.rain.gain.setTargetAtTime(0.28 * Math.min(1, rain * 1.4), now, 0.4);
     this.rainLow.gain.setTargetAtTime(0.35 * Math.max(0, rain - 0.4), now, 0.6);
     // falling and lying snow muffle the city

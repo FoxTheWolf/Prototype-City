@@ -52,6 +52,8 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
   // how often a column holds a drop, per 3 m of height
   const dens = f.snow ? 0.06 + 0.22 * f.amount : 0.03 + 0.3 * f.amount;
   const PERIOD = f.snow ? 1.2 : 3, TOP = 12, off = speed * f.sec;
+  // the band of falling drops follows the eye up a building, from the ground at street level
+  const base = Math.max(0, eye - 6);
   for (let x = 0; x < cols; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
     const rdx = dirX - dirY * plane * camX, rdy = dirY + dirX * plane * camX, L = Math.hypot(rdx, rdy);
@@ -65,7 +67,7 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
       // the drops of this column in each 3 m band of the fall, from the ground up to TOP
       const cap = f.snow ? 1 : Math.max(1.5, 6 - s * 0.6);
       const near = 1 - s / SHELLS.length;
-      for (let b = Math.floor(off / PERIOD); b <= Math.floor((TOP + off) / PERIOD); b++) {
+      for (let b = Math.floor((off + base) / PERIOD); b <= Math.floor((TOP + base + off) / PERIOD); b++) {
         // drop columns stay put on the compass (sliding them with the wind makes neighbouring
         // columns share a drop); the wind shows in the rain's slanted glyph, and flakes wander
         let a = az;
@@ -73,7 +75,7 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
         const colI = Math.floor(a / da);
         if (h3(colI, b, s) > dens) continue;
         const zd = b * PERIOD + h3(colI, b, s + 17) * PERIOD - off;
-        if (zd < 0 || zd > TOP) continue;
+        if (zd < base || zd > base + TOP) continue;
         // the streak in rows, from the drop's head upward: longer for near drops, which cross the view faster
         const yHead = hor - ((zd - eye) * scale) / dist, len = Math.min((streak * scale) / dist, cap);
         const y1 = Math.min(rows, Math.floor(yHead) + 1);

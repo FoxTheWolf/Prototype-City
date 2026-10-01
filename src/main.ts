@@ -5,13 +5,15 @@ import { Camera } from './render/camera';
 import { GlyphRenderer, type Layout } from './render/glRenderer';
 import { CharGrid } from './render/grid';
 import { type Look } from './render/palette';
+import { power } from './render/power';
 import { renderWorld } from './render/raycaster';
 import { daylight } from './render/sky';
 import { cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
+import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
-import { createWorld, cycleWeather, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
+import { createWorld, cycleWeather, debugFloor, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
 /** The grid always has this many rows; columns follow the window shape. */
 const ROWS = 80;
@@ -65,6 +67,8 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyY') cycleWeather(world);
   // debug: K switches the nearest substation (shift: all of them)
   else if (e.code === 'KeyK') togglePower(world, e.shiftKey);
+  // debug: PageUp / PageDown move a storey up or down inside a building
+  else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
 });
 
 function computeLayout(): Layout {
@@ -145,7 +149,7 @@ function frame(now: number) {
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
@@ -160,7 +164,13 @@ function frame(now: number) {
   const L = city.landmarks[lm];
   grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
   const W = world.weather;
-  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power);
+  // indoors: office tubes buzz while the building has power
+  let tubes = 0;
+  if (p.inside >= 0 && isOffice(city.buildings[p.inside])) {
+    const B = city.buildings[p.inside], P = world.power;
+    tubes = power(P, P.building[p.inside], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, p.inside, P.generator[p.inside], (world.tick + alpha) / 60)[0];
+  }
+  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power, p.inside >= 0, tubes);
   renderer.draw(grid);
   requestAnimationFrame(frame);
 }

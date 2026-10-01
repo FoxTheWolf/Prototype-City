@@ -1,6 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { generateCity, SIDEWALK, type City } from './city';
-import { baseAt, blocked } from './interior';
+import { baseAt, blocked, cellAt, planOf } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { spawnCars, stepCars, type Car } from './traffic';
@@ -74,6 +74,14 @@ export function togglePower(w: World, all: boolean) {
   let k = 0;
   P.subs.forEach((s, n) => { if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(P.subs[k].x - p.x, P.subs[k].y - p.y)) k = n; });
   switchSub(P, k, !P.subs[k].on, w.tick, p.x, p.y);
+}
+
+/** Debug: go up or down a storey inside a building (until it has stairs and lifts), where that floor has room to stand. */
+export function debugFloor(w: World, d: number) {
+  const p = w.player;
+  if (p.inside < 0) return;
+  const f = Math.max(0, p.floor + d), P = planOf(w.city, p.inside, f);
+  if (P && cellAt(P, p.x, p.y)) p.floor = f;
 }
 
 /** Debug: step through the fixed skies, then back to the forecast. */

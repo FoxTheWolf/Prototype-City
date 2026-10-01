@@ -90,6 +90,7 @@ for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], ['
 const hitT = new Float64Array(1024);
 const hitId = new Int32Array(1024);
 const hitSide = new Uint8Array(1024);
+const hitF = new Float64Array(1024);
 /** Per column: distance to the window glass when indoors, so the rain is not drawn in the room. */
 let nearT = new Float32Array(0);
 
@@ -279,18 +280,20 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
       if ((cx & 1) && (cy & 1)) {
         const blk = city.blocks[(cy >> 1) * city.nbx + (cx >> 1)];
         // skip the block when even its tallest building would be hidden behind what is already drawn
-        if (blk.b1 > blk.b0 && hor - ((blk.maxH - eye) * scale) / Math.max(tIn, 0.1) < clipTop) {
+        // (seen from above, a block's highest row is its far side)
+        const tE = blk.maxH > eye ? Math.max(tIn, 0.1) : Math.min(tx, ty);
+        if (blk.b1 > blk.b0 && hor - ((blk.maxH - eye) * scale) / tE < clipTop) {
           let n = 0;
           for (let k = blk.b0; k < blk.b1; k++) {
             const B = city.buildings[k];
             if (skip && B.x0 >= skip.x0 - 0.01 && B.x1 <= skip.x1 + 0.01 && B.y0 >= skip.y0 - 0.01 && B.y1 <= skip.y1 + 0.01) continue;
-            let tNear: number, side: number;
+            let tNear: number, side: number, tOut: number;
             if (B.round) {
               // upright cylinder inscribed in the box: nearest root of |p + t*d - c| = r
               const rr = (B.x1 - B.x0) / 2, ox = px - (B.x0 + rr), oy = py - (B.y0 + rr);
               const qa = rdx * rdx + rdy * rdy, qb = ox * rdx + oy * rdy, disc = qb * qb - qa * (ox * ox + oy * oy - rr * rr);
               if (disc <= 0) continue;
-              tNear = (-qb - Math.sqrt(disc)) / qa; side = 2;
+              tNear = (-qb - Math.sqrt(disc)) / qa; side = 2; tOut = (-qb + Math.sqrt(disc)) / qa;
               if (tNear <= 0.01) continue;
             } else {
               const ax = (B.x0 - px) * ix, bx = (B.x1 - px) * ix, ay = (B.y0 - py) * iy, by = (B.y1 - py) * iy;
@@ -307,10 +310,11 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
                 else if (K.nx * px + K.ny * py > K.c) continue;
               }
               if (tNear <= 0.01 || tNear >= tFar) continue;
+              tOut = tFar;
             }
             let s = n++;
-            while (s > 0 && hitT[s - 1] > tNear) { hitT[s] = hitT[s - 1]; hitId[s] = hitId[s - 1]; hitSide[s] = hitSide[s - 1]; s--; }
-            hitT[s] = tNear; hitId[s] = k; hitSide[s] = side;
+            while (s > 0 && hitT[s - 1] > tNear) { hitT[s] = hitT[s - 1]; hitId[s] = hitId[s - 1]; hitSide[s] = hitSide[s - 1]; hitF[s] = hitF[s - 1]; s--; }
+            hitT[s] = tNear; hitId[s] = k; hitSide[s] = side; hitF[s] = tOut;
           }
           for (let s = 0; s < n && clipTop > 0; s++) {
             const t = hitT[s], id = hitId[s], B = city.buildings[id];
@@ -319,6 +323,15 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
             const yt = hor - ((B.h - eyeD) * scale) / t, yb2 = hor + (eyeD * scale) / t;
             const top = Math.ceil(yt - 0.5);
             const y0 = Math.max(0, top), y1 = Math.min(rows, Math.ceil(yb2 - 0.5), clipTop);
+            // seen from above: the roof, from the near edge back to the far one, or to a taller
+            // box standing on it (a setback, a water tank), which then rises from the roof
+            let roofTop = top;
+            if (eyeD > B.h + 0.05) {
+              let tf = hitF[s];
+              for (let q = s + 1; q < n; q++) if (hitT[q] < tf && city.buildings[hitId[q]].h > B.h) { tf = hitT[q]; break; }
+              roofTop = Math.max(0, Math.ceil(hor - ((B.h - eyeD) * scale) / tf - 0.5));
+              roofRows(grid, x, B, roofTop, Math.min(top, clipTop, rows), px, py, rdx, rdy, eyeD, hor, scale);
+            }
             if (y0 < y1) {
               const side = hitSide[s];
               let along: number, lightK: number, face = 0, rev = false, dn: number;
@@ -337,7 +350,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
               }
               wallColumn(grid, x, B, id, t, side, face, lightK, along, y0, y1, top, hor, scale, eyeD, colW, rev, (colW * t) / Math.max(1e-6, Math.abs(dn)), hx, hy);
             }
-            clipTop = Math.min(clipTop, Math.max(0, top));
+            clipTop = Math.min(clipTop, Math.max(0, Math.min(top, roofTop)));
           }
           if (clipTop <= 0) break;
         }
@@ -481,6 +494,25 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
         if (cells[k] !== 32 && cells[k] !== 0) grid.put(i, cells[k], cells[k + 1] + (sr - cells[k + 1]) * a, cells[k + 2] + (sg - cells[k + 2]) * a, cells[k + 3] + (sb - cells[k + 3]) * a);
       }
     }
+  }
+}
+
+/** A flat roof seen from above, rows ya..yb of column x: tar and gravel inside a pale parapet. */
+function roofRows(grid: CharGrid, x: number, B: Building, ya: number, yb: number, px: number, py: number, rdx: number, rdy: number, eye: number, hor: number, scale: number) {
+  for (let y = ya; y < yb; y++) {
+    const i = y * grid.cols + x, m = (y + 0.5 - hor) / scale;
+    if (m <= 0) continue;
+    const t = (eye - B.h) / m;
+    if (frameInside && grid.depth[i] < t + 0.5) continue;
+    const wx = px + rdx * t, wy = py + rdy * t, fogK = 1 - Math.exp(-t / FOG), k = 1 - fogK * 0.6;
+    const edge = Math.min(wx - B.x0, B.x1 - wx, wy - B.y0, B.y1 - wy, B.cut ? B.cut.c - B.cut.nx * wx - B.cut.ny * wy : 1e9, B.round ? (B.x1 - B.x0) / 2 - Math.hypot(wx - (B.x0 + B.x1) / 2, wy - (B.y0 + B.y1) / 2) : 1e9);
+    const h = hash3(Math.floor(wx * 2), Math.floor(wy * 2), 61);
+    let ch = h < 0.5 ? G.dot : h < 0.8 ? G.com : G.col, r = 50, g = 50, b = 56;
+    if (edge < 0.35) { ch = G.eq; r = B.frame[0] * 1.2; g = B.frame[1] * 1.2; b = B.frame[2] * 1.2; }
+    if (frameSnow > 0.05) { const q = frameSnow * 0.9; r += (200 - r) * q; g += (205 - g) * q; b += (218 - b) * q; }
+    grid.put(i, ch, r * k, g * k, b * k);
+    grid.setBg(i, 7, 8, 12);
+    grid.depth[i] = t;
   }
 }
 
