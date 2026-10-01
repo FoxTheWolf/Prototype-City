@@ -72,11 +72,26 @@ let stairIdx = -1;
  * common parts always on, the others when someone is home (or `on`), as seen from outside too.
  */
 function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, elec: number, day: number, on: boolean, out: Float32Array, o: number) {
-  on ||= R.unit < 0 || hash3(boxId, r * 31 + f, 11) < (R.kind === 'shop' ? 0.8 : base.lit * (1 - 0.75 * day) * 1.3);
+  const common = R.unit < 0, h = hash3(boxId, r * 31 + f, 12);
+  if (elec < MAINS) {
+    // off the mains. On the building's generator: its own dimmer, amber light in the common parts
+    // and a few rooms, red lamps here and there in the halls. With nothing: the battery emergency
+    // lights, faint, only where people must find their way out (halls, stairs, the lobby)
+    const gen = elec > 0.25, lit = common || (gen && (on || h < 0.25)), red = common && h < (gen ? 0.3 : 0.4);
+    const c = !lit ? null : red ? EMERG_RED : gen ? GEN : EMERG;
+    const k = !c ? 0 : gen ? Math.min(1, elec * 1.1) : 0.6;
+    out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
+    return;
+  }
+  on ||= common || hash3(boxId, r * 31 + f, 11) < (R.kind === 'shop' ? 0.8 : base.lit * (1 - 0.75 * day) * 1.3);
   const c = !on ? null : R.kind === 'lobby' ? LOBBY : isOffice(base) || R.kind === 'stair' || R.kind === 'lift' ? TUBE : WARM;
   const k = c ? elec : 0;
   out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
 }
+/** Below this the building is off the mains (power() gives ~0.55 on a generator, 0 with none). */
+const MAINS = 0.8;
+/** The generator's light, and the emergency lamps (on batteries): white, and red ones. */
+const GEN: RGB = [190, 120, 60], EMERG: RGB = [70, 85, 110], EMERG_RED: RGB = [150, 22, 16];
 
 /** Squared distance from (x, y) to the nearest ceiling lamp of a room: they hang about every 4 m. */
 function lampD2(R: Room, x: number, y: number) {
@@ -95,12 +110,24 @@ function lightIn(I: Inside, r: number, x: number, y: number, t: number) {
  * `u` 0..1 across the sign as the viewer reads it. Writes into out (glyph, r, g, b).
  */
 const EXIT = 'EXIT';
-/** `du`: how much of the sign one column covers; each letter goes only in the column holding its middle. */
-function exitCell(u: number, v: number, du: number, out: number[]) {
+/**
+ * `du`, `dv`: how much of the sign one column and one row cover. As every text in the world: close
+ * up, each letter is made of points (the 5x7 bulbs); farther, one ASCII letter in the column holding
+ * its middle.
+ */
+function exitCell(u: number, v: number, du: number, dv: number, out: number[]) {
   const slots = EXIT.length + 2, n = Math.floor(u * slots - 0.5), c = (n + 1) / slots;
-  const letter = n >= 0 && n < EXIT.length && Math.abs(u - c) < du / 2 && v > 0.1 && v < 0.9;
-  out[0] = letter ? EXIT.charCodeAt(n) : G.eq;
-  out[1] = letter ? 90 : 30; out[2] = 255; out[3] = letter ? 140 : 110;
+  out[0] = G.eq; out[1] = 25; out[2] = 120; out[3] = 55;
+  if (n < 0 || n >= EXIT.length || v < 0.1 || v > 0.9) return;
+  const rows = fontRows(EXIT.charCodeAt(n))!;
+  if (0.8 / dv >= 4 && 1 / slots / du >= 3) {
+    // points: the bulbs in this cell
+    const px = (u * slots - (n + 1) + 0.5) * 6 - 0.5, pz = ((v - 0.1) / 0.8) * 7 - 0.5;
+    const hx = (du * slots * 6) / 2, hz = ((dv / 0.8) * 7) / 2, b = bulbsIn(rows, 5, px, pz, hx, hz);
+    if (b) { out[0] = bulbGlyph(b, hx, hz); out[1] = 225; out[2] = 255; out[3] = 230; }
+    return;
+  }
+  if (Math.abs(u - c) < du / 2) { out[0] = EXIT.charCodeAt(n); out[1] = 235; out[2] = 255; out[3] = 235; }
 }
 /** Whether a reading direction along a wall runs to the viewer's right: the right of a ray (rdx, rdy) is (-rdy, rdx). */
 const toRight = (ax: number, ay: number, rdx: number, rdy: number) => ax * -rdy + ay * rdx >= 0;
@@ -361,7 +388,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
             const w = (u - s0) / (s1 - s0), m = 0.5 - 0.3 / (s1 - s0);
             if (w > 0.5 - m && w < 0.5 + m) {
               const du = (I.colW * tn) / Math.max(1e-6, Math.abs(xStep ? rdx : rdy)) / ((s1 - s0) * 2 * m);
-              exitCell(rd ? (w - 0.5 + m) / (2 * m) : (0.5 + m - w) / (2 * m), (zz - DOOR_H - 0.06) / 0.26, du, P4); put(y, tn, P4[0], P4[1], P4[2], P4[3]); return;
+              exitCell(rd ? (w - 0.5 + m) / (2 * m) : (0.5 + m - w) / (2 * m), (DOOR_H + 0.32 - zz) / 0.26, du, tn / scale / 0.26, P4); put(y, tn, P4[0], P4[1], P4[2], P4[3]); return;
             }
           }
           lightIn(I, r, hx, hy, tn); const k = z < z0 + DOOR_H + 0.08 ? 1.3 : 1; put(y, tn, G.eq, 120 * L3[0] * k, 95 * L3[1] * k, 70 * L3[2] * k);
@@ -400,7 +427,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
         // the street door from inside: a metal frame, the middle stile, a push bar and the top rail
         // around its two glass leaves; over it the green EXIT sign
         const zz = z - z0;
-        if (zz > DOOR_H + 0.06 && zz < DOOR_H + 0.34 && du > 0.25 && du < 0.75) { exitCell(rdF ? (du - 0.25) * 2 : (0.75 - du) * 2, (zz - DOOR_H - 0.06) / 0.28, colA / (doorW * 0.5), P4); put(y, t, P4[0], P4[1], P4[2], P4[3]); return; }
+        if (zz > DOOR_H + 0.06 && zz < DOOR_H + 0.34 && du > 0.25 && du < 0.75) { exitCell(rdF ? (du - 0.25) * 2 : (0.75 - du) * 2, (DOOR_H + 0.34 - zz) / 0.28, colA / (doorW * 0.5), t / scale / 0.28, P4); put(y, t, P4[0], P4[1], P4[2], P4[3]); return; }
         if (zz < DOOR_H) {
           const frame = du < 0.05 || du > 0.95 || Math.abs(du - 0.5) < 0.025 || zz > DOOR_H - 0.1 || zz < 0.08;
           const bar = zz > 0.95 && zz < 1.08 && Math.abs(du - 0.5) > 0.08 && Math.abs(du - 0.5) < 0.42;
