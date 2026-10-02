@@ -113,9 +113,15 @@ export class Laptop {
       if (this.raise === 0) this.seat = null;
     }
     this.shell.update(now);
-    // the processor's load: the boot works it, a command that computes works it hard, idle it rests
-    const S = this.shell, w = this.world;
-    this.pc.load = S.state === 'boot' ? 0.55 : now < S.heavyUntil ? 1 : now < S.busyUntil ? 0.3 : 0.04;
+    // the processor's load, always moving a little: the boot works it hard, a heavy command maxes it,
+    // and at idle the kernel and daemons keep it jittering with the odd small blip
+    const S = this.shell, w = this.world, off = S.state === 'off' || this.pc.bootAt < 0;
+    const jit = 0.5 + 0.5 * Math.sin(now * 0.8), blip = Math.sin(now * 2.3) > 0.9 ? 0.12 : 0;
+    this.pc.load = off ? 0 : S.state === 'boot' ? 0.5 + 0.35 * Math.abs(Math.sin(now * 4))
+      : now < S.heavyUntil ? 0.86 + 0.14 * Math.abs(Math.sin(now * 9))
+      : now < S.busyUntil ? 0.28 + 0.1 * jit : 0.03 + 0.05 * jit + blip;
+    // a rough resident-memory model: the kernel and system take a baseline, buffers and cache drift
+    this.pc.bgKB = off ? 0 : Math.round((36 + 24 * (0.5 + 0.5 * Math.sin(now * 0.17))) * 1024);
     this.pc.heat(dt, w.player.inside >= 0 ? 22 : w.weather.temp);
     for (const s of this.shell.sfx) { this.sfx.push(s); if (s === 'seek') this.hddAt = now; }
     this.shell.sfx.length = 0;

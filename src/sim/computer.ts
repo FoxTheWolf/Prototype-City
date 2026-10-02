@@ -62,7 +62,7 @@ export interface Proc {
 }
 
 /** What the system itself takes before any process: the kernel, its buffers and the page cache it keeps. */
-const KERNEL_KB = 38 * 1024;
+const KERNEL_KB = 96 * 1024;
 /** The installed system on the disk, besides the files in the tree. */
 const SYSTEM_MB = 3400;
 
@@ -132,7 +132,9 @@ export class Computer {
   usedMB() { return SYSTEM_MB + this.du(this.root) / 1048576; }
   freeMB() { return this.hw.diskMB - this.usedMB(); }
   /** Memory taken by the kernel and the processes, and what is left, in KB. */
-  usedKB() { return KERNEL_KB + this.procs.reduce((s, p) => s + p.memKB, 0); }
+  /** Buffers and cache the running system holds (set by the notebook each frame); counts as used memory. */
+  bgKB = 0;
+  usedKB() { return KERNEL_KB + this.bgKB + this.procs.reduce((s, p) => s + p.memKB, 0); }
   freeKB() { return this.hw.ramMB * 1024 - this.usedKB(); }
   /** Start a process if its memory fits; null when it does not. */
   spawn(name: string, user: string, memKB: number, now: number): Proc | null {
