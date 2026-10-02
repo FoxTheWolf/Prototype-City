@@ -782,7 +782,7 @@
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
       "set": {
-        "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)" },
+        "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)", "people": "People here (debug)" },
         "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "temp": "Temperature", "dist": "Distance" },
         "values": {
           "profile": ["Normal", "Vibrate", "Silent"],
@@ -794,7 +794,10 @@
         },
         "hint": "< > change   OK next",
         "debugHint": ["Secret codes of this firmware.", "In the game they are to be found", "out there. OK dials one."],
-        "dial": "Dial"
+        "dial": "Dial",
+        "peopleNone": "Nobody lives near here.",
+        "peopleAt": "Residents of",
+        "peopleHint": "OK calls the mobile, or the home."
       },
       "code": {
         "imei": "IMEI", "sv": "SV 07",

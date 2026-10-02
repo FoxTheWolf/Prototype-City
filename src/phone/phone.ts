@@ -15,6 +15,7 @@ import en from '../locale/en.json';
 import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { hash3 } from '../core/rng';
+import { Doing, residentsOf, whereIs } from '../sim/citizens';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -49,8 +50,8 @@ export const INDOOR_ROW_M = [1, 2, 3.5, 6];
  * (left/right or OK change them), "about" lists the hardware and the line, "debug" holds what is
  * there for testing the game (the secret codes, to dial them; to go once gameplay replaces it).
  */
-export type SetPage = 'root' | 'sound' | 'display' | 'units' | 'wifi' | 'about' | 'debug';
-export const SET_PAGES: SetPage[] = ['sound', 'display', 'units', 'wifi', 'about', 'debug'];
+export type SetPage = 'root' | 'sound' | 'display' | 'units' | 'wifi' | 'about' | 'debug' | 'people';
+export const SET_PAGES: SetPage[] = ['sound', 'display', 'units', 'wifi', 'about', 'debug', 'people'];
 export interface Prefs {
   /** 0 normal, 1 vibrate, 2 silent. */
   profile: number;
@@ -207,6 +208,8 @@ export class Phone {
   swAcc = 0;
   /** Settings: the scroll of the list. */
   scroll = 0;
+  /** (Debug) the residents of the building in or next to which the settings' people page was opened. */
+  people: { building: number; ids: number[] } = { building: -1, ids: [] };
   /** When each key was last pressed, for its light. */
   readonly pressed = new Map<Key, number>();
 
@@ -593,7 +596,7 @@ export class Phone {
     const back = () => { this.setSel = SET_PAGES.indexOf(pg); this.setPage = 'root'; this.since = now; this.cue = 'stop'; return true; };
     if (pg === 'root') {
       if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + SET_PAGES.length) % SET_PAGES.length; return true; }
-      if (k === 'ok' || k === 'lsoft') { this.setPage = SET_PAGES[this.setSel]; this.setSel = 0; this.scroll = 0; this.since = now; if (this.setPage === 'wifi') this.wifi.scanNow(); return true; }
+      if (k === 'ok' || k === 'lsoft') { this.setPage = SET_PAGES[this.setSel]; this.setSel = 0; this.scroll = 0; this.since = now; if (this.setPage === 'wifi') this.wifi.scanNow(); if (this.setPage === 'people') this.people = peopleNear(this.world); return true; }
       if (k === 'rsoft') { this.open('menu', now); return true; }
       return false;
     }
@@ -614,6 +617,19 @@ export class Phone {
       if (this.world.wifi[i].sec === Sec.Open) W.connect(this.world, i, '', now);
       else { this.wkey = { ap: i, key: '' }; this.open('wifikey', now); }
       return true;
+    }
+    if (pg === 'people') {
+      const L = this.people.ids;
+      if (!L.length) return false;
+      if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + L.length) % L.length; return true; }
+      if (k === 'ok' || k === 'lsoft') {
+        // (debug) ring their mobile, or else their home
+        const P = this.world.pop, i = L[this.setSel], num = P.mobile[i] || P.households[P.home[i]].line;
+        if (!num) return false;
+        this.dial = num; this.call = null; this.open('calls', now); this.place(num, now);
+        return true;
+      }
+      return false;
     }
     if (pg === 'debug') {
       const C = secretCodes(this.world.seed);
@@ -687,7 +703,7 @@ export class Phone {
     if (this.radio.state !== 'service' || A.credit < 10) return false;
     A.credit -= 10;
     this.sent.unshift({ to: D.to, text: D.text, at: this.world.time });
-    const c = lookup(this.world.telco, this.world.seed, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q);
+    const c = lookup(this.world.telco, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q);
     const op = operatorName(this.world.city);
     if (c.kind === 'none') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5);
     else if (c.kind === 'self') this.receive(D.to, D.text, now + 3);
@@ -695,7 +711,12 @@ export class Phone {
       const b = this.world.city.businesses[c.k], [o, z] = BIZ_HOURS[b.kind] ?? [9, 17], hh = (x: number) => `${((x + 11) % 12) + 1}${x % 24 < 12 ? 'am' : 'pm'}`;
       const t = SMS.biz[Math.floor(h(2) * SMS.biz.length)].replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
       this.receive(D.to, t, now + 8 + h(3) * 20);
-    } else if (c.kind === 'res' && h(1) < 0.4) this.receive(D.to, SMS.res[Math.floor(h(2) * SMS.res.length)], now + 15 + h(3) * 40);
+    } else if (c.kind === 'home') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5); // a landline takes no texts
+    else if (c.kind === 'cell' && h(1) < 0.25 + 0.5 * (this.world.pop.talk[c.i] / 255)) {
+      // the owner reads it when awake, and maybe answers
+      const asleep = whereIs(this.world.pop, this.world.city, c.i, this.world.time).doing === Doing.Asleep;
+      this.receive(D.to, SMS.res[Math.floor(h(2) * SMS.res.length)], now + (asleep ? 240 : 15) + h(3) * 40);
+    }
     return true;
   }
 
@@ -771,4 +792,18 @@ export function phoneKey(code: string, key = ''): Key | null {
     case 'Minus': case 'NumpadSubtract': case 'Period': case 'NumpadDecimal': return '#';
   }
   return null;
+}
+
+/** (Debug) The building the player is in, or the nearest one with people living in it, and its residents. */
+export function peopleNear(world: World): { building: number; ids: number[] } {
+  const p = world.player, B = world.city.buildings, P = world.pop;
+  let best = p.inside, d = Infinity;
+  if (best < 0 || !residentsOf(P, best).length) {
+    best = -1;
+    for (const H of P.households) {
+      const b = B[H.building], dd = Math.hypot((b.x0 + b.x1) / 2 - p.x, (b.y0 + b.y1) / 2 - p.y);
+      if (dd < d) { d = dd; best = H.building; }
+    }
+  }
+  return { building: best, ids: best >= 0 ? residentsOf(P, best) : [] };
 }

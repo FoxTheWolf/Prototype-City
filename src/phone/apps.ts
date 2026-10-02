@@ -1,6 +1,8 @@
 import { hash3 } from '../core/rng';
 import en from '../locale/en.json';
-import { cityName, operatorName, wifiName } from '../locale/names';
+import { businessName, cityName, citizenName, operatorName, wifiName, workplaceName } from '../locale/names';
+import PEOPLE from '../locale/people.en.json';
+import { Role, whereIs } from '../sim/citizens';
 import { Sec } from '../sim/wifi';
 import { calendar, moonPhase } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
@@ -273,6 +275,7 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
   title(S, SET.pages[pg].toUpperCase(), t);
   if (pg === 'about') return about(S, P, world, t);
   if (pg === 'wifi') return wifiPage(S, P, world, t);
+  if (pg === 'people') return peoplePage(S, P, world, t);
   if (pg === 'debug') {
     SET.debugHint.forEach((l, k) => S.text(1, 3 + k, typed(l, t - 0.05 * k), DIM, LCD));
     secretCodes(world.seed).forEach((c, n) => row(S, 7 + n * 2, c.code, A.code[c.kind], n === P.setSel, t - 0.2 - 0.05 * n));
@@ -305,6 +308,27 @@ function about(S: Lcd, P: Phone, world: World, t: number) {
     S.text(SW - v.length - 1, y, typed(v, t - 0.05 * n - 0.1), v === T.noService || v.endsWith(T.off) ? BAD : INK, LCD);
   });
   softKeys(S, '', T.back);
+}
+
+/** (Debug) Who lives in the building next to the player: name, age, what they do, where they are now, their number. */
+function peoplePage(S: Lcd, P: Phone, world: World, t: number) {
+  const L = P.people.ids, Pop = world.pop, c = world.city;
+  if (!L.length) { S.text(1, 3, SET.peopleNone, DIM, LCD); return softKeys(S, '', T.back); }
+  S.text(1, 3, `${SET.peopleAt} #${P.people.building} (${L.length})`, DIM, LCD);
+  const per = 3, view = Math.floor((SH - 7) / per), top = Math.max(0, Math.min(P.setSel - Math.floor(view / 2), L.length - view));
+  const R = PEOPLE.role, D = PEOPLE.doing, roles = [R.worker, R.student, R.retired, R.idle, R.child];
+  const doings = [D.asleep, D.home, D.commute, D.work, D.out];
+  for (let n = 0; n < view && top + n < L.length; n++) {
+    const i = L[top + n], y = 5 + n * per, sel = top + n === P.setSel, H = Pop.households[Pop.home[i]];
+    const job = Pop.job[i] >= 0 ? workplaceName(c, Pop, Pop.job[i]) : '';
+    const W = whereIs(Pop, c, i, world.time), doing = doings[W.doing].replace('{place}', W.biz >= 0 ? businessName(c, W.biz) : '');
+    row(S, y, `${citizenName(c, Pop, i)}, ${Pop.age[i]}`.slice(0, SW - 6), `F${H.floor + 1}`, sel, t - 0.04 * n);
+    S.text(2, y + 1, typed(`${roles[Pop.role[i]].replace('{place}', job)}`.slice(0, SW - 3), t - 0.04 * n - 0.05), DIM, LCD);
+    const num = Pop.mobile[i] ? formatNumber(world.telco, Pop.mobile[i]) : H.line ? `${formatNumber(world.telco, H.line)} H` : '-';
+    S.text(2, y + 2, typed(`${doing.slice(0, 16)} ${num}`.slice(0, SW - 3), t - 0.04 * n - 0.1), Pop.role[i] === Role.Child ? DIM : INK, LCD);
+  }
+  S.center(SH - 3, SET.peopleHint, DIM, LCD);
+  softKeys(S, SET.dial, T.back);
 }
 
 const kbText = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${Math.round(kb)} KB`);

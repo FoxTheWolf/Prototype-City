@@ -54,6 +54,8 @@ export interface Telco {
   /** Substation of every site. */
   sub: Uint8Array;
   player: Account;
+  /** The citizens' numbers (see citizens.ts): >= 0 a mobile (citizen id), < 0 a home's landline (household -1-n). */
+  people: Map<string, number>;
 }
 
 const SPACING = 450;
@@ -107,11 +109,11 @@ export function buildTelco(seed: number, city: City, power: PowerGrid): Telco {
     byNum.set(num, -1 - i);
     return { x: p.x, y: p.y, a: p.a, num };
   });
-  return { area, bizNum, byNum, payphones, spent: new Set(), sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 } };
+  return { area, bizNum, byNum, payphones, spent: new Set(), sites, sub, player: { number: `555-01${line}`, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 }, people: new Map() };
 }
 
 /** A made-up local number (7 digits): an exchange from 200 to 999 (never 555 or an N11), and a line. */
-function localNumber(seed: number, q: number): string {
+export function localNumber(seed: number, q: number): string {
   let ex = 0;
   for (let t = 0; !ex || ex === 555 || ex % 100 === 11; t++) ex = 200 + Math.floor(hash3(seed, q, 900 + t) * 800);
   return String(ex) + String(Math.floor(hash3(seed, q, 901) * 10000)).padStart(4, '0');
@@ -134,16 +136,15 @@ export function isOpen(kind: string, hour: number): boolean {
 
 /** Who a dialed number reaches. */
 export type Callee =
-  | { kind: 'biz'; k: number } | { kind: 'res'; id: number } | { kind: 'operator' } | { kind: 'emergency' }
+  | { kind: 'biz'; k: number } | { kind: 'home'; h: number } | { kind: 'cell'; i: number } | { kind: 'operator' } | { kind: 'emergency' }
   | { kind: 'directory' } | { kind: 'self' } | { kind: 'payphone'; k: number } | { kind: 'none' };
 
 /**
  * The number dialed, as the exchange routes it: the service codes (911, 411, 611), a local number
  * (7 digits, or 10 with the city's area code, with or without a leading 1). A business answers its
- * own; of the other numbers about a third are homes, whose people answer (stage 11 will put the
- * citizens behind them); the rest are not in service.
+ * own; a citizen's mobile or a home's landline rings there (see citizens.ts); the rest are not in service.
  */
-export function lookup(T: Telco, seed: number, dialed: string): Callee {
+export function lookup(T: Telco, dialed: string): Callee {
   if (dialed === '911') return { kind: 'emergency' };
   if (dialed === '411') return { kind: 'directory' };
   if (dialed === '611') return { kind: 'operator' };
@@ -154,9 +155,9 @@ export function lookup(T: Telco, seed: number, dialed: string): Callee {
   if (d === T.player.number.replace('-', '')) return { kind: 'self' };
   const k = T.byNum.get(d);
   if (k !== undefined) return k >= 0 ? { kind: 'biz', k } : { kind: 'payphone', k: -1 - k };
-  if (d.startsWith('555')) return { kind: 'none' };
-  const h = hash3(seed, +d, 4242);
-  return h < 0.35 ? { kind: 'res', id: Math.floor(h * 1e9) } : { kind: 'none' };
+  const p = T.people.get(d);
+  if (p !== undefined) return p >= 0 ? { kind: 'cell', i: p } : { kind: 'home', h: -1 - p };
+  return { kind: 'none' };
 }
 
 /** Whether site k is on the air at this tick: on mains power, or on its batteries for a while after it went down. */

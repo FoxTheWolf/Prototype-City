@@ -17,7 +17,7 @@ const dec = new TextDecoder();
 
 (self as unknown as Worker).onmessage = (e: MessageEvent) => {
   const m = e.data;
-  if (m.type === 'init') { world = createWorld(m.seed, m.size); return; }
+  if (m.type === 'init') { world = createWorld(m.seed, m.size, false); return; }
   if (m.type === 'grid') { grid = new CharGrid(m.cols, m.rows, m.buf as GridBuffers); return; }
   if (m.type === 'frame' && world && grid) {
     const t0 = performance.now();

@@ -2,6 +2,8 @@ import { type City, type District } from '../sim/city';
 import { hash3 } from '../core/rng';
 import en from './en.json';
 import THANKS from './thanks.json';
+import PEOPLE from './people.en.json';
+import { type Population } from '../sim/citizens';
 
 /**
  * Names of places, read from the locale file. The sim only stores numbers (a name seed per
@@ -35,9 +37,10 @@ export function seamName(city: City): string {
 
 /**
  * Friends of the author, thanked by name (see CLAUDE.md, "Agradecimentos"): each one shows up
- * exactly once in every city, in a place its seed picks: a shop, a boulevard, a landmark or a
- * district takes the name. Later stages add places to the draw (a citizen, a contact, a post).
- * The key is `kind:ref`; the value, the name.
+ * exactly once in every city, in a place its seed picks: a shop, a boulevard, a landmark, a
+ * district or a citizen takes the name. Later stages add places to the draw (a contact, a post).
+ * The key is `kind:ref`; the value, the name. A citizen is drawn as a share of the population
+ * (`citizen:0.1234`), since the city is named before its people are made (see citizenThanked).
  */
 const thanked = new WeakMap<City, Map<string, string>>();
 function thanks(city: City): Map<string, string> {
@@ -51,10 +54,11 @@ function thanks(city: City): Map<string, string> {
   }
   const marks = city.landmarks.map((l, k) => (L.landmark[l.kind].includes('{r}') ? `landmark:${k}` : '')).filter(Boolean);
   const places = [
-    [0.4, city.businesses.map((_, k) => `biz:${k}`)],
-    [0.2, wide],
-    [0.2, marks],
-    [0.2, city.districts.map((_, k) => `district:${k}`)],
+    [0.32, city.businesses.map((_, k) => `biz:${k}`)],
+    [0.16, wide],
+    [0.16, marks],
+    [0.16, city.districts.map((_, k) => `district:${k}`)],
+    [0.2, Array.from({ length: 997 }, (_, k) => `citizen:${k / 997}`)],
   ] as const;
   THANKS.forEach((name, n) => {
     for (let tries = 0; tries < 50; tries++) {
@@ -175,4 +179,35 @@ export function wifiName(city: City, A: { biz: number; bssid: string; building: 
 /** The computer maker k of the city (see sim/computer.ts), named from slots of their own. */
 export function computerMakerName(city: City, k: number): string {
   return L.roots[(city.nameSeed + (L.roots.length - 29 - k) * 7919) % L.roots.length];
+}
+
+/** The thanked friend who is citizen i, if any: a share of the population picked with the other places. */
+function citizenThanked(city: City, P: Population, i: number): string | undefined {
+  for (const [key, name] of thanks(city)) {
+    if (!key.startsWith('citizen:')) continue;
+    // the first grown-up from the drawn share on
+    let j = Math.floor(+key.slice(8) * P.n);
+    while (j < P.n - 1 && P.age[j] < 18) j++;
+    if (j === i) return name;
+  }
+  return undefined;
+}
+
+/** A citizen's first and last name. */
+export function citizenNames(city: City, P: Population, i: number): [string, string] {
+  const t = citizenThanked(city, P, i);
+  if (t) { const sp = t.indexOf(' '); return sp < 0 ? [t, ''] : [t.slice(0, sp), t.slice(sp + 1)]; }
+  return [PEOPLE.first[P.first[i] % PEOPLE.first.length], PEOPLE.last[P.last[i] % PEOPLE.last.length]];
+}
+export const citizenName = (city: City, P: Population, i: number) => citizenNames(city, P, i).join(' ');
+
+/** A workplace's name: the business's own, or a firm's from the locale. */
+export function workplaceName(city: City, P: Population, k: number): string {
+  const W = P.workplaces[k];
+  if (W.biz >= 0) return businessName(city, W.biz);
+  const tpls = W.kind === 'office' ? PEOPLE.office : PEOPLE.plant, n = W.name;
+  return tpls[n % tpls.length]
+    .replace('{s}', PEOPLE.last[(n >>> 4) % PEOPLE.last.length])
+    .replace('{s2}', PEOPLE.last[(n >>> 11) % PEOPLE.last.length])
+    .replace('{w}', L.words[(n >>> 5) % L.words.length]);
 }

@@ -5,6 +5,7 @@ import { TIME_SCALE } from './clock';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
+import { generatePeople, noPeople, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
 import { crossers, pedsWanted, spawnPeds, stepPeds, type Ped } from './peds';
@@ -66,6 +67,8 @@ export interface World {
   doorSfx: [number, number, number][];
   /** What has happened (see events.ts). */
   events: EventLog;
+  /** Everyone who lives in the city (see citizens.ts). */
+  pop: Population;
 }
 
 /** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
@@ -83,7 +86,8 @@ const HIDE_R = 300, TURNOVER = 4;
 /** Default city side in metres. */
 export const CITY_SIZE = 2000;
 
-export function createWorld(seed: number, size = CITY_SIZE): World {
+/** people: false for a world that is only drawn (the render workers), which needs no citizens. */
+export function createWorld(seed: number, size = CITY_SIZE, people = true): World {
   const rng = mulberry32(seed);
   const city = generateCity(seed, size);
   // every city starts on a day of 2008 of its own, at nine in the evening
@@ -98,7 +102,10 @@ export function createWorld(seed: number, size = CITY_SIZE): World {
   stepWeather(weather, seed, time, 0);
   const peds = spawnPeds(city, rng, pedsWanted(time, 0), x, y);
   const power = buildPower(seed, city);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco: buildTelco(seed, city, power), wifi: buildWifi(seed, city, x, y, power), events: newEventLog() };
+  const telco = buildTelco(seed, city, power);
+  const pop = people ? generatePeople(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2)) : noPeople();
+  telco.people = pop.byNum;
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

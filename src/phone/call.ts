@@ -1,5 +1,6 @@
 import { hash3 } from '../core/rng';
-import { businessName, districtName, roadName } from '../locale/names';
+import { businessName, citizenNames, districtName, roadName } from '../locale/names';
+import { Doing, whereIs } from '../sim/citizens';
 import C from '../locale/calls.json';
 import en from '../locale/en.json';
 import { districtAt } from '../sim/city';
@@ -13,7 +14,9 @@ import { type World } from '../sim/world';
  * person, or a menu of options for the bigger ones), its recording when closed, the people of a
  * home or their answering machine, the operator's line. The player has no voice in the game, so
  * whoever answers hears silence and says so. The words come from the locale (calls.json), picked by
- * the number, the hour and the call, so a call made twice the same hour goes the same way. Calls
+ * the number, the hour and the call, so a call made twice the same hour goes the same way. A home
+ * or a mobile rings where its citizens are (see citizens.ts): someone awake at home picks up the
+ * landline, a mobile is answered at work, out or at home, rarely in the middle of the night. Calls
  * cost credit by the started minute; 911 and the operator's line are free.
  */
 export type Sfx = ['bell', number] | ['shutter'] | ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
@@ -46,10 +49,13 @@ export class Call {
   private repeats = 0;
   private holdUntil = -1;
   private h: (q: number) => number;
+  /** The citizen who picks up (a home's or a mobile's), or -1; and how they are when they do. */
+  private who = -1;
+  private mood: 'hello' | 'work' | 'out' | 'sleepy' | 'machine' = 'hello';
 
   /** landline: made from a payphone (the player's own mobile number then rings the handset in the pocket). */
   constructor(private world: World, readonly number: string, private start: number, noNetwork: boolean, readonly landline = false) {
-    this.callee = lookup(world.telco, world.seed, number);
+    this.callee = lookup(world.telco, number);
     const hour = Math.floor(world.time / 3600);
     this.h = (q) => hash3(world.seed ^ hour, number.length * 1000 + +number.replace(/\D/g, '').slice(-6), q);
     if (noNetwork && this.callee.kind !== 'emergency') { this.end(start, en.phone.apps.noNetwork); return; }
@@ -149,7 +155,38 @@ export class Call {
     if (c.kind === 'operator' || c.kind === 'emergency' || c.kind === 'directory') return 1;
     if (c.kind === 'payphone') return -1;
     if (c.kind === 'biz') return isOpen(this.kindOf(), this.hour()) ? 1 + Math.floor(this.h(2) * 3) : 2 + Math.floor(this.h(2) * 3);
-    return this.h(3) < 0.85 ? 2 + Math.floor(this.h(2) * 4) : -1;
+    if (c.kind === 'home' || c.kind === 'cell') return this.pickUp();
+    return -1;
+  }
+
+  /**
+   * Who answers a citizen's phone, from where its people are now: for a home, the first grown-up
+   * awake there (a sleeper after many rings, now and then), else its answering machine; for a mobile,
+   * its owner unless asleep (or busy, now and then), else the voicemail.
+   */
+  private pickUp(): number {
+    const w = this.world, P = w.pop, c = this.callee, t = w.time;
+    if (c.kind === 'home') {
+      const H = P.households[c.h];
+      let sleeper = -1;
+      for (let k = 0; k < H.n; k++) {
+        const i = H.m0 + k, d = whereIs(P, w.city, i, t).doing;
+        if (P.age[i] < 10) continue;
+        if (d === Doing.Home) { this.who = i; this.mood = 'hello'; return 2 + Math.floor(this.h(2) * 3); }
+        if (d === Doing.Asleep && sleeper < 0 && P.age[i] >= 18) sleeper = i;
+      }
+      if (sleeper >= 0 && this.h(4) < 0.3) { this.who = sleeper; this.mood = 'sleepy'; return 5 + Math.floor(this.h(2) * 2); }
+      if (!H.machine) return -1;
+      this.who = H.m0; this.mood = 'machine';
+      return 4;
+    }
+    if (c.kind !== 'cell') return -1;
+    const i = c.i, d = whereIs(P, w.city, i, t).doing, r = this.h(4);
+    this.who = i;
+    const answers = d === Doing.Asleep ? r < 0.12 : d === Doing.Work ? r < 0.5 : d === Doing.Out ? r < 0.65 : r < 0.85;
+    if (!answers) { this.mood = 'machine'; return 5; }
+    this.mood = d === Doing.Asleep ? 'sleepy' : d === Doing.Work ? 'work' : d === Doing.Out ? 'out' : 'hello';
+    return d === Doing.Asleep ? 5 : 1 + Math.floor(this.h(2) * 3);
   }
 
   /** What is said once the call is answered. */
@@ -172,9 +209,13 @@ export class Call {
         if (this.h(22) < 0.4) steps.push({ who: 'sys', text: this.pick([...(B[kind] ?? []), ...C.background.generic], 23), gap: 1 });
         return [...steps, ...silence()];
       }
-      case 'res': {
-        if (this.h(30) < 0.65) return [them(this.pick(C.res.hello, 31)), them(this.pick(C.res.who, 32), 3), them(this.pick(C.res.hangup, 33), 2.5), end];
-        return [rec(this.pick(C.res.machine, 34)), { who: 'act', text: 'beep', gap: 0.2 }, { who: 'act', text: 'end', gap: 10 }];
+      case 'home': case 'cell': {
+        const L = c.kind === 'home' ? C.res : C.cell;
+        if (this.mood === 'machine') {
+          return [rec(c.kind === 'home' ? this.pick(C.res.machine, 34) : this.pick(C.cell.voicemail, 34)), { who: 'act', text: 'beep', gap: 0.2 }, { who: 'act', text: 'end', gap: 10 }];
+        }
+        const first = this.mood === 'hello' ? this.pick(L.hello, 31) : this.pick((C.cell as Record<string, string[]>)[this.mood] ?? L.hello, 31);
+        return [them(this.mood === 'sleepy' && c.kind === 'home' ? this.pick(C.res.sleepy, 31) : first), them(this.pick(C.res.who, 32), 3), them(this.pick(C.res.hangup, 33), 2.5), end];
       }
       case 'operator': this.menu = 'operator'; return this.menuSteps(true);
       case 'emergency': return [them(C.emergency[0])];
@@ -226,7 +267,8 @@ export class Call {
       road = roadName(w.city, this.h(50) < 0.5, Math.floor(this.h(51) * (w.city.xb.length / 2)));
     } else if (c.kind === 'operator') biz = en.phone.apps.care;
     const acc = w.telco.player;
-    return s.replace('{biz}', biz).replace('{name}', this.pick(C.first, 60)).replace('{surname}', this.pick(en.surnames, 61))
+    const [name, surname] = this.who >= 0 ? citizenNames(w.city, w.pop, this.who) : [this.pick(C.first, 60), this.pick(en.surnames, 61)];
+    return s.replace('{biz}', biz).replace('{name}', name).replace('{surname}', surname)
       .replace('{open}', open).replace('{close}', close).replace('{road}', road).replace('{district}', district)
       .replace('{film}', this.pick(C.films, 62)).replace('{film2}', this.pick(C.films, 63)).replace('{t1}', hh(18 + Math.floor(this.h(64) * 2))).replace('{t2}', hh(20 + Math.floor(this.h(65) * 3)))
       .replace('{credit}', `$${(acc.credit / 100).toFixed(2)}`).replace('{data}', `${(acc.dataKB / 1024).toFixed(1)} MB`);

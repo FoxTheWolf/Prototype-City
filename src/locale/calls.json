@@ -36,7 +36,15 @@
     "hello": ["Hello?", "Yes, hello?", "Hi, who's calling?", "Hello, this is the {surname} residence."],
     "who": ["Who is this?", "Hello? I can't hear anything.", "Is someone there?"],
     "hangup": ["Must be a wrong number. Bye.", "I'm hanging up now.", "Okay. Goodbye."],
-    "machine": ["Hi, you've reached the {surname}s. Leave a message after the beep.", "This is {name}. I can't come to the phone. Leave a message.", "You've reached {name} {surname}. Please leave your name and number."]
+    "machine": ["Hi, you've reached the {surname}s. Leave a message after the beep.", "This is {name}. I can't come to the phone. Leave a message.", "You've reached {name} {surname}. Please leave your name and number."],
+    "sleepy": ["Hello...? It's the middle of the night.", "Who's calling at this hour?"]
+  },
+  "cell": {
+    "hello": ["Hello?", "Yeah, hello?", "This is {name}.", "{name} speaking.", "Hi, {name} here."],
+    "work": ["Hello? I'm at work, I can't talk long.", "{name} speaking. I'm a little busy right now."],
+    "out": ["Hello? Sorry, it's loud in here.", "Hi? I can barely hear you."],
+    "sleepy": ["Hello...? Do you know what time it is?", "Mm... hello? Who is this?"],
+    "voicemail": ["Hi, this is {name}. I can't take your call right now. Leave a message.", "You've reached {name} {surname}. Please leave a message after the tone.", "The person you are calling is not available. Please leave a message."]
   },
   "notInService": ["The number you have dialed is not in service. Please check the number and dial again."],
   "busy": "BUSY",
