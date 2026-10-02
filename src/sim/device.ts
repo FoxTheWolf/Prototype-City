@@ -38,13 +38,13 @@ export interface Device {
 
 /** How many looks a phone's body can have. */
 export const LOOKS = 6;
-/** Whose each look is (by maker index): every maker has a body style of its own. */
-export const LOOK_MAKER = [0, 1, 1, 2, 0, 2];
+/** Whose each look is (by maker index): one maker per body, each with its own body style and its own splash. */
+export const LOOK_MAKER = [0, 1, 2, 3, 4, 5];
 const makerLooks = (m: number) => LOOK_MAKER.map((x, i) => (x === m % MAKERS ? i : -1)).filter((i) => i >= 0);
 /** The boards the makers buy (the bootloader's name); a cheap model tends to get the first, a top one the last. */
 export const BOARDS = ['SB-11 bootrom', 'MX2 loader', 'ORCA-3 IPL'];
 
-export const MAKERS = 3;
+export const MAKERS = 6;
 const SERIES = ['Navigator', 'Slide', 'Flip', 'Pulse', 'Edge', 'Nova', 'Classic', 'Aero', 'Sense'];
 const OS = ['KOS', 'VEX', 'ORB'];
 const BODIES: [number, number, number][] = [[30, 32, 37], [120, 124, 132], [110, 24, 28], [26, 44, 92], [196, 196, 190], [150, 70, 110], [52, 56, 48]];

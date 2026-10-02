@@ -401,54 +401,103 @@ function boot(S: Lcd, P: Phone, world: World, t: number) {
 }
 
 /**
- * The maker's splash, in the maker's style: a deep blue field with the logo in amber and a gloss
- * (the first maker), a white page with the logo in navy and a red swoosh under it (the second), or
- * black with the logo swept in by a cyan scan line (the third). A name too long for the big letters is spelled out.
+ * The maker's splash: one maker per body (shells.ts), each with its own, in the spirit of its body.
+ * Classic: a deep blue field, the logo in amber with a gloss. Slate (glossy black, chrome): the logo
+ * swept in by a white scan line, mirrored below as on black glass. Brushed (metal): a silver plate
+ * with streaks, the logo stamped into it and lit along its lower edge. Pebble (soft, round): white,
+ * pink circles swelling out, the logo in magenta, dots taking turns. Rugged (rubber, orange trim):
+ * hazard stripes, the logo in orange stencil, a system check counting up. Slider (red gloss): the
+ * logo slides in from the right over a red sweep, as the phone slides open. A name too long for the
+ * big letters is spelled out.
  */
 function splash(S: Lcd, style: number, maker: string, model: string, u: number) {
-  const big = maker.length * 5 <= SW;
-  if (style % 3 === 1) {
-    const bgAt = (y: number): C3 => lerp([255, 255, 255], [214, 220, 228], y / SH);
-    for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
-    const NAVY: C3 = [26, 36, 70], RED: C3 = [214, 36, 52];
-    if (big) bigText(S, 6, maker, NAVY, u - 0.15);
-    else { const sp = maker.split('').join(' '); S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.15, 30), NAVY, bgAt(9)); }
-    // the swoosh: a red stroke drawn from the left, thick in the middle
-    const sw = Math.round(Math.max(0, Math.min(1, (u - 0.5) / 0.6)) * (SW - 8));
-    for (let x = 0; x < sw; x++) { const k = Math.sin((x / (SW - 8)) * Math.PI); S.put(4 + x, 14, k > 0.5 ? SHAPE.bottom : SHAPE.q1, RED, bgAt(14)); }
-    if (u > 1) S.center(16, typed(model, u - 1, 30), [110, 118, 132], bgAt(16));
-    // three dots taking turns
-    const on = Math.floor(u * 3) % 3;
-    if (u > 1.2) for (let k = 0; k < 3; k++) S.put((SW >> 1) - 2 + k * 2, 20, SHAPE.dot, k === on ? RED : [180, 186, 196], bgAt(20));
-    return;
-  }
-  if (style % 3 === 2) {
-    const BG: C3 = [0, 0, 0], CYAN: C3 = [70, 220, 255];
+  const big = maker.length * 5 <= SW, sp = maker.split('').join(' ');
+  const word = (y: number, col: C3, bg: (y: number) => C3, t = 1e9, dx = 0) => {
+    if (big) bigText(S, y, maker, col, t, dx);
+    else S.text(((SW - sp.length) >> 1) + dx, y + 3, typed(sp, t, 30), col, bg(y + 3));
+  };
+  const k = style % 6;
+  if (k === 1) {
+    // Slate: black glass; a white scan line reveals the logo, its reflection fainter below
+    const BG: C3 = [0, 0, 0], W: C3 = [235, 240, 250];
     for (let y = 0; y < SH; y++) S.fill(y, BG);
     const sweep = Math.floor(Math.max(0, (u - 0.2) / 1.1) * (SW + 2));
-    if (big) {
-      // a dim copy a row down as a glow, then the letters; everything right of the scan line wiped
-      bigText(S, 7, maker, [10, 50, 70]);
-      bigText(S, 6, maker, CYAN);
-      for (let y = 5; y <= 14; y++) for (let x = Math.max(0, sweep); x < SW; x++) S.put(x, y, 32, BG, BG);
-      if (sweep < SW) for (let y = 5; y <= 13; y++) S.put(sweep, y, 32, BG, [200, 250, 255]);
-    } else { const sp = maker.split('').join(' '), x0 = (SW - sp.length) >> 1; S.text(x0, 9, sp.slice(0, Math.max(0, sweep - x0)), CYAN, BG); }
-    if (u > 1.4) { const sp = model.split('').join(' '); S.center(16, typed(sp, u - 1.4, 40), [60, 130, 160], BG); }
-    const segs = 10, n = Math.round(Math.max(0, Math.min(1, (u - 1.2) / 1.4)) * segs), x0 = (SW - segs * 3) >> 1;
-    for (let k = 0; k < segs; k++) for (let d = 0; d < 2; d++) S.put(x0 + k * 3 + d, 20, 32, BG, k < n ? CYAN : [10, 30, 40]);
+    word(6, W, () => BG);
+    // the reflection: the letters' lower rows mirrored, dim, fading
+    if (big) for (let r = 0; r < 4; r++) for (let x = 0; x < SW; x++) {
+      const cell = S.peek(x, 12 - r);
+      if (cell) S.put(x, 13 + r, 32, BG, [cell[0] * (0.28 - r * 0.06), cell[1] * (0.28 - r * 0.06), cell[2] * (0.28 - r * 0.06)]);
+    }
+    for (let y = 5; y <= 17; y++) for (let x = Math.max(0, sweep); x < SW; x++) S.put(x, y, 32, BG, BG);
+    if (sweep < SW) for (let y = 5; y <= 12; y++) S.put(sweep, y, 32, BG, [255, 255, 255]);
+    if (u > 1.4) S.center(19, typed(model.split('').join(' '), u - 1.4, 40), [120, 126, 140], BG);
+    const n = Math.round(Math.max(0, Math.min(1, (u - 1.2) / 1.4)) * 20);
+    for (let x = 0; x < 20; x++) S.put(11 + x, 22, SHAPE.top, x < n ? W : [30, 32, 36], BG);
     return;
   }
+  if (k === 2) {
+    // Brushed: a silver plate with streaks; the logo stamped in, light catching its lower edge
+    const plate = (x: number, y: number): C3 => { const v = 150 + (y / SH) * 30 + (hash3(y, 21, 4) - 0.5) * 22 + (hash3(x >> 3, y, 6) - 0.5) * 6; return [v, v + 3, v + 8]; };
+    for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) S.put(x, y, 32, [0, 0, 0], plate(x, y));
+    const press = Math.min(1, u / 0.8);
+    if (big) { const e = 160 + 80 * press, s = 160 - 90 * press; bigText(S, 7, maker, [e, e + 2, e + 6]); bigText(S, 6, maker, [s, s + 4, s + 10]); }
+    else S.text((SW - sp.length) >> 1, 9, sp, [60, 64, 72], plate(0, 9));
+    if (u > 0.8) S.center(16, typed(model, u - 0.8, 30), [200, 130, 40], plate(0, 16));
+    const n = Math.round(Math.max(0, Math.min(1, (u - 1) / 1.4)) * 24);
+    for (let x = 0; x < 24; x++) S.put(9 + x, 20, 32, [0, 0, 0], x < n ? [255, 180, 80] : [110, 112, 118]);
+    return;
+  }
+  if (k === 3) {
+    // Pebble: white, soft pink circles swelling out from the middle, the logo in magenta, three dots
+    const bgAt = (y: number): C3 => lerp([255, 255, 255], [250, 236, 244], y / SH);
+    for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
+    for (let c = 0; c < 3; c++) {
+      const r = ((u * 9 + c * 6) % 18);
+      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+        const d = Math.hypot((x - SW / 2) * 0.55, y - 10);
+        if (Math.abs(d - r) < 0.5) S.put(x, y, 32, [0, 0, 0], lerp(bgAt(y), [250, 190, 220], 0.5 * (1 - r / 18)));
+      }
+    }
+    word(6, [210, 50, 140], bgAt, u - 0.3);
+    if (u > 1) S.center(16, typed(model.toLowerCase(), u - 1, 30), [170, 110, 140], bgAt(16));
+    const on = Math.floor(u * 3) % 3;
+    if (u > 1.2) for (let q = 0; q < 3; q++) S.put((SW >> 1) - 2 + q * 2, 20, SHAPE.dot, q === on ? [230, 80, 160] : [235, 200, 220], bgAt(20));
+    return;
+  }
+  if (k === 4) {
+    // Rugged: hazard stripes top and bottom, the logo in orange stencil, a system check counting up
+    const BG: C3 = [18, 18, 16], OR: C3 = [240, 130, 30];
+    for (let y = 0; y < SH; y++) S.fill(y, BG);
+    for (const y of [1, 2, SH - 3, SH - 2]) for (let x = 0; x < SW; x++) S.put(x, y, 32, BG, ((x + y + Math.floor(u * 8)) >> 1) % 3 === 0 ? OR : [30, 30, 26]);
+    if (big) { bigText(S, 7, maker, [0, 0, 0], u - 0.2); bigText(S, 6, maker, OR, u - 0.2); for (let x = 0; x < SW; x++) S.put(x, 9, 32, BG, BG); } // the stencil's bridge across the letters
+    else S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.2, 30), OR, BG);
+    if (u > 0.8) S.center(15, typed(`${model}  //  FIELD READY`, u - 0.8, 40), [200, 196, 180], BG);
+    const pct = Math.min(100, Math.max(0, Math.round((u - 1) / 1.4 * 100)));
+    if (u > 1) S.center(18, `SYSTEM CHECK ${String(pct).padStart(3)}%`, pct === 100 ? [140, 220, 90] : OR, BG);
+    return;
+  }
+  if (k === 5) {
+    // Slider: a dark field warming to red; the logo slides in from the right over a red sweep
+    const bgAt = (y: number): C3 => lerp([8, 4, 6], [70, 10, 18], Math.min(1, u / 1.2) * (y / SH));
+    for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
+    const slide = Math.max(0, 1 - Math.min(1, (u - 0.2) / 0.7)), dx = Math.round(slide * slide * SW);
+    for (let x = 0; x < SW; x++) if (x > SW - dx - 6 && x < SW - dx) S.put(x, 12, SHAPE.top, [220, 30, 50], bgAt(12));
+    word(5, [245, 235, 238], bgAt, 1e9, dx);
+    if (u > 1) S.center(15, typed(model, u - 1, 30), [220, 150, 160], bgAt(15));
+    const n = Math.round(Math.max(0, Math.min(1, (u - 1.1) / 1.3)) * 26);
+    for (let x = 0; x < 26; x++) S.put(8 + x, 20, 32, [0, 0, 0], x < n ? lerp([180, 20, 40], [255, 90, 100], x / 26) : [30, 8, 12]);
+    return;
+  }
+  // Classic: a deep blue field brightening from the top, the logo in amber with a shadow and a gloss, the model on a chip, a rounded bar
   const f = Math.min(1, u / 0.5);
-  const bgAt = (y: number): C3 => { const k = f * (1 - y / SH); return [6 + 18 * k, 10 + 34 * k, 20 + 70 * k]; };
+  const bgAt = (y: number): C3 => { const q = f * (1 - y / SH); return [6 + 18 * q, 10 + 34 * q, 20 + 70 * q]; };
   for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
-  // the maker's name in big letters while it fits the screen, a shadow under it and a lighter top half; a long one spelled out
   const g = Math.min(1, u * 2), lo: C3 = [255 * g, 170 * g, 60 * g], hi: C3 = [255 * g, 226 * g, 150 * g];
   if (big) {
     bigText(S, 7, maker, [0, 0, 0], u - 0.2, 1);
     bigText(S, 6, maker, lo, u - 0.2);
-    // the gloss: the top three rows of the letters lighter (bigText draws in from the top)
     bigText(S, 6, maker, hi, Math.min(u - 0.2, 2.5 / 30));
-  } else { const sp = maker.split('').join(' '); S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.2, 30), lo, bgAt(9)); }
+  } else S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.2, 30), lo, bgAt(9));
   if (u > 0.6) { const m = typed(model, u - 0.6, 30), x0 = ((SW - model.length) >> 1) - 2; box(S, x0, 15, x0 + model.length + 3, 15, [20, 30, 52], bgAt(15), 1); S.text(x0 + 2, 15, m, [210, 222, 240], [20, 30, 52]); }
   const w = 26, x0 = (SW - w) >> 1, n = Math.round(Math.max(0, Math.min(1, (u - 0.9) / 1.5)) * (w - 2));
   box(S, x0, 19, x0 + w - 1, 19, [14, 20, 34], bgAt(19), 1);

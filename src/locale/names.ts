@@ -162,7 +162,9 @@ export function operatorName(city: City): string {
 
 /** The phone maker k of the city (see sim/device.ts), named from a slot of its own. */
 export function makerName(city: City, k: number): string {
-  return L.roots[(city.nameSeed + (L.roots.length - 25 - k) * 7919) % L.roots.length];
+  // the first three keep the slots they always had; the rest past the computer makers'
+  const slot = k < 3 ? 25 + k : 33 + k;
+  return L.roots[(city.nameSeed + (L.roots.length - slot) * 7919) % L.roots.length];
 }
 
 /** A Wi-Fi network's name: a shop's own (its name run together, with a suffix), or a home router's default or its owner's. */

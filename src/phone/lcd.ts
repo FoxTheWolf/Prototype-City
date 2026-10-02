@@ -51,6 +51,13 @@ export class Lcd {
   fill(y: number, bg: C3) { for (let x = 0; x < SW; x++) this.put(x, y, 32, bg, bg); }
   /** Text centered on row y. */
   center(y: number, s: string, fg: C3, bg: C3) { this.text((SW - s.length) >> 1, y, s, fg, bg); }
+  /** The background colour drawn at screen cell (x, y), or null off the grid. */
+  peek(x: number, y: number): C3 | null {
+    const gx = this.x0 + x, gy = this.y0 + y, g = this.g;
+    if (x < 0 || y < 0 || x >= SW || y >= SH || gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return null;
+    const k = (gy * g.cols + gx) * 4;
+    return [g.bg[k], g.bg[k + 1], g.bg[k + 2]];
+  }
   /** Whether there is an HD layer to draw pixels on. */
   get hd(): boolean { return !!HDL; }
   /** HD pixel (ix, iy) (0..HD-1 each) of screen cell (x, y), over the interface. */
