@@ -2,7 +2,7 @@ import { playerPhone, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
 import { Call, type Sfx } from './call';
-import { takePhoto, type Photo } from './camera';
+import { MAX_ZOOM, takePhoto, type Photo } from './camera';
 import { CONVERT, Snake } from './store';
 import { type CharGrid } from '../render/grid';
 import { codeKind, secretCodes, type CodeKind } from './codes';
@@ -111,6 +111,8 @@ export const EDGE_LIMIT_KB = 10 * 1024;
 const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
 export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose', 'wifikey'];
+/** Screens with shortcuts on the lower keys (7-9, *, 0, #): held as high, so a click reaches them. */
+const LOW_KEYS: Screen[] = ['map', 'calendar', 'photos', 'clock'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -196,6 +198,9 @@ export class Phone {
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
   raise = 0;
+  /** 0 .. 1: peeking out of the pocket for a notification, until peekUntil. */
+  peek = 0;
+  peekUntil = 0;
   /** 0 .. 1: held higher, the whole keypad in sight, while the screen wants typing (as in GTA IV). */
   lift = 0;
   /** The grid cell under the system cursor, and the key there. */
@@ -243,6 +248,9 @@ export class Phone {
   render: ((g: CharGrid, k?: number) => void) | null = null;
   /** The camera draws in blocks (two pixels a cell) or in characters; # switches. */
   camBlocks = true;
+  /** The camera's zoom (1 .. MAX_ZOOM) and whether its flash fires. */
+  camZoom = 1;
+  camFlash = true;
   light = 1;
   readonly photos: Photo[] = [];
   phsel = 0;
@@ -255,6 +263,9 @@ export class Phone {
   calc = { cur: '0', acc: 0, op: '', fresh: true };
   /** Notes: the text (typed through noteEd). */
   note = '';
+  /** Clock: the alarm (minute of the day, on or off), the minute last checked. */
+  alarm = { min: 7 * 60, on: false };
+  private alarmLast = -1;
   /** Clock: the stopwatch, running since `swAt` (or -1), with `swAcc` seconds before. */
   swAt = -1;
   swAcc = 0;
@@ -282,9 +293,21 @@ export class Phone {
   }
 
   update(dt: number, now: number) {
-    this.raise += ((this.out ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
-    const typing = TYPING.includes(this.screen) || (this.screen === 'calendar' && this.cal.view === 'new');
+    // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
+    // out a little for a text or a reminder (its top row in sight for a few seconds)
+    const ringing = this.callIn && this.call?.state === 'ringing';
+    this.raise += ((this.out || ringing ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
+    this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
+    const app = this.screen === 'app' ? STORE[this.appId][0] : '';
+    const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (this.screen === 'calendar' && this.cal.view === 'new');
     this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
+    // the alarm clock: once a day at its minute, it rings with a note
+    const minute = Math.floor(this.world.time / 60) % 1440;
+    if (this.alarm.on && this.alarmLast >= 0 && minute !== this.alarmLast && ((minute - this.alarm.min + 1440) % 1440) < ((minute - this.alarmLast + 1440) % 1440)) {
+      this.incoming.push({ from: en.phone.app.clock, text: en.phone.apps.alarmRing.replace('{t}', `${String(Math.floor(this.alarm.min / 60)).padStart(2, '0')}:${String(this.alarm.min % 60).padStart(2, '0')}`), at: now });
+      if (this.prefs.profile === 0) this.cue = 'ring'; else if (this.prefs.profile === 1) this.buzz(now, 3);
+    }
+    this.alarmLast = minute;
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
       r.done = true;
@@ -303,6 +326,7 @@ export class Phone {
       if (now < m.at || this.radio.state !== 'service') continue;
       this.incoming.splice(i, 1);
       this.inbox.unshift({ from: m.from, text: m.text, at: this.world.time, read: false });
+      if (!this.out) this.peekUntil = now + 4;
       this.sfx.push(['sms']);
       if (this.prefs.profile === 1) this.buzz(now, 0.8);
     }
@@ -538,13 +562,16 @@ export class Phone {
           if (this.freeKB() < 600) { this.sfx.push(['fail']); return false; }
           // the flash fires as the picture is taken (it lights the scene the sensor sees)
           const p = this.world.player;
-          this.shotAt = performance.now() / 1000;
-          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light + 0.9, this.world.time, p.x, p.y, this.world.seed, this.camBlocks));
+          if (this.camFlash) this.shotAt = performance.now() / 1000;
+          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light + (this.camFlash ? 0.9 : 0), this.world.time, p.x, p.y, this.world.seed, this.camBlocks, this.camZoom));
           this.sfx.push(['shutter']);
           return true;
         }
         if (k === 'lsoft') { this.phsel = 0; this.open('photos', now); return true; }
-        if (k === '#') { this.camBlocks = !this.camBlocks; return true; }
+        // the d-pad: up and down zoom, left the flash, right pixels or characters (# too)
+        if (k === 'up' || k === 'down') { this.camZoom = Math.max(1, Math.min(MAX_ZOOM, this.camZoom * (k === 'up' ? 1.25 : 0.8))); if (this.camZoom < 1.05) this.camZoom = 1; return true; }
+        if (k === 'left') { this.camFlash = !this.camFlash; return true; }
+        if (k === 'right' || k === '#') { this.camBlocks = !this.camBlocks; return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       case 'photos': {
@@ -669,6 +696,10 @@ export class Phone {
         return r;
       }
       case 'clock':
+        // the alarm: up/down 10 minutes, left/right an hour (setting it turns it on), 1 on or off
+        if (k === 'up' || k === 'down') { this.alarm.min = (this.alarm.min + (k === 'up' ? 10 : -10) + 1440) % 1440; this.alarm.on = true; return true; }
+        if (k === 'left' || k === 'right') { this.alarm.min = (this.alarm.min + (k === 'right' ? 60 : -60) + 1440) % 1440; this.alarm.on = true; return true; }
+        if (k === '1') { this.alarm.on = !this.alarm.on; return true; }
         if (k === 'ok' || k === 'lsoft') { if (this.swAt >= 0) { this.swAcc += now - this.swAt; this.swAt = -1; } else this.swAt = now; return true; }
         if (k === '*') { this.swAcc = 0; if (this.swAt >= 0) this.swAt = now; return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }

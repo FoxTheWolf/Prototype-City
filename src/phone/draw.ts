@@ -42,13 +42,19 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
   // vibrating: the phone shakes in the hand in the same bursts as the buzz (0.47 s on every 0.8 s)
   const t = performance.now() / 1000, u = P.buzzUntil - t, on = u > 0 && (P.buzzLen - u) % 0.8 < 0.47;
   const sx = on ? (Math.floor(t * 34) % 2 ? 1 : -1) : 0, sy = on && Math.floor(t * 23) % 3 === 0 ? 1 : 0;
-  return [cols - PHONE_W - 6 + sx, rows - Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e) + sy];
+  const peek = Math.round(9 * (1 - (1 - P.peek) ** 3));
+  return [cols - PHONE_W - 6 + sx, rows - Math.max(peek, Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e)) + sy];
 }
 
 /** The key under a grid cell, if any. */
 export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number): Key | null {
   const [ox, oy] = origin(cols, rows, P);
-  for (const [k, x0, y0, w, h] of keysFor(P.look)) if (x >= ox + x0 && x < ox + x0 + w && y >= oy + y0 && y < oy + y0 + h) return k;
+  // the arrows are thin: their hit areas reach a row (or two columns) further out than they are drawn
+  const grow: Partial<Record<Key, [number, number, number, number]>> = { up: [0, -1, 0, 1], down: [0, 0, 0, 1], left: [-2, 0, 2, 0], right: [0, 0, 2, 0] };
+  for (const [k, x0, y0, w, h] of keysFor(P.look)) {
+    const [gx, gy, gw, gh] = grow[k] ?? [0, 0, 0, 0];
+    if (x >= ox + x0 + gx && x < ox + x0 + gx + w + gw && y >= oy + y0 + gy && y < oy + y0 + gy + h + gh) return k;
+  }
   return null;
 }
 
@@ -62,7 +68,7 @@ const GLOSS: Record<string, number> = { matte: 0.2, gloss: 0.6, metal: 0.42, rub
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
 
 export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
-  if (P.raise < 0.01) return;
+  if (P.raise < 0.01 && P.peek < 0.01) return;
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
   const SHL = SHELLS[P.look], KEYS = keysFor(P.look), CY = KEYS_Y;
@@ -76,7 +82,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   // the eye adapts in a second or two: in the dark the screen looks brighter and blooms, under a
   // strong light it looks a little dimmer
   GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
-  const gain = Math.min(1.55, Math.max(0.55, 1.7 - 0.75 * GL.adapt)), bloom = Math.min(1, Math.max(0, (0.9 - GL.adapt) / 0.5));
+  // (capped: a bright page must not wash out in the dark, see the ceiling on the glass below)
+  const gain = Math.min(1.18, Math.max(0.6, 1.6 - 0.7 * GL.adapt)), bloom = 0.6 * Math.min(1, Math.max(0, (0.9 - GL.adapt) / 0.5));
   // the glint: the brightest light nearby mirrored in the phone, a soft diagonal band on the side
   // it comes from, in its color, stronger for a light behind the player
   const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
@@ -229,8 +236,10 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const gx = ox + SX + x, gy = oy + SY + y;
     if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
     const k = (gy * g.cols + gx) * 4, sh = sheen(SX + x, SY + y) * amp * 0.45, C = g.cells, B = g.bg;
-    for (let c = 1; c < 4; c++) C[k + c] *= gain;
-    for (let c = 0; c < 3; c++) B[k + c] *= gain;
+    // the glass's ceiling: past 200 the light rolls off, so the brightest pages keep their detail
+    const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
+    for (let c = 1; c < 4; c++) C[k + c] = roll(C[k + c] * gain);
+    for (let c = 0; c < 3; c++) B[k + c] = roll(B[k + c] * gain);
     ar += B[k] + C[k + 1] * 0.3; ag += B[k + 1] + C[k + 2] * 0.3; ab += B[k + 2] + C[k + 3] * 0.3; n++;
     B[k] += 3 * Lr + sh * GL.r; B[k + 1] += 3 * Lg + sh * GL.g; B[k + 2] += 4 * Lb + sh * GL.b;
     C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;

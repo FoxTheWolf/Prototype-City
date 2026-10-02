@@ -18,10 +18,14 @@ export interface Photo {
   x: number;
   y: number;
   kb: number;
+  /** Taken in blocks (two pixels a cell) rather than characters. */
+  blocks: boolean;
 }
 
 /** Columns of a photo for a camera of so many megapixels (rows follow at half, as the cells are tall). */
-export const photoCols = (mp: number) => (mp >= 3 ? 84 : mp >= 2 ? 64 : mp >= 1 ? 52 : 32);
+export const photoCols = (mp: number) => (mp >= 3 ? 128 : mp >= 2 ? 104 : mp >= 1 ? 80 : 48);
+/** The lens zooms this far; past it, the zoom is digital (the picture's pixels grow). */
+export const OPTICAL = 1.5, MAX_ZOOM = 4;
 
 const grids = new Map<string, CharGrid>();
 function gridOf(w: number, h: number, tag = '') {
@@ -32,7 +36,7 @@ function gridOf(w: number, h: number, tag = '') {
 }
 
 /** How much of a cell a glyph covers, roughly: a cell's color is its background mixed toward its glyph's by this. */
-function cover(c: number): number {
+export function cover(c: number): number {
   if (c === 0 || c === 32) return 0;
   if (c >= 128 && c <= 131) return [1, 0.75, 0.5, 0.25][c - 128];
   if (c >= 128) return 0.5;
@@ -50,11 +54,22 @@ function cover(c: number): number {
  * is rendered at twice the rows and each cell shows two pixels (its glyph's colour mixed with its
  * background's): a picture, not characters.
  */
-export function expose(render: (g: CharGrid, k?: number) => void, w: number, h: number, light: number, frame: number, blocks = false): CharGrid {
-  const g = blocks ? gridOf(w, h * 2, 'b') : gridOf(w, h);
-  render(g, blocks ? 2 : 1);
+export function expose(render: (g: CharGrid, k?: number) => void, w: number, h: number, light: number, frame: number, blocks = false, zoom = 1): CharGrid {
+  const H = blocks ? h * 2 : h, g = gridOf(w, H, blocks ? 'b' : '');
+  if (zoom <= 1) render(g, blocks ? 2 : 1);
+  else {
+    // zoom: the lens renders more cells over the same view (real detail) up to OPTICAL; the middle
+    // of it is then picked out, its pixels growing past that (digital)
+    const opt = Math.min(OPTICAL, zoom), W2 = Math.round(w * opt), H2 = Math.round(H * opt), r = gridOf(W2, H2, blocks ? 'zb' : 'z');
+    render(r, blocks ? 2 : 1);
+    for (let y = 0; y < H; y++) for (let x = 0; x < w; x++) {
+      const sx = Math.floor(W2 / 2 + (x - w / 2 + 0.5) * opt / zoom), sy = Math.floor(H2 / 2 + (y - H / 2 + 0.5) * opt / zoom);
+      const a = (sy * W2 + sx) * 4, b = (y * w + x) * 4;
+      for (let c = 0; c < 4; c++) { g.cells[b + c] = r.cells[a + c]; g.bg[b + c] = r.bg[a + c]; }
+    }
+  }
   const dark = Math.max(0, Math.min(1, (0.7 - light) / 0.6)), gain = 1 + dark * 0.6;
-  if (dark > 0.02) for (let i = 0; i < w * h; i++) {
+  if (dark > 0.02) for (let i = 0; i < w * H; i++) {
     const n = hash3(frame, i, 77), k = i * 4;
     // sensor noise: the dim picture pushed brighter, specks of color, glyphs lost to grain
     for (let c = 0; c < 3; c++) {
@@ -75,7 +90,7 @@ export function expose(render: (g: CharGrid, k?: number) => void, w: number, h: 
   return o;
 }
 
-export function takePhoto(render: (g: CharGrid, k?: number) => void, mp: number, light: number, at: number, x: number, y: number, seed: number, blocks = false): Photo {
-  const w = photoCols(mp), h = Math.round(w / 2), g = expose(render, w, h, light, seed ^ Math.floor(at), blocks);
-  return { w, h, cells: g.cells.slice(), bg: g.bg.slice(), at, x, y, kb: Math.round(mp * 280 + hash3(seed, at, 5) * 120) };
+export function takePhoto(render: (g: CharGrid, k?: number) => void, mp: number, light: number, at: number, x: number, y: number, seed: number, blocks = false, zoom = 1): Photo {
+  const w = photoCols(mp), h = Math.round(w / 2), g = expose(render, w, h, light, seed ^ Math.floor(at), blocks, zoom);
+  return { w, h, cells: g.cells.slice(), bg: g.bg.slice(), at, x, y, kb: Math.round(mp * 280 + hash3(seed, at, 5) * 120), blocks };
 }

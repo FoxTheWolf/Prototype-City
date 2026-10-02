@@ -20,12 +20,19 @@ function skyWord(w: Weather): string {
   if (w.precip > 0.02) return w.snow ? K.snow : w.precip > 0.75 ? K.storm : w.precip < 0.25 ? K.drizzle : K.rain;
   return w.cloud > 0.75 ? K.cloudy : w.cloud > 0.35 ? K.partly : K.clear;
 }
-/** A little picture of the weather, 5 cells by 2. */
-function icon(w: Weather, night: boolean): [string, string, C3] {
-  if (w.precip > 0.02) return w.snow ? ['(___)', ' * * ', [235, 240, 255]] : w.precip > 0.75 ? ['(___)', ' /// ', [255, 230, 120]] : ['(___)', ' / / ', [170, 210, 255]];
-  if (w.cloud > 0.75) return [' .-. ', '(___)', [225, 230, 238]];
-  if (w.cloud > 0.35) return night ? [' (  .', '(___)', [225, 230, 238]] : ['\\|.-.', '(___)', [255, 220, 110]];
-  return night ? ['  _  ', ' ((  ', [240, 235, 200]] : [' \\|/ ', '-( )-', [255, 220, 90]];
+/** A little picture of the weather, 5 cells by 3, each row in the color of what it shows (sun, moon, cloud, rain, snow, lightning). */
+const SUN: C3 = [255, 214, 70], MOON: C3 = [236, 232, 196], CLOUD: C3 = [232, 236, 244], DARKC: C3 = [150, 156, 170], RAIN: C3 = [120, 180, 255], BOLT: C3 = [255, 240, 110];
+function icon(w: Weather, night: boolean): [string, C3][] {
+  const cloud: C3 = w.precip > 0.75 ? DARKC : CLOUD;
+  if (w.precip > 0.02) {
+    if (w.snow) return [[' .-. ', CLOUD], ['(___)', CLOUD], ['* * *', [255, 255, 255]]];
+    if (w.precip > 0.75) return [['(___)', cloud], ['  /_ ', BOLT], [" /'' ", BOLT]];
+    if (w.precip < 0.25) return [[' .-. ', cloud], ['(___)', cloud], [" ' ' ", RAIN]];
+    return [['(___)', cloud], [' ////', RAIN], ['//// ', RAIN]];
+  }
+  if (w.cloud > 0.75) return [['  .-.', CLOUD], ['.(   ', CLOUD], ['(____', CLOUD]];
+  if (w.cloud > 0.35) return night ? [['  )  ', MOON], [' .-. ', CLOUD], ['(___)', CLOUD]] : [['\\ | ', SUN], [' .-. ', CLOUD], ['(___)', CLOUD]];
+  return night ? [[' .-. ', MOON], ['(  ( ', MOON], [" '-' ", MOON]] : [['\\ | /', SUN], ['- O -', SUN], ['/ | \\', SUN]];
 }
 
 const ahead: Weather = newWeather(), sun = new Float64Array(2);
@@ -79,8 +86,7 @@ export function weatherApp(S: Lcd, P: Phone, world: World, t: number, now: numbe
     const lab = h ? W.in.replace('{h}', String(h)) : W.now;
     S.text(x0 + ((7 - lab.length) >> 1), 14, lab, WHITE, cardBg);
     S.text(x0 + 1, 15, hhmm(hr).slice(0, 5), SOFT, cardBg);
-    const [a, b, col] = icon(ahead, night);
-    S.text(x0 + 1, 16, a, col, cardBg); S.text(x0 + 1, 17, b, col, cardBg);
+    icon(ahead, night).forEach(([row, col], r) => S.text(x0 + 1, 16 + r, row.slice(0, 5), col, cardBg));
     const tt = `${f(ahead.temp)}°`;
     S.text(x0 + ((7 - tt.length) >> 1), 19, tt, WHITE, cardBg);
   });

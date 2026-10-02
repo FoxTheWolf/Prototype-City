@@ -796,7 +796,7 @@
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
-      "recent": "Recent", "camBlocks": "# PIXELS", "camText": "# ASCII", "newText": "new text", "newTexts": "new texts",
+      "recent": "Recent", "camBlocks": "PIX", "camText": "ASCII", "flashOn": "FLASH", "flashOff": "NO FLASH", "camKeys": "^v zoom  < flash  > pix/ascii", "newText": "new text", "newTexts": "new texts",
       "about": { "map": "Where you are, and the way", "calls": "Dial a number", "contacts": "The numbers on your SIM", "messages": "Texts in and out", "camera": "Take a picture", "wire": "What the city is saying", "news": "The city's paper", "weather": "Skycast forecast", "calendar": "Days, holidays, reminders", "clock": "Time and a stopwatch", "calc": "Add it up", "notes": "A pad for anything", "snake": "Eat, grow, don't bite", "folder": "Apps you downloaded", "store": "Get more apps", "settings": "Sounds, looks, phone" },
       "set": {
         "pages": { "sound": "Sounds", "display": "Display", "looks": "Phone & case", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)", "people": "People here (debug)" },
@@ -834,7 +834,7 @@
       "boxes": ["Inbox", "Sent", "Drafts", "Outbox"],
       "messages": ["No network", "Messages cannot be sent"],
       "calling": "CALLING", "ringing": "RINGING", "incoming": "INCOMING CALL", "missed": "{n} MISSED CALL", "missedN": "{n} MISSED CALLS", "answer": "Answer", "unreachable": "NOT REACHABLE", "noNetwork": "NO NETWORK", "busy": "NETWORK BUSY", "noAnswer": "NO ANSWER", "callEnded": "CALL ENDED", "care": "Customer Care", "save": "Save", "new": "New", "end": "End", "name": "Name", "numberF": "Number", "noContacts": "No contacts. New adds one.", "sim": "SIM {n}/250", "cost": "Cost {c}", "callFailed": "CALL FAILED", "dialHint": "Type a number", "call": "Call", "clear": "Clear",
-      "stopwatch": "STOPWATCH", "stopwatchHint": "* reset", "start": "Start", "stop": "Stop",
+      "stopwatch": "STOPWATCH", "stopwatchHint": "^v <> alarm  1 on/off  * reset", "alarm": "ALARM", "alarmOn": "ON", "alarmOff": "off", "alarmRing": "Alarm {t}. Time to get up.", "start": "Start", "stop": "Stop",
       "calcHint": ["^ +   v -   < x   > /", "OK =   * clear   # ."],
       "notesHint": "Tap the keys: 2 abc .. 9 wxyz  (# for T9)",
       "model": "Model", "cameraRow": "Camera", "os": "Software", "cpu": "Processor", "ram": "Memory", "flash": "Storage", "display": "Display", "radio": "Radio", "network": "Network",

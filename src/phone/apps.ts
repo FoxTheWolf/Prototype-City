@@ -13,7 +13,7 @@ import { BAR, bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS,
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
-import { expose, type Photo } from './camera';
+import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APPS, EDGE_LIMIT_KB, MENU_COLS, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
@@ -320,8 +320,10 @@ function clock(S: Lcd, P: Phone, world: World, t: number, now: number) {
   const c = calendar(world.time);
   bigText(S, 4, hhmm(c.hour), AMB, t);
   S.center(12, `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`, [160, 150, 140], BG);
-  for (let x = 4; x < SW - 4; x++) S.put(x, 14, ch('-'), [40, 34, 30], BG);
   const sw = P.swAcc + (P.swAt >= 0 ? now - P.swAt : 0), m = Math.floor(sw / 60), s2 = sw % 60;
+  // the alarm: its time, lit when on
+  const al = `${A.alarm} ${hhmm(P.alarm.min / 60)} ${P.alarm.on ? A.alarmOn : A.alarmOff}`;
+  S.center(13, al, P.alarm.on ? AMB : DAMB, BG);
   S.center(15, A.stopwatch, DAMB, BG);
   bigText(S, 16, `${String(m).padStart(2, '0')}:${String(Math.floor(s2)).padStart(2, '0')}`, P.swAt >= 0 ? AMB : DAMB);
   S.center(SH - 2, A.stopwatchHint, [90, 80, 70], BG);
@@ -569,18 +571,39 @@ function picture(S: Lcd, cells: Uint8ClampedArray, bg: Uint8ClampedArray, w: num
   }
 }
 
+/**
+ * A photo in blocks shown on the screen's rows y0..y1: scaled down by averaging its pixels (two per
+ * cell), so a big picture keeps its detail instead of skipping rows and columns.
+ */
+function photoBlocks(S: Lcd, p: Photo, y0: number, y1: number) {
+  const rows = y1 - y0, pw = p.w, ph = p.h * 2;
+  const k = Math.max(pw / SW, ph / (rows * 2)), dw = Math.floor(pw / k), dh = Math.floor(ph / k / 2), x0 = (SW - dw) >> 1, top = y0 + ((rows - dh) >> 1);
+  const px = (x: number, y: number, c: number) => { const q = ((y >> 1) * pw + x) * 4; return y & 1 ? p.bg[q + c] : p.cells[q + 1 + c]; };
+  const avg = (sx0: number, sy0: number): C3 => {
+    const sx1 = Math.max(sx0 + 1, Math.floor(sx0 + k)), sy1 = Math.max(sy0 + 1, Math.floor(sy0 + k)), o = [0, 0, 0];
+    let n = 0;
+    for (let y = sy0; y < sy1 && y < ph; y++) for (let x = sx0; x < sx1 && x < pw; x++) { for (let c = 0; c < 3; c++) o[c] += px(x, y, c); n++; }
+    return [o[0] / n, o[1] / n, o[2] / n];
+  };
+  for (let y = 0; y < dh; y++) for (let x = 0; x < dw; x++) {
+    const sx = Math.floor(x * k), a = avg(sx, Math.floor(y * 2 * k)), b = avg(sx, Math.floor((y * 2 + 1) * k));
+    S.put(x0 + x, top + y, SHAPE.top, a, b);
+  }
+}
+
 let finder: CharGrid | null = null, finderAt = -1, finderN = 0;
 /** The camera: the viewfinder live (15 times a second), a white flash on a shot, how many fit in the storage. */
 function cameraScreen(S: Lcd, P: Phone, now: number) {
-  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++, P.camBlocks); finderAt = now; }
+  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++, P.camBlocks, P.camZoom); finderAt = now; }
   if (finder) picture(S, finder.cells, finder.bg, SW, SH - 2, 1, SH - 1);
   if (now - P.shotAt < 0.15) for (let y = 1; y < SH - 1; y++) S.fill(y, WHITE);
   // the frame's corners, the resolution and the photos left
   for (const [x, y, c] of [[1, 2, '+'], [SW - 2, 2, '+'], [1, SH - 3, '+'], [SW - 2, SH - 3, '+']] as const) S.put(x, y, ch(c), WHITE, [0, 0, 0]);
   const left = Math.max(0, Math.floor(P.freeKB() / (P.device.cameraMP * 340)));
   S.text(1, 1, ` ${P.device.cameraMP}MP  ${left} `, WHITE, [0, 0, 0]);
-  const mode = P.camBlocks ? A.camBlocks : A.camText;
-  S.text(SW - mode.length - 2, 1, ` ${mode}`, WHITE, [0, 0, 0]);
+  const mode = `${P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? 'D' : ''} ` : ''}${P.camFlash ? A.flashOn : A.flashOff} ${P.camBlocks ? A.camBlocks : A.camText}`;
+  S.text(SW - mode.length - 2, 1, ` ${mode} `, WHITE, [0, 0, 0]);
+  S.text(1, SH - 2, ` ${A.camKeys} `, [200, 200, 200], [0, 0, 0]);
   softKeys(S, `${A.photos} (${P.photos.length})`, T.back);
   S.text((SW - A.shoot.length) >> 1, SH - 1, A.shoot, HI, BAR);
 }
@@ -590,7 +613,7 @@ function photosScreen(S: Lcd, P: Phone, t: number) {
   const p: Photo | undefined = P.photos[P.phsel];
   title(S, `${A.photos.toUpperCase()} ${p ? `${P.phsel + 1}/${P.photos.length}` : ''}`, t);
   if (!p) { S.center(10, A.noPhotos, DIM, LCD); return softKeys(S, '', T.back); }
-  picture(S, p.cells, p.bg, p.w, p.h, 2, SH - 2);
+  if (p.blocks) photoBlocks(S, p, 2, SH - 2); else picture(S, p.cells, p.bg, p.w, p.h, 2, SH - 2);
   const c = calendar(p.at);
   S.text(1, SH - 2, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}  ${p.kb} KB  ${A.del}`, DIM, LCD);
   softKeys(S, '< >', T.back);
