@@ -54,6 +54,11 @@ const CAR_NEAR = 70;
 const PED_DRAW = 130, PED_NEAR = 40;
 /** Headlights and tail lights light the street this close (farther, the lamps on the car still show). */
 const CAR_LIGHT_FAR = 90;
+/**
+ * Closer than this a car's headlights are two cones, one per lamp (further, one cone for the pair),
+ * for the CAR_TWIN_MAX nearest at most: each second cone costs ~0.1 ms of a single-thread frame.
+ */
+const CAR_TWIN_FAR = 40, CAR_TWIN_MAX = 8;
 /** Distance where building fog reaches ~63%. Long, so the skyline reads across the whole city. */
 const FOG = 1500;
 /** Street lamps light walls and objects up to this height, and this far from the viewer. */
@@ -1394,16 +1399,28 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
 function gatherLights(world: World, v: View, sec: number) {
   const { city } = world;
   dyn.begin(v.x, v.y);
+  // the squared distance within which cars get a cone per headlamp: CAR_TWIN_FAR, or nearer when
+  // more than CAR_TWIN_MAX are that close
+  const near2: number[] = [];
+  for (const c of world.cars) { const d2 = (c.x - v.x) ** 2 + (c.y - v.y) ** 2; if (d2 < CAR_TWIN_FAR * CAR_TWIN_FAR && c.kind !== 'bike') near2.push(d2); }
+  const twinD2 = near2.length > CAR_TWIN_MAX ? near2.sort((a, b) => a - b)[CAR_TWIN_MAX - 1] : CAR_TWIN_FAR * CAR_TWIN_FAR;
   for (const c of world.cars) {
     carPose(c, v.alpha, POSE);
     const [x, y, dx, dy] = POSE;
     if (Math.abs(x - v.x) > CAR_LIGHT_FAR || Math.abs(y - v.y) > CAR_LIGHT_FAR) continue;
-    const hl = c.len / 2, bike = c.kind === 'bike', fl = !bike && flashing(c, world.tick) ? 2.2 : 1;
+    const hl = c.len / 2, bike = c.kind === 'bike', fl = !bike && flashing(c, world.tick) ? 2.2 : 1, hw = halfW(c.kind) - 0.25;
     // a flash of the headlights: the high beams, brighter and further for a blink
-    dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, bike ? 8 : 24 * (fl > 1 ? 1.6 : 1), 1, 4, (bike ? 60 : 150) * fl, (bike ? 58 : 140) * fl, (bike ? 50 : 115) * fl);
+    const range = bike ? 8 : 24 * (fl > 1 ? 1.6 : 1), hr = (bike ? 60 : 150) * fl, hg = (bike ? 58 : 140) * fl, hb = (bike ? 50 : 115) * fl;
+    if (!bike && (x - v.x) ** 2 + (y - v.y) ** 2 <= twinD2) {
+      // up close, a cone from each headlamp (each a little more than half the pair's light)
+      for (const sd of [-hw, hw]) dyn.cone(x + dx * hl - dy * sd, y + dy * hl + dx * sd, dx, dy, 0.87, range, 1, 4, hr * 0.6, hg * 0.6, hb * 0.6);
+    } else dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb);
     if (!bike) dyn.point(x - dx * (hl + 0.1), y - dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
-    // the turn signal blinking amber on its side
-    if (!bike && blinkOn(c, sec)) { const s = c.sig * (halfW(c.kind)); dyn.point(x - dy * s, y + dx * s, 2.5, 0.5, 1.5, 130, 70, 0); }
+    // the turn signal blinking amber at its front and back corners on that side
+    if (!bike && blinkOn(c, sec)) {
+      const sd = c.sig * hw;
+      for (const f of [hl + 0.05, -hl - 0.05]) dyn.point(x + dx * f - dy * sd, y + dy * f + dx * sd, 2.5, 0.5, 1.5, 110, 60, 0);
+    }
     // a police beacon throws red and blue around it in turns
     // a wreck's hazard lights blink amber
     if (c.wreck && Math.floor(sec * 1.6) & 1) dyn.point(x, y, 6, 1, 3, 150, 90, 10);
