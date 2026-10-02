@@ -1,5 +1,5 @@
 import { hash3, type Rng } from '../core/rng';
-import { SIDEWALK, type Block, type City } from './city';
+import { diagS, SIDEWALK, type Block, type City } from './city';
 import { Doing, whereIs, type Population } from './citizens';
 import { doorPoint } from './interior';
 import { type PowerGrid } from './power';
@@ -90,8 +90,12 @@ function edge(b: Block, off: number, e: number, out: number[]) {
 }
 const E = [0, 0, 0, 0, 0];
 
-/** Whether a pedestrian can walk this block's sidewalk (the diagonal's blocks are left out for now). */
-const walkable = (b: Block | undefined) => !!b && !b.diag;
+/**
+ * Whether a pedestrian can walk this block's sidewalk. The diagonal's blocks too: their ring runs
+ * along the grid's sidewalks and crosses the diagonal avenue where it cuts them (by its crosswalks
+ * at the side streets' ends), the cars stopping for whoever is on it.
+ */
+const walkable = (b: Block | undefined) => !!b;
 
 /** The block (index) a point is in, or -1 on a road. */
 function blockIndex(city: City, x: number, y: number): number {
@@ -385,6 +389,17 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
         if (p.t > E[4] || p.t < 0) { corner(city, p); if (p.way.length) { p.v = v; p.stride += v * dt; continue; } edge(b, p.off, p.e, E); }
         p.x = E[0] + E[2] * p.t; p.y = E[1] + E[3] * p.t;
         p.dx = E[2] * p.dir; p.dy = E[3] * p.dir;
+        // where the diagonal avenue cuts the block, the ring keeps to its sidewalks: slanting along the
+        // curb on either side, and straight across the avenue where the ring crosses its middle (the
+        // cars stopping for whoever is on it)
+        if (b.diag) {
+          const D = city.diagonal, sd = diagS(D, p.x, p.y), half = D.w / 2 + 1;
+          if (Math.abs(sd) < half) {
+            const lat = Math.max(-half, Math.min(half, sd * 3));
+            p.x += D.nx * (lat - sd); p.y += D.ny * (lat - sd);
+            if (Math.abs(lat) < D.w / 2) crossers.push(p.x, p.y);
+          }
+        }
       }
     }
     p.v = v;
