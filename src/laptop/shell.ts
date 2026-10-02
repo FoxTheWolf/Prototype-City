@@ -6,6 +6,7 @@ import L from '../locale/laptop.en.json';
 import { computerMakerName, wifiName } from '../locale/names';
 import { Wifi } from '../phone/wifi';
 import { Sec } from '../sim/wifi';
+import { type Host, lanHosts, setBreaker, setSignals, techOnline, WORDS } from '../sim/network';
 
 /**
  * A Unix-like shell on a Computer: the commands, the text they print and how long they take. The
@@ -40,6 +41,10 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
   ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'iwlist', 40, 520], ['/sbin', 'dhclient', 120, 900], ['/bin', 'ping', 44, 420], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
 ];
+/** The hacker tools in ~/bin: fictional stand-ins (scanner, cracker, sniffer, console). Name, size KB, memory KB. */
+const HACK_TOOLS: [string, number, number][] = [
+  ['mmap', 220, 1400], ['bruter', 180, 1600], ['tdump', 260, 2200], ['tnet', 64, 520],
+];
 /** What the shell does itself, with no program on the disk. */
 const BUILTINS = new Set(['cd', 'help', 'history', 'exit', 'logout']);
 const PATH = ['/bin', '/usr/bin', '/sbin'];
@@ -67,7 +72,10 @@ export function install(pc: Computer, t: number) {
   for (const n of ['cpuinfo', 'meminfo', 'uptime', 'version']) pc.put(`/proc/${n}`, 0, 'root', t);
   pc.mkdirs(H, u, t);
   for (const [name, text] of Object.entries(L.home)) pc.put(`${H}/${name}`, text, u, ago(2 + Math.floor(hash3(name.length, 3, 5) * 30)));
+  // the hacker tools, installed outside the app store (through the notebook): a port scanner, a
+  // password tester, a packet sniffer and a remote console. All fictional, all run on the game's network.
   pc.mkdirs(`${H}/bin`, u, t);
+  for (const [name, kb, mem] of HACK_TOOLS) pc.put(`${H}/bin/${name}`, kb * 1024, u, t, name, mem);
   // an old backup: big enough to take a while to read
   pc.put(`${H}/media/backup-2007.tar`, 734_003_200, u, ago(61));
   pc.put(`${H}/media/photos/IMG_0412.JPG`, 1_184_311, u, ago(40));
@@ -109,11 +117,16 @@ export class Shell {
   readonly net = new Wifi();
   /** The ESSID set with iwconfig, waiting for dhclient to lease an address. */
   private essid = '';
+  /** An open remote console (tnet): the host, its substation, and where we are in logging in. */
+  private conn: { host: Host; stage: 'login' | 'pass' | 'shell'; tryUser: string } | null = null;
+  /** The next typed line is not echoed (a password prompt): draw.ts shows it masked. */
+  mask = false;
 
   constructor(readonly pc: Computer, private world: World) {
     this.cwd = `/home/${pc.hw.user}`;
   }
   get prompt() {
+    if (this.conn) return this.conn.stage === 'login' ? `${this.conn.host.name} login: ` : this.conn.stage === 'pass' ? 'Password: ' : `admin@${this.conn.host.name}# `;
     const H = `/home/${this.pc.hw.user}`, w = this.cwd === H ? '~' : this.cwd.startsWith(H + '/') ? '~' + this.cwd.slice(H.length) : this.cwd;
     return `${this.pc.hw.user}@${this.pc.hw.host}:${w}$ `;
   }
@@ -171,7 +184,7 @@ export class Shell {
   /** Cold boot: the BIOS, the boot loader, the kernel, the services, the login. */
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
-    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0;
+    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.mask = false;
     pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
     // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
     // up, the drives it finds; the drive spins up meanwhile
@@ -284,7 +297,7 @@ export class Shell {
     if (this.state !== 'ready') return;
     if (ctrl && (key === 'c' || key === 'C')) {
       if (!this.ready) this.interrupt(now);
-      else { this.lines.push({ text: this.prompt + this.input + '^C', ink: 0 }); this.input = ''; this.cur = 0; }
+      else { this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(this.input.length) : this.input) + '^C', ink: 0 }); this.input = ''; this.cur = 0; this.mask = false; }
       return;
     }
     if (ctrl && (key === 'l' || key === 'L')) { this.lines = []; return; }
@@ -312,7 +325,7 @@ export class Shell {
   private complete() {
     const s = this.input.slice(0, this.cur), k = s.lastIndexOf(' ') + 1, word = s.slice(k);
     let names: string[], dir = '';
-    if (k === 0) names = [...BUILTINS, ...PATH.flatMap((d) => [...(this.pc.get(d)?.kids?.keys() ?? [])])];
+    if (k === 0) names = [...BUILTINS, ...[...PATH, `/home/${this.pc.hw.user}/bin`].flatMap((d) => [...(this.pc.get(d)?.kids?.keys() ?? [])])];
     else {
       const j = word.lastIndexOf('/');
       dir = j >= 0 ? word.slice(0, j + 1) : '';
@@ -330,8 +343,10 @@ export class Shell {
 
   // ---- the commands ----
   private run(line: string, now: number) {
-    this.lines.push({ text: this.prompt + line, ink: 2 });
+    this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(line.length) : line), ink: 2 });
     this.input = ''; this.cur = 0; this.hi = -1; this.tq = now;
+    const wasMasked = this.mask; this.mask = false;
+    if (this.conn) { this.remote(line.trim(), wasMasked, now); this.busyUntil = this.tq; return; }
     const t = line.trim();
     if (!t) return;
     if (this.hist[this.hist.length - 1] !== t) this.hist.push(t);
@@ -346,7 +361,7 @@ export class Shell {
     // a program has to be on the disk and fit in the memory
     let prog: FsNode | null = null;
     if (!BUILTINS.has(name)) {
-      for (const d of name.includes('/') ? [''] : PATH) { const f = pc.get(d ? `${d}/${name}` : pc.abs(this.cwd, name)); if (f?.exec) { prog = f; break; } }
+      for (const d of name.includes('/') ? [''] : [...PATH, `/home/${pc.hw.user}/bin`]) { const f = pc.get(d ? `${d}/${name}` : pc.abs(this.cwd, name)); if (f?.exec) { prog = f; break; } }
       if (!prog) { this.say(now, fill(L.err.notfound, { c: name })); this.busyUntil = this.tq; return; }
       const p = pc.spawn(prog.exec!, pc.hw.user, prog.memKB, now);
       if (!p) { this.say(now, fill(L.err.nomem, { c: name }), 0, 0.05); this.busyUntil = this.tq; return; }
@@ -382,6 +397,55 @@ export class Shell {
     let best = -1, bd = -1e9;
     for (const [i, d] of this.net.list) if (wifiName(this.world.city, this.world.wifi[i]) === essid && d > bd) { bd = d; best = i; }
     return best;
+  }
+  /** The hosts on the joined network, or null when offline. */
+  private lan(): Host[] | null { return this.net.state === 'up' ? lanHosts(this.world, this.net.ap) : null; }
+
+  /** A line typed in an open tnet session: the login, the password, or a console command on the host. */
+  private remote(line: string, _masked: boolean, now: number) {
+    const C = this.conn!;
+    if (C.stage === 'login') { C.tryUser = line; C.stage = 'pass'; this.mask = true; return; }
+    if (C.stage === 'pass') {
+      if (C.tryUser === C.host.user && line === C.host.pass) { C.stage = 'shell'; this.say(now, '', 0, 0.2); this.say(now, C.host.ports[0].banner, 0, 0.1); this.say(now, `Type 'help' for commands, 'exit' to disconnect.`, 0, 0.1); }
+      else { this.say(now, 'Login incorrect', 0, 0.4); this.say(now, '', 0, 0.1); C.stage = 'login'; C.tryUser = ''; }
+      return;
+    }
+    const w = this.world, k = C.host.sub, argv = line.split(/\s+/).filter(Boolean), c = argv[0] ?? '';
+    const close = () => { this.say(now, 'Connection closed.', 0, 0.2); this.conn = null; };
+    if (c === 'exit' || c === 'quit' || c === 'logout') { close(); return; }
+    if (c === '') return;
+    if (c === 'help') {
+      if (C.host.kind === 'rtu') this.say(now, 'commands: status | breaker open | breaker close | exit', 0, 0.1);
+      else if (C.host.kind === 'signal') this.say(now, 'commands: status | mode normal | mode flash | mode dark | exit', 0, 0.1);
+      else this.say(now, 'commands: status | exit', 0, 0.1);
+      return;
+    }
+    if (C.host.kind === 'rtu') {
+      const on = w.power.subs[k].on;
+      if (c === 'status') { this.say(now, `RTU-300 substation ${String(k + 1).padStart(2, '0')}: breaker ${on ? 'CLOSED (energized)' : 'OPEN (de-energized)'}`, 0, 0.2); return; }
+      if (c === 'breaker' && (argv[1] === 'open' || argv[1] === 'close')) {
+        const want = argv[1] === 'close';
+        this.say(now, `> breaker ${argv[1]}`, 0, 0.3);
+        if (!setBreaker(w, k, want)) { this.say(now, `  breaker already ${want ? 'closed' : 'open'}`, 0, 0.1); return; }
+        this.say(now, want ? '  ACK: breaker closed, feeder re-energizing' : '  ACK: breaker tripped, feeder de-energized', 2, 0.2);
+        return;
+      }
+      this.say(now, `unknown command (try 'help')`, 0, 0.1); return;
+    }
+    if (C.host.kind === 'signal') {
+      const sig = w.power.subs[k].sig, name = ['NORMAL', 'FLASH', 'DARK'][sig];
+      if (c === 'status') { this.say(now, `ATC-2 cabinet, district ${String(k + 1).padStart(2, '0')}: mode ${name}`, 0, 0.2); return; }
+      if (c === 'mode' && ['normal', 'flash', 'dark'].includes(argv[1])) {
+        const m = ['normal', 'flash', 'dark'].indexOf(argv[1]);
+        this.say(now, `> mode ${argv[1]}`, 0, 0.3);
+        setSignals(w, k, m);
+        this.say(now, `  ACK: all intersections -> ${argv[1].toUpperCase()}`, 2, 0.2);
+        return;
+      }
+      this.say(now, `unknown command (try 'help')`, 0, 0.1); return;
+    }
+    if (c === 'status') { this.say(now, `${C.host.name}: online`, 0, 0.1); return; }
+    this.say(now, `unknown command (try 'help')`, 0, 0.1);
   }
   private err(out: string[], k: keyof typeof L.err, c: string, p = '') { out.push(fill(L.err[k], { c, p, u: p })); }
   /** Run a command; it prints into `out` and returns the seconds of work it took (0: none to speak of). */
@@ -623,6 +687,84 @@ export class Shell {
         this.busyUntil = this.tq;
         return 0;
       }
+      case 'mmap': {
+        // the port scanner: the hosts on the joined network and the services they answer on
+        const lan = this.lan();
+        if (!lan) { out.push('mmap: no network (join one and run dhclient first)'); return 0; }
+        const one = args[0], hosts = one ? lan.filter((x) => x.ip === one) : lan;
+        if (one && !hosts.length) { out.push(`mmap: host ${one} down or not on this network`); return 0; }
+        this.say(now, `mmap 2.3 scan started at ${when(w.time)}`, 0, 0.1);
+        this.say(now, '', 0, 0);
+        for (const hst of hosts) {
+          this.say(now, `Host ${hst.ip} (${hst.name}) is up [${hst.mac}]`, 0, 0.35);
+          this.say(now, '  PORT    STATE  SERVICE      BANNER', 0, 0.05);
+          for (const pt of hst.ports) this.say(now, `  ${String(pt.n).padEnd(6)}  open   ${pt.service.padEnd(12)} ${pt.banner}`, 0, 0.12);
+          this.say(now, '', 0, 0);
+        }
+        this.say(now, `${hosts.length} host${hosts.length === 1 ? '' : 's'} scanned.`, 0, 0.1);
+        this.busyUntil = this.tq;
+        return 0;
+      }
+      case 'bruter': {
+        // the password tester: run the word list against a host's console (port 23)
+        const lan = this.lan();
+        if (!lan) { out.push('bruter: no network'); return 0; }
+        const hst = lan.find((x) => x.ip === args[0]);
+        if (!args[0]) { out.push('usage: bruter <ip> [login]'); return 0; }
+        if (!hst) { out.push(`bruter: host ${args[0]} not found`); return 0; }
+        const port = hst.ports.find((p) => p.n === 23);
+        if (!port || !hst.user) { out.push(`bruter: ${args[0]} has no console to test (no login service on 23)`); return 0; }
+        const login = args[1] ?? hst.user;
+        this.say(now, `bruter: ${login}@${hst.ip}:23 — ${WORDS.length} candidates`, 0, 0.1);
+        const idx = login === hst.user ? WORDS.indexOf(hst.pass) : -1, shown = idx < 0 ? WORDS.length : idx + 1;
+        for (let k = 0; k < shown; k += Math.max(1, Math.floor(shown / 6))) this.say(now, `  [${String(k + 1).padStart(3)}/${WORDS.length}] ${WORDS[k]} ...`, 1, 0.18);
+        if (idx >= 0) { this.say(now, '', 0, 0.1); this.say(now, `  PASSWORD FOUND  login:${login}  password:${hst.pass}`, 2, 0.1); }
+        else { this.say(now, '', 0, 0.1); this.say(now, `  exhausted — ${login} is not a known login here`, 0, 0.1); }
+        this.busyUntil = this.tq;
+        return 0;
+      }
+      case 'tdump': {
+        // the packet sniffer: the traffic on the joined network. A technician logged into a
+        // substation terminal over this network is in the clear, login and all — that is how the
+        // utility's passwords leak.
+        if (this.net.state !== 'up') { out.push('tdump: no network'); return 0; }
+        const A = w.wifi[this.net.ap];
+        this.say(now, `tdump: listening on wlan0, channel ${A.ch}, link-type IEEE802_11`, 0, 0.1);
+        const t0 = w.time;
+        this.say(now, `${t0.toFixed(3)} beacon ${A.bssid} ssid "${wifiName(w.city, A)}" ch ${A.ch}`, 1, 0.3);
+        this.say(now, `${(t0 + 0.4).toFixed(3)} arp who-has 192.168.${A.ch}.1 tell 192.168.${A.ch}.${100}`, 1, 0.25);
+        if (A.util >= 0 && techOnline(w, A.util)) {
+          const lan = lanHosts(w, this.net.ap), rtu = lan.find((h) => h.kind === 'rtu')!;
+          this.say(now, `${(t0 + 1.1).toFixed(3)} 192.168.${A.ch}.50 > ${rtu.ip}.23  tcp SYN`, 1, 0.3);
+          this.say(now, `${(t0 + 1.3).toFixed(3)} ${rtu.ip}.23 > 192.168.${A.ch}.50  telnet "${rtu.name} login: "`, 0, 0.3);
+          this.say(now, `${(t0 + 2.0).toFixed(3)} 192.168.${A.ch}.50 > ${rtu.ip}.23  telnet data "${rtu.user}\\r"`, 2, 0.3);
+          this.say(now, `${(t0 + 2.2).toFixed(3)} ${rtu.ip}.23 > 192.168.${A.ch}.50  telnet "Password: "`, 0, 0.3);
+          this.say(now, `${(t0 + 2.9).toFixed(3)} 192.168.${A.ch}.50 > ${rtu.ip}.23  telnet data "${rtu.pass}\\r"`, 2, 0.3);
+          this.say(now, '', 0, 0.1);
+          this.say(now, '  ^ cleartext login captured', 2, 0.1);
+        } else {
+          this.say(now, `${(t0 + 1.2).toFixed(3)} 192.168.${A.ch}.102 > 8.8.8.8.53  dns A www`, 1, 0.3);
+          this.say(now, `${(t0 + 1.6).toFixed(3)} 192.168.${A.ch}.102 > 93.184.x.x.80  http GET /`, 1, 0.3);
+          this.say(now, '', 0, 0.1);
+          this.say(now, '  (nothing of note on this network)', 0, 0.1);
+        }
+        this.busyUntil = this.tq;
+        return 0;
+      }
+      case 'tnet': {
+        const lan = this.lan();
+        if (!lan) { out.push('tnet: no network'); return 0; }
+        const hst = lan.find((x) => x.ip === args[0]);
+        if (!args[0]) { out.push('usage: tnet <ip>'); return 0; }
+        if (!hst) { out.push(`tnet: ${args[0]}: host down`); return 0; }
+        if (!hst.ports.some((p) => p.n === 23) || !hst.user) { out.push(`tnet: ${args[0]}: connection refused on port 23`); return 0; }
+        this.say(now, `Trying ${hst.ip}...`, 0, 0.3);
+        this.say(now, `Connected to ${hst.ip}.`, 0, 0.3);
+        this.say(now, `Escape character is '^]'. Type 'exit' to close.`, 0, 0.1);
+        this.then(now, () => { this.conn = { host: hst, stage: 'login', tryUser: '' }; });
+        this.busyUntil = this.tq;
+        return 0;
+      }
       case 'sha1sum': {
         let work = 0;
         for (const p of args) {
@@ -660,6 +802,7 @@ export class Shell {
   private logout(now: number) {
     this.pc.kill(this.shellPid);
     this.state = 'boot';
+    this.conn = null; this.mask = false;
     this.tq = now;
     this.say(now, 'logout');
     this.say(now, '', 0, 0.3);

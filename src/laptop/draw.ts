@@ -145,7 +145,7 @@ export function drawLaptop(g: CharGrid, P: Laptop, world: World, now: number, li
     const lines = S.lines.slice(), ready = S.ready;
     let promptRow = -1;
     if (ready) {
-      const s = S.prompt + S.input;
+      const s = S.prompt + (S.mask ? '*'.repeat(S.input.length) : S.input);
       for (let k = 0; k === 0 || k < s.length + 1; k += TERM_W) { lines.push({ text: s.slice(k, k + TERM_W), ink: 0 }); if (promptRow < 0) promptRow = lines.length - 1; }
     }
     const first = Math.max(0, lines.length - TERM_H - S.scroll);

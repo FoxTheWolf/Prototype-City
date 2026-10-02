@@ -1,5 +1,6 @@
 import { hash3 } from '../core/rng';
 import { FLOOR_H, type City } from './city';
+import { type PowerGrid } from './power';
 
 /**
  * Wi-Fi access points: the routers in the city's shops and homes. A cafe usually has an open one, a
@@ -25,6 +26,8 @@ export interface AccessPoint {
   /** The hardware address, and the radio channel (1, 6 or 11). */
   bssid: string;
   ch: number;
+  /** The substation it is the maintenance link of (a utility network), or -1 for an ordinary router. */
+  util: number;
 }
 
 /** Chance that a business of each kind has a router, and that it is open. */
@@ -32,14 +35,14 @@ const SHOP_AP: Record<string, [number, number]> = {
   cafe: [0.9, 0.85], hotel: [0.8, 0.1], bar: [0.4, 0.5], books: [0.5, 0.7], diner: [0.3, 0.6], electronics: [0.6, 0.2],
 };
 
-export function buildWifi(seed: number, city: City, sx: number, sy: number): AccessPoint[] {
+export function buildWifi(seed: number, city: City, sx: number, sy: number, power: PowerGrid): AccessPoint[] {
   const out: AccessPoint[] = [];
   const add = (x: number, y: number, z: number, building: number, biz: number, sec: number, q: number) => {
     const h = (n: number) => hash3(seed ^ 0x3f1, q, n);
     const key = sec === Sec.WPA ? String(Math.floor(h(1) * 1e10)).padStart(8 + Math.floor(h(2) * 3), '0').slice(0, 8 + Math.floor(h(2) * 3))
       : sec === Sec.WEP ? Array.from({ length: 10 }, (_, i) => String(Math.floor(h(10 + i) * 10))).join('') : '';
     const bssid = Array.from({ length: 6 }, (_, i) => Math.floor(h(30 + i) * 256).toString(16).padStart(2, '0')).join(':').toUpperCase();
-    out.push({ x, y, z, building, biz, sec, key, bssid, ch: [1, 6, 11][Math.floor(h(3) * 3)] });
+    out.push({ x, y, z, building, biz, sec, key, bssid, ch: [1, 6, 11][Math.floor(h(3) * 3)], util: -1 });
   };
   // the shops'
   city.businesses.forEach((b, k) => {
@@ -64,5 +67,10 @@ export function buildWifi(seed: number, city: City, sx: number, sy: number): Acc
   let best = -1, bd = 1e9;
   out.forEach((a, i) => { const d = Math.hypot(a.x - sx, a.y - sy); if (a.biz >= 0 && d < bd) { bd = d; best = i; } });
   if (best >= 0) { out[best].sec = Sec.Open; out[best].key = ''; }
+  // the utility's maintenance link at each substation: a WEP network (the old kind) for the technicians' laptops
+  power.subs.forEach((S, k) => {
+    add(S.x, S.y, 2, -2, -1, Sec.WEP, 900000 + k);
+    out[out.length - 1].util = k;
+  });
   return out;
 }

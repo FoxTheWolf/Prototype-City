@@ -17,6 +17,8 @@ export interface Substation {
   /** Where that switch was thrown: the blackout ring spreads out from here. */
   ox: number;
   oy: number;
+  /** What its traffic-signal controller has been told (the cabinet in its district): 0 normal, 1 flashing, 2 dark. */
+  sig: number;
 }
 
 export interface PowerGrid {
@@ -52,7 +54,7 @@ export function buildPower(seed: number, city: City): PowerGrid {
   const nx = Math.max(1, Math.round(city.w / SPACING)), ny = Math.max(1, Math.round(city.h / SPACING));
   const subs: Substation[] = [];
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    subs.push({ x: ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y: ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny, on: true, changed: -1, ox: 0, oy: 0 });
+    subs.push({ x: ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y: ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny, on: true, changed: -1, ox: 0, oy: 0, sig: 0 });
   }
   const building = new Uint8Array(city.buildings.length), generator = new Uint8Array(city.buildings.length), backup = new Uint8Array(city.buildings.length);
   const hall = city.landmarks.find((l) => l.kind === 'hall');

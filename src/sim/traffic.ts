@@ -201,6 +201,8 @@ export const stopLike = (sg: number) => sg === Sig.Dark || sg === Sig.Stop || sg
 function gridDown(power: PowerGrid, k: number, sec: number): number {
   const S = power.subs[k];
   if (!S.on) return Sig.Dark;
+  if (S.sig === 2) return Sig.Dark;
+  if (S.sig === 1) return Sig.Flash;
   if (S.changed >= 0 && sec - S.changed / 60 < 15 + 15 * hash3(k, S.changed, 5)) return Sig.Flash;
   return -1;
 }

@@ -29,6 +29,7 @@
     "  system    uname uptime date ps kill free df dmesg whoami id hostname history",
     "  hardware  lshw sensors (and /proc/cpuinfo, /proc/meminfo)",
     "  network   iwlist iwconfig dhclient ifconfig ping",
+    "  hacking   mmap bruter tdump tnet   (in ~/bin; run on a network you have joined)",
     "  other     sha1sum sleep clear color man help shutdown reboot",
     "Keys: Tab completes, Up/Down history, Ctrl+C stops, Ctrl+L clears, wheel scrolls back."
   ],
@@ -73,10 +74,14 @@
     "reboot": "reboot\n  Restart the system.",
     "iwlist": "iwlist [wlan0] [scan]\n  Scan for the wireless networks in range: their name, channel, signal and whether they are locked.",
     "dhclient": "dhclient wlan0\n  Ask the network for an address once the card has joined one (see iwconfig). Fails if the key was wrong or the signal is gone.",
-    "ping": "ping host\n  Send packets to a host and time the replies. 'ping gw' pings the router. Needs an address first."
+    "ping": "ping host\n  Send packets to a host and time the replies. 'ping gw' pings the router. Needs an address first.",
+    "mmap": "mmap [ip]\n  Map the hosts on the network you have joined: each one that answers, and the services on its open ports. With an address, just that host. Join a network and get an address first (iwconfig, dhclient).",
+    "bruter": "bruter <ip> [login]\n  Try the built-in word list against a host's console (port 23). Prints the password if the login uses a weak one. For consoles you are authorised to test.",
+    "tdump": "tdump\n  Watch the packets on the joined network: beacons, ARP, DNS, and any console session someone leaves running in the clear. The old utility links (WEP) carry their logins unencrypted.",
+    "tnet": "tnet <ip>\n  Open a console on a host's port 23. It asks for a login and password; once in, 'help' lists what that box does (a substation breaker, a traffic cabinet). 'exit' disconnects."
   },
   "home": {
-    "notes.txt": "TODO\n- find a cafe with open wi-fi. coffee places usually leave it open\n- 'iwconfig' shows if the card is joined to anything\n- back up ~/media before the drive gives out (it clicks)\n",
+    "notes.txt": "TODO\n- find a cafe with open wi-fi. coffee places usually leave it open\n- 'iwconfig' shows if the card is joined to anything\n- the tools are in ~/bin now: mmap maps a network, tdump watches it\n- those GRIDLINK networks by the substations are the utility's. old WEP. the technicians log in over them in the clear -- tdump catches it\n- back up ~/media before the drive gives out (it clicks)\n",
     "readme.txt": "This notebook came with the system installed and nothing else.\nThe network tools go in ~/bin once there is a network to get them from.\n",
     ".profile": "PATH=/bin:/usr/bin:$HOME/bin\nPS1='\\u@\\h:\\w\\$ '\n"
   },
