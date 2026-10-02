@@ -2,6 +2,29 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.12.13 — Pedestres na diagonal (2026-10-02)
+- Agora há gente andando nos quarteirões cortados pela avenida diagonal: a calçada segue o meio-fio da diagonal e atravessa a avenida reto, com os carros parando para quem está passando.
+
+## 0.12.12 — Manchetes clicáveis (2026-10-02)
+- No jornal do celular, as setas escolhem a manchete e OK abre a matéria (a tecla esquerda atualiza): um texto curto com os lugares de verdade e um morador citado, sempre o mesmo para a mesma notícia.
+- As notícias de coisas que aconteceram (apagão, energia de volta, batida, engarrafamento) têm foto maior, marcadas com [PHOTO]: tirada da câmera de segurança mais perto ("Security camera still") ou da rua; a do apagão é tirada do portão da subestação.
+
+## 0.12.11 — Ajustes das câmeras, do notebook e outros (2026-10-02)
+- Câmeras: cerca de um terço fica parada (aparece como FIXED); as outras giram mais devagar quanto menor o FPS do gravador. O FPS vai de 10 a 30.
+- Elevadores bem mais rápidos (até 6 m/s).
+- Texto feito de pontos de luz vira letra ASCII quando a letra teria menos de 3 linhas de altura (letreiros, placas, outdoors, números do elevador).
+- Notebook: a tela fica no mesmo lugar e do mesmo tamanho na BIOS e no sistema; sem a linha transparente e sem cortar o texto de cima. O botão de ligar agora também desliga (no prompt, desliga o sistema direito; fora dele, corta a energia).
+
+## 0.12.10 — Pedestres no celular e sons da cidade (2026-10-02)
+- Pedestres usam o celular: falando com ele no ouvido, digitando com a tela acesa (que ilumina o rosto, de noite), e tocando. Quem digita anda mais devagar.
+- Dá para ouvir o toque do celular de quem passa (cinco toques diferentes) e o clique das teclas de quem digita do seu lado.
+- Carros passando ao longe nas outras ruas (menos de noite) e sirenes: uma a caminho de cada batida, um minuto depois, e de vez em quando uma em algum lugar da cidade.
+- 100 mil pessoas na cidade e até 2000 carros no pico.
+
+## 0.12.9 — Câmeras com modelo (2026-10-02)
+- Cada câmera é de um modelo de um dos três fabricantes de segurança da cidade: caixa, domo ou bullet, preto e branco ou colorida, com resolução, FPS e um jeito próprio de mostrar cor e brilho; cada unidade ainda tem o seu desgaste.
+- No modo CCTV a imagem tem mais resolução (pelo modelo) e fica no FPS do gravador; o painel do gravador está maior e mostra o fabricante e o modelo.
+
 ## 0.12.8 — Câmeras de segurança e modo CCTV (2026-10-02)
 - A cidade tem câmeras de segurança: de trânsito, em postes próprios nas esquinas (braço sobre o cruzamento, girando devagar), e nas fachadas de bancos, casas de penhor, farmácias e outras lojas, sobre o letreiro. Cada uma tem a luz vermelha de gravação piscando.
 - Nova opção na tela de título: **WATCH CCTV**. A cidade continua andando, vista só pelas câmeras, trocando de câmera a cada 14 s (as de poste bem mais vezes que as de loja). Esc volta ao menu.
