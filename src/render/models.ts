@@ -642,3 +642,20 @@ export const STOP_SIGN: Part[] = [
   part(Box, 0.05, -0.38, 2.1, 0.1, 0.38, 2.86, [200, 30, 30], Solid, '#', '=', '#'),
   part(Box, 0.1, -0.26, 2.42, 0.12, 0.26, 2.54, [235, 235, 235], Solid, '=', '=', '='),
 ];
+
+/** The turn signal's amber lamps on one side (sg: -1 left, 1 right; +y of a car is its right), and the high beams flashing. */
+const LAMPS = new Map<string, Part[]>();
+export function signalLamps(hl: number, hw: number, sg: number, flash: boolean): Part[] {
+  const key = `${hl}|${hw}|${sg}|${+flash}`;
+  let m = LAMPS.get(key);
+  if (m) return m;
+  m = [];
+  if (sg) {
+    const y0 = sg > 0 ? hw - 0.25 : -hw + 0.05, y1 = y0 + 0.2;
+    m.push(part(Box, hl - 0.02, y0, 0.66, hl + 0.06, y1, 0.8, [255, 170, 30], Glow, '*'));
+    m.push(part(Box, -hl - 0.06, y0, 0.66, -hl + 0.02, y1, 0.8, [255, 150, 20], Glow, '*'));
+  }
+  if (flash) for (const y of [-hw + 0.1, hw - 0.4]) m.push(part(Box, hl - 0.01, y, 0.6, hl + 0.08, y + 0.3, 0.88, [255, 255, 240], Glow, '@'));
+  LAMPS.set(key, m);
+  return m;
+}

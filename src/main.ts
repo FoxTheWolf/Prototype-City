@@ -26,7 +26,7 @@ import { lightning, PRESETS } from './sim/weather';
 import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
-const RES_ROWS = [80, 100, 120];
+const RES_ROWS = [80, 100, 120, 160, 200];
 let resStep = 1; // 100 rows on the main thread; 120 with the render workers (set below)
 const ROWS = 80; // the bench's grid, kept the same to compare
 /** The interface (phone, notebook, payphone, status lines) has its own grid, always this many rows: it keeps its size whatever the world's resolution. */

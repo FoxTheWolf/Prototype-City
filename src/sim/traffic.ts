@@ -72,6 +72,19 @@ export interface Car {
   /** On the diagonal avenue: 1 or -1 along its direction (0 on the grid), and how far along it is. */
   dg: number;
   u: number;
+  /**
+   * Driven off the rails, near the player (see stepFree): the body's position (and last tick's),
+   * heading (rad) and speed. The car on its lane (x, y) is then the driver's plan, where it means to
+   * be; the body chases it with real steering, grip and brakes.
+   */
+  free: boolean; bx: number; by: number; bpx: number; bpy: number; bh: number; bv: number;
+  /** The driver's reaction time (s), the tick it first saw the danger it is reacting to (-1: none), and the tick it last saw one. */
+  react: number; seen: number; hz: number;
+  /**
+   * What the driver shows of their intent: the turn signal (-1 left, 1 right, 0 none), and the tick
+   * they last flashed their headlights ("go ahead", or impatience). Some never signal (`forgets`).
+   */
+  sig: number; flashAt: number;
 }
 
 /** E, S, W, N as (dx, dy). */
@@ -93,7 +106,7 @@ const VEHICLES: { kind: VehicleKind; share: number; len: number; acc: number; v0
 function newVehicle(rng: Rng) {
   let r = rng();
   const V = VEHICLES.find((q) => (r -= q.share) < 0) ?? VEHICLES[VEHICLES.length - 1];
-  return { id: (rng() * 2 ** 31) | 0, kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0, held: 0, honk: 0 };
+  return { id: (rng() * 2 ** 31) | 0, kind: V.kind, len: V.len, acc: V.acc, max: V.v0 + rng() * (V.v1 - V.v0), col: V.cols[(rng() * V.cols.length) | 0], taxi: V.kind === 'taxi', beacon: V.kind === 'police' && rng() < 0.35, served: -1e9, dwell: 0, pitch: 0, pitchV: 0, roll: 0, rollV: 0, lift: 0, liftV: 0, wheel: 0, ph: 0, reckless: false, rgate: -1, lastD: 1e9, wreck: 0, vx: 0, vy: 0, spin: 0, held: 0, honk: 0, free: false, bx: 0, by: 0, bpx: 0, bpy: 0, bh: 0, bv: 0, react: 0.4 + rng() * 0.5, seen: -1, hz: 0, sig: 0, flashAt: -1e9 };
 }
 /**
  * Grip of the road: dry asphalt holds a hard stop (~0.8 g), wet less, snow little. Drivers know it:
@@ -109,8 +122,8 @@ const SPRING = 22, DAMP = 2.6;
 /** One tick of the body on its springs, from the acceleration along and across the car, and the road's bumps. */
 function stepBody(c: Car, a: number, dt: number) {
   const soft = c.len > 6 ? 1.6 : 1;
-  // the turn rate from the change of heading: sideways pull v * omega
-  const h = Math.atan2(c.dy, c.dx), dh = Math.atan2(Math.sin(h - c.ph), Math.cos(h - c.ph)), lat = (c.v * dh) / dt;
+  // the turn rate from the change of heading: sideways pull v * omega (the driven body's own heading when off the rails)
+  const h = c.free ? c.bh : Math.atan2(c.dy, c.dx), dh = Math.atan2(Math.sin(h - c.ph), Math.cos(h - c.ph)), lat = (c.v * dh) / dt;
   c.ph = h;
   const bike = c.kind === 'bike';
   const pT = bike ? 0 : Math.max(-0.12, Math.min(0.12, -a * 0.02 * soft)), rT = bike ? Math.max(-0.45, Math.min(0.45, lat * 0.1)) : Math.max(-0.13, Math.min(0.13, -lat * 0.035 * soft));
@@ -137,18 +150,121 @@ const halfW = (c: Car) => (c.len > 6 ? 1.2 : c.len > 5 ? 1.0 : c.len < 2 ? 0.35 
 
 /** Whether two vehicles' footprints (oriented rectangles) overlap. */
 function overlap(a: Car, b: Car): boolean {
-  const ax = [a.dx, a.dy], ay = [-a.dy, a.dx], bx = [b.dx, b.dy], by = [-b.dy, b.dx];
-  const tx = b.x - a.x, ty = b.y - a.y, ha = [a.len / 2, halfW(a)], hb = [b.len / 2, halfW(b)];
-  for (const [nx, ny] of [ax, ay, bx, by]) {
-    const ra = ha[0] * Math.abs(ax[0] * nx + ax[1] * ny) + ha[1] * Math.abs(ay[0] * nx + ay[1] * ny);
-    const rb = hb[0] * Math.abs(bx[0] * nx + bx[1] * ny) + hb[1] * Math.abs(by[0] * nx + by[1] * ny);
+  return boxes(a.x, a.y, a.dx, a.dy, a.len / 2, halfW(a), b.x, b.y, b.dx, b.dy, b.len / 2, halfW(b));
+}
+/** Two rectangles, each a center, a heading (unit) and half its length and width: do they overlap. */
+function boxes(ax: number, ay: number, ac: number, as: number, al: number, aw: number, bx: number, by: number, bc: number, bs: number, bl: number, bw: number): boolean {
+  const tx = bx - ax, ty = by - ay;
+  for (const [nx, ny] of [[ac, as], [-as, ac], [bc, bs], [-bs, bc]]) {
+    const ra = al * Math.abs(ac * nx + as * ny) + aw * Math.abs(-as * nx + ac * ny);
+    const rb = bl * Math.abs(bc * nx + bs * ny) + bw * Math.abs(-bs * nx + bc * ny);
     if (Math.abs(tx * nx + ty * ny) > ra + rb) return false;
   }
   return true;
 }
 
+/**
+ * Off the rails near the player: within FREE_IN of them a car's body is driven for real (it leaves
+ * the mode past FREE_OUT). The lane logic goes on as the driver's plan; the body is a mass chasing
+ * it, its acceleration (braking and turning alike) limited by the tyres' grip: on a dry road it keeps
+ * to the plan within centimetres, on snow it runs wide in a turn and slides when it brakes hard.
+ * The driver watches the cars around along their planned ways (the curves through an intersection
+ * too) over LOOK seconds, and brakes for one about to meet it, after their reaction time: who is
+ * already crossing goes first, else a fixed order. When two bodies still meet fast enough, they
+ * crash, whoever was at fault. Far from the player the cars stay on their lanes (cheap), where only
+ * the careless ones crash.
+ */
+const FREE_IN = 75, FREE_OUT = 95, LOOK = 3.5;
+/** Drivers who never use the turn signal, and how far before the intersection the others put it on (m). */
+const FORGETS = 0.07, SIGNAL_AHEAD = 35;
+/** Whether a car's turn signal lamp is lit now (it blinks at ~1.5 Hz), and whether its headlights are flashing. */
+export const blinkOn = (c: Car, sec: number) => c.sig !== 0 && ((sec * 1.5 + (c.id & 7) * 0.13) % 1) < 0.5;
+export const flashing = (c: Car, tick: number) => tick - c.flashAt < 36 && ((tick - c.flashAt) % 18) < 9;
+/** Bodies touching slower than this (m/s) just bump: the queue sorts it out. */
+const BUMP_V = 3;
+/** Stopped this long (s) for a car that does not move either, a driver edges on at a crawl. */
+const CREEP_S = 4, CREEP_V = 1.5;
+/** The body's pull to its plan: stiffness (1/s²) and damping (critical). */
+const PULL = 40, PULL_D = 2 * Math.sqrt(PULL);
+/** Where to draw a car between ticks: its body while driven, else its place on the lane. */
+export function carPose(c: Car, alpha: number, out: number[]) {
+  if (c.free) { out[0] = c.bpx + (c.bx - c.bpx) * alpha; out[1] = c.bpy + (c.by - c.bpy) * alpha; out[2] = Math.cos(c.bh); out[3] = Math.sin(c.bh); }
+  else { out[0] = c.px + (c.x - c.px) * alpha; out[1] = c.py + (c.y - c.py) * alpha; out[2] = c.dx; out[3] = c.dy; }
+}
+/**
+ * Where a car will be in t seconds along its plan at speed v: through its curve, then straight on;
+ * one coming up to the intersection it turns at, on a quarter circle into the street it takes
+ * (tight to the right, wide to the left, as the lanes go). x, y and heading into out.
+ */
+function planAt(city: City, c: Car, t: number, v: number, out: number[], own = true) {
+  // the driver knows their own plan; of another's they know only what the signal shows
+  if (!c.turn && !c.dg && c.plan !== c.hd && (own || c.sig !== 0)) {
+    const e = entryS(city, c.hd, c.ni, c.nj) - along(c.hd, c.x, c.y), s = v * t;
+    if (s > e && e > -1) {
+      const sg = turnOf(c.hd, c.plan), R = sg > 0 ? 6 : 12, a = Math.min(Math.PI / 2, (s - e) / R), rest = Math.max(0, s - e - R * Math.PI / 2);
+      const fx = c.dx, fy = c.dy, nx = -fy * sg, ny = fx * sg, ex = c.x + fx * e, ey = c.y + fy * e;
+      const h = Math.atan2(fy, fx) + sg * a, hx = Math.cos(h), hy = Math.sin(h);
+      out[0] = ex + R * (Math.sin(a) * fx + (1 - Math.cos(a)) * nx) + hx * rest;
+      out[1] = ey + R * (Math.sin(a) * fy + (1 - Math.cos(a)) * ny) + hy * rest;
+      out[2] = hx; out[3] = hy; return;
+    }
+  }
+  if (c.turn) {
+    const s = c.ts * c.tlen + v * t;
+    if (s < c.tlen) { curveAt(c, s / c.tlen, out); return; }
+    const hd = headingOfExit(c), [ex, ey] = DIRS[hd], r = s - c.tlen;
+    out[0] = c.t1x + ex * r; out[1] = c.t1y + ey * r; out[2] = ex; out[3] = ey; return;
+  }
+  out[0] = c.x + c.dx * v * t; out[1] = c.y + c.dy * v * t; out[2] = c.dx; out[3] = c.dy;
+}
+const PA = [0, 0, 0, 0], PB = [0, 0, 0, 0];
+/**
+ * The distance a driven car can go before it meets another on their planned ways, or 1e9 (-1: only
+ * cars standing still that it has waited CREEP_S for, which it now creeps past). It yields to a car
+ * already crossing an intersection when it is not, and between equals by their order.
+ */
+function hazard(city: City, c: Car, near: Car[], tick: number): number {
+  // ahead in time, and at least 20 m ahead (a slow car still sees what it is creeping into)
+  const al = c.len / 2 + 0.3, aw = halfW(c) + 0.15, va = Math.max(c.bv, 0.5), tMax = Math.min(8, Math.max(LOOK, 20 / va)), dt = tMax / 14;
+  let best = 1e9, creep = false;
+  for (const o of near) {
+    if (o === c || o.wreck) continue;
+    const rx = o.bx - c.bx, ry = o.by - c.by;
+    if (rx * rx + ry * ry > 1600) continue;
+    const moving = o.bv > 0.8;
+    // the order: the other one goes when it is crossing and this one is not, or by their ids
+    if (moving && (c.turn && !o.turn ? true : c.turn === o.turn && c.id < o.id)) continue;
+    const waited = !moving && c.seen >= 0 && tick - c.seen > CREEP_S * 60;
+    for (let t = dt; t <= tMax + 1e-6; t += dt) {
+      planAt(city, c, t, va, PA); planAt(city, o, t, o.bv, PB, false);
+      if (boxes(PA[0], PA[1], PA[2], PA[3], al, aw, PB[0], PB[1], PB[2], PB[3], o.len / 2, halfW(o))) {
+        if (waited) creep = true; else best = Math.min(best, Math.max(0, va * t - 1.5));
+        break;
+      }
+    }
+  }
+  return best < 1e9 ? best : creep ? -1 : 1e9;
+}
+/** One tick of a driven body chasing its plan, as a mass on a spring whose pull is held to the tyres' grip. */
+function stepFree(c: Car, grip: number, dt: number) {
+  c.bpx = c.bx; c.bpy = c.by;
+  const vx = Math.cos(c.bh) * c.bv, vy = Math.sin(c.bh) * c.bv;
+  let ax = PULL * (c.x - c.bx) + PULL_D * (c.dx * c.v - vx), ay = PULL * (c.y - c.by) + PULL_D * (c.dy * c.v - vy);
+  const am = Math.hypot(ax, ay), lim = grip * 9.81;
+  if (am > lim) { ax *= lim / am; ay *= lim / am; }
+  const nvx = vx + ax * dt, nvy = vy + ay * dt, sp = Math.hypot(nvx, nvy);
+  c.bx += nvx * dt; c.by += nvy * dt; c.bv = sp;
+  // it faces the way it goes (not backwards while it settles), or its plan's way when nearly still
+  if (sp > 0.5 && nvx * c.dx + nvy * c.dy > 0) c.bh = Math.atan2(nvy, nvx);
+  else if (sp <= 0.5) c.bh = Math.atan2(c.dy, c.dx);
+  // the plan jumped (the diagonal's turnaround at the city's edge): the body is put there
+  if ((c.x - c.bx) ** 2 + (c.y - c.by) ** 2 > 64) { c.bx = c.bpx = c.x; c.by = c.bpy = c.y; c.bh = Math.atan2(c.dy, c.dx); c.bv = c.v; }
+}
+
 /** Two vehicles collide: they share their momentum (by mass, ~ length), push apart and spin, and become wrecks. */
 function crash(a: Car, b: Car, rng: Rng, tick: number) {
+  // a driven car crashes where its body is
+  for (const c of [a, b]) if (c.free) { c.x = c.bx; c.y = c.by; c.px = c.bpx; c.py = c.bpy; c.dx = Math.cos(c.bh); c.dy = Math.sin(c.bh); c.v = c.bv; c.free = false; }
   const ma = a.len, mb = b.len, vax = a.dx * a.v, vay = a.dy * a.v, vbx = b.dx * b.v, vby = b.dy * b.v;
   const cx = (ma * vax + mb * vbx) / (ma + mb), cy = (ma * vay + mb * vby) / (ma + mb), rel = Math.hypot(vax - vbx, vay - vby);
   let nx = a.x - b.x, ny = a.y - b.y; const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
@@ -489,8 +605,12 @@ const P = [0, 0, 0, 0];
 function startTurn(city: City, rng: Rng, c: Car) {
   const to = c.plan, [ex, ey] = DIRS[to];
   const road = roadOf(to, c.ni, c.nj), oi = c.ni + ex, oj = c.nj + ey;
-  const bus = c.kind === 'bus', nl = lanesFor(city, to, road);
-  let next = choosePlan(city, rng, to, oi, oj, bus), lane = bus || c.kind === 'bike' ? nl - 1 : Math.min(laneFor(rng, nl, turnOf(to, next)), nl - 1);
+  const bus = c.kind === 'bus', nl = lanesFor(city, to, road), tt = turnOf(c.hd, to);
+  // through the box without crossing a neighbour's way: straight on in its own lane, a left turn into
+  // the inner lane, a right one into the outer; at the next intersection, what that lane allows
+  let next = choosePlan(city, rng, to, oi, oj, bus), lane = bus || c.kind === 'bike' ? nl - 1 : tt === 0 ? Math.min(c.lane, nl - 1) : tt < 0 ? 0 : nl - 1;
+  const nt = turnOf(to, next), canStraight = oi + ex >= 0 && oj + ey >= 0 && oi + ex < NXof(city) && oj + ey < NYof(city);
+  if (canStraight && !bus && ((nt < 0 && lane !== 0) || (nt > 0 && lane !== nl - 1))) next = to;
   if (!laneFree(city, to, road, lane, c.ni, c.nj)) {
     // the lane it wanted is backed up: take one with room, and go on straight from it if it can
     for (let l = 0; l < lanesFor(city, to, road); l++) if (laneFree(city, to, road, l, c.ni, c.nj)) { lane = l; break; }
@@ -561,6 +681,23 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     bucket(to, c.road, c.lane).push({ c, s: along(to, c.t1x, c.t1y) - (1 - c.ts) * c.tlen });
   }
   for (const b of lanes.values()) b.sort((p, q) => p.s - q.s);
+  // the cars driven off the rails: those near the player
+  const near: Car[] = [];
+  for (const c of cars) {
+    if (c.wreck) { c.free = false; continue; }
+    const d = Math.max(Math.abs(c.x - playerX), Math.abs(c.y - playerY));
+    if (!c.free && d < FREE_IN) { c.free = true; c.bx = c.bpx = c.x; c.by = c.bpy = c.y; c.bh = Math.atan2(c.dy, c.dx); c.bv = c.v; c.seen = -1; }
+    else if (c.free && d > FREE_OUT) c.free = false;
+    if (c.free) near.push(c);
+  }
+  // the turn signals: on a while before the turn and through it (not by those who never bother)
+  for (const c of cars) {
+    if (c.wreck || c.dg || hash3(c.id, 5, 77) < FORGETS) { c.sig = 0; continue; }
+    if (c.turn) c.sig = c.ts < 0.85 ? turnOf(turnHeadingIn(c), headingOfExit(c)) : 0;
+    else c.sig = c.plan !== c.hd && entryS(city, c.hd, c.ni, c.nj) - along(c.hd, c.x, c.y) < SIGNAL_AHEAD ? turnOf(c.hd, c.plan) : 0;
+  }
+  // turns are taken slower on a slippery road
+  const turnV = TURN_V * Math.sqrt(Math.min(1, grip / 0.8));
   // the earliest arrival at each all-way stop goes first
   firstWait.clear();
   for (const c of cars) if (c.arrive >= 0 && !c.wreck) { const f = firstWait.get(c.gate); if (f === undefined || c.arrive < f) firstWait.set(c.gate, c.arrive); }
@@ -579,7 +716,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     if (c.turn) {
       // through the intersection at a crawl when turning
       const to = headingOfExit(c);
-      if (to !== turnHeadingIn(c)) v0 = TURN_V;
+      if (to !== turnHeadingIn(c)) v0 = turnV;
       // the car ahead in the lane it is turning into: past this intersection, or crossing it
       // too (not those still waiting to come in from the far side)
       const b = bucket(to, c.road, c.lane), me = along(to, c.t1x, c.t1y) - (1 - c.ts) * c.tlen, out = along(to, c.t1x, c.t1y);
@@ -591,7 +728,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       const front = s + c.len / 2;
       if (c.kind === 'bus' && !c.dg) busStop(city, c, front, tick, obstacle);
       // slow down ahead of a turn
-      if (!c.dg && c.plan !== c.hd) v0 = Math.min(v0, Math.sqrt(TURN_V * TURN_V + 2 * 1.5 * Math.max(0, entryS(city, c.hd, c.ni, c.nj) - front)));
+      if (!c.dg && c.plan !== c.hd) v0 = Math.min(v0, Math.sqrt(turnV * turnV + 2 * 1.5 * Math.max(0, entryS(city, c.hd, c.ni, c.nj) - front)));
       // the next stop line: a red light, a stop sign or a full lane beyond is an obstacle there (the jam gap behind it)
       gateOf(city, power, c, front, sec);
       if (c.arrive >= 0 && c.gate !== G.key) c.arrive = -1; // past the stop it was waiting at
@@ -620,6 +757,22 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       const wx = w.x - c.x, wy = w.y - c.y, wa = wx * c.dx + wy * c.dy;
       if (wa > 0 && wa < 30 && Math.abs(wx * c.dy - wy * c.dx) < 2.6) obstacle(wa - c.len / 2 - w.len / 2 - 0.5, 0);
     }
+    if (c.free) {
+      // the plan waits for a body that fell behind it
+      if ((c.x - c.bx) ** 2 + (c.y - c.by) ** 2 > 4) v0 = Math.min(v0, c.bv + 1);
+      // a car about to meet this one: brake, once the driver has seen it (night slows them); a
+      // careless one is not looking. Edging on past a car that stands still, at a crawl
+      const h = c.reckless ? 1e9 : hazard(city, c, near, tick);
+      if (h < 0) v0 = Math.min(v0, CREEP_V);
+      else if (h < 1e9) {
+        if (c.seen < 0) c.seen = tick;
+        c.hz = tick;
+        if (tick - c.seen >= c.react * 60 * (night ? 1.3 : 1)) obstacle(h, 0);
+        // stopped to let the other one by: a flash of the headlights, now and then, says so
+        if (c.v < 0.5 && tick - c.flashAt > 600 && hash3(c.id, c.seen, 13) < 0.3) c.flashAt = tick;
+      }
+      else if (tick - c.hz > 60) c.seen = -1; // out of sight a second: it is gone
+    }
 
     // intelligent driver model
     const sStar = GAP0 + Math.max(0, (c.v * HEADWAY) / care + (c.v * (c.v - vl)) / (2 * Math.sqrt(c.acc * BRAKE)));
@@ -632,7 +785,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
     // impatience: stuck behind the player, or behind a stopped car while the light is green, a driver honks
     const held = c.v < 0.3 && (byPlayer || (!c.turn && G.sig === Sig.Green && gap < 6 && vl < 0.3));
     c.held = held ? c.held + 1 : 0;
-    if (c.held > (byPlayer ? 90 : 240) && tick - c.honk > 300 && rng() < 0.02) c.honk = tick;
+    if (c.held > (byPlayer ? 90 : 240) && tick - c.honk > 300 && rng() < 0.02) { if (rng() < 0.35) c.flashAt = tick; else c.honk = tick; }
 
     // move
     const d = c.v * dt;
@@ -655,12 +808,24 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
         startTurn(city, rng, c);
       }
     }
-    // a careless driver hits whatever it runs into (the careful ones keep their distance)
-    if (c.reckless && c.v > 1) for (const o of cars) {
+    if (c.free) stepFree(c, grip, dt);
+    // a careless driver hits whatever it runs into (the careful ones keep their distance); near the
+    // player the bodies do, below
+    if (c.reckless && c.v > 1 && !c.free) for (const o of cars) {
       if (o === c || o.wreck || Math.abs(o.x - c.x) > 9 || Math.abs(o.y - c.y) > 9) continue;
       if (!c.turn && !o.turn && o.hd === c.hd && o.road === c.road && o.lane === c.lane && o.dg === c.dg) continue;
       if (overlap(c, o)) { crash(c, o, rng, tick); break; }
     }
+  }
+  // the driven bodies that meet, fast enough, crash: they leave the plan where the bodies are
+  for (let a = 0; a < near.length; a++) for (let b = a + 1; b < near.length; b++) {
+    const A = near[a], B = near[b];
+    if (A.wreck || B.wreck || Math.abs(A.bx - B.bx) > 12 || Math.abs(A.by - B.by) > 12) continue;
+    const ac = Math.cos(A.bh), as = Math.sin(A.bh), bc = Math.cos(B.bh), bs = Math.sin(B.bh);
+    if (!boxes(A.bx, A.by, ac, as, A.len / 2, halfW(A), B.bx, B.by, bc, bs, B.len / 2, halfW(B))) continue;
+    if (Math.hypot(ac * A.bv - bc * B.bv, as * A.bv - bs * B.bv) < BUMP_V) continue;
+    for (const [c, cc, cs] of [[A, ac, as], [B, bc, bs]] as const) { c.x = c.bx; c.y = c.by; c.px = c.bpx; c.py = c.bpy; c.dx = cc; c.dy = cs; c.v = c.bv; c.free = false; }
+    crash(A, B, rng, tick);
   }
 }
 

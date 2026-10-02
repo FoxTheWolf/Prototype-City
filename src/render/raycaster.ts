@@ -9,7 +9,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { mastModel, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { signalLamps, mastModel, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
@@ -19,7 +19,7 @@ import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
 import { prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
-import { diagPoint, diagRoad, DIRS, Sig, signal, zoneSignal } from '../sim/traffic';
+import { blinkOn, carPose, diagPoint, diagRoad, DIRS, flashing, Sig, signal, zoneSignal } from '../sim/traffic';
 
 export interface View {
   x: number;
@@ -1395,11 +1395,15 @@ function gatherLights(world: World, v: View, sec: number) {
   const { city } = world;
   dyn.begin(v.x, v.y);
   for (const c of world.cars) {
-    const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
+    carPose(c, v.alpha, POSE);
+    const [x, y, dx, dy] = POSE;
     if (Math.abs(x - v.x) > CAR_LIGHT_FAR || Math.abs(y - v.y) > CAR_LIGHT_FAR) continue;
-    const hl = c.len / 2, bike = c.kind === 'bike';
-    dyn.cone(x + c.dx * hl, y + c.dy * hl, c.dx, c.dy, 0.87, bike ? 8 : 24, 1, 4, bike ? 60 : 150, bike ? 58 : 140, bike ? 50 : 115);
-    if (!bike) dyn.point(x - c.dx * (hl + 0.1), y - c.dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
+    const hl = c.len / 2, bike = c.kind === 'bike', fl = !bike && flashing(c, world.tick) ? 2.2 : 1;
+    // a flash of the headlights: the high beams, brighter and further for a blink
+    dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, bike ? 8 : 24 * (fl > 1 ? 1.6 : 1), 1, 4, (bike ? 60 : 150) * fl, (bike ? 58 : 140) * fl, (bike ? 50 : 115) * fl);
+    if (!bike) dyn.point(x - dx * (hl + 0.1), y - dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
+    // the turn signal blinking amber on its side
+    if (!bike && blinkOn(c, sec)) { const s = c.sig * (halfW(c.kind)); dyn.point(x - dy * s, y + dx * s, 2.5, 0.5, 1.5, 130, 70, 0); }
     // a police beacon throws red and blue around it in turns
     // a wreck's hazard lights blink amber
     if (c.wreck && Math.floor(sec * 1.6) & 1) dyn.point(x, y, 6, 1, 3, 150, 90, 10);
@@ -1586,6 +1590,10 @@ function lanesAt(n: number, halfW: number) {
   return at;
 }
 
+/** A car's place and heading this frame (carPose). */
+const POSE = [0, 0, 0, 0];
+/** Half a vehicle's width by kind, for the lamps on its corners. */
+const halfW = (kind: string) => (kind === 'bus' || kind === 'truck' ? 1.2 : kind === 'van' ? 1.0 : 0.9);
 /** The view and the grid's strip, for collectObjects to skip what that strip cannot show. */
 const CULL = { px: 0, py: 0, dirX: 1, dirY: 0, plane: 1, cols: 1, x0: 0, x1: 1, all: true };
 /**
@@ -1673,14 +1681,17 @@ function collectObjects(world: World, v: View): Obj[] {
     out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(p.id, step, wet && (p.id & 7) < 6, far), r: 0.8, h: 2.3, seed: 0 });
   }
   for (const c of world.cars) {
-    // interpolate between ticks so motion is smooth at any frame rate
-    const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
+    // interpolate between ticks so motion is smooth at any frame rate (a driven car's body, near the player)
+    carPose(c, v.alpha, POSE);
+    const [x, y] = POSE;
     if (Math.abs(x - v.x) > SPRITE_FAR || Math.abs(y - v.y) > SPRITE_FAR || !seen(x, y, 8)) continue;
     const near = Math.abs(x - v.x) < CAR_NEAR && Math.abs(y - v.y) < CAR_NEAR, [hl, h] = VEHICLE_SIZE[c.kind];
     const who = c.id & 63;
     const parts = c.kind === 'bike' ? bikeModel(c.col, who, Math.floor(c.wheel / (Math.PI / 2)) & 3)
       : c.kind === 'sedan' || c.kind === 'taxi' ? (near ? carModel(c.col, c.taxi, who) : carFarModel(c.col, c.taxi)) : vehicleModel(c.kind, c.col, c.beacon ? 1 + (Math.floor(frameSec * 3) & 1) : 0, near ? who : 0);
-    const o: Obj = { x, y, c: c.dx, s: c.dy, parts, r: hl + 0.3, h: h + 0.1, seed: 0 };
+    // the turn signal's lamps, front and back on its side, lit in the blink; the headlights flashing
+    const blink = c.kind !== 'bike' && blinkOn(c, frameSec), flash = c.kind !== 'bike' && flashing(c, world.tick);
+    const o: Obj = { x, y, c: POSE[2], s: POSE[3], parts: blink || flash ? [...parts, ...signalLamps(hl, halfW(c.kind), blink ? c.sig : 0, flash)] : parts, r: hl + 0.3, h: h + 0.1, seed: 0 };
     if (near) { o.pitch = c.pitch; o.roll = c.roll; o.lift = c.lift; o.wheel = c.wheel; }
     out.push(o);
   }
