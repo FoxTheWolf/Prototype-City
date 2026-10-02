@@ -361,11 +361,11 @@ export class Phone {
       const hr = Math.floor(this.world.time / 3600), h = (q: number) => hash3(this.world.seed, hr, q);
       if (hr !== this.oddHour) {
         if (this.oddHour >= 0) {
-          if (h(0x11c) < 0.05) this.wrongAt = now + h(0x11e) * 90;
+          if (h(0x11c) < 0.08) this.wrongAt = now + h(0x11e) * 90;
           // most of the texts nobody asked for are a shop's advertising (from its own number); the rest a wrong number
-          const B = this.world.city.businesses, ad = h(0x11d) < 0.07 && h(0x123) < 0.75 && B.length > 0;
+          const B = this.world.city.businesses, ad = h(0x11d) < 0.12 && h(0x123) < 0.75 && B.length > 0;
           if (ad) { const k = Math.floor(h(0x124) * B.length); this.receive(this.world.telco.bizNum[k], smsText(this.world, 'promo', -1, h(0x120), k), now + 5 + h(0x121) * 80); }
-          const i = !ad && h(0x11d) < 0.07 ? this.somebody(h(0x11f)) : -1;
+          const i = !ad && h(0x11d) < 0.12 ? this.somebody(h(0x11f)) : -1;
           if (i >= 0) { this.wrongSms.add(i); this.receive(this.world.pop.mobile[i], smsText(this.world, 'wrong', i, h(0x120)), now + 5 + h(0x121) * 80); }
         }
         this.oddHour = hr;

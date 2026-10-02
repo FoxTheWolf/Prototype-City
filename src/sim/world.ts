@@ -237,7 +237,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   stepDoors(w);
 
   const hour = (w.time / 3600) % 24;
-  stepPeds(w.city, w.power, w.pop, w.peds, w.cars, w.rng, TICK, w.tick, w.time, p.x, p.y);
+  stepPeds(w.city, w.power, w.pop, w.peds, w.cars, w.rng, TICK, w.tick, w.time, p.x, p.y, Math.cos(input.heading), Math.sin(input.heading));
   stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5, crossers);
   // the streets fill up and empty with the hour, out of the player's sight
   if (w.tick % 30 === 0) {

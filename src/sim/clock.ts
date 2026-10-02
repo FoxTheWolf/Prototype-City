@@ -4,7 +4,7 @@
  */
 
 /** Real minutes one game day lasts (as in GTA IV); change it here. */
-export const DAY_REAL_MIN = 48;
+export const DAY_REAL_MIN = 120;
 /** Game seconds per real second. */
 export const TIME_SCALE = 86400 / (DAY_REAL_MIN * 60);
 export const YEAR0 = 2008;

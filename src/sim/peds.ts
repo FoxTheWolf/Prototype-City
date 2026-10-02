@@ -283,8 +283,22 @@ export function spawnPeds(city: City, pop: Population, rng: Rng, time: number, x
   return peds;
 }
 
-/** One tick of the pedestrians near the player: new ones from the population, each walking on, the arrived and the far ones gone. */
-export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Ped[], cars: Car[], rng: Rng, dt: number, tick: number, time: number, px: number, py: number) {
+/** How often (ticks) each pedestrian is checked against their plan, and how far behind it they may fall. */
+const SYNC_TICKS = 60, SYNC_SLACK = 30;
+/** Whether the player could be looking at a point: close by, or within a wide cone ahead (heading hx, hy). */
+function inSight(x: number, y: number, px: number, py: number, hx: number, hy: number): boolean {
+  const dx = x - px, dy = y - py, d = Math.hypot(dx, dy);
+  return d < 10 || (dx * hx + dy * hy) / d > 0.34;
+}
+
+/**
+ * One tick of the pedestrians near the player: new ones from the population, each walking on, the
+ * arrived and the far ones gone. The day runs faster than people walk (the clock is TIME_SCALE times
+ * real time), so whoever has fallen behind their plan catches up while the player is not looking
+ * (heading hx, hy): on to where the plan has them by now, or gone indoors if it has them arrived.
+ * Someone followed walks on as they are, and gets there late.
+ */
+export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Ped[], cars: Car[], rng: Rng, dt: number, tick: number, time: number, px: number, py: number, hx = 1, hy = 0) {
   const sec = tick * dt;
   let walking = onStreet.get(peds);
   if (!walking) onStreet.set(peds, (walking = new Set(peds.map((p) => p.id))));
@@ -294,6 +308,19 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
     p.px = p.x; p.py = p.y;
     // too far from the player: off the street (their day goes on by their plan)
     if (Math.abs(p.x - px) > PED_FAR || Math.abs(p.y - py) > PED_FAR) { walking.delete(p.id); peds.splice(k, 1); continue; }
+    if ((tick + p.id) % SYNC_TICKS === 0 && !p.door && !p.way.length && p.goal >= 0 && !inSight(p.x, p.y, px, py, hx, hy)) {
+      const W = whereIs(pop, city, p.id, time);
+      if (W.doing !== Doing.Walk || W.building !== p.goal) { walking.delete(p.id); peds.splice(k, 1); continue; }
+      const F = city.buildings[W.from], T = city.buildings[W.building];
+      const fx = (F.x0 + F.x1) / 2, fy = (F.y0 + F.y1) / 2, gx = (T.x0 + T.x1) / 2, gy = (T.y0 + T.y1) / 2;
+      const planLeft = (1 - W.prog) * (Math.abs(gx - fx) + Math.abs(gy - fy)), left = Math.abs(gx - p.x) + Math.abs(gy - p.y);
+      if (left > planLeft + SYNC_SLACK) {
+        const x = fx + (gx - fx) * W.prog, y = fy + (gy - fy) * W.prog;
+        const q = Math.hypot(x - px, y - py) < PED_R && !inSight(x, y, px, py, hx, hy) ? spawnPed(city, rng, p.id, p.goal, x, y, null, p.pace) : null;
+        if (q) { peds[k] = q; continue; }
+        if (Math.hypot(x - px, y - py) >= PED_R) { walking.delete(p.id); peds.splice(k, 1); continue; }
+      }
+    }
     // (they walk through the player, so nobody is held up on their way by standing in it)
     let v = p.pace;
     if (p.door) {

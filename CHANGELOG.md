@@ -11,6 +11,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Dois boots: o primeiro é da placa-mãe (três placas, cada uma com sua tela, compartilhadas entre marcas), só lista o que o aparelho tem e o Wi-Fi dá OK; o segundo é da marca, com estilo próprio por fabricante.
 - Cada marca tem os seus corpos de celular; trocar de corpo troca de aparelho e de marca.
 - Pedestres atravessam o jogador e andam em ritmos diferentes: uns com pressa, outros devagar (mais idosos, mais à noite).
+- Um dia de jogo agora dura 2 horas reais (eram 48 minutos). Quem você não está olhando alcança onde a rotina dele diz que devia estar; quem você segue anda normal.
 
 ## 0.12.4 — Celular: fila de feedback (2026-10-02)
 - Discador com o registro de chamadas: feitas, sem resposta, recebidas e perdidas, com a hora; as setas escolhem e a tecla verde liga de volta.
