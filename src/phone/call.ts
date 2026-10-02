@@ -51,6 +51,10 @@ export class Call {
   private h: (q: number) => number;
   /** The citizen who picks up (a home's or a mobile's), or -1; and how they are when they do. */
   private who = -1;
+  /** A call to the player: the citizen calling (a wrong number), or -1. */
+  caller = -1;
+  /** Citizens who called the player by mistake (calling them back, they say so). */
+  static calledUs = new Set<number>();
   private mood: 'hello' | 'work' | 'out' | 'sleepy' | 'machine' = 'hello';
 
   /** landline: made from a payphone (the player's own mobile number then rings the handset in the pocket). */
@@ -59,6 +63,14 @@ export class Call {
     const hour = Math.floor(world.time / 3600);
     this.h = (q) => hash3(world.seed ^ hour, number.length * 1000 + +number.replace(/\D/g, '').slice(-6), q);
     if (noNetwork && this.callee.kind !== 'emergency') { this.end(start, en.phone.apps.noNetwork); return; }
+  }
+
+  /** A citizen dialing the player's number by mistake: it rings in the pocket until answered or they give up. */
+  static from(world: World, i: number, now: number): Call {
+    const c = new Call(world, world.pop.mobile[i], now, false, true);
+    c.caller = i; c.who = i; c.state = 'ringing'; c.ringAt = now; c.answerAt = Infinity;
+    Call.calledUs.add(i);
+    return c;
   }
 
   /** Advance the call; sounds to play go into `sfx`. */
@@ -83,7 +95,7 @@ export class Call {
     if (this.state === 'ringing') {
       if (now >= this.answerAt) { this.state = 'talk'; this.connectAt = now; this.q = this.script(); this.nextAt = now + 0.4; }
       else if (now >= this.ringAt) {
-        if (this.rings >= MAX_RINGS) { this.end(now, en.phone.apps.noAnswer); return; }
+        if (this.rings >= (this.caller >= 0 ? 5 : MAX_RINGS)) { this.end(now, en.phone.apps.noAnswer); return; }
         this.rings++; this.ringAt += 6; sfx.push(['ringback']);
         // a payphone being called rings out on its street
         if (this.callee.kind === 'payphone') sfx.push(['bell', this.callee.k]);
@@ -127,7 +139,10 @@ export class Call {
   answerHere(now: number) {
     if (this.state !== 'ringing') return;
     this.state = 'talk'; this.connectAt = now;
-    this.q = [{ who: 'sys', text: C.selfLine, gap: 0.5 }]; this.nextAt = now;
+    this.q = this.caller >= 0
+      ? [{ who: 'them', text: this.pick(C.wrong.ask, 70), gap: 0.4 }, { who: 'them', text: this.pick(C.res.who, 71), gap: 3 }, { who: 'them', text: this.pick(C.wrong.sorry, 72), gap: 2 }, { who: 'act', text: 'end', gap: 0.8 }]
+      : [{ who: 'sys', text: C.selfLine, gap: 0.5 }];
+    this.nextAt = now;
   }
 
   /** The far phone cannot take the call (the mobile out of service, or already on a call). */
@@ -153,7 +168,13 @@ export class Call {
   private ringsBefore(): number {
     const c = this.callee;
     if (c.kind === 'operator' || c.kind === 'emergency' || c.kind === 'directory') return 1;
-    if (c.kind === 'payphone') return -1;
+    if (c.kind === 'payphone') {
+      // someone walking by may pick it up
+      const ph = this.world.telco.payphones[c.k];
+      let best = 12;
+      for (const p of this.world.peds) { const d = Math.hypot(p.x - ph.x, p.y - ph.y); if (d < best) { best = d; this.who = p.id; } }
+      return this.who >= 0 && this.h(5) < 0.7 ? 3 + Math.floor(this.h(2) * 3) : -1;
+    }
     if (c.kind === 'biz') return isOpen(this.kindOf(), this.hour()) ? 1 + Math.floor(this.h(2) * 3) : 2 + Math.floor(this.h(2) * 3);
     if (c.kind === 'home' || c.kind === 'cell') return this.pickUp();
     return -1;
@@ -214,9 +235,11 @@ export class Call {
         if (this.mood === 'machine') {
           return [rec(c.kind === 'home' ? this.pick(C.res.machine, 34) : this.pick(C.cell.voicemail, 34)), { who: 'act', text: 'beep', gap: 0.2 }, { who: 'act', text: 'end', gap: 10 }];
         }
+        if (c.kind === 'cell' && Call.calledUs.has(c.i) && this.mood !== 'sleepy') return [them(this.pick(C.wrong.back, 31)), them(this.pick(C.res.hangup, 33), 2.5), end];
         const first = this.mood === 'hello' ? this.pick(L.hello, 31) : this.pick((C.cell as Record<string, string[]>)[this.mood] ?? L.hello, 31);
         return [them(this.mood === 'sleepy' && c.kind === 'home' ? this.pick(C.res.sleepy, 31) : first), them(this.pick(C.res.who, 32), 3), them(this.pick(C.res.hangup, 33), 2.5), end];
       }
+      case 'payphone': return [them(this.pick(C.payphone.hello, 35)), them(this.pick(C.payphone.who, 36), 3), them(this.pick(C.payphone.bye, 37), 2.5), end];
       case 'operator': this.menu = 'operator'; return this.menuSteps(true);
       case 'emergency': return [them(C.emergency[0])];
       case 'directory': this.listings = this.nearby(); return [rec(C.directory[0]), rec(C.directory[1], 1), end];
@@ -268,7 +291,7 @@ export class Call {
     } else if (c.kind === 'operator') biz = en.phone.apps.care;
     const acc = w.telco.player;
     const [name, surname] = this.who >= 0 ? citizenNames(w.city, w.pop, this.who) : [this.pick(C.first, 60), this.pick(en.surnames, 61)];
-    return s.replace('{biz}', biz).replace('{name}', name).replace('{surname}', surname)
+    return s.replace('{biz}', biz).replace('{name}', name).replace('{surname}', surname).replace('{other}', this.pick(C.first, 66))
       .replace('{open}', open).replace('{close}', close).replace('{road}', road).replace('{district}', district)
       .replace('{film}', this.pick(C.films, 62)).replace('{film2}', this.pick(C.films, 63)).replace('{t1}', hh(18 + Math.floor(this.h(64) * 2))).replace('{t2}', hh(20 + Math.floor(this.h(65) * 3)))
       .replace('{credit}', `$${(acc.credit / 100).toFixed(2)}`).replace('{data}', `${(acc.dataKB / 1024).toFixed(1)} MB`);

@@ -235,6 +235,7 @@ function splash(S: Lcd, maker: string, model: string, u: number) {
   for (let x = 0; x < 24; x++) S.put(9 + x, 19, x < n ? 32 : ch('.'), DIM, x < n ? HI : [10, 17, 34]);
 }
 
+const WHITE_MISS: C3 = [255, 230, 210];
 function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   const c = calendar(world.time);
   bigText(S, 4, hhmm(c.hour), INK, t);
@@ -243,6 +244,7 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   // the network it is on, as phones then showed it under the clock
   const R = P.radio, op = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
   S.text((SW - op.length) >> 1, 16, typed(op, t - 0.5), R.state === 'service' ? INK : [255, 120, 90], LCD);
+  if (P.missed) { const m = (P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)); S.text((SW - m.length) >> 1, 19, typed(m, t - 0.6), Math.floor(now * 2) & 1 ? WHITE_MISS : [255, 120, 90], LCD); }
   softKeys(S, T.menu, T.hide);
 }
 

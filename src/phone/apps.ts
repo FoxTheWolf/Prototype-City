@@ -317,7 +317,7 @@ function peoplePage(S: Lcd, P: Phone, world: World, t: number) {
   S.text(1, 3, `${SET.peopleAt} #${P.people.building} (${L.length})`, DIM, LCD);
   const per = 3, view = Math.floor((SH - 7) / per), top = Math.max(0, Math.min(P.setSel - Math.floor(view / 2), L.length - view));
   const R = PEOPLE.role, D = PEOPLE.doing, roles = [R.worker, R.student, R.retired, R.idle, R.child];
-  const doings = [D.asleep, D.home, D.commute, D.work, D.out];
+  const doings = [D.asleep, D.home, D.commute, D.work, D.out, D.errand];
   for (let n = 0; n < view && top + n < L.length; n++) {
     const i = L[top + n], y = 5 + n * per, sel = top + n === P.setSel, H = Pop.households[Pop.home[i]];
     const job = Pop.job[i] >= 0 ? workplaceName(c, Pop, Pop.job[i]) : '';

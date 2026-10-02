@@ -1,8 +1,8 @@
 import { hash3, mulberry32 } from '../core/rng';
 import { type City } from './city';
-import { calendar } from './clock';
 import { floorsOf, habitable, isOffice, tiersOf } from './interior';
 import { MAKERS } from './device';
+import { forecast, newWeather } from './weather';
 import { BIZ_HOURS, localNumber, type Telco } from './telco';
 
 /**
@@ -50,6 +50,8 @@ export interface Workplace {
 }
 
 export interface Population {
+  /** The city's seed (every person's day is drawn from it). */
+  seed: number;
   n: number;
   /** Name picks (indexes into the locale's first and last names). */
   first: Uint16Array;
@@ -101,7 +103,7 @@ function shiftsFor(a: number, b: number): [number, number][] {
 }
 
 const EMPTY: Population = {
-  n: 0, first: new Uint16Array(0), last: new Uint16Array(0), age: new Uint8Array(0), role: new Uint8Array(0), home: new Int32Array(0),
+  seed: 0, n: 0, first: new Uint16Array(0), last: new Uint16Array(0), age: new Uint8Array(0), role: new Uint8Array(0), home: new Int32Array(0),
   job: new Int32Array(0), shift: new Uint8Array(0), spouse: new Int32Array(0), friendAt: new Int32Array(1), friendList: new Int32Array(0),
   wake: new Uint8Array(0), bed: new Uint8Array(0), social: new Uint8Array(0), talk: new Uint8Array(0), phone: new Uint8Array(0), mobile: [],
   households: [], workplaces: [], byNum: new Map(),
@@ -203,7 +205,7 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
     if (job[i] >= 0) {
       const [s, len] = places[job[i]].shifts[shift[i]];
       if (s >= 20 || s < 4) { wake[i] = (s + len + 8) % 24; bed[i] = (s + len + 1) % 24; continue; } // up from the afternoon through the shift, asleep in the morning
-      wake[i] = Math.max(4, s - 1 - ri(2)); bed[i] = Math.max(21, Math.min(26, wake[i] + 16 + ri(3)));
+      wake[i] = Math.max(4, s - 1 - ri(2)); bed[i] = Math.min(wake[i] + 21, Math.max(s + len + 2, Math.max(21, Math.min(26, wake[i] + 16 + ri(3)))));
     } else {
       wake[i] = a < 18 ? 7 : 6 + ri(5); bed[i] = a < 13 ? 20 + ri(2) : 22 + ri(4);
     }
@@ -254,68 +256,166 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   });
 
   return {
-    n, first: Uint16Array.from(first), last: Uint16Array.from(last), age: Uint8Array.from(age), role, home: Int32Array.from(home), job, shift,
+    seed, n, first: Uint16Array.from(first), last: Uint16Array.from(last), age: Uint8Array.from(age), role, home: Int32Array.from(home), job, shift,
     spouse: Int32Array.from(spouse), friendAt: deg, friendList, wake, bed, social, talk, phone, mobile, households, workplaces: places, byNum,
   };
 }
 
 /** What someone is doing. */
-export enum Doing { Asleep, Home, Commute, Work, Out }
+export enum Doing { Asleep, Home, Walk, Work, Out, Errand }
 
-export interface Whereabouts {
+/**
+ * A stretch of someone's day, in hours from the day's midnight (past 24 for after midnight): at a
+ * place (to, with biz for a business), or walking from one building to another.
+ */
+export interface Seg {
+  a: number;
+  b: number;
   doing: Doing;
-  /** The building they are in or heading to (-1 when out somewhere without one). */
-  building: number;
-  /** A business they went out to (Out), or -1. */
+  from: number;
+  to: number;
   biz: number;
 }
 
-const HERE: Whereabouts = { doing: Doing.Home, building: -1, biz: -1 };
-/** Whether hour h (0..24) is within [a, a + len) on a clock that wraps. */
-const within = (h: number, a: number, len: number) => ((h - a + 24) % 24) < len;
+export interface Whereabouts {
+  doing: Doing;
+  /** The building they are in or heading to. */
+  building: number;
+  /** The business they are at or heading to, or -1. */
+  biz: number;
+  /** Walking: the building they left, and how far along the way (0..1). */
+  from: number;
+  prog: number;
+}
 
-/**
- * Where citizen i is at game time t, and what they are doing: a pure function of the person, the
- * day and the hour (the same answer every time it is asked), so far-off people cost nothing. Their
- * sleep, the shift on the days they work (with the trip there and back), an evening out now and
- * then at a bar, a diner or a café of the city, and otherwise home. The result is shared: copy it.
- */
-export function whereIs(P: Population, city: City, i: number, t: number): Whereabouts {
-  const C = calendar(t), h = C.hour, day = Math.floor(t / 86400), H = P.households[P.home[i]];
-  const R = HERE;
-  R.building = H.building; R.biz = -1;
-  const wake = P.wake[i], bed = P.bed[i], awake = (bed - wake + 24) % 24 || 24;
-  if (!within(h, wake, awake)) { R.doing = Doing.Asleep; return R; }
-  const j = P.job[i];
-  if (j >= 0) {
-    const W = P.workplaces[j], [s, len] = W.shifts[P.shift[i]];
-    // two days off a week: the weekend at a place closed then, two days of their own at the others
-    const off = W.weekends ? (C.weekday + i) % 7 < 2 : C.weekday === 0 || C.weekday === 6;
-    if (!off) {
-      const trip = 0.25 + (i % 4) * 0.1;
-      if (within(h, s, len)) { R.doing = Doing.Work; R.building = W.building; return R; }
-      if (within(h, s - trip, trip) || within(h, s + len, trip)) { R.doing = Doing.Commute; R.building = within(h, s - trip, trip) ? W.building : H.building; return R; }
-    }
+/** Walking pace between buildings, m/s (a city block takes about a minute). */
+export const WALK_V = 1.35;
+/** Hours to walk from building a to building b (along the grid, as people do). */
+function walkHours(city: City, a: number, b: number): number {
+  const A = city.buildings[a], B = city.buildings[b];
+  const d = Math.abs((A.x0 + A.x1 - B.x0 - B.x1) / 2) + Math.abs((A.y0 + A.y1 - B.y0 - B.y1) / 2);
+  return 0.02 + d / WALK_V / 3600;
+}
+
+/** Businesses by 100 m cell, to find what is near a home. */
+const bizGrid = new WeakMap<City, Map<number, number[]>>();
+const cellKey = (x: number, y: number) => Math.floor(x / 100) * 1024 + Math.floor(y / 100);
+function nearBiz(city: City, x: number, y: number, kinds: Set<string>, r: number, pick: number): number {
+  let G = bizGrid.get(city);
+  if (!G) {
+    G = new Map();
+    city.businesses.forEach((b, k) => {
+      const B = city.buildings[b.building], q = cellKey((B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+      let l = G!.get(q); if (!l) G!.set(q, (l = [])); l.push(k);
+    });
+    bizGrid.set(city, G);
   }
-  // an evening out: some nights, for a few hours before bed
-  const out = hash3(i, day, 0x0e7) < (P.social[i] / 255) * 0.3;
-  if (out && P.age[i] >= 18 && within(h, 19 + (i % 3), 3)) {
-    const k = outing(city, i, day);
-    if (k >= 0) { R.doing = Doing.Out; R.biz = k; R.building = city.businesses[k].building; return R; }
+  const found: number[] = [];
+  for (let gx = Math.floor((x - r) / 100); gx <= Math.floor((x + r) / 100); gx++) for (let gy = Math.floor((y - r) / 100); gy <= Math.floor((y + r) / 100); gy++) {
+    for (const k of G.get(gx * 1024 + gy) ?? []) if (kinds.has(city.businesses[k].kind)) found.push(k);
   }
-  R.doing = Doing.Home;
-  return R;
+  return found.length ? found[Math.floor(pick * found.length)] : -1;
 }
 
 const OUT_KINDS = new Set(['bar', 'diner', 'cafe', 'cinema']);
-/** The place someone goes out to on a given day: a bar, a diner, a café or a cinema, often near home. */
-function outing(city: City, i: number, day: number): number {
-  const B = city.businesses, n = B.length;
-  for (let k = 0; k < 8; k++) {
-    const b = Math.floor(hash3(i, day, 0x0e8 + k) * n);
-    if (OUT_KINDS.has(B[b].kind)) return b;
+const ERRAND_KINDS = new Set(['grocery', 'pharmacy', 'laundry', 'liquor', 'cafe', 'diner', 'books', 'electronics', 'pawn', 'tailor', 'bank']);
+const LUNCH_KINDS = new Set(['diner', 'cafe', 'grocery']);
+const STROLL_KINDS = new Set(['books', 'electronics', 'pawn', 'cafe', 'cinema', 'tailor', 'grocery']);
+
+const WX = newWeather();
+/** How hard it rains or snows (0..1) at game time t, by the forecast the city's weather follows. */
+function rainAt(seed: number, t: number) { forecast(seed, t, WX); return WX.precip; }
+
+/** Plans by citizen and day; dropped wholesale when it grows big (they are cheap to make again). */
+const plans = new Map<number, Seg[]>();
+
+/**
+ * Citizen i's day: work (with the walk there and back) on the days they work, an errand at a shop
+ * near home some days, an evening out now and then. A pure function of the person and the day, so
+ * every reader (the phone, the streets, later the news) sees the same day. Time not in a stretch
+ * is at home, awake or asleep.
+ */
+export function dayPlan(P: Population, city: City, i: number, day: number): Seg[] {
+  const key = i * 4096 + (day & 4095);
+  const got = plans.get(key);
+  if (got) return got;
+  if (plans.size > 200000) plans.clear();
+  const out: Seg[] = [], h = (q: number) => hash3(P.seed ^ i, day, q);
+  const home = P.households[P.home[i]].building, B = city.buildings[home], hx = (B.x0 + B.x1) / 2, hy = (B.y0 + B.y1) / 2;
+  const wake = P.wake[i], bedEnd = P.bed[i] > wake ? P.bed[i] : P.bed[i] + 24;
+  const free = (a: number, b: number) => a >= wake + 0.3 && b <= bedEnd - 0.3 && out.every((s) => b <= s.a || a >= s.b);
+  /** A trip from a building and back: walk there, stay, walk back. */
+  const trip = (from: number, at: number, stay: number, doing: Doing, to: number, biz: number, check = true) => {
+    const w = walkHours(city, from, to), a = at - w, b = at + stay + w;
+    if (check && !free(a, b)) return false;
+    out.push({ a, b: at, doing: Doing.Walk, from, to, biz }, { a: at, b: at + stay, doing, from: to, to, biz }, { a: at + stay, b, doing: Doing.Walk, from: to, to: from, biz: -1 });
+    return true;
+  };
+  /** An errand to a shop near (x, y) within r metres, tried at a few times of the day. */
+  const errand = (q: number, kinds: Set<string>, r: number, stay: number) => {
+    const k = nearBiz(city, hx, hy, kinds, r, h(q));
+    if (k < 0) return;
+    for (let n = 0; n < 3; n++) {
+      const at = wake + 1 + h(q + 1 + n) * Math.max(0, bedEnd - wake - 4);
+      // not out in a downpour, unless it has to be done
+      if (rainAt(P.seed, (day * 24 + at) * 3600) > 0.35 && h(q + 5) < 0.7) continue;
+      if (trip(home, at, stay, Doing.Errand, city.businesses[k].building, k)) return;
+    }
+  };
+  const j = P.job[i], wd = (((day + 2) % 7) + 7) % 7;
+  if (j >= 0) {
+    const W = P.workplaces[j], [s, len] = W.shifts[P.shift[i]];
+    // two days off a week: the weekend at a place closed then, two days of their own at the others
+    const off = W.weekends ? (wd + i) % 7 < 2 : wd === 0 || wd === 6;
+    // in a little early, out a little late; a lunch out from the offices and plants on a day shift
+    const early = h(10) * 0.35, late = h(11) * 0.3;
+    if (!off && trip(home, s - early, len + early + late, Doing.Work, W.building, W.biz)) {
+      const Wb = city.buildings[W.building], lunch = nearBiz(city, (Wb.x0 + Wb.x1) / 2, (Wb.y0 + Wb.y1) / 2, LUNCH_KINDS, 250, h(12));
+      if (W.kind !== 'shop' && s >= 7 && s <= 11 && len >= 8 && lunch >= 0 && h(13) < 0.55) {
+        const at = s + 3.5 + h(14), stay = 0.4 + h(15) * 0.4, wseg = out[1];
+        // the shift splits round the lunch, and the trip there and back comes out of it
+        const w = walkHours(city, W.building, city.businesses[lunch].building);
+        out.splice(1, 1, { ...wseg, b: at - w }, { ...wseg, a: at + stay + w });
+        trip(W.building, at, stay, Doing.Errand, city.businesses[lunch].building, lunch, false);
+      }
+    }
   }
-  return -1;
+  const adult = P.age[i] >= 18, home0 = !(j >= 0);
+  // errands some days: groceries, the pharmacy, the laundry, a coffee; and a stroll to a shop further off for whoever has the time
+  if (P.age[i] >= 13 && h(1) < (adult ? 0.6 : 0.3)) errand(20, ERRAND_KINDS, 260, 0.2 + h(4) * 0.5);
+  if (adult && h(2) < 0.3) errand(30, ERRAND_KINDS, 400, 0.15 + h(5) * 0.3);
+  if (P.age[i] >= 10 && home0 && h(3) < 0.6) errand(40, STROLL_KINDS, 700, 0.1 + h(6) * 0.4);
+  // an evening out, more often for the sociable
+  if (adult && h(7) < (P.social[i] / 255) * 0.35) {
+    const k = nearBiz(city, hx, hy, OUT_KINDS, 500, h(8));
+    const at = 18.5 + h(9) * 3;
+    if (k >= 0 && (rainAt(P.seed, (day * 24 + at) * 3600) < 0.5 || h(17) < 0.3)) trip(home, at, 1.2 + h(16) * 2, Doing.Out, city.businesses[k].building, k);
+  }
+  out.sort((x, y) => x.a - y.a);
+  plans.set(key, out);
+  return out;
+}
+
+const HERE: Whereabouts = { doing: Doing.Home, building: -1, biz: -1, from: -1, prog: 0 };
+
+/**
+ * Where citizen i is at game time t, and what they are doing, from their day's plan (and the
+ * night before, for a shift or an evening past midnight). Far-off people cost nothing: their day is
+ * only looked up when someone asks. The result is shared: copy what you keep.
+ */
+export function whereIs(P: Population, city: City, i: number, t: number): Whereabouts {
+  const day = Math.floor(t / 86400), hr = t / 3600 - day * 24, R = HERE;
+  for (const [d, x] of [[day, hr], [day - 1, hr + 24]]) {
+    for (const s of dayPlan(P, city, i, d)) {
+      if (x < s.a || x >= s.b) continue;
+      R.doing = s.doing; R.building = s.to; R.biz = s.biz; R.from = s.from; R.prog = (x - s.a) / (s.b - s.a);
+      return R;
+    }
+  }
+  R.building = P.households[P.home[i]].building; R.biz = -1; R.from = -1; R.prog = 0;
+  const wake = P.wake[i], bedEnd = P.bed[i] > wake ? P.bed[i] : P.bed[i] + 24;
+  R.doing = (hr >= wake && hr < bedEnd) || (hr + 24 >= wake && hr + 24 < bedEnd) ? Doing.Home : Doing.Asleep;
+  return R;
 }
 
 /** The friends of citizen i. */

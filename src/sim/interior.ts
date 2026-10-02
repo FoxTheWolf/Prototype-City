@@ -122,6 +122,14 @@ export function alongFace(B: Building, face: number, x: number, y: number): numb
   return face < 2 ? y : face < 4 ? x : x * B.cut!.ny - y * B.cut!.nx;
 }
 
+/** Just outside a lot's street door (0.6 m out), or null when it has none. */
+export function doorPoint(city: City, k: number): [number, number] | null {
+  const D = doorOf(city, k);
+  if (!D) return null;
+  const [x, y, nx, ny] = facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2);
+  return [x + nx * 0.6, y + ny * 0.6];
+}
+
 const doorCache = new Map<number, Door | null>();
 /**
  * The street door of a lot: one bay on the face closest to the street that has open ground in front

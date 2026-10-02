@@ -753,7 +753,9 @@
       "noData": "Your data bundle is used up. Dial *100# to buy a new one.",
       "failed": "Your message to {to} could not be delivered.",
       "biz": ["Thanks for your message! Please call us at {num}.", "We got your message. Our hours are {open} to {close}.", "Thank you for contacting {biz}. We will reply soon."],
-      "res": ["Who is this?", "Sorry, I think you have the wrong number.", "Hi! Who's this?", "Do I know you?", "Wrong number, sorry."]
+      "res": ["Who is this?", "Sorry, I think you have the wrong number.", "Hi! Who's this?", "Do I know you?", "Wrong number, sorry."],
+      "wrong": ["Are we still on for tonight?", "Running late, be there in 10.", "Did you pick up the groceries?", "Call me when you get this.", "Don't forget the keys are under the mat.", "Movie starts at 8. Don't be late!", "Happy birthday!! :)", "Can you feed the cat tomorrow?", "I'm outside. Where are you?", "Thanks for dinner last night."],
+      "oops": ["Oh no, sorry! Wrong number.", "Oops! Sorry, I typed the wrong number.", "Sorry, that was meant for someone else."]
     },
     "ok": "OK", "off": "OFF", "noService": "NO SERVICE", "ready": "READY.", "mapsDb": "MAPS DB",
     "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide", "places": "Places", "placesTitle": "PLACES", "show": "Show",
@@ -812,7 +814,7 @@
       "store": ["No data connection", "Apps download over EDGE", "or a Wi-Fi hotspot"],
       "boxes": ["Inbox", "Sent", "Drafts", "Outbox"],
       "messages": ["No network", "Messages cannot be sent"],
-      "calling": "CALLING", "ringing": "RINGING", "incoming": "INCOMING CALL", "answer": "Answer", "unreachable": "NOT REACHABLE", "noNetwork": "NO NETWORK", "busy": "NETWORK BUSY", "noAnswer": "NO ANSWER", "callEnded": "CALL ENDED", "care": "Customer Care", "save": "Save", "new": "New", "end": "End", "name": "Name", "numberF": "Number", "noContacts": "No contacts. New adds one.", "sim": "SIM {n}/250", "cost": "Cost {c}", "callFailed": "CALL FAILED", "dialHint": "Type a number", "call": "Call", "clear": "Clear",
+      "calling": "CALLING", "ringing": "RINGING", "incoming": "INCOMING CALL", "missed": "{n} MISSED CALL", "missedN": "{n} MISSED CALLS", "answer": "Answer", "unreachable": "NOT REACHABLE", "noNetwork": "NO NETWORK", "busy": "NETWORK BUSY", "noAnswer": "NO ANSWER", "callEnded": "CALL ENDED", "care": "Customer Care", "save": "Save", "new": "New", "end": "End", "name": "Name", "numberF": "Number", "noContacts": "No contacts. New adds one.", "sim": "SIM {n}/250", "cost": "Cost {c}", "callFailed": "CALL FAILED", "dialHint": "Type a number", "call": "Call", "clear": "Clear",
       "stopwatch": "STOPWATCH", "stopwatchHint": "* reset", "start": "Start", "stop": "Stop",
       "calcHint": ["^ +   v -   < x   > /", "OK =   * clear   # ."],
       "notesHint": "Tap the keys: 2 abc .. 9 wxyz  (# for T9)",

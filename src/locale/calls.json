@@ -39,6 +39,16 @@
     "machine": ["Hi, you've reached the {surname}s. Leave a message after the beep.", "This is {name}. I can't come to the phone. Leave a message.", "You've reached {name} {surname}. Please leave your name and number."],
     "sleepy": ["Hello...? It's the middle of the night.", "Who's calling at this hour?"]
   },
+  "wrong": {
+    "ask": ["Hi, is {other} there?", "Hello? {other}, is that you?", "Hey, it's {name}. Is this {other}?", "Hello, I'm looking for {other}."],
+    "sorry": ["Oh. I must have the wrong number. Sorry.", "Sorry, wrong number. Have a good night.", "Oops, wrong number. Sorry to bother you."],
+    "back": ["Hello? Oh, I think I called this number earlier. Sorry, that was a mistake.", "Hi... yes, I called before. Wrong number, sorry about that."]
+  },
+  "payphone": {
+    "hello": ["Hello? Uh, this is a pay phone.", "Yeah? This is a pay phone on the corner.", "Hello? I was just walking by. It was ringing."],
+    "who": ["Who are you looking for?", "Is anyone there?", "Hello?"],
+    "bye": ["Okay, I'm hanging this up.", "Must be a prank. Bye.", "Alright, goodbye."]
+  },
   "cell": {
     "hello": ["Hello?", "Yeah, hello?", "This is {name}.", "{name} speaking.", "Hi, {name} here."],
     "work": ["Hello? I'm at work, I can't talk long.", "{name} speaking. I'm a little busy right now."],

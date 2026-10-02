@@ -8,7 +8,7 @@ import { buildWifi, type AccessPoint } from './wifi';
 import { generatePeople, noPeople, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
-import { crossers, pedsWanted, spawnPeds, stepPeds, type Ped } from './peds';
+import { crossers, spawnPeds, stepPeds, type Ped } from './peds';
 import { newWeather, PRESETS, stepWeather, type Weather } from './weather';
 
 /** Simulation rate. The sim always advances in steps of exactly this size. */
@@ -100,11 +100,11 @@ export function createWorld(seed: number, size = CITY_SIZE, people = true): Worl
 
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
-  const peds = spawnPeds(city, rng, pedsWanted(time, 0), x, y);
   const power = buildPower(seed, city);
   const telco = buildTelco(seed, city, power);
   const pop = people ? generatePeople(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2)) : noPeople();
   telco.people = pop.byNum;
+  const peds = spawnPeds(city, pop, rng, time, x, y);
   return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop };
 }
 
@@ -234,7 +234,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   stepDoors(w);
 
   const hour = (w.time / 3600) % 24;
-  stepPeds(w.city, w.power, w.peds, w.cars, w.rng, TICK, w.tick, p.x, p.y, pedsWanted(w.time, w.weather.precip));
+  stepPeds(w.city, w.power, w.pop, w.peds, w.cars, w.rng, TICK, w.tick, w.time, p.x, p.y);
   stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5, crossers);
   // the streets fill up and empty with the hour, out of the player's sight
   if (w.tick % 30 === 0) {

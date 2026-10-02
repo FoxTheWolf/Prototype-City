@@ -116,6 +116,14 @@ export class Phone {
   buzzLen = 0;
   /** The call on the line is coming in (from a payphone): the far end pays and runs it; ringing again at nextRing. */
   callIn = false;
+  /** Calls that rang out unanswered since the dialer was last opened. */
+  missed = 0;
+  /** The game hour last checked for a citizen getting the player's number wrong; a call due at a time, from whom. */
+  private oddHour = -1;
+  private wrongAt = -1;
+  private wrongN = 0;
+  /** Citizens who texted the player by mistake (answer them and they say so). */
+  private wrongSms = new Set<number>();
   private nextRing = 0;
   /** A call ringing the player's own number (main hands it the payphone's), with the number it comes from. */
   incomingCall: () => [Call, string] | null = () => null;
@@ -254,6 +262,23 @@ export class Phone {
       if (A.dataKB < 1 && !this.told.out) { this.told.out = true; this.receive(op, SMS.noData, now + 2); }
       if (A.dataKB > 500) this.told.low = this.told.out = false;
     }
+    // now and then a citizen gets the player's number wrong: a call, or a text (one hour in a few)
+    if (this.screen !== 'off' && this.radio.state === 'service') {
+      const hr = Math.floor(this.world.time / 3600), h = (q: number) => hash3(this.world.seed, hr, q);
+      if (hr !== this.oddHour) {
+        if (this.oddHour >= 0) {
+          if (h(0x11c) < 0.16) this.wrongAt = now + h(0x11e) * 90;
+          const i = h(0x11d) < 0.12 ? this.somebody(h(0x11f)) : -1;
+          if (i >= 0) { this.wrongSms.add(i); this.receive(this.world.pop.mobile[i], SMS.wrong[Math.floor(h(0x120) * SMS.wrong.length)], now + 5 + h(0x121) * 80); }
+        }
+        this.oddHour = hr;
+      }
+      if (this.wrongAt >= 0 && now >= this.wrongAt && !this.call) {
+        this.wrongAt = -1;
+        const i = this.somebody(h(0x122 + ++this.wrongN));
+        if (i >= 0) { this.call = Call.from(this.world, i, now); this.callIn = true; this.dial = this.world.pop.mobile[i]; this.nextRing = now; this.open('calls', now); }
+      }
+    }
     // the call: its tones and voices; ended, it is paid for and, a moment later, put away
     // a call to the player's own number: it rings here (or cannot get through)
     const ic = this.incomingCall();
@@ -271,6 +296,12 @@ export class Phone {
         else if (this.prefs.profile === 1) { this.cue = 'vibrate'; this.buzz(now, 1.6); }
       }
       if (c.state !== 'ringing' && this.nextRing > 0) { this.nextRing = 0; this.cue = 'stop'; this.buzzUntil = 0; }
+      if (c.caller >= 0) {
+        // a citizen's call runs here; unanswered, it is a missed call (and in the list the green key redials)
+        const was = c.state;
+        c.update(now, c.state === 'talk' ? this.sfx : []); // their voice, not their ringback
+        if (was === 'ringing' && c.state === 'ended') { this.missed++; if (this.redial[0] !== c.number) this.redial.unshift(c.number); if (this.redial.length > 10) this.redial.pop(); }
+      }
       if (c.state === 'ended' && now > c.endAt + 2.5) { this.call = null; this.callIn = false; this.dial = ''; }
     } else if (c) {
       c.update(now, this.sfx);
@@ -300,6 +331,7 @@ export class Phone {
     if (this.screen === 'settings' && s !== 'settings') this.cue = 'stop';
     this.screen = s; this.since = now; this.scroll = 0;
     if (s === 'settings') { this.setPage = 'root'; this.setSel = 0; }
+    if (s === 'calls' && !this.call) this.missed = 0;
     if (s === 'compose') this.smsEd.set(this.draft.text);
     if (s === 'contact') this.nameEd.set(this.edit.name);
     if (s === 'map') this.panX = this.panY = 0;
@@ -650,6 +682,16 @@ export class Phone {
     return true;
   }
 
+  /** A citizen awake now, with a mobile, picked by r (0..1): who gets the number wrong; -1 if none found. */
+  private somebody(r: number): number {
+    const P = this.world.pop;
+    for (let k = 0; k < 40 && P.n; k++) {
+      const i = Math.floor(hash3(this.world.seed, Math.floor(r * 1e6), k) * P.n);
+      if (P.mobile[i] && P.age[i] >= 16 && whereIs(P, this.world.city, i, this.world.time).doing !== Doing.Asleep) return i;
+    }
+    return -1;
+  }
+
   private openApp(i: number, now: number) {
     this.appId = i; this.open('app', now);
     const id = STORE[i][0];
@@ -711,7 +753,8 @@ export class Phone {
       const b = this.world.city.businesses[c.k], [o, z] = BIZ_HOURS[b.kind] ?? [9, 17], hh = (x: number) => `${((x + 11) % 12) + 1}${x % 24 < 12 ? 'am' : 'pm'}`;
       const t = SMS.biz[Math.floor(h(2) * SMS.biz.length)].replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
       this.receive(D.to, t, now + 8 + h(3) * 20);
-    } else if (c.kind === 'home') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5); // a landline takes no texts
+    } else if (c.kind === 'cell' && this.wrongSms.has(c.i)) this.receive(D.to, SMS.oops[Math.floor(h(2) * SMS.oops.length)], now + 10 + h(3) * 30);
+    else if (c.kind === 'home') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5); // a landline takes no texts
     else if (c.kind === 'cell' && h(1) < 0.25 + 0.5 * (this.world.pop.talk[c.i] / 255)) {
       // the owner reads it when awake, and maybe answers
       const asleep = whereIs(this.world.pop, this.world.city, c.i, this.world.time).doing === Doing.Asleep;
@@ -807,3 +850,4 @@ export function peopleNear(world: World): { building: number; ids: number[] } {
   }
   return { building: best, ids: best >= 0 ? residentsOf(P, best) : [] };
 }
+

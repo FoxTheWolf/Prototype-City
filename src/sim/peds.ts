@@ -1,17 +1,22 @@
 import { type Rng } from '../core/rng';
 import { SIDEWALK, type Block, type City } from './city';
+import { Doing, whereIs, type Population } from './citizens';
+import { doorPoint } from './interior';
 import { type PowerGrid } from './power';
 import { Sig, signal, stopLike, type Car } from './traffic';
 
 /**
- * Pedestrians: the people on the sidewalks around the player. Each walks round a block on its
- * sidewalk, a little in from the curb, and at a corner turns or crosses on the crosswalk to the next
- * block, waiting for the walk light (traffic running alongside has the green), or at a stop sign or a
- * dark signal for a gap in the traffic. Cars stop for whoever is on the crosswalk. They exist only
- * near the player (the rest of the city is too far to see) and come and go out of sight; each has
- * an identity of its own, for stage 11 to tie to a citizen with a home and a routine.
+ * Pedestrians: the citizens on their way somewhere near the player (see citizens.ts). Whoever's
+ * day has them walking from one building to another, near enough to be seen, comes out of the door
+ * of the first (or round a corner, out of sight, when already on the way) and walks the sidewalks
+ * a little in from the curb, round the blocks and across the crosswalks towards the second, waiting
+ * for the walk light (traffic running alongside has the green), or at a stop sign or a dark signal
+ * for a gap in the traffic; at the block they go to, they walk in through its door and are gone.
+ * Cars stop for whoever is on the crosswalk. Out of the player's reach they are dropped, and go on
+ * by their plan, which costs nothing.
  */
 export interface Ped {
+  /** The citizen. */
   id: number;
   x: number;
   y: number;
@@ -38,20 +43,23 @@ export interface Ped {
   /** Ticks waited at the curb; metres walked (the legs swing with it). */
   wait: number;
   stride: number;
+  /** Where it goes: the building (-1: nowhere it can walk to, it leaves round the corner), its block, and the point on this ring of sidewalk across from its door. */
+  goal: number;
+  gb: number;
+  ge: number;
+  gt: number;
+  /** Through a door: 1 coming out to the sidewalk, 2 going in; lx, ly the point it walks to. */
+  door: number;
+  lx: number;
+  ly: number;
 }
 
 /** Where on the road the crosswalk runs: this far from the intersection's edge (the stripes are 1-4.5 m). */
 const CW = 2.75;
-/** Pedestrians live within this of the player, and are moved away beyond the second radius. */
+/** Pedestrians live within this of the player, and are dropped beyond the second radius. */
 export const PED_R = 220, PED_FAR = 260;
-/** Share of PEDS on the sidewalks at each hour. */
-const PEDS = 520;
-const PED_RUSH = [0.12, 0.08, 0.06, 0.05, 0.05, 0.1, 0.25, 0.6, 0.9, 0.7, 0.6, 0.7, 0.95, 0.85, 0.7, 0.7, 0.8, 1, 0.95, 0.8, 0.65, 0.5, 0.35, 0.2];
-
-export function pedsWanted(t: number, rain: number) {
-  const h = (t / 3600) % 24, a = Math.floor(h), f = h - a;
-  return Math.round(PEDS * (PED_RUSH[a] * (1 - f) + PED_RUSH[(a + 1) % 24] * f) * (1 - 0.4 * rain));
-}
+/** At most this many at once, and how much of the population is looked at per tick (all of it every 0.5 s). */
+const PED_CAP = 700, SCAN_TICKS = 30;
 
 /** The ring on a block's sidewalk `off` in from the curb: start and direction of edge e, and its length. */
 function edge(b: Block, off: number, e: number, out: number[]) {
@@ -66,39 +74,115 @@ const E = [0, 0, 0, 0, 0];
 /** Whether a pedestrian can walk this block's sidewalk (the diagonal's blocks are left out for now). */
 const walkable = (b: Block | undefined) => !!b && !b.diag;
 
-/** A new pedestrian on a sidewalk between rMin and rMax from (x, y), or null if none fits. */
-function spawnPed(city: City, rng: Rng, x: number, y: number, rMin: number, rMax: number): Ped | null {
-  for (let tries = 0; tries < 30; tries++) {
-    const n = (rng() * city.blocks.length) | 0, b = city.blocks[n];
-    if (!walkable(b)) continue;
-    const off = 0.7 + rng() * (SIDEWALK - 1.4), e = (rng() * 4) | 0;
-    edge(b, off, e, E);
-    const t = rng() * E[4], px = E[0] + E[2] * t, py = E[1] + E[3] * t, d = Math.hypot(px - x, py - y);
-    if (d < rMin || d > rMax) continue;
-    const dir = rng() < 0.5 ? 1 : -1;
-    return { id: (rng() * 2 ** 31) | 0, x: px, y: py, px, py, dx: E[2] * dir, dy: E[3] * dir, v: 0, pace: 1.1 + rng() * 0.5, blk: n, e, t, dir, off, way: [], wi: 0, ci: 0, cj: 0, axis: 0, wait: 0, stride: rng() * 2 };
-  }
-  return null;
+/** The block (index) a point is in, or -1 on a road. */
+function blockIndex(city: City, x: number, y: number): number {
+  const cx = city.xCell[Math.max(0, Math.min(city.xCell.length - 1, Math.floor(x)))], cy = city.yCell[Math.max(0, Math.min(city.yCell.length - 1, Math.floor(y)))];
+  if (!(cx & 1) || !(cy & 1)) return -1;
+  return ((cy - 1) >> 1) * city.nbx + ((cx - 1) >> 1);
 }
 
-export function spawnPeds(city: City, rng: Rng, count: number, x: number, y: number): Ped[] {
-  const out: Ped[] = [];
-  for (let k = 0; k < count * 3 && out.length < count; k++) { const p = spawnPed(city, rng, x, y, 0, PED_R); if (p) out.push(p); }
-  return out;
+/** The point of block b's ring nearest (x, y): its edge and metres along it. */
+function onRing(b: Block, off: number, x: number, y: number): [number, number] {
+  let best = 1e18, be = 0, bt = 0;
+  for (let e = 0; e < 4; e++) {
+    edge(b, off, e, E);
+    const t = Math.max(0, Math.min(E[4], (x - E[0]) * E[2] + (y - E[1]) * E[3]));
+    const d = (E[0] + E[2] * t - x) ** 2 + (E[1] + E[3] * t - y) ** 2;
+    if (d < best) { best = d; be = e; bt = t; }
+  }
+  return [be, bt];
+}
+
+/** Metres round the ring (clockwise) from edge 0's start. */
+function ringPos(b: Block, off: number, e: number, t: number) {
+  const w = b.x1 - b.x0 - 2 * off, h = b.y1 - b.y0 - 2 * off;
+  return [0, w, w + h, 2 * w + h][e] + t;
+}
+
+/** Whether, at the corner reached going this way along edge e, crossing straight on heads for the goal block. */
+function towards(city: City, p: Ped, e: number, dir: number): boolean {
+  const b = city.blocks[p.blk], bi = p.blk % city.nbx, bj = Math.floor(p.blk / city.nbx);
+  const gi = p.gb % city.nbx, gj = Math.floor(p.gb / city.nbx);
+  edge(b, p.off, e, E);
+  const tx = E[2] * dir, ty = E[3] * dir;
+  if (tx ? Math.sign(gi - bi) !== tx : Math.sign(gj - bj) !== ty) return false;
+  const ni = bi + tx, nj = bj + ty;
+  return ni >= 0 && nj >= 0 && ni < city.nbx && nj < city.nby && walkable(city.blocks[nj * city.nbx + ni]);
+}
+
+/** Which way round its block a pedestrian should go: to its goal on this block, or to the corner where it crosses towards it. */
+function pickDir(city: City, p: Ped) {
+  const b = city.blocks[p.blk];
+  if (p.blk === p.gb) {
+    const L = 2 * (b.x1 - b.x0 + b.y1 - b.y0 - 4 * p.off), fw = (((ringPos(b, p.off, p.ge, p.gt) - ringPos(b, p.off, p.e, p.t)) % L) + L) % L;
+    p.dir = fw <= L / 2 ? 1 : -1;
+    return;
+  }
+  let best = Infinity;
+  for (const d of [1, -1]) {
+    let e = p.e, t = p.t, dist = 0;
+    for (let k = 0; k < 4; k++) {
+      edge(b, p.off, e, E);
+      dist += d > 0 ? E[4] - t : t;
+      if (towards(city, p, e, d)) break;
+      e = (e + (d > 0 ? 1 : 3)) & 3;
+      edge(b, p.off, e, E);
+      t = d > 0 ? 0 : E[4];
+      if (k === 3) dist = Infinity;
+    }
+    if (dist < best) { best = dist; p.dir = d; }
+  }
+  // no way on from here (the diagonal's blocks in between): round this block to the nearest point to the door, and off
+  if (best === Infinity) {
+    const to = doorPoint(city, p.goal)!;
+    p.gb = p.blk; p.goal = -1;
+    [p.ge, p.gt] = onRing(b, p.off, to[0], to[1]);
+    pickDir(city, p);
+  }
 }
 
 /**
- * At a corner: turn, or cross straight on to the next block. Crossing sets the waypoints and the
- * stop whose light it waits for (the intersection, and the axis of the traffic running alongside).
+ * Citizen i out walking, as a pedestrian: from the door of the building they left (out) or at the
+ * point of their way they have reached (x, y), on its nearest sidewalk; null when their way cannot
+ * be walked (a block of the diagonal, a lot without a door).
  */
-function corner(city: City, rng: Rng, p: Ped) {
+function spawnPed(city: City, rng: Rng, i: number, goal: number, x: number, y: number, out: [number, number] | null): Ped | null {
+  const to = doorPoint(city, goal);
+  if (!to) return null;
+  const off = 0.7 + rng() * (SIDEWALK - 1.4);
+  const sx = out ? out[0] : x, sy = out ? out[1] : y;
+  let blk = blockIndex(city, sx, sy);
+  // on a road: the nearest block's sidewalk
+  if (blk < 0) {
+    for (let r = 2; r < 30 && blk < 0; r += 2) for (const [ox, oy] of [[r, 0], [-r, 0], [0, r], [0, -r]]) { blk = blockIndex(city, sx + ox, sy + oy); if (blk >= 0) break; }
+  }
+  const gb = blockIndex(city, to[0], to[1]);
+  if (blk < 0 || gb < 0 || !walkable(city.blocks[blk]) || !walkable(city.blocks[gb])) return null;
+  const [e, t] = onRing(city.blocks[blk], off, sx, sy), [ge, gt] = onRing(city.blocks[gb], off, to[0], to[1]);
+  edge(city.blocks[blk], off, e, E);
+  const rx = E[0] + E[2] * t, ry = E[1] + E[3] * t;
+  const p: Ped = {
+    id: i, x: out ? sx : rx, y: out ? sy : ry, px: 0, py: 0, dx: E[2], dy: E[3], v: 0, pace: 1.1 + rng() * 0.5, blk, e, t, dir: 1, off,
+    way: [], wi: 0, ci: 0, cj: 0, axis: 0, wait: 0, stride: rng() * 2, goal, gb, ge, gt, door: out ? 1 : 0, lx: rx, ly: ry,
+  };
+  p.px = p.x; p.py = p.y;
+  pickDir(city, p);
+  return p;
+}
+
+/**
+ * At a corner: turn, or cross straight on to the next block when that heads for the goal. Crossing
+ * sets the waypoints and the stop whose light it waits for (the intersection, and the axis of the
+ * traffic running alongside).
+ */
+function corner(city: City, p: Ped) {
   const b = city.blocks[p.blk], bi = p.blk % city.nbx, bj = Math.floor(p.blk / city.nbx);
   edge(b, p.off, p.e, E);
   const tx = E[2] * p.dir, ty = E[3] * p.dir; // travelling this way
-  const ni = bi + tx, nj = bj + ty, nb = ni >= 0 && nj >= 0 && ni < city.nbx && nj < city.nby ? city.blocks[nj * city.nbx + ni] : undefined;
-  if (walkable(nb) && rng() < 0.45) {
+  const ni = bi + tx, nj = bj + ty;
+  if (p.blk !== p.gb && towards(city, p, p.e, p.dir)) {
     // straight on across the road, on the crosswalk next to the intersection
-    const n = nb!;
+    const n = city.blocks[nj * city.nbx + ni];
     if (tx) {
       const yc = p.e === 0 ? b.y0 + CW : b.y1 - CW, ax = tx > 0 ? b.x1 : b.x0, bx = tx > 0 ? n.x0 : n.x1;
       edge(n, p.off, p.e, E);
@@ -133,21 +217,78 @@ function traffic(cars: Car[], x: number, y: number): boolean {
 /** Crosswalk users this tick (x, y pairs), for cars to stop for. */
 export const crossers: number[] = [];
 
-/** One tick of the pedestrians near the player; the crowd thins and grows with the hour, out of sight. */
-export function stepPeds(city: City, power: PowerGrid, peds: Ped[], cars: Car[], rng: Rng, dt: number, tick: number, px: number, py: number, want: number) {
+/** Walk straight to (lx, ly); true on arrival. */
+function toPoint(p: Ped, v: number, dt: number): boolean {
+  const dx = p.lx - p.x, dy = p.ly - p.y, d = Math.hypot(dx, dy);
+  if (d > 1e-6) { p.dx = dx / d; p.dy = dy / d; }
+  const step = Math.min(d, v * dt);
+  if (d > 1e-6) { p.x += (dx / d) * step; p.y += (dy / d) * step; }
+  return d - step < 0.05;
+}
+
+/**
+ * Who of the population is out walking near the player: a share of the citizens each tick (all of
+ * them every SCAN_TICKS). Someone who has just left a building in reach comes out of its door; someone
+ * already on their way is picked up only out of sight (between 0.7 and 1 of the reach), so nobody
+ * pops up in view. `all` looks at everyone at once (a new world).
+ */
+function scan(city: City, pop: Population, peds: Ped[], walking: Set<number>, rng: Rng, tick: number, time: number, px: number, py: number, all = false) {
+  if (!pop.n) return;
+  const per = Math.ceil(pop.n / SCAN_TICKS), i0 = all ? 0 : (tick % SCAN_TICKS) * per, i1 = all ? pop.n : Math.min(pop.n, i0 + per);
+  const B = city.buildings;
+  for (let i = i0; i < i1 && peds.length < PED_CAP; i++) {
+    if (walking.has(i)) continue;
+    const W = whereIs(pop, city, i, time);
+    if (W.doing !== Doing.Walk) continue;
+    const F = B[W.from], T = B[W.building];
+    const fx = (F.x0 + F.x1) / 2, fy = (F.y0 + F.y1) / 2, gx = (T.x0 + T.x1) / 2, gy = (T.y0 + T.y1) / 2;
+    const x = fx + (gx - fx) * W.prog, y = fy + (gy - fy) * W.prog;
+    const metres = W.prog * (Math.abs(gx - fx) + Math.abs(gy - fy));
+    let p: Ped | null = null;
+    if (metres < 25 && !all) {
+      // just out of the door
+      const out = doorPoint(city, W.from);
+      if (out && Math.hypot(out[0] - px, out[1] - py) < PED_R) p = spawnPed(city, rng, i, W.building, 0, 0, out);
+    } else {
+      const d = Math.hypot(x - px, y - py);
+      if (d < PED_R && (all || d > PED_R * 0.7)) p = spawnPed(city, rng, i, W.building, x, y, null);
+    }
+    if (p) { peds.push(p); walking.add(i); }
+  }
+}
+
+/** Citizens now walking as pedestrians, by id (so nobody is on the street twice). */
+const onStreet = new WeakMap<Ped[], Set<number>>();
+
+/** The pedestrians around a new world. */
+export function spawnPeds(city: City, pop: Population, rng: Rng, time: number, x: number, y: number): Ped[] {
+  const peds: Ped[] = [], s = new Set<number>();
+  scan(city, pop, peds, s, rng, 0, time, x, y, true);
+  onStreet.set(peds, s);
+  return peds;
+}
+
+/** One tick of the pedestrians near the player: new ones from the population, each walking on, the arrived and the far ones gone. */
+export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Ped[], cars: Car[], rng: Rng, dt: number, tick: number, time: number, px: number, py: number) {
   const sec = tick * dt;
+  let walking = onStreet.get(peds);
+  if (!walking) onStreet.set(peds, (walking = new Set(peds.map((p) => p.id))));
   crossers.length = 0;
   for (let k = peds.length - 1; k >= 0; k--) {
     const p = peds[k];
     p.px = p.x; p.py = p.y;
-    // too far behind the player: gone (it comes back as someone else, out of sight)
-    if (Math.abs(p.x - px) > PED_FAR || Math.abs(p.y - py) > PED_FAR) {
-      const n = peds.length > want ? null : spawnPed(city, rng, px, py, PED_R * 0.7, PED_R);
-      if (n) peds[k] = n; else peds.splice(k, 1);
-      continue;
-    }
+    // too far from the player: off the street (their day goes on by their plan)
+    if (Math.abs(p.x - px) > PED_FAR || Math.abs(p.y - py) > PED_FAR) { walking.delete(p.id); peds.splice(k, 1); continue; }
     let v = p.pace;
-    if (p.way.length) {
+    const ahx = p.x + p.dx * 0.8, ahy = p.y + p.dy * 0.8;
+    if (!p.way.length && Math.hypot(ahx - px, ahy - py) < 0.7) v = 0; // the player is in the way
+    if (p.door) {
+      // through the door: out onto the sidewalk, or in and gone
+      if (toPoint(p, v, dt)) {
+        if (p.door === 2) { walking.delete(p.id); peds.splice(k, 1); continue; }
+        p.door = 0;
+      }
+    } else if (p.way.length) {
       // crossing: to the curb, wait for the light, over the road, back onto the sidewalk
       const wx = p.way[p.wi * 2], wy = p.way[p.wi * 2 + 1];
       if (p.wi === 0) {
@@ -166,24 +307,26 @@ export function stepPeds(city: City, power: PowerGrid, peds: Ped[], cars: Car[],
       const step = Math.min(d, v * dt);
       if (d > 1e-6) { p.x += (dx / d) * step; p.y += (dy / d) * step; }
       if (p.wi === 1) crossers.push(p.x, p.y);
-      if (d - step < 0.05 && p.wi > 0) { p.wi++; if (p.wi > 2) p.way = []; }
+      if (d - step < 0.05 && p.wi > 0) { p.wi++; if (p.wi > 2) { p.way = []; pickDir(city, p); } }
     } else {
-      // round the block
+      // round the block; at the door's point, in
       const b = city.blocks[p.blk];
-      const ahx = p.x + p.dx * 0.8, ahy = p.y + p.dy * 0.8;
-      if (Math.hypot(ahx - px, ahy - py) < 0.7) v = 0; // the player is in the way
-      p.t += p.dir * v * dt;
-      edge(b, p.off, p.e, E);
-      if (p.t > E[4] || p.t < 0) { corner(city, rng, p); if (p.way.length) { p.stride += v * dt; continue; } edge(b, p.off, p.e, E); }
-      p.x = E[0] + E[2] * p.t; p.y = E[1] + E[3] * p.t;
-      p.dx = E[2] * p.dir; p.dy = E[3] * p.dir;
+      if (p.blk === p.gb && p.e === p.ge && Math.abs(p.t - p.gt) <= v * dt + 0.05) {
+        const to = p.goal >= 0 ? doorPoint(city, p.goal)! : [p.x, p.y];
+        p.door = 2; p.lx = to[0]; p.ly = to[1];
+      } else {
+        const t0 = p.t;
+        p.t += p.dir * v * dt;
+        // passing the door's point within one step
+        if (p.blk === p.gb && p.e === p.ge && (t0 - p.gt) * (p.t - p.gt) <= 0) p.t = p.gt;
+        edge(b, p.off, p.e, E);
+        if (p.t > E[4] || p.t < 0) { corner(city, p); if (p.way.length) { p.v = v; p.stride += v * dt; continue; } edge(b, p.off, p.e, E); }
+        p.x = E[0] + E[2] * p.t; p.y = E[1] + E[3] * p.t;
+        p.dx = E[2] * p.dir; p.dy = E[3] * p.dir;
+      }
     }
     p.v = v;
     p.stride += v * dt;
   }
-  // more people out at this hour: a few come round a corner, out of sight
-  if (tick % 20 === 0) for (let n = 0; n < 3 && peds.length < want; n++) { const q = spawnPed(city, rng, px, py, PED_R * 0.7, PED_R); if (q) peds.push(q); }
-  if (tick % 20 === 10 && peds.length > want) {
-    for (let k = peds.length - 1, n = 0; k >= 0 && n < 3 && peds.length > want; k--) if (Math.hypot(peds[k].x - px, peds[k].y - py) > PED_R * 0.7 && !peds[k].way.length) { peds.splice(k, 1); n++; }
-  }
+  scan(city, pop, peds, walking, rng, tick, time, px, py);
 }

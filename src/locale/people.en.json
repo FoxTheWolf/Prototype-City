@@ -4,5 +4,5 @@
   "office": ["{s} & {s2}", "{s} Associates", "{w} Holdings", "{w} Group", "{s} {w} Partners", "{w} Systems", "{w} Insurance", "{s} & Co.", "{w} Consulting", "{w} Media", "{w} Capital", "{s} Law Offices", "{w} Data", "{w} Mutual", "{s} {s2} Architects", "{w} Trading"],
   "plant": ["{w} Metalworks", "{s} Freight", "{w} Logistics", "{s} Printing", "{w} Plastics", "{s} Brothers Supply", "{w} Foods", "{w} Textiles", "{s} Tool & Die", "{w} Recycling"],
   "role": {"worker": "works at {place}", "student": "student", "retired": "retired", "idle": "out of work", "child": "child"},
-  "doing": {"asleep": "asleep", "home": "at home", "commute": "on the way", "work": "at work", "out": "out at {place}"}
+  "doing": {"asleep": "asleep", "home": "at home", "commute": "on the way", "work": "at work", "out": "out at {place}", "errand": "at {place}"}
 }
