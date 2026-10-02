@@ -129,7 +129,7 @@ export function drawCranes(grid: CharGrid, c: City, px: number, py: number, eye:
     for (let y = Math.max(0, yTop); y <= Math.min(rows - 1, yBot); y++) {
       for (let dx = -1; dx <= 1; dx++) {
         const x = cx + dx, i = y * cols + x;
-        if (x < 0 || x >= cols || depth[i] < tY) continue;
+        if (x < grid.x0 || x >= grid.x1 || depth[i] < tY) continue;
         if (y === yTop) {
           if (dx === 0) grid.put(i, lightOn ? C('*') : C('-'), lightOn ? 255 * vis : 60 * vis, lightOn ? 40 : 60 * vis, lightOn ? 30 : 65 * vis);
           else grid.put(i, C('-'), 70 * vis, 70 * vis, 76 * vis);

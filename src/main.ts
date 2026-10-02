@@ -14,7 +14,8 @@ import { CharGrid } from './render/grid';
 import { type Look } from './render/palette';
 import { power } from './render/power';
 import { pickedButton } from './render/interior';
-import { renderWorld, VIEW_GLINT, VIEW_LIGHT } from './render/raycaster';
+import { renderWorld, VIEW_GLINT, VIEW_LIGHT, type View } from './render/raycaster';
+import { RenderPool } from './render/pool';
 import { intro, INTRO_S } from './render/intro';
 import { daylight } from './render/sky';
 import { operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
@@ -26,7 +27,7 @@ import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours,
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 100, 120];
-let resStep = 1; // 100 rows, the user's choice
+let resStep = 1; // 100 rows on the main thread; 120 with the render workers (set below)
 const ROWS = 80; // the bench's grid, kept the same to compare
 /** Cell width / height, close to a monospace glyph. */
 const CELL_ASPECT = 0.6;
@@ -38,6 +39,12 @@ const MOUSE_SENS = 0.0022;
 const seedParam = new URLSearchParams(location.search).get('seed');
 const seed = seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 const world = createWorld(seed);
+// the world is drawn by a pool of workers when the page allows shared memory (?workers=N sets how
+// many, ?workers=0 draws on the main thread as before)
+const workersParam = new URLSearchParams(location.search).get('workers');
+const nWorkers = workersParam !== null ? Math.max(0, Number(workersParam) | 0) : Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 2));
+const pool = nWorkers > 0 && RenderPool.available() ? new RenderPool(seed, undefined, nWorkers) : null;
+if (pool) resStep = 2;
 
 const canvas = document.getElementById('screen') as HTMLCanvasElement;
 const overlay = document.getElementById('overlay')!;
@@ -65,7 +72,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool,
   gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
@@ -80,6 +87,8 @@ if (import.meta.env.DEV) Object.assign(window, {
   },
 });
 let grid: CharGrid;
+/** With the pool: the last world frame the workers finished, copied under the overlays every refresh. */
+let shown: CharGrid;
 let layout: Layout;
 let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
@@ -286,6 +295,8 @@ function computeLayout(): Layout {
 function resize() {
   layout = computeLayout();
   grid = new CharGrid(layout.cols, layout.rows);
+  shown = new CharGrid(layout.cols, layout.rows);
+  pool?.resize(layout.cols, layout.rows);
   renderer.setLayout(layout);
 }
 
@@ -322,6 +333,8 @@ let acc = 0;
 let fps = 60;
 /** Time spent drawing the world: smoothed, and the worst of the last second. */
 let renderMs = 0, worstMs = 0, worstShown = 0, worstAt = 0;
+/** World frames shown a second (with the pool they can lag the screen's refreshes), and the count this second. */
+let worldFps = 0, worldFrames = 0, worldAt = 0;
 
 function frame(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000);
@@ -344,8 +357,7 @@ function frame(now: number) {
   const alpha = acc / TICK;
 
   const p = world.player;
-  const r0 = performance.now();
-  renderWorld(grid, world, {
+  const view: View = {
     x: p.px + (p.x - p.px) * alpha,
     y: p.py + (p.y - p.py) * alpha,
     yaw: camera.yaw,
@@ -358,8 +370,20 @@ function frame(now: number) {
     cellAspect: layout.cellW / layout.cellH,
     look,
     hand: handLightNow(),
-  });
-  const ms = performance.now() - r0;
+  };
+  let ms: number;
+  if (pool) {
+    // the workers draw the next frame while this one shows the last they finished
+    if (pool.frame(world, view, shown)) worldFrames++;
+    grid.cells.set(shown.cells); grid.bg.set(shown.bg);
+    ms = pool.ms;
+  } else {
+    const r0 = performance.now();
+    renderWorld(grid, world, view);
+    ms = performance.now() - r0;
+    worldFrames++;
+  }
+  if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
   phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
   phone.update(dt, now / 1000);
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
@@ -389,7 +413,7 @@ function frame(now: number) {
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[P] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;

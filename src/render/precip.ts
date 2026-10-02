@@ -74,7 +74,7 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
   const PERIOD = f.snow ? 1.2 : 3, TOP = 12, off = fallen;
   // the band of falling drops follows the eye up a building, from the ground at street level
   const base = Math.max(0, eye - 6);
-  for (let x = 0; x < cols; x++) {
+  for (let x = grid.x0; x < grid.x1; x++) {
     const camX = (2 * (x + 0.5)) / cols - 1;
     const rdx = dirX - dirY * plane * camX, rdy = dirY + dirX * plane * camX, L = Math.hypot(rdx, rdy);
     const az = yaw + Math.atan(camX * plane);
@@ -141,7 +141,7 @@ export function drawFall(grid: CharGrid, f: Fall, px: number, py: number, eye: n
         if (d < 0.4) continue;
         const camX = (wx * -dirY + wy * dirX) / (d * plane);
         const x = Math.floor(((camX + 1) / 2) * cols);
-        if (x < 0 || x >= cols) continue;
+        if (x < grid.x0 || x >= grid.x1) continue;
         // a drop every ~0.6 s from each point, falling at 5 m/s
         const z = R.z - ((f.sec / 0.6 + h3(n, k, 72)) % 1) * 3;
         if (z < 0) continue;

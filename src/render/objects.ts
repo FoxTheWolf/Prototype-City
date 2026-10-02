@@ -128,7 +128,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
       if (tX - o.r < 0) sx0 = -1e9;
       if (tX + o.r > 0) sx1 = 1e9;
     }
-    const x0 = Math.max(0, Math.floor(sx0)), x1 = Math.min(cols, Math.ceil(sx1));
+    const x0 = Math.max(grid.x0, Math.floor(sx0)), x1 = Math.min(grid.x1, Math.ceil(sx1));
     if (x0 >= x1) continue;
     // parts thinner than a cell at this distance are widened to half a cell, so poles do not flicker
     const mh = 0.5 * colW * Math.max(tY, 0.3), mz = (0.5 * Math.max(tY, 0.3)) / v.scale;

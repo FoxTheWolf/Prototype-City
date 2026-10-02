@@ -43,7 +43,7 @@ export interface View {
 }
 
 /** Vertical field of view. The horizontal one follows the window shape (wider window, wider view). */
-const VFOV = (60 * Math.PI) / 180;
+export const VFOV = (60 * Math.PI) / 180;
 /** Beyond this the ground is plain haze. Buildings are traced to the city edge. */
 const GROUND_FAR = 600;
 /** Street furniture and cars are drawn only this close. */
@@ -131,6 +131,9 @@ export const VIEW_LIGHT = new Float32Array([1, 1, 1]);
  */
 export const VIEW_GLINT = new Float32Array([0, 0, 1, 1, 1, 0]);
 
+/** How long each column took in the last frame, ms: the render pool splits the screen by it (pool.ts). */
+export let COL_MS = new Float32Array(0);
+
 export function renderWorld(grid: CharGrid, world: World, v: View) {
   const { cols, rows } = grid;
   const { city } = world;
@@ -178,7 +181,9 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   frameInside = !!inside;
   frameX = px; frameY = py; planBudget = PLANS_PER_FRAME;
 
-  for (let x = 0; x < cols; x++) {
+  if (COL_MS.length !== cols) COL_MS = new Float32Array(cols);
+  for (let x = grid.x0; x < grid.x1; x++) {
+    const tCol = performance.now();
     const camX = (2 * (x + 0.5)) / cols - 1;
     const rdx = dirX + plX * camX, rdy = dirY + plY * camX, L = Math.hypot(rdx, rdy);
 
@@ -428,11 +433,13 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
     }
 
     fenceColumn(grid, x, city, px, py, rdx, rdy, hor, scale, eye);
+    COL_MS[x] = performance.now() - tCol;
   }
 
   drawSmoke(grid, city, v, dirX, dirY, plX, plY, plane, scale, hor, time);
   drawCranes(grid, city, v.x, v.y, eye, dirX, dirY, plX, plY, scale, hor, frameSec);
   const lit = (x: number, y: number, z: number) => { lightAt(x, y, z); return LT; };
+  Object.assign(CULL, { px, py, dirX, dirY, plane, cols, x0: grid.x0, x1: grid.x1, all: grid.x0 === 0 && grid.x1 === cols });
   drawObjects(grid, collectObjects(world, v), { x: px, y: py, eye, dirX, dirY, plX, plY, plane, scale, hor, far: SPRITE_FAR, light: lit, snow: snowC, sun: SUN });
   drawEscapes(grid, world, v, dirX, dirY, plX, plY, plane, scale, hor);
   const boardObjs = gatherBoards(world, v, sky.day);
@@ -490,7 +497,7 @@ function bulbHue(c: readonly number[]): Float32Array {
 }
 function handLight(grid: CharGrid, k: number) {
   const { cols, rows, cells, bg, depth } = grid;
-  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+  for (let y = 0; y < rows; y++) for (let x = grid.x0; x < grid.x1; x++) {
     const i = y * cols + x, d = depth[i];
     if (d > 40) continue;
     const cx = (x - cols / 2) / cols, cy = (y - rows / 2) / rows, aim = 0.55 + 0.45 * Math.exp(-(cx * cx + cy * cy) * 6);
@@ -507,7 +514,7 @@ const G_DAY = 2.2, LIFT_DAY = 24;
 const HAZE = [150, 160, 176];
 
 function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
-  const { cells, bg, depth, kind, sun } = grid;
+  const { cells, bg, depth, kind, sun, cols, rows, x0, x1 } = grid;
   // daylight: the sky's light (brighter and flatter under clouds) and the sun's (gone behind them),
   // its color warming to orange as it nears the horizon
   const low = 1 - Math.min(1, Math.max(0, sky.sunEl / 0.35));
@@ -518,7 +525,7 @@ function finish(grid: CharGrid, look: Look, sky: SkyFrame) {
   // a blackout of the whole city at night: with no light anywhere, everything sinks very dark (the
   // phone's torch, applied after this, still lights what is near)
   const dark = 1 - 0.72 * (1 - sky.cityLit) ** 1.5 * (1 - day);
-  for (let i = 0, k = 0; i < depth.length; i++, k += 4) {
+  for (let y = 0; y < rows; y++) for (let i = y * cols + x0, k = i * 4, iEnd = y * cols + x1; i < iEnd; i++, k += 4) {
     if (sky.moonlight > 0.02 && depth[i] < 1e9 && depth[i] > 0) {
       // the moon's cold light on everything: faint, it only tells once the city lights are out
       const m = sky.moonlight * (1 - 0.7 * sky.cloud) * 14;
@@ -646,7 +653,7 @@ function drawSmoke(grid: CharGrid, city: City, v: View, dirX: number, dirY: numb
     const eyeS = v.eye + (rx * rx + ry * ry) / (2 * CURVE_R); // sunk by the curve
     const top = hor - ((s.h - eyeS) * scale) / tY, bot = hor + (eyeS * scale) / tY;
     const maxHalf = s.r * 2.2 * colsPerM;
-    const x0 = Math.max(0, Math.floor(cx - maxHalf)), x1 = Math.min(cols, Math.ceil(cx + maxHalf));
+    const x0 = Math.max(grid.x0, Math.floor(cx - maxHalf)), x1 = Math.min(grid.x1, Math.ceil(cx + maxHalf));
     const y0 = Math.max(0, Math.ceil(top - 0.5)), y1 = Math.min(rows, Math.ceil(bot - 0.5));
     if (x0 >= x1 || y0 >= y1) continue;
     const fog = 1 - Math.min(1, tY / 2500) * 0.7;
@@ -1579,6 +1586,21 @@ function lanesAt(n: number, halfW: number) {
   return at;
 }
 
+/** The view and the grid's strip, for collectObjects to skip what that strip cannot show. */
+const CULL = { px: 0, py: 0, dirX: 1, dirY: 0, plane: 1, cols: 1, x0: 0, x1: 1, all: true };
+/**
+ * Can something at (x, y), reaching r metres, show in the columns this grid draws: with a strip
+ * of a render worker (pool.ts), the objects outside it are not even built.
+ */
+function seen(x: number, y: number, r: number): boolean {
+  const C = CULL;
+  if (C.all) return true;
+  const rx = x - C.px, ry = y - C.py, t = rx * C.dirX + ry * C.dirY;
+  if (t < r + 0.5) return t > -r; // around the viewer: let drawing decide
+  const sx = (C.cols / 2) * (1 + (-rx * C.dirY + ry * C.dirX) / (t * C.plane)), hw = (r * C.cols) / (2 * C.plane * t) + 1;
+  return sx + hw >= C.x0 && sx - hw <= C.x1;
+}
+
 function collectObjects(world: World, v: View): Obj[] {
   const out: Obj[] = [];
   const { city } = world;
@@ -1588,6 +1610,7 @@ function collectObjects(world: World, v: View): Obj[] {
   for (let cy = cy0 | 1; cy <= cy1; cy += 2) for (let cx = cx0 | 1; cx <= cx1; cx += 2) {
     const blk = cityBlock(city, cx, cy);
     if (blk) for (const p of blk.props) {
+      if (!seen(p.x, p.y, p.kind === 'tree' ? p.w + 1 : 4)) continue;
       if (p.kind === 'lamp') {
         // the head glows in its lamp's color, as bright and as warm as the lamp is right now
         const n = lampId(city, p), lv = Math.round(light.level[n] * 8) / 8, wm = Math.round(light.warm[n] * 8) / 8;
@@ -1617,6 +1640,7 @@ function collectObjects(world: World, v: View): Obj[] {
     }
   }
   forSignals(world, v, SIGNAL_FAR, (S) => {
+    if (!seen(S.x, S.y, 16)) return;
     const near = Math.hypot(S.x - v.x, S.y - v.y) < SIGNAL_NEAR;
     if (S.state === Sig.Stop) { if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: STOP_SIGN, r: 0.5, h: 2.9, seed: 0 }); return; }
     if (!near && S.lit < 0) return;
@@ -1644,14 +1668,14 @@ function collectObjects(world: World, v: View): Obj[] {
   const W = world.weather, wet = W.precip > 0.1 && !W.snow;
   for (const p of world.peds) {
     const x = p.px + (p.x - p.px) * v.alpha, y = p.py + (p.y - p.py) * v.alpha;
-    if (Math.abs(x - v.x) > PED_DRAW || Math.abs(y - v.y) > PED_DRAW) continue;
+    if (Math.abs(x - v.x) > PED_DRAW || Math.abs(y - v.y) > PED_DRAW || !seen(x, y, 1)) continue;
     const far = Math.abs(x - v.x) > PED_NEAR || Math.abs(y - v.y) > PED_NEAR, step = p.v > 0.1 ? Math.floor(p.stride / 0.45) & 3 : 0;
     out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(p.id, step, wet && (p.id & 7) < 6, far), r: 0.8, h: 2.3, seed: 0 });
   }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate
     const x = c.px + (c.x - c.px) * v.alpha, y = c.py + (c.y - c.py) * v.alpha;
-    if (Math.abs(x - v.x) > SPRITE_FAR || Math.abs(y - v.y) > SPRITE_FAR) continue;
+    if (Math.abs(x - v.x) > SPRITE_FAR || Math.abs(y - v.y) > SPRITE_FAR || !seen(x, y, 8)) continue;
     const near = Math.abs(x - v.x) < CAR_NEAR && Math.abs(y - v.y) < CAR_NEAR, [hl, h] = VEHICLE_SIZE[c.kind];
     const who = c.id & 63;
     const parts = c.kind === 'bike' ? bikeModel(c.col, who, Math.floor(c.wheel / (Math.PI / 2)) & 3)

@@ -169,6 +169,8 @@ export function windowHole(B: Building, fw: number, fz: number, z: number, groun
 const PANEL_W = 0.44, PANEL_Z0 = 0.85, PANEL_Z1 = 1.65;
 let picked = -1;
 export const pickedButton = () => picked;
+/** The button a render worker found under the middle of the screen (render/pool.ts). */
+export function setPicked(b: number) { picked = b; }
 /** Paint a cell of the panel at (pu across it, 0..1 left to right; zr), or return false off it. */
 function panelPaint(I: Inside, pu: number, zr: number, cu: number, cz: number, out: number[]): number {
   const n = I.liftN, cols = n > 12 ? 4 : 2, rows = Math.ceil(n / cols);
@@ -560,7 +562,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
  */
 export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, scale: number) {
   const { cols, rows, cells } = grid, z0 = I.floor * FLOOR_H;
-  for (let x = 0; x < cols; x++) {
+  for (let x = grid.x0; x < grid.x1; x++) {
     const t = gT[x];
     if (!t) continue;
     const along = gA[x], lr = gL[x * 3], lg = gL[x * 3 + 1], lb = gL[x * 3 + 2];
