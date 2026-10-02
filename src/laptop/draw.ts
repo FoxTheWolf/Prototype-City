@@ -165,6 +165,20 @@ export function drawLaptop(g: CharGrid, P: Laptop, world: World, now: number, li
       if (row >= 0 && row < TERM_H) put(sx + (pos % TERM_W), sy + row, 32, ink[0], ink[0]);
     }
     if (on && S.scroll > 0) text(sx + TERM_W - 14, sy, ` SCROLLBACK ${S.scroll} `.slice(0, 14), sbg, ink[1]);
+    // an always-on status strip in the top-right corner: processor load, temperature, memory, network
+    if (on && !S.bios) {
+      const pc = P.pc, N = S.net, cpu = Math.round(pc.load * 100), temp = Math.round(pc.tempC);
+      const mem = `${(pc.usedKB() / 1048576).toFixed(1)}/${(pc.hw.ramMB / 1024).toFixed(0)}G`;
+      const bars = N.state === 'up' ? '|'.repeat(N.bars) + '.'.repeat(4 - N.bars) : N.state === 'assoc' || N.state === 'dhcp' ? '~~~~' : '----';
+      const red: C3 = [255, 110, 80], grn: C3 = [120, 255, 150], dim = ink[1], val = ink[0], pbg: C3 = [sbg[0] + 10, sbg[1] + 14, sbg[2] + 10];
+      const segs: [string, C3][] = [
+        [' CPU ', dim], [`${String(cpu).padStart(3)}%`, cpu > 80 ? red : val], ['  ', dim],
+        [`${temp}C`, temp > 70 ? red : val], ['  MEM ', dim], [mem, val],
+        ['  NET ', dim], [bars, N.state === 'up' ? grn : dim], [' ', dim],
+      ];
+      let x = sx + TERM_W - segs.reduce((n, g) => n + g[0].length, 0);
+      for (const [t, c] of segs) { for (let k = 0; k < t.length; k++) put(x + k, sy, t.charCodeAt(k), c, pbg); x += t.length; }
+    }
     // powered off: a dark glass with the room in it, and the power button's hint
     if (!on) {
       text(sx + ((TERM_W - 24) >> 1), sy + (TERM_H >> 1), S.halted ? '[ENTER] POWER BUTTON' : '', [70, 70, 76], [12, 12, 14]);

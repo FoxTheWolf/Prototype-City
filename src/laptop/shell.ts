@@ -3,7 +3,9 @@ import { calendar } from '../sim/clock';
 import { type Computer, type FsNode } from '../sim/computer';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
-import { computerMakerName } from '../locale/names';
+import { computerMakerName, wifiName } from '../locale/names';
+import { Wifi } from '../phone/wifi';
+import { Sec } from '../sim/wifi';
 
 /**
  * A Unix-like shell on a Computer: the commands, the text they print and how long they take. The
@@ -36,7 +38,7 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'head', 36, 300], ['/usr/bin', 'wc', 34, 300], ['/usr/bin', 'find', 168, 1100], ['/usr/bin', 'du', 82, 700], ['/usr/bin', 'uptime', 12, 300],
   ['/usr/bin', 'free', 14, 320], ['/usr/bin', 'df', 64, 420], ['/usr/bin', 'whoami', 22, 260], ['/usr/bin', 'id', 30, 270],
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
-  ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
+  ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'iwlist', 40, 520], ['/sbin', 'dhclient', 120, 900], ['/bin', 'ping', 44, 420], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
 ];
 /** What the shell does itself, with no program on the disk. */
 const BUILTINS = new Set(['cd', 'help', 'history', 'exit', 'logout']);
@@ -103,6 +105,10 @@ export class Shell {
   bios = false;
   /** Asked to power off (shutdown): the notebook reads it. */
   halted = false;
+  /** The wireless card: it scans and joins the simulated routers of sim/wifi.ts (the phone's signal model). */
+  readonly net = new Wifi();
+  /** The ESSID set with iwconfig, waiting for dhclient to lease an address. */
+  private essid = '';
 
   constructor(readonly pc: Computer, private world: World) {
     this.cwd = `/home/${pc.hw.user}`;
@@ -136,6 +142,7 @@ export class Shell {
   }
 
   update(now: number) {
+    this.net.update(this.world, this.state !== 'off', now);
     let n = 0;
     while (n < this.queue.length && this.queue[n].at <= now) {
       const q = this.queue[n++];
@@ -370,6 +377,12 @@ export class Shell {
     this.busyUntil = this.tq;
   }
 
+  /** The strongest access point in range broadcasting this ESSID, or -1. */
+  private findAp(essid: string): number {
+    let best = -1, bd = -1e9;
+    for (const [i, d] of this.net.list) if (wifiName(this.world.city, this.world.wifi[i]) === essid && d > bd) { bd = d; best = i; }
+    return best;
+  }
   private err(out: string[], k: keyof typeof L.err, c: string, p = '') { out.push(fill(L.err[k], { c, p, u: p })); }
   /** Run a command; it prints into `out` and returns the seconds of work it took (0: none to speak of). */
   private exec(c: string, a: string[], out: string[], now: number): number {
@@ -539,12 +552,75 @@ export class Shell {
       case 'ifconfig': {
         out.push(`eth0      Link encap:Ethernet  HWaddr ${this.mac(0)}`, '          UP BROADCAST MULTICAST  MTU:1500  Metric:1', '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
         out.push('lo        Link encap:Local Loopback', '          inet addr:127.0.0.1  Mask:255.0.0.0', '          UP LOOPBACK RUNNING  MTU:16436  Metric:1', '');
-        out.push(`wlan0     Link encap:Ethernet  HWaddr ${this.mac(1)}`, '          UP BROADCAST MULTICAST  MTU:1500  Metric:1', '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
+        const up = this.net.state === 'up';
+        out.push(`wlan0     Link encap:Ethernet  HWaddr ${this.mac(1)}`);
+        if (up) out.push(`          inet addr:${this.net.ip}  Bcast:${this.net.ip.replace(/\.\d+$/, '.255')}  Mask:255.255.255.0`);
+        out.push(`          ${up ? 'UP BROADCAST RUNNING MULTICAST' : 'BROADCAST MULTICAST'}  MTU:1500  Metric:1`, '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
         return 0;
       }
       case 'iwconfig': {
+        // with arguments it joins a network: iwconfig wlan0 essid "NAME" [key KEY]
+        if (args[0] === 'wlan0' && (a.includes('essid') || a.includes('key'))) {
+          const ei = a.indexOf('essid');
+          if (ei >= 0 && a[ei + 1]) this.essid = a[ei + 1];
+          const ki = a.indexOf('key'), key = ki >= 0 ? a[ki + 1] ?? '' : '';
+          const i = this.findAp(this.essid);
+          if (i < 0) { out.push(`Error for wireless request "Set ESSID": network "${this.essid}" not in range`); return 0; }
+          this.net.connect(this.world, i, key, now);
+          out.push(`wlan0     associating with "${this.essid}"...`);
+          return 0.3;
+        }
         out.push('lo        no wireless extensions.', '', 'eth0      no wireless extensions.', '');
-        out.push('wlan0     IEEE 802.11bg  ESSID:off/any', '          Mode:Managed  Frequency:2.412 GHz  Access Point: Not-Associated', '          Tx-Power=20 dBm', '          Link Quality:0  Signal level:0  Noise level:0', '');
+        const N = this.net, joined = N.ap >= 0 ? this.world.wifi[N.ap] : null, nm = joined ? wifiName(this.world.city, joined) : '';
+        if (joined) out.push(`wlan0     IEEE 802.11bg  ESSID:"${nm}"`, `          Mode:Managed  Frequency:2.4${joined.ch} GHz  Access Point: ${joined.bssid}`, '          Bit Rate:54 Mb/s   Tx-Power=20 dBm', `          Encryption key:${joined.sec === Sec.Open ? 'off' : 'on'}`, `          Link Quality:${N.bars}/4  Signal level:${N.dbm} dBm  Noise level:-92 dBm`, '');
+        else out.push('wlan0     IEEE 802.11bg  ESSID:off/any', '          Mode:Managed  Access Point: Not-Associated', '          Tx-Power=20 dBm', '          Link Quality:0  Signal level:0  Noise level:0', '');
+        return 0;
+      }
+      case 'iwlist': {
+        // scan the wireless networks in range (sim/wifi.ts), strongest first
+        this.net.scanNow();
+        const list = this.net.list.slice(0, 24);
+        out.push('wlan0     Scan completed :');
+        if (!list.length) out.push('          No networks in range.');
+        list.forEach(([i, d], k) => {
+          const A = this.world.wifi[i], nm = wifiName(this.world.city, A), q = Math.max(0, Math.min(100, 2 * (d + 100)));
+          out.push(`          Cell ${String(k + 1).padStart(2, '0')} - Address: ${A.bssid}`, `                    ESSID:"${nm}"`, `                    Channel:${A.ch}  Quality=${q}/100  Signal level:${d} dBm`, `                    Encryption key:${A.sec === Sec.Open ? 'off' : 'on'}${A.sec ? (A.sec === Sec.WEP ? '  (WEP)' : '  (WPA)') : ''}`);
+        });
+        return this.net.list.length ? 1.2 : 0.4;
+      }
+      case 'dhclient': {
+        const N = this.net;
+        if (N.ap < 0) { out.push('wlan0: not associated; run iwconfig wlan0 essid "NAME" [key KEY] first'); return 0; }
+        this.say(now, 'Internet Systems Consortium DHCP Client', 0, 0.1);
+        this.say(now, `Listening on LPF/wlan0/${this.mac(1).toLowerCase()}`, 0, 0.2);
+        this.say(now, 'DHCPDISCOVER on wlan0 to 255.255.255.255 port 67', 0, 0.6);
+        this.say(now, `DHCPOFFER from 192.168.${this.world.wifi[N.ap].ch}.1`, 0, 1.0);
+        this.say(now, 'DHCPREQUEST on wlan0 to 255.255.255.255 port 67', 0, 0.3);
+        // the lease is ready once the card finishes associating (driven in update); read it then
+        this.then(now, () => {
+          if (N.state === 'badkey') { this.lines.push({ text: 'wlan0: authentication failed (wrong key)', ink: 0 }); return; }
+          if (N.state !== 'up') { this.lines.push({ text: 'No DHCPOFFERS received.', ink: 0 }); return; }
+          this.lines.push({ text: `DHCPACK from 192.168.${this.world.wifi[N.ap].ch}.1`, ink: 0 });
+          this.lines.push({ text: `bound to ${N.ip} -- renewal in 43200 seconds.`, ink: 0 });
+        }, 1.2);
+        this.busyUntil = this.tq;
+        return 0;
+      }
+      case 'ping': {
+        const host = args[0];
+        if (!host) { this.err(out, 'usage', c, 'ping host'); return 0; }
+        if (this.net.state !== 'up') { out.push('connect: Network is unreachable'); return 0; }
+        const gw = `192.168.${this.world.wifi[this.net.ap].ch}.1`, dst = host === 'gw' || host === 'gateway' ? gw : host;
+        this.say(now, `PING ${dst} (${dst}) 56(84) bytes of data.`, 0, 0.1);
+        const base = 4 + (4 - this.net.bars) * 12;
+        for (let k = 0; k < 4; k++) {
+          const t = (base + hash3(k, this.world.tick, 3) * 10).toFixed(1);
+          this.say(now, `64 bytes from ${dst}: icmp_seq=${k + 1} ttl=64 time=${t} ms`, 0, 0.6);
+        }
+        this.say(now, '', 0, 0.3);
+        this.say(now, `--- ${dst} ping statistics ---`, 0, 0);
+        this.say(now, '4 packets transmitted, 4 received, 0% packet loss', 0, 0);
+        this.busyUntil = this.tq;
         return 0;
       }
       case 'sha1sum': {

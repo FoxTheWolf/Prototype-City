@@ -28,7 +28,7 @@
     "  files     ls cd pwd cat head wc touch mkdir rmdir rm cp mv echo find du",
     "  system    uname uptime date ps kill free df dmesg whoami id hostname history",
     "  hardware  lshw sensors (and /proc/cpuinfo, /proc/meminfo)",
-    "  network   ifconfig iwconfig",
+    "  network   iwlist iwconfig dhclient ifconfig ping",
     "  other     sha1sum sleep clear color man help shutdown reboot",
     "Keys: Tab completes, Up/Down history, Ctrl+C stops, Ctrl+L clears, wheel scrolls back."
   ],
@@ -62,7 +62,7 @@
     "history": "history\n  The commands typed in this session.",
     "lshw": "lshw\n  The hardware: processor, memory, disk, network adapters.",
     "ifconfig": "ifconfig [iface]\n  The network interfaces and their addresses.",
-    "iwconfig": "iwconfig\n  The wireless interface: the network it is joined to, the signal.",
+    "iwconfig": "iwconfig [wlan0]\n  Show the wireless interface. To join a network:\n    iwconfig wlan0 essid \"NAME\" [key KEY]\n  An open network needs no key. Then run 'dhclient wlan0' to get an address.",
     "sha1sum": "sha1sum file...\n  A file's SHA-1 checksum. It reads the whole file: slow on a big one.",
     "sleep": "sleep seconds\n  Wait.",
     "clear": "clear\n  Clear the screen.",
@@ -70,7 +70,10 @@
     "man": "man command\n  The manual page of a command.",
     "help": "help\n  The list of commands.",
     "shutdown": "shutdown\n  Halt the system and power off. The next time the lid opens, it boots again.",
-    "reboot": "reboot\n  Restart the system."
+    "reboot": "reboot\n  Restart the system.",
+    "iwlist": "iwlist [wlan0] [scan]\n  Scan for the wireless networks in range: their name, channel, signal and whether they are locked.",
+    "dhclient": "dhclient wlan0\n  Ask the network for an address once the card has joined one (see iwconfig). Fails if the key was wrong or the signal is gone.",
+    "ping": "ping host\n  Send packets to a host and time the replies. 'ping gw' pings the router. Needs an address first."
   },
   "home": {
     "notes.txt": "TODO\n- find a cafe with open wi-fi. coffee places usually leave it open\n- 'iwconfig' shows if the card is joined to anything\n- back up ~/media before the drive gives out (it clicks)\n",
