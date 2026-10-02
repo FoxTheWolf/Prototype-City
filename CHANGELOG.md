@@ -13,6 +13,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Pedestres atravessam o jogador e andam em ritmos diferentes: uns com pressa, outros devagar (mais idosos, mais à noite).
 - Seis fabricantes de celular, um para cada corpo, cada um com a animação de boot no estilo do corpo (os nomes vêm da cidade).
 - Ícones dos apps e do clima em HD.
+- Tela do notebook grande e perto: o terminal ocupa a maior parte da vista e o teclado fica embaixo (aparece olhando para baixo). O sistema usa um console de 160×50, como uma tela de 1280×800 com a fonte do console; a BIOS, a SETUP e o editor usam o modo texto de 80×25, com letras maiores, como num PC de verdade.
 - Notebook 3D é o padrão: teclado mais curto (teclas mais largas que fundas), moldura menor, botão de ligar visível e clicável, a luz da tela no teclado. Segurando o botão direito para olhar em volta, a tela passa a ser desenhada na tampa, em perspectiva; soltando, a vista volta ao notebook com a tela centralizada e legível.
 - Notebook em três aparências para comparar (tecla **L**, com ele fechado): a clássica em caracteres, a 2D em HD (corpo em pixels com acabamento metálico, fosco ou brilhante pela marca, teclas com relevo, alto-falantes, touchpad e botão de ligar) e a 3D (o corpo como objeto na mesa, com a luz da cena e a perspectiva; ele fica no lugar quando você olha em volta).
 - Botão de ligar do notebook clicável (nas versões HD e 3D); a dica "Enter = ligar" foi para a linha de dicas.

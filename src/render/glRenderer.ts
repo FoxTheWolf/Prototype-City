@@ -15,12 +15,14 @@ void main() {
 // interface drew nothing, the world shows; where it drew a glyph only, the glyph lies over the world.
 // Between them lies the HD layer (hd.ts): plain pixels, HD per cell of the interface each way, some
 // under the interface (seen where it drew nothing), some over it (a photo on the phone's screen).
+// The notebook's screen has a layer of its own (its terminal's characters bigger than the interface's,
+// laid where the lid's glass falls), over the HD pixels under the interface and under the interface.
 // The whole screen is one draw call.
 const FS = `#version 300 es
 precision highp float;
 precision highp int;
-uniform sampler2D uCells, uBg, uAtlas, uUiCells, uUiBg, uUiAtlas, uHd;
-uniform ivec2 uCell, uOrigin, uGrid, uUiCell, uUiOrigin, uUiGrid;
+uniform sampler2D uCells, uBg, uAtlas, uUiCells, uUiBg, uUiAtlas, uHd, uTmCells, uTmBg, uTmAtlas;
+uniform ivec2 uCell, uOrigin, uGrid, uUiCell, uUiOrigin, uUiGrid, uTmCell, uTmOrigin, uTmGrid;
 uniform float uHeight;
 out vec4 outColor;
 vec3 layer(sampler2D cells, sampler2D atlas, ivec2 p, ivec2 c, ivec2 size, vec3 bg) {
@@ -38,6 +40,8 @@ void main() {
   if (q.x >= 0 && q.y >= 0 && u.x < uUiGrid.x && u.y < uUiGrid.y) {
     vec4 hp = texelFetch(uHd, (q * ${HD}) / uUiCell, 0);
     if (hp.a > 0.25 && hp.a < 0.75) col = hp.rgb;
+    ivec2 m = s - uTmOrigin, mc = m / max(uTmCell, ivec2(1));
+    if (uTmGrid.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < uTmGrid.x && mc.y < uTmGrid.y) col = layer(uTmCells, uTmAtlas, m, mc, uTmCell, texelFetch(uTmBg, mc, 0).rgb);
     vec4 ub = texelFetch(uUiBg, u, 0);
     if (ub.a > 0.25) col = layer(uUiCells, uUiAtlas, q, u, uUiCell, ub.a > 0.75 ? ub.rgb : col);
     if (hp.a > 0.75) col = hp.rgb;
@@ -55,7 +59,7 @@ export interface Layout {
   originY: number;
 }
 
-const UNIFORMS = ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uHd', 'uCell', 'uOrigin', 'uGrid', 'uUiCell', 'uUiOrigin', 'uUiGrid', 'uHeight'];
+const UNIFORMS = ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uHd', 'uTmCells', 'uTmBg', 'uTmAtlas', 'uTmCell', 'uTmOrigin', 'uTmGrid', 'uCell', 'uOrigin', 'uGrid', 'uUiCell', 'uUiOrigin', 'uUiGrid', 'uHeight'];
 
 export class GlyphRenderer {
   private gl: WebGL2RenderingContext;
@@ -73,8 +77,8 @@ export class GlyphRenderer {
     this.prog = link(gl, VS, FS);
     gl.useProgram(this.prog);
     for (const n of UNIFORMS) this.u[n] = gl.getUniformLocation(this.prog, n);
-    ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uHd'].forEach((n, k) => gl.uniform1i(this.u[n], k));
-    this.tex = [0, 1, 2, 3, 4, 5, 6].map(() => texture(gl));
+    ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uHd', 'uTmCells', 'uTmBg', 'uTmAtlas'].forEach((n, k) => gl.uniform1i(this.u[n], k));
+    this.tex = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => texture(gl));
     gl.bindVertexArray(gl.createVertexArray());
   }
 
@@ -100,7 +104,20 @@ export class GlyphRenderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  draw(grid: CharGrid, ui: CharGrid, hd: HdLayer) {
+  /** The notebook screen's layer: its grid (cols x rows) and its cell size in device pixels; the atlas is made for that size. */
+  private tm: { cols: number; rows: number; cellW: number; cellH: number } | null = null;
+  setTerm(cols: number, rows: number, cellW: number, cellH: number) {
+    const gl = this.gl;
+    this.tm = { cols, rows, cellW, cellH };
+    gl.useProgram(this.prog);
+    gl.uniform2i(this.u.uTmCell, cellW, cellH);
+    for (const k of [7, 8]) { gl.bindTexture(gl.TEXTURE_2D, this.tex[k]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, cols, rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null); }
+    gl.bindTexture(gl.TEXTURE_2D, this.tex[9]);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, buildAtlas(cellW, cellH));
+  }
+
+  /** term: the notebook screen's characters and where its top-left pixel goes, or null when not shown. */
+  draw(grid: CharGrid, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; x: number; y: number } | null = null) {
     const gl = this.gl;
     ([[grid, this.layout!, 0], [ui, this.ui!, 3]] as const).forEach(([G, L, t]) => {
       gl.activeTexture(gl.TEXTURE0 + t);
@@ -121,6 +138,18 @@ export class GlyphRenderer {
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y0, hd.w, y1 - y0 + 1, gl.RGBA, gl.UNSIGNED_BYTE, hd.px.subarray(y0 * hd.w * 4, (y1 + 1) * hd.w * 4));
       hd.lo = Infinity; hd.hi = -1;
     }
+    // the notebook's screen, when shown
+    if (term && this.tm) {
+      gl.uniform2i(this.u.uTmGrid, this.tm.cols, this.tm.rows);
+      gl.uniform2i(this.u.uTmOrigin, Math.round(term.x), Math.round(term.y));
+      ([[term.grid.cells, 7], [term.grid.bg, 8]] as const).forEach(([buf, k]) => {
+        gl.activeTexture(gl.TEXTURE0 + k);
+        gl.bindTexture(gl.TEXTURE_2D, this.tex[k]);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.tm!.cols, this.tm!.rows, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+      });
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex[9]);
+    } else gl.uniform2i(this.u.uTmGrid, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

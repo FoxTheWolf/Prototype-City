@@ -7,7 +7,8 @@ import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawLaptop } from './laptop/draw';
 import { drawLaptopHd, powerAt } from './laptop/hdlook';
-import { drawLaptop3d, laptopAnchor, power3d } from './laptop/look3d';
+import { drawLaptop3d, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
+import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
@@ -105,13 +106,26 @@ let layout: Layout;
 let ui: CharGrid;
 /** The HD layer: pixels at HD x the interface's grid (the phone's photos). */
 let hd: HdLayer;
+/**
+ * The notebook's screen layer (3D look): the system's console, TERM_W x TERM_H, or the firmware's
+ * text mode, 80 x 25, each with its cell size so both fill the same 16:10 screen, about two thirds of
+ * the view's height; which one is shown, as on a real PC, follows what runs (the firmware, a
+ * full-screen program, or the console).
+ */
+const TEXT_MODE = [80, 25] as const;
+let termFb: CharGrid, termTx: CharGrid, termCells: Record<'fb' | 'tx', [number, number]> = { fb: [8, 16], tx: [16, 32] }, termMode: 'fb' | 'tx' | '' = '';
+function termLayout() {
+  const w = canvas.width, h = canvas.height;
+  let rh = Math.floor(h * 0.68), rw = Math.floor(rh * 1.6);
+  if (rw > w * 0.94) { rw = Math.floor(w * 0.94); rh = Math.floor(rw / 1.6); }
+  termCells = { fb: [Math.max(3, Math.floor(rw / TERM_W)), Math.max(5, Math.floor(rh / TERM_H))], tx: [Math.max(4, Math.floor(rw / TEXT_MODE[0])), Math.max(8, Math.floor(rh / TEXT_MODE[1]))] };
+  termMode = '';
+}
 let uiLayout: Layout;
 let running = false;
 /** The notebook's look (L): the classic characters, the 2D body in HD, the 3D body (the user's pick, the default). */
 const LAP_LOOKS = ['CLASSIC', 'HD 2D', '3D'];
 let lapLook = 2;
-/** Down at the desk when the notebook opens in its 3D look. */
-const LAP_PITCH = -0.6;
 let lapWasOpen = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
@@ -264,7 +278,7 @@ addEventListener('mouseup', (e) => {
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
   // the 3D notebook: let go, the view comes back to it, its screen centred
-  if (laptop.open && lapLook === 2) { camera.targetYaw = laptopAnchor(); camera.targetPitch = LAP_PITCH; }
+  if (laptop.open && lapLook === 2) { camera.targetYaw = laptopAnchor(); camera.targetPitch = laptopPitch(); }
   // the pointer was held while looking around; the cursor is free again over the phone or the payphone,
   // a moment later: freed during the click, the browser could still open its menu where the cursor lands
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
@@ -283,7 +297,7 @@ addEventListener('keydown', (e) => {
   // N: take the notebook out, where it can be used (sitting or leaning)
   if (e.code === 'KeyN' && running && !e.repeat && !payphone.active && laptop.raise === 0) {
     if (phone.out) phoneToggle();
-    if (laptop.take(performance.now() / 1000)) { input.unlock(); if (lapLook === 2) camera.targetPitch = LAP_PITCH; }
+    if (laptop.take(performance.now() / 1000)) { input.unlock(); if (lapLook === 2) camera.targetPitch = laptopPitch(); }
     return;
   }
   // a payphone in use takes the keys; F lifts the handset of the one in front, or hangs it up
@@ -337,6 +351,8 @@ function resize() {
   grid = new CharGrid(layout.cols, layout.rows);
   ui = new CharGrid(uiLayout.cols, uiLayout.rows);
   hd = new HdLayer(uiLayout.cols * HD, uiLayout.rows * HD);
+  termFb = new CharGrid(TERM_W, TERM_H); termTx = new CharGrid(TEXT_MODE[0], TEXT_MODE[1]);
+  termLayout();
   setHd(hd);
   shown = new CharGrid(layout.cols, layout.rows);
   pool?.resize(layout.cols, layout.rows);
@@ -460,7 +476,14 @@ function frame(now: number) {
   lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
   sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin, laptop.pc.fan);
   if (lapLook === 1) drawLaptopHd(ui, hd, laptop, world, now / 1000, VIEW_LIGHT, camera.yaw);
-  else if (lapLook === 2) drawLaptop3d(ui, laptop, world, now / 1000, VIEW_LIGHT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag });
+  else if (lapLook === 2) {
+    // the screen layer's mode, and its place on the interface's grid
+    const mode = laptop.shell.bios || laptop.shell.screen() ? 'tx' : 'fb', T = mode === 'fb' ? termFb : termTx, [cw, chh] = termCells[mode];
+    if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); }
+    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: (T.cols * cw) / uiLayout.cellW, termH: (T.rows * chh) / uiLayout.cellH });
+    // while the lid opens, the view tips down to the screen
+    if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
+  }
   else drawLaptop(ui, laptop, world, now / 1000, VIEW_LIGHT);
   if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
@@ -515,7 +538,8 @@ function frame(now: number) {
       `${operatorName(city).toUpperCase()} ... SIGNAL OK`,
     ]);
   }
-  renderer.draw(grid, ui, hd);
+  const T3 = termMode === 'fb' ? termFb : termTx;
+  renderer.draw(grid, ui, hd, lapLook === 2 && screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null);
   requestAnimationFrame(frame);
 }
 

@@ -3,7 +3,6 @@ import { computerMakerName } from '../locale/names';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
 import { type Laptop } from './laptop';
-import { TERM_H, TERM_W } from './shell';
 import { St } from './screen';
 import { hash3 } from '../core/rng';
 
@@ -15,7 +14,9 @@ import { hash3 } from '../core/rng';
  */
 export type C3 = [number, number, number];
 /** The screen: the terminal plus the bezel around it. */
-export const SCR_W = TERM_W + 4, SCR_H = TERM_H + 3;
+/** The classic and HD looks' screen: 80 x 22 characters on the interface's grid, plus the bezel. */
+export const CL_W = 80, CL_H = 22;
+export const SCR_W = CL_W + 4, SCR_H = CL_H + 3;
 /** The keyboard: rows of [code, label, width in units]; every row is 15 units. */
 export const ROWS: [string, string, number][][] = [
   [['Escape', 'Esc', 1], ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n): [string, string, number] => [`F${n}`, `F${n}`, 1]), ['Delete', 'Del', 2]],
@@ -52,9 +53,9 @@ const POWER = [
   '   ===========================',
   '     EFFICIENCY  PARTNER      ',
 ];
-function biosArt(put: (x: number, y: number, ch: number, fg: readonly number[], bg: readonly number[]) => void, sx: number, sy: number) {
+function biosArt(put: (x: number, y: number, ch: number, fg: readonly number[], bg: readonly number[]) => void, sx: number, sy: number, W: number) {
   RIBBON.forEach((row, r) => { for (let c = 0; c < row.length; c++) if (row[c] !== ' ') put(sx + c, sy + r, row.charCodeAt(c), [60, 110, 255], BIOS_BG); });
-  const px = sx + TERM_W - 31;
+  const px = sx + W - 31;
   POWER.forEach((row, r) => {
     for (let c = 0; c < row.length; c++) if (row[c] !== ' ') put(px + c, sy + r, row.charCodeAt(c), r >= 5 ? [70, 220, 90] : [255, 230, 40], BIOS_BG);
   });
@@ -171,19 +172,19 @@ export type Text = (x: number, y: number, s: string, fg: readonly number[], bg: 
  * follows the scene: a faint wash of the light at the player's hands over it, smudges of fingerprints
  * that catch that light, and off, the light's reflection across it. Every look of the notebook draws its screen with this.
  */
-export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Laptop, now: number, lit: (c: readonly number[], k?: number) => C3, light: Float32Array) {
+export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Laptop, now: number, lit: (c: readonly number[], k?: number) => C3, light: Float32Array, W = CL_W, H = CL_H) {
   const S = P.shell, ink = INKS[S.ink], sbg = SCREEN_BG[S.ink];
   // the glass over every cell: the light's wash, the smudges, and (off) the reflection
   const Lr = Math.min(1.6, light[0]), Lg = Math.min(1.6, light[1]), Lb = Math.min(1.6, light[2]);
   const glass = (c: number, r: number, bg: readonly number[], off: boolean): C3 => {
-    const sm = smudge(c, r), band = off ? Math.max(0, 1 - Math.abs(((c * 0.6 - r * 1.4 + 18) % 40) - 20) / 5) : 0;
+    const sm = smudge(c / W, r / H), band = off ? Math.max(0, 1 - Math.abs(((c * 0.6 - r * 1.4 + 18) % 40) - 20) / 5) : 0;
     const k = 3 + sm * 22 + band * 26;
     return [bg[0] + k * Lr, bg[1] + k * Lg, bg[2] + k * Lb];
   };
   const raw = put;
   put = (x, y, ch, fg, bg) => {
     const c = x - sx, r = y - sy;
-    if (c >= 0 && r >= 0 && c < TERM_W && r < TERM_H) raw(x, y, ch, fg, glass(c, r, bg, !on));
+    if (c >= 0 && r >= 0 && c < W && r < H) raw(x, y, ch, fg, glass(c, r, bg, !on));
     else raw(x, y, ch, fg, bg);
   };
   text = (x, y, s2, fg, bg) => { for (let k = 0; k < s2.length; k++) put(x + k, y, s2.charCodeAt(k), fg, bg); };
@@ -194,26 +195,26 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
   let promptRow = -1;
   if (ready) {
     const s = S.prompt + (S.mask ? '*'.repeat(S.input.length) : S.input);
-    for (let k = 0; k === 0 || k < s.length + 1; k += TERM_W) { lines.push({ text: s.slice(k, k + TERM_W), ink: 0 }); if (promptRow < 0) promptRow = lines.length - 1; }
+    for (let k = 0; k === 0 || k < s.length + 1; k += W) { lines.push({ text: s.slice(k, k + W), ink: 0 }); if (promptRow < 0) promptRow = lines.length - 1; }
   }
-  const first = Math.max(0, lines.length - TERM_H - S.scroll);
-  for (let r = 0; r < TERM_H; r++) {
+  const first = Math.max(0, lines.length - H - S.scroll);
+  for (let r = 0; r < H; r++) {
     const ln = on ? lines[first + r] : undefined, scan = r & 1 ? 0.9 : 1;
-    for (let c = 0; c < TERM_W; c++) {
+    for (let c = 0; c < W; c++) {
       const ch = ln ? ln.text.charCodeAt(c) || 32 : 32, col = S.bios ? BIOS_INK : ink[ln?.ink ?? 0], k = scan, base = S.bios ? BIOS_BG : sbg;
       // a faint glow behind lit characters, as a CRT's phosphor spreads
       const bg: C3 = on ? (ch !== 32 ? [base[0] + col[0] * 0.07, base[1] + col[1] * 0.07, base[2] + col[2] * 0.07] : base) : [12, 12, 14];
       put(sx + c, sy + r, ch, [col[0] * k, col[1] * k, col[2] * k], bg);
     }
   }
-  if (on && S.bios) biosArt(put, sx, sy);
+  if (on && S.bios) biosArt(put, sx, sy, W);
   // a program owning the whole screen (SETUP, the editor) draws over the lines
   const full = on ? S.screen() : null;
   if (full) {
     const F = full.scr;
-    for (let r = 0; r < TERM_H; r++) {
+    for (let r = 0; r < Math.min(H, F.h); r++) {
       const scan = r & 1 ? 0.9 : 1;
-      for (let c = 0; c < TERM_W; c++) {
+      for (let c = 0; c < Math.min(W, F.w); c++) {
         const st = F.st[r][c], ch = F.ch[r][c].charCodeAt(0);
         let fg: C3, bg: C3;
         if (st >= 10) [fg, bg] = FW[st];
@@ -222,14 +223,14 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
         put(sx + c, sy + r, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], [bg[0] * scan, bg[1] * scan, bg[2] * scan]);
       }
     }
-    if (full.cy >= 0 && Math.floor(now * 2.5) & 1 && full.cx >= 0 && full.cx < TERM_W) put(sx + full.cx, sy + full.cy, 32, ink[0], ink[0]);
+    if (full.cy >= 0 && Math.floor(now * 2.5) & 1 && full.cx >= 0 && full.cx < W) put(sx + full.cx, sy + full.cy, 32, ink[0], ink[0]);
   }
   // the cursor: a block blinking where the next character goes
   if (on && !full && ready && S.scroll === 0 && Math.floor(now * 2.5) & 1) {
-    const pos = S.prompt.length + S.cur, row = lines.length - 1 - (Math.floor((S.prompt.length + S.input.length) / TERM_W) - Math.floor(pos / TERM_W)) - first;
-    if (row >= 0 && row < TERM_H) put(sx + (pos % TERM_W), sy + row, 32, ink[0], ink[0]);
+    const pos = S.prompt.length + S.cur, row = lines.length - 1 - (Math.floor((S.prompt.length + S.input.length) / W) - Math.floor(pos / W)) - first;
+    if (row >= 0 && row < H) put(sx + (pos % W), sy + row, 32, ink[0], ink[0]);
   }
-  if (on && S.scroll > 0) text(sx + TERM_W - 14, sy, ` SCROLLBACK ${S.scroll} `.slice(0, 14), sbg, ink[1]);
+  if (on && S.scroll > 0) text(sx + W - 14, sy, ` SCROLLBACK ${S.scroll} `.slice(0, 14), sbg, ink[1]);
   // a status strip in the top-right corner, once the system has finished booting (not before the OS loads)
   if (S.state === 'ready' && !full) {
     const pc = P.pc, N = S.net, cpu = Math.round(pc.load * 100), temp = Math.round(pc.tempC);
@@ -242,22 +243,22 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
       ['  NET ', dim], [bars, N.state === 'up' ? grn : dim],
       ['  BAT ', dim], [`${batt}%${pc.plugged ? (batt >= 100 ? ' AC' : '+') : ''}`, batt < 10 && !pc.plugged ? red : pc.plugged ? grn : val], [' ', dim],
     ];
-    let x = sx + TERM_W - segs.reduce((n, g) => n + g[0].length, 0);
+    let x = sx + W - segs.reduce((n, g) => n + g[0].length, 0);
     for (const [t, c] of segs) { for (let k = 0; k < t.length; k++) put(x + k, sy, t.charCodeAt(k), c, pbg); x += t.length; }
   }
   // powered off: a dark glass (the light's reflection lies on it, see glass above)
-  if (!on) for (let r = 0; r < TERM_H; r++) for (let c = 0; c < TERM_W; c++) put(sx + c, sy + r, 32, [0, 0, 0], [10, 10, 12]);
+  if (!on) for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) put(sx + c, sy + r, 32, [0, 0, 0], [10, 10, 12]);
 }
 
-/** Fingerprints on the glass: a few oval smudges, 0..1 at screen cell (c, r). */
-function smudge(c: number, r: number): number {
-  let v = 0;
+/** Fingerprints on the glass: a few oval smudges, 0..1 at (u, v), fractions of the screen's width and height. */
+function smudge(u: number, v: number): number {
+  let s = 0;
   for (let k = 0; k < 7; k++) {
-    const cx = hash3(k, 41, 1) * TERM_W, cy = hash3(k, 41, 2) * TERM_H, rx = 2.5 + hash3(k, 41, 3) * 4, ry = 1 + hash3(k, 41, 4) * 1.6;
-    const d = ((c - cx) / rx) ** 2 + ((r - cy) / ry) ** 2;
-    if (d < 1) v += (1 - d) * (0.5 + 0.5 * hash3(c, r, k + 90));
+    const cx = hash3(k, 41, 1), cy = hash3(k, 41, 2), rx = (2.5 + hash3(k, 41, 3) * 4) / 80, ry = (1 + hash3(k, 41, 4) * 1.6) / 22;
+    const d = ((u - cx) / rx) ** 2 + ((v - cy) / ry) ** 2;
+    if (d < 1) s += (1 - d) * (0.5 + 0.5 * hash3(Math.floor(u * 400), Math.floor(v * 200), k + 90));
   }
-  return Math.min(1, v);
+  return Math.min(1, s);
 }
 
 /** The bezel's bits round a screen whose bezel's top-left cell is (x0, y0): the webcam, the maker's name, the lights. */

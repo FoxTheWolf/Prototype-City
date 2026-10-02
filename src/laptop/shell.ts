@@ -21,7 +21,8 @@ import { capture } from '../sim/packets';
  * It runs on any Computer: the player's notebook now, the city's machines over the network later.
  * Times are real seconds; file times and the clock are the game's.
  */
-export const TERM_W = 80, TERM_H = 22;
+/** The system's console: 160 x 50, as a 2008 notebook's 1280 x 800 screen shows with the 8 x 16 console font (the firmware's text mode is 80 x 25). */
+export const TERM_W = 160, TERM_H = 50;
 /** How the terminal writes a line: a moment per line and per character (fast, but it is seen to scroll). */
 const LINE_S = 0.012, CHAR_S = 1 / 5000;
 const KEEP = 800;
