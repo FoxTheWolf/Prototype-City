@@ -4,6 +4,7 @@ import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
 import { type Laptop } from './laptop';
 import { TERM_H, TERM_W } from './shell';
+import { St } from './screen';
 
 /**
  * The notebook drawn over the view, low in the middle as if set down in front of the player: the
@@ -29,6 +30,13 @@ const INKS: C3[][] = [[[255, 176, 48], [170, 110, 34], [255, 214, 140]], [[90, 2
 const SCREEN_BG: C3[] = [[10, 6, 2], [3, 9, 4]];
 /** The BIOS's screen: light gray on black, as the firmware draws it before the system's own colors. */
 const BIOS_INK: C3 = [196, 196, 200], BIOS_BG: C3 = [2, 2, 4];
+/** The firmware's SETUP colors (screen.ts, St): navy body, gray bars, a teal pick. */
+const NAVY: C3 = [0, 0, 120], GRAY: C3 = [176, 176, 184];
+const FW: Record<number, [C3, C3]> = {
+  [St.Body]: [[184, 188, 200], NAVY], [St.Bar]: [[0, 0, 0], GRAY], [St.Tab]: [[0, 0, 120], [224, 224, 232]], [St.Pick]: [[255, 255, 255], [0, 110, 170]],
+  [St.Help]: [[110, 200, 230], NAVY], [St.Box]: [[0, 0, 0], GRAY], [St.BoxPick]: [[255, 255, 255], NAVY], [St.White]: [[250, 250, 255], NAVY],
+  [St.Gray]: [[120, 124, 160], NAVY], [St.Yellow]: [[255, 230, 80], NAVY],
+};
 /**
  * The BIOS's logos (our own, after the old POST screens): the maker's blue ribbon top left, and top
  * right the power-saving program's: a yellow sweep with a star, a green rule and its name.
@@ -159,22 +167,40 @@ export function drawLaptop(g: CharGrid, P: Laptop, world: World, now: number, li
       }
     }
     if (on && S.bios) biosArt(put, sx, sy);
+    // a program owning the whole screen (SETUP, the editor) draws over the lines
+    const full = on ? S.screen() : null;
+    if (full) {
+      const F = full.scr;
+      for (let r = 0; r < TERM_H; r++) {
+        const scan = r & 1 ? 0.9 : 1;
+        for (let c = 0; c < TERM_W; c++) {
+          const st = F.st[r][c], ch = F.ch[r][c].charCodeAt(0);
+          let fg: C3, bg: C3;
+          if (st >= 10) [fg, bg] = FW[st];
+          else if (st === St.Inverse) { fg = [sbg[0] + 4, sbg[1] + 4, sbg[2] + 4]; bg = [ink[0][0] * 0.85, ink[0][1] * 0.85, ink[0][2] * 0.85]; }
+          else { fg = ink[st]; bg = ch !== 32 ? [sbg[0] + fg[0] * 0.07, sbg[1] + fg[1] * 0.07, sbg[2] + fg[2] * 0.07] : sbg; }
+          put(sx + c, sy + r, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], [bg[0] * scan, bg[1] * scan, bg[2] * scan]);
+        }
+      }
+      if (full.cy >= 0 && Math.floor(now * 2.5) & 1 && full.cx >= 0 && full.cx < TERM_W) put(sx + full.cx, sy + full.cy, 32, ink[0], ink[0]);
+    }
     // the cursor: a block blinking where the next character goes
-    if (on && ready && S.scroll === 0 && Math.floor(now * 2.5) & 1) {
+    if (on && !full && ready && S.scroll === 0 && Math.floor(now * 2.5) & 1) {
       const pos = S.prompt.length + S.cur, row = lines.length - 1 - (Math.floor((S.prompt.length + S.input.length) / TERM_W) - Math.floor(pos / TERM_W)) - first;
       if (row >= 0 && row < TERM_H) put(sx + (pos % TERM_W), sy + row, 32, ink[0], ink[0]);
     }
     if (on && S.scroll > 0) text(sx + TERM_W - 14, sy, ` SCROLLBACK ${S.scroll} `.slice(0, 14), sbg, ink[1]);
     // a status strip in the top-right corner, once the system has finished booting (not before the OS loads)
-    if (S.state === 'ready') {
+    if (S.state === 'ready' && !full) {
       const pc = P.pc, N = S.net, cpu = Math.round(pc.load * 100), temp = Math.round(pc.tempC);
-      const mem = `${Math.round(pc.usedKB() / 1024)}/${Math.round(pc.hw.ramMB)}M`;
+      const mem = `${Math.round(pc.usedKB() / 1024)}/${Math.round(pc.hw.ramMB)}M`, batt = Math.round(pc.charge * 100);
       const bars = N.state === 'up' ? '|'.repeat(N.bars) + '.'.repeat(4 - N.bars) : N.state === 'assoc' || N.state === 'dhcp' ? '~~~~' : '----';
       const red: C3 = [255, 110, 80], grn: C3 = [120, 255, 150], dim = ink[1], val = ink[0], pbg: C3 = [sbg[0] + 10, sbg[1] + 14, sbg[2] + 10];
       const segs: [string, C3][] = [
         [' CPU ', dim], [`${String(cpu).padStart(3)}%`, cpu > 80 ? red : val], ['  ', dim],
         [`${temp}C`, temp > 70 ? red : val], ['  MEM ', dim], [mem, val],
-        ['  NET ', dim], [bars, N.state === 'up' ? grn : dim], [' ', dim],
+        ['  NET ', dim], [bars, N.state === 'up' ? grn : dim],
+        ['  BAT ', dim], [`${batt}%${pc.plugged ? (batt >= 100 ? ' AC' : '+') : ''}`, batt < 10 && !pc.plugged ? red : pc.plugged ? grn : val], [' ', dim],
       ];
       let x = sx + TERM_W - segs.reduce((n, g) => n + g[0].length, 0);
       for (const [t, c] of segs) { for (let k = 0; k < t.length; k++) put(x + k, sy, t.charCodeAt(k), c, pbg); x += t.length; }
@@ -192,6 +218,12 @@ export function drawLaptop(g: CharGrid, P: Laptop, world: World, now: number, li
     // the drive's activity light beside it: it flickers with every seek
     const busy = on && now - P.hddAt < 0.07 + 0.05 * ((now * 37) % 1);
     put(x0 + SCR_W - 6, y0 + SCR_H - 1, 46, busy ? [255, 190, 70] : [50, 36, 18], bezel);
+    // the charge light: amber charging, green full on the mains, off on the battery; it blinks amber
+    // when the battery is low, and three times when the power button finds it flat
+    const pc = P.pc, blink = Math.floor(now * 3) & 1, dead = now - P.deadAt < 1;
+    const chg: C3 = dead ? (blink ? [255, 150, 40] : [50, 30, 10]) : pc.plugged ? (pc.charge >= 0.995 ? [120, 255, 140] : [255, 170, 50])
+      : on && pc.charge < 0.1 ? (blink ? [255, 150, 40] : [50, 30, 10]) : [40, 30, 16];
+    put(x0 + SCR_W - 8, y0 + SCR_H - 1, 46, chg, bezel);
   }
 
   // what to do, and where the player sat

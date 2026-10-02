@@ -1,4 +1,6 @@
+import { hash3 } from '../core/rng';
 import { blockAt, diagS } from '../sim/city';
+import { Backup } from '../sim/power';
 import { Computer, playerLaptop } from '../sim/computer';
 import { planOf } from '../sim/interior';
 import { type World } from '../sim/world';
@@ -73,12 +75,31 @@ export class Laptop {
   readonly sfx: LapSound[] = [];
   /** The drive's last seek (real seconds): its activity light flickers with them. */
   hddAt = -9;
+  /** The power button pressed with a flat battery and no outlet: the charge light blinks, nothing else. */
+  deadAt = -9;
+  private lowSaid = false;
+  private critSaid = false;
 
   constructor(private world: World) {
     this.pc = new Computer(playerLaptop(world.seed));
+    this.pc.charge = 0.55 + hash3(world.seed, 402, 1) * 0.4;
     install(this.pc, world.time);
     this.shell = new Shell(this.pc, world);
   }
+  /**
+   * Is there a live outlet where the player sits: inside a building whose power is on (its
+   * substation, or a generator that feeds more than the emergency lights). Outside, on a fire
+   * escape or in a blackout, the notebook runs on its battery.
+   */
+  private outlet(): boolean {
+    const w = this.world, p = w.player, G = w.power;
+    if (p.inside < 0 || !this.seat || this.seat.kind === 'escape') return false;
+    return G.subs[G.building[p.inside]].on || G.backup[p.inside] >= Backup.Generator;
+  }
+  /** Flat and unplugged: the power button does nothing. */
+  private get dead() { return !this.pc.plugged && this.pc.charge <= 0.005; }
+  /** A program that owns the whole screen wants the keys a terminal would not (Esc, PageUp/PageDown). */
+  get owns() { return !!this.shell.fw.mode || !!this.shell.editor; }
   /** N: take it out where it can be used (true), or say why not. */
   take(now: number): boolean {
     if (this.open) return false;
@@ -86,6 +107,7 @@ export class Laptop {
     this.noticeAt = now;
     if (typeof s === 'string') { this.notice = L.seat[s]; return false; }
     this.seat = s; this.notice = L.seat[s.kind];
+    if (this.outlet()) this.notice += ' ' + L.seat.plug;
     this.open = true; this.openedAt = now; this.woke = false;
     this.sfx.push('zip');
     return true;
@@ -104,7 +126,8 @@ export class Laptop {
       if (t > 0.6) { if (this.lid === 0) this.sfx.push('open'); this.lid = Math.min(1, this.lid + dt / 0.45); }
       if (this.lid >= 1 && !this.woke) {
         this.woke = true;
-        if (this.shell.state === 'off' && !this.shell.halted) { this.sfx.push('power'); this.shell.boot(now); }
+        this.pc.plugged = this.outlet();
+        if (this.shell.state === 'off' && !this.shell.halted) { this.sfx.push('power'); if (this.dead) { this.deadAt = now; this.shell.halted = true; } else this.shell.boot(now); }
         else if (this.shell.state !== 'off') this.shell.resume(now);
       }
     } else {
@@ -123,6 +146,16 @@ export class Laptop {
     // a rough resident-memory model: the kernel and system take a baseline, buffers and cache drift
     this.pc.bgKB = off ? 0 : Math.round((36 + 24 * (0.5 + 0.5 * Math.sin(now * 0.17))) * 1024);
     this.pc.heat(dt, w.player.inside >= 0 ? 22 : w.weather.temp);
+    // the battery: on the mains only while open where there is an outlet; asleep in the bag it barely drains
+    const pc = this.pc, st = S.state === 'off' ? 'off' : this.open && this.lid >= 1 ? 'on' : 'sleep';
+    pc.plugged = this.open && this.outlet();
+    pc.drain(dt, st);
+    if (!pc.plugged && st !== 'off') {
+      if (pc.charge <= 0) S.powerLoss();
+      else if (pc.charge < 0.03 && st === 'on' && !this.critSaid) { this.critSaid = true; S.battCritical(now); }
+      else if (pc.charge < 0.1 && st === 'on' && !this.lowSaid) { this.lowSaid = true; S.broadcast(now, `Battery low (${Math.round(pc.charge * 100)}%): plug in the adapter or save your work.`); }
+    }
+    if (pc.charge > 0.12) this.lowSaid = this.critSaid = false;
     for (const s of this.shell.sfx) { this.sfx.push(s); if (s === 'seek') this.hddAt = now; }
     this.shell.sfx.length = 0;
   }
@@ -132,8 +165,11 @@ export class Laptop {
     this.pressed.set(code, now);
     this.sfx.push(code === 'Space' ? 'space' : code === 'Enter' || code === 'Backspace' || code.startsWith('Shift') ? 'enter' : 'key');
     // powered off (shut down): Enter is the power button
-    if (this.shell.state === 'off') { if (code === 'Enter' || code === 'Space') { this.shell.halted = false; this.sfx.push('power'); this.shell.boot(now); } return; }
-    if (code === 'PageUp' || code === 'PageDown') { this.scroll(code === 'PageUp' ? TERM_H - 2 : -(TERM_H - 2)); return; }
+    if (this.shell.state === 'off') {
+      if (code === 'Enter' || code === 'Space') { this.sfx.push('power'); if (this.dead) { this.deadAt = now; return; } this.shell.halted = false; this.shell.boot(now); }
+      return;
+    }
+    if ((code === 'PageUp' || code === 'PageDown') && !this.owns) { this.scroll(code === 'PageUp' ? TERM_H - 2 : -(TERM_H - 2)); return; }
     this.shell.key(key, ctrl, now);
   }
   scroll(d: number) { const S = this.shell; S.scroll = Math.max(0, Math.min(Math.max(0, S.lines.length - 4), S.scroll + d)); }

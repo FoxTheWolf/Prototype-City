@@ -1,6 +1,9 @@
 import { hash3 } from '../core/rng';
 import { calendar } from '../sim/clock';
-import { type Computer, type FsNode } from '../sim/computer';
+import { type BootDev, type Computer, type FsNode } from '../sim/computer';
+import { Firmware, type FwAction } from './bios';
+import { Editor } from './editor';
+import { type Scr } from './screen';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
 import { computerMakerName, wifiName } from '../locale/names';
@@ -40,6 +43,7 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'free', 14, 320], ['/usr/bin', 'df', 64, 420], ['/usr/bin', 'whoami', 22, 260], ['/usr/bin', 'id', 30, 270],
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
   ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'iwlist', 40, 520], ['/sbin', 'dhclient', 120, 900], ['/bin', 'ping', 44, 420], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
+  ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300],
 ];
 /** The hacker tools in ~/bin: fictional stand-ins (scanner, cracker, sniffer, console). Name, size KB, memory KB. */
 const HACK_TOOLS: [string, number, number][] = [
@@ -121,9 +125,25 @@ export class Shell {
   private conn: { host: Host; stage: 'login' | 'pass' | 'shell'; tryUser: string } | null = null;
   /** The next typed line is not echoed (a password prompt): draw.ts shows it masked. */
   mask = false;
+  /** The firmware's SETUP and boot menu, after the self test. */
+  readonly fw: Firmware;
+  /** The self test is on screen: F2 and F12 are heard, and what was asked for comes when it ends. */
+  private inPost = false;
+  private postWant: null | 'setup' | 'menu' = null;
+  /** The text editor, while it owns the screen. */
+  editor: Editor | null = null;
 
   constructor(readonly pc: Computer, private world: World) {
     this.cwd = `/home/${pc.hw.user}`;
+    this.fw = new Firmware(pc, world, (a) => this.fwDone(a));
+  }
+  /** The machine's own clock: the city's, moved by what was set in the BIOS. */
+  private get clock() { return this.world.time + this.pc.bios.clockOffset; }
+  /** A program drawing the whole screen (SETUP, the editor), with its cursor; null for the scrolling lines. */
+  screen(): { scr: Scr; cx: number; cy: number } | null {
+    if (this.fw.mode) return { scr: this.fw.cells(), cx: -1, cy: -1 };
+    if (this.editor && this.state === 'ready') return this.editor.cells();
+    return null;
   }
   get prompt() {
     if (this.conn) return this.conn.stage === 'login' ? `${this.conn.host.name} login: ` : this.conn.stage === 'pass' ? 'Password: ' : `admin@${this.conn.host.name}# `;
@@ -155,6 +175,7 @@ export class Shell {
   }
 
   update(now: number) {
+    this.net.on = this.pc.bios.wlan;
     this.net.update(this.world, this.state !== 'off', now);
     let n = 0;
     while (n < this.queue.length && this.queue[n].at <= now) {
@@ -185,6 +206,7 @@ export class Shell {
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
     this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.mask = false;
+    this.editor = null; this.fw.close(); this.inPost = true; this.postWant = null;
     pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
     // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
     // up, the drives it finds; the drive spins up meanwhile
@@ -198,34 +220,68 @@ export class Shell {
     this.say(now, '', 0, 0);
     this.say(now, '', 0, 0);
     this.say(now, `  Main Processor  : ${H.cpu} @ ${(H.cpuMHz / 1000).toFixed(2)}GHz`, 0, 0.3);
-    this.say(now, '  Memory Test     :       0K', 0, 0.2);
-    // counts up as fast as the BIOS checks it: ~1 GB a second
-    const steps = 16, kb = H.ramMB * 1024;
-    for (let k = 1; k <= steps; k++) this.redo(now, `  Memory Test     : ${String(Math.round((kb * k) / steps)).padStart(7)}K${k === steps ? ' OK' : ''}`, H.ramMB / 1000 / steps);
-    this.say(now, '', 0, 0.3);
-    this.say(now, '  Detecting Primary Master   ...', 0, 0.2);
-    this.seeks(now, 0.9, 7);
+    // counts up as fast as the BIOS checks it: ~1 GB a second (quick boot skips the test)
+    const kb = H.ramMB * 1024, quick = pc.bios.quickBoot;
+    if (quick) this.say(now, `  Memory Test     : ${String(kb).padStart(7)}K OK`, 0, 0.1);
+    else {
+      this.say(now, '  Memory Test     :       0K', 0, 0.2);
+      const steps = 16;
+      for (let k = 1; k <= steps; k++) this.redo(now, `  Memory Test     : ${String(Math.round((kb * k) / steps)).padStart(7)}K${k === steps ? ' OK' : ''}`, H.ramMB / 1000 / steps);
+    }
+    const q = quick ? 0.35 : 1;
+    this.say(now, '', 0, 0.3 * q);
+    this.say(now, '  Detecting Primary Master   ...', 0, 0.2 * q);
+    this.seeks(now, 0.9 * q, 7);
     this.redo(now, `  Detecting Primary Master   ... ${H.disk} ${Math.round(H.diskMB / 1000)}G`, 0);
-    this.say(now, '  Detecting Primary Slave    ...', 0, 0.1);
-    this.redo(now, '  Detecting Primary Slave    ... None', 0.5);
-    this.say(now, '  Detecting Secondary Master ...', 0, 0.1);
-    this.redo(now, '  Detecting Secondary Master ... DVD+-RW 8X', 0.6);
+    this.say(now, '  Detecting Primary Slave    ...', 0, 0.1 * q);
+    this.redo(now, '  Detecting Primary Slave    ... None', 0.5 * q);
+    this.say(now, '  Detecting Secondary Master ...', 0, 0.1 * q);
+    this.redo(now, '  Detecting Secondary Master ... DVD+-RW 8X', 0.6 * q);
     for (let k = 0; k < TERM_H - 15; k++) this.say(now, '', 0, 0);
-    this.say(now, '  Press F2 to enter SETUP, F12 for the boot menu', 0, 0);
-    // the screen goes dark while the drive reads the boot loader, then the system's text
-    this.then(now, () => { this.lines = []; this.bios = false; }, 1.6);
+    this.then(now, () => { this.lines.push({ text: this.postWant ? this.postMsg() : '  Press F2 to enter SETUP, F12 for the boot menu', ink: 0 }); });
+    // the keys are heard until the self test ends; then SETUP, the menu, or the boot order
+    this.then(now, () => this.postDone(), 1.6 * (quick ? 0.6 : 1));
+    this.busyUntil = this.tq;
+  }
+  private postMsg() { return this.postWant === 'setup' ? '  Entering SETUP...' : '  Entering the boot menu...'; }
+  private postDone() {
+    const now = performance.now() / 1000;
+    this.inPost = false;
+    if (this.postWant === 'setup') { this.lines = []; this.bios = false; this.fw.openSetup(); }
+    else if (this.postWant === 'menu') { this.lines = []; this.bios = false; this.fw.openMenu(); }
+    else this.load(now);
+    this.postWant = null;
+  }
+  private fwDone(a: FwAction) {
+    const now = performance.now() / 1000;
+    if (a.kind === 'reset') this.boot(now); else this.load(now, a.first);
+  }
+  /** Try the boot devices in their order (or the one picked first) until one boots: only the drive has a system. */
+  private load(now: number, first?: BootDev) {
+    const pc = this.pc, H = pc.hw;
+    this.tq = now; this.lines = []; this.bios = false;
+    const order = first ? [first, ...pc.bios.bootOrder.filter((d) => d !== first)] : pc.bios.bootOrder;
+    for (const d of order) {
+      if (d === 'hdd') break;
+      if (d === 'dvd') { this.say(now, 'Booting from CD/DVD Drive...', 0, 0.2); this.seeks(now, 1.6, 3); this.say(now, '  No bootable disc in the drive.', 0, 1.6); }
+      else if (d === 'usb') { this.say(now, 'Booting from USB Storage Device...', 0, 0.2); this.say(now, '  No USB storage device found.', 0, 0.4); }
+      else { this.say(now, `${H.eth} Boot Agent v1.2.40`, 0, 0.3); this.say(now, 'PXE-E61: Media test failure, check cable', 0, 1.2); this.say(now, 'PXE-M0F: Exiting PXE ROM.', 0, 0.3); }
+      this.say(now, '', 0, 0.1);
+    }
+    // the drive reads the boot loader, then the system's text
+    this.then(now, () => { this.lines = []; }, 0.2);
     this.seeks(now, 1.2, 9);
     this.at(now, 1.2);
     this.say(now, `Loading ${H.os} ${H.kernel} .....`, 0, 0.3);
     this.seeks(now, 1.4, 6);
     // the kernel: timestamped as it goes; the slower the machine, the longer it takes
-    const slow = 1800 / H.cpuMHz, kern = [
+    const kb = H.ramMB * 1024, slow = 1800 / H.cpuMHz, kern = [
       `${H.os} version ${H.kernel} (builder@osprey) #1 SMP`, `BIOS-provided physical RAM map: ${H.ramMB}MB LOWMEM available.`,
       `Detected ${H.cpuMHz}.${Math.floor(hash3(H.cpuMHz, 1, 2) * 900 + 100)} MHz processor.`, `Memory: ${kb - 38 * 1024}k/${kb}k available`,
       `CPU0: ${H.cpu} stepping 0${1 + Math.floor(hash3(H.cpuMHz, 3, 3) * 9)}`, ...(H.cores > 1 ? ['Booting processor 1/2 eip 2000', 'Total of 2 processors activated.'] : []),
-      'NET: Registered protocol family 2', 'PCI: Probing PCI hardware', 'ACPI: AC Adapter [AC] (off-line)', 'ACPI: Battery Slot [BAT0] (battery present)',
+      'NET: Registered protocol family 2', 'PCI: Probing PCI hardware', `ACPI: AC Adapter [AC] (${pc.plugged ? 'on-line' : 'off-line'})`, 'ACPI: Battery Slot [BAT0] (battery present)',
       `ata1.00: ATA-7: ${H.disk}, max UDMA/100`, `sd 0:0:0:0: [sda] ${Math.round(H.diskMB * 1953.125)} 512-byte hardware sectors`, ' sda: sda1 sda2 < sda5 >',
-      `eth0: ${H.eth}, link down`, `wlan0: ${H.wlan} card, firmware 4.1`, 'EXT3-fs: mounted filesystem with ordered data mode.', 'Adding 1004052k swap on /dev/sda5.',
+      `eth0: ${H.eth}, link down`, ...(pc.bios.wlan ? [`wlan0: ${H.wlan} card, firmware 4.1`] : []), 'EXT3-fs: mounted filesystem with ordered data mode.', 'Adding 1004052k swap on /dev/sda5.',
     ];
     let ts = 0;
     for (const k of kern) {
@@ -256,7 +312,7 @@ export class Shell {
     this.say(now, `${H.host} login: ${H.user}`, 0, 0.4);
     this.say(now, 'Password:', 0, 0.5);
     this.seeks(now, 0.3, 6);
-    const last = calendar(this.world.time - 3600 * 26);
+    const last = calendar(this.clock - 3600 * 26);
     this.say(now, `Last login: ${WDAY[last.weekday]} ${MON[last.month - 1]} ${String(last.day).padStart(2)} ${p2(Math.floor(last.hour))}:${p2(Math.floor((last.hour % 1) * 60))} on tty1`, 0, 0.6);
     for (const m of L.motd) this.say(now, fill(m, { os: H.os, kernel: H.kernel, host: H.host, user: H.user }), 1);
     this.then(now, () => {
@@ -294,7 +350,19 @@ export class Shell {
   // ---- the keyboard ----
   /** A key typed at the prompt (`key` as the browser names it). */
   key(key: string, ctrl: boolean, now: number) {
+    if (this.fw.mode) { this.fw.key(key); return; }
+    if (this.inPost) {
+      // F12 may be the browser's (its tools): F9 opens the boot menu too
+      const want = key === 'F2' ? 'setup' : key === 'F12' || key === 'F9' ? 'menu' : null;
+      if (want && !this.postWant) {
+        this.postWant = want;
+        const last = this.lines[this.lines.length - 1];
+        if (last?.text.startsWith('  Press F2')) last.text = this.postMsg();
+      }
+      return;
+    }
     if (this.state !== 'ready') return;
+    if (this.editor) { this.editor.key(key, ctrl); return; }
     if (ctrl && (key === 'c' || key === 'C')) {
       if (!this.ready) this.interrupt(now);
       else { this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(this.input.length) : this.input) + '^C', ink: 0 }); this.input = ''; this.cur = 0; this.mask = false; }
@@ -377,7 +445,7 @@ export class Shell {
       if (!dir?.dir) out.splice(0, out.length, fill(L.err.nofile, { c: 'sh', p: redir[0] }));
       else if (f?.dir) out.splice(0, out.length, fill(L.err.isdir, { c: 'sh', p: redir[0] }));
       else if (!pc.writable(path, pc.hw.user)) out.splice(0, out.length, fill(L.err.denied, { c: 'sh', p: redir[0] }));
-      else { const old = redir[1] && f?.data ? f.data : ''; pc.put(path, old + text, pc.hw.user, this.world.time); dir.mtime = this.world.time; void base; out.length = 0; }
+      else { const old = redir[1] && f?.data ? f.data : ''; pc.put(path, old + text, pc.hw.user, this.clock); dir.mtime = this.clock; void base; out.length = 0; }
     }
     // what it prints comes as the work gets done: spread over its time, or at the terminal's pace
     if (work > 0) {
@@ -507,9 +575,9 @@ export class Shell {
           const q = path(p), [dir] = pc.parent(q), n = pc.get(q);
           if (!dir?.dir) { this.err(out, 'nofile', c, p); continue; }
           if (!pc.writable(q, u)) { this.err(out, 'denied', c, p); continue; }
-          if (c === 'mkdir') { if (n) this.err(out, 'exists', c, p); else pc.mkdirs(q, u, w.time); }
-          else if (n) n.mtime = w.time; else pc.put(q, '', u, w.time);
-          dir.mtime = w.time;
+          if (c === 'mkdir') { if (n) this.err(out, 'exists', c, p); else pc.mkdirs(q, u, this.clock); }
+          else if (n) n.mtime = this.clock; else pc.put(q, '', u, this.clock);
+          dir.mtime = this.clock;
         }
         return 0;
       }
@@ -523,7 +591,7 @@ export class Shell {
           if (c === 'rmdir' && n.kids!.size) { this.err(out, 'notempty', c, p); continue; }
           if (c === 'rm' && n.dir && !flags.has('r')) { this.err(out, 'isdir', c, p); continue; }
           files += n.dir ? this.count(n) : 1;
-          dir.kids!.delete(base); dir.mtime = w.time;
+          dir.kids!.delete(base); dir.mtime = this.clock;
           if (this.cwd === q || this.cwd.startsWith(q + '/')) this.cwd = q.slice(0, q.lastIndexOf('/')) || '/';
         }
         return files > 3 ? pc.workS(0, files) : 0;
@@ -537,13 +605,13 @@ export class Shell {
         const [dir, base] = pc.parent(d), [sdir, sbase] = pc.parent(s);
         if (!dir?.dir) { this.err(out, 'nofile', c, args[1]); return 0; }
         if (!pc.writable(d, u) || (c === 'mv' && !pc.writable(s, u))) { this.err(out, 'denied', c, c === 'mv' && !pc.writable(s, u) ? args[0] : args[1]); return 0; }
-        if (c === 'mv') { sdir!.kids!.delete(sbase); n.name = base; dir.kids!.set(base, n); dir.mtime = w.time; return 0; }
+        if (c === 'mv') { sdir!.kids!.delete(sbase); n.name = base; dir.kids!.set(base, n); dir.mtime = this.clock; return 0; }
         if (n.dir) { this.err(out, 'isdir', c, args[0]); return 0; }
         if (n.size / 1048576 > pc.freeMB()) { this.err(out, 'nospace', c, args[1]); return pc.workS(pc.freeMB() * 1048576, 1); }
         // the copy is there once it has been read and written
         const work = pc.workS(n.size * 2, 2);
         this.at(now, work);
-        this.then(now, () => { const f = pc.put(d, n.data ?? n.size, u, w.time, n.exec, n.memKB); f.size = n.size; });
+        this.then(now, () => { const f = pc.put(d, n.data ?? n.size, u, this.clock, n.exec, n.memKB); f.size = n.size; });
         this.seeks(now - work, work, 6);
         return 0;
       }
@@ -568,12 +636,12 @@ export class Shell {
       }
       case 'uname': out.push(flags.has('a') ? `OspreyUX ${H.host} ${H.kernel} #1 SMP i686 ${H.cpu}` : 'OspreyUX'); return 0;
       case 'uptime': {
-        const up = (w.time - this.bootT) / 60, k = calendar(w.time), load = (0.02 + pc.procs.length * 0.01).toFixed(2);
+        const up = (w.time - this.bootT) / 60, k = calendar(this.clock), load = (0.02 + pc.procs.length * 0.01).toFixed(2);
         out.push(` ${p2(Math.floor(k.hour))}:${p2(Math.floor((k.hour % 1) * 60))}:${p2(Math.floor(((k.hour * 60) % 1) * 60))} up ${Math.floor(up / 60)}:${p2(Math.floor(up % 60))},  1 user,  load average: ${load}, ${load}, 0.00`);
         return 0;
       }
       case 'date': {
-        const k = calendar(w.time);
+        const k = calendar(this.clock);
         out.push(`${WDAY[k.weekday]} ${MON[k.month - 1]} ${String(k.day).padStart(2)} ${p2(Math.floor(k.hour))}:${p2(Math.floor((k.hour % 1) * 60))}:${p2(Math.floor(((k.hour * 60) % 1) * 60))} EST ${k.year}`);
         return 0;
       }
@@ -617,12 +685,14 @@ export class Shell {
         out.push(`eth0      Link encap:Ethernet  HWaddr ${this.mac(0)}`, '          UP BROADCAST MULTICAST  MTU:1500  Metric:1', '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
         out.push('lo        Link encap:Local Loopback', '          inet addr:127.0.0.1  Mask:255.0.0.0', '          UP LOOPBACK RUNNING  MTU:16436  Metric:1', '');
         const up = this.net.state === 'up';
+        if (!pc.bios.wlan) return 0;
         out.push(`wlan0     Link encap:Ethernet  HWaddr ${this.mac(1)}`);
         if (up) out.push(`          inet addr:${this.net.ip}  Bcast:${this.net.ip.replace(/\.\d+$/, '.255')}  Mask:255.255.255.0`);
         out.push(`          ${up ? 'UP BROADCAST RUNNING MULTICAST' : 'BROADCAST MULTICAST'}  MTU:1500  Metric:1`, '          RX packets:0 errors:0 dropped:0', '          TX packets:0 errors:0 dropped:0', '');
         return 0;
       }
       case 'iwconfig': {
+        if (!pc.bios.wlan) { out.push('lo        no wireless extensions.', '', 'eth0      no wireless extensions.', '', 'wlan0     No such device', ''); return 0; }
         // with arguments it joins a network: iwconfig wlan0 essid "NAME" [key KEY]
         if (args[0] === 'wlan0' && (a.includes('essid') || a.includes('key'))) {
           const ei = a.indexOf('essid');
@@ -641,6 +711,7 @@ export class Shell {
         return 0;
       }
       case 'iwlist': {
+        if (!pc.bios.wlan) { out.push('wlan0     Interface doesn\'t support scanning : No such device'); return 0; }
         // scan the wireless networks in range (sim/wifi.ts), strongest first
         this.net.scanNow();
         const list = this.net.list.slice(0, 24);
@@ -654,6 +725,7 @@ export class Shell {
       }
       case 'dhclient': {
         const N = this.net;
+        if (!pc.bios.wlan) { out.push('wlan0: No such device'); return 0; }
         if (N.ap < 0) { out.push('wlan0: not associated; run iwconfig wlan0 essid "NAME" [key KEY] first'); return 0; }
         this.say(now, 'Internet Systems Consortium DHCP Client', 0, 0.1);
         this.say(now, `Listening on LPF/wlan0/${this.mac(1).toLowerCase()}`, 0, 0.2);
@@ -786,6 +858,33 @@ export class Shell {
         out.push('', 'fan-isa-0000', `fan1:        ${String(pc.fanRpm()).padStart(4)} RPM`);
         return 0;
       }
+      case 'nano': {
+        const p = args[0] ? path(args[0]) : '', n = p ? pc.get(p) : null;
+        if (n?.dir) { this.err(out, 'isdir', c, args[0]); return 0; }
+        if (n && n.data === null && !p.startsWith('/proc/')) { out.push(`${c}: ${args[0]}: cannot edit a binary file`); return 0; }
+        if (p && !n && !pc.parent(p)[0]?.dir) { this.err(out, 'nofile', c, args[0]); return 0; }
+        const text = p.startsWith('/proc/') ? this.proc(p, now) : n?.data ?? '', ro = !!p && (p.startsWith('/proc/') || !pc.writable(p, u));
+        // the editor keeps its process (and its memory) until it closes
+        const pid = this.job;
+        this.job = 0;
+        this.then(now, () => {
+          this.editor = new Editor(args[0] ?? '', text, ro, (q, t) => this.save(q, t), () => { this.editor = null; pc.kill(pid); }, (q) => pc.abs(this.cwd, q));
+        });
+        return pc.workS(n?.size ?? 0, 1);
+      }
+      case 'acpi': {
+        const pct = Math.round(pc.charge * 100), hms = (t: number) => `${p2(Math.floor(t / 3600))}:${p2(Math.floor(t / 60) % 60)}:${p2(Math.floor(t) % 60)}`;
+        const st = pc.plugged ? (pct >= 100 ? 'Full' : 'Charging') : 'Discharging';
+        const left = pc.battLeftS(), tail = !pc.plugged ? (Number.isFinite(left) ? `, ${hms(left)} remaining` : '') : pct < 100 ? `, ${hms((1 - pc.charge) * 5400 * (pc.charge < 0.8 ? 1 : 1.6))} until charged` : '';
+        out.push(`Battery 0: ${st}, ${pct}%${tail}`);
+        if (flags.has('V') || flags.has('a')) out.push(`Adapter 0: ${pc.plugged ? 'on-line' : 'off-line'}`);
+        if (flags.has('V')) {
+          const mAh = (wh: number) => Math.round((wh * 1000) / 11.1);
+          out.push(`Battery 0: design capacity ${mAh(H.battWh)} mAh, last full capacity ${mAh(pc.battWh)} mAh = ${Math.round(H.battWear * 100)}%`);
+          out.push(`Thermal 0: ok, ${pc.tempC.toFixed(1)} degrees C`);
+        }
+        return 0;
+      }
       case 'sleep': return Math.min(600, Math.max(0, Number(args[0]) || 0));
       case 'clear': this.then(now, () => { this.lines = []; }); return 0;
       case 'color': {
@@ -798,6 +897,37 @@ export class Shell {
     }
     this.err(out, 'notfound', c);
     return 0;
+  }
+  /** The editor writes a file: an error (as the system words it), or null once it is on the disk. */
+  private save(p: string, text: string): string | null {
+    const pc = this.pc, [dir] = pc.parent(p), f = pc.get(p);
+    if (!dir?.dir) return 'No such file or directory';
+    if (f?.dir) return 'Is a directory';
+    if (!pc.writable(p, pc.hw.user)) return 'Permission denied';
+    if ((text.length - (f?.size ?? 0)) / 1048576 > pc.freeMB()) return 'No space left on device';
+    pc.put(p, text, pc.hw.user, this.clock);
+    dir.mtime = this.clock;
+    this.sound(performance.now() / 1000, 'seek', 0.05);
+    return null;
+  }
+  /** A line from the system to every terminal (the battery running low). */
+  broadcast(now: number, text: string) {
+    if (this.state !== 'ready') return;
+    this.lines.push({ text: '', ink: 0 }, { text: `Broadcast message from root@${this.pc.hw.host}:`, ink: 2 }, { text, ink: 2 });
+    void now;
+  }
+  /** The battery is almost empty: the system halts itself, cleanly. */
+  battCritical(now: number) {
+    if (this.state !== 'ready') return;
+    this.editor = null;
+    this.broadcast(now, 'Critical battery level: the system is shutting down.');
+    this.shutdown(now, false);
+  }
+  /** The battery is empty: the power is simply gone, whatever was on the screen. */
+  powerLoss() {
+    this.pc.halt();
+    this.queue = []; this.lines = []; this.state = 'off'; this.halted = true; this.bios = false; this.editor = null; this.fw.close(); this.inPost = false; this.conn = null; this.mask = false;
+    this.sfx.push('spindown');
   }
   private logout(now: number) {
     this.pc.kill(this.shellPid);

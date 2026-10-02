@@ -12,6 +12,7 @@
     "ground": "You sit on the curb and open the notebook.",
     "road": "Not in the middle of the street.",
     "lift": "Not while the car is moving.",
+    "plug": "The adapter goes into the wall outlet.",
     "hint": "[N] OPEN THE NOTEBOOK",
     "close": "[ESC] OR [MIDDLE MOUSE] CLOSE THE LID   [RIGHT MOUSE] LOOK AROUND   [WHEEL] SCROLL"
   },
@@ -27,10 +28,10 @@
     "Commands (see 'man <name>'):",
     "  files     ls cd pwd cat head wc touch mkdir rmdir rm cp mv echo find du",
     "  system    uname uptime date ps kill free df dmesg whoami id hostname history",
-    "  hardware  lshw sensors (and /proc/cpuinfo, /proc/meminfo)",
+    "  hardware  lshw sensors acpi (and /proc/cpuinfo, /proc/meminfo)",
     "  network   iwlist iwconfig dhclient ifconfig ping",
     "  hacking   mmap bruter tdump tnet   (in ~/bin; run on a network you have joined)",
-    "  other     sha1sum sleep clear color man help shutdown reboot",
+    "  other     nano sha1sum sleep clear color man help shutdown reboot",
     "Keys: Tab completes, Up/Down history, Ctrl+C stops, Ctrl+L clears, wheel scrolls back."
   ],
   "man": {
@@ -66,6 +67,8 @@
     "iwconfig": "iwconfig [wlan0]\n  Show the wireless interface. To join a network:\n    iwconfig wlan0 essid \"NAME\" [key KEY]\n  An open network needs no key. Then run 'dhclient wlan0' to get an address.",
     "sha1sum": "sha1sum file...\n  A file's SHA-1 checksum. It reads the whole file: slow on a big one.",
     "sleep": "sleep seconds\n  Wait.",
+    "nano": "nano [file]\n  Edit a text file, full screen. ^O (or F3) writes it, ^X (or F2) leaves, ^K cuts a line, ^U pastes it, ^G is the help. Only your home and /tmp can be written.",
+    "acpi": "acpi [-a] [-V]\n  The battery: charging or not, its charge and the time left. -a: the AC adapter too. -V: also the battery's wear and the temperature. The adapter is plugged in only where you sit inside a building with power.",
     "clear": "clear\n  Clear the screen.",
     "color": "color [amber|green]\n  The terminal's ink.",
     "man": "man command\n  The manual page of a command.",

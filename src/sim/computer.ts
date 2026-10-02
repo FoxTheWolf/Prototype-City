@@ -33,6 +33,9 @@ export interface Hardware {
   user: string;
   /** The body's color. */
   body: [number, number, number];
+  /** The battery: its design capacity (Wh) and how much of it is left after the years (0..1). */
+  battWh: number;
+  battWear: number;
 }
 
 export interface FsNode {
@@ -66,6 +69,24 @@ const KERNEL_KB = 96 * 1024;
 /** The installed system on the disk, besides the files in the tree. */
 const SYSTEM_MB = 3400;
 
+/** What can boot the machine, in the BIOS's boot order. */
+export type BootDev = 'hdd' | 'dvd' | 'usb' | 'net';
+/**
+ * The firmware's settings (CMOS), kept with the machine: they change what it does, not just what
+ * the SETUP screen shows. The clock runs off the real one by an offset; a disabled radio is not
+ * there for the system; quick boot skips the memory test; the boot order is tried in turn.
+ */
+export interface BiosConfig {
+  /** Seconds the hardware clock is off the city's (set in SETUP). */
+  clockOffset: number;
+  wlan: boolean;
+  quickBoot: boolean;
+  /** The fan never stops (a floor under its controller). */
+  fanAlways: boolean;
+  bootOrder: BootDev[];
+}
+export const biosDefaults = (): BiosConfig => ({ clockOffset: 0, wlan: true, quickBoot: false, fanAlways: false, bootOrder: ['hdd', 'dvd', 'usb', 'net'] });
+
 const node = (name: string, dir: boolean, owner: string, mtime: number): FsNode => ({ name, dir, kids: dir ? new Map() : null, data: null, size: dir ? 4096 : 0, owner, mtime, exec: null, memKB: 0 });
 
 export class Computer {
@@ -74,9 +95,31 @@ export class Computer {
   private nextPid = 1;
   /** Real time of the last boot, or -1 while off. */
   bootAt = -1;
+  bios: BiosConfig = biosDefaults();
+  /** The battery: charge 0..1 of what it holds now (its capacity worn below the design's, Wh). */
+  charge = 0.85;
+  battWh: number;
+  /** On the mains (the adapter in a live outlet), and charging the battery. */
+  plugged = false;
+  /** What it draws now, W (set by drain). */
+  watts = 0;
   constructor(readonly hw: Hardware) {
     this.root = node('', true, 'root', 0);
+    this.battWh = hw.battWh * hw.battWear;
   }
+  /**
+   * The battery for `dt` real seconds: running, the machine draws a base, its processor's load, the
+   * screen and the radio; asleep (lid shut) next to nothing; off nothing. On the mains, the adapter
+   * feeds it and charges the battery (about an hour and a half from empty).
+   */
+  drain(dt: number, state: 'off' | 'sleep' | 'on') {
+    const W = state === 'off' ? 0 : state === 'sleep' ? 0.6 : 9 + 16 * this.load + 3 + (this.bios.wlan ? 1.2 : 0) + 1.5 * this.fan;
+    this.watts = W;
+    if (this.plugged) this.charge = Math.min(1, this.charge + (dt * (this.charge < 0.8 ? 1 : 0.4)) / 5400);
+    else this.charge = Math.max(0, this.charge - (W * dt) / 3600 / this.battWh);
+  }
+  /** Seconds of battery left at what it draws now (Infinity on the mains or drawing nothing). */
+  battLeftS() { return this.plugged || this.watts <= 0 ? Infinity : (this.charge * this.battWh * 3600) / this.watts; }
 
   /** Path from cwd (absolute or relative; . and .. and ~ understood) to a normalized absolute path. */
   abs(cwd: string, path: string): string {
@@ -157,7 +200,7 @@ export class Computer {
     const on = this.bootAt >= 0;
     const target = ambient + (on ? (16 + 46 * this.load) * (1 - 0.32 * this.fan) : 0);
     this.tempC += (target - this.tempC) * Math.min(1, dt / 20);
-    const want = on ? Math.max(0.2, Math.min(1, (this.tempC - 45) / 30)) : 0;
+    const want = on ? Math.max(this.bios.fanAlways ? 0.45 : 0.2, Math.min(1, (this.tempC - 45) / 30)) : 0;
     this.fan += (want - this.fan) * Math.min(1, dt / 2.5);
   }
   /** The fan in revolutions a minute. */
@@ -191,5 +234,6 @@ export function playerLaptop(seed: number): Hardware {
     cpu, cpuMHz, cores, ramMB, diskMB: diskGB * 1000, disk: `DTK-${diskGB}G54 ATA`, diskMBs: 32 + Math.floor(h(9) * 12), seekMs: 12 + Math.floor(h(10) * 4),
     eth: '10/100 Ethernet', wlan: '802.11b/g, 54 Mbit/s', bios: `v1.${Math.floor(h(11) * 20)}`,
     os: 'Osprey/UX 4.2', kernel: '2.6.24-19', host, user: 'user', body: pick(BODIES, 12),
+    battWh: pick([48, 56, 56, 64], 13), battWear: 0.62 + h(14) * 0.3,
   };
 }
