@@ -36,6 +36,11 @@ export function buildAtlas(cellW: number, cellH: number): HTMLCanvasElement {
 
 /** Block and box glyphs (█▓▒░ ─│┼═ ╱╲╳) live in free slots from 128 up. */
 export const BLOCK = { full: 128, dark: 129, mid: 130, light: 131, h: 132, v: 133, cross: 134, dh: 135, up: 136, down: 137, x: 138 };
+/**
+ * Shapes for drawn interfaces (the phone): half and partial blocks (two pixels per cell, the signal
+ * bars), and the four rounded corners of a box, each filled inside a quarter ellipse.
+ */
+export const SHAPE = { top: 139, bottom: 140, left: 141, right: 142, q1: 143, q3: 144, tl: 145, tr: 146, bl: 147, br: 148, dot: 149 };
 
 /**
  * Drawn as exact shapes instead of font glyphs, so they fill the whole cell and tile without gaps.
@@ -69,4 +74,17 @@ function drawBlocks(ctx: CanvasRenderingContext2D, w: number, h: number) {
   line(BLOCK.up, 0, h, w, 0);
   line(BLOCK.down, 0, 0, w, h);
   line(BLOCK.x, 0, h, w, 0); line(BLOCK.x, 0, 0, w, h);
+  const hh = Math.round(h / 2), hw = Math.round(w / 2);
+  rect(SHAPE.top, 0, 0, w, hh); rect(SHAPE.bottom, 0, hh, w, h - hh);
+  rect(SHAPE.left, 0, 0, hw, h); rect(SHAPE.right, hw, 0, w - hw, h);
+  rect(SHAPE.q1, 0, h - Math.round(h / 4), w, Math.round(h / 4)); rect(SHAPE.q3, 0, h - Math.round((h * 3) / 4), w, Math.round((h * 3) / 4));
+  // rounded corners: the inside of a quarter ellipse whose center is the box's inner corner
+  const corner = (slot: number, cx: number, cy: number) => {
+    const [sx, sy] = at(slot);
+    ctx.save(); ctx.beginPath(); ctx.rect(sx, sy, w, h); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(sx + cx, sy + cy, w, h, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  corner(SHAPE.tl, w, h); corner(SHAPE.tr, 0, h); corner(SHAPE.bl, w, 0); corner(SHAPE.br, 0, 0);
+  const [dx, dy] = at(SHAPE.dot);
+  ctx.beginPath(); ctx.ellipse(dx + w / 2, dy + h / 2, w * 0.36, w * 0.36, 0, 0, Math.PI * 2); ctx.fill();
 }

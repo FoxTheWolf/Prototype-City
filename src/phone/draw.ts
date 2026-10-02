@@ -3,22 +3,26 @@ import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, menu } from './apps';
+import { box, CHROME, wallpaper } from './ui';
 import { applyTheme, BAD, bigText, ch, DAYS, DIM, HI, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
 import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
 import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
+import { hash3 } from '../core/rng';
+import { BLOCK, SHAPE } from '../render/atlas';
+import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
 
 /**
  * The phone drawn in the player's hand, over the bottom right of the view: a 2008 handset with a
  * colour screen above a d-pad, soft keys, call and end keys and the number keys, whose bottom row
- * runs off the screen. Keys light while the phone is on and sink when pressed. The screen is a
- * small character display of its own; its text types in and the map draws in, as on a slow phone.
- * It sits in the scene's light (VIEW_LIGHT: street lamps, signs, headlights, the room's lamps), with
- * a lit edge on top and left, and a sheen on its metal rim and its glass that slides as you turn.
+ * runs off the screen. Its body is one of the shells (shells.ts), maybe in a case. Keys light while
+ * the phone is on and sink when pressed. The screen is a small character display of its own; its
+ * text types in and the map draws in, as on a slow phone. It sits in the scene's light (VIEW_LIGHT:
+ * street lamps, signs, headlights, the room's lamps), with a lit rim on top and left, and a sheen on
+ * its body and its glass that slides as you turn, stronger the glossier the material.
  */
-export const PHONE_W = 50;
-const PHONE_H = 52;
+export { PHONE_W };
 /** How much of it shows when held up (the rest is below the screen edge). */
 const SHOWN = 46;
 const SX = 4, SY = 4;
@@ -29,15 +33,8 @@ export const mapView = (aspect: number, zoom: number, indoor = false): [number, 
   return [SW * r * aspect, MAP_ROWS * r];
 };
 
-/** The keys on the phone's face: key, column, row, width, height, label, label color. */
-const CY = SY + SH + 2;
-const KEYS: [Key, number, number, number, number, string, C3?][] = [
-  ['lsoft', 3, CY, 10, 2, '--'], ['rsoft', 37, CY, 10, 2, '--'],
-  ['send', 3, CY + 3, 10, 2, 'SEND', [80, 230, 120]], ['end', 37, CY + 3, 10, 2, 'END', [255, 80, 70]],
-  ['up', 21, CY, 8, 1, '^'], ['left', 16, CY + 1, 4, 3, '<'], ['right', 30, CY + 1, 4, 3, '>'], ['ok', 21, CY + 1, 8, 3, 'OK'], ['down', 21, CY + 4, 8, 1, 'v'],
-];
-(['1 .,', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'] as const).forEach((label, n) =>
-  KEYS.push([label[0] as Key, 3 + (n % 3) * 16, CY + 6 + Math.floor(n / 3) * 3, 12, 2, label]));
+const keyRects = new Map<number, KeyRect[]>();
+const keysFor = (look: number) => { let k = keyRects.get(look); if (!k) keyRects.set(look, (k = keysOf(SHELLS[look]))); return k; };
 
 /** Where the phone's top left corner is on the grid: held up higher while typing, the whole keypad in sight. */
 function origin(cols: number, rows: number, P: Phone): [number, number] {
@@ -51,11 +48,15 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
 /** The key under a grid cell, if any. */
 export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number): Key | null {
   const [ox, oy] = origin(cols, rows, P);
-  for (const [k, x0, y0, w, h] of KEYS) if (x >= ox + x0 && x < ox + x0 + w && y >= oy + y0 && y < oy + y0 + h) return k;
+  for (const [k, x0, y0, w, h] of keysFor(P.look)) if (x >= ox + x0 && x < ox + x0 + w && y >= oy + y0 && y < oy + y0 + h) return k;
   return null;
 }
 
-const BEZEL: C3 = [7, 7, 9], CAP: C3 = [48, 50, 57], CAP_TOP: C3 = [64, 67, 75], CAP_DOWN: C3 = [22, 23, 26];
+const BEZEL: C3 = [7, 7, 9];
+const mul = (c: C3, k: number): C3 => [c[0] * k, c[1] * k, c[2] * k];
+const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
+/** How much of the scene's glint a material gives back. */
+const GLOSS: Record<string, number> = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05, clear: 0.9 };
 
 /** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
@@ -64,8 +65,9 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   if (P.raise < 0.01) return;
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
-  // the body in the model's color, its rim lit on top and left, dark on the right
-  const BODY = P.device.body, EDGE: C3 = [BODY[0] * 1.5 + 18, BODY[1] * 1.5 + 18, BODY[2] * 1.5 + 18], DARKE: C3 = [BODY[0] * 0.6, BODY[1] * 0.6, BODY[2] * 0.6];
+  const SHL = SHELLS[P.look], KEYS = keysFor(P.look), CY = KEYS_Y;
+  // the body in the shell's color (or the model's), the face of a slider above its seam
+  const BODY: C3 = SHL.body ?? P.device.body, FACE: C3 = SHL.face ?? BODY;
   const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
@@ -79,74 +81,131 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   // it comes from, in its color, stronger for a light behind the player
   const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
   const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 5) ** 2));
+  const inG = (x: number, y: number) => { const gx = ox + x, gy = oy + y; return gx >= 0 && gy >= 0 && gx < g.cols && gy < g.rows ? gy * g.cols + gx : -1; };
   // a cell of the phone's surface: lit by the scene, darker toward the bottom, the glint on top in
   // proportion to its gloss; `glow` is light of its own (backlit key labels) the scene does not dim
   const cell = (x: number, y: number, c: number, fg: C3, bg: C3, gloss = 0.25, glow = false) => {
-    const gx = ox + x, gy = oy + y;
-    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
-    const i = gy * g.cols + gx, k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * amp;
+    const i = inG(x, y);
+    if (i < 0) return;
+    const k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * amp;
     g.setBg(i, bg[0] * Lr * k + sh * GL.r, bg[1] * Lg * k + sh * GL.g, bg[2] * Lb * k + sh * GL.b);
     if (glow) g.put(i, c, Math.max(fg[0], fg[0] * Lr), Math.max(fg[1], fg[1] * Lg), Math.max(fg[2], fg[2] * Lb));
     else g.put(i, c, fg[0] * Lr * k + sh * GL.r, fg[1] * Lg * k + sh * GL.g, fg[2] * Lb * k + sh * GL.b);
   };
+  // a glyph alone, lit the same way, over what is behind it (a rounded corner: outside it, the world)
+  const over = (x: number, y: number, c: number, fg: C3, gloss = 0.25) => {
+    const i = inG(x, y);
+    if (i < 0) return;
+    const k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * amp;
+    g.put(i, c, fg[0] * Lr * k + sh * GL.r, fg[1] * Lg * k + sh * GL.g, fg[2] * Lb * k + sh * GL.b);
+  };
   // the glint's light added to a cell's background; a cell darkened by a shadow
   const addBg = (x: number, y: number, v: number) => {
-    const gx = ox + x, gy = oy + y;
-    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
-    const k = (gy * g.cols + gx) * 4;
+    const i = inG(x, y);
+    if (i < 0) return;
+    const k = i * 4;
     g.bg[k] += v * GL.r; g.bg[k + 1] += v * GL.g; g.bg[k + 2] += v * GL.b;
   };
   const shade = (x: number, y: number, f: number) => {
-    const gx = ox + x, gy = oy + y;
-    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
-    const k = (gy * g.cols + gx) * 4;
+    const i = inG(x, y);
+    if (i < 0) return;
+    const k = i * 4;
     for (let c = 0; c < 3; c++) { g.bg[k + c] *= 1 - f; g.cells[k + c + 1] *= 1 - f; }
   };
+  const gl = GLOSS[SHL.material], W1 = PHONE_W - 1, H1 = PHONE_H - 1, R = SHL.round;
+  const inBody = (x: number, y: number) => inBox(x, y, 0, 0, W1, H1, R);
+  const surface = (_x: number, y: number): C3 => (SHL.face && y < CY - 1 ? FACE : BODY);
   // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
-  for (let y = 0; y < PHONE_H; y++) {
-    const inset = y === 0 || y === PHONE_H - 1 ? 3 : y === 1 || y === PHONE_H - 2 ? 1 : 0;
-    for (let x = inset; x < PHONE_W - inset; x++) {
-      const left = x === inset, right = x === PHONE_W - 1 - inset, top = y === 0 || (inset > 0 && (left || right));
-      const col: C3 = top || left ? EDGE : right ? DARKE : BODY;
-      cell(x, y, 32, col, col, left || right || top ? 0.9 : 0.2);
-    }
+  for (let y = 0; y < PHONE_H; y++) for (let x = 0; x < PHONE_W; x++) {
+    const v = inBody(x, y);
+    if (!v) continue;
+    const base = surface(x, y);
+    const rimL = !inBody(x - 1, y), rimR = !inBody(x + 1, y), rimT = !inBody(x, y - 1);
+    let col: C3 = rimT || rimL ? [base[0] * 1.5 + 18, base[1] * 1.5 + 18, base[2] * 1.5 + 18] : rimR ? mul(base, 0.6) : base;
+    let glyph = 32, fg = col;
+    if (SHL.material === 'metal' && !rimL && !rimR && !rimT) {
+      // brushed metal: rows of slightly different shades, a fine streak now and then
+      const s = 1 + (hash3(y, x >> 3, 91) - 0.5) * 0.1;
+      col = mul(col, s);
+      if (hash3(y, x, 92) < 0.18) { glyph = ch('-'); fg = mul(col, 1.12); }
+    } else if (SHL.material === 'rubber' && (x < 3 || x > W1 - 3) && y > 4 && !rimL && !rimR) { glyph = ch('='); fg = mul(col, 0.7); }
+    if (v === 1) cell(x, y, glyph, fg, col, rimL || rimR || rimT ? 0.9 : gl);
+    else over(x, y, v, col, 0.9);
   }
-  // earpiece, front camera, maker's name
-  for (let x = 20; x < 30; x++) cell(x, 1, ch('='), [16, 16, 18], [20, 20, 23]);
-  cell(38, 1, ch('o'), [70, 80, 100], [12, 12, 14]);
+  // a slider's seam: the upper half's edge, its shadow on the lower
+  if (SHL.face) for (let x = 0; x < PHONE_W; x++) if (inBody(x, CY - 1) === 1) { cell(x, CY - 2, 32, mul(FACE, 1.6), mul(FACE, 1.6), 0.9); shade(x, CY - 1, 0.45); }
+  // a rugged phone's bumpers and screws
+  if (SHL.material === 'rubber') {
+    for (const [x0, y0] of [[0, 0], [W1 - 4, 0]]) for (let y = 0; y < 3; y++) for (let x = 0; x < 5; x++) { const v = inBody(x0 + x, y0 + y); if (v === 1) cell(x0 + x, y0 + y, 32, SHL.trim, SHL.trim, 0.3); else if (v) over(x0 + x, y0 + y, v, SHL.trim, 0.3); }
+    for (const [x, y] of [[2, 4], [W1 - 2, 4]]) cell(x, y, ch('+'), [150, 150, 150], mul(BODY, 0.8), 0.6);
+  }
+  // earpiece, front camera, maker's name (dark on a light body)
+  const top = surface(0, 1), dark = lum(top) > 130;
+  if (SHL.name === 'Pebble') for (let x = 21; x < 29; x += 2) cell(x, 1, SHAPE.dot, mul(top, 0.55), top, gl);
+  else for (let x = 20; x < 30; x++) cell(x, 1, ch('='), [16, 16, 18], [20, 20, 23], 0.6);
+  cell(38, 1, ch('o'), [70, 80, 100], [12, 12, 14], 0.8);
   const brand = P.maker.toUpperCase().split('').join(' ');
-  for (let k = 0; k < brand.length; k++) cell(25 - (brand.length >> 1) + k, 2, brand.charCodeAt(k), [150, 156, 168], BODY);
-  for (let y = SY - 1; y <= SY + SH; y++) for (let x = SX - 1; x <= SX + SW; x++) cell(x, y, 32, BEZEL, BEZEL);
+  for (let k = 0; k < brand.length; k++) cell(25 - (brand.length >> 1) + k, 2, brand.charCodeAt(k), dark ? [80, 76, 84] : [150, 156, 168], top, gl);
+  // the screen's surround: a chrome ring on some, then the black bezel, rounded
+  if (SHL.chrome) for (let y = SY - 2; y <= SY + SH + 1; y++) for (let x = SX - 2; x <= SX + SW + 1; x++) {
+    const v = inBox(x, y, SX - 2, SY - 2, SX + SW + 1, SY + SH + 1, 1);
+    if (v === 1) cell(x, y, 32, SHL.trim, SHL.trim, 0.95); else if (v) cell(x, y, v, SHL.trim, surface(x, y), 0.95);
+  }
+  for (let y = SY - 1; y <= SY + SH; y++) for (let x = SX - 1; x <= SX + SW; x++) {
+    const v = inBox(x, y, SX - 1, SY - 1, SX + SW, SY + SH, 1);
+    if (v === 1) cell(x, y, 32, BEZEL, BEZEL, 0.7); else if (v) cell(x, y, v, BEZEL, SHL.chrome ? SHL.trim : surface(x, y), 0.7);
+  }
 
   // keys: lit from behind while the phone is on, sunk for a moment when pressed
   const on = P.screen !== 'off';
   const isDown = (k: Key) => { const t = P.pressed.get(k); return t !== undefined && now - t < 0.14; };
+  const ring = SHL.dpad === 'ring', onRing = (k: Key) => ring && (k === 'up' || k === 'down' || k === 'left' || k === 'right');
+  // a ring d-pad: a rounded ring of trim around OK, its four sides the arrows
+  if (ring) for (let y = CY; y <= CY + 4; y++) for (let x = 16; x <= 33; x++) {
+    const v = inBox(x, y, 16, CY, 33, CY + 4, 2);
+    const k: Key | null = y === CY ? 'up' : y === CY + 4 ? 'down' : x < 21 ? 'left' : x > 28 ? 'right' : null;
+    const hot = k && (isDown(k) ? 0.55 : P.hover === k ? 1.25 : 1);
+    const c = mul(SHL.trim, hot || 1);
+    if (v === 1) cell(x, y, 32, c, c, 0.8); else if (v) cell(x, y, v, c, surface(x, y), 0.8);
+  }
   // first the keys' shadows on the body, cast away from the light: sideways by the light's side,
   // down for a light ahead (from above the phone), up for one behind (always some, from the room
-  // around); then the caps over them, so a shadow never darkens a neighbouring key
-  const vx = -GL.lat, vy = Math.max(-1, Math.min(1, 0.55 - 0.9 * GL.back)), dark = 0.2 + 0.4 * GL.str;
+  // around); then the caps over them, so a shadow never darkens a neighbouring key. Flush keys
+  // have no shadows: dark lines run between them instead.
+  const vx = -GL.lat, vy = Math.max(-1, Math.min(1, 0.55 - 0.9 * GL.back)), darkS = 0.2 + 0.4 * GL.str;
   const sx = Math.abs(vx) > 0.3 ? Math.sign(vx) : 0, sy = Math.abs(vy) > 0.3 ? Math.sign(vy) : 0;
+  const flush = SHL.keys === 'flush';
   for (const [k, x0, y0, w, h] of KEYS) {
-    if (isDown(k)) continue;
+    if (isDown(k) || onRing(k) || (flush && k.length === 1 && /[0-9*#]/.test(k))) continue;
     const ex = sx > 0 ? x0 + w : x0 - 1, ey = sy > 0 ? y0 + h : y0 - 1;
-    if (sx) for (let y = 0; y < h; y++) shade(ex, y0 + y, dark * Math.abs(vx));
-    if (sy) for (let x = 0; x < w; x++) shade(x0 + x, ey, dark * Math.abs(vy));
-    if (sx && sy) shade(ex, ey, dark * Math.min(Math.abs(vx), Math.abs(vy)));
+    if (sx) for (let y = 0; y < h; y++) shade(ex, y0 + y, darkS * Math.abs(vx));
+    if (sy) for (let x = 0; x < w; x++) shade(x0 + x, ey, darkS * Math.abs(vy));
+    if (sx && sy) shade(ex, ey, darkS * Math.min(Math.abs(vx), Math.abs(vy)));
+  }
+  if (flush) {
+    for (let y = CY + 6; y < CY + 18; y++) for (const x of [17, 32]) shade(x, y, 0.5);
+    for (const y of [CY + 8, CY + 11, CY + 14]) for (let x = 3; x < 47; x++) shade(x, y, 0.5);
   }
   // the caps in relief, unless pushed in: lit along the top edge; the edge facing the nearest light
-  // catches its glint; lit from behind while the phone is on
+  // catches its glint; lit from behind while the phone is on; pebbles rounded at the corners
   const side = GL.lat > 0 ? 1 : 0, rim = GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
   for (const [k, x0, y0, w, h, label, col] of KEYS) {
-    const down = isDown(k), fg: C3 = col ?? (on ? [150, 205, 255] : [125, 128, 138]);
-    const hov = P.hover === k && !down ? 1.35 : 1;
-    const capAt = (y: number): C3 => { const c = down ? CAP_DOWN : y === 0 && h > 1 ? CAP_TOP : CAP; return [c[0] * hov, c[1] * hov, c[2] * hov]; };
+    const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
+    if (onRing(k)) { cell(x0 + (w >> 1), y0 + ((h - 1) >> 1), ch(label), down ? mul(fg, 0.7) : fg, mul(SHL.trim, down ? 0.55 : P.hover === k ? 1.25 : 1), 0.8, on); continue; }
+    const hov = P.hover === k && !down ? 1.3 : 1;
+    const capAt = (y: number): C3 => mul(down ? mul(SHL.cap, 0.45) : y === 0 && h > 1 ? SHL.capTop : SHL.cap, hov);
+    const pebble = (SHL.keys === 'pebble' || (ring && k === 'ok')) && h > 1;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
-      if (!down && rim > 1 && x === side * (w - 1)) addBg(x0 + x, y0 + y, rim);
+      const v = pebble ? inBox(x, y, 0, 0, w - 1, h - 1, 1) : 1;
+      if (v === 1) cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
+      else if (v) cell(x0 + x, y0 + y, v, capAt(y), ring && k === 'ok' ? SHL.trim : surface(x0 + x, y0 + y), 0.5);
+      if (!down && rim > 1 && x === side * (w - 1) && v === 1) addBg(x0 + x, y0 + y, rim);
     }
     const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
-    for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? [fg[0] * 0.7, fg[1] * 0.7, fg[2] * 0.7] : fg, capAt(ly - y0), 0.5, on);
+    for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? mul(fg, 0.7) : fg, capAt(ly - y0), 0.5, on);
   }
+  // the case: over the body's rim and around it, so only its own rim shows from the front
+  if (P.case) drawCase(CASES[P.case], R, now, cell, over, inG, g);
 
   // the screen
   const S = new Lcd(g, ox + SX, oy + SY);
@@ -185,7 +244,46 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
       const w = bloom * (d === 0 ? 0.22 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
       g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
+      // the glyphs there too (the bezel's rounded corners), so the halo does not leave them dark
+      if (d > 0) { g.cells[k + 1] += ar * w; g.cells[k + 2] += ag * w; g.cells[k + 3] += ab * w; }
     }
+  }
+}
+
+type CellFn = (x: number, y: number, c: number, fg: C3, bg: C3, gloss?: number, glow?: boolean) => void;
+type OverFn = (x: number, y: number, c: number, fg: C3, gloss?: number) => void;
+/**
+ * A case: a rounded rim two columns and a row wider than the body, over the body's outer cells,
+ * lit like the body. Leather is stitched, a bumper ridged, glitter twinkles as the light moves;
+ * clear plastic tints the body under it and lies over the world as a thin film.
+ */
+function drawCase(K: Case, R: number, now: number, cell: CellFn, over: OverFn, inG: (x: number, y: number) => number, g: CharGrid) {
+  const W1 = PHONE_W - 1, H1 = PHONE_H - 1, gl = GLOSS[K.material], col = K.color;
+  for (let y = -1; y <= H1 + 1; y++) for (let x = -2; x <= W1 + 2; x++) {
+    const o = inBox(x, y, -2, -1, W1 + 2, H1 + 1, R + 1);
+    if (!o) continue;
+    const n = inBox(x, y, 1, 1, W1 - 1, H1, Math.max(1, R));
+    if (n === 1) continue;
+    const i = inG(x, y);
+    if (i < 0) continue;
+    if (K.material === 'clear') {
+      // over the body: its color tinted; past it, a film over the world
+      if (g.bg[i * 4 + 3] === 255 && !(x < 0 || x > W1 || y < 0)) { const k = i * 4; for (let c = 0; c < 3; c++) g.bg[k + c] = g.bg[k + c] * 0.8 + col[c] * 0.12; }
+      else over(x, y, BLOCK.light, col, gl);
+      continue;
+    }
+    const h = hash3(x, y, 93), solid = o === 1 && !n;
+    let glyph = 32, fg: C3 = col;
+    if (K.pattern === 'stitch' && solid && (x === -1 || x === W1 + 1 || y === 0) && (x + y) % 2 === 0) { glyph = ch(y === 0 ? '-' : ':'); fg = [196, 150, 100]; }
+    else if (K.pattern === 'ridge' && solid && (x < 0 || x > W1) && y % 2 === 0) { glyph = ch('='); fg = mul(col, 2.2); }
+    else if (K.pattern === 'glitter' && solid && h < 0.3) { const tw = 0.5 + 0.5 * Math.sin(now * 3 + h * 40); glyph = ch(h < 0.08 ? '*' : h < 0.18 ? '+' : '.'); fg = [255, 200 + 55 * tw, 240]; }
+    if (o !== 1) over(x, y, o, col, gl);
+    else if (n) {
+      // the body's corner shows through the case's: its color over the case's
+      const k = i * 4, b: C3 = [g.bg[k], g.bg[k + 1], g.bg[k + 2]];
+      cell(x, y, n, [0, 0, 0], col, gl);
+      g.put(i, n, b[0], b[1], b[2]);
+    } else cell(x, y, glyph, fg, col, gl, glyph !== 32 && K.pattern === 'glitter');
   }
 }
 
@@ -235,23 +333,49 @@ function splash(S: Lcd, maker: string, model: string, u: number) {
   for (let x = 0; x < 24; x++) S.put(9 + x, 19, x < n ? 32 : ch('.'), DIM, x < n ? HI : [10, 17, 34]);
 }
 
-const WHITE_MISS: C3 = [255, 230, 210];
+/**
+ * The standby screen: the wallpaper, the time big over it with a shadow, the date and the network
+ * on glass chips, and cards for what is waiting (missed calls, unread texts, the next reminder).
+ */
 function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  const c = calendar(world.time);
-  bigText(S, 4, hhmm(c.hour), INK, t);
+  wallpaper(S, P.prefs.wall, 1, SH - 2, world.time, now);
+  const c = calendar(world.time), CHIP: C3 = [10, 14, 24];
+  bigText(S, 4, hhmm(c.hour), [0, 0, 0], t, 1);
+  bigText(S, 3, hhmm(c.hour), [255, 255, 255], t);
   const date = `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`;
-  S.text((SW - date.length) >> 1, 13, typed(date, t - 0.2), DIM, LCD);
   // the network it is on, as phones then showed it under the clock
   const R = P.radio, op = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
-  S.text((SW - op.length) >> 1, 16, typed(op, t - 0.5), R.state === 'service' ? INK : [255, 120, 90], LCD);
-  if (P.missed) { const m = (P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)); S.text((SW - m.length) >> 1, 19, typed(m, t - 0.6), Math.floor(now * 2) & 1 ? WHITE_MISS : [255, 120, 90], LCD); }
+  const chip = (y: number, s: string, fg: C3) => {
+    if (!s) return;
+    const x0 = ((SW - s.length) >> 1) - 2;
+    box(S, x0, y, x0 + s.length + 3, y, CHIP, CHIP, 0);
+    S.text(x0 + 2, y, s, fg, CHIP);
+  };
+  if (t > 0.2) chip(11, typed(date, t - 0.2), [220, 228, 240]);
+  if (t > 0.5) chip(13, typed(op, t - 0.5), R.state === 'service' ? [150, 200, 255] : [255, 120, 90]);
+  // what is waiting, as cards
+  const cards: [string, string, C3][] = [];
+  if (P.missed) cards.push([')))', (P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)), [255, 120, 90]]);
+  const unread = P.inbox.filter((m) => !m.read).length;
+  if (unread) cards.push(['[=]', `${unread} ${unread > 1 ? T.apps.newTexts : T.apps.newText}`, [150, 200, 255]]);
+  const rem = P.cal.reminders.filter((r) => !r.done).sort((a, b) => a.at - b.at)[0];
+  if (rem) cards.push(['31', `${hhmm(calendar(rem.at).hour)} ${rem.text}`, [255, 200, 120]]);
+  cards.slice(0, 3).forEach(([icon, s, col], k) => {
+    const y = 16 + k * 2;
+    if (t < 0.6 + k * 0.1) return;
+    box(S, 2, y, SW - 3, y, [24, 32, 50], [0, 0, 0], 0);
+    S.text(3, y, icon, col, [24, 32, 50]);
+    S.text(8, y, s.slice(0, SW - 12), Math.floor(now * 2) & 1 || k ? [235, 240, 250] : col, [24, 32, 50]);
+  });
   softKeys(S, T.menu, T.hide);
 }
 
-// map colours: what lies on the ground, and buildings brighter the taller they are
-const G_BG: C3[] = [[18, 8, 6], [24, 28, 36], [44, 48, 56], [30, 30, 30], [0, 0, 0], [24, 58, 34], [56, 56, 60], [42, 36, 32]];
+// map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,
+// green parks, buildings in grey that turns blue-grey the taller they are; the burning ground brown
+const G_BG: C3[] = [[112, 84, 72], [255, 255, 255], [228, 224, 216], [238, 234, 224], [0, 0, 0], [186, 222, 164], [234, 228, 212], [208, 204, 198]];
 const G_CH = [ch('.'), 32, 32, ch('.'), 32, ch('"'), ch('+'), ch('=')];
-const G_FG: C3[] = [[110, 46, 22], [0, 0, 0], [0, 0, 0], [58, 58, 56], [0, 0, 0], [60, 130, 72], [84, 84, 90], [96, 84, 72]];
+const G_FG: C3[] = [[160, 90, 60], [0, 0, 0], [0, 0, 0], [214, 208, 196], [0, 0, 0], [130, 186, 116], [212, 202, 182], [172, 166, 160]];
+const WIDE: C3 = [252, 226, 128];
 const ARROWS = ['>', '\\', 'v', '/', '<', '\\', '^', '/'];
 
 /**
@@ -297,7 +421,7 @@ function roadsIn(b: number[], a0: number, a1: number): [number, number][] {
 
 /** District tints for the far zooms, by type. */
 const D_TINT: Record<string, C3> = { financial: [70, 110, 190], commercial: [200, 140, 60], residential: [90, 150, 90], historic: [170, 110, 80], industrial: [120, 120, 120], theater: [210, 80, 200] };
-const ROAD: C3 = [52, 58, 72], LABEL: C3 = [150, 195, 215], TB: C3 = [16, 30, 40];
+const ROAD: C3 = [255, 255, 255], LABEL: C3 = [70, 76, 92], TB: C3 = CHROME.top, FOOT: C3 = [248, 249, 252];
 
 /**
  * The map app: north up, centered on the GPS position (or moved off it with the d-pad), drawing in
@@ -313,10 +437,14 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
   const bar = 6, scale = `${T.zoom[zoom]} |${'-'.repeat(bar - 2)}| ${fmtDist(bar * colM, P.prefs.dist)} N^`;
   S.fill(1, TB);
   const title = zoom === 3 ? cityName(city) : districtName(city, districtAt(city, cx, cy));
-  S.text(1, 1, typed(title.toUpperCase().slice(0, Math.max(0, SW - scale.length - 3)), t), HI, TB);
-  S.text(SW - scale.length - 1, 1, scale, DIM, TB);
+  S.text(1, 1, '+N', [120, 230, 150], TB);
+  S.text(4, 1, typed(title.slice(0, Math.max(0, SW - scale.length - 6)), t), CHROME.text, TB);
+  S.text(SW - scale.length - 1, 1, scale, CHROME.dim, TB);
   const out = new Int32Array(2);
-  const colRoad: boolean[] = [], rowRoad: boolean[] = [];
+  const colRoad: boolean[] = [], rowRoad: boolean[] = [], colWide: boolean[] = [], rowWide: boolean[] = [];
+  for (let c = 0; c < SW; c++) colWide[c] = roadIn(city.xb, city.xCell, X0 + c * colM, X0 + (c + 1) * colM, true);
+  for (let r = 0; r < MAP_ROWS; r++) rowWide[r] = roadIn(city.yb, city.yCell, Y0 + r * rowM, Y0 + (r + 1) * rowM, true);
+  const G = P.gps, halo = G.state === 'fix' ? G.acc : 0;
   if (zoom > 0) {
     // zoomed out, the roads are lines: all of them up to the sector zoom; for the city, the avenues and the wide streets
     for (let c = 0; c < SW; c++) colRoad[c] = roadIn(city.xb, city.xCell, X0 + c * colM, X0 + (c + 1) * colM, false);
@@ -328,20 +456,25 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
     for (let c = 0; c < SW; c++) {
       const x0 = X0 + c * colM, y0 = Y0 + r * rowM, mx = x0 + colM / 2, my = y0 + rowM / 2;
       const inCity = mx >= 0 && my >= 0 && mx < city.w && my < city.h;
-      if (zoom > 0 && inCity && (colRoad[c] || rowRoad[r] || Math.abs(diagS(D, mx, my)) < diagHalf)) { S.put(c, 2 + r, 32, ROAD, ROAD); continue; }
-      sample(m, x0, y0, colM, rowM, out);
-      const k = out[0];
-      let bg: C3, fg: C3 = G_FG[k], glyph = G_CH[k];
-      if (k === Ground.Building) {
-        const f = Math.min(1, out[1] / 120);
-        bg = [70 + 150 * f, 58 + 110 * f, 44 + 50 * f]; fg = [255, 240, 200];
-        // the skyline's few giants get a mark, to steer by
-        glyph = out[1] > 200 ? ch('^') : 32;
-      } else bg = G_BG[k];
+      const diag = inCity && Math.abs(diagS(D, mx, my)) < diagHalf;
+      let bg: C3, fg: C3, glyph: number, k: number;
+      if (zoom > 0 && inCity && (colRoad[c] || rowRoad[r] || diag)) { k = Ground.Road; bg = colWide[c] || rowWide[r] || diag ? WIDE : ROAD; fg = bg; glyph = 32; }
+      else {
+        sample(m, x0, y0, colM, rowM, out);
+        k = out[0]; fg = G_FG[k]; glyph = G_CH[k];
+        if (k === Ground.Building) {
+          const f = Math.min(1, out[1] / 120);
+          bg = [214 - 64 * f, 210 - 56 * f, 202 - 28 * f]; fg = [80, 86, 110];
+          // the skyline's few giants get a mark, to steer by
+          glyph = out[1] > 200 ? ch('^') : 32;
+        } else bg = k === Ground.Road && (colWide[c] || rowWide[r] || diag) ? WIDE : G_BG[k];
+      }
+      // the GPS's accuracy: a pale blue ring around the position
+      if (halo && Math.hypot(mx - G.x, my - G.y) < halo) bg = [bg[0] * 0.75 + 30, bg[1] * 0.75 + 46, bg[2] * 0.75 + 64];
       if (zoom >= 2 && inCity && k !== Ground.Out) {
         // the districts, tinted by type
         const tint = D_TINT[city.districts[districtAt(city, mx, my)].type];
-        bg = [bg[0] * 0.7 + tint[0] * 0.3, bg[1] * 0.7 + tint[1] * 0.3, bg[2] * 0.7 + tint[2] * 0.3];
+        if (k !== Ground.Road) bg = [bg[0] * 0.8 + tint[0] * 0.2, bg[1] * 0.8 + tint[1] * 0.2, bg[2] * 0.8 + tint[2] * 0.2];
       }
       S.put(c, 2 + r, glyph, fg, bg);
     }
@@ -364,14 +497,14 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
   city.landmarks.forEach((L, k) => {
     const [c, r] = at(L.x, L.y);
     if (c < 0 || c >= SW || r < 0 || r >= MAP_ROWS || r >= drawn) return;
-    S.put(c, 2 + r, ch('*'), [255, 230, 90], [60, 40, 10]);
+    S.put(c, 2 + r, ch('*'), [255, 255, 255], [210, 60, 50]);
     used[r * SW + c] = 1;
     stars.push([k, c, r]);
   });
   // up close, their names beside them, before any street name
   if (zoom <= 1) for (const [k, c, r] of stars) {
     const room = SW - c - 2;
-    if (room >= 5) label(c + 2, r, landmarkName(city, k).toUpperCase().slice(0, room), [255, 220, 120], [30, 22, 8]);
+    if (room >= 5) label(c + 2, r, landmarkName(city, k).slice(0, room), [160, 40, 30], [255, 244, 238]);
   }
   if (zoom <= 1) {
     // street names: the avenues across the top, the streets along their own rows (zoomed out, only the wide ones)
@@ -391,20 +524,20 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
     // district names at their middles, the ones nearest the view's middle first
     city.districts.map((Dd, k) => [k, Math.hypot(Dd.x - cx, Dd.y - cy)]).sort((a, b) => a[1] - b[1]).forEach(([k]) => {
       const Dd = city.districts[k], [c, r] = at(Dd.x, Dd.y), n = districtName(city, k).toUpperCase();
-      if (c >= 0 && c < SW) label(c - (n.length >> 1), r, n, [255, 236, 200], [30, 34, 40]);
+      if (c >= 0 && c < SW) label(c - (n.length >> 1), r, n, [40, 44, 56], [255, 255, 255]);
     });
   }
   marker(S, P, at, drawn, now);
   // the street at the view's middle
   const onDiag = Math.abs(diagS(D, cx, cy)) < D.w / 2 + SIDEWALK;
   const street = `${onDiag ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, cx))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, cy))}`;
-  S.fill(SH - 2, TB);
-  S.text(1, SH - 2, typed(street.slice(0, SW - 2), t - 0.3), INK, TB);
+  S.fill(SH - 2, FOOT);
+  S.text(1, SH - 2, typed(street.slice(0, SW - 2), t - 0.3), [30, 34, 44], FOOT);
   const panned = P.panX !== 0 || P.panY !== 0;
   if (panned) {
     // moved off the position: which way back to it
     const back = `${fmtDist(Math.hypot(P.panX, P.panY), P.prefs.dist)} ${compass(-P.panX, -P.panY)}`;
-    S.text(SW - back.length - 1, SH - 2, back, DIM, TB);
+    S.text(SW - back.length - 1, SH - 2, back, [40, 90, 170], FOOT);
   }
   gpsInfo(S, P, now, false);
   softKeys(S, panned ? T.center : T.places, T.back);
@@ -420,32 +553,32 @@ function marker(S: Lcd, P: Phone, at: (x: number, y: number) => number[], drawn:
   const [c, r] = at(g.x, g.y);
   if (c < 0 || c >= SW || r < 0 || r >= MAP_ROWS || r >= drawn) return;
   const blink = Math.floor(now * 3) & 1;
-  if (g.state !== 'fix') { if (blink) S.put(c, 2 + r, ch('?'), [200, 200, 200], [60, 60, 70]); return; }
-  const glyph = Number.isNaN(g.heading) ? ch('o') : ch(ARROWS[Math.round(g.heading / (Math.PI / 4)) & 7]);
-  S.put(c, 2 + r, glyph, blink ? [255, 255, 255] : [90, 255, 255], blink ? [0, 120, 150] : [0, 60, 80]);
+  if (g.state !== 'fix') { if (blink) S.put(c, 2 + r, ch('?'), [255, 255, 255], [140, 146, 160]); return; }
+  const glyph = Number.isNaN(g.heading) ? SHAPE.dot : ch(ARROWS[Math.round(g.heading / (Math.PI / 4)) & 7]);
+  S.put(c, 2 + r, glyph, [255, 255, 255], blink ? [60, 140, 255] : [30, 100, 220]);
 }
 
 /** The GPS's state over the map: searching (satellites in view, time to the fix), signal lost, or the accuracy. */
 function gpsInfo(S: Lcd, P: Phone, now: number, indoor: boolean) {
-  const g = P.gps, G = T.gps, box: C3 = [10, 18, 26];
+  const g = P.gps, G = T.gps, card: C3 = [252, 252, 254], ink: C3 = [30, 34, 44], grey: C3 = [110, 118, 132];
   if (g.state === 'search' || g.state === 'lost') {
-    for (let y = 9; y <= 14; y++) for (let x = 6; x < SW - 6; x++) S.put(x, y, 32, box, box);
-    S.center(10, g.state === 'search' ? G.search : G.lost, g.state === 'search' ? HI : BAD, box);
-    S.center(12, `${G.inView} ${g.sats}/11${indoor ? '  ' + G.indoor : ''}`, DIM, box);
+    box(S, 5, 9, SW - 6, 14, card, [200, 200, 200], 1);
+    S.center(10, g.state === 'search' ? G.search : G.lost, g.state === 'search' ? [40, 90, 170] : [200, 60, 50], card);
+    S.center(12, `${G.inView} ${g.sats}/11${indoor ? '  ' + G.indoor : ''}`, grey, card);
     if (g.state === 'search') {
       const n = Math.round(Math.max(0, 1 - g.wait / g.waitOf) * 20);
-      for (let x = 0; x < 20; x++) S.put(11 + x, 13, x < n ? 32 : ch('.'), DIM, x < n ? HI : box);
-    } else if (g.known && Math.floor(now * 2) & 1) S.center(13, G.lastKnown, DIM, box);
+      for (let x = 0; x < 20; x++) S.put(11 + x, 13, 32, ink, x < n ? [60, 140, 255] : [220, 224, 232]);
+    } else if (g.known && Math.floor(now * 2) & 1) S.center(13, G.lastKnown, grey, card);
   } else if (g.state === 'fix') {
     const a = G.acc.replace('{n}m', fmtDist(g.acc, P.prefs.dist));
-    S.text(SW - a.length - 1, 1, a, g.acc > 30 ? BAD : DIM, [16, 30, 40]);
+    S.text(SW - a.length - 1, 1, a, g.acc > 30 ? BAD : CHROME.dim, CHROME.top);
   }
 }
 
 /** Floor colors of the rooms on the indoor map, by kind; the stairs and the lift get a glyph. */
 const ROOM_BG: Record<RoomKind, C3> = {
-  lobby: [92, 88, 80], hall: [70, 64, 56], stair: [58, 62, 70], lift: [64, 70, 84], foyer: [86, 74, 60], living: [110, 86, 60],
-  bedroom: [84, 76, 104], kitchen: [96, 100, 84], bath: [70, 104, 112], office: [74, 84, 98], open: [80, 90, 102], shop: [118, 96, 54],
+  lobby: [222, 214, 196], hall: [210, 204, 194], stair: [190, 196, 206], lift: [184, 196, 220], foyer: [230, 214, 190], living: [240, 216, 180],
+  bedroom: [214, 204, 236], kitchen: [214, 230, 196], bath: [190, 226, 234], office: [204, 214, 230], open: [212, 222, 236], shop: [248, 226, 170],
 };
 const ROOM_CH: Partial<Record<RoomKind, number>> = { stair: ch('='), lift: ch('X') };
 
@@ -460,9 +593,9 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
   const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, m = mapRaster(city);
   const where = `${T.floor} ${player.floor === 0 ? T.ground : player.floor}`, scale = `|${'--'}| ${fmtDist(4 * colM, P.prefs.dist)} N^`;
   S.fill(1, TB);
-  S.text(1, 1, typed(where, t), HI, TB);
-  S.text(SW - scale.length - 1, 1, scale, DIM, TB);
-  const WALL: C3 = [30, 32, 36], OUT: C3 = [14, 16, 20];
+  S.text(1, 1, typed(where, t), CHROME.text, TB);
+  S.text(SW - scale.length - 1, 1, scale, CHROME.dim, TB);
+  const WALL: C3 = [86, 90, 102], OUT: C3 = [238, 234, 224];
   for (let r = 0; r < MAP_ROWS; r++) {
     if (t < 0.15 + r * 0.03) break;
     for (let c = 0; c < SW; c++) {
@@ -478,11 +611,11 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
       if (!any) {
         // past the outer walls: the street, or a neighbor's wall
         const k = groundAt(m, x0 + colM / 2, y0 + rowM / 2);
-        S.put(c, 2 + r, k === Ground.Building ? ch(':') : 32, [50, 46, 40], k === Ground.Building ? [36, 32, 28] : OUT);
-      } else if (mixed && !door) S.put(c, 2 + r, ch('#'), [70, 72, 78], WALL);
+        S.put(c, 2 + r, k === Ground.Building ? ch(':') : 32, [190, 186, 178], k === Ground.Building ? [214, 210, 202] : OUT);
+      } else if (mixed && !door) S.put(c, 2 + r, 32, WALL, WALL);
       else {
         const R = plan!.rooms[first - 1], bg = R ? ROOM_BG[R.kind] : WALL;
-        S.put(c, 2 + r, mixed ? 32 : R ? ROOM_CH[R.kind] ?? 32 : 32, [200, 205, 215], mixed ? [bg[0] * 1.3, bg[1] * 1.3, bg[2] * 1.3] : bg);
+        S.put(c, 2 + r, mixed ? 32 : R ? ROOM_CH[R.kind] ?? 32 : 32, [90, 96, 110], mixed ? [Math.min(255, bg[0] * 1.08), Math.min(255, bg[1] * 1.08), Math.min(255, bg[2] * 1.08)] : bg);
       }
     }
   }
@@ -493,13 +626,13 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
     if ((cellAt(plan, mx, my) & 127) !== n + 1) return;
     const name = (T.room as Record<string, string>)[R.kind], c = Math.floor((mx - X0) / colM) - (name.length >> 1), r = Math.floor((my - Y0) / rowM);
     if (r < 0 || r >= MAP_ROWS || r >= drawn || c < 0 || c + name.length > SW || name.length * colM > R.x1 - R.x0 + 0.5) return;
-    S.text(c, 2 + r, name, [235, 235, 240], ROOM_BG[R.kind]);
+    S.text(c, 2 + r, name, [50, 54, 66], ROOM_BG[R.kind]);
   });
   marker(S, P, (x, y) => [Math.floor((x - X0) / colM), Math.floor((y - Y0) / rowM)], drawn, now);
   // the address: the building's corner
   const addr = `${roadName(city, true, nearestRoad(city.xb, city.xCell, (B.x0 + B.x1) / 2))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, (B.y0 + B.y1) / 2))}`;
-  S.fill(SH - 2, TB);
-  S.text(1, SH - 2, typed(addr.slice(0, SW - 2), t - 0.3), INK, TB);
+  S.fill(SH - 2, FOOT);
+  S.text(1, SH - 2, typed(addr.slice(0, SW - 2), t - 0.3), [30, 34, 44], FOOT);
   gpsInfo(S, P, now, true);
   softKeys(S, P.panX || P.panY ? T.center : T.places, T.back);
 }
@@ -507,15 +640,19 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
 /** The list of places: the city's landmarks, nearest first, with how far and which way. */
 function places(S: Lcd, P: Phone, world: World, t: number) {
   const { city } = world, [hx, hy] = P.here();
-  S.text(1, 1, typed(T.placesTitle, t), HI, LCD);
-  const rows = SH - 5, top = Math.max(0, Math.min(P.psel - (rows >> 1), P.places.length - rows));
+  for (let y = 1; y < SH - 1; y++) S.fill(y, [244, 246, 250]);
+  S.fill(1, CHROME.top);
+  S.text(1, 1, '*', [255, 120, 100], CHROME.top);
+  S.text(3, 1, typed(T.placesTitle, t), CHROME.text, CHROME.top);
+  const rows = SH - 5, top = Math.max(0, Math.min(P.psel - (rows >> 1), P.places.length - rows)), INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132];
   for (let n = 0; n < rows && top + n < P.places.length; n++) {
-    const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? [40, 90, 120] : LCD;
+    const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? [214, 228, 250] : [244, 246, 250];
     const far = P.gps.known ? `${fmtDist(Math.hypot(L.x - hx, L.y - hy), P.prefs.dist)} ${compass(L.x - hx, L.y - hy)}` : '--';
     const name = landmarkName(city, k).slice(0, SW - far.length - 5);
     if (sel) S.fill(3 + n, bg);
-    S.text(1, 3 + n, typed(`* ${name}`, t - 0.1 - n * 0.04), sel ? [255, 255, 255] : INK, bg);
-    S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? [255, 255, 255] : DIM, bg);
+    S.put(1, 3 + n, ch('*'), [255, 255, 255], [210, 60, 50]);
+    S.text(3, 3 + n, typed(name, t - 0.1 - n * 0.04), INK2, bg);
+    S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? [40, 90, 170] : GREY, bg);
   }
   softKeys(S, T.show, T.back);
 }

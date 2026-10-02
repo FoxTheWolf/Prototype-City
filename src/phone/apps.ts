@@ -16,7 +16,10 @@ import { freeVoucher } from './ussd';
 import { expose, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APPS, EDGE_LIMIT_KB, STORE, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { APPS, EDGE_LIMIT_KB, MENU_COLS, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { box, face, header, lerp, mul, vgrad } from './ui';
+import { SHAPE } from '../render/atlas';
+import { CASES, SHELLS } from './shells';
 
 /** An app's own page color over the whole screen (between the status bar and the soft keys). */
 function paint(S: Lcd, bg: C3) { for (let y = 1; y < SH - 1; y++) S.fill(y, bg); }
@@ -35,27 +38,51 @@ function bar(S: Lcd, text: string, fg: C3, bg: C3, right = '', rfg: C3 = fg) {
 const A = T.apps;
 const name = (a: App) => (T.app as Record<string, string>)[a];
 
-/** Each app's icon: a framed symbol in its color. */
-const ICON: Record<App, [string, C3]> = {
-  map: ['*', [120, 230, 140]], calls: ['#', [120, 255, 160]], contacts: ['@', [255, 200, 120]], messages: ['=', [140, 200, 255]],
-  camera: ['o', [200, 200, 210]], calendar: ['31', [255, 110, 110]], clock: ['%', [255, 220, 120]], calc: ['+', [230, 230, 230]],
-  notes: ['~', [255, 240, 160]], weather: ['^', [150, 220, 255]], store: ['$', [255, 160, 200]], settings: ['&', [180, 180, 200]],
+/** Each app's icon: a symbol, its tile's color, the symbol's color. */
+const ICON: Record<App, [string, C3, C3]> = {
+  map: ['+N', [56, 150, 80], [255, 255, 255]], calls: [')))', [40, 170, 90], [255, 255, 255]], contacts: ['@', [220, 140, 60], [255, 255, 255]], messages: ['[=]', [60, 120, 210], [255, 255, 255]],
+  camera: ['[o]', [90, 94, 104], [230, 235, 245]], wire: ['sw', [38, 62, 120], [255, 170, 60]], news: ['NEWS', [236, 228, 208], [24, 20, 16]], weather: ['\\o/', [70, 150, 230], [255, 230, 110]],
+  calendar: ['31', [240, 240, 244], [210, 50, 50]], clock: ['(:)', [24, 22, 26], [255, 150, 40]], calc: ['+-', [56, 56, 62], [255, 150, 30]], notes: ['~~', [250, 230, 120], [40, 50, 110]],
+  snake: ['~o', [150, 178, 84], [36, 48, 22]], folder: ['[_]', [200, 150, 60], [255, 245, 220]], store: ['$', [110, 50, 130], [255, 140, 210]], settings: ['<o>', [120, 126, 140], [255, 255, 255]],
 };
+/** The icons of apps from the store. */
+const STORE_ICON: Record<string, [string, C3, C3]> = {
+  torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ['d', [130, 60, 170], [255, 220, 255]], atlas: ['3D', [60, 130, 90], [255, 255, 255]],
+  snake: ICON.snake, news: ICON.news, social: ICON.wire,
+};
+const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
+const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
 
-/** The menu: 12 apps in a 3x4 grid, each in the place of its key on the keypad. */
+/** An app's tile on a grid: the icon (a glossy rounded square with its symbol) and its name; the picked one on a lit panel. */
+function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], label: string, sel: boolean, t: number) {
+  if (t < 0) return;
+  if (sel) box(S, x, y, x + 9, y + 3, [56, 86, 140], menuBg, 1, [34, 54, 96]);
+  const under = (_x: number, yy: number) => (sel ? lerp([56, 86, 140], [34, 54, 96], (yy - y) / 3) : menuBg(yy));
+  box(S, x + 2, y, x + 7, y + 2, mul(col, 1.18), under, 1, mul(col, 0.78));
+  // the gloss: the top of the icon brighter
+  for (let k = x + 3; k <= x + 6; k++) S.put(k, y, SHAPE.top, lerp(mul(col, 1.18), [255, 255, 255], 0.35), mul(col, 1.18));
+  S.text(x + 5 - (sym.length >> 1) - (sym.length & 1 ? 0 : 0), y + 1, sym, fg, col);
+  const l = label.slice(0, 10);
+  S.text(x + ((10 - l.length) >> 1), y + 3, l, sel ? [255, 255, 255] : [150, 165, 190], sel ? [34, 54, 96] : menuBg(y + 3));
+}
+
+/** The menu: 16 apps in a 4x4 grid; the picked one named below with a word on what it does. */
 export function menu(S: Lcd, P: Phone, t: number) {
-  title(S, T.menuTitle, t);
-  APPS.forEach((a, n) => {
-    const cx = 2 + (n % 3) * 13, cy = 3 + Math.floor(n / 3) * 5, sel = n === P.sel, bg = sel ? SEL : LCD;
-    if (t < 0.08 + n * 0.04) return; // the icons pop in one by one
-    if (sel) for (let y = 0; y < 5; y++) for (let x = -1; x < 12; x++) S.put(cx + x, cy + y, 32, bg, bg);
-    const [sym, col] = ICON[a], fr: C3 = sel ? WHITE : [col[0] * 0.6, col[1] * 0.6, col[2] * 0.6];
-    S.text(cx + 3, cy, '+---+', fr, bg);
-    S.text(cx + 3, cy + 1, '|   |', fr, bg); S.text(cx + 5 - (sym.length >> 1), cy + 1, sym, col, bg);
-    S.text(cx + 3, cy + 2, '+---+', fr, bg);
-    const label = `${GRID_KEYS[n]} ${name(a)}`.slice(0, 11);
-    S.text(cx + ((11 - label.length) >> 1), cy + 3, label, sel ? WHITE : INK, bg);
-  });
+  vgrad(S, 1, SH - 2, MENU_BG[0], MENU_BG[1]);
+  APPS.forEach((a, n) => tile(S, 1 + (n % MENU_COLS) * 10, 2 + Math.floor(n / MENU_COLS) * 5, ICON[a], name(a), n === P.sel, t - 0.06 - n * 0.025));
+  const a = APPS[P.sel], about = (A.about as Record<string, string>)[a] ?? '';
+  S.center(22, typed(name(a), t - 0.2), [255, 255, 255], menuBg(22));
+  S.center(23, typed(about, t - 0.3), [130, 150, 180], menuBg(23));
+  softKeys(S, T.open, T.back);
+}
+
+/** My Apps: the apps downloaded from the store, as tiles. */
+function folder(S: Lcd, P: Phone, t: number) {
+  vgrad(S, 1, SH - 2, MENU_BG[0], MENU_BG[1]);
+  header(S, name('folder'), `${P.downloads().length}`, '[_]', ICON.folder[1]);
+  const L = P.downloads();
+  if (!L.length) { A.set.noDownloads.forEach((l, k) => S.center(10 + k, l, [150, 165, 190], menuBg(10 + k))); return softKeys(S, '', T.back); }
+  L.forEach((i, n) => tile(S, 1 + (n % MENU_COLS) * 10, 4 + Math.floor(n / MENU_COLS) * 5, STORE_ICON[STORE[i][0]] ?? ICON.store, appName(i), n === P.fsel, t - n * 0.04));
   softKeys(S, T.open, T.back);
 }
 
@@ -80,6 +107,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'app') return appScreen(S, P, world, t, now);
       if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
       if (P.screen === 'msglist') return msgList(S, P, t);
+      if (P.screen === 'folder') return folder(S, P, t);
       if (P.screen === 'msg') return msgRead(S, P, t);
       if (P.screen === 'compose') return compose(S, P, now);
   }
@@ -97,33 +125,67 @@ function wrap(s: string, w: number): string[] {
   return out;
 }
 
+/** The light pages of the phone's own apps (dialer, messages): a pale gradient, dark ink, blue accents. */
+const PG0: C3 = [234, 238, 244], PG1: C3 = [206, 212, 222], INKD: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], BLUE: C3 = [40, 90, 170];
+const pageBg = (y: number): C3 => lerp(PG0, PG1, (y - 1) / (SH - 3));
+const lightPage = (S: Lcd) => vgrad(S, 1, SH - 2, PG0, PG1);
+
 /**
- * The dialer: the number in big digits; the green key calls (Save makes it a contact). During a
- * call: who, its state and time, and what is said, typing in as it is spoken.
+ * The dialer: the number big on a white display, who it is, the numbers called last. During a call:
+ * a dark page, the other end's picture, name and number, the state and the time, and what is said
+ * in bubbles, typing in as it is spoken.
  */
 function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  title(S, name('calls').toUpperCase(), t);
   const d = P.dial, c = P.call, who = P.contacts.find((x) => x.number === d)?.name;
   if (!c) {
-    if (d.length <= 7) bigText(S, 6, d, INK);
-    else S.center(9, d, INK, LCD);
-    if (who) S.center(14, who, HI, LCD);
-    if (!d) S.center(15, typed(A.dialHint, t - 0.2), DIM, LCD);
+    lightPage(S);
+    header(S, name('calls'), P.missed ? `${P.missed} missed` : '', ')))', [120, 230, 150]);
+    box(S, 1, 4, SW - 2, 11, [255, 255, 255], pageBg, 1, [244, 246, 250]);
+    if (d.length <= 7) bigText(S, 5, d, INKD);
+    else S.center(8, d, INKD, [250, 251, 253]);
+    if (who) S.center(10, who, BLUE, [246, 248, 251]);
+    if (!d) S.center(8, typed(A.dialHint, t - 0.2), GREY, [250, 251, 253]);
+    // the numbers called last, the first one the green key brings back
+    if (P.redial.length) {
+      S.text(2, 13, A.recent, GREY, pageBg(13));
+      P.redial.slice(0, 5).forEach((n, k) => {
+        const y = 14 + k * 2, nm = P.contacts.find((x) => x.number === n)?.name, num = /^[0-9]{7}$/.test(n) ? formatNumber(world.telco, n) : n;
+        if (t < 0.15 + k * 0.05) return;
+        box(S, 1, y, SW - 2, y, k === 0 && !d ? [255, 255, 255] : [242, 245, 249], pageBg, 0);
+        face(S, 2, y, nm ?? n);
+        S.text(5, y, (nm ?? num).slice(0, SW - 16), INKD, k === 0 && !d ? [255, 255, 255] : [242, 245, 249]);
+        if (k === 0 && !d) S.text(SW - 9, y, A.send, [40, 160, 80], [255, 255, 255]);
+      });
+    }
     return softKeys(S, d ? A.save : '', d ? A.clear : T.back);
   }
-  S.center(3, who ?? (d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d), WHITE, LCD);
+  const D0: C3 = [26, 44, 70], D1: C3 = [8, 12, 22], dbg = (y: number) => lerp(D0, D1, (y - 1) / (SH - 3));
+  vgrad(S, 1, SH - 2, D0, D1);
+  const label = who ?? (d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d);
+  // their picture: a rounded tile in their color, the initials in it
+  box(S, 17, 2, 24, 5, [70, 90, 130], dbg, 1, [40, 56, 90]);
+  face(S, 20, 3, label);
+  S.center(6, label, WHITE, dbg(6));
+  if (who) S.center(7, d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d, [150, 170, 200], dbg(7));
   const u = Math.max(0, now - (c.connectAt >= 0 ? c.connectAt : now)), tm = `${String(Math.floor(u / 60)).padStart(2, '0')}:${String(Math.floor(u % 60)).padStart(2, '0')}`;
   const state = P.callIn && c.state === 'ringing' ? A.incoming : c.state === 'dialing' ? `${A.calling}${'.'.repeat(Math.floor(now * 3) % 4)}` : c.state === 'ringing' ? `${A.ringing} (${c.rings})` : c.state === 'talk' ? tm : c.reason;
-  S.center(5, state, c.state === 'ended' ? BAD : c.state === 'talk' ? [120, 255, 150] : HI, LCD);
-  if (c.state === 'ended' && !P.callIn && c.cost()) S.center(6, A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`), DIM, LCD);
-  // what is said, the latest at the bottom
-  const rows: [string, C3][] = [];
+  S.center(9, state, c.state === 'ended' ? BAD : c.state === 'talk' ? [120, 255, 150] : HI, dbg(9));
+  if (c.state === 'ended' && !P.callIn && c.cost()) S.center(10, A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`), [150, 170, 200], dbg(10));
+  // ringing in: rings spreading from the picture
+  if (P.callIn && c.state === 'ringing') { const r = Math.floor(now * 3) % 3; for (let k = 0; k <= r; k++) { S.put(15 - k * 2, 3, ch(')'), [120, 200, 255], dbg(3)); S.put(26 + k * 2, 3, ch('('), [120, 200, 255], dbg(3)); } }
+  // what is said, the latest at the bottom: theirs in white bubbles, recordings in amber
+  const rows: [string, C3, C3 | null][] = [];
   for (const L of c.lines) {
     const shown = L.text.slice(0, Math.ceil(((now - L.at) / L.dur) * L.text.length));
-    const col: C3 = L.who === 'them' ? INK : L.who === 'rec' ? HI : DIM;
-    for (const l of wrap(L.who === 'rec' ? `~ ${shown}` : shown, SW - 2)) rows.push([l, col]);
+    const them = L.who === 'them';
+    for (const l of wrap(L.who === 'rec' ? `~ ${shown}` : shown, SW - 6)) rows.push([l, them ? INKD : L.who === 'rec' ? HI : [150, 170, 200], them ? [236, 240, 246] : null]);
+    rows.push(['', INKD, null]);
   }
-  rows.slice(-(SH - 10)).forEach(([l, col], k) => S.text(1, 8 + k, l, col, LCD));
+  rows.slice(-(SH - 14)).forEach(([l, col, bub], k) => {
+    const y = 12 + k;
+    if (bub && l) { for (let x = 1; x < l.length + 3; x++) S.put(x, y, 32, bub, bub); S.text(2, y, l, col, bub); }
+    else S.text(2, y, l, col, dbg(y));
+  });
   if (P.callIn && c.state === 'ringing') return softKeys(S, A.answer, A.end);
   softKeys(S, '', c.state === 'ended' ? '' : A.end);
 }
@@ -159,26 +221,45 @@ function contactEdit(S: Lcd, P: Phone, now: number) {
   softKeys(S, E.name && E.number ? A.save : '', (E.step === 0 ? E.name : E.number) ? A.clear : T.back);
 }
 
-/** Messages: the inbox (unread count), the sent ones, and a new message. */
+/** Messages: the boxes as cards (inbox with the unread count, sent, a new message). */
 function messages(S: Lcd, P: Phone, t: number) {
-  title(S, name('messages').toUpperCase(), t);
+  lightPage(S);
+  header(S, name('messages'), '', '[=]', [150, 200, 255]);
   const unread = P.inbox.filter((m) => !m.read).length;
-  [`${A.inbox} (${unread}/${P.inbox.length})`, `${A.sent} (${P.sent.length})`, A.newMsg].forEach((l, k) => row(S, 3 + k * 2, l, '>', k === P.box, t - 0.05 * k));
+  const cards: [string, string, string, C3][] = [['[v]', A.inbox, unread ? `${unread} new` : `${P.inbox.length}`, BLUE], ['[^]', A.sent, `${P.sent.length}`, GREY], ['[+]', A.newMsg, '', [40, 160, 80]]];
+  cards.forEach(([icon, label, count, col], k) => {
+    const y = 4 + k * 4, sel = k === P.box, bg: C3 = sel ? [255, 255, 255] : [240, 243, 248];
+    if (t < 0.05 * k) return;
+    box(S, 1, y, SW - 2, y + 2, bg, pageBg, 1, sel ? [236, 241, 250] : [228, 232, 240]);
+    if (sel) for (let yy = y; yy <= y + 2; yy++) S.put(1, yy, SHAPE.left, BLUE, sel ? lerp(bg, [236, 241, 250], (yy - y) / 2) : bg);
+    S.text(3, y + 1, icon, col, lerp(bg, sel ? [236, 241, 250] : [228, 232, 240], 0.5));
+    S.text(8, y + 1, label, INKD, lerp(bg, sel ? [236, 241, 250] : [228, 232, 240], 0.5));
+    if (count) S.text(SW - count.length - 3, y + 1, count, unread && k === 0 ? [210, 60, 50] : GREY, lerp(bg, sel ? [236, 241, 250] : [228, 232, 240], 0.5));
+  });
   softKeys(S, T.open, T.back);
 }
 
 /** Who a message is from (or to): the contact's name when there is one. */
 const nameOf = (P: Phone, n: string) => P.contacts.find((c) => c.number === n)?.name ?? n;
 
+/** A box of messages as a list of conversations: the picture, who, when, the first words; unread ones marked. */
 function msgList(S: Lcd, P: Phone, t: number) {
-  const L = P.box === 0 ? P.inbox.map((m) => [m.from, m.text, m.read] as const) : P.sent.map((m) => [m.to, m.text, true] as const);
-  title(S, P.box === 0 ? A.inbox.toUpperCase() : A.sent.toUpperCase(), t);
-  if (!L.length) S.center(10, A.noMsgs, DIM, LCD);
-  const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.msel - view + 1, L.length - view));
-  L.slice(top, top + view).forEach(([who, text, read], n) => {
-    const sel = top + n === P.msel, y = 3 + n * 2, bg = sel ? SEL : LCD;
-    if (sel) S.fill(y, bg);
-    S.text(1, y, `${read ? ' ' : '*'}${nameOf(P, who)}: ${text}`.slice(0, SW - 2), sel ? WHITE : read ? DIM : INK, bg);
+  const L = P.box === 0 ? P.inbox.map((m) => [m.from, m.text, m.read, m.at] as const) : P.sent.map((m) => [m.to, m.text, true, m.at] as const);
+  lightPage(S);
+  header(S, P.box === 0 ? A.inbox : A.sent, `${L.length}`, '[=]', [150, 200, 255]);
+  if (!L.length) S.center(10, A.noMsgs, GREY, pageBg(10));
+  const per = 3, view = Math.floor((SH - 5) / per), top = Math.max(0, Math.min(P.msel - view + 1, L.length - view));
+  L.slice(top, top + view).forEach(([who, text, read, at], n) => {
+    const sel = top + n === P.msel, y = 3 + n * per, bg: C3 = sel ? [214, 228, 250] : pageBg(y);
+    if (t < 0.04 * n) return;
+    if (sel) box(S, 0, y, SW - 1, y + 1, bg, pageBg, 0);
+    face(S, 1, y, nameOf(P, who));
+    const c = calendar(at), when = `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`;
+    S.text(4, y, nameOf(P, who).slice(0, SW - when.length - 7), read ? INKD : BLUE, bg);
+    S.text(SW - when.length - 1, y, when, GREY, bg);
+    S.text(4, y + 1, text.slice(0, SW - 6), read ? GREY : INKD, sel ? bg : pageBg(y + 1));
+    if (!read) S.put(SW - 2, y + 1, SHAPE.dot, BLUE, sel ? bg : pageBg(y + 1));
+    for (let x = 4; x < SW - 1; x++) S.put(x, y + 2, SHAPE.top, [218, 222, 230], pageBg(y + 2));
   });
   softKeys(S, A.new, T.back);
 }
@@ -200,15 +281,20 @@ function msgRead(S: Lcd, P: Phone, t: number) {
 }
 
 function compose(S: Lcd, P: Phone, now: number) {
-  const D = P.draft, blink = Math.floor(now * 2) & 1;
-  title(S, A.newMsg.toUpperCase(), 1, `${D.step === 1 ? P.smsEd.label() : '123'} ${D.text.length}/160`);
-  S.text(1, 3, A.to, D.step === 0 ? HI : DIM, LCD);
-  S.text(5, 3, nameOf(P, D.to) + (D.step === 0 && blink ? '_' : ''), WHITE, LCD);
-  S.text(1, 5, A.text, D.step === 1 ? HI : DIM, LCD);
-  const lines = wrap(D.text, SW - 2);
-  lines.slice(-(SH - 10)).forEach((l, k) => S.text(1, 6 + k, l, WHITE, LCD));
-  if (D.step === 1 && blink) S.put(1 + (lines[lines.length - 1]?.length ?? 0), 6 + Math.max(0, Math.min(lines.length, SH - 10) - 1), ch('_'), WHITE, LCD);
-  S.text(1, SH - 3, D.step === 0 ? '* <-   v text' : P.smsEd.tapping(now) || A.modeHint, DIM, LCD);
+  const D = P.draft, blink = Math.floor(now * 2) & 1, W: C3 = [255, 255, 255];
+  lightPage(S);
+  header(S, A.newMsg, `${D.step === 1 ? P.smsEd.label() : '123'} ${D.text.length}/160`, '[+]', [120, 230, 150]);
+  // the number on a field of its own, the text on a white page; the field being typed in outlined in blue
+  box(S, 1, 3, SW - 2, 3, D.step === 0 ? W : [244, 246, 250], pageBg, 0);
+  S.text(2, 3, A.to, D.step === 0 ? BLUE : GREY, D.step === 0 ? W : [244, 246, 250]);
+  S.text(6, 3, nameOf(P, D.to) + (D.step === 0 && blink ? '_' : ''), INKD, D.step === 0 ? W : [244, 246, 250]);
+  const pg: C3 = D.step === 1 ? W : [244, 246, 250];
+  box(S, 1, 5, SW - 2, SH - 4, pg, pageBg, 1);
+  const lines = wrap(D.text, SW - 4);
+  lines.slice(-(SH - 11)).forEach((l, k) => S.text(2, 6 + k, l, INKD, pg));
+  if (D.step === 1 && blink) S.put(2 + (lines[lines.length - 1]?.length ?? 0), 6 + Math.max(0, Math.min(lines.length, SH - 11) - 1), ch('_'), BLUE, pg);
+  if (!D.text) S.text(2, 6, A.text, GREY, pg);
+  S.text(1, SH - 3, D.step === 0 ? '* <-   v text' : P.smsEd.tapping(now) || A.modeHint, GREY, pageBg(SH - 3));
   softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', D.step === 1 && D.text ? A.clear : T.back);
 }
 
@@ -304,9 +390,17 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
   if (pg === 'about') return about(S, P, world, t);
   if (pg === 'wifi') return wifiPage(S, P, world, t);
   if (pg === 'people') return peoplePage(S, P, world, t);
+  if (pg === 'looks') {
+    row(S, 3, SET.rows.shell, `< ${P.maker} ${SHELLS[P.look].name} >`, P.setSel === 0, t);
+    row(S, 5, SET.rows.case, `< ${CASES[P.case].name} >`, P.setSel === 1, t - 0.05);
+    S.text(1, 8, `${P.looks.length}/${SHELLS.length}  ${CASES.length > 1 ? `${P.cases.length - 1}/${CASES.length - 1}` : ''}`, DIM, LCD);
+    S.text(1, 9, SET.looksHint, DIM, LCD);
+    return softKeys(S, T.ok, T.back);
+  }
   if (pg === 'debug') {
     SET.debugHint.forEach((l, k) => S.text(1, 3 + k, typed(l, t - 0.05 * k), DIM, LCD));
     secretCodes(world.seed).forEach((c, n) => row(S, 7 + n * 2, c.code, A.code[c.kind], n === P.setSel, t - 0.2 - 0.05 * n));
+    row(S, 7 + secretCodes(world.seed).length * 2, SET.unlock, '', P.setSel === secretCodes(world.seed).length, t - 0.4);
     S.text(1, 22, A.voucher, DIM, LCD); S.text(1, 23, freeVoucher(world), INK, LCD);
     return softKeys(S, SET.dial, T.back);
   }
@@ -478,13 +572,15 @@ function picture(S: Lcd, cells: Uint8ClampedArray, bg: Uint8ClampedArray, w: num
 let finder: CharGrid | null = null, finderAt = -1, finderN = 0;
 /** The camera: the viewfinder live (15 times a second), a white flash on a shot, how many fit in the storage. */
 function cameraScreen(S: Lcd, P: Phone, now: number) {
-  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++); finderAt = now; }
+  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++, P.camBlocks); finderAt = now; }
   if (finder) picture(S, finder.cells, finder.bg, SW, SH - 2, 1, SH - 1);
   if (now - P.shotAt < 0.15) for (let y = 1; y < SH - 1; y++) S.fill(y, WHITE);
   // the frame's corners, the resolution and the photos left
   for (const [x, y, c] of [[1, 2, '+'], [SW - 2, 2, '+'], [1, SH - 3, '+'], [SW - 2, SH - 3, '+']] as const) S.put(x, y, ch(c), WHITE, [0, 0, 0]);
   const left = Math.max(0, Math.floor(P.freeKB() / (P.device.cameraMP * 340)));
   S.text(1, 1, ` ${P.device.cameraMP}MP  ${left} `, WHITE, [0, 0, 0]);
+  const mode = P.camBlocks ? A.camBlocks : A.camText;
+  S.text(SW - mode.length - 2, 1, ` ${mode}`, WHITE, [0, 0, 0]);
   softKeys(S, `${A.photos} (${P.photos.length})`, T.back);
   S.text((SW - A.shoot.length) >> 1, SH - 1, A.shoot, HI, BAR);
 }
@@ -509,7 +605,7 @@ function store(S: Lcd, P: Phone, t: number, now: number) {
   paint(S, BG);
   bar(S, `${P.maker} ${name('store')}`, [255, 255, 255], [70, 30, 90], '', PINK);
   ST.tabs.forEach((tb, k) => S.text(2 + k * 14, 3, k === P.stab ? `[${tb}]` : ` ${tb} `, k === P.stab ? PINK : DIMS, BG));
-  const list = P.stab === 0 ? STORE.map((_, i) => i) : P.apps;
+  const list = P.stab === 0 ? P.catalog() : P.downloads();
   if (!list.length) S.center(10, ST.none, DIMS, BG);
   list.forEach((i, n) => {
     const [id, kb, price] = STORE[i], y = 5 + n * 2, sel = n === P.ssel, bg = sel ? PICKC : CARD, have = P.apps.includes(i);

@@ -774,7 +774,7 @@
     "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide", "places": "Places", "placesTitle": "PLACES", "show": "Show",
     "zoom": ["LOCAL", "DISTR", "SECTOR", "CITY"], "floor": "FLOOR", "ground": "G",
     "room": { "lobby": "LOBBY", "hall": "HALL", "stair": "STAIRS", "lift": "LIFT", "foyer": "FOYER", "living": "LIVING", "bedroom": "BED", "kitchen": "KITCHEN", "bath": "BATH", "office": "OFFICE", "open": "OFFICE", "shop": "SHOP" },
-    "app": { "map": "Maps", "calls": "Calls", "contacts": "Contacts", "messages": "Messages", "camera": "Camera", "calendar": "Calendar", "clock": "Clock", "calc": "Calc", "notes": "Notes", "weather": "Weather", "store": "Store", "settings": "Settings" },
+    "app": { "map": "Maps", "calls": "Calls", "contacts": "Contacts", "messages": "Messages", "camera": "Camera", "wire": "Streetwire", "news": "News", "snake": "Snake", "calendar": "Calendar", "clock": "Clock", "calc": "Calc", "notes": "Notes", "weather": "Weather", "folder": "My Apps", "store": "Store", "settings": "Settings" },
     "gps": { "search": "SEARCHING SATELLITES", "lost": "NO GPS SIGNAL", "inView": "IN VIEW", "lastKnown": "LAST KNOWN POSITION", "indoor": "WEAK SIGNAL INDOORS", "acc": "+-{n}m" },
     "apps": {
       "contacts": ["No contacts", "SIM card: 0 of 250 used", "Numbers come with the network"],
@@ -796,20 +796,26 @@
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
+      "recent": "Recent", "camBlocks": "# PIXELS", "camText": "# ASCII", "newText": "new text", "newTexts": "new texts",
+      "about": { "map": "Where you are, and the way", "calls": "Dial a number", "contacts": "The numbers on your SIM", "messages": "Texts in and out", "camera": "Take a picture", "wire": "What the city is saying", "news": "The city's paper", "weather": "Skycast forecast", "calendar": "Days, holidays, reminders", "clock": "Time and a stopwatch", "calc": "Add it up", "notes": "A pad for anything", "snake": "Eat, grow, don't bite", "folder": "Apps you downloaded", "store": "Get more apps", "settings": "Sounds, looks, phone" },
       "set": {
-        "pages": { "sound": "Sounds", "display": "Display", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)", "people": "People here (debug)" },
-        "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "temp": "Temperature", "dist": "Distance" },
+        "pages": { "sound": "Sounds", "display": "Display", "looks": "Phone & case", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)", "people": "People here (debug)" },
+        "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "wall": "Wallpaper", "shell": "Phone", "case": "Case", "temp": "Temperature", "dist": "Distance" },
         "values": {
           "profile": ["Normal", "Vibrate", "Silent"],
           "ring": ["Desk Bell", "Trill", "Nocturne", "Arcade", "Pulse", "Noir"],
           "keys": ["Beep", "Click", "Touch-tone", "Off"],
           "theme": ["Ice", "Amber", "Green", "Paper", "Rose", "Mono"],
+          "wall": ["Skyline", "Rain", "Dusk", "Plain"],
           "temp": ["°F", "°C"],
           "dist": ["Metres", "Feet"]
         },
         "hint": "< > change   OK next",
         "debugHint": ["Secret codes of this firmware.", "In the game they are to be found", "out there. OK dials one."],
         "dial": "Dial",
+        "unlock": "Get all phones & cases",
+        "looksHint": "Got from shops later (debug: all)",
+        "noDownloads": ["Nothing downloaded yet.", "Get apps from the Store."],
         "peopleNone": "Nobody lives near here.",
         "peopleAt": "Residents of",
         "peopleHint": "OK calls the mobile, or the home."

@@ -21,6 +21,7 @@ import { Doing, residentsOf, whereIs } from '../sim/citizens';
 import { type Post } from '../sim/social';
 import { newWire, wireKey } from './wire';
 import { calKey, newCal } from './calendar';
+import { CASES, SHELLS } from './shells';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -37,13 +38,21 @@ import { calKey, newCal } from './calendar';
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
-export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'calendar' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
+export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'clock' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
-/** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
-export const APPS: App[] = ['map', 'calls', 'contacts', 'messages', 'camera', 'calendar', 'clock', 'calc', 'notes', 'weather', 'store', 'settings'];
-export const GRID_KEYS: Key[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+/**
+ * The menu: a 4x4 grid of apps, picked with the arrows (or 1-9 and 0 for the first ten). Streetwire,
+ * the news and Snake come with the phone, as phones then came with a few apps and a game; the apps
+ * downloaded from the store sit in their own folder.
+ */
+export const MENU_COLS = 4;
+export const APPS: App[] = ['map', 'calls', 'contacts', 'messages', 'camera', 'wire', 'news', 'weather', 'calendar', 'clock', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
+/** The apps on the menu that are store apps installed at the factory (their entries in STORE). */
+const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake' };
+/** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
+export const BUNDLED = ['social', 'news', 'snake'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
 export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
 /** The map's zoom levels (local, district, sector, city): metres per screen row. */
@@ -55,8 +64,8 @@ export const INDOOR_ROW_M = [1, 2, 3.5, 6];
  * (left/right or OK change them), "about" lists the hardware and the line, "debug" holds what is
  * there for testing the game (the secret codes, to dial them; to go once gameplay replaces it).
  */
-export type SetPage = 'root' | 'sound' | 'display' | 'units' | 'wifi' | 'about' | 'debug' | 'people';
-export const SET_PAGES: SetPage[] = ['sound', 'display', 'units', 'wifi', 'about', 'debug', 'people'];
+export type SetPage = 'root' | 'sound' | 'display' | 'looks' | 'units' | 'wifi' | 'about' | 'debug' | 'people';
+export const SET_PAGES: SetPage[] = ['sound', 'display', 'looks', 'units', 'wifi', 'about', 'debug', 'people'];
 export interface Prefs {
   /** 0 normal, 1 vibrate, 2 silent. */
   profile: number;
@@ -64,14 +73,16 @@ export interface Prefs {
   /** Keypad tones: 0 beep, 1 click only, 2 touch-tones, 3 off. */
   keys: number;
   theme: number;
+  /** The standby screen's wallpaper. */
+  wall: number;
   /** 0 Fahrenheit, 1 Celsius. */
   temp: number;
   /** 0 metres, 1 feet. */
   dist: number;
 }
-export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'keys'], display: ['theme'], units: ['temp', 'dist'] };
+export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'keys'], display: ['theme', 'wall'], units: ['temp', 'dist'] };
 /** How many values each option has (their names are in the locale). */
-export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, keys: 4, theme: 6, temp: 2, dist: 2 };
+export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, keys: 4, theme: 6, wall: 4, temp: 2, dist: 2 };
 
 /** A distance as the phone shows it, in the units picked in its settings. */
 export function fmtDist(m: number, feet: number): string {
@@ -112,7 +123,7 @@ export class Phone {
   readonly wifi = new Wifi();
   /** Wi-Fi: the network whose key is being typed (index into world.wifi), and the key. */
   wkey = { ap: -1, key: '' };
-  prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, temp: 0, dist: 0 };
+  prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, wall: 0, temp: 0, dist: 0 };
   /** Settings: the page open and the row picked on it. */
   setPage: SetPage = 'root';
   setSel = 0;
@@ -145,8 +156,19 @@ export class Phone {
   readonly apps: number[] = [];
   ssel = 0;
   stab = 0;
-  /** The app from the store that is open (an index into STORE), and the apps' state. */
+  /** The app from the store that is open (an index into STORE), where it was opened from, and the apps' state. */
   appId = 0;
+  appFrom: Screen = 'menu';
+  /** The downloads folder: the app picked. */
+  fsel = 0;
+  /**
+   * The body: the shell (one of SHELLS) and the case (one of CASES, 0 none), and those the player
+   * has. The phone comes in a shell of its own; others are got later (for now, from the debug page).
+   */
+  look: number;
+  case = 0;
+  looks: number[];
+  cases: number[] = [0];
   readonly snake = new Snake();
   conv = { pair: 0, input: '' };
   /** The store: a note on the last try (no Wi-Fi, no credit, no storage). */
@@ -167,6 +189,9 @@ export class Phone {
   constructor(private world: World) {
     this.device = playerPhone(world.seed);
     this.maker = makerName(world.city, this.device.maker);
+    this.look = this.device.look;
+    this.looks = [this.look];
+    for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
   }
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
@@ -215,7 +240,9 @@ export class Phone {
   /** Messages on their way to the phone: from, text, and when they arrive (real seconds). */
   private incoming: { from: string; text: string; at: number }[] = [];
   /** The camera: what it sees (main hands it the player's view), the light there, the photos, the one shown, the last shot. */
-  render: ((g: CharGrid) => void) | null = null;
+  render: ((g: CharGrid, k?: number) => void) | null = null;
+  /** The camera draws in blocks (two pixels a cell) or in characters; # switches. */
+  camBlocks = true;
   light = 1;
   readonly photos: Photo[] = [];
   phsel = 0;
@@ -417,10 +444,9 @@ export class Phone {
         return false;
       case 'menu': {
         if (k === 'left' || k === 'right') { this.sel = (this.sel + (k === 'left' ? -1 : 1) + APPS.length) % APPS.length; return true; }
-        if (k === 'up' || k === 'down') { this.sel = (this.sel + (k === 'up' ? -3 : 3) + APPS.length) % APPS.length; return true; }
-        const n = GRID_KEYS.indexOf(k);
-        if (n >= 0) { this.sel = n; this.open(APPS[n], now); return true; }
-        if (k === 'ok' || k === 'lsoft') { this.open(APPS[this.sel], now); return true; }
+        if (k === 'up' || k === 'down') { this.sel = (this.sel + (k === 'up' ? -MENU_COLS : MENU_COLS) + APPS.length) % APPS.length; return true; }
+        if (/^[0-9]$/.test(k)) { this.sel = k === '0' ? 9 : +k - 1; this.launch(APPS[this.sel], now); return true; }
+        if (k === 'ok' || k === 'lsoft') { this.launch(APPS[this.sel], now); return true; }
         if (k === 'rsoft') { this.open('standby', now); return true; }
         return false;
       }
@@ -513,11 +539,12 @@ export class Phone {
           // the flash fires as the picture is taken (it lights the scene the sensor sees)
           const p = this.world.player;
           this.shotAt = performance.now() / 1000;
-          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light + 0.9, this.world.time, p.x, p.y, this.world.seed));
+          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light + 0.9, this.world.time, p.x, p.y, this.world.seed, this.camBlocks));
           this.sfx.push(['shutter']);
           return true;
         }
         if (k === 'lsoft') { this.phsel = 0; this.open('photos', now); return true; }
+        if (k === '#') { this.camBlocks = !this.camBlocks; return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       case 'photos': {
@@ -527,14 +554,21 @@ export class Phone {
         if (k === 'rsoft') { this.open('camera', now); return true; }
         return false;
       }
+      case 'folder': {
+        const L = this.downloads(), n = L.length;
+        if (n && (k === 'up' || k === 'down' || k === 'left' || k === 'right')) { this.fsel = (this.fsel + (k === 'up' || k === 'left' ? -1 : 1) + n) % n; return true; }
+        if (n && (k === 'ok' || k === 'lsoft')) { this.openApp(L[this.fsel], now, 'folder'); return true; }
+        if (k === 'rsoft') { this.open('menu', now); return true; }
+        return false;
+      }
       case 'store': {
         // two tabs: the catalog (OK downloads) and the apps installed (OK opens)
-        const list = this.stab === 0 ? STORE.map((_, i) => i) : this.apps, n = list.length;
+        const list = this.stab === 0 ? this.catalog() : this.downloads(), n = list.length;
         if (k === 'left' || k === 'right') { this.stab = 1 - this.stab; this.ssel = 0; this.storeNote = ''; return true; }
         if (n && (k === 'up' || k === 'down')) { this.ssel = (this.ssel + (k === 'up' ? -1 : 1) + n) % n; this.storeNote = ''; return true; }
         if (n && (k === 'ok' || k === 'lsoft')) {
           const i = list[this.ssel], [, kb, price] = STORE[i];
-          if (this.stab === 1 || this.apps.includes(i)) { this.openApp(i, now); return true; }
+          if (this.stab === 1 || this.apps.includes(i)) { this.openApp(i, now, 'store'); return true; }
           if (!this.online()) this.storeNote = 'signal';
           else if (kb > EDGE_LIMIT_KB && this.wifi.state !== 'up') this.storeNote = 'wifi';
           else if (this.freeKB() < kb) this.storeNote = 'full';
@@ -684,6 +718,16 @@ export class Phone {
       else { this.wkey = { ap: i, key: '' }; this.open('wifikey', now); }
       return true;
     }
+    if (pg === 'looks') {
+      // the shell and the case: left/right (or OK) step through those the player has
+      if (k === 'up' || k === 'down') { this.setSel = 1 - this.setSel; return true; }
+      const less = k === 'left';
+      if (!(less || k === 'right' || k === 'ok' || k === 'lsoft')) return false;
+      const L = this.setSel === 0 ? this.looks : this.cases, cur = this.setSel === 0 ? this.look : this.case;
+      const n = L[(L.indexOf(cur) + (less ? -1 : 1) + L.length) % L.length];
+      if (this.setSel === 0) this.look = n; else this.case = n;
+      return true;
+    }
     if (pg === 'people') {
       const L = this.people.ids;
       if (!L.length) return false;
@@ -698,8 +742,10 @@ export class Phone {
       return false;
     }
     if (pg === 'debug') {
-      const C = secretCodes(this.world.seed);
-      if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + C.length) % C.length; return true; }
+      const C = secretCodes(this.world.seed), n = C.length + 1;
+      if (k === 'up' || k === 'down') { this.setSel = (this.setSel + (k === 'up' ? -1 : 1) + n) % n; return true; }
+      // the last row: every shell and case (until the game has ways to get them)
+      if ((k === 'ok' || k === 'lsoft') && this.setSel === C.length) { this.looks = SHELLS.map((_, i) => i); this.cases = CASES.map((_, i) => i); this.sfx.push(['sent']); return true; }
       // OK dials the code: the dialer opens and its keys go in one by one, with their tones
       if (k === 'ok' || k === 'lsoft') { this.dial = ''; this.call = null; this.open('calls', now); this.autoQ = C[this.setSel].code; this.autoAt = now + 0.5; return true; }
       return false;
@@ -726,8 +772,20 @@ export class Phone {
     return -1;
   }
 
-  private openApp(i: number, now: number) {
-    this.appId = i; this.open('app', now);
+  /** Open an app from the menu: the bundled store apps run as apps; the rest are screens. */
+  launch(a: App, now: number) {
+    const id = BUNDLED_APP[a];
+    if (id) this.openApp(STORE.findIndex((x) => x[0] === id), now, 'menu');
+    else { if (a === 'folder') this.fsel = 0; this.open(a, now); }
+  }
+
+  /** The store's catalog: what it sells (not what came with the phone). */
+  catalog(): number[] { return STORE.map((_, i) => i).filter((i) => !BUNDLED.includes(STORE[i][0])); }
+  /** The apps downloaded from the store, in the folder. */
+  downloads(): number[] { return this.apps.filter((i) => !BUNDLED.includes(STORE[i][0])); }
+
+  private openApp(i: number, now: number, from: Screen) {
+    this.appId = i; this.appFrom = from; this.open('app', now);
     const id = STORE[i][0];
     if (id === 'snake') this.snake.reset(now);
     if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
@@ -747,7 +805,7 @@ export class Phone {
     if (id === 'social' && (k !== 'rsoft' || this.wst.view !== 'feed')) {
       return wireKey(this, k, now, () => { if (this.online()) { this.fetchWire(now); this.since = now; } });
     }
-    if (k === 'rsoft') { this.stab = 1; this.open('store', now); return true; }
+    if (k === 'rsoft') { if (this.appFrom === 'store') this.stab = 1; this.open(this.appFrom, now); return true; }
     if (id === 'snake') {
       const S = this.snake;
       if (S.over && (k === 'ok' || k === '5')) { S.reset(now); return true; }

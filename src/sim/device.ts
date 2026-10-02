@@ -27,7 +27,12 @@ export interface Device {
   cameraMP: number;
   /** The body's color. */
   body: [number, number, number];
+  /** The body's look (one of LOOKS shells, drawn by phone/shells.ts): the same screen and system in each. */
+  look: number;
 }
+
+/** How many looks a phone's body can have. */
+export const LOOKS = 6;
 
 export const MAKERS = 3;
 const SERIES = ['Navigator', 'Slide', 'Flip', 'Pulse', 'Edge', 'Nova', 'Classic', 'Aero', 'Sense'];
@@ -42,15 +47,15 @@ export function phoneModel(seed: number, m: number, tier: number): Device {
   const os = `${OS[m % OS.length]} ${1 + tier}.${Math.floor(h(3) * 5)}`;
   if (tier === 0) return {
     maker: m, model: `${num} ${pick(SERIES, 4)}`, os, cpu: 'ARM9', cpuMHz: 104 + Math.floor(h(5) * 4) * 24, ramMB: 16, flashMB: 32,
-    radio: 'GSM/GPRS', wlan: '', gps: '', screen: '128x160', cameraMP: h(6) < 0.4 ? 0 : 0.3, body: pick(BODIES, 7),
+    radio: 'GSM/GPRS', wlan: '', gps: '', screen: '128x160', cameraMP: h(6) < 0.4 ? 0 : 0.3, body: pick(BODIES, 7), look: Math.floor(h(9) * LOOKS),
   };
   if (tier === 1) return {
     maker: m, model: `${num} ${pick(SERIES, 4)}`, os, cpu: 'ARM9', cpuMHz: 220 + Math.floor(h(5) * 4) * 16, ramMB: 64, flashMB: 128,
-    radio: 'GSM/EDGE', wlan: h(6) < 0.5 ? '802.11b/g' : '', gps: h(8) < 0.3 ? 'L1 GPS, 12 ch' : '', screen: '176x220', cameraMP: 1.3, body: pick(BODIES, 7),
+    radio: 'GSM/EDGE', wlan: h(6) < 0.5 ? '802.11b/g' : '', gps: h(8) < 0.3 ? 'L1 GPS, 12 ch' : '', screen: '176x220', cameraMP: 1.3, body: pick(BODIES, 7), look: Math.floor(h(9) * LOOKS),
   };
   return {
     maker: m, model: `${num} ${pick(SERIES, 4)}`, os, cpu: 'ARM11', cpuMHz: 332 + Math.floor(h(5) * 3) * 34, ramMB: 128, flashMB: 160,
-    radio: 'GSM/EDGE', wlan: '802.11b/g', gps: 'L1 GPS, 12 ch', screen: '240x320', cameraMP: h(6) < 0.5 ? 2 : 3.2, body: pick(BODIES, 7),
+    radio: 'GSM/EDGE', wlan: '802.11b/g', gps: 'L1 GPS, 12 ch', screen: '240x320', cameraMP: h(6) < 0.5 ? 2 : 3.2, body: pick(BODIES, 7), look: Math.floor(h(9) * LOOKS),
   };
 }
 
