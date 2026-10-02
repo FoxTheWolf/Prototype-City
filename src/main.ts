@@ -7,7 +7,7 @@ import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawLaptop } from './laptop/draw';
 import { drawLaptopHd, powerAt } from './laptop/hdlook';
-import { drawLaptop3d, power3d } from './laptop/look3d';
+import { drawLaptop3d, laptopAnchor, power3d } from './laptop/look3d';
 import en from './locale/en.json';
 import { FONT } from './render/atlas';
 import { Camera } from './render/camera';
@@ -107,9 +107,9 @@ let ui: CharGrid;
 let hd: HdLayer;
 let uiLayout: Layout;
 let running = false;
-/** The notebook's look, to choose between (L): the classic characters, the 2D body in HD, the 3D body. */
+/** The notebook's look (L): the classic characters, the 2D body in HD, the 3D body (the user's pick, the default). */
 const LAP_LOOKS = ['CLASSIC', 'HD 2D', '3D'];
-let lapLook = 1;
+let lapLook = 2;
 /** Down at the desk when the notebook opens in its 3D look. */
 const LAP_PITCH = -0.6;
 let lapWasOpen = false;
@@ -263,6 +263,8 @@ addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
+  // the 3D notebook: let go, the view comes back to it, its screen centred
+  if (laptop.open && lapLook === 2) { camera.targetYaw = laptopAnchor(); camera.targetPitch = LAP_PITCH; }
   // the pointer was held while looking around; the cursor is free again over the phone or the payphone,
   // a moment later: freed during the click, the browser could still open its menu where the cursor lands
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
@@ -458,7 +460,7 @@ function frame(now: number) {
   lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
   sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin, laptop.pc.fan);
   if (lapLook === 1) drawLaptopHd(ui, hd, laptop, world, now / 1000, VIEW_LIGHT, camera.yaw);
-  else if (lapLook === 2) drawLaptop3d(ui, laptop, world, now / 1000, VIEW_LIGHT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH });
+  else if (lapLook === 2) drawLaptop3d(ui, laptop, world, now / 1000, VIEW_LIGHT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag });
   else drawLaptop(ui, laptop, world, now / 1000, VIEW_LIGHT);
   if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }

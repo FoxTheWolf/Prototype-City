@@ -11,6 +11,9 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Dois boots: o primeiro é da placa-mãe (três placas, cada uma com sua tela, compartilhadas entre marcas), só lista o que o aparelho tem e o Wi-Fi dá OK; o segundo é da marca, com estilo próprio por fabricante.
 - Cada marca tem os seus corpos de celular; trocar de corpo troca de aparelho e de marca.
 - Pedestres atravessam o jogador e andam em ritmos diferentes: uns com pressa, outros devagar (mais idosos, mais à noite).
+- Seis fabricantes de celular, um para cada corpo, cada um com a animação de boot no estilo do corpo (os nomes vêm da cidade).
+- Ícones dos apps e do clima em HD.
+- Notebook 3D é o padrão: teclado mais curto (teclas mais largas que fundas), moldura menor, botão de ligar visível e clicável, a luz da tela no teclado. Segurando o botão direito para olhar em volta, a tela passa a ser desenhada na tampa, em perspectiva; soltando, a vista volta ao notebook com a tela centralizada e legível.
 - Notebook em três aparências para comparar (tecla **L**, com ele fechado): a clássica em caracteres, a 2D em HD (corpo em pixels com acabamento metálico, fosco ou brilhante pela marca, teclas com relevo, alto-falantes, touchpad e botão de ligar) e a 3D (o corpo como objeto na mesa, com a luz da cena e a perspectiva; ele fica no lugar quando você olha em volta).
 - Botão de ligar do notebook clicável (nas versões HD e 3D); a dica "Enter = ligar" foi para a linha de dicas.
 - Tela do notebook com a luz da cena por cima, marcas de dedo que pegam a luz e, desligada, o reflexo da luz no vidro.
