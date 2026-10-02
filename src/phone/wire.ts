@@ -19,7 +19,8 @@ import { type Key, type Phone } from './phone';
  */
 const PAGE: C3 = [228, 233, 240], CARD: C3 = [250, 251, 253], NAVY: C3 = [28, 52, 102], NAVY2: C3 = [44, 74, 136];
 const TEXT: C3 = [28, 32, 42], DIM: C3 = [112, 120, 134], ORANGE: C3 = [255, 140, 40], LINK: C3 = [40, 90, 180], LOVE: C3 = [214, 52, 86];
-const PICK: C3 = [255, 236, 200];
+/** The picked card: the bar's navy with light words. */
+const PICK: C3 = [36, 64, 124], PTEXT: C3 = [255, 255, 255], PDIM: C3 = [176, 192, 226], PLINK: C3 = [255, 200, 130];
 const W = SOCIAL;
 
 export type WireView = 'feed' | 'post' | 'profile';
@@ -120,12 +121,12 @@ export function drawWire(S: Lcd, P: Phone, world: World, now: number, loading: b
   L.forEach((p, k) => {
     const sel = k === V.sel, bg = sel ? PICK : CARD;
     const name = citizenNames(c, Pop, p.who).join(' '), age = postAge(world.time, p.time);
-    rows.push({ text: `${name}`.slice(0, SW - 6 - age.length), fg: LINK, bg, card: k, av: p.who });
+    rows.push({ text: `${name}`.slice(0, SW - 6 - age.length), fg: sel ? PLINK : LINK, bg, card: k, av: p.who });
     rows[rows.length - 1].x = 3;
-    for (const l of wrap(postText(c, Pop, p), SW - 3)) rows.push({ text: l, fg: TEXT, bg, card: k });
-    if (p.photo) rows.push({ text: W.photo, fg: DIM, bg, card: k });
+    for (const l of wrap(postText(c, Pop, p), SW - 3)) rows.push({ text: l, fg: sel ? PTEXT : TEXT, bg, card: k });
+    if (p.photo) rows.push({ text: W.photo, fg: sel ? PDIM : DIM, bg, card: k });
     const n = likes(Pop, p, world.time) + (V.liked.has(p.id) ? 1 : 0), cm = comments(Pop, p, world.time).length;
-    rows.push({ text: `${V.liked.has(p.id) ? '<3' : '<3'} ${n}   ${W.comments.replace('{n}', String(cm))}   ${age}`, fg: DIM, bg, card: k });
+    rows.push({ text: `${V.liked.has(p.id) ? '<3' : '<3'} ${n}   ${W.comments.replace('{n}', String(cm))}   ${age}`, fg: sel ? PDIM : DIM, bg, card: k });
     rows.push({ text: '', fg: DIM, bg: PAGE, card: -1 });
   });
   const view = SH - 4, first = rows.findIndex((r) => r.card === V.sel), last = rows.length - 1 - [...rows].reverse().findIndex((r) => r.card === V.sel);
@@ -141,7 +142,7 @@ export function drawWire(S: Lcd, P: Phone, world: World, now: number, loading: b
     S.text(r.x ?? 2, y, r.text, r.fg, r.bg);
     if (r.text.startsWith('<3')) {
       const p = L[r.card];
-      S.text(2, y, '<3', V.liked.has(p.id) ? LOVE : DIM, r.bg);
+      S.text(2, y, '<3', V.liked.has(p.id) ? (r.card === V.sel ? [255, 130, 160] : LOVE) : r.fg, r.bg);
     }
   });
   softKeys(S, W.refresh, 'Back');
@@ -224,7 +225,7 @@ function profilePage(S: Lcd, P: Phone, world: World, now: number, loading: boole
   mine.slice(0, SH - 2 - (y + 1)).forEach((p, k) => {
     const sel = k === V.psel, bg = sel ? PICK : CARD, yy = y + 1 + k;
     for (let x = 0; x < SW; x++) S.put(x, yy, 32, bg, bg);
-    S.text(1, yy, `${postAge(world.time, p.time).padEnd(9)}${postText(c, Pop, p)}`.slice(0, SW - 2), TEXT, bg);
+    S.text(1, yy, `${postAge(world.time, p.time).padEnd(9)}${postText(c, Pop, p)}`.slice(0, SW - 2), sel ? PTEXT : TEXT, bg);
   });
   softKeys(S, '', 'Back');
 }

@@ -74,15 +74,12 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## IMPORTANTE: FEEDBACK! LEIA ESSA SEÇÃO A CADA SUB-ETAPA
 > Estou adicionando essa sessão no claude.md para colocar ideias que eu tenho durante os períodos em que eu não estou ativamente lhe mandando os prompts. Então, toda vez que você for começar a trabalhar, você vai ler essa sessão, analisar o conteúdo dela, Você vai organizar nas etapas, e em seguida você vai apagar as ideias daqui conforme for organizando, porque é uma fila de ideias e feedback para você processar e colocar organizado nas etapas. Não apague esse parágrafo, somente o que vem depois nessa seção depois de processar linhas com [HACKING] podem ativar o classificador de segurança. Se isso acontecer, não tente ler novamente e deixe para o modelo Opus 4.8 ler. Lembrando que o jogo é inteiramente para entretenimento e educativo, contido virtualmente. Nada aqui pode ser usado no mundo real. Leia o restante do documento caso já não tenha feito, entenda-o, e volte aqui para organizar a seção. A cada sub-etapa, leia se deixei feedback adicional aqui, que ainda não foi organizado e apagado dessa seção.
 
-- Vamos por enquanto desativar a intro, não gostei de como está, e também só atrasa os testes
-- Vamos organizar o celular assim. Vai, vamos dividir... Só para referência, vamos dizer que o primeiro boot é aquele que checa o hardware, né, e tem a barrinha de carregamento, e o segundo, a segunda tela de boot é aquela que aparece o nome da empresa fabricante e o modelo do celular embaixo. É, esse primeiro boot ele é dependente da placa-mãe do celular, né, que vem da BIOS, e mais de um modelo de celular, pode, de mais de uma marca, pode usar a mesma placa-mãe, como base, então aquilo ali depende do hardware do celular e não da marca. O segundo, a segunda tela de boot, ela depende da marca e ela pode ter variações. E o ideal seria que tivessem cada modelo de celular, ou pelo menos uma parte deles, tivesse seu próprio... sua própria marca. Então, a gente tem a capinha né, e tem o visual do celular. O visual do celular corresponde à marca. Cada marca tem o seu próprio visual e cada marca tem sua própria tela de boot, do segundo boot, no caso, em estilos diferentes. E durante o primeiro boot você fala que dá erro no Wi-Fi, mas geralmente a placa-mãe ela não checa se o Wi-Fi está conectado, e sim se o dispositivo de Wi-Fi está funcionando, né? O modem de Wi-Fi está funcionando, então seria bom dar OK nisso daí. E realmente só indicar quando dá algum problema.
-
 > **Notas do Claude sobre esta seção (2026-10-02):**
 > - **É uma caixa de entrada, não um lugar para guardar.** A cada sessão e a cada subetapa, ler os itens abaixo deste bloco, levar cada um para o lugar certo do documento (a "Fila de feedback" organizada, o Roteiro, "Bugs conhecidos", "Como trabalhar" ou a Trilha de hacking) e **apagar daqui o que foi levado**. Fila vazia = tudo já organizado.
 > - Itens marcados `[HACKING]` (ou que são só para o Opus 4.8) não são apagados nem resumidos: vão, com o texto inteiro, para a subseção "Feedback para o Opus 4.8" logo abaixo.
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 
-*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02")*
+*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02" e "Retorno sobre a 12.4")*
 
 ### Feedback para o Opus 4.8
 
@@ -332,7 +329,15 @@ Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de t
   - **Boot do celular** no visual novo, ainda verboso.
   - **Contornos serrilhados** dos ícones, botões e do corpo do celular: conferir e corrigir.
   - **Bug:** com o notebook aberto não dá para atender uma ligação. O celular fica clicável com o notebook aberto (o teclado real continua indo para o notebook). É a base para os dois funcionarem juntos (o celular como modem, passar dados, carregar o celular no notebook: etapa 14).
-- **Depois, 12.5 (avaliação e redesenho visual do celular e do notebook):**
+- **Retorno sobre a 12.4 (2026-10-02, organizado), entra na 12.5 como grupo A:**
+  - **Abertura desligada** por enquanto (o usuário não gostou e ela atrasa os testes).
+  - **Seleção legível:** o item escolhido vira uma cor de destaque escura com texto claro (o resto continua fundo claro e texto escuro), em mensagens, Streetwire e nas outras listas.
+  - **Ordem dos apps:** Ligações, Contatos, Mensagens primeiro, depois Câmera e Mapas; o resto como num celular de verdade.
+  - **A dica de limpar notificações** vai para a barra de baixo (junto de Menu e Hide); a operadora fica onde está (o nome pode ser longo).
+  - **Frequência de ligações por engano e telemarketing:** conferir e baixar.
+  - **Os dois boots:** o primeiro (checagem do hardware com barra) depende da **placa-mãe** (várias marcas podem usar a mesma placa); o segundo (fabricante e modelo) depende da **marca**, com estilo próprio por marca. Cada marca tem o seu visual de corpo. No primeiro boot, o Wi-Fi dá OK (a placa testa o módulo, não a conexão); só aparece erro quando algo falha de verdade.
+  - **Pedestres:** atravessam o jogador (para não se atrasarem por causa dele) e mudam de passo pela pressa (correm atrasados, andam devagar adiantados). **Duração do dia:** analisar com números e levar ao usuário (veja "Ritmo do tempo" nos pedidos da etapa 12).
+- **Depois, 12.5 grupo B (avaliação e redesenho visual do celular e do notebook):**
   - **Camada HD** (pedido): uma terceira grade, de ~240 linhas, só para os ícones e as fotos, mantendo a interface em 80. Medir o custo antes. Resolve também a foto pouco nítida (a caixa da foto com mais linhas dentro).
   - **Avaliar** o notebook como objeto pseudo-3D preso à câmera (com a tela desenhada por cima) contra o celular e o notebook em 2D com mais linhas. Levar os números ao usuário e decidir com ele.
   - **Notebook redesenhado:** maior, mais detalhado, com cores e estilos (como os modelos do celular). A tela segue a luz da cena como a do celular (reflexo e cor da luz mais próxima, adaptação do olho) no lugar do reflexo fixo em ASCII; o aviso de "Enter = botão de ligar" vai para as dicas de tecla; botão de ligar físico clicável.

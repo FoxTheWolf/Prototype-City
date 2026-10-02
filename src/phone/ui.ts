@@ -46,6 +46,9 @@ export function face(S: Lcd, x: number, y: number, name: string) {
 }
 
 /** The system's bars: glossy, the top a shade lighter than the rest. */
+/** The picked row on a light page: a dark accent with light text (unpicked rows stay light with dark text). */
+export const PICK: C3 = [30, 66, 140], PICK_INK: C3 = [255, 255, 255], PICK_DIM: C3 = [176, 196, 232];
+
 export const CHROME = { top: [44, 62, 92] as C3, bot: [22, 30, 48] as C3, text: [235, 242, 255] as C3, dim: [140, 160, 190] as C3, accent: [255, 196, 90] as C3 };
 
 /** A title bar on row 1: the title, an icon before it, something on the right. */

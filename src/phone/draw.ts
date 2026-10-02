@@ -3,13 +3,14 @@ import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, menu } from './apps';
-import { box, CHROME, lerp, vgrad, wallpaper } from './ui';
-import { applyTheme, BAD, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
+import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad, wallpaper } from './ui';
+import { applyTheme, BAD, BAR, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
 import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
 import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
+import { BOARDS } from '../sim/device';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
 
@@ -297,68 +298,142 @@ function drawCase(K: Case, R: number, now: number, cell: CellFn, over: OverFn, i
 }
 
 /**
- * Power on, in two stages (in the look of the redesigned system, still verbose): the bootloader's
- * check scrolls by in a dark panel, each part with its timestamp and a colored tag, a bar filling
- * under it; then the splash, the maker's logo drawing in with a gloss over it, the model on a chip,
- * a rounded loading bar.
+ * Power on, in two stages. First the board's bootloader checks the hardware (the board is bought in,
+ * so its screen is the same on phones of different makers: three loaders, three looks); only what is
+ * fitted is listed, and a part shows a fault only when it fails. Then the maker's splash, in the
+ * maker's own style.
  */
 function boot(S: Lcd, P: Phone, world: World, t: number) {
   if (t < 0) { for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]); return; }
   const D = P.device;
-  if (t >= BOOT_LOG_S) return splash(S, P.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
+  if (t >= BOOT_LOG_S) return splash(S, D.maker, P.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
   mapRaster(world.city); // the map database loads during the check (built once per city)
-  vgrad(S, 0, SH - 1, [14, 20, 34], [2, 3, 6]);
-  // the bootloader's title bar
-  S.fill(1, CHROME.top);
-  S.text(1, 1, `${D.os} BOOT`, CHROME.accent, CHROME.top);
-  const ver = `${P.maker} ${D.model}`.slice(0, SW - 12);
-  S.text(SW - ver.length - 1, 1, ver, CHROME.dim, CHROME.top);
-  const L: [string, string][] = [
-    ['bootrom: signature', T.ok],
-    [`cpu0: ${D.cpu} @ ${D.cpuMHz}MHz`, T.ok],
-    [`mem: ${D.ramMB}MB SDRAM`, T.ok],
-    [`nand: ${D.flashMB}MB, 0 bad blocks`, T.ok],
-    ['fs: mounting /system /data', T.ok],
-    [`lcd: ${D.screen} 18bpp`, T.ok],
-    ['keypad: 21 keys, backlight', T.ok],
-    ['audio: codec, vibra motor', T.ok],
-    [`cam: ${D.cameraMP ? `${D.cameraMP.toFixed(1)}MP sensor` : 'none'}`, D.cameraMP ? T.ok : T.off],
-    [`gps: ${D.gps}`, D.gps === 'none' ? T.off : T.ok],
-    [`wlan: ${D.wlan}`, T.off],
-    [`modem: ${D.radio}`, T.ok],
-    ['sim: card present, PIN off', T.ok],
-    [`maps: ${cityName(world.city).toLowerCase()}`, T.ok],
-    ['ui: starting shell', T.ok],
+  // the parts the board finds, each with whether it passed (all do, until something can break)
+  const L: [string, boolean][] = [
+    ['bootrom: signature', true],
+    [`cpu0: ${D.cpu} @ ${D.cpuMHz}MHz`, true],
+    [`mem: ${D.ramMB}MB SDRAM`, true],
+    [`nand: ${D.flashMB}MB, 0 bad blocks`, true],
+    ['fs: mounting /system /data', true],
+    [`lcd: ${D.screen} 18bpp`, true],
+    ['keypad: 21 keys, backlight', true],
+    ['audio: codec, vibra motor', true],
   ];
-  const y0 = 3, rows = SH - y0 - 4;
-  box(S, 0, y0 - 1, SW - 1, y0 + rows, [6, 9, 16], (_x, y) => lerp([14, 20, 34], [2, 3, 6], y / (SH - 1)), 1);
-  let left = Math.floor(t * 420), shown = 0;
-  const out: [string, string, boolean][] = [];
+  if (D.cameraMP) L.push([`cam: ${D.cameraMP.toFixed(1)}MP sensor`, true]);
+  if (D.gps) L.push([`gps: ${D.gps}`, true]);
+  if (D.wlan) L.push([`wlan: ${D.wlan} module`, true]);
+  L.push([`modem: ${D.radio}`, true], ['sim: card present, PIN off', true], [`maps: ${cityName(world.city).toLowerCase()}`, true], ['ui: starting shell', true]);
+  const loader = BOARDS[D.board];
+  // how far the check has got: each line typed in, then its result
+  let left = Math.floor(t * (D.board === 1 ? 360 : 420)), shown = 0;
+  const out: [string, boolean, boolean][] = [];
   for (let k = 0; k < L.length && left >= 0; k++) {
-    const stamp = `${(0.04 + k * 0.137 + (k * k) * 0.011).toFixed(3).padStart(6)} `, full = stamp + L[k][0];
+    const full = D.board === 0 ? `${(0.04 + k * 0.137 + (k * k) * 0.011).toFixed(3).padStart(6)} ${L[k][0]}` : L[k][0];
     out.push([full.slice(0, left), L[k][1], left >= full.length]);
     left -= full.length + 4; shown = k + 1;
   }
-  out.slice(-rows).forEach(([txt, tag, done], n) => {
+  const f = shown / L.length, cursor = Math.floor(t * 8) & 1;
+  if (D.board === 1) {
+    // a plain loader: grey text on black, dot leaders to the result, a bar of hashes with a percentage
+    const BG: C3 = [0, 0, 0];
+    for (let y = 0; y < SH; y++) S.fill(y, BG);
+    const head = `${loader} v1.07`;
+    S.center(1, head, [220, 220, 220], BG);
+    S.center(2, '-'.repeat(head.length + 4), [90, 90, 90], BG);
+    const rows = SH - 8;
+    out.slice(-rows).forEach(([txt, ok, done], n) => {
+      const y = 4 + n, name = txt.slice(0, SW - 8);
+      S.text(1, y, name, [170, 170, 170], BG);
+      if (done) {
+        for (let x = 2 + name.length; x < SW - 6; x++) S.put(x, y, ch('.'), [70, 70, 70], BG);
+        S.text(SW - 5, y, ok ? 'OK' : 'FAIL', ok ? [240, 240, 240] : [255, 80, 60], BG);
+      } else if (cursor) S.put(1 + name.length, y, ch('_'), [200, 200, 200], BG);
+    });
+    const w = SW - 10, n = Math.round(f * w), pct = `${Math.round(f * 100)}%`.padStart(4);
+    S.text(1, SH - 2, `[${'#'.repeat(n)}${'.'.repeat(w - n)}]${pct}`, [150, 150, 150], BG);
+    return;
+  }
+  if (D.board === 2) {
+    // a framed loader: teal on deep blue, a prompt per part, results in brackets, a segmented bar
+    const BG: C3 = [4, 16, 28], TEAL: C3 = [70, 200, 210];
+    for (let y = 0; y < SH; y++) S.fill(y, BG);
+    for (let x = 1; x < SW - 1; x++) { S.put(x, 0, ch('='), [30, 90, 110], BG); S.put(x, 2, ch('='), [30, 90, 110], BG); }
+    S.center(1, ` ${loader.toUpperCase()} `, TEAL, BG);
+    const rows = SH - 7;
+    out.slice(-rows).forEach(([txt, ok, done], n) => {
+      const y = 3 + n;
+      S.text(1, y, '>', TEAL, BG);
+      S.text(3, y, txt.slice(0, SW - 12), [190, 220, 230], BG);
+      if (done) { S.text(SW - 8, y, '[    ]', [70, 110, 130], BG); S.text(SW - 6, y, ok ? 'OK' : '!!', ok ? [90, 230, 120] : [255, 90, 70], BG); }
+      else if (cursor) S.put(3 + Math.min(txt.length, SW - 12), y, ch('_'), TEAL, BG);
+    });
+    const segs = 16, n = Math.round(f * segs), x0 = (SW - segs * 2) >> 1;
+    for (let k = 0; k < segs; k++) S.put(x0 + k * 2, SH - 2, 32, BG, k < n ? lerp([40, 150, 170], [120, 240, 230], k / segs) : [12, 34, 50]);
+    return;
+  }
+  // the first loader: a dark panel, each part with its timestamp and a colored tag, a bar filling under it
+  vgrad(S, 0, SH - 1, [14, 20, 34], [2, 3, 6]);
+  S.fill(1, CHROME.top);
+  S.text(1, 1, loader.toUpperCase(), CHROME.accent, CHROME.top);
+  const ver = `${D.cpu} ${D.cpuMHz}MHz`;
+  S.text(SW - ver.length - 1, 1, ver, CHROME.dim, CHROME.top);
+  const y0 = 3, rows = SH - y0 - 4;
+  box(S, 0, y0 - 1, SW - 1, y0 + rows, [6, 9, 16], (_x, y) => lerp([14, 20, 34], [2, 3, 6], y / (SH - 1)), 1);
+  out.slice(-rows).forEach(([txt, ok, done], n) => {
     const y = y0 + n, bg: C3 = [6, 9, 16];
     S.text(1, y, txt.slice(0, 7), [90, 110, 140], bg);
     S.text(8, y, txt.slice(7, SW - 8), [200, 214, 232], bg);
-    if (done) { const good = tag === T.ok, tc: C3 = good ? [40, 150, 80] : [150, 110, 40]; S.text(SW - tag.length - 3, y, ` ${tag} `, [240, 250, 245], tc); }
-    else if (Math.floor(t * 8) & 1) S.put(1 + Math.min(txt.length, SW - 3), y, ch('_'), INK, bg);
+    if (done) { const tag = ok ? T.ok : 'FAIL', tc: C3 = ok ? [40, 150, 80] : [180, 50, 40]; S.text(SW - tag.length - 3, y, ` ${tag} `, [240, 250, 245], tc); }
+    else if (cursor) S.put(1 + Math.min(txt.length, SW - 3), y, ch('_'), INK, bg);
   });
-  // the bar under the panel
-  const f = shown / L.length, w = SW - 6, n = Math.round(f * w), yb = SH - 2;
+  const w = SW - 6, n = Math.round(f * w), yb = SH - 2;
   for (let x = 0; x < w; x++) S.put(3 + x, yb, x < n ? 32 : SHAPE.dot, [60, 70, 90], x < n ? lerp([60, 140, 230], [120, 220, 255], x / w) : [4, 5, 8]);
 }
 
-/** The splash: a deep field brightening from the top, the logo drawing in with a gloss, the model on a chip, a rounded bar filling. */
-function splash(S: Lcd, maker: string, model: string, u: number) {
+/**
+ * The maker's splash, in the maker's style: a deep blue field with the logo in amber and a gloss
+ * (the first maker), a white page with the logo in navy and a red swoosh under it (the second), or
+ * black with the logo swept in by a cyan scan line (the third). A name too long for the big letters is spelled out.
+ */
+function splash(S: Lcd, style: number, maker: string, model: string, u: number) {
+  const big = maker.length * 5 <= SW;
+  if (style % 3 === 1) {
+    const bgAt = (y: number): C3 => lerp([255, 255, 255], [214, 220, 228], y / SH);
+    for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
+    const NAVY: C3 = [26, 36, 70], RED: C3 = [214, 36, 52];
+    if (big) bigText(S, 6, maker, NAVY, u - 0.15);
+    else { const sp = maker.split('').join(' '); S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.15, 30), NAVY, bgAt(9)); }
+    // the swoosh: a red stroke drawn from the left, thick in the middle
+    const sw = Math.round(Math.max(0, Math.min(1, (u - 0.5) / 0.6)) * (SW - 8));
+    for (let x = 0; x < sw; x++) { const k = Math.sin((x / (SW - 8)) * Math.PI); S.put(4 + x, 14, k > 0.5 ? SHAPE.bottom : SHAPE.q1, RED, bgAt(14)); }
+    if (u > 1) S.center(16, typed(model, u - 1, 30), [110, 118, 132], bgAt(16));
+    // three dots taking turns
+    const on = Math.floor(u * 3) % 3;
+    if (u > 1.2) for (let k = 0; k < 3; k++) S.put((SW >> 1) - 2 + k * 2, 20, SHAPE.dot, k === on ? RED : [180, 186, 196], bgAt(20));
+    return;
+  }
+  if (style % 3 === 2) {
+    const BG: C3 = [0, 0, 0], CYAN: C3 = [70, 220, 255];
+    for (let y = 0; y < SH; y++) S.fill(y, BG);
+    const sweep = Math.floor(Math.max(0, (u - 0.2) / 1.1) * (SW + 2));
+    if (big) {
+      // a dim copy a row down as a glow, then the letters; everything right of the scan line wiped
+      bigText(S, 7, maker, [10, 50, 70]);
+      bigText(S, 6, maker, CYAN);
+      for (let y = 5; y <= 14; y++) for (let x = Math.max(0, sweep); x < SW; x++) S.put(x, y, 32, BG, BG);
+      if (sweep < SW) for (let y = 5; y <= 13; y++) S.put(sweep, y, 32, BG, [200, 250, 255]);
+    } else { const sp = maker.split('').join(' '), x0 = (SW - sp.length) >> 1; S.text(x0, 9, sp.slice(0, Math.max(0, sweep - x0)), CYAN, BG); }
+    if (u > 1.4) { const sp = model.split('').join(' '); S.center(16, typed(sp, u - 1.4, 40), [60, 130, 160], BG); }
+    const segs = 10, n = Math.round(Math.max(0, Math.min(1, (u - 1.2) / 1.4)) * segs), x0 = (SW - segs * 3) >> 1;
+    for (let k = 0; k < segs; k++) for (let d = 0; d < 2; d++) S.put(x0 + k * 3 + d, 20, 32, BG, k < n ? CYAN : [10, 30, 40]);
+    return;
+  }
   const f = Math.min(1, u / 0.5);
   const bgAt = (y: number): C3 => { const k = f * (1 - y / SH); return [6 + 18 * k, 10 + 34 * k, 20 + 70 * k]; };
   for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
   // the maker's name in big letters while it fits the screen, a shadow under it and a lighter top half; a long one spelled out
   const g = Math.min(1, u * 2), lo: C3 = [255 * g, 170 * g, 60 * g], hi: C3 = [255 * g, 226 * g, 150 * g];
-  if (maker.length * 5 <= SW) {
+  if (big) {
     bigText(S, 7, maker, [0, 0, 0], u - 0.2, 1);
     bigText(S, 6, maker, lo, u - 0.2);
     // the gloss: the top three rows of the letters lighter (bigText draws in from the top)
@@ -404,9 +479,9 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
     S.text(3, y, icon, col, [24, 32, 50]);
     S.text(8, y, s.slice(0, SW - 12), Math.floor(now * 2) & 1 || k ? [235, 240, 250] : col, [24, 32, 50]);
   });
-  // how to clear them (calls and texts; a reminder stays until its time)
-  if ((P.missed || unread) && t > 0.9) { const h = T.apps.clearHint, y = 16 + Math.min(3, cards.length) * 2; box(S, SW - h.length - 4, y, SW - 3, y, CHIP, CHIP, 0); S.text(SW - h.length - 3, y, h, [150, 160, 180], CHIP); }
   softKeys(S, T.menu, T.hide);
+  // how to clear them (calls and texts; a reminder stays until its time), on the bar between the soft keys
+  if ((P.missed || unread) && t > 0.9) { const h = T.apps.clearHint; S.text((SW - h.length) >> 1, SH - 1, h, [170, 185, 210], [BAR[0] * 0.55, BAR[1] * 0.55, BAR[2] * 0.55]); }
 }
 
 // map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,
@@ -685,13 +760,13 @@ function places(S: Lcd, P: Phone, world: World, t: number) {
   S.text(3, 1, typed(T.placesTitle, t), CHROME.text, CHROME.top);
   const rows = SH - 5, top = Math.max(0, Math.min(P.psel - (rows >> 1), P.places.length - rows)), INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132];
   for (let n = 0; n < rows && top + n < P.places.length; n++) {
-    const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? [214, 228, 250] : [244, 246, 250];
+    const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? PICK : [244, 246, 250];
     const far = P.gps.known ? `${fmtDist(Math.hypot(L.x - hx, L.y - hy), P.prefs.dist)} ${compass(L.x - hx, L.y - hy)}` : '--';
     const name = landmarkName(city, k).slice(0, SW - far.length - 5);
     if (sel) S.fill(3 + n, bg);
     S.put(1, 3 + n, ch('*'), [255, 255, 255], [210, 60, 50]);
-    S.text(3, 3 + n, typed(name, t - 0.1 - n * 0.04), INK2, bg);
-    S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? [40, 90, 170] : GREY, bg);
+    S.text(3, 3 + n, typed(name, t - 0.1 - n * 0.04), sel ? PICK_INK : INK2, bg);
+    S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? PICK_DIM : GREY, bg);
   }
   softKeys(S, T.show, T.back);
 }

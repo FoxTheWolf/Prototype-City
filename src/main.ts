@@ -336,10 +336,12 @@ let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 
 /** When the player first entered the city (the opening plays from there), or -1. */
 let introAt = -1;
+/** The opening is switched off for now (the user did not like it, and it slows the tests). */
+const INTRO = false;
 function begin() {
   if (!sound) { sound = new Sound(); if (new URLSearchParams(location.search).has('mute')) sound.toggleMute(); }
   sound.resume();
-  if (introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
+  if (INTRO && introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
   overlay.hidden = true;
   running = true;
   input.lock();

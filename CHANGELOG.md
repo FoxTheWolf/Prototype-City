@@ -2,6 +2,16 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.12.5 — Celular: retorno da 12.4 (2026-10-02)
+- A abertura está desligada por enquanto.
+- O item escolhido nas listas (mensagens, ligações, contatos, Streetwire, calendário, lugares, loja) fica num destaque escuro com texto claro.
+- Apps reordenados: Ligações, Contatos, Mensagens, Câmera e Mapas primeiro.
+- A dica de limpar notificações foi para a barra de baixo, entre Menu e Hide.
+- Menos ligações e SMS por engano (cerca de um terço do que era).
+- Dois boots: o primeiro é da placa-mãe (três placas, cada uma com sua tela, compartilhadas entre marcas), só lista o que o aparelho tem e o Wi-Fi dá OK; o segundo é da marca, com estilo próprio por fabricante.
+- Cada marca tem os seus corpos de celular; trocar de corpo troca de aparelho e de marca.
+- Pedestres atravessam o jogador e andam em ritmos diferentes: uns com pressa, outros devagar (mais idosos, mais à noite).
+
 ## 0.12.4 — Celular: fila de feedback (2026-10-02)
 - Discador com o registro de chamadas: feitas, sem resposta, recebidas e perdidas, com a hora; as setas escolhem e a tecla verde liga de volta.
 - O número digitado some ao sair do discador; abaixar e levantar o celular mantém a tela e o estado.

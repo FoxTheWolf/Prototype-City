@@ -17,7 +17,7 @@ import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APPS, EDGE_LIMIT_KB, MENU_COLS, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
-import { box, face, header, lerp, mul, vgrad } from './ui';
+import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 
@@ -154,14 +154,14 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
       P.log.slice(top, top + view).forEach((e, n) => {
         const k = top + n, y = 14 + n * 2, on = k === sel && !d, nm = P.contacts.find((x) => x.number === e.number)?.name, num = /^[0-9]{7}$/.test(e.number) ? formatNumber(world.telco, e.number) : e.number;
         if (t < 0.15 + n * 0.05) return;
-        const bg: C3 = on ? [255, 255, 255] : [242, 245, 249];
+        const bg: C3 = on ? PICK : [242, 245, 249];
         box(S, 1, y, SW - 2, y, bg, pageBg, 0);
         face(S, 2, y, nm ?? e.number);
         const bad = e.kind === 'missed' || e.kind === 'failed', col: C3 = bad ? [200, 50, 50] : e.kind === 'in' ? BLUE : [40, 150, 80];
-        S.text(5, y, e.kind === 'in' || e.kind === 'missed' ? '<' : '>', col, bg);
+        S.text(5, y, e.kind === 'in' || e.kind === 'missed' ? '<' : '>', on ? (bad ? [255, 150, 140] : PICK_INK) : col, bg);
         const c = calendar(e.at), when = `${A.log[e.kind]} ${hhmm(c.hour)}`;
-        S.text(7, y, (nm ?? num).slice(0, SW - when.length - 10), bad ? [170, 40, 40] : INKD, bg);
-        S.text(SW - when.length - 2, y, when, on ? col : GREY, bg);
+        S.text(7, y, (nm ?? num).slice(0, SW - when.length - 10), on ? PICK_INK : bad ? [170, 40, 40] : INKD, bg);
+        S.text(SW - when.length - 2, y, when, on ? PICK_DIM : GREY, bg);
       });
     }
     return softKeys(S, d ? A.save : '', d ? A.clear : T.back);
@@ -205,11 +205,11 @@ function contacts(S: Lcd, P: Phone, t: number) {
   if (!P.contacts.length) S.center(10, A.noContacts, [140, 120, 100], PG);
   const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.csel - view + 1, P.contacts.length - view));
   P.contacts.slice(top, top + view).forEach((c, n) => {
-    const k = top + n, sel = k === P.csel, y = 3 + n * 2, bg: C3 = sel ? [255, 222, 160] : PG;
+    const k = top + n, sel = k === P.csel, y = 3 + n * 2, bg: C3 = sel ? [110, 64, 36] : PG;
     for (let x = 0; x < SW; x++) S.put(x, y, 32, bg, bg);
     S.put(0, y, ch(c.name[0]?.toUpperCase() ?? '#'), [255, 255, 255], TAB);
-    S.text(2, y, typed(c.name, t - 0.04 * n), INKC, bg);
-    S.text(SW - c.number.length - 1, y, c.number, [120, 100, 80], bg);
+    S.text(2, y, typed(c.name, t - 0.04 * n), sel ? [255, 244, 224] : INKC, bg);
+    S.text(SW - c.number.length - 1, y, c.number, sel ? [230, 200, 160] : [120, 100, 80], bg);
     for (let x = 2; x < SW - 1; x++) S.put(x, y + 1, ch('.'), [214, 204, 180], PG);
   });
   softKeys(S, A.new, T.back);
@@ -235,13 +235,12 @@ function messages(S: Lcd, P: Phone, t: number) {
   const unread = P.inbox.filter((m) => !m.read).length;
   const cards: [string, string, string, C3][] = [['[v]', A.inbox, unread ? `${unread} new` : `${P.inbox.length}`, BLUE], ['[^]', A.sent, `${P.sent.length}`, GREY], ['[+]', A.newMsg, '', [40, 160, 80]], ['[x]', A.clearAll, '', [200, 60, 50]]];
   cards.forEach(([icon, label, count, col], k) => {
-    const y = 4 + k * 4, sel = k === P.box, bg: C3 = sel ? [255, 255, 255] : [240, 243, 248];
+    const y = 4 + k * 4, sel = k === P.box, bg: C3 = sel ? [44, 88, 170] : [240, 243, 248], bot: C3 = sel ? PICK : [228, 232, 240], mid = lerp(bg, bot, 0.5);
     if (t < 0.05 * k) return;
-    box(S, 1, y, SW - 2, y + 2, bg, pageBg, 1, sel ? [236, 241, 250] : [228, 232, 240]);
-    if (sel) for (let yy = y; yy <= y + 2; yy++) S.put(1, yy, SHAPE.left, BLUE, sel ? lerp(bg, [236, 241, 250], (yy - y) / 2) : bg);
-    S.text(3, y + 1, icon, col, lerp(bg, sel ? [236, 241, 250] : [228, 232, 240], 0.5));
-    S.text(8, y + 1, label, INKD, lerp(bg, sel ? [236, 241, 250] : [228, 232, 240], 0.5));
-    if (count) S.text(SW - count.length - 3, y + 1, count, unread && k === 0 ? [210, 60, 50] : GREY, lerp(bg, sel ? [236, 241, 250] : [228, 232, 240], 0.5));
+    box(S, 1, y, SW - 2, y + 2, bg, pageBg, 1, bot);
+    S.text(3, y + 1, icon, sel ? PICK_INK : col, mid);
+    S.text(8, y + 1, label, sel ? PICK_INK : INKD, mid);
+    if (count) S.text(SW - count.length - 3, y + 1, count, sel ? (unread && k === 0 ? [255, 190, 170] : PICK_DIM) : unread && k === 0 ? [210, 60, 50] : GREY, mid);
   });
   softKeys(S, T.open, T.back);
 }
@@ -257,15 +256,15 @@ function msgList(S: Lcd, P: Phone, t: number) {
   if (!L.length) S.center(10, A.noMsgs, GREY, pageBg(10));
   const per = 3, view = Math.floor((SH - 5) / per), top = Math.max(0, Math.min(P.msel - view + 1, L.length - view));
   L.slice(top, top + view).forEach(([who, text, read, at], n) => {
-    const sel = top + n === P.msel, y = 3 + n * per, bg: C3 = sel ? [214, 228, 250] : pageBg(y);
+    const sel = top + n === P.msel, y = 3 + n * per, bg: C3 = sel ? PICK : pageBg(y);
     if (t < 0.04 * n) return;
     if (sel) box(S, 0, y, SW - 1, y + 1, bg, pageBg, 0);
     face(S, 1, y, nameOf(P, who));
     const c = calendar(at), when = `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`;
-    S.text(4, y, nameOf(P, who).slice(0, SW - when.length - 7), read ? INKD : BLUE, bg);
-    S.text(SW - when.length - 1, y, when, GREY, bg);
-    S.text(4, y + 1, text.slice(0, SW - 6), read ? GREY : INKD, sel ? bg : pageBg(y + 1));
-    if (!read) S.put(SW - 2, y + 1, SHAPE.dot, BLUE, sel ? bg : pageBg(y + 1));
+    S.text(4, y, nameOf(P, who).slice(0, SW - when.length - 7), sel ? PICK_INK : read ? INKD : BLUE, bg);
+    S.text(SW - when.length - 1, y, when, sel ? PICK_DIM : GREY, bg);
+    S.text(4, y + 1, text.slice(0, SW - 6), sel ? (read ? PICK_DIM : PICK_INK) : read ? GREY : INKD, sel ? bg : pageBg(y + 1));
+    if (!read) S.put(SW - 2, y + 1, SHAPE.dot, sel ? [150, 200, 255] : BLUE, sel ? bg : pageBg(y + 1));
     for (let x = 4; x < SW - 1; x++) S.put(x, y + 2, SHAPE.top, [218, 222, 230], pageBg(y + 2));
   });
   softKeys(S, A.new, T.back);
@@ -642,7 +641,7 @@ const appName = (i: number) => (ST.names as Record<string, string>)[STORE[i][0]]
 
 /** The store: the maker's own shop (dark plum, pink accents); the catalog (size, price, whether it fits over EDGE) and the apps installed; a download's progress. */
 function store(S: Lcd, P: Phone, t: number, now: number) {
-  const BG: C3 = [30, 18, 42], PINK: C3 = [255, 120, 200], CARD: C3 = [52, 32, 70], PICKC: C3 = [96, 48, 120], TXT: C3 = [240, 226, 250], DIMS: C3 = [160, 130, 180];
+  const BG: C3 = [30, 18, 42], PINK: C3 = [255, 120, 200], CARD: C3 = [52, 32, 70], PICKC: C3 = [176, 52, 140], TXT: C3 = [240, 226, 250], DIMS: C3 = [160, 130, 180];
   paint(S, BG);
   bar(S, `${P.maker} ${name('store')}`, [255, 255, 255], [70, 30, 90], '', PINK);
   ST.tabs.forEach((tb, k) => S.text(2 + k * 14, 3, k === P.stab ? `[${tb}]` : ` ${tb} `, k === P.stab ? PINK : DIMS, BG));
@@ -653,7 +652,7 @@ function store(S: Lcd, P: Phone, t: number, now: number) {
     for (let x = 1; x < SW - 1; x++) S.put(x, y, 32, bg, bg);
     const right = P.stab === 1 ? '' : have ? ST.installed : `${kb >= 1024 ? `${(kb / 1024).toFixed(0)}MB` : `${kb}KB`} ${price ? `$${(price / 100).toFixed(2)}` : ST.free}`;
     S.text(2, y, typed(appName(i), t - n * 0.04), kb > EDGE_LIMIT_KB && !have ? DIMS : TXT, bg);
-    S.text(SW - right.length - 2, y, right, have ? PINK : DIMS, bg);
+    S.text(SW - right.length - 2, y, right, sel ? TXT : have ? PINK : DIMS, bg);
     if (sel && P.stab === 0) S.text(1, SH - 4, (ST.about as Record<string, string>)[id], DIMS, BG);
   });
   const J = P.radio.job;

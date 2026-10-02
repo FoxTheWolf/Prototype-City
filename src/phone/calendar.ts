@@ -21,7 +21,7 @@ import { Editor } from './textinput';
  */
 const T = en.phone.cal;
 const PAPER: C3 = [246, 245, 240], INK: C3 = [30, 30, 34], DIM: C3 = [130, 130, 140], RED: C3 = [200, 40, 46], BAR2: C3 = [168, 28, 34];
-const SEL: C3 = [255, 226, 160], GRID: C3 = [222, 220, 212], BLUE: C3 = [40, 90, 170];
+const SEL: C3 = [40, 70, 130], GRID: C3 = [222, 220, 212], BLUE: C3 = [40, 90, 170];
 const DAY = 86400;
 const MONTHS = T.months, WEEK = T.week;
 
@@ -150,12 +150,12 @@ function month(S: Lcd, P: Phone, world: World) {
     const isToday = today.year === C.y && today.month === C.m && today.day === d, sel = d === C.d;
     const hol = holidays(world, C.y, C.m, d).length > 0, t0 = dateT(C.y, C.m, d);
     const rem = C.reminders.some((r) => r.at >= t0 && r.at < t0 + DAY), ev = hash3(world.seed, Math.floor(t0 / DAY), 0xe7) < 0.35;
-    const bg: C3 = isToday ? RED : sel ? SEL : PAPER, fg: C3 = isToday ? [255, 255, 255] : hol || col === 0 ? RED : INK;
+    const bg: C3 = isToday ? RED : sel ? SEL : PAPER, fg: C3 = isToday || sel ? [255, 255, 255] : hol || col === 0 ? RED : INK;
     for (let k = 0; k < 5; k++) S.put(x + k, y, 32, bg, bg);
     S.text(x + 1, y, String(d).padStart(2), fg, bg);
-    if (rem) S.put(x + 3, y, ch('.'), isToday ? [255, 255, 255] : BLUE, bg);
+    if (rem) S.put(x + 3, y, ch('.'), isToday || sel ? [255, 255, 255] : BLUE, bg);
     if (ev) S.put(x + 4, y, ch('*'), isToday ? [255, 230, 150] : [200, 150, 40], bg);
-    if (sel && !isToday) { S.put(x, y, ch('['), RED, bg); S.put(x + 4, y, ch(']'), RED, bg); }
+    if (sel && isToday) { S.put(x, y, ch('['), [255, 255, 255], bg); S.put(x + 4, y, ch(']'), [255, 255, 255], bg); }
   }
   // what the picked day has, in brief
   const t0 = dateT(C.y, C.m, C.d), hol = holidays(world, C.y, C.m, C.d);

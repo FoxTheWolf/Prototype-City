@@ -146,7 +146,21 @@ function pickDir(city: City, p: Ped) {
  * point of their way they have reached (x, y), on its nearest sidewalk; null when their way cannot
  * be walked (a block of the diagonal, a lot without a door).
  */
-function spawnPed(city: City, rng: Rng, i: number, goal: number, x: number, y: number, out: [number, number] | null): Ped | null {
+/**
+ * How fast someone walks this trip, m/s: most at an ordinary pace, some hurrying (a jog; more of them
+ * in the morning rush, few old people), some taking their time (more of them old, and late at night).
+ * Until the day's length is settled this stands in for being late or early by their plan.
+ */
+function pickPace(rng: Rng, age: number, hour: number): number {
+  const rush = hour >= 7 && hour < 9.5, night = hour >= 20 || hour < 5;
+  const hurry = (0.06 + (rush ? 0.12 : 0)) * (age >= 70 ? 0.2 : 1), slow = 0.15 + (age >= 65 ? 0.45 : 0) + (night ? 0.1 : 0);
+  const r = rng();
+  if (r < hurry) return 2.4 + rng() * 1.0;
+  if (r < hurry + slow) return 0.8 + rng() * 0.3;
+  return 1.15 + rng() * 0.45;
+}
+
+function spawnPed(city: City, rng: Rng, i: number, goal: number, x: number, y: number, out: [number, number] | null, pace: number): Ped | null {
   const to = doorPoint(city, goal);
   if (!to) return null;
   const off = 0.7 + rng() * (SIDEWALK - 1.4);
@@ -162,7 +176,7 @@ function spawnPed(city: City, rng: Rng, i: number, goal: number, x: number, y: n
   edge(city.blocks[blk], off, e, E);
   const rx = E[0] + E[2] * t, ry = E[1] + E[3] * t;
   const p: Ped = {
-    id: i, x: out ? sx : rx, y: out ? sy : ry, px: 0, py: 0, dx: E[2], dy: E[3], v: 0, pace: 1.1 + rng() * 0.5, blk, e, t, dir: 1, off,
+    id: i, x: out ? sx : rx, y: out ? sy : ry, px: 0, py: 0, dx: E[2], dy: E[3], v: 0, pace, blk, e, t, dir: 1, off,
     way: [], wi: 0, ci: 0, cj: 0, axis: 0, wait: 0, stride: rng() * 2, goal, gb, ge, gt, door: out ? 1 : 0, lx: rx, ly: ry,
   };
   p.px = p.x; p.py = p.y;
@@ -245,13 +259,14 @@ function scan(city: City, pop: Population, peds: Ped[], walking: Set<number>, rn
     const x = fx + (gx - fx) * W.prog, y = fy + (gy - fy) * W.prog;
     const metres = W.prog * (Math.abs(gx - fx) + Math.abs(gy - fy));
     let p: Ped | null = null;
+    const pace = () => pickPace(rng, pop.age[i], (time % 86400) / 3600);
     if (metres < 25 && !all) {
       // just out of the door
       const out = doorPoint(city, W.from);
-      if (out && Math.hypot(out[0] - px, out[1] - py) < PED_R) p = spawnPed(city, rng, i, W.building, 0, 0, out);
+      if (out && Math.hypot(out[0] - px, out[1] - py) < PED_R) p = spawnPed(city, rng, i, W.building, 0, 0, out, pace());
     } else {
       const d = Math.hypot(x - px, y - py);
-      if (d < PED_R && (all || d > PED_R * 0.7)) p = spawnPed(city, rng, i, W.building, x, y, null);
+      if (d < PED_R && (all || d > PED_R * 0.7)) p = spawnPed(city, rng, i, W.building, x, y, null, pace());
     }
     if (p) { peds.push(p); walking.add(i); }
   }
@@ -279,9 +294,8 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
     p.px = p.x; p.py = p.y;
     // too far from the player: off the street (their day goes on by their plan)
     if (Math.abs(p.x - px) > PED_FAR || Math.abs(p.y - py) > PED_FAR) { walking.delete(p.id); peds.splice(k, 1); continue; }
+    // (they walk through the player, so nobody is held up on their way by standing in it)
     let v = p.pace;
-    const ahx = p.x + p.dx * 0.8, ahy = p.y + p.dy * 0.8;
-    if (!p.way.length && Math.hypot(ahx - px, ahy - py) < 0.7) v = 0; // the player is in the way
     if (p.door) {
       // through the door: out onto the sidewalk, or in and gone
       if (toPoint(p, v, dt)) {

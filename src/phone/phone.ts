@@ -1,4 +1,4 @@
-import { playerPhone, type Device } from '../sim/device';
+import { lookPhone, playerPhone, type Device } from '../sim/device';
 import { type World } from '../sim/world';
 import { Gps } from './gps';
 import { Call, type Sfx } from './call';
@@ -50,7 +50,7 @@ export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 
  * downloaded from the store sit in their own folder.
  */
 export const MENU_COLS = 4;
-export const APPS: App[] = ['map', 'calls', 'contacts', 'messages', 'camera', 'wire', 'news', 'weather', 'calendar', 'clock', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
+export const APPS: App[] = ['calls', 'contacts', 'messages', 'camera', 'map', 'wire', 'news', 'weather', 'calendar', 'clock', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
 /** The apps on the menu that are store apps installed at the factory (their entries in STORE). */
 const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake' };
 /** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
@@ -121,9 +121,9 @@ const LOW_KEYS: Screen[] = ['map', 'calendar', 'photos', 'clock'];
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
 export class Phone {
-  readonly device: Device;
-  /** The maker's name, from the city. */
-  readonly maker: string;
+  device: Device;
+  /** The maker's name, from the city (the maker of the phone in hand, so it follows the look). */
+  get maker(): string { return makerName(this.world.city, this.device.maker); }
   readonly gps = new Gps();
   readonly radio = new Radio();
   readonly wifi = new Wifi();
@@ -194,7 +194,6 @@ export class Phone {
   wxAt = -1e9;
   constructor(private world: World) {
     this.device = playerPhone(world.seed);
-    this.maker = makerName(world.city, this.device.maker);
     this.look = this.device.look;
     this.looks = [this.look];
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
@@ -362,11 +361,11 @@ export class Phone {
       const hr = Math.floor(this.world.time / 3600), h = (q: number) => hash3(this.world.seed, hr, q);
       if (hr !== this.oddHour) {
         if (this.oddHour >= 0) {
-          if (h(0x11c) < 0.16) this.wrongAt = now + h(0x11e) * 90;
+          if (h(0x11c) < 0.05) this.wrongAt = now + h(0x11e) * 90;
           // most of the texts nobody asked for are a shop's advertising (from its own number); the rest a wrong number
-          const B = this.world.city.businesses, ad = h(0x11d) < 0.12 && h(0x123) < 0.75 && B.length > 0;
+          const B = this.world.city.businesses, ad = h(0x11d) < 0.07 && h(0x123) < 0.75 && B.length > 0;
           if (ad) { const k = Math.floor(h(0x124) * B.length); this.receive(this.world.telco.bizNum[k], smsText(this.world, 'promo', -1, h(0x120), k), now + 5 + h(0x121) * 80); }
-          const i = !ad && h(0x11d) < 0.12 ? this.somebody(h(0x11f)) : -1;
+          const i = !ad && h(0x11d) < 0.07 ? this.somebody(h(0x11f)) : -1;
           if (i >= 0) { this.wrongSms.add(i); this.receive(this.world.pop.mobile[i], smsText(this.world, 'wrong', i, h(0x120)), now + 5 + h(0x121) * 80); }
         }
         this.oddHour = hr;
@@ -794,7 +793,7 @@ export class Phone {
       if (!(less || k === 'right' || k === 'ok' || k === 'lsoft')) return false;
       const L = this.setSel === 0 ? this.looks : this.cases, cur = this.setSel === 0 ? this.look : this.case;
       const n = L[(L.indexOf(cur) + (less ? -1 : 1) + L.length) % L.length];
-      if (this.setSel === 0) this.look = n; else this.case = n;
+      if (this.setSel === 0) { this.look = n; this.device = n === this.device.look ? this.device : lookPhone(this.world.seed, n); } else this.case = n;
       return true;
     }
     if (pg === 'people') {
