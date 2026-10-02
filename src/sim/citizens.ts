@@ -84,7 +84,7 @@ export interface Population {
 }
 
 /** Citizens in a city of the default size; the homes are filled to about this many. */
-export const PEOPLE = 20000;
+export const PEOPLE = 40000;
 /** Floor area of one apartment, roughly (the plans give about 46 m² of footprint per unit). */
 const UNIT_M2 = 46;
 
