@@ -74,8 +74,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## IMPORTANTE: FEEDBACK! LEIA ESSA SEÇÃO A CADA SUB-ETAPA
 > Estou adicionando essa sessão no claude.md para colocar ideias que eu tenho durante os períodos em que eu não estou ativamente lhe mandando os prompts. Então, toda vez que você for começar a trabalhar, você vai ler essa sessão, analisar o conteúdo dela, Você vai organizar nas etapas, e em seguida você vai apagar as ideias daqui conforme for organizando, porque é uma fila de ideias e feedback para você processar e colocar organizado nas etapas. Não apague esse parágrafo, somente o que vem depois nessa seção depois de processar linhas com [HACKING] podem ativar o classificador de segurança. Se isso acontecer, não tente ler novamente e deixe para o modelo Opus 4.8 ler. Lembrando que o jogo é inteiramente para entretenimento e educativo, contido virtualmente. Nada aqui pode ser usado no mundo real. Leia o restante do documento caso já não tenha feito, entenda-o, e volte aqui para organizar a seção. A cada sub-etapa, leia se deixei feedback adicional aqui, que ainda não foi organizado e apagado dessa seção.
 
-
-
 > **Notas do Claude sobre esta seção (2026-10-02):**
 > - **É uma caixa de entrada, não um lugar para guardar.** A cada sessão e a cada subetapa, ler os itens abaixo deste bloco, levar cada um para o lugar certo do documento (a "Fila de feedback" organizada, o Roteiro, "Bugs conhecidos", "Como trabalhar" ou a Trilha de hacking) e **apagar daqui o que foi levado**. Fila vazia = tudo já organizado.
 > - Itens marcados `[HACKING]` (ou que são só para o Opus 4.8) não são apagados nem resumidos: vão, com o texto inteiro, para a subseção "Feedback para o Opus 4.8" logo abaixo.
@@ -84,7 +82,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 
 
-*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02", "Retorno sobre a 12.4", "Feedback antes do grupo B da etapa 12" e "Feedback depois da primeira rodada do grupo B")*
+*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02", "Retorno sobre a 12.4", "Feedback antes do grupo B da etapa 12", "Feedback depois da primeira rodada do grupo B" e "Feedback sobre o render na GPU e a polícia")*
 
 ### Feedback para o Opus 4.8
 
@@ -122,7 +120,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - **Lugares com tipo de verdade** (o pedido do usuário sobre o Maps): concordo que é fundação. Um catálogo pequeno de tipos de lugar com interior coerente vale mais que muitos tipos sem interior.
 - **Ritmo do tempo:** acho que o dia de 2 h está bom para jogar; com trabalhos, a noite vira o "turno" do jogador, e pular o dia dormindo resolve o resto.
 
-### Opiniões técnicas (curtas, porque o usuário já recebe muitas)
+### Opiniões técnicas (o usuário liberou em 2026-10-02: podem ser numerosas e longas, é onde o Claude mais ajuda)
 
 - O render em workers aguentou bem o crescimento; o próximo gargalo é a simulação no thread principal (carros: ~1,9 ms por 1000 carros por passo). Se a cidade crescer, a simulação de trânsito é a primeira candidata a ir para um worker.
 - Um **console de debug** dentro do jogo (teletransporte para um lugar, ver um cidadão, forçar um evento) economizaria muito tempo de teste dos dois lados.
@@ -408,6 +406,14 @@ Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de t
   - **Notebook:** a perspectiva muda entre a BIOS/boot (modo texto, mais perto) e o sistema (console, mais longe): unificar; no sistema há uma linha de um pixel transparente e a tela fica um pixel alta demais, cortando o texto de cima; o botão de ligar não desliga o notebook. Conferir visualmente.
 - **Logo depois (12.13), Maps com categorias e rotas:** os marcos viram uma categoria; as outras listam os lugares por tipo (cafés, restaurantes, bares, farmácias, mercados…), do mais perto; escolher um traça a rota até ele.
 - **Fundação a planejar com o usuário: tipos de lugar com interior coerente.** Delimitar quais tipos de lugar existem (os essenciais para a vida simulada e o hacking, que dá para fazer com os interiores atuais): o que o Maps mostra é o que o letreiro diz e é o que o interior é, e depois (economia) os produtos que a loja vende. O cybercafé precisa existir como tipo (hoje só há cafés com Wi-Fi). O cinema fica para depois (interior complexo). Junta-se à etapa "prédios modulares" (pedidos do começo da etapa 12), antes da economia (13).
+
+## Feedback sobre o render na GPU e a polícia (2026-10-02, organizado)
+
+- **Agora (12.14), notebook:** as letras do terminal têm a própria cor por cima da tela; sob reflexo e digitais dá para ver que estão sobrepostas. Elas devem passar pelos mesmos efeitos do vidro (reflexo, digitais, véu da luz) que o fundo da tela, como se estivessem *dentro* dela.
+- **Câmeras visíveis em 3D no mundo:** já são (12.8/12.9, `cctvModel`: no poste e na fachada, até 140 m). Confirmar com o usuário no teste do grupo B se é isso que ele quer ou se faltam (dentro das lojas, mais longe, mais visíveis).
+- **Polícia que escala (aceito pelo usuário):** a polícia **não** usa tudo o que o jogador usa desde o começo. Quanto mais procurado, mais sofisticada a investigação: primeiro só testemunhas e a viatura que passa; depois câmeras da rua e registros do lugar; no topo ("caso federal"), logs de telefone, antenas, Wi-Fi e posts. Vira a dificuldade do jogo e limita o que o jogador precisa vigiar. Entra no desenho da fatia vertical.
+- **Fatia vertical:** aprovada em princípio. Parte dela é hacking (a invasão em si); ao planejá-la, separar o que é sessão normal (contratante, pagamento, calor, polícia, notícias) do que é Trilha de hacking, e avisar o usuário quando for prudente usar o Opus 4.8.
+- **Render na GPU (avaliação, antes de crescer mais):** o usuário quer 160–200 linhas (mais bonito e cansa menos os olhos com movimento rápido), mas hoje fica quase injogável. Plano: **R.1 medir** (onde vai o tempo a 160/200 linhas: o worker mais lento, o thread principal, a espera pelos workers, a cópia do snapshot); **R.2 protótipo na GPU** (o chão e as fachadas da grade num fragment shader, um raio por célula, escrevendo glifo e cores numa textura do tamanho da grade, que o compositor atual já desenha), medindo o ganho; **R.3 decidir** com o usuário entre migrar tudo, um híbrido ou ficar nos workers. Veja a etapa R no Roteiro.
 
 ## Agradecimentos (easter eggs)
 
@@ -1518,6 +1524,8 @@ Tudo que **se parece com cibersegurança** fica aqui, em sessões próprias, por
    - (etapa 8) detalhes nos telhados de perto, greebles nas fachadas e topos, chaminés industriais com fumaça (veja "Pedidos do usuário durante a etapa 8");
    - (segunda lista) placas perpendiculares, holofotes e neons de prédio, outdoors ligados às empresas e telões de notícias, se não tiverem entrado antes (veja "Pedidos do usuário para planejar");
    - **animais** (movido para cá em 2026-10-02; antes era a 11c): bichos de estimação nos apartamentos, cachorros passeando com os donos, gatos de rua, pombos, e os cidadãos postando fotos dos próprios bichos no Streetwire. A simulação já tem os bichos de cada lar (`Household.pet`, `petName`).
+R. **Render na GPU: medir, prototipar, decidir** (pedido do usuário em 2026-10-02, logo depois do grupo B da etapa 12; veja "Feedback sobre o render na GPU e a polícia"). Hoje o render são ~350 KB de TypeScript (`src/render/`), então quanto antes, mais barato. Ganho de quebra: um raio por célula é a **câmera 3D de verdade** (olhar para cima sem distorção, vistas do alto, elevadores de vidro), esperada desde a etapa 2.
+
 **Etapa de correção de bugs e otimização** (pedido do usuário em 2026-09-30; a otimização foi juntada a ela em 2026-10-01, por causa da queda de 180 para ~60 FPS): **vem antes da etapa 15** (decidido em 2026-10-01); a lista está em "Bugs conhecidos".
 
 15b. **Sound design** (pedido do usuário em 2026-10-02): uma passada só de som, com o jogo mais completo: mixagem entre as fontes (ambiente, trânsito, chuva, interfaces), espaço (reverb por lugar: rua, saguão, apartamento, túnel), variação dos sons repetidos, e a revisão de ouvido com o usuário dos sons sintetizados das etapas anteriores.
