@@ -7,6 +7,12 @@ import { districtAt } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { BIZ_HOURS, isOpen, lookup, type Callee } from '../sim/telco';
 import { type World } from '../sim/world';
+import { expand, pickW, rngOf, selOf, type Grammar, type Sel } from '../locale/gen';
+import { TEXT } from '../locale/text';
+import { momentTags, selFor } from '../locale/voice';
+
+/** The pieces the call's lines are put together from (calls.json's own lists, and the city's words). */
+const CALLG: Grammar[] = [C as unknown as Grammar, TEXT];
 
 /**
  * A phone call from the player's handset. The exchange routes the number (sim/telco.ts); the far
@@ -162,7 +168,21 @@ export class Call {
   private end(now: number, why: string) { this.state = 'ended'; this.endAt = now; this.reason = why; this.q = []; this.holdUntil = -1; this.waitUntil = -1; }
   private hour() { return calendar(this.world.time).hour; }
   private kindOf() { const c = this.callee; return c.kind === 'biz' ? this.world.city.businesses[c.k].kind : ''; }
-  private pick<T>(a: T[], q: number): T { return a[Math.floor(this.h(q) * a.length)]; }
+  /**
+   * A line from a list, put together by the text grammar (see locale/gen.ts): pieces fit for who is
+   * speaking (their age, family, the hour) and the slots inside it filled; the same call, the same words.
+   */
+  private pick(a: string[], q: number): string {
+    const r = rngOf(Math.floor(this.h(q) * 2147483647), q, 0xca11), sel = this.sel();
+    return expand(pickW(a, r, sel), CALLG, r, {}, sel);
+  }
+  private selCache: Sel | null = null;
+  private sel(): Sel {
+    if (this.selCache) return this.selCache;
+    const w = this.world;
+    if (this.who >= 0) return (this.selCache = selFor(w.pop, this.who, w.time, w.weather.temp, w.weather.precip, w.weather.snow));
+    return selOf(momentTags(w.time, w.weather.temp, w.weather.precip, w.weather.snow), 0);
+  }
 
   /** How many rings before someone picks up (-1: nobody does). */
   private ringsBefore(): number {

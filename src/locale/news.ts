@@ -5,6 +5,10 @@ import { forecast, newWeather } from '../sim/weather';
 import { type World } from '../sim/world';
 import en from './en.json';
 import { businessName, cityName, districtName, landmarkName, roadName, seamName } from './names';
+import { expand, Fresh, selOf } from './gen';
+import { momentTags } from './voice';
+import { makerName } from './names';
+import { TEXT } from './text';
 
 /**
  * Headlines for the news tickers. What really goes on comes first, read from the sim: a substation
@@ -42,6 +46,25 @@ export function fillHeadline(city: City, tpl: string, h: (q: number) => number):
     .replace('{p}', (1.5 + Math.floor(h(7) * 6) * 0.25).toFixed(2))
     .replace('{o}', String(90 + Math.floor(h(8) * 50)));
 }
+/**
+ * A headline put together by the news grammar (locale/text/news.en.json: subjects, verbs, things
+ * by section, filled with the city's names), never the same twice in a session.
+ */
+const freshNews = new Fresh(4000);
+export function madeHeadline(city: City, seed: number, a: number, b: number, t = 0): string {
+  // the stories of the year, by the month (the crash in the fall, the games in August), or the city's own
+  const sel = selOf(momentTags(t), 0);
+  return freshNews.take((r) => {
+    const h = (q: number) => hash3(Math.floor(r() * 1e9), q, 0x4e5);
+    const nb = city.businesses.length;
+    const tpl = expand(r() < 0.45 ? '#hl2008#' : '#hl#', TEXT, r, {
+      biz2: nb ? businessName(city, Math.floor(r() * nb)).toUpperCase() : 'THE CORNER DELI',
+      weekday: N.weekdays[Math.floor(r() * 7)],
+      maker: makerName(city, Math.floor(r() * 3)).toUpperCase(),
+    }, sel);
+    return fillHeadline(city, tpl, h).toUpperCase();
+  }, seed, a, b);
+}
 const ahead = newWeather();
 let key = '', text = '';
 
@@ -77,7 +100,8 @@ export function tickerText(world: World): string {
   items.push(N.date.replace('{wd}', N.weekdays[c.weekday]).replace('{mon}', N.months[c.month - 1]).replace('{d}', String(c.day)).replace('{y}', String(c.year)));
   const first = Math.floor(hash3(world.seed, hour, 0) * FLAVOR.length);
   // five different stories (11 steps through the list never repeat within it: 11 and its length are coprime)
-  for (let j = 0; j < 5; j++) items.push(fillHeadline(city, FLAVOR[(first + j * 11) % FLAVOR.length], (q) => hash3(world.seed, hour * 8 + j, q)));
+  // half from the written stories, half put together by the grammar
+  for (let j = 0; j < 5; j++) items.push(j & 1 ? madeHeadline(city, world.seed, hour, j, world.time) : fillHeadline(city, FLAVOR[(first + j * 11) % FLAVOR.length], (q) => hash3(world.seed, hour * 8 + j, q)));
   text = items.join(N.sep) + N.sep;
   return text;
 }

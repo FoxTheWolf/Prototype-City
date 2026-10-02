@@ -3,6 +3,7 @@ import { hash3 } from '../core/rng';
 import en from './en.json';
 import THANKS from './thanks.json';
 import PEOPLE from './people.en.json';
+import NAMES from './text/names.en.json';
 import { type Population } from '../sim/citizens';
 
 /**
@@ -193,11 +194,25 @@ function citizenThanked(city: City, P: Population, i: number): string | undefine
   return undefined;
 }
 
+/**
+ * A first name from the names given in the years the citizen was born (2008 less their age): the
+ * old have the names of the 1930s and 40s, the young those of the 80s and 90s; near the edges of
+ * an era, now and then one from the next.
+ */
+function firstName(P: Population, i: number): string {
+  const E = P.gender[i] ? NAMES.male : NAMES.female, a = P.age[i], h = hash3(P.seed, i, 0xa9e);
+  const era = a >= 59 ? (a < 64 && h < 0.3 ? E.mid : E.old) : a >= 29 ? (a >= 54 && h < 0.3 ? E.old : a < 34 && h < 0.3 ? E.young : E.mid) : a >= 24 && h < 0.25 ? E.mid : E.young;
+  return era[P.first[i] % era.length];
+}
+
+/** A pet's name, from the household's pick. */
+export const petName = (n: number) => NAMES.pets[n % NAMES.pets.length];
+
 /** A citizen's first and last name. */
 export function citizenNames(city: City, P: Population, i: number): [string, string] {
   const t = citizenThanked(city, P, i);
   if (t) { const sp = t.indexOf(' '); return sp < 0 ? [t, ''] : [t.slice(0, sp), t.slice(sp + 1)]; }
-  return [PEOPLE.first[P.first[i] % PEOPLE.first.length], PEOPLE.last[P.last[i] % PEOPLE.last.length]];
+  return [firstName(P, i), NAMES.last[P.last[i] % NAMES.last.length]];
 }
 export const citizenName = (city: City, P: Population, i: number) => citizenNames(city, P, i).join(' ');
 
@@ -207,7 +222,7 @@ export function workplaceName(city: City, P: Population, k: number): string {
   if (W.biz >= 0) return businessName(city, W.biz);
   const tpls = W.kind === 'office' ? PEOPLE.office : PEOPLE.plant, n = W.name;
   return tpls[n % tpls.length]
-    .replace('{s}', PEOPLE.last[(n >>> 4) % PEOPLE.last.length])
-    .replace('{s2}', PEOPLE.last[(n >>> 11) % PEOPLE.last.length])
+    .replace('{s}', NAMES.last[(n >>> 4) % NAMES.last.length])
+    .replace('{s2}', NAMES.last[(n >>> 11) % NAMES.last.length])
     .replace('{w}', L.words[(n >>> 5) % L.words.length]);
 }

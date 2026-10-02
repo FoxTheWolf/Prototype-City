@@ -27,6 +27,9 @@ export interface Household {
   n: number;
   /** The landline's local number, or '' (no phone at home). */
   line: string;
+  /** A pet (0 none, 1 cat, 2 dog, 3 bird, 4 fish) and its name's pick (the locale's list). */
+  pet: number;
+  petName: number;
   /** An answering machine on the landline. */
   machine: boolean;
 }
@@ -57,6 +60,8 @@ export interface Population {
   first: Uint16Array;
   last: Uint16Array;
   age: Uint8Array;
+  /** 0 a woman, 1 a man (the first name is picked from the matching list). */
+  gender: Uint8Array;
   role: Uint8Array;
   /** Household index. */
   home: Int32Array;
@@ -103,7 +108,7 @@ function shiftsFor(a: number, b: number): [number, number][] {
 }
 
 const EMPTY: Population = {
-  seed: 0, n: 0, first: new Uint16Array(0), last: new Uint16Array(0), age: new Uint8Array(0), role: new Uint8Array(0), home: new Int32Array(0),
+  seed: 0, n: 0, first: new Uint16Array(0), last: new Uint16Array(0), age: new Uint8Array(0), gender: new Uint8Array(0), role: new Uint8Array(0), home: new Int32Array(0),
   job: new Int32Array(0), shift: new Uint8Array(0), spouse: new Int32Array(0), friendAt: new Int32Array(1), friendList: new Int32Array(0),
   wake: new Uint8Array(0), bed: new Uint8Array(0), social: new Uint8Array(0), talk: new Uint8Array(0), phone: new Uint8Array(0), mobile: [],
   households: [], workplaces: [], byNum: new Map(),
@@ -165,7 +170,7 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
       for (let c = 1 + ri(3); c > 0; c--) person(h, fam, Math.max(0, age[m0] - 22 - ri(14)));
     } else if (r < 0.88) { person(h, fam, 25 + ri(30)); for (let c = 1 + ri(2); c > 0; c--) person(h, fam, Math.max(0, age[m0] - 20 - ri(15))); } // one parent
     else for (let c = 2 + ri(2); c > 0; c--) person(h, ri(LAST), 19 + ri(16));       // roommates
-    households.push({ building, floor, slot, m0, n: first.length - m0, line: '', machine: rnd() < 0.7 });
+    households.push({ building, floor, slot, m0, n: first.length - m0, line: '', machine: rnd() < 0.7, pet: 0, petName: 0 });
   }
   const n = first.length;
 
@@ -255,8 +260,21 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
     if (rnd() < (old ? 0.92 : 0.62)) { H.line = number(); byNum.set(H.line, -1 - h); }
   });
 
+  // --- gender and pets: from hashes, so the draws above stay as they were. A couple is mostly a man
+  // and a woman (some are two men or two women); a pet in about four homes in ten
+  const gender = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const s = spouse[i];
+    gender[i] = s >= 0 && s < i ? (hash3(seed, i, 0x9e7) < 0.94 ? 1 - gender[s] : gender[s]) : hash3(seed, i, 0x9e6) < 0.5 ? 1 : 0;
+  }
+  households.forEach((H, h) => {
+    const r = hash3(seed, h, 0x9e7a);
+    H.pet = r < 0.18 ? 1 : r < 0.34 ? 2 : r < 0.38 ? 3 : r < 0.42 ? 4 : 0;
+    H.petName = Math.floor(hash3(seed, h, 0x9e7b) * 65536);
+  });
+
   return {
-    seed, n, first: Uint16Array.from(first), last: Uint16Array.from(last), age: Uint8Array.from(age), role, home: Int32Array.from(home), job, shift,
+    seed, n, first: Uint16Array.from(first), last: Uint16Array.from(last), age: Uint8Array.from(age), gender, role, home: Int32Array.from(home), job, shift,
     spouse: Int32Array.from(spouse), friendAt: deg, friendList, wake, bed, social, talk, phone, mobile, households, workplaces: places, byNum,
   };
 }

@@ -1,15 +1,13 @@
 import { hash3 } from '../core/rng';
-import en from '../locale/en.json';
-import { businessName, cityName, citizenName, districtName, operatorName, wifiName, workplaceName } from '../locale/names';
-import { postAge, postText, SOCIAL } from '../locale/social';
-import { likes } from '../sim/social';
-import { districtAt } from '../sim/city';
+import { businessName, citizenName, operatorName, wifiName, workplaceName } from '../locale/names';
+import { drawWire } from './wire';
+import { drawCalendar } from './calendar';
+import { newsApp, weatherApp } from './skins';
 import PEOPLE from '../locale/people.en.json';
 import { Role, whereIs } from '../sim/citizens';
 import { Sec } from '../sim/wifi';
-import { calendar, moonPhase } from '../sim/clock';
+import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
-import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
 import { BAR, bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
@@ -17,9 +15,16 @@ import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
 import { expose, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
-import { tickerText } from '../locale/news';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APPS, EDGE_LIMIT_KB, STORE, fmtDist, GRID_KEYS, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+
+/** An app's own page color over the whole screen (between the status bar and the soft keys). */
+function paint(S: Lcd, bg: C3) { for (let y = 1; y < SH - 1; y++) S.fill(y, bg); }
+/** An app's own title bar. */
+function bar(S: Lcd, text: string, fg: C3, bg: C3, right = '', rfg: C3 = fg) {
+  S.fill(1, bg); S.text(1, 1, text, fg, bg);
+  if (right) S.text(SW - right.length - 1, 1, right, rfg, bg);
+}
 
 /**
  * The phone's menu and its apps besides the map. Those that need nothing more work for real
@@ -33,7 +38,7 @@ const name = (a: App) => (T.app as Record<string, string>)[a];
 /** Each app's icon: a framed symbol in its color. */
 const ICON: Record<App, [string, C3]> = {
   map: ['*', [120, 230, 140]], calls: ['#', [120, 255, 160]], contacts: ['@', [255, 200, 120]], messages: ['=', [140, 200, 255]],
-  camera: ['o', [200, 200, 210]], web: ['W', [120, 170, 255]], clock: ['%', [255, 220, 120]], calc: ['+', [230, 230, 230]],
+  camera: ['o', [200, 200, 210]], calendar: ['31', [255, 110, 110]], clock: ['%', [255, 220, 120]], calc: ['+', [230, 230, 230]],
   notes: ['~', [255, 240, 160]], weather: ['^', [150, 220, 255]], store: ['$', [255, 160, 200]], settings: ['&', [180, 180, 200]],
 };
 
@@ -46,19 +51,12 @@ export function menu(S: Lcd, P: Phone, t: number) {
     if (sel) for (let y = 0; y < 5; y++) for (let x = -1; x < 12; x++) S.put(cx + x, cy + y, 32, bg, bg);
     const [sym, col] = ICON[a], fr: C3 = sel ? WHITE : [col[0] * 0.6, col[1] * 0.6, col[2] * 0.6];
     S.text(cx + 3, cy, '+---+', fr, bg);
-    S.text(cx + 3, cy + 1, '|   |', fr, bg); S.put(cx + 5, cy + 1, ch(sym), col, bg);
+    S.text(cx + 3, cy + 1, '|   |', fr, bg); S.text(cx + 5 - (sym.length >> 1), cy + 1, sym, col, bg);
     S.text(cx + 3, cy + 2, '+---+', fr, bg);
     const label = `${GRID_KEYS[n]} ${name(a)}`.slice(0, 11);
     S.text(cx + ((11 - label.length) >> 1), cy + 3, label, sel ? WHITE : INK, bg);
   });
   softKeys(S, T.open, T.back);
-}
-
-/** A screen that only explains: why the app cannot do anything yet. */
-function notice(S: Lcd, t: number, head: string, lines: string[], col: C3 = BAD) {
-  title(S, head, t);
-  lines.forEach((l, k) => S.center(8 + k * 2, typed(l, t - 0.2 - k * 0.15), k === 0 ? col : DIM, LCD));
-  softKeys(S, '', T.back);
 }
 
 export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
@@ -67,8 +65,8 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'contacts': return contacts(S, P, t);
     case 'messages': return messages(S, P, t);
     case 'camera': return cameraScreen(S, P, now);
-    case 'web': return notice(S, t, name('web').toUpperCase(), P.online() ? A.soon : A.web, P.online() ? HI : BAD);
-    case 'weather': return weather(S, P, world, t, now);
+    case 'calendar': return drawCalendar(S, P, world, now);
+    case 'weather': return weatherApp(S, P, world, t, now);
     case 'store': return store(S, P, t, now);
     case 'clock': return clock(S, P, world, t, now);
     case 'calc': return calc(S, P, t);
@@ -130,16 +128,20 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
   softKeys(S, '', c.state === 'ended' ? '' : A.end);
 }
 
-/** Contacts: the SIM's list; OK calls, New adds one. */
+/** Contacts: an address book (cream pages, a brown cover bar, the first letter as a tab); OK calls, New adds one. */
 function contacts(S: Lcd, P: Phone, t: number) {
-  title(S, name('contacts').toUpperCase(), t, A.sim.replace('{n}', String(P.contacts.length)));
-  if (!P.contacts.length) S.center(10, A.noContacts, DIM, LCD);
+  const PG: C3 = [240, 232, 212], INKC: C3 = [40, 32, 24], TAB: C3 = [170, 120, 70];
+  paint(S, PG);
+  bar(S, name('contacts'), [250, 236, 210], [110, 64, 36], A.sim.replace('{n}', String(P.contacts.length)), [210, 180, 150]);
+  if (!P.contacts.length) S.center(10, A.noContacts, [140, 120, 100], PG);
   const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.csel - view + 1, P.contacts.length - view));
   P.contacts.slice(top, top + view).forEach((c, n) => {
-    const k = top + n, sel = k === P.csel, y = 3 + n * 2, bg = sel ? SEL : LCD;
-    if (sel) S.fill(y, bg);
-    S.text(1, y, typed(c.name, t - 0.04 * n), sel ? WHITE : INK, bg);
-    S.text(SW - c.number.length - 1, y, c.number, sel ? WHITE : DIM, bg);
+    const k = top + n, sel = k === P.csel, y = 3 + n * 2, bg: C3 = sel ? [255, 222, 160] : PG;
+    for (let x = 0; x < SW; x++) S.put(x, y, 32, bg, bg);
+    S.put(0, y, ch(c.name[0]?.toUpperCase() ?? '#'), [255, 255, 255], TAB);
+    S.text(2, y, typed(c.name, t - 0.04 * n), INKC, bg);
+    S.text(SW - c.number.length - 1, y, c.number, [120, 100, 80], bg);
+    for (let x = 2; x < SW - 1; x++) S.put(x, y + 1, ch('.'), [214, 204, 180], PG);
   });
   softKeys(S, A.new, T.back);
 }
@@ -182,11 +184,18 @@ function msgList(S: Lcd, P: Phone, t: number) {
 }
 
 function msgRead(S: Lcd, P: Phone, t: number) {
-  const m = P.box === 0 ? P.inbox[P.msel] : null, s = P.box === 1 ? P.sent[P.msel] : null;
-  const who = m ? m.from : s?.to ?? '', text = m ? m.text : s?.text ?? '', at = m ? m.at : s?.at ?? 0, c = calendar(at);
-  title(S, `${P.box === 0 ? A.from : A.to}: ${nameOf(P, who)}`.slice(0, SW - 2), t);
-  S.text(1, 3, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`, DIM, LCD);
-  wrap(text, SW - 2).slice(0, SH - 8).forEach((l, k) => S.text(1, 5 + k, typed(l, t - k * 0.05), WHITE, LCD));
+  const m = P.box === 0 ? P.inbox[P.msel] : null, s2 = P.box === 1 ? P.sent[P.msel] : null;
+  const who = m ? m.from : s2?.to ?? '', text = m ? m.text : s2?.text ?? '', at = m ? m.at : s2?.at ?? 0, c = calendar(at);
+  const PG: C3 = [214, 222, 232];
+  paint(S, PG);
+  bar(S, `${P.box === 0 ? A.from : A.to}: ${nameOf(P, who)}`.slice(0, SW - 2), WHITE, [60, 90, 130]);
+  S.center(3, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`, [110, 120, 136], PG);
+  // the message as a bubble: theirs white on the left, the player's green on the right
+  const mine = P.box === 1, lines = wrap(text, SW - 10).slice(0, SH - 9), w = Math.max(1, ...lines.map((l) => l.length)) + 2;
+  const x0 = mine ? SW - w - 2 : 2, BUB: C3 = mine ? [150, 222, 130] : [250, 250, 252];
+  for (let k = -1; k <= lines.length; k++) for (let x = 0; x < w; x++) S.put(x0 + x, 5 + k, 32, BUB, BUB);
+  lines.forEach((l, k) => S.text(x0 + 1, 5 + k, typed(l, t - k * 0.05), [24, 28, 34], BUB));
+  S.put(mine ? x0 + w : x0 - 1, 5 + lines.length, ch(mine ? '/' : '\\'), BUB, PG);
   softKeys(S, /^[0-9*#]+$/.test(who) ? A.replyK : '', T.back);
 }
 
@@ -217,43 +226,59 @@ function ussdScreen(S: Lcd, P: Phone, t: number, now: number) {
   softKeys(S, T.ok, T.back);
 }
 
-/** The time of day (the city's), the date, and a stopwatch on real seconds. */
+/** The time of day (the city's), the date, and a stopwatch on real seconds: black, with amber digits like a bedside clock. */
 function clock(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  title(S, name('clock').toUpperCase(), t);
+  const BG: C3 = [6, 6, 9], AMB: C3 = [255, 150, 40], DAMB: C3 = [120, 66, 20];
+  paint(S, BG);
+  bar(S, name('clock').toUpperCase(), AMB, [24, 18, 14]);
   const c = calendar(world.time);
-  bigText(S, 3, hhmm(c.hour), INK, t);
-  S.center(11, `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`, DIM, LCD);
-  const sw = P.swAcc + (P.swAt >= 0 ? now - P.swAt : 0), m = Math.floor(sw / 60), s = sw % 60;
-  S.center(15, A.stopwatch, HI, LCD);
-  S.center(17, `${String(m).padStart(2, '0')}:${s.toFixed(1).padStart(4, '0')}`, P.swAt >= 0 ? WHITE : INK, LCD);
-  S.center(20, A.stopwatchHint, DIM, LCD);
+  bigText(S, 4, hhmm(c.hour), AMB, t);
+  S.center(12, `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`, [160, 150, 140], BG);
+  for (let x = 4; x < SW - 4; x++) S.put(x, 14, ch('-'), [40, 34, 30], BG);
+  const sw = P.swAcc + (P.swAt >= 0 ? now - P.swAt : 0), m = Math.floor(sw / 60), s2 = sw % 60;
+  S.center(15, A.stopwatch, DAMB, BG);
+  bigText(S, 16, `${String(m).padStart(2, '0')}:${String(Math.floor(s2)).padStart(2, '0')}`, P.swAt >= 0 ? AMB : DAMB);
+  S.center(SH - 2, A.stopwatchHint, [90, 80, 70], BG);
   softKeys(S, P.swAt >= 0 ? A.stop : A.start, T.back);
 }
 
-/** The calculator: the display in big digits, the operation waiting, and which key does what. */
+/** The calculator: a dark body, the display in big white digits, and its keys drawn as buttons with what they do. */
 function calc(S: Lcd, P: Phone, t: number) {
-  title(S, name('calc').toUpperCase(), t, P.calc.op);
+  const BODY: C3 = [38, 38, 42], DISP: C3 = [12, 12, 14], OR: C3 = [255, 150, 30], KEY: C3 = [80, 80, 86];
+  paint(S, BODY);
+  bar(S, name('calc').toUpperCase(), [220, 220, 225], BODY, P.calc.op, OR);
+  for (let y = 3; y <= 11; y++) for (let x = 1; x < SW - 1; x++) S.put(x, y, 32, DISP, DISP);
   const v = P.calc.cur;
-  if (v.length <= 7) bigText(S, 5, v, v === 'ERROR' ? BAD : WHITE);
-  else S.text(SW - v.length - 2, 8, v, WHITE, LCD);
-  A.calcHint.forEach((l, k) => S.center(16 + k * 2, l, DIM, LCD));
+  if (v.length <= 6) bigText(S, 4, v, v === 'ERROR' ? BAD : WHITE);
+  else S.text(SW - v.length - 2, 8, v, WHITE, DISP);
+  // the keys: the arrows are the operations, OK equals, * clears, # the point
+  const keys: [string, string, C3][] = [['^', '+', OR], ['v', '-', OR], ['<', 'x', OR], ['>', '/', OR], ['OK', '=', OR], ['*', 'C', [170, 170, 176]], ['#', '.', KEY]];
+  keys.forEach(([k, op, col], n) => {
+    const x0 = 2 + (n % 4) * 10, y0 = 14 + Math.floor(n / 4) * 4;
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 8; x++) S.put(x0 + x, y0 + y, 32, col, col);
+    S.text(x0 + 3, y0 + 1, op, n === 6 ? WHITE : [20, 20, 20], col);
+    S.text(x0 + 1, y0 + 2, k, n === 6 ? [200, 200, 200] : [70, 40, 10], col);
+  });
+  void t;
   softKeys(S, '=', T.back);
 }
 
-/** Notes: the text typed on the keypad (Abc, T9 or 123, see textinput.ts). */
+/** Notes: a yellow legal pad (ruled lines, the red margin); the text typed on the keypad (Abc, T9 or 123, see textinput.ts). */
 function notes(S: Lcd, P: Phone, t: number, now: number) {
-  title(S, name('notes').toUpperCase(), t, `${P.noteEd.label()} ${P.note.length}/400`);
-  // wrap to the screen, keeping the end in view
-  const lines: string[] = [];
-  for (const para of P.note.split('\n')) { let s = para; do { lines.push(s.slice(0, SW - 2)); s = s.slice(SW - 2); } while (s.length); }
+  const PAD: C3 = [252, 238, 150], RULE: C3 = [236, 220, 128], INKN: C3 = [30, 40, 90], RED: C3 = [210, 80, 80];
+  paint(S, PAD);
+  bar(S, name('notes'), [250, 236, 210], [122, 72, 40], `${P.noteEd.label()} ${P.note.length}/400`, [220, 190, 160]);
+  const rowBg = (y: number): C3 => (y % 2 ? PAD : RULE);
+  for (let y = 3; y < SH - 2; y++) { for (let x = 0; x < SW; x++) S.put(x, y, 32, rowBg(y), rowBg(y)); S.put(2, y, ch('|'), RED, rowBg(y)); }
+  const lines: string[] = [], w = SW - 5;
+  for (const para of P.note.split('\n')) { let s2 = para; do { lines.push(s2.slice(0, w)); s2 = s2.slice(w); } while (s2.length); }
   const rows = SH - 6, shown = lines.slice(-rows);
-  shown.forEach((l, k) => S.text(1, 3 + k, l, INK, LCD));
-  // the word being typed (a multi-tap letter, or T9's guess) in inverse; a blinking cursor after it
+  shown.forEach((l, k) => S.text(4, 3 + k, l, INKN, rowBg(3 + k)));
   const ed = P.noteEd, live = ed.seq ? ed.word().length : ed.tapping(now) ? 1 : 0, last = shown.length ? shown[shown.length - 1] : '', y = 2 + Math.max(1, shown.length);
-  for (let n = 0; n < live; n++) { const x = last.length - live + n; if (x >= 0) S.put(1 + x, y, ch(last[x]), LCD, INK); }
-  if (Math.floor(now * 2) & 1 && !live) S.put(1 + last.length, y, ch('_'), INK, LCD);
-  if (!P.note) S.center(10, typed(A.notesHint, t - 0.2), DIM, LCD);
-  S.text(1, SH - 2, ed.tapping(now) || A.modeHint, DIM, LCD);
+  for (let n = 0; n < live; n++) { const x = last.length - live + n; if (x >= 0) S.put(4 + x, y, ch(last[x]), PAD, INKN); }
+  if (Math.floor(now * 2) & 1 && !live) S.put(4 + last.length, y, ch('_'), INKN, rowBg(y));
+  if (!P.note) S.center(10, typed(A.notesHint, t - 0.2), [150, 130, 80], rowBg(10));
+  S.text(1, SH - 2, ed.tapping(now) || A.modeHint, [140, 120, 70], PAD);
   softKeys(S, '', P.note ? A.clear : T.back);
 }
 
@@ -335,58 +360,6 @@ function peoplePage(S: Lcd, P: Phone, world: World, t: number) {
 }
 
 const kbText = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${Math.round(kb)} KB`);
-
-const ahead: Weather = newWeather();
-function skyWord(w: Weather): string {
-  const W = A.wx.sky;
-  if (w.precip > 0.02) return w.snow ? W.snow : w.precip > 0.75 ? W.storm : w.precip < 0.25 ? W.drizzle : W.rain;
-  return w.cloud > 0.75 ? W.cloudy : w.cloud > 0.35 ? W.partly : W.clear;
-}
-
-/**
- * Weather: the forecast comes down over EDGE (the session set up, then the kilobytes as fast as
- * the signal allows, out of the data bundle), then shows now and the hours ahead, from the same
- * forecast the city's weather follows. It keeps for an hour; OK downloads it again.
- */
-function weather(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  const R = P.radio, J = R.job?.what === 'weather' ? R.job : null, W = A.wx;
-  const fresh = world.time - P.wxAt < 3600;
-  if (!fresh && (!J || J.state === 'nosignal') && !P.online()) return notice(S, t, name('weather').toUpperCase(), A.weather);
-  title(S, `${name('weather').toUpperCase()} ${cityName(world.city).toUpperCase()}`, t);
-  if (J && J.state !== 'done') {
-    // the download, as a terminal would show it
-    const u = Math.max(0, now - J.at);
-    const lines = [`${W.attach} ...`, `${W.pdp} ...`, W.get.replace('{city}', cityName(world.city).toLowerCase().replace(/ /g, '_'))];
-    lines.forEach((l, k) => { if (u > k * 0.6) S.text(1, 4 + k, l, DIM, LCD); });
-    if (J.state === 'loading') {
-      const f = J.done / J.kb, n = Math.round(f * (SW - 4));
-      S.text(2, 9, '['.padEnd(n + 1, '#').padEnd(SW - 3, '.') + ']', INK, LCD);
-      S.center(11, W.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', String(J.kb)), DIM, LCD);
-    }
-    if (J.state === 'nosignal') S.center(12, W.lost, BAD, LCD);
-    if (J.state === 'nodata') { S.center(12, W.noData, BAD, LCD); S.center(14, W.buy, DIM, LCD); }
-    return softKeys(S, R.state === 'service' ? W.refresh : '', T.back);
-  }
-  // the forecast: now and the hours ahead
-  const base = P.wxAt;
-  ahead.preset = world.weather.preset;
-  ([0, 3, 6, 12, 24] as const).forEach((h, k) => {
-    if (t < 0.1 + k * 0.12) return;
-    const at = base + h * 3600;
-    forecast(world.seed, at, ahead);
-    const c = calendar(at), label = h ? W.in.replace('{h}', String(h)) : W.now, y = 3 + k * 3;
-    const tf = P.prefs.temp ? `${Math.round(ahead.temp)}°C` : `${Math.round(ahead.temp * 1.8 + 32)}°F`;
-    S.text(1, y, label.padEnd(5), HI, LCD);
-    S.text(7, y, hhmm(c.hour), DIM, LCD);
-    S.text(13, y, skyWord(ahead), INK, LCD);
-    S.text(SW - tf.length - 1, y, tf, WHITE, LCD);
-    S.text(13, y + 1, `${Math.round(ahead.cloud * 100)}% cloud  wind ${Math.round(Math.hypot(ahead.windX, ahead.windY))} m/s`, DIM, LCD);
-  });
-  const ph = W.phases[Math.round(moonPhase(world.time) * 8) % 8];
-  S.text(1, SH - 3, `${W.moon}: ${ph}`, DIM, LCD);
-  S.text(1, SH - 2, W.updated.replace('{t}', hhmm(calendar(base).hour)), DIM, LCD);
-  softKeys(S, R.state === 'service' ? W.refresh : '', T.back);
-}
 
 const C = A.code;
 const imeiOf = (seed: number) => String(Math.floor(hash3(seed, 7, 7) * 1e15)).padStart(15, '0');
@@ -530,25 +503,27 @@ function photosScreen(S: Lcd, P: Phone, t: number) {
 const ST = A.shop;
 const appName = (i: number) => (ST.names as Record<string, string>)[STORE[i][0]];
 
-/** The store: the catalog (size, price, whether it fits over EDGE) and the apps installed; a download's progress. */
+/** The store: the maker's own shop (dark plum, pink accents); the catalog (size, price, whether it fits over EDGE) and the apps installed; a download's progress. */
 function store(S: Lcd, P: Phone, t: number, now: number) {
-  title(S, `${P.maker.toUpperCase()} ${name('store').toUpperCase()}`, t);
-  ST.tabs.forEach((tb, k) => S.text(2 + k * 14, 3, k === P.stab ? `[${tb}]` : ` ${tb} `, k === P.stab ? HI : DIM, LCD));
+  const BG: C3 = [30, 18, 42], PINK: C3 = [255, 120, 200], CARD: C3 = [52, 32, 70], PICKC: C3 = [96, 48, 120], TXT: C3 = [240, 226, 250], DIMS: C3 = [160, 130, 180];
+  paint(S, BG);
+  bar(S, `${P.maker} ${name('store')}`, [255, 255, 255], [70, 30, 90], '', PINK);
+  ST.tabs.forEach((tb, k) => S.text(2 + k * 14, 3, k === P.stab ? `[${tb}]` : ` ${tb} `, k === P.stab ? PINK : DIMS, BG));
   const list = P.stab === 0 ? STORE.map((_, i) => i) : P.apps;
-  if (!list.length) S.center(10, ST.none, DIM, LCD);
+  if (!list.length) S.center(10, ST.none, DIMS, BG);
   list.forEach((i, n) => {
-    const [id, kb, price] = STORE[i], y = 5 + n * 2, sel = n === P.ssel, bg = sel ? SEL : LCD, have = P.apps.includes(i);
-    if (sel) S.fill(y, bg);
+    const [id, kb, price] = STORE[i], y = 5 + n * 2, sel = n === P.ssel, bg = sel ? PICKC : CARD, have = P.apps.includes(i);
+    for (let x = 1; x < SW - 1; x++) S.put(x, y, 32, bg, bg);
     const right = P.stab === 1 ? '' : have ? ST.installed : `${kb >= 1024 ? `${(kb / 1024).toFixed(0)}MB` : `${kb}KB`} ${price ? `$${(price / 100).toFixed(2)}` : ST.free}`;
-    S.text(1, y, typed(appName(i), t - n * 0.04), sel ? WHITE : kb > EDGE_LIMIT_KB && !have ? DIM : INK, bg);
-    S.text(SW - right.length - 1, y, right, sel ? WHITE : DIM, bg);
-    if (sel && P.stab === 0) S.text(1, SH - 4, (ST.about as Record<string, string>)[id], DIM, LCD);
+    S.text(2, y, typed(appName(i), t - n * 0.04), kb > EDGE_LIMIT_KB && !have ? DIMS : TXT, bg);
+    S.text(SW - right.length - 2, y, right, have ? PINK : DIMS, bg);
+    if (sel && P.stab === 0) S.text(1, SH - 4, (ST.about as Record<string, string>)[id], DIMS, BG);
   });
   const J = P.radio.job;
   if (J?.what.startsWith('app:') && (J.state === 'connecting' || J.state === 'loading')) {
     const f = J.done / J.kb, n = Math.round(f * (SW - 16));
-    S.text(1, SH - 3, `${ST.downloading} [${'#'.repeat(n).padEnd(SW - 16, '.')}]`, HI, LCD);
-  } else if (P.storeNote) S.text(1, SH - 3, (ST.notes as Record<string, string>)[P.storeNote], BAD, LCD);
+    S.text(1, SH - 3, `${ST.downloading} [${'#'.repeat(n).padEnd(SW - 16, '.')}]`, PINK, BG);
+  } else if (P.storeNote) S.text(1, SH - 3, (ST.notes as Record<string, string>)[P.storeNote], BAD, BG);
   softKeys(S, P.stab === 1 || P.apps.includes(list[P.ssel]) ? ST.open : ST.get, T.back);
   void now;
 }
@@ -563,26 +538,23 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   }
   title(S, appName(P.appId).toUpperCase(), t);
   if (id === 'snake') {
-    const G = P.snake, x0 = 1, y0 = 3;
-    for (let y = -1; y <= SNAKE_H; y++) for (let x = -1; x <= SNAKE_W; x++) if (x < 0 || y < 0 || x === SNAKE_W || y === SNAKE_H) S.put(x0 + x, y0 + y, ch('#'), DIM, LCD);
-    S.put(x0 + G.food[0], y0 + G.food[1], ch('@'), HI, LCD);
-    G.body.forEach(([x, y], n) => S.put(x0 + x, y0 + y, n ? 32 : ch('O'), [120, 255, 150], n ? [60, 170, 80] : LCD));
-    S.text(1, 1, `${ST.score} ${G.score}  ${ST.best} ${G.best}`, HI, [16, 30, 40]);
-    if (G.over) { S.center(10, ` ${ST.gameOver} `, BAD, LCD); S.center(12, ` ${ST.again} `, DIM, LCD); }
+    // the green screen of the old phones, dark pixels on it
+    const G = P.snake, x0 = 1, y0 = 3, GR: C3 = [150, 178, 84], PX: C3 = [36, 48, 22];
+    paint(S, GR);
+    bar(S, `${ST.score} ${G.score}  ${ST.best} ${G.best}`, PX, [132, 160, 70]);
+    for (let y = -1; y <= SNAKE_H; y++) for (let x = -1; x <= SNAKE_W; x++) if (x < 0 || y < 0 || x === SNAKE_W || y === SNAKE_H) S.put(x0 + x, y0 + y, 32, PX, PX);
+    S.put(x0 + G.food[0], y0 + G.food[1], ch('o'), PX, GR);
+    G.body.forEach(([x, y], n) => S.put(x0 + x, y0 + y, n ? 32 : ch('@'), GR, n ? PX : GR));
+    if (G.over) { S.center(10, ` ${ST.gameOver} `, GR, PX); S.center(12, ` ${ST.again} `, PX, GR); }
     return softKeys(S, '', T.back);
   }
-  if (id === 'social') return wire(S, P, world, t);
+  if (id === 'social') {
+    const J = P.radio.job;
+    return drawWire(S, P, world, now, J?.what === 'social' && (J.state === 'connecting' || J.state === 'loading'));
+  }
   if (id === 'news') {
-    const J = P.radio.job, loading = J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading');
-    if (loading || world.time - P.newsAt > 3600) {
-      S.center(10, P.online() ? ST.newsWait : ST.newsNone, P.online() ? DIM : BAD, LCD);
-      return softKeys(S, '', T.back);
-    }
-    // the same headlines the city's news tickers run
-    const lines = tickerText(world).split(en.news.sep).filter(Boolean).flatMap((h) => [...wrap(h, SW - 3), '']);
-    const top = Math.min(P.scroll, Math.max(0, lines.length - (SH - 5)));
-    lines.slice(top, top + SH - 5).forEach((l, k) => S.text(1, 3 + k, typed(l, t - k * 0.03, 120), l ? INK : DIM, LCD));
-    return softKeys(S, A.wx.refresh, T.back);
+    const J = P.radio.job;
+    return newsApp(S, P, world, t, J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading'));
   }
   if (id === 'convert') {
     const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');
@@ -596,33 +568,6 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   S.center(10, (ST.about as Record<string, string>)[id], DIM, LCD);
   softKeys(S, '', T.back);
   void now;
-}
-
-/**
- * Streetwire: the posts as last downloaded, newest first: who and how long ago, the words (wrapped),
- * the likes and the place. The ages and likes follow the clock; the posts are those of the download.
- */
-function wire(S: Lcd, P: Phone, world: World, t: number) {
-  const J = P.radio.job, loading = J?.what === 'social' && (J.state === 'connecting' || J.state === 'loading');
-  if (!P.wire.length && (loading || P.wireAt < 0)) {
-    S.center(10, loading || P.online() ? SOCIAL.wait : SOCIAL.none, loading || P.online() ? DIM : BAD, LCD);
-    return softKeys(S, '', T.back);
-  }
-  if (!P.wire.length) { S.center(10, SOCIAL.empty, DIM, LCD); return softKeys(S, SOCIAL.refresh, T.back); }
-  const c = world.city, Pop = world.pop, rows: [string, C3][] = [];
-  for (let k = P.wire.length - 1; k >= 0; k--) {
-    const p = P.wire[k], age = postAge(world.time, p.time);
-    const name = citizenName(c, Pop, p.who);
-    rows.push([`${name.slice(0, SW - 4 - age.length)}${' '.repeat(Math.max(1, SW - 3 - name.length - age.length))}${age}`, HI]);
-    for (const l of wrap(postText(c, p), SW - 3)) rows.push([` ${l}`, INK]);
-    const place = districtName(c, districtAt(c, p.x, p.y));
-    rows.push([` ${SOCIAL.likes.replace('{n}', String(likes(Pop, p, world.time)))}  ${SOCIAL.at.replace('{place}', place)}`.slice(0, SW - 2), DIM]);
-    rows.push(['', DIM]);
-  }
-  const view = SH - 5, top = Math.min(P.scroll * 2, Math.max(0, rows.length - view));
-  rows.slice(top, top + view).forEach(([l, col], k) => S.text(1, 3 + k, typed(l, t - k * 0.02, 140), col, LCD));
-  if (loading) S.text(SW - 4, 1, '...', DIM, [16, 30, 40]);
-  softKeys(S, SOCIAL.refresh, T.back);
 }
 
 const WF = A.wifi;

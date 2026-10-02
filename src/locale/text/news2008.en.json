@@ -1,0 +1,1301 @@
+{
+ "hl2008": [
+  "4|#pre8##y.econ##post8#",
+  "3|#pre8##y.tech##post8#",
+  "2|#pre8##y.green##post8#",
+  "2|#pre8##y.culture##post8#",
+  "2|#pre8##y.science##post8#",
+  "2|#pre8##y.life##post8#",
+  "2|#pre8##y.world##post8#",
+  "2|#pre8##y.sports##post8#",
+  "2|#pre8##y.election##post8#",
+  "1|#pre8##y.local##post8#"
+ ],
+ "natbank": [
+  "BRAMWELL BROTHERS",
+  "VANTMOOR CAPITAL",
+  "STELLWOOD BANK",
+  "ORRIN FEDERAL",
+  "KESSBRIDGE SECURITIES",
+  "HALVANE MORTGAGE",
+  "TAMSWORTH INSURANCE",
+  "GARRICK PELL & CO.",
+  "CORDELL SAVINGS",
+  "NORTHGATE TRUST",
+  "ASHBY MUTUAL",
+  "WELLMERE FINANCIAL",
+  "PRESCOTT HOME LOANS",
+  "LINDQVIST & HART"
+ ],
+ "techco": [
+  "ARCADIA MICRO",
+  "VEXA SYSTEMS",
+  "LUMEN DEVICES",
+  "CORVANE",
+  "PELLUCID",
+  "QUILLON",
+  "NOVARI",
+  "BRISKWAVE",
+  "HALCYON SOFT",
+  "OPTERRA",
+  "ZEPHYRA",
+  "{maker}"
+ ],
+ "carco": [
+  "DELMONT MOTORS",
+  "ASHCROFT AUTO",
+  "VARGA MOTOR CO.",
+  "BRENTWOOD AUTOMOTIVE",
+  "CALLOWAY CARS",
+  "THE BIG THREE AUTOMAKERS"
+ ],
+ "retailco": [
+  "MEGAMART",
+  "VALUEWAY",
+  "SHOPLAND",
+  "HOMEPLUS DEPOT",
+  "BARGAIN BARN"
+ ],
+ "airline": [
+  "SKYWARD AIR",
+  "TRANSCONTINENTAL",
+  "BLUEHAVEN AIRLINES",
+  "MERIDIAN AIRWAYS",
+  "COASTAL JET"
+ ],
+ "socialnet": [
+  "PALSPACE",
+  "LINKUP",
+  "CHATTERBOX",
+  "FRIENDPAGE",
+  "STREETWIRE"
+ ],
+ "videosite": [
+  "CLIPSTREAM",
+  "VIDDLE",
+  "SHOWREEL"
+ ],
+ "searchco": [
+  "SEEKWELL",
+  "FINDLY",
+  "LOOKUPPER"
+ ],
+ "microblog": [
+  "CHIRPR",
+  "SQUAWK",
+  "BLURT"
+ ],
+ "console": [
+  "MOTION-CONTROL CONSOLE",
+  "NEW GAME CONSOLE",
+  "HANDHELD GAME SYSTEM",
+  "FITNESS BALANCE BOARD"
+ ],
+ "phoneT": [
+  "TOUCHSCREEN SMARTPHONE",
+  "SMARTPHONE",
+  "3G SMARTPHONE",
+  "CAMERA PHONE",
+  "QWERTY PHONE",
+  "FLIP PHONE"
+ ],
+ "gadget8": [
+  "NETBOOK",
+  "E-BOOK READER",
+  "BLU-LASER DISC PLAYER",
+  "GPS UNIT",
+  "FLAT SCREEN TV",
+  "DIGITAL PHOTO FRAME",
+  "POCKET VIDEO CAMERA",
+  "HD CAMCORDER",
+  "MP3 PLAYER",
+  "TOUCHSCREEN MUSIC PLAYER"
+ ],
+ "y.econ": [
+  "[mon9/mon10/mon11/mon12] #natbank# #bankFate#",
+  "[mon9/mon10/mon11/mon12] #natbank# #bankFate#",
+  "[mon3] #natbank# SOLD IN FIRE SALE",
+  "[mon9] WALL STREET #wsDay#",
+  "[mon9/mon10] MARKETS #mktMove# AS #natbank# #bankFate#",
+  "[mon10/mon11/mon12] STOCKS #mktMove# #mktReason#",
+  "DOW #mktMove# {o} POINTS",
+  "DOW #mktMove# {o}0 POINTS IN #wsDay2#",
+  "SUBPRIME #subprime#",
+  "FORECLOSURES #foreclose#",
+  "FORECLOSURE SIGNS #foreclose2# IN {district}",
+  "HOME PRICES #fall# FOR {nth} MONTH",
+  "MORTGAGE RATES #ratemove#",
+  "#natbank# #mortgage#",
+  "[mon10/mon11/mon12] CONGRESS #bailout#",
+  "[mon10/mon11/mon12] ${o}0 BILLION BAILOUT #bailout2#",
+  "[mon11/mon12] AUTOMAKERS ASK FOR #bailoutAsk#",
+  "[mon11/mon12] #carco# #carFate#",
+  "[mon5/mon6/mon7/mon8] GAS HITS $#gasPrice# A GALLON",
+  "[mon6/mon7] OIL TOPS $#oilPrice# A BARREL",
+  "[mon6/mon7/mon8] DRIVERS #gasReact#",
+  "[mon10/mon11/mon12] GAS PRICES FINALLY #fall#",
+  "SUV SALES #fall# AS GAS SOARS",
+  "[mon5/mon6/mon7] #airline# TO CHARGE FOR #airFee#",
+  "#airline# #airFate#",
+  "AIRFARES #rise# ON FUEL COSTS",
+  "[mon4/mon5/mon6/mon7] STIMULUS CHECKS #stimulus#",
+  "[mon5/mon6] FAMILIES PLAN TO #stimulusUse# WITH STIMULUS CHECKS",
+  "RICE PRICES #rise#, SHOPPERS STOCK UP",
+  "FOOD PRICES #rise# WORLDWIDE",
+  "BREAD AND MILK #rise# AGAIN",
+  "RECESSION #recession#",
+  "[mon11/mon12] ECONOMISTS: RECESSION BEGAN LAST YEAR",
+  "JOBLESS RATE #rise# TO {p}%",
+  "[mon11/mon12] HOLIDAY SALES #holidaySales#",
+  "[mon11] BLACK FRIDAY #blackFriday#",
+  "#retailco# #retailFate#",
+  "SHOPPERS #thrift# IN TOUGH TIMES",
+  "401(K) BALANCES #fall# {o}0%",
+  "CREDIT CRUNCH #crunch#",
+  "SMALL BUSINESSES #smallbiz# AS LOANS DRY UP",
+  "{city} BANKS #localbank#",
+  "DOLLAR #dollar#",
+  "GOLD #gold#",
+  "PAWN SHOPS #pawnBoom#",
+  "COUPON CLIPPING #comeback#",
+  "STAYCATIONS #comeback# AS BUDGETS TIGHTEN",
+  "HOMEOWNERS #underwater#",
+  "#natbank# CEO #ceoFate#",
+  "BANK RUN AT #natbank# BRANCHES",
+  "MONEY MARKET FUND #breaksBuck#"
+ ],
+ "bankFate": [
+  "FILES FOR BANKRUPTCY",
+  "COLLAPSES",
+  "TAKEN OVER BY GOVERNMENT",
+  "BOUGHT BY RIVAL",
+  "SEEKS EMERGENCY LOAN",
+  "CUTS {o}00 JOBS",
+  "POSTS RECORD LOSS",
+  "SHARES PLUNGE",
+  "RESCUED IN WEEKEND DEAL",
+  "WRITES DOWN BILLIONS"
+ ],
+ "wsDay": [
+  "IN TURMOIL",
+  "HAS WORST DAY SINCE 1987",
+  "REELS",
+  "BRACES FOR MORE",
+  "IN PANIC MODE",
+  "WATCHES IN SHOCK"
+ ],
+ "wsDay2": [
+  "WILD SESSION",
+  "ONE DAY",
+  "WORST WEEK IN YEARS",
+  "LATE SELLOFF",
+  "SURPRISE RALLY"
+ ],
+ "mktMove": [
+  "PLUNGE",
+  "TUMBLE",
+  "SOAR",
+  "SWING WILDLY",
+  "SLIDE",
+  "REBOUND",
+  "CRASH",
+  "RALLY"
+ ],
+ "mktReason": [
+  "ON BANK FEARS",
+  "ON BAILOUT HOPES",
+  "ON JOB LOSSES",
+  "AFTER RATE CUT",
+  "AS CREDIT FREEZES",
+  "ON RECESSION FEARS"
+ ],
+ "subprime": [
+  "CRISIS DEEPENS",
+  "LOSSES MOUNT",
+  "FALLOUT SPREADS",
+  "LENDERS CLOSE",
+  "WOES HIT {city}",
+  "MESS: WHAT IT MEANS FOR YOU"
+ ],
+ "foreclose": [
+  "HIT RECORD",
+  "DOUBLE",
+  "SPREAD TO SUBURBS",
+  "CLIMB {p}%",
+  "HIT {district}"
+ ],
+ "foreclose2": [
+  "MULTIPLY",
+  "GO UP",
+  "APPEAR ON EVERY BLOCK"
+ ],
+ "fall": [
+  "FALL",
+  "DROP",
+  "SLIDE",
+  "SINK",
+  "TUMBLE"
+ ],
+ "rise": [
+  "RISE",
+  "CLIMB",
+  "JUMP",
+  "SOAR",
+  "SPIKE"
+ ],
+ "ratemove": [
+  "JUMP",
+  "DIP",
+  "HIT LOW",
+  "SPIKE",
+  "HOLD"
+ ],
+ "mortgage": [
+  "FREEZES LOANS",
+  "OFFERS TO REWORK MORTGAGES",
+  "STOPS LENDING",
+  "SUED BY HOMEOWNERS",
+  "FACES PROBE"
+ ],
+ "bailout": [
+  "DEBATES BAILOUT",
+  "REJECTS BAILOUT",
+  "PASSES BAILOUT",
+  "SPLIT OVER RESCUE PLAN",
+  "RUSHES RESCUE BILL"
+ ],
+ "bailout2": [
+  "PASSES",
+  "FAILS IN HOUSE",
+  "SIGNED INTO LAW",
+  "STIRS ANGER",
+  "QUESTIONED BY TAXPAYERS"
+ ],
+ "bailoutAsk": [
+  "EMERGENCY LOANS",
+  "A LIFELINE",
+  "HELP IN CAPITAL"
+ ],
+ "carFate": [
+  "CUTS SHIFTS",
+  "CLOSES PLANT",
+  "SALES DROP {p}0%",
+  "SEEKS GOVERNMENT LOAN",
+  "BETS ON HYBRIDS",
+  "SCRAPS BIG SUV"
+ ],
+ "gasPrice": [
+  "3.99",
+  "4.00",
+  "4.11",
+  "4.25",
+  "3.89",
+  "4.05"
+ ],
+ "oilPrice": [
+  "100",
+  "120",
+  "130",
+  "140",
+  "145"
+ ],
+ "gasReact": [
+  "CUT BACK",
+  "CARPOOL",
+  "TAKE THE BUS",
+  "BUY SCOOTERS",
+  "SKIP ROAD TRIPS",
+  "TRADE IN SUVS"
+ ],
+ "airFee": [
+  "FIRST CHECKED BAG",
+  "PILLOWS",
+  "SODAS",
+  "SEAT SELECTION",
+  "BLANKETS"
+ ],
+ "airFate": [
+  "CUTS FLIGHTS",
+  "MERGES WITH RIVAL",
+  "GROUNDS OLD JETS",
+  "ADDS FUEL SURCHARGE",
+  "FILES FOR BANKRUPTCY"
+ ],
+ "stimulus": [
+  "IN THE MAIL",
+  "ARRIVE EARLY",
+  "DELAYED FOR SOME",
+  "SPENT ON GROCERIES",
+  "SAVED BY MOST"
+ ],
+ "stimulusUse": [
+  "PAY BILLS",
+  "BUY A FLAT SCREEN",
+  "SAVE",
+  "PAY RENT",
+  "FIX THE CAR"
+ ],
+ "recession": [
+  "FEARS GROW",
+  "OFFICIAL",
+  "HITS MAIN STREET",
+  "BITES IN {city}",
+  "TALK EVERYWHERE"
+ ],
+ "holidaySales": [
+  "WORST IN DECADES",
+  "SLUMP",
+  "DISAPPOINT",
+  "SAVED BY DEEP DISCOUNTS"
+ ],
+ "blackFriday": [
+  "CROWDS SMALLER",
+  "DOORBUSTERS DRAW LINES",
+  "DEALS DEEPER THAN EVER"
+ ],
+ "retailFate": [
+  "CLOSES {o} STORES",
+  "SLASHES PRICES",
+  "FILES FOR BANKRUPTCY",
+  "HOLDS LIQUIDATION SALE",
+  "GOES ALL IN ON BARGAINS"
+ ],
+ "thrift": [
+  "TURN TO THRIFT STORES",
+  "BUY STORE BRANDS",
+  "COOK AT HOME",
+  "SKIP EATING OUT",
+  "MEND OLD CLOTHES"
+ ],
+ "crunch": [
+  "TIGHTENS",
+  "HITS STUDENT LOANS",
+  "SQUEEZES SHOPS",
+  "FREEZES MARKETS"
+ ],
+ "smallbiz": [
+  "STRUGGLE",
+  "CUT HOURS",
+  "BAND TOGETHER",
+  "GET CREATIVE"
+ ],
+ "localbank": [
+  "SAY THEY ARE SAFE",
+  "SEE CUSTOMERS MOVE MONEY",
+  "RAISE DEPOSIT LIMITS",
+  "EXTEND HOURS FOR WORRIED CLIENTS"
+ ],
+ "dollar": [
+  "SINKS TO RECORD LOW",
+  "BOUNCES BACK",
+  "WEAKENS AGAINST EURO"
+ ],
+ "gold": [
+  "TOPS $1,000",
+  "SHINES AS STOCKS SINK",
+  "DRAWS NERVOUS BUYERS"
+ ],
+ "pawnBoom": [
+  "SEE BUSINESS BOOM",
+  "FULL OF FLAT SCREENS",
+  "BUSIER THAN EVER"
+ ],
+ "comeback": [
+  "MAKES A COMEBACK",
+  "IS BACK IN STYLE",
+  "SURGES"
+ ],
+ "underwater": [
+  "OWE MORE THAN HOMES ARE WORTH",
+  "WALK AWAY",
+  "SEEK HELP",
+  "FACE RESET RATES"
+ ],
+ "ceoFate": [
+  "RESIGNS",
+  "DEFENDS BONUS",
+  "GRILLED BY CONGRESS",
+  "APOLOGIZES"
+ ],
+ "breaksBuck": [
+  "BREAKS THE BUCK",
+  "FREEZES WITHDRAWALS"
+ ],
+ "y.tech": [
+  "[mon6/mon7] #techco# #phoneT# #phoneNews#",
+  "#techco# UNVEILS #phoneT#",
+  "LINES FORM FOR NEW #phoneT#",
+  "[mon7/mon8/mon9] APP STORE #appStore#",
+  "PHONE APPS #appNews#",
+  "#techco# OPENS ONLINE APP STORE",
+  "#phoneT# OWNERS #phoneOwners#",
+  "#gadget8# #gadgetSale#",
+  "#console# #consoleNews#",
+  "#socialnet# #socialNews#",
+  "#socialnet# PASSES #socialMillions# MILLION USERS",
+  "#videosite# #videoNews#",
+  "#microblog# #microblogNews#",
+  "#searchco# #searchNews#",
+  "BLOGS #blogNews#",
+  "CITIZEN JOURNALISTS #citizenNews#",
+  "OFFICE WORKERS #officeNet#",
+  "BLU-LASER DISC #formatWar#",
+  "HD DISC FORMAT #formatLose#",
+  "[mon9/mon10] #searchco# LAUNCHES WEB BROWSER",
+  "NETBOOKS #netbook#",
+  "FREE WI-FI #wifiNews#",
+  "TEXT MESSAGES #textNews#",
+  "TEENS SEND {o} TEXTS A DAY",
+  "PHONE BILL SHOCK: #billShock#",
+  "DIGITAL TV SWITCH #dtv#",
+  "DIGITAL CAMERAS #camNews#",
+  "ONLINE MUSIC STORE #musicStore#",
+  "VIRUS #virusNews#",
+  "SPAM EMAIL #spamNews#",
+  "PRIVATE ROCKET #rocket#",
+  "HOME COMPUTERS #pcNews#",
+  "{city} LIBRARY #libNet#",
+  "GRANDPARENTS #grandNet#",
+  "VIDEO GAME MUSIC GAMES #musicGame#",
+  "ONLINE VIDEO #onlineVideo#"
+ ],
+ "phoneNews": [
+  "SELLS OUT",
+  "DRAWS LINES AROUND THE BLOCK",
+  "GOES 3G",
+  "CUTS PRICE",
+  "GETS GPS",
+  "COPIED BY RIVALS",
+  "HAS NO KEYBOARD, CRITICS GRUMBLE"
+ ],
+ "appStore": [
+  "OPENS WITH {o}0 APPS",
+  "HITS {o} MILLION DOWNLOADS",
+  "MAKES TEEN A MILLIONAIRE",
+  "FILLS WITH GAMES",
+  "SPARKS GOLD RUSH"
+ ],
+ "appNews": [
+  "BOOM",
+  "TURN PHONES INTO FLASHLIGHTS",
+  "FIND NEAREST PIZZA",
+  "TEACH LANGUAGES",
+  "PLAY GAMES ON THE BUS"
+ ],
+ "phoneOwners": [
+  "CAN'T PUT THEM DOWN",
+  "TEXT WHILE WALKING",
+  "REPORT CRACKED SCREENS",
+  "DOWNLOAD APPS BY THE DOZEN"
+ ],
+ "gadgetSale": [
+  "SALES SOAR",
+  "PRICES DROP",
+  "TOP HOLIDAY LISTS",
+  "SELL OUT",
+  "BAFFLE PARENTS"
+ ],
+ "consoleNews": [
+  "SOLD OUT FOR HOLIDAYS",
+  "GETS GRANDMA BOWLING",
+  "USED IN NURSING HOMES",
+  "SETS SALES RECORD",
+  "BLAMED FOR SORE ARMS"
+ ],
+ "socialNews": [
+  "CRAZE SWEEPS OFFICES",
+  "BANNED AT WORK",
+  "REDESIGN ANGERS USERS",
+  "OVERTAKES RIVAL",
+  "GRANDPARENTS JOIN",
+  "PROFILES REVEAL TOO MUCH",
+  "USED TO ORGANIZE BLOCK PARTY"
+ ],
+ "socialMillions": [
+  "50",
+  "100",
+  "75",
+  "120",
+  "30"
+ ],
+ "videoNews": [
+  "CLIP OF #viralThing# GOES VIRAL",
+  "HITS BILLION VIEWS",
+  "MAKES STARS OF ORDINARY PEOPLE",
+  "SLOWS OFFICE NETWORKS"
+ ],
+ "viralThing": [
+  "SNEEZING PANDA",
+  "DANCING GRANDPA",
+  "SKATEBOARDING DOG",
+  "PIANO-PLAYING CAT",
+  "SINGING CAB DRIVER",
+  "BABY LAUGHING",
+  "SURPRISED CHIPMUNK",
+  "MAN UNBOXING GADGET"
+ ],
+ "microblogNews": [
+  "USERS POST WHAT THEY HAD FOR LUNCH",
+  "SPREADS NEWS FASTER THAN TV",
+  "CONFUSES EVERYONE OVER 40",
+  "GOES DOWN AGAIN"
+ ],
+ "searchNews": [
+  "MAPS SHOW YOUR STREET",
+  "BECOMES A VERB",
+  "ADDS STREET PHOTOS",
+  "LAUNCHES FREE EMAIL"
+ ],
+ "blogNews": [
+  "CHANGE THE NEWS",
+  "BEAT PAPERS TO STORY",
+  "GO MAINSTREAM",
+  "MAKE HOUSEWIVES FAMOUS"
+ ],
+ "citizenNews": [
+  "FILM STORM WITH PHONES",
+  "BREAK LOCAL STORY",
+  "POST PHOTOS FROM SCENE"
+ ],
+ "officeNet": [
+  "SPEND HOURS ON SOCIAL SITES",
+  "BLOCKED FROM VIDEO SITES",
+  "BUY GIFTS ONLINE AT LUNCH"
+ ],
+ "formatWar": [
+  "WINS FORMAT WAR",
+  "PLAYERS DROP IN PRICE",
+  "MOVIES FILL SHELVES"
+ ],
+ "formatLose": [
+  "CALLED OFF",
+  "OWNERS LEFT HANGING",
+  "PLAYERS SOLD FOR $50"
+ ],
+ "netbook": [
+  "TAKE OFF",
+  "SMALL, CHEAP AND EVERYWHERE",
+  "FLY OFF SHELVES"
+ ],
+ "wifiNews": [
+  "SPREADS TO CAFES",
+  "COMING TO PARKS",
+  "DRAWS LAPTOP CROWD TO DINERS"
+ ],
+ "textNews": [
+  "OUTNUMBER CALLS",
+  "COST 20 CENTS EACH",
+  "CHANGE HOW TEENS TALK"
+ ],
+ "billShock": [
+  "TEEN RUNS UP $1,000 IN TEXTS",
+  "DATA FEES SURPRISE USERS",
+  "ROAMING CHARGES STUN TRAVELERS"
+ ],
+ "dtv": [
+  "COMING NEXT YEAR",
+  "CONVERTER BOX COUPONS ON THE WAY",
+  "CONFUSES VIEWERS"
+ ],
+ "camNews": [
+  "KILL OFF FILM",
+  "GO 10 MEGAPIXELS",
+  "FLOOD PHOTO SITES"
+ ],
+ "musicStore": [
+  "SELLS BILLIONTH SONG",
+  "DROPS COPY PROTECTION",
+  "BEATS CD STORES"
+ ],
+ "virusNews": [
+  "HITS OFFICE COMPUTERS",
+  "SPREADS THROUGH EMAIL",
+  "TARGETS SOCIAL SITES"
+ ],
+ "spamNews": [
+  "MAKES UP 90% OF EMAIL",
+  "SPAMMER JAILED",
+  "FILTERS GET SMARTER"
+ ],
+ "rocket": [
+  "REACHES ORBIT FOR FIRST TIME",
+  "LAUNCH FAILS, TEAM VOWS RETRY",
+  "SPACE RACE GOES PRIVATE"
+ ],
+ "pcNews": [
+  "GET CHEAPER",
+  "NEW OPERATING SYSTEM PANNED",
+  "DESKTOPS LOSE TO LAPTOPS"
+ ],
+ "libNet": [
+  "COMPUTERS ALWAYS FULL",
+  "OFFERS INTERNET CLASSES",
+  "LINES FOR FREE WEB ACCESS"
+ ],
+ "grandNet": [
+  "JOIN SOCIAL SITES",
+  "LEARN TO TEXT",
+  "VIDEO CHAT WITH FAMILY"
+ ],
+ "musicGame": [
+  "TOP CHARTS",
+  "PLASTIC GUITARS SELL OUT",
+  "PARTIES GO KARAOKE"
+ ],
+ "onlineVideo": [
+  "THREATENS TV",
+  "STREAMS DEBATE",
+  "GOES HIGH DEFINITION"
+ ],
+ "y.green": [
+  "GOING GREEN #greenTrend#",
+  "REUSABLE BAGS #bags#",
+  "{city} #cityGreen#",
+  "CFL BULBS #cfl#",
+  "HYBRID CARS #hybrid#",
+  "CARBON FOOTPRINT #carbon#",
+  "{biz} GOES GREEN",
+  "BIKE COMMUTERS #bikeNews#",
+  "RECYCLING #recycle#",
+  "BOTTLED WATER #bottled#",
+  "SOLAR PANELS #solar#",
+  "EARTH HOUR: {city} #earthHour#",
+  "ETHANOL #ethanol#",
+  "COMMUNITY GARDENS #garden#",
+  "PLASTIC BAG #plasticBan#"
+ ],
+ "greenTrend": [
+  "GOES MAINSTREAM",
+  "SELLS EVERYTHING",
+  "HITS THE OFFICE",
+  "STARTS AT HOME"
+ ],
+ "bags": [
+  "CATCH ON",
+  "SOLD AT EVERY REGISTER",
+  "FORGOTTEN IN CARS"
+ ],
+ "cityGreen": [
+  "PLANTS {o}00 TREES",
+  "TRIES HYBRID BUSES",
+  "LAUNCHES RECYCLING DRIVE",
+  "ADDS BIKE LANES",
+  "SWITCHES TO LED STREET LIGHTS"
+ ],
+ "cfl": [
+  "REPLACE OLD BULBS",
+  "SAVE ON BILLS",
+  "SPLIT OPINION"
+ ],
+ "hybrid": [
+  "WAITING LISTS GROW",
+  "OUTSELL SUVS",
+  "GET TAX BREAKS"
+ ],
+ "carbon": [
+  "BECOMES BUZZWORD",
+  "CALCULATORS POP UP ONLINE"
+ ],
+ "bikeNews": [
+  "DOUBLE AS GAS SOARS",
+  "DEMAND MORE LANES"
+ ],
+ "recycle": [
+  "RATES UP {p}%",
+  "BINS OVERFLOW"
+ ],
+ "bottled": [
+  "SALES DIP AS TAP MAKES COMEBACK",
+  "BANNED AT CITY HALL"
+ ],
+ "solar": [
+  "APPEAR ON ROOFTOPS",
+  "PRICES FALL"
+ ],
+ "earthHour": [
+  "GOES DARK FOR ONE HOUR",
+  "SKYLINE SWITCHES OFF"
+ ],
+ "ethanol": [
+  "BLAMED FOR FOOD PRICES",
+  "PUMPS SPREAD"
+ ],
+ "garden": [
+  "SPRING UP IN EMPTY LOTS",
+  "WAITING LISTS GROW"
+ ],
+ "plasticBan": [
+  "FEE DEBATED",
+  "BAN PROPOSED"
+ ],
+ "y.culture": [
+  "SUPERHERO MOVIE #boxOffice#",
+  "'#film8#' #boxOffice#",
+  "VAMPIRE ROMANCE NOVEL #vampire#",
+  "WRITERS' STRIKE #strike#",
+  "TV SHOWS #tvNews#",
+  "REALITY TV #reality#",
+  "TALENT SHOW #talent#",
+  "TEEN MUSICAL #musical#",
+  "SPY THRILLER #boxOffice#",
+  "ANIMATED ROBOT FILM #boxOffice#",
+  "MUSIC SALES #musicSales#",
+  "VINYL RECORDS #vinyl#",
+  "CELEBRITY GOSSIP #gossip#",
+  "SKINNY JEANS #fashion#",
+  "EMO KIDS #emo#",
+  "OSCARS #oscars#",
+  "BEST SELLER: #bookTitle#",
+  "COMIC BOOK MOVIES #comicMovies#",
+  "SITCOM FINALE #finale#",
+  "LATE NIGHT TV #lateNight#"
+ ],
+ "film8": [
+  "THE DARK GUARDIAN",
+  "IRON SUIT",
+  "THE CRYSTAL IDOL",
+  "THE ROBOT AND THE TRASH PLANET",
+  "KUNG FU BEAR",
+  "SUMMER OF THE ISLAND SONG",
+  "THE CURIOUS LIFE OF HENRY",
+  "STREET RACE 4",
+  "THE GREEN GIANT RETURNS"
+ ],
+ "boxOffice": [
+  "BREAKS RECORDS",
+  "TOPS BOX OFFICE",
+  "SELLS OUT MIDNIGHT SHOWS",
+  "DRAWS LINES AROUND {biz}",
+  "IS SUMMER'S BIGGEST HIT",
+  "MAKES $#money# MILLION"
+ ],
+ "money": [
+  "150",
+  "200",
+  "300",
+  "500",
+  "75"
+ ],
+ "vampire": [
+  "HAS TEENS LINING UP",
+  "TOPS LISTS",
+  "HEADS TO BIG SCREEN",
+  "SPARKS FAN CRAZE"
+ ],
+ "strike": [
+  "ENDS",
+  "HALTS TV SHOWS",
+  "LEAVES RERUNS",
+  "DRAGS ON"
+ ],
+ "tvNews": [
+  "RETURN AFTER STRIKE",
+  "MOVE ONLINE",
+  "GO HD"
+ ],
+ "reality": [
+  "RATINGS SOAR",
+  "STARS GET OWN SHOWS",
+  "EVERYWHERE YOU LOOK"
+ ],
+ "talent": [
+  "CROWNS SINGING JANITOR",
+  "FINALE DRAWS MILLIONS",
+  "AUDITIONS COME TO {city}"
+ ],
+ "musical": [
+  "SOUNDTRACK TOPS CHARTS",
+  "TOUR SELLS OUT",
+  "SEQUEL ON THE WAY"
+ ],
+ "musicSales": [
+  "CDS SLUMP",
+  "DOWNLOADS SOAR",
+  "RINGTONES MAKE MILLIONS"
+ ],
+ "vinyl": [
+  "MAKE A COMEBACK",
+  "SALES DOUBLE"
+ ],
+ "gossip": [
+  "BLOGS RULE",
+  "MAGAZINES FLY OFF RACKS"
+ ],
+ "fashion": [
+  "EVERYWHERE",
+  "PUZZLE PARENTS",
+  "SPOTTED ON {road}"
+ ],
+ "emo": [
+  "SIDE BANGS SPREAD",
+  "PUZZLE PARENTS"
+ ],
+ "oscars": [
+  "GO TO GRITTY WESTERN",
+  "FIRST-TIME WINNERS SHINE",
+  "RATINGS DIP"
+ ],
+ "bookTitle": [
+  "'THE MIDNIGHT ORCHARD'",
+  "'A THOUSAND KITES'",
+  "'THE SECRET RECIPE'",
+  "'ONE YEAR ON THE ROAD'",
+  "'LESSONS FROM A LIFE'"
+ ],
+ "comicMovies": [
+  "RULE SUMMER",
+  "GET DARKER",
+  "MAKE BILLIONS"
+ ],
+ "finale": [
+  "DRAWS MILLIONS",
+  "LEAVES FANS CRYING",
+  "DIVIDES VIEWERS"
+ ],
+ "lateNight": [
+  "HOSTS RETURN",
+  "RATINGS WAR"
+ ],
+ "y.science": [
+  "[mon9/mon10] PARTICLE COLLIDER #collider#",
+  "MARS LANDER #mars#",
+  "SPACE STATION #iss#",
+  "SCIENTISTS #sciFind#",
+  "NEW #species# SPECIES FOUND",
+  "COMET #comet#",
+  "ECLIPSE #eclipse#",
+  "ARCTIC ICE #arctic#",
+  "DOCTORS #medNews#",
+  "STEM CELL #stemcell#",
+  "GENOME TEST #genome#",
+  "[mon2] TOTAL LUNAR ECLIPSE TONIGHT",
+  "[mon8] PERSEID METEOR SHOWER PEAKS",
+  "[mon12] GEMINID METEOR SHOWER THIS WEEK"
+ ],
+ "collider": [
+  "SWITCHED ON",
+  "WORLD DOES NOT END",
+  "BREAKS DOWN, REPAIRS TAKE MONTHS",
+  "SPARKS DOOMSDAY RUMORS",
+  "FIRES FIRST BEAM"
+ ],
+ "mars": [
+  "FINDS WATER ICE",
+  "TOUCHES DOWN SAFELY",
+  "SENDS FIRST PHOTOS",
+  "GOES QUIET FOR WINTER"
+ ],
+ "iss": [
+  "GETS NEW LAB",
+  "CREW RETURNS",
+  "VISIBLE OVER {city} TONIGHT"
+ ],
+ "sciFind": [
+  "MAKE LIGHT INVISIBLE CLOAK",
+  "CLONE PUPPY",
+  "MAP NEANDERTHAL GENES",
+  "FIND EARTH-LIKE PLANETS"
+ ],
+ "species": [
+  "FROG",
+  "BEETLE",
+  "ORCHID",
+  "DEEP SEA FISH",
+  "MONKEY",
+  "LIZARD"
+ ],
+ "comet": [
+  "VISIBLE TO NAKED EYE",
+  "FLARES BRIGHT"
+ ],
+ "eclipse": [
+  "DARKENS SKY",
+  "WATCHED FROM ROOFTOPS"
+ ],
+ "arctic": [
+  "SHRINKS TO NEAR RECORD",
+  "OPENS NORTHWEST PASSAGE"
+ ],
+ "medNews": [
+  "URGE FLU SHOTS",
+  "WARN ABOUT HEAT",
+  "TEST NEW VACCINE"
+ ],
+ "stemcell": [
+  "BREAKTHROUGH",
+  "DEBATE CONTINUES"
+ ],
+ "genome": [
+  "COMES TO MALL",
+  "PRICE DROPS"
+ ],
+ "y.life": [
+  "TOMATO SCARE #tomato#",
+  "TOY RECALL #toyRecall#",
+  "PEANUT BUTTER RECALL #recall#",
+  "PET FOOD RECALL #recall#",
+  "STAYCATIONS #staycation#",
+  "FAMILIES #family8#",
+  "TEENS #teens8#",
+  "OFFICE WORKERS #office8#",
+  "COMMUTERS #commute8#",
+  "GROCERY BILLS #grocery8#",
+  "HOME COOKING #cooking#",
+  "DINERS #diner8#",
+  "COUPLES #couples#",
+  "GRADUATES #grads#",
+  "RETIREES #retirees#",
+  "PAY PHONES #payphones#",
+  "VIDEO RENTAL STORES #videoRent#",
+  "NEWSPAPERS #papers#",
+  "PHOTO BOOTHS #booths#"
+ ],
+ "tomato": [
+  "EMPTIES SALAD BARS",
+  "LIFTED",
+  "HITS SALSA SALES"
+ ],
+ "toyRecall": [
+  "WIDENS",
+  "OVER LEAD PAINT",
+  "WORRIES PARENTS"
+ ],
+ "recall": [
+  "EXPANDS",
+  "ENDS",
+  "CHECK YOUR PANTRY"
+ ],
+ "staycation": [
+  "ARE IN",
+  "FILL CITY PARKS",
+  "BOOST LOCAL MUSEUMS"
+ ],
+ "family8": [
+  "EAT AT HOME MORE",
+  "SKIP VACATIONS",
+  "MOVE IN WITH PARENTS",
+  "SHARE ONE CAR"
+ ],
+ "teens8": [
+  "TEXT AT DINNER TABLE",
+  "LIVE ON SOCIAL SITES",
+  "WANT PHONES FOR BIRTHDAY",
+  "LEARN GUITAR FROM VIDEO GAME"
+ ],
+ "office8": [
+  "WORK FROM HOME",
+  "BRING LUNCH",
+  "FEAR LAYOFFS",
+  "BLOCKED FROM VIDEO SITES"
+ ],
+ "commute8": [
+  "SWITCH TO BUSES",
+  "CARPOOL",
+  "BIKE IN SUITS"
+ ],
+ "grocery8": [
+  "UP {p}0% IN A YEAR",
+  "SQUEEZE FAMILIES"
+ ],
+ "cooking": [
+  "COMES BACK",
+  "SAVES MONEY"
+ ],
+ "diner8": [
+  "SEE MORE REGULARS",
+  "ADD RECESSION SPECIALS"
+ ],
+ "couples": [
+  "DELAY WEDDINGS",
+  "TRIM WEDDING BUDGETS"
+ ],
+ "grads": [
+  "FACE TOUGH JOB MARKET",
+  "MOVE BACK HOME"
+ ],
+ "retirees": [
+  "WATCH SAVINGS SHRINK",
+  "GO BACK TO WORK"
+ ],
+ "payphones": [
+  "DISAPPEARING",
+  "STILL USED BY {o} A DAY"
+ ],
+ "videoRent": [
+  "CLOSE AS MAIL RENTALS GROW",
+  "FIGHT BACK WITH KIOSKS"
+ ],
+ "papers": [
+  "CUT PAGES",
+  "GO ONLINE",
+  "LOSE READERS"
+ ],
+ "booths": [
+  "MAKE A COMEBACK",
+  "HIT WITH TEENS"
+ ],
+ "y.world": [
+  "[mon8] SUMMER OLYMPICS OPEN WITH #ceremony#",
+  "[mon8] OLYMPIC SWIMMER WINS #golds# GOLDS",
+  "[mon8] SPRINTER #sprinter#",
+  "[mon8] HOST NATION #hostNation#",
+  "[mon8] OLYMPIC TORCH #torch#",
+  "[mon3/mon4] OLYMPIC TORCH RELAY #torchRelay#",
+  "[mon6] EURO SOCCER CUP #euro#",
+  "OIL NATIONS #opec#",
+  "FOOD RIOTS #foodWorld#",
+  "WORLD MARKETS #mktMove#",
+  "[mon10/mon11/mon12] GLOBAL BANKS #globalBank#",
+  "SUMMIT ON #summit#",
+  "[mon7] HEAT WAVE ACROSS EUROPE",
+  "HURRICANE #hurricane#",
+  "[mon8/mon9] HURRICANE #hurricane#",
+  "EARTHQUAKE #quake#",
+  "PIRATES #pirates#"
+ ],
+ "ceremony": [
+  "DAZZLING SHOW",
+  "{o}000 DRUMMERS",
+  "FIREWORKS SPECTACLE"
+ ],
+ "golds": [
+  "EIGHT",
+  "RECORD"
+ ],
+ "sprinter": [
+  "SETS WORLD RECORD",
+  "CELEBRATES BEFORE FINISH LINE",
+  "BECOMES FASTEST MAN ALIVE"
+ ],
+ "hostNation": [
+  "TOPS GOLD MEDAL COUNT",
+  "WOWS WORLD"
+ ],
+ "torch": [
+  "LIT IN STADIUM",
+  "PASSES {city}-BORN ATHLETE"
+ ],
+ "torchRelay": [
+  "MEETS PROTESTS",
+  "CROSSES OCEAN"
+ ],
+ "euro": [
+  "CROWNS NEW CHAMPION",
+  "FINAL DRAWS MILLIONS"
+ ],
+ "opec": [
+  "CUT OUTPUT",
+  "MEET AS PRICES FALL"
+ ],
+ "foodWorld": [
+  "OVER RICE PRICES",
+  "SPREAD"
+ ],
+ "globalBank": [
+  "CUT RATES TOGETHER",
+  "SHAKEN"
+ ],
+ "summit": [
+  "CLIMATE",
+  "FOOD CRISIS",
+  "WORLD ECONOMY"
+ ],
+ "hurricane": [
+  "SLAMS GULF COAST",
+  "FORCES EVACUATIONS",
+  "SPARES CITY",
+  "KNOCKS OUT POWER FOR MILLIONS"
+ ],
+ "quake": [
+  "STRIKES OVERSEAS, AID FLOWS",
+  "RATTLES WEST COAST"
+ ],
+ "pirates": [
+  "SEIZE OIL TANKER",
+  "TROUBLE SHIPPING LANES"
+ ],
+ "y.sports": [
+  "[mon2] UNDERDOGS #superbowl#",
+  "[mon10/mon11] WORLD SERIES #series#",
+  "[mon6] BASKETBALL FINALS #finals#",
+  "[mon4] MARATHON #marathon#",
+  "BASEBALL #baseball8#",
+  "OLD STADIUM #stadium#",
+  "[mon6] GOLF OPEN #golf#",
+  "[mon7] TOUR DE FRANCE #tour#",
+  "TENNIS FINAL #tennis#",
+  "[mon3] COLLEGE HOOPS MADNESS #madness#"
+ ],
+ "superbowl": [
+  "STUN UNBEATEN TEAM IN BIG GAME",
+  "WIN IT ALL WITH LATE CATCH"
+ ],
+ "series": [
+  "GOES TO GAME 5",
+  "WON IN RAIN DELAY",
+  "FANS CELEBRATE IN STREETS"
+ ],
+ "finals": [
+  "RIVALRY RENEWED",
+  "CHAMPIONS CROWNED"
+ ],
+ "marathon": [
+  "SETS COURSE RECORD",
+  "DRAWS {o}000 RUNNERS"
+ ],
+ "baseball8": [
+  "STEROID REPORT SHAKES GAME",
+  "INSTANT REPLAY ARRIVES",
+  "TICKET PRICES SOAR"
+ ],
+ "stadium": [
+  "PLAYS FINAL GAME",
+  "TO BE TORN DOWN",
+  "FANS TAKE HOME SEATS"
+ ],
+ "golf": [
+  "WON IN PLAYOFF ON BAD KNEE",
+  "GOES EXTRA HOLES"
+ ],
+ "tour": [
+  "CLOUDED BY DOPING",
+  "NEW CHAMPION"
+ ],
+ "tennis": [
+  "LONGEST FINAL EVER",
+  "ENDS IN DARKNESS"
+ ],
+ "madness": [
+  "BRACKETS BUSTED",
+  "UPSETS GALORE"
+ ],
+ "y.election": [
+  "[mon1/mon2/mon3/mon4/mon5/mon6] PRIMARY #primary#",
+  "[mon8/mon9] CONVENTION #convention#",
+  "[mon9/mon10] DEBATE #debate#",
+  "[mon10/mon11] VOTER REGISTRATION #register#",
+  "[mon11] HISTORIC ELECTION #historic#",
+  "[mon11] TURNOUT #turnout#",
+  "[mon11/mon12] NEW PRESIDENT #president#",
+  "YOUNG VOTERS #young#",
+  "CAMPAIGN #campaign#",
+  "ONLINE DONATIONS #donations#",
+  "LATE NIGHT TV SPOOFS #spoof#",
+  "[mon11] {city} POLLS #polls#"
+ ],
+ "primary": [
+  "RACE TIGHTENS",
+  "GOES TO THE WIRE",
+  "DRAWS RECORD TURNOUT",
+  "SURPRISE WIN"
+ ],
+ "convention": [
+  "DRAWS MILLIONS OF VIEWERS",
+  "SPEECH STIRS CROWD",
+  "BALLOONS DROP"
+ ],
+ "debate": [
+  "DRAWS RECORD AUDIENCE",
+  "FOCUSES ON ECONOMY",
+  "TOWN HALL STYLE"
+ ],
+ "register": [
+  "SHATTERS RECORDS",
+  "LINES AT CITY HALL"
+ ],
+ "historic": [
+  "MAKES HISTORY",
+  "CROWDS FILL STREETS",
+  "FIRST OF ITS KIND"
+ ],
+ "turnout": [
+  "HIGHEST IN DECADES",
+  "LINES AROUND THE BLOCK"
+ ],
+ "president": [
+  "PICKS CABINET",
+  "PROMISES CHANGE",
+  "TO TAKE OFFICE IN JANUARY"
+ ],
+ "young": [
+  "TURN OUT IN FORCE",
+  "ORGANIZE ONLINE"
+ ],
+ "campaign": [
+  "GOES ONLINE",
+  "SPENDS RECORD SUMS",
+  "TEXTS SUPPORTERS"
+ ],
+ "donations": [
+  "BREAK RECORDS",
+  "SMALL GIFTS ADD UP"
+ ],
+ "spoof": [
+  "CANDIDATES",
+  "BOOST RATINGS"
+ ],
+ "polls": [
+  "OPEN EARLY",
+  "STAY OPEN LATE",
+  "LONG LINES IN {district}"
+ ],
+ "y.local": [
+  "{district} #local8#",
+  "{biz} #localBiz8#",
+  "{city} #cityLocal8#"
+ ],
+ "local8": [
+  "FAMILIES FEEL THE CRUNCH",
+  "GETS FREE WI-FI",
+  "FORECLOSURES CLIMB",
+  "BIKE SHOPS BOOM",
+  "GARDENS SPROUT IN EMPTY LOTS",
+  "CELEBRATES ELECTION NIGHT",
+  "WATCHES OLYMPICS AT BARS"
+ ],
+ "localBiz8": [
+  "HOLDS 'RECESSION SPECIAL'",
+  "ADDS FREE WI-FI",
+  "SELLS OUT OF REUSABLE BAGS",
+  "HOSTS DEBATE WATCH PARTY",
+  "OFFERS STIMULUS CHECK DISCOUNT",
+  "STAYS OPEN DESPITE CRUNCH"
+ ],
+ "cityLocal8": [
+  "GAS STATIONS RUN DRY",
+  "TO BUY HYBRID TAXIS",
+  "OPENS JOB CENTER",
+  "SEES STAYCATION BOOM",
+  "UNEMPLOYMENT AT {p}%"
+ ],
+ "pre8": [
+  "10|",
+  "UPDATE: ",
+  "BREAKING: ",
+  "{city}: ",
+  "ANALYSIS: ",
+  "OPINION: ",
+  "LOCAL VIEW: ",
+  "SPECIAL REPORT: ",
+  "WEEKEND: ",
+  "EXCLUSIVE: ",
+  "FROM THE WIRE: ",
+  "IN DEPTH: ",
+  "YOUR MONEY: ",
+  "TECH: ",
+  "LATE EDITION: "
+ ],
+ "post8": [
+  "12|",
+  " - EXPERTS",
+  " - REPORT",
+  " - POLL",
+  ", SOURCES SAY",
+  " AS {district} WATCHES",
+  " - DETAILS INSIDE",
+  " (PHOTOS)",
+  " - LIVE UPDATES",
+  " - WHAT IT MEANS FOR YOU",
+  " - READERS REACT"
+ ]
+}

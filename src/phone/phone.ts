@@ -11,12 +11,16 @@ import { Wifi } from './wifi';
 import { Editor } from './textinput';
 import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
+import { smsText } from '../locale/sms';
 import en from '../locale/en.json';
 import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { hash3 } from '../core/rng';
+import { calendar as calendarOf } from '../sim/clock';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
 import { type Post } from '../sim/social';
+import { newWire, wireKey } from './wire';
+import { calKey, newCal } from './calendar';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -33,12 +37,12 @@ import { type Post } from '../sim/social';
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
-export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'web' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
+export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'calendar' | 'clock' | 'calc' | 'notes' | 'weather' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /** The menu: a 3x4 grid of apps, picked with the arrows or the key in the same place on the keypad. */
-export const APPS: App[] = ['map', 'calls', 'contacts', 'messages', 'camera', 'web', 'clock', 'calc', 'notes', 'weather', 'store', 'settings'];
+export const APPS: App[] = ['map', 'calls', 'contacts', 'messages', 'camera', 'calendar', 'clock', 'calc', 'notes', 'weather', 'store', 'settings'];
 export const GRID_KEYS: Key[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
 export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
@@ -151,6 +155,12 @@ export class Phone {
   /** Streetwire: the posts as last downloaded (newest last), when, and the newest post id seen then. */
   wire: Post[] = [];
   wireAt = -1e9;
+  /** Streetwire's pages: the feed, a post, a profile; what was liked. */
+  readonly wst = newWire();
+  /** The calendar: the month and day in view, the page, the player's reminders. */
+  readonly cal = newCal();
+  /** Renders the city from a point (main hands it): the photos on Streetwire's posts. */
+  shoot: ((g: CharGrid, x: number, y: number, yaw: number) => void) | null = null;
   private wireId = -1;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
@@ -246,7 +256,14 @@ export class Phone {
 
   update(dt: number, now: number) {
     this.raise += ((this.out ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
-    this.lift += ((this.out && TYPING.includes(this.screen) ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
+    const typing = TYPING.includes(this.screen) || (this.screen === 'calendar' && this.cal.view === 'new');
+    this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
+    // reminders whose time has come ring, with a note in the inbox
+    for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
+      r.done = true;
+      this.incoming.push({ from: en.phone.cal.from, text: en.phone.cal.alarm.replace('{text}', r.text), at: now });
+      if (this.prefs.profile === 0) this.cue = 'ring'; else if (this.prefs.profile === 1) this.buzz(now, 1.6);
+    }
     if (this.screen === 'boot' && now - this.since > BOOT_S) this.open('standby', now);
     // the GPS runs while the map is open, in the hand or not
     this.gps.update(this.world, this.screen === 'map' || this.screen === 'places' || (this.screen === 'code' && this.code === 'gps'), now, dt);
@@ -276,7 +293,7 @@ export class Phone {
         if (this.oddHour >= 0) {
           if (h(0x11c) < 0.16) this.wrongAt = now + h(0x11e) * 90;
           const i = h(0x11d) < 0.12 ? this.somebody(h(0x11f)) : -1;
-          if (i >= 0) { this.wrongSms.add(i); this.receive(this.world.pop.mobile[i], SMS.wrong[Math.floor(h(0x120) * SMS.wrong.length)], now + 5 + h(0x121) * 80); }
+          if (i >= 0) { this.wrongSms.add(i); this.receive(this.world.pop.mobile[i], smsText(this.world, 'wrong', i, h(0x120)), now + 5 + h(0x121) * 80); }
         }
         this.oddHour = hr;
       }
@@ -329,6 +346,7 @@ export class Phone {
     if (J?.what === 'news' && J.state === 'done') { this.newsAt = this.world.time; this.radio.job = null; }
     if (J?.what === 'social' && J.state === 'done') {
       this.wire = this.world.feed.posts.slice(-WIRE_POSTS); this.wireAt = this.world.time; this.wireId = this.world.feed.next - 1; this.radio.job = null; this.scroll = 0;
+      if (this.wst.view === 'feed') this.wst.sel = 0;
     }
     if (this.screen === 'app' && STORE[this.appId][0] === 'snake' && this.snake.update(now)) this.sfx.push(['beep']);
     // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
@@ -345,6 +363,7 @@ export class Phone {
     if (s === 'compose') this.smsEd.set(this.draft.text);
     if (s === 'contact') this.nameEd.set(this.edit.name);
     if (s === 'map') this.panX = this.panY = 0;
+    if (s === 'calendar') { const c = calendarOf(this.world.time); this.cal.y = c.year; this.cal.m = c.month; this.cal.d = c.day; this.cal.view = 'month'; }
   }
 
   /** The next key of a code dialing itself, when its time has come. */
@@ -610,6 +629,11 @@ export class Phone {
         if (/^[0-9#]$/.test(k) && E.number.length < 16) { E.number += k; return true; }
         return false;
       }
+      case 'calendar': {
+        const r = calKey(this, this.world, k, now);
+        if (r === 'menu') { this.open('menu', now); return true; }
+        return r;
+      }
       case 'clock':
         if (k === 'ok' || k === 'lsoft') { if (this.swAt >= 0) { this.swAcc += now - this.swAt; this.swAt = -1; } else this.swAt = now; return true; }
         if (k === '*') { this.swAcc = 0; if (this.swAt >= 0) this.swAt = now; return true; }
@@ -707,7 +731,7 @@ export class Phone {
     const id = STORE[i][0];
     if (id === 'snake') this.snake.reset(now);
     if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
-    if (id === 'social' && this.online()) this.fetchWire(now);
+    if (id === 'social') { this.wst.view = 'feed'; if (this.online()) this.fetchWire(now); }
   }
 
   /** Download what is new on the wire: a little for the page, and each post since the last time. */
@@ -719,6 +743,10 @@ export class Phone {
   /** The keys of the app open. */
   private appKey(k: Key, now: number): boolean {
     const id = STORE[this.appId][0];
+    // Streetwire's own pages first (Back on a post or a profile goes back a page)
+    if (id === 'social' && (k !== 'rsoft' || this.wst.view !== 'feed')) {
+      return wireKey(this, k, now, () => { if (this.online()) { this.fetchWire(now); this.since = now; } });
+    }
     if (k === 'rsoft') { this.stab = 1; this.open('store', now); return true; }
     if (id === 'snake') {
       const S = this.snake;
@@ -726,10 +754,6 @@ export class Phone {
       const d: Record<string, [number, number]> = { up: [0, -1], '2': [0, -1], down: [0, 1], '8': [0, 1], left: [-1, 0], '4': [-1, 0], right: [1, 0], '6': [1, 0] };
       if (d[k]) { S.steer(...d[k]); return true; }
       return false;
-    }
-    if (id === 'social') {
-      if ((k === 'ok' || k === 'lsoft') && this.online()) { this.fetchWire(now); this.since = now; return true; }
-      return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false;
     }
     if (id === 'news') { if ((k === 'ok' || k === 'lsoft') && this.online()) { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; } return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false; }
     if (id === 'convert') {
@@ -772,14 +796,14 @@ export class Phone {
     else if (c.kind === 'self') this.receive(D.to, D.text, now + 3);
     else if (c.kind === 'biz' && h(1) < 0.6) {
       const b = this.world.city.businesses[c.k], [o, z] = BIZ_HOURS[b.kind] ?? [9, 17], hh = (x: number) => `${((x + 11) % 12) + 1}${x % 24 < 12 ? 'am' : 'pm'}`;
-      const t = SMS.biz[Math.floor(h(2) * SMS.biz.length)].replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
+      const t = smsText(this.world, 'biz', -1, h(2)).replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
       this.receive(D.to, t, now + 8 + h(3) * 20);
-    } else if (c.kind === 'cell' && this.wrongSms.has(c.i)) this.receive(D.to, SMS.oops[Math.floor(h(2) * SMS.oops.length)], now + 10 + h(3) * 30);
+    } else if (c.kind === 'cell' && this.wrongSms.has(c.i)) this.receive(D.to, smsText(this.world, 'oops', c.i, h(2)), now + 10 + h(3) * 30);
     else if (c.kind === 'home') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5); // a landline takes no texts
     else if (c.kind === 'cell' && h(1) < 0.25 + 0.5 * (this.world.pop.talk[c.i] / 255)) {
       // the owner reads it when awake, and maybe answers
       const asleep = whereIs(this.world.pop, this.world.city, c.i, this.world.time).doing === Doing.Asleep;
-      this.receive(D.to, SMS.res[Math.floor(h(2) * SMS.res.length)], now + (asleep ? 240 : 15) + h(3) * 40);
+      this.receive(D.to, smsText(this.world, 'res', c.i, h(2)), now + (asleep ? 240 : 15) + h(3) * 40);
     }
     return true;
   }

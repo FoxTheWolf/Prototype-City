@@ -1,0 +1,14 @@
+{
+  "cal.cinema": ["Premiere: '#calFilm#' at {biz}", "{biz}: double feature, '#calFilm#' and '#calFilm#'", "{biz}: midnight showing of '#calFilm#'", "{biz}: classic night, '#calFilm#'", "{biz}: kids' matinee, '#calFilm#'"],
+  "cal.bar": ["{biz}: live #genre# tonight", "{biz}: trivia night", "{biz}: karaoke night", "{biz}: open mic", "{biz}: #genre# band from out of town", "{biz}: pool tournament", "{biz}: game night on the big screen"],
+  "cal.diner": ["{biz}: #dish# special all day", "{biz}: pie night, half price", "{biz}: free coffee before 7am", "{biz}: anniversary breakfast"],
+  "cal.cafe": ["{biz}: poetry reading", "{biz}: acoustic set", "{biz}: new roast tasting", "{biz}: book club meets"],
+  "cal.shop": ["{biz}: #pct#% off sale", "{biz}: grand reopening", "{biz}: clearance weekend", "{biz}: buy one get one", "{biz}: sidewalk sale", "{biz}: early bird specials"],
+  "cal.hotel": ["{biz}: ballroom dance night", "{biz}: jazz brunch", "{biz}: wedding fair"],
+  "cal.books": ["{biz}: author signing", "{biz}: kids' story hour", "{biz}: used book sale"],
+  "cal.city": ["Street fair in {district}", "Farmers market in {district}", "Block party on {road}", "Free concert at {landmark}", "Parade down {road}", "Flea market in {district}", "Movie night in the park, {district}", "5K fun run through {district}", "Community clean-up, {district}", "Blood drive at {landmark}", "Chili cook-off in {district}", "Lantern walk at {landmark}", "Art walk in {district}", "Library book sale, {district}", "Bike to work day", "Free museum day", "City council meeting", "Recycling drive, {district}", "Swap meet in {district}", "Night market on {road}"],
+  "calFilm": ["#filmA# #filmB#", "The #filmB# of #filmC#", "#filmC# #filmD#", "#filmB# #filmE#", "#filmA# #filmB# II"],
+  "genre": ["jazz", "blues", "rock", "folk", "soul", "swing", "country", "salsa", "punk", "bluegrass"],
+  "dish": ["meatloaf", "pot roast", "fish fry", "chicken and waffles", "chili", "pancake", "pierogi", "corned beef"],
+  "pct": ["10", "15", "20", "25", "30", "40", "50"]
+}

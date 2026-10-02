@@ -751,17 +751,30 @@
       "welcome": "Welcome to {op}! Dial *100# for your balance and data bundles.",
       "lowData": "You have less than 500 KB of data left. Dial *100# to buy a bundle.",
       "noData": "Your data bundle is used up. Dial *100# to buy a new one.",
-      "failed": "Your message to {to} could not be delivered.",
-      "biz": ["Thanks for your message! Please call us at {num}.", "We got your message. Our hours are {open} to {close}.", "Thank you for contacting {biz}. We will reply soon."],
-      "res": ["Who is this?", "Sorry, I think you have the wrong number.", "Hi! Who's this?", "Do I know you?", "Wrong number, sorry."],
-      "wrong": ["Are we still on for tonight?", "Running late, be there in 10.", "Did you pick up the groceries?", "Call me when you get this.", "Don't forget the keys are under the mat.", "Movie starts at 8. Don't be late!", "Happy birthday!! :)", "Can you feed the cat tomorrow?", "I'm outside. Where are you?", "Thanks for dinner last night."],
-      "oops": ["Oh no, sorry! Wrong number.", "Oops! Sorry, I typed the wrong number.", "Sorry, that was meant for someone else."]
+      "failed": "Your message to {to} could not be delivered."
+    },
+    "cal": {
+      "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+      "week": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+      "open": "Open", "add": "New", "save": "Save", "hint": "* < month ># 0 today",
+      "sunrise": "Sunrise", "sunset": "Sunset", "moon": "Moon:", "forecast": "Forecast:", "clear": "clear", "cloudy": "cloudy", "rain": "rain", "snow": "snow",
+      "reminders": "YOUR REMINDERS", "noReminders": "None. 'New' adds one.", "inCity": "IN THE CITY",
+      "newReminder": "New reminder", "what": "What", "when": "When", "hhmm": "(24h, HHMM)", "next": "v time", "timeHint": "Digits: hour and minute. ^ text",
+      "alarm": "Reminder: {text}", "from": "Calendar",
+      "holiday": {
+        "newYear": "New Year's Day", "civil": "Civil Rights Day", "groundhog": "Groundhog Day", "valentine": "Valentine's Day", "presidents": "Presidents' Day",
+        "dstOn": "Daylight saving time begins", "patrick": "St. Patrick's Day", "easter": "Easter Sunday", "fools": "April Fools' Day", "taxes": "Tax Day",
+        "earth": "Earth Day", "mother": "Mother's Day", "memorial": "Memorial Day", "father": "Father's Day", "summer": "First day of summer",
+        "july4": "Independence Day", "labor": "Labor Day", "fall": "First day of fall", "columbus": "Columbus Day", "halloween": "Halloween",
+        "dstOff": "Daylight saving time ends", "election": "Election Day", "veterans": "Veterans Day", "thanksgiving": "Thanksgiving",
+        "winter": "First day of winter", "xmasEve": "Christmas Eve", "xmas": "Christmas Day", "nye": "New Year's Eve", "founders": "{city} Founders' Day"
+      }
     },
     "ok": "OK", "off": "OFF", "noService": "NO SERVICE", "ready": "READY.", "mapsDb": "MAPS DB",
     "menu": "Menu", "menuTitle": "MENU", "open": "Open", "back": "Back", "center": "Center", "hide": "Hide", "places": "Places", "placesTitle": "PLACES", "show": "Show",
     "zoom": ["LOCAL", "DISTR", "SECTOR", "CITY"], "floor": "FLOOR", "ground": "G",
     "room": { "lobby": "LOBBY", "hall": "HALL", "stair": "STAIRS", "lift": "LIFT", "foyer": "FOYER", "living": "LIVING", "bedroom": "BED", "kitchen": "KITCHEN", "bath": "BATH", "office": "OFFICE", "open": "OFFICE", "shop": "SHOP" },
-    "app": { "map": "Maps", "calls": "Calls", "contacts": "Contacts", "messages": "Messages", "camera": "Camera", "web": "Web", "clock": "Clock", "calc": "Calc", "notes": "Notes", "weather": "Weather", "store": "Store", "settings": "Settings" },
+    "app": { "map": "Maps", "calls": "Calls", "contacts": "Contacts", "messages": "Messages", "camera": "Camera", "calendar": "Calendar", "clock": "Clock", "calc": "Calc", "notes": "Notes", "weather": "Weather", "store": "Store", "settings": "Settings" },
     "gps": { "search": "SEARCHING SATELLITES", "lost": "NO GPS SIGNAL", "inView": "IN VIEW", "lastKnown": "LAST KNOWN POSITION", "indoor": "WEAK SIGNAL INDOORS", "acc": "+-{n}m" },
     "apps": {
       "contacts": ["No contacts", "SIM card: 0 of 250 used", "Numbers come with the network"],
