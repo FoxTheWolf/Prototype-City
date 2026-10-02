@@ -76,10 +76,17 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 > **Notas do Claude sobre esta seção (2026-10-02):**
 > - **É uma caixa de entrada, não um lugar para guardar.** A cada sessão e a cada subetapa, ler os itens abaixo deste bloco, levar cada um para o lugar certo do documento (a "Fila de feedback" organizada, o Roteiro, "Bugs conhecidos", "Como trabalhar" ou a Trilha de hacking) e **apagar daqui o que foi levado**. Fila vazia = tudo já organizado.
-> - Itens marcados `[HACKING]` vão para a Trilha de hacking sem serem detalhados fora dela.
+> - Itens marcados `[HACKING]` (ou que são só para o Opus 4.8) não são apagados nem resumidos: vão, com o texto inteiro, para a subseção "Feedback para o Opus 4.8" logo abaixo.
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 
 *(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02")*
+
+### Feedback para o Opus 4.8
+
+> Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.
+
+- [HACKING] Adicionar modo recovery para fazer root no celular. (Isso era uma coisa em 2008? Senão, usar uma alternativa. Eu imagino o celular como um hibrido de iphone com blackberry, mas com form factor de celular comum. Inclusive, mais pra frente, uma versão com form factor e teclado de blackberry pro celular seria prudente, e quem sabe uma versão flip igual o notebook). Seria necessário para instalar aplicações de hacking. *(A parte dos formatos BlackBerry e flip já foi para a etapa 15.)*
+- Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
 ## Visão do jogo
 
@@ -328,7 +335,7 @@ Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de t
   - **Notebook redesenhado:** maior, mais detalhado, com cores e estilos (como os modelos do celular). A tela segue a luz da cena como a do celular (reflexo e cor da luz mais próxima, adaptação do olho) no lugar do reflexo fixo em ASCII; o aviso de "Enter = botão de ligar" vai para as dicas de tecla; botão de ligar físico clicável.
   - **Digitais leves** (blocos bem transparentes) na tela do notebook e do celular.
 - **Depois, 12.6: o sistema de arquivos do celular.** Firmware, sistema e arquivos simulados (contatos, fotos, ligações, mensagens) que são a fonte da interface: mudar o arquivo muda o que o celular mostra. Ligado ao notebook, os arquivos podem ser vistos e copiados nele. Base para conteúdo posterior.
-- **Trilha de hacking:** um item `[HACKING]` sobre o celular, para o Opus 4.8 ler direto da conversa de 2026-10-02 e detalhar na trilha. Junto, a ideia de um mapa de linhas sensíveis dos arquivos do notebook (fazer só se mexer neles fora da trilha começar a dar problema).
+- **Trilha de hacking:** os itens estão em "Feedback para o Opus 4.8", dentro da seção de feedback (não precisa buscar em conversa nenhuma).
 - **Etapa 15 (variedade):** outros formatos de celular (um com teclado completo estilo BlackBerry, um flip como o notebook).
 - **Regras novas**, em "Como trabalhar": Electron, contexto da conversa e log de atualizações.
 
@@ -470,7 +477,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 
 > **⚠️ LEIA ISTO PRIMEIRO — regra do classificador de segurança.** Qualquer coisa que **se pareça com cibersegurança** (hacking, redes, portas, varredura, senhas, captura de pacotes, invasão, consoles remotos), mesmo no contexto de game dev, **pode ser bloqueada pelo classificador de segurança** no meio da resposta. O **Sonnet 5.5** bloqueou; o **Opus 4.8** (menos safeguards) fez sem bloqueio. Por isso:
 > - **Esse trabalho é separado numa trilha própria** (veja "Trilha de hacking" no Roteiro). Ao começar uma sessão dessa trilha, **avise o usuário para trocar para o Opus 4.8 antes de prosseguir.**
-> - **Quando a etapa atual NÃO for de hacking, não abra os arquivos de hacking nem leia as entradas de hacking** deste documento. Só de ter esse conteúdo na resposta pode disparar o classificador e travar o trabalho. **Arquivos de hacking:** `src/sim/network.ts`, `src/sim/packets.ts`, a parte de hacking de `src/laptop/shell.ts` (os comandos `mmap`/`bruter`/`tdump`/`tnet`/`mbus` e a sessão remota `conn`/`remote`), o campo `util` de `src/sim/wifi.ts`, e o manual `docs/manual-hacking.html`/`.pdf`. **Seções deste doc marcadas `[HACKING]`:** a 10.6 no Histórico, as "Lições da etapa 10", "Design: pacotes de rede simulados", e os itens `[HACKING]` do Roteiro.
+> - **Quando a etapa atual NÃO for de hacking, não abra os arquivos de hacking nem leia as entradas de hacking** deste documento. Só de ter esse conteúdo na resposta pode disparar o classificador e travar o trabalho. **Arquivos de hacking:** `src/sim/network.ts`, `src/sim/packets.ts`, a parte de hacking de `src/laptop/shell.ts` (os comandos `mmap`/`bruter`/`tdump`/`tnet`/`mbus` e a sessão remota `conn`/`remote`), o campo `util` de `src/sim/wifi.ts`, e o manual `docs/manual-hacking.html`/`.pdf`. **Seções deste doc marcadas `[HACKING]`:** a 10.6 no Histórico, as "Lições da etapa 10", "Design: pacotes de rede simulados", os itens `[HACKING]` do Roteiro e a subseção "Feedback para o Opus 4.8" (na seção de feedback).
 > - Se, mesmo fora de uma etapa de hacking, você **precisar** mexer num desses arquivos (um bug de build, por exemplo), avise o usuário e peça para ele confirmar o modelo antes.
 
 - **Etapas 1 a 9 (e 5b) concluídas.** A 9 (rede de telefones e celular) fechou em 2026-10-01: o grupo A foi testado e ajustado (9.4); B e C foram feitos sem rodada de teste, a pedido do usuário ("pode prosseguir, não precisa pedir meu feedback de novo"), então **o retorno dele sobre ligações, SMS, orelhões, câmera, loja e abertura pode chegar no começo da próxima sessão.** O que ele achou de errado nas etapas 6–9 está em "Bugs conhecidos", "Refinamento: anotações" e nas seções "Pedidos do usuário…". A nota "perguntar sobre a etapa 6" é para o **começo da etapa 15**.
