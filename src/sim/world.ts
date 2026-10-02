@@ -6,6 +6,7 @@ import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
 import { generatePeople, noPeople, PEOPLE as PEOPLE_AT, type Population } from './citizens';
+import { newFeed, stepSocial, type Feed } from './social';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
 import { crossers, spawnPeds, stepPeds, type Ped } from './peds';
@@ -69,6 +70,8 @@ export interface World {
   events: EventLog;
   /** Everyone who lives in the city (see citizens.ts). */
   pop: Population;
+  /** What they post (see social.ts). */
+  feed: Feed;
 }
 
 /** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
@@ -105,7 +108,7 @@ export function createWorld(seed: number, size = CITY_SIZE, people = true): Worl
   const pop = people ? generatePeople(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2)) : noPeople();
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -260,6 +263,8 @@ export function stepWorld(w: World, input: PlayerInput) {
     if (last && w.tick - last.tick < JAM_AGAIN) return;
     logEvent(w.events, 'jam', w.tick, w.time, (w.city.xb[2 * i] + w.city.xb[2 * i + 1]) / 2, (w.city.yb[2 * j] + w.city.yb[2 * j + 1]) / 2, Math.min(1, n / 15), refs);
   });
+  // the social network, every real second (30 game seconds)
+  if (w.tick % 60 === 30) stepSocial(w.feed, w.pop, w.city, w.events, w.power, w.weather, w.seed, w.time, 60 * TICK * TIME_SCALE);
   w.ptime = w.time;
   w.time += TICK * TIME_SCALE;
   stepWeather(w.weather, w.seed, w.time, TICK * TIME_SCALE);

@@ -1,6 +1,9 @@
 import { hash3 } from '../core/rng';
 import en from '../locale/en.json';
-import { businessName, cityName, citizenName, operatorName, wifiName, workplaceName } from '../locale/names';
+import { businessName, cityName, citizenName, districtName, operatorName, wifiName, workplaceName } from '../locale/names';
+import { postAge, postText, SOCIAL } from '../locale/social';
+import { likes } from '../sim/social';
+import { districtAt } from '../sim/city';
 import PEOPLE from '../locale/people.en.json';
 import { Role, whereIs } from '../sim/citizens';
 import { Sec } from '../sim/wifi';
@@ -568,6 +571,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
     if (G.over) { S.center(10, ` ${ST.gameOver} `, BAD, LCD); S.center(12, ` ${ST.again} `, DIM, LCD); }
     return softKeys(S, '', T.back);
   }
+  if (id === 'social') return wire(S, P, world, t);
   if (id === 'news') {
     const J = P.radio.job, loading = J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading');
     if (loading || world.time - P.newsAt > 3600) {
@@ -592,6 +596,33 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   S.center(10, (ST.about as Record<string, string>)[id], DIM, LCD);
   softKeys(S, '', T.back);
   void now;
+}
+
+/**
+ * Streetwire: the posts as last downloaded, newest first: who and how long ago, the words (wrapped),
+ * the likes and the place. The ages and likes follow the clock; the posts are those of the download.
+ */
+function wire(S: Lcd, P: Phone, world: World, t: number) {
+  const J = P.radio.job, loading = J?.what === 'social' && (J.state === 'connecting' || J.state === 'loading');
+  if (!P.wire.length && (loading || P.wireAt < 0)) {
+    S.center(10, loading || P.online() ? SOCIAL.wait : SOCIAL.none, loading || P.online() ? DIM : BAD, LCD);
+    return softKeys(S, '', T.back);
+  }
+  if (!P.wire.length) { S.center(10, SOCIAL.empty, DIM, LCD); return softKeys(S, SOCIAL.refresh, T.back); }
+  const c = world.city, Pop = world.pop, rows: [string, C3][] = [];
+  for (let k = P.wire.length - 1; k >= 0; k--) {
+    const p = P.wire[k], age = postAge(world.time, p.time);
+    const name = citizenName(c, Pop, p.who);
+    rows.push([`${name.slice(0, SW - 4 - age.length)}${' '.repeat(Math.max(1, SW - 3 - name.length - age.length))}${age}`, HI]);
+    for (const l of wrap(postText(c, p), SW - 3)) rows.push([` ${l}`, INK]);
+    const place = districtName(c, districtAt(c, p.x, p.y));
+    rows.push([` ${SOCIAL.likes.replace('{n}', String(likes(Pop, p, world.time)))}  ${SOCIAL.at.replace('{place}', place)}`.slice(0, SW - 2), DIM]);
+    rows.push(['', DIM]);
+  }
+  const view = SH - 5, top = Math.min(P.scroll * 2, Math.max(0, rows.length - view));
+  rows.slice(top, top + view).forEach(([l, col], k) => S.text(1, 3 + k, typed(l, t - k * 0.02, 140), col, LCD));
+  if (loading) S.text(SW - 4, 1, '...', DIM, [16, 30, 40]);
+  softKeys(S, SOCIAL.refresh, T.back);
 }
 
 const WF = A.wifi;

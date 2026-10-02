@@ -16,6 +16,7 @@ import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { hash3 } from '../core/rng';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
+import { type Post } from '../sim/social';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -84,9 +85,11 @@ const SYSTEM_KB = 40 * 1024;
  * The store's catalog: id, size in KB, price in cents. Small apps download over EDGE; past
  * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
  */
-export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999]];
+export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0]];
 /** Kilobytes the news reader downloads each time. */
 const NEWS_KB = 8;
+/** Posts a Streetwire page holds. */
+const WIRE_POSTS = 40;
 export const EDGE_LIMIT_KB = 10 * 1024;
 
 /** Kilobytes of a weather forecast download. */
@@ -145,6 +148,10 @@ export class Phone {
   /** The store: a note on the last try (no Wi-Fi, no credit, no storage). */
   storeNote = '';
   newsAt = -1e9;
+  /** Streetwire: the posts as last downloaded (newest last), when, and the newest post id seen then. */
+  wire: Post[] = [];
+  wireAt = -1e9;
+  private wireId = -1;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
   constructor(private world: World) {
@@ -320,6 +327,9 @@ export class Phone {
       this.radio.job = null;
     }
     if (J?.what === 'news' && J.state === 'done') { this.newsAt = this.world.time; this.radio.job = null; }
+    if (J?.what === 'social' && J.state === 'done') {
+      this.wire = this.world.feed.posts.slice(-WIRE_POSTS); this.wireAt = this.world.time; this.wireId = this.world.feed.next - 1; this.radio.job = null; this.scroll = 0;
+    }
     if (this.screen === 'app' && STORE[this.appId][0] === 'snake' && this.snake.update(now)) this.sfx.push(['beep']);
     // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
     // again once the signal is back after a failed try; not with the bundle used up)
@@ -697,6 +707,13 @@ export class Phone {
     const id = STORE[i][0];
     if (id === 'snake') this.snake.reset(now);
     if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
+    if (id === 'social' && this.online()) this.fetchWire(now);
+  }
+
+  /** Download what is new on the wire: a little for the page, and each post since the last time. */
+  private fetchWire(now: number) {
+    const fresh = Math.min(WIRE_POSTS, this.world.feed.next - 1 - this.wireId);
+    this.radio.fetch('social', 3 + fresh * 0.35, now);
   }
 
   /** The keys of the app open. */
@@ -709,6 +726,10 @@ export class Phone {
       const d: Record<string, [number, number]> = { up: [0, -1], '2': [0, -1], down: [0, 1], '8': [0, 1], left: [-1, 0], '4': [-1, 0], right: [1, 0], '6': [1, 0] };
       if (d[k]) { S.steer(...d[k]); return true; }
       return false;
+    }
+    if (id === 'social') {
+      if ((k === 'ok' || k === 'lsoft') && this.online()) { this.fetchWire(now); this.since = now; return true; }
+      return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false;
     }
     if (id === 'news') { if ((k === 'ok' || k === 'lsoft') && this.online()) { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; } return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false; }
     if (id === 'convert') {
