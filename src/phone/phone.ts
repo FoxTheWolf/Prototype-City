@@ -13,6 +13,8 @@ import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
 import { smsText } from '../locale/sms';
 import en from '../locale/en.json';
+import { type FsNode } from '../sim/computer';
+import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
 import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { hash3 } from '../core/rng';
@@ -66,8 +68,8 @@ export const INDOOR_ROW_M = [1, 2, 3.5, 6];
  * (left/right or OK change them), "about" lists the hardware and the line, "debug" holds what is
  * there for testing the game (the secret codes, to dial them; to go once gameplay replaces it).
  */
-export type SetPage = 'root' | 'sound' | 'display' | 'looks' | 'units' | 'wifi' | 'about' | 'debug' | 'people';
-export const SET_PAGES: SetPage[] = ['sound', 'display', 'looks', 'units', 'wifi', 'about', 'debug', 'people'];
+export type SetPage = 'root' | 'sound' | 'display' | 'looks' | 'units' | 'wifi' | 'usb' | 'about' | 'debug' | 'people';
+export const SET_PAGES: SetPage[] = ['sound', 'display', 'looks', 'units', 'wifi', 'usb', 'about', 'debug', 'people'];
 export interface Prefs {
   /** 0 normal, 1 vibrate, 2 silent. */
   profile: number;
@@ -197,6 +199,7 @@ export class Phone {
     this.look = this.device.look;
     this.looks = [this.look];
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
+    this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...APPS.filter((a) => a !== 'folder'), ...BUNDLED]);
   }
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
@@ -306,7 +309,45 @@ export class Phone {
     return 'out';
   }
 
+  /**
+   * The phone's file system (sim/phonefs.ts): firmware, system and the user's data as files. The data
+   * the screens use (contacts, call log, texts, notes, photos) is kept in step with its files: a file
+   * changed from outside (the notebook, over the cable) is read back in; a change on the phone is
+   * written out. `fsSaid` holds what each file last said, to tell which side changed.
+   */
+  fs: FsNode;
+  private fsSaid: Record<string, string> = {};
+  private fsAt = -1;
+  private photoN = 0;
+  /** The cable to the notebook: wanted (the settings), and whether the notebook has it mounted (main sets it). */
+  usb = false;
+  usbLinked = false;
+  private syncFs(now: number) {
+    if (now - this.fsAt < 0.5) return;
+    this.fsAt = now;
+    const files: [string, () => string, (s: string) => void][] = [
+      [DATA.contacts, () => contactsOut(this.contacts), (t) => this.contacts.splice(0, this.contacts.length, ...contactsIn(t).slice(0, 250))],
+      [DATA.calls, () => callsOut(this.log), (t) => this.log.splice(0, this.log.length, ...callsIn(t))],
+      [DATA.inbox, () => inboxOut(this.inbox), (t) => this.inbox.splice(0, this.inbox.length, ...inboxIn(t))],
+      [DATA.sent, () => sentOut(this.sent), (t) => this.sent.splice(0, this.sent.length, ...sentIn(t))],
+      [DATA.notes, () => this.note, (t) => { this.note = t.slice(0, 400); this.noteEd.set(this.note); }],
+    ];
+    for (const [path, out, read] of files) {
+      const f = fsGet(this.fs, path), said = this.fsSaid[path];
+      if (f && !f.dir && said !== undefined && (f.data ?? '') !== said) { read(f.data ?? ''); this.fsSaid[path] = f.data ?? ''; continue; }
+      const text = out();
+      if (text !== said || !f) { fsPut(this.fs, path, text, 'user', this.world.time); this.fsSaid[path] = text; }
+    }
+    // the photos: each a file in the camera's folder; one deleted there is gone from the phone, a new one gets its file
+    const dir = fsDirs(this.fs, DCIM, 'user', this.world.time);
+    for (let k = this.photos.length - 1; k >= 0; k--) {
+      const ph = this.photos[k];
+      if (!ph.name) { ph.name = `IMG_${String(++this.photoN).padStart(4, '0')}.JPG`; fsPut(this.fs, `${DCIM}/${ph.name}`, ph.kb * 1024, 'user', ph.at); }
+      else if (!dir.kids!.has(ph.name)) this.photos.splice(k, 1);
+    }
+  }
   update(dt: number, now: number) {
+    this.syncFs(now);
     // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
     // out a little for a text or a reminder (its top row in sight for a few seconds)
     const ringing = (this.callIn && this.call?.state === 'ringing') || this.screen === 'alarm';
@@ -771,6 +812,11 @@ export class Phone {
     if (k === 'rsoft') return back();
     if (pg === 'about') {
       if (k === 'up' || k === 'down') { this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)); return true; }
+      return false;
+    }
+    if (pg === 'usb') {
+      // the cable to the notebook: OK plugs it in or pulls it out
+      if (k === 'ok' || k === 'lsoft') { this.usb = !this.usb; this.sfx.push([this.usb ? 'sent' : 'fail']); return true; }
       return false;
     }
     if (pg === 'wifi') {

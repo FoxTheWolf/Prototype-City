@@ -468,6 +468,13 @@ function frame(now: number) {
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
+  // the phone over its cable: mounted at /mnt/phone while the notebook is open and running
+  {
+    const want = phone.usb && laptop.open && laptop.pc.bootAt >= 0, mnt = laptop.pc.mkdirs('/mnt');
+    if (want && mnt.kids!.get('phone') !== phone.fs) mnt.kids!.set('phone', phone.fs);
+    else if (!want && mnt.kids!.has('phone')) mnt.kids!.delete('phone');
+    phone.usbLinked = want;
+  }
   // the 3D look tipped the view down at the desk: back up as it closes
   if (lapWasOpen && !laptop.open && lapLook === 2) camera.targetPitch = 0;
   lapWasOpen = laptop.open;

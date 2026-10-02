@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.12.6 — Sistema de arquivos do celular (2026-10-02)
+- O celular tem arquivos de verdade: firmware (o carregador da placa, o baseband), sistema (o OS da marca, apps, toques, fontes) e dados.
+- Contatos (vCard), registro de chamadas, mensagens recebidas e enviadas e notas são arquivos de texto; mudar o arquivo muda o que o celular mostra, e usar o celular muda o arquivo. Cada foto é um arquivo em `media/DCIM`; apagar o arquivo apaga a foto.
+- Configurações → USB cable: com o cabo ligado e o notebook aberto, o celular aparece em `/mnt/phone` no notebook, onde dá para listar, ler, copiar e editar os arquivos.
+
 ## 0.12.5 — Celular: retorno da 12.4 (2026-10-02)
 - A abertura está desligada por enquanto.
 - O item escolhido nas listas (mensagens, ligações, contatos, Streetwire, calendário, lugares, loja) fica num destaque escuro com texto claro.

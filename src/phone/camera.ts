@@ -20,6 +20,8 @@ export interface Photo {
   kb: number;
   /** Taken in blocks (two pixels a cell) rather than characters. */
   blocks: boolean;
+  /** Its file in the camera's folder on the phone (phonefs.ts), once it has one. */
+  name?: string;
 }
 
 /** Columns of a photo for a camera of so many megapixels (rows follow at half, as the cells are tall). */

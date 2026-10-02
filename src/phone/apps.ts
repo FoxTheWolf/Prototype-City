@@ -402,6 +402,14 @@ function settings(S: Lcd, P: Phone, world: World, t: number) {
   if (pg === 'about') return about(S, P, world, t);
   if (pg === 'wifi') return wifiPage(S, P, world, t);
   if (pg === 'people') return peoplePage(S, P, world, t);
+  if (pg === 'usb') {
+    // the cable to the notebook: plugged in or not, and what the notebook sees
+    const U = SET.usb;
+    row(S, 3, U.cable, P.usb ? U.in : U.out, true, t);
+    const say = P.usb ? (P.usbLinked ? U.linked : U.waiting) : U.hint;
+    say.forEach((l, k) => S.text(1, 6 + k, typed(l, t - 0.1 - 0.05 * k), k ? DIM : INK, LCD));
+    return softKeys(S, P.usb ? U.unplug : U.plug, T.back);
+  }
   if (pg === 'looks') {
     row(S, 3, SET.rows.shell, `< ${P.maker} ${SHELLS[P.look].name} >`, P.setSel === 0, t);
     row(S, 5, SET.rows.case, `< ${CASES[P.case].name} >`, P.setSel === 1, t - 0.05);

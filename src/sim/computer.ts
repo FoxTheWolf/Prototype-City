@@ -93,6 +93,9 @@ export const biosDefaults = (): BiosConfig => ({ clockOffset: 0, wlan: true, qui
 
 const node = (name: string, dir: boolean, owner: string, mtime: number): FsNode => ({ name, dir, kids: dir ? new Map() : null, data: null, size: dir ? 4096 : 0, owner, mtime, exec: null, memKB: 0 });
 
+/** A new node of a file tree (phonefs.ts makes the phone's with it). */
+export const fsNode = node;
+
 export class Computer {
   readonly root: FsNode;
   procs: Proc[] = [];
@@ -145,9 +148,10 @@ export class Computer {
     const k = path.lastIndexOf('/');
     return [this.get(path.slice(0, k) || '/'), path.slice(k + 1)];
   }
-  /** May the user write here: only in their home and /tmp (the rest is the system's). */
+  /** May the user write here: only in their home and /tmp (the rest is the system's), and on what is mounted. */
   writable(path: string, user: string): boolean {
-    return user === 'root' || path === `/home/${user}` || path.startsWith(`/home/${user}/`) || path === '/tmp' || path.startsWith('/tmp/');
+    // and on a device mounted under /mnt (the phone over its cable)
+    return user === 'root' || path === `/home/${user}` || path.startsWith(`/home/${user}/`) || path === '/tmp' || path.startsWith('/tmp/') || path.startsWith('/mnt/');
   }
   /** Make the directories of a path, as the system does when it is installed. */
   mkdirs(path: string, owner = 'root', mtime = 0): FsNode {
@@ -176,7 +180,8 @@ export class Computer {
     for (const k of n.kids!.values()) s += this.du(k);
     return s;
   }
-  usedMB() { return SYSTEM_MB + this.du(this.root) / 1048576; }
+  /** Its own disk (a device mounted under /mnt is not on it). */
+  usedMB() { const m = this.root.kids!.get('mnt'); return SYSTEM_MB + (this.du(this.root) - (m ? this.du(m) : 0)) / 1048576; }
   freeMB() { return this.hw.diskMB - this.usedMB(); }
   /** Memory taken by the kernel and the processes, and what is left, in KB. */
   /** Buffers and cache the running system holds (set by the notebook each frame); counts as used memory. */
