@@ -1,3 +1,4 @@
+import { weatherIcon, wxArt } from './hdicons';
 import en from '../locale/en.json';
 import { cityName } from '../locale/names';
 import { tickerText } from '../locale/news';
@@ -87,6 +88,7 @@ export function weatherApp(S: Lcd, P: Phone, world: World, t: number, now: numbe
     S.text(x0 + ((7 - lab.length) >> 1), 14, lab, WHITE, cardBg);
     S.text(x0 + 1, 15, hhmm(hr).slice(0, 5), SOFT, cardBg);
     icon(ahead, night).forEach(([row, col], r) => S.text(x0 + 1, 16 + r, row.slice(0, 5), col, cardBg));
+    weatherIcon(S, x0 + 1, 16, wxArt(ahead.precip, ahead.snow, ahead.cloud, night), cardBg);
     const tt = `${f(ahead.temp)}°`;
     S.text(x0 + ((7 - tt.length) >> 1), 19, tt, WHITE, cardBg);
   });

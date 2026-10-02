@@ -18,6 +18,7 @@ import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APPS, EDGE_LIMIT_KB, MENU_COLS, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
+import { appIcon } from './hdicons';
 import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
@@ -55,7 +56,7 @@ const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
 const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
 
 /** An app's tile on a grid: the icon (a glossy rounded square with its symbol) and its name; the picked one on a lit panel. */
-function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], label: string, sel: boolean, t: number) {
+function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], label: string, sel: boolean, t: number, id = '') {
   if (t < 0) return;
   if (sel) box(S, x, y, x + 9, y + 3, [56, 86, 140], menuBg, 1, [34, 54, 96]);
   const under = (_x: number, yy: number) => (sel ? lerp([56, 86, 140], [34, 54, 96], (yy - y) / 3) : menuBg(yy));
@@ -63,6 +64,8 @@ function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], la
   // the gloss: the top of the icon brighter
   for (let k = x + 3; k <= x + 6; k++) S.put(k, y, SHAPE.top, lerp(mul(col, 1.18), [255, 255, 255], 0.35), mul(col, 1.18));
   S.text(x + 5 - (sym.length >> 1) - (sym.length & 1 ? 0 : 0), y + 1, sym, fg, col);
+  // in HD: the icon as a picture over the characters' one
+  appIcon(S, x + 2, y, id, col, (r) => under(0, y + r));
   const l = label.slice(0, 10);
   S.text(x + ((10 - l.length) >> 1), y + 3, l, sel ? [255, 255, 255] : [150, 165, 190], sel ? [34, 54, 96] : menuBg(y + 3));
 }
@@ -70,7 +73,7 @@ function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], la
 /** The menu: 16 apps in a 4x4 grid; the picked one named below with a word on what it does. */
 export function menu(S: Lcd, P: Phone, t: number) {
   vgrad(S, 1, SH - 2, MENU_BG[0], MENU_BG[1]);
-  APPS.forEach((a, n) => tile(S, 1 + (n % MENU_COLS) * 10, 2 + Math.floor(n / MENU_COLS) * 5, ICON[a], name(a), n === P.sel, t - 0.06 - n * 0.025));
+  APPS.forEach((a, n) => tile(S, 1 + (n % MENU_COLS) * 10, 2 + Math.floor(n / MENU_COLS) * 5, ICON[a], name(a), n === P.sel, t - 0.06 - n * 0.025, a));
   const a = APPS[P.sel], about = (A.about as Record<string, string>)[a] ?? '';
   S.center(22, typed(name(a), t - 0.2), [255, 255, 255], menuBg(22));
   S.center(23, typed(about, t - 0.3), [130, 150, 180], menuBg(23));
@@ -83,7 +86,7 @@ function folder(S: Lcd, P: Phone, t: number) {
   header(S, name('folder'), `${P.downloads().length}`, '[_]', ICON.folder[1]);
   const L = P.downloads();
   if (!L.length) { A.set.noDownloads.forEach((l, k) => S.center(10 + k, l, [150, 165, 190], menuBg(10 + k))); return softKeys(S, '', T.back); }
-  L.forEach((i, n) => tile(S, 1 + (n % MENU_COLS) * 10, 4 + Math.floor(n / MENU_COLS) * 5, STORE_ICON[STORE[i][0]] ?? ICON.store, appName(i), n === P.fsel, t - n * 0.04));
+  L.forEach((i, n) => tile(S, 1 + (n % MENU_COLS) * 10, 4 + Math.floor(n / MENU_COLS) * 5, STORE_ICON[STORE[i][0]] ?? ICON.store, appName(i), n === P.fsel, t - n * 0.04, STORE[i][0] === 'social' ? 'wire' : STORE[i][0]));
   softKeys(S, T.open, T.back);
 }
 
