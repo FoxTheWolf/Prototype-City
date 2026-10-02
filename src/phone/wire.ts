@@ -1,5 +1,7 @@
 import { hash3 } from '../core/rng';
 import { CharGrid } from '../render/grid';
+import { HD } from '../render/hd';
+import { cover } from './camera';
 import { districtAt, isSolid, type City } from '../sim/city';
 import { comments, likes, type Post } from '../sim/social';
 import { type World } from '../sim/world';
@@ -38,8 +40,8 @@ export interface WireState {
 }
 export const newWire = (): WireState => ({ view: 'feed', sel: 0, psel: 0, post: null, who: -1, from: 'feed', liked: new Set(), scroll: 0 });
 
-/** A picture the size of the post's photo, kept by post id. */
-export interface Pic { w: number; h: number; cells: Uint8ClampedArray; bg: Uint8ClampedArray }
+/** A picture the size of the post's photo, kept by post id: its cells (the average of each), and its HD pixels (HD x HD per cell, r g b). */
+export interface Pic { w: number; h: number; cells: Uint8ClampedArray; bg: Uint8ClampedArray; hd: Uint8ClampedArray }
 const pics = new Map<number, Pic>();
 const PIC_W = 42, PIC_H = 14;
 
@@ -56,14 +58,28 @@ function viewpoint(city: City, p: Post): [number, number, number] {
 function picOf(P: Phone, world: World, p: Post): Pic | null {
   let pic = pics.get(p.id);
   if (pic || !P.shoot) return pic ?? null;
-  const g = new CharGrid(PIC_W, PIC_H), [x, y, yaw] = viewpoint(world.city, p);
+  // rendered with one cell per HD pixel (the same shape as a cell, a third of it each way), each
+  // pixel the cell's glyph colour mixed into its background by how much of the cell the glyph covers
+  const W = PIC_W * HD, H = PIC_H * HD, g = new CharGrid(W, H), [x, y, yaw] = viewpoint(world.city, p);
   P.shoot(g, x, y, yaw);
-  // a phone camera of 2008: a little soft, a little noisy
-  for (let i = 0; i < PIC_W * PIC_H; i++) {
-    const k = i * 4, n = (hash3(p.id, i, 9) - 0.5) * 26;
-    for (let c = 0; c < 3; c++) { g.cells[k + 1 + c] += n; g.bg[k + c] += n * 0.5; }
+  const hd = new Uint8ClampedArray(W * H * 3);
+  for (let i = 0; i < W * H; i++) {
+    // a phone camera of 2008: a little soft, a little noisy
+    const k = i * 4, f = cover(g.cells[k]), n = (hash3(p.id, i, 9) - 0.5) * 22;
+    for (let c = 0; c < 3; c++) hd[i * 3 + c] = g.bg[k + c] + (g.cells[k + 1 + c] - g.bg[k + c]) * f + n;
   }
-  pic = { w: PIC_W, h: PIC_H, cells: g.cells.slice(), bg: g.bg.slice() };
+  const cells = new Uint8ClampedArray(PIC_W * PIC_H * 4), bg = new Uint8ClampedArray(PIC_W * PIC_H * 4);
+  for (let cy = 0; cy < PIC_H; cy++) for (let cx = 0; cx < PIC_W; cx++) {
+    const o = (cy * PIC_W + cx) * 4;
+    cells[o] = 32;
+    for (let c = 0; c < 3; c++) {
+      let v = 0;
+      for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) v += hd[((cy * HD + iy) * W + cx * HD + ix) * 3 + c];
+      bg[o + c] = v / (HD * HD);
+    }
+    bg[o + 3] = 255;
+  }
+  pic = { w: PIC_W, h: PIC_H, cells, bg, hd };
   pics.set(p.id, pic);
   if (pics.size > 120) pics.delete(pics.keys().next().value!);
   return pic;
@@ -191,6 +207,11 @@ function postPage(S: Lcd, P: Phone, world: World, p: Post, now: number, loading:
         if (!pic) { S.put(x, y, r === 6 && x > 12 && x < 30 ? W.loadingPhoto.charCodeAt(x - 13) || 32 : 32, DIM, [200, 205, 214]); continue; }
         const q = (r * pic.w + x) * 4;
         S.put(x, y, pic.cells[q] || 32, [pic.cells[q + 1], pic.cells[q + 2], pic.cells[q + 3]], [pic.bg[q], pic.bg[q + 1], pic.bg[q + 2]]);
+        // in HD: the cell's nine pixels over it
+        for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
+          const h = ((r * HD + iy) * pic.w * HD + x * HD + ix) * 3;
+          S.pixel(x, y, ix, iy, pic.hd[h], pic.hd[h + 1], pic.hd[h + 2]);
+        }
       }
     }
   }

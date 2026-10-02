@@ -17,6 +17,7 @@ import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APPS, EDGE_LIMIT_KB, MENU_COLS, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { HD } from '../render/hd';
 import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
@@ -595,6 +596,16 @@ function photoBlocks(S: Lcd, p: Photo, y0: number, y1: number) {
   for (let y = 0; y < dh; y++) for (let x = 0; x < dw; x++) {
     const sx = Math.floor(x * k), a = avg(sx, Math.floor(y * 2 * k)), b = avg(sx, Math.floor((y * 2 + 1) * k));
     S.put(x0 + x, top + y, SHAPE.top, a, b);
+  }
+  if (!S.hd) return;
+  // in HD, each cell's nine pixels over it, each the mean square of the photo's pixels under it (a
+  // cell is k photo pixels wide and 2k tall, so an HD pixel is k/HD by 2k/HD of them)
+  const fw = k / HD, fh = (2 * k) / HD;
+  for (let y = 0; y < dh * HD; y++) for (let x = 0; x < dw * HD; x++) {
+    const sx0 = Math.floor(x * fw), sy0 = Math.floor(y * fh), sx1 = Math.max(sx0 + 1, Math.floor((x + 1) * fw)), sy1 = Math.max(sy0 + 1, Math.floor((y + 1) * fh));
+    let r = 0, g = 0, bl = 0, n = 0;
+    for (let yy = sy0; yy < sy1 && yy < ph; yy++) for (let xx = sx0; xx < sx1 && xx < pw; xx++) { r += px(xx, yy, 0) ** 2; g += px(xx, yy, 1) ** 2; bl += px(xx, yy, 2) ** 2; n++; }
+    if (n) S.pixel(x0 + Math.floor(x / HD), top + Math.floor(y / HD), x % HD, y % HD, Math.sqrt(r / n), Math.sqrt(g / n), Math.sqrt(bl / n));
   }
 }
 

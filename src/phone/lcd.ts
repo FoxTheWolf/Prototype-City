@@ -1,5 +1,6 @@
 import en from '../locale/en.json';
 import { type CharGrid } from '../render/grid';
+import { HD, HdOrder, type HdLayer } from '../render/hd';
 import { fontRows } from '../render/signs';
 import { SHAPE } from '../render/atlas';
 import { calendar } from '../sim/clock';
@@ -50,7 +51,19 @@ export class Lcd {
   fill(y: number, bg: C3) { for (let x = 0; x < SW; x++) this.put(x, y, 32, bg, bg); }
   /** Text centered on row y. */
   center(y: number, s: string, fg: C3, bg: C3) { this.text((SW - s.length) >> 1, y, s, fg, bg); }
+  /** Whether there is an HD layer to draw pixels on. */
+  get hd(): boolean { return !!HDL; }
+  /** HD pixel (ix, iy) (0..HD-1 each) of screen cell (x, y), over the interface. */
+  pixel(x: number, y: number, ix: number, iy: number, r: number, g: number, b: number) {
+    if (!HDL || x < 0 || y < 0 || x >= SW || y >= SH) return;
+    HDL.put((this.x0 + x) * HD + ix, (this.y0 + y) * HD + iy, r, g, b, HdOrder.Over);
+  }
 }
+
+/** The HD layer the phone draws its photos on (main sets it). */
+let HDL: HdLayer | null = null;
+export const setHd = (h: HdLayer) => { HDL = h; };
+export const hdLayer = () => HDL;
 
 /** Text that types in: as much of s as `cps` characters a second have written since t = 0. */
 export const typed = (s: string, t: number, cps = 60) => s.slice(0, Math.max(0, Math.floor(t * cps)));

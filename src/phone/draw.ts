@@ -4,13 +4,14 @@ import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, menu } from './apps';
 import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad, wallpaper } from './ui';
-import { applyTheme, BAD, BAR, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
+import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
 import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
 import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
+import { HD } from '../render/hd';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
 
@@ -233,6 +234,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   }
   // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
   let ar = 0, ag = 0, ab = 0, n = 0;
+  const H = hdLayer();
   for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
     const gx = ox + SX + x, gy = oy + SY + y;
     if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
@@ -244,6 +246,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     ar += B[k] + C[k + 1] * 0.3; ag += B[k + 1] + C[k + 2] * 0.3; ab += B[k + 2] + C[k + 3] * 0.3; n++;
     B[k] += 3 * Lr + sh * GL.r; B[k + 1] += 3 * Lg + sh * GL.g; B[k + 2] += 4 * Lb + sh * GL.b;
     C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;
+    // the HD pixels over this cell (a photo) under the same glass
+    if (H) for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
+      const q = H.at(gx * HD + ix, gy * HD + iy);
+      if (q < 0) continue;
+      const X = H.px;
+      for (let c = 0; c < 3; c++) X[q + c] = roll(X[q + c] * gain);
+      X[q] += 3 * Lr + sh * GL.r; X[q + 1] += 3 * Lg + sh * GL.g; X[q + 2] += 4 * Lb + sh * GL.b;
+    }
   }
   if (bloom > 0.01 && n && on) {
     // bloom in the dark: the screen's own light haloes over the glass and spills on the bezel around it

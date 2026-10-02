@@ -1,5 +1,6 @@
 import { ATLAS_COLS, buildAtlas } from './atlas';
 import { type CharGrid } from './grid';
+import { HD, type HdLayer } from './hd';
 
 const VS = `#version 300 es
 void main() {
@@ -12,11 +13,13 @@ void main() {
 // interface's over it (always the same size: the phone, the notebook, the status lines). Each reads
 // glyph + colors from its grid textures and copies the matching texel of its own atlas. Where the
 // interface drew nothing, the world shows; where it drew a glyph only, the glyph lies over the world.
+// Between them lies the HD layer (hd.ts): plain pixels, HD per cell of the interface each way, some
+// under the interface (seen where it drew nothing), some over it (a photo on the phone's screen).
 // The whole screen is one draw call.
 const FS = `#version 300 es
 precision highp float;
 precision highp int;
-uniform sampler2D uCells, uBg, uAtlas, uUiCells, uUiBg, uUiAtlas;
+uniform sampler2D uCells, uBg, uAtlas, uUiCells, uUiBg, uUiAtlas, uHd;
 uniform ivec2 uCell, uOrigin, uGrid, uUiCell, uUiOrigin, uUiGrid;
 uniform float uHeight;
 out vec4 outColor;
@@ -33,8 +36,11 @@ void main() {
   if (p.x >= 0 && p.y >= 0 && c.x < uGrid.x && c.y < uGrid.y) col = layer(uCells, uAtlas, p, c, uCell, texelFetch(uBg, c, 0).rgb);
   ivec2 q = s - uUiOrigin, u = q / uUiCell;
   if (q.x >= 0 && q.y >= 0 && u.x < uUiGrid.x && u.y < uUiGrid.y) {
+    vec4 hp = texelFetch(uHd, (q * ${HD}) / uUiCell, 0);
+    if (hp.a > 0.25 && hp.a < 0.75) col = hp.rgb;
     vec4 ub = texelFetch(uUiBg, u, 0);
     if (ub.a > 0.25) col = layer(uUiCells, uUiAtlas, q, u, uUiCell, ub.a > 0.75 ? ub.rgb : col);
+    if (hp.a > 0.75) col = hp.rgb;
   }
   outColor = vec4(col, 1.0);
 }`;
@@ -49,7 +55,7 @@ export interface Layout {
   originY: number;
 }
 
-const UNIFORMS = ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uCell', 'uOrigin', 'uGrid', 'uUiCell', 'uUiOrigin', 'uUiGrid', 'uHeight'];
+const UNIFORMS = ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uHd', 'uCell', 'uOrigin', 'uGrid', 'uUiCell', 'uUiOrigin', 'uUiGrid', 'uHeight'];
 
 export class GlyphRenderer {
   private gl: WebGL2RenderingContext;
@@ -67,8 +73,8 @@ export class GlyphRenderer {
     this.prog = link(gl, VS, FS);
     gl.useProgram(this.prog);
     for (const n of UNIFORMS) this.u[n] = gl.getUniformLocation(this.prog, n);
-    ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas'].forEach((n, k) => gl.uniform1i(this.u[n], k));
-    this.tex = [0, 1, 2, 3, 4, 5].map(() => texture(gl));
+    ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uHd'].forEach((n, k) => gl.uniform1i(this.u[n], k));
+    this.tex = [0, 1, 2, 3, 4, 5, 6].map(() => texture(gl));
     gl.bindVertexArray(gl.createVertexArray());
   }
 
@@ -89,10 +95,12 @@ export class GlyphRenderer {
       gl.bindTexture(gl.TEXTURE_2D, this.tex[t + 2]);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, buildAtlas(L.cellW, L.cellH));
     });
+    gl.bindTexture(gl.TEXTURE_2D, this.tex[6]);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, ui.cols * HD, ui.rows * HD, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  draw(grid: CharGrid, ui: CharGrid) {
+  draw(grid: CharGrid, ui: CharGrid, hd: HdLayer) {
     const gl = this.gl;
     ([[grid, this.layout!, 0], [ui, this.ui!, 3]] as const).forEach(([G, L, t]) => {
       gl.activeTexture(gl.TEXTURE0 + t);
@@ -104,6 +112,15 @@ export class GlyphRenderer {
       gl.activeTexture(gl.TEXTURE0 + t + 2);
       gl.bindTexture(gl.TEXTURE_2D, this.tex[t + 2]);
     });
+    // the HD layer: only the rows drawn or cleared since the last upload
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.tex[6]);
+    hd.mark();
+    if (hd.hi >= hd.lo) {
+      const y0 = Math.max(0, hd.lo), y1 = Math.min(hd.h - 1, hd.hi);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y0, hd.w, y1 - y0 + 1, gl.RGBA, gl.UNSIGNED_BYTE, hd.px.subarray(y0 * hd.w * 4, (y1 + 1) * hd.w * 4));
+      hd.lo = Infinity; hd.hi = -1;
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

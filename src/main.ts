@@ -17,6 +17,8 @@ import { pickedButton } from './render/interior';
 import { renderWorld, VIEW_GLINT, VIEW_LIGHT, type View } from './render/raycaster';
 import { RenderPool } from './render/pool';
 import { intro, INTRO_S } from './render/intro';
+import { HD, HdLayer } from './render/hd';
+import { setHd } from './phone/lcd';
 import { daylight } from './render/sky';
 import { operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
@@ -99,6 +101,8 @@ let shown: CharGrid;
 let layout: Layout;
 /** The interface's layer over the world, and its layout (UI_ROWS rows). */
 let ui: CharGrid;
+/** The HD layer: pixels at HD x the interface's grid (the phone's photos). */
+let hd: HdLayer;
 let uiLayout: Layout;
 let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
@@ -315,6 +319,8 @@ function resize() {
   uiLayout = computeLayout(UI_ROWS);
   grid = new CharGrid(layout.cols, layout.rows);
   ui = new CharGrid(uiLayout.cols, uiLayout.rows);
+  hd = new HdLayer(uiLayout.cols * HD, uiLayout.rows * HD);
+  setHd(hd);
   shown = new CharGrid(layout.cols, layout.rows);
   pool?.resize(layout.cols, layout.rows);
   renderer.setLayout(layout, uiLayout);
@@ -406,7 +412,7 @@ function frame(now: number) {
     worldFrames++;
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
-  ui.wipe();
+  ui.wipe(); hd.wipe();
   phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
   phone.update(dt, now / 1000);
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
@@ -480,14 +486,14 @@ function frame(now: number) {
   // the opening, over everything the first seconds
   if (introAt >= 0 && now / 1000 - introAt < INTRO_S) {
     const c = calendar(world.time), hh = String(Math.floor(c.hour)).padStart(2, '0'), mm = String(Math.floor((c.hour % 1) * 60)).padStart(2, '0');
-    ui.wipe();
+    ui.wipe(); hd.wipe();
     intro(grid, now / 1000 - introAt, [
       cityName(city).toUpperCase(),
       `${districtName(city, d).toUpperCase()}  ${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')} ${hh}:${mm}`,
       `${operatorName(city).toUpperCase()} ... SIGNAL OK`,
     ]);
   }
-  renderer.draw(grid, ui);
+  renderer.draw(grid, ui, hd);
   requestAnimationFrame(frame);
 }
 
