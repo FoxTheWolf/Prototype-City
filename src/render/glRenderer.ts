@@ -8,29 +8,35 @@ void main() {
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
-// Every pixel finds its cell, reads glyph + colors from the grid textures and copies
-// the matching atlas texel. The whole screen is one draw call.
+// Every pixel finds its cell in two grids: the world's (its rows set by the resolution) and the
+// interface's over it (always the same size: the phone, the notebook, the status lines). Each reads
+// glyph + colors from its grid textures and copies the matching texel of its own atlas. Where the
+// interface drew nothing, the world shows; where it drew a glyph only, the glyph lies over the world.
+// The whole screen is one draw call.
 const FS = `#version 300 es
 precision highp float;
 precision highp int;
-uniform sampler2D uCells;
-uniform sampler2D uBg;
-uniform sampler2D uAtlas;
-uniform ivec2 uCell;
-uniform ivec2 uOrigin;
-uniform ivec2 uGrid;
+uniform sampler2D uCells, uBg, uAtlas, uUiCells, uUiBg, uUiAtlas;
+uniform ivec2 uCell, uOrigin, uGrid, uUiCell, uUiOrigin, uUiGrid;
 uniform float uHeight;
 out vec4 outColor;
-void main() {
-  ivec2 p = ivec2(int(gl_FragCoord.x), int(uHeight - gl_FragCoord.y)) - uOrigin;
-  ivec2 c = p / uCell;
-  if (p.x < 0 || p.y < 0 || c.x >= uGrid.x || c.y >= uGrid.y) { outColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
-  vec4 cell = texelFetch(uCells, c, 0);
-  vec3 bg = texelFetch(uBg, c, 0).rgb;
+vec3 layer(sampler2D cells, sampler2D atlas, ivec2 p, ivec2 c, ivec2 size, vec3 bg) {
+  vec4 cell = texelFetch(cells, c, 0);
   int glyph = int(cell.r * 255.0 + 0.5);
-  ivec2 a = ivec2(glyph % ${ATLAS_COLS}, glyph / ${ATLAS_COLS}) * uCell + (p - c * uCell);
-  float cov = texelFetch(uAtlas, a, 0).r;
-  outColor = vec4(mix(bg, cell.gba, cov), 1.0);
+  ivec2 a = ivec2(glyph % ${ATLAS_COLS}, glyph / ${ATLAS_COLS}) * size + (p - c * size);
+  return mix(bg, cell.gba, texelFetch(atlas, a, 0).r);
+}
+void main() {
+  ivec2 s = ivec2(int(gl_FragCoord.x), int(uHeight - gl_FragCoord.y));
+  vec3 col = vec3(0.0);
+  ivec2 p = s - uOrigin, c = p / uCell;
+  if (p.x >= 0 && p.y >= 0 && c.x < uGrid.x && c.y < uGrid.y) col = layer(uCells, uAtlas, p, c, uCell, texelFetch(uBg, c, 0).rgb);
+  ivec2 q = s - uUiOrigin, u = q / uUiCell;
+  if (q.x >= 0 && q.y >= 0 && u.x < uUiGrid.x && u.y < uUiGrid.y) {
+    vec4 ub = texelFetch(uUiBg, u, 0);
+    if (ub.a > 0.25) col = layer(uUiCells, uUiAtlas, q, u, uUiCell, ub.a > 0.75 ? ub.rgb : col);
+  }
+  outColor = vec4(col, 1.0);
 }`;
 
 export interface Layout {
@@ -43,14 +49,16 @@ export interface Layout {
   originY: number;
 }
 
+const UNIFORMS = ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas', 'uCell', 'uOrigin', 'uGrid', 'uUiCell', 'uUiOrigin', 'uUiGrid', 'uHeight'];
+
 export class GlyphRenderer {
   private gl: WebGL2RenderingContext;
   private prog: WebGLProgram;
-  private cellsTex: WebGLTexture;
-  private bgTex: WebGLTexture;
-  private atlasTex: WebGLTexture;
+  /** The world's cells, background and atlas, then the interface's. */
+  private tex: WebGLTexture[];
   private u: Record<string, WebGLUniformLocation | null> = {};
   private layout: Layout | null = null;
+  private ui: Layout | null = null;
 
   constructor(private canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
@@ -58,44 +66,44 @@ export class GlyphRenderer {
     this.gl = gl;
     this.prog = link(gl, VS, FS);
     gl.useProgram(this.prog);
-    for (const n of ['uCells', 'uBg', 'uAtlas', 'uCell', 'uOrigin', 'uGrid', 'uHeight']) this.u[n] = gl.getUniformLocation(this.prog, n);
-    gl.uniform1i(this.u.uCells, 0);
-    gl.uniform1i(this.u.uBg, 1);
-    gl.uniform1i(this.u.uAtlas, 2);
-    this.cellsTex = texture(gl);
-    this.bgTex = texture(gl);
-    this.atlasTex = texture(gl);
+    for (const n of UNIFORMS) this.u[n] = gl.getUniformLocation(this.prog, n);
+    ['uCells', 'uBg', 'uAtlas', 'uUiCells', 'uUiBg', 'uUiAtlas'].forEach((n, k) => gl.uniform1i(this.u[n], k));
+    this.tex = [0, 1, 2, 3, 4, 5].map(() => texture(gl));
     gl.bindVertexArray(gl.createVertexArray());
   }
 
-  /** Recreate the atlas and grid textures for a new layout. */
-  setLayout(l: Layout) {
+  /** Recreate the atlases and grid textures for new layouts: the world's and the interface's. */
+  setLayout(l: Layout, ui: Layout) {
     const gl = this.gl;
-    this.layout = l;
+    this.layout = l; this.ui = ui;
     gl.useProgram(this.prog);
-    gl.uniform2i(this.u.uCell, l.cellW, l.cellH);
-    gl.uniform2i(this.u.uOrigin, l.originX, l.originY);
-    gl.uniform2i(this.u.uGrid, l.cols, l.rows);
     gl.uniform1f(this.u.uHeight, this.canvas.height);
-    for (const t of [this.cellsTex, this.bgTex]) {
-      gl.bindTexture(gl.TEXTURE_2D, t);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, l.cols, l.rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    }
-    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, buildAtlas(l.cellW, l.cellH));
+    ([[l, 0, ''], [ui, 3, 'Ui']] as const).forEach(([L, t, n]) => {
+      gl.uniform2i(this.u[`u${n}Cell`], L.cellW, L.cellH);
+      gl.uniform2i(this.u[`u${n}Origin`], L.originX, L.originY);
+      gl.uniform2i(this.u[`u${n}Grid`], L.cols, L.rows);
+      for (const k of [t, t + 1]) {
+        gl.bindTexture(gl.TEXTURE_2D, this.tex[k]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, L.cols, L.rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, this.tex[t + 2]);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, buildAtlas(L.cellW, L.cellH));
+    });
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  draw(grid: CharGrid) {
-    const gl = this.gl, l = this.layout!;
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.cellsTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, l.cols, l.rows, gl.RGBA, gl.UNSIGNED_BYTE, grid.cells);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.bgTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, l.cols, l.rows, gl.RGBA, gl.UNSIGNED_BYTE, grid.bg);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+  draw(grid: CharGrid, ui: CharGrid) {
+    const gl = this.gl;
+    ([[grid, this.layout!, 0], [ui, this.ui!, 3]] as const).forEach(([G, L, t]) => {
+      gl.activeTexture(gl.TEXTURE0 + t);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex[t]);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, L.cols, L.rows, gl.RGBA, gl.UNSIGNED_BYTE, G.cells);
+      gl.activeTexture(gl.TEXTURE0 + t + 1);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex[t + 1]);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, L.cols, L.rows, gl.RGBA, gl.UNSIGNED_BYTE, G.bg);
+      gl.activeTexture(gl.TEXTURE0 + t + 2);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex[t + 2]);
+    });
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

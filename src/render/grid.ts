@@ -14,7 +14,11 @@ export interface GridBuffers { cells: ArrayBufferLike; bg: ArrayBufferLike; dept
 export class CharGrid {
   /** Per cell: glyph code, fg r, fg g, fg b. Clamped arrays saturate out-of-range colors for free. */
   readonly cells: Uint8ClampedArray;
-  /** Per cell: bg r, bg g, bg b, unused. */
+  /**
+   * Per cell: bg r, bg g, bg b, and how much of the cell is drawn: 0 nothing, 128 a glyph only,
+   * 255 glyph and background. Only the interface's layer reads it (the world's cells are all drawn):
+   * where nothing was drawn, the world shows through (see glRenderer.ts).
+   */
   readonly bg: Uint8ClampedArray;
   /** Per cell distance of what was drawn, for sprite occlusion. */
   readonly depth: Float32Array;
@@ -67,11 +71,18 @@ export class CharGrid {
   put(i: number, ch: number, r: number, g: number, b: number) {
     const k = i * 4;
     this.cells[k] = ch; this.cells[k + 1] = r; this.cells[k + 2] = g; this.cells[k + 3] = b;
+    if (this.bg[k + 3] === 0) this.bg[k + 3] = 128;
   }
 
   setBg(i: number, r: number, g: number, b: number) {
     const k = i * 4;
-    this.bg[k] = r; this.bg[k + 1] = g; this.bg[k + 2] = b;
+    this.bg[k] = r; this.bg[k + 1] = g; this.bg[k + 2] = b; this.bg[k + 3] = 255;
+  }
+
+  /** Nothing drawn anywhere: an interface layer, transparent until something is put on it. */
+  wipe() {
+    this.bg.fill(0);
+    for (let i = 0; i < this.cells.length; i += 4) this.cells[i] = 32;
   }
 
   /** Write a line of text starting at (x, y), with a solid background. */

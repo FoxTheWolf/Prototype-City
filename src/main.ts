@@ -29,6 +29,8 @@ import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours,
 const RES_ROWS = [80, 100, 120];
 let resStep = 1; // 100 rows on the main thread; 120 with the render workers (set below)
 const ROWS = 80; // the bench's grid, kept the same to compare
+/** The interface (phone, notebook, payphone, status lines) has its own grid, always this many rows: it keeps its size whatever the world's resolution. */
+const UI_ROWS = 80;
 /** Cell width / height, close to a monospace glyph. */
 const CELL_ASPECT = 0.6;
 /** Eye height in metres. */
@@ -73,9 +75,12 @@ function handLightNow(): number {
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
   world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool,
-  gridText: (x0 = 0, y0 = 0, x1 = grid.cols, y1 = grid.rows) => {
+  // the world's characters; with ui = true the interface's (where it drew, else the world's under it at 80 rows)
+  gridText: (x0 = 0, y0 = 0, x1?: number, y1?: number, onUi = false) => {
+    const G = onUi ? ui : grid;
+    x1 ??= G.cols; y1 ??= G.rows;
     let s = '';
-    for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(grid.cells[(y * grid.cols + x) * 4]); s += '\n'; }
+    for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(G.bg[(y * G.cols + x) * 4 + 3] || !onUi ? G.cells[(y * G.cols + x) * 4] : 32); s += '\n'; }
     return s;
   },
   // renders the current view n times without the frame loop (it stops while the pane is hidden); returns the mean ms
@@ -90,6 +95,9 @@ let grid: CharGrid;
 /** With the pool: the last world frame the workers finished, copied under the overlays every refresh. */
 let shown: CharGrid;
 let layout: Layout;
+/** The interface's layer over the world, and its layout (UI_ROWS rows). */
+let ui: CharGrid;
+let uiLayout: Layout;
 let running = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
@@ -97,7 +105,7 @@ let solidStep = 0; // 0.24 ("1/3"), the user's pick
 const look: Look = { solid: SOLID[solidStep], blocks: false, sharp: 0, fuse: false };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
-  const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(layout.cellW / layout.cellH, phone.zoom, world.player.inside >= 0));
+  const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(uiLayout.cellW / uiLayout.cellH, phone.zoom, world.player.inside >= 0));
   // keypad tones as the settings say: none in silent or with them off, the dome's click only, or a
   // tone (touch-tones on the dialer, or on every digit); a call fails for want of a network
   const pr = phone.prefs;
@@ -181,10 +189,10 @@ addEventListener('wheel', (e) => {
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
 let rightAt = -1, rightMoved = 0;
-/** The grid cell under the system cursor. */
+/** The interface's cell under the system cursor. */
 function cellAtClient(cx: number, cy: number): [number, number] {
-  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
-  return [Math.floor(((cx - r.left) * dpr - layout.originX) / layout.cellW), Math.floor(((cy - r.top) * dpr - layout.originY) / layout.cellH)];
+  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
+  return [Math.floor(((cx - r.left) * dpr - L.originX) / L.cellW), Math.floor(((cy - r.top) * dpr - L.originY) / L.cellH)];
 }
 addEventListener('mousemove', (e) => { [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY); });
 /** A payphone's key pressed: its sound, and the payphone. */
@@ -205,14 +213,14 @@ addEventListener('mousedown', (e) => {
   }
   if (e.button === 1) { e.preventDefault(); if (!payphone.active) phoneToggle(); return; }
   if (payphone.active) {
-    if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(grid.cols, grid.rows, x, y); if (k) payPress(k); }
+    if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(ui.cols, ui.rows, x, y); if (k) payPress(k); }
     else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
   if (phone.out) {
     if (e.button === 0) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
-      phonePress(keyAt(grid.cols, grid.rows, phone, x, y) ?? 'ok');
+      phonePress(keyAt(ui.cols, ui.rows, phone, x, y) ?? 'ok');
     } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
@@ -281,11 +289,10 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
 });
 
-function computeLayout(): Layout {
+function computeLayout(rows: number): Layout {
   const dpr = devicePixelRatio || 1;
   const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
   canvas.width = w; canvas.height = h;
-  const rows = RES_ROWS[resStep];
   const cellH = Math.max(4, Math.floor(h / rows));
   const cellW = Math.max(3, Math.round(cellH * CELL_ASPECT));
   const cols = Math.floor(w / cellW);
@@ -293,11 +300,13 @@ function computeLayout(): Layout {
 }
 
 function resize() {
-  layout = computeLayout();
+  layout = computeLayout(RES_ROWS[resStep]);
+  uiLayout = computeLayout(UI_ROWS);
   grid = new CharGrid(layout.cols, layout.rows);
+  ui = new CharGrid(uiLayout.cols, uiLayout.rows);
   shown = new CharGrid(layout.cols, layout.rows);
   pool?.resize(layout.cols, layout.rows);
-  renderer.setLayout(layout);
+  renderer.setLayout(layout, uiLayout);
 }
 
 function readInput(): PlayerInput {
@@ -384,6 +393,7 @@ function frame(now: number) {
     worldFrames++;
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
+  ui.wipe();
   phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
   phone.update(dt, now / 1000);
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
@@ -392,47 +402,47 @@ function frame(now: number) {
   for (const [k] of world.doorSfx) sound?.swing(k > 0);
   world.doorSfx.length = 0;
   payphone.update(now / 1000);
-  payphone.hover = payphone.active ? payphone.keyAt(grid.cols, grid.rows, phone.cx, phone.cy) : null;
+  payphone.hover = payphone.active ? payphone.keyAt(ui.cols, ui.rows, phone.cx, phone.cy) : null;
   playSfx(phone.sfx);
   playSfx(payphone.sfx);
-  drawPayphone(grid, payphone, world, now / 1000, VIEW_LIGHT);
+  drawPayphone(ui, payphone, world, now / 1000, VIEW_LIGHT);
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
-  if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; grid.text((grid.cols - s.length) >> 1, grid.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
+  if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
-  phone.hover = phone.out ? keyAt(grid.cols, grid.rows, phone, phone.cx, phone.cy) : null;
-  drawPhone(grid, phone, world, layout.cellW / layout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
+  phone.hover = phone.out ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
+  drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
   playLap(laptop.sfx);
   const lapOn = laptop.lid > 0 && laptop.pc.bootAt >= 0 && laptop.shell.state !== 'off';
   lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
   sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin, laptop.pc.fan);
-  drawLaptop(grid, laptop, world, now / 1000, VIEW_LIGHT);
-  if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; grid.text((grid.cols - s.length) >> 1, grid.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
+  drawLaptop(ui, laptop, world, now / 1000, VIEW_LIGHT);
+  if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[P] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
-  grid.text(1, grid.rows - 1, status, [255, 176, 74], [12, 10, 8]);
+  ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
   const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
     + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY  POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} [K] `;
-  grid.text(grid.cols - clock.length - 1, grid.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
+  ui.text(ui.cols - clock.length - 1, ui.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
     + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
   let lm = 0;
   city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
   const L = city.landmarks[lm];
-  grid.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
+  ui.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
   // the panel, while standing in a lift car; the chime when it arrives
   const nFloors = liftFloors(world);
   if (nFloors) {
     // a small sight in the middle, to aim at the panel's buttons
-    const i = (grid.rows >> 1) * grid.cols + (grid.cols >> 1), on = pickedButton() >= 0;
-    grid.put(i, '+'.charCodeAt(0), on ? 255 : 200, on ? 200 : 200, on ? 80 : 200);
+    const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1), on = pickedButton() >= 0;
+    ui.put(i, '+'.charCodeAt(0), on ? 255 : 200, on ? 200 : 200, on ? 80 : 200);
   }
   if (wasRiding && p.liftTo < 0) { sound?.ding(); sound?.doors(); }
   if (!wasRiding && p.liftTo >= 0) sound?.doors();
@@ -454,13 +464,14 @@ function frame(now: number) {
   // the opening, over everything the first seconds
   if (introAt >= 0 && now / 1000 - introAt < INTRO_S) {
     const c = calendar(world.time), hh = String(Math.floor(c.hour)).padStart(2, '0'), mm = String(Math.floor((c.hour % 1) * 60)).padStart(2, '0');
+    ui.wipe();
     intro(grid, now / 1000 - introAt, [
       cityName(city).toUpperCase(),
       `${districtName(city, d).toUpperCase()}  ${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')} ${hh}:${mm}`,
       `${operatorName(city).toUpperCase()} ... SIGNAL OK`,
     ]);
   }
-  renderer.draw(grid);
+  renderer.draw(grid, ui);
   requestAnimationFrame(frame);
 }
 
