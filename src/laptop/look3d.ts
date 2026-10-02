@@ -111,7 +111,9 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   if (!tmp || tmp.cols !== cols || tmp.rows !== rows) tmp = new CharGrid(cols, rows);
   tmp.depth.fill(1e9);
   drawObjects(tmp, [obj], cam);
-  const gx0 = square ? Math.round(tl![0]) : 0, gy0 = square ? Math.round(tl![1]) : 0, gx1 = square ? Math.round(tl![0] + view.termW) : 0, gy1 = square ? Math.round(tl![1] + view.termH) : 0;
+  // the cells the screen layer shows through: every cell it touches (rounded out, so no row of the
+  // body cuts its edge; the renderer fills the sliver round the layer with its edge's color)
+  const gx0 = square ? Math.floor(tl![0]) : 0, gy0 = square ? Math.floor(tl![1]) : 0, gx1 = square ? Math.ceil(tl![0] + view.termW) : 0, gy1 = square ? Math.ceil(tl![1] + view.termH) : 0;
   for (let i = 0; i < cols * rows; i++) {
     if (tmp.depth[i] > 1e8) continue;
     const k = i * 4, x = i % cols, y = Math.floor(i / cols);

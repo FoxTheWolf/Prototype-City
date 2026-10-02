@@ -134,10 +134,11 @@ export function marqueeBulb(u: number, sec: number): boolean {
 
 /**
  * Letters at least this many columns wide and rows tall are drawn as their bulbs rather than as a
- * glyph (about 28 m away for a shop sign). Below ~3 x 2.6 cells several bulbs share a cell, and
- * bulbGlyph shades it by how many of its bulb spots are lit, so the letter still reads as a shape.
+ * glyph. Under 3 rows a letter of bulbs no longer reads (the user's rule, 2026-10-02): it is its
+ * ASCII glyph. Down to that, several bulbs may share a cell, and bulbGlyph shades it by how many of
+ * its bulb spots are lit, so the letter still reads as a shape.
  */
-export const BULB_COLS = 1.6, BULB_ROWS = 1.4;
+export const BULB_COLS = 1.6, BULB_ROWS = 3;
 
 /** Glyph for a cell holding n lit bulbs, its footprint hx x hz half-sizes in bulb units; 0 if none. */
 export function bulbGlyph(n: number, hx: number, hz: number): number {

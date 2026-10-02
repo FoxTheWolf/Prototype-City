@@ -332,6 +332,17 @@ export class Shell {
     this.redo(now, '', 0);
     this.busyUntil = this.tq;
   }
+  /**
+   * The power button pressed while it runs: at the prompt the system halts cleanly (the button
+   * tells it to, as ACPI does); anywhere else (the firmware, booting, busy) it cuts the power.
+   */
+  powerButton(now: number) {
+    if (this.halted) return;
+    if (this.state === 'ready' && !this.editor && !this.fw.mode) { this.shutdown(now, false); return; }
+    this.queue = []; this.editor = null; this.fw.close(); this.bios = false; this.inPost = false;
+    this.pc.halt(); this.state = 'off'; this.halted = true; this.lines = [];
+    this.sound(now, 'spindown', 0);
+  }
   shutdown(now: number, reboot: boolean) {
     const pc = this.pc;
     this.state = 'boot';

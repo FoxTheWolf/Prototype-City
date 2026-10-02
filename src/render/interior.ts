@@ -203,6 +203,11 @@ function panelPaint(I: Inside, pu: number, zr: number, cu: number, cz: number, o
 function digitLamps(s: string, u0: number, u1: number, zTop: number, zBot: number, u: number, z: number, cu: number, cz: number): number {
   const bw = (u1 - u0) / (6 * s.length - 1), bh = (zTop - zBot) / 7, hx = cu / bw / 2, hz = cz / bh / 2;
   const px = (u - u0) / bw, pz = (zTop - z) / bh;
+  // a digit under 3 rows tall: its ASCII glyph, in the cell holding its middle (as every text in the world)
+  if ((zTop - zBot) / cz < 3) {
+    const k = Math.floor(px / 6), mu = u0 + (k * 6 + 2.5) * bw, mz = (zTop + zBot) / 2;
+    return k >= 0 && k < s.length && Math.abs(u - mu) <= cu / 2 && Math.abs(z - mz) <= cz / 2 ? s.charCodeAt(k) : 32;
+  }
   let nb = 0;
   for (let k = 0; k < s.length; k++) {
     const rows = fontRows(s.charCodeAt(k));

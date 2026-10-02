@@ -82,7 +82,9 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
-*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02", "Retorno sobre a 12.4" e "Feedback antes do grupo B da etapa 12")*
+
+
+*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02", "Retorno sobre a 12.4", "Feedback antes do grupo B da etapa 12" e "Feedback depois da primeira rodada do grupo B")*
 
 ### Feedback para o Opus 4.8
 
@@ -90,6 +92,40 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 - [HACKING] Adicionar modo recovery para fazer root no celular. (Isso era uma coisa em 2008? Senão, usar uma alternativa. Eu imagino o celular como um hibrido de iphone com blackberry, mas com form factor de celular comum. Inclusive, mais pra frente, uma versão com form factor e teclado de blackberry pro celular seria prudente, e quem sabe uma versão flip igual o notebook). Seria necessário para instalar aplicações de hacking. *(A parte dos formatos BlackBerry e flip já foi para a etapa 15.)*
 
+
+## Opiniões e sugestões do Claude (pedido do usuário em 2026-10-02)
+
+> O usuário pediu opinião de verdade: criativa, de gameplay e de rumo, não só técnica. Esta seção é minha (do Claude), para ele considerar; nada aqui está decidido. Quando ele decidir algo, o item vai para "Decisões tomadas" ou para o Roteiro, e aqui fica marcado. Sessões futuras podem acrescentar opiniões, sempre datadas.
+
+### O que eu acho do rumo (2026-10-02)
+
+- **A cidade está ficando impressionante, e o jogo ainda não existe.** Já temos trânsito com física, 100 mil pessoas com rotina, rede elétrica, telefonia, Wi-Fi, câmeras, rede social, notícias. O que ainda não existe é um motivo para o jogador fazer alguma coisa numa noite qualquer. Meu maior medo pelo projeto é virar um simulador lindo em que se passeia e não se joga. **A minha sugestão mais forte: antes de mais largura (web inteira, economia completa), fazer uma "fatia vertical" de uma noite de trabalho**, do começo ao fim, com o que já existe: alguém pede um serviço → o jogador investiga → vai até o lugar → invade → a cidade reage → ele é pago (ou pego). Tudo o que vier depois fica mais fácil de decidir quando essa noite for divertida.
+- **O realismo é a identidade do jogo, mas atrito só é bom quando vira decisão.** A partida a frio do GPS, a franquia de dados, a bateria do notebook, sentar para usar: tudo ótimo **se** em algum momento o jogador tiver que escolher por causa disso (ir pelo Wi-Fi do café e ser visto, ou pelo 3G caro e lento; comprar um receptor GPS melhor). Atrito que nunca vira escolha vira só espera. Sugiro sempre perguntar, para cada limite realista: "qual escolha ele cria?" e, se nenhuma, deixá-lo leve.
+- **A cidade tem as mesmas ferramentas que o jogador — use isso contra ele.** É a ideia que mais me empolga. Câmeras, logs de telefone, posts com foto, testemunhas, registros de acesso Wi-Fi: o jogador usa tudo isso para hackear; a polícia (e quem ele prejudicou) deveria usar exatamente os mesmos dados para chegar nele. Isso transforma a simulação inteira em jogabilidade sem inventar nada: apagar o log, evitar a câmera da esquina, ligar do orelhão em vez do celular, não postar perto do crime, trocar de Wi-Fi. É o Shadows of Doubt ao contrário: você é o caso.
+
+### Sugestões de jogabilidade
+
+- **Trabalhos que nascem da simulação (o laço principal).** Um "contratante" (fixer) que liga para o orelhão ou manda SMS de número desconhecido, e mais tarde um fórum na web. Os pedidos saem do que existe: o dono de um bar quer o concorrente sem luz na sexta à noite; uma seguradora quer saber se um cidadão foi mesmo ao trabalho no dia do acidente (os dados de câmera e de antena dizem); alguém quer apagar uma multa; um jornalista quer a telemetria do Sarcófago. Pagamento em dinheiro do jogo → hardware melhor (notebook, antena direcional, celular com Wi-Fi melhor, receptor GPS) → alvos mais difíceis.
+- **Calor (heat) e investigação.** Cada ação deixa rastros na simulação (log no roteador, você numa câmera, sua linha na antena, uma testemunha que postou). Um detetive/NPC da polícia junta os rastros com o tempo; a investigação aparece nas notícias e no Streetwire ("polícia procura homem de casaco perto da subestação"). O jogador vê o cerco se fechar pelos mesmos canais que usa.
+- **A lenda urbana.** Se o jogador causa apagões repetidos, a cidade lhe dá um apelido no Streetwire e nas manchetes ("o Fantasma da Rede"), teorias, posts de fãs e de quem odeia. É feedback diegético de "reputação" e de graça para quem gosta de ver as consequências.
+- **Conhecimento como progressão (estilo Hacknet/Outer Wilds).** Mais do que upgrades, o jogador progride por saber coisas: o código secreto do celular achado numa oficina, a senha num post-it de um escritório, a chave do Wi-Fi escrita no quadro do café, o horário em que o técnico loga. Um **mural de pistas** no apartamento (ou no notebook) para ligar fatos ajudaria muito.
+- **Coisas físicas de 2008 que são ótimas de jogar:** fuçar o lixo atrás de um prédio (recibos, papéis com senhas); grampear um orelhão; ligar para um ramal e enganar a recepcionista (engenharia social com escolhas de fala, pelo sistema de diálogo da 13c); um cartão de crachá clonado; a impressora de rede de um escritório imprimindo coisas.
+- **O apagão como ferramenta, não só como espetáculo.** Sem luz, as câmeras com bateria duram pouco, as portas magnéticas abrem (ou trancam, pelo modelo), o trânsito para, as testemunhas olham para o céu. Planejar um serviço em volta de um apagão programado deveria ser uma das jogadas mais satisfatórias do jogo.
+- **Um mistério de fundo, pouco e bom.** As histórias emergentes carregam o jogo, mas um fio autoral discreto dá direção: o Sarcófago parado, a empresa que o construía, a agência da zona de fogo, a telemetria que ainda transmite. Pistas espalhadas nos sistemas (e-mails, manchetes antigas, logs) para quem quiser seguir, sem obrigar.
+- **Uma estação de números** (rádio de ondas curtas lendo números à noite) é perfeita para o tom noir de 2008 e pode ser a porta do mistério.
+- **O apartamento do jogador como base:** onde ele dorme (pular o tempo), carrega tudo, guarda hardware, e onde o mural de pistas fica. Um lugar que vai ficando "dele".
+
+### Sugestões de rumo e ordem
+
+- Depois do grupo B: **a fatia vertical de uma noite** (um contrato, investigação, invasão, reação, pagamento ou calor), antes da web completa e da economia completa. Ela vai mostrar quais partes da web e da economia são necessárias primeiro.
+- **Salvar o jogo cedo.** Hoje nada persiste. O plano "semente + mudanças" está nas decisões; quanto antes existir, mais barato (cada sistema novo já nasce salvável).
+- **Lugares com tipo de verdade** (o pedido do usuário sobre o Maps): concordo que é fundação. Um catálogo pequeno de tipos de lugar com interior coerente vale mais que muitos tipos sem interior.
+- **Ritmo do tempo:** acho que o dia de 2 h está bom para jogar; com trabalhos, a noite vira o "turno" do jogador, e pular o dia dormindo resolve o resto.
+
+### Opiniões técnicas (curtas, porque o usuário já recebe muitas)
+
+- O render em workers aguentou bem o crescimento; o próximo gargalo é a simulação no thread principal (carros: ~1,9 ms por 1000 carros por passo). Se a cidade crescer, a simulação de trânsito é a primeira candidata a ir para um worker.
+- Um **console de debug** dentro do jogo (teletransporte para um lugar, ver um cidadão, forçar um evento) economizaria muito tempo de teste dos dois lados.
 
 ## Visão do jogo
 
@@ -362,6 +398,16 @@ Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de t
   - **A tela do notebook com os efeitos da do celular,** mais fortes: adaptação do olho (mais clara no escuro, mais apagada sob luz forte, com bloom) e reflexo do lado e na cor da luz mais forte por perto (`VIEW_GLINT`).
   - **Subestações físicas:** cada uma é um objeto no mundo (pátio cercado, transformadores, isoladores, placa), visível de longe, num ponto fixo; e uma linha de debug com a mais próxima (distância, direção, ligada ou não).
 - **Etapas novas no Roteiro:** 13b (os NPCs interagindo com a cidade), 13c (os NPCs interagindo com o jogador, com o sistema de diálogo) e 15b (sound design).
+
+## Feedback depois da primeira rodada do grupo B (2026-10-02, organizado)
+
+- **Agora (12.11):**
+  - **Câmeras:** algumas paradas (sem girar) e as outras girando devagar, mais devagar quanto menor o FPS (girar rápido num FPS baixo fica ruim); **FPS entre 10 e 30** nos modelos.
+  - **Elevadores mais rápidos.**
+  - **Texto no mundo:** quando a letra teria menos de 3 linhas de altura em pontos de luz (ou outra forma), desenhar a letra ASCII no lugar.
+  - **Notebook:** a perspectiva muda entre a BIOS/boot (modo texto, mais perto) e o sistema (console, mais longe): unificar; no sistema há uma linha de um pixel transparente e a tela fica um pixel alta demais, cortando o texto de cima; o botão de ligar não desliga o notebook. Conferir visualmente.
+- **Logo depois (12.13), Maps com categorias e rotas:** os marcos viram uma categoria; as outras listam os lugares por tipo (cafés, restaurantes, bares, farmácias, mercados…), do mais perto; escolher um traça a rota até ele.
+- **Fundação a planejar com o usuário: tipos de lugar com interior coerente.** Delimitar quais tipos de lugar existem (os essenciais para a vida simulada e o hacking, que dá para fazer com os interiores atuais): o que o Maps mostra é o que o letreiro diz e é o que o interior é, e depois (economia) os produtos que a loja vende. O cybercafé precisa existir como tipo (hoje só há cafés com Wi-Fi). O cinema fica para depois (interior complexo). Junta-se à etapa "prédios modulares" (pedidos do começo da etapa 12), antes da economia (13).
 
 ## Agradecimentos (easter eggs)
 

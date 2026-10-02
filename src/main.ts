@@ -122,7 +122,10 @@ function termLayout() {
   const w = canvas.width, h = canvas.height;
   let rh = Math.floor(h * 0.68), rw = Math.floor(rh * 1.6);
   if (rw > w * 0.94) { rw = Math.floor(w * 0.94); rh = Math.floor(rw / 1.6); }
-  termCells = { fb: [Math.max(3, Math.floor(rw / TERM_W)), Math.max(5, Math.floor(rh / TERM_H))], tx: [Math.max(4, Math.floor(rw / TEXT_MODE[0])), Math.max(8, Math.floor(rh / TEXT_MODE[1]))] };
+  // the text mode's cells are the console's doubled (80 x 25 against 160 x 50), so both fill exactly the
+  // same glass: the notebook stays where it is when the firmware hands over to the system
+  const fb: [number, number] = [Math.max(3, Math.floor(rw / TERM_W)), Math.max(5, Math.floor(rh / TERM_H))];
+  termCells = { fb, tx: [fb[0] * (TERM_W / TEXT_MODE[0]), fb[1] * (TERM_H / TEXT_MODE[1])] };
   termMode = '';
 }
 let uiLayout: Layout;
@@ -246,9 +249,13 @@ addEventListener('mousedown', (e) => {
     }
     // the notebook's power button
     const pw = power3d;
-    if (e.button === 0 && pw && laptop.shell.halted) {
+    if (e.button === 0 && pw) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
-      if (x >= pw[0] && x < pw[2] && y >= pw[1] && y < pw[3]) laptop.key('Enter', 'Enter', false, performance.now() / 1000);
+      // off, it powers on (Enter is the same button); on, it halts the system (or cuts the power outside it)
+      if (x >= pw[0] && x < pw[2] && y >= pw[1] && y < pw[3]) {
+        if (laptop.shell.halted) laptop.key('Enter', 'Enter', false, performance.now() / 1000);
+        else { laptop.shell.powerButton(performance.now() / 1000); sound?.powerClick(); }
+      }
     }
     return;
   }
@@ -476,7 +483,7 @@ function cctvOverlay(k: number, now: number) {
   if (Math.floor(now * 1.2) & 1) ui.text(x1 - 8, 2, 'O', [255, 40, 30], bgc);
   ui.text(x1 - 6, 2, 'REC', W, bgc);
   ui.text(x0 + 2, ui.rows - 3, `CH${ch} ${cctvMakerName(world.city, M.maker).toUpperCase()} ${M.code}`, W, bgc);
-  ui.text(x0 + 2, ui.rows - 2, `${M.color ? 'COLOR' : 'B/W'} ${M.res} ${M.px}  ${M.fps} FPS  ${C.kind === 0 ? 'AUTO-PAN' : 'PAN'}`, W, bgc);
+  ui.text(x0 + 2, ui.rows - 2, `${M.color ? 'COLOR' : 'B/W'} ${M.res} ${M.px}  ${M.fps} FPS  ${C.sweep ? 'AUTO-PAN' : 'FIXED'}`, W, bgc);
   if (cctv?.title) ui.text(x1 - 26, ui.rows - 2, `NEXT ${Math.max(0, Math.ceil(CCTV_HOLD - (now - cctv.at)))}s  [ESC] MENU`, [150, 160, 150], bgc);
 }
 canvas.addEventListener('click', () => { if (!cctv?.title && !input.locked && !phone.out && !laptop.open) input.lock(); });

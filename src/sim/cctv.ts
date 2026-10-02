@@ -45,12 +45,12 @@ export interface CamModel {
   bias: { tint: [number, number, number]; sat: number; gain: number; gamma: number; grain: number };
 }
 export const CAMS: CamModel[] = [
-  { maker: 0, code: 'VC-220', shape: 'box', color: false, res: 'CIF', px: '352x240', rows: 120, fps: 7.5, bias: { tint: [0.86, 1, 0.88], sat: 0, gain: 1, gamma: 1.1, grain: 1 } },
+  { maker: 0, code: 'VC-220', shape: 'box', color: false, res: 'CIF', px: '352x240', rows: 120, fps: 10, bias: { tint: [0.86, 1, 0.88], sat: 0, gain: 1, gamma: 1.1, grain: 1 } },
   { maker: 0, code: 'VC-480D', shape: 'dome', color: true, res: '4CIF', px: '704x480', rows: 160, fps: 15, bias: { tint: [1.05, 1, 0.9], sat: 0.6, gain: 1.05, gamma: 1, grain: 0.7 } },
   { maker: 1, code: 'S-12 NIGHTEYE', shape: 'bullet', color: false, res: '2CIF', px: '704x240', rows: 120, fps: 15, bias: { tint: [0.92, 0.95, 1.06], sat: 0, gain: 1.2, gamma: 0.9, grain: 1.3 } },
   { maker: 1, code: 'S-30 COLORPRO', shape: 'box', color: true, res: 'D1', px: '720x480', rows: 160, fps: 30, bias: { tint: [0.95, 1.02, 1.08], sat: 0.85, gain: 1, gamma: 1.05, grain: 0.5 } },
-  { maker: 2, code: 'TX-5', shape: 'dome', color: false, res: 'QCIF', px: '176x120', rows: 100, fps: 3.75, bias: { tint: [1, 1, 1], sat: 0, gain: 0.95, gamma: 1.15, grain: 1.2 } },
-  { maker: 2, code: 'TX-9C', shape: 'bullet', color: true, res: 'CIF', px: '352x240', rows: 120, fps: 6, bias: { tint: [1.1, 0.96, 1.05], sat: 0.5, gain: 1.12, gamma: 0.95, grain: 1 } },
+  { maker: 2, code: 'TX-5', shape: 'dome', color: false, res: 'QCIF', px: '176x120', rows: 100, fps: 10, bias: { tint: [1, 1, 1], sat: 0, gain: 0.95, gamma: 1.15, grain: 1.2 } },
+  { maker: 2, code: 'TX-9C', shape: 'bullet', color: true, res: 'CIF', px: '352x240', rows: 120, fps: 12.5, bias: { tint: [1.1, 0.96, 1.05], sat: 0.5, gain: 1.12, gamma: 0.95, grain: 1 } },
 ];
 /** The models a traffic camera (the city's, newer, bought in bulk) or a shop's may be. */
 const TRAFFIC_CAMS = [1, 2, 3, 3, 5], SHOP_CAMS = [0, 0, 1, 2, 4, 4, 5];
@@ -67,8 +67,9 @@ export function buildCctv(seed: number, city: City): Cctv[] {
     if (hash3(seed ^ 0xcc7, k, 1) >= (TRAFFIC[city.districts[b.district].type] ?? 0.05)) return;
     const mx = b.x0 + SIDEWALK - 0.5, my = b.y0 + SIDEWALK - 0.5;
     if (Math.abs(diagS(D, mx, my)) < D.w / 2 + 12) return;
-    const a = -0.75 * Math.PI, arm = 1.6;
-    list.push({ kind: 0, x: mx + Math.cos(a) * arm, y: my + Math.sin(a) * arm, z: 6.1, mx, my, yaw: a, sweep: 0.55 + 0.25 * hash3(seed, k, 2), period: 18 + 20 * hash3(seed, k, 3), phase: hash3(seed, k, 4), pitch: -0.32, biz: -1, building: -1, model: TRAFFIC_CAMS[Math.floor(hash3(seed, k, 5) * TRAFFIC_CAMS.length)], wear: hash3(seed, k, 6) });
+    const a = -0.75 * Math.PI, arm = 1.6, model = TRAFFIC_CAMS[Math.floor(hash3(seed, k, 5) * TRAFFIC_CAMS.length)];
+    const [sweep, period] = pan(seed, k, CAMS[model].fps, 0.55 + 0.25 * hash3(seed, k, 2), 18 + 20 * hash3(seed, k, 3));
+    list.push({ kind: 0, x: mx + Math.cos(a) * arm, y: my + Math.sin(a) * arm, z: 6.1, mx, my, yaw: a, sweep, period, phase: hash3(seed, k, 4), pitch: -0.32, biz: -1, building: -1, model, wear: hash3(seed, k, 6) });
   });
   city.businesses.forEach((biz, n) => {
     if (hash3(seed ^ 0x5ca, n, 1) >= (SHOP[biz.kind] ?? 0)) return;
@@ -82,13 +83,22 @@ export function buildCctv(seed: number, city: City): Cctv[] {
     const lo = f < 2 ? B.y0 : B.x0, hi = f < 2 ? B.y1 : B.x1, end = hash3(seed, n, 2) < 0.5 ? 0 : 1;
     if (hi - lo < 4) return;
     const at = end ? hi - 0.7 : lo + 0.7, dir = end ? -1 : 1, wx = f === 0 ? B.x0 : f === 1 ? B.x1 : at, wy = f < 2 ? at : f === 2 ? B.y0 : B.y1;
-    const out = 0.35, ax = f < 2 ? 0 : dir, ay = f < 2 ? dir : 0;
+    const out = 0.35, ax = f < 2 ? 0 : dir, ay = f < 2 ? dir : 0, model = SHOP_CAMS[Math.floor(hash3(seed, n, 6) * SHOP_CAMS.length)];
+    const [sweep, period] = pan(seed, 10000 + n, CAMS[model].fps, 0.3 + 0.15 * hash3(seed, n, 3), 12 + 12 * hash3(seed, n, 4));
     list.push({
       kind: 1, x: wx + nx * out, y: wy + ny * out, z: 4.1, mx: wx, my: wy, yaw: Math.atan2(ny * 0.8 + ay * 0.6, nx * 0.8 + ax * 0.6),
-      sweep: 0.3 + 0.15 * hash3(seed, n, 3), period: 12 + 12 * hash3(seed, n, 4), phase: hash3(seed, n, 5), pitch: -0.4, biz: n, building: biz.building, model: SHOP_CAMS[Math.floor(hash3(seed, n, 6) * SHOP_CAMS.length)], wear: hash3(seed, n, 7),
+      sweep, period, phase: hash3(seed, n, 5), pitch: -0.4, biz: n, building: biz.building, model, wear: hash3(seed, n, 7),
     });
   });
   return list;
+}
+
+/**
+ * How a camera pans: about a third stay still, watching one spot; the others sweep, slower the
+ * fewer frames their recorder keeps (a fast pan at 10 frames a second only jumps).
+ */
+function pan(seed: number, k: number, fps: number, sweep: number, period: number): [number, number] {
+  return hash3(seed ^ 0x9a7, k, 1) < 0.33 ? [0, 1] : [sweep, period * (1 + (30 - fps) / 20)];
 }
 
 /** A camera's heading at a moment (seconds of real time). */

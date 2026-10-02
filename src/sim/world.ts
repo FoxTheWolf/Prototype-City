@@ -168,10 +168,10 @@ export function callLift(w: World, f: number): boolean {
 }
 
 /** Lift speed in m/s, with a gentle start and stop. */
-const LIFT_V = 2.5;
+const LIFT_V = 6;
 function stepLift(p: Player) {
   const goal = p.liftTo * FLOOR_H, d = goal - p.z;
-  p.z += Math.sign(d) * Math.min(Math.abs(d), Math.min(LIFT_V, 0.6 + Math.abs(d) * 1.5) * TICK);
+  p.z += Math.sign(d) * Math.min(Math.abs(d), Math.min(LIFT_V, 0.8 + Math.abs(d) * 2.2) * TICK);
   // the storey whose plan surrounds the car
   p.floor = Math.round(p.z / FLOOR_H);
   if (Math.abs(goal - p.z) < 1e-3) { p.z = goal; p.floor = p.liftTo; p.liftTo = -1; }

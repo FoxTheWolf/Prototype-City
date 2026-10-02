@@ -45,6 +45,10 @@ void main() {
     if (uTmGrid.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < uTmGrid.x && mc.y < uTmGrid.y) {
       vec4 tb = texelFetch(uTmBg, mc, 0);
       if (tb.a > 0.25) col = layer(uTmCells, uTmAtlas, m, mc, uTmCell, tb.a > 0.75 ? tb.rgb : col);
+    } else if (uTmGrid.x > 0 && m.x >= -uUiCell.x && m.y >= -uUiCell.y && m.x < uTmGrid.x * uTmCell.x + uUiCell.x && m.y < uTmGrid.y * uTmCell.y + uUiCell.y) {
+      // within an interface cell round the layer: its nearest edge cell's paper (the screen's black edge)
+      vec4 tb = texelFetch(uTmBg, clamp(m / max(uTmCell, ivec2(1)), ivec2(0), uTmGrid - 1), 0);
+      if (tb.a > 0.75) col = tb.rgb;
     }
     vec4 ub = texelFetch(uUiBg, u, 0);
     if (ub.a > 0.25) col = layer(uUiCells, uUiAtlas, q, u, uUiCell, ub.a > 0.75 ? ub.rgb : col);
