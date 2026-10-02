@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Manual do Hacker — Terminal City</title>
+<style>
+  :root{
+    --bg:#0c0e0b; --panel:#13160f; --panel2:#171a12; --ink:#e7dcc2; --dim:#8c8a79;
+    --amber:#e8b84b; --amber2:#f4cf74; --green:#86d96a; --cyan:#73c7d6; --red:#e07a5f;
+    --line:#2a2d22; --sel:#2a2410;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI","Helvetica Neue",system-ui,sans-serif;
+    font-size:10.5pt; line-height:1.5;
+  }
+  .mono{font-family:"Consolas","DejaVu Sans Mono","Courier New",monospace;}
+  h1,h2,h3,h4{font-family:"Consolas","DejaVu Sans Mono",monospace; color:var(--amber); line-height:1.2; margin:0 0 .4em;}
+  h2{font-size:17pt; border-bottom:1px solid var(--line); padding-bottom:.2em; margin-top:0;}
+  h3{font-size:12.5pt; color:var(--amber2); margin-top:1.1em;}
+  h4{font-size:10.5pt; color:var(--green); margin-top:.9em; text-transform:uppercase; letter-spacing:.06em;}
+  p{margin:.5em 0;}
+  a{color:var(--cyan); text-decoration:none;}
+  code{font-family:"Consolas","DejaVu Sans Mono",monospace; color:var(--amber2); background:#1c1f15; padding:.03em .3em; border-radius:3px;}
+  .section{page-break-before:always; padding:4mm 0 0;}
+  .lead{color:var(--dim); font-size:10pt;}
+  ul,ol{margin:.4em 0 .4em 0; padding-left:1.3em;}
+  li{margin:.25em 0;}
+  strong{color:var(--amber2);}
+  .kbd{display:inline-block; font-family:"Consolas",monospace; font-size:9pt; background:#20241a; border:1px solid #39402c; border-bottom-width:2px; border-radius:4px; padding:.02em .4em; color:var(--ink);}
+
+  /* command / output blocks */
+  pre{font-family:"Consolas","DejaVu Sans Mono",monospace; font-size:8.6pt; line-height:1.45; margin:.5em 0; padding:.7em .9em; border-radius:5px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;}
+  pre.cmd{background:#0a0d07; border:1px solid #2c3420; border-left:3px solid var(--green); color:var(--green);}
+  pre.out{background:#121309; border:1px solid var(--line); border-left:3px solid #4a442a; color:#cfc7a8;}
+  pre .c{color:var(--dim);}            /* comment */
+  pre .p{color:var(--amber);}          /* prompt */
+  pre .s{color:var(--amber2); font-weight:bold;}  /* secret / highlight */
+
+  table{width:100%; border-collapse:collapse; margin:.6em 0; font-size:9pt;}
+  th,td{border:1px solid var(--line); padding:.35em .5em; text-align:left; vertical-align:top;}
+  th{background:var(--panel2); color:var(--amber); font-family:"Consolas",monospace;}
+  td code{background:none; padding:0;}
+
+  .box{border:1px solid var(--line); border-radius:6px; padding:.7em .9em; margin:.7em 0; background:var(--panel);}
+  .box.warn{border-left:3px solid var(--red);}
+  .box.tip{border-left:3px solid var(--cyan);}
+  .box.note{border-left:3px solid var(--amber);}
+  .box .tag{font-family:"Consolas",monospace; font-size:8pt; letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:.2em;}
+  .warn .tag{color:var(--red);} .tip .tag{color:var(--cyan);} .note .tag{color:var(--amber);}
+
+  .tut{border:1px solid #33381f; border-radius:7px; margin:1em 0; overflow:hidden; background:var(--panel);}
+  .tut>.head{background:linear-gradient(180deg,#1b1f12,#141710); padding:.5em .9em; border-bottom:1px solid #33381f;}
+  .tut>.head .n{font-family:"Consolas",monospace; color:var(--bg); background:var(--amber); border-radius:4px; padding:.05em .5em; font-weight:bold; margin-right:.5em;}
+  .tut>.head .t{font-family:"Consolas",monospace; color:var(--amber2); font-size:11pt;}
+  .tut>.body{padding:.3em .9em .8em;}
+  .goal{color:var(--dim); font-size:9pt; margin:.3em 0 .6em;}
+  ol.steps{counter-reset:step; list-style:none; padding-left:0;}
+  ol.steps>li{counter-increment:step; position:relative; padding-left:2em; margin:.7em 0;}
+  ol.steps>li::before{content:counter(step); position:absolute; left:0; top:.05em; font-family:"Consolas",monospace; font-size:8.5pt; color:var(--bg); background:var(--green); width:1.35em; height:1.35em; border-radius:50%; text-align:center; line-height:1.35em;}
+
+  /* cover */
+  .cover{height:255mm; display:flex; flex-direction:column; justify-content:center; padding:0 4mm;}
+  .cover .scan{position:relative;}
+  .cover h1{font-size:34pt; letter-spacing:.02em; margin:0; text-shadow:0 0 18px rgba(232,184,75,.35);}
+  .cover .sub{font-family:"Consolas",monospace; color:var(--green); font-size:13pt; margin-top:.3em;}
+  .cover .meta{margin-top:2.2em; color:var(--dim); font-family:"Consolas",monospace; font-size:9.5pt; border-top:1px solid var(--line); padding-top:1em; max-width:120mm;}
+  .cover .big{font-family:"Consolas",monospace; color:#1d2014; font-size:9pt; line-height:1.15; white-space:pre; margin-bottom:1.5em;}
+  .toc{columns:2; column-gap:12mm; font-family:"Consolas",monospace; font-size:9.5pt;}
+  .toc div{margin:.2em 0; break-inside:avoid;}
+  .toc .num{color:var(--amber);}
+  footer{color:var(--dim); font-size:8pt; text-align:center; margin-top:3mm;}
+  @page{ size:A4; margin:16mm 14mm; }
+</style>
+</head>
+<body>
+
+<!-- ===================== COVER ===================== -->
+<div class="cover">
+  <div class="big">  ████████ ███████ ██████  ███    ███ ██ ███    ██  █████  ██
+     ██    ██      ██   ██ ████  ████ ██ ████   ██ ██   ██ ██
+     ██    █████   ██████  ██ ████ ██ ██ ██ ██  ██ ███████ ██
+     ██    ██      ██   ██ ██  ██  ██ ██ ██  ██ ██ ██   ██ ██
+     ██    ███████ ██   ██ ██      ██ ██ ██   ████ ██   ██ ███████   C I T Y</div>
+  <h1>Manual do Hacker</h1>
+  <div class="sub">&gt; ferramentas, conceitos e tutoriais — notebook &amp; celular</div>
+  <div class="meta">
+    Documento de referência fora do jogo. Tudo o que está aqui é o sistema de
+    hacking <em>fictício</em> de Terminal City e só funciona dentro da simulação do jogo:
+    nomes de programas, redes, portas e senhas são inventados. Nada aqui se aplica a
+    computadores ou redes reais.<br><br>
+    Versão do manual: etapa 10 (notebook e primeiro hacking).<br>
+    Exemplos usam a cidade da semente <code>42</code> — nomes, chaves e endereços
+    mudam a cada semente e a cada rede.
+  </div>
+</div>
+
+<!-- ===================== ÍNDICE ===================== -->
+<div class="section">
+  <h2>Índice</h2>
+  <div class="toc">
+    <div><span class="num">1.</span> O mundo é uma rede</div>
+    <div><span class="num">2.</span> Conceitos</div>
+    <div><span class="num">2.1</span> Wi-Fi: aberto, WEP, WPA</div>
+    <div><span class="num">2.2</span> Sinal e distância</div>
+    <div><span class="num">2.3</span> Hosts, portas e serviços</div>
+    <div><span class="num">2.4</span> Senhas e listas de palavras</div>
+    <div><span class="num">2.5</span> Pacotes, captura e handshake</div>
+    <div><span class="num">2.6</span> Consoles e modbus (ICS)</div>
+    <div><span class="num">2.7</span> O computador virtual</div>
+    <div><span class="num">3.</span> O notebook</div>
+    <div><span class="num">3.1</span> Tirar, abrir e operar</div>
+    <div><span class="num">3.2</span> O shell</div>
+    <div><span class="num">3.3</span> A BIOS e a senha</div>
+    <div><span class="num">3.4</span> Comandos de rede</div>
+    <div><span class="num">3.5</span> As ferramentas de hacker</div>
+    <div><span class="num">4.</span> O celular</div>
+    <div><span class="num">5.</span> Tutoriais</div>
+    <div><span class="num">6.</span> Referência rápida</div>
+  </div>
+</div>
+
+<!-- ===================== 1 ===================== -->
+<div class="section">
+  <h2>1 &middot; O mundo é uma rede</h2>
+  <p class="lead">Como pensar a cidade do ponto de vista de um hacker de 2008.</p>
+  <p>Terminal City é uma cidade simulada de verdade: a rede elétrica, os semáforos, as
+  antenas de celular, os roteadores das lojas e casas — tudo existe como dado na
+  simulação. O hacking não é um minijogo à parte; é mexer nesses sistemas reais pela
+  rede e ver a consequência na cidade (um bairro que apaga, um cruzamento que trava,
+  uma manchete que corre no letreiro).</p>
+  <p>A época é por volta de <strong>2008</strong>. Nada de ciberespaço, implantes ou
+  <em>quickhacks</em>. O hacking é físico e concreto: você vai até um lugar, entra numa
+  rede Wi-Fi pelo <strong>notebook</strong>, varre o que há nela, descobre uma senha e
+  abre um console. O <strong>celular</strong> é o aparelho de bolso (sinal, dados,
+  mapa, códigos); as ferramentas pesadas de hacker vivem no notebook.</p>
+  <div class="box note"><span class="tag">Princípio</span>
+  Tudo o que você captura ou controla vem da simulação. Uma senha que o <code>tdump</code>
+  mostra é a senha que o técnico realmente usou. Um disjuntor que você abre é o mesmo
+  que a tecla de debug abre. Se funciona, a cidade reage.</div>
+</div>
+
+<!-- ===================== 2 ===================== -->
+<div class="section">
+  <h2>2 &middot; Conceitos</h2>
+
+  <h3>2.1 &middot; Wi-Fi: aberto, WEP, WPA</h3>
+  <p>Cada roteador anuncia uma rede com um nome (<strong>ESSID</strong>), um endereço de
+  hardware (<strong>BSSID</strong>), um canal (1, 6 ou 11) e um tipo de segurança:</p>
+  <table>
+    <tr><th>Tipo</th><th>O que significa</th><th>Para você</th></tr>
+    <tr><td><code>aberto</code></td><td>sem chave; o tráfego passa em claro no ar</td><td>entra direto; dá para ler tudo que passa</td></tr>
+    <tr><td><code>WEP</code></td><td>chave velha e fraca de 10 dígitos</td><td>precisa da chave; com ela, você decifra o tráfego</td></tr>
+    <tr><td><code>WPA</code></td><td>chave mais forte (8–10 dígitos)</td><td>precisa da chave; o tráfego fica protegido, mas o <em>handshake</em> pode ser capturado</td></tr>
+  </table>
+  <p>As redes de manutenção da companhia elétrica são <strong>WEP</strong> e têm nome
+  <code>GRIDLINK-NN</code> — ficam no ponto de cada subestação. São o alvo mais rico
+  do jogo hoje.</p>
+
+  <h3>2.2 &middot; Sinal e distância</h3>
+  <p>O sinal é medido em <strong>dBm</strong> (mais perto de zero = mais forte:
+  −36 dBm é ótimo, −90 dBm é quase nada) e em barras de 0 a 4. O sinal cai com a
+  distância, com as paredes e com os prédios no caminho. Sinal fraco significa
+  <strong>pacotes perdidos e retransmitidos</strong> — a captura fica mais lenta e
+  falhada. Para hackear bem, chegue perto da fonte.</p>
+
+  <h3>2.3 &middot; Hosts, portas e serviços</h3>
+  <p>Numa rede há vários <strong>hosts</strong> (máquinas), cada um com um endereço IP
+  (<code>192.168.x.y</code>). Cada host escuta em <strong>portas</strong>, e cada porta
+  roda um <strong>serviço</strong> que se anuncia com um <em>banner</em>. As portas que
+  importam agora:</p>
+  <table>
+    <tr><th>Porta</th><th>Serviço</th><th>O que é</th></tr>
+    <tr><td><code>80</code></td><td>http</td><td>painel web do roteador / bridge de rádio</td></tr>
+    <tr><td><code>23</code></td><td>telnet</td><td>console de texto com login e senha (RTU, armário de semáforos)</td></tr>
+    <tr><td><code>502</code></td><td>modbus</td><td>telemetria e controle industrial — <strong>sem senha</strong></td></tr>
+    <tr><td><code>135/139/445</code></td><td>windows</td><td>PCs comuns de lojas e casas</td></tr>
+  </table>
+
+  <h3>2.4 &middot; Senhas e listas de palavras</h3>
+  <p>Os consoles telnet pedem <strong>login</strong> e <strong>senha</strong>. Os
+  operadores da cidade usam senhas fracas — todas saem de uma lista de palavras comuns
+  (<em>admin</em>, <em>matthew</em>, <em>network</em>…). É isso que o <code>bruter</code>
+  explora: ele tenta a lista inteira até acertar. Logins típicos:
+  <code>operator</code> (a RTU do disjuntor) e <code>engineer</code> (o armário de
+  semáforos).</p>
+
+  <h3>2.5 &middot; Pacotes, captura e handshake</h3>
+  <p>Toda conversa na rede vira <strong>pacotes</strong> no ar. Um capturador
+  (<code>tdump</code>) mostra cada quadro: os <em>beacons</em> do roteador, a entrada de
+  um aparelho na rede (probe → autenticação → associação), o <strong>handshake WPA de 4
+  vias</strong> (as 4 mensagens EAPOL que provam a chave), e depois ARP, DHCP, DNS, TCP
+  e HTTP.</p>
+  <ul>
+    <li>Numa rede <strong>aberta ou WEP</strong> (você tem a chave), o conteúdo aparece em
+    claro — inclusive senhas digitadas num telnet.</li>
+    <li>Numa rede <strong>WPA</strong>, o conteúdo fica cifrado; mas capturar o
+    <strong>handshake</strong> de alguém entrando guarda o material para quebrar a chave
+    offline mais tarde.</li>
+  </ul>
+  <div class="box tip"><span class="tag">Dica</span>
+  Numa rede de manutenção, espere aparecer um <strong>técnico logado</strong>: o
+  <code>tdump</code> captura o login dele em claro (<code>operator</code> + a senha), e
+  você nem precisa quebrar nada.</div>
+
+  <h3>2.6 &middot; Consoles e modbus (ICS)</h3>
+  <p>A subestação tem dois jeitos de ser controlada:</p>
+  <ul>
+    <li><strong>Telnet (porta 23)</strong> na <code>RTU-300</code>: pede login e senha; lá
+    dentro, <code>breaker open</code> desarma o disjuntor (apaga o bairro) e
+    <code>breaker close</code> religa.</li>
+    <li><strong>Modbus (porta 502)</strong> na mesma RTU: um protocolo industrial que
+    <strong>não tem autenticação</strong>. Dá para ler a telemetria (tensão, corrente,
+    frequência, temperatura) e escrever o <em>coil</em> do disjuntor — alcançar a porta
+    502 já basta. É a fraqueza clássica dos sistemas industriais.</li>
+  </ul>
+  <p>O armário de semáforos (<code>ATC-2</code>, telnet) aceita <code>mode normal</code>,
+  <code>mode flash</code> (pisca amarelo) e <code>mode dark</code> (apaga): o distrito
+  inteiro daquela subestação obedece.</p>
+
+  <h3>2.7 &middot; O computador virtual</h3>
+  <p>O notebook (e cada máquina da cidade) é um computador de verdade na simulação: tem
+  CPU, memória, disco, placa de rede e um sistema operacional (<code>Osprey/UX</code>,
+  tipo Unix). Os limites são reais:</p>
+  <ul>
+    <li>um programa que não cabe na memória livre não roda (<em>cannot allocate memory</em>);</li>
+    <li>ler do disco e calcular leva tempo — o texto sai no ritmo do trabalho real;</li>
+    <li>a <strong>bateria</strong> acaba (2–3 h); carregue sentado dentro de um prédio com energia;</li>
+    <li>a <strong>BIOS</strong> guarda relógio, ordem de boot e uma senha opcional.</li>
+  </ul>
+</div>
+
+<!-- ===================== 3 ===================== -->
+<div class="section">
+  <h2>3 &middot; O notebook</h2>
+  <p class="lead">A ferramenta principal do hacker.</p>
+
+  <h3>3.1 &middot; Tirar, abrir e operar</h3>
+  <ul>
+    <li><span class="kbd">N</span> tira o notebook da mochila e o guarda. Ele <strong>só
+    abre sentado ou apoiado</strong> (banco, ponto de ônibus, mesa de café, degrau,
+    meio-fio, no chão dentro de um prédio…). No meio da rua, não.</li>
+    <li>Ao abrir, escolha o lugar; o mundo continua andando enquanto você usa.</li>
+    <li>Com ele aberto, o teclado inteiro vai para o terminal; segure o
+    <strong>botão direito</strong> para olhar em volta.</li>
+    <li><span class="kbd">Esc</span> fecha a tampa e levanta.</li>
+    <li><code>color green</code> / <code>color amber</code> troca a cor do fósforo.</li>
+  </ul>
+
+  <h3>3.2 &middot; O shell</h3>
+  <p>É um shell tipo Unix. Alguns comandos do dia a dia:</p>
+  <table>
+    <tr><th>Comando</th><th>O que faz</th></tr>
+    <tr><td><code>ls</code> <code>cd</code> <code>pwd</code> <code>cat</code></td><td>listar, navegar, ver arquivos</td></tr>
+    <tr><td><code>man &lt;cmd&gt;</code></td><td>o manual de um comando (leia isto!)</td></tr>
+    <tr><td><code>help</code></td><td>a lista de comandos por categoria</td></tr>
+    <tr><td><code>ps</code> <code>free</code> <code>df</code></td><td>processos, memória, disco</td></tr>
+    <tr><td><code>sensors</code> <code>acpi</code></td><td>temperatura/ventilador, bateria</td></tr>
+    <tr><td><code>nano &lt;arq&gt;</code></td><td>editor de texto</td></tr>
+  </table>
+  <p>Atalhos: <span class="kbd">Tab</span> completa, <span class="kbd">↑</span>/<span class="kbd">↓</span>
+  histórico, <span class="kbd">Ctrl+C</span> cancela, <span class="kbd">Ctrl+L</span> limpa,
+  a roda do mouse rola. Só se escreve em <code>~</code> (sua pasta) e <code>/tmp</code>.</p>
+
+  <h3>3.3 &middot; A BIOS e a senha</h3>
+  <p>Logo que o notebook liga (o POST), você pode entrar na firmware:</p>
+  <ul>
+    <li><span class="kbd">F2</span> abre a <strong>SETUP</strong> (abas Main, Advanced, Boot,
+    Security, Exit). <span class="kbd">F10</span> salva e reinicia, <span class="kbd">Esc</span>
+    sai sem salvar.</li>
+    <li><span class="kbd">F12</span> abre o <strong>menu de boot</strong> (disco, DVD, USB, rede).</li>
+    <li>Na aba <strong>Security</strong> você define a <strong>senha de supervisor</strong>:
+    ela é pedida para entrar na SETUP e, se você ligar <em>Password on Boot</em>, a cada
+    vez que a máquina liga. É a base para as senhas de BIOS que protegem as máquinas da
+    cidade mais adiante.</li>
+  </ul>
+
+  <h3>3.4 &middot; Comandos de rede</h3>
+  <p>A placa sem fio do notebook enxerga as mesmas redes que o celular. O caminho para
+  entrar numa rede é sempre o mesmo:</p>
+  <table>
+    <tr><th>Comando</th><th>O que faz</th></tr>
+    <tr><td class="mono">iwlist</td><td>varre as redes em volta (nome, canal, sinal, se é fechada)</td></tr>
+    <tr><td class="mono">iwconfig wlan0 essid "NOME" key CHAVE</td><td>associa a uma rede (a <code>key</code> só nas fechadas)</td></tr>
+    <tr><td class="mono">dhclient</td><td>pede um endereço IP (<em>bound to …</em> = conectado)</td></tr>
+    <tr><td class="mono">ifconfig</td><td>mostra o endereço atual</td></tr>
+    <tr><td class="mono">ping &lt;host&gt;</td><td>testa o alcance (o tempo cresce com sinal fraco)</td></tr>
+  </table>
+
+  <h3>3.5 &middot; As ferramentas de hacker</h3>
+  <p>Ficam em <code>~/bin</code> (instaladas por fora da loja). <strong>Todas só rodam
+  numa rede em que você já entrou</strong> (<code>iwconfig</code> + <code>dhclient</code>):</p>
+  <table>
+    <tr><th>Ferramenta</th><th>O que faz</th><th>Uso</th></tr>
+    <tr><td><code>mmap</code></td><td>varre os hosts da rede: cada máquina, suas portas, serviços e banners</td><td class="mono">mmap<br>mmap &lt;ip&gt;</td></tr>
+    <tr><td><code>tdump</code></td><td>captura os pacotes do ar (beacons, handshake, logins em claro)</td><td class="mono">tdump<br>tdump -c 30</td></tr>
+    <tr><td><code>bruter</code></td><td>testa a lista de senhas fracas contra um console (porta 23)</td><td class="mono">bruter &lt;ip&gt; [login]</td></tr>
+    <tr><td><code>tnet</code></td><td>abre o console remoto (login/senha); dentro, <code>help</code> lista o que a máquina faz</td><td class="mono">tnet &lt;ip&gt;</td></tr>
+    <tr><td><code>mbus</code></td><td>fala modbus na porta 502: lê a telemetria ou escreve o disjuntor (sem senha)</td><td class="mono">mbus &lt;ip&gt; read<br>mbus &lt;ip&gt; write coil 0 0|1</td></tr>
+  </table>
+  <div class="box note"><span class="tag">man</span>
+  Cada ferramenta tem sua página: <code>man tdump</code>, <code>man mbus</code>, etc.
+  Comece por aí quando esquecer a sintaxe.</div>
+</div>
+
+<!-- ===================== 4 ===================== -->
+<div class="section">
+  <h2>4 &middot; O celular</h2>
+  <p class="lead">O aparelho de bolso: sinal, dados, mapa e alguns segredos.</p>
+  <p>O celular não tem (ainda) as ferramentas pesadas de hacker — scanner de Wi-Fi,
+  farejador e captura virão numa atualização por cabo (etapa 14). Hoje ele serve ao
+  hacker de três jeitos:</p>
+
+  <h4>Wi-Fi</h4>
+  <p>Nas configurações &rarr; Wi-Fi, o celular varre e entra em redes abertas e fechadas,
+  com alcance físico, igual ao notebook. É o jeito rápido de ver que redes existem num
+  lugar antes de abrir o notebook. <span class="kbd">Configurações</span> mostra sinal em
+  dBm, célula e número.</p>
+  <div class="box tip"><span class="tag">Debug</span>
+  Na versão atual, a tela de Wi-Fi do celular mostra a <strong>chave</strong> da rede
+  escolhida (um atalho de desenvolvimento). É assim que você consegue a chave WEP de uma
+  <code>GRIDLINK</code> por enquanto — a quebra de WEP de verdade vem na etapa 14.</div>
+
+  <h4>Códigos secretos (USSD / service codes)</h4>
+  <p>Como nos celulares da época, digitar um código no discador e ligar abre telas de
+  teste escondidas. Alguns são fixos, outros mudam por cidade (você os acha no mundo —
+  um fórum, um manual vazado):</p>
+  <ul>
+    <li><code>*#06#</code> — o IMEI do aparelho.</li>
+    <li><code>*100#</code> — o menu da operadora (saldo, pacotes de dados, recarga, seu número).</li>
+    <li><code>*#nnnn#</code> — testes de fábrica: GPS, <em>field test</em> (célula, canal, nível,
+    vizinhas), sensores, teclas, tela, versão. Os quatro dígitos mudam por semente.</li>
+  </ul>
+
+  <h4>Dados e sinal</h4>
+  <p>Os dados móveis (EDGE) vêm das antenas da cidade e têm <strong>franquia em MB</strong>.
+  O sinal depende da distância até a antena e dos prédios no caminho. No blackout, as
+  antenas caem depois de algumas horas (bateria). O app de mapa, o GPS e o <em>field
+  test</em> ajudam a entender a rede de antenas — útil quando o hacking de telecom chegar.</p>
+</div>
+
+<!-- ===================== 5 ===================== -->
+<div class="section">
+  <h2>5 &middot; Tutoriais</h2>
+  <p class="lead">Passo a passo. Os valores (chave, IPs, senha) são exemplos da semente
+  <code>42</code> e mudam a cada rede — leia o que a sua tela mostra.</p>
+
+  <div class="tut">
+    <div class="head"><span class="n">T1</span><span class="t">Apagar um bairro pela subestação</span></div>
+    <div class="body">
+      <div class="goal">Alvo: a RTU do disjuntor de uma subestação. Resultado: o distrito apaga.</div>
+      <ol class="steps">
+        <li>Vá até perto de uma subestação (a rede de manutenção <code>GRIDLINK</code> só
+        aparece ali). Sente-se e abra o notebook com <span class="kbd">N</span>.</li>
+        <li>Veja as redes em volta:
+          <pre class="cmd">iwlist</pre>
+          <pre class="out">Cell 01 - Address: 55:07:BD:ED:A4:55
+          ESSID:"GRIDLINK-01"
+          Channel:11  Quality=100/100  Signal level:<span class="s">-36 dBm</span>
+          Encryption key:on  (WEP)</pre>
+          Sinal forte (perto de 0) = você está no lugar certo.</li>
+        <li>Entre na rede. A chave WEP de 10 dígitos você lê hoje na tela de Wi-Fi do
+        celular (debug):
+          <pre class="cmd">iwconfig wlan0 essid "GRIDLINK-01" key 7418529185
+dhclient</pre>
+          <pre class="out">bound to 192.168.11.249 -- renewal in 43200 seconds.</pre></li>
+        <li>Veja o que há na rede:
+          <pre class="cmd">mmap</pre>
+          <pre class="out">Host 192.168.11.10 (rtu-01) is up
+  23   open  telnet   Voltex RTU-300 substation controller
+  502  open  modbus   unit 1 (telemetry)
+Host 192.168.11.11 (atc-01) is up
+  23   open  telnet   Metrix ATC-2 traffic signal cabinet</pre></li>
+        <li>Descubra a senha da RTU. <strong>Opção A — capturar</strong> (espere um técnico logar):
+          <pre class="cmd">tdump</pre>
+          <pre class="out"><span class="s">TELNET  192.168.11.51 &gt; 192.168.11.10.23  data "operator\r"</span>
+<span class="s">TELNET  192.168.11.51 &gt; 192.168.11.10.23  data "matthew\r"</span>
+  ^ cleartext credentials captured</pre>
+          <strong>Opção B — quebrar</strong> a senha fraca:
+          <pre class="cmd">bruter 192.168.11.10 operator</pre>
+          <pre class="out">  PASSWORD FOUND  login:operator  password:matthew</pre></li>
+        <li>Entre no console e abra o disjuntor:
+          <pre class="cmd">tnet 192.168.11.10
+<span class="c">login:</span> operator
+<span class="c">Password:</span> matthew
+breaker open</pre>
+          <pre class="out">  ACK: breaker tripped, feeder de-energized</pre>
+          O bairro apaga em onda. <code>breaker close</code> religa; <code>exit</code> desconecta.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tut">
+    <div class="head"><span class="n">T2</span><span class="t">O mesmo, sem senha — pelo modbus</span></div>
+    <div class="body">
+      <div class="goal">A porta 502 não pede senha. Se você só quer o disjuntor, pule o bruter e o tnet.</div>
+      <ol class="steps">
+        <li>Entre na <code>GRIDLINK</code> e rode <code>mmap</code> como no T1 (passos 1–4).</li>
+        <li>Leia a telemetria da subestação:
+          <pre class="cmd">mbus 192.168.11.10 read</pre>
+          <pre class="out">  40000  breaker_closed          1
+  40001  bus_kV_x100          1378
+  40002  feeder_amps           349
+  40003  frequency_cHz        5998</pre></li>
+        <li>Desarme o disjuntor escrevendo o coil 0 (0 = desliga):
+          <pre class="cmd">mbus 192.168.11.10 write coil 0 0</pre>
+          <pre class="out">  response: coil 0 -&gt; OFF  (breaker tripped, feeder dead)</pre>
+          <code>write coil 0 1</code> religa.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tut">
+    <div class="head"><span class="n">T3</span><span class="t">Travar o trânsito de um distrito</span></div>
+    <div class="body">
+      <div class="goal">Alvo: o armário de semáforos (ATC-2). Resultado: os cruzamentos piscam ou apagam.</div>
+      <ol class="steps">
+        <li>Na mesma <code>GRIDLINK</code>, a senha do <code>engineer</code> sai do <code>bruter</code>
+        (ou do <code>tdump</code>):
+          <pre class="cmd">bruter 192.168.11.11 engineer</pre></li>
+        <li>Abra o console do armário e mude o modo:
+          <pre class="cmd">tnet 192.168.11.11
+<span class="c">login:</span> engineer
+<span class="c">Password:</span> ...
+mode flash</pre>
+          <pre class="out">  ACK: all intersections -&gt; FLASH</pre>
+          <code>mode dark</code> apaga tudo (vira parada obrigatória e causa batidas);
+          <code>mode normal</code> volta ao ciclo.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tut">
+    <div class="head"><span class="n">T4</span><span class="t">Capturar um handshake WPA</span></div>
+    <div class="body">
+      <div class="goal">Numa rede WPA você não lê o conteúdo, mas pode guardar o handshake para quebrar depois (etapa 14).</div>
+      <ol class="steps">
+        <li>Entre numa rede WPA qualquer (loja, casa) e capture:
+          <pre class="cmd">tdump -c 40</pre>
+          <pre class="out"><span class="s">EAPOL-Key  (1/4) ... ANonce</span>
+<span class="s">EAPOL-Key  (2/4) ... SNonce MIC</span>
+<span class="s">EAPOL-Key  (3/4) ... Install GTK MIC</span>
+<span class="s">EAPOL-Key  (4/4) ... MIC</span>
+  ^ WPA four-way handshake captured (crackable offline)</pre>
+          As 4 mensagens EAPOL só aparecem quando um aparelho <em>entra</em> na rede —
+          tenha paciência (ou force alguém a reconectar, mais adiante).</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tut">
+    <div class="head"><span class="n">T5</span><span class="t">Bisbilhotar um café (rede aberta)</span></div>
+    <div class="body">
+      <div class="goal">Numa rede aberta tudo passa em claro: ótimo para OSINT (nomes, hábitos).</div>
+      <ol class="steps">
+        <li>Ache a rede aberta do café (a mais perto do seu ponto de partida costuma ser aberta):
+          <pre class="cmd">iwlist
+iwconfig wlan0 essid "StarLounge-Free"
+dhclient</pre></li>
+        <li>Capture o tráfego — DNS e HTTP aparecem inteiros:
+          <pre class="cmd">tdump</pre>
+          <pre class="out">DNS   192.168.11.109 &gt; ...  A? mail.com
+HTTP  GET /inbox HTTP/1.1  Host: mail.com</pre></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tut">
+    <div class="head"><span class="n">T6</span><span class="t">Pôr uma senha na sua própria BIOS</span></div>
+    <div class="body">
+      <div class="goal">Protege o seu notebook e ensina o mecanismo das senhas de BIOS das máquinas da cidade.</div>
+      <ol class="steps">
+        <li>Reinicie (<code>reboot</code>) e, na tela do POST, aperte <span class="kbd">F2</span>.</li>
+        <li>Vá até a aba <strong>Security</strong> (seta para o lado), selecione
+        <em>Set Supervisor Password</em> e <span class="kbd">Enter</span>.</li>
+        <li>Digite a senha, <span class="kbd">Enter</span>, digite de novo para confirmar.</li>
+        <li>Desça até <em>Password on Boot</em> e ligue (<span class="kbd">Enter</span>) se quiser
+        que a senha seja pedida a cada vez que liga.</li>
+        <li>Vá à aba <strong>Exit</strong> &rarr; <em>Exit Saving Changes</em> &rarr;
+        <span class="kbd">Y</span>. Pronto: agora a SETUP (e o boot, se você ligou) pedem a senha.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 6 ===================== -->
+<div class="section">
+  <h2>6 &middot; Referência rápida</h2>
+
+  <h3>O ciclo do hacking de rede</h3>
+  <pre class="out">iwlist  →  iwconfig wlan0 essid "…" [key …]  →  dhclient  →  mmap
+                                                               │
+                      ┌────────────────────────────────────────┤
+                   tdump (capturar login/handshake)      bruter (quebrar senha)
+                      └──────────────┬─────────────────────────┘
+                                   tnet &lt;ip&gt;   →  breaker open | mode flash
+                                   mbus &lt;ip&gt; write coil 0 0   (sem senha)</pre>
+
+  <h3>Teclas do notebook</h3>
+  <table>
+    <tr><th>Tecla</th><th>Ação</th></tr>
+    <tr><td><span class="kbd">N</span></td><td>tirar / guardar o notebook (abre sentado ou apoiado)</td></tr>
+    <tr><td><span class="kbd">Esc</span></td><td>fechar a tampa</td></tr>
+    <tr><td><span class="kbd">F2</span> / <span class="kbd">F12</span></td><td>BIOS SETUP / menu de boot (no POST)</td></tr>
+    <tr><td>botão direito</td><td>olhar em volta com o notebook aberto</td></tr>
+    <tr><td><span class="kbd">Ctrl+C</span> / <span class="kbd">Ctrl+L</span></td><td>cancelar / limpar a tela</td></tr>
+  </table>
+
+  <h3>Logins conhecidos</h3>
+  <table>
+    <tr><th>Máquina</th><th>Porta</th><th>Login</th><th>Comandos</th></tr>
+    <tr><td>RTU-300 (disjuntor)</td><td>23</td><td><code>operator</code></td><td><code>status</code>, <code>breaker open/close</code></td></tr>
+    <tr><td>RTU-300 (modbus)</td><td>502</td><td>— (sem senha)</td><td><code>read</code>, <code>write coil 0 0|1</code></td></tr>
+    <tr><td>ATC-2 (semáforos)</td><td>23</td><td><code>engineer</code></td><td><code>mode normal/flash/dark</code></td></tr>
+  </table>
+
+  <div class="box warn"><span class="tag">Lembrete</span>
+  Este manual descreve um sistema <strong>fictício dentro de um jogo</strong>. Os nomes
+  das ferramentas (<code>mmap</code>, <code>bruter</code>, <code>tdump</code>,
+  <code>tnet</code>, <code>mbus</code>) são inventados; portas, senhas e protocolos
+  existem só na simulação de Terminal City.</div>
+
+  <footer>Terminal City — Manual do Hacker · etapa 10 · gerado para uso pessoal</footer>
+</div>
+
+</body>
+</html>

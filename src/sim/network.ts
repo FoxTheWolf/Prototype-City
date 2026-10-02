@@ -89,6 +89,27 @@ export function setBreaker(w: World, k: number, on: boolean) {
 /** Tell a district's signal cabinet what to do: 0 normal, 1 flash, 2 dark. */
 export function setSignals(w: World, k: number, mode: number) { w.power.subs[k].sig = mode; }
 
+/** One telemetry holding register of an RTU: its address, a short label and the value now. */
+export interface Reg { addr: number; name: string; value: number }
+/**
+ * The substation's modbus holding registers, read from the live power state. Register 0 is the
+ * breaker (coil, 1 closed), the rest are the feeder's readings: nominal when energized, zero when
+ * the breaker is open. Deterministic jitter per minute keeps them looking alive without a tick.
+ */
+export function modbusRegs(w: World, k: number): Reg[] {
+  const on = w.power.subs[k].on, j = (q: number) => hash3(w.seed ^ 0x50b, k * 16 + q, Math.floor(w.time / 60));
+  return [
+    { addr: 0, name: 'breaker_closed', value: on ? 1 : 0 },
+    { addr: 1, name: 'bus_kV_x100', value: on ? 1370 + Math.round(j(1) * 30) : 0 },          // 13.70-13.73 kV, hundredths
+    { addr: 2, name: 'feeder_amps', value: on ? 210 + Math.round(j(2) * 180) : 0 },
+    { addr: 3, name: 'frequency_cHz', value: on ? 5998 + Math.round(j(3) * 5) : 0 },          // ~59.98-60.03 Hz in centi-Hz
+    { addr: 4, name: 'real_power_kW', value: on ? 2800 + Math.round(j(4) * 2400) : 0 },
+    { addr: 5, name: 'power_factor_pct', value: on ? 92 + Math.round(j(5) * 6) : 0 },
+    { addr: 6, name: 'xfmr_temp_C', value: on ? 55 + Math.round(j(6) * 20) : 24 + Math.round(j(6) * 4) },
+    { addr: 7, name: 'fault_flags', value: 0 },
+  ];
+}
+
 /**
  * Whether a technician is logged into a substation's terminal right now (and so is on the air in
  * the clear): half the 20-minute windows of game time have one, for the first part of the window.

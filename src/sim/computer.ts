@@ -84,8 +84,12 @@ export interface BiosConfig {
   /** The fan never stops (a floor under its controller). */
   fanAlways: boolean;
   bootOrder: BootDev[];
+  /** The supervisor password (CMOS); empty for none. It guards SETUP and, with bootPass, power-on. */
+  supervisorPass: string;
+  /** Ask for the supervisor password at every power-on, not only to enter SETUP. */
+  bootPass: boolean;
 }
-export const biosDefaults = (): BiosConfig => ({ clockOffset: 0, wlan: true, quickBoot: false, fanAlways: false, bootOrder: ['hdd', 'dvd', 'usb', 'net'] });
+export const biosDefaults = (): BiosConfig => ({ clockOffset: 0, wlan: true, quickBoot: false, fanAlways: false, bootOrder: ['hdd', 'dvd', 'usb', 'net'], supervisorPass: '', bootPass: false });
 
 const node = (name: string, dir: boolean, owner: string, mtime: number): FsNode => ({ name, dir, kids: dir ? new Map() : null, data: null, size: dir ? 4096 : 0, owner, mtime, exec: null, memKB: 0 });
 

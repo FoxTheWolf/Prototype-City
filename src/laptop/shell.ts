@@ -9,7 +9,8 @@ import L from '../locale/laptop.en.json';
 import { computerMakerName, wifiName } from '../locale/names';
 import { Wifi } from '../phone/wifi';
 import { Sec } from '../sim/wifi';
-import { type Host, lanHosts, setBreaker, setSignals, techOnline, WORDS } from '../sim/network';
+import { type Host, lanHosts, modbusRegs, setBreaker, setSignals, WORDS } from '../sim/network';
+import { capture } from '../sim/packets';
 
 /**
  * A Unix-like shell on a Computer: the commands, the text they print and how long they take. The
@@ -47,7 +48,7 @@ const PROGRAMS: [string, string, number, number][] = [
 ];
 /** The hacker tools in ~/bin: fictional stand-ins (scanner, cracker, sniffer, console). Name, size KB, memory KB. */
 const HACK_TOOLS: [string, number, number][] = [
-  ['mmap', 220, 1400], ['bruter', 180, 1600], ['tdump', 260, 2200], ['tnet', 64, 520],
+  ['mmap', 220, 1400], ['bruter', 180, 1600], ['tdump', 260, 2200], ['tnet', 64, 520], ['mbus', 96, 700],
 ];
 /** What the shell does itself, with no program on the disk. */
 const BUILTINS = new Set(['cd', 'help', 'history', 'exit', 'logout']);
@@ -247,8 +248,9 @@ export class Shell {
   private postDone() {
     const now = performance.now() / 1000;
     this.inPost = false;
-    if (this.postWant === 'setup') { this.lines = []; this.bios = false; this.fw.openSetup(); }
+    if (this.postWant === 'setup') { this.lines = []; this.bios = false; this.fw.requestSetup(); }
     else if (this.postWant === 'menu') { this.lines = []; this.bios = false; this.fw.openMenu(); }
+    else if (this.pc.bios.supervisorPass && this.pc.bios.bootPass) { this.lines = []; this.bios = false; this.fw.openUnlock('boot'); }
     else this.load(now);
     this.postWant = null;
   }
@@ -796,30 +798,22 @@ export class Shell {
         return 0;
       }
       case 'tdump': {
-        // the packet sniffer: the traffic on the joined network. A technician logged into a
-        // substation terminal over this network is in the clear, login and all — that is how the
-        // utility's passwords leak.
-        if (this.net.state !== 'up') { out.push('tdump: no network'); return 0; }
-        const A = w.wifi[this.net.ap];
-        this.say(now, `tdump: listening on wlan0, channel ${A.ch}, link-type IEEE802_11`, 0, 0.1);
-        const t0 = w.time;
-        this.say(now, `${t0.toFixed(3)} beacon ${A.bssid} ssid "${wifiName(w.city, A)}" ch ${A.ch}`, 1, 0.3);
-        this.say(now, `${(t0 + 0.4).toFixed(3)} arp who-has 192.168.${A.ch}.1 tell 192.168.${A.ch}.${100}`, 1, 0.25);
-        if (A.util >= 0 && techOnline(w, A.util)) {
-          const lan = lanHosts(w, this.net.ap), rtu = lan.find((h) => h.kind === 'rtu')!;
-          this.say(now, `${(t0 + 1.1).toFixed(3)} 192.168.${A.ch}.50 > ${rtu.ip}.23  tcp SYN`, 1, 0.3);
-          this.say(now, `${(t0 + 1.3).toFixed(3)} ${rtu.ip}.23 > 192.168.${A.ch}.50  telnet "${rtu.name} login: "`, 0, 0.3);
-          this.say(now, `${(t0 + 2.0).toFixed(3)} 192.168.${A.ch}.50 > ${rtu.ip}.23  telnet data "${rtu.user}\\r"`, 2, 0.3);
-          this.say(now, `${(t0 + 2.2).toFixed(3)} ${rtu.ip}.23 > 192.168.${A.ch}.50  telnet "Password: "`, 0, 0.3);
-          this.say(now, `${(t0 + 2.9).toFixed(3)} 192.168.${A.ch}.50 > ${rtu.ip}.23  telnet data "${rtu.pass}\\r"`, 2, 0.3);
-          this.say(now, '', 0, 0.1);
-          this.say(now, '  ^ cleartext login captured', 2, 0.1);
-        } else {
-          this.say(now, `${(t0 + 1.2).toFixed(3)} 192.168.${A.ch}.102 > 8.8.8.8.53  dns A www`, 1, 0.3);
-          this.say(now, `${(t0 + 1.6).toFixed(3)} 192.168.${A.ch}.102 > 93.184.x.x.80  http GET /`, 1, 0.3);
-          this.say(now, '', 0, 0.1);
-          this.say(now, '  (nothing of note on this network)', 0, 0.1);
-        }
+        // the packet sniffer: the frames on the joined network, materialized from the simulation's
+        // flows (sim/packets.ts). What reads in the clear follows the encryption — an open or WEP
+        // network (we hold the key), or a station whose WPA handshake was captured. A technician
+        // logged into a substation terminal leaks the login that way. -c N caps the frame count.
+        if (this.net.state !== 'up') { out.push('tdump: no network (join one with iwconfig/dhclient first)'); return 0; }
+        const A = w.wifi[this.net.ap], ssid = wifiName(w.city, A), sec = A.sec === Sec.Open ? 'open' : A.sec === Sec.WEP ? 'WEP' : 'WPA';
+        const ci = a.indexOf('-c'), limit = ci >= 0 ? Math.max(1, Math.min(400, Number(a[ci + 1]) || 60)) : 60;
+        const pkts = capture(w, this.net.ap, ssid, this.net.dbm, w.time, 8, limit);
+        this.say(now, `tdump: listening on wlan0, channel ${A.ch}, ${sec}, link-type IEEE802_11 (${this.net.dbm} dBm)`, 0, 0.1);
+        for (const p of pkts) this.say(now, `${p.t.toFixed(6).padStart(11)}  ${p.info}`, p.ink, 0.05 + hash3(Math.floor(p.t * 1000), 1, 2) * 0.08);
+        const creds = pkts.some((p) => p.ink === 2 && p.info.startsWith('TELNET')), shake = pkts.some((p) => p.info.startsWith('EAPOL'));
+        this.say(now, '', 0, 0.1);
+        this.say(now, `${pkts.length} frames captured on channel ${A.ch}.`, 0, 0.1);
+        if (creds) this.say(now, '  ^ cleartext credentials captured', 2, 0.1);
+        else if (shake) this.say(now, '  ^ WPA four-way handshake captured (crackable offline)', 2, 0.1);
+        else if (A.sec === Sec.WPA) this.say(now, '  (WPA data protected; capture a handshake to crack it offline)', 0, 0.1);
         this.busyUntil = this.tq;
         return 0;
       }
@@ -835,6 +829,33 @@ export class Shell {
         this.say(now, `Escape character is '^]'. Type 'exit' to close.`, 0, 0.1);
         this.then(now, () => { this.conn = { host: hst, stage: 'login', tryUser: '' }; });
         this.busyUntil = this.tq;
+        return 0;
+      }
+      case 'mbus': {
+        // the modbus client: read the RTU's telemetry registers on port 502, or write the breaker
+        // coil. Modbus has no authentication of its own — reaching 502 is enough, no login needed.
+        const lan = this.lan();
+        if (!lan) { out.push('mbus: no network'); return 0; }
+        if (!args[0]) { out.push('usage: mbus <ip> [read | write coil 0 <0|1>]'); return 0; }
+        const hst = lan.find((x) => x.ip === args[0]);
+        if (!hst) { out.push(`mbus: ${args[0]}: host down`); return 0; }
+        if (!hst.ports.some((p) => p.n === 502)) { out.push(`mbus: ${args[0]}: connection refused on port 502`); return 0; }
+        const k = hst.sub, sub = args[1] ?? 'read';
+        if (sub === 'read') {
+          this.say(now, `mbus: ${hst.ip}:502 unit 1 — Read Holding Registers 0..7`, 0, 0.3);
+          for (const r of modbusRegs(w, k)) this.say(now, `  4${String(r.addr).padStart(4, '0')}  ${r.name.padEnd(18)} ${String(r.value).padStart(6)}`, 1, 0.08);
+          this.busyUntil = this.tq;
+          return 0;
+        }
+        if (sub === 'write' && args[2] === 'coil' && args[3] === '0' && (args[4] === '0' || args[4] === '1')) {
+          const want = args[4] === '1'; // coil 0 set = breaker closed (energized)
+          this.say(now, `mbus: ${hst.ip}:502 unit 1 — Write Single Coil 0 = ${want ? 'ON' : 'OFF'}`, 0, 0.3);
+          if (!setBreaker(w, k, want)) { this.say(now, `  response: coil 0 already ${want ? 'ON' : 'OFF'}`, 0, 0.15); return 0; }
+          this.say(now, want ? '  response: coil 0 -> ON  (breaker closed, feeder energized)' : '  response: coil 0 -> OFF  (breaker tripped, feeder dead)', 2, 0.2);
+          this.busyUntil = this.tq;
+          return 0;
+        }
+        out.push('usage: mbus <ip> [read | write coil 0 <0|1>]');
         return 0;
       }
       case 'sha1sum': {
