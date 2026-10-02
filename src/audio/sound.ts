@@ -258,6 +258,15 @@ export class Sound {
       case 4: // pulse: two notes, insistent
         for (let a = 0; a < secs; a += 0.5) note(a % 1 < 0.5 ? m(76) : m(71), a, 0.22, 'square', 0.025);
         break;
+      case 10: // the alarm's beeper: a digital watch's four beeps, again and again, faster the longer it goes
+        for (let a = 0, n = 0; a < secs; a += n++ < 4 ? 1 : 0.8) for (let b = 0; b < 4; b++) note(2048, a + b * 0.12, 0.07, 'square', 0.03);
+        break;
+      case 11: // rising: a bright tone climbing, the morning coming up
+        for (let a = 0; a < secs; a += 2) [60, 64, 67, 72, 76, 79, 84].forEach((n, i) => note(m(n), a + i * 0.16, 0.14, 'triangle', 0.02 + i * 0.006));
+        break;
+      case 12: // chimes: a church bell's three notes, ringing out
+        for (let a = 0; a < secs; a += 2.4) [[79, 0], [76, 0.6], [72, 1.2]].forEach(([n, at]) => note(m(n), a + at, 1.1, 'sine', 0.06));
+        break;
       default: // noir: a muted walking bass and a high answer
         [[45, 0], [48, 0.35], [50, 0.7], [52, 1.05], [76, 1.5], [74, 1.8]].forEach(([n, at]) => { for (let a = 0; a < secs; a += 2.6) note(m(n), a + at, n > 60 ? 0.25 : 0.3, n > 60 ? 'sine' : 'triangle', n > 60 ? 0.04 : 0.06); });
     }

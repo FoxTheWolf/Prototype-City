@@ -796,14 +796,15 @@
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
-      "recent": "Recent", "camBlocks": "PIX", "camText": "ASCII", "flashOn": "FLASH", "flashOff": "NO FLASH", "camKeys": "^v zoom  < flash  > pix/ascii", "newText": "new text", "newTexts": "new texts",
+      "recent": "Recent", "camBlocks": "PIX", "camText": "ASCII", "flashOn": "FLASH", "flashOff": "NO FLASH", "camKeys": "^v zoom  < flash", "alarmStop": "Any key to stop", "newText": "new text", "newTexts": "new texts",
       "about": { "map": "Where you are, and the way", "calls": "Dial a number", "contacts": "The numbers on your SIM", "messages": "Texts in and out", "camera": "Take a picture", "wire": "What the city is saying", "news": "The city's paper", "weather": "Skycast forecast", "calendar": "Days, holidays, reminders", "clock": "Time and a stopwatch", "calc": "Add it up", "notes": "A pad for anything", "snake": "Eat, grow, don't bite", "folder": "Apps you downloaded", "store": "Get more apps", "settings": "Sounds, looks, phone" },
       "set": {
         "pages": { "sound": "Sounds", "display": "Display", "looks": "Phone & case", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)", "people": "People here (debug)" },
-        "rows": { "profile": "Profile", "ring": "Ringtone", "keys": "Keypad tones", "theme": "Theme", "wall": "Wallpaper", "shell": "Phone", "case": "Case", "temp": "Temperature", "dist": "Distance" },
+        "rows": { "profile": "Profile", "ring": "Ringtone", "alarmTone": "Alarm tone", "keys": "Keypad tones", "theme": "Theme", "wall": "Wallpaper", "shell": "Phone", "case": "Case", "temp": "Temperature", "dist": "Distance" },
         "values": {
           "profile": ["Normal", "Vibrate", "Silent"],
           "ring": ["Desk Bell", "Trill", "Nocturne", "Arcade", "Pulse", "Noir"],
+          "alarmTone": ["Beeper", "Sunrise", "Chimes"],
           "keys": ["Beep", "Click", "Touch-tone", "Off"],
           "theme": ["Ice", "Amber", "Green", "Paper", "Rose", "Mono"],
           "wall": ["Skyline", "Rain", "Dusk", "Plain"],

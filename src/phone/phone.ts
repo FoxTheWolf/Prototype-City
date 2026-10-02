@@ -39,7 +39,7 @@ import { CASES, SHELLS } from './shells';
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'clock' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
+export type Screen = 'off' | 'boot' | 'standby' | 'alarm' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /**
@@ -72,6 +72,8 @@ export interface Prefs {
   ring: number;
   /** Keypad tones: 0 beep, 1 click only, 2 touch-tones, 3 off. */
   keys: number;
+  /** The alarm clock's tone. */
+  alarmTone: number;
   theme: number;
   /** The standby screen's wallpaper. */
   wall: number;
@@ -80,9 +82,9 @@ export interface Prefs {
   /** 0 metres, 1 feet. */
   dist: number;
 }
-export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'keys'], display: ['theme', 'wall'], units: ['temp', 'dist'] };
+export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'alarmTone', 'keys'], display: ['theme', 'wall'], units: ['temp', 'dist'] };
 /** How many values each option has (their names are in the locale). */
-export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, keys: 4, theme: 6, wall: 4, temp: 2, dist: 2 };
+export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, alarmTone: 3, keys: 4, theme: 6, wall: 4, temp: 2, dist: 2 };
 
 /** A distance as the phone shows it, in the units picked in its settings. */
 export function fmtDist(m: number, feet: number): string {
@@ -125,12 +127,12 @@ export class Phone {
   readonly wifi = new Wifi();
   /** Wi-Fi: the network whose key is being typed (index into world.wifi), and the key. */
   wkey = { ap: -1, key: '' };
-  prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, wall: 0, temp: 0, dist: 0 };
+  prefs: Prefs = { profile: 0, ring: 0, alarmTone: 0, keys: 0, theme: 0, wall: 0, temp: 0, dist: 0 };
   /** Settings: the page open and the row picked on it. */
   setPage: SetPage = 'root';
   setSel = 0;
   /** A sound the last key asks for (main plays it): a ringtone preview, the buzz of vibrate, or silence. */
-  cue: 'ring' | 'vibrate' | 'stop' | null = null;
+  cue: 'ring' | 'alarm' | 'vibrate' | 'stop' | null = null;
   /** Vibrating until this time (real seconds), for this long: the phone shakes on screen with the buzz. */
   buzzUntil = 0;
   buzzLen = 0;
@@ -246,8 +248,8 @@ export class Phone {
   private incoming: { from: string; text: string; at: number }[] = [];
   /** The camera: what it sees (main hands it the player's view), the light there, the photos, the one shown, the last shot. */
   render: ((g: CharGrid, k?: number) => void) | null = null;
-  /** The camera draws in blocks (two pixels a cell) or in characters; # switches. */
-  camBlocks = true;
+  /** The camera draws in blocks (two pixels a cell); the characters version was tried and dropped. */
+  readonly camBlocks = true;
   /** The camera's zoom (1 .. MAX_ZOOM) and whether its flash fires. */
   camZoom = 1;
   camFlash = true;
@@ -266,6 +268,11 @@ export class Phone {
   /** Clock: the alarm (minute of the day, on or off), the minute last checked. */
   alarm = { min: 7 * 60, on: false };
   private alarmLast = -1;
+  /** Ringing: until when, the next time the tone starts, and the screen to go back to. */
+  private alarmEnd = 0;
+  private alarmNext = 0;
+  private alarmBack: Screen = 'standby';
+  private stopAlarm(now: number) { this.cue = 'stop'; this.buzzUntil = 0; this.open(this.alarmBack === 'alarm' ? 'standby' : this.alarmBack, now); }
   /** Clock: the stopwatch, running since `swAt` (or -1), with `swAcc` seconds before. */
   swAt = -1;
   swAcc = 0;
@@ -295,7 +302,7 @@ export class Phone {
   update(dt: number, now: number) {
     // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
     // out a little for a text or a reminder (its top row in sight for a few seconds)
-    const ringing = this.callIn && this.call?.state === 'ringing';
+    const ringing = (this.callIn && this.call?.state === 'ringing') || this.screen === 'alarm';
     this.raise += ((this.out || ringing ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
     const app = this.screen === 'app' ? STORE[this.appId][0] : '';
@@ -303,11 +310,16 @@ export class Phone {
     this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     // the alarm clock: once a day at its minute, it rings with a note
     const minute = Math.floor(this.world.time / 60) % 1440;
-    if (this.alarm.on && this.alarmLast >= 0 && minute !== this.alarmLast && ((minute - this.alarm.min + 1440) % 1440) < ((minute - this.alarmLast + 1440) % 1440)) {
-      this.incoming.push({ from: en.phone.app.clock, text: en.phone.apps.alarmRing.replace('{t}', `${String(Math.floor(this.alarm.min / 60)).padStart(2, '0')}:${String(this.alarm.min % 60).padStart(2, '0')}`), at: now });
-      if (this.prefs.profile === 0) this.cue = 'ring'; else if (this.prefs.profile === 1) this.buzz(now, 3);
+    if (this.alarm.on && this.alarmLast >= 0 && minute !== this.alarmLast && ((minute - this.alarm.min + 1440) % 1440) < ((minute - this.alarmLast + 1440) % 1440) && this.screen !== 'off' && this.screen !== 'boot') {
+      // it takes the whole screen and rings its own tone (in any profile, as alarms do) until a key stops it, or a minute passes
+      if (this.screen !== 'alarm') this.alarmBack = this.screen;
+      this.open('alarm', now); this.alarmEnd = now + 60; this.alarmNext = now;
     }
     this.alarmLast = minute;
+    if (this.screen === 'alarm') {
+      if (now >= this.alarmEnd) this.stopAlarm(now);
+      else if (now >= this.alarmNext) { this.alarmNext = now + 4; this.cue = 'alarm'; if (this.prefs.profile === 1) this.buzz(now, 2); }
+    }
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
       r.done = true;
@@ -457,11 +469,16 @@ export class Phone {
     if (k === 'end' && s !== 'boot' && s !== 'standby') { this.open('standby', now); return true; }
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
     switch (s) {
+      case 'alarm':
+        // any key stops it
+        this.stopAlarm(now);
+        return true;
       case 'boot':
         if (k === 'rsoft') { this.out = false; return 'away'; }
         return false;
       case 'standby':
         if (k === 'ok' || k === 'lsoft') { this.open('menu', now); return true; }
+        if (k === 'up') { if (!this.call) this.dial = ''; this.open('calls', now); return true; }
         // a number typed on the standby screen opens the dialer with it, as phones did
         if (/^[0-9*#]$/.test(k)) { this.dial = k; this.call = null; this.open('calls', now); return true; }
         if (k === 'rsoft') { this.out = false; return 'away'; }
@@ -568,10 +585,9 @@ export class Phone {
           return true;
         }
         if (k === 'lsoft') { this.phsel = 0; this.open('photos', now); return true; }
-        // the d-pad: up and down zoom, left the flash, right pixels or characters (# too)
+        // the d-pad: up and down zoom, left the flash
         if (k === 'up' || k === 'down') { this.camZoom = Math.max(1, Math.min(MAX_ZOOM, this.camZoom * (k === 'up' ? 1.25 : 0.8))); if (this.camZoom < 1.05) this.camZoom = 1; return true; }
         if (k === 'left') { this.camFlash = !this.camFlash; return true; }
-        if (k === 'right' || k === '#') { this.camBlocks = !this.camBlocks; return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       case 'photos': {
@@ -789,6 +805,7 @@ export class Phone {
     this.prefs[key] = (this.prefs[key] + (less ? -1 : 1) + n) % n;
     // hear what was picked
     if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
+    if (key === 'alarmTone') this.cue = 'alarm';
     if (this.cue === 'vibrate') this.buzz(performance.now() / 1000, 1.6);
     return true;
   }

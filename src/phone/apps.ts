@@ -108,6 +108,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
       if (P.screen === 'msglist') return msgList(S, P, t);
       if (P.screen === 'folder') return folder(S, P, t);
+      if (P.screen === 'alarm') return alarmScreen(S, P, now);
       if (P.screen === 'msg') return msgRead(S, P, t);
       if (P.screen === 'compose') return compose(S, P, now);
   }
@@ -582,13 +583,24 @@ function photoBlocks(S: Lcd, p: Photo, y0: number, y1: number) {
   const avg = (sx0: number, sy0: number): C3 => {
     const sx1 = Math.max(sx0 + 1, Math.floor(sx0 + k)), sy1 = Math.max(sy0 + 1, Math.floor(sy0 + k)), o = [0, 0, 0];
     let n = 0;
-    for (let y = sy0; y < sy1 && y < ph; y++) for (let x = sx0; x < sx1 && x < pw; x++) { for (let c = 0; c < 3; c++) o[c] += px(x, y, c); n++; }
-    return [o[0] / n, o[1] / n, o[2] / n];
+    // the root of the mean square: small bright lights (signs, lamps, windows) keep their light instead of being averaged into the dark
+    for (let y = sy0; y < sy1 && y < ph; y++) for (let x = sx0; x < sx1 && x < pw; x++) { for (let c = 0; c < 3; c++) o[c] += px(x, y, c) ** 2; n++; }
+    return [Math.sqrt(o[0] / n), Math.sqrt(o[1] / n), Math.sqrt(o[2] / n)];
   };
   for (let y = 0; y < dh; y++) for (let x = 0; x < dw; x++) {
     const sx = Math.floor(x * k), a = avg(sx, Math.floor(y * 2 * k)), b = avg(sx, Math.floor((y * 2 + 1) * k));
     S.put(x0 + x, top + y, SHAPE.top, a, b);
   }
+}
+
+/** The alarm ringing: the whole screen, the time big, blinking; any key stops it. */
+function alarmScreen(S: Lcd, P: Phone, now: number) {
+  const on = Math.floor(now * 2) & 1, BG: C3 = on ? [60, 20, 10] : [16, 8, 6], AMB: C3 = [255, 150, 40];
+  paint(S, BG);
+  S.center(4, A.alarm, AMB, BG);
+  bigText(S, 7, hhmm(P.alarm.min / 60), on ? [255, 255, 255] : AMB);
+  S.center(16, A.alarmStop, [220, 200, 180], BG);
+  softKeys(S, A.stop, A.stop);
 }
 
 let finder: CharGrid | null = null, finderAt = -1, finderN = 0;
@@ -601,7 +613,7 @@ function cameraScreen(S: Lcd, P: Phone, now: number) {
   for (const [x, y, c] of [[1, 2, '+'], [SW - 2, 2, '+'], [1, SH - 3, '+'], [SW - 2, SH - 3, '+']] as const) S.put(x, y, ch(c), WHITE, [0, 0, 0]);
   const left = Math.max(0, Math.floor(P.freeKB() / (P.device.cameraMP * 340)));
   S.text(1, 1, ` ${P.device.cameraMP}MP  ${left} `, WHITE, [0, 0, 0]);
-  const mode = `${P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? 'D' : ''} ` : ''}${P.camFlash ? A.flashOn : A.flashOff} ${P.camBlocks ? A.camBlocks : A.camText}`;
+  const mode = `${P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? 'D' : ''} ` : ''}${P.camFlash ? A.flashOn : A.flashOff}`;
   S.text(SW - mode.length - 2, 1, ` ${mode} `, WHITE, [0, 0, 0]);
   S.text(1, SH - 2, ` ${A.camKeys} `, [200, 200, 200], [0, 0, 0]);
   softKeys(S, `${A.photos} (${P.photos.length})`, T.back);
