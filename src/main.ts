@@ -21,7 +21,10 @@ import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer } from './render/hd';
 import { setHd } from './phone/lcd';
 import { daylight } from './render/sky';
-import { operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
+import { cctvLook } from './render/cctv';
+import { cctvYaw } from './sim/cctv';
+import { spawnPeds } from './sim/peds';
+import { businessName, operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { isOffice } from './sim/interior';
@@ -80,6 +83,8 @@ function handLightNow(): number {
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
   world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool,
+  // watch camera k as on the title (stopCctv to leave)
+  watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
   // the world's characters; with ui = true the interface's (where it drew, else the world's under it at 80 rows)
   gridText: (x0 = 0, y0 = 0, x1?: number, y1?: number, onUi = false) => {
     const G = onUi ? ui : grid;
@@ -279,6 +284,16 @@ addEventListener('mouseup', (e) => {
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
 });
 addEventListener('keydown', (e) => {
+  // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
+  if (cctv && (e.code === 'Escape' || (e.code === 'KeyC' && !cctv.title))) { stopCctv(); return; }
+  if (cctv?.title) return;
+  if (e.code === 'KeyC' && running && !laptop.open && !e.repeat) {
+    const p = world.player;
+    let best = -1, bd = 200;
+    world.cctv.forEach((C, k) => { const d = Math.hypot(C.x - p.x, C.y - p.y); if (d < bd) { bd = d; best = k; } });
+    if (best >= 0) startCctv(false, best);
+    return;
+  }
   // the browser does not lock the pointer from Esc: after closing the notebook the next key (or click) does
   if (relock && !laptop.open) { relock = false; if (running && !phone.out && !payphone.active && !input.locked) input.lock(); }
   // the notebook open takes the whole keyboard; Esc closes the lid and stands up
@@ -380,7 +395,67 @@ function begin() {
   input.lock();
 }
 overlay.addEventListener('click', begin);
-canvas.addEventListener('click', () => { if (!input.locked && !phone.out && !laptop.open) input.lock(); });
+document.getElementById('cctv')!.addEventListener('click', (e) => { e.stopPropagation(); startCctv(true); });
+
+/**
+ * Watching the security cameras: the title's other choice (the city goes on, seen only through its
+ * cameras, switching every CCTV_HOLD seconds, the street poles far more often than the shops'), or
+ * in the game (debug, key C) the nearest camera. The picture is a camera of the time into a DVR:
+ * the world at the lowest resolution in a 4:3 frame, monochrome, with the recorder's overlay.
+ */
+const CCTV_HOLD = 14, CCTV_POLE_WEIGHT = 15;
+let cctv: { k: number; at: number; title: boolean; res: number; sx: number; sy: number } | null = null;
+function pickCam(from: number): number {
+  const L = world.cctv, cur = L[from];
+  let tot = 0;
+  const w = L.map((c) => (cur && Math.hypot(c.x - cur.x, c.y - cur.y) < 150 ? 0 : c.kind === 0 ? CCTV_POLE_WEIGHT : 1));
+  for (const x of w) tot += x;
+  let r = Math.random() * tot;
+  for (let k = 0; k < L.length; k++) if ((r -= w[k]) < 0) return k;
+  return 0;
+}
+/** Puts the (unseen) player under camera k, so the people and the traffic around it are simulated. */
+function goToCam(k: number) {
+  const C = world.cctv[k], p = world.player, nx = Math.cos(C.yaw), ny = Math.sin(C.yaw);
+  p.x = p.px = C.x + nx * 1.5; p.y = p.py = C.y + ny * 1.5; p.inside = -1; p.floor = 0; p.z = 0;
+  world.peds = spawnPeds(world.city, world.pop, world.rng, world.time, p.x, p.y);
+}
+function startCctv(title: boolean, k = -1) {
+  if (!world.cctv.length) return;
+  const p = world.player;
+  cctv = { k: k >= 0 ? k : pickCam(-1), at: performance.now() / 1000, title, res: resStep, sx: p.x, sy: p.y };
+  resStep = 0; resize();
+  if (title) { overlay.hidden = true; goToCam(cctv.k); }
+}
+function stopCctv() {
+  if (!cctv) return;
+  const C = cctv;
+  cctv = null;
+  resStep = C.res; resize();
+  if (C.title) {
+    const p = world.player;
+    p.x = p.px = C.sx; p.y = p.py = C.sy;
+    world.peds = spawnPeds(world.city, world.pop, world.rng, world.time, p.x, p.y);
+    overlay.hidden = false;
+  }
+}
+/** The recorder's overlay over a camera's picture, inside the 4:3 frame (x0..x1 on the interface's grid). */
+function cctvOverlay(k: number, x0: number, x1: number, now: number) {
+  const C = world.cctv[k], c = calendar(world.time), city = world.city, ch = String(k + 1).padStart(2, '0');
+  const two = (n: number) => String(Math.floor(n)).padStart(2, '0'), secs = Math.floor((world.time % 60));
+  const W: [number, number, number] = [235, 240, 235], bgc: [number, number, number] = [0, 0, 0];
+  const place = C.kind === 0
+    ? `${roadName(city, true, nearestRoad(city.xb, city.xCell, C.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, C.y))}`
+    : businessName(city, C.biz);
+  const name = (C.kind === 0 ? `TRAFFIC ${place}` : place).toUpperCase().slice(0, x1 - x0 - 26);
+  ui.text(x0 + 2, 2, `CAM${ch} ${name}`, W, bgc);
+  ui.text(x1 - 22, 2, `${two(c.month)}/${two(c.day)}/${c.year} ${two(c.hour)}:${two((c.hour % 1) * 60)}:${two(secs)}`, W, bgc);
+  if (Math.floor(now * 1.2) & 1) ui.text(x1 - 8, 4, 'O', [255, 40, 30], bgc);
+  ui.text(x1 - 6, 4, 'REC', W, bgc);
+  ui.text(x0 + 2, ui.rows - 4, `CH${ch}  ${C.kind === 0 ? 'PTZ AUTO-PAN' : 'FIXED+PAN'}  CIF 352x288  7.5 FPS`, W, bgc);
+  if (cctv?.title) ui.text(x1 - 26, ui.rows - 4, `NEXT ${Math.max(0, Math.ceil(CCTV_HOLD - (now - cctv.at)))}s  [ESC] MENU`, [150, 160, 150], bgc);
+}
+canvas.addEventListener('click', () => { if (!cctv?.title && !input.locked && !phone.out && !laptop.open) input.lock(); });
 
 const bolt = new Float64Array(2);
 let last = performance.now();
@@ -408,6 +483,9 @@ function frame(now: number) {
   // fixed-step simulation, independent of the frame rate
   acc += dt;
   const cmd = readInput();
+  // in the title's camera mode, switch cameras now and then; the pedestrians sync to its heading
+  if (cctv?.title && now / 1000 - cctv.at > CCTV_HOLD) { cctv.k = pickCam(cctv.k); cctv.at = now / 1000; goToCam(cctv.k); }
+  if (cctv) cmd.heading = world.cctv[cctv.k].yaw;
   while (acc >= TICK) { stepWorld(world, cmd); acc -= TICK; }
   const alpha = acc / TICK;
 
@@ -426,6 +504,11 @@ function frame(now: number) {
     look,
     hand: handLightNow(),
   };
+  if (cctv) {
+    // the view from the lens, panning; a cheap lens sees a little wider (more rows of the same picture)
+    const C = world.cctv[cctv.k];
+    Object.assign(view, { x: C.x, y: C.y, yaw: cctvYaw(C, (world.tick + alpha) / 60), pitch: C.pitch, eye: C.z - 0.1, floor: 0, z: 0, lift: false, hand: 0 });
+  }
   let ms: number;
   if (pool) {
     // the workers draw the next frame while this one shows the last they finished
@@ -440,6 +523,17 @@ function frame(now: number) {
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
   ui.wipe(); hd.wipe();
+  if (cctv) {
+    // the camera's picture: its look, then a 4:3 frame on the monitor (black bars at the sides)
+    cctvLook(grid, now / 1000, cctv.k * 31 + 7);
+    const w43 = Math.min(grid.cols, Math.round((grid.rows * layout.cellH * 4) / 3 / layout.cellW)), gx0 = (grid.cols - w43) >> 1;
+    for (let y = 0; y < grid.rows; y++) for (let x = 0; x < grid.cols; x++) if (x < gx0 || x >= gx0 + w43) { const i = y * grid.cols + x; grid.put(i, 32, 0, 0, 0); grid.setBg(i, 0, 0, 0); }
+    const ux0 = Math.round((gx0 * layout.cellW) / uiLayout.cellW), ux1 = Math.round(((gx0 + w43) * layout.cellW) / uiLayout.cellW);
+    cctvOverlay(cctv.k, ux0, ux1, now / 1000);
+    renderer.draw(grid, ui, hd, null);
+    requestAnimationFrame(frame);
+    return;
+  }
   phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
   phone.update(dt, now / 1000);
   // a code dialing itself (from the debug settings), and the sounds the phone asked for

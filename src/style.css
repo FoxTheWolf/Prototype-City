@@ -25,3 +25,4 @@ body { background: var(--bg); color: var(--fg); font-family: var(--mono); overfl
 #overlay button { margin-top: 18px; font: 600 13px var(--mono); letter-spacing: .1em; color: var(--bg); background: var(--amber);
   border: 0; padding: 10px 22px; cursor: pointer; }
 #overlay button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+#overlay button.alt { margin-left: 10px; color: var(--cyan); background: transparent; outline: 1px solid var(--cyan); }

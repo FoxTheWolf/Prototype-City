@@ -2,6 +2,7 @@ import { hash3, mulberry32, type Rng } from '../core/rng';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, leavesOf, planOf } from './interior';
 import { TIME_SCALE } from './clock';
+import { buildCctv, type Cctv } from './cctv';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
@@ -72,6 +73,8 @@ export interface World {
   pop: Population;
   /** What they post (see social.ts). */
   feed: Feed;
+  /** The security cameras (see cctv.ts). */
+  cctv: Cctv[];
 }
 
 /** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
@@ -108,7 +111,7 @@ export function createWorld(seed: number, size = CITY_SIZE, people = true): Worl
   const pop = people ? generatePeople(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2)) : noPeople();
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city) };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

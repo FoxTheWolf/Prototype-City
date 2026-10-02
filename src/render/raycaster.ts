@@ -9,13 +9,14 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { signalLamps, mastModel, substationModel, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { signalLamps, mastModel, substationModel, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
 import { power } from './power';
 import { subAt, type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
+import { cctvYaw } from '../sim/cctv';
 import { daylight, prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
@@ -1366,6 +1367,8 @@ function gatherRoofs(world: World, v: View) {
   }
 }
 
+/** Security cameras are drawn this far. */
+const CCTV_FAR = 140;
 /** Rooftop billboards are drawn this far. */
 const BOARD_FAR = 500;
 const boardList: Obj[] = [];
@@ -1391,6 +1394,13 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
     if (Math.hypot(S.x - v.x, S.y - v.y) > BOARD_FAR) return;
     const base = city.buildings[S.building].h, lit = (frameSec + k * 0.37) % 1.5 < 0.5;
     boardList.push({ x: S.x, y: S.y, c: 1, s: 0, parts: mastModel(base, lit), r: 1.8, h: base + 8.6, z0: base, seed: 9000 + k });
+  });
+  // the security cameras, panning, their red light blinking while they record
+  world.cctv.forEach((C, k) => {
+    if (Math.abs(C.x - v.x) > CCTV_FAR || Math.abs(C.y - v.y) > CCTV_FAR) return;
+    const arm = Math.hypot(C.x - C.mx, C.y - C.my), a = Math.atan2(C.y - C.my, C.x - C.mx), yaw = cctvYaw(C, frameSec);
+    boardList.push({ x: C.mx, y: C.my, c: Math.cos(a), s: Math.sin(a), parts: cctvMount(C.z, arm, C.kind === 0), r: arm + 0.2, h: C.z + 0.4, z0: C.kind === 0 ? 0 : C.z - 0.15, seed: 9700 + k });
+    boardList.push({ x: C.x, y: C.y, c: Math.cos(yaw), s: Math.sin(yaw), parts: cctvModel(C.z, (frameSec + k * 0.29) % 2 < 1), r: 0.35, h: C.z + 0.12, z0: C.z - 0.12, seed: 9800 + k });
   });
   // the substations' yards
   world.power.subs.forEach((S, k) => {

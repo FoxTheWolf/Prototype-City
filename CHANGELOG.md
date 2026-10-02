@@ -2,6 +2,19 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.12.8 — Câmeras de segurança e modo CCTV (2026-10-02)
+- A cidade tem câmeras de segurança: de trânsito, em postes próprios nas esquinas (braço sobre o cruzamento, girando devagar), e nas fachadas de bancos, casas de penhor, farmácias e outras lojas, sobre o letreiro. Cada uma tem a luz vermelha de gravação piscando.
+- Nova opção na tela de título: **WATCH CCTV**. A cidade continua andando, vista só pelas câmeras, trocando de câmera a cada 14 s (as de poste bem mais vezes que as de loja). Esc volta ao menu.
+- A imagem é a de uma câmera barata de 2008 num gravador: resolução baixa, quadro 4:3 com tarjas pretas, monocromática esverdeada, linhas de varredura, granulado no escuro, faixa de interferência e linhas rasgadas; por cima, o nome da câmera e o lugar, a data e a hora com segundos, REC piscando, canal e "CIF 352x288 7.5 FPS".
+- Debug no jogo: **C** olha pela câmera mais próxima (C ou Esc sai).
+
+## 0.12.7 — Notebook e subestações (2026-10-02)
+- Só o notebook 3D (as aparências clássica e HD 2D saíram, e a tecla L também).
+- O `nano` abre em tela cheia no console de 160×50, sem a linha de comando aparecendo embaixo.
+- A tela do notebook reage à luz como a do celular, mais forte: fica mais clara e espalha brilho na moldura no escuro, mais apagada sob luz forte, e reflete a luz mais forte por perto numa faixa do lado de onde ela vem, na cor dela.
+- As subestações agora são lugares de verdade: um pátio cercado num lote vazio, com transformadores, isoladores, pórtico, guarita com luz verde (vermelha quando desligada), placa DANGER no portão e um holofote que ilumina o pátio à noite. A cerca é sólida.
+- Debug: a linha de baixo mostra a subestação mais próxima (distância, direção, ligada ou não).
+
 ## 0.12.6 — Sistema de arquivos do celular (2026-10-02)
 - O celular tem arquivos de verdade: firmware (o carregador da placa, o baseband), sistema (o OS da marca, apps, toques, fontes) e dados.
 - Contatos (vCard), registro de chamadas, mensagens recebidas e enviadas e notas são arquivos de texto; mudar o arquivo muda o que o celular mostra, e usar o celular muda o arquivo. Cada foto é um arquivo em `media/DCIM`; apagar o arquivo apaga a foto.

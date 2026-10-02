@@ -723,3 +723,37 @@ export function substationModel(D: number, W: number, on: boolean, flood: number
   yards.set(key, m);
   return m;
 }
+
+const cams = new Map<string, Part[]>();
+/**
+ * A security camera's housing at height z, looking along +x (it pans with the object's heading): the
+ * body, its sun shield, the dark lens and the red light of a camera recording (`led`).
+ */
+export function cctvModel(z: number, led: boolean): Part[] {
+  const key = z.toFixed(1) + (led ? '*' : '');
+  let m = cams.get(key);
+  if (m) return m;
+  m = [
+    part(Box, -0.28, -0.09, z - 0.1, 0.16, 0.09, z + 0.07, [206, 206, 200], Solid, '=', '-', '#'),
+    part(Box, -0.3, -0.12, z + 0.07, 0.24, 0.12, z + 0.1, [176, 178, 172], Solid, '-', '='),
+    part(Ball, 0.12, -0.065, z - 0.085, 0.22, 0.065, z + 0.045, [22, 24, 30], Solid, 'o', 'o'),
+    part(Box, -0.3, -0.02, z - 0.04, -0.27, 0.02, z, led ? [255, 40, 30] : [70, 20, 18], led ? Glow : Solid, '.'),
+  ];
+  cams.set(key, m);
+  return m;
+}
+const camMounts = new Map<string, Part[]>();
+/**
+ * What a camera hangs from, reaching `arm` metres along +x to it at height z: a pole of its own with
+ * an arm (traffic, `pole`), or a bracket out of the wall (shop).
+ */
+export function cctvMount(z: number, arm: number, pole: boolean): Part[] {
+  const key = `${z.toFixed(1)}|${arm.toFixed(2)}|${pole}`;
+  let m = camMounts.get(key);
+  if (m) return m;
+  m = pole
+    ? [part(Cyl, -0.09, -0.09, 0, 0.09, 0.09, z + 0.35, [92, 96, 100], Solid, '|', '.'), part(Box, 0, -0.04, z + 0.22, arm, 0.04, z + 0.3, [92, 96, 100], Solid, '-', '='), part(Box, arm - 0.04, -0.03, z + 0.1, arm + 0.04, 0.03, z + 0.24, [92, 96, 100], Solid, '|')]
+    : [part(Box, 0, -0.06, z - 0.02, arm, 0.06, z + 0.04, [150, 150, 146], Solid, '-', '='), part(Box, 0, -0.1, z - 0.12, 0.04, 0.1, z + 0.12, [150, 150, 146], Solid, '#')];
+  camMounts.set(key, m);
+  return m;
+}
