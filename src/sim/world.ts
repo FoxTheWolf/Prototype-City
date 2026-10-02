@@ -78,7 +78,7 @@ export interface World {
 }
 
 /** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
-const CARS = 1500;
+const CARS = 2000;
 /** Share of CARS on the streets at each hour of the day: quiet before dawn, full at the rush hours. */
 const RUSH = [0.3, 0.25, 0.22, 0.22, 0.25, 0.35, 0.6, 0.9, 1, 0.95, 0.8, 0.8, 0.85, 0.8, 0.8, 0.85, 0.95, 1, 1, 0.85, 0.7, 0.6, 0.5, 0.4];
 /** Cars wanted at game time t (seconds), the hours blended. */
