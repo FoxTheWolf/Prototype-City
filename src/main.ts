@@ -127,7 +127,7 @@ function playSfx(list: Sfx[]) {
   }
   list.length = 0;
 }
-let lapSpin = 0;
+let lapSpin = 0, relock = false;
 /** Sounds the notebook asked for. */
 function playLap(list: LapSound[]) {
   for (const f of list) {
@@ -140,7 +140,8 @@ function playLap(list: LapSound[]) {
       case 'seek': sound.seek(); break;
       case 'beep': sound.biosBeep(); break;
       case 'power': sound.powerClick(); break;
-      case 'spin': case 'spindown': break; // the hum follows the power (laptopHum)
+      case 'spin': sound.hddSpinUp(); break;
+      case 'spindown': sound.hddPark(); break; // the hum follows the power (laptopHum)
     }
   }
   list.length = 0;
@@ -184,9 +185,12 @@ function payPress(k: Key) {
   if (!payphone.active) input.lock();
 }
 addEventListener('mousedown', (e) => {
+  if (relock && !laptop.open) { relock = false; if (running && !phone.out && !payphone.active && e.button !== 1) input.lock(); }
   if (e.button === 2) e.preventDefault();
   if (!running) return;
   if (laptop.open) {
+    // the middle button puts the notebook away too (a click can lock the pointer again at once)
+    if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
     if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
@@ -219,10 +223,12 @@ addEventListener('mouseup', (e) => {
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
 });
 addEventListener('keydown', (e) => {
+  // the browser does not lock the pointer from Esc: after closing the notebook the next key (or click) does
+  if (relock && !laptop.open) { relock = false; if (running && !phone.out && !payphone.active && !input.locked) input.lock(); }
   // the notebook open takes the whole keyboard; Esc closes the lid and stands up
   if (laptop.open) {
     e.preventDefault();
-    if (e.code === 'Escape') { if (!e.repeat) { laptop.close(performance.now() / 1000); input.lock(); } return; }
+    if (e.code === 'Escape') { if (!e.repeat) { laptop.close(performance.now() / 1000); input.lock(); relock = true; } return; }
     if (e.repeat && !['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'].includes(e.code) && e.key.length !== 1) return;
     laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
     return;
@@ -327,7 +333,7 @@ function frame(now: number) {
   camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
   const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
-  if (running && !laptop.open) camera.look(turn * 2.2 * dt, 0);
+  if (running) { if (!laptop.open) camera.look(turn * 2.2 * dt, 0); }
   else camera.look(dt * 0.08, 0); // idle drift behind the title
   camera.update(dt);
 

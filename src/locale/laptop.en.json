@@ -13,7 +13,7 @@
     "road": "Not in the middle of the street.",
     "lift": "Not while the car is moving.",
     "hint": "[N] OPEN THE NOTEBOOK",
-    "close": "[ESC] CLOSE THE LID AND STAND UP   [RIGHT MOUSE] LOOK AROUND   [WHEEL] SCROLL"
+    "close": "[ESC] OR [MIDDLE MOUSE] CLOSE THE LID   [RIGHT MOUSE] LOOK AROUND   [WHEEL] SCROLL"
   },
   "motd": [
     "",

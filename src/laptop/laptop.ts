@@ -71,6 +71,8 @@ export class Laptop {
   /** When each key (by its code) was last pressed: it shows pressed down for a moment. */
   readonly pressed = new Map<string, number>();
   readonly sfx: LapSound[] = [];
+  /** The drive's last seek (real seconds): its activity light flickers with them. */
+  hddAt = -9;
 
   constructor(private world: World) {
     this.pc = new Computer(playerLaptop(world.seed));
@@ -111,7 +113,7 @@ export class Laptop {
       if (this.raise === 0) this.seat = null;
     }
     this.shell.update(now);
-    for (const s of this.shell.sfx) this.sfx.push(s);
+    for (const s of this.shell.sfx) { this.sfx.push(s); if (s === 'seek') this.hddAt = now; }
     this.shell.sfx.length = 0;
   }
   /** A key of the player's keyboard, typed on the notebook. */

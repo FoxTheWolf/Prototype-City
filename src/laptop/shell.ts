@@ -3,6 +3,7 @@ import { calendar } from '../sim/clock';
 import { type Computer, type FsNode } from '../sim/computer';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
+import { computerMakerName } from '../locale/names';
 
 /**
  * A Unix-like shell on a Computer: the commands, the text they print and how long they take. The
@@ -96,6 +97,8 @@ export class Shell {
   private shellPid = 0;
   /** The process a command is running as, until it ends. */
   private job = 0;
+  /** The BIOS's screen is up (draw.ts draws its logos and colors). */
+  bios = false;
   /** Asked to power off (shutdown): the notebook reads it. */
   halted = false;
 
@@ -160,19 +163,37 @@ export class Shell {
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
     this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0;
-    pc.halt(); pc.bootAt = now; this.bootT = w.time;
+    pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
+    // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
+    // up, the drives it finds; the drive spins up meanwhile
+    this.bios = true;
+    const maker = computerMakerName(w.city, H.maker), year = calendar(w.time).year - 1;
     this.say(now, '', 0, 0.5);
     this.sound(now, 'beep', 0.1);
-    this.say(now, `${H.bios.startsWith('v') ? 'PhoenixLike' : ''}`.replace('PhoenixLike', `NB BIOS ${H.bios}, an Energy Star Ally`), 1, 0.1);
-    this.say(now, `CPU: ${H.cpu} @ ${(H.cpuMHz / 1000).toFixed(2)}GHz`, 0, 0.3);
-    this.say(now, 'Memory Test:      0K', 0, 0.2);
-    // counts up as fast as the BIOS checks it: ~1.6 GB a second
-    const steps = 12, kb = H.ramMB * 1024;
-    for (let k = 1; k <= steps; k++) this.redo(now, `Memory Test: ${String(Math.round((kb * k) / steps)).padStart(7)}K${k === steps ? ' OK' : ''}`, H.ramMB / 1600 / steps);
-    this.say(now, `Primary Master: ${H.disk}  ${Math.round(H.diskMB / 1000)}GB`, 0, 0.35);
     this.sound(now, 'spin', 0);
-    this.say(now, 'Booting from Hard Disk...', 0, 0.9);
-    this.say(now, '', 0, 0.2);
+    this.say(now, `     ${maker} BIOS (C) ${year} ${maker} Systems, Inc.`, 0, 0.1);
+    this.say(now, `     ${maker} ${H.model} BIOS Revision ${H.bios}`, 0, 0.05);
+    this.say(now, '', 0, 0);
+    this.say(now, '', 0, 0);
+    this.say(now, `  Main Processor  : ${H.cpu} @ ${(H.cpuMHz / 1000).toFixed(2)}GHz`, 0, 0.3);
+    this.say(now, '  Memory Test     :       0K', 0, 0.2);
+    // counts up as fast as the BIOS checks it: ~1 GB a second
+    const steps = 16, kb = H.ramMB * 1024;
+    for (let k = 1; k <= steps; k++) this.redo(now, `  Memory Test     : ${String(Math.round((kb * k) / steps)).padStart(7)}K${k === steps ? ' OK' : ''}`, H.ramMB / 1000 / steps);
+    this.say(now, '', 0, 0.3);
+    this.say(now, '  Detecting Primary Master   ...', 0, 0.2);
+    this.seeks(now, 0.9, 7);
+    this.redo(now, `  Detecting Primary Master   ... ${H.disk} ${Math.round(H.diskMB / 1000)}G`, 0);
+    this.say(now, '  Detecting Primary Slave    ...', 0, 0.1);
+    this.redo(now, '  Detecting Primary Slave    ... None', 0.5);
+    this.say(now, '  Detecting Secondary Master ...', 0, 0.1);
+    this.redo(now, '  Detecting Secondary Master ... DVD+-RW 8X', 0.6);
+    for (let k = 0; k < TERM_H - 15; k++) this.say(now, '', 0, 0);
+    this.say(now, '  Press F2 to enter SETUP, F12 for the boot menu', 0, 0);
+    // the screen goes dark while the drive reads the boot loader, then the system's text
+    this.then(now, () => { this.lines = []; this.bios = false; }, 1.6);
+    this.seeks(now, 1.2, 9);
+    this.at(now, 1.2);
     this.say(now, `Loading ${H.os} ${H.kernel} .....`, 0, 0.3);
     this.seeks(now, 1.4, 6);
     // the kernel: timestamped as it goes; the slower the machine, the longer it takes

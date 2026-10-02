@@ -416,13 +416,13 @@ export class Sound {
     const s = ctx.createBufferSource(), c = gain(ctx, 0, this.master);
     s.buffer = this.noise;
     s.connect(filter(ctx, 'bandpass', (big ? 2200 : 3200) + Math.random() * 900, 1.2)).connect(c);
-    c.gain.setValueAtTime((big ? 0.08 : 0.06) * (0.8 + Math.random() * 0.4), t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.018);
+    c.gain.setValueAtTime((big ? 0.2 : 0.16) * (0.8 + Math.random() * 0.4), t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.018);
     s.start(t, Math.random() * 1.5); s.stop(t + 0.03);
     const k = ctx.createBufferSource(), h = gain(ctx, 0, this.master);
     k.buffer = this.noise;
     k.connect(filter(ctx, 'bandpass', kind === 'space' ? 260 : big ? 380 : 520 + Math.random() * 120, 2)).connect(h);
     const at = t + 0.006;
-    h.gain.setValueAtTime(kind === 'space' ? 0.16 : big ? 0.11 : 0.07, at); h.gain.exponentialRampToValueAtTime(0.0005, at + (kind === 'space' ? 0.05 : 0.03));
+    h.gain.setValueAtTime(kind === 'space' ? 0.36 : big ? 0.26 : 0.18, at); h.gain.exponentialRampToValueAtTime(0.0005, at + (kind === 'space' ? 0.05 : 0.03));
     k.start(at, Math.random() * 1.5); k.stop(at + 0.07);
   }
   /** The backpack's zipper: a run of tiny teeth clicking past, then the bag's cloth. */
@@ -450,14 +450,54 @@ export class Sound {
     k.start(at, Math.random()); k.stop(at + 0.1);
   }
   /** The drive seeking: the head's arm ticking across the platter. */
-  seek() {
-    const ctx = this.ctx, t = ctx.currentTime;
-    for (const [d, f, v] of [[0, 1700 + Math.random() * 600, 0.05], [0.004 + Math.random() * 0.006, 900, 0.03]]) {
-      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
-      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, 3)).connect(g);
-      g.gain.setValueAtTime(v * (0.6 + Math.random() * 0.5), t + d); g.gain.exponentialRampToValueAtTime(0.0005, t + d + 0.006);
-      s.start(t + d, Math.random() * 1.5); s.stop(t + d + 0.01);
+  /**
+   * The drive's head arm moving, as an old mechanical drive sounds: a dry tick of the actuator
+   * hitting its stop over a dull thock through the case; now and then a quick chatter of short seeks.
+   */
+  seek(at = 0, big = false) {
+    const ctx = this.ctx, t = ctx.currentTime + at, n = big ? 1 : Math.random() < 0.25 ? 3 : 1;
+    for (let k = 0; k < n; k++) {
+      const d = k * (0.018 + Math.random() * 0.012);
+      this.hddHit(t + d, 1500 + Math.random() * 900, (big ? 0.1 : 0.05) * (0.6 + Math.random() * 0.5), 0.005);
+      this.hddHit(t + d + 0.002, big ? 260 : 340 + Math.random() * 120, (big ? 0.22 : 0.09) * (0.7 + Math.random() * 0.4), big ? 0.035 : 0.018);
     }
+  }
+  private hddHit(t: number, f: number, v: number, len: number) {
+    const ctx = this.ctx, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, f < 600 ? 1.6 : 3)).connect(g);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0005, t + len);
+    s.start(t, Math.random() * 1.5); s.stop(t + len + 0.01);
+  }
+  /**
+   * Power on: the spindle motor winds up (a rising whirr), then the heads unpark and calibrate (a
+   * few heavy clunks and a buzz of fast seeks as the arm sweeps the platters), then quiet reads.
+   */
+  hddSpinUp() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'sawtooth'; o.connect(filter(ctx, 'lowpass', 300, 1)).connect(g);
+    o.frequency.setValueAtTime(8, t); o.frequency.exponentialRampToValueAtTime(90, t + 2.4);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03, t + 0.3); g.gain.linearRampToValueAtTime(0.018, t + 2.4); g.gain.linearRampToValueAtTime(0, t + 3);
+    o.start(t); o.stop(t + 3.1);
+    // the brushes' whirr as it starts
+    const n = ctx.createBufferSource(), ng = gain(ctx, 0, this.master), nf = filter(ctx, 'bandpass', 200, 2);
+    n.buffer = this.noise; n.connect(nf).connect(ng);
+    nf.frequency.setValueAtTime(150, t); nf.frequency.exponentialRampToValueAtTime(1400, t + 2.4);
+    ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(0.02, t + 0.4); ng.gain.linearRampToValueAtTime(0, t + 2.6);
+    n.start(t, Math.random()); n.stop(t + 2.7);
+    // unpark and calibrate
+    const c = 2.5;
+    for (const [d, big] of [[0, true], [0.22, true], [0.5, false], [0.56, false], [0.62, false], [0.68, false], [0.74, false], [0.95, true], [1.3, false], [1.38, false], [1.6, true]] as [number, boolean][]) this.seek(c + d, big);
+    // the voice coil's buzz as the arm sweeps
+    const b = ctx.createOscillator(), bg = gain(ctx, 0, this.master);
+    b.type = 'square'; b.frequency.value = 110; b.connect(filter(ctx, 'bandpass', 700, 2)).connect(bg);
+    bg.gain.setValueAtTime(0, t + c + 0.48); bg.gain.linearRampToValueAtTime(0.012, t + c + 0.5); bg.gain.linearRampToValueAtTime(0, t + c + 0.8);
+    b.start(t + c + 0.45); b.stop(t + c + 0.85);
+  }
+  /** Power off: the heads park with a clunk, the spindle winds down. */
+  hddPark() {
+    this.seek(0, true);
+    this.seek(0.12, false);
   }
   /** The BIOS's beep from the little speaker: short, square and thin. */
   biosBeep() {
@@ -484,18 +524,18 @@ export class Sound {
       const sg = gain(ctx, 0, this.master), fan = gain(ctx, 0, this.master);
       const spinO = ctx.createOscillator(), whine = ctx.createOscillator();
       spinO.type = 'triangle'; whine.type = 'sine';
-      spinO.connect(filter(ctx, 'lowpass', 400, 0.7)).connect(sg);
-      const wg = gain(ctx, 0.08, sg); whine.connect(wg);
+      spinO.connect(filter(ctx, 'lowpass', 260, 0.7)).connect(sg);
+      const wg = gain(ctx, 0.025, sg); whine.connect(filter(ctx, 'lowpass', 1200, 0.7)).connect(wg);
       spinO.start(); whine.start();
       const n = ctx.createBufferSource(); n.buffer = this.noise; n.loop = true;
-      n.connect(filter(ctx, 'lowpass', 1100, 0.6)).connect(fan); n.start();
+      n.connect(filter(ctx, 'lowpass', 420, 0.5)).connect(fan); n.start();
       this.lapHum = { spin: spinO, whine, sg, fan };
     }
     const H = this.lapHum;
     H.spin.frequency.setTargetAtTime(15 + 75 * spin, t, 0.1);
-    H.whine.frequency.setTargetAtTime(400 + 4100 * spin, t, 0.1);
-    H.sg.gain.setTargetAtTime(on ? 0.02 * spin : 0, t, 0.2);
-    H.fan.gain.setTargetAtTime(on ? 0.008 : 0, t, 0.6);
+    H.whine.frequency.setTargetAtTime(180 + 720 * spin, t, 0.1);
+    H.sg.gain.setTargetAtTime(on ? 0.012 * spin : 0, t, 0.2);
+    H.fan.gain.setTargetAtTime(on ? 0.0035 : 0, t, 0.6);
   }
 
   /** The phone out of the pocket (or back in): cloth rustling, and the knock of it in the hand. */
