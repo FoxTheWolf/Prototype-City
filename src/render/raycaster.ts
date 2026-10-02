@@ -9,14 +9,14 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { signalLamps, mastModel, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { signalLamps, mastModel, substationModel, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, furnitureModel, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
 import { drawObjects, type Obj } from './objects';
 import { type Look } from './palette';
 import { drawFall, underRoof, type Roof } from './precip';
 import { power } from './power';
 import { subAt, type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
-import { prepareSky, skyColumn, type SkyFrame } from './sky';
+import { daylight, prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
 import { blinkOn, carPose, diagPoint, diagRoad, DIRS, flashing, Sig, signal, zoneSignal } from '../sim/traffic';
@@ -1392,8 +1392,22 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
     const base = city.buildings[S.building].h, lit = (frameSec + k * 0.37) % 1.5 < 0.5;
     boardList.push({ x: S.x, y: S.y, c: 1, s: 0, parts: mastModel(base, lit), r: 1.8, h: base + 8.6, z0: base, seed: 9000 + k });
   });
+  // the substations' yards
+  world.power.subs.forEach((S, k) => {
+    if (!S.yard || Math.hypot(S.x - v.x, S.y - v.y) > BOARD_FAR) return;
+    const [D, W] = yardSize(S.yard);
+    boardList.push({ x: S.x, y: S.y, c: Math.cos(S.yard.a), s: Math.sin(S.yard.a), parts: substationModel(D, W, S.on, yardFlood(S.on, day)), r: Math.hypot(D, W) / 2, h: 9.1, seed: 9500 + k });
+  });
   return boardList;
 }
+
+/** A yard's depth (toward its street) and width. */
+function yardSize(Y: { x0: number; y0: number; x1: number; y1: number; a: number }): [number, number] {
+  const along = Math.abs(Math.cos(Y.a)) > 0.5;
+  return along ? [Y.x1 - Y.x0, Y.y1 - Y.y0] : [Y.y1 - Y.y0, Y.x1 - Y.x0];
+}
+/** A yard's floodlight: on at night while the substation runs, in eighths. */
+const yardFlood = (on: boolean, day: number) => (on ? Math.round(Math.max(0, 1 - day * 1.4) * 8) / 8 : 0);
 
 /** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
 function gatherLights(world: World, v: View, sec: number) {
@@ -1425,6 +1439,14 @@ function gatherLights(world: World, v: View, sec: number) {
     // a wreck's hazard lights blink amber
     if (c.wreck && Math.floor(sec * 1.6) & 1) dyn.point(x, y, 6, 1, 3, 150, 90, 10);
     if (c.beacon) { const red = (Math.floor(sec * 3) & 1) === 0; dyn.point(x, y, 14, 2, 8, red ? 140 : 20, red ? 15 : 30, red ? 15 : 160); }
+  }
+  // the substations' floodlights light their yards
+  for (const S of world.power.subs) {
+    if (!S.yard || Math.abs(S.x - v.x) > DYN_FAR || Math.abs(S.y - v.y) > DYN_FAR) continue;
+    const f = yardFlood(S.on, daylight(world.time));
+    if (f <= 0) continue;
+    const [D, W] = yardSize(S.yard), c = Math.cos(S.yard.a), sn = Math.sin(S.yard.a), lx = D / 2 - 1.6, ly = W / 2 - 1.6;
+    dyn.point(S.x + c * lx - sn * ly, S.y + sn * lx + c * ly, 16, 3, 9, 170 * f, 160 * f, 135 * f);
   }
   // each lit traffic light throws its color on the street in front of it (and on wet asphalt, far)
   forSignals(world, v, SIGNAL_LIGHT_FAR, (S) => {

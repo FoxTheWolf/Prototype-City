@@ -7,7 +7,8 @@ import { Scr, St } from './screen';
  * says where the cursor is, ^G shows the help. Ctrl+W and Ctrl+N belong to the browser, so the
  * editor does not use them. Writing goes through the shell (permissions, disk space, the drive).
  */
-const W = 80, H = 22, TOP = 1, ROWS = 18, STATUS = 19;
+/** The whole console (160 x 50, as TERM_W x TERM_H in shell.ts): a title bar, the file, the status line and two rows of keys. */
+const W = 160, H = 50, TOP = 1, ROWS = H - 4, STATUS = H - 3;
 const HELP = [
   'Help for the editor',
   '',
@@ -171,8 +172,8 @@ export class Editor {
   private keys(s: Scr, a: [string, string][], b: [string, string][]) {
     [a, b].forEach((row, r) => row.forEach(([k, label], i) => {
       const x = i * 16;
-      s.text(x, 20 + r, k, St.Inverse);
-      s.text(x + k.length + 1, 20 + r, label, St.Ink);
+      s.text(x, H - 2 + r, k, St.Inverse);
+      s.text(x + k.length + 1, H - 2 + r, label, St.Ink);
     }));
   }
 }

@@ -1,22 +1,10 @@
-import { type CharGrid } from '../render/grid';
-import { computerMakerName } from '../locale/names';
-import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
 import { type Laptop } from './laptop';
 import { St } from './screen';
 import { hash3 } from '../core/rng';
 
-/**
- * The notebook drawn over the view, low in the middle as if set down in front of the player: the
- * lid with its screen (the terminal), the hinge, and the keyboard deck in perspective, wider toward
- * the viewer, its keys going down as they are typed. The body sits in the scene's light; the screen
- * makes its own, amber or green.
- */
+/** The notebook's shared pieces: its keyboard, the terminal's inks, and the screen's content (look3d.ts draws the body). */
 export type C3 = [number, number, number];
-/** The screen: the terminal plus the bezel around it. */
-/** The classic and HD looks' screen: 80 x 22 characters on the interface's grid, plus the bezel. */
-export const CL_W = 80, CL_H = 22;
-export const SCR_W = CL_W + 4, SCR_H = CL_H + 3;
 /** The keyboard: rows of [code, label, width in units]; every row is 15 units. */
 export const ROWS: [string, string, number][][] = [
   [['Escape', 'Esc', 1], ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n): [string, string, number] => [`F${n}`, `F${n}`, 1]), ['Delete', 'Del', 2]],
@@ -64,104 +52,6 @@ function biosArt(put: (x: number, y: number, ch: number, fg: readonly number[], 
 /** The keys' hint over the notebook: how to close it, and while it is off, that Enter is the power button. */
 export const hintOf = (P: Laptop) => (P.shell.halted ? `${L.seat.power}   ${L.seat.close}` : L.seat.close);
 
-export function drawLaptop(g: CharGrid, P: Laptop, world: World, now: number, light: Float32Array) {
-  if (P.raise < 0.01) return;
-  const H = P.pc.hw;
-  const Lr = Math.min(1.4, 0.25 + light[0]), Lg = Math.min(1.4, 0.25 + light[1]), Lb = Math.min(1.4, 0.25 + light[2]);
-  const lit = (c: readonly number[], k = 1): C3 => [c[0] * Lr * k, c[1] * Lg * k, c[2] * Lb * k];
-  // the whole object slides up from below the view; the deck runs off the bottom edge
-  const ease = 1 - (1 - P.raise) ** 3, deckRows = 2 * ROWS.length + 5, total = SCR_H + 1 + deckRows;
-  const y0 = Math.round(g.rows - total + 4 + (1 - ease) * (total + 2)), x0 = (g.cols - SCR_W) >> 1;
-  const put = (x: number, y: number, ch: number, fg: readonly number[], bg: readonly number[]) => {
-    if (x < 0 || y < 0 || x >= g.cols || y >= g.rows) return;
-    const i = y * g.cols + x;
-    g.put(i, ch, fg[0], fg[1], fg[2]); g.setBg(i, bg[0], bg[1], bg[2]);
-  };
-  const text = (x: number, y: number, s: string, fg: readonly number[], bg: readonly number[]) => { for (let k = 0; k < s.length; k++) put(x + k, y, s.charCodeAt(k), fg, bg); };
-  const BODY = H.body, bodyC = lit(BODY), bezel = lit(BODY, 0.55), edgeC = lit([BODY[0] * 1.4 + 20, BODY[1] * 1.4 + 20, BODY[2] * 1.4 + 20]);
-
-  const hingeY = y0 + SCR_H;
-  // ---- the hinge and the deck ----
-  for (let x = 0; x < SCR_W; x++) put(x0 + x, hingeY, 95, lit([BODY[0] * 0.4, BODY[1] * 0.4, BODY[2] * 0.4]), lit(BODY, 0.75));
-  const deckTop = hingeY + 1;
-  for (let r = 0; r < deckRows; r++) {
-    // wider toward the viewer
-    const w = SCR_W + 2 + Math.round(r * 1.1), dx = (g.cols - w) >> 1;
-    for (let x = 0; x < w; x++) put(dx + x, deckTop + r, 32, bodyC, x === 0 || x === w - 1 ? edgeC : bodyC);
-  }
-  const keyFace = lit([34, 34, 38]), keySide = lit([16, 16, 18]), label = lit([190, 190, 196]);
-  // the keys' shadows on the deck first (to their right, away from the light), then the keys over them
-  const shade = lit(BODY, 0.5);
-  ROWS.forEach((row, ri) => {
-    const r = 1 + ri * 2, w = SCR_W - 2 + Math.round(r * 1.1), U = w / 15, dx = (g.cols - w) >> 1;
-    let u = 0;
-    for (const [, , wu] of row) {
-      const a = dx + Math.round(u * U), b = dx + Math.round((u + wu) * U) - 1;
-      u += wu;
-      if (b > a) { put(b, deckTop + r, 32, shade, shade); put(b, deckTop + r + 1, 32, shade, shade); }
-    }
-  });
-  ROWS.forEach((row, ri) => {
-    const r = 1 + ri * 2, w = SCR_W - 2 + Math.round(r * 1.1), U = w / 15, dx = (g.cols - w) >> 1;
-    let u = 0;
-    for (const [code, lab, wu] of row) {
-      const a = dx + Math.round(u * U), b = dx + Math.round((u + wu) * U) - 1, down = now - (P.pressed.get(code) ?? -9) < 0.12;
-      u += wu;
-      if (b <= a) continue;
-      // a key: its face with the label on top, its side under it; pressed, the face sinks a row
-      const fy = deckTop + r + (down ? 1 : 0), lx = a + ((b - a - lab.length) >> 1);
-      for (let x = a; x < b; x++) {
-        if (!down) put(x, deckTop + r + 1, 32, keySide, keySide);
-        put(x, fy, 32, label, down ? lit([28, 28, 31]) : keyFace);
-      }
-      text(Math.max(a, lx), fy, lab.slice(0, b - a), down ? lit([255, 255, 255]) : label, down ? lit([28, 28, 31]) : keyFace);
-    }
-  });
-  // the touchpad and its buttons
-  const ty = deckTop + 2 * ROWS.length + 1, tw = 22, tx = (g.cols - tw) >> 1;
-  for (let r = 0; r < 3; r++) for (let x = 0; x < tw; x++) put(tx + x, ty + r, 32, bodyC, r === 2 ? lit(BODY, 0.6) : lit(BODY, 0.85));
-  for (let x = 0; x < tw; x++) put(tx + x, ty + 2, x === tw >> 1 ? 124 : 32, lit(BODY, 0.4), lit(BODY, 0.6));
-
-  // ---- the lid: hinged at the back of the deck. Shut, it lies over the keyboard (its back, with the
-  // maker's name, toward the viewer); it swings up through an angle, its far edge rising from near the
-  // viewer (wide) past the hinge to upright (as wide as the screen) ----
-  const th = (P.lid * Math.PI) / 2, D = 2 * ROWS.length + 1;
-  const edge = hingeY - SCR_H * Math.sin(th) + D * Math.cos(th);
-  const deckW = (y: number) => SCR_W + 2 + Math.round((y - hingeY - 1) * 1.1);
-  const brand = computerMakerName(world.city, H.maker).toUpperCase();
-  if (P.lid < 1) {
-    if (edge > hingeY) {
-      // its back, over the keys, wider toward the viewer
-      const top = hingeY + 1, bot = Math.round(edge);
-      for (let y = top; y <= bot; y++) {
-        const w = deckW(y), dx = (g.cols - w) >> 1;
-        for (let x = 0; x < w; x++) put(dx + x, y, 32, bodyC, y === bot || x === 0 || x === w - 1 ? edgeC : lit(BODY, 0.9 + 0.1 * ((y - top) / Math.max(1, bot - top))));
-      }
-      if (bot - top > 2) text((g.cols - brand.length) >> 1, (top + bot) >> 1, brand, lit([BODY[0] * 0.6 + 60, BODY[1] * 0.6 + 60, BODY[2] * 0.6 + 60]), lit(BODY, 0.95));
-    } else {
-      // past the hinge: its face, the bezel round a dark glass, foreshortened
-      const top = Math.round(edge), n = hingeY - top;
-      for (let y = top; y < hingeY; y++) {
-        const f = (y - top) / Math.max(1, n), inGlass = f > 1.8 / Math.max(2, n) && f < 1 - 1 / Math.max(2, n);
-        for (let x = 0; x < SCR_W; x++) {
-          const glass = inGlass && x >= 2 && x < SCR_W - 2;
-          put(x0 + x, y, 32, bodyC, y === top || x === 0 || x === SCR_W - 1 ? edgeC : glass ? lit([16 + 20 * f, 16 + 20 * f, 20 + 22 * f]) : bezel);
-        }
-      }
-    }
-  } else {
-    for (let y = y0; y < hingeY; y++) for (let x = 0; x < SCR_W; x++) put(x0 + x, y, 32, bodyC, x === 0 || x === SCR_W - 1 || y === y0 ? edgeC : bezel);
-  }
-  if (P.lid >= 1) {
-    drawScreen(put, text, x0 + 2, y0 + 2, P, now, lit, light);
-    bezelBits(put, text, x0, y0, P, now, lit, bezel, brand);
-  }
-
-  // what to do, and where the player sat
-  if (P.open && now - P.noticeAt < 3) text((g.cols - P.notice.length - 2) >> 1, Math.max(1, y0 - 2), ` ${P.notice} `, [255, 220, 140], [20, 16, 10]);
-  else if (P.open && P.lid >= 1) { const h = hintOf(P); text((g.cols - h.length - 2) >> 1, Math.max(1, y0 - 2), ` ${h} `, [150, 140, 120], [14, 12, 10]); }
-}
-
 /** A cell writer on the interface's grid (glyph, ink, paper), and a string writer. */
 export type Put = (x: number, y: number, ch: number, fg: readonly number[], bg: readonly number[]) => void;
 export type Text = (x: number, y: number, s: string, fg: readonly number[], bg: readonly number[]) => void;
@@ -172,7 +62,7 @@ export type Text = (x: number, y: number, s: string, fg: readonly number[], bg: 
  * follows the scene: a faint wash of the light at the player's hands over it, smudges of fingerprints
  * that catch that light, and off, the light's reflection across it. Every look of the notebook draws its screen with this.
  */
-export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Laptop, now: number, lit: (c: readonly number[], k?: number) => C3, light: Float32Array, W = CL_W, H = CL_H) {
+export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Laptop, now: number, lit: (c: readonly number[], k?: number) => C3, light: Float32Array, W: number, H: number) {
   const S = P.shell, ink = INKS[S.ink], sbg = SCREEN_BG[S.ink];
   // the glass over every cell: the light's wash, the smudges, and (off) the reflection
   const Lr = Math.min(1.6, light[0]), Lg = Math.min(1.6, light[1]), Lb = Math.min(1.6, light[2]);
@@ -191,7 +81,8 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
   void lit;
   const on = S.state !== 'off' && P.pc.bootAt >= 0;
   // the visible lines: the scrollback, then the prompt and what is being typed
-  const lines = S.lines.slice(), ready = S.ready;
+  const full = on ? S.screen() : null;
+  const lines = full ? [] : S.lines.slice(), ready = S.ready && !full;
   let promptRow = -1;
   if (ready) {
     const s = S.prompt + (S.mask ? '*'.repeat(S.input.length) : S.input);
@@ -208,8 +99,7 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
     }
   }
   if (on && S.bios) biosArt(put, sx, sy, W);
-  // a program owning the whole screen (SETUP, the editor) draws over the lines
-  const full = on ? S.screen() : null;
+  // a program owning the whole screen (SETUP, the editor) draws instead of the lines
   if (full) {
     const F = full.scr;
     for (let r = 0; r < Math.min(H, F.h); r++) {
@@ -259,23 +149,4 @@ function smudge(u: number, v: number): number {
     if (d < 1) s += (1 - d) * (0.5 + 0.5 * hash3(Math.floor(u * 400), Math.floor(v * 200), k + 90));
   }
   return Math.min(1, s);
-}
-
-/** The bezel's bits round a screen whose bezel's top-left cell is (x0, y0): the webcam, the maker's name, the lights. */
-export function bezelBits(put: Put, text: Text, x0: number, y0: number, P: Laptop, now: number, lit: (c: readonly number[], k?: number) => C3, bezel: readonly number[], brand: string) {
-  const S = P.shell, on = S.state !== 'off' && P.pc.bootAt >= 0;
-  // the bezel: the webcam on top, the maker's name below
-  put(x0 + (SCR_W >> 1), y0, 111, [40, 40, 44], bezel);
-  text(x0 + ((SCR_W - brand.length) >> 1), y0 + SCR_H - 1, brand, lit([150, 150, 156]), bezel);
-  // the power light
-  put(x0 + SCR_W - 4, y0 + SCR_H - 1, 46, on ? [120, 255, 140] : Math.floor(now * 0.8) & 1 ? [255, 170, 60] : [60, 40, 20], bezel);
-  // the drive's activity light beside it: it flickers with every seek
-  const busy = on && now - P.hddAt < 0.07 + 0.05 * ((now * 37) % 1);
-  put(x0 + SCR_W - 6, y0 + SCR_H - 1, 46, busy ? [255, 190, 70] : [50, 36, 18], bezel);
-  // the charge light: amber charging, green full on the mains, off on the battery; it blinks amber
-  // when the battery is low, and three times when the power button finds it flat
-  const pc = P.pc, blink = Math.floor(now * 3) & 1, dead = now - P.deadAt < 1;
-  const chg: C3 = dead ? (blink ? [255, 150, 40] : [50, 30, 10]) : pc.plugged ? (pc.charge >= 0.995 ? [120, 255, 140] : [255, 170, 50])
-    : on && pc.charge < 0.1 ? (blink ? [255, 150, 40] : [50, 30, 10]) : [40, 30, 16];
-  put(x0 + SCR_W - 8, y0 + SCR_H - 1, 46, chg, bezel);
 }

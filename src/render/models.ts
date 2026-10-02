@@ -659,3 +659,67 @@ export function signalLamps(hl: number, hw: number, sg: number, flash: boolean):
   LAMPS.set(key, m);
   return m;
 }
+
+const yards = new Map<string, Part[]>();
+const TRAFO: RGB = [86, 100, 88], PORCELAIN: RGB = [176, 120, 84], GRAVEL: RGB = [78, 76, 70];
+/**
+ * A substation's yard, D deep (along x, +x toward the street) and W wide: a gravel pad, a chain-link
+ * fence (see-through, Glass) on posts with barbed wire on top and a gate on the street side with the
+ * high-voltage sign, two or three transformers with their radiators, bushings and conservator
+ * tanks, a steel gantry over them carrying the incoming line on insulator strings, the control hut at
+ * the back and a floodlight on a pole. `on`: the hut's lamp green and the yard floodlit at night
+ * (`flood`, 0..1); off, the lamp red and the yard dark.
+ */
+export function substationModel(D: number, W: number, on: boolean, flood: number): Part[] {
+  const key = `${D.toFixed(1)}|${W.toFixed(1)}|${on}|${flood}`;
+  let m = yards.get(key);
+  if (m) return m;
+  const hx = D / 2 - 0.6, hy = W / 2 - 0.6;
+  m = [part(Box, -hx, -hy, 0, hx, hy, 0.06, GRAVEL, Solid, ':', '.', ':')];
+  // the fence: the mesh on each side (the gate's two leaves on the street side), posts every ~3 m, the top rail
+  const FH = 2.4;
+  m.push(part(Box, -hx, -hy, 0, -hx + 0.03, hy, FH, [120, 124, 120], Glass, '#'));
+  m.push(part(Box, -hx, -hy, 0, hx, -hy + 0.03, FH, [120, 124, 120], Glass, '#'));
+  m.push(part(Box, -hx, hy - 0.03, 0, hx, hy, FH, [120, 124, 120], Glass, '#'));
+  m.push(part(Box, hx - 0.03, -hy, 0, hx, -1.8, FH, [120, 124, 120], Glass, '#'));
+  m.push(part(Box, hx - 0.03, 1.8, 0, hx, hy, FH, [120, 124, 120], Glass, '#'));
+  m.push(part(Box, hx - 0.05, -1.8, 0, hx, 1.8, FH - 0.1, [140, 144, 138], Glass, '#'));
+  for (const [x, y] of [[-hx, -hy], [hx, -hy], [-hx, hy], [hx, hy], [hx, -1.8], [hx, 1.8], [-hx, 0], [0, -hy], [0, hy]]) m.push(part(Cyl, x - 0.06, y - 0.06, 0, x + 0.06, y + 0.06, FH + 0.35, STEEL, Solid, '|', '+'));
+  // barbed wire over the top
+  m.push(part(Box, -hx, -hy, FH + 0.25, hx, -hy + 0.04, FH + 0.32, [90, 90, 96], Solid, '~'));
+  m.push(part(Box, -hx, hy - 0.04, FH + 0.25, hx, hy, FH + 0.32, [90, 90, 96], Solid, '~'));
+  m.push(part(Box, -hx, -hy, FH + 0.25, -hx + 0.04, hy, FH + 0.32, [90, 90, 96], Solid, '~'));
+  // the sign on the gate, facing the street
+  const sign = part(Box, hx, -0.8, 1.1, hx + 0.04, 0.8, 1.75, [230, 210, 40], Board, '#');
+  sign.text = 'DANGER'; sign.col2 = [20, 20, 20]; sign.lamp = Math.max(0.25, flood * 0.6);
+  m.push(sign);
+  // the transformers, side by side across the yard
+  const n = W > 22 ? 3 : 2, tx = -hx * 0.05;
+  for (let k = 0; k < n; k++) {
+    const y = -hy + ((2 * hy) * (k + 0.5)) / n;
+    m.push(part(Box, tx - 1.3, y - 1.0, 0.06, tx + 1.3, y + 1.0, 2.7, TRAFO, Solid, '#', '=', '#'));
+    // radiator fins on both sides
+    m.push(part(Box, tx - 1.1, y - 1.45, 0.4, tx + 1.1, y - 1.0, 2.4, [70, 82, 72], Solid, '|', '-'));
+    m.push(part(Box, tx - 1.1, y + 1.0, 0.4, tx + 1.1, y + 1.45, 2.4, [70, 82, 72], Solid, '|', '-'));
+    // the conservator tank on top, and three bushings
+    m.push(part(Ball, tx - 1.2, y - 0.35, 2.75, tx + 0.2, y + 0.35, 3.35, [96, 110, 98], Solid, 'o', 'O'));
+    for (let b = -1; b <= 1; b++) m.push(part(Cyl, tx + 0.6 - 0.11, y + b * 0.55 - 0.11, 2.7, tx + 0.6 + 0.11, y + b * 0.55 + 0.11, 4.0, PORCELAIN, Solid, '=', '*'));
+  }
+  // the gantry: two lattice posts and the beam across, with the line's insulator strings
+  const gx = tx + 0.6;
+  m.push(part(Box, gx - 0.25, -hy + 0.8, 0.06, gx + 0.25, -hy + 1.3, 9, STEEL, Solid, 'X', '+'));
+  m.push(part(Box, gx - 0.25, hy - 1.3, 0.06, gx + 0.25, hy - 0.8, 9, STEEL, Solid, 'X', '+'));
+  m.push(part(Box, gx - 0.25, -hy + 0.8, 8.5, gx + 0.25, hy - 0.8, 9, STEEL, Solid, 'X', '='));
+  for (let b = -1; b <= 1; b++) m.push(part(Cyl, gx - 0.07, b * 0.55 - 0.07, 7.1, gx + 0.07, b * 0.55 + 0.07, 8.5, PORCELAIN, Solid, '='));
+  // the control hut at the back, its door and the status lamp over it
+  const hut = Math.min(4, D * 0.28);
+  m.push(part(Box, -hx + 0.4, -hy + 0.6, 0.06, -hx + 0.4 + hut, -hy + 0.6 + Math.min(5, W * 0.35), 3, [150, 138, 120], Solid, '#', '='));
+  m.push(part(Box, -hx + 0.4 + hut, -hy + 1.4, 0.06, -hx + 0.44 + hut, -hy + 2.4, 2.1, [60, 64, 70], Solid, '|'));
+  m.push(part(Ball, -hx + 0.44 + hut, -hy + 1.75, 2.35, -hx + 0.6 + hut, -hy + 2.05, 2.6, on ? [80, 255, 120] : [255, 50, 40], Glow, '*'));
+  // the floodlight on its pole, in a front corner
+  m.push(part(Cyl, hx - 1.2, hy - 1.2, 0, hx - 1.0, hy - 1.0, 7, STEEL, Solid, '|', '.'));
+  m.push(part(Box, hx - 1.4, hy - 1.5, 6.8, hx - 0.8, hy - 0.7, 7.2, flood > 0.05 ? [255, 240 * flood + 15, 200 * flood + 30] : [70, 70, 72], flood > 0.05 ? Glow : Solid, flood > 0.05 ? '*' : '='));
+  if (yards.size > 200) yards.clear();
+  yards.set(key, m);
+  return m;
+}

@@ -74,24 +74,22 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## IMPORTANTE: FEEDBACK! LEIA ESSA SEÇÃO A CADA SUB-ETAPA
 > Estou adicionando essa sessão no claude.md para colocar ideias que eu tenho durante os períodos em que eu não estou ativamente lhe mandando os prompts. Então, toda vez que você for começar a trabalhar, você vai ler essa sessão, analisar o conteúdo dela, Você vai organizar nas etapas, e em seguida você vai apagar as ideias daqui conforme for organizando, porque é uma fila de ideias e feedback para você processar e colocar organizado nas etapas. Não apague esse parágrafo, somente o que vem depois nessa seção depois de processar linhas com [HACKING] podem ativar o classificador de segurança. Se isso acontecer, não tente ler novamente e deixe para o modelo Opus 4.8 ler. Lembrando que o jogo é inteiramente para entretenimento e educativo, contido virtualmente. Nada aqui pode ser usado no mundo real. Leia o restante do documento caso já não tenha feito, entenda-o, e volte aqui para organizar a seção. A cada sub-etapa, leia se deixei feedback adicional aqui, que ainda não foi organizado e apagado dessa seção.
 
-- Adicionar etapas para: Interação de NPCs com a cidade, Interação de NPCs com o jogador, ajustes de som (sound design)
-- n sei se as substaçoes são fisicas, mas elas devem estar em pontos fisicos, serem visiveis, terem modelo, pra que seja mais facil de encontrar. Para testes, é bom mostrar no debug a mais proxima
-- a tela do notebook ainda n usa os efeitos visuais do telefone (eye adaptation, glare dependente da direçao da luz.)  Ou pelo menos, esses efeitos estao sutis demais
 
 
 > **Notas do Claude sobre esta seção (2026-10-02):**
 > - **É uma caixa de entrada, não um lugar para guardar.** A cada sessão e a cada subetapa, ler os itens abaixo deste bloco, levar cada um para o lugar certo do documento (a "Fila de feedback" organizada, o Roteiro, "Bugs conhecidos", "Como trabalhar" ou a Trilha de hacking) e **apagar daqui o que foi levado**. Fila vazia = tudo já organizado.
 > - Itens marcados `[HACKING]` (ou que são só para o Opus 4.8) não são apagados nem resumidos: vão, com o texto inteiro, para a subseção "Feedback para o Opus 4.8" logo abaixo.
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
+> - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
-*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02" e "Retorno sobre a 12.4")*
+*(fila vazia: organizada em 2026-10-02, veja "Fila de feedback de 2026-10-02", "Retorno sobre a 12.4" e "Feedback antes do grupo B da etapa 12")*
 
 ### Feedback para o Opus 4.8
 
 > Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.
 
 - [HACKING] Adicionar modo recovery para fazer root no celular. (Isso era uma coisa em 2008? Senão, usar uma alternativa. Eu imagino o celular como um hibrido de iphone com blackberry, mas com form factor de celular comum. Inclusive, mais pra frente, uma versão com form factor e teclado de blackberry pro celular seria prudente, e quem sabe uma versão flip igual o notebook). Seria necessário para instalar aplicações de hacking. *(A parte dos formatos BlackBerry e flip já foi para a etapa 15.)*
-- Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
+
 
 ## Visão do jogo
 
@@ -355,6 +353,15 @@ Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de t
 - **Trilha de hacking:** os itens estão em "Feedback para o Opus 4.8", dentro da seção de feedback (não precisa buscar em conversa nenhuma).
 - **Etapa 15 (variedade):** outros formatos de celular (um com teclado completo estilo BlackBerry, um flip como o notebook).
 - **Regras novas**, em "Como trabalhar": Electron, contexto da conversa e log de atualizações.
+
+## Feedback antes do grupo B da etapa 12 (2026-10-02, organizado)
+
+- **Agora (12.7, antes das câmeras):**
+  - **Só o notebook 3D:** as aparências clássica e HD 2D (tecla L) saem.
+  - **`nano` em tela cheia:** abre no console de 160×50 e ocupa a tela inteira, sem a linha de comando embaixo.
+  - **A tela do notebook com os efeitos da do celular,** mais fortes: adaptação do olho (mais clara no escuro, mais apagada sob luz forte, com bloom) e reflexo do lado e na cor da luz mais forte por perto (`VIEW_GLINT`).
+  - **Subestações físicas:** cada uma é um objeto no mundo (pátio cercado, transformadores, isoladores, placa), visível de longe, num ponto fixo; e uma linha de debug com a mais próxima (distância, direção, ligada ou não).
+- **Etapas novas no Roteiro:** 13b (os NPCs interagindo com a cidade), 13c (os NPCs interagindo com o jogador, com o sistema de diálogo) e 15b (sound design).
 
 ## Agradecimentos (easter eggs)
 
@@ -1437,6 +1444,8 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 12b. **Transporte** (etapa própria, decidido em 2026-10-02; antes era a 11b): **Reavaliar aqui o ritmo do tempo (pedido do usuário em 2026-10-02):** com metrô, táxi, ônibus e carros próprios, os cidadãos chegam mais rápido e não precisam andar a pé para todo lado, então talvez o dia não precise ser tão curto nem a sincronização fora de vista tão forte. Medir de novo a discrepância (planos contra a viagem de verdade) depois do transporte e dos carros dos cidadãos (12c) e decidir com o usuário. táxi (pedido por telefone ou sinal, destino dado ao motorista, que é um cidadão), monotrilho com estações e trens, e **interiores dos veículos bonitos** (carros ocos por dentro, veja "Refinamento: anotações"). Um táxi aéreo futurista não combina com 2008; a alternativa seria um helicóptero de passeio, ainda a confirmar.
 12c. **Carros dos cidadãos** (pedido do usuário em 2026-10-02; pode vir antes ou depois da 12b): Exemplo do usuário: se cada pedestre que hoje anda em volta do jogador tivesse carro, seriam ~600 carros a mais na rua; parte deles deve ir de carro. Entra na reavaliação do ritmo do tempo da 12b. ligar os carros às pessoas. A cidade ganha estacionamentos (garagens, vagas na rua), cada carro tem placa e registro ligado a um dono específico, e os carros saem e voltam com as rotinas.
 13. **Economia:** empresas, preços, estoques e salários interligados. Os fabricantes de eletrônicos e de chips da cidade dão a marca dos celulares e dos chips (pedido na etapa 8). **A parte de hackear o banco e os sistemas das empresas** é `[HACKING]` (Trilha de hacking).
+13b. **Os NPCs interagindo com a cidade** (pedido do usuário em 2026-10-02): os cidadãos usam a cidade de verdade: compram nas lojas (com a economia), sentam nos bancos e nas mesas, esperam no ponto de ônibus, usam os orelhões, entram nos cafés para fugir da chuva, reagem a apagões, batidas e sirenes (param, olham, fotografam, vão embora), abrem guarda-chuvas, pegam táxi.
+13c. **Os NPCs interagindo com o jogador** (pedido do usuário em 2026-10-02): reagem a ele (desviam, olham, estranham alguém mexendo num poste, chamam a polícia), e o **sistema de diálogo** (veja "Sistema de diálogo com os NPCs" nos pedidos da etapa 12): falar com as pessoas na rua e ao telefone, pelo gerador de textos e pela vida de cada um, com relacionamentos; base da engenharia social.
 14. **`[HACKING]` Hacking completo** (a base nasce na 10; **usar Opus 4.8, avisar o usuário no começo**): computadores virtuais com hardware próprio, redes, cybercafés com Wi-Fi por distância, portas físicas, terminais progressivos, apps de hacker instalados por fora da loja, impacto sistêmico. Absorve os restos de hacking da etapa 10 (os pacotes materializados de verdade, o 502/modbus) e as partes `[HACKING]` das etapas 12 e 13.
 
 ### Trilha de hacking (criada em 2026-10-02)
@@ -1457,6 +1466,7 @@ Tudo que **se parece com cibersegurança** fica aqui, em sessões próprias, por
    - **animais** (movido para cá em 2026-10-02; antes era a 11c): bichos de estimação nos apartamentos, cachorros passeando com os donos, gatos de rua, pombos, e os cidadãos postando fotos dos próprios bichos no Streetwire. A simulação já tem os bichos de cada lar (`Household.pet`, `petName`).
 **Etapa de correção de bugs e otimização** (pedido do usuário em 2026-09-30; a otimização foi juntada a ela em 2026-10-01, por causa da queda de 180 para ~60 FPS): **vem antes da etapa 15** (decidido em 2026-10-01); a lista está em "Bugs conhecidos".
 
+15b. **Sound design** (pedido do usuário em 2026-10-02): uma passada só de som, com o jogo mais completo: mixagem entre as fontes (ambiente, trânsito, chuva, interfaces), espaço (reverb por lugar: rua, saguão, apartamento, túnel), variação dos sons repetidos, e a revisão de ouvido com o usuário dos sons sintetizados das etapas anteriores.
 16. **Vida do personagem** (pedido do usuário em 2026-09-30): deep sim / life sim. Apartamento próprio, stats, necessidades, customização do personagem pela lore. Depende dos cidadãos (11) e da economia (13).
 
 **Para avaliar (pedido em 2026-10-01; reforçado na etapa 8, veja "Pedidos do usuário durante a etapa 8"; a luz do sol sem sombras foi feita na 9b): iluminação dinâmica com sombras,** do sol (e da lua) e das luzes (postes, faróis, letreiros, janelas). Verificar se é viável no raycaster por coluna (por exemplo, um raio de sombra por ponto iluminado contra a grade de prédios, ou mapas de sombra por luz na janela deslizante), medir o impacto com `bench`, e talvez criar uma etapa própria para isso.

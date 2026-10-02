@@ -25,6 +25,8 @@ const VFOV = Math.PI / 3;
 
 let anchor = 0, pitch0 = -0.6, wasOpen = false, tmp: CharGrid | null = null;
 const L3 = new Float32Array(3);
+/** The glint and the eye's adaptation on the screen, eased over time (as on the phone, see phone/draw.ts; stronger here). */
+const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0, bloom: 0, mean: [0, 0, 0] as C3 };
 /** Where the power button falls on the interface's grid (cells), for a click; null when not shown. */
 export let power3d: [number, number, number, number] | null = null;
 /** The view's yaw the notebook was set down facing, and the pitch that centres its screen: where the view comes back to. */
@@ -37,7 +39,7 @@ export let screenAt: [number, number] | null = null;
 export interface View3d { yaw: number; pitch: number; aspect: number; still: boolean; termW: number; termH: number }
 
 /** term: the screen layer's characters, filled here (its size: the console's or the text mode's). */
-export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: World, now: number, light: Float32Array, view: View3d) {
+export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: World, now: number, light: Float32Array, glint: Float32Array, view: View3d) {
   power3d = null; screenAt = null;
   if (P.open && !wasOpen) anchor = view.yaw;
   wasOpen = P.open;
@@ -102,6 +104,7 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
       term.put(i, ch, fg[0], fg[1], fg[2]); term.setBg(i, bg[0], bg[1], bg[2]);
     };
     drawScreen(tput, (x, y, s, fg, bg) => { for (let k = 0; k < s.length; k++) tput(x + k, y, s.charCodeAt(k), fg, bg); }, 0, 0, P, now, lit, light, TW, TH);
+    glassOver(term, light, glint, now, on);
   }
 
   // ---- the body, drawn into a grid of the interface's size, copied over it as solid blocks (the soft look) ----
@@ -152,6 +155,18 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   { const p = project(cam, obj, PB[0], PB[1], DECK_H, cols); if (p) power3d = [Math.floor(p[0]) - 2, Math.floor(p[1]) - 1, Math.floor(p[0]) + 3, Math.floor(p[1]) + 2]; }
   if (square) {
     screenAt = [tl![0], tl![1]];
+    // bloom in the dark: the screen's light haloes over the bezel round it
+    if (on && GL.bloom > 0.01) {
+      const x0 = Math.round(tl![0]), y0 = Math.round(tl![1]), x1 = Math.round(br![0]), y1 = Math.round(br![1]), [ar, ag, ab] = GL.mean;
+      for (let y = y0 - 4; y <= y1 + 3; y++) for (let x = x0 - 6; x <= x1 + 5; x++) {
+        if (x < 0 || y < 0 || x >= cols || y >= rows || tmp.depth[y * cols + x] > 1e8) continue;
+        const d = Math.max(x0 - x, x - x1 + 1, (y0 - y) * 1.6, (y - y1 + 1) * 1.6, 0);
+        if (d <= 0) continue;
+        const w = GL.bloom * 1.1 / (d + 0.6), k = (y * cols + x) * 4;
+        g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
+        g.cells[k + 1] += ar * w; g.cells[k + 2] += ag * w; g.cells[k + 3] += ab * w;
+      }
+    }
     // the bezel: the webcam over the glass; the maker's name and the lights under it
     const cx = Math.round((tl![0] + br![0]) / 2), below = Math.round(br![1]);
     glyph(cx, Math.round(tl![1]) - 1, 111, [40, 40, 44]);
@@ -175,4 +190,43 @@ function project(v: Cam, o: Obj, x: number, y: number, z: number, cols: number):
   const tY = inv * (-v.plY * wx + v.plX * wy), tX = inv * (v.dirY * wx - v.dirX * wy);
   if (tY < 0.05) return null;
   return [(cols / 2) * (1 + tX / tY), v.hor - ((z - v.eye) * v.scale) / tY];
+}
+
+/**
+ * The glass over the screen, as on the phone but stronger: the eye's adaptation (in the dark the
+ * screen looks brighter and blooms on the bezel; under a strong light it looks washed and dimmer),
+ * and the glint: the brightest light nearby mirrored as a soft diagonal band on the side it comes
+ * from, in its color, stronger for a light behind the player (the glass faces them). Off, the glint
+ * shows plainly on the dark glass.
+ */
+function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: number, on: boolean) {
+  const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
+  GL.at = now;
+  GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
+  GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
+  const Lm = (light[0] + light[1] + light[2]) / 3;
+  GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
+  const gain = Math.min(1.3, Math.max(0.5, 1.75 - 0.85 * GL.adapt));
+  GL.bloom = 0.9 * Math.min(1, Math.max(0, (0.95 - GL.adapt) / 0.5));
+  // the band: across the glass, leaning; where it lies follows the side the light comes from
+  const W = T.cols, H = T.rows, s0 = 0.5 + GL.lat * 0.38, amp = (on ? 70 : 110) * GL.str * (0.6 + 0.6 * GL.back);
+  // a broad veil of the light too, whatever its direction: a lit room washes the glass
+  const veil = Math.min(1.6, Lm) * (on ? 6 : 9);
+  const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
+  let ar = 0, ag = 0, ab = 0;
+  for (let r = 0; r < H; r++) {
+    const v = r / H;
+    for (let c = 0; c < W; c++) {
+      const u = c / W, k = (r * W + c) * 4, C = T.cells, B = T.bg;
+      const band = Math.exp(-(((u + (v - 0.5) * 0.45 - s0) / 0.11) ** 2)) + 0.35 * Math.exp(-(((u + (v - 0.5) * 0.45 - s0 - 0.2) / 0.04) ** 2));
+      const sh = band * amp;
+      for (let n = 1; n < 4; n++) C[k + n] = roll(C[k + n] * gain);
+      for (let n = 0; n < 3; n++) B[k + n] = roll(B[k + n] * gain);
+      ar += B[k] + C[k + 1] * 0.25; ag += B[k + 1] + C[k + 2] * 0.25; ab += B[k + 2] + C[k + 3] * 0.25;
+      B[k] += sh * GL.r + veil * light[0]; B[k + 1] += sh * GL.g + veil * light[1]; B[k + 2] += sh * GL.b + veil * light[2];
+      C[k + 1] += sh * 0.55 * GL.r; C[k + 2] += sh * 0.55 * GL.g; C[k + 3] += sh * 0.55 * GL.b;
+    }
+  }
+  const n = W * H;
+  GL.mean = [ar / n, ag / n, ab / n];
 }

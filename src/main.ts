@@ -5,8 +5,6 @@ import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
-import { drawLaptop } from './laptop/draw';
-import { drawLaptopHd, powerAt } from './laptop/hdlook';
 import { drawLaptop3d, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
@@ -123,9 +121,6 @@ function termLayout() {
 }
 let uiLayout: Layout;
 let running = false;
-/** The notebook's look (L): the classic characters, the 2D body in HD, the 3D body (the user's pick, the default). */
-const LAP_LOOKS = ['CLASSIC', 'HD 2D', '3D'];
-let lapLook = 2;
 let lapWasOpen = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
@@ -243,8 +238,8 @@ addEventListener('mousedown', (e) => {
       const [x, y] = cellAtClient(e.clientX, e.clientY), k = keyAt(ui.cols, ui.rows, phone, x, y);
       if (k) { if (!phone.out) phone.out = true; phonePress(k); return; }
     }
-    // the notebook's power button, in the looks that draw one
-    const pw = lapLook === 1 ? powerAt : lapLook === 2 ? power3d : null;
+    // the notebook's power button
+    const pw = power3d;
     if (e.button === 0 && pw && laptop.shell.halted) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
       if (x >= pw[0] && x < pw[2] && y >= pw[1] && y < pw[3]) laptop.key('Enter', 'Enter', false, performance.now() / 1000);
@@ -278,7 +273,7 @@ addEventListener('mouseup', (e) => {
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
   // the 3D notebook: let go, the view comes back to it, its screen centred
-  if (laptop.open && lapLook === 2) { camera.targetYaw = laptopAnchor(); camera.targetPitch = laptopPitch(); }
+  if (laptop.open) { camera.targetYaw = laptopAnchor(); camera.targetPitch = laptopPitch(); }
   // the pointer was held while looking around; the cursor is free again over the phone or the payphone,
   // a moment later: freed during the click, the browser could still open its menu where the cursor lands
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
@@ -297,7 +292,7 @@ addEventListener('keydown', (e) => {
   // N: take the notebook out, where it can be used (sitting or leaning)
   if (e.code === 'KeyN' && running && !e.repeat && !payphone.active && laptop.raise === 0) {
     if (phone.out) phoneToggle();
-    if (laptop.take(performance.now() / 1000)) { input.unlock(); if (lapLook === 2) camera.targetPitch = laptopPitch(); }
+    if (laptop.take(performance.now() / 1000)) { input.unlock(); camera.targetPitch = laptopPitch(); }
     return;
   }
   // a payphone in use takes the keys; F lifts the handset of the one in front, or hangs it up
@@ -324,7 +319,6 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
   else if (e.code === 'KeyV') look.sharp = (look.sharp + 1) % 4;
   else if (e.code === 'KeyG') look.fuse = !look.fuse;
-  else if (e.code === 'KeyL') lapLook = (lapLook + 1) % LAP_LOOKS.length;
   else if (e.code === 'KeyR') { resStep = (resStep + 1) % RES_ROWS.length; resize(); }
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
   else if (e.code === 'KeyT') skipHours(world, e.shiftKey ? -1 : 1);
@@ -476,34 +470,40 @@ function frame(now: number) {
     phone.usbLinked = want;
   }
   // the 3D look tipped the view down at the desk: back up as it closes
-  if (lapWasOpen && !laptop.open && lapLook === 2) camera.targetPitch = 0;
+  if (lapWasOpen && !laptop.open) camera.targetPitch = 0;
   lapWasOpen = laptop.open;
   playLap(laptop.sfx);
   const lapOn = laptop.lid > 0 && laptop.pc.bootAt >= 0 && laptop.shell.state !== 'off';
   lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
   sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin, laptop.pc.fan);
-  if (lapLook === 1) drawLaptopHd(ui, hd, laptop, world, now / 1000, VIEW_LIGHT, camera.yaw);
-  else if (lapLook === 2) {
+  {
     // the screen layer's mode, and its place on the interface's grid
-    const mode = laptop.shell.bios || laptop.shell.screen() ? 'tx' : 'fb', T = mode === 'fb' ? termFb : termTx, [cw, chh] = termCells[mode];
+    // (the editor runs in the system's console, full screen; only the firmware is in text mode)
+    const mode = laptop.shell.bios || laptop.shell.fw.mode ? 'tx' : 'fb', T = mode === 'fb' ? termFb : termTx, [cw, chh] = termCells[mode];
     if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); }
-    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: (T.cols * cw) / uiLayout.cellW, termH: (T.rows * chh) / uiLayout.cellH });
+    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: (T.cols * cw) / uiLayout.cellW, termH: (T.rows * chh) / uiLayout.cellH });
     // while the lid opens, the view tips down to the screen
     if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
   }
-  else drawLaptop(ui, laptop, world, now / 1000, VIEW_LIGHT);
   if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [L] NOTEBOOK ${LAP_LOOKS[lapLook]}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+    + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
   const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
     + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY  POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} [K] `;
   ui.text(ui.cols - clock.length - 1, ui.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
+  // debug: the nearest substation (a fenced yard), how far, which way and whether it runs
+  {
+    let k = 0, bd = Infinity;
+    world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
+    const S = world.power.subs[k], s = ` SUBSTATION ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}${S.yard ? '' : ' (NO YARD)'} `;
+    ui.text(ui.cols - s.length - 1, ui.rows - 3, s, S.on ? [140, 255, 170] : [255, 120, 90], [8, 10, 14]);
+  }
   const { city } = world, d = districtAt(city, p.x, p.y);
   const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
     + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
@@ -546,7 +546,7 @@ function frame(now: number) {
     ]);
   }
   const T3 = termMode === 'fb' ? termFb : termTx;
-  renderer.draw(grid, ui, hd, lapLook === 2 && screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null);
+  renderer.draw(grid, ui, hd, screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null);
   requestAnimationFrame(frame);
 }
 

@@ -220,7 +220,9 @@ export function stepWorld(w: World, input: PlayerInput) {
   const R = 0.3;
   const nx = p.x + vx * TICK;
   // probes ahead of the player on both shoulders; walls, doorways and the street door are in interior.ts
-  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y);
+  // and the substations' fenced yards (the fence is 0.6 m in from the lot's edge)
+  const yard = (x: number, y: number) => p.z < 2.6 && w.power.subs.some((S) => S.yard && x > S.yard.x0 + 0.55 && x < S.yard.x1 - 0.55 && y > S.yard.y0 + 0.55 && y < S.yard.y1 - 0.55);
+  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y) || yard(x, y);
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;

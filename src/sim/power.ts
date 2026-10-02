@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { type City } from './city';
+import { diagS, type City } from './city';
 
 /**
  * The power grid. Substations stand at fixed points; every building and street lamp hangs on the
@@ -19,6 +19,12 @@ export interface Substation {
   oy: number;
   /** What its traffic-signal controller has been told (the cabinet in its district): 0 normal, 1 flashing, 2 dark. */
   sig: number;
+  /**
+   * The fenced yard it stands in: an empty lot of the city (its rubble cleared), its middle at (x, y);
+   * `a` is the heading of the side toward the nearest street (the gate and the warning sign). Null
+   * when no empty lot was near enough (then it is only a point, as before).
+   */
+  yard: { x0: number; y0: number; x1: number; y1: number; a: number } | null;
 }
 
 export interface PowerGrid {
@@ -53,8 +59,10 @@ function nearest(subs: Substation[], x: number, y: number) {
 export function buildPower(seed: number, city: City): PowerGrid {
   const nx = Math.max(1, Math.round(city.w / SPACING)), ny = Math.max(1, Math.round(city.h / SPACING));
   const subs: Substation[] = [];
+  const used = new Set<number>();
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    subs.push({ x: ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y: ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny, on: true, changed: -1, ox: 0, oy: 0, sig: 0 });
+    const x = ((i + 0.25 + 0.5 * hash3(seed, i, j * 7 + 1)) * city.w) / nx, y = ((j + 0.25 + 0.5 * hash3(seed, i, j * 7 + 2)) * city.h) / ny;
+    subs.push(placeYard(city, used, x, y));
   }
   const building = new Uint8Array(city.buildings.length), generator = new Uint8Array(city.buildings.length), backup = new Uint8Array(city.buildings.length);
   const hall = city.landmarks.find((l) => l.kind === 'hall');
@@ -72,6 +80,44 @@ export function buildPower(seed: number, city: City): PowerGrid {
   const cell = new Uint8Array(GRID * GRID);
   for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++) cell[j * GRID + i] = nearest(subs, ((i + 0.5) * city.w) / GRID, ((j + 0.5) * city.h) / GRID);
   return { subs, building, lamp, generator, backup, cell };
+}
+
+/**
+ * A substation near (x, y): in the nearest empty lot big enough for a yard (at least 12 m a side,
+ * clear of the diagonal avenue and its plazas), within YARD_REACH; its rubble is cleared. The gate
+ * faces the side of the lot nearest its block's edge (the street).
+ */
+const YARD_MIN = 12, YARD_REACH = 360;
+function placeYard(city: City, used: Set<number>, x: number, y: number): Substation {
+  // a smaller lot further off when there is none (a cramped yard beats none)
+  let best = pickLot(city, used, x, y, YARD_MIN, YARD_REACH);
+  if (best < 0) best = pickLot(city, used, x, y, 9, YARD_REACH * 2);
+  return placeYardAt(city, used, x, y, best);
+}
+function pickLot(city: City, used: Set<number>, x: number, y: number, min: number, reach: number): number {
+  let best = -1, bd = reach;
+  city.empties.forEach((L, k) => {
+    if (used.has(k) || Math.min(L.x1 - L.x0, L.y1 - L.y0) < min) return;
+    const B = city.blocks[L.block], mx = (L.x0 + L.x1) / 2, my = (L.y0 + L.y1) / 2;
+    if (B.diag || B.square || B.open) return;
+    if (Math.abs(diagS(city.diagonal, mx, my)) < city.diagonal.w / 2 + Math.hypot(L.x1 - L.x0, L.y1 - L.y0) / 2 + 6) return;
+    const d = Math.hypot(mx - x, my - y);
+    if (d < bd) { bd = d; best = k; }
+  });
+  return best;
+}
+function placeYardAt(city: City, used: Set<number>, x: number, y: number, best: number): Substation {
+  const S: Substation = { x, y, on: true, changed: -1, ox: 0, oy: 0, sig: 0, yard: null };
+  if (best < 0) return S;
+  used.add(best);
+  const L = city.empties[best], B = city.blocks[L.block];
+  S.x = (L.x0 + L.x1) / 2; S.y = (L.y0 + L.y1) / 2;
+  // the side nearest the block's edge: west, north, east, south (headings pi, -pi/2, 0, pi/2)
+  const gaps = [L.x0 - B.x0, L.y0 - B.y0, B.x1 - L.x1, B.y1 - L.y1], side = gaps.indexOf(Math.min(...gaps));
+  S.yard = { x0: L.x0, y0: L.y0, x1: L.x1, y1: L.y1, a: [Math.PI, -Math.PI / 2, 0, Math.PI / 2][side] };
+  // the rubble is cleared away
+  B.props = B.props.filter((p) => p.kind !== 'debris' || p.x < L.x0 || p.x > L.x1 || p.y < L.y0 || p.y > L.y1);
+  return S;
 }
 
 /** The substation feeding a point of the city (outside it, the nearest edge's). */

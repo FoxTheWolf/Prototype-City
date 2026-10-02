@@ -312,6 +312,9 @@ export interface Block {
  * The street grid is a list of boundaries per axis. Cell c spans [xb[c], xb[c+1]]:
  * even cells are roads, odd cells are blocks. The city starts and ends with a road.
  */
+/** A lot left without a building, inside the sidewalks of its block. */
+export interface EmptyLot { x0: number; y0: number; x1: number; y1: number; block: number }
+
 export interface City {
   businesses: Business[];
   /** Every street lamp, in a fixed order: the index is the lamp's identity (for its failures now, the power grid later). */
@@ -328,6 +331,8 @@ export interface City {
   nby: number;
   blocks: Block[];
   buildings: Building[];
+  /** The empty lots (rubble), where the power grid puts its substations. */
+  empties: EmptyLot[];
   /** Middle of downtown, where the towers are. */
   cx: number;
   cy: number;
@@ -617,6 +622,7 @@ export function generateCity(seed: number, size: number): City {
   const nameSeed = (rng() * 1e9) | 0;
   const blocks: Block[] = [];
   const buildings: Building[] = [];
+  const empties: EmptyLot[] = [];
   const businesses: Business[] = [];
   const theater = districts.find((d) => d.type === 'theater');
   const diagonal = placeDiagonal(xb, yb, theater ? theater.x : cx, theater ? theater.y : cy);
@@ -665,7 +671,8 @@ export function generateCity(seed: number, size: number): City {
         return;
       }
       if (br() < K.empty) {
-        // empty lot: rubble piles
+        // empty lot: rubble piles (the power grid may fence one in for a substation)
+        empties.push({ x0: ax0, y0: ay0, x1: ax1, y1: ay1, block: blocks.length - 1 });
         for (let n = 1 + ((fr() * 3) | 0); n > 0; n--) {
           block.props.push({ kind: 'debris', x: ax0 + 1.5 + fr() * Math.max(0, lw - 3), y: ay0 + 1.5 + fr() * Math.max(0, lh - 3), w: 0, z1: 0, seed: (fr() * 1e6) | 0, a: fr() * 6.28 });
         }
@@ -918,7 +925,7 @@ export function generateCity(seed: number, size: number): City {
   const xCell = cellTable(xb), yCell = cellTable(yb);
   diagonalLamps(seed, diagonal, w, h, xb, yb, xCell, yCell, nbx, blocks, districts);
   const { vents, floodlights, sarcophagus } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, empties, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
 }
 
 /** Faces of a building on the sidewalk: the sides on the block's edge, and a face cut by the diagonal. */
