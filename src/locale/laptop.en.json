@@ -27,7 +27,7 @@
     "Commands (see 'man <name>'):",
     "  files     ls cd pwd cat head wc touch mkdir rmdir rm cp mv echo find du",
     "  system    uname uptime date ps kill free df dmesg whoami id hostname history",
-    "  hardware  lshw (and /proc/cpuinfo, /proc/meminfo)",
+    "  hardware  lshw sensors (and /proc/cpuinfo, /proc/meminfo)",
     "  network   ifconfig iwconfig",
     "  other     sha1sum sleep clear color man help shutdown reboot",
     "Keys: Tab completes, Up/Down history, Ctrl+C stops, Ctrl+L clears, wheel scrolls back."

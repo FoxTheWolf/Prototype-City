@@ -36,7 +36,7 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'head', 36, 300], ['/usr/bin', 'wc', 34, 300], ['/usr/bin', 'find', 168, 1100], ['/usr/bin', 'du', 82, 700], ['/usr/bin', 'uptime', 12, 300],
   ['/usr/bin', 'free', 14, 320], ['/usr/bin', 'df', 64, 420], ['/usr/bin', 'whoami', 22, 260], ['/usr/bin', 'id', 30, 270],
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
-  ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
+  ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
 ];
 /** What the shell does itself, with no program on the disk. */
 const BUILTINS = new Set(['cd', 'help', 'history', 'exit', 'logout']);
@@ -97,6 +97,8 @@ export class Shell {
   private shellPid = 0;
   /** The process a command is running as, until it ends. */
   private job = 0;
+  /** Until when the processor is working hard (a command that computes), real seconds. */
+  heavyUntil = 0;
   /** The BIOS's screen is up (draw.ts draws its logos and colors). */
   bios = false;
   /** Asked to power off (shutdown): the notebook reads it. */
@@ -357,6 +359,7 @@ export class Shell {
     }
     // what it prints comes as the work gets done: spread over its time, or at the terminal's pace
     if (work > 0) {
+      if (work > 0.5) this.heavyUntil = Math.max(now, this.tq) + work;
       this.seeks(now, work, 6);
       const each = work / Math.max(1, out.length);
       if (!out.length) this.at(now, work);
@@ -558,6 +561,12 @@ export class Shell {
           work += pc.workS(n.size, 1, 15);
         }
         return work;
+      }
+      case 'sensors': {
+        out.push('coretemp-isa-0000', 'Adapter: ISA adapter');
+        for (let k = 0; k < H.cores; k++) out.push(`Core ${k}:      +${(pc.tempC + k * 1.5).toFixed(1)}°C  (high = +85.0°C, crit = +100.0°C)`);
+        out.push('', 'fan-isa-0000', `fan1:        ${String(pc.fanRpm()).padStart(4)} RPM`);
+        return 0;
       }
       case 'sleep': return Math.min(600, Math.max(0, Number(args[0]) || 0));
       case 'clear': this.then(now, () => { this.lines = []; }); return 0;

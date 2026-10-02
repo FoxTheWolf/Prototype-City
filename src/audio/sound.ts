@@ -513,12 +513,12 @@ export class Sound {
     g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.01);
     s.start(t, Math.random()); s.stop(t + 0.02);
   }
-  private lapHum: { spin: OscillatorNode; whine: OscillatorNode; sg: GainNode; fan: GainNode } | null = null;
+  private lapHum: { spin: OscillatorNode; whine: OscillatorNode; sg: GainNode; fan: GainNode; ff: BiquadFilterNode } | null = null;
   /**
    * The notebook running: the drive's platter (5400 rpm, a hum at 90 Hz with a faint whine) and the
    * fan's soft hiss. `spin` 0..1 is the platter's speed (it spins up at boot and down at halt).
    */
-  laptopHum(on: boolean, spin: number) {
+  laptopHum(on: boolean, spin: number, fan = 0) {
     const ctx = this.ctx, t = ctx.currentTime;
     if (!this.lapHum) {
       const sg = gain(ctx, 0, this.master), fan = gain(ctx, 0, this.master);
@@ -528,14 +528,17 @@ export class Sound {
       const wg = gain(ctx, 0.025, sg); whine.connect(filter(ctx, 'lowpass', 1200, 0.7)).connect(wg);
       spinO.start(); whine.start();
       const n = ctx.createBufferSource(); n.buffer = this.noise; n.loop = true;
-      n.connect(filter(ctx, 'lowpass', 420, 0.5)).connect(fan); n.start();
-      this.lapHum = { spin: spinO, whine, sg, fan };
+      const ff = filter(ctx, 'lowpass', 420, 0.5);
+      n.connect(ff).connect(fan); n.start();
+      this.lapHum = { spin: spinO, whine, sg, fan, ff };
     }
     const H = this.lapHum;
     H.spin.frequency.setTargetAtTime(15 + 75 * spin, t, 0.1);
     H.whine.frequency.setTargetAtTime(180 + 720 * spin, t, 0.1);
     H.sg.gain.setTargetAtTime(on ? 0.012 * spin : 0, t, 0.2);
-    H.fan.gain.setTargetAtTime(on ? 0.0035 : 0, t, 0.6);
+    // the fan: a soft hiss at idle, louder and brighter as it spins up to cool
+    H.fan.gain.setTargetAtTime(on ? 0.007 + 0.03 * fan * fan : 0, t, 0.6);
+    H.ff.frequency.setTargetAtTime(380 + 1600 * fan, t, 0.6);
   }
 
   /** The phone out of the pocket (or back in): cloth rustling, and the knock of it in the hand. */

@@ -142,6 +142,24 @@ export class Computer {
     return p;
   }
   kill(pid: number) { this.procs = this.procs.filter((p) => p.pid !== pid); }
+  /** Processor load 0..1 (set by what runs on it), the processor's temperature in °C and the fan's speed 0..1. */
+  load = 0;
+  tempC = 30;
+  fan = 0;
+  /**
+   * The heat, for `dt` real seconds in air at `ambient` °C: the load heats the processor toward a
+   * level the fan pulls down, and the fan follows the temperature (as a notebook's controller does:
+   * slow and quiet when cool, full above ~75 °C). Off, it cools to the air and the fan stops.
+   */
+  heat(dt: number, ambient: number) {
+    const on = this.bootAt >= 0;
+    const target = ambient + (on ? (16 + 46 * this.load) * (1 - 0.32 * this.fan) : 0);
+    this.tempC += (target - this.tempC) * Math.min(1, dt / 20);
+    const want = on ? Math.max(0.2, Math.min(1, (this.tempC - 45) / 30)) : 0;
+    this.fan += (want - this.fan) * Math.min(1, dt / 2.5);
+  }
+  /** The fan in revolutions a minute. */
+  fanRpm() { return this.fan < 0.02 ? 0 : Math.round(1800 + this.fan * 3600); }
   /** Power off: memory is gone, the pids start over. */
   halt() { this.procs = []; this.nextPid = 1; this.bootAt = -1; }
   /**

@@ -383,7 +383,7 @@ function frame(now: number) {
   playLap(laptop.sfx);
   const lapOn = laptop.lid > 0 && laptop.pc.bootAt >= 0 && laptop.shell.state !== 'off';
   lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
-  sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin);
+  sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin, laptop.pc.fan);
   drawLaptop(grid, laptop, world, now / 1000, VIEW_LIGHT);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; grid.text((grid.cols - s.length) >> 1, grid.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;

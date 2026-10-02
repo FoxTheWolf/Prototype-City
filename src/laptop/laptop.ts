@@ -113,6 +113,10 @@ export class Laptop {
       if (this.raise === 0) this.seat = null;
     }
     this.shell.update(now);
+    // the processor's load: the boot works it, a command that computes works it hard, idle it rests
+    const S = this.shell, w = this.world;
+    this.pc.load = S.state === 'boot' ? 0.55 : now < S.heavyUntil ? 1 : now < S.busyUntil ? 0.3 : 0.04;
+    this.pc.heat(dt, w.player.inside >= 0 ? 22 : w.weather.temp);
     for (const s of this.shell.sfx) { this.sfx.push(s); if (s === 'seek') this.hddAt = now; }
     this.shell.sfx.length = 0;
   }
