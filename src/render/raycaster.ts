@@ -1458,6 +1458,11 @@ function gatherLights(world: World, v: View, sec: number) {
     const [D, W] = yardSize(S.yard), c = Math.cos(S.yard.a), sn = Math.sin(S.yard.a), lx = D / 2 - 1.6, ly = W / 2 - 1.6;
     dyn.point(S.x + c * lx - sn * ly, S.y + sn * lx + c * ly, 16, 3, 9, 170 * f, 160 * f, 135 * f);
   }
+  // a phone's screen lights the face of whoever is texting on it, close by
+  for (const p of world.peds) {
+    if ((p.use !== 2 && p.use !== 3) || Math.abs(p.x - v.x) > 25 || Math.abs(p.y - v.y) > 25) continue;
+    dyn.point(p.x + p.dx * 0.3, p.y + p.dy * 0.3, 1.4, 1, 1.9, 22, 30, 44);
+  }
   // each lit traffic light throws its color on the street in front of it (and on wet asphalt, far)
   forSignals(world, v, SIGNAL_LIGHT_FAR, (S) => {
     if (S.lit < 0) return;
@@ -1727,7 +1732,7 @@ function collectObjects(world: World, v: View): Obj[] {
     const x = p.px + (p.x - p.px) * v.alpha, y = p.py + (p.y - p.py) * v.alpha;
     if (Math.abs(x - v.x) > PED_DRAW || Math.abs(y - v.y) > PED_DRAW || !seen(x, y, 1)) continue;
     const far = Math.abs(x - v.x) > PED_NEAR || Math.abs(y - v.y) > PED_NEAR, step = p.v > 0.1 ? Math.floor(p.stride / 0.45) & 3 : 0;
-    out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(p.id, step, wet && (p.id & 7) < 6, far), r: 0.8, h: 2.3, seed: 0 });
+    out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(p.id, step, wet && (p.id & 7) < 6, far, far ? 0 : p.use === 3 && Math.floor(frameSec * 4) & 1 ? 2 : p.use), r: 0.8, h: 2.3, seed: 0 });
   }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate (a driven car's body, near the player)

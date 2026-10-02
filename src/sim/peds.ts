@@ -1,4 +1,4 @@
-import { type Rng } from '../core/rng';
+import { hash3, type Rng } from '../core/rng';
 import { SIDEWALK, type Block, type City } from './city';
 import { Doing, whereIs, type Population } from './citizens';
 import { doorPoint } from './interior';
@@ -52,6 +52,25 @@ export interface Ped {
   door: number;
   lx: number;
   ly: number;
+  /** Their phone now (see phoneUse): 0 not in use, 1 on a call (at the ear), 2 texting (in the hand, its screen lit), 3 ringing. */
+  use: number;
+}
+
+/**
+ * Whether someone walking has their phone out at a moment (real seconds): in slots of PHONE_SLOT s,
+ * the talkative ones more often; a call starts with a few seconds of ringing (incoming) or not
+ * (they dial). A pure function of the citizen and the time, so the same person uses it the same way.
+ */
+const PHONE_SLOT = 40, RING_S = 4;
+export function phoneUse(pop: Population, id: number, sec: number): number {
+  if (pop.phone[id] === 255) return 0;
+  const slot = Math.floor(sec / PHONE_SLOT + hash3(id, 5, 71)), h = hash3(id, slot, 77);
+  if (h >= 0.1 + 0.3 * (pop.talk[id] / 255)) return 0;
+  const into = (sec / PHONE_SLOT + hash3(id, 5, 71) - slot) * PHONE_SLOT;
+  // most slots run short of the whole: a call or a text of 12 to 40 s
+  if (into > 12 + 28 * hash3(id, slot, 79)) return 0;
+  if (hash3(id, slot, 78) < 0.5) return 2;
+  return into < RING_S && hash3(id, slot, 80) < 0.5 ? 3 : 1;
 }
 
 /** Where on the road the crosswalk runs: this far from the intersection's edge (the stripes are 1-4.5 m). */
@@ -177,7 +196,7 @@ function spawnPed(city: City, rng: Rng, i: number, goal: number, x: number, y: n
   const rx = E[0] + E[2] * t, ry = E[1] + E[3] * t;
   const p: Ped = {
     id: i, x: out ? sx : rx, y: out ? sy : ry, px: 0, py: 0, dx: E[2], dy: E[3], v: 0, pace, blk, e, t, dir: 1, off,
-    way: [], wi: 0, ci: 0, cj: 0, axis: 0, wait: 0, stride: rng() * 2, goal, gb, ge, gt, door: out ? 1 : 0, lx: rx, ly: ry,
+    way: [], wi: 0, ci: 0, cj: 0, axis: 0, wait: 0, stride: rng() * 2, goal, gb, ge, gt, door: out ? 1 : 0, lx: rx, ly: ry, use: 0,
   };
   p.px = p.x; p.py = p.y;
   pickDir(city, p);
@@ -321,8 +340,10 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
         if (Math.hypot(x - px, y - py) >= PED_R) { walking.delete(p.id); peds.splice(k, 1); continue; }
       }
     }
+    p.use = phoneUse(pop, p.id, sec);
     // (they walk through the player, so nobody is held up on their way by standing in it)
-    let v = p.pace;
+    // texting slows them down
+    let v = p.use === 2 ? p.pace * 0.8 : p.pace;
     if (p.door) {
       // through the door: out onto the sidewalk, or in and gone
       if (toPoint(p, v, dt)) {

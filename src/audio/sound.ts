@@ -10,6 +10,10 @@ import { type EventLog } from '../sim/events';
 
 /** Engines heard at once (the nearest), and how far an engine, a horn and a crash carry. */
 const ENGINES = 3, ENGINE_R = 45, HORN_R = 120, CRASH_R = 600, CROWD_R = 30;
+/** Passers-by's phones heard: ringing within this, keys clicking within the second. */
+const PED_RING_R = 22, PED_KEYS_R = 4;
+/** Sirens: one answering a crash within SIREN_R, after a while; and now and then one from somewhere in the city. */
+const SIREN_R = 1500;
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
@@ -57,6 +61,13 @@ export class Sound {
   private crowd!: GainNode;
   private dwelling = new Set<Car>();
   private honks = new Map<Car, number>();
+  /** When each passer-by's phone rings next (its tune's loop), and when the next key click of someone texting near is. */
+  private pedRings = new Map<number, number>();
+  private nextKey = 0;
+  /** The next far car going by, the next siren from nowhere in particular, and the sirens coming to crashes (when, where). */
+  private nextPass = 0;
+  private nextSiren = 0;
+  private sirensDue: [number, number, number][] = [];
 
   constructor() {
     const ctx = (this.ctx = new AudioContext());
@@ -684,8 +695,23 @@ export class Sound {
    * The traffic around the listener: the nearest engines and tyres, horns, buses' air brakes at their
    * stops, and crashes from the event queue, late by the speed of sound.
    */
-  traffic(cars: Car[], events: EventLog, x: number, y: number, yaw: number, wet: number, tick: number, people: { x: number; y: number }[] = []) {
+  traffic(cars: Car[], events: EventLog, x: number, y: number, yaw: number, wet: number, tick: number, people: { x: number; y: number; id: number; use: number }[] = []) {
     const now = this.ctx.currentTime, rx = -Math.sin(yaw), ry = Math.cos(yaw);
+    // passers-by's phones: a ringing one plays its tune (each their own of the handsets' tunes),
+    // someone texting close by clicks the keys
+    let texting = 0;
+    for (const p of people) {
+      if (!p.use) { this.pedRings.delete(p.id); continue; }
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (p.use === 2 && d < PED_KEYS_R) texting = Math.max(texting, 1 - d / PED_KEYS_R);
+      if (p.use !== 3 || d > PED_RING_R) continue;
+      const due = this.pedRings.get(p.id);
+      if (due !== undefined && due > now) continue;
+      const pn = ((p.x - x) * rx + (p.y - y) * ry) / (d || 1);
+      this.pedRings.set(p.id, now + this.pedRing(p.id % 5, (1 - d / PED_RING_R) ** 1.6, pn));
+    }
+    if (this.pedRings.size > 200) this.pedRings.clear();
+    if (texting && now > this.nextKey) { this.burst(now, 0.015, 0.05 * texting, 0, 3800, 'bandpass', 3); this.nextKey = now + 0.12 + Math.random() * 0.35; }
     // the people around: the more within earshot, the louder the murmur
     let crowd = 0;
     for (const p of people) { const d = Math.abs(p.x - x) + Math.abs(p.y - y); if (d < CROWD_R) crowd += 1 - d / CROWD_R; }
@@ -725,7 +751,57 @@ export class Sound {
       if (e.kind !== 'crash' || tick - e.tick > 60) continue;
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < CRASH_R) this.smash(now + d / 343, (1 - d / CRASH_R) ** 1.6 * (0.5 + e.weight), pan(e.x, e.y));
+      // help is on its way: a siren to it, a minute or so later
+      if (d < SIREN_R && Math.random() < 0.7) this.sirensDue.push([now + 25 + Math.random() * 50, e.x, e.y]);
     }
+  }
+
+  /** One loop of a passer-by's ringtone (k: one of five little tunes), at v, panned; returns how long until it plays again. */
+  private pedRing(k: number, v: number, pan: number): number {
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.02, p = ctx.createStereoPanner(), out = gain(ctx, v * 0.6, p);
+    p.pan.value = pan * 0.8; p.connect(this.out);
+    const m = (n: number) => 440 * 2 ** ((n - 69) / 12);
+    const tunes: [number, number, number][][] = [
+      [[76, 0, 0.12], [72, 0.15, 0.12], [76, 0.3, 0.12], [79, 0.45, 0.25]],
+      [[84, 0, 0.08], [88, 0.1, 0.08], [84, 0.2, 0.08], [88, 0.3, 0.08], [84, 0.4, 0.08], [88, 0.5, 0.08]],
+      [[67, 0, 0.2], [71, 0.22, 0.2], [74, 0.44, 0.2], [79, 0.66, 0.35]],
+      [[81, 0, 0.5], [77, 0.5, 0.5]],
+      [[72, 0, 0.1], [72, 0.15, 0.1], [79, 0.3, 0.1], [79, 0.45, 0.1], [81, 0.6, 0.1], [79, 0.75, 0.2]],
+    ];
+    let end = 0;
+    for (const [n, at, len] of tunes[k]) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, out);
+      o.type = k === 3 ? 'triangle' : 'square'; o.frequency.value = m(n);
+      o.connect(filter(ctx, 'lowpass', 3000, 0.7)).connect(g);
+      g.gain.setValueAtTime(0, t0 + at); g.gain.linearRampToValueAtTime(0.03, t0 + at + 0.01); g.gain.setValueAtTime(0.03, t0 + at + len - 0.02); g.gain.linearRampToValueAtTime(0, t0 + at + len);
+      o.start(t0 + at); o.stop(t0 + at + len + 0.02);
+      end = Math.max(end, at + len);
+    }
+    return end + 0.6;
+  }
+
+  /** A car going by somewhere off in the streets: a soft rise and fall of road noise, panned across. */
+  private passBy(t: number, v: number, pan: number) {
+    const ctx = this.ctx, s = ctx.createBufferSource(), p = ctx.createStereoPanner(), g = gain(ctx, 0, p), lp = filter(ctx, 'lowpass', 500, 0.8);
+    const len = 2.5 + Math.random() * 3;
+    p.pan.setValueAtTime(pan, t); p.pan.linearRampToValueAtTime(-pan * 0.6, t + len); p.connect(this.out);
+    s.buffer = this.noise; s.connect(lp).connect(g);
+    lp.frequency.setValueAtTime(300, t); lp.frequency.linearRampToValueAtTime(700, t + len / 2); lp.frequency.linearRampToValueAtTime(260, t + len);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + len / 2); g.gain.linearRampToValueAtTime(0, t + len);
+    s.start(t, Math.random() * 1.5); s.stop(t + len + 0.05);
+  }
+
+  /** A siren far off: the wail (or the yelp) of an emergency vehicle rising out of the city and fading, dulled by the buildings. */
+  private siren(t: number, v: number, pan: number) {
+    const ctx = this.ctx, p = ctx.createStereoPanner(), g = gain(ctx, 0, p), lp = filter(ctx, 'lowpass', 1600, 0.7), o = ctx.createOscillator();
+    const len = 10 + Math.random() * 10, yelp = Math.random() < 0.35;
+    p.pan.setValueAtTime(pan, t); p.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, pan + (Math.random() - 0.5))), t + len); p.connect(this.out);
+    o.type = 'sawtooth'; o.connect(lp).connect(g);
+    // a wail sweeps up and down in about 4 s; a yelp in a third of a second
+    const per = yelp ? 0.32 : 4.2;
+    for (let a = 0; a < len; a += per) { o.frequency.setValueAtTime(650, t + a); o.frequency.linearRampToValueAtTime(1350, t + a + per * 0.55); o.frequency.linearRampToValueAtTime(650, t + a + per); }
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + len * 0.45); g.gain.linearRampToValueAtTime(v * 0.8, t + len * 0.6); g.gain.linearRampToValueAtTime(0, t + len);
+    o.start(t); o.stop(t + len + 0.05);
   }
 
   private burst(t: number, len: number, v: number, pan: number, f: number, type: BiquadFilterType, q: number) {
@@ -860,6 +936,25 @@ export class Sound {
     }
     this.neon.gain.setTargetAtTime(neon, now, 0.015);
     this.crackle.gain.setTargetAtTime(crackle, now, 0.01);
+
+    // far off: cars going by on the other streets now and then (fewer at night), and sirens: to the
+    // crashes, and once in a while one from somewhere in the city
+    if (now > this.nextPass) {
+      const busy = 0.35 + 0.65 * day;
+      if (this.nextPass > 0) this.passBy(now, 0.05 + Math.random() * 0.05, (Math.random() - 0.5) * 1.6);
+      this.nextPass = now + (2 + Math.random() * 6) / busy;
+    }
+    for (let k = this.sirensDue.length - 1; k >= 0; k--) {
+      const [at, ex, ey] = this.sirensDue[k];
+      if (at > now) continue;
+      this.sirensDue.splice(k, 1);
+      const d = Math.hypot(ex - x, ey - y);
+      this.siren(now, 0.06 * Math.max(0.15, 1 - d / SIREN_R), pan(ex, ey) * 0.7);
+    }
+    if (now > this.nextSiren) {
+      if (this.nextSiren > 0) this.siren(now, 0.015 + Math.random() * 0.02, (Math.random() - 0.5) * 1.6);
+      this.nextSiren = now + 90 + Math.random() * 180;
+    }
 
     const edge = Math.min(x, y, city.w - x, city.h - y);
     this.fire.gain.setTargetAtTime(edge < FIRE_R ? 0.3 * (1 - edge / FIRE_R) ** 1.5 : 0, now, 0.5);
