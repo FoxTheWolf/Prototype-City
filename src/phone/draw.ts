@@ -244,7 +244,9 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     for (let c = 1; c < 4; c++) C[k + c] = roll(C[k + c] * gain);
     for (let c = 0; c < 3; c++) B[k + c] = roll(B[k + c] * gain);
     ar += B[k] + C[k + 1] * 0.3; ag += B[k + 1] + C[k + 2] * 0.3; ab += B[k + 2] + C[k + 3] * 0.3; n++;
-    B[k] += 3 * Lr + sh * GL.r; B[k + 1] += 3 * Lg + sh * GL.g; B[k + 2] += 4 * Lb + sh * GL.b;
+    // fingerprints: smudges on the glass that catch the scene's light (and the glint)
+    const fp = smudge(x, y) * (14 + sh * 0.6);
+    B[k] += 3 * Lr + sh * GL.r + fp * Lr; B[k + 1] += 3 * Lg + sh * GL.g + fp * Lg; B[k + 2] += 4 * Lb + sh * GL.b + fp * Lb;
     C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;
     // the HD pixels over this cell (a photo) under the same glass
     if (H) for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
@@ -252,7 +254,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       if (q < 0) continue;
       const X = H.px;
       for (let c = 0; c < 3; c++) X[q + c] = roll(X[q + c] * gain);
-      X[q] += 3 * Lr + sh * GL.r; X[q + 1] += 3 * Lg + sh * GL.g; X[q + 2] += 4 * Lb + sh * GL.b;
+      X[q] += 3 * Lr + sh * GL.r + fp * Lr; X[q + 1] += 3 * Lg + sh * GL.g + fp * Lg; X[q + 2] += 4 * Lb + sh * GL.b + fp * Lb;
     }
   }
   if (bloom > 0.01 && n && on) {
@@ -828,4 +830,15 @@ function places(S: Lcd, P: Phone, world: World, t: number) {
     S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? PICK_DIM : GREY, bg);
   }
   softKeys(S, T.show, T.back);
+}
+
+/** Fingerprints on the phone's glass: a few oval smudges where a thumb goes (low and to the right), 0..1 at screen cell (x, y). */
+function smudge(x: number, y: number): number {
+  let v = 0;
+  for (let k = 0; k < 6; k++) {
+    const cx = SW * (0.35 + hash3(k, 51, 1) * 0.6), cy = SH * (0.3 + hash3(k, 51, 2) * 0.65), rx = 2 + hash3(k, 51, 3) * 3.5, ry = 1 + hash3(k, 51, 4) * 1.8;
+    const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
+    if (d < 1) v += (1 - d) * (0.5 + 0.5 * hash3(x, y, k + 60));
+  }
+  return Math.min(1, v);
 }
