@@ -1,0 +1,92 @@
+{
+  "promo.diner": [
+    "2 eggs, toast & coffee for $2.99!",
+    "Free slice of pie with any entree!",
+    "Kids eat free with an adult meal!",
+    "Bottomless coffee for 99 cents!",
+    "20% off the blue plate special!"
+  ],
+  "promo.bar": [
+    "Happy hour 5 to 8, two for one on drafts!",
+    "Trivia night, free wings for the winners!",
+    "Live band, no cover before 10!",
+    "Half-price appetizers all night!"
+  ],
+  "promo.cafe": [
+    "Buy one latte, get one free!",
+    "Free muffin with any large drink!",
+    "Double stamps on your coffee card!",
+    "New pumpkin spice is back!"
+  ],
+  "promo.bank": [
+    "Open a checking account and get $50!",
+    "0% intro APR on our new card!",
+    "Free checking with direct deposit!",
+    "Stop by for a free financial checkup!"
+  ],
+  "promo.electronics": [
+    "MP3 players from $39.99!",
+    "20% off all digital cameras!",
+    "Trade in your old phone for store credit!",
+    "Flat screens marked down up to 30%!",
+    "Free memory card with any camera!"
+  ],
+  "promo.pharmacy": [
+    "Flu shots, no appointment needed!",
+    "Buy one get one half off on vitamins!",
+    "Double rewards points on everything!",
+    "Free blood pressure check in store!"
+  ],
+  "promo.parking": [
+    "Early bird $9 all day before 9am!",
+    "Monthly spaces now $10 off!",
+    "Park 3 hours, pay for 2!"
+  ],
+  "promo.pawn": [
+    "We buy gold, top dollar paid!",
+    "Guitars and tools 25% off!",
+    "Fast cash loans, no credit check!"
+  ],
+  "promo.cinema": [
+    "$5 matinees before 4pm!",
+    "Free small popcorn with any ticket!",
+    "Midnight premiere, tickets on sale now!",
+    "Student night, 2 for 1 tickets!"
+  ],
+  "promo.hotel": [
+    "Weekend rooms from $89 a night!",
+    "Stay 2 nights, get the 3rd free!",
+    "Free breakfast with every booking!"
+  ],
+  "promo.liquor": [
+    "10% off any 6 bottles!",
+    "Wine tasting this Saturday, free!",
+    "Case discounts all week!"
+  ],
+  "promo.grocery": [
+    "Fresh bread 2 for $3!",
+    "Double coupons on Tuesdays!",
+    "Ground beef $1.99/lb!",
+    "Fruit and veg 20% off!"
+  ],
+  "promo.laundry": [
+    "Wash & fold 99 cents/lb!",
+    "Free dry with any wash before noon!",
+    "Dry cleaning 3 shirts for $5!"
+  ],
+  "promo.books": [
+    "Buy 2 paperbacks, get 1 free!",
+    "Author signing this Thursday!",
+    "Used books 50% off!"
+  ],
+  "promo.tailor": [
+    "Hems while you wait, $8!",
+    "Suits altered 15% off this week!",
+    "Free pressing with any alteration!"
+  ],
+  "promo.autoparts": [
+    "Oil change kits 25% off!",
+    "Free battery test in store!",
+    "Wiper blades buy one get one!"
+  ]
+}

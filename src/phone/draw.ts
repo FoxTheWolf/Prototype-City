@@ -3,8 +3,8 @@ import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, menu } from './apps';
-import { box, CHROME, wallpaper } from './ui';
-import { applyTheme, BAD, bigText, ch, DAYS, DIM, HI, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
+import { box, CHROME, lerp, vgrad, wallpaper } from './ui';
+import { applyTheme, BAD, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
 import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
@@ -297,49 +297,77 @@ function drawCase(K: Case, R: number, now: number, cell: CellFn, over: OverFn, i
 }
 
 /**
- * Power on, in two stages: the hardware check scrolls by fast, listing what it finds; then the
- * splash screen, the maker's logo drawing in over the model's name and a loading bar.
+ * Power on, in two stages (in the look of the redesigned system, still verbose): the bootloader's
+ * check scrolls by in a dark panel, each part with its timestamp and a colored tag, a bar filling
+ * under it; then the splash, the maker's logo drawing in with a gloss over it, the model on a chip,
+ * a rounded loading bar.
  */
 function boot(S: Lcd, P: Phone, world: World, t: number) {
   if (t < 0) { for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]); return; }
   const D = P.device;
   if (t >= BOOT_LOG_S) return splash(S, P.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
   mapRaster(world.city); // the map database loads during the check (built once per city)
-  const line = (a: string, b: string) => a + ' ' + '.'.repeat(Math.max(2, SW - 4 - a.length - b.length)) + ' ' + b;
-  const L = [
-    `${D.os}  ${P.maker} ${D.model}`,
-    '',
-    line(`CPU ${D.cpu} ${D.cpuMHz} MHz`, T.ok),
-    line(`RAM ${D.ramMB} MB`, T.ok),
-    line(`FLASH ${D.flashMB} MB`, T.ok),
-    line(`LCD ${D.screen}`, T.ok),
-    line(`GPS ${D.gps}`, T.ok),
-    line(`WLAN ${D.wlan}`, T.off),
-    line(`RADIO ${D.radio}`, T.ok),
-    line(`${T.mapsDb} ${cityName(world.city).toUpperCase()}`, T.ok),
-    '',
-    T.ready,
+  vgrad(S, 0, SH - 1, [14, 20, 34], [2, 3, 6]);
+  // the bootloader's title bar
+  S.fill(1, CHROME.top);
+  S.text(1, 1, `${D.os} BOOT`, CHROME.accent, CHROME.top);
+  const ver = `${P.maker} ${D.model}`.slice(0, SW - 12);
+  S.text(SW - ver.length - 1, 1, ver, CHROME.dim, CHROME.top);
+  const L: [string, string][] = [
+    ['bootrom: signature', T.ok],
+    [`cpu0: ${D.cpu} @ ${D.cpuMHz}MHz`, T.ok],
+    [`mem: ${D.ramMB}MB SDRAM`, T.ok],
+    [`nand: ${D.flashMB}MB, 0 bad blocks`, T.ok],
+    ['fs: mounting /system /data', T.ok],
+    [`lcd: ${D.screen} 18bpp`, T.ok],
+    ['keypad: 21 keys, backlight', T.ok],
+    ['audio: codec, vibra motor', T.ok],
+    [`cam: ${D.cameraMP ? `${D.cameraMP.toFixed(1)}MP sensor` : 'none'}`, D.cameraMP ? T.ok : T.off],
+    [`gps: ${D.gps}`, D.gps === 'none' ? T.off : T.ok],
+    [`wlan: ${D.wlan}`, T.off],
+    [`modem: ${D.radio}`, T.ok],
+    ['sim: card present, PIN off', T.ok],
+    [`maps: ${cityName(world.city).toLowerCase()}`, T.ok],
+    ['ui: starting shell', T.ok],
   ];
-  let left = Math.floor(t * 320);
+  const y0 = 3, rows = SH - y0 - 4;
+  box(S, 0, y0 - 1, SW - 1, y0 + rows, [6, 9, 16], (_x, y) => lerp([14, 20, 34], [2, 3, 6], y / (SH - 1)), 1);
+  let left = Math.floor(t * 420), shown = 0;
+  const out: [string, string, boolean][] = [];
   for (let k = 0; k < L.length && left >= 0; k++) {
-    const s = L[k].slice(0, left), bad = L[k].endsWith(T.noService) || L[k].endsWith(T.off);
-    S.text(1, 1 + k, s, k === 0 ? HI : bad && s.length === L[k].length ? [255, 120, 90] : DIM, LCD);
-    left -= L[k].length + 3;
-    if (left < 0 && Math.floor(t * 8) & 1) S.put(1 + s.length, 1 + k, ch('_'), INK, LCD);
+    const stamp = `${(0.04 + k * 0.137 + (k * k) * 0.011).toFixed(3).padStart(6)} `, full = stamp + L[k][0];
+    out.push([full.slice(0, left), L[k][1], left >= full.length]);
+    left -= full.length + 4; shown = k + 1;
   }
+  out.slice(-rows).forEach(([txt, tag, done], n) => {
+    const y = y0 + n, bg: C3 = [6, 9, 16];
+    S.text(1, y, txt.slice(0, 7), [90, 110, 140], bg);
+    S.text(8, y, txt.slice(7, SW - 8), [200, 214, 232], bg);
+    if (done) { const good = tag === T.ok, tc: C3 = good ? [40, 150, 80] : [150, 110, 40]; S.text(SW - tag.length - 3, y, ` ${tag} `, [240, 250, 245], tc); }
+    else if (Math.floor(t * 8) & 1) S.put(1 + Math.min(txt.length, SW - 3), y, ch('_'), INK, bg);
+  });
+  // the bar under the panel
+  const f = shown / L.length, w = SW - 6, n = Math.round(f * w), yb = SH - 2;
+  for (let x = 0; x < w; x++) S.put(3 + x, yb, x < n ? 32 : SHAPE.dot, [60, 70, 90], x < n ? lerp([60, 140, 230], [120, 220, 255], x / w) : [4, 5, 8]);
 }
 
-/** The splash: a deep blue field brightening from the top, the logo drawing in, the model's name, a bar filling. */
+/** The splash: a deep field brightening from the top, the logo drawing in with a gloss, the model on a chip, a rounded bar filling. */
 function splash(S: Lcd, maker: string, model: string, u: number) {
   const f = Math.min(1, u / 0.5);
-  for (let y = 0; y < SH; y++) { const k = f * (1 - y / SH); S.fill(y, [8 + 12 * k, 12 + 28 * k, 22 + 60 * k]); }
-  // the maker's name in big letters while it fits the screen; a long one spelled out in capitals
-  const mc: C3 = [Math.min(255, u * 500), Math.min(196, u * 400), Math.min(90, u * 180)];
-  if (maker.length * 5 <= SW) bigText(S, 6, maker, mc, u - 0.2);
-  else { const sp = maker.split('').join(' '); S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.2, 30), mc, [12, 22, 44]); }
-  S.text((SW - model.length) >> 1, 15, typed(model, u - 0.6, 30), INK, [12, 22, 44]);
-  const n = Math.round(Math.max(0, Math.min(1, (u - 0.9) / 1.5)) * 24);
-  for (let x = 0; x < 24; x++) S.put(9 + x, 19, x < n ? 32 : ch('.'), DIM, x < n ? HI : [10, 17, 34]);
+  const bgAt = (y: number): C3 => { const k = f * (1 - y / SH); return [6 + 18 * k, 10 + 34 * k, 20 + 70 * k]; };
+  for (let y = 0; y < SH; y++) S.fill(y, bgAt(y));
+  // the maker's name in big letters while it fits the screen, a shadow under it and a lighter top half; a long one spelled out
+  const g = Math.min(1, u * 2), lo: C3 = [255 * g, 170 * g, 60 * g], hi: C3 = [255 * g, 226 * g, 150 * g];
+  if (maker.length * 5 <= SW) {
+    bigText(S, 7, maker, [0, 0, 0], u - 0.2, 1);
+    bigText(S, 6, maker, lo, u - 0.2);
+    // the gloss: the top three rows of the letters lighter (bigText draws in from the top)
+    bigText(S, 6, maker, hi, Math.min(u - 0.2, 2.5 / 30));
+  } else { const sp = maker.split('').join(' '); S.text((SW - sp.length) >> 1, 9, typed(sp, u - 0.2, 30), lo, bgAt(9)); }
+  if (u > 0.6) { const m = typed(model, u - 0.6, 30), x0 = ((SW - model.length) >> 1) - 2; box(S, x0, 15, x0 + model.length + 3, 15, [20, 30, 52], bgAt(15), 1); S.text(x0 + 2, 15, m, [210, 222, 240], [20, 30, 52]); }
+  const w = 26, x0 = (SW - w) >> 1, n = Math.round(Math.max(0, Math.min(1, (u - 0.9) / 1.5)) * (w - 2));
+  box(S, x0, 19, x0 + w - 1, 19, [14, 20, 34], bgAt(19), 1);
+  for (let x = 0; x < n; x++) S.put(x0 + 1 + x, 19, 32, [0, 0, 0], lerp([255, 150, 50], [255, 220, 120], x / w));
 }
 
 /**
@@ -376,6 +404,8 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
     S.text(3, y, icon, col, [24, 32, 50]);
     S.text(8, y, s.slice(0, SW - 12), Math.floor(now * 2) & 1 || k ? [235, 240, 250] : col, [24, 32, 50]);
   });
+  // how to clear them (calls and texts; a reminder stays until its time)
+  if ((P.missed || unread) && t > 0.9) { const h = T.apps.clearHint, y = 16 + Math.min(3, cards.length) * 2; box(S, SW - h.length - 4, y, SW - 3, y, CHIP, CHIP, 0); S.text(SW - h.length - 3, y, h, [150, 160, 180], CHIP); }
   softKeys(S, T.menu, T.hide);
 }
 

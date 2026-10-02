@@ -98,11 +98,23 @@ export function inBox(x: number, y: number, x0: number, y0: number, x1: number, 
   const rx = r * 1.6, ry = r;
   const left = x < x0 + rx, right = x > x1 - rx, top = y < y0 + ry, bottom = y > y1 - ry;
   if (!(left || right) || !(top || bottom)) return 1;
-  // the corner's ellipse, its center inside the box; test the cell's four corners against it
+  // the corner's ellipse, its center inside the box: how much of the cell it covers (4x4 samples), and
+  // which half. A corner wider than a cell crosses several cells: only the one the curve turns in gets
+  // the rounded glyph; those along its flatter part are full, empty or half cells (a single rounded
+  // glyph in each of them made the edge scalloped)
   const cx = left ? x0 + rx : x1 + 1 - rx, cy = top ? y0 + ry : y1 + 1 - ry;
-  let n = 0;
-  for (const [px, py] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (((px - cx) / rx) ** 2 + ((py - cy) / ry) ** 2 <= 1.0001) n++;
-  if (n === 4) return 1;
-  if (n === 0) return 0;
+  let n = 0, inV = 0, inH = 0;
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+    const px = x + (i + 0.5) / 4, py = y + (j + 0.5) / 4;
+    if (((px - cx) / rx) ** 2 + ((py - cy) / ry) ** 2 > 1) continue;
+    n++;
+    if (top ? j >= 2 : j < 2) inV++;
+    if (left ? i >= 2 : i < 2) inH++;
+  }
+  if (n >= 14) return 1;
+  if (n <= 2) return 0;
+  // most of it in the inner half and little in the outer: a half cell
+  if (inV >= 7 && n - inV <= 2) return top ? SHAPE.bottom : SHAPE.top;
+  if (inH >= 7 && n - inH <= 2) return left ? SHAPE.right : SHAPE.left;
   return top ? (left ? SHAPE.tl : SHAPE.tr) : left ? SHAPE.bl : SHAPE.br;
 }

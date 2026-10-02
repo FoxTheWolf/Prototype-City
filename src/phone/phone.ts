@@ -29,10 +29,11 @@ import { CASES, SHELLS } from './shells';
  * up and click). No DOM here: main passes keys in, draw.ts and apps.ts read the state. Times are
  * real seconds (performance.now / 1000).
  *
- * Controls, after GTA IV on PC: Up takes it out (P too, both ways); with it out, the arrows are
- * the d-pad, Enter or the left mouse button its middle (OK, and the left soft key's action),
- * Backspace or a click of the right mouse button the right soft key (Back), which on the standby
- * screen puts it away; the middle button takes it out and puts it away. With it out the system
+ * Controls, after GTA IV on PC: Up takes it out, P and the middle mouse button take it out and
+ * lower it (it keeps its screen and state; on the standby screen the middle button, or Up, opens the
+ * dialer instead); with it out, the arrows are the d-pad, Enter or the left mouse button its middle
+ * (OK, and the left soft key's action), Backspace or a click of the right mouse button the right
+ * soft key (Back), which on the standby screen puts it away. With it out the system
  * cursor is free (hold the right button to look around), a click on a key presses it, and the wheel
  * steps through the menu and scrolls lists; the digit keys are the keypad, + / numpad * its * key, - and . its # key, Space the
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
@@ -40,6 +41,7 @@ import { CASES, SHELLS } from './shells';
  */
 export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'clock' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'alarm' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
+export type CallKind = 'out' | 'failed' | 'in' | 'missed';
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /**
@@ -54,7 +56,7 @@ const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news'
 /** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
 export const BUNDLED = ['social', 'news', 'snake'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
-export const BOOT_LOG_S = 1.9, BOOT_S = 4.6;
+export const BOOT_LOG_S = 2.4, BOOT_S = 5.1;
 /** The map's zoom levels (local, district, sector, city): metres per screen row. */
 export const ZOOM_ROW_M = [8, 18, 36, 96];
 /** Inside a building the map shows the floor plan instead, at these scales. */
@@ -222,10 +224,16 @@ export class Phone {
   /** The list of places: landmarks nearest first, and the one picked. */
   places: number[] = [];
   psel = 0;
-  /** Calls: the number being dialled, the call under way (or just ended), the numbers called last. */
+  /** Calls: the number being dialled, the call under way (or just ended). */
   dial = '';
   call: Call | null = null;
-  readonly redial: string[] = [];
+  /**
+   * The call log, newest first (it keeps 20): the number, how the call went (made and answered,
+   * made but not completed, received, missed) and the game time. The dialer lists it; the arrows
+   * pick one and the green key (or OK) calls it back.
+   */
+  readonly log: { number: string; kind: CallKind; at: number }[] = [];
+  lsel = 0;
   /** Sounds the phone asks main to play (the call's tones and voices). */
   readonly sfx: Sfx[] = [];
   /** The contacts on the SIM (it holds 250): a few come with the line, the rest are added by hand. */
@@ -355,7 +363,10 @@ export class Phone {
       if (hr !== this.oddHour) {
         if (this.oddHour >= 0) {
           if (h(0x11c) < 0.16) this.wrongAt = now + h(0x11e) * 90;
-          const i = h(0x11d) < 0.12 ? this.somebody(h(0x11f)) : -1;
+          // most of the texts nobody asked for are a shop's advertising (from its own number); the rest a wrong number
+          const B = this.world.city.businesses, ad = h(0x11d) < 0.12 && h(0x123) < 0.75 && B.length > 0;
+          if (ad) { const k = Math.floor(h(0x124) * B.length); this.receive(this.world.telco.bizNum[k], smsText(this.world, 'promo', -1, h(0x120), k), now + 5 + h(0x121) * 80); }
+          const i = !ad && h(0x11d) < 0.12 ? this.somebody(h(0x11f)) : -1;
           if (i >= 0) { this.wrongSms.add(i); this.receive(this.world.pop.mobile[i], smsText(this.world, 'wrong', i, h(0x120)), now + 5 + h(0x121) * 80); }
         }
         this.oddHour = hr;
@@ -383,17 +394,21 @@ export class Phone {
         else if (this.prefs.profile === 1) { this.cue = 'vibrate'; this.buzz(now, 1.6); }
       }
       if (c.state !== 'ringing' && this.nextRing > 0) { this.nextRing = 0; this.cue = 'stop'; this.buzzUntil = 0; }
-      if (c.caller >= 0) {
-        // a citizen's call runs here; unanswered, it is a missed call (and in the list the green key redials)
-        const was = c.state;
-        c.update(now, c.state === 'talk' ? this.sfx : []); // their voice, not their ringback
-        if (was === 'ringing' && c.state === 'ended') { this.missed++; if (this.redial[0] !== c.number) this.redial.unshift(c.number); if (this.redial.length > 10) this.redial.pop(); }
+      // a citizen's call runs here (their voice, not their ringback)
+      if (c.caller >= 0) c.update(now, c.state === 'talk' ? this.sfx : []);
+      if (c.state === 'ended' && now > c.endAt + 2.5) {
+        // answered, or missed (counted on the standby screen and the dialer until it is opened)
+        const answered = c.connectAt >= 0;
+        if (!answered) this.missed++;
+        this.logCall(this.dial, answered ? 'in' : 'missed');
+        this.call = null; this.callIn = false; this.dial = '';
       }
-      if (c.state === 'ended' && now > c.endAt + 2.5) { this.call = null; this.callIn = false; this.dial = ''; }
     } else if (c) {
       c.update(now, this.sfx);
       if (c.state === 'ended' && now > c.endAt + 2.5) {
         this.world.telco.player.credit -= c.cost();
+        this.logCall(c.number, c.connectAt >= 0 ? 'out' : 'failed');
+        this.dial = '';
         for (const [name, num] of c.listings) this.receive('411', `${name} ${formatNumber(this.world.telco, num)}`, now + 3);
         this.call = null;
       }
@@ -420,6 +435,9 @@ export class Phone {
 
   open(s: Screen, now: number) {
     if (this.screen === 'settings' && s !== 'settings') this.cue = 'stop';
+    // leaving the dialer clears what was being dialed; put away and taken out again, it stays
+    if (this.screen === 'calls' && s !== 'calls' && !this.call) this.dial = '';
+    if (s === 'calls' && this.screen !== 'calls') this.lsel = 0;
     this.screen = s; this.since = now; this.scroll = 0;
     if (s === 'settings') { this.setPage = 'root'; this.setSel = 0; }
     if (s === 'calls' && !this.call) this.missed = 0;
@@ -479,6 +497,8 @@ export class Phone {
       case 'standby':
         if (k === 'ok' || k === 'lsoft') { this.open('menu', now); return true; }
         if (k === 'up') { if (!this.call) this.dial = ''; this.open('calls', now); return true; }
+        // down clears what is waiting (missed calls, unread texts)
+        if (k === 'down') { if (!this.missed && this.inbox.every((m) => m.read)) return false; this.clearNotices(); return true; }
         // a number typed on the standby screen opens the dialer with it, as phones did
         if (/^[0-9*#]$/.test(k)) { this.dial = k; this.call = null; this.open('calls', now); return true; }
         if (k === 'rsoft') { this.out = false; return 'away'; }
@@ -542,8 +562,9 @@ export class Phone {
           return true;
         }
         if ((k === 'send' || k === 'ok') && this.dial) { this.place(this.dial, now); return true; }
-        // the green key on an empty dialer brings back the last number called
-        if (k === 'send' && this.redial.length) { this.dial = this.redial[0]; return true; }
+        // with nothing dialed, the arrows pick a call in the log and the green key (or OK) calls it back
+        if (!this.dial && this.log.length && (k === 'up' || k === 'down')) { this.lsel = Math.max(0, Math.min(this.log.length - 1, this.lsel + (k === 'up' ? -1 : 1))); return true; }
+        if (!this.dial && this.log.length && (k === 'send' || k === 'ok')) { this.place(this.log[Math.min(this.lsel, this.log.length - 1)].number, now); return true; }
         if (k === 'lsoft' && this.dial) { this.edit = { name: '', number: this.dial, step: 0 }; this.open('contact', now); return true; }
         if (k === 'rsoft') { if (this.dial) this.dial = this.dial.slice(0, -1); else this.open('menu', now); return true; }
         return false;
@@ -635,8 +656,9 @@ export class Phone {
       }
       case 'messages': {
         // the boxes, and a new message
-        if (k === 'up' || k === 'down') { this.box = (this.box + (k === 'up' ? 2 : 1)) % 3; return true; }
+        if (k === 'up' || k === 'down') { this.box = (this.box + (k === 'up' ? 3 : 1)) % 4; return true; }
         if (k === 'ok' || k === 'lsoft') {
+          if (this.box === 3) { this.clearNotices(); this.sfx.push(['sent']); return true; }
           if (this.box === 2) { this.draft = { to: '', text: '', step: 0 }; this.open('compose', now); }
           else { this.msel = 0; this.open('msglist', now); }
           return true;
@@ -896,15 +918,19 @@ export class Phone {
     if (this.radio.state !== 'service' || A.credit < 10) return false;
     A.credit -= 10;
     this.sent.unshift({ to: D.to, text: D.text, at: this.world.time });
-    const c = lookup(this.world.telco, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q);
+    const c = lookup(this.world.telco, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q), n = this.bother(D.to);
     const op = operatorName(this.world.city);
     if (c.kind === 'none') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5);
     else if (c.kind === 'self') this.receive(D.to, D.text, now + 3);
-    else if (c.kind === 'biz' && h(1) < 0.6) {
+    else if (c.kind === 'biz' && h(1) < 0.6 && n < 4) {
       const b = this.world.city.businesses[c.k], [o, z] = BIZ_HOURS[b.kind] ?? [9, 17], hh = (x: number) => `${((x + 11) % 12) + 1}${x % 24 < 12 ? 'am' : 'pm'}`;
       const t = smsText(this.world, 'biz', -1, h(2)).replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
       this.receive(D.to, t, now + 8 + h(3) * 20);
-    } else if (c.kind === 'cell' && this.wrongSms.has(c.i)) this.receive(D.to, smsText(this.world, 'oops', c.i, h(2)), now + 10 + h(3) * 30);
+    }
+    // texted again and again: a person asks them to stop, then goes quiet
+    else if (c.kind === 'cell' && n >= 6) { /* no answer */ }
+    else if (c.kind === 'cell' && n >= 3) { if (h(1) < 0.8) this.receive(D.to, smsText(this.world, 'annoyed', c.i, h(2)), now + 10 + h(3) * 30); }
+    else if (c.kind === 'cell' && this.wrongSms.has(c.i)) this.receive(D.to, smsText(this.world, 'oops', c.i, h(2)), now + 10 + h(3) * 30);
     else if (c.kind === 'home') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5); // a landline takes no texts
     else if (c.kind === 'cell' && h(1) < 0.25 + 0.5 * (this.world.pop.talk[c.i] / 255)) {
       // the owner reads it when awake, and maybe answers
@@ -924,10 +950,29 @@ export class Phone {
       return;
     }
     this.call = new Call(this.world, number, now, this.radio.state !== 'service');
+    this.call.pester = this.bother(number);
     if (this.call.state === 'ended') this.sfx.push(['fail']);
     this.dial = number;
-    if (this.redial[0] !== number) this.redial.unshift(number);
-    if (this.redial.length > 10) this.redial.pop();
+  }
+
+  /** The player's calls and texts to each number (game times), for the people tired of them. */
+  private bothered = new Map<string, number[]>();
+  /** One more call or text to a number: how many in the last two game hours, this one included. */
+  private bother(number: string): number {
+    const t = this.world.time, L = (this.bothered.get(number) ?? []).filter((x) => t - x < 7200);
+    L.push(t); this.bothered.set(number, L);
+    return L.length;
+  }
+
+  /** Every notification seen: missed calls counted, texts read. */
+  clearNotices() { this.missed = 0; for (const m of this.inbox) m.read = true; }
+
+  /** A call into the log (newest first). */
+  private logCall(number: string, kind: CallKind) {
+    if (!number) return;
+    this.log.unshift({ number, kind, at: this.world.time });
+    if (this.log.length > 20) this.log.pop();
+    this.lsel = 0;
   }
 
   /** Ask the operator's menu for the answer to the path so far. */

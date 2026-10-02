@@ -50,6 +50,10 @@
     "sorry": ["Oh. I must have the wrong number. Sorry.", "Sorry, wrong number. Have a good night.", "Oops, wrong number. Sorry to bother you.", "Oh, sorry! I dialed wrong.", "My mistake, sorry.", "Sorry, these buttons are so small.", "Oh dear, sorry about that.", "[teen/young] my bad, wrong #", "[old/senior] Oh, I'm so sorry, dear. Wrong number."],
     "back": ["Hello? Oh, I think I called this number earlier. Sorry, that was a mistake.", "Hi... yes, I called before. Wrong number, sorry about that.", "Oh, you called back! Sorry, I dialed wrong earlier.", "Yes, that was me. Wrong number, my apologies."]
   },
+  "pester": {
+    "first": ["You again?", "Hello? Is this the same number again?", "Okay, who keeps calling me?", "Not this number again.", "Hello... again.", "Seriously, you again?"],
+    "stop": ["Please stop calling this number.", "I don't know you. Stop calling, okay?", "This is the third time today. Please stop.", "If you call again I'm not picking up.", "I'm busy. Please don't call again.", "Whatever this is, I'm not interested."]
+  },
   "payphone": {
     "hello": ["Hello? Uh, this is a pay phone.", "Yeah? This is a pay phone on the corner.", "Hello? I was just walking by. It was ringing.", "Uh, hi? Pay phone.", "Hello? I don't usually answer these.", "This is a pay phone. Who are you looking for?", "[teen/young] uh, hello? random pay phone here.", "[old/senior] Hello? I'm just passing by, dear."],
     "who": ["Who are you looking for?", "Is anyone there?", "Hello?", "Is this a prank?", "There's nobody here but me."],

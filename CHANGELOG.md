@@ -1,0 +1,75 @@
+# Terminal City — log de atualizações
+
+Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
+
+## 0.12.4 — Celular: fila de feedback (2026-10-02)
+- Discador com o registro de chamadas: feitas, sem resposta, recebidas e perdidas, com a hora; as setas escolhem e a tecla verde liga de volta.
+- O número digitado some ao sair do discador; abaixar e levantar o celular mantém a tela e o estado.
+- **P** volta a tirar e abaixar o celular; o botão do meio também abaixa, e na tela inicial abre o discador.
+- Papel de parede segue a hora (céu de dia, entardecer, noite com lua); a lua e o sol saíram de trás do relógio.
+- Tecla 1 com símbolos: `@ _ : / & ( ) " # $ %` além da pontuação.
+- Limpar notificações: no app de mensagens ou com a seta para baixo na tela inicial.
+- A maioria dos SMS não pedidos agora é propaganda das lojas da cidade.
+- Ligar ou mandar SMS demais para a mesma pessoa a irrita: ela reclama e depois para de atender.
+- Boot do celular redesenhado, ainda verboso; splash com brilho no logotipo.
+- Cantos arredondados sem serrilhado nos ícones, botões e no corpo do celular.
+- Com o notebook aberto, o celular continua clicável (dá para atender uma ligação).
+
+## 0.12.3 (2026-10-02)
+- Alarme em tela cheia com três toques próprios; câmera só em blocos e fotos que não apagam as luzes pequenas; segunda tecla abre o discador.
+
+## 0.12.2 (2026-10-02)
+- Câmera com flash opcional, zoom óptico e digital e mais resolução; o celular sobe nos apps que usam as teclas de baixo; notificações espiam do bolso; alarme no relógio; símbolos do clima.
+
+## 0.12.1 — Celular redesenhado (2026-10-02)
+- Tela inicial com papel de parede, menu 4×4, discador, mensagens e mapa novos; seis modelos de corpo e capinhas; apps de fábrica e a pasta "My Apps"; população de 60 mil.
+
+## 0.11 — Cidadãos e rotinas (2026-10-02)
+- 0.11.1: cidadãos com casa, emprego, família, amigos e telefone; ligar para alguém cai em quem está em casa ou na secretária.
+- 0.11.2: o dia de cada um (trabalho, almoço, recados, saídas); os pedestres são os cidadãos, saindo e entrando pelas portas; ligações e SMS por engano.
+- 0.11.3: 40 mil cidadãos.
+- 0.11.4: a rede social Streetwire, com posts de rotina e de testemunhas dos eventos.
+- 0.11.5: textos gerados com a voz de cada pessoa, manchetes de 2008, perfis, comentários e fotos no Streetwire, app de calendário, visual próprio dos apps.
+
+## 0.10 — O notebook (2026-10-01/02)
+- 0.10.1–0.10.4: o notebook como objeto (tecla N, só sentado ou apoiado), computador virtual com shell tipo Unix, BIOS na tela, HD e ventilador com som, temperatura e painel de status.
+- 0.10.5: Wi-Fi no notebook (varrer redes, conectar, pegar endereço, ping).
+- 0.10.6: (entrada da Trilha de hacking)
+- 0.10.7: BIOS SETUP e menu de boot, bateria com tomada, editor de texto.
+- 0.10.8: o mundo é desenhado em vários núcleos; 120 linhas como padrão.
+- 0.10.9: a interface não encolhe com a resolução do mundo.
+- 0.10.10: carros dirigidos de verdade perto do jogador, com seta, sinal de luz e dois faróis.
+- 0.10.11: (entrada da Trilha de hacking)
+
+## 0.9b — Luz do sol (2026-10-01)
+- Faces ao sol e na sombra, Sarcófago mais perto, superfícies distantes em blocos, tecla R de resolução.
+
+## 0.9 — Telefones e celular (2026-10-01)
+- Antenas e sinal de verdade, dados móveis com franquia, ligações e SMS, operadora com `*100#`, orelhões, câmera, loja de apps, modelos e marcas de celular, abertura do jogo, agradecimentos escondidos.
+- Correções e otimização: portas entre cômodos, placas EXIT, energia de reserva, Wi-Fi nas lojas e casas, T9, modos visuais (tecla V).
+
+## 0.8 — Navegação (2026-10-01)
+- O celular na mão com mapa em quatro zooms e de interior, lista de lugares, GPS com os limites de 2008, calculadora, relógio, notas e os outros apps.
+
+## 0.7 — Trânsito (2026-10-01)
+- Faixas, semáforos e o X da diagonal; ônibus, táxis, viaturas, caminhões, ciclistas e pedestres; física dos carros e batidas; sons do trânsito; 1500 carros.
+
+## 0.6 — Interiores (2026-09-30/10-01)
+- Entrar nos prédios sem carregamento, plantas e móveis, elevadores (alguns de vidro), escadas de incêndio, lojas abertas, interiores vistos de fora.
+- Fachadas mais ricas: coroas acesas, anúncios pintados, outdoors, neon, andaimes, relevo e o theater district com telões e letreiro de notícias.
+
+## 0.5 — Clima e céu; 0.5b — Blackout (2026-09-30)
+- Avenida diagonal, placas perpendiculares e holofotes; relógio e calendário de 2008, céu com sol, lua e nuvens, chuva, neve e trovões; curvatura do horizonte e o Sarcófago.
+- Rede elétrica com subestações e o blackout com som (tecla K).
+
+## 0.4 — Visual sólido (2026-09-30)
+- Fundo colorido atrás dos glifos, paleta de sódio, objetos com volume, mobiliário urbano, lixo, letreiros com o nome das empresas, luzes dinâmicas e o primeiro som.
+
+## 0.3 — Estrutura da cidade (2026-09-30)
+- Distritos com nomes, estilos de fachada, topos de torre, parques, praças, marcos e a borda com a zona de fogo.
+
+## 0.2 — Cidade grande (2026-09-30)
+- Cidade de ~2×2 km em metros, prédios com identidade fixa e horizonte distante.
+
+## 0.1 — Motor (2026-09-30)
+- Vite + TypeScript, raycaster por coluna em grade de caracteres desenhada pela GPU, câmera suave.

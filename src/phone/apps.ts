@@ -146,16 +146,22 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
     else S.center(8, d, INKD, [250, 251, 253]);
     if (who) S.center(10, who, BLUE, [246, 248, 251]);
     if (!d) S.center(8, typed(A.dialHint, t - 0.2), GREY, [250, 251, 253]);
-    // the numbers called last, the first one the green key brings back
-    if (P.redial.length) {
+    // the call log: each call with how it went (arrow out made, arrow in received, red missed or not
+    // completed) and when; with nothing dialed the arrows pick one and the green key calls it back
+    if (P.log.length) {
       S.text(2, 13, A.recent, GREY, pageBg(13));
-      P.redial.slice(0, 5).forEach((n, k) => {
-        const y = 14 + k * 2, nm = P.contacts.find((x) => x.number === n)?.name, num = /^[0-9]{7}$/.test(n) ? formatNumber(world.telco, n) : n;
-        if (t < 0.15 + k * 0.05) return;
-        box(S, 1, y, SW - 2, y, k === 0 && !d ? [255, 255, 255] : [242, 245, 249], pageBg, 0);
-        face(S, 2, y, nm ?? n);
-        S.text(5, y, (nm ?? num).slice(0, SW - 16), INKD, k === 0 && !d ? [255, 255, 255] : [242, 245, 249]);
-        if (k === 0 && !d) S.text(SW - 9, y, A.send, [40, 160, 80], [255, 255, 255]);
+      const view = 5, sel = Math.min(P.lsel, P.log.length - 1), top = Math.max(0, Math.min(sel - view + 1, P.log.length - view));
+      P.log.slice(top, top + view).forEach((e, n) => {
+        const k = top + n, y = 14 + n * 2, on = k === sel && !d, nm = P.contacts.find((x) => x.number === e.number)?.name, num = /^[0-9]{7}$/.test(e.number) ? formatNumber(world.telco, e.number) : e.number;
+        if (t < 0.15 + n * 0.05) return;
+        const bg: C3 = on ? [255, 255, 255] : [242, 245, 249];
+        box(S, 1, y, SW - 2, y, bg, pageBg, 0);
+        face(S, 2, y, nm ?? e.number);
+        const bad = e.kind === 'missed' || e.kind === 'failed', col: C3 = bad ? [200, 50, 50] : e.kind === 'in' ? BLUE : [40, 150, 80];
+        S.text(5, y, e.kind === 'in' || e.kind === 'missed' ? '<' : '>', col, bg);
+        const c = calendar(e.at), when = `${A.log[e.kind]} ${hhmm(c.hour)}`;
+        S.text(7, y, (nm ?? num).slice(0, SW - when.length - 10), bad ? [170, 40, 40] : INKD, bg);
+        S.text(SW - when.length - 2, y, when, on ? col : GREY, bg);
       });
     }
     return softKeys(S, d ? A.save : '', d ? A.clear : T.back);
@@ -227,7 +233,7 @@ function messages(S: Lcd, P: Phone, t: number) {
   lightPage(S);
   header(S, name('messages'), '', '[=]', [150, 200, 255]);
   const unread = P.inbox.filter((m) => !m.read).length;
-  const cards: [string, string, string, C3][] = [['[v]', A.inbox, unread ? `${unread} new` : `${P.inbox.length}`, BLUE], ['[^]', A.sent, `${P.sent.length}`, GREY], ['[+]', A.newMsg, '', [40, 160, 80]]];
+  const cards: [string, string, string, C3][] = [['[v]', A.inbox, unread ? `${unread} new` : `${P.inbox.length}`, BLUE], ['[^]', A.sent, `${P.sent.length}`, GREY], ['[+]', A.newMsg, '', [40, 160, 80]], ['[x]', A.clearAll, '', [200, 60, 50]]];
   cards.forEach(([icon, label, count, col], k) => {
     const y = 4 + k * 4, sel = k === P.box, bg: C3 = sel ? [255, 255, 255] : [240, 243, 248];
     if (t < 0.05 * k) return;

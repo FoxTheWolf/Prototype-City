@@ -174,7 +174,7 @@ function phoneToggle() {
 }
 // with the phone out the mouse moves a cursor: a click on one of its keys presses it, the left
 // button elsewhere is OK and a click of the right one Back (as in GTA IV); holding the right button
-// looks around instead. The middle button takes the phone out and puts it away.
+// looks around instead. The middle button (or P) takes the phone out and lowers it; on the standby screen it opens the dialer.
 // Otherwise, in a lift car, aim at a button of its panel and click it.
 // no browser menu on the right button (it is Back and look-around): stopped early, on the canvas and the document
 const noMenu = (e: Event) => { e.preventDefault(); e.stopPropagation(); return false; };
@@ -211,10 +211,17 @@ addEventListener('mousedown', (e) => {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
     if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
+    // the phone stays usable by the mouse over the notebook (a call coming in, or taken out before):
+    // a click on one of its keys presses it, and takes it into the hand if it was only up for the call
+    if (e.button === 0 && phone.raise > 0.5) {
+      const [x, y] = cellAtClient(e.clientX, e.clientY), k = keyAt(ui.cols, ui.rows, phone, x, y);
+      if (k) { if (!phone.out) phone.out = true; phonePress(k); }
+    }
     return;
   }
-  // the middle button: takes the phone out; again, up to the dialer; on the dialer, back in the pocket
-  if (e.button === 1) { e.preventDefault(); if (!payphone.active) { if (phone.out && phone.screen !== 'calls' && phone.screen !== 'boot' && phone.screen !== 'alarm') { if (!phone.call) phone.dial = ''; phone.open('calls', performance.now() / 1000); } else phoneToggle(); } return; }
+  // the middle button: takes the phone out; on the standby screen it opens the dialer; elsewhere it
+  // lowers the phone, which keeps its screen and state for when it comes up again
+  if (e.button === 1) { e.preventDefault(); if (!payphone.active) { if (phone.out && phone.screen === 'standby') phonePress('up'); else phoneToggle(); } return; }
   if (payphone.active) {
     if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(ui.cols, ui.rows, x, y); if (k) payPress(k); }
     else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
@@ -268,7 +275,7 @@ addEventListener('keydown', (e) => {
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
   // the phone: Up (or P) takes it out; while it is out, its keys (see phone.ts)
-  const pk = phone.out ? phoneKey(e.code, e.key) : null;
+  const pk = phone.out && e.code !== 'KeyP' ? phoneKey(e.code, e.key) : null;
   if (pk) {
     e.preventDefault();
     if (e.repeat && pk !== 'up' && pk !== 'down' && pk !== 'left' && pk !== 'right') return;
@@ -277,6 +284,7 @@ addEventListener('keydown', (e) => {
   }
   if (e.repeat) return;
   if (e.code === 'ArrowUp' && !phone.out && running) phoneToggle();
+  else if (e.code === 'KeyP' && running && !payphone.active) phoneToggle();
   else if (e.code === 'KeyM') sound?.toggleMute();
   else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
@@ -413,8 +421,10 @@ function frame(now: number) {
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'alarm') sound?.ring(10 + phone.prefs.alarmTone, 4); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
-  phone.hover = phone.out ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
-  drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
+  phone.hover = phone.out || (laptop.open && phone.raise > 0.5) ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
+  // over the notebook while it is open (to be clicked), under it otherwise
+  const phoneOnTop = laptop.open;
+  if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
   playLap(laptop.sfx);
@@ -422,6 +432,7 @@ function frame(now: number) {
   lapSpin += ((lapOn ? 1 : 0) - lapSpin) * Math.min(1, dt / (lapOn ? 2.5 : 1.5));
   sound?.laptopHum(lapOn || lapSpin > 0.05, lapSpin, laptop.pc.fan);
   drawLaptop(ui, laptop, world, now / 1000, VIEW_LIGHT);
+  if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);

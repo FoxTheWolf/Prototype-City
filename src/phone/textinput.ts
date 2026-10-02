@@ -12,8 +12,8 @@ import { type Key } from './phone';
  */
 export type Mode = 'abc' | 't9' | '123';
 const MODES: Mode[] = ['abc', 't9', '123'];
-export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
-const PUNCT = '.,?!\'-';
+export const TAPS: Record<string, string> = { '1': '.,?!\'-@_:/&()"#$%1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
+const PUNCT = '.,?!\'-@_:/&()"#$%';
 
 /** The key a letter is on. */
 const keyOf: Record<string, string> = {};

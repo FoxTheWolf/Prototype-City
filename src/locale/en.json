@@ -785,7 +785,7 @@
         "sky": { "clear": "Clear", "partly": "Partly cloudy", "cloudy": "Cloudy", "drizzle": "Drizzle", "rain": "Rain", "storm": "Thunderstorm", "snow": "Snow" },
         "phases": ["New", "Waxing crescent", "First quarter", "Waxing gibbous", "Full", "Waning gibbous", "Last quarter", "Waning crescent"] },
       "soon": ["Connected over EDGE", "Coming soon"],
-      "running": "USSD code running...", "reply": "Reply:", "send": "Send", "to": "To", "text": "Text", "inbox": "Inbox", "sent": "Sent", "newMsg": "New message", "noMsgs": "No messages", "replyK": "Reply", "from": "From", "smsSent": "Message sent", "smsFail": "Sending failed",
+      "running": "USSD code running...", "reply": "Reply:", "send": "Send", "to": "To", "text": "Text", "inbox": "Inbox", "sent": "Sent", "newMsg": "New message", "clearAll": "Clear notifications", "clearHint": "v clear", "noMsgs": "No messages", "replyK": "Reply", "from": "From", "smsSent": "Message sent", "smsFail": "Sending failed",
       "voucher": "Top-up card (unused)",
       "shop": { "tabs": ["CATALOG", "INSTALLED"], "free": "FREE", "installed": "INSTALLED", "get": "Get", "open": "Open",
         "names": { "snake": "Snake", "torch": "Torch", "news": "City News", "convert": "Converter", "tunes": "Tunes Player", "atlas": "Street Atlas 3D", "social": "Streetwire" },
@@ -796,7 +796,7 @@
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",
-      "recent": "Recent", "camBlocks": "PIX", "camText": "ASCII", "flashOn": "FLASH", "flashOff": "NO FLASH", "camKeys": "^v zoom  < flash", "alarmStop": "Any key to stop", "newText": "new text", "newTexts": "new texts",
+      "recent": "Recent calls", "log": { "out": "Dialed", "failed": "No answer", "in": "Received", "missed": "Missed" }, "camBlocks": "PIX", "camText": "ASCII", "flashOn": "FLASH", "flashOff": "NO FLASH", "camKeys": "^v zoom  < flash", "alarmStop": "Any key to stop", "newText": "new text", "newTexts": "new texts",
       "about": { "map": "Where you are, and the way", "calls": "Dial a number", "contacts": "The numbers on your SIM", "messages": "Texts in and out", "camera": "Take a picture", "wire": "What the city is saying", "news": "The city's paper", "weather": "Skycast forecast", "calendar": "Days, holidays, reminders", "clock": "Time and a stopwatch", "calc": "Add it up", "notes": "A pad for anything", "snake": "Eat, grow, don't bite", "folder": "Apps you downloaded", "store": "Get more apps", "settings": "Sounds, looks, phone" },
       "set": {
         "pages": { "sound": "Sounds", "display": "Display", "looks": "Phone & case", "units": "Units", "wifi": "Wi-Fi", "about": "About phone", "debug": "Debug (game)", "people": "People here (debug)" },

@@ -62,6 +62,8 @@ export class Call {
   /** Citizens who called the player by mistake (calling them back, they say so). */
   static calledUs = new Set<number>();
   private mood: 'hello' | 'work' | 'out' | 'sleepy' | 'machine' = 'hello';
+  /** Calls and texts from the player to this number lately (this one included): from 3 they are annoyed, from 6 they stop answering. */
+  pester = 0;
 
   /** landline: made from a payphone (the player's own mobile number then rings the handset in the pocket). */
   constructor(private world: World, readonly number: string, private start: number, noNetwork: boolean, readonly landline = false) {
@@ -213,10 +215,11 @@ export class Call {
       for (let k = 0; k < H.n; k++) {
         const i = H.m0 + k, d = whereIs(P, w.city, i, t).doing;
         if (P.age[i] < 10) continue;
-        if (d === Doing.Home) { this.who = i; this.mood = 'hello'; return 2 + Math.floor(this.h(2) * 3); }
+        // called too often, nobody at home picks it up any more (the machine does, if there is one)
+        if (d === Doing.Home && this.pester < 6) { this.who = i; this.mood = 'hello'; return 2 + Math.floor(this.h(2) * 3); }
         if (d === Doing.Asleep && sleeper < 0 && P.age[i] >= 18) sleeper = i;
       }
-      if (sleeper >= 0 && this.h(4) < 0.3) { this.who = sleeper; this.mood = 'sleepy'; return 5 + Math.floor(this.h(2) * 2); }
+      if (this.pester < 6 && sleeper >= 0 && this.h(4) < 0.3) { this.who = sleeper; this.mood = 'sleepy'; return 5 + Math.floor(this.h(2) * 2); }
       if (!H.machine) return -1;
       this.who = H.m0; this.mood = 'machine';
       return 4;
@@ -224,6 +227,8 @@ export class Call {
     if (c.kind !== 'cell') return -1;
     const i = c.i, d = whereIs(P, w.city, i, t).doing, r = this.h(4);
     this.who = i;
+    // called too often: they send it to the voicemail after a ring or two
+    if (this.pester >= 6) { this.mood = 'machine'; return 2; }
     const answers = d === Doing.Asleep ? r < 0.12 : d === Doing.Work ? r < 0.5 : d === Doing.Out ? r < 0.65 : r < 0.85;
     if (!answers) { this.mood = 'machine'; return 5; }
     this.mood = d === Doing.Asleep ? 'sleepy' : d === Doing.Work ? 'work' : d === Doing.Out ? 'out' : 'hello';
@@ -256,6 +261,8 @@ export class Call {
           return [rec(c.kind === 'home' ? this.pick(C.res.machine, 34) : this.pick(C.cell.voicemail, 34)), { who: 'act', text: 'beep', gap: 0.2 }, { who: 'act', text: 'end', gap: 10 }];
         }
         if (c.kind === 'cell' && Call.calledUs.has(c.i) && this.mood !== 'sleepy') return [them(this.pick(C.wrong.back, 31)), them(this.pick(C.res.hangup, 33), 2.5), end];
+        // called again and again: they say so, and hang up
+        if (this.pester >= 3) return [them(this.pick(C.pester.first, 38)), them(this.pick(C.pester.stop, 39), 1.5), end];
         const first = this.mood === 'hello' ? this.pick(L.hello, 31) : this.pick((C.cell as Record<string, string[]>)[this.mood] ?? L.hello, 31);
         return [them(this.mood === 'sleepy' && c.kind === 'home' ? this.pick(C.res.sleepy, 31) : first), them(this.pick(C.res.who, 32), 3), them(this.pick(C.res.hangup, 33), 2.5), end];
       }
