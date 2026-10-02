@@ -22,7 +22,8 @@ import { HD, HdLayer } from './render/hd';
 import { setHd } from './phone/lcd';
 import { daylight } from './render/sky';
 import { cctvLook } from './render/cctv';
-import { cctvYaw } from './sim/cctv';
+import { CAMS, cctvYaw } from './sim/cctv';
+import { cctvMakerName } from './locale/names';
 import { spawnPeds } from './sim/peds';
 import { businessName, operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
@@ -366,6 +367,7 @@ function resize() {
   shown = new CharGrid(layout.cols, layout.rows);
   pool?.resize(layout.cols, layout.rows);
   renderer.setLayout(layout, uiLayout);
+  if (cctv) dvrLayout();
 }
 
 function readInput(): PlayerInput {
@@ -401,10 +403,30 @@ document.getElementById('cctv')!.addEventListener('click', (e) => { e.stopPropag
  * Watching the security cameras: the title's other choice (the city goes on, seen only through its
  * cameras, switching every CCTV_HOLD seconds, the street poles far more often than the shops'), or
  * in the game (debug, key C) the nearest camera. The picture is a camera of the time into a DVR:
- * the world at the lowest resolution in a 4:3 frame, monochrome, with the recorder's overlay.
+ * the world at the model's resolution (its rows) in a 4:3 frame, as its model sees color and light,
+ * held at the model's frames a second, with the recorder's overlay on a layer of big characters.
  */
 const CCTV_HOLD = 14, CCTV_POLE_WEIGHT = 15;
 let cctv: { k: number; at: number; title: boolean; res: number; sx: number; sy: number } | null = null;
+/** The last picture the recorder kept (shown until the next, at the model's rate), when, and the overlay's layer (DVR_ROWS rows). */
+let cctvHold: CharGrid | null = null, cctvShot = -1;
+const DVR_ROWS = 40;
+let dvr: CharGrid | null = null, dvrAt: [number, number] = [0, 0];
+/** The world's resolution for camera k: its model's rows; the overlay's layer over its 4:3 frame. */
+function cctvScreen(k: number) {
+  const rows = CAMS[world.cctv[k].model].rows, step = Math.max(0, RES_ROWS.indexOf(rows));
+  if (step !== resStep || !dvr) { resStep = step; resize(); }
+  cctvHold = null;
+}
+/** The overlay's layer over the 4:3 frame (again on every resize). */
+function dvrLayout() {
+  const h = canvas.height, cellH = Math.floor(h / DVR_ROWS), cellW = Math.max(3, Math.round(cellH * CELL_ASPECT));
+  const fw = Math.min(canvas.width, Math.round((h * 4) / 3)), cols = Math.floor(fw / cellW);
+  dvr = new CharGrid(cols, DVR_ROWS);
+  dvrAt = [(canvas.width - cols * cellW) >> 1, (h - DVR_ROWS * cellH) >> 1];
+  renderer.setTerm(cols, DVR_ROWS, cellW, cellH);
+  termMode = '';
+}
 function pickCam(from: number): number {
   const L = world.cctv, cur = L[from];
   let tot = 0;
@@ -424,13 +446,13 @@ function startCctv(title: boolean, k = -1) {
   if (!world.cctv.length) return;
   const p = world.player;
   cctv = { k: k >= 0 ? k : pickCam(-1), at: performance.now() / 1000, title, res: resStep, sx: p.x, sy: p.y };
-  resStep = 0; resize();
+  dvr = null; cctvScreen(cctv.k);
   if (title) { overlay.hidden = true; goToCam(cctv.k); }
 }
 function stopCctv() {
   if (!cctv) return;
   const C = cctv;
-  cctv = null;
+  cctv = null; dvr = null; cctvHold = null; termMode = '';
   resStep = C.res; resize();
   if (C.title) {
     const p = world.player;
@@ -440,20 +462,22 @@ function stopCctv() {
   }
 }
 /** The recorder's overlay over a camera's picture, inside the 4:3 frame (x0..x1 on the interface's grid). */
-function cctvOverlay(k: number, x0: number, x1: number, now: number) {
+function cctvOverlay(k: number, now: number) {
+  const ui = dvr!, x0 = 0, x1 = ui.cols, M = CAMS[world.cctv[k].model];
   const C = world.cctv[k], c = calendar(world.time), city = world.city, ch = String(k + 1).padStart(2, '0');
   const two = (n: number) => String(Math.floor(n)).padStart(2, '0'), secs = Math.floor((world.time % 60));
   const W: [number, number, number] = [235, 240, 235], bgc: [number, number, number] = [0, 0, 0];
   const place = C.kind === 0
     ? `${roadName(city, true, nearestRoad(city.xb, city.xCell, C.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, C.y))}`
     : businessName(city, C.biz);
-  const name = (C.kind === 0 ? `TRAFFIC ${place}` : place).toUpperCase().slice(0, x1 - x0 - 26);
-  ui.text(x0 + 2, 2, `CAM${ch} ${name}`, W, bgc);
-  ui.text(x1 - 22, 2, `${two(c.month)}/${two(c.day)}/${c.year} ${two(c.hour)}:${two((c.hour % 1) * 60)}:${two(secs)}`, W, bgc);
-  if (Math.floor(now * 1.2) & 1) ui.text(x1 - 8, 4, 'O', [255, 40, 30], bgc);
-  ui.text(x1 - 6, 4, 'REC', W, bgc);
-  ui.text(x0 + 2, ui.rows - 4, `CH${ch}  ${C.kind === 0 ? 'PTZ AUTO-PAN' : 'FIXED+PAN'}  CIF 352x288  7.5 FPS`, W, bgc);
-  if (cctv?.title) ui.text(x1 - 26, ui.rows - 4, `NEXT ${Math.max(0, Math.ceil(CCTV_HOLD - (now - cctv.at)))}s  [ESC] MENU`, [150, 160, 150], bgc);
+  const name = (C.kind === 0 ? `TRAFFIC ${place}` : place).toUpperCase().slice(0, x1 - x0 - 30);
+  ui.text(x0 + 2, 1, `CAM${ch} ${name}`, W, bgc);
+  ui.text(x1 - 22, 1, `${two(c.month)}/${two(c.day)}/${c.year} ${two(c.hour)}:${two((c.hour % 1) * 60)}:${two(secs)}`, W, bgc);
+  if (Math.floor(now * 1.2) & 1) ui.text(x1 - 8, 2, 'O', [255, 40, 30], bgc);
+  ui.text(x1 - 6, 2, 'REC', W, bgc);
+  ui.text(x0 + 2, ui.rows - 3, `CH${ch} ${cctvMakerName(world.city, M.maker).toUpperCase()} ${M.code}`, W, bgc);
+  ui.text(x0 + 2, ui.rows - 2, `${M.color ? 'COLOR' : 'B/W'} ${M.res} ${M.px}  ${M.fps} FPS  ${C.kind === 0 ? 'AUTO-PAN' : 'PAN'}`, W, bgc);
+  if (cctv?.title) ui.text(x1 - 26, ui.rows - 2, `NEXT ${Math.max(0, Math.ceil(CCTV_HOLD - (now - cctv.at)))}s  [ESC] MENU`, [150, 160, 150], bgc);
 }
 canvas.addEventListener('click', () => { if (!cctv?.title && !input.locked && !phone.out && !laptop.open) input.lock(); });
 
@@ -484,7 +508,7 @@ function frame(now: number) {
   acc += dt;
   const cmd = readInput();
   // in the title's camera mode, switch cameras now and then; the pedestrians sync to its heading
-  if (cctv?.title && now / 1000 - cctv.at > CCTV_HOLD) { cctv.k = pickCam(cctv.k); cctv.at = now / 1000; goToCam(cctv.k); }
+  if (cctv?.title && now / 1000 - cctv.at > CCTV_HOLD) { cctv.k = pickCam(cctv.k); cctv.at = now / 1000; goToCam(cctv.k); cctvScreen(cctv.k); }
   if (cctv) cmd.heading = world.cctv[cctv.k].yaw;
   while (acc >= TICK) { stepWorld(world, cmd); acc -= TICK; }
   const alpha = acc / TICK;
@@ -524,13 +548,20 @@ function frame(now: number) {
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
   ui.wipe(); hd.wipe();
   if (cctv) {
-    // the camera's picture: its look, then a 4:3 frame on the monitor (black bars at the sides)
-    cctvLook(grid, now / 1000, cctv.k * 31 + 7);
+    // the camera's picture: kept at its model's rate and seen its way, then a 4:3 frame on the monitor (black bars at the sides)
+    const C = world.cctv[cctv.k], M = CAMS[C.model];
+    if (!cctvHold || cctvHold.cols !== grid.cols || cctvHold.rows !== grid.rows) { cctvHold = new CharGrid(grid.cols, grid.rows); cctvShot = -1; }
+    if (cctvShot < 0 || now / 1000 - cctvShot >= 1 / M.fps) {
+      cctvShot = now / 1000;
+      cctvHold.cells.set(grid.cells); cctvHold.bg.set(grid.bg);
+      cctvLook(cctvHold, now / 1000, cctv.k * 31 + 7, M, C.wear);
+    }
+    grid.cells.set(cctvHold.cells); grid.bg.set(cctvHold.bg);
     const w43 = Math.min(grid.cols, Math.round((grid.rows * layout.cellH * 4) / 3 / layout.cellW)), gx0 = (grid.cols - w43) >> 1;
     for (let y = 0; y < grid.rows; y++) for (let x = 0; x < grid.cols; x++) if (x < gx0 || x >= gx0 + w43) { const i = y * grid.cols + x; grid.put(i, 32, 0, 0, 0); grid.setBg(i, 0, 0, 0); }
-    const ux0 = Math.round((gx0 * layout.cellW) / uiLayout.cellW), ux1 = Math.round(((gx0 + w43) * layout.cellW) / uiLayout.cellW);
-    cctvOverlay(cctv.k, ux0, ux1, now / 1000);
-    renderer.draw(grid, ui, hd, null);
+    dvr!.wipe();
+    cctvOverlay(cctv.k, now / 1000);
+    renderer.draw(grid, ui, hd, { grid: dvr!, x: dvrAt[0], y: dvrAt[1] });
     requestAnimationFrame(frame);
     return;
   }

@@ -726,18 +726,32 @@ export function substationModel(D: number, W: number, on: boolean, flood: number
 
 const cams = new Map<string, Part[]>();
 /**
- * A security camera's housing at height z, looking along +x (it pans with the object's heading): the
- * body, its sun shield, the dark lens and the red light of a camera recording (`led`).
+ * A security camera at height z, looking along +x (it pans with the object's heading), by its
+ * model's shape (sim/cctv.ts): a box camera in its weather housing with a sun shield and a dark
+ * lens; a dome, a smoked half-ball under a white base; a bullet, a long white tube with a hood. The
+ * red light of a camera recording blinks (`led`).
  */
-export function cctvModel(z: number, led: boolean): Part[] {
-  const key = z.toFixed(1) + (led ? '*' : '');
+export function cctvModel(z: number, led: boolean, shape: 'box' | 'dome' | 'bullet'): Part[] {
+  const key = z.toFixed(1) + (led ? '*' : '') + shape;
   let m = cams.get(key);
   if (m) return m;
-  m = [
-    part(Box, -0.28, -0.09, z - 0.1, 0.16, 0.09, z + 0.07, [206, 206, 200], Solid, '=', '-', '#'),
-    part(Box, -0.3, -0.12, z + 0.07, 0.24, 0.12, z + 0.1, [176, 178, 172], Solid, '-', '='),
-    part(Ball, 0.12, -0.065, z - 0.085, 0.22, 0.065, z + 0.045, [22, 24, 30], Solid, 'o', 'o'),
-    part(Box, -0.3, -0.02, z - 0.04, -0.27, 0.02, z, led ? [255, 40, 30] : [70, 20, 18], led ? Glow : Solid, '.'),
+  const LED: RGB = led ? [255, 40, 30] : [70, 20, 18], ledM = led ? Glow : Solid;
+  if (shape === 'box') m = [
+    part(Box, -0.36, -0.12, z - 0.13, 0.22, 0.12, z + 0.09, [210, 210, 204], Solid, '=', '-', '#'),
+    part(Box, -0.4, -0.16, z + 0.09, 0.32, 0.16, z + 0.13, [180, 182, 176], Solid, '-', '='),
+    part(Ball, 0.18, -0.085, z - 0.11, 0.3, 0.085, z + 0.06, [22, 24, 30], Solid, 'o', 'o'),
+    part(Box, -0.4, -0.03, z - 0.05, -0.36, 0.03, z + 0.01, LED, ledM, '.'),
+  ];
+  else if (shape === 'dome') m = [
+    part(Cyl, -0.2, -0.2, z + 0.02, 0.2, 0.2, z + 0.12, [222, 222, 218], Solid, '=', '-'),
+    part(Ball, -0.17, -0.17, z - 0.2, 0.17, 0.17, z + 0.06, [38, 40, 48], Solid, 'O', 'o'),
+    part(Box, 0.16, -0.025, z + 0.02, 0.2, 0.025, z + 0.07, LED, ledM, '.'),
+  ];
+  else m = [
+    part(Ball, -0.3, -0.09, z - 0.09, 0.22, 0.09, z + 0.09, [226, 226, 222], Solid, '=', '-'),
+    part(Box, -0.05, -0.11, z + 0.07, 0.32, 0.11, z + 0.1, [200, 200, 196], Solid, '-', '='),
+    part(Ball, 0.17, -0.06, z - 0.06, 0.25, 0.06, z + 0.06, [22, 24, 30], Solid, 'o', 'o'),
+    part(Box, -0.18, -0.12, z - 0.03, -0.14, -0.09, z + 0.02, LED, ledM, '.'),
   ];
   cams.set(key, m);
   return m;

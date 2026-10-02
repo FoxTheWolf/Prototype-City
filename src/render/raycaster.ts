@@ -16,7 +16,7 @@ import { drawFall, underRoof, type Roof } from './precip';
 import { power } from './power';
 import { subAt, type PowerGrid } from '../sim/power';
 import { CURVE_R, drawCranes, sarcophagusColumn } from './sarcophagus';
-import { cctvYaw } from '../sim/cctv';
+import { CAMS, cctvYaw } from '../sim/cctv';
 import { daylight, prepareSky, skyColumn, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, BULB_COLS, BULB_ROWS, bulbGlyph, bulbOn, bulbsIn, fontRows, marqueeBulb, signLight, signMode, signText, SignMode } from './signs';
 import { tickerText } from '../locale/news';
@@ -1400,7 +1400,7 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
     if (Math.abs(C.x - v.x) > CCTV_FAR || Math.abs(C.y - v.y) > CCTV_FAR) return;
     const arm = Math.hypot(C.x - C.mx, C.y - C.my), a = Math.atan2(C.y - C.my, C.x - C.mx), yaw = cctvYaw(C, frameSec);
     boardList.push({ x: C.mx, y: C.my, c: Math.cos(a), s: Math.sin(a), parts: cctvMount(C.z, arm, C.kind === 0), r: arm + 0.2, h: C.z + 0.4, z0: C.kind === 0 ? 0 : C.z - 0.15, seed: 9700 + k });
-    boardList.push({ x: C.x, y: C.y, c: Math.cos(yaw), s: Math.sin(yaw), parts: cctvModel(C.z, (frameSec + k * 0.29) % 2 < 1), r: 0.35, h: C.z + 0.12, z0: C.z - 0.12, seed: 9800 + k });
+    boardList.push({ x: C.x, y: C.y, c: Math.cos(yaw), s: Math.sin(yaw), parts: cctvModel(C.z, (frameSec + k * 0.29) % 2 < 1, CAMS[C.model].shape), r: 0.45, h: C.z + 0.15, z0: C.z - 0.22, seed: 9800 + k });
   });
   // the substations' yards
   world.power.subs.forEach((S, k) => {

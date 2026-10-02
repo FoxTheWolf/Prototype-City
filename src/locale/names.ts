@@ -167,6 +167,11 @@ export function makerName(city: City, k: number): string {
   return L.roots[(city.nameSeed + (L.roots.length - slot) * 7919) % L.roots.length];
 }
 
+/** A maker of security cameras (three per city, see sim/cctv.ts CAMS). */
+export function cctvMakerName(city: City, k: number): string {
+  return L.roots[(city.nameSeed + (L.roots.length - 50 - k) * 7919) % L.roots.length];
+}
+
 /** A Wi-Fi network's name: a shop's own (its name run together, with a suffix), or a home router's default or its owner's. */
 export function wifiName(city: City, A: { biz: number; bssid: string; building: number; util?: number }): string {
   if (A.util !== undefined && A.util >= 0) return `GRIDLINK-${String(A.util + 1).padStart(2, '0')}`;

@@ -41,7 +41,11 @@ void main() {
     vec4 hp = texelFetch(uHd, (q * ${HD}) / uUiCell, 0);
     if (hp.a > 0.25 && hp.a < 0.75) col = hp.rgb;
     ivec2 m = s - uTmOrigin, mc = m / max(uTmCell, ivec2(1));
-    if (uTmGrid.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < uTmGrid.x && mc.y < uTmGrid.y) col = layer(uTmCells, uTmAtlas, m, mc, uTmCell, texelFetch(uTmBg, mc, 0).rgb);
+    // (like the interface: a cell nothing was drawn in is clear, one with a glyph only lies over what is under it)
+    if (uTmGrid.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < uTmGrid.x && mc.y < uTmGrid.y) {
+      vec4 tb = texelFetch(uTmBg, mc, 0);
+      if (tb.a > 0.25) col = layer(uTmCells, uTmAtlas, m, mc, uTmCell, tb.a > 0.75 ? tb.rgb : col);
+    }
     vec4 ub = texelFetch(uUiBg, u, 0);
     if (ub.a > 0.25) col = layer(uUiCells, uUiAtlas, q, u, uUiCell, ub.a > 0.75 ? ub.rgb : col);
     if (hp.a > 0.75) col = hp.rgb;
