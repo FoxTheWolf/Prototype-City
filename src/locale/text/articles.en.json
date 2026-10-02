@@ -1,0 +1,190 @@
+{
+  "art.crash": ["#crashLead# #crashMid# #crashWitness# #crashClose#"],
+  "crashLead": [
+    "Two vehicles collided at {road} and {cross} {when}, #trafficPolice# said.",
+    "A collision at the corner of {road} and {cross} slowed traffic {when}.",
+    "Drivers on {road} found the intersection at {cross} blocked {when} after two cars collided.",
+    "#trafficPolice.cap# responded to a collision at {road} and {cross} {when}.",
+    "A fender-bender at {road} and {cross} {when} left two cars stopped in the intersection."
+  ],
+  "crashMid": [
+    "#noInjury#",
+    "#noInjury# #cause#",
+    "#cause# #noInjury#",
+    "#noInjury# #towed#",
+    "#cause# #towed#"
+  ],
+  "noInjury": [
+    "No serious injuries were reported.",
+    "Both drivers were checked at the scene and declined further care.",
+    "Officials said everyone involved walked away.",
+    "Paramedics checked one driver for minor bumps and bruises.",
+    "No one was taken to the hospital, according to the fire department."
+  ],
+  "cause": [
+    "One driver appears to have run the light.",
+    "Wet pavement may have played a part.",
+    "Investigators are looking at whether a driver failed to yield.",
+    "The cause is under review.",
+    "Witnesses said one car entered the intersection late on a yellow.",
+    "Officers said speed may have been a factor."
+  ],
+  "towed": [
+    "Both cars were towed from the scene.",
+    "A tow truck cleared the lanes within the hour.",
+    "One lane stayed closed while crews swept up glass.",
+    "Traffic was waved around the cars until they were moved."
+  ],
+  "crashWitness": [
+    "\"#crashQuote#,\" said {witness}, who #sawFrom#.",
+    "{witness}, who #sawFrom#, said: \"#crashQuote#.\"",
+    "",
+    "\"#crashQuote#,\" {witness} told the Courier."
+  ],
+  "crashQuote": [
+    "I heard the brakes and then the bang",
+    "It happened so fast",
+    "That corner is always trouble",
+    "Everybody just stopped and stared",
+    "They need a longer yellow there",
+    "I'm just glad nobody was hurt",
+    "You could hear it from inside the shop"
+  ],
+  "sawFrom": [
+    "was waiting at the bus stop",
+    "works nearby",
+    "was walking home",
+    "was getting coffee across the street",
+    "lives on the corner",
+    "was crossing {cross} at the time"
+  ],
+  "crashClose": [
+    "Drivers are advised to expect delays on {road}.",
+    "The intersection has reopened.",
+    "Residents have asked the city for a traffic study at the corner.",
+    "It was the #nth# collision at the corner this year, according to city records.",
+    "#trafficPolice.cap# urged drivers to slow down in #weatherWord#."
+  ],
+  "trafficPolice": ["police", "traffic officers", "the police department", "a police spokesperson", "officers at the scene"],
+  "nth": ["second", "third", "fourth", "fifth"],
+  "weatherWord": ["the rain", "bad weather", "the evening rush", "the dark", "busy hours"],
+
+  "art.jam": ["#jamLead# #jamMid# #jamClose#"],
+  "jamLead": [
+    "Traffic backed up on {road} near {cross} {when}.",
+    "Cars sat bumper to bumper on {road} at {cross} {when}.",
+    "Commuters on {road} crawled past {cross} {when}.",
+    "A slowdown on {road} stretched blocks back from {cross} {when}."
+  ],
+  "jamMid": [
+    "#jamCause# Drivers reported waits of {m} minutes or more.",
+    "#jamCause#",
+    "Some drivers turned onto side streets to get around it. #jamCause#",
+    "Buses on the route ran late. #jamCause#"
+  ],
+  "jamCause": [
+    "The signals at the corner were blamed for the delay.",
+    "City officials said heavy volume was to blame.",
+    "A stalled car added to the trouble.",
+    "No single cause was reported.",
+    "Double-parked delivery trucks narrowed the lanes."
+  ],
+  "jamClose": [
+    "Traffic was moving again within the hour.",
+    "The city says it will review the light timing.",
+    "Drivers are urged to plan extra time.",
+    "\"It's like this every #day#,\" said {witness}, who drives the route.",
+    ""
+  ],
+  "day": ["evening", "morning", "day", "Friday", "week"],
+
+  "art.blackout": ["#boLead# #boMid# #boWitness# #boClose#"],
+  "boLead": [
+    "The lights went out across {district} {when}, leaving blocks in the dark.",
+    "A power failure struck {district} {when}.",
+    "Thousands in {district} lost power {when}.",
+    "Street lights, signs and windows went dark in {district} {when} in a sudden outage."
+  ],
+  "boMid": [
+    "The utility said a fault at a substation tripped the line. #signals#",
+    "Crews were sent to the neighborhood substation. #signals#",
+    "#signals# The utility has not said what caused the failure.",
+    "The cause is under investigation. #signals#"
+  ],
+  "signals": [
+    "Traffic lights in the area went dark, and drivers treated intersections as four-way stops.",
+    "Officers directed traffic at the busiest corners.",
+    "Elevators stopped in several buildings; no one was reported stuck for long.",
+    "Shops lit candles and kept their doors open."
+  ],
+  "boWitness": [
+    "\"#boQuote#,\" said {witness}, who lives in {district}.",
+    "",
+    "{witness} said: \"#boQuote#.\""
+  ],
+  "boQuote": [
+    "Everything just went quiet",
+    "You could see the stars for once",
+    "The whole street came outside to see",
+    "My phone still worked, so I called my mother",
+    "I heard a bang and then nothing"
+  ],
+  "boClose": [
+    "Power is expected back within hours.",
+    "The utility asked residents to keep freezers closed.",
+    "Crews worked through the night.",
+    "Hospitals in the area switched to generators."
+  ],
+
+  "art.restored": ["#reLead# #reMid# #reClose#"],
+  "reLead": [
+    "Power returned to {district} {when}.",
+    "The lights came back on across {district} {when}.",
+    "Crews restored electricity to {district} {when}."
+  ],
+  "reMid": [
+    "The utility said repairs at the substation were complete.",
+    "Street lights flickered back block by block.",
+    "Traffic signals were back to normal soon after."
+  ],
+  "reClose": [
+    "The cause of the outage is still being reviewed.",
+    "Officials thanked residents for their patience.",
+    "\"We were lucky it didn't last longer,\" said {witness}.",
+    ""
+  ],
+
+  "art.weather": [
+    "Forecasters expect #wxLater# later, with temperatures near {temp} degrees. #wxAdvice#",
+    "{city} will see #wxLater# over the next few hours. #wxAdvice#",
+    "It is {temp} degrees in {city}. #wxAdvice# Expect #wxLater# later."
+  ],
+  "wxLater": ["clear skies", "clouds rolling in", "more rain", "a light drizzle", "a calm night", "a chilly evening", "gusty winds"],
+  "wxAdvice": ["Bring an umbrella.", "Drivers should watch for slick roads.", "A good night for a walk.", "Bundle up.", "Keep a coat handy."],
+
+  "art.flavor": [
+    "#flLead# #flMid# #flClose#"
+  ],
+  "flLead": [
+    "The story drew a crowd of neighbors {when}.",
+    "Word spread quickly through {district} {when}.",
+    "City officials confirmed the news {when}.",
+    "It was the talk of {district} {when}."
+  ],
+  "flMid": [
+    "\"#flQuote#,\" said {witness}, a longtime resident.",
+    "Residents said they had been waiting for news like this for years.",
+    "Not everyone was pleased. \"#flQuote#,\" said {witness}.",
+    "The details are still coming in, the Courier has learned.",
+    "{witness}, who has lived in {district} for {m} years, called it \"#flWord#.\""
+  ],
+  "flQuote": ["It's about time", "We'll see how it goes", "Nobody asked us", "This is good for the neighborhood", "I didn't believe it at first", "My kids are excited"],
+  "flWord": ["a big deal", "long overdue", "a surprise", "typical", "good news for once"],
+  "flClose": [
+    "More is expected at the next council meeting.",
+    "The Courier will follow the story.",
+    "Readers can share their views in Sunday's letters page.",
+    "Officials did not return calls for comment.",
+    ""
+  ]
+}

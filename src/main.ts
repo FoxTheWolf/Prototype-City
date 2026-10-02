@@ -73,7 +73,7 @@ phone.incomingCall = () => (payphone.call && payphone.active ? [payphone.call, w
 // the phone's camera sees the player's view
 phone.render = (g, k = 1) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: eyeNow() + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: (layout.cellW / layout.cellH) * k, look, hand: handLightNow() });
 // Streetwire's photos: the city seen from where a post's author stood
-phone.shoot = (g, x, y, yaw) => renderWorld(g, world, { x, y, yaw, pitch: 0.06, eye: 1.6, floor: 0, z: 0, lift: false, alpha: 0, cellAspect: layout.cellW / layout.cellH, look });
+phone.shoot = (g, x, y, yaw, eye = 1.6, pitch = 0.06) => renderWorld(g, world, { x, y, yaw, pitch, eye, floor: 0, z: 0, lift: false, alpha: 0, cellAspect: layout.cellW / layout.cellH, look });
 /** The light in the player's hand now: the camera's flash for a moment after a shot, the torch app while the phone is out. */
 function handLightNow(): number {
   const t = performance.now() / 1000;

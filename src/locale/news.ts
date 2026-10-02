@@ -5,9 +5,9 @@ import { forecast, newWeather } from '../sim/weather';
 import { type World } from '../sim/world';
 import en from './en.json';
 import { businessName, cityName, districtName, landmarkName, roadName, seamName } from './names';
-import { expand, Fresh, selOf } from './gen';
+import { expand, Fresh, rngOf, selOf } from './gen';
 import { momentTags } from './voice';
-import { makerName } from './names';
+import { citizenNames, makerName } from './names';
 import { TEXT } from './text';
 
 /**
@@ -68,6 +68,24 @@ export function madeHeadline(city: City, seed: number, a: number, b: number, t =
 const ahead = newWeather();
 let key = '', text = '';
 
+/**
+ * A story behind a headline, to be opened in the news app: what it is about, and for one that
+ * happened (a blackout, the lights back, a crash, a jam) where, so the paper has a photo of it.
+ */
+export interface Story {
+  head: string;
+  kind: 'blackout' | 'restored' | 'crash' | 'jam' | 'weather' | 'date' | 'flavor';
+  /** Where it happened (NaN when nowhere in particular), its words (road, cross street, district), and a number that picks its text. */
+  x: number; y: number;
+  road: string; cross: string; district: string;
+  key: number;
+  /** Game time it happened. */
+  at: number;
+}
+let stories: Story[] = [];
+/** The stories of the headlines the tickers run now, in the same order. */
+export function newsStories(world: World): Story[] { tickerText(world); return stories; }
+
 /** Seconds of real time a restored substation stays in the news. */
 const RESTORED_NEWS = 120;
 /** Seconds of real time a traffic jam stays in the news. */
@@ -84,24 +102,30 @@ export function tickerText(world: World): string {
   key = k;
   const pick = <T>(a: T[], j: number) => a[Math.floor(hash3(world.seed, hour, j) * a.length)];
   const items: string[] = [];
+  stories = [];
+  const story = (head: string, kind: Story['kind'], x = NaN, y = NaN, road = '', cross = '', district = '', k = 0, at = world.time) => {
+    items.push(head);
+    stories.push({ head, kind, x, y, road, cross, district, key: k, at });
+  };
   power.subs.forEach((s, j) => {
-    const d = districtName(city, districtAt(city, s.x, s.y)).toUpperCase();
-    if (!s.on) items.push(pick(N.blackout, 100 + j).replace('{district}', d));
-    else if (recent(s)) items.push(pick(N.restored, 200 + j).replace('{district}', d));
+    const dn = districtName(city, districtAt(city, s.x, s.y)), d = dn.toUpperCase();
+    const at = world.time - ((world.tick - s.changed) / 60) * 30;
+    if (!s.on) story(pick(N.blackout, 100 + j).replace('{district}', d), 'blackout', s.x, s.y, '', '', dn, 100 + j + hour * 7, at);
+    else if (recent(s)) story(pick(N.restored, 200 + j).replace('{district}', d), 'restored', s.x, s.y, '', '', dn, 200 + j + hour * 7, at);
   });
   for (const e of jams.slice(-3)) {
-    const [i, j, hd] = e.refs, avenue = (hd & 1) === 1;
-    items.push(pick(e.kind === 'crash' ? N.crash : N.jam, 300 + e.id).replace('{road}', roadName(city, avenue, avenue ? i : j).toUpperCase()).replace('{cross}', roadName(city, !avenue, avenue ? j : i).toUpperCase()));
+    const [i, j, hd] = e.refs, avenue = (hd & 1) === 1, road = roadName(city, avenue, avenue ? i : j), cross = roadName(city, !avenue, avenue ? j : i);
+    story(pick(e.kind === 'crash' ? N.crash : N.jam, 300 + e.id).replace('{road}', road.toUpperCase()).replace('{cross}', cross.toUpperCase()), e.kind === 'crash' ? 'crash' : 'jam', e.x, e.y, road, cross, districtName(city, districtAt(city, e.x, e.y)), e.id, e.time);
   }
   const W = world.weather, c = calendar(world.time);
   ahead.preset = W.preset;
   forecast(world.seed, world.time + 6 * 3600, ahead);
-  items.push(N.weather.replace('{city}', cityName(city).toUpperCase()).replace('{now}', sky(W)).replace('{temp}', String(Math.round(W.temp * 1.8 + 32))).replace('{later}', sky(ahead)));
-  items.push(N.date.replace('{wd}', N.weekdays[c.weekday]).replace('{mon}', N.months[c.month - 1]).replace('{d}', String(c.day)).replace('{y}', String(c.year)));
+  story(N.weather.replace('{city}', cityName(city).toUpperCase()).replace('{now}', sky(W)).replace('{temp}', String(Math.round(W.temp * 1.8 + 32))).replace('{later}', sky(ahead)), 'weather', NaN, NaN, '', '', '', hour);
+  story(N.date.replace('{wd}', N.weekdays[c.weekday]).replace('{mon}', N.months[c.month - 1]).replace('{d}', String(c.day)).replace('{y}', String(c.year)), 'date');
   const first = Math.floor(hash3(world.seed, hour, 0) * FLAVOR.length);
   // five different stories (11 steps through the list never repeat within it: 11 and its length are coprime)
   // half from the written stories, half put together by the grammar
-  for (let j = 0; j < 5; j++) items.push(j & 1 ? madeHeadline(city, world.seed, hour, j, world.time) : fillHeadline(city, FLAVOR[(first + j * 11) % FLAVOR.length], (q) => hash3(world.seed, hour * 8 + j, q)));
+  for (let j = 0; j < 5; j++) story(j & 1 ? madeHeadline(city, world.seed, hour, j, world.time) : fillHeadline(city, FLAVOR[(first + j * 11) % FLAVOR.length], (q) => hash3(world.seed, hour * 8 + j, q)), 'flavor', NaN, NaN, '', '', districtName(city, Math.floor(hash3(world.seed, hour * 8 + j, 4) * city.districts.length)), hour * 8 + j);
   text = items.join(N.sep) + N.sep;
   return text;
 }
@@ -110,4 +134,26 @@ function sky(w: { cloud: number; precip: number; snow: boolean }): string {
   const S = N.sky;
   if (w.precip > 0.02) return w.snow ? S.snow : w.precip > 0.75 ? S.storm : w.precip < 0.25 ? S.drizzle : S.rain;
   return w.cloud > 0.7 ? S.cloudy : S.clear;
+}
+
+/**
+ * The article under a story's headline, by the article grammar (locale/text/articles.en.json): a
+ * few sentences with the real places and someone of the city quoted. The same story always reads
+ * the same. The date line has none.
+ */
+export function storyBody(world: World, S: Story): string[] {
+  if (S.kind === 'date') return [];
+  const { city } = world, r = rngOf(world.seed, S.key, 0xa27);
+  const P = world.pop, wi = P.n ? Math.floor(r() * P.n) : -1, [first, last] = wi >= 0 ? citizenNames(city, P, wi) : ['A', 'Neighbor'];
+  const h = calendar(S.at).hour;
+  const when = h < 5 ? 'overnight' : h < 11 ? 'this morning' : h < 14 ? 'around midday' : h < 18 ? 'this afternoon' : h < 21 ? 'this evening' : 'tonight';
+  const ctx = {
+    road: S.road, cross: S.cross, district: S.district || cityName(city), city: cityName(city), when,
+    witness: `${first} ${last}`, temp: String(Math.round(world.weather.temp * 1.8 + 32)), m: String(5 + Math.floor(r() * 30)),
+  };
+  const body = expand(`#art.${S.kind}#`, TEXT, r, ctx).replace(/\s+/g, ' ').trim();
+  // in paragraphs of two sentences
+  const sent = body.match(/[^.!?]+[.!?]+["']?/g) ?? [body], out: string[] = [];
+  for (let k = 0; k < sent.length; k += 2) out.push(sent.slice(k, k + 2).map((x) => x.trim()).join(' '));
+  return out;
 }

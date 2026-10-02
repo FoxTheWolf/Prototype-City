@@ -56,16 +56,26 @@ function viewpoint(city: City, p: Post): [number, number, number] {
 
 /** The post's photo: taken now if not yet (main renders it through P.shoot). */
 function picOf(P: Phone, world: World, p: Post): Pic | null {
-  let pic = pics.get(p.id);
+  const [x, y, yaw] = viewpoint(world.city, p);
+  return takePic(P, p.id, x, y, yaw, PIC_W, PIC_H);
+}
+
+/**
+ * A photo of the city, w x h cells, kept by `id`: taken now if not yet (main renders it through
+ * P.shoot) from (x, y) looking along yaw, at an eye height and a pitch (a street photo by default).
+ * Null while it cannot be taken.
+ */
+export function takePic(P: Phone, id: number, x: number, y: number, yaw: number, PIC_W: number, PIC_H: number, eye?: number, pitch?: number): Pic | null {
+  let pic = pics.get(id);
   if (pic || !P.shoot) return pic ?? null;
   // rendered with one cell per HD pixel (the same shape as a cell, a third of it each way), each
   // pixel the cell's glyph colour mixed into its background by how much of the cell the glyph covers
-  const W = PIC_W * HD, H = PIC_H * HD, g = new CharGrid(W, H), [x, y, yaw] = viewpoint(world.city, p);
-  P.shoot(g, x, y, yaw);
+  const W = PIC_W * HD, H = PIC_H * HD, g = new CharGrid(W, H);
+  P.shoot(g, x, y, yaw, eye, pitch);
   const hd = new Uint8ClampedArray(W * H * 3);
   for (let i = 0; i < W * H; i++) {
     // a phone camera of 2008: a little soft, a little noisy
-    const k = i * 4, f = cover(g.cells[k]), n = (hash3(p.id, i, 9) - 0.5) * 22;
+    const k = i * 4, f = cover(g.cells[k]), n = (hash3(id, i, 9) - 0.5) * 22;
     for (let c = 0; c < 3; c++) hd[i * 3 + c] = g.bg[k + c] + (g.cells[k + 1 + c] - g.bg[k + c]) * f + n;
   }
   const cells = new Uint8ClampedArray(PIC_W * PIC_H * 4), bg = new Uint8ClampedArray(PIC_W * PIC_H * 4);
@@ -80,7 +90,7 @@ function picOf(P: Phone, world: World, p: Post): Pic | null {
     bg[o + 3] = 255;
   }
   pic = { w: PIC_W, h: PIC_H, cells, bg, hd };
-  pics.set(p.id, pic);
+  pics.set(id, pic);
   if (pics.size > 120) pics.delete(pics.keys().next().value!);
   return pic;
 }

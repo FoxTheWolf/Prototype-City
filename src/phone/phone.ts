@@ -22,6 +22,7 @@ import { calendar as calendarOf } from '../sim/clock';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
 import { type Post } from '../sim/social';
 import { newWire, wireKey } from './wire';
+import { newsStories, type Story } from '../locale/news';
 import { calKey, newCal } from './calendar';
 import { CASES, SHELLS } from './shells';
 
@@ -182,6 +183,10 @@ export class Phone {
   /** The store: a note on the last try (no Wi-Fi, no credit, no storage). */
   storeNote = '';
   newsAt = -1e9;
+  /** The news app: the story picked on the front page, and the one open (null: the front page). */
+  newsSel = 0;
+  newsOpen: Story | null = null;
+  private newsScroll = 0;
   /** Streetwire: the posts as last downloaded (newest last), when, and the newest post id seen then. */
   wire: Post[] = [];
   wireAt = -1e9;
@@ -190,7 +195,7 @@ export class Phone {
   /** The calendar: the month and day in view, the page, the player's reminders. */
   readonly cal = newCal();
   /** Renders the city from a point (main hands it): the photos on Streetwire's posts. */
-  shoot: ((g: CharGrid, x: number, y: number, yaw: number) => void) | null = null;
+  shoot: ((g: CharGrid, x: number, y: number, yaw: number, eye?: number, pitch?: number) => void) | null = null;
   private wireId = -1;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
@@ -920,6 +925,10 @@ export class Phone {
     if (id === 'social' && (k !== 'rsoft' || this.wst.view !== 'feed')) {
       return wireKey(this, k, now, () => { if (this.online()) { this.fetchWire(now); this.since = now; } });
     }
+    if (id === 'news' && this.newsOpen) {
+      if (k === 'rsoft' || k === 'left') { this.newsOpen = null; this.scroll = this.newsScroll; return true; }
+      return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false;
+    }
     if (k === 'rsoft') { if (this.appFrom === 'store') this.stab = 1; this.open(this.appFrom, now); return true; }
     if (id === 'snake') {
       const S = this.snake;
@@ -928,7 +937,17 @@ export class Phone {
       if (d[k]) { S.steer(...d[k]); return true; }
       return false;
     }
-    if (id === 'news') { if ((k === 'ok' || k === 'lsoft') && this.online()) { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; } return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false; }
+    if (id === 'news') {
+      if (k === 'lsoft' && this.online()) { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; }
+      const fresh = this.world.time - this.newsAt <= 3600;
+      if ((k === 'ok' || k === 'right') && fresh) {
+        const q = newsStories(this.world).filter((s) => s.kind !== 'date')[this.newsSel];
+        if (q) { this.newsOpen = q; this.newsScroll = this.scroll; this.scroll = 0; this.since = now; }
+        return true;
+      }
+      if (k === 'ok' && this.online()) { this.radio.fetch('news', NEWS_KB, now); this.since = now; return true; }
+      return k === 'up' || k === 'down' ? (this.newsSel = Math.max(0, this.newsSel + (k === 'up' ? -1 : 1)), true) : false;
+    }
     if (id === 'convert') {
       const C = this.conv;
       if (k === 'up' || k === 'down') { C.pair = (C.pair + (k === 'up' ? -1 : 1) + CONVERT.length) % CONVERT.length; return true; }

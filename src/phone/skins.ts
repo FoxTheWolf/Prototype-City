@@ -1,7 +1,11 @@
 import { weatherIcon, wxArt } from './hdicons';
 import en from '../locale/en.json';
 import { cityName } from '../locale/names';
-import { tickerText } from '../locale/news';
+import { newsStories, storyBody, type Story } from '../locale/news';
+import { HD } from '../render/hd';
+import { isSolid } from '../sim/city';
+import { takePic } from './wire';
+import { PICK, PICK_INK } from './ui';
 import { calendar, moonPhase, sunDir } from '../sim/clock';
 import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
@@ -113,21 +117,94 @@ export function newsApp(S: Lcd, P: Phone, world: World, t: number, loading: bool
     S.center(10, P.online() ? A.shop.newsWait : A.shop.newsNone, P.online() ? FADED : [170, 40, 30], PAPER);
     return softKeys(S, '', en.phone.back);
   }
-  const heads = tickerText(world).split(en.news.sep).map((h) => h.trim()).filter(Boolean);
-  const rows: [string, C3, boolean][] = [];
-  heads.forEach((h, k) => {
-    for (const l of wrapW(h, SW - 2)) rows.push([l, INK, k === 0]);
-    rows.push([k === 0 ? '' : '', INK, false]);
-    if (k < heads.length - 1) rows.push(['~'.repeat(8), RULE, false]);
+  // the front page: every story under its headline; the picked one dark, OK opens it
+  if (P.newsOpen) return article(S, P, world, P.newsOpen, t);
+  const list = newsStories(world).filter((q) => q.kind !== 'date');
+  P.newsSel = Math.max(0, Math.min(P.newsSel, list.length - 1));
+  const rows: [string, number][] = [];
+  let selRow = 0;
+  list.forEach((q, k) => {
+    if (k === P.newsSel) selRow = rows.length;
+    for (const l of wrapW(q.head + (isNaN(q.x) ? '' : ' [PHOTO]'), SW - 2)) rows.push([l, k]);
+    if (k < list.length - 1) rows.push(['~', -1]);
   });
   const view = SH - 7;
+  // keep the picked story in view
+  if (selRow < P.scroll) P.scroll = selRow;
+  const selEnd = rows.findIndex((r, i) => i > selRow && r[1] !== P.newsSel);
+  if ((selEnd < 0 ? rows.length : selEnd) > P.scroll + view) P.scroll = (selEnd < 0 ? rows.length : selEnd) - view;
   P.scroll = Math.max(0, Math.min(P.scroll, Math.max(0, rows.length - view)));
-  rows.slice(P.scroll, P.scroll + view).forEach(([l, col, lead], k) => {
-    const y = 5 + k;
-    if (l.startsWith('~')) { S.center(y, '*  *  *', col, PAPER); return; }
-    S.text(1, y, typed(l, t - k * 0.03, 140), col, lead ? [228, 216, 190] : PAPER);
+  rows.slice(P.scroll, P.scroll + view).forEach(([l, k], i) => {
+    const y = 5 + i, pick = k === P.newsSel;
+    if (l === '~') { S.center(y, '*  *  *', RULE, PAPER); return; }
+    if (pick) S.fill(y, PICK);
+    S.text(1, y, typed(l, t - i * 0.03, 140), pick ? PICK_INK : INK, pick ? PICK : k === 0 ? [228, 216, 190] : PAPER);
   });
   softKeys(S, W.refresh, en.phone.back);
+}
+
+/** Photos of the stories: bigger than Streetwire's (the paper's), 42 x 18. */
+const PHOTO_W = 42, PHOTO_H = 18;
+/**
+ * Where the paper's photo of a story is taken from: a security camera near it (the still from its
+ * recorder, from up on its pole or wall), else a spot on the street 20 to 40 m off, looking at it.
+ */
+function photoSpot(world: World, q: Story): [number, number, number, number, number, number] {
+  // a substation: from its street, across the fence
+  const Y = world.power.subs.find((u) => u.x === q.x && u.y === q.y)?.yard;
+  if (Y) {
+    const c = Math.cos(Y.a), sn = Math.sin(Y.a), half = Math.abs(c) > 0.5 ? (Y.x1 - Y.x0) / 2 : (Y.y1 - Y.y0) / 2;
+    return [q.x + c * (half + 7), q.y + sn * (half + 7), Y.a + Math.PI, 1.6, 0.12, -1];
+  }
+  let best = -1, bd = 140;
+  world.cctv.forEach((c, k) => { const d = Math.hypot(c.x - q.x, c.y - q.y); if (d < bd && d > 6) { bd = d; best = k; } });
+  if (best >= 0) {
+    const c = world.cctv[best];
+    return [c.x, c.y, Math.atan2(q.y - c.y, q.x - c.x), c.z, -Math.atan2(c.z - 1, bd) * 0.8, best];
+  }
+  for (let d = 20; d <= 40; d += 5) for (let a = 0; a < 12; a++) {
+    const ang = (a / 12) * Math.PI * 2 + q.key, x = q.x + Math.cos(ang) * d, y = q.y + Math.sin(ang) * d;
+    if (!isSolid(world.city, x, y)) return [x, y, Math.atan2(q.y - y, q.x - x), 1.6, 0.04, -1];
+  }
+  return [q.x, q.y, q.key, 1.6, 0.04, -1];
+}
+
+/** A story opened: its headline, its photo (when it happened somewhere), the article and the dateline; up and down scroll. */
+function article(S: Lcd, P: Phone, world: World, q: Story, t: number) {
+  const rows: [string, C3, C3][] = [];
+  for (const l of wrapW(q.head, SW - 2)) rows.push([l, INK, [228, 216, 190]]);
+  rows.push(['', INK, PAPER]);
+  let photoAt = -1, cam = -1;
+  if (!isNaN(q.x)) {
+    photoAt = rows.length;
+    for (let r = 0; r < PHOTO_H; r++) rows.push(['', INK, PAPER]);
+    cam = photoSpot(world, q)[5];
+    rows.push([cam >= 0 ? `Security camera still, CAM ${String(cam + 1).padStart(2, '0')}` : 'Courier photo', FADED, PAPER]);
+    rows.push(['', INK, PAPER]);
+  }
+  for (const para of storyBody(world, q)) { for (const l of wrapW(para, SW - 2)) rows.push([l, INK, PAPER]); rows.push(['', INK, PAPER]); }
+  const c = calendar(q.at);
+  rows.push([`${cityName(world.city).toUpperCase()}, ${MONTHS[c.month - 1]} ${c.day}`, FADED, PAPER]);
+  const view = SH - 7;
+  P.scroll = Math.max(0, Math.min(P.scroll, Math.max(0, rows.length - view)));
+  rows.slice(P.scroll, P.scroll + view).forEach(([l, fg, bg], i) => { if (bg !== PAPER) S.fill(5 + i, bg); S.text(1, 5 + i, typed(l, t - i * 0.02, 160), fg, bg); });
+  if (photoAt >= 0) {
+    const [x, y, yaw, eye, pitch] = photoSpot(world, q), pic = takePic(P, 0x7e000000 + q.key * 8 + (q.kind === 'crash' ? 1 : q.kind === 'jam' ? 2 : q.kind === 'blackout' ? 3 : 4), x, y, yaw, PHOTO_W, PHOTO_H, eye, pitch);
+    for (let r = 0; r < PHOTO_H; r++) {
+      const yy = 5 + photoAt + r - P.scroll;
+      if (yy < 5 || yy >= 5 + view) continue;
+      for (let cx = 0; cx < PHOTO_W && cx < SW; cx++) {
+        if (!pic) { S.put(cx, yy, 32, FADED, [200, 192, 172]); continue; }
+        const o = (r * pic.w + cx) * 4;
+        S.put(cx, yy, 32, [pic.cells[o + 1], pic.cells[o + 2], pic.cells[o + 3]], [pic.bg[o], pic.bg[o + 1], pic.bg[o + 2]]);
+        for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
+          const h = ((r * HD + iy) * pic.w * HD + cx * HD + ix) * 3;
+          S.pixel(cx, yy, ix, iy, pic.hd[h], pic.hd[h + 1], pic.hd[h + 2]);
+        }
+      }
+    }
+  }
+  softKeys(S, '', en.phone.back);
 }
 
 function wrapW(s: string, w: number): string[] {
