@@ -1,5 +1,6 @@
 import { BAY, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
-import { BLOCKS } from '../raycaster';
+import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, RAMP, SCREEN_PAL, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
+import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
 import { LAMP_R, LIGHT_W } from '../lightmap';
 
@@ -19,14 +20,19 @@ export const UNIFORMS = [
   'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'pad0',
   'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
   'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'starSlots',
+  'tickN',
 ] as const;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
-export const BLD = 48;
+export const BLD = 52;
+/** The signs' buffer (world.ts, signData): where the font and the businesses start, and the ticker's room. */
+export const SG_FONT = 8, SG_BIZ = SG_FONT + 256 * 7, TICK_MAX = 4096;
 export const BLK = 8;
 export const STYLES = ['office', 'glass', 'brick', 'historic', 'residential', 'warehouse', 'crown', 'spire', 'dome', 'tank', 'chimney', 'mech', 'clock', 'mast', 'gasholder'];
 
 const C = (s: string) => s.charCodeAt(0);
+const v3 = (c: readonly number[]) => `vec3f(${c.map((x) => x.toFixed(1)).join(', ')})`;
+const f = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : `${x}`);
 const G = {
   DOT: C('.'), COM: C(','), TICK: C('`'), COL: C(':'), SEMI: C(';'), DASH: C('-'), EQ: C('='), PLUS: C('+'),
   HASH: C('#'), PCT: C('%'), AT: C('@'), BAR: C('|'), US: C('_'), STAR: C('*'), QUO: C('"'),
@@ -52,6 +58,7 @@ struct U { ${UNIFORMS.map((n) => `${n}: f32`).join(', ')} };
 @group(0) @binding(12) var<storage, read> dlv: array<f32>;
 @group(0) @binding(13) var<storage, read> doff: array<u32>;
 @group(0) @binding(14) var<storage, read> didx: array<u32>;
+@group(0) @binding(15) var<storage, read> sg: array<u32>;
 
 ${glyphs}
 const FLOOR_H = ${FLOOR_H};
@@ -183,6 +190,100 @@ fn roofCell(q: u32, t: f32, wx: f32, wy: f32) -> Cell {
   return Cell(ch, sat(c * k), vec3f(7.0, 8.0, 12.0), t, KIND_GROUND, 0.0);
 }
 
+// ---- signs (signs.ts and wallColumn): shop signs, painted ads, video screens, the news ticker
+const LETTER_W = ${f(LETTER_W)}; const SIGN_Z0 = ${f(SIGN_Z0)}; const SIGN_Z1 = ${f(SIGN_Z1)}; const AD_LETTER = ${f(AD_LETTER)};
+const TICK_Z0 = ${f(TICK_Z0)}; const TICK_Z1 = ${f(TICK_Z1)}; const TICK_LW = ${f(TICK_LW)}; const TICK_SPEED = ${f(TICK_SPEED)};
+const BULB_COLS = ${f(BULB_COLS)}; const BULB_ROWS = ${f(BULB_ROWS)};
+const SG_FONT = ${SG_FONT}u; const SG_BIZ = ${SG_BIZ}u;
+const AD_BG = array<vec3f, ${AD_BG.length}>(${AD_BG.map(v3).join(', ')});
+const AD_FG = array<vec3f, ${AD_FG.length}>(${AD_FG.map(v3).join(', ')});
+const FRAME_AD = ${v3(FRAME_AD)};
+const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(', ')});
+const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
+fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
+  if (bx < 0 || bx > 4 || by < 0 || by > 6) { return false; }
+  return ((sg[SG_FONT + min(c, 255u) * 7u + u32(by)] >> u32(4 - bx)) & 1u) == 1u;
+}
+// the bulbs of letter c whose centers fall in a cell's footprint (center px, pz, half sizes hx, hz, in bulb units)
+fn bulbsIn(c: u32, px: f32, pz: f32, hx: f32, hz: f32) -> u32 {
+  var n = 0u;
+  for (var by = max(0, i32(ceil(pz - hz - 0.5))); by <= min(6, i32(ceil(pz + hz - 0.5)) - 1); by++) {
+    for (var bx = max(0, i32(ceil(px - hx - 0.5))); bx <= min(4, i32(ceil(px + hx - 0.5)) - 1); bx++) { if (bulbOn(c, bx, by)) { n++; } }
+  }
+  return n;
+}
+fn bulbGlyph(n: u32, hx: f32, hz: f32) -> u32 {
+  if (n == 0u) { return 0u; }
+  let spots = 4.0 * hx * hz;
+  if (spots <= 1.5) { return select(111u, 64u, n > 1u); }
+  let fr = f32(n) / spots;
+  return select(select(58u, 111u, fr > 0.22), 64u, fr > 0.5);
+}
+fn bulbHue(c: vec3f) -> vec3f {
+  let lo = min(c.x, min(c.y, c.z)) * 0.75; let hi = max(1.0, max(c.x, max(c.y, c.z)) - lo);
+  return (c - vec3f(lo)) * (255.0 / hi);
+}
+// a business's sign text for a face that fits \`fit\` letters (signText): (pool offset, length)
+fn bizText(biz: i32, fit: i32) -> vec2u {
+  let o = SG_BIZ + u32(biz) * 3u; let full = sg[o];
+  if (i32(full & 255u) <= fit) { return vec2u(full >> 8u, full & 255u); }
+  let w = sg[o + 1u];
+  return vec2u(w >> 8u, u32(min(i32(w & 255u), max(0, fit))));
+}
+fn signStutter(biz: i32, sec: f32) -> bool {
+  return hash3(biz, ifloor(sec / 1.7), 5) < 0.35 && hash3(biz, ifloor(sec * 14.0), 6) < 0.5;
+}
+// brightness of letter k (-1: the whole sign) of a sign of mode \`mode\` whose full name is n letters (signLight)
+fn signLight(biz: i32, mode: u32, k: i32, n: f32, sec: f32) -> f32 {
+  let OFF = 0.12;
+  if (mode == 1u) {
+    let st = 0.22; let cycle = n * st + 2.2; let p = (sec + hash3(biz, 1, 1) * cycle) % cycle;
+    if (p < n * st) { return select(select(OFF, 1.0, f32(k) <= p / st), 1.0, k < 0); }
+    return select(OFF, 1.0, p < n * st + 1.6);
+  }
+  if (mode == 2u) { return select(OFF, 1.0, (sec + hash3(biz, 2, 2) * 1.3) % 1.3 < 0.85); }
+  if (mode == 3u && k >= 0) {
+    if (k == ifloor(hash3(biz, 3, 3) * n) && hash3(biz, 3, 4) < 0.5) { return OFF; }
+    if (k == ifloor(hash3(biz, 4, 3) * n)) { return select(1.0, OFF, signStutter(biz, sec)); }
+  }
+  return 1.0;
+}
+struct Px { ch: u32, c: vec3f };
+// one cell of video screen \`id\`, W x H metres, uu metres from its left edge (as read) and v down from its top (screenPixel)
+fn screenPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dAlong: f32, dz: f32) -> Px {
+  let sec = u.sec;
+  let scene = ifloor(sec / 6.0 + hash3(id, 0, 91) * 7.0);
+  let kind = ifloor(hash3(id, scene, 92) * 3.0);
+  let NP = ${SCREEN_PAL.length}.0;
+  let a = SCREEN_PAL[ifloor(hash3(id, scene, 94) * NP)]; let b = SCREEN_PAL[ifloor(hash3(id, scene, 95) * NP)];
+  let st = sec % 6.0;
+  let px = floor(uu / 0.3) * 0.3; let pz = floor(v / 0.3) * 0.3;
+  let nb = sg[2];
+  if (kind == 0 && nb > 0u) {
+    let tx = bizText(ifloor(hash3(id, scene, 93) * f32(nb)), max(1, ifloor((W - 1.0) / 1.2)));
+    let n = f32(max(1u, tx.y)); let lw = min((W - 1.0) / n, (H * 0.55) / 1.4); let lh = lw * 1.4;
+    let x0 = (W - n * lw) / 2.0; let y0 = (H - lh) / 2.0;
+    let li = ifloor((uu - x0) / lw); let fu = ((uu - x0) / lw - f32(li)) * 1.25 - 0.12; let fv = (v - y0) / lh;
+    let typed = li >= 0 && li < i32(tx.y) && f32(li) < st / 0.12;
+    var lc = 32u; if (typed) { lc = sg[tx.x + u32(li)]; }
+    let on = typed && fu >= 0.0 && fu < 1.0 && fv >= 0.0 && fv < 1.0 && bulbOn(lc, ifloor(fu * 5.0), ifloor(fv * 7.0));
+    let glyphs = lw / dAlong >= 3.0 && lh / dz >= 2.6;
+    if (!glyphs && lw / dAlong >= 0.9 && typed && abs(uu - x0 - (f32(li) + 0.5) * lw) < dAlong / 2.0 && abs(v - H / 2.0) < dz / 2.0 + 0.01) {
+      return Px(lc, vec3f(255.0, 250.0, 235.0));
+    }
+    let lit = on && glyphs;
+    return Px(select(COL, HASH, lit), select(a, vec3f(255.0, 250.0, 235.0), lit) * select(0.3 + 0.25 * (pz / H), 1.0, lit));
+  } else if (kind == 1) {
+    // plasma: three moving waves, mapped to a ramp of glyphs and blended between two colors
+    let val = (sin(px * 0.9 + sec * 1.3 + f32(scene)) + sin(pz * 1.1 - sec * 0.9) + sin((px + pz) * 0.6 + sec * 2.1)) / 6.0 + 0.5;
+    return Px(RAMP[min(${RAMP.length - 1}, ifloor(val * ${RAMP.length}.0))], (a * (1.0 - val) + b * val) * (0.25 + 0.75 * val));
+  }
+  // diagonal bars of color sweeping across, with a bright band
+  let s = (px + pz * 0.6 - sec * 3.0) / 1.5; let band = ((s % 3.0) + 3.0) % 3.0;
+  var col = vec3f(30.0, 30.0, 40.0); if (band < 1.0) { col = a; } else if (band < 2.0) { col = b; }
+  return Px(select(COL, select(HASH, AT, band % 1.0 < 0.15), band < 2.0), col * select(0.6, 0.75 + 0.25 * sin(s * 3.0), band < 2.0));
+}
+
 // ---- a wall (wallColumn): the facade by its style, its windows, and the lights on it
 fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> Cell {
   let q = u32(bk * ${BLD});
@@ -241,6 +342,37 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
   let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - u.eye) / t) * 4.0 + f32(bk % 7));
   let fl = ifloor(z / FLOOR_H); let fz = z / FLOOR_H - f32(fl);
   var ch = 0u; var c = vec3f(0.0);
+  // seen from the other side, text reads mirrored along the face (rev in wallColumn)
+  let rev = side < 2 && (face == 1 || face == 2);
+  let sec = u.sec; let scol = sign;
+  // the shop sign on this face: the business name centered on it, if at least 3 letters fit
+  let biz = i32(bld[q + 48u]);
+  var signN = 0; var signU = 0.0; var stx = vec2u(0u); var smode = 0u; var sfull = 0.0;
+  if (biz >= 0 && side != 2) {
+    stx = bizText(biz, ifloor((f1 - f0 - 1.2) / LETTER_W) - 2);
+    signN = select(0, i32(stx.y), stx.y >= 3u);
+    signU = along - (f0 + f1) * 0.5 + f32(signN + 2) * LETTER_W * 0.5;
+    if (signU < 0.0 || signU >= f32(signN + 2) * LETTER_W) { signN = 0; }
+    smode = sg[SG_BIZ + u32(biz) * 3u + 2u]; sfull = f32(sg[SG_BIZ + u32(biz) * 3u] & 255u);
+  }
+  let letters = LETTER_W / dAlong >= 0.9;
+  // a painted ad high on one face: the business's name in big block letters on a colored board
+  let adB = i32(bld[q + 49u]);
+  var adN = 0; var adTx = vec2u(0u); var adA0 = 0.0; var adA1 = 0.0; var adZ0 = 0.0; var adZ1 = 0.0;
+  if (adB >= 0 && side != 2 && face == ifloor(hash3(bk, 7, 77) * select(4.0, 5.0, bld[q + 6u] > 0.5))) {
+    let w = min(f1 - f0 - 2.0, 16.0); let mid = (f0 + f1) * 0.5;
+    if (w > 5.0) {
+      adTx = bizText(adB, ifloor((w - 1.0) / AD_LETTER)); adN = i32(adTx.y);
+      adA0 = mid - w / 2.0; adA1 = mid + w / 2.0; adZ1 = H - 1.6; adZ0 = max(FLOOR_H * 1.5, adZ1 - 5.5);
+    }
+  }
+  // a video screen on this face, above the shop sign (and the ticker), as wide as the face allows
+  let ticker = bld[q + 51u] > 0.5;
+  var scA0 = 0.0; var scA1 = 0.0; var scZ0 = 0.0; var scZ1 = 0.0;
+  if (side != 2 && ((u32(bld[q + 50u]) >> u32(face)) & 1u) == 1u) {
+    let w = min(f1 - f0 - 1.5, 16.0); let mid = (f0 + f1) * 0.5;
+    if (w > 4.0) { scA0 = mid - w / 2.0; scA1 = mid + w / 2.0; scZ0 = select(5.2, TICK_Z1 + 1.2, ticker); scZ1 = min(H - 1.5, scZ0 + min(12.0, w * 0.75)); }
+  }
   // a window's color: lit in the building's window color (or its band's), dark ones deep blue glass
   var wc = win; if (band > 0 && ((fl / band) & 1) == 1) { wc = sign; }
   let hh = hash3(bk, wi, fl);
@@ -285,6 +417,72 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
     if (z < base) { ch = select(DOT, BAR, along % 1.6 < 0.3); c = frame * 0.6 * shade; }
     else if (z > lid) { ch = CARET; c = frame * shade; }
     else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame * shade; }
+  } else if (signN > 0 && z > SIGN_Z0 && z < SIGN_Z1) {
+    // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
+    let col = ifloor(signU / LETTER_W) - 1; let inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
+    let kk = select(col, signN - 1 - col, rev);
+    var cc = 32u; if (col >= 0 && col < signN) { cc = sg[stx.x + u32(kk)]; }
+    let lit = signLight(biz, smode, select(-1, kk, inText), sfull, sec) * adElec;
+    // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
+    let center = abs((signU / LETTER_W - f32(col) - 1.5) * LETTER_W) < dAlong / 2.0 && abs(z - 3.0) < dz / 2.0 + 0.01;
+    // big enough, a letter is drawn as its 5x7 pattern of bulbs
+    let bulbs = LETTER_W / dAlong >= BULB_COLS && 0.56 / dz >= BULB_ROWS;
+    if (bulbs && col >= 0 && col < signN && z > 2.72 && z < 3.28) {
+      var fu = signU / LETTER_W - f32(col) - 1.0;
+      if (rev) { fu = 1.0 - fu; }
+      let on = signLight(biz, smode, kk, sfull, sec) * adElec;
+      let px = (fu * LETTER_W - 0.05) / 0.09; let pz = (3.28 - z) / 0.08; let hx = dAlong / 0.18; let hz = dz / 0.16;
+      let nn = bulbsIn(cc, px, pz, hx, hz);
+      let hue = bulbHue(scol);
+      if (nn > 0u) { ch = bulbGlyph(nn, hx, hz); c = hue * on; }
+      else if (bulbOn(cc, ifloor(px), ifloor(pz))) { ch = 32u; c = hue * (on * 0.35); }
+      else { ch = 32u; c = vec3f(14.0, 12.0, 16.0); }
+    } else if (inText && cc != 32u && (!letters || center)) { ch = select(EQ, cc, letters); c = scol * lit; }
+    else if (inText) { ch = 32u; c = scol * (lit * 0.35); }
+    else if (smode == 4u) {
+      // the marquee's white bulbs are on the building's power too
+      let on = (ifloor(signU / 0.3) + ifloor(sec * 7.0)) % 3 == 0 && ad > 0.05;
+      ch = select(DOT, O, on); c = vec3f(255.0, 225.0, 150.0) * (select(0.3, 1.0, on) * min(ad, 1.3));
+    } else if (z < 2.72 || z > 3.28) { ch = DASH; c = scol * (lit * 0.45); }
+    else { ch = DOT; c = vec3f(14.0, 12.0, 16.0); }
+  } else if (ticker && side != 2 && z > TICK_Z0 - 0.15 && z < TICK_Z1 + 0.15) {
+    // the news ticker: headlines in amber bulbs running right to left around the building
+    if (z < TICK_Z0 || z > TICK_Z1) { ch = EQ; c = frame * 0.7 * shade; }
+    else {
+      let n = i32(u.tickN); let p = select(along, -along, rev) + sec * TICK_SPEED; let li = ifloor(p / TICK_LW); let fu = p / TICK_LW - f32(li);
+      var lc = 32u; if (n > 0) { lc = sg[sg[0] + u32(((li % n) + n) % n)]; }
+      let lh = TICK_Z1 - TICK_Z0; let on = adElec;
+      if (TICK_LW / dAlong >= BULB_COLS && lh / dz >= BULB_ROWS) {
+        // up close, bulbs (0.14 m apart), counted per cell like the shop signs'
+        let bz = (lh - 0.2) / 7.0; let hx = dAlong / 0.28; let hz = dz / bz / 2.0;
+        let nb = bulbsIn(lc, (fu * TICK_LW - 0.08) / 0.14, (TICK_Z1 - 0.1 - z) / bz, hx, hz);
+        if (nb > 0u) { ch = bulbGlyph(nb, hx, hz); c = vec3f(255.0, 150.0, 45.0) * on; } else { ch = DOT; c = vec3f(34.0, 20.0, 12.0); }
+      } else if (TICK_LW / dAlong >= 0.9) {
+        let center = abs(fu - 0.45) * TICK_LW < dAlong / 2.0 && abs(z - (TICK_Z0 + TICK_Z1) / 2.0) < dz / 2.0 + 0.01;
+        ch = select(32u, lc, center); c = vec3f(255.0, 150.0, 45.0) * select(0.12 * on, on, center);
+      } else { ch = EQ; c = vec3f(160.0, 95.0, 30.0) * on; }
+    }
+  } else if (scZ1 > scZ0 && along > scA0 && along < scA1 && z > scZ0 && z < scZ1) {
+    // a video screen behind a dark bezel
+    if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45 * shade; }
+    else {
+      let P = screenPix(bk, select(along - scA0, scA1 - along, rev), scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
+      ch = P.ch; c = P.c * adElec;
+    }
+  } else if (adN > 0 && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
+    // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint
+    let lw = AD_LETTER; let start = (adA0 + adA1) * 0.5 - f32(adN) * lw * 0.5; let zc = (adZ0 + adZ1) * 0.5;
+    let col = ifloor((along - start) / lw); let kk = select(col, adN - 1 - col, rev);
+    let fu = ((along - start) / lw - f32(col)) * 1.25 - 0.12; let fzz = (zc + 1.1 - z) / 2.2;
+    var on = false;
+    if (col >= 0 && col < adN && fu >= 0.0 && fu < 1.0 && fzz >= 0.0 && fzz < 1.0) { on = bulbOn(sg[adTx.x + u32(kk)], ifloor(select(fu, 1.0 - fu, rev) * 5.0), ifloor(fzz * 7.0)); }
+    let edge = along - adA0 < 0.25 || adA1 - along < 0.25 || z - adZ0 < 0.25 || adZ1 - z < 0.25;
+    let hp = ifloor(hash3(bk, 8, 77) * ${AD_BG.length}.0);
+    var ac = select(AD_BG[hp], AD_FG[hp], on); if (edge) { ac = FRAME_AD; }
+    ch = select(select(select(DOT, COL, hash3(ifloor(along * 2.0), ifloor(z * 2.0), 5) < 0.2), HASH, on), EQ, edge);
+    c = ac * ((0.75 + 0.25 * hash3(ifloor(along * 3.0), ifloor(z * 3.0), bk)) * shade);
+    // lit from below by gooseneck lamps at night
+    c += vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9);
   } else if (detailed && S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;

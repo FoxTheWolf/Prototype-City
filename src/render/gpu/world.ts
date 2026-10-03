@@ -2,7 +2,8 @@ import { faceSpan, type City } from '../../sim/city';
 import type { World } from '../../sim/world';
 import { gpuPrepare, VFOV, type View } from '../raycaster';
 import { CURVE_R } from '../sarcophagus';
-import { BLD, BLK, STYLES, UNIFORMS, worldWGSL } from './shader';
+import { fontRows, signMode, signText } from '../signs';
+import { BLD, BLK, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
  * Stage R: the world drawn on the GPU (WebGPU). The city goes up once as lists (street boundaries,
@@ -15,7 +16,8 @@ import { BLD, BLK, STYLES, UNIFORMS, worldWGSL } from './shader';
  * walls by style (windows, bands, cornices, piers, balconies, glass, warehouses, crowns, neon,
  * floodlights, the power per window in a blackout), the lamps' and the dynamic lights, the finish
  * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
- * the sky (gradient, stars, moon, clouds). Not yet: the signs, ads, screens and ticker, the doors, the rooms
+ * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
+ * ticker. Not yet: the blade signs and billboards (objects), the doors, the rooms
  * seen through the windows, fire escapes, scaffolding, reliefs, objects, cars, people, interiors,
  * the fire zone and the Sarcophagus, smoke, rain and snow falling, the glass of the windows indoors.
  */
@@ -44,6 +46,10 @@ export class GpuWorld {
   /** The buildings' floats, kept to write the power grid's part into (substation, generator). */
   private blds: Float32Array;
   private powerSet = false;
+  /** The signs' buffer (see signData) and the ticker text last written into it. */
+  private sg: GPUBuffer;
+  private tickOff = 0;
+  private ticker = '';
 
   static available(): boolean { return typeof navigator !== 'undefined' && 'gpu' in navigator; }
 
@@ -69,6 +75,7 @@ export class GpuWorld {
       blds.set([B.x0, B.y0, B.x1, B.y1, B.h, B.round ? 1 : 0, K ? 1 : 0, K?.nx ?? 0, K?.ny ?? 0, K?.c ?? 0, STYLES.indexOf(B.style), B.lit,
         ...B.win, ...B.frame, B.feat, B.shop ? 1 : 0, B.tier, ...B.sign, ...(B.neon ?? [0, 0, 0]), B.neon ? 1 : 0, ...(B.crown ?? [0, 0, 0]), B.crown ? 1 : 0,
         ...(B.flood ?? [0, 0, 0]), B.flood ? B.floodH : 0], o);
+      blds.set([B.biz, B.ad, B.screen, B.ticker ? 1 : 0], o + 48);
       for (let f = 0; f < 5; f++) {
         if (f === 4 && !K) continue;
         const sp = faceSpan(B, f);
@@ -80,6 +87,8 @@ export class GpuWorld {
       const b = dev.createBuffer({ size: Math.max(16, a.byteLength), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
       dev.queue.writeBuffer(b, 0, a); return b;
     };
+    const S = signData(city);
+    this.sg = store(S.data); this.tickOff = S.tick;
     this.fixed = [new Float32Array(C.xb), new Float32Array(C.yb), Uint32Array.from(C.xCell), Uint32Array.from(C.yCell), blocks, blds].map(store);
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
@@ -115,6 +124,12 @@ export class GpuWorld {
   encode(enc: GPUCommandEncoder, world: World, v: View) {
     const { cols, rows } = this, C = this.city, q = this.dev.queue;
     const F = gpuPrepare(world, v), sky = F.sky, P = world.power;
+    if (F.ticker !== this.ticker) {
+      this.ticker = F.ticker;
+      const T = new Uint32Array(Math.min(TICK_MAX, F.ticker.length));
+      for (let k = 0; k < T.length; k++) T[k] = code(F.ticker, k);
+      if (T.length) q.writeBuffer(this.sg, this.tickOff * 4, T);
+    }
     if (!this.powerSet) {
       // which substation feeds each building, and whether it has a generator: fixed once the grid exists
       for (let k = 0; k < C.buildings.length; k++) { this.blds[k * BLD + 46] = P.building[k]; this.blds[k * BLD + 47] = P.generator[k]; }
@@ -131,7 +146,7 @@ export class GpuWorld {
     if (!this.bind) {
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
-        entries: [this.uni, ...this.fixed, this.out, this.subs, this.lmap, this.lampCol, ...this.dyn].map((buffer, binding) => ({ binding, resource: { buffer } })),
+        entries: [this.uni, ...this.fixed, this.out, this.subs, this.lmap, this.lampCol, ...this.dyn, this.sg].map((buffer, binding) => ({ binding, resource: { buffer } })),
       });
     }
     const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
@@ -145,7 +160,7 @@ export class GpuWorld {
       snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, pad0: 0,
       dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
-      starSlots: Math.round((cols * Math.PI) / Math.atan(plane)),
+      starSlots: Math.round((cols * Math.PI) / Math.atan(plane)), tickN: Math.min(TICK_MAX, this.ticker.length),
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
     q.writeBuffer(this.uni, 0, U);
@@ -154,4 +169,39 @@ export class GpuWorld {
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
   }
+}
+
+/** A character as the atlas has it (Latin-1): an accent outside it falls back to its plain letter. */
+function code(s: string, k: number) {
+  const c = s.charCodeAt(k);
+  if (c < 256) return c;
+  const b = s[k].normalize('NFD').charCodeAt(0);
+  return b < 256 ? b : 63;
+}
+
+/**
+ * The signs' data, one u32 each: a header (the ticker's and the text pool's offsets, the number of
+ * businesses), the 5x7 font for codes 0..255 at SG_FONT, three words per business at SG_BIZ (its
+ * full sign name and its longest word, as offset << 8 | length into the pool, and its sign mode),
+ * room for the ticker, then the pool. The shader cuts the name to a face as signText does.
+ */
+function signData(city: City) {
+  const nb = city.businesses.length, tick = SG_BIZ + nb * 3, pool = tick + TICK_MAX;
+  const chars: number[] = [], at = new Map<string, number>();
+  const put = (s: string) => {
+    let o = at.get(s);
+    if (o === undefined) { o = pool + chars.length; at.set(s, o); for (let k = 0; k < s.length; k++) chars.push(code(s, k)); }
+    return (o << 8) | Math.min(255, s.length);
+  };
+  const words: number[] = [];
+  for (let b = 0; b < nb; b++) {
+    const full = signText(city, b, 255), word = full.split(' ').sort((x, y) => y.length - x.length)[0];
+    words.push(put(full), put(word), signMode(city, b));
+  }
+  const out = new Uint32Array(pool + chars.length);
+  out[0] = tick; out[1] = pool; out[2] = nb;
+  for (let c = 0; c < 256; c++) { const r = fontRows(c); if (r) for (let k = 0; k < 7; k++) out[SG_FONT + c * 7 + k] = r[k]; }
+  out.set(words, SG_BIZ);
+  out.set(chars, pool);
+  return { data: out, tick };
 }

@@ -67,10 +67,11 @@ const LIT_H = 9, LIT_FAR = 600;
 /** Litter on the ground is drawn only this close. */
 const LITTER_FAR = 14;
 /** Height of a tower's lit crown band; width of an ad's letters; the ads' boards and paint. */
-const CROWN_H = 16, AD_LETTER = 1.25;
-const AD_BG: RGB[] = [[170, 40, 35], [35, 60, 130], [200, 170, 60], [215, 210, 195], [40, 100, 70], [25, 25, 30]];
-const AD_FG: RGB[] = [[240, 230, 210], [240, 200, 70], [40, 30, 30], [180, 40, 35], [235, 225, 200], [230, 60, 60]];
-const FRAME_AD: RGB = [60, 55, 50];
+const CROWN_H = 16;
+export const AD_LETTER = 1.25;
+export const AD_BG: RGB[] = [[170, 40, 35], [35, 60, 130], [200, 170, 60], [215, 210, 195], [40, 100, 70], [25, 25, 30]];
+export const AD_FG: RGB[] = [[240, 230, 210], [240, 200, 70], [40, 30, 30], [180, 40, 35], [235, 225, 200], [230, 60, 60]];
+export const FRAME_AD: RGB = [60, 55, 50];
 /** Spacing of the floodlights along the foot of a floodlit facade. */
 const FLOOD_GAP = 6;
 
@@ -101,7 +102,7 @@ const LT = new Float32Array(3);
 /** Dynamic lights (cars, signs) are gathered this close to the viewer. */
 const DYN_FAR = 200;
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
-const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
+export const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
 let frameTicker = '';
 let frameCity: City, frameSec = 0, frameDay = 0, frameSnow = 0, frameInside = false, frameX = 0, frameY = 0;
@@ -512,7 +513,7 @@ export function gpuPrepare(world: World, v: View) {
   VIEW_GLINT[0] = lat;
   VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
   VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
-  return { sky, light, dyn, sun: SUN };
+  return { sky, light, dyn, sun: SUN, ticker: frameTicker };
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
@@ -1170,9 +1171,9 @@ function wallColumn(grid: CharGrid, x: number, B: Building, id: number, t: numbe
 }
 
 /** The news ticker's band, its letters' width and its speed (m/s). */
-const TICK_Z0 = 9.8, TICK_Z1 = 11, TICK_LW = 0.85, TICK_SPEED = 3.2;
-const SCREEN_PAL: RGB[] = [[255, 60, 130], [60, 200, 255], [255, 210, 60], [110, 255, 120], [190, 90, 255], [255, 120, 40], [240, 240, 255]];
-const RAMP = [C('.'), C(':'), C('-'), C('='), C('+'), C('*'), C('%'), C('#'), C('@')];
+export const TICK_Z0 = 9.8, TICK_Z1 = 11, TICK_LW = 0.85, TICK_SPEED = 3.2;
+export const SCREEN_PAL: RGB[] = [[255, 60, 130], [60, 200, 255], [255, 210, 60], [110, 255, 120], [190, 90, 255], [255, 120, 40], [240, 240, 255]];
+export const RAMP = [C('.'), C(':'), C('-'), C('='), C('+'), C('*'), C('%'), C('#'), C('@')];
 /** The scene showing on screen `id` now (it changes every 6 s): its kind (0 ad, 1 video, 2 color bars) and colors. */
 function screenScene(id: number, sec: number) {
   const scene = Math.floor(sec / 6 + hash3(id, 0, 91) * 7);
