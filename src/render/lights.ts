@@ -1,9 +1,9 @@
 /**
- * Lights that change every frame: car headlights (cones), tail lights (points) and neon signs
- * (segments along a facade, lighting the side they face). Rebuilt each frame around the viewer and
+ * Lights that change every frame: car headlights (cones), tail lights (points), wall floodlights, and the
+ * lit panels (signs, screens, neon, shop windows, lighting the side they face). Rebuilt each frame around the viewer and
  * sorted into 8 m buckets, so a point only looks at the few lights that can reach it.
  */
-const LightKind = { Point: 0, Cone: 1, Segment: 2, Flood: 3, Panel: 4 } as const;
+const LightKind = { Point: 0, Cone: 1, Flood: 3, Panel: 4 } as const;
 /**
  * A panel light's size factor: a panel of area A lights a point d away by A' / (d^2 + A'), A' = PANEL_S * A
  * (full on its face, falling as 1 / d^2 farther than its own size). The shader has the same.
@@ -32,16 +32,16 @@ export class DynLights {
   /** Panel: 4 + its wrap (0: lights only what faces it, ~1: all round, a bare tube). */
   private kind = new Float32Array(MAX);
   private x = new Float32Array(MAX); private y = new Float32Array(MAX);
-  /** Cone: direction. Segment: the other end. */
+  /** Cone: direction. Panel: the other end. */
   private u = new Float32Array(MAX); private w = new Float32Array(MAX);
-  /** Segment: the outward normal. Cone: cos of the half angle in nx. */
+  /** Panel: the outward normal. Cone: cos of the half angle in nx. */
   private nx = new Float32Array(MAX); private ny = new Float32Array(MAX);
   private range = new Float32Array(MAX);
   /** Full strength up to height zFull, fading to nothing at zTop. */
   private zFull = new Float32Array(MAX); private zTop = new Float32Array(MAX);
   private r = new Float32Array(MAX); private g = new Float32Array(MAX); private b = new Float32Array(MAX);
   /**
-   * Segment: brightness of the pieces along it (the letters of a sign), as running sums in `lv`
+   * Panel: brightness of the pieces along it (the letters of a sign), as running sums in `lv`
    * starting at lv0, lvN pieces; lvN = 0 means evenly lit.
    */
   private lv0 = new Int32Array(MAX); private lvN = new Uint16Array(MAX); private lvH = new Float32Array(MAX);
@@ -83,7 +83,8 @@ export class DynLights {
    * A lit rectangle standing on the line (x0, y0)-(x1, y1) from height z0 to z1, facing (nx, ny): a sign, a screen,
    * a shop window; a vertical line if the two ends meet (a neon tube up a corner). wrap: how much it also lights
    * what is beside or behind its face (0 a flat screen, 1 a bare tube). Lit by distance in 3D, by how the panel
-   * faces the point and how the point's surface faces the panel (the shader's lightAt). levels as in pieces.
+   * faces the point and how the point's surface faces the panel (the shader's lightAt). levels: the brightness of
+   * pieces along it (0..1, from (x0, y0): a sign's letters); a point takes those round its nearest spot on it.
    * Its color (r, g, b) is in linear light, 1 = white (linC), unlike the other lights'.
    */
   panel(x0: number, y0: number, x1: number, y1: number, nx: number, ny: number, z0: number, z1: number, range: number, wrap: number, r: number, g: number, b: number, levels?: number[]) {
@@ -98,31 +99,6 @@ export class DynLights {
     this.lvUsed += n + 1;
   }
 
-  /** A strip from (x0, y0) to (x1, y1) shining toward (nx, ny). */
-  segment(x0: number, y0: number, x1: number, y1: number, nx: number, ny: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number) {
-    this.add(LightKind.Segment, x0, y0, x1, y1, nx, ny, range, zFull, zTop, r, g, b,
-      Math.min(x0, x1) - range, Math.min(y0, y1) - range, Math.max(x0, x1) + range, Math.max(y0, y1) + range);
-  }
-
-  /**
-   * A segment made of pieces with their own brightness (0..1, in order from (x0, y0)): a point takes
-   * the brightness of the pieces around its nearest spot on the strip, over a stretch that widens
-   * with the distance (right against the wall only the piece in front counts).
-   */
-  pieces(x0: number, y0: number, x1: number, y1: number, nx: number, ny: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number, levels: number[]) {
-    const n = levels.length;
-    if (this.lvUsed + n + 1 > this.lv.length || this.n >= MAX) return;
-    if (levels.every((l) => l === levels[0])) {
-      // all pieces alike (a steady or blinking sign): an ordinary segment
-      this.segment(x0, y0, x1, y1, nx, ny, range, zFull, zTop, r * levels[0], g * levels[0], b * levels[0]);
-      return;
-    }
-    this.segment(x0, y0, x1, y1, nx, ny, range, zFull, zTop, r, g, b);
-    const i = this.n - 1, o = this.lvUsed;
-    this.lv0[i] = o; this.lvN[i] = n; this.lvH[i] = n / Math.hypot(x1 - x0, y1 - y0); this.lv[o] = 0;
-    for (let k = 0; k < n; k++) this.lv[o + k + 1] = this.lv[o + k] + levels[k];
-    this.lvUsed += n + 1;
-  }
 
   /** A panel's light at a point (no surface: as if it faced the panel). */
   private samplePanel(k: number, px: number, py: number, pz: number, out: Float32Array) {
@@ -197,7 +173,8 @@ export class DynLights {
       const zk = pz <= this.zFull[k] ? 1 : (this.zTop[k] - pz) / (this.zTop[k] - this.zFull[k]);
       if (zk <= 0) continue;
       const R = this.range[k];
-      let dx = px - this.x[k], dy = py - this.y[k], f = 0, lvl = 1;
+      const dx = px - this.x[k], dy = py - this.y[k];
+      let f = 0;
       const kind = Math.floor(this.kind[k]);
       if (kind === LightKind.Flood) {
         const s = dx * this.nx[k] + dy * this.ny[k];
@@ -205,18 +182,6 @@ export class DynLights {
         f = floodBeam(-dx * this.ny[k] + dy * this.nx[k], s, Math.max(0, pz), this.zFull[k]);
         out[0] += this.r[k] * f; out[1] += this.g[k] * f; out[2] += this.b[k] * f;
         continue;
-      }
-      if (kind === LightKind.Segment) {
-        // distance to the strip, only on the side it faces
-        if (dx * this.nx[k] + dy * this.ny[k] < -0.3) continue;
-        const sx = this.u[k] - this.x[k], sy = this.w[k] - this.y[k];
-        const t = Math.max(0, Math.min(1, (dx * sx + dy * sy) / (sx * sx + sy * sy)));
-        dx -= sx * t; dy -= sy * t;
-        const n = this.lvN[k];
-        if (n) {
-          const h = (0.3 + 0.5 * Math.hypot(dx, dy)) * this.lvH[k], c = t * n, a = Math.max(0, c - h), b = Math.min(n, c + h);
-          lvl = (this.lvSum(k, b) - this.lvSum(k, a)) / (b - a);
-        }
       }
       const d = Math.hypot(dx, dy);
       if (d >= R) continue;
@@ -226,7 +191,7 @@ export class DynLights {
         if (c <= c0) continue;
         f *= Math.min(1, (c - c0) / ((1 - c0) * 0.5));
       }
-      f *= zk * lvl;
+      f *= zk;
       out[0] += this.r[k] * f; out[1] += this.g[k] * f; out[2] += this.b[k] * f;
     }
   }

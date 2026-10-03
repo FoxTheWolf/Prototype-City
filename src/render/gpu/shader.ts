@@ -84,7 +84,6 @@ const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
 const LIGHT_KNEE = 150.0;
 /** How much of a lamp's light a surface sends back once tinted by its color (finish), and how strongly a lit room's light spills onto the wall around its window. */
-const SIGN_BACK = 2.5;
 /** A panel light's size factor (PANEL_S in lights.ts), and how much of it a surface turned away from it still gets (it is not a point: some of it always shows). */
 const PANEL_S = ${f(PANEL_S)}; const PANEL_RECV_WRAP = 0.15;
 const WIN_SPILL = 70.0;
@@ -231,7 +230,7 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
       let lz = select((zt - pz) / (zt - zf), 1.0, pz <= zf);
       if (lz <= 0.0) { continue; }
       let kind = u32(dl[o]); let R = dl[o + 7u];
-      var dx = px - dl[o + 1u]; var dy = py - dl[o + 2u]; var lvl = 1.0;
+      let dx = px - dl[o + 1u]; let dy = py - dl[o + 2u];
       if (kind == 3u) {
         // a wall floodlight (floodBeam in lights.ts): the beam up the wall, thin out from it, and a little
         // spill round the lamp on the pavement; the wall itself is painted in wallCell with the same cone
@@ -244,24 +243,9 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         L += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * own * (fz * exp(-(a * a + sc * sc * 4.0) / (w * w)) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z));
         continue;
       }
-      if (kind == 2u) {
-        if (dx * dl[o + 5u] + dy * dl[o + 6u] < -SIGN_BACK) { continue; }
-        let sx = dl[o + 3u] - dl[o + 1u]; let sy = dl[o + 4u] - dl[o + 2u];
-        let t = clamp((dx * sx + dy * sy) / (sx * sx + sy * sy), 0.0, 1.0);
-        dx -= sx * t; dy -= sy * t;
-        let n = u32(dl[o + 14u]);
-        if (n > 0u) {
-          let h = (0.3 + 0.5 * length(vec2f(dx, dy))) * dl[o + 15u]; let cc = t * f32(n);
-          let a = max(0.0, cc - h); let b = min(f32(n), cc + h); let lo = u32(dl[o + 13u]);
-          lvl = (lvSum(lo, n, b) - lvSum(lo, n, a)) / (b - a);
-        }
-      }
       let d = length(vec2f(dx, dy));
       if (d >= R) { continue; }
       var f = (1.0 - d / R) * (1.0 - d / R);
-      // a sign lights what is in front of its wall, fading out over SIGN_BACK m behind the wall's plane
-      // (a hard cut there drew a straight seam from the building's corner across the street)
-      if (kind == 2u) { f *= smoothK(-SIGN_BACK, 0.0, dx * dl[o + 5u] + dy * dl[o + 6u]); }
       if (kind == 1u) {
         let cs = (dx * dl[o + 3u] + dy * dl[o + 4u]) / select(d, 1.0, d == 0.0); let c0 = dl[o + 5u];
         if (cs <= c0) { continue; }
@@ -277,7 +261,7 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
           }
         }
       }
-      f *= lz * lvl;
+      f *= lz;
       L += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * f;
     }
   }
