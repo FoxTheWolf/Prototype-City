@@ -14,6 +14,9 @@ import type { GpuWorld } from './world';
  * come up from the CPU each frame, as they do for WebGL.
  */
 
+/** How much of the blurred glow is added over the world. */
+const GLOW_K = 1.4;
+
 const WGSL = /* wgsl */ `
 struct CU {
   cell: vec2i, origin: vec2i, grid: vec2i, uiCell: vec2i, uiOrigin: vec2i, uiGrid: vec2i,
@@ -29,6 +32,7 @@ struct CU {
 @group(0) @binding(7) var tmCells: texture_2d<f32>;
 @group(0) @binding(8) var tmBg: texture_2d<f32>;
 @group(0) @binding(9) var tmAtlas: texture_2d<f32>;
+@group(0) @binding(10) var<storage, read> glow: array<vec4f>;
 
 @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
   // one triangle covering the whole screen
@@ -54,7 +58,7 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     let i = u32(c.y * u.grid.x + c.x); let n = u32(u.grid.x * u.grid.y);
     let w = world[i]; let b = world[n + i];
     let bg = vec3f(f32(b & 255u), f32((b >> 8u) & 255u), f32((b >> 16u) & 255u)) / 255.0;
-    col = mix(bg, rgb(w), glyphAt(atlas, i32(w & 255u), p, c, u.cell));
+    col = mix(bg, rgb(w), glyphAt(atlas, i32(w & 255u), p, c, u.cell)) + glow[i].rgb * ${GLOW_K};
   }
   let q = s - u.uiOrigin; let uc = q / u.uiCell;
   if (q.x >= 0 && q.y >= 0 && uc.x < u.uiGrid.x && uc.y < u.uiGrid.y) {
@@ -78,6 +82,40 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
 }
 `;
 
+/**
+ * The bloom (R.21): what glows (the background's alpha the world pass wrote, times the cell's color) blurred
+ * over the cells around it, across then down (a cell is about twice as tall as wide), into glow, which the
+ * compositor adds over the world.
+ */
+const GLOW_RX = 14, GLOW_RY = 7;
+const GLOW_WGSL = /* wgsl */ `
+struct GU { cols: u32, rows: u32, dir: u32, pad: u32 };
+@group(0) @binding(0) var<uniform> g: GU;
+@group(0) @binding(1) var<storage, read> world: array<u32>;
+@group(0) @binding(2) var<storage, read_write> tmp: array<vec4f>;
+@group(0) @binding(3) var<storage, read_write> glow: array<vec4f>;
+fn src(x: i32, y: i32) -> vec3f {
+  let i = u32(y) * g.cols + u32(x); let w = world[i]; let a = f32(world[g.cols * g.rows + i] >> 24u) / 255.0;
+  return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0 * a;
+}
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
+  if (id.x >= g.cols || id.y >= g.rows) { return; }
+  let x = i32(id.x); let y = i32(id.y); var s = vec3f(0.0); var ws = 0.0;
+  if (g.dir == 0u) {
+    for (var d = -${GLOW_RX}; d <= ${GLOW_RX}; d++) {
+      let w = exp(-f32(d * d) / ${(GLOW_RX * GLOW_RX) / 4.5}); ws += w;
+      let xx = x + d; if (xx >= 0 && xx < i32(g.cols)) { s += src(xx, y) * w; }
+    }
+    tmp[u32(y) * g.cols + u32(x)] = vec4f(s / ws, 0.0);
+  } else {
+    for (var d = -${GLOW_RY}; d <= ${GLOW_RY}; d++) {
+      let w = exp(-f32(d * d) / ${(GLOW_RY * GLOW_RY) / 4.5}); ws += w;
+      let yy = y + d; if (yy >= 0 && yy < i32(g.rows)) { s += tmp[u32(yy) * g.cols + u32(x)].rgb * w; }
+    }
+    glow[u32(y) * g.cols + u32(x)] = vec4f(s / ws, 0.0);
+  }
+}
+`;
 const TEX = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST;
 
 export class GpuCompositor {
@@ -93,6 +131,10 @@ export class GpuCompositor {
   private ui: Layout | null = null;
   private tm = { cols: 1, rows: 1 };
   private outFor: GPUBuffer | null = null;
+  private glowPipe: GPUComputePipeline;
+  private glowUni: GPUBuffer[];
+  private glowBuf: { tmp: GPUBuffer; glow: GPUBuffer; n: number } | null = null;
+  private glowBind: GPUBindGroup[] = [];
   private timing = false;
 
   constructor(private gw: GpuWorld, canvas: HTMLCanvasElement) {
@@ -104,6 +146,10 @@ export class GpuCompositor {
     mod.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL ${m.lineNum}:${m.linePos} ${m.message}`)));
     this.pipe = dev.createRenderPipeline({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format }] }, primitive: { topology: 'triangle-list' } });
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const gm = dev.createShaderModule({ code: GLOW_WGSL });
+    gm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL glow ${m.lineNum}:${m.linePos} ${m.message}`)));
+    this.glowPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: gm, entryPoint: 'main' } });
+    this.glowUni = [0, 1].map(() => dev.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }));
     const one = () => this.tex(1, 1);
     this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one() };
   }
@@ -163,17 +209,34 @@ export class GpuCompositor {
       this.up(this.t.tmBg, term.grid.bg, this.tm.cols, this.tm.rows);
     } else { this.U[16] = 0; this.U[17] = 0; }
     this.dev.queue.writeBuffer(this.uni, 0, this.U);
+    const n = gw.cols * gw.rows;
+    if (!this.glowBuf || this.glowBuf.n !== n) {
+      this.glowBuf?.tmp.destroy(); this.glowBuf?.glow.destroy();
+      const mk = () => this.dev.createBuffer({ size: Math.max(16, n * 16), usage: GPUBufferUsage.STORAGE });
+      this.glowBuf = { tmp: mk(), glow: mk(), n };
+      this.bind = null;
+    }
     if (!this.bind || this.outFor !== gw.out) {
       this.outFor = gw.out;
-      const T = this.t;
+      const T = this.t, G = this.glowBuf;
+      this.glowBind = this.glowUni.map((b, k) => {
+        this.dev.queue.writeBuffer(b, 0, new Uint32Array([gw.cols, gw.rows, k, 0]));
+        return this.dev.createBindGroup({ layout: this.glowPipe.getBindGroupLayout(0), entries: [b, gw.out, G.tmp, G.glow].map((buffer, binding) => ({ binding, resource: { buffer } })) });
+      });
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: this.uni } }, { binding: 1, resource: { buffer: gw.out } },
-          ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmCells, T.tmBg, T.tmAtlas].map((t, k) => ({ binding: k + 2, resource: t.createView() }))],
+          ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmCells, T.tmBg, T.tmAtlas].map((t, k) => ({ binding: k + 2, resource: t.createView() })),
+          { binding: 10, resource: { buffer: G.glow } }],
       });
     }
     const enc = this.dev.createCommandEncoder();
     gw.encode(enc, world, v);
+    for (const b of this.glowBind) {
+      const cp = enc.beginComputePass();
+      cp.setPipeline(this.glowPipe); cp.setBindGroup(0, b); cp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));
+      cp.end();
+    }
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind); pass.draw(3);
     pass.end();

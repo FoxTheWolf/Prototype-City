@@ -957,7 +957,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let winPw = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched);
   var isWin = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
-  var ch = 0u; var c = vec3f(0.0);
+  var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0);
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
   let rev = side < 2 && (face == 1 || face == 2);
   let sec = u.sec; let scol = sign;
@@ -997,7 +997,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let wk = wp * (0.65 + 0.35 * hash3(wi, fl, bk));
   let darkPane = vec3f(30.0 * shade + 8.0, 36.0 * shade + 8.0, 58.0 * shade + 12.0);
   if (S == 7 || S == 10) {
-    if (z > H - 1.0) { ch = STAR; c = win * winLight; }
+    if (z > H - 1.0) { ch = STAR; c = win * winLight; em = true; }
     else if (S == 10 && ((z > H - 6.0 && z < H - 4.5) || (z > H - 10.0 && z < H - 8.5))) { ch = EQ; c = frame * 1.9 * shade; }
     else { ch = select(BAR, EQ, S == 10 && detailed); c = frame * select(1.0, 1.2, S == 7) * shade; }
   } else if (z > H - max(0.6, dz)) {
@@ -1011,9 +1011,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let hand = (s1 > 0.0 && s1 < clockR * 0.5 && abs(-du * sin(a1) + cz * cos(a1)) < 0.22) || (s2 > 0.0 && s2 < clockR * 0.75 && abs(-du * sin(a2) + cz * cos(a2)) < 0.22);
     if (d > clockR * 0.82) { ch = O; c = frame * 1.6 * shade; }
     else if (hand) { ch = HASH; c = vec3f(40.0, 30.0, 20.0); }
-    else { ch = select(COL, O, d < 0.3); c = vec3f(250.0, 230.0, 170.0) * elec; }
+    else { ch = select(COL, O, d < 0.3); c = vec3f(250.0, 230.0, 170.0) * elec; em = true; }
   } else if (S == 13) {
-    if (z % 30.0 < 1.0 && corner) { ch = STAR; c = win * winLight; }
+    if (z % 30.0 < 1.0 && corner) { ch = STAR; c = win * winLight; em = true; }
     else if (!detailed) { ch = BAR; c = frame * shade; }
     else if (corner) { ch = BAR; c = frame * 1.3 * shade; }
     else {
@@ -1025,7 +1025,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else if (z % 6.0 < 0.45) { ch = EQ; c = frame * 1.3 * shade; }
     else { ch = select(DOT, COL, detailed); c = frame * 0.75 * shade; }
   } else if (S == 6) {
-    if ((ifloor(along / select(1.6, 0.8, detailed)) & 1) == 1) { ch = BAR; c = win * adElec * 0.9; }
+    if ((ifloor(along / select(1.6, 0.8, detailed)) & 1) == 1) { ch = BAR; c = win * adElec * 0.9; em = true; }
     else { ch = BAR; c = frame * 1.2 * shade; }
   } else if (S == 8) { ch = select(COL, BAR, detailed && along % 2.0 < 0.3); c = frame * 1.2 * shade; }
   else if (S == 11) { ch = select(HASH, EQ, detailed && fw < 0.5); c = frame * 0.9 * shade; }
@@ -1036,6 +1036,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame * shade; }
   } else if (signN > 0 && z > SIGN_Z0 && z < SIGN_Z1) {
     // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
+    em = true;
     let col = ifloor(signU / LETTER_W) - 1; let inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
     let kk = select(col, signN - 1 - col, rev);
     var cc = 32u; if (col >= 0 && col < signN) { cc = sg[stx.x + u32(kk)]; }
@@ -1066,6 +1067,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     // the news ticker: headlines in amber bulbs running right to left around the building
     if (z < TICK_Z0 || z > TICK_Z1) { ch = EQ; c = frame * 0.7 * shade; }
     else {
+      em = true;
       let n = i32(u.tickN); let p = select(along, -along, rev) + sec * TICK_SPEED; let li = ifloor(p / TICK_LW); let fu = p / TICK_LW - f32(li);
       var lc = 32u; if (n > 0) { lc = sg[sg[0] + u32(((li % n) + n) % n)]; }
       let lh = TICK_Z1 - TICK_Z0; let on = adElec;
@@ -1084,13 +1086,13 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45 * shade; }
     else {
       let P = screenPix(bk, select(along - scA0, scA1 - along, rev), scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
-      ch = P.ch; c = P.c * adElec;
+      ch = P.ch; c = P.c * adElec; em = true;
     }
   } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
     // the street door: a frame, two glass leaves and a transom, lit from the lobby
     let e = min(along - dA0, dA1 - along);
     if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
-    else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.55 * elec); }
+    else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.55 * elec); em = true; }
   } else if (adN > 0 && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
     // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint
     let lw = AD_LETTER; let start = (adA0 + adA1) * 0.5 - f32(adN) * lw * 0.5; let zc = (adZ0 + adZ1) * 0.5;
@@ -1104,7 +1106,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     ch = select(select(select(DOT, COL, hash3(ifloor(along * 2.0), ifloor(z * 2.0), 5) < 0.2), HASH, on), EQ, edge);
     c = ac * ((0.75 + 0.25 * hash3(ifloor(along * 3.0), ifloor(z * 3.0), bk)) * shade);
     // lit from below by gooseneck lamps at night
-    c += vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9);
+    let al = vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9); c += al; il += al;
   } else if (pk.ok && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
     // a window: the room behind it, lit by its own lamps
     let P = peekCell(po, lot, bk, pk, fl, rdx, rdy, -m, t, winPw, sheen);
@@ -1129,28 +1131,28 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (p2 > 0.04) {
       ch = select(COL, O, h2 < litK * 0.4);
       var w2 = win; let gfl = gf << kv; if (band > 0 && ((gfl / band) & 1) == 1) { w2 = sign; }
-      c = w2 * p2 * (0.65 + 0.35 * hash3(gw, bk, 5));
+      c = w2 * p2 * (0.65 + 0.35 * hash3(gw, bk, 5)); em = true;
     } else {
       // the average of what up close is wall and dark panes, so the color holds when the detail comes in
       let paneK = select(select(select(0.3, 0.2, S == 2), 0.24, S == 4), 0.0, S == 1 || S == 5);
       ch = farWall; c = mix(frame * farK * shade, darkPane, paneK);
     }
   } else if (z < FLOOR_H && shop) {
-    if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; }
+    if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; em = true; }
     else { ch = BAR; c = frame * shade; }
   } else if (S == 1) {
     // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
     if (fz < 0.08) { ch = DASH; c = frame * 0.8 * shade; }
     else if (fw < 0.07 || corner) { ch = BAR; c = frame * 1.5 * shade; }
     else if (hh < litK) {
-      if (wp > 0.04) { ch = select(select(COL, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+      if (wp > 0.04) { ch = select(select(COL, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
     } else { ch = select(select(DOT, COL, sheen > 0.4), SL, sheen > 0.85); c = frame * (1.3 + 0.9 * sheen) * shade; }
   } else if (S == 5) {
     let dp = along % 6.0;
     if (z > H - 3.2 && z < H - 1.4) {
       if (fw > 0.08 && fw < 0.92) {
         let p0 = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977, gen, bk, 1.5) * winLight, switched);
-        if (hash3(bk, wi, 0) < litK * 2.0 && p0 > 0.04) { ch = HASH; c = win * p0 * 0.75; }
+        if (hash3(bk, wi, 0) < litK * 2.0 && p0 > 0.04) { ch = HASH; c = win * p0 * 0.75; em = true; }
         else { ch = EQ; c = vec3f(22.0 * shade + 8.0, 26.0 * shade + 8.0, 36.0 * shade + 10.0); }
       } else { ch = BAR; c = frame * 1.2 * shade; }
     } else if (z < 4.5 && ifloor(along / 6.0) % 3 == 1 && !corner) {
@@ -1168,11 +1170,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else if (fz < 0.08) { ch = DASH; c = frame * 1.1 * shade; }
     else if (fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82) {
       if (fz > 0.7) { ch = CARET; c = frame * 1.3 * shade; }
-      else if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+      else if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
     } else { ch = COL; c = frame * shade; }
   } else if (S == 2) {
     if (fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78 && !corner) {
-      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
     } else {
       let course = ifloor(z / 0.5); let off = f32(course & 1) * 0.6;
       ch = select(EQ, BAR, corner); c = frame * (0.8 + 0.35 * hash3(course, ifloor((along + off) / 1.2), bk)) * shade;
@@ -1185,17 +1187,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       else if (balK == 2) { ch = COL; c = vec3f(110.0 * shade + 10.0, 140.0 * shade + 10.0, 160.0 * shade + 12.0); }
       else { ch = select(BAR, DASH, balK == 3); c = frame * 1.3 * shade; }
     } else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) {
-      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
     } else { ch = select(DOT, BAR, corner); c = frame * shade; }
   } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
-    if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+    if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
   } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
+  var emC = select(vec3f(0.0), c, em);
   // a lit room's light spills onto the wall around its window
   if (pk.ok && !isWin && !corner && z < H - 0.6 && pk.r >= 0) {
     let GL = roomLamp(lot, bk, roomRec(po, pk.r), pk.r, fl, winPw);
     if (GL.x + GL.y + GL.z > 0.02) {
       let d = length(vec2f((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H)); let e = max(0.0, 1.0 - d / 1.5);
-      c += GL * (120.0 * e * e);
+      c += GL * (120.0 * e * e); il += GL * (120.0 * e * e);
     }
   }
   // neon tubes up the corners and along the roof line, and their glow on the wall
@@ -1207,12 +1210,12 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let s = select(along, z, eA < tw);
     let chase = hash3(bk, 3, 31) < 0.35 && ifloor((s - u.sec * 5.0) / 1.4) % 3 == 0;
     let k = ad * (1.0 - 0.55 * u.day) * select(1.0, 0.25, chase);
-    if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); }
-    else { let e = max(0.0, 1.0 - min(eA, dTop) / 1.6); c += neon * (e * e * 0.5 * k); }
+    if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); emC = c; il = vec3f(0.0); }
+    else { let e = max(0.0, 1.0 - min(eA, dTop) / 1.6); c += neon * (e * e * 0.5 * k); il += neon * (e * e * 0.5 * k); }
   }
   // the top washed in light at night
   if (bld[q + 31u] > 0.5 && z > H - CROWN_H) {
-    c += colAt(q + 28u) * (pow((z - (H - CROWN_H)) / CROWN_H, 1.4) * 0.95 * ad * (1.0 - 0.85 * u.day));
+    let cw = colAt(q + 28u) * (pow((z - (H - CROWN_H)) / CROWN_H, 1.4) * 0.95 * ad * (1.0 - 0.85 * u.day)); c += cw; il += cw;
   }
   // floodlights at the foot of the wall, each a cone of light widening upward
   let floodH = bld[q + 35u];
@@ -1224,9 +1227,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       let fb = select(f0, 0.0, side == 2);
       let fr = (((along - fb) / FLOOD_GAP) % 1.0 + 1.0) % 1.0; let d = abs(fr - 0.5) * FLOOD_GAP; let d2 = FLOOD_GAP - d;
       I = fzz * (exp(-(d / w) * (d / w)) + exp(-(d2 / w) * (d2 / w)));
-      if (z < 0.35 && d < 0.3) { ch = STAR; c = vec3f(240.0, 230.0, 200.0); }
+      if (z < 0.35 && d < 0.3) { ch = STAR; c = vec3f(240.0, 230.0, 200.0); emC = c; il = vec3f(0.0); }
     }
-    c += colAt(q + 32u) * (I * adElec);
+    c += colAt(q + 32u) * (I * adElec); il += colAt(q + 32u) * (I * adElec);
   }
   // the scaffolding 1 m out from a street face: steel tubes (standards every 2.4 m, ledgers every 2 m,
   // a brace in every other bay), boards on each lift, and over the rest a mesh net or nothing
@@ -1241,17 +1244,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       if (upright || led || brace || board) {
         let plank = board && !led && !upright;
         ch = select(select(select(DASH, SL, brace), EQ, plank), BAR, upright);
-        c = select(SCAF_STEEL * 1.1, SCAF_BOARD * 0.9, plank) * shade0; T = sT;
+        c = select(SCAF_STEEL * 1.1, SCAF_BOARD * 0.9, plank) * shade0; T = sT; emC = vec3f(0.0); il = vec3f(0.0);
       } else if (bld[q + 53u] > 0.5) {
         // the net veils the wall behind it
-        c = c * 0.45 + NETS[u32(bld[q + 53u]) - 1u] * (0.55 * shade0);
+        c = c * 0.45 + NETS[u32(bld[q + 53u]) - 1u] * (0.55 * shade0); emC *= 0.45; il *= 0.45;
         if (t < 40.0 && ch != AT && ch != HASH) { ch = select(DOT, COL, ((ifloor(uu / 0.3) + ifloor(zs / 0.3)) & 1) == 1); }
       }
     }
   }
   c = sat(c);
   // street lamps, headlights and signs light the lower floors
-  if (z < LIT_H && t < LIT_FAR) { c = sat(c + lightAt(hx, hy, z) * (1.3 * shade)); }
+  if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c = sat(c + L); il += L; }
+  if (!isWin) { gEm = sat(emC); gIl = il; gTag = T; }
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));
 }
@@ -1403,13 +1407,17 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     }
   }
   c = sat(c);
-  return Cell(ch, sat((c + lightAt(wx, wy, 0.0) * lk) * fog), bg, rd, KIND_GROUND, 0.0);
+  let gl = lightAt(wx, wy, 0.0) * (lk * fog);
+  gEm = vec3f(0.0); gIl = gl; gTag = rd;
+  return Cell(ch, sat(c * fog + gl), bg, rd, KIND_GROUND, 0.0);
 }
 
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
 const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 3.0; const DAY_GROUND = 1.8;
 /** The brightest a surface reflects (its hue kept), how much more saturated the day shows the colors, and the exposure. */
 const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
+/** By day, how strongly the lamps' light reaches a surface, and how bright what glows reads. */
+const DAY_LAMP = 1.5; const DAY_EMIT = 1.6;
 /** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
 fn acesL(x: f32) -> f32 { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 /** The curve on the luminance only, so a bright color keeps its hue and saturation; past 1 it goes to white. */
@@ -1424,7 +1432,12 @@ fn tone(x: vec3f) -> vec3f {
 // ---- the finish: moonlight, daylight and haze, a whole-city blackout, the display modes
 fn finish(cl: Cell) -> Cell {
   var o = cl;
+  gGlow = 0.0;
   if (o.depth >= 1e9) { return o; }
+  // the light this cell gives off and gets from the lamps, if it was made where it was marked
+  let tagged = o.depth == gTag;
+  let emit = select(vec3f(0.0), gEm, tagged); let lamp = select(vec3f(0.0), gIl, tagged);
+  gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day);
   if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = sat(o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); }
   let day = u.day;
   if (day > 0.01 || u.flash > 0.0) {
@@ -1440,7 +1453,8 @@ fn finish(cl: Cell) -> Cell {
       let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
       let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
       let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
-      var alb = pow(o.c / 255.0, vec3f(2.2)) * DAY_ALBEDO;
+      // the surface's own color without the light on it and from it
+      var alb = pow(max(vec3f(0.0), o.c - emit - lamp) / 255.0, vec3f(2.2)) * DAY_ALBEDO;
       // the colors were made for the night: by day a bit more saturated, and never brighter than a white wall
       alb = max(vec3f(0.0), mix(vec3f(dot(alb, vec3f(0.2126, 0.7152, 0.0722))), alb, DAY_SAT));
       let am = max(alb.x, max(alb.y, alb.z)); if (am > DAY_ALB_MAX) { alb *= DAY_ALB_MAX / am; }
@@ -1448,7 +1462,8 @@ fn finish(cl: Cell) -> Cell {
       if (o.kind == KIND_GROUND) { let g = dot(alb, vec3f(0.3, 0.5, 0.2)); alb = mix(alb, vec3f(g), 0.2) * DAY_GROUND; }
       let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
       let E = skyC + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * share * gSun) + vec3f(u.flash * 0.6);
-      let lin = tone(alb * E);
+      // the lamps light the surface as the sky does (weak by day); what glows is added over
+      let lin = tone(alb * (E + pow(lamp / 255.0, vec3f(2.2)) * DAY_LAMP) + pow(emit / 255.0, vec3f(2.2)) * DAY_EMIT);
       let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
       let dc = mix(pow(lin, vec3f(1.0 / 2.2)) * 255.0, haze, fd);
       o.c = sat(mix(o.c * (1.0 - f) + haze * f, dc, smoothK(0.0, 0.35, day)));
@@ -1850,7 +1865,8 @@ fn store(i: u32, n: u32, cl: Cell) {
   let k = vec3u(clamp(cl.c, vec3f(0.0), vec3f(255.0)));
   outp[i] = cl.ch | (k.x << 8u) | (k.y << 16u) | (k.z << 24u);
   let b = vec3u(clamp(cl.bg, vec3f(0.0), vec3f(255.0)));
-  outp[n + i] = b.x | (b.y << 8u) | (b.z << 16u) | (255u << 24u);
+  // the background's alpha carries the glow (the compositor's bloom pass reads it)
+  outp[n + i] = b.x | (b.y << 8u) | (b.z << 16u) | (u32(gGlow * 255.0) << 24u);
 }
 
 // a light held at the eye (handLight): what is near gets brighter by its distance, most in the middle of the view
@@ -2027,6 +2043,13 @@ fn sunLit(px: f32, py: f32, pz: f32) -> f32 {
 const SHADOW_TOP = 460.0;
 /** This cell's sunlight after the shadows (sunLit), for finish. */
 var<private> gSun: f32 = 1.0;
+// what of the cell's color is light it gives off (a lit window, a sign, a lamp) and light it gets from the
+// lamps (street lamps, floodlights, headlights), for the cell at depth gTag; set where the cell is made
+var<private> gEm: vec3f = vec3f(0.0);
+var<private> gIl: vec3f = vec3f(0.0);
+var<private> gTag: f32 = -1.0;
+// how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)
+var<private> gGlow: f32 = 0.0;
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {

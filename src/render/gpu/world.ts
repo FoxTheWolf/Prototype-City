@@ -276,6 +276,8 @@ export class GpuWorld {
       T.read.mapAsync(GPUMapMode.READ).then(() => {
         const a = new Uint8Array(T.read.getMappedRange());
         T.grid.cells.set(a.subarray(0, n)); T.grid.bg.set(a.subarray(n, 2 * n));
+        // (the GPU keeps the glow in the background's alpha; on the CPU a background is opaque)
+        for (let k = 3; k < n; k += 4) T.grid.bg[k] = 255;
         T.read.unmap(); T.busy = false; T.at = now; T.tag = tag;
       }, () => { T.busy = false; });
     }

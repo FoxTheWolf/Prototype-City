@@ -220,17 +220,18 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         kk *= 0.55 + 0.45 * h + 0.25 * nrm.z;
       } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && shape == 0u), fx[p + 12u], face == 2); }
     }
-    var rgb = col * kk;
+    var rgb = col * kk; var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     let painted = mat == M_GLOW || mat == M_TEXT || (mat == M_BOARD && face == 0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
     if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); } // the room's lamps
     else if (!painted) {
       // the light where the ray hit, strongest on tops
       let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff);
-      rgb += L * (select(1.1, 1.5, face == 2) * fog);
+      rgb += L * (select(1.1, 1.5, face == 2) * fog); oIl = L * (select(1.1, 1.5, face == 2) * fog);
     }
+    if (mat == M_GLOW || mat == M_TEXT) { oEm = rgb; }
     // seen through glass: darker and colder, with a faint sheen
-    if (glassT < best) { rgb = rgb * vec3f(0.6, 0.66, 0.72) + vec3f(16.0, 24.0, 34.0); }
+    if (glassT < best) { rgb = rgb * vec3f(0.6, 0.66, 0.72) + vec3f(16.0, 24.0, 34.0); oEm *= 0.66; oIl *= 0.66; }
     // the share of direct sun on this face (2 + share, see finish); a fire escape (no sun on the CPU) and
     // the painted faces keep what was under them
     var sun = select(0.0, cl.sun, cl.sun >= 2.0);
@@ -239,6 +240,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
+    gEm = sat(oEm); gIl = oIl; gTag = best;
     cl = Cell(ch, sat(rgb), cl.bg, best, select(select(KIND_OTHER, KIND_OBJECT, mat == M_SOLID && !painted), KIND_ROOM, indoor), sun);
   }
   return cl;
