@@ -8,6 +8,8 @@
 
 ### Movidos em 2026-10-03, terceira organização
 
+**R.29 (2026-10-03), Sessão A item 1, o brilho das janelas de longe unido às de perto.** Pedido: de longe a fachada tinha uma "capa" de janelas coloridas; de perto apareciam as salas reais, muitas apagadas e sem cor, trocadas por pontilhado por janela (`peekK > hash`), o que parecia um corte. Feito em `wallCell` (`gpu/shader.ts`): (a) o corpo da fachada (janelas e parede) virou um bloco à parte (`body`); o visual distante (`chF/cF`) é calculado também na faixa de transição, e com uma janela por célula usa o mesmo sorteio e o mesmo brilho da janela de perto; (b) na faixa `detK` as cores dos dois visuais se misturam pelo `detK` do prédio (só o glifo continua pontilhado), com a emissão misturada (`bodyEm`); (c) as salas aparecem em todas as janelas dentro de `1,3 · PEEK_FAR` (antes só nas sorteadas), a cor da capa (acesa ou vidro escuro) se mistura com a sala por `peekK`, e a janela que era acesa de longe ganha `winGlow = cor · WIN_GLOW (0,6) · peekK · smoothstep(GLOW_NEAR 12 m, 56 m)`, que vai para `gEm` (bloom). Medido: 4,0 → 4,1 ms numa torre a 30 m; 3,5 → 3,6 ms a 70 m.
+
 **Grupo B da etapa 12 (12.7–12.13) aprovado pelo usuário em 2026-10-03:** "o grupo B da etapa 12, por mim, tá tudo ok". A caixa de feedback dessa data (portal de entrada, ChatGPT, bugs de interior e do notebook, fatia vertical para amigos) foi distribuída no "Plano das próximas sessões" do CLAUDE.md; o texto do tutorial do notebook foi para "Feedback para o Opus 4.8". Os retornos do Gemini/ChatGPT chegaram em `docs/tarefas/retorno/` (o `01-tipos-de-lugar.json` veio com texto em volta e foi limpo).
 
 ### Movidos em 2026-10-03, segunda organização (sessão Opus, antes da pausa do limite semanal)

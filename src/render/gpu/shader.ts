@@ -255,6 +255,8 @@ const FRAME_AD = ${v3(FRAME_AD)};
 const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(', ')});
 const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
 const DOOR_H = ${f(DOOR_H)}; const FX_TAB = ${FX_TAB}u; const PCELL = ${f(PCELL)}; const CEIL = ${f(CEIL)}; const PDOOR = ${DOOR}u; const PEEK_FAR = 80.0;
+// a window lit from afar keeps a glow of its color up close: how strong, and where it is gone
+const WIN_GLOW = 0.6; const GLOW_NEAR = 12.0;
 const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v3(SCAF_STEEL)}; const SCAF_BOARD = ${v3(SCAF_BOARD)};
 const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
 fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
@@ -1000,7 +1002,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // the room behind the wall here, near enough to make out: this floor's plan (the ground floor's or the
   // upper floors' of this box), entered where the ray met the wall
   var po = 0u; var pk = Peek(false, 0.0, 0, 0.0, 0.0); var lot = -1;
-  if (detailed && t < PEEK_FAR * 2.5 && peekK > hash3(wi, fl, bk + 517) && !gRefl && side != 2 && fl >= 0 && f32(fl) < floor((H - 1.0) / FLOOR_H + 0.5)) {
+  if (detailed && t < PEEK_FAR * 2.5 && peekK > 0.0 && !gRefl && side != 2 && fl >= 0 && f32(fl) < floor((H - 1.0) / FLOOR_H + 0.5)) {
     po = fx[FX_TAB + fx[0] + u32(bk) * 2u + select(1u, 0u, fl == 0)];
     if (po > 0u) { lot = i32(fx[po + 5u]); pk = peekInto(po, q, hx, hy, rdx, rdy); }
   }
@@ -1008,6 +1010,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   var isWin = false; var glass = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0;
+  var body = false; var bodyEm = vec3f(-1.0); var winGlow = vec3f(0.0);
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
   let rev = side < 2 && (face == 1 || face == 2);
   let sec = u.sec; let scol = sign;
@@ -1157,36 +1160,51 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     c = ac * ((0.75 + 0.25 * hash3(ifloor(along * 3.0), ifloor(z * 3.0), bk)) * shade);
     // lit from below by gooseneck lamps at night
     let al = vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9); c += al; il += al;
-  } else if (pk.ok && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
-    // a window: the room behind it, lit by its own lamps
-    let P = peekCell(po, lot, bk, pk, fl, rdx, rdy, -m, t, winPw, sheen);
-    ch = P.ch; c = P.c; isWin = true; glass = true;
-  } else if (detailed && S != 1 && S != 5 && S != 3 && z > H - 1.3) {
-    // cornice with dentils
-    ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
-  } else if (detailed && (S == 0 || S == 2 || S == 4) && fl > 1 && fl % (4 + i32(feat * 3.0)) == 0 && fz < 0.07) {
-    ch = EQ; c = frame * 1.3 * shade; // a belt course every few floors
-  } else if (detailed && S == 2 && !corner && fw > 0.27 && fw < 0.73 && ((fz > 0.78 && fz < 0.86) || (fz > 0.25 && fz < 0.3))) {
-    ch = select(US, DASH, fz > 0.5); c = frame * 1.3 * shade; // stone lintel and sill
-  } else if (detailed && S == 0 && feat > 0.6 && wi % 2 == 0 && fw < 0.18) {
-    ch = BAR; c = frame * 1.3 * shade; // art deco piers
-  } else if (detailed && (S == 0 || S == 4) && z < FLOOR_H && !shop && !corner) {
-    ch = select(HASH, EQ, (ifloor(z / 0.5) & 1) == 1); c = frame * 0.95 * shade; // a stone base
-  } else if (!detailed) {
-    // far: several floors and bays share a cell, grouped in powers of two so the pattern holds still
+  } else { body = true; }
+  // the facade's body (windows and wall). Far, several floors and bays share a cell; up close, each window
+  // and its room. In the band between, both are made and their colors mixed by the building's detail, so the
+  // whole tower fades from one look to the other (only the glyphs still dither over the band)
+  var chF = 0u; var cF = vec3f(0.0); var emF = false; var glassF = false;
+  if (body && (!detailed || detK < 1.0)) {
     let gw = wi >> kh; let gf = fl >> kv;
     let h2 = hash3(bk, gw, gf);
     var p2 = 0.0;
     if (h2 < litK) { p2 = select(winLight, power(sub, cx, cy, bk * 131 + gw * 977 + gf * 7, gen, bk, 1.5) * winLight, switched); }
     if (p2 > 0.04) {
-      ch = select(COL, O, h2 < litK * 0.4);
+      chF = select(COL, O, h2 < litK * 0.4);
       var w2 = win; let gfl = gf << kv; if (band > 0 && ((gfl / band) & 1) == 1) { w2 = sign; }
-      c = w2 * p2 * (0.65 + 0.35 * hash3(gw, bk, 5)); em = true;
+      // one window per cell: the same brightness as that window up close, so the two looks agree
+      let bri = select(0.65 + 0.35 * hash3(gw, bk, 5), 0.65 + 0.35 * hash3(wi, fl, bk), kh == 0u && kv == 0u);
+      cF = w2 * p2 * bri; emF = true;
     } else {
       // the average of what up close is wall and dark panes, so the color holds when the detail comes in
       let paneK = select(select(select(0.3, 0.2, S == 2), 0.24, S == 4), 0.0, S == 1 || S == 5);
-      ch = farWall; c = mix(frame * select(farK, 1.15, S == 1) * shade, darkPane, paneK); glass = S == 1;
+      chF = farWall; cF = mix(frame * select(farK, 1.15, S == 1) * shade, darkPane, paneK); glassF = S == 1;
     }
+  }
+  if (body && !detailed) { ch = chF; c = cF; em = emF; glass = glassF; }
+  else if (body) {
+  if (pk.ok && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
+    // a window: the room behind it, lit by its own lamps. From afar it was a pane in the building's window
+    // color (lit) or dark glass: that look fades out over the whole building as it comes near, and a pane
+    // that was lit keeps a glow of its color, fading closer still
+    let P = peekCell(po, lot, bk, pk, fl, rdx, rdy, -m, t, winPw, sheen);
+    let capaLit = hh < litK && wp > 0.04;
+    let capa = select(darkPane, wc * wk, capaLit);
+    ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
+    c = mix(capa, P.c, peekK); isWin = true; glass = true;
+    if (capaLit) { winGlow = wc * wk * (WIN_GLOW * peekK * smoothstep(GLOW_NEAR, 0.7 * PEEK_FAR, tRef)); c += winGlow; }
+  } else if (S != 1 && S != 5 && S != 3 && z > H - 1.3) {
+    // cornice with dentils
+    ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
+  } else if ((S == 0 || S == 2 || S == 4) && fl > 1 && fl % (4 + i32(feat * 3.0)) == 0 && fz < 0.07) {
+    ch = EQ; c = frame * 1.3 * shade; // a belt course every few floors
+  } else if (S == 2 && !corner && fw > 0.27 && fw < 0.73 && ((fz > 0.78 && fz < 0.86) || (fz > 0.25 && fz < 0.3))) {
+    ch = select(US, DASH, fz > 0.5); c = frame * 1.3 * shade; // stone lintel and sill
+  } else if (S == 0 && feat > 0.6 && wi % 2 == 0 && fw < 0.18) {
+    ch = BAR; c = frame * 1.3 * shade; // art deco piers
+  } else if ((S == 0 || S == 4) && z < FLOOR_H && !shop && !corner) {
+    ch = select(HASH, EQ, (ifloor(z / 0.5) & 1) == 1); c = frame * 0.95 * shade; // a stone base
   } else if (z < FLOOR_H && shop) {
     if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; em = true; glass = true; }
     else { ch = BAR; c = frame * shade; }
@@ -1242,7 +1260,12 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
     if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
   } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
-  var emC = select(vec3f(0.0), c, em);
+  if (detK < 1.0) {
+    bodyEm = mix(select(vec3f(0.0), cF, emF), select(vec3f(0.0), c, em), detK);
+    c = mix(cF, c, detK); em = em || emF;
+  }
+  }
+  var emC = select(select(vec3f(0.0), c, em), bodyEm, bodyEm.x >= 0.0);
   // a lit room's light spills onto the wall around its window
   // (only where this floor has a window in this bay: a stone base or a blind wall has none to spill from)
   if (pk.ok && !isWin && !corner && z < H - 0.6 && pk.r >= 0 && windowHole(style, shop, 0.5, 0.54, 0.54 * FLOOR_H, fl == 0)) {
@@ -1308,7 +1331,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
   if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c += L; il += L; }
-  if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; } else { gEm = vec3f(0.0); gIl = vec3f(0.0); }
+  if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; }
   gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0;
   gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it

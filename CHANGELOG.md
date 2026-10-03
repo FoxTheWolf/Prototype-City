@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.29 — Janelas que não perdem a cor (2026-10-03)
+- Chegando perto de um prédio à noite, as janelas não trocam mais de repente de cores acesas para salas cinzas: a cor vista de longe some aos poucos no prédio inteiro, e as janelas acesas guardam um brilho dessa cor, que só se apaga bem de perto.
+- A passagem do prédio distante para o prédio com detalhes ficou suave, sem o pontilhado de cores.
+
 ## 0.R.28 — Batida seca e carros mais nítidos (2026-10-03)
 - A batida de carro soa como uma pancada seca e pesada, com o amassado da lataria e estalos de vidro, em vez de um sininho.
 - O reflexo da cidade na pintura dos carros ficou mais nítido.
