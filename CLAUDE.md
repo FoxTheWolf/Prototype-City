@@ -550,6 +550,7 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - Os bugs abertos agora estão no **"Plano das próximas sessões"** (por sessão). Bugs novos entram aqui até a próxima organização.
+- **A notícia do apagão sai no instante do corte (retorno do usuário em 2026-10-03):** gerar a manchete (e talvez os posts de "voltou a luz") só depois que a energia volta, não durante o apagão. Para a sessão de correções.
 - **Acidentes demais no trânsito (retorno do usuário em 2026-10-03):** as batidas estão frequentes demais. Olhar na sessão de correções ou junto da fatia vertical (as "Lições da 10.10" têm como diagnosticar uma batida; contar por `w.events.list` com `kind === 'crash'` por minuto de simulação, antes e depois).
 - **Fachada que muda bruscamente ao se aproximar:** a faixa de transição foi alongada na R.34 (esperando o teste do usuário). Se ainda aparecer, comparar as cores do visual de longe (`cF` em `wallCell`) com a média do detalhado: o de longe parece mais claro (parede marrom) que o de perto (vidros escuros).
 

@@ -306,7 +306,7 @@ export class GpuWorld {
     if (timed) {
       // (L.12) a blackout or the power coming back round the viewer holds the eye where it was for a moment
       const sub = subAt(P, C, world.player.x, world.player.y);
-      const sec = (world.tick + v.alpha) / 60, push = eyePush(P, sub, world.player.x, world.player.y, sec);
+      const sec = (world.tick + v.alpha) / 60, push = eyePush(P, sub, world.player.x, world.player.y, sec, 1 - sky.day);
       // (L.13) then pushes it darker for a few seconds, from where it was, before letting it adapt again
       if (push < 1 && this.autoExposure) {
         if (this.pushBase < 0) this.pushBase = this.adapt;

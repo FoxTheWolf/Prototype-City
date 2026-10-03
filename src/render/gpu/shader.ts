@@ -1281,10 +1281,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
         // up close, bulbs (0.14 m apart), counted per cell like the shop signs'
         let bz = (lh - 0.2) / 7.0; let hx = dAlong / 0.28; let hz = dz / bz / 2.0;
         let nb = bulbsIn(lc, (fu * TICK_LW - 0.08) / 0.14, (TICK_Z1 - 0.1 - z) / bz, hx, hz);
-        if (nb > 0u) { ch = bulbGlyph(nb, hx, hz); c = vec3f(255.0, 150.0, 45.0) * on; } else { ch = DOT; c = vec3f(34.0, 20.0, 12.0); }
+        // unlit, the bulbs are the housing's color (else the dark letters show on it, inverted)
+        if (nb > 0u && on > 0.05) { ch = bulbGlyph(nb, hx, hz); c = mix(vec3f(34.0, 20.0, 12.0), vec3f(255.0, 150.0, 45.0), on); } else { ch = DOT; c = vec3f(34.0, 20.0, 12.0); }
       } else if (TICK_LW / dAlong >= 0.9) {
         let center = abs(fu - 0.45) * TICK_LW < dAlong / 2.0 && abs(z - (TICK_Z0 + TICK_Z1) / 2.0) < dz / 2.0 + 0.01;
-        ch = select(32u, lc, center); c = vec3f(255.0, 150.0, 45.0) * select(0.12 * on, on, center);
+        ch = select(32u, lc, center && on > 0.05); c = vec3f(255.0, 150.0, 45.0) * select(0.12 * on, on, center);
       } else { ch = EQ; c = vec3f(160.0, 95.0, 30.0) * on; }
     }
   } else if (scZ1 > scZ0 && along > scA0 && along < scA1 && z > scZ0 && z < scZ1) {

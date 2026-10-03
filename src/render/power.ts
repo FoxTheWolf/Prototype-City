@@ -88,20 +88,22 @@ export function eyeHold(p: PowerGrid, sub: number, x: number, y: number, sec: nu
   return since < at ? 1 : 1 - (since - at) / hold;
 }
 
-/** (L.13) After the dark reaches the viewer, the eye is pushed darker within EYE_PUSH_S seconds (the dark comes fast), down to EYE_PUSH_K of where it was, before it is let go. */
-const EYE_PUSH_S = 1, EYE_PUSH_K = 0.2;
+/** (L.13) After the dark reaches the viewer, the eye is pushed darker within EYE_PUSH_S seconds (the dark comes fast), down to EYE_PUSH_K of where it was, held there EYE_PUSH_HOLD seconds, before it is let go. */
+const EYE_PUSH_S = 1, EYE_PUSH_K = 0.2, EYE_PUSH_HOLD = 1;
 
 /**
  * (L.13) Going down, how much darker the eye is pushed now (1 = not at all): from the moment the
- * dark reaches (x, y), smoothly down to EYE_PUSH_K over EYE_PUSH_S; 1 again after that (the eye
- * then adapts on from where it was left).
+ * dark reaches (x, y), smoothly down to EYE_PUSH_K over EYE_PUSH_S, held for EYE_PUSH_HOLD; 1 again
+ * after that (the eye then adapts on from where it was left). Only at night (`night` 0 day .. 1 night):
+ * by day the sky stays as bright, so there is nothing to push the eye.
  */
-export function eyePush(p: PowerGrid, sub: number, x: number, y: number, sec: number): number {
+export function eyePush(p: PowerGrid, sub: number, x: number, y: number, sec: number, night: number): number {
   const S = p.subs[sub];
   if (S.changed < 0 || S.on) return 1;
   const k = (sec - S.changed / 60 - (SURGE + Math.hypot(x - S.ox, y - S.oy) / WAVE + 0.3)) / EYE_PUSH_S;
-  if (k < 0 || k > 1) return 1;
-  return 1 - (1 - EYE_PUSH_K) * k * k * (3 - 2 * k);
+  if (k < 0 || k > 1 + EYE_PUSH_HOLD / EYE_PUSH_S || night <= 0) return 1;
+  const m = Math.min(1, k);
+  return 1 - (1 - EYE_PUSH_K) * m * m * (3 - 2 * m) * Math.min(1, night);
 }
 
 /**
