@@ -148,7 +148,7 @@ export class GpuWorld {
     // after the facades and plans: the models, then the frame's objects (fx[1] says where)
     this.mBase = this.fxW.length; this.oBase = this.mBase + MODEL_CAP; this.fxW[1] = this.oBase;
     this.mW = new Uint32Array(MODEL_CAP); this.mF = new Float32Array(this.mW.buffer);
-    this.fx = dev.createBuffer({ size: (this.oBase + OBJ_CAP) * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    this.fx = dev.createBuffer({ size: (this.oBase + OBJ_CAP) * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
     dev.queue.writeBuffer(this.fx, 0, this.fxW);
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
@@ -286,27 +286,10 @@ export class GpuWorld {
   private model(parts: Part[]): number {
     const at = this.models.get(parts);
     if (at !== undefined) return at;
-    let chars = 0;
-    for (const p of parts) chars += p.text?.length ?? 0;
-    const n = 1 + parts.length * PW + chars;
+    const n = partsSize(parts);
     if (this.mEnd + n > MODEL_CAP) return -1;
-    const W = this.mW, F = this.mF, o = this.mEnd;
-    let tx = o + 1 + parts.length * PW;
-    W[o] = parts.length;
-    parts.forEach((p, k) => {
-      const w = o + 1 + k * PW;
-      W[w] = p.shape; F[w + 1] = p.x0; F[w + 2] = p.y0; F[w + 3] = p.z0; F[w + 4] = p.x1; F[w + 5] = p.y1; F[w + 6] = p.z1;
-      F[w + 7] = p.col[0]; F[w + 8] = p.col[1]; F[w + 9] = p.col[2];
-      W[w + 10] = p.mat; W[w + 11] = p.side; W[w + 12] = p.top; W[w + 13] = p.end;
-      const t = p.text ?? '';
-      W[w + 14] = this.mBase + tx; W[w + 15] = t.length;
-      for (let c = 0; c < t.length; c++) W[tx++] = code(t, c);
-      W[w + 16] = p.sym === undefined || p.sym < 0 ? 0 : p.sym + 1;
-      const c2 = p.col2;
-      F[w + 17] = c2?.[0] ?? 0; F[w + 18] = c2?.[1] ?? 0; F[w + 19] = c2?.[2] ?? 0; W[w + 20] = c2 ? 1 : 0;
-      F[w + 21] = p.lamp ?? 0; W[w + 22] = p.bulbs ? 1 : 0; W[w + 23] = 0;
-    });
-    this.mEnd = tx;
+    const o = this.mEnd;
+    this.mEnd = packParts(this.mW, this.mF, o, parts, this.mBase);
     this.models.set(parts, this.mBase + o);
     return this.mBase + o;
   }
@@ -406,8 +389,18 @@ export class GpuWorld {
   private putPlan(P: Plan, upper: boolean, lot: number): number {
     const W = this.fxW, F = this.fxF, s = P.box * 2 + (upper ? 1 : 0), t = FX_TAB + this.city.buildings.length + s, q = this.dev.queue;
     if (this.fxPlan[s]) return W[t];
-    const n = 6 + P.rooms.length * 6 + Math.ceil(P.cells.length / 4), o = this.fxTake(n);
+    // after the cells, the furniture (seen through the windows): its count, then per piece x, y, c, s,
+    // its radius and its model's offset; then the models, each once
+    const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy));
+    let mSize = 0;
+    for (const m of list) if (!mods.has(m)) { mods.set(m, 0); mSize += partsSize(m); }
+    const nCells = Math.ceil(P.cells.length / 4), fo = 6 + P.rooms.length * 6 + nCells;
+    const n = fo + 1 + P.furn.length * 6 + mSize, o = this.fxTake(n);
     if (o < 0) return -1;
+    let mo = o + fo + 1 + P.furn.length * 6;
+    for (const m of mods.keys()) { mods.set(m, mo); mo = packParts(W, F, mo, m, 0); }
+    W[o + fo] = P.furn.length;
+    P.furn.forEach((f, k) => { const e = o + fo + 1 + k * 6; F[e] = f.x; F[e + 1] = f.y; F[e + 2] = f.c; F[e + 3] = f.s; F[e + 4] = Math.hypot(f.hx, f.hy) + 0.4; W[e + 5] = mods.get(list[k])!; });
     W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = lot;
     P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind); W[w + 5] = R.unit; });
     W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 2), o + 6 + P.rooms.length * 6);
@@ -492,6 +485,36 @@ interface Shot {
   grid: CharGrid;
   at: number;
   tag: string | undefined;
+}
+
+/** Words a model takes in fx (packParts). */
+function partsSize(parts: Part[]) {
+  let chars = 0;
+  for (const p of parts) chars += p.text?.length ?? 0;
+  return 1 + parts.length * PW + chars;
+}
+
+/**
+ * A model into W at o (W[0] is fx[base]): its part count, PW words per part, then the parts' texts;
+ * returns where it ends.
+ */
+function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], base: number) {
+  let tx = o + 1 + parts.length * PW;
+  W[o] = parts.length;
+  parts.forEach((p, k) => {
+    const w = o + 1 + k * PW;
+    W[w] = p.shape; F[w + 1] = p.x0; F[w + 2] = p.y0; F[w + 3] = p.z0; F[w + 4] = p.x1; F[w + 5] = p.y1; F[w + 6] = p.z1;
+    F[w + 7] = p.col[0]; F[w + 8] = p.col[1]; F[w + 9] = p.col[2];
+    W[w + 10] = p.mat; W[w + 11] = p.side; W[w + 12] = p.top; W[w + 13] = p.end;
+    const t = p.text ?? '';
+    W[w + 14] = base + tx; W[w + 15] = t.length;
+    for (let c = 0; c < t.length; c++) W[tx++] = code(t, c);
+    W[w + 16] = p.sym === undefined || p.sym < 0 ? 0 : p.sym + 1;
+    const c2 = p.col2;
+    F[w + 17] = c2?.[0] ?? 0; F[w + 18] = c2?.[1] ?? 0; F[w + 19] = c2?.[2] ?? 0; W[w + 20] = c2 ? 1 : 0;
+    F[w + 21] = p.lamp ?? 0; W[w + 22] = p.bulbs ? 1 : 0; W[w + 23] = 0;
+  });
+  return tx;
 }
 
 /** Words for the objects' models and for a frame's objects in fx. */

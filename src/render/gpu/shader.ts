@@ -434,33 +434,101 @@ fn wallPx(kind: u32, unit: i32, zr: f32, uu: f32) -> Px {
   return Px(ch, c);
 }
 /**
+ * The furniture of the plan at o on storey f, along the ray from t0 to t1 (the glass to the room's far
+ * surface): the nearest piece's hit (t = t1: none), its glyph and color, lit by the faces as the street
+ * objects are (the room's lamps are applied by peekCell; a glowing part keeps its own color).
+ */
+struct FHit { t: f32, ch: u32, c: vec3f, glow: bool };
+fn furnHit(o: u32, f: i32, rdx: f32, rdy: f32, kz: f32, t0: f32, t1: f32) -> FHit {
+  var h = FHit(t1, 0u, vec3f(0.0), false);
+  let fo = o + 6u + fx[o + 4u] * 6u + (fx[o + 2u] * fx[o + 3u] + 3u) / 4u;
+  let n = fx[fo]; let oz = u.eye - f32(f) * FLOOR_H;
+  // parts thinner than a cell at this distance are widened to half a cell (as in objectsOver)
+  let mh = 0.5 * u.colW * t0; let mz = 0.5 * t0 / u.scale;
+  var hp = 0u; var face = 0; var nrm = vec3f(0.0); var hc = 1.0; var hs0 = 0.0;
+  for (var k = 0u; k < n; k++) {
+    let e = fo + 1u + k * 6u;
+    let x = fxf(e); let y = fxf(e + 1u); let c = fxf(e + 2u); let s = fxf(e + 3u); let r = fxf(e + 4u); let mo = fx[e + 5u];
+    let ox = (u.px - x) * c + (u.py - y) * s; let oy = -(u.px - x) * s + (u.py - y) * c;
+    let dx = rdx * c + rdy * s; let dy = -rdx * s + rdy * c;
+    let qa = dx * dx + dy * dy; let qb = ox * dx + oy * dy; let disc = qb * qb - qa * (ox * ox + oy * oy - r * r);
+    if (disc < 0.0) { continue; }
+    let sq = sqrt(disc);
+    if ((-qb + sq) / qa < t0 || (-qb - sq) / qa > h.t) { continue; }
+    let o3 = vec3f(ox, oy, oz); let d0 = vec3f(dx, dy, kz); let d3 = select(d0, vec3f(1e-9), abs(d0) < vec3f(1e-9));
+    for (var pi = 0u; pi < fx[mo]; pi++) {
+      let p = mo + 1u + pi * PW;
+      let shape = fx[p]; let q0 = fx3(p + 1u); let q1 = fx3(p + 4u);
+      let cen = (q0 + q1) * 0.5; let hs = max((q1 - q0) * 0.5, vec3f(mh, mh, mz));
+      var t = 1e9; var fc = 0; var nn = vec3f(0.0);
+      if (shape == 0u) {
+        let ta = (cen - hs - o3) / d3; let tb = (cen + hs - o3) / d3;
+        let lo = min(ta, tb); let hi = max(ta, tb);
+        let tn = max(lo.x, max(lo.y, lo.z)); let tf = min(hi.x, min(hi.y, hi.z));
+        if (tn > tf || tn <= t0) { continue; }
+        t = tn; fc = select(select(2, 1, tn == lo.y), 0, tn == lo.x); nn = vec3f(0.0); nn[fc] = -sign(d3[fc]);
+      } else {
+        let X = (o3.x - cen.x) / hs.x; let Y = (o3.y - cen.y) / hs.y; let DX = d3.x / hs.x; let DY = d3.y / hs.y;
+        let Z = select(0.0, (o3.z - cen.z) / hs.z, shape != 1u); let DZ = select(0.0, d3.z / hs.z, shape != 1u);
+        let a = DX * DX + DY * DY + DZ * DZ; let b = X * DX + Y * DY + Z * DZ; let ds = b * b - a * (X * X + Y * Y + Z * Z - 1.0);
+        if (ds < 0.0) { continue; }
+        t = (-b - sqrt(ds)) / a;
+        if (shape == 1u) {
+          if (abs(o3.z + d3.z * t - cen.z) > hs.z) {
+            // the cylinder's top, seen from above
+            if (d3.z >= 0.0 || o3.z <= cen.z + hs.z) { continue; }
+            t = (cen.z + hs.z - o3.z) / d3.z; let uu = X + DX * t; let w = Y + DY * t;
+            if (uu * uu + w * w > 1.0) { continue; }
+            fc = 2; nn = vec3f(0.0, 0.0, 1.0);
+          } else { fc = 1; nn = vec3f(X + DX * t, Y + DY * t, 0.0); }
+        } else { nn = vec3f(X + DX * t, Y + DY * t, Z + DZ * t); fc = select(1, 2, nn.z > 0.75); }
+        if (t <= t0) { continue; }
+      }
+      if (t < h.t) { h.t = t; hp = p; face = fc; nrm = nn; hc = c; hs0 = s; }
+    }
+  }
+  if (hp == 0u) { return h; }
+  let mat = fx[hp + 10u]; let shape = fx[hp];
+  h.c = fx3(hp + 7u);
+  if (mat == M_GLOW) { h.ch = fx[hp + 11u]; h.glow = true; return h; }
+  let wn = abs(nrm.x * hc - nrm.y * hs0) / select(length(nrm.xy), 1.0, length(nrm.xy) == 0.0);
+  h.c *= select(0.72 + 0.28 * wn, 1.15, face == 2);
+  h.ch = select(select(fx[hp + 11u], fx[hp + 13u], face == 0 && shape == 0u), fx[hp + 12u], face == 2);
+  return h;
+}
+/**
  * One window cell's view of the room behind it (peekCell): the ray goes on from the glass at distance t,
  * rising kz per unit, to the back wall, or down to the floor or up to the ceiling of storey f; under the glass.
  */
 fn peekCell(o: u32, lot: i32, boxId: i32, pk: Peek, f: i32, rdx: f32, rdy: f32, kz: f32, t: f32, elec: f32, sheen: f32) -> Px {
   let z0 = f32(f) * FLOOR_H; let zc = z0 + CEIL; let tw = t + pk.d; let zw = u.eye + kz * tw;
   let st = i32(bld[u32(lot * ${BLD}) + 10u]); let office = st == 0 || st == 1;
-  var r = pk.r; var x = 0.0; var y = 0.0; var part = 1;
+  var r = pk.r; var x = 0.0; var y = 0.0; var part = 1; var tEnd = tw;
   if (zw < z0 || zw > zc) {
     part = select(2, 0, zw < z0);
-    let tt = (select(zc, z0, part == 0) - u.eye) / kz;
-    x = u.px + rdx * tt; y = u.py + rdy * tt;
-    let cc = roomAt(o, x, y); if (cc > 0u) { r = i32(cc) - 1; }
-  } else { x = u.px + rdx * tw; y = u.py + rdy * tw; }
+    tEnd = (select(zc, z0, part == 0) - u.eye) / kz;
+  }
+  // the furniture in front of the floor, the ceiling or the wall
+  let F = furnHit(o, f, rdx, rdy, kz, t, tEnd);
+  if (F.t < tEnd) { part = 3; tEnd = F.t; }
+  x = u.px + rdx * tEnd; y = u.py + rdy * tEnd;
+  if (part != 1) { let cc = roomAt(o, x, y); if (cc > 0u) { r = i32(cc) - 1; } }
   if (r < 0 || u32(r) >= fx[o + 4u]) { return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
   let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
   let lp = roomLamp(lot, boxId, ro, r, f, elec);
   let k = 0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0); let a = 0.14 + 0.5 * u.day;
   let L = lp * k + vec3f(a, a * 1.05, a * 1.25);
   var p = Px(DOT, vec3f(0.0));
-  if (part == 0) { p = floorPx(kind, office, x, y); }
+  if (part == 3) { p = Px(F.ch, F.c); }
+  else if (part == 0) { p = floorPx(kind, office, x, y); }
   else if (part == 2) { p = ceilPx(ro, kind, office, lp.x + lp.y > 0.05, x, y); }
   else { p = wallPx(kind, unit, zw - z0, pk.uu); }
   let ch = p.ch; let c = p.c;
   let sh = select(1.0, pk.shade, part == 1);
   // under the glass: a faint tint, and the sky and the city mirrored in soft bands (by day the reflection wins)
   let s2 = sheen * sheen; let gk = 0.55 - 0.2 * u.day - 0.3 * s2;
-  let lc = c * L * sh;
+  var lc = c * L * sh;
+  if (part == 3 && F.glow) { lc = c * select(0.25, 1.0, lp.x + lp.y > 0.05); } // a lamp: lit when the room is
   return Px(ch, lc * gk + vec3f(16.0 + s2 * 95.0 + u.day * 55.0, 30.0 + s2 * 110.0 + u.day * 65.0, 40.0 + s2 * 130.0 + u.day * 80.0));
 }
 /** Window openings of a facade style, as wallColumn draws them (windowHole). */
