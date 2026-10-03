@@ -370,19 +370,22 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
 });
 
-function computeLayout(rows: number): Layout {
+/** `rows` sets the cell size; the grid then gets as many rows as fill the screen (no black bars, the phone on the bottom edge).
+ *  cover: the world overfills by up to a cell (cut at the edges); the interface stays whole, the leftover (< a cell) on top. */
+function computeLayout(rows: number, cover: boolean): Layout {
   const dpr = devicePixelRatio || 1;
   const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
   canvas.width = w; canvas.height = h;
   const cellH = Math.max(4, Math.floor(h / rows));
   const cellW = Math.max(3, Math.round(cellH * CELL_ASPECT));
-  const cols = Math.floor(w / cellW);
-  return { cols, rows, cellW, cellH, originX: (w - cols * cellW) >> 1, originY: (h - rows * cellH) >> 1 };
+  const fit = cover ? Math.ceil : Math.floor;
+  const cols = fit(w / cellW), n = fit(h / cellH);
+  return { cols, rows: n, cellW, cellH, originX: (w - cols * cellW) >> 1, originY: cover ? (h - n * cellH) >> 1 : h - n * cellH };
 }
 
 function resize() {
-  layout = computeLayout(camRows || RES_ROWS[resStep]);
-  uiLayout = computeLayout(UI_ROWS);
+  layout = computeLayout(camRows || RES_ROWS[resStep], true);
+  uiLayout = computeLayout(UI_ROWS, false);
   grid = new CharGrid(layout.cols, layout.rows);
   ui = new CharGrid(uiLayout.cols, uiLayout.rows);
   hd = new HdLayer(uiLayout.cols * HD, uiLayout.rows * HD);

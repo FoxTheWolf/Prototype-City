@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.38 — Tela inteira sem faixas pretas (2026-10-03)
+- A cidade preenche a tela toda, sem as faixas pretas em cima e embaixo: a opção de linhas (R) passa a definir o tamanho dos caracteres, e o jogo acrescenta as linhas que faltam. O celular fica sempre encostado na borda de baixo.
+
 ## 0.R.37 — Electron (2026-10-03)
 - O jogo pode rodar numa janela própria, em tela cheia, fora do navegador: `jogar-electron.bat` (F11 sai e volta da tela cheia, Alt+F4 fecha). A resolução fica sempre a mesma, sem as abas e a barra do navegador.
 
