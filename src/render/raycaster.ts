@@ -3,7 +3,7 @@ import { BAY, BLADE_LETTER, blockAt, BLADE_Z, BURN_START, diagS, faceSpan, FLOOR
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { baseAt, cachedPlan, DOOR_H, doorOf, escapesOf, exitsOf, habitable, leavesOf, liftGlassAt, lotOf, planOf, type Door, type Plan } from '../sim/interior';
 import { glassPass, insideLight, interiorColumn, peekCell, peekInto, prepareInside, roomGlow, windowHole, type Inside, type Peek } from './interior';
-import { type CharGrid, KIND } from './grid';
+import { CharGrid, KIND } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights } from './lights';
@@ -175,16 +175,7 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   // indoors: the floor is drawn over the city, which shows only through the windows; the building's
   // own boxes (setbacks, rooftop parts) are left out of the city
   if (nearT.length !== cols) nearT = new Float32Array(cols); else nearT.fill(0);
-  const kIn = baseAt(city, px, py), plan = kIn >= 0 ? planOf(city, kIn, v.floor) : null;
-  let inside: Inside | null = null, skip: Building | null = null;
-  if (plan) {
-    skip = city.buildings[kIn];
-    inside = { city, k: kIn, plan, base: skip, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW: (2 * plane) / cols, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day: sky.day, sec: frameSec, rain, leaves: [], leafA: [] };
-    // the doors between rooms, swung as far as they are open (eased: fast at first, settling at the end)
-    inside.leaves = leavesOf(plan);
-    inside.leafA = inside.leaves.map((_, n) => { const a = world.doors.get(doorKey(kIn, v.floor, n)) ?? 0; return (1 - (1 - a) ** 2) * Math.PI * 0.5; });
-    prepareInside(inside, px, py);
-  }
+  const inside = insideOf(world, v, (2 * plane) / cols, sky.day, rain), skip: Building | null = inside ? inside.base : null;
   frameInside = !!inside;
   frameX = px; frameY = py; planBudget = PLANS_PER_FRAME;
 
@@ -460,37 +451,72 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
   finish(grid, v.look, sky);
   if (v.hand) handLight(grid, v.hand);
-  // the light on the viewer's hands, for what they hold (the phone): the room's lamps indoors; outside
-  // the sky, the street lamps and the passing lights at chest height, and the lightning
-  // the brightest light's side and color, for the glint on what they hold: the light sampled 2 m
-  // around them gives the way it gets brighter; a light behind reflects best off a screen facing them
-  const I0 = inside, sample = (x: number, y: number, out: Float32Array) => {
-    if (I0) { const L = insideLight(I0, x, y); out[0] = L[0] * 150; out[1] = L[1] * 150; out[2] = L[2] * 150; }
-    else { lightAt(x, y, 1.6); out[0] = LT[0]; out[1] = LT[1]; out[2] = LT[2]; }
-    return out[0] + out[1] + out[2];
-  };
-  const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
-  const here = sample(px, py, S), g = Math.hypot(ex, ey);
-  if (inside) { const L = insideLight(inside, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
-  else {
-    const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
-    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
-  }
-  {
-    const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0;
-    const m = Math.max(1, S[0], S[1], S[2]);
-    VIEW_GLINT[0] = lat;
-    VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
-    VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
-  }
+  viewLight(inside, px, py, dirX, dirY, sky);
   // after finish, so the drops keep the background of what is behind them
   drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);
 }
 
 /**
+ * The light on the viewer's hands, for what they hold (the phone): the room's lamps indoors; outside the sky,
+ * the street lamps and the passing lights at chest height, and the lightning. And the brightest light's side
+ * and color, for the glint on what they hold: the light sampled 2 m around them gives the way it gets brighter;
+ * a light behind reflects best off a screen facing them.
+ */
+function viewLight(I: Inside | null, px: number, py: number, dirX: number, dirY: number, sky: SkyFrame) {
+  const sample = (x: number, y: number, out: Float32Array) => {
+    if (I) { const L = insideLight(I, x, y); out[0] = L[0] * 150; out[1] = L[1] * 150; out[2] = L[2] * 150; }
+    else { lightAt(x, y, 1.6); out[0] = LT[0]; out[1] = LT[1]; out[2] = LT[2]; }
+    return out[0] + out[1] + out[2];
+  };
+  const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
+  const here = sample(px, py, S), g = Math.hypot(ex, ey);
+  if (I) { const L = insideLight(I, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
+  else {
+    const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
+    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
+  }
+  const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0;
+  const m = Math.max(1, S[0], S[1], S[2]);
+  VIEW_GLINT[0] = lat;
+  VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
+  VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
+}
+
+/** The floor the viewer stands in (null outdoors), with its doors' swing and its lamps made ready for this frame. */
+function insideOf(world: World, v: View, colW: number, day: number, rain: number): Inside | null {
+  const { city } = world, kIn = baseAt(city, v.x, v.y), plan = kIn >= 0 ? planOf(city, kIn, v.floor) : null;
+  if (!plan) return null;
+  const base = city.buildings[kIn];
+  const I: Inside = { city, k: kIn, plan, base, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day, sec: frameSec, rain, leaves: [], leafA: [] };
+  // the doors between rooms, swung as far as they are open (eased: fast at first, settling at the end)
+  I.leaves = leavesOf(plan);
+  I.leafA = I.leaves.map((_, n) => { const a = world.doors.get(doorKey(kIn, v.floor, n)) ?? 0; return (1 - (1 - a) ** 2) * Math.PI * 0.5; });
+  prepareInside(I, v.x, v.y);
+  return I;
+}
+
+let pickGrid: CharGrid | null = null, pickNear = new Float32Array(0);
+/**
+ * The floor a GPU frame draws around the viewer (after gpuPrepare), or null outdoors. The lift button
+ * under the middle of the screen (pickedButton) is still found here, by the CPU's walk of that one column.
+ */
+export function gpuInside(world: World, v: View, cols: number, rows: number, sky: SkyFrame) {
+  const W = world.weather, scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
+  const I = insideOf(world, v, (2 * plane) / cols, frameDay, W.snow ? 0 : W.precip);
+  frameInside = !!I;
+  if (!I) return null;
+  if (!pickGrid || pickGrid.cols !== cols || pickGrid.rows !== rows) { pickGrid = new CharGrid(cols, rows); pickNear = new Float32Array(cols); }
+  const x = cols >> 1, camX = (2 * (x + 0.5)) / cols - 1, dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw);
+  pickGrid.clear();
+  interiorColumn(pickGrid, x, I, v.x, v.y, dirX - dirY * plane * camX, dirY + dirX * plane * camX, v.eye, rows / 2 + Math.tan(v.pitch) * scale, scale, pickNear);
+  viewLight(I, v.x, v.y, dirX, dirY, sky);
+  return I;
+}
+
+/**
  * What a frame drawn on the GPU (render/gpu) takes from here: the start of renderWorld (the frame's
  * globals, the sky, the street lamps, the dynamic lights) without the drawing, and at the end the
- * light on the viewer's hands (outdoors only for now: the GPU has no interiors yet).
+ * light on the viewer's hands outdoors (gpuInside sets it indoors).
  */
 export function gpuPrepare(world: World, v: View) {
   const { city } = world;
@@ -503,16 +529,7 @@ export function gpuPrepare(world: World, v: View) {
   light.update(frameSec, sky.day, world.power);
   gatherLights(world, v, frameSec);
   glFrame = (glFrame + 1) >>> 0 || 1;
-  const px = v.x, py = v.y, dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw);
-  const sample = (x: number, y: number, out: Float32Array) => { lightAt(x, y, 1.6); out[0] = LT[0]; out[1] = LT[1]; out[2] = LT[2]; return out[0] + out[1] + out[2]; };
-  const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
-  const here = sample(px, py, S), g = Math.hypot(ex, ey);
-  const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
-  for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
-  const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0, m = Math.max(1, S[0], S[1], S[2]);
-  VIEW_GLINT[0] = lat;
-  VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
-  VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
+  viewLight(null, v.x, v.y, Math.cos(v.yaw), Math.sin(v.yaw), sky);
   return { sky, light, dyn, sun: SUN, ticker: frameTicker };
 }
 

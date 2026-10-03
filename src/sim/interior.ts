@@ -278,12 +278,18 @@ export function stairStep(city: City, k: number, x: number, y: number, z: number
   return Number.isNaN(best) || Math.abs(best - z) > 0.5 ? NaN : best;
 }
 
+/** The glass wall of lot k's panoramic lift shaft, as a box along u (x if alongX, else y) and across v; null if none. */
+export function liftGlassBox(city: City, k: number) {
+  const F = frameOf(city, k);
+  return F.glass ? { alongX: F.alongX, u0: F.su1 + 0.08, u1: F.lu1 - 0.08, v0: F.cv0 - 0.3, v1: F.cv1 + 0.3 } : null;
+}
+
 /** Whether (x, y), on the facade of lot k, is the glass wall of its panoramic lift shaft. */
 export function liftGlassAt(city: City, k: number, x: number, y: number): boolean {
-  const F = frameOf(city, k);
-  if (!F.glass) return false;
-  const u = F.alongX ? x : y, v = F.alongX ? y : x;
-  return u > F.su1 + 0.08 && u < F.lu1 - 0.08 && v > F.cv0 - 0.3 && v < F.cv1 + 0.3;
+  const G = liftGlassBox(city, k);
+  if (!G) return false;
+  const u = G.alongX ? x : y, v = G.alongX ? y : x;
+  return u > G.u0 && u < G.u1 && v > G.v0 && v < G.v1;
 }
 
 /**

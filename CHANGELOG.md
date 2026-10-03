@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.15 — Os interiores na GPU (2026-10-03)
+- No modo da GPU, dá para entrar nos prédios: os cômodos com as paredes, as portas abrindo, as placas EXIT, a botoeira do elevador (os botões continuam clicáveis), os móveis iluminados pelas lâmpadas de cada cômodo, a porta de rua vista de dentro, e as janelas com a cidade lá fora, o reflexo no vidro e as gotas escorrendo quando chove (a chuva só cai do lado de fora). Com a câmera 3D, dá para olhar o teto do escritório e as torres em volta sem distorção.
+- A luz da lanterna do celular e a luz nas mãos (que ilumina o celular e o notebook) agora também funcionam no modo da GPU.
+
 ## 0.R.14 — Fumaça, chuva e neve na GPU (2026-10-03)
 - No modo da GPU, a fumaça da zona de fogo sobe no horizonte, a chuva e a neve caem (com a água escorrendo da borda dos pontos de ônibus e dos andaimes, e nada caindo debaixo deles), os respingos aparecem no chão molhado, o lixo volta às calçadas e às sarjetas, e as faixas do X da avenida diagonal ganham as linhas de parada.
 

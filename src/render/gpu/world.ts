@@ -1,14 +1,16 @@
 import { BAY, blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
-import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, planOf, tiersOf } from '../../sim/interior';
+import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, liftGlassBox, planOf, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
-import { gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, type View } from '../raycaster';
-import type { Part } from '../objects';
+import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, type View } from '../raycaster';
+import { insideLamps, type Inside } from '../interior';
+import { furnitureModel } from '../models';
+import type { Obj, Part } from '../objects';
 import { OW, PW, TILE } from './objects';
 import { CURVE_R } from '../sarcophagus';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
-import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
+import { BLD, BLK, FX_TAB, IN_LAMPS, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
  * Stage R: the world drawn on the GPU (WebGPU). The city goes up once as lists (street boundaries,
@@ -25,7 +27,8 @@ import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGS
  * ticker, the burnt ground, the fence, the Sarcophagus and its cranes, scaffolding and reliefs, the street doors and the fire escapes
  * drawn on the facades, the rooms seen through the windows, and the objects (gpu/objects.ts: lamps, trees, furniture, blade
  * signs, billboards, signals, cars, people, cameras, substations, sheds, the fire escapes' frames), the smoke of the fire
- * zone, rain and snow falling. Not yet: interiors, the glass of the windows indoors.
+ * zone, rain and snow falling, and the floor the viewer stands in (shader.ts, interiorCell: its walls, doors, the
+ * lift's panel, the windows with the city through them and their glass, floor and ceiling; its furniture as objects).
  */
 
 type UName = (typeof UNIFORMS)[number];
@@ -174,7 +177,7 @@ export class GpuWorld {
   /** This frame's world into `out`, as the first pass of the encoder (the compositor draws it in the same submit). */
   encode(enc: GPUCommandEncoder, world: World, v: View) {
     const { cols, rows } = this, C = this.city, q = this.dev.queue;
-    const F = gpuPrepare(world, v), sky = F.sky, P = world.power;
+    const F = gpuPrepare(world, v), sky = F.sky, P = world.power, I = gpuInside(world, v, cols, rows, sky), sk = I?.base;
     if (F.ticker !== this.ticker) {
       this.ticker = F.ticker;
       const T = new Uint32Array(Math.min(TICK_MAX, F.ticker.length));
@@ -219,9 +222,10 @@ export class GpuWorld {
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
+      hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
-    this.objects(world, v, scale, plane, vals.hor);
+    this.objects(world, v, scale, plane, vals.hor, I);
     q.writeBuffer(this.uni, 0, U);
     const pass = enc.beginComputePass();
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
@@ -263,12 +267,14 @@ export class GpuWorld {
    * corners projected), the 8-column tiles it covers, and its model (sent once). When the model area
    * fills, it starts over and the frame is packed again.
    */
-  private objects(world: World, v: View, scale: number, plane: number, hor: number) {
+  private objects(world: World, v: View, scale: number, plane: number, hor: number, I: Inside | null) {
     const { cols, rows } = this, q = this.dev.queue;
     const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch), c3 = this.cam3d;
     // the cone the objects are gathered in: the 3D camera turned up or down sees wider at its top or bottom rows
     const den = cp - Math.abs(sp) * Math.tan(VFOV / 2);
-    const list = gpuObjects(world, v, cols, !c3 ? plane : den > 0.15 ? plane / den : 1e3);
+    const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, !c3 ? plane : den > 0.15 ? plane / den : 1e3);
+    // indoors, the floor's furniture, lit by its rooms' lamps
+    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
     // a point on the screen, as cell edges (column, row), or false behind the eye
     let px = 0, py = 0;
@@ -306,26 +312,60 @@ export class GpuWorld {
     // the tiles' lists: counted, then filled
     const n = picked.length, W = this.oW, F = this.oF, cnt = new Uint32Array(nT + 1);
     for (let j = 0; j < n; j++) for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) cnt[t]++;
-    const tab = 6, lst = tab + nT + 1;
+    const tab = 8, lst = tab + nT + 1;
     let total = 0;
     for (let t = 0; t < nT; t++) { W[tab + t] = total; total += cnt[t]; }
     W[tab + nT] = total;
     // after the objects, this frame's roofs that keep the rain off (gatherRoofs): x, y, c, s, hx, hy, z
     const ob = lst + total, rb = ob + n * OW, nR = roofs.length;
-    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 6); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 6); return; }
+    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 8); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 8); return; }
     roofs.forEach((R, k) => F.set([R.x, R.y, R.c, R.s, R.hx, R.hy, R.z], rb + k * 7));
     const fill = cnt.fill(0);
     for (let j = 0; j < n; j++) {
       for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) W[lst + W[tab + t] + fill[t]++] = j;
-      const { o, far, zoff } = list[picked[j]], w = ob + j * OW, lean = o.lift !== undefined;
+      const { o, far, zoff, indoor } = list[picked[j]], w = ob + j * OW, lean = o.lift !== undefined;
       F[w] = o.x; F[w + 1] = o.y; F[w + 2] = o.c; F[w + 3] = o.s; F[w + 4] = o.r; F[w + 5] = o.h; F[w + 6] = o.z0 ?? 0;
       W[w + 7] = o.seed | 0; F[w + 8] = far; F[w + 9] = zoff;
       F[w + 10] = lean ? o.pitch ?? 0 : 0; F[w + 11] = lean ? o.roll ?? 0 : 0; F[w + 12] = lean ? o.lift ?? 0 : 0; F[w + 13] = o.wheel ?? 0;
-      W[w + 14] = lean ? 1 : 0; W[w + 15] = mods[j];
+      W[w + 14] = lean ? 1 : indoor ? 2 : 0; W[w + 15] = mods[j];
       W[w + 16] = box[j * 4]; W[w + 17] = box[j * 4 + 1]; W[w + 18] = box[j * 4 + 2]; W[w + 19] = box[j * 4 + 3];
     }
-    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR;
-    q.writeBuffer(this.fx, this.oBase * 4, W, 0, rb + nR * 7);
+    // then the floor the viewer stands in (see the shader's IN_ words): its plan, lot, box, storey, floor height, doors
+    // shut, the lift's floors and destination, how many door leaves and street doors, the panoramic lift's glass,
+    // the rooms; the rooms' lamps, the leaves (hinge, along, out, width, swing), the street doors (face, a0, a1)
+    let ib = rb + nR * 7, end = ib;
+    const po = I ? this.putPlan(I.plan, I.floor !== 0, I.k) : -1;
+    if (I && po >= 0) {
+      const nr = I.plan.rooms.length, nL = I.leaves.length, ex = I.floor === 0 ? I.exits : [], G = liftGlassBox(this.city, I.k);
+      end = ib + IN_LAMPS + nr * 3 + nL * 8 + ex.length * 3;
+      if (end > OBJ_CAP) { ib = 0; end = rb + nR * 7; }
+      else {
+        W[ib] = po; W[ib + 1] = I.k; W[ib + 2] = I.boxId; W[ib + 3] = I.floor; F[ib + 4] = I.z0; W[ib + 5] = I.closed ? 1 : 0;
+        W[ib + 6] = I.liftN; W[ib + 7] = I.liftTo; W[ib + 8] = nL; W[ib + 9] = ex.length;
+        W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; W[ib + 15] = nr;
+        F.set(insideLamps().subarray(0, nr * 3), ib + IN_LAMPS);
+        const lb = ib + IN_LAMPS + nr * 3;
+        I.leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w, I.leafA[k]], lb + k * 8));
+        ex.forEach((D, k) => { W[lb + nL * 8 + k * 3] = D.face; F[lb + nL * 8 + k * 3 + 1] = D.a0; F[lb + nL * 8 + k * 3 + 2] = D.a1; });
+      }
+    } else ib = 0;
+    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = 0;
+    q.writeBuffer(this.fx, this.oBase * 4, W, 0, end);
+  }
+
+  /** Plan P (a lot's ground floor, or its box's upper floors) into fx unless it is there: its offset, or -1 if fx had to start over. */
+  private putPlan(P: Plan, upper: boolean, lot: number): number {
+    const W = this.fxW, F = this.fxF, s = P.box * 2 + (upper ? 1 : 0), t = FX_TAB + this.city.buildings.length + s, q = this.dev.queue;
+    if (this.fxPlan[s]) return W[t];
+    const n = 6 + P.rooms.length * 6 + Math.ceil(P.cells.length / 4), o = this.fxTake(n);
+    if (o < 0) return -1;
+    W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = lot;
+    P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind); W[w + 5] = R.unit; });
+    W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 2), o + 6 + P.rooms.length * 6);
+    if (P.cells.length & 3) { const c0 = P.cells.length & ~3; let v = 0; for (let c = c0; c < P.cells.length; c++) v |= P.cells[c] << ((c - c0) * 8); W[o + 6 + P.rooms.length * 6 + (c0 >> 2)] = v; }
+    this.fxPlan[s] = 1; W[t] = o;
+    q.writeBuffer(this.fx, o * 4, W, o, n); q.writeBuffer(this.fx, t * 4, W, t, 1);
+    return o;
   }
 
   /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
@@ -349,9 +389,9 @@ export class GpuWorld {
    */
   private facades(x: number, y: number) {
     if (this.fxScan++ % 6) return;
-    const C = this.city, W = this.fxW, F = this.fxF, nb = C.buildings.length, q = this.dev.queue;
+    const C = this.city, W = this.fxW, F = this.fxF, q = this.dev.queue;
     let plans = FX_PLANS;
-    const start = this.fxEnd, slots: number[] = [];
+    const slots: number[] = [];
     const make = (k: number, f: number) => { if (plans > 0 && cachedPlan(C, k, f) === undefined) { planOf(C, k, f); plans--; } };
     for (const b of C.blocks) {
       if (b.b1 <= b.b0 || Math.max(b.x0 - x, x - b.x1, b.y0 - y, y - b.y1) > FX_NEAR) continue;
@@ -367,15 +407,7 @@ export class GpuWorld {
             if (f0 < top) make(k, f0);
             for (const f of f0 < top ? [0, f0] : [0]) {
               const P = cachedPlan(C, k, f);
-              if (!P || P.box !== (f ? j : k) || this.fxPlan[P.box * 2 + (f ? 1 : 0)]) continue;
-              const o = this.fxTake(6 + P.rooms.length * 6 + Math.ceil(P.cells.length / 4));
-              if (o < 0) return;
-              W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = k;
-              P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind); W[w + 5] = R.unit; });
-              W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 2), o + 6 + P.rooms.length * 6);
-              if (P.cells.length & 3) { const c0 = P.cells.length & ~3; let v = 0; for (let c = c0; c < P.cells.length; c++) v |= P.cells[c] << ((c - c0) * 8); W[o + 6 + P.rooms.length * 6 + (c0 >> 2)] = v; }
-              this.fxPlan[P.box * 2 + (f ? 1 : 0)] = 1;
-              const t = FX_TAB + nb + P.box * 2 + (f ? 1 : 0); W[t] = o; slots.push(t);
+              if (P && P.box === (f ? j : k) && this.putPlan(P, f !== 0, k) < 0) return;
             }
             f0 = Math.max(f0, top);
           }
@@ -385,15 +417,16 @@ export class GpuWorld {
         const doors = exitsOf(C, k, true), escs = escapesOf(C, k), n = doors.length + escs.length;
         const o = n ? this.fxTake(1 + n * 3) : 0;
         if (o < 0) return;
+        const start = o;
         this.fxState[k] = want;
         if (!n) continue;
         W[o] = n;
         doors.forEach((D, e) => { W[o + 1 + e * 3] = D.face << 4; F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1; });
         escs.forEach((E, e) => { const w = o + 1 + (doors.length + e) * 3; W[w] = 1 | (E.face << 4); F[w + 1] = E.a0; F[w + 2] = E.a0 + 2 * BAY; });
         W[FX_TAB + k] = o; slots.push(FX_TAB + k);
+        q.writeBuffer(this.fx, start * 4, W, start, 1 + n * 3);
       }
     }
-    if (this.fxEnd > start) q.writeBuffer(this.fx, start * 4, W, start, this.fxEnd - start);
     for (const t of slots) q.writeBuffer(this.fx, t * 4, W, t, 1);
   }
 }

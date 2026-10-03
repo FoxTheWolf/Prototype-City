@@ -10,7 +10,9 @@ import { SYMBOLS } from '../signs';
  * - the frame's objects, from fx[1]: their count, the number of 8-column tiles, where the objects and
  *   the tile lists start, the tiles' offsets into the list, the list, then OW words per object (pose,
  *   radius, height, base, seed, fog distance, lift, lean, the model's offset, its screen box), then
- *   the roofs that keep the rain off (fx[OB + 4] where, fx[OB + 5] how many; seven floats each).
+ *   the roofs that keep the rain off (fx[OB + 4] where, fx[OB + 5] how many; seven floats each), and the floor
+ *   the viewer stands in (fx[OB + 6] where, 0 outdoors; see the shader's interiorCell). The furniture is objects
+ *   too, marked indoor (lit by the rooms' lamps, multiplied).
  */
 export const OW = 20, PW = 24, TILE = 8;
 
@@ -51,7 +53,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
   let tile = gx / TILE;
   if (tile >= fx[OB + 1u]) { return cl; }
   let objs = OB + fx[OB + 2u]; let list = OB + fx[OB + 3u];
-  for (var li = fx[OB + 6u + tile]; li < fx[OB + 7u + tile]; li++) {
+  for (var li = fx[OB + 8u + tile]; li < fx[OB + 9u + tile]; li++) {
     let ob = objs + fx[list + li] * OW;
     if (gx < fx[ob + 16u] || gx >= fx[ob + 17u] || gy < fx[ob + 18u] || gy >= fx[ob + 19u]) { continue; }
     let x = fxf(ob); let y = fxf(ob + 1u); let c = fxf(ob + 2u); let s = fxf(ob + 3u); let r = fxf(ob + 4u);
@@ -70,7 +72,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     let ta = max(0.05, (-qb - sq) / qa);
     if (cl.depth <= ta) { continue; }
     // a vehicle's body leans on its springs: its parts off the ground are hit by the ray turned (and lifted) into it
-    let lean = fx[ob + 14u] == 1u; let pt = fxf(ob + 10u); let rl = fxf(ob + 11u); let lift = fxf(ob + 12u);
+    let lean = fx[ob + 14u] == 1u; let indoor = fx[ob + 14u] == 2u; let pt = fxf(ob + 10u); let rl = fxf(ob + 11u); let lift = fxf(ob + 12u);
     let bo = vec3f(ox - pt * (oz - PIVOT), oy - rl * (oz - PIVOT), oz + pt * ox + rl * oy - lift);
     let bd = vec3f(dx - pt * dz, dy - rl * dz, dz + pt * dx + rl * dy);
     let mo = fx[ob + 15u]; let np = fx[mo];
@@ -220,8 +222,9 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     }
     var rgb = col * kk;
     let painted = mat == M_GLOW || mat == M_TEXT || (mat == M_BOARD && face == 0);
-    if (face == 2 && u.snow > 0.0 && !painted) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
-    if (!painted) {
+    if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
+    if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); } // the room's lamps
+    else if (!painted) {
       // the light where the ray hit, strongest on tops
       let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff);
       rgb += L * (select(1.1, 1.5, face == 2) * fog);
@@ -232,7 +235,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     // the painted faces keep what was under them
     var sun = select(0.0, cl.sun, cl.sun >= 2.0);
     if (cl.kind == KIND_WALL) { sun = 2.0 + cl.sun; }
-    if (!painted && mat != M_GLOW && zoff == 0.0) {
+    if (!painted && mat != M_GLOW && zoff == 0.0 && !indoor) {
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }

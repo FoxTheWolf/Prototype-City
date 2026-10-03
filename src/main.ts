@@ -117,17 +117,22 @@ if (import.meta.env.DEV) Object.assign(window, {
     x1 ??= g.cols; y1 ??= g.rows;
     // (tint: the cells whose glyph color differs by more than 24 in a channel)
     // (kinds: the differing glyphs by what drew them on the CPU, KIND)
+    // (tints: the first of those cells, as x, y, the GPU's color and the CPU's)
     let G = '', P = '', diff = 0, tint = 0;
-    const kinds = [0, 0, 0, 0, 0, 0];
+    const kinds = [0, 0, 0, 0, 0, 0], tints: string[] = [];
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
         const i = y * g.cols + x, c = a[i] & 255, d = cg.cells[i * 4];
         G += c < 33 ? ' ' : String.fromCharCode(c); P += d < 33 ? ' ' : String.fromCharCode(d); if ((c < 33 ? 32 : c) !== (d < 33 ? 32 : d)) { diff++; kinds[cg.kind[i]]++; }
-        for (let k = 1; k < 4; k++) if (Math.abs(((a[i] >>> (k * 8)) & 255) - cg.cells[i * 4 + k]) > 24) { tint++; break; }
+        for (let k = 1; k < 4; k++) if (Math.abs(((a[i] >>> (k * 8)) & 255) - cg.cells[i * 4 + k]) > 24) {
+          tint++;
+          if (tints.length < 12) tints.push(`${x},${y} ${(a[i] >>> 8) & 255},${(a[i] >>> 16) & 255},${a[i] >>> 24}/${cg.cells[i * 4 + 1]},${cg.cells[i * 4 + 2]},${cg.cells[i * 4 + 3]}`);
+          break;
+        }
       }
       G += '\n'; P += '\n';
     }
-    return { gpu: G, cpu: P, diff, tint, kinds };
+    return { gpu: G, cpu: P, diff, tint, kinds, tints };
   },
   // watch camera k as on the title (stopCctv to leave)
   watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
