@@ -521,7 +521,6 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
   - **`src/render/intro.ts`:** a abertura (terminal no preto, depois a cidade em blocos que se desfazem em glifos).
 - **Ordem do quadro:** `main` em `gpu/shader.ts`, por célula: o andar em volta (`interiorCell`), a cidade (`cityCell`: céu, Sarcófago, chão, paredes, telhados, cerca), fumaça, objetos, o vidro visto de dentro, `finish`, e por fim chuva e neve (`fallOver`).
 - **Bugs registrados para depois:** veja "Bugs conhecidos".
-- **Blackout por prédio (pedido em 2026-10-03, para a próxima sessão):** cada prédio demora demais para apagar e para acender de novo; acelerar o tempo dentro de cada prédio e apagar/acender por andar ou por grupos de 4–8 janelas, não janela a janela ao acaso. Mexer em `render/power.ts` e na cópia dele no shader (`gpu/shader.ts`), que precisam continuar iguais.
 
 ### Histórico
 

@@ -7,9 +7,10 @@ import { type PowerGrid } from '../sim/power';
  *
  * Going down: a ring runs out from where the switch was thrown, slow enough to watch, and reaches
  * the nearest buildings first. Just before it arrives the lights surge a little brighter; when it
- * reaches a building, that building's lights go out one by one in random order, each with a
- * flicker. Coming back: buildings return in random order over some fifteen seconds, and inside
- * each one its lights again come on in random order, flickering before they hold. Buildings on a
+ * reaches a building, its lights go out within half a second, a flicker each, by groups (the
+ * shader's winGroup: whole floors, or runs of 4..8 windows). Coming back: buildings return in random
+ * order over some ten seconds, and inside each one the groups come on within a second, flickering
+ * before they hold. Buildings on a
  * generator fall dark and come back dimmer a few seconds later.
  */
 

@@ -156,6 +156,14 @@ fn power(sub: i32, x: f32, y: f32, id: i32, gen: bool, group: i32, spread: f32) 
   return select(1.0, 0.15, t < 0.7 && hash3(id, ifloor(t * 18.0), 406) < 0.5);
 }
 
+/** The power element a window belongs to: in a blackout the windows go (and come back) together by
+ *  whole floors in some buildings, by runs of 4..8 windows in the others, not one by one. */
+fn winGroup(bk: i32, wi: i32, fl: i32) -> i32 {
+  let h = hash3(bk, 0, 408);
+  if (h < 0.35) { return bk * 131 + fl * 7; }
+  return bk * 131 + (wi / (4 + i32(fract(h * 13.0) * 5.0))) * 977 + fl * 7;
+}
+
 // ---- light (lightmap.ts, lights.ts, lightAt): the street lamps' pools and this frame's dynamic lights
 fn lampCorner(i: u32, f: f32) -> vec3f {
   let w = lmap[i];
@@ -1020,7 +1028,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     po = fx[FX_TAB + fx[0] + u32(bk) * 2u + select(1u, 0u, fl == 0)];
     if (po > 0u) { lot = i32(fx[po + 5u]); pk = peekInto(po, q, hx, hy, rdx, rdy); }
   }
-  let winPw = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched);
+  let winPw = select(winLight, power(sub, cx, cy, winGroup(bk, wi, fl), gen, bk, 0.5) * winLight, switched);
   var isWin = false; var glass = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0;
@@ -1060,7 +1068,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   var wc = win; if (band > 0 && ((fl / band) & 1) == 1) { wc = sign; }
   let hh = hash3(bk, wi, fl);
   var wp = 0.0;
-  if (hh < litK) { wp = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched); }
+  if (hh < litK) { wp = select(winLight, power(sub, cx, cy, winGroup(bk, wi, fl), gen, bk, 0.5) * winLight, switched); }
   let wk = wp * (0.65 + 0.35 * hash3(wi, fl, bk));
   let darkPane = vec3f(30.0 * shade + 8.0, 36.0 * shade + 8.0, 58.0 * shade + 12.0);
   if (S == 7 || S == 10) {
@@ -1183,7 +1191,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let gw = wi >> kh; let gf = fl >> kv;
     let h2 = hash3(bk, gw, gf);
     var p2 = 0.0;
-    if (h2 < litK) { p2 = select(winLight, power(sub, cx, cy, bk * 131 + gw * 977 + gf * 7, gen, bk, 1.5) * winLight, switched); }
+    if (h2 < litK) { p2 = select(winLight, power(sub, cx, cy, winGroup(bk, gw << kh, gf << kv), gen, bk, 0.5) * winLight, switched); }
     if (p2 > 0.04) {
       chF = select(COL, O, h2 < litK * 0.4);
       var w2 = win; let gfl = gf << kv; if (band > 0 && ((gfl / band) & 1) == 1) { w2 = sign; }
@@ -1234,7 +1242,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let dp = along % 6.0;
     if (z > H - 3.2 && z < H - 1.4) {
       if (fw > 0.08 && fw < 0.92) {
-        let p0 = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977, gen, bk, 1.5) * winLight, switched);
+        let p0 = select(winLight, power(sub, cx, cy, winGroup(bk, wi, 0), gen, bk, 0.5) * winLight, switched);
         if (hash3(bk, wi, 0) < litK * 2.0 && p0 > 0.04) { ch = HASH; c = win * p0 * 0.75; em = true; }
         else { ch = EQ; c = vec3f(22.0 * shade + 8.0, 26.0 * shade + 8.0, 36.0 * shade + 10.0); }
       } else { ch = BAR; c = frame * 1.2 * shade; }

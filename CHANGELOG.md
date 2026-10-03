@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.B.5 — Apagão por andares (2026-10-03)
+- No apagão, as janelas de um prédio apagam e voltam juntas, por andar ou em grupos de algumas janelas, e bem mais rápido, em vez de uma a uma ao acaso.
+
 ## 0.F.1 — Hoje em 2008 (2026-10-03)
 - Na primeira vez que o jogo abre no dia, a tela de carregamento mostra o que aconteceu no mundo nessa mesma data em 2008. Nas outras vezes, às vezes aparece uma curiosidade de 2008 no lugar da dica.
 
