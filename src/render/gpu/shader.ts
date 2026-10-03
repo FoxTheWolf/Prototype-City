@@ -268,6 +268,7 @@ const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(
 const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
 const DOOR_H = ${f(DOOR_H)}; const FX_TAB = ${FX_TAB}u; const PCELL = ${f(PCELL)}; const CEIL = ${f(CEIL)}; const PDOOR = ${DOOR}u; const PEEK_FAR = 80.0;
 // a window lit from afar keeps a glow of its color up close: how strong, and where it is gone
+const DET_FADE = 2.0; // the far look gives way to the detailed one over a long band (0.7 to DET_FADE x tCut), so it never jumps
 const WIN_GLOW = 0.45; const GLOW_NEAR = 35.0; const GLOW_FULL = 72.0;
 const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v3(SCAF_STEEL)}; const SCAF_BOARD = ${v3(SCAF_BOARD)};
 const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
@@ -948,10 +949,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let tCut = min(FLOOR_H * u.scale / 2.2, BAY / (u.colW * 1.5));
   let tRef = length(vec2f(max(max(x0 - gOX, gOX - x1), 0.0), max(max(y0 - gOY, gOY - y1), 0.0)));
   // (a tall tower's top, far from the eye though its foot is near, fades out over a band too: never a cut)
-  let detK = (1.0 - smoothstep(0.8 * tCut, 1.3 * tCut, tRef)) * (1.0 - smoothstep(1.6 * tCut, 2.2 * tCut, t));
+  let detK = (1.0 - smoothstep(0.7 * tCut, DET_FADE * tCut, tRef)) * (1.0 - smoothstep(2.4 * tCut, 3.2 * tCut, t));
   // the same for the rooms seen through the windows: the building's, not the cell's, so no cut runs across a tower
   let peekK = (1.0 - smoothstep(0.7 * PEEK_FAR, 1.3 * PEEK_FAR, tRef)) * (1.0 - smoothstep(1.8 * PEEK_FAR, 2.5 * PEEK_FAR, t));
-  let detailed = t < tCut * 2.2 && detK > hash3(i32(floor(along * 4.0)), i32(floor(zw * 2.0)), bk + 913);
+  let detailed = t < tCut * 3.2 && detK > hash3(i32(floor(along * 4.0)), i32(floor(zw * 2.0)), bk + 913);
   // how fast the hit moves along the face, per unit of t
   var da = 0.0;
   if (side == 0) { da = rdy; } else if (side == 1) { da = rdx; } else if (side == 3) { da = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }

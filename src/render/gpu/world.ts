@@ -150,7 +150,7 @@ export class GpuWorld {
     this.sg = store(S.data); this.tickOff = S.tick;
     this.fixed = [new Float32Array(C.xb), new Float32Array(C.yb), Uint32Array.from(C.xCell), Uint32Array.from(C.yCell), blocks, blds].map(store);
     const nb = C.buildings.length;
-    this.fxW = new Uint32Array(FX_TAB + 3 * nb + (1 << 20)); this.fxF = new Float32Array(this.fxW.buffer);
+    this.fxW = new Uint32Array(FX_TAB + 3 * nb + (1 << 22)); this.fxF = new Float32Array(this.fxW.buffer); // room for many plans: when full, all start over
     this.fxW[0] = nb;
     this.fxState = new Uint8Array(nb); this.fxPlan = new Uint8Array(nb * 2); this.fxEnd = FX_TAB + 3 * nb;
     // after the facades and plans: the models, then the frame's objects (fx[1] says where)
@@ -590,8 +590,12 @@ function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], ba
 
 /** Words for the objects' models and for a frame's objects in fx. */
 const MODEL_CAP = 1 << 20, OBJ_CAP = 1 << 19;
-/** How near the doors and escapes are looked at, and the floor plans made (a few every 6 frames). */
-const FX_NEAR = 250, FX_PLAN = 80, FX_PLANS = 4;
+/**
+ * How near the doors and escapes are looked at, and the floor plans made (a few every 6 frames): the plans
+ * beyond where the rooms start fading in through the windows (1.3 x PEEK_FAR in the shader, 104 m), so a
+ * plan never arrives where its rooms would show at once.
+ */
+const FX_NEAR = 250, FX_PLAN = 130, FX_PLANS = 6;
 /** The room kinds, numbered as the shader has them. */
 const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop'];
 

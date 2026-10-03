@@ -316,7 +316,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **Raios de luz (*god rays*):** os do sol na tela (barato, a partir do céu visível perto do sol, na composição); os cones dos postes e holofotes no ar com névoa ou chuva (uma marcha pelo raio por luz próxima: medir antes).
 - **A névoa laranja da cidade:** se ainda não parecer "o centro aceso" (R.22b), uma luz de baixo para cima nas fachadas, mais forte perto do centro.
 - **A revisão geral da luz** (temperatura de cor para todas as luzes, unidades físicas, exposição): proposta ao usuário, **esperando a decisão dele**.
-- **Tijolo com relevo** (mapa normal com paralaxe), se sobrar. **O usuário pediu (2026-10-03):** se der certo, sugerir outros materiais ("o jogo precisa de mais voxels"). Candidatos do Claude, do mais visível ao menos: a cantaria das fachadas históricas (blocos de pedra e cornijas), as calçadas de lajota e os paralelepípedos, o concreto com juntas e furos de forma, as chapas onduladas dos galpões e as portas de enrolar das lojas, o asfalto rachado da zona de fogo, as grades de ventilação e os ar-condicionados nas paredes. O relevo por paralaxe dá o *aspecto* de voxel sem geometria; volume de verdade (sacadas, caixas de ar-condicionado, cornijas salientes) é geometria e fica para a etapa 15.
+- **Tijolo com relevo** (mapa normal com paralaxe), se sobrar. **O usuário pediu (2026-10-03):** se der certo, sugerir outros materiais ("o jogo precisa de mais voxels"). **Calçadas (pedido do usuário em 2026-10-03):** vários tipos, das limpas e bem feitas às sujas e com ladrilhos faltando, escolhidas pelo distrito (as piores na periferia). Candidatos do Claude, do mais visível ao menos: a cantaria das fachadas históricas (blocos de pedra e cornijas), as calçadas de lajota e os paralelepípedos, o concreto com juntas e furos de forma, as chapas onduladas dos galpões e as portas de enrolar das lojas, o asfalto rachado da zona de fogo, as grades de ventilação e os ar-condicionados nas paredes. O relevo por paralaxe dá o *aspecto* de voxel sem geometria; volume de verdade (sacadas, caixas de ar-condicionado, cornijas salientes) é geometria e fica para a etapa 15.
 
 ### Sessão C (Sonnet): correções pequenas
 > Correções localizadas, sem sistemas novos (veja "Sessões com o Sonnet" em "Como trabalhar"). Avisar o usuário para trocar para o Sonnet.
@@ -524,7 +524,7 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - Os bugs abertos agora estão no **"Plano das próximas sessões"** (por sessão). Bugs novos entram aqui até a próxima organização.
-- **Fachada/janelas mudam bruscamente ao se aproximar (2026-10-03, ainda acontece depois da R.29/R.30; capturas do usuário: a torre rosa e uma torre laranja):** a uma certa distância a fachada inteira troca de aparência de uma vez. Suspeitas: o corte `detailed` (`tCut`) ou o `detK`/`peekK` por prédio (`tRef`) em `wallCell`. Não é urgente; para um bugfix de luz (Sessão A item 7 ou depois).
+- **Fachada que muda bruscamente ao se aproximar:** a faixa de transição foi alongada na R.34 (esperando o teste do usuário). Se ainda aparecer, comparar as cores do visual de longe (`cF` em `wallCell`) com a média do detalhado: o de longe parece mais claro (parede marrom) que o de perto (vidros escuros).
 
 ## Refinamento: anotações (para a etapa 15)
 
