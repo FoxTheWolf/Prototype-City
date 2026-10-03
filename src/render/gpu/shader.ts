@@ -1833,9 +1833,11 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     // the scales finer than a step are averaged out (else a long step hits or misses them by chance: grain)
     let k1s = k1 * (1.0 - smoothK(500.0, 1200.0, ds)); let k2s = k2 * (1.0 - smoothK(150.0, 400.0, ds));
     var s = s0;
+    // a small fixed offset per ray of where each step samples: the step edges (layers) melt into a fine dither
+    let cj = (fract(sin(dot(vec2f(ux * 977.0 + up * 311.0, uy * 1213.0 - up * 157.0), vec2f(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.6;
     for (var k = 0; k < CLOUD_STEPS; k++) {
       // each step's stretch, s..s+ds: how much of the height it climbs lies inside its column's cloud
-      let za = u.eye + up * s; let zb = za + up * ds; let sm = s + ds * 0.5;
+      let za = u.eye + up * s; let zb = za + up * ds; let sm = s + ds * (0.5 + cj);
       let px = u.px + ux * sm; let py = u.py + uy * sm;
       let C = cloudCol(px, py, (za + zb) * 0.5, k1s, k2s, lo);
       let lo2 = max(za, C.y); let hi2 = min(zb, C.z);
