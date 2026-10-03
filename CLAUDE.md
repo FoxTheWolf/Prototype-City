@@ -417,6 +417,18 @@ Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de t
 - **Fatia vertical:** aprovada em princípio. Parte dela é hacking (a invasão em si); ao planejá-la, separar o que é sessão normal (contratante, pagamento, calor, polícia, notícias) do que é Trilha de hacking, e avisar o usuário quando for prudente usar o Opus 4.8.
 - **Render na GPU (avaliação, antes de crescer mais):** o usuário quer 160–200 linhas (mais bonito e cansa menos os olhos com movimento rápido), mas hoje fica quase injogável. Plano: **R.1 medir** (onde vai o tempo a 160/200 linhas: o worker mais lento, o thread principal, a espera pelos workers, a cópia do snapshot); **R.2 protótipo na GPU** (o chão e as fachadas da grade num fragment shader, um raio por célula, escrevendo glifo e cores numa textura do tamanho da grade, que o compositor atual já desenha), medindo o ganho; **R.3 decidir** com o usuário entre migrar tudo, um híbrido ou ficar nos workers. Veja a etapa R no Roteiro.
 
+### R.1, primeira medição (2026-10-02, máquina do Claude, 16 threads, 6 workers, theater district, girando 0,03 rad por quadro)
+
+| Linhas | Grade | Worker mais lento (mediana) | Quadro do mundo, mediana / p95 | Thread principal por quadro |
+|---|---|---|---|---|
+| 120 | 356×120 | 4,6 ms | 5,1 / 6,9 ms | 0,46 ms |
+| 160 | 475×160 | 6,3 ms | 7,0 / 9,7 ms | 0,49 ms |
+| 200 | 594×200 | 8,0–9,0 ms | 8,6–9,7 / 11,7–13,6 ms | 0,50–0,59 ms |
+
+- O custo cresce quase linear com as células, e o desequilíbrio entre os workers é ~1,2× (o mais lento contra a média).
+- **Aqui, 200 linhas dão ~110 quadros do mundo por segundo.** O "quase injogável" do usuário deve vir de outra coisa: (a) a CPU dele ter menos núcleos (os workers disputam com o thread principal e a simulação, ~3,6 ms por passo no pico); (b) **judder**: o mundo a ~90–110 quadros por segundo num monitor de 180 Hz é mostrado num ritmo irregular (2, 1, 2 atualizações por quadro), o que se vê como engasgo mesmo com FPS alto, e o pipeline soma um quadro de atraso. A GPU resolve as duas coisas (o mundo desenhado no mesmo quadro, em <1 ms).
+- **Falta:** os números do jogo rodando no PC do usuário (FPS, WORLD e DRAW da linha de status a 200 linhas, e o modelo da CPU). O laço do jogo não roda com o painel do navegador oculto, então o Claude só consegue medir o pool isolado (script em "Lições da 10.8"; `lookNow()` dá o `look` atual no console).
+
 ## Agradecimentos (easter eggs)
 
 Pedido do usuário em 2026-10-01: amigos dele que aparecem no jogo como agradecimento. **Cada nome aparece exatamente uma vez em toda cidade gerada, num lugar diferente conforme a semente:** numa semente é o nome de uma empresa, em outra um cidadão, uma rua, um marco, uma manchete, um contato no celular etc. A escolha do lugar sai da semente (determinística). Os nomes são escritos exatamente como abaixo, sem tradução.

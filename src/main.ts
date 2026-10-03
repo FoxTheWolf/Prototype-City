@@ -94,6 +94,8 @@ if (import.meta.env.DEV) Object.assign(window, {
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) s += String.fromCharCode(G.bg[(y * G.cols + x) * 4 + 3] || !onUi ? G.cells[(y * G.cols + x) * 4] : 32); s += '\n'; }
     return s;
   },
+  // the current look (the visual toggles), for measuring with a pool of one's own
+  lookNow: () => look,
   // renders the current view n times without the frame loop (it stops while the pane is hidden); returns the mean ms
   // on a 256x80 grid of its own, as in a 16:9 window
   bench: (n = 10) => {
