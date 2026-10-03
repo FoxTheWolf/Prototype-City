@@ -210,9 +210,9 @@ export function gpuPrepare(world: World, v: View) {
  * The objects a GPU frame draws (after gpuPrepare): the same lists renderWorld draws, each with the
  * distance its fog ends at and how high it is lifted (a fire escape's floors: zoff).
  */
-export function gpuObjects(world: World, v: View, cols: number, plane: number): { o: Obj; far: number; zoff: number }[] {
+export function gpuObjects(world: World, v: View, cols: number, plane: number, near = 0): { o: Obj; far: number; zoff: number }[] {
   // what is outside the view's cone is not even built (seen), as in a render worker's strip
-  Object.assign(CULL, { px: v.x, py: v.y, dirX: Math.cos(v.yaw), dirY: Math.sin(v.yaw), plane, cols, x0: 0, x1: cols, all: false });
+  Object.assign(CULL, { px: v.x, py: v.y, dirX: Math.cos(v.yaw), dirY: Math.sin(v.yaw), plane, cols, x0: 0, x1: cols, all: false, near });
   gatherRoofs(world, v);
   const out = collectObjects(world, v).map((o) => ({ o, far: SPRITE_FAR, zoff: 0 }));
   for (const o of gatherBoards(world, v, frameDay)) out.push({ o, far: BOARD_FAR, zoff: 0 });
@@ -642,7 +642,7 @@ const POSE = [0, 0, 0, 0];
 /** Half a vehicle's width by kind, for the lamps on its corners. */
 const halfW = (kind: string) => (kind === 'bus' || kind === 'truck' ? 1.2 : kind === 'van' ? 1.0 : 0.9);
 /** The view and the grid's strip, for collectObjects to skip what that strip cannot show. */
-const CULL = { px: 0, py: 0, dirX: 1, dirY: 0, plane: 1, cols: 1, x0: 0, x1: 1, all: true };
+const CULL = { px: 0, py: 0, dirX: 1, dirY: 0, plane: 1, cols: 1, x0: 0, x1: 1, all: true, near: 0 };
 /**
  * Can something at (x, y), reaching r metres, show in the columns this grid draws: with a strip
  * of a render worker (pool.ts), the objects outside it are not even built.
@@ -650,7 +650,10 @@ const CULL = { px: 0, py: 0, dirX: 1, dirY: 0, plane: 1, cols: 1, x0: 0, x1: 1, 
 function seen(x: number, y: number, r: number): boolean {
   const C = CULL;
   if (C.all) return true;
-  const rx = x - C.px, ry = y - C.py, t = rx * C.dirX + ry * C.dirY;
+  const rx = x - C.px, ry = y - C.py;
+  // near enough to cast a shadow into the view, even from behind
+  if (rx * rx + ry * ry < C.near * C.near) return true;
+  const t = rx * C.dirX + ry * C.dirY;
   if (t < r + 0.5) return t > -r; // around the viewer: let drawing decide
   const sx = (C.cols / 2) * (1 + (-rx * C.dirY + ry * C.dirX) / (t * C.plane)), hw = (r * C.cols) / (2 * C.plane * t) + 1;
   return sx + hw >= C.x0 && sx - hw <= C.x1;

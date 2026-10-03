@@ -10,6 +10,8 @@ import type { Obj, Part } from '../objects';
 import { OW, PW, TILE } from './objects';
 /** By day, how much wider the objects are gathered than the view (their shadows reach in from the sides), and how near an off-screen one must be to cast (m). */
 const SHADOW_CONE = 1.6, SHADOW_CASTERS = 150;
+/** By day, how near an object behind the viewer must be to still cast its shadow forward (m; SG_LONG). */
+const SHADOW_BACK = 60;
 /** Objects within FLOOD_REACH m of a floodlit facade nearer than FLOOD_SHADOW_FAR cast its lamps' shadows on it (at most FLOOD_CASTERS). */
 const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 /** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
@@ -320,7 +322,7 @@ export class GpuWorld {
     const den = cp - Math.abs(sp) * Math.tan(VFOV / 2);
     // (by day wider: what stands just off the screen casts its shadow into it)
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
-    const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone);
+    const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // indoors, the floor's furniture, lit by its rooms' lamps
     if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
@@ -350,14 +352,18 @@ export class GpuWorld {
       for (let k = 0; k < list.length; k++) {
         const { o, far, zoff } = list[k];
         const tY = (o.x - v.x) * dirX + (o.y - v.y) * dirY;
-        if (tY + o.r < 0.3 || tY - o.r > far) continue;
+        if (tY - o.r > far) continue;
+        // wholly behind the eye: by day still sent (with no screen box) if near enough to cast forward
+        const back = tY + o.r < 0.3;
+        if (back && !(shadows && Math.hypot(o.x - v.x, o.y - v.y) < SHADOW_BACK)) continue;
         let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, behind = false;
         const zl = (o.z0 ?? 0) + zoff - 0.4, zh = o.h + zoff + 0.4;
         for (let c = 0; c < 8; c++) {
           if (!proj(o.x + (c & 1 ? o.r : -o.r), o.y + (c & 2 ? o.r : -o.r), c & 4 ? zh : zl)) { behind = true; break; }
           x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
         }
-        if (behind) { x0 = 0; x1 = cols; y0 = 0; y1 = rows; }
+        if (back) x1 = -1e9;
+        else if (behind) { x0 = 0; x1 = cols; y0 = 0; y1 = rows; }
         const bx0 = Math.max(0, Math.floor(x0) - 1), bx1 = Math.min(cols, Math.ceil(x1) + 1), by0 = Math.max(0, Math.floor(y0) - 1), by1 = Math.min(rows, Math.ceil(y1) + 1);
         // off the screen: by day still sent (with no screen box) to cast its shadow, if near enough
         const off = bx0 >= bx1 || by0 >= by1;
