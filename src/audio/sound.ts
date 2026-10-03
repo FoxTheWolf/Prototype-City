@@ -8,6 +8,14 @@ import { blackout, darkEvent, Kit, restore } from './blackout';
 import { type Car } from '../sim/traffic';
 import { type EventLog } from '../sim/events';
 
+/**
+ * (L.13) Development only: play the recorded blackout sounds the user keeps in
+ * `easter eggs/copyright protected/` (git-ignored, never shipped) instead of the synthesized ones.
+ * Where the files are missing (any build given to someone else), the synthesized sounds play.
+ * The final game uses only synthesized sounds.
+ */
+const EGG_SOUNDS = true;
+
 /** Engines heard at once (the nearest), and how far an engine, a horn and a crash carry. */
 const ENGINES = 3, ENGINE_R = 45, HORN_R = 120, CRASH_R = 600, CROWD_R = 30;
 /** Passers-by's phones heard: ringing within this, keys clicking within the second. */
@@ -45,6 +53,8 @@ export class Sound {
   private noise: AudioBuffer;
   private lastBolt = -1;
   private kit: Kit;
+  /** (L.13, dev only) The recorded blackout sounds from `easter eggs/copyright protected/`, when EGG_SOUNDS and the files are there. */
+  private egg: { down?: AudioBuffer; up?: AudioBuffer } = {};
   private seen: number[] = [];
   private nextDark = 0;
   private hush = 0;
@@ -111,6 +121,9 @@ export class Sound {
     hiss.connect(this.humCrackle);
 
     this.kit = new Kit(ctx, this.out, noise);
+    if (EGG_SOUNDS) for (const [k, f] of [['down', 'wd_blackout_start'], ['up', 'wd_blackout_end']] as const)
+      fetch(`/easter eggs/copyright protected/${f}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((b) => ctx.decodeAudioData(b)).then((a) => { this.egg[k] = a; }).catch(() => {});
 
     // rain: a hiss of drops on the pavement, and in a downpour the low roar of water everywhere
     this.rain = gain(ctx, 0, this.out);
@@ -159,6 +172,15 @@ export class Sound {
   }
 
   /** Thunder after `delay` seconds: a crack, then a long low roll that fades. */
+  /** (L.13) One of the recorded blackout sounds (EGG_SOUNDS), at time `at`, with gain g and pan pn. */
+  private playEgg(buf: AudioBuffer, at: number, g: number, pn: number) {
+    const src = this.ctx.createBufferSource(), p = this.ctx.createStereoPanner();
+    src.buffer = buf;
+    p.pan.value = Math.max(-1, Math.min(1, pn));
+    src.connect(gain(this.ctx, g, p)); p.connect(this.out);
+    src.start(at);
+  }
+
   private thunder(delay: number) {
     const ctx = this.ctx, t0 = ctx.currentTime + delay;
     const s = ctx.createBufferSource();
@@ -885,7 +907,9 @@ export class Sound {
       const d = Math.hypot(s.ox - x, s.oy - y);
       if (d > 1400) return;
       const g = (1 - d / 1400) ** 1.3, at = now + d / 343, pn = pan(s.ox, s.oy) * 0.6;
-      if (!s.on) blackout(this.kit, at, g, pn);
+      const egg = s.on ? this.egg.up : this.egg.down;
+      if (egg) this.playEgg(egg, at, g, pn);
+      else if (!s.on) blackout(this.kit, at, g, pn);
       else restore(this.kit, at, g, pn);
     });
     // in a dark district the city hush falls; now and then a relay or a transformer fights back

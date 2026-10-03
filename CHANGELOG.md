@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.13 — Um apagão que escurece de verdade (2026-10-03)
+- Depois do surto, quando a escuridão chega até você, a visão escurece aos poucos por uns cinco segundos, bem mais do que antes, e só então os olhos começam a se acostumar ao escuro.
+
 ## 0.L.12 — O apagão em três tempos (2026-10-03)
 - O apagão não é mais imediato: por quase dois segundos todas as luzes do bairro ficam cada vez mais fortes, alguns telões já dão tela azul, e só então a escuridão corre pelas ruas.
 - Quando a luz some à sua volta, os olhos demoram uns três segundos para se acostumar: fica tudo muito escuro no começo.

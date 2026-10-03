@@ -20,7 +20,7 @@ const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 const OG_N = 64, OG_CELL = 2;
 import { CURVE_R } from '../sarcophagus';
 import { setEye } from '../eye';
-import { eyeHold } from '../power';
+import { eyeHold, eyePush } from '../power';
 import { subAt } from '../../sim/power';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
@@ -150,6 +150,8 @@ export class GpuWorld {
 
   /** The eye's adaptation: the exposure over the one the time of day expects (L.3). */
   adapt = 1;
+  /** (L.13) The eye when a blackout began pushing it darker (-1: not pushing). */
+  private pushBase = -1;
   /** The world's pass on the GPU's own clock (ms, smoothed); -1 without timestamp queries. */
   gpuMs = -1;
   private tq: { set: GPUQuerySet; res: GPUBuffer; read: GPUBuffer; busy: boolean } | null = null;
@@ -304,7 +306,16 @@ export class GpuWorld {
     if (timed) {
       // (L.12) a blackout or the power coming back round the viewer holds the eye where it was for a moment
       const sub = subAt(P, C, world.player.x, world.player.y);
-      this.adaptStep(sky.day, eyeHold(P, sub, world.player.x, world.player.y, (world.tick + v.alpha) / 60));
+      const sec = (world.tick + v.alpha) / 60, push = eyePush(P, sub, world.player.x, world.player.y, sec);
+      // (L.13) then pushes it darker for a few seconds, from where it was, before letting it adapt again
+      if (push < 1 && this.autoExposure) {
+        if (this.pushBase < 0) this.pushBase = this.adapt;
+        this.adapt = this.pushBase * push;
+        this.adaptAt = performance.now();
+      } else {
+        this.pushBase = -1;
+        this.adaptStep(sky.day, eyeHold(P, sub, world.player.x, world.player.y, sec));
+      }
     }
     const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
     const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), W = world.weather, Dg = C.diagonal, U = this.U;

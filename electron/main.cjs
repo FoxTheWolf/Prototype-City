@@ -10,12 +10,21 @@ const path = require('node:path');
 
 const DIST = path.join(__dirname, '..', 'dist');
 const PORT = 47180;
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' };
+// (L.13) the user's own recorded sounds for development, never copied into dist/ nor git: served when the folder exists
+const EGGS = path.join(__dirname, '..', 'easter eggs');
+const TYPES = { '.mp3': 'audio/mpeg', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const ISOLATE = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 
 function serve() {
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (url.startsWith('/easter eggs/')) {
+      const egg = path.join(EGGS, url.slice('/easter eggs/'.length));
+      if (!egg.startsWith(EGGS) || !fs.existsSync(egg) || fs.statSync(egg).isDirectory()) { res.writeHead(404, ISOLATE); res.end(); return; }
+      res.writeHead(200, { 'Content-Type': TYPES[path.extname(egg)] ?? 'application/octet-stream', ...ISOLATE });
+      fs.createReadStream(egg).pipe(res);
+      return;
+    }
     let file = path.join(DIST, url === '/' ? 'index.html' : url);
     if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(DIST, 'index.html');
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream', ...ISOLATE });

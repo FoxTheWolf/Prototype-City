@@ -19,8 +19,8 @@ import { type PowerGrid } from '../sim/power';
 const WAVE = 120;
 /** (L.12) The surge before the ring starts: seconds, and how much brighter it gets (the shader's power() keeps the same). */
 export const SURGE = 1.8, SURGE_K = 0.5;
-/** (L.12) How long the eye stays as it was after the dark (or the light) reaches the viewer, before it adapts again. */
-const EYE_DARK_S = 3, EYE_BRIGHT_S = 2.5;
+/** (L.12) How long the eye stays as it was after the light comes back round the viewer, before it adapts again. */
+const EYE_BRIGHT_S = 2.5;
 /** Out: [level 0 .. ~1.35, seconds since this element came back on (for warm-up), or -1]. */
 export const PW = new Float32Array(2);
 
@@ -73,17 +73,35 @@ export function bsod(p: PowerGrid, sub: number, x: number, y: number, id: number
 
 /**
  * (L.12) The eye through a blackout at (x, y): how much it is held where it was (0 free .. 1 held).
- * Going down it is held through the surge, as the light goes out round the viewer and for EYE_DARK_S
- * after, letting go over that time: the dark is very dark at first. Coming back, held as the
+ * Going down it is held through the surge, until the dark reaches the viewer (then eyePush darkens
+ * it, L.13). Coming back, held as the
  * lights return round the viewer and for EYE_BRIGHT_S after: everything is blown bright for a moment.
  */
 export function eyeHold(p: PowerGrid, sub: number, x: number, y: number, sec: number): number {
   const S = p.subs[sub];
   if (S.changed < 0) return 0;
   const since = sec - S.changed / 60, d = Math.hypot(x - S.ox, y - S.oy);
-  const at = S.on ? upDelay(d, 0.5, 0.5, 0.25) + 0.7 : SURGE + d / WAVE + 0.3, hold = S.on ? EYE_BRIGHT_S : EYE_DARK_S;
+  // going down, held only through the surge: then eyePush takes over
+  if (!S.on) return since >= 0 && since < SURGE + d / WAVE + 0.3 ? 1 : 0;
+  const at = upDelay(d, 0.5, 0.5, 0.25) + 0.7, hold = EYE_BRIGHT_S;
   if (since < 0 || since > at + hold) return 0;
   return since < at ? 1 : 1 - (since - at) / hold;
+}
+
+/** (L.13) After the dark reaches the viewer, the eye is pushed darker for EYE_PUSH_S seconds, down to EYE_PUSH_K of where it was, before it is let go. */
+const EYE_PUSH_S = 5, EYE_PUSH_K = 0.2;
+
+/**
+ * (L.13) Going down, how much darker the eye is pushed now (1 = not at all): from the moment the
+ * dark reaches (x, y), smoothly down to EYE_PUSH_K over EYE_PUSH_S; 1 again after that (the eye
+ * then adapts on from where it was left).
+ */
+export function eyePush(p: PowerGrid, sub: number, x: number, y: number, sec: number): number {
+  const S = p.subs[sub];
+  if (S.changed < 0 || S.on) return 1;
+  const k = (sec - S.changed / 60 - (SURGE + Math.hypot(x - S.ox, y - S.oy) / WAVE + 0.3)) / EYE_PUSH_S;
+  if (k < 0 || k > 1) return 1;
+  return 1 - (1 - EYE_PUSH_K) * k * k * (3 - 2 * k);
 }
 
 /**
