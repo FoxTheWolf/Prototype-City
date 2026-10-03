@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.6 — Sombras, céu e luz do dia dentro dos prédios (2026-10-03)
+- O fundo das ruas entre prédios altos e a base das paredes recebem menos luz do céu (como de verdade), e um pouco da luz volta das paredes em volta.
+- Dentro dos prédios, de dia, a luz entra pelas janelas: perto delas fica claro, e vai escurecendo para o meio do prédio. Os escritórios ficam com as lâmpadas acesas no horário de trabalho.
+- O anúncio do ponto de ônibus ilumina a calçada com a cor do que está mostrando.
+- O farol de um carro não atravessa mais o carro da frente: acende a traseira dele, e o que está atrás fica na sombra.
+
 ## 0.L.3 — O olho se adapta (2026-10-03)
 - Exposição automática: ao sair de um prédio para o meio-dia, a rua ofusca por um segundo; ao entrar num lugar escuro (ou num apagão), o olho vai se acostumando aos poucos. A linha de status mostra `EYE x…`.
 - De dia, as salas iluminadas só pelas lâmpadas parecem mais escuras que a rua, e as janelas vistas de fora ficam escuras como de verdade.
