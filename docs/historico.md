@@ -6,6 +6,47 @@
 
 > Os pedidos e as filas de feedback já organizadas saem do CLAUDE.md quando atendidos e vêm para cá, com o texto original. Os que ainda estavam abertos na mudança foram resumidos em "Pedidos em aberto" no CLAUDE.md. Entradas novas no topo.
 
+### Movidos em 2026-10-03 (sessão de organização do documento)
+
+**Etapa R, iluminação (texto que estava em "Pedidos em aberto"):** feitos as sombras dos prédios pelo sol (`sunLit`), o dia novo no `finish` (albedo linear × céu + sol × sombra) e, na R.20, o fim do "cinza Windows 98": a curva de tom pela luminância (`tone`, preserva matiz e saturação), albedo limitado sem perder o matiz e um pouco mais saturado (`DAY_ALB_MAX`, `DAY_SAT`, `DAY_EXPO`), a névoa da noite que escurecia as torres distantes de dia, nuvens brancas de dia, a cor de longe da fachada igual à média de perto, e os cômodos vistos pela janela com a luz das próprias lâmpadas. R.21: emissão separada do albedo, com bloom. R.23/R.24: materiais (`gMat`, `gNrm`, `gWet`, brilho do sol GGX) e reflexos de verdade no vidro e no chão molhado (segundo raio por `cityCell`). R.22c: sombras dos objetos pelo sol. R.26: sol por temperatura de cor, tom do dia mantendo o matiz, carros menos espelhados.
+
+**R.27 (2026-10-03, sessão Sonnet):** reflexo desfocado dos carros menos desfocado (`REFL_BLUR` 0,5 → 0,2; o desfoque é só tremido por célula e fica pixelado, a ideia futura é um desfoque mais natural); o brilho especular (a luz de um poste ou do sol batendo em tinta, metal ou vidro) agora faz bloom (`SPEC_BLOOM*` no `light`); o nível de detalhe da fachada passou a ser do prédio inteiro com pontilhado na troca, no lugar do corte pela distância da célula; e as janelas com cômodo de verdade (`PEEK_FAR`) também são do prédio, com pontilhado por janela (`peekK`), que era o corte diagonal visível nas torres.
+
+#### Medições da etapa R (R.1 a R.3, movidas do CLAUDE.md)
+
+### R.1, primeira medição (2026-10-02, máquina do Claude, 16 threads, 6 workers, theater district, girando 0,03 rad por quadro)
+
+| Linhas | Grade | Worker mais lento (mediana) | Quadro do mundo, mediana / p95 | Thread principal por quadro |
+|---|---|---|---|---|
+| 120 | 356×120 | 4,6 ms | 5,1 / 6,9 ms | 0,46 ms |
+| 160 | 475×160 | 6,3 ms | 7,0 / 9,7 ms | 0,49 ms |
+| 200 | 594×200 | 8,0–9,0 ms | 8,6–9,7 / 11,7–13,6 ms | 0,50–0,59 ms |
+
+- O custo cresce quase linear com as células, e o desequilíbrio entre os workers é ~1,2× (o mais lento contra a média).
+- **Aqui, 200 linhas dão ~110 quadros do mundo por segundo.** O "quase injogável" do usuário deve vir de outra coisa: (a) a CPU dele ter menos núcleos (os workers disputam com o thread principal e a simulação, ~3,6 ms por passo no pico); (b) **judder**: o mundo a ~90–110 quadros por segundo num monitor de 180 Hz é mostrado num ritmo irregular (2, 1, 2 atualizações por quadro), o que se vê como engasgo mesmo com FPS alto, e o pipeline soma um quadro de atraso. A GPU resolve as duas coisas (o mundo desenhado no mesmo quadro, em <1 ms).
+- **No PC do usuário (2026-10-02):** o FPS fica travado em 180 a 200 linhas, mas o `DRAW` passa de 70 ms às vezes, principalmente ao girar a câmera e ao andar, e a imagem engasga muito; o FPS não muda quando o `DRAW` sobe. Ou seja, o laço da tela segue a 180 Hz enquanto o mundo chega atrasado e irregular dos workers (um worker atrasado segura o quadro inteiro). É o motivo de seguir para a GPU (R.2).
+- O laço do jogo não roda com o painel do navegador oculto: para medir o jogo de verdade, o painel precisa estar visível (veja "Como trabalhar"). `lookNow()` dá o `look` atual no console.
+
+
+### R.2, o protótipo na GPU (2026-10-02, máquina do Claude, mesma sessão, 594×200, girando 0,03 rad por quadro)
+
+`src/render/gpu/world.ts` (`GpuWorld`, tecla **J**, `gpuNow()` no console): a cidade sobe uma vez como listas (limites das ruas, quarteirões, prédios); um compute shader lança **um raio 3D por célula** pela mesma grade de ruas da CPU (caixas, cilindros e cortes da diagonal, telhados, curvatura) e faz o chão (ruas, faixas, calçadas, praças, parques), as fachadas com janelas acesas pelo mesmo `hash3`, e o céu. As células voltam para a grade do mundo (`mapAsync`) e o compositor de hoje desenha (um quadro de atraso, como os workers). Ainda **sem** luzes, objetos, carros, pessoas, letreiros, interiores, nuvens, chuva nem os estilos de fachada.
+
+| | Quadro do mundo, mediana / p95 / pior | Quadros do mundo por segundo (tela a 180) |
+|---|---|---|
+| 6 workers (CPU, completo) | 7,5 / 10,7 / 16,9 ms | 77 |
+| GPU R.2 (incompleto, contando a volta para a CPU) | 3,1 / 4,1 / 4,7 ms | 164 |
+
+- O tempo da GPU inclui mandar, esperar e ler de volta ~1 MB; o cálculo em si é menor. Quando o compositor também estiver na GPU, a volta some e o mundo sai no mesmo quadro da tela (sem o *judder* nem o quadro de atraso).
+- O que falta pesa na GPU muito menos que na CPU (é o mesmo trabalho por célula, em milhares de núcleos); o risco está no volume de código a portar, não no desempenho.
+
+### R.3, o compositor na GPU (2026-10-02, máquina do Claude, 594×200, girando)
+
+`GpuCompositor` (`src/render/gpu/compositor.ts`) é o `glRenderer.ts` em WGSL, num canvas próprio por cima do WebGL (`pointer-events: none`, os cliques continuam indo para o canvas de baixo). Num só envio: o compute do mundo e a composição (mundo lido direto do buffer, HD, tela do notebook, interface). O modo CCTV e a abertura ainda passam pela CPU. **Medido:** 180 quadros do mundo por segundo com a tela a 180 (antes, 77 com os workers e 164 no R.2); a GPU termina o quadro em ~3 ms (pelo `onSubmittedWorkDone`, que conta também a espera). No PC do usuário, o R.2 já "diminuiu muito" os engasgos sem acabar com eles; o que sobrar agora deve estar no thread principal (a simulação, ~3,6 ms por passo no pico, e vários passos num quadro depois de um atraso), a medir lá.
+
+**Faltando no modo GPU (atualizado na R.16):** nada. O modo CCTV, a abertura e a câmera do celular leem de volta uma vista desenhada na GPU (`GpuWorld.shot`). Falta só decidir com o usuário tornar a GPU o padrão e apagar o render da CPU e os workers.
+
+
 ### Movidos em 2026-10-02
 
 #### Pedidos do usuário para etapas futuras (2026-09-30)

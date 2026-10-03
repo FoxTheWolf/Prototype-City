@@ -106,7 +106,9 @@ const REFL_FAR_WALL = 260.0; const REFL_FAR_GROUND = 160.0;
 /** How far a car's paint mirrors the city (m); past it, the sky only. How much the paint's color tints what it mirrors (metallic flakes). */
 const REFL_FAR_CAR = 90.0; const CAR_METAL = 0.25;
 /** How far a rough surface's mirror ray is scattered per unit of roughness (a blurred reflection, dithered per cell). */
-const REFL_BLUR = 0.5;
+const REFL_BLUR = 0.2;
+/** How much of a lamp's highlight on glossy paint, metal or glass blooms, and where the sun's glint starts blooming and how fast it grows. */
+const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
 /** How saturated the palette color reads as albedo under a light: the palettes are near grey (their hue shows
  *  mostly through the city's orange haze), so a lit wall went grey; the light now takes a stronger version of the hue. */
 const LIT_SAT = 1.5;
@@ -926,7 +928,15 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let switched = subs[u32(sub) * 4u] >= 0.0;
   let litK = lit * (1.0 - 0.75 * u.day);
   let rpf = FLOOR_H * u.scale / t; let cpb = BAY / (u.colW * t);
-  let detailed = rpf >= 2.2 && cpb >= 1.5;
+  // the facade's detail is the building's, not the cell's: it comes in by the distance to the nearest point of
+  // its footprint, faded with a dither over a band, so a tower never shows a diagonal cut between the two looks
+  // (a long wall's far end still drops to the far look: its cells would be smaller than a glyph)
+  let tCut = min(FLOOR_H * u.scale / 2.2, BAY / (u.colW * 1.5));
+  let tRef = length(vec2f(max(max(x0 - gOX, gOX - x1), 0.0), max(max(y0 - gOY, gOY - y1), 0.0)));
+  let detK = 1.0 - smoothstep(0.8 * tCut, 1.3 * tCut, tRef);
+  // the same for the rooms seen through the windows: the building's, not the cell's, so no cut runs across a tower
+  let peekK = 1.0 - smoothstep(0.7 * PEEK_FAR, 1.3 * PEEK_FAR, tRef);
+  let detailed = t < tCut * 2.2 && detK > hash3(i32(floor(along * 4.0)), i32(floor(zw * 2.0)), bk + 913);
   // how fast the hit moves along the face, per unit of t
   var da = 0.0;
   if (side == 0) { da = rdy; } else if (side == 1) { da = rdx; } else if (side == 3) { da = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }
@@ -990,7 +1000,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // the room behind the wall here, near enough to make out: this floor's plan (the ground floor's or the
   // upper floors' of this box), entered where the ray met the wall
   var po = 0u; var pk = Peek(false, 0.0, 0, 0.0, 0.0); var lot = -1;
-  if (detailed && t < PEEK_FAR && !gRefl && side != 2 && fl >= 0 && f32(fl) < floor((H - 1.0) / FLOOR_H + 0.5)) {
+  if (detailed && t < PEEK_FAR * 2.5 && peekK > hash3(wi, fl, bk + 517) && !gRefl && side != 2 && fl >= 0 && f32(fl) < floor((H - 1.0) / FLOOR_H + 0.5)) {
     po = fx[FX_TAB + fx[0] + u32(bk) * 2u + select(1u, 0u, fl == 0)];
     if (po > 0u) { lot = i32(fx[po + 5u]); pk = peekInto(po, q, hx, hy, rdx, rdy); }
   }
@@ -1534,7 +1544,7 @@ fn sunLin() -> vec3f { let l = pow(kelvin(sunTemp()), vec3f(2.2)); return l / ma
 // ---- the finish: moonlight, daylight and haze, a whole-city blackout (light), then the display modes (display)
 fn light(cl: Cell) -> Cell {
   var o = cl;
-  gGlow = 0.0; gTint = vec3f(1.0);
+  gGlow = 0.0; gTint = vec3f(1.0); var spG = 0.0; // spG: the bloom of a lamp's highlight on glossy paint, metal or glass
   if (o.depth >= 1e9) { return o; }
   if (o.depth == gTag) {
     let b0 = max(vec3f(0.0), o.c - gEm - gIl); let m0 = max(b0.x, max(b0.y, b0.z));
@@ -1557,10 +1567,10 @@ fn light(cl: Cell) -> Cell {
     let lc = select(lamp, mix(vec3f(dot(lamp, vec3f(0.2126, 0.7152, 0.0722))), lamp, WALL_LAMP_HUE), o.kind == KIND_WALL);
     var nl = lc * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
     // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color
-    if (gMat != MAT_NONE) { let r = matRough(); nl += lamp * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * select(LAMP_GLOSS, CAR_GLOSS, gMat == MAT_PAINT)); }
+    if (gMat != MAT_NONE) { let r = matRough(); let sp = lamp * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * select(LAMP_GLOSS, CAR_GLOSS, gMat == MAT_PAINT)); nl += sp; spG = dot(sp, vec3f(0.3, 0.5, 0.2)) / 255.0 * SPEC_BLOOM; }
     o.c = base + emit + nl; lamp = nl;
   }
-  gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
+  gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0 + spG, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
   if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = max(vec3f(0.0), o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); } // (not clamped: a lit color over 255 cut per channel here went yellow-grey and white before the night's curve)
   let day = u.day;
   if (day > 0.01 || u.flash > 0.0) {
@@ -1587,6 +1597,7 @@ fn light(cl: Cell) -> Cell {
       // the lamps light the surface as the sky does (weak by day); what glows is added over
       // and the sun's highlight on what is glossy, in the sun's color
       let gloss = select(0.0, sunGloss(), tagged) * DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun;
+      gGlow = max(gGlow, clamp((gloss - SPEC_BLOOM_MIN) * SPEC_BLOOM_SUN, 0.0, 1.0)); // a strong glint on metal blooms
       let lin = tone(alb * (E + pow(lamp / 255.0, vec3f(2.2)) * DAY_LAMP) + sunC * gloss + pow(emit / 255.0, vec3f(2.2)) * DAY_EMIT);
       let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
       let dc = mix(pow(lin, vec3f(1.0 / 2.2)) * 255.0, haze, fd);
