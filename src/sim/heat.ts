@@ -7,6 +7,7 @@ import { siteUp } from './telco';
 import { TIME_SCALE } from './clock';
 import { stepWeather } from './weather';
 import { post } from './bank';
+import { logEvent } from './events';
 
 /**
  * The heat the player draws by hitting the city (the vertical slice's "getting caught"). Kept as
@@ -68,9 +69,11 @@ export interface Heat {
   cop: Cop | null;
   /** The last arrest, for the game to show; null until the first one. */
   bust: Bust | null;
+  /** The highest tier the city has already reacted to (a manhunt event), so it is announced once. */
+  announced: number;
 }
 
-export const newHeat = (): Heat => ({ points: 0, traces: [], lastAt: -1, cop: null, bust: null });
+export const newHeat = (): Heat => ({ points: 0, traces: [], lastAt: -1, cop: null, bust: null, announced: 0 });
 
 /** How far each trace kind reaches from the act (m): a bystander must be close, a mast logs from afar. */
 const WITNESS_R = 70, CAMERA_R = 48, ANTENNA_R = 1e9, WIFI_R = 60;
@@ -152,6 +155,15 @@ export function stepHeat(w: World, dt: number) {
     while (k < h.traces.length && h.traces[k].time < cut) k++;
     if (k) h.traces.splice(0, k);
   }
+  // the city reacts: when the investigation climbs to a new height (city, then federal), word gets out
+  // once (the news and the feed read this event, see news.ts / social.ts)
+  const tier = tierOf(h);
+  if (tier >= 2 && tier > h.announced) {
+    const last = h.traces[h.traces.length - 1];
+    logEvent(w.events, 'manhunt', w.tick, time, last ? last.x : w.player.x, last ? last.y : w.player.y, tier >= 3 ? 1 : 0.7, [tier]);
+    h.announced = tier;
+  }
+  if (tier < 2) h.announced = 0; // cooled off: a fresh escalation will be news again
   runCop(w, dt);
 }
 
@@ -196,6 +208,7 @@ function arrest(w: World) {
   const fine = Math.min(FINE, w.bank.balance);
   if (fine > 0) post(w.bank, time, 'fee', -fine, 0);
   h.bust = { at: time, fine, lostPay, lm };
+  logEvent(w.events, 'bust', w.tick, time, hx, hy, 0.9, [lm]); // the city hears of the arrest
   // skip the night in custody
   w.time = w.ptime = time + HOLD;
   stepWeather(w.weather, w.seed, w.time, 0);

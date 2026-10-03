@@ -13,7 +13,7 @@ import { type Weather } from './weather';
  * going out where they are). Only numbers are kept: the words are the locale's (social.en.json).
  * It all comes from the seed and the clock, so the same city and the same actions give the same feed.
  */
-export type PostKind = 'home' | 'work' | 'walk' | 'out' | 'errand' | 'night' | 'rain' | 'snow' | 'crash' | 'jam' | 'blackout' | 'restored';
+export type PostKind = 'home' | 'work' | 'walk' | 'out' | 'errand' | 'night' | 'rain' | 'snow' | 'crash' | 'jam' | 'blackout' | 'restored' | 'manhunt' | 'bust';
 
 /**
  * How the author feels about it: the wording follows (a happy post is made of happy pieces).
@@ -36,9 +36,11 @@ const MOOD_W: Record<PostKind, number[]> = {
   jam:      [0,   0,   0,   2,   1,   0,   4,   0.2, 1],
   blackout: [0,   1.5, 0.5, 0,   0,   0,   2,   3,   1.2],
   restored: [3,   0.5, 1.5, 0,   0,   0,   0.5, 0,   1.5],
+  manhunt:  [0,   1.2, 0.5, 0,   0,   0,   1,   4,   1],
+  bust:     [1.5, 2,   1,   0,   0,   0.3, 0.8, 1.5, 1.2],
 };
 /** Kinds a phone camera can take a picture of (outdoors, or of what happened). */
-const PHOTO_KINDS = new Set<PostKind>(['walk', 'out', 'errand', 'rain', 'snow', 'crash', 'jam', 'blackout', 'restored']);
+const PHOTO_KINDS = new Set<PostKind>(['walk', 'out', 'errand', 'rain', 'snow', 'crash', 'jam', 'blackout', 'restored', 'manhunt']);
 
 export interface Post {
   id: number;
@@ -79,7 +81,7 @@ const KEEP = 300, PER_HOUR = 70;
 const ACTIVE = [0.25, 0.15, 0.08, 0.05, 0.05, 0.1, 0.3, 0.6, 0.8, 0.7, 0.6, 0.7, 0.9, 0.8, 0.7, 0.7, 0.8, 0.9, 1, 1, 1, 0.9, 0.7, 0.45];
 /** How far people notice an event (m), and at most how many post about one. */
 const SEEN_R: Partial<Record<string, number>> = { crash: 120, jam: 180 };
-const MAX_ABOUT: Record<string, number> = { crash: 2, jam: 1, blackout: 6, restored: 3 };
+const MAX_ABOUT: Record<string, number> = { crash: 2, jam: 1, blackout: 6, restored: 3, manhunt: 4, bust: 5 };
 
 /** Whether someone can post now: old enough, a phone that can (the middle and top models), or at home (the family computer). */
 function canPost(P: Population, i: number, d: Doing) {
@@ -141,6 +143,8 @@ function add(F: Feed, p: Post) {
 function witnesses(F: Feed, P: Population, city: City, power: PowerGrid, e: SimEvent, seed: number) {
   const max = Math.round((MAX_ABOUT[e.kind] ?? 0) * (0.5 + e.weight));
   const h = (q: number) => hash3(seed ^ 0x3e17, e.id, q), r = SEEN_R[e.kind];
+  // the investigation is city-wide news: anyone may talk about it, not only those who were there
+  const cityWide = e.kind === 'manhunt' || e.kind === 'bust';
   // the city has a few crashes and jams a minute: only some get talked about
   if (!max || ((e.kind === 'crash' || e.kind === 'jam') && h(77) < 0.7)) return;
   let found = 0;
@@ -148,7 +152,7 @@ function witnesses(F: Feed, P: Population, city: City, power: PowerGrid, e: SimE
   for (let tries = 0; tries < 3000 && found < max; tries++) {
     const i = Math.floor(h(tries) * P.n), [x, y, d, b] = spot(P, city, i, e.time);
     if (!canPost(P, i, d) || h(5000 + tries) * 255 > P.talk[i] * 1.5) continue;
-    if (r !== undefined ? Math.hypot(x - e.x, y - e.y) > r : b < 0 || power.building[b] !== e.refs[0]) continue;
+    if (!cityWide && (r !== undefined ? Math.hypot(x - e.x, y - e.y) > r : b < 0 || power.building[b] !== e.refs[0])) continue;
     // a minute to half an hour of game time later
     const kind = e.kind as PostKind, pick = Math.floor(h(9500 + tries) * 1e6);
     F.pending.push({ id: 0, who: i, time: e.time + 60 + h(9000 + tries) * 1700, kind, pick, biz: -1, x, y, event: e.id, mood: moodOf(P, i, kind, e.time, null, pick), photo: photoOf(P, i, kind, pick) });

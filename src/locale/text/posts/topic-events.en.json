@@ -22,5 +22,17 @@
   "core.restored.happy": ["Power's back in {district}! Fridge is saved!", "Lights are back! Never take electricity for granted.", "And we're back. Hello, world!", "Whole block cheered when the lights came on", "[kids] {kid} is sad the adventure is over, I'm not"],
   "core.restored.playful": ["Power's back. Goodbye, candle life.", "Lights back on in {district}. Pioneer days are over.", "Power's back. Now to reset every clock I own."],
   "core.restored.annoyed": ["Power's back but every clock in my place is blinking", "Power's back, but the internet isn't"],
-  "core.restored.calm": ["Lights back, back to normal"]
+  "core.restored.calm": ["Lights back, back to normal"],
+
+  "fact.manhunt": ["Police all over {district}", "They're looking for whoever's behind the blackouts", "Cops asking around {district}", "Patrol cars everywhere tonight", "Heard they're hunting the guy who keeps killing the power", "Choppers over {district}", "They stopped me to ask if I saw anything", "News says it's one person doing all the outages", "Someone's been messing with the grid, cops are on it", "Extra police on #street# tonight", "They're calling him the Ghost of the Grid", "Whole block got questioned", "[old/senior] In all my years I've never seen this many police on the street", "[job] They came by {job} asking questions", "[pet] Even {petname} won't stop barking at the sirens"],
+  "core.manhunt.worried": ["Police everywhere in {district} and nobody will say why. Stay safe.", "They're hunting whoever keeps cutting the power. Kind of scary not knowing who.", "Cops stopped me to ask if I saw anyone near the substation. I didn't.", "Lock your doors, {district}, there's a manhunt on.", "[kids] Keeping {kid} inside tonight with all the patrols out", "[old/senior] I don't like how many police are on my street tonight"],
+  "core.manhunt.excited": ["There is a full manhunt in {district} right now, this is wild", "Cops, choppers, the whole thing, over the blackout guy", "They're saying one person did ALL the outages. One person!"],
+  "core.manhunt.annoyed": ["Can't get down #street#, police have half of {district} blocked", "Got stopped and questioned just for walking home. Great.", "All this over the lights going out. Find him already."],
+  "core.manhunt.playful": ["The Ghost of the Grid strikes again and the whole city's chasing a shadow", "Somewhere out there is a guy with a laptop vs the entire police force"],
+
+  "fact.bust": ["Heard they finally caught the blackout guy", "Police made an arrest in {district}", "They got him", "Someone's in custody over the outages", "Cops picked up the grid guy, they say", "Arrest in the blackout case", "News says they caught the Ghost of the Grid", "One in custody downtown", "Looks like it's over, they made an arrest"],
+  "core.bust.excited": ["THEY GOT HIM. The blackout guy is in custody!", "Arrest in {district}! The Ghost of the Grid, caught at last.", "It's over, they finally caught the guy behind the outages"],
+  "core.bust.happy": ["They caught him. Maybe the lights stay on now.", "Arrest in the blackout case. Sleeping easy tonight.", "Good news for once: they got the grid guy."],
+  "core.bust.worried": ["They say they made an arrest, but how do they know it's the right person?", "An arrest in {district}. I hope that's really the end of it.", "Caught someone over the outages. Feels too easy."],
+  "core.bust.calm": ["They made an arrest. Back to normal, I suppose.", "Arrest in the blackout case. On with the week."]
 }

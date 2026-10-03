@@ -67,6 +67,20 @@
       "GRIDLOCK AT {road} AND {cross}",
       "DELAYS ON {road} NEAR {cross} - AVOID THE AREA"
     ],
+    "manhunt": [
+      "POLICE HUNT SUSPECT BEHIND {district} OUTAGES",
+      "INVESTIGATORS SEEK 'GHOST' IN {district} GRID CASE",
+      "MANHUNT IN {district} AS UTILITY BREACHES MOUNT",
+      "AUTHORITIES WIDEN SEARCH OVER {district} INCIDENTS",
+      "FEDERAL AGENTS JOIN PROBE INTO {district} BREACHES",
+      "TASK FORCE FORMED AS {district} CASE GOES NATIONAL"
+    ],
+    "bust": [
+      "POLICE MAKE ARREST IN {district} GRID CASE",
+      "SUSPECT DETAINED OVER CITY OUTAGES",
+      "ONE HELD IN CONNECTION WITH {district} BREACHES",
+      "ARREST REPORTED IN UTILITY TAMPERING PROBE"
+    ],
     "weather": "{city} WEATHER: {now}, {temp}F - TONIGHT: {later}",
     "sky": { "clear": "CLEAR", "cloudy": "CLOUDY", "drizzle": "DRIZZLE", "rain": "RAIN", "storm": "THUNDERSTORMS", "snow": "SNOW" },
     "flavor": {

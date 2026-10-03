@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.2 — A cidade começa a reagir (2026-10-03)
+- Mexer com a cidade agora deixa rastro. Quem está por perto vê, as câmeras e as antenas registram, e quanto mais você faz, mais quente fica a sua situação — de nada, a um caso local, a um da cidade inteira, até um caso "federal".
+- Quando você fica procurado, uma viatura começa a vir atrás de você, mirando onde foi visto por último; nos níveis mais altos ela chega mais perto do seu rastro. Fique dentro de um prédio e ela não te pega.
+- Se a polícia te alcança na rua, você é preso: acorda na prefeitura mais próxima, perde a noite, paga uma multa e devolve o que ganhou na noite. Sem fim de jogo — a poeira abaixa e você continua.
+- As notícias e o Streetwire passam a falar do caso: uma caçada ("estão atrás do 'Ghost of the Grid'") e, quando alguém é preso, o alívio da cidade.
+
 ## 0.F.1c — Maps com busca e rota a pé (2026-10-03)
 - No Maps, o OK (ou Search) abre uma busca: digite pelo teclado do celular (Abc, T9 ou 123, com o #) o nome de um lugar ou o tipo dele ("bar", "pub", "pharmacy", "bank"...). A busca vai pelo EDGE ou pelo Wi-Fi, gasta um pouco do pacote de dados e demora conforme o sinal.
 - Os lugares voltam do mais perto ao mais longe, cada um com o tipo, se está aberto e a distância. Escolher um mostra o lugar no mapa com uma ficha: nome, tipo e distrito, aberto ou fechado (até que horas ou quando abre), telefone (a tecla verde liga), endereço e distância.

@@ -74,7 +74,7 @@ let key = '', text = '';
  */
 export interface Story {
   head: string;
-  kind: 'blackout' | 'restored' | 'crash' | 'jam' | 'weather' | 'date' | 'flavor';
+  kind: 'blackout' | 'restored' | 'crash' | 'jam' | 'manhunt' | 'bust' | 'weather' | 'date' | 'flavor';
   /** Where it happened (NaN when nowhere in particular), its words (road, cross street, district), and a number that picks its text. */
   x: number; y: number;
   road: string; cross: string; district: string;
@@ -90,6 +90,8 @@ export function newsStories(world: World): Story[] { tickerText(world); return s
 const RESTORED_NEWS = 120;
 /** Seconds of real time a traffic jam stays in the news. */
 const JAM_NEWS = 180;
+/** Seconds of real time a manhunt or an arrest stays in the news (stage F.2c). */
+const CASE_NEWS = 300;
 
 export function tickerText(world: World): string {
   const { city, power } = world;
@@ -97,7 +99,9 @@ export function tickerText(world: World): string {
   const recent = (s: { changed: number }) => s.changed >= 0 && world.tick - s.changed < RESTORED_NEWS * 60;
   // jams from the event queue, while they are fresh
   const jams = world.events.list.filter((e) => (e.kind === 'jam' || e.kind === 'crash') && world.tick - e.tick < JAM_NEWS * 60);
-  const k = `${hour}|${power.subs.map((s) => (s.on ? (recent(s) ? 2 : 1) : 0)).join('')}|${world.weather.preset}|${jams.map((e) => e.id).join()}`;
+  // the investigation the player draws (stage F.2c): a manhunt the city hears of, an arrest
+  const cases = world.events.list.filter((e) => (e.kind === 'manhunt' || e.kind === 'bust') && world.tick - e.tick < CASE_NEWS * 60);
+  const k = `${hour}|${power.subs.map((s) => (s.on ? (recent(s) ? 2 : 1) : 0)).join('')}|${world.weather.preset}|${jams.map((e) => e.id).join()}|${cases.map((e) => e.id).join()}`;
   if (k === key) return text;
   key = k;
   const pick = <T>(a: T[], j: number) => a[Math.floor(hash3(world.seed, hour, j) * a.length)];
@@ -116,6 +120,10 @@ export function tickerText(world: World): string {
   for (const e of jams.slice(-3)) {
     const [i, j, hd] = e.refs, avenue = (hd & 1) === 1, road = roadName(city, avenue, avenue ? i : j), cross = roadName(city, !avenue, avenue ? j : i);
     story(pick(e.kind === 'crash' ? N.crash : N.jam, 300 + e.id).replace('{road}', road.toUpperCase()).replace('{cross}', cross.toUpperCase()), e.kind === 'crash' ? 'crash' : 'jam', e.x, e.y, road, cross, districtName(city, districtAt(city, e.x, e.y)), e.id, e.time);
+  }
+  for (const e of cases.slice(-2)) {
+    const dn = districtName(city, districtAt(city, e.x, e.y)), base = (e.kind === 'manhunt' ? 400 : 500) + e.id;
+    story(pick(e.kind === 'manhunt' ? N.manhunt : N.bust, base).replace('{district}', dn.toUpperCase()), e.kind, e.x, e.y, '', '', dn, base, e.time);
   }
   const W = world.weather, c = calendar(world.time);
   ahead.preset = W.preset;

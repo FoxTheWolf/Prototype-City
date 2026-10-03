@@ -154,6 +154,52 @@
     ""
   ],
 
+  "art.manhunt": ["#mhLead# #mhMid# #mhWitness# #mhClose#"],
+  "mhLead": [
+    "Police in {district} are searching for a suspect tied to the recent string of outages.",
+    "Investigators {when} widened their hunt for whoever has been tampering with the city's grid.",
+    "A manhunt is under way in {district} after another substation was breached {when}.",
+    "Authorities say they are closing in on the person behind the blackouts across {city}."
+  ],
+  "mhMid": [
+    "Officers have pulled footage from traffic cameras and records from the phone network.",
+    "The utility confirmed the failures were no accident and asked the public for help.",
+    "A spokesman said the pattern pointed to one person working alone.",
+    "Investigators would not say how far the inquiry had reached."
+  ],
+  "mhWitness": [
+    "\"I just want the lights to stay on,\" said {witness}.",
+    "\"They were asking everyone on my block if we saw anything,\" said {witness}.",
+    "\"It's unsettling, not knowing who's doing it,\" said {witness}.",
+    ""
+  ],
+  "mhClose": [
+    "Anyone with information was asked to come forward.",
+    "The investigation is continuing.",
+    "No arrests had been made as of {when}.",
+    ""
+  ],
+
+  "art.bust": ["#buLead# #buMid# #buClose#"],
+  "buLead": [
+    "Police said {when} they had arrested a suspect in connection with the city's outages.",
+    "One person was taken into custody in {district} over the recent grid breaches.",
+    "An arrest was reported {when} in the long-running utility tampering case.",
+    "Authorities confirmed a suspect was in custody after weeks of blackouts."
+  ],
+  "buMid": [
+    "Investigators credited camera footage and network records with the break.",
+    "The utility said it hoped the arrest would bring the failures to an end.",
+    "Officials declined to release the suspect's name.",
+    "A spokesman said the case was still being built."
+  ],
+  "buClose": [
+    "\"Maybe now we can sleep,\" said {witness}.",
+    "The investigation remains open.",
+    "More details were expected {when}.",
+    ""
+  ],
+
   "art.weather": [
     "Forecasters expect #wxLater# later, with temperatures near {temp} degrees. #wxAdvice#",
     "{city} will see #wxLater# over the next few hours. #wxAdvice#",
