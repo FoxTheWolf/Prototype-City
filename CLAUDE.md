@@ -308,10 +308,11 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 ### Sessão A (Opus): fechar a iluminação
 > **O usuário sugeriu (2026-10-03)** que o que for complicado aqui pode esperar a **reescrita do shader de iluminação** (dia e noite juntos; ver "A revisão geral da luz" na Sessão B). Antes de cada item, avaliar se ele vale agora ou depois dela.
-3. **Sombras das luzes da noite** (o usuário confirmou em 2026-10-03 que os postes ainda não fazem sombra; pode esperar a reescrita da luz) (postes e faróis; só as luzes mais próximas, cada uma é um raio a mais por célula) e a lua fazendo sombra.
-5. **Reflexos:** faltam os objetos (postes, carros, pessoas) e as cabeças dos postes no reflexo (R.24); um desfoque mais natural que o tremido por célula (`REFL_BLUR`).
-6. **Cores:** céu do dia (o gradiente ainda é o antigo), a saturação da noite, as paletas quase cinzas das fachadas (`LOOK` em `sim/city.ts`: residencial, histórico, moldura de escritório) e `CAR_COLS`. **Sugestão:** uma tecla de debug com a tabela de cores de fachada sob dia, entardecer e noite lado a lado, para decidir olhando a tabela.
-7. Bugs de luz: o painel do ponto de ônibus estoura em branco; o Sarcófago parece de vidro visto pela janela (a lua aparece atrás dele); saturação demais em alguns lugares (faixas roxas no vidro, saguão verde-água).
+> **A.1–A.3 feitos em 2026-10-03** (veja `docs/historico.md`). O que sobrou ficou para a reescrita da luz ou espera o usuário:
+3. **Sombras das luzes da noite** (postes e faróis; só as luzes mais próximas, cada uma é um raio a mais por célula) e a lua fazendo sombra: **para a reescrita da luz.**
+5. **Reflexos: os objetos** (postes, carros, pessoas, as cabeças dos postes) não aparecem, porque o `objectsOver` corta os objetos pelas faixas de tela (`tile = gx / TILE`) e o raio refletido não passa por elas; precisa de outra estrutura (uma grade no chão, como a `shadowGrid`): **para a reescrita da luz.**
+6. **Cores:** o usuário julga as paletas novas (A.2) com a **F4**; falta a saturação da noite (perguntar em que direção: está forte demais ou fraca?).
+7. **Saturação demais** (faixas roxas no vidro, saguão verde-água): **pedir capturas com a posição** (a linha de status mostra `POS`) para achar o lugar.
 
 ### Sessão B (Opus): atmosfera
 - **Nuvens volumétricas** (bordas acesas pelo sol, base escura; as de hoje parecem um pouco cinzas). Plano: um raymarch curto só nas células de céu numa camada de ~1200–2500 m, ruído 3D, 2–4 passos em direção ao sol para a borda acesa, e amortizado (parte das células por quadro). Comparar com a resposta de `docs/tarefas/04-nuvens-e-raios.md`.
