@@ -32,6 +32,7 @@ import { calendar, sunDir } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
 import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, CITY_SIZE, type PlayerInput } from './sim/world';
+import { tierOf } from './sim/heat'; // [HACKING]
 import { loadPop, savePop } from './popCache';
 import { pace } from './core/steps';
 import TIPS from './locale/tips.json';
@@ -731,6 +732,14 @@ function frame(now: number) {
       world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
       const S = world.power.subs[k], s = ` SUBSTATION ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}${S.yard ? '' : ' (NO YARD)'} `;
       ui.text(ui.cols - s.length - 1, ui.rows - 3, s, S.on ? [140, 255, 170] : [255, 120, 90], [8, 10, 14]);
+    }
+    // [HACKING] debug: the heat the player has drawn, its tier and the traces behind it
+    if (world.heat.points > 0.005) {
+      const H = world.heat, tier = tierOf(H), by: Record<string, number> = {};
+      for (const t of H.traces) by[t.kind] = (by[t.kind] ?? 0) + 1;
+      const tr = (['witness', 'camera', 'antenna', 'wifi'] as const).filter((k) => by[k]).map((k) => `${by[k]}${k[0].toUpperCase()}`).join(' ');
+      const hs = ` HEAT ${H.points.toFixed(2)} TIER ${tier} [${['CLEAN', 'LOCAL', 'CITY', 'FEDERAL'][tier]}] ${tr} `;
+      ui.text(ui.cols - hs.length - 1, ui.rows - 4, hs, tier >= 3 ? [255, 90, 90] : tier >= 2 ? [255, 150, 70] : [255, 210, 90], [14, 8, 6]);
     }
     const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
       + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;

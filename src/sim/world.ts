@@ -11,6 +11,7 @@ import { buildTelco, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
 import { noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { newFeed, stepSocial, type Feed } from './social';
+import { newHeat, recordAct, stepHeat, type Heat } from './heat'; // [HACKING]
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
 import { crossers, spawnPeds, stepPeds, type Ped } from './peds';
@@ -82,6 +83,8 @@ export interface World {
   bank: BankAccount;
   /** [HACKING] The jobs a fixer offers (see jobs.ts). */
   jobs: JobBoard;
+  /** [HACKING] The heat the player draws, and the traces behind it (see heat.ts). */
+  heat: Heat;
 }
 
 /** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
@@ -130,7 +133,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), jobs: buildJobs(seed, city, power, x, y, time) };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), jobs: buildJobs(seed, city, power, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -150,7 +153,10 @@ export function togglePower(w: World, all: boolean) {
   if (all) { const off = P.subs.some((s) => s.on); P.subs.forEach((_, k) => flip(k, !off)); return; }
   let k = 0;
   P.subs.forEach((s, n) => { if (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(P.subs[k].x - p.x, P.subs[k].y - p.y)) k = n; });
-  flip(k, !P.subs[k].on);
+  const wasOn = P.subs[k].on;
+  flip(k, !wasOn);
+  // [HACKING] throwing a breaker dark is a traceable act, like the hacked blackout (see heat.ts)
+  if (wasOn) recordAct(w.heat, w, p.x, p.y, w.time, true);
 }
 
 /** Debug: go up or down a storey inside a building (until it has stairs and lifts), where that floor has room to stand. */
@@ -290,6 +296,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   // the social network, every real second (30 game seconds)
   if (w.tick % 60 === 30) stepSocial(w.feed, w.pop, w.city, w.events, w.power, w.weather, w.seed, w.time, 60 * TICK * TIME_SCALE);
   stepJobs(w.jobs, w.power, w.bank, w.time); // [HACKING] the fixer's jobs resolve against the real grid
+  stepHeat(w.heat, w.time, TICK * TIME_SCALE); // [HACKING] heat cools off and traces go cold
   w.ptime = w.time;
   w.time += TICK * TIME_SCALE;
   stepWeather(w.weather, w.seed, w.time, TICK * TIME_SCALE);

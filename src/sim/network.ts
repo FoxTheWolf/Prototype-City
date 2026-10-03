@@ -1,5 +1,6 @@
 import { hash3 } from '../core/rng';
 import { logEvent } from './events';
+import { recordAct } from './heat';
 import { switchSub } from './power';
 import { Sec } from './wifi';
 import { type World } from './world';
@@ -83,6 +84,9 @@ export function setBreaker(w: World, k: number, on: boolean) {
   if (S.on === on) return false;
   switchSub(w.power, k, on, w.tick, S.x, S.y);
   logEvent(w.events, on ? 'restored' : 'blackout', w.tick, w.time, S.x, S.y, 0.8, [k]);
+  // throwing the breaker dark over the maintenance link is a traceable act: it leaves the player's
+  // trail where they stand (the GRIDLINK logs the laptop's MAC right here). Restoring it is not.
+  if (!on) recordAct(w.heat, w, w.player.x, w.player.y, w.time, true);
   return true;
 }
 
