@@ -34,13 +34,15 @@ export const laptopAnchor = () => anchor;
 export const laptopPitch = () => pitch0;
 /** Where the screen layer's top-left falls on the interface's grid (cells, fractional) while it is faced squarely; null otherwise. */
 export let screenAt: [number, number] | null = null;
+/** The glass's corners on the interface's grid (cells: x, y from the top-left, clockwise), faced or from aside, while the lid is open; null otherwise. */
+export let glassBox: number[] | null = null;
 
 /** The view; termW and termH: the screen layer's size on the interface's grid (cells, fractional). */
 export interface View3d { yaw: number; pitch: number; aspect: number; still: boolean; termW: number; termH: number }
 
 /** term: the screen layer's characters, filled here (its size: the console's or the text mode's). */
 export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: World, now: number, light: Float32Array, glint: Float32Array, view: View3d) {
-  power3d = null; screenAt = null;
+  power3d = null; screenAt = null; glassBox = null;
   if (P.open && !wasOpen) anchor = view.yaw;
   wasOpen = P.open;
   if (P.raise < 0.01) return;
@@ -94,6 +96,10 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
 
   // ---- the screen's place: faced squarely, the screen layer goes over the glass ----
   const tl = P.lid >= 1 ? project(cam, obj, xh - 0.0005, -GW / 2, glass1, cols) : null, br = P.lid >= 1 ? project(cam, obj, xh - 0.0005, GW / 2, glass0, cols) : null;
+  if (tl && br) {
+    const tr = project(cam, obj, xh - 0.0005, GW / 2, glass1, cols), bl = project(cam, obj, xh - 0.0005, -GW / 2, glass0, cols);
+    if (tr && bl) glassBox = [tl[0], tl[1], tr[0], tr[1], br[0], br[1], bl[0], bl[1]];
+  }
   const square = !!tl && !!br && view.still && Math.abs(br[0] - tl[0] - view.termW) < 1.5 && Math.abs(br[1] - tl[1] - view.termH) < 1;
   // the screen's characters: the console, or the firmware's text mode
   const TW = term.cols, TH = term.rows;

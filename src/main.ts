@@ -5,7 +5,7 @@ import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
-import { drawLaptop3d, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
+import { drawLaptop3d, glassBox, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
 import { FONT } from './render/atlas';
@@ -131,14 +131,18 @@ let hd: HdLayer;
  * full-screen program, or the console).
  */
 const TEXT_MODE = [80, 25] as const;
+/** The notebook screen's shape: 16:10, as the widescreen notebooks of 2008 (1280 x 800). */
+const TERM_ASPECT = 16 / 10;
 let termFb: CharGrid, termTx: CharGrid, termCells: Record<'fb' | 'tx', [number, number]> = { fb: [8, 16], tx: [16, 32] }, termMode: 'fb' | 'tx' | '' = '';
 function termLayout() {
   const w = canvas.width, h = canvas.height;
-  let rh = Math.floor(h * 0.68), rw = Math.floor(rh * 1.6);
-  if (rw > w * 0.94) { rw = Math.floor(w * 0.94); rh = Math.floor(rw / 1.6); }
+  // whole pixels a cell, as near the screen's shape (TERM_ASPECT) as they come: from the height (about two
+  // thirds of the view's), or from the width if that is too wide
+  let ch = Math.max(5, Math.floor((h * 0.68) / TERM_H)), cw = Math.max(3, Math.round((ch * TERM_H * TERM_ASPECT) / TERM_W));
+  if (cw * TERM_W > w * 0.94) { cw = Math.max(3, Math.floor((w * 0.94) / TERM_W)); ch = Math.max(5, Math.round((cw * TERM_W) / (TERM_ASPECT * TERM_H))); }
   // the text mode's cells are the console's doubled (80 x 25 against 160 x 50), so both fill exactly the
   // same glass: the notebook stays where it is when the firmware hands over to the system
-  const fb: [number, number] = [Math.max(3, Math.floor(rw / TERM_W)), Math.max(5, Math.floor(rh / TERM_H))];
+  const fb: [number, number] = [cw, ch];
   termCells = { fb, tx: [fb[0] * (TERM_W / TEXT_MODE[0]), fb[1] * (TERM_H / TEXT_MODE[1])] };
   termMode = '';
 }
@@ -695,7 +699,10 @@ function frame(now: number) {
   }
   const T3 = termMode === 'fb' ? termFb : termTx;
   const termAt = screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, termAt, PHONE_SCREEN.at);
+  // the GPU's compositor also takes the screen seen from aside (not shown as a layer), for its glow
+  const G = glassBox, toPx = (c: number, k: number) => (k & 1 ? uiLayout.originY + c * uiLayout.cellH : uiLayout.originX + c * uiLayout.cellW);
+  const lapAt = G && termMode ? { grid: T3, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at);
   else renderer.draw(grid, ui, hd, termAt);
   requestAnimationFrame(frame);
 }

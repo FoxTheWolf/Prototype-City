@@ -10,7 +10,7 @@ import { Scr, St } from './screen';
  * to the machine and resets it, so they take effect on that boot. Keys are the browser's names
  * (e.key). The look is our own take on the text firmware of the time.
  */
-const W = 80, H = 22;
+const W = 80, H = 25;
 const TABS = ['Main', 'Advanced', 'Boot', 'Security', 'Exit'] as const;
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -172,7 +172,7 @@ export class Firmware {
     s.text(0, 2, '-'.repeat(W), St.Gray);
     // the items on the left, the help on the right
     const HX = 56, I = this.items();
-    for (let r = 3; r < 19; r++) s.text(HX - 2, r, '|', St.Gray);
+    for (let r = 3; r < H - 3; r++) s.text(HX - 2, r, '|', St.Gray);
     s.text(HX, 3, 'Item Specific Help', St.White);
     I.forEach((it, k) => {
       const y = 4 + k;
@@ -184,9 +184,9 @@ export class Firmware {
     const help = I[this.row]?.help ?? '';
     wrap(help, W - HX - 1).forEach((l, k) => s.text(HX, 5 + k, l, St.Help));
     // the keys
-    s.fill(0, 20, W, 2, St.Bar);
-    s.text(1, 20, '^v  Select Item   +/- Change Values      F9  Setup Defaults', St.Bar);
-    s.text(1, 21, '<>  Select Menu   Esc Exit     Enter Select / Execute F10 Save and Exit', St.Bar);
+    s.fill(0, H - 2, W, 2, St.Bar);
+    s.text(1, H - 2, '^v  Select Item   +/- Change Values      F9  Setup Defaults', St.Bar);
+    s.text(1, H - 1, '<>  Select Menu   Esc Exit     Enter Select / Execute F10 Save and Exit', St.Bar);
     if (this.dlg) {
       const D = this.dlg, w = Math.max(44, D.title.length + 6), bx = (W - w) >> 1, h = D.input ? 8 : 6;
       s.box(bx, 8, w, h, St.Box);

@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.37 — Electron (2026-10-03)
+- O jogo pode rodar numa janela própria, em tela cheia, fora do navegador: `jogar-electron.bat` (F11 sai e volta da tela cheia, Alt+F4 fecha). A resolução fica sempre a mesma, sem as abas e a barra do navegador.
+
+## 0.R.36b — Notebook: brilho de lado e BIOS inteira (2026-10-03)
+- O brilho da tela do notebook continua quando você olha para o lado, seguindo a forma do vidro em perspectiva.
+- A tela de configuração da BIOS ocupa a tela inteira, sem a faixa preta embaixo, e a tela do notebook tem a proporção de 16:10 em qualquer tamanho de janela.
+
 ## 0.R.36 — Telas que iluminam em volta (2026-10-03)
 - O brilho das telas do celular e do notebook agora aparece de verdade: um halo na cor da tela espalha-se pela moldura, pelo teclado e pelo que está em volta, mais forte no escuro.
 - As partes claras da tela (como o relógio grande do celular) brilham um pouco por cima dela, como uma tela acesa de verdade.

@@ -33,11 +33,14 @@ const SCR_K = 0.9, SCR_RX = 4, SCR_RY = 3;
 const CU = /* wgsl */ `
 struct CU {
   cell: vec2i, origin: vec2i, grid: vec2i, uiCell: vec2i, uiOrigin: vec2i, uiGrid: vec2i,
-  tmCell: vec2i, tmOrigin: vec2i, tmGrid: vec2i, ph0: vec2i, ph1: vec2i, pad: vec2i,
+  tmCell: vec2i, tmOrigin: vec2i, tmGrid: vec2i, ph0: vec2i, ph1: vec2i, tmShow: vec2i, g0: vec2i, g1: vec2i, g2: vec2i, g3: vec2i,
 };
-// the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's
+// the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's layer
+// (tmGrid is set while the notebook's screen is up, tmShow.x while its layer is shown: faced squarely);
+// g0 to g3: the notebook glass's corners (top-left, top-right, bottom-right, bottom-left), faced or from
+// aside, for its glow
 fn inPhone(p: vec2i) -> bool { return all(p >= u.ph0) && all(p < u.ph1); }
-fn inTerm(p: vec2i) -> bool { return u.tmGrid.x > 0 && all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
+fn inTerm(p: vec2i) -> bool { return u.tmShow.x > 0 && all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
 // a screen cell's light: its paper, and a little of its glyph's color (a glyph covers part of the cell)
 fn cellLight(cells: texture_2d<f32>, bg: texture_2d<f32>, c: vec2i) -> vec3f {
   let k = textureLoad(cells, c, 0); let b = textureLoad(bg, c, 0).rgb;
@@ -85,11 +88,23 @@ fn layer(cells: texture_2d<f32>, at: texture_2d<f32>, p: vec2i, c: vec2i, size: 
   let cell = textureLoad(cells, c, 0);
   return mix(bg, cell.gba, glyphAt(at, i32(cell.r * 255.0 + 0.5), p, c, size));
 }
-// a screen's glow at p: its mean light (m), by the distance from its rectangle (a to b)
-fn halo(p: vec2i, a: vec2i, b: vec2i, m: vec3f) -> vec3f {
-  let h = f32(b.y - a.y); let c = vec2f(a + b) * 0.5; let e = vec2f(b - a) * 0.5;
-  let d = length(max(abs(vec2f(p) + 0.5 - c) - e, vec2f(0.0)));
+// a screen's glow: its mean light (m), by the signed distance d from its edge (a screen h px tall); inside
+// it (a glass seen from aside, where nothing else covers it) the glow fades in from the edge
+fn halo(d: f32, h: f32, m: vec3f) -> vec3f {
+  if (d < 0.0) { return m * ${CORE_K + HALO_K} * exp(d / (${CORE_R / 2} * h)); }
   return m * (${CORE_K} * exp(-d / (${CORE_R} * h)) + ${HALO_K} * exp(-d / (${HALO_R} * h)));
+}
+// the signed distance from a convex quad's edge (corners in order), negative inside
+fn sdQuad(p: vec2f, v0: vec2f, v1: vec2f, v2: vec2f, v3: vec2f) -> f32 {
+  var v = array<vec2f, 4>(v0, v1, v2, v3);
+  var d = 1e12; var inside = true;
+  for (var i = 0; i < 4; i++) {
+    let a = v[i]; let e = v[(i + 1) % 4] - a; let w = p - a;
+    let b = w - e * clamp(dot(w, e) / max(dot(e, e), 1e-6), 0.0, 1.0);
+    d = min(d, dot(b, b));
+    if (e.x * w.y - e.y * w.x < 0.0) { inside = false; }
+  }
+  return select(sqrt(d), -sqrt(d), inside);
 }
 fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0; }
 
@@ -109,10 +124,10 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; }
     let m = s - u.tmOrigin; let mc = m / max(u.tmCell, vec2i(1));
     // (like the interface: a cell nothing was drawn in is clear, one with a glyph only lies over what is under it)
-    if (u.tmGrid.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < u.tmGrid.x && mc.y < u.tmGrid.y) {
+    if (u.tmShow.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < u.tmGrid.x && mc.y < u.tmGrid.y) {
       let tb = textureLoad(tmBg, mc, 0);
       if (tb.a > 0.25) { col = layer(tmCells, tmAtlas, m, mc, u.tmCell, select(col, tb.rgb, tb.a > 0.75)); }
-    } else if (u.tmGrid.x > 0 && m.x >= -u.uiCell.x && m.y >= -u.uiCell.y && m.x < u.tmGrid.x * u.tmCell.x + u.uiCell.x && m.y < u.tmGrid.y * u.tmCell.y + u.uiCell.y) {
+    } else if (u.tmShow.x > 0 && m.x >= -u.uiCell.x && m.y >= -u.uiCell.y && m.x < u.tmGrid.x * u.tmCell.x + u.uiCell.x && m.y < u.tmGrid.y * u.tmCell.y + u.uiCell.y) {
       // within an interface cell round the layer: its nearest edge cell's paper (the screen's black edge)
       let tb = textureLoad(tmBg, clamp(m / max(u.tmCell, vec2i(1)), vec2i(0), u.tmGrid - 1), 0);
       if (tb.a > 0.75) { col = tb.rgb; }
@@ -134,8 +149,16 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     col += vec3f(0.85, 0.9, 1.0) * r * ${SCREEN_REFL} * max(0.0, 1.0 - l * 2.5);
   } else {
     // round the screens: their glow, over the device and the world alike
-    if (u.ph1.x > u.ph0.x) { col += halo(s, u.ph0, u.ph1, mean[0].rgb); }
-    if (u.tmGrid.x > 0) { col += halo(s, u.tmOrigin, u.tmOrigin + u.tmGrid * u.tmCell, mean[1].rgb); }
+    let f = vec2f(s) + 0.5;
+    if (u.ph1.x > u.ph0.x) {
+      let q = abs(f - vec2f(u.ph0 + u.ph1) * 0.5) - vec2f(u.ph1 - u.ph0) * 0.5;
+      col += halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y), mean[0].rgb);
+    }
+    if (u.tmGrid.x > 0) {
+      let a = vec2f(u.g0); let b = vec2f(u.g1); let c = vec2f(u.g2); let e = vec2f(u.g3);
+      // its height: the mean of its two sides (the near one is taller from aside)
+      col += halo(sdQuad(f, a, b, c, e), 0.5 * (length(e - a) + length(c - b)), mean[1].rgb);
+    }
   }
   return vec4f(col, 1.0);
 }
@@ -243,7 +266,7 @@ export class GpuCompositor {
   private ctx: GPUCanvasContext;
   private pipe: GPURenderPipeline;
   private uni: GPUBuffer;
-  private U = new Int32Array(24);
+  private U = new Int32Array(32);
   private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas', GPUTexture>;
   private bind: GPUBindGroup | null = null;
   private ui: Layout | null = null;
@@ -321,8 +344,13 @@ export class GpuCompositor {
     this.dev.queue.writeTexture({ texture: t, origin: [0, y0] }, data, { bytesPerRow: w * 4 }, [w, h]);
   }
 
-  /** This frame: the world drawn on the GPU (from `world` and `v`), then every layer over it, in one submit. */
-  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; x: number; y: number } | null = null, phone: readonly number[] | null = null) {
+  /**
+   * This frame: the world drawn on the GPU (from `world` and `v`), then every layer over it, in one submit.
+   * term: the notebook's screen while it is up (its layer shown at x, y when `show`; `glass`, its glass's
+   * corners in pixels, x, y from the top-left clockwise, for its glow); phone: the phone's screen, in
+   * interface cells.
+   */
+  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null) {
     const L = this.ui!, gw = this.gw;
     this.up(this.t.uiCells, ui.cells, L.cols, L.rows);
     this.up(this.t.uiBg, ui.bg, L.cols, L.rows);
@@ -336,9 +364,11 @@ export class GpuCompositor {
     }
     if (term) {
       this.U.set([Math.round(term.x), Math.round(term.y), this.tm.cols, this.tm.rows], 14);
+      this.U[22] = term.show ? 1 : 0;
+      this.U.set(term.glass.map(Math.round), 24);
       this.up(this.t.tmCells, term.grid.cells, this.tm.cols, this.tm.rows);
       this.up(this.t.tmBg, term.grid.bg, this.tm.cols, this.tm.rows);
-    } else { this.U[16] = 0; this.U[17] = 0; }
+    } else { this.U[16] = 0; this.U[17] = 0; this.U[22] = 0; }
     // the phone's screen (in interface cells) in pixels
     if (phone) {
       const x0 = L.originX + phone[0] * L.cellW, y0 = L.originY + phone[1] * L.cellH;
