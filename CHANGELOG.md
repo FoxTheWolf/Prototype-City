@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.B.2 — Nuvens de verdade e raios de sol (2026-10-03)
+- As nuvens ganharam volume: o lado virado para o sol acende (no pôr do sol fica laranja), a base fica cinza, e o contorno é limpo (sem o grão de antes). À noite, a base é iluminada pela cidade lá embaixo.
+- Raios de sol: quando o sol baixo está atrás de uma árvore ou de um prédio, faixas de luz saem pelas frestas.
+- A sombra de um poste ou de uma árvore não some mais quando você passa por ele (de dia, o que está até 60 m atrás continua fazendo sombra para a frente).
+
 ## 0.A.3 — Abrir mais rápido (2026-10-03)
 - O jogo no Electron abre em ~2 s em vez de ~11 s a partir da segunda vez: os shaders compilados ficam guardados (eles só são compilados de novo quando o código deles muda).
 - A população de uma cidade fica guardada: abrir de novo a mesma semente (`?seed=`) pula a parte de registrar os cidadãos. `?fresh` força gerar tudo de novo.

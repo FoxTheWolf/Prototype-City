@@ -314,8 +314,8 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 7. **Saturação demais** (faixas roxas no vidro, saguão verde-água): **pedir capturas com a posição** (a linha de status mostra `POS`) para achar o lugar.
 
 ### Sessão B (Opus): atmosfera
-- **Nuvens volumétricas** (bordas acesas pelo sol, base escura; as de hoje parecem um pouco cinzas). Plano: um raymarch curto só nas células de céu numa camada de ~1200–2500 m, ruído 3D, 2–4 passos em direção ao sol para a borda acesa, e amortizado (parte das células por quadro). Comparar com a resposta de `docs/tarefas/04-nuvens-e-raios.md`.
-- **Raios de luz (*god rays*):** os do sol na tela (barato, a partir do céu visível perto do sol, na composição); os cones dos postes e holofotes no ar com névoa ou chuva (uma marcha pelo raio por luz próxima: medir antes).
+- **B.0–B.2 feitos em 2026-10-03** (sombras de objetos atrás do jogador, nuvens volumétricas, raios de sol na tela; veja `docs/historico.md`). **Esperando o retorno do usuário** sobre as nuvens e os raios (força dos raios: `RAYS_WGSL` em `gpu/compositor.ts`).
+- **Raios nos cones dos postes e holofotes** no ar com névoa ou chuva (uma marcha pelo raio por luz próxima, de preferência por uma grade de luzes no chão como a `shadowGrid`; a resposta do Gemini em `retorno/04` tem um esboço): medir antes.
 - **A névoa laranja da cidade:** se ainda não parecer "o centro aceso" (R.22b), uma luz de baixo para cima nas fachadas, mais forte perto do centro.
 - **A revisão geral da luz** (temperatura de cor para todas as luzes, unidades físicas, exposição): proposta ao usuário, **esperando a decisão dele**.
 - **Telas que iluminam em volta (pedido em 2026-10-03, para a reescrita da luz):** os anúncios animados dos pontos de ônibus (material `Screen` dos objetos, A.1) e os telões e letreiros do Theater District devem lançar na calçada e nas paredes em volta uma luz com a cor que estão mostrando no momento, animada.

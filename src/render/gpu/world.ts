@@ -52,6 +52,8 @@ export class GpuWorld {
   cam3d = true;
   private uni: GPUBuffer;
   private U = new Float32Array(Math.ceil(UNIFORMS.length / 4) * 4);
+  /** The sun on the screen this frame: cell column, row, and the strength of its rays (0: none). */
+  sunScreen = [0, 0, 0];
   private pipe!: GPUComputePipeline;
   private mod: GPUShaderModule;
   /** The city's lists (fixed), then what changes: substations, light map, lamp colors, dynamic lights. */
@@ -245,6 +247,17 @@ export class GpuWorld {
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
+    // the sun on the screen (cell x, y) and how strongly its rays show, for the compositor's (B.2)
+    {
+      const [sx, sy, sz] = F.sun, f = sx * dirX + sy * dirY, lat = sy * dirX - sx * dirY, cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);
+      const d = this.cam3d ? f * cp + sz * sp : f;
+      const k = sky.day * Math.min(1, Math.max(0, sz) * 12) * (1 - 0.6 * sky.cloud) * (1 - 0.8 * sky.precip);
+      if (d > 0.05 && k > 0.01) {
+        this.sunScreen[0] = (cols / 2) * (1 + lat / (d * plane));
+        this.sunScreen[1] = this.cam3d ? rows / 2 - ((-f * sp + sz * cp) / d) * scale : vals.hor - (sz * scale) / f;
+        this.sunScreen[2] = k;
+      } else this.sunScreen[2] = 0;
+    }
     this.objects(world, v, scale, plane, vals.hor, I, sky.day > 0.01 && F.sun[2] > 0.02 ? F.sun : null);
     q.writeBuffer(this.uni, 0, U);
     const pass = enc.beginComputePass();

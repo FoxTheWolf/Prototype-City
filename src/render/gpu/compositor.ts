@@ -200,6 +200,43 @@ fn src(x: i32, y: i32) -> vec4f {
   }
 }
 `;
+/**
+ * The sun's rays (B.2): from every cell, RAY_N looks along the line to the sun on the screen, summing the bright
+ * sky near the sun they cross (what blocks it, a building's dark edge, leaves a gap: the shafts), added to glow.
+ */
+const RAY_N = 24;
+const RAYS_WGSL = /* wgsl */ `
+struct RU { cols: f32, rows: f32, aspect: f32, k: f32, sx: f32, sy: f32, pad0: f32, pad1: f32 };
+@group(0) @binding(0) var<uniform> r: RU;
+@group(0) @binding(1) var<storage, read> world: array<u32>;
+@group(0) @binding(2) var<storage, read_write> glow: array<vec4f>;
+// the sky's light at a cell, if it is bright and near the sun (in screen heights)
+fn lit(x: i32, y: i32) -> vec3f {
+  let n = u32(r.cols) * u32(r.rows); let w = world[n + u32(y) * u32(r.cols) + u32(x)];
+  let c = vec3f(f32(w & 255u), f32((w >> 8u) & 255u), f32((w >> 16u) & 255u)) / 255.0;
+  let d = length(vec2f((f32(x) - r.sx) / r.cols * r.aspect, (f32(y) - r.sy) / r.rows));
+  return c * smoothstep(0.35, 0.8, dot(c, vec3f(0.3, 0.5, 0.2))) * exp(-d / 0.22);
+}
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
+  let cols = u32(r.cols); let rows = u32(r.rows);
+  if (id.x >= cols || id.y >= rows) { return; }
+  let p = vec2f(f32(id.x), f32(id.y)); let to = vec2f(r.sx, r.sy) - p;
+  // from a fixed offset per cell along the line (no bands)
+  let j = fract(sin(dot(p, vec2f(12.9898, 78.233))) * 43758.5453);
+  var s = vec3f(0.0); var wt = 1.0; var ws = 0.0;
+  for (var k = 0; k < ${RAY_N}; k++) {
+    ws += wt;
+    let q = p + to * ((f32(k) + j) / f32(${RAY_N}));
+    let qx = i32(q.x); let qy = i32(q.y);
+    if (qx >= 0 && qy >= 0 && qx < i32(cols) && qy < i32(rows)) { s += lit(qx, qy) * wt; }
+    wt *= 0.96;
+  }
+  let i = id.y * cols + id.x;
+  // the mean along the line (so an open sky only brightens a little), capped: the shafts are the contrast
+  let ray = min(s * (r.k * 1.6 / ws), vec3f(0.35));
+  glow[i] = vec4f(glow[i].rgb + ray, glow[i].a);
+}
+`;
 /** Each screen's mean light (the phone's in mean[0], the notebook's in mean[1]): one workgroup a screen. */
 const MEAN_WGSL = /* wgsl */ `
 ${CU}
@@ -283,6 +320,10 @@ export class GpuCompositor {
   private scrBuf: GPUBuffer | null = null;
   private scrBind: GPUBindGroup | null = null;
   private timing = false;
+  private rayPipe: GPUComputePipeline;
+  private rayUni: GPUBuffer;
+  private rayBind: GPUBindGroup | null = null;
+  private RU = new Float32Array(8);
 
   constructor(private gw: GpuWorld, canvas: HTMLCanvasElement) {
     const dev = (this.dev = gw.dev);
@@ -304,6 +345,10 @@ export class GpuCompositor {
     sm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL scr ${m.lineNum}:${m.linePos} ${m.message}`)));
     this.scrPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: sm, entryPoint: 'main' } });
     this.glowUni = [0, 1].map(() => dev.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }));
+    const rm = dev.createShaderModule({ code: RAYS_WGSL });
+    rm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL rays ${m.lineNum}:${m.linePos} ${m.message}`)));
+    this.rayPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: rm, entryPoint: 'main' } });
+    this.rayUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const one = () => this.tex(1, 1);
     this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one() };
   }
@@ -390,6 +435,8 @@ export class GpuCompositor {
         return this.dev.createBindGroup({ layout: this.glowPipe.getBindGroupLayout(0), entries:
           [b, gw.out, G.tmp, G.glow].map((buffer, binding) => ({ binding, resource: { buffer } })) });
       });
+      this.rayBind = this.dev.createBindGroup({ layout: this.rayPipe.getBindGroupLayout(0), entries:
+        [this.rayUni, gw.out, G.glow].map((buffer, binding) => ({ binding, resource: { buffer } })) });
       this.scrBuf?.destroy();
       this.scrBuf = this.dev.createBuffer({ size: (L.cols * L.rows + this.tm.cols * this.tm.rows) * 16, usage: GPUBufferUsage.STORAGE });
       this.scrBind = this.dev.createBindGroup({ layout: this.scrPipe.getBindGroupLayout(0), entries: [
@@ -414,6 +461,16 @@ export class GpuCompositor {
       const cp = enc.beginComputePass();
       cp.setPipeline(this.glowPipe); cp.setBindGroup(0, b); cp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));
       cp.end();
+    }
+    // the sun's rays over the glow, when the sun is up and near enough the screen to show
+    const S = gw.sunScreen;
+    if (S[2] > 0) {
+      const cv = this.ctx.canvas as HTMLCanvasElement;
+      this.RU.set([gw.cols, gw.rows, cv.width / Math.max(1, cv.height), S[2], S[0], S[1], 0, 0]);
+      this.dev.queue.writeBuffer(this.rayUni, 0, this.RU);
+      const rp = enc.beginComputePass();
+      rp.setPipeline(this.rayPipe); rp.setBindGroup(0, this.rayBind!); rp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));
+      rp.end();
     }
     const mp = enc.beginComputePass();
     mp.setPipeline(this.meanPipe); mp.setBindGroup(0, this.meanBind!); mp.dispatchWorkgroups(2);
