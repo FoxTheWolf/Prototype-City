@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.22b — Freadas e lanternas (2026-10-03)
+- As lanternas traseiras ficam vermelhas e pintam de vermelho o carro de trás, em vez de branco.
+- Na freada, ônibus e caminhões não enfiam mais o nariz no asfalto: o mergulho para a frente ficou bem mais contido (a inclinação nas curvas continua igual).
+- As rachaduras em brasa da zona de fogo aparecem como traços de longe, e não mais como pontinhos.
+- A névoa laranja da cidade à noite chega mais perto e cobre também os prédios da frente.
+- Tecla R: as resoluções agora são 80, 120, 180 e 200 linhas (200 continua o padrão).
+
 ## 0.R.22 — A noite sem estouro (2026-10-03)
 - À noite, paredes e calçadas sob luz forte não estouram mais para o cinza ou o branco: a luz forte clareia mantendo a cor, e o vidro escuro sob um poste continua escuro e azulado.
 

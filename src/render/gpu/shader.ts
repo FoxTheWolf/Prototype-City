@@ -1293,9 +1293,10 @@ fn burnGround(wx: f32, wy: f32, rd: f32, W: f32, Hh: f32) -> Cell {
         if (d < d1) { d2 = d1; d1 = d; near = hash3(cx, cy, 13); } else if (d < d2) { d2 = d; }
       }
     }
-    let width = 0.6 + rd * 0.0025;
+    // wide enough to read as cracks from the fence (a cell there is metres across), not a few dots
+    let width = 1.2 + rd * 0.006;
     if (d2 - d1 < width && near < 0.75) {
-      let kk = heat * (0.55 + 0.45 * sin(u.sec * 60.0 * 0.05 + near * 40.0)) * (0.6 + 0.4 * fog) * min(1.0, 1.2 / (1.0 + rd * 0.002)) * (1.0 - 0.6 * day);
+      let kk = heat * (0.55 + 0.45 * sin(u.sec * 60.0 * 0.05 + near * 40.0)) * (0.6 + 0.4 * fog) * min(1.0, 1.6 / (1.0 + rd * 0.0008)) * (1.0 - 0.6 * day);
       if (d2 - d1 < width * 0.4 && rd < 150.0 && kk > 0.5) { ch = STAR; }
       let dk = 0.97 * day;
       c = vec3f(24.0 + 130.0 * kk, 10.0 + 50.0 * kk * kk, 8.0 + 10.0 * kk) * (1.0 - dk) + c * (0.7 * dk);
@@ -1434,7 +1435,7 @@ const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
 /** By day, how strongly the lamps' light reaches a surface, and how bright what glows reads. */
 const DAY_LAMP = 1.5; const DAY_EMIT = 1.6;
 /** Night: how light a surface's color must be (strongest channel, 0-255) to take a lamp's full light, and where the highlights start to roll off. */
-const NIGHT_ALB_REF = 85.0; const NIGHT_KNEE = 0.3;
+const NIGHT_ALB_REF = 85.0; const NIGHT_KNEE = 0.3; const NIGHT_WHITE = 0.15;
 /** The night's curve, in linear light on the luminance: untouched below the knee (the night's look), above it an
  *  exponential shoulder toward 1; a channel still past 1 goes toward white, as in tone(). In 0-255 sRGB. */
 fn nightTone(c: vec3f) -> vec3f {
@@ -1446,7 +1447,8 @@ fn nightTone(c: vec3f) -> vec3f {
   if (L > NIGHT_KNEE) { Lt = NIGHT_KNEE + (1.0 - NIGHT_KNEE) * (1.0 - exp(-(L - NIGHT_KNEE) / (1.0 - NIGHT_KNEE))); }
   var y = x * (Lt / max(L, 1e-5));
   let mx = max(y.x, max(y.y, y.z));
-  if (mx > 1.0) { y = vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)); }
+  // past 1, mostly scaled down with its hue kept (a red tail light stays red), only a little toward white
+  if (mx > 1.0) { y = mix(y / mx, vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)), NIGHT_WHITE); }
   return pow(y, vec3f(1.0 / 2.2)) * 255.0;
 }
 /** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
@@ -1527,7 +1529,7 @@ fn finish(cl: Cell) -> Cell {
   }
   // the city's sodium glow in the air: far things sink into a low orange haze (as a big city seen at night)
   if (night > 0.01 && o.kind != KIND_ROOM) {
-    let hk = (1.0 - exp(-o.depth / 1400.0)) * NIGHT_HAZE * night * (0.15 + 0.85 * u.cityLit) * (0.8 + 0.4 * u.precip);
+    let hk = (1.0 - exp(-o.depth / 900.0)) * NIGHT_HAZE * night * (0.15 + 0.85 * u.cityLit) * (0.8 + 0.4 * u.precip);
     o.c = o.c * (1.0 - hk) + vec3f(120.0, 64.0, 26.0) * hk;
   }
   // at night bright sums roll off on the luminance (the hue kept) instead of each channel clipping at 255,

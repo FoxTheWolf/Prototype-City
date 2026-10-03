@@ -34,8 +34,10 @@ import { lightning, PRESETS } from './sim/weather';
 import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
-const RES_ROWS = [80, 100, 120, 160, 200];
-let resStep = 4;
+const RES_ROWS = [80, 120, 180, 200];
+let resStep = 3;
+/** The rows a security camera's model shows while looking through it (0: the player's own, RES_ROWS[resStep]). */
+let camRows = 0;
 /** The interface (phone, notebook, payphone, status lines) has its own grid, always this many rows: it keeps its size whatever the world's resolution. */
 const UI_ROWS = 80;
 /** Cell width / height, close to a monospace glyph. */
@@ -375,7 +377,7 @@ function computeLayout(rows: number): Layout {
 }
 
 function resize() {
-  layout = computeLayout(RES_ROWS[resStep]);
+  layout = computeLayout(camRows || RES_ROWS[resStep]);
   uiLayout = computeLayout(UI_ROWS);
   grid = new CharGrid(layout.cols, layout.rows);
   ui = new CharGrid(uiLayout.cols, uiLayout.rows);
@@ -433,8 +435,8 @@ const DVR_ROWS = 40;
 let dvr: CharGrid | null = null, dvrAt: [number, number] = [0, 0];
 /** The world's resolution for camera k: its model's rows; the overlay's layer over its 4:3 frame. */
 function cctvScreen(k: number) {
-  const rows = CAMS[world.cctv[k].model].rows, step = Math.max(0, RES_ROWS.indexOf(rows));
-  if (step !== resStep || !dvr) { resStep = step; resize(); }
+  const rows = CAMS[world.cctv[k].model].rows;
+  if (rows !== camRows || !dvr) { camRows = rows; resize(); }
   cctvHold = null;
 }
 /** The overlay's layer over the 4:3 frame (again on every resize). */
@@ -472,7 +474,7 @@ function stopCctv() {
   if (!cctv) return;
   const C = cctv;
   cctv = null; dvr = null; cctvHold = null; termMode = '';
-  resStep = C.res; resize();
+  resStep = C.res; camRows = 0; resize();
   if (C.title) {
     const p = world.player;
     p.x = p.px = C.sx; p.y = p.py = C.sy;

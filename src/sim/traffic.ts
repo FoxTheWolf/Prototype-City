@@ -126,7 +126,7 @@ function stepBody(c: Car, a: number, dt: number) {
   const h = c.free ? c.bh : Math.atan2(c.dy, c.dx), dh = Math.atan2(Math.sin(h - c.ph), Math.cos(h - c.ph)), lat = (c.v * dh) / dt;
   c.ph = h;
   const bike = c.kind === 'bike';
-  const pT = bike ? 0 : Math.max(-0.12, Math.min(0.12, -a * 0.02 * soft)), rT = bike ? Math.max(-0.45, Math.min(0.45, lat * 0.1)) : Math.max(-0.13, Math.min(0.13, -lat * 0.035 * soft));
+  const pLim = Math.min(0.05, 0.3 / c.len), pT = bike ? 0 : Math.max(-pLim, Math.min(pLim, -a * 0.012 * soft)), rT = bike ? Math.max(-0.45, Math.min(0.45, lat * 0.1)) : Math.max(-0.13, Math.min(0.13, -lat * 0.035 * soft));
   c.pitchV += (-SPRING * (c.pitch - pT) - DAMP * c.pitchV) * dt; c.pitch += c.pitchV * dt;
   c.rollV += (-SPRING * (c.roll - rT) - DAMP * c.rollV) * dt; c.roll += c.rollV * dt;
   // seams and potholes every few metres kick the body up a little, harder the faster it goes
