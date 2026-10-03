@@ -234,6 +234,16 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
         let cs = (dx * dl[o + 3u] + dy * dl[o + 4u]) / select(d, 1.0, d == 0.0); let c0 = dl[o + 5u];
         if (cs <= c0) { continue; }
         f *= min(1.0, (cs - c0) / ((1.0 - c0) * 0.5));
+        // a car ahead in the beam (dl[6]: how far its back is, dl[15]: its side offset over that) shadows what is behind it,
+        // a wedge as wide as a car at its back, widening behind; its back itself stays lit
+        let cut = dl[o + 6u];
+        if (cut > 0.0) {
+          let s = dx * dl[o + 3u] + dy * dl[o + 4u];
+          if (s > cut) {
+            let a = -dx * dl[o + 4u] + dy * dl[o + 3u]; let w = 1.0 / cut;
+            f *= 1.0 - (1.0 - smoothK(0.85 * w, 1.25 * w, abs(a / s - dl[o + 15u]))) * smoothK(cut + 0.1, cut + 0.7, s);
+          }
+        }
       }
       f *= lz * lvl;
       L += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * f;

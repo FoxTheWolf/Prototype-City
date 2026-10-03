@@ -55,8 +55,13 @@ export class DynLights {
     this.add(LightKind.Point, x, y, 0, 0, 0, 0, range, zFull, zTop, r, g, b, x - range, y - range, x + range, y + range);
   }
 
-  cone(x: number, y: number, dx: number, dy: number, cosHalf: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number) {
-    this.add(LightKind.Cone, x, y, dx, dy, cosHalf, 0, range, zFull, zTop, r, g, b, x - range, y - range, x + range, y + range);
+  /**
+   * A beam from (x, y) along (dx, dy). If something stands in it (a car ahead), cut is how far along the beam its back is
+   * and slope where it is across (its side offset / cut): past it the beam is shadowed behind it (the shader's lightAt).
+   */
+  cone(x: number, y: number, dx: number, dy: number, cosHalf: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number, cut = 0, slope = 0) {
+    this.add(LightKind.Cone, x, y, dx, dy, cosHalf, cut, range, zFull, zTop, r, g, b, x - range, y - range, x + range, y + range);
+    this.lvH[this.n - 1] = slope;
   }
 
   /**

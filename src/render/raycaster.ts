@@ -418,6 +418,25 @@ function gatherLights(world: World, v: View, sec: number) {
   const near2: number[] = [];
   for (const c of world.cars) { const d2 = (c.x - v.x) ** 2 + (c.y - v.y) ** 2; if (d2 < CAR_TWIN_FAR * CAR_TWIN_FAR && c.kind !== 'bike') near2.push(d2); }
   const twinD2 = near2.length > CAR_TWIN_MAX ? near2.sort((a, b) => a - b)[CAR_TWIN_MAX - 1] : CAR_TWIN_FAR * CAR_TWIN_FAR;
+  // where the nearby cars are, for the headlights they block (L.6)
+  const near: { x: number; y: number; hl: number }[] = [];
+  for (const c of world.cars) {
+    if (c.kind === 'bike') continue;
+    carPose(c, v.alpha, POSE);
+    if (Math.abs(POSE[0] - v.x) < CAR_LIGHT_FAR + 40 && Math.abs(POSE[1] - v.y) < CAR_LIGHT_FAR + 40) near.push({ x: POSE[0], y: POSE[1], hl: c.len / 2 });
+  }
+  /** The nearest car standing in a beam from (lx, ly) along (dx, dy) within range: [how far its back is, its side offset / that], or [0, 0]. */
+  const blocker = (lx: number, ly: number, dx: number, dy: number, range: number): [number, number] => {
+    let best = 0, sl = 0;
+    for (const o of near) {
+      const ox = o.x - lx, oy = o.y - ly, s = ox * dx + oy * dy - o.hl;
+      if (s < 0.3 || s > range || (best > 0 && s >= best)) continue;
+      const a = -ox * dy + oy * dx;
+      if (Math.abs(a) > 0.6 * s + 1.2) continue; // outside the beam's spread
+      best = s; sl = a / s;
+    }
+    return [best, sl];
+  };
   for (const c of world.cars) {
     carPose(c, v.alpha, POSE);
     const [x, y, dx, dy] = POSE;
@@ -430,9 +449,10 @@ function gatherLights(world: World, v: View, sec: number) {
       // beam is asymmetric: the right lamp's reaches further and higher, a little toward the curb (the signs)
       for (const sd of [-hw, hw]) {
         const rt = sd > 0, ax = rt ? dx - dy * 0.08 : dx, ay = rt ? dy + dx * 0.08 : dy, an = Math.hypot(ax, ay);
-        dyn.cone(x + dx * hl - dy * sd, y + dy * hl + dx * sd, ax / an, ay / an, 0.87, range * (rt ? 1.35 : 1), 1, rt ? 6 : 4, hr * 0.6, hg * 0.6, hb * 0.6);
+        const lx = x + dx * hl - dy * sd, ly = y + dy * hl + dx * sd, R = range * (rt ? 1.35 : 1), [cut, sl] = blocker(lx, ly, ax / an, ay / an, R);
+        dyn.cone(lx, ly, ax / an, ay / an, 0.87, R, 1, rt ? 6 : 4, hr * 0.6, hg * 0.6, hb * 0.6, cut, sl);
       }
-    } else dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb);
+    } else { const [cut, sl] = bike ? [0, 0] : blocker(x + dx * hl, y + dy * hl, dx, dy, range); dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb, cut, sl); }
     if (!bike) dyn.point(x - dx * (hl + 0.1), y - dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
     // the turn signal blinking amber at its front and back corners on that side
     if (!bike && blinkOn(c, sec)) {
