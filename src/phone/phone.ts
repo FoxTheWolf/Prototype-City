@@ -18,6 +18,8 @@ import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, 
 import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { post } from '../sim/bank';
+import { jobReply } from '../sim/jobs'; // [HACKING] ver CLAUDE.md > Arquivos de hacking
+import { jobSms } from '../locale/jobs'; // [HACKING]
 import { hash3 } from '../core/rng';
 import { calendar as calendarOf } from '../sim/clock';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
@@ -427,6 +429,12 @@ export class Phone {
       if (A.dataKB < 500 && !this.told.low) { this.told.low = true; this.receive(op, SMS.lowData, now + 2); }
       if (A.dataKB < 1 && !this.told.out) { this.told.out = true; this.receive(op, SMS.noData, now + 2); }
       if (A.dataKB > 500) this.told.low = this.told.out = false;
+    }
+    // [HACKING] the fixer's texts: the offer when its time comes, the reply to YES/NO, the result
+    for (const j of this.world.jobs.jobs) {
+      if (!j.sent.offer && this.world.time >= j.offerAt) { j.sent.offer = true; this.receive(j.from, jobSms(this.world, j, 'offer'), now + 4); }
+      if (!j.sent.ack && (j.state === 'active' || j.state === 'declined')) { j.sent.ack = true; this.receive(j.from, jobSms(this.world, j, j.state === 'active' ? 'confirm' : 'declined'), now + 4); }
+      if (!j.sent.result && (j.state === 'done' || j.state === 'failed')) { j.sent.result = true; this.receive(j.from, jobSms(this.world, j, j.state === 'done' ? 'paid' : 'failed'), now + 6); }
     }
     // now and then a citizen gets the player's number wrong: a call, or a text (one hour in a few)
     if (this.screen !== 'off' && this.radio.state === 'service') {
@@ -1046,6 +1054,8 @@ export class Phone {
     if (this.radio.state !== 'service' || A.credit < 10) return false;
     A.credit -= 10;
     this.sent.unshift({ to: D.to, text: D.text, at: this.world.time });
+    // [HACKING] a reply to a fixer's line is a take/pass, not a call to a number not in service
+    if (this.world.jobs.jobs.some((j) => j.from === D.to)) { jobReply(this.world.jobs, D.to, D.text, this.world.time); return true; }
     const c = lookup(this.world.telco, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q), n = this.bother(D.to);
     const op = operatorName(this.world.city);
     if (c.kind === 'none') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5);

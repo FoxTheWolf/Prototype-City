@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.1b — O primeiro trabalho (2026-10-03)
+- Um número desconhecido manda um SMS oferecendo trabalho: deixar um lugar da cidade sem luz nesta noite, por um pagamento. Responda YES para aceitar, NO para recusar.
+- Aceito o trabalho, o contratante confirma; corte a energia do alvo antes do prazo e, quando a luz cai, o pagamento entra na sua conta do banco.
+- Se o prazo passar com as luzes acesas, não há pagamento, e o contratante não gosta.
+
 ## 0.F.1 — Uma conta no banco (2026-10-03)
 - A cidade tem de dois a cinco bancos, cada um uma rede de agências com fachada na rua; as agências da mesma rede têm o mesmo nome no letreiro.
 - Você tem uma conta no banco da agência mais perto de onde começa, aberta umas semanas antes, com o extrato desses dias: compras nas lojas da cidade, saques nos caixas e a tarifa do mês.
