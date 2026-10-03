@@ -1703,6 +1703,11 @@ fn display(cl: Cell) -> Cell {
 
 // ---- the sky (sky.ts): gradient, stars, the moon with its phase, the cloud deck lit from below, the sun's glow
 const CLOUD_H = 1200.0;
+// the layer's top plane, the longest stretch marched, the samples along it, and the mean free path (m) of the thickest cloud
+const CLOUD_TOP = 1900.0;
+const CLOUD_RUN = 5000.0;
+const CLOUD_STEPS = 8;
+const CLOUD_MFP = 140.0;
 const MOON_R = ${(3.4 * Math.PI) / 180};
 const TAU = 6.28318531;
 // the same smooth noise as sky.ts (its 256x256 table is hash3(i, j, 777), computed here instead)
@@ -1724,6 +1729,22 @@ fn glowBelow(x: f32, y: f32) -> vec3f {
   let sd = length(vec2f(x - u.sarX, y - u.sarY)) / (u.sarR * 1.3);
   let fire = 1.6 * exp(-sd * sd);
   return vec3f(40.0 * city + 70.0 * fire, 34.0 * city + 24.0 * fire, 18.0 * city + 12.0 * fire);
+}
+// the cloud's density at a point: the cover's noise (as the flat deck had it) sets where there is cloud and
+// how high it climbs, from a base a little higher where it thins out; k1, k2 fade the finer scales with distance
+fn cloudAt(x: f32, y: f32, z: f32, k1: f32, k2: f32, lo: f32) -> f32 {
+  if (z < CLOUD_H || z > CLOUD_TOP) { return 0.0; }
+  let ox = x + u.driftX; let oy = y + u.driftY;
+  // the finer scales slide with height, so the cloud billows instead of standing as columns
+  let hz = z - CLOUD_H;
+  let n0 = noise(ox / 1100.0, oy / 1100.0); let n1 = noise((ox + hz * 0.6) / 420.0 + 71.0, (oy - hz * 0.4) / 420.0 + 13.0); let n2 = noise((ox - hz * 0.9) / 150.0 + 37.0, (oy + hz * 0.7) / 150.0 + 91.0);
+  var d = 0.55 * n0 + 0.3 * (k1 * n1 + (1.0 - k1) * 0.5) + 0.15 * (k2 * n2 + (1.0 - k2) * 0.5);
+  d += (0.5 - d) * smoothK(8000.0, 30000.0, length(vec2f(x - u.px, y - u.py)));
+  let c = smoothK(lo - 0.18, lo + 0.12, d);
+  if (c <= 0.0) { return 0.0; }
+  let top = CLOUD_H + (CLOUD_TOP - CLOUD_H) * c * (0.3 + 0.7 * d);
+  let bot = CLOUD_H + 140.0 * (1.0 - c);
+  return c * smoothK(bot, bot + 80.0, z) * (1.0 - smoothK(max(bot + 40.0, top - 220.0), top, z));
 }
 fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let L = length(vec2f(rdx, rdy)); let night = 1.0 - u.day; let day = u.day;
@@ -1786,29 +1807,51 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
       r += hk; g += hk; b += hk * 1.2;
     }
   }
-  // the cloud deck where this ray meets it, drifting with the wind
+  // (B.1) the cloud layer, marched: CLOUD_H up to as thick as its cover makes it, each sample lit by the sun
+  // through the cloud between it and the sun (lit edges, dark bases) and, at night, by the city from below
   if (u.cloud > 0.01 && up > 0.002) {
     let tc = (CLOUD_H - u.eye) / (up * L); let wx = u.px + rdx * tc; let wy = u.py + rdy * tc; let D = tc * L;
     let fp = (D * D) / ((CLOUD_H - u.eye) * u.scale);
-    let ox = wx + u.driftX; let oy = wy + u.driftY;
     let k1 = 1.0 - smoothK(300.0, 900.0, fp); let k2 = 1.0 - smoothK(120.0, 360.0, fp);
-    let n0 = noise(ox / 1100.0, oy / 1100.0); let n1 = noise(ox / 420.0 + 71.0, oy / 420.0 + 13.0); let n2 = noise(ox / 150.0 + 37.0, oy / 150.0 + 91.0);
-    var d = 0.55 * n0 + 0.3 * (k1 * n1 + (1.0 - k1) * 0.5) + 0.15 * (k2 * n2 + (1.0 - k2) * 0.5);
-    d += (0.5 - d) * smoothK(8000.0, 30000.0, D);
     let lo = 1.0 - u.cloud;
-    let a = smoothK(lo - 0.18, lo + 0.12, d) * (0.55 + 0.45 * min(1.0, u.cloud * 1.3));
+    // the march: from the base to the top plane, no longer than CLOUD_RUN m across (low rays are long)
+    let s0 = D; let s1 = min((CLOUD_TOP - u.eye) / up, s0 + CLOUD_RUN);
+    let ds = (s1 - s0) / f32(CLOUD_STEPS); let seg = ds * sqrt(1.0 + up * up);
+    let ux = rdx / L; let uy = rdy / L;
+    let Ls = normalize(vec3f(u.sunX, u.sunY, u.sunZ));
+    let cosS = dot(normalize(vec3f(ux, uy, up)), Ls);
+    // forward scattering: the edges between the eye and the sun light up (silver lining)
+    let phase = 0.75 + 1.4 * pow(max(0.0, cosS), 10.0) + 0.3 * pow(max(0.0, cosS), 2.0);
+    let sunOn = smoothK(-0.1, 0.03, u.sunEl) * (1.0 - 0.45 * u.precip);
+    let sunC = kelvin(sunTemp()) * (235.0 * sunOn * phase);
+    let amb = vec3f(118.0, 124.0, 140.0) * day * (1.0 - 0.4 * u.precip) + vec3f(60.0 * u.dusk, 30.0 * u.dusk, 22.0 * u.dusk);
+    let GL = glowBelow(wx, wy) * ((0.9 + 0.5 * u.precip) * night);
+    let base = 12.0 + 12.0 * (1.0 - u.cityLit) * night;
+    var tr = 1.0; var acc = vec3f(0.0);
+    var s = s0 + ds * gDith;
+    for (var k = 0; k < CLOUD_STEPS; k++) {
+      let px = u.px + ux * s; let py = u.py + uy * s; let pz = u.eye + up * s;
+      let dn = cloudAt(px, py, pz, k1, k2, lo);
+      if (dn > 0.003) {
+        // the cloud toward the sun, two looks
+        let l1 = cloudAt(px + Ls.x * 90.0, py + Ls.y * 90.0, pz + Ls.z * 90.0, k1, k2, lo);
+        let l2 = cloudAt(px + Ls.x * 320.0, py + Ls.y * 320.0, pz + Ls.z * 320.0, k1, k2, lo);
+        let sunT = exp(-(l1 * 90.0 + l2 * 230.0) / 160.0);
+        let hf = clamp((pz - CLOUD_H) / (CLOUD_TOP - CLOUD_H), 0.0, 1.0);
+        let lb = (1.0 - hf) * (1.0 - hf);
+        var q = amb * (0.45 + 0.55 * hf) + sunC * sunT + vec3f(base, base, base + 5.0) + GL * (0.35 + 0.65 * lb);
+        q += vec3f(u.moonlight * 60.0 * (0.3 + 0.7 * hf)) * vec3f(1.0, 1.0, 1.15);
+        let ab = 1.0 - exp(-dn * seg / CLOUD_MFP);
+        acc += q * ab * tr; tr *= 1.0 - ab;
+        if (tr < 0.03) { break; }
+      }
+      s += ds;
+    }
+    let a = (1.0 - tr) * (0.55 + 0.45 * min(1.0, u.cloud * 1.3));
     if (a > 0.02) {
-      let GL = glowBelow(wx, wy);
-      let thick = min(1.0, a * (0.5 + d));
-      let gk = (0.35 + 0.65 * thick) * (0.8 + 0.5 * u.precip) * night;
-      let base = 12.0 + 12.0 * (1.0 - u.cityLit) * night;
-      var q = vec3f(base + GL.x * gk, base + GL.y * gk, base + 5.0 + GL.z * gk);
-      let grey = (215.0 - 75.0 * thick - 70.0 * u.precip + 25.0 * toSun * (1.0 - thick)) * day;
-      q += vec3f(grey, grey * 1.01, grey * 1.06);
-      q += vec3f(150.0 * u.dusk * toSun * (1.0 - thick * 0.5), 60.0 * u.dusk * toSun, 30.0 * u.dusk);
+      var q = acc / max(1e-3, 1.0 - tr);
+      let thick = 1.0 - tr;
       q += vec3f(190.0, 185.0, 230.0) * u.flash;
-      let ml = u.moonlight * (1.0 - thick) * 60.0;
-      q += vec3f(ml, ml, ml * 1.15);
       if (moonA) { q += cc * (0.3 * (1.0 - thick)); }
       let hz = 1.0 - exp(-D / 12000.0); let hk = 0.4 * night * (0.6 + 0.6 * u.precip) * (0.25 + 0.75 * u.cityLit);
       q += (vec3f(26.0 + 55.0 * hk + 90.0 * day, 22.0 + 32.0 * hk + 95.0 * day, 26.0 + 22.0 * hk + 102.0 * day) - q) * hz;
@@ -2270,6 +2313,8 @@ var<private> gTag: f32 = -1.0;
 var<private> gGlow: f32 = 0.0;
 /** skyCell without the moon (the haze behind the Sarcophagus). */
 var<private> gNoMoon: bool = false;
+// a fixed per-cell offset for the clouds' march (no bands, and no shimmer: it does not change by frame)
+var<private> gDith: f32 = 0.5;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
 var<private> gGlowK: f32 = 1.0;
 // the material, the surface's normal (toward the viewer) and how wet it is, of the cell at gTag (R.23)
@@ -2304,6 +2349,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let L = sqrt(rdx * rdx + rdy * rdy);
   let A = L * L / (2.0 * u.curveR);
   gOX = u.px; gOY = u.py; gOZ = u.eye; gRefl = false; gMat = MAT_NONE; gWet = 0.0;
+  gDith = hash3(i32(gid.x), i32(gid.y), 61);
   gRay = normalize(vec3f(rdx, rdy, -m));
   var tG = 1e9;
   if (m > 0.0) { let disc = m * m - 4.0 * A * u.eye; if (disc > 0.0) { tG = 2.0 * u.eye / (m + sqrt(disc)); } }
