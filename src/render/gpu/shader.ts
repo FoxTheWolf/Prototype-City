@@ -268,7 +268,7 @@ const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(
 const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
 const DOOR_H = ${f(DOOR_H)}; const FX_TAB = ${FX_TAB}u; const PCELL = ${f(PCELL)}; const CEIL = ${f(CEIL)}; const PDOOR = ${DOOR}u; const PEEK_FAR = 80.0;
 // a window lit from afar keeps a glow of its color up close: how strong, and where it is gone
-const WIN_GLOW = 0.6; const GLOW_NEAR = 12.0;
+const WIN_GLOW = 0.45; const GLOW_NEAR = 35.0; const GLOW_FULL = 72.0;
 const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v3(SCAF_STEEL)}; const SCAF_BOARD = ${v3(SCAF_BOARD)};
 const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
 fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
@@ -1207,7 +1207,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
     c = mix(capa, P.c, peekK); isWin = true; glass = true;
     // (the lit pane is light, as in the far look, until the room takes over)
-    if (capaLit) { let gk = WIN_GLOW * peekK * smoothstep(GLOW_NEAR, 0.7 * PEEK_FAR, tRef); c += wc * wk * gk; winGlow = wc * wk * (1.0 - peekK + gk); }
+    if (capaLit) { let gk = WIN_GLOW * peekK * smoothstep(GLOW_NEAR, GLOW_FULL, tRef); c += wc * wk * gk; winGlow = wc * wk * (1.0 - peekK + gk); }
   } else if (S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;

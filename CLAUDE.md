@@ -303,13 +303,10 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 >
 > **Ritmo (2026-10-03):** o usuário ainda não ficou sem o limite semanal; quando for ficar, ele avisa. **Sempre que houver tarefa trivial que não precisa do código, delegar às outras IAs** (briefing em `docs/tarefas/`, veja "Delegar a outras IAs" nas decisões). Os cinco retornos de `docs/tarefas/retorno/` já chegaram (o 01 veio com texto em volta do JSON e foi limpo; 52 lugares). A **fatia vertical** vem **depois** de fechar a iluminação (decidido pelo usuário em 2026-10-03).
 
-### Esperando o teste do usuário
-- R.22c/R.26 (sombras dos objetos, sol por temperatura, tom do dia), R.27 (detalhe por prédio com pontilhado) e R.28 (reflexo do carro `REFL_BLUR` 0,1, som da batida seco). A névoa laranja da cidade (R.22b). R.29 (janelas: a cor de longe some aos poucos e as acesas guardam um brilho dela). R.31 (holofotes: luminárias, luz em quem passa, sombras na fachada). R.30 (o reflexo no vidro das torres altas se desfaz no céu em vez de cortar marrom→preto; o mesmo fade nos cômodos e no detalhe do alto das torres).
-
 ### Sessão A (Opus): fechar a iluminação
 > **O usuário sugeriu (2026-10-03)** que o que for complicado aqui pode esperar a **reescrita do shader de iluminação** (dia e noite juntos; ver "A revisão geral da luz" na Sessão B). Antes de cada item, avaliar se ele vale agora ou depois dela.
 2. **Faróis assimétricos:** dois cones por carro, o da direita mais longo e mais alto (ilumina as placas).
-3. **Sombras das luzes da noite** (postes e faróis; só as luzes mais próximas, cada uma é um raio a mais por célula) e a lua fazendo sombra.
+3. **Sombras das luzes da noite** (o usuário confirmou em 2026-10-03 que os postes ainda não fazem sombra; pode esperar a reescrita da luz) (postes e faróis; só as luzes mais próximas, cada uma é um raio a mais por célula) e a lua fazendo sombra.
 4. **Bloom e reflexo de verdade nas telas do celular e do notebook** (as células acesas da tela na mesma passada de bloom; o reflexo pela imagem do mundo do quadro, desfocada e espelhada).
 5. **Reflexos:** faltam os objetos (postes, carros, pessoas) e as cabeças dos postes no reflexo (R.24); um desfoque mais natural que o tremido por célula (`REFL_BLUR`).
 6. **Cores:** céu do dia (o gradiente ainda é o antigo), a saturação da noite, as paletas quase cinzas das fachadas (`LOOK` em `sim/city.ts`: residencial, histórico, moldura de escritório) e `CAR_COLS`. **Sugestão:** uma tecla de debug com a tabela de cores de fachada sob dia, entardecer e noite lado a lado, para decidir olhando a tabela.
@@ -528,6 +525,7 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - Os bugs abertos agora estão no **"Plano das próximas sessões"** (por sessão). Bugs novos entram aqui até a próxima organização.
+- **Fachada/janelas mudam bruscamente ao se aproximar (2026-10-03, ainda acontece depois da R.29/R.30; capturas do usuário: a torre rosa e uma torre laranja):** a uma certa distância a fachada inteira troca de aparência de uma vez. Suspeitas: o corte `detailed` (`tCut`) ou o `detK`/`peekK` por prédio (`tRef`) em `wallCell`. Não é urgente; para um bugfix de luz (Sessão A item 7 ou depois).
 
 ## Refinamento: anotações (para a etapa 15)
 
