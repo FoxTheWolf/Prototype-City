@@ -151,7 +151,7 @@ function lit3(R: Room, lp: Float32Array, o: number, x: number, y: number, t: num
 }
 
 /** Window openings of a facade style, as wallColumn draws them: fw across the bay, fz up the storey. */
-export function windowHole(B: Building, fw: number, fz: number, z: number, ground: boolean): boolean {
+function windowHole(B: Building, fw: number, fz: number, z: number, ground: boolean): boolean {
   if (ground && B.shop) return fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6;
   switch (B.style) {
     case 'glass': return fw >= 0.07 && fz >= 0.08;
@@ -171,8 +171,6 @@ export function windowHole(B: Building, fw: number, fz: number, z: number, groun
 const PANEL_W = 0.44, PANEL_Z0 = 0.85, PANEL_Z1 = 1.65;
 let picked = -1;
 export const pickedButton = () => picked;
-/** The button a render worker found under the middle of the screen (render/pool.ts). */
-export function setPicked(b: number) { picked = b; }
 /** Paint a cell of the panel at (pu across it, 0..1 left to right; zr), or return false off it. */
 function panelPaint(I: Inside, pu: number, zr: number, cu: number, cz: number, out: number[]): number {
   const n = I.liftN, cols = n > 12 ? 4 : 2, rows = Math.ceil(n / cols);
@@ -563,82 +561,8 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   }
 }
 
-/**
- * After the city (and the cars) are in: the window cells get the glass, a little darker, with the
- * room's lamp reflected in it and, when it rains, drops sliding down and beads that stay.
- */
-export function glassPass(grid: CharGrid, I: Inside, eye: number, hor: number, scale: number) {
-  const { cols, rows, cells } = grid, z0 = I.floor * FLOOR_H;
-  for (let x = grid.x0; x < grid.x1; x++) {
-    const t = gT[x];
-    if (!t) continue;
-    const along = gA[x], lr = gL[x * 3], lg = gL[x * 3 + 1], lb = gL[x * 3 + 2];
-    const col = Math.floor(along * 9), speed = 0.25 + hash3(col, 1, 7) * 0.5, ph = hash3(col, 2, 7) * 9, slides = hash3(col, 3, 7) < I.rain * 0.5;
-    // the glass as a material, not paint on the pane: it reflects more the more it is seen edge on
-    // (Fresnel), and what it reflects (the lit room, a soft streak) follows the view direction, so it
-    // slides as the camera turns and never hides the city behind it (colors only, no glyphs)
-    const fres = 0.14 + 0.6 * (1 - gC[x]) ** 3, keep = 1 - 0.55 * fres;
-    for (let y = 0; y < rows; y++) {
-      // (not over what stands in the room in front of the window: the furniture)
-      if (!glass[y * cols + x] || grid.depth[y * cols + x] < t - 0.05) continue;
-      const k4 = (y * cols + x) * 4;
-      const e = (hor - (y + 0.5)) / scale, z = eye + e * t;
-      const streak = (0.5 + 0.5 * Math.sin(gH[x] * 2.2 + e * 1.7 + 0.6)) ** 10, m = fres * (60 + 150 * streak);
-      cells[k4 + 1] = cells[k4 + 1] * keep * 0.8 + 10 + m * lr; cells[k4 + 2] = cells[k4 + 2] * keep * 0.88 + 16 + m * lg; cells[k4 + 3] = cells[k4 + 3] * keep * 0.95 + 22 + m * lb;
-      if (I.rain > 0 && !gDoor[x]) {
-        const dz = ((z - z0) + I.sec * speed + ph) % 3;
-        const slide = slides && dz < (t / scale) * 1.2;
-        const bead = hash3(Math.floor(along * 14), Math.floor(z * 14), 8) < I.rain * 0.06;
-        if (slide || bead) { cells[k4] = slide ? G.com : G.dot; cells[k4 + 1] += 50; cells[k4 + 2] += 55; cells[k4 + 3] += 65; }
-      }
-    }
-  }
-}
 
-/**
- * Looking into a window from outside: where the ray, entering a plan at (hx, hy), meets its first
- * wall. The rooms behind the glass are then drawn cell by cell (peekCell): back wall, floor or
- * ceiling, lit by their own lamps.
- */
-export interface Peek {
-  /** Ray distance from the glass to the wall, the room whose wall it is, and the position along it. */
-  d: number;
-  r: number;
-  u: number;
-  shade: number;
-}
 
-export function peekInto(P: Plan, B: Building, hx: number, hy: number, rdx: number, rdy: number, out: Peek): boolean {
-  // the far side of the box (and the cut), from the entry point
-  let tEnd = 1e9;
-  if (rdx > 0) tEnd = Math.min(tEnd, (B.x1 - hx) / rdx); else if (rdx < 0) tEnd = Math.min(tEnd, (B.x0 - hx) / rdx);
-  if (rdy > 0) tEnd = Math.min(tEnd, (B.y1 - hy) / rdy); else if (rdy < 0) tEnd = Math.min(tEnd, (B.y0 - hy) / rdy);
-  const K = B.cut;
-  if (K) { const dn = K.nx * rdx + K.ny * rdy; if (dn > 0) tEnd = Math.min(tEnd, (K.c - K.nx * hx - K.ny * hy) / dn); }
-  // step in a little, so the first cell is inside
-  const e = 0.03 / Math.hypot(rdx, rdy), sx = hx + rdx * e, sy = hy + rdy * e;
-  let i = Math.floor(sx / CELL) - P.gx, j = Math.floor(sy / CELL) - P.gy;
-  const stX = rdx < 0 ? -1 : 1, stY = rdy < 0 ? -1 : 1;
-  const dX = rdx !== 0 ? Math.abs(CELL / rdx) : 1e12, dY = rdy !== 0 ? Math.abs(CELL / rdy) : 1e12;
-  let tX = rdx !== 0 ? ((P.gx + i + (rdx > 0 ? 1 : 0)) * CELL - sx) / rdx : 1e12;
-  let tY = rdy !== 0 ? ((P.gy + j + (rdy > 0 ? 1 : 0)) * CELL - sy) / rdy : 1e12;
-  const at = (a: number, b: number) => (a < 0 || b < 0 || a >= P.nx || b >= P.ny ? 0 : P.cells[b * P.nx + a]);
-  let cur = at(i, j);
-  if (!cur) return false;
-  for (let guard = 0; guard < 300; guard++) {
-    const xStep = tX < tY, tn = xStep ? tX : tY;
-    if (tn + e >= tEnd) { out.d = tEnd; out.r = (cur & 127) - 1; out.u = 0; out.shade = 0.8; return true; }
-    if (xStep) { i += stX; tX += dX; } else { j += stY; tY += dY; }
-    const nv = at(i, j);
-    if (!nv) continue;
-    if ((nv & 127) !== (cur & 127) && !(cur & nv & DOOR)) {
-      out.d = tn + e; out.r = (cur & 127) - 1; out.u = xStep ? sy + rdy * tn : sx + rdx * tn; out.shade = xStep ? 1 : 0.82;
-      return true;
-    }
-    cur = nv;
-  }
-  return false;
-}
 
 /** Light at a point of the viewer's floor, as a multiplier (for the furniture). */
 export function insideLight(I: Inside, x: number, y: number): Float32Array {
@@ -648,46 +572,5 @@ export function insideLight(I: Inside, x: number, y: number): Float32Array {
   return L3;
 }
 
-const PL = new Float32Array(3);
-/** The lamp (0..1 per channel) of room r on floor f, as seen from outside: for the glow around its windows. */
-export function roomGlow(base: Building, boxId: number, P: Plan, r: number, f: number, elec: number, backup: number, day: number): Float32Array {
-  const R = P.rooms[r];
-  if (R) roomLamp(base, boxId, R, r, f, elec, backup, day, false, PL, 0); else PL[0] = PL[1] = PL[2] = 0;
-  return PL;
-}
-/**
- * One window cell's view of the room behind it, into out (glyph, r, g, b): the ray goes on from the
- * glass at distance t, rising kz metres per unit of distance, to the back wall, or down to the floor
- * or up to the ceiling of storey f.
- */
-export function peekCell(out: number[], base: Building, boxId: number, P: Plan, pk: Peek, f: number, px: number, py: number, rdx: number, rdy: number, eye: number, kz: number, t: number, elec: number, backup: number, day: number, sheen: number) {
-  const z0 = f * FLOOR_H, zc = z0 + CEIL, tw = t + pk.d, zw = eye + kz * tw, office = isOffice(base);
-  let r = pk.r, x: number, y: number, tt: number, part: number;
-  if (zw < z0 || zw > zc) {
-    // floor or ceiling, in whichever room the ray meets it
-    part = zw < z0 ? 0 : 2;
-    tt = ((part ? zc : z0) - eye) / kz;
-    x = px + rdx * tt; y = py + rdy * tt;
-    const c = cellAt(P, x, y) & 127;
-    if (c) r = c - 1;
-  } else { part = 1; tt = tw; x = px + rdx * tw; y = py + rdy * tw; }
-  const R = P.rooms[r];
-  if (!R) { out[0] = G.eq; out[1] = 20; out[2] = 24; out[3] = 40; return; }
-  roomLamp(base, boxId, R, r, f, elec, backup, day, false, PL, 0);
-  lit3(R, PL, 0, x, y, 0, day);
-  if (part === 0) floorPaint(R.kind, office, x, y, out);
-  else if (part === 2) ceilPaint(R, office, PL[0] + PL[1] > 0.05, x, y, out);
-  else wallPaint(R, zw - z0, pk.u, out);
-  const sh = part === 1 ? pk.shade : 1;
-  glassOver(out, out[1] * L3[0] * sh, out[2] * L3[1] * sh, out[3] * L3[2] * sh, sheen, day);
-}
 
-/**
- * Glass over what is behind it (r, g, b), into out: a faint blue-green tint, and the sky and the
- * city mirrored in it as soft diagonal bands (sheen 0..1 along the pane); by day the reflection wins.
- */
-export function glassOver(out: number[], r: number, g: number, b: number, sheen: number, day: number) {
-  const s = sheen * sheen, k = 0.55 - 0.2 * day - 0.3 * s;
-  out[1] = r * k + 16 + s * 95 + day * 55; out[2] = g * k + 30 + s * 110 + day * 65; out[3] = b * k + 40 + s * 130 + day * 80;
-}
 

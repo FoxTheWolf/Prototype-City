@@ -40,8 +40,8 @@ export class GpuWorld {
   out!: GPUBuffer;
   cols = 0;
   rows = 0;
-  /** A true 3D camera (rays turned by the pitch) instead of the CPU's sheared one. */
-  cam3d = false;
+  /** A true 3D camera (rays turned by the pitch); false: the old raycaster's sheared one. */
+  cam3d = true;
   private uni: GPUBuffer;
   private U = new Float32Array(Math.ceil(UNIFORMS.length / 4) * 4);
   private pipe: GPUComputePipeline;

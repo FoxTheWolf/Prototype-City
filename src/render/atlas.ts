@@ -1,6 +1,6 @@
 /** Glyph slots are indexed by char code: slot n sits at column n % 16, row n / 16. */
 export const ATLAS_COLS = 16;
-export const ATLAS_ROWS = 16;
+const ATLAS_ROWS = 16;
 
 export const FONT = '"IBM Plex Mono", ui-monospace, Consolas, monospace';
 

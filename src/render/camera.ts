@@ -4,13 +4,13 @@
  */
 export class Camera {
   yaw = -Math.PI / 2;
-  /** Look angle up/down in radians. Rendered by y-shearing, so verticals stay vertical. */
+  /** Look angle up/down in radians (the GPU's 3D camera turns the rays by it). */
   pitch = 0;
   targetYaw = this.yaw;
   targetPitch = 0;
 
-  /** ~40 degrees. Beyond this, y-shearing stretches the image too much (rooflines turn into slanted pyramids). */
-  static readonly MAX_PITCH = 0.7;
+  /** ~77 degrees: almost straight up or down, short of where the yaw would flip. */
+  static readonly MAX_PITCH = 1.35;
   /** Higher = snappier. 1/SMOOTH is roughly the lag in seconds. */
   static readonly SMOOTH = 22;
 

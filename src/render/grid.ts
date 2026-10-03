@@ -9,7 +9,7 @@ export const KIND = { other: 0, ground: 1, wall: 2, object: 3, room: 4, block: 5
  * The character screen: one glyph + foreground + background per cell.
  * Layouts match the GPU textures so they upload without conversion.
  */
-export interface GridBuffers { cells: ArrayBufferLike; bg: ArrayBufferLike; depth: ArrayBufferLike; kind: ArrayBufferLike; sun: ArrayBufferLike }
+interface GridBuffers { cells: ArrayBufferLike; bg: ArrayBufferLike; depth: ArrayBufferLike; kind: ArrayBufferLike; sun: ArrayBufferLike }
 
 export class CharGrid {
   /** Per cell: glyph code, fg r, fg g, fg b. Clamped arrays saturate out-of-range colors for free. */

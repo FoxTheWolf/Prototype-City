@@ -3,7 +3,7 @@
  * (segments along a facade, lighting the side they face). Rebuilt each frame around the viewer and
  * sorted into 8 m buckets, so a point only looks at the few lights that can reach it.
  */
-export const LightKind = { Point: 0, Cone: 1, Segment: 2 } as const;
+const LightKind = { Point: 0, Cone: 1, Segment: 2 } as const;
 
 export const CELL = 8, SIDE = 64; // buckets cover 512 m around the viewer
 const MAX = 4096;

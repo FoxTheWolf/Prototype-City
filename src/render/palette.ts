@@ -1,7 +1,5 @@
-import { type RGB } from '../sim/city';
+import {  } from '../sim/city';
 
-/** The street-lamp light on the ground: sodium vapor, the palette chosen in stage 4. */
-export const LAMP: RGB = [95, 70, 35];
 
 /** Display switches the player can flip while playing. */
 export interface Look {

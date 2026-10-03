@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.17 — Só a GPU (2026-10-03)
+- O mundo agora é sempre desenhado pela placa de vídeo, com a câmera 3D de verdade: dá para olhar quase reto para cima (até ~77°) sem distorção. A resolução padrão passou para 200 linhas.
+- O jogo precisa de um navegador com WebGPU (Chrome, Edge ou outro Chromium).
+
 ## 0.R.16 — O fim do porte para a GPU (2026-10-03)
 - No modo da GPU, o modo CCTV, a abertura, o visor da câmera do celular, as fotos que você tira e as fotos dos posts e das matérias do jornal também passam a ser desenhados pela placa de vídeo. Todo o jogo já roda no modo da GPU.
 

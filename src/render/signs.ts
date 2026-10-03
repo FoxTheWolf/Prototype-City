@@ -88,11 +88,6 @@ const FONT: Record<string, number[]> = {
   '*': [0, 4, 21, 14, 21, 4, 0], '#': [10, 10, 31, 10, 31, 10, 10],
 };
 
-/** Whether the bulb at column bx (0..4, from the left) and row by (0..6, from the top) of a letter is there. */
-export function bulbOn(c: number, bx: number, by: number): boolean {
-  const rows = fontRows(c);
-  return !!rows && ((rows[by] >> (4 - bx)) & 1) === 1;
-}
 
 /** The 5x7 bulb rows of a letter (high bit = left column), or undefined. */
 export function fontRows(c: number): number[] | undefined {
@@ -127,10 +122,6 @@ export function bulbsIn(rows: number[], w: number, px: number, pz: number, hx: n
   return n;
 }
 
-/** Marquee bulbs around the sign: every third one lit, running along. */
-export function marqueeBulb(u: number, sec: number): boolean {
-  return (Math.floor(u / 0.3) + Math.floor(sec * 7)) % 3 === 0;
-}
 
 /**
  * Letters at least this many columns wide and rows tall are drawn as their bulbs rather than as a

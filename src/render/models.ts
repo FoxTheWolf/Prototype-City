@@ -10,8 +10,8 @@ const TIRE: RGB = [28, 28, 32];
 const STEEL: RGB = [100, 100, 110];
 
 /** Clothes and skin for the people seen in vehicles (and, later, on the sidewalks). */
-export const CLOTHES: RGB[] = [[150, 40, 45], [40, 60, 110], [70, 70, 75], [180, 170, 150], [50, 100, 70], [120, 80, 50], [200, 200, 205], [30, 30, 34]];
-export const SKIN: RGB[] = [[225, 185, 150], [190, 140, 100], [140, 95, 65], [95, 65, 45]];
+const CLOTHES: RGB[] = [[150, 40, 45], [40, 60, 110], [70, 70, 75], [180, 170, 150], [50, 100, 70], [120, 80, 50], [200, 200, 205], [30, 30, 34]];
+const SKIN: RGB[] = [[225, 185, 150], [190, 140, 100], [140, 95, 65], [95, 65, 45]];
 
 /** A person sitting in a vehicle at (x, y), seat at z: torso and head, colors from `who`. */
 function seated(m: Part[], x: number, y: number, z: number, who: number) {
