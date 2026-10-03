@@ -825,17 +825,18 @@ export class Sound {
   }
 
   private smash(t: number, v: number, pan: number) {
-    this.burst(t, 0.45, 0.6 * v, pan, 140, 'lowpass', 0.9);
-    // the crumple: a rattle of short mid bursts
-    for (let k = 0; k < 7; k++) this.burst(t + 0.01 + k * 0.025 + Math.random() * 0.02, 0.06, 0.25 * v * (1 - k / 8), pan, 700 + Math.random() * 900, 'bandpass', 2);
-    // glass: bright pings scattering
-    for (let k = 0; k < 10; k++) {
-      const ctx = this.ctx, o = ctx.createOscillator(), p = ctx.createStereoPanner(), g = gain(ctx, 0, p), at = t + 0.05 + Math.random() * 0.35;
-      p.pan.value = Math.max(-1, Math.min(1, pan + (Math.random() - 0.5) * 0.4)); p.connect(this.out);
-      o.frequency.value = 3000 + Math.random() * 4000; o.connect(g);
-      g.gain.setValueAtTime(0.03 * v, at); g.gain.exponentialRampToValueAtTime(0.0003, at + 0.08);
-      o.start(at); o.stop(at + 0.1);
-    }
+    const ctx = this.ctx, p = ctx.createStereoPanner(), g = gain(ctx, 0, p), o = ctx.createOscillator();
+    p.pan.value = pan; p.connect(this.out);
+    // the hit itself: a dull body thump (a low sine falling fast, no ring) and the bang of the impact
+    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.12); o.connect(g);
+    g.gain.setValueAtTime(0.9 * v, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.18);
+    o.start(t); o.stop(t + 0.22);
+    this.burst(t, 0.22, 0.8 * v, pan, 220, 'lowpass', 0.7);
+    this.burst(t, 0.07, 0.35 * v, pan, 1200, 'lowpass', 0.7);
+    // the crumple: a short rattle of low-mid bursts
+    for (let k = 0; k < 5; k++) this.burst(t + 0.02 + k * 0.03 + Math.random() * 0.02, 0.05, 0.18 * v * (1 - k / 6), pan, 350 + Math.random() * 500, 'bandpass', 1.2);
+    // glass: a few bright noise ticks (noise, not tones, so it never rings like a bell)
+    for (let k = 0; k < 5; k++) this.burst(t + 0.05 + Math.random() * 0.25, 0.03, 0.05 * v, Math.max(-1, Math.min(1, pan + (Math.random() - 0.5) * 0.4)), 5000, 'highpass', 0.7);
   }
 
   update(city: City, x: number, y: number, yaw: number, sec: number, day: number, w: Weather, bolt: number, grid: PowerGrid, indoors: boolean, tubes: number) {

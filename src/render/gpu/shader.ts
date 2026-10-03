@@ -106,7 +106,7 @@ const REFL_FAR_WALL = 260.0; const REFL_FAR_GROUND = 160.0;
 /** How far a car's paint mirrors the city (m); past it, the sky only. How much the paint's color tints what it mirrors (metallic flakes). */
 const REFL_FAR_CAR = 90.0; const CAR_METAL = 0.25;
 /** How far a rough surface's mirror ray is scattered per unit of roughness (a blurred reflection, dithered per cell). */
-const REFL_BLUR = 0.2;
+const REFL_BLUR = 0.1;
 /** How much of a lamp's highlight on glossy paint, metal or glass blooms, and where the sun's glint starts blooming and how fast it grows. */
 const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
 /** How saturated the palette color reads as albedo under a light: the palettes are near grey (their hue shows
