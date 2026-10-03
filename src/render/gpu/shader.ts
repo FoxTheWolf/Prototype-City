@@ -36,7 +36,7 @@ const f = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : `${x}`);
 const G = {
   DOT: C('.'), COM: C(','), TICK: C('`'), COL: C(':'), SEMI: C(';'), DASH: C('-'), EQ: C('='), PLUS: C('+'),
   HASH: C('#'), PCT: C('%'), AT: C('@'), BAR: C('|'), US: C('_'), STAR: C('*'), QUO: C('"'),
-  O: C('o'), LB: C('['), RB: C(']'), SL: C('/'), BS: C('\\'), CARET: C('^'), X: C('x'),
+  O: C('o'), TILDE: C('~'), LB: C('['), RB: C(']'), SL: C('/'), BS: C('\\'), CARET: C('^'), X: C('x'),
 };
 
 export function worldWGSL(): string {
@@ -885,7 +885,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let n = cols * rows; let i = gid.y * cols + gid.x;
   let camX = 2.0 * (f32(gid.x) + 0.5) / u.cols - 1.0;
   // the ray: on the ground plane (rdx, rdy), and how fast it drops per unit of that (m):
-  // z(t) = eye - m t - (t L)^2 / 2R. Sheared like the CPU's, or a true 3D camera turned by the pitch.
+  // z(t) = eye - m t + (t L)^2 / 2R (the ground falls away over the curve). Sheared like the CPU's, or a true 3D camera turned by the pitch.
   var rdx = u.dirX + u.plX * camX; var rdy = u.dirY + u.plY * camX;
   var m = (f32(gid.y) + 0.5 - u.hor) / u.scale;
   if (u.cam3d > 0.5) {
@@ -915,7 +915,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     if ((cx & 1) == 1 && (cy & 1) == 1) {
       let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
       let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]); let maxH = blk[o + 6u];
-      let zMin = min(u.eye - m * tIn - A * tIn * tIn, u.eye - m * tOut - A * tOut * tOut);
+      let zMin = min(u.eye - m * tIn + A * tIn * tIn, u.eye - m * tOut + A * tOut * tOut);
       if (b1 > b0 && zMin < maxH) {
         for (var k = b0; k < b1; k++) {
           let q = u32(k * ${BLD});
@@ -940,7 +940,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             }
           }
           if (tN <= 0.01 || tN >= tF || tN >= best) { continue; }
-          let zN = u.eye - m * tN - A * tN * tN;
+          let zN = u.eye - m * tN + A * tN * tN;
           if (zN >= 0.0 && zN <= h) { best = tN; bk = k; bside = side; roof = false; }
           else if (zN > h && m > 0.0) {
             let tr = (u.eye - h) / m;
@@ -954,10 +954,31 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - u.py) * iy; }
   }
 
+  // the cordon fence on the city edge (fenceColumn): chain link on posts, barbed wire on top, where nothing nearer is hit
+  let fX = select(select(1e9, -u.px / rdx, rdx < 0.0), (u.cityW - u.px) / rdx, rdx > 0.0);
+  let fY = select(select(1e9, -u.py / rdy, rdy < 0.0), (u.cityH - u.py) / rdy, rdy > 0.0);
+  let tf = min(fX, fY);
+  if (tf > 0.05 && tf <= 2000.0 && tf < min(select(1e9, best, bk >= 0), tG)) {
+    let z = u.eye - m * tf + A * tf * tf;
+    if (z >= 0.0 && z < 4.2) {
+      let along = select(u.px + tf * rdx, u.py + tf * rdy, fX < fY);
+      var ch = 0u;
+      if (z > 3.7) { ch = select(TILDE, X, (ifloor(along / 0.4) & 1) == 1); }
+      else if (along % 3.0 < 0.15 + tf * 0.002) { ch = BAR; }
+      else if (tf < 30.0) {
+        let a = (((along + z) % 0.6) + 0.6) % 0.6 < 0.07; let b = (((along - z) % 0.6) + 0.6) % 0.6 < 0.07;
+        ch = select(select(select(0u, BS, b), SL, a), X, a && b);
+      }
+      if (ch != 0u) {
+        let k = 1.0 - min(1.0, tf / 1500.0) * 0.7;
+        store(i, n, finish(Cell(ch, vec3f(120.0, 120.0, 130.0) * k, vec3f(7.0, 8.0, 12.0), tf, KIND_OTHER, 0.0))); return;
+      }
+    }
+  }
   if (bk >= 0 && best < tG) {
     if (roof) { store(i, n, finish(roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best))); return; }
     // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
-    store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best - A * best * best, best / u.scale)));
+    store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale)));
     return;
   }
   if (tG < 1e8) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }
