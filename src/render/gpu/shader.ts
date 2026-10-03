@@ -1611,6 +1611,8 @@ const LAMP_E = 0.45;
 const LAMP_OVER = 0.3;
 /** How much of the eye's change from night to day what glows keeps up with (1: as bright on the screen by day as at night). */
 const EMIT_KEEP = 0.95;
+/** How much of the light on what hides the sky comes back (its albedo), and the share of it in the sun (L.4). */
+const SKY_BOUNCE = 0.35; const SKY_BOUNCE_SUN = 0.3;
 /** The lamps' highlight on what is glossy. */
 const LAMP_SPEC = 0.03;
 /** How much of the day's exposure a room's own light follows (0: it reads as drawn by day too; 1: only its lamps, dark by day). */
@@ -1664,14 +1666,18 @@ fn light(cl: Cell) -> Cell {
     // the ground's colors were made for the night (dark, bluish asphalt): by day, lighter and greyer
     if (o.kind == KIND_GROUND) { A = mix(A, vec3f(dot(A, vec3f(0.3, 0.5, 0.2))), 0.2 * g) * mix(1.0, DAY_GROUND, g); }
     // the night's ambient: the city's glow (neutral: the palette is drawn under it) and the moon (bluish)
-    let En = vec3f(cityAmb()) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud));
+    // (the moon and the sky are cut by the buildings round it, gSky; the city's glow, half from the lit air, a little less)
+    let En = vec3f(cityAmb()) * mix(1.0, gSky, 0.5) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * gSky);
     // the day's: the sky's (bluish; whiter under clouds) and the sun's on what faces it out of the shadows (gSun);
     // it fades in on a log scale with the exposure (ds), so dusk never dips darker than night or day
     let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
     let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
     let sunC = sunLin(); let sunK = DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun * ds;
     let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
-    let E = (En * (1.0 - g) + skyC * ds + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
+    // what hides the sky gives some back: the walls and the street round it, lit by the sky and by the sun on part of them
+    let sunOpen = DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * max(0.0, u.sunZ);
+    let Eb = (1.0 - gSky) * SKY_BOUNCE * (skyC * ds + sunC * (sunOpen * SKY_BOUNCE_SUN));
+    let E = (En * (1.0 - g) + skyC * (ds * gSky) + Eb + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps (lightAt dims its light by day; the eye does that now): their light takes the surface's color;
     // on a facade most of its hue (each street takes its lamps' tone; all of it under the old sRGB light made scorched-paper greys)
     // (past white the sum of lamps grows slowly: a few headlights together raised to the 2.2 blew a car out to white)
@@ -2366,10 +2372,86 @@ fn sunLit(px: f32, py: f32, pz: f32) -> f32 {
 }
 /** No building is taller than this (m): a shadow ray above it is out in the sun. */
 const SHADOW_TOP = 460.0;
+// ---- the sky's occlusion (L.4): how much of the sky a point sees, past the buildings round it
+/** How far the horizon is looked for (m), how many directions round a point on the ground, and how far from the viewer it is
+ *  worked out (past it the occlusion fades to none over the last third). */
+const SKY_R = 110.0; const SKY_FAR = 700.0;
+/** The highest a building rises above (px, py, pz) seen along (rdx, rdy), as the tangent of its elevation, within SKY_R. */
+fn horizonTan(px: f32, py: f32, pz: f32, rdx: f32, rdy: f32) -> f32 {
+  let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
+  let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
+  let W = arrayLength(&xc); let H = arrayLength(&yc);
+  if (px < 0.0 || py < 0.0 || px >= f32(W) || py >= f32(H)) { return 0.0; }
+  var cx = i32(xc[u32(px)]); var cy = i32(yc[u32(py)]);
+  let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
+  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix;
+  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy;
+  var tIn = 0.0; var best = 0.0;
+  for (var s = 0; s < 64; s++) {
+    if (tIn > SKY_R || (SHADOW_TOP - pz) < best * tIn) { break; }
+    if ((cx & 1) == 1 && (cy & 1) == 1) {
+      let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
+      let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]);
+      if (b1 > b0 && blk[o + 6u] - pz > best * max(tIn, 0.5)) {
+        for (var q0 = b0; q0 < b1; q0++) {
+          let q = u32(q0 * ${BLD});
+          let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let h = bld[q + 4u];
+          if (h - pz <= best * max(tIn, 0.5)) { continue; }
+          var tN = 0.0; var tF = 0.0;
+          if (bld[q + 5u] > 0.5) {
+            let rr = (x1 - x0) * 0.5; let ox = px - (x0 + rr); let oy = py - (y0 + rr);
+            let qb = ox * rdx + oy * rdy; let disc = qb * qb - (ox * ox + oy * oy - rr * rr);
+            if (disc <= 0.0) { continue; }
+            tN = -qb - sqrt(disc); tF = -qb + sqrt(disc);
+          } else {
+            let ax = (x0 - px) * ix; let bx = (x1 - px) * ix; let ay = (y0 - py) * iy; let by = (y1 - py) * iy;
+            tN = max(min(ax, bx), min(ay, by)); tF = min(max(ax, bx), max(ay, by));
+            if (bld[q + 6u] > 0.5) {
+              let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
+              let dn = knx * rdx + kny * rdy; let th = (kc - knx * px - kny * py) / dn;
+              if (dn < 0.0) { tN = max(tN, th); } else if (dn > 0.0) { tF = min(tF, th); } else if (knx * px + kny * py > kc) { continue; }
+            }
+          }
+          if (tF <= 0.03 || tN >= tF || tN > SKY_R) { continue; }
+          best = max(best, (h - pz) / max(tN, 0.5));
+        }
+      }
+    }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy; }
+  }
+  return best;
+}
+/** The share of the sky's light a surface at P with normal N gets past the buildings (1: open sky), cosine-weighted:
+ *  a floor sees cos^2 of each direction's horizon; a wall only the sky in front of it, each slice by how it faces it.
+ *  No sorting by cell: it moves smoothly with the point, so no glyph flickers. */
+fn skyView(P: vec3f, N: vec3f) -> f32 {
+  let up = N.z > 0.7;
+  if (up) {
+    var s = 0.0;
+    for (var k = 0; k < 8; k++) {
+      let a = f32(k) * 0.785398 + 0.3927; let tn = horizonTan(P.x, P.y, P.z + 0.3, cos(a), sin(a));
+      s += 1.0 / (1.0 + tn * tn);
+    }
+    return s / 8.0;
+  }
+  let n = normalize(vec2f(N.x, N.y) + vec2f(1e-5, 0.0));
+  var s = 0.0; var wsum = 0.0;
+  for (var k = -2; k <= 2; k++) {
+    let a = f32(k) * 0.6; let w = cos(a);
+    let d = vec2f(n.x * cos(a) - n.y * sin(a), n.x * sin(a) + n.y * cos(a));
+    let th = atan(horizonTan(P.x + n.x * 0.15, P.y + n.y * 0.15, P.z, d.x, d.y));
+    s += w * (0.785398 - th * 0.5 - sin(2.0 * th) * 0.25) / 0.785398; wsum += w;
+  }
+  // a wall also sees half its hemisphere below the horizon: the ground's light (the bounce, in light) stands in for it
+  return mix(s / wsum, 1.0, max(0.0, N.z));
+}
 /** How far from the viewer the street objects' shadows are traced (m). */
 const OBJ_SHADOW_FAR = 120.0;
 /** This cell's sunlight after the shadows (sunLit), for finish. */
 var<private> gSun: f32 = 1.0;
+/** This cell's share of the sky past the buildings (skyView), for finish. */
+var<private> gSky: f32 = 1.0;
 // what of the cell's color is light it gives off (a lit window, a sign, a lamp) and light it gets from the
 // lamps (street lamps, floodlights, headlights), for the cell at depth gTag; set where the cell is made
 var<private> gEm: vec3f = vec3f(0.0);
@@ -2466,7 +2548,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         gRefl = false; gOX = u.px; gOY = u.py; gOZ = u.eye;
         if (rc.depth < 1e8) {
           if (rc.depth == gTag) { gTag += t; } rc.depth += t;
-          gSun = 1.0;
+          gSun = 1.0; gSky = 1.0;
           let lc = light(rc); refl = lc.c; rGlow = gGlow;
         } else { refl = max(rc.bg, select(vec3f(0.0), rc.c, rc.ch != 32u)); }
         if (skyK > 0.0) { refl = mix(refl, skyCell(mR, rx, ry).bg, skyK); rGlow *= 1.0 - skyK; }
@@ -2475,6 +2557,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       }
       gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
     }
+  }
+  // how much sky what this cell shows sees (the sky and the rooms keep theirs; it fades out far away)
+  gSky = 1.0;
+  if (cl.depth < SKY_FAR && cl.kind != KIND_ROOM && cl.kind != KIND_OTHER) {
+    let t = cl.depth;
+    let P = vec3f(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
+    let Nn = select(vec3f(0.0, 0.0, 1.0), gNrm, cl.depth == gTag && cl.kind == KIND_WALL);
+    gSky = mix(skyView(P, Nn), 1.0, smoothK(SKY_FAR * 0.65, SKY_FAR, t));
   }
   // by day, whether the sun reaches what this cell shows (the sky and the rooms keep theirs)
   gSun = 1.0;
