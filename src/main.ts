@@ -34,8 +34,8 @@ import { lightning, PRESETS } from './sim/weather';
 import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
-const RES_ROWS = [80, 120, 180, 200];
-let resStep = 3;
+const RES_ROWS = [80, 120, 200];
+let resStep = 2;
 /** The rows a security camera's model shows while looking through it (0: the player's own, RES_ROWS[resStep]). */
 let camRows = 0;
 /** The interface (phone, notebook, payphone, status lines) has its own grid, always this many rows: it keeps its size whatever the world's resolution. */
