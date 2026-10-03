@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.19 — Sombras e um dia de verdade (2026-10-03)
+- Os prédios fazem sombra: de dia, as ruas entre as torres ficam na sombra e os topos e as fachadas viradas para o sol se acendem, e a sombra anda com o sol ao longo do dia.
+- O dia foi refeito: as cores dos prédios aparecem (tijolo, vidro, pintura), o sol é quente e a sombra azulada, e a névoa só aparece ao longe. Acabou o cinza lavado.
+
 ## 0.R.18 — Móveis pelas janelas (2026-10-03)
 - Olhando de fora, pelas janelas e vitrines, agora se veem os móveis dos cômodos (camas, sofás, mesas, balcões, prateleiras), iluminados pela lâmpada de cada cômodo.
 

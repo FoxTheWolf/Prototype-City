@@ -1401,6 +1401,10 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   return Cell(ch, sat((c + lightAt(wx, wy, 0.0) * lk) * fog), bg, rd, KIND_GROUND, 0.0);
 }
 
+/** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
+const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 3.0; const DAY_GROUND = 1.8;
+/** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
+fn aces(x: vec3f) -> vec3f { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), vec3f(0.0), vec3f(1.0)); }
 // ---- the finish: moonlight, daylight and haze, a whole-city blackout, the display modes
 fn finish(cl: Cell) -> Cell {
   var o = cl;
@@ -1414,13 +1418,21 @@ fn finish(cl: Cell) -> Cell {
     let objSun = o.sun >= 2.0;
     let sunlit = o.kind == KIND_WALL || objSun;
     if (day > 0.01 && (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit)) {
+      // by day, lit as a 3D game does: the surface's color as its albedo (in linear light), times the
+      // sky's light from above (bluish; whiter under clouds) and the sun's on what faces it and is not in
+      // a building's shadow (gSun); then a filmic tone curve, and the haze only with distance
       let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
-      let skyK = day * (0.36 + 0.3 * u.cloud); let dirK = 1.6 * day * (1.0 - 0.85 * u.cloud);
       let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
-      let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun); let d = dirK * share;
-      let gm = vec3f(1.0) + 2.2 * (vec3f(skyK * 0.92, skyK * 0.97, skyK * 1.08) + d * sunC) + vec3f(u.flash * 0.6);
-      let lift = 24.0 * (skyK + d);
-      o.c = sat((o.c * gm + lift * sunC) * (1.0 - f) + haze * f);
+      let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
+      var alb = pow(o.c / 255.0, vec3f(2.2)) * DAY_ALBEDO;
+      // the ground's colors were made for the night (dark, bluish asphalt): by day, lighter and greyer
+      if (o.kind == KIND_GROUND) { let g = dot(alb, vec3f(0.3, 0.5, 0.2)); alb = mix(alb, vec3f(g), 0.2) * DAY_GROUND; }
+      let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
+      let E = skyC + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * share * gSun) + vec3f(u.flash * 0.6);
+      let lin = aces(alb * E);
+      let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
+      let dc = mix(pow(lin, vec3f(1.0 / 2.2)) * 255.0, haze, fd);
+      o.c = sat(mix(o.c * (1.0 - f) + haze * f, dc, smoothK(0.0, 0.35, day)));
     } else {
       let amb = 1.0 + 0.7 * day + u.flash * 0.6;
       o.c = sat(o.c * amb * (1.0 - f) + haze * f);
@@ -1937,6 +1949,65 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
   }
   return cl;
 }
+/**
+ * Whether the sun reaches the point (px, py, pz): 1 lit, 0 in a building's shadow. A ray from the point
+ * toward the sun walks the street grid as the view's rays do, rising sunZ per metre of ground, and any
+ * box, cylinder or cut box it passes below the top of shades the point. (A point on a face turned to the
+ * sun starts on its own box's edge: only a box the ray goes on through counts.)
+ */
+fn sunLit(px: f32, py: f32, pz: f32) -> f32 {
+  let L = length(vec2f(u.sunX, u.sunY));
+  if (u.sunZ <= 0.0 || L < 1e-4) { return 1.0; }
+  let rdx = u.sunX / L; let rdy = u.sunY / L; let k = u.sunZ / L;
+  let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
+  let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
+  let W = arrayLength(&xc); let H = arrayLength(&yc);
+  if (px < 0.0 || py < 0.0 || px >= f32(W) || py >= f32(H)) { return 1.0; }
+  var cx = i32(xc[u32(px)]); var cy = i32(yc[u32(py)]);
+  let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
+  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix;
+  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy;
+  var tIn = 0.0;
+  for (var s = 0; s < 256; s++) {
+    let z = pz + k * tIn;
+    if (z > SHADOW_TOP) { break; }
+    if ((cx & 1) == 1 && (cy & 1) == 1) {
+      let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
+      let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]);
+      if (b1 > b0 && z < blk[o + 6u]) {
+        for (var q0 = b0; q0 < b1; q0++) {
+          let q = u32(q0 * ${BLD});
+          let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let h = bld[q + 4u];
+          var tN = 0.0; var tF = 0.0;
+          if (bld[q + 5u] > 0.5) {
+            let rr = (x1 - x0) * 0.5; let ox = px - (x0 + rr); let oy = py - (y0 + rr);
+            let qb = ox * rdx + oy * rdy; let disc = qb * qb - (ox * ox + oy * oy - rr * rr);
+            if (disc <= 0.0) { continue; }
+            tN = -qb - sqrt(disc); tF = -qb + sqrt(disc);
+          } else {
+            let ax = (x0 - px) * ix; let bx = (x1 - px) * ix; let ay = (y0 - py) * iy; let by = (y1 - py) * iy;
+            tN = max(min(ax, bx), min(ay, by)); tF = min(max(ax, bx), max(ay, by));
+            if (bld[q + 6u] > 0.5) {
+              let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
+              let dn = knx * rdx + kny * rdy; let th = (kc - knx * px - kny * py) / dn;
+              if (dn < 0.0) { tN = max(tN, th); } else if (dn > 0.0) { tF = min(tF, th); } else if (knx * px + kny * py > kc) { continue; }
+            }
+          }
+          if (tF <= 0.03 || tN >= tF) { continue; }
+          if (pz + k * max(tN, 0.0) < h - 0.05) { return 0.0; }
+        }
+      }
+    }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy; }
+  }
+  return 1.0;
+}
+/** No building is taller than this (m): a shadow ray above it is out in the sun. */
+const SHADOW_TOP = 460.0;
+/** This cell's sunlight after the shadows (sunLit), for finish. */
+var<private> gSun: f32 = 1.0;
+
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let cols = u32(u.cols); let rows = u32(u.rows);
@@ -1967,6 +2038,12 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // the finished cell, only beyond the glass indoors (the sky's depth is 1e9, so the finish leaves it as it is)
   cl = objectsOver(smokeOver(cl, rdx, rdy, m), gid.x, gid.y, rdx, rdy, -m);
   if (inc.state == 2u) { cl = glassOver(cl, inc, m); }
+  // by day, whether the sun reaches what this cell shows (the sky and the rooms keep theirs)
+  gSun = 1.0;
+  if (u.day > 0.01 && u.sunZ > 0.0 && cl.depth < 3000.0 && cl.kind != KIND_ROOM) {
+    let t = cl.depth;
+    gSun = sunLit(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
+  }
   store(i, n, fallOver(handOver(finish(cl), gid.x, gid.y), rdx, rdy, m, inc.nearT));
 }
 `;
