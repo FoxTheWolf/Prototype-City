@@ -18,6 +18,14 @@
     "Each citizen has a home, a job and a routine. Follow someone and you will learn their day.",
     "Calls cost credit. Dial *100# to check your balance and top up.",
     "Press F3 to hide the debug lines and take a clean screenshot.",
-    "Press R to change how many rows the world is drawn with, and V for how sharp the glyphs look."
+    "Press R to change how many rows the world is drawn with, and V for how sharp the glyphs look.",
+    "Open your notebook with N, then use iwconfig to see whether its card has joined any network.",
+    "A cafe's open Wi-Fi is the easy way in. Join it with iwconfig, then run dhclient for an address.",
+    "Once you have an address, mmap lists the machines on the network and the services they answer on.",
+    "Most systems hide behind a weak password. Point bruter at a host's console and let it work the list.",
+    "The GRIDLINK networks by the substations are the utility's own, still on old WEP that gives up its key.",
+    "Technicians log in over GRIDLINK in the clear. Leave tdump listening and it catches what they type.",
+    "Open a console on a host with tnet, or talk straight to a substation's breaker over mbus.",
+    "Everything you touch leaves a trail: the network logs your notebook right where it stands."
   ]
 }
