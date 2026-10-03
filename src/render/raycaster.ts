@@ -299,6 +299,15 @@ function lightAt(x: number, y: number, z: number) {
 const LIGHT_KNEE = 150;
 
 const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
+/**
+ * The lit panels' strength (x their color) and reach (m): shop signs, video screens, blade signs, neon tubes up
+ * the corners, shop windows (DynLights.panel), and how far off screens and neon still light.
+ */
+const SIGN_LIGHT = 3.0, SIGN_RANGE = 22, SCREEN_LIGHT = 0.5, SCREEN_RANGE = 50, SCREEN_LIGHT_FAR = 140;
+const BLADE_LIGHT = 3.0, BLADE_RANGE = 22, NEON_LIGHT = 1.5, NEON_RANGE = 16, NEON_LIGHT_FAR = 120, SHOP_LIGHT = 1.2, SHOP_RANGE = 10;
+/** A color (0-255, sRGB) at strength q as linear light (1 = white), for the panels. */
+const MARQUEE_LIGHT = 0.6, TICKER_LIGHT = 0.8;
+const linC = (c: number, q: number) => (c / 255) ** 2.2 * q;
 
 /**
  * The power of building k's signs, ads, neon, screens and floodlights: like buildingPower, but a
@@ -496,8 +505,15 @@ function gatherLights(world: World, v: View, sec: number) {
       }
       if (p.kind !== 'blade') continue;
       const bi = city.businesses[p.seed].building, B = city.buildings[bi];
-      const q = 0.3 * signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, sec) * signPower(world, bi, sec);
-      dyn.point(p.x + Math.cos(p.a) * 0.9, p.y + Math.sin(p.a) * 0.9, 6, 9, 12, B.sign[0] * q, B.sign[1] * q, B.sign[2] * q);
+      const q = BLADE_LIGHT * signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, sec) * signPower(world, bi, sec);
+      if (q < 0.005) continue;
+      // both faces of the panel, out from the wall, as tall as it is
+      const letter = p.z1 || BLADE_LETTER, c = Math.cos(p.a), sn = Math.sin(p.a), x1 = bladeReach(letter);
+      const z1 = BLADE_Z + bladeHeight(bladeText(city, p.seed), BLADE_SYMBOL[city.businesses[p.seed].kind] ?? -1, letter);
+      for (const sd of [-1, 1]) {
+        const ox = -sn * sd * 0.2, oy = c * sd * 0.2;
+        dyn.panel(p.x + c * 0.4 + ox, p.y + sn * 0.4 + oy, p.x + c * x1 + ox, p.y + sn * x1 + oy, -sn * sd, c * sd, BLADE_Z, z1, BLADE_RANGE, 0.25, linC(B.sign[0], q), linC(B.sign[1], q), linC(B.sign[2], q));
+      }
     }
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
@@ -506,69 +522,86 @@ function gatherLights(world: World, v: View, sec: number) {
         const q = 0.8 * signPower(world, k, sec), [fr, fg, fb] = B.flood;
         if (q > 0.01) floodSpots(B, (x, y, nx, ny) => dyn.flood(x, y, nx, ny, B.floodH, fr * q, fg * q, fb * q));
       }
+      const cx = (B.x0 + B.x1) / 2, cy = (B.y0 + B.y1) / 2, dist = Math.hypot(cx - v.x, cy - v.y);
+      // neon tubes up its corners light the sidewalk and the street round them, all round
+      if (B.neon && !B.cut && dist < NEON_LIGHT_FAR) {
+        const q = NEON_LIGHT * signPower(world, k, sec), [nr, ng, nb] = B.neon;
+        if (q > 0.005) for (const [x, y] of [[B.x0, B.y0], [B.x1, B.y0], [B.x0, B.y1], [B.x1, B.y1]]) dyn.panel(x, y, x, y, 1, 0, 0, B.h, NEON_RANGE, 0.99, linC(nr, q), linC(ng, q), linC(nb, q));
+      }
       if (B.biz < 0 || B.round) continue;
-      const K0 = B.cut;
-      if (B.shop && Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < 60) {
+      const blkB = blockAt(city, cx, cy);
+      if (B.shop && dist < 60) {
         // the lit shop windows spill warm light on the sidewalk in front of them (faces on the street)
-        const w = 0.3 * buildingPower(world, k, sec), blk = blockAt(city, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
-        for (let f = 0; f < (K0 ? 5 : 4); f++) {
+        const w = SHOP_LIGHT * buildingPower(world, k, sec);
+        for (let f = 0; f < (B.cut ? 5 : 4); f++) {
           const sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
           if (hi - lo < 2) continue;
-          const gap = !blk ? 0 : f === 0 ? B.x0 - blk.x0 : f === 1 ? blk.x1 - B.x1 : f === 2 ? B.y0 - blk.y0 : f === 3 ? blk.y1 - B.y1 : 0;
+          const gap = !blkB ? 0 : f === 0 ? B.x0 - blkB.x0 : f === 1 ? blkB.x1 - B.x1 : f === 2 ? B.y0 - blkB.y0 : f === 3 ? blkB.y1 - B.y1 : 0;
           if (gap > SIDEWALK + 0.5) continue;
-          if (f === 4) dyn.segment(K0!.nx * K0!.c + K0!.ny * lo, K0!.ny * K0!.c - K0!.nx * lo, K0!.nx * K0!.c + K0!.ny * hi, K0!.ny * K0!.c - K0!.nx * hi, K0!.nx, K0!.ny, 5, 1.5, 4, 200 * w, 165 * w, 110 * w);
-          else {
-            const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
-            dyn.segment(alongX ? lo : edge, alongX ? edge : lo, alongX ? hi : edge, alongX ? edge : hi, alongX ? 0 : out, alongX ? out : 0, 5, 1.5, 4, 200 * w, 165 * w, 110 * w);
-          }
+          const L = faceLine(B, f, lo, hi);
+          dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], 0.3, 2.6, SHOP_RANGE, 0.1, linC(200, w), linC(165, w), linC(110, w));
         }
       }
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
-      if (B.screen && Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < 80) {
-        // the screens wash the street with their current scene's color
-        const S = screenScene(k, sec), q = 0.22 * signPower(world, k, sec), cr = (S.a[0] + S.b[0]) / 2 * q, cg = (S.a[1] + S.b[1]) / 2 * q, cb = (S.a[2] + S.b[2]) / 2 * q;
+      if (B.screen && dist < SCREEN_LIGHT_FAR) {
+        // the screens wash the street and the facades across it with their current scene's color, from where they hang
+        const S = screenScene(k, sec), q = SCREEN_LIGHT * signPower(world, k, sec), cr = linC((S.a[0] + S.b[0]) / 2, q), cg = linC((S.a[1] + S.b[1]) / 2, q), cb = linC((S.a[2] + S.b[2]) / 2, q);
         for (let f = 0; f < (B.cut ? 5 : 4); f++) {
           if (!(B.screen & (1 << f))) continue;
-          const sp = faceSpan(B, f), mid = (sp[0] + sp[1]) / 2, hw = Math.min(sp[1] - sp[0] - 1.5, 16) / 2, Kc = B.cut;
-          if (f === 4) dyn.segment(Kc!.nx * Kc!.c + Kc!.ny * (mid - hw), Kc!.ny * Kc!.c - Kc!.nx * (mid - hw), Kc!.nx * Kc!.c + Kc!.ny * (mid + hw), Kc!.ny * Kc!.c - Kc!.nx * (mid + hw), Kc!.nx, Kc!.ny, 14, 6, 12, cr, cg, cb);
-          else {
-            const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
-            dyn.segment(alongX ? mid - hw : edge, alongX ? edge : mid - hw, alongX ? mid + hw : edge, alongX ? edge : mid + hw, alongX ? 0 : out, alongX ? out : 0, 14, 6, 12, cr, cg, cb);
-          }
+          const sp = faceSpan(B, f), mid = (sp[0] + sp[1]) / 2, w = Math.min(sp[1] - sp[0] - 1.5, 16);
+          if (w <= 4) continue;
+          // (as wallCell places it: above the ticker, if there is one)
+          const z0 = B.ticker ? TICK_Z1 + 1.2 : 5.2, z1 = Math.min(B.h - 1.5, z0 + Math.min(12, w * 0.75));
+          const L = faceLine(B, f, mid - w / 2, mid + w / 2);
+          dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], z0, z1, SCREEN_RANGE, 0.05, cr, cg, cb);
         }
       }
-      const [sr, sg, sb] = B.sign, q = 0.4 * signPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
+      const [sr, sg, sb] = B.sign, q = SIGN_LIGHT * signPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
       // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims
       // its own spot; farther away the sign is lit evenly, as a whole
-      const near = Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < SIGN_LETTER_LIGHT;
-      const K = B.cut;
-      for (let f = 0; f < (K ? 5 : 4); f++) {
+      const near = dist < SIGN_LETTER_LIGHT;
+      for (let f = 0; f < (B.cut ? 5 : 4); f++) {
         const sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
         const n = signText(city, B.biz, Math.floor((hi - lo - 1.2) / LETTER_W) - 2).length;
         if (n < 3) continue;
         const half = ((n + 2) * LETTER_W) / 2, mid = (lo + hi) / 2;
         // the letters in order of increasing coordinate, with the frame's padding at both ends
         const rev = f === 1 || f === 2; // same reading order as wallColumn
-        let x0: number, y0: number, x1: number, y1: number, nx: number, ny: number;
-        if (f === 4) {
-          // points on the cut face are n * c + (ny, -nx) * u
-          nx = K!.nx; ny = K!.ny;
-          x0 = nx * K!.c + ny * (mid - half); y0 = ny * K!.c - nx * (mid - half);
-          x1 = nx * K!.c + ny * (mid + half); y1 = ny * K!.c - nx * (mid + half);
-        } else {
-          const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
-          x0 = alongX ? mid - half : edge; y0 = alongX ? edge : mid - half; x1 = alongX ? mid + half : edge; y1 = alongX ? edge : mid + half;
-          nx = alongX ? 0 : out; ny = alongX ? out : 0;
-        }
+        const L = faceLine(B, f, mid - half, mid + half);
         if (near) {
           LEVELS.length = 0;
           for (let col = 0; col < n; col++) LEVELS[col + 1] = signLight(B.biz, mode, rev ? n - 1 - col : col, full, sec);
           LEVELS[0] = LEVELS[n + 1] = whole;
-          dyn.pieces(x0, y0, x1, y1, nx, ny, 7, 3.5, 7, sr * q, sg * q, sb * q, LEVELS);
-        } else dyn.segment(x0, y0, x1, y1, nx, ny, 7, 3.5, 7, sr * q * whole, sg * q * whole, sb * q * whole);
+          dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], SIGN_Z0, SIGN_Z1, SIGN_RANGE, 0.35, linC(sr, q), linC(sg, q), linC(sb, q), LEVELS);
+        } else dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], SIGN_Z0, SIGN_Z1, SIGN_RANGE, 0.35, linC(sr, q * whole), linC(sg, q * whole), linC(sb, q * whole));
+        // a marquee's frame of warm white bulbs (a third lit, chasing; wallCell) lights on its own, whatever the letters do
+        if (mode === 4) dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], SIGN_Z0, SIGN_Z1, SIGN_RANGE, 0.5, linC(255, q * MARQUEE_LIGHT), linC(225, q * MARQUEE_LIGHT), linC(150, q * MARQUEE_LIGHT));
+      }
+      // the news ticker's amber bulbs (about a third lit) all round the building
+      if (B.ticker && dist < SCREEN_LIGHT_FAR) {
+        const tq = TICKER_LIGHT * signPower(world, k, sec);
+        for (let f = 0; f < (B.cut ? 5 : 4); f++) {
+          const sp = faceSpan(B, f), L = faceLine(B, f, sp[0], sp[1]);
+          dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], TICK_Z0, TICK_Z1, SIGN_RANGE, 0.3, linC(255, tq), linC(150, tq), linC(45, tq));
+        }
       }
     }
   }
+}
+
+/** The stretch from a0 to a1 along face f of B (faceSpan's coordinate) as [x0, y0, x1, y1, nx, ny], in increasing coordinate, with its outward normal. */
+const FL = [0, 0, 0, 0, 0, 0];
+function faceLine(B: Building, f: number, a0: number, a1: number) {
+  if (f === 4) {
+    // points on the cut face are n * c + (ny, -nx) * u
+    const K = B.cut!;
+    FL[0] = K.nx * K.c + K.ny * a0; FL[1] = K.ny * K.c - K.nx * a0; FL[2] = K.nx * K.c + K.ny * a1; FL[3] = K.ny * K.c - K.nx * a1; FL[4] = K.nx; FL[5] = K.ny;
+  } else {
+    const alongX = f >= 2, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, out = f & 1 ? 1 : -1;
+    FL[0] = alongX ? a0 : edge; FL[1] = alongX ? edge : a0; FL[2] = alongX ? a1 : edge; FL[3] = alongX ? edge : a1;
+    FL[4] = alongX ? 0 : out; FL[5] = alongX ? out : 0;
+  }
+  return FL;
 }
 
 /** Props of the blocks near the viewer, plus nearby cars. Far away they are too small to matter. */

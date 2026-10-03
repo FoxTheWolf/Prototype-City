@@ -80,6 +80,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
+- Uma mudança que eu sugiro para a fatia vertical é que já que aquele distrito, aquele quarteirão em triângulo, né, estilo Times Square, está dando tanto problema, vamos eliminar ele por hora, né, colocar uma flag que desliga a geração dele, e aí vamos trocar por dois quarteirões estilo praça, né, Ou algo que fique parecido. Um quarteirão estilo praça, né? Nesse, no meio desse lugar. 
+
 ### Feedback para o Opus 4.8
 
 > Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.

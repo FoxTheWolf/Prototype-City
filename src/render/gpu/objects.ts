@@ -350,7 +350,8 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); } // the room's lamps
     else if (!painted) {
       // the light where the ray hit, strongest on tops
-      let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff);
+      let wn = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z);
+      let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff, wn / max(1e-4, length(wn)));
       rgb += L * (select(1.1, 1.5, face == 2) * fog); oIl = L * (select(1.1, 1.5, face == 2) * fog);
     }
     if (mat == M_GLOW || mat == M_TEXT || (mat == M_SCREEN && face == 1)) { oEm = rgb; }

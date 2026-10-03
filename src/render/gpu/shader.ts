@@ -2,7 +2,7 @@ import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
 import { CEIL, CELL as PCELL, DOOR, DOOR_H } from '../../sim/interior';
 import { LITTER, LITTER_FAR, AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, FLOOD_GAP, FLOOD_FIX_FAR, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
-import { CELL, FLOOD_OUT, SIDE } from '../lights';
+import { CELL, FLOOD_OUT, PANEL_S, SIDE } from '../lights';
 import { LAMP_R, LIGHT_W } from '../lightmap';
 import { objectsWGSL } from './objects';
 import { SHELLS } from '../precip';
@@ -85,6 +85,8 @@ const GROUND_FAR = 600.0;
 const LIGHT_KNEE = 150.0;
 /** How much of a lamp's light a surface sends back once tinted by its color (finish), and how strongly a lit room's light spills onto the wall around its window. */
 const SIGN_BACK = 2.5;
+/** A panel light's size factor (PANEL_S in lights.ts), and how much of it a surface turned away from it still gets (it is not a point: some of it always shows). */
+const PANEL_S = ${f(PANEL_S)}; const PANEL_RECV_WRAP = 0.15;
 const WIN_SPILL = 70.0;
 const CROWN_H = 16.0;
 const FLOOD_GAP = ${f(FLOOD_GAP)}; const FLOOD_OUT = ${f(FLOOD_OUT)}; const FLOOD_FIX_FAR = ${f(FLOOD_FIX_FAR)}; const FLOOD_SHADOW_FAR = 45.0;
@@ -113,7 +115,7 @@ const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
  *  mostly through the city's orange haze), so a lit wall went grey; the light now takes a stronger version of the hue. */
 const LIT_SAT = 1.5;
 /** How much of a lamp's own hue a facade takes (0: only its brightness). */
-const WALL_LAMP_HUE = 0.75;
+const WALL_LAMP_HUE = 0.9;
 /** At night, how much darker the street objects' paint reads than its palette color (as the walls' palette is). */
 const OBJ_NIGHT = 0.3;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
@@ -176,8 +178,12 @@ fn lvSum(o: u32, n: u32, p: f32) -> f32 {
   if (k >= n) { return dlv[o + k]; }
   return dlv[o + k] + (dlv[o + k + 1u] - dlv[o + k]) * (p - f32(k));
 }
-fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
+// nr: the lit surface's normal (zero: none, a raindrop; it takes the light as if it faced it)
+fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
   var L = vec3f(0.0);
+  // the panels add up in linear light (their colors come linear; 1 = white): summed as sRGB, raised to 2.2 in the
+  // finish, a light fell off as 1 / d^4.4 and a sign lit only the wall it hung on
+  var Lp = vec3f(0.0);
   let zk = select(1.0 - (pz - 1.0) / (LIT_H - 1.0), 1.0, pz <= 1.0);
   if (zk > 0.0) {
     let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
@@ -196,6 +202,32 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
     for (var q = doff[c]; q < doff[c + 1u]; q++) {
       let o = didx[q] * 16u;
       let zf = dl[o + 8u]; let zt = dl[o + 9u];
+      if (dl[o] >= 4.0) {
+        // a lit panel (DynLights.panel): a sign, a screen, a shop window, a neon tube; its nearest point in 3D,
+        // how it faces the point (its wrap: a bare tube lights all round) and how the surface faces it
+        let wrap = dl[o] - 4.0; let enx = dl[o + 5u]; let eny = dl[o + 6u];
+        var ax = px - dl[o + 1u]; var ay = py - dl[o + 2u];
+        if (ax * enx + ay * eny < -0.3 && wrap < 0.9) { continue; }
+        let sx = dl[o + 3u] - dl[o + 1u]; let sy = dl[o + 4u] - dl[o + 2u]; let L2 = sx * sx + sy * sy;
+        let t = select(0.0, clamp((ax * sx + ay * sy) / L2, 0.0, 1.0), L2 > 1e-4);
+        let v = vec3f(ax - sx * t, ay - sy * t, pz - clamp(pz, zf, zt));
+        let d2 = dot(v, v); let R = dl[o + 7u];
+        if (d2 >= R * R) { continue; }
+        let d = sqrt(d2) + 0.05;
+        let ce = mix(max(0.0, (v.x * enx + v.y * eny) / d), 1.0, wrap);
+        let cr = select(1.0, mix(max(0.0, -dot(nr, v) / d), 1.0, PANEL_RECV_WRAP), dot(nr, nr) > 0.25);
+        // (only the part of it within ~d of the point counts: a long tube falls off as 1 / d, a wide panel up close is even)
+        let ext = 2.0 * d + 0.3; let S = PANEL_S * clamp(sqrt(L2), 0.3, ext) * clamp(zt - zf, 0.3, ext); let w = 1.0 - d2 / (R * R);
+        var lv = 1.0;
+        let n = u32(dl[o + 14u]);
+        if (n > 0u) {
+          let h = (0.3 + 0.5 * sqrt(d2)) * dl[o + 15u]; let cc = t * f32(n);
+          let a = max(0.0, cc - h); let b = min(f32(n), cc + h); let lo = u32(dl[o + 13u]);
+          lv = (lvSum(lo, n, b) - lvSum(lo, n, a)) / (b - a);
+        }
+        Lp += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * (ce * cr * (S / (d2 + S)) * w * w * lv);
+        continue;
+      }
       let lz = select((zt - pz) / (zt - zf), 1.0, pz <= zf);
       if (lz <= 0.0) { continue; }
       let kind = u32(dl[o]); let R = dl[o + 7u];
@@ -249,6 +281,7 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
       L += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * f;
     }
   }
+  if (Lp.x + Lp.y + Lp.z > 0.0) { L = pow(pow(max(L, vec3f(0.0)) / 255.0, vec3f(2.2)) + Lp, vec3f(1.0 / 2.2)) * 255.0; }
   let m = max(L.x, max(L.y, L.z));
   if (m > LIGHT_KNEE) { L *= (LIGHT_KNEE + (m - LIGHT_KNEE) * 0.3) / m; }
   if (u.day > 0.0) { L *= 1.0 - 0.85 * u.day; }
@@ -1383,7 +1416,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
-  if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c += L; il += L; }
+  if (t < LIT_FAR) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
   if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; }
   gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0;
   gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
@@ -1542,7 +1575,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     }
   }
   c = sat(c);
-  let gl = lightAt(wx, wy, 0.0) * (lk * fog);
+  let gl = lightAt(wx, wy, 0.0, vec3f(0.0, 0.0, 1.0)) * (lk * fog);
   gEm = vec3f(0.0); gIl = gl; gTag = rd; gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
   // how wet the spot is: a film everywhere it rains, puddles in the low spots (more on the asphalt)
   gWet = 0.0;
@@ -2153,7 +2186,7 @@ fn fallOver(cl: Cell, rdx: f32, rdy: f32, m: f32, nearT: f32) -> Cell {
       if (Y < 0.0 || Y >= max(len, 1.0)) { continue; }
       if (underRoof(wx, wy, zd)) { continue; } // sheltered
       // see-through: the drop is the color behind it lightened (snow: whitened), plus the light it catches
-      let lt = lightAt(wx, wy, zd);
+      let lt = lightAt(wx, wy, zd, vec3f(0.0));
       let q = (0.5 + 0.5 * near) * select(0.8, 1.0, snow); let add = select(60.0, 120.0, snow) * q + 200.0 * u.flash;
       o.ch = select(select(glyph, COL, s > 5), select(DOT, STAR, s < 3), snow);
       o.c = max(sat(o.bg), sat(o.c) * 0.5) * 1.2 + vec3f(add, add, add * 1.1) + lt * select(2.2, 1.4, snow);
@@ -2200,7 +2233,7 @@ fn fallOver(cl: Cell, rdx: f32, rdy: f32, m: f32, nearT: f32) -> Cell {
         // no drip where the next roof goes on (scaffold sheds of two faces meeting, end to end)
         let qx = lx + ox * 0.2; let qy = ly + oy * 0.2;
         if (underRoof(Rx + qx * Rc - qy * Rs, Ry + qx * Rs + qy * Rc, Rz - 0.1)) { continue; }
-        let lt = lightAt(wx + u.px, wy + u.py, z);
+        let lt = lightAt(wx + u.px, wy + u.py, z, vec3f(0.0));
         o.ch = select(BAR, COM, Y < 1.0);
         o.c = max(sat(o.bg), sat(o.c) * 0.5) * 1.2 + vec3f(70.0, 75.0, 85.0) + lt * 2.0;
         return o;
