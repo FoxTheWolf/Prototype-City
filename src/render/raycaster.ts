@@ -467,6 +467,13 @@ function gatherLights(world: World, v: View, sec: number) {
   for (const blk of city.blocks) {
     if (blk.x1 < v.x - DYN_FAR || blk.x0 > v.x + DYN_FAR || blk.y1 < v.y - DYN_FAR || blk.y0 > v.y + DYN_FAR) continue;
     for (const p of blk.props) {
+      if (p.kind === 'shelter' && Math.abs(p.x - v.x) < 60 && Math.abs(p.y - v.y) < 60) {
+        // a bus shelter's advert washes the pavement on both sides of it with its scene's color (L.5)
+        const S = screenScene(p.seed, sec), P = world.power, on = power(P, subAt(P, city, p.x, p.y), p.x, p.y, p.seed, 0, sec)[0];
+        const q = (S.kind === 0 ? 0.1 : 0.2) * on, c = Math.cos(p.a), sn = Math.sin(p.a);
+        if (q > 0.005) dyn.point(p.x + c * -0.17 - sn * 1.96, p.y + sn * -0.17 + c * 1.96, 5, 1, 3.5, (S.a[0] + S.b[0]) / 2 * q, (S.a[1] + S.b[1]) / 2 * q, (S.a[2] + S.b[2]) / 2 * q);
+        continue;
+      }
       if (p.kind !== 'blade') continue;
       const bi = city.businesses[p.seed].building, B = city.buildings[bi];
       const q = 0.3 * signLight(p.seed, signMode(city, p.seed), -1, signText(city, p.seed, 255).length, sec) * signPower(world, bi, sec);
