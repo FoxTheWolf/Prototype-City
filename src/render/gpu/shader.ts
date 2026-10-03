@@ -423,8 +423,10 @@ fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32) -> vec3f
     let c = select(select(vec3f(70.0, 85.0, 110.0), vec3f(190.0, 120.0, 60.0), gen), vec3f(150.0, 22.0, 16.0), commonPart && h < select(0.4, 0.3, gen));
     return c / 255.0 * select(0.6, min(1.0, elec * 1.1), gen);
   }
-  if (!(commonPart || hash3(boxId, r * 31 + f, 11) < select(bld[lq + 11u] * (1.0 - 0.75 * u.day) * 1.3, 0.8, kind == R_SHOP))) { return vec3f(0.0); }
   let st = i32(bld[lq + 10u]); let office = st == 0 || st == 1;
+  // a home's lamps go out by day; an office's stay on through the working day (L.5)
+  let onK = select(1.0 - 0.75 * u.day, 1.0 + 0.6 * u.day, office);
+  if (!(commonPart || hash3(boxId, r * 31 + f, 11) < select(bld[lq + 11u] * onK * 1.3, 0.8, kind == R_SHOP))) { return vec3f(0.0); }
   let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(222.0, 240.0, 232.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
   return c / 255.0 * elec;
 }
@@ -621,9 +623,16 @@ fn inBlock() -> u32 {
 }
 fn inLamp(IB: u32, r: i32) -> vec3f { let w = IB + IN_LAMPS + u32(r) * 3u; return vec3f(fxf(w), fxf(w + 1u), fxf(w + 2u)); }
 /** The light at a point of room r (lit3): its lamps, falling off with the distance to the nearest and along the ray; and the ambient. */
+/** The daylight in a room (L.5): strong by the windows, falling off with the distance to the nearest outer wall
+ *  (DAYLIGHT_FALL m), and what reaches deep in; whiter than the night's ambient. */
+const DAYLIGHT_WIN = 2.2; const DAYLIGHT_DEEP = 0.2; const DAYLIGHT_FALL = 4.0;
+fn dayIn(x: f32, y: f32) -> f32 {
+  let d = max(0.0, min(min(x - u.inX0, u.inX1 - x), min(y - u.inY0, u.inY1 - y)));
+  return u.day * (DAYLIGHT_DEEP + DAYLIGHT_WIN * exp(-d / DAYLIGHT_FALL)) * (1.0 - 0.4 * u.cloud);
+}
 fn litIn(IB: u32, ro: u32, r: i32, x: f32, y: f32, t: f32) -> vec3f {
-  let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + t * 0.03); let a = 0.14 + 0.5 * u.day;
-  return inLamp(IB, r) * k + vec3f(a, a * 1.05, a * 1.25);
+  let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + t * 0.03); let a = 0.14 * (1.0 - u.day); let dl = dayIn(x, y);
+  return inLamp(IB, r) * k + vec3f(a, a * 1.05, a * 1.25) + vec3f(dl * 0.92, dl * 0.97, dl);
 }
 /** The light on the floor's furniture (insideLight), as a multiplier. */
 fn insideLight(x: f32, y: f32) -> vec3f {
@@ -633,8 +642,8 @@ fn insideLight(x: f32, y: f32) -> vec3f {
   if (u32(r) >= fx[o + 4u]) { return vec3f(0.3); }
   return litIn(IB, roomRec(o, r), r, x, y, 0.0);
 }
-// (clamped as the CPU stores it, before the finish)
-fn roomCell(ch: u32, c: vec3f, t: f32) -> Cell { return Cell(ch, sat(c), vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0); }
+// (not clamped: by the windows the daylight takes a room past 255, and the finish takes it down with its hue kept)
+fn roomCell(ch: u32, c: vec3f, t: f32) -> Cell { return Cell(ch, max(c, vec3f(0.0)), vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0); }
 fn zrOf(z: f32, z0: f32) -> f32 { return (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H; }
 /** Whether a reading direction along a wall runs to the viewer's right. */
 fn toRight(ax: f32, ay: f32, rdx: f32, rdy: f32) -> bool { return ax * -rdy + ay * rdx >= 0.0; }
@@ -1616,7 +1625,7 @@ const SKY_BOUNCE = 0.35; const SKY_BOUNCE_SUN = 0.3;
 /** The lamps' highlight on what is glossy. */
 const LAMP_SPEC = 0.03;
 /** How much of the day's exposure a room's own light follows (0: it reads as drawn by day too; 1: only its lamps, dark by day). */
-const ROOM_DAY = 0.5;
+const ROOM_DAY = 0.3;
 /** The night's exposure with the city lit: the night's palette shows as drawn under AMB_N. */
 const EV_NIGHT = 1.0 / (DAY_ALBEDO * AMB_N);
 fn lin(c: vec3f) -> vec3f { return pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2)); }
