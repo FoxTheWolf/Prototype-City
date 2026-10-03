@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.3 — O olho se adapta (2026-10-03)
+- Exposição automática: ao sair de um prédio para o meio-dia, a rua ofusca por um segundo; ao entrar num lugar escuro (ou num apagão), o olho vai se acostumando aos poucos. A linha de status mostra `EYE x…`.
+- De dia, as salas iluminadas só pelas lâmpadas parecem mais escuras que a rua, e as janelas vistas de fora ficam escuras como de verdade.
+- Um carro iluminado por vários faróis ao mesmo tempo não estoura mais para o branco.
+
 ## 0.L.2 — Cada luz com a sua temperatura (2026-10-03)
 - Os postes seguem a temperatura de cor real do tipo de lâmpada: sódio laranja, sódio de baixa pressão amarelo, vapor metálico branco quente com um fundo verde, mercúrio verde-azulado e os primeiros LEDs brancos frios. As fachadas agora pegam o tom dos postes da rua delas.
 - As janelas de escritório são mais de fluorescente (branco frio, esverdeado) e menos de cores inventadas; as casas continuam com a luz quente das lâmpadas incandescentes.

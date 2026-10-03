@@ -43,6 +43,40 @@ import { BLD, BLK, FX_TAB, IN_LAMPS, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS
 type UName = (typeof UNIFORMS)[number];
 const UIDX = Object.fromEntries(UNIFORMS.map((n, k) => [n, k])) as Record<UName, number>;
 
+/**
+ * The eye's light meter (L.3): the mean of the log of each cell's light on the screen, as the frame was shown
+ * (glyph and background together, in linear light), in one workgroup; with how many cells were blown out.
+ */
+const METER_WGSL = /* wgsl */ `
+@group(0) @binding(0) var<storage, read> outp: array<u32>;
+@group(0) @binding(1) var<storage, read_write> res: array<f32>;
+@group(0) @binding(2) var<uniform> dim: vec4f;
+var<workgroup> sumL: array<f32, 256>;
+var<workgroup> sumB: array<f32, 256>;
+fn ch(w: u32, k: u32) -> f32 { return pow(f32((w >> k) & 255u) / 255.0, 2.2); }
+@compute @workgroup_size(256) fn main(@builtin(local_invocation_index) t: u32) {
+  let n = u32(dim.x) * u32(dim.y);
+  var s = 0.0; var b = 0.0;
+  for (var i = t; i < n; i += 256u) {
+    let f = outp[i]; let g = outp[n + i];
+    let lf = 0.2126 * ch(f, 8u) + 0.7152 * ch(f, 16u) + 0.0722 * ch(f, 24u);
+    let lg = 0.2126 * ch(g, 0u) + 0.7152 * ch(g, 8u) + 0.0722 * ch(g, 16u);
+    let L = select(lf, 0.0, (f & 255u) == 32u) * 0.55 + lg * 0.45;
+    s += log(L + 1e-3); b += select(0.0, 1.0, L > 0.7);
+  }
+  sumL[t] = s; sumB[t] = b;
+  workgroupBarrier();
+  for (var k = 128u; k > 0u; k >>= 1u) { if (t < k) { sumL[t] += sumL[t + k]; sumB[t] += sumB[t + k]; } workgroupBarrier(); }
+  if (t == 0u) { res[0] = sumL[0] / f32(n); res[1] = sumB[0] / f32(n); }
+}`;
+
+/** The eye's adaptation (L.3): the exposure the time of day expects already fits a scene whose mean light (as the
+ *  meter reads it, at adaptation 1) is within the band (by night, by day); past its edges the eye moves by the
+ *  strength of the difference (opening up in the dark, closing in bright light), within the range; and how fast (s):
+ *  it closes quickly in bright light and opens slowly in the dark. */
+const ADAPT_BAND_NIGHT = [0.007, 0.05], ADAPT_BAND_DAY = [0.05, 0.12], ADAPT_DARK = 0.7, ADAPT_BRIGHT = 0.75, ADAPT_MIN = 1 / 8, ADAPT_MAX = 16;
+const ADAPT_DOWN_S = 0.45, ADAPT_UP_S = 2.2;
+
 export class GpuWorld {
   /** The cells of the last frame: glyph + fg per cell, then bg per cell (CharGrid's layout), read by the compositor. */
   out!: GPUBuffer;
@@ -111,6 +145,16 @@ export class GpuWorld {
   /** The world's pass on the GPU's own clock (ms, smoothed); -1 without timestamp queries. */
   gpuMs = -1;
   private tq: { set: GPUQuerySet; res: GPUBuffer; read: GPUBuffer; busy: boolean } | null = null;
+  /** The meter's pipeline, result and read-back, the frame's adaptation it saw, and the target it gives. */
+  private meter: { pipe: GPUComputePipeline; res: GPUBuffer; read: GPUBuffer; uni: GPUBuffer; bind: GPUBindGroup | null; busy: boolean; pending: boolean; adapt: number; day: number } | null = null;
+  /** The last reading: mean log light at adaptation 1, and the share of cells blown out (debug). */
+  meterLog = 0;
+  meterHot = 0;
+  /** Where the eye is going (adapt's target), and when it last moved (ms). */
+  private adaptTarget = 1;
+  private adaptAt = -1;
+  /** Set false to hold the eye at the time of day's exposure (debug). */
+  autoExposure = true;
 
   static available(): boolean { return typeof navigator !== 'undefined' && 'gpu' in navigator; }
 
@@ -183,6 +227,12 @@ export class GpuWorld {
       this.tq = { set: dev.createQuerySet({ type: 'timestamp', count: 2 }), res: dev.createBuffer({ size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC }),
         read: dev.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), busy: false };
     }
+    {
+      const pipe = dev.createComputePipeline({ layout: 'auto', compute: { module: dev.createShaderModule({ code: METER_WGSL }), entryPoint: 'main' } });
+      this.meter = { pipe, res: dev.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }),
+        read: dev.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
+        uni: dev.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }), bind: null, busy: false, pending: false, adapt: 1, day: 0 };
+    }
     const mod = (this.mod = dev.createShaderModule({ code: worldWGSL() }));
     mod.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL ${m.lineNum}:${m.linePos} ${m.message}`)));
   }
@@ -193,6 +243,7 @@ export class GpuWorld {
     this.cols = cols; this.rows = rows;
     this.out?.destroy();
     this.out = this.dev.createBuffer({ size: cols * rows * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    if (this.meter) this.meter.bind = null;
     this.bind = null;
   }
 
@@ -238,6 +289,7 @@ export class GpuWorld {
         entries: [this.uni, ...this.fixed, this.out, this.subs, this.lmap, this.lampCol, ...this.dyn, this.sg, this.fx].map((buffer, binding) => ({ binding, resource: { buffer } })),
       });
     }
+    if (timed) this.adaptStep(sky.day);
     const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
     const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), W = world.weather, Dg = C.diagonal, U = this.U;
     // how far the rain has fallen, shared with the CPU's drawFall (split into whole bands and the rest, for the f32s)
@@ -248,7 +300,7 @@ export class GpuWorld {
       nbx: C.nbx, nxb: C.xb.length, nyb: C.yb.length, curveR: CURVE_R, dox: Dg.ox, doy: Dg.oy, dex: Dg.ex, dey: Dg.ey,
       dnx: Dg.nx, dny: Dg.ny, dw: Dg.w, blocks: v.look.blocks ? 1 : 0, lox: F.light.ox, loy: F.light.oy, dbx: D.bx, dby: D.by,
       sunX: F.sun[0], sunY: F.sun[1], sunZ: F.sun[2], sunEl: sky.sunEl, cloud: sky.cloud, moonlight: sky.moonlight, cityLit: 0.65 * F.light.litShare + 0.35 * sky.cityLit, flash: sky.flash,
-      snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, adapt: this.adapt,
+      snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, adapt: timed ? this.adapt : 1,
       dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
       sarH: C.sarcophagus.h, towX: C.sarcophagus.tx, towY: C.sarcophagus.ty, towR: C.sarcophagus.tr, towH: C.sarcophagus.th,
@@ -278,10 +330,44 @@ export class GpuWorld {
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
     if (T) { enc.resolveQuerySet(T.set, 0, 2, T.res, 0); enc.copyBufferToBuffer(T.res, 0, T.read, 0, 16); T.busy = true; this.tqPending = true; }
+    // the eye's meter over what this frame shows
+    const M = timed && this.meter && !this.meter.busy ? this.meter : null;
+    if (M) {
+      if (!M.bind) M.bind = this.dev.createBindGroup({ layout: M.pipe.getBindGroupLayout(0), entries: [this.out, M.res, M.uni].map((buffer, binding) => ({ binding, resource: { buffer } })) });
+      q.writeBuffer(M.uni, 0, new Float32Array([cols, rows, 0, 0]));
+      const mp = enc.beginComputePass();
+      mp.setPipeline(M.pipe); mp.setBindGroup(0, M.bind); mp.dispatchWorkgroups(1); mp.end();
+      enc.copyBufferToBuffer(M.res, 0, M.read, 0, 16);
+      M.busy = true; M.pending = true; M.adapt = this.adapt; M.day = sky.day;
+    }
+  }
+
+  /** The eye: toward the meter's target, closing up fast and opening slowly. */
+  private adaptStep(day: number) {
+    const now = performance.now(), dt = this.adaptAt < 0 ? 0 : Math.min(0.25, (now - this.adaptAt) / 1000);
+    this.adaptAt = now;
+    if (!this.autoExposure) { this.adapt = 1; return; }
+    const tau = this.adaptTarget < this.adapt ? ADAPT_DOWN_S : ADAPT_UP_S;
+    this.adapt *= Math.pow(this.adaptTarget / this.adapt, 1 - Math.exp(-dt / tau));
+    void day;
   }
   private tqPending = false;
-  /** After the frame's submit: read the world pass's time back when it lands. */
+  /** After the frame's submit: read the world pass's time and the eye's meter back when they land. */
   readTime() {
+    const M = this.meter;
+    if (M && M.pending) {
+      M.pending = false;
+      M.read.mapAsync(GPUMapMode.READ).then(() => {
+        const r = new Float32Array(M.read.getMappedRange().slice(0));
+        M.read.unmap(); M.busy = false;
+        // the mean light the scene would have at adaptation 1 (the curve's shoulder ignored), and where that sends the eye
+        this.meterLog = r[0] - Math.log(M.adapt); this.meterHot = r[1];
+        const g = Math.min(1, Math.max(0, M.day / 0.35)), edge = (k: number) => Math.log(ADAPT_BAND_NIGHT[k]) * (1 - g) + Math.log(ADAPT_BAND_DAY[k]) * g;
+        const lo = edge(0), hi = edge(1), m = this.meterLog;
+        const over = m < lo ? (m - lo) * ADAPT_DARK : m > hi ? (m - hi) * ADAPT_BRIGHT : 0;
+        this.adaptTarget = Math.min(ADAPT_MAX, Math.max(ADAPT_MIN, Math.exp(-over)));
+      }, () => { M.busy = false; });
+    }
     const T = this.tq;
     if (!T || !this.tqPending) return;
     this.tqPending = false;

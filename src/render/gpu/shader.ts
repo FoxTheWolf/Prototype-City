@@ -1607,10 +1607,14 @@ const AMB_N = 0.004; const MOON_E = 0.003;
 const NIGHT_ADAPT = 0.3;
 /** The lamps' light (lightAt's) in the same units: under a street lamp ~3% of the day's sky. */
 const LAMP_E = 0.45;
+/** How fast the lamps' summed light still grows past white (lightAt's 255). */
+const LAMP_OVER = 0.3;
 /** How much of the eye's change from night to day what glows keeps up with (1: as bright on the screen by day as at night). */
 const EMIT_KEEP = 0.95;
 /** The lamps' highlight on what is glossy. */
 const LAMP_SPEC = 0.03;
+/** How much of the day's exposure a room's own light follows (0: it reads as drawn by day too; 1: only its lamps, dark by day). */
+const ROOM_DAY = 0.5;
 /** The night's exposure with the city lit: the night's palette shows as drawn under AMB_N. */
 const EV_NIGHT = 1.0 / (DAY_ALBEDO * AMB_N);
 fn lin(c: vec3f) -> vec3f { return pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2)); }
@@ -1670,7 +1674,9 @@ fn light(cl: Cell) -> Cell {
     let E = (En * (1.0 - g) + skyC * ds + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps (lightAt dims its light by day; the eye does that now): their light takes the surface's color;
     // on a facade most of its hue (each street takes its lamps' tone; all of it under the old sRGB light made scorched-paper greys)
-    var El = lin(lamp / max(0.15, 1.0 - 0.85 * day)) * LAMP_E;
+    // (past white the sum of lamps grows slowly: a few headlights together raised to the 2.2 blew a car out to white)
+    let lx = lamp / max(0.15, 1.0 - 0.85 * day) / 255.0;
+    var El = pow(min(lx, vec3f(1.0) + max(lx - vec3f(1.0), vec3f(0.0)) * LAMP_OVER), vec3f(2.2)) * LAMP_E;
     if (o.kind == KIND_WALL) { El = mix(vec3f(luma(El)), El, WALL_LAMP_HUE); }
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
     let Le = lin(emit) * (pow(EV_NIGHT / evDayNight(), EMIT_KEEP) / EV_NIGHT);
@@ -1705,7 +1711,11 @@ fn light(cl: Cell) -> Cell {
     gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged) * up;
     let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
     c = c * (1.0 - f) + haze * f;
-    if (abs(u.adapt - 1.0) > 0.001) { c = srgb(lin(c) * u.adapt); }
+    // a room has its own lamps, much dimmer than the day outside: by day it reads darker at the day's exposure
+    // (a share of the daylight comes in by the windows, until the light bounces: L.5), and the eye opens up inside
+    let roomK = select(1.0, pow(evDayNight() / EV_NIGHT, ROOM_DAY), o.kind == KIND_ROOM);
+    let k = u.adapt * roomK;
+    if (abs(k - 1.0) > 0.001) { c = srgb(lin(c) * k); }
     o.c = c;
   }
   o.bg *= dark;
