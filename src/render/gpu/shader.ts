@@ -177,11 +177,11 @@ fn lampCorner(i: u32, f: f32, sh: vec4f) -> vec3f {
 /** How far from the viewer the street lamps' shadows of the objects are traced (m), and from how far they fade out. */
 const LAMP_SH_FAR = 40.0;
 /**
- * The street lamps' cones in the falling rain or snow (at night): a short march along the view ray (to CONE_FAR),
+ * The street lamps' cones in the air at night (CONE_DRY), stronger in falling rain or snow (CONE_WET by the precipitation): a short march along the view ray (to CONE_FAR),
  * each step lit by the two lamps of its metre if it is in the cone under their heads, the brighter near them.
  * The steps start at a fine-grained offset per cell (interleaved gradient noise), as the sun's rays do.
  */
-const CONE_FAR = 32.0; const CONE_STEPS = 12; const CONE_TAN = 1.6; const CONE_K = 0.1;
+const CONE_FAR = 32.0; const CONE_STEPS = 12; const CONE_TAN = 1.6; const CONE_K = 0.1; const CONE_DRY = 0.8; const CONE_WET = 1.6;
 fn coneLamp(w: u32, Q: vec3f) -> vec3f {
   if (w == 0u) { return vec3f(0.0); }
   let n = ((w >> 8u) - 1u) * 6u;
@@ -193,7 +193,7 @@ fn coneLamp(w: u32, Q: vec3f) -> vec3f {
   return vec3f(lampCol[n], lampCol[n + 1u], lampCol[n + 2u]) * (e * e / (1.0 + (dz * dz + rr * rr) / 12.0));
 }
 fn lampCones(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, depth: f32) -> vec3f {
-  let k = u.precip * (1.0 - u.day);
+  let k = (CONE_DRY + CONE_WET * u.precip) * (1.0 - u.day);
   if (k < 0.03) { return vec3f(0.0); }
   let tEnd = min(depth, CONE_FAR); let dt = tEnd / f32(CONE_STEPS);
   let j = fract(52.9829189 * fract(0.06711056 * f32(gx) + 0.00583715 * f32(gy)));
@@ -1898,7 +1898,7 @@ fn glowBelow(x: f32, y: f32) -> vec3f {
   let city = spread * (0.75 + 0.25 * exp(-cd * cd)) * u.cityLit;
   let sd = length(vec2f(x - u.sarX, y - u.sarY)) / (u.sarR * 1.3);
   let fire = 1.6 * exp(-sd * sd);
-  return vec3f(40.0 * city + 70.0 * fire, 34.0 * city + 24.0 * fire, 18.0 * city + 12.0 * fire);
+  return vec3f(48.0 * city + 70.0 * fire, 33.0 * city + 24.0 * fire, 10.0 * city + 12.0 * fire);
 }
 // the cloud's column at (x, y): its cover c (from the cover's noise, as the flat deck had it), base and top; the
 // finer scales slide with height z (so it billows instead of standing as columns); k1, k2 fade them with distance
@@ -1998,7 +1998,8 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     let sunC = kelvin(sunTemp()) * (235.0 * sunOn * phase);
     let amb = vec3f(118.0, 124.0, 140.0) * day * (1.0 - 0.4 * u.precip) + vec3f(60.0 * u.dusk, 30.0 * u.dusk, 22.0 * u.dusk);
     let GL = glowBelow(wx, wy) * ((0.9 + 0.5 * u.precip) * night);
-    let base = 12.0 + 12.0 * (1.0 - u.cityLit) * night;
+    // the clouds' own floor of light: lower in a blackout (no city to light them, only the moon)
+    let base = 12.0 - 9.0 * (1.0 - u.cityLit) * night;
     var tr = 1.0; var acc = vec3f(0.0);
     // the scales finer than a step are averaged out (else a long step hits or misses them by chance: grain)
     let k1s = k1 * (1.0 - smoothK(500.0, 1200.0, ds)); let k2s = k2 * (1.0 - smoothK(150.0, 400.0, ds));
@@ -2747,7 +2748,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var lit = light(cl);
   if (paint) { refl *= mix(vec3f(1.0), gTint, CAR_METAL); }
   if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }
-  // the lamps' cones in the rain, over all of it (as bright as the eye takes them)
+  // the lamps' cones in the air (stronger in the rain), over all of it (as bright as the eye takes them)
   if (inc.state == 0u) { lit.c += lampCones(gid.x, gid.y, rdx, rdy, m, cl.depth) * pow(u.adapt, 1.0 / 2.2); }
   store(i, n, fallOver(handOver(display(lit), gid.x, gid.y), rdx, rdy, m, inc.nearT));
 }

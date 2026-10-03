@@ -308,7 +308,9 @@ const BLADE_LIGHT = 3.75, BLADE_RANGE = 22, NEON_LIGHT = 1.5, NEON_RANGE = 16, N
 /** A color (0-255, sRGB) at strength q as linear light (1 = white), for the panels. */
 const MARQUEE_LIGHT = 0.6, TICKER_LIGHT = 0.8;
 /** By day the screens turn up their brightness (as real LED screens do): their light on the street x (1 + this) at noon, so it shows in the shade. */
-const SCREEN_DAY = 4;
+const SCREEN_DAY = 7;
+/** The signs' light on the street by day (how many times stronger at noon), so it still shows in the shade. */
+const SIGN_DAY = 1.5;
 const linC = (c: number, q: number) => (c / 255) ** 2.2 * q;
 
 /**
@@ -558,7 +560,7 @@ function gatherLights(world: World, v: View, sec: number) {
           dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], z0, z1, SCREEN_RANGE, 0.05, cr, cg, cb);
         }
       }
-      const [sr, sg, sb] = B.sign, q = SIGN_LIGHT * signPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
+      const [sr, sg, sb] = B.sign, q = SIGN_LIGHT * (1 + SIGN_DAY * frameDay) * signPower(world, k, sec), whole = signLight(B.biz, mode, -1, full, sec);
       // up close every letter lights the wall and sidewalk in front of it, so a failing tube dims
       // its own spot; farther away the sign is lit evenly, as a whole
       const near = dist < SIGN_LETTER_LIGHT;
