@@ -193,7 +193,7 @@ fn colAt(o: u32) -> vec3f { return vec3f(bld[o], bld[o + 1u], bld[o + 2u]); }
 
 // ---- a roof seen from above (roofRows)
 fn roofCell(q: u32, t: f32, wx: f32, wy: f32) -> Cell {
-  let fogK = 1.0 - exp(-t / FOG); let k = 1.0 - fogK * 0.6;
+  let fogK = 1.0 - exp(-t / FOG); let k = 1.0 - fogK * 0.6 * (1.0 - u.day);
   let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u];
   var edge = min(min(wx - x0, x1 - wx), min(wy - y0, y1 - wy));
   if (bld[q + 6u] > 0.5) { edge = min(edge, bld[q + 9u] - bld[q + 7u] * wx - bld[q + 8u] * wy); }
@@ -875,7 +875,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   if (side != 2) { f0 = bld[q + 36u + u32(face) * 2u]; f1 = bld[q + 37u + u32(face) * 2u]; }
   let dAlong = u.colW * t / max(1e-6, abs(dn));
   let fogK = 1.0 - exp(-t / FOG);
-  let shade0 = lightK * (1.0 - fogK * 0.6); var shade = shade0;
+  let shade0 = lightK * (1.0 - fogK * 0.6 * (1.0 - u.day)); var shade = shade0; // by day the haze is the finish's
   let winLight = 1.0 - fogK * 0.45;
   // the building's power now, its signs' (never on the generator), and each window's
   let sub = i32(bld[q + 46u]); let gen = bld[q + 47u] > 0.5;
@@ -936,7 +936,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let clockR = select(0.0, min(3.0, (f1 - f0) * 0.32), style == 12 && side != 2); let clockZ = H - clockR - 2.0;
   let du = along - (f0 + f1) * 0.5;
   let farWall = select(select(COL, BAR, S == 5), EQ, S == 2);
-  let farK = select(1.0, 1.25, S == 1);
+  let farK = select(1.0, 1.6, S == 1); // the curtain wall up close averages ~1.6x its frame (sheen, mullions)
   let balcony = S == 4 && feat < 0.5; let balK = ifloor(fract(feat * 131.0) * 4.0);
   let pIdx = ifloor(fract(feat * 977.0) * 5.0); let pat = PATS[pIdx];
   let band = select(0, 1 + ifloor(fract(feat * 53.0) * 3.0), fract(feat * 311.0) < 0.35);
@@ -1130,7 +1130,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       ch = select(COL, O, h2 < litK * 0.4);
       var w2 = win; let gfl = gf << kv; if (band > 0 && ((gfl / band) & 1) == 1) { w2 = sign; }
       c = w2 * p2 * (0.65 + 0.35 * hash3(gw, bk, 5));
-    } else { ch = farWall; c = frame * farK * shade; }
+    } else {
+      // the average of what up close is wall and dark panes, so the color holds when the detail comes in
+      let paneK = select(select(select(0.3, 0.2, S == 2), 0.24, S == 4), 0.0, S == 1 || S == 5);
+      ch = farWall; c = mix(frame * farK * shade, darkPane, paneK);
+    }
   } else if (z < FLOOR_H && shop) {
     if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; }
     else { ch = BAR; c = frame * shade; }
@@ -1248,7 +1252,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   c = sat(c);
   // street lamps, headlights and signs light the lower floors
   if (z < LIT_H && t < LIT_FAR) { c = sat(c + lightAt(hx, hy, z) * (1.3 * shade)); }
-  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, KIND_WALL, max(0.0, wsun));
+  // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
+  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));
 }
 
 // ---- scorched ground outside the fence, split by cracks that glow where the coal burns (burnGround)
@@ -1286,8 +1291,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let W = f32(arrayLength(&xc)); let Hh = f32(arrayLength(&yc));
   let bg = vec3f(7.0, 8.0, 12.0);
   if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return burnGround(wx, wy, rd, W, Hh); }
-  if (rd > GROUND_FAR) { return Cell(DOT, vec3f(28.0, 24.0, 32.0), bg, rd, KIND_GROUND, 0.0); }
-  let fog = 1.0 - (rd / GROUND_FAR) * 0.9;
+  if (rd > GROUND_FAR) { return Cell(DOT, mix(vec3f(28.0, 24.0, 32.0), vec3f(70.0, 72.0, 78.0), u.day), bg, rd, KIND_GROUND, 0.0); }
+  let fog = 1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day);
   let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);
   let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
   var ch = DOT; var c = vec3f(38.0, 38.0, 46.0);
@@ -1403,8 +1408,19 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
 
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
 const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 3.0; const DAY_GROUND = 1.8;
+/** The brightest a surface reflects (its hue kept), how much more saturated the day shows the colors, and the exposure. */
+const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
 /** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
-fn aces(x: vec3f) -> vec3f { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), vec3f(0.0), vec3f(1.0)); }
+fn acesL(x: f32) -> f32 { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+/** The curve on the luminance only, so a bright color keeps its hue and saturation; past 1 it goes to white. */
+fn tone(x: vec3f) -> vec3f {
+  let L = dot(x, vec3f(0.2126, 0.7152, 0.0722));
+  if (L < 1e-5) { return vec3f(0.0); }
+  let Lt = acesL(L * DAY_EXPO); var y = x * (Lt / L);
+  let mx = max(y.x, max(y.y, y.z));
+  if (mx > 1.0) { y = vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)); }
+  return y;
+}
 // ---- the finish: moonlight, daylight and haze, a whole-city blackout, the display modes
 fn finish(cl: Cell) -> Cell {
   var o = cl;
@@ -1425,16 +1441,20 @@ fn finish(cl: Cell) -> Cell {
       let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
       let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
       var alb = pow(o.c / 255.0, vec3f(2.2)) * DAY_ALBEDO;
+      // the colors were made for the night: by day a bit more saturated, and never brighter than a white wall
+      alb = max(vec3f(0.0), mix(vec3f(dot(alb, vec3f(0.2126, 0.7152, 0.0722))), alb, DAY_SAT));
+      let am = max(alb.x, max(alb.y, alb.z)); if (am > DAY_ALB_MAX) { alb *= DAY_ALB_MAX / am; }
       // the ground's colors were made for the night (dark, bluish asphalt): by day, lighter and greyer
       if (o.kind == KIND_GROUND) { let g = dot(alb, vec3f(0.3, 0.5, 0.2)); alb = mix(alb, vec3f(g), 0.2) * DAY_GROUND; }
       let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
       let E = skyC + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * share * gSun) + vec3f(u.flash * 0.6);
-      let lin = aces(alb * E);
+      let lin = tone(alb * E);
       let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
       let dc = mix(pow(lin, vec3f(1.0 / 2.2)) * 255.0, haze, fd);
       o.c = sat(mix(o.c * (1.0 - f) + haze * f, dc, smoothK(0.0, 0.35, day)));
     } else {
-      let amb = 1.0 + 0.7 * day + u.flash * 0.6;
+      // rooms keep their own lamps' light (brightened, a green plant read almost white)
+      let amb = 1.0 + select(0.7, 0.1, o.kind == KIND_ROOM) * day + u.flash * 0.6;
       o.c = sat(o.c * amb * (1.0 - f) + haze * f);
     }
   }
@@ -1553,7 +1573,7 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
       let gk = (0.35 + 0.65 * thick) * (0.8 + 0.5 * u.precip) * night;
       let base = 12.0 + 12.0 * (1.0 - u.cityLit) * night;
       var q = vec3f(base + GL.x * gk, base + GL.y * gk, base + 5.0 + GL.z * gk);
-      let grey = (150.0 - 60.0 * thick - 35.0 * u.precip) * day;
+      let grey = (215.0 - 75.0 * thick - 70.0 * u.precip + 25.0 * toSun * (1.0 - thick)) * day;
       q += vec3f(grey, grey * 1.01, grey * 1.06);
       q += vec3f(150.0 * u.dusk * toSun * (1.0 - thick * 0.5), 60.0 * u.dusk * toSun, 30.0 * u.dusk);
       q += vec3f(190.0, 185.0, 230.0) * u.flash;

@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.20 — Cor de verdade de dia (2026-10-03)
+- De dia, os prédios mostram a própria cor (o tijolo é vermelho, as torres de vidro azuis, verdes e roxas) em vez do cinza lavado; as torres distantes não ficam mais escuras, e as nuvens são brancas.
+- Um prédio não muda mais de cor quando você se aproxima e as janelas aparecem.
+- Os cômodos vistos pelas janelas ficam mais escuros que a fachada, como de verdade, e os móveis não ficam mais brancos (a planta verde é verde).
+
 ## 0.R.19 — Sombras e um dia de verdade (2026-10-03)
 - Os prédios fazem sombra: de dia, as ruas entre as torres ficam na sombra e os topos e as fachadas viradas para o sol se acendem, e a sombra anda com o sol ao longo do dia.
 - O dia foi refeito: as cores dos prédios aparecem (tijolo, vidro, pintura), o sol é quente e a sombra azulada, e a névoa só aparece ao longe. Acabou o cinza lavado.
