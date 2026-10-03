@@ -1,4 +1,4 @@
-import { BAY, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
+import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
 import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, RAMP, SCREEN_PAL, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
@@ -77,7 +77,8 @@ const DSIDE = ${SIDE};
 const DCELL = ${CELL}.0;
 const BLOCKS = array<u32, 256>(${Array.from(BLOCKS).map((b) => `${b}u`).join(',')});
 const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u, 90u, PLUS), vec3u(48u, O, EQ), vec3u(72u, HASH, EQ));
-const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u;
+const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u;
+const BURN_START = ${f(BURN_START)};
 // (lamp pool radius ${LAMP_R} m: baked into the light map on the CPU)
 
 // the same hash as core/rng.ts's hash3 (32-bit wrapping products)
@@ -592,12 +593,41 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), t, KIND_WALL, max(0.0, wsun));
 }
 
+// ---- scorched ground outside the fence, split by cracks that glow where the coal burns (burnGround)
+fn burnGround(wx: f32, wy: f32, rd: f32, W: f32, Hh: f32) -> Cell {
+  let out = max(max(-wx, wx - W), max(-wy, wy - Hh));
+  let fog = 1.0 - min(1.0, rd / 2500.0) * 0.85; let day = u.day;
+  let hv = hash3(ifloor(wx / 6.0), ifloor(wy / 6.0), 5); let tex = (0.9 + 0.15 * hv) * fog * (0.45 + 0.55 * day);
+  var ch = 32u; var c = vec3f(42.0 - 14.0 * day, 32.0 - 5.0 * day, 30.0 - 2.0 * day) * tex;
+  let heat = clamp((out - BURN_START) / 200.0, 0.0, 1.0);
+  if (heat > 0.0) {
+    // cracks are the edges of a cellular pattern: where the two nearest feature points are almost equally far
+    let S = 14.0; let gx = ifloor(wx / S); let gy = ifloor(wy / S);
+    var d1 = 1e9; var d2 = 1e9; var near = 0.0;
+    for (var j = -1; j <= 1; j++) {
+      for (var k = -1; k <= 1; k++) {
+        let cx = gx + k; let cy = gy + j;
+        let d = length(vec2f((f32(cx) + hash3(cx, cy, 11)) * S - wx, (f32(cy) + hash3(cx, cy, 12)) * S - wy));
+        if (d < d1) { d2 = d1; d1 = d; near = hash3(cx, cy, 13); } else if (d < d2) { d2 = d; }
+      }
+    }
+    let width = 0.6 + rd * 0.0025;
+    if (d2 - d1 < width && near < 0.75) {
+      let kk = heat * (0.55 + 0.45 * sin(u.sec * 60.0 * 0.05 + near * 40.0)) * (0.6 + 0.4 * fog) * min(1.0, 1.2 / (1.0 + rd * 0.002)) * (1.0 - 0.6 * day);
+      if (d2 - d1 < width * 0.4 && rd < 150.0 && kk > 0.5) { ch = STAR; }
+      let dk = 0.97 * day;
+      c = vec3f(24.0 + 130.0 * kk, 10.0 + 50.0 * kk * kk, 8.0 + 10.0 * kk) * (1.0 - dk) + c * (0.7 * dk);
+    }
+  }
+  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), rd, KIND_BLOCK, 0.0);
+}
+
 // ---- the ground (renderWorld's ground loop)
 fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let wx = u.px + rdx * rd; let wy = u.py + rdy * rd;
   let W = f32(arrayLength(&xc)); let Hh = f32(arrayLength(&yc));
   let bg = vec3f(7.0, 8.0, 12.0);
-  if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return Cell(DOT, vec3f(60.0, 30.0, 18.0), bg, rd, KIND_GROUND, 0.0); }
+  if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return burnGround(wx, wy, rd, W, Hh); }
   if (rd > GROUND_FAR) { return Cell(DOT, vec3f(28.0, 24.0, 32.0), bg, rd, KIND_GROUND, 0.0); }
   let fog = 1.0 - (rd / GROUND_FAR) * 0.9;
   let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);
@@ -687,7 +717,7 @@ fn finish(cl: Cell) -> Cell {
     let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
     let haze = vec3f(150.0, 160.0, 176.0);
     let sunlit = o.kind == KIND_WALL;
-    if (day > 0.01 && (o.kind == KIND_GROUND || sunlit)) {
+    if (day > 0.01 && (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit)) {
       let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
       let skyK = day * (0.36 + 0.3 * u.cloud); let dirK = 1.6 * day * (1.0 - 0.85 * u.cloud);
       let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
@@ -713,6 +743,11 @@ fn finish(cl: Cell) -> Cell {
       let fl = fill + (0.5 - fill) * 0.45 * f;
       o.bg = o.c * fl; o.c *= glyph;
     }
+  }
+  if (o.kind == KIND_BLOCK) {
+    // solid color; a glyph left on it is a glint, brighter than the surface
+    o.bg = o.c;
+    if (o.ch != 32u) { o.c = o.c * 1.4 + vec3f(50.0, 50.0, 46.0); }
   }
   if (u.blocks > 0.5 && BLOCKS[o.ch] != 0u) { o.ch = BLOCKS[o.ch]; }
   return o;
