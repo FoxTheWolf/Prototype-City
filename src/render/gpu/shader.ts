@@ -20,7 +20,7 @@ export const UNIFORMS = [
   'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'pad0',
   'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
   'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'starSlots',
-  'tickN',
+  'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH',
 ] as const;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
@@ -619,7 +619,7 @@ fn burnGround(wx: f32, wy: f32, rd: f32, W: f32, Hh: f32) -> Cell {
       c = vec3f(24.0 + 130.0 * kk, 10.0 + 50.0 * kk * kk, 8.0 + 10.0 * kk) * (1.0 - dk) + c * (0.7 * dk);
     }
   }
-  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), rd, KIND_BLOCK, 0.0);
+  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), rd, KIND_BLOCK, u.sunZ);
 }
 
 // ---- the ground (renderWorld's ground loop)
@@ -721,7 +721,7 @@ fn finish(cl: Cell) -> Cell {
       let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
       let skyK = day * (0.36 + 0.3 * u.cloud); let dirK = 1.6 * day * (1.0 - 0.85 * u.cloud);
       let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
-      let share = select(u.sunZ, o.sun, sunlit); let d = dirK * share;
+      let share = select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK); let d = dirK * share;
       let gm = vec3f(1.0) + 2.2 * (vec3f(skyK * 0.92, skyK * 0.97, skyK * 1.08) + d * sunC) + vec3f(u.flash * 0.6);
       let lift = 24.0 * (skyK + d);
       o.c = sat((o.c * gm + lift * sunC) * (1.0 - f) + haze * f);
@@ -871,6 +871,109 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   return o;
 }
 
+// ---- the Sarcophagus on the horizon (sarcophagus.ts): the dome, the draft tower and the cranes
+fn domeZ(r: f32, h: f32, rho: f32) -> f32 {
+  if (rho >= r) { return 0.0; }
+  let Rs = (r * r + h * h) / (2.0 * h);
+  return sqrt(Rs * Rs - rho * rho) - (Rs - h);
+}
+// [entry, exit] along the unit ray (ux, uy) through a circle, or x < 0 for none
+fn span2(cx: f32, cy: f32, r: f32, ux: f32, uy: f32) -> vec2f {
+  let ox = u.px - cx; let oy = u.py - cy; let b = ox * ux + oy * uy; let disc = b * b - (ox * ox + oy * oy - r * r);
+  if (disc > 0.0 && -b + sqrt(disc) > 0.0) { return vec2f(max(1.0, -b - sqrt(disc)), -b + sqrt(disc)); }
+  return vec2f(-1.0);
+}
+// apparent height above the eye of a surface point z at distance d, over the curve, as a slope
+fn slopeAt(z: f32, d: f32) -> f32 { return (z - u.eye - d * d / (2.0 * u.curveR)) / d; }
+fn sarcVis() -> f32 { return smoothK(u.sarR + 3700.0, u.sarR + 3100.0, length(vec2f(u.sarX - u.px, u.sarY - u.py))); }
+// the dome or tower in this cell (want: the cell's slope; sL: rows per unit of slope), depth 1e9 if none
+fn sarcCell(want: f32, sL: f32, L: f32, ux: f32, uy: f32, col: f32, bg: vec3f, vis: f32) -> Cell {
+  var o = Cell(32u, vec3f(0.0), bg, 1e9, KIND_BLOCK, 0.0);
+  let day = u.day; let fire = 0.75 * (1.0 - 0.7 * day); let dark = 18.0 * 0.7 * day;
+  let flick = 0.75 + 0.25 * sin(u.sec * 0.7 + col * 0.05); let steel = 16.0 + 14.0 * day;
+  let sun = vec3f(u.sunX, u.sunY, u.sunZ);
+  var best = 1e9; var c = vec3f(0.0); var ch = 32u; var sh = 0.0;
+  let dome = span2(u.sarX, u.sarY, u.sarR, ux, uy);
+  if (dome.x >= 0.0) {
+    let ds = (dome.y - dome.x) / 24.0;
+    var top = -1e9;
+    for (var k = 0; k <= 24; k++) { let dd = dome.x + ds * f32(k); top = max(top, slopeAt(domeZ(u.sarR, u.sarH, length(vec2f(u.px + ux * dd - u.sarX, u.py + uy * dd - u.sarY))), dd)); }
+    if (want <= top && want >= slopeAt(0.0, dome.x) - 1.0 / sL) {
+      // the first point along the ray where the dome rises above this cell
+      var d = dome.x; var z = 0.0;
+      for (var k = 0; k <= 24; k++) {
+        d = dome.x + ds * f32(k);
+        z = domeZ(u.sarR, u.sarH, length(vec2f(u.px + ux * d - u.sarX, u.py + uy * d - u.sarY)));
+        if (slopeAt(z, d) >= want) { break; }
+      }
+      let hx = u.px + ux * d - u.sarX; let hy = u.py + uy * d - u.sarY; let phi = atan2(hy, hx);
+      // panels: 2.5 degrees around by 50 m up; a third never went up, and the fire shows through
+      let pa = ifloor((phi + 3.14159265) / 0.044); let pz = ifloor(z / 50.0); let ph = hash3(pa, pz, 92);
+      let Rs = (u.sarR * u.sarR + u.sarH * u.sarH) / (2.0 * u.sarH);
+      let nrm = normalize(vec3f(hx / Rs + (ph - 0.5) * 0.08, hy / Rs + (hash3(pa, pz, 93) - 0.5) * 0.08, (z + Rs - u.sarH) / Rs));
+      let ns = dot(nrm, sun);
+      // a glint where the sun mirrors off a panel toward the eye
+      let vv = vec3f(-ux, -uy, (u.eye - z) / d);
+      var spec = 0.0;
+      if (sun.z > 0.0 && ns > 0.0) { spec = (2.0 * ns * dot(nrm, vv) - dot(sun, vv)) / length(vv); }
+      let glint = select(32u, select(PLUS, STAR, spec > 0.996), day > 0.2 && spec > 0.985);
+      let pk = 0.85 + 0.3 * ph;
+      best = d;
+      if ((top - want) * sL < 1.0) { c = vec3f(steel * 1.3, steel * 1.3, steel * 1.4); sh = ns + 0.01; }
+      else if (z < 45.0) { c = vec3f(230.0 * flick * fire + dark, 95.0 * flick * fire + dark, 30.0 * fire + dark); }
+      else if (hash3(pa, pz, 91) < 0.33) { c = vec3f(200.0 * flick * fire + dark, 80.0 * flick * fire + dark, 28.0 * fire + dark); }
+      else { let rib = select(1.0, 0.8, pa % 3 == 0); ch = glint; c = vec3f(steel * pk * rib, steel * pk * rib, steel * 1.12 * pk * rib); sh = ns + 0.01; }
+    }
+  }
+  let tw = span2(u.towX, u.towY, u.towR, ux, uy);
+  if (tw.x >= 0.0 && tw.x < best) {
+    // the draft tower: a squat ribbed drum, its rim glowing with the heat it was built to draw up
+    let d = tw.x; let top = slopeAt(u.towH, d);
+    if (want <= top && want >= slopeAt(0.0, d) - 1.0 / sL) {
+      let ang = atan2(u.py + uy * d - u.towY, u.px + ux * d - u.towX);
+      best = d; ch = 32u; sh = 0.0;
+      if ((top - want) * sL < 1.0) {
+        ch = select(32u, STAR, (ifloor(u.sec * 1.5) + i32(col)) % 9 == 0);
+        c = vec3f(255.0 * flick * fire + dark, 70.0 * fire + dark, 40.0 * fire + dark);
+      } else {
+        let rib = select(1.0, 0.8, ifloor((ang + 3.14159265) / 0.06) % 4 == 0);
+        c = vec3f(steel * 0.9 * rib, steel * 0.9 * rib, steel * rib); sh = cos(ang) * sun.x + sin(ang) * sun.y + 0.01;
+      }
+    }
+  }
+  if (best >= 1e9) { return o; }
+  // fade out into whatever is behind (the smoky low sky) as it leaves view
+  let haze = 0.45 * (1.0 - day);
+  c = c * (1.0 - haze) + bg * haze;
+  o.ch = ch; o.c = bg + (c - bg) * vis; o.bg = bg + (c * 0.35 - bg) * vis;
+  o.depth = best / L; o.sun = select(0.0, clamp(sh, 0.0, 1.0), sh != 0.0);
+  return o;
+}
+// the cranes on the dome, stopped mid-job, projected like the CPU's (drawCranes); depth 1e9 if none here
+fn craneCell(gx: i32, gy: i32, vis: f32) -> Cell {
+  var o = Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0);
+  let invDet = 1.0 / (u.plX * u.dirY - u.dirX * u.plY);
+  let c0 = sg[3]; let nc = sg[4];
+  for (var q = 0u; q < nc; q++) {
+    let kx = bitcast<f32>(sg[c0 + q * 4u]); let ky = bitcast<f32>(sg[c0 + q * 4u + 1u]); let kz = bitcast<f32>(sg[c0 + q * 4u + 2u]); let ka = bitcast<f32>(sg[c0 + q * 4u + 3u]);
+    let rx = kx - u.px; let ry = ky - u.py; let tY = invDet * (-u.plY * rx + u.plX * ry);
+    if (tY < 10.0 || tY >= o.depth) { continue; }
+    let tX = invDet * (u.dirY * rx - u.dirX * ry); let dx = gx - ifloor((u.cols / 2.0) * (1.0 + tX / tY));
+    if (dx < -1 || dx > 1) { continue; }
+    let drop = (rx * rx + ry * ry) / (2.0 * u.curveR);
+    let yTop = i32(ceil(u.hor - ((kz - u.eye - drop) * u.scale) / tY - 0.5)); let yBot = i32(ceil(u.hor - ((kz - 70.0 - u.eye - drop) * u.scale) / tY - 0.5));
+    if (gy < yTop || gy > yBot) { continue; }
+    let lightOn = (u.sec + ka) % 1.6 < 0.5;
+    if (gy == yTop) {
+      if (dx == 0) { o.ch = select(DASH, STAR, lightOn); o.c = select(vec3f(60.0 * vis, 60.0 * vis, 65.0 * vis), vec3f(255.0 * vis, 40.0, 30.0), lightOn); }
+      else { o.ch = DASH; o.c = vec3f(70.0, 70.0, 76.0) * vis; }
+    } else if (dx == 0) { o.ch = BAR; o.c = vec3f(60.0, 60.0, 66.0) * vis; }
+    else { continue; }
+    o.depth = tY;
+  }
+  return o;
+}
+
 fn store(i: u32, n: u32, cl: Cell) {
   let k = vec3u(clamp(cl.c, vec3f(0.0), vec3f(255.0)));
   outp[i] = cl.ch | (k.x << 8u) | (k.y << 16u) | (k.z << 24u);
@@ -954,11 +1057,20 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - u.py) * iy; }
   }
 
+  // the Sarcophagus and its cranes, far past the fence, behind whatever is nearer
+  var far = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
+  let vis = sarcVis();
+  if (vis > 0.0) {
+    var bgS = vec3f(7.0, 8.0, 12.0); if (m <= 0.0) { bgS = skyCell(m, rdx, rdy).bg; }
+    far = sarcCell(-m / L, u.scale * L, L, rdx / L, rdy / L, f32(gid.x), bgS, vis);
+    let cr = craneCell(i32(gid.x), i32(gid.y), vis);
+    if (cr.depth < far.depth) { far = cr; }
+  }
   // the cordon fence on the city edge (fenceColumn): chain link on posts, barbed wire on top, where nothing nearer is hit
   let fX = select(select(1e9, -u.px / rdx, rdx < 0.0), (u.cityW - u.px) / rdx, rdx > 0.0);
   let fY = select(select(1e9, -u.py / rdy, rdy < 0.0), (u.cityH - u.py) / rdy, rdy > 0.0);
   let tf = min(fX, fY);
-  if (tf > 0.05 && tf <= 2000.0 && tf < min(select(1e9, best, bk >= 0), tG)) {
+  if (tf > 0.05 && tf <= 2000.0 && tf < min(min(select(1e9, best, bk >= 0), tG), far.depth)) {
     let z = u.eye - m * tf + A * tf * tf;
     if (z >= 0.0 && z < 4.2) {
       let along = select(u.px + tf * rdx, u.py + tf * rdy, fX < fY);
@@ -975,13 +1087,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       }
     }
   }
-  if (bk >= 0 && best < tG) {
+  if (bk >= 0 && best < tG && best < far.depth) {
     if (roof) { store(i, n, finish(roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best))); return; }
     // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
     store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale)));
     return;
   }
-  if (tG < 1e8) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }
+  if (tG < 1e8 && tG < far.depth) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }
+  if (far.depth < 1e9) { store(i, n, finish(far)); return; }
 
   // below the horizon, a ray the curve carries past the ground: the far ground, as on the CPU
   if (m > 0.0) { store(i, n, finish(groundCell(1e7, rdx, rdy))); return; }

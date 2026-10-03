@@ -17,9 +17,9 @@ import { BLD, BLK, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from
  * floodlights, the power per window in a blackout), the lamps' and the dynamic lights, the finish
  * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
  * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
- * ticker. Not yet: the blade signs and billboards (objects), the doors, the rooms
+ * ticker, the burnt ground, the fence, the Sarcophagus and its cranes. Not yet: the blade signs and billboards (objects), the doors, the rooms
  * seen through the windows, fire escapes, scaffolding, reliefs, objects, cars, people, interiors,
- * the fire zone and the Sarcophagus, smoke, rain and snow falling, the glass of the windows indoors.
+ * the smoke, rain and snow falling, the glass of the windows indoors.
  */
 
 type UName = (typeof UNIFORMS)[number];
@@ -160,6 +160,7 @@ export class GpuWorld {
       snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, pad0: 0,
       dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
+      sarH: C.sarcophagus.h, towX: C.sarcophagus.tx, towY: C.sarcophagus.ty, towR: C.sarcophagus.tr, towH: C.sarcophagus.th,
       starSlots: Math.round((cols * Math.PI) / Math.atan(plane)), tickN: Math.min(TICK_MAX, this.ticker.length),
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
@@ -181,9 +182,9 @@ function code(s: string, k: number) {
 
 /**
  * The signs' data, one u32 each: a header (the ticker's and the text pool's offsets, the number of
- * businesses), the 5x7 font for codes 0..255 at SG_FONT, three words per business at SG_BIZ (its
+ * businesses, the cranes' offset and count), the 5x7 font for codes 0..255 at SG_FONT, three words per business at SG_BIZ (its
  * full sign name and its longest word, as offset << 8 | length into the pool, and its sign mode),
- * room for the ticker, then the pool. The shader cuts the name to a face as signText does.
+ * room for the ticker, then the pool, then the Sarcophagus's cranes (four floats each). The shader cuts the name to a face as signText does.
  */
 function signData(city: City) {
   const nb = city.businesses.length, tick = SG_BIZ + nb * 3, pool = tick + TICK_MAX;
@@ -198,8 +199,11 @@ function signData(city: City) {
     const full = signText(city, b, 255), word = full.split(' ').sort((x, y) => y.length - x.length)[0];
     words.push(put(full), put(word), signMode(city, b));
   }
-  const out = new Uint32Array(pool + chars.length);
-  out[0] = tick; out[1] = pool; out[2] = nb;
+  // the Sarcophagus's cranes after the pool: x, y, z, a as floats
+  const cranes = city.sarcophagus.cranes, cr0 = pool + chars.length;
+  const out = new Uint32Array(cr0 + cranes.length * 4);
+  out[0] = tick; out[1] = pool; out[2] = nb; out[3] = cr0; out[4] = cranes.length;
+  new Float32Array(out.buffer).set(cranes.flatMap((k) => [k.x, k.y, k.z, k.a]), cr0);
   for (let c = 0; c < 256; c++) { const r = fontRows(c); if (r) for (let k = 0; k < 7; k++) out[SG_FONT + c * 7 + k] = r[k]; }
   out.set(words, SG_BIZ);
   out.set(chars, pool);
