@@ -426,8 +426,12 @@ function gatherLights(world: World, v: View, sec: number) {
     // a flash of the headlights: the high beams, brighter and further for a blink
     const range = bike ? 8 : 24 * (fl > 1 ? 1.6 : 1), hr = (bike ? 60 : 150) * fl, hg = (bike ? 58 : 140) * fl, hb = (bike ? 50 : 115) * fl;
     if (!bike && (x - v.x) ** 2 + (y - v.y) ** 2 <= twinD2) {
-      // up close, a cone from each headlamp (each a little more than half the pair's light)
-      for (const sd of [-hw, hw]) dyn.cone(x + dx * hl - dy * sd, y + dy * hl + dx * sd, dx, dy, 0.87, range, 1, 4, hr * 0.6, hg * 0.6, hb * 0.6);
+      // up close, a cone from each headlamp (each a little more than half the pair's light); the dipped
+      // beam is asymmetric: the right lamp's reaches further and higher, a little toward the curb (the signs)
+      for (const sd of [-hw, hw]) {
+        const rt = sd > 0, ax = rt ? dx - dy * 0.08 : dx, ay = rt ? dy + dx * 0.08 : dy, an = Math.hypot(ax, ay);
+        dyn.cone(x + dx * hl - dy * sd, y + dy * hl + dx * sd, ax / an, ay / an, 0.87, range * (rt ? 1.35 : 1), 1, rt ? 6 : 4, hr * 0.6, hg * 0.6, hb * 0.6);
+      }
     } else dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb);
     if (!bike) dyn.point(x - dx * (hl + 0.1), y - dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
     // the turn signal blinking amber at its front and back corners on that side

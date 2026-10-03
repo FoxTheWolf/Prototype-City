@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.33 — Faróis assimétricos (2026-10-03)
+- De perto, cada farol de carro tem o próprio facho, e o da direita vai mais longe, mais alto e um pouco para a calçada, como o farol baixo de verdade (ilumina as placas e quem está na beira da rua).
+
 ## 0.R.32 — Brilho das janelas mais discreto (2026-10-03)
 - O brilho colorido que as janelas acesas guardam ao chegar perto de um prédio é mais fraco e some bem antes (a uns 35 m), sem parecer um efeito pintado por cima.
 
