@@ -194,8 +194,8 @@ export class Phone {
   readonly wst = newWire();
   /** The calendar: the month and day in view, the page, the player's reminders. */
   readonly cal = newCal();
-  /** Renders the city from a point (main hands it): the photos on Streetwire's posts. */
-  shoot: ((g: CharGrid, x: number, y: number, yaw: number, eye?: number, pitch?: number) => void) | null = null;
+  /** Renders the city from a point (main hands it): the photos on Streetwire's posts (false while the picture is not there yet). */
+  shoot: ((g: CharGrid, x: number, y: number, yaw: number, eye?: number, pitch?: number) => boolean) | null = null;
   private wireId = -1;
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
@@ -262,7 +262,9 @@ export class Phone {
   /** Messages on their way to the phone: from, text, and when they arrive (real seconds). */
   private incoming: { from: string; text: string; at: number }[] = [];
   /** The camera: what it sees (main hands it the player's view), the light there, the photos, the one shown, the last shot. */
-  render: ((g: CharGrid, k?: number) => void) | null = null;
+  render: ((g: CharGrid, k?: number) => boolean) | null = null;
+  /** A shot taken whose picture is not there yet (on the GPU it comes back a frame later): tried every frame. */
+  private shotDue: (() => Photo | null) | null = null;
   /** The camera draws in blocks (two pixels a cell); the characters version was tried and dropped. */
   readonly camBlocks = true;
   /** The camera's zoom (1 .. MAX_ZOOM) and whether its flash fires. */
@@ -351,7 +353,14 @@ export class Phone {
       else if (!dir.kids!.has(ph.name)) this.photos.splice(k, 1);
     }
   }
+  /** The shot taken, into the photos once its picture is there. */
+  private develop() {
+    const ph = this.shotDue?.();
+    if (ph) { this.photos.unshift(ph); this.shotDue = null; }
+  }
+
   update(dt: number, now: number) {
+    this.develop();
     this.syncFs(now);
     // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
     // out a little for a text or a reminder (its top row in sight for a few seconds)
@@ -646,7 +655,9 @@ export class Phone {
           // the flash fires as the picture is taken (it lights the scene the sensor sees)
           const p = this.world.player;
           if (this.camFlash) this.shotAt = performance.now() / 1000;
-          this.photos.unshift(takePhoto(this.render, this.device.cameraMP, this.light + (this.camFlash ? 0.9 : 0), this.world.time, p.x, p.y, this.world.seed, this.camBlocks, this.camZoom));
+          const R = this.render, mp = this.device.cameraMP, light = this.light + (this.camFlash ? 0.9 : 0), at = this.world.time, x = p.x, y = p.y, blocks = this.camBlocks, zoom = this.camZoom;
+          this.shotDue = () => takePhoto(R, mp, light, at, x, y, this.world.seed, blocks, zoom);
+          this.develop();
           this.sfx.push(['shutter']);
           return true;
         }

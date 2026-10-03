@@ -633,7 +633,7 @@ function alarmScreen(S: Lcd, P: Phone, now: number) {
 let finder: CharGrid | null = null, finderAt = -1, finderN = 0;
 /** The camera: the viewfinder live (15 times a second), a white flash on a shot, how many fit in the storage. */
 function cameraScreen(S: Lcd, P: Phone, now: number) {
-  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++, P.camBlocks, P.camZoom); finderAt = now; }
+  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++, P.camBlocks, P.camZoom) ?? finder; finderAt = now; }
   if (finder) picture(S, finder.cells, finder.bg, SW, SH - 2, 1, SH - 1);
   if (now - P.shotAt < 0.15) for (let y = 1; y < SH - 1; y++) S.fill(y, WHITE);
   // the frame's corners, the resolution and the photos left

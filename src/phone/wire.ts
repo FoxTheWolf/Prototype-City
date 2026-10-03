@@ -71,7 +71,7 @@ export function takePic(P: Phone, id: number, x: number, y: number, yaw: number,
   // rendered with one cell per HD pixel (the same shape as a cell, a third of it each way), each
   // pixel the cell's glyph colour mixed into its background by how much of the cell the glyph covers
   const W = PIC_W * HD, H = PIC_H * HD, g = new CharGrid(W, H);
-  P.shoot(g, x, y, yaw, eye, pitch);
+  if (!P.shoot(g, x, y, yaw, eye, pitch)) return null;
   const hd = new Uint8ClampedArray(W * H * 3);
   for (let i = 0; i < W * H; i++) {
     // a phone camera of 2008: a little soft, a little noisy

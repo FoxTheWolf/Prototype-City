@@ -6,7 +6,8 @@ import { SHAPE } from '../render/atlas';
  * The phone's camera. A photo is a small render of what the player sees, kept as glyph data (a few
  * KB): the same idea the city's social network will use for its citizens' photos (stage 12). Its
  * size follows the camera's megapixels, and in the dark it turns grainy and dim, as phone cameras
- * of 2008 did. The phone sees the world through `render` (main hands it the player's view).
+ * of 2008 did. The phone sees the world through `render` (main hands it the player's view; false while
+ * the picture is not there yet: on the GPU it comes back a frame later).
  */
 export interface Photo {
   w: number;
@@ -56,14 +57,14 @@ export function cover(c: number): number {
  * is rendered at twice the rows and each cell shows two pixels (its glyph's colour mixed with its
  * background's): a picture, not characters.
  */
-export function expose(render: (g: CharGrid, k?: number) => void, w: number, h: number, light: number, frame: number, blocks = false, zoom = 1): CharGrid {
+export function expose(render: (g: CharGrid, k?: number) => boolean, w: number, h: number, light: number, frame: number, blocks = false, zoom = 1): CharGrid | null {
   const H = blocks ? h * 2 : h, g = gridOf(w, H, blocks ? 'b' : '');
-  if (zoom <= 1) render(g, blocks ? 2 : 1);
+  if (zoom <= 1) { if (!render(g, blocks ? 2 : 1)) return null; }
   else {
     // zoom: the lens renders more cells over the same view (real detail) up to OPTICAL; the middle
     // of it is then picked out, its pixels growing past that (digital)
     const opt = Math.min(OPTICAL, zoom), W2 = Math.round(w * opt), H2 = Math.round(H * opt), r = gridOf(W2, H2, blocks ? 'zb' : 'z');
-    render(r, blocks ? 2 : 1);
+    if (!render(r, blocks ? 2 : 1)) return null;
     for (let y = 0; y < H; y++) for (let x = 0; x < w; x++) {
       const sx = Math.floor(W2 / 2 + (x - w / 2 + 0.5) * opt / zoom), sy = Math.floor(H2 / 2 + (y - H / 2 + 0.5) * opt / zoom);
       const a = (sy * W2 + sx) * 4, b = (y * w + x) * 4;
@@ -92,7 +93,9 @@ export function expose(render: (g: CharGrid, k?: number) => void, w: number, h: 
   return o;
 }
 
-export function takePhoto(render: (g: CharGrid, k?: number) => void, mp: number, light: number, at: number, x: number, y: number, seed: number, blocks = false, zoom = 1): Photo {
+/** A photo, or null while the picture is not there yet (try again next frame). */
+export function takePhoto(render: (g: CharGrid, k?: number) => boolean, mp: number, light: number, at: number, x: number, y: number, seed: number, blocks = false, zoom = 1): Photo | null {
   const w = photoCols(mp), h = Math.round(w / 2), g = expose(render, w, h, light, seed ^ Math.floor(at), blocks, zoom);
+  if (!g) return null;
   return { w, h, cells: g.cells.slice(), bg: g.bg.slice(), at, x, y, kb: Math.round(mp * 280 + hash3(seed, at, 5) * 120), blocks };
 }

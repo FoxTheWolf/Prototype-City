@@ -2,7 +2,8 @@ import { BAY, blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
 import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, liftGlassBox, planOf, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
-import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, type View } from '../raycaster';
+import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
+import { CharGrid } from '../grid';
 import { insideLamps, type Inside } from '../interior';
 import { furnitureModel } from '../models';
 import type { Obj, Part } from '../objects';
@@ -52,6 +53,11 @@ export class GpuWorld {
   private dyn: GPUBuffer[] = [];
   private lmapVersion = -1;
   private bind: GPUBindGroup | null = null;
+  /** Bumped when a list's buffer is made again: every bind group made before is stale. */
+  private gen = 0;
+  private bindGen = -1;
+  /** Views drawn off the screen and read back (see shot), by key. */
+  private shots = new Map<string, Shot>();
   /** The buildings' floats, kept to write the power grid's part into (substation, generator). */
   private blds: Float32Array;
   private powerSet = false;
@@ -170,7 +176,7 @@ export class GpuWorld {
     b?.destroy();
     let size = 256; while (size < bytes) size *= 2;
     this.dyn[k] = this.dev.createBuffer({ size, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    this.bind = null;
+    this.gen++;
     return this.dyn[k];
   }
 
@@ -198,7 +204,8 @@ export class GpuWorld {
     this.facades(v.x, v.y);
     const D = F.dyn.pack();
     [D.lights, D.lv, D.off, D.idx].forEach((a, k) => { const b = this.fit(k, a.byteLength); q.writeBuffer(b, 0, a); });
-    if (!this.bind) {
+    if (!this.bind || this.bindGen !== this.gen) {
+      this.bindGen = this.gen;
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
         entries: [this.uni, ...this.fixed, this.out, this.subs, this.lmap, this.lampCol, ...this.dyn, this.sg, this.fx].map((buffer, binding) => ({ binding, resource: { buffer } })),
@@ -231,6 +238,48 @@ export class GpuWorld {
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
+  }
+
+  /**
+   * View v drawn into a cols x rows grid off the screen and read back to the CPU, for what works on the
+   * picture there (the cameras' monitor, the opening, the phone's camera and the photos): under `key`,
+   * the last picture that landed, or null; a new one is started unless one is on its way. Without a
+   * tag the picture must have been asked for in the last quarter second (a live view, a frame or two
+   * late); with one, it must be the picture asked for with that tag (a photo of one place), and it is
+   * not drawn again once it is there.
+   */
+  shot(key: string, world: World, v: View, cols: number, rows: number, tag?: string): CharGrid | null {
+    let S = this.shots.get(key);
+    if (!S || S.cols !== cols || S.rows !== rows) {
+      if (S) { S.out.destroy(); S.read.destroy(); }
+      const size = cols * rows * 8, dev = this.dev;
+      S = { cols, rows, out: dev.createBuffer({ size, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }), read: dev.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
+        bind: null, bindGen: -1, busy: false, grid: new CharGrid(cols, rows), at: -1, tag: undefined };
+      this.shots.set(key, S);
+    }
+    const now = performance.now(), ok = S.at >= 0 && (tag !== undefined ? S.tag === tag : now - S.at < 250);
+    if (ok && tag !== undefined) return S.grid;
+    if (!S.busy) {
+      // drawn as the screen's frame is, into this picture's buffer; the light on the viewer's hands is the screen's
+      const keep = { out: this.out, cols: this.cols, rows: this.rows, bind: this.bind, bindGen: this.bindGen }, L = VIEW_LIGHT.slice(), G = VIEW_GLINT.slice();
+      Object.assign(this, { out: S.out, cols, rows, bind: S.bind, bindGen: S.bindGen });
+      const enc = this.dev.createCommandEncoder();
+      this.encode(enc, world, v);
+      enc.copyBufferToBuffer(S.out, 0, S.read, 0, cols * rows * 8);
+      this.dev.queue.submit([enc.finish()]);
+      S.bind = this.bind; S.bindGen = this.bindGen;
+      Object.assign(this, keep);
+      VIEW_LIGHT.set(L); VIEW_GLINT.set(G);
+      const T = S, n = cols * rows * 4;
+      T.busy = true;
+      // (the out buffer is CharGrid's layout: glyph and color per cell, then the background)
+      T.read.mapAsync(GPUMapMode.READ).then(() => {
+        const a = new Uint8Array(T.read.getMappedRange());
+        T.grid.cells.set(a.subarray(0, n)); T.grid.bg.set(a.subarray(n, 2 * n));
+        T.read.unmap(); T.busy = false; T.at = now; T.tag = tag;
+      }, () => { T.busy = false; });
+    }
+    return ok ? S.grid : null;
   }
 
   /** A model's offset in fx, written into the model area the first time it is seen (-1: the area is full). */
@@ -429,6 +478,20 @@ export class GpuWorld {
     }
     for (const t of slots) q.writeBuffer(this.fx, t * 4, W, t, 1);
   }
+}
+
+/** A view drawn off the screen (GpuWorld.shot): its buffers, and the last picture read back (asked for at `at`, with `tag`). */
+interface Shot {
+  cols: number;
+  rows: number;
+  out: GPUBuffer;
+  read: GPUBuffer;
+  bind: GPUBindGroup | null;
+  bindGen: number;
+  busy: boolean;
+  grid: CharGrid;
+  at: number;
+  tag: string | undefined;
 }
 
 /** Words for the objects' models and for a frame's objects in fx. */

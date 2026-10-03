@@ -79,10 +79,23 @@ function eyeNow(): number {
 }
 payphone.outgoing = () => phone.call;
 phone.incomingCall = () => (payphone.call && payphone.active ? [payphone.call, world.telco.payphones[payphone.k].num] : null);
+/**
+ * View v drawn into g, for what works on the picture on the CPU: on the GPU it is read back from a recent
+ * frame of g's size under `key` (false before one has landed; see GpuWorld.shot), on the CPU drawn at once.
+ */
+function drawInto(g: CharGrid, v: View, key: string, tag?: string): boolean {
+  if (useGpu && gpu) {
+    const s = gpu.shot(`${key} ${g.cols}x${g.rows}`, world, v, g.cols, g.rows, tag);
+    if (s) { g.cells.set(s.cells); g.bg.set(s.bg); }
+    return !!s;
+  }
+  renderWorld(g, world, v);
+  return true;
+}
 // the phone's camera sees the player's view
-phone.render = (g, k = 1) => renderWorld(g, world, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: eyeNow() + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: (layout.cellW / layout.cellH) * k, look, hand: handLightNow() });
+phone.render = (g, k = 1) => drawInto(g, { x: world.player.x, y: world.player.y, yaw: camera.yaw, pitch: camera.pitch, eye: eyeNow() + world.player.z, floor: viewFloor(), z: world.player.z, lift: world.player.liftTo >= 0, alpha: 0, cellAspect: (layout.cellW / layout.cellH) * k, look, hand: handLightNow() }, 'camera');
 // Streetwire's photos: the city seen from where a post's author stood
-phone.shoot = (g, x, y, yaw, eye = 1.6, pitch = 0.06) => renderWorld(g, world, { x, y, yaw, pitch, eye, floor: 0, z: 0, lift: false, alpha: 0, cellAspect: layout.cellW / layout.cellH, look });
+phone.shoot = (g, x, y, yaw, eye = 1.6, pitch = 0.06) => drawInto(g, { x, y, yaw, pitch, eye, floor: 0, z: 0, lift: false, alpha: 0, cellAspect: layout.cellW / layout.cellH, look }, 'shoot', `${x} ${y} ${yaw} ${eye} ${pitch}`);
 /** The light in the player's hand now: the camera's flash for a moment after a shot, the torch app while the phone is out. */
 function handLightNow(): number {
   const t = performance.now() / 1000;
@@ -609,13 +622,17 @@ function frame(now: number) {
     Object.assign(view, { x: C.x, y: C.y, yaw: cctvYaw(C, (world.tick + alpha) / 60), pitch: C.pitch, eye: C.z - 0.1, floor: 0, z: 0, lift: false, hand: 0 });
   }
   let ms: number;
-  // on the GPU the world is drawn with the rest of the screen at the end of the frame (the camera's
-  // picture and the opening still go through the CPU)
+  // on the GPU the world is drawn with the rest of the screen at the end of the frame; the cameras'
+  // monitor and the opening work on the picture on the CPU, so for them it is read back (a frame late)
   const onGpu = !!(useGpu && comp) && !cctv && !(introAt >= 0 && now / 1000 - introAt < INTRO_S);
   gpuCanvas.style.display = onGpu ? 'block' : 'none';
   if (onGpu) {
     gpuView = view;
     ms = comp!.ms;
+    worldFrames++;
+  } else if (useGpu && comp) {
+    if (!drawInto(grid, view, 'screen')) grid.clear();
+    ms = comp.ms;
     worldFrames++;
   } else if (pool) {
     // the workers draw the next frame while this one shows the last they finished
