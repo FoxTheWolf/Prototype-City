@@ -1,0 +1,1202 @@
+{
+"objects": [
+{
+"id": "standing_sign",
+"name": "Lit sidewalk A-frame sign",
+"where": "sidewalk",
+"size_m": [0.6, 0.4, 1.1],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.6, 0.05, 1.0],
+"at_m": [0, 0, 0.05],
+"color": "#202020",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.55, 0.06, 0.6],
+"at_m": [0, -0.01, 0.4],
+"color": "#ffe0a0",
+"glow": "#ffcc66"
+}
+],
+"light": {
+"color": "#ffcc66",
+"radius_m": 3,
+"flicker": "none"
+},
+"text": "OPEN, BAR, 24H",
+"density_per_100m_street": 6,
+"notes": "A warm rectangle of light catches the feet of passing pedestrians."
+},
+{
+"id": "vertical_bar_sign",
+"name": "Vertical bar sign",
+"where": "wall",
+"size_m": [0.45, 0.15, 2.4],
+"mount_height_m": 2.2,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.45, 0.12, 2.4],
+"at_m": [0, 0, 1.2],
+"color": "#17151b",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.32, 0.05, 2.1],
+"at_m": [0, -0.08, 1.2],
+"color": "#ff416c",
+"glow": "#ff174f"
+}
+],
+"light": {
+"color": "#ff174f",
+"radius_m": 4,
+"flicker": "buzz"
+},
+"text": "BAR",
+"density_per_100m_street": 8,
+"notes": "A narrow glowing blade of color hangs beside a dark doorway."
+},
+{
+"id": "karaoke_box",
+"name": "Karaoke illuminated box",
+"where": "wall",
+"size_m": [1.0, 0.2, 1.4],
+"mount_height_m": 3.0,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.0, 0.18, 1.4],
+"at_m": [0, 0, 0.7],
+"color": "#25202c",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.82, 0.04, 1.1],
+"at_m": [0, -0.11, 0.7],
+"color": "#7d5cff",
+"glow": "#7d5cff"
+}
+],
+"light": {
+"color": "#7d5cff",
+"radius_m": 4,
+"flicker": "blink"
+},
+"text": "KARAOKE",
+"density_per_100m_street": 5,
+"notes": "Purple light spills across the wall and makes the entrance easy to spot."
+},
+{
+"id": "restaurant_lightbox",
+"name": "Restaurant wall lightbox",
+"where": "wall",
+"size_m": [1.6, 0.16, 0.8],
+"mount_height_m": 2.5,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.6, 0.14, 0.8],
+"at_m": [0, 0, 0.4],
+"color": "#202020",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [1.4, 0.04, 0.58],
+"at_m": [0, -0.1, 0.4],
+"color": "#fff0bd",
+"glow": "#ffb84d"
+}
+],
+"light": {
+"color": "#ffb84d",
+"radius_m": 4,
+"flicker": "none"
+},
+"text": "NOODLES, GRILL, EAT",
+"density_per_100m_street": 7,
+"notes": "A broad amber rectangle gives the storefront a cheap but inviting glow."
+},
+{
+"id": "club_vertical_stack",
+"name": "Stacked club sign",
+"where": "wall",
+"size_m": [0.8, 0.18, 3.0],
+"mount_height_m": 3.5,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.8, 0.14, 3.0],
+"at_m": [0, 0, 1.5],
+"color": "#12121a",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.62, 0.04, 0.72],
+"at_m": [0, -0.1, 2.35],
+"color": "#ff3bd4",
+"glow": "#ff3bd4"
+},
+{
+"shape": "box",
+"size_m": [0.62, 0.04, 0.72],
+"at_m": [0, -0.1, 1.5],
+"color": "#35e7ff",
+"glow": "#35e7ff"
+},
+{
+"shape": "box",
+"size_m": [0.62, 0.04, 0.72],
+"at_m": [0, -0.1, 0.65],
+"color": "#ffcc4d",
+"glow": "#ffcc4d"
+}
+],
+"light": {
+"color": "#ff3bd4",
+"radius_m": 5,
+"flicker": "chase"
+},
+"text": "CLUB, LIVE, NIGHT",
+"density_per_100m_street": 3,
+"notes": "Three stacked luminous panels climb the facade like a vertical beacon."
+},
+{
+"id": "neon_tube_frame",
+"name": "Neon tube rectangle",
+"where": "wall",
+"size_m": [1.2, 0.1, 1.8],
+"mount_height_m": 2.0,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.2, 0.05, 0.08],
+"at_m": [0, -0.06, 0],
+"color": "#20d9ff",
+"glow": "#20d9ff"
+},
+{
+"shape": "box",
+"size_m": [1.2, 0.05, 0.08],
+"at_m": [0, -0.06, 1.72],
+"color": "#20d9ff",
+"glow": "#20d9ff"
+},
+{
+"shape": "box",
+"size_m": [0.08, 0.05, 1.8],
+"at_m": [-0.56, -0.06, 0.86],
+"color": "#20d9ff",
+"glow": "#20d9ff"
+},
+{
+"shape": "box",
+"size_m": [0.08, 0.05, 1.8],
+"at_m": [0.56, -0.06, 0.86],
+"color": "#20d9ff",
+"glow": "#20d9ff"
+}
+],
+"light": {
+"color": "#20d9ff",
+"radius_m": 3,
+"flicker": "buzz"
+},
+"text": "LIVE, BAR, ROOM",
+"density_per_100m_street": 4,
+"notes": "A thin electric outline creates a bright geometric frame against stained concrete."
+},
+{
+"id": "projecting_sign",
+"name": "Projecting perpendicular sign",
+"where": "wall",
+"size_m": [0.25, 0.9, 1.5],
+"mount_height_m": 2.8,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.22, 0.9, 1.5],
+"at_m": [0, 0, 0.75],
+"color": "#1b1720",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.16, 0.75, 1.25],
+"at_m": [0, 0, 0.75],
+"color": "#ff5c8a",
+"glow": "#ff5c8a"
+}
+],
+"light": {
+"color": "#ff5c8a",
+"radius_m": 3,
+"flicker": "none"
+},
+"text": "BAR, CLUB, INN",
+"density_per_100m_street": 7,
+"notes": "The sign juts into the pedestrian lane and remains visible from either direction."
+},
+{
+"id": "small_red_box",
+"name": "Small red wall box",
+"where": "wall",
+"size_m": [0.65, 0.12, 0.5],
+"mount_height_m": 1.8,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.65, 0.1, 0.5],
+"at_m": [0, 0, 0.25],
+"color": "#6b1824",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.5, 0.03, 0.32],
+"at_m": [0, -0.07, 0.25],
+"color": "#ff304f",
+"glow": "#ff304f"
+}
+],
+"light": {
+"color": "#ff304f",
+"radius_m": 2,
+"flicker": "buzz"
+},
+"text": "OPEN, CASH, VIP",
+"density_per_100m_street": 9,
+"notes": "Small red boxes punctuate otherwise dark walls with a persistent warning-like glow."
+},
+{
+"id": "menu_case",
+"name": "Illuminated menu case",
+"where": "wall",
+"size_m": [0.7, 0.12, 1.0],
+"mount_height_m": 1.1,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.7, 0.1, 1.0],
+"at_m": [0, 0, 0.5],
+"color": "#191919",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.56, 0.03, 0.78],
+"at_m": [0, -0.07, 0.5],
+"color": "#ffdca0",
+"glow": "#ffb94d"
+}
+],
+"light": {
+"color": "#ffb94d",
+"radius_m": 2,
+"flicker": "none"
+},
+"text": "MENU, SPECIAL, SET",
+"density_per_100m_street": 8,
+"notes": "A low warm panel illuminates menus and the lower half of nearby pedestrians."
+},
+{
+"id": "arcade_marquee",
+"name": "Arcade marquee",
+"where": "entrance",
+"size_m": [1.8, 0.35, 0.7],
+"mount_height_m": 2.3,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.8, 0.3, 0.7],
+"at_m": [0, 0, 0.35],
+"color": "#28202e",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [1.55, 0.06, 0.45],
+"at_m": [0, -0.18, 0.35],
+"color": "#35d7ff",
+"glow": "#35d7ff"
+}
+],
+"light": {
+"color": "#35d7ff",
+"radius_m": 4,
+"flicker": "chase"
+},
+"text": "ARCADE, GAMES, PLAY",
+"density_per_100m_street": 3,
+"notes": "A cyan marquee flashes above a dark doorway, suggesting noise and activity inside."
+},
+{
+"id": "cash_machine",
+"name": "Illuminated cash machine",
+"where": "wall",
+"size_m": [0.7, 0.45, 1.4],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.7, 0.4, 1.4],
+"at_m": [0, 0, 0.7],
+"color": "#24262a",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.45, 0.03, 0.3],
+"at_m": [0, -0.22, 1.0],
+"color": "#77ffcc",
+"glow": "#44ffaa"
+},
+{
+"shape": "box",
+"size_m": [0.2, 0.03, 0.1],
+"at_m": [0, -0.22, 0.62],
+"color": "#eeeeee",
+"glow": null
+}
+],
+"light": {
+"color": "#44ffaa",
+"radius_m": 2,
+"flicker": "none"
+},
+"text": "CASH, ATM, MONEY",
+"density_per_100m_street": 2,
+"notes": "A pale green display makes the machine glow like a tiny aquarium in the wall."
+},
+{
+"id": "vending_machine",
+"name": "Drink vending machine",
+"where": "sidewalk",
+"size_m": [0.8, 0.65, 1.9],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.8, 0.65, 1.9],
+"at_m": [0, 0, 0.95],
+"color": "#303238",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.55, 0.04, 1.1],
+"at_m": [0, -0.34, 1.1],
+"color": "#83dfff",
+"glow": "#55ccff"
+},
+{
+"shape": "box",
+"size_m": [0.18, 0.04, 0.08],
+"at_m": [0.25, -0.35, 0.38],
+"color": "#caffef",
+"glow": "#8affdd"
+}
+],
+"light": {
+"color": "#55ccff",
+"radius_m": 2,
+"flicker": "none"
+},
+"text": "DRINKS, COLD, 24H",
+"density_per_100m_street": 4,
+"notes": "Cold blue light shines through the glass and reflects strongly in wet pavement."
+},
+{
+"id": "cigarette_machine",
+"name": "Cigarette vending machine",
+"where": "wall",
+"size_m": [0.55, 0.3, 1.4],
+"mount_height_m": 0.7,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.55, 0.28, 1.4],
+"at_m": [0, 0, 0.7],
+"color": "#303030",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.4, 0.03, 0.9],
+"at_m": [0, -0.16, 0.75],
+"color": "#ffd76a",
+"glow": "#ffb833"
+}
+],
+"light": {
+"color": "#ffb833",
+"radius_m": 2,
+"flicker": "buzz"
+},
+"text": "CIGS, TABACCO, 24H",
+"density_per_100m_street": 2,
+"notes": "A grimy amber panel makes the machine visible from the edge of the sidewalk."
+},
+{
+"id": "phone_booth",
+"name": "Street phone booth",
+"where": "sidewalk",
+"size_m": [0.9, 0.9, 2.2],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.9, 0.9, 2.2],
+"at_m": [0, 0, 1.1],
+"color": "#25252a",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.7, 0.04, 1.5],
+"at_m": [0, -0.46, 1.0],
+"color": "#1d5d72",
+"glow": "#1d9bc4"
+},
+{
+"shape": "cylinder",
+"size_m": [0.12, 0.12, 0.7],
+"at_m": [0.2, -0.52, 1.05],
+"color": "#111111",
+"glow": null
+}
+],
+"light": {
+"color": "#1d9bc4",
+"radius_m": 2,
+"flicker": "buzz"
+},
+"text": "CALL, PHONE",
+"density_per_100m_street": 1,
+"notes": "A cramped blue-lit booth creates a tiny private pocket amid the crowd."
+},
+{
+"id": "doorway_light",
+"name": "Glowing doorway frame",
+"where": "entrance",
+"size_m": [1.3, 0.25, 2.5],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.3, 0.2, 2.5],
+"at_m": [0, 0, 1.25],
+"color": "#101015",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.08, 0.06, 2.5],
+"at_m": [-0.57, -0.14, 1.25],
+"color": "#ff55aa",
+"glow": "#ff55aa"
+},
+{
+"shape": "box",
+"size_m": [0.08, 0.06, 2.5],
+"at_m": [0.57, -0.14, 1.25],
+"color": "#ff55aa",
+"glow": "#ff55aa"
+},
+{
+"shape": "box",
+"size_m": [1.22, 0.06, 0.08],
+"at_m": [0, -0.14, 2.45],
+"color": "#ff55aa",
+"glow": "#ff55aa"
+}
+],
+"light": {
+"color": "#ff55aa",
+"radius_m": 3,
+"flicker": "none"
+},
+"text": "IN, ENTER, LIVE",
+"density_per_100m_street": 6,
+"notes": "A glowing three-sided frame turns an otherwise anonymous doorway into an entrance."
+},
+{
+"id": "low_strip_sign",
+"name": "Low horizontal strip sign",
+"where": "wall",
+"size_m": [2.4, 0.12, 0.35],
+"mount_height_m": 1.4,
+"parts": [
+{
+"shape": "box",
+"size_m": [2.4, 0.1, 0.35],
+"at_m": [0, 0, 0.18],
+"color": "#191922",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [2.15, 0.03, 0.16],
+"at_m": [0, -0.08, 0.18],
+"color": "#b7ff48",
+"glow": "#9dff00"
+}
+],
+"light": {
+"color": "#9dff00",
+"radius_m": 3,
+"flicker": "chase"
+},
+"text": "OPEN, FOOD, BAR",
+"density_per_100m_street": 5,
+"notes": "A thin acid-green line stretches across the storefront at eye level."
+},
+{
+"id": "roof_sign_box",
+"name": "Rooftop illuminated sign box",
+"where": "rooftop",
+"size_m": [3.2, 0.5, 1.4],
+"mount_height_m": 9.0,
+"parts": [
+{
+"shape": "box",
+"size_m": [3.2, 0.5, 1.4],
+"at_m": [0, 0, 0.7],
+"color": "#15151b",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [2.8, 0.05, 0.95],
+"at_m": [0, -0.28, 0.7],
+"color": "#ff3366",
+"glow": "#ff3366"
+}
+],
+"light": {
+"color": "#ff3366",
+"radius_m": 7,
+"flicker": "buzz"
+},
+"text": "HOTEL, CLUB, PALACE",
+"density_per_100m_street": 1,
+"notes": "The rooftop box floats above the street canyon as a distant block of saturated color."
+},
+{
+"id": "rooftop_letter_blocks",
+"name": "Rooftop letter blocks",
+"where": "rooftop",
+"size_m": [3.5, 0.45, 1.1],
+"mount_height_m": 8.0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.55, 0.4, 1.1],
+"at_m": [-1.2, 0, 0.55],
+"color": "#54eaff",
+"glow": "#54eaff"
+},
+{
+"shape": "box",
+"size_m": [0.55, 0.4, 1.1],
+"at_m": [-0.4, 0, 0.55],
+"color": "#54eaff",
+"glow": "#54eaff"
+},
+{
+"shape": "box",
+"size_m": [0.55, 0.4, 1.1],
+"at_m": [0.4, 0, 0.55],
+"color": "#54eaff",
+"glow": "#54eaff"
+},
+{
+"shape": "box",
+"size_m": [0.55, 0.4, 1.1],
+"at_m": [1.2, 0, 0.55],
+"color": "#54eaff",
+"glow": "#54eaff"
+}
+],
+"light": {
+"color": "#54eaff",
+"radius_m": 7,
+"flicker": "none"
+},
+"text": "NIGHT, CITY, HOTEL",
+"density_per_100m_street": 1,
+"notes": "Large luminous blocks form crude readable lettering above the rooftops."
+},
+{
+"id": "overhead_banner",
+"name": "Cross-street luminous banner",
+"where": "above_street",
+"size_m": [4.5, 0.15, 0.9],
+"mount_height_m": 4.5,
+"parts": [
+{
+"shape": "box",
+"size_m": [4.5, 0.12, 0.9],
+"at_m": [0, 0, 0.45],
+"color": "#24182a",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [4.1, 0.03, 0.62],
+"at_m": [0, -0.08, 0.45],
+"color": "#ff72c8",
+"glow": "#ff4fbb"
+}
+],
+"light": {
+"color": "#ff4fbb",
+"radius_m": 5,
+"flicker": "chase"
+},
+"text": "TONIGHT, LIVE, SPECIAL",
+"density_per_100m_street": 2,
+"notes": "A glowing horizontal strip compresses the sky between two buildings."
+},
+{
+"id": "wire_hung_sign",
+"name": "Wire-hung small sign",
+"where": "above_street",
+"size_m": [0.9, 0.12, 0.7],
+"mount_height_m": 3.8,
+"parts": [
+{
+"shape": "cylinder",
+"size_m": [0.025, 0.025, 0.8],
+"at_m": [-0.3, 0, 0.9],
+"color": "#252525",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.025, 0.025, 0.8],
+"at_m": [0.3, 0, 0.9],
+"color": "#252525",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.9, 0.12, 0.7],
+"at_m": [0, 0, 0.35],
+"color": "#161620",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.7, 0.03, 0.48],
+"at_m": [0, -0.08, 0.35],
+"color": "#fff09a",
+"glow": "#ffcf4d"
+}
+],
+"light": {
+"color": "#ffcf4d",
+"radius_m": 3,
+"flicker": "buzz"
+},
+"text": "BAR, EAT, INN",
+"density_per_100m_street": 3,
+"notes": "A crooked little sign hangs from overhead wires and sways above the pedestrians."
+},
+{
+"id": "tube_column",
+"name": "Vertical neon tube column",
+"where": "wall",
+"size_m": [0.18, 0.18, 2.8],
+"mount_height_m": 1.8,
+"parts": [
+{
+"shape": "cylinder",
+"size_m": [0.08, 0.08, 2.8],
+"at_m": [0, 0, 1.4],
+"color": "#b44cff",
+"glow": "#b44cff"
+},
+{
+"shape": "box",
+"size_m": [0.18, 0.18, 0.08],
+"at_m": [0, 0, 0.08],
+"color": "#24242a",
+"glow": null
+}
+],
+"light": {
+"color": "#b44cff",
+"radius_m": 3,
+"flicker": "buzz"
+},
+"text": "NO, VIP, LIVE",
+"density_per_100m_street": 5,
+"notes": "A single purple tube adds a narrow vertical slash of light to a crowded facade."
+},
+{
+"id": "restaurant_canopy",
+"name": "Glowing restaurant canopy",
+"where": "entrance",
+"size_m": [2.2, 1.0, 0.25],
+"mount_height_m": 2.4,
+"parts": [
+{
+"shape": "box",
+"size_m": [2.2, 1.0, 0.25],
+"at_m": [0, 0, 0.12],
+"color": "#202027",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [2.0, 0.82, 0.08],
+"at_m": [0, 0, 0.18],
+"color": "#e74b58",
+"glow": "#e74b58"
+}
+],
+"light": {
+"color": "#e74b58",
+"radius_m": 3,
+"flicker": "none"
+},
+"text": "RAMEN, GRILL, CAFE",
+"density_per_100m_street": 3,
+"notes": "The low glowing canopy creates a red pool of light directly over the entrance."
+},
+{
+"id": "alley_lamp_box",
+"name": "Alley wall lamp box",
+"where": "alley",
+"size_m": [0.5, 0.25, 0.7],
+"mount_height_m": 2.0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.5, 0.22, 0.7],
+"at_m": [0, 0, 0.35],
+"color": "#252525",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.32, 0.04, 0.45],
+"at_m": [0, -0.13, 0.35],
+"color": "#d6e5c0",
+"glow": "#b9ff8a"
+}
+],
+"light": {
+"color": "#b9ff8a",
+"radius_m": 4,
+"flicker": "buzz"
+},
+"text": "STAFF, EXIT, SERVICE",
+"density_per_100m_street": 4,
+"notes": "Weak greenish light reveals damp brick, pipes and overflowing bins in the alley."
+},
+{
+"id": "ac_unit",
+"name": "Wall-mounted air conditioner",
+"where": "wall",
+"size_m": [1.0, 0.45, 0.45],
+"mount_height_m": 2.8,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.0, 0.42, 0.45],
+"at_m": [0, 0, 0.23],
+"color": "#77777a",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.72, 0.03, 0.2],
+"at_m": [0, -0.23, 0.23],
+"color": "#3b3b3d",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.16, 0.16, 0.05],
+"at_m": [0.35, -0.25, 0.23],
+"color": "#a9ffdc",
+"glow": "#73e8bb"
+}
+],
+"light": {
+"color": "#73e8bb",
+"radius_m": 1,
+"flicker": "none"
+},
+"text": null,
+"density_per_100m_street": 9,
+"notes": "A dull metal air conditioner hums above the street, with a tiny green status light."
+},
+{
+"id": "utility_box",
+"name": "Electrical utility box",
+"where": "wall",
+"size_m": [0.65, 0.3, 0.9],
+"mount_height_m": 0.8,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.65, 0.28, 0.9],
+"at_m": [0, 0, 0.45],
+"color": "#3c3c3c",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.35, 0.03, 0.08],
+"at_m": [0, -0.16, 0.68],
+"color": "#ff4141",
+"glow": "#ff4141"
+}
+],
+"light": {
+"color": "#ff4141",
+"radius_m": 1,
+"flicker": "blink"
+},
+"text": "POWER, DO NOT OPEN",
+"density_per_100m_street": 5,
+"notes": "Industrial hardware breaks up the signage with an occasional blinking red indicator."
+},
+{
+"id": "trash_stack",
+"name": "Stacked garbage bags",
+"where": "alley",
+"size_m": [1.2, 0.8, 0.9],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "cylinder",
+"size_m": [0.42, 0.42, 0.6],
+"at_m": [-0.25, 0, 0.3],
+"color": "#171717",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.38, 0.38, 0.55],
+"at_m": [0.25, 0.05, 0.28],
+"color": "#202020",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.3, 0.3, 0.45],
+"at_m": [0, -0.2, 0.65],
+"color": "#111111",
+"glow": null
+}
+],
+"light": null,
+"text": null,
+"density_per_100m_street": 5,
+"notes": "Black garbage bags pile against the walls and catch reflections from nearby neon."
+},
+{
+"id": "neon_reflection_puddle",
+"name": "Neon-lit puddle marker",
+"where": "sidewalk",
+"size_m": [1.8, 0.9, 0.02],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.8, 0.9, 0.02],
+"at_m": [0, 0, 0.01],
+"color": "#181c24",
+"glow": "#164f68"
+},
+{
+"shape": "box",
+"size_m": [1.2, 0.06, 0.02],
+"at_m": [0, 0, 0.03],
+"color": "#35d9ff",
+"glow": "#35d9ff"
+},
+{
+"shape": "box",
+"size_m": [0.7, 0.04, 0.02],
+"at_m": [0.2, 0.2, 0.04],
+"color": "#ff3d9a",
+"glow": "#ff3d9a"
+}
+],
+"light": {
+"color": "#35d9ff",
+"radius_m": 1,
+"flicker": "none"
+},
+"text": null,
+"density_per_100m_street": 7,
+"notes": "A thin reflective patch on the pavement visually doubles nearby neon into broken streaks."
+},
+{
+"id": "hanging_lantern_cluster",
+"name": "Cluster of hanging lanterns",
+"where": "above_street",
+"size_m": [1.6, 0.5, 1.2],
+"mount_height_m": 3.5,
+"parts": [
+{
+"shape": "cylinder",
+"size_m": [0.03, 0.03, 0.7],
+"at_m": [-0.55, 0, 0.85],
+"color": "#252525",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.03, 0.03, 0.9],
+"at_m": [0, 0, 0.75],
+"color": "#252525",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.03, 0.03, 0.6],
+"at_m": [0.55, 0, 0.9],
+"color": "#252525",
+"glow": null
+},
+{
+"shape": "cylinder",
+"size_m": [0.32, 0.32, 0.45],
+"at_m": [-0.55, 0, 0.35],
+"color": "#ff6644",
+"glow": "#ff4422"
+},
+{
+"shape": "cylinder",
+"size_m": [0.32, 0.32, 0.45],
+"at_m": [0, 0, 0.25],
+"color": "#ffb34d",
+"glow": "#ff8c33"
+},
+{
+"shape": "cylinder",
+"size_m": [0.32, 0.32, 0.45],
+"at_m": [0.55, 0, 0.4],
+"color": "#ff5577",
+"glow": "#ff3355"
+}
+],
+"light": {
+"color": "#ff6644",
+"radius_m": 3,
+"flicker": "none"
+},
+"text": "BAR, FOOD, TEA",
+"density_per_100m_street": 3,
+"notes": "Three low lanterns hang over the lane, creating warm islands beneath the tangled wires."
+},
+{
+"id": "service_door_sign",
+"name": "Back-alley service sign",
+"where": "alley",
+"size_m": [0.9, 0.12, 0.5],
+"mount_height_m": 1.8,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.9, 0.1, 0.5],
+"at_m": [0, 0, 0.25],
+"color": "#242424",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.7, 0.03, 0.3],
+"at_m": [0, -0.08, 0.25],
+"color": "#ffdf72",
+"glow": "#ffbf3f"
+}
+],
+"light": {
+"color": "#ffbf3f",
+"radius_m": 2,
+"flicker": "buzz"
+},
+"text": "STAFF ONLY, SERVICE, EXIT",
+"density_per_100m_street": 3,
+"notes": "A dirty amber sign marks a door that most pedestrians are not meant to use."
+},
+{
+"id": "tiny_open_sign",
+"name": "Tiny hanging OPEN sign",
+"where": "entrance",
+"size_m": [0.45, 0.1, 0.3],
+"mount_height_m": 1.9,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.45, 0.08, 0.3],
+"at_m": [0, 0, 0.15],
+"color": "#1c2025",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.32, 0.03, 0.18],
+"at_m": [0, -0.06, 0.15],
+"color": "#ff334f",
+"glow": "#ff334f"
+}
+],
+"light": {
+"color": "#ff334f",
+"radius_m": 2,
+"flicker": "blink"
+},
+"text": "OPEN",
+"density_per_100m_street": 10,
+"notes": "A tiny blinking red sign provides one of the smallest points of artificial light in the street."
+},
+{
+"id": "floor_level_sign",
+"name": "Low floor-level venue sign",
+"where": "entrance",
+"size_m": [1.1, 0.15, 0.55],
+"mount_height_m": 0.3,
+"parts": [
+{
+"shape": "box",
+"size_m": [1.1, 0.12, 0.55],
+"at_m": [0, 0, 0.28],
+"color": "#191a1f",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.9, 0.03, 0.35],
+"at_m": [0, -0.08, 0.28],
+"color": "#50e6c4",
+"glow": "#50e6c4"
+}
+],
+"light": {
+"color": "#50e6c4",
+"radius_m": 2,
+"flicker": "none"
+},
+"text": "LOUNGE, ROOM, CLUB",
+"density_per_100m_street": 4,
+"notes": "A low turquoise panel is easy to miss until its glow catches the rain."
+}
+],
+"gate": {
+"id": "entertainment_district_gate",
+"name": "Illuminated entertainment district entrance arch",
+"where": "above_street",
+"size_m": [9.0, 0.8, 5.5],
+"mount_height_m": 0,
+"parts": [
+{
+"shape": "box",
+"size_m": [0.7, 0.8, 5.0],
+"at_m": [-4.15, 0, 2.5],
+"color": "#17171c",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [0.7, 0.8, 5.0],
+"at_m": [4.15, 0, 2.5],
+"color": "#17171c",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [9.0, 0.8, 0.75],
+"at_m": [0, 0, 5.0],
+"color": "#19151f",
+"glow": null
+},
+{
+"shape": "box",
+"size_m": [8.3, 0.08, 0.48],
+"at_m": [0, -0.43, 5.0],
+"color": "#ff3da8",
+"glow": "#ff3da8"
+},
+{
+"shape": "box",
+"size_m": [7.4, 0.08, 0.22],
+"at_m": [0, -0.45, 4.55],
+"color": "#3ce7ff",
+"glow": "#3ce7ff"
+},
+{
+"shape": "cylinder",
+"size_m": [0.08, 0.08, 1.0],
+"at_m": [-3.2, -0.45, 4.2],
+"color": "#ffd15c",
+"glow": "#ffd15c"
+},
+{
+"shape": "cylinder",
+"size_m": [0.08, 0.08, 1.0],
+"at_m": [-2.4, -0.45, 4.2],
+"color": "#ffd15c",
+"glow": "#ffd15c"
+},
+{
+"shape": "cylinder",
+"size_m": [0.08, 0.08, 1.0],
+"at_m": [2.4, -0.45, 4.2],
+"color": "#ffd15c",
+"glow": "#ffd15c"
+},
+{
+"shape": "cylinder",
+"size_m": [0.08, 0.08, 1.0],
+"at_m": [3.2, -0.45, 4.2],
+"color": "#ffd15c",
+"glow": "#ffd15c"
+}
+],
+"light": {
+"color": "#ff3da8",
+"radius_m": 10,
+"flicker": "chase"
+},
+"text": "NIGHT DISTRICT, ENTERTAINMENT, WELCOME",
+"notes": "A heavy neon arch spans the narrow street, creating a bright threshold into the entertainment quarter."
+},
+"palettes": [
+{
+"name": "Wet Magenta",
+"colors": ["#0b0d14", "#24152d", "#ff2f9f", "#35d9ff", "#ffc857"]
+},
+{
+"name": "Electric Alley",
+"colors": ["#090d12", "#12303a", "#00d9ff", "#b84dff", "#ff4568"]
+},
+{
+"name": "Amber Rain",
+"colors": ["#101014", "#302016", "#ff9f43", "#ffd166", "#ef477f"]
+},
+{
+"name": "Midnight Arcade",
+"colors": ["#090a18", "#1a1640", "#635bff", "#24e6c8", "#ff4fa3"]
+},
+{
+"name": "Dirty Neon",
+"colors": ["#111315", "#29251f", "#b8ff3d", "#ff3b3b", "#4de1ff"]
+}
+]
+}

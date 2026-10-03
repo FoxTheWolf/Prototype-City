@@ -1,0 +1,3476 @@
+{
+  "places": [
+    {
+      "id": "classic_diner",
+      "name": "Classic Diner",
+      "category": "food",
+      "district_fit": [
+        "commercial",
+        "industrial",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        80,
+        150
+      ],
+      "rooms": [
+        {
+          "name": "dining_area",
+          "share": 0.7,
+          "furniture": [
+            "booth x8",
+            "bar stool x10",
+            "counter x1",
+            "crt tv x1",
+            "cash register x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.25,
+          "furniture": [
+            "grill x1",
+            "fryer x2",
+            "fridge x2",
+            "prep table x2"
+          ]
+        },
+        {
+          "name": "restroom",
+          "share": 0.05,
+          "furniture": [
+            "toilet x2",
+            "sink x2"
+          ]
+        }
+      ],
+      "sells": [
+        "coffee",
+        "burger",
+        "fries",
+        "milkshake",
+        "cherry pie"
+      ],
+      "price_range_usd_2008": [
+        2.5,
+        12.0
+      ],
+      "hours": "00-24",
+      "staff": [
+        "waitress x2",
+        "line cook x2",
+        "manager x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "DINER",
+        "OPEN 24 HOURS",
+        "BREAKFAST"
+      ],
+      "night_life": 0.4,
+      "notes": "Neon signs buzz outside. Patrons read physical newspapers. Cash register has a bulky CRT monitor."
+    },
+    {
+      "id": "indie_coffee_shop",
+      "name": "Indie Coffee Shop",
+      "category": "food",
+      "district_fit": [
+        "commercial",
+        "residential",
+        "historic"
+      ],
+      "floor": "any",
+      "area_m2": [
+        50,
+        100
+      ],
+      "rooms": [
+        {
+          "name": "seating",
+          "share": 0.6,
+          "furniture": [
+            "armchair x4",
+            "small table x6",
+            "wooden chair x12",
+            "sofa x1"
+          ]
+        },
+        {
+          "name": "counter",
+          "share": 0.3,
+          "furniture": [
+            "espresso machine x1",
+            "display case x1",
+            "cash register x1",
+            "tip jar x1"
+          ]
+        },
+        {
+          "name": "restroom",
+          "share": 0.1,
+          "furniture": [
+            "toilet x1",
+            "sink x1"
+          ]
+        }
+      ],
+      "sells": [
+        "espresso",
+        "drip coffee",
+        "muffin",
+        "bagel",
+        "cd mix tape"
+      ],
+      "price_range_usd_2008": [
+        1.5,
+        6.0
+      ],
+      "hours": "06-20",
+      "staff": [
+        "barista x2"
+      ],
+      "has_wifi": true,
+      "sign_words": [
+        "COFFEE",
+        "ESPRESSO",
+        "FREE WI-FI"
+      ],
+      "night_life": 0.1,
+      "notes": "Students use thick laptops connected to early Wi-Fi. Bulletin board has tear-off flyers for local indie bands."
+    },
+    {
+      "id": "slice_pizzeria",
+      "name": "Slice Pizzeria",
+      "category": "food",
+      "district_fit": [
+        "commercial",
+        "residential",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        40,
+        80
+      ],
+      "rooms": [
+        {
+          "name": "front_counter",
+          "share": 0.4,
+          "furniture": [
+            "glass display x1",
+            "high table x3",
+            "stool x6",
+            "cash register x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.5,
+          "furniture": [
+            "pizza oven x2",
+            "prep counter x1",
+            "dough mixer x1",
+            "fridge x1"
+          ]
+        },
+        {
+          "name": "storage",
+          "share": 0.1,
+          "furniture": [
+            "shelf x3",
+            "box stack x5"
+          ]
+        }
+      ],
+      "sells": [
+        "cheese slice",
+        "pepperoni slice",
+        "garlic knots",
+        "fountain soda"
+      ],
+      "price_range_usd_2008": [
+        1.5,
+        14.0
+      ],
+      "hours": "11-02",
+      "staff": [
+        "pizza chef x2",
+        "cashier x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "PIZZA",
+        "BY THE SLICE",
+        "HOT"
+      ],
+      "night_life": 0.6,
+      "notes": "Open late for bar-hoppers. A small CRT TV mounted in the corner plays sports."
+    },
+    {
+      "id": "corner_deli",
+      "name": "Corner Deli",
+      "category": "food",
+      "district_fit": [
+        "commercial",
+        "financial",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        30,
+        70
+      ],
+      "rooms": [
+        {
+          "name": "storefront",
+          "share": 0.6,
+          "furniture": [
+            "deli counter x1",
+            "snack rack x4",
+            "drink fridge x2",
+            "cash register x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.2,
+          "furniture": [
+            "meat slicer x1",
+            "griddle x1",
+            "sink x1"
+          ]
+        },
+        {
+          "name": "storage",
+          "share": 0.2,
+          "furniture": [
+            "freezer x1",
+            "shelf x2"
+          ]
+        }
+      ],
+      "sells": [
+        "pastrami sandwich",
+        "bagel with cream cheese",
+        "potato chips",
+        "soda can"
+      ],
+      "price_range_usd_2008": [
+        3.0,
+        9.0
+      ],
+      "hours": "05-18",
+      "staff": [
+        "deli clerk x2"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "DELI",
+        "SANDWICHES",
+        "COLD CUTS"
+      ],
+      "night_life": 0.0,
+      "notes": "A landline phone sits behind the counter for delivery orders. Heavy use of physical cash."
+    },
+    {
+      "id": "dive_bar",
+      "name": "Dive Bar",
+      "category": "food",
+      "district_fit": [
+        "industrial",
+        "commercial",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        60,
+        120
+      ],
+      "rooms": [
+        {
+          "name": "bar_area",
+          "share": 0.8,
+          "furniture": [
+            "long bar x1",
+            "bar stool x15",
+            "booth x4",
+            "pool table x1",
+            "jukebox x1",
+            "crt tv x2"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.1,
+          "furniture": [
+            "urinal x2",
+            "toilet x2",
+            "sink x2"
+          ]
+        },
+        {
+          "name": "office",
+          "share": 0.1,
+          "furniture": [
+            "desk x1",
+            "safe x1",
+            "filing cabinet x1"
+          ]
+        }
+      ],
+      "sells": [
+        "draft beer",
+        "cheap whiskey",
+        "bottled beer",
+        "peanuts"
+      ],
+      "price_range_usd_2008": [
+        2.0,
+        7.0
+      ],
+      "hours": "16-04",
+      "staff": [
+        "bartender x2",
+        "bouncer x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "BAR",
+        "LIQUOR",
+        "BILLIARDS"
+      ],
+      "night_life": 1.0,
+      "notes": "Jukebox is loaded with CDs. Cigarette machine still in the corner, though smoking bans are starting to hit."
+    },
+    {
+      "id": "neighborhood_bakery",
+      "name": "Neighborhood Bakery",
+      "category": "food",
+      "district_fit": [
+        "residential",
+        "historic"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        40,
+        90
+      ],
+      "rooms": [
+        {
+          "name": "display_area",
+          "share": 0.4,
+          "furniture": [
+            "glass counter x2",
+            "bread shelf x3",
+            "cash register x1"
+          ]
+        },
+        {
+          "name": "baking_room",
+          "share": 0.6,
+          "furniture": [
+            "large oven x2",
+            "prep table x2",
+            "flour bin x4",
+            "cooling rack x3"
+          ]
+        }
+      ],
+      "sells": [
+        "baguette",
+        "croissant",
+        "cupcake",
+        "birthday cake"
+      ],
+      "price_range_usd_2008": [
+        1.0,
+        25.0
+      ],
+      "hours": "05-15",
+      "staff": [
+        "baker x2",
+        "cashier x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "BAKERY",
+        "FRESH BREAD",
+        "CAKES"
+      ],
+      "night_life": 0.0,
+      "notes": "No laptops, just locals buying daily bread. Staff tracks custom cake orders in a spiral notebook."
+    },
+    {
+      "id": "upscale_bistro",
+      "name": "Upscale Bistro",
+      "category": "food",
+      "district_fit": [
+        "financial",
+        "historic",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        100,
+        200
+      ],
+      "rooms": [
+        {
+          "name": "dining_room",
+          "share": 0.6,
+          "furniture": [
+            "fine table x15",
+            "chair x30",
+            "wine rack x2",
+            "host stand x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.3,
+          "furniture": [
+            "commercial stove x2",
+            "prep station x3",
+            "fridge x2",
+            "dishwasher x1"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.1,
+          "furniture": [
+            "fancy toilet x2",
+            "fancy sink x2",
+            "mirror x2"
+          ]
+        }
+      ],
+      "sells": [
+        "steak frites",
+        "duck confit",
+        "wine glass",
+        "creme brulee"
+      ],
+      "price_range_usd_2008": [
+        25.0,
+        80.0
+      ],
+      "hours": "17-23",
+      "staff": [
+        "host x1",
+        "waiter x4",
+        "chef x3",
+        "sommelier x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "BISTRO",
+        "RESERVATIONS",
+        "FINE DINING"
+      ],
+      "night_life": 0.7,
+      "notes": "Patrons check their BlackBerries during dinner. Payments made with magnetic stripe credit cards."
+    },
+    {
+      "id": "fast_food_burger",
+      "name": "Fast Food Burger Joint",
+      "category": "food",
+      "district_fit": [
+        "commercial",
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        120,
+        250
+      ],
+      "rooms": [
+        {
+          "name": "dining",
+          "share": 0.5,
+          "furniture": [
+            "plastic booth x10",
+            "plastic table x8",
+            "chair x16",
+            "trash bin x3"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.4,
+          "furniture": [
+            "burger grill x2",
+            "fry station x2",
+            "soda fountain x1",
+            "pos terminal x3"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.1,
+          "furniture": [
+            "toilet x3",
+            "sink x2",
+            "hand dryer x1"
+          ]
+        }
+      ],
+      "sells": [
+        "combo meal",
+        "cheeseburger",
+        "chicken nuggets",
+        "large soda"
+      ],
+      "price_range_usd_2008": [
+        3.0,
+        8.0
+      ],
+      "hours": "06-00",
+      "staff": [
+        "cashier x3",
+        "fry cook x2",
+        "grill cook x2",
+        "manager x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "DRIVE THRU",
+        "BURGERS",
+        "FRIES"
+      ],
+      "night_life": 0.2,
+      "notes": "Heavy plastic aesthetic. Early thick LCD menus above the POS systems."
+    },
+    {
+      "id": "chinese_takeout",
+      "name": "Chinese Takeout",
+      "category": "food",
+      "district_fit": [
+        "residential",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        40,
+        80
+      ],
+      "rooms": [
+        {
+          "name": "waiting_area",
+          "share": 0.2,
+          "furniture": [
+            "bench x1",
+            "counter x1",
+            "cash register x1",
+            "menu board x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.7,
+          "furniture": [
+            "wok station x3",
+            "rice cooker x2",
+            "deep fryer x1",
+            "prep table x2"
+          ]
+        },
+        {
+          "name": "storage",
+          "share": 0.1,
+          "furniture": [
+            "freezer x1",
+            "dry shelf x2"
+          ]
+        }
+      ],
+      "sells": [
+        "general tso chicken",
+        "lo mein",
+        "egg roll",
+        "wonton soup"
+      ],
+      "price_range_usd_2008": [
+        5.0,
+        15.0
+      ],
+      "hours": "11-22",
+      "staff": [
+        "cook x2",
+        "cashier x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "TAKEOUT",
+        "DELIVERY",
+        "CHINESE FOOD"
+      ],
+      "night_life": 0.1,
+      "notes": "Stack of paper menus on the counter. A wired telephone constantly rings for delivery orders."
+    },
+    {
+      "id": "chain_pharmacy",
+      "name": "Chain Pharmacy",
+      "category": "retail",
+      "district_fit": [
+        "commercial",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        200,
+        400
+      ],
+      "rooms": [
+        {
+          "name": "aisles",
+          "share": 0.7,
+          "furniture": [
+            "gondola shelving x20",
+            "checkout counter x3",
+            "photo kiosk x1"
+          ]
+        },
+        {
+          "name": "pharmacy_counter",
+          "share": 0.15,
+          "furniture": [
+            "high counter x1",
+            "pill shelf x5",
+            "computer x2"
+          ]
+        },
+        {
+          "name": "stock_room",
+          "share": 0.15,
+          "furniture": [
+            "storage rack x6",
+            "box stack x10"
+          ]
+        }
+      ],
+      "sells": [
+        "prescription meds",
+        "cough syrup",
+        "shampoo",
+        "digital camera memory card",
+        "candy"
+      ],
+      "price_range_usd_2008": [
+        2.0,
+        150.0
+      ],
+      "hours": "08-22",
+      "staff": [
+        "pharmacist x1",
+        "cashier x2",
+        "stocker x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "PHARMACY",
+        "PRESCRIPTIONS",
+        "1 HR PHOTO"
+      ],
+      "night_life": 0.1,
+      "notes": "Features a digital photo printing kiosk where people plug in SD cards or USB drives."
+    },
+    {
+      "id": "bodega_corner_store",
+      "name": "Bodega",
+      "category": "retail",
+      "district_fit": [
+        "residential",
+        "historic",
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        30,
+        80
+      ],
+      "rooms": [
+        {
+          "name": "shop_floor",
+          "share": 0.8,
+          "furniture": [
+            "shelf x6",
+            "drink fridge x3",
+            "counter x1",
+            "lottery machine x1"
+          ]
+        },
+        {
+          "name": "storage",
+          "share": 0.2,
+          "furniture": [
+            "box pile x4",
+            "mop bucket x1"
+          ]
+        }
+      ],
+      "sells": [
+        "cigarettes",
+        "beer",
+        "scratch tickets",
+        "candy bar",
+        "calling cards"
+      ],
+      "price_range_usd_2008": [
+        1.0,
+        15.0
+      ],
+      "hours": "00-24",
+      "staff": [
+        "owner x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "GROCERY",
+        "LOTTO",
+        "ATM"
+      ],
+      "night_life": 0.5,
+      "notes": "Sells international prepaid calling cards and physical newspapers. Dusty CRT TV behind the counter."
+    },
+    {
+      "id": "consumer_electronics_store",
+      "name": "Consumer Electronics Store",
+      "category": "retail",
+      "district_fit": [
+        "commercial",
+        "financial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        150,
+        350
+      ],
+      "rooms": [
+        {
+          "name": "showroom",
+          "share": 0.7,
+          "furniture": [
+            "display table x6",
+            "tv wall mount x8",
+            "register x2",
+            "shelf x5"
+          ]
+        },
+        {
+          "name": "checkout",
+          "share": 0.1,
+          "furniture": [
+            "counter x1",
+            "pos terminal x2"
+          ]
+        },
+        {
+          "name": "warehouse",
+          "share": 0.2,
+          "furniture": [
+            "pallet rack x4",
+            "ladder x1"
+          ]
+        }
+      ],
+      "sells": [
+        "thick lcd tv",
+        "mp3 player",
+        "point and shoot camera",
+        "gps navigation unit",
+        "laptop"
+      ],
+      "price_range_usd_2008": [
+        49.99,
+        1200.0
+      ],
+      "hours": "10-21",
+      "staff": [
+        "sales rep x3",
+        "cashier x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "ELECTRONICS",
+        "COMPUTERS",
+        "TVS"
+      ],
+      "night_life": 0.0,
+      "notes": "Dominant items are standalone GPS units for cars, 4GB MP3 players, and early heavy 720p flat screens."
+    },
+    {
+      "id": "mobile_phone_shop",
+      "name": "Mobile Phone Kiosk",
+      "category": "retail",
+      "district_fit": [
+        "commercial",
+        "financial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        20,
+        50
+      ],
+      "rooms": [
+        {
+          "name": "sales_floor",
+          "share": 0.8,
+          "furniture": [
+            "glass display counter x3",
+            "stool x2",
+            "wall rack x2"
+          ]
+        },
+        {
+          "name": "back_office",
+          "share": 0.2,
+          "furniture": [
+            "desk x1",
+            "pc x1",
+            "safe x1"
+          ]
+        }
+      ],
+      "sells": [
+        "flip phone",
+        "blackberry",
+        "slide phone",
+        "bluetooth earpiece",
+        "car charger"
+      ],
+      "price_range_usd_2008": [
+        19.99,
+        299.0
+      ],
+      "hours": "10-20",
+      "staff": [
+        "sales agent x2"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "PHONES",
+        "PLANS",
+        "ACCESSORIES"
+      ],
+      "night_life": 0.0,
+      "notes": "Walls covered in plastic cases for Motorola Razrs and BlackBerries. Promotes 'Unlimited T9 Texting'."
+    },
+    {
+      "id": "street_newsstand",
+      "name": "Newsstand",
+      "category": "retail",
+      "district_fit": [
+        "commercial",
+        "financial",
+        "historic"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        5,
+        10
+      ],
+      "rooms": [
+        {
+          "name": "kiosk_interior",
+          "share": 1.0,
+          "furniture": [
+            "magazine rack x3",
+            "newspaper stack x4",
+            "stool x1",
+            "heater x1"
+          ]
+        }
+      ],
+      "sells": [
+        "daily newspaper",
+        "gossip magazine",
+        "gum",
+        "candy",
+        "lighter"
+      ],
+      "price_range_usd_2008": [
+        0.5,
+        5.0
+      ],
+      "hours": "06-19",
+      "staff": [
+        "vendor x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "NEWS",
+        "MAGAZINES",
+        "SNACKS"
+      ],
+      "night_life": 0.0,
+      "notes": "Print media is still highly relevant. Gossip magazines mock early 2000s celebrities."
+    },
+    {
+      "id": "coin_laundromat",
+      "name": "Coin Laundromat",
+      "category": "retail",
+      "district_fit": [
+        "residential",
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        60,
+        120
+      ],
+      "rooms": [
+        {
+          "name": "machines_area",
+          "share": 0.85,
+          "furniture": [
+            "washing machine x15",
+            "dryer x10",
+            "folding table x3",
+            "plastic chair x4",
+            "coin dispenser x1"
+          ]
+        },
+        {
+          "name": "utility_room",
+          "share": 0.15,
+          "furniture": [
+            "water heater x2",
+            "mop sink x1"
+          ]
+        }
+      ],
+      "sells": [
+        "detergent box",
+        "fabric softener",
+        "bleach",
+        "soda can"
+      ],
+      "price_range_usd_2008": [
+        1.0,
+        3.5
+      ],
+      "hours": "06-23",
+      "staff": [
+        "attendant x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "WASH & FOLD",
+        "COIN LAUNDRY",
+        "OPEN LATE"
+      ],
+      "night_life": 0.3,
+      "notes": "People read physical books or listen to iPods while waiting. Requires quarters, no card readers on machines."
+    },
+    {
+      "id": "local_pawn_shop",
+      "name": "Pawn Shop",
+      "category": "retail",
+      "district_fit": [
+        "industrial",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        50,
+        100
+      ],
+      "rooms": [
+        {
+          "name": "showroom",
+          "share": 0.5,
+          "furniture": [
+            "glass display case x4",
+            "guitar rack x1",
+            "tool shelf x2"
+          ]
+        },
+        {
+          "name": "secure_storage",
+          "share": 0.4,
+          "furniture": [
+            "safe x2",
+            "metal shelf x4"
+          ]
+        },
+        {
+          "name": "office",
+          "share": 0.1,
+          "furniture": [
+            "desk x1",
+            "pc x1",
+            "chair x1"
+          ]
+        }
+      ],
+      "sells": [
+        "used acoustic guitar",
+        "power drill",
+        "gold chain",
+        "dvd player",
+        "crt tv"
+      ],
+      "price_range_usd_2008": [
+        10.0,
+        500.0
+      ],
+      "hours": "09-18",
+      "staff": [
+        "pawnbroker x2"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "PAWN",
+        "BUY SELL TRADE",
+        "CASH LOANS"
+      ],
+      "night_life": 0.0,
+      "notes": "Iron bars on windows. Heavy inventory of used car stereos, DVDs, and older game consoles."
+    },
+    {
+      "id": "video_rental_store",
+      "name": "DVD & Video Rental",
+      "category": "retail",
+      "district_fit": [
+        "residential",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        80,
+        160
+      ],
+      "rooms": [
+        {
+          "name": "shelves_area",
+          "share": 0.75,
+          "furniture": [
+            "dvd rack x12",
+            "vhs bargain bin x2",
+            "poster frame x4"
+          ]
+        },
+        {
+          "name": "counter",
+          "share": 0.1,
+          "furniture": [
+            "register counter x1",
+            "scanner x2",
+            "pc x2"
+          ]
+        },
+        {
+          "name": "back_room",
+          "share": 0.15,
+          "furniture": [
+            "desk x1",
+            "dvd buffer machine x1",
+            "shelf x2"
+          ]
+        }
+      ],
+      "sells": [
+        "dvd rental",
+        "video game rental",
+        "microwave popcorn",
+        "candy"
+      ],
+      "price_range_usd_2008": [
+        2.0,
+        15.0
+      ],
+      "hours": "10-22",
+      "staff": [
+        "clerk x2",
+        "manager x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "VIDEO RENTAL",
+        "NEW RELEASES",
+        "GAMES"
+      ],
+      "night_life": 0.2,
+      "notes": "Dying breed but still surviving in 2008. Lots of 'Be Kind, Rewind' stickers on older VHS stock being sold off."
+    },
+    {
+      "id": "record_cd_store",
+      "name": "Record & CD Store",
+      "category": "retail",
+      "district_fit": [
+        "historic",
+        "commercial",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        60,
+        120
+      ],
+      "rooms": [
+        {
+          "name": "browse_area",
+          "share": 0.8,
+          "furniture": [
+            "cd rack x10",
+            "vinyl bin x4",
+            "register x1"
+          ]
+        },
+        {
+          "name": "listening_station",
+          "share": 0.1,
+          "furniture": [
+            "headphone station x3",
+            "stool x3"
+          ]
+        },
+        {
+          "name": "storage",
+          "share": 0.1,
+          "furniture": [
+            "shelf x3",
+            "box stack x5"
+          ]
+        }
+      ],
+      "sells": [
+        "music cd",
+        "vinyl record",
+        "band poster",
+        "headphones"
+      ],
+      "price_range_usd_2008": [
+        5.0,
+        20.0
+      ],
+      "hours": "11-20",
+      "staff": [
+        "clerk x2"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "MUSIC",
+        "CDS",
+        "VINYL",
+        "BUY SELL TRADE"
+      ],
+      "night_life": 0.1,
+      "notes": "CDs are still the main seller, but vinyl is making an indie comeback. Listening stations let you preview tracks."
+    },
+    {
+      "id": "used_bookstore",
+      "name": "Used Bookstore",
+      "category": "retail",
+      "district_fit": [
+        "historic",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        70,
+        140
+      ],
+      "rooms": [
+        {
+          "name": "book_aisles",
+          "share": 0.85,
+          "furniture": [
+            "tall bookshelf x15",
+            "display table x2"
+          ]
+        },
+        {
+          "name": "reading_nook",
+          "share": 0.1,
+          "furniture": [
+            "armchair x2",
+            "rug x1",
+            "lamp x1"
+          ]
+        },
+        {
+          "name": "counter",
+          "share": 0.05,
+          "furniture": [
+            "register x1",
+            "stool x1"
+          ]
+        }
+      ],
+      "sells": [
+        "paperback novel",
+        "hardcover book",
+        "magazine back issue",
+        "bookmark"
+      ],
+      "price_range_usd_2008": [
+        1.0,
+        12.0
+      ],
+      "hours": "10-18",
+      "staff": [
+        "owner x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "USED BOOKS",
+        "RARE FINDS",
+        "TRADE"
+      ],
+      "night_life": 0.0,
+      "notes": "Smells like old paper. No e-readers around, just physical books. Cash register is an old mechanical one."
+    },
+    {
+      "id": "neighborhood_hardware_store",
+      "name": "Hardware Store",
+      "category": "retail",
+      "district_fit": [
+        "residential",
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        100,
+        200
+      ],
+      "rooms": [
+        {
+          "name": "main_floor",
+          "share": 0.7,
+          "furniture": [
+            "tool aisle x6",
+            "hardware bin x4",
+            "register counter x1"
+          ]
+        },
+        {
+          "name": "lumber_paint",
+          "share": 0.2,
+          "furniture": [
+            "paint mixer x1",
+            "wood rack x2"
+          ]
+        },
+        {
+          "name": "office",
+          "share": 0.1,
+          "furniture": [
+            "desk x1",
+            "filing cabinet x2"
+          ]
+        }
+      ],
+      "sells": [
+        "hammer",
+        "nails",
+        "paint can",
+        "extension cord",
+        "lightbulb"
+      ],
+      "price_range_usd_2008": [
+        1.5,
+        80.0
+      ],
+      "hours": "07-19",
+      "staff": [
+        "store clerk x3"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "HARDWARE",
+        "TOOLS",
+        "KEYS MADE"
+      ],
+      "night_life": 0.0,
+      "notes": "Dusty and cluttered. Receipts are printed on dot-matrix printers."
+    },
+    {
+      "id": "dance_nightclub",
+      "name": "Dance Nightclub",
+      "category": "nightlife",
+      "district_fit": [
+        "theater",
+        "commercial",
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        300,
+        600
+      ],
+      "rooms": [
+        {
+          "name": "dance_floor",
+          "share": 0.5,
+          "furniture": [
+            "speaker stack x4",
+            "dj booth x1",
+            "disco light x6"
+          ]
+        },
+        {
+          "name": "bar",
+          "share": 0.2,
+          "furniture": [
+            "long counter x1",
+            "bar stool x10",
+            "liquor shelf x3"
+          ]
+        },
+        {
+          "name": "vip_lounge",
+          "share": 0.15,
+          "furniture": [
+            "leather sofa x4",
+            "glass table x2",
+            "velvet rope x2"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.15,
+          "furniture": [
+            "toilet x6",
+            "sink x4",
+            "mirror x4"
+          ]
+        }
+      ],
+      "sells": [
+        "mixed drink",
+        "bottle service",
+        "energy drink",
+        "cover charge"
+      ],
+      "price_range_usd_2008": [
+        10.0,
+        250.0
+      ],
+      "hours": "22-04",
+      "staff": [
+        "bartender x4",
+        "bouncer x3",
+        "dj x1",
+        "barback x2"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "CLUB",
+        "VIP",
+        "DANCE"
+      ],
+      "night_life": 1.0,
+      "notes": "Digital cameras everywhere using harsh flashes. DJ is spinning CDs or vinyl, no laptop."
+    },
+    {
+      "id": "karaoke_lounge",
+      "name": "Karaoke Lounge",
+      "category": "nightlife",
+      "district_fit": [
+        "commercial",
+        "theater"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        150,
+        300
+      ],
+      "rooms": [
+        {
+          "name": "main_bar",
+          "share": 0.3,
+          "furniture": [
+            "bar counter x1",
+            "stool x8",
+            "crt tv x1"
+          ]
+        },
+        {
+          "name": "private_rooms",
+          "share": 0.6,
+          "furniture": [
+            "sofa x6",
+            "karaoke machine x6",
+            "low table x6",
+            "crt tv x6"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.1,
+          "furniture": [
+            "toilet x3",
+            "sink x2"
+          ]
+        }
+      ],
+      "sells": [
+        "pitcher of beer",
+        "soju",
+        "fried snacks",
+        "room rental"
+      ],
+      "price_range_usd_2008": [
+        20.0,
+        60.0
+      ],
+      "hours": "18-03",
+      "staff": [
+        "host x1",
+        "server x3",
+        "bartender x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "KARAOKE",
+        "PRIVATE ROOMS",
+        "BAR"
+      ],
+      "night_life": 0.8,
+      "notes": "Thick songbook binders filled with laminated pages. Bulky microphones with physical cords."
+    },
+    {
+      "id": "retro_arcade",
+      "name": "Retro Arcade",
+      "category": "nightlife",
+      "district_fit": [
+        "commercial",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        150,
+        300
+      ],
+      "rooms": [
+        {
+          "name": "arcade_floor",
+          "share": 0.8,
+          "furniture": [
+            "arcade cabinet x25",
+            "pinball machine x5",
+            "change machine x2",
+            "air hockey table x1"
+          ]
+        },
+        {
+          "name": "prize_counter",
+          "share": 0.1,
+          "furniture": [
+            "glass case x2",
+            "register x1"
+          ]
+        },
+        {
+          "name": "office",
+          "share": 0.1,
+          "furniture": [
+            "desk x1",
+            "safe x1",
+            "parts bin x2"
+          ]
+        }
+      ],
+      "sells": [
+        "game tokens",
+        "soda",
+        "candy",
+        "cheap plastic prize"
+      ],
+      "price_range_usd_2008": [
+        0.25,
+        10.0
+      ],
+      "hours": "12-00",
+      "staff": [
+        "technician x1",
+        "counter clerk x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "ARCADE",
+        "GAMES",
+        "PRIZES"
+      ],
+      "night_life": 0.5,
+      "notes": "Still surviving in 2008 through rhythm games and fighting game tournaments. Very loud CRT buzz."
+    },
+    {
+      "id": "indie_cinema",
+      "name": "Indie Cinema",
+      "category": "nightlife",
+      "district_fit": [
+        "historic",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        200,
+        400
+      ],
+      "rooms": [
+        {
+          "name": "lobby_concessions",
+          "share": 0.3,
+          "furniture": [
+            "ticket booth x1",
+            "popcorn machine x1",
+            "soda fountain x1",
+            "movie poster x6"
+          ]
+        },
+        {
+          "name": "screening_room",
+          "share": 0.6,
+          "furniture": [
+            "theater seat x50",
+            "projector screen x1"
+          ]
+        },
+        {
+          "name": "projection_booth",
+          "share": 0.1,
+          "furniture": [
+            "35mm projector x1",
+            "film reel shelf x2",
+            "stool x1"
+          ]
+        }
+      ],
+      "sells": [
+        "movie ticket",
+        "large popcorn",
+        "soda cup",
+        "boxed candy"
+      ],
+      "price_range_usd_2008": [
+        6.0,
+        12.0
+      ],
+      "hours": "14-00",
+      "staff": [
+        "ticket seller x1",
+        "usher x2",
+        "projectionist x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "CINEMA",
+        "NOW SHOWING",
+        "INDEPENDENT FILMS"
+      ],
+      "night_life": 0.6,
+      "notes": "Projects physical 35mm film. Patrons carry flip phones and wait in line outside."
+    },
+    {
+      "id": "billiards_hall",
+      "name": "Pool & Billiards Hall",
+      "category": "nightlife",
+      "district_fit": [
+        "industrial",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        250,
+        500
+      ],
+      "rooms": [
+        {
+          "name": "pool_tables",
+          "share": 0.7,
+          "furniture": [
+            "pool table x12",
+            "hanging lamp x12",
+            "high chair x15",
+            "cue rack x4"
+          ]
+        },
+        {
+          "name": "bar_area",
+          "share": 0.2,
+          "furniture": [
+            "bar x1",
+            "stool x6",
+            "register x1",
+            "glass washer x1"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.1,
+          "furniture": [
+            "urinal x3",
+            "toilet x2",
+            "sink x2"
+          ]
+        }
+      ],
+      "sells": [
+        "table rental",
+        "beer pitcher",
+        "mixed drink",
+        "french fries"
+      ],
+      "price_range_usd_2008": [
+        8.0,
+        25.0
+      ],
+      "hours": "16-02",
+      "staff": [
+        "bartender x2",
+        "floor manager x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "BILLIARDS",
+        "POOL",
+        "BAR"
+      ],
+      "night_life": 0.7,
+      "notes": "Chalk dust in the air. People pay for table time by the hour using cash."
+    },
+    {
+      "id": "comedy_club",
+      "name": "Comedy Club",
+      "category": "nightlife",
+      "district_fit": [
+        "theater",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        150,
+        300
+      ],
+      "rooms": [
+        {
+          "name": "seating_stage",
+          "share": 0.65,
+          "furniture": [
+            "small round table x20",
+            "chair x60",
+            "stage x1",
+            "microphone stand x1",
+            "spotlight x2"
+          ]
+        },
+        {
+          "name": "bar",
+          "share": 0.15,
+          "furniture": [
+            "bar counter x1",
+            "stool x5",
+            "pos terminal x1"
+          ]
+        },
+        {
+          "name": "green_room",
+          "share": 0.1,
+          "furniture": [
+            "sofa x2",
+            "mini fridge x1",
+            "mirror x1"
+          ]
+        },
+        {
+          "name": "restrooms",
+          "share": 0.1,
+          "furniture": [
+            "toilet x4",
+            "sink x3"
+          ]
+        }
+      ],
+      "sells": [
+        "admission ticket",
+        "two drink minimum",
+        "cocktail",
+        "beer bottle"
+      ],
+      "price_range_usd_2008": [
+        15.0,
+        40.0
+      ],
+      "hours": "19-02",
+      "staff": [
+        "host x1",
+        "waitress x3",
+        "bartender x2",
+        "comedian x3"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "COMEDY",
+        "STAND UP",
+        "LIVE"
+      ],
+      "night_life": 0.8,
+      "notes": "Brick wall behind the stage. No smartphones to record sets, though some might sneak a flip phone picture."
+    },
+    {
+      "id": "cybercafe",
+      "name": "Cybercafe",
+      "category": "services",
+      "district_fit": [
+        "commercial",
+        "theater"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        60,
+        140
+      ],
+      "rooms": [
+        {
+          "name": "main_hall",
+          "share": 0.75,
+          "furniture": [
+            "pc desk x12",
+            "swivel chair x12",
+            "crt monitor x8",
+            "lcd monitor 4:3 x4",
+            "counter x1",
+            "laser printer x1",
+            "vending machine x1"
+          ]
+        },
+        {
+          "name": "back_office",
+          "share": 0.2,
+          "furniture": [
+            "desk x1",
+            "safe x1",
+            "router rack x1",
+            "filing cabinet x1"
+          ]
+        },
+        {
+          "name": "restroom",
+          "share": 0.05,
+          "furniture": [
+            "toilet x1",
+            "sink x1"
+          ]
+        }
+      ],
+      "sells": [
+        "internet time (per hour)",
+        "b&w printing",
+        "soda can",
+        "chips"
+      ],
+      "price_range_usd_2008": [
+        1.0,
+        5.0
+      ],
+      "hours": "08-02",
+      "staff": [
+        "manager x1",
+        "attendant x2"
+      ],
+      "has_wifi": true,
+      "sign_words": [
+        "NET",
+        "CAFE",
+        "ONLINE",
+        "INTERNET",
+        "WEB"
+      ],
+      "night_life": 0.6,
+      "notes": "Loud clicking of mechanical keyboards and gamers playing LAN matches on beige/black PC towers."
+    },
+    {
+      "id": "print_copy_center",
+      "name": "Print & Copy Center",
+      "category": "services",
+      "district_fit": [
+        "commercial",
+        "financial",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        80,
+        150
+      ],
+      "rooms": [
+        {
+          "name": "self_serve_area",
+          "share": 0.5,
+          "furniture": [
+            "large copier x4",
+            "counter x2",
+            "paper cutter x1",
+            "trash bin x2"
+          ]
+        },
+        {
+          "name": "staff_workstation",
+          "share": 0.4,
+          "furniture": [
+            "plotter printer x1",
+            "binding machine x1",
+            "register x2",
+            "pc x2"
+          ]
+        },
+        {
+          "name": "storage_room",
+          "share": 0.1,
+          "furniture": [
+            "paper box stack x10",
+            "shelf x2"
+          ]
+        }
+      ],
+      "sells": [
+        "b&w copy",
+        "color print",
+        "fax service",
+        "document binding"
+      ],
+      "price_range_usd_2008": [
+        0.1,
+        30.0
+      ],
+      "hours": "08-20",
+      "staff": [
+        "clerk x3",
+        "manager x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "COPIES",
+        "PRINTING",
+        "FAX",
+        "SHIPPING"
+      ],
+      "night_life": 0.0,
+      "notes": "People still rely heavily on fax machines for official documents. USB drives are common for printing."
+    },
+    {
+      "id": "bank_branch",
+      "name": "Local Bank Branch",
+      "category": "services",
+      "district_fit": [
+        "financial",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        150,
+        300
+      ],
+      "rooms": [
+        {
+          "name": "lobby",
+          "share": 0.4,
+          "furniture": [
+            "atm x2",
+            "velvet rope x3",
+            "writing desk x2",
+            "brochure rack x1"
+          ]
+        },
+        {
+          "name": "teller_counter",
+          "share": 0.2,
+          "furniture": [
+            "bulletproof glass x1",
+            "teller station x4",
+            "money counter x2"
+          ]
+        },
+        {
+          "name": "offices",
+          "share": 0.3,
+          "furniture": [
+            "desk x3",
+            "chair x9",
+            "filing cabinet x6",
+            "pc x3"
+          ]
+        },
+        {
+          "name": "vault",
+          "share": 0.1,
+          "furniture": [
+            "vault door x1",
+            "safety deposit box rack x4"
+          ]
+        }
+      ],
+      "sells": [
+        "checking account",
+        "savings account",
+        "cashier check",
+        "loan consultation"
+      ],
+      "price_range_usd_2008": [
+        0.0,
+        50.0
+      ],
+      "hours": "09-17",
+      "staff": [
+        "teller x4",
+        "bank manager x1",
+        "loan officer x2",
+        "security guard x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "BANK",
+        "ATM",
+        "LOANS",
+        "TRUST"
+      ],
+      "night_life": 0.0,
+      "notes": "Tellers use older AS400-style green screen terminal interfaces or early Windows XP banking software."
+    },
+    {
+      "id": "classic_barbershop",
+      "name": "Classic Barbershop",
+      "category": "services",
+      "district_fit": [
+        "residential",
+        "historic",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        40,
+        80
+      ],
+      "rooms": [
+        {
+          "name": "cutting_floor",
+          "share": 0.8,
+          "furniture": [
+            "barber chair x4",
+            "wall mirror x4",
+            "waiting bench x1",
+            "crt tv x1",
+            "magazine table x1"
+          ]
+        },
+        {
+          "name": "restroom_supply",
+          "share": 0.2,
+          "furniture": [
+            "sink x1",
+            "toilet x1",
+            "towel shelf x2"
+          ]
+        }
+      ],
+      "sells": [
+        "haircut",
+        "beard trim",
+        "straight razor shave",
+        "hair pomade"
+      ],
+      "price_range_usd_2008": [
+        12.0,
+        30.0
+      ],
+      "hours": "09-19",
+      "staff": [
+        "barber x4"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "BARBER",
+        "HAIRCUTS",
+        "SHAVES",
+        "WALK-INS WELCOME"
+      ],
+      "night_life": 0.0,
+      "notes": "CRT TV in the corner is always tuned to ESPN or local news. Thick sports magazines on the table."
+    },
+    {
+      "id": "budget_motel",
+      "name": "Budget Motel",
+      "category": "services",
+      "district_fit": [
+        "industrial",
+        "commercial",
+        "residential"
+      ],
+      "floor": "any",
+      "area_m2": [
+        400,
+        800
+      ],
+      "rooms": [
+        {
+          "name": "lobby",
+          "share": 0.1,
+          "furniture": [
+            "front desk x1",
+            "coffee station x1",
+            "sofa x1",
+            "brochure rack x1"
+          ]
+        },
+        {
+          "name": "guest_room_standard",
+          "share": 0.8,
+          "furniture": [
+            "double bed x20",
+            "crt tv x10",
+            "dresser x10",
+            "mini fridge x10"
+          ]
+        },
+        {
+          "name": "laundry_utility",
+          "share": 0.1,
+          "furniture": [
+            "washing machine x2",
+            "dryer x2",
+            "cleaning cart x2"
+          ]
+        }
+      ],
+      "sells": [
+        "nightly room",
+        "weekly room rate",
+        "vending machine snack",
+        "pay-per-view movie"
+      ],
+      "price_range_usd_2008": [
+        39.99,
+        89.99
+      ],
+      "hours": "00-24",
+      "staff": [
+        "front desk clerk x2",
+        "maid x3",
+        "maintenance x1"
+      ],
+      "has_wifi": true,
+      "sign_words": [
+        "MOTEL",
+        "VACANCY",
+        "CABLE TV",
+        "A/C"
+      ],
+      "night_life": 0.3,
+      "notes": "Free Wi-Fi is heavily advertised as a new premium feature, but connections drop constantly."
+    },
+    {
+      "id": "fitness_gym",
+      "name": "Fitness Gym",
+      "category": "services",
+      "district_fit": [
+        "commercial",
+        "residential"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        300,
+        700
+      ],
+      "rooms": [
+        {
+          "name": "cardio_zone",
+          "share": 0.4,
+          "furniture": [
+            "treadmill x10",
+            "elliptical x8",
+            "stationary bike x6",
+            "hanging crt tv x4"
+          ]
+        },
+        {
+          "name": "weight_room",
+          "share": 0.4,
+          "furniture": [
+            "weight bench x6",
+            "dumbbell rack x4",
+            "squat rack x2",
+            "mirror wall x2"
+          ]
+        },
+        {
+          "name": "locker_rooms",
+          "share": 0.15,
+          "furniture": [
+            "locker bank x6",
+            "bench x4",
+            "shower stall x4",
+            "toilet x2"
+          ]
+        },
+        {
+          "name": "reception",
+          "share": 0.05,
+          "furniture": [
+            "desk x1",
+            "turnstile x1",
+            "protein shake cooler x1"
+          ]
+        }
+      ],
+      "sells": [
+        "monthly membership",
+        "day pass",
+        "protein bar",
+        "sports drink"
+      ],
+      "price_range_usd_2008": [
+        10.0,
+        60.0
+      ],
+      "hours": "05-23",
+      "staff": [
+        "receptionist x2",
+        "personal trainer x3",
+        "janitor x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "GYM",
+        "FITNESS",
+        "WEIGHTS",
+        "AEROBICS"
+      ],
+      "night_life": 0.2,
+      "notes": "People listen to music on iPod Nanos strapped to their arms with velcro bands."
+    },
+    {
+      "id": "dental_clinic",
+      "name": "Dental Clinic",
+      "category": "services",
+      "district_fit": [
+        "residential",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        100,
+        200
+      ],
+      "rooms": [
+        {
+          "name": "waiting_room",
+          "share": 0.25,
+          "furniture": [
+            "reception desk x1",
+            "chair x8",
+            "coffee table x1",
+            "fish tank x1"
+          ]
+        },
+        {
+          "name": "treatment_rooms",
+          "share": 0.6,
+          "furniture": [
+            "dental chair x3",
+            "instrument tray x3",
+            "overhead light x3",
+            "xray machine x1"
+          ]
+        },
+        {
+          "name": "office_sterilization",
+          "share": 0.15,
+          "furniture": [
+            "autoclave x1",
+            "desk x1",
+            "filing cabinet x3"
+          ]
+        }
+      ],
+      "sells": [
+        "teeth cleaning",
+        "cavity filling",
+        "root canal",
+        "teeth whitening"
+      ],
+      "price_range_usd_2008": [
+        75.0,
+        800.0
+      ],
+      "hours": "08-18",
+      "staff": [
+        "dentist x2",
+        "dental hygienist x2",
+        "receptionist x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "DENTIST",
+        "FAMILY DENTISTRY",
+        "WALK-INS"
+      ],
+      "night_life": 0.0,
+      "notes": "Patient records are highly reliant on massive physical manila folders kept behind the reception desk."
+    },
+    {
+      "id": "police_precinct",
+      "name": "Police Precinct",
+      "category": "services",
+      "district_fit": [
+        "historic",
+        "industrial",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        300,
+        600
+      ],
+      "rooms": [
+        {
+          "name": "front_desk",
+          "share": 0.2,
+          "furniture": [
+            "high counter x1",
+            "bulletproof glass x1",
+            "bench x3",
+            "wanted poster board x1"
+          ]
+        },
+        {
+          "name": "bullpen",
+          "share": 0.4,
+          "furniture": [
+            "metal desk x8",
+            "office chair x8",
+            "filing cabinet x10",
+            "whiteboard x2"
+          ]
+        },
+        {
+          "name": "holding_cells",
+          "share": 0.25,
+          "furniture": [
+            "iron bars x4",
+            "cot x4",
+            "metal toilet x4"
+          ]
+        },
+        {
+          "name": "interrogation",
+          "share": 0.15,
+          "furniture": [
+            "metal table x2",
+            "chair x4",
+            "two way mirror x2"
+          ]
+        }
+      ],
+      "sells": [
+        "police report copy",
+        "background check fee"
+      ],
+      "price_range_usd_2008": [
+        15.0,
+        50.0
+      ],
+      "hours": "00-24",
+      "staff": [
+        "desk sergeant x1",
+        "detective x4",
+        "patrol officer x6"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "POLICE",
+        "PRECINCT",
+        "DO NOT PARK"
+      ],
+      "night_life": 0.6,
+      "notes": "Desks are cluttered with paperwork, bulky radios, and thick CRT monitors. Ashtrays still visible but unused."
+    },
+    {
+      "id": "post_office",
+      "name": "Post Office",
+      "category": "services",
+      "district_fit": [
+        "commercial",
+        "historic",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        150,
+        350
+      ],
+      "rooms": [
+        {
+          "name": "customer_lobby",
+          "share": 0.3,
+          "furniture": [
+            "po box wall x3",
+            "service counter x1",
+            "packing table x2"
+          ]
+        },
+        {
+          "name": "sorting_room",
+          "share": 0.6,
+          "furniture": [
+            "sorting bin x10",
+            "canvas mail cart x6",
+            "conveyor belt x1"
+          ]
+        },
+        {
+          "name": "office_restroom",
+          "share": 0.1,
+          "furniture": [
+            "desk x1",
+            "toilet x1",
+            "sink x1"
+          ]
+        }
+      ],
+      "sells": [
+        "postage stamp",
+        "shipping box",
+        "money order",
+        "bubble wrap"
+      ],
+      "price_range_usd_2008": [
+        0.42,
+        25.0
+      ],
+      "hours": "08-17",
+      "staff": [
+        "postal clerk x3",
+        "mail carrier x4",
+        "postmaster x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "POST OFFICE",
+        "MAIL",
+        "SHIPPING"
+      ],
+      "night_life": 0.0,
+      "notes": "Stamp price in 2008 is 42 cents. A heavy matrix printer grinds away at receipts."
+    },
+    {
+      "id": "small_law_firm",
+      "name": "Small Law Firm",
+      "category": "office",
+      "district_fit": [
+        "financial",
+        "commercial",
+        "historic"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        80,
+        160
+      ],
+      "rooms": [
+        {
+          "name": "reception",
+          "share": 0.2,
+          "furniture": [
+            "reception desk x1",
+            "leather sofa x1",
+            "coffee table x1",
+            "plant x2"
+          ]
+        },
+        {
+          "name": "partner_offices",
+          "share": 0.5,
+          "furniture": [
+            "large wood desk x2",
+            "leather executive chair x2",
+            "bookshelf x4",
+            "client chair x4"
+          ]
+        },
+        {
+          "name": "conference_room",
+          "share": 0.2,
+          "furniture": [
+            "long table x1",
+            "chair x6",
+            "speakerphone x1"
+          ]
+        },
+        {
+          "name": "file_room",
+          "share": 0.1,
+          "furniture": [
+            "tall filing cabinet x6",
+            "copier x1"
+          ]
+        }
+      ],
+      "sells": [
+        "legal consultation",
+        "document drafting",
+        "court representation"
+      ],
+      "price_range_usd_2008": [
+        150.0,
+        500.0
+      ],
+      "hours": "09-18",
+      "staff": [
+        "lawyer x2",
+        "paralegal x1",
+        "receptionist x1"
+      ],
+      "has_wifi": true,
+      "sign_words": [
+        "LAW OFFICE",
+        "ATTORNEYS AT LAW",
+        "LEGAL COUNSEL"
+      ],
+      "night_life": 0.0,
+      "notes": "Conference room table features a bulky Polycom star-shaped conference phone. Blackberrys buzz silently on desks."
+    },
+    {
+      "id": "accounting_firm",
+      "name": "Accounting Firm",
+      "category": "office",
+      "district_fit": [
+        "financial",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        100,
+        200
+      ],
+      "rooms": [
+        {
+          "name": "work_floor",
+          "share": 0.6,
+          "furniture": [
+            "cubicle partition x6",
+            "desk x6",
+            "chair x6",
+            "adding machine x6",
+            "crt monitor x6"
+          ]
+        },
+        {
+          "name": "manager_office",
+          "share": 0.2,
+          "furniture": [
+            "desk x1",
+            "chair x3",
+            "filing cabinet x2"
+          ]
+        },
+        {
+          "name": "break_room",
+          "share": 0.2,
+          "furniture": [
+            "round table x1",
+            "coffee maker x1",
+            "fridge x1",
+            "microwave x1"
+          ]
+        }
+      ],
+      "sells": [
+        "tax preparation",
+        "bookkeeping service",
+        "payroll processing"
+      ],
+      "price_range_usd_2008": [
+        100.0,
+        1000.0
+      ],
+      "hours": "08-18",
+      "staff": [
+        "accountant x4",
+        "manager x1",
+        "clerk x2"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "CPA",
+        "ACCOUNTING",
+        "TAX SERVICES"
+      ],
+      "night_life": 0.0,
+      "notes": "Physical adding machines with paper tape are still widely used alongside Excel 2003/2007."
+    },
+    {
+      "id": "insurance_agency",
+      "name": "Insurance Agency",
+      "category": "office",
+      "district_fit": [
+        "commercial",
+        "residential"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        60,
+        120
+      ],
+      "rooms": [
+        {
+          "name": "front_office",
+          "share": 0.8,
+          "furniture": [
+            "desk x3",
+            "office chair x3",
+            "client chair x6",
+            "filing cabinet x4",
+            "water cooler x1"
+          ]
+        },
+        {
+          "name": "back_storage",
+          "share": 0.2,
+          "furniture": [
+            "metal shelf x3",
+            "safe x1",
+            "printer x1"
+          ]
+        }
+      ],
+      "sells": [
+        "auto insurance policy",
+        "home insurance policy",
+        "life insurance"
+      ],
+      "price_range_usd_2008": [
+        50.0,
+        300.0
+      ],
+      "hours": "09-17",
+      "staff": [
+        "insurance agent x3"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "INSURANCE",
+        "AUTO HOME LIFE",
+        "AGENCY"
+      ],
+      "night_life": 0.0,
+      "notes": "Desks have large Rolodexes and thick phone books. Agents use heavy beige corded phones."
+    },
+    {
+      "id": "telemarketing_call_center",
+      "name": "Call Center",
+      "category": "office",
+      "district_fit": [
+        "industrial",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        300,
+        800
+      ],
+      "rooms": [
+        {
+          "name": "call_floor",
+          "share": 0.75,
+          "furniture": [
+            "cubicle desk x40",
+            "office chair x40",
+            "headset x40",
+            "lcd monitor 4:3 x40",
+            "supervisor podium x1"
+          ]
+        },
+        {
+          "name": "break_room",
+          "share": 0.15,
+          "furniture": [
+            "vending machine x2",
+            "cafeteria table x4",
+            "chair x16",
+            "microwave x2"
+          ]
+        },
+        {
+          "name": "server_room",
+          "share": 0.1,
+          "furniture": [
+            "server rack x3",
+            "ac unit x1"
+          ]
+        }
+      ],
+      "sells": [
+        "telemarketing service",
+        "customer support contract"
+      ],
+      "price_range_usd_2008": [
+        500.0,
+        5000.0
+      ],
+      "hours": "00-24",
+      "staff": [
+        "call agent x40",
+        "supervisor x3",
+        "it tech x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "GLOBAL SOLUTIONS",
+        "SUPPORT CENTER"
+      ],
+      "night_life": 0.4,
+      "notes": "Loud hum of voices and AC. Agents are using wired headsets connected to bulky IP phones."
+    },
+    {
+      "id": "boutique_ad_agency",
+      "name": "Boutique Ad Agency",
+      "category": "office",
+      "district_fit": [
+        "historic",
+        "theater",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        150,
+        300
+      ],
+      "rooms": [
+        {
+          "name": "open_workspace",
+          "share": 0.6,
+          "furniture": [
+            "large shared desk x4",
+            "ergonomic chair x8",
+            "imac g5 x8",
+            "whiteboard x3",
+            "bean bag x2"
+          ]
+        },
+        {
+          "name": "pitch_room",
+          "share": 0.25,
+          "furniture": [
+            "glass table x1",
+            "designer chair x6",
+            "projector x1"
+          ]
+        },
+        {
+          "name": "kitchenette",
+          "share": 0.15,
+          "furniture": [
+            "espresso machine x1",
+            "bar stool x3",
+            "mini fridge x1"
+          ]
+        }
+      ],
+      "sells": [
+        "print ad campaign",
+        "radio spot",
+        "branding package",
+        "early social media strategy"
+      ],
+      "price_range_usd_2008": [
+        2000.0,
+        25000.0
+      ],
+      "hours": "10-19",
+      "staff": [
+        "creative director x1",
+        "copywriter x2",
+        "graphic designer x3",
+        "account manager x2"
+      ],
+      "has_wifi": true,
+      "sign_words": [
+        "CREATIVE",
+        "AGENCY",
+        "DESIGN"
+      ],
+      "night_life": 0.1,
+      "notes": "Heavy use of early aluminum iMacs. Employees playing ping pong or listening to iPods at their desks."
+    },
+    {
+      "id": "indie_software_company",
+      "name": "Indie Software Dev",
+      "category": "office",
+      "district_fit": [
+        "historic",
+        "industrial",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        100,
+        250
+      ],
+      "rooms": [
+        {
+          "name": "dev_pit",
+          "share": 0.7,
+          "furniture": [
+            "ikea desk x6",
+            "office chair x6",
+            "dual monitor setup x6",
+            "whiteboard x4",
+            "empty pizza box stack x2"
+          ]
+        },
+        {
+          "name": "server_closet",
+          "share": 0.1,
+          "furniture": [
+            "server rack x1",
+            "ups battery x2",
+            "tangled wire mess x1"
+          ]
+        },
+        {
+          "name": "lounge",
+          "share": 0.2,
+          "furniture": [
+            "worn sofa x2",
+            "crt tv x1",
+            "xbox 360 x1",
+            "mini fridge x1"
+          ]
+        }
+      ],
+      "sells": [
+        "custom software",
+        "web design",
+        "it consulting",
+        "web 2.0 app"
+      ],
+      "price_range_usd_2008": [
+        500.0,
+        10000.0
+      ],
+      "hours": "11-02",
+      "staff": [
+        "programmer x4",
+        "producer x1",
+        "artist x1"
+      ],
+      "has_wifi": true,
+      "sign_words": [
+        "TECH",
+        "SOFTWARE",
+        "STUDIO"
+      ],
+      "night_life": 0.5,
+      "notes": "Developers drinking energy drinks, writing code on Windows XP or early OS X. Xbox 360 in the lounge for Halo 3 breaks."
+    },
+    {
+      "id": "corporate_satellite_office",
+      "name": "Corporate Satellite Office",
+      "category": "office",
+      "district_fit": [
+        "financial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        400,
+        1000
+      ],
+      "rooms": [
+        {
+          "name": "cubicle_farm",
+          "share": 0.6,
+          "furniture": [
+            "cubicle x30",
+            "office chair x30",
+            "pc tower x30",
+            "landline phone x30"
+          ]
+        },
+        {
+          "name": "executive_suites",
+          "share": 0.2,
+          "furniture": [
+            "large desk x4",
+            "leather chair x4",
+            "bookshelf x4",
+            "visitor chair x8"
+          ]
+        },
+        {
+          "name": "conference_rooms",
+          "share": 0.1,
+          "furniture": [
+            "long table x2",
+            "chair x16",
+            "projector x2"
+          ]
+        },
+        {
+          "name": "copy_break_room",
+          "share": 0.1,
+          "furniture": [
+            "large copier x2",
+            "water cooler x1",
+            "coffee machine x1"
+          ]
+        }
+      ],
+      "sells": [
+        "b2b sales",
+        "corporate consulting",
+        "logistics management"
+      ],
+      "price_range_usd_2008": [
+        1000.0,
+        50000.0
+      ],
+      "hours": "08-18",
+      "staff": [
+        "corporate drone x25",
+        "manager x4",
+        "executive x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "ENTERPRISE",
+        "CORPORATE",
+        "REGIONAL OFFICE"
+      ],
+      "night_life": 0.0,
+      "notes": "Grey, soul-crushing beige aesthetic. Floppy disks are dead, but CD-RWs and USB thumb drives are everywhere."
+    },
+    {
+      "id": "auto_mechanic_garage",
+      "name": "Auto Mechanic Garage",
+      "category": "industry",
+      "district_fit": [
+        "industrial",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        200,
+        500
+      ],
+      "rooms": [
+        {
+          "name": "garage_bay",
+          "share": 0.7,
+          "furniture": [
+            "hydraulic lift x4",
+            "tool chest x4",
+            "tire rack x2",
+            "oil drum x3"
+          ]
+        },
+        {
+          "name": "waiting_room",
+          "share": 0.15,
+          "furniture": [
+            "plastic chair x4",
+            "coffee table x1",
+            "auto magazine stack x1",
+            "vending machine x1"
+          ]
+        },
+        {
+          "name": "office",
+          "share": 0.15,
+          "furniture": [
+            "desk x1",
+            "greasy keyboard x1",
+            "crt monitor x1",
+            "filing cabinet x2"
+          ]
+        }
+      ],
+      "sells": [
+        "oil change",
+        "tire rotation",
+        "engine repair",
+        "brake job"
+      ],
+      "price_range_usd_2008": [
+        29.99,
+        1500.0
+      ],
+      "hours": "07-18",
+      "staff": [
+        "head mechanic x1",
+        "auto tech x3",
+        "receptionist x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "AUTO REPAIR",
+        "MECHANIC",
+        "INSPECTION STATION",
+        "OIL CHANGE"
+      ],
+      "night_life": 0.0,
+      "notes": "Grease everywhere. The shop radio blasts classic rock. Diagnostics run on specialized heavy rugged laptops."
+    },
+    {
+      "id": "commercial_print_shop",
+      "name": "Commercial Print Shop",
+      "category": "industry",
+      "district_fit": [
+        "industrial",
+        "commercial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        250,
+        600
+      ],
+      "rooms": [
+        {
+          "name": "production_floor",
+          "share": 0.8,
+          "furniture": [
+            "industrial printing press x2",
+            "large paper roll x5",
+            "bindery machine x1",
+            "pallet jack x1"
+          ]
+        },
+        {
+          "name": "front_office",
+          "share": 0.1,
+          "furniture": [
+            "counter x1",
+            "desk x2",
+            "pc x2"
+          ]
+        },
+        {
+          "name": "loading_dock",
+          "share": 0.1,
+          "furniture": [
+            "stack of pallets x3",
+            "cardboard box stack x10"
+          ]
+        }
+      ],
+      "sells": [
+        "bulk flyer",
+        "vinyl banner",
+        "business card batch",
+        "brochure bundle"
+      ],
+      "price_range_usd_2008": [
+        50.0,
+        5000.0
+      ],
+      "hours": "06-20",
+      "staff": [
+        "press operator x2",
+        "prepress tech x1",
+        "sales rep x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "COMMERCIAL PRINTING",
+        "BANNERS",
+        "SIGNS",
+        "LITHOGRAPHY"
+      ],
+      "night_life": 0.1,
+      "notes": "Smells heavily of ink and ozone. Graphic files are submitted via CD-ROMs or early slow FTP servers."
+    },
+    {
+      "id": "warehouse_storage",
+      "name": "Warehouse Storage",
+      "category": "industry",
+      "district_fit": [
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        500,
+        2000
+      ],
+      "rooms": [
+        {
+          "name": "main_warehouse",
+          "share": 0.9,
+          "furniture": [
+            "tall industrial shelving x20",
+            "forklift x2",
+            "shrink wrap station x1",
+            "pallet pile x10"
+          ]
+        },
+        {
+          "name": "manager_booth",
+          "share": 0.05,
+          "furniture": [
+            "desk x1",
+            "clipboard rack x1",
+            "time clock x1"
+          ]
+        },
+        {
+          "name": "restroom",
+          "share": 0.05,
+          "furniture": [
+            "toilet x1",
+            "sink x1"
+          ]
+        }
+      ],
+      "sells": [
+        "wholesale goods pallet",
+        "logistics service"
+      ],
+      "price_range_usd_2008": [
+        100.0,
+        10000.0
+      ],
+      "hours": "05-22",
+      "staff": [
+        "warehouse manager x1",
+        "forklift driver x3",
+        "picker x5"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "LOGISTICS",
+        "WAREHOUSE",
+        "SHIPPING & RECEIVING"
+      ],
+      "night_life": 0.1,
+      "notes": "Echoey and dusty. Workers use rugged barcode scanners with monochrome green screens."
+    },
+    {
+      "id": "scrap_yard_office",
+      "name": "Scrap Yard Office",
+      "category": "industry",
+      "district_fit": [
+        "industrial"
+      ],
+      "floor": "ground",
+      "area_m2": [
+        40,
+        80
+      ],
+      "rooms": [
+        {
+          "name": "service_counter",
+          "share": 0.6,
+          "furniture": [
+            "dirty counter x1",
+            "cash register x1",
+            "pa system mic x1",
+            "metal chair x2"
+          ]
+        },
+        {
+          "name": "back_room",
+          "share": 0.4,
+          "furniture": [
+            "desk x1",
+            "safe x1",
+            "filing cabinet x3",
+            "first aid kit x1"
+          ]
+        }
+      ],
+      "sells": [
+        "used car part",
+        "scrap metal processing",
+        "towing service"
+      ],
+      "price_range_usd_2008": [
+        5.0,
+        500.0
+      ],
+      "hours": "07-17",
+      "staff": [
+        "yard manager x1",
+        "crane operator x1",
+        "clerk x1"
+      ],
+      "has_wifi": false,
+      "sign_words": [
+        "SCRAP METAL",
+        "AUTO SALVAGE",
+        "WE BUY JUNK CARS"
+      ],
+      "night_life": 0.0,
+      "notes": "Office is a prefabricated trailer. Walls are covered in faded pin-up calendars and parts catalogs."
+    },
+    {
+      "id": "studio_apartment",
+      "name": "Studio Apartment",
+      "category": "home",
+      "district_fit": [
+        "residential",
+        "historic",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        30,
+        50
+      ],
+      "rooms": [
+        {
+          "name": "living_sleeping_area",
+          "share": 0.75,
+          "furniture": [
+            "futon x1",
+            "coffee table x1",
+            "crt tv x1",
+            "small desk x1",
+            "wardrobe x1"
+          ]
+        },
+        {
+          "name": "kitchenette",
+          "share": 0.15,
+          "furniture": [
+            "mini fridge x1",
+            "stove x1",
+            "sink x1"
+          ]
+        },
+        {
+          "name": "bathroom",
+          "share": 0.1,
+          "furniture": [
+            "toilet x1",
+            "sink x1",
+            "shower stall x1"
+          ]
+        }
+      ],
+      "sells": [],
+      "price_range_usd_2008": [
+        0,
+        0
+      ],
+      "hours": "00-24",
+      "staff": [],
+      "has_wifi": true,
+      "sign_words": [],
+      "night_life": 0.8,
+      "notes": "Cramped living space. A Nintendo Wii or PS2 sits under the thick TV. Broadband router blinks in the corner."
+    },
+    {
+      "id": "one_bedroom_apartment",
+      "name": "1-Bedroom Apartment",
+      "category": "home",
+      "district_fit": [
+        "residential",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        50,
+        75
+      ],
+      "rooms": [
+        {
+          "name": "living_room",
+          "share": 0.4,
+          "furniture": [
+            "sofa x1",
+            "tv stand x1",
+            "lcd tv 720p x1",
+            "coffee table x1",
+            "bookshelf x1"
+          ]
+        },
+        {
+          "name": "bedroom",
+          "share": 0.3,
+          "furniture": [
+            "queen bed x1",
+            "nightstand x2",
+            "dresser x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.2,
+          "furniture": [
+            "fridge x1",
+            "stove x1",
+            "dining table x1",
+            "chair x2"
+          ]
+        },
+        {
+          "name": "bathroom",
+          "share": 0.1,
+          "furniture": [
+            "toilet x1",
+            "sink x1",
+            "bathtub x1"
+          ]
+        }
+      ],
+      "sells": [],
+      "price_range_usd_2008": [
+        0,
+        0
+      ],
+      "hours": "00-24",
+      "staff": [],
+      "has_wifi": true,
+      "sign_words": [],
+      "night_life": 0.9,
+      "notes": "Standard young professional home. Stacks of DVD cases next to the TV. Desktop PC in the bedroom corner."
+    },
+    {
+      "id": "two_bedroom_family_apartment",
+      "name": "2-Bedroom Family Apartment",
+      "category": "home",
+      "district_fit": [
+        "residential"
+      ],
+      "floor": "any",
+      "area_m2": [
+        80,
+        110
+      ],
+      "rooms": [
+        {
+          "name": "living_room",
+          "share": 0.35,
+          "furniture": [
+            "large sofa x1",
+            "armchair x1",
+            "entertainment center x1",
+            "crt tv x1",
+            "rug x1"
+          ]
+        },
+        {
+          "name": "kitchen_dining",
+          "share": 0.25,
+          "furniture": [
+            "fridge x1",
+            "stove x1",
+            "dishwasher x1",
+            "dining table x1",
+            "chair x4"
+          ]
+        },
+        {
+          "name": "master_bedroom",
+          "share": 0.2,
+          "furniture": [
+            "king bed x1",
+            "wardrobe x2",
+            "nightstand x2"
+          ]
+        },
+        {
+          "name": "second_bedroom",
+          "share": 0.15,
+          "furniture": [
+            "twin bed x1",
+            "desk x1",
+            "toy chest x1"
+          ]
+        },
+        {
+          "name": "bathroom",
+          "share": 0.05,
+          "furniture": [
+            "toilet x1",
+            "sink x1",
+            "bathtub x1"
+          ]
+        }
+      ],
+      "sells": [],
+      "price_range_usd_2008": [
+        0,
+        0
+      ],
+      "hours": "00-24",
+      "staff": [],
+      "has_wifi": true,
+      "sign_words": [],
+      "night_life": 1.0,
+      "notes": "Family home. Landline phone on the kitchen wall. Messy desk with a shared family Dell PC running Windows Vista."
+    },
+    {
+      "id": "sro_tenement_room",
+      "name": "SRO / Tenement Room",
+      "category": "home",
+      "district_fit": [
+        "industrial",
+        "historic"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        15,
+        25
+      ],
+      "rooms": [
+        {
+          "name": "single_room",
+          "share": 1.0,
+          "furniture": [
+            "twin bed x1",
+            "hot plate x1",
+            "mini fridge x1",
+            "small crt tv x1",
+            "sink x1"
+          ]
+        }
+      ],
+      "sells": [],
+      "price_range_usd_2008": [
+        0,
+        0
+      ],
+      "hours": "00-24",
+      "staff": [],
+      "has_wifi": false,
+      "sign_words": [],
+      "night_life": 1.0,
+      "notes": "Single Room Occupancy. Bathrooms are shared in the hallway (not in the room). Rabbit ear antenna on the TV."
+    },
+    {
+      "id": "brownstone_floor",
+      "name": "Brownstone Floor",
+      "category": "home",
+      "district_fit": [
+        "historic",
+        "residential"
+      ],
+      "floor": "any",
+      "area_m2": [
+        90,
+        140
+      ],
+      "rooms": [
+        {
+          "name": "living_parlor",
+          "share": 0.4,
+          "furniture": [
+            "fancy sofa x2",
+            "fireplace x1",
+            "bookshelf x2",
+            "flat screen tv x1"
+          ]
+        },
+        {
+          "name": "kitchen",
+          "share": 0.2,
+          "furniture": [
+            "stainless fridge x1",
+            "gas stove x1",
+            "island counter x1",
+            "bar stool x2"
+          ]
+        },
+        {
+          "name": "bedroom",
+          "share": 0.3,
+          "furniture": [
+            "large bed x1",
+            "antique dresser x1",
+            "rug x1"
+          ]
+        },
+        {
+          "name": "bathroom",
+          "share": 0.1,
+          "furniture": [
+            "clawfoot tub x1",
+            "toilet x1",
+            "pedestal sink x1"
+          ]
+        }
+      ],
+      "sells": [],
+      "price_range_usd_2008": [
+        0,
+        0
+      ],
+      "hours": "00-24",
+      "staff": [],
+      "has_wifi": true,
+      "sign_words": [],
+      "night_life": 0.9,
+      "notes": "Wealthy urban living. Flat screen TVs (plasma or early LCD) are a status symbol here. iPod docking station on the shelf."
+    },
+    {
+      "id": "luxury_penthouse",
+      "name": "Luxury Penthouse",
+      "category": "home",
+      "district_fit": [
+        "financial",
+        "commercial"
+      ],
+      "floor": "upper",
+      "area_m2": [
+        200,
+        400
+      ],
+      "rooms": [
+        {
+          "name": "open_living_area",
+          "share": 0.45,
+          "furniture": [
+            "designer sectional x1",
+            "glass coffee table x1",
+            "large flat screen tv x1",
+            "grand piano x1",
+            "bar counter x1"
+          ]
+        },
+        {
+          "name": "gourmet_kitchen",
+          "share": 0.2,
+          "furniture": [
+            "subzero fridge x1",
+            "professional range x1",
+            "wine cooler x1",
+            "marble island x1"
+          ]
+        },
+        {
+          "name": "master_suite",
+          "share": 0.25,
+          "furniture": [
+            "king bed x1",
+            "walk-in closet rack x4",
+            "lounge chair x1"
+          ]
+        },
+        {
+          "name": "master_bath",
+          "share": 0.1,
+          "furniture": [
+            "jacuzzi tub x1",
+            "glass shower x1",
+            "double sink x1",
+            "toilet x1"
+          ]
+        }
+      ],
+      "sells": [],
+      "price_range_usd_2008": [
+        0,
+        0
+      ],
+      "hours": "00-24",
+      "staff": [],
+      "has_wifi": true,
+      "sign_words": [],
+      "night_life": 0.8,
+      "notes": "High-end 2008 luxury. Home theater systems with Blu-Ray players. Clean, minimalist furniture."
+    }
+  ]
+}

@@ -80,13 +80,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
-
 ### Feedback para o Opus 4.8
 
 > Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.
 
 - [HACKING] **O nome do sistema do notebook vem das empresas da cidade (pedido em 2026-10-02):** hoje "Osprey/UX" está fixo (aparece no boot: `Loading Osprey/UX 4.2 2.6.24-19`, `builder@osprey`). Deve sair de uma empresa de software que existe na simulação, como a marca do celular. O usuário pediu ao Opus 4.8 porque o nome mora no shell (`src/laptop/shell.ts`); avaliar antes se isso atrapalha o hacking (comandos, caminhos, banners que outros hosts mostram), e só fazer se não atrapalhar.
 - [HACKING] Adicionar modo recovery para fazer root no celular. (Isso era uma coisa em 2008? Senão, usar uma alternativa. Eu imagino o celular como um hibrido de iphone com blackberry, mas com form factor de celular comum. Inclusive, mais pra frente, uma versão com form factor e teclado de blackberry pro celular seria prudente, e quem sabe uma versão flip igual o notebook). Seria necessário para instalar aplicações de hacking. *(A parte dos formatos BlackBerry e flip já foi para a etapa 15.)*
+- [HACKING] **Tutorial do notebook na fatia vertical (pedido em 2026-10-03, texto original):** "E pode ter um arquivo, e provavelmente no celular é o, mais, é o primeiro que a pessoa vai ver como mensagem. Aí você pode ensinar para a pessoa a ela tirar o notebook, né? E os comandos básicos do notebook, para aí ela conseguir abrir o notebook, ler um arquivo de texto que ele vai ter instruções de como fazer um trabalho, como hackear de forma bem básica. Mas aí essa parte do notebook seria bom deixar para o ou para os 4.8, né, porque vai ser basicamente um tutorial de hacking, então delega isso para ele." *(O tutorial do celular, a mensagem que ensina a tirar o notebook, fica na Sessão F, fora da trilha.)*
 
 
 ## Opiniões e sugestões do Claude (pedido do usuário em 2026-10-02)
@@ -128,6 +128,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 - O render em workers aguentou bem o crescimento; o próximo gargalo é a simulação no thread principal (carros: ~1,9 ms por 1000 carros por passo). Se a cidade crescer, a simulação de trânsito é a primeira candidata a ir para um worker.
 - Um **console de debug** dentro do jogo (teletransporte para um lugar, ver um cidadão, forçar um evento) economizaria muito tempo de teste dos dois lados.
+
+### Sobre assinar o ChatGPT para código (pergunta do usuário em 2026-10-03)
+
+- **Onde ajudaria de verdade:** bugs pequenos e bem cercados (a fila da Sessão C, que hoje vai para o Sonnet), scripts de conferência (validar JSON, contar combinações da gramática), e segunda opinião em planos. Com um briefing curto (o bug, os arquivos, como testar) ele resolve bem coisas desse tamanho.
+- **Onde eu não delegaria:** o shader do mundo, a luz e tudo o que é identidade visual (dependem de muito contexto acumulado e de olhar o resultado), e mudanças que cruzam vários sistemas. O custo escondido é o contexto: o projeto tem convenções fortes (simulação sem render, semente, gramática para todo texto, "Lições da etapa N") que ele não conhece; o diff dele precisa de revisão, e uma revisão minha custa menos que um conserto meu, mas não é de graça.
+- **O hacking:** a OpenAI também tem filtros para cibersegurança; para um jogo fictício provavelmente passa, mas não dá para garantir, e o Opus 4.8 já resolve sem bloqueio. Não trocaria o que funciona.
+- **Regras se ele entrar:** um agente por vez no repositório, sempre a partir de um commit limpo; ele lê um `AGENTS.md` curto que aponta para as seções certas do CLAUDE.md (não o documento inteiro); eu reviso o diff antes do commit.
+- **Recomendação:** antes de assinar, testar o grátis com um bug da Sessão C (por exemplo, a ligação atendida pelo mouse) e ver o diff. Se vier limpo, vale a assinatura sobretudo como substituto da fila do Sonnet.
 
 ## Visão do jogo
 
@@ -272,7 +280,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
   - **Hacking com princípios reais e nomes fictícios (esclarecido pelo usuário):** os princípios seguem os reais, como no Hacknet e no Grey Hack (portas, varreduras, serviços, senhas, logs, redes). **A única coisa que muda são os nomes dos programas**, que viram versões parecidas mas fictícias (por exemplo, "Nmap" vira "Mmap"). Não mudar nada além disso por enquanto. Tudo roda só dentro da simulação do jogo.
   - **As falas dos NPCs** (ligações, SMS, posts, manchetes) ficam limpas: sem palavrão, insulto, conteúdo sexual, violência explícita, nem nada que possa ser sinalizado. O tom noir vem do clima e da situação, não do vocabulário.
 - **Render do mundo na GPU com WebGPU (decidido pelo usuário em 2026-10-02):** migrar **o render do mundo inteiro** (não um híbrido permanente) para WebGPU (compute shaders e storage buffers: a cidade vai como listas, não espremida em texturas). Só Chromium/Electron, o que é aceito. A migração é por partes atrás de uma tecla, comparando com a versão em CPU, que é apagada quando a nova estiver igual. Ficam na CPU: a simulação e as camadas de interface (celular, notebook, painéis). Ordem: medir → protótipo (chão e fachadas) → fachadas e janelas, céu e nuvens, letreiros, objetos e carros, luzes, interiores, chuva e vidro. A câmera 3D de verdade vem junto.
-- **Delegar a outras IAs (combinado em 2026-10-02, para economizar o limite do usuário):** o usuário tem o Gemini (pago) e o ChatGPT (grátis). Delegar só o que não depende do código: textos da gramática (com um briefing do formato e das regras), pesquisa (referências de 2008, receitas de som) e segundas opiniões de arquitetura. Os briefings ficam em `docs/tarefas/`, um por tarefa, curtos (nunca o CLAUDE.md inteiro). O resultado volta para o Claude conferir (de preferência por script).
+- **Delegar a outras IAs (combinado em 2026-10-02, para economizar o limite do usuário):** o usuário tem o Gemini (pago) e o ChatGPT (grátis). Delegar só o que não depende do código: textos da gramática (com um briefing do formato e das regras), pesquisa (referências de 2008, receitas de som) e segundas opiniões de arquitetura. Os briefings ficam em `docs/tarefas/`, um por tarefa, curtos (nunca o CLAUDE.md inteiro). O resultado volta para o Claude conferir (de preferência por script). **ChatGPT pago com as ferramentas de código (perguntado em 2026-10-03; ainda não assinado):** a opinião do Claude está em "Opiniões e sugestões do Claude" (2026-10-03). Se assinar, começar por um bug da fila do Sonnet, com o Claude revisando o diff.
 - **Toda frase do jogo pela gramática (pedido do usuário na 11.5):** com pesos de idade, gênero e contexto, para cada pessoa soar única. Vale para tudo o que vier (taxistas, posts, sites, notícias): **todo texto novo entra como peças em `locale/text/` e passa por `expand` com a `Sel` de quem fala.**
 - **Os dados da simulação são a matéria do hacking:** registros de moradores e funcionários, logs de telefone, câmeras, controle de portas e semáforos vêm da simulação e não são inventados à parte.
 - **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
@@ -293,10 +301,10 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 > Só o que **ainda não foi feito**, em ordem. Cada sessão é um **grupo** (retorno do usuário só no fim, veja "Como trabalhar"). Ao fechar uma, o que ela atendeu vai para `docs/historico.md` ("Pedidos atendidos").
 >
-> **Ritmo combinado em 2026-10-03 (limite semanal):** o usuário vai ficar uns dias sem limite. Nesse tempo ele **joga e testa** (R.22c a R.28 estão esperando o teste) e leva as tarefas de `docs/tarefas/` ao Gemini e ao ChatGPT. Quando o limite voltar, a primeira coisa é **ler o retorno dele e os arquivos de `docs/tarefas/retorno/`**, organizar aqui, e só então seguir. A **fatia vertical** vem **depois** de fechar a iluminação (decidido pelo usuário em 2026-10-03).
+> **Ritmo (2026-10-03):** o usuário ainda não ficou sem o limite semanal; quando for ficar, ele avisa. **Sempre que houver tarefa trivial que não precisa do código, delegar às outras IAs** (briefing em `docs/tarefas/`, veja "Delegar a outras IAs" nas decisões). Os cinco retornos de `docs/tarefas/retorno/` já chegaram (o 01 veio com texto em volta do JSON e foi limpo; 52 lugares). A **fatia vertical** vem **depois** de fechar a iluminação (decidido pelo usuário em 2026-10-03).
 
 ### Esperando o teste do usuário
-- R.22c/R.26 (sombras dos objetos, sol por temperatura, tom do dia), R.27 (detalhe por prédio com pontilhado) e R.28 (reflexo do carro `REFL_BLUR` 0,1, som da batida seco). A névoa laranja da cidade (R.22b). O grupo B da etapa 12 (12.7–12.13).
+- R.22c/R.26 (sombras dos objetos, sol por temperatura, tom do dia), R.27 (detalhe por prédio com pontilhado) e R.28 (reflexo do carro `REFL_BLUR` 0,1, som da batida seco). A névoa laranja da cidade (R.22b).
 
 ### Sessão A (Opus): fechar a iluminação
 1. **O brilho das janelas de longe unido às de perto** (pedido em 2026-10-03; plano do Claude):
@@ -316,7 +324,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **Raios de luz (*god rays*):** os do sol na tela (barato, a partir do céu visível perto do sol, na composição); os cones dos postes e holofotes no ar com névoa ou chuva (uma marcha pelo raio por luz próxima: medir antes).
 - **A névoa laranja da cidade:** se ainda não parecer "o centro aceso" (R.22b), uma luz de baixo para cima nas fachadas, mais forte perto do centro.
 - **A revisão geral da luz** (temperatura de cor para todas as luzes, unidades físicas, exposição): proposta ao usuário, **esperando a decisão dele**.
-- **Tijolo com relevo** (mapa normal com paralaxe), se sobrar.
+- **Tijolo com relevo** (mapa normal com paralaxe), se sobrar. **O usuário pediu (2026-10-03):** se der certo, sugerir outros materiais ("o jogo precisa de mais voxels"). Candidatos do Claude, do mais visível ao menos: a cantaria das fachadas históricas (blocos de pedra e cornijas), as calçadas de lajota e os paralelepípedos, o concreto com juntas e furos de forma, as chapas onduladas dos galpões e as portas de enrolar das lojas, o asfalto rachado da zona de fogo, as grades de ventilação e os ar-condicionados nas paredes. O relevo por paralaxe dá o *aspecto* de voxel sem geometria; volume de verdade (sacadas, caixas de ar-condicionado, cornijas salientes) é geometria e fica para a etapa 15.
 
 ### Sessão C (Sonnet): correções pequenas
 > Correções localizadas, sem sistemas novos (veja "Sessões com o Sonnet" em "Como trabalhar"). Avisar o usuário para trocar para o Sonnet.
@@ -326,6 +334,16 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **As portas de rua não abrem sozinhas** quando o jogador chega perto (as internas abrem).
 - **Rede social:** espaçar posts com o mesmo motivo (três ou quatro seguidos dizendo que precisa acordar às seis): guardar os assuntos recentes em `sim/social.ts` e evitar repeti-los por um tempo. Juntar as peças novas de `docs/tarefas/retorno/03-posts-streetwire.json`, se já tiverem voltado (conferir por script).
 - **Postes do andaime e dos pontos de ônibus não são sólidos.**
+- **Notebook (pedidos de 2026-10-03; mexer só em `src/laptop/draw.ts`/`laptop.ts`, não no shell):**
+  - com o notebook aberto, limitar o quanto se olha **para baixo** (olhar muito para baixo quebra o aparelho na tela; para cima continua livre);
+  - com a tampa fechada, antes da animação de abrir, os nomes das teclas (ESC, F1, F2…) aparecem através da tampa;
+  - cosmético: luzes de energia e de disco maiores, a marca e a câmera em cima da tela maiores, e o botão de ligar acima da tecla Delete.
+- **Chuva vista nas paredes internas** dos interiores (não chove dentro, mas as gotas aparecem desenhadas nas paredes; provavelmente o `fallOver` em `gpu/shader.ts` não sabe que a célula é de interior).
+- **Agradecimentos pelo sobrenome** (veja "Agradecimentos"): onde o nome inteiro soa estranho (empresa, marco), usar só o sobrenome no `thanks()` de `locale/names.ts`.
+
+### Bugs de interior (Opus; podem ir junto da Sessão E)
+- **Paredes internas cortadas no meio**, principalmente perto do X do theater district: às vezes não se passa pela porta ou se fica preso (o corte da diagonal na planta de `sim/interior.ts`).
+- **Elevador só até o corpo mais grosso do prédio:** prédios com dois corpos (um largo embaixo e um fino em cima) parecem ter elevador só nos andares de baixo. **Primeiro verificar se é bug** (se o corpo de cima tem andares com planta e se o poço chega até lá).
 
 ### Sessão D (Opus): Maps com categorias e rotas
 - Os marcos viram uma categoria; as outras listam os lugares por tipo (cafés, restaurantes, bares, farmácias, mercados…), do mais perto; escolher um traça a rota. O mapa ganha um modo escuro.
@@ -338,13 +356,18 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 ### Sessão F: fatia vertical de uma noite de trabalho (aprovada em princípio)
 - Um contratante → investigar → ir ao lugar → invadir → a cidade reage → pagamento ou calor (veja "Opiniões e sugestões do Claude"). Separar o que é sessão normal (contratante, pagamento, calor, polícia, notícias) do que é Trilha de hacking, e avisar quando usar o Opus 4.8. **Polícia que escala** (aceito): testemunhas e a viatura que passa; depois câmeras da rua e registros do lugar; no topo ("caso federal"), logs de telefone, antenas, Wi-Fi e posts.
 - **Perguntar ao usuário:** se as câmeras 3D de hoje (poste e fachada, até 140 m) bastam, ou se faltam dentro das lojas, mais longe, mais visíveis.
+- **Para mandar a amigos testarem (pedido em 2026-10-03):**
+  - **O limite de storage buffers do WebGPU:** o shader do mundo usa 16 por estágio (`gpu/world.ts` pede `min(16, o do adaptador)`), e o mínimo garantido pelo WebGPU é **8**. Num PC que só ofereça 8–10, o pipeline fica inválido e a tela preta. Antes de mandar: juntar buffers (as listas das luzes dinâmicas, `subs` com `lampCol`, o que couber no `fx`) até caber em 8, ou pelo menos mostrar um aviso claro com o limite do adaptador.
+  - **Empacotar em Electron**, se não for caro (o Electron é Chromium, então o WebGPU vem junto; o limite acima continua valendo, porque depende da placa de vídeo).
+  - **Tutorial em texto** (um arquivo para quem joga) e **um tutorial no celular**: a primeira mensagem que a pessoa recebe ensina o celular e a tirar o notebook. **O tutorial dentro do notebook (comandos básicos e um trabalho simples de hacking) é da Trilha de hacking** (está em "Feedback para o Opus 4.8").
 
 ### Depois (já nas etapas do Roteiro)
 - **Etapa 12 (web):** sites das empresas, portal de notícias e busca, o resto da rede social, registros dos cidadãos (Opus 4.8).
 - **Interiores:** pessoas dentro dos prédios (a simulação ainda não põe ninguém dentro) e as portas de rua abrindo vistas de fora; o interior falso nas janelas (*interior mapping*) para os prédios distantes.
 - **Telas em perspectiva no mundo** (a tela do notebook e do celular desenhadas no próprio aparelho, em perspectiva): a tela vira uma **textura** própria que o shader amostra quando o raio bate no vidro do aparelho (com filtragem e *mip*); manter o modo de hoje (por cima, nítido) ao usar, e a perspectiva só ao tirar/guardar e de longe. Depois da iluminação.
+- **Notebook com teclas e botões físicos no modelo 3D** (pedido em 2026-10-03, investigar): hoje só a tampa e a carcaça são 3D; ver o custo de fazer as teclas e o botão de ligar como peças do modelo, junto com as telas em perspectiva.
 - **Letreiros de lâmpadas como esferas de verdade** (só de perto, quando a lâmpada cobre ≥ ~2 células) e uma faixa intermediária com uma **fonte de pontos 3×5** entre as lâmpadas 5×7 e a letra ASCII numa célula (a 200 linhas a letra de longe é pequena demais para ler). Recalibrar as trocas pelo tamanho em células, não em metros.
-- **Distrito de entretenimento estilo Kamurocho** (referências 39–41; etapa 15 ou uma subetapa da R), do mais barato ao mais caro: letreiros perpendiculares verticais muito mais densos com moldura de lâmpadas; letreiros-caixa acesos nas paredes (nome de uma empresa que existe); sacos de lixo empilhados; modelos novos (cavalete aceso, máquina de venda, cones, ar-condicionado na parede, bicicletas, poste com losangos acesos); fios cruzando a rua; o portal aceso sobre a entrada; um tipo de distrito com ruas estreitas de pedestres. **Base:** `docs/tarefas/retorno/05-distrito-entretenimento.json`.
+- **Distrito de entretenimento: o Theater District com a densidade de Kamurocho, e um distrito de periferia com o portal (decidido pelo usuário em 2026-10-03).** O usuário pensa mais em Manhattan, perto da Times Square, do que em Yakuza: **adaptar o Theater District** com a densidade de coisas de Kamurocho (letreiros, lixo, ar-condicionado, fios), sem portal. O portal aceso fica para **um distrito mais na periferia**, como algumas cidades têm, com **um quarteirão reservado de ruelas só a pé entre os prédios**; se o portal fica nele ou não, decidir depois de ver. Itens (referências 39–41; etapa 15 ou uma subetapa da R), do mais barato ao mais caro: letreiros perpendiculares verticais muito mais densos com moldura de lâmpadas; letreiros-caixa acesos nas paredes (nome de uma empresa que existe); sacos de lixo empilhados; modelos novos (cavalete aceso, máquina de venda, cones, ar-condicionado na parede, bicicletas, poste com losangos acesos); fios cruzando a rua; o portal aceso sobre a entrada; um tipo de distrito com ruas estreitas de pedestres. **Base:** `docs/tarefas/retorno/05-distrito-entretenimento.json`.
 - **Paredes finas sem relevo** (bordas de recuos, cortes da diagonal): decidir com o usuário, junto com as fachadas mais complexas (15) ou numa subetapa da R.
 - **Carregamento sem travar:** a geração da cidade num worker com barra de progresso (o Windows marca a janela como "não respondendo").
 - **Etapa 13 (economia):** bolsa de valores com app e site; banco de dados de empresas com endereço físico e escritório do tipo certo; fabricantes da cidade dando a marca dos celulares **e dos chips**; comprar pacote de dados com dinheiro de verdade.
@@ -356,6 +379,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 ## Agradecimentos (easter eggs)
 
 Pedido do usuário em 2026-10-01: amigos dele que aparecem no jogo como agradecimento. **Cada nome aparece exatamente uma vez em toda cidade gerada, num lugar diferente conforme a semente:** numa semente é o nome de uma empresa, em outra um cidadão, uma rua, um marco, uma manchete, um contato no celular etc. A escolha do lugar sai da semente (determinística). Os nomes são escritos exatamente como abaixo, sem tradução.
+Os nomes estão como Nome Sobrenome; **onde só o sobrenome soar mais natural (o nome de uma empresa, por exemplo), pode usar só o sobrenome** (dito pelo usuário em 2026-10-03; ajuste na Sessão C).
 
 - Léo Fennix
 - Masotan Braun
@@ -442,7 +466,7 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 > - **Quando a etapa atual NÃO for de hacking, não abra os arquivos de hacking nem leia as entradas de hacking** deste documento. Só de ter esse conteúdo na resposta pode disparar o classificador e travar o trabalho. **Arquivos de hacking:** `src/sim/network.ts`, `src/sim/packets.ts`, a parte de hacking de `src/laptop/shell.ts` (os comandos `mmap`/`bruter`/`tdump`/`tnet`/`mbus` e a sessão remota `conn`/`remote`), o campo `util` de `src/sim/wifi.ts`, e o manual `docs/manual-hacking.html`/`.pdf`. **Seções deste doc marcadas `[HACKING]`:** a 10.6 no Histórico, as "Lições da etapa 10", "Design: pacotes de rede simulados", os itens `[HACKING]` do Roteiro e a subseção "Feedback para o Opus 4.8" (na seção de feedback).
 > - Se, mesmo fora de uma etapa de hacking, você **precisar** mexer num desses arquivos (um bug de build, por exemplo), avise o usuário e peça para ele confirmar o modelo antes.
 
-- **Onde estamos (2026-10-03):** etapas 1 a 11 e a R (render na GPU, R.1–R.28) feitas; a 12 (web) seguiu pelo celular (12.1–12.6) e pelo grupo B (12.7–12.13, esperando o teste). Agora a fila de iluminação e depois o resto: veja **"Plano das próximas sessões"** (a ordem das sessões está lá). O usuário vai ficar uns dias sem limite testando; **começar a próxima sessão pelo retorno dele e por `docs/tarefas/retorno/`.**
+- **Onde estamos (2026-10-03):** etapas 1 a 11 e a R (render na GPU, R.1–R.28) feitas; a 12 (web) seguiu pelo celular (12.1–12.6) e pelo grupo B (12.7–12.13, aprovado pelo usuário em 2026-10-03). Agora a fila de iluminação (Sessão A) e depois o resto: veja **"Plano das próximas sessões"** (a ordem das sessões está lá).
 - **Na Trilha de hacking** a etapa 10 está fechada (10.6 e 10.11, Opus 4.8); o que falta dela está no Roteiro. O retorno do usuário sobre a 9 B/C, a 10 (grupo C, 10.7–10.11) e o manual de hacking (`docs/manual-hacking.pdf`) pode chegar a qualquer momento.
 - **A nota "perguntar sobre a etapa 6"** é para o começo da etapa 15.
 - **Antes de começar qualquer etapa, leia as seções "Lições da etapa N"** nas notas técnicas: são o conhecimento acumulado das sessões anteriores (a 7 tem como testar a simulação sem o jogador; a 8, como testar o celular).
@@ -770,7 +794,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
 12. **Web dinâmica** (a próxima etapa; reorganizado pelo usuário em 2026-10-02: a web é quase uma etapa por si só e aproveita a base que já existe, cidadãos, empresas, eventos e o gerador de textos). Grupos sugeridos, a confirmar no começo:
    - ✅ **Grupo A, o celular redesenhado** (12.1): tela inicial, menu, discador, mensagens e mapa; modelos visuais e capinhas; apps de fábrica e a pasta; câmera em blocos; 60 mil pessoas.
    - ✅ **Antes do grupo B: 12.4–12.6** (celular, notebook, camada HD, sistema de arquivos do celular).
-   - ✅ **Grupo B (12.7–12.13, esperando o teste):** câmeras de segurança e o modo CCTV, pedestres usando o celular, sons de ambiente (carros e sirenes distantes, o celular de quem passa), manchetes clicáveis com texto e foto, e o bug dos pedestres na diagonal (veja "Plano das próximas sessões").
+   - ✅ **Grupo B (12.7–12.13, aprovado em 2026-10-03):** câmeras de segurança e o modo CCTV, pedestres usando o celular, sons de ambiente (carros e sirenes distantes, o celular de quem passa), manchetes clicáveis com texto e foto, e o bug dos pedestres na diagonal (veja "Plano das próximas sessões").
    - **Sites das empresas:** gerados a partir da simulação (horário, endereço, o que vendem, quem trabalha lá), desenhados no notebook; alguns com versão para celular (sites leves de 2008).
    - **Portal de notícias e busca:** as manchetes vindas da fila de eventos, uma busca que acha empresas, pessoas e lugares que existem.
    - **O resto da rede social:** respostas, compartilhamentos, assuntos em alta, o site do Streetwire no notebook, o jogador postar.

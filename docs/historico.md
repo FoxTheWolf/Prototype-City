@@ -6,6 +6,10 @@
 
 > Os pedidos e as filas de feedback já organizadas saem do CLAUDE.md quando atendidos e vêm para cá, com o texto original. Os que ainda estavam abertos na mudança foram resumidos em "Pedidos em aberto" no CLAUDE.md. Entradas novas no topo.
 
+### Movidos em 2026-10-03, terceira organização
+
+**Grupo B da etapa 12 (12.7–12.13) aprovado pelo usuário em 2026-10-03:** "o grupo B da etapa 12, por mim, tá tudo ok". A caixa de feedback dessa data (portal de entrada, ChatGPT, bugs de interior e do notebook, fatia vertical para amigos) foi distribuída no "Plano das próximas sessões" do CLAUDE.md; o texto do tutorial do notebook foi para "Feedback para o Opus 4.8". Os retornos do Gemini/ChatGPT chegaram em `docs/tarefas/retorno/` (o `01-tipos-de-lugar.json` veio com texto em volta e foi limpo).
+
 ### Movidos em 2026-10-03, segunda organização (sessão Opus, antes da pausa do limite semanal)
 
 **R.28 (2026-10-03):** o reflexo dos carros menos desfocado ainda (`REFL_BLUR` 0,2 → 0,1, o "roughness" que o usuário pediu) e o som da batida refeito: era um "sininho" porque o vidro eram osciladores senoidais agudos com decaimento; agora é uma pancada seca (seno grave caindo de 110 para 38 Hz em 0,12 s, mais ruído grave), o amassado curto e o vidro como estalos de ruído agudo, sem tom (`smash` em `audio/sound.ts`). Também: o CLAUDE.md reorganizado em sessões ("Plano das próximas sessões") e as tarefas para o Gemini e o ChatGPT em `docs/tarefas/`.
