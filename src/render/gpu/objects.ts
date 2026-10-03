@@ -220,8 +220,9 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         kk *= 0.55 + 0.45 * h + 0.25 * nrm.z;
       } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && shape == 0u), fx[p + 12u], face == 2); }
     }
-    var rgb = col * kk; var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     let painted = mat == M_GLOW || mat == M_TEXT || (mat == M_BOARD && face == 0);
+    // at night the paint reads darker, as the walls' palette does (the lamps' light comes on top, by its color)
+    var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
     if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); } // the room's lamps
     else if (!painted) {
@@ -240,7 +241,11 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
-    gEm = sat(oEm); gIl = oIl; gTag = best; gGlowK = 1.0;
+    gEm = sat(oEm); gIl = oIl; gTag = best; gGlowK = 1.0; gWet = 0.0;
+    // the material: a vehicle's body is glossy paint, leaves are matte; the rest (people, poles, benches) plain
+    let wn = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let wl = length(wn);
+    gNrm = select(vec3f(0.0, 0.0, 1.0), wn / wl, wl > 1e-5);
+    gMat = select(select(MAT_NONE, MAT_LEAF, mat == M_LEAF), MAT_PAINT, lean && mat == M_SOLID && !indoor);
     cl = Cell(ch, max(rgb, vec3f(0.0)), cl.bg, best, select(select(KIND_OTHER, KIND_OBJECT, mat == M_SOLID && !painted), KIND_ROOM, indoor), sun);
   }
   return cl;

@@ -93,6 +93,19 @@ const DSIDE = ${SIDE};
 const DCELL = ${CELL}.0;
 const BLOCKS = array<u32, 256>(${Array.from(BLOCKS).map((b) => `${b}u`).join(',')});
 const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u, 90u, PLUS), vec3u(48u, O, EQ), vec3u(72u, HASH, EQ));
+// materials (R.23): how rough a surface is (0 a mirror, 1 matte) and how much it reflects head-on (F0)
+const MAT_NONE = 0u; const MAT_ASPHALT = 1u; const MAT_CONCRETE = 2u; const MAT_BRICK = 3u; const MAT_GLASS = 4u; const MAT_METAL = 5u;
+const MAT_PAINT = 6u; const MAT_LEAF = 7u; const MAT_STONE = 8u; const MAT_WINDOW = 9u;
+const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.22, 1.0, 0.75, 0.05);
+const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.12, 0.25, 0.05, 0.02, 0.03, 0.05);
+// each facade style's wall (office, glass, brick, historic, residential, warehouse, lit stripes, spire, ...)
+const WALL_MAT = array<u32, 16>(2u, 5u, 3u, 8u, 2u, 5u, 2u, 5u, 2u, 5u, 5u, 8u, 8u, 5u, 2u, 2u);
+/** How far a mirroring surface traces its reflection (m); past it, it mirrors the sky only. */
+const REFL_FAR_WALL = 260.0; const REFL_FAR_GROUND = 160.0;
+/** At night, how much darker the street objects' paint reads than its palette color (as the walls' palette is). */
+const OBJ_NIGHT = 0.3;
+/** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
+const LAMP_GLOSS = 1.2;
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u; const KIND_ROOM = 5u;
 const BURN_START = ${f(BURN_START)};
 const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
@@ -864,23 +877,23 @@ fn glassOver(cl: Cell, g: InC, m: f32) -> Cell {
 fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m: f32, A: f32) -> Cell {
   let q = u32(bk * ${BLD});
   let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let H = bld[q + 4u];
-  let hx = u.px + t * rdx; let hy = u.py + t * rdy;
+  let hx = gOX + t * rdx; let hy = gOY + t * rdy;
   let style = i32(bld[q + 10u]); let lit = bld[q + 11u]; let feat = bld[q + 18u];
   let shop = bld[q + 19u] > 0.5;
   let win = colAt(q + 12u); let frame = colAt(q + 15u); let sign = colAt(q + 21u);
   // where along the face, its light, the face's span
-  var along = 0.0; var lightK = 1.0; var face = 0; var dn = 1.0; var wsun = 0.0;
+  var along = 0.0; var lightK = 1.0; var face = 0; var dn = 1.0; var wsun = 0.0; var nw = vec2f(0.0);
   if (side == 2) {
     let rr = (x1 - x0) * 0.5; let nx = (hx - x0 - rr) / rr; let ny = (hy - y0 - rr) / rr;
     along = (atan2(ny, nx) + 3.14159265) * rr; lightK = 0.72 + 0.28 * abs(nx);
-    wsun = nx * u.sunX + ny * u.sunY;
+    wsun = nx * u.sunX + ny * u.sunY; nw = normalize(vec2f(nx, ny));
   } else if (side == 3) {
     let kx = bld[q + 7u]; let ky = bld[q + 8u];
     along = hx * ky - hy * kx; lightK = 0.72 + 0.28 * abs(kx); face = 4; dn = kx * rdx + ky * rdy;
-    wsun = kx * u.sunX + ky * u.sunY;
+    wsun = kx * u.sunX + ky * u.sunY; nw = vec2f(kx, ky);
   } else {
     along = select(hx, hy, side == 0); lightK = select(0.72, 1.0, side == 0);
-    if (side == 0) { face = select(0, 1, rdx < 0.0); dn = rdx; } else { face = select(3, 2, rdy > 0.0); dn = rdy; }
+    if (side == 0) { face = select(0, 1, rdx < 0.0); dn = rdx; nw = vec2f(select(1.0, -1.0, rdx > 0.0), 0.0); } else { face = select(3, 2, rdy > 0.0); dn = rdy; nw = vec2f(0.0, select(1.0, -1.0, rdy > 0.0)); }
     wsun = select(select(select(u.sunY, -u.sunY, face == 2), u.sunX, face == 1), -u.sunX, face == 0);
   }
   var f0 = -1e9; var f1 = 1e9;
@@ -921,7 +934,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       if (l0 <= l1 && l0 < bl) { bl = l0; }
     }
     if (bl <= 1.0) {
-      let rT = t - sb + sb * bl; let zr = u.eye - m * rT + A * rT * rT;
+      let rT = t - sb + sb * bl; let zr = gOZ - m * rT + A * rT * rT;
       if (zr > bld[q + 60u] && zr < bld[q + 61u]) {
         rs = select(2, 1, bl < 1e-6); T = rT; z = zr; along = af + (along - af) * bl;
         shade = shade0 * select(0.68, 1.08, rs == 1);
@@ -956,18 +969,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   var tang = 0.0;
   if (side == 0) { tang = rdy; } else if (side == 1) { tang = rdx; } else if (side == 3) { tang = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }
   else { let nx = hx - cx; let ny = hy - cy; let n = max(1e-6, length(vec2f(nx, ny))); tang = (rdx * -ny + rdy * nx) / n; }
-  let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - u.eye) / t) * 4.0 + f32(bk % 7));
+  let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - gOZ) / t) * 4.0 + f32(bk % 7));
   let fl = ifloor(z / FLOOR_H); let fz = z / FLOOR_H - f32(fl);
   let escU = (f32(wi % 7) - 2.0 + fw) / 2.0;
   // the room behind the wall here, near enough to make out: this floor's plan (the ground floor's or the
   // upper floors' of this box), entered where the ray met the wall
   var po = 0u; var pk = Peek(false, 0.0, 0, 0.0, 0.0); var lot = -1;
-  if (detailed && t < PEEK_FAR && side != 2 && fl >= 0 && f32(fl) < floor((H - 1.0) / FLOOR_H + 0.5)) {
+  if (detailed && t < PEEK_FAR && !gRefl && side != 2 && fl >= 0 && f32(fl) < floor((H - 1.0) / FLOOR_H + 0.5)) {
     po = fx[FX_TAB + fx[0] + u32(bk) * 2u + select(1u, 0u, fl == 0)];
     if (po > 0u) { lot = i32(fx[po + 5u]); pk = peekInto(po, q, hx, hy, rdx, rdy); }
   }
   let winPw = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched);
-  var isWin = false;
+  var isWin = false; var glass = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0;
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
@@ -1122,7 +1135,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   } else if (pk.ok && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
     // a window: the room behind it, lit by its own lamps
     let P = peekCell(po, lot, bk, pk, fl, rdx, rdy, -m, t, winPw, sheen);
-    ch = P.ch; c = P.c; isWin = true;
+    ch = P.ch; c = P.c; isWin = true; glass = true;
   } else if (detailed && S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
@@ -1147,18 +1160,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     } else {
       // the average of what up close is wall and dark panes, so the color holds when the detail comes in
       let paneK = select(select(select(0.3, 0.2, S == 2), 0.24, S == 4), 0.0, S == 1 || S == 5);
-      ch = farWall; c = mix(frame * farK * shade, darkPane, paneK);
+      ch = farWall; c = mix(frame * select(farK, 1.15, S == 1) * shade, darkPane, paneK); glass = S == 1;
     }
   } else if (z < FLOOR_H && shop) {
-    if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; em = true; }
+    if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; em = true; glass = true; }
     else { ch = BAR; c = frame * shade; }
   } else if (S == 1) {
     // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
     if (fz < 0.08) { ch = DASH; c = frame * 0.8 * shade; }
     else if (fw < 0.07 || corner) { ch = BAR; c = frame * 1.5 * shade; }
     else if (hh < litK) {
-      if (wp > 0.04) { ch = select(select(COL, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
-    } else { ch = select(select(DOT, COL, sheen > 0.4), SL, sheen > 0.85); c = frame * (1.3 + 0.9 * sheen) * shade; }
+      if (wp > 0.04) { ch = select(select(COL, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
+    } else { ch = select(select(DOT, COL, sheen > 0.4), SL, sheen > 0.85); c = frame * (1.0 + 0.3 * sheen) * shade; glass = true; }
   } else if (S == 5) {
     let dp = along % 6.0;
     if (z > H - 3.2 && z < H - 1.4) {
@@ -1182,11 +1195,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else if (fz < 0.08) { ch = DASH; c = frame * 1.1 * shade; }
     else if (fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82) {
       if (fz > 0.7) { ch = CARET; c = frame * 1.3 * shade; }
-      else if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
+      else if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
     } else { ch = COL; c = frame * shade; }
   } else if (S == 2) {
     if (fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78 && !corner) {
-      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
+      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
     } else {
       let course = ifloor(z / 0.5); let off = f32(course & 1) * 0.6;
       ch = select(EQ, BAR, corner); c = frame * (0.8 + 0.35 * hash3(course, ifloor((along + off) / 1.2), bk)) * shade;
@@ -1199,10 +1212,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       else if (balK == 2) { ch = COL; c = vec3f(110.0 * shade + 10.0, 140.0 * shade + 10.0, 160.0 * shade + 12.0); }
       else { ch = select(BAR, DASH, balK == 3); c = frame * 1.3 * shade; }
     } else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) {
-      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
+      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
     } else { ch = select(DOT, BAR, corner); c = frame * shade; }
   } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
-    if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; em = true; } else { ch = EQ; c = darkPane; }
+    if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
   } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
   var emC = select(vec3f(0.0), c, em);
   // a lit room's light spills onto the wall around its window
@@ -1251,7 +1264,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let scH = bld[q + 52u];
   if (scH > 0.0 && side != 2 && face < 4 && ((u32(bld[q + 54u]) >> u32(face)) & 1u) == 1u) {
     let sb = SCAF_D / max(1e-6, abs(dn)); let sA = along0 - da * sb; let sT = t - sb;
-    let zs = u.eye - m * sT + A * sT * sT;
+    let zs = gOZ - m * sT + A * sT * sT;
     if (sA > f0 + 0.1 && sA < f1 - 0.1 && zs > SHED_Z + 1.1 && zs < scH) {
       let uu = sA - f0; let tw = max(0.05, dAlong * 0.5); let tz = max(0.05, dz * 0.5); let lz = (zs - SHED_Z) % 2.0;
       let upright = uu % 2.4 < tw || f1 - sA < tw; let led = lz < tz || zs > scH - tz; let board = lz < 0.14 + tz;
@@ -1270,7 +1283,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
   if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c += L; il += L; }
-  if (!isWin) { gEm = sat(emC); gIl = il; gTag = T; gGlowK = glowK; }
+  if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; } else { gEm = vec3f(0.0); gIl = vec3f(0.0); }
+  gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0;
+  gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));
 }
@@ -1307,7 +1322,7 @@ fn burnGround(wx: f32, wy: f32, rd: f32, W: f32, Hh: f32) -> Cell {
 
 // ---- the ground (renderWorld's ground loop)
 fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
-  let wx = u.px + rdx * rd; let wy = u.py + rdy * rd;
+  let wx = gOX + rdx * rd; let wy = gOY + rdy * rd;
   let W = f32(arrayLength(&xc)); let Hh = f32(arrayLength(&yc));
   let bg = vec3f(7.0, 8.0, 12.0);
   if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return burnGround(wx, wy, rd, W, Hh); }
@@ -1315,14 +1330,14 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let fog = 1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day);
   let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);
   let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
-  var ch = DOT; var c = vec3f(38.0, 38.0, 46.0);
+  var ch = DOT; var c = vec3f(38.0, 38.0, 46.0); var mat = MAT_CONCRETE;
   var dens = 0.0; // litter per 0.5 m square
   let roadX = (gx & 1) == 0; let roadY = (gy & 1) == 0;
   let sD = (wx - u.dox) * u.dnx + (wy - u.doy) * u.dny; let aD = abs(sD); let pastD = aD - u.dw * 0.5;
   let diagGlyph = select(SL, BS, u.dex * u.dey > 0.0);
   let asphalt = select(select(TICK, COM, hv < 0.8), DOT, hv < 0.5);
   if (pastD < 0.0) {
-    ch = asphalt;
+    ch = asphalt; mat = MAT_ASPHALT;
     if (!roadY && rd < 200.0) {
       let al = (wx - u.dox) * u.dex + (wy - u.doy) * u.dey; let m = aD % LANE_W;
       if (aD < 0.3) { ch = diagGlyph; c = vec3f(210.0, 170.0, 60.0); }
@@ -1330,7 +1345,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       else if (min(m, LANE_W - m) < 0.12 && aD < floor(u.dw * 0.5 / LANE_W) * LANE_W - 1.0 && ifloor(al / 3.0) % 2 == 0) { ch = diagGlyph; c = vec3f(150.0); }
     }
   } else if (roadX || roadY) {
-    ch = asphalt;
+    ch = asphalt; mat = MAT_ASPHALT;
     if (roadX != roadY && rd < 200.0) {
       var b0a = 0.0; var b0b = 0.0; var e0a = 0.0; var e0b = 0.0; var across = 0.0; var along = 0.0;
       if (roadX) { b0a = xb[gx]; b0b = xb[gx + 1]; e0a = yb[gy]; e0b = yb[gy + 1]; across = wx - (b0a + b0b) * 0.5; along = wy; }
@@ -1374,7 +1389,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       dens = 0.01;
       let mx = (blk[o] + blk[o + 2u]) * 0.5; let my = (blk[o + 1u] + blk[o + 3u]) * 0.5;
       if (abs(wx - mx) < 1.5 || abs(wy - my) < 1.5) { ch = select(COM, DOT, hv < 0.5); c = vec3f(95.0, 85.0, 70.0); }
-      else { ch = select(select(SEMI, COM, hv < 0.7), QUO, hv < 0.4); c = vec3f(40.0, 95.0 + hv * 40.0, 45.0); }
+      else { ch = select(select(SEMI, COM, hv < 0.7), QUO, hv < 0.4); c = vec3f(40.0, 95.0 + hv * 40.0, 45.0); mat = MAT_LEAF; }
     } else if (opk == 2u) {
       let fx = fract(wx / 2.5); let fy = fract(wy / 2.5);
       ch = select(COL, PLUS, fx < 0.06 || fy < 0.06); c = vec3f(92.0, 86.0, 80.0);
@@ -1396,7 +1411,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       let ux = wx - (f32(lx) * 0.5 + half + room * hash3(lx, ly, 19)); let uy = wy - (f32(ly) * 0.5 + half + room * hash3(lx, ly, 20));
       let ang = hash3(lx, ly, 21) * 3.14159265; let ca = cos(ang); let sa = sin(ang);
       let lu = abs(ux * ca + uy * sa); let lw = abs(-ux * sa + uy * ca);
-      let e = rd * rd / (u.eye * u.scale) * 0.5;
+      let e = rd * rd / (max(gOZ, 0.5) * u.scale) * 0.5;
       let hit = select((lu < max(Lb.y, e)) && (lw < max(Lb.z, e)), length(vec2f(lu, lw)) < max(Lb.y, e), Lb.x == 0.0);
       if (hit) { ch = u32(La.x); c = La.yzw; }
     }
@@ -1409,7 +1424,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   }
   if (u.wet > 0.02) {
     let wk = u.wet * (1.0 - u.snow);
-    c *= vec3f(1.0 - 0.35 * wk, 1.0 - 0.35 * wk, 1.0 - 0.3 * wk);
+    // (darker, less than before the reflections: the mirror now takes its share of the light)
+    c *= vec3f(1.0 - 0.2 * wk, 1.0 - 0.2 * wk, 1.0 - 0.17 * wk);
     lk = 1.0 + 1.1 * wk * select(1.0, 0.75 + 0.25 * sin(u.sec * 7.0 + hv * 30.0), u.rain > 0.0);
     if (u.rain > 0.0 && rd < 22.0 && !underRoof(wx, wy, 0.1)) {
       // splashes: a ring that grows from a random spot of each 0.33 m square, for a blink, more in a
@@ -1417,14 +1433,20 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       let sx = ifloor(wx * 3.0); let sy = ifloor(wy * 3.0); let ph = fract(u.sec * 2.3 + hash3(sx, sy, 41));
       if (hash3(sx, sy, 42) < u.rain * 0.3 && ph < 0.09) {
         let d = length(vec2f(wx - (f32(sx) + 0.2 + 0.6 * hash3(sx, sy, 43)) / 3.0, wy - (f32(sy) + 0.2 + 0.6 * hash3(sx, sy, 44)) / 3.0));
-        let e = rd * rd / (u.eye * u.scale) * 0.5; let rr = 0.02 + ph * 1.1;
+        let e = rd * rd / (max(gOZ, 0.5) * u.scale) * 0.5; let rr = 0.02 + ph * 1.1;
         if (abs(d - rr) < max(0.015, e)) { ch = select(O, TICK, rr < 0.05 || e > 0.04); c = vec3f(150.0, 150.0, 165.0); }
       }
     }
   }
   c = sat(c);
   let gl = lightAt(wx, wy, 0.0) * (lk * fog);
-  gEm = vec3f(0.0); gIl = gl; gTag = rd;
+  gEm = vec3f(0.0); gIl = gl; gTag = rd; gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
+  // how wet the spot is: a film everywhere it rains, puddles in the low spots (more on the asphalt)
+  gWet = 0.0;
+  if (u.wet > 0.02 && mat != MAT_LEAF) {
+    let pd = smoothK(select(0.62, 0.55, mat == MAT_ASPHALT), 0.72, noise(wx / 5.0 + 13.0, wy / 5.0 + 7.0) * 0.7 + noise(wx / 1.7, wy / 1.7) * 0.3);
+    gWet = u.wet * (1.0 - u.snow) * select(0.15 + 0.6 * pd, 0.45 + 0.55 * pd, mat == MAT_ASPHALT);
+  }
   return Cell(ch, c * fog + gl, bg, rd, KIND_GROUND, 0.0);
 }
 
@@ -1462,8 +1484,20 @@ fn tone(x: vec3f) -> vec3f {
   if (mx > 1.0) { y = vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)); }
   return y;
 }
-// ---- the finish: moonlight, daylight and haze, a whole-city blackout, the display modes
-fn finish(cl: Cell) -> Cell {
+// ---- materials: Fresnel (Schlick), the highlight's spread (GGX), the roughness with the wet film
+fn fres(f0: f32, cosT: f32) -> f32 { let k = 1.0 - clamp(cosT, 0.0, 1.0); let k2 = k * k; return f0 + (1.0 - f0) * k2 * k2 * k; }
+fn ggx(nh: f32, r: f32) -> f32 { let a = max(r * r, 0.002); let a2 = a * a; let d = nh * nh * (a2 - 1.0) + 1.0; return a2 / (3.14159265 * d * d); }
+fn matRough() -> f32 { return mix(MAT_ROUGH[gMat], 0.04, gWet); }
+/** The sun's highlight on this cell's surface (its BRDF's specular part times N.L; Kelemen's visibility), 0 on matte. */
+fn sunGloss() -> f32 {
+  if (gMat == MAT_NONE) { return 0.0; }
+  let Ls = normalize(vec3f(u.sunX, u.sunY, max(u.sunZ, 0.0))); let V = -gRay; let N = gNrm;
+  let nl = dot(N, Ls); if (nl <= 0.0 || dot(N, V) <= 0.0) { return 0.0; }
+  let H = normalize(Ls + V); let lh = max(dot(Ls, H), 0.1);
+  return min(40.0, ggx(max(dot(N, H), 0.0), matRough()) * fres(MAT_F0[gMat], lh) * 0.25 / (lh * lh) * nl);
+}
+// ---- the finish: moonlight, daylight and haze, a whole-city blackout (light), then the display modes (display)
+fn light(cl: Cell) -> Cell {
   var o = cl;
   gGlow = 0.0;
   if (o.depth >= 1e9) { return o; }
@@ -1478,7 +1512,9 @@ fn finish(cl: Cell) -> Cell {
     let tint = mix(vec3f(1.0), base / max(mb, 1.0), smoothK(2.0, 12.0, mb));
     // a surface reflects in proportion to how light it is: dark glass under a white lamp stays dark and
     // keeps its hue, a pale sidewalk takes the full pool
-    let nl = lamp * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
+    var nl = lamp * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
+    // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color
+    if (gMat != MAT_NONE) { let r = matRough(); nl += lamp * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * LAMP_GLOSS); }
     o.c = base + emit + nl; lamp = nl;
   }
   gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
@@ -1507,7 +1543,9 @@ fn finish(cl: Cell) -> Cell {
       let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
       let E = skyC + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * share * gSun) + vec3f(u.flash * 0.6);
       // the lamps light the surface as the sky does (weak by day); what glows is added over
-      let lin = tone(alb * (E + pow(lamp / 255.0, vec3f(2.2)) * DAY_LAMP) + pow(emit / 255.0, vec3f(2.2)) * DAY_EMIT);
+      // and the sun's highlight on what is glossy, in the sun's color
+      let gloss = select(0.0, sunGloss(), tagged) * DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun;
+      let lin = tone(alb * (E + pow(lamp / 255.0, vec3f(2.2)) * DAY_LAMP) + sunC * gloss + pow(emit / 255.0, vec3f(2.2)) * DAY_EMIT);
       let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
       let dc = mix(pow(lin, vec3f(1.0 / 2.2)) * 255.0, haze, fd);
       o.c = sat(mix(o.c * (1.0 - f) + haze * f, dc, smoothK(0.0, 0.35, day)));
@@ -1535,6 +1573,11 @@ fn finish(cl: Cell) -> Cell {
   // at night bright sums roll off on the luminance (the hue kept) instead of each channel clipping at 255,
   // which sent a lit color to grey and white
   if (night > 0.01) { o.c = mix(o.c, nightTone(o.c), night); }
+  return o;
+}
+fn display(cl: Cell) -> Cell {
+  var o = cl;
+  if (o.depth >= 1e9) { return o; }
   if (u.solid > 0.0) { o.bg = o.c * u.solid; }
   if (u.sharp < 3.0) {
     let s = u.sharp;
@@ -1955,11 +1998,11 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
   let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
   let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
   let W = arrayLength(&xc); let H = arrayLength(&yc);
-  var cx = i32(xc[u32(clamp(u.px, 0.0, f32(W - 1u)))]);
-  var cy = i32(yc[u32(clamp(u.py, 0.0, f32(H - 1u)))]);
+  var cx = i32(xc[u32(clamp(gOX, 0.0, f32(W - 1u)))]);
+  var cy = i32(yc[u32(clamp(gOY, 0.0, f32(H - 1u)))]);
   let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
-  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - u.px) * ix;
-  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - u.py) * iy;
+  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - gOX) * ix;
+  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - gOY) * iy;
   var tIn = 0.0;
   var best = 1e9; var bk = -1; var bside = 0; var roof = false;
   for (var s = 0; s < 1024; s++) {
@@ -1968,7 +2011,7 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
     if ((cx & 1) == 1 && (cy & 1) == 1) {
       let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
       let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]); let maxH = blk[o + 6u];
-      let zMin = min(u.eye - m * tIn + A * tIn * tIn, u.eye - m * tOut + A * tOut * tOut);
+      let zMin = min(gOZ - m * tIn + A * tIn * tIn, gOZ - m * tOut + A * tOut * tOut);
       if (b1 > b0 && zMin < maxH) {
         for (var k = b0; k < b1; k++) {
           let q = u32(k * ${BLD});
@@ -1976,41 +2019,41 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
           if ((x0 >= u.inX0 - 0.01) && (x1 <= u.inX1 + 0.01) && (y0 >= u.inY0 - 0.01) && (y1 <= u.inY1 + 0.01)) { continue; }
           var tN = 0.0; var tF = 0.0; var side = 0;
           if (bld[q + 5u] > 0.5) {
-            let rr = (x1 - x0) * 0.5; let ox = u.px - (x0 + rr); let oy = u.py - (y0 + rr);
+            let rr = (x1 - x0) * 0.5; let ox = gOX - (x0 + rr); let oy = gOY - (y0 + rr);
             let qa = rdx * rdx + rdy * rdy; let qb = ox * rdx + oy * rdy;
             let disc = qb * qb - qa * (ox * ox + oy * oy - rr * rr);
             if (disc <= 0.0) { continue; }
             tN = (-qb - sqrt(disc)) / qa; tF = (-qb + sqrt(disc)) / qa; side = 2;
           } else {
-            let ax = (x0 - u.px) * ix; let bx = (x1 - u.px) * ix; let ay = (y0 - u.py) * iy; let by = (y1 - u.py) * iy;
+            let ax = (x0 - gOX) * ix; let bx = (x1 - gOX) * ix; let ay = (y0 - gOY) * iy; let by = (y1 - gOY) * iy;
             let nnx = min(ax, bx); let nny = min(ay, by);
             tF = min(max(ax, bx), max(ay, by)); tN = max(nnx, nny); side = select(1, 0, nnx > nny);
             if (bld[q + 6u] > 0.5) {
               let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
-              let dn = knx * rdx + kny * rdy; let th = (kc - knx * u.px - kny * u.py) / dn;
+              let dn = knx * rdx + kny * rdy; let th = (kc - knx * gOX - kny * gOY) / dn;
               if (dn < 0.0) { if (th > tN) { tN = th; side = 3; } }
               else if (dn > 0.0) { tF = min(tF, th); }
-              else if (knx * u.px + kny * u.py > kc) { continue; }
+              else if (knx * gOX + kny * gOY > kc) { continue; }
             }
           }
           if (tN <= 0.01 || tN >= tF || tN >= best) { continue; }
-          let zN = u.eye - m * tN + A * tN * tN;
+          let zN = gOZ - m * tN + A * tN * tN;
           if (zN >= 0.0 && zN <= h) { best = tN; bk = k; bside = side; roof = false; }
           else if (zN > h && m > 0.0) {
-            let tr = (u.eye - h) / m;
+            let tr = (gOZ - h) / m;
             if (tr <= tF && tr < best) { best = tr; bk = k; bside = side; roof = true; }
           }
         }
         if (bk >= 0) { break; }
       }
     }
-    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - u.px) * ix; }
-    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - u.py) * iy; }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - gOX) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - gOY) * iy; }
   }
 
   // the Sarcophagus and its cranes, far past the fence, behind whatever is nearer
   var far = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
-  let vis = sarcVis();
+  let vis = select(sarcVis(), 0.0, gRefl);
   if (vis > 0.0) {
     var bgS = vec3f(7.0, 8.0, 12.0); if (m <= 0.0) { bgS = skyCell(m, rdx, rdy).bg; }
     far = sarcCell(-m / L, u.scale * L, L, rdx / L, rdy / L, f32(gx), bgS, vis);
@@ -2018,15 +2061,15 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
     if (cr.depth < far.depth) { far = cr; }
   }
   // the cordon fence on the city edge (fenceColumn): chain link on posts, barbed wire on top, where nothing nearer is hit
-  let fX = select(select(1e9, -u.px / rdx, rdx < 0.0), (u.cityW - u.px) / rdx, rdx > 0.0);
-  let fY = select(select(1e9, -u.py / rdy, rdy < 0.0), (u.cityH - u.py) / rdy, rdy > 0.0);
+  let fX = select(select(1e9, -gOX / rdx, rdx < 0.0), (u.cityW - gOX) / rdx, rdx > 0.0);
+  let fY = select(select(1e9, -gOY / rdy, rdy < 0.0), (u.cityH - gOY) / rdy, rdy > 0.0);
   let tf = min(fX, fY);
   var cl = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
   var done = false;
   if (tf > 0.05 && tf <= 2000.0 && tf < min(min(select(1e9, best, bk >= 0), tG), far.depth)) {
-    let z = u.eye - m * tf + A * tf * tf;
+    let z = gOZ - m * tf + A * tf * tf;
     if (z >= 0.0 && z < 4.2) {
-      let along = select(u.px + tf * rdx, u.py + tf * rdy, fX < fY);
+      let along = select(gOX + tf * rdx, gOY + tf * rdy, fX < fY);
       var ch = 0u;
       if (z > 3.7) { ch = select(TILDE, X, (ifloor(along / 0.4) & 1) == 1); }
       else if (along % 3.0 < 0.15 + tf * 0.002) { ch = BAR; }
@@ -2042,9 +2085,9 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
   }
   if (!done) {
     if (bk >= 0 && best < tG && best < far.depth) {
-      if (roof) { cl = roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best); }
+      if (roof) { cl = roofCell(u32(bk * ${BLD}), best, gOX + rdx * best, gOY + rdy * best); }
       // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
-      else { cl = wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale, m, A); }
+      else { cl = wallCell(bk, best, bside, rdx, rdy, gOZ - m * best + A * best * best, best / u.scale, m, A); }
     }
     else if (tG < 1e8 && tG < far.depth) { cl = groundCell(tG, rdx, rdy); }
     else if (far.depth < 1e9) { cl = far; }
@@ -2121,6 +2164,17 @@ var<private> gTag: f32 = -1.0;
 var<private> gGlow: f32 = 0.0;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
 var<private> gGlowK: f32 = 1.0;
+// the material, the surface's normal (toward the viewer) and how wet it is, of the cell at gTag (R.23)
+var<private> gMat: u32 = 0u;
+var<private> gNrm: vec3f = vec3f(0.0, 0.0, 1.0);
+var<private> gWet: f32 = 0.0;
+// this cell's ray (unit, the way it travels)
+var<private> gRay: vec3f = vec3f(1.0, 0.0, 0.0);
+// where the rays through the city start (the eye; a mirror's spot for a reflection), and whether it is one
+var<private> gOX: f32 = 0.0;
+var<private> gOY: f32 = 0.0;
+var<private> gOZ: f32 = 0.0;
+var<private> gRefl: bool = false;
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
@@ -2139,6 +2193,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
   let L = sqrt(rdx * rdx + rdy * rdy);
   let A = L * L / (2.0 * u.curveR);
+  gOX = u.px; gOY = u.py; gOZ = u.eye; gRefl = false; gMat = MAT_NONE; gWet = 0.0;
+  gRay = normalize(vec3f(rdx, rdy, -m));
   var tG = 1e9;
   if (m > 0.0) { let disc = m * m - 4.0 * A * u.eye; if (disc > 0.0) { tG = 2.0 * u.eye / (m + sqrt(disc)); } }
 
@@ -2152,13 +2208,51 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // the finished cell, only beyond the glass indoors (the sky's depth is 1e9, so the finish leaves it as it is)
   cl = objectsOver(smokeOver(cl, rdx, rdy, m), gid.x, gid.y, rdx, rdy, -m);
   if (inc.state == 2u) { cl = glassOver(cl, inc, m); }
+  // ---- the reflection (R.24): glass and wet ground mirror the city along a second ray from where this one
+  // hit; anything else glossy (a car's paint, metal) mirrors the sky. Weighed by Fresnel and the roughness.
+  var refl = vec3f(0.0); var rw = 0.0; var rGlow = 0.0;
+  if (cl.depth == gTag && cl.depth < 1e8 && gMat != MAT_NONE) {
+    let N = gNrm; let nv = max(1e-3, -dot(N, gRay)); let r = matRough();
+    rw = fres(MAT_F0[gMat], nv) * (1.0 - r) * (1.0 - r);
+    if (N.z > 0.5) { rw = min(rw, 0.7); } // a puddle never mirrors all of it
+    if (rw > 0.03) {
+      let t = cl.depth;
+      let R = gRay - 2.0 * dot(gRay, N) * N;
+      let LR = length(R.xy); var mR = -R.z / max(LR, 1e-4);
+      // the rain ripples the puddles: the reflection wavers up and down, a streak under each light
+      if (N.z > 0.5 && u.rain > 0.0) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0)) - 0.5) * 0.05 * u.rain; } let rx = R.x / max(LR, 1e-4); let ry = R.y / max(LR, 1e-4);
+      let ground = N.z > 0.5;
+      let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05) && t < select(REFL_FAR_WALL, REFL_FAR_GROUND, ground) && LR > 0.05;
+      let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sMat = gMat; let sN = gNrm; let sWet = gWet; let sRay = gRay;
+      if (mirror) {
+        gRefl = true;
+        gOX = u.px + rdx * t + N.x * 0.05; gOY = u.py + rdy * t + N.y * 0.05; gOZ = max(0.02, u.eye - m * t + A * t * t + N.z * 0.02);
+        gRay = normalize(vec3f(rx, ry, -mR));
+        let AR = 1.0 / (2.0 * u.curveR);
+        var tg = 1e9;
+        if (mR > 0.0) { let disc = mR * mR - 4.0 * AR * gOZ; if (disc > 0.0) { tg = 2.0 * gOZ / (mR + sqrt(disc)); } }
+        var rc = cityCell(gid.x, gid.y, rx, ry, mR, 1.0, AR, tg);
+        gRefl = false; gOX = u.px; gOY = u.py; gOZ = u.eye;
+        if (rc.depth < 1e8) {
+          if (rc.depth == gTag) { gTag += t; } rc.depth += t;
+          gSun = 1.0;
+          let lc = light(rc); refl = lc.c; rGlow = gGlow;
+        } else { refl = max(rc.bg, select(vec3f(0.0), rc.c, rc.ch != 32u)); }
+      } else {
+        let sk = skyCell(mR, rx, ry); refl = sk.bg;
+      }
+      gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
+    }
+  }
   // by day, whether the sun reaches what this cell shows (the sky and the rooms keep theirs)
   gSun = 1.0;
   if (u.day > 0.01 && u.sunZ > 0.0 && cl.depth < 3000.0 && cl.kind != KIND_ROOM) {
     let t = cl.depth;
     gSun = sunLit(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
   }
-  store(i, n, fallOver(handOver(finish(cl), gid.x, gid.y), rdx, rdy, m, inc.nearT));
+  var lit = light(cl);
+  if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }
+  store(i, n, fallOver(handOver(display(lit), gid.x, gid.y), rdx, rdy, m, inc.nearT));
 }
 `;
 }

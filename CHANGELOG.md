@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.24 — Materiais e reflexos (2026-10-03)
+- Com chuva, o asfalto molhado reflete a cidade de verdade: os letreiros de neon, as janelas acesas e as torres aparecem espelhados nas poças, tremendo com a chuva.
+- As fachadas de vidro refletem os prédios da frente e o céu, mais forte quando vistas de lado, como vidro de verdade.
+- De dia, o sol brilha na pintura dos carros, no vidro e no chão molhado.
+- À noite, os carros e os objetos da rua não ficam mais com a cor estourada: a pintura escurece como as paredes, e o brilho dos postes aparece na lataria.
+- O chão molhado escurece menos; agora é o reflexo que dá o tom.
+- Tecla R: o modo de 180 linhas saiu (ficam 80, 120 e 200).
+
 ## 0.R.22b — Freadas e lanternas (2026-10-03)
 - As lanternas traseiras ficam vermelhas e pintam de vermelho o carro de trás, em vez de branco.
 - Na freada, ônibus e caminhões não enfiam mais o nariz no asfalto: o mergulho para a frente ficou bem mais contido (a inclinação nas curvas continua igual).
