@@ -4,6 +4,8 @@
 
 ## Pedidos atendidos (movidos do CLAUDE.md)
 
+- **R.38/R.39 (2026-10-03):** a grade preenche a tela inteira (as linhas escolhidas em R definem o tamanho da célula; o mundo cobre a tela com até uma célula cortada, a interface fica inteira encostada embaixo, o resto < 1 célula em cima). O carregamento não trava mais: `worldSteps`/`peopleSteps` (geradores que dizem quanto falta) rodam em fatias de ~30 ms por `pace` (`src/core/steps.ts`), com uma barra na tela de título; a maior pausa caiu de ~2 s para ~50 ms (o `generateCity` inteiro). O shader do mundo compila com `createComputePipelineAsync`. A dica embaixo da barra (`src/locale/tips.json`, e `today2008.json` vazio até o retorno da tarefa 06). **F3** esconde as linhas de debug.
+
 > Os pedidos e as filas de feedback já organizadas saem do CLAUDE.md quando atendidos e vêm para cá, com o texto original. Os que ainda estavam abertos na mudança foram resumidos em "Pedidos em aberto" no CLAUDE.md. Entradas novas no topo.
 
 ### Movidos em 2026-10-03, terceira organização

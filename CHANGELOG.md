@@ -4,6 +4,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 
 ## 0.R.39 — Carregamento sem travar e F3 (2026-10-03)
 - A cidade é gerada sem travar a janela: a tela de título mostra uma barra de progresso com o que está sendo feito (ruas, rede elétrica, cidadãos, shaders), e os botões aparecem quando tudo está pronto.
+- A tela de carregamento mostra uma dica sobre o jogo embaixo da barra (e, em breve, o que aconteceu no mundo neste mesmo dia em 2008).
 - **F3** esconde e mostra as linhas de debug (posição, FPS, relógio, subestação, endereço), para tirar capturas limpas.
 
 ## 0.R.38 — Tela inteira sem faixas pretas (2026-10-03)

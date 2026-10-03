@@ -33,6 +33,8 @@ import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
 import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, type PlayerInput } from './sim/world';
 import { pace } from './core/steps';
+import TIPS from './locale/tips.json';
+import TODAY_2008 from './locale/today2008.json';
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
@@ -56,6 +58,23 @@ function load(f: number, what: string) {
   if (f >= 1) { L.hidden = true; document.getElementById('ready')!.hidden = false; }
 }
 load(0.02, 'BOOTING');
+showTip();
+
+/** A line under the bar: the first load of the day shows what happened on this date in 2008 (when the list has it); otherwise a tip or a fact of 2008. */
+function showTip() {
+  const now = new Date(), key = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = (TODAY_2008.days as Record<string, { text: string }[]>)[key];
+  let first = false;
+  try { first = localStorage.getItem('tc.tipDay') !== key; localStorage.setItem('tc.tipDay', key); } catch { /* no storage: treat as seen */ }
+  const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+  let head: string, text: string;
+  if (first && today?.length) { head = `${TIPS.today} · ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`; text = pick(today).text; }
+  else if (TODAY_2008.facts.length && Math.random() < 0.35) { head = TIPS.fact; text = (pick(TODAY_2008.facts) as { text: string }).text; }
+  else { head = TIPS.tip; text = pick(TIPS.tips); }
+  const el = document.getElementById('tip')!;
+  el.querySelector('.head')!.textContent = head;
+  el.querySelector('.text')!.textContent = text;
+}
 
 // ?seed=123 reproduces a city; otherwise every game rolls a new one. ?mute starts with the sound off.
 const seedParam = new URLSearchParams(location.search).get('seed');
