@@ -225,8 +225,10 @@ function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: n
       for (let n = 1; n < 4; n++) C[k + n] = roll(C[k + n] * gain);
       for (let n = 0; n < 3; n++) B[k + n] = roll(B[k + n] * gain);
       ar += B[k] + C[k + 1] * 0.25; ag += B[k + 1] + C[k + 2] * 0.25; ab += B[k + 2] + C[k + 3] * 0.25;
-      B[k] += sh * GL.r + veil * light[0]; B[k + 1] += sh * GL.g + veil * light[1]; B[k + 2] += sh * GL.b + veil * light[2];
-      C[k + 1] += sh * 0.55 * GL.r; C[k + 2] += sh * 0.55 * GL.g; C[k + 3] += sh * 0.55 * GL.b;
+      // the reflection adds the same over a letter as over the paper (the letters are under the glass)
+      const ar2 = sh * GL.r + veil * light[0], ag2 = sh * GL.g + veil * light[1], ab2 = sh * GL.b + veil * light[2];
+      B[k] += ar2; B[k + 1] += ag2; B[k + 2] += ab2;
+      C[k + 1] += ar2; C[k + 2] += ag2; C[k + 3] += ab2;
     }
   }
   const n = W * H;

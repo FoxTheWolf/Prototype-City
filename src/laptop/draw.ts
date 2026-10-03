@@ -66,16 +66,18 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
   const S = P.shell, ink = INKS[S.ink], sbg = SCREEN_BG[S.ink];
   // the glass over every cell: the light's wash, the smudges, and (off) the reflection
   const Lr = Math.min(1.6, light[0]), Lg = Math.min(1.6, light[1]), Lb = Math.min(1.6, light[2]);
-  const glass = (c: number, r: number, bg: readonly number[], off: boolean): C3 => {
+  // what the glass adds lies over the letters as much as over the paper: they are inside it
+  const glass = (c: number, r: number, off: boolean): number => {
     const sm = smudge(c / W, r / H), band = off ? Math.max(0, 1 - Math.abs(((c * 0.6 - r * 1.4 + 18) % 40) - 20) / 5) : 0;
-    const k = 3 + sm * 22 + band * 26;
-    return [bg[0] + k * Lr, bg[1] + k * Lg, bg[2] + k * Lb];
+    return 3 + sm * 22 + band * 26;
   };
   const raw = put;
   put = (x, y, ch, fg, bg) => {
     const c = x - sx, r = y - sy;
-    if (c >= 0 && r >= 0 && c < W && r < H) raw(x, y, ch, fg, glass(c, r, bg, !on));
-    else raw(x, y, ch, fg, bg);
+    if (c >= 0 && r >= 0 && c < W && r < H) {
+      const k = glass(c, r, !on);
+      raw(x, y, ch, [fg[0] + k * Lr, fg[1] + k * Lg, fg[2] + k * Lb], [bg[0] + k * Lr, bg[1] + k * Lg, bg[2] + k * Lb]);
+    } else raw(x, y, ch, fg, bg);
   };
   text = (x, y, s2, fg, bg) => { for (let k = 0; k < s2.length; k++) put(x + k, y, s2.charCodeAt(k), fg, bg); };
   void lit;

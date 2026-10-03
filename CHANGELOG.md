@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.12.14 — Letras dentro da tela do notebook (2026-10-02)
+- O reflexo da luz, o véu do ambiente e as digitais caem igual sobre as letras e sobre o fundo da tela do notebook: as letras parecem estar dentro do vidro, e não coladas por cima dele.
+
 ## 0.12.13 — Pedestres na diagonal (2026-10-02)
 - Agora há gente andando nos quarteirões cortados pela avenida diagonal: a calçada segue o meio-fio da diagonal e atravessa a avenida reto, com os carros parando para quem está passando.
 
