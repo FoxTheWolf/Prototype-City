@@ -106,12 +106,18 @@ export class GpuWorld {
   private oW = new Uint32Array(OBJ_CAP);
   private oF = new Float32Array(this.oW.buffer);
 
+  /** The world's pass on the GPU's own clock (ms, smoothed); -1 without timestamp queries. */
+  gpuMs = -1;
+  private tq: { set: GPUQuerySet; res: GPUBuffer; read: GPUBuffer; busy: boolean } | null = null;
+
   static available(): boolean { return typeof navigator !== 'undefined' && 'gpu' in navigator; }
 
   static async create(city: City): Promise<GpuWorld> {
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
     if (!adapter) throw new Error('no WebGPU adapter');
-    const device = await adapter.requestDevice({ requiredLimits: { maxStorageBuffersPerShaderStage: Math.min(16, adapter.limits.maxStorageBuffersPerShaderStage) } });
+    // the GPU's own clock on the world's pass, where the adapter has it (the real cost of the shader, L.0)
+    const ts = adapter.features.has('timestamp-query');
+    const device = await adapter.requestDevice({ requiredFeatures: ts ? ['timestamp-query'] : [], requiredLimits: { maxStorageBuffersPerShaderStage: Math.min(16, adapter.limits.maxStorageBuffersPerShaderStage) } });
     const g = new GpuWorld(device, city);
     // compiled off the main thread (the first compile takes seconds)
     g.pipe = await device.createComputePipelineAsync({ layout: 'auto', compute: { module: g.mod, entryPoint: 'main' } });
@@ -171,6 +177,10 @@ export class GpuWorld {
     this.subs = sz(64 * 16);
     this.lmap = sz(1024 * 1024 * 4 * 2);
     this.lampCol = sz(C.lamps.length * 12);
+    if (dev.features.has('timestamp-query')) {
+      this.tq = { set: dev.createQuerySet({ type: 'timestamp', count: 2 }), res: dev.createBuffer({ size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC }),
+        read: dev.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), busy: false };
+    }
     const mod = (this.mod = dev.createShaderModule({ code: worldWGSL() }));
     mod.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL ${m.lineNum}:${m.linePos} ${m.message}`)));
   }
@@ -196,7 +206,7 @@ export class GpuWorld {
   }
 
   /** This frame's world into `out`, as the first pass of the encoder (the compositor draws it in the same submit). */
-  encode(enc: GPUCommandEncoder, world: World, v: View) {
+  encode(enc: GPUCommandEncoder, world: World, v: View, timed = false) {
     const { cols, rows } = this, C = this.city, q = this.dev.queue;
     const F = gpuPrepare(world, v), sky = F.sky, P = world.power, I = gpuInside(world, v, cols, rows, sky), sk = I?.base;
     if (F.ticker !== this.ticker) {
@@ -260,10 +270,25 @@ export class GpuWorld {
     }
     this.objects(world, v, scale, plane, vals.hor, I, sky.day > 0.01 && F.sun[2] > 0.02 ? F.sun : null);
     q.writeBuffer(this.uni, 0, U);
-    const pass = enc.beginComputePass();
+    const T = timed && this.tq && !this.tq.busy ? this.tq : null;
+    const pass = enc.beginComputePass(T ? { timestampWrites: { querySet: T.set, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 } } : undefined);
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
+    if (T) { enc.resolveQuerySet(T.set, 0, 2, T.res, 0); enc.copyBufferToBuffer(T.res, 0, T.read, 0, 16); T.busy = true; this.tqPending = true; }
+  }
+  private tqPending = false;
+  /** After the frame's submit: read the world pass's time back when it lands. */
+  readTime() {
+    const T = this.tq;
+    if (!T || !this.tqPending) return;
+    this.tqPending = false;
+    T.read.mapAsync(GPUMapMode.READ).then(() => {
+      const t = new BigUint64Array(T.read.getMappedRange());
+      const ms = Number(t[1] - t[0]) / 1e6;
+      T.read.unmap(); T.busy = false;
+      if (ms > 0 && ms < 1000) this.gpuMs = this.gpuMs < 0 ? ms : this.gpuMs + (ms - this.gpuMs) * 0.1;
+    }, () => { T.busy = false; });
   }
 
   /**

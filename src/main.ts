@@ -718,7 +718,7 @@ function frame(now: number) {
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const { city } = world, d = districtAt(city, p.x, p.y);
   if (hudOn) {
-    const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
+    const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}  `
       + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
     ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
     const cal = calendar(world.time), wx = world.weather;

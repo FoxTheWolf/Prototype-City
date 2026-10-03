@@ -456,7 +456,7 @@ export class GpuCompositor {
       });
     }
     const enc = this.dev.createCommandEncoder();
-    gw.encode(enc, world, v);
+    gw.encode(enc, world, v, true);
     for (const b of this.glowBind) {
       const cp = enc.beginComputePass();
       cp.setPipeline(this.glowPipe); cp.setBindGroup(0, b); cp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));
@@ -481,6 +481,7 @@ export class GpuCompositor {
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind); pass.draw(3);
     pass.end();
     this.dev.queue.submit([enc.finish()]);
+    gw.readTime();
     // how long the GPU takes: one frame measured at a time
     if (!this.timing) {
       this.timing = true;
