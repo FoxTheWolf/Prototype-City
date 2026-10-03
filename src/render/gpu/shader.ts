@@ -1,4 +1,5 @@
 import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
+import { DOOR_H } from '../../sim/interior';
 import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
@@ -28,6 +29,8 @@ export const BLD = 64;
 /** The signs' buffer (world.ts, signData): where the font and the businesses start, and the ticker's room. */
 export const SG_FONT = 8, SG_BIZ = SG_FONT + 256 * 7, TICK_MAX = 4096;
 export const BLK = 8;
+/** Where the per-building table of facade features starts in the near buffer (world.ts, facades). */
+export const FX_TAB = 8;
 export const STYLES = ['office', 'glass', 'brick', 'historic', 'residential', 'warehouse', 'crown', 'spire', 'dome', 'tank', 'chimney', 'mech', 'clock', 'mast', 'gasholder'];
 
 const C = (s: string) => s.charCodeAt(0);
@@ -59,6 +62,7 @@ struct U { ${UNIFORMS.map((n) => `${n}: f32`).join(', ')} };
 @group(0) @binding(13) var<storage, read> doff: array<u32>;
 @group(0) @binding(14) var<storage, read> didx: array<u32>;
 @group(0) @binding(15) var<storage, read> sg: array<u32>;
+@group(0) @binding(16) var<storage, read> fx: array<u32>;
 
 ${glyphs}
 const FLOOR_H = ${FLOOR_H};
@@ -201,6 +205,7 @@ const AD_FG = array<vec3f, ${AD_FG.length}>(${AD_FG.map(v3).join(', ')});
 const FRAME_AD = ${v3(FRAME_AD)};
 const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(', ')});
 const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
+const DOOR_H = ${f(DOOR_H)}; const FX_TAB = ${FX_TAB}u;
 const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v3(SCAF_STEEL)}; const SCAF_BOARD = ${v3(SCAF_BOARD)};
 const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
 fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
@@ -359,6 +364,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let kv = select(u32(ceil(log2(1.0 / rpf))), 0u, rpf >= 1.0); let kh = select(u32(ceil(log2(1.0 / cpb))), 0u, cpb >= 1.0);
   let bay = along / BAY; let wi = ifloor(bay); let fw = bay - f32(wi);
   let corner = along - f0 < 0.35 || f1 - along < 0.35;
+  // the street doors on this face (the main one, and the shops' once the ground plan is made), and a
+  // fire escape two bays wide over this spot (only drawn where there is one)
+  var dA0 = 0.0; var dA1 = -1.0; var esc = false;
+  let fo = fx[FX_TAB + u32(bk)];
+  if (fo > 0u) {
+    for (var e = 0u; e < fx[fo]; e++) {
+      let w = fo + 1u + e * 3u; let kf = fx[w]; let a0 = bitcast<f32>(fx[w + 1u]); let a1 = bitcast<f32>(fx[w + 2u]);
+      if (i32(kf >> 4u) != face || side == 2) { continue; }
+      if ((kf & 15u) == 0u) { if (along0 > a0 && along0 < a1) { dA0 = a0; dA1 = a1; } }
+      else if (along >= a0 && along < a1 && !corner) { esc = true; }
+    }
+  }
   // a clock tower is a historic facade with a clock face near the top of each side
   var S = style; if (style == 12) { S = 3; }
   let clockR = select(0.0, min(3.0, (f1 - f0) * 0.32), style == 12 && side != 2); let clockZ = H - clockR - 2.0;
@@ -374,6 +391,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   else { let nx = hx - cx; let ny = hy - cy; let n = max(1e-6, length(vec2f(nx, ny))); tang = (rdx * -ny + rdy * nx) / n; }
   let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - u.eye) / t) * 4.0 + f32(bk % 7));
   let fl = ifloor(z / FLOOR_H); let fz = z / FLOOR_H - f32(fl);
+  let escU = (f32(wi % 7) - 2.0 + fw) / 2.0;
+  let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0);
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
   let rev = side < 2 && (face == 1 || face == 2);
@@ -503,6 +522,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       let P = screenPix(bk, select(along - scA0, scA1 - along, rev), scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
       ch = P.ch; c = P.c * adElec;
     }
+  } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
+    // the street door: a frame, two glass leaves and a transom, lit from the lobby
+    let e = min(along - dA0, dA1 - along);
+    if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
+    else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.55 * elec); }
   } else if (adN > 0 && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
     // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint
     let lw = AD_LETTER; let start = (adA0 + adA1) * 0.5 - f32(adN) * lw * 0.5; let zc = (adZ0 + adZ1) * 0.5;
@@ -561,6 +585,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       let edge = dp < 0.4 || dp > 5.6;
       ch = select(select(DASH, EQ, z > 4.1), BAR, edge); c = frame * select(1.15, 1.3, edge) * shade;
     } else { ch = BAR; c = frame * select(0.78, 1.0, (ifloor(along / 0.6) & 1) == 1) * shade; }
+  } else if (escCell) {
+    // fire escape: landings, rails and a zigzag stair between floors
+    ch = select(select(select(SL, BS, (fl & 1) == 1), BAR, escU < 0.04 || escU > 0.96), EQ, fz < 0.08);
+    c = vec3f(95.0, 95.0, 105.0) * shade;
   } else if (S == 3) {
     if (z > H - 2.2) { ch = select(select(QUO, COL, (i32(fw * 4.0) & 1) == 1), EQ, z > H - 1.2); c = frame * 1.3 * shade; }
     else if (z < FLOOR_H * 1.2) { ch = select(HASH, EQ, (ifloor(z / 0.7) & 1) == 1); c = frame * 0.9 * shade; }
