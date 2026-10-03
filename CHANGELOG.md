@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.1c — Maps com busca e rota a pé (2026-10-03)
+- No Maps, o OK (ou Search) abre uma busca: digite pelo teclado do celular (Abc, T9 ou 123, com o #) o nome de um lugar ou o tipo dele ("bar", "pub", "pharmacy", "bank"...). A busca vai pelo EDGE ou pelo Wi-Fi, gasta um pouco do pacote de dados e demora conforme o sinal.
+- Os lugares voltam do mais perto ao mais longe, cada um com o tipo, se está aberto e a distância. Escolher um mostra o lugar no mapa com uma ficha: nome, tipo e distrito, aberto ou fechado (até que horas ou quando abre), telefone (a tecla verde liga), endereço e distância.
+- O botão do meio na ficha calcula a rota a pé (também pelos dados, com uma espera). O mapa mostra a rota em azul e embaixo a próxima curva ("In 80m turn left onto 9th St"), quanto falta e o destino; ao chegar, o celular avisa. Se você sair da rota, ele recalcula. "End" encerra a rota.
+- O erro do GPS muda devagar (a cada ~6 s, suave) em vez de saltar todo segundo; na rua, uma posição que cairia dentro de um prédio vai para a calçada mais perto, e durante uma rota a posição fica presa nela, como num navegador.
+
 ## 0.F.1b — O primeiro trabalho (2026-10-03)
 - Um número desconhecido manda um SMS oferecendo trabalho: deixar um lugar da cidade sem luz nesta noite, por um pagamento. Responda YES para aceitar, NO para recusar.
 - Aceito o trabalho, o contratante confirma; corte a energia do alvo antes do prazo e, quando a luz cai, o pagamento entra na sua conta do banco.

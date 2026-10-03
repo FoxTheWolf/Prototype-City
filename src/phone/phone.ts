@@ -9,6 +9,7 @@ import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 import { Wifi } from './wifi';
 import { Editor } from './textinput';
+import { onRoute, placeAt, route, search, type Place } from './places';
 import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
 import { smsText } from '../locale/sms';
@@ -126,7 +127,7 @@ export const money = (c: number) => `${c < 0 ? '-' : ''}$${(Math.abs(c) / 100).t
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
-export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose', 'wifikey'];
+export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose', 'wifikey', 'places'];
 /** Screens with shortcuts on the lower keys (7-9, *, 0, #): held as high, so a click reaches them. */
 const LOW_KEYS: Screen[] = ['map', 'calendar', 'photos', 'clock'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
@@ -247,9 +248,23 @@ export class Phone {
   panY = 0;
   /** The map's zoom level (index into ZOOM_ROW_M). */
   zoom = 0;
-  /** The list of places: landmarks nearest first, and the one picked. */
-  places: number[] = [];
-  psel = 0;
+  /**
+   * Maps' search: the words typed, the words last searched, the places found (nearest first; null
+   * before a search), the one picked (-1: the field), and why nothing came back ('' or 'offline').
+   */
+  readonly findEd = new Editor(24, true);
+  findQ = '';
+  places: Place[] | null = null;
+  psel = -1;
+  findNote = '';
+  /** A place shown on the map with its card (null: none), and where the position was then (the view stays on the place as the GPS moves). */
+  pin: Place | null = null;
+  private pinHere = [0, 0];
+  /**
+   * The walking route: to where, its corners (empty until it comes back from the server), the
+   * state, whether it was asked for, and the seconds off it (a while off it, it is calculated again).
+   */
+  nav: { to: Place; R: number[]; state: 'routing' | 'go' | 'none' | 'arrived'; asked: boolean; off: number } | null = null;
   /** Calls: the number being dialled, the call under way (or just ended). */
   dial = '';
   call: Call | null = null;
@@ -515,6 +530,14 @@ export class Phone {
       this.wire = this.world.feed.posts.slice(-WIRE_POSTS); this.wireAt = this.world.time; this.wireId = this.world.feed.next - 1; this.radio.job = null; this.scroll = 0;
       if (this.wst.view === 'feed') this.wst.sel = 0;
     }
+    // Maps: the search's answer, the route's, and the walk along it
+    if (J?.what === 'find' && J.state === 'done') {
+      const [x, y] = this.here();
+      this.places = search(this.world.city, this.findQ, x, y); this.psel = this.places.length ? 0 : -1; this.radio.job = null;
+    }
+    const N = this.nav;
+    if (N) this.navigate(N, J, now, dt);
+    if (this.pin !== null) { const [x, y] = this.here(); this.panX += this.pinHere[0] - x; this.panY += this.pinHere[1] - y; this.pinHere = [x, y]; }
     if (this.screen === 'app' && STORE[this.appId][0] === 'snake' && this.snake.update(now)) this.sfx.push(['beep']);
     // with the weather open, the forecast downloads over EDGE when it is older than an hour (and
     // again once the signal is back after a failed try; not with the bundle used up)
@@ -532,7 +555,7 @@ export class Phone {
     if (s === 'calls' && !this.call) this.missed = 0;
     if (s === 'compose') this.smsEd.set(this.draft.text);
     if (s === 'contact') this.nameEd.set(this.edit.name);
-    if (s === 'map') this.panX = this.panY = 0;
+    if (s === 'map') { this.panX = this.panY = 0; this.pin = null; }
     if (s === 'calendar') { const c = calendarOf(this.world.time); this.cal.y = c.year; this.cal.m = c.month; this.cal.d = c.day; this.cal.view = 'month'; }
   }
 
@@ -547,8 +570,58 @@ export class Phone {
 
   /** Where the map is: the GPS position (or the last known one), or the city's middle before any fix. */
   here(): [number, number] {
-    const g = this.gps, c = this.world.city;
-    return g.known ? [g.x, g.y] : [c.cx, c.cy];
+    const g = this.gps, c = this.world.city, N = this.nav;
+    if (!g.known) return [c.cx, c.cy];
+    // on a route, a position near it is put on it (as a navigator holds a car to the road)
+    if (N?.state === 'go' && g.state === 'fix') { const o = onRoute(N.R, g.x, g.y); if (o.off < Math.max(20, g.acc)) return [o.px, o.py]; }
+    return [g.x, g.y];
+  }
+
+  /**
+   * The route: asked for once there is a position and a connection (the server works it out, so it
+   * costs data and takes a moment), then followed: arrived near the door; a while off it, again.
+   */
+  private navigate(N: NonNullable<Phone['nav']>, J: Phone['radio']['job'], now: number, dt: number) {
+    const g = this.gps, city = this.world.city, [bx, by] = placeAt(city, N.to);
+    if (N.state === 'routing') {
+      if (J?.what === 'route' && J.state === 'done') {
+        this.radio.job = null;
+        N.R = route(city, g.x, g.y, bx, by); N.state = N.R.length ? 'go' : 'none'; N.off = 0;
+        this.sfx.push([N.state === 'go' ? 'sent' : 'fail']);
+      } else if (J?.what === 'route' && (J.state === 'nosignal' || J.state === 'nodata')) { this.radio.job = null; N.asked = false; }
+      else if (!N.asked && g.known && this.online() && (J?.what !== 'route')) {
+        N.asked = true;
+        this.radio.fetch('route', 3 + Math.hypot(bx - g.x, by - g.y) / 250, now);
+      }
+      return;
+    }
+    if (N.state !== 'go' || g.state !== 'fix') return;
+    if (Math.hypot(bx - g.x, by - g.y) < Math.max(15, g.acc * 0.6)) { N.state = 'arrived'; this.sfx.push(['beep']); this.buzz(now, 0.5); return; }
+    const o = onRoute(N.R, g.x, g.y);
+    N.off = o.off > Math.max(35, g.acc * 1.5) ? N.off + dt : 0;
+    if (N.off > 6) { N.state = 'routing'; N.asked = false; N.R = []; }
+  }
+
+  /** Maps' search page, as it was left. */
+  private openFind(now: number) {
+    this.screen = 'places'; this.since = now;
+    if (!this.places?.length) this.psel = -1;
+  }
+
+  /** Show a place on the map with its card, at a zoom that keeps the position in sight when it is near. */
+  private showPlace(p: Place, now: number) {
+    const [x, y] = this.here(), [px, py] = placeAt(this.world.city, p);
+    this.pin = p; this.screen = 'map'; this.since = now; this.pinHere = [x, y];
+    this.panX = px - x; this.panY = py - y;
+    const d = Math.hypot(this.panX, this.panY);
+    this.zoom = d < 150 ? 0 : d < 350 ? 1 : d < 700 ? 2 : 3;
+  }
+
+  /** Call a place found (a landmark has no number). */
+  private callPlace(p: Place, now: number): boolean {
+    if (p < 0) return false;
+    this.open('calls', now); this.place(this.world.telco.bizNum[p], now);
+    return true;
   }
 
   /** The view stays over the city and its edge. */
@@ -606,30 +679,48 @@ export class Phone {
         if (k === 'up' || k === 'down') { this.panY += (k === 'up' ? -1 : 1) * viewH / 4; this.since = now; return this.clampPan(); }
         if (k === '1' || k === '2' || k === '3' || k === '4') return this.setZoom(+k - 1, now);
         if (k === '*' || k === '#') return this.setZoom(this.zoom + (k === '*' ? -1 : 1), now);
-        if (k === 'ok' || k === 'lsoft') {
+        if (this.pin !== null) {
+          // a place's card: the middle button (or Route) walks there, the green key calls it, Back goes back to the list
+          const p = this.pin;
+          if (k === 'ok' || k === 'lsoft') { this.nav = { to: p, R: [], state: 'routing', asked: false, off: 0 }; this.pin = null; this.panX = this.panY = 0; this.zoom = 0; this.since = now; return true; }
+          if (k === 'send') return this.callPlace(p, now);
+          if (k === 'rsoft') { this.pin = null; this.openFind(now); return true; }
+          return false;
+        }
+        if (k === 'ok') {
           if (this.panX || this.panY) { this.panX = this.panY = 0; this.since = now; return true; }
-          // the places, nearest first
-          const [x, y] = this.here(), L = this.world.city.landmarks;
-          this.places = L.map((_, i) => i).sort((a, b) => Math.hypot(L[a].x - x, L[a].y - y) - Math.hypot(L[b].x - x, L[b].y - y));
-          this.psel = 0; this.screen = 'places'; this.since = now;
+          this.openFind(now);
           return true;
         }
+        // the left soft key: End the route under way, or Search
+        if (k === 'lsoft') { if (this.nav) this.nav = null; else this.openFind(now); return true; }
+        if (k === 'send' && this.nav) return this.callPlace(this.nav.to, now);
         if (k === 'rsoft') { this.open('menu', now); return true; }
         return false;
       case 'places': {
-        const n = this.places.length;
-        if (n && (k === 'up' || k === 'down')) { this.psel = (this.psel + (k === 'up' ? -1 : 1) + n) % n; return true; }
-        if (n && (k === 'ok' || k === 'lsoft')) {
-          // show the place on the map, at a zoom that keeps the position in sight when it is near
-          const [x, y] = this.here(), L = this.world.city.landmarks[this.places[this.psel]];
-          this.screen = 'map'; this.since = now;
-          this.panX = L.x - x; this.panY = L.y - y;
-          const d = Math.hypot(this.panX, this.panY);
-          this.zoom = Math.max(this.zoom, d < 150 ? 0 : d < 350 ? 1 : d < 700 ? 2 : 3);
+        // the search field on top (psel -1), the places found under it
+        const n = this.places?.length ?? 0;
+        if (k === 'up' || k === 'down') { const s = Math.max(-1, Math.min(n - 1, this.psel + (k === 'up' ? -1 : 1))); if (s === this.psel) return false; this.psel = s; return true; }
+        if (this.psel >= 0) {
+          const p = this.places![this.psel];
+          if (k === 'ok' || k === 'lsoft') { this.showPlace(p, now); return true; }
+          if (k === 'send') return this.callPlace(p, now);
+          if (k === 'rsoft') { this.psel = -1; return true; }
+          return false;
+        }
+        if (k === 'rsoft') { if (!this.findEd.del()) { this.screen = 'map'; this.since = now; } return true; }
+        if (k === 'ok' || k === 'lsoft' || k === 'send') {
+          // the words go to the server over EDGE (or the Wi-Fi), and the places come back
+          const q = this.findEd.value().trim();
+          if (!q) return false;
+          const J = this.radio.job;
+          if (J?.what === 'find' && (J.state === 'connecting' || J.state === 'loading')) return true;
+          this.findQ = q; this.places = null; this.since = now;
+          if (!this.online()) { this.findNote = 'offline'; this.sfx.push(['fail']); return true; }
+          this.findNote = ''; this.radio.fetch('find', 2 + q.length * 0.05 + 1.5, now);
           return true;
         }
-        if (k === 'rsoft') { this.screen = 'map'; this.since = now; return true; }
-        return false;
+        return this.findEd.key(k, now);
       }
       case 'calls':
         if (this.call && this.callIn && this.call.state === 'ringing') {

@@ -15,6 +15,8 @@ import { HD } from '../render/hd';
 import { EYE, pageDim } from '../render/eye';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
+import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
+import { formatNumber } from '../sim/telco';
 
 /**
  * The phone drawn in the player's hand, over the bottom right of the view: a 2008 handset with a
@@ -231,7 +233,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       if (P.screen === 'standby') standby(S, P, world, t, now);
       else if (P.screen === 'menu') menu(S, P, t);
       else if (P.screen === 'map') map(S, P, world, aspect, t, now);
-      else if (P.screen === 'places') places(S, P, world, t);
+      else if (P.screen === 'places') places(S, P, world, t, now);
       else app(S, P, world, t, now);
     }
   }
@@ -601,7 +603,8 @@ function roadsIn(b: number[], a0: number, a1: number): [number, number][] {
 
 /** District tints for the far zooms, by type. */
 const D_TINT: Record<string, C3> = { financial: [70, 110, 190], commercial: [200, 140, 60], residential: [90, 150, 90], historic: [170, 110, 80], industrial: [120, 120, 120], theater: [210, 80, 200] };
-const ROAD: C3 = [255, 255, 255], LABEL: C3 = [70, 76, 92], TB: C3 = CHROME.top, FOOT: C3 = [248, 249, 252];
+const ROAD: C3 = [255, 255, 255], LABEL: C3 = [70, 76, 92], TB: C3 = CHROME.top, FOOT: C3 = [248, 249, 252], ROUTE: C3 = [70, 140, 250];
+const F = T.find, A = T.apps;
 
 /**
  * The map app: north up, centered on the GPS position (or moved off it with the d-pad), drawing in
@@ -672,6 +675,18 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
     for (let k = 0; k < s.length; k++) used[r * SW + x + k] = 1;
     S.text(x, 2 + r, s, fg, bg);
   };
+  // the route: a blue line along its legs; the destination (or the place shown): a red pin, drawn last
+  const N = P.nav, dest = N ? N.to : P.pin;
+  if (N?.R.length) {
+    const step = 0.5 * Math.min(colM, rowM), R = N.R;
+    for (let k = 0; k + 3 < R.length; k += 2) {
+      const L = Math.hypot(R[k + 2] - R[k], R[k + 3] - R[k + 1]);
+      for (let d = 0; d <= L; d += step) {
+        const [c, r] = at(R[k] + ((R[k + 2] - R[k]) * d) / (L || 1), R[k + 1] + ((R[k + 3] - R[k + 1]) * d) / (L || 1));
+        if (c >= 0 && c < SW && r >= 0 && r < MAP_ROWS && r < drawn) S.put(c, 2 + r, 32, ROUTE, ROUTE);
+      }
+    }
+  }
   // landmarks: a star (named below, where there is room)
   const stars: [number, number, number][] = [];
   city.landmarks.forEach((L, k) => {
@@ -707,7 +722,13 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
       if (c >= 0 && c < SW) label(c - (n.length >> 1), r, n, [40, 44, 56], [255, 255, 255]);
     });
   }
+  if (dest !== null) {
+    const [px, py] = placeAt(city, dest), [c, r] = at(px, py);
+    if (c >= 0 && c < SW && r >= 0 && r < MAP_ROWS && r < drawn) S.put(c, 2 + r, ch('v'), [255, 255, 255], Math.floor(now * 2) & 1 ? [230, 50, 40] : [180, 30, 24]);
+  }
   marker(S, P, at, drawn, now);
+  if (P.pin !== null) return placeCard(S, P, world, P.pin, t);
+  if (N) return navBar(S, P, world, N, t, now);
   // the street at the view's middle
   const onDiag = Math.abs(diagS(D, cx, cy)) < D.w / 2 + SIDEWALK;
   const street = `${onDiag ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, cx))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, cy))}`;
@@ -720,7 +741,56 @@ function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: num
     S.text(SW - back.length - 1, SH - 2, back, [40, 90, 170], FOOT);
   }
   gpsInfo(S, P, now, false);
-  softKeys(S, panned ? T.center : T.places, T.back);
+  softKeys(S, panned ? T.center : F.search, T.back);
+}
+
+/** The card of a place shown on the map: name, kind, open or not, phone, address, how far; OK walks there. */
+function placeCard(S: Lcd, P: Phone, world: World, p: Place, t: number) {
+  const { city } = world, CARD: C3 = [252, 252, 254], INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], y0 = SH - 8;
+  box(S, 0, y0, SW - 1, SH - 2, CARD, CARD, 0);
+  for (let x = 0; x < SW; x++) S.put(x, y0, 32, [200, 204, 214], [200, 204, 214]);
+  S.put(1, y0 + 1, ch('v'), [255, 255, 255], [220, 46, 38]);
+  S.text(3, y0 + 1, typed(placeName(city, p).slice(0, SW - 4), t), INK2, CARD);
+  S.text(3, y0 + 2, typed(`${placeKind(city, p)} - ${placeDistrict(city, p)}`.slice(0, SW - 4), t - 0.1), GREY, CARD);
+  const h = placeHours(city, p, calendar(world.time).hour);
+  if (h) {
+    const tag = h.open ? F.openNow : F.closed, col: C3 = h.open ? [40, 150, 70] : [200, 50, 40];
+    S.text(3, y0 + 3, tag, [255, 255, 255], col);
+    S.text(4 + tag.length, y0 + 3, typed(h.text, t - 0.15), GREY, CARD);
+  }
+  const num = p >= 0 ? formatNumber(world.telco, world.telco.bizNum[p]) : F.noPhone;
+  S.text(3, y0 + 4, typed(num, t - 0.2), p >= 0 ? [40, 90, 170] : GREY, CARD);
+  const [hx, hy] = P.gps.known ? [P.gps.x, P.gps.y] : [NaN, NaN], [px, py] = placeAt(city, p);
+  const far = P.gps.known ? `${fmtDist(Math.hypot(px - hx, py - hy), P.prefs.dist)} ${compass(px - hx, py - hy)}` : '--';
+  S.text(SW - far.length - 1, y0 + 4, far, INK2, CARD);
+  S.text(3, y0 + 5, typed(placeAddress(city, p).slice(0, SW - 4), t - 0.25), INK2, CARD);
+  softKeys(S, F.route, T.back);
+}
+
+/** Under the map while a route is followed: the next turn (or how it stands) and the way left. */
+function navBar(S: Lcd, P: Phone, world: World, N: NonNullable<Phone['nav']>, t: number, now: number) {
+  const { city } = world, BAR2: C3 = [30, 66, 140], W2: C3 = [255, 255, 255], DIM2: C3 = [176, 196, 232], g = P.gps, d = (m: number) => fmtDist(m, P.prefs.dist);
+  S.fill(SH - 3, BAR2); S.fill(SH - 2, BAR2);
+  let line = '', sub = placeName(city, N.to);
+  if (N.state === 'arrived') line = F.arrived;
+  else if (N.state === 'none') line = F.noRoute;
+  else if (N.state === 'routing') {
+    const J = P.radio.job;
+    line = (N.R.length || N.off > 0 ? F.rerouting : F.routing).slice(0, SW - 2);
+    if (!g.known) sub = T.gps.search;
+    else if (J?.what === 'route' && J.state === 'loading') sub = A.wx.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', J.kb.toFixed(1));
+    else if (!P.online()) sub = F.offline;
+    line += '.'.repeat(Math.floor(now * 3) % 4);
+  } else if (g.known) {
+    const o = onRoute(N.R, g.x, g.y), turn = nextTurn(city, N.R, o.leg, o.px, o.py);
+    line = turn ? F.turn.replace('{d}', d(turn.dist)).replace('{side}', turn.right ? F.right : F.left).replace('{road}', turn.road) : F.straight.replace('{d}', d(o.left));
+    sub = `${F.togo.replace('{d}', d(o.left))} - ${sub}`;
+    // which way the next turn goes
+    if (turn) S.text(SW - 3, SH - 3, turn.right ? '->' : '<-', [255, 220, 120], BAR2);
+  }
+  S.text(1, SH - 3, typed(line.slice(0, SW - 5), t - 0.2), W2, BAR2);
+  S.text(1, SH - 2, typed(sub.slice(0, SW - 2), t - 0.3), DIM2, BAR2);
+  softKeys(S, F.end, T.back);
 }
 
 /**
@@ -814,27 +884,55 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
   S.fill(SH - 2, FOOT);
   S.text(1, SH - 2, typed(addr.slice(0, SW - 2), t - 0.3), [30, 34, 44], FOOT);
   gpsInfo(S, P, now, true);
-  softKeys(S, P.panX || P.panY ? T.center : T.places, T.back);
+  softKeys(S, P.panX || P.panY ? T.center : P.nav ? F.end : F.search, T.back);
 }
 
-/** The list of places: the city's landmarks, nearest first, with how far and which way. */
-function places(S: Lcd, P: Phone, world: World, t: number) {
-  const { city } = world, [hx, hy] = P.here();
-  for (let y = 1; y < SH - 1; y++) S.fill(y, [244, 246, 250]);
+/**
+ * Maps' search: a field typed on the keypad (Abc, T9 or 123, as messages are), and under it the
+ * places the server sent back, nearest first, each with its kind, whether it is open and how far.
+ */
+function places(S: Lcd, P: Phone, world: World, t: number, now: number) {
+  const { city } = world, PG: C3 = [244, 246, 250], W: C3 = [255, 255, 255], INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], BLUE: C3 = [40, 90, 170];
+  for (let y = 1; y < SH - 1; y++) S.fill(y, PG);
   S.fill(1, CHROME.top);
-  S.text(1, 1, '*', [255, 120, 100], CHROME.top);
-  S.text(3, 1, typed(T.placesTitle, t), CHROME.text, CHROME.top);
-  const rows = SH - 5, top = Math.max(0, Math.min(P.psel - (rows >> 1), P.places.length - rows)), INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132];
-  for (let n = 0; n < rows && top + n < P.places.length; n++) {
-    const k = P.places[top + n], L = city.landmarks[k], sel = top + n === P.psel, bg: C3 = sel ? PICK : [244, 246, 250];
-    const far = P.gps.known ? `${fmtDist(Math.hypot(L.x - hx, L.y - hy), P.prefs.dist)} ${compass(L.x - hx, L.y - hy)}` : '--';
-    const name = landmarkName(city, k).slice(0, SW - far.length - 5);
-    if (sel) S.fill(3 + n, bg);
-    S.put(1, 3 + n, ch('*'), [255, 255, 255], [210, 60, 50]);
-    S.text(3, 3 + n, typed(name, t - 0.1 - n * 0.04), sel ? PICK_INK : INK2, bg);
-    S.text(SW - far.length - 1, 3 + n, typed(far, t - 0.2 - n * 0.04), sel ? PICK_DIM : GREY, bg);
+  S.text(1, 1, '?', [255, 196, 90], CHROME.top);
+  S.text(3, 1, typed(F.title, t), CHROME.text, CHROME.top);
+  const ed = P.findEd, mode = ed.label();
+  S.text(SW - mode.length - 1, 1, mode, CHROME.dim, CHROME.top);
+  // the field, outlined while it is the one picked
+  const on = P.psel < 0, q = ed.value(), blink = Math.floor(now * 2) & 1;
+  box(S, 1, 3, SW - 2, 3, on ? W : [234, 236, 242], PG, 0);
+  S.put(2, 3, ch('>'), on ? BLUE : GREY, on ? W : [234, 236, 242]);
+  if (q) S.text(4, 3, q.slice(-(SW - 7)) + (on && blink ? '_' : ''), INK2, on ? W : [234, 236, 242]);
+  else S.text(4, 3, on && blink ? '_' : F.hint.slice(0, SW - 7), GREY, on ? W : [234, 236, 242]);
+  S.text(1, 4, on ? ed.tapping(now) || T.apps.modeHint : '', GREY, PG);
+  // what came back: the search under way, nothing, or the list
+  const J = P.radio.job;
+  if (P.places === null) {
+    if (P.findNote === 'offline') S.center(9, F.offline, BAD, PG);
+    else if (J?.what === 'find') {
+      const msg = J.state === 'nodata' ? T.apps.wx.noData : J.state === 'nosignal' ? T.apps.wx.lost : `${F.searching}${'.'.repeat(Math.floor(now * 3) % 4)}`;
+      S.center(9, msg, J.state === 'nodata' || J.state === 'nosignal' ? BAD : BLUE, PG);
+      if (J.state === 'loading') S.center(10, T.apps.wx.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', J.kb.toFixed(1)), GREY, PG);
+    }
+    return softKeys(S, q ? F.search : '', q ? T.apps.clear : T.back);
   }
-  softKeys(S, T.show, T.back);
+  if (!P.places.length) { S.center(9, F.none, GREY, PG); return softKeys(S, F.search, T.back); }
+  S.text(1, 5, F.results.replace('{n}', String(P.places.length)), GREY, PG);
+  const [hx, hy] = P.here(), hour = calendar(world.time).hour, rows = Math.floor((SH - 8) / 2), sel = Math.max(0, P.psel);
+  const top = Math.max(0, Math.min(sel - (rows >> 1), P.places.length - rows));
+  for (let n = 0; n < rows && top + n < P.places.length; n++) {
+    const p = P.places[top + n], y = 6 + 2 * n, picked = top + n === P.psel, bg: C3 = picked ? PICK : PG;
+    const [px, py] = placeAt(city, p), far = P.gps.known ? `${fmtDist(Math.hypot(px - hx, py - hy), P.prefs.dist)} ${compass(px - hx, py - hy)}` : '--';
+    if (picked) { S.fill(y, bg); S.fill(y + 1, bg); }
+    S.put(1, y, ch(p >= 0 ? 'v' : '*'), W, p >= 0 ? [220, 46, 38] : [210, 60, 50]);
+    S.text(3, y, typed(placeName(city, p).slice(0, SW - far.length - 5), t - 0.1 - n * 0.04), picked ? PICK_INK : INK2, bg);
+    S.text(SW - far.length - 1, y, far, picked ? PICK_DIM : GREY, bg);
+    const h = placeHours(city, p, hour), kind = placeKind(city, p);
+    S.text(3, y + 1, kind, picked ? PICK_DIM : GREY, bg);
+    if (h) S.text(4 + kind.length, y + 1, h.open ? F.openNow : F.closed, picked ? W : h.open ? [40, 150, 70] : [200, 50, 40], bg);
+  }
+  softKeys(S, P.psel >= 0 ? T.show : F.search, T.back);
 }
 
 /** Fingerprints on the phone's glass: a few oval smudges where a thumb goes (low and to the right), 0..1 at screen cell (x, y). */

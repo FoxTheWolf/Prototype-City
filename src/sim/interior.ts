@@ -108,7 +108,7 @@ export function storeyBox(city: City, k: number, f: number): number {
 }
 
 /** Outward normal and the point at `a` along face 0..4 of a box. */
-function facePoint(B: Building, face: number, a: number): [number, number, number, number] {
+export function facePoint(B: Building, face: number, a: number): [number, number, number, number] {
   if (face === 0) return [B.x0, a, -1, 0];
   if (face === 1) return [B.x1, a, 1, 0];
   if (face === 2) return [a, B.y0, 0, -1];

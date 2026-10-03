@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import { type World } from '../sim/world';
-import { Ground, MAP_RES, mapRaster } from './mapdata';
+import { Ground, groundAt, MAP_RES, mapRaster } from './mapdata';
+import { walkable } from './places';
 
 /**
  * The phone's GPS receiver, with a 2008 receiver's limits. It runs while the Maps app is open:
@@ -18,6 +19,8 @@ import { Ground, MAP_RES, mapRaster } from './mapdata';
 const SATS = 11, AZ = 16;
 /** Seconds to the first fix: never had one, had one minutes ago, a moment ago. */
 const COLD = 25, WARM = 8, HOT = 2;
+/** Seconds over which the error drifts from one offset to the next (it once changed every second, too fast to read). */
+const DRIFT_S = 6;
 
 export type GpsState = 'off' | 'search' | 'fix' | 'lost';
 
@@ -95,12 +98,17 @@ export class Gps {
     this.nextUpdate = now + (indoor ? 3 : 1);
     const canyon = this.sky.reduce((a, b) => a + b, 0) / AZ;
     const sigma = indoor ? 12 : Math.min(60, 3 + 12 / Math.max(1, n - 3) + 18 * canyon + 5 * this.bounced);
-    const k = Math.floor(now);
-    // the error wanders (multipath), mostly carried over from the last second
-    const gx = (hash3(world.seed, k, 11) + hash3(world.seed, k, 12) - 1) * 1.7, gy = (hash3(world.seed, k, 13) + hash3(world.seed, k, 14) - 1) * 1.7;
-    this.ex = this.ex * 0.6 + gx * sigma * 0.4;
-    this.ey = this.ey * 0.6 + gy * sigma * 0.4;
-    const nx = p.x + this.ex, ny = p.y + this.ey;
+    // the error wanders (multipath) slowly: toward a new offset every DRIFT_S seconds, eased
+    const w = now / DRIFT_S, k = Math.floor(w), f = (w - k) * (w - k) * (3 - 2 * (w - k));
+    const off = (q: number, a: number) => (hash3(world.seed, q, a) + hash3(world.seed, q, a + 1) - 1) * 0.86 * sigma;
+    this.ex = off(k, 11) * (1 - f) + off(k + 1, 11) * f;
+    this.ey = off(k, 13) * (1 - f) + off(k + 1, 13) * f;
+    let nx = p.x + this.ex, ny = p.y + this.ey;
+    // outdoors, a position inside a building is put on the sidewalk nearest it (map matching, as navigators did)
+    if (!indoor) {
+      const g = groundAt(mapRaster(world.city), nx, ny);
+      if (g === Ground.Building || g === Ground.Lot || g === Ground.Yard) [nx, ny] = walkable(world.city, nx, ny);
+    }
     // heading from the track, when it moved more than the noise
     const mx = nx - this.hx, my = ny - this.hy;
     if (Math.hypot(mx, my) > Math.max(2.5, sigma * 0.6)) { this.heading = Math.atan2(my, mx); this.hx = nx; this.hy = ny; }
