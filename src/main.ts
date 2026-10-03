@@ -28,7 +28,7 @@ import { cctvMakerName } from './locale/names';
 import { spawnPeds } from './sim/peds';
 import { businessName, operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
-import { calendar } from './sim/clock';
+import { calendar, sunDir } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
 import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, type PlayerInput } from './sim/world';
@@ -343,6 +343,8 @@ addEventListener('mouseup', (e) => {
 addEventListener('keydown', (e) => {
   // F3 hides and shows the debug lines (for clean screenshots), whatever is in the hands
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
+  // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
+  if (e.code === 'F4') { e.preventDefault(); if (!e.repeat) calib = !calib; return; }
   // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
   if (cctv && (e.code === 'Escape' || (e.code === 'KeyC' && !cctv.title))) { stopCctv(); return; }
   if (cctv?.title) return;
@@ -445,6 +447,31 @@ let sound: Sound | null = null;
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
 /** The debug lines (status, clock, substation, where): F3 hides them. */
 let hudOn = true;
+/** Debug (F4): the same view at noon, at sunset and at night, side by side, to decide the palette by looking at it. */
+let calib = false, calibTags: string[] = [];
+const CALIB = ['NOON', 'SUNSET', 'NIGHT'];
+/** Today's noon, the evening moment the sun is about 2 degrees up, and 11 pm. */
+function calibTimes(t: number): number[] {
+  const day0 = Math.floor(t / 86400) * 86400, sd = new Float64Array(2);
+  let dusk = day0 + 18 * 3600, best = Infinity;
+  for (let h = 14; h < 22; h += 1 / 12) { sunDir(day0 + h * 3600, sd); const e = Math.abs(sd[0] - 0.035); if (e < best) { best = e; dusk = day0 + h * 3600; } }
+  return [day0 + 12 * 3600, dusk, day0 + 23 * 3600];
+}
+/** The three pictures into grid (each a third of its width), drawn with the clock moved to each time; their labels. */
+function drawCalib(view: View): string[] {
+  const w3 = Math.floor(grid.cols / 3), t0 = world.time, p0 = world.ptime, ts = calibTimes(t0);
+  grid.clear();
+  ts.forEach((t, k) => {
+    world.time = world.ptime = t;
+    const g = gpu?.shot(`calib${k}`, world, view, w3, grid.rows);
+    if (g) for (let r = 0; r < grid.rows; r++) {
+      const src = r * w3 * 4, dst = (r * grid.cols + k * w3) * 4;
+      grid.cells.set(g.cells.subarray(src, src + w3 * 4), dst); grid.bg.set(g.bg.subarray(src, src + w3 * 4), dst);
+    }
+  });
+  world.time = t0; world.ptime = p0;
+  return ts.map((t, k) => { const c = calendar(t); return `${CALIB[k]} ${String(Math.floor(c.hour)).padStart(2, '0')}:${String(Math.floor((c.hour % 1) * 60)).padStart(2, '0')}`; });
+}
 let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 
 /** When the player first entered the city (the opening plays from there), or -1. */
@@ -600,18 +627,23 @@ function frame(now: number) {
   let ms: number;
   // on the GPU the world is drawn with the rest of the screen at the end of the frame; the cameras'
   // monitor and the opening work on the picture on the CPU, so for them it is read back (a frame late)
-  const onGpu = !!comp && !cctv && !(introAt >= 0 && now / 1000 - introAt < INTRO_S);
+  const onGpu = !!comp && !cctv && !calib && !(introAt >= 0 && now / 1000 - introAt < INTRO_S);
   gpuCanvas.style.display = onGpu ? 'block' : 'none';
   if (onGpu) {
     ms = comp!.ms;
     worldFrames++;
   } else {
-    if (!drawInto(grid, view, 'screen')) grid.clear();
+    if (calib) calibTags = drawCalib(view);
+    else if (!drawInto(grid, view, 'screen')) grid.clear();
     ms = comp?.ms ?? 0;
     worldFrames++;
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
   ui.wipe(); hd.wipe();
+  if (calib) calibTags.forEach((tag, k) => {
+    const x = Math.round((layout.originX + k * Math.floor(grid.cols / 3) * layout.cellW - uiLayout.originX) / uiLayout.cellW) + 1;
+    ui.text(Math.max(0, x), 2, ` ${tag} `, [255, 230, 160], [12, 10, 8]);
+  });
   if (cctv) {
     // the camera's picture: kept at its model's rate and seen its way, then a 4:3 frame on the monitor (black bars at the sides)
     const C = world.cctv[cctv.k], M = CAMS[C.model];

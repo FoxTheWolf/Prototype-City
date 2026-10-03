@@ -89,7 +89,8 @@ export interface Car {
 
 /** E, S, W, N as (dx, dy). */
 export const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]] as const;
-const CAR_COLS: RGB[] = [[180, 40, 40], [40, 90, 170], [200, 200, 210], [40, 40, 48], [60, 140, 90], [150, 90, 40], [120, 60, 150]];
+// the colors of 2008's cars: mostly silver, white, black and grey, then dark blue, red, champagne, green, maroon
+const CAR_COLS: RGB[] = [[170, 172, 178], [170, 172, 178], [215, 215, 212], [215, 215, 212], [30, 30, 34], [30, 30, 34], [95, 98, 104], [35, 55, 110], [150, 30, 30], [165, 145, 110], [35, 70, 50], [95, 30, 40]];
 /** A typical car's length, for room checks. */
 const CAR_L = 4.5;
 /** Per kind: share of the traffic, length, acceleration, top speed range (m/s), colors. */

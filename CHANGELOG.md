@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.A.2 — Mais cor na cidade (2026-10-03)
+- As fachadas residenciais, históricas e de escritório ganharam cores de verdade (terracota, creme, sálvia, azul, mostarda, arenito, brownstone, granito), no lugar dos tons quase cinzas.
+- Os carros têm as cores de 2008: muitos prata, brancos e pretos, depois azul-escuro, vermelho, champanhe, verde e vinho.
+- O céu do dia ficou mais azul no alto, ainda enevoado no horizonte.
+- **F4** (debug) mostra a mesma vista ao meio-dia, no pôr do sol e à noite, lado a lado, para comparar as cores.
+
 ## 0.A.1 — Anúncios nos pontos de ônibus (2026-10-03)
 - O cartaz dos pontos de ônibus virou uma tela de anúncio animada, dos dois lados, com as mesmas animações dos telões (e apaga num apagão). Antes era um quadrado branco que estourava de brilho.
 - O Sarcófago não deixa mais a lua aparecer através dele, como se fosse de vidro.

@@ -531,15 +531,18 @@ const CROWNS: RGB[] = [[255, 235, 190], [255, 190, 80], [255, 70, 60], [80, 140,
 
 const WIN: RGB[] = [[255, 206, 110], [120, 220, 255], [90, 150, 255], [255, 150, 70], [190, 255, 170], [255, 130, 200], [255, 240, 200]];
 const WARM: RGB[] = [[255, 206, 110], [255, 170, 90], [255, 240, 200], [150, 190, 255]];
-const FRAME: RGB[] = [[92, 72, 50], [58, 66, 88], [76, 60, 84], [52, 64, 62], [88, 80, 70]];
+// (A.2) more color in the near-grey palettes, at about the same brightness: bronze, steel blue, red granite, green, concrete
+const FRAME: RGB[] = [[100, 74, 46], [52, 66, 100], [96, 58, 52], [46, 72, 64], [96, 88, 74]];
 
 /** Per style: wall colors, window colors, share of lit windows [min, max]. */
 const LOOK: Partial<Record<Facade, { frame: RGB[]; win: RGB[]; lit: [number, number] }>> = {
   office: { frame: FRAME, win: WIN, lit: [0.18, 0.68] },
   glass: { frame: [[40, 90, 120], [30, 105, 100], [50, 70, 130], [85, 60, 115], [30, 85, 70], [110, 95, 60]], win: WIN, lit: [0.15, 0.55] },
   brick: { frame: [[120, 52, 38], [100, 60, 45], [130, 72, 50], [85, 45, 40], [110, 80, 60]], win: WARM, lit: [0.2, 0.55] },
-  historic: { frame: [[140, 125, 100], [120, 110, 95], [150, 130, 110], [110, 100, 90], [130, 100, 80]], win: WARM, lit: [0.15, 0.45] },
-  residential: { frame: [[90, 95, 110], [110, 90, 80], [80, 100, 90], [120, 110, 90], [100, 85, 100]], win: WARM, lit: [0.2, 0.6] },
+  // limestone, sandstone, pale stone, brownstone, buff
+  historic: { frame: [[140, 125, 100], [150, 125, 85], [150, 130, 110], [112, 70, 52], [130, 100, 80]], win: WARM, lit: [0.15, 0.45] },
+  // painted walls: terracotta, cream, sage, dusty blue, mustard, salmon
+  residential: { frame: [[140, 85, 62], [150, 138, 112], [96, 118, 92], [86, 100, 132], [150, 118, 62], [148, 96, 88]], win: WARM, lit: [0.2, 0.6] },
   warehouse: { frame: [[80, 85, 90], [95, 80, 65], [70, 78, 72], [100, 70, 55]], win: [[200, 220, 180], [255, 200, 120]], lit: [0.05, 0.25] },
 };
 

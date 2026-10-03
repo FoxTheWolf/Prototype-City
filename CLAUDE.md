@@ -80,6 +80,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
+- Seria bom também fazer esse cartaz animado dos pontos de onibus. Não só esse, como todos os outros do theater District é, iluminarem ao redor né, com uma textura animada. Mas aí você pode deixar isso para quando você fizer a, a reescrita da iluminação.
+
 ### Feedback para o Opus 4.8
 
 > Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.

@@ -1738,9 +1738,10 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let toSun = 0.5 + 0.5 * cos(dS);
   let t2 = t * t; let t4 = t2 * t2;
   let cl = 0.3 + 0.7 * u.cityLit;
-  var r = (5.0 + 21.0 * t2 + 30.0 * t4 * cl) * night + (62.0 + 80.0 * t2) * day;
-  var g = (6.0 + 10.0 * t2 + 8.0 * t4 * cl) * night + (84.0 + 72.0 * t2) * day;
-  var b = (11.0 + 21.0 * t2 - 6.0 * t4 * cl) * night + (118.0 + 44.0 * t2) * day;
+  // (A.2) the day: still a hazy sky, but a bluer zenith fading to a pale horizon
+  var r = (5.0 + 21.0 * t2 + 30.0 * t4 * cl) * night + (54.0 + 96.0 * t2) * day;
+  var g = (6.0 + 10.0 * t2 + 8.0 * t4 * cl) * night + (88.0 + 80.0 * t2) * day;
+  var b = (11.0 + 21.0 * t2 - 6.0 * t4 * cl) * night + (142.0 + 42.0 * t2) * day;
   let dk = u.dusk * t4 * (0.35 + 0.65 * toSun);
   r += 190.0 * dk; g += 80.0 * dk; b += 30.0 * dk - 10.0 * dk * toSun;
   // the city's glow on the haze over it: seen only from its edges and beyond, low over the center, and it
