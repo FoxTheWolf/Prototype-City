@@ -1433,6 +1433,22 @@ const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 3.0; const DAY_GROU
 const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
 /** By day, how strongly the lamps' light reaches a surface, and how bright what glows reads. */
 const DAY_LAMP = 1.5; const DAY_EMIT = 1.6;
+/** Night: how light a surface's color must be (strongest channel, 0-255) to take a lamp's full light, and where the highlights start to roll off. */
+const NIGHT_ALB_REF = 85.0; const NIGHT_KNEE = 0.3;
+/** The night's curve, in linear light on the luminance: untouched below the knee (the night's look), above it an
+ *  exponential shoulder toward 1; a channel still past 1 goes toward white, as in tone(). In 0-255 sRGB. */
+fn nightTone(c: vec3f) -> vec3f {
+  let x = pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2));
+  let L = dot(x, vec3f(0.2126, 0.7152, 0.0722));
+  let mx0 = max(x.x, max(x.y, x.z));
+  if (L <= NIGHT_KNEE && mx0 <= 1.0) { return c; }
+  var Lt = L;
+  if (L > NIGHT_KNEE) { Lt = NIGHT_KNEE + (1.0 - NIGHT_KNEE) * (1.0 - exp(-(L - NIGHT_KNEE) / (1.0 - NIGHT_KNEE))); }
+  var y = x * (Lt / max(L, 1e-5));
+  let mx = max(y.x, max(y.y, y.z));
+  if (mx > 1.0) { y = vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)); }
+  return pow(y, vec3f(1.0 / 2.2)) * 255.0;
+}
 /** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
 fn acesL(x: f32) -> f32 { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 /** The curve on the luminance only, so a bright color keeps its hue and saturation; past 1 it goes to white. */
@@ -1457,8 +1473,10 @@ fn finish(cl: Cell) -> Cell {
   // strongest channel, so the dark night colors still show the light (a darker wall, a bit less)
   if (tagged && lamp.x + lamp.y + lamp.z > 0.5) {
     let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
-    let tint = mix(vec3f(1.0), base / max(mb, 1.0), smoothK(4.0, 24.0, mb));
-    let nl = lamp * tint * (LAMP_REFL * (0.6 + 0.4 * min(1.0, mb / 110.0)));
+    let tint = mix(vec3f(1.0), base / max(mb, 1.0), smoothK(2.0, 12.0, mb));
+    // a surface reflects in proportion to how light it is: dark glass under a white lamp stays dark and
+    // keeps its hue, a pale sidewalk takes the full pool
+    let nl = lamp * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
     o.c = base + emit + nl; lamp = nl;
   }
   gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
@@ -1512,6 +1530,9 @@ fn finish(cl: Cell) -> Cell {
     let hk = (1.0 - exp(-o.depth / 1400.0)) * NIGHT_HAZE * night * (0.15 + 0.85 * u.cityLit) * (0.8 + 0.4 * u.precip);
     o.c = o.c * (1.0 - hk) + vec3f(120.0, 64.0, 26.0) * hk;
   }
+  // at night bright sums roll off on the luminance (the hue kept) instead of each channel clipping at 255,
+  // which sent a lit color to grey and white
+  if (night > 0.01) { o.c = mix(o.c, nightTone(o.c), night); }
   if (u.solid > 0.0) { o.bg = o.c * u.solid; }
   if (u.sharp < 3.0) {
     let s = u.sharp;
