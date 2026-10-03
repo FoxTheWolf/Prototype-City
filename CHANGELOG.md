@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.2 — Cada luz com a sua temperatura (2026-10-03)
+- Os postes seguem a temperatura de cor real do tipo de lâmpada: sódio laranja, sódio de baixa pressão amarelo, vapor metálico branco quente com um fundo verde, mercúrio verde-azulado e os primeiros LEDs brancos frios. As fachadas agora pegam o tom dos postes da rua delas.
+- As janelas de escritório são mais de fluorescente (branco frio, esverdeado) e menos de cores inventadas; as casas continuam com a luz quente das lâmpadas incandescentes.
+
 ## 0.L.1 — Uma luz só para o dia e a noite (2026-10-03)
 - Por baixo, a luz virou uma só conta física para o dia e a noite: cada superfície tem a sua cor, recebe a luz do céu, do sol, da lua, do brilho da cidade e das lâmpadas, e o olho a leva para a tela por uma exposição. O visual ficou quase igual; é a base para a exposição automática e a iluminação global.
 - As poças de luz dos postes ficam um pouco mais alaranjadas sobre a calçada clara, e de dia as lâmpadas acesas iluminam um pouco (bem pouco) o que está perto.

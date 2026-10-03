@@ -113,7 +113,7 @@ const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
  *  mostly through the city's orange haze), so a lit wall went grey; the light now takes a stronger version of the hue. */
 const LIT_SAT = 1.5;
 /** How much of a lamp's own hue a facade takes (0: only its brightness). */
-const WALL_LAMP_HUE = 0.3;
+const WALL_LAMP_HUE = 0.75;
 /** At night, how much darker the street objects' paint reads than its palette color (as the walls' palette is). */
 const OBJ_NIGHT = 0.3;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
@@ -425,7 +425,7 @@ fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32) -> vec3f
   }
   if (!(commonPart || hash3(boxId, r * 31 + f, 11) < select(bld[lq + 11u] * (1.0 - 0.75 * u.day) * 1.3, 0.8, kind == R_SHOP))) { return vec3f(0.0); }
   let st = i32(bld[lq + 10u]); let office = st == 0 || st == 1;
-  let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(215.0, 232.0, 255.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
+  let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(222.0, 240.0, 232.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
   return c / 255.0 * elec;
 }
 fn lampD2(ro: u32, x: f32, y: f32) -> f32 {
@@ -1669,7 +1669,7 @@ fn light(cl: Cell) -> Cell {
     let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
     let E = (En * (1.0 - g) + skyC * ds + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps (lightAt dims its light by day; the eye does that now): their light takes the surface's color;
-    // on a facade only a touch of its hue (the sodium's orange times a blue wall made a scorched-paper yellow-grey)
+    // on a facade most of its hue (each street takes its lamps' tone; all of it under the old sRGB light made scorched-paper greys)
     var El = lin(lamp / max(0.15, 1.0 - 0.85 * day)) * LAMP_E;
     if (o.kind == KIND_WALL) { El = mix(vec3f(luma(El)), El, WALL_LAMP_HUE); }
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)

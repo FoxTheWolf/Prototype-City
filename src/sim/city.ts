@@ -529,7 +529,9 @@ const NEON: RGB[] = [[255, 70, 170], [60, 230, 255], [170, 90, 255], [90, 255, 1
 
 const CROWNS: RGB[] = [[255, 235, 190], [255, 190, 80], [255, 70, 60], [80, 140, 255], [190, 100, 255], [90, 230, 170]];
 
-const WIN: RGB[] = [[255, 206, 110], [120, 220, 255], [90, 150, 255], [255, 150, 70], [190, 255, 170], [255, 130, 200], [255, 240, 200]];
+// offices: mostly fluorescent tubes (cool white ~4100 K with its green, daylight ~6500 K), some behind tinted glass
+// (cyan, blue, green), a few warm (halogen, a manager's desk lamp) (L.2)
+const WIN: RGB[] = [[255, 206, 110], [120, 220, 255], [90, 150, 255], [225, 245, 230], [190, 255, 170], [215, 230, 255], [255, 240, 200]];
 const WARM: RGB[] = [[255, 206, 110], [255, 170, 90], [255, 240, 200], [150, 190, 255]];
 // (A.2) more color in the near-grey palettes, at about the same brightness: bronze, steel blue, red granite, green, concrete
 const FRAME: RGB[] = [[100, 74, 46], [52, 66, 100], [96, 58, 52], [46, 72, 64], [96, 88, 74]];

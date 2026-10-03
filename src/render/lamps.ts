@@ -14,12 +14,15 @@ export const LampMode = { Steady: 0, Cycling: 1, Stutter: 2, Dead: 3 } as const;
  * (`cold`): sodium starts red, metal halide and mercury start dim and greenish-blue. LEDs have no
  * warm-up and no hum.
  */
+/** The full-strength colors follow each lamp's color temperature (L.2), at the same brightness: high-pressure sodium ~2050 K,
+ *  low-pressure sodium a near-monochrome yellow-orange, metal halide ~4000 K with its faint green, mercury's
+ *  blue-green lines, and the cold white of 2008's first LEDs. */
 export const LAMP_LIGHT: Record<LampType, { warm: RGB; cold: RGB; hum: boolean }> = {
-  hps: { warm: [118, 72, 24], cold: [70, 14, 6], hum: true },
-  lps: { warm: [122, 74, 6], cold: [80, 20, 10], hum: true },
-  mh: { warm: [82, 84, 88], cold: [40, 55, 70], hum: true },
+  hps: { warm: [125, 68, 10], cold: [70, 14, 6], hum: true },
+  lps: { warm: [128, 84, 0], cold: [80, 20, 10], hum: true },
+  mh: { warm: [92, 84, 70], cold: [40, 55, 70], hum: true },
   mv: { warm: [58, 82, 84], cold: [20, 45, 45], hum: true },
-  led: { warm: [80, 88, 102], cold: [80, 88, 102], hum: false },
+  led: { warm: [84, 87, 95], cold: [84, 87, 95], hum: false },
 };
 
 export function lampMode(id: number, type: LampType = 'hps'): number {
