@@ -81,6 +81,9 @@ const LIT_H = 9.0;
 const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
 const LIGHT_KNEE = 150.0;
+/** How much of a lamp's light a surface sends back once tinted by its color (finish), and how strongly a lit room's light spills onto the wall around its window. */
+const SIGN_BACK = 2.5;
+const LAMP_REFL = 1.5; const WIN_SPILL = 70.0;
 const CROWN_H = 16.0;
 const FLOOD_GAP = 6.0;
 const LW = ${LIGHT_W};
@@ -142,8 +145,12 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
   if (zk > 0.0) {
     let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
     if (ix >= 0 && iy >= 0 && ix < LW - 1 && iy < LW - 1) {
-      let tx = fx - f32(ix); let ty = fy - f32(iy); let i0 = u32(iy * LW + ix);
-      L += (lampCorner(i0, (1.0 - tx) * (1.0 - ty)) + lampCorner(i0 + 1u, tx * (1.0 - ty)) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty) + lampCorner(i0 + u32(LW) + 1u, tx * ty)) * zk;
+      let tx = fx - f32(ix); let ty = fy - f32(iy);
+      // the two strongest lamps on each metre (the second layer at LW * LW), summed
+      for (var ly = 0u; ly < 2u; ly++) {
+        let i0 = u32(iy * LW + ix) + ly * u32(LW * LW);
+        L += (lampCorner(i0, (1.0 - tx) * (1.0 - ty)) + lampCorner(i0 + 1u, tx * (1.0 - ty)) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty) + lampCorner(i0 + u32(LW) + 1u, tx * ty)) * zk;
+      }
     }
   }
   let bi = ifloor(px / DCELL) - i32(u.dbx); let bj = ifloor(py / DCELL) - i32(u.dby);
@@ -157,7 +164,7 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
       let kind = u32(dl[o]); let R = dl[o + 7u];
       var dx = px - dl[o + 1u]; var dy = py - dl[o + 2u]; var lvl = 1.0;
       if (kind == 2u) {
-        if (dx * dl[o + 5u] + dy * dl[o + 6u] < -0.3) { continue; }
+        if (dx * dl[o + 5u] + dy * dl[o + 6u] < -SIGN_BACK) { continue; }
         let sx = dl[o + 3u] - dl[o + 1u]; let sy = dl[o + 4u] - dl[o + 2u];
         let t = clamp((dx * sx + dy * sy) / (sx * sx + sy * sy), 0.0, 1.0);
         dx -= sx * t; dy -= sy * t;
@@ -171,6 +178,9 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
       let d = length(vec2f(dx, dy));
       if (d >= R) { continue; }
       var f = (1.0 - d / R) * (1.0 - d / R);
+      // a sign lights what is in front of its wall, fading out over SIGN_BACK m behind the wall's plane
+      // (a hard cut there drew a straight seam from the building's corner across the street)
+      if (kind == 2u) { f *= smoothK(-SIGN_BACK, 0.0, dx * dl[o + 5u] + dy * dl[o + 6u]); }
       if (kind == 1u) {
         let cs = (dx * dl[o + 3u] + dy * dl[o + 4u]) / select(d, 1.0, d == 0.0); let c0 = dl[o + 5u];
         if (cs <= c0) { continue; }
@@ -1199,7 +1209,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let GL = roomLamp(lot, bk, roomRec(po, pk.r), pk.r, fl, winPw);
     if (GL.x + GL.y + GL.z > 0.02) {
       let d = length(vec2f((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H)); let e = max(0.0, 1.0 - d / 1.5);
-      c += GL * (120.0 * e * e); il += GL * (120.0 * e * e);
+      c += GL * (WIN_SPILL * e * e); il += GL * (WIN_SPILL * e * e);
     }
   }
   // neon tubes up the corners and along the roof line, and their glow on the wall
@@ -1255,9 +1265,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       }
     }
   }
-  c = sat(c);
+  // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
-  if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c = sat(c + L); il += L; }
+  if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c += L; il += L; }
   if (!isWin) { gEm = sat(emC); gIl = il; gTag = T; gGlowK = glowK; }
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));
@@ -1412,7 +1422,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   c = sat(c);
   let gl = lightAt(wx, wy, 0.0) * (lk * fog);
   gEm = vec3f(0.0); gIl = gl; gTag = rd;
-  return Cell(ch, sat(c * fog + gl), bg, rd, KIND_GROUND, 0.0);
+  return Cell(ch, c * fog + gl, bg, rd, KIND_GROUND, 0.0);
 }
 
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
@@ -1439,7 +1449,16 @@ fn finish(cl: Cell) -> Cell {
   if (o.depth >= 1e9) { return o; }
   // the light this cell gives off and gets from the lamps, if it was made where it was marked
   let tagged = o.depth == gTag;
-  let emit = select(vec3f(0.0), gEm, tagged); let lamp = select(vec3f(0.0), gIl, tagged);
+  let emit = select(vec3f(0.0), gEm, tagged); var lamp = select(vec3f(0.0), gIl, tagged);
+  // the light a surface gets takes its color (light x albedo), instead of being added over it: a red
+  // wall under a sodium lamp reads deep orange-red, not grey; brightness is kept by the color's own
+  // strongest channel, so the dark night colors still show the light (a darker wall, a bit less)
+  if (tagged && lamp.x + lamp.y + lamp.z > 0.5) {
+    let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
+    let tint = mix(vec3f(1.0), base / max(mb, 1.0), smoothK(4.0, 24.0, mb));
+    let nl = lamp * tint * (LAMP_REFL * (0.6 + 0.4 * min(1.0, mb / 110.0)));
+    o.c = base + emit + nl; lamp = nl;
+  }
   gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
   if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = sat(o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); }
   let day = u.day;

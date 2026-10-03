@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.21c — Luz na cor das coisas (2026-10-03)
+- À noite, a luz dos postes e letreiros toma a cor da parede: o tijolo vermelho fica vermelho-alaranjado sob o sódio, em vez de cinza estourado, e as janelas acesas não deixam mais uma auréola cinza na fachada.
+- Os postes de sódio estão mais laranjas e mais fortes.
+- Sumiram as linhas retas de luz no chão e nas paredes entre um prédio e outro.
+
 ## 0.R.21 — Luzes que brilham (2026-10-03)
 - À noite, o que é luz brilha de verdade: janelas acesas, neon, letreiros, postes e faróis ganham um halo que se espalha pelo ar em volta.
 - De dia, os postes e os holofotes não pintam mais manchas de luz nas paredes, e os letreiros de neon apagados ficam escuros como de verdade.

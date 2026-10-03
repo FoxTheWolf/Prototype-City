@@ -153,7 +153,7 @@ export class GpuWorld {
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
     this.subs = sz(64 * 16);
-    this.lmap = sz(1024 * 1024 * 4);
+    this.lmap = sz(1024 * 1024 * 4 * 2);
     this.lampCol = sz(C.lamps.length * 12);
     const mod = dev.createShaderModule({ code: worldWGSL() });
     mod.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL ${m.lineNum}:${m.linePos} ${m.message}`)));

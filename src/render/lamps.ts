@@ -15,8 +15,8 @@ export const LampMode = { Steady: 0, Cycling: 1, Stutter: 2, Dead: 3 } as const;
  * warm-up and no hum.
  */
 export const LAMP_LIGHT: Record<LampType, { warm: RGB; cold: RGB; hum: boolean }> = {
-  hps: { warm: [95, 70, 35], cold: [70, 14, 6], hum: true },
-  lps: { warm: [100, 68, 8], cold: [80, 20, 10], hum: true },
+  hps: { warm: [118, 72, 24], cold: [70, 14, 6], hum: true },
+  lps: { warm: [122, 74, 6], cold: [80, 20, 10], hum: true },
   mh: { warm: [82, 84, 88], cold: [40, 55, 70], hum: true },
   mv: { warm: [58, 82, 84], cold: [20, 45, 45], hum: true },
   led: { warm: [80, 88, 102], cold: [80, 88, 102], hum: false },

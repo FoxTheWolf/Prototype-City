@@ -16,8 +16,10 @@ const R = LAMP_R;
  * Each metre remembers which lamp lights it, so a lamp that fails dims its own pool every frame.
  */
 export class LightWindow {
-  private map = new Float32Array(W * W);
-  private lamp = new Int32Array(W * W);
+  // the two strongest lamps on each metre (a second layer at W * W): with only the strongest, where two
+  // pools of a different color or level met there was a straight seam on the ground and the walls
+  private map = new Float32Array(W * W * 2);
+  private lamp = new Int32Array(W * W * 2);
   /** Brightness of every lamp this frame, by lamp id; only the lamps in the window are updated. */
   level = new Float32Array(0);
   /** Warmth of every lamp this frame (0 just struck, 1 warmed up). */
@@ -58,7 +60,8 @@ export class LightWindow {
         for (let gx = Math.max(0, Math.ceil(lx - R)); gx <= Math.min(W - 1, lx + R); gx++) {
           const g = 1 - ((gx - lx) ** 2 + (gy - ly) ** 2) / (R * R);
           const k = gy * W + gx;
-          if (g > m[k]) { m[k] = g; id[k] = n; }
+          if (g > m[k]) { m[k + W * W] = m[k]; id[k + W * W] = id[k]; m[k] = g; id[k] = n; }
+          else if (g > m[k + W * W]) { m[k + W * W] = g; id[k + W * W] = n; }
         }
       }
     });
@@ -86,8 +89,8 @@ export class LightWindow {
 
   /** The baked window for the GPU: per metre, (lamp id + 1) << 8 | the pool's strength x 255 (0: unlit). */
   packMap(): Uint32Array {
-    const out = new Uint32Array(W * W), m = this.map, id = this.lamp;
-    for (let k = 0; k < W * W; k++) if (m[k] > 0) out[k] = ((id[k] + 1) << 8) | Math.min(255, Math.round(m[k] * 255));
+    const out = new Uint32Array(W * W * 2), m = this.map, id = this.lamp;
+    for (let k = 0; k < W * W * 2; k++) if (m[k] > 0) out[k] = ((id[k] + 1) << 8) | Math.min(255, Math.round(m[k] * 255));
     return out;
   }
   /** Every lamp's color this frame (r, g, b per lamp id). */
@@ -105,6 +108,6 @@ export class LightWindow {
       const n = id[i] * 3;
       out[0] += c[n] * g; out[1] += c[n + 1] * g; out[2] += c[n + 2] * g;
     };
-    corner(i0, (1 - tx) * (1 - ty)); corner(i0 + 1, tx * (1 - ty)); corner(i0 + W, (1 - tx) * ty); corner(i0 + W + 1, tx * ty);
+    for (const j of [i0, i0 + W * W]) { corner(j, (1 - tx) * (1 - ty)); corner(j + 1, tx * (1 - ty)); corner(j + W, (1 - tx) * ty); corner(j + W + 1, tx * ty); }
   }
 }
