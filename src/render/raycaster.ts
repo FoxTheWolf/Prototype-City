@@ -65,7 +65,7 @@ const FOG = 1500;
 /** Street lamps light walls and objects up to this height, and this far from the viewer. */
 const LIT_H = 9, LIT_FAR = 600;
 /** Litter on the ground is drawn only this close. */
-const LITTER_FAR = 14;
+export const LITTER_FAR = 14;
 /** Height of a tower's lit crown band; width of an ad's letters; the ads' boards and paint. */
 const CROWN_H = 16;
 export const AD_LETTER = 1.25;
@@ -86,7 +86,7 @@ const G = {
  * Litter items: glyph, color, shape (0 round, 1 flat rectangle, 2 long and thin) and half sizes in metres.
  * Colors are muted, so the street keeps its sodium palette.
  */
-const LITTER: [number, number, number, number, number, number, number][] = [
+export const LITTER: [number, number, number, number, number, number, number][] = [
   [C('@'), 38, 38, 44, 0, 0.22, 0], [C('@'), 50, 66, 100, 0, 0.19, 0], [C('&'), 165, 165, 160, 0, 0.16, 0], // black, blue and white bags
   [C('u'), 225, 220, 205, 0, 0.08, 0], [C('u'), 185, 60, 50, 0, 0.08, 0], [C('o'), 120, 90, 60, 0, 0.07, 0], // cups, a coffee lid
   [C('='), 175, 180, 190, 2, 0.08, 0.035], [C('='), 175, 50, 45, 2, 0.08, 0.035], // cans lying down
@@ -127,7 +127,7 @@ const hitF = new Float64Array(1024);
 /** Per column: distance to the window glass when indoors, so the rain is not drawn in the room. */
 let nearT = new Float32Array(0);
 /** This frame's roofs near the viewer that keep the rain off. */
-const roofs: Roof[] = [];
+export const roofs: Roof[] = [];
 
 /** The light on the viewer's hands after the last renderWorld, per channel (~0.3 in the dark, 1 in daylight). */
 export const VIEW_LIGHT = new Float32Array([1, 1, 1]);

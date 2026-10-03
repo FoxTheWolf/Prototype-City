@@ -9,7 +9,8 @@ import { SYMBOLS } from '../signs';
  *   parts, symbol + 1, second color + flag, lamp, bulbs);
  * - the frame's objects, from fx[1]: their count, the number of 8-column tiles, where the objects and
  *   the tile lists start, the tiles' offsets into the list, the list, then OW words per object (pose,
- *   radius, height, base, seed, fog distance, lift, lean, the model's offset, its screen box).
+ *   radius, height, base, seed, fog distance, lift, lean, the model's offset, its screen box), then
+ *   the roofs that keep the rain off (fx[OB + 4] where, fx[OB + 5] how many; seven floats each).
  */
 export const OW = 20, PW = 24, TILE = 8;
 
@@ -50,7 +51,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
   let tile = gx / TILE;
   if (tile >= fx[OB + 1u]) { return cl; }
   let objs = OB + fx[OB + 2u]; let list = OB + fx[OB + 3u];
-  for (var li = fx[OB + 4u + tile]; li < fx[OB + 5u + tile]; li++) {
+  for (var li = fx[OB + 6u + tile]; li < fx[OB + 7u + tile]; li++) {
     let ob = objs + fx[list + li] * OW;
     if (gx < fx[ob + 16u] || gx >= fx[ob + 17u] || gy < fx[ob + 18u] || gy >= fx[ob + 19u]) { continue; }
     let x = fxf(ob); let y = fxf(ob + 1u); let c = fxf(ob + 2u); let s = fxf(ob + 3u); let r = fxf(ob + 4u);

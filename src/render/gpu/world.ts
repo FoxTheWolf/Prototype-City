@@ -1,10 +1,12 @@
 import { BAY, blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
 import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, planOf, tiersOf } from '../../sim/interior';
+import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
-import { gpuObjects, gpuPrepare, REL, reliefOf, VFOV, type View } from '../raycaster';
+import { gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, type View } from '../raycaster';
 import type { Part } from '../objects';
 import { OW, PW, TILE } from './objects';
 import { CURVE_R } from '../sarcophagus';
+import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
@@ -22,8 +24,8 @@ import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGS
  * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
  * ticker, the burnt ground, the fence, the Sarcophagus and its cranes, scaffolding and reliefs, the street doors and the fire escapes
  * drawn on the facades, the rooms seen through the windows, and the objects (gpu/objects.ts: lamps, trees, furniture, blade
- * signs, billboards, signals, cars, people, cameras, substations, sheds, the fire escapes' frames). Not yet: interiors,
- * the smoke, rain and snow falling, the glass of the windows indoors.
+ * signs, billboards, signals, cars, people, cameras, substations, sheds, the fire escapes' frames), the smoke of the fire
+ * zone, rain and snow falling. Not yet: interiors, the glass of the windows indoors.
  */
 
 type UName = (typeof UNIFORMS)[number];
@@ -201,6 +203,8 @@ export class GpuWorld {
     }
     const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
     const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), W = world.weather, Dg = C.diagonal, U = this.U;
+    // how far the rain has fallen, shared with the CPU's drawFall (split into whole bands and the rest, for the f32s)
+    const Fs = fallShape({ amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: (world.tick + v.alpha) / 60, flash: sky.flash });
     const vals: Record<UName, number> = {
       px: v.x, py: v.y, eye: v.eye, dirX, dirY, plX: -dirY * plane, plY: dirX * plane, hor: rows / 2 + Math.tan(v.pitch) * scale,
       scale, cols, rows, sec: (world.tick + v.alpha) / 60, day: sky.day, solid: v.look.solid, sharp: v.look.sharp, fuse: v.look.fuse ? 1 : 0,
@@ -212,6 +216,9 @@ export class GpuWorld {
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
       sarH: C.sarcophagus.h, towX: C.sarcophagus.tx, towY: C.sarcophagus.ty, towR: C.sarcophagus.tr, towH: C.sarcophagus.th,
       starSlots: Math.round((cols * Math.PI) / Math.atan(plane)), tickN: Math.min(TICK_MAX, this.ticker.length),
+      yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
+      fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
+      fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
     this.objects(world, v, scale, plane, vals.hor);
@@ -299,12 +306,14 @@ export class GpuWorld {
     // the tiles' lists: counted, then filled
     const n = picked.length, W = this.oW, F = this.oF, cnt = new Uint32Array(nT + 1);
     for (let j = 0; j < n; j++) for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) cnt[t]++;
-    const tab = 4, lst = tab + nT + 1;
+    const tab = 6, lst = tab + nT + 1;
     let total = 0;
     for (let t = 0; t < nT; t++) { W[tab + t] = total; total += cnt[t]; }
     W[tab + nT] = total;
-    const ob = lst + total;
-    if (ob + n * OW > OBJ_CAP) { W[0] = 0; q.writeBuffer(this.fx, this.oBase * 4, W, 0, 1); return; }
+    // after the objects, this frame's roofs that keep the rain off (gatherRoofs): x, y, c, s, hx, hy, z
+    const ob = lst + total, rb = ob + n * OW, nR = roofs.length;
+    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 6); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 6); return; }
+    roofs.forEach((R, k) => F.set([R.x, R.y, R.c, R.s, R.hx, R.hy, R.z], rb + k * 7));
     const fill = cnt.fill(0);
     for (let j = 0; j < n; j++) {
       for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) W[lst + W[tab + t] + fill[t]++] = j;
@@ -315,8 +324,8 @@ export class GpuWorld {
       W[w + 14] = lean ? 1 : 0; W[w + 15] = mods[j];
       W[w + 16] = box[j * 4]; W[w + 17] = box[j * 4 + 1]; W[w + 18] = box[j * 4 + 2]; W[w + 19] = box[j * 4 + 3];
     }
-    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst;
-    q.writeBuffer(this.fx, this.oBase * 4, W, 0, ob + n * OW);
+    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR;
+    q.writeBuffer(this.fx, this.oBase * 4, W, 0, rb + nR * 7);
   }
 
   /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
@@ -408,7 +417,7 @@ function code(s: string, k: number) {
  * The signs' data, one u32 each: a header (the ticker's and the text pool's offsets, the number of
  * businesses, the cranes' offset and count), the 5x7 font for codes 0..255 at SG_FONT, three words per business at SG_BIZ (its
  * full sign name and its longest word, as offset << 8 | length into the pool, and its sign mode),
- * room for the ticker, then the pool, then the Sarcophagus's cranes (four floats each). The shader cuts the name to a face as signText does.
+ * room for the ticker, then the pool, then the Sarcophagus's cranes (four floats each), the smoke vents and the diagonal's X per avenue. The shader cuts the name to a face as signText does.
  */
 function signData(city: City) {
   const nb = city.businesses.length, tick = SG_BIZ + nb * 3, pool = tick + TICK_MAX;
@@ -424,10 +433,15 @@ function signData(city: City) {
     words.push(put(full), put(word), signMode(city, b));
   }
   // the Sarcophagus's cranes after the pool: x, y, z, a as floats
-  const cranes = city.sarcophagus.cranes, cr0 = pool + chars.length;
-  const out = new Uint32Array(cr0 + cranes.length * 4);
-  out[0] = tick; out[1] = pool; out[2] = nb; out[3] = cr0; out[4] = cranes.length;
-  new Float32Array(out.buffer).set(cranes.flatMap((k) => [k.x, k.y, k.z, k.a]), cr0);
+  // then the smoke vents (x, y, r, h), then per avenue the X the diagonal makes on it (a0, a1; 0, 0 if none)
+  const cranes = city.sarcophagus.cranes, cr0 = pool + chars.length, v0 = cr0 + cranes.length * 4, x0 = v0 + city.vents.length * 4;
+  const nAv = (city.xb.length >> 1) + 1, zones = diagRoad(city).byRoad;
+  const out = new Uint32Array(x0 + nAv * 2);
+  out[0] = tick; out[1] = pool; out[2] = nb; out[3] = cr0; out[4] = cranes.length; out[5] = v0; out[6] = city.vents.length; out[7] = x0;
+  const OF = new Float32Array(out.buffer);
+  OF.set(cranes.flatMap((k) => [k.x, k.y, k.z, k.a]), cr0);
+  OF.set(city.vents.flatMap((s) => [s.x, s.y, s.r, s.h]), v0);
+  for (let k = 0; k < nAv; k++) { const X = zones.get(1024 + k)?.find((z) => z.isX); if (X) { OF[x0 + k * 2] = X.a0; OF[x0 + k * 2 + 1] = X.a1; } }
   for (let c = 0; c < 256; c++) { const r = fontRows(c); if (r) for (let k = 0; k < 7; k++) out[SG_FONT + c * 7 + k] = r[k]; }
   out.set(words, SG_BIZ);
   out.set(chars, pool);

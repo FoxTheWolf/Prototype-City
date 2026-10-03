@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.14 — Fumaça, chuva e neve na GPU (2026-10-03)
+- No modo da GPU, a fumaça da zona de fogo sobe no horizonte, a chuva e a neve caem (com a água escorrendo da borda dos pontos de ônibus e dos andaimes, e nada caindo debaixo deles), os respingos aparecem no chão molhado, o lixo volta às calçadas e às sarjetas, e as faixas do X da avenida diagonal ganham as linhas de parada.
+
 ## 0.R.13 — Objetos e carros na GPU (2026-10-03)
 - No modo da GPU, as ruas ganham tudo o que é objeto: postes, árvores, bancos, orelhões, pontos de ônibus, entulho, placas perpendiculares com as letras em lâmpadas, outdoors nos telhados, semáforos com os sinais de pedestre, placas de PARE, câmeras de segurança, as subestações, os andaimes sobre a calçada, as escadas de incêndio de ferro, as pessoas e os carros (com as rodas girando, a carroceria balançando nas molas, os vidros e as setas piscando). Com a câmera 3D, dá para olhar um carro de cima sem distorção.
 

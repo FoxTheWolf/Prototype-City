@@ -1,10 +1,11 @@
 import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
 import { CEIL, CELL as PCELL, DOOR, DOOR_H } from '../../sim/interior';
-import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
+import { LITTER, LITTER_FAR, AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
 import { LAMP_R, LIGHT_W } from '../lightmap';
 import { objectsWGSL } from './objects';
+import { SHELLS } from '../precip';
 
 /**
  * The world's compute shader (stage R): one invocation per cell. The walk through the street grid and
@@ -22,7 +23,9 @@ export const UNIFORMS = [
   'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'pad0',
   'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
   'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'starSlots',
-  'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH',
+  'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH', 'yaw', 'fall',
+  'fallSnow', 'windX', 'windY', 'fallB', 'fallR', 'fallSpeed', 'fallStreak', 'fallDens',
+  'fallPeriod',
 ] as const;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
@@ -84,6 +87,9 @@ const BLOCKS = array<u32, 256>(${Array.from(BLOCKS).map((b) => `${b}u`).join(','
 const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u, 90u, PLUS), vec3u(48u, O, EQ), vec3u(72u, HASH, EQ));
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u;
 const BURN_START = ${f(BURN_START)};
+const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
+const LIT_B = array<vec3f, ${LITTER.length}>(${LITTER.map((L) => `vec3f(${L.slice(4).map(f).join(', ')})`).join(', ')});
+const LITTER_FAR = ${f(LITTER_FAR)};
 // (lamp pool radius ${LAMP_R} m: baked into the light map on the CPU)
 
 // the same hash as core/rng.ts's hash3 (32-bit wrapping products)
@@ -898,6 +904,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);
   let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
   var ch = DOT; var c = vec3f(38.0, 38.0, 46.0);
+  var dens = 0.0; // litter per 0.5 m square
   let roadX = (gx & 1) == 0; let roadY = (gy & 1) == 0;
   let sD = (wx - u.dox) * u.dnx + (wy - u.doy) * u.dny; let aD = abs(sD); let pastD = aD - u.dw * 0.5;
   let diagGlyph = select(SL, BS, u.dex * u.dey > 0.0);
@@ -907,6 +914,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     if (!roadY && rd < 200.0) {
       let al = (wx - u.dox) * u.dex + (wy - u.doy) * u.dey; let m = aD % LANE_W;
       if (aD < 0.3) { ch = diagGlyph; c = vec3f(210.0, 170.0, 60.0); }
+      else if (pastD > -1.2) { dens = 0.07; }
       else if (min(m, LANE_W - m) < 0.12 && aD < floor(u.dw * 0.5 / LANE_W) * LANE_W - 1.0 && ifloor(al / 3.0) % 2 == 0) { ch = diagGlyph; c = vec3f(150.0); }
     }
   } else if (roadX || roadY) {
@@ -924,10 +932,17 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       let a = abs(across); let end = min(min(along - e0a, e0b - along), dEnd); let m = a % LANE_W;
       let lanes = floor((b0b - b0a) * 0.5 / LANE_W);
       let mark = select(DASH, BAR, roadX); let markX = select(BAR, EQ, roadX);
-      if (dEnd < 1.0) { }
+      // an avenue the diagonal crosses in an X: where the diagonal's lanes end, and the stop lines before it
+      var xa0 = 0.0; var xa1 = 0.0;
+      if (roadX) { let xo = sg[7] + u32(gx >> 1) * 2u; xa0 = bitcast<f32>(sg[xo]); xa1 = bitcast<f32>(sg[xo + 1u]); }
+      let hasX = xa1 > xa0;
+      if (hasX && pastD < 0.25 && along > xa0 && along < xa1) { ch = BAR; c = vec3f(175.0); }
+      else if (dEnd < 1.0) { }
       else if (end > 1.0 && end < 4.5) { if (ifloor((across + 100.0) / 0.9) % 2 == 0) { ch = markX; c = vec3f(150.0); } }
+      else if (hasX && (a < (b0b - b0a) * 0.5 - 0.3) && (((across < 0.0) && (xa0 - along > 4.6) && (xa0 - along < 5.05)) || ((across > 0.0) && (along - xa1 > 4.6) && (along - xa1 < 5.05)))) { ch = EQ; c = vec3f(170.0); }
       else if ((end > 4.6) && (end < 5.05) && (a < (b0b - b0a) * 0.5 - 0.3) && (select((across < 0.0), (across > 0.0), (along - e0a) < (e0b - along)) == roadX)) { ch = markX; c = vec3f(170.0); }
       else if (a < 0.3) { ch = mark; c = vec3f(210.0, 170.0, 60.0); }
+      else if ((b0b - b0a) * 0.5 - a < 1.2) { dens = 0.07; } // the gutter collects what the wind blows
       else if (min(m, LANE_W - m) < 0.12 && a < lanes * LANE_W - 1.0 && ifloor(along / 3.0) % 2 == 0) { ch = mark; c = vec3f(150.0); }
     }
   } else {
@@ -938,11 +953,13 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     if (edge < SIDEWALK) {
       let fx = fract(wx / 1.5); let fy = fract(wy / 1.5);
       ch = select(COL, PLUS, fx < 0.08 || fy < 0.08); c = vec3f(78.0, 74.0, 78.0);
+      dens = select(0.025, 0.06, (flags & 32u) != 0u);
     } else if ((diag & select(2u, 4u, sD > 0.0)) != 0u) {
       let fx = fract(wx / 2.5); let fy = fract(wy / 2.5);
       ch = select(COL, PLUS, fx < 0.06 || fy < 0.06); c = vec3f(92.0, 86.0, 80.0);
       if (square) { let dark = ((ifloor(wx / 2.5) + ifloor(wy / 2.5)) & 1) == 1; c = select(vec3f(108.0, 104.0, 108.0), vec3f(62.0, 60.0, 66.0), dark); if (!dark && fx > 0.45 && fx < 0.55 && fy > 0.45 && fy < 0.55) { ch = O; } }
     } else if (opk == 1u) {
+      dens = 0.01;
       let mx = (blk[o] + blk[o + 2u]) * 0.5; let my = (blk[o + 1u] + blk[o + 3u]) * 0.5;
       if (abs(wx - mx) < 1.5 || abs(wy - my) < 1.5) { ch = select(COM, DOT, hv < 0.5); c = vec3f(95.0, 85.0, 70.0); }
       else { ch = select(select(SEMI, COM, hv < 0.7), QUO, hv < 0.4); c = vec3f(40.0, 95.0 + hv * 40.0, 45.0); }
@@ -957,6 +974,21 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       else { ch = select(COM, DOT, hv < 0.6); c = vec3f(55.0, 50.0, 48.0); }
     } else { ch = select(COM, DOT, hv < 0.7); c = vec3f(50.0, 48.0, 52.0); }
   }
+  if (dens > 0.0 && rd < LITTER_FAR) {
+    // litter: at most one item per 0.5 m square, at a random spot and turn inside it; at a distance an
+    // item grows to the ground one row covers, so it does not slip between rows
+    let lx = ifloor(wx * 2.0); let ly = ifloor(wy * 2.0);
+    if (hash3(lx, ly, 17) < dens) {
+      let k = min(u32(hash3(lx, ly, 18) * ${LITTER.length}.0), ${LITTER.length - 1}u); let La = LIT_A[k]; let Lb = LIT_B[k];
+      let half = max(Lb.y, Lb.z); let room = max(0.0, 0.5 - 2.0 * half);
+      let ux = wx - (f32(lx) * 0.5 + half + room * hash3(lx, ly, 19)); let uy = wy - (f32(ly) * 0.5 + half + room * hash3(lx, ly, 20));
+      let ang = hash3(lx, ly, 21) * 3.14159265; let ca = cos(ang); let sa = sin(ang);
+      let lu = abs(ux * ca + uy * sa); let lw = abs(-ux * sa + uy * ca);
+      let e = rd * rd / (u.eye * u.scale) * 0.5;
+      let hit = select((lu < max(Lb.y, e)) && (lw < max(Lb.z, e)), length(vec2f(lu, lw)) < max(Lb.y, e), Lb.x == 0.0);
+      if (hit) { ch = u32(La.x); c = La.yzw; }
+    }
+  }
   var lk = 1.0;
   if (u.snow > 0.02) {
     let sk = u.snow * select(1.0, 0.5, roadX || roadY || pastD < 0.0);
@@ -967,6 +999,16 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     let wk = u.wet * (1.0 - u.snow);
     c *= vec3f(1.0 - 0.35 * wk, 1.0 - 0.35 * wk, 1.0 - 0.3 * wk);
     lk = 1.0 + 1.1 * wk * select(1.0, 0.75 + 0.25 * sin(u.sec * 7.0 + hv * 30.0), u.rain > 0.0);
+    if (u.rain > 0.0 && rd < 22.0 && !underRoof(wx, wy, 0.1)) {
+      // splashes: a ring that grows from a random spot of each 0.33 m square, for a blink, more in a
+      // downpour; a cell at a distance covers more ground (e), so there it shrinks to a dot
+      let sx = ifloor(wx * 3.0); let sy = ifloor(wy * 3.0); let ph = fract(u.sec * 2.3 + hash3(sx, sy, 41));
+      if (hash3(sx, sy, 42) < u.rain * 0.3 && ph < 0.09) {
+        let d = length(vec2f(wx - (f32(sx) + 0.2 + 0.6 * hash3(sx, sy, 43)) / 3.0, wy - (f32(sy) + 0.2 + 0.6 * hash3(sx, sy, 44)) / 3.0));
+        let e = rd * rd / (u.eye * u.scale) * 0.5; let rr = 0.02 + ph * 1.1;
+        if (abs(d - rr) < max(0.015, e)) { ch = select(O, TICK, rr < 0.05 || e > 0.04); c = vec3f(150.0, 150.0, 165.0); }
+      }
+    }
   }
   c = sat(c);
   return Cell(ch, sat((c + lightAt(wx, wy, 0.0) * lk) * fog), bg, rd, KIND_GROUND, 0.0);
@@ -1240,6 +1282,149 @@ fn craneCell(gx: i32, gy: i32, vis: f32) -> Cell {
   }
   return o;
 }
+// whether (x, y, z) is under one of this frame's roofs (bus shelters, sidewalk sheds), as precip.ts's underRoof
+fn underRoof(x: f32, y: f32, z: f32) -> bool {
+  let OB = fx[1];
+  if (OB == 0u) { return false; }
+  let rb = OB + fx[OB + 4u]; let nr = fx[OB + 5u];
+  for (var k = 0u; k < nr; k++) {
+    let w = rb + k * 7u;
+    if (z > fxf(w + 6u)) { continue; }
+    let dx = x - fxf(w); let dy = y - fxf(w + 1u); let c = fxf(w + 2u); let s = fxf(w + 3u);
+    if (abs(dx * c + dy * s) < fxf(w + 4u) && abs(-dx * s + dy * c) < fxf(w + 5u)) { return true; }
+  }
+  return false;
+}
+// the smoke columns over the fire zone (drawSmoke): color only, veiling what is behind them in puffs that
+// rise, glowing orange at the base; each vent's column measured in metres across at its distance
+fn smokeOver(cl: Cell, rdx: f32, rdy: f32, m: f32) -> Cell {
+  var o = cl;
+  let fwd = rdx * u.dirX + rdy * u.dirY;
+  if (fwd < 1e-3) { return o; }
+  let lat = rdy * u.dirX - rdx * u.dirY;
+  let v0 = sg[5]; let nv = sg[6];
+  for (var q = 0u; q < nv; q++) {
+    let w = v0 + q * 4u;
+    let sx = bitcast<f32>(sg[w]); let sy = bitcast<f32>(sg[w + 1u]); let sr = bitcast<f32>(sg[w + 2u]); let sh = bitcast<f32>(sg[w + 3u]);
+    let rx = sx - u.px; let ry = sy - u.py; let fV = rx * u.dirX + ry * u.dirY;
+    if (fV < 5.0) { continue; }
+    let t = fV / fwd;
+    if (o.depth <= t) { continue; }
+    let drop = (rx * rx + ry * ry) / (2.0 * u.curveR);
+    let vv = (sh - drop - (u.eye - m * t)) / sh; // 0 at the top of the column, 1 at the ground
+    if (vv < 0.0 || vv >= 1.0) { continue; }
+    let rise = 1.0 - vv;
+    // the column widens and leans downwind as it rises
+    let half = sr * (0.5 + 1.7 * rise); let mid = ry * u.dirX - rx * u.dirY + rise * rise * sr * 1.5;
+    let uu = (lat * t - mid) / half;
+    if (abs(uu) >= 1.0) { continue; }
+    let row = ifloor(vv * 30.0 + u.sec * 60.0 * 0.03 * (30.0 / max(1.0, sh / 10.0)));
+    let a = (1.0 - uu * uu) * (0.25 + 0.75 * vv) * 0.55 * (0.55 + 0.45 * hash3(ifloor(uu * 5.0 + sx), row, i32(sy)));
+    if (a < 0.02) { continue; }
+    let glow = select(0.0, (vv - 0.7) / 0.3, vv > 0.7);
+    let g0 = (60.0 + 30.0 * vv) * (1.0 - min(1.0, fV / 2500.0) * 0.7);
+    let sc = vec3f(g0 + 120.0 * glow, g0 + 40.0 * glow, g0 * 1.05);
+    o.bg += (sc - o.bg) * a;
+    if (o.ch != 32u && o.ch != 0u) { o.c += (sc - o.c) * a; }
+  }
+  return o;
+}
+// ---- rain and snow falling (precip.ts, drawFall), over the finished cell: drops on shells around the
+// viewer, in columns fixed to the compass; the nearest shell's drop over this cell wins, then the water
+// running off the roofs' edges
+const SHELLS = array<f32, ${SHELLS.length}>(${SHELLS.map(f).join(', ')});
+fn h3(a: i32, b: i32, c: i32) -> f32 {
+  var h = (bitcast<u32>(a) * 0x27d4eb2du) ^ (bitcast<u32>(b) * 0x165667b1u) ^ (bitcast<u32>(c) * 0x9e3779b1u);
+  h ^= h >> 16u; h *= 0x85ebca6bu; h ^= h >> 13u; h *= 0xc2b2ae35u; h ^= h >> 16u;
+  return f32(h) / 4294967296.0;
+}
+fn fallOver(cl: Cell, rdx: f32, rdy: f32, m: f32) -> Cell {
+  var o = cl;
+  if (u.fall <= 0.01) { return o; }
+  let snow = u.fallSnow > 0.5;
+  let L = sqrt(rdx * rdx + rdy * rdy);
+  let fwd = rdx * u.dirX + rdy * u.dirY; let side = rdy * u.dirX - rdx * u.dirY;
+  if (fwd < 1e-3) { return o; }
+  // (Y: the rows from a drop's head up to this cell, as the CPU's rows on its sheared camera)
+  let az = u.yaw + atan2(side, fwd); let da = 2.0 * u.plane / u.cols;
+  // wind across this line of sight: which way the rain's streaks lean
+  let cross = 0.5 * ((-rdy * u.windX + rdx * u.windY) / L) / u.fallSpeed;
+  let glyph = select(select(BS, SL, cross > 0.0), BAR, abs(cross) < 0.1);
+  let P = u.fallPeriod; let base = max(0.0, u.eye - 6.0);
+  let b0 = ifloor((u.fallR + base) / P); let b1 = ifloor((12.0 + base + u.fallR) / P);
+  for (var s = 0; s < ${SHELLS.length}; s++) {
+    let t = SHELLS[s]; let dist = t / L;
+    if (o.depth <= dist) { break; }
+    let cap = select(max(1.5, 6.0 - f32(s) * 0.6), 1.0, snow); let near = 1.0 - f32(s) / ${SHELLS.length}.0;
+    let zc = u.eye - m * dist; let wx = u.px + rdx / L * t; let wy = u.py + rdy / L * t;
+    for (var bb = b0; bb <= b1; bb++) {
+      let b = i32(u.fallB) + bb;
+      var a = az;
+      if (snow) { a += 0.25 * sin(u.sec * 0.9 + f32(b) * 1.7 + f32(s)) / t; }
+      let colI = ifloor(a / da);
+      if (h3(colI, b, s) > u.fallDens) { continue; }
+      let zd = f32(bb) * P + h3(colI, b, s + 17) * P - u.fallR;
+      if (zd < base || zd > base + 12.0) { continue; }
+      let len = min(u.fallStreak * u.scale / dist, cap); let Y = 0.5 + (zc - zd) * u.scale / dist;
+      if (Y < 0.0 || Y >= max(len, 1.0)) { continue; }
+      if (underRoof(wx, wy, zd)) { continue; } // sheltered
+      // see-through: the drop is the color behind it lightened (snow: whitened), plus the light it catches
+      let lt = lightAt(wx, wy, zd);
+      let q = (0.5 + 0.5 * near) * select(0.8, 1.0, snow); let add = select(60.0, 120.0, snow) * q + 200.0 * u.flash;
+      o.ch = select(select(glyph, COL, s > 5), select(DOT, STAR, s < 3), snow);
+      o.c = max(sat(o.bg), sat(o.c) * 0.5) * 1.2 + vec3f(add, add, add * 1.1) + lt * select(2.2, 1.4, snow);
+      return o;
+    }
+  }
+  if (snow) { return o; }
+  // water running off the roofs: drops falling from their edges (the open front and the two ends)
+  let OB = fx[1];
+  if (OB == 0u) { return o; }
+  let rb = OB + fx[OB + 4u]; let nr = fx[OB + 5u];
+  let colC = ifloor((side / fwd / u.plane + 1.0) * 0.5 * u.cols);
+  for (var n = 0u; n < nr; n++) {
+    let w = rb + n * 7u;
+    let Rx = fxf(w); let Ry = fxf(w + 1u); let Rc = fxf(w + 2u); let Rs = fxf(w + 3u); let hx = fxf(w + 4u); let hy = fxf(w + 5u); let Rz = fxf(w + 6u);
+    // a roof whose corners all fall in other columns has no drop here
+    var lo = 1e9; var hi = -1e9; var ok = true;
+    for (var c = 0; c < 4; c++) {
+      let lx = select(-hx, hx, (c & 1) == 1); let ly = select(-hy, hy, (c & 2) == 2);
+      let wx = Rx + lx * Rc - ly * Rs - u.px; let wy = Ry + lx * Rs + ly * Rc - u.py; let d = wx * u.dirX + wy * u.dirY;
+      if (d < 0.4) { ok = false; break; }
+      let cx = ((wx * -u.dirY + wy * u.dirX) / (d * u.plane) + 1.0) * 0.5 * u.cols; lo = min(lo, cx); hi = max(hi, cx);
+    }
+    if (ok && (f32(colC) + 1.0 < lo || f32(colC) > hi)) { continue; }
+    var k = 0;
+    for (var e = 0; e < 3; e++) {
+      var ax = hx; var ay = -hy; var bx = hx; var by = hy; var ox = 1.0; var oy = 0.0;
+      if (e == 1) { ax = -hx; ay = -hy; bx = hx; by = -hy; ox = 0.0; oy = -1.0; }
+      if (e == 2) { ax = -hx; ay = hy; bx = hx; by = hy; ox = 0.0; oy = 1.0; }
+      let mm = ifloor(length(vec2f(bx - ax, by - ay)) / 0.3);
+      for (var qq = 0; qq <= mm; qq++) {
+        let kk = k; k++;
+        if (h3(i32(n), kk, 71) > u.fall * 0.55) { continue; }
+        let lx = ax + (bx - ax) * f32(qq) / f32(max(mm, 1)); let ly = ay + (by - ay) * f32(qq) / f32(max(mm, 1));
+        let wx = Rx + lx * Rc - ly * Rs - u.px; let wy = Ry + lx * Rs + ly * Rc - u.py;
+        let d = wx * u.dirX + wy * u.dirY;
+        if (d < 0.4) { continue; }
+        if (ifloor(((wx * -u.dirY + wy * u.dirX) / (d * u.plane) + 1.0) * 0.5 * u.cols) != colC) { continue; }
+        // a drop every ~0.6 s from each point, falling at 5 m/s
+        let z = Rz - fract(u.sec / 0.6 + h3(i32(n), kk, 72)) * 3.0;
+        if (z < 0.0 || o.depth <= d / fwd) { continue; }
+        let Y = 0.5 + (u.eye - m * (d / fwd) - z) * u.scale / d;
+        if (Y < 0.0 || Y >= min(3.0, 0.3 * u.scale / d)) { continue; }
+        // no drip where the next roof goes on (scaffold sheds of two faces meeting, end to end)
+        let qx = lx + ox * 0.2; let qy = ly + oy * 0.2;
+        if (underRoof(Rx + qx * Rc - qy * Rs, Ry + qx * Rs + qy * Rc, Rz - 0.1)) { continue; }
+        let lt = lightAt(wx + u.px, wy + u.py, z);
+        o.ch = select(BAR, COM, Y < 1.0);
+        o.c = max(sat(o.bg), sat(o.c) * 0.5) * 1.2 + vec3f(70.0, 75.0, 85.0) + lt * 2.0;
+        return o;
+      }
+    }
+  }
+  return o;
+}
 ${objectsWGSL()}
 fn store(i: u32, n: u32, cl: Cell) {
   let k = vec3u(clamp(cl.c, vec3f(0.0), vec3f(255.0)));
@@ -1368,8 +1553,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     else if (m > 0.0) { cl = groundCell(1e7, rdx, rdy); }
     else { cl = skyCell(m, rdx, rdy); }
   }
-  // the street objects over all of it (the sky's depth is 1e9, so the finish leaves it as it is)
-  store(i, n, finish(objectsOver(cl, gid.x, gid.y, rdx, rdy, -m)));
+  // the smoke, then the street objects over all of it, then rain and snow over the finished cell (the sky's depth is 1e9, so the finish leaves it as it is)
+  store(i, n, fallOver(finish(objectsOver(smokeOver(cl, rdx, rdy, m), gid.x, gid.y, rdx, rdy, -m)), rdx, rdy, m));
 }
 `;
 }
