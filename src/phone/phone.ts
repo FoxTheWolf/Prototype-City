@@ -17,6 +17,7 @@ import { type FsNode } from '../sim/computer';
 import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
 import { businessName, makerName, operatorName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
+import { post } from '../sim/bank';
 import { hash3 } from '../core/rng';
 import { calendar as calendarOf } from '../sim/clock';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
@@ -107,12 +108,18 @@ const SYSTEM_KB = 40 * 1024;
  * The store's catalog: id, size in KB, price in cents. Small apps download over EDGE; past
  * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
  */
-export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0]];
+export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0], ['bank', 96, 0]];
+/** Kilobytes the bank's app downloads to show the account, and to make a payment. */
+const BANK_KB = 6, BANK_PAY_KB = 2;
+/** What the bank's app can top the phone's credit up by, in cents. */
+export const TOPUPS = [500, 1000, 2000, 5000];
 /** Kilobytes the news reader downloads each time. */
 const NEWS_KB = 8;
 /** Posts a Streetwire page holds. */
 const WIRE_POSTS = 40;
 export const EDGE_LIMIT_KB = 10 * 1024;
+/** Cents as dollars: $1,234.56. */
+export const money = (c: number) => `${c < 0 ? '-' : ''}$${(Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
@@ -197,6 +204,14 @@ export class Phone {
   /** Renders the city from a point (main hands it): the photos on Streetwire's posts (false while the picture is not there yet). */
   shoot: ((g: CharGrid, x: number, y: number, yaw: number, eye?: number, pitch?: number) => boolean) | null = null;
   private wireId = -1;
+  /**
+   * The bank's app (it came installed by the bank, in My Apps): the page open, the row picked, the
+   * scroll of the statement, whether the account has been downloaded since it was opened, and a note
+   * on the last top-up (done, no funds, no data connection).
+   */
+  bk = { view: 'home' as 'home' | 'stmt' | 'topup' | 'branch', sel: 0, ok: false, note: '' };
+  /** The player's bank, by its name. */
+  get bankName(): string { const c = this.world.city; return businessName(c, c.banks[this.world.bank.bank].hq); }
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
   wxAt = -1e9;
   constructor(private world: World) {
@@ -204,6 +219,8 @@ export class Phone {
     this.look = this.device.look;
     this.looks = [this.look];
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
+    // the bank's own app, put on by the bank with the account (in My Apps, like a download)
+    this.apps.push(STORE.findIndex((a) => a[0] === 'bank'));
     this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...APPS.filter((a) => a !== 'folder'), ...BUNDLED]);
   }
   out = false;
@@ -476,6 +493,16 @@ export class Phone {
       this.radio.job = null;
     }
     if (J?.what === 'news' && J.state === 'done') { this.newsAt = this.world.time; this.radio.job = null; }
+    if (J?.what === 'bank' && J.state === 'done') { this.bk.ok = true; this.radio.job = null; }
+    // a top-up from the bank: off the account, onto the line's credit, and the operator says so
+    if (J?.what.startsWith('banktop:') && J.state === 'done') {
+      const c = +J.what.slice(8), op = operatorName(this.world.city);
+      this.radio.job = null;
+      if (post(this.world.bank, this.world.time, 'topup', -c, 0)) {
+        this.world.telco.player.credit += c; this.bk.note = 'done'; this.sfx.push(['sent']);
+        this.receive(op, SMS.topup.replace('{amount}', money(c)).replace('{credit}', money(this.world.telco.player.credit)), now + 3);
+      } else this.bk.note = 'funds';
+    }
     if (J?.what === 'social' && J.state === 'done') {
       this.wire = this.world.feed.posts.slice(-WIRE_POSTS); this.wireAt = this.world.time; this.wireId = this.world.feed.next - 1; this.radio.job = null; this.scroll = 0;
       if (this.wst.view === 'feed') this.wst.sel = 0;
@@ -921,6 +948,7 @@ export class Phone {
     if (id === 'snake') this.snake.reset(now);
     if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
     if (id === 'social') { this.wst.view = 'feed'; if (this.online()) this.fetchWire(now); }
+    if (id === 'bank') { this.bk = { view: 'home', sel: 0, ok: false, note: '' }; if (this.online()) this.radio.fetch('bank', BANK_KB, now); }
   }
 
   /** Download what is new on the wire: a little for the page, and each post since the last time. */
@@ -940,6 +968,7 @@ export class Phone {
       if (k === 'rsoft' || k === 'left') { this.newsOpen = null; this.scroll = this.newsScroll; return true; }
       return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false;
     }
+    if (id === 'bank') { const r = this.bankKey(k, now); if (r !== null) return r; }
     if (k === 'rsoft') { if (this.appFrom === 'store') this.stab = 1; this.open(this.appFrom, now); return true; }
     if (id === 'snake') {
       const S = this.snake;
@@ -967,6 +996,30 @@ export class Phone {
       if (k === '*') { C.input = C.input.slice(0, -1); return true; }
       return false;
     }
+    return false;
+  }
+
+  /** The bank's app: its pages (null: the key is the app's Back, to leave it). */
+  private bankKey(k: Key, now: number): boolean | null {
+    const B = this.bk, rows = B.view === 'home' ? 3 : B.view === 'topup' ? TOPUPS.length : B.view === 'stmt' ? this.world.bank.ledger.length : 0;
+    if (!B.ok) {
+      // not downloaded (no signal when it was opened): OK tries again
+      if (k === 'ok' && this.online()) { this.radio.fetch('bank', BANK_KB, now); this.since = now; return true; }
+      return k === 'rsoft' ? null : false;
+    }
+    if (k === 'rsoft') { if (B.view === 'home') return null; B.view = 'home'; B.sel = 0; B.note = ''; this.since = now; return true; }
+    if ((k === 'up' || k === 'down') && rows) { B.sel = Math.max(0, Math.min(rows - 1, B.sel + (k === 'up' ? -1 : 1))); B.note = ''; return true; }
+    if (B.view === 'home' && (k === 'ok' || k === 'lsoft')) { B.view = (['stmt', 'topup', 'branch'] as const)[B.sel]; B.sel = 0; this.since = now; return true; }
+    if (B.view === 'topup' && (k === 'ok' || k === 'lsoft')) {
+      const J = this.radio.job;
+      if (J?.what.startsWith('banktop:') && (J.state === 'connecting' || J.state === 'loading')) return true;
+      if (!this.online()) B.note = 'signal';
+      else if (this.world.bank.balance < TOPUPS[B.sel]) B.note = 'funds';
+      else { this.radio.fetch(`banktop:${TOPUPS[B.sel]}`, BANK_PAY_KB, now); B.note = ''; }
+      return true;
+    }
+    // the branch's page: the green key calls it
+    if (B.view === 'branch' && k === 'send') { this.open('calls', now); this.place(this.world.telco.bizNum[this.world.bank.branch], now); return true; }
     return false;
   }
 

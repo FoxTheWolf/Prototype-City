@@ -139,6 +139,28 @@ export interface Business {
   building: number;
   /** Picks the name; the words live in the locale, like the other names. */
   name: number;
+  /** A bank's branch: the business of its chain's head office, whose name it carries. */
+  hq?: number;
+}
+
+/** A bank: its head office (a business, the branch nearest downtown) and all its branches, the head office first. */
+export interface BankChain { hq: number; branches: number[] }
+/** About how many branches a bank has: the city's bank fronts are shared out among this many fewer chains (2 to 5). */
+const BANK_BRANCHES = 3;
+
+/** The city's banks: its bank fronts grouped into a few chains (at least two: shops nearest downtown become banks when there are too few). */
+function bankChains(seed: number, businesses: Business[], buildings: Building[], cx: number, cy: number): BankChain[] {
+  const far = (k: number) => { const B = buildings[businesses[k].building]; return Math.hypot((B.x0 + B.x1) / 2 - cx, (B.y0 + B.y1) / 2 - cy); };
+  const near = businesses.map((_, k) => k).sort((a, b) => far(a) - far(b));
+  for (const k of near) if (businesses.filter((b) => b.kind === 'bank').length < 2 && businesses[k].kind !== 'hotel') businesses[k].kind = 'bank';
+  const all = near.filter((k) => businesses[k].kind === 'bank');
+  const n = Math.max(Math.min(2, all.length), Math.min(5, Math.round(all.length / BANK_BRANCHES)));
+  const chains = all.slice(0, n).map((hq) => ({ hq, branches: [hq] }));
+  for (const k of all.slice(n)) {
+    const c = chains[Math.floor(hash3(seed ^ 0xba7c, k, 1) * n)];
+    c.branches.push(k); businesses[k].hq = c.hq;
+  }
+  return chains;
 }
 
 /** Which businesses open on the ground floor, by district. */
@@ -326,6 +348,8 @@ export interface EmptyLot { x0: number; y0: number; x1: number; y1: number; bloc
 
 export interface City {
   businesses: Business[];
+  /** The banks (see bankChains). */
+  banks: BankChain[];
   /** Every street lamp, in a fixed order: the index is the lamp's identity (for its failures now, the power grid later). */
   lamps: Prop[];
   w: number;
@@ -955,6 +979,7 @@ export function generateCity(seed: number, size: number): City {
     block.b1 = buildings.length;
   }
 
+  const banks = bankChains(seed, businesses, buildings, cx, cy);
   const landmarks: Landmark[] = [];
   for (const [k, kind] of special) if (kind !== 'park2') landmarks.push({ kind, x: (blocks[k].x0 + blocks[k].x1) / 2, y: (blocks[k].y0 + blocks[k].y1) / 2 });
   let tallest = buildings[0];
@@ -964,7 +989,7 @@ export function generateCity(seed: number, size: number): City {
   const xCell = cellTable(xb), yCell = cellTable(yb);
   diagonalLamps(seed, diagonal, w, h, xb, yb, xCell, yCell, nbx, blocks, districts);
   const { vents, floodlights, sarcophagus } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, empties, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, empties, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, banks, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
 }
 
 /** Faces of a building on the sidewalk: the sides on the block's edge, and a face cut by the diagonal. */

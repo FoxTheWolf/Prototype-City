@@ -1,5 +1,6 @@
 import { hash3 } from '../core/rng';
-import { businessName, citizenName, operatorName, wifiName, workplaceName } from '../locale/names';
+import { businessName, citizenName, districtName, operatorName, roadName, wifiName, workplaceName } from '../locale/names';
+import { districtAt, nearestRoad } from '../sim/city';
 import { drawWire } from './wire';
 import { drawCalendar } from './calendar';
 import { newsApp, weatherApp } from './skins';
@@ -16,7 +17,7 @@ import { freeVoucher } from './ussd';
 import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APPS, EDGE_LIMIT_KB, MENU_COLS, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { APPS, EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
 import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
@@ -50,7 +51,7 @@ const ICON: Record<App, [string, C3, C3]> = {
 /** The icons of apps from the store. */
 const STORE_ICON: Record<string, [string, C3, C3]> = {
   torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ['d', [130, 60, 170], [255, 220, 255]], atlas: ['3D', [60, 130, 90], [255, 255, 255]],
-  snake: ICON.snake, news: ICON.news, social: ICON.wire,
+  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ['$$', [22, 70, 52], [235, 200, 110]],
 };
 const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
 const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
@@ -714,6 +715,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
     const J = P.radio.job;
     return newsApp(S, P, world, t, J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading'));
   }
+  if (id === 'bank') return bankApp(S, P, world, t);
   if (id === 'convert') {
     const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');
     S.center(4, `< ${what} >`, HI, LCD);
@@ -726,6 +728,87 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   S.center(10, (ST.about as Record<string, string>)[id], DIM, LCD);
   softKeys(S, '', T.back);
   void now;
+}
+
+const BK = A.bank;
+/**
+ * The bank's app, in the bank's own colors (a deep green bar, gold, a cream page): the account and
+ * its balance, the statement, a top-up of the phone's credit from the account, and the branch (where
+ * it is, its hours, its number). Nothing shows until the account has come down over the network.
+ */
+function bankApp(S: Lcd, P: Phone, world: World, t: number) {
+  const GREEN: C3 = [18, 64, 48], GOLD: C3 = [236, 200, 112], PAGE: C3 = [242, 238, 226], INK2: C3 = [34, 38, 34], GREY: C3 = [120, 122, 112], RED: C3 = [170, 40, 40], OK2: C3 = [30, 120, 60];
+  const { city } = world, Acc = world.bank, B = P.bk, J = P.radio.job, op = operatorName(city);
+  paint(S, PAGE);
+  bar(S, P.bankName.toUpperCase().slice(0, SW - 4), GOLD, GREEN, '$$', GOLD);
+  if (!B.ok) {
+    const busy = J?.what === 'bank' && (J.state === 'connecting' || J.state === 'loading');
+    if (busy) {
+      S.center(10, typed(BK.connecting, t), INK2, PAGE);
+      const n = Math.round((J!.done / J!.kb) * 20);
+      S.center(12, `[${'#'.repeat(n).padEnd(20, '.')}]`, GREEN, PAGE);
+    } else BK.offline.forEach((l, k) => S.center(10 + k, l, GREY, PAGE));
+    return softKeys(S, busy ? '' : T.ok, T.back);
+  }
+  const date = (at: number) => { const c = calendar(at); return `${String(c.month).padStart(2, '0')}/${String(c.day).padStart(2, '0')}`; };
+  const corner = (k: number) => {
+    const Bd = city.buildings[city.businesses[k].building], x = (Bd.x0 + Bd.x1) / 2, y = (Bd.y0 + Bd.y1) / 2;
+    return [`${roadName(city, true, nearestRoad(city.xb, city.xCell, x))} &`, roadName(city, false, nearestRoad(city.yb, city.yCell, y)), districtName(city, districtAt(city, x, y))];
+  };
+  if (B.view === 'home') {
+    S.text(2, 3, typed(`${BK.checking} ****${Acc.number.slice(-4)}`, t), GREY, PAGE);
+    S.text(2, 5, typed(BK.balance, t - 0.1), INK2, PAGE);
+    S.text(2, 6, typed(money(Acc.balance), t - 0.15), GREEN, PAGE);
+    S.text(2, 7, typed(BK.asOf.replace('{t}', hhmm(calendar(world.time).hour)), t - 0.2), GREY, PAGE);
+    BK.menu.forEach((m, n) => {
+      const sel = n === B.sel, bg: C3 = sel ? GREEN : PAGE;
+      S.fill(10 + n * 2, bg);
+      S.text(2, 10 + n * 2, typed(m, t - 0.25 - n * 0.05), sel ? GOLD : INK2, bg);
+      S.text(SW - 3, 10 + n * 2, '>', sel ? GOLD : GREY, bg);
+    });
+    return softKeys(S, T.ok, T.back);
+  }
+  if (B.view === 'stmt') {
+    S.text(1, 2, BK.stmt, GREEN, PAGE);
+    const L = Acc.ledger, rows = SH - 6, top = Math.max(0, Math.min(B.sel - (rows >> 1), L.length - rows));
+    for (let n = 0; n < rows && top + n < L.length; n++) {
+      const e = L[L.length - 1 - (top + n)], y = 4 + n, sel = top + n === B.sel, bg: C3 = sel ? [222, 230, 214] : PAGE;
+      const what = (BK.kinds as Record<string, string>)[e.kind].replace('{biz}', e.kind === 'card' || e.kind === 'atm' ? businessName(city, e.ref) : '').replace('{op}', op);
+      const amt = `${e.amount > 0 ? '+' : ''}${money(e.amount)}`;
+      S.fill(y, bg);
+      S.text(1, y, date(e.at), GREY, bg);
+      S.text(7, y, what.slice(0, SW - 9 - amt.length), INK2, bg);
+      S.text(SW - amt.length - 1, y, amt, e.amount > 0 ? OK2 : INK2, bg);
+    }
+    return softKeys(S, '', T.back);
+  }
+  if (B.view === 'topup') {
+    S.text(1, 2, BK.topupTitle.replace('{op}', op.toUpperCase()).slice(0, SW - 2), GREEN, PAGE);
+    S.text(2, 4, BK.credit, GREY, PAGE); S.text(SW - money(world.telco.player.credit).length - 2, 4, money(world.telco.player.credit), INK2, PAGE);
+    S.text(2, 5, BK.balance, GREY, PAGE); S.text(SW - money(Acc.balance).length - 2, 5, money(Acc.balance), INK2, PAGE);
+    TOPUPS.forEach((c, n) => {
+      const sel = n === B.sel, bg: C3 = sel ? GREEN : PAGE;
+      S.fill(8 + n * 2, bg);
+      S.text(2, 8 + n * 2, money(c), sel ? GOLD : INK2, bg);
+    });
+    const busy = J?.what.startsWith('banktop:') && (J.state === 'connecting' || J.state === 'loading');
+    if (busy) S.text(2, SH - 4, BK.paying, GREY, PAGE);
+    else if (B.note) S.text(2, SH - 4, (BK.notes as Record<string, string>)[B.note], B.note === 'done' ? OK2 : RED, PAGE);
+    return softKeys(S, busy ? '' : BK.pay, T.back);
+  }
+  // the branch where the account is, and the head office
+  const k = Acc.branch, chain = city.banks[Acc.bank], hq = chain.hq;
+  S.text(1, 2, BK.branch, GREEN, PAGE);
+  corner(k).forEach((l, n) => S.text(2, 4 + n, typed(l.slice(0, SW - 4), t - n * 0.05), INK2, PAGE));
+  S.text(2, 8, BK.hours, GREY, PAGE);
+  S.text(2, 9, formatNumber(world.telco, world.telco.bizNum[k]), INK2, PAGE);
+  if (hq !== k) {
+    S.text(2, 12, BK.hq, GREEN, PAGE);
+    corner(hq).forEach((l, n) => S.text(2, 13 + n, l.slice(0, SW - 4), INK2, PAGE));
+  } else S.text(2, 12, BK.isHq, GREEN, PAGE);
+  S.text(2, 17, BK.branches.replace('{n}', String(chain.branches.length)), GREY, PAGE);
+  S.text(2, SH - 4, BK.callHint, GREY, PAGE);
+  softKeys(S, '', T.back);
 }
 
 const WF = A.wifi;

@@ -751,7 +751,8 @@
       "welcome": "Welcome to {op}! Dial *100# for your balance and data bundles.",
       "lowData": "You have less than 500 KB of data left. Dial *100# to buy a bundle.",
       "noData": "Your data bundle is used up. Dial *100# to buy a new one.",
-      "failed": "Your message to {to} could not be delivered."
+      "failed": "Your message to {to} could not be delivered.",
+      "topup": "Your line was topped up {amount} from your bank. Credit now {credit}."
     },
     "cal": {
       "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -788,11 +789,15 @@
       "running": "USSD code running...", "reply": "Reply:", "send": "Send", "to": "To", "text": "Text", "inbox": "Inbox", "sent": "Sent", "newMsg": "New message", "clearAll": "Clear notifications", "clearHint": "v clear", "noMsgs": "No messages", "replyK": "Reply", "from": "From", "smsSent": "Message sent", "smsFail": "Sending failed",
       "voucher": "Top-up card (unused)",
       "shop": { "tabs": ["CATALOG", "INSTALLED"], "free": "FREE", "installed": "INSTALLED", "get": "Get", "open": "Open",
-        "names": { "snake": "Snake", "torch": "Torch", "news": "City News", "convert": "Converter", "tunes": "Tunes Player", "atlas": "Street Atlas 3D", "social": "Streetwire" },
-        "about": { "snake": "The classic. 2 4 6 8 to steer.", "torch": "The screen as a light.", "news": "Headlines over EDGE.", "convert": "Units, the US way and back.", "tunes": "Music player (Wi-Fi only).", "atlas": "3D street maps (Wi-Fi only).", "social": "What the city is saying." },
+        "names": { "snake": "Snake", "torch": "Torch", "news": "City News", "convert": "Converter", "tunes": "Tunes Player", "atlas": "Street Atlas 3D", "social": "Streetwire", "bank": "Mobile Bank" },
+        "about": { "snake": "The classic. 2 4 6 8 to steer.", "torch": "The screen as a light.", "news": "Headlines over EDGE.", "convert": "Units, the US way and back.", "tunes": "Music player (Wi-Fi only).", "atlas": "3D street maps (Wi-Fi only).", "social": "What the city is saying.", "bank": "Your account, from your bank." },
         "notes": { "signal": "No data connection.", "wifi": "Over 10 MB: Wi-Fi only.", "full": "Not enough storage.", "credit": "Not enough credit. Dial *100#." },
         "downloading": "Downloading", "none": "No apps installed.", "gameOver": "GAME OVER", "again": "OK to play again", "score": "SCORE", "best": "BEST",
         "newsWait": "Fetching headlines...", "newsNone": "No data connection." },
+      "bank": { "connecting": "Connecting securely...", "offline": ["No data connection.", "OK to try again."], "checking": "Checking", "balance": "Available balance", "asOf": "As of {t}", "menu": ["Statement", "Top up phone", "Branch & contact"],
+        "stmt": "STATEMENT", "topupTitle": "TOP UP {op}", "credit": "Phone credit", "pay": "Pay", "paying": "Sending...", "notes": { "done": "Done. Your credit is topped up.", "funds": "Insufficient funds.", "signal": "No data connection." },
+        "branch": "YOUR BRANCH", "hq": "Head office", "isHq": "This branch is the head office.", "hours": "Mon-Fri 9am-5pm", "callHint": "Green key calls the branch", "branches": "{n} branches in the city",
+        "kinds": { "open": "Opening deposit", "cash": "Cash deposit", "atm": "ATM {biz}", "card": "{biz}", "fee": "Monthly fee", "topup": "{op} top-up", "transfer": "Transfer in" } },
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",

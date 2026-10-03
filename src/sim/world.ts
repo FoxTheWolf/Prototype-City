@@ -4,6 +4,7 @@ import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city'
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, leavesOf, planOf } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
+import { openAccount, type BankAccount } from './bank';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
@@ -76,6 +77,8 @@ export interface World {
   feed: Feed;
   /** The security cameras (see cctv.ts). */
   cctv: Cctv[];
+  /** The player's bank account (see bank.ts). */
+  bank: BankAccount;
 }
 
 /** Cars on the grid at the busiest hour (and 12% more on the diagonal), for the default city size. */
@@ -124,7 +127,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city) };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time) };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

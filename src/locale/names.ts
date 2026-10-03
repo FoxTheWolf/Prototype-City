@@ -141,6 +141,7 @@ export function bladeText(city: City, k: number): string {
 
 /** A business's name, from its name pick: a template for its kind filled with surnames and brand words. */
 export function businessName(city: City, k: number): string {
+  k = city.businesses[k].hq ?? k; // a bank's branch carries its head office's name
   const b = city.businesses[k], n = b.name;
   const tpls = L.business[b.kind];
   const t = thanks(city).get(`biz:${k}`);

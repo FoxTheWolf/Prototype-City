@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.1 — Uma conta no banco (2026-10-03)
+- A cidade tem de dois a cinco bancos, cada um uma rede de agências com fachada na rua; as agências da mesma rede têm o mesmo nome no letreiro.
+- Você tem uma conta no banco da agência mais perto de onde começa, aberta umas semanas antes, com o extrato desses dias: compras nas lojas da cidade, saques nos caixas e a tarifa do mês.
+- O app do banco vem no celular (em My Apps): saldo, extrato, recarga do crédito do celular com o dinheiro da conta (a operadora avisa por SMS), e a agência, com endereço, horário e telefone (a tecla verde liga para ela). Ele precisa de sinal ou Wi-Fi e gasta um pouco do pacote de dados.
+- No apagão, o olho só escurece à força de noite, e fica no escuro máximo por um segundo antes de se recuperar.
+- O letreiro de notícias apagado não mostra mais as letras escuras.
+
 ## 0.L.13 — Um apagão que escurece de verdade (2026-10-03)
 - Depois do surto, quando a escuridão chega até você, a visão fica muito escura em um segundo, e logo os olhos começam a se acostumar ao escuro.
 - No surto, as luzes chegam ao dobro do brilho (antes, 1,5×).
