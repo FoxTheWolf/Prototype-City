@@ -80,8 +80,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
-- Uma mudança que eu sugiro para a fatia vertical é que já que aquele distrito, aquele quarteirão em triângulo, né, estilo Times Square, está dando tanto problema, vamos eliminar ele por hora, né, colocar uma flag que desliga a geração dele, e aí vamos trocar por dois quarteirões estilo praça, né, Ou algo que fique parecido. Um quarteirão estilo praça, né? Nesse, no meio desse lugar. 
-
 ### Feedback para o Opus 4.8
 
 > Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.
@@ -356,6 +354,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 ### Sessão E: fundação dos tipos de lugar (planejar com o usuário)
 - **Tipos de lugar com interior coerente** e **prédios modulares** (antes da economia, 13): o que o Maps mostra é o que o letreiro diz e é o que o interior é, e depois o que a loja vende; o **cybercafé** precisa existir como tipo; o cinema fica para depois. Cada cômodo com um uso definido pela simulação; mais escritórios perto do centro; a renda dos moradores segue o lugar. Liga com `homeUnit` (ainda não existe) em `sim/citizens.ts` e com `furnish` em `sim/interior.ts`. **Base:** o catálogo de `docs/tarefas/retorno/01-tipos-de-lugar.json`.
 - **Bug: semáforo no meio da rua no X do theater district**, e repensar o triângulo da diagonal (quarteirão comum com calçada, ou prédio estilo Flatiron com pracinha). Decidir com o usuário.
+- **Sugestão do usuário (2026-10-03), antes da fatia vertical:** como o quarteirão em triângulo do X (estilo Times Square) dá muito problema, **desligar a geração dele com uma flag** (sem apagar o código) e pôr no lugar **um ou dois quarteirões estilo praça**. Pode resolver junto o semáforo no meio da rua. Fazer antes da Sessão F.
 
 ### Sessão F: fatia vertical de uma noite de trabalho (aprovada em princípio)
 - Um contratante → investigar → ir ao lugar → invadir → a cidade reage → pagamento ou calor (veja "Opiniões e sugestões do Claude"). Separar o que é sessão normal (contratante, pagamento, calor, polícia, notícias) do que é Trilha de hacking, e avisar quando usar o Opus 4.8. **Polícia que escala** (aceito): testemunhas e a viatura que passa; depois câmeras da rua e registros do lugar; no topo ("caso federal"), logs de telefone, antenas, Wi-Fi e posts.
