@@ -95,8 +95,8 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
     const ln = on ? lines[first + r] : undefined, scan = r & 1 ? 0.9 : 1;
     for (let c = 0; c < W; c++) {
       const ch = ln ? ln.text.charCodeAt(c) || 32 : 32, col = S.bios ? BIOS_INK : ink[ln?.ink ?? 0], k = scan, base = S.bios ? BIOS_BG : sbg;
-      // a faint glow behind lit characters, as a CRT's phosphor spreads
-      const bg: C3 = on ? (ch !== 32 ? [base[0] + col[0] * 0.07, base[1] + col[1] * 0.07, base[2] + col[2] * 0.07] : base) : [12, 12, 14];
+      // the paper is the same under a letter as round it: the letters are lit dots on the glass, not a strip of their own
+      const bg: C3 = on ? base : [12, 12, 14];
       put(sx + c, sy + r, ch, [col[0] * k, col[1] * k, col[2] * k], bg);
     }
   }
@@ -111,7 +111,7 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
         let fg: C3, bg: C3;
         if (st >= 10) [fg, bg] = FW[st];
         else if (st === St.Inverse) { fg = [sbg[0] + 4, sbg[1] + 4, sbg[2] + 4]; bg = [ink[0][0] * 0.85, ink[0][1] * 0.85, ink[0][2] * 0.85]; }
-        else { fg = ink[st]; bg = ch !== 32 ? [sbg[0] + fg[0] * 0.07, sbg[1] + fg[1] * 0.07, sbg[2] + fg[2] * 0.07] : sbg; }
+        else { fg = ink[st]; bg = sbg; }
         put(sx + c, sy + r, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], [bg[0] * scan, bg[1] * scan, bg[2] * scan]);
       }
     }

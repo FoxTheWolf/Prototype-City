@@ -2,6 +2,175 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## Pedidos atendidos (movidos do CLAUDE.md)
+
+> Os pedidos e as filas de feedback já organizadas saem do CLAUDE.md quando atendidos e vêm para cá, com o texto original. Os que ainda estavam abertos na mudança foram resumidos em "Pedidos em aberto" no CLAUDE.md. Entradas novas no topo.
+
+### Movidos em 2026-10-02
+
+#### Pedidos do usuário para etapas futuras (2026-09-30)
+
+Dados enquanto jogava a etapa 3. Cada um está também no roteiro, na etapa em que cabe.
+- **Escadas de incêndio físicas:** hoje são só desenho na fachada. Devem ser objetos em que se sobe de verdade (etapa 6, junto com os interiores e a subida de andares).
+- **Letreiros nas fachadas:** com o nome da empresa que de fato funciona ali (vem da simulação, não é enfeite) e com luzes que piscam e fazem efeitos (letras acendendo em sequência, contornos correndo, falhas de neon). O visual e os efeitos cabem na etapa 4; os nomes reais das empresas vêm da etapa 13 (economia), mas podem ser gerados antes, desde que fiquem ligados ao prédio.
+- **Interiores físicos, como em Shadows of Doubt:** o interior existe no mesmo espaço que a cidade. Entrar num prédio é atravessar a porta, sem tela de carregamento, sem teleporte e sem fade. É preciso vigiar o desempenho (etapa 6; o usuário quer medir o custo antes de confirmar que fica sem carregamento).
+- **Elevadores funcionais:** você entra, aperta o botão e é levado para cima de verdade, sem fade. Alguns elevadores com parede de vidro, para ver a cidade enquanto sobe (etapa 6). Isso depende da câmera com giro vertical de verdade ou pelo menos da altura do olho variável (veja as notas de projeção).
+- **Iluminação dinâmica:** os postes e os faróis dos carros iluminam o mundo em volta de verdade, e a luz se move com os carros (etapa 4 para a base da luz, feita; os faróis já iluminam desde a 4; faltam os do trânsito novo, na etapa 7).
+- **Objetos espalhados:** entulho, bancos e mobiliário urbano (etapa 4).
+
+#### Pedidos do usuário durante a etapa 6 (2026-09-30)
+
+Dados ao testar o grupo A dos interiores, junto com as referências 27–36.
+- **Fachadas mais complexas:** hoje são simples demais. Os prédios de Nova York, mesmo quadrados, têm cornijas em vários níveis, arcos, pilastras, bases diferentes do corpo, coroas e muitos detalhes (referências 28–30 e 32). Também andaimes (*scaffolding*), que são comuns em Manhattan.
+- **Áreas cobertas da chuva:** debaixo de um andaime ou de um ponto de ônibus não chove, e a água escorre pela borda do telhado. *(Feito para o ponto de ônibus; o andaime vem junto com ele.)*
+- **Muito mais letreiros e publicidade nos prédios,** como em Manhattan (referências 34 e 35). Liga-se ao pedido anterior de anúncios ligados às empresas da simulação.
+- **Iluminação dos topos à noite:** além dos holofotes de baixo, coroas e topos acesos, como o Empire State (referência 36).
+- **Ver os interiores de fora:** *(feito na 6.4, veja o Histórico).*
+
+#### Pedidos do usuário durante a etapa 8 (2026-10-01)
+
+Dados ao testar o grupo B da navegação. Cada um também está no roteiro, na etapa em que cabe.
+- **Luz do sol nos prédios:** de dia, os lados virados para o sol iluminados e os outros na sombra, e o horizonte iluminado (hoje fica todo preto de dia; o usuário mandou captura). Depois, um mapa de sombras para os prédios fazerem sombra uns nos outros e no chão. Junta-se à avaliação da "iluminação dinâmica com sombras" no roteiro; o usuário quer ver isso explicitamente.
+- **A marca do celular e dos chips vem das empresas da cidade:** o aparelho hoje é "Kestrel" fixo no código. Deve ser o nome de uma empresa de eletrônicos que existe na simulação (`city.businesses`, ou fabricantes da economia), e a splash screen mostra essa marca. Os chips de dentro (CPU, rádio) também com marcas de fabricantes que existem no mundo. É simulação: entra com a economia (etapa 13) e com os celulares dos cidadãos (etapa 9); o `Device` em `sim/device.ts` já é o lugar.
+- **Detalhe nos telhados de perto:** ar-condicionado, dutos, casas de máquinas, antenas e afins quando se chega perto de um telhado (de um andar alto, o telhado vizinho aparece liso demais). Etapa 15.
+- **Greebles nos prédios** (o termo que o usuário procurava: os detalhes de relevo sem função das naves de Star Wars, chamados *greebles* ou *nurnies*): caixas, painéis, saliências e peças miúdas na fachada e no topo, só para o prédio não parecer um paralelepípedo. Etapa 15.
+- **Indústria que solta fumaça de verdade:** chaminés de fábrica nos distritos industriais com colunas de fumaça (como as da zona de fogo). Hoje há chaminés (`chimney`) sem fumaça. Etapa 15, ou antes se couber.
+
+#### Pedidos do usuário no começo da etapa 9 (2026-10-01)
+
+Anotados por ele enquanto testava o fim da etapa 8. Gostou da digitação por multi-tap.
+- **O celular sobe para digitar (como no GTA IV):** hoje a última fileira do teclado fica fora da tela. Quando a tela pede digitação (discador, SMS, notas, calculadora), o aparelho sobe mais, até o teclado inteiro aparecer; nas outras telas volta à altura atual. Etapa 9, grupo A.
+- **Botão do meio do mouse tira e guarda o celular.** Etapa 9, grupo A.
+- **Clicar nas teclas do celular com o mouse:** o usuário não tem teclado numérico, e digitar e usar a calculadora pelo teclado do PC é chato. As teclas do aparelho na tela devem ser clicáveis (o cursor livre aparece com o celular fora, ou uma mira), com o mesmo afundar, clique e som. Etapa 9, grupo A.
+- **Plano de dados com limite (ideia de uma amiga do usuário):** os dados móveis têm franquia em MB; acabou, ou se compra outro pacote ou fica sem 3G/EDGE. Mais um gasto do dinheiro do jogador, bom para a jogabilidade. A operadora é uma empresa da cidade (hackeável depois). O contador de uso nasce na etapa 9 com os dados móveis; a compra com dinheiro de verdade depende da economia (etapa 13), então até lá o saldo pode ser um valor fixo de debug.
+- **Marca e modelos de celular vindos das empresas da simulação** (reforço do pedido da etapa 8): o "Kestrel" fixo deve virar o nome de um fabricante da cidade, e deve haver **vários modelos** com hardware diferente (CPU, memória, câmera, rádios), aparência e cores diferentes. Os cidadãos têm aparelhos diferentes (etapa 9 para o dado `Device` por modelo; a ligação com fabricantes reais da economia, etapa 13).
+- **Portas difíceis de achar,** para entrar e para sair:
+  - por dentro, **placas verdes de saída de emergência** (EXIT) e setas indicando o caminho até a porta de rua;
+  - **por dentro a porta de rua não é desenhada** (aparece uma janela no lugar): é bug, para a etapa de bugfix.
+- **Pessoas dentro dos prédios,** só para mostrar que são habitados, antes das rotinas da etapa 11 (poucos figurantes parados ou andando no cômodo, com `pedModel`). Etapa de bugfix/refinamento ou começo da 11.
+- **Interior falso nas janelas (parallax / *interior mapping*, como o cube map dos jogos):** cada janela mostra um cômodo falso com profundidade, escolhido pelo tipo de prédio (escritório, apartamento, loja), barato. Serve para os prédios distantes (além de `PEEK_FAR`) e, **enquanto os móveis não aparecem nos interiores vistos de fora, para todos os prédios**. Etapa de bugfix e otimização.
+
+#### Pedidos do usuário durante a 11.5 (2026-10-02)
+
+- **Animais no mundo e fotos de pets:** modelos de animais (bichos de estimação nos apartamentos, cachorros passeando, gatos de rua, pombos) e cidadãos postando fotos dos próprios bichos, o "gato da internet" de 2008. A simulação já sabe quem tem bicho e o nome dele (`Household.pet`, `petName`). Fica na etapa 15 (variedade).
+- **Toda frase do jogo pela gramática, com pesos de idade, gênero e contexto,** para cada pessoa soar única e nada parecer sorteado. Vale para tudo o que vier: falas de taxistas e motoristas (12b), posts da etapa 12, sites e notícias. **Todo texto novo deve entrar como peças em `locale/text/` e passar por `expand` com a `Sel` de quem fala.**
+- **Manchetes relevantes para 2008** (feito na 11.5) e **memes de 2004–2008** num slot próprio (feito).
+
+#### Pedidos do usuário no começo da etapa 12 (2026-10-02)
+
+Dados depois de testar a 11.5 (aprovada). Organizados por onde cabem:
+- **Agora (etapa 12, grupo A):**
+  - **Redesenho do celular:** tela inicial, menu, discador, mensagens e mapa no nível dos apps da 11.5.
+  - **Vários modelos visuais de celular:** o jogador começa com um sorteado e consegue outros depois. Para manter a compatibilidade, todos têm **a mesma tela e o mesmo sistema**; mudam o corpo, as teclas e as cores (variações maiores, depois). **Todos refletem a luz da cena como o atual** (`VIEW_LIGHT`, `VIEW_GLINT`).
+  - **Capinhas:** cobrem o corpo e deixam ver só a borda.
+  - **Câmera do celular só em blocos:** comparar com a versão em ASCII e decidir.
+  - **População de 60 mil** (e ir subindo até dar problema).
+- **Logo depois (etapa 12, grupo B ou C):**
+  - **Pedestres usando o celular** de forma visível (o aparelho na mão, a tela acesa), e o som de toque e de teclas de quem passa perto com o celular.
+  - **Mais sons de ambiente:** carros e sirenes distantes.
+  - **Manchetes clicáveis:** cada manchete abre um texto que faz sentido (pela gramática); as que vêm de um evento real têm uma foto do acontecimento, maior que as do Streetwire (o mesmo `Phone.shoot`).
+- **Bug:** não há pedestres nas diagonais (os quarteirões da diagonal são evitados em `sim/peds.ts`). Ver junto com os pedestres do grupo B. **Ideia do usuário:** em vez de cortar os prédios pela diagonal, tratar cada pedaço triangular como um quarteirão de verdade (com calçada própria em volta) e gerar os prédios dentro dele. Ajudaria os pedestres a dar a volta nele como em qualquer quarteirão; avaliar quando o grupo B chegar.
+- **Câmeras de segurança (logo depois do grupo A):** objetos com modelo visual (em postes, fachadas, dentro das lojas), cada uma com posição, direção e giro na simulação, e a possibilidade de **olhar por elas** (o mesmo `renderWorld` com efeito de CCTV). Servem a três coisas: as fotos das manchetes, o hacking (as câmeras invadidas são da Trilha) e o **modo CCTV** da tela de título (veja "Ideias futuras"), que o usuário quer logo depois das câmeras: ficar só assistindo a cidade, agora bem cheia de gente.
+- **Etapa 13 (economia):** **sistema de ações** (bolsa), com app e site. **Banco de dados de empresas:** toda empresa tem um endereço físico, um escritório do tipo certo para ela.
+- **Etapa própria, antes ou junto com a 13: prédios modulares.** Cada cômodo de cada prédio tem um uso definido pela simulação (o escritório de uma empresa, o apartamento de uma família), e a planta e os móveis seguem esse uso. Regras de cidade de verdade: mais escritórios perto do centro, e a renda dos moradores segue o lugar (nada de família pobre de cinco pessoas no meio da Times Square). Liga com `homeUnit` (que ainda não existe) em `sim/citizens.ts` e com `furnish` em `sim/interior.ts`.
+- **Dados no teste do grupo A (2026-10-02), para depois:**
+  - **Etapa 15 (variedade):** mais modelos de celular e mais capinhas; uma passada nos ícones em geral (o atlas só tem ASCII e Latin-1, então "emojis" seriam glifos desenhados no atlas, como os de `SHAPE`).
+  - **Mapa:** um modo escuro, e **navegação**: escolher um marco (ou um lugar do mapa) e apertar OK inicia a rota até ele (próximo grupo da etapa 12, junto com o que der).
+  - **Etapa 15 (variedade): cada modelo de celular e cada capinha com variações de cor** próprias.
+  - **Sistema de diálogo com os NPCs (etapa própria, a decidir onde):** falar com as pessoas na rua, de forma profunda, usando o gerador de textos e a vida de cada cidadão; com relacionamentos. Serve também para a engenharia social e para conversar ao telefone (hoje o jogador não fala nas ligações).
+  - **Pedestres com velocidades diferentes** (a pressa pelo atraso: uns correm, outros andam devagar), para não andarem amontoados. Junto com os pedestres do grupo B.
+  - **Ritmo do tempo:** o relógio do jogo anda 30× mais rápido que o real, e um pedestre a 1,35 m/s leva 12 min reais para andar 1 km, que são 6 h de jogo. Para casar de verdade, o tempo teria de andar ~1× (um dia de 24 h reais); com 4× (um dia de 6 h) o descompasso cai para 4×. Respondido ao usuário; ele decide.
+  - **Rede social: espaçar posts com o mesmo motivo** (ele viu três ou quatro posts seguidos de gente dizendo que precisa acordar às seis, com frases diferentes mas o mesmo assunto). Guardar os assuntos recentes em `sim/social.ts` e evitar repeti-los por um tempo.
+  - **Bug: semáforo no meio da rua no X do theater district** (o pedaço triangular da diagonal). E repensar o triângulo: torná-lo modular (um quarteirão comum na essência, que uma cidade pode ter ou não), ou um prédio estilo Flatiron com uma pracinha na frente e uma praça de pedestres do lado. Ajudaria o trânsito e os pedestres. Decidir com o usuário.
+- **Otimização:** o jogo fica preso a 180 FPS mas tem engasgos visíveis, não é fluido; em 200 linhas o `DRAW` oscila entre 15 e 70 ms. Investigar na etapa de otimização (junto com o "Stutter leve com os workers" em "Bugs conhecidos").
+
+#### Fila de feedback de 2026-10-02 (organizada)
+
+Deixada pelo usuário na seção de feedback. A ordem dos grupos é a ordem de trabalho.
+- **Agora, 12.4 (celular e convívio com o notebook):**
+  - **App de ligações:** os recentes diziam "send" e não mostravam as chamadas recebidas de NPC; não dava para escolher outro número. Mostrar o estado de cada uma (feita, recebida, perdida, não completada), escolher e rediscar.
+  - **Discador limpo** ao sair do app e voltar; o número só fica se o celular foi abaixado e levantado no mesmo app. **P volta** a tirar e guardar; **P ou o botão do meio abaixam** o celular sem mudar a tela nem o estado. O botão do meio (e a seta para cima) só abre o discador na tela inicial.
+  - **Papel de parede de noite em pleno dia**, e o último dígito do relógio com caracteres estranhos (a lua atrás): o papel segue a hora, e a lua sai de trás do relógio.
+  - **Símbolos no teclado** (`_ @ ! ?` e outros) pela tecla 1.
+  - **Limpar todas as notificações** (no app de mensagens e na tela inicial).
+  - **Menos SMS por engano:** a maioria vira marketing das empresas da cidade.
+  - **NPCs reagem** a várias ligações ou SMS seguidos para o mesmo número.
+  - **Boot do celular** no visual novo, ainda verboso.
+  - **Contornos serrilhados** dos ícones, botões e do corpo do celular: conferir e corrigir.
+  - **Bug:** com o notebook aberto não dá para atender uma ligação. O celular fica clicável com o notebook aberto (o teclado real continua indo para o notebook). É a base para os dois funcionarem juntos (o celular como modem, passar dados, carregar o celular no notebook: etapa 14).
+- **Retorno sobre a 12.4 (2026-10-02, organizado), entra na 12.5 como grupo A:**
+  - **Abertura desligada** por enquanto (o usuário não gostou e ela atrasa os testes).
+  - **Seleção legível:** o item escolhido vira uma cor de destaque escura com texto claro (o resto continua fundo claro e texto escuro), em mensagens, Streetwire e nas outras listas.
+  - **Ordem dos apps:** Ligações, Contatos, Mensagens primeiro, depois Câmera e Mapas; o resto como num celular de verdade.
+  - **A dica de limpar notificações** vai para a barra de baixo (junto de Menu e Hide); a operadora fica onde está (o nome pode ser longo).
+  - **Frequência de ligações por engano e telemarketing:** conferir e baixar.
+  - **Os dois boots:** o primeiro (checagem do hardware com barra) depende da **placa-mãe** (várias marcas podem usar a mesma placa); o segundo (fabricante e modelo) depende da **marca**, com estilo próprio por marca. Cada marca tem o seu visual de corpo. No primeiro boot, o Wi-Fi dá OK (a placa testa o módulo, não a conexão); só aparece erro quando algo falha de verdade.
+  - **Pedestres:** atravessam o jogador (para não se atrasarem por causa dele) e mudam de passo pela pressa (correm atrasados, andam devagar adiantados). **Duração do dia:** analisar com números e levar ao usuário (veja "Ritmo do tempo" nos pedidos da etapa 12).
+- **Decidido pelo usuário em 2026-10-02 (12.5 grupo B), depois das medições:**
+  - **Camada HD só nas fotos guardadas** (galeria, Streetwire, depois as manchetes): uma camada de pixels a 3× a grade da interface (240 linhas), composta entre o mundo e a interface; o visor ao vivo continua na resolução de hoje. Medido: subir a textura custa <0,1 ms; o visor em HD custaria 8,8 ms por quadro do visor (hoje 3,8).
+  - **Notebook nas duas versões, para o usuário escolher:** (1) o corpo como objeto 3D preso à câmera (luz e perspectiva de verdade; medido ~1,4–2 ms num thread, ~0,3 ms com os workers) com a tela do terminal em 2D por cima; (2) tudo 2D, mais detalhado, com o corpo desenhado na camada HD e o texto na grade de 80 linhas, como o celular. Uma tecla troca entre as duas.
+  - **Dia de 2 h reais** (era 48 min; "duas, talvez três"), com os pedestres fora de vista sincronizados com o plano.
+- **Depois, 12.5 grupo B (avaliação e redesenho visual do celular e do notebook):**
+  - **Camada HD** (pedido): uma terceira grade, de ~240 linhas, só para os ícones e as fotos, mantendo a interface em 80. Medir o custo antes. Resolve também a foto pouco nítida (a caixa da foto com mais linhas dentro).
+  - **Avaliar** o notebook como objeto pseudo-3D preso à câmera (com a tela desenhada por cima) contra o celular e o notebook em 2D com mais linhas. Levar os números ao usuário e decidir com ele.
+  - **Notebook redesenhado:** maior, mais detalhado, com cores e estilos (como os modelos do celular). A tela segue a luz da cena como a do celular (reflexo e cor da luz mais próxima, adaptação do olho) no lugar do reflexo fixo em ASCII; o aviso de "Enter = botão de ligar" vai para as dicas de tecla; botão de ligar físico clicável.
+  - **Digitais leves** (blocos bem transparentes) na tela do notebook e do celular.
+- **Feito, 12.6: o sistema de arquivos do celular** (veja o Histórico). Firmware, sistema e arquivos simulados (contatos, fotos, ligações, mensagens) que são a fonte da interface: mudar o arquivo muda o que o celular mostra. Ligado ao notebook, os arquivos podem ser vistos e copiados nele. Base para conteúdo posterior.
+- **Trilha de hacking:** os itens estão em "Feedback para o Opus 4.8", dentro da seção de feedback (não precisa buscar em conversa nenhuma).
+- **Etapa 15 (variedade):** outros formatos de celular (um com teclado completo estilo BlackBerry, um flip como o notebook).
+- **Regras novas**, em "Como trabalhar": Electron, contexto da conversa e log de atualizações.
+
+#### Feedback antes do grupo B da etapa 12 (2026-10-02, organizado)
+
+- **Agora (12.7, antes das câmeras):**
+  - **Só o notebook 3D:** as aparências clássica e HD 2D (tecla L) saem.
+  - **`nano` em tela cheia:** abre no console de 160×50 e ocupa a tela inteira, sem a linha de comando embaixo.
+  - **A tela do notebook com os efeitos da do celular,** mais fortes: adaptação do olho (mais clara no escuro, mais apagada sob luz forte, com bloom) e reflexo do lado e na cor da luz mais forte por perto (`VIEW_GLINT`).
+  - **Subestações físicas:** cada uma é um objeto no mundo (pátio cercado, transformadores, isoladores, placa), visível de longe, num ponto fixo; e uma linha de debug com a mais próxima (distância, direção, ligada ou não).
+- **Etapas novas no Roteiro:** 13b (os NPCs interagindo com a cidade), 13c (os NPCs interagindo com o jogador, com o sistema de diálogo) e 15b (sound design).
+
+#### Feedback depois da primeira rodada do grupo B (2026-10-02, organizado)
+
+- **Agora (12.11):**
+  - **Câmeras:** algumas paradas (sem girar) e as outras girando devagar, mais devagar quanto menor o FPS (girar rápido num FPS baixo fica ruim); **FPS entre 10 e 30** nos modelos.
+  - **Elevadores mais rápidos.**
+  - **Texto no mundo:** quando a letra teria menos de 3 linhas de altura em pontos de luz (ou outra forma), desenhar a letra ASCII no lugar.
+  - **Notebook:** a perspectiva muda entre a BIOS/boot (modo texto, mais perto) e o sistema (console, mais longe): unificar; no sistema há uma linha de um pixel transparente e a tela fica um pixel alta demais, cortando o texto de cima; o botão de ligar não desliga o notebook. Conferir visualmente.
+- **Logo depois (12.13), Maps com categorias e rotas:** os marcos viram uma categoria; as outras listam os lugares por tipo (cafés, restaurantes, bares, farmácias, mercados…), do mais perto; escolher um traça a rota até ele.
+- **Fundação a planejar com o usuário: tipos de lugar com interior coerente.** Delimitar quais tipos de lugar existem (os essenciais para a vida simulada e o hacking, que dá para fazer com os interiores atuais): o que o Maps mostra é o que o letreiro diz e é o que o interior é, e depois (economia) os produtos que a loja vende. O cybercafé precisa existir como tipo (hoje só há cafés com Wi-Fi). O cinema fica para depois (interior complexo). Junta-se à etapa "prédios modulares" (pedidos do começo da etapa 12), antes da economia (13).
+
+#### Feedback sobre o render na GPU e a polícia (2026-10-02, organizado)
+
+- **Agora (12.14), notebook:** as letras do terminal têm a própria cor por cima da tela; sob reflexo e digitais dá para ver que estão sobrepostas. Elas devem passar pelos mesmos efeitos do vidro (reflexo, digitais, véu da luz) que o fundo da tela, como se estivessem *dentro* dela.
+- **Câmeras visíveis em 3D no mundo:** já são (12.8/12.9, `cctvModel`: no poste e na fachada, até 140 m). Confirmar com o usuário no teste do grupo B se é isso que ele quer ou se faltam (dentro das lojas, mais longe, mais visíveis).
+- **Polícia que escala (aceito pelo usuário):** a polícia **não** usa tudo o que o jogador usa desde o começo. Quanto mais procurado, mais sofisticada a investigação: primeiro só testemunhas e a viatura que passa; depois câmeras da rua e registros do lugar; no topo ("caso federal"), logs de telefone, antenas, Wi-Fi e posts. Vira a dificuldade do jogo e limita o que o jogador precisa vigiar. Entra no desenho da fatia vertical.
+- **Fatia vertical:** aprovada em princípio. Parte dela é hacking (a invasão em si); ao planejá-la, separar o que é sessão normal (contratante, pagamento, calor, polícia, notícias) do que é Trilha de hacking, e avisar o usuário quando for prudente usar o Opus 4.8.
+- **Render na GPU (avaliação, antes de crescer mais):** o usuário quer 160–200 linhas (mais bonito e cansa menos os olhos com movimento rápido), mas hoje fica quase injogável. Plano: **R.1 medir** (onde vai o tempo a 160/200 linhas: o worker mais lento, o thread principal, a espera pelos workers, a cópia do snapshot); **R.2 protótipo na GPU** (o chão e as fachadas da grade num fragment shader, um raio por célula, escrevendo glifo e cores numa textura do tamanho da grade, que o compositor atual já desenha), medindo o ganho; **R.3 decidir** com o usuário entre migrar tudo, um híbrido ou ficar nos workers. Veja a etapa R no Roteiro.
+
+#### Pedidos do usuário para planejar (2026-09-30, segunda lista)
+
+Dados antes de começar a etapa 5. Ainda não têm etapa decidida; a sugestão de onde cabem está em cada item e no roteiro.
+- **Placas de publicidade e neons condizentes com a simulação:** outdoors e painéis anunciam empresas e produtos que existem (`city.businesses` e, depois, os produtos da economia da etapa 13), e não marcas inventadas à parte. Os anúncios podem mudar com a simulação (liquidação, lançamento, empresa que faliu e deixou o outdoor rasgado).
+- **Outras luzes nos prédios:** holofotes iluminando fachadas de baixo para cima, contornos de neon, faixas acesas. Usam a base de luz da etapa 4 (`lights.ts`) e devem ficar ligadas à rede elétrica da 5b. *(Os holofotes foram feitos na 5.3; contornos de neon ainda não.)*
+- **Placas perpendiculares à fachada** (*blade signs*): estacionamento, café, hotel, bar, penhor, feitas para quem vem pela rua e pela calçada. Mostram o tipo e o nome da empresa do prédio. No render, são objetos com volume (como os da 4b), presos à parede, e não pintados na fachada. *(Feitas na 5.2.)*
+- **Sistema de notícias:** notícias de *flavor* e notícias que correspondem ao que de fato acontece, vindas da mesma fila de eventos da rede social (etapa 12). Prédios com letreiros de notícias correndo (como o *news zipper* da Times Square) mostram essas manchetes na cidade.
+- **Distrito no estilo Times Square:** abundância extrema de neon, telões e publicidade. Já estava na etapa 15; provavelmente é um tipo de distrito novo (`KIND` em `city.ts`), com poucos por cidade.
+- **Avenidas diagonais que cortam os quarteirões, como a Broadway em Manhattan.** É uma mudança estrutural: hoje a malha é só ortogonal (`xb`/`yb`) e o raycaster percorre essa grade; os prédios são caixas ou cilindros. Uma diagonal pede lotes triangulares e trapezoidais (prédios no estilo Flatiron, que exigem prismas de base poligonal no teste de raio), praças nos cruzamentos em X e um trecho da malha que o DDA precisa testar à parte. **Deve vir antes do trânsito**, porque o trânsito e os semáforos dependem do desenho das ruas. *(Feita na 5.1, a pedido do usuário: "o mais cedo possível, antes de causar problemas".)*
+- **Deep sim / life sim imersivo:** ter um apartamento, stats do personagem, customização do personagem em termos de lore (história, origem, habilidades, e não aparência). Provavelmente nas últimas etapas, depois dos cidadãos (11) e da economia (13).
+
+#### Pedidos do usuário durante a etapa 10 (2026-10-02)
+
+Dados ao testar o grupo A do notebook (10.2/10.3). Organizados aqui e no roteiro.
+- **Painel de status sempre visível no notebook:** num canto da tela do terminal, mostrar temperatura, uso de CPU, memória e rede, atualizado a cada quadro, para não precisar digitar `sensors`. *(Feito na 10.4.)*
+- **Modo de 120 linhas como visual alvo:** o usuário acha que a imagem "doída nos olhos" melhora muito em 120 linhas. Mas 120 linhas derruba o frame rate. Então:
+  - *(Feito na 10.8, com 6 workers; 120 linhas é o padrão.)* **Prioridade: Web Workers (ou reescrita do render), logo depois do notebook** (veja o plano de mitigação em "Bugs conhecidos"), para 120 linhas rodar bem. A reescrita no shader com a câmera 3D ficou para uma etapa própria (veja o Roteiro).
+  - *(Feito na 10.9.)* **Desatrelar a interface 2D da resolução de linhas:** celular, painéis, HUD, notebook e relógio devem ser desenhados numa grade fixa de **80 linhas** por cima, em vez de encolherem com 100/120 linhas. São elementos 2D, então basta mapeá-los para a grade de 80 e escalar para a grade real. (Já anotado no retorno da 9b; agora é pedido firme.)
+- **Estender o modo de blocos (SOFT) às paredes e aos objetos cúbicos:** o usuário gosta do chão em blocos; quer o mesmo nas paredes (blocos uniformes em vez de ASCII) e em objetos totalmente cúbicos (ex.: orelhões), para aliviar os olhos. (O modo SOFT já cobre paredes e objetos sólidos; rever a intensidade/uniformidade com ele, talvez um estágio novo. Entra na etapa de otimização/refino do visual.)
+- **Redesign dos orelhões + segundo modelo (cabine fechada):** manter o orelhão atual (poste com capa) e acrescentar um **segundo tipo**: a cabine telefônica fechada em que se entra (referência 23), que também **protege da chuva** (vira um `Roof` como o ponto de ônibus). Entra na etapa 15 (variedade) ou antes se couber; é um modelo novo em `models.ts` + um `PropKind`.
+- **Integrar o celular ao notebook (pensar em como; pedido do usuário em 2026-10-02):** o celular poderia servir de **modem/hotspot** para o notebook (tethering: o notebook navega pelos dados móveis do celular quando não há Wi-Fi por perto), e/ou guardar dados num **cartão SD** compartilhado entre os dois (plausível para ~2008). São dois sistemas já existentes (`phone/radio.ts` com os dados móveis, `sim/computer.ts` com o disco do notebook); a ligação entra na etapa 14 (hacking completo) ou antes se couber. Registrar como ideia a desenhar.
+- **Relógio de pulso (estilo Casio, um pouco mais moderno):** um relógio no pulso do jogador, diegético, que mostra hora, data e **temperatura**, com **alarme** e **luz** (botão que acende), sem precisar tirar o celular. Lê `world.time`/`world.weather`. É uma interface 2D nova (como o celular), provavelmente uma tecla própria. Organizar: pode nascer como um item curto na etapa 12b/15, ou antes se o usuário pedir; registrar aqui para não perder.
+
+
 ## Histórico (registro por etapa; os itens mais antigos ficam no fim)
 
 - **12.9–12.13, o resto do grupo B (2026-10-02), esperando o teste do usuário:**
