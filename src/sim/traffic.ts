@@ -1,5 +1,5 @@
 import { hash3, type Rng } from '../core/rng';
-import { districtAt, LANE_W, lanesOf, roadCenter, type City, type Diagonal, type RGB } from './city';
+import { DIAGONAL, districtAt, LANE_W, lanesOf, roadCenter, type City, type Diagonal, type RGB } from './city';
 import { subAt, type PowerGrid } from './power';
 
 /**
@@ -452,6 +452,11 @@ const roadKey = (vert: boolean, k: number) => (vert ? 1024 : 0) + k;
 export function diagRoad(city: City): DiagRoad {
   let D = diagRoads.get(city);
   if (D) return D;
+  if (!DIAGONAL) {
+    D = { u0: 0, u1: 0, lanes: 1, zones: [], byRoad: new Map(), touched: new Set(), xOf: new Map() };
+    diagRoads.set(city, D);
+    return D;
+  }
   const d = city.diagonal, hw = d.w / 2;
   // the line inside the city, a little in from the edges
   let u0 = -1e9, u1 = 1e9;
@@ -563,7 +568,7 @@ export function spawnCars(city: City, rng: Rng, count: number, existing: Car[] =
   }
   // and some on the diagonal, both ways, between its crossings
   const D = diagRoad(city), d = city.diagonal, Q = [0, 0];
-  for (let k = 0, tries = 0; k < Math.round(count * 0.12) && tries < count * 4; tries++) {
+  for (let k = 0, tries = 0; DIAGONAL && k < Math.round(count * 0.12) && tries < count * 4; tries++) {
     const dg = rng() < 0.5 ? 1 : -1, u = D.u0 + 10 + rng() * (D.u1 - D.u0 - 20), lane = (rng() * D.lanes) | 0;
     if (D.zones.some((z) => u > z.u0 - 6 && u < z.u1 + 6)) continue;
     const V = newVehicle(rng);

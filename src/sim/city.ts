@@ -112,6 +112,13 @@ export interface Diagonal {
 }
 
 export const DIAG_W = 21;
+/**
+ * The diagonal avenue on or off. Off (since 2026-10-03), the city is a plain grid: the X and its
+ * wedges gave trouble (the X's signals, rooms cut on the slant, people on its crossings), and the
+ * theater district gets a square of two whole blocks instead. The code stays; the line is put far
+ * outside the city, where it touches nothing.
+ */
+export const DIAGONAL = false;
 /** The diagonal's angle off the avenues, in degrees (fixed: every city has the same one). */
 export const DIAG_ANGLE = 24;
 
@@ -388,7 +395,7 @@ function nearestDistrict(districts: District[], x: number, y: number): number {
  * Blocks that hold a landmark, by block index, drawn from LIBRARY. Landmarks never touch each
  * other (not even diagonally), except a big park, which takes a second block to its east ('park2').
  */
-function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: number, nby: number, districts: District[], diag: Diagonal) {
+function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: number, nby: number, districts: District[], diag: Diagonal, taken: Set<number>) {
   const rng = mulberry32((hash3(seed, 5555, 2) * 4294967296) | 0);
   const out = new Map<number, LandmarkKind | 'park2'>();
   const type: DistrictType[] = [];
@@ -397,7 +404,7 @@ function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: numbe
   }
   const free = (k: number) => {
     const i = k % nbx, j = (k / nbx) | 0;
-    if (diagRange(diag, xb[2 * i + 1], yb[2 * j + 1], xb[2 * i + 2], yb[2 * j + 2]).touches) return false;
+    if (taken.has(k) || diagRange(diag, xb[2 * i + 1], yb[2 * j + 1], xb[2 * i + 2], yb[2 * j + 2]).touches) return false;
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
       const ii = i + di, jj = j + dj;
       if (ii >= 0 && jj >= 0 && ii < nbx && jj < nby && out.has(jj * nbx + ii)) return false;
@@ -424,12 +431,18 @@ function pickLandmarkBlocks(seed: number, xb: number[], yb: number[], nbx: numbe
  */
 function placeDiagonal(xb: number[], yb: number[], px: number, py: number): Diagonal {
   const a = (DIAG_ANGLE * Math.PI) / 180, ex = Math.sin(a), ey = Math.cos(a);
-  let ox = 0, oy = 0, bd = Infinity;
+  const { x, y } = nearestCrossing(xb, yb, px, py), far = DIAGONAL ? 0 : 1e5;
+  return { ox: x + ey * far, oy: y - ex * far, ex, ey, nx: ey, ny: -ex, w: DIAG_W };
+}
+
+/** The avenue intersection nearest (px, py), away from the city's edge roads: road i of xb, road j of yb. */
+function nearestCrossing(xb: number[], yb: number[], px: number, py: number) {
+  let bi = 1, bj = 1, x = 0, y = 0, bd = Infinity;
   for (let i = 1; i < xb.length / 2 - 1; i++) for (let j = 1; j < yb.length / 2 - 1; j++) {
-    const x = roadCenter(xb, i), y = roadCenter(yb, j), d = (x - px) ** 2 + (y - py) ** 2;
-    if (d < bd) { bd = d; ox = x; oy = y; }
+    const cx = roadCenter(xb, i), cy = roadCenter(yb, j), d = (cx - px) ** 2 + (cy - py) ** 2;
+    if (d < bd) { bd = d; bi = i; bj = j; x = cx; y = cy; }
   }
-  return { ox, oy, ex, ey, nx: ey, ny: -ex, w: DIAG_W };
+  return { i: bi, j: bj, x, y };
 }
 
 /** Signed distance of a point from the diagonal's center line. */
@@ -631,7 +644,14 @@ export function generateCity(seed: number, size: number): City {
   const businesses: Business[] = [];
   const theater = districts.find((d) => d.type === 'theater');
   const diagonal = placeDiagonal(xb, yb, theater ? theater.x : cx, theater ? theater.y : cy);
-  const special = pickLandmarkBlocks(seed, xb, yb, nbx, nby, districts, diagonal);
+  // without the diagonal, the theater district's square: the two blocks either side of the avenue
+  // on one side of its crossing, the avenue running through it
+  const X = nearestCrossing(xb, yb, theater ? theater.x : cx, theater ? theater.y : cy), squares = new Set<number>();
+  const row = hash3(seed, X.i, X.j) < 0.5 ? X.j - 1 : X.j;
+  if (!DIAGONAL && theater) for (const i of [X.i - 1, X.i]) if (i >= 0 && i < nbx && row >= 0 && row < nby) squares.add(row * nbx + i);
+  // the square's middle: on the avenue, halfway along the blocks (the X's center with the diagonal)
+  const sqX = DIAGONAL ? diagonal.ox : X.x, sqY = DIAGONAL ? diagonal.oy : (yb[2 * row + 1] + yb[2 * row + 2]) / 2;
+  const special = pickLandmarkBlocks(seed, xb, yb, nbx, nby, districts, diagonal, squares);
 
   for (let j = 0; j < nby; j++) for (let i = 0; i < nbx; i++) {
     const br = mulberry32((hash3(seed, i, j) * 4294967296) | 0);
@@ -645,8 +665,11 @@ export function generateCity(seed: number, size: number): City {
     const K = KIND[districts[district].type];
     const lm = special.get(j * nbx + i);
     const LM_OPEN: Record<string, OpenKind | null> = { memorial: 'plaza', hall: 'plaza', clock: 'plaza', mast: 'plaza', park: 'park', park2: 'park', church: 'park', gasworks: 'yard', power: null };
-    const open = lm ? LM_OPEN[lm] : br() < K.openP ? K.open : null;
-    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [], diag: 0, square: false };
+    const sq = squares.has(j * nbx + i);
+    const open = sq ? 'plaza' : lm ? LM_OPEN[lm] : br() < K.openP ? K.open : null;
+    const block: Block = { x0, y0, x1, y1, district, open, b0: buildings.length, b1: 0, maxH: 0, props: [], diag: 0, square: sq };
+    // the blocks around the square face it with screens and tickers
+    const aroundX = DIAGONAL ? false : Math.hypot(mx - sqX, my - sqY) < SQUARE_R;
     blocks.push(block);
 
     // street lamps along the curb, about every 28 m
@@ -758,7 +781,7 @@ export function generateCity(seed: number, size: number): City {
     };
     const long = ix1 - ix0 > iy1 - iy0;
 
-    if (open === 'plaza' || lm === 'church') for (const [x, y] of [[ix0 + 4, iy0 + 4], [ix1 - 4, iy0 + 4], [ix1 - 4, iy1 - 4], [ix0 + 4, iy1 - 4]]) tree(x, y);
+    if ((open === 'plaza' && !sq) || lm === 'church') for (const [x, y] of [[ix0 + 4, iy0 + 4], [ix1 - 4, iy0 + 4], [ix1 - 4, iy1 - 4], [ix0 + 4, iy1 - 4]]) tree(x, y);
     else if (open === 'park') {
       // trees, leaving the two crossing paths through the middle clear
       const trees = Math.round(((ix1 - ix0) * (iy1 - iy0)) / 140);
@@ -788,7 +811,8 @@ export function generateCity(seed: number, size: number): City {
         block.props.push({ kind, x: ax + ux * d - nx * back, y: ay + uy * d - ny * back, w: 0, z1: 0, seed: (fr() * 1e6) | 0, a });
       }
     }
-    if (open === 'park' || open === 'plaza') {
+    if (sq) furnishSquare(block, sqX, sqY, () => true, fr);
+    else if (open === 'park' || open === 'plaza') {
       // benches along the paths through the middle, facing them
       for (const s of [-1, 1]) for (let k = 1; k <= 2; k++) {
         const off = open === 'park' ? 2.6 : 6;
@@ -868,7 +892,10 @@ export function generateCity(seed: number, size: number): City {
       for (let k = block.b0; k < buildings.length; k++) block.maxH = Math.max(block.maxH, buildings[k].h);
       // nothing stands on the roadway; trees keep off its sidewalks too
       block.props = block.props.filter((p) => Math.abs(diagS(diagonal, p.x, p.y)) > diagonal.w / 2 + (p.kind === 'tree' ? SIDEWALK + 1 : 0.4));
-      if (block.square) furnishSquare(block, diagonal, fr);
+      if (block.square) furnishSquare(block, diagonal.ox, diagonal.oy, (x, y) => {
+        const sv = diagS(diagonal, x, y);
+        return Math.abs(sv) > diagonal.w / 2 + SIDEWALK + 1 && (block.diag & (sv > 0 ? 4 : 2)) !== 0;
+      }, fr);
     }
     // one business per shop front; kind and name come from the building's position, so they stay put
     const shops = SHOPS[districts[district].type];
@@ -897,8 +924,9 @@ export function generateCity(seed: number, size: number): City {
       if (type === 'theater' && B.tier === 1 && !B.round) {
         // a news ticker around some buildings (most of the wedges on the diagonal), screens on most street faces
         if (B.h >= 18 && hash3(seed ^ 0x71c4, bx, by) < (B.cut ? 0.35 : 0.04)) B.ticker = true;
-        if (B.h >= 14) for (const f of streetFaces(block, B)) if (hash3(seed ^ 0x5c4e, bx + f, by) < 0.6 || (block.square && facesX(B, f, diagonal))) B.screen |= 1 << f;
+        if (B.h >= 14) for (const f of streetFaces(block, B)) if (hash3(seed ^ 0x5c4e, bx + f, by) < 0.6 || ((block.square || aroundX) && facesX(B, f, sqX, sqY))) B.screen |= 1 << f;
         if (block.square && B.cut && B.h >= 18) B.ticker = true;
+        if (aroundX && B.h >= 18 && streetFaces(block, B).some((f) => facesX(B, f, sqX, sqY))) B.ticker = true;
       }
       if (B.tier === 1 && !B.round && businesses.length && (B.style === 'brick' || B.style === 'residential' || B.style === 'warehouse') && B.h > 10 && hash3(seed ^ 0xadad, bx, by) < 0.3) B.ad = Math.floor(hash3(seed ^ 0xadae, bx, by) * businesses.length);
       // neon tubes on the corners and roof line: common on the commercial strips, rarer on towers
@@ -987,10 +1015,10 @@ const PLAZA_AREA = 1200;
 const SQUARE_R = 190, SQUARE_PLAZA = 4000;
 
 /** Whether face f of a building looks out onto the square (toward the X's center). */
-function facesX(B: Building, f: number, d: Diagonal): boolean {
+function facesX(B: Building, f: number, ox: number, oy: number): boolean {
   const mx = (B.x0 + B.x1) / 2, my = (B.y0 + B.y1) / 2;
   const [nx, ny] = f === 4 ? [B.cut!.nx, B.cut!.ny] : f === 0 ? [-1, 0] : f === 1 ? [1, 0] : f === 2 ? [0, -1] : [0, 1];
-  const dx = d.ox - mx, dy = d.oy - my, L = Math.hypot(dx, dy) || 1;
+  const dx = ox - mx, dy = oy - my, L = Math.hypot(dx, dy) || 1;
   return (nx * dx + ny * dy) / L > 0.35;
 }
 
@@ -999,13 +1027,10 @@ function facesX(B: Building, f: number, d: Diagonal): boolean {
  * on a 4 m grid, and on the biggest sliver the red steps people sit on to watch the screens,
  * turned to the X. From the block's furniture stream, so the buildings stay put.
  */
-function furnishSquare(block: Block, d: Diagonal, fr: Rng) {
+function furnishSquare(block: Block, ox: number, oy: number, open: (x: number, y: number) => boolean, fr: Rng) {
   const ix0 = block.x0 + SIDEWALK + 1, iy0 = block.y0 + SIDEWALK + 1, ix1 = block.x1 - SIDEWALK - 1, iy1 = block.y1 - SIDEWALK - 1;
-  const inPlaza = (x: number, y: number) => {
-    if (x < ix0 || x > ix1 || y < iy0 || y > iy1) return false;
-    const sv = diagS(d, x, y);
-    return Math.abs(sv) > d.w / 2 + SIDEWALK + 1 && (block.diag & (sv > 0 ? 4 : 2)) !== 0;
-  };
+  const inPlaza = (x: number, y: number) => x >= ix0 && x <= ix1 && y >= iy0 && y <= iy1 && open(x, y);
+  const d = { ox, oy };
   const toX = (x: number, y: number) => Math.atan2(d.oy - y, d.ox - x);
   // the steps: the free spot (8 x 6 m around it) nearest the X
   let best: [number, number] | null = null, bd = Infinity;
@@ -1015,7 +1040,9 @@ function furnishSquare(block: Block, d: Diagonal, fr: Rng) {
     if (ok && dd < bd) { bd = dd; best = [x, y]; }
   }
   if (best) block.props.push({ kind: 'steps', x: best[0], y: best[1], w: 0, z1: 0, seed: 0, a: toX(best[0], best[1]) });
-  for (let y = iy0 + 1; y <= iy1 - 1; y += 4) for (let x = ix0 + 1; x <= ix1 - 1; x += 4) {
+  // a whole block is sparser than the slivers, or it is a maze of tables
+  const step = block.diag ? 4 : 7;
+  for (let y = iy0 + 1; y <= iy1 - 1; y += step) for (let x = ix0 + 1; x <= ix1 - 1; x += step) {
     const px = x + (fr() - 0.5) * 1.5, py = y + (fr() - 0.5) * 1.5;
     if (!inPlaza(px, py) || (best && Math.hypot(px - best[0], py - best[1]) < 6.5)) continue;
     const r = fr(), a = fr() * Math.PI * 2;
