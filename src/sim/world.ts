@@ -96,8 +96,8 @@ export const CITY_SIZE = 2000;
 /** people: false for a world that is only drawn (the render workers), which needs no citizens. */
 export function createWorld(seed: number, size = CITY_SIZE, people = true): World { return drain(worldSteps(seed, size, people)); }
 
-/** createWorld in steps (0..1 along), for a loader that keeps the page alive. */
-export function* worldSteps(seed: number, size = CITY_SIZE, people = true): Steps<World> {
+/** createWorld in steps (0..1 along), for a loader that keeps the page alive; `saved`: the population already made for this seed (a cache). */
+export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved?: Population): Steps<World> {
   const rng = mulberry32(seed);
   yield 0;
   const city = generateCity(seed, size);
@@ -116,8 +116,8 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true): Step
   yield 0.08;
   const telco = buildTelco(seed, city, power);
   yield 0.1;
-  let pop = noPeople();
-  if (people) {
+  let pop = saved ?? noPeople();
+  if (people && !saved) {
     const g = peopleSteps(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2));
     for (let r = g.next(); ; r = g.next()) { if (r.done) { pop = r.value; break; } yield 0.1 + 0.85 * r.value; }
   }

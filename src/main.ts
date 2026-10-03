@@ -31,7 +31,8 @@ import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar, sunDir } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
-import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, type PlayerInput } from './sim/world';
+import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, CITY_SIZE, type PlayerInput } from './sim/world';
+import { loadPop, savePop } from './popCache';
 import { pace } from './core/steps';
 import TIPS from './locale/tips.json';
 import TODAY_2008 from './locale/today2008.json';
@@ -80,7 +81,9 @@ function showTip() {
 const seedParam = new URLSearchParams(location.search).get('seed');
 const seed = seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 // the city is made in steps, the page alive between them, with a bar on the title screen (load)
-const world = await pace(worldSteps(seed), (f) => load(0.04 + 0.84 * f, f < 0.05 ? 'LAYING OUT STREETS' : f < 0.1 ? 'WIRING THE GRID' : 'REGISTERING CITIZENS'));
+const savedPop = await loadPop(seed);
+const world = await pace(worldSteps(seed, CITY_SIZE, true, savedPop), (f) => load(0.04 + 0.84 * f, f < 0.05 ? 'LAYING OUT STREETS' : f < 0.1 ? 'WIRING THE GRID' : 'REGISTERING CITIZENS'));
+if (!savedPop) void savePop(seed, world.pop);
 // the world is drawn on the GPU (WebGPU; stage R), from the moment the device is ready. Its compositor
 // draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas), which
 // still shows the cameras' monitor and the opening (pictures read back from the GPU and worked on here)

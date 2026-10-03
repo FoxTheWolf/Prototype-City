@@ -2331,7 +2331,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       // a rough surface scatters its mirror: the ray turned a little per cell (a dithered blur)
       if (r > 0.08) {
         let jx = hash3(i32(gid.x), i32(gid.y), 31) - 0.5; let jy = hash3(i32(gid.x), i32(gid.y), 32) - 0.5; let jz = hash3(i32(gid.x), i32(gid.y), 33) - 0.5;
-        R = normalize(R + vec3f(jx, jy, jz) * (REFL_BLUR * r));
+        // on the ground it smears up and down more than sideways (the long streaks under lights on wet asphalt)
+        let an = select(vec3f(1.0), vec3f(0.35, 0.35, 1.8), N.z > 0.5);
+        R = normalize(R + vec3f(jx, jy, jz) * an * (REFL_BLUR * r));
         if (dot(R, N) < 0.02) { R = normalize(R + N * (0.02 - dot(R, N))); }
       }
       let LR = length(R.xy); var mR = -R.z / max(LR, 1e-4);

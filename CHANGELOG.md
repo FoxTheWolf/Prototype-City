@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.A.3 — Abrir mais rápido (2026-10-03)
+- O jogo no Electron abre em ~2 s em vez de ~11 s a partir da segunda vez: os shaders compilados ficam guardados (eles só são compilados de novo quando o código deles muda).
+- A população de uma cidade fica guardada: abrir de novo a mesma semente (`?seed=`) pula a parte de registrar os cidadãos. `?fresh` força gerar tudo de novo.
+- O reflexo no asfalto molhado se estica na vertical, como as faixas de luz de verdade, em vez de tremer para todos os lados.
+
 ## 0.A.2 — Mais cor na cidade (2026-10-03)
 - As fachadas residenciais, históricas e de escritório ganharam cores de verdade (terracota, creme, sálvia, azul, mostarda, arenito, brownstone, granito), no lugar dos tons quase cinzas.
 - Os carros têm as cores de 2008: muitos prata, brancos e pretos, depois azul-escuro, vermelho, champanhe, verde e vinho.

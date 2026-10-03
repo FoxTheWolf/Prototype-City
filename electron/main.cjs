@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DIST = path.join(__dirname, '..', 'dist');
+const PORT = 47180;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const ISOLATE = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 
@@ -20,7 +21,12 @@ function serve() {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream', ...ISOLATE });
     fs.createReadStream(file).pipe(res);
   });
-  return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok(server.address().port)));
+  // always the same port when it is free: the origin stays the same between runs, so Chromium keeps its caches
+  // for it (the compiled shaders, the saved population, localStorage); any free port if it is taken
+  return new Promise((ok) => {
+    server.once('error', () => server.listen(0, '127.0.0.1', () => ok(server.address().port)));
+    server.listen(PORT, '127.0.0.1', () => ok(server.address().port));
+  });
 }
 
 app.whenReady().then(async () => {
@@ -30,7 +36,7 @@ app.whenReady().then(async () => {
   const check = !!process.env.TC_CHECK;
   const win = new BrowserWindow({ fullscreen: !check, show: !check, autoHideMenuBar: true, backgroundColor: '#000000', title: 'Terminal City' });
   if (check) win.webContents.once('did-finish-load', async () => {
-    console.log(await win.webContents.executeJavaScript(`(async () => JSON.stringify({ isolated: crossOriginIsolated, adapter: !!(await navigator.gpu?.requestAdapter()), title: document.title }))()`));
+    console.log(await win.webContents.executeJavaScript(`(async () => { while (document.getElementById('ready')?.hidden !== false && performance.now() < 60000) await new Promise((r) => setTimeout(r, 50)); return JSON.stringify({ isolated: crossOriginIsolated, adapter: !!(await navigator.gpu?.requestAdapter()), title: document.title, readyMs: Math.round(performance.now()), origin: location.origin }); })()`));
     app.quit();
   });
   win.webContents.on('before-input-event', (e, input) => {
