@@ -20,6 +20,8 @@ const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 const OG_N = 64, OG_CELL = 2;
 import { CURVE_R } from '../sarcophagus';
 import { setEye } from '../eye';
+import { eyeHold } from '../power';
+import { subAt } from '../../sim/power';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, FX_TAB, IN_LAMPS, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
@@ -299,7 +301,11 @@ export class GpuWorld {
         entries: [this.uni, ...this.fixed, this.out, this.subs, this.lmap, this.lampCol, ...this.dyn, this.sg, this.fx].map((buffer, binding) => ({ binding, resource: { buffer } })),
       });
     }
-    if (timed) this.adaptStep(sky.day);
+    if (timed) {
+      // (L.12) a blackout or the power coming back round the viewer holds the eye where it was for a moment
+      const sub = subAt(P, C, world.player.x, world.player.y);
+      this.adaptStep(sky.day, eyeHold(P, sub, world.player.x, world.player.y, (world.tick + v.alpha) / 60));
+    }
     const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
     const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), W = world.weather, Dg = C.diagonal, U = this.U;
     // how far the rain has fallen, shared with the CPU's drawFall (split into whole bands and the rest, for the f32s)
@@ -354,11 +360,11 @@ export class GpuWorld {
   }
 
   /** The eye: toward the meter's target, closing up fast and opening slowly. */
-  private adaptStep(day: number) {
+  private adaptStep(day: number, hold = 0) {
     const now = performance.now(), dt = this.adaptAt < 0 ? 0 : Math.min(0.25, (now - this.adaptAt) / 1000);
     this.adaptAt = now;
     if (!this.autoExposure) { this.adapt = 1; return; }
-    const tau = this.adaptTarget < this.adapt ? ADAPT_DOWN_S : ADAPT_UP_S;
+    const tau = (this.adaptTarget < this.adapt ? ADAPT_DOWN_S : ADAPT_UP_S) / Math.max(1e-3, 1 - hold);
     this.adapt *= Math.pow(this.adaptTarget / this.adapt, 1 - Math.exp(-dt / tau));
     void day;
   }

@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.12 — O apagão em três tempos (2026-10-03)
+- O apagão não é mais imediato: por quase dois segundos todas as luzes do bairro ficam cada vez mais fortes, alguns telões já dão tela azul, e só então a escuridão corre pelas ruas.
+- Quando a luz some à sua volta, os olhos demoram uns três segundos para se acostumar: fica tudo muito escuro no começo.
+- A luz volta a partir de onde você está, prédio a prédio para longe, e por um instante tudo parece claro demais até os olhos se acostumarem.
+- A luz que um telão joga na rua fica azul enquanto ele mostra a tela de erro.
+- Os telões não são mais cortados pelas baias salientes das fachadas de tijolo (os prédios com telão ficam sem elas por enquanto).
+
 ## 0.L.11 — Apagão de verdade nas telas e luz nas praças (2026-10-03)
 - No apagão, os telões mostram a tela azul de erro meio segundo antes de apagar e por alguns segundos depois que a luz volta, como se reiniciassem.
 - O letreiro de notícias e os letreiros das lojas não parecem mais "invertidos" no apagão: apagados, viram placas escuras.

@@ -13,7 +13,7 @@ import { signalLamps, mastModel, substationModel, cctvModel, cctvMount, bladeHei
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
-import { power } from './power';
+import { bsod, power } from './power';
 import { subAt } from '../sim/power';
 import { CAMS, cctvYaw } from '../sim/cctv';
 import { daylight, prepareSky, type SkyFrame } from './sky';
@@ -268,6 +268,8 @@ export const REL = { P: 0, off: 0, a: 0, w: 0, d: 0, z0: 0, z1: 0 };
 /** Oriel bays on some walk-ups, pilasters on old facades, piers on art deco offices (where the facade draws them). */
 export function reliefOf(B: Building): boolean {
   const h = (B.feat * 7919) % 1;
+  // (L.12) nothing stands out in front of a video screen or a news ticker (the bays cut through them), until the facades' rework
+  if (B.screen || B.ticker) return false;
   if (B.style === 'brick' && B.feat >= 0.45 && B.feat < 0.8 && B.h > 10 && B.ad < 0) {
     REL.P = 3 + Math.floor(h * 3); REL.off = 1; REL.a = 0.15; REL.w = 2 * BAY - 0.3; REL.d = 0.6; REL.z0 = FLOOR_H + 0.3; REL.z1 = B.h - 1.6;
   } else if (B.style === 'residential' && B.feat >= 0.6 && B.h > 7 && B.ad < 0) {
@@ -549,7 +551,10 @@ function gatherLights(world: World, v: View, sec: number) {
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
       if (B.screen && dist < SCREEN_LIGHT_FAR) {
         // the screens wash the street and the facades across it with their current scene's color, from where they hang
-        const S = screenScene(k, sec), q = SCREEN_LIGHT * (1 + SCREEN_DAY * frameDay) * signPower(world, k, sec), cr = linC((S.a[0] + S.b[0]) / 2, q), cg = linC((S.a[1] + S.b[1]) / 2, q), cb = linC((S.a[2] + S.b[2]) / 2, q);
+        // (L.12) or the crash screen's blue, while it shows (the shader's bsodPix: mostly the blue field, some white text)
+        const S = screenScene(k, sec), q = SCREEN_LIGHT * (1 + SCREEN_DAY * frameDay) * signPower(world, k, sec);
+        const P = world.power, crash = bsod(P, P.building[k], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, k, sec);
+        const cr = linC(crash ? 45 : (S.a[0] + S.b[0]) / 2, q), cg = linC(crash ? 65 : (S.a[1] + S.b[1]) / 2, q), cb = linC(crash ? 200 : (S.a[2] + S.b[2]) / 2, q);
         for (let f = 0; f < (B.cut ? 5 : 4); f++) {
           if (!(B.screen & (1 << f))) continue;
           const sp = faceSpan(B, f), mid = (sp[0] + sp[1]) / 2, w = Math.min(sp[1] - sp[0] - 1.5, 16);
