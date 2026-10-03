@@ -16,6 +16,8 @@ const SHADOW_BACK = 60;
 const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 /** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
 const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
+/** The objects' footprints on the ground (footGrid): OG_N x OG_N cells of OG_CELL metres round the viewer, for the lamps' shadows and the reflections. */
+const OG_N = 64, OG_CELL = 2;
 import { CURVE_R } from '../sarcophagus';
 import { setEye } from '../eye';
 import { fallShape } from '../precip';
@@ -138,6 +140,9 @@ export class GpuWorld {
   private oBase = 0;
   private sgCnt = new Uint32Array(SG_N * SG_N);
   private sgStamp = new Int32Array(SG_N * SG_N);
+  private ogCnt = new Uint32Array(OG_N * OG_N);
+  /** Every lamp's color this frame and where its head is (r, g, b, x, y, z), for the lamps' shadows. */
+  private lampBuf: Float32Array;
   private oW = new Uint32Array(OBJ_CAP);
   private oF = new Float32Array(this.oW.buffer);
 
@@ -223,7 +228,10 @@ export class GpuWorld {
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
     this.subs = sz(64 * 16);
     this.lmap = sz(1024 * 1024 * 4 * 2);
-    this.lampCol = sz(C.lamps.length * 12);
+    this.lampCol = sz(C.lamps.length * 24);
+    this.lampBuf = new Float32Array(C.lamps.length * 6);
+    // the head hangs at the end of the arm (lampModel: 1.6 m out, 6.4 m up)
+    C.lamps.forEach((p, n) => this.lampBuf.set([0, 0, 0, p.x + Math.cos(p.a) * 1.6, p.y + Math.sin(p.a) * 1.6, 6.37], n * 6));
     if (dev.features.has('timestamp-query')) {
       this.tq = { set: dev.createQuerySet({ type: 'timestamp', count: 2 }), res: dev.createBuffer({ size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC }),
         read: dev.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), busy: false };
@@ -279,7 +287,8 @@ export class GpuWorld {
     P.subs.forEach((s, k) => S.set([s.changed < 0 ? -1 : s.changed / 60, s.on ? 1 : 0, s.ox, s.oy], k * 4));
     q.writeBuffer(this.subs, 0, S);
     if (F.light.version !== this.lmapVersion) { this.lmapVersion = F.light.version; q.writeBuffer(this.lmap, 0, F.light.packMap()); }
-    q.writeBuffer(this.lampCol, 0, F.light.colors);
+    { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * 6] = c[n * 3]; L[n * 6 + 1] = c[n * 3 + 1]; L[n * 6 + 2] = c[n * 3 + 2]; } }
+    q.writeBuffer(this.lampCol, 0, this.lampBuf);
     this.facades(v.x, v.y);
     const D = F.dyn.pack();
     [D.lights, D.lv, D.off, D.idx].forEach((a, k) => { const b = this.fit(k, a.byteLength); q.writeBuffer(b, 0, a); });
@@ -509,13 +518,13 @@ export class GpuWorld {
     // the tiles' lists: counted, then filled
     const n = picked.length, W = this.oW, F = this.oF, cnt = new Uint32Array(nT + 1);
     for (let j = 0; j < n; j++) for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) cnt[t]++;
-    const tab = 9, lst = tab + nT + 1;
+    const tab = 10, lst = tab + nT + 1;
     let total = 0;
     for (let t = 0; t < nT; t++) { W[tab + t] = total; total += cnt[t]; }
     W[tab + nT] = total;
     // after the objects, this frame's roofs that keep the rain off (gatherRoofs): x, y, c, s, hx, hy, z
     const ob = lst + total, rb = ob + n * OW, nR = roofs.length;
-    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 9); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 9); return; }
+    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 10); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 10); return; }
     roofs.forEach((R, k) => F.set([R.x, R.y, R.c, R.s, R.hx, R.hy, R.z], rb + k * 7));
     const fill = cnt.fill(0);
     for (let j = 0; j < n; j++) {
@@ -552,7 +561,10 @@ export class GpuWorld {
     // and the objects that cast the floodlights' shadows: their count, then their indices
     let fl = 0;
     if (casters.length && end + 1 + casters.length <= OBJ_CAP) { fl = end; W[end] = casters.length; W.set(casters, end + 1); end += 1 + casters.length; }
-    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = sg; W[8] = fl;
+    // the objects' footprints, for the lamps' shadows and what the wet street and the glass mirror
+    let og = 0;
+    { const e = this.footGrid(W, F, end, ob, n, v); if (e > 0) { og = end; end = e; } }
+    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = sg; W[8] = fl; W[9] = og;
     q.writeBuffer(this.fx, this.oBase * 4, W, 0, end);
   }
 
@@ -590,6 +602,37 @@ export class GpuWorld {
     cnt.fill(0); stamp.fill(-1);
     for (let j = 0; j < n; j++) visit(j, (c) => { W[list + W[head + c] + cnt[c]++] = j; });
     F[at] = x0; F[at + 1] = y0; W[at + 2] = N; F[at + 3] = SG_CELL;
+    return list + total;
+  }
+
+  /**
+   * The outdoor objects binned by their footprint on the ground (their circle), from word at: a square of OG_N x OG_N
+   * cells of OG_CELL metres round the viewer (its corner x, y), the cells' offsets into the list, then the list. A ray
+   * near the ground (to a street lamp, or mirrored off the wet street) walks its cells and tests only their objects.
+   * The end, or 0 if it did not fit.
+   */
+  private footGrid(W: Uint32Array, F: Float32Array, at: number, ob: number, n: number, v: View): number {
+    const N = OG_N, cs = OG_CELL, x0 = Math.floor(v.x / cs) * cs - (N / 2) * cs, y0 = Math.floor(v.y / cs) * cs - (N / 2) * cs;
+    const cnt = this.ogCnt.fill(0), head = at + 4, list = head + N * N + 1;
+    const each = (f: (c: number) => void) => {
+      for (let j = 0; j < n; j++) {
+        const w = ob + j * OW;
+        if (W[w + 14] === 2 || F[w + 9] !== 0) continue;
+        const x = F[w] - x0, y = F[w + 1] - y0, r = F[w + 4];
+        const i0 = Math.max(0, Math.floor((x - r) / cs)), i1 = Math.min(N - 1, Math.floor((x + r) / cs));
+        const j0 = Math.max(0, Math.floor((y - r) / cs)), j1 = Math.min(N - 1, Math.floor((y + r) / cs));
+        for (let jj = j0; jj <= j1; jj++) for (let ii = i0; ii <= i1; ii++) { cur = j; f(jj * N + ii); }
+      }
+    };
+    let cur = 0;
+    each((c) => cnt[c]++);
+    let total = 0;
+    for (let c = 0; c < N * N; c++) { W[head + c] = total; total += cnt[c]; }
+    W[head + N * N] = total;
+    if (list + total > OBJ_CAP) return 0;
+    cnt.fill(0);
+    each((c) => { W[list + W[head + c] + cnt[c]++] = cur; });
+    F[at] = x0; F[at + 1] = y0; W[at + 2] = N; F[at + 3] = cs;
     return list + total;
   }
 

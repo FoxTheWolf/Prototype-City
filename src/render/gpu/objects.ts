@@ -12,7 +12,8 @@ import { SYMBOLS } from '../signs';
  *   radius, height, base, seed, fog distance, lift, lean, the model's offset, its screen box), then
  *   the roofs that keep the rain off (fx[OB + 4] where, fx[OB + 5] how many; seven floats each), the floor
  *   the viewer stands in (fx[OB + 6] where, 0 outdoors; see the shader's interiorCell), the sun's shadow grid
- *   (fx[OB + 7]) and the objects that shade the floodlit facades (fx[OB + 8]: a count, then their indices). The furniture is objects
+ *   (fx[OB + 7]), the objects that shade the floodlit facades (fx[OB + 8]: a count, then their indices) and the objects'
+ *   footprints on the ground (fx[OB + 9], footGrid). The furniture is objects
  *   too, marked indoor (lit by the rooms' lamps, multiplied).
  */
 export const OW = 20, PW = 24, TILE = 8;
@@ -141,8 +142,10 @@ fn objBlock(ob: u32, P: vec3f, Ls: vec3f, tPre: f32, tMax: f32, mw: f32) -> f32 
       if (!hit || length(hp - o) > tMax) { continue; }
       if (mat == M_LEAF) {
         // a crown lets the sun through in flecks
-        let h = hash3(ifloor(hp.x / 0.4) + j32(ob), ifloor(hp.y / 0.4), ifloor(hp.z / 0.4));
-        lit = min(lit, select(0.0, 0.7, h < OBJ_LEAF_GAP));
+        // (in blotches a metre wide and never wholly clear: the 0.4 m flecks, lit or not, flickered as the view moved
+        // and read as holes in the shadow)
+        let h = hash3(ifloor(hp.x) + j32(ob), ifloor(hp.y), ifloor(hp.z));
+        lit = min(lit, OBJ_LEAF_GAP * h);
         if (lit <= 0.0) { return 0.0; }
         continue;
       }
@@ -151,7 +154,130 @@ fn objBlock(ob: u32, P: vec3f, Ls: vec3f, tPre: f32, tMax: f32, mw: f32) -> f32 
     return lit;
 }
 fn j32(v: u32) -> i32 { return i32(v & 0xffffu); }
-const OBJ_LEAF_GAP = 0.25;
+
+// ---- the objects' footprints on the ground (fx[OB + 9], footGrid): a ray near the ground walks its cells
+/** The footprint grid's cells a ray from P along unit D crosses within tEnd (along D), walked by footStep. */
+struct FootWalk { G: u32, N: i32, cs: f32, ci: i32, cj: i32, si: i32, sj: i32, tx: f32, ty: f32, dtx: f32, dty: f32, tEnd: f32, ok: bool };
+fn footStart(P: vec3f, D: vec3f, tMax: f32) -> FootWalk {
+  var w = FootWalk(0u, 0, 1.0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, tMax, false);
+  let OB = fx[1];
+  if (OB == 0u || fx[OB] == 0u || fx[OB + 9u] == 0u) { return w; }
+  let G = OB + fx[OB + 9u]; let N = i32(fx[G + 2u]); let cs = fxf(G + 3u);
+  let qx = (P.x - fxf(G)) / cs; let qy = (P.y - fxf(G + 1u)) / cs;
+  if (qx < 0.0 || qy < 0.0 || qx >= f32(N) || qy >= f32(N)) { return w; }
+  w.G = G; w.N = N; w.cs = cs; w.ci = i32(qx); w.cj = i32(qy); w.ok = true;
+  w.si = select(1, -1, D.x < 0.0); w.sj = select(1, -1, D.y < 0.0);
+  w.dtx = select(1e9, cs / abs(D.x), abs(D.x) > 1e-6); w.dty = select(1e9, cs / abs(D.y), abs(D.y) > 1e-6);
+  w.tx = select(1e9, (select(f32(w.ci + 1), f32(w.ci), D.x < 0.0) - qx) * cs / abs(D.x), abs(D.x) > 1e-6);
+  w.ty = select(1e9, (select(f32(w.cj + 1), f32(w.cj), D.y < 0.0) - qy) * cs / abs(D.y), abs(D.y) > 1e-6);
+  return w;
+}
+/** The current cell's stretch (start, end) of the footprint grid's list. */
+fn footCell(w: FootWalk) -> vec2u {
+  let head = w.G + 4u; let c = u32(w.cj * w.N + w.ci);
+  return vec2u(fx[head + c], fx[head + c + 1u]);
+}
+/** On to the next cell; false past the end or out of the grid. */
+fn footStep(w: ptr<function, FootWalk>) -> bool {
+  if ((*w).tx < (*w).ty) { if ((*w).tx > (*w).tEnd) { return false; } (*w).ci += (*w).si; (*w).tx += (*w).dtx; }
+  else { if ((*w).ty > (*w).tEnd) { return false; } (*w).cj += (*w).sj; (*w).ty += (*w).dty; }
+  return (*w).ci >= 0 && (*w).cj >= 0 && (*w).ci < (*w).N && (*w).cj < (*w).N;
+}
+/** How much of a light at H reaches P past the street objects (1 clear): the street lamps' shadows. */
+fn footShadow(P: vec3f, H: vec3f) -> f32 {
+  let V = H - P; let len = length(V);
+  if (len < 0.6) { return 1.0; }
+  let D = V / len;
+  var w = footStart(P, D, len);
+  if (!w.ok) { return 1.0; }
+  let OB = fx[1]; let objs = OB + fx[OB + 2u]; let list = w.G + 4u + u32(w.N * w.N) + 1u;
+  var lit = 1.0;
+  for (var s = 0; s < 40; s++) {
+    let r = footCell(w);
+    for (var li = r.x; li < r.y; li++) {
+      let ob = objs + fx[list + li] * OW;
+      // (short of the lamp's own head)
+      lit = min(lit, objBlock(ob, P, D, len, len - 0.5, 0.0));
+      if (lit <= 0.0) { return 0.0; }
+    }
+    if (!footStep(&w)) { break; }
+  }
+  return lit;
+}
+/** How far the wet street and the glass mirror the street objects (m along the mirrored ray). */
+const REFL_OBJ_FAR = 60.0;
+/**
+ * The street objects over what a mirrored ray from O along unit D found (cl, at its depth along the ray): the nearest
+ * part it meets, plainly shaded (its color and the lamps' light; a lamp's head, a sign, a screen lit), as objectsOver
+ * shades them for the view.
+ */
+fn objRefl(cl0: Cell, O: vec3f, D: vec3f) -> Cell {
+  var cl = cl0;
+  let tLim = min(cl.depth, REFL_OBJ_FAR);
+  var w = footStart(O, D, tLim);
+  if (!w.ok) { return cl; }
+  let OB = fx[1]; let objs = OB + fx[OB + 2u]; let list = w.G + 4u + u32(w.N * w.N) + 1u;
+  var best = tLim; var bp = 0u; var bo = 0u; var bn = vec3f(0.0); var found = false;
+  for (var s = 0; s < 40; s++) {
+    let r = footCell(w);
+    for (var li = r.x; li < r.y; li++) {
+      let ob = objs + fx[list + li] * OW;
+      let x = fxf(ob); let y = fxf(ob + 1u); let c = fxf(ob + 2u); let sn = fxf(ob + 3u); let rr = fxf(ob + 4u);
+      let o = vec3f((O.x - x) * c + (O.y - y) * sn, -(O.x - x) * sn + (O.y - y) * c, O.z);
+      let d0 = vec3f(D.x * c + D.y * sn, -D.x * sn + D.y * c, D.z);
+      // the ray's pass by its circle first
+      let qa = d0.x * d0.x + d0.y * d0.y; let qb = o.x * d0.x + o.y * d0.y; let disc = qb * qb - qa * (o.x * o.x + o.y * o.y - rr * rr);
+      if (disc < 0.0 || qa < 1e-9) { continue; }
+      if ((-qb - sqrt(disc)) / qa >= best) { continue; }
+      let d = select(d0, vec3f(1e-6), abs(d0) < vec3f(1e-6));
+      let mo = fx[ob + 15u]; let np = fx[mo];
+      for (var k = 0u; k < np; k++) {
+        let p = mo + 1u + k * PW;
+        if (fx[p + 10u] == M_GLASS) { continue; }
+        let shape = fx[p]; let q0 = fx3(p + 1u); let q1 = fx3(p + 4u);
+        let cen = (q0 + q1) * 0.5; let hs = max((q1 - q0) * 0.5, vec3f(0.03));
+        var t = 1e9; var nr = vec3f(0.0);
+        if (shape == 0u) {
+          let t0 = (cen - hs - o) / d; let t1 = (cen + hs - o) / d;
+          let tn = min(t0, t1); let tf = max(t0, t1);
+          let a = max(tn.x, max(tn.y, tn.z)); let b = min(tf.x, min(tf.y, tf.z));
+          if (a <= b && a > 0.03) { t = a; nr = select(select(vec3f(0.0, 0.0, -sign(d.z)), vec3f(0.0, -sign(d.y), 0.0), a == tn.y), vec3f(-sign(d.x), 0.0, 0.0), a == tn.x); }
+        } else {
+          let X = (o.x - cen.x) / hs.x; let Y = (o.y - cen.y) / hs.y; let DX = d.x / hs.x; let DY = d.y / hs.y;
+          if (shape == 1u) {
+            let a = DX * DX + DY * DY; let b = X * DX + Y * DY; let ds = b * b - a * (X * X + Y * Y - 1.0);
+            if (ds >= 0.0 && a > 1e-9) { let tt = (-b - sqrt(ds)) / a; if (tt > 0.03 && abs(o.z + d.z * tt - cen.z) <= hs.z) { t = tt; nr = vec3f(X + DX * tt, Y + DY * tt, 0.0); } }
+          } else {
+            let Z = (o.z - cen.z) / hs.z; let DZ = d.z / hs.z;
+            let a = DX * DX + DY * DY + DZ * DZ; let b = X * DX + Y * DY + Z * DZ; let ds = b * b - a * (X * X + Y * Y + Z * Z - 1.0);
+            if (ds >= 0.0) { let tt = (-b - sqrt(ds)) / a; if (tt > 0.03) { t = tt; nr = vec3f(X + DX * tt, Y + DY * tt, Z + DZ * tt); } }
+          }
+        }
+        if (t < best) { best = t; bp = p; bo = ob; bn = nr; found = true; }
+      }
+    }
+    // a hit before this cell's far edge is the nearest (an object over several cells is met again further on)
+    if (found && best <= min(w.tx, w.ty)) { break; }
+    if (!footStep(&w)) { break; }
+  }
+  if (!found) { return cl; }
+  let mat = fx[bp + 10u]; let c = fxf(bo + 2u); let sn = fxf(bo + 3u);
+  let wn = normalize(vec3f(bn.x * c - bn.y * sn, bn.x * sn + bn.y * c, bn.z) + vec3f(1e-5, 0.0, 0.0));
+  let H = O + D * best;
+  let glow = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;
+  var col = fx3(bp + 7u);
+  if (mat == M_SCREEN) { col = vec3f(150.0, 160.0, 190.0) * (col / 255.0); }
+  var rgb = col * select((0.72 + 0.28 * abs(wn.x)) * (1.0 - OBJ_NIGHT * (1.0 - u.day)), 1.0, glow);
+  var oIl = vec3f(0.0);
+  if (!glow) { oIl = lightAt(H.x, H.y, H.z, wn) * 1.1; rgb += oIl; }
+  gEm = select(vec3f(0.0), sat(rgb), glow); gIl = oIl; gTag = best; gWet = 0.0; gMat = MAT_NONE; gNrm = wn;
+  gGlowK = 1.0; gEmK = select(1.0, SIGN_EMIT, mat == M_TEXT);
+  let ch = select(fx[bp + 11u], LEAF[1], mat == M_LEAF);
+  return Cell(ch, max(rgb, vec3f(0.0)), cl.bg, best, select(KIND_OBJECT, KIND_OTHER, glow), 2.0 + max(0.0, dot(wn, vec3f(u.sunX, u.sunY, u.sunZ))));
+}
+
+/** The most sun a crown lets through (its blotches between none and this). */
+const OBJ_LEAF_GAP = 0.5;
 /** How bright a small screen (a shelter's advert) is next to the big ones on the buildings. */
 const SCREEN_K = 0.75; const SCREEN_S = 3.0;
 
@@ -163,7 +289,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
   let tile = gx / TILE;
   if (tile >= fx[OB + 1u]) { return cl; }
   let objs = OB + fx[OB + 2u]; let list = OB + fx[OB + 3u];
-  for (var li = fx[OB + 9u + tile]; li < fx[OB + 10u + tile]; li++) {
+  for (var li = fx[OB + 10u + tile]; li < fx[OB + 11u + tile]; li++) {
     let ob = objs + fx[list + li] * OW;
     if (gx < fx[ob + 16u] || gx >= fx[ob + 17u] || gy < fx[ob + 18u] || gy >= fx[ob + 19u]) { continue; }
     let x = fxf(ob); let y = fxf(ob + 1u); let c = fxf(ob + 2u); let s = fxf(ob + 3u); let r = fxf(ob + 4u);

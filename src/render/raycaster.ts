@@ -307,6 +307,8 @@ const SIGN_LIGHT = 3.75, SIGN_RANGE = 22, SCREEN_LIGHT = 0.7, SCREEN_RANGE = 50,
 const BLADE_LIGHT = 3.75, BLADE_RANGE = 22, NEON_LIGHT = 1.5, NEON_RANGE = 16, NEON_LIGHT_FAR = 120, SHOP_LIGHT = 1.2, SHOP_RANGE = 10;
 /** A color (0-255, sRGB) at strength q as linear light (1 = white), for the panels. */
 const MARQUEE_LIGHT = 0.6, TICKER_LIGHT = 0.8;
+/** By day the screens turn up their brightness (as real LED screens do): their light on the street x (1 + this) at noon, so it shows in the shade. */
+const SCREEN_DAY = 4;
 const linC = (c: number, q: number) => (c / 255) ** 2.2 * q;
 
 /**
@@ -545,7 +547,7 @@ function gatherLights(world: World, v: View, sec: number) {
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
       if (B.screen && dist < SCREEN_LIGHT_FAR) {
         // the screens wash the street and the facades across it with their current scene's color, from where they hang
-        const S = screenScene(k, sec), q = SCREEN_LIGHT * signPower(world, k, sec), cr = linC((S.a[0] + S.b[0]) / 2, q), cg = linC((S.a[1] + S.b[1]) / 2, q), cb = linC((S.a[2] + S.b[2]) / 2, q);
+        const S = screenScene(k, sec), q = SCREEN_LIGHT * (1 + SCREEN_DAY * frameDay) * signPower(world, k, sec), cr = linC((S.a[0] + S.b[0]) / 2, q), cg = linC((S.a[1] + S.b[1]) / 2, q), cb = linC((S.a[2] + S.b[2]) / 2, q);
         for (let f = 0; f < (B.cut ? 5 : 4); f++) {
           if (!(B.screen & (1 << f))) continue;
           const sp = faceSpan(B, f), mid = (sp[0] + sp[1]) / 2, w = Math.min(sp[1] - sp[0] - 1.5, 16);

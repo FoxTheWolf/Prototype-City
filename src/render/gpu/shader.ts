@@ -166,11 +166,53 @@ fn winGroup(bk: i32, wi: i32, fl: i32) -> i32 {
 }
 
 // ---- light (lightmap.ts, lights.ts, lightAt): the street lamps' pools and this frame's dynamic lights
-fn lampCorner(i: u32, f: f32) -> vec3f {
+fn lampCorner(i: u32, f: f32, sh: vec4f) -> vec3f {
   let w = lmap[i];
   if (w == 0u || f <= 0.0) { return vec3f(0.0); }
-  let n = ((w >> 8u) - 1u) * 3u; let g = f32(w & 255u) / 255.0 * f;
-  return vec3f(lampCol[n], lampCol[n + 1u], lampCol[n + 2u]) * g;
+  let id = w >> 8u; let n = (id - 1u) * 6u; let g = f32(w & 255u) / 255.0 * f;
+  // (the shadow of what stands between it and the lamp, for the two lamps of the nearest metre: sh = id, lit, id, lit)
+  let k = select(select(1.0, sh.w, f32(id) == sh.z), sh.y, f32(id) == sh.x);
+  return vec3f(lampCol[n], lampCol[n + 1u], lampCol[n + 2u]) * (g * k);
+}
+/** How far from the viewer the street lamps' shadows of the objects are traced (m), and from how far they fade out. */
+const LAMP_SH_FAR = 40.0;
+/**
+ * The street lamps' cones in the falling rain or snow (at night): a short march along the view ray (to CONE_FAR),
+ * each step lit by the two lamps of its metre if it is in the cone under their heads, the brighter near them.
+ * The steps start at a fine-grained offset per cell (interleaved gradient noise), as the sun's rays do.
+ */
+const CONE_FAR = 32.0; const CONE_STEPS = 12; const CONE_TAN = 1.6; const CONE_K = 0.1;
+fn coneLamp(w: u32, Q: vec3f) -> vec3f {
+  if (w == 0u) { return vec3f(0.0); }
+  let n = ((w >> 8u) - 1u) * 6u;
+  let dz = lampCol[n + 5u] - Q.z;
+  if (dz <= 0.1) { return vec3f(0.0); }
+  let rr = length(vec2f(Q.x - lampCol[n + 3u], Q.y - lampCol[n + 4u])); let R = dz * CONE_TAN;
+  if (rr >= R) { return vec3f(0.0); }
+  let e = 1.0 - rr / R;
+  return vec3f(lampCol[n], lampCol[n + 1u], lampCol[n + 2u]) * (e * e / (1.0 + (dz * dz + rr * rr) / 12.0));
+}
+fn lampCones(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, depth: f32) -> vec3f {
+  let k = u.precip * (1.0 - u.day);
+  if (k < 0.03) { return vec3f(0.0); }
+  let tEnd = min(depth, CONE_FAR); let dt = tEnd / f32(CONE_STEPS);
+  let j = fract(52.9829189 * fract(0.06711056 * f32(gx) + 0.00583715 * f32(gy)));
+  var acc = vec3f(0.0);
+  for (var s = 0; s < CONE_STEPS; s++) {
+    let t = (f32(s) + j) * dt;
+    let Q = vec3f(u.px + rdx * t, u.py + rdy * t, u.eye - m * t);
+    if (Q.z < 0.0 || Q.z > 7.0) { continue; }
+    let ix = ifloor(Q.x - u.lox); let iy = ifloor(Q.y - u.loy);
+    if (ix < 0 || iy < 0 || ix >= LW || iy >= LW) { continue; }
+    let i0 = u32(iy * LW + ix);
+    acc += (coneLamp(lmap[i0], Q) + coneLamp(lmap[i0 + u32(LW * LW)], Q)) * dt;
+  }
+  return acc * (CONE_K * k);
+}
+/** How much of lamp id's light reaches P past the street objects (1 clear). */
+fn lampShadow(P: vec3f, id: u32) -> f32 {
+  let n = (id - 1u) * 6u;
+  return footShadow(P, vec3f(lampCol[n + 3u], lampCol[n + 4u], lampCol[n + 5u]));
 }
 fn lvSum(o: u32, n: u32, p: f32) -> f32 {
   let k = u32(floor(p));
@@ -188,10 +230,21 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
     let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
     if (ix >= 0 && iy >= 0 && ix < LW - 1 && iy < LW - 1) {
       let tx = fx - f32(ix); let ty = fy - f32(iy);
+      // near the viewer at night, what stands between a point and its lamps shades it: the two lamps of the nearest metre
+      var sh = vec4f(-1.0, 1.0, -1.0, 1.0);
+      let dv = length(vec2f(px - u.px, py - u.py));
+      if (u.day < 0.95 && dv < LAMP_SH_FAR) {
+        let k = u32((iy + i32(ty >= 0.5)) * LW + ix + i32(tx >= 0.5));
+        let w0 = lmap[k]; let w1 = lmap[k + u32(LW * LW)];
+        let P = vec3f(px, py, max(pz, 0.03)) + nr * 0.06;
+        let fade = smoothK(LAMP_SH_FAR * 0.75, LAMP_SH_FAR, dv);
+        if (w0 != 0u) { sh.x = f32(w0 >> 8u); sh.y = mix(lampShadow(P, w0 >> 8u), 1.0, fade); }
+        if (w1 != 0u) { sh.z = f32(w1 >> 8u); sh.w = mix(lampShadow(P, w1 >> 8u), 1.0, fade); }
+      }
       // the two strongest lamps on each metre (the second layer at LW * LW), summed
       for (var ly = 0u; ly < 2u; ly++) {
         let i0 = u32(iy * LW + ix) + ly * u32(LW * LW);
-        L += (lampCorner(i0, (1.0 - tx) * (1.0 - ty)) + lampCorner(i0 + 1u, tx * (1.0 - ty)) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty) + lampCorner(i0 + u32(LW) + 1u, tx * ty)) * zk;
+        L += (lampCorner(i0, (1.0 - tx) * (1.0 - ty), sh) + lampCorner(i0 + 1u, tx * (1.0 - ty), sh) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty, sh) + lampCorner(i0 + u32(LW) + 1u, tx * ty, sh)) * zk;
       }
     }
   }
@@ -609,8 +662,11 @@ fn peekCell(o: u32, lot: i32, boxId: i32, pk: Peek, f: i32, rdx: f32, rdy: f32, 
   if (r < 0 || u32(r) >= fx[o + 4u]) { return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
   let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
   let lp = roomLamp(lot, boxId, ro, r, f, elec);
-  let k = 0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0); let a = 0.14 + 0.5 * u.day;
-  let L = lp * k + vec3f(a, a * 1.05, a * 1.25);
+  // lit as the floor the viewer stands in (litIn): by day the daylight from the window, falling off into the room
+  // (the old flat ambient left the lamps' pools as bright blobs on every ceiling by day)
+  let k = 0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0); let a = 0.14 * (1.0 - u.day);
+  let dl = u.day * (DAYLIGHT_DEEP + DAYLIGHT_WIN * exp(-max(0.0, tEnd - t) / DAYLIGHT_FALL)) * (1.0 - 0.4 * u.cloud);
+  let L = lp * k * (1.0 - 0.6 * u.day) + vec3f(a, a * 1.05, a * 1.25) + vec3f(dl * 0.92, dl * 0.97, dl);
   var p = Px(DOT, vec3f(0.0));
   if (part == 3) { p = Px(F.ch, F.c); }
   else if (part == 0) { p = floorPx(kind, office, x, y); }
@@ -1197,7 +1253,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45 * shade; }
     else {
       let P = screenPix(bk, select(along - scA0, scA1 - along, rev), scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
-      ch = P.ch; c = P.c * adElec; em = true; emK = SCREEN_EMIT;
+      ch = P.ch; c = P.c * adElec; em = true; emK = SCREEN_EMIT * (1.0 + SCREEN_DAY_EMIT * u.day);
     }
   } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
     // the street door: a frame, two glass leaves and a transom, lit from the lobby
@@ -1512,6 +1568,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     } else if (opk == 2u) {
       let fx = fract(wx / 2.5); let fy = fract(wy / 2.5);
       ch = select(COL, PLUS, fx < 0.06 || fy < 0.06); c = vec3f(92.0, 86.0, 80.0);
+      if (square) { let dark = ((ifloor(wx / 2.5) + ifloor(wy / 2.5)) & 1) == 1; c = select(vec3f(108.0, 104.0, 108.0), vec3f(62.0, 60.0, 66.0), dark); if (!dark && fx > 0.45 && fx < 0.55 && fy > 0.45 && fy < 0.55) { ch = O; } }
     } else if (opk == 3u) {
       let long = blk[o + 2u] - blk[o] > blk[o + 3u] - blk[o + 1u];
       let a = (select(wx, wy, long) - select(blk[o], blk[o + 1u], long)) % 4.5; let uu = select(wy, wx, long);
@@ -1640,6 +1697,8 @@ fn sunLin() -> vec3f { let l = pow(kelvin(sunTemp()), vec3f(2.2)); return l / ma
 // exposure the time of day expects, and follows the eye's adaptation only.
 /** The night's ambient light with the city lit (its glow on everything; the night's palette is drawn for it), and the full moon's. */
 const AMB_N = 0.004; const MOON_E = 0.003;
+/** How much of the moonlight a point in the buildings' moon shadow still gets (the sky's part of it). */
+const MOON_SHADE = 0.25;
 /** How much the eye opens up as the city's glow fails (0: not at all, 1: as much as the light fell). */
 const NIGHT_ADAPT = 0.3;
 /** The lamps' light (lightAt's) in the same units: under a street lamp ~3% of the day's sky. */
@@ -1652,6 +1711,8 @@ const EMIT_KEEP = 0.95;
 const SIGN_EMIT = 2.4; const SIGN_GLOW = 1.6;
 /** The video screens (the telões, the bus shelters' adverts): brighter to the eye too, less than the signs (a picture, not a light). */
 const SCREEN_EMIT = 1.6;
+/** By day the screens are turned up (as real LED screens are): to the eye x (1 + this) at noon. */
+const SCREEN_DAY_EMIT = 0.6;
 /** How much of a sign cell's color its background takes (the others take the B key's share, 0.24). */
 const SIGN_FILL = 0.5;
 /** How much of the eye closing down a sign makes up for (0: none, 1: all). */
@@ -1715,7 +1776,7 @@ fn light(cl: Cell) -> Cell {
     if (o.kind == KIND_GROUND) { A = mix(A, vec3f(dot(A, vec3f(0.3, 0.5, 0.2))), 0.2 * g) * mix(1.0, DAY_GROUND, g); }
     // the night's ambient: the city's glow (neutral: the palette is drawn under it) and the moon (bluish)
     // (the moon and the sky are cut by the buildings round it, gSky; the city's glow, half from the lit air, a little less)
-    let En = vec3f(cityAmb()) * mix(1.0, gSky, 0.5) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * gSky);
+    let En = vec3f(cityAmb()) * mix(1.0, gSky, 0.5) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * gSky * mix(MOON_SHADE, 1.0, gMoon));
     // the day's: the sky's (bluish; whiter under clouds) and the sun's on what faces it out of the shadows (gSun);
     // it fades in on a log scale with the exposure (ds), so dusk never dips darker than night or day
     let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
@@ -2373,10 +2434,14 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
  * box, cylinder or cut box it passes below the top of shades the point. (A point on a face turned to the
  * sun starts on its own box's edge: only a box the ray goes on through counts.)
  */
-fn sunLit(px: f32, py: f32, pz: f32) -> f32 {
-  let L = length(vec2f(u.sunX, u.sunY));
-  if (u.sunZ <= 0.0 || L < 1e-4) { return 1.0; }
-  let rdx = u.sunX / L; let rdy = u.sunY / L; let k = u.sunZ / L;
+fn sunLit(px: f32, py: f32, pz: f32) -> f32 { return dirLit(px, py, pz, vec3f(u.sunX, u.sunY, u.sunZ)); }
+/** The moon's direction (as the sun's, from its azimuth and elevation). */
+fn moonDir() -> vec3f { let ce = cos(u.moonEl); return vec3f(cos(u.moonA) * ce, sin(u.moonA) * ce, max(0.0, sin(u.moonEl))); }
+/** Whether a light far off along S (the sun, the moon) reaches the point past the buildings. */
+fn dirLit(px: f32, py: f32, pz: f32, S: vec3f) -> f32 {
+  let L = length(S.xy);
+  if (S.z <= 0.0 || L < 1e-4) { return 1.0; }
+  let rdx = S.x / L; let rdy = S.y / L; let k = S.z / L;
   let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
   let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
   let W = arrayLength(&xc); let H = arrayLength(&yc);
@@ -2484,17 +2549,19 @@ fn horizonTan(px: f32, py: f32, pz: f32, rdx: f32, rdy: f32) -> f32 {
 /** The share of the sky's light a surface at P with normal N gets past the buildings (1: open sky), cosine-weighted:
  *  a floor sees cos^2 of each direction's horizon; a wall only the sky in front of it, each slice by how it faces it.
  *  No sorting by cell: it moves smoothly with the point, so no glyph flickers. */
+const SKY_DIRS = 16;
 fn skyView(P: vec3f, N: vec3f) -> f32 {
   let up = N.z > 0.7;
   gBncA = vec3f(0.0); gBncS = vec3f(0.0);
   if (up) {
+    // (16 directions: with 8, each corner of a building crossing one of them cut a straight wedge of shade into the street)
     var s = 0.0;
-    for (var k = 0; k < 8; k++) {
-      let a = f32(k) * 0.785398 + 0.3927; let tn = horizonTan(P.x, P.y, P.z + 0.3, cos(a), sin(a));
+    for (var k = 0; k < SKY_DIRS; k++) {
+      let a = (f32(k) + 0.5) * (6.283185 / f32(SKY_DIRS)); let tn = horizonTan(P.x, P.y, P.z + 0.3, cos(a), sin(a));
       s += 1.0 / (1.0 + tn * tn);
-      bounceFrom(tn * tn / (1.0 + tn * tn) / 8.0);
+      bounceFrom(tn * tn / (1.0 + tn * tn) / f32(SKY_DIRS));
     }
-    return s / 8.0;
+    return s / f32(SKY_DIRS);
   }
   let n = normalize(vec2f(N.x, N.y) + vec2f(1e-5, 0.0));
   var s = 0.0; var wsum = 0.0;
@@ -2532,6 +2599,8 @@ fn bounceFrom(w: f32) {
 const OBJ_SHADOW_FAR = 120.0;
 /** This cell's sunlight after the shadows (sunLit), for finish. */
 var<private> gSun: f32 = 1.0;
+/** Whether the moon reaches this cell past the buildings (1) or not (0), for finish. */
+var<private> gMoon: f32 = 1.0;
 /** This cell's share of the sky past the buildings (skyView), for finish. */
 var<private> gSky: f32 = 1.0;
 // what of the cell's color is light it gives off (a lit window, a sign, a lamp) and light it gets from the
@@ -2629,6 +2698,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         var tg = 1e9;
         if (mR > 0.0) { let disc = mR * mR - 4.0 * AR * gOZ; if (disc > 0.0) { tg = 2.0 * gOZ / (mR + sqrt(disc)); } }
         var rc = cityCell(gid.x, gid.y, rx, ry, mR, 1.0, AR, tg);
+        // and the street objects it meets first (the lamps' heads and the cars in the wet street)
+        rc = objRefl(rc, vec3f(gOX, gOY, gOZ), gRay);
         gRefl = false; gOX = u.px; gOY = u.py; gOZ = u.eye;
         if (rc.depth < 1e8) {
           if (rc.depth == gTag) { gTag += t; } rc.depth += t;
@@ -2665,10 +2736,19 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       gSun *= objShadow(P + Nn * 0.06, Ls, 0.5 * u.colW * t);
     }
   }
+  // at night, whether the moon reaches it (the buildings' shadows in the moonlight, which tell in a blackout)
+  gMoon = 1.0;
+  if (u.moonlight > 0.02 && u.day < 0.99 && cl.depth < 3000.0 && cl.kind != KIND_ROOM) {
+    let t = cl.depth;
+    let P = vec3f(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
+    gMoon = dirLit(P.x, P.y, P.z, moonDir());
+  }
   let paint = gMat == MAT_PAINT;
   var lit = light(cl);
   if (paint) { refl *= mix(vec3f(1.0), gTint, CAR_METAL); }
   if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }
+  // the lamps' cones in the rain, over all of it (as bright as the eye takes them)
+  if (inc.state == 0u) { lit.c += lampCones(gid.x, gid.y, rdx, rdy, m, cl.depth) * pow(u.adapt, 1.0 / 2.2); }
   store(i, n, fallOver(handOver(display(lit), gid.x, gid.y), rdx, rdy, m, inc.nearT));
 }
 `;
