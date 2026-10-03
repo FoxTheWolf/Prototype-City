@@ -17,6 +17,7 @@ import { power } from './render/power';
 import { pickedButton } from './render/interior';
 import { renderWorld, VIEW_GLINT, VIEW_LIGHT, type View } from './render/raycaster';
 import { RenderPool } from './render/pool';
+import { GpuWorld } from './render/gpu/world';
 import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer } from './render/hd';
 import { setHd } from './phone/lcd';
@@ -54,6 +55,8 @@ const workersParam = new URLSearchParams(location.search).get('workers');
 const nWorkers = workersParam !== null ? Math.max(0, Number(workersParam) | 0) : Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 2));
 const pool = nWorkers > 0 && RenderPool.available() ? new RenderPool(seed, undefined, nWorkers) : null;
 if (pool) resStep = 2;
+// stage R.2: the prototype of the world on the GPU (J switches it on and off; it starts on the first press)
+let gpu: GpuWorld | null = null, useGpu = false, gpuAsked = false;
 
 const canvas = document.getElementById('screen') as HTMLCanvasElement;
 const overlay = document.getElementById('overlay')!;
@@ -83,7 +86,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool, gpuNow: () => gpu,
   // watch camera k as on the title (stopCctv to leave)
   watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
   // the world's characters; with ui = true the interface's (where it drew, else the world's under it at 80 rows)
@@ -344,6 +347,13 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyU') look.blocks = !look.blocks;
   else if (e.code === 'KeyV') look.sharp = (look.sharp + 1) % 4;
   else if (e.code === 'KeyG') look.fuse = !look.fuse;
+  else if (e.code === 'KeyJ') {
+    if (gpu) useGpu = !useGpu;
+    else if (!gpuAsked && GpuWorld.available()) {
+      gpuAsked = true;
+      GpuWorld.create(world.city).then((g) => { gpu = g; g.resize(layout.cols, layout.rows); useGpu = true; }, (err) => console.error('WebGPU:', err));
+    }
+  }
   else if (e.code === 'KeyR') { resStep = (resStep + 1) % RES_ROWS.length; resize(); }
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
   else if (e.code === 'KeyT') skipHours(world, e.shiftKey ? -1 : 1);
@@ -375,6 +385,7 @@ function resize() {
   setHd(hd);
   shown = new CharGrid(layout.cols, layout.rows);
   pool?.resize(layout.cols, layout.rows);
+  gpu?.resize(layout.cols, layout.rows);
   renderer.setLayout(layout, uiLayout);
   if (cctv) dvrLayout();
 }
@@ -543,7 +554,12 @@ function frame(now: number) {
     Object.assign(view, { x: C.x, y: C.y, yaw: cctvYaw(C, (world.tick + alpha) / 60), pitch: C.pitch, eye: C.z - 0.1, floor: 0, z: 0, lift: false, hand: 0 });
   }
   let ms: number;
-  if (pool) {
+  if (useGpu && gpu) {
+    // the GPU's frame comes back a refresh or two later, like the workers'
+    if (gpu.frame(world, view, shown)) worldFrames++;
+    grid.cells.set(shown.cells); grid.bg.set(shown.bg);
+    ms = gpu.ms;
+  } else if (pool) {
     // the workers draw the next frame while this one shows the last they finished
     if (pool.frame(world, view, shown)) worldFrames++;
     grid.cells.set(shown.cells); grid.bg.set(shown.bg);
@@ -624,7 +640,7 @@ function frame(now: number) {
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${useGpu ? 'GPU R.2' : pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;

@@ -313,6 +313,18 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - O laço do jogo não roda com o painel do navegador oculto: para medir o jogo de verdade, **pedir ao usuário que deixe o navegador do app aberto** (veja "Como trabalhar"). `lookNow()` dá o `look` atual no console.
 
 
+### R.2, o protótipo na GPU (2026-10-02, máquina do Claude, mesma sessão, 594×200, girando 0,03 rad por quadro)
+
+`src/render/gpu/world.ts` (`GpuWorld`, tecla **J**, `gpuNow()` no console): a cidade sobe uma vez como listas (limites das ruas, quarteirões, prédios); um compute shader lança **um raio 3D por célula** pela mesma grade de ruas da CPU (caixas, cilindros e cortes da diagonal, telhados, curvatura) e faz o chão (ruas, faixas, calçadas, praças, parques), as fachadas com janelas acesas pelo mesmo `hash3`, e o céu. As células voltam para a grade do mundo (`mapAsync`) e o compositor de hoje desenha (um quadro de atraso, como os workers). Ainda **sem** luzes, objetos, carros, pessoas, letreiros, interiores, nuvens, chuva nem os estilos de fachada.
+
+| | Quadro do mundo, mediana / p95 / pior | Quadros do mundo por segundo (tela a 180) |
+|---|---|---|
+| 6 workers (CPU, completo) | 7,5 / 10,7 / 16,9 ms | 77 |
+| GPU R.2 (incompleto, contando a volta para a CPU) | 3,1 / 4,1 / 4,7 ms | 164 |
+
+- O tempo da GPU inclui mandar, esperar e ler de volta ~1 MB; o cálculo em si é menor. Quando o compositor também estiver na GPU, a volta some e o mundo sai no mesmo quadro da tela (sem o *judder* nem o quadro de atraso).
+- O que falta pesa na GPU muito menos que na CPU (é o mesmo trabalho por célula, em milhares de núcleos); o risco está no volume de código a portar, não no desempenho.
+
 ## Agradecimentos (easter eggs)
 
 Pedido do usuário em 2026-10-01: amigos dele que aparecem no jogo como agradecimento. **Cada nome aparece exatamente uma vez em toda cidade gerada, num lugar diferente conforme a semente:** numa semente é o nome de uma empresa, em outra um cidadão, uma rua, um marco, uma manchete, um contato no celular etc. A escolha do lugar sai da semente (determinística). Os nomes são escritos exatamente como abaixo, sem tradução.
@@ -771,7 +783,7 @@ Tudo que **se parece com cibersegurança** fica aqui, em sessões próprias, por
    - (etapa 8) detalhes nos telhados de perto, greebles nas fachadas e topos, chaminés industriais com fumaça (veja "Pedidos em aberto");
    - (segunda lista) placas perpendiculares, holofotes e neons de prédio, outdoors ligados às empresas e telões de notícias, se não tiverem entrado antes (veja "Pedidos em aberto");
    - **animais** (movido para cá em 2026-10-02; antes era a 11c): bichos de estimação nos apartamentos, cachorros passeando com os donos, gatos de rua, pombos, e os cidadãos postando fotos dos próprios bichos no Streetwire. A simulação já tem os bichos de cada lar (`Household.pet`, `petName`).
-R. **Render na GPU (WebGPU): medir, prototipar, migrar tudo** (pedido do usuário em 2026-10-02, logo depois do grupo B da etapa 12; veja "Feedback sobre o render na GPU e a polícia"). Hoje o render são ~350 KB de TypeScript (`src/render/`), então quanto antes, mais barato. Ganho de quebra: um raio por célula é a **câmera 3D de verdade** (olhar para cima sem distorção, vistas do alto, elevadores de vidro), esperada desde a etapa 2.
+R. **Render na GPU (WebGPU): medir, prototipar, migrar tudo** (pedido do usuário em 2026-10-02, logo depois do grupo B da etapa 12; as medições estão em "Pedidos em aberto", R.1 e R.2). **Feitos:** R.1 (medir) e R.2 (o protótipo, `src/render/gpu/world.ts`, tecla J). **Próximo, R.3:** o compositor também na GPU (WebGPU desenhando a grade direto, sem ler de volta) e, por partes, o resto do mundo no shader, na ordem das decisões (fachadas e janelas, céu e nuvens, letreiros, objetos e carros, luzes, interiores, chuva e vidro), sempre comparando com a CPU pela tecla J. Hoje o render são ~350 KB de TypeScript (`src/render/`), então quanto antes, mais barato. Ganho de quebra: um raio por célula é a **câmera 3D de verdade** (olhar para cima sem distorção, vistas do alto, elevadores de vidro), esperada desde a etapa 2.
 
 **Etapa de correção de bugs e otimização** (pedido do usuário em 2026-09-30; a otimização foi juntada a ela em 2026-10-01, por causa da queda de 180 para ~60 FPS): **vem antes da etapa 15** (decidido em 2026-10-01); a lista está em "Bugs conhecidos".
 
