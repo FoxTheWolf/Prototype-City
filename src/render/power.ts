@@ -18,10 +18,10 @@ import { type PowerGrid } from '../sim/power';
 /** Speed of the blackout ring, metres per second. */
 const WAVE = 120;
 /** (L.12) The surge before the ring starts: seconds, and how much brighter it gets (the shader's power() keeps the same). */
-export const SURGE = 1.8, SURGE_K = 0.5;
+export const SURGE = 1.8, SURGE_K = 1;
 /** (L.12) How long the eye stays as it was after the light comes back round the viewer, before it adapts again. */
 const EYE_BRIGHT_S = 2.5;
-/** Out: [level 0 .. ~1.35, seconds since this element came back on (for warm-up), or -1]. */
+/** Out: [level 0 .. 2 (the surge), seconds since this element came back on (for warm-up), or -1]. */
 export const PW = new Float32Array(2);
 
 /**
@@ -88,8 +88,8 @@ export function eyeHold(p: PowerGrid, sub: number, x: number, y: number, sec: nu
   return since < at ? 1 : 1 - (since - at) / hold;
 }
 
-/** (L.13) After the dark reaches the viewer, the eye is pushed darker for EYE_PUSH_S seconds, down to EYE_PUSH_K of where it was, before it is let go. */
-const EYE_PUSH_S = 5, EYE_PUSH_K = 0.2;
+/** (L.13) After the dark reaches the viewer, the eye is pushed darker within EYE_PUSH_S seconds (the dark comes fast), down to EYE_PUSH_K of where it was, before it is let go. */
+const EYE_PUSH_S = 1, EYE_PUSH_K = 0.2;
 
 /**
  * (L.13) Going down, how much darker the eye is pushed now (1 = not at all): from the moment the

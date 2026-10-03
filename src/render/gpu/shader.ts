@@ -147,9 +147,9 @@ fn power(sub: i32, x: f32, y: f32, id: i32, gen: bool, group: i32, spread: f32) 
   let hb = hash3(group, sub, 404); let hw = hash3(id, sub, 407);
   if (subs[o + 1u] < 0.5) {
     // (L.12) the surge: everything swells together, then holds brighter until the ring arrives (render/power.ts)
-    if (since < ${SURGE}) { return 1.0 + ${SURGE_K} * smoothstep(0.0, ${SURGE}, since); }
+    if (since < ${SURGE}) { return 1.0 + ${SURGE_K.toFixed(3)} * smoothstep(0.0, ${SURGE}, since); }
     let t = since - ${SURGE} - d / 120.0 - hb * 0.3 - hw * spread;
-    if (t < 0.0) { return ${1 + SURGE_K}; }
+    if (t < 0.0) { return ${(1 + SURGE_K).toFixed(3)}; }
     if (t < 0.32) { return select(0.05, 1.25, hash3(id, ifloor(t * 28.0), 405) < 0.45); }
     if (gen && t > 3.0) { return min(0.55, (t - 3.0) * 0.4); }
     return 0.0;
