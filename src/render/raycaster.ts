@@ -1216,8 +1216,8 @@ function screenPixel(id: number, u: number, v: number, W: number, H: number, dAl
 }
 
 /** Scaffolding: its distance from the wall, and the colors of its tubes, boards and nets (green, blue, white, orange, black, green). */
-const SCAF_D = 1, SCAF_STEEL: RGB = [140, 140, 150], SCAF_BOARD: RGB = [120, 95, 60];
-const NETS: RGB[] = [[50, 110, 70], [50, 80, 140], [170, 170, 165], [190, 100, 40], [35, 35, 40], [70, 120, 60]];
+export const SCAF_D = 1, SCAF_STEEL: RGB = [140, 140, 150], SCAF_BOARD: RGB = [120, 95, 60];
+export const NETS: RGB[] = [[50, 110, 70], [50, 80, 140], [170, 170, 165], [190, 100, 40], [35, 35, 40], [70, 120, 60]];
 /** Whether face f (0..3) of a building faces a street, where its sidewalk shed and scaffolding go. */
 function scaffoldFace(B: Building, f: number): boolean {
   const blk = blockAt(frameCity, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
@@ -1232,9 +1232,9 @@ const PATS = [[G.at, G.hash, G.pct], [C('8'), G.o, G.col], [C('X'), C('Z'), G.pl
  * What stands out of a facade, filled by reliefOf: a piece every P bays (from bay off, plus a
  * metres), w wide and d deep, between heights z0 and z1.
  */
-const REL = { P: 0, off: 0, a: 0, w: 0, d: 0, z0: 0, z1: 0 };
+export const REL = { P: 0, off: 0, a: 0, w: 0, d: 0, z0: 0, z1: 0 };
 /** Oriel bays on some walk-ups, pilasters on old facades, piers on art deco offices (where the facade draws them). */
-function reliefOf(B: Building): boolean {
+export function reliefOf(B: Building): boolean {
   const h = (B.feat * 7919) % 1;
   if (B.style === 'brick' && B.feat >= 0.45 && B.feat < 0.8 && B.h > 10 && B.ad < 0) {
     REL.P = 3 + Math.floor(h * 3); REL.off = 1; REL.a = 0.15; REL.w = 2 * BAY - 0.3; REL.d = 0.6; REL.z0 = FLOOR_H + 0.3; REL.z1 = B.h - 1.6;
@@ -1363,7 +1363,8 @@ function drawEscapes(grid: CharGrid, world: World, v: View, dirX: number, dirY: 
  * The sheds (scaffolding over the sidewalk along a building's street faces) are also gathered as
  * objects, in pieces of SHED_SEG metres: a plywood deck on posts, with a bulb under it.
  */
-const SHED_SEG = 4.8, SHED_D = 2.6, SHED_Z = 3;
+export const SHED_Z = 3;
+const SHED_SEG = 4.8, SHED_D = 2.6;
 const sheds: Obj[] = [];
 function gatherRoofs(world: World, v: View) {
   roofs.length = 0; sheds.length = 0;

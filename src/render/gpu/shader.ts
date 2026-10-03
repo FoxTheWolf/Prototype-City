@@ -1,5 +1,5 @@
 import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
-import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, RAMP, SCREEN_PAL, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
+import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
 import { LAMP_R, LIGHT_W } from '../lightmap';
@@ -24,7 +24,7 @@ export const UNIFORMS = [
 ] as const;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
-export const BLD = 52;
+export const BLD = 64;
 /** The signs' buffer (world.ts, signData): where the font and the businesses start, and the ticker's room. */
 export const SG_FONT = 8, SG_BIZ = SG_FONT + 256 * 7, TICK_MAX = 4096;
 export const BLK = 8;
@@ -201,6 +201,8 @@ const AD_FG = array<vec3f, ${AD_FG.length}>(${AD_FG.map(v3).join(', ')});
 const FRAME_AD = ${v3(FRAME_AD)};
 const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(', ')});
 const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
+const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v3(SCAF_STEEL)}; const SCAF_BOARD = ${v3(SCAF_BOARD)};
+const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
 fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
   if (bx < 0 || bx > 4 || by < 0 || by > 6) { return false; }
   return ((sg[SG_FONT + min(c, 255u) * 7u + u32(by)] >> u32(4 - bx)) & 1u) == 1u;
@@ -286,7 +288,8 @@ fn screenPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dAlong: f32, dz: f32) -> 
 }
 
 // ---- a wall (wallColumn): the facade by its style, its windows, and the lights on it
-fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> Cell {
+// (m and A: the ray's drop and the curve's, to find heights on it a little nearer, at a relief or the scaffolding)
+fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m: f32, A: f32) -> Cell {
   let q = u32(bk * ${BLD});
   let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let H = bld[q + 4u];
   let hx = u.px + t * rdx; let hy = u.py + t * rdy;
@@ -312,7 +315,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
   if (side != 2) { f0 = bld[q + 36u + u32(face) * 2u]; f1 = bld[q + 37u + u32(face) * 2u]; }
   let dAlong = u.colW * t / max(1e-6, abs(dn));
   let fogK = 1.0 - exp(-t / FOG);
-  let shade = lightK * (1.0 - fogK * 0.6);
+  let shade0 = lightK * (1.0 - fogK * 0.6); var shade = shade0;
   let winLight = 1.0 - fogK * 0.45;
   // the building's power now, its signs' (never on the generator), and each window's
   let sub = i32(bld[q + 46u]); let gen = bld[q + 47u] > 0.5;
@@ -324,6 +327,35 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
   let litK = lit * (1.0 - 0.75 * u.day);
   let rpf = FLOOR_H * u.scale / t; let cpb = BAY / (u.colW * t);
   let detailed = rpf >= 2.2 && cpb >= 1.5;
+  // how fast the hit moves along the face, per unit of t
+  var da = 0.0;
+  if (side == 0) { da = rdy; } else if (side == 1) { da = rdx; } else if (side == 3) { da = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }
+  let along0 = along; var z = zw; var T = t;
+  // a bay, pilaster or pier in front of the wall plane (reliefOf): where the ray meets it first, its
+  // front (rs 1) or its side (rs 2); there it is nearer, at its own spot along the face, lit by its own side
+  var rs = 0;
+  if (detailed && side != 2 && bld[q + 62u] > 0.5) {
+    let per = bld[q + 55u] * BAY; let o = bld[q + 56u] * BAY + bld[q + 57u]; let rw = bld[q + 58u];
+    let sb = bld[q + 59u] / max(1e-6, abs(dn)); let af = along - da * sb;
+    let lo = min(af, along); let hi = max(af, along);
+    var bl = 2.0;
+    let k0 = ifloor((lo - o - rw) / per); let k1 = min(ifloor((hi - o) / per), k0 + 64);
+    for (var k = k0; k <= k1; k++) {
+      let s0 = f32(k) * per + o; let s1 = s0 + rw;
+      if (s0 < f0 + 0.5 || s1 > f1 - 0.5) { continue; }
+      var l0 = 0.0; var l1 = 1.0;
+      if (abs(along - af) < 1e-9) { if (af < s0 || af > s1) { continue; } }
+      else { let a = (s0 - af) / (along - af); let b = (s1 - af) / (along - af); l0 = max(0.0, min(a, b)); l1 = min(1.0, max(a, b)); }
+      if (l0 <= l1 && l0 < bl) { bl = l0; }
+    }
+    if (bl <= 1.0) {
+      let rT = t - sb + sb * bl; let zr = u.eye - m * rT + A * rT * rT;
+      if (zr > bld[q + 60u] && zr < bld[q + 61u]) {
+        rs = select(2, 1, bl < 1e-6); T = rT; z = zr; along = af + (along - af) * bl;
+        shade = shade0 * select(0.68, 1.08, rs == 1);
+      }
+    }
+  }
   let kv = select(u32(ceil(log2(1.0 / rpf))), 0u, rpf >= 1.0); let kh = select(u32(ceil(log2(1.0 / cpb))), 0u, cpb >= 1.0);
   let bay = along / BAY; let wi = ifloor(bay); let fw = bay - f32(wi);
   let corner = along - f0 < 0.35 || f1 - along < 0.35;
@@ -388,7 +420,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
   } else if (z > H - max(0.6, dz)) {
     ch = US; c = frame * 1.5 * shade;
     if (u.snow > 0.05) { c += (vec3f(190.0, 195.0, 205.0) - c) * (u.snow * 0.8); }
-  } else if (clockR > 0.0 && length(vec2f(du, z - clockZ)) < clockR) {
+  } else if (rs == 2) { ch = select(BAR, EQ, S == 2); c = frame * shade; } // the side of a bay or pier
+  else if (clockR > 0.0 && length(vec2f(du, z - clockZ)) < clockR) {
     let cz = z - clockZ; let d = length(vec2f(du, cz));
     let a1 = 150.0 * 3.14159265 / 180.0; let a2 = 30.0 * 3.14159265 / 180.0;
     let s1 = du * cos(a1) + cz * sin(a1); let s2 = du * cos(a2) + cz * sin(a2);
@@ -587,10 +620,31 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> 
     }
     c += colAt(q + 32u) * (I * adElec);
   }
+  // the scaffolding 1 m out from a street face: steel tubes (standards every 2.4 m, ledgers every 2 m,
+  // a brace in every other bay), boards on each lift, and over the rest a mesh net or nothing
+  let scH = bld[q + 52u];
+  if (scH > 0.0 && side != 2 && face < 4 && ((u32(bld[q + 54u]) >> u32(face)) & 1u) == 1u) {
+    let sb = SCAF_D / max(1e-6, abs(dn)); let sA = along0 - da * sb; let sT = t - sb;
+    let zs = u.eye - m * sT + A * sT * sT;
+    if (sA > f0 + 0.1 && sA < f1 - 0.1 && zs > SHED_Z + 1.1 && zs < scH) {
+      let uu = sA - f0; let tw = max(0.05, dAlong * 0.5); let tz = max(0.05, dz * 0.5); let lz = (zs - SHED_Z) % 2.0;
+      let upright = uu % 2.4 < tw || f1 - sA < tw; let led = lz < tz || zs > scH - tz; let board = lz < 0.14 + tz;
+      let brace = ifloor(uu / 2.4) % 2 == 0 && abs(((uu % 2.4) / 2.4) * 2.0 - lz) < max(0.08, tw * 1.5);
+      if (upright || led || brace || board) {
+        let plank = board && !led && !upright;
+        ch = select(select(select(DASH, SL, brace), EQ, plank), BAR, upright);
+        c = select(SCAF_STEEL * 1.1, SCAF_BOARD * 0.9, plank) * shade0; T = sT;
+      } else if (bld[q + 53u] > 0.5) {
+        // the net veils the wall behind it
+        c = c * 0.45 + NETS[u32(bld[q + 53u]) - 1u] * (0.55 * shade0);
+        if (t < 40.0 && ch != AT && ch != HASH) { ch = select(DOT, COL, ((ifloor(uu / 0.3) + ifloor(zs / 0.3)) & 1) == 1); }
+      }
+    }
+  }
   c = sat(c);
   // street lamps, headlights and signs light the lower floors
   if (z < LIT_H && t < LIT_FAR) { c = sat(c + lightAt(hx, hy, z) * (1.3 * shade)); }
-  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), t, KIND_WALL, max(0.0, wsun));
+  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, KIND_WALL, max(0.0, wsun));
 }
 
 // ---- scorched ground outside the fence, split by cracks that glow where the coal burns (burnGround)
@@ -1090,7 +1144,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (bk >= 0 && best < tG && best < far.depth) {
     if (roof) { store(i, n, finish(roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best))); return; }
     // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
-    store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale)));
+    store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale, m, A)));
     return;
   }
   if (tG < 1e8 && tG < far.depth) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }

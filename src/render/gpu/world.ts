@@ -1,6 +1,6 @@
-import { faceSpan, type City } from '../../sim/city';
+import { blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
 import type { World } from '../../sim/world';
-import { gpuPrepare, VFOV, type View } from '../raycaster';
+import { gpuPrepare, REL, reliefOf, VFOV, type View } from '../raycaster';
 import { CURVE_R } from '../sarcophagus';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
@@ -17,8 +17,8 @@ import { BLD, BLK, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from
  * floodlights, the power per window in a blackout), the lamps' and the dynamic lights, the finish
  * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
  * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
- * ticker, the burnt ground, the fence, the Sarcophagus and its cranes. Not yet: the blade signs and billboards (objects), the doors, the rooms
- * seen through the windows, fire escapes, scaffolding, reliefs, objects, cars, people, interiors,
+ * ticker, the burnt ground, the fence, the Sarcophagus and its cranes, scaffolding and reliefs. Not yet: the blade signs and billboards (objects), the doors, the rooms
+ * seen through the windows, fire escapes, objects, cars, people, interiors,
  * the smoke, rain and snow falling, the glass of the windows indoors.
  */
 
@@ -68,7 +68,8 @@ export class GpuWorld {
       blocks.set([b.x0, b.y0, b.x1, b.y1, b.b0, b.b1, b.maxH, (b.open ? { park: 1, plaza: 2, yard: 3 }[b.open] : 0) | (b.diag << 2) | (ind << 5) | (b.square ? 64 : 0)], k * BLK);
     });
     // per building: box, height, round, cut (flag, nx, ny, c), style, lit, win, frame, feat, shop, tier,
-    // sign, neon (+ flag), crown (+ flag), flood + its height, the five faces' spans, substation, generator
+    // sign, neon (+ flag), crown (+ flag), flood + its height, the five faces' spans, substation, generator,
+    // business, ad, screen, ticker, scaffolding (top, net, faces), relief (P, off, a, w, d, z0, z1, flag)
     const blds = new Float32Array(C.buildings.length * BLD);
     C.buildings.forEach((B, k) => {
       const K = B.cut, o = k * BLD;
@@ -76,6 +77,14 @@ export class GpuWorld {
         ...B.win, ...B.frame, B.feat, B.shop ? 1 : 0, B.tier, ...B.sign, ...(B.neon ?? [0, 0, 0]), B.neon ? 1 : 0, ...(B.crown ?? [0, 0, 0]), B.crown ? 1 : 0,
         ...(B.flood ?? [0, 0, 0]), B.flood ? B.floodH : 0], o);
       blds.set([B.biz, B.ad, B.screen, B.ticker ? 1 : 0], o + 48);
+      // the scaffolding (its top, net, and the street faces it stands on: scaffoldFace), and the relief (reliefOf)
+      if (B.scaffold) {
+        const b = blockAt(C, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+        let mask = 0;
+        if (b) [B.x0 - b.x0, b.x1 - B.x1, B.y0 - b.y0, b.y1 - B.y1].forEach((gap, f) => { if (gap <= SIDEWALK + 0.5) mask |= 1 << f; });
+        blds.set([B.scaffold, B.net, mask], o + 52);
+      }
+      if (reliefOf(B)) blds.set([REL.P, REL.off, REL.a, REL.w, REL.d, REL.z0, REL.z1, 1], o + 55);
       for (let f = 0; f < 5; f++) {
         if (f === 4 && !K) continue;
         const sp = faceSpan(B, f);
@@ -105,7 +114,7 @@ export class GpuWorld {
     if (cols === this.cols && rows === this.rows) return;
     this.cols = cols; this.rows = rows;
     this.out?.destroy();
-    this.out = this.dev.createBuffer({ size: cols * rows * 8, usage: GPUBufferUsage.STORAGE });
+    this.out = this.dev.createBuffer({ size: cols * rows * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     this.bind = null;
   }
 

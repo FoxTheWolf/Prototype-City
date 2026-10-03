@@ -91,6 +91,18 @@ function handLightNow(): number {
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
   world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool, gpuNow: () => gpu, compNow: () => comp,
+  // the GPU world's characters (J on), read back from its output buffer, to compare with gridText
+  gpuText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
+    if (!gpu) return '';
+    const g = gpu, size = g.cols * g.rows * 8, st = g.dev.createBuffer({ size, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    const e = g.dev.createCommandEncoder(); e.copyBufferToBuffer(g.out, 0, st, 0, size); g.dev.queue.submit([e.finish()]);
+    await st.mapAsync(GPUMapMode.READ);
+    const a = new Uint32Array(st.getMappedRange().slice(0)); st.destroy();
+    x1 ??= g.cols; y1 ??= g.rows;
+    let s = '';
+    for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) { const c = a[y * g.cols + x] & 255; s += c < 33 ? ' ' : String.fromCharCode(c); } s += '\n'; }
+    return s;
+  },
   // watch camera k as on the title (stopCctv to leave)
   watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
   // the world's characters; with ui = true the interface's (where it drew, else the world's under it at 80 rows)
