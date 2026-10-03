@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.8 — Letreiros e telões que iluminam a rua (2026-10-03)
+- Os letreiros, telões, placas verticais, neons dos cantos, molduras de lâmpadas e o letreiro de notícias iluminam a rua, as calçadas e as fachadas em volta com a cor que estão mostrando, a partir da altura em que estão e com alcance bem maior. Um telão grande tinge a rua inteira à frente dele.
+- A moldura de lâmpadas de um letreiro ilumina a calçada mesmo quando as letras estão apagadas.
+- A luz que volta dos prédios em volta pega a cor deles: no fim da tarde, a parede de tijolo ao sol esquenta a calçada e a parede da sombra do outro lado.
+
 ## 0.L.6 — Sombras, céu e luz do dia dentro dos prédios (2026-10-03)
 - O fundo das ruas entre prédios altos e a base das paredes recebem menos luz do céu (como de verdade), e um pouco da luz volta das paredes em volta.
 - Dentro dos prédios, de dia, a luz entra pelas janelas: perto delas fica claro, e vai escurecendo para o meio do prédio. Os escritórios ficam com as lâmpadas acesas no horário de trabalho.
