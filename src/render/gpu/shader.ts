@@ -17,6 +17,8 @@ export const UNIFORMS = [
   'dnx', 'dny', 'dw', 'blocks', 'lox', 'loy', 'dbx', 'dby',
   'sunX', 'sunY', 'sunZ', 'sunEl', 'cloud', 'moonlight', 'cityLit', 'flash',
   'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'pad0',
+  'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
+  'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'starSlots',
 ] as const;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
@@ -518,6 +520,124 @@ fn finish(cl: Cell) -> Cell {
   return o;
 }
 
+// ---- the sky (sky.ts): gradient, stars, the moon with its phase, the cloud deck lit from below, the sun's glow
+const CLOUD_H = 1200.0;
+const MOON_R = ${(3.4 * Math.PI) / 180};
+const TAU = 6.28318531;
+// the same smooth noise as sky.ts (its 256x256 table is hash3(i, j, 777), computed here instead)
+fn noise(x: f32, y: f32) -> f32 {
+  let ix = floor(x); let iy = floor(y); let fx = x - ix; let fy = y - iy;
+  let sx = fx * fx * (3.0 - 2.0 * fx); let sy = fy * fy * (3.0 - 2.0 * fy);
+  let x0 = i32(ix) & 255; let y0 = i32(iy) & 255; let x1 = (x0 + 1) & 255; let y1 = (y0 + 1) & 255;
+  let a = hash3(x0, y0, 777); let b = hash3(x1, y0, 777); let c = hash3(x0, y1, 777); let d = hash3(x1, y1, 777);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+fn smoothK(a: f32, b: f32, v: f32) -> f32 { let t = clamp((v - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
+fn wrapA(a: f32) -> f32 { return a - round(a / TAU) * TAU; }
+// how much the ground under a point lights the clouds: the city's glow, and the crater under the Sarcophagus
+fn glowBelow(x: f32, y: f32) -> vec3f {
+  let half = min(u.cityW, u.cityH) * 0.5; let rc = length(vec2f(x - u.cityW * 0.5, y - u.cityH * 0.5)) / half;
+  let spread = exp(-(rc / 2.6) * (rc / 2.6));
+  let cd = length(vec2f(x - u.ccx, y - u.ccy)) / (min(u.cityW, u.cityH) * 0.6);
+  let city = spread * (0.75 + 0.25 * exp(-cd * cd)) * u.cityLit;
+  let sd = length(vec2f(x - u.sarX, y - u.sarY)) / (u.sarR * 1.3);
+  let fire = 1.6 * exp(-sd * sd);
+  return vec3f(40.0 * city + 70.0 * fire, 34.0 * city + 24.0 * fire, 18.0 * city + 12.0 * fire);
+}
+fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
+  let L = length(vec2f(rdx, rdy)); let night = 1.0 - u.day; let day = u.day;
+  let up = -m / L; // tan of the elevation
+  // the row relative to the horizon (the CPU's y + 0.5 - hor); the 3D camera takes it from the elevation
+  let rowF = select(m * u.scale, -up * u.scale, u.cam3d > 0.5);
+  let t = clamp((u.hor + rowF) / max(1.0, u.hor), 0.0, 1.0);
+  let az = atan2(rdy, rdx);
+  let dA = wrapA(az - u.moonA);
+  let moonCol = u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
+  let dS = wrapA(az - u.sunA);
+  let toSun = 0.5 + 0.5 * cos(dS);
+  let t2 = t * t; let t4 = t2 * t2;
+  let cl = 0.3 + 0.7 * u.cityLit;
+  var r = (5.0 + 21.0 * t2 + 30.0 * t4 * cl) * night + (62.0 + 80.0 * t2) * day;
+  var g = (6.0 + 10.0 * t2 + 8.0 * t4 * cl) * night + (84.0 + 72.0 * t2) * day;
+  var b = (11.0 + 21.0 * t2 - 6.0 * t4 * cl) * night + (118.0 + 44.0 * t2) * day;
+  let dk = u.dusk * t4 * (0.35 + 0.65 * toSun);
+  r += 190.0 * dk; g += 80.0 * dk; b += 30.0 * dk - 10.0 * dk * toSun;
+  var ch = 0u; var cc = vec3f(0.0);
+  var sunK = 0.0; var cover = 0.0;
+  let el = atan(up);
+  if (u.sunEl > -0.15) {
+    let ang = length(vec2f(dS * cos(el), el - u.sunEl));
+    sunK = (exp(-ang / 0.09) * 0.8 + exp(-ang / 0.35) * 0.25) * min(1.0, (u.sunEl + 0.15) / 0.2);
+  }
+  // stars on a fixed ring of azimuth slots
+  let slot = i32(floor(fract(az / TAU) * u.starSlots));
+  let yr = rowF - 0.5;
+  let hs = hash3(slot, ifloor(yr), 7);
+  var star = 0.0;
+  if (hs < 0.012 && yr < -3.0) { star = (120.0 + hs * 8000.0) * night * night; }
+  else if (yr >= -2.0 && night > 0.5) { ch = DOT; cc = vec3f(70.0, 40.0, 60.0); }
+  // the moon, its lit side facing the sun
+  var moonA = false;
+  if (moonCol) {
+    let mu = (dA * cos(el)) / MOON_R; let mv = (el - u.moonEl) / MOON_R; let d2 = mu * mu + mv * mv;
+    if (d2 < 1.0) {
+      let wz = sqrt(1.0 - d2); let f = TAU * u.phase;
+      var lit = max(0.0, mu * sin(f) - wz * cos(f));
+      lit = lit * (0.72 + 0.28 * noise(mu * 3.0 + 40.0, mv * 3.0 + 40.0)) + 0.05 * night * night;
+      if (lit > 0.04 + 0.2 * day) {
+        let k = min(1.0, lit) * (0.35 + 0.65 * night); let e = min(1.0, (1.0 - d2) * 5.0);
+        cc = vec3f(235.0 * k + 20.0 + r * day, 228.0 * k + 20.0 + g * day, 200.0 * k + 26.0 + b * day);
+        r += (cc.x - r) * e; g += (cc.y - g) * e; b += (cc.z - b) * e;
+        moonA = true; star = 0.0;
+      }
+    } else if (d2 < 9.0) {
+      let hk = ((1.0 - cos(TAU * u.phase)) * 0.5) * night * exp(-(sqrt(d2) - 1.0) * 1.6) * 18.0;
+      r += hk; g += hk; b += hk * 1.2;
+    }
+  }
+  // the cloud deck where this ray meets it, drifting with the wind
+  if (u.cloud > 0.01 && up > 0.002) {
+    let tc = (CLOUD_H - u.eye) / (up * L); let wx = u.px + rdx * tc; let wy = u.py + rdy * tc; let D = tc * L;
+    let fp = (D * D) / ((CLOUD_H - u.eye) * u.scale);
+    let ox = wx + u.driftX; let oy = wy + u.driftY;
+    let k1 = 1.0 - smoothK(300.0, 900.0, fp); let k2 = 1.0 - smoothK(120.0, 360.0, fp);
+    let n0 = noise(ox / 1100.0, oy / 1100.0); let n1 = noise(ox / 420.0 + 71.0, oy / 420.0 + 13.0); let n2 = noise(ox / 150.0 + 37.0, oy / 150.0 + 91.0);
+    var d = 0.55 * n0 + 0.3 * (k1 * n1 + (1.0 - k1) * 0.5) + 0.15 * (k2 * n2 + (1.0 - k2) * 0.5);
+    d += (0.5 - d) * smoothK(8000.0, 30000.0, D);
+    let lo = 1.0 - u.cloud;
+    let a = smoothK(lo - 0.18, lo + 0.12, d) * (0.55 + 0.45 * min(1.0, u.cloud * 1.3));
+    if (a > 0.02) {
+      let GL = glowBelow(wx, wy);
+      let thick = min(1.0, a * (0.5 + d));
+      let gk = (0.35 + 0.65 * thick) * (0.8 + 0.5 * u.precip) * night;
+      let base = 12.0 + 12.0 * (1.0 - u.cityLit) * night;
+      var q = vec3f(base + GL.x * gk, base + GL.y * gk, base + 5.0 + GL.z * gk);
+      let grey = (150.0 - 60.0 * thick - 35.0 * u.precip) * day;
+      q += vec3f(grey, grey * 1.01, grey * 1.06);
+      q += vec3f(150.0 * u.dusk * toSun * (1.0 - thick * 0.5), 60.0 * u.dusk * toSun, 30.0 * u.dusk);
+      q += vec3f(190.0, 185.0, 230.0) * u.flash;
+      let ml = u.moonlight * (1.0 - thick) * 60.0;
+      q += vec3f(ml, ml, ml * 1.15);
+      if (moonA) { q += cc * (0.3 * (1.0 - thick)); }
+      let hz = 1.0 - exp(-D / 12000.0); let hk = 0.4 * night * (0.6 + 0.6 * u.precip) * (0.25 + 0.75 * u.cityLit);
+      q += (vec3f(26.0 + 55.0 * hk + 90.0 * day, 22.0 + 32.0 * hk + 95.0 * day, 26.0 + 22.0 * hk + 102.0 * day) - q) * hz;
+      r += (q.x - r) * a; g += (q.y - g) * a; b += (q.z - b) * a;
+      cover = a;
+      star *= 1.0 - a;
+      if (moonA) { if (thick > 0.6) { ch = 0u; } else { cc *= 1.0 - a * 0.8; } }
+    }
+  }
+  if (sunK > 0.003) {
+    let sk = sunK * (1.0 - 0.55 * cover);
+    r += 230.0 * sk; g += (205.0 - 60.0 * u.dusk) * sk; b += (170.0 - 90.0 * u.dusk) * sk;
+  }
+  var o = Cell(32u, vec3f(0.0), vec3f(r, g, b), 1e9, KIND_OTHER, 0.0);
+  if (star > r + 25.0 && !moonA) { o.ch = select(DOT, STAR, hs < 0.003); o.c = vec3f(star, star, star + 30.0); }
+  else if (ch != 0u) { o.ch = ch; o.c = cc; }
+  if (u.blocks > 0.5 && BLOCKS[o.ch] != 0u) { o.ch = BLOCKS[o.ch]; }
+  return o;
+}
+
 fn store(i: u32, n: u32, cl: Cell) {
   let k = vec3u(clamp(cl.c, vec3f(0.0), vec3f(255.0)));
   outp[i] = cl.ch | (k.x << 8u) | (k.y << 16u) | (k.z << 24u);
@@ -609,15 +729,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
   if (tG < 1e8) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }
 
-  // ---- the sky: a gradient, stars at night (sky.ts comes next)
-  let night = 1.0 - u.day;
-  let up = clamp(-m * 1.2, 0.0, 1.0);
-  var sky = mix(vec3f(26.0, 22.0, 40.0), vec3f(5.0, 7.0, 18.0), up);
-  sky = mix(sky, mix(vec3f(150.0, 165.0, 190.0), vec3f(90.0, 120.0, 170.0), up), u.day);
-  let az = atan2(rdy, rdx);
-  var cl = Cell(32u, sky, sky * u.solid, 1e9, KIND_OTHER, 0.0);
-  if (night > 0.5 && hash3(i32(az * 700.0), i32(m * 300.0), 5) < 0.004) { cl.ch = DOT; cl.c = vec3f(170.0, 170.0, 190.0); }
-  store(i, n, cl);
+  // below the horizon, a ray the curve carries past the ground: the far ground, as on the CPU
+  if (m > 0.0) { store(i, n, finish(groundCell(1e7, rdx, rdy))); return; }
+  store(i, n, skyCell(m, rdx, rdy));
 }
 `;
 }

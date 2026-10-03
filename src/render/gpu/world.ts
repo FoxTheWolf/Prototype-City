@@ -14,8 +14,8 @@ import { BLD, BLK, STYLES, UNIFORMS, worldWGSL } from './shader';
  * Ported: the ground (streets, markings, sidewalks, plazas, parks, yards, snow, wet), the roofs, the
  * walls by style (windows, bands, cornices, piers, balconies, glass, warehouses, crowns, neon,
  * floodlights, the power per window in a blackout), the lamps' and the dynamic lights, the finish
- * (daylight, moonlight, haze, a whole-city blackout, the display modes), and a true 3D camera.
- * Not yet: the sky (a plain gradient here), the signs, ads, screens and ticker, the doors, the rooms
+ * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
+ * the sky (gradient, stars, moon, clouds). Not yet: the signs, ads, screens and ticker, the doors, the rooms
  * seen through the windows, fire escapes, scaffolding, reliefs, objects, cars, people, interiors,
  * the fire zone and the Sarcophagus, smoke, rain and snow falling, the glass of the windows indoors.
  */
@@ -143,6 +143,9 @@ export class GpuWorld {
       dnx: Dg.nx, dny: Dg.ny, dw: Dg.w, blocks: v.look.blocks ? 1 : 0, lox: F.light.ox, loy: F.light.oy, dbx: D.bx, dby: D.by,
       sunX: F.sun[0], sunY: F.sun[1], sunZ: F.sun[2], sunEl: sky.sunEl, cloud: sky.cloud, moonlight: sky.moonlight, cityLit: sky.cityLit, flash: sky.flash,
       snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, pad0: 0,
+      dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
+      cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
+      starSlots: Math.round((cols * Math.PI) / Math.atan(plane)),
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
     q.writeBuffer(this.uni, 0, U);

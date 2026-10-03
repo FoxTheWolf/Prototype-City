@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.5 — O céu na GPU (2026-10-02)
+- No modo da GPU, o céu é o de verdade: estrelas, a lua com a fase, as nuvens andando com o vento e iluminadas por baixo pela cidade, o amanhecer e o entardecer coloridos e o brilho do sol. Com a câmera 3D, o céu acompanha o olhar para cima.
+
 ## 0.R.4 — Luzes, fachadas e câmera 3D na GPU (2026-10-02)
 - No modo da GPU, os prédios ganham os estilos de verdade (tijolo, vidro, histórico, galpão, sacadas, cornijas, coroas, neon, holofotes), as janelas apagam uma a uma no apagão, e a luz dos postes e dos faróis cai na rua e nas paredes. O dia, o luar e os modos visuais (B, U, V, G) funcionam.
 - A tecla J agora tem três passos: o desenho de sempre, o da GPU e o da GPU com uma câmera 3D de verdade (olhando para cima, as torres convergem em perspectiva).
