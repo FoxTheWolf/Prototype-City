@@ -5,6 +5,9 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 ## 0.R.21 — Luzes que brilham (2026-10-03)
 - À noite, o que é luz brilha de verdade: janelas acesas, neon, letreiros, postes e faróis ganham um halo que se espalha pelo ar em volta.
 - De dia, os postes e os holofotes não pintam mais manchas de luz nas paredes, e os letreiros de neon apagados ficam escuros como de verdade.
+- As portas acesas e as lâmpadas dos holofotes não estouram mais; os holofotes iluminam a parede na cor dela, e sumiram as faixas pretas verticais que apareciam em algumas paredes.
+- No apagão, a escuridão geral chega no ritmo dos postes apagando em volta de você.
+- De longe, nos limites da cidade, o céu sobre o centro tem um brilho laranja das luzes, que some num apagão.
 
 ## 0.R.20 — Cor de verdade de dia (2026-10-03)
 - De dia, os prédios mostram a própria cor (o tijolo é vermelho, as torres de vidro azuis, verdes e roxas) em vez do cinza lavado; as torres distantes não ficam mais escuras, e as nuvens são brancas.

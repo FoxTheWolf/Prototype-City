@@ -957,7 +957,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let winPw = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched);
   var isWin = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
-  var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0);
+  var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0;
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
   let rev = side < 2 && (face == 1 || face == 2);
   let sec = u.sec; let scol = sign;
@@ -1092,7 +1092,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     // the street door: a frame, two glass leaves and a transom, lit from the lobby
     let e = min(along - dA0, dA1 - along);
     if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
-    else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.55 * elec); em = true; }
+    else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.3; }
   } else if (adN > 0 && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
     // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint
     let lw = AD_LETTER; let start = (adA0 + adA1) * 0.5 - f32(adN) * lw * 0.5; let zc = (adZ0 + adZ1) * 0.5;
@@ -1194,7 +1194,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
   var emC = select(vec3f(0.0), c, em);
   // a lit room's light spills onto the wall around its window
-  if (pk.ok && !isWin && !corner && z < H - 0.6 && pk.r >= 0) {
+  // (only where this floor has a window in this bay: a stone base or a blind wall has none to spill from)
+  if (pk.ok && !isWin && !corner && z < H - 0.6 && pk.r >= 0 && windowHole(style, shop, 0.5, 0.54, 0.54 * FLOOR_H, fl == 0)) {
     let GL = roomLamp(lot, bk, roomRec(po, pk.r), pk.r, fl, winPw);
     if (GL.x + GL.y + GL.z > 0.02) {
       let d = length(vec2f((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H)); let e = max(0.0, 1.0 - d / 1.5);
@@ -1220,16 +1221,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // floodlights at the foot of the wall, each a cone of light widening upward
   let floodH = bld[q + 35u];
   if (floodH > 0.0 && z < floodH) {
-    let w = 0.35 + 0.18 * z; let fzz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / floodH), 1.2);
+    let w = 1.4 + 0.55 * z; let fzz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / floodH), 1.2);
     var I = 0.0;
-    if (dAlong > FLOOD_GAP * 0.4) { I = fzz * min(1.0, 1.77 * w / FLOOD_GAP); }
+    if (dAlong > FLOOD_GAP * 0.4) { I = fzz * (0.3 + 0.7 * min(1.0, 1.77 * w / FLOOD_GAP)); }
     else {
       let fb = select(f0, 0.0, side == 2);
       let fr = (((along - fb) / FLOOD_GAP) % 1.0 + 1.0) % 1.0; let d = abs(fr - 0.5) * FLOOD_GAP; let d2 = FLOOD_GAP - d;
-      I = fzz * (exp(-(d / w) * (d / w)) + exp(-(d2 / w) * (d2 / w)));
-      if (z < 0.35 && d < 0.3) { ch = STAR; c = vec3f(240.0, 230.0, 200.0); emC = c; il = vec3f(0.0); }
+      // each lamp's cone, and some light between them, so the wall is scalloped and never left dark
+      I = fzz * (0.3 + 0.7 * min(1.2, exp(-(d / w) * (d / w)) + exp(-(d2 / w) * (d2 / w))));
+      if (z < 0.35 && d < 0.3) { ch = STAR; c = vec3f(200.0, 190.0, 165.0); emC = c; il = vec3f(0.0); glowK = 0.3; }
     }
-    c += colAt(q + 32u) * (I * adElec); il += colAt(q + 32u) * (I * adElec);
+    // the light takes the wall's color (light times albedo, plus a little of its own): a stone wall glows warm, not white
+    let fl = colAt(q + 32u) * (I * adElec) * (vec3f(0.2) + 1.5 * frame / 255.0); c += fl; il += fl;
   }
   // the scaffolding 1 m out from a street face: steel tubes (standards every 2.4 m, ledgers every 2 m,
   // a brace in every other bay), boards on each lift, and over the rest a mesh net or nothing
@@ -1255,7 +1258,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   c = sat(c);
   // street lamps, headlights and signs light the lower floors
   if (z < LIT_H && t < LIT_FAR) { let L = lightAt(hx, hy, z) * (1.3 * shade); c = sat(c + L); il += L; }
-  if (!isWin) { gEm = sat(emC); gIl = il; gTag = T; }
+  if (!isWin) { gEm = sat(emC); gIl = il; gTag = T; gGlowK = glowK; }
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));
 }
@@ -1437,7 +1440,7 @@ fn finish(cl: Cell) -> Cell {
   // the light this cell gives off and gets from the lamps, if it was made where it was marked
   let tagged = o.depth == gTag;
   let emit = select(vec3f(0.0), gEm, tagged); let lamp = select(vec3f(0.0), gIl, tagged);
-  gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day);
+  gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
   if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = sat(o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); }
   let day = u.day;
   if (day > 0.01 || u.flash > 0.0) {
@@ -1538,6 +1541,15 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   var b = (11.0 + 21.0 * t2 - 6.0 * t4 * cl) * night + (118.0 + 44.0 * t2) * day;
   let dk = u.dusk * t4 * (0.35 + 0.65 * toSun);
   r += 190.0 * dk; g += 80.0 * dk; b += 30.0 * dk - 10.0 * dk * toSun;
+  // the city's glow on the haze over it: seen only from its edges and beyond, low over the center, and it
+  // fades as the lamps go out (cityLit)
+  let tcx = u.cityW * 0.5 - u.px; let tcy = u.cityH * 0.5 - u.py; let dcen = length(vec2f(tcx, tcy));
+  let away = smoothK(0.35, 1.3, dcen / (min(u.cityW, u.cityH) * 0.5));
+  if (away > 0.0 && night > 0.0) {
+    let toC = max(0.0, (tcx * rdx + tcy * rdy) / (max(1.0, dcen) * L));
+    let dome = away * (0.25 + 0.75 * toC * toC) * exp(-max(0.0, up) / 0.12) * u.cityLit * night;
+    r += 75.0 * dome; g += 34.0 * dome; b += 10.0 * dome;
+  }
   var ch = 0u; var cc = vec3f(0.0);
   var sunK = 0.0; var cover = 0.0;
   let el = atan(up);
@@ -2050,6 +2062,8 @@ var<private> gIl: vec3f = vec3f(0.0);
 var<private> gTag: f32 = -1.0;
 // how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)
 var<private> gGlow: f32 = 0.0;
+// how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
+var<private> gGlowK: f32 = 1.0;
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {

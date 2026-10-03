@@ -82,6 +82,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 *(fila vazia: organizada em 2026-10-03, veja "Pedidos em aberto")*
 
+- Vou colocar na parte de referências umas screenshots de Yakuza, que tem vários desses neons na parede, que eu acho que seriam não só neons na parede, como propaganda, publicidade, um monte de coisas, que eu acho que daria certo a gente reproduzir algumas. Você pode analisar a imagem e ver esses estilos né, de rua movimentada e tudo, e você vê o que é que você quer reproduzir. Ou melhor, o que seria fácil de reproduzir, né? E já ajudaria a você entender a vibe que eu tô querendo para um distrito movimentado além de Manhattan.
+
 ### Feedback para o Opus 4.8
 
 > Itens que só uma sessão com o Opus 4.8 deve ler e organizar (os `[HACKING]`). As outras sessões **não leem esta subseção** e só acrescentam aqui, sem apagar. O Opus 4.8 organiza na Trilha de hacking e apaga daqui o que organizou.
@@ -295,6 +297,12 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
   - sombras dos objetos (árvores, carros, postes) e das luzes da noite (postes, faróis), a lua fazendo sombra, o céu do dia (gradiente ainda o de antes), e rever a saturação da noite (veja "Bugs conhecidos").
   - **Paletas das fachadas** (`LOOK` em `sim/city.ts`): residencial, histórico e escritório ainda são quase cinzas na origem; rever com o usuário (mudar mexe na noite também).
   - **Materiais (PBR), pedido do usuário em 2026-10-03:** um id de material por superfície (asfalto, asfalto molhado, vidro, metal, tijolo) com rugosidade e reflexo. Como já há um raio por célula, o vidro e o asfalto molhado podem lançar **um segundo raio de reflexo** pela mesma grade da cidade (reflexo de verdade, não pintado). As telas do celular e do notebook podem ganhar reflexo de Fresnel do ambiente real (hoje é um brilho simulado). Planejar como subetapas próprias (R.21+), medindo o custo.
+- **Pedidos do usuário em 2026-10-03 (depois da R.21), para a fila da R:**
+  - **Raios de luz volumétricos (*god rays*):** cones visíveis no ar nos postes e nas luzes fortes tipo holofote, e raios do sol. Os do sol podem ser baratos (na tela, a partir do brilho do céu e das sombras); os cones das luzes custam uma marcha pelo raio por luz, medir antes.
+  - **Faróis assimétricos:** o farol da direita (de quem dirige) mais longo e mais apontado para cima, para iluminar as placas, como na vida real (já anotado em "Refinamento" como dois cones).
+  - **Nuvens volumétricas**, para os efeitos do sol (raios, bordas acesas); e as nuvens ainda parecem um pouco cinzas.
+  - **Bloom e reflexo de verdade nas telas do celular e do notebook**, no lugar do brilho e do reflexo falsos: as células acesas da tela entram na mesma passada de bloom; o reflexo pode usar a imagem do mundo do quadro, desfocada e espelhada.
+  - **Carregamento sem travar** (para o futuro): a geração da cidade num worker com uma barra de progresso, para o Windows não marcar a janela como "não respondendo" no primeiro carregamento.
 - **A transição de nível de detalhe das fachadas ainda é um corte seco** (a cor agora bate, mas o padrão das janelas aparece de uma vez): suavizar com um pontilhado (*dither*) na faixa de troca.
 - **A janela mostra o cômodo inteiro (pedido em 2026-10-03):** os móveis já aparecem pelas janelas e vitrines (R.18). Faltam as pessoas (a simulação ainda não põe ninguém dentro dos prédios: os pedestres só andam na rua) e as portas de rua abrindo vistas de fora.
 - **Logo depois, Maps com categorias e rotas:** os marcos viram uma categoria; as outras listam os lugares por tipo (cafés, restaurantes, bares, farmácias, mercados…), do mais perto; escolher um traça a rota até ele. O mapa ganha um modo escuro.
@@ -558,7 +566,7 @@ Ajustes que o usuário pediu para deixar para a etapa de refinamento e variedade
 - **O que é por quadro fica na CPU e sobe como lista** (lâmpadas com falhas e energia, luzes dinâmicas, números do céu: `gpuPrepare`); o que é por célula vai para o shader. A energia (`power`) é uma função pura e foi portada inteira, para cada janela apagar no seu tempo.
 - **Ler o que a GPU desenhou:** `await gpuText(x0, y0, x1, y1)` (a comparação com a CPU, `cmpText`, saiu com ela na R.17).
 - **Objetos (R.13):** os modelos sobem uma vez por identidade da lista de `Part` (`WeakMap`); uma lista nova a cada quadro (as setas de um carro: `[...parts, ...signalLamps]`) sobe toda vez e só enche a área mais cedo. Juntar os objetos no thread principal custa: sempre cortar pelo cone (`seen`).
-- **Palavras reservadas do WGSL** (`std`, `common`, `shared`, `pass`, entre outras) deixam o pipeline inválido sem erro no console; ver com `getCompilationInfo()`.
+- **Palavras reservadas do WGSL** (`std`, `common`, `shared`, `pass`, entre outras; o erro aparece pelo `getCompilationInfo()` de um módulo criado no console) deixam o pipeline inválido sem erro no console; ver com `getCompilationInfo()`.
 - **`round()` do WGSL arredonda o meio para o par** (2,5 → 2), o `Math.round` para cima: onde a CPU usa `Math.round`, usar `floor(x + 0.5)`.
 - **(R.21) Emissão e luz recebida por célula:** quem faz a célula (`wallCell`, o chão, `objectsOver`) grava em variáveis privadas `gEm`/`gIl` com a profundidade em `gTag`; o `finish` só as usa se `o.depth == gTag` (assim um objeto ou outra coisa por cima não herda a luz da parede). O brilho do bloom vai no **alfa do fundo** (`store`); a leitura de volta (`shot`) devolve o alfa a 255, porque o celular copia o fundo da foto para a tela dele, onde alfa 0 é transparente.
 - **O `fx` tem `COPY_SRC` desde a R.18:** dá para lê-lo de volta (`copyBufferToBuffer` para um buffer `MAP_READ`) e comparar com a cópia da CPU (`gpuNow().fxW`/`fxF`).

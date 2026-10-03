@@ -27,6 +27,11 @@ export class LightWindow {
   private inWindow: number[] = [];
   ox = 0;
   oy = 0;
+  /**
+   * The share of the lamps around (nearer weigh more) that have power, 1 when none is out: how much of
+   * the city's glow is left, for the light over everything in a blackout (it follows the lamps going out).
+   */
+  litShare = 1;
   /** Bumped at every re-bake, so the GPU's copy knows when to go up again. */
   version = 0;
   private city: City | null = null;
@@ -61,7 +66,8 @@ export class LightWindow {
 
   /** Update the lamps' failures and photocells for this frame (day: 0 night .. 1 daylight). */
   update(sec: number, day: number, grid: PowerGrid) {
-    const lamps = this.city!.lamps, c = this.col;
+    const lamps = this.city!.lamps, c = this.col, cx = this.ox + W / 2, cy = this.oy + W / 2;
+    let on = 0, all = 0;
     for (const n of this.inWindow) {
       const t = lamps[n].lampType ?? 'hps', L = LAMP_LIGHT[t];
       lampState(n, sec, this.st, t);
@@ -69,10 +75,13 @@ export class LightWindow {
       // the power grid: dark in a blackout; when it comes back a discharge lamp warms up again
       const pw = power(grid, grid.lamp[n], lamps[n].x, lamps[n].y, n + 100000, 0, sec);
       this.st[0] *= Math.min(1.3, pw[0]);
+      const wd = 1 / (1 + ((lamps[n].x - cx) ** 2 + (lamps[n].y - cy) ** 2) / (120 * 120));
+      on += wd * Math.min(1, pw[0]); all += wd;
       if (pw[1] >= 0 && t !== 'led') this.st[1] = Math.min(this.st[1], pw[1] / 9);
       const lv = (this.level[n] = this.st[0]), w = (this.warm[n] = this.st[1]);
       for (let k = 0; k < 3; k++) c[n * 3 + k] = (L.cold[k] + (L.warm[k] - L.cold[k]) * w) * lv;
     }
+    this.litShare = all > 0 ? on / all : 1;
   }
 
   /** The baked window for the GPU: per metre, (lamp id + 1) << 8 | the pool's strength x 255 (0: unlit). */

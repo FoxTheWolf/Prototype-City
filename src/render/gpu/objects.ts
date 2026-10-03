@@ -240,7 +240,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
-    gEm = sat(oEm); gIl = oIl; gTag = best;
+    gEm = sat(oEm); gIl = oIl; gTag = best; gGlowK = 1.0;
     cl = Cell(ch, sat(rgb), cl.bg, best, select(select(KIND_OTHER, KIND_OBJECT, mat == M_SOLID && !painted), KIND_ROOM, indoor), sun);
   }
   return cl;
