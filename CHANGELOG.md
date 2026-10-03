@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.11 — Apagão de verdade nas telas e luz nas praças (2026-10-03)
+- No apagão, os telões mostram a tela azul de erro meio segundo antes de apagar e por alguns segundos depois que a luz volta, como se reiniciassem.
+- O letreiro de notícias e os letreiros das lojas não parecem mais "invertidos" no apagão: apagados, viram placas escuras.
+- Sumiu o brilho vermelho em volta das janelas no apagão (as luzes de emergência dos corredores não iluminam mais a parede de fora).
+- As praças e os parques têm postes: a praça do Theater District ganhou uma grade deles, e os caminhos dos parques e praças, postes dos dois lados.
+- De dia, os telões e as placas iluminam mais a rua; à noite, os cones dos postes aparecem também fora da chuva (mais fortes nela); as nuvens da noite ficam mais amareladas e escurecem no apagão.
+
 ## 0.L.10 — A praça do Theater District e as sombras da noite (2026-10-03)
 - A avenida diagonal saiu por enquanto (o X dava problema no trânsito e nos prédios). No lugar, o Theater District ganhou uma praça grande dos dois lados da avenida, com piso xadrez, degraus vermelhos, mesas e bancos, cercada de telões e letreiros virados para ela.
 - À noite, os postes fazem sombra: as pessoas, os carros, os bancos e os próprios postes deixam sombra na calçada.

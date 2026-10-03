@@ -4,6 +4,8 @@ import { hash3, mulberry32, type Rng } from '../core/rng';
 export const FLOOR_H = 3.5;
 /** Sidewalk ring inside every block, measured from the curb. */
 export const SIDEWALK = 4;
+/** The spacing of the lamps over the plazas, the parks' paths and the square (m). */
+const PLAZA_LAMP = 16;
 export const LANE_W = 3.5;
 /** Width of one window bay on a facade; the walls of the rooms inside line up with it. */
 export const BAY = 1.6;
@@ -821,6 +823,10 @@ export function generateCity(seed: number, size: number): City {
         block.props.push({ kind: 'bench', x: mx - off, y: my + s * dy, w: 0, z1: 0, seed: 0, a: 0 });
       }
       if (fr() < 0.5) block.props.push({ kind: 'bin', x: mx + 2.2, y: my + 2.2, w: 0, z1: 0, seed: 0, a: 0 });
+      // lamps along both paths, on the side away from the benches, arms over the path
+      const lo = open === 'park' ? 1.4 : 4.5;
+      for (let x = ix0 + 5; x <= ix1 - 5; x += PLAZA_LAMP) if (Math.abs(x - mx) > 4) block.props.push({ kind: 'lamp', x, y: my - lo, w: 0.3, z1: 6.5, seed: 0, a: Math.PI / 2, lampType: 'mh' });
+      for (let y = iy0 + 5; y <= iy1 - 5; y += PLAZA_LAMP) if (Math.abs(y - my) > 4) block.props.push({ kind: 'lamp', x: mx + lo, y, w: 0.3, z1: 6.5, seed: 0, a: Math.PI, lampType: 'mh' });
     }
 
     if (lm === 'memorial') {
@@ -1040,12 +1046,20 @@ function furnishSquare(block: Block, ox: number, oy: number, open: (x: number, y
     if (ok && dd < bd) { bd = dd; best = [x, y]; }
   }
   if (best) block.props.push({ kind: 'steps', x: best[0], y: best[1], w: 0, z1: 0, seed: 0, a: toX(best[0], best[1]) });
+  // lamps on a grid over the plaza, arms toward the X (the furniture keeps clear of them)
+  const lamps: [number, number][] = [];
+  for (let y = iy0 + 4; y <= iy1 - 4; y += PLAZA_LAMP) for (let x = ix0 + 4; x <= ix1 - 4; x += PLAZA_LAMP) {
+    if (!inPlaza(x, y) || (best && Math.hypot(x - best[0], y - best[1]) < 7)) continue;
+    lamps.push([x, y]);
+    block.props.push({ kind: 'lamp', x, y, w: 0.3, z1: 6.5, seed: 0, a: toX(x, y), lampType: 'mh' });
+  }
   // a whole block is sparser than the slivers, or it is a maze of tables
   const step = block.diag ? 4 : 7;
   for (let y = iy0 + 1; y <= iy1 - 1; y += step) for (let x = ix0 + 1; x <= ix1 - 1; x += step) {
     const px = x + (fr() - 0.5) * 1.5, py = y + (fr() - 0.5) * 1.5;
     if (!inPlaza(px, py) || (best && Math.hypot(px - best[0], py - best[1]) < 6.5)) continue;
     const r = fr(), a = fr() * Math.PI * 2;
+    if (lamps.some(([lx, ly]) => Math.hypot(px - lx, py - ly) < 1.8)) continue;
     const kind: PropKind | null = r < 0.3 ? 'table' : r < 0.42 ? 'planter' : r < 0.52 ? 'bench' : r < 0.58 ? 'bin' : null;
     if (kind) block.props.push({ kind, x: px, y: py, w: 0, z1: 0, seed: (fr() * 1e6) | 0, a: kind === 'bench' ? toX(px, py) : a });
   }

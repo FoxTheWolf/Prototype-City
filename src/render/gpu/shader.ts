@@ -443,6 +443,38 @@ fn screenPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dAlong: f32, dz: f32) -> 
   var col = vec3f(30.0, 30.0, 40.0); if (band < 1.0) { col = a; } else if (band < 2.0) { col = b; }
   return Px(select(COL, select(HASH, AT, band % 1.0 < 0.15), band < 2.0), col * select(0.6, 0.75 + 0.25 * sin(s * 3.0), band < 2.0));
 }
+/** Whether a video screen on substation sub's power shows the crash screen now: for half a second before the
+ *  power goes (and through its flicker), and for a few seconds after it comes back, as it reboots (timed as power()). */
+fn bsod(sub: i32, x: f32, y: f32, id: i32, spread: f32) -> bool {
+  let o = u32(sub) * 4u;
+  let changed = subs[o];
+  if (changed < 0.0) { return false; }
+  let since = u.sec - changed; let d = length(vec2f(x - subs[o + 2u], y - subs[o + 3u]));
+  let hb = hash3(id, sub, 404); let hw = hash3(id, sub, 407);
+  if (subs[o + 1u] < 0.5) { let t = since - d / 120.0 - hb * 0.3 - hw * spread; return t > -0.5 && t < 0.32; }
+  let t = since - (0.4 + hb * 10.0 + hw * spread * 2.0 + d / 240.0);
+  return t >= 0.0 && t < 2.5 + hash3(id, sub, 409) * 3.0;
+}
+/** The crash screen: white text on blue under a grey title, as screenPix lays out a screen W x H (uu, v from its top left). */
+fn bsodPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dA: f32, dz: f32) -> Px {
+  let blue = vec3f(20.0, 45.0, 210.0); let white = vec3f(235.0, 235.0, 245.0); let grey = vec3f(175.0, 175.0, 180.0);
+  let lh = max(0.3, H / 13.0); let cw = lh * 0.62;
+  let cols = max(1, ifloor(W / cw) - 2); let row = ifloor(v / lh); let ci = ifloor((uu - cw) / cw);
+  var txt = false; var inv = false;
+  if (ci >= 0 && ci < cols) {
+    if (row == 1) { let t0 = (cols - 8) / 2; inv = ci >= t0 && ci < t0 + 8; txt = inv && ci > t0 && ci < t0 + 7; }
+    else if (row >= 3 && row <= 9 && row != 6) { let L = ifloor(f32(cols) * (0.45 + 0.55 * hash3(id, row, 31))); txt = ci < L && hash3(id, row * 97 + ci, 32) > 0.16; }
+    else if (row == 11) { let L = min(cols, 22); let t0 = (cols - L) / 2; txt = ci >= t0 && ci < t0 + L && hash3(id, ci, 33) > 0.14; }
+  }
+  let bg = select(blue, grey, inv); let fg = select(white, blue, inv);
+  if (cw / dA >= 0.9 && lh / dz >= 0.9) {
+    // a letter per cell holding its center, as the screens' and signs' letters
+    let center = abs(uu - cw - (f32(ci) + 0.5) * cw) < dA / 2.0 && abs(v - (f32(row) + 0.5) * lh) < dz / 2.0 + 0.01;
+    if (txt && center) { return Px(65u + u32(hash3(id, row * 131 + ci, 34) * 26.0), fg); }
+    return Px(HASH, bg * 0.8);
+  }
+  return Px(select(HASH, EQ, txt), select(bg * 0.8, mix(bg, fg, 0.5), txt));
+}
 
 // ---- the rooms behind the windows (render/interior.ts: peekInto, roomLamp, peekCell), from the plans in fx
 const PAINT = array<vec3f, 6>(vec3f(190.0, 170.0, 135.0), vec3f(150.0, 170.0, 160.0), vec3f(175.0, 150.0, 165.0), vec3f(185.0, 185.0, 175.0), vec3f(150.0, 160.0, 185.0), vec3f(195.0, 160.0, 120.0));
@@ -1203,7 +1235,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame * shade; }
   } else if (signN > 0 && z > SIGN_Z0 && z < SIGN_Z1) {
     // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
-    em = true; emK = SIGN_EMIT; glowK = SIGN_GLOW;
+    // (switched off, a dark board lit by what is round it: emitting, its dark panel glowed brighter than the dead bulbs)
+    em = adElec > 0.02; emK = SIGN_EMIT; glowK = SIGN_GLOW;
     let col = ifloor(signU / LETTER_W) - 1; let inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
     let kk = select(col, signN - 1 - col, rev);
     var cc = 32u; if (col >= 0 && col < signN) { cc = sg[stx.x + u32(kk)]; }
@@ -1234,7 +1267,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     // the news ticker: headlines in amber bulbs running right to left around the building
     if (z < TICK_Z0 || z > TICK_Z1) { ch = EQ; c = frame * 0.7 * shade; }
     else {
-      em = true; emK = SIGN_EMIT; glowK = SIGN_GLOW;
+      em = adElec > 0.02; emK = SIGN_EMIT; glowK = SIGN_GLOW;
       let n = i32(u.tickN); let p = select(along, -along, rev) + sec * TICK_SPEED; let li = ifloor(p / TICK_LW); let fu = p / TICK_LW - f32(li);
       var lc = 32u; if (n > 0) { lc = sg[sg[0] + u32(((li % n) + n) % n)]; }
       let lh = TICK_Z1 - TICK_Z0; let on = adElec;
@@ -1252,7 +1285,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     // a video screen behind a dark bezel
     if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45 * shade; }
     else {
-      let P = screenPix(bk, select(along - scA0, scA1 - along, rev), scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
+      let su = select(along - scA0, scA1 - along, rev);
+      var P = screenPix(bk, su, scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
+      if (bsod(sub, cx, cy, bk, 0.25)) { P = bsodPix(bk, su, scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz); }
       ch = P.ch; c = P.c * adElec; em = true; emK = SCREEN_EMIT * (1.0 + SCREEN_DAY_EMIT * u.day);
     }
   } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
@@ -1382,8 +1417,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   var emC = select(select(vec3f(0.0), c, em), bodyEm, bodyEm.x >= 0.0);
   // a lit room's light spills onto the wall around its window
-  // (only where this floor has a window in this bay: a stone base or a blind wall has none to spill from)
-  if (pk.ok && !isWin && !corner && z < H - 0.6 && pk.r >= 0 && windowHole(style, shop, 0.5, 0.54, 0.54 * FLOOR_H, fl == 0)) {
+  // (only where this floor has a window in this bay: a stone base or a blind wall has none to spill from;
+  // and only from the mains: the emergency lamps of a blackout are too faint to light the wall outside)
+  if (pk.ok && !isWin && winPw >= 0.8 && !corner && z < H - 0.6 && pk.r >= 0 && windowHole(style, shop, 0.5, 0.54, 0.54 * FLOOR_H, fl == 0)) {
     let GL = roomLamp(lot, bk, roomRec(po, pk.r), pk.r, fl, winPw);
     if (GL.x + GL.y + GL.z > 0.02) {
       let d = length(vec2f((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H)); let e = max(0.0, 1.0 - d / 1.5);
