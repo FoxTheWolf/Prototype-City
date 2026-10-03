@@ -20,7 +20,7 @@ export const UNIFORMS = [
   'nbx', 'nxb', 'nyb', 'curveR', 'dox', 'doy', 'dex', 'dey',
   'dnx', 'dny', 'dw', 'blocks', 'lox', 'loy', 'dbx', 'dby',
   'sunX', 'sunY', 'sunZ', 'sunEl', 'cloud', 'moonlight', 'cityLit', 'flash',
-  'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'pad0',
+  'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'adapt',
   'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
   'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'starSlots',
   'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH', 'yaw', 'fall',
@@ -85,7 +85,7 @@ const GROUND_FAR = 600.0;
 const LIGHT_KNEE = 150.0;
 /** How much of a lamp's light a surface sends back once tinted by its color (finish), and how strongly a lit room's light spills onto the wall around its window. */
 const SIGN_BACK = 2.5;
-const LAMP_REFL = 1.5; const WIN_SPILL = 70.0;
+const WIN_SPILL = 70.0;
 const CROWN_H = 16.0;
 const FLOOD_GAP = ${f(FLOOD_GAP)}; const FLOOD_OUT = ${f(FLOOD_OUT)}; const FLOOD_FIX_FAR = ${f(FLOOD_FIX_FAR)}; const FLOOD_SHADOW_FAR = 45.0;
 const LW = ${LIGHT_W};
@@ -1538,24 +1538,22 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
 const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 4.2; const DAY_GROUND = 1.8;
 /** The brightest a surface reflects (its hue kept), how much more saturated the day shows the colors, and the exposure. */
 const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
-/** By day, how strongly the lamps' light reaches a surface, and how bright what glows reads. */
-const DAY_LAMP = 1.5; const DAY_EMIT = 1.6;
-/** Night: how light a surface's color must be (strongest channel, 0-255) to take a lamp's full light, and where the highlights start to roll off. */
-const NIGHT_ALB_REF = 85.0; const NIGHT_KNEE = 0.3; const NIGHT_WHITE = 0.15;
-/** The night's curve, in linear light on the luminance: untouched below the knee (the night's look), above it an
- *  exponential shoulder toward 1; a channel still past 1 goes toward white, as in tone(). In 0-255 sRGB. */
+/** Night: where the highlights start to roll off, and how far a color past 1 goes toward white. */
+const NIGHT_KNEE = 0.3; const NIGHT_WHITE = 0.15;
+/** The night's curve, on display-linear light, on the luminance: untouched below the knee (the night's look),
+ *  above it an exponential shoulder toward 1; a channel still past 1 goes toward white, as in tone(). */
 fn nightTone(c: vec3f) -> vec3f {
-  let x = pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2));
+  let x = max(c, vec3f(0.0));
   let L = dot(x, vec3f(0.2126, 0.7152, 0.0722));
   let mx0 = max(x.x, max(x.y, x.z));
-  if (L <= NIGHT_KNEE && mx0 <= 1.0) { return c; }
+  if (L <= NIGHT_KNEE && mx0 <= 1.0) { return x; }
   var Lt = L;
   if (L > NIGHT_KNEE) { Lt = NIGHT_KNEE + (1.0 - NIGHT_KNEE) * (1.0 - exp(-(L - NIGHT_KNEE) / (1.0 - NIGHT_KNEE))); }
   var y = x * (Lt / max(L, 1e-5));
   let mx = max(y.x, max(y.y, y.z));
   // past 1, mostly scaled down with its hue kept (a red tail light stays red), only a little toward white
   if (mx > 1.0) { y = mix(y / mx, vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)), NIGHT_WHITE); }
-  return pow(y, vec3f(1.0 / 2.2)) * 255.0;
+  return y;
 }
 /** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
 fn acesL(x: f32) -> f32 { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
@@ -1565,7 +1563,7 @@ const DAY_WHITE = 0.2;
 fn tone(x: vec3f) -> vec3f {
   let L = dot(x, vec3f(0.2126, 0.7152, 0.0722));
   if (L < 1e-5) { return vec3f(0.0); }
-  let Lt = acesL(L * DAY_EXPO); var y = x * (Lt / L);
+  let Lt = acesL(L); var y = x * (Lt / L);
   let mx = max(y.x, max(y.y, y.z));
   // past 1: mostly scaled down with its hue kept (a red car in the sun reads a stronger red), only a little toward white
   if (mx > 1.0) { y = mix(y / mx, vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)), DAY_WHITE); }
@@ -1598,91 +1596,127 @@ fn kelvin(T: f32) -> vec3f {
 }
 /** The sunlight's color in linear light, its luminance 1 (the brightness is DAY_SUN's). */
 fn sunLin() -> vec3f { let l = pow(kelvin(sunTemp()), vec3f(2.2)); return l / max(1e-3, dot(l, vec3f(0.2126, 0.7152, 0.0722))); }
-// ---- the finish: moonlight, daylight and haze, a whole-city blackout (light), then the display modes (display)
+// ---- the light (L.1): one for day and night. A surface's palette color is its albedo; it gets the ambient light
+// (the sky's by day, the city's glow and the moon's by night), the sun's, and the lamps'; what glows adds its own.
+// The sum is radiance, in linear light; the eye's exposure (EV) takes it to the screen through one tone curve.
+// What is not lit this way (the rooms seen inside, painted signs, smoke) keeps its color as it looks at the
+// exposure the time of day expects, and follows the eye's adaptation only.
+/** The night's ambient light with the city lit (its glow on everything; the night's palette is drawn for it), and the full moon's. */
+const AMB_N = 0.004; const MOON_E = 0.003;
+/** How much the eye opens up as the city's glow fails (0: not at all, 1: as much as the light fell). */
+const NIGHT_ADAPT = 0.3;
+/** The lamps' light (lightAt's) in the same units: under a street lamp ~3% of the day's sky. */
+const LAMP_E = 0.45;
+/** How much of the eye's change from night to day what glows keeps up with (1: as bright on the screen by day as at night). */
+const EMIT_KEEP = 0.95;
+/** The lamps' highlight on what is glossy. */
+const LAMP_SPEC = 0.03;
+/** The night's exposure with the city lit: the night's palette shows as drawn under AMB_N. */
+const EV_NIGHT = 1.0 / (DAY_ALBEDO * AMB_N);
+fn lin(c: vec3f) -> vec3f { return pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2)); }
+fn srgb(x: vec3f) -> vec3f { return pow(max(x, vec3f(0.0)), vec3f(1.0 / 2.2)) * 255.0; }
+fn luma(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
+/** How far toward the day's look (0 at night, 1 from a third of the way into the day). */
+fn dayGrade() -> f32 { return smoothK(0.0, 0.35, u.day); }
+/** The city's glow on everything (it fades with the lamps in a blackout). */
+fn cityAmb() -> f32 { return AMB_N * (0.02 + 0.98 * pow(clamp(u.cityLit, 0.0, 1.0), 1.5)); }
+/** The exposure from night to day (on a log scale), without the blackout's. */
+fn evDayNight() -> f32 { return exp(mix(log(EV_NIGHT), log(DAY_EXPO), dayGrade())); }
+/** The exposure the time of day expects: the night's opened up a little when the city goes dark. */
+fn evRef() -> f32 { return exp(mix(log(EV_NIGHT * pow(cityAmb() / AMB_N, -NIGHT_ADAPT)), log(DAY_EXPO), dayGrade())); }
+/** One tone curve: the night's (untouched below a knee) toward the day's filmic one with the day. */
+fn toneMap(x: vec3f, g: f32) -> vec3f {
+  if (g <= 0.0) { return nightTone(x); }
+  if (g >= 1.0) { return tone(x); }
+  return mix(nightTone(x), tone(x), g);
+}
 fn light(cl: Cell) -> Cell {
   var o = cl;
   gGlow = 0.0; gTint = vec3f(1.0); var spG = 0.0; // spG: the bloom of a lamp's highlight on glossy paint, metal or glass
-  if (o.depth >= 1e9) { return o; }
-  if (o.depth == gTag) {
-    let b0 = max(vec3f(0.0), o.c - gEm - gIl); let m0 = max(b0.x, max(b0.y, b0.z));
-    if (m0 > 12.0) { let s0 = max(vec3f(0.0), mix(vec3f(dot(b0, vec3f(0.2126, 0.7152, 0.0722))), b0, LIT_SAT)); gTint = s0 / max(1.0, max(s0.x, max(s0.y, s0.z))); }
+  let ev = evRef() * u.adapt; let rS = pow(u.adapt, 1.0 / 2.2);
+  if (o.depth >= 1e9) {
+    // the sky follows the eye's adaptation only
+    if (abs(u.adapt - 1.0) > 0.001) { o.c = srgb(nightTone(lin(o.c) * u.adapt)); o.bg = srgb(nightTone(lin(o.bg) * u.adapt)); }
+    return o;
   }
-  // the light this cell gives off and gets from the lamps, if it was made where it was marked
   let tagged = o.depth == gTag;
-  let emit = select(vec3f(0.0), gEm, tagged); var lamp = select(vec3f(0.0), gIl, tagged);
-  // the light a surface gets takes its color (light x albedo), instead of being added over it: a red
-  // wall under a sodium lamp reads deep orange-red, not grey; brightness is kept by the color's own
-  // strongest channel, so the dark night colors still show the light (a darker wall, a bit less)
-  if (tagged && lamp.x + lamp.y + lamp.z > 0.5) {
-    let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
-    let sb = max(vec3f(0.0), mix(vec3f(dot(base, vec3f(0.2126, 0.7152, 0.0722))), base, LIT_SAT)); let ms = max(sb.x, max(sb.y, sb.z));
-    let tint = mix(vec3f(1.0), sb / max(ms, 1.0), smoothK(2.0, 12.0, mb)); gTint = tint;
-    // a surface reflects in proportion to how light it is: dark glass under a white lamp stays dark and
-    // keeps its hue, a pale sidewalk takes the full pool
-    // on a facade the lamp mostly brightens the wall's own color, with only a touch of its hue: the sodium's
-    // orange times a blue or beige wall made a scorched-paper yellow-grey where the light fell (the ground keeps its pools)
-    let lc = select(lamp, mix(vec3f(dot(lamp, vec3f(0.2126, 0.7152, 0.0722))), lamp, WALL_LAMP_HUE), o.kind == KIND_WALL);
-    var nl = lc * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
-    // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color
-    if (gMat != MAT_NONE) { let r = matRough(); let sp = lamp * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * select(LAMP_GLOSS, CAR_GLOSS, gMat == MAT_PAINT)); nl += sp; spG = dot(sp, vec3f(0.3, 0.5, 0.2)) / 255.0 * SPEC_BLOOM; }
-    o.c = base + emit + nl; lamp = nl;
-  }
-  gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0 + spG, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
-  if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = max(vec3f(0.0), o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); } // (not clamped: a lit color over 255 cut per channel here went yellow-grey and white before the night's curve)
-  let day = u.day;
-  if (day > 0.01 || u.flash > 0.0) {
-    let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
-    let haze = vec3f(150.0, 160.0, 176.0);
-    // objects keep 2 + their share of sun (0: none, as the CPU's sun buffer left at 0)
-    let objSun = o.sun >= 2.0;
-    let sunlit = o.kind == KIND_WALL || objSun;
-    if (day > 0.01 && (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit)) {
-      // by day, lit as a 3D game does: the surface's color as its albedo (in linear light), times the
-      // sky's light from above (bluish; whiter under clouds) and the sun's on what faces it and is not in
-      // a building's shadow (gSun); then a filmic tone curve, and the haze only with distance
-      let sunC = sunLin();
-      let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
-      // the surface's own color without the light on it and from it
-      var alb = pow(max(vec3f(0.0), o.c - emit - lamp) / 255.0, vec3f(2.2)) * DAY_ALBEDO;
-      // the colors were made for the night: by day a bit more saturated, and never brighter than a white wall
-      alb = max(vec3f(0.0), mix(vec3f(dot(alb, vec3f(0.2126, 0.7152, 0.0722))), alb, DAY_SAT));
-      let am = max(alb.x, max(alb.y, alb.z)); if (am > DAY_ALB_MAX) { alb *= DAY_ALB_MAX / am; }
-      // the ground's colors were made for the night (dark, bluish asphalt): by day, lighter and greyer
-      if (o.kind == KIND_GROUND) { let g = dot(alb, vec3f(0.3, 0.5, 0.2)); alb = mix(alb, vec3f(g), 0.2) * DAY_GROUND; }
-      let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
-      let E = skyC + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * share * gSun) + vec3f(u.flash * 0.6);
-      // the lamps light the surface as the sky does (weak by day); what glows is added over
-      // and the sun's highlight on what is glossy, in the sun's color
-      let gloss = select(0.0, sunGloss(), tagged) * DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun;
-      gGlow = max(gGlow, clamp((gloss - SPEC_BLOOM_MIN) * SPEC_BLOOM_SUN, 0.0, 1.0)); // a strong glint on metal blooms
-      let lin = tone(alb * (E + pow(lamp / 255.0, vec3f(2.2)) * DAY_LAMP) + sunC * gloss + pow(emit / 255.0, vec3f(2.2)) * DAY_EMIT);
-      let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
-      let dc = mix(pow(lin, vec3f(1.0 / 2.2)) * 255.0, haze, fd);
-      o.c = sat(mix(o.c * (1.0 - f) + haze * f, dc, smoothK(0.0, 0.35, day)));
-    } else {
-      // rooms keep their own lamps' light (brightened, a green plant read almost white)
-      let amb = 1.0 + select(0.7, 0.1, o.kind == KIND_ROOM) * day + u.flash * 0.6;
-      o.c = max(vec3f(0.0), o.c * amb * (1.0 - f) + haze * f);
-    }
-  }
-  // a blackout darkens what is lit by the city's glow, not the lights: what still shines (a generator's
-  // windows, headlights, a lamp coming back) stands out more against a dark city, as the eye adapts
-  let night = 1.0 - day;
+  // the light this cell gives off and gets from the lamps, if it was made where it was marked
+  let emit = select(vec3f(0.0), gEm, tagged); let lamp = select(vec3f(0.0), gIl, tagged);
+  let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
+  // the surface's hue (its palette color, saturated, max channel 1), for the paint's reflection
+  if (mb > 12.0) { let s0 = max(vec3f(0.0), mix(vec3f(luma(base)), base, LIT_SAT)); gTint = s0 / max(1.0, max(s0.x, max(s0.y, s0.z))); }
+  let day = u.day; let night = 1.0 - day; let g = dayGrade();
+  let haze = vec3f(150.0, 160.0, 176.0);
+  let objSun = o.sun >= 2.0;
+  let sunlit = o.kind == KIND_WALL || objSun;
+  // the blackout's darkening of what is not lit this way (what is lit, below, darkens by its light)
   let dark = 1.0 - 0.72 * pow(1.0 - u.cityLit, 1.5) * night;
-  if (dark < 0.999) {
-    let adapt = 1.0 + 0.7 * (1.0 - u.cityLit) * night;
-    let lit = min(o.c, emit + lamp);
-    o.c = (o.c - lit) * dark + lit * adapt; o.bg *= dark;
-    gGlow = min(1.0, gGlow * adapt);
+  if (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit) {
+    // ---- lit: albedo x the light on it
+    var A = lin(base) * DAY_ALBEDO;
+    // the colors were made for the night: by day a bit more saturated, and never brighter than a white wall
+    A = max(vec3f(0.0), mix(vec3f(luma(A)), A, mix(1.0, DAY_SAT, g)));
+    let am = max(A.x, max(A.y, A.z)); if (am > DAY_ALB_MAX) { A *= DAY_ALB_MAX / am; }
+    // the ground's colors were made for the night (dark, bluish asphalt): by day, lighter and greyer
+    if (o.kind == KIND_GROUND) { A = mix(A, vec3f(dot(A, vec3f(0.3, 0.5, 0.2))), 0.2 * g) * mix(1.0, DAY_GROUND, g); }
+    // the night's ambient: the city's glow (neutral: the palette is drawn under it) and the moon (bluish)
+    let En = vec3f(cityAmb()) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud));
+    // the day's: the sky's (bluish; whiter under clouds) and the sun's on what faces it out of the shadows (gSun);
+    // it fades in on a log scale with the exposure (ds), so dusk never dips darker than night or day
+    let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
+    let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
+    let sunC = sunLin(); let sunK = DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun * ds;
+    let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
+    let E = (En * (1.0 - g) + skyC * ds + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
+    // the lamps (lightAt dims its light by day; the eye does that now): their light takes the surface's color;
+    // on a facade only a touch of its hue (the sodium's orange times a blue wall made a scorched-paper yellow-grey)
+    var El = lin(lamp / max(0.15, 1.0 - 0.85 * day)) * LAMP_E;
+    if (o.kind == KIND_WALL) { El = mix(vec3f(luma(El)), El, WALL_LAMP_HUE); }
+    // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
+    let Le = lin(emit) * (pow(EV_NIGHT / evDayNight(), EMIT_KEEP) / EV_NIGHT);
+    var Lr = A * (E + El) + Le;
+    // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color, and the sun's
+    if (gMat != MAT_NONE && tagged) {
+      let r = matRough();
+      let sp = El * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * select(LAMP_GLOSS, CAR_GLOSS, gMat == MAT_PAINT) * LAMP_SPEC);
+      Lr += sp; spG = dot(srgb(sp * ev), vec3f(0.3, 0.5, 0.2)) / 255.0 * SPEC_BLOOM;
+      if (day > 0.01) {
+        let gloss = sunGloss() * sunK;
+        Lr += sunC * gloss;
+        gGlow = clamp((gloss / max(ds, 1e-3) - SPEC_BLOOM_MIN) * SPEC_BLOOM_SUN, 0.0, 1.0); // a strong glint on metal blooms
+      }
+    }
+    o.c = srgb(toneMap(Lr * ev, g));
+    gGlow = max(gGlow, clamp(dot(srgb(Le * ev), vec3f(0.3, 0.5, 0.2)) / 255.0 + spG, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged));
+    // the haze: by day with distance, at its most far away
+    let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
+    let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
+    o.c = mix(o.c, haze * rS, (1.0 - g) * f + g * fd);
+  } else {
+    // ---- kept as drawn: the moon on it, brighter by day (rooms keep their own lamps' light), the blackout,
+    // and the eye's adaptation
+    var c = o.c;
+    if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; c += vec3f(m * 0.7, m * 0.8, m * 1.15); }
+    let amb = 1.0 + select(0.7, 0.1, o.kind == KIND_ROOM) * day + u.flash * 0.6;
+    c *= amb;
+    let lit = min(c, emit + lamp);
+    let up = pow(evRef() / evDayNight(), 1.0 / 2.2); // how much the eye opened in the blackout
+    c = (c - lit) * dark + lit * up;
+    gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged) * up;
+    let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
+    c = c * (1.0 - f) + haze * f;
+    if (abs(u.adapt - 1.0) > 0.001) { c = srgb(lin(c) * u.adapt); }
+    o.c = c;
   }
+  o.bg *= dark;
+  gGlow = min(1.0, gGlow * rS);
   // the city's sodium glow in the air: far things sink into a low orange haze (as a big city seen at night)
   if (night > 0.01 && o.kind != KIND_ROOM) {
     let hk = (1.0 - exp(-o.depth / 900.0)) * NIGHT_HAZE * night * (0.15 + 0.85 * u.cityLit) * (0.8 + 0.4 * u.precip);
-    o.c = o.c * (1.0 - hk) + vec3f(120.0, 64.0, 26.0) * hk;
+    o.c = o.c * (1.0 - hk) + vec3f(120.0, 64.0, 26.0) * (hk * rS);
   }
-  // at night bright sums roll off on the luminance (the hue kept) instead of each channel clipping at 255,
-  // which sent a lit color to grey and white
-  if (night > 0.01) { o.c = mix(o.c, nightTone(o.c), night); }
+  // bright sums roll off on the luminance (the hue kept) instead of each channel clipping at 255
+  if (max(o.c.x, max(o.c.y, o.c.z)) > 255.0) { o.c = srgb(nightTone(lin(o.c))); }
   return o;
 }
 fn display(cl: Cell) -> Cell {

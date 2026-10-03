@@ -106,6 +106,8 @@ export class GpuWorld {
   private oW = new Uint32Array(OBJ_CAP);
   private oF = new Float32Array(this.oW.buffer);
 
+  /** The eye's adaptation: the exposure over the one the time of day expects (L.3). */
+  adapt = 1;
   /** The world's pass on the GPU's own clock (ms, smoothed); -1 without timestamp queries. */
   gpuMs = -1;
   private tq: { set: GPUQuerySet; res: GPUBuffer; read: GPUBuffer; busy: boolean } | null = null;
@@ -246,7 +248,7 @@ export class GpuWorld {
       nbx: C.nbx, nxb: C.xb.length, nyb: C.yb.length, curveR: CURVE_R, dox: Dg.ox, doy: Dg.oy, dex: Dg.ex, dey: Dg.ey,
       dnx: Dg.nx, dny: Dg.ny, dw: Dg.w, blocks: v.look.blocks ? 1 : 0, lox: F.light.ox, loy: F.light.oy, dbx: D.bx, dby: D.by,
       sunX: F.sun[0], sunY: F.sun[1], sunZ: F.sun[2], sunEl: sky.sunEl, cloud: sky.cloud, moonlight: sky.moonlight, cityLit: 0.65 * F.light.litShare + 0.35 * sky.cityLit, flash: sky.flash,
-      snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, pad0: 0,
+      snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, adapt: this.adapt,
       dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
       sarH: C.sarcophagus.h, towX: C.sarcophagus.tx, towY: C.sarcophagus.ty, towR: C.sarcophagus.tr, towH: C.sarcophagus.th,
