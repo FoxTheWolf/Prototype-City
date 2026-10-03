@@ -8,6 +8,10 @@ import { insideLamps, type Inside } from '../interior';
 import { furnitureModel } from '../models';
 import type { Obj, Part } from '../objects';
 import { OW, PW, TILE } from './objects';
+/** By day, how much wider the objects are gathered than the view (their shadows reach in from the sides), and how near an off-screen one must be to cast (m). */
+const SHADOW_CONE = 1.6, SHADOW_CASTERS = 150;
+/** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
+const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 import { CURVE_R } from '../sarcophagus';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
@@ -90,6 +94,8 @@ export class GpuWorld {
   private mSent = 0;
   private models = new WeakMap<Part[], number>();
   private oBase = 0;
+  private sgCnt = new Uint32Array(SG_N * SG_N);
+  private sgStamp = new Int32Array(SG_N * SG_N);
   private oW = new Uint32Array(OBJ_CAP);
   private oF = new Float32Array(this.oW.buffer);
 
@@ -232,7 +238,7 @@ export class GpuWorld {
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
-    this.objects(world, v, scale, plane, vals.hor, I);
+    this.objects(world, v, scale, plane, vals.hor, I, sky.day > 0.01 && F.sun[2] > 0.02 ? F.sun : null);
     q.writeBuffer(this.uni, 0, U);
     const pass = enc.beginComputePass();
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
@@ -301,12 +307,15 @@ export class GpuWorld {
    * corners projected), the 8-column tiles it covers, and its model (sent once). When the model area
    * fills, it starts over and the frame is packed again.
    */
-  private objects(world: World, v: View, scale: number, plane: number, hor: number, I: Inside | null) {
+  private objects(world: World, v: View, scale: number, plane: number, hor: number, I: Inside | null, sun: ArrayLike<number> | null) {
+    const shadows = sun !== null;
     const { cols, rows } = this, q = this.dev.queue;
     const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch), c3 = this.cam3d;
     // the cone the objects are gathered in: the 3D camera turned up or down sees wider at its top or bottom rows
     const den = cp - Math.abs(sp) * Math.tan(VFOV / 2);
-    const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, !c3 ? plane : den > 0.15 ? plane / den : 1e3);
+    // (by day wider: what stands just off the screen casts its shadow into it)
+    const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
+    const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone);
     // indoors, the floor's furniture, lit by its rooms' lamps
     if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
@@ -334,10 +343,12 @@ export class GpuWorld {
         }
         if (behind) { x0 = 0; x1 = cols; y0 = 0; y1 = rows; }
         const bx0 = Math.max(0, Math.floor(x0) - 1), bx1 = Math.min(cols, Math.ceil(x1) + 1), by0 = Math.max(0, Math.floor(y0) - 1), by1 = Math.min(rows, Math.ceil(y1) + 1);
-        if (bx0 >= bx1 || by0 >= by1) continue;
+        // off the screen: by day still sent (with no screen box) to cast its shadow, if near enough
+        const off = bx0 >= bx1 || by0 >= by1;
+        if (off && !(shadows && Math.hypot(o.x - v.x, o.y - v.y) < SHADOW_CASTERS)) continue;
         const m = this.model(o.parts);
         if (m < 0) { full = true; break; }
-        picked.push(k); mods.push(m); box.push(bx0, bx1, by0, by1);
+        picked.push(k); mods.push(m); if (off) box.push(0, 0, 0, 0); else box.push(bx0, bx1, by0, by1);
       }
       if (!full) break;
       this.models = new WeakMap(); this.mEnd = 0; this.mSent = 0;
@@ -383,8 +394,48 @@ export class GpuWorld {
         ex.forEach((D, k) => { W[lb + nL * 8 + k * 3] = D.face; F[lb + nL * 8 + k * 3 + 1] = D.a0; F[lb + nL * 8 + k * 3 + 2] = D.a1; });
       }
     } else ib = 0;
-    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = 0;
+    // by day, the grid of the objects' shadows on the ground (see shadowGrid)
+    let sg = 0;
+    if (sun) { const e = this.shadowGrid(W, F, end, ob, n, sun, v); if (e > 0) { sg = end; end = e; } }
+    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = sg;
     q.writeBuffer(this.fx, this.oBase * 4, W, 0, end);
+  }
+
+  /**
+   * The objects' shadows binned on the ground, from word at: a square of SG_N x SG_N cells of SG_CELL metres
+   * around the viewer (its corner x, y), the cells' offsets into the list, then the list of objects. An object
+   * lands in every cell its volume's shadow covers when cast on the ground along the sun (a capsule from its foot
+   * toward the shadow's tip, as wide as it is): the shader casts a point to the ground the same way and tests
+   * only that cell's objects. The end, or 0 if it did not fit.
+   */
+  private shadowGrid(W: Uint32Array, F: Float32Array, at: number, ob: number, n: number, sun: ArrayLike<number>, v: View): number {
+    const N = SG_N, x0 = Math.floor(v.x / SG_CELL) * SG_CELL - (N / 2) * SG_CELL, y0 = Math.floor(v.y / SG_CELL) * SG_CELL - (N / 2) * SG_CELL;
+    const Sx = sun[0] / sun[2], Sy = sun[1] / sun[2], cnt = this.sgCnt.fill(0), stamp = this.sgStamp.fill(-1);
+    const head = at + 4, list = head + N * N + 1;
+    const visit = (j: number, f: (c: number) => void) => {
+      const w = ob + j * OW;
+      if (W[w + 14] === 2) return;
+      const x = F[w], y = F[w + 1], r = F[w + 4] + SG_CELL * 0.5, zoff = F[w + 9], zl = F[w + 6] + zoff, top = F[w + 5] + zoff;
+      // the shadow of heights zl..top on the ground, its length kept under SG_LONG
+      const k = Math.min(1, SG_LONG / Math.max(1e-3, Math.hypot(Sx, Sy) * top));
+      const ax = x - Sx * zl * k, ay = y - Sy * zl * k, bx = x - Sx * top * k, by = y - Sy * top * k;
+      const len = Math.hypot(bx - ax, by - ay), steps = Math.max(1, Math.ceil(len / (SG_CELL * 0.5)));
+      for (let s = 0; s <= steps; s++) {
+        const px = ax + ((bx - ax) * s) / steps - x0, py = ay + ((by - ay) * s) / steps - y0;
+        const i0 = Math.max(0, Math.floor((px - r) / SG_CELL)), i1 = Math.min(N - 1, Math.floor((px + r) / SG_CELL));
+        const j0 = Math.max(0, Math.floor((py - r) / SG_CELL)), j1 = Math.min(N - 1, Math.floor((py + r) / SG_CELL));
+        for (let jj = j0; jj <= j1; jj++) for (let ii = i0; ii <= i1; ii++) { const c = jj * N + ii; if (stamp[c] !== j) { stamp[c] = j; f(c); } }
+      }
+    };
+    for (let j = 0; j < n; j++) visit(j, (c) => cnt[c]++);
+    let total = 0;
+    for (let c = 0; c < N * N; c++) { W[head + c] = total; total += cnt[c]; }
+    W[head + N * N] = total;
+    if (list + total > OBJ_CAP) return 0;
+    cnt.fill(0); stamp.fill(-1);
+    for (let j = 0; j < n; j++) visit(j, (c) => { W[list + W[head + c] + cnt[c]++] = j; });
+    F[at] = x0; F[at + 1] = y0; W[at + 2] = N; F[at + 3] = SG_CELL;
+    return list + total;
   }
 
   /** Plan P (a lot's ground floor, or its box's upper floors) into fx unless it is there: its offset, or -1 if fx had to start over. */
@@ -520,7 +571,7 @@ function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], ba
 }
 
 /** Words for the objects' models and for a frame's objects in fx. */
-const MODEL_CAP = 1 << 20, OBJ_CAP = 1 << 18;
+const MODEL_CAP = 1 << 20, OBJ_CAP = 1 << 19;
 /** How near the doors and escapes are looked at, and the floor plans made (a few every 6 frames). */
 const FX_NEAR = 250, FX_PLAN = 80, FX_PLANS = 4;
 /** The room kinds, numbered as the shader has them. */

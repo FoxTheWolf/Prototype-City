@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.26 — Sombras dos objetos e sol com cor de verdade (2026-10-03)
+- De dia, postes, árvores, carros, pessoas, bancos e abrigos fazem sombra no chão, nas paredes e uns nos outros; a copa das árvores deixa passar o sol em manchas.
+- O sol tem a cor da hora: amarelado ao meio-dia, cada vez mais laranja perto do nascer e do pôr do sol, na luz e no disco do céu.
+- Um objeto colorido ao sol fica com a cor mais forte, em vez de clarear para o branco.
+- Os carros não são mais espelhos: a pintura reflete menos, mais desfocada, e só fica mais espelhada quando vista de lado.
+
 ## 0.R.25 — Fachadas sem cinza e carros brilhantes (2026-10-03)
 - As fachadas iluminadas pelos postes e letreiros não ficam mais amareladas e acinzentadas (o efeito de "papel queimado"): a luz clareia a cor da própria parede.
 - As vitrines mostram o interior da loja com a cor dele, em vez de um painel cinza; cada loja tem a parede pintada de uma cor.

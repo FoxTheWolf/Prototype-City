@@ -45,6 +45,85 @@ fn slotBulbs(c: u32, sym: u32, px: f32, pz: f32, hx: f32, hz: f32) -> u32 {
 }
 fn slotOn(c: u32, sym: u32, bx: i32, by: i32) -> bool { return select(symOn(sym - 1u, bx, by), bulbOn(c, bx, by), sym == 0u); }
 
+/**
+ * How much sun reaches world point P past the frame's street objects (1 lit, 0 shaded): a ray toward the sun
+ * (Ls, unit) against each outdoor object's parts, as the view's rays hit them (unleaned, true sizes). Leaves let
+ * some light through in flecks. Only objects whose cylinder the ray passes below the top of count.
+ */
+fn objShadow(P: vec3f, Ls: vec3f, mw: f32) -> f32 {
+  let OB = fx[1];
+  if (OB == 0u || fx[OB] == 0u || fx[OB + 7u] == 0u || Ls.z <= 0.02) { return 1.0; }
+  let objs = OB + fx[OB + 2u];
+  // the point cast down to the ground along the sun: its cell of the shadow grid holds the objects to test
+  let G = OB + fx[OB + 7u]; let N = fx[G + 2u]; let cs = fxf(G + 3u);
+  let qx = P.x - Ls.x * (P.z / Ls.z) - fxf(G); let qy = P.y - Ls.y * (P.z / Ls.z) - fxf(G + 1u);
+  if (qx < 0.0 || qy < 0.0) { return 1.0; }
+  let ci = u32(qx / cs); let cj = u32(qy / cs);
+  if (ci >= N || cj >= N) { return 1.0; }
+  let head = G + 4u; let list = head + N * N + 1u; let cell = cj * N + ci;
+  var lit = 1.0;
+  for (var li = fx[head + cell]; li < fx[head + cell + 1u]; li++) {
+    let j = fx[list + li];
+    let ob = objs + j * OW;
+    if (fx[ob + 14u] == 2u) { continue; } // indoor furniture
+    let x = fxf(ob); let y = fxf(ob + 1u); let r = fxf(ob + 4u); let zoff = fxf(ob + 9u); let top = fxf(ob + 5u) + zoff;
+    if (P.z >= top) { continue; }
+    // along the ray until it is above the object's top; its nearest pass by the axis on the ground plane
+    let tTop = (top - P.z) / Ls.z;
+    let rx = x - P.x; let ry = y - P.y; let L2 = max(1e-6, Ls.x * Ls.x + Ls.y * Ls.y);
+    let tc = clamp((rx * Ls.x + ry * Ls.y) / L2, 0.0, tTop);
+    let ex = rx - Ls.x * tc; let ey = ry - Ls.y * tc;
+    if (ex * ex + ey * ey > r * r) { continue; }
+    let c = fxf(ob + 2u); let s = fxf(ob + 3u);
+    let o = vec3f((P.x - x) * c + (P.y - y) * s, -(P.x - x) * s + (P.y - y) * c, P.z - zoff);
+    let d0 = vec3f(Ls.x * c + Ls.y * s, -Ls.x * s + Ls.y * c, Ls.z);
+    let d = select(d0, vec3f(1e-6), abs(d0) < vec3f(1e-6));
+    let mo = fx[ob + 15u]; let np = fx[mo];
+    for (var k = 0u; k < np; k++) {
+      let p = mo + 1u + k * PW;
+      let mat = fx[p + 10u];
+      if (mat == M_GLASS) { continue; }
+      let shape = fx[p]; let q0 = fx3(p + 1u); let q1 = fx3(p + 4u);
+      let cen = (q0 + q1) * 0.5; let hs = max((q1 - q0) * 0.5, vec3f(mw, mw, 0.01));
+      var hit = false; var hp = vec3f(0.0);
+      if (shape == 0u) {
+        let t0 = (cen - hs - o) / d; let t1 = (cen + hs - o) / d;
+        let tn = min(t0, t1); let tf = max(t0, t1);
+        let a = max(tn.x, max(tn.y, tn.z)); let b = min(tf.x, min(tf.y, tf.z));
+        hit = a <= b && b > 0.03; hp = o + d * max(a, 0.0);
+      } else {
+        let X = (o.x - cen.x) / hs.x; let Y = (o.y - cen.y) / hs.y; let DX = d.x / hs.x; let DY = d.y / hs.y;
+        if (shape == 1u) {
+          let qa = DX * DX + DY * DY; let qb = X * DX + Y * DY; let ds = qb * qb - qa * (X * X + Y * Y - 1.0);
+          if (ds >= 0.0 && qa > 1e-9) {
+            let ta = (-qb - sqrt(ds)) / qa; let tb = (-qb + sqrt(ds)) / qa;
+            // the span inside the circle, cut to the cylinder's height
+            let za = (cen.z - hs.z - o.z) / d.z; let zb = (cen.z + hs.z - o.z) / d.z;
+            let a = max(ta, min(za, zb)); let b = min(tb, max(za, zb));
+            hit = a <= b && b > 0.03; hp = o + d * max(a, 0.0);
+          }
+        } else {
+          let Z = (o.z - cen.z) / hs.z; let DZ = d.z / hs.z;
+          let qa = DX * DX + DY * DY + DZ * DZ; let qb = X * DX + Y * DY + Z * DZ; let ds = qb * qb - qa * (X * X + Y * Y + Z * Z - 1.0);
+          if (ds >= 0.0) { let tb = (-qb + sqrt(ds)) / qa; let ta = (-qb - sqrt(ds)) / qa; hit = tb > 0.03; hp = o + d * max(ta, 0.0); }
+        }
+      }
+      if (!hit) { continue; }
+      if (mat == M_LEAF) {
+        // a crown lets the sun through in flecks
+        let h = hash3(ifloor(hp.x / 0.4) + j32(ob), ifloor(hp.y / 0.4), ifloor(hp.z / 0.4));
+        lit = min(lit, select(0.0, 0.7, h < OBJ_LEAF_GAP));
+        if (lit <= 0.0) { return 0.0; }
+        continue;
+      }
+      return 0.0;
+    }
+  }
+  return lit;
+}
+fn j32(v: u32) -> i32 { return i32(v & 0xffffu); }
+const OBJ_LEAF_GAP = 0.25;
+
 // the objects over what the world drew in this cell, nearest wins (the cell's depth); (dz: the ray's rise per metre)
 fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell {
   var cl = cl0;

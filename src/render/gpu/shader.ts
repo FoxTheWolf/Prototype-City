@@ -96,14 +96,17 @@ const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u
 // materials (R.23): how rough a surface is (0 a mirror, 1 matte) and how much it reflects head-on (F0)
 const MAT_NONE = 0u; const MAT_ASPHALT = 1u; const MAT_CONCRETE = 2u; const MAT_BRICK = 3u; const MAT_GLASS = 4u; const MAT_METAL = 5u;
 const MAT_PAINT = 6u; const MAT_LEAF = 7u; const MAT_STONE = 8u; const MAT_WINDOW = 9u;
-const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.1, 1.0, 0.75, 0.05);
-const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.05, 0.25, 0.3, 0.02, 0.03, 0.04);
+// (a car's paint: a clear coat over a satin color, not chrome; its mirror only shows toward the edges, blurred)
+const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.35, 1.0, 0.75, 0.05);
+const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.05, 0.25, 0.1, 0.02, 0.03, 0.04);
 // each facade style's wall (office, glass, brick, historic, residential, warehouse, lit stripes, spire, ...)
 const WALL_MAT = array<u32, 16>(2u, 5u, 3u, 8u, 2u, 5u, 2u, 5u, 2u, 5u, 5u, 8u, 8u, 5u, 2u, 2u);
 /** How far a mirroring surface traces its reflection (m); past it, it mirrors the sky only. */
 const REFL_FAR_WALL = 260.0; const REFL_FAR_GROUND = 160.0;
 /** How far a car's paint mirrors the city (m); past it, the sky only. How much the paint's color tints what it mirrors (metallic flakes). */
-const REFL_FAR_CAR = 90.0; const CAR_METAL = 0.55;
+const REFL_FAR_CAR = 90.0; const CAR_METAL = 0.25;
+/** How far a rough surface's mirror ray is scattered per unit of roughness (a blurred reflection, dithered per cell). */
+const REFL_BLUR = 0.5;
 /** How saturated the palette color reads as albedo under a light: the palettes are near grey (their hue shows
  *  mostly through the city's orange haze), so a lit wall went grey; the light now takes a stronger version of the hue. */
 const LIT_SAT = 1.5;
@@ -114,7 +117,7 @@ const OBJ_NIGHT = 0.3;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
 /** The walls of the shops seen through their windows: mint, butter, salmon, sky, cream, red. */
 const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.0, 120.0), vec3f(220.0, 140.0, 115.0), vec3f(135.0, 180.0, 215.0), vec3f(220.0, 205.0, 170.0), vec3f(190.0, 80.0, 70.0));
-const LAMP_GLOSS = 1.2; const CAR_GLOSS = 2.5;
+const LAMP_GLOSS = 1.2; const CAR_GLOSS = 1.5;
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u; const KIND_ROOM = 5u;
 const BURN_START = ${f(BURN_START)};
 const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
@@ -1489,13 +1492,16 @@ fn nightTone(c: vec3f) -> vec3f {
 }
 /** A filmic tone curve (Narkowicz's fit of ACES): bright light rolls off instead of clipping to white. */
 fn acesL(x: f32) -> f32 { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
-/** The curve on the luminance only, so a bright color keeps its hue and saturation; past 1 it goes to white. */
+/** How far a color past 1 goes toward white (0: only scaled down, its hue kept). */
+const DAY_WHITE = 0.2;
+/** The curve on the luminance only, so a bright color keeps its hue and saturation. */
 fn tone(x: vec3f) -> vec3f {
   let L = dot(x, vec3f(0.2126, 0.7152, 0.0722));
   if (L < 1e-5) { return vec3f(0.0); }
   let Lt = acesL(L * DAY_EXPO); var y = x * (Lt / L);
   let mx = max(y.x, max(y.y, y.z));
-  if (mx > 1.0) { y = vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)); }
+  // past 1: mostly scaled down with its hue kept (a red car in the sun reads a stronger red), only a little toward white
+  if (mx > 1.0) { y = mix(y / mx, vec3f(Lt) + (y - vec3f(Lt)) * ((1.0 - Lt) / max(1e-4, mx - Lt)), DAY_WHITE); }
   return y;
 }
 // ---- materials: Fresnel (Schlick), the highlight's spread (GGX), the roughness with the wet film
@@ -1510,6 +1516,21 @@ fn sunGloss() -> f32 {
   let H = normalize(Ls + V); let lh = max(dot(Ls, H), 0.1);
   return min(40.0, ggx(max(dot(N, H), 0.0), matRough()) * fres(MAT_F0[gMat], lh) * 0.25 / (lh * lh) * nl);
 }
+// ---- the sun's color by its color temperature: a warm yellow-white high up, orange toward the horizon
+/** The sun's color temperature (K) at noon high and at the horizon, and the elevation (rad) where it is fully the high one. */
+const SUN_K_HIGH = 4700.0; const SUN_K_LOW = 1900.0; const SUN_K_EL = 0.55;
+fn sunTemp() -> f32 { return mix(SUN_K_LOW, SUN_K_HIGH, smoothK(-0.02, SUN_K_EL, u.sunEl)); }
+/** A black body's color at T kelvin, in sRGB 0-1 (Tanner Helland's fit), the strongest channel 1. */
+fn kelvin(T: f32) -> vec3f {
+  let t = clamp(T, 1000.0, 15000.0) / 100.0;
+  var c = vec3f(1.0);
+  if (t > 66.0) { c.x = 329.698727446 * pow(t - 60.0, -0.1332047592) / 255.0; c.y = 288.1221695283 * pow(t - 60.0, -0.0755148492) / 255.0; }
+  else { c.y = (99.4708025861 * log(t) - 161.1195681661) / 255.0; c.z = select(select((138.5177312231 * log(t - 10.0) - 305.0447927307) / 255.0, 0.0, t <= 19.0), 1.0, t >= 66.0); }
+  c = clamp(c, vec3f(0.0), vec3f(1.0));
+  return c / max(c.x, max(c.y, c.z));
+}
+/** The sunlight's color in linear light, its luminance 1 (the brightness is DAY_SUN's). */
+fn sunLin() -> vec3f { let l = pow(kelvin(sunTemp()), vec3f(2.2)); return l / max(1e-3, dot(l, vec3f(0.2126, 0.7152, 0.0722))); }
 // ---- the finish: moonlight, daylight and haze, a whole-city blackout (light), then the display modes (display)
 fn light(cl: Cell) -> Cell {
   var o = cl;
@@ -1552,8 +1573,7 @@ fn light(cl: Cell) -> Cell {
       // by day, lit as a 3D game does: the surface's color as its albedo (in linear light), times the
       // sky's light from above (bluish; whiter under clouds) and the sun's on what faces it and is not in
       // a building's shadow (gSun); then a filmic tone curve, and the haze only with distance
-      let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
-      let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
+      let sunC = sunLin();
       let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
       // the surface's own color without the light on it and from it
       var alb = pow(max(vec3f(0.0), o.c - emit - lamp) / 255.0, vec3f(2.2)) * DAY_ALBEDO;
@@ -1739,7 +1759,7 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   }
   if (sunK > 0.003) {
     let sk = sunK * (1.0 - 0.55 * cover);
-    r += 230.0 * sk; g += (205.0 - 60.0 * u.dusk) * sk; b += (170.0 - 90.0 * u.dusk) * sk;
+    let kc = kelvin(sunTemp()) * 240.0; r += kc.x * sk; g += kc.y * sk; b += kc.z * sk;
   }
   var o = Cell(32u, vec3f(0.0), vec3f(r, g, b), 1e9, KIND_OTHER, 0.0);
   if (star > r + 25.0 && !moonA) { o.ch = select(DOT, STAR, hs < 0.003); o.c = vec3f(star, star, star + 30.0); }
@@ -2175,6 +2195,8 @@ fn sunLit(px: f32, py: f32, pz: f32) -> f32 {
 }
 /** No building is taller than this (m): a shadow ray above it is out in the sun. */
 const SHADOW_TOP = 460.0;
+/** How far from the viewer the street objects' shadows are traced (m). */
+const OBJ_SHADOW_FAR = 120.0;
 /** This cell's sunlight after the shadows (sunLit), for finish. */
 var<private> gSun: f32 = 1.0;
 // what of the cell's color is light it gives off (a lit window, a sign, a lamp) and light it gets from the
@@ -2241,7 +2263,13 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     if (N.z > 0.5 && gMat != MAT_PAINT) { rw = min(rw, 0.7); } // a puddle never mirrors all of it
     if (rw > 0.03) {
       let t = cl.depth;
-      let R = gRay - 2.0 * dot(gRay, N) * N;
+      var R = gRay - 2.0 * dot(gRay, N) * N;
+      // a rough surface scatters its mirror: the ray turned a little per cell (a dithered blur)
+      if (r > 0.08) {
+        let jx = hash3(i32(gid.x), i32(gid.y), 31) - 0.5; let jy = hash3(i32(gid.x), i32(gid.y), 32) - 0.5; let jz = hash3(i32(gid.x), i32(gid.y), 33) - 0.5;
+        R = normalize(R + vec3f(jx, jy, jz) * (REFL_BLUR * r));
+        if (dot(R, N) < 0.02) { R = normalize(R + N * (0.02 - dot(R, N))); }
+      }
       let LR = length(R.xy); var mR = -R.z / max(LR, 1e-4);
       // the rain ripples the puddles: the reflection wavers up and down, a streak under each light
       if (N.z > 0.5 && u.rain > 0.0 && gMat != MAT_PAINT) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0 + 7.0 * hash3(i32(gid.x), i32(gid.y), 77))) - 0.5) * 0.05 * u.rain; } let rx = R.x / max(LR, 1e-4); let ry = R.y / max(LR, 1e-4);
@@ -2272,7 +2300,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   gSun = 1.0;
   if (u.day > 0.01 && u.sunZ > 0.0 && cl.depth < 3000.0 && cl.kind != KIND_ROOM) {
     let t = cl.depth;
-    gSun = sunLit(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
+    let P = vec3f(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
+    gSun = sunLit(P.x, P.y, P.z);
+    // and past the street objects (poles, trees, cars, people), near enough for their shadows to show
+    if (gSun > 0.0 && t < OBJ_SHADOW_FAR) {
+      let Ls = normalize(vec3f(u.sunX, u.sunY, u.sunZ));
+      let Nn = select(vec3f(0.0, 0.0, 1.0), gNrm, cl.depth == gTag);
+      // (parts thinner than a cell where the shadow falls are widened to half a cell, as drawing does, or a pole's shadow flickers away)
+      gSun *= objShadow(P + Nn * 0.06, Ls, 0.5 * u.colW * t);
+    }
   }
   let paint = gMat == MAT_PAINT;
   var lit = light(cl);
