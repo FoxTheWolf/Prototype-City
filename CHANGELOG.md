@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.3 — O mundo da GPU direto na tela (2026-10-02)
+- No modo J, o mundo vai da placa de vídeo direto para a tela, no mesmo quadro: um quadro novo do mundo a cada atualização da tela, sem o atraso e sem os engasgos de esperar o desenho.
+
 ## 0.R.2 — Primeiro mundo desenhado na GPU (2026-10-02)
 - Tecla J: um protótipo do mundo desenhado pela placa de vídeo (WebGPU), com ruas, prédios, janelas e céu, ainda sem luzes, carros, pessoas e letreiros. Serve para comparar com o desenho de hoje; aperte J de novo para voltar.
 

@@ -1,7 +1,6 @@
 import type { City } from '../../sim/city';
 import { FLOOR_H, SIDEWALK, LANE_W } from '../../sim/city';
 import type { World } from '../../sim/world';
-import type { CharGrid } from '../grid';
 import { VFOV, type View } from '../raycaster';
 import { CURVE_R } from '../sarcophagus';
 import { prepareSky } from '../sky';
@@ -11,8 +10,8 @@ import { prepareSky } from '../sky';
  * (street boundaries, blocks, buildings); a compute shader casts one 3D ray per cell (no y-shearing
  * per column: the same projection as the CPU's for now, so the two can be compared) and writes the
  * cell's glyph and colors. Only the ground, the walls with their windows, the roofs and the sky:
- * enough to measure. The cells are read back into the world's grid and the compositor of today
- * draws them (a frame of latency, like the workers); the final version will compose on the GPU.
+ * enough to measure. The compositor (compositor.ts) draws the cells in the same submit: the world
+ * reaches the screen in the frame it was drawn for, without coming back to the CPU.
  */
 
 const STYLES = ['office', 'glass', 'brick', 'historic', 'residential', 'warehouse', 'crown', 'spire', 'dome', 'tank', 'chimney', 'mech'];
@@ -205,16 +204,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 }
 `;
 
-/** One staging buffer the cells are read back through. */
-interface Slot { buf: GPUBuffer; state: 0 | 1 | 2; t0: number; ms: number }
-
 export class GpuWorld {
-  /** Time from sending a frame to its cells being back on the CPU (ms), and the last ready one's. */
-  ms = 0;
-  private cols = 0;
-  private rows = 0;
-  private out!: GPUBuffer;
-  private slots: Slot[] = [];
+  /** The cells of the last frame: glyph + fg per cell, then bg per cell (CharGrid's layout), read by the compositor. */
+  out!: GPUBuffer;
+  cols = 0;
+  rows = 0;
   private bind!: GPUBindGroup;
   private uni: GPUBuffer;
   private U = new Float32Array(UNI);
@@ -230,7 +224,7 @@ export class GpuWorld {
     return new GpuWorld(device, city);
   }
 
-  private constructor(private dev: GPUDevice, private city: City) {
+  private constructor(readonly dev: GPUDevice, private city: City) {
     const C = city;
     const blocks = new Float32Array(C.blocks.length * BLK);
     C.blocks.forEach((b, k) => {
@@ -253,65 +247,33 @@ export class GpuWorld {
     this.pipe = dev.createComputePipeline({ layout: 'auto', compute: { module: mod, entryPoint: 'main' } });
   }
 
-  /** The screen's size: new output and staging buffers (frames in flight are dropped). */
+  /** The screen's size: a new output buffer. */
   resize(cols: number, rows: number) {
     if (cols === this.cols && rows === this.rows) return;
     this.cols = cols; this.rows = rows;
-    const size = cols * rows * 8;
     this.out?.destroy();
-    this.slots.forEach((s) => s.buf.destroy());
-    this.out = this.dev.createBuffer({ size, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-    this.slots = [0, 1, 2].map(() => ({ buf: this.dev.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), state: 0 as const, t0: 0, ms: 0 }));
+    this.out = this.dev.createBuffer({ size: cols * rows * 8, usage: GPUBufferUsage.STORAGE });
     this.bind = this.dev.createBindGroup({
       layout: this.pipe.getBindGroupLayout(0),
       entries: [this.uni, ...this.bufs, this.out].map((buffer, binding) => ({ binding, resource: { buffer } })),
     });
   }
 
-  /**
-   * Called every screen refresh: copies the newest frame that came back into `out` (true), and sends
-   * the next one while fewer than two are on their way.
-   */
-  frame(world: World, v: View, out: CharGrid): boolean {
-    const { cols, rows } = this;
-    let got = false;
-    // the newest frame back; older ones are dropped
-    let newest: Slot | null = null;
-    for (const s of this.slots) if (s.state === 2 && (!newest || s.t0 > newest.t0)) newest = s;
-    if (newest) {
-      const words = new Uint32Array(newest.buf.getMappedRange());
-      const n = cols * rows;
-      new Uint32Array(out.cells.buffer, out.cells.byteOffset, n).set(words.subarray(0, n));
-      new Uint32Array(out.bg.buffer, out.bg.byteOffset, n).set(words.subarray(n, 2 * n));
-      this.ms = newest.ms; got = true;
-      for (const s of this.slots) if (s.state === 2 && s.t0 <= newest.t0) { s.buf.unmap(); s.state = 0; }
-    }
-    const busy = this.slots.filter((s) => s.state === 1).length, free = this.slots.find((s) => s.state === 0);
-    if (busy < 2 && free) {
-      const C = this.city;
-      const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
-      const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), sec = (world.tick + v.alpha) / 60;
-      const sky = prepareSky(C, world.power, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, sec);
-      const D = C.diagonal;
-      this.U.set([v.x, v.y, v.eye, dirX, dirY, -dirY * plane, dirX * plane, rows / 2 + Math.tan(v.pitch) * scale,
-        scale, cols, rows, sec, sky.day, v.look.solid, 0, 0,
-        C.nbx, C.xb.length, C.yb.length, CURVE_R, D.ox, D.oy, D.ex, D.ey,
-        D.nx, D.ny, D.w, 0, 0, 0, 0, 0]);
-      this.dev.queue.writeBuffer(this.uni, 0, this.U);
-      const enc = this.dev.createCommandEncoder(), pass = enc.beginComputePass();
-      pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
-      pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
-      pass.end();
-      enc.copyBufferToBuffer(this.out, 0, free.buf, 0, cols * rows * 8);
-      this.dev.queue.submit([enc.finish()]);
-      const slot = free, t0 = performance.now(), size = this.cols * this.rows;
-      slot.state = 1; slot.t0 = t0;
-      slot.buf.mapAsync(GPUMapMode.READ).then(() => {
-        // a resize meanwhile destroyed this buffer: forget the frame
-        if (this.cols * this.rows !== size || !this.slots.includes(slot)) return;
-        slot.ms = performance.now() - t0; slot.state = 2;
-      }, () => { slot.state = 0; });
-    }
-    return got;
+  /** This frame's world into `out`, as the first pass of the encoder (the compositor draws it in the same submit). */
+  encode(enc: GPUCommandEncoder, world: World, v: View) {
+    const { cols, rows } = this, C = this.city;
+    const scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * v.cellAspect) / scale;
+    const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), sec = (world.tick + v.alpha) / 60;
+    const sky = prepareSky(C, world.power, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, sec);
+    const D = C.diagonal;
+    this.U.set([v.x, v.y, v.eye, dirX, dirY, -dirY * plane, dirX * plane, rows / 2 + Math.tan(v.pitch) * scale,
+      scale, cols, rows, sec, sky.day, v.look.solid, 0, 0,
+      C.nbx, C.xb.length, C.yb.length, CURVE_R, D.ox, D.oy, D.ex, D.ey,
+      D.nx, D.ny, D.w, 0, 0, 0, 0, 0]);
+    this.dev.queue.writeBuffer(this.uni, 0, this.U);
+    const pass = enc.beginComputePass();
+    pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
+    pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
+    pass.end();
   }
 }

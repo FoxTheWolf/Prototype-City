@@ -18,6 +18,7 @@ import { pickedButton } from './render/interior';
 import { renderWorld, VIEW_GLINT, VIEW_LIGHT, type View } from './render/raycaster';
 import { RenderPool } from './render/pool';
 import { GpuWorld } from './render/gpu/world';
+import { GpuCompositor } from './render/gpu/compositor';
 import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer } from './render/hd';
 import { setHd } from './phone/lcd';
@@ -55,8 +56,11 @@ const workersParam = new URLSearchParams(location.search).get('workers');
 const nWorkers = workersParam !== null ? Math.max(0, Number(workersParam) | 0) : Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 2));
 const pool = nWorkers > 0 && RenderPool.available() ? new RenderPool(seed, undefined, nWorkers) : null;
 if (pool) resStep = 2;
-// stage R.2: the prototype of the world on the GPU (J switches it on and off; it starts on the first press)
-let gpu: GpuWorld | null = null, useGpu = false, gpuAsked = false;
+// stage R: the world drawn on the GPU (J switches it on and off; it starts on the first press). Its
+// compositor draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas)
+let gpu: GpuWorld | null = null, comp: GpuCompositor | null = null, useGpu = false, gpuAsked = false;
+const gpuCanvas = document.createElement('canvas');
+Object.assign(gpuCanvas.style, { position: 'fixed', left: '0', top: '0', width: '100vw', height: '100vh', pointerEvents: 'none', display: 'none' });
 
 const canvas = document.getElementById('screen') as HTMLCanvasElement;
 const overlay = document.getElementById('overlay')!;
@@ -86,7 +90,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool, gpuNow: () => gpu,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, pool, RenderPool, gpuNow: () => gpu, compNow: () => comp,
   // watch camera k as on the title (stopCctv to leave)
   watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
   // the world's characters; with ui = true the interface's (where it drew, else the world's under it at 80 rows)
@@ -351,7 +355,13 @@ addEventListener('keydown', (e) => {
     if (gpu) useGpu = !useGpu;
     else if (!gpuAsked && GpuWorld.available()) {
       gpuAsked = true;
-      GpuWorld.create(world.city).then((g) => { gpu = g; g.resize(layout.cols, layout.rows); useGpu = true; }, (err) => console.error('WebGPU:', err));
+      GpuWorld.create(world.city).then((g) => {
+        gpu = g; g.resize(layout.cols, layout.rows);
+        canvas.after(gpuCanvas); gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height;
+        comp = new GpuCompositor(g, gpuCanvas); comp.setLayout(layout, uiLayout);
+        if (termMode) { const T = termMode === 'fb' ? termFb : termTx, [cw, chh] = termCells[termMode]; comp.setTerm(T.cols, T.rows, cw, chh); }
+        useGpu = true;
+      }, (err) => console.error('WebGPU:', err));
     }
   }
   else if (e.code === 'KeyR') { resStep = (resStep + 1) % RES_ROWS.length; resize(); }
@@ -387,6 +397,7 @@ function resize() {
   pool?.resize(layout.cols, layout.rows);
   gpu?.resize(layout.cols, layout.rows);
   renderer.setLayout(layout, uiLayout);
+  if (comp) { gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height; comp.setLayout(layout, uiLayout); }
   if (cctv) dvrLayout();
 }
 
@@ -554,11 +565,13 @@ function frame(now: number) {
     Object.assign(view, { x: C.x, y: C.y, yaw: cctvYaw(C, (world.tick + alpha) / 60), pitch: C.pitch, eye: C.z - 0.1, floor: 0, z: 0, lift: false, hand: 0 });
   }
   let ms: number;
-  if (useGpu && gpu) {
-    // the GPU's frame comes back a refresh or two later, like the workers'
-    if (gpu.frame(world, view, shown)) worldFrames++;
-    grid.cells.set(shown.cells); grid.bg.set(shown.bg);
-    ms = gpu.ms;
+  // on the GPU the world is drawn with the rest of the screen at the end of the frame (the camera's
+  // picture and the opening still go through the CPU)
+  const onGpu = !!(useGpu && comp) && !cctv && !(introAt >= 0 && now / 1000 - introAt < INTRO_S);
+  gpuCanvas.style.display = onGpu ? 'block' : 'none';
+  if (onGpu) {
+    ms = comp!.ms;
+    worldFrames++;
   } else if (pool) {
     // the workers draw the next frame while this one shows the last they finished
     if (pool.frame(world, view, shown)) worldFrames++;
@@ -630,7 +643,7 @@ function frame(now: number) {
     // the screen layer's mode, and its place on the interface's grid
     // (the editor runs in the system's console, full screen; only the firmware is in text mode)
     const mode = laptop.shell.bios || laptop.shell.fw.mode ? 'tx' : 'fb', T = mode === 'fb' ? termFb : termTx, [cw, chh] = termCells[mode];
-    if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); }
+    if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); comp?.setTerm(T.cols, T.rows, cw, chh); }
     drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: (T.cols * cw) / uiLayout.cellW, termH: (T.rows * chh) / uiLayout.cellH });
     // while the lid opens, the view tips down to the screen
     if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
@@ -640,7 +653,7 @@ function frame(now: number) {
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${useGpu ? 'GPU R.2' : pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
+  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)}, ${useGpu ? 'GPU' : pool ? `${pool.n} WORKERS` : 'MAIN'})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
     + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
   ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
   const cal = calendar(world.time), wx = world.weather;
@@ -696,7 +709,9 @@ function frame(now: number) {
     ]);
   }
   const T3 = termMode === 'fb' ? termFb : termTx;
-  renderer.draw(grid, ui, hd, screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null);
+  const termAt = screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null;
+  if (onGpu) comp!.draw(world, view, ui, hd, termAt);
+  else renderer.draw(grid, ui, hd, termAt);
   requestAnimationFrame(frame);
 }
 
