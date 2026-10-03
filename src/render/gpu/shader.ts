@@ -935,9 +935,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // (a long wall's far end still drops to the far look: its cells would be smaller than a glyph)
   let tCut = min(FLOOR_H * u.scale / 2.2, BAY / (u.colW * 1.5));
   let tRef = length(vec2f(max(max(x0 - gOX, gOX - x1), 0.0), max(max(y0 - gOY, gOY - y1), 0.0)));
-  let detK = 1.0 - smoothstep(0.8 * tCut, 1.3 * tCut, tRef);
+  // (a tall tower's top, far from the eye though its foot is near, fades out over a band too: never a cut)
+  let detK = (1.0 - smoothstep(0.8 * tCut, 1.3 * tCut, tRef)) * (1.0 - smoothstep(1.6 * tCut, 2.2 * tCut, t));
   // the same for the rooms seen through the windows: the building's, not the cell's, so no cut runs across a tower
-  let peekK = 1.0 - smoothstep(0.7 * PEEK_FAR, 1.3 * PEEK_FAR, tRef);
+  let peekK = (1.0 - smoothstep(0.7 * PEEK_FAR, 1.3 * PEEK_FAR, tRef)) * (1.0 - smoothstep(1.8 * PEEK_FAR, 2.5 * PEEK_FAR, t));
   let detailed = t < tCut * 2.2 && detK > hash3(i32(floor(along * 4.0)), i32(floor(zw * 2.0)), bk + 913);
   // how fast the hit moves along the face, per unit of t
   var da = 0.0;
@@ -1193,7 +1194,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let capa = select(darkPane, wc * wk, capaLit);
     ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
     c = mix(capa, P.c, peekK); isWin = true; glass = true;
-    if (capaLit) { winGlow = wc * wk * (WIN_GLOW * peekK * smoothstep(GLOW_NEAR, 0.7 * PEEK_FAR, tRef)); c += winGlow; }
+    // (the lit pane is light, as in the far look, until the room takes over)
+    if (capaLit) { let gk = WIN_GLOW * peekK * smoothstep(GLOW_NEAR, 0.7 * PEEK_FAR, tRef); c += wc * wk * gk; winGlow = wc * wk * (1.0 - peekK + gk); }
   } else if (S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
@@ -2308,7 +2310,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       // the rain ripples the puddles: the reflection wavers up and down, a streak under each light
       if (N.z > 0.5 && u.rain > 0.0 && gMat != MAT_PAINT) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0 + 7.0 * hash3(i32(gid.x), i32(gid.y), 77))) - 0.5) * 0.05 * u.rain; } let rx = R.x / max(LR, 1e-4); let ry = R.y / max(LR, 1e-4);
       let ground = N.z > 0.5;
-      let mirror = (((gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05) && t < select(REFL_FAR_WALL, REFL_FAR_GROUND, ground)) || (gMat == MAT_PAINT && t < REFL_FAR_CAR)) && LR > 0.05;
+      // past its reach a surface mirrors only the sky; the city's reflection fades into it over the last stretch,
+      // so a tall tower's glass never shows a cut where its upper floors pass the reach
+      let farR = select(select(REFL_FAR_WALL, REFL_FAR_GROUND, ground), REFL_FAR_CAR, gMat == MAT_PAINT);
+      let skyK = smoothstep(0.65 * farR, farR, t);
+      let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05 || gMat == MAT_PAINT) && t < farR && LR > 0.05;
       let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sMat = gMat; let sN = gNrm; let sWet = gWet; let sRay = gRay;
       if (mirror) {
         gRefl = true;
@@ -2324,6 +2330,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           gSun = 1.0;
           let lc = light(rc); refl = lc.c; rGlow = gGlow;
         } else { refl = max(rc.bg, select(vec3f(0.0), rc.c, rc.ch != 32u)); }
+        if (skyK > 0.0) { refl = mix(refl, skyCell(mR, rx, ry).bg, skyK); rGlow *= 1.0 - skyK; }
       } else {
         let sk = skyCell(mR, rx, ry); refl = sk.bg;
       }

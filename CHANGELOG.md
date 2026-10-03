@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.30 — Vidro sem cortes no reflexo (2026-10-03)
+- Nas torres de vidro altas, o reflexo da cidade não acaba mais numa linha dura no meio da fachada (marrom embaixo, preto em cima): longe demais, ele se desfaz aos poucos no reflexo do céu.
+- O mesmo vale para os cômodos vistos pelas janelas e para o detalhe da fachada no alto de uma torre: somem aos poucos com a distância, sem uma linha.
+
 ## 0.R.29 — Janelas que não perdem a cor (2026-10-03)
 - Chegando perto de um prédio à noite, as janelas não trocam mais de repente de cores acesas para salas cinzas: a cor vista de longe some aos poucos no prédio inteiro, e as janelas acesas guardam um brilho dessa cor, que só se apaga bem de perto.
 - A passagem do prédio distante para o prédio com detalhes ficou suave, sem o pontilhado de cores.
