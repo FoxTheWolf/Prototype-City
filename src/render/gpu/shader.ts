@@ -4,6 +4,7 @@ import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_B
 import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
 import { LAMP_R, LIGHT_W } from '../lightmap';
+import { objectsWGSL } from './objects';
 
 /**
  * The world's compute shader (stage R): one invocation per cell. The walk through the street grid and
@@ -81,7 +82,7 @@ const DSIDE = ${SIDE};
 const DCELL = ${CELL}.0;
 const BLOCKS = array<u32, 256>(${Array.from(BLOCKS).map((b) => `${b}u`).join(',')});
 const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u, 90u, PLUS), vec3u(48u, O, EQ), vec3u(72u, HASH, EQ));
-const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u;
+const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u;
 const BURN_START = ${f(BURN_START)};
 // (lamp pool radius ${LAMP_R} m: baked into the light map on the CPU)
 
@@ -980,12 +981,14 @@ fn finish(cl: Cell) -> Cell {
   if (day > 0.01 || u.flash > 0.0) {
     let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
     let haze = vec3f(150.0, 160.0, 176.0);
-    let sunlit = o.kind == KIND_WALL;
+    // objects keep 2 + their share of sun (0: none, as the CPU's sun buffer left at 0)
+    let objSun = o.sun >= 2.0;
+    let sunlit = o.kind == KIND_WALL || objSun;
     if (day > 0.01 && (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit)) {
       let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
       let skyK = day * (0.36 + 0.3 * u.cloud); let dirK = 1.6 * day * (1.0 - 0.85 * u.cloud);
       let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
-      let share = select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK); let d = dirK * share;
+      let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun); let d = dirK * share;
       let gm = vec3f(1.0) + 2.2 * (vec3f(skyK * 0.92, skyK * 0.97, skyK * 1.08) + d * sunC) + vec3f(u.flash * 0.6);
       let lift = 24.0 * (skyK + d);
       o.c = sat((o.c * gm + lift * sunC) * (1.0 - f) + haze * f);
@@ -1000,10 +1003,10 @@ fn finish(cl: Cell) -> Cell {
   if (u.sharp < 3.0) {
     let s = u.sharp;
     var fill = 0.0;
-    if (o.kind == KIND_GROUND) { fill = 0.5; } else if (s == 0.0 && o.kind == KIND_WALL) { fill = 0.28; }
+    if (o.kind == KIND_GROUND) { fill = 0.5; } else if (o.kind == KIND_OBJECT && s < 2.0) { fill = 0.7; } else if (s == 0.0 && o.kind == KIND_WALL) { fill = 0.28; }
     if (fill > 0.0) {
       let fa = select(0.0, clamp((o.depth - 40.0) / 220.0, 0.0, 1.0), u.fuse > 0.5); let f = fa * fa * (3.0 - 2.0 * fa);
-      let glyph = select(0.78, 0.82, o.kind == KIND_GROUND) - 0.15 * f;
+      let glyph = select(select(0.78, 0.95, o.kind == KIND_OBJECT), 0.82, o.kind == KIND_GROUND) - 0.15 * f;
       let fl = fill + (0.5 - fill) * 0.45 * f;
       o.bg = o.c * fl; o.c *= glyph;
     }
@@ -1237,7 +1240,7 @@ fn craneCell(gx: i32, gy: i32, vis: f32) -> Cell {
   }
   return o;
 }
-
+${objectsWGSL()}
 fn store(i: u32, n: u32, cl: Cell) {
   let k = vec3u(clamp(cl.c, vec3f(0.0), vec3f(255.0)));
   outp[i] = cl.ch | (k.x << 8u) | (k.y << 16u) | (k.z << 24u);
@@ -1334,6 +1337,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let fX = select(select(1e9, -u.px / rdx, rdx < 0.0), (u.cityW - u.px) / rdx, rdx > 0.0);
   let fY = select(select(1e9, -u.py / rdy, rdy < 0.0), (u.cityH - u.py) / rdy, rdy > 0.0);
   let tf = min(fX, fY);
+  var cl = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
+  var done = false;
   if (tf > 0.05 && tf <= 2000.0 && tf < min(min(select(1e9, best, bk >= 0), tG), far.depth)) {
     let z = u.eye - m * tf + A * tf * tf;
     if (z >= 0.0 && z < 4.2) {
@@ -1347,22 +1352,24 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       }
       if (ch != 0u) {
         let k = 1.0 - min(1.0, tf / 1500.0) * 0.7;
-        store(i, n, finish(Cell(ch, vec3f(120.0, 120.0, 130.0) * k, vec3f(7.0, 8.0, 12.0), tf, KIND_OTHER, 0.0))); return;
+        cl = Cell(ch, vec3f(120.0, 120.0, 130.0) * k, vec3f(7.0, 8.0, 12.0), tf, KIND_OTHER, 0.0); done = true;
       }
     }
   }
-  if (bk >= 0 && best < tG && best < far.depth) {
-    if (roof) { store(i, n, finish(roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best))); return; }
-    // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
-    store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale, m, A)));
-    return;
+  if (!done) {
+    if (bk >= 0 && best < tG && best < far.depth) {
+      if (roof) { cl = roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best); }
+      // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
+      else { cl = wallCell(bk, best, bside, rdx, rdy, u.eye - m * best + A * best * best, best / u.scale, m, A); }
+    }
+    else if (tG < 1e8 && tG < far.depth) { cl = groundCell(tG, rdx, rdy); }
+    else if (far.depth < 1e9) { cl = far; }
+    // below the horizon, a ray the curve carries past the ground: the far ground, as on the CPU
+    else if (m > 0.0) { cl = groundCell(1e7, rdx, rdy); }
+    else { cl = skyCell(m, rdx, rdy); }
   }
-  if (tG < 1e8 && tG < far.depth) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }
-  if (far.depth < 1e9) { store(i, n, finish(far)); return; }
-
-  // below the horizon, a ray the curve carries past the ground: the far ground, as on the CPU
-  if (m > 0.0) { store(i, n, finish(groundCell(1e7, rdx, rdy))); return; }
-  store(i, n, skyCell(m, rdx, rdy));
+  // the street objects over all of it (the sky's depth is 1e9, so the finish leaves it as it is)
+  store(i, n, finish(objectsOver(cl, gid.x, gid.y, rdx, rdy, -m)));
 }
 `;
 }

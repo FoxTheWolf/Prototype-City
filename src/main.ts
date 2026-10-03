@@ -59,6 +59,8 @@ if (pool) resStep = 2;
 // stage R: the world drawn on the GPU (J switches it on and off; it starts on the first press). Its
 // compositor draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas)
 let gpu: GpuWorld | null = null, comp: GpuCompositor | null = null, useGpu = false, gpuAsked = false;
+/** The view of the last world frame drawn on the GPU (dev: cmpText). */
+let gpuView: View | null = null;
 const gpuCanvas = document.createElement('canvas');
 Object.assign(gpuCanvas.style, { position: 'fixed', left: '0', top: '0', width: '100vw', height: '100vh', pointerEvents: 'none', display: 'none' });
 
@@ -102,6 +104,30 @@ if (import.meta.env.DEV) Object.assign(window, {
     let s = '';
     for (let y = y0; y < y1; y++) { for (let x = x0; x < x1; x++) { const c = a[y * g.cols + x] & 255; s += c < 33 ? ' ' : String.fromCharCode(c); } s += '\n'; }
     return s;
+  },
+  // the GPU's cells and the CPU's drawn with the same view at the same moment, as two texts, and how many cells differ
+  cmpText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
+    if (!gpu || !gpuView) return null;
+    const g = gpu, size = g.cols * g.rows * 8, st = g.dev.createBuffer({ size, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    const e = g.dev.createCommandEncoder(); e.copyBufferToBuffer(g.out, 0, st, 0, size); g.dev.queue.submit([e.finish()]);
+    const cg = new CharGrid(g.cols, g.rows);
+    renderWorld(cg, world, gpuView);
+    await st.mapAsync(GPUMapMode.READ);
+    const a = new Uint32Array(st.getMappedRange().slice(0)); st.destroy();
+    x1 ??= g.cols; y1 ??= g.rows;
+    // (tint: the cells whose glyph color differs by more than 24 in a channel)
+    // (kinds: the differing glyphs by what drew them on the CPU, KIND)
+    let G = '', P = '', diff = 0, tint = 0;
+    const kinds = [0, 0, 0, 0, 0, 0];
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = y * g.cols + x, c = a[i] & 255, d = cg.cells[i * 4];
+        G += c < 33 ? ' ' : String.fromCharCode(c); P += d < 33 ? ' ' : String.fromCharCode(d); if ((c < 33 ? 32 : c) !== (d < 33 ? 32 : d)) { diff++; kinds[cg.kind[i]]++; }
+        for (let k = 1; k < 4; k++) if (Math.abs(((a[i] >>> (k * 8)) & 255) - cg.cells[i * 4 + k]) > 24) { tint++; break; }
+      }
+      G += '\n'; P += '\n';
+    }
+    return { gpu: G, cpu: P, diff, tint, kinds };
   },
   // watch camera k as on the title (stopCctv to leave)
   watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
@@ -583,6 +609,7 @@ function frame(now: number) {
   const onGpu = !!(useGpu && comp) && !cctv && !(introAt >= 0 && now / 1000 - introAt < INTRO_S);
   gpuCanvas.style.display = onGpu ? 'block' : 'none';
   if (onGpu) {
+    gpuView = view;
     ms = comp!.ms;
     worldFrames++;
   } else if (pool) {

@@ -1,7 +1,9 @@
 import { BAY, blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
 import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, planOf, tiersOf } from '../../sim/interior';
 import type { World } from '../../sim/world';
-import { gpuPrepare, REL, reliefOf, VFOV, type View } from '../raycaster';
+import { gpuObjects, gpuPrepare, REL, reliefOf, VFOV, type View } from '../raycaster';
+import type { Part } from '../objects';
+import { OW, PW, TILE } from './objects';
 import { CURVE_R } from '../sarcophagus';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
@@ -19,7 +21,8 @@ import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGS
  * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
  * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
  * ticker, the burnt ground, the fence, the Sarcophagus and its cranes, scaffolding and reliefs, the street doors and the fire escapes
- * drawn on the facades, the rooms seen through the windows. Not yet: the blade signs and billboards (objects), objects, cars, people, interiors,
+ * drawn on the facades, the rooms seen through the windows, and the objects (gpu/objects.ts: lamps, trees, furniture, blade
+ * signs, billboards, signals, cars, people, cameras, substations, sheds, the fire escapes' frames). Not yet: interiors,
  * the smoke, rain and snow falling, the glass of the windows indoors.
  */
 
@@ -68,6 +71,16 @@ export class GpuWorld {
   /** Per box: 1 where its ground (2k) or upper floors' (2k + 1) plan is in fx. */
   private fxPlan: Uint8Array;
   private fxScan = 0;
+  /** The objects' models in fx (from mBase, MODEL_CAP words; offsets kept by Part list) and the frame's objects (from oBase). */
+  private mBase = 0;
+  private mW: Uint32Array;
+  private mF: Float32Array;
+  private mEnd = 0;
+  private mSent = 0;
+  private models = new WeakMap<Part[], number>();
+  private oBase = 0;
+  private oW = new Uint32Array(OBJ_CAP);
+  private oF = new Float32Array(this.oW.buffer);
 
   static available(): boolean { return typeof navigator !== 'undefined' && 'gpu' in navigator; }
 
@@ -121,7 +134,11 @@ export class GpuWorld {
     this.fxW = new Uint32Array(FX_TAB + 3 * nb + (1 << 20)); this.fxF = new Float32Array(this.fxW.buffer);
     this.fxW[0] = nb;
     this.fxState = new Uint8Array(nb); this.fxPlan = new Uint8Array(nb * 2); this.fxEnd = FX_TAB + 3 * nb;
-    this.fx = store(this.fxW);
+    // after the facades and plans: the models, then the frame's objects (fx[1] says where)
+    this.mBase = this.fxW.length; this.oBase = this.mBase + MODEL_CAP; this.fxW[1] = this.oBase;
+    this.mW = new Uint32Array(MODEL_CAP); this.mF = new Float32Array(this.mW.buffer);
+    this.fx = dev.createBuffer({ size: (this.oBase + OBJ_CAP) * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    dev.queue.writeBuffer(this.fx, 0, this.fxW);
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
     this.subs = sz(64 * 16);
@@ -197,11 +214,109 @@ export class GpuWorld {
       starSlots: Math.round((cols * Math.PI) / Math.atan(plane)), tickN: Math.min(TICK_MAX, this.ticker.length),
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
+    this.objects(world, v, scale, plane, vals.hor);
     q.writeBuffer(this.uni, 0, U);
     const pass = enc.beginComputePass();
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
+  }
+
+  /** A model's offset in fx, written into the model area the first time it is seen (-1: the area is full). */
+  private model(parts: Part[]): number {
+    const at = this.models.get(parts);
+    if (at !== undefined) return at;
+    let chars = 0;
+    for (const p of parts) chars += p.text?.length ?? 0;
+    const n = 1 + parts.length * PW + chars;
+    if (this.mEnd + n > MODEL_CAP) return -1;
+    const W = this.mW, F = this.mF, o = this.mEnd;
+    let tx = o + 1 + parts.length * PW;
+    W[o] = parts.length;
+    parts.forEach((p, k) => {
+      const w = o + 1 + k * PW;
+      W[w] = p.shape; F[w + 1] = p.x0; F[w + 2] = p.y0; F[w + 3] = p.z0; F[w + 4] = p.x1; F[w + 5] = p.y1; F[w + 6] = p.z1;
+      F[w + 7] = p.col[0]; F[w + 8] = p.col[1]; F[w + 9] = p.col[2];
+      W[w + 10] = p.mat; W[w + 11] = p.side; W[w + 12] = p.top; W[w + 13] = p.end;
+      const t = p.text ?? '';
+      W[w + 14] = this.mBase + tx; W[w + 15] = t.length;
+      for (let c = 0; c < t.length; c++) W[tx++] = code(t, c);
+      W[w + 16] = p.sym === undefined || p.sym < 0 ? 0 : p.sym + 1;
+      const c2 = p.col2;
+      F[w + 17] = c2?.[0] ?? 0; F[w + 18] = c2?.[1] ?? 0; F[w + 19] = c2?.[2] ?? 0; W[w + 20] = c2 ? 1 : 0;
+      F[w + 21] = p.lamp ?? 0; W[w + 22] = p.bulbs ? 1 : 0; W[w + 23] = 0;
+    });
+    this.mEnd = tx;
+    this.models.set(parts, this.mBase + o);
+    return this.mBase + o;
+  }
+
+  /**
+   * The frame's objects (raycaster.ts, gpuObjects) into fx: each one's screen box (its bounding box's
+   * corners projected), the 8-column tiles it covers, and its model (sent once). When the model area
+   * fills, it starts over and the frame is packed again.
+   */
+  private objects(world: World, v: View, scale: number, plane: number, hor: number) {
+    const { cols, rows } = this, q = this.dev.queue;
+    const dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch), c3 = this.cam3d;
+    // the cone the objects are gathered in: the 3D camera turned up or down sees wider at its top or bottom rows
+    const den = cp - Math.abs(sp) * Math.tan(VFOV / 2);
+    const list = gpuObjects(world, v, cols, !c3 ? plane : den > 0.15 ? plane / den : 1e3);
+    const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
+    // a point on the screen, as cell edges (column, row), or false behind the eye
+    let px = 0, py = 0;
+    const proj = (X: number, Y: number, Z: number) => {
+      const rx = X - v.x, ry = Y - v.y, rz = Z - v.eye, f = rx * dirX + ry * dirY, lat = ry * dirX - rx * dirY;
+      if (!c3) { if (f < 0.3) return false; px = (cols / 2) * (1 + lat / (f * plane)); py = hor - (rz * scale) / f; return true; }
+      const d = f * cp + rz * sp;
+      if (d < 0.3) return false;
+      px = (cols / 2) * (1 + lat / (d * plane)); py = rows / 2 - ((-f * sp + rz * cp) / d) * scale; return true;
+    };
+    for (let pass = 0; pass < 2; pass++) {
+      box.length = 0; mods.length = 0; picked.length = 0;
+      let full = false;
+      for (let k = 0; k < list.length; k++) {
+        const { o, far, zoff } = list[k];
+        const tY = (o.x - v.x) * dirX + (o.y - v.y) * dirY;
+        if (tY + o.r < 0.3 || tY - o.r > far) continue;
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, behind = false;
+        const zl = (o.z0 ?? 0) + zoff - 0.4, zh = o.h + zoff + 0.4;
+        for (let c = 0; c < 8; c++) {
+          if (!proj(o.x + (c & 1 ? o.r : -o.r), o.y + (c & 2 ? o.r : -o.r), c & 4 ? zh : zl)) { behind = true; break; }
+          x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+        }
+        if (behind) { x0 = 0; x1 = cols; y0 = 0; y1 = rows; }
+        const bx0 = Math.max(0, Math.floor(x0) - 1), bx1 = Math.min(cols, Math.ceil(x1) + 1), by0 = Math.max(0, Math.floor(y0) - 1), by1 = Math.min(rows, Math.ceil(y1) + 1);
+        if (bx0 >= bx1 || by0 >= by1) continue;
+        const m = this.model(o.parts);
+        if (m < 0) { full = true; break; }
+        picked.push(k); mods.push(m); box.push(bx0, bx1, by0, by1);
+      }
+      if (!full) break;
+      this.models = new WeakMap(); this.mEnd = 0; this.mSent = 0;
+    }
+    if (this.mEnd > this.mSent) { q.writeBuffer(this.fx, (this.mBase + this.mSent) * 4, this.mW, this.mSent, this.mEnd - this.mSent); this.mSent = this.mEnd; }
+    // the tiles' lists: counted, then filled
+    const n = picked.length, W = this.oW, F = this.oF, cnt = new Uint32Array(nT + 1);
+    for (let j = 0; j < n; j++) for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) cnt[t]++;
+    const tab = 4, lst = tab + nT + 1;
+    let total = 0;
+    for (let t = 0; t < nT; t++) { W[tab + t] = total; total += cnt[t]; }
+    W[tab + nT] = total;
+    const ob = lst + total;
+    if (ob + n * OW > OBJ_CAP) { W[0] = 0; q.writeBuffer(this.fx, this.oBase * 4, W, 0, 1); return; }
+    const fill = cnt.fill(0);
+    for (let j = 0; j < n; j++) {
+      for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) W[lst + W[tab + t] + fill[t]++] = j;
+      const { o, far, zoff } = list[picked[j]], w = ob + j * OW, lean = o.lift !== undefined;
+      F[w] = o.x; F[w + 1] = o.y; F[w + 2] = o.c; F[w + 3] = o.s; F[w + 4] = o.r; F[w + 5] = o.h; F[w + 6] = o.z0 ?? 0;
+      W[w + 7] = o.seed | 0; F[w + 8] = far; F[w + 9] = zoff;
+      F[w + 10] = lean ? o.pitch ?? 0 : 0; F[w + 11] = lean ? o.roll ?? 0 : 0; F[w + 12] = lean ? o.lift ?? 0 : 0; F[w + 13] = o.wheel ?? 0;
+      W[w + 14] = lean ? 1 : 0; W[w + 15] = mods[j];
+      W[w + 16] = box[j * 4]; W[w + 17] = box[j * 4 + 1]; W[w + 18] = box[j * 4 + 2]; W[w + 19] = box[j * 4 + 3];
+    }
+    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst;
+    q.writeBuffer(this.fx, this.oBase * 4, W, 0, ob + n * OW);
   }
 
   /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
@@ -274,6 +389,8 @@ export class GpuWorld {
   }
 }
 
+/** Words for the objects' models and for a frame's objects in fx. */
+const MODEL_CAP = 1 << 20, OBJ_CAP = 1 << 18;
 /** How near the doors and escapes are looked at, and the floor plans made (a few every 6 frames). */
 const FX_NEAR = 250, FX_PLAN = 80, FX_PLANS = 4;
 /** The room kinds, numbered as the shader has them. */

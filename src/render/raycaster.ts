@@ -516,6 +516,38 @@ export function gpuPrepare(world: World, v: View) {
   return { sky, light, dyn, sun: SUN, ticker: frameTicker };
 }
 
+/**
+ * The objects a GPU frame draws (after gpuPrepare): the same lists renderWorld draws, each with the
+ * distance its fog ends at and how high it is lifted (a fire escape's floors: zoff).
+ */
+export function gpuObjects(world: World, v: View, cols: number, plane: number): { o: Obj; far: number; zoff: number }[] {
+  // what is outside the view's cone is not even built (seen), as in a render worker's strip
+  Object.assign(CULL, { px: v.x, py: v.y, dirX: Math.cos(v.yaw), dirY: Math.sin(v.yaw), plane, cols, x0: 0, x1: cols, all: false });
+  gatherRoofs(world, v);
+  const out = collectObjects(world, v).map((o) => ({ o, far: SPRITE_FAR, zoff: 0 }));
+  for (const o of gatherBoards(world, v, frameDay)) out.push({ o, far: BOARD_FAR, zoff: 0 });
+  for (const o of sheds) out.push({ o, far: SPRITE_FAR, zoff: 0 });
+  // the fire escapes, one object per floor (drawEscapes)
+  const { city } = world;
+  for (const blk of city.blocks) {
+    if (v.x < blk.x0 - 50 || v.x > blk.x1 + 50 || v.y < blk.y0 - 50 || v.y > blk.y1 + 50) continue;
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const B = city.buildings[k];
+      if (B.style !== 'brick' || B.tier !== 1 || B.feat >= 0.45) continue;
+      for (const e of escapesOf(city, k)) {
+        const cx = e.ox + e.ux * BAY, cy = e.oy + e.uy * BAY;
+        if (Math.hypot(cx - v.x, cy - v.y) > 50) continue;
+        const flip = e.nx * e.uy - e.ny * e.ux > 0 ? 1 : -1;
+        for (let f = 0; f <= e.top; f++) {
+          const parts = escapeModel(f > 0, f < e.top ? (f & 1 ? -flip : flip) : 0, BAY, (f & 1) === 1);
+          out.push({ o: { x: cx, y: cy, c: e.nx, s: e.ny, parts, r: 2, h: 4.6, seed: 0 }, far: 60, zoff: f * FLOOR_H });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */
 /**
  * A light held at the eye: everything drawn gets brighter by its distance (from the depth buffer),
