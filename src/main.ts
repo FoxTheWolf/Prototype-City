@@ -31,7 +31,8 @@ import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
-import { callLift, createWorld, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, type PlayerInput } from './sim/world';
+import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, type PlayerInput } from './sim/world';
+import { pace } from './core/steps';
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
@@ -46,10 +47,21 @@ const CELL_ASPECT = 0.6;
 const EYE = 1.7;
 const MOUSE_SENS = 0.0022;
 
+/** The loading bar on the title screen: how far (0..1) and what is being done; at 1 the buttons show. */
+function load(f: number, what: string) {
+  const L = document.getElementById('loading')!;
+  (L.querySelector('.fill') as HTMLElement).style.transform = `scaleX(${f})`;
+  L.querySelector('.what')!.textContent = `${what} ${'.'.repeat(1 + (Math.floor(performance.now() / 300) % 3))}`;
+  L.querySelector('.pct')!.textContent = `${Math.floor(f * 100)}%`;
+  if (f >= 1) { L.hidden = true; document.getElementById('ready')!.hidden = false; }
+}
+load(0.02, 'BOOTING');
+
 // ?seed=123 reproduces a city; otherwise every game rolls a new one. ?mute starts with the sound off.
 const seedParam = new URLSearchParams(location.search).get('seed');
 const seed = seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
-const world = createWorld(seed);
+// the city is made in steps, the page alive between them, with a bar on the title screen (load)
+const world = await pace(worldSteps(seed), (f) => load(0.04 + 0.84 * f, f < 0.05 ? 'LAYING OUT STREETS' : f < 0.1 ? 'WIRING THE GRID' : 'REGISTERING CITIZENS'));
 // the world is drawn on the GPU (WebGPU; stage R), from the moment the device is ready. Its compositor
 // draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas), which
 // still shows the cameras' monitor and the opening (pictures read back from the GPU and worked on here)
@@ -310,6 +322,8 @@ addEventListener('mouseup', (e) => {
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
 });
 addEventListener('keydown', (e) => {
+  // F3 hides and shows the debug lines (for clean screenshots), whatever is in the hands
+  if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
   // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
   if (cctv && (e.code === 'Escape' || (e.code === 'KeyC' && !cctv.title))) { stopCctv(); return; }
   if (cctv?.title) return;
@@ -410,6 +424,8 @@ function readInput(): PlayerInput {
 let sound: Sound | null = null;
 /** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
+/** The debug lines (status, clock, substation, where): F3 hides them. */
+let hudOn = true;
 let wasRiding = false, stride = 0, lastX = 0, lastY = 0;
 
 /** When the player first entered the city (the opening plays from there), or -1. */
@@ -417,6 +433,7 @@ let introAt = -1;
 /** The opening is switched off for now (the user did not like it, and it slows the tests). */
 const INTRO = false;
 function begin() {
+  if (!gpu) return; // still loading
   if (!sound) { sound = new Sound(); if (new URLSearchParams(location.search).has('mute')) sound.toggleMute(); }
   sound.resume();
   if (INTRO && introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
@@ -645,27 +662,29 @@ function frame(now: number) {
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
-  const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
-    + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
-  ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
-  const cal = calendar(world.time), wx = world.weather;
-  const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
-    + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY  POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} [K] `;
-  ui.text(ui.cols - clock.length - 1, ui.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
-  // debug: the nearest substation (a fenced yard), how far, which way and whether it runs
-  {
-    let k = 0, bd = Infinity;
-    world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
-    const S = world.power.subs[k], s = ` SUBSTATION ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}${S.yard ? '' : ' (NO YARD)'} `;
-    ui.text(ui.cols - s.length - 1, ui.rows - 3, s, S.on ? [140, 255, 170] : [255, 120, 90], [8, 10, 14]);
-  }
   const { city } = world, d = districtAt(city, p.x, p.y);
-  const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
-    + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
-  let lm = 0;
-  city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
-  const L = city.landmarks[lm];
-  ui.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
+  if (hudOn) {
+    const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})  `
+      + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+    ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
+    const cal = calendar(world.time), wx = world.weather;
+    const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
+      + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY  POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} [K] `;
+    ui.text(ui.cols - clock.length - 1, ui.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
+    // debug: the nearest substation (a fenced yard), how far, which way and whether it runs
+    {
+      let k = 0, bd = Infinity;
+      world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
+      const S = world.power.subs[k], s = ` SUBSTATION ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}${S.yard ? '' : ' (NO YARD)'} `;
+      ui.text(ui.cols - s.length - 1, ui.rows - 3, s, S.on ? [140, 255, 170] : [255, 120, 90], [8, 10, 14]);
+    }
+    const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
+      + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
+    let lm = 0;
+    city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
+    const L = city.landmarks[lm];
+    ui.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
+  }
   // the panel, while standing in a lift car; the chime when it arrives
   const nFloors = liftFloors(world);
   if (nFloors) {
@@ -714,8 +733,10 @@ addEventListener('resize', resize);
 document.fonts.load(`16px ${FONT}`).finally(() => {
   resize();
   requestAnimationFrame(frame);
-  if (!GpuWorld.available()) { overlay.querySelector('p')?.replaceChildren('WebGPU is required (a Chromium browser).'); return; }
+  if (!GpuWorld.available()) { load(0.88, 'WebGPU IS REQUIRED (A CHROMIUM BROWSER)'); return; }
+  load(0.9, 'COMPILING SHADERS');
   GpuWorld.create(world.city).then((g) => {
+    load(1, 'READY');
     gpu = g; g.resize(layout.cols, layout.rows);
     canvas.after(gpuCanvas); gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height;
     comp = new GpuCompositor(g, gpuCanvas); comp.setLayout(layout, uiLayout);

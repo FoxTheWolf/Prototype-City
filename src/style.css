@@ -26,3 +26,15 @@ body { background: var(--bg); color: var(--fg); font-family: var(--mono); overfl
   border: 0; padding: 10px 22px; cursor: pointer; }
 #overlay button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 #overlay button.alt { margin-left: 10px; color: var(--cyan); background: transparent; outline: 1px solid var(--cyan); }
+
+/* the loading bar: the fill moves by steps; the shine and the stripes are animated by the compositor, so they keep moving even while a step works */
+#loading { width: min(440px, 80vw); margin: 22px auto 0; cursor: default; }
+#loading[hidden], #ready[hidden] { display: none; }
+#loading .bar { position: relative; height: 14px; overflow: hidden; outline: 1px solid var(--amber-dim); outline-offset: 3px; }
+#loading .fill { position: absolute; inset: 0; transform-origin: left; transform: scaleX(0); transition: transform .25s ease-out;
+  background: repeating-linear-gradient(90deg, var(--amber) 0 10px, transparent 10px 13px); box-shadow: 0 0 12px rgba(255, 176, 74, .45); }
+#loading .shine { position: absolute; inset: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 236, 200, .55), transparent);
+  animation: shine 1.4s linear infinite; mix-blend-mode: screen; }
+@keyframes shine { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+#loading .status { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; letter-spacing: .1em; color: var(--amber-dim); }
+#loading .pct { color: var(--amber); }

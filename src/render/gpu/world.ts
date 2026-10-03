@@ -50,7 +50,8 @@ export class GpuWorld {
   cam3d = true;
   private uni: GPUBuffer;
   private U = new Float32Array(Math.ceil(UNIFORMS.length / 4) * 4);
-  private pipe: GPUComputePipeline;
+  private pipe!: GPUComputePipeline;
+  private mod: GPUShaderModule;
   /** The city's lists (fixed), then what changes: substations, light map, lamp colors, dynamic lights. */
   private fixed: GPUBuffer[];
   private subs: GPUBuffer;
@@ -107,7 +108,10 @@ export class GpuWorld {
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
     if (!adapter) throw new Error('no WebGPU adapter');
     const device = await adapter.requestDevice({ requiredLimits: { maxStorageBuffersPerShaderStage: Math.min(16, adapter.limits.maxStorageBuffersPerShaderStage) } });
-    return new GpuWorld(device, city);
+    const g = new GpuWorld(device, city);
+    // compiled off the main thread (the first compile takes seconds)
+    g.pipe = await device.createComputePipelineAsync({ layout: 'auto', compute: { module: g.mod, entryPoint: 'main' } });
+    return g;
   }
 
   private constructor(readonly dev: GPUDevice, private city: City) {
@@ -163,9 +167,8 @@ export class GpuWorld {
     this.subs = sz(64 * 16);
     this.lmap = sz(1024 * 1024 * 4 * 2);
     this.lampCol = sz(C.lamps.length * 12);
-    const mod = dev.createShaderModule({ code: worldWGSL() });
+    const mod = (this.mod = dev.createShaderModule({ code: worldWGSL() }));
     mod.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL ${m.lineNum}:${m.linePos} ${m.message}`)));
-    this.pipe = dev.createComputePipeline({ layout: 'auto', compute: { module: mod, entryPoint: 'main' } });
   }
 
   /** The screen's size: a new output buffer. */

@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.39 — Carregamento sem travar e F3 (2026-10-03)
+- A cidade é gerada sem travar a janela: a tela de título mostra uma barra de progresso com o que está sendo feito (ruas, rede elétrica, cidadãos, shaders), e os botões aparecem quando tudo está pronto.
+- **F3** esconde e mostra as linhas de debug (posição, FPS, relógio, subestação, endereço), para tirar capturas limpas.
+
 ## 0.R.38 — Tela inteira sem faixas pretas (2026-10-03)
 - A cidade preenche a tela toda, sem as faixas pretas em cima e embaixo: a opção de linhas (R) passa a definir o tamanho dos caracteres, e o jogo acrescenta as linhas que faltam. O celular fica sempre encostado na borda de baixo.
 

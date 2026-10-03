@@ -1,4 +1,5 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
+import { drain, type Steps } from '../core/steps';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, leavesOf, planOf } from './interior';
 import { TIME_SCALE } from './clock';
@@ -6,7 +7,7 @@ import { buildCctv, type Cctv } from './cctv';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
-import { generatePeople, noPeople, PEOPLE as PEOPLE_AT, type Population } from './citizens';
+import { noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { newFeed, stepSocial, type Feed } from './social';
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
 import { crashes, queues, roadGrip, spawnCars, stepCars, type Car } from './traffic';
@@ -93,9 +94,14 @@ const HIDE_R = 300, TURNOVER = 4;
 export const CITY_SIZE = 2000;
 
 /** people: false for a world that is only drawn (the render workers), which needs no citizens. */
-export function createWorld(seed: number, size = CITY_SIZE, people = true): World {
+export function createWorld(seed: number, size = CITY_SIZE, people = true): World { return drain(worldSteps(seed, size, people)); }
+
+/** createWorld in steps (0..1 along), for a loader that keeps the page alive. */
+export function* worldSteps(seed: number, size = CITY_SIZE, people = true): Steps<World> {
   const rng = mulberry32(seed);
+  yield 0;
   const city = generateCity(seed, size);
+  yield 0.05;
   // every city starts on a day of 2008 of its own, at nine in the evening
   const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;
   const cars = spawnCars(city, rng, Math.round(carsWanted(time) / 1.12));
@@ -107,8 +113,15 @@ export function createWorld(seed: number, size = CITY_SIZE, people = true): Worl
   const weather = newWeather();
   stepWeather(weather, seed, time, 0);
   const power = buildPower(seed, city);
+  yield 0.08;
   const telco = buildTelco(seed, city, power);
-  const pop = people ? generatePeople(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2)) : noPeople();
+  yield 0.1;
+  let pop = noPeople();
+  if (people) {
+    const g = peopleSteps(seed, city, telco, Math.round(PEOPLE_AT * (size / CITY_SIZE) ** 2));
+    for (let r = g.next(); ; r = g.next()) { if (r.done) { pop = r.value; break; } yield 0.1 + 0.85 * r.value; }
+  }
+  yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
   return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city) };

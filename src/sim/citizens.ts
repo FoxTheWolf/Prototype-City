@@ -1,4 +1,5 @@
 import { hash3, mulberry32 } from '../core/rng';
+import { drain } from '../core/steps';
 import { type City } from './city';
 import { floorsOf, habitable, isOffice, tiersOf } from './interior';
 import { MAKERS } from './device';
@@ -119,7 +120,10 @@ export const noPeople = (): Population => EMPTY;
 /**
  * Everyone, from the seed. Names are picks (the locale takes them modulo its lists). Numbers are drawn so they never clash with a business's or a payphone's.
  */
-export function generatePeople(seed: number, city: City, T: Telco, target = PEOPLE): Population {
+export function generatePeople(seed: number, city: City, T: Telco, target = PEOPLE): Population { return drain(peopleSteps(seed, city, T, target)); }
+
+/** generatePeople in steps: yields how far along (0..1) every so often, so a loader can let the page breathe. */
+export function* peopleSteps(seed: number, city: City, T: Telco, target = PEOPLE): Generator<number, Population> {
   const FIRST = 65536, LAST = 65536;
   const rnd = mulberry32(hash3(seed, 0xc171, 11) * 2 ** 32);
   const ri = (n: number) => Math.floor(rnd() * n);
@@ -127,6 +131,7 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   // --- homes: apartment slots in the residential buildings (not offices), floor by floor
   const slots: [number, number, number][] = [];
   const places: Workplace[] = [];
+  yield 0;
   city.buildings.forEach((B, k) => {
     if (B.tier !== 1 || B.round) return;
     const area = (B.x1 - B.x0) * (B.y1 - B.y0) * (B.cut ? 0.7 : 1);
@@ -161,7 +166,9 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   const first: number[] = [], last: number[] = [], age: number[] = [], spouse: number[] = [], home: number[] = [];
   const households: Household[] = [];
   const person = (h: number, ln: number, a: number) => { first.push(ri(FIRST)); last.push(ln); age.push(a); spouse.push(-1); home.push(h); return first.length - 1; };
+  yield 0.05;
   for (let h = 0; h < nh; h++) {
+    if ((h & 4095) === 0) yield 0.05 + 0.15 * (h / nh);
     const [building, floor, slot] = slots[h], m0 = first.length, fam = ri(LAST), r = rnd();
     if (r < 0.34) person(h, fam, 20 + ri(66));                                       // alone
     else if (r < 0.6) { const a = person(h, fam, 22 + ri(60)), b = person(h, fam, Math.max(19, age[m0] - 6 + ri(13))); spouse[a] = b; spouse[b] = a; } // a couple
@@ -175,6 +182,7 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   const n = first.length;
 
   // --- what each one does
+  yield 0.2;
   const role = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const a = age[i], r = rnd();
@@ -193,7 +201,9 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   const cum = new Float64Array(places.length);
   let tot = 0;
   cap.forEach((c, p) => { tot += places[p].kind === 'shop' ? c * 6 : c; cum[p] = tot; }); // shops hire first
+  yield 0.25;
   for (; w < workers.length; w++) {
+    if ((w & 8191) === 0) yield 0.25 + 0.1 * (w / workers.length);
     const x = rnd() * tot;
     let lo = 0, hi = places.length - 1;
     while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < x) lo = m + 1; else hi = m; }
@@ -202,6 +212,7 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   places.forEach((P) => delete (P as Partial<Workplace & { cap: number }>).cap);
 
   // --- the hours they keep: night shifts sleep by day; the rest by their nature
+  yield 0.35;
   const wake = new Uint8Array(n), bed = new Uint8Array(n), social = new Uint8Array(n), talk = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const a = age[i];
@@ -224,7 +235,9 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   };
   const cells = new Map<number, number[]>();
   for (let i = 0; i < n; i++) { if (age[i] < 14) continue; const c = near(i); let l = cells.get(c); if (!l) cells.set(c, (l = [])); l.push(i); }
+  yield 0.45;
   for (let i = 0; i < n; i++) {
+    if ((i & 8191) === 0) yield 0.45 + 0.2 * (i / n);
     if (age[i] < 14) continue;
     const want = 1 + Math.floor((social[i] / 255) * 3);
     for (let k = 0; k < want; k++) {
@@ -243,18 +256,21 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
   for (let k = 0; k < pairs.length; k += 2) { friendList[fill[pairs[k]]++] = pairs[k + 1]; friendList[fill[pairs[k + 1]]++] = pairs[k]; }
 
   // --- phones: a mobile for most adults (fewer of the old, some of the teenagers), a landline in most homes
+  yield 0.65;
   const byNum = new Map<string, number>();
   const taken = (s: string) => byNum.has(s) || T.byNum.has(s) || s === T.player.number.replace('-', '');
   let q = 0;
   const number = () => { let s = ''; while (!s || taken(s)) s = localNumber(seed, 200000 + q++); return s; };
   const phone = new Uint8Array(n).fill(255), mobile: string[] = new Array(n).fill('');
   for (let i = 0; i < n; i++) {
+    if ((i & 4095) === 0) yield 0.65 + 0.25 * (i / n);
     const a = age[i], p = a < 13 ? 0 : a < 18 ? 0.5 : a < 66 ? 0.88 : 0.55;
     if (rnd() >= p) continue;
     const r = rnd() * (a < 40 ? 1 : 0.75), tier = r < 0.5 ? 0 : r < 0.85 ? 1 : 2;
     phone[i] = ri(MAKERS) * 3 + tier;
     mobile[i] = number(); byNum.set(mobile[i], i);
   }
+  yield 0.9;
   households.forEach((H, h) => {
     const old = age[H.m0] > 50;
     if (rnd() < (old ? 0.92 : 0.62)) { H.line = number(); byNum.set(H.line, -1 - h); }
@@ -262,6 +278,7 @@ export function generatePeople(seed: number, city: City, T: Telco, target = PEOP
 
   // --- gender and pets: from hashes, so the draws above stay as they were. A couple is mostly a man
   // and a woman (some are two men or two women); a pet in about four homes in ten
+  yield 0.92;
   const gender = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const s = spouse[i];
