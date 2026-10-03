@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.25 — Fachadas sem cinza e carros brilhantes (2026-10-03)
+- As fachadas iluminadas pelos postes e letreiros não ficam mais amareladas e acinzentadas (o efeito de "papel queimado"): a luz clareia a cor da própria parede.
+- As vitrines mostram o interior da loja com a cor dele, em vez de um painel cinza; cada loja tem a parede pintada de uma cor.
+- Os carros refletem a cidade na lataria, com o reflexo tingido pela cor da pintura, e brilham mais debaixo dos postes.
+- O sol ilumina mais forte o que bate nele.
+- Na chuva, cada pingo respinga no seu tempo, com um anel menor e mais transparente.
+
 ## 0.R.24 — Materiais e reflexos (2026-10-03)
 - Com chuva, o asfalto molhado reflete a cidade de verdade: os letreiros de neon, as janelas acesas e as torres aparecem espelhados nas poças, tremendo com a chuva.
 - As fachadas de vidro refletem os prédios da frente e o céu, mais forte quando vistas de lado, como vidro de verdade.

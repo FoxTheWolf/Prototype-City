@@ -96,16 +96,25 @@ const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u
 // materials (R.23): how rough a surface is (0 a mirror, 1 matte) and how much it reflects head-on (F0)
 const MAT_NONE = 0u; const MAT_ASPHALT = 1u; const MAT_CONCRETE = 2u; const MAT_BRICK = 3u; const MAT_GLASS = 4u; const MAT_METAL = 5u;
 const MAT_PAINT = 6u; const MAT_LEAF = 7u; const MAT_STONE = 8u; const MAT_WINDOW = 9u;
-const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.22, 1.0, 0.75, 0.05);
-const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.12, 0.25, 0.05, 0.02, 0.03, 0.05);
+const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.1, 1.0, 0.75, 0.05);
+const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.05, 0.25, 0.3, 0.02, 0.03, 0.04);
 // each facade style's wall (office, glass, brick, historic, residential, warehouse, lit stripes, spire, ...)
 const WALL_MAT = array<u32, 16>(2u, 5u, 3u, 8u, 2u, 5u, 2u, 5u, 2u, 5u, 5u, 8u, 8u, 5u, 2u, 2u);
 /** How far a mirroring surface traces its reflection (m); past it, it mirrors the sky only. */
 const REFL_FAR_WALL = 260.0; const REFL_FAR_GROUND = 160.0;
+/** How far a car's paint mirrors the city (m); past it, the sky only. How much the paint's color tints what it mirrors (metallic flakes). */
+const REFL_FAR_CAR = 90.0; const CAR_METAL = 0.55;
+/** How saturated the palette color reads as albedo under a light: the palettes are near grey (their hue shows
+ *  mostly through the city's orange haze), so a lit wall went grey; the light now takes a stronger version of the hue. */
+const LIT_SAT = 1.5;
+/** How much of a lamp's own hue a facade takes (0: only its brightness). */
+const WALL_LAMP_HUE = 0.3;
 /** At night, how much darker the street objects' paint reads than its palette color (as the walls' palette is). */
 const OBJ_NIGHT = 0.3;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
-const LAMP_GLOSS = 1.2;
+/** The walls of the shops seen through their windows: mint, butter, salmon, sky, cream, red. */
+const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.0, 120.0), vec3f(220.0, 140.0, 115.0), vec3f(135.0, 180.0, 215.0), vec3f(220.0, 205.0, 170.0), vec3f(190.0, 80.0, 70.0));
+const LAMP_GLOSS = 1.2; const CAR_GLOSS = 2.5;
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u; const KIND_ROOM = 5u;
 const BURN_START = ${f(BURN_START)};
 const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
@@ -388,7 +397,7 @@ fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32) -> vec3f
   }
   if (!(commonPart || hash3(boxId, r * 31 + f, 11) < select(bld[lq + 11u] * (1.0 - 0.75 * u.day) * 1.3, 0.8, kind == R_SHOP))) { return vec3f(0.0); }
   let st = i32(bld[lq + 10u]); let office = st == 0 || st == 1;
-  let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(215.0, 232.0, 255.0), office || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
+  let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(215.0, 232.0, 255.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
   return c / 255.0 * elec;
 }
 fn lampD2(ro: u32, x: f32, y: f32) -> f32 {
@@ -450,7 +459,9 @@ fn wallPx(kind: u32, unit: i32, zr: f32, uu: f32) -> Px {
   }
   if (kind == R_STAIR) { return Px(SEMI, vec3f(135.0, 135.0, 130.0)); }
   if (kind == R_LIFT) { return Px(BAR, vec3f(165.0, 170.0, 175.0)); }
-  if (kind == R_OFFICE || kind == R_OPEN || kind == R_SHOP) { return Px(COL, vec3f(165.0, 165.0, 160.0)); }
+  if (kind == R_OFFICE || kind == R_OPEN) { return Px(COL, vec3f(165.0, 165.0, 160.0)); }
+  // a shop painted in its own color (a grey one under cool lamps read as a grey slab through the window)
+  if (kind == R_SHOP) { return Px(COL, SHOP_PAINT[u32(hash3(unit, 7, 13) * 6.0) % 6u]); }
   // homes: each one papered or painted in its own way
   let c = PAINT[u32((((unit * 7 + 3) % 6) + 6) % 6)]; let h = hash3(unit, 5, 9); let pu = ((uu / 0.4) % 1.0 + 1.0) % 1.0;
   var ch = COL;
@@ -550,11 +561,12 @@ fn peekCell(o: u32, lot: i32, boxId: i32, pk: Peek, f: i32, rdx: f32, rdy: f32, 
   else { p = wallPx(kind, unit, zw - z0, pk.uu); }
   let ch = p.ch; let c = p.c;
   let sh = select(1.0, pk.shade, part == 1);
-  // under the glass: a faint tint, and the sky and the city mirrored in soft bands (by day the reflection wins)
-  let s2 = sheen * sheen; let gk = 0.55 - 0.2 * u.day - 0.3 * s2;
+  // under the glass: a faint cold tint (the reflection itself is the finish's, R.24: the old painted bands of sky
+  // over the room turned a warm lit shop grey)
+  let gk = 0.62 - 0.2 * u.day;
   var lc = c * L * sh;
   if (part == 3 && F.glow) { lc = c * select(0.25, 1.0, lp.x + lp.y > 0.05); } // a lamp: lit when the room is
-  return Px(ch, lc * gk + vec3f(16.0 + s2 * 95.0 + u.day * 55.0, 30.0 + s2 * 110.0 + u.day * 65.0, 40.0 + s2 * 130.0 + u.day * 80.0));
+  return Px(ch, lc * gk + vec3f(8.0, 12.0, 18.0));
 }
 /** Window openings of a facade style, as wallColumn draws them (windowHole). */
 fn windowHole(S: i32, shop: bool, fw: f32, fz: f32, z: f32, ground: bool) -> bool {
@@ -1428,13 +1440,15 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     c *= vec3f(1.0 - 0.2 * wk, 1.0 - 0.2 * wk, 1.0 - 0.17 * wk);
     lk = 1.0 + 1.1 * wk * select(1.0, 0.75 + 0.25 * sin(u.sec * 7.0 + hv * 30.0), u.rain > 0.0);
     if (u.rain > 0.0 && rd < 22.0 && !underRoof(wx, wy, 0.1)) {
-      // splashes: a ring that grows from a random spot of each 0.33 m square, for a blink, more in a
-      // downpour; a cell at a distance covers more ground (e), so there it shrinks to a dot
-      let sx = ifloor(wx * 3.0); let sy = ifloor(wy * 3.0); let ph = fract(u.sec * 2.3 + hash3(sx, sy, 41));
-      if (hash3(sx, sy, 42) < u.rain * 0.3 && ph < 0.09) {
-        let d = length(vec2f(wx - (f32(sx) + 0.2 + 0.6 * hash3(sx, sy, 43)) / 3.0, wy - (f32(sy) + 0.2 + 0.6 * hash3(sx, sy, 44)) / 3.0));
-        let e = rd * rd / (max(gOZ, 0.5) * u.scale) * 0.5; let rr = 0.02 + ph * 1.1;
-        if (abs(d - rr) < max(0.015, e)) { ch = select(O, TICK, rr < 0.05 || e > 0.04); c = vec3f(150.0, 150.0, 165.0); }
+      // splashes: each 0.33 m square takes a drop now and then at its own pace (0.3-1.1 s), each at a new
+      // random spot: a small faint ring for a blink; a cell at a distance covers more ground (e), so there a dot
+      let sx = ifloor(wx * 3.0); let sy = ifloor(wy * 3.0);
+      let per = 0.3 + 0.8 * hash3(sx, sy, 45); let tt = u.sec / per + hash3(sx, sy, 41); let cyc = ifloor(tt);
+      let ph = fract(tt) * per;
+      if (hash3(sx * 7 + cyc, sy - cyc * 3, 42) < u.rain * 0.45 && ph < 0.1) {
+        let d = length(vec2f(wx - (f32(sx) + 0.2 + 0.6 * hash3(sx + cyc * 13, sy, 43)) / 3.0, wy - (f32(sy) + 0.2 + 0.6 * hash3(sx, sy + cyc * 11, 44)) / 3.0));
+        let e = rd * rd / (max(gOZ, 0.5) * u.scale) * 0.5; let rr = 0.01 + ph * 0.5;
+        if (abs(d - rr) < max(0.01, e)) { ch = select(O, TICK, rr < 0.03 || e > 0.03); c = mix(c, vec3f(150.0, 150.0, 165.0), 0.4 * (1.0 - ph / 0.1)); }
       }
     }
   }
@@ -1451,7 +1465,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
 }
 
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
-const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 3.0; const DAY_GROUND = 1.8;
+const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 4.2; const DAY_GROUND = 1.8;
 /** The brightest a surface reflects (its hue kept), how much more saturated the day shows the colors, and the exposure. */
 const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
 /** By day, how strongly the lamps' light reaches a surface, and how bright what glows reads. */
@@ -1499,8 +1513,12 @@ fn sunGloss() -> f32 {
 // ---- the finish: moonlight, daylight and haze, a whole-city blackout (light), then the display modes (display)
 fn light(cl: Cell) -> Cell {
   var o = cl;
-  gGlow = 0.0;
+  gGlow = 0.0; gTint = vec3f(1.0);
   if (o.depth >= 1e9) { return o; }
+  if (o.depth == gTag) {
+    let b0 = max(vec3f(0.0), o.c - gEm - gIl); let m0 = max(b0.x, max(b0.y, b0.z));
+    if (m0 > 12.0) { let s0 = max(vec3f(0.0), mix(vec3f(dot(b0, vec3f(0.2126, 0.7152, 0.0722))), b0, LIT_SAT)); gTint = s0 / max(1.0, max(s0.x, max(s0.y, s0.z))); }
+  }
   // the light this cell gives off and gets from the lamps, if it was made where it was marked
   let tagged = o.depth == gTag;
   let emit = select(vec3f(0.0), gEm, tagged); var lamp = select(vec3f(0.0), gIl, tagged);
@@ -1509,16 +1527,20 @@ fn light(cl: Cell) -> Cell {
   // strongest channel, so the dark night colors still show the light (a darker wall, a bit less)
   if (tagged && lamp.x + lamp.y + lamp.z > 0.5) {
     let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
-    let tint = mix(vec3f(1.0), base / max(mb, 1.0), smoothK(2.0, 12.0, mb));
+    let sb = max(vec3f(0.0), mix(vec3f(dot(base, vec3f(0.2126, 0.7152, 0.0722))), base, LIT_SAT)); let ms = max(sb.x, max(sb.y, sb.z));
+    let tint = mix(vec3f(1.0), sb / max(ms, 1.0), smoothK(2.0, 12.0, mb)); gTint = tint;
     // a surface reflects in proportion to how light it is: dark glass under a white lamp stays dark and
     // keeps its hue, a pale sidewalk takes the full pool
-    var nl = lamp * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
+    // on a facade the lamp mostly brightens the wall's own color, with only a touch of its hue: the sodium's
+    // orange times a blue or beige wall made a scorched-paper yellow-grey where the light fell (the ground keeps its pools)
+    let lc = select(lamp, mix(vec3f(dot(lamp, vec3f(0.2126, 0.7152, 0.0722))), lamp, WALL_LAMP_HUE), o.kind == KIND_WALL);
+    var nl = lc * tint * (LAMP_REFL * clamp(mb / NIGHT_ALB_REF, 0.22, 1.25));
     // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color
-    if (gMat != MAT_NONE) { let r = matRough(); nl += lamp * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * LAMP_GLOSS); }
+    if (gMat != MAT_NONE) { let r = matRough(); nl += lamp * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * select(LAMP_GLOSS, CAR_GLOSS, gMat == MAT_PAINT)); }
     o.c = base + emit + nl; lamp = nl;
   }
   gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * u.day) * select(1.0, gGlowK, tagged);
-  if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = sat(o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); }
+  if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = max(vec3f(0.0), o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); } // (not clamped: a lit color over 255 cut per channel here went yellow-grey and white before the night's curve)
   let day = u.day;
   if (day > 0.01 || u.flash > 0.0) {
     let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
@@ -1552,7 +1574,7 @@ fn light(cl: Cell) -> Cell {
     } else {
       // rooms keep their own lamps' light (brightened, a green plant read almost white)
       let amb = 1.0 + select(0.7, 0.1, o.kind == KIND_ROOM) * day + u.flash * 0.6;
-      o.c = sat(o.c * amb * (1.0 - f) + haze * f);
+      o.c = max(vec3f(0.0), o.c * amb * (1.0 - f) + haze * f);
     }
   }
   // a blackout darkens what is lit by the city's glow, not the lights: what still shines (a generator's
@@ -2168,6 +2190,8 @@ var<private> gGlowK: f32 = 1.0;
 var<private> gMat: u32 = 0u;
 var<private> gNrm: vec3f = vec3f(0.0, 0.0, 1.0);
 var<private> gWet: f32 = 0.0;
+// the hue of this cell's surface (its palette color, saturated, max channel 1), for the light and the paint's reflection
+var<private> gTint: vec3f = vec3f(1.0);
 // this cell's ray (unit, the way it travels)
 var<private> gRay: vec3f = vec3f(1.0, 0.0, 0.0);
 // where the rays through the city start (the eye; a mirror's spot for a reflection), and whether it is one
@@ -2214,15 +2238,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (cl.depth == gTag && cl.depth < 1e8 && gMat != MAT_NONE) {
     let N = gNrm; let nv = max(1e-3, -dot(N, gRay)); let r = matRough();
     rw = fres(MAT_F0[gMat], nv) * (1.0 - r) * (1.0 - r);
-    if (N.z > 0.5) { rw = min(rw, 0.7); } // a puddle never mirrors all of it
+    if (N.z > 0.5 && gMat != MAT_PAINT) { rw = min(rw, 0.7); } // a puddle never mirrors all of it
     if (rw > 0.03) {
       let t = cl.depth;
       let R = gRay - 2.0 * dot(gRay, N) * N;
       let LR = length(R.xy); var mR = -R.z / max(LR, 1e-4);
       // the rain ripples the puddles: the reflection wavers up and down, a streak under each light
-      if (N.z > 0.5 && u.rain > 0.0) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0)) - 0.5) * 0.05 * u.rain; } let rx = R.x / max(LR, 1e-4); let ry = R.y / max(LR, 1e-4);
+      if (N.z > 0.5 && u.rain > 0.0 && gMat != MAT_PAINT) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0 + 7.0 * hash3(i32(gid.x), i32(gid.y), 77))) - 0.5) * 0.05 * u.rain; } let rx = R.x / max(LR, 1e-4); let ry = R.y / max(LR, 1e-4);
       let ground = N.z > 0.5;
-      let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05) && t < select(REFL_FAR_WALL, REFL_FAR_GROUND, ground) && LR > 0.05;
+      let mirror = (((gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05) && t < select(REFL_FAR_WALL, REFL_FAR_GROUND, ground)) || (gMat == MAT_PAINT && t < REFL_FAR_CAR)) && LR > 0.05;
       let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sMat = gMat; let sN = gNrm; let sWet = gWet; let sRay = gRay;
       if (mirror) {
         gRefl = true;
@@ -2250,7 +2274,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let t = cl.depth;
     gSun = sunLit(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
   }
+  let paint = gMat == MAT_PAINT;
   var lit = light(cl);
+  if (paint) { refl *= mix(vec3f(1.0), gTint, CAR_METAL); }
   if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }
   store(i, n, fallOver(handOver(display(lit), gid.x, gid.y), rdx, rdy, m, inc.nearT));
 }
