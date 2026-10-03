@@ -1,6 +1,6 @@
 import { type City } from '../sim/city';
 import { LAMP_LIGHT, lampState, photocell } from './lamps';
-import { power } from './power';
+import { power, smoothPower } from './power';
 import { type PowerGrid } from '../sim/power';
 
 /** Side of the baked window in metres. */
@@ -71,6 +71,8 @@ export class LightWindow {
   update(sec: number, day: number, grid: PowerGrid) {
     const lamps = this.city!.lamps, c = this.col, cx = this.ox + W / 2, cy = this.oy + W / 2;
     let on = 0, all = 0;
+    // each substation's share lit, as a straight line in time (no sparks), for the glow over everything
+    const smooth = grid.subs.map((_, k) => smoothPower(grid, k, sec, this.city!.w, this.city!.h));
     for (const n of this.inWindow) {
       const t = lamps[n].lampType ?? 'hps', L = LAMP_LIGHT[t];
       lampState(n, sec, this.st, t);
@@ -79,7 +81,7 @@ export class LightWindow {
       const pw = power(grid, grid.lamp[n], lamps[n].x, lamps[n].y, n + 100000, 0, sec);
       this.st[0] *= Math.min(1.3, pw[0]);
       const wd = 1 / (1 + ((lamps[n].x - cx) ** 2 + (lamps[n].y - cy) ** 2) / (120 * 120));
-      on += wd * Math.min(1, pw[0]); all += wd;
+      on += wd * smooth[grid.lamp[n]]; all += wd;
       if (pw[1] >= 0 && t !== 'led') this.st[1] = Math.min(this.st[1], pw[1] / 9);
       const lv = (this.level[n] = this.st[0]), w = (this.warm[n] = this.st[1]);
       for (let k = 0; k < 3; k++) c[n * 3 + k] = (L.cold[k] + (L.warm[k] - L.cold[k]) * w) * lv;

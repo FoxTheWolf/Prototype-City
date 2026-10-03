@@ -43,3 +43,18 @@ export function power(p: PowerGrid, sub: number, x: number, y: number, id: numbe
   PW[0] = t < 0.7 && hash3(id, Math.floor(t * 18), 406) < 0.5 ? 0.15 : 1;
   return PW;
 }
+
+/**
+ * The share of one substation's elements lit now, without the flicker: a straight line from the
+ * switch to the moment the ring has crossed the whole city (w x h) going down, or the last building
+ * has come back going up. For the light over everything (the city's glow), which should fall and
+ * rise at a steady rate instead of following each lamp's sparks.
+ */
+export function smoothPower(p: PowerGrid, sub: number, sec: number, w: number, h: number): number {
+  const S = p.subs[sub];
+  if (S.changed < 0) return 1;
+  const since = sec - S.changed / 60;
+  const far = Math.hypot(Math.max(S.ox, w - S.ox), Math.max(S.oy, h - S.oy));
+  if (!S.on) return 1 - Math.min(1, Math.max(0, since / (far / WAVE + 0.9)));
+  return Math.min(1, Math.max(0, (since - 0.4) / (11.4 + far / WAVE / 2)));
+}

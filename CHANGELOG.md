@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.21d — Apagão suave e a cidade laranja de longe (2026-10-03)
+- No apagão, a cidade escurece num ritmo constante até o anel chegar à borda, em vez de piscar enquanto escurece; na volta, clareia do mesmo jeito.
+- As luzes não são mais escurecidas junto com a cidade: no apagão, o que continua aceso (faróis, prédios com gerador, letreiros voltando) brilha mais forte contra o escuro.
+- De longe, a cidade à noite fica envolta numa névoa laranja das luzes da rua, e o brilho sobre ela no céu é bem mais forte.
+
 ## 0.R.21c — Luz na cor das coisas (2026-10-03)
 - À noite, a luz dos postes e letreiros toma a cor da parede: o tijolo vermelho fica vermelho-alaranjado sob o sódio, em vez de cinza estourado, e as janelas acesas não deixam mais uma auréola cinza na fachada.
 - Os postes de sódio estão mais laranjas e mais fortes.

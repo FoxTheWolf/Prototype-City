@@ -77,6 +77,8 @@ const BAY = ${BAY};
 const SIDEWALK = ${SIDEWALK};
 const LANE_W = ${LANE_W};
 const FOG = 1500.0;
+// how much of a far thing the city's orange glow covers at night (finish)
+const NIGHT_HAZE = 0.42;
 const LIT_H = 9.0;
 const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
@@ -1495,8 +1497,21 @@ fn finish(cl: Cell) -> Cell {
       o.c = sat(o.c * amb * (1.0 - f) + haze * f);
     }
   }
-  let dark = 1.0 - 0.72 * pow(1.0 - u.cityLit, 1.5) * (1.0 - day);
-  if (dark < 0.999) { o.c *= dark; o.bg *= dark; }
+  // a blackout darkens what is lit by the city's glow, not the lights: what still shines (a generator's
+  // windows, headlights, a lamp coming back) stands out more against a dark city, as the eye adapts
+  let night = 1.0 - day;
+  let dark = 1.0 - 0.72 * pow(1.0 - u.cityLit, 1.5) * night;
+  if (dark < 0.999) {
+    let adapt = 1.0 + 0.7 * (1.0 - u.cityLit) * night;
+    let lit = min(o.c, emit + lamp);
+    o.c = (o.c - lit) * dark + lit * adapt; o.bg *= dark;
+    gGlow = min(1.0, gGlow * adapt);
+  }
+  // the city's sodium glow in the air: far things sink into a low orange haze (as a big city seen at night)
+  if (night > 0.01 && o.kind != KIND_ROOM) {
+    let hk = (1.0 - exp(-o.depth / 1400.0)) * NIGHT_HAZE * night * (0.15 + 0.85 * u.cityLit) * (0.8 + 0.4 * u.precip);
+    o.c = o.c * (1.0 - hk) + vec3f(120.0, 64.0, 26.0) * hk;
+  }
   if (u.solid > 0.0) { o.bg = o.c * u.solid; }
   if (u.sharp < 3.0) {
     let s = u.sharp;
@@ -1563,11 +1578,11 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   // the city's glow on the haze over it: seen only from its edges and beyond, low over the center, and it
   // fades as the lamps go out (cityLit)
   let tcx = u.cityW * 0.5 - u.px; let tcy = u.cityH * 0.5 - u.py; let dcen = length(vec2f(tcx, tcy));
-  let away = smoothK(0.35, 1.3, dcen / (min(u.cityW, u.cityH) * 0.5));
+  let away = smoothK(0.2, 1.2, dcen / (min(u.cityW, u.cityH) * 0.5));
   if (away > 0.0 && night > 0.0) {
     let toC = max(0.0, (tcx * rdx + tcy * rdy) / (max(1.0, dcen) * L));
-    let dome = away * (0.25 + 0.75 * toC * toC) * exp(-max(0.0, up) / 0.12) * u.cityLit * night;
-    r += 75.0 * dome; g += 34.0 * dome; b += 10.0 * dome;
+    let dome = away * (0.3 + 0.7 * toC * toC) * exp(-max(0.0, up) / 0.16) * u.cityLit * night;
+    r += 150.0 * dome; g += 72.0 * dome; b += 22.0 * dome;
   }
   var ch = 0u; var cc = vec3f(0.0);
   var sunK = 0.0; var cover = 0.0;

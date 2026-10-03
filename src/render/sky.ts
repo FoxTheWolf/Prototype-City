@@ -3,7 +3,7 @@ import { type City } from '../sim/city';
 import { moonDir, moonPhase, sunDir } from '../sim/clock';
 import { lightning, type Weather } from '../sim/weather';
 import { type PowerGrid } from '../sim/power';
-import { power } from './power';
+import { smoothPower } from './power';
 import {  } from './grid';
 
 /**
@@ -69,7 +69,7 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
     day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) : 0,
     cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,
-    cityLit: grid.subs.reduce((a, s, k) => a + Math.min(1, power(grid, k, s.x, s.y, 7, 0, sec)[0]), 0) / grid.subs.length,
+    cityLit: grid.subs.reduce((a, _, k) => a + smoothPower(grid, k, sec, city.w, city.h), 0) / grid.subs.length,
   };
 }
 
