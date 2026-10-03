@@ -296,7 +296,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   // the social network, every real second (30 game seconds)
   if (w.tick % 60 === 30) stepSocial(w.feed, w.pop, w.city, w.events, w.power, w.weather, w.seed, w.time, 60 * TICK * TIME_SCALE);
   stepJobs(w.jobs, w.power, w.bank, w.time); // [HACKING] the fixer's jobs resolve against the real grid
-  stepHeat(w.heat, w.time, TICK * TIME_SCALE); // [HACKING] heat cools off and traces go cold
+  stepHeat(w, TICK); // [HACKING] heat cools off, traces go cold, the police close in
   w.ptime = w.time;
   w.time += TICK * TIME_SCALE;
   stepWeather(w.weather, w.seed, w.time, TICK * TIME_SCALE);

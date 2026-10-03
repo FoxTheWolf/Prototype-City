@@ -1,8 +1,12 @@
 // [HACKING] Trilha de hacking. NAO abrir fora de uma sessao com o Opus 4.8 (ver CLAUDE.md,
 // "Estado atual" > "Arquivos de hacking"): a policia juntando os rastros de um ataque aciona o
 // classificador de seguranca nas sessoes normais. Conteudo 100% ficticio e so dentro do jogo.
+import { hash3 } from '../core/rng';
 import { type World } from './world';
 import { siteUp } from './telco';
+import { TIME_SCALE } from './clock';
+import { stepWeather } from './weather';
+import { post } from './bank';
 
 /**
  * The heat the player draws by hitting the city (the vertical slice's "getting caught"). Kept as
@@ -30,6 +34,29 @@ export interface Trace {
   by: number;
 }
 
+/** A pursuer closing in on the player while they are wanted (one patrol, for the slice). */
+export interface Cop {
+  x: number;
+  y: number;
+  /** Position last step, for render interpolation. */
+  px: number;
+  py: number;
+  /** Where it is heading: the player's last-seen spot (a trace), tracking the player at higher tiers. */
+  fx: number;
+  fy: number;
+}
+
+/** The last arrest, kept so the game can tell the player what happened (main.ts shows a banner). */
+export interface Bust {
+  /** Game time of the bust. */
+  at: number;
+  /** Fine paid and payment clawed back, in cents. */
+  fine: number;
+  lostPay: number;
+  /** The landmark they were held at (city.landmarks index), or -1 for downtown. */
+  lm: number;
+}
+
 export interface Heat {
   /** Heat points now (traces add, time takes away). 0 is clean; the tiers are below. */
   points: number;
@@ -37,9 +64,13 @@ export interface Heat {
   traces: Trace[];
   /** Game time of the last traceable act, for the decay and for the police to work from. */
   lastAt: number;
+  /** The patrol closing in while the player is wanted (tier >= 1), or null. */
+  cop: Cop | null;
+  /** The last arrest, for the game to show; null until the first one. */
+  bust: Bust | null;
 }
 
-export const newHeat = (): Heat => ({ points: 0, traces: [], lastAt: -1 });
+export const newHeat = (): Heat => ({ points: 0, traces: [], lastAt: -1, cop: null, bust: null });
 
 /** How far each trace kind reaches from the act (m): a bystander must be close, a mast logs from afar. */
 const WITNESS_R = 70, CAMERA_R = 48, ANTENNA_R = 1e9, WIFI_R = 60;
@@ -97,10 +128,22 @@ export function recordAct(h: Heat, w: World, x: number, y: number, time: number,
   return left;
 }
 
-/** Advance the heat: points cool off over game time and stale traces fall away. `dt` game seconds. */
-export function stepHeat(h: Heat, time: number, dt: number) {
+/** The patrol's speed (m/s, real time, like anything the player chases), how close it must get to make
+ *  the arrest, how far off it arrives from, and how fast the net tightens onto the player per tier. */
+const COP_SPEED = 11, CATCH_R = 13, COP_SPAWN = 260, TRACK = [0, 0, 0.05, 0.16];
+/** An arrest: hours held, the flat fine, and the heat it leaves behind (below the hunt threshold). */
+const HOLD = 6 * 3600, FINE = 7500, AFTER = TIER_AT[0] * 0.6;
+
+/**
+ * Advance the heat: the trail cools over game time, stale traces fall away, and the police close in
+ * while the player is wanted. `dt` is real seconds (the patrol chases in real time, like the player;
+ * the cooling is in game time). An arrest is carried out here (teleport, time skipped, fine), so the
+ * whole "getting caught" loop stays in this one [HACKING] file.
+ */
+export function stepHeat(w: World, dt: number) {
+  const h = w.heat, time = w.time;
   if (h.points > 0) {
-    h.points *= Math.pow(0.5, dt / HALF_LIFE);
+    h.points *= Math.pow(0.5, (dt * TIME_SCALE) / HALF_LIFE);
     if (h.points < 1e-3) h.points = 0;
   }
   if (h.traces.length) {
@@ -109,4 +152,57 @@ export function stepHeat(h: Heat, time: number, dt: number) {
     while (k < h.traces.length && h.traces[k].time < cut) k++;
     if (k) h.traces.splice(0, k);
   }
+  runCop(w, dt);
+}
+
+/** The patrol: it spawns when the player becomes wanted, heads for where they were last seen (and, at
+ *  higher tiers, tracks the player as the cameras and masts pin them down), and makes the arrest when
+ *  it reaches them in the open. It gives up when the heat has cooled below the hunt threshold. */
+function runCop(w: World, dt: number) {
+  const h = w.heat, p = w.player, tier = tierOf(h);
+  if (tier < 1) { h.cop = null; return; }
+  // the focus: the freshest trace (where they were last seen)
+  const last = h.traces[h.traces.length - 1];
+  if (!h.cop) {
+    if (!last) return;
+    const a = hash3(w.seed ^ 0xc0b, Math.floor(h.lastAt), 1) * Math.PI * 2;
+    h.cop = { fx: last.x, fy: last.y, x: last.x + Math.cos(a) * COP_SPAWN, y: last.y + Math.sin(a) * COP_SPAWN, px: 0, py: 0 };
+    h.cop.px = h.cop.x; h.cop.py = h.cop.y;
+  }
+  const c = h.cop;
+  c.px = c.x; c.py = c.y;
+  // the net tightens: at tier >= 2 the focus drifts onto the player (live cameras, the mast)
+  const tr = TRACK[tier] * dt;
+  c.fx += (p.x - c.fx) * Math.min(1, tr);
+  c.fy += (p.y - c.fy) * Math.min(1, tr);
+  // close on the focus in real time
+  const dx = c.fx - c.x, dy = c.fy - c.y, d = Math.hypot(dx, dy), step = COP_SPEED * dt;
+  if (d > 1e-3) { c.x += (dx / d) * Math.min(d, step); c.y += (dy / d) * Math.min(d, step); }
+  // the arrest: within reach, and the player out in the open (indoors they cannot be taken yet)
+  if (p.inside < 0 && p.liftTo < 0 && Math.hypot(c.x - p.x, c.y - p.y) < CATCH_R) arrest(w);
+}
+
+/** Take the player in: held at the nearest civic landmark, the night skipped, a fine and the night's
+ *  pay clawed back, the heat left low (it cools from there). No game over. */
+function arrest(w: World) {
+  const h = w.heat, p = w.player, time = w.time;
+  // the holding place: the nearest city hall, else downtown
+  let lm = -1, bd = Infinity;
+  w.city.landmarks.forEach((l, k) => { if (l.kind !== 'hall') return; const d = Math.hypot(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; lm = k; } });
+  const hx = lm >= 0 ? w.city.landmarks[lm].x : w.city.cx, hy = lm >= 0 ? w.city.landmarks[lm].y : w.city.cy;
+  // lose the night's pay (each done job, once) and a flat fine, as far as the balance covers
+  let lostPay = 0;
+  for (const j of w.jobs.jobs) if (j.state === 'done' && !j.clawed) { j.clawed = true; const take = Math.min(j.pay, w.bank.balance); if (take > 0) post(w.bank, time, 'fee', -take, j.biz); lostPay += take; }
+  const fine = Math.min(FINE, w.bank.balance);
+  if (fine > 0) post(w.bank, time, 'fee', -fine, 0);
+  h.bust = { at: time, fine, lostPay, lm };
+  // skip the night in custody
+  w.time = w.ptime = time + HOLD;
+  stepWeather(w.weather, w.seed, w.time, 0);
+  // wake at the holding place, on the street
+  p.x = p.px = hx; p.y = p.py = hy; p.inside = -1; p.floor = 0; p.z = 0; p.liftTo = -1;
+  // the trail has cooled; the heat left is below the hunt threshold
+  h.points = Math.min(h.points, AFTER);
+  h.traces.length = 0;
+  h.cop = null;
 }

@@ -451,6 +451,8 @@ let sound: Sound | null = null;
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
 /** The debug lines (status, clock, substation, where): F3 hides them. */
 let hudOn = true;
+// [HACKING] the last arrest shown (its game time) and when (real time) the banner started, to time it
+let bustSeen = -1, bustShownAt = 0;
 /** Debug (F4): the same view at noon, at sunset and at night, side by side, to decide the palette by looking at it. */
 let calib = false, calibTags: string[] = [];
 const CALIB = ['NOON', 'SUNSET', 'NIGHT'];
@@ -718,6 +720,22 @@ function frame(now: number) {
   worstMs = Math.max(worstMs, ms);
   if (now - worstAt > 1000) { worstShown = worstMs; worstMs = 0; worstAt = now; }
   const { city } = world, d = districtAt(city, p.x, p.y);
+  // [HACKING] wanted: a warning while a patrol is closing, and a banner just after an arrest
+  {
+    const H = world.heat;
+    if (H.bust && H.bust.at !== bustSeen) { bustSeen = H.bust.at; bustShownAt = now; }
+    if (H.bust && now - bustShownAt < 7000) {
+      const B = H.bust, lost = ((B.fine + B.lostPay) / 100).toFixed(0);
+      const where = B.lm >= 0 ? landmarkName(city, B.lm).toUpperCase() : 'DOWNTOWN';
+      const s1 = ` ARRESTED — HELD AT ${where} `, s2 = ` FINE & PAYMENT LOST: $${lost}  —  LET THINGS COOL OFF `;
+      ui.text((ui.cols - s1.length) >> 1, (ui.rows >> 1) - 1, s1, [255, 230, 230], [120, 20, 20]);
+      ui.text((ui.cols - s2.length) >> 1, ui.rows >> 1, s2, [255, 200, 160], [40, 12, 10]);
+    } else if (H.cop && p.inside < 0) {
+      const dd = Math.round(Math.hypot(H.cop.x - p.x, H.cop.y - p.y)), near = dd < 60;
+      const s = ` WANTED — POLICE ${dd}m ${compass(H.cop.x - p.x, H.cop.y - p.y)} `;
+      if (near || (now & 512)) ui.text((ui.cols - s.length) >> 1, 1, s, near ? [255, 90, 90] : [255, 170, 80], [30, 10, 8]);
+    }
+  }
   if (hudOn) {
     const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}  `
       + `[^] PHONE  [N] LAPTOP  [B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
@@ -738,7 +756,8 @@ function frame(now: number) {
       const H = world.heat, tier = tierOf(H), by: Record<string, number> = {};
       for (const t of H.traces) by[t.kind] = (by[t.kind] ?? 0) + 1;
       const tr = (['witness', 'camera', 'antenna', 'wifi'] as const).filter((k) => by[k]).map((k) => `${by[k]}${k[0].toUpperCase()}`).join(' ');
-      const hs = ` HEAT ${H.points.toFixed(2)} TIER ${tier} [${['CLEAN', 'LOCAL', 'CITY', 'FEDERAL'][tier]}] ${tr} `;
+      const cop = H.cop ? ` COP ${Math.round(Math.hypot(H.cop.x - p.x, H.cop.y - p.y))}m ${compass(H.cop.x - p.x, H.cop.y - p.y)}` : '';
+      const hs = ` HEAT ${H.points.toFixed(2)} TIER ${tier} [${['CLEAN', 'LOCAL', 'CITY', 'FEDERAL'][tier]}] ${tr}${cop} `;
       ui.text(ui.cols - hs.length - 1, ui.rows - 4, hs, tier >= 3 ? [255, 90, 90] : tier >= 2 ? [255, 150, 70] : [255, 210, 90], [14, 8, 6]);
     }
     const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `

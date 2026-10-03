@@ -34,6 +34,8 @@ export interface Job {
   tookAt: number;
   /** Which texts the phone has already turned into messages (delivery bookkeeping, part of the save). */
   sent: { offer: boolean; ack: boolean; result: boolean };
+  /** [HACKING] Set once the pay was clawed back by an arrest, so it is not taken twice (see heat.ts). */
+  clawed?: boolean;
 }
 
 export interface JobBoard { jobs: Job[] }
