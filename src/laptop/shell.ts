@@ -6,7 +6,8 @@ import { Editor } from './editor';
 import { type Scr } from './screen';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
-import { computerMakerName, wifiName } from '../locale/names';
+import { businessName, computerMakerName, districtName, wifiName } from '../locale/names';
+import { districtAt } from '../sim/city';
 import { Wifi } from '../phone/wifi';
 import { Sec } from '../sim/wifi';
 import { type Host, lanHosts, modbusRegs, setBreaker, setSignals, WORDS } from '../sim/network';
@@ -52,7 +53,7 @@ const HACK_TOOLS: [string, number, number][] = [
   ['mmap', 220, 1400], ['bruter', 180, 1600], ['tdump', 260, 2200], ['tnet', 64, 520], ['mbus', 96, 700],
 ];
 /** What the shell does itself, with no program on the disk. */
-const BUILTINS = new Set(['cd', 'help', 'history', 'exit', 'logout']);
+const BUILTINS = new Set(['cd', 'help', 'history', 'job', 'exit', 'logout']);
 const PATH = ['/bin', '/usr/bin', '/sbin'];
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -689,6 +690,20 @@ export class Shell {
       case 'id': out.push(`uid=1000(${u}) gid=1000(${u}) groups=1000(${u}),20(dialout),24(cdrom),44(video),46(plugdev),110(netdev)`); return 0;
       case 'hostname': out.push(H.host); return 0;
       case 'history': this.hist.forEach((h, k) => out.push(`${String(k + 1).padStart(5)}  ${h}`)); return 0;
+      case 'job': {
+        // [HACKING] the fixer's contract as a note to yourself: which one, where, by when, for how
+        // much, and whether it is done. How to actually do it is in ~/start-here.txt.
+        const bz = (j: { biz: number }) => { const B = w.city.businesses[j.biz], bd = w.city.buildings[B.building]; return `${businessName(w.city, j.biz)}, ${districtName(w.city, districtAt(w.city, (bd.x0 + bd.x1) / 2, (bd.y0 + bd.y1) / 2))}`; };
+        const due = (t: number) => { const hh = Math.floor(t / 3600) % 24, ap = hh < 12 ? 'am' : 'pm'; return `${((hh + 11) % 12) + 1}${ap}`; };
+        const money = (cents: number) => '$' + Math.round(cents / 100);
+        const J = w.jobs.jobs, active = J.find((j) => j.state === 'active'), closed = J.find((j) => j.state === 'done' || j.state === 'failed'), offered = J.find((j) => j.state === 'offered');
+        if (active) out.push(`Contract: ${bz(active)}`, `  dark before ${due(active.due)}    pay ${money(active.pay)}`, `  power there comes from GRIDLINK-${String(active.sub + 1).padStart(2, '0')}; how: cat ~/start-here.txt`);
+        else if (closed?.state === 'done') out.push(`Contract complete: ${bz(closed)} went dark. Paid ${money(closed.pay)}.`);
+        else if (closed) out.push(`Contract failed: ${bz(closed)} kept its lights. No pay.`);
+        else if (offered) out.push('A fixer has sent work to your phone. Reply YES from the phone to take it.');
+        else out.push('No contract right now.');
+        return 0;
+      }
       case 'lshw': {
         out.push(`${H.host}`, `    description: Notebook`, `    product: ${H.model}`, `  *-cpu`, `       product: ${H.cpu}`, `       size: ${H.cpuMHz}MHz`, `       cores: ${H.cores}`,
           `  *-memory`, `       size: ${H.ramMB}MiB`, `  *-disk`, `       product: ${H.disk}`, `       size: ${Math.round(H.diskMB / 1000)}GB`, `       capabilities: 5400rpm, ${H.diskMBs}MB/s`,
