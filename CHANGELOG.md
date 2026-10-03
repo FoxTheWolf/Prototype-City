@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.12 — Os cômodos pelas janelas na GPU (2026-10-03)
+- No modo da GPU, as janelas dos prédios próximos mostram os cômodos de dentro (paredes, piso, teto e as lâmpadas acesas de cada um), e a luz dos cômodos acesos se espalha pela parede em volta da janela, como no desenho de sempre.
+
 ## 0.R.11 — Portas e escadas de incêndio na GPU (2026-10-02)
 - No modo da GPU, as portas de rua dos prédios e das lojas aparecem nas fachadas, com o vidro aceso pela luz do saguão, e os prédios de tijolo mostram a escada de incêndio desenhada na parede.
 

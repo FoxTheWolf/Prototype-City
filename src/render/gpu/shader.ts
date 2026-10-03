@@ -1,5 +1,5 @@
 import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
-import { DOOR_H } from '../../sim/interior';
+import { CEIL, CELL as PCELL, DOOR, DOOR_H } from '../../sim/interior';
 import { AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
 import { CELL, SIDE } from '../lights';
@@ -205,7 +205,7 @@ const AD_FG = array<vec3f, ${AD_FG.length}>(${AD_FG.map(v3).join(', ')});
 const FRAME_AD = ${v3(FRAME_AD)};
 const SCREEN_PAL = array<vec3f, ${SCREEN_PAL.length}>(${SCREEN_PAL.map(v3).join(', ')});
 const RAMP = array<u32, ${RAMP.length}>(${RAMP.map((c) => `${c}u`).join(', ')});
-const DOOR_H = ${f(DOOR_H)}; const FX_TAB = ${FX_TAB}u;
+const DOOR_H = ${f(DOOR_H)}; const FX_TAB = ${FX_TAB}u; const PCELL = ${f(PCELL)}; const CEIL = ${f(CEIL)}; const PDOOR = ${DOOR}u; const PEEK_FAR = 80.0;
 const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v3(SCAF_STEEL)}; const SCAF_BOARD = ${v3(SCAF_BOARD)};
 const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
 fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
@@ -290,6 +290,167 @@ fn screenPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dAlong: f32, dz: f32) -> 
   let s = (px + pz * 0.6 - sec * 3.0) / 1.5; let band = ((s % 3.0) + 3.0) % 3.0;
   var col = vec3f(30.0, 30.0, 40.0); if (band < 1.0) { col = a; } else if (band < 2.0) { col = b; }
   return Px(select(COL, select(HASH, AT, band % 1.0 < 0.15), band < 2.0), col * select(0.6, 0.75 + 0.25 * sin(s * 3.0), band < 2.0));
+}
+
+// ---- the rooms behind the windows (render/interior.ts: peekInto, roomLamp, peekCell), from the plans in fx
+const PAINT = array<vec3f, 6>(vec3f(190.0, 170.0, 135.0), vec3f(150.0, 170.0, 160.0), vec3f(175.0, 150.0, 165.0), vec3f(185.0, 185.0, 175.0), vec3f(150.0, 160.0, 185.0), vec3f(195.0, 160.0, 120.0));
+const R_LOBBY = 0u; const R_HALL = 1u; const R_STAIR = 2u; const R_LIFT = 3u; const R_KITCHEN = 7u; const R_BATH = 8u; const R_OFFICE = 9u; const R_OPEN = 10u; const R_SHOP = 11u;
+/** Cell (i, j) of the plan at o: its room + 1 (0 outside), with the DOOR bit. */
+fn planCell(o: u32, i: i32, j: i32) -> u32 {
+  let nx = i32(fx[o + 2u]);
+  if (i < 0 || j < 0 || i >= nx || j >= i32(fx[o + 3u])) { return 0u; }
+  let b = u32(j * nx + i);
+  return (fx[o + 6u + fx[o + 4u] * 6u + b / 4u] >> ((b % 4u) * 8u)) & 255u;
+}
+fn roomAt(o: u32, x: f32, y: f32) -> u32 { return planCell(o, ifloor(x / PCELL) - i32(fx[o]), ifloor(y / PCELL) - i32(fx[o + 1u])) & 127u; }
+struct Peek { ok: bool, d: f32, r: i32, uu: f32, shade: f32 };
+/** From the glass at (hx, hy), on through the plan to the first wall between two rooms (no doorway), or the far side of box q. */
+fn peekInto(o: u32, q: u32, hx: f32, hy: f32, rdx: f32, rdy: f32) -> Peek {
+  var pk = Peek(false, 0.0, 0, 0.0, 0.0);
+  var tEnd = 1e9;
+  if (rdx > 0.0) { tEnd = min(tEnd, (bld[q + 2u] - hx) / rdx); } else if (rdx < 0.0) { tEnd = min(tEnd, (bld[q] - hx) / rdx); }
+  if (rdy > 0.0) { tEnd = min(tEnd, (bld[q + 3u] - hy) / rdy); } else if (rdy < 0.0) { tEnd = min(tEnd, (bld[q + 1u] - hy) / rdy); }
+  if (bld[q + 6u] > 0.5) { let dn = bld[q + 7u] * rdx + bld[q + 8u] * rdy; if (dn > 0.0) { tEnd = min(tEnd, (bld[q + 9u] - bld[q + 7u] * hx - bld[q + 8u] * hy) / dn); } }
+  let e = 0.03 / length(vec2f(rdx, rdy)); let sx = hx + rdx * e; let sy = hy + rdy * e;
+  let gx = i32(fx[o]); let gy = i32(fx[o + 1u]);
+  var i = ifloor(sx / PCELL) - gx; var j = ifloor(sy / PCELL) - gy;
+  let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
+  let dX = select(1e12, abs(PCELL / rdx), rdx != 0.0); let dY = select(1e12, abs(PCELL / rdy), rdy != 0.0);
+  var tX = 1e12; if (rdx != 0.0) { tX = (f32(gx + i + select(0, 1, rdx > 0.0)) * PCELL - sx) / rdx; }
+  var tY = 1e12; if (rdy != 0.0) { tY = (f32(gy + j + select(0, 1, rdy > 0.0)) * PCELL - sy) / rdy; }
+  var cur = planCell(o, i, j);
+  if (cur == 0u) { return pk; }
+  for (var g = 0; g < 300; g++) {
+    let xs = tX < tY; let tn = select(tY, tX, xs);
+    if (tn + e >= tEnd) { pk.ok = true; pk.d = tEnd; pk.r = i32(cur & 127u) - 1; pk.uu = 0.0; pk.shade = 0.8; return pk; }
+    if (xs) { i += stX; tX += dX; } else { j += stY; tY += dY; }
+    let nv = planCell(o, i, j);
+    if (nv == 0u) { continue; }
+    if ((nv & 127u) != (cur & 127u) && (cur & nv & PDOOR) == 0u) {
+      pk.ok = true; pk.d = tn + e; pk.r = i32(cur & 127u) - 1; pk.uu = select(sx + rdx * tn, sy + rdy * tn, xs); pk.shade = select(0.82, 1.0, xs);
+      return pk;
+    }
+    cur = nv;
+  }
+  return pk;
+}
+/** Room r's record in the plan at o (its box as four f32, its kind and unit). */
+fn roomRec(o: u32, r: i32) -> u32 { return o + 6u + u32(r) * 6u; }
+/** The lamp of room r on floor f of box boxId as seen from outside (0..1 per channel, times the power), as roomLamp. */
+fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32) -> vec3f {
+  let kind = fx[ro + 4u]; let commonPart = bitcast<i32>(fx[ro + 5u]) < 0; let h = hash3(boxId, r * 31 + f, 12);
+  let lq = u32(lot * ${BLD});
+  let backup = i32(bld[lq + 63u]);
+  var elec = elecIn;
+  if (elec < 0.8 && backup == 3) { elec = 0.85; }
+  else if (elec < 0.8) {
+    // off the mains: the generator's amber, the emergency lamps (white, a few red), or dark
+    if (backup == 0 || (backup == 1 && !commonPart)) { return vec3f(0.0); }
+    let gen = backup == 2 && elec > 0.25;
+    if (!(commonPart || (gen && h < 0.25))) { return vec3f(0.0); }
+    let c = select(select(vec3f(70.0, 85.0, 110.0), vec3f(190.0, 120.0, 60.0), gen), vec3f(150.0, 22.0, 16.0), commonPart && h < select(0.4, 0.3, gen));
+    return c / 255.0 * select(0.6, min(1.0, elec * 1.1), gen);
+  }
+  if (!(commonPart || hash3(boxId, r * 31 + f, 11) < select(bld[lq + 11u] * (1.0 - 0.75 * u.day) * 1.3, 0.8, kind == R_SHOP))) { return vec3f(0.0); }
+  let st = i32(bld[lq + 10u]); let office = st == 0 || st == 1;
+  let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(215.0, 232.0, 255.0), office || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
+  return c / 255.0 * elec;
+}
+fn lampD2(ro: u32, x: f32, y: f32) -> f32 {
+  let x0 = bitcast<f32>(fx[ro]); let y0 = bitcast<f32>(fx[ro + 1u]); let w = bitcast<f32>(fx[ro + 2u]) - x0; let h = bitcast<f32>(fx[ro + 3u]) - y0;
+  let sx = w / max(1.0, round(w / 4.0)); let sy = h / max(1.0, round(h / 4.0));
+  let dx = (((x - x0) % sx) + sx) % sx - sx / 2.0; let dy = (((y - y0) % sy) + sy) % sy - sy / 2.0;
+  return dx * dx + dy * dy;
+}
+/**
+ * One window cell's view of the room behind it (peekCell): the ray goes on from the glass at distance t,
+ * rising kz per unit, to the back wall, or down to the floor or up to the ceiling of storey f; under the glass.
+ */
+fn peekCell(o: u32, lot: i32, boxId: i32, pk: Peek, f: i32, rdx: f32, rdy: f32, kz: f32, t: f32, elec: f32, sheen: f32) -> Px {
+  let z0 = f32(f) * FLOOR_H; let zc = z0 + CEIL; let tw = t + pk.d; let zw = u.eye + kz * tw;
+  let st = i32(bld[u32(lot * ${BLD}) + 10u]); let office = st == 0 || st == 1;
+  var r = pk.r; var x = 0.0; var y = 0.0; var part = 1;
+  if (zw < z0 || zw > zc) {
+    part = select(2, 0, zw < z0);
+    let tt = (select(zc, z0, part == 0) - u.eye) / kz;
+    x = u.px + rdx * tt; y = u.py + rdy * tt;
+    let cc = roomAt(o, x, y); if (cc > 0u) { r = i32(cc) - 1; }
+  } else { x = u.px + rdx * tw; y = u.py + rdy * tw; }
+  if (r < 0 || u32(r) >= fx[o + 4u]) { return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
+  let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
+  let lp = roomLamp(lot, boxId, ro, r, f, elec);
+  let k = 0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0); let a = 0.14 + 0.5 * u.day;
+  let L = lp * k + vec3f(a, a * 1.05, a * 1.25);
+  var ch = DOT; var c = vec3f(0.0);
+  if (part == 0) {
+    // the floor
+    if (kind == R_BATH || kind == R_KITCHEN) {
+      let ix = ifloor(x / 0.3); let iy = ifloor(y / 0.3); let seam = x / 0.3 - f32(ix) < 0.12 || y / 0.3 - f32(iy) < 0.12;
+      let dark = kind == R_KITCHEN && ((ix + iy) & 1) == 1;
+      ch = select(DOT, PLUS, seam); c = select(vec3f(165.0, 165.0, 158.0), vec3f(60.0, 58.0, 62.0), dark);
+    } else if (kind == R_LOBBY) {
+      let ix = ifloor(x / 0.8); let iy = ifloor(y / 0.8); let seam = x / 0.8 - f32(ix) < 0.05 || y / 0.8 - f32(iy) < 0.05;
+      ch = select(DOT, PLUS, seam); c = vec3f(175.0, 165.0, 145.0) * select(0.8, 1.0, ((ix + iy) & 1) == 1);
+    } else if (kind == R_HALL) { ch = select(COM, DOT, office); c = select(vec3f(120.0, 45.0, 45.0), vec3f(95.0, 95.0, 100.0), office); }
+    else if (kind == R_OFFICE || kind == R_OPEN) {
+      let kk = select(0.85, 1.0, ((ifloor(x / 0.6) + ifloor(y / 0.6)) & 1) == 1);
+      ch = select(DOT, COM, hash3(ifloor(x * 6.0), ifloor(y * 6.0), 3) < 0.5); c = vec3f(72.0, 78.0, 95.0) * kk;
+    } else if (kind == R_STAIR) { ch = EQ; c = vec3f(125.0, 125.0, 120.0); }
+    else if (kind == R_LIFT) { ch = HASH; c = vec3f(100.0, 100.0, 108.0); }
+    else if (kind == R_SHOP) { ch = DOT; c = vec3f(110.0); }
+    else {
+      // wooden boards, staggered
+      let row = ifloor(y / 0.2); let al = x / 1.2 + f32(row & 1) * 0.5; let seam = al - floor(al) < 0.06;
+      ch = select(DASH, BAR, seam); c = vec3f(130.0, 85.0, 50.0) * (0.8 + 0.3 * hash3(row, ifloor(al), 4));
+    }
+  } else if (part == 2) {
+    // the ceiling: tiles with light panels in offices, a lamp in the middle of the rooms at home
+    let on = lp.x + lp.y > 0.05;
+    ch = DOT; c = vec3f(150.0, 148.0, 142.0);
+    if (office || kind == R_STAIR || kind == R_LIFT) {
+      let fxx = ((x / 2.4) % 1.0 + 1.0) % 1.0; let fyy = ((y / 1.2) % 1.0 + 1.0) % 1.0;
+      if (fxx > 0.3 && fxx < 0.7 && fyy > 0.25 && fyy < 0.75) { ch = EQ; c = vec3f(200.0, 210.0, 220.0) * select(0.6, 2.2, on); }
+      else if (x / 0.6 - floor(x / 0.6) < 0.06 || y / 0.6 - floor(y / 0.6) < 0.06) { ch = PLUS; }
+    } else if (lampD2(ro, x, y) < 0.05) { ch = O; c = vec3f(255.0, 220.0, 160.0) * select(0.5, 2.4, on); }
+  } else {
+    // the wall, uu along it, zr above the floor
+    let zr = zw - z0; let uu = pk.uu;
+    if (zr < 0.12) { ch = US; c = vec3f(70.0, 52.0, 40.0); }
+    else if (zr > CEIL - 0.1) { ch = DASH; c = vec3f(120.0); }
+    else if (kind == R_BATH || kind == R_KITCHEN) {
+      let top = select(1.5, 2.0, kind == R_BATH);
+      if (zr < top && zr > select(0.9, 0.0, kind == R_BATH)) {
+        let seam = ((uu / 0.3) % 1.0 + 1.0) % 1.0 < 0.15 || (zr / 0.3) % 1.0 < 0.15;
+        ch = select(DOT, PLUS, seam); c = vec3f(180.0, 190.0, 188.0);
+      } else { ch = COL; c = vec3f(200.0, 196.0, 180.0); }
+    } else if (kind == R_LOBBY || kind == R_HALL) {
+      if (zr < 1.0) { let pp = ((uu / 0.8) % 1.0 + 1.0) % 1.0; ch = select(select(COL, EQ, zr > 0.92), BAR, pp < 0.08); c = vec3f(110.0, 76.0, 50.0); }
+      else { ch = COL; c = vec3f(165.0, 155.0, 135.0); }
+    } else if (kind == R_STAIR) { ch = SEMI; c = vec3f(135.0, 135.0, 130.0); }
+    else if (kind == R_LIFT) { ch = BAR; c = vec3f(165.0, 170.0, 175.0); }
+    else if (kind == R_OFFICE || kind == R_OPEN || kind == R_SHOP) { ch = COL; c = vec3f(165.0, 165.0, 160.0); }
+    else {
+      // homes: each one papered or painted in its own way
+      c = PAINT[u32((((unit * 7 + 3) % 6) + 6) % 6)]; let h = hash3(unit, 5, 9); let pu = ((uu / 0.4) % 1.0 + 1.0) % 1.0;
+      ch = COL;
+      if (h < 0.35) { ch = select(COL, BAR, pu < 0.5); }
+      else if (h < 0.6) { ch = select(QUO, DOT, ((i32(uu / 0.3) + i32(zr / 0.3)) & 1) == 1); }
+    }
+  }
+  let sh = select(1.0, pk.shade, part == 1);
+  // under the glass: a faint tint, and the sky and the city mirrored in soft bands (by day the reflection wins)
+  let s2 = sheen * sheen; let gk = 0.55 - 0.2 * u.day - 0.3 * s2;
+  let lc = c * L * sh;
+  return Px(ch, lc * gk + vec3f(16.0 + s2 * 95.0 + u.day * 55.0, 30.0 + s2 * 110.0 + u.day * 65.0, 40.0 + s2 * 130.0 + u.day * 80.0));
+}
+/** Window openings of a facade style, as wallColumn draws them (windowHole). */
+fn windowHole(S: i32, shop: bool, fw: f32, fz: f32, z: f32, ground: bool) -> bool {
+  if (ground && shop) { return fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6; }
+  if (S == 1) { return fw >= 0.07 && fz >= 0.08; }
+  if (S == 4) { return fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78; }
+  if (S == 2) { return fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78; }
+  if (S == 3) { return !ground && fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82; }
+  return fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8;
 }
 
 // ---- a wall (wallColumn): the facade by its style, its windows, and the lights on it
@@ -392,6 +553,15 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - u.eye) / t) * 4.0 + f32(bk % 7));
   let fl = ifloor(z / FLOOR_H); let fz = z / FLOOR_H - f32(fl);
   let escU = (f32(wi % 7) - 2.0 + fw) / 2.0;
+  // the room behind the wall here, near enough to make out: this floor's plan (the ground floor's or the
+  // upper floors' of this box), entered where the ray met the wall
+  var po = 0u; var pk = Peek(false, 0.0, 0, 0.0, 0.0); var lot = -1;
+  if (detailed && t < PEEK_FAR && side != 2 && fl >= 0 && f32(fl) < round((H - 1.0) / FLOOR_H)) {
+    po = fx[FX_TAB + fx[0] + u32(bk) * 2u + select(1u, 0u, fl == 0)];
+    if (po > 0u) { lot = i32(fx[po + 5u]); pk = peekInto(po, q, hx, hy, rdx, rdy); }
+  }
+  let winPw = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched);
+  var isWin = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0);
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
@@ -541,6 +711,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     c = ac * ((0.75 + 0.25 * hash3(ifloor(along * 3.0), ifloor(z * 3.0), bk)) * shade);
     // lit from below by gooseneck lamps at night
     c += vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9);
+  } else if (pk.ok && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
+    // a window: the room behind it, lit by its own lamps
+    let P = peekCell(po, lot, bk, pk, fl, rdx, rdy, -m, t, winPw, sheen);
+    ch = P.ch; c = P.c; isWin = true;
   } else if (detailed && S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
@@ -618,6 +792,14 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
     if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
   } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
+  // a lit room's light spills onto the wall around its window
+  if (pk.ok && !isWin && !corner && z < H - 0.6 && pk.r >= 0) {
+    let GL = roomLamp(lot, bk, roomRec(po, pk.r), pk.r, fl, winPw);
+    if (GL.x + GL.y + GL.z > 0.02) {
+      let d = length(vec2f((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H)); let e = max(0.0, 1.0 - d / 1.5);
+      c += GL * (120.0 * e * e);
+    }
+  }
   // neon tubes up the corners and along the roof line, and their glow on the wall
   if (bld[q + 27u] > 0.5) {
     let neon = colAt(q + 24u);

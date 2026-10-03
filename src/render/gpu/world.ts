@@ -1,5 +1,5 @@
 import { BAY, blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
-import { cachedPlan, escapesOf, exitsOf, habitable, planOf } from '../../sim/interior';
+import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, planOf, tiersOf } from '../../sim/interior';
 import type { World } from '../../sim/world';
 import { gpuPrepare, REL, reliefOf, VFOV, type View } from '../raycaster';
 import { CURVE_R } from '../sarcophagus';
@@ -19,7 +19,7 @@ import { BLD, BLK, FX_TAB, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGS
  * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
  * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
  * ticker, the burnt ground, the fence, the Sarcophagus and its cranes, scaffolding and reliefs, the street doors and the fire escapes
- * drawn on the facades. Not yet: the blade signs and billboards (objects), the rooms seen through the windows, objects, cars, people, interiors,
+ * drawn on the facades, the rooms seen through the windows. Not yet: the blade signs and billboards (objects), objects, cars, people, interiors,
  * the smoke, rain and snow falling, the glass of the windows indoors.
  */
 
@@ -55,7 +55,9 @@ export class GpuWorld {
    * What is near and changes as the viewer moves (binding 16, the last the adapters allow: later lists
    * go in here too, after their own header word): at FX_TAB, one word per building, where its facade
    * features start (0: none); each is a count, then per feature its kind | face << 4 (0 a street door,
-   * 1 a fire escape) and its span along the face (two f32). Rewritten in place as they become known.
+   * 1 a fire escape) and its span along the face (two f32). Then two words per box, where its plans
+   * start: the ground floor's and the upper floors' (gx, gy, nx, ny, rooms, lot; per room its box as
+   * four f32, kind and unit; the cells, four to a word). fx[0] is the number of buildings.
    */
   private fx: GPUBuffer;
   private fxW: Uint32Array;
@@ -63,6 +65,8 @@ export class GpuWorld {
   private fxEnd = 0;
   /** Per building: 0 not looked at, 1 its features without the ground plan, 2 with it (the shops' doors). */
   private fxState: Uint8Array;
+  /** Per box: 1 where its ground (2k) or upper floors' (2k + 1) plan is in fx. */
+  private fxPlan: Uint8Array;
   private fxScan = 0;
 
   static available(): boolean { return typeof navigator !== 'undefined' && 'gpu' in navigator; }
@@ -114,8 +118,9 @@ export class GpuWorld {
     this.sg = store(S.data); this.tickOff = S.tick;
     this.fixed = [new Float32Array(C.xb), new Float32Array(C.yb), Uint32Array.from(C.xCell), Uint32Array.from(C.yCell), blocks, blds].map(store);
     const nb = C.buildings.length;
-    this.fxW = new Uint32Array(FX_TAB + nb + 65536); this.fxF = new Float32Array(this.fxW.buffer);
-    this.fxState = new Uint8Array(nb); this.fxEnd = FX_TAB + nb;
+    this.fxW = new Uint32Array(FX_TAB + 3 * nb + (1 << 20)); this.fxF = new Float32Array(this.fxW.buffer);
+    this.fxW[0] = nb;
+    this.fxState = new Uint8Array(nb); this.fxPlan = new Uint8Array(nb * 2); this.fxEnd = FX_TAB + 3 * nb;
     this.fx = store(this.fxW);
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
@@ -159,7 +164,7 @@ export class GpuWorld {
     }
     if (!this.powerSet) {
       // which substation feeds each building, and whether it has a generator: fixed once the grid exists
-      for (let k = 0; k < C.buildings.length; k++) { this.blds[k * BLD + 46] = P.building[k]; this.blds[k * BLD + 47] = P.generator[k]; }
+      for (let k = 0; k < C.buildings.length; k++) { this.blds[k * BLD + 46] = P.building[k]; this.blds[k * BLD + 47] = P.generator[k]; this.blds[k * BLD + 63] = P.backup[k]; }
       q.writeBuffer(this.fixed[5], 0, this.blds);
       this.powerSet = true;
     }
@@ -199,43 +204,80 @@ export class GpuWorld {
     pass.end();
   }
 
+  /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
+  private fxReset() {
+    const nb = this.city.buildings.length;
+    this.fxState.fill(0); this.fxPlan.fill(0);
+    this.fxW.fill(0, FX_TAB, FX_TAB + 3 * nb); this.fxEnd = FX_TAB + 3 * nb;
+    this.dev.queue.writeBuffer(this.fx, 0, this.fxW, 0, this.fxEnd);
+  }
+
+  /** Room for n words at the end of the near buffer (its offset), or -1 after starting over. */
+  private fxTake(n: number) {
+    if (this.fxEnd + n > this.fxW.length) { this.fxReset(); return -1; }
+    const o = this.fxEnd; this.fxEnd += n; return o;
+  }
+
   /**
-   * The street doors and fire escapes of the houses near (x, y), into fx: looked at every few frames,
-   * and again once a ground plan brings the shops' doors (and moves the escapes off them).
+   * The houses near (x, y), into fx, looked at every few frames: their street doors and fire escapes
+   * (again once a ground plan brings the shops' doors and moves the escapes off them), and within
+   * FX_PLAN the floor plans of each box, made here a few at a time (as the CPU's window peeks do).
    */
   private facades(x: number, y: number) {
     if (this.fxScan++ % 6) return;
-    const C = this.city, W = this.fxW, F = this.fxF, nb = C.buildings.length;
-    let plans = FX_PLANS, lo = nb, hi = -1;
-    const start = this.fxEnd;
+    const C = this.city, W = this.fxW, F = this.fxF, nb = C.buildings.length, q = this.dev.queue;
+    let plans = FX_PLANS;
+    const start = this.fxEnd, slots: number[] = [];
+    const make = (k: number, f: number) => { if (plans > 0 && cachedPlan(C, k, f) === undefined) { planOf(C, k, f); plans--; } };
     for (const b of C.blocks) {
       if (b.b1 <= b.b0 || Math.max(b.x0 - x, x - b.x1, b.y0 - y, y - b.y1) > FX_NEAR) continue;
       for (let k = b.b0; k < b.b1; k++) {
         const B = C.buildings[k];
         if (!habitable(B)) continue;
-        if (plans > 0 && cachedPlan(C, k, 0) === undefined && Math.max(B.x0 - x, x - B.x1, B.y0 - y, y - B.y1) < FX_PLAN) { planOf(C, k, 0); plans--; }
+        if (Math.max(B.x0 - x, x - B.x1, B.y0 - y, y - B.y1) < FX_PLAN) {
+          // the ground floor's plan, and the upper floors' of each box of the lot (the first storey it holds)
+          make(k, 0);
+          let f0 = 1;
+          for (const j of tiersOf(C, k)) {
+            const top = floorsOf(C.buildings[j]);
+            if (f0 < top) make(k, f0);
+            for (const f of f0 < top ? [0, f0] : [0]) {
+              const P = cachedPlan(C, k, f);
+              if (!P || P.box !== (f ? j : k) || this.fxPlan[P.box * 2 + (f ? 1 : 0)]) continue;
+              const o = this.fxTake(6 + P.rooms.length * 6 + Math.ceil(P.cells.length / 4));
+              if (o < 0) return;
+              W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = k;
+              P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind); W[w + 5] = R.unit; });
+              W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 2), o + 6 + P.rooms.length * 6);
+              if (P.cells.length & 3) { const c0 = P.cells.length & ~3; let v = 0; for (let c = c0; c < P.cells.length; c++) v |= P.cells[c] << ((c - c0) * 8); W[o + 6 + P.rooms.length * 6 + (c0 >> 2)] = v; }
+              this.fxPlan[P.box * 2 + (f ? 1 : 0)] = 1;
+              const t = FX_TAB + nb + P.box * 2 + (f ? 1 : 0); W[t] = o; slots.push(t);
+            }
+            f0 = Math.max(f0, top);
+          }
+        }
         const want = cachedPlan(C, k, 0) ? 2 : 1;
         if (this.fxState[k] >= want) continue;
         const doors = exitsOf(C, k, true), escs = escapesOf(C, k), n = doors.length + escs.length;
-        if (this.fxEnd + 1 + n * 3 > W.length) { this.fxState.fill(0); W.fill(0, FX_TAB, FX_TAB + nb); this.fxEnd = FX_TAB + nb; this.dev.queue.writeBuffer(this.fx, 0, W); return; }
+        const o = n ? this.fxTake(1 + n * 3) : 0;
+        if (o < 0) return;
         this.fxState[k] = want;
         if (!n) continue;
-        const o = this.fxEnd;
         W[o] = n;
         doors.forEach((D, e) => { W[o + 1 + e * 3] = D.face << 4; F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1; });
         escs.forEach((E, e) => { const w = o + 1 + (doors.length + e) * 3; W[w] = 1 | (E.face << 4); F[w + 1] = E.a0; F[w + 2] = E.a0 + 2 * BAY; });
-        this.fxEnd += 1 + n * 3;
-        W[FX_TAB + k] = o; lo = Math.min(lo, k); hi = Math.max(hi, k);
+        W[FX_TAB + k] = o; slots.push(FX_TAB + k);
       }
     }
-    const q = this.dev.queue;
     if (this.fxEnd > start) q.writeBuffer(this.fx, start * 4, W, start, this.fxEnd - start);
-    if (hi >= lo) q.writeBuffer(this.fx, (FX_TAB + lo) * 4, W, FX_TAB + lo, hi - lo + 1);
+    for (const t of slots) q.writeBuffer(this.fx, t * 4, W, t, 1);
   }
 }
 
-/** The ground plans the street doors of the shops come from: made near the viewer, a few per frame (as the CPU's window peeks do). */
-const FX_NEAR = 250, FX_PLAN = 80, FX_PLANS = 2;
+/** How near the doors and escapes are looked at, and the floor plans made (a few every 6 frames). */
+const FX_NEAR = 250, FX_PLAN = 80, FX_PLANS = 4;
+/** The room kinds, numbered as the shader has them. */
+const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop'];
 
 /** A character as the atlas has it (Latin-1): an accent outside it falls back to its plain letter. */
 function code(s: string, k: number) {
