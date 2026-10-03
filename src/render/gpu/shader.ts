@@ -1706,7 +1706,7 @@ const CLOUD_H = 1200.0;
 // the layer's top plane, the longest stretch marched, the samples along it, and the mean free path (m) of the thickest cloud
 const CLOUD_TOP = 1900.0;
 const CLOUD_RUN = 5000.0;
-const CLOUD_STEPS = 8;
+const CLOUD_STEPS = 12;
 const CLOUD_MFP = 140.0;
 const MOON_R = ${(3.4 * Math.PI) / 180};
 const TAU = 6.28318531;
@@ -1730,21 +1730,23 @@ fn glowBelow(x: f32, y: f32) -> vec3f {
   let fire = 1.6 * exp(-sd * sd);
   return vec3f(40.0 * city + 70.0 * fire, 34.0 * city + 24.0 * fire, 18.0 * city + 12.0 * fire);
 }
-// the cloud's density at a point: the cover's noise (as the flat deck had it) sets where there is cloud and
-// how high it climbs, from a base a little higher where it thins out; k1, k2 fade the finer scales with distance
-fn cloudAt(x: f32, y: f32, z: f32, k1: f32, k2: f32, lo: f32) -> f32 {
-  if (z < CLOUD_H || z > CLOUD_TOP) { return 0.0; }
+// the cloud's column at (x, y): its cover c (from the cover's noise, as the flat deck had it), base and top; the
+// finer scales slide with height z (so it billows instead of standing as columns); k1, k2 fade them with distance
+fn cloudCol(x: f32, y: f32, z: f32, k1: f32, k2: f32, lo: f32) -> vec3f {
   let ox = x + u.driftX; let oy = y + u.driftY;
-  // the finer scales slide with height, so the cloud billows instead of standing as columns
-  let hz = z - CLOUD_H;
+  let hz = clamp(z, CLOUD_H, CLOUD_TOP) - CLOUD_H;
   let n0 = noise(ox / 1100.0, oy / 1100.0); let n1 = noise((ox + hz * 0.6) / 420.0 + 71.0, (oy - hz * 0.4) / 420.0 + 13.0); let n2 = noise((ox - hz * 0.9) / 150.0 + 37.0, (oy + hz * 0.7) / 150.0 + 91.0);
   var d = 0.55 * n0 + 0.3 * (k1 * n1 + (1.0 - k1) * 0.5) + 0.15 * (k2 * n2 + (1.0 - k2) * 0.5);
   d += (0.5 - d) * smoothK(8000.0, 30000.0, length(vec2f(x - u.px, y - u.py)));
   let c = smoothK(lo - 0.18, lo + 0.12, d);
-  if (c <= 0.0) { return 0.0; }
-  let top = CLOUD_H + (CLOUD_TOP - CLOUD_H) * c * (0.3 + 0.7 * d);
-  let bot = CLOUD_H + 140.0 * (1.0 - c);
-  return c * smoothK(bot, bot + 80.0, z) * (1.0 - smoothK(max(bot + 40.0, top - 220.0), top, z));
+  return vec3f(c, CLOUD_H + 140.0 * (1.0 - c), CLOUD_H + (CLOUD_TOP - CLOUD_H) * c * (0.3 + 0.7 * d));
+}
+// the cloud's density at a point (for the looks toward the sun): its column's cover, inside base..top
+fn cloudAt(x: f32, y: f32, z: f32, k1: f32, k2: f32, lo: f32) -> f32 {
+  if (z < CLOUD_H || z > CLOUD_TOP) { return 0.0; }
+  let C = cloudCol(x, y, z, k1, k2, lo);
+  if (C.x <= 0.0) { return 0.0; }
+  return C.x * smoothK(C.y, C.y + 80.0, z) * (1.0 - smoothK(max(C.y + 40.0, C.z - 220.0), C.z, z));
 }
 fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let L = length(vec2f(rdx, rdy)); let night = 1.0 - u.day; let day = u.day;
@@ -1828,14 +1830,22 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     let GL = glowBelow(wx, wy) * ((0.9 + 0.5 * u.precip) * night);
     let base = 12.0 + 12.0 * (1.0 - u.cityLit) * night;
     var tr = 1.0; var acc = vec3f(0.0);
-    var s = s0 + ds * gDith;
+    // the scales finer than a step are averaged out (else a long step hits or misses them by chance: grain)
+    let k1s = k1 * (1.0 - smoothK(500.0, 1200.0, ds)); let k2s = k2 * (1.0 - smoothK(150.0, 400.0, ds));
+    var s = s0;
     for (var k = 0; k < CLOUD_STEPS; k++) {
-      let px = u.px + ux * s; let py = u.py + uy * s; let pz = u.eye + up * s;
-      let dn = cloudAt(px, py, pz, k1, k2, lo);
+      // each step's stretch, s..s+ds: how much of the height it climbs lies inside its column's cloud
+      let za = u.eye + up * s; let zb = za + up * ds; let sm = s + ds * 0.5;
+      let px = u.px + ux * sm; let py = u.py + uy * sm;
+      let C = cloudCol(px, py, (za + zb) * 0.5, k1s, k2s, lo);
+      let lo2 = max(za, C.y); let hi2 = min(zb, C.z);
+      let inside = max(0.0, hi2 - lo2) / max(1e-3, zb - za);
+      let dn = C.x * inside;
+      let pz = (lo2 + hi2) * 0.5;
       if (dn > 0.003) {
         // the cloud toward the sun, two looks
-        let l1 = cloudAt(px + Ls.x * 90.0, py + Ls.y * 90.0, pz + Ls.z * 90.0, k1, k2, lo);
-        let l2 = cloudAt(px + Ls.x * 320.0, py + Ls.y * 320.0, pz + Ls.z * 320.0, k1, k2, lo);
+        let l1 = cloudAt(px + Ls.x * 90.0, py + Ls.y * 90.0, pz + Ls.z * 90.0, k1s, k2s, lo);
+        let l2 = cloudAt(px + Ls.x * 320.0, py + Ls.y * 320.0, pz + Ls.z * 320.0, k1s, k2s, lo);
         let sunT = exp(-(l1 * 90.0 + l2 * 230.0) / 160.0);
         let hf = clamp((pz - CLOUD_H) / (CLOUD_TOP - CLOUD_H), 0.0, 1.0);
         let lb = (1.0 - hf) * (1.0 - hf);
@@ -2313,8 +2323,6 @@ var<private> gTag: f32 = -1.0;
 var<private> gGlow: f32 = 0.0;
 /** skyCell without the moon (the haze behind the Sarcophagus). */
 var<private> gNoMoon: bool = false;
-// a fixed per-cell offset for the clouds' march (no bands, and no shimmer: it does not change by frame)
-var<private> gDith: f32 = 0.5;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
 var<private> gGlowK: f32 = 1.0;
 // the material, the surface's normal (toward the viewer) and how wet it is, of the cell at gTag (R.23)
@@ -2349,7 +2357,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let L = sqrt(rdx * rdx + rdy * rdy);
   let A = L * L / (2.0 * u.curveR);
   gOX = u.px; gOY = u.py; gOZ = u.eye; gRefl = false; gMat = MAT_NONE; gWet = 0.0;
-  gDith = hash3(i32(gid.x), i32(gid.y), 61);
   gRay = normalize(vec3f(rdx, rdy, -m));
   var tG = 1e9;
   if (m > 0.0) { let disc = m * m - 4.0 * A * u.eye; if (disc > 0.0) { tG = 2.0 * u.eye / (m + sqrt(disc)); } }
