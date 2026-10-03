@@ -22,7 +22,7 @@ const C = (s: string) => s.charCodeAt(0);
 export function objectsWGSL(): string {
   return /* wgsl */ `
 const OW = ${OW}u; const PW = ${PW}u; const TILE = ${TILE}u; const PIVOT = 0.7;
-const M_SOLID = 0u; const M_LEAF = 1u; const M_GLOW = 2u; const M_TEXT = 3u; const M_BOARD = 4u; const M_WHEEL = 5u; const M_GLASS = 6u;
+const M_SOLID = 0u; const M_LEAF = 1u; const M_GLOW = 2u; const M_TEXT = 3u; const M_BOARD = 4u; const M_WHEEL = 5u; const M_GLASS = 6u; const M_SCREEN = 7u;
 const LEAF = array<u32, 5>(${['@', '&', '%', '#', '*'].map((c) => `${C(c)}u`).join(', ')});
 const SPOKES = array<u32, 4>(${['|', '/', '-', '\\'].map((c) => `${C(c)}u`).join(', ')});
 const TYRE = vec3f(52.0, 52.0, 56.0); const HUB = vec3f(170.0, 170.0, 175.0); const RIM = vec3f(140.0, 140.0, 148.0); const DIRT = vec3f(110.0, 90.0, 62.0);
@@ -152,6 +152,8 @@ fn objBlock(ob: u32, P: vec3f, Ls: vec3f, tPre: f32, tMax: f32, mw: f32) -> f32 
 }
 fn j32(v: u32) -> i32 { return i32(v & 0xffffu); }
 const OBJ_LEAF_GAP = 0.25;
+/** How bright a small screen (a shelter's advert) is next to the big ones on the buildings. */
+const SCREEN_K = 0.75; const SCREEN_S = 3.0;
 
 // the objects over what the world drew in this cell, nearest wins (the cell's depth); (dz: the ray's rise per metre)
 fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell {
@@ -291,6 +293,19 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       kk = (0.55 + 0.25 * hash3(ifloor(hp.y * 2.0), ifloor(hp.z * 2.0), 7)) * fog + fxf(p + 21u) * 1.3 * max(0.0, 1.0 - (hp.z - q0.z) / H);
       if (bulbs && fg) { kk = 0.75 + 0.45 * fog; }
     }
+    else if (mat == M_SCREEN) {
+      // a video screen on its faces across y (a bus shelter's advert, both sides), the telões' animations; the edges a dark frame
+      let pw = col / 255.0; // the part's color is its power (dims in a blackout)
+      ch = EQ; col = vec3f(40.0, 40.0, 44.0); kk = fog;
+      if (face == 1) {
+        let W = q1.x - q0.x; let H = q1.z - q0.z;
+        let uu = select(q1.x - hp.x, hp.x - q0.x, oy > cen.y); // read left to right from either side
+        // drawn as a screen SCREEN_S times bigger, so its pixels are finer than the buildings' 0.3 m
+        let S = SCREEN_S;
+        let px = screenPix(seed, uu * S, (q1.z - hp.z) * S, W * S, H * S, S * (u.colW * best) / max(1e-6, abs(dy)), S * best / u.scale);
+        ch = px.ch; col = px.c * SCREEN_K * pw; kk = 1.0;
+      }
+    }
     else if (mat == M_TEXT && face == 1 && tLen > 0u) {
       let W = q1.x - q0.x;
       let perCol = (u.colW * best) / max(1e-6, abs(dy)); let perRow = best / u.scale;
@@ -328,7 +343,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         kk *= 0.55 + 0.45 * h + 0.25 * nrm.z;
       } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && shape == 0u), fx[p + 12u], face == 2); }
     }
-    let painted = mat == M_GLOW || mat == M_TEXT || (mat == M_BOARD && face == 0);
+    let painted = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN || (mat == M_BOARD && face == 0);
     // at night the paint reads darker, as the walls' palette does (the lamps' light comes on top, by its color)
     var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
@@ -338,7 +353,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff);
       rgb += L * (select(1.1, 1.5, face == 2) * fog); oIl = L * (select(1.1, 1.5, face == 2) * fog);
     }
-    if (mat == M_GLOW || mat == M_TEXT) { oEm = rgb; }
+    if (mat == M_GLOW || mat == M_TEXT || (mat == M_SCREEN && face == 1)) { oEm = rgb; }
     // seen through glass: darker and colder, with a faint sheen
     if (glassT < best) { rgb = rgb * vec3f(0.6, 0.66, 0.72) + vec3f(16.0, 24.0, 34.0); oEm *= 0.66; oIl *= 0.66; }
     // the share of direct sun on this face (2 + share, see finish); a fire escape (no sun on the CPU) and

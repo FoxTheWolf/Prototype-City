@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.A.1 — Anúncios nos pontos de ônibus (2026-10-03)
+- O cartaz dos pontos de ônibus virou uma tela de anúncio animada, dos dois lados, com as mesmas animações dos telões (e apaga num apagão). Antes era um quadrado branco que estourava de brilho.
+- O Sarcófago não deixa mais a lua aparecer através dele, como se fosse de vidro.
+- A dica da tela de carregamento fica perto da borda de baixo.
+
 ## 0.R.39 — Carregamento sem travar e F3 (2026-10-03)
 - A cidade é gerada sem travar a janela: a tela de título mostra uma barra de progresso com o que está sendo feito (ruas, rede elétrica, cidadãos, shaders), e os botões aparecem quando tudo está pronto.
 - A tela de carregamento mostra uma dica sobre o jogo embaixo da barra (e, em breve, o que aconteceu no mundo neste mesmo dia em 2008).

@@ -3,7 +3,7 @@ import { type RGB } from '../sim/city';
 import { Mat, part, Shape, type Part } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
-const { Solid, Leaf, Glow, Text, Board, Wheel, Glass } = Mat;
+const { Solid, Leaf, Glow, Text, Board, Wheel, Glass, Screen } = Mat;
 
 const GLASS: RGB = [45, 65, 95];
 const TIRE: RGB = [28, 28, 32];
@@ -313,7 +313,8 @@ export const FURNITURE: Record<string, { parts: Part[]; r: number; h: number }> 
     r: 2.3, h: 2.5, parts: [
       part(Box, -0.95, -2.05, 2.3, 0.95, 2.05, 2.45, STEEL, Solid, '=', '_'),
       part(Box, -0.95, -2.0, 0.25, -0.88, 2.0, 2.3, GLASS, Solid, ':'),
-      part(Box, -0.88, 1.92, 0.3, 0.55, 2.0, 2.15, [240, 225, 200], Glow, '#'),
+      // the advert: a small video screen showing the same animations as the big ones (both sides); its color is its power (white: on)
+      part(Box, -0.88, 1.92, 0.3, 0.55, 2.0, 2.15, [255, 255, 255], Screen, '='),
       part(Box, 0.8, -2.0, 0, 0.9, -1.9, 2.3, STEEL, Solid, '|'),
       part(Box, -0.6, -1.5, 0.42, -0.2, 1.3, 0.5, STEEL, Solid, '=', '='),
     ],
@@ -424,7 +425,7 @@ export function poweredFurniture(kind: string, k: number): Part[] {
   const q = Math.round(Math.min(1.25, k) * 8) / 8, key = kind + q;
   let m = dimmed.get(key);
   if (!m) {
-    m = FURNITURE[kind].parts.map((p) => (p.mat === Mat.Glow ? { ...p, col: [p.col[0] * q, p.col[1] * q, p.col[2] * q] as RGB } : p));
+    m = FURNITURE[kind].parts.map((p) => (p.mat === Mat.Glow || p.mat === Mat.Screen ? { ...p, col: [p.col[0] * q, p.col[1] * q, p.col[2] * q] as RGB } : p));
     dimmed.set(key, m);
   }
   return m;

@@ -1733,7 +1733,7 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let t = clamp((u.hor + rowF) / max(1.0, u.hor), 0.0, 1.0);
   let az = atan2(rdy, rdx);
   let dA = wrapA(az - u.moonA);
-  let moonCol = u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
+  let moonCol = !gNoMoon && u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
   let dS = wrapA(az - u.sunA);
   let toSun = 0.5 + 0.5 * cos(dS);
   let t2 = t * t; let t4 = t2 * t2;
@@ -2157,7 +2157,8 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
   var far = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
   let vis = select(sarcVis(), 0.0, gRefl);
   if (vis > 0.0) {
-    var bgS = vec3f(7.0, 8.0, 12.0); if (m <= 0.0) { bgS = skyCell(m, rdx, rdy).bg; }
+    // the haze it fades into is the sky without the moon (else the moon shows through it, like glass)
+    var bgS = vec3f(7.0, 8.0, 12.0); if (m <= 0.0) { gNoMoon = true; bgS = skyCell(m, rdx, rdy).bg; gNoMoon = false; }
     far = sarcCell(-m / L, u.scale * L, L, rdx / L, rdy / L, f32(gx), bgS, vis);
     let cr = craneCell(i32(gx), i32(gy), vis);
     if (cr.depth < far.depth) { far = cr; }
@@ -2266,6 +2267,8 @@ var<private> gIl: vec3f = vec3f(0.0);
 var<private> gTag: f32 = -1.0;
 // how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)
 var<private> gGlow: f32 = 0.0;
+/** skyCell without the moon (the haze behind the Sarcophagus). */
+var<private> gNoMoon: bool = false;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
 var<private> gGlowK: f32 = 1.0;
 // the material, the surface's normal (toward the viewer) and how wet it is, of the cell at gTag (R.23)
