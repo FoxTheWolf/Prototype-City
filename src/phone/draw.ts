@@ -69,6 +69,9 @@ const GLOSS: Record<string, number> = { matte: 0.2, gloss: 0.6, metal: 0.42, rub
 /** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
 
+/** Where this frame drew the phone's lit screen (interface cells: x, y, w, h), for the bloom; null when off or not drawn. */
+export const SCREEN: { at: number[] | null } = { at: null };
+
 export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
   if (P.raise < 0.01 && P.peek < 0.01) return;
   const [ox, oy] = origin(g.cols, g.rows, P);
@@ -218,6 +221,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
 
   // the screen
   const S = new Lcd(g, ox + SX, oy + SY);
+  SCREEN.at = on ? [ox + SX, oy + SY, SW, SH] : null;
   if (!on) for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]);
   else {
     for (let y = 0; y < SH; y++) S.fill(y, LCD);

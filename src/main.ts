@@ -1,6 +1,6 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, keyAt, mapView } from './phone/draw';
+import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { type Sfx } from './phone/call';
@@ -606,6 +606,7 @@ function frame(now: number) {
   phone.hover = phone.out || (laptop.open && phone.raise > 0.5) ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
   const phoneOnTop = laptop.open;
+  PHONE_SCREEN.at = null;
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
@@ -694,7 +695,7 @@ function frame(now: number) {
   }
   const T3 = termMode === 'fb' ? termFb : termTx;
   const termAt = screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, termAt);
+  if (onGpu) comp!.draw(world, view, ui, hd, termAt, PHONE_SCREEN.at);
   else renderer.draw(grid, ui, hd, termAt);
   requestAnimationFrame(frame);
 }

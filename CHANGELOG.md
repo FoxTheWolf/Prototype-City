@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.35 — Telas que brilham (2026-10-03)
+- As telas do celular e do notebook entram no mesmo brilho (bloom) das luzes da cidade: uma tela clara à noite espalha luz sobre a moldura e o aparelho em volta.
+- O vidro das telas reflete, fraco e desfocado, as luzes fortes da cena (letreiros, postes), só onde a tela está escura.
+
 ## 0.R.34 — Fachadas sem troca brusca (2026-10-03)
 - A passagem do prédio visto de longe para o prédio com detalhes acontece numa faixa muito mais longa (de ~150 m a ~440 m), aos poucos, em vez de mudar de uma vez quando você se aproxima.
 - As salas vistas pelas janelas são preparadas mais cedo (a 130 m), antes de começarem a aparecer, e há muito mais espaço para elas antes de tudo ser recarregado.

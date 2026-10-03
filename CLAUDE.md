@@ -306,7 +306,6 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 ### Sessão A (Opus): fechar a iluminação
 > **O usuário sugeriu (2026-10-03)** que o que for complicado aqui pode esperar a **reescrita do shader de iluminação** (dia e noite juntos; ver "A revisão geral da luz" na Sessão B). Antes de cada item, avaliar se ele vale agora ou depois dela.
 3. **Sombras das luzes da noite** (o usuário confirmou em 2026-10-03 que os postes ainda não fazem sombra; pode esperar a reescrita da luz) (postes e faróis; só as luzes mais próximas, cada uma é um raio a mais por célula) e a lua fazendo sombra.
-4. **Bloom e reflexo de verdade nas telas do celular e do notebook** (as células acesas da tela na mesma passada de bloom; o reflexo pela imagem do mundo do quadro, desfocada e espelhada).
 5. **Reflexos:** faltam os objetos (postes, carros, pessoas) e as cabeças dos postes no reflexo (R.24); um desfoque mais natural que o tremido por célula (`REFL_BLUR`).
 6. **Cores:** céu do dia (o gradiente ainda é o antigo), a saturação da noite, as paletas quase cinzas das fachadas (`LOOK` em `sim/city.ts`: residencial, histórico, moldura de escritório) e `CAR_COLS`. **Sugestão:** uma tecla de debug com a tabela de cores de fachada sob dia, entardecer e noite lado a lado, para decidir olhando a tabela.
 7. Bugs de luz: o painel do ponto de ônibus estoura em branco; o Sarcófago parece de vidro visto pela janela (a lua aparece atrás dele); saturação demais em alguns lugares (faixas roxas no vidro, saguão verde-água).
