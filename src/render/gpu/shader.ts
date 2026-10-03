@@ -1873,7 +1873,9 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   }
   if (sunK > 0.003) {
     let sk = sunK * (1.0 - 0.55 * cover);
-    let kc = kelvin(sunTemp()) * 240.0; r += kc.x * sk; g += kc.y * sk; b += kc.z * sk;
+    // toward the sun's own color (not added on top of the blue sky, which burned it to white)
+    let kc = kelvin(sunTemp()) * 245.0; let m = min(1.0, sk);
+    r += (kc.x - r) * m; g += (kc.y - g) * m; b += (kc.z - b) * m;
   }
   var o = Cell(32u, vec3f(0.0), vec3f(r, g, b), 1e9, KIND_OTHER, 0.0);
   if (star > r + 25.0 && !moonA) { o.ch = select(DOT, STAR, hs < 0.003); o.c = vec3f(star, star, star + 30.0); }

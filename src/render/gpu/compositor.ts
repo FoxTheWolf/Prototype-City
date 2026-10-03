@@ -204,7 +204,7 @@ fn src(x: i32, y: i32) -> vec4f {
  * The sun's rays (B.2): from every cell, RAY_N looks along the line to the sun on the screen, summing the bright
  * sky near the sun they cross (what blocks it, a building's dark edge, leaves a gap: the shafts), added to glow.
  */
-const RAY_N = 24;
+const RAY_N = 32;
 const RAYS_WGSL = /* wgsl */ `
 struct RU { cols: f32, rows: f32, aspect: f32, k: f32, sx: f32, sy: f32, pad0: f32, pad1: f32 };
 @group(0) @binding(0) var<uniform> r: RU;
@@ -222,7 +222,7 @@ fn lit(x: i32, y: i32) -> vec3f {
   if (id.x >= cols || id.y >= rows) { return; }
   let p = vec2f(f32(id.x), f32(id.y)); let to = vec2f(r.sx, r.sy) - p;
   // from a fixed offset per cell along the line (no bands)
-  let j = fract(sin(dot(p, vec2f(12.9898, 78.233))) * 43758.5453);
+  let j = fract(52.9829189 * fract(0.06711056 * p.x + 0.00583715 * p.y)); // interleaved gradient: finer grain
   var s = vec3f(0.0); var wt = 1.0; var ws = 0.0;
   for (var k = 0; k < ${RAY_N}; k++) {
     ws += wt;
@@ -233,7 +233,7 @@ fn lit(x: i32, y: i32) -> vec3f {
   }
   let i = id.y * cols + id.x;
   // the mean along the line (so an open sky only brightens a little), capped: the shafts are the contrast
-  let ray = min(s * (r.k * 1.6 / ws), vec3f(0.35));
+  let ray = min(s * (r.k * 1.0 / ws), vec3f(0.2));
   glow[i] = vec4f(glow[i].rgb + ray, glow[i].a);
 }
 `;
