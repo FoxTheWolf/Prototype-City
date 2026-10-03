@@ -5,6 +5,7 @@ import { HD, type HdLayer } from '../hd';
 import type { World } from '../../sim/world';
 import type { View } from '../raycaster';
 import type { GpuWorld } from './world';
+import { EYE } from '../eye';
 
 /**
  * Stage R.3: the compositor of glRenderer.ts on WebGPU, on a canvas of its own laid over the WebGL one.
@@ -34,11 +35,12 @@ const CU = /* wgsl */ `
 struct CU {
   cell: vec2i, origin: vec2i, grid: vec2i, uiCell: vec2i, uiOrigin: vec2i, uiGrid: vec2i,
   tmCell: vec2i, tmOrigin: vec2i, tmGrid: vec2i, ph0: vec2i, ph1: vec2i, tmShow: vec2i, g0: vec2i, g1: vec2i, g2: vec2i, g3: vec2i,
+  eye: vec4i,
 };
 // the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's layer
 // (tmGrid is set while the notebook's screen is up, tmShow.x while its layer is shown: faced squarely);
 // g0 to g3: the notebook glass's corners (top-left, top-right, bottom-right, bottom-left), faced or from
-// aside, for its glow
+// aside, for its glow; eye.x: how bright the screens look to the eye (EYE.k, thousandths, 600 on a lit street at night)
 fn inPhone(p: vec2i) -> bool { return all(p >= u.ph0) && all(p < u.ph1); }
 fn inTerm(p: vec2i) -> bool { return u.tmShow.x > 0 && all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
 // a screen cell's light: its paper, and a little of its glyph's color (a glyph covers part of the cell)
@@ -136,10 +138,13 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     if (ub.a > 0.25) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
     if (hp.a > 0.75) { col = hp.rgb; }
   }
+  // the screens' glow follows the eye (none by day, more in the dark) and is less for a bright page (the eye adapts to it)
+  let ek = f32(u.eye.x) / 600.0;
+  let kPh = ek / (1.0 + 3.0 * dot(mean[0].rgb, vec3f(0.3, 0.5, 0.2))); let kTm = ek / (1.0 + 3.0 * dot(mean[1].rgb, vec3f(0.3, 0.5, 0.2)));
   if (inPhone(s)) {
-    col += scrAt(s, u.uiOrigin, u.uiCell, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K};
+    col += scrAt(s, u.uiOrigin, u.uiCell, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh;
   } else if (inTerm(s)) {
-    col += scrAt(s, u.tmOrigin, u.tmCell, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K};
+    col += scrAt(s, u.tmOrigin, u.tmCell, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm;
   }
   if (inPhone(s) || inTerm(s)) {
     // the screen's glass: the frame's bright lights mirrored on it, blurred (the world's glow only, in .a),
@@ -152,12 +157,12 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     let f = vec2f(s) + 0.5;
     if (u.ph1.x > u.ph0.x) {
       let q = abs(f - vec2f(u.ph0 + u.ph1) * 0.5) - vec2f(u.ph1 - u.ph0) * 0.5;
-      col += halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y), mean[0].rgb);
+      col += halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y), mean[0].rgb * kPh);
     }
     if (u.tmGrid.x > 0) {
       let a = vec2f(u.g0); let b = vec2f(u.g1); let c = vec2f(u.g2); let e = vec2f(u.g3);
       // its height: the mean of its two sides (the near one is taller from aside)
-      col += halo(sdQuad(f, a, b, c, e), 0.5 * (length(e - a) + length(c - b)), mean[1].rgb);
+      col += halo(sdQuad(f, a, b, c, e), 0.5 * (length(e - a) + length(c - b)), mean[1].rgb * kTm);
     }
   }
   return vec4f(col, 1.0);
@@ -303,7 +308,7 @@ export class GpuCompositor {
   private ctx: GPUCanvasContext;
   private pipe: GPURenderPipeline;
   private uni: GPUBuffer;
-  private U = new Int32Array(32);
+  private U = new Int32Array(36);
   private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas', GPUTexture>;
   private bind: GPUBindGroup | null = null;
   private ui: Layout | null = null;
@@ -419,6 +424,7 @@ export class GpuCompositor {
       const x0 = L.originX + phone[0] * L.cellW, y0 = L.originY + phone[1] * L.cellH;
       this.U.set([x0, y0, x0 + phone[2] * L.cellW, y0 + phone[3] * L.cellH], 18);
     } else this.U.fill(0, 18, 22);
+    this.U[32] = Math.round(EYE.k * 1000);
     this.dev.queue.writeBuffer(this.uni, 0, this.U);
     const n = gw.cols * gw.rows;
     if (!this.glowBuf || this.glowBuf.n !== n) {

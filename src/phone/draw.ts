@@ -12,6 +12,7 @@ import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
 import { HD } from '../render/hd';
+import { EYE, pageDim } from '../render/eye';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
 
@@ -66,8 +67,8 @@ const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
 /** How much of the scene's glint a material gives back. */
 const GLOSS: Record<string, number> = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05, clear: 0.9 };
 
-/** The glint and the eye's adaptation, eased over time so they do not jump from frame to frame. */
-const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0 };
+/** The glint, eased over time so it does not jump from frame to frame. */
+const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
 
 /** Where this frame drew the phone's lit screen (interface cells: x, y, w, h), for the bloom; null when off or not drawn. */
 export const SCREEN: { at: number[] | null } = { at: null };
@@ -79,16 +80,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const SHL = SHELLS[P.look], KEYS = keysFor(P.look), CY = KEYS_Y;
   // the body in the shell's color (or the model's), the face of a slider above its seam
   const BODY: C3 = SHL.body ?? P.device.body, FACE: C3 = SHL.face ?? BODY;
-  const Lr = light[0], Lg = light[1], Lb = light[2], Lm = (Lr + Lg + Lb) / 3;
+  const Lr = light[0], Lg = light[1], Lb = light[2];
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
   GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
   GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
-  // the eye adapts in a second or two: in the dark the screen looks brighter and blooms, under a
-  // strong light it looks a little dimmer
-  GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
-  // (capped: a bright page must not wash out in the dark, see the ceiling on the glass below)
-  const gain = Math.min(1.18, Math.max(0.6, 1.6 - 0.7 * GL.adapt)), bloom = 0.6 * Math.min(1, Math.max(0, (0.9 - GL.adapt) / 0.5));
+  // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by
+  // day it looks dimmer (capped: a bright page must not wash out in the dark, see the ceiling on the glass below)
+  const gain = Math.min(1.18, 0.65 + 0.55 * Math.min(1, EYE.k / 0.6)), bloom = EYE.k;
   // the glint: the brightest light nearby mirrored in the phone, a soft diagonal band on the side
   // it comes from, in its color, stronger for a light behind the player
   const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
@@ -261,14 +260,16 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       X[q] += 3 * Lr + sh * GL.r + fp * Lr; X[q + 1] += 3 * Lg + sh * GL.g + fp * Lg; X[q + 2] += 4 * Lb + sh * GL.b + fp * Lb;
     }
   }
-  if (bloom > 0.01 && n && on) {
+  ar /= Math.max(1, n); ag /= Math.max(1, n); ab /= Math.max(1, n);
+  // (less of it for a bright page: the eye adapts to what it looks at)
+  const bl = Math.min(0.7, bloom * pageDim(lum([ar, ag, ab])));
+  if (bl > 0.01 && n && on) {
     // bloom in the dark: the screen's own light haloes over the glass and spills on the bezel around it
-    ar /= n; ag /= n; ab /= n;
     for (let y = SY - 3; y <= SY + SH + 2; y++) for (let x = SX - 3; x <= SX + SW + 2; x++) {
       const gx = ox + x, gy = oy + y;
       if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
       const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
-      const w = bloom * (d === 0 ? 0.22 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
+      const w = bl * (d === 0 ? 0.22 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
       g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
       // the glyphs there too (the bezel's rounded corners), so the halo does not leave them dark
       if (d > 0) { g.cells[k + 1] += ar * w; g.cells[k + 2] += ag * w; g.cells[k + 3] += ab * w; }

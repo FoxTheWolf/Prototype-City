@@ -1067,7 +1067,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let winPw = select(winLight, power(sub, cx, cy, winGroup(bk, wi, fl), gen, bk, 0.5) * winLight, switched);
   var isWin = false; var glass = false;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
-  var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0;
+  var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0; var emK = 1.0;
   var body = false; var bodyEm = vec3f(-1.0); var winGlow = vec3f(0.0);
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
   let rev = side < 2 && (face == 1 || face == 2);
@@ -1147,7 +1147,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame * shade; }
   } else if (signN > 0 && z > SIGN_Z0 && z < SIGN_Z1) {
     // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
-    em = true;
+    em = true; emK = SIGN_EMIT; glowK = SIGN_GLOW;
     let col = ifloor(signU / LETTER_W) - 1; let inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
     let kk = select(col, signN - 1 - col, rev);
     var cc = 32u; if (col >= 0 && col < signN) { cc = sg[stx.x + u32(kk)]; }
@@ -1164,7 +1164,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       let nn = bulbsIn(cc, px, pz, hx, hz);
       let hue = bulbHue(scol);
       if (nn > 0u) { ch = bulbGlyph(nn, hx, hz); c = hue * on; }
-      else if (bulbOn(cc, ifloor(px), ifloor(pz))) { ch = 32u; c = hue * (on * 0.35); }
+      else if (bulbOn(cc, ifloor(px), ifloor(pz))) { ch = 32u; c = hue * (on * 0.8); }
       else { ch = 32u; c = vec3f(14.0, 12.0, 16.0); }
     } else if (inText && cc != 32u && (!letters || center)) { ch = select(EQ, cc, letters); c = scol * lit; }
     else if (inText) { ch = 32u; c = scol * (lit * 0.35); }
@@ -1178,7 +1178,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     // the news ticker: headlines in amber bulbs running right to left around the building
     if (z < TICK_Z0 || z > TICK_Z1) { ch = EQ; c = frame * 0.7 * shade; }
     else {
-      em = true;
+      em = true; emK = SIGN_EMIT; glowK = SIGN_GLOW;
       let n = i32(u.tickN); let p = select(along, -along, rev) + sec * TICK_SPEED; let li = ifloor(p / TICK_LW); let fu = p / TICK_LW - f32(li);
       var lc = 32u; if (n > 0) { lc = sg[sg[0] + u32(((li % n) + n) % n)]; }
       let lh = TICK_Z1 - TICK_Z0; let on = adElec;
@@ -1197,7 +1197,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45 * shade; }
     else {
       let P = screenPix(bk, select(along - scA0, scA1 - along, rev), scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
-      ch = P.ch; c = P.c * adElec; em = true;
+      ch = P.ch; c = P.c * adElec; em = true; emK = SCREEN_EMIT;
     }
   } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
     // the street door: a frame, two glass leaves and a transom, lit from the lobby
@@ -1343,7 +1343,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let s = select(along, z, eA < tw);
     let chase = hash3(bk, 3, 31) < 0.35 && ifloor((s - u.sec * 5.0) / 1.4) % 3 == 0;
     let k = ad * (1.0 - 0.55 * u.day) * select(1.0, 0.25, chase);
-    if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); emC = c; il = vec3f(0.0); }
+    if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); emC = c; il = vec3f(0.0); emK = SIGN_EMIT; glowK = SIGN_GLOW; }
     else { let e = max(0.0, 1.0 - min(eA, dTop) / 1.6); c += neon * (e * e * 0.5 * k); il += neon * (e * e * 0.5 * k); }
   }
   // the top washed in light at night
@@ -1401,7 +1401,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
   if (t < LIT_FAR) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
-  if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; }
+  if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; gEmK = emK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0; }
   gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0;
   gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
@@ -1560,7 +1560,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   }
   c = sat(c);
   let gl = lightAt(wx, wy, 0.0, vec3f(0.0, 0.0, 1.0)) * (lk * fog);
-  gEm = vec3f(0.0); gIl = gl; gTag = rd; gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
+  gEm = vec3f(0.0); gEmK = 1.0; gIl = gl; gTag = rd; gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
   // how wet the spot is: a film everywhere it rains, puddles in the low spots (more on the asphalt)
   gWet = 0.0;
   if (u.wet > 0.02 && mat != MAT_LEAF) {
@@ -1647,6 +1647,14 @@ const LAMP_E = 0.45;
 const LAMP_OVER = 0.3;
 /** How much of the eye's change from night to day what glows keeps up with (1: as bright on the screen by day as at night). */
 const EMIT_KEEP = 0.95;
+/** The signs (shop signs, blade signs and their bulbs, the ticker, the neon tubes up the corners): how much brighter they look than drawn, and their bloom (only to the eye: their light on the street is SIGN_LIGHT in raycaster.ts). */
+const SIGN_EMIT = 2.4; const SIGN_GLOW = 1.6;
+/** The video screens (the telões, the bus shelters' adverts): brighter to the eye too, less than the signs (a picture, not a light). */
+const SCREEN_EMIT = 1.6;
+/** How much of a sign cell's color its background takes (the others take the B key's share, 0.24). */
+const SIGN_FILL = 0.5;
+/** How much of the eye closing down a sign makes up for (0: none, 1: all). */
+const SIGN_EYE = 0.6;
 /** How much of the light on what hides the sky comes back (its albedo), and the share of it in the sun (L.4). */
 const SKY_BOUNCE = 0.35;
 /** The bounce off the buildings round (L.8): how much of the sky's light they send back (per albedo: L.4 took albedo 1), and
@@ -1724,7 +1732,8 @@ fn light(cl: Cell) -> Cell {
     var El = pow(min(lx, vec3f(1.0) + max(lx - vec3f(1.0), vec3f(0.0)) * LAMP_OVER), vec3f(2.2)) * LAMP_E;
     if (o.kind == KIND_WALL) { El = mix(vec3f(luma(El)), El, WALL_LAMP_HUE); }
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
-    let Le = lin(emit) * (pow(EV_NIGHT / evDayNight(), EMIT_KEEP) / EV_NIGHT);
+    // (a sign keeps most of its brightness when the eye closes down in a bright street: it still reads as lit)
+    let Le = lin(emit) * (pow(EV_NIGHT / evDayNight(), EMIT_KEEP) / EV_NIGHT) * select(1.0, gEmK * pow(max(1.0, 1.0 / u.adapt), SIGN_EYE), tagged && gEmK > 1.0);
     var Lr = A * (E + El) + Le;
     // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color, and the sun's
     if (gMat != MAT_NONE && tagged) {
@@ -1752,7 +1761,7 @@ fn light(cl: Cell) -> Cell {
     c *= amb;
     let lit = min(c, emit + lamp);
     let up = pow(evRef() / evDayNight(), 1.0 / 2.2); // how much the eye opened in the blackout
-    c = (c - lit) * dark + lit * up;
+    c = (c - lit) * dark + lit * up * select(1.0, gEmK, tagged);
     gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged) * up;
     let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
     c = c * (1.0 - f) + haze * f;
@@ -1789,6 +1798,8 @@ fn display(cl: Cell) -> Cell {
       o.bg = o.c * fl; o.c *= glyph;
     }
   }
+  // a sign glows through its whole cell, not only its glyph (the bulbs' light on the panel behind them)
+  if (o.depth == gTag && gEmK > 1.0) { o.bg = max(o.bg, o.c * SIGN_FILL); }
   if (o.kind == KIND_BLOCK) {
     // solid color; a glyph left on it is a glint, brighter than the surface
     o.bg = o.c;
@@ -2533,6 +2544,8 @@ var<private> gGlow: f32 = 0.0;
 var<private> gNoMoon: bool = false;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
 var<private> gGlowK: f32 = 1.0;
+// how much brighter than drawn a cell's own light looks (the signs: lit to the eye, apart from the light they cast)
+var<private> gEmK: f32 = 1.0;
 // the material, the surface's normal (toward the viewer) and how wet it is, of the cell at gTag (R.23)
 var<private> gMat: u32 = 0u;
 var<private> gNrm: vec3f = vec3f(0.0, 0.0, 1.0);
@@ -2606,7 +2619,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       let farR = select(select(REFL_FAR_WALL, REFL_FAR_GROUND, ground), REFL_FAR_CAR, gMat == MAT_PAINT);
       let skyK = smoothstep(0.65 * farR, farR, t);
       let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05 || gMat == MAT_PAINT) && t < farR && LR > 0.05;
-      let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sMat = gMat; let sN = gNrm; let sWet = gWet; let sRay = gRay;
+      let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sEK = gEmK; let sMat = gMat; let sN = gNrm; let sWet = gWet; let sRay = gRay;
       if (mirror) {
         gRefl = true;
         gOX = u.px + rdx * t + N.x * 0.05; gOY = u.py + rdy * t + N.y * 0.05; gOZ = max(0.02, u.eye - m * t + A * t * t + N.z * 0.02);
@@ -2625,7 +2638,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       } else {
         let sk = skyCell(mR, rx, ry); refl = sk.bg;
       }
-      gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
+      gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
     }
   }
   // how much sky what this cell shows sees (the sky and the rooms keep theirs; it fades out far away)

@@ -411,7 +411,11 @@ export function bladeModel(text: string, sym: number, col: RGB, z0: number, lett
     for (let k = 0; k < n && m.length < 31; k += 1) {
       if ((k + chase) % 3) continue;
       const z = z0 + 0.25 + k * 0.5;
-      for (const y of [-wy, wy]) m.push(part(Box, x1 - 0.1, y - 0.07, z - 0.07, x1 + 0.04, y + 0.07, z + 0.07, [255, 230, 160], Glow, 'o'));
+      for (const y of [-wy, wy]) {
+        const b = part(Box, x1 - 0.1, y - 0.07, z - 0.07, x1 + 0.04, y + 0.07, z + 0.07, [255, 230, 160], Glow, 'o');
+        b.bulbs = true; // (a sign's light: it looks lit as the sign does, gpu/objects.ts)
+        m.push(b);
+      }
     }
   }
   if (blades.size > 4000) blades.clear();

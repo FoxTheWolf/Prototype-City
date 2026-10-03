@@ -303,8 +303,8 @@ const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
  * The lit panels' strength (x their color) and reach (m): shop signs, video screens, blade signs, neon tubes up
  * the corners, shop windows (DynLights.panel), and how far off screens and neon still light.
  */
-const SIGN_LIGHT = 3.0, SIGN_RANGE = 22, SCREEN_LIGHT = 0.5, SCREEN_RANGE = 50, SCREEN_LIGHT_FAR = 140;
-const BLADE_LIGHT = 3.0, BLADE_RANGE = 22, NEON_LIGHT = 1.5, NEON_RANGE = 16, NEON_LIGHT_FAR = 120, SHOP_LIGHT = 1.2, SHOP_RANGE = 10;
+const SIGN_LIGHT = 3.75, SIGN_RANGE = 22, SCREEN_LIGHT = 0.7, SCREEN_RANGE = 50, SCREEN_LIGHT_FAR = 140;
+const BLADE_LIGHT = 3.75, BLADE_RANGE = 22, NEON_LIGHT = 1.5, NEON_RANGE = 16, NEON_LIGHT_FAR = 120, SHOP_LIGHT = 1.2, SHOP_RANGE = 10;
 /** A color (0-255, sRGB) at strength q as linear light (1 = white), for the panels. */
 const MARQUEE_LIGHT = 0.6, TICKER_LIGHT = 0.8;
 const linC = (c: number, q: number) => (c / 255) ** 2.2 * q;

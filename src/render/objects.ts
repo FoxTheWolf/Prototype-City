@@ -41,7 +41,7 @@ export interface Part {
   sym?: number;
   col2?: RGB;
   lamp?: number;
-  /** Board: the letters are lamps (bulbs up close, lit glyphs farther), not paint. */
+  /** Board: the letters are lamps (bulbs up close, lit glyphs farther), not paint. Glow: a sign's bulb (it looks lit as signs do). */
   bulbs?: boolean;
 }
 

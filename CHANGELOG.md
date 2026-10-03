@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.9 — Letreiros que parecem acesos e telas que seguem o olho (2026-10-03)
+- Os letreiros, as placas verticais (e as lâmpadas das bordas delas), os neons nos cantos dos prédios, o letreiro de notícias e os telões brilham muito mais aos olhos e iluminam um pouco mais em volta. Continuam parecendo acesos mesmo numa rua clara, quando o olho se fecha.
+- A tela do celular e a do notebook seguem a adaptação do olho: de dia ficam mais apagadas e sem brilho em volta; à noite brilham, mais ainda no escuro. Uma página branca não estoura mais: quanto mais clara a tela, menos ela espalha luz.
+
 ## 0.L.8 — Letreiros e telões que iluminam a rua (2026-10-03)
 - Os letreiros, telões, placas verticais, neons dos cantos, molduras de lâmpadas e o letreiro de notícias iluminam a rua, as calçadas e as fachadas em volta com a cor que estão mostrando, a partir da altura em que estão e com alcance bem maior. Um telão grande tinge a rua inteira à frente dele.
 - A moldura de lâmpadas de um letreiro ilumina a calçada mesmo quando as letras estão apagadas.

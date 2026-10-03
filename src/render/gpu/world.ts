@@ -17,6 +17,7 @@ const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 /** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
 const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 import { CURVE_R } from '../sarcophagus';
+import { setEye } from '../eye';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, FX_TAB, IN_LAMPS, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
@@ -311,6 +312,7 @@ export class GpuWorld {
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
+    if (timed) setEye(sky.day, vals.cityLit, vals.adapt);
     // the sun on the screen (cell x, y) and how strongly its rays show, for the compositor's (B.2)
     {
       const [sx, sy, sz] = F.sun, f = sx * dirX + sy * dirY, lat = sy * dirX - sx * dirY, cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);

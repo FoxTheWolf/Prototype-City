@@ -325,7 +325,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         let nb = slotBulbs(cc, sl, bpx, bpz, perCol / ux / 2.0, perRow / uz / 2.0);
         let bx = ifloor(bpx); let by = ifloor(bpz);
         if (nb > 0u) { ch = bulbGlyph(nb, perCol / ux / 2.0, perRow / uz / 2.0); kk = 1.25; }
-        else if (slotOn(cc, sl, bx, by)) { ch = 32u; kk = 0.45; }
+        else if (slotOn(cc, sl, bx, by)) { ch = 32u; kk = 0.75; }
         else { ch = 32u; kk = 0.12; }
       } else {
         // a glyph in the one cell holding the slot's center; the rest of the panel glows faintly
@@ -365,7 +365,10 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
-    gEm = sat(oEm); gIl = oIl; gTag = best; gGlowK = 1.0; gWet = 0.0;
+    gEm = sat(oEm); gIl = oIl; gTag = best; gWet = 0.0;
+    // a blade sign and the bulbs up its edges look lit, as the shop signs do (SIGN_EMIT); an advert screen as the telões do
+    let signLit = mat == M_TEXT || (mat == M_GLOW && fx[p + 22u] == 1u);
+    gGlowK = select(1.0, SIGN_GLOW, signLit); gEmK = select(select(1.0, SCREEN_EMIT, mat == M_SCREEN && face == 1), SIGN_EMIT, signLit);
     // the material: a vehicle's body is glossy paint, leaves are matte; the rest (people, poles, benches) plain
     let wn = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let wl = length(wn);
     gNrm = select(vec3f(0.0, 0.0, 1.0), wn / wl, wl > 1e-5);

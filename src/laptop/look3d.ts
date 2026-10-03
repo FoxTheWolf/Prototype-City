@@ -4,6 +4,7 @@ import { type World } from '../sim/world';
 import { drawScreen, hintOf, INKS, ROWS, type C3 } from './draw';
 import { type Laptop } from './laptop';
 import { computerMakerName } from '../locale/names';
+import { EYE, pageDim } from '../render/eye';
 
 /**
  * The notebook's 3D look: its body is an object with volume (render/objects.ts) set down in front of
@@ -25,8 +26,8 @@ const VFOV = Math.PI / 3;
 
 let anchor = 0, pitch0 = -0.6, wasOpen = false, tmp: CharGrid | null = null;
 const L3 = new Float32Array(3);
-/** The glint and the eye's adaptation on the screen, eased over time (as on the phone, see phone/draw.ts; stronger here). */
-const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, adapt: 1, at: 0, bloom: 0, mean: [0, 0, 0] as C3 };
+/** The glint on the screen, eased over time, and the screen's bloom and mean light (as on the phone, see phone/draw.ts; stronger here). */
+const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0, bloom: 0, mean: [0, 0, 0] as C3 };
 /** Where the power button falls on the interface's grid (cells), for a click; null when not shown. */
 export let power3d: [number, number, number, number] | null = null;
 /** The view's yaw the notebook was set down facing, and the pitch that centres its screen: where the view comes back to. */
@@ -213,9 +214,8 @@ function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: n
   GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
   GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
   const Lm = (light[0] + light[1] + light[2]) / 3;
-  GL.adapt += (Lm - GL.adapt) * (1 - Math.exp(-dt / 1.5));
-  const gain = Math.min(1.3, Math.max(0.5, 1.75 - 0.85 * GL.adapt));
-  GL.bloom = 0.9 * Math.min(1, Math.max(0, (0.95 - GL.adapt) / 0.5));
+  // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by day dimmer
+  const gain = Math.min(1.3, 0.55 + 0.65 * Math.min(1, EYE.k / 0.6));
   // the band: across the glass, leaning; where it lies follows the side the light comes from
   const W = T.cols, H = T.rows, s0 = 0.5 + GL.lat * 0.38, amp = (on ? 70 : 110) * GL.str * (0.6 + 0.6 * GL.back);
   // a broad veil of the light too, whatever its direction: a lit room washes the glass
@@ -239,4 +239,6 @@ function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: n
   }
   const n = W * H;
   GL.mean = [ar / n, ag / n, ab / n];
+  // (less bloom for a bright page: the eye adapts to what it looks at)
+  GL.bloom = Math.min(1, 1.5 * EYE.k * pageDim(0.3 * GL.mean[0] + 0.59 * GL.mean[1] + 0.11 * GL.mean[2]));
 }
