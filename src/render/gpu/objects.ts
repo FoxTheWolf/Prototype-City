@@ -10,8 +10,9 @@ import { SYMBOLS } from '../signs';
  * - the frame's objects, from fx[1]: their count, the number of 8-column tiles, where the objects and
  *   the tile lists start, the tiles' offsets into the list, the list, then OW words per object (pose,
  *   radius, height, base, seed, fog distance, lift, lean, the model's offset, its screen box), then
- *   the roofs that keep the rain off (fx[OB + 4] where, fx[OB + 5] how many; seven floats each), and the floor
- *   the viewer stands in (fx[OB + 6] where, 0 outdoors; see the shader's interiorCell). The furniture is objects
+ *   the roofs that keep the rain off (fx[OB + 4] where, fx[OB + 5] how many; seven floats each), the floor
+ *   the viewer stands in (fx[OB + 6] where, 0 outdoors; see the shader's interiorCell), the sun's shadow grid
+ *   (fx[OB + 7]) and the objects that shade the floodlit facades (fx[OB + 8]: a count, then their indices). The furniture is objects
  *   too, marked indoor (lit by the rooms' lamps, multiplied).
  */
 export const OW = 20, PW = 24, TILE = 8;
@@ -63,17 +64,46 @@ fn objShadow(P: vec3f, Ls: vec3f, mw: f32) -> f32 {
   let head = G + 4u; let list = head + N * N + 1u; let cell = cj * N + ci;
   var lit = 1.0;
   for (var li = fx[head + cell]; li < fx[head + cell + 1u]; li++) {
-    let j = fx[list + li];
-    let ob = objs + j * OW;
+    let ob = objs + fx[list + li] * OW;
     if (fx[ob + 14u] == 2u) { continue; } // indoor furniture
-    let x = fxf(ob); let y = fxf(ob + 1u); let r = fxf(ob + 4u); let zoff = fxf(ob + 9u); let top = fxf(ob + 5u) + zoff;
+    let top = fxf(ob + 5u) + fxf(ob + 9u);
     if (P.z >= top) { continue; }
-    // along the ray until it is above the object's top; its nearest pass by the axis on the ground plane
-    let tTop = (top - P.z) / Ls.z;
+    // (along the ray until it is above the object's top)
+    lit = min(lit, objBlock(ob, P, Ls, (top - P.z) / Ls.z, 1e9, mw));
+    if (lit <= 0.0) { return 0.0; }
+  }
+  return lit;
+}
+
+/**
+ * How much of a floodlight at L reaches world point P on its wall past the objects standing in front of the
+ * floodlit facades (fx[OB + 8]'s list), the same way as the sun's shadows; 1 when there is no list.
+ */
+fn floodShadow(P: vec3f, L: vec3f) -> f32 {
+  let OB = fx[1];
+  if (OB == 0u || fx[OB] == 0u || fx[OB + 8u] == 0u) { return 1.0; }
+  let objs = OB + fx[OB + 2u]; let F = OB + fx[OB + 8u];
+  let D = L - P; let len = length(D); let d = D / max(len, 1e-4);
+  var lit = 1.0;
+  for (var i = 0u; i < fx[F]; i++) {
+    let ob = objs + fx[F + 1u + i] * OW;
+    lit = min(lit, objBlock(ob, P, d, len, len - 0.25, 0.0));
+    if (lit <= 0.0) { return 0.0; }
+  }
+  return lit;
+}
+
+/**
+ * How much of the ray from P along the unit direction Ls gets past object ob (1 clear, 0 blocked, between for
+ * leaves): its axis's nearest pass on the ground plane within tPre first, then each part within tMax.
+ */
+fn objBlock(ob: u32, P: vec3f, Ls: vec3f, tPre: f32, tMax: f32, mw: f32) -> f32 {
+    let x = fxf(ob); let y = fxf(ob + 1u); let r = fxf(ob + 4u); let zoff = fxf(ob + 9u);
     let rx = x - P.x; let ry = y - P.y; let L2 = max(1e-6, Ls.x * Ls.x + Ls.y * Ls.y);
-    let tc = clamp((rx * Ls.x + ry * Ls.y) / L2, 0.0, tTop);
+    let tc = clamp((rx * Ls.x + ry * Ls.y) / L2, 0.0, tPre);
     let ex = rx - Ls.x * tc; let ey = ry - Ls.y * tc;
-    if (ex * ex + ey * ey > r * r) { continue; }
+    if (ex * ex + ey * ey > r * r) { return 1.0; }
+    var lit = 1.0;
     let c = fxf(ob + 2u); let s = fxf(ob + 3u);
     let o = vec3f((P.x - x) * c + (P.y - y) * s, -(P.x - x) * s + (P.y - y) * c, P.z - zoff);
     let d0 = vec3f(Ls.x * c + Ls.y * s, -Ls.x * s + Ls.y * c, Ls.z);
@@ -108,7 +138,7 @@ fn objShadow(P: vec3f, Ls: vec3f, mw: f32) -> f32 {
           if (ds >= 0.0) { let tb = (-qb + sqrt(ds)) / qa; let ta = (-qb - sqrt(ds)) / qa; hit = tb > 0.03; hp = o + d * max(ta, 0.0); }
         }
       }
-      if (!hit) { continue; }
+      if (!hit || length(hp - o) > tMax) { continue; }
       if (mat == M_LEAF) {
         // a crown lets the sun through in flecks
         let h = hash3(ifloor(hp.x / 0.4) + j32(ob), ifloor(hp.y / 0.4), ifloor(hp.z / 0.4));
@@ -118,8 +148,7 @@ fn objShadow(P: vec3f, Ls: vec3f, mw: f32) -> f32 {
       }
       return 0.0;
     }
-  }
-  return lit;
+    return lit;
 }
 fn j32(v: u32) -> i32 { return i32(v & 0xffffu); }
 const OBJ_LEAF_GAP = 0.25;
@@ -132,7 +161,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
   let tile = gx / TILE;
   if (tile >= fx[OB + 1u]) { return cl; }
   let objs = OB + fx[OB + 2u]; let list = OB + fx[OB + 3u];
-  for (var li = fx[OB + 8u + tile]; li < fx[OB + 9u + tile]; li++) {
+  for (var li = fx[OB + 9u + tile]; li < fx[OB + 10u + tile]; li++) {
     let ob = objs + fx[list + li] * OW;
     if (gx < fx[ob + 16u] || gx >= fx[ob + 17u] || gy < fx[ob + 18u] || gy >= fx[ob + 19u]) { continue; }
     let x = fxf(ob); let y = fxf(ob + 1u); let c = fxf(ob + 2u); let s = fxf(ob + 3u); let r = fxf(ob + 4u);

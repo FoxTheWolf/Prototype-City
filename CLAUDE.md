@@ -304,10 +304,10 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 > **Ritmo (2026-10-03):** o usuário ainda não ficou sem o limite semanal; quando for ficar, ele avisa. **Sempre que houver tarefa trivial que não precisa do código, delegar às outras IAs** (briefing em `docs/tarefas/`, veja "Delegar a outras IAs" nas decisões). Os cinco retornos de `docs/tarefas/retorno/` já chegaram (o 01 veio com texto em volta do JSON e foi limpo; 52 lugares). A **fatia vertical** vem **depois** de fechar a iluminação (decidido pelo usuário em 2026-10-03).
 
 ### Esperando o teste do usuário
-- R.22c/R.26 (sombras dos objetos, sol por temperatura, tom do dia), R.27 (detalhe por prédio com pontilhado) e R.28 (reflexo do carro `REFL_BLUR` 0,1, som da batida seco). A névoa laranja da cidade (R.22b). R.29 (janelas: a cor de longe some aos poucos e as acesas guardam um brilho dela). R.30 (o reflexo no vidro das torres altas se desfaz no céu em vez de cortar marrom→preto; o mesmo fade nos cômodos e no detalhe do alto das torres).
+- R.22c/R.26 (sombras dos objetos, sol por temperatura, tom do dia), R.27 (detalhe por prédio com pontilhado) e R.28 (reflexo do carro `REFL_BLUR` 0,1, som da batida seco). A névoa laranja da cidade (R.22b). R.29 (janelas: a cor de longe some aos poucos e as acesas guardam um brilho dela). R.31 (holofotes: luminárias, luz em quem passa, sombras na fachada). R.30 (o reflexo no vidro das torres altas se desfaz no céu em vez de cortar marrom→preto; o mesmo fade nos cômodos e no detalhe do alto das torres).
 
 ### Sessão A (Opus): fechar a iluminação
-1. **Holofotes de verdade:** uma luminária presa à fachada (modelo) e um cone de luz real nas luzes dinâmicas (calçada, pessoas, o que passa), com sombra só nos mais próximos, no lugar do cone pintado (`floodH` em `wallCell`).
+> **O usuário sugeriu (2026-10-03)** que o que for complicado aqui pode esperar a **reescrita do shader de iluminação** (dia e noite juntos; ver "A revisão geral da luz" na Sessão B). Antes de cada item, avaliar se ele vale agora ou depois dela.
 2. **Faróis assimétricos:** dois cones por carro, o da direita mais longo e mais alto (ilumina as placas).
 3. **Sombras das luzes da noite** (postes e faróis; só as luzes mais próximas, cada uma é um raio a mais por célula) e a lua fazendo sombra.
 4. **Bloom e reflexo de verdade nas telas do celular e do notebook** (as células acesas da tela na mesma passada de bloom; o reflexo pela imagem do mundo do quadro, desfocada e espelhada).

@@ -10,6 +10,8 @@ import type { Obj, Part } from '../objects';
 import { OW, PW, TILE } from './objects';
 /** By day, how much wider the objects are gathered than the view (their shadows reach in from the sides), and how near an off-screen one must be to cast (m). */
 const SHADOW_CONE = 1.6, SHADOW_CASTERS = 150;
+/** Objects within FLOOD_REACH m of a floodlit facade nearer than FLOOD_SHADOW_FAR cast its lamps' shadows on it (at most FLOOD_CASTERS). */
+const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 /** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
 const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 import { CURVE_R } from '../sarcophagus';
@@ -319,6 +321,17 @@ export class GpuWorld {
     // indoors, the floor's furniture, lit by its rooms' lamps
     if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
+    // the floodlit facades near enough for their lamps' shadows: who stands in front of one casts them
+    const lit: number[] = [];
+    for (const b of this.city.blocks) {
+      if (b.x1 < v.x - FLOOD_SHADOW_FAR || b.x0 > v.x + FLOOD_SHADOW_FAR || b.y1 < v.y - FLOOD_SHADOW_FAR || b.y0 > v.y + FLOOD_SHADOW_FAR) continue;
+      for (let k = b.b0; k < b.b1; k++) { const B = this.city.buildings[k]; if (B.flood && !B.round) lit.push(k); }
+    }
+    const byFlood = (o: Obj) => lit.some((k) => {
+      const B = this.city.buildings[k], dx = Math.max(B.x0 - o.x, 0, o.x - B.x1), dy = Math.max(B.y0 - o.y, 0, o.y - B.y1);
+      return dx * dx + dy * dy < (FLOOD_REACH + o.r) ** 2;
+    });
+    const casters: number[] = [];
     // a point on the screen, as cell edges (column, row), or false behind the eye
     let px = 0, py = 0;
     const proj = (X: number, Y: number, Z: number) => {
@@ -329,7 +342,7 @@ export class GpuWorld {
       px = (cols / 2) * (1 + lat / (d * plane)); py = rows / 2 - ((-f * sp + rz * cp) / d) * scale; return true;
     };
     for (let pass = 0; pass < 2; pass++) {
-      box.length = 0; mods.length = 0; picked.length = 0;
+      box.length = 0; mods.length = 0; picked.length = 0; casters.length = 0;
       let full = false;
       for (let k = 0; k < list.length; k++) {
         const { o, far, zoff } = list[k];
@@ -345,9 +358,11 @@ export class GpuWorld {
         const bx0 = Math.max(0, Math.floor(x0) - 1), bx1 = Math.min(cols, Math.ceil(x1) + 1), by0 = Math.max(0, Math.floor(y0) - 1), by1 = Math.min(rows, Math.ceil(y1) + 1);
         // off the screen: by day still sent (with no screen box) to cast its shadow, if near enough
         const off = bx0 >= bx1 || by0 >= by1;
-        if (off && !(shadows && Math.hypot(o.x - v.x, o.y - v.y) < SHADOW_CASTERS)) continue;
+        const flood = lit.length > 0 && !list[k].indoor && casters.length < FLOOD_CASTERS && byFlood(o);
+        if (off && !(shadows && Math.hypot(o.x - v.x, o.y - v.y) < SHADOW_CASTERS) && !flood) continue;
         const m = this.model(o.parts);
         if (m < 0) { full = true; break; }
+        if (flood) casters.push(picked.length);
         picked.push(k); mods.push(m); if (off) box.push(0, 0, 0, 0); else box.push(bx0, bx1, by0, by1);
       }
       if (!full) break;
@@ -357,13 +372,13 @@ export class GpuWorld {
     // the tiles' lists: counted, then filled
     const n = picked.length, W = this.oW, F = this.oF, cnt = new Uint32Array(nT + 1);
     for (let j = 0; j < n; j++) for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) cnt[t]++;
-    const tab = 8, lst = tab + nT + 1;
+    const tab = 9, lst = tab + nT + 1;
     let total = 0;
     for (let t = 0; t < nT; t++) { W[tab + t] = total; total += cnt[t]; }
     W[tab + nT] = total;
     // after the objects, this frame's roofs that keep the rain off (gatherRoofs): x, y, c, s, hx, hy, z
     const ob = lst + total, rb = ob + n * OW, nR = roofs.length;
-    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 8); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 8); return; }
+    if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 9); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 9); return; }
     roofs.forEach((R, k) => F.set([R.x, R.y, R.c, R.s, R.hx, R.hy, R.z], rb + k * 7));
     const fill = cnt.fill(0);
     for (let j = 0; j < n; j++) {
@@ -397,7 +412,10 @@ export class GpuWorld {
     // by day, the grid of the objects' shadows on the ground (see shadowGrid)
     let sg = 0;
     if (sun) { const e = this.shadowGrid(W, F, end, ob, n, sun, v); if (e > 0) { sg = end; end = e; } }
-    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = sg;
+    // and the objects that cast the floodlights' shadows: their count, then their indices
+    let fl = 0;
+    if (casters.length && end + 1 + casters.length <= OBJ_CAP) { fl = end; W[end] = casters.length; W.set(casters, end + 1); end += 1 + casters.length; }
+    W[0] = n; W[1] = nT; W[2] = ob; W[3] = lst; W[4] = rb; W[5] = nR; W[6] = ib; W[7] = sg; W[8] = fl;
     q.writeBuffer(this.fx, this.oBase * 4, W, 0, end);
   }
 

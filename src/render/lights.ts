@@ -3,7 +3,20 @@
  * (segments along a facade, lighting the side they face). Rebuilt each frame around the viewer and
  * sorted into 8 m buckets, so a point only looks at the few lights that can reach it.
  */
-const LightKind = { Point: 0, Cone: 1, Segment: 2 } as const;
+const LightKind = { Point: 0, Cone: 1, Segment: 2, Flood: 3 } as const;
+/** A wall floodlight's spot stands this far out from its wall (the shader's FLOOD_OUT). */
+export const FLOOD_OUT = 1.2;
+/**
+ * A wall floodlight's beam at (a along the wall, s out from the lamp, height z): as wide as the shader paints it
+ * on the wall, leaning in from the lamp to meet the wall by 4 m up, fading to the top it reaches (h).
+ */
+export function floodBeam(a: number, s: number, z: number, h: number) {
+  const w = 1.4 + 0.55 * z, fz = Math.min(1, z / 1.5) * Math.max(0, 1 - z / h) ** 1.2;
+  // (not the fixture's own housing, within ~0.25 m of the spot)
+  const own = Math.min(1, Math.max(0, (a * a + s * s - 0.06) / 0.1));
+  const sc = s + FLOOD_OUT * Math.min(1, z / 4);
+  return own * (fz * Math.exp(-(a * a + sc * sc * 4) / (w * w)) + 0.3 * Math.exp(-(a * a + s * s) / 0.6) * Math.max(0, 1 - z));
+}
 
 export const CELL = 8, SIDE = 64; // buckets cover 512 m around the viewer
 const MAX = 4096;
@@ -44,6 +57,14 @@ export class DynLights {
 
   cone(x: number, y: number, dx: number, dy: number, cosHalf: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number) {
     this.add(LightKind.Cone, x, y, dx, dy, cosHalf, 0, range, zFull, zTop, r, g, b, x - range, y - range, x + range, y + range);
+  }
+
+  /**
+   * A floodlight at the foot of a wall (its spot (x, y), the wall's outward normal), aimed up the wall to
+   * height h: the same beam the shader paints on the wall, here for what stands in front of it.
+   */
+  flood(x: number, y: number, nx: number, ny: number, h: number, r: number, g: number, b: number) {
+    this.add(LightKind.Flood, x, y, 0, 0, nx, ny, 3, h, h + 1, r, g, b, x - 3, y - 3, x + 3, y + 3);
   }
 
   /** A strip from (x0, y0) to (x1, y1) shining toward (nx, ny). */
@@ -123,6 +144,13 @@ export class DynLights {
       const R = this.range[k];
       let dx = px - this.x[k], dy = py - this.y[k], f = 0, lvl = 1;
       const kind = this.kind[k];
+      if (kind === LightKind.Flood) {
+        const s = dx * this.nx[k] + dy * this.ny[k];
+        if (s < 0.1 - FLOOD_OUT) continue; // the wall itself: the shader paints it with the same beam
+        f = floodBeam(-dx * this.ny[k] + dy * this.nx[k], s, Math.max(0, pz), this.zFull[k]);
+        out[0] += this.r[k] * f; out[1] += this.g[k] * f; out[2] += this.b[k] * f;
+        continue;
+      }
       if (kind === LightKind.Segment) {
         // distance to the strip, only on the side it faces
         if (dx * this.nx[k] + dy * this.ny[k] < -0.3) continue;

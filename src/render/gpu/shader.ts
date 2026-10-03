@@ -1,8 +1,8 @@
 import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
 import { CEIL, CELL as PCELL, DOOR, DOOR_H } from '../../sim/interior';
-import { LITTER, LITTER_FAR, AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
+import { LITTER, LITTER_FAR, AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, FLOOD_GAP, FLOOD_FIX_FAR, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
 import { BULB_COLS, BULB_ROWS } from '../signs';
-import { CELL, SIDE } from '../lights';
+import { CELL, FLOOD_OUT, SIDE } from '../lights';
 import { LAMP_R, LIGHT_W } from '../lightmap';
 import { objectsWGSL } from './objects';
 import { SHELLS } from '../precip';
@@ -87,7 +87,7 @@ const LIGHT_KNEE = 150.0;
 const SIGN_BACK = 2.5;
 const LAMP_REFL = 1.5; const WIN_SPILL = 70.0;
 const CROWN_H = 16.0;
-const FLOOD_GAP = 6.0;
+const FLOOD_GAP = ${f(FLOOD_GAP)}; const FLOOD_OUT = ${f(FLOOD_OUT)}; const FLOOD_FIX_FAR = ${f(FLOOD_FIX_FAR)}; const FLOOD_SHADOW_FAR = 45.0;
 const LW = ${LIGHT_W};
 const DSIDE = ${SIDE};
 const DCELL = ${CELL}.0;
@@ -192,6 +192,18 @@ fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
       if (lz <= 0.0) { continue; }
       let kind = u32(dl[o]); let R = dl[o + 7u];
       var dx = px - dl[o + 1u]; var dy = py - dl[o + 2u]; var lvl = 1.0;
+      if (kind == 3u) {
+        // a wall floodlight (floodBeam in lights.ts): the beam up the wall, thin out from it, and a little
+        // spill round the lamp on the pavement; the wall itself is painted in wallCell with the same cone
+        let s = dx * dl[o + 5u] + dy * dl[o + 6u];
+        if (s < 0.1 - FLOOD_OUT) { continue; }
+        let a = -dx * dl[o + 6u] + dy * dl[o + 5u]; let z = max(pz, 0.0);
+        let w = 1.4 + 0.55 * z; let fz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / zf), 1.2);
+        let own = clamp((a * a + s * s - 0.06) / 0.1, 0.0, 1.0); // not the fixture's own housing
+        let sc = s + FLOOD_OUT * min(1.0, z / 4.0); // the beam leans in to meet the wall
+        L += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * own * (fz * exp(-(a * a + sc * sc * 4.0) / (w * w)) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z));
+        continue;
+      }
       if (kind == 2u) {
         if (dx * dl[o + 5u] + dy * dl[o + 6u] < -SIGN_BACK) { continue; }
         let sx = dl[o + 3u] - dl[o + 1u]; let sy = dl[o + 4u] - dl[o + 2u];
@@ -1302,9 +1314,20 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else {
       let fb = select(f0, 0.0, side == 2);
       let fr = (((along - fb) / FLOOD_GAP) % 1.0 + 1.0) % 1.0; let d = abs(fr - 0.5) * FLOOD_GAP; let d2 = FLOOD_GAP - d;
+      // near, whoever stands between a lamp and the wall throws a shadow up it: the ray from here to each of the
+      // two nearest lamps (FLOOD_OUT m out, at its lens) past the objects in front of the floodlit facades
+      var v1 = 1.0; var v2 = 1.0;
+      if (t < FLOOD_SHADOW_FAR && side != 2) {
+        var tg = vec2f(0.0, 1.0); if (side == 1) { tg = vec2f(1.0, 0.0); } else if (side == 3) { tg = vec2f(bld[q + 8u], -bld[q + 7u]); }
+        let a1 = (0.5 - fr) * FLOOD_GAP; let a2 = a1 + select(-FLOOD_GAP, FLOOD_GAP, fr > 0.5);
+        let P = vec3f(hx + nw.x * 0.02, hy + nw.y * 0.02, z);
+        v1 = floodShadow(P, vec3f(hx + tg.x * a1 + nw.x * FLOOD_OUT, hy + tg.y * a1 + nw.y * FLOOD_OUT, 0.32));
+        v2 = floodShadow(P, vec3f(hx + tg.x * a2 + nw.x * FLOOD_OUT, hy + tg.y * a2 + nw.y * FLOOD_OUT, 0.32));
+      }
       // each lamp's cone, and some light between them, so the wall is scalloped and never left dark
-      I = fzz * (0.3 + 0.7 * min(1.2, exp(-(d / w) * (d / w)) + exp(-(d2 / w) * (d2 / w))));
-      if (z < 0.35 && d < 0.3) { ch = STAR; c = vec3f(200.0, 190.0, 165.0); emC = c; il = vec3f(0.0); glowK = 0.3; }
+      I = fzz * (0.3 + 0.7 * min(1.2, exp(-(d / w) * (d / w)) * v1 + exp(-(d2 / w) * (d2 / w)) * v2));
+      // (the lamp itself: near, a fixture standing in front of the wall)
+      if (z < 0.35 && d < 0.3 && t > FLOOD_FIX_FAR) { ch = STAR; c = vec3f(200.0, 190.0, 165.0); emC = c; il = vec3f(0.0); glowK = 0.3; }
     }
     // the light takes the wall's color (light times albedo, plus a little of its own): a stone wall glows warm, not white
     let fl = colAt(q + 32u) * (I * adElec) * (vec3f(0.2) + 1.5 * frame / 255.0); c += fl; il += fl;

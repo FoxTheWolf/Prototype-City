@@ -6,10 +6,10 @@ import { insideLight, interiorColumn, prepareInside, type Inside } from './inter
 import { CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
-import { DynLights } from './lights';
+import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText } from '../locale/names';
-import { signalLamps, mastModel, substationModel, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel } from './models';
+import { signalLamps, mastModel, substationModel, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -87,6 +87,26 @@ const dyn = new DynLights();
 const LT = new Float32Array(3);
 /** Dynamic lights (cars, signs) are gathered this close to the viewer. */
 const DYN_FAR = 200;
+/**
+ * A lit facade's floodlights stand every FLOOD_GAP m along each face (where the shader paints their beams);
+ * their fixtures are drawn this close, and they light what passes in front of them this close.
+ */
+export const FLOOD_GAP = 6, FLOOD_FIX_FAR = 70, FLOOD_LIGHT_FAR = 120;
+
+/** The floodlights of building B: each lamp's spot (FLOOD_OUT m out from its face) and the face's outward normal. */
+function floodSpots(B: Building, cb: (x: number, y: number, nx: number, ny: number) => void) {
+  if (!B.flood || B.round) return;
+  const K = B.cut;
+  for (let f = 0; f < (K ? 5 : 4); f++) {
+    const sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
+    const out = f & 1 ? 1 : -1, nx = f === 4 ? K!.nx : f >= 2 ? 0 : out, ny = f === 4 ? K!.ny : f >= 2 ? out : 0;
+    for (let a = lo + FLOOD_GAP / 2; a < hi; a += FLOOD_GAP) {
+      const x = f === 4 ? nx * K!.c + ny * a : f >= 2 ? a : f === 0 ? B.x0 : B.x1;
+      const y = f === 4 ? ny * K!.c - nx * a : f >= 2 ? (f === 2 ? B.y0 : B.y1) : a;
+      cb(x + nx * FLOOD_OUT, y + ny * FLOOD_OUT, nx, ny);
+    }
+  }
+}
 /** Width of one letter on a shop sign, and the sign band's height above the sidewalk. */
 export const LETTER_W = 0.55, SIGN_Z0 = 2.6, SIGN_Z1 = 3.4;
 // the current frame's city and time in seconds, for the signs
@@ -450,6 +470,11 @@ function gatherLights(world: World, v: View, sec: number) {
     }
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
+      // the floodlights at its foot light whoever walks by (and the sidewalk round each lamp)
+      if (B.flood && Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < FLOOD_LIGHT_FAR) {
+        const q = 0.8 * signPower(world, k, sec), [fr, fg, fb] = B.flood;
+        if (q > 0.01) floodSpots(B, (x, y, nx, ny) => dyn.flood(x, y, nx, ny, B.floodH, fr * q, fg * q, fb * q));
+      }
       if (B.biz < 0 || B.round) continue;
       const K0 = B.cut;
       if (B.shop && Math.hypot((B.x0 + B.x1) / 2 - v.x, (B.y0 + B.y1) / 2 - v.y) < 60) {
@@ -663,6 +688,19 @@ function collectObjects(world: World, v: View): Obj[] {
         const parts = lit ? poweredFurniture(p.kind, power(P, subAt(P, city, p.x, p.y), p.x, p.y, p.seed, 0, frameSec)[0]) : f.parts;
         out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts, r: f.r, h: f.h, seed: p.seed });
       }
+    }
+  }
+  // the floodlights at the foot of lit facades (their lens lit in eighths, so the models are reused)
+  for (let cy = cy0 | 1; cy <= cy1; cy += 2) for (let cx = cx0 | 1; cx <= cx1; cx += 2) {
+    const blk = cityBlock(city, cx, cy);
+    if (!blk) continue;
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const B = city.buildings[k];
+      if (!B.flood || Math.abs((B.x0 + B.x1) / 2 - v.x) > FLOOD_FIX_FAR + 60 || Math.abs((B.y0 + B.y1) / 2 - v.y) > FLOOD_FIX_FAR + 60) continue;
+      const parts = wallFloodModel(B.flood, Math.round(Math.min(1, signPower(world, k, frameSec)) * 8) / 8);
+      floodSpots(B, (x, y, nx, ny) => {
+        if (Math.abs(x - v.x) < FLOOD_FIX_FAR && Math.abs(y - v.y) < FLOOD_FIX_FAR && seen(x, y, 0.5)) out.push({ x, y, c: nx, s: ny, parts, r: 0.35, h: 0.35, seed: 0 });
+      });
     }
   }
   forSignals(world, v, SIGNAL_FAR, (S) => {

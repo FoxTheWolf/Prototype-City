@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.R.31 — Holofotes de verdade (2026-10-03)
+- As fachadas iluminadas por baixo ganharam as luminárias: caixinhas de metal no chão, a pouco mais de um metro da parede, com a lente acesa na cor da luz.
+- O feixe ilumina quem passa na frente e a calçada em volta da luminária, não só a parede.
+- Quem passa entre o holofote e a parede projeta na fachada uma sombra grande, que sobe pela parede (só nos holofotes perto de você).
+
 ## 0.R.30 — Vidro sem cortes no reflexo (2026-10-03)
 - Nas torres de vidro altas, o reflexo da cidade não acaba mais numa linha dura no meio da fachada (marrom embaixo, preto em cima): longe demais, ele se desfaz aos poucos no reflexo do céu.
 - O mesmo vale para os cômodos vistos pelas janelas e para o detalhe da fachada no alto de uma torre: somem aos poucos com a distância, sem uma linha.

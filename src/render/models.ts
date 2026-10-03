@@ -354,6 +354,26 @@ export const FLOOD: Part[] = [
   part(Box, 0.2, -0.8, 12.8, 0.5, 0.8, 14.2, [255, 250, 225], Glow, '#'),
 ];
 
+const floods = new Map<string, Part[]>();
+/**
+ * A floodlight at the foot of a lit facade (+x out from the wall, the lamp's spot at the origin): a low steel
+ * box on a plate, its lens on top tilted to the wall, glowing in the light's color while it is on (lit 0..1).
+ */
+export function wallFloodModel(col: RGB, lit: number): Part[] {
+  const key = `${col.join(',')}|${lit}`;
+  let m = floods.get(key);
+  if (!m) {
+    const on = lit > 0.05, k = 255 / Math.max(...col), lens: RGB = on ? [Math.min(255, col[0] * k * lit + 40), Math.min(255, col[1] * k * lit + 40), Math.min(255, col[2] * k * lit + 40)] : [60, 62, 66];
+    m = [
+      part(Box, -0.22, -0.2, 0, 0.2, 0.2, 0.06, [70, 70, 74], Solid, '_', '='),
+      part(Box, -0.16, -0.15, 0.06, 0.16, 0.15, 0.3, [95, 96, 100], Solid, '#', '='),
+      part(Box, -0.18, -0.13, 0.3, 0.1, 0.13, 0.34, lens, on ? Glow : Solid, '*', '@'),
+    ];
+    floods.set(key, m);
+  }
+  return m;
+}
+
 const blades = new Map<string, Part[]>();
 /** Height of a blade sign's panel: its letters, a square symbol on top if it has one, and the frame. */
 export function bladeHeight(text: string, sym: number, letter: number) {
