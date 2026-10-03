@@ -38,5 +38,5 @@ body { background: var(--bg); color: var(--fg); font-family: var(--mono); overfl
 @keyframes shine { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 #loading .status { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; letter-spacing: .1em; color: var(--amber-dim); }
 #loading .pct { color: var(--amber); }
-#tip { max-width: min(560px, 86vw); margin: 18px auto 0; font-size: 12px; line-height: 1.6; color: var(--fg); cursor: default; }
+#tip { position: fixed; left: 50%; bottom: 6vh; transform: translateX(-50%); width: min(560px, 86vw); margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg); cursor: default; }
 #tip .head { display: block; color: var(--cyan); letter-spacing: .14em; font-size: 11px; margin-bottom: 2px; }
