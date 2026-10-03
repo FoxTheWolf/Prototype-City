@@ -1,0 +1,623 @@
+import { BAY, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
+import { BLOCKS } from '../raycaster';
+import { CELL, SIDE } from '../lights';
+import { LAMP_R, LIGHT_W } from '../lightmap';
+
+/**
+ * The world's compute shader (stage R): one invocation per cell. The walk through the street grid and
+ * the shading port raycaster.ts (renderWorld, wallColumn, roofRows, the ground, lightAt, finish) and
+ * keep its numbers, so the two can be compared with J. What is not ported yet is listed in world.ts.
+ */
+
+/** The uniform block, one f32 each, in this order (world.ts fills it by these names). */
+export const UNIFORMS = [
+  'px', 'py', 'eye', 'dirX', 'dirY', 'plX', 'plY', 'hor',
+  'scale', 'cols', 'rows', 'sec', 'day', 'solid', 'sharp', 'fuse',
+  'nbx', 'nxb', 'nyb', 'curveR', 'dox', 'doy', 'dex', 'dey',
+  'dnx', 'dny', 'dw', 'blocks', 'lox', 'loy', 'dbx', 'dby',
+  'sunX', 'sunY', 'sunZ', 'sunEl', 'cloud', 'moonlight', 'cityLit', 'flash',
+  'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'pad0',
+] as const;
+
+/** Floats per building in the buildings buffer (see world.ts for the layout). */
+export const BLD = 48;
+export const BLK = 8;
+export const STYLES = ['office', 'glass', 'brick', 'historic', 'residential', 'warehouse', 'crown', 'spire', 'dome', 'tank', 'chimney', 'mech', 'clock', 'mast', 'gasholder'];
+
+const C = (s: string) => s.charCodeAt(0);
+const G = {
+  DOT: C('.'), COM: C(','), TICK: C('`'), COL: C(':'), SEMI: C(';'), DASH: C('-'), EQ: C('='), PLUS: C('+'),
+  HASH: C('#'), PCT: C('%'), AT: C('@'), BAR: C('|'), US: C('_'), STAR: C('*'), QUO: C('"'),
+  O: C('o'), LB: C('['), RB: C(']'), SL: C('/'), BS: C('\\'), CARET: C('^'), X: C('x'),
+};
+
+export function worldWGSL(): string {
+  const glyphs = Object.entries(G).map(([k, v]) => `const ${k} = ${v}u;`).join('\n');
+  return /* wgsl */ `
+struct U { ${UNIFORMS.map((n) => `${n}: f32`).join(', ')} };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var<storage, read> xb: array<f32>;
+@group(0) @binding(2) var<storage, read> yb: array<f32>;
+@group(0) @binding(3) var<storage, read> xc: array<u32>;
+@group(0) @binding(4) var<storage, read> yc: array<u32>;
+@group(0) @binding(5) var<storage, read> blk: array<f32>;
+@group(0) @binding(6) var<storage, read> bld: array<f32>;
+@group(0) @binding(7) var<storage, read_write> outp: array<u32>;
+@group(0) @binding(8) var<storage, read> subs: array<f32>;
+@group(0) @binding(9) var<storage, read> lmap: array<u32>;
+@group(0) @binding(10) var<storage, read> lampCol: array<f32>;
+@group(0) @binding(11) var<storage, read> dl: array<f32>;
+@group(0) @binding(12) var<storage, read> dlv: array<f32>;
+@group(0) @binding(13) var<storage, read> doff: array<u32>;
+@group(0) @binding(14) var<storage, read> didx: array<u32>;
+
+${glyphs}
+const FLOOR_H = ${FLOOR_H};
+const BAY = ${BAY};
+const SIDEWALK = ${SIDEWALK};
+const LANE_W = ${LANE_W};
+const FOG = 1500.0;
+const LIT_H = 9.0;
+const LIT_FAR = 600.0;
+const GROUND_FAR = 600.0;
+const LIGHT_KNEE = 150.0;
+const CROWN_H = 16.0;
+const FLOOD_GAP = 6.0;
+const LW = ${LIGHT_W};
+const DSIDE = ${SIDE};
+const DCELL = ${CELL}.0;
+const BLOCKS = array<u32, 256>(${Array.from(BLOCKS).map((b) => `${b}u`).join(',')});
+const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u, 90u, PLUS), vec3u(48u, O, EQ), vec3u(72u, HASH, EQ));
+const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u;
+// (lamp pool radius ${LAMP_R} m: baked into the light map on the CPU)
+
+// the same hash as core/rng.ts's hash3 (32-bit wrapping products)
+fn hash3(a: i32, b: i32, c: i32) -> f32 {
+  var h = (u32(a) * 374761393u) ^ (u32(b) * 668265263u) ^ (u32(c) * 2147483647u);
+  h = (h ^ (h >> 13u)) * 1274126177u;
+  h = h ^ (h >> 16u);
+  return f32(h) / 4294967296.0;
+}
+fn ifloor(x: f32) -> i32 { return i32(floor(x)); }
+
+// ---- power (render/power.ts): one element's light level now, from its substation's state
+fn power(sub: i32, x: f32, y: f32, id: i32, gen: bool, group: i32, spread: f32) -> f32 {
+  let o = u32(sub) * 4u;
+  let changed = subs[o];
+  if (changed < 0.0) { return 1.0; }
+  let since = u.sec - changed; let d = length(vec2f(x - subs[o + 2u], y - subs[o + 3u]));
+  let hb = hash3(group, sub, 404); let hw = hash3(id, sub, 407);
+  if (subs[o + 1u] < 0.5) {
+    let t = since - d / 120.0 - hb * 0.3 - hw * spread;
+    if (t < -0.6) { return 1.0; }
+    if (t < 0.0) { return 1.0 + 0.35 * (1.0 + t / 0.6); }
+    if (t < 0.32) { return select(0.05, 1.25, hash3(id, ifloor(t * 28.0), 405) < 0.45); }
+    if (gen && t > 3.0) { return min(0.55, (t - 3.0) * 0.4); }
+    return 0.0;
+  }
+  let t = since - (0.4 + hb * 10.0 + hw * spread * 2.0 + d / 240.0);
+  if (t < 0.0) { return select(0.0, 0.55, gen); }
+  return select(1.0, 0.15, t < 0.7 && hash3(id, ifloor(t * 18.0), 406) < 0.5);
+}
+
+// ---- light (lightmap.ts, lights.ts, lightAt): the street lamps' pools and this frame's dynamic lights
+fn lampCorner(i: u32, f: f32) -> vec3f {
+  let w = lmap[i];
+  if (w == 0u || f <= 0.0) { return vec3f(0.0); }
+  let n = ((w >> 8u) - 1u) * 3u; let g = f32(w & 255u) / 255.0 * f;
+  return vec3f(lampCol[n], lampCol[n + 1u], lampCol[n + 2u]) * g;
+}
+fn lvSum(o: u32, n: u32, p: f32) -> f32 {
+  let k = u32(floor(p));
+  if (k >= n) { return dlv[o + k]; }
+  return dlv[o + k] + (dlv[o + k + 1u] - dlv[o + k]) * (p - f32(k));
+}
+fn lightAt(px: f32, py: f32, pz: f32) -> vec3f {
+  var L = vec3f(0.0);
+  let zk = select(1.0 - (pz - 1.0) / (LIT_H - 1.0), 1.0, pz <= 1.0);
+  if (zk > 0.0) {
+    let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
+    if (ix >= 0 && iy >= 0 && ix < LW - 1 && iy < LW - 1) {
+      let tx = fx - f32(ix); let ty = fy - f32(iy); let i0 = u32(iy * LW + ix);
+      L += (lampCorner(i0, (1.0 - tx) * (1.0 - ty)) + lampCorner(i0 + 1u, tx * (1.0 - ty)) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty) + lampCorner(i0 + u32(LW) + 1u, tx * ty)) * zk;
+    }
+  }
+  let bi = ifloor(px / DCELL) - i32(u.dbx); let bj = ifloor(py / DCELL) - i32(u.dby);
+  if (bi >= 0 && bj >= 0 && bi < DSIDE && bj < DSIDE) {
+    let c = u32(bj * DSIDE + bi);
+    for (var q = doff[c]; q < doff[c + 1u]; q++) {
+      let o = didx[q] * 16u;
+      let zf = dl[o + 8u]; let zt = dl[o + 9u];
+      let lz = select((zt - pz) / (zt - zf), 1.0, pz <= zf);
+      if (lz <= 0.0) { continue; }
+      let kind = u32(dl[o]); let R = dl[o + 7u];
+      var dx = px - dl[o + 1u]; var dy = py - dl[o + 2u]; var lvl = 1.0;
+      if (kind == 2u) {
+        if (dx * dl[o + 5u] + dy * dl[o + 6u] < -0.3) { continue; }
+        let sx = dl[o + 3u] - dl[o + 1u]; let sy = dl[o + 4u] - dl[o + 2u];
+        let t = clamp((dx * sx + dy * sy) / (sx * sx + sy * sy), 0.0, 1.0);
+        dx -= sx * t; dy -= sy * t;
+        let n = u32(dl[o + 14u]);
+        if (n > 0u) {
+          let h = (0.3 + 0.5 * length(vec2f(dx, dy))) * dl[o + 15u]; let cc = t * f32(n);
+          let a = max(0.0, cc - h); let b = min(f32(n), cc + h); let lo = u32(dl[o + 13u]);
+          lvl = (lvSum(lo, n, b) - lvSum(lo, n, a)) / (b - a);
+        }
+      }
+      let d = length(vec2f(dx, dy));
+      if (d >= R) { continue; }
+      var f = (1.0 - d / R) * (1.0 - d / R);
+      if (kind == 1u) {
+        let cs = (dx * dl[o + 3u] + dy * dl[o + 4u]) / select(d, 1.0, d == 0.0); let c0 = dl[o + 5u];
+        if (cs <= c0) { continue; }
+        f *= min(1.0, (cs - c0) / ((1.0 - c0) * 0.5));
+      }
+      f *= lz * lvl;
+      L += vec3f(dl[o + 10u], dl[o + 11u], dl[o + 12u]) * f;
+    }
+  }
+  let m = max(L.x, max(L.y, L.z));
+  if (m > LIGHT_KNEE) { L *= (LIGHT_KNEE + (m - LIGHT_KNEE) * 0.3) / m; }
+  if (u.day > 0.0) { L *= 1.0 - 0.85 * u.day; }
+  return L;
+}
+
+// what a cell ends up with before the finish
+struct Cell { ch: u32, c: vec3f, bg: vec3f, depth: f32, kind: u32, sun: f32 };
+fn sat(c: vec3f) -> vec3f { return clamp(c, vec3f(0.0), vec3f(255.0)); }
+fn colAt(o: u32) -> vec3f { return vec3f(bld[o], bld[o + 1u], bld[o + 2u]); }
+
+// ---- a roof seen from above (roofRows)
+fn roofCell(q: u32, t: f32, wx: f32, wy: f32) -> Cell {
+  let fogK = 1.0 - exp(-t / FOG); let k = 1.0 - fogK * 0.6;
+  let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u];
+  var edge = min(min(wx - x0, x1 - wx), min(wy - y0, y1 - wy));
+  if (bld[q + 6u] > 0.5) { edge = min(edge, bld[q + 9u] - bld[q + 7u] * wx - bld[q + 8u] * wy); }
+  if (bld[q + 5u] > 0.5) { edge = min(edge, (x1 - x0) * 0.5 - length(vec2f(wx - (x0 + x1) * 0.5, wy - (y0 + y1) * 0.5))); }
+  let h = hash3(ifloor(wx * 2.0), ifloor(wy * 2.0), 61);
+  var ch = select(select(COL, COM, h < 0.8), DOT, h < 0.5); var c = vec3f(50.0, 50.0, 56.0);
+  if (edge < 0.35) { ch = EQ; c = colAt(q + 15u) * 1.2; }
+  if (u.snow > 0.05) { c += (vec3f(200.0, 205.0, 218.0) - c) * (u.snow * 0.9); }
+  return Cell(ch, sat(c * k), vec3f(7.0, 8.0, 12.0), t, KIND_GROUND, 0.0);
+}
+
+// ---- a wall (wallColumn): the facade by its style, its windows, and the lights on it
+fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, z: f32, dz: f32) -> Cell {
+  let q = u32(bk * ${BLD});
+  let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let H = bld[q + 4u];
+  let hx = u.px + t * rdx; let hy = u.py + t * rdy;
+  let style = i32(bld[q + 10u]); let lit = bld[q + 11u]; let feat = bld[q + 18u];
+  let shop = bld[q + 19u] > 0.5;
+  let win = colAt(q + 12u); let frame = colAt(q + 15u); let sign = colAt(q + 21u);
+  // where along the face, its light, the face's span
+  var along = 0.0; var lightK = 1.0; var face = 0; var dn = 1.0; var wsun = 0.0;
+  if (side == 2) {
+    let rr = (x1 - x0) * 0.5; let nx = (hx - x0 - rr) / rr; let ny = (hy - y0 - rr) / rr;
+    along = (atan2(ny, nx) + 3.14159265) * rr; lightK = 0.72 + 0.28 * abs(nx);
+    wsun = nx * u.sunX + ny * u.sunY;
+  } else if (side == 3) {
+    let kx = bld[q + 7u]; let ky = bld[q + 8u];
+    along = hx * ky - hy * kx; lightK = 0.72 + 0.28 * abs(kx); face = 4; dn = kx * rdx + ky * rdy;
+    wsun = kx * u.sunX + ky * u.sunY;
+  } else {
+    along = select(hx, hy, side == 0); lightK = select(0.72, 1.0, side == 0);
+    if (side == 0) { face = select(0, 1, rdx < 0.0); dn = rdx; } else { face = select(3, 2, rdy > 0.0); dn = rdy; }
+    wsun = select(select(select(u.sunY, -u.sunY, face == 2), u.sunX, face == 1), -u.sunX, face == 0);
+  }
+  var f0 = -1e9; var f1 = 1e9;
+  if (side != 2) { f0 = bld[q + 36u + u32(face) * 2u]; f1 = bld[q + 37u + u32(face) * 2u]; }
+  let dAlong = u.colW * t / max(1e-6, abs(dn));
+  let fogK = 1.0 - exp(-t / FOG);
+  let shade = lightK * (1.0 - fogK * 0.6);
+  let winLight = 1.0 - fogK * 0.45;
+  // the building's power now, its signs' (never on the generator), and each window's
+  let sub = i32(bld[q + 46u]); let gen = bld[q + 47u] > 0.5;
+  let cx = (x0 + x1) * 0.5; let cy = (y0 + y1) * 0.5;
+  let pw = power(sub, cx, cy, bk, gen, bk, 0.25);
+  let ad = select(pw, power(sub, cx, cy, bk, false, bk, 0.25), gen);
+  let elec = winLight * pw; let adElec = winLight * ad;
+  let switched = subs[u32(sub) * 4u] >= 0.0;
+  let litK = lit * (1.0 - 0.75 * u.day);
+  let rpf = FLOOR_H * u.scale / t; let cpb = BAY / (u.colW * t);
+  let detailed = rpf >= 2.2 && cpb >= 1.5;
+  let kv = select(u32(ceil(log2(1.0 / rpf))), 0u, rpf >= 1.0); let kh = select(u32(ceil(log2(1.0 / cpb))), 0u, cpb >= 1.0);
+  let bay = along / BAY; let wi = ifloor(bay); let fw = bay - f32(wi);
+  let corner = along - f0 < 0.35 || f1 - along < 0.35;
+  // a clock tower is a historic facade with a clock face near the top of each side
+  var S = style; if (style == 12) { S = 3; }
+  let clockR = select(0.0, min(3.0, (f1 - f0) * 0.32), style == 12 && side != 2); let clockZ = H - clockR - 2.0;
+  let du = along - (f0 + f1) * 0.5;
+  let farWall = select(select(COL, BAR, S == 5), EQ, S == 2);
+  let farK = select(1.0, 1.25, S == 1);
+  let balcony = S == 4 && feat < 0.5; let balK = ifloor(fract(feat * 131.0) * 4.0);
+  let pIdx = ifloor(fract(feat * 977.0) * 5.0); let pat = PATS[pIdx];
+  let band = select(0, 1 + ifloor(fract(feat * 53.0) * 3.0), fract(feat * 311.0) < 0.35);
+  // the glass mirrors the sky: bands slide over it as the viewer moves
+  var tang = 0.0;
+  if (side == 0) { tang = rdy; } else if (side == 1) { tang = rdx; } else if (side == 3) { tang = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }
+  else { let nx = hx - cx; let ny = hy - cy; let n = max(1e-6, length(vec2f(nx, ny))); tang = (rdx * -ny + rdy * nx) / n; }
+  let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - u.eye) / t) * 4.0 + f32(bk % 7));
+  let fl = ifloor(z / FLOOR_H); let fz = z / FLOOR_H - f32(fl);
+  var ch = 0u; var c = vec3f(0.0);
+  // a window's color: lit in the building's window color (or its band's), dark ones deep blue glass
+  var wc = win; if (band > 0 && ((fl / band) & 1) == 1) { wc = sign; }
+  let hh = hash3(bk, wi, fl);
+  var wp = 0.0;
+  if (hh < litK) { wp = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977 + fl * 7, gen, bk, 1.5) * winLight, switched); }
+  let wk = wp * (0.65 + 0.35 * hash3(wi, fl, bk));
+  let darkPane = vec3f(30.0 * shade + 8.0, 36.0 * shade + 8.0, 58.0 * shade + 12.0);
+  if (S == 7 || S == 10) {
+    if (z > H - 1.0) { ch = STAR; c = win * winLight; }
+    else if (S == 10 && ((z > H - 6.0 && z < H - 4.5) || (z > H - 10.0 && z < H - 8.5))) { ch = EQ; c = frame * 1.9 * shade; }
+    else { ch = select(BAR, EQ, S == 10 && detailed); c = frame * select(1.0, 1.2, S == 7) * shade; }
+  } else if (z > H - max(0.6, dz)) {
+    ch = US; c = frame * 1.5 * shade;
+    if (u.snow > 0.05) { c += (vec3f(190.0, 195.0, 205.0) - c) * (u.snow * 0.8); }
+  } else if (clockR > 0.0 && length(vec2f(du, z - clockZ)) < clockR) {
+    let cz = z - clockZ; let d = length(vec2f(du, cz));
+    let a1 = 150.0 * 3.14159265 / 180.0; let a2 = 30.0 * 3.14159265 / 180.0;
+    let s1 = du * cos(a1) + cz * sin(a1); let s2 = du * cos(a2) + cz * sin(a2);
+    let hand = (s1 > 0.0 && s1 < clockR * 0.5 && abs(-du * sin(a1) + cz * cos(a1)) < 0.22) || (s2 > 0.0 && s2 < clockR * 0.75 && abs(-du * sin(a2) + cz * cos(a2)) < 0.22);
+    if (d > clockR * 0.82) { ch = O; c = frame * 1.6 * shade; }
+    else if (hand) { ch = HASH; c = vec3f(40.0, 30.0, 20.0); }
+    else { ch = select(COL, O, d < 0.3); c = vec3f(250.0, 230.0, 170.0) * elec; }
+  } else if (S == 13) {
+    if (z % 30.0 < 1.0 && corner) { ch = STAR; c = win * winLight; }
+    else if (!detailed) { ch = BAR; c = frame * shade; }
+    else if (corner) { ch = BAR; c = frame * 1.3 * shade; }
+    else {
+      let a = ((along + z) % 3.0 + 3.0) % 3.0 < 0.35; let b = ((along - z) % 3.0 + 3.0) % 3.0 < 0.35;
+      ch = select(select(select(DOT, BS, b), SL, a), X, a && b); c = frame * select(0.35, 1.2, a || b) * shade;
+    }
+  } else if (S == 14) {
+    if (along % 7.0 < 0.5) { ch = BAR; c = frame * 1.4 * shade; }
+    else if (z % 6.0 < 0.45) { ch = EQ; c = frame * 1.3 * shade; }
+    else { ch = select(DOT, COL, detailed); c = frame * 0.75 * shade; }
+  } else if (S == 6) {
+    if ((ifloor(along / select(1.6, 0.8, detailed)) & 1) == 1) { ch = BAR; c = win * adElec * 0.9; }
+    else { ch = BAR; c = frame * 1.2 * shade; }
+  } else if (S == 8) { ch = select(COL, BAR, detailed && along % 2.0 < 0.3); c = frame * 1.2 * shade; }
+  else if (S == 11) { ch = select(HASH, EQ, detailed && fw < 0.5); c = frame * 0.9 * shade; }
+  else if (S == 9) {
+    let tr = (x1 - x0) * 0.5; let lid = H - 0.6 * tr; let base = lid - 1.7 * tr;
+    if (z < base) { ch = select(DOT, BAR, along % 1.6 < 0.3); c = frame * 0.6 * shade; }
+    else if (z > lid) { ch = CARET; c = frame * shade; }
+    else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame * shade; }
+  } else if (detailed && S != 1 && S != 5 && S != 3 && z > H - 1.3) {
+    // cornice with dentils
+    ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
+  } else if (detailed && (S == 0 || S == 2 || S == 4) && fl > 1 && fl % (4 + i32(feat * 3.0)) == 0 && fz < 0.07) {
+    ch = EQ; c = frame * 1.3 * shade; // a belt course every few floors
+  } else if (detailed && S == 2 && !corner && fw > 0.27 && fw < 0.73 && ((fz > 0.78 && fz < 0.86) || (fz > 0.25 && fz < 0.3))) {
+    ch = select(US, DASH, fz > 0.5); c = frame * 1.3 * shade; // stone lintel and sill
+  } else if (detailed && S == 0 && feat > 0.6 && wi % 2 == 0 && fw < 0.18) {
+    ch = BAR; c = frame * 1.3 * shade; // art deco piers
+  } else if (detailed && (S == 0 || S == 4) && z < FLOOR_H && !shop && !corner) {
+    ch = select(HASH, EQ, (ifloor(z / 0.5) & 1) == 1); c = frame * 0.95 * shade; // a stone base
+  } else if (!detailed) {
+    // far: several floors and bays share a cell, grouped in powers of two so the pattern holds still
+    let gw = wi >> kh; let gf = fl >> kv;
+    let h2 = hash3(bk, gw, gf);
+    var p2 = 0.0;
+    if (h2 < litK) { p2 = select(winLight, power(sub, cx, cy, bk * 131 + gw * 977 + gf * 7, gen, bk, 1.5) * winLight, switched); }
+    if (p2 > 0.04) {
+      ch = select(COL, O, h2 < litK * 0.4);
+      var w2 = win; let gfl = gf << kv; if (band > 0 && ((gfl / band) & 1) == 1) { w2 = sign; }
+      c = w2 * p2 * (0.65 + 0.35 * hash3(gw, bk, 5));
+    } else { ch = farWall; c = frame * farK * shade; }
+  } else if (z < FLOOR_H && shop) {
+    if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; }
+    else { ch = BAR; c = frame * shade; }
+  } else if (S == 1) {
+    // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
+    if (fz < 0.08) { ch = DASH; c = frame * 0.8 * shade; }
+    else if (fw < 0.07 || corner) { ch = BAR; c = frame * 1.5 * shade; }
+    else if (hh < litK) {
+      if (wp > 0.04) { ch = select(select(COL, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+    } else { ch = select(select(DOT, COL, sheen > 0.4), SL, sheen > 0.85); c = frame * (1.3 + 0.9 * sheen) * shade; }
+  } else if (S == 5) {
+    let dp = along % 6.0;
+    if (z > H - 3.2 && z < H - 1.4) {
+      if (fw > 0.08 && fw < 0.92) {
+        let p0 = select(winLight, power(sub, cx, cy, bk * 131 + wi * 977, gen, bk, 1.5) * winLight, switched);
+        if (hash3(bk, wi, 0) < litK * 2.0 && p0 > 0.04) { ch = HASH; c = win * p0 * 0.75; }
+        else { ch = EQ; c = vec3f(22.0 * shade + 8.0, 26.0 * shade + 8.0, 36.0 * shade + 10.0); }
+      } else { ch = BAR; c = frame * 1.2 * shade; }
+    } else if (z < 4.5 && ifloor(along / 6.0) % 3 == 1 && !corner) {
+      let edge = dp < 0.4 || dp > 5.6;
+      ch = select(select(DASH, EQ, z > 4.1), BAR, edge); c = frame * select(1.15, 1.3, edge) * shade;
+    } else { ch = BAR; c = frame * select(0.78, 1.0, (ifloor(along / 0.6) & 1) == 1) * shade; }
+  } else if (S == 3) {
+    if (z > H - 2.2) { ch = select(select(QUO, COL, (i32(fw * 4.0) & 1) == 1), EQ, z > H - 1.2); c = frame * 1.3 * shade; }
+    else if (z < FLOOR_H * 1.2) { ch = select(HASH, EQ, (ifloor(z / 0.7) & 1) == 1); c = frame * 0.9 * shade; }
+    else if ((wi % 3 == 0 && fw < 0.28) || corner) { ch = BAR; c = frame * 1.25 * shade; }
+    else if (fz < 0.08) { ch = DASH; c = frame * 1.1 * shade; }
+    else if (fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82) {
+      if (fz > 0.7) { ch = CARET; c = frame * 1.3 * shade; }
+      else if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+    } else { ch = COL; c = frame * shade; }
+  } else if (S == 2) {
+    if (fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78 && !corner) {
+      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+    } else {
+      let course = ifloor(z / 0.5); let off = f32(course & 1) * 0.6;
+      ch = select(EQ, BAR, corner); c = frame * (0.8 + 0.35 * hash3(course, ifloor((along + off) / 1.2), bk)) * shade;
+    }
+  } else if (S == 4) {
+    let balAt = balK == 3 || select(fw > 0.1 && fw < 0.9 && (balK != 1 || (fl & 1) == 1), wi % 4 < 2 && fw > 0.04 && fw < 0.96, balK == 2);
+    if (balcony && z > FLOOR_H && fz < 0.25 && balAt) {
+      if (fz < 0.07) { ch = EQ; c = frame * 1.35 * shade; }
+      else if (balK == 1) { ch = HASH; c = frame * 1.1 * shade; }
+      else if (balK == 2) { ch = COL; c = vec3f(110.0 * shade + 10.0, 140.0 * shade + 10.0, 160.0 * shade + 12.0); }
+      else { ch = select(BAR, DASH, balK == 3); c = frame * 1.3 * shade; }
+    } else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) {
+      if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+    } else { ch = select(DOT, BAR, corner); c = frame * shade; }
+  } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
+    if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; } else { ch = EQ; c = darkPane; }
+  } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
+  // neon tubes up the corners and along the roof line, and their glow on the wall
+  if (bld[q + 27u] > 0.5) {
+    let neon = colAt(q + 24u);
+    let eA = min(along - f0, f1 - along); let dTop = abs(z - (H - 0.3));
+    let tw = max(0.1, dAlong * 0.6); let tz = max(0.1, dz * 0.6);
+    let onTube = (eA < tw && z < H - 0.3 + tz) || dTop < tz;
+    let s = select(along, z, eA < tw);
+    let chase = hash3(bk, 3, 31) < 0.35 && ifloor((s - u.sec * 5.0) / 1.4) % 3 == 0;
+    let k = ad * (1.0 - 0.55 * u.day) * select(1.0, 0.25, chase);
+    if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); }
+    else { let e = max(0.0, 1.0 - min(eA, dTop) / 1.6); c += neon * (e * e * 0.5 * k); }
+  }
+  // the top washed in light at night
+  if (bld[q + 31u] > 0.5 && z > H - CROWN_H) {
+    c += colAt(q + 28u) * (pow((z - (H - CROWN_H)) / CROWN_H, 1.4) * 0.95 * ad * (1.0 - 0.85 * u.day));
+  }
+  // floodlights at the foot of the wall, each a cone of light widening upward
+  let floodH = bld[q + 35u];
+  if (floodH > 0.0 && z < floodH) {
+    let w = 0.35 + 0.18 * z; let fzz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / floodH), 1.2);
+    var I = 0.0;
+    if (dAlong > FLOOD_GAP * 0.4) { I = fzz * min(1.0, 1.77 * w / FLOOD_GAP); }
+    else {
+      let fb = select(f0, 0.0, side == 2);
+      let fr = (((along - fb) / FLOOD_GAP) % 1.0 + 1.0) % 1.0; let d = abs(fr - 0.5) * FLOOD_GAP; let d2 = FLOOD_GAP - d;
+      I = fzz * (exp(-(d / w) * (d / w)) + exp(-(d2 / w) * (d2 / w)));
+      if (z < 0.35 && d < 0.3) { ch = STAR; c = vec3f(240.0, 230.0, 200.0); }
+    }
+    c += colAt(q + 32u) * (I * adElec);
+  }
+  c = sat(c);
+  // street lamps, headlights and signs light the lower floors
+  if (z < LIT_H && t < LIT_FAR) { c = sat(c + lightAt(hx, hy, z) * (1.3 * shade)); }
+  return Cell(ch, c, vec3f(7.0, 8.0, 12.0), t, KIND_WALL, max(0.0, wsun));
+}
+
+// ---- the ground (renderWorld's ground loop)
+fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
+  let wx = u.px + rdx * rd; let wy = u.py + rdy * rd;
+  let W = f32(arrayLength(&xc)); let Hh = f32(arrayLength(&yc));
+  let bg = vec3f(7.0, 8.0, 12.0);
+  if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return Cell(DOT, vec3f(60.0, 30.0, 18.0), bg, rd, KIND_GROUND, 0.0); }
+  if (rd > GROUND_FAR) { return Cell(DOT, vec3f(28.0, 24.0, 32.0), bg, rd, KIND_GROUND, 0.0); }
+  let fog = 1.0 - (rd / GROUND_FAR) * 0.9;
+  let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);
+  let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
+  var ch = DOT; var c = vec3f(38.0, 38.0, 46.0);
+  let roadX = (gx & 1) == 0; let roadY = (gy & 1) == 0;
+  let sD = (wx - u.dox) * u.dnx + (wy - u.doy) * u.dny; let aD = abs(sD); let pastD = aD - u.dw * 0.5;
+  let diagGlyph = select(SL, BS, u.dex * u.dey > 0.0);
+  let asphalt = select(select(TICK, COM, hv < 0.8), DOT, hv < 0.5);
+  if (pastD < 0.0) {
+    ch = asphalt;
+    if (!roadY && rd < 200.0) {
+      let al = (wx - u.dox) * u.dex + (wy - u.doy) * u.dey; let m = aD % LANE_W;
+      if (aD < 0.3) { ch = diagGlyph; c = vec3f(210.0, 170.0, 60.0); }
+      else if (min(m, LANE_W - m) < 0.12 && aD < floor(u.dw * 0.5 / LANE_W) * LANE_W - 1.0 && ifloor(al / 3.0) % 2 == 0) { ch = diagGlyph; c = vec3f(150.0); }
+    }
+  } else if (roadX || roadY) {
+    ch = asphalt;
+    if (roadX != roadY && rd < 200.0) {
+      var b0a = 0.0; var b0b = 0.0; var e0a = 0.0; var e0b = 0.0; var across = 0.0; var along = 0.0;
+      if (roadX) { b0a = xb[gx]; b0b = xb[gx + 1]; e0a = yb[gy]; e0b = yb[gy + 1]; across = wx - (b0a + b0b) * 0.5; along = wy; }
+      else { b0a = yb[gy]; b0b = yb[gy + 1]; e0a = xb[gx]; e0b = xb[gx + 1]; across = wy - (b0a + b0b) * 0.5; along = wx; }
+      var dEnd = 1e9;
+      if (!roadX && abs(u.dnx) > 0.05) {
+        let hw = (b0b - b0a) * 0.5; let ycn = (b0a + b0b) * 0.5; let sg = select(-1.0, 1.0, sD > 0.0);
+        let s1 = (wx - u.dox) * u.dnx + (ycn - hw - u.doy) * u.dny; let s2 = (wx - u.dox) * u.dnx + (ycn + hw - u.doy) * u.dny;
+        dEnd = (min(sg * s1, sg * s2) - u.dw * 0.5) / abs(u.dnx);
+      }
+      let a = abs(across); let end = min(min(along - e0a, e0b - along), dEnd); let m = a % LANE_W;
+      let lanes = floor((b0b - b0a) * 0.5 / LANE_W);
+      let mark = select(DASH, BAR, roadX); let markX = select(BAR, EQ, roadX);
+      if (dEnd < 1.0) { }
+      else if (end > 1.0 && end < 4.5) { if (ifloor((across + 100.0) / 0.9) % 2 == 0) { ch = markX; c = vec3f(150.0); } }
+      else if ((end > 4.6) && (end < 5.05) && (a < (b0b - b0a) * 0.5 - 0.3) && (select((across < 0.0), (across > 0.0), (along - e0a) < (e0b - along)) == roadX)) { ch = markX; c = vec3f(170.0); }
+      else if (a < 0.3) { ch = mark; c = vec3f(210.0, 170.0, 60.0); }
+      else if (min(m, LANE_W - m) < 0.12 && a < lanes * LANE_W - 1.0 && ifloor(along / 3.0) % 2 == 0) { ch = mark; c = vec3f(150.0); }
+    }
+  } else {
+    let o = u32(((gy >> 1) * i32(u.nbx) + (gx >> 1)) * ${BLK});
+    let flags = u32(blk[o + 7u]); let opk = flags & 3u; let diag = (flags >> 2u) & 7u; let square = (flags & 64u) != 0u;
+    var edge = min(min(wx - blk[o], blk[o + 2u] - wx), min(wy - blk[o + 1u], blk[o + 3u] - wy));
+    if (diag != 0u) { edge = min(edge, pastD); }
+    if (edge < SIDEWALK) {
+      let fx = fract(wx / 1.5); let fy = fract(wy / 1.5);
+      ch = select(COL, PLUS, fx < 0.08 || fy < 0.08); c = vec3f(78.0, 74.0, 78.0);
+    } else if ((diag & select(2u, 4u, sD > 0.0)) != 0u) {
+      let fx = fract(wx / 2.5); let fy = fract(wy / 2.5);
+      ch = select(COL, PLUS, fx < 0.06 || fy < 0.06); c = vec3f(92.0, 86.0, 80.0);
+      if (square) { let dark = ((ifloor(wx / 2.5) + ifloor(wy / 2.5)) & 1) == 1; c = select(vec3f(108.0, 104.0, 108.0), vec3f(62.0, 60.0, 66.0), dark); if (!dark && fx > 0.45 && fx < 0.55 && fy > 0.45 && fy < 0.55) { ch = O; } }
+    } else if (opk == 1u) {
+      let mx = (blk[o] + blk[o + 2u]) * 0.5; let my = (blk[o + 1u] + blk[o + 3u]) * 0.5;
+      if (abs(wx - mx) < 1.5 || abs(wy - my) < 1.5) { ch = select(COM, DOT, hv < 0.5); c = vec3f(95.0, 85.0, 70.0); }
+      else { ch = select(select(SEMI, COM, hv < 0.7), QUO, hv < 0.4); c = vec3f(40.0, 95.0 + hv * 40.0, 45.0); }
+    } else if (opk == 2u) {
+      let fx = fract(wx / 2.5); let fy = fract(wy / 2.5);
+      ch = select(COL, PLUS, fx < 0.06 || fy < 0.06); c = vec3f(92.0, 86.0, 80.0);
+    } else if (opk == 3u) {
+      let long = blk[o + 2u] - blk[o] > blk[o + 3u] - blk[o + 1u];
+      let a = (select(wx, wy, long) - select(blk[o], blk[o + 1u], long)) % 4.5; let uu = select(wy, wx, long);
+      if (abs(a - 1.5) < 0.12 || abs(a - 2.95) < 0.12) { ch = select(BAR, EQ, long); c = vec3f(120.0, 115.0, 115.0); }
+      else if (a > 1.2 && a < 3.3 && uu % 0.8 < 0.25) { ch = select(EQ, BAR, long); c = vec3f(70.0, 52.0, 40.0); }
+      else { ch = select(COM, DOT, hv < 0.6); c = vec3f(55.0, 50.0, 48.0); }
+    } else { ch = select(COM, DOT, hv < 0.7); c = vec3f(50.0, 48.0, 52.0); }
+  }
+  var lk = 1.0;
+  if (u.snow > 0.02) {
+    let sk = u.snow * select(1.0, 0.5, roadX || roadY || pastD < 0.0);
+    c += (vec3f(200.0, 205.0, 218.0) - c) * sk;
+    if (sk > 0.35) { ch = select(select(DOT, SEMI, hv < 0.85), COL, hv < 0.55); }
+  }
+  if (u.wet > 0.02) {
+    let wk = u.wet * (1.0 - u.snow);
+    c *= vec3f(1.0 - 0.35 * wk, 1.0 - 0.35 * wk, 1.0 - 0.3 * wk);
+    lk = 1.0 + 1.1 * wk * select(1.0, 0.75 + 0.25 * sin(u.sec * 7.0 + hv * 30.0), u.rain > 0.0);
+  }
+  c = sat(c);
+  return Cell(ch, sat((c + lightAt(wx, wy, 0.0) * lk) * fog), bg, rd, KIND_GROUND, 0.0);
+}
+
+// ---- the finish: moonlight, daylight and haze, a whole-city blackout, the display modes
+fn finish(cl: Cell) -> Cell {
+  var o = cl;
+  if (o.depth >= 1e9) { return o; }
+  if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; o.c = sat(o.c + vec3f(m * 0.7, m * 0.8, m * 1.15)); }
+  let day = u.day;
+  if (day > 0.01 || u.flash > 0.0) {
+    let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
+    let haze = vec3f(150.0, 160.0, 176.0);
+    let sunlit = o.kind == KIND_WALL;
+    if (day > 0.01 && (o.kind == KIND_GROUND || sunlit)) {
+      let low = 1.0 - clamp(u.sunEl / 0.35, 0.0, 1.0);
+      let skyK = day * (0.36 + 0.3 * u.cloud); let dirK = 1.6 * day * (1.0 - 0.85 * u.cloud);
+      let sunC = vec3f(1.05, 0.95 - 0.3 * low, 0.85 - 0.5 * low);
+      let share = select(u.sunZ, o.sun, sunlit); let d = dirK * share;
+      let gm = vec3f(1.0) + 2.2 * (vec3f(skyK * 0.92, skyK * 0.97, skyK * 1.08) + d * sunC) + vec3f(u.flash * 0.6);
+      let lift = 24.0 * (skyK + d);
+      o.c = sat((o.c * gm + lift * sunC) * (1.0 - f) + haze * f);
+    } else {
+      let amb = 1.0 + 0.7 * day + u.flash * 0.6;
+      o.c = sat(o.c * amb * (1.0 - f) + haze * f);
+    }
+  }
+  let dark = 1.0 - 0.72 * pow(1.0 - u.cityLit, 1.5) * (1.0 - day);
+  if (dark < 0.999) { o.c *= dark; o.bg *= dark; }
+  if (u.solid > 0.0) { o.bg = o.c * u.solid; }
+  if (u.sharp < 3.0) {
+    let s = u.sharp;
+    var fill = 0.0;
+    if (o.kind == KIND_GROUND) { fill = 0.5; } else if (s == 0.0 && o.kind == KIND_WALL) { fill = 0.28; }
+    if (fill > 0.0) {
+      let fa = select(0.0, clamp((o.depth - 40.0) / 220.0, 0.0, 1.0), u.fuse > 0.5); let f = fa * fa * (3.0 - 2.0 * fa);
+      let glyph = select(0.78, 0.82, o.kind == KIND_GROUND) - 0.15 * f;
+      let fl = fill + (0.5 - fill) * 0.45 * f;
+      o.bg = o.c * fl; o.c *= glyph;
+    }
+  }
+  if (u.blocks > 0.5 && BLOCKS[o.ch] != 0u) { o.ch = BLOCKS[o.ch]; }
+  return o;
+}
+
+fn store(i: u32, n: u32, cl: Cell) {
+  let k = vec3u(clamp(cl.c, vec3f(0.0), vec3f(255.0)));
+  outp[i] = cl.ch | (k.x << 8u) | (k.y << 16u) | (k.z << 24u);
+  let b = vec3u(clamp(cl.bg, vec3f(0.0), vec3f(255.0)));
+  outp[n + i] = b.x | (b.y << 8u) | (b.z << 16u) | (255u << 24u);
+}
+
+@compute @workgroup_size(8, 8)
+fn main(@builtin(global_invocation_id) gid: vec3u) {
+  let cols = u32(u.cols); let rows = u32(u.rows);
+  if (gid.x >= cols || gid.y >= rows) { return; }
+  let n = cols * rows; let i = gid.y * cols + gid.x;
+  let camX = 2.0 * (f32(gid.x) + 0.5) / u.cols - 1.0;
+  // the ray: on the ground plane (rdx, rdy), and how fast it drops per unit of that (m):
+  // z(t) = eye - m t - (t L)^2 / 2R. Sheared like the CPU's, or a true 3D camera turned by the pitch.
+  var rdx = u.dirX + u.plX * camX; var rdy = u.dirY + u.plY * camX;
+  var m = (f32(gid.y) + 0.5 - u.hor) / u.scale;
+  if (u.cam3d > 0.5) {
+    let cp = cos(u.pitch); let sp = sin(u.pitch); let v = (u.rows * 0.5 - (f32(gid.y) + 0.5)) / u.scale; let h = camX * u.plane;
+    let D = vec3f(u.dirX * cp, u.dirY * cp, sp) + vec3f(-u.dirY, u.dirX, 0.0) * h + vec3f(-u.dirX * sp, -u.dirY * sp, cp) * v;
+    rdx = D.x; rdy = D.y; m = -D.z;
+  }
+  let L = sqrt(rdx * rdx + rdy * rdy);
+  let A = L * L / (2.0 * u.curveR);
+  var tG = 1e9;
+  if (m > 0.0) { let disc = m * m - 4.0 * A * u.eye; if (disc > 0.0) { tG = 2.0 * u.eye / (m + sqrt(disc)); } }
+
+  // ---- walk the street grid front to back, as the CPU does, but for this one cell's ray
+  let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
+  let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
+  let W = arrayLength(&xc); let H = arrayLength(&yc);
+  var cx = i32(xc[u32(clamp(u.px, 0.0, f32(W - 1u)))]);
+  var cy = i32(yc[u32(clamp(u.py, 0.0, f32(H - 1u)))]);
+  let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
+  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - u.px) * ix;
+  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - u.py) * iy;
+  var tIn = 0.0;
+  var best = 1e9; var bk = -1; var bside = 0; var roof = false;
+  for (var s = 0; s < 1024; s++) {
+    if (tIn > tG) { break; }
+    let tOut = min(tx, ty);
+    if ((cx & 1) == 1 && (cy & 1) == 1) {
+      let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
+      let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]); let maxH = blk[o + 6u];
+      let zMin = min(u.eye - m * tIn - A * tIn * tIn, u.eye - m * tOut - A * tOut * tOut);
+      if (b1 > b0 && zMin < maxH) {
+        for (var k = b0; k < b1; k++) {
+          let q = u32(k * ${BLD});
+          let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let h = bld[q + 4u];
+          var tN = 0.0; var tF = 0.0; var side = 0;
+          if (bld[q + 5u] > 0.5) {
+            let rr = (x1 - x0) * 0.5; let ox = u.px - (x0 + rr); let oy = u.py - (y0 + rr);
+            let qa = rdx * rdx + rdy * rdy; let qb = ox * rdx + oy * rdy;
+            let disc = qb * qb - qa * (ox * ox + oy * oy - rr * rr);
+            if (disc <= 0.0) { continue; }
+            tN = (-qb - sqrt(disc)) / qa; tF = (-qb + sqrt(disc)) / qa; side = 2;
+          } else {
+            let ax = (x0 - u.px) * ix; let bx = (x1 - u.px) * ix; let ay = (y0 - u.py) * iy; let by = (y1 - u.py) * iy;
+            let nnx = min(ax, bx); let nny = min(ay, by);
+            tF = min(max(ax, bx), max(ay, by)); tN = max(nnx, nny); side = select(1, 0, nnx > nny);
+            if (bld[q + 6u] > 0.5) {
+              let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
+              let dn = knx * rdx + kny * rdy; let th = (kc - knx * u.px - kny * u.py) / dn;
+              if (dn < 0.0) { if (th > tN) { tN = th; side = 3; } }
+              else if (dn > 0.0) { tF = min(tF, th); }
+              else if (knx * u.px + kny * u.py > kc) { continue; }
+            }
+          }
+          if (tN <= 0.01 || tN >= tF || tN >= best) { continue; }
+          let zN = u.eye - m * tN - A * tN * tN;
+          if (zN >= 0.0 && zN <= h) { best = tN; bk = k; bside = side; roof = false; }
+          else if (zN > h && m > 0.0) {
+            let tr = (u.eye - h) / m;
+            if (tr <= tF && tr < best) { best = tr; bk = k; bside = side; roof = true; }
+          }
+        }
+        if (bk >= 0) { break; }
+      }
+    }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - u.px) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - u.py) * iy; }
+  }
+
+  if (bk >= 0 && best < tG) {
+    if (roof) { store(i, n, finish(roofCell(u32(bk * ${BLD}), best, u.px + rdx * best, u.py + rdy * best))); return; }
+    // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
+    store(i, n, finish(wallCell(bk, best, bside, rdx, rdy, u.eye - m * best - A * best * best, best / u.scale)));
+    return;
+  }
+  if (tG < 1e8) { store(i, n, finish(groundCell(tG, rdx, rdy))); return; }
+
+  // ---- the sky: a gradient, stars at night (sky.ts comes next)
+  let night = 1.0 - u.day;
+  let up = clamp(-m * 1.2, 0.0, 1.0);
+  var sky = mix(vec3f(26.0, 22.0, 40.0), vec3f(5.0, 7.0, 18.0), up);
+  sky = mix(sky, mix(vec3f(150.0, 165.0, 190.0), vec3f(90.0, 120.0, 170.0), up), u.day);
+  let az = atan2(rdy, rdx);
+  var cl = Cell(32u, sky, sky * u.solid, 1e9, KIND_OTHER, 0.0);
+  if (night > 0.5 && hash3(i32(az * 700.0), i32(m * 300.0), 5) < 0.004) { cl.ch = DOT; cl.c = vec3f(170.0, 170.0, 190.0); }
+  store(i, n, cl);
+}
+`;
+}

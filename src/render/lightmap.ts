@@ -4,9 +4,11 @@ import { power } from './power';
 import { type PowerGrid } from '../sim/power';
 
 /** Side of the baked window in metres. */
-const W = 1024;
+export const LIGHT_W = 1024;
+const W = LIGHT_W;
 /** Radius of one street lamp's pool of light on the ground. */
-const R = 11;
+export const LAMP_R = 11;
+const R = LAMP_R;
 
 /**
  * Street-lamp light on the ground, baked at 1 m resolution into a window around the viewer.
@@ -23,8 +25,10 @@ export class LightWindow {
   /** Color every lamp throws this frame, by lamp id: r, g, b. */
   private col = new Float32Array(0);
   private inWindow: number[] = [];
-  private ox = 0;
-  private oy = 0;
+  ox = 0;
+  oy = 0;
+  /** Bumped at every re-bake, so the GPU's copy knows when to go up again. */
+  version = 0;
   private city: City | null = null;
   private st = new Float32Array(2);
 
@@ -36,6 +40,7 @@ export class LightWindow {
       this.col = new Float32Array(city.lamps.length * 3);
     }
     this.city = city;
+    this.version++;
     const ox = (this.ox = Math.floor(x - W / 2)), oy = (this.oy = Math.floor(y - W / 2));
     const m = this.map, id = this.lamp;
     m.fill(0);
@@ -69,6 +74,15 @@ export class LightWindow {
       for (let k = 0; k < 3; k++) c[n * 3 + k] = (L.cold[k] + (L.warm[k] - L.cold[k]) * w) * lv;
     }
   }
+
+  /** The baked window for the GPU: per metre, (lamp id + 1) << 8 | the pool's strength x 255 (0: unlit). */
+  packMap(): Uint32Array {
+    const out = new Uint32Array(W * W), m = this.map, id = this.lamp;
+    for (let k = 0; k < W * W; k++) if (m[k] > 0) out[k] = ((id[k] + 1) << 8) | Math.min(255, Math.round(m[k] * 255));
+    return out;
+  }
+  /** Every lamp's color this frame (r, g, b per lamp id). */
+  get colors(): Float32Array { return this.col; }
 
   /** Add the lamps' light at a world point, times k, to out[0..2]: bilinear between metres, nothing outside the window. */
   add(x: number, y: number, k: number, out: Float32Array) {

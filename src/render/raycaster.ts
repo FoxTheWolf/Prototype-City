@@ -115,7 +115,7 @@ let framePower: PowerGrid;
 const SUN = [0, 0, 0];
 let wallSun = 0;
 /** ASCII glyph -> block/box slot for the blocks mode; 0 keeps the glyph. */
-const BLOCKS = new Uint8Array(256);
+export const BLOCKS = new Uint8Array(256);
 for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], [':', BLOCK.light], ['-', BLOCK.h], ['|', BLOCK.v],
   ['+', BLOCK.cross], ['=', BLOCK.dh], ['/', BLOCK.up], ['\\', BLOCK.down], ['x', BLOCK.x]] as const) BLOCKS[C(c)] = b;
 // per-block ray hits, reused every column
@@ -484,6 +484,35 @@ export function renderWorld(grid: CharGrid, world: World, v: View) {
   }
   // after finish, so the drops keep the background of what is behind them
   drawFall(grid, { amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: frameSec, flash: sky.flash }, px, py, eye, v.yaw, plane, scale, hor, lit, nearT, roofs);
+}
+
+/**
+ * What a frame drawn on the GPU (render/gpu) takes from here: the start of renderWorld (the frame's
+ * globals, the sky, the street lamps, the dynamic lights) without the drawing, and at the end the
+ * light on the viewer's hands (outdoors only for now: the GPU has no interiors yet).
+ */
+export function gpuPrepare(world: World, v: View) {
+  const { city } = world;
+  light.ensure(city, v.x, v.y);
+  const time = world.tick + v.alpha;
+  frameCity = city; frameSec = time / 60; framePower = world.power; frameTicker = tickerText(world);
+  const sky = prepareSky(city, world.power, world.weather, world.seed, world.ptime + (world.time - world.ptime) * v.alpha, frameSec);
+  frameDay = sky.day; frameSnow = world.weather.snowCover; frameInside = false; frameX = v.x; frameY = v.y;
+  { const ce = Math.cos(sky.sunEl); SUN[0] = Math.cos(sky.sunA) * ce; SUN[1] = Math.sin(sky.sunA) * ce; SUN[2] = Math.max(0, Math.sin(sky.sunEl)); }
+  light.update(frameSec, sky.day, world.power);
+  gatherLights(world, v, frameSec);
+  glFrame = (glFrame + 1) >>> 0 || 1;
+  const px = v.x, py = v.y, dirX = Math.cos(v.yaw), dirY = Math.sin(v.yaw);
+  const sample = (x: number, y: number, out: Float32Array) => { lightAt(x, y, 1.6); out[0] = LT[0]; out[1] = LT[1]; out[2] = LT[2]; return out[0] + out[1] + out[2]; };
+  const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
+  const here = sample(px, py, S), g = Math.hypot(ex, ey);
+  const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
+  for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
+  const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0, m = Math.max(1, S[0], S[1], S[2]);
+  VIEW_GLINT[0] = lat;
+  VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
+  VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
+  return { sky, light, dyn, sun: SUN };
 }
 
 /** Display modes applied to the finished frame: solid backgrounds under world cells, block glyphs. */

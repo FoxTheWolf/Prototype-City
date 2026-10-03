@@ -5,7 +5,7 @@
  */
 export const LightKind = { Point: 0, Cone: 1, Segment: 2 } as const;
 
-const CELL = 8, SIDE = 64; // buckets cover 512 m around the viewer
+export const CELL = 8, SIDE = 64; // buckets cover 512 m around the viewer
 const MAX = 4096;
 
 export class DynLights {
@@ -92,6 +92,25 @@ export class DynLights {
       if (this.buckets[c].length === 0) this.used.push(c);
       this.buckets[c].push(i);
     }
+  }
+
+  /**
+   * This frame's lights as flat arrays for the GPU (render/gpu): 16 floats per light (kind, x, y, u, w,
+   * nx, ny, range, zFull, zTop, r, g, b, lv0, lvN, lvH), the pieces' running sums, and the buckets as
+   * offsets into a list of light indices (SIDE x SIDE + 1 offsets).
+   */
+  pack() {
+    const n = this.n, L = new Float32Array(Math.max(1, n) * 16);
+    for (let i = 0; i < n; i++) {
+      L.set([this.kind[i], this.x[i], this.y[i], this.u[i], this.w[i], this.nx[i], this.ny[i], this.range[i], this.zFull[i], this.zTop[i], this.r[i], this.g[i], this.b[i], this.lv0[i], this.lvN[i], this.lvH[i]], i * 16);
+    }
+    const off = new Uint32Array(SIDE * SIDE + 1);
+    let total = 0;
+    for (let c = 0; c < SIDE * SIDE; c++) { off[c] = total; total += this.buckets[c].length; }
+    off[SIDE * SIDE] = total;
+    const idx = new Uint32Array(Math.max(1, total));
+    for (let c = 0; c < SIDE * SIDE; c++) idx.set(this.buckets[c], off[c]);
+    return { lights: L, lv: this.lv.subarray(0, Math.max(1, this.lvUsed)), off, idx, bx: this.bx, by: this.by };
   }
 
   /** Add the light reaching (px, py) at height pz to out[0..2]. */
