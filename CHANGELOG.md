@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.L.10 — A praça do Theater District e as sombras da noite (2026-10-03)
+- A avenida diagonal saiu por enquanto (o X dava problema no trânsito e nos prédios). No lugar, o Theater District ganhou uma praça grande dos dois lados da avenida, com piso xadrez, degraus vermelhos, mesas e bancos, cercada de telões e letreiros virados para ela.
+- À noite, os postes fazem sombra: as pessoas, os carros, os bancos e os próprios postes deixam sombra na calçada.
+- Na rua molhada aparecem os postes, os carros, as pessoas e as cabeças acesas dos postes refletidos.
+- Com lua, os prédios fazem sombra no luar (aparece mais num apagão).
+- Na chuva e na neve, dá para ver o cone de luz debaixo de cada poste.
+- As cunhas retas de sombra que se amontoavam no chão de dia sumiram; as janelas não mostram mais uma bolinha de luz no meio de cada sala; os telões ficam mais fortes de dia; a sombra das árvores não pisca mais.
+
 ## 0.L.9 — Letreiros que parecem acesos e telas que seguem o olho (2026-10-03)
 - Os letreiros, as placas verticais (e as lâmpadas das bordas delas), os neons nos cantos dos prédios, o letreiro de notícias e os telões brilham muito mais aos olhos e iluminam um pouco mais em volta. Continuam parecendo acesos mesmo numa rua clara, quando o olho se fecha.
 - A tela do celular e a do notebook seguem a adaptação do olho: de dia ficam mais apagadas e sem brilho em volta; à noite brilham, mais ainda no escuro. Uma página branca não estoura mais: quanto mais clara a tela, menos ela espalha luz.
