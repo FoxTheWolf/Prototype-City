@@ -1340,7 +1340,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let eA = min(along - f0, f1 - along); let dTop = abs(z - (H - 0.3));
     let tw = max(0.1, dAlong * 0.6); let tz = max(0.1, dz * 0.6);
     let onTube = (eA < tw && z < H - 0.3 + tz) || dTop < tz;
-    let s = select(along, z, eA < tw);
+    // where along its tube the chase is: up a side tube (and the wall's glow nearer a side than the top), else across the top
+    let s = select(along, z, eA < tw || eA < dTop);
     let chase = hash3(bk, 3, 31) < 0.35 && ifloor((s - u.sec * 5.0) / 1.4) % 3 == 0;
     let k = ad * (1.0 - 0.55 * u.day) * select(1.0, 0.25, chase);
     if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); emC = c; il = vec3f(0.0); emK = SIGN_EMIT; glowK = SIGN_GLOW; }
