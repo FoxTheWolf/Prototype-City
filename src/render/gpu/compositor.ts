@@ -17,11 +17,18 @@ import type { GpuWorld } from './world';
 /** How much of the blurred glow is added over the world. */
 const GLOW_K = 1.4;
 /**
- * The device screens (the phone's and the notebook's) in the bloom: how much of a screen cell's light glows,
- * how much of that glow spills over the device around the screen (within SPILL px), and how strongly the
- * glass reflects the frame's bright lights (mirrored, blurred: the glow), where the screen is dark.
+ * The device screens (the phone's and the notebook's) glow over everything round them, the device and the
+ * world (R.36: drawn after the interface layers, so the device does not hide it): the screen's mean light
+ * (worked out each frame) times a tight core and a wide halo falling off with the distance from the screen's
+ * edge, their reach a share of the screen's height. SCREEN_REFL: how strongly the glass reflects the frame's
+ * bright lights (mirrored, blurred: the glow), where the screen is dark.
  */
-const SCREEN_GLOW = 0.55, SPILL_K = 0.7, SPILL = 48, SCREEN_REFL = 0.5;
+const CORE_K = 1.0, CORE_R = 0.06, HALO_K = 0.8, HALO_R = 0.4, SCREEN_REFL = 0.5;
+/**
+ * The screens' own bloom (R.36): their bright parts (the phone's big clock, white text) blurred over the
+ * screen cells round them (SCR_RX x SCR_RY cells) and added over the screen, times SCR_K.
+ */
+const SCR_K = 0.9, SCR_RX = 4, SCR_RY = 3;
 
 const CU = /* wgsl */ `
 struct CU {
@@ -31,10 +38,11 @@ struct CU {
 // the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's
 fn inPhone(p: vec2i) -> bool { return all(p >= u.ph0) && all(p < u.ph1); }
 fn inTerm(p: vec2i) -> bool { return u.tmGrid.x > 0 && all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
-fn nearScreen(p: vec2i) -> bool {
-  let s = vec2i(${SPILL});
-  return (u.ph1.x > u.ph0.x && all(p >= u.ph0 - s) && all(p < u.ph1 + s))
-    || (u.tmGrid.x > 0 && all(p >= u.tmOrigin - s) && all(p < u.tmOrigin + u.tmGrid * u.tmCell + s));
+// a screen cell's light: its paper, and a little of its glyph's color (a glyph covers part of the cell)
+fn cellLight(cells: texture_2d<f32>, bg: texture_2d<f32>, c: vec2i) -> vec3f {
+  let k = textureLoad(cells, c, 0); let b = textureLoad(bg, c, 0).rgb;
+  let gi = i32(k.r * 255.0 + 0.5);
+  return select(b, mix(b, k.gba, 0.3), gi > 32);
 }
 `;
 
@@ -51,6 +59,17 @@ ${CU}
 @group(0) @binding(8) var tmBg: texture_2d<f32>;
 @group(0) @binding(9) var tmAtlas: texture_2d<f32>;
 @group(0) @binding(10) var<storage, read> glow: array<vec4f>;
+@group(0) @binding(11) var<storage, read> mean: array<vec4f>;
+@group(0) @binding(12) var<storage, read> scr: array<vec4f>;
+// a screen's bloom at pixel p: the cells' blur (from base, a grid of g cells of size cs at o), between
+// cell centers, within the cells a to b
+fn scrAt(p: vec2i, o: vec2i, cs: vec2i, base: u32, g: vec2i, a: vec2i, b: vec2i) -> vec3f {
+  let f = (vec2f(p - o) + 0.5) / vec2f(cs) - 0.5; let i = vec2i(floor(f)); let t = fract(f);
+  let i0 = clamp(i, a, b - 1); let i1 = clamp(i + 1, a, b - 1);
+  let s00 = scr[base + u32(i0.y * g.x + i0.x)].rgb; let s10 = scr[base + u32(i0.y * g.x + i1.x)].rgb;
+  let s01 = scr[base + u32(i1.y * g.x + i0.x)].rgb; let s11 = scr[base + u32(i1.y * g.x + i1.x)].rgb;
+  return mix(mix(s00, s10, t.x), mix(s01, s11, t.x), t.y);
+}
 
 @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
   // one triangle covering the whole screen
@@ -66,37 +85,46 @@ fn layer(cells: texture_2d<f32>, at: texture_2d<f32>, p: vec2i, c: vec2i, size: 
   let cell = textureLoad(cells, c, 0);
   return mix(bg, cell.gba, glyphAt(at, i32(cell.r * 255.0 + 0.5), p, c, size));
 }
+// a screen's glow at p: its mean light (m), by the distance from its rectangle (a to b)
+fn halo(p: vec2i, a: vec2i, b: vec2i, m: vec3f) -> vec3f {
+  let h = f32(b.y - a.y); let c = vec2f(a + b) * 0.5; let e = vec2f(b - a) * 0.5;
+  let d = length(max(abs(vec2f(p) + 0.5 - c) - e, vec2f(0.0)));
+  return m * (${CORE_K} * exp(-d / (${CORE_R} * h)) + ${HALO_K} * exp(-d / (${HALO_R} * h)));
+}
 fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0; }
 
 @fragment fn fs(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   let s = vec2i(pos.xy);
-  var col = vec3f(0.0); var gl = vec4f(0.0);
+  var col = vec3f(0.0);
   let p = s - u.origin; let c = p / u.cell;
   if (p.x >= 0 && p.y >= 0 && c.x < u.grid.x && c.y < u.grid.y) {
     let i = u32(c.y * u.grid.x + c.x); let n = u32(u.grid.x * u.grid.y);
     let w = world[i]; let b = world[n + i];
     let bg = vec3f(f32(b & 255u), f32((b >> 8u) & 255u), f32((b >> 16u) & 255u)) / 255.0;
-    gl = glow[i];
-    col = mix(bg, rgb(w), glyphAt(atlas, i32(w & 255u), p, c, u.cell)) + gl.rgb * ${GLOW_K};
+    col = mix(bg, rgb(w), glyphAt(atlas, i32(w & 255u), p, c, u.cell)) + glow[i].rgb * ${GLOW_K};
   }
-  var over = false;
   let q = s - u.uiOrigin; let uc = q / u.uiCell;
   if (q.x >= 0 && q.y >= 0 && uc.x < u.uiGrid.x && uc.y < u.uiGrid.y) {
     let hp = textureLoad(hd, (q * ${HD}) / u.uiCell, 0);
-    if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; over = true; }
+    if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; }
     let m = s - u.tmOrigin; let mc = m / max(u.tmCell, vec2i(1));
     // (like the interface: a cell nothing was drawn in is clear, one with a glyph only lies over what is under it)
     if (u.tmGrid.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < u.tmGrid.x && mc.y < u.tmGrid.y) {
       let tb = textureLoad(tmBg, mc, 0);
-      if (tb.a > 0.25) { col = layer(tmCells, tmAtlas, m, mc, u.tmCell, select(col, tb.rgb, tb.a > 0.75)); over = true; }
+      if (tb.a > 0.25) { col = layer(tmCells, tmAtlas, m, mc, u.tmCell, select(col, tb.rgb, tb.a > 0.75)); }
     } else if (u.tmGrid.x > 0 && m.x >= -u.uiCell.x && m.y >= -u.uiCell.y && m.x < u.tmGrid.x * u.tmCell.x + u.uiCell.x && m.y < u.tmGrid.y * u.tmCell.y + u.uiCell.y) {
       // within an interface cell round the layer: its nearest edge cell's paper (the screen's black edge)
       let tb = textureLoad(tmBg, clamp(m / max(u.tmCell, vec2i(1)), vec2i(0), u.tmGrid - 1), 0);
-      if (tb.a > 0.75) { col = tb.rgb; over = true; }
+      if (tb.a > 0.75) { col = tb.rgb; }
     }
     let ub = textureLoad(uiBg, uc, 0);
-    if (ub.a > 0.25) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); over = true; }
-    if (hp.a > 0.75) { col = hp.rgb; over = true; }
+    if (ub.a > 0.25) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
+    if (hp.a > 0.75) { col = hp.rgb; }
+  }
+  if (inPhone(s)) {
+    col += scrAt(s, u.uiOrigin, u.uiCell, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K};
+  } else if (inTerm(s)) {
+    col += scrAt(s, u.tmOrigin, u.tmCell, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K};
   }
   if (inPhone(s) || inTerm(s)) {
     // the screen's glass: the frame's bright lights mirrored on it, blurred (the world's glow only, in .a),
@@ -104,9 +132,10 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     let mx = clamp(u.grid.x - 1 - c.x, 0, u.grid.x - 1); let my = clamp(c.y, 0, u.grid.y - 1);
     let r = glow[u32(my * u.grid.x + mx)].a; let l = dot(col, vec3f(0.3, 0.5, 0.2));
     col += vec3f(0.85, 0.9, 1.0) * r * ${SCREEN_REFL} * max(0.0, 1.0 - l * 2.5);
-  } else if (over && nearScreen(s)) {
-    // the device around a screen: the glow spills over it (the screen's own, and the city's)
-    col += gl.rgb * ${GLOW_K * SPILL_K};
+  } else {
+    // round the screens: their glow, over the device and the world alike
+    if (u.ph1.x > u.ph0.x) { col += halo(s, u.ph0, u.ph1, mean[0].rgb); }
+    if (u.tmGrid.x > 0) { col += halo(s, u.tmOrigin, u.tmOrigin + u.tmGrid * u.tmCell, mean[1].rgb); }
   }
   return vec4f(col, 1.0);
 }
@@ -119,33 +148,16 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
  */
 const GLOW_RX = 14, GLOW_RY = 7;
 const GLOW_WGSL = /* wgsl */ `
-${CU}
 struct GU { cols: u32, rows: u32, dir: u32, pad: u32 };
 @group(0) @binding(0) var<uniform> g: GU;
 @group(0) @binding(1) var<storage, read> world: array<u32>;
 @group(0) @binding(2) var<storage, read_write> tmp: array<vec4f>;
 @group(0) @binding(3) var<storage, read_write> glow: array<vec4f>;
-@group(0) @binding(4) var<uniform> u: CU;
-@group(0) @binding(5) var uiCells: texture_2d<f32>;
-@group(0) @binding(6) var uiBg: texture_2d<f32>;
-@group(0) @binding(7) var tmCells: texture_2d<f32>;
-@group(0) @binding(8) var tmBg: texture_2d<f32>;
-// a screen cell's light: its paper, and a little of its glyph's color (a glyph covers part of the cell)
-fn cellLight(cells: texture_2d<f32>, bg: texture_2d<f32>, c: vec2i) -> vec3f {
-  let k = textureLoad(cells, c, 0); let b = textureLoad(bg, c, 0).rgb;
-  let gi = i32(k.r * 255.0 + 0.5);
-  return select(b, mix(b, k.gba, 0.3), gi > 32);
-}
-// what glows at world cell (x, y): rgb with the screens, and in .a the world's alone (its brightness),
-// which the screens reflect
+// what glows at world cell (x, y), and in .a its brightness, which the screens reflect
 fn src(x: i32, y: i32) -> vec4f {
   let i = u32(y) * g.cols + u32(x); let w = world[i]; let a = f32(world[g.cols * g.rows + i] >> 24u) / 255.0;
   let wc = vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0 * a;
-  var s = wc;
-  let p = u.origin + vec2i(x, y) * u.cell + u.cell / 2;
-  if (inPhone(p)) { s = cellLight(uiCells, uiBg, (p - u.uiOrigin) / u.uiCell) * ${SCREEN_GLOW}; }
-  else if (inTerm(p)) { s = cellLight(tmCells, tmBg, (p - u.tmOrigin) / max(u.tmCell, vec2i(1))) * ${SCREEN_GLOW}; }
-  return vec4f(s, dot(wc, vec3f(0.3, 0.5, 0.2)));
+  return vec4f(wc, dot(wc, vec3f(0.3, 0.5, 0.2)));
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= g.cols || id.y >= g.rows) { return; }
@@ -163,6 +175,63 @@ fn src(x: i32, y: i32) -> vec4f {
     }
     glow[u32(y) * g.cols + u32(x)] = s / ws;
   }
+}
+`;
+/** Each screen's mean light (the phone's in mean[0], the notebook's in mean[1]): one workgroup a screen. */
+const MEAN_WGSL = /* wgsl */ `
+${CU}
+@group(0) @binding(0) var<uniform> u: CU;
+@group(0) @binding(1) var uiCells: texture_2d<f32>;
+@group(0) @binding(2) var uiBg: texture_2d<f32>;
+@group(0) @binding(3) var tmCells: texture_2d<f32>;
+@group(0) @binding(4) var tmBg: texture_2d<f32>;
+@group(0) @binding(5) var<storage, read_write> mean: array<vec4f>;
+var<workgroup> part: array<vec3f, 64>;
+@compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) t: u32) {
+  var a = vec2i(0); var b = vec2i(0);
+  if (wg.x == 0u) { a = (u.ph0 - u.uiOrigin) / u.uiCell; b = (u.ph1 - u.uiOrigin) / u.uiCell; }
+  else if (u.tmGrid.x > 0) { b = u.tmGrid; }
+  let n = max(b - a, vec2i(0)); var s = vec3f(0.0);
+  for (var k = i32(t); k < n.x * n.y; k += 64) {
+    let c = a + vec2i(k % n.x, k / n.x);
+    s += select(cellLight(tmCells, tmBg, c), cellLight(uiCells, uiBg, c), wg.x == 0u);
+  }
+  part[t] = s;
+  workgroupBarrier();
+  if (t == 0u) {
+    var m = vec3f(0.0);
+    for (var k = 0u; k < 64u; k++) { m += part[k]; }
+    mean[wg.x] = vec4f(m / f32(max(n.x * n.y, 1)), 0.0);
+  }
+}
+`;
+/** The screens' bright cells blurred (scr: the phone's over the interface's grid, then the notebook's). */
+const SCR_WGSL = /* wgsl */ `
+${CU}
+@group(0) @binding(0) var<uniform> u: CU;
+@group(0) @binding(1) var uiCells: texture_2d<f32>;
+@group(0) @binding(2) var uiBg: texture_2d<f32>;
+@group(0) @binding(3) var tmCells: texture_2d<f32>;
+@group(0) @binding(4) var tmBg: texture_2d<f32>;
+@group(0) @binding(5) var<storage, read_write> scr: array<vec4f>;
+fn bright(c: vec3f) -> vec3f { return c * smoothstep(0.3, 0.85, dot(c, vec3f(0.3, 0.5, 0.2))); }
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
+  let c = vec2i(id.xy); let phone = id.z == 0u;
+  var a = vec2i(0); var b = u.tmGrid;
+  if (phone) { a = (u.ph0 - u.uiOrigin) / u.uiCell; b = (u.ph1 - u.uiOrigin) / u.uiCell; }
+  if (any(c < a) || any(c >= b)) { return; }
+  var s = vec3f(0.0); var ws = 0.0;
+  for (var dy = -${SCR_RY}; dy <= ${SCR_RY}; dy++) {
+    for (var dx = -${SCR_RX}; dx <= ${SCR_RX}; dx++) {
+      let w = exp(-f32(dx * dx) / ${(SCR_RX * SCR_RX) / 2.5} - f32(dy * dy) / ${(SCR_RY * SCR_RY) / 2.5}); ws += w;
+      let q = c + vec2i(dx, dy);
+      if (all(q >= a) && all(q < b)) {
+        s += bright(select(cellLight(tmCells, tmBg, q), cellLight(uiCells, uiBg, q), phone)) * w;
+      }
+    }
+  }
+  let i = select(u32(u.uiGrid.x * u.uiGrid.y) + u32(c.y * u.tmGrid.x + c.x), u32(c.y * u.uiGrid.x + c.x), phone);
+  scr[i] = vec4f(s / ws, 0.0);
 }
 `;
 const TEX = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST;
@@ -184,6 +253,12 @@ export class GpuCompositor {
   private glowUni: GPUBuffer[];
   private glowBuf: { tmp: GPUBuffer; glow: GPUBuffer; n: number } | null = null;
   private glowBind: GPUBindGroup[] = [];
+  private meanPipe: GPUComputePipeline;
+  private meanBuf: GPUBuffer;
+  private meanBind: GPUBindGroup | null = null;
+  private scrPipe: GPUComputePipeline;
+  private scrBuf: GPUBuffer | null = null;
+  private scrBind: GPUBindGroup | null = null;
   private timing = false;
 
   constructor(private gw: GpuWorld, canvas: HTMLCanvasElement) {
@@ -198,6 +273,13 @@ export class GpuCompositor {
     const gm = dev.createShaderModule({ code: GLOW_WGSL });
     gm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL glow ${m.lineNum}:${m.linePos} ${m.message}`)));
     this.glowPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: gm, entryPoint: 'main' } });
+    const mm = dev.createShaderModule({ code: MEAN_WGSL });
+    mm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL mean ${m.lineNum}:${m.linePos} ${m.message}`)));
+    this.meanPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: mm, entryPoint: 'main' } });
+    this.meanBuf = dev.createBuffer({ size: 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    const sm = dev.createShaderModule({ code: SCR_WGSL });
+    sm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL scr ${m.lineNum}:${m.linePos} ${m.message}`)));
+    this.scrPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: sm, entryPoint: 'main' } });
     this.glowUni = [0, 1].map(() => dev.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }));
     const one = () => this.tex(1, 1);
     this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one() };
@@ -275,15 +357,25 @@ export class GpuCompositor {
       const T = this.t, G = this.glowBuf;
       this.glowBind = this.glowUni.map((b, k) => {
         this.dev.queue.writeBuffer(b, 0, new Uint32Array([gw.cols, gw.rows, k, 0]));
-        return this.dev.createBindGroup({ layout: this.glowPipe.getBindGroupLayout(0), entries: [
-          ...[b, gw.out, G.tmp, G.glow, this.uni].map((buffer, binding) => ({ binding, resource: { buffer } })),
-          ...[T.uiCells, T.uiBg, T.tmCells, T.tmBg].map((t, k) => ({ binding: k + 5, resource: t.createView() }))] });
+        return this.dev.createBindGroup({ layout: this.glowPipe.getBindGroupLayout(0), entries:
+          [b, gw.out, G.tmp, G.glow].map((buffer, binding) => ({ binding, resource: { buffer } })) });
       });
+      this.scrBuf?.destroy();
+      this.scrBuf = this.dev.createBuffer({ size: (L.cols * L.rows + this.tm.cols * this.tm.rows) * 16, usage: GPUBufferUsage.STORAGE });
+      this.scrBind = this.dev.createBindGroup({ layout: this.scrPipe.getBindGroupLayout(0), entries: [
+        { binding: 0, resource: { buffer: this.uni } },
+        ...[T.uiCells, T.uiBg, T.tmCells, T.tmBg].map((t, k) => ({ binding: k + 1, resource: t.createView() })),
+        { binding: 5, resource: { buffer: this.scrBuf } }] });
+      this.meanBind = this.dev.createBindGroup({ layout: this.meanPipe.getBindGroupLayout(0), entries: [
+        { binding: 0, resource: { buffer: this.uni } },
+        ...[T.uiCells, T.uiBg, T.tmCells, T.tmBg].map((t, k) => ({ binding: k + 1, resource: t.createView() })),
+        { binding: 5, resource: { buffer: this.meanBuf } }] });
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: this.uni } }, { binding: 1, resource: { buffer: gw.out } },
           ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmCells, T.tmBg, T.tmAtlas].map((t, k) => ({ binding: k + 2, resource: t.createView() })),
-          { binding: 10, resource: { buffer: G.glow } }],
+          { binding: 10, resource: { buffer: G.glow } }, { binding: 11, resource: { buffer: this.meanBuf } },
+          { binding: 12, resource: { buffer: this.scrBuf } }],
       });
     }
     const enc = this.dev.createCommandEncoder();
@@ -293,6 +385,11 @@ export class GpuCompositor {
       cp.setPipeline(this.glowPipe); cp.setBindGroup(0, b); cp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));
       cp.end();
     }
+    const mp = enc.beginComputePass();
+    mp.setPipeline(this.meanPipe); mp.setBindGroup(0, this.meanBind!); mp.dispatchWorkgroups(2);
+    mp.setPipeline(this.scrPipe); mp.setBindGroup(0, this.scrBind!);
+    mp.dispatchWorkgroups(Math.ceil(Math.max(L.cols, this.tm.cols) / 8), Math.ceil(Math.max(L.rows, this.tm.rows) / 8), 2);
+    mp.end();
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind); pass.draw(3);
     pass.end();
