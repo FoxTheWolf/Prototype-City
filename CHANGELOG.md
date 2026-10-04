@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.13 — Opções mais simples e pessoas mais atentas (2026-10-04)
+- O menu de opções agora tem Style (High Definition, o padrão, ou Classic, com menos linhas e o visual mais marcado) e Sharpness (Soft ou Sharp). As opções voltaram ao padrão uma vez.
+- Com a mochila, o caixa ou a lista de direções abertos, o personagem não anda nem gira mais por trás da tela.
+- Quem você para para pedir informação fica parado de frente enquanto você escolhe; quem está atravessando a rua segue andando.
+- Os pedestres não trocam mais de roupa ao apontar o caminho, e o guarda-chuva agora fica na mão.
+
 ## 0.13.9b — Pedir informação (2026-10-04)
 - Chegue perto de alguém na calçada e aperte F para pedir o caminho até um café, bar, farmácia, banco, mercearia, motel... ou um marco da cidade. A pessoa para, aponta e explica em quarteirões e nomes de rua.
 - Nem todo mundo sabe, alguns erram o lado, e tarde da noite tem gente que nem para.

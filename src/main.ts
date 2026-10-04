@@ -54,13 +54,20 @@ import { applyWorld, snapWorld } from './sim/save';
 
 /** The grid has this many rows (chosen in the options; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
-/** The options (the menu's; F3 also flips the debug lines), kept per viewer in the browser, apart from the save (deleting a save keeps them). */
-interface Opts { solid: number; blocks: boolean; sharp: number; fuse: boolean; res: number; mute: boolean; hud: boolean }
+/**
+ * The options (the menu's; F3 also flips the debug lines), kept per viewer in the browser, apart from the save (deleting a save keeps them).
+ * The style (13.13) sets the rows and the old sharpness together: High Definition (200 rows, soft) or Classic (120, sharper);
+ * Sharpness is the far glyphs' fusion (Soft: fused). The background and the glyphs are fixed (0.24 of the glyph's color, ASCII).
+ */
+interface Opts { style: number; fuse: boolean; mute: boolean; hud: boolean }
+const STYLES = [{ name: 'HIGH DEFINITION', res: 2, sharp: 0 }, { name: 'CLASSIC', res: 1, sharp: 2 }];
 const OPTS: Opts = (() => {
-  const d: Opts = { solid: 0, blocks: false, sharp: 0, fuse: false, res: 2, mute: false, hud: false };
-  try { return { ...d, ...JSON.parse(localStorage.getItem('tc.opts') ?? '{}') }; } catch { return d; }
+  const d: Opts = { style: 0, fuse: false, mute: false, hud: false };
+  // the options before 13.13 are dropped once (tc.opts), so the game opens in the new defaults
+  try { localStorage.removeItem('tc.opts'); return { ...d, ...JSON.parse(localStorage.getItem('tc.opts2') ?? '{}') }; } catch { return d; }
 })();
-let resStep = Math.min(OPTS.res, RES_ROWS.length - 1);
+let style = Math.min(OPTS.style, STYLES.length - 1);
+let resStep = STYLES[style].res;
 /** The rows a security camera's model shows while looking through it (0: the player's own, RES_ROWS[resStep]). */
 let camRows = 0;
 /** The interface (phone, notebook, payphone, status lines) has its own grid, always this many rows: it keeps its size whatever the world's resolution. */
@@ -225,10 +232,8 @@ function termLayout() {
 let uiLayout: Layout;
 let running = false;
 let lapWasOpen = false;
-// display switches: B steps the solid background darker until it is off, U the block glyphs
-const SOLID = [0.24, 0.16, 0.08, 0];
-let solidStep = Math.min(OPTS.solid, SOLID.length - 1); // 0: 0.24 ("1/3"), the user's pick
-const look: Look = { solid: SOLID[solidStep], blocks: OPTS.blocks, sharp: OPTS.sharp, fuse: OPTS.fuse };
+// the solid background behind the glyphs: 0.24 of the glyph's color ("1/3"), the user's pick
+const look: Look = { solid: 0.24, blocks: false, sharp: STYLES[style].sharp, fuse: OPTS.fuse };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
   const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(uiLayout.cellW / uiLayout.cellH, phone.zoom, world.player.inside >= 0));
@@ -478,7 +483,7 @@ addEventListener('keydown', (e) => {
     if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
     if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
     // someone on the sidewalk in front: ask them the way (13.9)
-    if (!phone.out) { const q = ask.near(camera.yaw); if (q) { ask.ask(q); return; } }
+    if (!phone.out) { const q = ask.near(camera.yaw); if (q) { ask.ask(q, performance.now() / 1000); return; } }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
@@ -538,11 +543,14 @@ function resize() {
   if (cctv) dvrLayout();
 }
 
+/** A screen the player is busy with (13.12): the bag, the counter, asking the way; they neither walk nor turn. */
+const uiBusy = () => counter.active || bagView.open || ask.open;
+
 function readInput(): PlayerInput {
   // the up and down arrows belong to the phone (as in GTA IV); WASD walk
   const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
-  const go = running && laptop.raise === 0 && !counter.active && !bagView.open && !ask.open;
+  const go = running && laptop.raise === 0 && !uiBusy();
   return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
@@ -663,18 +671,15 @@ function pause() {
 }
 function resume() { paused = false; menu.close(); input.lock(); }
 function saveOpts() {
-  Object.assign(OPTS, { solid: solidStep, blocks: look.blocks, sharp: look.sharp, fuse: look.fuse, res: resStep, hud: hudOn });
+  Object.assign(OPTS, { style, fuse: look.fuse, hud: hudOn });
   // ?mute is for a session (the tests), not a choice to remember
   if (sound && !params.has('mute')) OPTS.mute = sound.muted;
-  try { localStorage.setItem('tc.opts', JSON.stringify(OPTS)); } catch { /* no storage: the defaults next time */ }
+  try { localStorage.setItem('tc.opts2', JSON.stringify(OPTS)); } catch { /* no storage: the defaults next time */ }
 }
 const OPTIONS: Option[] = [
   { label: 'SOUND', value: () => ((sound ? sound.muted : OPTS.mute) ? 'OFF' : 'ON'), next: () => { if (sound) sound.toggleMute(); else OPTS.mute = !OPTS.mute; saveOpts(); } },
-  { label: 'BACKGROUND', value: () => (look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'), next: () => { look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length]; saveOpts(); } },
-  { label: 'GLYPHS', value: () => (look.blocks ? 'BLOCKS' : 'ASCII'), next: () => { look.blocks = !look.blocks; saveOpts(); } },
-  { label: 'SHARPNESS', value: () => ['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp], next: () => { look.sharp = (look.sharp + 1) % 4; saveOpts(); } },
-  { label: 'FUSE FAR GLYPHS', value: () => (look.fuse ? 'ON' : 'OFF'), next: () => { look.fuse = !look.fuse; saveOpts(); } },
-  { label: 'ROWS', value: () => String(RES_ROWS[resStep]), next: () => { resStep = (resStep + 1) % RES_ROWS.length; resize(); saveOpts(); } },
+  { label: 'STYLE', value: () => STYLES[style].name, next: () => { style = (style + 1) % STYLES.length; look.sharp = STYLES[style].sharp; resStep = STYLES[style].res; resize(); saveOpts(); } },
+  { label: 'SHARPNESS', value: () => (look.fuse ? 'SOFT' : 'SHARP'), next: () => { look.fuse = !look.fuse; saveOpts(); } },
   { label: 'DEBUG LINES (F3)', value: () => (hudOn ? 'ON' : 'OFF'), next: () => { hudOn = !hudOn; saveOpts(); } },
 ];
 /** The debug page: what the status lines show, as text. */
@@ -799,10 +804,10 @@ function frame(now: number) {
 
   // camera first, so this frame's movement uses the heading the player sees
   const [mx, my] = input.takeMouse();
-  camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
+  if (!uiBusy()) camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
   const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
-  if (running) { if (!laptop.open) camera.look(turn * 2.2 * dt, 0); }
+  if (running) { if (!laptop.open && !uiBusy()) camera.look(turn * 2.2 * dt, 0); }
   else camera.look(dt * 0.08, 0); // idle drift behind the title
   camera.update(dt);
 
@@ -992,7 +997,7 @@ function frame(now: number) {
   }
   if (hudOn) {
     const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}  `
-      + `[^] PHONE  [N] LAPTOP  ${WATCH_ON ? '[H] WATCH [J] MODE [I] START  ' : ''}[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+      + `[^] PHONE  [N] LAPTOP  ${WATCH_ON ? '[H] WATCH [J] MODE [I] START  ' : ''}${STYLES[style].name} ${look.fuse ? 'SOFT' : 'SHARP'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
     ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
     const cal = calendar(world.time), wx = world.weather;
     const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `

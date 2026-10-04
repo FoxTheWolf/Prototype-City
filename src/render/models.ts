@@ -136,9 +136,11 @@ const UMBRELLAS: RGB[] = [[30, 30, 34], [150, 30, 40], [40, 60, 120], [200, 180,
  * coat, trousers and skin from `who`, under an umbrella in the rain. Far away just the figure.
  */
 export function pedModel(who: number, step: number, umbrella: boolean, far: boolean, use = 0): Part[] {
-  const key = (who & 255) + '|' + step + '|' + umbrella + far + use;
+  const key = who + '|' + step + '|' + umbrella + far + use;
   let m = peds.get(key);
   if (m) return m;
+  // keyed by the whole person (a key on part of the id let two people share a pose's look, 13.11a); kept small
+  if (peds.size > 6000) peds.clear();
   const L = pedLook(who), coat = L.shirt, pants = L.pants;
   // the blocky proportions (13.8): a pixel of the skin's grid is 1.8/32 m; head 8, body 8 x 12 x 4, limbs 4 x 12 x 4
   const X = 1.8 / 32, hd = 4 * X, bd = 2 * X, lw = 4 * X, alex = L.alex ? X : 0;
@@ -166,6 +168,7 @@ export function pedModel(who: number, step: number, umbrella: boolean, far: bool
       use === 4 ? part(Box, -0.05, hd, T - 0.225, 0.5, hd + lw - alex, T, L.sleeve, Solid, '=', '-', '#') // pointing the way: the arm out ahead (its hand added below)
         : use === 1 ? limb(hd, hd + lw - alex, 0, T - 0.1, T + 0.28, L.sleeve, L.skin, 2, L.armStyle)
         : use ? limb(hd - 0.05, hd + lw - 0.05 - alex, 0.15, Z + 0.15, Z + 0.27, L.sleeve, L.skin, 2, L.armStyle)
+          : umbrella ? part(Box, -0.05, hd, T - 0.225, 0.3, hd + lw - alex, T, L.sleeve, Solid, '=', '-', '#')
           : limb(hd, hd + lw - alex, -sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
       limb(-hd - lw + alex, -hd, sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
       head,
@@ -177,8 +180,13 @@ export function pedModel(who: number, step: number, umbrella: boolean, far: bool
       m.push(part(Box, 0.27, 0, Z + 0.29, 0.35, 0.08, Z + 0.31, use === 3 ? [255, 240, 160] : [150, 200, 255], Glow, '-', '='));
     }
     if (umbrella) {
-      m.push(part(Box, 0.08, hd, 1.3, 0.11, hd + 0.03, 2.05, [40, 40, 44], Solid, '|'));
-      m.push(part(Ball, -0.5, -0.38, 1.97, 0.66, 0.78, 2.27, UMBRELLAS[(who >> 2) % UMBRELLAS.length], Solid, '^', '^', '^'));
+      // held in the right hand (out in front at the shoulder's height when free; by the side while on the phone)
+      const ux = use ? 0.08 : 0.34, uy = use ? hd + (lw - alex) / 2 : 0.1, uz = use ? 1.3 : T - 0.2;
+      // the forearm turned in, the hand in front of the chest
+      if (!use) m.push(part(Box, 0.2, uy - 0.04, T - 0.22, 0.3, hd + lw - alex, T - 0.06, L.sleeve, Solid, '='),
+        part(Box, 0.29, uy - 0.06, T - 0.22, 0.39, uy + 0.06, T - 0.06, L.skin, Solid, '#'));
+      m.push(part(Box, ux - 0.015, uy - 0.015, uz, ux + 0.015, uy + 0.015, 2.05, [40, 40, 44], Solid, '|'));
+      m.push(part(Ball, ux - 0.58, uy - 0.58, 1.97, ux + 0.58, uy + 0.58, 2.27, UMBRELLAS[(who >> 2) % UMBRELLAS.length], Solid, '^', '^', '^'));
     }
   }
   peds.set(key, m);

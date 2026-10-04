@@ -64,8 +64,26 @@ export class AskWay {
     return out;
   }
 
-  ask(q: Ped) { this.who = q.id; this.pick = 0; }
-  close() { this.who = -1; }
+  /**
+   * Ask q: they stop and face the player while the list is open (13.11d), unless they are crossing
+   * the street or going through a door; then they walk on with a word.
+   */
+  ask(q: Ped, now: number) {
+    if (q.way.length || q.door) { this.who = q.id; this.say(q.id, null, 'dir.busy', {}, now); this.who = -1; return; }
+    this.who = q.id; this.pick = 0;
+    q.hold = 60 * 60; q.pdx = q.pdy = 0;
+  }
+  /** Closed without an answer: they walk on after a moment. */
+  close() {
+    const q = this.world.peds.find((e) => e.id === this.who);
+    if (q && (q.hold ?? 0) > 90 && !q.pdx && !q.pdy) q.hold = 30;
+    this.who = -1;
+  }
+  private say(id: number, pl: Place | null, key: string, ctx: Record<string, string>, now: number) {
+    const w = this.world, P = w.pop, W = w.weather, sel = selFor(P, id, w.time, W.temp, W.precip, W.snow), r = rngOf(id, pl ?? 0, Math.floor(w.time / 600));
+    this.said = voice(tidy(expand(`#${key}#`, TEXT, r, { ...ctx, place: pl === null ? '' : placeName(w.city, pl) }, sel)), P, id, r);
+    this.saidAt = now;
+  }
 
   /** A key while the list is open: true when it was the list's. */
   key(code: string, now: number): boolean {
@@ -73,7 +91,7 @@ export class AskWay {
     const n = this.rows().length;
     if (code === 'ArrowUp') this.pick = (this.pick + n - 1) % n;
     else if (code === 'ArrowDown') this.pick = (this.pick + 1) % n;
-    else if (code === 'Enter' || code === 'Space') { this.answer(this.rows()[this.pick].place(), now); this.close(); }
+    else if (code === 'Enter' || code === 'Space') { this.answer(this.rows()[this.pick].place(), now); this.who = -1; }
     else if (code === 'Escape' || code === 'KeyF') this.close();
     else return false;
     return true;
@@ -81,14 +99,13 @@ export class AskWay {
 
   /** Their answer about place pl: said, and they stop to say it (pointing the first way). */
   private answer(pl: Place | null, now: number) {
-    const w = this.world, c = w.city, P = w.pop, id = this.who, q = w.peds.find((e) => e.id === id), me = w.player;
+    const w = this.world, c = w.city, id = this.who, q = w.peds.find((e) => e.id === id), me = w.player;
     if (!q) return;
     const h = (k: number) => hash3(id, pl ?? -999, k + Math.floor(w.time / 3600)), hour = (w.time / 3600) % 24;
-    const r = rngOf(id, pl ?? 0, Math.floor(w.time / 600)), W = w.weather, sel = selFor(P, id, w.time, W.temp, W.precip, W.snow);
-    const say = (key: string, ctx: Record<string, string> = {}) => { this.said = voice(tidy(expand(`#${key}#`, TEXT, r, { ...ctx, place: pl === null ? '' : placeName(c, pl) }, sel)), P, id, r); this.saidAt = now; };
+    const say = (key: string, ctx: Record<string, string> = {}) => this.say(id, pl, key, ctx, now);
     const hold = (s: number, px = 0, py = 0) => { q.hold = Math.round(s * 60); q.pdx = px; q.pdy = py; };
     // late at night some walk on
-    if ((hour >= 23 || hour < 5) && h(1) < 0.35) { say('dir.busy'); return; }
+    if ((hour >= 23 || hour < 5) && h(1) < 0.35) { say('dir.busy'); q.hold = 0; return; }
     if (pl === null) { say('dir.dunno'); hold(3); return; }
     const [tx, ty] = placeAt(c, pl), d = Math.hypot(tx - me.x, ty - me.y);
     if (d > KNOWN || h(2) < 0.08 + 0.5 * (d / KNOWN) ** 2) { say('dir.dunno'); hold(3); return; }
