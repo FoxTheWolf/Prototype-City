@@ -3,6 +3,7 @@
 // classificador de seguranca nas sessoes normais. Conteudo 100% ficticio e so dentro do jogo.
 import { hash3 } from '../core/rng';
 import { type World } from './world';
+import { isSolid, type City } from './city';
 import { siteUp } from './telco';
 import { TIME_SCALE } from './clock';
 import { stepWeather } from './weather';
@@ -131,6 +132,19 @@ export function recordAct(h: Heat, w: World, x: number, y: number, time: number,
   return left;
 }
 
+/** The nearest spot clear of any building to wake at: the hall's own footprint is solid, so landing
+ *  the player on its centre would trap them inside. Spiral out until the ground is open (a sidewalk,
+ *  the plaza or, at worst, the road), so they can always walk away. */
+function freeSpot(city: City, x: number, y: number): [number, number] {
+  if (!isSolid(city, x, y)) return [x, y];
+  for (let r = 4; r <= 160; r += 4)
+    for (let a = 0; a < 24; a++) {
+      const t = (a / 24) * Math.PI * 2, nx = x + Math.cos(t) * r, ny = y + Math.sin(t) * r;
+      if (!isSolid(city, nx, ny)) return [nx, ny];
+    }
+  return [x, y];
+}
+
 /** The patrol's speed (m/s, real time, like anything the player chases), how close it must get to make
  *  the arrest, how far off it arrives from, and how fast the net tightens onto the player per tier. */
 const COP_SPEED = 11, CATCH_R = 13, COP_SPAWN = 260, TRACK = [0, 0, 0.05, 0.16];
@@ -212,8 +226,9 @@ function arrest(w: World) {
   // skip the night in custody
   w.time = w.ptime = time + HOLD;
   stepWeather(w.weather, w.seed, w.time, 0);
-  // wake at the holding place, on the street
-  p.x = p.px = hx; p.y = p.py = hy; p.inside = -1; p.floor = 0; p.z = 0; p.liftTo = -1;
+  // wake at the holding place, on the street in front of it (never inside the solid building)
+  const [wx, wy] = freeSpot(w.city, hx, hy);
+  p.x = p.px = wx; p.y = p.py = wy; p.inside = -1; p.floor = 0; p.z = 0; p.liftTo = -1;
   // the trail has cooled; the heat left is below the hunt threshold
   h.points = Math.min(h.points, AFTER);
   h.traces.length = 0;
