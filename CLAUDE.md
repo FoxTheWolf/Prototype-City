@@ -362,7 +362,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - Mixagem entre as fontes, reverb por lugar (rua, saguão, apartamento, túnel), variação dos sons repetidos, e a revisão de ouvido com o usuário dos sons sintetizados.
 
 ### Etapa 22: Vida do personagem (antes "16")
-- **HUD pelo relógio e por um app de fitness (pedido do usuário em 2026-10-04):** duas barrinhas no topo do visor do relógio, uma de cada lado: fome e cansaço. Um app de fitness no celular com os detalhes: fome, sede, batimentos (o fôlego da corrida), sono (quanto falta dormir) e uma ficha (nome, idade, altura), guardada no save e definida depois pelo editor de personagem.
+- **App de fitness (pedido do usuário em 2026-10-04; as barras do relógio foram para a lista de correções):** um app de fitness no celular com os detalhes: fome, sede, batimentos (o fôlego da corrida), sono (quanto falta dormir) e uma ficha (nome, idade, altura), guardada no save e definida depois pelo editor de personagem.
 - **Dormir antes do apartamento:** nos motéis (o tipo já existe, 13.1): pagar a noite no balcão e pular o tempo. Pode vir antes, com a fome e a bateria.
 - **Comprar um apartamento e mobiliar (ideia do usuário em 2026-10-04):** colocar e mover móveis e itens. Viável com o gerador atual como caso especial: o apartamento do jogador pula a mobília de `furnish` e lê a lista de móveis dele do save (posição, rotação, tipo), editada no jogo pegando e soltando (a mesma mão da mochila e das prateleiras).
 - Apartamento próprio (dormir, guardar hardware, o mural de pistas), stats, necessidades (a **temperatura**, que vem do clima, molha e esfria, e aparece no termômetro do relógio; o **cansaço**, pago dormindo num lugar seguro), customização pela lore. Efeitos leves, nunca morte.
@@ -373,7 +373,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 > **Os storage buffers e o desempenho em PCs fracos ficam com o Claude** (o usuário deixou a solução técnica com ele em 2026-10-04): planejar antes do marco, sem pressa.
 
 ### Lista fixa: correções pequenas (Sonnet)
-> Correções localizadas, sem sistemas novos (veja "Sessões com o Sonnet" em "Como trabalhar"). Avisar o usuário para trocar para o Sonnet.
+> Correções localizadas, sem sistemas novos. **Feitas pelo agente `bugfix`** (`.claude/agents/bugfix.md`: Sonnet 5.5, esforço médio) chamado de dentro de uma sessão normal, com um pedido curto (o bug, os arquivos, como conferir); não precisa de sessão própria. Juntar vários bugs num pedido só, porque cada chamada relê o contexto.
 - **A 200 linhas sobram linhas embaixo da linha de status** (celular transparente embaixo, faixa preta na BIOS): provavelmente resolvido pela R.38; só conferir.
 - **Ligação recebida pelo mouse:** botão esquerdo atende, direito rejeita.
 - **Discador: o nome do contato aparece por cima do número digitado:** levar o nome para cima ou para baixo do número (`calls` em `src/phone/apps.ts`).
@@ -386,6 +386,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **Chuva vista nas paredes internas** dos interiores (provavelmente o `fallOver` em `gpu/shader.ts`).
 - **Agradecimentos pelo sobrenome** onde o nome inteiro soa estranho (`thanks()` em `locale/names.ts`).
 - **Placas de rua dentro do semáforo:** o braço do semáforo corta a placa (`streetBlade`): levar a placa para a ponta do braço, do lado da calçada; o verde mais escuro e o branco mais claro.
+- **Barras de fome e cansaço no relógio** (pedido do usuário em 2026-10-04, as duas já existem: `sim/needs.ts`, o estômago e o fôlego): duas barrinhas no topo do visor, uma de cada lado (`watch.ts`).
 - **Linha de debug:** reorganizar e enxugar; tirar o que já está no menu e cujas teclas saíram (BG, ASCII, SOFT, FUSE, ROWS).
 
 ### Lista fixa: retoques de luz (Opus)
@@ -613,7 +614,7 @@ Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n
 ## Como trabalhar neste projeto
 
 - **Uma sessão por etapa ou funcionalidade.** Ler só os arquivos e as imagens de referência daquela etapa.
-- **Sessões com o Sonnet para o que é simples (pedido do usuário em 2026-10-03):** a própria Anthropic indica o Sonnet para tarefas mais simples, e ele gasta menos limite e é mais rápido. Correções pequenas e localizadas (bugs de interface, teclas, um ajuste num arquivo que já existe), sem arquivos novos nem sistemas novos, vão para a **fila do Sonnet** (a "Lista fixa: correções pequenas" do Plano). Ao montar o plano de uma sessão, separar o que é dessa fila e **avisar o usuário quando for prudente trocar para o Sonnet**, do mesmo jeito que se avisa para o Opus 4.8 na Trilha de hacking. O que é de projeto (render, simulação, sistemas novos) fica com o Opus.
+- **Bugs simples pelo agente `bugfix` (regra do usuário em 2026-10-04; substitui as sessões com o Sonnet):** as correções da "Lista fixa: correções pequenas" vão para o agente `bugfix` (Sonnet 5.5, esforço médio), chamado de dentro da sessão, em lote. O agente `hacking` roda no Opus 4.8 com esforço médio (`effort` no cabeçalho de `.claude/agents/*.md`). O que é de projeto (render, simulação, sistemas novos) fica com o Opus.
 - **Olhar o limite de 5 h (regra do usuário em 2026-10-04):** no começo e de tempos em tempos, ler o uso (`get_usage`: limite de 5 h e semanal) e planejar a sessão pelo que sobra. Um agente custa pelo menos ~5% do limite por uso (ele relê o contexto): só chamar quando valer.
 - **Testar sem o navegador sempre que der (pedido do usuário em 2026-10-04):** uma pasta `tests/` com scripts que rodam a simulação no Node (empacotados com `npx rolldown`, como nas "Lições da 11.5"): comprar, pagar, furtar, fome, bateria, pedir direção, trabalhos, save. O navegador fica para o que é visual. **Quando for preciso medir desempenho, avisar o usuário antes para ele abrir o painel**, em vez de perder tempo com o laço parado. Criar a pasta na próxima sessão de código.
 - **Opinar sempre (pedido do usuário em 2026-10-03; regra atualizada em 2026-10-04):** dar sugestões técnicas e criativas ao longo do trabalho, **a cada etapa**. O feedback vai para **`docs/feedback-claude.md`** (datado, o mais novo em cima), e **todo feedback escrito lá também é mandado no chat**, para o usuário não precisar procurar. A seção "Opiniões e sugestões do Claude" do CLAUDE.md fica como histórico; o novo vai para o arquivo.
