@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.4 — Um relógio de pulso (2026-10-03)
+- H ergue o relógio digital do pulso esquerdo (e abaixa de novo), sem parar de andar: a hora da cidade, o dia da semana e a data. O visor depende da luz em volta e some no escuro; L acende a luz dele por alguns segundos.
+- Na hora cheia ele dá dois bipes baixinhos.
+
 ## 0.F.3 — Um guia dentro do notebook (2026-10-03)
 - O notebook agora traz um guia: abra-o e leia `cat ~/start-here.txt` — os comandos para olhar em volta e o passo a passo do primeiro trabalho (achar a GRIDLINK de uma subestação, entrar, achar o disjuntor e cortar a luz).
 - Um comando novo, `job`, mostra o trabalho que você aceitou: onde é, até que horas e quanto paga; depois, se foi feito ou se falhou.

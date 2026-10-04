@@ -219,6 +219,18 @@ export class Sound {
     o.start(t); o.stop(t + 0.3);
   }
 
+  /** The wristwatch's piezo: two short high pips on the hour (F.4), quiet as a watch on a wrist is. */
+  watchChime() {
+    const ctx = this.ctx;
+    for (const a of [0, 0.16]) {
+      const t = ctx.currentTime + a, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.type = 'square'; o.frequency.value = 4096;
+      o.connect(filter(ctx, 'lowpass', 6000, 0.7)).connect(g);
+      g.gain.setValueAtTime(0.012, t); g.gain.setValueAtTime(0, t + 0.07);
+      o.start(t); o.stop(t + 0.1);
+    }
+  }
+
   /**
    * A phone key: the snap of its rubber dome (a click of bright noise) and the handset's short
    * keypad tone, a little higher for the d-pad than the digits, low when the key does nothing.

@@ -168,6 +168,11 @@ export function makerName(city: City, k: number): string {
   return L.roots[(city.nameSeed + (L.roots.length - slot) * 7919) % L.roots.length];
 }
 
+/** The maker of the player's wristwatch (F.4): a slot of its own. */
+export function watchMakerName(city: City): string {
+  return L.roots[(city.nameSeed + (L.roots.length - 56) * 7919) % L.roots.length];
+}
+
 /** A maker of security cameras (three per city, see sim/cctv.ts CAMS). */
 export function cctvMakerName(city: City, k: number): string {
   return L.roots[(city.nameSeed + (L.roots.length - 50 - k) * 7919) % L.roots.length];
