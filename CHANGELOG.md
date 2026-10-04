@@ -6,6 +6,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Num prédio com janelas dos dois lados, olhando de fora você vê a sala e, pela janela do outro lado, a rua de trás.
 - Pela porta de rua aberta, a sala tem a mesma luz vista da calçada e vista de dentro; de dentro, o vão aberto não tem mais um vidro invisível.
 - Não há mais um pedaço de janela em cima das portas de rua.
+- Monitores, abajures e telas acesos dentro das salas brilham também vistos de fora, pela janela ou pela porta.
 
 ## 0.13.10b — Um só espaço (2026-10-04)
 - O que você vê pela janela de fora é o mesmo andar que você encontra lá dentro: as mesmas salas, as mesmas lâmpadas acesas, as portas fechadas onde estão fechadas. Uma porta que você deixa aberta continua aberta para quem olha da rua.

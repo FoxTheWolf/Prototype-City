@@ -1088,7 +1088,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let ro = roomRec(o, r); let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
         // a lamp keeps its own color: lit when the room is
         let lc = select(F.c * roomLit(V, ro, r, x, y, F.t - tIn), F.c * select(0.25, 1.0, lp.x + lp.y > 0.05), F.glow);
-        res.cl = roomCell(F.ch, lc, F.t); gBack = 0.0;
+        res.cl = roomCell(F.ch, lc, F.t); gBack = 0.0; if (F.glow) { gPeekEm = lc; }
       }
     }
   }
@@ -1100,7 +1100,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
  * as it is, the same as from inside.
  */
 fn peekRoom(o: u32, lot: i32, box: i32, f: i32, rdx: f32, rdy: f32, m: f32, t: f32, elec: f32, full: bool, pane: bool) -> Px {
-  gBack = 0.0;
+  gBack = 0.0; gPeekEm = vec3f(0.0);
   let R = roomWalk(outView(o, lot, box, f, elec, full), rdx, rdy, m, t);
   if (R.state != 1u) { gBack = 0.0; return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
   if (!pane) { return Px(R.cl.ch, R.cl.c); }
@@ -1395,7 +1395,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else if (dOp > 0.0 && e > edgeIn + 0.08) {
       // through the doorway: the room behind, as through a shop window (or the lobby's glow, too far to make out)
       // (13.10b2: lit as the room, as from inside, not as the wall; no glass in the way)
-      if (pkR >= 0) { let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, false); ch = P.ch; c = P.c; isWin = true; doorway = true; backT = gBack; }
+      if (pkR >= 0) { let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, false); ch = P.ch; c = P.c; isWin = true; doorway = true; backT = gBack; winGlow = gPeekEm; }
       else { ch = DOT; c = vec3f(255.0, 220.0, 160.0) * (0.18 * elec); em = true; glowK = 0.2; }
     }
     else if (dOp > 0.0 && e > edgeIn) { ch = COL; c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.2; }
@@ -1449,9 +1449,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let capaLit = hh < litK && wp > 0.04;
     let capa = select(darkPane, wc * wk, capaLit);
     ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
-    c = mix(capa, P.c, peekK); isWin = true; glass = true;
+    c = mix(capa, P.c, peekK); isWin = true; glass = true; winGlow = gPeekEm * peekK * (0.62 - 0.2 * u.day);
     // (the lit pane is light, as in the far look, until the room takes over)
-    if (capaLit) { let gk = WIN_GLOW * peekK * smoothstep(GLOW_NEAR, GLOW_FULL, tRef); c += wc * wk * gk; winGlow = wc * wk * (1.0 - peekK + gk); }
+    if (capaLit) { let gk = WIN_GLOW * peekK * smoothstep(GLOW_NEAR, GLOW_FULL, tRef); c += wc * wk * gk; winGlow += wc * wk * (1.0 - peekK + gk); }
   } else if (S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
@@ -2783,6 +2783,8 @@ var<private> gBack: f32 = 0.0;
 var<private> gBackT: f32 = 0.0;
 var<private> gBackW: f32 = 0.0;
 var<private> gBackK: f32 = 0.0;
+// a lit piece of furniture (a screen, a lamp) met by peekRoom: its glow, so it blooms seen from the street as from inside
+var<private> gPeekEm: vec3f = vec3f(0.0);
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
