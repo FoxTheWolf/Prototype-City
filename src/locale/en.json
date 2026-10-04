@@ -55,9 +55,25 @@
   "wideAvenue": "{r} Blvd",
   "wideStreet": "{r} St",
   "diagonal": "{r} Way",
+  "goods": {
+    "coffee": "Coffee", "eggs_toast": "Eggs & toast", "burger": "Burger", "fries": "Fries", "milkshake": "Milkshake", "pie": "Slice of pie", "meatloaf": "Meatloaf plate",
+    "drip_coffee": "Drip coffee", "espresso": "Espresso", "latte": "Latte", "muffin": "Muffin", "bagel": "Bagel",
+    "slice": "Cheese slice", "pepperoni_slice": "Pepperoni slice", "garlic_knots": "Garlic knots", "fountain_soda": "Fountain soda", "whole_pie": "Whole pie",
+    "pastrami": "Pastrami on rye", "bagel_cc": "Bagel & cream cheese", "chips": "Potato chips", "soda_can": "Can of soda",
+    "combo": "Combo meal", "cheeseburger": "Cheeseburger", "nuggets": "Chicken nuggets", "large_soda": "Large soda",
+    "draft_beer": "Draft beer", "bottled_beer": "Bottled beer", "whiskey": "Whiskey", "peanuts": "Peanuts",
+    "bread": "Loaf of bread", "milk": "Gallon of milk", "eggs": "Dozen eggs", "canned_soup": "Canned soup", "noodles": "Instant noodles", "candy": "Candy bar", "cigarettes": "Cigarettes", "batteries": "AA batteries", "umbrella": "Umbrella",
+    "cough_syrup": "Cough syrup", "painkillers": "Painkillers", "bandages": "Bandages", "shampoo": "Shampoo", "toothpaste": "Toothpaste", "memory_card": "Memory card",
+    "wash_load": "Wash (one load)", "dry_load": "Dry (one load)", "detergent": "Detergent",
+    "used_watch": "Used watch", "dvd_player": "DVD player", "power_drill": "Power drill", "guitar": "Acoustic guitar", "gold_chain": "Gold chain",
+    "headphones": "Headphones", "usb_stick": "USB stick (1 GB)", "charger": "Phone charger", "blank_cds": "Blank CDs (10)", "ethernet_cable": "Ethernet cable", "mp3_player": "MP3 player",
+    "prepaid_card": "Prepaid card", "hands_free": "Hands-free earpiece", "phone_case": "Phone case",
+    "internet_hour": "Internet (1 hour)", "print_page": "Print (1 page)", "room_night": "Room (1 night)", "vending_snack": "Vending snack"
+  },
   "blade": {
     "hotel": "{name}", "cinema": "{name}", "parking": "PARK", "bar": "BAR", "pawn": "PAWN", "liquor": "LIQUOR",
-    "cafe": "CAFE", "diner": "EAT", "pharmacy": "DRUGS"
+    "cafe": "CAFE", "diner": "EAT", "pharmacy": "DRUGS",
+    "pizza": "PIZZA", "fastfood": "BURGERS", "phones": "MOBILE", "cyber": "INTERNET", "motel": "MOTEL"
   },
   "news": {
     "sep": "   +++   ",
@@ -741,7 +757,13 @@
     "books": ["{s} Books", "{w} Books", "{s} & Sons"],
     "tailor": ["{s} Tailors", "{s} & {s2}", "{w} Alterations"],
     "autoparts": ["{s} Auto Parts", "{w} Auto", "{s} Tire", "{w} Motors"],
-    "parking": ["{s} Parking", "{w} Garage", "Park 24h", "{w} Park & Lock"]
+    "parking": ["{s} Parking", "{w} Garage", "Park 24h", "{w} Park & Lock"],
+    "pizza": ["{s}'s Pizza", "{w} Pizza", "Pizza {s}", "{s}'s Slice", "Famous {w} Pizza"],
+    "deli": ["{s}'s Deli", "{w} Deli", "{s} & Sons Deli", "{w} Delicatessen"],
+    "fastfood": ["{w} Burger", "Burger {w}", "{w} Express", "{s}'s Burgers"],
+    "phones": ["{w} Mobile", "{s} Wireless", "Cell City", "{w} Phones"],
+    "cyber": ["{w} Net Cafe", "Cyber {w}", "{s} Internet Cafe", "@{w}"],
+    "motel": ["{w} Motel", "{w} Motor Inn", "{s} Motel", "Budget {w} Inn"]
   },
   "surnames": [
     "Rossi", "Kowalski", "O'Neil", "Chen", "Nguyen", "Morales", "Novak", "Park", "Weiss", "Kaplan",
@@ -802,8 +824,8 @@
     "app": { "map": "Maps", "calls": "Calls", "contacts": "Contacts", "messages": "Messages", "camera": "Camera", "wire": "Streetwire", "news": "News", "snake": "Snake", "calendar": "Calendar", "bank": "Bank", "calc": "Calc", "notes": "Notes", "weather": "Weather", "folder": "My Apps", "store": "Store", "settings": "Settings" },
     "gps": { "search": "SEARCHING SATELLITES", "lost": "NO GPS SIGNAL", "inView": "IN VIEW", "lastKnown": "LAST KNOWN POSITION", "indoor": "WEAK SIGNAL INDOORS", "acc": "+-{n}m" },
     "find": { "title": "SEARCH", "hint": "Name or kind: bar, pharmacy...", "search": "Search", "searching": "Searching...", "none": "No places found.", "offline": "No data connection.", "results": "{n} places", "landmark": "Landmark", "substation": "Substation", "subWords": "power grid gridlink utility electric substation", "route": "Route", "call": "Call", "end": "End", "routing": "Calculating route...", "noRoute": "No walking route found.", "arrived": "You have arrived", "rerouting": "Off route. Recalculating...", "turn": "In {d} turn {side} onto {road}", "left": "left", "right": "right", "straight": "Continue {d}", "togo": "{d} to go", "openNow": "OPEN", "closed": "CLOSED", "always": "Open 24 hours", "until": "until {h}", "opens": "opens {h}", "noon": "noon", "midnight": "midnight", "noPhone": "No phone", "callHint": "Green key calls",
-      "kinds": { "diner": "Diner", "bar": "Bar", "cafe": "Cafe", "pharmacy": "Pharmacy", "grocery": "Grocery", "laundry": "Laundromat", "pawn": "Pawn shop", "electronics": "Electronics", "liquor": "Liquor store", "hotel": "Hotel", "bank": "Bank", "cinema": "Cinema", "books": "Bookstore", "tailor": "Tailor", "autoparts": "Auto parts", "parking": "Parking" },
-      "also": { "diner": "restaurant food eat", "bar": "pub tavern drinks", "cafe": "coffee", "pharmacy": "drugstore drugs", "grocery": "market supermarket food", "laundry": "laundry", "pawn": "pawnshop", "electronics": "computer phone", "liquor": "wine beer", "hotel": "inn", "bank": "atm", "cinema": "movies theater", "books": "books", "tailor": "clothes", "autoparts": "car garage", "parking": "garage" } },
+      "kinds": { "diner": "Diner", "bar": "Bar", "cafe": "Cafe", "pharmacy": "Pharmacy", "grocery": "Grocery", "laundry": "Laundromat", "pawn": "Pawn shop", "electronics": "Electronics", "liquor": "Liquor store", "hotel": "Hotel", "bank": "Bank", "cinema": "Cinema", "books": "Bookstore", "tailor": "Tailor", "autoparts": "Auto parts", "parking": "Parking", "pizza": "Pizzeria", "deli": "Deli", "fastfood": "Fast food", "phones": "Phone store", "cyber": "Cybercafe", "motel": "Motel" },
+      "also": { "diner": "restaurant food eat", "bar": "pub tavern drinks", "cafe": "coffee", "pharmacy": "drugstore drugs", "grocery": "market supermarket food", "laundry": "laundry", "pawn": "pawnshop", "electronics": "computer phone", "liquor": "wine beer", "hotel": "inn", "bank": "atm", "cinema": "movies theater", "books": "books", "tailor": "clothes", "autoparts": "car garage", "parking": "garage", "pizza": "pizza food eat slice", "deli": "sandwich food eat", "fastfood": "burger food eat", "phones": "mobile cell phone sim", "cyber": "internet cafe net computer print", "motel": "hotel room sleep inn" } },
     "apps": {
       "contacts": ["No contacts", "SIM card: 0 of 250 used", "Numbers come with the network"],
       "camera": ["2.0 MP camera", "Coming soon", "(with the phone network)"],

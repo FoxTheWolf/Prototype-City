@@ -1,4 +1,5 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
+import { PLACES } from './placeTypes';
 
 // 1 world unit = 1 metre.
 export const FLOOR_H = 3.5;
@@ -131,7 +132,8 @@ export type PropKind = 'lamp' | 'tree' | 'bench' | 'bin' | 'hydrant' | 'mailbox'
  * now; interiors (stage 7) and the economy (stage 13) will hang their own data on the same record.
  */
 export type BusinessKind = 'diner' | 'bar' | 'cafe' | 'pharmacy' | 'grocery' | 'laundry' | 'pawn' | 'electronics'
-  | 'liquor' | 'hotel' | 'bank' | 'cinema' | 'books' | 'tailor' | 'autoparts' | 'parking';
+  | 'liquor' | 'hotel' | 'bank' | 'cinema' | 'books' | 'tailor' | 'autoparts' | 'parking'
+  | 'pizza' | 'deli' | 'fastfood' | 'phones' | 'cyber' | 'motel';
 
 export interface Business {
   kind: BusinessKind;
@@ -165,12 +167,12 @@ function bankChains(seed: number, businesses: Business[], buildings: Building[],
 
 /** Which businesses open on the ground floor, by district. */
 const SHOPS: Record<DistrictType, BusinessKind[]> = {
-  financial: ['bank', 'cafe', 'electronics', 'diner', 'pharmacy', 'bar', 'parking'],
-  commercial: ['diner', 'bar', 'electronics', 'pawn', 'cinema', 'hotel', 'pharmacy', 'liquor', 'cafe', 'parking'],
-  residential: ['grocery', 'laundry', 'liquor', 'pharmacy', 'diner', 'bar'],
-  historic: ['cafe', 'bar', 'books', 'tailor', 'hotel', 'diner'],
-  industrial: ['autoparts', 'diner', 'bar', 'liquor'],
-  theater: ['cinema', 'hotel', 'bar', 'diner', 'electronics', 'cinema', 'hotel', 'cafe', 'pharmacy', 'parking'],
+  financial: ['bank', 'cafe', 'electronics', 'diner', 'pharmacy', 'bar', 'parking', 'deli', 'fastfood', 'phones'],
+  commercial: ['diner', 'bar', 'electronics', 'pawn', 'cinema', 'hotel', 'pharmacy', 'liquor', 'cafe', 'parking', 'pizza', 'fastfood', 'phones', 'cyber'],
+  residential: ['grocery', 'laundry', 'liquor', 'pharmacy', 'diner', 'bar', 'pizza', 'deli', 'grocery', 'cyber', 'motel'],
+  historic: ['cafe', 'bar', 'books', 'tailor', 'hotel', 'diner', 'deli'],
+  industrial: ['autoparts', 'diner', 'bar', 'liquor', 'fastfood', 'motel', 'pawn'],
+  theater: ['cinema', 'hotel', 'bar', 'diner', 'electronics', 'cinema', 'hotel', 'cafe', 'pharmacy', 'parking', 'pizza', 'fastfood', 'cyber'],
 };
 
 export interface Prop {
@@ -190,9 +192,7 @@ export interface Prop {
  * Chance that a business hangs a blade sign (a vertical sign sticking out of the facade, for the
  * street to see) next to its shop sign.
  */
-const BLADE: Partial<Record<BusinessKind, number>> = {
-  hotel: 1, cinema: 1, parking: 1, bar: 0.6, pawn: 0.6, liquor: 0.4, cafe: 0.4, diner: 0.4, pharmacy: 0.3,
-};
+const BLADE = (kind: BusinessKind) => PLACES[kind].blade ?? 0;
 /**
  * A blade sign's panel starts this high and has one letter every BLADE_LETTER metres; hotels and
  * cinemas on tall enough buildings hang a tall one instead, BLADE_TALL metres a letter, over several floors.
@@ -934,9 +934,11 @@ export function generateCity(seed: number, size: number): City {
       if (!B.shop) continue;
       const bx = Math.floor(B.x0), by = Math.floor(B.y0);
       B.biz = businesses.length;
-      const kind = shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by) * shops.length)];
+      // a rare kind (PLACES[k].rare) keeps its pick only that often; otherwise the front draws again
+      let kind = shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by) * shops.length)];
+      for (let t = 1; t < 4 && hash3(seed ^ 0x2a7e, bx + t, by) >= (PLACES[kind].rare ?? 1); t++) kind = shops[Math.floor(hash3(seed ^ 0x51ed27, bx, by + t * 7919) * shops.length)];
       businesses.push({ kind, building: k, name: Math.floor(hash3(seed ^ 0x3b9ac1, bx, by) * 1e9) });
-      if (hash3(seed ^ 0x7b1ade, bx, by) < (BLADE[kind] ?? 0)) bladeSign(block, B, hash3(seed ^ 0x7b1ade, by, bx), kind);
+      if (hash3(seed ^ 0x7b1ade, bx, by) < BLADE(kind)) bladeSign(block, B, hash3(seed ^ 0x7b1ade, by, bx), kind);
     }
     // facade dressing, from each building's position so nothing else moves: lit crowns on towers,
     // sidewalk sheds (scaffolding) along the street, ads painted high on the walls of walk-ups

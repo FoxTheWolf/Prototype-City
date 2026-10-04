@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import { FLOOR_H, type City } from './city';
 import { type PowerGrid } from './power';
+import { PLACES } from './placeTypes';
 
 /**
  * Wi-Fi access points: the routers in the city's shops and homes. A cafe usually has an open one, a
@@ -34,9 +35,7 @@ export interface AccessPoint {
 }
 
 /** Chance that a business of each kind has a router, and that it is open. */
-const SHOP_AP: Record<string, [number, number]> = {
-  cafe: [0.9, 0.85], hotel: [0.8, 0.1], bar: [0.4, 0.5], books: [0.5, 0.7], diner: [0.3, 0.6], electronics: [0.6, 0.2],
-};
+const SHOP_AP: Record<string, [number, number] | undefined> = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [k, p.wifi]));
 
 export function buildWifi(seed: number, city: City, sx: number, sy: number, power: PowerGrid): AccessPoint[] {
   const out: AccessPoint[] = [];

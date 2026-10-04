@@ -16,7 +16,7 @@ import { type World } from './world';
 export type ItemId = 'sim' | 'antenna' | 'battery';
 export interface Item { id: ItemId; cents: number; kinds: string[]; once: boolean }
 export const ITEMS: Item[] = [
-  { id: 'sim', cents: 2500, kinds: ['electronics', 'pawn'], once: false },
+  { id: 'sim', cents: 2500, kinds: ['electronics', 'pawn', 'phones'], once: false },
   { id: 'antenna', cents: 8900, kinds: ['electronics'], once: true },
   { id: 'battery', cents: 6500, kinds: ['electronics', 'pawn'], once: true },
 ];

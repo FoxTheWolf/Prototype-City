@@ -2,6 +2,7 @@ import { hash3 } from '../core/rng';
 import { type City } from './city';
 import { TIME_SCALE } from './clock';
 import { subAt, type PowerGrid } from './power';
+import { PLACES } from './placeTypes';
 
 /**
  * The mobile network: the operator's cell sites on the rooftops, and the player's line with it.
@@ -133,10 +134,7 @@ export function mastNear(T: Telco, px: number, py: number): number {
 }
 
 /** Opening hours of each kind of business (from, to; to past 24 for after midnight; 0-24 always open). */
-export const BIZ_HOURS: Record<string, [number, number]> = {
-  diner: [6, 23], bar: [16, 26], cafe: [6, 20], pharmacy: [8, 22], grocery: [7, 23], laundry: [7, 21], pawn: [10, 19], electronics: [10, 20],
-  liquor: [10, 23], hotel: [0, 24], bank: [9, 17], cinema: [12, 24], books: [10, 21], tailor: [9, 18], autoparts: [8, 19], parking: [0, 24],
-};
+export const BIZ_HOURS: Record<string, [number, number]> = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [k, p.hours]));
 export function isOpen(kind: string, hour: number): boolean {
   const [a, b] = BIZ_HOURS[kind] ?? [9, 17];
   return (hour >= a && hour < b) || hour + 24 < b;

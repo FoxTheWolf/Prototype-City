@@ -1,5 +1,6 @@
 import { hash3 } from '../core/rng';
 import { diagS, SIDEWALK, type City } from './city';
+import { PLACES } from './placeTypes';
 
 /**
  * The security cameras of the city, fixed from the seed. Two kinds for now:
@@ -56,7 +57,7 @@ export const CAMS: CamModel[] = [
 const TRAFFIC_CAMS = [1, 2, 3, 3, 5], SHOP_CAMS = [0, 0, 1, 2, 4, 4, 5];
 
 const TRAFFIC: Record<string, number> = { financial: 0.85, theater: 1, commercial: 0.7, historic: 0.5, residential: 0.25, industrial: 0.3 };
-const SHOP: Record<string, number> = { bank: 0.9, pawn: 0.5, liquor: 0.4, pharmacy: 0.3, electronics: 0.35, hotel: 0.3, grocery: 0.15, parking: 0.3, cinema: 0.15 };
+const SHOP: Record<string, number | undefined> = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [k, p.cctv]));
 
 export function buildCctv(seed: number, city: City): Cctv[] {
   const list: Cctv[] = [];

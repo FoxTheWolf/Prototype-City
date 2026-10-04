@@ -1,4 +1,10 @@
 {
+  "promo.pizza": ["Two slices and a soda for $4.99!", "Large pie for $9.99, pickup only!", "Free garlic knots with any large pie!"],
+  "promo.deli": ["Sandwich of the day for $5.99!", "Free coffee with any bagel before 9!"],
+  "promo.fastfood": ["Any combo for $4.99 this week!", "Free fries with any burger!", "Two cheeseburgers for $1.99!"],
+  "promo.phones": ["Double minutes on any prepaid card!", "Free case with any new phone!", "New SIM free with a $20 top-up!"],
+  "promo.cyber": ["First hour online half price!", "Night pass: midnight to 6 for $5!", "10 free prints with any hour!"],
+  "promo.motel": ["Weekly rates, ask at the desk!", "Free cable TV in every room!"],
   "promo.diner": [
     "2 eggs, toast & coffee for $2.99!",
     "Free slice of pie with any entree!",

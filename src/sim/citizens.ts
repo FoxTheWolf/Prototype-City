@@ -5,6 +5,7 @@ import { floorsOf, habitable, isOffice, tiersOf } from './interior';
 import { MAKERS } from './device';
 import { forecast, newWeather } from './weather';
 import { BIZ_HOURS, localNumber, type Telco } from './telco';
+import { PLACES, visitKinds } from './placeTypes';
 
 /**
  * The citizens: everyone who lives in the city, with a home, maybe a job, a family or roommates,
@@ -95,10 +96,7 @@ export const PEOPLE = 100000;
 const UNIT_M2 = 46;
 
 /** Staff a business needs, all shifts together. */
-const SHOP_STAFF: Record<string, number> = {
-  diner: 7, bar: 5, cafe: 4, pharmacy: 6, grocery: 8, laundry: 3, pawn: 2, electronics: 5, liquor: 3,
-  hotel: 20, bank: 12, cinema: 9, books: 3, tailor: 2, autoparts: 5, parking: 4,
-};
+const SHOP_STAFF: Record<string, number> = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [k, p.staff]));
 
 /** Shifts that cover opening hours [a, b): one if short, two if long, three round the clock. */
 function shiftsFor(a: number, b: number): [number, number][] {
@@ -352,10 +350,10 @@ function nearBiz(city: City, x: number, y: number, kinds: Set<string>, r: number
   return found.length ? found[Math.floor(pick * found.length)] : -1;
 }
 
-const OUT_KINDS = new Set(['bar', 'diner', 'cafe', 'cinema']);
-const ERRAND_KINDS = new Set(['grocery', 'pharmacy', 'laundry', 'liquor', 'cafe', 'diner', 'books', 'electronics', 'pawn', 'tailor', 'bank']);
+const OUT_KINDS: Set<string> = visitKinds('out');
+const ERRAND_KINDS: Set<string> = visitKinds('errand');
 const LUNCH_KINDS = new Set(['diner', 'cafe', 'grocery']);
-const STROLL_KINDS = new Set(['books', 'electronics', 'pawn', 'cafe', 'cinema', 'tailor', 'grocery']);
+const STROLL_KINDS: Set<string> = visitKinds('stroll');
 
 const WX = newWeather();
 /** How hard it rains or snows (0..1) at game time t, by the forecast the city's weather follows. */

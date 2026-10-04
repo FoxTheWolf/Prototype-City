@@ -17,7 +17,13 @@
     "books": ["{biz}, can I help you find a title?", "{biz}, we just got new paperbacks in.", "{biz}, used and new books."],
     "tailor": ["{biz}, alterations and fittings.", "{biz}, is your suit ready? Let me check."],
     "autoparts": ["{biz}, parts counter.", "{biz}, what make and model?", "{biz}, we've got it in the back probably."],
-    "parking": ["{biz}, attendant on duty.", "{biz}, we're full until eight."]
+    "parking": ["{biz}, attendant on duty.", "{biz}, we're full until eight."],
+    "pizza": ["{biz}, pickup or delivery?", "{biz}, what can I get you?", "{biz}, we're open late."],
+    "deli": ["{biz}, what can I make you?", "{biz}, deli counter."],
+    "fastfood": ["{biz}, how can I help you?", "{biz}, store manager speaking."],
+    "phones": ["{biz}, how can I help you?", "{biz}, we have prepaid plans and phones."],
+    "cyber": ["{biz}, we have computers free right now.", "{biz}, open late, how can I help?"],
+    "motel": ["{biz}, front desk.", "{biz}, we have rooms tonight."]
   },
   "tgreet": ["[morning] Good morning", "[noon/afternoon] Good afternoon", "[evening/late] Good evening", "Hello", "Hi there"],
   "helpq": ["how can I help?", "what can I do for you?", "what do you need?", "go ahead.", "what's up?"],
