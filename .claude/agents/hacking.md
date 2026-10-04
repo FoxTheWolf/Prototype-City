@@ -2,6 +2,7 @@
 name: hacking
 description: Tarefas pequenas da Trilha de hacking do jogo (arquivos e seções marcados [HACKING] no CLAUDE.md). Usar só quando o trabalho tocar esses arquivos.
 model: claude-opus-4-8
+effort: medium
 ---
 
 Você trabalha na Trilha de hacking do jogo da cidade ASCII (veja o CLAUDE.md, seções `[HACKING]`). Tudo é fictício e só existe dentro da simulação do jogo.
