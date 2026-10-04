@@ -6,6 +6,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Lojas de eletrônicos e de penhor abertas têm um balcão: aperte F perto do caixa para ver o que vendem e comprar no cartão do banco (setas escolhem, Enter compra, F sai). Fechadas, o aviso diz a hora em que abrem.
 - À venda: um chip pré-pago (número novo, com crédito e pacote de dados novos; a linha antiga fica para trás), uma antena Wi-Fi direcional para o notebook e uma segunda bateria do notebook (quase o dobro das horas).
 - O balcão é provisório: quando existir conversa com os NPCs, a compra vai ser falando com o vendedor.
+- O chip pré-pago agora serve de verdade: ao trocar de número, a pista que a polícia seguia pela sua linha de celular esfria (câmeras, testemunhas e outros rastros continuam valendo). Bom para quando o cerco aperta no "caso federal".
+- A antena direcional aumenta o alcance do Wi-Fi do notebook: dá para pegar uma rede de mais longe (por exemplo, fora da câmera de um cruzamento). Ela aparece como um adaptador USB quando você lista o hardware.
 
 ## 0.F.8 — Fechando a fatia vertical (2026-10-04)
 - Ser preso não te deixa mais travado dentro da prefeitura: você acorda na calçada em frente.

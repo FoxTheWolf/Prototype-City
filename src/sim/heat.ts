@@ -34,6 +34,9 @@ export interface Trace {
   weight: number;
   /** Who or what noticed: a ped id, a camera index, a cell-site id, an access-point index. */
   by: number;
+  /** The phone line the handset carried when this was logged (antenna traces only): a prepaid-SIM
+   *  swap drops the traces tied to the old line, so that source of heat goes cold (see dropLine). */
+  line?: string;
 }
 
 /** A pursuer closing in on the player while they are wanted (one patrol, for the slice). */
@@ -104,9 +107,10 @@ export function tierOf(h: Heat): number {
  */
 export function recordAct(h: Heat, w: World, x: number, y: number, time: number, wired: boolean): Trace[] {
   const left: Trace[] = [];
-  const push = (kind: TraceKind, weight: number, by: number) => {
+  const push = (kind: TraceKind, weight: number, by: number): Trace => {
     const t: Trace = { kind, x, y, time, weight, by };
     h.traces.push(t); left.push(t); h.points += weight;
+    return t;
   };
   // bystanders: people on the street near enough and awake to see, at most a few
   let seen = 0;
@@ -121,7 +125,8 @@ export function recordAct(h: Heat, w: World, x: number, y: number, time: number,
   // the cell site serving the player's handset here (it logs the handset's presence near the act)
   let site = -1, sd = ANTENNA_R;
   w.telco.sites.forEach((s, k) => { const d = Math.hypot(s.x - x, s.y - y); if (d < sd && siteUp(w.telco, w.power, k, w.tick)) { sd = d; site = k; } });
-  if (site >= 0) push('antenna', W_ANTENNA, w.telco.sites[site].id);
+  // the handset's line is logged with the mast trace: a prepaid-SIM swap makes it go cold (dropLine)
+  if (site >= 0) push('antenna', W_ANTENNA, w.telco.sites[site].id).line = w.telco.player.number;
   // the maintenance Wi-Fi the act went through (the strongest single trace), or any utility AP nearby
   if (wired) {
     let ap = -1, ad = WIFI_R;
@@ -130,6 +135,21 @@ export function recordAct(h: Heat, w: World, x: number, y: number, time: number,
   }
   h.lastAt = time;
   return left;
+}
+
+/**
+ * Drop the phone-line traces tied to a number (the player buying a prepaid SIM, F.9b). The cell-site
+ * logs under the old line stop leading to the player, so that one source of heat falls away -- the
+ * "federal" phone/mast trail the police were following goes cold. Everything else they have on the
+ * player -- the cameras, the bystanders, the maintenance Wi-Fi -- is not tied to the handset and stays.
+ */
+export function dropLine(h: Heat, number: string): void {
+  let dropped = 0;
+  h.traces = h.traces.filter((t) => {
+    if (t.kind === 'antenna' && t.line === number) { dropped += t.weight; return false; }
+    return true;
+  });
+  if (dropped > 0) h.points = Math.max(0, h.points - dropped);
 }
 
 /** The nearest spot clear of any building to wake at: the hall's own footprint is solid, so landing
@@ -244,7 +264,7 @@ function arrest(w: World) {
 export function saveHeat(h: Heat): unknown {
   return {
     points: h.points,
-    traces: h.traces.map((t) => ({ kind: t.kind, x: t.x, y: t.y, time: t.time, weight: t.weight, by: t.by })),
+    traces: h.traces.map((t) => ({ kind: t.kind, x: t.x, y: t.y, time: t.time, weight: t.weight, by: t.by, line: t.line })),
     lastAt: h.lastAt,
     cop: h.cop ? { ...h.cop } : null,
     bust: h.bust ? { ...h.bust } : null,
@@ -263,7 +283,7 @@ export function loadHeat(h: Heat, data: unknown): void {
   h.lastAt = d.lastAt ?? -1;
   h.announced = d.announced ?? 0;
   h.traces = Array.isArray(d.traces)
-    ? d.traces.map((t) => ({ kind: t.kind, x: t.x, y: t.y, time: t.time, weight: t.weight, by: t.by }))
+    ? d.traces.map((t) => ({ kind: t.kind, x: t.x, y: t.y, time: t.time, weight: t.weight, by: t.by, line: t.line }))
     : [];
   h.cop = d.cop ? { x: d.cop.x, y: d.cop.y, px: d.cop.px, py: d.cop.py, fx: d.cop.fx, fy: d.cop.fy } : null;
   h.bust = d.bust ? { at: d.bust.at, fine: d.bust.fine, lostPay: d.bust.lostPay, lm: d.bust.lm } : null;

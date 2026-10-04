@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import { post } from './bank';
 import { START_CREDIT, START_DATA_KB } from './telco';
+import { dropLine } from './heat'; // [HACKING] a SIM swap drops the old line's phone traces (ver CLAUDE.md > Arquivos de hacking)
 import { type World } from './world';
 
 /**
@@ -50,5 +51,6 @@ function newLine(w: World) {
   const T = w.telco, old = T.player.number;
   let n = ++w.gear.sims, num = old;
   for (let t = 0; num === old && t < 50; t++) num = `555-01${String(Math.floor(hash3(w.seed, 555, 2 + n * 7 + t) * 100)).padStart(2, '0')}`;
+  dropLine(w.heat, old); // [HACKING] the mast logs tied to the old line go cold with the number
   Object.assign(T.player, { number: num, credit: START_CREDIT, dataKB: START_DATA_KB, usedKB: 0 });
 }

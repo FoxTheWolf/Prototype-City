@@ -53,6 +53,8 @@ const PROGRAMS: [string, string, number, number][] = [
 const HACK_TOOLS: [string, number, number][] = [
   ['mmap', 220, 1400], ['bruter', 180, 1600], ['tdump', 260, 2200], ['tnet', 64, 520], ['mbus', 96, 700],
 ];
+/** The directional antenna's gain, dB (F.9b): reaches a maintenance AP (GRIDLINK) from further, e.g. out of the crossing camera. */
+const ANT_GAIN = 9;
 /** What the shell does itself, with no program on the disk. */
 const BUILTINS = new Set(['cd', 'help', 'history', 'job', 'exit', 'logout']);
 const PATH = ['/bin', '/usr/bin', '/sbin'];
@@ -180,6 +182,7 @@ export class Shell {
 
   update(now: number) {
     this.net.on = this.pc.bios.wlan;
+    this.net.gain = this.world.gear.antenna ? ANT_GAIN : 0; // the directional antenna's boost (F.9b)
     this.net.update(this.world, this.state !== 'off', now);
     let n = 0;
     while (n < this.queue.length && this.queue[n].at <= now) {
@@ -728,6 +731,8 @@ export class Shell {
         out.push(`${H.host}`, `    description: Notebook`, `    product: ${H.model}`, `  *-cpu`, `       product: ${H.cpu}`, `       size: ${H.cpuMHz}MHz`, `       cores: ${H.cores}`,
           `  *-memory`, `       size: ${H.ramMB}MiB`, `  *-disk`, `       product: ${H.disk}`, `       size: ${Math.round(H.diskMB / 1000)}GB`, `       capabilities: 5400rpm, ${H.diskMBs}MB/s`,
           `  *-network:0`, `       logical name: eth0`, `       product: ${H.eth}`, `       serial: ${this.mac(0)}`, `  *-network:1`, `       logical name: wlan0`, `       product: ${H.wlan}`, `       serial: ${this.mac(1)}`);
+        // the directional antenna shows up as a USB adapter when it is plugged in (F.9b)
+        if (w.gear.antenna) out.push(`  *-usb`, `       description: Wireless interface`, `       product: RT73 802.11g USB Directional Adapter`, `       vendor: Raltech`, `       logical name: wlan1`, `       serial: ${this.mac(2)}`, `       capabilities: usb-2.00 ieee80211 (+9dBi yagi)`);
         return 0.4 * (1800 / H.cpuMHz);
       }
       case 'ifconfig': {

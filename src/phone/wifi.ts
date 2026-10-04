@@ -25,6 +25,9 @@ export class Wifi {
   ap = -1;
   dbm = -100;
   bars = 0;
+  /** Extra antenna gain, dB (a directional antenna on the notebook, F.9b): 0 for the bare card and
+   *  for the phone; the owner sets it. It both boosts the heard signal and reaches further. */
+  gain = 0;
   ip = '';
   /** What the last scan found, strongest first: [access point, dBm]. */
   list: [number, number][] = [];
@@ -84,9 +87,9 @@ export class Wifi {
     const p = world.player, eye = p.z + 1.4, m = mapRaster(world.city), floor = Math.floor((p.z + 0.5) / FLOOR_H), A = world.wifi[i];
     {
       const dx = A.x - p.x, dy = A.y - p.y, d2 = Math.hypot(dx, dy);
-      if (d2 > 150) return -200;
+      if (d2 > 150 + this.gain * 15) return -200; // a directional antenna carries further
       // 15 dBm out of the router, the free-space loss at 2.4 GHz (indoor exponent 3)
-      let dbm = 15 - (40 + 30 * Math.log10(Math.max(1, Math.hypot(d2, A.z - eye))));
+      let dbm = this.gain + 15 - (40 + 30 * Math.log10(Math.max(1, Math.hypot(d2, A.z - eye))));
       if (p.inside === A.building) dbm -= 12 * Math.abs(Math.floor(A.z / FLOOR_H) - floor);
       else {
         dbm -= p.inside >= 0 ? 20 : 10; // its outer wall, and ours
