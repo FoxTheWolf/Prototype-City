@@ -331,7 +331,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 >
 > **Ritmo:** retorno do usuário no fim de cada grupo de subetapas (veja "Como trabalhar"). Tarefas sem código vão para as outras IAs (briefing em `docs/tarefas/`).
 >
-> **Esperando o teste do usuário** (feitos antes da renumeração): F.7/F.7b/F.7c (relógio), F.8b (prisão fora da prefeitura, subestações no Maps), F.9 (balcão: chip, antena, bateria), F.1c (Maps com busca e rota), F.2 (calor e polícia), B.3/B.4 (sol e nuvens), L.10, L.11/L.11b (retoques de luz).
+> **Testes:** tudo o que foi feito antes da renumeração foi testado pelo usuário (2026-10-04).
 
 ### Etapa 13: Lugares e lojas (planejada com o usuário em 2026-10-04)
 > **Decidido:** comprar **pegando na prateleira** (o item físico, levado ao caixa e pago ao funcionário); **~15 tipos que se usam** na primeira passada (o resto do catálogo depois); a **mochila nasce junto da compra** e a fome logo depois. Base: o catálogo `docs/tarefas/retorno/01-tipos-de-lugar.json`.
@@ -358,7 +358,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 - **E-mail** (canal do contratante para contratos longos e do mistério de fundo; veja "Canais do contratante").
 - **Mais destinos do dinheiro:** lojas online, serviços, assinaturas, hardware pelo correio.
 - **Tocador de música no celular:** músicas inclusas e lidas de uma pasta do computador do jogador (no Electron, uma pasta fixa ao lado do jogo; no navegador, escolhida); tocar, pausar, pular, volume; continua tocando com o celular abaixado. Se for para a grade principal, juntar o discador e os contatos num app só (os contatos numa aba) para abrir a vaga.
-- **Maps:** o modo escuro; buscar ruas e esquinas ("5th Ave & 12th St").
+- **Maps:** o modo escuro (pedido de novo em 2026-10-04; pode vir antes, junto da lista de retoques); buscar ruas e esquinas ("5th Ave & 12th St").
 
 ### Etapa 16: Os NPCs usando a cidade e reagindo ao jogador (antes "13b" e parte da "13c")
 - Usam a cidade: compram nas lojas, sentam nos bancos e nas mesas, esperam no ponto, usam os orelhões, entram nos cafés para fugir da chuva, reagem a apagões, batidas e sirenes (param, olham, fotografam), abrem guarda-chuvas, pegam táxi.
@@ -413,7 +413,8 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 
 ### Lista fixa: retoques de luz (Opus)
 - **Cores:** o usuário julga as paletas com a **F4**; falta a saturação da noite (perguntar: forte demais ou fraca?). **Saturação demais** (faixas roxas no vidro, saguão verde-água): pedir capturas com a posição (`POS`).
-- **A tela do celular clara demais:** o bloom e a adaptação do olho com a tela muito branca (`render/eye.ts`, `EYE.k`/`pageDim`, e o bloom em `gpu/shader.ts`).
+- **A tela do celular clara demais** (reforçado pelo usuário em 2026-10-04): as telas muito brancas do celular com um fundo um pouco mais escuro, **dependente do tema** (um branco gelo, um cinza claro), o que também tira o bloom excessivo; depois, se ainda precisar, o bloom e a adaptação do olho (`render/eye.ts`, `EYE.k`/`pageDim`, e o bloom em `gpu/shader.ts`).
+- **O bloom do relógio parece falso** (retorno do usuário em 2026-10-04): muito bloom na borda e quase nenhum dentro do visor; os dígitos pretos não são cobertos pelo brilho. O halo da luz azul deve passar também por cima dos dígitos e do papel do visor (`watch.ts`, `WATCH_LCD`, `HALO_TINT` em `gpu/compositor.ts`).
 - **A lâmpada das marquises verdes** sem a emissão nova: dar `gEm` como os letreiros.
 - **Chão na chuva com ladrilhos clareando e escurecendo:** código antigo de chão molhado; achar e tirar.
 - **Blackout de noite claro demais:** a luz que sobra com `cityLit` = 0 (céu, `cityAmb`, névoa, lua); depois `ADAPT_DARK`.
