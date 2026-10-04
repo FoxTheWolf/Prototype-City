@@ -917,7 +917,8 @@ export function cellAt(P: Plan, x: number, y: number): number {
  * outer walls (crossed only through the street door, on the ground floor), and on the street the
  * buildings without an inside.
  */
-export function blocked(city: City, f: number, ax: number, ay: number, bx: number, by: number): boolean {
+/** `shut(k)`: lot k's shop is closed now, so its own street doors stay locked from outside (13.3); going out is always allowed. */
+export function blocked(city: City, f: number, ax: number, ay: number, bx: number, by: number, shut?: (k: number) => boolean): boolean {
   const ka = baseAt(city, ax, ay), kb = baseAt(city, bx, by);
   if (kb < 0 && isSolid(city, bx, by)) return true;
   if (ka !== kb) {
@@ -933,7 +934,9 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
       return true;
     }
     // through one of the street doors: the main one or a shop's
+    const locked = ka < 0 && !!shut?.(k), main = doorOf(city, k);
     for (const D of exitsOf(city, k)) {
+      if (locked && D !== main) continue;
       const [px, py, nx, ny] = facePoint(B, D.face, D.a0);
       const sa = (ax - px) * nx + (ay - py) * ny, sb = (bx - px) * nx + (by - py) * ny;
       if (sa > 0 === sb > 0) continue; // not crossing this face

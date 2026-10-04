@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.3 — Quem trabalha nas lojas (2026-10-04)
+- Os balconistas são moradores da cidade com turno e folga: o caixa só atende quando alguém do turno está lá ("NOBODY AT THE TILL" quando não está).
+- Cada turno de loja tem pelo menos duas pessoas, que tiram as folgas em dias diferentes, então a loja quase nunca fica sem ninguém.
+- Fora do horário, a porta da loja fica trancada por fora; quem está dentro sempre consegue sair.
+
 ## 0.13.2 — Lojas por dentro (2026-10-04)
 - Cada tipo de lugar tem o interior que combina com ele: diners com balcão e banquetas vermelhas, bares com a prateleira de garrafas, cafés e pizzarias com vitrine e forno, cybercafés com fileiras de computadores, lavanderias com lavadoras e secadoras, mercearias com geladeiras e corredores, lojas de eletrônicos e de penhor com vitrines.
 - As prateleiras mostram o que a loja vende, cada produto com sua cor. Pegar e comprar vem na próxima parte.

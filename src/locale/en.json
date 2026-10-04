@@ -3,7 +3,7 @@
   "counter": {
     "hello": "What can I get you?", "ok": "Paid by card. Thank you!", "funds": "Card declined: not enough in the account.", "owned": "You already have one of those.",
     "balance": "ACCOUNT", "have": "OWNED", "keys": "[UP/DOWN] PICK  [ENTER] BUY  [F] LEAVE",
-    "use": "[F] COUNTER", "closed": "CLOSED - OPENS AT {h}:00",
+    "use": "[F] COUNTER", "closed": "CLOSED - OPENS AT {h}:00", "nobody": "NOBODY AT THE TILL",
     "items": {
       "sim": { "name": "Prepaid SIM card", "what": "A new number. The old line stays behind." },
       "antenna": { "name": "Directional Wi-Fi antenna", "what": "USB, for the notebook. Reaches further." },

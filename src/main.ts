@@ -425,7 +425,7 @@ addEventListener('keydown', (e) => {
     const k = payphone.near();
     if (k >= 0 && !phone.out) { payphone.open(k); input.unlock(); return; }
     const c = counter.near();
-    if (c?.open && !phone.out) { counter.open(c.k); return; }
+    if (c?.staffed && !phone.out) { counter.open(c.k); return; }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }

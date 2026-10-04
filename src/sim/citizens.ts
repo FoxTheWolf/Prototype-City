@@ -186,14 +186,14 @@ export function* peopleSteps(seed: number, city: City, T: Telco, target = PEOPLE
     const a = age[i], r = rnd();
     role[i] = a < 18 ? Role.Child : a >= 66 ? (r < 0.15 ? Role.Worker : Role.Retired) : a < 25 && r < 0.35 ? Role.Student : r < 0.86 ? Role.Worker : Role.Idle;
   }
-  // jobs: first one person per shift of every shop, so none stands empty; then everyone else by the room left
+  // jobs: first two people per shift of every shop, so none stands empty on a day off; then everyone else by the room left
   const job = new Int32Array(n).fill(-1), shift = new Uint8Array(n);
   const workers: number[] = [];
   for (let i = 0; i < n; i++) if (role[i] === Role.Worker) workers.push(i);
   for (let k = workers.length - 1; k > 0; k--) { const j = ri(k + 1); [workers[k], workers[j]] = [workers[j], workers[k]]; }
   let w = 0;
   const hire = (p: number, i: number, s: number) => { job[i] = p; shift[i] = s; places[p].staff.push(i); };
-  places.forEach((P, p) => { if (P.kind === 'shop') P.shifts.forEach((_, s) => { if (w < workers.length) hire(p, workers[w++], s); }); });
+  for (let r = 0; r < 2; r++) places.forEach((P, p) => { if (P.kind === 'shop') P.shifts.forEach((_, s) => { if (w < workers.length) hire(p, workers[w++], s); }); });
   // the rest: weighted by the jobs still open (a running total, then a binary search per worker)
   const cap = places.map((P) => Math.max(0, (P as Workplace & { cap: number }).cap - P.staff.length));
   const cum = new Float64Array(places.length);
@@ -398,8 +398,9 @@ export function dayPlan(P: Population, city: City, i: number, day: number): Seg[
   const j = P.job[i], wd = (((day + 2) % 7) + 7) % 7;
   if (j >= 0) {
     const W = P.workplaces[j], [s, len] = W.shifts[P.shift[i]];
-    // two days off a week: the weekend at a place closed then, two days of their own at the others
-    const off = W.weekends ? (wd + i) % 7 < 2 : wd === 0 || wd === 6;
+    // two days off a week: the weekend at a place closed then, two days of their own at the others;
+    // a shop's people on the same shift take theirs in turn, so the till is never left alone
+    const off = !W.weekends ? wd === 0 || wd === 6 : W.kind === 'shop' ? (wd + 7 - offStart(P, W, i)) % 7 < 2 : (wd + i) % 7 < 2;
     // in a little early, out a little late; a lunch out from the offices and plants on a day shift
     const early = h(10) * 0.35, late = h(11) * 0.3;
     if (!off && trip(home, s - early, len + early + late, Doing.Work, W.building, W.biz)) {
@@ -426,6 +427,25 @@ export function dayPlan(P: Population, city: City, i: number, day: number): Seg[
   }
   out.sort((x, y) => x.a - y.a);
   plans.set(key, out);
+  return out;
+}
+
+/** Where a shop worker's two days off start (0..6): spread evenly over the people of the same shift. */
+function offStart(P: Population, W: Workplace, i: number): number {
+  let r = 0, n = 0;
+  for (const j of W.staff) if (P.shift[j] === P.shift[i]) { if (j === i) r = n; n++; }
+  return Math.floor((r * 7) / n);
+}
+
+/** The workplace of each shop, by business. */
+const shopOf = new WeakMap<Population, Map<number, Workplace>>();
+
+/** Who is at work in business k at game time t (the clerks behind the till), by citizen id. */
+export function staffOn(P: Population, city: City, k: number, t: number): number[] {
+  let M = shopOf.get(P);
+  if (!M) { M = new Map(); for (const W of P.workplaces) if (W.kind === 'shop') M.set(W.biz, W); shopOf.set(P, M); }
+  const out: number[] = [];
+  for (const i of M.get(k)?.staff ?? []) { const R = whereIs(P, city, i, t); if (R.doing === Doing.Work && R.biz === k) out.push(i); }
   return out;
 }
 

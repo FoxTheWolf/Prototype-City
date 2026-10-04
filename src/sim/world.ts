@@ -8,7 +8,7 @@ import { openAccount, type BankAccount } from './bank';
 import { newGear, type Gear } from './gear';
 import { buildJobs, stepJobs, type JobBoard } from './jobs';
 import { buildPower, switchSub, type PowerGrid } from './power';
-import { buildTelco, type Telco } from './telco';
+import { buildTelco, isOpen, type Telco } from './telco';
 import { buildWifi, type AccessPoint } from './wifi';
 import { noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { newFeed, stepSocial, type Feed } from './social';
@@ -256,7 +256,9 @@ export function stepWorld(w: World, input: PlayerInput) {
   // probes ahead of the player on both shoulders; walls, doorways and the street door are in interior.ts
   // and the substations' fenced yards (the fence is 0.6 m in from the lot's edge)
   const yard = (x: number, y: number) => p.z < 2.6 && w.power.subs.some((S) => S.yard && x > S.yard.x0 + 0.55 && x < S.yard.x1 - 0.55 && y > S.yard.y0 + 0.55 && y < S.yard.y1 - 0.55);
-  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y) || yard(x, y);
+  // a shop's own street doors are locked outside its hours
+  const shut = (k: number) => { const b = w.city.buildings[k].biz; return b >= 0 && !isOpen(w.city.businesses[b].kind, (w.time / 3600) % 24); };
+  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y, shut) || yard(x, y);
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;

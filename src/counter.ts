@@ -1,6 +1,7 @@
 import { type Sfx } from './phone/call';
 import { type CharGrid } from './render/grid';
 import { buy, itemsAt, owned, type Item } from './sim/gear';
+import { staffOn } from './sim/citizens';
 import { planOf } from './sim/interior';
 import { BIZ_HOURS, isOpen } from './sim/telco';
 import { type World } from './sim/world';
@@ -28,15 +29,16 @@ export class Counter {
   get active() { return this.k >= 0; }
   items(): Item[] { return this.k < 0 ? [] : itemsAt(this.world.city.businesses[this.k].kind); }
 
-  /** The business whose till the player stands at, if it sells gear, and whether it is open; or null. */
-  near(): { k: number; open: boolean } | null {
+  /** The business whose till the player stands at, if it sells gear, whether it is open and whether a clerk is there (13.3); or null. */
+  near(): { k: number; open: boolean; staffed: boolean } | null {
     const w = this.world, p = w.player;
     if (p.inside < 0 || p.floor !== 0) return null;
     const B = w.city.buildings[p.inside];
     if (!B.shop || B.biz < 0 || !itemsAt(w.city.businesses[B.biz].kind).length) return null;
     const P = planOf(w.city, p.inside, 0);
     if (!P || !P.furn.some((f) => f.kind === 'till' && Math.hypot(f.x - p.x, f.y - p.y) < REACH + Math.max(f.hx, f.hy))) return null;
-    return { k: B.biz, open: isOpen(w.city.businesses[B.biz].kind, (w.time / 3600) % 24) };
+    const open = isOpen(w.city.businesses[B.biz].kind, (w.time / 3600) % 24);
+    return { k: B.biz, open, staffed: open && staffOn(w.pop, w.city, B.biz, w.time).length > 0 };
   }
 
   open(k: number) { this.k = k; this.pick = 0; this.note = T.hello; this.noteAt = -9; this.sfx.push(['beep']); }
@@ -58,9 +60,9 @@ export class Counter {
   }
 }
 
-/** The prompt at a till: how to use the counter, or when the shop opens. */
-export function counterPrompt(world: World, n: { k: number; open: boolean }): string {
-  return n.open ? T.use : T.closed.replace('{h}', String(BIZ_HOURS[world.city.businesses[n.k].kind]?.[0] ?? 9));
+/** The prompt at a till: how to use the counter, that nobody is at it, or when the shop opens. */
+export function counterPrompt(world: World, n: { k: number; open: boolean; staffed: boolean }): string {
+  return n.staffed ? T.use : n.open ? T.nobody : T.closed.replace('{h}', String(BIZ_HOURS[world.city.businesses[n.k].kind]?.[0] ?? 9));
 }
 
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
