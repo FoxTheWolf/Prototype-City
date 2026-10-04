@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-04 (5): depois da 13.10b
+
+- **Uma janela de fora ainda não mostra a janela do outro lado:** vista da rua, a parede de fora do lado oposto tem vidro escuro, porque o shader não chama a cidade de dentro dele mesmo. Num prédio estreito com janelas dos dois lados (comum nos de tijolo), seria bonito ver a rua de trás através da sala. Dá para fazer com um segundo raio barato, como o do reflexo (R.24). Proponho deixar para a etapa 20, se fizer falta.
+- **A sala do jogador acesa vista de fora:** se você acende uma sala (entrando nela) e sai, ela continua acesa para quem está na rua só enquanto você está naquele andar. Uma luz que fica acesa depois que você sai seria um rastro bom para a polícia notar (combina com o calor da F.2).
+
+---
+
 ## 2026-10-04 (4): o plano da 13.10 e o retorno dos testes
 
 - **Um só espaço é a arquitetura certa.** Hoje o shader tem dois desenhos do interior (o do andar do jogador e o visto pela janela), e cada recurso novo era feito num só deles: daí a porta que parece janela e as portas internas que somem de fora. Com uma função só, cada coisa nova aparece dos dois lados de graça. O risco é o desempenho: hoje a vista pela janela é barata de propósito. Vou medir antes e depois, e de longe fica um nível de detalhe barato.
