@@ -3,6 +3,7 @@ import { Input } from './input';
 import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
+import { doorAhead, useDoor } from './sim/doors';
 import { Counter, counterPrompt, drawCounter } from './counter';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
@@ -116,6 +117,8 @@ const camera = new Camera();
 const phone = new Phone(world);
 const payphone = new Payphone(world);
 const counter = new Counter(world);
+/** What trying a door said (LOCKED), and when. */
+let doorNote = '', doorNoteAt = -9;
 /** The notebook's battery with what was bought (F.9): the second pack adds its capacity; bought just now, it comes charged. */
 function gearBattery(fresh = false) {
   const pc = laptop.pc, base = pc.hw.battWh * pc.hw.battWear, wh = base + (world.gear.battery ? SPARE_WH : 0);
@@ -426,6 +429,8 @@ addEventListener('keydown', (e) => {
     if (k >= 0 && !phone.out) { payphone.open(k); input.unlock(); return; }
     const c = counter.near();
     if (c?.staffed && !phone.out) { counter.open(c.k); return; }
+    // a door in front: open it, close it, or find it locked (13.2c)
+    if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
@@ -827,7 +832,7 @@ function frame(now: number) {
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);
-  for (const [k] of world.doorSfx) sound?.swing(k > 0);
+  for (const [k] of world.doorSfx) { if (k === 2) sound?.rattle(); else sound?.swing(k > 0); }
   world.doorSfx.length = 0;
   payphone.update(now / 1000);
   payphone.hover = payphone.active ? payphone.keyAt(ui.cols, ui.rows, phone.cx, phone.cy) : null;
@@ -839,6 +844,11 @@ function frame(now: number) {
   // a shop's till in front: how to use the counter, or when the shop opens
   const till = !phone.out && !counter.active ? counter.near() : null;
   if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
+  // a door in front: F to open or close it, or that it is locked (for a moment after trying)
+  if (!till && !phone.out && !counter.active && !payphone.active) {
+    const d = doorAhead(world, camera.yaw), late = now / 1000 - doorNoteAt < 1.5 && doorNote;
+    if (d || late) { const s = ` ${late ? doorNote : world.doorWant.has(d!.key) ? en.doors.close : en.doors.open} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
+  }
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }

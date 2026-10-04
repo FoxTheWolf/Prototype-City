@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
+import { streetLeaves } from '../sim/doors';
 import { baseAt, doorOf, escapesOf, exitsOf, leavesOf, planOf } from '../sim/interior';
 import { insideLight, interiorColumn, prepareInside, type Inside } from './interior';
 import { CharGrid } from './grid';
@@ -164,8 +165,11 @@ function insideOf(world: World, v: View, colW: number, day: number, rain: number
   const base = city.buildings[kIn];
   const I: Inside = { city, k: kIn, plan, base, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day, sec: frameSec, rain, leaves: [], leafA: [] };
   // the doors between rooms, swung as far as they are open (eased: fast at first, settling at the end)
-  I.leaves = leavesOf(plan);
-  I.leafA = I.leaves.map((_, n) => { const a = world.doors.get(doorKey(kIn, v.floor, n)) ?? 0; return (1 - (1 - a) ** 2) * Math.PI * 0.5; });
+  // and on the ground floor the street doors' pairs of glass leaves (each pair one door, keyed from 100)
+  const own = leavesOf(plan), street = v.floor === 0 && !v.lift ? streetLeaves(world, kIn) : [];
+  I.leaves = [...own, ...street];
+  const swing = (a: number) => (1 - (1 - a) ** 2) * Math.PI * 0.5;
+  I.leafA = [...own.map((_, n) => swing(world.doors.get(doorKey(kIn, v.floor, n)) ?? 0)), ...street.map((_, n) => swing(world.doors.get(doorKey(kIn, 0, 100 + (n >> 1))) ?? 0))];
   prepareInside(I, v.x, v.y);
   return I;
 }

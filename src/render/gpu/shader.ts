@@ -861,13 +861,14 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
   tExit = max(tExit, 0.02);
   // the nearest door leaf the ray meets (hinge, along, out, width, swing), drawn once the walk gets that far
   let nL = fx[IB + 8u]; let lb = IB + IN_LAMPS + nRooms * 3u;
-  var lt = 1e9; var lu = 0.0; var lk = 1.0;
+  var lt = 1e9; var lu = 0.0; var lk = 1.0; var lg = false;
   for (var n = 0u; n < nL; n++) {
-    let w = lb + n * 8u; let ang = fxf(w + 7u); let c = cos(ang); let s = sin(ang); let dw = fxf(w + 6u);
+    // a negative width: a street door's glass leaf (13.2c)
+    let w = lb + n * 8u; let ang = fxf(w + 7u); let c = cos(ang); let s = sin(ang); let dwr = fxf(w + 6u); let dw = abs(dwr);
     let ex = (fxf(w + 2u) * c + fxf(w + 4u) * s) * dw; let ey = (fxf(w + 3u) * c + fxf(w + 5u) * s) * dw; let den = rdx * ey - rdy * ex;
     if (abs(den) < 1e-9) { continue; }
     let qx = fxf(w) - u.px; let qy = fxf(w + 1u) - u.py; let t = (qx * ey - qy * ex) / den; let uu = (qx * rdy - qy * rdx) / den;
-    if (t > 0.05 && t < lt && uu >= 0.0 && uu <= 1.0) { lt = t; lu = uu; lk = 0.7 + 0.3 * abs(-ey * rdx + ex * rdy) / (dw * rl); }
+    if (t > 0.05 && t < lt && uu >= 0.0 && uu <= 1.0) { lt = t; lu = uu; lk = 0.7 + 0.3 * abs(-ey * rdx + ex * rdy) / (dw * rl); lg = dwr < 0.0; }
   }
   // walk the plan's cells; a change of room is a wall, unless both cells are a doorway
   let gx = i32(fx[o]); let gy = i32(fx[o + 1u]);
@@ -881,7 +882,17 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
     let xs = tX < tY; let tn = select(tY, tX, xs);
     if (lt < min(tn, tExit)) {
       let z = u.eye - m * lt;
-      if (z > z0 && z <= z0 + DOOR_H - 0.02) {
+      if (lg && z > z0 && z <= z0 + DOOR_H - 0.02) {
+        // a street door's leaf: a metal frame and a push bar round the glass, which the ray goes on through
+        let zz = z - z0;
+        let frame = lu > 0.93 || lu < 0.05 || zz > DOOR_H - 0.12 || zz < 0.1;
+        let bar = zz > 0.95 && zz < 1.08 && lu > 0.12 && lu < 0.85;
+        if (frame || bar) {
+          let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+          let Lt = litIn(IB, roomRec(o, rr), rr, hx, hy, lt);
+          res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt * lk, lt); res.state = 1u; return res;
+        }
+      } else if (z > z0 && z <= z0 + DOOR_H - 0.02) {
         // a panel door: its edges, two recessed panels, and the knob near the far edge
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
         let Lt = litIn(IB, roomRec(o, rr), rr, hx, hy, lt); let zz = z - z0;
@@ -989,9 +1000,9 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
           res.cl = roomCell(ep.ch, ep.c, t); res.state = 1u; return res;
         }
         if (zz < DOOR_H) {
-          let frame = du < 0.05 || du > 0.95 || abs(du - 0.5) < 0.025 || zz > DOOR_H - 0.1 || zz < 0.08;
-          let bar = zz > 0.95 && zz < 1.08 && abs(du - 0.5) > 0.08 && abs(du - 0.5) < 0.42;
-          if (frame || bar) { res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt, t); res.state = 1u; return res; }
+          // the jambs and the head: the leaves (drawn above, as they swing) carry the stiles and the push bars
+          let frame = du < 0.04 || du > 0.96 || zz > DOOR_H - 0.06;
+          if (frame) { res.cl = roomCell(BAR, vec3f(95.0, 98.0, 105.0) * Lt, t); res.state = 1u; return res; }
           res.state = 2u; return res;
         }
         // above the door and its sign: wall, never a window
@@ -1125,13 +1136,14 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let corner = along - f0 < 0.35 || f1 - along < 0.35;
   // the street doors on this face (the main one, and the shops' once the ground plan is made), and a
   // fire escape two bays wide over this spot (only drawn where there is one)
-  var dA0 = 0.0; var dA1 = -1.0; var esc = false;
+  var dA0 = 0.0; var dA1 = -1.0; var esc = false; var dOp = 0.0;
   let fo = fx[FX_TAB + u32(bk)];
   if (fo > 0u) {
     for (var e = 0u; e < fx[fo]; e++) {
       let w = fo + 1u + e * 3u; let kf = fx[w]; let a0 = bitcast<f32>(fx[w + 1u]); let a1 = bitcast<f32>(fx[w + 2u]);
-      if (i32(kf >> 4u) != face || side == 2) { continue; }
-      if ((kf & 15u) == 0u) { if (along0 > a0 && along0 < a1) { dA0 = a0; dA1 = a1; } }
+      if (i32((kf >> 4u) & 15u) != face || side == 2) { continue; }
+      // a street door's word has how open it is in bits 8..15 (13.2c)
+      if ((kf & 15u) == 0u) { if (along0 > a0 && along0 < a1) { dA0 = a0; dA1 = a1; dOp = f32((kf >> 8u) & 255u) / 255.0; } }
       else if (along >= a0 && along < a1 && !corner) { esc = true; }
     }
   }
@@ -1300,7 +1312,16 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
     // the street door: a frame, two glass leaves and a transom, lit from the lobby
     let e = min(along - dA0, dA1 - along);
+    // open, each leaf has turned in from its jamb: from outside it shows as a strip that narrows, and between
+    // them the lobby, lit, without glass
+    let hwd = (dA1 - dA0) * 0.5; let sw = (1.0 - (1.0 - dOp) * (1.0 - dOp)) * 1.5707963; let edgeIn = hwd * cos(sw);
     if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
+    else if (dOp > 0.0 && e > edgeIn + 0.08) {
+      // through the doorway: the room behind, as through a shop window (or the lobby's glow, too far to make out)
+      if (pk.ok) { let P = peekCell(po, lot, bk, pk, fl, rdx, rdy, -m, t, winPw, 0.0); ch = P.ch; c = P.c; }
+      else { ch = DOT; c = vec3f(255.0, 220.0, 160.0) * (0.18 * elec); em = true; glowK = 0.2; }
+    }
+    else if (dOp > 0.0 && e > edgeIn) { ch = COL; c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.2; }
     else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.3; }
   } else if (adN > 0 && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
     // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint

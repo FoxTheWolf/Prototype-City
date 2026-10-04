@@ -936,7 +936,7 @@ export function inFurniture(P: Plan, x: number, y: number): boolean {
  * shut and swinging open toward (nx, ny) (into the private room, off the corridor); w wide; its
  * middle at (cx, cy). Wide openings (over 1.7 m) and the lift's and stairs' openings have none.
  */
-export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number }
+export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number; /** The rooms on either side (indexes; -1 for a street door). */ ra: number; rb: number }
 const leafCache = new WeakMap<Plan, Leaf[]>();
 const COMMON = new Set<RoomKind>(['hall', 'lobby', 'foyer']);
 export function leavesOf(P: Plan): Leaf[] {
@@ -958,7 +958,7 @@ export function leavesOf(P: Plan): Leaf[] {
             // it swings into the room off the common parts; between two private rooms, into the later one
             const intoB = COMMON.has(A.kind) !== COMMON.has(B.kind) ? COMMON.has(A.kind) : rb > ra, n = intoB ? 1 : -1;
             const wc = ((d ? P.gy : P.gx) + a + 1) * CELL, s0 = ((d ? P.gx : P.gy) + run) * CELL;
-            L.push(d ? { hx: s0, hy: wc, ax: 1, ay: 0, nx: 0, ny: n, w, cx: s0 + w / 2, cy: wc } : { hx: wc, hy: s0, ax: 0, ay: 1, nx: n, ny: 0, w, cx: wc, cy: s0 + w / 2 });
+            L.push(d ? { hx: s0, hy: wc, ax: 1, ay: 0, nx: 0, ny: n, w, cx: s0 + w / 2, cy: wc, ra: ra - 1, rb: rb - 1 } : { hx: wc, hy: s0, ax: 0, ay: 1, nx: n, ny: 0, w, cx: wc, cy: s0 + w / 2, ra: ra - 1, rb: rb - 1 });
           }
           run = -1;
         }
@@ -981,8 +981,8 @@ export function cellAt(P: Plan, x: number, y: number): number {
  * outer walls (crossed only through the street door, on the ground floor), and on the street the
  * buildings without an inside.
  */
-/** `shut(k)`: lot k's shop is closed now, so its own street doors stay locked from outside (13.3); going out is always allowed. */
-export function blocked(city: City, f: number, ax: number, ay: number, bx: number, by: number, shut?: (k: number) => boolean): boolean {
+/** `open(k, n)`: whether street door n of lot k (exitsOf's order) stands open; a shut one is a wall (13.2c). */
+export function blocked(city: City, f: number, ax: number, ay: number, bx: number, by: number, open?: (k: number, n: number) => boolean): boolean {
   const ka = baseAt(city, ax, ay), kb = baseAt(city, bx, by);
   if (kb < 0 && isSolid(city, bx, by)) return true;
   if (ka !== kb) {
@@ -998,9 +998,10 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
       return true;
     }
     // through one of the street doors: the main one or a shop's
-    const locked = ka < 0 && !!shut?.(k), main = doorOf(city, k);
-    for (const D of exitsOf(city, k)) {
-      if (locked && D !== main) continue;
+    const E = exitsOf(city, k);
+    for (let n = 0; n < E.length; n++) {
+      const D = E[n];
+      if (open && !open(k, n)) continue;
       const [px, py, nx, ny] = facePoint(B, D.face, D.a0);
       const sa = (ax - px) * nx + (ay - py) * ny, sb = (bx - px) * nx + (by - py) * ny;
       if (sa > 0 === sb > 0) continue; // not crossing this face

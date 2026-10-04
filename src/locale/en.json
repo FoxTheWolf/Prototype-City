@@ -1,5 +1,6 @@
 {
   "lang": "en",
+  "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED" },
   "counter": {
     "hello": "What can I get you?", "ok": "Paid by card. Thank you!", "funds": "Card declined: not enough in the account.", "owned": "You already have one of those.",
     "balance": "ACCOUNT", "have": "OWNED", "keys": "[UP/DOWN] PICK  [ENTER] BUY  [F] LEAVE",

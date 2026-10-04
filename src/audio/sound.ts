@@ -677,6 +677,17 @@ export class Sound {
     }
   }
 
+  /** A locked door tried: the handle turns and stops, the latch knocks twice against its keeper. */
+  rattle() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (const [at, f, v] of [[0, 1800, 0.1], [0.11, 900, 0.14], [0.2, 900, 0.1]]) {
+      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, 4)).connect(g);
+      g.gain.setValueAtTime(v, t + at); g.gain.setTargetAtTime(0, t + at + 0.005, 0.02);
+      s.start(t + at, Math.random()); s.stop(t + at + 0.1);
+    }
+  }
+
   /** The car moving (0..1 of its speed): a low motor hum and a faint whine. */
   liftMotor(k: number) {
     if (!this.motor) {

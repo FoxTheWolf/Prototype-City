@@ -294,6 +294,7 @@ export class GpuWorld {
     { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * 6] = c[n * 3]; L[n * 6 + 1] = c[n * 3 + 1]; L[n * 6 + 2] = c[n * 3 + 2]; } }
     q.writeBuffer(this.lampCol, 0, this.lampBuf);
     this.facades(v.x, v.y);
+    this.streetDoors(world);
     const D = F.dyn.pack();
     [D.lights, D.lv, D.off, D.idx].forEach((a, k) => { const b = this.fit(k, a.byteLength); q.writeBuffer(b, 0, a); });
     if (!this.bind || this.bindGen !== this.gen) {
@@ -568,7 +569,8 @@ export class GpuWorld {
         W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; W[ib + 15] = nr;
         F.set(insideLamps().subarray(0, nr * 3), ib + IN_LAMPS);
         const lb = ib + IN_LAMPS + nr * 3;
-        I.leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w, I.leafA[k]], lb + k * 8));
+        // a street door's glass leaves have their width negative (the shader draws them as glass in a frame)
+        I.leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.ra < 0 && L.rb < 0 ? -L.w : L.w, I.leafA[k]], lb + k * 8));
         ex.forEach((D, k) => { W[lb + nL * 8 + k * 3] = D.face; F[lb + nL * 8 + k * 3 + 1] = D.a0; F[lb + nL * 8 + k * 3 + 2] = D.a1; });
       }
     } else ib = 0;
@@ -687,6 +689,24 @@ export class GpuWorld {
   }
 
   /** Room for n words at the end of the near buffer (its offset), or -1 after starting over. */
+  /** The street doors' word in each lot's list (face << 4) gets how open the door is in bits 8..15 (13.2c), written only when it changes. */
+  private doorOpen = new Map<number, number>();
+  private streetDoors(world: World) {
+    const W = this.fxW, q = this.dev.queue, now = new Map<number, number>();
+    for (const [key, a] of world.doors) {
+      const n = key % 128, k = Math.floor(key / 128 / 256);
+      if (n < 100 || Math.floor(key / 128) % 256 !== 0) continue;
+      const o = W[FX_TAB + k];
+      if (o && n - 100 < W[o] && (W[o + 1 + (n - 100) * 3] & 15) === 0) now.set(o + 1 + (n - 100) * 3, Math.round(a * 255));
+    }
+    for (const i of this.doorOpen.keys()) if (!now.has(i)) now.set(i, 0);
+    for (const [i, b] of now) {
+      const v = (W[i] & 0xff) | (b << 8);
+      if (v !== W[i]) { W[i] = v; q.writeBuffer(this.fx, i * 4, W, i, 1); }
+      if (b) this.doorOpen.set(i, b); else this.doorOpen.delete(i);
+    }
+  }
+
   private fxTake(n: number) {
     if (this.fxEnd + n > this.fxW.length) { this.fxReset(); return -1; }
     const o = this.fxEnd; this.fxEnd += n; return o;
