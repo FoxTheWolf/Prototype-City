@@ -25,6 +25,8 @@ const GLOW_K = 1.4;
  * bright lights (mirrored, blurred: the glow), where the screen is dark.
  */
 const CORE_K = 1.0, CORE_R = 0.06, HALO_K = 0.8, HALO_R = 0.4, SCREEN_REFL = 0.5;
+/** How much the phone's and the watch's glow tints what it falls on before adding to it (a bright case would clip it away). */
+const HALO_TINT = 3;
 /**
  * The screens' own bloom (R.36): their bright parts (the phone's big clock, white text) blurred over the
  * screen cells round them (SCR_RX x SCR_RY cells) and added over the screen, times SCR_K.
@@ -158,7 +160,12 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     let f = vec2f(s) + 0.5;
     if (u.ph1.x > u.ph0.x) {
       let q = abs(f - vec2f(u.ph0 + u.ph1) * 0.5) - vec2f(u.ph1 - u.ph0) * 0.5;
-      col += halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y) * f32(max(u.eye.y, 1)) / 100.0, mean[0].rgb * kPh);
+      let g = halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y) * f32(max(u.eye.y, 1)) / 100.0, mean[0].rgb * kPh);
+      // added alone, it is lost on what is already bright (the watch's steel case near white clips): tint that
+      // toward the glow's color first, so the glow reads over the case and not behind it
+      let gl = max(g.r, max(g.g, g.b));
+      if (gl > 0.0) { col *= mix(vec3f(1.0), g / gl, min(1.0, gl * ${HALO_TINT})); }
+      col += g;
     }
     if (u.tmGrid.x > 0) {
       let a = vec2f(u.g0); let b = vec2f(u.g1); let c = vec2f(u.g2); let e = vec2f(u.g3);

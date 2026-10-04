@@ -70,20 +70,22 @@ function load(f: number, what: string) {
   if (f >= 1) { L.hidden = true; document.getElementById('ready')!.hidden = false; }
 }
 load(0.02, 'BOOTING');
-showTip();
+showTip(true);
+// the line changes every 15–20 s (it shows on the title and in the pause menu, where one may stay a while)
+(function cycle() { setTimeout(() => { showTip(false); cycle(); }, 15000 + Math.random() * 5000); })();
 
-/** A line under the bar: the first load of the day shows what happened on this date in 2008 (when the list has it); otherwise a tip or a fact of 2008. */
-function showTip() {
+/** A line under the bar: the first load of the day shows what happened on this date in 2008 (when the list has it); otherwise (and on every change after) a tip or a fact of 2008. */
+function showTip(load: boolean) {
   const now = new Date(), key = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const today = (TODAY_2008.days as Record<string, { text: string }[]>)[key];
   let first = false;
-  try { first = localStorage.getItem('tc.tipDay') !== key; localStorage.setItem('tc.tipDay', key); } catch { /* no storage: treat as seen */ }
-  const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+  if (load) try { first = localStorage.getItem('tc.tipDay') !== key; localStorage.setItem('tc.tipDay', key); } catch { /* no storage: treat as seen */ }
+  const el = document.getElementById('tip')!, was = el.querySelector('.text')!.textContent;
+  const pick = <T extends string | { text: string },>(a: T[]) => { let x = a[0]; for (let k = 0; k < 4; k++) { x = a[Math.floor(Math.random() * a.length)]; if ((typeof x === 'string' ? x : x.text) !== was) break; } return x; };
   let head: string, text: string;
   if (first && today?.length) { head = `${TIPS.today} · ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`; text = pick(today).text; }
   else if (TODAY_2008.facts.length && Math.random() < 0.35) { head = TIPS.fact; text = (pick(TODAY_2008.facts) as { text: string }).text; }
   else { head = TIPS.tip; text = pick(TIPS.tips); }
-  const el = document.getElementById('tip')!;
   el.querySelector('.head')!.textContent = head;
   el.querySelector('.text')!.textContent = text;
 }

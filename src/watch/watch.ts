@@ -136,6 +136,9 @@ const HOLD_S = 1.2, POP_S = 3.5, RING_S = 20;
 const LIGHT_S = 3;
 /** How slowly the thermometer follows the air (real seconds). */
 const TEMP_S = 20;
+/** The compass reads its sensor this often (real seconds), like a watch's: the number does not follow every turn of the head. */
+const COMPASS_S = 0.6;
+const compass = { at: -1e9, deg: 0 };
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 /** Size of the watch on the interface's grid (the case; one row of strap above it, one below at the screen's edge). */
 const W = 32, CASE_Y = 1, CASE_H = 15;
@@ -298,7 +301,8 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
     ink(dx + 22, dy + 4, String(Math.floor((sw % 1) * 100)).padStart(2, '0'));
   }
   // the bottom row, in every mode: where the player faces (the compass) and the thermometer
-  const deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360;
+  if (now - compass.at >= COMPASS_S || now < compass.at) { compass.at = now; compass.deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360; }
+  const deg = compass.deg;
   ink(LX + 1, LY + LH - 1, COMPASS[Math.round(deg / 45) % 8].padEnd(2, ' ') + ' ' + String(deg).padStart(3, '0'));
   if (!Number.isNaN(Wt.temp)) { const t = `${Math.round(Wt.temp) || 0}C`; ink(LX + LW - 1 - t.length, LY + LH - 1, t); }
   // the LCD sits under the face: the face's edge shades its top row, and the side away from the light
