@@ -1,5 +1,6 @@
 import { businessName, districtName, landmarkName, roadName } from '../locale/names';
 import { districtAt, nearestRoad, type City } from '../sim/city';
+import { type Substation } from '../sim/power';
 import { exitsOf, facePoint } from '../sim/interior';
 import { BIZ_HOURS } from '../sim/telco';
 import { Ground, MAP_RES, mapRaster, type MapRaster } from './mapdata';
@@ -8,20 +9,41 @@ import { T } from './lcd';
 /**
  * The Maps app's places: what a search finds (the city's businesses and landmarks), where each one's
  * door is, and the walking route to it, found over the map raster (sidewalks first, crossing the
- * roads where it must). A place is a number: a business k as k, a landmark k as -(k + 1).
+ * roads where it must). A place is a number: a business k as k, a landmark k as -(k + 1), and the
+ * power grid's substation k as -(landmarks + 1 + k) (so a job's maintenance target can be navigated to).
  * Not part of the simulation: the phone reads the city.
  */
 export type Place = number;
 const F = T.find;
 
-export const placeName = (city: City, p: Place) => (p >= 0 ? businessName(city, p) : landmarkName(city, -p - 1));
-/** What kind of place it is, as the search lists it ("Bar", "Pharmacy", "Landmark"). */
-export const placeKind = (city: City, p: Place) => (p >= 0 ? (F.kinds as Record<string, string>)[city.businesses[p].kind] ?? '' : F.landmark);
+/** The live power grid's substations, linked once from the phone (the sim owns them, not the city). */
+const subsByCity = new WeakMap<City, Substation[]>();
+export function linkSubs(city: City, subs: Substation[]) { subsByCity.set(city, subs); }
+const subList = (city: City): Substation[] => subsByCity.get(city) ?? [];
+/** For a place p < 0: the substation index it names, or -1 when it is an ordinary landmark. */
+const subIndex = (city: City, p: Place): number => { const i = -p - 1 - city.landmarks.length; return i >= 0 ? i : -1; };
+/** The two-digit number a substation shows (matches its GRIDLINK-nn maintenance Wi-Fi, see sim/wifi.ts). */
+const subNo = (k: number) => String(k + 1).padStart(2, '0');
+
+export const placeName = (city: City, p: Place) => {
+  if (p >= 0) return businessName(city, p);
+  const s = subIndex(city, p);
+  return s >= 0 ? `${F.substation} ${subNo(s)}` : landmarkName(city, -p - 1);
+};
+/** What kind of place it is, as the search lists it ("Bar", "Pharmacy", "Landmark", "Substation"). */
+export const placeKind = (city: City, p: Place) => {
+  if (p >= 0) return (F.kinds as Record<string, string>)[city.businesses[p].kind] ?? '';
+  return subIndex(city, p) >= 0 ? F.substation : F.landmark;
+};
 
 const doors = new WeakMap<City, Map<Place, [number, number]>>();
 /** Where to walk to: just outside the shop's own door (or the building's), or the landmark itself. */
 export function placeAt(city: City, p: Place): [number, number] {
-  if (p < 0) { const L = city.landmarks[-p - 1]; return walkable(city, L.x, L.y); }
+  if (p < 0) {
+    const s = subIndex(city, p);
+    if (s >= 0) { const S = subList(city)[s]; return S ? walkable(city, S.x, S.y) : [0, 0]; }
+    const L = city.landmarks[-p - 1]; return walkable(city, L.x, L.y);
+  }
   let mine = doors.get(city);
   if (!mine) doors.set(city, (mine = new Map()));
   const hit = mine.get(p);
@@ -63,13 +85,16 @@ export function search(city: City, q: string, x: number, y: number, max = 40): P
   if (!qs.length) return [];
   const hits: [Place, number][] = [];
   const test = (p: Place) => {
-    const ws = [...words(placeName(city, p)), ...words(placeKind(city, p)), ...(p >= 0 ? words((F.also as Record<string, string>)[city.businesses[p].kind] ?? '') : [])];
+    const extra = p >= 0 ? words((F.also as Record<string, string>)[city.businesses[p].kind] ?? '') : subIndex(city, p) >= 0 ? words(F.subWords) : [];
+    const ws = [...words(placeName(city, p)), ...words(placeKind(city, p)), ...extra];
     if (!qs.every((w) => ws.some((v) => v.startsWith(w)))) return;
     const [px, py] = placeAt(city, p);
     hits.push([p, Math.hypot(px - x, py - y)]);
   };
   for (let k = 0; k < city.businesses.length; k++) test(k);
   for (let k = 0; k < city.landmarks.length; k++) test(-k - 1);
+  const subs = subList(city);
+  for (let k = 0; k < subs.length; k++) test(-(city.landmarks.length + 1 + k));
   return hits.sort((a, b) => a[1] - b[1]).slice(0, max).map((h) => h[0]);
 }
 

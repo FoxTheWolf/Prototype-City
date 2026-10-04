@@ -9,7 +9,7 @@ import { codeKind, secretCodes, type CodeKind } from './codes';
 import { Radio } from './radio';
 import { Wifi } from './wifi';
 import { Editor } from './textinput';
-import { onRoute, placeAt, route, search, type Place } from './places';
+import { linkSubs, onRoute, placeAt, route, search, type Place } from './places';
 import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
 import { smsText } from '../locale/sms';
@@ -220,6 +220,8 @@ export class Phone {
     this.look = this.device.look;
     this.looks = [this.look];
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
+    linkSubs(world.city, world.power.subs); // the Maps can find a job's GRIDLINK substation
+
     this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...APPS.filter((a) => a !== 'folder'), ...BUNDLED]);
   }
   out = false;
