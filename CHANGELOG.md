@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.9 — Onde gastar o dinheiro (2026-10-04)
+- Lojas de eletrônicos e de penhor abertas têm um balcão: aperte F perto do caixa para ver o que vendem e comprar no cartão do banco (setas escolhem, Enter compra, F sai). Fechadas, o aviso diz a hora em que abrem.
+- À venda: um chip pré-pago (número novo, com crédito e pacote de dados novos; a linha antiga fica para trás), uma antena Wi-Fi direcional para o notebook e uma segunda bateria do notebook (quase o dobro das horas).
+- O balcão é provisório: quando existir conversa com os NPCs, a compra vai ser falando com o vendedor.
+
 ## 0.F.8 — Fechando a fatia vertical (2026-10-04)
 - Ser preso não te deixa mais travado dentro da prefeitura: você acorda na calçada em frente.
 - O Maps acha as subestações (busque "substation" ou "gridlink"): a "Substation 03" é a da rede GRIDLINK-03, com rota a pé até ela.

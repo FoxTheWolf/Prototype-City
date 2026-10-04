@@ -3,6 +3,8 @@ import { Input } from './input';
 import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
+import { Counter, counterPrompt, drawCounter } from './counter';
+import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawWatch, Watch, WATCH_LCD, WATCH_ON } from './watch/watch';
@@ -113,6 +115,13 @@ const input = new Input(canvas);
 const camera = new Camera();
 const phone = new Phone(world);
 const payphone = new Payphone(world);
+const counter = new Counter(world);
+/** The notebook's battery with what was bought (F.9): the second pack adds its capacity; bought just now, it comes charged. */
+function gearBattery(fresh = false) {
+  const pc = laptop.pc, base = pc.hw.battWh * pc.hw.battWear, wh = base + (world.gear.battery ? SPARE_WH : 0);
+  if (fresh && wh > pc.battWh) pc.charge = (pc.charge * pc.battWh + (wh - pc.battWh)) / wh;
+  pc.battWh = wh;
+}
 const laptop = new Laptop(world);
 const watch = new Watch();
 /** Eye height over the feet: lower while sitting at the notebook (or leaning on a counter). */
@@ -397,6 +406,11 @@ addEventListener('keydown', (e) => {
     laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
     return;
   }
+  // at a shop's counter (F.9) the arrows, Enter, F and Esc are its
+  if (counter.active) {
+    if (!e.repeat && counter.key(e.code, performance.now() / 1000)) { e.preventDefault(); if (world.gear.battery) gearBattery(true); }
+    if (!counter.active || e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space') return;
+  }
   // Esc with nothing in the hands: the pause menu (with the pointer locked, the browser frees it and pointerlockchange opens it)
   if (e.code === 'Escape' && running && !phone.out && !payphone.active) { if (!e.repeat) pause(); return; }
   // N: take the notebook out, where it can be used (sitting or leaning)
@@ -410,6 +424,8 @@ addEventListener('keydown', (e) => {
     if (payphone.active) { payphone.close(); input.lock(); return; }
     const k = payphone.near();
     if (k >= 0 && !phone.out) { payphone.open(k); input.unlock(); return; }
+    const c = counter.near();
+    if (c?.open && !phone.out) { counter.open(c.k); return; }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
@@ -473,7 +489,7 @@ function readInput(): PlayerInput {
   // the up and down arrows belong to the phone (as in GTA IV); WASD walk
   const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
-  const go = running && laptop.raise === 0;
+  const go = running && laptop.raise === 0 && !counter.active;
   return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
@@ -548,6 +564,7 @@ function applySave(s: GameSave) {
   applyWorld(world, s.world);
   phone.restore(s.phone as ReturnType<Phone['snapshot']>);
   laptop.restore(s.laptop as ReturnType<Laptop['snapshot']>);
+  gearBattery();
   watch.restore(s.watch as ReturnType<Watch['snapshot']>, performance.now() / 1000);
   camera.yaw = camera.targetYaw = s.cam.yaw; camera.pitch = camera.targetPitch = s.cam.pitch;
 }
@@ -817,6 +834,11 @@ function frame(now: number) {
   playSfx(phone.sfx);
   playSfx(payphone.sfx);
   drawPayphone(ui, payphone, world, now / 1000, VIEW_LIGHT);
+  playSfx(counter.sfx);
+  drawCounter(ui, counter, world, now / 1000);
+  // a shop's till in front: how to use the counter, or when the shop opens
+  const till = !phone.out && !counter.active ? counter.near() : null;
+  if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }

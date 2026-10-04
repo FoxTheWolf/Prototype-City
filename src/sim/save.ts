@@ -22,6 +22,8 @@ export interface WorldSave {
   line: World['telco']['player'];
   spent: Set<string>;
   bank: World['bank'];
+  /** Missing in saves from before F.9. */
+  gear?: World['gear'];
   events: World['events'];
   feed: World['feed'];
   weather: World['weather'];
@@ -34,7 +36,7 @@ export function snapWorld(w: World): WorldSave {
   return {
     time: w.time, tick: w.tick, player: { ...w.player },
     subs: w.power.subs.map((s) => ({ on: s.on, changed: s.changed, ox: s.ox, oy: s.oy, sig: s.sig, offAt: s.offAt })),
-    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, events: w.events, feed: w.feed, weather: { ...w.weather },
+    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, events: w.events, feed: w.feed, weather: { ...w.weather },
     jobs: saveJobs(w.jobs), heat: saveHeat(w.heat),
   };
 }
@@ -50,6 +52,7 @@ export function applyWorld(w: World, d: WorldSave) {
   Object.assign(w.telco.player, d.line);
   w.telco.spent = d.spent;
   w.bank = d.bank;
+  if (d.gear) Object.assign(w.gear, d.gear);
   w.events = d.events;
   w.feed = d.feed;
   Object.assign(w.weather, d.weather);

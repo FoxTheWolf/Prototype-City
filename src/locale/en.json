@@ -1,5 +1,15 @@
 {
   "lang": "en",
+  "counter": {
+    "hello": "What can I get you?", "ok": "Paid by card. Thank you!", "funds": "Card declined: not enough in the account.", "owned": "You already have one of those.",
+    "balance": "ACCOUNT", "have": "OWNED", "keys": "[UP/DOWN] PICK  [ENTER] BUY  [F] LEAVE",
+    "use": "[F] COUNTER", "closed": "CLOSED - OPENS AT {h}:00",
+    "items": {
+      "sim": { "name": "Prepaid SIM card", "what": "A new number. The old line stays behind." },
+      "antenna": { "name": "Directional Wi-Fi antenna", "what": "USB, for the notebook. Reaches further." },
+      "battery": { "name": "Notebook battery", "what": "A second pack: about twice the hours." }
+    }
+  },
   "roots": [
     "Ashford", "Kessler", "Marlow", "Greyhaven", "Calloway", "Thornbury", "Holloway", "Brandt",
     "Sable", "Mercer", "Dunmore", "Carver", "Radley", "Whitlock", "Garrison", "Blackmoor",

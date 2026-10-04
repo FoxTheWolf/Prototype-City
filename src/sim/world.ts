@@ -5,6 +5,7 @@ import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, leavesOf, planOf } 
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
 import { openAccount, type BankAccount } from './bank';
+import { newGear, type Gear } from './gear';
 import { buildJobs, stepJobs, type JobBoard } from './jobs';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
@@ -81,6 +82,8 @@ export interface World {
   cctv: Cctv[];
   /** The player's bank account (see bank.ts). */
   bank: BankAccount;
+  /** What the player has bought (F.9): the notebook's antenna and second battery, the SIMs. */
+  gear: Gear;
   /** [HACKING] The jobs a fixer offers (see jobs.ts). */
   jobs: JobBoard;
   /** [HACKING] The heat the player draws, and the traces behind it (see heat.ts). */
@@ -133,7 +136,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
