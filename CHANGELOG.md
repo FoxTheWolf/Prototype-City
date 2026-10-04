@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10b — Um só espaço (2026-10-04)
+- O que você vê pela janela de fora é o mesmo andar que você encontra lá dentro: as mesmas salas, as mesmas lâmpadas acesas, as portas fechadas onde estão fechadas. Uma porta que você deixa aberta continua aberta para quem olha da rua.
+- De fora, perto dos prédios, aparecem as folhas das portas, as placas EXIT, as portas do elevador com o mostrador e a mobília; mais longe, só as salas e a luz delas.
+- As paredes de dentro têm espessura: os vãos das portas mostram o batente.
+
 ## 0.13.10a — Prédios na medida (2026-10-04)
 - A cidade foi medida de novo em módulos de 2 m: ruas, quarteirões, terrenos e recuos das torres. Cada prédio tem largura e fundo inteiros, e as janelas ficaram um pouco mais largas. A mesma semente gera agora uma cidade diferente.
 - As paredes de dentro e de fora têm espessura: você para encostado nelas, não no meio. Os móveis não entram mais nas paredes.

@@ -50,8 +50,6 @@ const G = { dot: C('.'), com: C(','), col: C(':'), semi: C(';'), dash: C('-'), e
 let rowState = new Uint8Array(0);
 /** Per room: lamp light (r, g, b, 0..~1.2) and the room center, rebuilt every frame. */
 let lamp = new Float32Array(0);
-/** The rooms' lamps of the floor made ready by prepareInside (for the GPU). */
-export const insideLamps = () => lamp;
 
 /** Wall paint of an apartment, by unit. */
 const PAINT: RGB[] = [[190, 170, 135], [150, 170, 160], [175, 150, 165], [185, 185, 175], [150, 160, 185], [195, 160, 120]];

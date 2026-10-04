@@ -1,11 +1,11 @@
 import { BAY, blockAt, faceSpan, FLOOR_H, SIDEWALK, type City } from '../../sim/city';
-import { carHere, carOf } from '../../sim/lifts';
-import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, liftGlassBox, planOf, tiersOf, type Plan } from '../../sim/interior';
+import { carOf, liftTop } from '../../sim/lifts';
+import { cachedPlan, cellAt, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
 import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
 import { CharGrid } from '../grid';
-import { insideLamps, type Inside } from '../interior';
+import { type Inside } from '../interior';
 import { furnitureModel } from '../models';
 import type { Obj, Part } from '../objects';
 import { OW, PW, TILE } from './objects';
@@ -25,7 +25,7 @@ import { eyeHold, eyePush } from '../power';
 import { subAt } from '../../sim/power';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
-import { BLD, BLK, FX_TAB, IN_LAMPS, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
+import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
  * Stage R: the world drawn on the GPU (WebGPU). The city goes up once as lists (street boundaries,
@@ -122,7 +122,8 @@ export class GpuWorld {
    * features start (0: none); each is a count, then per feature its kind | face << 4 (0 a street door,
    * 1 a fire escape) and its span along the face (two f32). Then two words per box, where its plans
    * start: the ground floor's and the upper floors' (gx, gy, nx, ny, rooms, lot; per room its box as
-   * four f32, kind and unit; the cells, four to a word). fx[0] is the number of buildings.
+   * four f32, kind and unit; the cells, two to a word; its door leaves; its furniture). Then a word per
+   * lot, its lift car (liftWord), and the doors standing open (openDoors). fx[0] is the number of buildings.
    */
   private fx: GPUBuffer;
   private fxW: Uint32Array;
@@ -132,6 +133,10 @@ export class GpuWorld {
   private fxState: Uint8Array;
   /** Per box: 1 where its ground (2k) or upper floors' (2k + 1) plan is in fx. */
   private fxPlan: Uint8Array;
+  /** Per lot: 1 once its lift car's word is kept up in fx (liftWord). */
+  private fxCar: Uint8Array;
+  /** The open doors' list last written (openDoors), as text to compare. */
+  private doorsSent = '';
   private fxScan = 0;
   /** The objects' models in fx (from mBase, MODEL_CAP words; offsets kept by Part list) and the frame's objects (from oBase). */
   private mBase = 0;
@@ -221,9 +226,9 @@ export class GpuWorld {
     this.sg = store(S.data); this.tickOff = S.tick;
     this.fixed = [new Float32Array(C.xb), new Float32Array(C.yb), Uint32Array.from(C.xCell), Uint32Array.from(C.yCell), blocks, blds].map(store);
     const nb = C.buildings.length;
-    this.fxW = new Uint32Array(FX_TAB + 3 * nb + (1 << 22)); this.fxF = new Float32Array(this.fxW.buffer); // room for many plans: when full, all start over
+    this.fxW = new Uint32Array(this.fxHead() + (1 << 22)); this.fxF = new Float32Array(this.fxW.buffer); // room for many plans: when full, all start over
     this.fxW[0] = nb;
-    this.fxState = new Uint8Array(nb); this.fxPlan = new Uint8Array(nb * 2); this.fxEnd = FX_TAB + 3 * nb;
+    this.fxState = new Uint8Array(nb); this.fxPlan = new Uint8Array(nb * 2); this.fxCar = new Uint8Array(nb); this.fxEnd = this.fxHead();
     // after the facades and plans: the models, then the frame's objects (fx[1] says where)
     this.mBase = this.fxW.length; this.oBase = this.mBase + MODEL_CAP; this.fxW[1] = this.oBase;
     this.mW = new Uint32Array(MODEL_CAP); this.mF = new Float32Array(this.mW.buffer);
@@ -294,8 +299,10 @@ export class GpuWorld {
     if (F.light.version !== this.lmapVersion) { this.lmapVersion = F.light.version; q.writeBuffer(this.lmap, 0, F.light.packMap()); }
     { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * 6] = c[n * 3]; L[n * 6 + 1] = c[n * 3 + 1]; L[n * 6 + 2] = c[n * 3 + 2]; } }
     q.writeBuffer(this.lampCol, 0, this.lampBuf);
-    this.facades(v.x, v.y);
+    this.facades(world, v.x, v.y);
     this.streetDoors(world);
+    this.liftCars(world);
+    this.openDoors(world);
     const D = F.dyn.pack();
     [D.lights, D.lv, D.off, D.idx].forEach((a, k) => { const b = this.fit(k, a.byteLength); q.writeBuffer(b, 0, a); });
     if (!this.bind || this.bindGen !== this.gen) {
@@ -556,25 +563,22 @@ export class GpuWorld {
       W[w + 16] = box[j * 4]; W[w + 17] = box[j * 4 + 1]; W[w + 18] = box[j * 4 + 2]; W[w + 19] = box[j * 4 + 3];
     }
     // then the floor the viewer stands in (see the shader's IN_ words): its plan, lot, box, storey, floor height, doors
-    // shut, the lift's floors and destination, how many door leaves and street doors, the panoramic lift's glass,
-    // the rooms; the rooms' lamps, the leaves (hinge, along, out, width, swing), the street doors (face, a0, a1)
+    // shut, the destination picked in the lift, how many street door leaves, the room the viewer is in (its lamps on,
+    // as if they had found the switch), the panoramic lift's glass, the building's power; then the street doors' glass
+    // leaves (hinge, along, out, width, swing). The rest (the rooms' lamps, the doors between rooms, the street doors,
+    // the car) is the plan's and the lot's, the same for every ray into the building (13.10b).
     let ib = rb + nR * 7, end = ib;
     const po = I ? this.putPlan(I.plan, I.floor !== 0, I.k) : -1;
     if (I && po >= 0) {
-      const nr = I.plan.rooms.length, nL = I.leaves.length, ex = I.floor === 0 ? I.exits : [], G = liftGlassBox(this.city, I.k);
-      end = ib + IN_LAMPS + nr * 3 + nL * 8 + ex.length * 3;
+      const own = leavesOf(I.plan).length, nL = I.leaves.length - own, G = liftGlassBox(this.city, I.k);
+      end = ib + IN_LEAVES + nL * 8;
       if (end > OBJ_CAP) { ib = 0; end = rb + nR * 7; }
       else {
         W[ib] = po; W[ib + 1] = I.k; W[ib + 2] = I.boxId; W[ib + 3] = I.floor; F[ib + 4] = I.z0; W[ib + 5] = I.closed ? 1 : 0;
-        W[ib + 6] = I.liftN; W[ib + 7] = I.liftTo; W[ib + 8] = nL; W[ib + 9] = ex.length;
-        W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; W[ib + 15] = nr;
-        // the lift car: the floor it shows, and whether it stands here with its doors open (13.2d)
-        { const car = carOf(world, I.k), shown = Math.max(0, Math.round(car.z / FLOOR_H)); W[ib + 16] = shown | (I.closed || carHere(world, I.k, I.floor) ? 256 : 0) | (car.to === I.floor ? 512 : 0); }
-        F.set(insideLamps().subarray(0, nr * 3), ib + IN_LAMPS);
-        const lb = ib + IN_LAMPS + nr * 3;
-        // a street door's glass leaves have their width negative (the shader draws them as glass in a frame)
-        I.leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.ra < 0 && L.rb < 0 ? -L.w : L.w, I.leafA[k]], lb + k * 8));
-        ex.forEach((D, k) => { W[lb + nL * 8 + k * 3] = D.face; F[lb + nL * 8 + k * 3 + 1] = D.a0; F[lb + nL * 8 + k * 3 + 2] = D.a1; });
+        W[ib + 6] = 0; W[ib + 7] = I.liftTo; W[ib + 8] = nL; W[ib + 9] = (cellAt(I.plan, v.x, v.y) & ROOM) - 1;
+        W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; F[ib + 15] = I.elec;
+        // (a street door's glass leaves have their width negative: the shader draws them as glass in a frame)
+        for (let k = 0; k < nL; k++) { const L = I.leaves[own + k]; F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, -L.w, I.leafA[own + k]], ib + IN_LEAVES + k * 8); }
       }
     } else ib = 0;
     // by day, the grid of the objects' shadows on the ground (see shadowGrid)
@@ -667,9 +671,12 @@ export class GpuWorld {
     const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock));
     let mSize = 0;
     for (const m of list) if (!mods.has(m)) { mods.set(m, 0); mSize += partsSize(m); }
-    const nCells = Math.ceil(P.cells.length / 2), fo = 6 + P.rooms.length * 6 + nCells;
+    // (after the cells, its door leaves: their count, then per leaf its hinge, the way it lies shut, the way it swings and its width)
+    const leaves = leavesOf(P), nCells = Math.ceil(P.cells.length / 2), lo = 6 + P.rooms.length * 6 + nCells, fo = lo + 1 + leaves.length * LEAF_W;
     const n = fo + 1 + P.furn.length * 6 + mSize, o = this.fxTake(n);
     if (o < 0) return -1;
+    W[o + lo] = leaves.length;
+    leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w], o + lo + 1 + k * LEAF_W));
     let mo = o + fo + 1 + P.furn.length * 6;
     for (const m of mods.keys()) { mods.set(m, mo); mo = packParts(W, F, mo, m, 0); }
     W[o + fo] = P.furn.length;
@@ -687,7 +694,7 @@ export class GpuWorld {
   private fxReset() {
     const nb = this.city.buildings.length;
     this.fxState.fill(0); this.fxPlan.fill(0);
-    this.fxW.fill(0, FX_TAB, FX_TAB + 3 * nb); this.fxEnd = FX_TAB + 3 * nb;
+    this.fxW.fill(0, FX_TAB, FX_TAB + 3 * nb); this.fxEnd = this.fxHead();
     this.dev.queue.writeBuffer(this.fx, 0, this.fxW, 0, this.fxEnd);
   }
 
@@ -710,6 +717,41 @@ export class GpuWorld {
     }
   }
 
+  /** Where the plans start in fx: after the tables (the buildings', the boxes' plans, the lots' cars) and the open doors. */
+  private fxHead() { return FX_TAB + 4 * this.city.buildings.length + FX_DOORS * 2 + 1; }
+
+  /**
+   * Each lift car's word in fx (one per lot, after the plans' table), written when it changes: the floor it shows
+   * (bits 0..7), standing there (8), the floor it rides to + 1 (9..16, 0 standing), the floors it serves (17..24).
+   */
+  private liftCars(world: World) {
+    const W = this.fxW, q = this.dev.queue, t0 = FX_TAB + 3 * this.city.buildings.length, inside = world.player.inside;
+    if (inside >= 0 && !this.fxCar[inside]) { this.fxCar[inside] = 1; carOf(world, inside); }
+    for (const [k, c] of world.lifts) {
+      if (!this.fxCar[k]) continue;
+      const shown = Math.max(0, Math.min(255, Math.round(c.z / FLOOR_H))), stand = c.to < 0 && Math.abs(c.z - shown * FLOOR_H) < 0.05;
+      const w = (shown | (stand ? 256 : 0) | (Math.min(255, c.to + 1) << 9) | (Math.min(255, liftTop(world, k)) << 17)) >>> 0;
+      if (W[t0 + k] !== w) { W[t0 + k] = w; q.writeBuffer(this.fx, (t0 + k) * 4, W, t0 + k, 1); }
+    }
+  }
+
+  /**
+   * The doors between rooms standing open anywhere (world.doors: shut ones are not kept), at most FX_DOORS, after the
+   * cars' table: their count, then per door its key (doorKey) and how far it has swung (radians), eased as the player's.
+   */
+  private openDoors(world: World) {
+    const W = this.fxW, F = this.fxF, at = FX_TAB + 4 * this.city.buildings.length;
+    let n = 0, sig = '';
+    for (const [key, a] of world.doors) {
+      if (key % 128 >= 100 || a <= 0 || n >= FX_DOORS) continue;
+      W[at + 1 + n * 2] = key; F[at + 2 + n * 2] = (1 - (1 - a) ** 2) * Math.PI * 0.5; n++;
+      sig += `${key}:${a.toFixed(3)},`;
+    }
+    if (sig === this.doorsSent) return;
+    this.doorsSent = sig; W[at] = n;
+    this.dev.queue.writeBuffer(this.fx, at * 4, W, at, 1 + n * 2);
+  }
+
   private fxTake(n: number) {
     if (this.fxEnd + n > this.fxW.length) { this.fxReset(); return -1; }
     const o = this.fxEnd; this.fxEnd += n; return o;
@@ -720,10 +762,10 @@ export class GpuWorld {
    * (again once a ground plan brings the shops' doors and moves the escapes off them), and within
    * FX_PLAN the floor plans of each box, made here a few at a time (as the CPU's window peeks do).
    */
-  private facades(x: number, y: number) {
+  private facades(world: World, x: number, y: number) {
     if (this.fxScan++ % 6) return;
     const C = this.city, W = this.fxW, F = this.fxF, q = this.dev.queue;
-    let plans = FX_PLANS;
+    let plans = FX_PLANS, cars = 2;
     const slots: number[] = [];
     const make = (k: number, f: number) => { if (plans > 0 && cachedPlan(C, k, f) === undefined) { planOf(C, k, f); plans--; } };
     for (const b of C.blocks) {
@@ -744,6 +786,9 @@ export class GpuWorld {
             }
             f0 = Math.max(f0, top);
           }
+          // once its ground plan is made, its lift car is kept up in fx too (liftWord)
+          // (a few a scan: its first count of floors makes the plans of every floor it serves)
+          if (!this.fxCar[k] && cars > 0 && cachedPlan(C, k, 0)) { this.fxCar[k] = 1; carOf(world, k); cars--; }
         }
         const want = cachedPlan(C, k, 0) ? 2 : 1;
         if (this.fxState[k] >= want) continue;
