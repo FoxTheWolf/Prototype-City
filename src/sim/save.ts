@@ -18,7 +18,7 @@ export interface WorldSave {
   time: number;
   tick: number;
   player: World['player'];
-  subs: { on: boolean; changed: number; ox: number; oy: number; sig: number }[];
+  subs: { on: boolean; changed: number; ox: number; oy: number; sig: number; offAt?: number }[];
   line: World['telco']['player'];
   spent: Set<string>;
   bank: World['bank'];
@@ -33,7 +33,7 @@ export interface WorldSave {
 export function snapWorld(w: World): WorldSave {
   return {
     time: w.time, tick: w.tick, player: { ...w.player },
-    subs: w.power.subs.map((s) => ({ on: s.on, changed: s.changed, ox: s.ox, oy: s.oy, sig: s.sig })),
+    subs: w.power.subs.map((s) => ({ on: s.on, changed: s.changed, ox: s.ox, oy: s.oy, sig: s.sig, offAt: s.offAt })),
     line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, events: w.events, feed: w.feed, weather: { ...w.weather },
     jobs: saveJobs(w.jobs), heat: saveHeat(w.heat),
   };

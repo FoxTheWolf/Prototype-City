@@ -19,6 +19,8 @@ export interface Substation {
   oy: number;
   /** What its traffic-signal controller has been told (the cabinet in its district): 0 normal, 1 flashing, 2 dark. */
   sig: number;
+  /** Game time the crews noticed it down (the first check after it went off), or -1 while it is on: it comes back by itself some hours later. */
+  offAt: number;
   /**
    * The fenced yard it stands in: an empty lot of the city (its rubble cleared), its middle at (x, y);
    * `a` is the heading of the side toward the nearest street (the gate and the warning sign). Null
@@ -107,7 +109,7 @@ function pickLot(city: City, used: Set<number>, x: number, y: number, min: numbe
   return best;
 }
 function placeYardAt(city: City, used: Set<number>, x: number, y: number, best: number): Substation {
-  const S: Substation = { x, y, on: true, changed: -1, ox: 0, oy: 0, sig: 0, yard: null };
+  const S: Substation = { x, y, on: true, changed: -1, ox: 0, oy: 0, sig: 0, offAt: -1, yard: null };
   if (best < 0) return S;
   used.add(best);
   const L = city.empties[best], B = city.blocks[L.block];

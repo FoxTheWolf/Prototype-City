@@ -142,6 +142,9 @@ export function skipHours(w: World, h: number) {
   stepWeather(w.weather, w.seed, w.time, 0);
 }
 
+/** The fewest game hours a dark substation waits for the crews (up to twice that). */
+const RESTORE_H = 2;
+
 /** Debug: switch the substation nearest the player, or (all) every one: all off if any is on. */
 export function togglePower(w: World, all: boolean) {
   const P = w.power, p = w.player;
@@ -295,6 +298,14 @@ export function stepWorld(w: World, input: PlayerInput) {
   });
   // the social network, every real second (30 game seconds)
   if (w.tick % 60 === 30) stepSocial(w.feed, w.pop, w.city, w.events, w.power, w.weather, w.seed, w.time, 60 * TICK * TIME_SCALE);
+  // a substation left dark comes back by itself: the utility's crews take 2 to 4 game hours
+  if (w.tick % 60 === 45) w.power.subs.forEach((s, k) => {
+    if (s.on) { s.offAt = -1; return; }
+    if (s.offAt < 0) { s.offAt = w.time; return; }
+    if (w.time - s.offAt < (RESTORE_H + RESTORE_H * hash3(w.seed, k, Math.floor(s.offAt))) * 3600) return;
+    switchSub(w.power, k, true, w.tick, s.x, s.y);
+    logEvent(w.events, 'restored', w.tick, w.time, s.x, s.y, 0.8, [k]);
+  });
   stepJobs(w); // [HACKING] the fixer's jobs resolve against the real grid (and the trace against the cell log)
   stepHeat(w, TICK); // [HACKING] heat cools off, traces go cold, the police close in
   w.ptime = w.time;
