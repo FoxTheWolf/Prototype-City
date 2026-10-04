@@ -6,7 +6,7 @@
 
 ## 2026-10-04 (6): depois da 13.10b2
 
-- **A porta de rua fechada, vista de fora, parece uma placa marrom chapada:** o desenho dela é um brilho fixo do saguão (de antes do um só espaço), não o vidro com a sala atrás. Com a 13.10d (porta 3D de verdade) isso some de graça: proponho não mexer antes.
+- **A porta de rua fechada, vista de fora, parece uma placa marrom chapada:** o desenho dela é um brilho fixo do saguão (de antes do um só espaço), não o vidro com a sala atrás. Com a 13.10e (porta 3D de verdade) isso some de graça: proponho não mexer antes.
 - **A rua de trás pela janela abre um caminho barato para o "interior falso" de longe (etapa 20):** o mesmo segundo raio poderia, depois dos 60 m, atravessar o prédio sem a planta (só a caixa), para as janelas de longe mostrarem um pouco do céu do outro lado. Só se as torres de longe parecerem chapadas demais.
 
 ---

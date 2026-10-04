@@ -5,7 +5,7 @@
  * For every building with an inside, on the ground floor and the first floor up: every room can be
  * walked into (from the street doors downstairs, from the lift upstairs) going round the furniture,
  * the way `blocked` lets the player walk; every street door opens into the plan; no piece of furniture
- * stands on a wall or a doorway. Prints the failures and exits with 1 if there are any.
+ * stands on a wall or a doorway; every till can be walked up to from the street (13.10c). Prints the failures and exits with 1 if there are any.
  */
 import { BAY, generateCity } from '../src/sim/city';
 import { CELL, DOOR, exitsOf, facePoint, floorsOf, habitable, inFurniture, planOf, ROOM, WALL, type Plan } from '../src/sim/interior';
@@ -13,8 +13,8 @@ import { CITY_SIZE } from '../src/sim/world';
 
 const seeds = [Number(process.argv[2] ?? 42)];
 let fails = 0, plans = 0, rooms = 0;
-/** Known, for 13.10c: lots with no street door at all, and shops with no door of their own. */
-let noDoor = 0, shutShops = 0;
+/** Known: lots closed in on every side (no street door at all); shops with no way in (none since 13.10c). */
+let noDoor = 0, shutShops = 0, tills = 0;
 const fail = (msg: string) => { if (++fails <= 40) console.log('FAIL ' + msg); };
 
 for (const seed of seeds) {
@@ -33,8 +33,9 @@ for (const seed of seeds) {
     }
   });
 }
-console.log(`${plans} plans, ${rooms} rooms, ${fails} failures (known for 13.10c: ${noDoor} lots with no street door, ${shutShops} shops with no door)`);
+console.log(`${plans} plans, ${rooms} rooms, ${tills} tills, ${fails} failures (known: ${noDoor} lots closed in with no street door, ${shutShops} shops with no way in)`);
 process.exit(fails ? 1 : 0);
+
 
 function check(P: Plan, at: string, doors: [number, number, number, number][] | null) {
   const { cells, nx, ny } = P, n = nx * ny;
@@ -69,6 +70,12 @@ function check(P: Plan, at: string, doors: [number, number, number, number][] | 
     if (has && !got && (R.kind === 'shop' || R.kind === 'store')) shutShops++;
     else if (has && !got) fail(`${at}: room ${r} (${R.kind}, ${(R.x1 - R.x0).toFixed(1)} x ${(R.y1 - R.y0).toFixed(1)} m) cannot be walked into`);
   });
+  // every till can be walked to from the street (13.10c)
+  if (doors) for (const f of P.furn) if (f.kind === 'till') {
+    const c = (Math.floor((f.y + f.s * (f.hx + 0.3)) / CELL) - P.gy) * nx + Math.floor((f.x + f.c * (f.hx + 0.3)) / CELL) - P.gx;
+    tills++;
+    if (!seen[c]) fail(`${at}: the till at (${f.x.toFixed(1)}, ${f.y.toFixed(1)}) cannot be walked up to`);
+  }
   for (const f of P.furn) {
     const ex = Math.abs(f.c) * f.hx + Math.abs(f.s) * f.hy, ey = Math.abs(f.s) * f.hx + Math.abs(f.c) * f.hy;
     for (let y = f.y - ey + 0.05; y < f.y + ey; y += CELL) for (let x = f.x - ex + 0.05; x < f.x + ex; x += CELL) {

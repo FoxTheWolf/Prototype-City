@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10c — Plantas desenhadas (2026-10-04)
+- Diners, cafés, delis, pizzarias, bares, mercearias, lavanderias, cybercafés e as lojas de prateleira têm agora um arranjo pensado: no diner, o fogão no fundo, o balcão com banquetas e as mesas perto da vitrine; no bar, as garrafas atrás do balcão; na mercearia, as geladeiras no fundo e os corredores saindo da porta.
+- O caixa de toda loja fica sempre ao alcance de quem entra pela porta.
+- Só vira loja o que tem frente para a rua: as salas dos fundos de um prédio com lojas são escritórios ou apartamentos, e toda loja tem a própria porta.
+- Mais prédios ganharam porta para a rua (a porta procura um trecho livre da fachada em vez de desistir).
+
 ## 0.13.10b2 — Através da sala (2026-10-04)
 - Num prédio com janelas dos dois lados, olhando de fora você vê a sala e, pela janela do outro lado, a rua de trás.
 - Pela porta de rua aberta, a sala tem a mesma luz vista da calçada e vista de dentro; de dentro, o vão aberto não tem mais um vidro invisível.

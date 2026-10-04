@@ -1,5 +1,6 @@
 import { hash3, mulberry32 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
+import { FRONT, layoutsFor, MAXLEN, PIECES, SINGLE, stretch } from './layouts';
 import { COLD, PLACES } from './placeTypes';
 
 /**
@@ -154,9 +155,16 @@ export function doorOf(city: City, k: number): Door | null {
     const sp = faceSpan(B, face), lo = sp[0], hi = sp[1];
     const w0 = Math.ceil((lo + 0.4) / BAY), w1 = Math.floor((hi - 0.4) / BAY) - 1;
     if (w1 < w0) continue;
-    const wi = B.shop && w1 > w0 ? w0 + 1 : Math.round((w0 + w1) / 2);
-    const [x, y, nx, ny] = facePoint(B, face, (wi + 0.5) * BAY);
-    if (isSolid(city, x + nx * 0.6, y + ny * 0.6)) continue;
+    // the preferred bay, else the nearest one along the face with open ground before it (13.10c)
+    const pref = B.shop && w1 > w0 ? w0 + 1 : Math.round((w0 + w1) / 2);
+    let wi = -1;
+    for (let o = 0; o <= w1 - w0 && wi < 0; o++) for (const c of o ? [pref - o, pref + o] : [pref]) {
+      if (c < w0 || c > w1) continue;
+      const [x, y, nx, ny] = facePoint(B, face, (c + 0.5) * BAY);
+      if (B.cut && B.cut.nx * x + B.cut.ny * y > B.cut.c - 0.3 && face < 4) continue;
+      if (!isSolid(city, x + nx * 0.6, y + ny * 0.6)) { wi = c; break; }
+    }
+    if (wi < 0) continue;
     // how far the face stands back from the edge of the block; the cut face is on the avenue
     const gap = face === 0 ? B.x0 - blk.x0 : face === 1 ? blk.x1 - B.x1 : face === 2 ? B.y0 - blk.y0 : face === 3 ? blk.y1 - B.y1 : 0;
     if (gap < bestGap - 0.5) { bestGap = gap; best = { face, a0: wi * BAY, a1: (wi + 1) * BAY }; }
@@ -480,14 +488,21 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   let unit = 0;
   /** A shop's own street door: one bay in the middle of its front on the outer wall at v = vf. */
   const exits: Door[] = [];
-  const shopExit = (a: number, b: number, vf: number) => {
-    const face = vf <= V0 + 0.01 ? (ax ? 2 : 0) : (ax ? 3 : 1), m = (a + b) / 2, a0 = Math.floor(m / BAY) * BAY;
-    if (a0 < a + 0.3 || a0 + BAY > b - 0.3) return;
-    const [x, y, nX, nY] = facePoint(B, face, a0 + BAY / 2);
-    if (C && C.nx * x + C.ny * y > C.c - 0.3) return;
-    if (isSolid(city, x + nX * 0.6, y + nY * 0.6)) return;
-    exits.push({ face, a0, a1: a0 + BAY });
+  /** Where a shop from a to b along u, its front on the outer wall at v = vf, can have its door: the bay nearest the middle with open ground before it (13.10c), or null. */
+  const shopFront = (a: number, b: number, vf: number): Door | null => {
+    if (vf > V0 + 0.01 && vf < V1 - 0.01) return null;
+    const face = vf <= V0 + 0.01 ? (ax ? 2 : 0) : (ax ? 3 : 1), m = Math.floor((a + b) / 2 / BAY);
+    for (const o of [0, -1, 1, -2, 2]) {
+      const a0 = (m + o) * BAY;
+      if (a0 < a + 0.3 || a0 + BAY > b - 0.3) continue;
+      const [x, y, nX, nY] = facePoint(B, face, a0 + BAY / 2);
+      if (C && C.nx * x + C.ny * y > C.c - 0.3) continue;
+      if (isSolid(city, x + nX * 0.6, y + nY * 0.6)) continue;
+      return { face, a0, a1: a0 + BAY };
+    }
+    return null;
   };
+  const shopExit = (a: number, b: number, vf: number) => { const E = shopFront(a, b, vf); if (E) exits.push(E); return !!E; };
 
   /** An apartment from a to b along u, its depth running from the corridor wall at cv toward vf. */
   const apartment = (a: number, b: number, cv: number, vf: number) => {
@@ -533,7 +548,8 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   /** Split [a, b] along u into units of a few bays and fill each. */
   const units = (a: number, b: number, cv: number, vf: number) => {
     if (b - a < 1.2) return;
-    if (shop) {
+    // a shop only where its front is on the street (13.10c); the units at the back are offices or homes
+    if (shop && shopFront(a, b, vf)) {
       // a deep shop keeps a stockroom at the back, off the corridor, behind a door (13.2b)
       const D = Math.abs(vf - cv), s = vf > cv ? 1 : -1, id = unit++;
       if (D > 9 && b - a >= 3 * BAY) {
@@ -602,14 +618,14 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
       const c = cellAt({ box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & ROOM;
       const next = c && rooms[c - 1].unit >= 0 ? rooms[c - 1] : null; // not a corridor or the lobby
       room(next ? (next.kind === 'shop' || next.kind === 'store' || next.kind === 'open' || next.kind === 'office' ? next.kind : 'bedroom') : office ? 'office' : 'bedroom', next ? next.unit : unit++, F.su0, v0, F.lu1, v1);
-      if (next && next.kind !== 'shop' && next.kind !== 'store') doorU(F.su0, vm - 0.6);
+      if (next) doorU(F.su0, vm - 0.6);
     }
     if (lSide) { room('lobby', -1, lu0, lSide < 0 ? V0 : F.c1, lu1, lSide < 0 ? F.c0 : V1); doorV(lSide < 0 ? F.c0 : F.c1, (Math.max(lu0, U0) + Math.min(lu1, U1)) / 2 - 0.6); }
   } else {
     // walk-up: stairs at one end, the rest is one home (or a shop downstairs)
     // a walk-up: its end is a lift (the stairs are left out for now)
     room(floorsOf(city.buildings[k]) > 1 ? 'lift' : 'hall', -1, U0, V0, F.su1, V1);
-    if (shop) { room('shop', unit++, F.su1, V0, U1, V1); shopExit(F.su1, U1, V0); if (!exits.length) shopExit(F.su1, U1, V1); }
+    if (shop && (shopFront(F.su1, U1, V0) || shopFront(F.su1, U1, V1))) { room('shop', unit++, F.su1, V0, U1, V1); if (!shopExit(F.su1, U1, V0)) shopExit(F.su1, U1, V1); }
     else if (office) { room('office', unit++, F.su1, V0, U1, V1); doorU(F.su1, V0 + 0.4); }
     else {
       const n = (U1 - F.su1) / BAY, id = unit++;
@@ -637,10 +653,10 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   connect(cells, nx, ny, rooms);
   const P: Plan = { box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny };
   // the street doors (the main one and the shops'), so nothing is put in front of them
-  const streets: [number, number][] = [];
+  const streets: [number, number, number, number][] = [];
   if (ground) {
     const main = doorOf(city, k);
-    for (const D of main ? [main, ...exits] : exits) { const [x, y] = facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2); streets.push([x, y]); }
+    for (const D of main ? [main, ...exits] : exits) streets.push(facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2));
   }
   furnish(P, rnd, office, streets, shop && base.biz >= 0 ? city.businesses[base.biz]?.kind : undefined);
   return P;
@@ -713,7 +729,7 @@ function connect(cells: Uint16Array, nx: number, ny: number, rooms: Room[]) {
  */
 /** Metres kept clear around doorways when furnishing. */
 const CLEAR = 0.9;
-function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number][], biz?: BusinessKind) {
+function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number, number, number][], biz?: BusinessKind) {
   const F = P.furn;
   const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
     // every cell the piece covers (13.10a: a wall is one cell thick, a looser sampling missed it)
@@ -889,6 +905,76 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
         shelves(r, R, biz);
     }
   };
+  /**
+   * A shop's floor from a model drawn in text (sim/layouts.ts, 13.10c): turned so its front is the
+   * wall with the shop's street door, mirrored by the dice, stretched over the room; a piece that
+   * does not fit is left out, and the model is kept only with its till placed and walkable to from
+   * the door. False (nothing placed) when no model fits.
+   */
+  const layoutShop = (r: number, R: Room, biz: BusinessKind | undefined): boolean => {
+    const door = streets.find(([x, y, nX, nY]) => (cellAt(P, x - nX * 0.4, y - nY * 0.4) & ROOM) === r + 1);
+    const models = layoutsFor(biz);
+    if (!door || !models.length || (door[2] && door[3])) return false;
+    const [dx, dy, fx, fy] = door, w = sides(R), xs0 = w[0][0], xs1 = w[1][0], ys0 = w[2][1], ys1 = w[3][1];
+    const depth = fx ? xs1 - xs0 : ys1 - ys0, width = fx ? ys1 - ys0 : xs1 - xs0;
+    const rows = Math.floor(depth / 0.5), cols = Math.floor(width / 0.5), cw = width / cols, cd = depth / rows;
+    const start = (rnd() * models.length) | 0, m0 = rnd() < 0.5, n0 = F.length;
+    const display: FurnKind = biz === 'electronics' || biz === 'phones' || biz === 'pawn' ? 'case' : 'shelf';
+    for (let t = 0; t < models.length * 2; t++) {
+      const g = stretch(models[(start + (t >> 1)) % models.length], cols, rows);
+      if (!g) continue;
+      const mir = (t & 1) === 1 ? !m0 : m0;
+      // rows run from the back wall to the front (fx, fy); columns across, one way or the other
+      const rx = fx, ry = fy, cx = mir ? fy : -fy, cy = mir ? -fx : fx;
+      const ox = (rx || cx) > 0 ? xs0 : xs1, oy = (ry || cy) > 0 ? ys0 : ys1;
+      const seen = new Uint8Array(rows * cols), at = (i: number, j: number) => (i < 0 || j < 0 || i >= cols || j >= rows ? '.' : g[j][i]);
+      let till: Furn | null = null;
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const ch = g[j][i];
+        if (ch === '.' || seen[j * cols + i] || !PIECES[ch] && ch !== 'X') continue;
+        // the rectangle of this letter
+        let i1 = i + 1, j1 = j + 1;
+        if (!SINGLE.has(ch)) { while (at(i1, j) === ch) i1++; while (at(i, j1) === ch) j1++; }
+        for (let b = j; b < j1; b++) for (let a = i; a < i1; a++) seen[b * cols + a] = 1;
+        // which way it faces, in the model: chairs and stools to their table or counter, the rest away from the wall it stands on
+        let fc = 0, fr = 1;
+        if (SINGLE.has(ch) && ch !== 'P') {
+          search: for (let d = 1; d <= 2; d++) for (const [a, b] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) if ('tBDC'.includes(at(i + a * d, j + b * d))) { fc = a; fr = b; break search; }
+        } else if (!FRONT.has(ch) && j > 0) { if (i === 0) { fc = 1; fr = 0; } else if (i1 === cols) { fc = -1; fr = 0; } }
+        // cut into lengths along its long side
+        const [max, gap] = MAXLEN[ch] ?? [99, 0], long = i1 - i >= j1 - j;
+        for (let p = long ? i : j; p < (long ? i1 : j1); p += max + gap) {
+          const q = Math.min(p + max, long ? i1 : j1);
+          const a0 = long ? p : i, a1 = long ? q : i1, b0 = long ? j : p, b1 = long ? j1 : q;
+          const lc = (a0 + a1) / 2 * cw, lr = (b0 + b1) / 2 * cd;
+          const x = ox + cx * lc + rx * lr, y = oy + cy * lc + ry * lr;
+          const sc = (a1 - a0) * cw - 0.1, sr = (b1 - b0) * cd - 0.1, one = SINGLE.has(ch) ? 0.45 : 99;
+          const L = Math.min(one, fr ? sr : sc), Wd = Math.min(one, fr ? sc : sr);
+          const c = fc * cx + fr * rx, s = fc * cy + fr * ry;
+          const ex = Math.abs(c) * L / 2 + Math.abs(s) * Wd / 2, ey = Math.abs(s) * L / 2 + Math.abs(c) * Wd / 2;
+          if (!free(r, x - ex, y - ey, x + ex, y + ey)) continue;
+          const kind = ch === 'X' ? display : PIECES[ch];
+          const f: Furn = { kind, x, y, c, s, hx: L / 2, hy: Wd / 2, seed: (rnd() * 1e6) | 0 };
+          if (kind === 'shelf' || kind === 'case' || kind === 'cooler' || kind === 'bottles') f.stock = stock(biz, kind === 'case' ? 4 : 3, kind === 'cooler');
+          F.push(f);
+          if (kind === 'till') till = f;
+        }
+      }
+      if (till && reach(P, r, dx - fx * 0.4, dy - fy * 0.4, till.x + till.c * (till.hx + 0.3), till.y + till.s * (till.hx + 0.3))) return true;
+      F.length = n0;
+    }
+    return false;
+  };
+  /** Take away what was put in front of the room's tills afterwards (tables, islands), so the counter can be walked up to. */
+  const clearTill = (R: Room) => {
+    for (const t of F.filter((f) => f.kind === 'till' && f.x > R.x0 && f.x < R.x1 && f.y > R.y0 && f.y < R.y1)) {
+      const d = t.hx + 0.55, sx = t.x + t.c * d, sy = t.y + t.s * d, hx = Math.abs(t.c) * 0.55 + Math.abs(t.s) * t.hy, hy = Math.abs(t.s) * 0.55 + Math.abs(t.c) * t.hy;
+      for (let n = F.length - 1; n >= 0; n--) {
+        const f = F[n], ex = Math.abs(f.c) * f.hx + Math.abs(f.s) * f.hy, ey = Math.abs(f.s) * f.hx + Math.abs(f.c) * f.hy;
+        if (f !== t && f.x - ex < sx + hx && f.x + ex > sx - hx && f.y - ey < sy + hy && f.y + ey > sy - hy) F.splice(n, 1);
+      }
+    }
+  };
   /** How much of room r's floor its pieces cover, 0..1. */
   const covered = (r: number, R: Room) => {
     let a = 0;
@@ -957,7 +1043,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
         }
         wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
         break;
-      case 'shop': shopFloor(r, R, biz); fillShop(r, R, biz); break;
+      case 'shop': if (!layoutShop(r, R, biz)) shopFloor(r, R, biz); fillShop(r, R, biz); clearTill(R); break;
       case 'store': storeRoom(r, R, biz); break;
       case 'lobby':
         if (office) wall(r, R, 'reception', 0.8, 2.2, 1.2);
@@ -965,6 +1051,29 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
         break;
     }
   });
+}
+
+/** Whether (tx, ty) can be walked to from (sx, sy) inside room r, round its walls and furniture. */
+export function reach(P: Plan, r: number, sx: number, sy: number, tx: number, ty: number): boolean {
+  const { cells, nx, ny } = P, n = nx * ny;
+  const idx = (x: number, y: number) => { const i = Math.floor(x / CELL) - P.gx, j = Math.floor(y / CELL) - P.gy; return i < 0 || j < 0 || i >= nx || j >= ny ? -1 : j * nx + i; };
+  const ok = (c: number) => (cells[c] & ROOM) === r + 1 && !(cells[c] & WALL) && !inFurniture(P, (P.gx + c % nx + 0.5) * CELL, (P.gy + ((c / nx) | 0) + 0.5) * CELL);
+  const s = idx(sx, sy), t = idx(tx, ty);
+  if (s < 0 || t < 0 || !ok(s) || !ok(t)) return false;
+  const seen = new Uint8Array(n), stack = [s];
+  seen[s] = 1;
+  while (stack.length) {
+    const c = stack.pop()!, i = c % nx;
+    if (c === t) return true;
+    for (const d of [1, -1, nx, -nx]) {
+      if ((d === 1 && i === nx - 1) || (d === -1 && i === 0)) continue;
+      const e = c + d;
+      if (e < 0 || e >= n || seen[e]) continue;
+      seen[e] = 1;
+      if (ok(e)) stack.push(e);
+    }
+  }
+  return false;
 }
 
 /** Whether (x, y) is inside a piece of the plan's furniture. */
