@@ -3,6 +3,7 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.13.7 — Placas de rua (2026-10-04)
+- As placas pintadas e os letreiros laterais não parecem mais de vidro, e a placa de direção saiu do meio da rua.
 - Toda esquina tem as placas verdes com o nome das duas ruas, no poste do semáforo ou num poste próprio.
 - Nos cruzamentos das vias largas, placas marrons apontam para o marco mais perto, com a distância.
 - O portão das subestações mostra a placa da companhia elétrica com o número da subestação.

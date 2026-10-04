@@ -668,7 +668,9 @@ function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
     }
     cornerText.set(key, text);
   }
-  if (text) out.push({ x: S.x + S.c * 1.6, y: S.y + S.s * 1.6, c: S.c, s: S.s, parts: guideSign(text), r: 0.12 * text.length / 2 + 0.4, h: 2.6, seed: 0 });
+  // up the sidewalk, away from the crossing: a stop sign's corner is the near one, a light's the far one
+  const back = stop ? 1.6 : -1.6;
+  if (text) out.push({ x: S.x + S.c * back, y: S.y + S.s * back, c: S.c, s: S.s, parts: guideSign(text), r: 0.12 * text.length / 2 + 0.4, h: 2.6, seed: 0 });
 }
 
 function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => void) {

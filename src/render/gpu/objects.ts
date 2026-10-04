@@ -398,7 +398,8 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let uu = q1.y - hp.y - start; let li = ifloor(uu / lw); let fz = ((q0.z + q1.z) / 2.0 + lh / 2.0 - hp.z) / lh;
       let frame = !bulbs && (min(hp.y - q0.y, q1.y - hp.y) < max(min(0.2, W * 0.05), perCol / 2.0) || min(hp.z - q0.z, q1.z - hp.z) < max(min(0.2, H * 0.08), perRow / 2.0));
       var fg = false;
-      ch = DOT;
+      // the board's face between the letters is solid (a sparse glyph read as tinted glass, 13.7)
+      ch = select(HASH, DOT, bulbs);
       if (frame) { ch = EQ; }
       else if (li >= 0 && f32(li) < n && ((fz >= 0.0 && fz < 1.0) || bulbs)) {
         let cc = fx[tOff + u32(li)]; let fu = (uu / lw - f32(li)) * 1.25 - 0.12;
@@ -452,11 +453,11 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         let bx = ifloor(bpx); let by = ifloor(bpz);
         if (nb > 0u) { ch = bulbGlyph(nb, perCol / ux / 2.0, perRow / uz / 2.0); kk = 1.25; }
         else if (slotOn(cc, sl, bx, by)) { ch = 32u; kk = 0.75; }
-        else { ch = 32u; kk = 0.12; }
+        else { ch = EQ; kk = 0.3; } // the panel between the bulbs, solid (a blank read as tinted glass, 13.7)
       } else {
         // a glyph in the one cell holding the slot's center; the rest of the panel glows faintly
         let center = abs(hp.x - (sx0 + sw / 2.0)) < max(perCol, 0.05) / 2.0 && abs(hp.z - (sz0 - sh / 2.0)) < perRow / 2.0 + 0.01;
-        ch = select(32u, farC, center); kk = select(0.3, 1.0, center);
+        ch = select(EQ, farC, center); kk = select(0.3, 1.0, center);
       }
     }
     else {
@@ -469,9 +470,10 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         kk *= 0.55 + 0.45 * h + 0.25 * nrm.z;
       } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && shape == 0u), fx[p + 12u], face == 2); }
     }
-    let painted = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN || (mat == M_BOARD && face == 0);
+    // a board's printed face is a surface like any other (lit, shaded, its own sun), lit at night by its lamps too
+    let painted = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;
     // at night the paint reads darker, as the walls' palette does (the lamps' light comes on top, by its color)
-    var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
+    var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW && mat != M_BOARD); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
     if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); } // the room's lamps
     else if (!painted) {
@@ -483,11 +485,11 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     if (mat == M_GLOW || mat == M_TEXT || (mat == M_SCREEN && face == 1)) { oEm = rgb; }
     // seen through glass: darker and colder, with a faint sheen
     if (glassT < best) { rgb = rgb * vec3f(0.6, 0.66, 0.72) + vec3f(16.0, 24.0, 34.0); oEm *= 0.66; oIl *= 0.66; }
-    // the share of direct sun on this face (2 + share, see finish); a fire escape (no sun on the CPU) and
-    // the painted faces keep what was under them
+    // the share of direct sun on this face (2 + share, see finish), by its own normal (signs too: taking
+    // what was under them showed the wall's shadows through them, 13.7); a fire escape keeps what was under it
     var sun = select(0.0, cl.sun, cl.sun >= 2.0);
     if (cl.kind == KIND_WALL && !indoor) { sun = 2.0 + cl.sun; }
-    if (!painted && mat != M_GLOW && zoff == 0.0 && !indoor) {
+    if (mat != M_GLOW && zoff == 0.0 && !indoor) {
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
