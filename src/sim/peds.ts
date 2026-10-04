@@ -52,8 +52,12 @@ export interface Ped {
   door: number;
   lx: number;
   ly: number;
-  /** Their phone now (see phoneUse): 0 not in use, 1 on a call (at the ear), 2 texting (in the hand, its screen lit), 3 ringing. */
+  /** Their phone now (see phoneUse): 0 not in use, 1 on a call (at the ear), 2 texting (in the hand, its screen lit), 3 ringing; 4 pointing the way. */
   use: number;
+  /** Stopped to talk to the player (13.9): ticks left, and the way pointed (0, 0: facing the player). */
+  hold?: number;
+  pdx?: number;
+  pdy?: number;
 }
 
 /**
@@ -331,6 +335,14 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
     p.px = p.x; p.py = p.y;
     // too far from the player: off the street (their day goes on by their plan)
     if (Math.abs(p.x - px) > PED_FAR || Math.abs(p.y - py) > PED_FAR) { walking.delete(p.id); peds.splice(k, 1); continue; }
+    // stopped, telling the player the way: facing them, then pointing the first way for a while, then facing them again
+    if (p.hold) {
+      p.hold--;
+      const fx = px - p.x, fy = py - p.y, fl = Math.hypot(fx, fy) || 1, pointing = (p.pdx || p.pdy) && p.hold > 90 && p.hold < 300;
+      if (pointing) { p.dx = p.pdx!; p.dy = p.pdy!; } else { p.dx = fx / fl; p.dy = fy / fl; }
+      p.v = 0; p.use = pointing ? 4 : 0;
+      continue;
+    }
     if ((tick + p.id) % SYNC_TICKS === 0 && !p.door && !p.way.length && p.goal >= 0 && !inSight(p.x, p.y, px, py, hx, hy)) {
       const W = whereIs(pop, city, p.id, time);
       if (W.doing !== Doing.Walk || W.building !== p.goal) { walking.delete(p.id); peds.splice(k, 1); continue; }

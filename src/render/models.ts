@@ -163,13 +163,15 @@ export function pedModel(who: number, step: number, umbrella: boolean, far: bool
       limb(-lw, 0, -sw, 0, Z, pants, L.shoes, 3, 0),
       body,
       // the right arm swinging, or holding the phone: at the ear on a call, out in front to text (its screen lit)
-      use === 1 ? limb(hd, hd + lw - alex, 0, T - 0.1, T + 0.28, L.sleeve, L.skin, 2, L.armStyle)
+      use === 4 ? part(Box, -0.05, hd, T - 0.225, 0.5, hd + lw - alex, T, L.sleeve, Solid, '=', '-', '#') // pointing the way: the arm out ahead (its hand added below)
+        : use === 1 ? limb(hd, hd + lw - alex, 0, T - 0.1, T + 0.28, L.sleeve, L.skin, 2, L.armStyle)
         : use ? limb(hd - 0.05, hd + lw - 0.05 - alex, 0.15, Z + 0.15, Z + 0.27, L.sleeve, L.skin, 2, L.armStyle)
           : limb(hd, hd + lw - alex, -sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
       limb(-hd - lw + alex, -hd, sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
       head,
     ];
     if (use === 1) m.push(part(Box, -0.01, hd - 0.02, T + 0.12, 0.07, hd + 0.03, T + 0.28, [30, 30, 34], Solid, '|'));
+    else if (use === 4) m.push(part(Box, 0.5, hd + 0.02, T - 0.2, 0.62, hd + lw - alex - 0.02, T - 0.03, L.skin, Solid, '#'));
     else if (use) {
       m.push(part(Box, 0.26, -0.02, Z + 0.24, 0.36, 0.1, Z + 0.29, [30, 30, 34], Solid, '='));
       m.push(part(Box, 0.27, 0, Z + 0.29, 0.35, 0.08, Z + 0.31, use === 3 ? [255, 240, 160] : [150, 200, 255], Glow, '-', '='));

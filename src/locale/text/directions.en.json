@@ -1,0 +1,62 @@
+{
+  "dir.answer": [
+    "3|#dirhi# #dirroute# #dirend#",
+    "2|#dirroute# #dirend#",
+    "1|#dirhi# #dirroute#"
+  ],
+  "dir.one": [
+    "2|#dirhi# #dirone# #dirend#",
+    "1|#dirone# #dirend#"
+  ],
+  "dirhi": [
+    "Sure.",
+    "Oh, {place}?",
+    "Let me think...",
+    "Yeah, I know it.",
+    "Okay, so...",
+    "[old/senior] Oh, certainly.",
+    "[old/senior] Let me see, dear.",
+    "[teen/young] Yeah, easy.",
+    "[teen/young] Uh, yeah.",
+    "[evening/late] Sure, real quick."
+  ],
+  "dirroute": [
+    "Go {leg1}, then {leg2}.",
+    "Head {leg1}, and then {leg2}.",
+    "Walk {leg1}, then turn and go {leg2}.",
+    "You want to go {leg1}, then {leg2}."
+  ],
+  "dirone": [
+    "Go {leg1}.",
+    "Just head {leg1}.",
+    "It's {leg1} from here.",
+    "Keep going {leg1}."
+  ],
+  "dirend": [
+    "It's on {road}.",
+    "You'll see it on {road}.",
+    "It's right there on {road}.",
+    "Can't miss it.",
+    "[old/senior] It's been there for years.",
+    "[teen/young] Can't miss it."
+  ],
+  "dir.near": [
+    "It's right around here, about {feet} feet {way}.",
+    "Oh, it's just {way} of here.",
+    "You're practically there. About {feet} feet {way}."
+  ],
+  "dir.dunno": [
+    "Sorry, no idea.",
+    "Hm, I don't know that one.",
+    "Sorry, I'm not from around here.",
+    "Never heard of it, sorry.",
+    "[old/senior] I'm afraid I couldn't tell you.",
+    "[teen/young] No clue, sorry."
+  ],
+  "dir.busy": [
+    "Sorry, can't stop.",
+    "Not now, sorry.",
+    "Sorry, in a hurry.",
+    "[late] Sorry, it's late."
+  ]
+}

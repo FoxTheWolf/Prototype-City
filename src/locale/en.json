@@ -14,6 +14,10 @@
       "battery": { "name": "Notebook battery", "what": "A second pack: about twice the hours." }
     }
   },
+  "ask": {
+    "use": "[F] ASK THE WAY", "title": "EXCUSE ME, HOW DO I GET TO...", "keys": "[UP/DN] PICK  [ENTER] ASK  [F] NEVER MIND", "they": "PASSERBY",
+    "north": "north", "south": "south", "east": "east", "west": "west"
+  },
   "bag": {
     "title": "BACKPACK", "keys": "[DRAG] MOVE  [R] TURN  [E] EAT  [DRAG TO A SLOT] USE  [RIGHT CLICK] PUT BACK / THROW AWAY  [B] CLOSE",
     "keep": "You'll want to keep that.", "thrown": "{x}: thrown away.", "back": "{x}: back on the shelf.",

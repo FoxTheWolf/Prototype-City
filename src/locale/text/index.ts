@@ -20,6 +20,7 @@ import SKY from './posts/topic-sky.en.json';
 import EVENTS from './posts/topic-events.en.json';
 import PROMO from './promo.en.json';
 import ARTICLES from './articles.en.json';
+import DIRECTIONS from './directions.en.json';
 
 /**
  * Every grammar file of the city's texts, in one: lists of the same name in several files are put
@@ -34,5 +35,5 @@ export function merge(...files: Grammar[]): Grammar {
 export const TEXT: Grammar = merge(
   WORDS as Grammar, WORDS2 as Grammar, MEMES as Grammar, SMS as Grammar, NEWS as Grammar, NEWS8 as Grammar, CAL as Grammar, COMMENTS as Grammar, PROFILES as Grammar, SHAPES as Grammar,
   HAPPY as Grammar, CALM as Grammar, LOW as Grammar, PLAYFUL as Grammar,
-  HOME as Grammar, WORK as Grammar, STREET as Grammar, SKY as Grammar, EVENTS as Grammar, PROMO as Grammar, ARTICLES as Grammar,
+  HOME as Grammar, WORK as Grammar, STREET as Grammar, SKY as Grammar, EVENTS as Grammar, PROMO as Grammar, ARTICLES as Grammar, DIRECTIONS as Grammar,
 );

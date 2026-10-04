@@ -7,6 +7,7 @@ import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
 import { Counter, counterPrompt, drawCounter, money } from './counter';
 import { BagView } from './bagUi';
+import { AskWay, drawAskWay } from './askWay';
 import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
@@ -124,6 +125,7 @@ const phone = new Phone(world);
 const payphone = new Payphone(world);
 const counter = new Counter(world);
 const bagView = new BagView(world);
+const ask = new AskWay(world);
 // the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
 bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
 bagView.onSwap = (op) => { swapSim(world, op); phone.newSim(); };
@@ -168,7 +170,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, bagView, counter, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp,
   // the GPU world's characters (J on), read back from its output buffer, to compare with gridText
   gpuText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
     if (!gpu) return '';
@@ -430,6 +432,8 @@ addEventListener('keydown', (e) => {
     laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
     return;
   }
+  // asking someone the way (13.9): the list takes the arrows, Enter, F and Esc
+  if (ask.open) { if (!e.repeat && ask.key(e.code, performance.now() / 1000)) e.preventDefault(); return; }
   // at a shop's counter (F.9) the arrows, Enter, F and Esc are its
   if (counter.active) {
     if (!e.repeat && counter.key(e.code, performance.now() / 1000)) { e.preventDefault(); if (world.gear.battery) gearBattery(true); }
@@ -473,6 +477,8 @@ addEventListener('keydown', (e) => {
     // the lift's doors in front, its car elsewhere: call it (13.2d)
     if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
     if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
+    // someone on the sidewalk in front: ask them the way (13.9)
+    if (!phone.out) { const q = ask.near(camera.yaw); if (q) { ask.ask(q); return; } }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
@@ -536,7 +542,7 @@ function readInput(): PlayerInput {
   // the up and down arrows belong to the phone (as in GTA IV); WASD walk
   const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
-  const go = running && laptop.raise === 0 && !counter.active && !bagView.open;
+  const go = running && laptop.raise === 0 && !counter.active && !bagView.open && !ask.open;
   return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
@@ -915,6 +921,9 @@ function frame(now: number) {
     const d = lift ? null : doorAhead(world, camera.yaw), late = now / 1000 - doorNoteAt < 1.5 && doorNote;
     if (d || late || lift) { const s = ` ${late ? doorNote : lift ? (carOf(world, world.player.inside).to === world.player.floor ? en.doors.coming : en.doors.call) : world.doorWant.has(d!.key) ? en.doors.close : en.doors.open} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   }
+  // someone to ask the way, in front; the list, and what they said
+  drawAskWay(ui, ask, now / 1000);
+  if (!till && !aim && !phone.out && !counter.active && !ask.open && !bagView.open && !payphone.active && !doorAhead(world, camera.yaw) && ask.near(camera.yaw)) { const s = ` ${en.ask.use} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
