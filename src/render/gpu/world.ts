@@ -478,7 +478,7 @@ export class GpuWorld {
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
     const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // indoors, the floor's furniture, lit by its rooms' lamps
-    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
+    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
     // the floodlit facades near enough for their lamps' shadows: who stands in front of one casts them
     const lit: number[] = [];
@@ -659,7 +659,7 @@ export class GpuWorld {
     if (this.fxPlan[s]) return W[t];
     // after the cells, the furniture (seen through the windows): its count, then per piece x, y, c, s,
     // its radius and its model's offset; then the models, each once
-    const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy));
+    const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock));
     let mSize = 0;
     for (const m of list) if (!mods.has(m)) { mods.set(m, 0); mSize += partsSize(m); }
     const nCells = Math.ceil(P.cells.length / 4), fo = 6 + P.rooms.length * 6 + nCells;

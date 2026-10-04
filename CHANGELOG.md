@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.2 — Lojas por dentro (2026-10-04)
+- Cada tipo de lugar tem o interior que combina com ele: diners com balcão e banquetas vermelhas, bares com a prateleira de garrafas, cafés e pizzarias com vitrine e forno, cybercafés com fileiras de computadores, lavanderias com lavadoras e secadoras, mercearias com geladeiras e corredores, lojas de eletrônicos e de penhor com vitrines.
+- As prateleiras mostram o que a loja vende, cada produto com sua cor. Pegar e comprar vem na próxima parte.
+- Dá para apoiar o notebook no balcão de um bar ou numa vitrine, e sentar numa banqueta.
+
 ## 0.13.1 — Lugares de verdade, primeira parte (2026-10-04)
 - A cidade ganhou pizzarias, delis, lanchonetes de fast food, lojas de celular, cybercafés (poucos: procure no Maps) e motéis, cada um com nome, letreiro, horário e saudação ao telefone.
 - Cada tipo de lugar agora sabe o que vende e quanto custa (preços de 2008). Por enquanto isso ainda não aparece no jogo: é a base para comprar pegando na prateleira, nas próximas atualizações.

@@ -29,7 +29,7 @@ export function findSeat(w: World): Seat | 'road' | 'lift' {
       // distance to the piece's footprint
       const dx = p.x - f.x, dy = p.y - f.y, u = Math.abs(dx * f.c + dy * f.s) - f.hx, v = Math.abs(-dx * f.s + dy * f.c) - f.hy, d = Math.hypot(Math.max(0, u), Math.max(0, v));
       const kind: SeatKind | null = f.kind === 'desk' || f.kind === 'table' || f.kind === 'coffee' ? 'desk'
-        : f.kind === 'counter' || f.kind === 'reception' || f.kind === 'till' ? 'counter' : f.kind === 'sofa' || f.kind === 'chair' ? 'sofa' : f.kind === 'bed' ? 'bed' : null;
+        : f.kind === 'counter' || f.kind === 'reception' || f.kind === 'till' || f.kind === 'bar' || f.kind === 'case' ? 'counter' : f.kind === 'sofa' || f.kind === 'chair' || f.kind === 'stool' ? 'sofa' : f.kind === 'bed' ? 'bed' : null;
       if (kind && d < bd) { bd = d; best = { kind, eye: kind === 'counter' ? 1.6 : kind === 'bed' ? 1.0 : kind === 'desk' && f.kind === 'coffee' ? 1.1 : 1.2 }; }
     }
     return best ?? { kind: 'floor', eye: 0.85 };

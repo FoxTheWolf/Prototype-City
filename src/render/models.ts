@@ -437,18 +437,41 @@ export function poweredFurniture(kind: string, k: number): Part[] {
 
 const GOODS: RGB[] = [[200, 60, 50], [60, 120, 200], [230, 200, 60], [80, 170, 90], [220, 220, 210]];
 const furns = new Map<string, Part[]>();
+/** Each good has its own packaging color, from its name (so the same good looks the same everywhere). */
+const goodColors = new Map<string, RGB>();
+function goodColor(g: string): RGB {
+  let c = goodColors.get(g);
+  if (!c) {
+    let h = 0;
+    for (let i = 0; i < g.length; i++) h = Math.imul(h ^ g.charCodeAt(i), 0x01000193);
+    const a = ((h >>> 0) % 360) / 360 * 2 * Math.PI, l = 150 + ((h >>> 9) % 70);
+    c = [l + 80 * Math.cos(a), l + 80 * Math.cos(a - 2.09), l + 80 * Math.cos(a + 2.09)].map((x) => Math.max(30, Math.min(240, x))) as unknown as RGB;
+    goodColors.set(g, c);
+  }
+  return c;
+}
 /**
  * Furniture, facing +x (its front), centered, hx deep and hy wide (half sizes), as volumes like the
  * street furniture. Colors vary a little with the seed.
  */
-export function furnitureModel(kind: string, seed: number, hx: number, hy: number): Part[] {
-  const v = seed % 4, key = kind + v + hx.toFixed(2) + hy.toFixed(2);
+export function furnitureModel(kind: string, seed: number, hx: number, hy: number, stock?: string[]): Part[] {
+  const v = seed % 4, key = kind + v + hx.toFixed(2) + hy.toFixed(2) + (stock ? stock.join() : '');
   let m = furns.get(key);
   if (m) return m;
   const pick = <T>(a: T[]) => a[v % a.length];
   const WOOD = pick<RGB>([[120, 80, 50], [95, 65, 45], [140, 105, 70], [80, 60, 50]]);
   const FAB = pick<RGB>([[120, 60, 55], [60, 80, 120], [90, 110, 80], [130, 120, 100]]);
-  const WHITE: RGB = [200, 200, 195], DARK: RGB = [45, 45, 50];
+  const WHITE: RGB = [200, 200, 195], DARK: RGB = [45, 45, 50], STEEL: RGB = [150, 152, 158];
+  /** The packaging color of the goods at a spot: one of the piece's stock (each good its own color), or any. */
+  const goods = (h: number): RGB => (stock?.length ? goodColor(stock[(h * stock.length) | 0]) : GOODS[(h * GOODS.length) | 0]);
+  /** Rows of goods across a face at x = fx, from z0 to z1, each `w` wide and `t` tall. */
+  const fill = (out: Part[], fx: number, z0: number, z1: number, dz: number, w: number, t: number, skip = 0.25) => {
+    for (let z = z0; z < z1; z += dz) for (let y = -hy + 0.1; y < hy - w; y += w + 0.08) {
+      const h = hash3(seed, Math.round(y * 10), Math.round(z * 10));
+      if (h < skip) continue;
+      out.push(part(Box, fx - 0.06, y, z, fx, y + w, z + t, goods(h), Solid, '#'));
+    }
+  };
   switch (kind) {
     case 'bed': m = [
       part(Box, -hx, -hy, 0, hx, hy, 0.3, WOOD, Solid, '=', '='),
@@ -487,8 +510,49 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
       for (let z = 0.3; z < 1.7; z += 0.42) for (let y = -hy + 0.1; y < hy - 0.2; y += 0.3) {
         const h = hash3(seed, Math.round(y * 10), Math.round(z * 10));
         if (h < 0.25) continue;
-        m.push(part(Box, hx - 0.02, y, z, hx + 0.02, y + 0.22, z + 0.25, GOODS[(h * GOODS.length) | 0], Solid, '#'));
+        m.push(part(Box, hx - 0.02, y, z, hx + 0.02, y + 0.22, z + 0.25, goods(h), Solid, '#'));
       }
+      break;
+    }
+    case 'bar': m = [part(Box, -hx, -hy, 0, hx, hy, 1.05, [70, 45, 35], Solid, '#', '='), part(Box, -hx, -hy, 1.05, hx + 0.08, hy, 1.1, [150, 110, 70], Solid, '-', '_')]; break;
+    case 'stool': m = [part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, 0.72, STEEL, Solid, '|'), part(Cyl, -hx, -hy, 0.72, hx, hy, 0.78, [150, 40, 40], Solid, '=', 'o')]; break;
+    case 'bottles': {
+      // a tall back shelf, its bottles in rows (the stock's colors), a mirror strip behind
+      m = [part(Box, -hx, -hy, 0, hx, hy, 0.9, [70, 45, 35], Solid, '#', '='), part(Box, -hx, -hy, 0.9, -hx + 0.04, hy, 2.0, [120, 130, 140], Glass, '|')];
+      for (const z of [0.9, 1.35]) {
+        m.push(part(Box, -hx, -hy, z, hx, hy, z + 0.03, [90, 60, 40], Solid, '-'));
+        for (let y = -hy + 0.1; y < hy - 0.15; y += 0.15) {
+          const h = hash3(seed, Math.round(y * 20), Math.round(z * 10));
+          if (h < 0.15) continue;
+          m.push(part(Cyl, -0.06, y, z + 0.03, 0.06, y + 0.11, z + 0.36, goods(h), Solid, '!', 'o'));
+        }
+      }
+      break;
+    }
+    case 'cooler': m = [
+      // a glass-door drinks fridge, lit inside
+      part(Box, -hx, -hy, 0, hx, hy, 2.0, DARK, Solid, '#', '='),
+      part(Box, hx - 0.02, -hy + 0.06, 0.15, hx + 0.01, hy - 0.06, 1.9, [200, 230, 255], Glow, ':')];
+      fill(m, hx + 0.02, 0.25, 1.8, 0.4, 0.12, 0.26, 0.15); break;
+    case 'case': m = [
+      // a display counter: a base, glass on top, goods inside
+      part(Box, -hx, -hy, 0, hx, hy, 0.6, WOOD, Solid, '#', '='),
+      part(Box, -hx, -hy, 0.95, hx, hy, 1.0, [170, 200, 210], Glass, '-', '_')];
+      for (let y = -hy + 0.15; y < hy - 0.2; y += 0.32) {
+        const h = hash3(seed, Math.round(y * 10), 3);
+        if (h < 0.2) continue;
+        m.push(part(Box, -0.12, y, 0.6, 0.12, y + 0.22, 0.75, goods(h), Solid, 'o', 'o'));
+      }
+      break;
+    case 'oven': m = [
+      part(Box, -hx, -hy, 0, hx, hy, 0.85, STEEL, Solid, '#', '='),
+      part(Box, -hx, -hy, 0.85, hx, hy, 1.55, [110, 112, 118], Solid, '#', '='),
+      part(Box, hx, -hy + 0.15, 1.05, hx + 0.02, hy - 0.15, 1.3, [255, 130, 40], Glow, '=')]; break;
+    case 'washer': case 'dryer': {
+      // a front loader; dryers stack two high
+      const tall = kind === 'dryer' ? 1.8 : 0.9;
+      m = [part(Box, -hx, -hy, 0, hx, hy, tall, WHITE, Solid, '#', '=')];
+      for (let z = 0.45; z < tall; z += 0.9) m.push(part(Ball, hx - 0.03, -0.2, z - 0.2, hx + 0.03, 0.2, z + 0.2, [60, 70, 80], Glass, 'O'));
       break;
     }
     case 'till': m = [part(Box, -hx, -hy, 0, hx, hy, 1.0, WOOD, Solid, '#', '='), part(Box, -0.15, -0.2, 1.0, 0.1, 0.2, 1.25, DARK, Solid, '#'), part(Box, 0.1, -0.15, 1.05, 0.12, 0.15, 1.2, [120, 255, 140], Glow, ':')]; break;

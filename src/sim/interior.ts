@@ -1,5 +1,6 @@
 import { hash3, mulberry32 } from '../core/rng';
-import { BAY, blockAt, faceSpan, FLOOR_H, isSolid, type Building, type City } from './city';
+import { BAY, blockAt, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
+import { PLACES } from './placeTypes';
 
 /**
  * The insides of the buildings, in the same space as the street: no loading, the door is a gap in
@@ -46,7 +47,8 @@ export interface Plan {
 }
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
-export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table';
+export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table'
+  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer';
 export interface Furn {
   kind: FurnKind;
   x: number;
@@ -56,6 +58,8 @@ export interface Furn {
   hx: number;
   hy: number;
   seed: number;
+  /** What a shelf, cooler or display case holds: goods of the shop (placeTypes), a few per piece. */
+  stock?: string[];
 }
 
 /** The street door: on face 0..4 (as faceSpan numbers them), from a0 to a1 along it. */
@@ -595,7 +599,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     const main = doorOf(city, k);
     for (const D of main ? [main, ...exits] : exits) { const [x, y] = facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2); streets.push([x, y]); }
   }
-  furnish(P, rnd, office, streets);
+  furnish(P, rnd, office, streets, shop && base.biz >= 0 ? city.businesses[base.biz]?.kind : undefined);
   return P;
 }
 
@@ -650,7 +654,7 @@ function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
  */
 /** Metres kept clear around doorways when furnishing. */
 const CLEAR = 0.9;
-function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number][]) {
+function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number][], biz?: BusinessKind) {
   const F = P.furn;
   const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
     for (let y = y0 + 0.1; y < y1; y += 0.2) for (let x = x0 + 0.1; x < x1; x += 0.2) {
@@ -690,6 +694,134 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
     }
     return null;
   };
+  /** Goods of the shop for one piece: a few of what it sells, from a spot picked by the plan's dice. */
+  const stock = (biz: BusinessKind | undefined, n: number): string[] | undefined => {
+    const all = biz ? PLACES[biz].sells.map(([g]) => g) : [];
+    if (!all.length) return undefined;
+    const out: string[] = [], at = (rnd() * all.length) | 0;
+    for (let k = 0; k < Math.min(n, all.length); k++) out.push(all[(at + k) % all.length]);
+    return out;
+  };
+  /** A run of pieces side by side along the first wall where at least `min` of them fit. */
+  const row = (r: number, R: Room, kind: FurnKind, L: number, W: number, front: number, n: number, min = 2, biz?: BusinessKind): Furn[] => {
+    const walls: [number, number, number, number, number][] = [
+      [R.x0 + 0.05, 0, 1, 0, R.y1 - R.y0], [R.x1 - 0.05, 0, -1, 0, R.y1 - R.y0], [0, R.y0 + 0.05, 0, 1, R.x1 - R.x0], [0, R.y1 - 0.05, 0, -1, R.x1 - R.x0]];
+    const start = (rnd() * 4) | 0;
+    for (let k = 0; k < 4; k++) {
+      const [wx, wy, c, s, len] = walls[(start + k) % 4], got: Furn[] = [];
+      for (let a = 0.3 + W / 2; a < len - 0.3 - W / 2 && got.length < n; a += W + 0.05) {
+        const along = (c ? R.y0 : R.x0) + a;
+        const f = c ? put(r, kind, wx, along, c, s, L, W, front) : put(r, kind, along, wy, c, s, L, W, front);
+        if (f) { f.stock = stock(biz, 3); got.push(f); }
+      }
+      if (got.length >= min) return got;
+      for (const f of got) F.splice(F.indexOf(f), 1);
+    }
+    return [];
+  };
+  /** Small tables with a chair on two sides, in a grid over what is left of the room. */
+  const tables = (r: number, R: Room, step: number) => {
+    for (let y = R.y0 + 1.4; y < R.y1 - 1.1; y += step) for (let x = R.x0 + 1.4; x < R.x1 - 1.1; x += step) {
+      const t = put(r, 'table', x - 0.4, y, 1, 0, 0.8, 0.8, 0);
+      if (!t) continue;
+      // put() takes the back of a piece: each chair's back 0.5 m off the table's edge, facing it
+      put(r, 'chair', t.x - 0.95, t.y - 0.15, 1, 0, 0.45, 0.45, 0);
+      put(r, 'chair', t.x + 0.95, t.y + 0.15, -1, 0, 0.45, 0.45, 0);
+    }
+  };
+  /** A counter along a wall with stools in front of it (a diner's, a bar's). */
+  const counterStools = (r: number, R: Room, kind: FurnKind, len: number): Furn | null => {
+    const f = wall(r, R, kind, 0.7, Math.min(len, Math.max(R.x1 - R.x0, R.y1 - R.y0) - 2.4), 1.6);
+    if (!f) return null;
+    const px = -f.s, py = f.c, out = f.hx + 0.25;
+    for (let t = -f.hy + 0.4; t <= f.hy - 0.3; t += 0.75)
+      put(r, 'stool', f.x + f.c * out + px * t, f.y + f.s * out + py * t, f.c, f.s, 0.4, 0.4, 0);
+    return f;
+  };
+  /** Aisles of free-standing shelves (up to 5 m each) down the long side, each with its goods; against the walls when the shop is too narrow. */
+  const shelves = (r: number, R: Room, biz: BusinessKind | undefined, max = 99) => {
+    const w = R.x1 - R.x0, d = R.y1 - R.y0, alongY = d >= w;
+    const a0 = alongY ? R.x0 : R.y0, a1 = alongY ? R.x1 : R.y1, b0 = alongY ? R.y0 : R.x0, b1 = alongY ? R.y1 : R.x1;
+    let n = 0;
+    for (let a = a0 + 1.6; a < a1 - 1.6 && n < max; a += 2.2) for (let b = b0 + 1.4; b < b1 - 1.4 && n < max;) {
+      const L = Math.min(5, b1 - 1.4 - b);
+      if (L < 1) break;
+      const f = alongY ? put(r, 'shelf', a, b + L / 2, 1, 0, 0.5, L, 0) : put(r, 'shelf', b + L / 2, a, 0, 1, 0.5, L, 0);
+      if (f) { f.stock = stock(biz, 3); n++; }
+      b += L + 1.4;
+    }
+    if (!n) n = row(r, R, 'shelf', 0.5, 1.4, 0.9, Math.min(max, 6), 1, biz).length;
+  };
+  /** A shop's floor by what the business is (placeTypes); every shop keeps a till, where the counter is (F.9). */
+  const shopFloor = (r: number, R: Room, biz: BusinessKind | undefined) => {
+    const area = (R.x1 - R.x0) * (R.y1 - R.y0);
+    switch (biz) {
+      case 'diner': case 'fastfood':
+        wall(r, R, 'till', 0.7, 1.4, 1.1);
+        if (biz === 'diner') counterStools(r, R, 'bar', 6);
+        else { const c = wall(r, R, 'case', 0.7, 3, 1.4); if (c) c.stock = stock(biz, 4); }
+        wall(r, R, 'oven', 0.8, 1.6, 0.9, [0.1, 0.9]);
+        tables(r, R, 2.3);
+        break;
+      case 'cafe': case 'deli': case 'pizza': {
+        wall(r, R, 'till', 0.7, 1.4, 1.1);
+        const c = wall(r, R, 'case', 0.7, 2.4, 1.4);
+        if (c) c.stock = stock(biz, 4);
+        if (biz === 'pizza') wall(r, R, 'oven', 0.9, 1.6, 0.9, [0.1, 0.9]);
+        else row(r, R, 'cooler', 0.7, 1, 0.9, 2, 1, biz);
+        tables(r, R, 2.4);
+        if (biz === 'cafe') wall(r, R, 'sofa', 0.9, 2, 1.2, [0.2, 0.8]);
+        break;
+      }
+      case 'bar': {
+        counterStools(r, R, 'bar', 7);
+        const b = wall(r, R, 'bottles', 0.35, 2.4, 1.0);
+        if (b) b.stock = stock(biz, 3);
+        wall(r, R, 'till', 0.7, 1.2, 1.1);
+        tables(r, R, 2.6);
+        break;
+      }
+      case 'cyber':
+        wall(r, R, 'till', 0.7, 1.6, 1.2);
+        // the computers, each a desk with its screen and a chair, in rows
+        for (let y = R.y0 + 1.6; y < R.y1 - 1.0; y += 2.2) for (let x = R.x0 + 1.2; x < R.x1 - 1.0; x += 1.7) {
+          const dk = put(r, 'desk', x, y, 0, 1, 0.7, 1.4, 0);
+          if (dk) put(r, 'chair', dk.x, dk.y + 0.9, 0, -1, 0.5, 0.5, 0);
+        }
+        row(r, R, 'cooler', 0.7, 1, 0.9, 1, 1, biz);
+        break;
+      case 'laundry':
+        wall(r, R, 'till', 0.7, 1.4, 1.1);
+        row(r, R, 'washer', 0.7, 0.7, 1.2, 8);
+        row(r, R, 'dryer', 0.7, 0.7, 1.2, 8);
+        if (area > 30) wall(r, R, 'table', 0.8, 1.8, 0.9, [0.5]);
+        break;
+      case 'grocery': case 'liquor':
+        wall(r, R, 'till', 0.7, 1.6, 1.2);
+        row(r, R, 'cooler', 0.7, 1, 1.0, 5, 2, biz);
+        shelves(r, R, biz);
+        break;
+      case 'electronics': case 'phones': case 'pawn':
+        wall(r, R, 'till', 0.7, 1.6, 1.1);
+        row(r, R, 'case', 0.6, 1.6, 1.0, 4, 1, biz);
+        shelves(r, R, biz, biz === 'electronics' ? 99 : 2);
+        break;
+      case 'bank':
+        wall(r, R, 'reception', 0.8, Math.min(5, Math.max(R.x1 - R.x0, R.y1 - R.y0) - 2), 1.8);
+        wall(r, R, 'till', 0.7, 1.2, 1.1);
+        wall(r, R, 'table', 0.7, 1.4, 1.0);
+        wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
+        break;
+      case 'hotel': case 'motel': case 'cinema': case 'parking':
+        wall(r, R, 'till', 0.7, 2.2, 1.4);
+        wall(r, R, 'sofa', 0.9, 2, 1.2);
+        wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
+        break;
+      default:
+        wall(r, R, 'till', 0.7, 1.8, 1.1);
+        shelves(r, R, biz);
+    }
+  };
   P.rooms.forEach((R, r) => {
     const w = R.x1 - R.x0, d = R.y1 - R.y0;
     switch (R.kind) {
@@ -717,16 +849,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
         }
         wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
         break;
-      case 'shop': {
-        // shelves in rows down the long side, the till near the front
-        const long = w > d;
-        for (let a = (long ? R.y0 : R.x0) + 2.2; a < (long ? R.y1 : R.x1) - 1.6; a += 2.4) {
-          if (long) put(r, 'shelf', R.x0 + 1.2, a, 1, 0, 0.5, Math.max(1, w - 3.6), 0);
-          else put(r, 'shelf', a, R.y0 + 1.2, 0, 1, 0.5, Math.max(1, d - 3.6), 0);
-        }
-        wall(r, R, 'till', 0.7, 1.8, 1.1);
-        break;
-      }
+      case 'shop': shopFloor(r, R, biz); break;
       case 'lobby':
         if (office) wall(r, R, 'reception', 0.8, 2.2, 1.2);
         wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
