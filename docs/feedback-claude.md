@@ -6,8 +6,8 @@
 
 ## 2026-10-04 (5): depois da 13.10b
 
-- **Uma janela de fora ainda não mostra a janela do outro lado:** vista da rua, a parede de fora do lado oposto tem vidro escuro, porque o shader não chama a cidade de dentro dele mesmo. Num prédio estreito com janelas dos dois lados (comum nos de tijolo), seria bonito ver a rua de trás através da sala. Dá para fazer com um segundo raio barato, como o do reflexo (R.24). Proponho deixar para a etapa 20, se fizer falta.
-- **A sala do jogador acesa vista de fora:** se você acende uma sala (entrando nela) e sai, ela continua acesa para quem está na rua só enquanto você está naquele andar. Uma luz que fica acesa depois que você sai seria um rastro bom para a polícia notar (combina com o calor da F.2).
+- **Uma janela de fora ainda não mostra a janela do outro lado:** vista da rua, a parede de fora do lado oposto tem vidro escuro, porque o shader não chama a cidade de dentro dele mesmo. Num prédio estreito com janelas dos dois lados (comum nos de tijolo), seria bonito ver a rua de trás através da sala. Dá para fazer com um segundo raio barato, como o do reflexo (R.24). Proponho deixar para a etapa 20, se fizer falta. **(Usuário: fazer agora, na 13.10b2.)**
+- **A sala do jogador acesa vista de fora:** se você acende uma sala (entrando nela) e sai, ela continua acesa para quem está na rua só enquanto você está naquele andar. Uma luz que fica acesa depois que você sai seria um rastro bom para a polícia notar (combina com o calor da F.2). **(Usuário: sim, mas só quando a polícia e as missões amadurecerem; etapa 16.)**
 
 ---
 
