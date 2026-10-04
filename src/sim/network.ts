@@ -90,8 +90,16 @@ export function setBreaker(w: World, k: number, on: boolean) {
   return true;
 }
 
-/** Tell a district's signal cabinet what to do: 0 normal, 1 flash, 2 dark. */
-export function setSignals(w: World, k: number, mode: number) { w.power.subs[k].sig = mode; }
+/** Tell a district's signal cabinet what to do: 0 normal, 1 flash, 2 dark. Returns false if already in that mode. */
+export function setSignals(w: World, k: number, mode: number) {
+  const S = w.power.subs[k];
+  if (S.sig === mode) return false;
+  S.sig = mode;
+  // forcing the lights off-cycle over the maintenance link is a traceable act, like tripping a breaker:
+  // the GRIDLINK logs the laptop's MAC and the crossing's own traffic camera sees whoever is there.
+  if (mode !== 0) recordAct(w.heat, w, w.player.x, w.player.y, w.time, true);
+  return true;
+}
 
 /** One telemetry holding register of an RTU: its address, a short label and the value now. */
 export interface Reg { addr: number; name: string; value: number }

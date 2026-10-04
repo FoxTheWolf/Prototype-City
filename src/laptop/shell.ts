@@ -521,7 +521,7 @@ export class Shell {
       if (c === 'mode' && ['normal', 'flash', 'dark'].includes(argv[1])) {
         const m = ['normal', 'flash', 'dark'].indexOf(argv[1]);
         this.say(now, `> mode ${argv[1]}`, 0, 0.3);
-        setSignals(w, k, m);
+        if (!setSignals(w, k, m)) { this.say(now, `  cabinet already in ${argv[1].toUpperCase()}`, 0, 0.1); return; }
         this.say(now, `  ACK: all intersections -> ${argv[1].toUpperCase()}`, 2, 0.2);
         return;
       }
@@ -697,9 +697,11 @@ export class Shell {
         const due = (t: number) => { const hh = Math.floor(t / 3600) % 24, ap = hh < 12 ? 'am' : 'pm'; return `${((hh + 11) % 12) + 1}${ap}`; };
         const money = (cents: number) => '$' + Math.round(cents / 100);
         const J = w.jobs.jobs, active = J.find((j) => j.state === 'active'), closed = J.find((j) => j.state === 'done' || j.state === 'failed'), offered = J.find((j) => j.state === 'offered');
-        if (active) out.push(`Contract: ${bz(active)}`, `  dark before ${due(active.due)}    pay ${money(active.pay)}`, `  power there comes from GRIDLINK-${String(active.sub + 1).padStart(2, '0')}; how: cat ~/start-here.txt`);
-        else if (closed?.state === 'done') out.push(`Contract complete: ${bz(closed)} went dark. Paid ${money(closed.pay)}.`);
-        else if (closed) out.push(`Contract failed: ${bz(closed)} kept its lights. No pay.`);
+        const grid = (j: { sub: number }) => `GRIDLINK-${String(j.sub + 1).padStart(2, '0')}`;
+        if (active?.kind === 'signals') out.push(`Contract: the crossing by ${bz(active)}`, `  snarl the lights before ${due(active.due)}    pay ${money(active.pay)}`, `  that crossing's cabinet is on ${grid(active)} (host atc-*); how: cat ~/start-here.txt`);
+        else if (active) out.push(`Contract: ${bz(active)}`, `  dark before ${due(active.due)}    pay ${money(active.pay)}`, `  power there comes from ${grid(active)}; how: cat ~/start-here.txt`);
+        else if (closed?.state === 'done') out.push(`Contract complete: ${closed.kind === 'signals' ? `the crossing by ${bz(closed)} is snarled` : `${bz(closed)} went dark`}. Paid ${money(closed.pay)}.`);
+        else if (closed) out.push(`Contract failed: ${closed.kind === 'signals' ? `the lights by ${bz(closed)} kept running` : `${bz(closed)} kept its lights`}. No pay.`);
         else if (offered) out.push('A fixer has sent work to your phone. Reply YES from the phone to take it.');
         else out.push('No contract right now.');
         return 0;

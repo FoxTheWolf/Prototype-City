@@ -447,7 +447,7 @@ export class Phone {
     }
     // [HACKING] the fixer's texts: the offer when its time comes, the reply to YES/NO, the result
     for (const j of this.world.jobs.jobs) {
-      if (!j.sent.offer && this.world.time >= j.offerAt) { j.sent.offer = true; this.receive(j.from, jobSms(this.world, j, 'offer'), now + 4); }
+      if (!j.sent.offer && j.state !== 'pending' && this.world.time >= j.offerAt) { j.sent.offer = true; this.receive(j.from, jobSms(this.world, j, 'offer'), now + 4); }
       if (!j.sent.ack && (j.state === 'active' || j.state === 'declined')) { j.sent.ack = true; this.receive(j.from, jobSms(this.world, j, j.state === 'active' ? 'confirm' : 'declined'), now + 4); }
       if (!j.sent.result && (j.state === 'done' || j.state === 'failed')) { j.sent.result = true; this.receive(j.from, jobSms(this.world, j, j.state === 'done' ? 'paid' : 'failed'), now + 6); }
     }

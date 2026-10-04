@@ -20,6 +20,16 @@ export function jobSms(world: World, j: Job, kind: JobSms): string {
   const B = world.city.businesses[j.biz], bld = world.city.buildings[B.building];
   const name = businessName(world.city, j.biz);
   const where = districtName(world.city, districtAt(world.city, (bld.x0 + bld.x1) / 2, (bld.y0 + bld.y1) / 2));
+  if (j.kind === 'signals') {
+    // the crossing is named by the business it sits by: the player finds that on the map and goes there
+    switch (kind) {
+      case 'offer': return `Another one, if you're up for it. The crossing by ${name} in ${where} -- I want it snarled before ${clock(j.due)}. Kill the lights or set them flashing, your call. ${money(j.pay)}. Reply YES or NO.`;
+      case 'confirm': return `Good. Get to the crossing by ${name} and jam the signals before ${clock(j.due)}. Flashing or dark, either works. Don't hang around after.`;
+      case 'declined': return `Suit yourself.`;
+      case 'paid': return `Word is that crossing is a mess. ${money(j.pay)} is in your account now. We'll talk.`;
+      case 'failed': return `The lights by ${name} were still running at ${clock(j.due)}. No pay. Don't waste my time again.`;
+    }
+  }
   switch (kind) {
     case 'offer': return `Work, if you want it. I need ${name} in ${where} to lose power tonight, before ${clock(j.due)}. ${money(j.pay)} when it's done. Reply YES to take it, NO to pass.`;
     case 'confirm': return `Good. Cut the power to ${name} before ${clock(j.due)}. You'll know when it works. Don't linger.`;

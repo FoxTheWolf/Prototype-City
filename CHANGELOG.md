@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.4b — O segundo trabalho: travar um cruzamento (2026-10-03)
+- Pago o primeiro trabalho, o mesmo número volta com outro, maior: travar os semáforos de um cruzamento da cidade dentro de uma janela de 1 a 2 horas. O SMS diz qual cruzamento (pelo nome de um lugar ao lado) e até que horas.
+- Aceite com YES, vá até o cruzamento, ache a GRIDLINK daquele trecho, entre no armário de semáforos e ponha os sinais em flash ou apagados antes do prazo. Feito isso, o pagamento entra na conta; se o prazo passar com os sinais normais, não há pagamento.
+- Mexer no armário de semáforos deixa rastro como cortar um disjuntor: a câmera de trânsito do cruzamento e o Wi-Fi de manutenção registram você, e o calor sobe.
+- O comando `job` no notebook já mostra os dois tipos de trabalho.
+
 ## 0.F.4 — Um relógio de pulso (2026-10-03)
 - H ergue o relógio digital do pulso esquerdo (e abaixa de novo), sem parar de andar: a hora da cidade, o dia da semana e a data. O visor depende da luz em volta e some no escuro; L acende a luz dele por alguns segundos.
 - Na hora cheia ele dá dois bipes baixinhos.
