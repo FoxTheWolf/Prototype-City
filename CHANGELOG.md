@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.5 — Fome (2026-10-04)
+- Você sente fome com o passar das horas. Com fome, a corrida dura menos (de 30 s bem alimentado a uns 4 s faminto); andando, o fôlego volta. Ninguém morre de fome.
+- Nos diners, cafés e bares, o balcão tem EAT HERE / TO GO (Tab). Na mochila, E come o que está sob o cursor.
+- O estômago ronca quando a fome aperta, e a mochila mostra como você está.
+
 ## 0.13.4 — Comprar de verdade e a mochila (2026-10-04)
 - Nas lojas, mire num produto da prateleira e aperte F: ele vai para a mochila, ainda sem pagar (com uma etiqueta $).
 - No caixa, F abre o balcão: pague tudo o que pegou em dinheiro ou no cartão (←/→ escolhe), ou deixe no balcão. Nos diners, cafés e bares, peça no balcão para viagem.

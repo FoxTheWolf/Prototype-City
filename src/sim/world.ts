@@ -7,6 +7,7 @@ import { buildCctv, type Cctv } from './cctv';
 import { openAccount, type BankAccount } from './bank';
 import { newGear, type Gear } from './gear';
 import { newBag, stepBag, type Bag } from './bag';
+import { newNeeds, stepNeeds, type Needs } from './needs';
 import { buildJobs, stepJobs, type JobBoard } from './jobs';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
@@ -94,6 +95,8 @@ export interface World {
   gear: Gear;
   /** What the player carries in the backpack (13.4; see bag.ts). */
   bag: Bag;
+  /** Hunger and breath (13.5; see needs.ts). */
+  needs: Needs;
   /** [HACKING] The jobs a fixer offers (see jobs.ts). */
   jobs: JobBoard;
   /** [HACKING] The heat the player draws, and the traces behind it (see heat.ts). */
@@ -146,7 +149,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -235,7 +238,9 @@ export function stepWorld(w: World, input: PlayerInput) {
   let f = input.forward, st = input.strafe;
   const len = Math.hypot(f, st);
   if (len > 1) { f /= len; st /= len; }
-  const sp = p.liftTo >= 0 ? 0 : input.run ? 9 : 3.5; // a moving car holds the player still
+  // running spends breath, and a hungry stomach gives less of it (needs.ts)
+  const run = stepNeeds(w, input.run && (f !== 0 || st !== 0) && p.liftTo < 0, TICK, TICK * TIME_SCALE) && input.run;
+  const sp = p.liftTo >= 0 ? 0 : run ? 9 : 3.5; // a moving car holds the player still
   if (p.liftTo >= 0) stepLift(p);
   const dx = Math.cos(input.heading), dy = Math.sin(input.heading);
   const vx = (dx * f - dy * st) * sp, vy = (dy * f + dx * st) * sp;

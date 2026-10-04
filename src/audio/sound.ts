@@ -688,6 +688,29 @@ export class Sound {
     }
   }
 
+  /** Eating: a few soft crunches. */
+  munch() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (let k = 0; k < 4; k++) {
+      const at = t + k * 0.22 + Math.random() * 0.05, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', 700 + Math.random() * 500, 1.5)).connect(g);
+      g.gain.setValueAtTime(0.09, at); g.gain.setTargetAtTime(0, at + 0.01, 0.04);
+      s.start(at, Math.random()); s.stop(at + 0.2);
+    }
+  }
+
+  /** The stomach growling: a low gurgle that wobbles in pitch. */
+  growl() {
+    const ctx = this.ctx, t = ctx.currentTime, g = gain(ctx, 0, this.master), lp = filter(ctx, 'lowpass', 220, 4);
+    lp.connect(g);
+    const o = ctx.createOscillator(), wob = ctx.createOscillator(), wg = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = 70; wob.frequency.value = 7; wg.gain.value = 25;
+    wob.connect(wg).connect(o.frequency); o.connect(lp);
+    o.frequency.setValueAtTime(70, t); o.frequency.linearRampToValueAtTime(45, t + 1.1);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.15); g.gain.setTargetAtTime(0, t + 0.8, 0.2);
+    o.start(t); wob.start(t); o.stop(t + 1.6); wob.stop(t + 1.6);
+  }
+
   /** The car moving (0..1 of its speed): a low motor hum and a faint whine. */
   liftMotor(k: number) {
     if (!this.motor) {

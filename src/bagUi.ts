@@ -2,6 +2,7 @@ import { money } from './counter';
 import { type CharGrid } from './render/grid';
 import { goodColor } from './render/models';
 import { BAG_H, BAG_W, dropItem, itemAt, settleBag, type BagItem } from './sim/bag';
+import { eat, edible, hungerStage } from './sim/needs';
 import { type World } from './sim/world';
 import { businessName } from './locale/names';
 import en from './locale/en.json';
@@ -55,6 +56,18 @@ export class BagView {
     dropItem(w.bag, i);
     this.say((i.paid ? T.thrown : T.back).replace('{x}', NAMES[i.good] ?? i.good), now);
   }
+  /** Eat the thing under the cursor (only paid things: an unpaid one is the shop's until it is). True when it was eaten. */
+  eatAt(cx: number, cy: number, now: number): boolean {
+    const w = this.world, [x, y] = this.cm(cx, cy), i = itemAt(w.bag, x, y);
+    if (!i) return false;
+    const name = NAMES[i.good] ?? i.good;
+    if (!edible(i.good)) { this.say(T.notFood, now); return false; }
+    if (!eat(w, i.good)) { this.say(T.fullUp, now); return false; }
+    if (this.held === i) this.held = null;
+    dropItem(w.bag, i);
+    this.say(T.ate.replace('{x}', name), now);
+    return true;
+  }
   private say(s: string, now: number) { this.note = s; this.noteAt = now; }
 
   /** The pile, a frame: the held thing follows the cursor at (cx, cy). */
@@ -106,6 +119,8 @@ export class BagView {
       sy += 3;
     }
     g.text(sx, sy, ` ${`${T.cash} ${money(w.player.cash)}`.padEnd(SW - 1)}`, [180, 230, 170], IN);
+    const st = hungerStage(w.needs.food);
+    g.text(sx, sy + 2, ` ${`${T.stomach} ${T.stages[st]}`.padEnd(SW - 1)}`, st >= 2 ? [255, 150, 110] : [200, 200, 190], IN);
     // the thing under the cursor: what it is, and whose
     const info = over ? `${NAMES[over.good] ?? over.good}  ${over.paid ? '' : `${T.unpaid} ${money(over.cents)} (${businessName(w.city, over.shop)})`}` : '';
     const msg = now - this.noteAt < 2.5 ? this.note : info;

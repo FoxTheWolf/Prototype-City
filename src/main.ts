@@ -8,6 +8,7 @@ import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
 import { Counter, counterPrompt, drawCounter, money } from './counter';
 import { BagView } from './bagUi';
 import { aimedGood, takeGood } from './shop';
+import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
@@ -425,7 +426,7 @@ addEventListener('keydown', (e) => {
   // at a shop's counter (F.9) the arrows, Enter, F and Esc are its
   if (counter.active) {
     if (!e.repeat && counter.key(e.code, performance.now() / 1000)) { e.preventDefault(); if (world.gear.battery) gearBattery(true); }
-    if (!counter.active || e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space') return;
+    if (!counter.active || e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space' || e.code === 'Tab') return;
   }
   // the backpack open: B or Esc closes it, R turns what is held; the rest of the keys wait
   if (bagView.open) {
@@ -433,6 +434,7 @@ addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (e.code === 'KeyB' || e.code === 'Escape') { bagView.open = false; bagView.release(); input.lock(); }
     else if (e.code === 'KeyR') bagView.turn();
+    else if (e.code === 'KeyE' && bagView.eatAt(phone.cx, phone.cy, performance.now() / 1000)) sound?.munch();
     return;
   }
   // B: open the backpack (13.4)
@@ -874,6 +876,10 @@ function frame(now: number) {
   playSfx(payphone.sfx);
   drawPayphone(ui, payphone, world, now / 1000, VIEW_LIGHT);
   playSfx(counter.sfx);
+  if (counter.ate) { counter.ate = false; sound?.munch(); }
+  // hunger (13.5): told once at each stage, with the stomach's growl
+  const hs = hungerStage(world.needs.food);
+  if (hs > world.needs.told) { world.needs.told = hs; shelfNote = en.bag.hungry[hs]; shelfNoteAt = now / 1000; sound?.growl(); }
   drawCounter(ui, counter, world, now / 1000);
   // the backpack: its pile settles every frame, drawn while open
   bagView.step(dt, phone.cx, phone.cy);
