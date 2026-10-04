@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-04, depois da 13.10d (o que está no peito)
+
+1. **O núcleo da 1.0 antes do resto.** As etapas 13 a 22 são muitas, e algumas são polimento (sound design, refinamento). Sugiro escrever numa linha o **laço mínimo da 1.0**: receber um trabalho → ir ao lugar → hackear → a cidade reage → calor → dinheiro → comprar equipamento → trabalho maior. Toda subetapa nova passa por uma pergunta: alimenta esse laço? Se não, vai para depois da 1.0, como o cinema.
+2. **O hacking está ficando para trás.** O coração do jogo é o hacking, e ele anda devagar porque depende do Opus 4.8 e do agente. Hoje há três trabalhos; a cidade já tem muito mais sistemas para mexer (lojas com horário, portas trancadas, elevadores, câmeras, cidadãos com rotina). Proponho uma sessão da trilha logo depois da 13.10, só para desenhar 5 a 10 trabalhos novos com o que já existe (por exemplo, destrancar a porta do estoque de uma loja fechada, parar um elevador, apagar a câmera de uma esquina na hora certa).
+3. **Uma fonte só para cada geometria.** O bug da porta de hoje nasceu de eu ter recalculado na GPU uma coisa que a CPU já calcula (as folhas de rua). Toda vez que dois lugares calculam a mesma geometria, eles divergem. Regra que sugiro: a simulação calcula, a GPU só lê.
+4. **O shader é um monólito de ~3 mil linhas.** O travamento da compilação de hoje é um aviso: quanto mais ele cresce, mais lento compila e mais fácil é travar. Antes da demo, vale uma sessão de arrumação: separar em arquivos por assunto (céu, fachada, interior, objetos) e medir o tempo de compilação. Junto entram os 16 buffers para caber em 8, que já está no marco da demo.
+5. **Testes visuais fixos.** Os testes no Node pegam a lógica; os bugs que você acha são visuais. Proponho uma lista de "posições de ouro" (semente 42, POS, hora, direção) para olhar a cada grupo: a porta da loja, um interior, um cruzamento, a borda. Eu tiro as capturas e comparo antes de pedir seu teste, e você recebe menos bugs óbvios.
+6. **O ritmo do limite.** O limite semanal está apertando. Sessões menores com um objetivo só rendem mais que sessões longas, porque o contexto cresce e cada mensagem fica mais cara. Ler o CLAUDE.md custa ~45 mil tokens por sessão: vale uma passada para enxugar (levar o design já implementado e as listas longas para `docs/`).
+7. **O que está muito bom.** O princípio do "um só espaço" está pagando: as portas, as janelas e a luz agora concordam de dentro e de fora, e os bugs que sobram são de acabamento, não de arquitetura. A identidade noir (a porta de enrolar à noite, a vitrine acesa) já tem cara de jogo. A decisão de cortar o que gera *workaround* (a diagonal, o cinema) foi a mais importante do mês.
+8. **Ideia pequena:** a porta de enrolar como alvo. Ela já é controlada pelo horário; um controlador de horário hackeável numa rua comercial (todas as portas sobem às 3 da manhã) é uma consequência visível, barata e engraçada, no estilo Uplink.
+
+
 ## 2026-10-04 (7): depois da 13.10c
 
 - **Os modelos em texto abrem uma porta boa para as outras IAs:** o formato é simples (meio metro por letra, legenda fixa) e o código já descarta o que não cabe e confere o caixa. Dá para pedir ao Gemini/ChatGPT variações por tipo (três diners, dois bares…) com um briefing curto em `docs/tarefas/`, e o teste no Node diz quais funcionam.
