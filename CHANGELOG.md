@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10b2 — Através da sala (2026-10-04)
+- Num prédio com janelas dos dois lados, olhando de fora você vê a sala e, pela janela do outro lado, a rua de trás.
+- Pela porta de rua aberta, a sala tem a mesma luz vista da calçada e vista de dentro; de dentro, o vão aberto não tem mais um vidro invisível.
+- Não há mais um pedaço de janela em cima das portas de rua.
+
 ## 0.13.10b — Um só espaço (2026-10-04)
 - O que você vê pela janela de fora é o mesmo andar que você encontra lá dentro: as mesmas salas, as mesmas lâmpadas acesas, as portas fechadas onde estão fechadas. Uma porta que você deixa aberta continua aberta para quem olha da rua.
 - De fora, perto dos prédios, aparecem as folhas das portas, as placas EXIT, as portas do elevador com o mostrador e a mobília; mais longe, só as salas e a luz delas.

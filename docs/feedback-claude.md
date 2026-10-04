@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-04 (6): depois da 13.10b2
+
+- **A porta de rua fechada, vista de fora, parece uma placa marrom chapada:** o desenho dela é um brilho fixo do saguão (de antes do um só espaço), não o vidro com a sala atrás. Com a 13.10d (porta 3D de verdade) isso some de graça: proponho não mexer antes.
+- **A rua de trás pela janela abre um caminho barato para o "interior falso" de longe (etapa 20):** o mesmo segundo raio poderia, depois dos 60 m, atravessar o prédio sem a planta (só a caixa), para as janelas de longe mostrarem um pouco do céu do outro lado. Só se as torres de longe parecerem chapadas demais.
+
+---
+
 ## 2026-10-04 (5): depois da 13.10b
 
 - **Uma janela de fora ainda não mostra a janela do outro lado:** vista da rua, a parede de fora do lado oposto tem vidro escuro, porque o shader não chama a cidade de dentro dele mesmo. Num prédio estreito com janelas dos dois lados (comum nos de tijolo), seria bonito ver a rua de trás através da sala. Dá para fazer com um segundo raio barato, como o do reflexo (R.24). Proponho deixar para a etapa 20, se fizer falta. **(Usuário: fazer agora, na 13.10b2.)**

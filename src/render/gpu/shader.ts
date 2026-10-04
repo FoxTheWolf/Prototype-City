@@ -868,7 +868,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   let dX = select(1e12, abs(PCELL / rdx), rdx != 0.0); let dY = select(1e12, abs(PCELL / rdy), rdy != 0.0);
   var tX = 1e12; if (rdx != 0.0) { tX = (f32(gx + i + select(0, 1, rdx > 0.0)) * PCELL - u.px) / rdx; }
   var tY = 1e12; if (rdy != 0.0) { tY = (f32(gy + j + select(0, 1, rdy > 0.0)) * PCELL - u.py) / rdy; }
-  var cur = planCell(o, i, j); var wall = false; var done = false;
+  var cur = planCell(o, i, j); var wall = false; var done = false; var leafGlass = false;
   if (!inside && cur == 0u) { return res; }
   for (var g = 0; g < 400; g++) {
     let xs = tX < tY; let tn = select(tY, tX, xs);
@@ -884,6 +884,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
           res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt * lk, lt); res.state = 1u; done = true; break;
         }
+        leafGlass = true;
       } else if (z > z0 && z <= z0 + DOOR_H - 0.02) {
         // a panel door: its edges, two recessed panels, and the knob near the far edge
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
@@ -1027,7 +1028,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     }
     let shade = select(select(0.82, 1.0, face < 2), 0.9, face == 4);
     let Lt = roomLit(V, ro, r0, hx, hy, t - tIn);
-    res.nearT = t; res.gt = t; res.ga = along; res.gdoor = isDoor; res.gl = Lt; res.gc = abs(nX * rdx + nY * rdy) / rl; res.gh = atan2(rdy, rdx);
+    res.nearT = t; res.gt = t; res.ga = along; res.gl = Lt; res.gc = abs(nX * rdx + nY * rdy) / rl; res.gh = atan2(rdy, rdx);
     // seen from the street, the far side's glass: dark, with the night city's glow (or the day) beyond it
     let farGlass = vec3f(20.0, 24.0, 40.0) + vec3f(90.0, 100.0, 115.0) * u.day;
     let z = u.eye - m * t;
@@ -1045,15 +1046,16 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           // the jambs and the head: the leaves (drawn above, as they swing) carry the stiles and the push bars
           let frame = du < 0.04 || du > 0.96 || zz > DOOR_H - 0.06;
           if (frame) { res.cl = roomCell(BAR, vec3f(95.0, 98.0, 105.0) * Lt, t); }
-          else if (inside) { res.state = 2u; }
-          else { res.cl = roomCell(EQ, farGlass, t); }
+          // (an open doorway with no leaf in the way has no glass: gdoor)
+          else if (inside) { res.state = 2u; res.gdoor = !leafGlass; }
+          else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
         } else {
           // above the door and its sign: wall, never a window
           let p = wallPx(kind, unit, zrOf(z, z0), along);
           res.cl = roomCell(p.ch, p.c * Lt * shade, t);
         }
       } else if ((liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(st, shop, fw, fz, z - z0, ground))) {
-        if (inside) { res.state = 2u; } else { res.cl = roomCell(EQ, farGlass, t); }
+        if (inside) { res.state = 2u; } else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
       } else {
         let zr = zrOf(z, z0);
         // the sill: just under a window
@@ -1086,7 +1088,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let ro = roomRec(o, r); let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
         // a lamp keeps its own color: lit when the room is
         let lc = select(F.c * roomLit(V, ro, r, x, y, F.t - tIn), F.c * select(0.25, 1.0, lp.x + lp.y > 0.05), F.glow);
-        res.cl = roomCell(F.ch, lc, F.t);
+        res.cl = roomCell(F.ch, lc, F.t); gBack = 0.0;
       }
     }
   }
@@ -1094,11 +1096,14 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
 }
 /**
  * One window cell's view of storey f of the box behind it (o its plan, entered at distance t): the walk from the
- * glass, under a faint cold tint (the reflection itself is the finish's, R.24).
+ * glass, under a faint cold tint (the reflection itself is the finish's, R.24); through an open doorway (pane false)
+ * as it is, the same as from inside.
  */
-fn peekRoom(o: u32, lot: i32, box: i32, f: i32, rdx: f32, rdy: f32, m: f32, t: f32, elec: f32, full: bool) -> Px {
+fn peekRoom(o: u32, lot: i32, box: i32, f: i32, rdx: f32, rdy: f32, m: f32, t: f32, elec: f32, full: bool, pane: bool) -> Px {
+  gBack = 0.0;
   let R = roomWalk(outView(o, lot, box, f, elec, full), rdx, rdy, m, t);
-  if (R.state != 1u) { return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
+  if (R.state != 1u) { gBack = 0.0; return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
+  if (!pane) { return Px(R.cl.ch, R.cl.c); }
   let gk = 0.62 - 0.2 * u.day;
   return Px(R.cl.ch, R.cl.c * gk + vec3f(8.0, 12.0, 18.0));
 }
@@ -1114,7 +1119,7 @@ fn glassOver(cl: Cell, g: InC, m: f32) -> Cell {
   let e = -m; let z = u.eye + e * g.gt;
   let streak = pow(max(1e-6, 0.5 + 0.5 * sin(g.gh * 2.2 + e * 1.7 + 0.6)), 10.0); let mm = fres * (60.0 + 150.0 * streak);
   o.c = sat(o.c) * keep * vec3f(0.8, 0.88, 0.95) + vec3f(10.0, 16.0, 22.0) + mm * g.gl;
-  if (u.rain > 0.0 && !g.gdoor) {
+  if (u.rain > 0.0) {
     let dzr = (z - g.gz0) + u.sec * speed + ph; let dz = dzr - 3.0 * floor(dzr / 3.0);
     let slide = slides && dz < (g.gt / u.scale) * 1.2;
     let bead = hash3(ifloor(g.ga * 14.0), ifloor(z * 14.0), 8) < u.rain * 0.06;
@@ -1242,7 +1247,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (po > 0u) { lot = i32(fx[po + 5u]); let e = 0.03 / length(vec2f(rdx, rdy)); pkR = i32(roomAt(po, hx + rdx * e, hy + rdy * e)) - 1; }
   }
   let winPw = select(winLight, power(sub, cx, cy, winGroup(bk, wi, fl), gen, bk, 0.5) * winLight, switched);
-  var isWin = false; var glass = false;
+  var isWin = false; var glass = false; var doorway = false; var backT = 0.0;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0; var emK = 1.0;
   var body = false; var bodyEm = vec3f(-1.0); var winGlow = vec3f(0.0);
@@ -1389,7 +1394,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
     else if (dOp > 0.0 && e > edgeIn + 0.08) {
       // through the doorway: the room behind, as through a shop window (or the lobby's glow, too far to make out)
-      if (pkR >= 0) { let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL); ch = P.ch; c = P.c; }
+      // (13.10b2: lit as the room, as from inside, not as the wall; no glass in the way)
+      if (pkR >= 0) { let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, false); ch = P.ch; c = P.c; isWin = true; doorway = true; backT = gBack; }
       else { ch = DOT; c = vec3f(255.0, 220.0, 160.0) * (0.18 * elec); em = true; glowK = 0.2; }
     }
     else if (dOp > 0.0 && e > edgeIn) { ch = COL; c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.2; }
@@ -1432,11 +1438,14 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   if (body && !detailed) { ch = chF; c = cF; em = emF; glass = glassF; }
   else if (body) {
-  if (pkR >= 0 && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
+  if (fl == 0 && dA1 > dA0 && z < FLOOR_H) {
+    // over a street door: wall up to the next floor, never a window (13.10b2)
+    ch = select(COL, EQ, z < DOOR_H + 0.5); c = frame * select(1.0, 1.25, z < DOOR_H + 0.5) * shade;
+  } else if (pkR >= 0 && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
     // a window: the room behind it, lit by its own lamps. From afar it was a pane in the building's window
     // color (lit) or dark glass: that look fades out over the whole building as it comes near, and a pane
     // that was lit keeps a glow of its color, fading closer still
-    let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL);
+    let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, true); backT = gBack;
     let capaLit = hh < litK && wp > 0.04;
     let capa = select(darkPane, wc * wk, capaLit);
     ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
@@ -1592,10 +1601,12 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
-  if (t < LIT_FAR) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
+  if (t < LIT_FAR && !doorway) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
+  // the street behind, through the room's far window (main sends the ray on)
+  gBackT = select(0.0, backT, isWin && T == t && backT > t); gBackW = t; gBackK = select(peekK, -1.0, doorway);
   if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; gEmK = emK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0; }
   gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0;
-  gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
+  gMat = select(select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass), MAT_NONE, doorway);
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));
 }
@@ -2765,6 +2776,13 @@ var<private> gOX: f32 = 0.0;
 var<private> gOY: f32 = 0.0;
 var<private> gOZ: f32 = 0.0;
 var<private> gRefl: bool = false;
+// (13.10b2) a room seen from the street through to a window on its far side: where the walk met that glass (gBack,
+// roomWalk), and for the cell wallCell made, how far off the far glass is (gBackT, 0 none), where the near window is,
+// and how much of the cell is the room (peekK); main sends a second ray on through it to the street behind
+var<private> gBack: f32 = 0.0;
+var<private> gBackT: f32 = 0.0;
+var<private> gBackW: f32 = 0.0;
+var<private> gBackK: f32 = 0.0;
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
@@ -2793,11 +2811,29 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var inc = InC(Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0), 0u, 0.0, 0.0, vec3f(0.0), false, 0.0, 0.0, 0.0, 0.0);
   if (IB != 0u) { inc = roomWalk(inView(IB), rdx, rdy, m, 0.0); }
   var cl = inc.cl;
+  gBackT = 0.0;
   if (inc.state != 1u) { cl = cityCell(gid.x, gid.y, rdx, rdy, m, L, A, tG); }
+  // ---- (13.10b2) a room seen through a window or an open street door, and through a window on its far side: the
+  // street behind, by a second ray on from that glass (as the reflection's, R.24), lit on its own
+  var thru = vec3f(0.0); var thruCh = 32u; var thruK = 0.0; var thruPane = 1.0;
+  if (inc.state != 1u && gBackT > 0.0 && cl.kind == KIND_ROOM && abs(cl.depth - gBackW) < 1e-3) {
+    let tb = gBackT + 0.05; thruK = abs(gBackK); thruPane = select(0.62 - 0.2 * u.day, 1.0, gBackK < 0.0) * 0.8;
+    let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sEK = gEmK; let sMat = gMat; let sN = gNrm; let sWet = gWet;
+    gOX = u.px + rdx * tb; gOY = u.py + rdy * tb; gOZ = u.eye - m * tb + A * tb * tb;
+    var tg = 1e9;
+    if (m > 0.0) { let disc = m * m - 4.0 * A * gOZ; if (disc > 0.0) { tg = 2.0 * gOZ / (m + sqrt(disc)); } }
+    var bc = cityCell(gid.x, gid.y, rdx, rdy, m, L, A, tg);
+    gOX = u.px; gOY = u.py; gOZ = u.eye;
+    if (bc.depth < 1e8) { if (bc.depth == gTag) { gTag += tb; } bc.depth += tb; }
+    bc = objectsOver(bc, gid.x, gid.y, rdx, rdy, -m);
+    gSun = 1.0; gSky = 1.0; gMoon = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
+    let lb = light(bc); thru = lb.c; thruCh = lb.ch;
+    gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet;
+  }
   // the smoke, then the street objects (and the furniture) over all of it, the window glass, then rain and snow over
   // the finished cell, only beyond the glass indoors (the sky's depth is 1e9, so the finish leaves it as it is)
   cl = objectsOver(smokeOver(cl, rdx, rdy, m), gid.x, gid.y, rdx, rdy, -m);
-  if (inc.state == 2u) { cl = glassOver(cl, inc, m); }
+  if (inc.state == 2u && !inc.gdoor) { cl = glassOver(cl, inc, m); }
   // ---- the reflection (R.24): glass and wet ground mirror the city along a second ray from where this one
   // hit; anything else glossy (a car's paint, metal) mirrors the sky. Weighed by Fresnel and the roughness.
   var refl = vec3f(0.0); var rw = 0.0; var rGlow = 0.0;
@@ -2881,6 +2917,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
   let paint = gMat == MAT_PAINT;
   var lit = light(cl);
+  if (thruK > 0.0) {
+    lit.c = mix(lit.c, thru * thruPane * vec3f(0.9, 0.95, 1.0) + vec3f(4.0, 6.0, 9.0), thruK);
+    if (thruK > 0.5 && lit.ch == EQ) { lit.ch = thruCh; }  }
   if (paint) { refl *= mix(vec3f(1.0), gTint, CAR_METAL); }
   if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }
   // the lamps' cones in the air (stronger in the rain), over all of it (as bright as the eye takes them)
