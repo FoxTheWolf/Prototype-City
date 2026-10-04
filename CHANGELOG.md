@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.6a — O relógio fica no pulso, o banco no celular (2026-10-03)
+- O relógio de pulso agora fica sempre à vista, no canto de baixo à esquerda. H o abaixa para fora do caminho (e ergue de novo); abaixado, ele sobe sozinho na hora cheia, quando bipa, e quando o alarme toca.
+- Três modos, como os de verdade, trocados pelo botão MODE (J): a hora, o alarme e o cronômetro. O botão da direita (I) liga e desliga o alarme e dispara e para o cronômetro.
+- Acertar o alarme: no modo AL, segure I até aparecer SET; I avança a hora que pisca, J passa para os minutos e J de novo termina. O alarme toca 20 segundos; qualquer botão do relógio o cala.
+- Cronômetro: I começa e para; parado, segure I para zerar. Ele continua contando mesmo em outro modo.
+- O app de relógio saiu do celular (o alarme e o cronômetro foram para o pulso); no lugar dele, no menu, entrou o app do banco.
+
 ## 0.F.5 — O terceiro trabalho: seguir uma linha (2026-10-03)
 - Pago o segundo trabalho, o mesmo número volta com o terceiro, o que paga melhor: descobrir em que distrito da cidade um certo celular estava a uma hora do dia. O SMS dá o número da linha e a hora.
 - A pista não está na rua: é no registro da operadora. Procure o Wi-Fi de manutenção dela (o OMC) na torre mais alta do centro, entre na rede, `tnet` o host `omc-r` e rode `log <número>` — sai o registro de antena da linha hora a hora, com o distrito de cada uma.

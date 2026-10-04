@@ -393,10 +393,13 @@ addEventListener('keydown', (e) => {
     phonePress(pk);
     return;
   }
+  // the wristwatch's right button (I): held, it repeats while a field of the alarm is being set
+  if (e.code === 'KeyI' && running && WATCH_ON) { watch.startDown(performance.now() / 1000, e.repeat); return; }
   if (e.repeat) return;
-  // the wristwatch: H raises it into sight (and lowers it), L lights it while it is up
+  // the wristwatch: H lowers it out of sight (and raises it), L lights it, J steps its mode
   if (e.code === 'KeyH' && running && WATCH_ON) { watch.toggle(); return; }
-  if (e.code === 'KeyL' && running && watch.up) { watch.light(performance.now() / 1000); return; }
+  if (e.code === 'KeyL' && running && WATCH_ON) { watch.light(performance.now() / 1000); return; }
+  if (e.code === 'KeyJ' && running && WATCH_ON) { watch.modeKey(performance.now() / 1000); return; }
   if (e.code === 'ArrowUp' && !phone.out && running) phoneToggle();
   else if (e.code === 'KeyP' && running && !payphone.active) phoneToggle();
   else if (e.code === 'KeyM') sound?.toggleMute();
@@ -413,6 +416,8 @@ addEventListener('keydown', (e) => {
   // debug: PageUp / PageDown move a storey up or down inside a building
   else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
 });
+
+addEventListener('keyup', (e) => { if (e.code === 'KeyI' && WATCH_ON) watch.startUp(); });
 
 /** `rows` sets the cell size; the grid then gets as many rows as fill the screen (no black bars, the phone on the bottom edge).
  *  cover: the world overfills by up to a cell (cut at the edges); the interface stays whole, the leftover (< a cell) on top. */
@@ -688,16 +693,19 @@ function frame(now: number) {
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
-  if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'alarm') sound?.ring(10 + phone.prefs.alarmTone, 4); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
+  if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
   phone.hover = phone.out || (laptop.open && phone.raise > 0.5) ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
-  watch.update(dt, world.time);
+  watch.update(dt, world.time, now / 1000);
   for (const f of watch.sfx) {
     if (f === 'chime') sound?.watchChime();
+    else if (f === 'alarm') sound?.watchAlarm();
+    else if (f === 'beep') sound?.watchBeep();
     else if (f === 'light') sound?.phoneKey(false, true, false);
   }
   watch.sfx.length = 0;
-  drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city));
+  // in the game only (not over the title or the loading screen)
+  if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city));
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null;
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
@@ -750,7 +758,7 @@ function frame(now: number) {
   }
   if (hudOn) {
     const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}  `
-      + `[^] PHONE  [N] LAPTOP  ${WATCH_ON ? '[H] WATCH  ' : ''}[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
+      + `[^] PHONE  [N] LAPTOP  ${WATCH_ON ? '[H] WATCH [J] MODE [I] START  ' : ''}[B] BG ${look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'}  [U] ${look.blocks ? 'BLOCKS' : 'ASCII'}  [V] ${['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp]}  [G] FUSE ${look.fuse ? 'ON' : 'OFF'}  [R] ROWS ${RES_ROWS[resStep]}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
     ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
     const cal = calendar(world.time), wx = world.weather;
     const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `

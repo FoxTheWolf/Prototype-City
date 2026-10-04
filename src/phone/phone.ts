@@ -46,8 +46,8 @@ import { CASES, SHELLS } from './shells';
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
-export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'clock' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
-export type Screen = 'off' | 'boot' | 'standby' | 'alarm' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
+export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
+export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type CallKind = 'out' | 'failed' | 'in' | 'missed';
 export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
@@ -57,11 +57,11 @@ export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 
  * downloaded from the store sit in their own folder.
  */
 export const MENU_COLS = 4;
-export const APPS: App[] = ['calls', 'contacts', 'messages', 'camera', 'map', 'wire', 'news', 'weather', 'calendar', 'clock', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
-/** The apps on the menu that are store apps installed at the factory (their entries in STORE). */
-const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake' };
+export const APPS: App[] = ['calls', 'contacts', 'messages', 'camera', 'map', 'wire', 'news', 'weather', 'calendar', 'bank', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
+/** The apps on the menu that are store apps installed at the factory (their entries in STORE); the bank's came with the account. */
+const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake', bank: 'bank' };
 /** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
-export const BUNDLED = ['social', 'news', 'snake'];
+export const BUNDLED = ['social', 'news', 'snake', 'bank'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
 export const BOOT_LOG_S = 2.4, BOOT_S = 5.1;
 /** The map's zoom levels (local, district, sector, city): metres per screen row. */
@@ -81,8 +81,6 @@ export interface Prefs {
   ring: number;
   /** Keypad tones: 0 beep, 1 click only, 2 touch-tones, 3 off. */
   keys: number;
-  /** The alarm clock's tone. */
-  alarmTone: number;
   theme: number;
   /** The standby screen's wallpaper. */
   wall: number;
@@ -91,9 +89,9 @@ export interface Prefs {
   /** 0 metres, 1 feet. */
   dist: number;
 }
-export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'alarmTone', 'keys'], display: ['theme', 'wall'], units: ['temp', 'dist'] };
+export const PREF_ROWS: Record<'sound' | 'display' | 'units', (keyof Prefs)[]> = { sound: ['profile', 'ring', 'keys'], display: ['theme', 'wall'], units: ['temp', 'dist'] };
 /** How many values each option has (their names are in the locale). */
-export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, alarmTone: 3, keys: 4, theme: 6, wall: 4, temp: 2, dist: 2 };
+export const PREF_N: Record<keyof Prefs, number> = { profile: 3, ring: 6, keys: 4, theme: 6, wall: 4, temp: 2, dist: 2 };
 
 /** A distance as the phone shows it, in the units picked in its settings. */
 export function fmtDist(m: number, feet: number): string {
@@ -129,7 +127,7 @@ const WEATHER_KB = 12;
 /** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
 export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose', 'wifikey', 'places'];
 /** Screens with shortcuts on the lower keys (7-9, *, 0, #): held as high, so a click reaches them. */
-const LOW_KEYS: Screen[] = ['map', 'calendar', 'photos', 'clock'];
+const LOW_KEYS: Screen[] = ['map', 'calendar', 'photos'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -142,12 +140,12 @@ export class Phone {
   readonly wifi = new Wifi();
   /** Wi-Fi: the network whose key is being typed (index into world.wifi), and the key. */
   wkey = { ap: -1, key: '' };
-  prefs: Prefs = { profile: 0, ring: 0, alarmTone: 0, keys: 0, theme: 0, wall: 0, temp: 0, dist: 0 };
+  prefs: Prefs = { profile: 0, ring: 0, keys: 0, theme: 0, wall: 0, temp: 0, dist: 0 };
   /** Settings: the page open and the row picked on it. */
   setPage: SetPage = 'root';
   setSel = 0;
   /** A sound the last key asks for (main plays it): a ringtone preview, the buzz of vibrate, or silence. */
-  cue: 'ring' | 'alarm' | 'vibrate' | 'stop' | null = null;
+  cue: 'ring' | 'vibrate' | 'stop' | null = null;
   /** Vibrating until this time (real seconds), for this long: the phone shakes on screen with the buzz. */
   buzzUntil = 0;
   buzzLen = 0;
@@ -208,7 +206,7 @@ export class Phone {
   shoot: ((g: CharGrid, x: number, y: number, yaw: number, eye?: number, pitch?: number) => boolean) | null = null;
   private wireId = -1;
   /**
-   * The bank's app (it came installed by the bank, in My Apps): the page open, the row picked, the
+   * The bank's app (it came installed by the bank, on the menu): the page open, the row picked, the
    * scroll of the statement, whether the account has been downloaded since it was opened, and a note
    * on the last top-up (done, no funds, no data connection).
    */
@@ -222,8 +220,6 @@ export class Phone {
     this.look = this.device.look;
     this.looks = [this.look];
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
-    // the bank's own app, put on by the bank with the account (in My Apps, like a download)
-    this.apps.push(STORE.findIndex((a) => a[0] === 'bank'));
     this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...APPS.filter((a) => a !== 'folder'), ...BUNDLED]);
   }
   out = false;
@@ -316,17 +312,6 @@ export class Phone {
   calc = { cur: '0', acc: 0, op: '', fresh: true };
   /** Notes: the text (typed through noteEd). */
   note = '';
-  /** Clock: the alarm (minute of the day, on or off), the minute last checked. */
-  alarm = { min: 7 * 60, on: false };
-  private alarmLast = -1;
-  /** Ringing: until when, the next time the tone starts, and the screen to go back to. */
-  private alarmEnd = 0;
-  private alarmNext = 0;
-  private alarmBack: Screen = 'standby';
-  private stopAlarm(now: number) { this.cue = 'stop'; this.buzzUntil = 0; this.open(this.alarmBack === 'alarm' ? 'standby' : this.alarmBack, now); }
-  /** Clock: the stopwatch, running since `swAt` (or -1), with `swAcc` seconds before. */
-  swAt = -1;
-  swAcc = 0;
   /** Settings: the scroll of the list. */
   scroll = 0;
   /** (Debug) the residents of the building in or next to which the settings' people page was opened. */
@@ -398,24 +383,12 @@ export class Phone {
     this.syncFs(now);
     // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
     // out a little for a text or a reminder (its top row in sight for a few seconds)
-    const ringing = (this.callIn && this.call?.state === 'ringing') || this.screen === 'alarm';
+    const ringing = this.callIn && this.call?.state === 'ringing';
     this.raise += ((this.out || ringing ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
     const app = this.screen === 'app' ? STORE[this.appId][0] : '';
     const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (this.screen === 'calendar' && this.cal.view === 'new');
     this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
-    // the alarm clock: once a day at its minute, it rings with a note
-    const minute = Math.floor(this.world.time / 60) % 1440;
-    if (this.alarm.on && this.alarmLast >= 0 && minute !== this.alarmLast && ((minute - this.alarm.min + 1440) % 1440) < ((minute - this.alarmLast + 1440) % 1440) && this.screen !== 'off' && this.screen !== 'boot') {
-      // it takes the whole screen and rings its own tone (in any profile, as alarms do) until a key stops it, or a minute passes
-      if (this.screen !== 'alarm') this.alarmBack = this.screen;
-      this.open('alarm', now); this.alarmEnd = now + 60; this.alarmNext = now;
-    }
-    this.alarmLast = minute;
-    if (this.screen === 'alarm') {
-      if (now >= this.alarmEnd) this.stopAlarm(now);
-      else if (now >= this.alarmNext) { this.alarmNext = now + 4; this.cue = 'alarm'; if (this.prefs.profile === 1) this.buzz(now, 2); }
-    }
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
       r.done = true;
@@ -650,10 +623,6 @@ export class Phone {
     if (k === 'end' && s !== 'boot' && s !== 'standby') { this.open('standby', now); return true; }
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
     switch (s) {
-      case 'alarm':
-        // any key stops it
-        this.stopAlarm(now);
-        return true;
       case 'boot':
         if (k === 'rsoft') { this.out = false; return 'away'; }
         return false;
@@ -916,15 +885,6 @@ export class Phone {
         if (r === 'menu') { this.open('menu', now); return true; }
         return r;
       }
-      case 'clock':
-        // the alarm: up/down 10 minutes, left/right an hour (setting it turns it on), 1 on or off
-        if (k === 'up' || k === 'down') { this.alarm.min = (this.alarm.min + (k === 'up' ? 10 : -10) + 1440) % 1440; this.alarm.on = true; return true; }
-        if (k === 'left' || k === 'right') { this.alarm.min = (this.alarm.min + (k === 'right' ? 60 : -60) + 1440) % 1440; this.alarm.on = true; return true; }
-        if (k === '1') { this.alarm.on = !this.alarm.on; return true; }
-        if (k === 'ok' || k === 'lsoft') { if (this.swAt >= 0) { this.swAcc += now - this.swAt; this.swAt = -1; } else this.swAt = now; return true; }
-        if (k === '*') { this.swAcc = 0; if (this.swAt >= 0) this.swAt = now; return true; }
-        if (k === 'rsoft') { this.open('menu', now); return true; }
-        return false;
       case 'settings':
         return this.settingsKey(k, now);
       case 'code':
@@ -1015,7 +975,6 @@ export class Phone {
     this.prefs[key] = (this.prefs[key] + (less ? -1 : 1) + n) % n;
     // hear what was picked
     if (key === 'ring' || key === 'profile') this.cue = this.prefs.profile === 0 ? 'ring' : this.prefs.profile === 1 ? 'vibrate' : 'stop';
-    if (key === 'alarmTone') this.cue = 'alarm';
     if (this.cue === 'vibrate') this.buzz(performance.now() / 1000, 1.6);
     return true;
   }

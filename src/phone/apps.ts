@@ -10,7 +10,7 @@ import { Sec } from '../sim/wifi';
 import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
-import { BAR, bigText, BAD, ch, DAYS, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
+import { BAR, bigText, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
@@ -34,7 +34,7 @@ function bar(S: Lcd, text: string, fg: C3, bg: C3, right = '', rfg: C3 = fg) {
 
 /**
  * The phone's menu and its apps besides the map. Those that need nothing more work for real
- * (calculator, clock with a stopwatch, notes typed by multi-tap, the about screen with the
+ * (calculator, notes typed by multi-tap, the about screen with the
  * hardware and the GPS); the dialer, contacts and messages have their screens but no network to
  * use (the antennas come with stage 9); the rest say what they are waiting for.
  */
@@ -45,13 +45,13 @@ const name = (a: App) => (T.app as Record<string, string>)[a];
 const ICON: Record<App, [string, C3, C3]> = {
   map: ['+N', [56, 150, 80], [255, 255, 255]], calls: [')))', [40, 170, 90], [255, 255, 255]], contacts: ['@', [220, 140, 60], [255, 255, 255]], messages: ['[=]', [60, 120, 210], [255, 255, 255]],
   camera: ['[o]', [90, 94, 104], [230, 235, 245]], wire: ['sw', [38, 62, 120], [255, 170, 60]], news: ['NEWS', [236, 228, 208], [24, 20, 16]], weather: ['\\o/', [70, 150, 230], [255, 230, 110]],
-  calendar: ['31', [240, 240, 244], [210, 50, 50]], clock: ['(:)', [24, 22, 26], [255, 150, 40]], calc: ['+-', [56, 56, 62], [255, 150, 30]], notes: ['~~', [250, 230, 120], [40, 50, 110]],
+  calendar: ['31', [240, 240, 244], [210, 50, 50]], bank: ['$$', [22, 70, 52], [235, 200, 110]], calc: ['+-', [56, 56, 62], [255, 150, 30]], notes: ['~~', [250, 230, 120], [40, 50, 110]],
   snake: ['~o', [150, 178, 84], [36, 48, 22]], folder: ['[_]', [200, 150, 60], [255, 245, 220]], store: ['$', [110, 50, 130], [255, 140, 210]], settings: ['<o>', [120, 126, 140], [255, 255, 255]],
 };
 /** The icons of apps from the store. */
 const STORE_ICON: Record<string, [string, C3, C3]> = {
   torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ['d', [130, 60, 170], [255, 220, 255]], atlas: ['3D', [60, 130, 90], [255, 255, 255]],
-  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ['$$', [22, 70, 52], [235, 200, 110]],
+  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ICON.bank,
 };
 const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
 const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
@@ -100,7 +100,6 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'calendar': return drawCalendar(S, P, world, now);
     case 'weather': return weatherApp(S, P, world, t, now);
     case 'store': return store(S, P, t, now);
-    case 'clock': return clock(S, P, world, t, now);
     case 'calc': return calc(S, P, t);
     case 'notes': return notes(S, P, t, now);
     case 'settings': return settings(S, P, world, t);
@@ -113,7 +112,6 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
       if (P.screen === 'msglist') return msgList(S, P, t);
       if (P.screen === 'folder') return folder(S, P, t);
-      if (P.screen === 'alarm') return alarmScreen(S, P, now);
       if (P.screen === 'msg') return msgRead(S, P, t);
       if (P.screen === 'compose') return compose(S, P, now);
   }
@@ -321,24 +319,6 @@ function ussdScreen(S: Lcd, P: Phone, t: number, now: number) {
     return softKeys(S, U.input ? A.send : '', T.back);
   }
   softKeys(S, T.ok, T.back);
-}
-
-/** The time of day (the city's), the date, and a stopwatch on real seconds: black, with amber digits like a bedside clock. */
-function clock(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  const BG: C3 = [6, 6, 9], AMB: C3 = [255, 150, 40], DAMB: C3 = [120, 66, 20];
-  paint(S, BG);
-  bar(S, name('clock').toUpperCase(), AMB, [24, 18, 14]);
-  const c = calendar(world.time);
-  bigText(S, 4, hhmm(c.hour), AMB, t);
-  S.center(12, `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`, [160, 150, 140], BG);
-  const sw = P.swAcc + (P.swAt >= 0 ? now - P.swAt : 0), m = Math.floor(sw / 60), s2 = sw % 60;
-  // the alarm: its time, lit when on
-  const al = `${A.alarm} ${hhmm(P.alarm.min / 60)} ${P.alarm.on ? A.alarmOn : A.alarmOff}`;
-  S.center(13, al, P.alarm.on ? AMB : DAMB, BG);
-  S.center(15, A.stopwatch, DAMB, BG);
-  bigText(S, 16, `${String(m).padStart(2, '0')}:${String(Math.floor(s2)).padStart(2, '0')}`, P.swAt >= 0 ? AMB : DAMB);
-  S.center(SH - 2, A.stopwatchHint, [90, 80, 70], BG);
-  softKeys(S, P.swAt >= 0 ? A.stop : A.start, T.back);
 }
 
 /** The calculator: a dark body, the display in big white digits, and its keys drawn as buttons with what they do. */
@@ -619,16 +599,6 @@ function photoBlocks(S: Lcd, p: Photo, y0: number, y1: number) {
     for (let yy = sy0; yy < sy1 && yy < ph; yy++) for (let xx = sx0; xx < sx1 && xx < pw; xx++) { r += px(xx, yy, 0) ** 2; g += px(xx, yy, 1) ** 2; bl += px(xx, yy, 2) ** 2; n++; }
     if (n) S.pixel(x0 + Math.floor(x / HD), top + Math.floor(y / HD), x % HD, y % HD, Math.sqrt(r / n), Math.sqrt(g / n), Math.sqrt(bl / n));
   }
-}
-
-/** The alarm ringing: the whole screen, the time big, blinking; any key stops it. */
-function alarmScreen(S: Lcd, P: Phone, now: number) {
-  const on = Math.floor(now * 2) & 1, BG: C3 = on ? [60, 20, 10] : [16, 8, 6], AMB: C3 = [255, 150, 40];
-  paint(S, BG);
-  S.center(4, A.alarm, AMB, BG);
-  bigText(S, 7, hhmm(P.alarm.min / 60), on ? [255, 255, 255] : AMB);
-  S.center(16, A.alarmStop, [220, 200, 180], BG);
-  softKeys(S, A.stop, A.stop);
 }
 
 let finder: CharGrid | null = null, finderAt = -1, finderN = 0;

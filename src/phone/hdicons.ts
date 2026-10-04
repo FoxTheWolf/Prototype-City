@@ -114,15 +114,15 @@ export const APP_ART: Record<string, string[]> = {
     '..wwwkkkwwwkkkww..',
     '..wwwwwwwwwwwwww..',
   ],
-  clock: [
+  bank: [
     '..................',
-    '......oooooo......',
-    '....oo......oo....',
-    '...o....w.....o...',
-    '...o....w.....o...',
-    '...o....wwww..o...',
-    '....oo......oo....',
-    '......oooooo......',
+    '........yy........',
+    '.....yyyyyyyy.....',
+    '...yyyyyyyyyyyy...',
+    '....y..y..y..y....',
+    '....y..y..y..y....',
+    '....y..y..y..y....',
+    '...yyyyyyyyyyyy...',
     '..................',
   ],
   calc: [
