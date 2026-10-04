@@ -39,7 +39,11 @@ export interface Account {
   /** Data left in the bundle, and used in all, in kilobytes. */
   dataKB: number;
   usedKB: number;
+  /** The operator whose SIM it is (13.6): 0 owns the masts, the others resell them; missing before 13.6. */
+  op?: number;
 }
+/** How many operators sell lines in the city. */
+export const OPERATORS = 3;
 
 export interface Telco {
   /** The city's area code, and every business's local number (7 digits) by business index. */

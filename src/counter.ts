@@ -149,7 +149,7 @@ export function drawCounter(g: CharGrid, C: Counter, world: World, now: number) 
     let label = '', price = '';
     if (r.kind === 'pay') { label = T.pay.replace('{n}', String(taken.length)); price = money(sum); }
     else if (r.kind === 'leave') label = T.leave;
-    else if (r.kind === 'gear') { label = T.items[r.item.id].name; price = owned(world.gear, r.item) ? T.have : money(r.item.cents); }
+    else if (r.kind === 'gear') { label = T.items[r.item.id].name; price = owned(world, r.item) ? T.have : money(r.item.cents); }
     else if (r.kind === 'menu') { label = GOODS[r.good] ?? r.good; price = money(r.cents); }
     else { label = T.withdraw; price = money(r.cents); }
     g.text(x0 + 1, y, ' '.repeat(W - 2), fg, bg);

@@ -23,6 +23,8 @@ export interface BagItem {
   cents: number;
   shop: number;
   paid: boolean;
+  /** A SIM's operator (13.6). */
+  op?: number;
   /** Fall speed, cm/s (not saved). */
   vx?: number;
   vy?: number;
@@ -59,7 +61,7 @@ const SIZE: Record<string, [number, number]> = {
   headphones: [18, 20], usb_stick: [8, 12], charger: [10, 14], blank_cds: [13, 12], ethernet_cable: [15, 18], mp3_player: [10, 16],
   prepaid_card: [6, 9], hands_free: [10, 16], phone_case: [9, 15],
   detergent: [10, 14], vending_snack: [8, 12],
-  antenna: [6, 22], battery: [20, 6],
+  antenna: [6, 22], battery: [20, 6], sim: [9, 5],
 };
 export const carried = (good: string) => good in SIZE;
 export const sizeOf = (good: string): [number, number] => SIZE[good] ?? [10, 10];
@@ -94,9 +96,9 @@ export function addToBag(B: Bag, good: string, cents: number, shop: number, paid
   return true;
 }
 
-/** The gear bought before there was a bag (F.9 saves): put in it, if not there yet. */
+/** Saves from 13.4 kept the fitted antenna and battery in the bag too: fitted gear is on the notebook (13.6). */
 export function bagGear(w: World) {
-  for (const g of ['antenna', 'battery'] as const) if (w.gear[g] && !w.bag.items.some((i) => i.good === g)) addToBag(w.bag, g, 0, -1, true);
+  for (const g of ['antenna', 'battery'] as const) if (w.gear[g]) w.bag.items = w.bag.items.filter((i) => i.good !== g);
 }
 
 /** The unpaid things from shop k, and what they come to. */

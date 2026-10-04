@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.6 — Upgrades de verdade (2026-10-04)
+- O chip, a antena e a bateria comprados vão para a mochila. Arraste a antena ou a bateria até o notebook para instalar: a antena USB aparece encaixada na lateral, com a luz piscando, e a bateria estendida atrás.
+- Arraste o chip até o celular: a tampa sai, a bateria sai, o chip velho sai e o novo entra. O número muda e a operadora do chip novo pode ser outra (há três na cidade).
+
 ## 0.13.5 — Fome (2026-10-04)
 - Você sente fome com o passar das horas. Com fome, a corrida dura menos (de 30 s bem alimentado a uns 4 s faminto); andando, o fôlego volta. Ninguém morre de fome.
 - Nos diners, cafés e bares, o balcão tem EAT HERE / TO GO (Tab). Na mochila, E come o que está sob o cursor.

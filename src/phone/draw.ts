@@ -524,7 +524,7 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   bigText(S, 3, hhmm(c.hour), [255, 255, 255], t);
   const date = `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`;
   // the network it is on, as phones then showed it under the clock
-  const R = P.radio, op = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
+  const R = P.radio, op = R.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
   const chip = (y: number, s: string, fg: C3) => {
     if (!s) return;
     const x0 = ((SW - s.length) >> 1) - 2;

@@ -157,8 +157,9 @@ export function businessName(city: City, k: number): string {
 }
 
 /** The mobile operator, named from a slot of its own. */
-export function operatorName(city: City): string {
-  return fill(L.operator[city.nameSeed % L.operator.length], L.roots[(city.nameSeed + (L.roots.length - 23) * 7919) % L.roots.length]);
+/** The city's operators: 0 owns the masts; the others (13.6) sell prepaid lines over the same network. */
+export function operatorName(city: City, op = 0): string {
+  return fill(L.operator[(city.nameSeed + op * 2) % L.operator.length], L.roots[(city.nameSeed + (L.roots.length - 23 - op * 13) * 7919) % L.roots.length]);
 }
 
 /** The phone maker k of the city (see sim/device.ts), named from a slot of its own. */

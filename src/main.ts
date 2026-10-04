@@ -7,6 +7,8 @@ import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
 import { Counter, counterPrompt, drawCounter, money } from './counter';
 import { BagView } from './bagUi';
+import { fit, swapSim } from './sim/gear';
+import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
 import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
@@ -122,6 +124,9 @@ const phone = new Phone(world);
 const payphone = new Payphone(world);
 const counter = new Counter(world);
 const bagView = new BagView(world);
+// the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
+bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
+bagView.onSwap = (op) => { swapSim(world, op); phone.newSim(); };
 /** What taking a good off a shelf said, and when; and the last theft shown (its game time). */
 let shelfNote = '', shelfNoteAt = -9, theftSeen = world.bag.stolenAt;
 /** What trying a door said (LOCKED), and when. */
@@ -379,7 +384,7 @@ document.addEventListener('pointerlockchange', () => {
   else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
 });
 addEventListener('mouseup', (e) => {
-  if (e.button === 0 && bagView.open) bagView.release();
+  if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
@@ -432,7 +437,7 @@ addEventListener('keydown', (e) => {
   if (bagView.open) {
     e.preventDefault();
     if (e.repeat) return;
-    if (e.code === 'KeyB' || e.code === 'Escape') { bagView.open = false; bagView.release(); input.lock(); }
+    if ((e.code === 'KeyB' || e.code === 'Escape') && !bagView.swap) { bagView.open = false; bagView.release(); input.lock(); }
     else if (e.code === 'KeyR') bagView.turn();
     else if (e.code === 'KeyE' && bagView.eatAt(phone.cx, phone.cy, performance.now() / 1000)) sound?.munch();
     return;
@@ -876,6 +881,8 @@ function frame(now: number) {
   playSfx(payphone.sfx);
   drawPayphone(ui, payphone, world, now / 1000, VIEW_LIGHT);
   playSfx(counter.sfx);
+  for (const s of bagView.sfx) if (s === 'click') sound?.lapKey('key'); else sound?.phoneSlide(true);
+  bagView.sfx.length = 0;
   if (counter.ate) { counter.ate = false; sound?.munch(); }
   // hunger (13.5): told once at each stage, with the stomach's growl
   const hs = hungerStage(world.needs.food);
@@ -1031,7 +1038,7 @@ function frame(now: number) {
     intro(grid, now / 1000 - introAt, [
       cityName(city).toUpperCase(),
       `${districtName(city, d).toUpperCase()}  ${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')} ${hh}:${mm}`,
-      `${operatorName(city).toUpperCase()} ... SIGNAL OK`,
+      `${operatorName(city, world.telco.player.op ?? 0).toUpperCase()} ... SIGNAL OK`,
     ]);
   }
   const T3 = termMode === 'fb' ? termFb : termTx;

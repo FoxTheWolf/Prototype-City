@@ -37,6 +37,10 @@ export const laptopPitch = () => pitch0;
 export let screenAt: [number, number] | null = null;
 /** The glass's corners on the interface's grid (cells: x, y from the top-left, clockwise), faced or from aside, while the lid is open; null otherwise. */
 export let glassBox: number[] | null = null;
+/** The gear fitted from the bag (13.6) waiting to be seen going in, and when each slid in (seconds). */
+const pending = new Set<string>(), plugAt: Record<string, number> = { antenna: -9, battery: -9 };
+/** Gear just fitted: it slides into place the next time the notebook comes up. */
+export function plugIn(id: 'antenna' | 'battery') { pending.add(id); plugAt[id] = Infinity; }
 
 /** The view; termW and termH: the screen layer's size on the interface's grid (cells, fractional). */
 export interface View3d { yaw: number; pitch: number; aspect: number; still: boolean; termW: number; termH: number }
@@ -92,6 +96,20 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
     const face = a > Math.PI / 4;
     parts.push(part(Shape.Box, Math.min(ax, bx), -halfLid, Math.min(az, bz), Math.max(ax, bx) + LID_T, halfLid, Math.max(az, bz) + (face ? 0 : LID_T),
       face ? [BODY[0] * 0.4, BODY[1] * 0.4, BODY[2] * 0.4] : col(0.95), Mat.Solid, face ? ' ' : '#', ' ', ' '));
+  }
+  // the gear fitted to it (13.6): a USB Wi-Fi stick with its whip in the right side's port, the
+  // extended battery standing out behind the hinge; each slides in the first time it is seen
+  for (const id of pending) if (P.raise > 0.9) { plugAt[id] = now; pending.delete(id); }
+  const slid = (id: string) => { const k = Math.max(0, Math.min(1, (now - plugAt[id]) / 0.7)); return 1 - (1 - k) ** 3; };
+  if (world.gear.antenna) {
+    const o = (1 - slid('antenna')) * 0.06, y0 = HALF_W - 0.004 + o, lit = on && Math.floor(now * 3) % 2 === 0;
+    parts.push(part(Shape.Box, -0.012, y0, 0.004, 0.01, y0 + 0.036, 0.013, [28, 28, 32], Mat.Solid, '=', '-', '#'));
+    parts.push(part(Shape.Box, -0.004, y0 + 0.008, 0.013, 0.0, y0 + 0.012, 0.0145, lit ? [90, 160, 255] : [50, 60, 80], lit ? Mat.Glow : Mat.Solid, '.', '.', '.'));
+    parts.push(part(Shape.Cyl, -0.003, y0 + 0.03, 0.013, 0.003, y0 + 0.036, 0.15, [22, 22, 25], Mat.Solid, '|', 'o', '|'));
+  }
+  if (world.gear.battery) {
+    const o = (1 - slid('battery')) * 0.08;
+    parts.push(part(Shape.Box, xh + 0.004 + o, -HALF_W * 0.8, 0, xh + 0.03 + o, HALF_W * 0.8, 0.017, col(0.55), Mat.Solid, '#', '=', '#'));
   }
   const obj: Obj = { x: T - xh, y: 0, c: 1, s: 0, parts, r: Math.hypot(DECK_D, HALF_W), h: DECK_H + LID_H + 0.02, seed: 7, z0: 0 };
 

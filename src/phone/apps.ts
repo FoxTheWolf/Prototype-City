@@ -415,7 +415,7 @@ function about(S: Lcd, P: Phone, world: World, t: number) {
   const imei = imeiOf(world.seed);
   const gps = g.state === 'fix' ? `${A.gpsFix} ${g.sats} SAT +-${fmtDist(g.acc, P.prefs.dist)}` : g.state === 'search' ? `${A.gpsSearch} ${g.sats} SAT` : g.state === 'lost' ? A.gpsLost : A.gpsOff;
   const R = P.radio, acc = world.telco.player, site = R.site >= 0 ? world.telco.sites[R.site] : null;
-  const net = R.state === 'service' ? operatorName(world.city).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
+  const net = R.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
   const rows: [string, string][] = [
     [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
     [A.number, formatNumber(world.telco, acc.number.replace('-', ''))], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
@@ -708,7 +708,7 @@ const BK = A.bank;
  */
 function bankApp(S: Lcd, P: Phone, world: World, t: number) {
   const GREEN: C3 = [18, 64, 48], GOLD: C3 = [236, 200, 112], PAGE: C3 = [242, 238, 226], INK2: C3 = [34, 38, 34], GREY: C3 = [120, 122, 112], RED: C3 = [170, 40, 40], OK2: C3 = [30, 120, 60];
-  const { city } = world, Acc = world.bank, B = P.bk, J = P.radio.job, op = operatorName(city);
+  const { city } = world, Acc = world.bank, B = P.bk, J = P.radio.job, op = operatorName(city, world.telco.player.op ?? 0);
   paint(S, PAGE);
   bar(S, P.bankName.toUpperCase().slice(0, SW - 4), GOLD, GREEN, '$$', GOLD);
   if (!B.ok) {

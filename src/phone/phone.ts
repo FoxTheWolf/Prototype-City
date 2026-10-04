@@ -378,6 +378,9 @@ export class Phone {
    * What the save keeps of the phone (F.6): its files (the contacts, calls, texts and notes live
    * there), the photos, the apps, the settings and looks, the reminders. Plain data (structured clone).
    */
+  /** A new SIM in the phone (13.6): it registers again, and the new operator says hello. */
+  newSim() { this.told.welcome = false; this.radio.state = 'off'; }
+
   snapshot() {
     return {
       fs: this.fs, photos: this.photos, photoN: this.photoN, apps: [...this.apps], prefs: { ...this.prefs }, look: this.look, case: this.case,
@@ -438,7 +441,7 @@ export class Phone {
       if (this.prefs.profile === 1) this.buzz(now, 0.8);
     }
     if (this.radio.state === 'service') {
-      const A = this.world.telco.player, op = operatorName(this.world.city);
+      const A = this.world.telco.player, op = operatorName(this.world.city, this.world.telco.player.op ?? 0);
       if (!this.told.welcome) { this.told.welcome = true; this.receive(op, SMS.welcome.replace('{op}', op), now + 4); }
       if (A.dataKB < 500 && !this.told.low) { this.told.low = true; this.receive(op, SMS.lowData, now + 2); }
       if (A.dataKB < 1 && !this.told.out) { this.told.out = true; this.receive(op, SMS.noData, now + 2); }
@@ -519,7 +522,7 @@ export class Phone {
     if (J?.what === 'bank' && J.state === 'done') { this.bk.ok = true; this.radio.job = null; }
     // a top-up from the bank: off the account, onto the line's credit, and the operator says so
     if (J?.what.startsWith('banktop:') && J.state === 'done') {
-      const c = +J.what.slice(8), op = operatorName(this.world.city);
+      const c = +J.what.slice(8), op = operatorName(this.world.city, this.world.telco.player.op ?? 0);
       this.radio.job = null;
       if (post(this.world.bank, this.world.time, 'topup', -c, 0)) {
         this.world.telco.player.credit += c; this.bk.note = 'done'; this.sfx.push(['sent']);
@@ -1151,7 +1154,7 @@ export class Phone {
       return true;
     }
     const c = lookup(this.world.telco, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q), n = this.bother(D.to);
-    const op = operatorName(this.world.city);
+    const op = operatorName(this.world.city, this.world.telco.player.op ?? 0);
     if (c.kind === 'none') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5);
     else if (c.kind === 'self') this.receive(D.to, D.text, now + 3);
     else if (c.kind === 'biz' && h(1) < 0.6 && n < 4) {
@@ -1210,8 +1213,8 @@ export class Phone {
   /** Ask the operator's menu for the answer to the path so far. */
   private ask() {
     const r = ussd(this.world, this.us.code, this.us.path);
-    this.us.text = r.text.replace('{op}', operatorName(this.world.city)); this.us.menu = r.menu; this.us.input = '';
-    if (r.sms) this.receive(operatorName(this.world.city), r.sms, this.us.at + 4);
+    this.us.text = r.text.replace('{op}', operatorName(this.world.city, this.world.telco.player.op ?? 0)); this.us.menu = r.menu; this.us.input = '';
+    if (r.sms) this.receive(operatorName(this.world.city, this.world.telco.player.op ?? 0), r.sms, this.us.at + 4);
   }
 
 
