@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.1 — Lugares de verdade, primeira parte (2026-10-04)
+- A cidade ganhou pizzarias, delis, lanchonetes de fast food, lojas de celular, cybercafés (poucos: procure no Maps) e motéis, cada um com nome, letreiro, horário e saudação ao telefone.
+- Cada tipo de lugar agora sabe o que vende e quanto custa (preços de 2008). Por enquanto isso ainda não aparece no jogo: é a base para comprar pegando na prateleira, nas próximas atualizações.
+- O chip pré-pago também é vendido nas lojas de celular.
+
 ## 0.F.9 — Onde gastar o dinheiro (2026-10-04)
 - Lojas de eletrônicos e de penhor abertas têm um balcão: aperte F perto do caixa para ver o que vendem e comprar no cartão do banco (setas escolhem, Enter compra, F sai). Fechadas, o aviso diz a hora em que abrem.
 - À venda: um chip pré-pago (número novo, com crédito e pacote de dados novos; a linha antiga fica para trás), uma antena Wi-Fi direcional para o notebook e uma segunda bateria do notebook (quase o dobro das horas).
