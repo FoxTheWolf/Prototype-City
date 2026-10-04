@@ -36,6 +36,7 @@
 - **(L.10) Sombras em cunhas retas** no chão vêm de qualquer coisa medida em poucas direções fixas (a luz do céu tinha 8): mais direções antes de sorteio por célula, que pisca.
 
 ### Lições da etapa R (render na GPU), para não repetir
+- **Compilação travada em "COMPILING SHADERS 90%" (13.10d):** o WGSL não dá erro (`getCompilationInfo` vazio), mas o pipeline não fica pronto. Causa: uma segunda chamada a uma função enorme (`peekRoom` → `roomWalk`) dentro de `wallCell`; o compilador do Windows inlina tudo e a caminhada dobra de tamanho. Regra: **uma chamada só de `peekRoom`/`roomWalk` por função**; para dois casos, decidir as flags antes e chamar uma vez.
 
 - **Erros do WGSL não aparecem sozinhos:** a tela fica preta e o console mudo (o pipeline inválido só reclama ao ser usado). Conferir com `device.createShaderModule({code}).getCompilationInfo()` no console (cada mensagem tem linha e coluna) ou com `pushErrorScope('validation')` em volta de um `encode`.
 - **`a < x … y > b` no WGSL vira template:** um identificador seguido de `<` com um `>` mais adiante na mesma expressão é lido como `tipo<…>`. Pôr cada comparação entre parênteses.
