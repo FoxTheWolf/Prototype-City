@@ -5,7 +5,7 @@ import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
-import { drawWatch, Watch, WATCH_ON } from './watch/watch';
+import { drawWatch, Watch, WATCH_LCD, WATCH_ON } from './watch/watch';
 import { drawLaptop3d, glassBox, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
@@ -42,9 +42,9 @@ import { Menu, type Option } from './menu';
 import { readSave, SAVE_V, writeSave, type GameSave } from './saveGame';
 import { applyWorld, snapWorld } from './sim/save';
 
-/** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
+/** The grid has this many rows (chosen in the options; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
-/** The options (the menu's, and the keys B U V G R M F3 that change them too), kept per viewer in the browser. */
+/** The options (the menu's; F3 also flips the debug lines), kept per viewer in the browser, apart from the save (deleting a save keeps them). */
 interface Opts { solid: number; blocks: boolean; sharp: number; fuse: boolean; res: number; mute: boolean; hud: boolean }
 const OPTS: Opts = (() => {
   const d: Opts = { solid: 0, blocks: false, sharp: 0, fuse: false, res: 2, mute: false, hud: false };
@@ -383,6 +383,13 @@ addEventListener('keydown', (e) => {
   // the notebook open takes the whole keyboard; Esc closes the lid and stands up
   if (laptop.open) {
     e.preventDefault();
+    // Insert: the phone up beside it (or down), worked by the mouse while the keys stay the notebook's
+    if (e.code === 'Insert' && !e.repeat && !payphone.active) {
+      const r = phone.toggle(performance.now() / 1000);
+      sound?.phoneSlide(r !== 'in');
+      if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
+      return;
+    }
     if (e.code === 'Escape' && !laptop.shell.fw.mode) { if (!e.repeat) { laptop.close(performance.now() / 1000); input.lock(); relock = true; } return; }
     if (e.repeat && !['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'].includes(e.code) && e.key.length !== 1) return;
     laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
@@ -412,32 +419,25 @@ addEventListener('keydown', (e) => {
     phonePress(pk);
     return;
   }
-  // the wristwatch's right button (I): held, it repeats while a field of the alarm is being set
-  if (e.code === 'KeyI' && running && WATCH_ON) { watch.startDown(performance.now() / 1000, e.repeat); return; }
+  // the wristwatch's right button (K): held, it repeats while a field of the alarm is being set
+  if (e.code === 'KeyK' && running && WATCH_ON) { watch.startDown(performance.now() / 1000, e.repeat); return; }
   if (e.repeat) return;
-  // the wristwatch: H lowers it out of sight (and raises it), L lights it, J steps its mode
-  if (e.code === 'KeyH' && running && WATCH_ON) { watch.toggle(); return; }
+  // the wristwatch: I lowers it out of sight (and raises it); its buttons are J (MODE), K (START) and L (LIGHT)
+  if (e.code === 'KeyI' && running && WATCH_ON) { watch.toggle(); return; }
   if (e.code === 'KeyL' && running && WATCH_ON) { watch.light(performance.now() / 1000); return; }
   if (e.code === 'KeyJ' && running && WATCH_ON) { watch.modeKey(performance.now() / 1000); return; }
   if (e.code === 'ArrowUp' && !phone.out && running) phoneToggle();
   else if (e.code === 'KeyP' && running && !payphone.active) phoneToggle();
-  else if (e.code === 'KeyM') sound?.toggleMute();
-  else if (e.code === 'KeyB') look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length];
-  else if (e.code === 'KeyU') look.blocks = !look.blocks;
-  else if (e.code === 'KeyV') look.sharp = (look.sharp + 1) % 4;
-  else if (e.code === 'KeyG') look.fuse = !look.fuse;
-  else if (e.code === 'KeyR') { resStep = (resStep + 1) % RES_ROWS.length; resize(); }
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
   else if (e.code === 'KeyT') skipHours(world, e.shiftKey ? -1 : 1);
   else if (e.code === 'KeyY') cycleWeather(world);
-  // debug: K switches the nearest substation (shift: all of them)
-  else if (e.code === 'KeyK') togglePower(world, e.shiftKey);
+  // debug: F6 switches the nearest substation (shift: all of them)
+  else if (e.code === 'F6') { e.preventDefault(); togglePower(world, e.shiftKey); }
   // debug: PageUp / PageDown move a storey up or down inside a building
   else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
-  if (['KeyM', 'KeyB', 'KeyU', 'KeyV', 'KeyG', 'KeyR'].includes(e.code)) saveOpts();
 });
 
-addEventListener('keyup', (e) => { if (e.code === 'KeyI' && WATCH_ON) watch.startUp(); });
+addEventListener('keyup', (e) => { if (e.code === 'KeyK' && WATCH_ON) watch.startUp(); });
 
 /** `rows` sets the cell size; the grid then gets as many rows as fill the screen (no black bars, the phone on the bottom edge).
  *  cover: the world overfills by up to a cell (cut at the edges); the interface stays whole, the leftover (< a cell) on top. */
@@ -596,12 +596,12 @@ function saveOpts() {
   try { localStorage.setItem('tc.opts', JSON.stringify(OPTS)); } catch { /* no storage: the defaults next time */ }
 }
 const OPTIONS: Option[] = [
-  { label: 'SOUND (M)', value: () => ((sound ? sound.muted : OPTS.mute) ? 'OFF' : 'ON'), next: () => { if (sound) sound.toggleMute(); else OPTS.mute = !OPTS.mute; saveOpts(); } },
-  { label: 'BACKGROUND (B)', value: () => (look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'), next: () => { look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length]; saveOpts(); } },
-  { label: 'GLYPHS (U)', value: () => (look.blocks ? 'BLOCKS' : 'ASCII'), next: () => { look.blocks = !look.blocks; saveOpts(); } },
-  { label: 'SHARPNESS (V)', value: () => ['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp], next: () => { look.sharp = (look.sharp + 1) % 4; saveOpts(); } },
-  { label: 'FUSE FAR GLYPHS (G)', value: () => (look.fuse ? 'ON' : 'OFF'), next: () => { look.fuse = !look.fuse; saveOpts(); } },
-  { label: 'ROWS (R)', value: () => String(RES_ROWS[resStep]), next: () => { resStep = (resStep + 1) % RES_ROWS.length; resize(); saveOpts(); } },
+  { label: 'SOUND', value: () => ((sound ? sound.muted : OPTS.mute) ? 'OFF' : 'ON'), next: () => { if (sound) sound.toggleMute(); else OPTS.mute = !OPTS.mute; saveOpts(); } },
+  { label: 'BACKGROUND', value: () => (look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'), next: () => { look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length]; saveOpts(); } },
+  { label: 'GLYPHS', value: () => (look.blocks ? 'BLOCKS' : 'ASCII'), next: () => { look.blocks = !look.blocks; saveOpts(); } },
+  { label: 'SHARPNESS', value: () => ['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp], next: () => { look.sharp = (look.sharp + 1) % 4; saveOpts(); } },
+  { label: 'FUSE FAR GLYPHS', value: () => (look.fuse ? 'ON' : 'OFF'), next: () => { look.fuse = !look.fuse; saveOpts(); } },
+  { label: 'ROWS', value: () => String(RES_ROWS[resStep]), next: () => { resStep = (resStep + 1) % RES_ROWS.length; resize(); saveOpts(); } },
   { label: 'DEBUG LINES (F3)', value: () => (hudOn ? 'ON' : 'OFF'), next: () => { hudOn = !hudOn; saveOpts(); } },
 ];
 /** The debug page: what the status lines show, as text. */
@@ -622,7 +622,7 @@ function debugText(): string {
     `HEAT      ${world.heat.points.toFixed(2)}  TIER ${tierOf(world.heat)}`,
     '',
     'DEBUG KEYS  F3 lines  F4 noon/sunset/night  T/Shift+T +-1h  Y weather',
-    '            K substation (Shift: all)  C nearest camera  PgUp/PgDn floor',
+    '            F6 substation (Shift: all)  C nearest camera  PgUp/PgDn floor',
   ].join('\n');
 }
 const menu = new Menu({ options: OPTIONS, debug: debugText, save: saveNow, resume, quit: async () => { await saveNow(); reloadWith({}); } });
@@ -830,7 +830,7 @@ function frame(now: number) {
   }
   watch.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
-  if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city));
+  if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city));
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null;
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
@@ -951,7 +951,8 @@ function frame(now: number) {
   // the GPU's compositor also takes the screen seen from aside (not shown as a layer), for its glow
   const G = glassBox, toPx = (c: number, k: number) => (k & 1 ? uiLayout.originY + c * uiLayout.cellH : uiLayout.originX + c * uiLayout.cellW);
   const lapAt = G && termMode ? { grid: T3, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at);
+  // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at);
   else renderer.draw(grid, ui, hd, termAt);
   requestAnimationFrame(frame);
 }

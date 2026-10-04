@@ -2,6 +2,15 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.7 — Retoques do relógio e das teclas (2026-10-04)
+- O relógio agora tem caixa de aço escovado que pega a luz da cena, com o reflexo da luz mais forte por perto deslizando nela e a sombra da moldura sobre o visor, como o celular.
+- O visor some de verdade no escuro: para ler a hora à noite, use a luz (L). A luz agora é azul e deixa um leve brilho em volta.
+- Teclas do relógio novas: I abaixa e ergue, J é MODE, K é START/STOP, L é LIGHT.
+- Sinal de hora: no modo alarme, o START (K) alterna alarme, sinal de hora, os dois e nenhum (marcas `(*)` e `SIG` no visor). Com o sinal ligado (o padrão) o relógio bipa e sobe sozinho a cada hora; desligado, não faz nenhum dos dois.
+- A correia aparece uma linha acima do relógio e uma linha abaixo, na borda da tela.
+- Com o notebook aberto, Insert ergue e abaixa o celular, que se usa pelo mouse enquanto o teclado continua no notebook.
+- As teclas de gráfico e de som (B, U, V, G, R, M) saíram: tudo isso fica no menu de opções. F3 continua ligando as linhas de debug. O apagão de debug saiu do K e foi para F6 (Shift+F6: a cidade toda).
+
 ## 0.F.6c — Salvar o jogo e o menu (2026-10-03)
 - O jogo agora salva: a hora, onde você está, o dinheiro e a conta, o crédito do celular, os contatos, as mensagens, as fotos e as notas do celular, o disco e a BIOS do notebook, o relógio, as subestações e semáforos que você mexeu, as notícias e posts, e os trabalhos e o calor em que você estava.
 - Na tela de título: CONTINUE volta ao jogo salvo (com a data em que foi salvo), NEW GAME começa uma cidade nova (pergunta antes, porque vai substituir o save), WATCH CCTV e OPTIONS.
