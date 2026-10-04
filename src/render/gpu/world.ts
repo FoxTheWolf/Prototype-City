@@ -804,6 +804,7 @@ function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], ba
     const c2 = p.col2;
     F[w + 17] = c2?.[0] ?? 0; F[w + 18] = c2?.[1] ?? 0; F[w + 19] = c2?.[2] ?? 0; W[w + 20] = c2 ? 1 : 0;
     F[w + 21] = p.lamp ?? 0; W[w + 22] = p.bulbs ? 1 : 0; W[w + 23] = p.skin ?? 0;
+    F[w + 24] = p.swing ?? 0; F[w + 25] = p.pivX ?? 0; F[w + 26] = p.pivZ ?? 0;
   });
   return tx;
 }

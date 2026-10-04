@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.11 — Gente de verdade na calçada (2026-10-04)
+- Os pedestres andam com joelhos e cotovelos: a perna dobra ao vir para a frente e os braços balançam.
+- Perto de você, as pessoas desviam umas das outras (e de você) em vez de se atravessarem, e diminuem o passo atrás de quem anda devagar.
+- A aparência de cada pessoa agora faz parte de quem ela é: famílias parecidas, cabelos grisalhos com a idade, barba, cabelo comprido.
+
 ## 0.13.13 — Opções mais simples e pessoas mais atentas (2026-10-04)
 - O menu de opções agora tem Style (High Definition, o padrão, ou Classic, com menos linhas e o visual mais marcado) e Sharpness (Soft ou Sharp). As opções voltaram ao padrão uma vez.
 - Com a mochila, o caixa ou a lista de direções abertos, o personagem não anda nem gira mais por trás da tela.

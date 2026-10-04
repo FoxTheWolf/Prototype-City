@@ -856,8 +856,8 @@ function collectObjects(world: World, v: View): Obj[] {
   for (const p of world.peds) {
     const x = p.px + (p.x - p.px) * v.alpha, y = p.py + (p.y - p.py) * v.alpha;
     if (Math.abs(x - v.x) > PED_DRAW || Math.abs(y - v.y) > PED_DRAW || !seen(x, y, 1)) continue;
-    const far = Math.abs(x - v.x) > PED_NEAR || Math.abs(y - v.y) > PED_NEAR, step = p.v > 0.1 ? Math.floor(p.stride / 0.45) & 3 : 0;
-    out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(p.id, step, wet && (p.id & 7) < 6, far, far ? 0 : p.use === 3 && Math.floor(frameSec * 4) & 1 ? 2 : p.use), r: 0.8, h: 2.3, seed: 0 });
+    const far = Math.abs(x - v.x) > PED_NEAR || Math.abs(y - v.y) > PED_NEAR, step = p.v > 0.1 ? 1 + (Math.floor(p.stride / 0.225) & 7) : 0;
+    out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(world.pop, p.id, step, wet && (p.id & 7) < 6, far, far ? 0 : p.use === 3 && Math.floor(frameSec * 4) & 1 ? 2 : p.use), r: 0.8, h: 2.3, seed: 0 });
   }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate (a driven car's body, near the player)

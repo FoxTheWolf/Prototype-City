@@ -58,6 +58,10 @@ export interface Ped {
   hold?: number;
   pdx?: number;
   pdy?: number;
+  /** Near the player (13.11b): metres stepped aside (to their left of the way they walk), the step they mean to take, and how much they slow behind someone. */
+  lat?: number;
+  latT?: number;
+  slow?: number;
 }
 
 /**
@@ -310,6 +314,49 @@ export function spawnPeds(city: City, pop: Population, rng: Rng, time: number, x
   return peds;
 }
 
+/** How far from the player people keep out of each other's way (13.11b), m; how far ahead they look, and how wide a body is. */
+const AVOID_R = 160, AHEAD = 2.2, BODY = 0.75;
+/**
+ * Near the player people do not walk through each other (13.11b): whoever has someone just ahead
+ * steps aside, away from them (round someone standing or the player, past someone slower; two
+ * coming at each other each see the other on the same side, so they pass); and close behind
+ * someone slower, they slow to their pace. Only on the sidewalk's ring; the step stays on the sidewalk (see its use).
+ */
+function avoid(peds: Ped[], px: number, py: number) {
+  const cells = new Map<number, Ped[]>(), key = (x: number, y: number) => Math.floor(x / 2) * 65536 + Math.floor(y / 2);
+  for (const p of peds) {
+    if (Math.abs(p.x - px) > AVOID_R + 2 || Math.abs(p.y - py) > AVOID_R + 2) continue;
+    const k = key(p.x, p.y);
+    let l = cells.get(k);
+    if (!l) cells.set(k, (l = []));
+    l.push(p);
+  }
+  for (const p of peds) {
+    p.latT = 0; p.slow = 1;
+    if (p.hold || p.door || p.way.length || Math.abs(p.x - px) > AVOID_R || Math.abs(p.y - py) > AVOID_R) continue;
+    const hx = p.dx, hy = p.dy, nx = -hy, ny = hx;
+    let best = AHEAD;
+    const see = (qx: number, qy: number, qv: number, qhx: number, qhy: number) => {
+      const rx = qx - p.x, ry = qy - p.y, f = rx * hx + ry * hy, l = rx * nx + ry * ny;
+      if (f <= 0 || f >= best || Math.abs(l) > BODY) return;
+      best = f;
+      const along = qhx * hx + qhy * hy;
+      // walking the same way and not slower: no need
+      if (qv >= 0.2 && along > 0.3 && qv >= p.pace * 0.9) return;
+      // aside, away from them (someone coming the other way sees it the same: both pass the same side)
+      p.latT = (p.lat ?? 0) + l + (l > 0 ? -1 : 1) * (BODY + 0.1);
+      // close behind someone slower: their pace till there is room
+      if (qv >= 0.2 && along > 0.3 && f < 1) p.slow = Math.max(0.3, qv / (p.pace || 1));
+    };
+    const cx = Math.floor(p.x / 2), cy = Math.floor(p.y / 2);
+    for (let i = cx - 1; i <= cx + 1; i++) for (let j = cy - 1; j <= cy + 1; j++) {
+      const l = cells.get(i * 65536 + j);
+      if (l) for (const q of l) if (q !== p) see(q.x, q.y, q.hold ? 0 : q.v, q.dx, q.dy);
+    }
+    see(px, py, 0, 0, 0);
+  }
+}
+
 /** How often (ticks) each pedestrian is checked against their plan, and how far behind it they may fall. */
 const SYNC_TICKS = 60, SYNC_SLACK = 30;
 /** Whether the player could be looking at a point: close by, or within a wide cone ahead (heading hx, hy). */
@@ -330,6 +377,7 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
   let walking = onStreet.get(peds);
   if (!walking) onStreet.set(peds, (walking = new Set(peds.map((p) => p.id))));
   crossers.length = 0;
+  avoid(peds, px, py);
   for (let k = peds.length - 1; k >= 0; k--) {
     const p = peds[k];
     p.px = p.x; p.py = p.y;
@@ -359,7 +407,7 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
     p.use = phoneUse(pop, p.id, sec);
     // (they walk through the player, so nobody is held up on their way by standing in it)
     // texting slows them down
-    let v = p.use === 2 ? p.pace * 0.8 : p.pace;
+    let v = (p.use === 2 ? p.pace * 0.8 : p.pace) * (p.slow ?? 1);
     if (p.door) {
       // through the door: out onto the sidewalk, or in and gone
       if (toPoint(p, v, dt)) {
@@ -401,6 +449,14 @@ export function stepPeds(city: City, power: PowerGrid, pop: Population, peds: Pe
         if (p.t > E[4] || p.t < 0) { corner(city, p); if (p.way.length) { p.v = v; p.stride += v * dt; continue; } edge(b, p.off, p.e, E); }
         p.x = E[0] + E[2] * p.t; p.y = E[1] + E[3] * p.t;
         p.dx = E[2] * p.dir; p.dy = E[3] * p.dir;
+        // a step aside (13.11b), eased, and kept on the sidewalk: along the edge's inward normal
+        p.lat = (p.lat ?? 0) + ((p.latT ?? 0) - (p.lat ?? 0)) * Math.min(1, dt * 2.5);
+        if (Math.abs(p.lat) > 0.01) {
+          let inx = -E[3], iny = E[2];
+          if (((b.x0 + b.x1) / 2 - p.x) * inx + ((b.y0 + b.y1) / 2 - p.y) * iny < 0) { inx = -inx; iny = -iny; }
+          const s = -p.dy * inx + p.dx * iny, o = Math.max(0.4, Math.min(SIDEWALK - 0.4, p.off + s * p.lat)) - p.off;
+          p.x += inx * o; p.y += iny * o;
+        }
         // where the diagonal avenue cuts the block, the ring keeps to its sidewalks: slanting along the
         // curb on either side, and straight across the avenue where the ring crosses its middle (the
         // cars stopping for whoever is on it)

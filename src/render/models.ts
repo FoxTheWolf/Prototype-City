@@ -1,5 +1,7 @@
 import { hash3 } from '../core/rng';
 import { type RGB } from '../sim/city';
+import { type Population } from '../sim/citizens';
+import { looksOf } from '../sim/looks';
 import { Mat, part, Shape, type Part } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
@@ -12,6 +14,8 @@ const STEEL: RGB = [100, 100, 110];
 /** Clothes and skin for the people seen in vehicles (and, later, on the sidewalks). */
 const CLOTHES: RGB[] = [[150, 40, 45], [40, 60, 110], [70, 70, 75], [180, 170, 150], [50, 100, 70], [120, 80, 50], [200, 200, 205], [30, 30, 34]];
 const SKIN: RGB[] = [[225, 185, 150], [190, 140, 100], [140, 95, 65], [95, 65, 45]];
+/** The RGB of sim/looks.ts's TONES, HAIRS and CLOTHS, in their order. */
+const TONE_RGB: RGB[] = [[235, 200, 175], [225, 185, 150], [200, 155, 115], [170, 120, 85], [130, 88, 60], [90, 62, 44]];
 
 /** A person sitting in a vehicle at (x, y), seat at z: torso and head, colors from `who`. */
 function seated(m: Part[], x: number, y: number, z: number, who: number) {
@@ -108,40 +112,39 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
   return m;
 }
 const peds = new Map<string, Part[]>();
-const HAIR: RGB[] = [[30, 22, 18], [70, 45, 25], [120, 80, 40], [190, 150, 80], [150, 60, 30], [140, 140, 140], [20, 20, 22], [90, 60, 40]];
+/** The population the cached people belong to (a new city, new looks). */
+let pedsOf: Population | null = null;
+const HAIR: RGB[] = [[20, 20, 22], [55, 38, 25], [100, 65, 35], [140, 100, 60], [195, 160, 90], [150, 60, 30], [140, 140, 140], [215, 215, 210]];
 const SHOES: RGB[] = [[25, 25, 28], [70, 45, 30], [200, 200, 200], [110, 80, 50]];
 /**
- * A person's look in the blocky style (13.8), from who they are: skin tone, hair (color and how
- * long), shirt and trousers, a jacket over the shirt or not, sleeves short or long, shoes, and the
- * slimmer arms (3 pixels) for some. The style bits go to the shader (mcSkin): head = hair length
- * (2 bits) + eye color (2) + beard (1); body = 0 plain, 1 open jacket, 2 striped; arm = 0 long, 1 short sleeves.
+ * A person's look in the blocky style (13.8), drawn from how the simulation says they look
+ * (looksOf, 13.11e): skin tone, hair (color and how long), eyes, beard, shirt and trousers, a
+ * jacket or not, sleeves, shoes, slim arms. The style bits go to the shader (mcSkin): head = hair
+ * length (2 bits) + eye color (2) + beard (1); body = 0 plain, 1 open jacket, 2 striped; arm = 0 long, 1 short sleeves.
  */
-export function pedLook(who: number) {
-  const h = (q: number) => hash3(who, 1308, q);
-  const pick = <T>(a: T[], q: number) => a[Math.floor(h(q) * a.length)];
-  const skin = pick(SKIN, 1), hair = pick(HAIR, 2), shirt = pick(CLOTHES, 3), pants = pick(CLOTHES, 4), jacket = pick(CLOTHES, 5);
-  const bodyStyle = h(6) < 0.45 ? 1 : h(6) < 0.6 ? 2 : 0, armStyle = bodyStyle !== 1 && h(7) < 0.35 ? 1 : 0;
-  const hairLen = h(8) < 0.08 ? 0 : h(8) < 0.6 ? 1 : 2, eyes = Math.floor(h(9) * 4), beard = hairLen !== 2 && h(10) < 0.2 ? 1 : 0;
+export function pedLook(P: Population, who: number) {
+  const L = looksOf(P, who);
+  const shirt = CLOTHES[L.shirt], jacket = CLOTHES[L.jacket], bodyStyle = L.jacketOn ? 1 : L.striped ? 2 : 0;
   return {
-    skin, hair, shirt, pants, jacket, shoes: pick(SHOES, 11), alex: hairLen === 2 && h(12) < 0.7,
+    skin: TONE_RGB[L.tone], hair: HAIR[L.hair], shirt, pants: CLOTHES[L.pants], jacket, shoes: SHOES[L.shoes], alex: L.slim,
     // a jacket's sleeves are the jacket's
-    sleeve: bodyStyle === 1 ? jacket : shirt,
-    headStyle: hairLen | (eyes << 2) | (beard << 4), bodyStyle, armStyle,
+    sleeve: L.jacketOn ? jacket : shirt,
+    headStyle: L.hairLen | (L.eyes << 2) | (+L.beard << 4), bodyStyle, armStyle: +L.shortSleeves,
   };
 }
 
 const UMBRELLAS: RGB[] = [[30, 30, 34], [150, 30, 40], [40, 60, 120], [200, 180, 60], [60, 110, 70], [150, 150, 155]];
 /**
- * A person standing or walking, facing +x: legs and arms swinging with the step (`step`, 0..3),
+ * A person standing or walking, facing +x: jointed legs and arms with the step (`step`: 0 standing, 1..8 the walk),
  * coat, trousers and skin from `who`, under an umbrella in the rain. Far away just the figure.
  */
-export function pedModel(who: number, step: number, umbrella: boolean, far: boolean, use = 0): Part[] {
+export function pedModel(P: Population, who: number, step: number, umbrella: boolean, far: boolean, use = 0): Part[] {
   const key = who + '|' + step + '|' + umbrella + far + use;
+  // keyed by the whole person (a key on part of the id let two people share a pose's look, 13.11a); kept small
+  if (peds.size > 6000 || pedsOf !== P) { peds.clear(); pedsOf = P; }
   let m = peds.get(key);
   if (m) return m;
-  // keyed by the whole person (a key on part of the id let two people share a pose's look, 13.11a); kept small
-  if (peds.size > 6000) peds.clear();
-  const L = pedLook(who), coat = L.shirt, pants = L.pants;
+  const L = pedLook(P, who), coat = L.shirt, pants = L.pants;
   // the blocky proportions (13.8): a pixel of the skin's grid is 1.8/32 m; head 8, body 8 x 12 x 4, limbs 4 x 12 x 4
   const X = 1.8 / 32, hd = 4 * X, bd = 2 * X, lw = 4 * X, alex = L.alex ? X : 0;
   const sk = (k: number, style: number) => k | (style << 4);
@@ -150,29 +153,42 @@ export function pedModel(who: number, step: number, umbrella: boolean, far: bool
     part(Box, -bd, -hd, 12 * X, bd, hd, 24 * X, coat, Solid, '#', '=', '#'),
     part(Box, -hd, -hd, 24 * X, hd, hd, 32 * X, L.skin, Solid, '@')];
   else {
-    const sw = 0.18 * Math.sin((step * Math.PI) / 2), Z = 12 * X, T = 24 * X;
+    const Z = 12 * X, T = 24 * X;
     const limb = (y0: number, y1: number, dx: number, z0: number, z1: number, col: RGB, col2: RGB, k: number, st: number) => {
       const q = part(Box, -bd + dx, y0, z0, bd + dx, y1, z1, col, Skin, '#', '=', '#');
       q.col2 = col2; q.skin = sk(k, st);
       return q;
     };
+    // the walk (13.11c): step 0 standing, 1..8 the eighths of a stride. Each limb is in two (thigh and
+    // shin, upper arm and forearm), turned at its joints: the hips swing the legs, the knee bends while
+    // the leg comes forward, the arms swing against the legs with the elbows a little bent
+    const ph = ((step - 1) * Math.PI) / 4, walk = step > 0;
+    const legA = (q: number) => (walk ? 0.45 * Math.sin(ph + q) : 0), knee = (q: number) => (walk ? 0.8 * Math.max(0, Math.cos(ph + q)) : 0);
+    const jointed = (y0: number, y1: number, jz: number, a: number, bend: number, col: RGB, col2: RGB, k: number, st: number): Part[] => {
+      const h = 6 * X, up = limb(y0, y1, 0, jz - h, jz, col, col2, k, st), kx = h * Math.sin(a), kz = jz - h * Math.cos(a);
+      up.swing = a; up.pivX = 0; up.pivZ = jz; up.skin! |= 1 << 16;
+      const lo = limb(y0, y1, kx, kz - h, kz, col, col2, k, st);
+      lo.swing = a + bend; lo.pivX = kx; lo.pivZ = kz; lo.skin! |= 6 << 12;
+      return [up, lo];
+    };
+    const armA = (q: number) => -0.6 * legA(q), elbow = walk ? 0.3 : 0.05;
     const head = part(Box, -hd, -hd, T, hd, hd, T + 8 * X, L.skin, Skin, '#', '#', '#');
     head.col2 = L.hair; head.skin = sk(0, L.headStyle);
     const body = part(Box, -bd, -hd, Z, bd, hd, T, coat, Skin, '#', '=', '#');
     body.col2 = L.jacket; body.skin = sk(1, L.bodyStyle);
     m = [
-      limb(0, lw, sw, 0, Z, pants, L.shoes, 3, 0),
-      limb(-lw, 0, -sw, 0, Z, pants, L.shoes, 3, 0),
+      ...jointed(0, lw, Z, legA(0), -knee(0), pants, L.shoes, 3, 0),
+      ...jointed(-lw, 0, Z, legA(Math.PI), -knee(Math.PI), pants, L.shoes, 3, 0),
       body,
       // the right arm swinging, or holding the phone: at the ear on a call, out in front to text (its screen lit)
       use === 4 ? part(Box, -0.05, hd, T - 0.225, 0.5, hd + lw - alex, T, L.sleeve, Solid, '=', '-', '#') // pointing the way: the arm out ahead (its hand added below)
         : use === 1 ? limb(hd, hd + lw - alex, 0, T - 0.1, T + 0.28, L.sleeve, L.skin, 2, L.armStyle)
         : use ? limb(hd - 0.05, hd + lw - 0.05 - alex, 0.15, Z + 0.15, Z + 0.27, L.sleeve, L.skin, 2, L.armStyle)
           : umbrella ? part(Box, -0.05, hd, T - 0.225, 0.3, hd + lw - alex, T, L.sleeve, Solid, '=', '-', '#')
-          : limb(hd, hd + lw - alex, -sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
-      limb(-hd - lw + alex, -hd, sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
+          : jointed(hd, hd + lw - alex, T, armA(0), elbow, L.sleeve, L.skin, 2, L.armStyle),
+      ...jointed(-hd - lw + alex, -hd, T, armA(Math.PI), elbow, L.sleeve, L.skin, 2, L.armStyle),
       head,
-    ];
+    ].flat();
     if (use === 1) m.push(part(Box, -0.01, hd - 0.02, T + 0.12, 0.07, hd + 0.03, T + 0.28, [30, 30, 34], Solid, '|'));
     else if (use === 4) m.push(part(Box, 0.5, hd + 0.02, T - 0.2, 0.62, hd + lw - alex - 0.02, T - 0.03, L.skin, Solid, '#'));
     else if (use) {

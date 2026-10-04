@@ -48,8 +48,12 @@ export interface Part {
   lamp?: number;
   /** Board: the letters are lamps (bulbs up close, lit glyphs farther), not paint. Glow: a sign's bulb (it looks lit as signs do). */
   bulbs?: boolean;
-  /** Skin: the body part (0 head, 1 body, 2 arm, 3 leg) and its style bits from bit 4 (see mcSkin). */
+  /** Skin: the body part (0 head, 1 body, 2 arm, 3 leg), its style bits from bit 4, and from bit 12 the rows above it when a limb is in two (see mcSkin). */
   skin?: number;
+  /** A box turned (13.11c) by `swing` radians about the y axis through (pivX, pivZ): a limb at its joint; the bottom swings toward +x. */
+  swing?: number;
+  pivX?: number;
+  pivZ?: number;
 }
 
 export interface Obj {
