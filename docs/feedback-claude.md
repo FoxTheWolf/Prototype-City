@@ -6,6 +6,8 @@
 
 ## 2026-10-04, depois da 13.10d (o que está no peito)
 
+> **Resposta do usuário (2026-10-04):** concordou com tudo, menos o item 2: o hacking depende dos sistemas da cidade, e o principal (a web) ainda não existe; ele deve brilhar a partir das etapas 15 e 16. Os aceitos foram levados ao CLAUDE.md.
+
 1. **O núcleo da 1.0 antes do resto.** As etapas 13 a 22 são muitas, e algumas são polimento (sound design, refinamento). Sugiro escrever numa linha o **laço mínimo da 1.0**: receber um trabalho → ir ao lugar → hackear → a cidade reage → calor → dinheiro → comprar equipamento → trabalho maior. Toda subetapa nova passa por uma pergunta: alimenta esse laço? Se não, vai para depois da 1.0, como o cinema.
 2. **O hacking está ficando para trás.** O coração do jogo é o hacking, e ele anda devagar porque depende do Opus 4.8 e do agente. Hoje há três trabalhos; a cidade já tem muito mais sistemas para mexer (lojas com horário, portas trancadas, elevadores, câmeras, cidadãos com rotina). Proponho uma sessão da trilha logo depois da 13.10, só para desenhar 5 a 10 trabalhos novos com o que já existe (por exemplo, destrancar a porta do estoque de uma loja fechada, parar um elevador, apagar a câmera de uma esquina na hora certa).
 3. **Uma fonte só para cada geometria.** O bug da porta de hoje nasceu de eu ter recalculado na GPU uma coisa que a CPU já calcula (as folhas de rua). Toda vez que dois lugares calculam a mesma geometria, eles divergem. Regra que sugiro: a simulação calcula, a GPU só lê.
