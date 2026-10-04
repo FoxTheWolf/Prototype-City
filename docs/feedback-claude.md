@@ -4,6 +4,11 @@
 
 ---
 
+## 2026-10-04 (7): depois da 13.10c
+
+- **Os modelos em texto abrem uma porta boa para as outras IAs:** o formato é simples (meio metro por letra, legenda fixa) e o código já descarta o que não cabe e confere o caixa. Dá para pedir ao Gemini/ChatGPT variações por tipo (três diners, dois bares…) com um briefing curto em `docs/tarefas/`, e o teste no Node diz quais funcionam.
+- **Banco, hotel, motel, cinema e estacionamento ainda usam o gerador antigo:** são saguões, e o modelo deles é diferente (balcão no fundo, sofás, plantas). Proponho um modelo para cada quando a etapa 14 trouxer o diálogo com o atendente.
+
 ## 2026-10-04 (6): depois da 13.10b2
 
 - **A porta de rua fechada, vista de fora, parece uma placa marrom chapada:** o desenho dela é um brilho fixo do saguão (de antes do um só espaço), não o vidro com a sala atrás. Com a 13.10e (porta 3D de verdade) isso some de graça: proponho não mexer antes.
