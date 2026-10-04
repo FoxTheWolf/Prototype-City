@@ -9,8 +9,8 @@ import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
-import { bladeText } from '../locale/names';
-import { signalLamps, mastModel, substationModel, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { bladeText, landmarkName, roadName } from '../locale/names';
+import { signalLamps, mastModel, substationModel, streetBlade, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -415,7 +415,7 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
   world.power.subs.forEach((S, k) => {
     if (!S.yard || Math.hypot(S.x - v.x, S.y - v.y) > BOARD_FAR) return;
     const [D, W] = yardSize(S.yard);
-    boardList.push({ x: S.x, y: S.y, c: Math.cos(S.yard.a), s: Math.sin(S.yard.a), parts: substationModel(D, W, S.on, yardFlood(S.on, day)), r: Math.hypot(D, W) / 2, h: 9.1, seed: 9500 + k });
+    boardList.push({ x: S.x, y: S.y, c: Math.cos(S.yard.a), s: Math.sin(S.yard.a), parts: substationModel(D, W, S.on, yardFlood(S.on, day), `GRIDLINK SUB ${String(k + 1).padStart(2, '0')}`), r: Math.hypot(D, W) / 2, h: 9.1, seed: 9500 + k });
   });
   return boardList;
 }
@@ -621,9 +621,9 @@ function faceLine(B: Building, f: number, a0: number, a1: number) {
 /** Traffic lights are drawn this close (whole, or far off just their lit lamps) and cast their color this close; their glow on the street, red, yellow, green. */
 const SIGNAL_LIGHT_FAR = 80, SIGNAL_FAR = 200, SIGNAL_NEAR = 60;
 const SIG_GLOW: RGB[] = [[110, 14, 10], [100, 70, 10], [20, 100, 55]];
-interface SignalPost { x: number; y: number; c: number; s: number; state: number; lit: number; at: number[]; cross: number }
+interface SignalPost { x: number; y: number; c: number; s: number; state: number; lit: number; at: number[]; cross: number; i: number; j: number; hd: number }
 /** cross: the light of the other road's traffic here (for the second walk signal). */
-const SP: SignalPost = { x: 0, y: 0, c: 0, s: 0, state: 0, lit: -1, at: [], cross: Sig.Stop };
+const SP: SignalPost = { x: 0, y: 0, c: 0, s: 0, state: 0, lit: -1, at: [], cross: Sig.Stop, i: -1, j: -1, hd: 0 };
 const atCache = new Map<string, number[]>();
 
 /**
@@ -631,6 +631,46 @@ const atCache = new Map<string, number[]>();
  * right corner, facing the oncoming cars, its arm (+y in its frame) over their lanes; or, at a
  * stop sign corner, the sign on the near right corner. On real time (the tick), like the sim.
  */
+/** The street signs' texts, by intersection and corner (they never change for a city). */
+const cornerText = new Map<string, string>();
+/**
+ * The signs at a corner (13.7): on two opposite corners of each intersection the names of both
+ * roads, blades back to back high on the pole (on its own pole at a stop sign's corner); and where
+ * a wide road crosses, a guide sign a little up the sidewalk toward the nearest landmark, with an
+ * arrow from where the traffic comes and the distance in miles.
+ */
+function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
+  const { city } = world, stop = S.state === Sig.Stop;
+  if (S.hd === 0 || S.hd === 2) {
+    const ave = roadName(city, true, S.i).toUpperCase(), st = roadName(city, false, S.j).toUpperCase(), z = stop ? 2.95 : 3.1;
+    const ra = streetBlade(ave, z, stop), rs = streetBlade(st, z + 0.26, false), ha = Math.max(0.7, 0.11 * ave.length + 0.25) / 2, hs = Math.max(0.7, 0.11 * st.length + 0.25) / 2;
+    // the avenue runs along y: its blade faces x both ways; the street's, turned a quarter, faces y
+    out.push({ x: S.x, y: S.y, c: 1, s: 0, parts: ra, r: ha + 0.1, h: z + 0.3, seed: 0 });
+    out.push({ x: S.x, y: S.y, c: -1, s: 0, parts: streetBlade(ave, z, false), r: ha + 0.1, h: z + 0.3, z0: z, seed: 0 });
+    out.push({ x: S.x, y: S.y, c: 0, s: 1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.26, seed: 0 });
+    out.push({ x: S.x, y: S.y, c: 0, s: -1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.26, seed: 0 });
+    return;
+  }
+  if (S.hd !== 1) return;
+  const wide = (b: number[], k: number) => b[2 * k + 1] - b[2 * k] >= b[1] - b[0];
+  if (!wide(city.xb, S.i) && !wide(city.yb, S.j)) return;
+  const key = `${S.i},${S.j}`;
+  let text = cornerText.get(key);
+  if (text === undefined) {
+    text = '';
+    let best = -1, bd = 1600;
+    city.landmarks.forEach((L, k) => { const d = Math.hypot(L.x - S.x, L.y - S.y); if (d > 150 && d < bd) { bd = d; best = k; } });
+    if (best >= 0) {
+      // the traffic here comes from -(c, s): ahead is that way, its right is (s, -c) turned
+      const L = city.landmarks[best], dx = L.x - S.x, dy = L.y - S.y, ahead = -(dx * S.c + dy * S.s), right = dx * S.s - dy * S.c;
+      const arrow = Math.abs(ahead) >= Math.abs(right) ? (ahead > 0 ? '^' : 'v') : right > 0 ? '>' : '<';
+      text = `${arrow} ${landmarkName(city, best).toUpperCase().slice(0, 18)} ${(bd / 1609).toFixed(1)} MI`;
+    }
+    cornerText.set(key, text);
+  }
+  if (text) out.push({ x: S.x + S.c * 1.6, y: S.y + S.s * 1.6, c: S.c, s: S.s, parts: guideSign(text), r: 0.12 * text.length / 2 + 0.4, h: 2.6, seed: 0 });
+}
+
 function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => void) {
   const { city } = world, sec = (world.tick + v.alpha) / 60;
   const NX = city.xb.length / 2, NY = city.yb.length / 2;
@@ -649,7 +689,7 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
         const st = shown(signal(city, world.power, i, j, hd & 1, sec), signal(city, world.power, i, j, hd & 1, sec, true), pw, sec), rx = -dy, ry = dx; // the right-hand side
         const ahead = st === Sig.Stop ? -(aH + 0.7) : aH + 0.7;
         SP.x = mx + dx * ahead + rx * (halfW + 0.7); SP.y = my + dy * ahead + ry * (halfW + 0.7);
-        SP.c = -dx; SP.s = -dy;
+        SP.c = -dx; SP.s = -dy; SP.i = i; SP.j = j; SP.hd = hd;
         setState(st);
         SP.cross = shown(signal(city, world.power, i, j, (hd & 1) ^ 1, sec), signal(city, world.power, i, j, (hd & 1) ^ 1, sec, true), pw, sec);
         if (SP.cross === Sig.Yellow && st === Sig.Yellow) SP.cross = Sig.Dark; // flashing: the walk signs stay dark
@@ -669,7 +709,7 @@ function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => v
     const zpw = power(world.power, subAt(world.power, city, Q2[0], Q2[1]), Q2[0], Q2[1], 800000 + z.key, 0, sec)[0];
     for (const dg of [1, -1]) {
       diagPoint(d, (dg > 0 ? z.u1 : z.u0) + dg * 0.7, dg, hw + 0.7, Q2);
-      SP.x = Q2[0]; SP.y = Q2[1]; SP.c = -d.ex * dg; SP.s = -d.ey * dg;
+      SP.x = Q2[0]; SP.y = Q2[1]; SP.c = -d.ex * dg; SP.s = -d.ey * dg; SP.i = SP.j = -1;
       setState(shown(zoneSignal(city, world.power, z, true, sec), zoneSignal(city, world.power, z, true, sec, true), zpw, sec));
       SP.at = lanesAt(D.lanes, hw);
       cb(SP);
@@ -786,6 +826,7 @@ function collectObjects(world: World, v: View): Obj[] {
   forSignals(world, v, SIGNAL_FAR, (S) => {
     if (!seen(S.x, S.y, 16)) return;
     const near = Math.hypot(S.x - v.x, S.y - v.y) < SIGNAL_NEAR;
+    if (near && S.i >= 0) cornerSigns(world, S, out);
     if (S.state === Sig.Stop) { if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: STOP_SIGN, r: 0.5, h: 2.9, seed: 0 }); return; }
     if (!near && S.lit < 0) return;
     // the walk light shows the people across the street when they may cross alongside this traffic (blinking on its yellow)

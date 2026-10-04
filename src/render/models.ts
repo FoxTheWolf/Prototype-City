@@ -733,6 +733,38 @@ export function walkSignal(w: number): Part[] {
   return m;
 }
 
+const streetSigns = new Map<string, Part[]>();
+/**
+ * A street-name blade (13.7), its name read from the front (+x): green with white letters, as the
+ * board letters go (dots up close, a glyph a letter farther). Its back is plain: a corner gets two,
+ * back to back. `z0` its foot; `pole`: with its own pole under it (at a stop sign's corner).
+ */
+export function streetBlade(name: string, z0: number, pole: boolean): Part[] {
+  const key = `${name}|${z0}|${pole}`;
+  let m = streetSigns.get(key);
+  if (m) return m;
+  const hw = Math.max(0.7, 0.11 * name.length + 0.25) / 2;
+  const b = part(Box, 0, -hw, z0, 0.02, hw, z0 + 0.24, [20, 95, 50], Board, '=');
+  b.text = name; b.col2 = [235, 240, 235]; b.lamp = 0;
+  m = [b];
+  if (pole) m.push(part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, z0 + 0.3, STEEL, Solid, '|', '.'));
+  streetSigns.set(key, m);
+  return m;
+}
+
+/** A guide sign on its post, facing +x (13.7): brown with white letters, toward a landmark ("^ OLD MARLOW 0.3 MI"). */
+export function guideSign(text: string): Part[] {
+  const key = `guide|${text}`;
+  let m = streetSigns.get(key);
+  if (m) return m;
+  const hw = Math.max(0.8, 0.12 * text.length + 0.3) / 2;
+  const b = part(Box, 0.05, -hw, 2.1, 0.08, hw, 2.5, [105, 62, 34], Board, '=');
+  b.text = text; b.col2 = [240, 235, 225]; b.lamp = 0;
+  m = [part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, 2.6, STEEL, Solid, '|', '.'), b];
+  streetSigns.set(key, m);
+  return m;
+}
+
 /** A stop sign facing +x on its post. */
 export const STOP_SIGN: Part[] = [
   part(Cyl, -0.05, -0.05, 0, 0.05, 0.05, 2.5, STEEL, Solid, '|', '.'),
@@ -767,8 +799,8 @@ const TRAFO: RGB = [86, 100, 88], PORCELAIN: RGB = [176, 120, 84], GRAVEL: RGB =
  * the back and a floodlight on a pole. `on`: the hut's lamp green and the yard floodlit at night
  * (`flood`, 0..1); off, the lamp red and the yard dark.
  */
-export function substationModel(D: number, W: number, on: boolean, flood: number): Part[] {
-  const key = `${D.toFixed(1)}|${W.toFixed(1)}|${on}|${flood}`;
+export function substationModel(D: number, W: number, on: boolean, flood: number, name = ''): Part[] {
+  const key = `${D.toFixed(1)}|${W.toFixed(1)}|${on}|${flood}|${name}`;
   let m = yards.get(key);
   if (m) return m;
   const hx = D / 2 - 0.6, hy = W / 2 - 0.6;
@@ -790,6 +822,12 @@ export function substationModel(D: number, W: number, on: boolean, flood: number
   const sign = part(Box, hx, -0.8, 1.1, hx + 0.04, 0.8, 1.75, [230, 210, 40], Board, '#');
   sign.text = 'DANGER'; sign.col2 = [20, 20, 20]; sign.lamp = Math.max(0.25, flood * 0.6);
   m.push(sign);
+  // the utility's plate over it: whose yard this is, and its number (13.7)
+  if (name) {
+    const plate = part(Box, hx, -1.2, 1.85, hx + 0.04, 1.2, 2.2, [235, 235, 230], Board, '#');
+    plate.text = name; plate.col2 = [30, 60, 140]; plate.lamp = Math.max(0.25, flood * 0.6);
+    m.push(plate);
+  }
   // the transformers, side by side across the yard
   const n = W > 22 ? 3 : 2, tx = -hx * 0.05;
   for (let k = 0; k < n; k++) {
