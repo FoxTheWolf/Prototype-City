@@ -38,10 +38,19 @@ import { loadPop, savePop } from './popCache';
 import { pace } from './core/steps';
 import TIPS from './locale/tips.json';
 import TODAY_2008 from './locale/today2008.json';
+import { Menu, type Option } from './menu';
+import { readSave, SAVE_V, writeSave, type GameSave } from './saveGame';
+import { applyWorld, snapWorld } from './sim/save';
 
 /** The grid has this many rows (key R steps through them; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
-let resStep = 2;
+/** The options (the menu's, and the keys B U V G R M F3 that change them too), kept per viewer in the browser. */
+interface Opts { solid: number; blocks: boolean; sharp: number; fuse: boolean; res: number; mute: boolean; hud: boolean }
+const OPTS: Opts = (() => {
+  const d: Opts = { solid: 0, blocks: false, sharp: 0, fuse: false, res: 2, mute: false, hud: false };
+  try { return { ...d, ...JSON.parse(localStorage.getItem('tc.opts') ?? '{}') }; } catch { return d; }
+})();
+let resStep = Math.min(OPTS.res, RES_ROWS.length - 1);
 /** The rows a security camera's model shows while looking through it (0: the player's own, RES_ROWS[resStep]). */
 let camRows = 0;
 /** The interface (phone, notebook, payphone, status lines) has its own grid, always this many rows: it keeps its size whatever the world's resolution. */
@@ -80,8 +89,10 @@ function showTip() {
 }
 
 // ?seed=123 reproduces a city; otherwise every game rolls a new one. ?mute starts with the sound off.
-const seedParam = new URLSearchParams(location.search).get('seed');
-const seed = seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
+// With a saved game the city is the save's (CONTINUE puts the save on it); ?new rolls a new one anyway.
+const params = new URLSearchParams(location.search), seedParam = params.get('seed');
+const saved = await readSave();
+const seed = seedParam !== null ? Number(seedParam) | 0 : saved && !params.has('new') ? saved.seed : (Math.random() * 2 ** 31) | 0;
 // the city is made in steps, the page alive between them, with a bar on the title screen (load)
 const savedPop = await loadPop(seed);
 const world = await pace(worldSteps(seed, CITY_SIZE, true, savedPop), (f) => load(0.04 + 0.84 * f, f < 0.05 ? 'LAYING OUT STREETS' : f < 0.1 ? 'WIRING THE GRID' : 'REGISTERING CITIZENS'));
@@ -188,8 +199,8 @@ let running = false;
 let lapWasOpen = false;
 // display switches: B steps the solid background darker until it is off, U the block glyphs
 const SOLID = [0.24, 0.16, 0.08, 0];
-let solidStep = 0; // 0.24 ("1/3"), the user's pick
-const look: Look = { solid: SOLID[solidStep], blocks: false, sharp: 0, fuse: false };
+let solidStep = Math.min(OPTS.solid, SOLID.length - 1); // 0: 0.24 ("1/3"), the user's pick
+const look: Look = { solid: SOLID[solidStep], blocks: OPTS.blocks, sharp: OPTS.sharp, fuse: OPTS.fuse };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key) {
   const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(uiLayout.cellW / uiLayout.cellH, phone.zoom, world.player.inside >= 0));
@@ -291,7 +302,7 @@ function payPress(k: Key) {
 addEventListener('mousedown', (e) => {
   if (relock && !laptop.open) { relock = false; if (running && !phone.out && !payphone.active && e.button !== 1) input.lock(); }
   if (e.button === 2) e.preventDefault();
-  if (!running) return;
+  if (!running || paused) return;
   if (laptop.open) {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
@@ -335,7 +346,11 @@ addEventListener('mousedown', (e) => {
   if (b >= 0) sound?.beep(callLift(world, b));
 });
 // the lock arrives a moment after it is asked for: if the right button is already up, free the cursor again
-document.addEventListener('pointerlockchange', () => { if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); });
+document.addEventListener('pointerlockchange', () => {
+  if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock();
+  // the pointer freed by the player (Esc, or leaving the window), not by the game: pause
+  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
+});
 addEventListener('mouseup', (e) => {
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
@@ -348,7 +363,9 @@ addEventListener('mouseup', (e) => {
 });
 addEventListener('keydown', (e) => {
   // F3 hides and shows the debug lines (for clean screenshots), whatever is in the hands
-  if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
+  // the menu open takes the keys: Esc goes a page back, or out
+  if (menu.isOpen) { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); menu.back(); } return; }
+  if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) { hudOn = !hudOn; saveOpts(); } return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
   if (e.code === 'F4') { e.preventDefault(); if (!e.repeat) calib = !calib; return; }
   // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
@@ -371,6 +388,8 @@ addEventListener('keydown', (e) => {
     laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
     return;
   }
+  // Esc with nothing in the hands: the pause menu (with the pointer locked, the browser frees it and pointerlockchange opens it)
+  if (e.code === 'Escape' && running && !phone.out && !payphone.active) { if (!e.repeat) pause(); return; }
   // N: take the notebook out, where it can be used (sitting or leaning)
   if (e.code === 'KeyN' && running && !e.repeat && !payphone.active && laptop.raise === 0) {
     if (phone.out) phoneToggle();
@@ -415,6 +434,7 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyK') togglePower(world, e.shiftKey);
   // debug: PageUp / PageDown move a storey up or down inside a building
   else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
+  if (['KeyM', 'KeyB', 'KeyU', 'KeyV', 'KeyG', 'KeyR'].includes(e.code)) saveOpts();
 });
 
 addEventListener('keyup', (e) => { if (e.code === 'KeyI' && WATCH_ON) watch.startUp(); });
@@ -460,7 +480,7 @@ let sound: Sound | null = null;
 /** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
 /** The debug lines (status, clock, substation, where): F3 hides them. */
-let hudOn = true;
+let hudOn = OPTS.hud;
 // [HACKING] the last arrest shown (its game time) and when (real time) the banner started, to time it
 let bustSeen = -1, bustShownAt = 0;
 /** Debug (F4): the same view at noon, at sunset and at night, side by side, to decide the palette by looking at it. */
@@ -496,15 +516,117 @@ let introAt = -1;
 const INTRO = false;
 function begin() {
   if (!gpu) return; // still loading
-  if (!sound) { sound = new Sound(); if (new URLSearchParams(location.search).has('mute')) sound.toggleMute(); }
+  if (!sound) { sound = new Sound(); if (params.has('mute') || OPTS.mute) sound.toggleMute(); }
   sound.resume();
   if (INTRO && introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
   overlay.hidden = true;
   running = true;
+  lastSave = performance.now();
   input.lock();
 }
-overlay.addEventListener('click', begin);
 document.getElementById('cctv')!.addEventListener('click', (e) => { e.stopPropagation(); startCctv(true); });
+
+/**
+ * The saved game (F.6): the seed and what changed (sim/save.ts, and the phone's, the notebook's and the
+ * watch's own). CONTINUE puts it on this world (made from its seed) and goes in; NEW GAME starts the
+ * city fresh (asking first when there is a save it will replace, at the next save). The game saves
+ * every AUTOSAVE_S, from the pause menu, on quitting to the title and when the window is hidden.
+ */
+const AUTOSAVE_S = 180;
+let lastSave = 0, continued = false;
+function gameSave(): GameSave {
+  return { v: SAVE_V, seed, at: Date.now(), world: snapWorld(world), phone: phone.snapshot(), laptop: laptop.snapshot(), watch: watch.snapshot(), cam: { yaw: camera.yaw, pitch: camera.pitch } };
+}
+async function saveNow(): Promise<boolean> {
+  if (!running || cctv) return false;
+  lastSave = performance.now();
+  return writeSave(gameSave());
+}
+function applySave(s: GameSave) {
+  applyWorld(world, s.world);
+  phone.restore(s.phone as ReturnType<Phone['snapshot']>);
+  laptop.restore(s.laptop as ReturnType<Laptop['snapshot']>);
+  watch.restore(s.watch as ReturnType<Watch['snapshot']>, performance.now() / 1000);
+  camera.yaw = camera.targetYaw = s.cam.yaw; camera.pitch = camera.targetPitch = s.cam.pitch;
+}
+/** The page again with these in the address (?mute kept): the title of another city. */
+function reloadWith(q: Record<string, string>) {
+  const u = new URLSearchParams(q);
+  if (params.has('mute')) u.set('mute', '');
+  location.search = u.toString();
+}
+const contBtn = document.getElementById('continue') as HTMLButtonElement, newBtn = document.getElementById('start') as HTMLButtonElement;
+if (saved) {
+  contBtn.hidden = false;
+  const c = calendar(saved.world.time), hh = String(Math.floor(c.hour)).padStart(2, '0'), mm = String(Math.floor((c.hour % 1) * 60)).padStart(2, '0');
+  document.querySelector('#ready .saveinfo')!.textContent = `SAVED ${new Date(saved.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · IN THE CITY ${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')} ${hh}:${mm}`;
+}
+contBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!saved || !gpu) return;
+  // the save is of another city than the one behind the title: load that one first
+  if (saved.seed !== seed) { reloadWith({}); return; }
+  if (!continued) { applySave(saved); continued = true; }
+  begin();
+});
+let sure = params.has('new');
+newBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!gpu) return;
+  if (saved && !sure) { sure = true; newBtn.textContent = 'NEW GAME (REPLACES THE SAVE)'; return; }
+  // the city behind the title is the save's: roll another
+  if (saved && seed === saved.seed && seedParam === null && !params.has('new')) { reloadWith({ new: '' }); return; }
+  begin();
+});
+addEventListener('visibilitychange', () => { if (document.hidden) void saveNow(); });
+
+/** The pause menu (Esc in the game; menu.ts): the world stops while it is open. */
+let paused = false;
+function pause() {
+  if (!running || paused || cctv) return;
+  paused = true;
+  input.unlock();
+  menu.open(false);
+}
+function resume() { paused = false; menu.close(); input.lock(); }
+function saveOpts() {
+  Object.assign(OPTS, { solid: solidStep, blocks: look.blocks, sharp: look.sharp, fuse: look.fuse, res: resStep, hud: hudOn });
+  // ?mute is for a session (the tests), not a choice to remember
+  if (sound && !params.has('mute')) OPTS.mute = sound.muted;
+  try { localStorage.setItem('tc.opts', JSON.stringify(OPTS)); } catch { /* no storage: the defaults next time */ }
+}
+const OPTIONS: Option[] = [
+  { label: 'SOUND (M)', value: () => ((sound ? sound.muted : OPTS.mute) ? 'OFF' : 'ON'), next: () => { if (sound) sound.toggleMute(); else OPTS.mute = !OPTS.mute; saveOpts(); } },
+  { label: 'BACKGROUND (B)', value: () => (look.solid ? `${solidStep + 1}/${SOLID.length - 1}` : 'OFF'), next: () => { look.solid = SOLID[solidStep = (solidStep + 1) % SOLID.length]; saveOpts(); } },
+  { label: 'GLYPHS (U)', value: () => (look.blocks ? 'BLOCKS' : 'ASCII'), next: () => { look.blocks = !look.blocks; saveOpts(); } },
+  { label: 'SHARPNESS (V)', value: () => ['SOFT', 'SHARP', 'SHARPER', 'SHARPEST'][look.sharp], next: () => { look.sharp = (look.sharp + 1) % 4; saveOpts(); } },
+  { label: 'FUSE FAR GLYPHS (G)', value: () => (look.fuse ? 'ON' : 'OFF'), next: () => { look.fuse = !look.fuse; saveOpts(); } },
+  { label: 'ROWS (R)', value: () => String(RES_ROWS[resStep]), next: () => { resStep = (resStep + 1) % RES_ROWS.length; resize(); saveOpts(); } },
+  { label: 'DEBUG LINES (F3)', value: () => (hudOn ? 'ON' : 'OFF'), next: () => { hudOn = !hudOn; saveOpts(); } },
+];
+/** The debug page: what the status lines show, as text. */
+function debugText(): string {
+  const p = world.player, c = calendar(world.time), wx = world.weather, two = (n: number) => String(Math.floor(n)).padStart(2, '0');
+  let k = 0, bd = Infinity;
+  world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
+  const S = world.power.subs[k];
+  return [
+    `SEED      ${seed}`,
+    `POSITION  ${p.x.toFixed(1)}, ${p.y.toFixed(1)}${p.inside >= 0 ? `  INSIDE, FLOOR ${p.floor}` : ''}`,
+    `DISTRICT  ${districtName(world.city, districtAt(world.city, p.x, p.y)).toUpperCase()}`,
+    `TIME      ${c.year}-${two(c.month)}-${two(c.day)} ${two(c.hour)}:${two((c.hour % 1) * 60)}`,
+    `WEATHER   ${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'}  CLOUD ${Math.round(wx.cloud * 100)}%  ${wx.temp.toFixed(0)}C`,
+    `FRAME     ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}`,
+    `GRID      ${grid.cols}x${grid.rows}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}`,
+    `POWER     ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} ON  NEAREST ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}`,
+    `HEAT      ${world.heat.points.toFixed(2)}  TIER ${tierOf(world.heat)}`,
+    '',
+    'DEBUG KEYS  F3 lines  F4 noon/sunset/night  T/Shift+T +-1h  Y weather',
+    '            K substation (Shift: all)  C nearest camera  PgUp/PgDn floor',
+  ].join('\n');
+}
+const menu = new Menu({ options: OPTIONS, debug: debugText, save: saveNow, resume, quit: async () => { await saveNow(); reloadWith({}); } });
+document.getElementById('options')!.addEventListener('click', (e) => { e.stopPropagation(); menu.open(true); });
 
 /**
  * Watching the security cameras: the title's other choice (the city goes on, seen only through its
@@ -617,7 +739,10 @@ function frame(now: number) {
   // in the title's camera mode, switch cameras now and then; the pedestrians sync to its heading
   if (cctv?.title && now / 1000 - cctv.at > CCTV_HOLD) { cctv.k = pickCam(cctv.k); cctv.at = now / 1000; goToCam(cctv.k); cctvScreen(cctv.k); }
   if (cctv) cmd.heading = world.cctv[cctv.k].yaw;
+  // paused (the menu): the world waits
+  if (paused) acc = 0;
   while (acc >= TICK) { stepWorld(world, cmd); acc -= TICK; }
+  if (running && !paused && !cctv && now - lastSave > AUTOSAVE_S * 1000) void saveNow();
   const alpha = acc / TICK;
 
   const p = world.player;

@@ -86,6 +86,9 @@ export class Laptop {
     install(this.pc, world.time);
     this.shell = new Shell(this.pc, world);
   }
+  /** What the save keeps of the notebook (F.6): its disk, its firmware's settings and its battery; it comes back off, in the backpack. */
+  snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge }; }
+  restore(d: ReturnType<Laptop['snapshot']>) { this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; }
   /**
    * Is there a live outlet where the player sits: inside a building whose power is on (its
    * substation, or a generator that feeds more than the emergency lights). Outside, on a fire

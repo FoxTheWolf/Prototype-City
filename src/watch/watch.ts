@@ -47,6 +47,13 @@ export class Watch {
   /** Sounds asked for this frame: 'up', 'down', 'light', 'chime', 'beep', 'alarm'. */
   sfx: string[] = [];
 
+  /** What the save keeps (the stopwatch is real time, so it comes back stopped, with what it had counted). */
+  snapshot() { return { up: this.up, mode: this.mode, alarm: { ...this.alarm }, sw: this.swAcc }; }
+  restore(d: ReturnType<Watch['snapshot']>, now: number) {
+    this.up = d.up; this.mode = d.mode; this.alarm = { ...d.alarm }; this.swAcc = d.sw; this.swAt = -1; this.setting = 0; this.ringUntil = 0;
+    this.lightAt = now - 99;
+  }
+
   /** In sight now: by choice, or come up by itself. */
   shown(now: number) { return this.up || now < this.popUntil || this.ringing(now); }
   ringing(now: number) { return now < this.ringUntil; }
@@ -116,9 +123,9 @@ const HOLD_S = 1.2, POP_S = 3.5, RING_S = 20;
 /** How long the light stays on. */
 const LIGHT_S = 3;
 /** Size of the watch on the interface's grid (the case; the strap runs past it, off the bottom). */
-const W = 32, CASE_Y = 3, CASE_H = 15;
+const W = 32, CASE_Y = 2, CASE_H = 15;
 /** The LCD window, inside the case. */
-const LX = 3, LY = 6, LW = 26, LH = 9;
+const LX = 3, LY = CASE_Y + 3, LW = 26, LH = 9;
 
 /** Seven segments per digit (a top, b top right, c bottom right, d bottom, e bottom left, f top left, g middle). */
 const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
@@ -134,7 +141,7 @@ const LCD_BG: C3 = [150, 160, 136], INK: C3 = [24, 28, 24], BACKLIT: C3 = [90, 2
 export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, brand: string) {
   if (Wt.raise < 0.01) return;
   const e = 1 - (1 - Wt.raise) ** 3;
-  const ox = 6, oy = g.rows - Math.round((CASE_Y + CASE_H + 3) * e);
+  const ox = 6, oy = g.rows - Math.round((CASE_Y + CASE_H) * e);
   const L = [Math.max(0.05, light[0]), Math.max(0.05, light[1]), Math.max(0.05, light[2])];
   const at = (x: number, y: number) => { const gx = ox + x, gy = oy + y; return gx >= 0 && gy >= 0 && gx < g.cols && gy < g.rows ? gy * g.cols + gx : -1; };
   // a cell of the watch in the scene's light; `own` is light of its own (the backlight) the scene does not dim
@@ -170,7 +177,7 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   const b = brand.toUpperCase().slice(0, 14);
   text(W - 2 - b.length, CASE_Y + 1, b, BRAND, RESIN);
   for (let x = 2; x < W - 2; x++) cell(x, CASE_Y + 2, '-', GOLD, RESIN);
-  text((W - 12) >> 1, CASE_Y + CASE_H - 2, 'WR ALARM CHR', LABEL, RESIN);
+  text((W - 12) >> 1, CASE_Y + CASE_H - 2, 'WATER RESIST', LABEL, RESIN);
 
   // the LCD: lit from its left edge while the light is on, else only by what is around
   const lit = Wt.lit(now);

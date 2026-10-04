@@ -206,3 +206,32 @@ export function answerTrace(board: JobBoard, from: string, dist: number, bank: B
   if (dist === j.ans) { j.state = 'done'; post(bank, time, 'transfer', j.pay, 0); return 'right'; }
   j.tries = (j.tries ?? 0) + 1; j.nudge = true; return 'wrong';
 }
+
+/**
+ * Serialize the board to plain data (JSON-safe: only numbers, strings, booleans and plain objects,
+ * no Maps/Sets/city references). Every field of a Job is already a primitive or a flat object; the
+ * times are absolute game time (world.time), so they line up again once world.time is restored.
+ * See loadJobs for the inverse.
+ */
+export function saveJobs(b: JobBoard): unknown {
+  return { jobs: b.jobs.map((j) => ({ ...j, sent: { ...j.sent } })) };
+}
+
+/**
+ * Restore the board's mutable state onto a board freshly built by buildJobs with the same seed (so
+ * the structural fields -- from, biz, sub, pay, win -- already match): the jobs offered/taken/done,
+ * their deadlines, the delivery bookkeeping (sent) and the trace job's resolved subject. Jobs are
+ * matched by id; a field the save does not carry (one added after the save was written) keeps the
+ * fresh board's value.
+ */
+export function loadJobs(b: JobBoard, data: unknown): void {
+  const d = data as { jobs?: Partial<Job>[] } | null;
+  if (!d || !Array.isArray(d.jobs)) return;
+  for (const s of d.jobs) {
+    const j = b.jobs.find((q) => q.id === s.id);
+    if (!j) continue;
+    const sent = s.sent ?? j.sent;
+    Object.assign(j, s);
+    j.sent = { offer: !!sent.offer, ack: !!sent.ack, result: !!sent.result };
+  }
+}

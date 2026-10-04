@@ -372,6 +372,30 @@ export class Phone {
       else if (!dir.kids!.has(ph.name)) this.photos.splice(k, 1);
     }
   }
+  /**
+   * What the save keeps of the phone (F.6): its files (the contacts, calls, texts and notes live
+   * there), the photos, the apps, the settings and looks, the reminders. Plain data (structured clone).
+   */
+  snapshot() {
+    return {
+      fs: this.fs, photos: this.photos, photoN: this.photoN, apps: [...this.apps], prefs: { ...this.prefs }, look: this.look, case: this.case,
+      looks: [...this.looks], cases: [...this.cases], reminders: this.cal.reminders, wifiOn: this.wifi.on, told: { ...this.told },
+      // already switched on once (the line's numbers are in its contacts): it comes back on, in the pocket
+      booted: this.screen !== 'off',
+    };
+  }
+  /** Back to a saved phone: in the pocket and off; the screens' data is read back from the files at the next sync. */
+  restore(d: ReturnType<Phone['snapshot']>) {
+    this.fs = d.fs;
+    this.fsSaid = {};
+    for (const path of Object.values(DATA)) this.fsSaid[path] = '\u0000';
+    this.photos.splice(0, this.photos.length, ...d.photos); this.photoN = d.photoN;
+    this.apps.splice(0, this.apps.length, ...d.apps);
+    this.prefs = { ...this.prefs, ...d.prefs };
+    this.look = d.look; this.case = d.case; this.looks = d.looks; this.cases = d.cases;
+    this.cal.reminders = d.reminders; this.wifi.on = d.wifiOn; this.told = d.told;
+    if (d.booted) this.screen = 'standby';
+  }
   /** The shot taken, into the photos once its picture is there. */
   private develop() {
     const ph = this.shotDue?.();

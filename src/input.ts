@@ -41,7 +41,9 @@ export class Input {
   }
 
   /** Free the pointer: the system cursor shows. */
-  unlock() { if (this.locked) document.exitPointerLock(); }
+  unlock() { if (this.locked) { this.unlockedAt = performance.now(); document.exitPointerLock(); } }
+  /** When the game itself last freed the pointer (to tell it from the player pressing Esc). */
+  unlockedAt = -1e9;
 
   down(...codes: string[]) { return codes.some((c) => this.keys.has(c)); }
 }

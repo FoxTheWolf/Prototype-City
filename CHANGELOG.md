@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.6c — Salvar o jogo e o menu (2026-10-03)
+- O jogo agora salva: a hora, onde você está, o dinheiro e a conta, o crédito do celular, os contatos, as mensagens, as fotos e as notas do celular, o disco e a BIOS do notebook, o relógio, as subestações e semáforos que você mexeu, as notícias e posts, e os trabalhos e o calor em que você estava.
+- Na tela de título: CONTINUE volta ao jogo salvo (com a data em que foi salvo), NEW GAME começa uma cidade nova (pergunta antes, porque vai substituir o save), WATCH CCTV e OPTIONS.
+- Esc no jogo pausa: continuar, salvar, opções, debug (os dados que ficavam nas linhas de status) e salvar e sair para o título. O mundo para enquanto o menu está aberto.
+- As opções (som, fundo, glifos, nitidez, fusão, resolução, linhas de debug) ficam lembradas entre uma vez e outra; as linhas de debug começam desligadas (F3 ou o menu as liga).
+- O jogo salva sozinho a cada 3 minutos, ao minimizar a janela e ao sair para o título. Por enquanto há um só save.
+- O relógio de pulso ficou mais baixo na tela, com a correia de cima mais curta, e o "WATER RESIST" voltou.
+
 ## 0.F.6a — O relógio fica no pulso, o banco no celular (2026-10-03)
 - O relógio de pulso agora fica sempre à vista, no canto de baixo à esquerda. H o abaixa para fora do caminho (e ergue de novo); abaixado, ele sobe sozinho na hora cheia, quando bipa, e quando o alarme toca.
 - Três modos, como os de verdade, trocados pelo botão MODE (J): a hora, o alarme e o cronômetro. O botão da direita (I) liga e desliga o alarme e dispara e para o cronômetro.

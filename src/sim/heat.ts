@@ -219,3 +219,37 @@ function arrest(w: World) {
   h.traces.length = 0;
   h.cop = null;
 }
+
+/**
+ * Serialize the heat to plain data (JSON-safe: numbers, strings, booleans and flat objects, no
+ * references). Every time here is game time (recordAct/stepHeat work from world.time), so the traces
+ * and the cooling line up again once world.time is restored; nothing uses performance.now(). See
+ * loadHeat for the inverse.
+ */
+export function saveHeat(h: Heat): unknown {
+  return {
+    points: h.points,
+    traces: h.traces.map((t) => ({ kind: t.kind, x: t.x, y: t.y, time: t.time, weight: t.weight, by: t.by })),
+    lastAt: h.lastAt,
+    cop: h.cop ? { ...h.cop } : null,
+    bust: h.bust ? { ...h.bust } : null,
+    announced: h.announced,
+  };
+}
+
+/**
+ * Restore the heat onto a fresh newHeat(): the points, the traces behind them, the patrol closing
+ * in and the last arrest. Missing fields fall back to the clean defaults.
+ */
+export function loadHeat(h: Heat, data: unknown): void {
+  const d = data as Partial<Heat> | null;
+  if (!d) return;
+  h.points = d.points ?? 0;
+  h.lastAt = d.lastAt ?? -1;
+  h.announced = d.announced ?? 0;
+  h.traces = Array.isArray(d.traces)
+    ? d.traces.map((t) => ({ kind: t.kind, x: t.x, y: t.y, time: t.time, weight: t.weight, by: t.by }))
+    : [];
+  h.cop = d.cop ? { x: d.cop.x, y: d.cop.y, px: d.cop.px, py: d.cop.py, fx: d.cop.fx, fy: d.cop.fy } : null;
+  h.bust = d.bust ? { at: d.bust.at, fine: d.bust.fine, lostPay: d.bust.lostPay, lm: d.bust.lm } : null;
+}

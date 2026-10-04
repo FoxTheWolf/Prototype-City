@@ -40,3 +40,18 @@ body { background: var(--bg); color: var(--fg); font-family: var(--mono); overfl
 #loading .pct { color: var(--amber); }
 #tip { position: fixed; left: 50%; bottom: 6vh; transform: translateX(-50%); width: min(560px, 86vw); margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg); cursor: default; }
 #tip .head { display: block; color: var(--cyan); letter-spacing: .14em; font-size: 11px; margin-bottom: 2px; }
+
+/* the menu (F.6): the pause menu in the game, the options from the title */
+#menu { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(7, 8, 12, .78); padding-inline: 16px; z-index: 10; }
+#menu[hidden] { display: none; }
+#menu .panel { width: min(460px, 100%); text-align: center; }
+#menu h2 { color: var(--amber); letter-spacing: .14em; font-weight: 600; margin: 0 0 18px; text-shadow: 0 0 14px rgba(255, 176, 74, .3); }
+#menu .body { display: flex; flex-direction: column; gap: 10px; }
+#menu button { font: 600 13px var(--mono); letter-spacing: .1em; color: var(--bg); background: var(--amber); border: 0; padding: 10px 22px; cursor: pointer; }
+#menu button.alt { color: var(--cyan); background: transparent; outline: 1px solid var(--cyan); outline-offset: -1px; }
+#menu button.row { display: flex; justify-content: space-between; }
+#menu button:disabled { opacity: .5; }
+#menu button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+#menu pre { text-align: left; font: 12px/1.5 var(--mono); color: var(--fg); background: rgba(0, 0, 0, .35); padding: 10px 12px; margin: 0; white-space: pre-wrap; max-height: 60vh; overflow: auto; }
+#menu .note { min-height: 1.4em; color: var(--amber-dim); font-size: 12px; letter-spacing: .1em; margin-top: 12px; }
+#ready .saveinfo { color: var(--amber-dim); font-size: 12px; margin-top: 12px; }
