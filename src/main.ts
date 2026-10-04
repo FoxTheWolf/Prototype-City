@@ -886,7 +886,11 @@ function frame(now: number) {
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);
-  for (const [k] of world.doorSfx) { if (k === 3) { sound?.ding(); sound?.doors(); } else if (k === 2) sound?.rattle(); else sound?.swing(k > 0); }
+  for (const [k, x, y, kd = 0] of world.doorSfx) {
+    // (a door far off, a shutter down the block: quieter with the distance)
+    const vol = k === 3 ? 1 : Math.min(1, 3 / Math.max(3, Math.hypot(x - world.player.x, y - world.player.y)));
+    if (k === 3) { sound?.ding(); sound?.doors(); } else if (k === 2) sound?.rattle(); else if (k >= 4) sound?.rollShutter(k === 4, vol); else sound?.swing(k > 0, kd, vol);
+  }
   world.doorSfx.length = 0;
   payphone.update(now / 1000);
   payphone.hover = payphone.active ? payphone.keyAt(ui.cols, ui.rows, phone.cx, phone.cy) : null;

@@ -1090,7 +1090,12 @@ export function inFurniture(P: Plan, x: number, y: number): boolean {
  * shut and swinging open toward (nx, ny) (into the private room, off the corridor); w wide; its
  * middle at (cx, cy). Wide openings (over 1.7 m) and the lift's and stairs' openings have none.
  */
-export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number; /** The rooms on either side (indexes; -1 for a street door). */ ra: number; rb: number }
+/** What a door leaf is made of (13.10d): the street doors' glass, a home's wood, the steel of a stockroom, an office's painted panel. */
+export const DOOR_GLASS = 0, DOOR_WOOD = 1, DOOR_METAL = 2, DOOR_OFFICE = 3;
+export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number; /** The rooms on either side (indexes; -1 for a street door). */ ra: number; rb: number; kind: number }
+const HOME = new Set<RoomKind>(['living', 'bedroom', 'kitchen', 'bath', 'foyer']);
+/** Steel onto a stockroom, wood in and into a home, a painted panel elsewhere (offices, lobbies, a shop's own rooms). */
+const leafKind = (A: Room, B: Room) => A.kind === 'store' || B.kind === 'store' ? DOOR_METAL : HOME.has(A.kind) || HOME.has(B.kind) ? DOOR_WOOD : DOOR_OFFICE;
 const leafCache = new WeakMap<Plan, Leaf[]>();
 const COMMON = new Set<RoomKind>(['hall', 'lobby', 'foyer']);
 export function leavesOf(P: Plan): Leaf[] {
@@ -1112,7 +1117,8 @@ export function leavesOf(P: Plan): Leaf[] {
             // it swings into the room off the common parts; between two private rooms, into the later one
             const intoB = COMMON.has(A.kind) !== COMMON.has(B.kind) ? COMMON.has(A.kind) : rb > ra, n = intoB ? 1 : -1;
             const wc = ((d ? P.gy : P.gx) + a + 1) * CELL, s0 = ((d ? P.gx : P.gy) + run) * CELL;
-            L.push(d ? { hx: s0, hy: wc, ax: 1, ay: 0, nx: 0, ny: n, w, cx: s0 + w / 2, cy: wc, ra: ra - 1, rb: rb - 1 } : { hx: wc, hy: s0, ax: 0, ay: 1, nx: n, ny: 0, w, cx: wc, cy: s0 + w / 2, ra: ra - 1, rb: rb - 1 });
+            const kind = leafKind(A, B);
+            L.push(d ? { hx: s0, hy: wc, ax: 1, ay: 0, nx: 0, ny: n, w, cx: s0 + w / 2, cy: wc, ra: ra - 1, rb: rb - 1, kind } : { hx: wc, hy: s0, ax: 0, ay: 1, nx: n, ny: 0, w, cx: wc, cy: s0 + w / 2, ra: ra - 1, rb: rb - 1, kind });
           }
           run = -1;
         }

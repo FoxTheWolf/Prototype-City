@@ -1,6 +1,7 @@
 import { hash3 } from '../core/rng';
-import { baseAt, exitsOf, facePoint, leavesOf, planOf, type Leaf, type Room } from './interior';
+import { baseAt, DOOR_GLASS, DOOR_METAL, exitsOf, facePoint, leavesOf, planOf, type Leaf, type Room } from './interior';
 import { isOpen } from './telco';
+import { PLACES } from './placeTypes';
 import type { World } from './world';
 
 /**
@@ -12,8 +13,32 @@ import type { World } from './world';
 /** A door's key in world.doors and world.doorWant: the lot, the storey and its index in leavesOf (100 + n: street door n of exitsOf). */
 export const doorKey = (k: number, f: number, n: number) => (k * 256 + f) * 128 + n;
 const STREET = 100;
-/** Reach of F, m; how far off an open door swings shut by itself; seconds to open and to shut. */
-const REACH = 1.7, LEAVE = 3, OPEN_S = 0.6, SHUT_S = 0.8;
+/** Reach of F, m; how far off an open door swings shut by itself. */
+const REACH = 1.7, LEAVE = 3;
+/** Seconds to open and to shut, by what the leaf is made of (DOOR_*): the steel one is heavy and its closer slow. */
+const OPEN_S = [0.6, 0.6, 0.9, 0.6], SHUT_S = [0.9, 0.8, 1.6, 0.8];
+
+/** What door key's leaf is made of: the street doors are glass, the rest as leavesOf says. */
+export function doorKind(w: World, key: number): number {
+  const n = key % 128, f = Math.floor(key / 128) % 256, k = Math.floor(key / 128 / 256);
+  if (n >= STREET) return DOOR_GLASS;
+  const P = planOf(w.city, k, f);
+  return (P && leavesOf(P)[n]?.kind) ?? DOOR_GLASS;
+}
+
+/**
+ * The steel shutter of a shop's own street door (13.10d): how far down it is at this hour, 0 up, 1 down. It rolls
+ * down over SHUTTER_H after closing time and up over SHUTTER_H before opening; a shop always open never shuts.
+ */
+export const SHUTTER_H = 0.05;
+export function shutterAt(hours: [number, number], hour: number): number {
+  const [a, b] = hours;
+  if (b - a >= 24) return 0;
+  const h = ((hour % 24) + 24) % 24, open = (h >= a && h < b) || h + 24 < b;
+  if (open) return 0;
+  const since = (((h - b) % 24) + 24) % 24, until = (((a - h) % 24) + 24) % 24;
+  return Math.min(1, since / SHUTTER_H, until / SHUTTER_H);
+}
 /** Open enough to walk through. */
 const PASS = 0.8;
 
@@ -29,8 +54,8 @@ export function streetLeaves(w: World, k: number): Leaf[] {
     // the leaves lie along the facade when shut; open, they turn into the building (against the outward normal)
     // a few centimetres in from the facade, so the ray from inside meets them before the outer wall
     const ix = -nx * 0.04, iy = -ny * 0.04;
-    out.push({ hx: x0 + ix, hy: y0 + iy, ax: ux, ay: uy, nx: -nx, ny: -ny, w: half, cx: x0 + ux * half / 2, cy: y0 + uy * half / 2, ra: -1, rb: -1 });
-    out.push({ hx: x1 + ix, hy: y1 + iy, ax: -ux, ay: -uy, nx: -nx, ny: -ny, w: half, cx: x1 - ux * half / 2, cy: y1 - uy * half / 2, ra: -1, rb: -1 });
+    out.push({ hx: x0 + ix, hy: y0 + iy, ax: ux, ay: uy, nx: -nx, ny: -ny, w: half, cx: x0 + ux * half / 2, cy: y0 + uy * half / 2, ra: -1, rb: -1, kind: DOOR_GLASS });
+    out.push({ hx: x1 + ix, hy: y1 + iy, ax: -ux, ay: -uy, nx: -nx, ny: -ny, w: half, cx: x1 - ux * half / 2, cy: y1 - uy * half / 2, ra: -1, rb: -1, kind: DOOR_GLASS });
   }
   return out;
 }
@@ -86,7 +111,7 @@ export function useDoor(w: World, heading: number): 'open' | 'close' | 'locked' 
   const d = doorAhead(w, heading);
   if (!d) return null;
   if (w.doorWant.has(d.key)) { w.doorWant.delete(d.key); return 'close'; }
-  if (doorLocked(w, d)) { w.doorSfx.push([2, d.x, d.y]); return 'locked'; }
+  if (doorLocked(w, d)) { w.doorSfx.push([2, d.x, d.y, doorKind(w, d.key)]); return 'locked'; }
   w.doorWant.add(d.key);
   w.doorAt.set(d.key, [d.x, d.y]);
   return 'open';
@@ -100,16 +125,35 @@ export function stepDoors(w: World, tick: number) {
     if (!at || Math.hypot(p.x - at[0], p.y - at[1]) > LEAVE || f !== p.floor) w.doorWant.delete(key);
   }
   for (const key of w.doorWant) {
-    const a = w.doors.get(key) ?? 0;
-    if (a === 0) { const at = w.doorAt.get(key)!; w.doorSfx.push([1, at[0], at[1]]); }
-    if (a < 1) w.doors.set(key, Math.min(1, a + tick / OPEN_S));
+    const a = w.doors.get(key) ?? 0, kd = doorKind(w, key);
+    if (a === 0) { const at = w.doorAt.get(key)!; w.doorSfx.push([1, at[0], at[1], kd]); }
+    if (a < 1) w.doors.set(key, Math.min(1, a + tick / OPEN_S[kd]));
   }
   for (const [key, a] of w.doors) {
     if (w.doorWant.has(key)) continue;
-    const b = a - tick / SHUT_S;
+    const kd = doorKind(w, key), b = a - tick / SHUT_S[kd];
     if (b > 0) { w.doors.set(key, b); continue; }
+    const at = w.doorAt.get(key) ?? [p.x, p.y];
     w.doors.delete(key); w.doorAt.delete(key);
-    w.doorSfx.push([-1, 0, 0]);
+    w.doorSfx.push([-1, at[0], at[1], kd]);
+  }
+  stepShutters(w, tick);
+}
+
+/** The shops' shutters near the player that start to roll this tick (a sound each: 4 down, 5 up). */
+const SHUTTER_NEAR = 40;
+function stepShutters(w: World, tick: number) {
+  const p = w.player, h1 = (w.time / 3600) % 24, h0 = h1 - tick / 3600;
+  for (const z of w.city.businesses) {
+    const B = w.city.buildings[z.building];
+    if (Math.abs((B.x0 + B.x1) / 2 - p.x) > SHUTTER_NEAR + 30 || Math.abs((B.y0 + B.y1) / 2 - p.y) > SHUTTER_NEAR + 30) continue;
+    const hrs = PLACES[z.kind]?.hours ?? [9, 17], s0 = shutterAt(hrs, h0), s1 = shutterAt(hrs, h1);
+    if (s0 === s1 || (s0 > 0 && s0 < 1)) continue;
+    const k = z.building, D = exitsOf(w.city, k), Bk = w.city.buildings[k];
+    for (let n = 1; n < D.length; n++) {
+      const [x, y] = facePoint(Bk, D[n].face, (D[n].a0 + D[n].a1) / 2);
+      if (Math.hypot(x - p.x, y - p.y) < SHUTTER_NEAR) w.doorSfx.push([s1 > s0 ? 4 : 5, x, y, DOOR_METAL]);
+    }
   }
 }
 

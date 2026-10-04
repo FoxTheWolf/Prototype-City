@@ -32,7 +32,7 @@ export const UNIFORMS = [
 /** Words of the viewer's floor's block (world.ts) before its street doors' leaves. */
 export const IN_LEAVES = 17;
 /** Floats per door leaf in a plan (world.ts putPlan), and how many open doors fx lists (openDoors). */
-export const LEAF_W = 7, FX_DOORS = 64;
+export const LEAF_W = 8, FX_DOORS = 64;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
 export const BLD = 64;
@@ -805,17 +805,43 @@ fn leafSwing(k: i32, f: i32, n: u32) -> f32 {
   for (var e = 0u; e < min(fx[at], FX_DOORS); e++) { if (fx[at + 1u + e * 2u] == key) { return fxf(at + 2u + e * 2u); } }
   return 0.0;
 }
-struct LHit { t: f32, u: f32, k: f32, glass: bool };
+struct LHit { t: f32, u: f32, k: f32, kind: u32, edge: bool };
+/** A leaf's thickness, m: its free edge shows as a strip when the door stands open, seen along it. */
+const LEAF_TH = 0.05;
 /** A door leaf hinged at h, lying along a when shut and swinging toward n by ang, dw wide (negative: a street door's
- *  glass leaf): the hit h made nearer if the ray meets it between t0 and h.t. */
-fn leafTest(h: LHit, hx: f32, hy: f32, ax: f32, ay: f32, nx: f32, ny: f32, dwr: f32, ang: f32, rdx: f32, rdy: f32, rl: f32, t0: f32) -> LHit {
+ *  glass leaf), made of kind (DOOR_* in sim/interior): the hit h made nearer if the ray meets it, or its free edge,
+ *  between t0 and h.t. */
+fn leafTest(h: LHit, hx: f32, hy: f32, ax: f32, ay: f32, nx: f32, ny: f32, dwr: f32, ang: f32, kind: u32, rdx: f32, rdy: f32, rl: f32, t0: f32) -> LHit {
   let c = cos(ang); let s = sin(ang); let dw = abs(dwr);
   let ex = (ax * c + nx * s) * dw; let ey = (ay * c + ny * s) * dw; let den = rdx * ey - rdy * ex;
-  if (abs(den) < 1e-9) { return h; }
-  let qx = hx - u.px; let qy = hy - u.py; let t = (qx * ey - qy * ex) / den; let uu = (qx * rdy - qy * rdx) / den;
-  if (t > t0 && t < h.t && uu >= 0.0 && uu <= 1.0) { return LHit(t, uu, 0.7 + 0.3 * abs(-ey * rdx + ex * rdy) / (dw * rl), dwr < 0.0); }
-  return h;
+  var r = h;
+  if (abs(den) > 1e-9) {
+    let qx = hx - u.px; let qy = hy - u.py; let t = (qx * ey - qy * ex) / den; let uu = (qx * rdy - qy * rdx) / den;
+    if (t > t0 && t < r.t && uu >= 0.0 && uu <= 1.0) { r = LHit(t, uu, 0.7 + 0.3 * abs(-ey * rdx + ex * rdy) / (dw * rl), kind, false); }
+  }
+  // the free edge: a short segment across the leaf's end, as thick as the leaf
+  let px = -ey / dw * LEAF_TH; let py = ex / dw * LEAF_TH;
+  let den2 = rdx * py - rdy * px;
+  if (abs(den2) > 1e-9) {
+    let qx = hx + ex - px * 0.5 - u.px; let qy = hy + ey - py * 0.5 - u.py;
+    let t = (qx * py - qy * px) / den2; let uu = (qx * rdy - qy * rdx) / den2;
+    if (t > t0 && t < r.t && uu >= 0.0 && uu <= 1.0) { r = LHit(t, 0.5, 0.75, kind, true); }
+  }
+  return r;
 }
+/**
+ * A street door seen from outside (13.10d): its two leaves, hinged at the jambs h0 and h1, along a (from h0) when shut
+ * and turned in toward n by ang, hw wide each; set by wallCell for the walk it starts through the doorway.
+ */
+var<private> gSD: bool = false;
+var<private> gSDh0: vec2f = vec2f(0.0);
+var<private> gSDh1: vec2f = vec2f(0.0);
+var<private> gSDa: vec2f = vec2f(0.0);
+var<private> gSDn: vec2f = vec2f(0.0);
+var<private> gSDw: f32 = 0.0;
+var<private> gSDang: f32 = 0.0;
+/** Whether the walk last started from outside went through a street door's glass leaf (its glass seen over the room). */
+var<private> gSDglass: bool = false;
 
 /**
  * The walk (z(t) = eye - m t): from the viewer (V.IB != 0, tIn 0) or from where the ray came in at tIn. The viewer's
@@ -845,21 +871,25 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   if (bld[q + 6u] > 0.5) { let dn = knx * rdx + kny * rdy; if (dn > 0.0) { let t = (bld[q + 9u] - knx * u.px - kny * u.py) / dn; if (t < tExit) { tExit = t; face = 4; } } }
   tExit = max(tExit, tIn + 0.02);
   // the nearest door leaf the ray meets (the plan's, swung as far as each is open; the viewer's street doors' glass ones)
-  var lh = LHit(1e9, 0.0, 1.0, false);
+  var lh = LHit(1e9, 0.0, 1.0, 0u, false);
   if (full) {
     let t0 = max(0.05, tIn); let lb = leafBase(o);
     for (var n = 0u; n < fx[lb]; n++) {
       let w = lb + 1u + n * LEAF_W;
-      lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), leafSwing(V.lot, V.f, n), rdx, rdy, rl, t0);
+      lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), leafSwing(V.lot, V.f, n), u32(fxf(w + 7u)), rdx, rdy, rl, t0);
     }
     if (inside) {
       for (var n = 0u; n < fx[V.IB + 8u]; n++) {
         let w = V.IB + IN_LEAVES + n * 8u;
-        lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), fxf(w + 7u), rdx, rdy, rl, t0);
+        lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), fxf(w + 7u), 0u, rdx, rdy, rl, t0);
       }
+    } else if (gSD) {
+      // the street door the ray came in by, seen from outside: the same two glass leaves as from inside
+      lh = leafTest(lh, gSDh0.x, gSDh0.y, gSDa.x, gSDa.y, gSDn.x, gSDn.y, -gSDw, gSDang, 0u, rdx, rdy, rl, t0);
+      lh = leafTest(lh, gSDh1.x, gSDh1.y, -gSDa.x, -gSDa.y, gSDn.x, gSDn.y, -gSDw, gSDang, 0u, rdx, rdy, rl, t0);
     }
   }
-  var lt = lh.t; let lu = lh.u; let lk = lh.k; let lg = lh.glass;
+  var lt = lh.t; let lu = lh.u; let lk = lh.k; let lg = lh.kind == 0u; let lkind = lh.kind; let ledge = lh.edge;
   // walk the plan's cells from where the ray is in it; a change of room is a wall, unless both cells are a doorway
   let gx = i32(fx[o]); let gy = i32(fx[o + 1u]);
   let s0 = tIn + select(0.0, 0.03 / rl, tIn > 0.0);
@@ -874,7 +904,13 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     let xs = tX < tY; let tn = select(tY, tX, xs);
     if (lt < min(tn, tExit)) {
       let z = u.eye - m * lt;
-      if (lg && z > z0 && z <= z0 + DOOR_H - 0.02) {
+      if (ledge && z > z0 && z <= z0 + DOOR_H - 0.02) {
+        // the leaf's free edge, seen along it as it stands open: its frame, or the wood's end grain
+        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+        let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
+        let ec = select(select(select(vec3f(150.0, 108.0, 70.0), vec3f(95.0, 98.0, 105.0), lkind == 0u), vec3f(120.0, 126.0, 132.0), lkind == 2u), vec3f(140.0, 144.0, 150.0), lkind == 3u);
+        res.cl = roomCell(BAR, ec * Lt * lk, lt); res.state = 1u; done = true; break;
+      } else if (lg && z > z0 && z <= z0 + DOOR_H - 0.02) {
         // a street door's leaf: a metal frame and a push bar round the glass, which the ray goes on through
         let zz = z - z0;
         let frame = lu > 0.93 || lu < 0.05 || zz > DOOR_H - 0.12 || zz < 0.1;
@@ -884,15 +920,24 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
           res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt * lk, lt); res.state = 1u; done = true; break;
         }
-        leafGlass = true;
+        leafGlass = true; gSDglass = true;
+      } else if (lkind == 2u && z > z0 && z <= z0 + DOOR_H - 0.02) {
+        // a steel door (a stockroom's): a plain sheet in a darker edge, a kick plate, the bar across it
+        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+        let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
+        let edge = lu < 0.04 || lu > 0.96 || zz > DOOR_H - 0.07;
+        let kick = zz < 0.28; let bar = zz > 0.95 && zz < 1.06 && lu > 0.1 && lu < 0.88;
+        let col = vec3f(112.0, 120.0, 126.0) * lk * select(select(select(1.0, 0.8, kick), 1.45, bar), 0.7, edge);
+        res.cl = roomCell(select(select(select(HASH, EQ, kick), BAR, bar), BAR, edge), col * Lt, lt);
+        res.state = 1u; done = true; break;
       } else if (z > z0 && z <= z0 + DOOR_H - 0.02) {
-        // a panel door: its edges, two recessed panels, and the knob near the far edge
+        // a panel door (wood in a home, a painted panel in an office): its edges, two recessed panels, the knob
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
         let edge = lu < 0.06 || lu > 0.94 || zz > DOOR_H - 0.1 || zz < 0.06;
         let knob = lu > 0.82 && lu < 0.9 && zz > 0.92 && zz < 1.06;
         let panel = !edge && lu > 0.16 && lu < 0.84 && ((zz > 0.25 && zz < 0.85) || (zz > 1.2 && zz < DOOR_H - 0.3));
-        let col = select(vec3f(118.0, 78.0, 46.0), vec3f(118.0, 122.0, 130.0), office) * lk * select(select(1.0, 1.1, panel), 0.8, edge);
+        let col = select(vec3f(118.0, 78.0, 46.0), vec3f(118.0, 122.0, 130.0), lkind == 3u) * lk * select(select(1.0, 1.1, panel), 0.8, edge);
         if (knob) { res.cl = roomCell(O, vec3f(210.0, 175.0, 90.0) * Lt, lt); } else { res.cl = roomCell(select(select(EQ, COL, panel), BAR, edge), col * Lt, lt); }
         res.state = 1u; done = true; break;
       }
@@ -1211,14 +1256,15 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let corner = along - f0 < 0.35 || f1 - along < 0.35;
   // the street doors on this face (the main one, and the shops' once the ground plan is made), and a
   // fire escape two bays wide over this spot (only drawn where there is one)
-  var dA0 = 0.0; var dA1 = -1.0; var esc = false; var dOp = 0.0;
+  var dA0 = 0.0; var dA1 = -1.0; var esc = false; var dOp = 0.0; var dSh = 0.0; var dHasSh = false;
   let fo = fx[FX_TAB + u32(bk)];
   if (fo > 0u) {
     for (var e = 0u; e < fx[fo]; e++) {
       let w = fo + 1u + e * 3u; let kf = fx[w]; let a0 = bitcast<f32>(fx[w + 1u]); let a1 = bitcast<f32>(fx[w + 2u]);
       if (i32((kf >> 4u) & 15u) != face || side == 2) { continue; }
       // a street door's word has how open it is in bits 8..15 (13.2c)
-      if ((kf & 15u) == 0u) { if (along0 > a0 && along0 < a1) { dA0 = a0; dA1 = a1; dOp = f32((kf >> 8u) & 255u) / 255.0; } }
+      // (and a shop's own door has a steel shutter, bit 24, rolled down as far as bits 16..23 say: 13.10d)
+      if ((kf & 15u) == 0u) { if (along0 > a0 && along0 < a1) { dA0 = a0; dA1 = a1; dOp = f32((kf >> 8u) & 255u) / 255.0; dSh = f32((kf >> 16u) & 255u) / 255.0; dHasSh = (kf & (1u << 24u)) != 0u; } }
       else if (along >= a0 && along < a1 && !corner) { esc = true; }
     }
   }
@@ -1388,18 +1434,37 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   } else if (dA1 > dA0 && z < DOOR_H + 0.35) {
     // the street door: a frame, two glass leaves and a transom, lit from the lobby
     let e = min(along - dA0, dA1 - along);
-    // open, each leaf has turned in from its jamb: from outside it shows as a strip that narrows, and between
-    // them the lobby, lit, without glass
-    let hwd = (dA1 - dA0) * 0.5; let sw = (1.0 - (1.0 - dOp) * (1.0 - dOp)) * 1.5707963; let edgeIn = hwd * cos(sw);
-    if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
-    else if (dOp > 0.0 && e > edgeIn + 0.08) {
-      // through the doorway: the room behind, as through a shop window (or the lobby's glow, too far to make out)
-      // (13.10b2: lit as the room, as from inside, not as the wall; no glass in the way)
-      if (pkR >= 0) { let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, false); ch = P.ch; c = P.c; isWin = true; doorway = true; backT = gBack; winGlow = gPeekEm; }
-      else { ch = DOT; c = vec3f(255.0, 220.0, 160.0) * (0.18 * elec); em = true; glowK = 0.2; }
+    let shTop = DOOR_H + 0.22; let shBot = shTop - dSh * shTop;
+    if (dHasSh && z > shTop) {
+      // a shop's shutter box over the door
+      ch = select(EQ, BAR, z > DOOR_H + 0.31); c = vec3f(96.0, 100.0, 104.0) * shade;
+    } else if (dSh > 0.0 && z >= shBot) {
+      // the steel shutter rolled down (as far as it is), slats across the whole door and a bar along its bottom
+      let slat = fract((shTop - z) / 0.09);
+      ch = select(select(DASH, EQ, slat < 0.6), BAR, z - shBot < 0.07 && dSh < 0.999);
+      c = vec3f(128.0, 132.0, 136.0) * select(select(0.75, 1.0, slat < 0.6), 0.6, z - shBot < 0.07) * shade;
+    } else if (e < 0.12 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.12); c = frame * 1.5 * shade; }
+    else {
+      // up close, the door itself (13.10d): the walk into the lobby meets the same two glass leaves as from inside,
+      // hinged at the jambs and turned in as far as the door is open. Far, the door painted: open, each leaf a strip
+      // that narrows, and between them the lobby, lit, without glass. (One walk for both: it is the costly call.)
+      let near = pkR >= 0 && tRef < PEEK_FULL && side != 2;
+      let hwd = (dA1 - dA0) * 0.5; let sw = (1.0 - (1.0 - dOp) * (1.0 - dOp)) * 1.5707963; let edgeIn = hwd * cos(sw);
+      if (near || (pkR >= 0 && dOp > 0.0 && e > edgeIn + 0.08)) {
+        var ax = vec2f(0.0, 1.0); if (side == 1) { ax = vec2f(1.0, 0.0); } else if (side == 3) { ax = vec2f(bld[q + 8u], -bld[q + 7u]); }
+        let hp = vec2f(hx, hy) - nw * 0.04;
+        gSD = near; gSDa = ax; gSDn = -nw; gSDw = hwd;
+        gSDh0 = hp + ax * (dA0 - along); gSDh1 = hp + ax * (dA1 - along); gSDang = sw; gSDglass = false;
+        let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, false);
+        gSD = false;
+        ch = P.ch; c = P.c; isWin = true; backT = gBack; winGlow = gPeekEm;
+        // through a shut leaf's glass: a little darker and cooler, and it takes the street's reflection
+        if (gSDglass) { c = c * 0.82 + vec3f(8.0, 12.0, 18.0); glass = true; } else { doorway = true; }
+      }
+      else if (dOp > 0.0 && e > edgeIn + 0.08) { ch = DOT; c = vec3f(255.0, 220.0, 160.0) * (0.18 * elec); em = true; glowK = 0.2; }
+      else if (dOp > 0.0 && e > edgeIn) { ch = COL; c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.2; }
+      else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.3; }
     }
-    else if (dOp > 0.0 && e > edgeIn) { ch = COL; c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.2; }
-    else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.3; }
   } else if (adN > 0 && along > adA0 && along < adA1 && z > adZ0 && z < adZ1) {
     // the ad: a frame, then the letters (5 x 7 blocks each) centered on the board, weathered paint
     let lw = AD_LETTER; let start = (adA0 + adA1) * 0.5 - f32(adN) * lw * 0.5; let zc = (adZ0 + adZ1) * 0.5;

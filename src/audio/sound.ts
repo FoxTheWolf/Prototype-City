@@ -649,32 +649,73 @@ export class Sound {
   }
 
   /**
-   * A door between rooms: opening, the latch's click and a short rub of the hinge; shutting, the
-   * latch and a soft knock of the leaf in its frame.
+   * A door swinging (13.10d), by what it is made of (DOOR_* in sim/interior): wood (and an office's panel) clicks its
+   * latch, rubs its hinge and knocks shut; a street door's glass leaf clacks its push bar, hisses on its closer and
+   * shuts with a tinny shiver of the glass; the steel one of a stockroom thumps its bar and booms shut. vol: by distance.
    */
-  swing(open: boolean) {
+  swing(open: boolean, kind = 1, vol = 1) {
     const ctx = this.ctx, t = ctx.currentTime;
-    const click = (at: number, f: number, v: number) => {
-      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
-      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, 3)).connect(g);
-      g.gain.setValueAtTime(v, t + at); g.gain.setTargetAtTime(0, t + at + 0.004, 0.012);
-      s.start(t + at, Math.random()); s.stop(t + at + 0.08);
+    const out = gain(ctx, vol, this.master);
+    const click = (at: number, f: number, v: number, q = 3, d = 0.012) => {
+      const s = ctx.createBufferSource(), g = gain(ctx, 0, out);
+      s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', f, q)).connect(g);
+      g.gain.setValueAtTime(v, t + at); g.gain.setTargetAtTime(0, t + at + 0.004, d);
+      s.start(t + at, Math.random()); s.stop(t + at + 0.08 + d * 6);
     };
-    click(0, 2600, 0.12);
-    if (open) {
-      // the hinge: a faint rub of noise rising a little in pitch
-      const s = ctx.createBufferSource(), bp = filter(ctx, 'bandpass', 700, 6), g = gain(ctx, 0, this.master);
+    const thud = (at: number, f: number, v: number, d: number) => {
+      const o = ctx.createOscillator(), h = gain(ctx, 0, out);
+      o.frequency.setValueAtTime(f, t + at); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + at + d * 4); o.connect(h);
+      h.gain.setValueAtTime(v, t + at); h.gain.setTargetAtTime(0, t + at + 0.01, d);
+      o.start(t + at); o.stop(t + at + d * 8);
+    };
+    const rub = (at: number, f0: number, f1: number, v: number, len: number, q = 6) => {
+      const s = ctx.createBufferSource(), bp = filter(ctx, 'bandpass', f0, q), g = gain(ctx, 0, out);
       s.buffer = this.noise; s.connect(bp).connect(g);
-      bp.frequency.setValueAtTime(600, t + 0.05); bp.frequency.linearRampToValueAtTime(900, t + 0.4);
-      g.gain.setValueAtTime(0, t + 0.05); g.gain.linearRampToValueAtTime(0.05, t + 0.15); g.gain.linearRampToValueAtTime(0, t + 0.45);
-      s.start(t + 0.05, Math.random()); s.stop(t + 0.5);
+      bp.frequency.setValueAtTime(f0, t + at); bp.frequency.linearRampToValueAtTime(f1, t + at + len);
+      g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(v, t + at + len * 0.3); g.gain.linearRampToValueAtTime(0, t + at + len);
+      s.start(t + at, Math.random()); s.stop(t + at + len + 0.05);
+    };
+    if (kind === 0) {
+      // glass: the push bar's clack, the closer's soft hiss; shut, the frame's knock and the pane's shiver
+      if (open) { click(0, 1900, 0.13, 2); click(0.03, 700, 0.1, 2); rub(0.08, 2400, 3200, 0.025, 0.5, 1.5); }
+      else {
+        rub(0, 3000, 2200, 0.02, 0.35, 1.5); click(0.35, 1100, 0.12, 2); thud(0.35, 140, 0.08, 0.03);
+        for (let k = 0; k < 3; k++) { const o = ctx.createOscillator(), h = gain(ctx, 0, out); o.frequency.value = 3800 + k * 1370; o.connect(h); h.gain.setValueAtTime(0.012, t + 0.36); h.gain.setTargetAtTime(0, t + 0.37, 0.05); o.start(t + 0.36); o.stop(t + 0.7); }
+      }
+    } else if (kind === 2) {
+      // steel: the bar's heavy clunk, a long low groan of the hinge; shut, a boom and the latch
+      if (open) { click(0, 900, 0.16, 2, 0.02); thud(0.02, 110, 0.12, 0.05); rub(0.1, 220, 330, 0.06, 0.8, 4); }
+      else { thud(0, 62, 0.3, 0.12); click(0, 500, 0.18, 1.5, 0.03); click(0.05, 1500, 0.08); }
     } else {
-      const o = ctx.createOscillator(), h = gain(ctx, 0, this.master);
-      o.frequency.value = 95; o.connect(h);
-      h.gain.setValueAtTime(0.16, t); h.gain.setTargetAtTime(0, t + 0.01, 0.05);
-      o.start(t); o.stop(t + 0.3);
-      click(0.02, 1400, 0.08);
+      // wood (an office's panel a little lighter): the latch's click, the hinge's rub; shut, a soft knock
+      const hi = kind === 3 ? 1.2 : 1;
+      click(0, 2600 * hi, 0.12);
+      if (open) rub(0.05, 600 * hi, 900 * hi, 0.05, 0.4);
+      else { thud(0, 95 * hi, 0.16, 0.05); click(0.02, 1400 * hi, 0.08); }
     }
+  }
+
+  /** A shop's steel shutter rolling down (or up): the slats rattling over the drum for a few seconds, a clang at the end. */
+  rollShutter(down: boolean, vol = 1) {
+    const ctx = this.ctx, t = ctx.currentTime, len = 3.2;
+    const out = gain(ctx, vol, this.master);
+    const s = ctx.createBufferSource(), bp = filter(ctx, 'bandpass', down ? 900 : 700, 2), am = gain(ctx, 0, out);
+    s.buffer = this.noise; s.connect(bp).connect(am);
+    // the slats passing the drum, about 18 a second
+    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+    lfo.type = 'square'; lfo.frequency.value = 18; lg.gain.value = 0.05; lfo.connect(lg).connect(am.gain);
+    am.gain.setValueAtTime(0.06, t); am.gain.linearRampToValueAtTime(0.07, t + len * 0.8); am.gain.linearRampToValueAtTime(0, t + len);
+    bp.frequency.linearRampToValueAtTime(down ? 650 : 1000, t + len);
+    s.start(t, Math.random()); s.stop(t + len + 0.1); lfo.start(t); lfo.stop(t + len + 0.1);
+    // the bottom bar hitting the ground (rolled down) or the stop (rolled up)
+    const o = ctx.createOscillator(), h = gain(ctx, 0, out);
+    o.frequency.value = down ? 85 : 140; o.connect(h);
+    h.gain.setValueAtTime(0.22, t + len); h.gain.setTargetAtTime(0, t + len + 0.01, 0.1);
+    o.start(t + len); o.stop(t + len + 0.8);
+    const c = ctx.createBufferSource(), g = gain(ctx, 0, out);
+    c.buffer = this.noise; c.connect(filter(ctx, 'bandpass', 1200, 3)).connect(g);
+    g.gain.setValueAtTime(0.12, t + len); g.gain.setTargetAtTime(0, t + len + 0.005, 0.06);
+    c.start(t + len, Math.random()); c.stop(t + len + 0.4);
   }
 
   /** A locked door tried: the handle turns and stops, the latch knocks twice against its keeper. */

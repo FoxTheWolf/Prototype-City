@@ -79,8 +79,8 @@ export interface World {
   doorAt: Map<number, [number, number]>;
   /** Each building's lift car (lifts.ts), by lot, made when first looked at. */
   lifts: Map<number, LiftCar>;
-  /** Doors that just started to open (+1), just closed (-1) or would not open (2, locked), and lift cars that came when called (3), with where, for main to sound. */
-  doorSfx: [number, number, number][];
+  /** Doors that just started to open (+1), just closed (-1) or would not open (2, locked), lift cars that came when called (3), shop shutters starting to roll down (4) or up (5), with where and what the door is made of (DOOR_*), for main to sound. */
+  doorSfx: [number, number, number, number?][];
   /** What has happened (see events.ts). */
   events: EventLog;
   /** Everyone who lives in the city (see citizens.ts). */

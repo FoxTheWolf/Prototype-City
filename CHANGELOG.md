@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10d — Portas de verdade (2026-10-04)
+- As portas giram de verdade na dobradiça, e a porta de rua vista da calçada é a mesma vista de dentro: as duas folhas de vidro se abrem para dentro, e de lado se vê a espessura da folha.
+- Cada porta é feita de alguma coisa: vidro nas portas de rua, madeira nos apartamentos, aço com barra na porta do estoque, painel pintado nos escritórios e saguões. Cada uma tem o próprio som (o vidro tilinta ao fechar, a de aço bate pesada e fecha devagar com a mola).
+- As lojas fechadas baixam a porta de enrolar de aço na frente da porta, no horário, com o barulho das lâminas; de manhã ela sobe antes de abrir.
+
 ## 0.13.10c — Plantas desenhadas (2026-10-04)
 - Diners, cafés, delis, pizzarias, bares, mercearias, lavanderias, cybercafés e as lojas de prateleira têm agora um arranjo pensado: no diner, o fogão no fundo, o balcão com banquetas e as mesas perto da vitrine; no bar, as garrafas atrás do balcão; na mercearia, as geladeiras no fundo e os corredores saindo da porta.
 - O caixa de toda loja fica sempre ao alcance de quem entra pela porta.

@@ -1,5 +1,7 @@
 import { BAY, blockAt, faceSpan, FLOOR_H, SIDEWALK, type City } from '../../sim/city';
 import { carOf, liftTop } from '../../sim/lifts';
+import { shutterAt } from '../../sim/doors';
+import { PLACES } from '../../sim/placeTypes';
 import { cachedPlan, cellAt, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
@@ -671,12 +673,12 @@ export class GpuWorld {
     const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock));
     let mSize = 0;
     for (const m of list) if (!mods.has(m)) { mods.set(m, 0); mSize += partsSize(m); }
-    // (after the cells, its door leaves: their count, then per leaf its hinge, the way it lies shut, the way it swings and its width)
+    // (after the cells, its door leaves: their count, then per leaf its hinge, the way it lies shut, the way it swings, its width and what it is made of)
     const leaves = leavesOf(P), nCells = Math.ceil(P.cells.length / 2), lo = 6 + P.rooms.length * 6 + nCells, fo = lo + 1 + leaves.length * LEAF_W;
     const n = fo + 1 + P.furn.length * 6 + mSize, o = this.fxTake(n);
     if (o < 0) return -1;
     W[o + lo] = leaves.length;
-    leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w], o + lo + 1 + k * LEAF_W));
+    leaves.forEach((L, k) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w, L.kind], o + lo + 1 + k * LEAF_W));
     let mo = o + fo + 1 + P.furn.length * 6;
     for (const m of mods.keys()) { mods.set(m, mo); mo = packParts(W, F, mo, m, 0); }
     W[o + fo] = P.furn.length;
@@ -693,7 +695,7 @@ export class GpuWorld {
   /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
   private fxReset() {
     const nb = this.city.buildings.length;
-    this.fxState.fill(0); this.fxPlan.fill(0);
+    this.fxState.fill(0); this.fxPlan.fill(0); this.shutters.clear();
     this.fxW.fill(0, FX_TAB, FX_TAB + 3 * nb); this.fxEnd = this.fxHead();
     this.dev.queue.writeBuffer(this.fx, 0, this.fxW, 0, this.fxEnd);
   }
@@ -701,6 +703,8 @@ export class GpuWorld {
   /** Room for n words at the end of the near buffer (its offset), or -1 after starting over. */
   /** The street doors' word in each lot's list (face << 4) gets how open the door is in bits 8..15 (13.2c), written only when it changes. */
   private doorOpen = new Map<number, number>();
+  /** The shops' doors with a shutter (their word in fx) and the shop's hours, to roll it by the time (13.10d). */
+  private shutters = new Map<number, [number, number]>();
   private streetDoors(world: World) {
     const W = this.fxW, q = this.dev.queue, now = new Map<number, number>();
     for (const [key, a] of world.doors) {
@@ -711,9 +715,16 @@ export class GpuWorld {
     }
     for (const i of this.doorOpen.keys()) if (!now.has(i)) now.set(i, 0);
     for (const [i, b] of now) {
-      const v = (W[i] & 0xff) | (b << 8);
+      const v = (W[i] & ~0xff00) | (b << 8);
       if (v !== W[i]) { W[i] = v; q.writeBuffer(this.fx, i * 4, W, i, 1); }
       if (b) this.doorOpen.set(i, b); else this.doorOpen.delete(i);
+    }
+    // the shutters, down as far as the hour says (only those whose word is still this lot's)
+    const hour = (world.time / 3600) % 24;
+    for (const [i, hrs] of this.shutters) {
+      if (!(W[i] & (1 << 24))) { this.shutters.delete(i); continue; }
+      const v = (W[i] & ~0xff0000) | (Math.round(shutterAt(hrs, hour) * 255) << 16);
+      if (v !== W[i]) { W[i] = v; q.writeBuffer(this.fx, i * 4, W, i, 1); }
     }
   }
 
@@ -799,7 +810,12 @@ export class GpuWorld {
         this.fxState[k] = want;
         if (!n) continue;
         W[o] = n;
-        doors.forEach((D, e) => { W[o + 1 + e * 3] = D.face << 4; F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1; });
+        // (a shop's own doors, after the building's main one, have a steel shutter: bit 24, and how far down in 16..23)
+        const biz = C.buildings[k].biz;
+        doors.forEach((D, e) => {
+          W[o + 1 + e * 3] = (D.face << 4) | (e > 0 && biz >= 0 ? 1 << 24 : 0); F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1;
+          if (e > 0 && biz >= 0) this.shutters.set(o + 1 + e * 3, PLACES[C.businesses[biz].kind]?.hours ?? [9, 17]);
+        });
         escs.forEach((E, e) => { const w = o + 1 + (doors.length + e) * 3; W[w] = 1 | (E.face << 4); F[w + 1] = E.a0; F[w + 2] = E.a0 + 2 * BAY; });
         W[FX_TAB + k] = o; slots.push(FX_TAB + k);
         q.writeBuffer(this.fx, start * 4, W, start, 1 + n * 3);
