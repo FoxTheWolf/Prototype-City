@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-04 (3): respostas à fila de feedback
+
+- **Interiores por módulo (Lego):** concordo, é a causa de quase todos os remendos. Sugestão: módulo de 2 m com a parede *dentro* do módulo (0,2 m), corredor de 1 módulo, e o prédio com largura e fundo arredondados para baixo a um múltiplo; a sobra do lote vira recuo, calçada mais larga ou pátio, em vez de esticar a sala. Assim a cidade não precisa ser gerada de novo e as salas modelo encaixam em qualquer andar. Faço a 13.11 antes da 13.10, como você permitiu.
+- **Skin pela simulação:** ótima base para missões de "achar o contato". Cuidado com um detalhe: a 64×64 é pequena, então só os traços que se leem de longe valem (pele, cabelo, cor da roupa, óculos, barba); cor dos olhos é 1 pixel e só vale de perto. Proponho que a ficha do cidadão tenha esses campos e a *descrição* da missão use só os que aparecem.
+- **Haiku para os ajustes:** não recomendo. O custo de cada chamada é quase todo reler o contexto do projeto, e isso o Haiku paga igual; ele erra mais num código grande. O agente `bugfix` (Sonnet) já existe; o ganho está em juntar a lista, como você disse.
+- **Chuva volumétrica:** concordo, é o certo agora que a câmera é 3D. No shader dá para fazer barato: as gotas vivem numa grade 3D presa ao mundo (não à câmera), e cada raio atravessa só as poucas células perto do jogador. Limitar o ângulo seria um remendo que quebra com o FOV. Fica depois dos materiais, como pediu.
+- **Menu Style/Sharpness:** boa limpeza. Só um aviso de nome: "Sharpness: Soft" (a fusão de longe) e a nitidez SOFT antiga do High Definition são coisas diferentes com o mesmo nome; como a antiga some do menu, não deve confundir.
+- **Reunião no fim do limite:** boa regra. Vou olhar o uso e propor a conversa perto de 90% da janela de 5 h.
+- **Batimentos no relógio:** combina com o mostrador de 2008 (os relógios de corrida já tinham). Sugiro que a barra pisque no ritmo do batimento.
+
+---
+
 ## 2026-10-04 (2): respostas ao retorno do usuário
 
 - **Segundo eixo do tom:** calmo ↔ pressionando, no lugar de engraçado ↔ sério. Pressão se mede bem por palavras (urgência, insistência, exclamações, maiúsculas) e é a alavanca clássica da engenharia social; o humor fica como a marca "Banter". Foi para a etapa 14.
