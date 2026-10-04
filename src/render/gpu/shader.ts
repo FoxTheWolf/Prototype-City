@@ -30,7 +30,7 @@ export const UNIFORMS = [
 ] as const;
 
 /** Words of the floor's block (world.ts) before its rooms' lamps. */
-export const IN_LAMPS = 16;
+export const IN_LAMPS = 17;
 
 /** Floats per building in the buildings buffer (see world.ts for the layout). */
 export const BLD = 64;
@@ -848,6 +848,8 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
   var res = InC(Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0), 0u, 0.0, 0.0, vec3f(0.0), false, 0.0, 0.0, 0.0, 0.0);
   let o = fx[IB]; let lot = i32(fx[IB + 1u]); let boxId = i32(fx[IB + 2u]); let fl = i32(fx[IB + 3u]);
   let z0 = fxf(IB + 4u); let shut = fx[IB + 5u] == 1u; let zc = z0 + CEIL; let nRooms = fx[IB + 15u];
+  // the lift car (13.2d): the floor it shows, whether it stands here (doors open), whether the player called it
+  let carW = fx[IB + 16u]; let carHereF = (carW & 256u) != 0u; let carFl = i32(carW & 255u); let carCalled = (carW & 512u) != 0u;
   let q = u32(boxId * ${BLD}); let lq = u32(lot * ${BLD});
   let st = i32(bld[lq + 10u]); let shop = bld[lq + 19u] > 0.5; let office = st == 0 || st == 1;
   let rl = sqrt(rdx * rdx + rdy * rdy);
@@ -914,7 +916,10 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
       let r = i32(cur & 127u) - 1; let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
       let hx = u.px + rdx * tn; let hy = u.py + rdy * tn; let uu = select(hx, hy, xs); let shade = select(0.82, 1.0, xs);
       let z = u.eye - m * tn;
-      if ((cur & nv & PDOOR) != 0u && !shut) {
+      let nk = fx[roomRec(o, i32(nv & 127u) - 1) + 4u];
+      // the lift's doorway is shut on this floor while its car is elsewhere
+      let liftShut = !carHereF && (nk == R_LIFT || kind == R_LIFT);
+      if ((cur & nv & PDOOR) != 0u && !shut && !liftShut) {
         // a doorway: the lintel above it, and on through; over the way out to the lobby (or the stairs), a green EXIT sign
         if (z > z0 + DOOR_H && z <= zc) {
           let k2 = fx[roomRec(o, i32(nv & 127u) - 1) + 4u];
@@ -940,6 +945,42 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
           res.cl = roomCell(EQ, vec3f(120.0, 95.0, 70.0) * litIn(IB, ro, r, hx, hy, tn) * k, tn); res.state = 1u; return res;
         }
       } else {
+        if (z > z0 && z <= zc && nk == R_LIFT && kind != R_LIFT) {
+          // the hall side of the lift (13.2d): its steel doors, the floor display over them, the call button beside
+          let zz = z - z0; let rlt = litIn(IB, ro, r, hx, hy, tn);
+          let wi = select(i, i - stX, xs); let wj = select(j - stY, j, xs);
+          var off = 0; var found = (cur & nv & PDOOR) != 0u;
+          for (var q2 = 1; q2 <= 3 && !found; q2++) {
+            if (doorBoth(o, xs, wi, wj, i, j, q2)) { off = q2; found = true; } else if (doorBoth(o, xs, wi, wj, i, j, -q2)) { off = -q2; found = true; }
+          }
+          if (found) {
+            var a = 0; var b = 0;
+            loop { if (a <= -8 || !doorBoth(o, xs, wi, wj, i, j, off + a - 1)) { break; } a--; }
+            loop { if (b >= 8 || !doorBoth(o, xs, wi, wj, i, j, off + b + 1)) { break; } b++; }
+            let base = select(f32(gx + i), f32(gy + j), xs) * PCELL;
+            let s0 = base + f32(off + a) * PCELL; let s1 = base + f32(off + b + 1) * PCELL; let sm = (s0 + s1) * 0.5;
+            let cw = u.colW * tn / max(1e-6, abs(select(rdy, rdx, xs)));
+            let rd = select(toRight(1.0, 0.0, rdx, rdy), toRight(0.0, 1.0, rdx, rdy), xs);
+            if (uu > s0 && uu < s1 && zz < DOOR_H) {
+              // two steel leaves meeting in the middle, a dark frame round them
+              let seam = abs(uu - sm) < 0.03; let edge = uu - s0 < 0.06 || s1 - uu < 0.06 || zz > DOOR_H - 0.06;
+              res.cl = roomCell(select(select(BAR, COL, !seam), EQ, edge), select(select(vec3f(150.0, 156.0, 165.0), vec3f(60.0, 62.0, 68.0), seam), vec3f(80.0, 82.0, 90.0), edge) * rlt * shade, tn); res.state = 1u; return res;
+            }
+            if (abs(uu - sm) < 0.17 && zz > DOOR_H + 0.06 && zz < DOOR_H + 0.36) {
+              // the floor display: amber lamp digits on black
+              let pu0 = (uu - (sm - 0.17)) / 0.34; let pu = select(1.0 - pu0, pu0, rd);
+              let g = digitLamps(carFl, max(2, ndig(carFl)), 0.08, 0.92, DOOR_H + 0.34, DOOR_H + 0.08, pu, zz, cw / 0.34, tn / u.scale);
+              if (g != 0u) { res.cl = roomCell(g, vec3f(255.0, 140.0, 40.0), tn); } else { res.cl = roomCell(DOT, vec3f(40.0, 18.0, 8.0), tn); }
+              res.state = 1u; return res;
+            }
+            let bu = uu - s1;
+            if (bu > 0.12 && bu < 0.3 && zz > 1.0 && zz < 1.3) {
+              // the call button on its plate: lit amber once the car is called
+              let btn = abs(bu - 0.21) < 0.045 && abs(zz - 1.15) < 0.05;
+              res.cl = roomCell(select(EQ, O, btn), select(vec3f(120.0, 124.0, 132.0), select(vec3f(90.0, 92.0, 98.0), vec3f(255.0, 160.0, 50.0), carCalled), btn) * select(rlt, vec3f(1.0), btn && carCalled), tn); res.state = 1u; return res;
+            }
+          }
+        }
         if (z > z0 && z <= zc) {
           // the wall; on the lift car's long wall at the low coordinate, its panel
           var pw = -1.0;

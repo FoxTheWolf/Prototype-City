@@ -1,4 +1,5 @@
-import { BAY, blockAt, faceSpan, SIDEWALK, type City } from '../../sim/city';
+import { BAY, blockAt, faceSpan, FLOOR_H, SIDEWALK, type City } from '../../sim/city';
+import { carHere, carOf } from '../../sim/lifts';
 import { cachedPlan, escapesOf, exitsOf, floorsOf, habitable, liftGlassBox, planOf, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
@@ -567,6 +568,8 @@ export class GpuWorld {
         W[ib] = po; W[ib + 1] = I.k; W[ib + 2] = I.boxId; W[ib + 3] = I.floor; F[ib + 4] = I.z0; W[ib + 5] = I.closed ? 1 : 0;
         W[ib + 6] = I.liftN; W[ib + 7] = I.liftTo; W[ib + 8] = nL; W[ib + 9] = ex.length;
         W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; W[ib + 15] = nr;
+        // the lift car: the floor it shows, and whether it stands here with its doors open (13.2d)
+        { const car = carOf(world, I.k), shown = Math.max(0, Math.round(car.z / FLOOR_H)); W[ib + 16] = shown | (I.closed || carHere(world, I.k, I.floor) ? 256 : 0) | (car.to === I.floor ? 512 : 0); }
         F.set(insideLamps().subarray(0, nr * 3), ib + IN_LAMPS);
         const lb = ib + IN_LAMPS + nr * 3;
         // a street door's glass leaves have their width negative (the shader draws them as glass in a frame)

@@ -4,6 +4,7 @@ import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw'
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { doorAhead, useDoor } from './sim/doors';
+import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
 import { Counter, counterPrompt, drawCounter } from './counter';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
@@ -430,6 +431,8 @@ addEventListener('keydown', (e) => {
     const c = counter.near();
     if (c?.staffed && !phone.out) { counter.open(c.k); return; }
     // a door in front: open it, close it, or find it locked (13.2c)
+    // the lift's doors in front, its car elsewhere: call it (13.2d)
+    if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
     if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
@@ -832,7 +835,7 @@ function frame(now: number) {
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);
-  for (const [k] of world.doorSfx) { if (k === 2) sound?.rattle(); else sound?.swing(k > 0); }
+  for (const [k] of world.doorSfx) { if (k === 3) { sound?.ding(); sound?.doors(); } else if (k === 2) sound?.rattle(); else sound?.swing(k > 0); }
   world.doorSfx.length = 0;
   payphone.update(now / 1000);
   payphone.hover = payphone.active ? payphone.keyAt(ui.cols, ui.rows, phone.cx, phone.cy) : null;
@@ -846,8 +849,9 @@ function frame(now: number) {
   if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a door in front: F to open or close it, or that it is locked (for a moment after trying)
   if (!till && !phone.out && !counter.active && !payphone.active) {
-    const d = doorAhead(world, camera.yaw), late = now / 1000 - doorNoteAt < 1.5 && doorNote;
-    if (d || late) { const s = ` ${late ? doorNote : world.doorWant.has(d!.key) ? en.doors.close : en.doors.open} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
+    const lift = liftAhead(world, camera.yaw) && !carHere(world, world.player.inside, world.player.floor);
+    const d = lift ? null : doorAhead(world, camera.yaw), late = now / 1000 - doorNoteAt < 1.5 && doorNote;
+    if (d || late || lift) { const s = ` ${late ? doorNote : lift ? (carOf(world, world.player.inside).to === world.player.floor ? en.doors.coming : en.doors.call) : world.doorWant.has(d!.key) ? en.doors.close : en.doors.open} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   }
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;

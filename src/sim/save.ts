@@ -58,6 +58,6 @@ export function applyWorld(w: World, d: WorldSave) {
   Object.assign(w.weather, d.weather);
   loadJobs(w.jobs, d.jobs);
   loadHeat(w.heat, d.heat);
-  w.doors.clear(); w.doorWant.clear(); w.doorAt.clear();
+  w.doors.clear(); w.doorWant.clear(); w.doorAt.clear(); w.lifts.clear();
   w.peds = spawnPeds(w.city, w.pop, w.rng, w.time, w.player.x, w.player.y);
 }

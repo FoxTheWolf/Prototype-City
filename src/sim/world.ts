@@ -10,6 +10,7 @@ import { buildJobs, stepJobs, type JobBoard } from './jobs';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
 import { leafBlocks, stepDoors, streetOpen } from './doors';
+import { carHere, inLift, stepLifts, type LiftCar } from './lifts';
 import { buildWifi, type AccessPoint } from './wifi';
 import { noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { newFeed, stepSocial, type Feed } from './social';
@@ -74,7 +75,9 @@ export interface World {
   /** The doors the player opened (they swing toward open), and where each one is. */
   doorWant: Set<number>;
   doorAt: Map<number, [number, number]>;
-  /** Doors that just started to open (+1), just closed (-1) or would not open (2, locked), with where, for main to sound. */
+  /** Each building's lift car (lifts.ts), by lot, made when first looked at. */
+  lifts: Map<number, LiftCar>;
+  /** Doors that just started to open (+1), just closed (-1) or would not open (2, locked), and lift cars that came when called (3), with where, for main to sound. */
   doorSfx: [number, number, number][];
   /** What has happened (see events.ts). */
   events: EventLog;
@@ -140,7 +143,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -241,7 +244,9 @@ export function stepWorld(w: World, input: PlayerInput) {
   const yard = (x: number, y: number) => p.z < 2.6 && w.power.subs.some((S) => S.yard && x > S.yard.x0 + 0.55 && x < S.yard.x1 - 0.55 && y > S.yard.y0 + 0.55 && y < S.yard.y1 - 0.55);
   // the doors stop the way while shut (they open by hand, doors.ts)
   const open = (k: number, n: number) => streetOpen(w, k, n);
-  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || yard(x, y);
+  // and the lift's doors are shut on this floor while its car is elsewhere (lifts.ts)
+  const liftShut = (x: number, y: number) => p.liftTo < 0 && inLift(w, x, y) && !inLift(w, p.x, p.y) && !carHere(w, p.inside, p.floor);
+  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y);
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
@@ -256,6 +261,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   // in through a fire escape's window: onto that floor
   if (p.inside >= 0 && wasOut && p.liftTo < 0) p.z = p.floor * FLOOR_H;
   stepDoors(w, TICK);
+  stepLifts(w, TICK);
 
   const hour = (w.time / 3600) % 24;
   stepPeds(w.city, w.power, w.pop, w.peds, w.cars, w.rng, TICK, w.tick, w.time, p.x, p.y, Math.cos(input.heading), Math.sin(input.heading));
