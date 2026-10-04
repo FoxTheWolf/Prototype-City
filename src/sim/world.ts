@@ -1,7 +1,7 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { drain, type Steps } from '../core/steps';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf } from './interior';
+import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, ROOM } from './interior';
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
 import { openAccount, type BankAccount } from './bank';
@@ -183,10 +183,10 @@ export function debugFloor(w: World, d: number) {
   const p = w.player;
   if (p.inside < 0) return;
   // in a lift car the buttons call it: it rides there for real, doors shut
-  const here = planOf(w.city, p.inside, p.floor), c = here ? cellAt(here, p.x, p.y) & 127 : 0;
+  const here = planOf(w.city, p.inside, p.floor), c = here ? cellAt(here, p.x, p.y) & ROOM : 0;
   if (c && here!.rooms[c - 1].kind === 'lift') {
     const f = (p.liftTo >= 0 ? p.liftTo : p.floor) + d, P = f >= 0 ? planOf(w.city, p.inside, f) : null;
-    if (P && (cellAt(P, p.x, p.y) & 127) && P.rooms[(cellAt(P, p.x, p.y) & 127) - 1].kind === 'lift') p.liftTo = f;
+    if (P && (cellAt(P, p.x, p.y) & ROOM) && P.rooms[(cellAt(P, p.x, p.y) & ROOM) - 1].kind === 'lift') p.liftTo = f;
     return;
   }
   const f = Math.max(0, p.floor + d), P = planOf(w.city, p.inside, f);
@@ -197,10 +197,10 @@ export function debugFloor(w: World, d: number) {
 export function liftFloors(w: World): number {
   const p = w.player;
   if (p.inside < 0) return 0;
-  const P = planOf(w.city, p.inside, p.floor), c = P ? cellAt(P, p.x, p.y) & 127 : 0;
+  const P = planOf(w.city, p.inside, p.floor), c = P ? cellAt(P, p.x, p.y) & ROOM : 0;
   if (!c || P!.rooms[c - 1].kind !== 'lift') return 0;
   let n = p.floor + 1;
-  for (;;) { const Q = planOf(w.city, p.inside, n), q = Q ? cellAt(Q, p.x, p.y) & 127 : 0; if (!q || Q!.rooms[q - 1].kind !== 'lift') return n; n++; }
+  for (;;) { const Q = planOf(w.city, p.inside, n), q = Q ? cellAt(Q, p.x, p.y) & ROOM : 0; if (!q || Q!.rooms[q - 1].kind !== 'lift') return n; n++; }
 }
 
 /** Press a floor on the car's panel: it rides there (true), or the floor does not exist (false). */

@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, type Building, type City, type RGB } from '../sim/city';
-import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Leaf, type Plan, type Room, type RoomKind } from '../sim/interior';
+import { CEIL, CELL, cellAt, DOOR, DOOR_H, isOffice, ROOM, liftGlassAt, SL, STAIR_LAND, stairH, stairLocal, type Door, type Leaf, type Plan, type Room, type RoomKind } from '../sim/interior';
 import { type CharGrid, KIND } from './grid';
 import { bulbGlyph, bulbsIn, fontRows } from './signs';
 
@@ -62,7 +62,7 @@ const WARM: RGB = [255, 205, 140], TUBE: RGB = [215, 232, 255], LOBBY: RGB = [25
  * room the viewer (x, y) stands in, as if they had found the switch.
  */
 export function prepareInside(I: Inside, x: number, y: number) {
-  const here = (cellAt(I.plan, x, y) & 127) - 1;
+  const here = (cellAt(I.plan, x, y) & ROOM) - 1;
   const R = I.plan.rooms, n = R.length;
   if (lamp.length < n * 3) lamp = new Float32Array(n * 3 + 96);
   for (let r = 0; r < n; r++) roomLamp(I.base, I.boxId, R[r], r, I.floor, I.elec, I.backup, I.day, r === here, lamp, r * 3);
@@ -369,7 +369,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
   }
   const leafUpTo = (limit: number) => {
     if (lt >= limit) return;
-    const hx = px + rdx * lt, hy = py + rdy * lt, rr = (cellAt(P, hx, hy) & 127) - 1, office = isOffice(I.base);
+    const hx = px + rdx * lt, hy = py + rdy * lt, rr = (cellAt(P, hx, hy) & ROOM) - 1, office = isOffice(I.base);
     span(lt, z0, z0 + DOOR_H - 0.02, (y, z) => {
       const zz = z - z0;
       lightIn(I, Math.max(0, rr), hx, hy, lt);
@@ -392,8 +392,8 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const nv = at(i, j);
     if (!nv) continue;
     if (!cur) { cur = nv; continue; }
-    if ((nv & 127) !== (cur & 127)) {
-      const r = (cur & 127) - 1, R = P.rooms[r], hx = px + rdx * tn, hy = py + rdy * tn;
+    if ((nv & ROOM) !== (cur & ROOM)) {
+      const r = (cur & ROOM) - 1, R = P.rooms[r], hx = px + rdx * tn, hy = py + rdy * tn;
       const u = xStep ? hy : hx, shade = xStep ? 1 : 0.82;
       // the lift's panel: on the long wall at the low coordinate, read left to right from inside
       let pw = -1;
@@ -409,7 +409,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
         if (b >= 0 && x === (cols >> 1) && y === (rows >> 1)) picked = b;
         put(y, tn, P4[0], P4[1] * L3[0] * shade, P4[2] * L3[1] * shade, P4[3] * L3[2] * shade);
       };
-      const r2 = (nv & 127) - 1;
+      const r2 = (nv & ROOM) - 1;
       if (cur & nv & DOOR && !I.closed && well && (r === stairIdx || r2 === stairIdx)) {
         // a door of the shaft seen from inside it: open on this storey; a storey up or down, a dark
         // doorway (that floor is not drawn); the shaft's wall around them
@@ -423,7 +423,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
       } else if (cur & nv & DOOR && !I.closed) {
         // a doorway: the lintel above it, and on through; over the way to the stairs or out to the
         // lobby, a green EXIT sign
-        const k2 = P.rooms[(nv & 127) - 1]?.kind, k1 = R.kind;
+        const k2 = P.rooms[(nv & ROOM) - 1]?.kind, k1 = R.kind;
         const toExit = k2 === 'stair' || (k2 === 'lobby' && k1 !== 'lobby');
         let s0 = 0, s1 = 0;
         if (toExit) {
@@ -453,7 +453,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     cur = nv;
   }
 
-  const r0 = cur ? (cur & 127) - 1 : 0;
+  const r0 = cur ? (cur & ROOM) - 1 : 0;
   if (!closed && P.rooms.length) {
     // the outer wall: windows on the facade's grid, the street door on the ground floor
     const t = tExit, hx = px + rdx * t, hy = py + rdy * t, R = P.rooms[r0];
@@ -517,7 +517,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const rowOf = (z: number, t: number) => Math.max(0, Math.min(rows, Math.ceil(hor - ((z - eye) * scale) / t - 0.5)));
     for (let t = 0.08; t < Math.min(tClose, 14); t += 0.03 + t * 0.02) {
       const wx = px + rdx * t, wy = py + rdy * t;
-      if (!stairLocal(I.city, I.k, wx, wy) || (cellAt(P, wx, wy) & 127) - 1 !== stairIdx) {
+      if (!stairLocal(I.city, I.k, wx, wy) || (cellAt(P, wx, wy) & ROOM) - 1 !== stairIdx) {
         yLow = Math.min(yLow, rowOf(z0, t)); yHigh = Math.max(yHigh, rowOf(zc, t));
         continue;
       }
@@ -552,7 +552,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
     const wx = px + rdx * t, wy = py + rdy * t;
     let c = at(Math.floor(wx / CELL) - P.gx, Math.floor(wy / CELL) - P.gy);
     if (!c) c = cur || 1;
-    const r = (c & 127) - 1;
+    const r = (c & ROOM) - 1;
     if (r < 0 || r >= P.rooms.length) continue;
     if (r === stairIdx) { put(y, t, 32, 0, 0, 0); continue; }
     lightIn(I, r, wx, wy, t);
@@ -566,7 +566,7 @@ export function interiorColumn(grid: CharGrid, x: number, I: Inside, px: number,
 
 /** Light at a point of the viewer's floor, as a multiplier (for the furniture). */
 export function insideLight(I: Inside, x: number, y: number): Float32Array {
-  const c = cellAt(I.plan, x, y) & 127, r = c ? c - 1 : 0;
+  const c = cellAt(I.plan, x, y) & ROOM, r = c ? c - 1 : 0;
   if (!I.plan.rooms[r]) { L3[0] = L3[1] = L3[2] = 0.3; return L3; }
   lit3(I.plan.rooms[r], lamp, r * 3, x, y, 0, I.day);
   return L3;

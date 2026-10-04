@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10a — Prédios na medida (2026-10-04)
+- A cidade foi medida de novo em módulos de 2 m: ruas, quarteirões, terrenos e recuos das torres. Cada prédio tem largura e fundo inteiros, e as janelas ficaram um pouco mais largas. A mesma semente gera agora uma cidade diferente.
+- As paredes de dentro e de fora têm espessura: você para encostado nelas, não no meio. Os móveis não entram mais nas paredes.
+
 ## 0.13.11 — Gente de verdade na calçada (2026-10-04)
 - Os pedestres andam com joelhos e cotovelos: a perna dobra ao vir para a frente e os braços balançam.
 - Perto de você, as pessoas desviam umas das outras (e de você) em vez de se atravessarem, e diminuem o passo atrás de quem anda devagar.

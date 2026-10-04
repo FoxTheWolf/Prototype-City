@@ -8,7 +8,7 @@ import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, 
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
 import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
-import { cellAt, DOOR, planOf, type RoomKind } from '../sim/interior';
+import { cellAt, DOOR, planOf, ROOM, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
 import { HD } from '../render/hd';
@@ -853,7 +853,7 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
       // 3x3 points per cell: one room all over is its floor; two rooms meeting is a wall, unless both sides are a doorway
       let first = -1, mixed = false, door = true, any = false;
       for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
-        const v = plan ? cellAt(plan, x0 + ((i + 0.5) / 3) * colM, y0 + ((j + 0.5) / 3) * rowM) : 0, room = v & 127;
+        const v = plan ? cellAt(plan, x0 + ((i + 0.5) / 3) * colM, y0 + ((j + 0.5) / 3) * rowM) : 0, room = v & ROOM;
         if (room) any = true;
         if (!(v & DOOR)) door = false;
         if (first < 0) first = room; else if (room !== first) mixed = true;
@@ -873,7 +873,7 @@ function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, no
   // the rooms' names, at their middles, where they fit
   if (plan && P.zoom <= 1) plan.rooms.forEach((R, n) => {
     const mx = (R.x0 + R.x1) / 2, my = (R.y0 + R.y1) / 2;
-    if ((cellAt(plan, mx, my) & 127) !== n + 1) return;
+    if ((cellAt(plan, mx, my) & ROOM) !== n + 1) return;
     const name = (T.room as Record<string, string>)[R.kind], c = Math.floor((mx - X0) / colM) - (name.length >> 1), r = Math.floor((my - Y0) / rowM);
     if (r < 0 || r >= MAP_ROWS || r >= drawn || c < 0 || c + name.length > SW || name.length * colM > R.x1 - R.x0 + 0.5) return;
     S.text(c, 2 + r, name, [50, 54, 66], ROOM_BG[R.kind]);

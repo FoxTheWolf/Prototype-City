@@ -667,7 +667,7 @@ export class GpuWorld {
     const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock));
     let mSize = 0;
     for (const m of list) if (!mods.has(m)) { mods.set(m, 0); mSize += partsSize(m); }
-    const nCells = Math.ceil(P.cells.length / 4), fo = 6 + P.rooms.length * 6 + nCells;
+    const nCells = Math.ceil(P.cells.length / 2), fo = 6 + P.rooms.length * 6 + nCells;
     const n = fo + 1 + P.furn.length * 6 + mSize, o = this.fxTake(n);
     if (o < 0) return -1;
     let mo = o + fo + 1 + P.furn.length * 6;
@@ -676,8 +676,8 @@ export class GpuWorld {
     P.furn.forEach((f, k) => { const e = o + fo + 1 + k * 6; F[e] = f.x; F[e + 1] = f.y; F[e + 2] = f.c; F[e + 3] = f.s; F[e + 4] = Math.hypot(f.hx, f.hy) + 0.4; W[e + 5] = mods.get(list[k])!; });
     W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = lot;
     P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind === 'store' ? 'office' : R.kind); W[w + 5] = R.unit; });
-    W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 2), o + 6 + P.rooms.length * 6);
-    if (P.cells.length & 3) { const c0 = P.cells.length & ~3; let v = 0; for (let c = c0; c < P.cells.length; c++) v |= P.cells[c] << ((c - c0) * 8); W[o + 6 + P.rooms.length * 6 + (c0 >> 2)] = v; }
+    W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 1), o + 6 + P.rooms.length * 6);
+    if (P.cells.length & 1) W[o + 6 + P.rooms.length * 6 + (P.cells.length >> 1)] = P.cells[P.cells.length - 1];
     this.fxPlan[s] = 1; W[t] = o;
     q.writeBuffer(this.fx, o * 4, W, o, n); q.writeBuffer(this.fx, t * 4, W, t, 1);
     return o;

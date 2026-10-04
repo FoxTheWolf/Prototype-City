@@ -4,19 +4,25 @@ import { COLD, PLACES } from './placeTypes';
 
 /**
  * The insides of the buildings, in the same space as the street: no loading, the door is a gap in
- * the wall. Each floor is a raster of CELL squares holding the room they belong to; a wall is where
- * two rooms meet, a doorway is where both cells carry the DOOR bit. Room walls stand on the window
+ * the wall. Each floor is a raster of CELL squares holding the room they belong to; the walls have a
+ * body (13.10a): one cell thick, the WALL bit on the cells along the outer walls and on the low side
+ * of every line where two rooms meet; a doorway is where the cells on both sides carry the DOOR bit
+ * (and none the WALL bit). Room walls stand on the window
  * grid (multiples of BAY), so every window seen from the street belongs to one room. Plans are
  * made on demand from the building's position and kept, so a building is the same every visit.
  */
 
-/** Plan raster cell in metres: a quarter of a window bay. */
-export const CELL = 0.4;
+/** Plan raster cell in metres: an eighth of a window bay, and the thickness of a wall. */
+export const CELL = 0.25;
 /** Floor to ceiling; the slab takes the rest of FLOOR_H. */
 export const CEIL = 3.2;
 export const DOOR_H = 2.2;
-/** On the cells of a doorway: crossing between two such cells passes. The low 7 bits are the room. */
-export const DOOR = 0x80;
+/** A cell's room + 1 (0 outside the plan). */
+export const ROOM = 0xff;
+/** On the cells of a doorway: crossing between two such cells passes. */
+export const DOOR = 0x100;
+/** On the cells a wall stands on. */
+export const WALL = 0x200;
 
 export type RoomKind = 'lobby' | 'hall' | 'stair' | 'lift' | 'foyer' | 'living' | 'bedroom' | 'kitchen' | 'bath' | 'office' | 'open' | 'shop' | 'store';
 
@@ -38,8 +44,8 @@ export interface Plan {
   exits: Door[];
   /** The furniture of the floor; it is solid. */
   furn: Furn[];
-  /** Room index + 1 per cell (0 outside), with the DOOR bit. Cell (i, j) is at ((gx + i), (gy + j)) * CELL. */
-  cells: Uint8Array;
+  /** Room index + 1 per cell (0 outside), with the DOOR and WALL bits. Cell (i, j) is at ((gx + i), (gy + j)) * CELL. */
+  cells: Uint16Array;
   gx: number;
   gy: number;
   nx: number;
@@ -437,7 +443,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
   const U0 = ax ? B.x0 : B.y0, U1 = ax ? B.x1 : B.y1, V0 = ax ? B.y0 : B.x0, V1 = ax ? B.y1 : B.x1;
   const gx = Math.floor(B.x0 / CELL), gy = Math.floor(B.y0 / CELL);
   const nx = Math.ceil(B.x1 / CELL) - gx, ny = Math.ceil(B.y1 / CELL) - gy;
-  const cells = new Uint8Array(nx * ny), rooms: Room[] = [];
+  const cells = new Uint16Array(nx * ny), rooms: Room[] = [];
   const C = B.cut;
 
   /** Fill the cells whose centers fall in a (u, v) rectangle; at the outer walls take the edge cells too. */
@@ -451,13 +457,14 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
       for (let i = 0; i < nx; i++) {
         const cx = (gx + i + 0.5) * CELL;
         if (cx < x0 || cx >= x1 || (C && C.nx * cx + C.ny * cy > C.c + CELL * 0.71)) continue;
-        if (or) { if (cells[j2 * nx + i]) cells[j2 * nx + i] |= val; } else cells[j2 * nx + i] = val;
+        // (a doorway takes the wall away)
+        if (or) { if (cells[j2 * nx + i]) cells[j2 * nx + i] = (cells[j2 * nx + i] | val) & ~WALL; } else cells[j2 * nx + i] = val;
       }
     }
   };
   const room = (kind: RoomKind, unit: number, u0: number, v0: number, u1: number, v1: number) => {
     u0 = Math.max(u0, U0); u1 = Math.min(u1, U1); v0 = Math.max(v0, V0); v1 = Math.min(v1, V1);
-    if (u1 - u0 < 0.3 || v1 - v0 < 0.3 || rooms.length >= 127) return;
+    if (u1 - u0 < 0.3 || v1 - v0 < 0.3 || rooms.length >= ROOM - 1) return;
     rooms.push(ax ? { kind, unit, x0: u0, y0: v0, x1: u1, y1: v1 } : { kind, unit, x0: v0, y0: u0, x1: v1, y1: u1 });
     fill(u0, v0, u1, v1, rooms.length, false);
   };
@@ -592,7 +599,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     const outer = core < 0 ? V0 : V1, back = core < 0 ? F.cv0 : F.cv1;
     if (Math.abs(outer - back) > 1.2) {
       const v0 = Math.min(outer, back), v1 = Math.max(outer, back), vm = (v0 + v1) / 2;
-      const c = cellAt({ box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & 127;
+      const c = cellAt({ box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny }, ax ? F.su0 - 0.2 : vm, ax ? vm : F.su0 - 0.2) & ROOM;
       const next = c && rooms[c - 1].unit >= 0 ? rooms[c - 1] : null; // not a corridor or the lobby
       room(next ? (next.kind === 'shop' || next.kind === 'store' || next.kind === 'open' || next.kind === 'office' ? next.kind : 'bedroom') : office ? 'office' : 'bedroom', next ? next.unit : unit++, F.su0, v0, F.lu1, v1);
       if (next && next.kind !== 'shop' && next.kind !== 'store') doorU(F.su0, vm - 0.6);
@@ -611,7 +618,22 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
       doorU(F.su1, V0 + 0.4);
     }
   }
+  walls(cells, nx, ny);
   for (const [u0, v0, u1, v1] of doors) fill(u0, v0, u1, v1, DOOR, true);
+  // the outer wall opens at the street doors, and up the fire escapes at their windows
+  const open = (D: Door, f0: number, f1: number) => {
+    const [px, py, nX, nY] = facePoint(B, D.face, 0);
+    for (let jj = 0; jj < ny; jj++) for (let i = 0; i < nx; i++) {
+      const k2 = jj * nx + i;
+      if (!(cells[k2] & WALL)) continue;
+      const cx = (gx + i + 0.5) * CELL, cy = (gy + jj + 0.5) * CELL;
+      if ((px - cx) * nX + (py - cy) * nY > CELL) continue;
+      const fw = (alongFace(B, D.face, cx, cy) - D.a0) / (D.a1 - D.a0);
+      if (fw > f0 && fw < f1) cells[k2] &= ~WALL;
+    }
+  };
+  if (ground) { const main = doorOf(city, k); for (const D of main ? [main, ...exits] : exits) open(D, 0, 1); }
+  else if (j === k) for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
   connect(cells, nx, ny, rooms);
   const P: Plan = { box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny };
   // the street doors (the main one and the shops'), so nothing is put in front of them
@@ -625,14 +647,30 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
 }
 
 /**
+ * The walls (13.10a): a cell is wall when it is on the edge of the plan, or when the cell after it
+ * (in x or in y) is another room's, so a wall between two rooms is one cell thick, on its low side.
+ */
+function walls(cells: Uint16Array, nx: number, ny: number) {
+  const W = new Uint8Array(nx * ny);
+  const at = (a: number, b: number) => (a < 0 || b < 0 || a >= nx || b >= ny ? 0 : cells[b * nx + a] & ROOM);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const c = cells[j * nx + i];
+    if (!c) continue;
+    const r = c & ROOM, e = at(i + 1, j), s = at(i, j + 1);
+    if (!e || !s || !at(i - 1, j) || !at(i, j - 1) || e !== r || s !== r) W[j * nx + i] = 1;
+  }
+  for (let k = 0; k < nx * ny; k++) if (W[k]) cells[k] |= WALL;
+}
+
+/**
  * Make every room reachable from the stairs (shops stay closed): where the cut of the diagonal,
  * or a tight lot, left a room with no way in, open a doorway to a neighbour that has one.
  */
-function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
+function connect(cells: Uint16Array, nx: number, ny: number, rooms: Room[]) {
   const seen = new Uint8Array(nx * ny), stack: number[] = [];
   // from the stairs; where the cut took them away, from the lobby or the corridor
-  let start = cells.findIndex((v) => v !== 0 && (rooms[(v & 127) - 1].kind === 'stair' || rooms[(v & 127) - 1].kind === 'lift'));
-  if (start < 0) start = cells.findIndex((v) => v !== 0 && (rooms[(v & 127) - 1].kind === 'lobby' || rooms[(v & 127) - 1].kind === 'hall'));
+  let start = cells.findIndex((v) => v !== 0 && (rooms[(v & ROOM) - 1].kind === 'stair' || rooms[(v & ROOM) - 1].kind === 'lift'));
+  if (start < 0) start = cells.findIndex((v) => v !== 0 && (rooms[(v & ROOM) - 1].kind === 'lobby' || rooms[(v & ROOM) - 1].kind === 'hall'));
   if (start < 0) return;
   for (let guard = 0; guard < 60; guard++) {
     seen.fill(0); stack.length = 0; stack.push(start); seen[start] = 1;
@@ -641,23 +679,23 @@ function connect(cells: Uint8Array, nx: number, ny: number, rooms: Room[]) {
       for (const d of [1, -1, nx, -nx]) {
         if ((d === 1 && i === nx - 1) || (d === -1 && i === 0) || (d === nx && j === ny - 1) || (d === -nx && j === 0)) continue;
         const e = c + d, w = cells[e];
-        if (!w || seen[e] || ((w & 127) !== (v & 127) && !(w & v & DOOR))) continue;
+        if (!w || seen[e] || ((w & ROOM) !== (v & ROOM) && !(w & v & DOOR))) continue;
         seen[e] = 1; stack.push(e);
       }
     }
-    // the first wall between a reached cell and a room still closed off: a doorway three cells wide
+    // the first wall between a reached cell and a room still closed off: a doorway five cells wide
     let made = false;
     for (let c = 0; c < nx * ny && !made; c++) {
       const i = c % nx;
       for (const d of [1, nx]) {
         if (d === 1 && i === nx - 1) continue;
         for (const [a, b] of [[c, c + d], [c + d, c]]) {
-          if (b >= nx * ny || a < 0 || !cells[b] || seen[b] || !seen[a] || rooms[(cells[b] & 127) - 1].kind === 'shop' || rooms[(cells[b] & 127) - 1].kind === 'store') continue;
+          if (b >= nx * ny || a < 0 || !cells[b] || seen[b] || !seen[a] || rooms[(cells[b] & ROOM) - 1].kind === 'shop' || rooms[(cells[b] & ROOM) - 1].kind === 'store') continue;
           const side = d === 1 ? nx : 1;
-          for (const o of [-side, 0, side]) {
+          for (const o of [-2 * side, -side, 0, side, 2 * side]) {
             const p = a + o, q = b + o;
             if (p < 0 || q < 0 || p >= nx * ny || q >= nx * ny) continue;
-            if ((cells[p] & 127) === (cells[a] & 127) && (cells[q] & 127) === (cells[b] & 127)) { cells[p] |= DOOR; cells[q] |= DOOR; }
+            if ((cells[p] & ROOM) === (cells[a] & ROOM) && (cells[q] & ROOM) === (cells[b] & ROOM)) { cells[p] = (cells[p] | DOOR) & ~WALL; cells[q] = (cells[q] | DOOR) & ~WALL; }
           }
           made = true; break;
         }
@@ -678,9 +716,10 @@ const CLEAR = 0.9;
 function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number][], biz?: BusinessKind) {
   const F = P.furn;
   const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
-    for (let y = y0 + 0.1; y < y1; y += 0.2) for (let x = x0 + 0.1; x < x1; x += 0.2) {
-      const c = cellAt(P, x, y);
-      if ((c & 127) !== r + 1 || c & DOOR) return false;
+    // every cell the piece covers (13.10a: a wall is one cell thick, a looser sampling missed it)
+    for (let j = Math.floor((y0 + 1e-3) / CELL); j <= Math.floor((y1 - 1e-3) / CELL); j++) for (let i = Math.floor((x0 + 1e-3) / CELL); i <= Math.floor((x1 - 1e-3) / CELL); i++) {
+      const c = cellAt(P, (i + 0.5) * CELL, (j + 0.5) * CELL);
+      if ((c & ROOM) !== r + 1 || c & (DOOR | WALL)) return false;
     }
     // keep a metre clear in front of every doorway, and 1.6 m in front of the street doors
     for (let y = y0 - CLEAR; y < y1 + CLEAR; y += 0.2) for (let x = x0 - CLEAR; x < x1 + CLEAR; x += 0.2) if (cellAt(P, x, y) & DOOR) return false;
@@ -690,6 +729,14 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
       if (x0 < f.x + ex && x1 > f.x - ex && y0 < f.y + ey && y1 > f.y - ey) return false;
     }
     return true;
+  };
+  /** The room's four walls, each as its inner face (past the wall's cells), the way a piece faces from it, and its length. */
+  const sides = (R: Room): [number, number, number, number, number][] => {
+    const mx = (R.x0 + R.x1) / 2, my = (R.y0 + R.y1) / 2;
+    // from the room's edge inward, past the cells that are wall
+    const face = (e: number, d: number, onX: boolean) => { let v = e; for (let n = 0; n < 3; n++) { const c = onX ? cellAt(P, v + d * CELL * 0.5, my) : cellAt(P, mx, v + d * CELL * 0.5); if (!(c & WALL)) break; v = (Math.floor((v + d * CELL * 0.5) / CELL) + (d > 0 ? 1 : 0)) * CELL; } return v + d * 0.05; };
+    const x0 = face(R.x0, 1, true), x1 = face(R.x1, -1, true), y0 = face(R.y0, 1, false), y1 = face(R.y1, -1, false);
+    return [[x0, 0, 1, 0, R.y1 - R.y0], [x1, 0, -1, 0, R.y1 - R.y0], [0, y0, 0, 1, R.x1 - R.x0], [0, y1, 0, -1, R.x1 - R.x0]];
   };
   /** Put a piece of depth L and width W facing (c, s) with its back at (bx, by); front: clear strip in front. */
   const put = (r: number, kind: FurnKind, bx: number, by: number, c: number, s: number, L: number, W: number, front: number): Furn | null => {
@@ -703,8 +750,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
   };
   /** Against one of the room's walls, trying them (and spots along them) in turn. */
   const wall = (r: number, R: Room, kind: FurnKind, L: number, W: number, front: number, spots = [0.5, 0.3, 0.7]): Furn | null => {
-    const walls: [number, number, number, number, number][] = [
-      [R.x0 + 0.05, 0, 1, 0, R.y1 - R.y0], [R.x1 - 0.05, 0, -1, 0, R.y1 - R.y0], [0, R.y0 + 0.05, 0, 1, R.x1 - R.x0], [0, R.y1 - 0.05, 0, -1, R.x1 - R.x0]];
+    const walls = sides(R);
     const start = (rnd() * 4) | 0;
     for (const t of spots) for (let k = 0; k < 4; k++) {
       const [wx, wy, c, s, len] = walls[(start + k) % 4];
@@ -726,8 +772,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
   };
   /** A run of pieces side by side along the first wall where at least `min` of them fit. */
   const row = (r: number, R: Room, kind: FurnKind, L: number, W: number, front: number, n: number, min = 2, biz?: BusinessKind): Furn[] => {
-    const walls: [number, number, number, number, number][] = [
-      [R.x0 + 0.05, 0, 1, 0, R.y1 - R.y0], [R.x1 - 0.05, 0, -1, 0, R.y1 - R.y0], [0, R.y0 + 0.05, 0, 1, R.x1 - R.x0], [0, R.y1 - 0.05, 0, -1, R.x1 - R.x0]];
+    const walls = sides(R);
     const start = (rnd() * 4) | 0;
     for (let k = 0; k < 4; k++) {
       const [wx, wy, c, s, len] = walls[(start + k) % 4], got: Furn[] = [];
@@ -847,7 +892,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
   /** How much of room r's floor its pieces cover, 0..1. */
   const covered = (r: number, R: Room) => {
     let a = 0;
-    for (const f of F) if (f.x > R.x0 && f.x < R.x1 && f.y > R.y0 && f.y < R.y1 && (cellAt(P, f.x, f.y) & 127) === r + 1) a += 4 * f.hx * f.hy;
+    for (const f of F) if (f.x > R.x0 && f.x < R.x1 && f.y > R.y0 && f.y < R.y1 && (cellAt(P, f.x, f.y) & ROOM) === r + 1) a += 4 * f.hx * f.hy;
     return a / ((R.x1 - R.x0) * (R.y1 - R.y0));
   };
   /** Free-standing pieces in a grid over what is left of the room (islands), each with its goods. */
@@ -951,8 +996,8 @@ export function leavesOf(P: Plan): Leaf[] {
       let run = -1, ra = 0, rb = 0;
       for (let b = 0; b <= nB; b++) {
         const p = b < nB ? (d ? cells[a * nx + b] : cells[b * nx + a]) : 0, q = b < nB ? (d ? cells[(a + 1) * nx + b] : cells[b * nx + a + 1]) : 0;
-        const ok = !!(p & q & DOOR) && (p & 127) !== (q & 127);
-        if (run >= 0 && (!ok || (p & 127) !== ra || (q & 127) !== rb)) {
+        const ok = !!(p & q & DOOR) && (p & ROOM) !== (q & ROOM);
+        if (run >= 0 && (!ok || (p & ROOM) !== ra || (q & ROOM) !== rb)) {
           const w = (b - run) * CELL, A = rooms[ra - 1], B = rooms[rb - 1];
           if (w <= 1.7 && A && B && A.kind !== 'lift' && B.kind !== 'lift' && A.kind !== 'stair' && B.kind !== 'stair') {
             // it swings into the room off the common parts; between two private rooms, into the later one
@@ -962,7 +1007,7 @@ export function leavesOf(P: Plan): Leaf[] {
           }
           run = -1;
         }
-        if (ok && run < 0) { run = b; ra = p & 127; rb = q & 127; }
+        if (ok && run < 0) { run = b; ra = p & ROOM; rb = q & ROOM; }
       }
     }
   }
@@ -970,7 +1015,7 @@ export function leavesOf(P: Plan): Leaf[] {
   return L;
 }
 
-/** The cell value at a point (room + 1 with the DOOR bit), 0 outside the plan. */
+/** The cell value at a point (room + 1 with the DOOR and WALL bits), 0 outside the plan. */
 export function cellAt(P: Plan, x: number, y: number): number {
   const i = Math.floor(x / CELL) - P.gx, j = Math.floor(y / CELL) - P.gy;
   return i < 0 || j < 0 || i >= P.nx || j >= P.ny ? 0 : P.cells[j * P.nx + i];
@@ -1014,13 +1059,15 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
   const P = planOf(city, ka, f);
   if (!P) return true;
   if (inFurniture(P, bx, by)) return true;
-  // walk the step in short hops; a wall is a change of room without the DOOR bit on both sides
+  // walk the step in short hops; a wall is a cell with the WALL bit (stepping out of one is free, so
+  // nobody gets stuck), or a change of room without the DOOR bit on both sides
   const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 0.1);
   let prev = cellAt(P, ax, ay);
   for (let s = 1; s <= n; s++) {
     const c = cellAt(P, ax + ((bx - ax) * s) / n, ay + ((by - ay) * s) / n);
     if (!c || !prev) { prev = c || prev; continue; }
-    if ((c & 127) !== (prev & 127) && !(c & prev & DOOR)) return true;
+    if (c & WALL && !(prev & WALL)) return true;
+    if ((c & ROOM) !== (prev & ROOM) && !(c & prev & DOOR)) return true;
     prev = c;
   }
   return false;

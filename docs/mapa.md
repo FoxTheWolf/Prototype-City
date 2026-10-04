@@ -48,4 +48,5 @@
     - `voice.ts`: a voz de cada cidadão (as condições de quem fala e do momento, os nomes da vida dele em `lifeCtx`, e o jeito de digitar em `voice`);
     - `text/`: os arquivos da gramática, juntados por `text/index.ts` (`TEXT`): `words`, `words-more`, `memes`, `sms`, `news`, `news2008`, `calendar`, `comments`, `profiles`, `names` (nomes por gênero e geração, sobrenomes, bichos), `promo` (as ofertas das lojas por SMS) e `posts/` (formas, emoções e assuntos).
   - **`src/counter.ts`, `src/shop.ts`, `src/bagUi.ts`** (interface, como o celular): o balcão do caixa, mirar e pegar um produto da prateleira, e a tela da mochila.
+  - **`tests/`** (no Node, sem o navegador; rodar com `npx rolldown tests/<x>.ts --format esm --platform node -o tests/.out/<x>.mjs && node tests/.out/<x>.mjs`): `plans.ts` (as invariantes das plantas), `plan-print.ts` (uma planta em texto).
   - **`src/render/intro.ts`:** a abertura (terminal no preto, depois a cidade em blocos que se desfazem em glifos).

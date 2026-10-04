@@ -8,8 +8,14 @@ export const SIDEWALK = 4;
 /** The spacing of the lamps over the plazas, the parks' paths and the square (m). */
 const PLAZA_LAMP = 16;
 export const LANE_W = 3.5;
-/** Width of one window bay on a facade; the walls of the rooms inside line up with it. */
-export const BAY = 1.6;
+/**
+ * Width of one window bay on a facade, and the module of the plans inside (13.10a): the roads, the
+ * blocks, the lots and the setbacks all measure in it, so every building is a whole number of bays
+ * on the world's grid and the rooms fit it with nothing left over.
+ */
+export const BAY = 2;
+/** A length rounded to a whole number of bays (at least one). */
+const bays = (v: number) => Math.max(BAY, Math.round(v / BAY) * BAY);
 
 export type RGB = readonly [number, number, number];
 
@@ -625,7 +631,8 @@ function layoutAxis(rng: Rng, size: number, blockMin: number, blockMax: number, 
   const b = [0, wide];
   let x = wide;
   for (let k = 1; ; k++) {
-    const blk = blockMin + Math.round(rng() * (blockMax - blockMin));
+    // whole bays, so a block (and its sidewalk ring) lies on the grid of the bays (13.10a)
+    const blk = blockMin + bays(rng() * (blockMax - blockMin)) - BAY;
     const w = k % wideEvery === 0 ? wide : road;
     if (x + blk + w > size) break;
     b.push(x + blk, x + blk + w);
@@ -656,8 +663,9 @@ export function roadCenter(b: number[], k: number): number {
  */
 export function generateCity(seed: number, size: number): City {
   const rng = mulberry32(seed);
-  const xb = layoutAxis(rng, size, 150, 200, 21, 28, 4);
-  const yb = layoutAxis(rng, size, 60, 80, 14, 21, 5);
+  // the road widths are whole bays too (22 m keeps the 21 m roads' three lanes a way)
+  const xb = layoutAxis(rng, size, 150, 200, 22, 28, 4);
+  const yb = layoutAxis(rng, size, 60, 80, 14, 22, 5);
   const w = xb[xb.length - 1], h = yb[yb.length - 1];
   const nbx = (xb.length - 2) / 2, nby = (yb.length - 2) / 2;
   const cx = w * (0.4 + rng() * 0.2), cy = h * (0.4 + rng() * 0.2);
@@ -720,8 +728,8 @@ export function generateCity(seed: number, size: number): City {
       const lw = ax1 - ax0, lh = ay1 - ay0;
       if (Math.max(lw, lh) > maxLot) {
         const t = 0.35 + br() * 0.3;
-        if (lw >= lh) { const s = Math.round(ax0 + lw * t); lot(ax0, ay0, s, ay1); lot(s, ay0, ax1, ay1); }
-        else { const s = Math.round(ay0 + lh * t); lot(ax0, ay0, ax1, s); lot(ax0, s, ax1, ay1); }
+        if (lw >= lh) { const s = ax0 + bays(lw * t); lot(ax0, ay0, s, ay1); lot(s, ay0, ax1, ay1); }
+        else { const s = ay0 + bays(lh * t); lot(ax0, ay0, ax1, s); lot(ax0, s, ax1, ay1); }
         return;
       }
       if (br() < K.empty) {
@@ -743,7 +751,7 @@ export function generateCity(seed: number, size: number): City {
       // warehouses have one or two tall open floors
       if (facade === 'warehouse') floors = Math.min(floors, 2);
       // towers stand back from the lot edge and step in as they rise
-      let inset = floors > 25 && Math.min(lw, lh) > 20 ? 2 + br() * 3 : 0;
+      let inset = floors > 25 && Math.min(lw, lh) > 20 ? bays(2 + br() * 3) : 0;
       const tiers = floors > 30 ? 1 + ((br() * 3) | 0) : 1;
       let top: Building | null = null;
       const fl = floodFor(seed, districts[district].type, facade, floors, ax0, ay0);
@@ -755,7 +763,7 @@ export function generateCity(seed: number, size: number): City {
         if (k === 1 && fl) { const u = hash3(seed, ax0 | 0, ay0 | 0); top.flood = fl; top.floodH = Math.min(bh, fl === FLOOD_WARM ? 14 + u * 30 : 30 + u * 60); }
         buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
-        inset += 3 + br() * 3;
+        inset += bays(3 + br() * 3);
       }
       if (top) roof(top, floors);
     };

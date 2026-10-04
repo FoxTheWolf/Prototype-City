@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { FLOOR_H } from './city';
-import { cellAt, planOf } from './interior';
+import { cellAt, planOf, ROOM } from './interior';
 import type { World } from './world';
 
 /**
@@ -30,7 +30,7 @@ export function liftTop(w: World, k: number): number {
   n = 0;
   if (L) {
     const x = (L.x0 + L.x1) / 2, y = (L.y0 + L.y1) / 2;
-    for (;;) { const P = planOf(w.city, k, n), q = P ? cellAt(P, x, y) & 127 : 0; if (!q || P!.rooms[q - 1].kind !== 'lift') break; n++; }
+    for (;;) { const P = planOf(w.city, k, n), q = P ? cellAt(P, x, y) & ROOM : 0; if (!q || P!.rooms[q - 1].kind !== 'lift') break; n++; }
   }
   tops.set(k, n);
   return n;
@@ -54,7 +54,7 @@ export const carHere = (w: World, k: number, f: number) => { const c = carOf(w, 
 export function inLift(w: World, x: number, y: number): boolean {
   const p = w.player;
   if (p.inside < 0) return false;
-  const P = planOf(w.city, p.inside, p.floor), c = P ? cellAt(P, x, y) & 127 : 0;
+  const P = planOf(w.city, p.inside, p.floor), c = P ? cellAt(P, x, y) & ROOM : 0;
   return !!c && P!.rooms[c - 1].kind === 'lift';
 }
 

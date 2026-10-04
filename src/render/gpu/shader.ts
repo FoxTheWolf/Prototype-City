@@ -490,9 +490,9 @@ fn planCell(o: u32, i: i32, j: i32) -> u32 {
   let nx = i32(fx[o + 2u]);
   if (i < 0 || j < 0 || i >= nx || j >= i32(fx[o + 3u])) { return 0u; }
   let b = u32(j * nx + i);
-  return (fx[o + 6u + fx[o + 4u] * 6u + b / 4u] >> ((b % 4u) * 8u)) & 255u;
+  return (fx[o + 6u + fx[o + 4u] * 6u + b / 2u] >> ((b % 2u) * 16u)) & 0xffffu;
 }
-fn roomAt(o: u32, x: f32, y: f32) -> u32 { return planCell(o, ifloor(x / PCELL) - i32(fx[o]), ifloor(y / PCELL) - i32(fx[o + 1u])) & 127u; }
+fn roomAt(o: u32, x: f32, y: f32) -> u32 { return planCell(o, ifloor(x / PCELL) - i32(fx[o]), ifloor(y / PCELL) - i32(fx[o + 1u])) & 255u; }
 struct Peek { ok: bool, d: f32, r: i32, uu: f32, shade: f32 };
 /** From the glass at (hx, hy), on through the plan to the first wall between two rooms (no doorway), or the far side of box q. */
 fn peekInto(o: u32, q: u32, hx: f32, hy: f32, rdx: f32, rdy: f32) -> Peek {
@@ -512,12 +512,12 @@ fn peekInto(o: u32, q: u32, hx: f32, hy: f32, rdx: f32, rdy: f32) -> Peek {
   if (cur == 0u) { return pk; }
   for (var g = 0; g < 300; g++) {
     let xs = tX < tY; let tn = select(tY, tX, xs);
-    if (tn + e >= tEnd) { pk.ok = true; pk.d = tEnd; pk.r = i32(cur & 127u) - 1; pk.uu = 0.0; pk.shade = 0.8; return pk; }
+    if (tn + e >= tEnd) { pk.ok = true; pk.d = tEnd; pk.r = i32(cur & 255u) - 1; pk.uu = 0.0; pk.shade = 0.8; return pk; }
     if (xs) { i += stX; tX += dX; } else { j += stY; tY += dY; }
     let nv = planCell(o, i, j);
     if (nv == 0u) { continue; }
-    if ((nv & 127u) != (cur & 127u) && (cur & nv & PDOOR) == 0u) {
-      pk.ok = true; pk.d = tn + e; pk.r = i32(cur & 127u) - 1; pk.uu = select(sx + rdx * tn, sy + rdy * tn, xs); pk.shade = select(0.82, 1.0, xs);
+    if ((nv & 255u) != (cur & 255u) && (cur & nv & PDOOR) == 0u) {
+      pk.ok = true; pk.d = tn + e; pk.r = i32(cur & 255u) - 1; pk.uu = select(sx + rdx * tn, sy + rdy * tn, xs); pk.shade = select(0.82, 1.0, xs);
       return pk;
     }
     cur = nv;
@@ -625,7 +625,7 @@ fn wallPx(kind: u32, unit: i32, zr: f32, uu: f32) -> Px {
 struct FHit { t: f32, ch: u32, c: vec3f, glow: bool };
 fn furnHit(o: u32, f: i32, rdx: f32, rdy: f32, kz: f32, t0: f32, t1: f32) -> FHit {
   var h = FHit(t1, 0u, vec3f(0.0), false);
-  let fo = o + 6u + fx[o + 4u] * 6u + (fx[o + 2u] * fx[o + 3u] + 3u) / 4u;
+  let fo = o + 6u + fx[o + 4u] * 6u + (fx[o + 2u] * fx[o + 3u] + 1u) / 2u;
   let n = fx[fo]; let oz = u.eye - f32(f) * FLOOR_H;
   // parts thinner than a cell at this distance are widened to half a cell (as in objectsOver)
   let mh = 0.5 * u.colW * t0; let mz = 0.5 * t0 / u.scale;
@@ -912,17 +912,17 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
     let nv = planCell(o, i, j);
     if (nv == 0u) { continue; }
     if (cur == 0u) { cur = nv; continue; }
-    if ((nv & 127u) != (cur & 127u)) {
-      let r = i32(cur & 127u) - 1; let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
+    if ((nv & 255u) != (cur & 255u)) {
+      let r = i32(cur & 255u) - 1; let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
       let hx = u.px + rdx * tn; let hy = u.py + rdy * tn; let uu = select(hx, hy, xs); let shade = select(0.82, 1.0, xs);
       let z = u.eye - m * tn;
-      let nk = fx[roomRec(o, i32(nv & 127u) - 1) + 4u];
+      let nk = fx[roomRec(o, i32(nv & 255u) - 1) + 4u];
       // the lift's doorway is shut on this floor while its car is elsewhere
       let liftShut = !carHereF && (nk == R_LIFT || kind == R_LIFT);
       if ((cur & nv & PDOOR) != 0u && !shut && !liftShut) {
         // a doorway: the lintel above it, and on through; over the way out to the lobby (or the stairs), a green EXIT sign
         if (z > z0 + DOOR_H && z <= zc) {
-          let k2 = fx[roomRec(o, i32(nv & 127u) - 1) + 4u];
+          let k2 = fx[roomRec(o, i32(nv & 255u) - 1) + 4u];
           let toExit = k2 == R_STAIR || (k2 == R_LOBBY && kind != R_LOBBY);
           let zz = z - z0;
           if (toExit && zz > DOOR_H + 0.06 && zz < DOOR_H + 0.32) {
@@ -1002,7 +1002,7 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
   if (wall) { res.nearT = 1e9; }
   else if (nRooms > 0u) {
     // the outer wall: windows on the facade's grid, the street doors on the ground floor
-    let r0 = select(0, i32(cur & 127u) - 1, cur != 0u); let ro = roomRec(o, r0); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
+    let r0 = select(0, i32(cur & 255u) - 1, cur != 0u); let ro = roomRec(o, r0); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
     let t = tExit; let hx = u.px + rdx * t; let hy = u.py + rdy * t;
     let along = select(select(hx * kny - hy * knx, hx, face < 4), hy, face < 2);
     let corner = along - bld[q + 36u + u32(face) * 2u] < 0.35 || bld[q + 37u + u32(face) * 2u] - along < 0.35;
@@ -1065,7 +1065,7 @@ fn interiorCell(IB: u32, rdx: f32, rdy: f32, m: f32) -> InC {
   let wx = u.px + rdx * t; let wy = u.py + rdy * t;
   var c = planCell(o, ifloor(wx / PCELL) - gx, ifloor(wy / PCELL) - gy);
   if (c == 0u) { c = select(1u, cur, cur != 0u); }
-  let r = i32(c & 127u) - 1;
+  let r = i32(c & 255u) - 1;
   if (r < 0 || u32(r) >= nRooms) { return res; }
   let ro = roomRec(o, r); let kind = fx[ro + 4u];
   var p = Px(0u, vec3f(0.0));
