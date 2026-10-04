@@ -23,7 +23,61 @@ const C = (s: string) => s.charCodeAt(0);
 export function objectsWGSL(): string {
   return /* wgsl */ `
 const OW = ${OW}u; const PW = ${PW}u; const TILE = ${TILE}u; const PIVOT = 0.7;
-const M_SOLID = 0u; const M_LEAF = 1u; const M_GLOW = 2u; const M_TEXT = 3u; const M_BOARD = 4u; const M_WHEEL = 5u; const M_GLASS = 6u; const M_SCREEN = 7u;
+const M_SOLID = 0u; const M_LEAF = 1u; const M_GLOW = 2u; const M_TEXT = 3u; const M_BOARD = 4u; const M_WHEEL = 5u; const M_GLASS = 6u; const M_SCREEN = 7u; const M_SKIN = 8u;
+// A person's body part in the blocky style (13.8): the hit's pixel on the skin's grid (1.8/32 m) on
+// the face it is on, colored by the part (0 head, 1 body, 2 arm, 3 leg) and its style bits (see pedLook).
+// c: the main color (skin tone, shirt, sleeve, trousers); c2: the second (hair, jacket, hand, shoes).
+fn mcSkin(w: u32, hp: vec3f, q0: vec3f, q1: vec3f, c: vec3f, c2: vec3f) -> vec3f {
+  let X = 1.8 / 32.0; let k = w & 15u; let st = w >> 4u;
+  // which face: the nearest of the box's planes
+  let d0 = abs(hp - q0); let d1 = abs(q1 - hp);
+  var f = 0u; var m = d1.x; // 0 front (+x), 1 back, 2 right (+y), 3 left, 4 top, 5 bottom
+  if (d0.x < m) { m = d0.x; f = 1u; } if (d1.y < m) { m = d1.y; f = 2u; } if (d0.y < m) { m = d0.y; f = 3u; }
+  if (d1.z < m) { m = d1.z; f = 4u; } if (d0.z < m) { f = 5u; }
+  // the pixel: across the face (from the part's left as seen from that face) and down from its top
+  let row = i32(floor((q1.z - hp.z) / X)); var col = 0;
+  if (f == 0u) { col = i32(floor((q1.y - hp.y) / X)); } else if (f == 1u) { col = i32(floor((hp.y - q0.y) / X)); }
+  else if (f == 2u) { col = i32(floor((hp.x - q0.x) / X)); } else if (f == 3u) { col = i32(floor((q1.x - hp.x) / X)); }
+  else { col = i32(floor((q1.y - hp.y) / X)); }
+  let shade = select(1.0, 0.82, (row + col) % 7 == 3); // a little pixel noise, as hand-drawn skins have
+  if (k == 0u) {
+    // the head: hair (none, short, long) over the face; eyes on the 5th row, a mouth on the 7th; a beard
+    let hl = st & 3u; let eyes = (st >> 2u) & 3u; let beard = (st >> 4u) & 1u;
+    if (f == 4u) { return select(c, c2, hl > 0u); }
+    if (f == 5u) { return c * 0.8; }
+    let hairRows = select(select(1, 2, hl == 1u), 6, hl == 2u);
+    if (hl > 0u && (row < select(hairRows, 1 + i32(hl), f == 0u) || (f == 0u && hl == 2u && (col == 0 || col == 7) && row < 5))) { return c2 * shade; }
+    if (f == 0u) {
+      if (row == 4 && (col == 1 || col == 6)) { return vec3f(235.0, 235.0, 230.0); }
+      if (row == 4 && (col == 2 || col == 5)) {
+        return select(select(vec3f(60.0, 40.0, 25.0), vec3f(50.0, 90.0, 160.0), eyes == 1u), select(vec3f(60.0, 120.0, 70.0), vec3f(25.0, 25.0, 28.0), eyes == 3u), eyes >= 2u);
+      }
+      if (beard == 1u && row >= 5) { return c2 * 0.9; }
+      if (row == 6 && (col == 3 || col == 4)) { return c * 0.62; }
+      if (row == 5 && (col == 3 || col == 4)) { return c * 0.88; } // the nose's shadow
+    }
+    return c * select(1.0, 0.9, f != 0u);
+  }
+  if (k == 1u) {
+    // the body: the shirt, an open jacket at its sides, stripes; the neck's skin at the collar; a belt
+    if (row == 11) { return c * 0.5; }
+    if (st == 1u && (f == 0u || f == 1u) && (col < 3 || col > 4 || f == 1u)) { return c2 * shade; }
+    if (st == 1u && (f == 2u || f == 3u)) { return c2 * shade; }
+    if (st == 2u && row % 3 == 1) { return c2; }
+    if (f == 0u && row == 0 && (col == 3 || col == 4)) { return c * 0.75; }
+    return c * shade;
+  }
+  if (k == 2u) {
+    // an arm: the sleeve (long, or short down to the 4th row), the hand at the bottom
+    let sleeve = select(9, 4, st == 1u);
+    if (f == 5u || row >= sleeve) { return c2 * select(1.0, 0.85, row >= 11); }
+    return c * shade;
+  }
+  // a leg: the trousers, the shoes on the last two rows
+  if (f == 5u || row >= 10) { return c2; }
+  return c * select(shade, 0.8, f == 1u);
+}
+
 const LEAF = array<u32, 5>(${['@', '&', '%', '#', '*'].map((c) => `${C(c)}u`).join(', ')});
 const SPOKES = array<u32, 4>(${['|', '/', '-', '\\'].map((c) => `${C(c)}u`).join(', ')});
 const TYRE = vec3f(52.0, 52.0, 56.0); const HUB = vec3f(170.0, 170.0, 175.0); const RIM = vec3f(140.0, 140.0, 148.0); const DIRT = vec3f(110.0, 90.0, 62.0);
@@ -469,6 +523,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         ch = LEAF[min(4u, u32(h * 5.0))];
         kk *= 0.55 + 0.45 * h + 0.25 * nrm.z;
       } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && shape == 0u), fx[p + 12u], face == 2); }
+      if (mat == M_SKIN) { col = mcSkin(fx[p + 23u], hp, q0, q1, col, col2); ch = HASH; }
     }
     // a board's printed face is a surface like any other (lit, shaded, its own sun), lit at night by its lamps too
     let painted = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;

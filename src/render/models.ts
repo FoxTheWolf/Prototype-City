@@ -3,7 +3,7 @@ import { type RGB } from '../sim/city';
 import { Mat, part, Shape, type Part } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
-const { Solid, Leaf, Glow, Text, Board, Wheel, Glass, Screen } = Mat;
+const { Solid, Leaf, Glow, Text, Board, Wheel, Glass, Screen, Skin } = Mat;
 
 const GLASS: RGB = [45, 65, 95];
 const TIRE: RGB = [28, 28, 32];
@@ -108,6 +108,28 @@ export function vehicleModel(kind: string, col: RGB, flash = 0, who = 0): Part[]
   return m;
 }
 const peds = new Map<string, Part[]>();
+const HAIR: RGB[] = [[30, 22, 18], [70, 45, 25], [120, 80, 40], [190, 150, 80], [150, 60, 30], [140, 140, 140], [20, 20, 22], [90, 60, 40]];
+const SHOES: RGB[] = [[25, 25, 28], [70, 45, 30], [200, 200, 200], [110, 80, 50]];
+/**
+ * A person's look in the blocky style (13.8), from who they are: skin tone, hair (color and how
+ * long), shirt and trousers, a jacket over the shirt or not, sleeves short or long, shoes, and the
+ * slimmer arms (3 pixels) for some. The style bits go to the shader (mcSkin): head = hair length
+ * (2 bits) + eye color (2) + beard (1); body = 0 plain, 1 open jacket, 2 striped; arm = 0 long, 1 short sleeves.
+ */
+export function pedLook(who: number) {
+  const h = (q: number) => hash3(who, 1308, q);
+  const pick = <T>(a: T[], q: number) => a[Math.floor(h(q) * a.length)];
+  const skin = pick(SKIN, 1), hair = pick(HAIR, 2), shirt = pick(CLOTHES, 3), pants = pick(CLOTHES, 4), jacket = pick(CLOTHES, 5);
+  const bodyStyle = h(6) < 0.45 ? 1 : h(6) < 0.6 ? 2 : 0, armStyle = bodyStyle !== 1 && h(7) < 0.35 ? 1 : 0;
+  const hairLen = h(8) < 0.08 ? 0 : h(8) < 0.6 ? 1 : 2, eyes = Math.floor(h(9) * 4), beard = hairLen !== 2 && h(10) < 0.2 ? 1 : 0;
+  return {
+    skin, hair, shirt, pants, jacket, shoes: pick(SHOES, 11), alex: hairLen === 2 && h(12) < 0.7,
+    // a jacket's sleeves are the jacket's
+    sleeve: bodyStyle === 1 ? jacket : shirt,
+    headStyle: hairLen | (eyes << 2) | (beard << 4), bodyStyle, armStyle,
+  };
+}
+
 const UMBRELLAS: RGB[] = [[30, 30, 34], [150, 30, 40], [40, 60, 120], [200, 180, 60], [60, 110, 70], [150, 150, 155]];
 /**
  * A person standing or walking, facing +x: legs and arms swinging with the step (`step`, 0..3),
@@ -117,29 +139,44 @@ export function pedModel(who: number, step: number, umbrella: boolean, far: bool
   const key = (who & 255) + '|' + step + '|' + umbrella + far + use;
   let m = peds.get(key);
   if (m) return m;
-  const coat = CLOTHES[who % CLOTHES.length], pants = CLOTHES[(who >> 3) % CLOTHES.length], skin = SKIN[(who >> 5) % SKIN.length];
-  if (far) m = [part(Box, -0.13, -0.22, 0, 0.13, 0.22, 1.45, coat, Solid, '|', '=', '|'), part(Ball, -0.13, -0.13, 1.45, 0.13, 0.13, 1.75, skin, Solid, '@')];
+  const L = pedLook(who), coat = L.shirt, pants = L.pants;
+  // the blocky proportions (13.8): a pixel of the skin's grid is 1.8/32 m; head 8, body 8 x 12 x 4, limbs 4 x 12 x 4
+  const X = 1.8 / 32, hd = 4 * X, bd = 2 * X, lw = 4 * X, alex = L.alex ? X : 0;
+  const sk = (k: number, style: number) => k | (style << 4);
+  if (far) m = [
+    part(Box, -bd, -hd, 0, bd, hd, 12 * X, pants, Solid, '|', '=', '|'),
+    part(Box, -bd, -hd, 12 * X, bd, hd, 24 * X, coat, Solid, '#', '=', '#'),
+    part(Box, -hd, -hd, 24 * X, hd, hd, 32 * X, L.skin, Solid, '@')];
   else {
-    const sw = 0.2 * Math.sin((step * Math.PI) / 2);
+    const sw = 0.18 * Math.sin((step * Math.PI) / 2), Z = 12 * X, T = 24 * X;
+    const limb = (y0: number, y1: number, dx: number, z0: number, z1: number, col: RGB, col2: RGB, k: number, st: number) => {
+      const q = part(Box, -bd + dx, y0, z0, bd + dx, y1, z1, col, Skin, '#', '=', '#');
+      q.col2 = col2; q.skin = sk(k, st);
+      return q;
+    };
+    const head = part(Box, -hd, -hd, T, hd, hd, T + 8 * X, L.skin, Skin, '#', '#', '#');
+    head.col2 = L.hair; head.skin = sk(0, L.headStyle);
+    const body = part(Box, -bd, -hd, Z, bd, hd, T, coat, Skin, '#', '=', '#');
+    body.col2 = L.jacket; body.skin = sk(1, L.bodyStyle);
     m = [
-      part(Box, -0.07 + sw, 0.03, 0, 0.07 + sw, 0.17, 0.86, pants, Solid, '|'),
-      part(Box, -0.07 - sw, -0.17, 0, 0.07 - sw, -0.03, 0.86, pants, Solid, '|'),
-      part(Box, -0.13, -0.22, 0.84, 0.13, 0.22, 1.47, coat, Solid, '#', '=', '#'),
+      limb(0, lw, sw, 0, Z, pants, L.shoes, 3, 0),
+      limb(-lw, 0, -sw, 0, Z, pants, L.shoes, 3, 0),
+      body,
       // the right arm swinging, or holding the phone: at the ear on a call, out in front to text (its screen lit)
-      use === 1 ? part(Box, -0.04, 0.14, 1.22, 0.06, 0.26, 1.6, coat, Solid, '|')
-        : use ? part(Box, 0, 0.1, 1.02, 0.3, 0.2, 1.12, coat, Solid, '-', '=')
-          : part(Box, -0.06 - sw * 0.7, 0.22, 0.88, 0.06 - sw * 0.7, 0.32, 1.42, coat, Solid, '|'),
-      part(Box, -0.06 + sw * 0.7, -0.32, 0.88, 0.06 + sw * 0.7, -0.22, 1.42, coat, Solid, '|'),
-      part(Ball, -0.12, -0.12, 1.47, 0.14, 0.12, 1.76, skin, Solid, '@'),
+      use === 1 ? limb(hd, hd + lw - alex, 0, T - 0.1, T + 0.28, L.sleeve, L.skin, 2, L.armStyle)
+        : use ? limb(hd - 0.05, hd + lw - 0.05 - alex, 0.15, Z + 0.15, Z + 0.27, L.sleeve, L.skin, 2, L.armStyle)
+          : limb(hd, hd + lw - alex, -sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
+      limb(-hd - lw + alex, -hd, sw * 0.7, Z, T, L.sleeve, L.skin, 2, L.armStyle),
+      head,
     ];
-    if (use === 1) m.push(part(Box, -0.01, 0.1, 1.52, 0.07, 0.15, 1.68, [30, 30, 34], Solid, '|'));
+    if (use === 1) m.push(part(Box, -0.01, hd - 0.02, T + 0.12, 0.07, hd + 0.03, T + 0.28, [30, 30, 34], Solid, '|'));
     else if (use) {
-      m.push(part(Box, 0.26, -0.02, 1.08, 0.36, 0.1, 1.13, [30, 30, 34], Solid, '='));
-      m.push(part(Box, 0.27, 0, 1.13, 0.35, 0.08, 1.15, use === 3 ? [255, 240, 160] : [150, 200, 255], Glow, '-', '='));
+      m.push(part(Box, 0.26, -0.02, Z + 0.24, 0.36, 0.1, Z + 0.29, [30, 30, 34], Solid, '='));
+      m.push(part(Box, 0.27, 0, Z + 0.29, 0.35, 0.08, Z + 0.31, use === 3 ? [255, 240, 160] : [150, 200, 255], Glow, '-', '='));
     }
     if (umbrella) {
-      m.push(part(Box, 0.08, 0.2, 1.3, 0.11, 0.23, 2.0, [40, 40, 44], Solid, '|'));
-      m.push(part(Ball, -0.5, -0.38, 1.92, 0.66, 0.78, 2.22, UMBRELLAS[(who >> 2) % UMBRELLAS.length], Solid, '^', '^', '^'));
+      m.push(part(Box, 0.08, hd, 1.3, 0.11, hd + 0.03, 2.05, [40, 40, 44], Solid, '|'));
+      m.push(part(Ball, -0.5, -0.38, 1.97, 0.66, 0.78, 2.27, UMBRELLAS[(who >> 2) % UMBRELLAS.length], Solid, '^', '^', '^'));
     }
   }
   peds.set(key, m);

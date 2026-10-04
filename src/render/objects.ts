@@ -20,7 +20,12 @@ export const Shape = { Box: 0, Cyl: 1, Ball: 2 } as const;
  * shop signs; farther, as glyphs; farther still, a lit bar. Board: a painted billboard facing +x,
  * its text across it in 5x7 block letters (`col2` on `col`), lit from below by `lamp` (0..1).
  */
-export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3, Board: 4, Wheel: 5, Glass: 6, Screen: 7 } as const;
+export const Mat = { Solid: 0, Leaf: 1, Glow: 2, Text: 3, Board: 4, Wheel: 5, Glass: 6, Screen: 7, Skin: 8 } as const;
+/*
+ * Skin (13.8): a body part of a person in the blocky style, its color drawn per pixel of the skin's
+ * grid (head 8x8, body 8x12, limbs 4x12; a pixel is 1.8/32 m) from `col`, `col2` and `skin` (which
+ * part, and the style bits): see mcSkin in gpu/objects.ts. Shaded like Solid. Only the GPU draws it.
+ */
 /*
  * Wheel: a tyre (an ellipsoid flattened along y), drawn from the side as hub, spokes and a rubber
  * ring with a scuff of dirt, all turning by the object's `wheel` angle. Glass: see-through; the
@@ -43,6 +48,8 @@ export interface Part {
   lamp?: number;
   /** Board: the letters are lamps (bulbs up close, lit glyphs farther), not paint. Glow: a sign's bulb (it looks lit as signs do). */
   bulbs?: boolean;
+  /** Skin: the body part (0 head, 1 body, 2 arm, 3 leg) and its style bits from bit 4 (see mcSkin). */
+  skin?: number;
 }
 
 export interface Obj {

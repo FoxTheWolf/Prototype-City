@@ -803,7 +803,7 @@ function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], ba
     W[w + 16] = p.sym === undefined || p.sym < 0 ? 0 : p.sym + 1;
     const c2 = p.col2;
     F[w + 17] = c2?.[0] ?? 0; F[w + 18] = c2?.[1] ?? 0; F[w + 19] = c2?.[2] ?? 0; W[w + 20] = c2 ? 1 : 0;
-    F[w + 21] = p.lamp ?? 0; W[w + 22] = p.bulbs ? 1 : 0; W[w + 23] = 0;
+    F[w + 21] = p.lamp ?? 0; W[w + 22] = p.bulbs ? 1 : 0; W[w + 23] = p.skin ?? 0;
   });
   return tx;
 }
