@@ -12,7 +12,7 @@ Jogo de simulação de cidade americana de **2008**, tom noir mas **linguagem li
 - Lacunas que o jogo preenche: `{place}`, `{road}`, `{first}` (o nome de quem fala), `{job}`, `{biz}` (onde trabalha), `{district}`, `{time}`.
 - Símbolos de outra lista: `#nome#` (pode criar listas auxiliares, ex. `"#shrug#"`).
 
-Quero de 6 a 10 frases por chave, com variedade de idade e humor; quem é tratado com grosseria responde mais seco ou vai embora; quem é tratado com gentileza ajuda mais. Inclua também `reply.confused` (não entendeu a frase) e `reply.leave` (encerra a conversa).
+Quero de 6 a 10 frases por chave, com variedade de idade e humor; quem é tratado com grosseria responde mais seco ou vai embora; quem é tratado com gentileza ajuda mais. Inclua também `reply.confused` (não entendeu a frase), `reply.banter.nice|plain|rude` (respostas leves a conversa sem intenção séria: piada, bobagem) e `reply.leave` (encerra a conversa).
 
 Intents: (colar aqui a lista de `id` da tarefa 07).
 

@@ -13,6 +13,7 @@ Quero um JSON com três partes:
 {
   "id": "ask_where",                        // snake_case, único
   "what": "Asking where a place or person is.",
+  "label": "Question about a place's location",   // o que aparece para o jogador acima da caixa de texto antes de enviar (curto, até ~40 letras)
   "keywords": { "where": 3, "find": 2, "get to": 3, "located": 2, "way to": 3, "how do i get": 4 },
   "needs_question": true,                   // se costuma ser pergunta
   "slots": ["place"],                        // o que o jogo deve extrair da frase: place | person | thing | time | number | none
@@ -31,7 +32,9 @@ Cubra: cumprimentar, despedir, agradecer, desculpar-se, perguntar onde fica, per
   "lie_markers": { "trust me": 2, "honestly": 1, "i swear": 2 }
 }
 ```
-Pode acrescentar outros eixos que façam sentido (formal/informal, nervoso).
+Pode acrescentar outros eixos que façam sentido (formal/informal, nervoso). Inclua `"tone_labels"`: o rótulo curto que o jogador vê para cada faixa de tom (ex.: -3 "Hostile", -1 "Curt", 0 "Neutral", +1 "Polite", +3 "Respectful").
+
+Inclua também dois intents especiais: `banter` (conversa sem intenção séria: piada, bobagem, frase aleatória; label "Banter") e `unrecognized` (nada reconhecido ou erros demais; label "Unrecognized"), com as regras de quando cada um vale.
 
 3. `"rules"`: de 15 a 30 regras simples, em texto, de como juntar tudo. Exemplos: "uma frase que começa com do/does/can/could/is/are/where/what/who/when/why/how, ou termina com ?, é pergunta"; "'not' ou 'n't' antes da palavra-chave inverte o sentido"; "se dois intents empatam, vale o que tem a palavra mais pesada"; "um nome de lugar conhecido na frase puxa para ask_where"; "frases com menos de 2 palavras-chave dão 'não entendi'". Pense em erros de digitação comuns e em gírias de 2008 (u, ur, pls, thx).
 
