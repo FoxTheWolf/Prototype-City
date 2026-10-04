@@ -40,7 +40,8 @@ struct CU {
 // the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's layer
 // (tmGrid is set while the notebook's screen is up, tmShow.x while its layer is shown: faced squarely);
 // g0 to g3: the notebook glass's corners (top-left, top-right, bottom-right, bottom-left), faced or from
-// aside, for its glow; eye.x: how bright the screens look to the eye (EYE.k, thousandths, 600 on a lit street at night)
+// aside, for its glow; eye.x: how bright the screens look to the eye (EYE.k, thousandths, 600 on a lit street at night);
+// eye.y, eye.z: the phone rectangle's glow reach and strength (hundredths; the watch's small LCD reaches further)
 fn inPhone(p: vec2i) -> bool { return all(p >= u.ph0) && all(p < u.ph1); }
 fn inTerm(p: vec2i) -> bool { return u.tmShow.x > 0 && all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
 // a screen cell's light: its paper, and a little of its glyph's color (a glyph covers part of the cell)
@@ -140,7 +141,7 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
   }
   // the screens' glow follows the eye (none by day, more in the dark) and is less for a bright page (the eye adapts to it)
   let ek = f32(u.eye.x) / 600.0;
-  let kPh = ek / (1.0 + 3.0 * dot(mean[0].rgb, vec3f(0.3, 0.5, 0.2))); let kTm = ek / (1.0 + 3.0 * dot(mean[1].rgb, vec3f(0.3, 0.5, 0.2)));
+  let kPh = ek * f32(max(u.eye.z, 1)) / 100.0 / (1.0 + 3.0 * dot(mean[0].rgb, vec3f(0.3, 0.5, 0.2))); let kTm = ek / (1.0 + 3.0 * dot(mean[1].rgb, vec3f(0.3, 0.5, 0.2)));
   if (inPhone(s)) {
     col += scrAt(s, u.uiOrigin, u.uiCell, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh;
   } else if (inTerm(s)) {
@@ -157,7 +158,7 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     let f = vec2f(s) + 0.5;
     if (u.ph1.x > u.ph0.x) {
       let q = abs(f - vec2f(u.ph0 + u.ph1) * 0.5) - vec2f(u.ph1 - u.ph0) * 0.5;
-      col += halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y), mean[0].rgb * kPh);
+      col += halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y) * f32(max(u.eye.y, 1)) / 100.0, mean[0].rgb * kPh);
     }
     if (u.tmGrid.x > 0) {
       let a = vec2f(u.g0); let b = vec2f(u.g1); let c = vec2f(u.g2); let e = vec2f(u.g3);
@@ -398,7 +399,7 @@ export class GpuCompositor {
    * This frame: the world drawn on the GPU (from `world` and `v`), then every layer over it, in one submit.
    * term: the notebook's screen while it is up (its layer shown at x, y when `show`; `glass`, its glass's
    * corners in pixels, x, y from the top-left clockwise, for its glow); phone: the phone's screen, in
-   * interface cells.
+   * interface cells (a fifth number: how much further and stronger it glows, the watch's LCD).
    */
   draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null) {
     const L = this.ui!, gw = this.gw;
@@ -424,6 +425,8 @@ export class GpuCompositor {
       const x0 = L.originX + phone[0] * L.cellW, y0 = L.originY + phone[1] * L.cellH;
       this.U.set([x0, y0, x0 + phone[2] * L.cellW, y0 + phone[3] * L.cellH], 18);
     } else this.U.fill(0, 18, 22);
+    const boost = phone?.[4] ?? 1;
+    this.U[33] = Math.round(100 * boost); this.U[34] = Math.round(100 * Math.sqrt(boost));
     this.U[32] = Math.round(EYE.k * 1000);
     this.dev.queue.writeBuffer(this.uni, 0, this.U);
     const n = gw.cols * gw.rows;

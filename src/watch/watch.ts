@@ -47,6 +47,8 @@ export class Watch {
   /** The game hour and minute last seen (-1: not yet). */
   private hour = -1;
   private minute = -1;
+  /** The thermometer's reading (degrees C, NaN: not yet): it follows the air slowly, as a real one on a wrist does. */
+  temp = NaN;
   /** Sounds asked for this frame: 'up', 'down', 'light', 'chime', 'beep', 'alarm'. */
   sfx: string[] = [];
 
@@ -105,7 +107,9 @@ export class Watch {
   /** A step of the field being set: an hour, or a minute. */
   private step() { const A = this.alarm; A.min = this.setting === 1 ? (A.min + 60) % 1440 : A.min - (A.min % 60) + ((A.min % 60) + 1) % 60; }
 
-  update(dt: number, time: number, now: number) {
+  /** `air`: the temperature round the player (the weather's outdoors, a room's indoors). */
+  update(dt: number, time: number, now: number, air: number) {
+    this.temp = Number.isNaN(this.temp) ? air : this.temp + (air - this.temp) * Math.min(1, dt / TEMP_S);
     // held: in alarm mode it starts setting it; on a stopped stopwatch it clears it
     if (this.bDown >= 0 && !this.bHeld && now - this.bDown > HOLD_S) {
       this.bHeld = true;
@@ -130,6 +134,9 @@ export class Watch {
 const HOLD_S = 1.2, POP_S = 3.5, RING_S = 20;
 /** How long the light stays on. */
 const LIGHT_S = 3;
+/** How slowly the thermometer follows the air (real seconds). */
+const TEMP_S = 20;
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 /** Size of the watch on the interface's grid (the case; one row of strap above it, one below at the screen's edge). */
 const W = 32, CASE_Y = 1, CASE_H = 15;
 /** The LCD window, inside the case. */
@@ -140,18 +147,22 @@ const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
 const STEEL: C3 = [92, 94, 100], FACE: C3 = [26, 26, 29], STRAP: C3 = [24, 24, 26], LABEL: C3 = [150, 150, 150], BRAND: C3 = [230, 226, 214], GOLD: C3 = [170, 140, 70];
-const LCD_BG: C3 = [150, 160, 136], INK: C3 = [24, 28, 24], BACKLIT: C3 = [70, 150, 245];
+const LCD_BG: C3 = [66, 72, 58], INK: C3 = [24, 28, 24], BACKLIT: C3 = [70, 150, 245];
 /** How much of the glint each surface gives back: the brushed steel, the face's print, the crystal over the LCD. */
 const G_STEEL = 0.45, G_FACE = 0.12, G_GLASS = 0.5;
 /** How far (cells) the backlight's blue spills over the case round the LCD, and how strong. */
 const SPILL = 4, SPILL_K = 0.5;
+/** The lit LCD glows over the case and the world like the phone's screen, but it is small: its glow reaches this much further (and the square root of it stronger). */
+const GLOW_BOOST = 3;
 /** An unlit LCD only reflects: it goes dark faster than the scene (its light to this power), so the light (L) is needed. */
-const LCD_POW = 1.8;
+const LCD_POW = 2.6;
+/** The segments that are off still show faintly (a cheap LCD): their cells this much darker than the paper. */
+const GHOST = 0.8;
 
 /** The glint (VIEW_GLINT), eased so it does not jump from frame to frame (as the phone's). */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
 
-/** Where this frame drew the lit LCD (interface cells: x, y, w, h), for the compositor's glow; null when unlit. */
+/** Where this frame drew the lit LCD (interface cells: x, y, w, h, and GLOW_BOOST), for the compositor's glow; null when unlit. */
 export const WATCH_LCD: { at: number[] | null } = { at: null };
 
 /**
@@ -160,7 +171,7 @@ export const WATCH_LCD: { at: number[] | null } = { at: null };
  * under its crystal (the face's shadow on it, away from the light). `light` is the scene's light at the
  * hands (VIEW_LIGHT), `glint` VIEW_GLINT, `brand` the maker printed on the face.
  */
-export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, glint: Float32Array, brand: string) {
+export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, glint: Float32Array, brand: string, yaw: number) {
   WATCH_LCD.at = null;
   if (Wt.raise < 0.01) return;
   const e = 1 - (1 - Wt.raise) ** 3;
@@ -239,7 +250,7 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   // a segment cell: dark where on, and very faintly so where off (the ghost of a cheap LCD)
   const seg = (x: number, y: number, on: boolean) => {
     const [c, own] = lcd(x - LX);
-    lc(x, y, ' ', INK, on ? INK : [c[0] * 0.94, c[1] * 0.94, c[2] * 0.94], own);
+    lc(x, y, ' ', INK, on ? INK : [c[0] * GHOST, c[1] * GHOST, c[2] * GHOST], own);
   };
   // a digit, 4 columns by 5 rows
   const digit = (x: number, y: number, n: number) => {
@@ -252,6 +263,10 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   };
   const C = calendar(time), dx = LX, dy = LY + 3;
   const ink = (x: number, y: number, s: string) => { for (let k = 0; k < s.length; k++) { const [c, own] = lcd(x + k - LX); lc(x + k, y, s[k], INK, c, own); } };
+  // the small fields' segments while off: every one of them faintly, as '8's (the marks keep their shape)
+  const ghost = (x: number, y: number, s: string) => { for (let k = 0; k < s.length; k++) if (s[k] !== ' ') { const [c, own] = lcd(x + k - LX); lc(x + k, y, s[k], [c[0] * GHOST, c[1] * GHOST, c[2] * GHOST], c, own); } };
+  ghost(LX + 1, LY + 1, '88'); ghost(LX + 8, LY + 1, '(*) SIG'); ghost(LX + LW - 6, LY + 1, '88-88');
+  ghost(dx + 22, dy + 4, '88'); ghost(LX + 1, LY + LH - 1, '88 888'); ghost(LX + LW - 5, LY + LH - 1, '-88C');
   // hh:mm in big digits, either pair blank (the field blinking while it is set); `zero`: a leading zero on the hour
   const big = (h: number, m: number, hideH = false, hideM = false, zero = false) => {
     digit(dx, dy, hideH || (h < 10 && !zero) ? -1 : Math.floor(h / 10)); digit(dx + 5, dy, hideH ? -1 : h % 10);
@@ -282,9 +297,13 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
     big(Math.floor(sw / 60) % 60, Math.floor(sw) % 60, false, false, true);
     ink(dx + 22, dy + 4, String(Math.floor((sw % 1) * 100)).padStart(2, '0'));
   }
+  // the bottom row, in every mode: where the player faces (the compass) and the thermometer
+  const deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360;
+  ink(LX + 1, LY + LH - 1, COMPASS[Math.round(deg / 45) % 8].padEnd(2, ' ') + ' ' + String(deg).padStart(3, '0'));
+  if (!Number.isNaN(Wt.temp)) { const t = `${Math.round(Wt.temp) || 0}C`; ink(LX + LW - 1 - t.length, LY + LH - 1, t); }
   // the LCD sits under the face: the face's edge shades its top row, and the side away from the light
   for (let x = 0; x < LW; x++) shade(LX + x, LY, 0.3);
   const vx = -GL.lat;
   if (Math.abs(vx) > 0.3) for (let y = 0; y < LH; y++) shade(vx < 0 ? LX : LX + LW - 1, LY + y, (0.15 + 0.35 * GL.str) * Math.abs(vx));
-  if (lit) WATCH_LCD.at = [ox + LX, oy + LY, LW, LH];
+  if (lit) WATCH_LCD.at = [ox + LX, oy + LY, LW, LH, GLOW_BOOST];
 }

@@ -821,7 +821,7 @@ function frame(now: number) {
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
   phone.hover = phone.out || (laptop.open && phone.raise > 0.5) ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
-  watch.update(dt, world.time, now / 1000);
+  watch.update(dt, world.time, now / 1000, world.player.inside >= 0 ? 21 : world.weather.temp);
   for (const f of watch.sfx) {
     if (f === 'chime') sound?.watchChime();
     else if (f === 'alarm') sound?.watchAlarm();
@@ -830,7 +830,7 @@ function frame(now: number) {
   }
   watch.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
-  if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city));
+  if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null;
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);

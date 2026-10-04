@@ -3,6 +3,9 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.F.7 — Retoques do relógio e das teclas (2026-10-04)
+- O relógio virou um modelo com bússola e termômetro: a última linha do visor mostra para onde você está olhando (N, NE, E… e os graus) e a temperatura (a do ar na rua, a do ambiente dentro dos prédios; o termômetro demora alguns segundos para acompanhar).
+- O visor ficou mais escuro que a caixa e, no apagão, quase não se lê sem a luz. Na luz forte aparecem levemente todos os segmentos apagados, inclusive as marcas e os campos pequenos.
+- A luz azul do relógio agora brilha em volta como a tela do celular.
 - O relógio agora tem caixa de aço escovado que pega a luz da cena, com o reflexo da luz mais forte por perto deslizando nela e a sombra da moldura sobre o visor, como o celular.
 - O visor some de verdade no escuro: para ler a hora à noite, use a luz (L). A luz agora é azul e deixa um leve brilho em volta.
 - Teclas do relógio novas: I abaixa e ergue, J é MODE, K é START/STOP, L é LIGHT.
