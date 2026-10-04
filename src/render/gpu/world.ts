@@ -670,7 +670,7 @@ export class GpuWorld {
     W[o + fo] = P.furn.length;
     P.furn.forEach((f, k) => { const e = o + fo + 1 + k * 6; F[e] = f.x; F[e + 1] = f.y; F[e + 2] = f.c; F[e + 3] = f.s; F[e + 4] = Math.hypot(f.hx, f.hy) + 0.4; W[e + 5] = mods.get(list[k])!; });
     W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = lot;
-    P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind); W[w + 5] = R.unit; });
+    P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind === 'store' ? 'office' : R.kind); W[w + 5] = R.unit; });
     W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 2), o + 6 + P.rooms.length * 6);
     if (P.cells.length & 3) { const c0 = P.cells.length & ~3; let v = 0; for (let c = c0; c < P.cells.length; c++) v |= P.cells[c] << ((c - c0) * 8); W[o + 6 + P.rooms.length * 6 + (c0 >> 2)] = v; }
     this.fxPlan[s] = 1; W[t] = o;

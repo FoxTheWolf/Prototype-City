@@ -69,6 +69,9 @@ export const PLACES: Record<BusinessKind, PlaceType> = {
   parking: { catalog: '', hours: [0, 24], staff: 4, blade: 1, cctv: 0.3, sells: [] },
 };
 
+/** Goods kept cold (in the coolers; never on a dry shelf). */
+export const COLD = new Set(['milk', 'eggs', 'soda_can', 'large_soda', 'bottled_beer']);
+
 /** Kinds whose people come in for a reason (`visit`). */
 export const visitKinds = (why: 'out' | 'errand' | 'stroll') =>
   new Set((Object.keys(PLACES) as BusinessKind[]).filter((k) => PLACES[k].visit?.includes(why)));

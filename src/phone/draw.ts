@@ -828,7 +828,7 @@ function gpsInfo(S: Lcd, P: Phone, now: number, indoor: boolean) {
 /** Floor colors of the rooms on the indoor map, by kind; the stairs and the lift get a glyph. */
 const ROOM_BG: Record<RoomKind, C3> = {
   lobby: [222, 214, 196], hall: [210, 204, 194], stair: [190, 196, 206], lift: [184, 196, 220], foyer: [230, 214, 190], living: [240, 216, 180],
-  bedroom: [214, 204, 236], kitchen: [214, 230, 196], bath: [190, 226, 234], office: [204, 214, 230], open: [212, 222, 236], shop: [248, 226, 170],
+  bedroom: [214, 204, 236], kitchen: [214, 230, 196], bath: [190, 226, 234], office: [204, 214, 230], open: [212, 222, 236], shop: [248, 226, 170], store: [222, 208, 180],
 };
 const ROOM_CH: Partial<Record<RoomKind, number>> = { stair: ch('='), lift: ch('X') };
 
