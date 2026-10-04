@@ -22,7 +22,8 @@ import { post } from '../sim/bank';
 import { jobReply, answerTrace } from '../sim/jobs'; // [HACKING] ver CLAUDE.md > Arquivos de hacking
 import { jobSms } from '../locale/jobs'; // [HACKING]
 import { hash3 } from '../core/rng';
-import { calendar as calendarOf } from '../sim/clock';
+import { calendar as calendarOf, TIME_SCALE } from '../sim/clock';
+import { OUTLETS } from '../sim/placeTypes';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
 import { type Post } from '../sim/social';
 import { newWire, wireKey } from './wire';
@@ -306,6 +307,17 @@ export class Phone {
   readonly photos: Photo[] = [];
   phsel = 0;
   shotAt = -9;
+  /**
+   * The battery (13.9), 0..1: it runs down with the game clock while the phone is on, faster with
+   * the screen out, the GPS, a call, data moving or the Wi-Fi on; flat, the phone switches itself
+   * off and stays off. It charges at a café's (or a bar's, a cybercafé's...) outlet with a charger
+   * in the bag, on or off. `charging` while it does; `low` the last warning given (1 at 15%, 2 at 5%).
+   */
+  batt = 0.8;
+  charging = false;
+  low = 0;
+  /** Switched on before (the line's numbers are in its contacts): a boot after a flat battery does not add them again. */
+  private everOn = false;
   /** Operator notices already sent: welcome, low data, no data. */
   private told = { welcome: false, low: false, out: false };
   /** A USSD session: the code, the answers so far, what came back, what is being typed, when it was asked. */
@@ -328,9 +340,12 @@ export class Phone {
     this.out = !this.out;
     if (!this.out) return 'in';
     if (this.screen === 'off') {
+      // flat: it stays dark in the hand
+      if (this.batt <= 0.01) return 'out';
       this.screen = 'boot'; this.since = now + 0.35;
       // the numbers that come with the line
-      for (const [name, number] of CONTACTS) this.contacts.push({ name, number });
+      if (!this.everOn) for (const [name, number] of CONTACTS) this.contacts.push({ name, number });
+      this.everOn = true;
       return 'boot';
     }
     this.since = now; // the backlight wakes up: the screen draws in again
@@ -386,7 +401,7 @@ export class Phone {
       fs: this.fs, photos: this.photos, photoN: this.photoN, apps: [...this.apps], prefs: { ...this.prefs }, look: this.look, case: this.case,
       looks: [...this.looks], cases: [...this.cases], reminders: this.cal.reminders, wifiOn: this.wifi.on, told: { ...this.told },
       // already switched on once (the line's numbers are in its contacts): it comes back on, in the pocket
-      booted: this.screen !== 'off',
+      booted: this.screen !== 'off' || this.everOn, batt: this.batt,
     };
   }
   /** Back to a saved phone: in the pocket and off; the screens' data is read back from the files at the next sync. */
@@ -399,8 +414,30 @@ export class Phone {
     this.prefs = { ...this.prefs, ...d.prefs };
     this.look = d.look; this.case = d.case; this.looks = d.looks; this.cases = d.cases;
     this.cal.reminders = d.reminders; this.wifi.on = d.wifiOn; this.told = d.told;
-    if (d.booted) this.screen = 'standby';
+    this.everOn = d.booted;
+    if (d.batt !== undefined) this.batt = d.batt;
+    if (d.booted && this.batt > 0.01) this.screen = 'standby';
   }
+  /**
+   * The battery, a frame of dt real seconds (game hours: one full charge lasts ~40 h idle, ~8 h with
+   * the screen out, ~3 h on the map with the GPS); charging takes ~1.5 h from flat.
+   */
+  private power(dt: number) {
+    const w = this.world, p = w.player, h = (dt * TIME_SCALE) / 3600;
+    const B = p.inside >= 0 ? w.city.buildings[p.inside] : null, G = w.power;
+    this.charging = !!B && B.biz >= 0 && p.floor === 0 && OUTLETS.has(w.city.businesses[B.biz].kind) && G.subs[G.building[p.inside]].on
+      && w.bag.items.some((i) => i.good === 'charger' && i.paid);
+    if (this.charging) { this.batt = Math.min(1, this.batt + h / 1.5); if (this.batt > 0.2) this.low = 0; return; }
+    if (this.screen === 'off') return;
+    const call = this.call && this.call.state !== 'ended', data = this.radio.job && this.radio.job.state !== 'done';
+    const rate = 1 / 40 + (this.out ? 1 / 8 : 0) + (this.gps.state !== 'off' ? 1 / 5 : 0) + (call ? 1 / 6 : 0) + (data ? 1 / 10 : 0) + (this.wifi.on ? 1 / 40 : 0);
+    this.batt = Math.max(0, this.batt - h * rate);
+    // low: a warning beep at 15% and 5%; flat, it switches off
+    const lv = this.batt < 0.05 ? 2 : this.batt < 0.15 ? 1 : 0;
+    if (lv > this.low) { this.low = lv; this.sfx.push(['beep']); this.buzz(performance.now() / 1000, 0.5); }
+    if (this.batt <= 0) { this.screen = 'off'; this.sfx.push(['stop']); }
+  }
+
   /** The shot taken, into the photos once its picture is there. */
   private develop() {
     const ph = this.shotDue?.();
@@ -409,6 +446,7 @@ export class Phone {
 
   update(dt: number, now: number) {
     this.develop();
+    this.power(dt);
     this.syncFs(now);
     // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
     // out a little for a text or a reminder (its top row in sight for a few seconds)

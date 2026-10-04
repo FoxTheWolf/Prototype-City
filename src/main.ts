@@ -128,7 +128,7 @@ const bagView = new BagView(world);
 bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
 bagView.onSwap = (op) => { swapSim(world, op); phone.newSim(); };
 /** What taking a good off a shelf said, and when; and the last theft shown (its game time). */
-let shelfNote = '', shelfNoteAt = -9, theftSeen = world.bag.stolenAt;
+let shelfNote = '', shelfNoteAt = -9, theftSeen = world.bag.stolenAt, wasCharging = false, lowSeen = 0;
 /** What trying a door said (LOCKED), and when. */
 let doorNote = '', doorNoteAt = -9;
 /** The notebook's battery with what was bought (F.9): the second pack adds its capacity; bought just now, it comes charged. */
@@ -289,6 +289,8 @@ function playLap(list: LapSound[]) {
 }
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
+  // flat (13.9): it stays dark
+  if (r === 'out' && phone.screen === 'off') { shelfNote = en.bag.flat; shelfNoteAt = performance.now() / 1000; }
   // with the phone out the system cursor is free to click its keys; put away, the view takes the mouse again
   if (r === 'in') input.lock(); else input.unlock();
   sound?.phoneSlide(r !== 'in');
@@ -884,6 +886,9 @@ function frame(now: number) {
   for (const s of bagView.sfx) if (s === 'click') sound?.lapKey('key'); else sound?.phoneSlide(true);
   bagView.sfx.length = 0;
   if (counter.ate) { counter.ate = false; sound?.munch(); }
+  // the phone's battery (13.9): plugged in at a café's outlet, and low
+  if (phone.charging !== wasCharging) { wasCharging = phone.charging; if (phone.charging) { shelfNote = en.bag.charging; shelfNoteAt = now / 1000; } }
+  if (phone.low !== lowSeen) { if (phone.low > lowSeen) { shelfNote = phone.low === 2 ? en.bag.battEmpty : en.bag.battLow; shelfNoteAt = now / 1000; } lowSeen = phone.low; }
   // hunger (13.5): told once at each stage, with the stomach's growl
   const hs = hungerStage(world.needs.food);
   if (hs > world.needs.told) { world.needs.told = hs; shelfNote = en.bag.hungry[hs]; shelfNoteAt = now / 1000; sound?.growl(); }

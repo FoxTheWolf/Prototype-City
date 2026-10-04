@@ -82,7 +82,7 @@ export const hhmm = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0
  * while data moves over EDGE, Wi-Fi, the GPS while it runs, an envelope for unread messages, the
  * time, the battery.
  */
-export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false, wifi: Wifi | null = null) {
+export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false, wifi: Wifi | null = null, batt = 1, charging = false) {
   const B: C3 = [BAR[0] * 0.55, BAR[1] * 0.55, BAR[2] * 0.55], OK: C3 = [150, 235, 150], OFF: C3 = [BAR[0] * 1.4, BAR[1] * 1.4, BAR[2] * 1.4];
   S.fill(0, B);
   S.put(1, 0, ch('Y'), INK, B);
@@ -103,8 +103,9 @@ export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radi
     for (let b = 0; b < 3; b++) S.put(19 + b, 0, G[b + 1], b < Math.ceil(wifi.bars * 0.75) ? [150, 230, 255] : OFF, B);
   }
   S.text(SW - 12, 0, hhmm(calendar(world.time).hour), INK, B);
-  // the battery: a cell with its level, a nub
-  for (let k = 0; k < 4; k++) S.put(SW - 6 + k, 0, 128, k < 3 ? OK : [70, 90, 70], B);
+  // the battery: a cell with its level (red when low), a nub; while charging the level climbs
+  const bars = charging ? Math.floor(now * 2) % 5 : Math.ceil(batt * 4), BC: C3 = batt < 0.15 && !charging ? BAD : OK;
+  for (let k = 0; k < 4; k++) S.put(SW - 6 + k, 0, 128, k < bars ? BC : [70, 90, 70], B);
   S.put(SW - 2, 0, SHAPE.left, [120, 140, 120], B);
 }
 

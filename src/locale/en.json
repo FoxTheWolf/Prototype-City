@@ -20,7 +20,7 @@
     "cash": "CASH", "unpaid": "UNPAID", "phone": "PHONE", "laptop": "NOTEBOOK", "sim": "SIM CARD",
     "take": "[F] TAKE {x}  {p}", "ask": "ASK AT THE COUNTER", "taken": "{x} in the bag (unpaid)", "room": "No room in your bag",
     "stole": "You walked out without paying for {n} item(s).",
-    "eat": "[E] EAT", "notHere": "That doesn't go there.", "fitted": "{x}: fitted to the notebook.", "swapping": "SWAPPING THE SIM...", "swapped": "New line {n} ({op}).", "ate": "{x}: eaten.", "notFood": "You can't eat that.", "fullUp": "You're full.", "stomach": "STOMACH",
+    "eat": "[E] EAT", "flat": "The phone's battery is dead.", "charging": "Phone charging (plugged in here).", "battLow": "Phone battery low.", "battEmpty": "Phone battery almost dead.", "notHere": "That doesn't go there.", "fitted": "{x}: fitted to the notebook.", "swapping": "SWAPPING THE SIM...", "swapped": "New line {n} ({op}).", "ate": "{x}: eaten.", "notFood": "You can't eat that.", "fullUp": "You're full.", "stomach": "STOMACH",
     "stages": ["Fed", "Peckish", "Hungry", "Starving"], "hungry": ["", "You're getting peckish.", "You're hungry. Running wears you out fast.", "You're starving. You can barely run."]
   },
   "roots": [

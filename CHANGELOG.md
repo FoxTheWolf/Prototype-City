@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.9a — Bateria do celular (2026-10-04)
+- O celular agora tem bateria: gasta mais na mão, no mapa com GPS e em ligações. Avisa em 15% e 5% e desliga quando acaba.
+- Para carregar, leve um carregador (lojas de eletrônicos e de celular) e fique num café, cybercafé, lanchonete, bar, lavanderia ou motel.
+
 ## 0.13.8 — Gente quadrada (2026-10-04)
 - As pessoas da cidade agora têm o formato do Minecraft: cabeça, tronco, braços e pernas em blocos, cada uma com sua "skin" (cabelo, olhos, camisa ou jaqueta, mangas, calça e sapatos).
 

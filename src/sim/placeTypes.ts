@@ -69,6 +69,9 @@ export const PLACES: Record<BusinessKind, PlaceType> = {
   parking: { catalog: '', hours: [0, 24], staff: 4, blade: 1, cctv: 0.3, sells: [] },
 };
 
+/** Places with an outlet a customer may use (13.9): the phone charges there, with a charger in the bag. */
+export const OUTLETS = new Set(['cafe', 'cyber', 'diner', 'fastfood', 'pizza', 'deli', 'bar', 'motel', 'laundry']);
+
 /** Goods kept cold (in the coolers; never on a dry shelf). */
 export const COLD = new Set(['milk', 'eggs', 'soda_can', 'large_soda', 'bottled_beer']);
 

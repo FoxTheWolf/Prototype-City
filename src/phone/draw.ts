@@ -229,7 +229,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const t = now - P.since;
     if (P.screen === 'boot') boot(S, P, world, t);
     else {
-      statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi);
+      statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi, P.batt, P.charging);
       if (P.screen === 'standby') standby(S, P, world, t, now);
       else if (P.screen === 'menu') menu(S, P, t);
       else if (P.screen === 'map') map(S, P, world, aspect, t, now);
