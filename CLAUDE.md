@@ -395,7 +395,7 @@ Também servem de referência, pelo que já está nas decisões: RDR2 (cidadãos
 > **Fechamento proposto pelo Claude em 2026-10-04 (a confirmar com o usuário):**
 > - **F.7c ✅** bloom do relógio por cima (tinge a caixa), bússola mais lenta, dicas ciclando.
 > - **F.8a ✅** subestações voltam sozinhas em 2–4 h de jogo (`offAt` em `sim/power.ts`, `RESTORE_H` em `sim/world.ts`).
-> - **F.8b (agente `hacking`)** a prisão larga o jogador em frente à prefeitura, não dentro; as subestações na busca do Maps ("Substation nn", o mesmo número do GRIDLINK).
+> - **F.8b ✅ (agente `hacking`)** a prisão larga o jogador na calçada em frente à prefeitura (`freeSpot` em `sim/heat.ts`); as subestações na busca do Maps ("Substation nn" = `GRIDLINK-nn`, `linkSubs`/`subIndex` em `phone/places.ts`). Esperando o teste do usuário.
 > - **F.9 (proposta)** onde gastar o dinheiro: chip descartável, antena direcional, bateria extra, nas lojas de penhor e eletrônicos (a compra é sessão normal; o efeito do chip no calor e da antena no Wi-Fi é Trilha de hacking).
 > - **F.10 (proposta)** o SMS de balanço depois do serviço (o que a cidade sabe); conferir se os trabalhos se renovam depois do terceiro (Trilha de hacking).
 > **Decidido pelo usuário em 2026-10-03:**
@@ -599,7 +599,6 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 - **A notícia do apagão sai no instante do corte (retorno do usuário em 2026-10-03):** gerar a manchete (e talvez os posts de "voltou a luz") só depois que a energia volta, não durante o apagão. Para a sessão de correções.
 - **Acidentes demais no trânsito (retorno do usuário em 2026-10-03):** as batidas estão frequentes demais. Olhar na sessão de correções ou junto da fatia vertical (as "Lições da 10.10" têm como diagnosticar uma batida; contar por `w.events.list` com `kind === 'crash'` por minuto de simulação, antes e depois).
 - **Fachada que muda bruscamente ao se aproximar:** a faixa de transição foi alongada na R.34 (esperando o teste do usuário). Se ainda aparecer, comparar as cores do visual de longe (`cF` em `wallCell`) com a média do detalhado: o de longe parece mais claro (parede marrom) que o de perto (vidros escuros).
-- **Preso vai para DENTRO da prefeitura (sólida) e fica travado (retorno do usuário em 2026-10-03):** a prisão (`arrest` em `sim/heat.ts`) larga o jogador dentro do prédio da prefeitura, que é sólido — sem saída. Pôr na **praça/calçada em frente** à prefeitura (um ponto `walkable` logo fora da porta), não dentro. Quebra o jogo; prioridade na sessão de correções.
 - **Semáforo reverte / "pouco tempo antes de ser pego" (retorno do usuário em 2026-10-03):** no trabalho 2 o usuário sentiu que "não consegui deixar o semáforo por tempo suficiente" e anotou "o semáforo volta ao normal". Investigar (a) se algo zera `S.sig` sozinho (o trabalho fecha no instante em que fica fora do normal, então reverter não falha o trabalho, mas confunde); (b) se a pressão da polícia (F.2, `heat.ts`) chega rápido demais no trabalho 2 — talvez a janela/escala precise de folga. Diagnóstico de batidas nas "Lições da 10.10".
 
 ## Refinamento: anotações (para a etapa 15)
