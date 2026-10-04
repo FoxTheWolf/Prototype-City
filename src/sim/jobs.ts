@@ -2,10 +2,13 @@
 // "Estado atual" > "Arquivos de hacking"): o contratante que encomenda um apagao aciona o
 // classificador de seguranca nas sessoes normais. Conteudo 100% ficticio e so dentro do jogo.
 import { hash3 } from '../core/rng';
-import { type City, roadCenter } from './city';
+import { type City, roadCenter, districtAt } from './city';
 import { type PowerGrid, subAt } from './power';
 import { hasSignal } from './traffic';
 import { post, type BankAccount } from './bank';
+import { type Population, whereIs, Doing } from './citizens';
+import { type Telco, mastNear } from './telco';
+import { type World } from './world';
 
 /**
  * The jobs a fixer offers the player (the night's work of the vertical slice). The board is pure
@@ -15,14 +18,19 @@ import { post, type BankAccount } from './bank';
  * (stage 12) and a contractor calling with real dialogue (stage 13c) are later channels on the same
  * machine.
  *
- * Two jobs, from the same fixer, in a ladder (the vertical slice's F.1 and F.4):
+ * Three jobs, from the same fixer, in a ladder (the vertical slice's F.1, F.4 and F.5):
  *  - 'blackout': a named business dark tonight, checked against the real grid (`sub` goes off).
  *  - 'signals': a crossing by a named business snarled inside a 1..2 h window, checked against the
  *    district's signal cabinet (`sub` set to flash or dark). Offered only once the first is paid.
- * Success is only what the player controls (the breaker open, the cabinet off-cycle): never a count
- * of cars or a crash, which are the city's luck -- those feed the heat and the news, not the pay.
+ *  - 'trace': where a subject's phone put them at a time, read off the operator's cell-site log and
+ *    reported back by text. Checked against the district the serving mast covers (the answer the
+ *    log itself shows), so it is still only what the player controls -- pulling the right record and
+ *    relaying it -- never the city's luck. Offered only once the signals job is paid.
+ * Success is only what the player controls (the breaker open, the cabinet off-cycle, the record
+ * pulled): never a count of cars or a crash, which are the city's luck -- those feed the heat and
+ * the news, not the pay.
  */
-export type JobKind = 'blackout' | 'signals';
+export type JobKind = 'blackout' | 'signals' | 'trace';
 export type JobState = 'pending' | 'offered' | 'active' | 'done' | 'failed' | 'declined';
 
 export interface Job {
@@ -40,7 +48,7 @@ export interface Job {
   /** Game time the offer is sent, and the deadline to deliver by (set when a 'pending' job is offered). */
   offerAt: number;
   due: number;
-  /** Signals job: the length of the window from offer to deadline (seconds); unused by blackout. */
+  /** Signals/trace job: the length of the window from offer to deadline (seconds); unused by blackout. */
   win: number;
   state: JobState;
   /** Game time the player took it, or -1. */
@@ -49,6 +57,16 @@ export interface Job {
   sent: { offer: boolean; ack: boolean; result: boolean };
   /** [HACKING] Set once the pay was clawed back by an arrest, so it is not taken twice (see heat.ts). */
   clawed?: boolean;
+  /** Trace job: the subject (citizen id), their mobile's local digits, the game time asked about,
+   *  and the district the operator's log puts them in then (the answer, from the serving mast). */
+  subj?: number;
+  num?: string;
+  at?: number;
+  ans?: number;
+  /** Trace job: wrong answers so far, and that a wrong one just came in (for the fixer's "look again"
+   *  text, which the phone sends outside the offer/ack/result bookkeeping). */
+  tries?: number;
+  nudge?: boolean;
 }
 
 export interface JobBoard { jobs: Job[] }
@@ -65,8 +83,8 @@ function crossingNear(city: City, px: number, py: number): { x: number; y: numbe
   return best;
 }
 
-/** The slice's two jobs, from the seed and the player's start (x, y) and game time. */
-export function buildJobs(seed: number, city: City, power: PowerGrid, x: number, y: number, time: number): JobBoard {
+/** The slice's three jobs, from the seed and the player's start (x, y) and game time. */
+export function buildJobs(seed: number, city: City, power: PowerGrid, pop: Population, telco: Telco, x: number, y: number, time: number): JobBoard {
   const board: JobBoard = { jobs: [] };
   const B = city.businesses;
   if (!B.length) return board;
@@ -101,7 +119,42 @@ export function buildJobs(seed: number, city: City, power: PowerGrid, x: number,
       board.jobs.push({ id: 2, kind: 'signals', from, biz: biz2, sub: cab, pay: pay2, win, offerAt: 0, due: 0, state: 'pending', tookAt: -1, sent: { offer: false, ack: false, result: false } });
     }
   }
+
+  // job 3, the trace: where a subject's line put them at a time, read off the operator's cell logs
+  // and reported back. Only a skeleton here; the subject and the hour are chosen when the job is
+  // offered (resolveTrace, from stepJobs), so the hour stays recent whatever the player's pace --
+  // the fast game clock would otherwise push the asked hour past the log's window. Needs a population
+  // and masts (not the empty world). Offered after the signals job is paid (see stepJobs).
+  if (pop.n > 0 && telco.sites.length) {
+    const pay3 = 40000 + Math.floor(h(31) * 5) * 2500;      // $400 .. $500, more than the signals job
+    const win3 = (3 + Math.floor(h(32) * 3)) * 0.5 * 3600;  // a 1.5 / 2.0 / 2.5 h window
+    board.jobs.push({ id: 3, kind: 'trace', from, biz: -1, sub: -1, pay: pay3, win: win3, offerAt: 0, due: 0, state: 'pending', tookAt: -1, sent: { offer: false, ack: false, result: false }, subj: -1, num: '', at: 0, ans: -1, tries: 0 });
+  }
   return board;
+}
+
+/**
+ * [HACKING] Fill a trace job's subject, line, hour and answer when it is offered, from the seed and
+ * the game time now. A random adult with a mobile, at a fixed place a few hours ago (so the serving
+ * mast's district is plain); the answer is that district, exactly what the operator's cell log shows
+ * (sim/network.ts, cellLog) -- so a diligent pull always answers right, never the city's luck.
+ */
+function resolveTrace(w: World, j: Job) {
+  const { city, pop, telco, seed } = w;
+  const h = (n: number) => hash3(seed ^ 0x3b1c, n, Math.floor(w.time / 3600));
+  for (let t = 0; t < 96; t++) {
+    const cand = Math.floor(h(100 + t) * pop.n);
+    if (pop.phone[cand] === 255 || pop.age[cand] < 18 || !pop.mobile[cand]) continue;
+    const ago = 3 + Math.floor(h(500 + t) * 4);               // 3..6 game-hours ago
+    const q = Math.floor((w.time - ago * 3600) / 3600) * 3600; // on the hour
+    if (q < 0) continue;
+    const wa = whereIs(pop, city, cand, q);
+    if (wa.doing === Doing.Walk || wa.building < 0) continue;  // somewhere fixed, so the district is plain
+    const B = city.buildings[wa.building], m = mastNear(telco, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+    if (m < 0) continue;
+    j.subj = cand; j.num = pop.mobile[cand]; j.at = q; j.ans = districtAt(city, telco.sites[m].x, telco.sites[m].y);
+    return;
+  }
 }
 
 /** The player's reply to a fixer's number: take it (YES) or pass (NO). The job acted on, or null if unclear. */
@@ -115,20 +168,41 @@ export function jobReply(board: JobBoard, from: string, text: string, time: numb
 }
 
 /** Advance the board: an active job is done the moment its target is in the wanted state (and paid),
- *  failed when the deadline passes. The signals job is offered once the blackout one has been paid. */
-export function stepJobs(board: JobBoard, power: PowerGrid, bank: BankAccount, time: number) {
+ *  failed when the deadline passes. Each job is offered once the one before it has been paid. */
+export function stepJobs(w: World) {
+  const board = w.jobs, time = w.time;
   for (const j of board.jobs) {
     if (j.state !== 'active') continue;
+    // the trace job is closed by the player's answer (answerTrace), not the grid; here it only times out
+    if (j.kind === 'trace') { if (time >= j.due) j.state = 'failed'; continue; }
     // blackout: the target's substation is off; signals: the district's cabinet is off-cycle (flash or dark)
-    const met = j.kind === 'blackout' ? !power.subs[j.sub].on : power.subs[j.sub].sig !== 0;
-    if (met) { j.state = 'done'; post(bank, time, 'transfer', j.pay, j.biz); }
+    const met = j.kind === 'blackout' ? !w.power.subs[j.sub].on : w.power.subs[j.sub].sig !== 0;
+    if (met) { j.state = 'done'; post(w.bank, time, 'transfer', j.pay, j.biz); }
     else if (time >= j.due) j.state = 'failed';
   }
-  // the fixer's second job comes once the first is paid: schedule its offer and window from here
-  const j2 = board.jobs.find((j) => j.kind === 'signals');
-  if (j2 && j2.state === 'pending' && board.jobs.some((j) => j.kind === 'blackout' && j.state === 'done')) {
-    j2.state = 'offered';
-    j2.offerAt = time + 12 * 60;          // about twelve game-minutes after the first pays out
-    j2.due = j2.offerAt + j2.win;
+  // the signals job is offered once the blackout one is paid: schedule its offer and window from here
+  const j2 = board.jobs.find((q) => q.kind === 'signals');
+  if (j2 && j2.state === 'pending' && board.jobs.some((q) => q.kind === 'blackout' && q.state === 'done')) {
+    j2.state = 'offered'; j2.offerAt = time + 12 * 60; j2.due = j2.offerAt + j2.win;
   }
+  // the trace job once the signals one is paid; its subject and hour are chosen now (resolveTrace),
+  // so the hour the fixer asks about is recent whatever the player's pace
+  const j3 = board.jobs.find((q) => q.kind === 'trace');
+  if (j3 && j3.state === 'pending' && board.jobs.some((q) => q.kind === 'signals' && q.state === 'done')) {
+    resolveTrace(w, j3);
+    if ((j3.subj ?? -1) >= 0) { j3.state = 'offered'; j3.offerAt = time + 12 * 60; j3.due = j3.offerAt + j3.win; }
+  }
+}
+
+/**
+ * The player's answer to a trace job (a district index, parsed from their text by the phone, which
+ * holds the locale), checked against the district the operator's log shows. A match is done and paid;
+ * a wrong one only costs a try and flags a "look again" (the deadline still ends the job). Returns
+ * 'right' | 'wrong' when a trace job took the answer, or null when none was waiting.
+ */
+export function answerTrace(board: JobBoard, from: string, dist: number, bank: BankAccount, time: number): 'right' | 'wrong' | null {
+  const j = board.jobs.find((q) => q.from === from && q.kind === 'trace' && q.state === 'active');
+  if (!j) return null;
+  if (dist === j.ans) { j.state = 'done'; post(bank, time, 'transfer', j.pay, 0); return 'right'; }
+  j.tries = (j.tries ?? 0) + 1; j.nudge = true; return 'wrong';
 }

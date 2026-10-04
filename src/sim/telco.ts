@@ -124,6 +124,14 @@ export function formatNumber(T: Telco, local: string): string {
   return local.length === 7 ? `(${T.area}) ${local.slice(0, 3)}-${local.slice(3)}` : local;
 }
 
+/** The cell site that serves a point: the nearest mast (the operator's record is cell-level, so the
+ *  district is the mast's). Shared by the trace job and its cell log ([HACKING] jobs.ts / network.ts). */
+export function mastNear(T: Telco, px: number, py: number): number {
+  let best = -1, bd = Infinity;
+  T.sites.forEach((s, k) => { const d = Math.hypot(s.x - px, s.y - py); if (d < bd) { bd = d; best = k; } });
+  return best;
+}
+
 /** Opening hours of each kind of business (from, to; to past 24 for after midnight; 0-24 always open). */
 export const BIZ_HOURS: Record<string, [number, number]> = {
   diner: [6, 23], bar: [16, 26], cafe: [6, 20], pharmacy: [8, 22], grocery: [7, 23], laundry: [7, 21], pawn: [10, 19], electronics: [10, 20],

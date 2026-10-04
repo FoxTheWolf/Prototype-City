@@ -16,10 +16,10 @@ import { smsText } from '../locale/sms';
 import en from '../locale/en.json';
 import { type FsNode } from '../sim/computer';
 import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
-import { businessName, makerName, operatorName } from '../locale/names';
+import { businessName, makerName, operatorName, districtName } from '../locale/names';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { post } from '../sim/bank';
-import { jobReply } from '../sim/jobs'; // [HACKING] ver CLAUDE.md > Arquivos de hacking
+import { jobReply, answerTrace } from '../sim/jobs'; // [HACKING] ver CLAUDE.md > Arquivos de hacking
 import { jobSms } from '../locale/jobs'; // [HACKING]
 import { hash3 } from '../core/rng';
 import { calendar as calendarOf } from '../sim/clock';
@@ -450,6 +450,7 @@ export class Phone {
       if (!j.sent.offer && j.state !== 'pending' && this.world.time >= j.offerAt) { j.sent.offer = true; this.receive(j.from, jobSms(this.world, j, 'offer'), now + 4); }
       if (!j.sent.ack && (j.state === 'active' || j.state === 'declined')) { j.sent.ack = true; this.receive(j.from, jobSms(this.world, j, j.state === 'active' ? 'confirm' : 'declined'), now + 4); }
       if (!j.sent.result && (j.state === 'done' || j.state === 'failed')) { j.sent.result = true; this.receive(j.from, jobSms(this.world, j, j.state === 'done' ? 'paid' : 'failed'), now + 6); }
+      if (j.kind === 'trace' && j.nudge) { j.nudge = false; this.receive(j.from, jobSms(this.world, j, 'wrong'), now + 6); } // a wrong answer: look again
     }
     // now and then a citizen gets the player's number wrong: a call, or a text (one hour in a few)
     if (this.screen !== 'off' && this.radio.state === 'service') {
@@ -1136,6 +1137,18 @@ export class Phone {
   /** A text message on its way to the phone, arriving at `at` (once there is signal). */
   receive(from: string, text: string, at: number) { this.incoming.push({ from, text, at }); }
 
+  /** [HACKING] The district a trace answer names: the longest district name found in the player's
+   *  text (the log shows the full name to copy), or -1 if none matches. */
+  private parseDistrict(text: string): number {
+    const t = text.toLowerCase();
+    let best = -1, bl = 0;
+    for (let d = 0; d < this.world.city.districts.length; d++) {
+      const n = districtName(this.world.city, d).toLowerCase();
+      if (n && t.includes(n) && n.length > bl) { bl = n.length; best = d; }
+    }
+    return best;
+  }
+
   /**
    * Send a text (10 cents): the network carries it if there is signal; a business may answer with
    * an automatic reply, a home now and then; a number not in service bounces back.
@@ -1145,8 +1158,13 @@ export class Phone {
     if (this.radio.state !== 'service' || A.credit < 10) return false;
     A.credit -= 10;
     this.sent.unshift({ to: D.to, text: D.text, at: this.world.time });
-    // [HACKING] a reply to a fixer's line is a take/pass, not a call to a number not in service
-    if (this.world.jobs.jobs.some((j) => j.from === D.to)) { jobReply(this.world.jobs, D.to, D.text, this.world.time); return true; }
+    // [HACKING] a reply to a fixer's line: an active trace wants a district name, else it is a take/pass
+    if (this.world.jobs.jobs.some((j) => j.from === D.to)) {
+      const tr = this.world.jobs.jobs.find((j) => j.from === D.to && j.kind === 'trace' && j.state === 'active');
+      if (tr) answerTrace(this.world.jobs, D.to, this.parseDistrict(D.text), this.world.bank, this.world.time);
+      else jobReply(this.world.jobs, D.to, D.text, this.world.time);
+      return true;
+    }
     const c = lookup(this.world.telco, D.to), h = (q: number) => hash3(this.world.seed, this.sent.length, q), n = this.bother(D.to);
     const op = operatorName(this.world.city);
     if (c.kind === 'none') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5);

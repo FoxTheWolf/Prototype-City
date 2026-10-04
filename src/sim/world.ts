@@ -133,7 +133,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), jobs: buildJobs(seed, city, power, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -295,7 +295,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   });
   // the social network, every real second (30 game seconds)
   if (w.tick % 60 === 30) stepSocial(w.feed, w.pop, w.city, w.events, w.power, w.weather, w.seed, w.time, 60 * TICK * TIME_SCALE);
-  stepJobs(w.jobs, w.power, w.bank, w.time); // [HACKING] the fixer's jobs resolve against the real grid
+  stepJobs(w); // [HACKING] the fixer's jobs resolve against the real grid (and the trace against the cell log)
   stepHeat(w, TICK); // [HACKING] heat cools off, traces go cold, the police close in
   w.ptime = w.time;
   w.time += TICK * TIME_SCALE;

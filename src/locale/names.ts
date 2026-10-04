@@ -179,7 +179,8 @@ export function cctvMakerName(city: City, k: number): string {
 }
 
 /** A Wi-Fi network's name: a shop's own (its name run together, with a suffix), or a home router's default or its owner's. */
-export function wifiName(city: City, A: { biz: number; bssid: string; building: number; util?: number }): string {
+export function wifiName(city: City, A: { biz: number; bssid: string; building: number; util?: number; omc?: boolean }): string {
+  if (A.omc) return operatorName(city).replace(/[^A-Za-z0-9]/g, '').slice(0, 12) + '-OMC';
   if (A.util !== undefined && A.util >= 0) return `GRIDLINK-${String(A.util + 1).padStart(2, '0')}`;
   const tail = A.bssid.replace(/:/g, '').slice(-4);
   if (A.biz >= 0) {

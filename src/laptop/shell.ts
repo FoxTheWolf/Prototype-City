@@ -10,7 +10,8 @@ import { businessName, computerMakerName, districtName, wifiName } from '../loca
 import { districtAt } from '../sim/city';
 import { Wifi } from '../phone/wifi';
 import { Sec } from '../sim/wifi';
-import { type Host, lanHosts, modbusRegs, setBreaker, setSignals, WORDS } from '../sim/network';
+import { type Host, lanHosts, modbusRegs, setBreaker, setSignals, cellLog, WORDS } from '../sim/network';
+import { formatNumber } from '../sim/telco';
 import { capture } from '../sim/packets';
 
 /**
@@ -500,6 +501,7 @@ export class Shell {
     if (c === 'help') {
       if (C.host.kind === 'rtu') this.say(now, 'commands: status | breaker open | breaker close | exit', 0, 0.1);
       else if (C.host.kind === 'signal') this.say(now, 'commands: status | mode normal | mode flash | mode dark | exit', 0, 0.1);
+      else if (C.host.kind === 'omc') this.say(now, 'commands: status | log <number> | exit', 0, 0.1);
       else this.say(now, 'commands: status | exit', 0, 0.1);
       return;
     }
@@ -523,6 +525,21 @@ export class Shell {
         this.say(now, `> mode ${argv[1]}`, 0, 0.3);
         if (!setSignals(w, k, m)) { this.say(now, `  cabinet already in ${argv[1].toUpperCase()}`, 0, 0.1); return; }
         this.say(now, `  ACK: all intersections -> ${argv[1].toUpperCase()}`, 2, 0.2);
+        return;
+      }
+      this.say(now, `unknown command (try 'help')`, 0, 0.1); return;
+    }
+    if (C.host.kind === 'omc') {
+      if (c === 'status') { this.say(now, 'OMC-R: online (HLR/VLR, cell registration log)', 0, 0.2); return; }
+      if (c === 'log') {
+        let num = (argv[1] ?? '').replace(/\D/g, '');
+        if (num.length > 7) num = num.slice(-7);                 // the player may type the area code too
+        if (num.length !== 7) { this.say(now, 'usage: log <number>   (the 7-digit line)', 0, 0.1); return; }
+        const regs = cellLog(w, num, w.time);
+        if (!regs.length) { this.say(now, `  no mobile registration on file for ${num}`, 0, 0.2); return; }
+        const ap = (t: number) => { const hh = Math.floor(t / 3600) % 24; return `${((hh + 11) % 12) + 1}${hh < 12 ? 'am' : 'pm'}`.padStart(4); };
+        this.say(now, `MSISDN ${num} -- cell registration log`, 0, 0.3);
+        for (const r of regs) this.say(now, `  ${ap(r.t)}  cell ${r.site}  ${districtName(w.city, r.dist)}`, 1, 0.08);
         return;
       }
       this.say(now, `unknown command (try 'help')`, 0, 0.1); return;
@@ -698,10 +715,11 @@ export class Shell {
         const money = (cents: number) => '$' + Math.round(cents / 100);
         const J = w.jobs.jobs, active = J.find((j) => j.state === 'active'), closed = J.find((j) => j.state === 'done' || j.state === 'failed'), offered = J.find((j) => j.state === 'offered');
         const grid = (j: { sub: number }) => `GRIDLINK-${String(j.sub + 1).padStart(2, '0')}`;
-        if (active?.kind === 'signals') out.push(`Contract: the crossing by ${bz(active)}`, `  snarl the lights before ${due(active.due)}    pay ${money(active.pay)}`, `  that crossing's cabinet is on ${grid(active)} (host atc-*); how: cat ~/start-here.txt`);
+        if (active?.kind === 'trace') out.push(`Contract: trace a line`, `  which district was ${formatNumber(w.telco, active.num ?? '')} in around ${due(active.at ?? 0)}?  text it back before ${due(active.due)}    pay ${money(active.pay)}`, `  read it off the operator's records: its maintenance Wi-Fi (its OMC) is at the tallest tower downtown`, `  connect, 'tnet' the omc-r host and 'log <number>'; how: cat ~/start-here.txt`);
+        else if (active?.kind === 'signals') out.push(`Contract: the crossing by ${bz(active)}`, `  snarl the lights before ${due(active.due)}    pay ${money(active.pay)}`, `  that crossing's cabinet is on ${grid(active)} (host atc-*); how: cat ~/start-here.txt`);
         else if (active) out.push(`Contract: ${bz(active)}`, `  dark before ${due(active.due)}    pay ${money(active.pay)}`, `  power there comes from ${grid(active)}; how: cat ~/start-here.txt`);
-        else if (closed?.state === 'done') out.push(`Contract complete: ${closed.kind === 'signals' ? `the crossing by ${bz(closed)} is snarled` : `${bz(closed)} went dark`}. Paid ${money(closed.pay)}.`);
-        else if (closed) out.push(`Contract failed: ${closed.kind === 'signals' ? `the lights by ${bz(closed)} kept running` : `${bz(closed)} kept its lights`}. No pay.`);
+        else if (closed?.state === 'done') out.push(`Contract complete: ${closed.kind === 'signals' ? `the crossing by ${bz(closed)} is snarled` : closed.kind === 'trace' ? `the line was traced` : `${bz(closed)} went dark`}. Paid ${money(closed.pay)}.`);
+        else if (closed) out.push(`Contract failed: ${closed.kind === 'signals' ? `the lights by ${bz(closed)} kept running` : closed.kind === 'trace' ? `the line went untraced` : `${bz(closed)} kept its lights`}. No pay.`);
         else if (offered) out.push('A fixer has sent work to your phone. Reply YES from the phone to take it.');
         else out.push('No contract right now.');
         return 0;

@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.F.5 — O terceiro trabalho: seguir uma linha (2026-10-03)
+- Pago o segundo trabalho, o mesmo número volta com o terceiro, o que paga melhor: descobrir em que distrito da cidade um certo celular estava a uma hora do dia. O SMS dá o número da linha e a hora.
+- A pista não está na rua: é no registro da operadora. Procure o Wi-Fi de manutenção dela (o OMC) na torre mais alta do centro, entre na rede, `tnet` o host `omc-r` e rode `log <número>` — sai o registro de antena da linha hora a hora, com o distrito de cada uma.
+- Leia o distrito da hora pedida e mande por SMS para o contratante. Acertou, o pagamento entra na conta; errou, ele manda olhar de novo; passou o prazo sem resposta certa, não há pagamento.
+- O comando `job` no notebook descreve o contrato, o número e onde fica o OMC.
+
 ## 0.F.4b — O segundo trabalho: travar um cruzamento (2026-10-03)
 - Pago o primeiro trabalho, o mesmo número volta com outro, maior: travar os semáforos de um cruzamento da cidade dentro de uma janela de 1 a 2 horas. O SMS diz qual cruzamento (pelo nome de um lugar ao lado) e até que horas.
 - Aceite com YES, vá até o cruzamento, ache a GRIDLINK daquele trecho, entre no armário de semáforos e ponha os sinais em flash ou apagados antes do prazo. Feito isso, o pagamento entra na conta; se o prazo passar com os sinais normais, não há pagamento.

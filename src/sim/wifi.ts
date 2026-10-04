@@ -28,6 +28,9 @@ export interface AccessPoint {
   ch: number;
   /** The substation it is the maintenance link of (a utility network), or -1 for an ordinary router. */
   util: number;
+  /** [HACKING] The operator's records maintenance link (its switching centre downtown); the way in to
+   *  the cell-site logs (sim/network.ts, the 'omc' host). True for that one AP, false for the rest. */
+  omc?: boolean;
 }
 
 /** Chance that a business of each kind has a router, and that it is open. */
@@ -72,5 +75,18 @@ export function buildWifi(seed: number, city: City, sx: number, sy: number, powe
     add(S.x, S.y, 2, -2, -1, Sec.WEP, 900000 + k);
     out[out.length - 1].util = k;
   });
+  // [HACKING] the mobile operator's records link: one WEP network at its switching centre -- the
+  // tallest downtown tower -- reachable from the street below. The way to the cell-site logs.
+  let mtso = -1, md = 1e9;
+  city.buildings.forEach((B, k) => {
+    if (B.tier < 1) return;
+    const d = Math.hypot((B.x0 + B.x1) / 2 - city.cx, (B.y0 + B.y1) / 2 - city.cy);
+    if (d < md && B.h >= 20) { md = d; mtso = k; }
+  });
+  if (mtso >= 0) {
+    const B = city.buildings[mtso];
+    add((B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, 2, mtso, -1, Sec.WEP, 950000);
+    out[out.length - 1].omc = true;
+  }
   return out;
 }

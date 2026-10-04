@@ -1,4 +1,7 @@
 import { hash3 } from '../core/rng';
+import { districtAt } from './city';
+import { whereIs } from './citizens';
+import { mastNear } from './telco';
 import { logEvent } from './events';
 import { recordAct } from './heat';
 import { switchSub } from './power';
@@ -14,7 +17,7 @@ import { type World } from './world';
  * that is a weak one from the common lists, and a few commands that change the city's state.
  */
 export interface Port { n: number; service: string; banner: string }
-export type HostKind = 'router' | 'pc' | 'rtu' | 'signal' | 'bridge';
+export type HostKind = 'router' | 'pc' | 'rtu' | 'signal' | 'bridge' | 'omc';
 export interface Host {
   ip: string;
   name: string;
@@ -59,6 +62,15 @@ export function lanHosts(w: World, ap: number): Host[] {
     add(11, `atc-${n}`, 'signal', k, [
       { n: 23, service: 'telnet', banner: 'Metrix ATC-2 traffic signal cabinet fw 1.8' },
     ], 'engineer', word(12));
+    return out;
+  }
+  if (A.omc) {
+    // [HACKING] the mobile operator's records link: an edge gateway and the OMC-R console that holds
+    // the cell-site registration logs (`cellLog` below reads them for a line).
+    add(1, 'edge-gw', 'bridge', -1, [{ n: 80, service: 'http', banner: 'Norsat NSG-20 edge gateway' }]);
+    add(10, 'omc-r', 'omc', -1, [
+      { n: 23, service: 'telnet', banner: 'Norsat MSC OMC-R / HLR console fw 3.2' },
+    ], 'operator', word(13));
     return out;
   }
   // an ordinary network: the router, and for some a PC or two sharing files
@@ -129,4 +141,28 @@ export function modbusRegs(w: World, k: number): Reg[] {
 export function techOnline(w: World, k: number): boolean {
   const win = Math.floor(w.time / 1200), into = (w.time % 1200) / 1200;
   return hash3(w.seed ^ 0x7ec, k, win) < 0.55 && into < 0.6;
+}
+
+/** One hour of a line's cell-registration log: the game time, the serving mast's id, and its district. */
+export interface CellReg { t: number; site: number; dist: number }
+/**
+ * [HACKING] The operator's cell-site registration log for a mobile line, read off the OMC-R host
+ * (sim/laptop/shell.ts). For each of the last twelve hours it gives the mast that served the line
+ * then (whereIs + the nearest mast) and the district that mast covers -- the same reading the trace
+ * job checks its answer against (sim/jobs.ts). `line` is the 7-digit local number; [] if it is no
+ * known mobile. The locale turns the district index into a name; the sim keeps no text.
+ */
+export function cellLog(w: World, line: string, now: number): CellReg[] {
+  const id = w.pop.byNum.get(line);
+  if (id === undefined || id < 0) return [];   // not a mobile line on file
+  const out: CellReg[] = [];
+  const hr = Math.floor(now / 3600);
+  for (let q = Math.max(0, hr - 11); q <= hr; q++) {
+    const t = q * 3600, wa = whereIs(w.pop, w.city, id, t), b = wa.building;
+    if (b < 0) continue;
+    const B = w.city.buildings[b], m = mastNear(w.telco, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2);
+    if (m < 0) continue;
+    out.push({ t, site: w.telco.sites[m].id, dist: districtAt(w.city, w.telco.sites[m].x, w.telco.sites[m].y) });
+  }
+  return out;
 }
