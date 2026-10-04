@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-04 (4): o plano da 13.10 e o retorno dos testes
+
+- **Um só espaço é a arquitetura certa.** Hoje o shader tem dois desenhos do interior (o do andar do jogador e o visto pela janela), e cada recurso novo era feito num só deles: daí a porta que parece janela e as portas internas que somem de fora. Com uma função só, cada coisa nova aparece dos dois lados de graça. O risco é o desempenho: hoje a vista pela janela é barata de propósito. Vou medir antes e depois, e de longe fica um nível de detalhe barato.
+- **Paredes com volume rendem um ganho de graça:** a janela ganha profundidade (o vão na parede), que hoje é chapada; de perto isso se lê muito bem em ASCII.
+- **Os modelos de planta em texto** (uma grade de caracteres por modelo) podem ser desenhados por você ou pelo Gemini, com um briefing do formato: é uma tarefa boa para delegar, porque não depende do código.
+- **Notícias dominadas por batidas:** além do limite por assunto, as batidas em si estão frequentes demais; as duas coisas juntas devem resolver. Pus o limite nas correções e a frequência na etapa 18.
+- **Efeitos da surge:** ótima ideia, combina com o apagão que já existe e dá o "aviso" antes do corte. Pus na etapa 20; é pequeno e pode vir antes se você quiser.
+
+---
+
 ## 2026-10-04 (3): respostas à fila de feedback
 
 - **Interiores por módulo (Lego):** concordo, é a causa de quase todos os remendos. Sugestão: módulo de 2 m com a parede *dentro* do módulo (0,2 m), corredor de 1 módulo, e o prédio com largura e fundo arredondados para baixo a um múltiplo; a sobra do lote vira recuo, calçada mais larga ou pátio, em vez de esticar a sala. Assim a cidade não precisa ser gerada de novo e as salas modelo encaixam em qualquer andar. Faço a 13.11 antes da 13.10, como você permitiu.
