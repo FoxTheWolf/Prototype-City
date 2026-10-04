@@ -2,6 +2,20 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.2d — Elevadores de verdade (2026-10-04)
+- Cada prédio tem a sua cabine, parada num andar qualquer. No corredor, F chama o elevador: ele vem de verdade, toca a campainha e abre.
+- Com a cabine em outro andar, as portas de aço ficam fechadas, o mostrador em cima mostra onde ela está e o botão de chamar acende.
+
+## 0.13.2c — Portas com a mão (2026-10-04)
+- As portas abrem e fecham com F, e fecham sozinhas quando você se afasta. Fechadas, não dá para atravessar.
+- As portas da rua têm duas folhas de vidro que giram para dentro, e pelo vão aberto se vê a loja.
+- Algumas portas estão trancadas: a maioria dos apartamentos, os escritórios fora do horário, as lojas fechadas.
+
+## 0.13.2b — Lojas menos vazias (2026-10-04)
+- O elevador das torres com recuo agora chega ao último andar.
+- As geladeiras guardam só bebidas e frios.
+- As lojas fundas têm uma sala de estoque nos fundos, e as lojas grandes ganham mais vitrines, prateleiras ou mesas em vez de chão vazio.
+
 ## 0.13.3 — Quem trabalha nas lojas (2026-10-04)
 - Os balconistas são moradores da cidade com turno e folga: o caixa só atende quando alguém do turno está lá ("NOBODY AT THE TILL" quando não está).
 - Cada turno de loja tem pelo menos duas pessoas, que tiram as folgas em dias diferentes, então a loja quase nunca fica sem ninguém.
