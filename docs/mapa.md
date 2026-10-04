@@ -1,0 +1,51 @@
+# Mapa dos módulos
+
+> Movido do CLAUDE.md em 2026-10-04. Ler só a parte da pasta em que se vai mexer (`grep -n` pelo nome do arquivo). Ao criar ou renomear um arquivo, atualizar aqui.
+
+- **Mapa dos módulos** (o que está em cada arquivo):
+  - **`src/sim/`** (nunca importa `render` nem o DOM):
+    - `city.ts`: grade, quarteirões, prédios (caixas, cilindros e caixas cortadas pela diagonal), empresas, props, marcos, borda e Sarcófago.
+    - `world.ts`: o passo fixo de 60 Hz e as teclas de debug.
+    - `traffic.ts`: trânsito por faixas (IDM), curvas nos cruzamentos, semáforos (`signal`, `zoneSignal`), paradas obrigatórias, a diagonal (`diagRoad`, zonas), filas (`queues`).
+    - `events.ts`: a fila de eventos (apagão, energia de volta, engarrafamento; batidas na 7B).
+    - `clock.ts`: tempo, calendário, sol e lua.
+    - `weather.ts`: previsão pura, chão molhado e neve.
+    - `power.ts`: subestações, geradores e quem alimenta o quê.
+    - `telco.ts`: antenas (cell sites), a energia e a bateria delas, a linha pré-paga do jogador (crédito, pacote de dados), os números (código de área, empresas, orelhões, residenciais que existem, 911/411/611), horários das empresas e `lookup` (quem um número alcança).
+    - `save.ts`: o salvamento do mundo (`snapWorld`/`applyWorld`; chama `saveJobs`/`saveHeat` dos arquivos `[HACKING]`, só as chamadas). O armazenamento fica em `src/saveGame.ts` (IndexedDB) e o menu em `src/menu.ts`.
+    - `needs.ts`: a fome e o fôlego da corrida (`stepNeeds`, `FOOD`, `eat`).
+    - `bag.ts`: a mochila (itens com tamanho em cm, `placeFor`, a física `settleBag`, o furto em `stepBag`, `pay` em dinheiro ou cartão).
+    - `bank.ts`: a conta do jogador (`openAccount`, `post`, o extrato); os bancos são `city.banks` (`bankChains` em `city.ts`: redes de agências, cada uma uma empresa com frente na rua).
+    - `jobs.ts` **`[HACKING]`**: os trabalhos que um contratante oferece (`buildJobs`, `jobReply`, `stepJobs`), agnóstico de canal, lido pelo celular. **Não abrir fora da Trilha de hacking.**
+    - `wifi.ts`: os roteadores Wi-Fi das lojas e casas (nome, segurança, chave, canal) e os Wi-Fi de manutenção das subestações (`util`, WEP, nome `GRIDLINK-nn`).
+    - `computer.ts`: o computador virtual (hardware, disco em árvore `FsNode`, processos, `workS`, bateria/temperatura, `BiosConfig` com relógio, rádio, ordem de boot e a senha de supervisor `supervisorPass`/`bootPass`); `playerLaptop(seed)`.
+    - `network.ts`: os hosts por rede Wi-Fi (`lanHosts`: roteador, PCs; nas de manutenção o bridge, a RTU da subestação e o armário de semáforos ATC; na da operadora o `edge-gw` e o `omc-r`), as portas e serviços, a lista de senhas fracas (`WORDS`), `setBreaker`/`setSignals` (os efeitos no mundo), `modbusRegs` (a telemetria da RTU lida da rede elétrica, para o `mbus`), `cellLog` (o registro de antena de uma linha, para o comando `log` do OMC) e `techOnline` (quando um técnico está logado em claro, para o `tdump` capturar).
+    - `packets.ts` **`[HACKING]`**: `capture(...)`, o gerador puro e determinístico de pacotes de uma rede Wi-Fi, materializados só quando o `tdump` captura (handshake, ARP/DHCP/DNS/TCP/HTTP, cifra pela segurança, perdas pelo dBm).
+    - `citizens.ts`: a população (lares nos apartamentos, empregos nas lojas, escritórios e galpões, famílias, amigos, celulares e linhas fixas), o plano do dia de cada um (`dayPlan`) e `whereIs`, onde cada um está a uma hora (funções puras).
+    - `peds.ts`: os cidadãos caminhando perto do jogador, da porta de um prédio à porta do outro.
+    - `social.ts`: a rede social (posts de rotina e de testemunhas dos eventos, curtidas).
+    - `device.ts`: os modelos de celular dos fabricantes da cidade (`phoneModel`, `playerPhone`).
+    - `interior.ts`: plantas dos andares (sob demanda, em cache), portas de rua (a principal e as das lojas), móveis, escadas de incêndio (as internas saíram; o código delas ficou), elevadores (de vidro também) e a colisão de tudo isso.
+  - **`src/render/`:**
+    - `gpu/shader.ts` (o mundo por célula, WGSL), `gpu/objects.ts` (os objetos), `gpu/world.ts` (`GpuWorld`: sobe a cidade e as listas do quadro; `shot` lê de volta uma vista), `gpu/compositor.ts` (as camadas na tela).
+    - `raycaster.ts`: o que a CPU ainda prepara por quadro para a GPU (`gpuPrepare`, `gpuInside`, `gpuObjects`: luzes, céu, objetos, o andar em volta). O desenho por coluna da CPU foi apagado na R.17 (o usuário guardou uma cópia).
+    - `glRenderer.ts`: a composição na GPU da grade do mundo e da grade da interface (10.9).
+    - `sky.ts`: gradiente, nuvens, lua e sol.
+    - `precip.ts`: chuva e neve.
+    - `sarcophagus.ts`: a cúpula e a constante `CURVE_R`.
+    - `objects.ts` e `models.ts`: objetos com volume (inclusive semáforos e placas de PARE, `signalModel`, `signalFarModel`).
+    - `signs.ts`: letreiros, lâmpadas e símbolos.
+    - `lights.ts`: luzes dinâmicas.
+    - `lightmap.ts`: poças de luz dos postes.
+    - `lamps.ts`: falhas e fotocélula.
+    - `power.ts`: o efeito do blackout, uma função pura.
+    - `interior.ts`: o andar em volta do jogador (paredes, piso, teto, lâmpadas, degraus, botoeira do elevador, janelas e vidro) e os interiores vistos de fora pelas janelas (`peekInto`/`peekCell`).
+  - **`src/phone/`** (a interface do celular, como o `main.ts`: lê a simulação, não é lida por ela): `phone.ts` (estado, teclas e a lógica dos apps; os apps de fábrica e a pasta), `shells.ts` (os modelos visuais e as capinhas), `ui.ts` (as peças da interface: caixas arredondadas, degradês, fotos com iniciais, papéis de parede, a barra de título), `wire.ts` (o Streetwire: feed, post com foto e comentários, perfil, curtidas), `calendar.ts` (o calendário: mês, dia, feriados, eventos da cidade, lembretes), `skins.ts` (o visual próprio da previsão do tempo e do jornal), `draw.ts` (o aparelho na mão, a luz nele, o boot, o mapa da cidade e o de interior, a lista de lugares), `apps.ts` (o menu em grade e as telas dos outros apps), `lcd.ts` (a tela: tamanho, cores, texto digitando, barra de status, teclas laterais, letras grandes), `gps.ts` (o receptor com os limites de 2008; o erro muda a cada 6 s e, na rua, cai na calçada), `places.ts` (a busca do Maps, a porta de cada lugar, a ficha, a rota a pé por A* no raster do mapa e a próxima curva), `radio.ts` (o rádio GSM/EDGE: sinal, barras, registro, dados), `call.ts` (a ligação: quem atende, o roteiro de falas, o menu por teclas, a cobrança), `ussd.ts` (o menu `*100#` da operadora e os cartões de recarga), `codes.ts` (os códigos secretos por semente), `camera.ts` (visor e fotos), `store.ts` (os apps da loja: Snake, conversor), `payphone.ts` (o orelhão), `wifi.ts` (o Wi-Fi do aparelho), `textinput.ts` (o editor Abc/T9/123), `mapdata.ts` (o raster da cidade para o mapa). O hardware do aparelho fica em `sim/device.ts`. A luz nas mãos (`VIEW_LIGHT`, `VIEW_GLINT`) vem do fim de `renderWorld`.
+  - **`src/laptop/`** (a interface do notebook, como o celular: lê a simulação): `bios.ts` (a SETUP com as abas Main/Advanced/Boot/Security/Exit, o menu de boot, o diálogo de senha de supervisor e a tela de desbloqueio `unlock` no POST), `editor.ts` (o `nano`), `screen.ts` (telas cheias em células), `laptop.ts` (o objeto, tirar/guardar, achar onde sentar, a tampa, a bateria), `draw.ts` (o aparelho, a tela 80×22, o teclado, a BIOS, o painel de status, a máscara da senha `S.mask`), `shell.ts` (o shell tipo Unix: comandos, boot, o ritmo do trabalho real, a placa Wi-Fi `Shell.net`, os comandos de hacking `mmap`/`bruter`/`tdump`/`tnet`/`mbus`, o builtin `job` (o contrato de `world.jobs`) e a sessão remota `conn`/`remote`; o gate de senha no boot/SETUP). O hardware é um `Computer` de `sim/computer.ts`; os hosts e efeitos vêm de `sim/network.ts`.
+  - **`src/audio/`:** `sound.ts` (ambiente, chuva, trovão, zumbidos) e `blackout.ts` (o som do apagão, versão A).
+  - **`src/locale/`:** `en.json`, `names.ts` (nomes, operadora, fabricantes de celular, cidadãos com o primeiro nome pela geração e pelo gênero, bichos, firmas e os agradecimentos), `news.ts` (o letreiro; `madeHeadline`, as manchetes da gramática), `calls.json` (as falas das ligações, agora peças da gramática), `people.en.json` (firmas, papéis), `social.en.json` e `social.ts` (posts, comentários e perfis do Streetwire), `sms.ts` (os SMS dos cidadãos e das lojas), `jobs.ts` **`[HACKING]`** (os textos do contratante; não abrir fora da Trilha de hacking), `thanks.json` (os nomes dos amigos), e:
+    - `gen.ts`: o gerador de textos (gramática com `#símbolo#`, pesos `3|`, condições `[old evening]`, `{slots}`, persona e a memória `Fresh` contra repetição);
+    - `voice.ts`: a voz de cada cidadão (as condições de quem fala e do momento, os nomes da vida dele em `lifeCtx`, e o jeito de digitar em `voice`);
+    - `text/`: os arquivos da gramática, juntados por `text/index.ts` (`TEXT`): `words`, `words-more`, `memes`, `sms`, `news`, `news2008`, `calendar`, `comments`, `profiles`, `names` (nomes por gênero e geração, sobrenomes, bichos), `promo` (as ofertas das lojas por SMS) e `posts/` (formas, emoções e assuntos).
+  - **`src/counter.ts`, `src/shop.ts`, `src/bagUi.ts`** (interface, como o celular): o balcão do caixa, mirar e pegar um produto da prateleira, e a tela da mochila.
+  - **`src/render/intro.ts`:** a abertura (terminal no preto, depois a cidade em blocos que se desfazem em glifos).
