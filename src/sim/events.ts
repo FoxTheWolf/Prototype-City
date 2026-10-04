@@ -3,7 +3,7 @@
  * substation goes down, a jam builds, later a crash) is logged here with where and when, and the
  * news, the social network (stage 12) and the logs the player hacks into read from the same queue.
  */
-export type EventKind = 'blackout' | 'restored' | 'jam' | 'crash' | 'manhunt' | 'bust';
+export type EventKind = 'blackout' | 'restored' | 'jam' | 'crash' | 'manhunt' | 'bust' | 'shoplift';
 
 export interface SimEvent {
   /** Running number, so readers can tell what they have already seen. */

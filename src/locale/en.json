@@ -2,14 +2,23 @@
   "lang": "en",
   "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED", "call": "[F] CALL THE LIFT", "coming": "THE LIFT IS COMING" },
   "counter": {
-    "hello": "What can I get you?", "ok": "Paid by card. Thank you!", "funds": "Card declined: not enough in the account.", "owned": "You already have one of those.",
-    "balance": "ACCOUNT", "have": "OWNED", "keys": "[UP/DOWN] PICK  [ENTER] BUY  [F] LEAVE",
+    "hello": "What can I get you?", "nothing": "Just looking? Take what you need off the shelves.", "ok": "Paid. Thank you!", "funds": "Card declined: not enough in the account.", "noCash": "You don't have enough cash on you.",
+    "owned": "You already have one of those.", "room": "That won't fit in your bag.", "left": "No problem, I'll put them back.", "withdrew": "Here's your cash.",
+    "pay": "Pay for {n} item(s)", "leave": "Leave them on the counter", "withdraw": "Withdraw cash",
+    "cash": "CASH", "card": "CARD", "have": "OWNED", "keys": "[UP/DN] PICK [L/R] CASH/CARD [ENTER] OK [F] LEAVE",
     "use": "[F] COUNTER", "closed": "CLOSED - OPENS AT {h}:00", "nobody": "NOBODY AT THE TILL",
     "items": {
       "sim": { "name": "Prepaid SIM card", "what": "A new number. The old line stays behind." },
       "antenna": { "name": "Directional Wi-Fi antenna", "what": "USB, for the notebook. Reaches further." },
       "battery": { "name": "Notebook battery", "what": "A second pack: about twice the hours." }
     }
+  },
+  "bag": {
+    "title": "BACKPACK", "keys": "[DRAG] MOVE  [R] TURN  [RIGHT CLICK] PUT BACK / THROW AWAY  [B] CLOSE",
+    "keep": "You'll want to keep that.", "thrown": "{x}: thrown away.", "back": "{x}: back on the shelf.",
+    "cash": "CASH", "unpaid": "UNPAID", "phone": "PHONE", "laptop": "NOTEBOOK", "sim": "SIM CARD",
+    "take": "[F] TAKE {x}  {p}", "ask": "ASK AT THE COUNTER", "taken": "{x} in the bag (unpaid)", "room": "No room in your bag",
+    "stole": "You walked out without paying for {n} item(s)."
   },
   "roots": [
     "Ashford", "Kessler", "Marlow", "Greyhaven", "Calloway", "Thornbury", "Holloway", "Brandt",

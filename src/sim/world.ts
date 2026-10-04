@@ -6,6 +6,7 @@ import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
 import { openAccount, type BankAccount } from './bank';
 import { newGear, type Gear } from './gear';
+import { newBag, stepBag, type Bag } from './bag';
 import { buildJobs, stepJobs, type JobBoard } from './jobs';
 import { buildPower, switchSub, type PowerGrid } from './power';
 import { buildTelco, type Telco } from './telco';
@@ -91,6 +92,8 @@ export interface World {
   bank: BankAccount;
   /** What the player has bought (F.9): the notebook's antenna and second battery, the SIMs. */
   gear: Gear;
+  /** What the player carries in the backpack (13.4; see bag.ts). */
+  bag: Bag;
   /** [HACKING] The jobs a fixer offers (see jobs.ts). */
   jobs: JobBoard;
   /** [HACKING] The heat the player draws, and the traces behind it (see heat.ts). */
@@ -143,7 +146,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */
@@ -260,6 +263,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   }
   // in through a fire escape's window: onto that floor
   if (p.inside >= 0 && wasOut && p.liftTo < 0) p.z = p.floor * FLOOR_H;
+  stepBag(w);
   stepDoors(w, TICK);
   stepLifts(w, TICK);
 

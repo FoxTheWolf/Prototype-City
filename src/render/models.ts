@@ -439,7 +439,7 @@ const GOODS: RGB[] = [[200, 60, 50], [60, 120, 200], [230, 200, 60], [80, 170, 9
 const furns = new Map<string, Part[]>();
 /** Each good has its own packaging color, from its name (so the same good looks the same everywhere). */
 const goodColors = new Map<string, RGB>();
-function goodColor(g: string): RGB {
+export function goodColor(g: string): RGB {
   let c = goodColors.get(g);
   if (!c) {
     let h = 0;

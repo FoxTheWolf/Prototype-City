@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.4 — Comprar de verdade e a mochila (2026-10-04)
+- Nas lojas, mire num produto da prateleira e aperte F: ele vai para a mochila, ainda sem pagar (com uma etiqueta $).
+- No caixa, F abre o balcão: pague tudo o que pegou em dinheiro ou no cartão (←/→ escolhe), ou deixe no balcão. Nos diners, cafés e bares, peça no balcão para viagem.
+- Saindo da loja sem pagar, o que estava na mochila é furto (por enquanto ninguém vai atrás).
+- B abre a mochila: as coisas caem e se empilham de verdade, e só entra o que cabe. Arraste com o mouse, R gira, o botão direito devolve à prateleira ou joga fora. Ao lado ficam o celular, o notebook e o chip.
+- No caixa do seu banco dá para sacar dinheiro.
+
 ## 0.13.2d — Elevadores de verdade (2026-10-04)
 - Cada prédio tem a sua cabine, parada num andar qualquer. No corredor, F chama o elevador: ele vem de verdade, toca a campainha e abre.
 - Com a cabine em outro andar, as portas de aço ficam fechadas, o mostrador em cima mostra onde ela está e o botão de chamar acende.

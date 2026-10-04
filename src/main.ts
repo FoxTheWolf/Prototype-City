@@ -5,7 +5,9 @@ import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
-import { Counter, counterPrompt, drawCounter } from './counter';
+import { Counter, counterPrompt, drawCounter, money } from './counter';
+import { BagView } from './bagUi';
+import { aimedGood, takeGood } from './shop';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
@@ -118,6 +120,9 @@ const camera = new Camera();
 const phone = new Phone(world);
 const payphone = new Payphone(world);
 const counter = new Counter(world);
+const bagView = new BagView(world);
+/** What taking a good off a shelf said, and when; and the last theft shown (its game time). */
+let shelfNote = '', shelfNoteAt = -9, theftSeen = world.bag.stolenAt;
 /** What trying a door said (LOCKED), and when. */
 let doorNote = '', doorNoteAt = -9;
 /** The notebook's battery with what was bought (F.9): the second pack adds its capacity; bought just now, it comes charged. */
@@ -157,7 +162,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, bagView, counter, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp,
   // the GPU world's characters (J on), read back from its output buffer, to compare with gridText
   gpuText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
     if (!gpu) return '';
@@ -318,6 +323,12 @@ addEventListener('mousedown', (e) => {
   if (relock && !laptop.open) { relock = false; if (running && !phone.out && !payphone.active && e.button !== 1) input.lock(); }
   if (e.button === 2) e.preventDefault();
   if (!running || paused) return;
+  // the backpack open: the left button drags a thing, the right one puts it back or throws it away
+  if (bagView.open) {
+    if (e.button === 0) bagView.grab(phone.cx, phone.cy);
+    else if (e.button === 2) bagView.remove(phone.cx, phone.cy, performance.now() / 1000);
+    return;
+  }
   if (laptop.open) {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
@@ -362,11 +373,12 @@ addEventListener('mousedown', (e) => {
 });
 // the lock arrives a moment after it is asked for: if the right button is already up, free the cursor again
 document.addEventListener('pointerlockchange', () => {
-  if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock();
+  if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open || bagView.open)) input.unlock();
   // the pointer freed by the player (Esc, or leaving the window), not by the game: pause
-  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
+  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
 });
 addEventListener('mouseup', (e) => {
+  if (e.button === 0 && bagView.open) bagView.release();
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;
@@ -415,6 +427,16 @@ addEventListener('keydown', (e) => {
     if (!e.repeat && counter.key(e.code, performance.now() / 1000)) { e.preventDefault(); if (world.gear.battery) gearBattery(true); }
     if (!counter.active || e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space') return;
   }
+  // the backpack open: B or Esc closes it, R turns what is held; the rest of the keys wait
+  if (bagView.open) {
+    e.preventDefault();
+    if (e.repeat) return;
+    if (e.code === 'KeyB' || e.code === 'Escape') { bagView.open = false; bagView.release(); input.lock(); }
+    else if (e.code === 'KeyR') bagView.turn();
+    return;
+  }
+  // B: open the backpack (13.4)
+  if (e.code === 'KeyB' && running && !e.repeat && !phone.out && !payphone.active && !counter.active && laptop.raise === 0) { bagView.open = true; input.unlock(); return; }
   // Esc with nothing in the hands: the pause menu (with the pointer locked, the browser frees it and pointerlockchange opens it)
   if (e.code === 'Escape' && running && !phone.out && !payphone.active) { if (!e.repeat) pause(); return; }
   // N: take the notebook out, where it can be used (sitting or leaning)
@@ -428,6 +450,14 @@ addEventListener('keydown', (e) => {
     if (payphone.active) { payphone.close(); input.lock(); return; }
     const k = payphone.near();
     if (k >= 0 && !phone.out) { payphone.open(k); input.unlock(); return; }
+    // a good on a shelf under the sight: into the bag, unpaid (13.4)
+    const a = !phone.out ? aimedGood(world, camera.yaw, camera.pitch, eyeNow()) : null;
+    if (a) {
+      const r = takeGood(world, a), name = (en.goods as Record<string, string>)[a.good] ?? a.good;
+      shelfNote = r === 'ok' ? en.bag.taken.replace('{x}', name) : en.bag[r]; shelfNoteAt = performance.now() / 1000;
+      if (r === 'ok') sound?.phoneKey(false);
+      return;
+    }
     const c = counter.near();
     if (c?.staffed && !phone.out) { counter.open(c.k); return; }
     // a door in front: open it, close it, or find it locked (13.2c)
@@ -497,7 +527,7 @@ function readInput(): PlayerInput {
   // the up and down arrows belong to the phone (as in GTA IV); WASD walk
   const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
-  const go = running && laptop.raise === 0 && !counter.active;
+  const go = running && laptop.raise === 0 && !counter.active && !bagView.open;
   return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
@@ -570,6 +600,7 @@ async function saveNow(): Promise<boolean> {
 }
 function applySave(s: GameSave) {
   applyWorld(world, s.world);
+  theftSeen = world.bag.stolenAt;
   phone.restore(s.phone as ReturnType<Phone['snapshot']>);
   laptop.restore(s.laptop as ReturnType<Laptop['snapshot']>);
   gearBattery();
@@ -844,8 +875,21 @@ function frame(now: number) {
   drawPayphone(ui, payphone, world, now / 1000, VIEW_LIGHT);
   playSfx(counter.sfx);
   drawCounter(ui, counter, world, now / 1000);
+  // the backpack: its pile settles every frame, drawn while open
+  bagView.step(dt, phone.cx, phone.cy);
+  bagView.draw(ui, phone.cx, phone.cy, [
+    [en.bag.phone, `${phone.maker} ${phone.device.model}`],
+    [en.bag.laptop, `${Math.round(laptop.pc.charge * 100)}% ${laptop.pc.battWh.toFixed(0)} Wh`],
+    [en.bag.sim, world.telco.player.number],
+  ], now / 1000);
+  // a good on a shelf under the sight: what F takes, and its price; what taking it said; walking out unpaid
+  const aim = running && !phone.out && !counter.active && !bagView.open && !laptop.open ? aimedGood(world, camera.yaw, camera.pitch, eyeNow()) : null;
+  if (world.bag.stolenAt !== theftSeen) { theftSeen = world.bag.stolenAt; shelfNote = en.bag.stole.replace('{n}', String(world.bag.stolen)); shelfNoteAt = now / 1000; }
+  const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? en.bag.take.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good).replace('{p}', money(aim.cents)) : '';
+  if (shelfMsg && !bagView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
+  if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
   // a shop's till in front: how to use the counter, or when the shop opens
-  const till = !phone.out && !counter.active ? counter.near() : null;
+  const till = !phone.out && !counter.active && !bagView.open ? counter.near() : null;
   if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a door in front: F to open or close it, or that it is locked (for a moment after trying)
   if (!till && !phone.out && !counter.active && !payphone.active) {

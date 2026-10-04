@@ -123,7 +123,7 @@ export function tickerText(world: World): string {
   }
   for (const e of cases.slice(-2)) {
     const dn = districtName(city, districtAt(city, e.x, e.y)), base = (e.kind === 'manhunt' ? 400 : 500) + e.id;
-    story(pick(e.kind === 'manhunt' ? N.manhunt : N.bust, base).replace('{district}', dn.toUpperCase()), e.kind, e.x, e.y, '', '', dn, base, e.time);
+    story(pick(e.kind === 'manhunt' ? N.manhunt : N.bust, base).replace('{district}', dn.toUpperCase()), e.kind as 'manhunt' | 'bust', e.x, e.y, '', '', dn, base, e.time);
   }
   const W = world.weather, c = calendar(world.time);
   ahead.preset = W.preset;

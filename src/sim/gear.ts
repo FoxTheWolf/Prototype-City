@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { post } from './bank';
+import { addToBag, pay, placeFor, sizeOf } from './bag';
 import { START_CREDIT, START_DATA_KB } from './telco';
 import { dropLine } from './heat'; // [HACKING] a SIM swap drops the old line's phone traces (ver CLAUDE.md > Arquivos de hacking)
 import { type World } from './world';
@@ -36,13 +36,13 @@ export const SPARE_WH = 48;
 export const itemsAt = (kind: string) => ITEMS.filter((i) => i.kinds.includes(kind));
 export const owned = (g: Gear, i: Item) => i.once && g[i.id as 'antenna' | 'battery'];
 
-/** Buy an item at business k: paid by card. 'ok', or why not. */
-export function buy(w: World, i: Item, k: number): 'ok' | 'owned' | 'funds' {
+/** Buy an item at business k, in cash or by card; the antenna and the battery go in the bag (13.4). 'ok', or why not. */
+export function buy(w: World, i: Item, k: number, cash = false): 'ok' | 'owned' | 'funds' | 'room' {
   if (owned(w.gear, i)) return 'owned';
-  if (w.bank.balance < i.cents) return 'funds';
-  post(w.bank, w.time, 'card', -i.cents, k);
+  if (i.id !== 'sim' && !placeFor(w.bag, ...sizeOf(i.id))) return 'room';
+  if (!pay(w, i.cents, k, cash)) return 'funds';
   if (i.id === 'sim') newLine(w);
-  else w.gear[i.id] = true;
+  else { w.gear[i.id] = true; addToBag(w.bag, i.id, i.cents, k, true); }
   return 'ok';
 }
 

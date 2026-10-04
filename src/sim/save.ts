@@ -1,6 +1,7 @@
 import { FLOOR_H } from './city';
 import { loadHeat, saveHeat } from './heat'; // [HACKING] the heat's own save
 import { loadJobs, saveJobs } from './jobs'; // [HACKING] the jobs' own save
+import { bagGear } from './bag';
 import { spawnPeds } from './peds';
 import { type World } from './world';
 
@@ -24,6 +25,8 @@ export interface WorldSave {
   bank: World['bank'];
   /** Missing in saves from before F.9. */
   gear?: World['gear'];
+  /** Missing in saves from before 13.4. */
+  bag?: World['bag'];
   events: World['events'];
   feed: World['feed'];
   weather: World['weather'];
@@ -36,7 +39,7 @@ export function snapWorld(w: World): WorldSave {
   return {
     time: w.time, tick: w.tick, player: { ...w.player },
     subs: w.power.subs.map((s) => ({ on: s.on, changed: s.changed, ox: s.ox, oy: s.oy, sig: s.sig, offAt: s.offAt })),
-    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, events: w.events, feed: w.feed, weather: { ...w.weather },
+    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, bag: { ...w.bag, items: w.bag.items.map(({ vx: _x, vy: _y, ...i }) => i) }, events: w.events, feed: w.feed, weather: { ...w.weather },
     jobs: saveJobs(w.jobs), heat: saveHeat(w.heat),
   };
 }
@@ -53,6 +56,8 @@ export function applyWorld(w: World, d: WorldSave) {
   w.telco.spent = d.spent;
   w.bank = d.bank;
   if (d.gear) Object.assign(w.gear, d.gear);
+  if (d.bag) w.bag = d.bag;
+  bagGear(w);
   w.events = d.events;
   w.feed = d.feed;
   Object.assign(w.weather, d.weather);
