@@ -258,7 +258,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Maps:** o modo escuro (pedido de novo em 2026-10-04; pode vir antes, junto da lista de retoques); buscar ruas e esquinas ("5th Ave & 12th St").
 - **App de mensagens cifradas** (o canal dos hackers, decidido em 2026-10-04; veja "O jogador é o número dele"): nome fictício, ligado ao número; o contratante passa a escrever por ele em vez do SMS comum.
 
-### Etapa 16: Os NPCs usando a cidade e reagindo ao jogador (antes "13b" e parte da "13c")
+### Etapa 16: Os NPCs usando a cidade e reagindo ao jogador
 - **Começar pelos pedestres sem trilhos** (entrevista de 2026-10-04, `docs/visao.md`): destino próprio e área caminhável com custos (a rua permitida, mais cara), desvio local; é a base dos curiosos na batida, da polícia procurando e do stealth (medidor de luz; as luzes do próprio jogador o entregam).
 - Usam a cidade: compram nas lojas, sentam nos bancos e nas mesas, esperam no ponto, usam os orelhões, entram nos cafés para fugir da chuva, reagem a apagões, batidas e sirenes (param, olham, fotografam), abrem guarda-chuvas, pegam táxi.
 - **Pessoas dentro dos prédios** (a simulação ainda não põe ninguém dentro) e as portas de rua abrindo vistas de fora.
@@ -280,10 +280,10 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Dirigir entra na 1.0, no fim da etapa 18, radar depois):** as peças convergem (a câmera do táxi, a física do trânsito, o estacionamento dos carros dos NPCs, as fotos). **Multas por foto da placa** (radar), alvo de hacking depois. **Começar o carro por dentro com 2–3 referências escolhidas pelo usuário** e um esboço do painel e do banco antes do resto.
 - **Reavaliar o ritmo do tempo** depois disso: medir de novo a discrepância entre os planos e a viagem de verdade e decidir com o usuário se o dia pode ser mais longo.
 
-### Etapa 19: `[HACKING]` Hacking completo (antes "14"; Opus 4.8, avisar o usuário)
+### Etapa 19: `[HACKING]` Hacking completo (Opus 4.8)
 - Computadores virtuais, redes, cybercafés com Wi-Fi por distância, portas físicas, apps de hacker instalados por cabo, impacto sistêmico; o modelo completo de "Design: pacotes de rede simulados"; o celular como modem do notebook (tethering) e talvez um cartão SD compartilhado. Detalhes na "Trilha de hacking".
 
-### Etapa 20: Refinamento e variedade (antes "15")
+### Etapa 20: Refinamento e variedade
 - **Perguntar no começo:** as opiniões do usuário sobre a etapa 6 (interiores).
 - Fachadas mais complexas (cornijas, arcos, pilastras, bases, coroas; referências 28–30 e 32); muito mais letreiros e publicidade (34, 35), outdoors de empresas que existem e mudam com a simulação; topos acesos à noite (36); contornos de neon; distrito estilo Times Square; detalhes de telhado e *greebles*; chaminés industriais com fumaça; cabine telefônica fechada (23); transmissor de rádio como treliça vazada e mais marcos; mais modelos de celular e capinhas, formatos BlackBerry e flip; uma passada nos ícones; carros menos arcaicos (rodas girando, pessoas visíveis, modelos variados); animais (bichos nos apartamentos, cachorros com os donos, gatos de rua, pombos; `Household.pet` já existe).
 - **Efeitos da surge (retorno do usuário em 2026-10-04):** como os telões que dão tela azul, durante a surge os aparelhos falham: alguns postes apagam soltando faíscas, letreiros e placas de publicidade também, e luzes de janelas se apagam (`render/power.ts`, `SURGE`).
