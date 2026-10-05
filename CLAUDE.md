@@ -256,7 +256,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Portal de notícias e busca:** as manchetes da fila de eventos; uma busca que acha empresas, pessoas e lugares.
 - **Fotos apontadas para o que importa (retorno do usuário em 2026-10-04),** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
 - **O resto da rede social:** respostas, compartilhamentos, assuntos em alta, o site do Streetwire no notebook, o jogador postar.
-- **Easter egg do eclipse:** a sombra da Terra já é desenhada (0.13.10d3; `jogar-eclipse-total.bat`/`-parcial.bat`, parâmetro `?at=`); falta os cidadãos comentarem no Streetwire (20/02/2008, totalidade 22:05–22:55 no relógio do jogo; o de 16/08 não é visível na cidade, a lua está abaixo do horizonte).
+- **Eclipse no Streetwire:** a lua já escurece (0.13.10d3, `jogar-eclipse-*.bat`); falta os cidadãos comentarem o de 20/02/2008 (totalidade 22:05–22:55; o de 16/08 não se vê na cidade).
 - **Registros dos cidadãos** (identidade e documentos): **Opus 4.8** (pode acionar o classificador).
 - **E-mail** (canal do contratante para contratos longos e do mistério de fundo; veja "Canais do contratante").
 - **Mais destinos do dinheiro:** lojas online, serviços, assinaturas, hardware pelo correio.
