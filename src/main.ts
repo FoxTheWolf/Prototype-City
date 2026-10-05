@@ -118,6 +118,13 @@ const world = await pace(worldSteps(seed, CITY_SIZE, true, savedPop), (f) => loa
 if (!savedPop) void savePop(seed, world.pop);
 // ?at=2008-02-20T22:30 starts a new game at that time of the city's clock (the eclipse launchers, jogar-eclipse-*.bat)
 const atParam = params.get('at');
+// ?sarcnear: only to look at the Sarcophagus up close (13.15): pulls the dome, tower and cranes to 200 m past the fence
+if (params.has('sarcnear')) {
+  const S = world.city.sarcophagus, C = world.city;
+  const dx = S.x - C.w / 2, dy = S.y - C.h / 2, d = Math.hypot(dx, dy), k = -2300 / d;
+  S.x += dx * k; S.y += dy * k; S.tx += dx * k; S.ty += dy * k;
+  for (const c of S.cranes) { c.x += dx * k; c.y += dy * k; }
+}
 if (atParam && !Number.isNaN(Date.parse(atParam + 'Z'))) skipHours(world, (Date.parse(atParam + 'Z') - Date.UTC(2008, 0, 1)) / 3.6e6 - world.time / 3600);
 // the world is drawn on the GPU (WebGPU; stage R), from the moment the device is ready. Its compositor
 // draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas), which
