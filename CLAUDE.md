@@ -85,6 +85,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **As duas camadas se comunicam (usuário, 2026-10-05):** o implícito (o código: memória, valores, regras) governa, mas **todo efeito implícito precisa de um jeito orgânico de se mostrar**, senão confunde. Ex.: o NPC diz "I remember you, you lied to me about…"; na delegacia, o policial lê em voz alta o que está no caderno e a fiança sobe ali. Ao criar um sistema implícito, planejar junto como ele aparece.
 
+**Ordem dos princípios (usuário, 2026-10-05):** a **caixa de areia** vem primeiro: experimentar sem medo (salvar a qualquer hora, recarga livre) pesa mais que a permanência das consequências; a consequência real é perder o progresso ao voltar.
+
 ## Como o usuário gosta de trabalhar (o mais produtivo do projeto, dito por ele em 2026-10-04)
 
 - **Perguntar:** qualquer dúvida vira pergunta ao usuário, em vez de supor.
@@ -364,6 +366,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 > Regra do usuário (2026-10-05): **sempre que recomendar um chat novo**, reescrever esta seção com o rumo que o próximo Claude deve tomar: a tarefa, o que pedir ao usuário, o que evitar, as suspeitas abertas. Substitui o "peça ao próximo Claude que…" no chat. Curta: só o recado, sem histórico.
 
 - **Comece enxugando o CLAUDE.md** (está em ~91 mil; o teto de ~90 mil é guia, não regra rígida): levar as listas fixas de luz e de correções para `docs/`, encolher as subetapas ✅ e as decisões já implementadas. Depois, a **13.10p** (registro de playtest) e a **13.10e** (terrenos sem porta).
+- **Antes de mexer na rede elétrica ou nos GridLinks:** conferir quantas subestações `sim/power.ts` gera hoje e como encaixar os nove GridLinks 3×3 decididos (`docs/visao.md`, "Respostas do usuário à crítica").
 - **Propor ao usuário uma entrevista com o Opus 4.8** (Trilha de hacking) sobre o que ficou pendente na entrevista de 2026-10-05: o aparelho estilo Flipper (o 4.8 faz o sistema, o 5.5 o desenho 2D, conciliados na mesma conversa), as backdoors dos GridLinks e a sidequest do apagão geral, as câmeras na lista de Wi-Fi, o favor do cybercafé na primeira noite, expor haters na rede social, o rastro do dinheiro no banco e como a ficha e a fiança entram no calor (`docs/feedback-opus48.md`). O limite semanal estava apertado; não abrir o agente `hacking` sem perguntar.
 - **A segunda entrevista de 2026-10-05** (polícia e calor, economia, nome GRID DOWN, GridLink remendada, contatos, a primeira noite no cybercafé, caderno, aparelhos 3D com física e tela fora do ASCII, salvar livre, dificuldade única) está no fim de `docs/visao.md`; o princípio novo das **duas camadas** está no topo do CLAUDE.md. **Ordem decidida:** enxugar o CLAUDE.md → 13.10p → 13.10e → o resto da 13 → diálogo (14) → web (15) → identidade visual (etapa própria, depois da 15). A entrevista com o Opus 4.8 fica para antes da próxima sessão de desenvolvimento da Trilha de hacking. A conta da rede social fica para a etapa 15.
 - A sessão de 2026-10-05 foi uma entrevista longa: as decisões estão no fim de `docs/visao.md` (vida do personagem, investigações geradas, som, materiais, curva de tom, diálogo, o que os NPCs sabem, web) e a leitura cega das capturas em `docs/feedback-claude.md` (`referencias/44–78`). A 13.10d2 e a lua/estrelas esperam o teste do usuário.
