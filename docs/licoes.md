@@ -9,6 +9,7 @@
 ` nas strings). `sed -i` também troca para LF. Conferir com `file CLAUDE.md`. Usar `assert s.count(old) == 1` antes de cada troca.
 - **As lições da etapa 13 quase não foram escritas** (só a da compilação travada): 13 subetapas sem registro. Por isso a regra "Lições a cada sessão".
 - **Entrevista com o usuário (2026-10-04):** uma pergunta por vez, com a opinião do Claude e uma recomendação, rendeu muito por pouco limite (~10% da janela de 5 h em ~25 perguntas). Ele quer que o Claude **conteste**: duas das melhores decisões vieram de ele discordar do Claude (TI depende da rede física; o gancho da história é a primeira quest, não um post) e uma de o Claude discordar dele (a fatia vertical). Gravar as respostas em `docs/visao.md` a cada 3–4 perguntas, para não perder.
+- **O teste do Claude novo achou três buracos de uma vez (2026-10-04):** o Resumo apontava a subetapa errada, o plano da lua só existia no `visao.md` e não havia mapa de onde está cada coisa. Virou regra em "Como trabalhar".
 - **Chat longo custa mais que o documento:** passado de ~200 mil tokens de conversa, um chat novo com o CLAUDE.md enxuto sai mais barato por mensagem.
 
 ### `[HACKING]` Lições da etapa 10 (notebook e hacking), para não repetir
