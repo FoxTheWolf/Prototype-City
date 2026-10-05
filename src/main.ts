@@ -125,6 +125,9 @@ if (params.has('sarcnear')) {
   S.x += dx * k; S.y += dy * k; S.tx += dx * k; S.ty += dy * k;
   for (const c of S.cranes) { c.x += dx * k; c.y += dy * k; }
 }
+// ?pos=771.2,971.9 starts a new game standing there (the comparison launchers, comparar-*.bat)
+const posParam = params.get('pos')?.split(',').map(Number);
+if (posParam?.length === 2 && posParam.every(Number.isFinite)) Object.assign(world.player, { x: posParam[0], y: posParam[1], px: posParam[0], py: posParam[1] });
 if (atParam && !Number.isNaN(Date.parse(atParam + 'Z'))) skipHours(world, (Date.parse(atParam + 'Z') - Date.UTC(2008, 0, 1)) / 3.6e6 - world.time / 3600);
 // the world is drawn on the GPU (WebGPU; stage R), from the moment the device is ready. Its compositor
 // draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas), which
