@@ -75,3 +75,24 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Prioridade dos problemas:** o feio pesa um pouco mais que o sem sentido; o desempenho está bom.
 - **Preocupações do usuário:** a beleza dos interiores novos e do carro por dentro (começar a 18 com 2–3 referências escolhidas por ele, um esboço do painel e do banco, e só depois o resto; Blockbench como plano B) e os sons (análise por síntese, testada cedo com o pior som).
 - **O que o usuário mais gostou:** o visual (pôr do sol, nuvens), o terminal Unix e a BIOS, os apps, o clima aconchegante de se proteger da chuva, o celular, o relógio, as skins.
+
+## Continuação da conversa (2026-10-04)
+
+### O caderno do jogador
+- **Acessório diegético com interface 2D como a do relógio** (aberto junto dele), letra cursiva mas legível, **digitado pelo teclado** (só mouse limitaria demais; o mouse pode rabiscar/sublinhar se valer).
+- **Clicar para copiar:** um nome, número ou IP em qualquer tela (SMS, Streetwire, terminal) vai para o caderno.
+- **Afetado pelo escuro como o relógio.** Resolve o T9 do celular (ruim de propósito) e anotar senhas. Semente do mural de pistas (etapa 22).
+
+### Stealth e luz
+- **Em aberto, mas o Claude recomenda:** um medidor de exposição (como Thief) lendo a luz no lugar do jogador; a polícia acha mais fácil no claro. **As próprias luzes entregam o jogador** (tela do celular, luz do relógio, o celular tocando com uma ligação por engano). Depende da polícia sair dos trilhos (etapa 16).
+
+### Sem trilhos (pedestres e carros)
+- **Pedestres com objetivo:** um destino ("ir até a batida e fotografar para o Streetwire") e uma área caminhável com custos (calçada barata, rua cara mas permitida, praças), com desvio local entre todos; só perto do jogador. **É a fundação da etapa 16** (curiosos, polícia procurando, stealth): começar a 16 por ela.
+- **Carros que decidem:** dar ré, contornar uma batida ou um carro parado, desviar do jogador no meio da rua (como o Cyberpunk depois do rework). Vai para o rework de carros (18), junto da freada progressiva.
+
+### Prisão
+- **Nunca apreender o notebook** (softlock: sem ele não há como ganhar dinheiro sem tédio). O custo da prisão é decidido no rework do calor e da polícia.
+
+### Lazer (prioridade baixa, só por diversão)
+- Fliperama com jogos em ASCII, sinuca e dardos no bar (depois que os interiores estiverem bons), jogos no celular, rádio. O bartender que conta o que sabe vem do diálogo (14). Sem medidor de estresse.
+- **Cinema (depois da 1.0):** exibir um `.mp4` do jogador em ASCII (arquivo do jogador, como a pasta de músicas; não quebra "tudo é código").
