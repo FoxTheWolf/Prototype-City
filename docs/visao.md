@@ -354,3 +354,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Sussurrar com custo:** um modo de falar baixo (uma tecla ou a frase entre parênteses): só o alvo ouve, mas sussurrar parece suspeito ("why are you whispering?").
 - **O barulho do lugar muda quem ouve,** pelo som que o jogo já tem: num bar ou numa avenida só quem está colado; numa loja vazia, todos.
 - **A ligação é ouvida, o SMS não:** o lado do jogador numa ligação em voz alta é ouvido por quem está perto; o SMS é silencioso (só quem está colado vê a tela). Grampo é Trilha de hacking.
+
+### O personagem do jogador (conversa de 2026-10-05)
+- **O editor fica no espelho do motel:** o jogo começa direto no quarto com uma aparência sorteada pela semente; o espelho do banheiro abre o editor quando o jogador quiser.
+- **Falas neutras sobre o jogador:** os NPCs o descrevem pela roupa e pelo número ("the one in the grey jacket lied to Marta", "0179"), como se descreve um estranho; sem gênero na gramática do jogador, sem papel de gênero, sem risco de expressão ofensiva. Pronomes como opção do espelho só depois da 1.0, se o usuário quiser.
+- **Só a roupa e o estado mudam o tratamento** (molhada, suja, suspeita à noite), nunca idade ou rosto. **A roupa molhada tem que aparecer para o jogador** (manga escurecida, gotas no relógio), e **os carros passando em poças jogam água** e podem molhar o jogador (etapa 20, clima).
