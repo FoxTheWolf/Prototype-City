@@ -213,3 +213,9 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Os materiais PBR não furam a fila (decidido pelo usuário em 2026-10-05):** dão trabalho (dar material a tudo, sobre o shader frágil), então o ritmo de jogabilidade segue (14 diálogo, que o usuário considera o fator mais inovador do jogo, e 15); os materiais vão junto da arrumação do shader, antes da demo.
 - **Neon de dia (contraproposta do usuário em 2026-10-05):** liberdade artística: **alguns neons apagam de dia e outros não** (pela semente/pelo dono); nos distritos de entretenimento, o neon aceso de dia é a identidade do lugar.
 - **Faróis dos carros (2026-10-05, para a passada dos carros na etapa 18):** variar a cor dos faróis (halógeno amarelado, xenon branco-azulado); conferir se duas luzes vermelhas somadas tendem ao branco (não deveriam: o tom deve ficar vermelho, só mais forte) e se o lilás na traseira vem do farol do carro de trás.
+
+### O diálogo: a ordem (rodada rápida de 2026-10-05)
+- **O texto livre vem primeiro** (é o diferencial; o usuário quase pulou a etapa 13 por ele); as escolhas de assunto e tom viram atalhos de intenção depois, sobre a mesma máquina.
+- **O primeiro teste é com o balconista da loja** (troca o balcão provisório da F.9): preço, quem trabalha aqui, horário.
+- **A memória dura pelo impacto:** uma pergunta comum some em horas; uma grosseria ou uma mentira descoberta dura dias. Pelo número e pela roupa, nunca pelo nome.
+- **Quando não entende:** o NPC estranha com uma fala própria e a tela sugere, discreta, os assuntos possíveis.
