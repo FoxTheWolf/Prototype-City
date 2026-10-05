@@ -68,6 +68,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 
 ## Nome
 - **GRID DOWN é o favorito, mas fica em aberto** (falta a análise legal e a identidade do logo).
+- **Reforçado em 2026-10-05:** GRID DOWN é o favorito para a busca de marca e os conceitos de logo. O nome aproveita o ponto fixo do jogo, a GridLink (o usuário não quer "GridLink" como nome, por lembrar de "Mmap"/"amp link"): "grid" é a rede elétrica, a grade da cidade e a GridLink; "down" é o apagão geral. Já existem obras com esse nome (romances de sobrevivência): conferir antes de fixar; um subtítulo pode diferenciar. Alternativas dadas: SODIUM GRID, DEAD GRID, GRIDFALL.
+- **Tarefas:** a busca de marca e uns conceitos de logo (em código, sem arquivo de imagem no jogo).
 
 ## Como trabalhar (mudanças da entrevista)
 - **Mais sugestões e mais discordância:** o Claude contesta direto quando acha que algo não vale, explicando por quê (a fatia vertical foi um exemplo de contestação que salvou o projeto).
@@ -261,3 +263,22 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Dinheiro vivo e no banco, com riscos diferentes:** o vivo é confiscado na prisão; o do banco é seguro mas deixa rastro (depósitos grandes chamam a investigação; detalhe na Trilha de hacking); esconder dinheiro no apartamento é mais um motivo para ter um.
 - **Para onde vai a sobra na 1.0:** hardware e aparelhos (side grades), roupas e disfarces, informantes e favores (o balconista que avisa, o advogado que baixa a fiança), a bolsa e um apartamento melhor.
 - **Os preços da etapa 17 valem para o jogador também:** se ele parar a entrega do bairro, a comida fica mais cara para ele.
+
+### A GridLink e o aparelho estilo Flipper (conversa de 2026-10-05)
+- **A GridLink é uma concessionária remendada, não um ctOS:** terceirizada e barata, ganhou a licitação de energia e telecomunicações e mantém um remendo de sistemas antigos e diferentes entre si (caixas velhas, modems discados, senhas de fábrica, corrupção na licitação). O noir vem do descaso, não de um olho que tudo vê; assim não lembra a Blume/ctOS de Watch Dogs. Cada caixa é diferente, nada de "hackear tudo" com um botão. A história continua adiada; isto só fixa o tom.
+- **O aparelho estilo Flipper (nome fictício): o Opus 4.8 faz o sistema, o Opus 5.5 faz o desenho 2D** em código (como o relógio). Fluxo: numa sessão do Opus 5.5, o desenho; na mesma conversa, chamar o agente `hacking` com o desenho e a lista de funções que tocam a interface; ele devolve o que o sistema precisa (telas, botões, estados); o Opus 5.5 concilia. Só quando o limite semanal permitir.
+
+### Os NPCs como contatos (conversa de 2026-10-05)
+- **Alguém vira contato** pela conversa e pela frequência (voltar ao mesmo café, ser educado, lembrar o nome), por favores (uma dívida que ele lembra), por negócio (o informante pago, leal enquanto o dinheiro vier), pelo número trocado (o contato no celular é a prova, e some com o chip) e **pela rede social** (ideia do usuário): o diálogo livre também vale nos comentários dos posts dos NPCs; o jogador posta, NPCs comentam, ele pode ficar famoso; como quem comentou existe de verdade, uma conversa da rua continua no virtual e vice-versa.
+- **Um contato se perde** por mentira descoberta, por ter sido prejudicado pelo jogador (o apagão que estragou a loja; ele pode descobrir pelas notícias e pela fofoca), por sumiço (esfria e esquece os detalhes aos poucos) e por calor demais (se afasta por medo e pode entregar o jogador se a polícia perguntar).
+- **Expor quem ataca o jogador nas redes** (ideia do usuário: descobrir quem está por trás de uma conta e o NPC reagir) depende dos registros dos cidadãos, que são Trilha de hacking; o texto inteiro está em `docs/feedback-opus48.md`.
+- **A fama na rede social (em aberto até a etapa 15):** o jogador fica famoso por fotos e furos, conversa e humor nos comentários, vazamentos (Trilha de hacking) e ajuda no fórum. O usuário temeu que uma conta separada do número vire "duas vidas" complexas demais; o Claude propôs **uma conta só, com o risco vindo do conteúdo** (a cidade liga fatos concretos: a foto tirada na cena e na hora em que te viram, o vazamento com dados que só o invasor teria); decidir depois.
+- **Na 1.0, a rede social é só comentar e postar** (foto ou texto, NPCs respondendo pela máquina de intenções); a fama com efeitos e a exposição de haters ficam depois.
+
+### A primeira hora no motel (conversa de 2026-10-05)
+- **O jogo começa acordando no quarto,** sem cutscene: quarto escuro, a luz da rua pela janela, o celular vibrando na mesa com o SMS do motel (a diária) e o do cliente de TI. O primeiro gesto é tirar o celular, que já ensina a interface.
+- **Às 18h, um pedido urgente** (ideia do usuário, para o jogador não ficar perdido até a manhã): o **dono de um cybercafé** com a rede caída liga desesperado. Cybercafé porque é ligado à tecnologia, apresenta o lugar onde o jogador vai usar a internet depois e justifica o dono ter contatos do meio. **A fome da primeira noite:** ele dá crédito na máquina de vendas do café.
+- **Prazo real:** chegou tarde, perdeu o trabalho (não fere a regra do resultado: chegar a tempo é controle do jogador, não sorteio); para quem é novo não travar, outro cliente de TI aparece no dia seguinte.
+- **O favor** pode ser o espelho do conserto (derrubar o café concorrente com o mesmo sistema); Trilha de hacking, `docs/feedback-opus48.md`.
+- **O quarto do motel na primeira hora:** a tomada e a cama (13.9c, dormir), a mochila na cama com o notebook (pouca bateria) e um pouco de dinheiro, a recepção com o gerente (pagar a diária no balcão; o primeiro NPC, que ensina a caixa de texto) e, pela janela, **uma caixa da GridLink no poste com o LED piscando**: o ponto fixo plantado no primeiro minuto, sem explicação.
+- **Dinheiro no começo:** a noite de hoje paga e dinheiro para 1–2 diárias e comida; o pagamento da TI chega antes de acabar.
