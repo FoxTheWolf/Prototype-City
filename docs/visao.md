@@ -155,3 +155,6 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O tempo não para** durante a conversa, como no celular: digitar devagar tem custo, o que dá tensão à engenharia social.
 - **Os NPCs lembram o essencial**, pelo princípio orgânico (o implícito governa, o explícito guia): cada cidadão com quem o jogador falou guarda pouco no save (se ele foi grosso, mentiu e foi pego, disse um nome, quando foi) e reage depois ("you again"), sem barra nem número à mostra.
 - **Voz:** um murmúrio sintetizado por sílaba enquanto o texto aparece, chiptune, com tom e ritmo pela idade, pelo gênero e pelo humor de quem fala (como Animal Crossing ou Undertale); tudo código.
+- **O NPC encerra pela vida dele:** quem está com pressa corta ("Sorry, gotta go") e segue a rotina; quem foi tratado mal vai embora.
+- **Opções ou caixa de texto primeiro:** o jogador escolhe o padrão no menu de opções (`tc.opts2`).
+- **Os balões na rua:** reações ao mundo (apagão, batida, chuva, sirene), reações ao jogador (esbarrar, correr, mexer num poste, entrar molhado) e conversas entre NPCs, que o jogador pode ouvir de perto (e que podem trazer pistas).
