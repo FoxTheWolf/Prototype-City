@@ -158,3 +158,6 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O NPC encerra pela vida dele:** quem está com pressa corta ("Sorry, gotta go") e segue a rotina; quem foi tratado mal vai embora.
 - **Opções ou caixa de texto primeiro:** o jogador escolhe o padrão no menu de opções (`tc.opts2`).
 - **Os balões na rua:** reações ao mundo (apagão, batida, chuva, sirene), reações ao jogador (esbarrar, correr, mexer num poste, entrar molhado) e conversas entre NPCs, que o jogador pode ouvir de perto (e que podem trazer pistas).
+- **Mentira, percebida pelos fatos:** o NPC confere a frase com o que ele sabe da simulação (dizer que é o técnico para quem conhece o técnico de verdade, ou que mora no prédio para o porteiro, é desmascarado); mentira sobre o que ele não sabe passa, pesada pela personalidade (desconfiado ou ingênuo). Sem sorteio.
+- **O que dá credibilidade:** saber detalhes (o nome do chefe, o turno, o número do pedido, achados na investigação ou ouvindo conversas), a roupa (o uniforme da empresa, quando as roupas de profissão vierem), objetos (crachá ou documento na mochila, mostrado quando pedem) e, ao telefone, o número de onde se liga.
+- **Mentira descoberta:** o NPC lembra, fica fechado com o jogador e conta aos colegas e conhecidos (a fofoca anda pelas relações); se for grave, chama a polícia e o calor sobe.
