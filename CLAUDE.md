@@ -232,6 +232,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 
 ### Etapa 15: Web e celular
 - **Decidido em 2026-10-05** (`docs/visao.md`): navegador com páginas de 2008 desenhadas em ASCII; sites por modelos de tipo + semente; a web segue a simulação (notícias, preços, sites fora do ar no apagão, o que o jogador causou). Celular com internet lenta e cara; webmail, com push só no modelo BlackBerry; músicas inclusas em chiptune sintetizado.
+- **Rodada de 2026-10-05** (`docs/visao.md`): buscador lento com páginas fora do índice; notebook com janelas em mosaico, copiar/colar e clicar em IP/porta/endereço; fórum de tutoriais (o texto é `[HACKING]`).
 - **Sites das empresas** gerados da simulação (horário, endereço, o que vendem pela tabela da 13.1, quem trabalha lá), no notebook; alguns com versão para celular.
 - **Portal de notícias e busca:** as manchetes da fila de eventos; uma busca que acha empresas, pessoas e lugares.
 - **Fotos apontadas para o que importa,** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
