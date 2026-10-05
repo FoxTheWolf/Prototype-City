@@ -103,7 +103,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## Opiniões e sugestões do Claude
 
-Ficam em `docs/feedback-claude.md` (as antigas, de 2026-10-02 a 2026-10-04, no fim dele). Ler só quando for planejar.
+Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 
 ## Visão do jogo
 
