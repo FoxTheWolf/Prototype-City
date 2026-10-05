@@ -19,7 +19,7 @@ const SHADOW_CONE = 1.6, SHADOW_CASTERS = 150;
 const SHADOW_BACK = 60;
 /** Objects within FLOOD_REACH m of a floodlit facade nearer than FLOOD_SHADOW_FAR cast its lamps' shadows on it (at most FLOOD_CASTERS). */
 /** The moon's rays against the sun's (moonlight 1: full moon). */
-const MOON_RAYS = 0.6;
+const MOON_RAYS = 0.35;
 const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 /** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
 const SG_N = 128, SG_CELL = 2, SG_LONG = 60;

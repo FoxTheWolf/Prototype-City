@@ -11,6 +11,7 @@
 - **(13.10d2) Céu real:** testar a astronomia no Node contra os exemplos resolvidos do Meeus (12.a tempo sideral, 25.a sol, 47.a lua) e um evento conhecido (o eclipse lunar de 2008-02-21); a conta de girar o raio para o equador é replicada no teste e conferida com Vega, Polaris e Sírius. No jogo, conferir projetando cada estrela na tela pela câmera e lendo o `gpuText` naquela célula.
 
 ### Lições do processo (documentação e conversas), para não repetir
+- **(2026-10-05, do usuário) Conferência visual barata é do usuário:** um `.bat` com `?at=`/`seed=` (como `jogar-eclipse-*.bat`) e o que olhar; o navegador do painel só para depurar o shader. As contas (eclipse, posições) se conferem no Node pelas funções de `sim/clock.ts`.
 - **O CLAUDE.md cresce sozinho (2026-10-04):** chegou a 146 mil caracteres (~46 mil tokens relidos em **toda** mensagem) mesmo depois de vários enxugamentos, porque cada sessão acrescentava lá o texto longo (subetapas feitas com nomes de função, regras novas sem tirar as velhas, designs implementados). Enxugar não basta: valem o teto e o destino de cada acréscimo (regra "O CLAUDE.md tem teto" em "Como trabalhar").
 - **Editar o CLAUDE.md por script Python:** ler com `io.open(..., encoding='utf-8')` converte CRLF para LF; gravar com `newline='
 '` (ou ler e gravar com `newline=''` e usar `

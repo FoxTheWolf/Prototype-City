@@ -162,6 +162,8 @@ const GLOW_BOOST = 3;
  * of the knee), so at night the light (L) is needed; above it (day, a lit shop) it reads as the scene.
  */
 const LCD_KNEE = 0.35;
+/** The LCD's paper is pale: in good light it reads a little brighter than the scene's light alone. */
+const LCD_GAIN = 1.3;
 /** The segments that are off still show faintly (a cheap LCD): their cells this much darker than the paper. */
 const GHOST = 0.8;
 
@@ -245,7 +247,7 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   text((W - 12) >> 1, CASE_Y + CASE_H - 2, 'WATER RESIST', LABEL, FACE);
 
   // the LCD: lit from its left edge while the light is on (blue), else only reflecting what is around, darker
-  const Ld = L.map((v) => Math.min(1, v) * Math.min(1, v / LCD_KNEE));
+  const Ld = L.map((v) => Math.min(1, v * LCD_GAIN) * Math.min(1, v / LCD_KNEE));
   const lcd = (x: number): [C3, number] => {
     if (!lit) return [LCD_BG, 0];
     const k = 1 - (x / LW) * 0.35;

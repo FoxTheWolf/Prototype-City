@@ -9,7 +9,7 @@ export const DAY_REAL_MIN = 120;
 export const TIME_SCALE = 86400 / (DAY_REAL_MIN * 60);
 export const YEAR0 = 2008;
 /** The city's latitude, radians (the render's stars turn by it too). */
-export const LAT = (41 * Math.PI) / 180;
+export const LAT = (40.71 * Math.PI) / 180; // New York's sky (LON below)
 const DAY = 86400;
 
 const leap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;

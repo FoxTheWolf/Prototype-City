@@ -2219,15 +2219,18 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     if (d2 < 1.0) {
       let wz = sqrt(1.0 - d2); let f = TAU * u.phase;
       var lit = max(0.0, mu * sin(f) - wz * cos(f));
-      lit = lit * (0.72 + 0.28 * noise(mu * 3.0 + 40.0, mv * 3.0 + 40.0)) + 0.05 * night * night;
+      // the face: the dark seas (broad, sharp-edged patches) over a finer mottle
+      let sea = smoothK(0.42, 0.6, noise(mu * 1.6 + 40.0, mv * 1.6 + 40.0)); let fine = noise(mu * 4.5 + 10.0, mv * 4.5 + 10.0);
+      let face = (1.0 - 0.38 * sea) * (0.82 + 0.18 * fine);
+      lit = lit * face + 0.05 * night * night;
       if (lit > 0.04 + 0.2 * day) {
         var k = min(1.0, lit) * (0.35 + 0.65 * night); let e = min(1.0, (1.0 - d2) * 5.0);
         // an eclipse: the penumbra greys it a little, the umbra (deeper toward its middle) leaves a copper glow
         let ed = length(vec2f(mu, mv) - vec2f(u.eclU, u.eclV));
         let um = 1.0 - smoothK(UMBRA - 0.06, UMBRA + 0.06, ed); let pen = 1.0 - smoothK(UMBRA, PENUMBRA, ed);
         k *= (1.0 - 0.35 * pen) * (1.0 - um);
-        let cu = um * (0.55 - 0.25 * (1.0 - ed / UMBRA)) * night;
-        cc = vec3f(235.0 * k + 20.0 + 150.0 * cu + r * day, 228.0 * k + 20.0 + 48.0 * cu + g * day, 200.0 * k + 26.0 + 22.0 * cu + b * day);
+        let cu = um * (0.5 - 0.25 * (1.0 - ed / UMBRA)) * night * face;
+        cc = vec3f(235.0 * k + 20.0 + 105.0 * cu + r * day, 228.0 * k + 20.0 + 45.0 * cu + g * day, 200.0 * k + 26.0 + 30.0 * cu + b * day);
         r += (cc.x - r) * e; g += (cc.y - g) * e; b += (cc.z - b) * e;
         moonA = true; star = 0.0;
       }

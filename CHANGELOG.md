@@ -9,6 +9,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Os holofotes de fachada não aparecem mais no chão dos corredores do prédio vizinho.
 - Eclipses lunares: a sombra da Terra escurece a lua e a deixa cor de cobre na totalidade (o de 20/02/2008 é visível na cidade).
 - O visor do relógio não fica mais escuro de dia; à noite continua precisando da luz.
+- A lua ganhou mares escuros e textura; o eclipse ficou menos vermelho e com detalhe; raios do luar mais suaves; o céu é o de Nova York (40,7° N).
 
 ## 0.13.10d2 — O céu de 2008 e portas sem vidro fantasma (2026-10-05)
 - A lua e o sol estão onde estavam de verdade em 2008, vistos da cidade: a lua nasce mais tarde a cada dia, some do céu da noite em parte do mês, e as fases batem com o calendário (em 21 de fevereiro, às 22h30, a lua cheia está alta no sudeste, na hora do eclipse daquele ano).
