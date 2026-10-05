@@ -303,3 +303,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### Salvar e errar (conversa de 2026-10-05)
 - **Salvar a qualquer hora** (escolha do usuário, contra a recomendação do Claude de salvar dormindo): menu com slots livres; **recarregar é livre**. A tensão vem das consequências dentro do jogo, não do save.
 - **O pior caso é recomeçar a vida, não o jogo:** prisão com ficha pesada, despejo, contatos perdidos, chip queimado levam de volta ao motel e ao pouco dinheiro; o mundo, o conhecimento e o equipamento escondido continuam. Nunca game over.
+
+### Dificuldade e ajuda (conversa de 2026-10-05)
+- **Uma dificuldade só:** o jogo como foi pensado, sem níveis nem alavancas (o tamanho da cidade continua parâmetro da geração).
+- **Quem ajuda o jogador travado:** contatos por SMS (no máximo um por dia), o fórum de tutoriais, perguntar aos NPCs pela caixa de texto ("where can I find work?") e as dicas da tela de carregamento (`tips.json`).
+- **Nenhum objetivo na tela:** o que fazer está nos SMS, no e-mail, no caderno e na conversa; sem lista de missões no HUD.
