@@ -243,3 +243,21 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### O jogador é só mais um (reforçado pelo usuário em 2026-10-05)
 - **A cidade existe sem o jogador:** toda a web (fóruns, sites, páginas escondidas) nasce na geração, antes do primeiro segundo de jogo; o jogador influencia um sistema que já existe, nunca é o motivo de ele funcionar.
 - **O veterano que pula a TI:** se ele começa a hackear sozinho, **um fixer que observava manda um SMS** ("vi o que você fez; tenho um trabalho"), pelo que o jogador fez de fato (não por um placar visível). Risco anotado pelo usuário: quem quer pular pode ficar perdido sem saber como "começar logo"; a decidir como dar uma pista sem tutorial (ideias: o cliente de TI menciona de passagem onde "o outro tipo de trabalho" se acha; um cartão ou pichação no motel com o endereço do fórum).
+
+### A polícia e o calor como experiência (conversa de 2026-10-05)
+- **Abordagem com conversa:** o policial que alcança o jogador manda parar e pergunta; a resposta vai pela caixa de texto (etapa 14): explicar, mentir ou fugir. Prisão se a roupa bate e a conversa falha.
+- **Prisão = noite + fiança + confisco:** acorda de manhã na delegacia; fiança pelo calor; o ilegal da mochila é confiscado (pendrive, ferramentas, cabos), **nunca o notebook**; o calor zera, mas o jogador fica fichado (a próxima abordagem pega mais pesado).
+- **A fuga a pé diverte por:** quebrar a linha de visão (a polícia vai ao último lugar visto e procura dali), trocar de roupa no caminho, sumir na multidão e no transporte (a vantagem do dia). **Usar a cidade contra eles** não é improviso: hackear na hora é lento e expõe; o caminho é a preparação (backdoors deixadas antes, ativadas por um aparelho; Trilha de hacking, `docs/feedback-opus48.md`).
+- **Câmeras: olhando o mundo** (objetos visíveis, LED de noite), sem cone na tela. **A lista de Wi-Fi do celular como radar orgânico:** as câmeras IP aparecem como redes; em 2008 a maioria ainda é de cabo coaxial, então o radar é incompleto de propósito. Um aparelho de hacking físico (estilo Flipper, nome fictício) pode detectar mais (Trilha de hacking).
+- **Colecionar os GridLinks até o apagão geral:** objetivo opcional que a cidade nota (auditorias, caixas trocadas, subestações vigiadas); pode ser o começo ou o fim de uma **sidequest separada da história principal**.
+- **Sentir o calor sem barra:** mais polícia no bairro (viaturas paradas, patrulhas olhando as pessoas, sirenes), notícias e Streetwire com a descrição publicada ("grey jacket"), **rádio da polícia** como item (side grade: ocupa a mão e a mochila, faz barulho) e contatos que avisam por SMS.
+- **Escala:** na 1.0, a pé, viaturas e cerco (bloqueios nas esquinas, busca loja por loja); **helicóptero depois da 1.0**.
+
+### A economia do jogador (conversa de 2026-10-05)
+- **Primeiro apartamento em ~5 a 7 dias de jogo** (4 a 6 h jogando): o marco de sair do motel numa primeira sessão longa.
+- **Custo de vida apertado no começo, folgado depois:** diária, comida e crédito do celular comem quase todo o pagamento de TI; com o hacking sobra, e a pressão passa a ser o calor.
+- **O hacking paga ~5x a TI, e a TI segue viável:** dinheiro limpo, sem calor, para quando o calor estiver alto; fachada e contatos. Side grade, não só tutorial.
+- **Aluguel semanal na 1.0** pago ao síndico; atrasou, aviso e despejo de volta ao motel (nunca game over). Comprar e mobiliar livremente depois da 1.0.
+- **Dinheiro vivo e no banco, com riscos diferentes:** o vivo é confiscado na prisão; o do banco é seguro mas deixa rastro (depósitos grandes chamam a investigação; detalhe na Trilha de hacking); esconder dinheiro no apartamento é mais um motivo para ter um.
+- **Para onde vai a sobra na 1.0:** hardware e aparelhos (side grades), roupas e disfarces, informantes e favores (o balconista que avisa, o advogado que baixa a fiança), a bolsa e um apartamento melhor.
+- **Os preços da etapa 17 valem para o jogador também:** se ele parar a entrega do bairro, a comida fica mais cara para ele.
