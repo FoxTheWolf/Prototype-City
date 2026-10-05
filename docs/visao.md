@@ -282,3 +282,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O favor** pode ser o espelho do conserto (derrubar o café concorrente com o mesmo sistema); Trilha de hacking, `docs/feedback-opus48.md`.
 - **O quarto do motel na primeira hora:** a tomada e a cama (13.9c, dormir), a mochila na cama com o notebook (pouca bateria) e um pouco de dinheiro, a recepção com o gerente (pagar a diária no balcão; o primeiro NPC, que ensina a caixa de texto) e, pela janela, **uma caixa da GridLink no poste com o LED piscando**: o ponto fixo plantado no primeiro minuto, sem explicação.
 - **Dinheiro no começo:** a noite de hoje paga e dinheiro para 1–2 diárias e comida; o pagamento da TI chega antes de acabar.
+
+### O ritmo de um dia comum (conversa de 2026-10-05)
+- **Sem trabalho marcado, o jogador vai para a rua por:** reconhecimento (ler a rua: caixas da GridLink, câmeras, redes no Wi-Fi, horários; anotar no caderno), chamados de TI por SMS (renda limpa, contatos novos), vida comum (comer, roupa, carregar no café, conversar com conhecidos) e boatos (conversas na rua e Streetwire viram trabalho por conta própria).
+- **Um trabalho grande de hacking a cada 1–2 dias de jogo,** com TI e preparação no meio; o calor esfria entre um e outro e cada trabalho pesa.
