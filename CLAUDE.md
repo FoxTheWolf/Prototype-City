@@ -259,6 +259,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Hackear o banco e os sistemas das empresas** é `[HACKING]` (Trilha de hacking).
 
 ### Etapa 18: Transporte e carros dos cidadãos
+- **Decidido em 2026-10-05** (`docs/visao.md`): táxi pelo banco de trás, viagem real que se pode pular pagando; metrô com uma linha circular de 6–8 estações; **todo carro na rua tem dono e destino** (a placa leva ao dono), e só alguns moradores têm carro.
 - **Antes, refazer os carros**: não dá para entrar num táxi que é uma caixa; os ocupantes ainda são o modelo antigo de pedestre com o material metálico do carro.
 - **Direção dos carros (retorno do usuário em 2026-10-04):** depois da curva eles corrigem demais para pegar a faixa mais à direita (fica agressivo): suavizar o ângulo da correção ou preferir a faixa mais à esquerda do sentido em que já estão; freiam na hora diante de pedestres (sem atropelamento no jogo, mas a freada deve ser progressiva); conferir quando um carro batido some, para não ficar parado para sempre causando engarrafamento; **batidas frequentes demais** (contar por `w.events.list` com `kind === 'crash'` por minuto de simulação, antes e depois; diagnóstico nas "Lições da 10.10").
 - **Carros que decidem** (entrevista de 2026-10-04): dar ré, contornar batidas e carros parados, desviar do jogador.

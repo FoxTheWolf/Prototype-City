@@ -183,3 +183,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### A economia (etapa 17; conversa de 2026-10-05)
 - **Cadeia curta na 1.0:** fornecedor → loja → cliente; o estoque acaba, o caminhão repõe, o preço sobe com a falta, os salários pagam as compras dos NPCs. O bastante para o hacking mexer em preços e entregas e a cidade reagir. Indústrias e empresas que quebram ficam para depois.
 - **A bolsa segue as empresas:** as ações sobem e descem com o que acontece com elas (apagão na fábrica, notícia ruim); o jogador pode comprar, e mexer na notícia mexe no preço.
+
+### O transporte (etapa 18; conversa de 2026-10-05)
+- **O táxi:** o jogador senta atrás, vê a cidade passar pela janela, o taxímetro corre e o motorista (um cidadão) puxa conversa pelo diálogo; dá para pular a viagem pagando o mesmo.
+- **O metrô elevado:** uma linha em volta do centro, com 6–8 estações, trens de verdade nos trilhos sobre a rua, passageiros cidadãos, cartão ou ficha e o vagão por dentro.
+- **Carros dos cidadãos (princípio do usuário: tudo é simulado):** só alguns moradores têm carro, mas **todo carro na rua tem dono e está indo a algum lugar**; nenhum carro anônimo. Quem vê uma placa pode pesquisá-la e achar o dono. Os táxis e os veículos de empresa têm a empresa e o motorista como dono.
