@@ -120,3 +120,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O esconderijo** com servidor próprio (acessado de fora), o computador do motel/apartamento; acessórios para o notebook, o celular e avulsos; o carro como compra grande (se vier).
 - **Dois caminhos até um alvo:** chegar perto (fisicamente ou com antena direcional: rápido, expõe o corpo) ou pela rede até ele (lento, mais seguro para o corpo, mais logs). Detalhes na Trilha de hacking.
 - **Invariante da rede, como a das plantas:** um teste em `tests/` garante que todo alvo tem uma porta de entrada e um caminho até ele.
+
+### O nome da cidade (em aberto)
+- O usuário vê benefícios nos dois lados; **a história não deve pesar nessa decisão** (é tempero, não o prato: o objetivo é o jogo que ele quer jogar).
+- **Ideia do usuário:** o nome sorteado pela semente, às vezes um **easter egg de homenagem** (ex.: "Uplink City"), como os agradecimentos. Os pontos fixos, se houver, são os sistemas (o fogo, o cordão), não o nome.
