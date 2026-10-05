@@ -121,9 +121,9 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Dois caminhos até um alvo:** chegar perto (fisicamente ou com antena direcional: rápido, expõe o corpo) ou pela rede até ele (lento, mais seguro para o corpo, mais logs). Detalhes na Trilha de hacking.
 - **Invariante da rede, como a das plantas:** um teste em `tests/` garante que todo alvo tem uma porta de entrada e um caminho até ele.
 
-### O nome da cidade (em aberto)
+### O nome da cidade (decidido em 2026-10-05: pela semente)
 - O usuário vê benefícios nos dois lados; **a história não deve pesar nessa decisão** (é tempero, não o prato: o objetivo é o jogo que ele quer jogar).
-- **Ideia do usuário:** o nome sorteado pela semente, às vezes um **easter egg de homenagem** (ex.: "Uplink City"), como os agradecimentos. Os pontos fixos, se houver, são os sistemas (o fogo, o cordão), não o nome.
+- **Ideia do usuário:** o nome sorteado pela semente, às vezes um **easter egg de homenagem** (ex.: "Uplink City"), como os agradecimentos. **Decidido em 2026-10-05:** o nome sai da semente, com raras homenagens.
 
 ### O ano no jogo e o que é a 1.0 (conversa de 2026-10-05)
 - **A 1.0 é a primeira versão completa, não o jogo acabado.** Depois vêm atualizações grandes, como o X4: Foundations (que já está na 6.0 ou 7.0). A demo para amigos não tem data: o usuário avisa quando considerar que chegou na 1.0.

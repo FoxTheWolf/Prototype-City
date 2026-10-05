@@ -82,7 +82,7 @@ Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa cor
 - **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
 - **Etapa 6 (respondido em 2026-09-30):** interiores no espaço físico; câmera 3D depois; começar por residencial e escritório.
 - **Etapa 8 (respondido em 2026-10-01):** o painel é o celular, não pausa, GPS exato primeiro e os limites de 2008 no grupo 8C.
-- **Etapa 18 (transporte):** o usuário ainda não sabe se quer transporte aéreo. Se houver, será um helicóptero de passeio, e não um táxi aéreo.
+- **Etapa 18 (respondido em 2026-10-05):** transporte aéreo só depois da 1.0 (um helicóptero de passeio, não táxi aéreo).
 
 ## Ideias futuras (não decididas)
 
