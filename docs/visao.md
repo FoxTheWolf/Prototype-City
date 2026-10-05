@@ -171,3 +171,6 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Navegador:** um navegador fictício no notebook, com barra de endereço, abas e botão voltar; as páginas têm layout de site de 2008 (cabeçalho, menu, colunas, banners) desenhado nas células, com cores.
 - **Sites das empresas:** uns 6–8 modelos de layout por tipo (restaurante, loja, banco, operadora, jornal…), com cores, nome, logo ASCII e conteúdo tirados da simulação pela semente; cada empresa parece única sem escrever site por site.
 - **A web viva:** as manchetes saem da fila de eventos, preços e horários seguem a economia; um apagão no bairro do servidor derruba o site ("server not found"); o que o jogador causou aparece na web (a notícia do apagão, posts sobre o semáforo) sem nunca dizer que foi ele.
+- **Internet no celular:** lenta e cara (EDGE/3G), abrindo as versões móveis dos sites aos poucos e gastando o pacote de dados pago; a web de verdade é no notebook, no Wi-Fi (motivo para ir ao cybercafé).
+- **E-mail:** webmail no navegador, de um provedor que é empresa da cidade (hackeável), com spam gerado, newsletters das lojas, o banco e contratos longos; **só o celular estilo BlackBerry recebe e-mail** (push), os outros modelos não.
+- **Músicas inclusas:** chiptune sintetizado pelo jogo, com nomes de bandas fictícias da cidade, mais as do jogador pela pasta.
