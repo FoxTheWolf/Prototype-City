@@ -171,7 +171,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. **Decidido:** um dia dura 48 minutos reais e o jogador pode dormir e pular o tempo (feito na 5.5; o dia ainda é um visual provisório).
 
-- **O ano no jogo (decidido em 2026-10-05):** um **2008 alternativo**; o tempo corre e o calendário vira para 2009. Época e lugar são referência, não regra (`docs/visao.md`). **A 1.0 é a primeira versão completa**, seguida de atualizações como as do X4.
+- **O ano no jogo (decidido em 2026-10-05):** um **2008 alternativo**; o tempo corre e o calendário vira para 2009. Época e lugar são referência, não regra (`docs/visao.md`). **A 1.0 é completa em profundidade, não em largura**: o laço inteiro e polido, sistemas sem provisório, largura contida; depois, atualizações como as do X4.
 - **Paleta:** sódio âmbar nos postes, cada fonte com a sua cor (temperatura real, 2026-10-03); fundo dos glifos fixo em 0,24; só ASCII; som sintetizado (Web Audio) desde a etapa 4.
 
 ## Plano: etapas 13 a 22 (renumerado em 2026-10-04)
@@ -276,7 +276,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Efeitos dos carros:** fumaça do escapamento (simples, sem ser volumétrica); fumaça volumétrica dos pneus nas freadas fortes.
 - Táxi (pedido por telefone ou sinal, destino dado ao motorista, que é um cidadão), **metrô com trem elevado** (estações e trens; trocado do monotrilho do ASCII City na entrevista de 2026-10-04), interiores dos veículos (carros ocos por dentro). Transporte aéreo: depois da 1.0. O nome da cidade sai da semente (2026-10-05).
 - Carros ligados às pessoas: estacionamentos, placa e registro com dono, os carros saem e voltam com as rotinas (se cada pedestre perto do jogador tivesse carro, seriam ~600 carros a mais).
-- **Dirigir (entrevista de 2026-10-04):** decidir aqui se entra antes ou depois da 1.0; as peças convergem (a câmera do táxi, a física do trânsito, o estacionamento dos carros dos NPCs, as fotos). **Multas por foto da placa** (radar), alvo de hacking depois. **Começar o carro por dentro com 2–3 referências escolhidas pelo usuário** e um esboço do painel e do banco antes do resto.
+- **Dirigir entra na 1.0, no fim da etapa 18 (decidido em 2026-10-05; as multas por radar depois):** as peças convergem (a câmera do táxi, a física do trânsito, o estacionamento dos carros dos NPCs, as fotos). **Multas por foto da placa** (radar), alvo de hacking depois. **Começar o carro por dentro com 2–3 referências escolhidas pelo usuário** e um esboço do painel e do banco antes do resto.
 - **Reavaliar o ritmo do tempo** depois disso: medir de novo a discrepância entre os planos e a viagem de verdade e decidir com o usuário se o dia pode ser mais longo.
 
 ### Etapa 19: `[HACKING]` Hacking completo (antes "14"; Opus 4.8, avisar o usuário)

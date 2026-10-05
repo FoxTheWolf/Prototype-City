@@ -141,3 +141,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Praia (2026-10-05):** a borda é uma praia de contorno natural, fora da grade, que vai ficando funda.
 - **Lição do Sarcófago (retorno do usuário):** de tão longe, não parecia uma megaestrutura; não dava megalofobia, em parte por faltarem detalhes pequenos que dessem referência de tamanho (e, daquela distância, nem eles apareceriam). Megaestruturas futuras precisam ficar perto o bastante e ter detalhes em escala humana (escadas, janelas, guarda-corpos, luzes de aviso). Antes de desligá-lo, o usuário quer vê-lo de perto; o código fica guardado para uma possível expansão.
 - **A praia vira lugar (2026-10-05):** calçadão de madeira com quiosques e um píer com farol (o parque de diversões ficou de fora por enquanto).
+
+### O tamanho da 1.0 (conversa de 2026-10-05)
+- **Decidido: completa em profundidade, não em largura.** O laço mínimo inteiro e polido, cada sistema que entra completo (sem "aperte 1" provisório), mas largura contida: poucos tipos de trabalho bem feitos, alguns distritos, os sistemas que o hacking usa. A largura vem nas atualizações, como no X4.
+- **Dirigir entra na 1.0**, no fim da etapa 18: a física já existe, o interior do carro vem com o táxi, o estacionamento e a placa com os carros dos cidadãos. As multas por radar ficam para depois, como alvo de hacking.
+- **Eclipse solar total** emprestado de outro ano, no 2008 do jogo.
