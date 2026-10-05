@@ -368,3 +368,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### Escala do tempo contra a distância (conversa de 2026-10-05)
 - **O problema (achado pelo Claude):** o tempo do jogo corre 30x o real (dia de 48 min); atravessar 2 km a pé leva ~25 min reais = ~12 h de jogo. O prazo "da noite toda" não cobre a cidade a pé, e as caminhadas podem engolir o ritmo de um trabalho a cada 1–2 dias.
 - **Decidido:** a geração garante **um cybercafé a 300–500 m do motel** inicial (2–3 h de jogo a pé), conferido por um teste em `tests/`. **A escala geral se mede com o registro de playtest (13.10p)**: quanto tempo de jogo os deslocamentos comem numa sessão real, e decidir com números, sem esperar a etapa 18 (ideia a testar: o tempo correr mais devagar na rua e mais rápido ao esperar).
+
+### Os celulares do jogador (conversa de 2026-10-05)
+- **O celular inicial é barato:** ligação, SMS e pouco mais; dura pouco no jogo e serve para apresentar as mecânicas (placas, endereços, perguntar o caminho, o mapa de papel; a primeira noite é achar o cybercafé pelo endereço do SMS).
+- **Depois, upgrades por tiers, não side grades** (o usuário: "chamar atenção" não é interessante, e o plano de dados caro não pesa para quem ganha mais): o **smartphone atual** (o celular de hoje, com Maps e apps) vira o padrão; o topo é um **modelo BlackBerry com teclado**, que cumpre algumas funções do notebook. Ficam como porém o plano de dados mais caro e a bateria menor.
+- **Um celular só:** dois aparelhos seriam dois números e duas reputações, confuso demais.
