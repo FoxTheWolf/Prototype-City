@@ -96,3 +96,18 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### Lazer (prioridade baixa, só por diversão)
 - Fliperama com jogos em ASCII, sinuca e dardos no bar (depois que os interiores estiverem bons), jogos no celular, rádio. O bartender que conta o que sabe vem do diálogo (14). Sem medidor de estresse.
 - **Cinema (depois da 1.0):** exibir um `.mp4` do jogador em ASCII (arquivo do jogador, como a pasta de músicas; não quebra "tudo é código").
+
+### Princípio central: orgânico (o explícito guia, nunca governa)
+- **Relações implícitas:** sem barra de amizade ou romance. O jogo **lembra** como o jogador trata cada pessoa (valores escondidos) e mostra pelas ações dela: cumprimenta, puxa conversa, manda SMS à toa, faz favores; ou evita, denuncia, expõe no Streetwire. O apego a um NPC deve surgir como nos Let's Plays: por uma situação, não por recompensa.
+- **Como fica no código:** uma memória esparsa só dos NPCs com quem o jogador interagiu (afinidade, confiança, rancor, última vez que o viu, o que sabe dele: o rosto, o número). Trocar de chip também o apaga da agenda dessas pessoas. Nasce com o diálogo (14), que a alimenta e a lê.
+
+### Clima sem estações fixas
+- **O clima segue a temperatura do dia, não a estação** (uma noite fria pode nevar e o dia seguinte ter sol; dias quentes têm cara de verão). Os elementos de estação viram efeitos do clima do dia (neve nas bordas depois de nevar, névoa de calor, folhas depois de ventania).
+- **Viés leve do calendário, nunca trava:** começar em dezembro dá neve de vez em quando, não todo dia (calibrar por número, ex.: até 1 em 4 nas noites frias de dezembro; conferir rodando um mês no Node). Talvez uma opção de novo jogo para desligar a neve.
+- **Ideias de dia bonito (liberdade ao Claude):** neblina de manhã com raios de sol, asfalto molhado refletindo o céu claro, rastros de avião e pombos, fumaça das chaminés pegando a luz, sombras longas na hora dourada e o *Manhattanhenge* (o sol alinhado com a grade em certos dias; os NPCs fotografam).
+
+### Lua e estrelas reais de 2008
+- **Fazer logo, num lote de correções rápidas:** a posição da lua pelo algoritmo de baixa precisão de Meeus (latitude ~40° N) e as ~300 estrelas mais brilhantes numa tabela. Resolve o bug da lua que se esconde.
+
+### Ritmo dos trabalhos
+- **Misto e adaptativo:** guiado no começo, depois natural (fórum, indicações); se o jogador anda parado no hacking, um contato manda um SMS empurrando, no máximo um por dia de jogo (Trilha de hacking: a máquina de trabalhos mora lá).
