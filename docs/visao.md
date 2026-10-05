@@ -204,3 +204,9 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Perseguição só com sirenes no mundo**, em som 3D de onde a polícia está; sem música de tensão.
 - **O murmúrio das falas com timbre pela semente** (altura, velocidade e forma de onda pela idade, gênero e personalidade).
 - **A análise por síntese, em ordem:** primeiro **a batida de carro** (o som que mais incomoda o usuário; nunca acertado; base royalty free/CC0), depois **os passos** (dependem dos materiais do chão: carpete, madeira, grama, asfalto, ladrilho, cada um com várias variações para não repetir; ligar à tabela de materiais da etapa 20), a **chuva** e os **carros e trânsito**.
+
+### O refinamento e os materiais (etapa 20; rodada rápida de 2026-10-05)
+- **Uma tabela de materiais só** (textura, som do passo, como molha), usada pelo render e pelo som.
+- **Telões e outdoors alternam notícias (da fila de eventos) e anúncios** de empresas que existem.
+- **O piso das praças varia por praça** pela semente (xadrez, faixas, pedra).
+- **Os carros vão para a etapa 18** (já precisam ser refeitos para o táxi), e **os materiais saem do refinamento e vêm antes**: o usuário quer materiais PBR (cor, rugosidade, metal) como base para o metal dos carros (hoje um só valor de reflexo, que parece falso), o molhado, o vidro e os detalhes que o ASCII tem dificuldade de mostrar.
