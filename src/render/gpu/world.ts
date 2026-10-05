@@ -52,8 +52,6 @@ import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, SG_BIZ, SG_FONT, SG_STAR
  * lift's panel, the windows with the city through them and their glass, floor and ceiling; its furniture as objects).
  */
 
-/** The tone curve under test: AgX instead of the ACES/night one (F7, debug). */
-export const TONE = { agx: false };
 type UName = (typeof UNIFORMS)[number];
 const UIDX = Object.fromEntries(UNIFORMS.map((n, k) => [n, k])) as Record<UName, number>;
 
@@ -352,7 +350,7 @@ export class GpuWorld {
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
-      agx: TONE.agx ? 1 : 0, hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
+      hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
     if (timed) setEye(sky.day, vals.cityLit, vals.adapt);

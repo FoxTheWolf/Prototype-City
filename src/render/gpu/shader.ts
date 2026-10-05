@@ -30,7 +30,6 @@ export const UNIFORMS = [
   'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH', 'yaw', 'fall',
   'fallSnow', 'windX', 'windY', 'fallB', 'fallR', 'fallSpeed', 'fallStreak', 'fallDens',
   'fallPeriod', 'inX0', 'inY0', 'inX1', 'inY1', 'hand', 'eclU', 'eclV',
-  'agx',
 ] as const;
 
 /** Words of the viewer's floor's block (world.ts) before its street doors' leaves. */
@@ -1960,20 +1959,7 @@ fn evDayNight() -> f32 { return exp(mix(log(EV_NIGHT), log(DAY_EXPO), dayGrade()
 /** The exposure the time of day expects: the night's opened up a little when the city goes dark. */
 fn evRef() -> f32 { return exp(mix(log(EV_NIGHT * pow(cityAmb() / AMB_N, -NIGHT_ADAPT)), log(DAY_EXPO), dayGrade())); }
 /** One tone curve: the night's (untouched below a knee) toward the day's filmic one with the day. */
-/** The AgX curve (Wrensch's fit of Blender's), per channel: a test against tone()/nightTone(), toggled with F7. */
-fn agxContrast(x: vec3f) -> vec3f {
-  let x2 = x * x; let x4 = x2 * x2;
-  return 15.5 * x4 * x2 - 40.14 * x4 * x + 31.96 * x4 - 6.868 * x2 * x + 0.4298 * x2 + 0.1191 * x - 0.00232;
-}
-fn agxTone(c: vec3f) -> vec3f {
-  let inset = mat3x3f(vec3f(0.842479062253094, 0.0423282422610123, 0.0423756549057051), vec3f(0.0784335999999992, 0.878468636469772, 0.0784336), vec3f(0.0792237451477643, 0.0791661274605434, 0.879142973793104));
-  let outset = mat3x3f(vec3f(1.19687900512017, -0.0528968517574562, -0.0529716355144438), vec3f(-0.0980208811401368, 1.15190312990417, -0.0980434501171241), vec3f(-0.0990297440797205, -0.0989611768448433, 1.15107367264116));
-  var v = clamp(log2(inset * max(c, vec3f(1e-10))), vec3f(-12.47393), vec3f(4.026069));
-  v = agxContrast((v + 12.47393) / (4.026069 + 12.47393));
-  return pow(max(outset * v, vec3f(0.0)), vec3f(2.2));
-}
 fn toneMap(x: vec3f, g: f32) -> vec3f {
-  if (u.agx > 0.5) { return agxTone(x); }
   if (g <= 0.0) { return nightTone(x); }
   if (g >= 1.0) { return tone(x); }
   return mix(nightTone(x), tone(x), g);
