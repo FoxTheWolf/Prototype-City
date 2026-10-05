@@ -13,5 +13,8 @@ Briefings curtos e autocontidos, um por tarefa, para o usuário colar no **Gemin
 | `05-distrito-entretenimento.md` | Gemini ou ChatGPT | Lista de objetos e letreiros de um distrito estilo Kamurocho/Times Square, com medidas e luz | Distrito de entretenimento |
 | `06-hoje-em-2008.md` | Gemini (pesquisa na web) | "Today in 2008" para as 366 datas e 150 fatos de 2008, em JSON (fatos **reais**: a exceção à regra abaixo) | Tela de carregamento |
 | `09-plantas-de-lojas.md` | ChatGPT ou Gemini | Plantas em texto dos tipos de loja sem modelo (banco, hotel, motel, farmácia, livraria…) e uma variação a mais dos que já têm | Interiores (13.10c) |
+| `10-nome-e-identidade.md` | Gemini (pesquisa) | Checagem do nome GRID DOWN/GridLink, marcas de concessionárias por volta de 2008, pichação sobre logos, cinco direções de logo | Identidade visual |
+| `11-falas-primeira-noite.md` | ChatGPT ou Gemini | Falas da primeira noite (motel, cybercafé) e dos sinais das duas camadas (memória, fofoca, recusa, quem ouve, polícia), em JSON | Primeira hora, diálogo (14) |
+| `12-precos-de-2008.md` | Gemini (pesquisa) | Preços reais de 2008 (moradia, comida, celular, notebook e peças, roupas, transporte, salários, fiança), em JSON | Economia (17), balanço |
 
 **Regras para todas:** nada de marcas, nomes ou lugares reais (tudo inventado); textos limpos (sem palavrão, insulto, conteúdo sexual ou violência explícita); época por volta de 2008.
