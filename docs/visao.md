@@ -351,3 +351,6 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Quem está perto ouve** (ideia do usuário): confessar um crime ao balconista com gente em volta cria testemunhas; é uma base da fofoca. Pelo teste das duas camadas, quem ouviu mostra (vira a cabeça, para, comenta "did he just say…?").
 - **Nem todo NPC aceita conversar:** depende da vida dele (pressa, desconfiança à noite; quem está parado no ponto ou no balcão conversa), e a recusa diz o porquê ("sorry, I'm late").
 - **Na tela:** a fala do NPC como legenda no centro de baixo (com o nome, se o jogador souber) e a caixa de texto logo abaixo, com a leitura de intenção e o medidor de tom acima dela.
+- **Sussurrar com custo:** um modo de falar baixo (uma tecla ou a frase entre parênteses): só o alvo ouve, mas sussurrar parece suspeito ("why are you whispering?").
+- **O barulho do lugar muda quem ouve,** pelo som que o jogo já tem: num bar ou numa avenida só quem está colado; numa loja vazia, todos.
+- **A ligação é ouvida, o SMS não:** o lado do jogador numa ligação em voz alta é ouvido por quem está perto; o SMS é silencioso (só quem está colado vê a tela). Grampo é Trilha de hacking.
