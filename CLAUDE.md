@@ -80,7 +80,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
-
+- feedback, as estrelas ainda tem esse efeito de "trail". Sugestão: adicionar leve efeito de bloom nas estrelas, e aumentar a quantidade, pra deixar um pouco mais parecido como era antes de usarmos o catálogo real
 
 
 ### Feedback para o Opus 4.8
@@ -178,6 +178,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. **Decidido:** um dia dura 48 minutos reais e o jogador pode dormir e pular o tempo (feito na 5.5; o dia ainda é um visual provisório).
 
+- **O ano no jogo (em aberto, conversa de 2026-10-05):** o calendário já vira para 2009 e o céu continua certo; a dúvida do usuário é de design: num jogo sem fim, o ano avançando com a tecnologia e as manchetes paradas em 2008 quebra a imersão; tirar o ano daria atemporalidade. Decidir numa entrevista (onde o ano aparece: BIOS, `date`, jornal, dicas "TODAY IN 2008", manchetes `hl2008`).
 - **Paleta:** sódio âmbar nos postes, cada fonte com a sua cor (temperatura real, 2026-10-03); fundo dos glifos fixo em 0,24; só ASCII; som sintetizado (Web Audio) desde a etapa 4.
 
 ## Plano: etapas 13 a 22 (renumerado em 2026-10-04)
@@ -255,7 +256,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Portal de notícias e busca:** as manchetes da fila de eventos; uma busca que acha empresas, pessoas e lugares.
 - **Fotos apontadas para o que importa (retorno do usuário em 2026-10-04),** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
 - **O resto da rede social:** respostas, compartilhamentos, assuntos em alta, o site do Streetwire no notebook, o jogador postar.
-- **Easter egg do eclipse (pedido do usuário em 2026-10-05):** com a lua real (2008), houve um eclipse lunar total visível na cidade em 2008-02-21 (às 22h30) e um parcial em 2008-08-16: os cidadãos comentam no Streetwire, e a lua fica avermelhada no céu nessa hora (`moonEcl`/`sunLon` em `sim/clock.ts` já dão a posição; falta a sombra da Terra no desenho).
+- **Easter egg do eclipse:** a sombra da Terra já é desenhada (0.13.10d3; `jogar-eclipse-total.bat`/`-parcial.bat`, parâmetro `?at=`); falta os cidadãos comentarem no Streetwire (20/02/2008, totalidade 22:05–22:55 no relógio do jogo; o de 16/08 não é visível na cidade, a lua está abaixo do horizonte).
 - **Registros dos cidadãos** (identidade e documentos): **Opus 4.8** (pode acionar o classificador).
 - **E-mail** (canal do contratante para contratos longos e do mistério de fundo; veja "Canais do contratante").
 - **Mais destinos do dinheiro:** lojas online, serviços, assinaturas, hardware pelo correio.

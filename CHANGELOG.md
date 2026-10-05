@@ -7,6 +7,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - A lua cheia solta raios de luz pequenos entre os prédios, como o sol.
 - Olhar para o céu não deixa mais as bordas da tela vermelhas.
 - Os holofotes de fachada não aparecem mais no chão dos corredores do prédio vizinho.
+- Eclipses lunares: a sombra da Terra escurece a lua e a deixa cor de cobre na totalidade (o de 20/02/2008 é visível na cidade).
+- O visor do relógio não fica mais escuro de dia; à noite continua precisando da luz.
 
 ## 0.13.10d2 — O céu de 2008 e portas sem vidro fantasma (2026-10-05)
 - A lua e o sol estão onde estavam de verdade em 2008, vistos da cidade: a lua nasce mais tarde a cada dia, some do céu da noite em parte do mês, e as fases batem com o calendário (em 21 de fevereiro, às 22h30, a lua cheia está alta no sudeste, na hora do eclipse daquele ano).

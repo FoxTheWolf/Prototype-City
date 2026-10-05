@@ -157,8 +157,11 @@ const G_STEEL = 0.45, G_FACE = 0.12, G_GLASS = 0.5;
 const SPILL = 4, SPILL_K = 0.5;
 /** The lit LCD glows over the case and the world like the phone's screen, but it is small: its glow reaches this much further (and the square root of it stronger). */
 const GLOW_BOOST = 3;
-/** An unlit LCD only reflects: it goes dark faster than the scene (its light to this power), so the light (L) is needed. */
-const LCD_POW = 2.6;
+/**
+ * An unlit LCD only reflects: below LCD_KNEE of light it goes dark faster than the scene (the light times its share
+ * of the knee), so at night the light (L) is needed; above it (day, a lit shop) it reads as the scene.
+ */
+const LCD_KNEE = 0.35;
 /** The segments that are off still show faintly (a cheap LCD): their cells this much darker than the paper. */
 const GHOST = 0.8;
 
@@ -242,7 +245,7 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   text((W - 12) >> 1, CASE_Y + CASE_H - 2, 'WATER RESIST', LABEL, FACE);
 
   // the LCD: lit from its left edge while the light is on (blue), else only reflecting what is around, darker
-  const Ld = L.map((v) => Math.pow(Math.min(1, v), LCD_POW));
+  const Ld = L.map((v) => Math.min(1, v) * Math.min(1, v / LCD_KNEE));
   const lcd = (x: number): [C3, number] => {
     if (!lit) return [LCD_BG, 0];
     const k = 1 - (x / LW) * 0.35;

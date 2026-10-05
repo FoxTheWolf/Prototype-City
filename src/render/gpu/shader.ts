@@ -1,5 +1,6 @@
 import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
 import STARS from '../stars.json';
+import { PENUMBRA, UMBRA } from '../sky';
 import { LAT } from '../../sim/clock';
 import { CEIL, CELL as PCELL, DOOR, DOOR_H, LEAF_TH, WALL } from '../../sim/interior';
 import { LITTER, LITTER_FAR, AD_BG, AD_FG, AD_LETTER, BLOCKS, FRAME_AD, LETTER_W, NETS, RAMP, SCAF_BOARD, SCAF_D, SCAF_STEEL, SCREEN_PAL, SHED_Z, SIGN_Z0, FLOOD_GAP, FLOOD_FIX_FAR, SIGN_Z1, TICK_LW, TICK_SPEED, TICK_Z0, TICK_Z1 } from '../raycaster';
@@ -28,7 +29,7 @@ export const UNIFORMS = [
   'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'lst',
   'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH', 'yaw', 'fall',
   'fallSnow', 'windX', 'windY', 'fallB', 'fallR', 'fallSpeed', 'fallStreak', 'fallDens',
-  'fallPeriod', 'inX0', 'inY0', 'inX1', 'inY1', 'hand',
+  'fallPeriod', 'inX0', 'inY0', 'inX1', 'inY1', 'hand', 'eclU', 'eclV',
 ] as const;
 
 /** Words of the viewer's floor's block (world.ts) before its street doors' leaves. */
@@ -2099,6 +2100,7 @@ const CLOUD_MFP = 140.0;
 const MOON_R = ${(3.4 * Math.PI) / 180};
 /** The stars' light over their catalog value, and how much more with the city dark (cityLit 0). */
 const STAR_K = 1.35; const STAR_DARK = 0.6;
+const UMBRA = ${UMBRA}; const PENUMBRA = ${PENUMBRA};
 const TAU = 6.28318531;
 // the same smooth noise as sky.ts (its 256x256 table is hash3(i, j, 777), computed here instead)
 fn noise(x: f32, y: f32) -> f32 {
@@ -2219,8 +2221,13 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
       var lit = max(0.0, mu * sin(f) - wz * cos(f));
       lit = lit * (0.72 + 0.28 * noise(mu * 3.0 + 40.0, mv * 3.0 + 40.0)) + 0.05 * night * night;
       if (lit > 0.04 + 0.2 * day) {
-        let k = min(1.0, lit) * (0.35 + 0.65 * night); let e = min(1.0, (1.0 - d2) * 5.0);
-        cc = vec3f(235.0 * k + 20.0 + r * day, 228.0 * k + 20.0 + g * day, 200.0 * k + 26.0 + b * day);
+        var k = min(1.0, lit) * (0.35 + 0.65 * night); let e = min(1.0, (1.0 - d2) * 5.0);
+        // an eclipse: the penumbra greys it a little, the umbra (deeper toward its middle) leaves a copper glow
+        let ed = length(vec2f(mu, mv) - vec2f(u.eclU, u.eclV));
+        let um = 1.0 - smoothK(UMBRA - 0.06, UMBRA + 0.06, ed); let pen = 1.0 - smoothK(UMBRA, PENUMBRA, ed);
+        k *= (1.0 - 0.35 * pen) * (1.0 - um);
+        let cu = um * (0.55 - 0.25 * (1.0 - ed / UMBRA)) * night;
+        cc = vec3f(235.0 * k + 20.0 + 150.0 * cu + r * day, 228.0 * k + 20.0 + 48.0 * cu + g * day, 200.0 * k + 26.0 + 22.0 * cu + b * day);
         r += (cc.x - r) * e; g += (cc.y - g) * e; b += (cc.z - b) * e;
         moonA = true; star = 0.0;
       }

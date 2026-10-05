@@ -32,6 +32,9 @@ export interface SkyFrame {
   moonA: number;
   moonEl: number;
   phase: number;
+  /** The earth's shadow (its umbra's center) from the moon's center, in moon radii, along the sky (u) and up (v): far off but at an eclipse. */
+  eclU: number;
+  eclV: number;
   /** Moonlight 0..1 (up, bright phase), for the scene later (blackout). */
   moonlight: number;
   cloud: number;
@@ -49,6 +52,9 @@ export interface SkyFrame {
 }
 
 const tmp = new Float64Array(2);
+/** The moon's true radius in the sky, and the earth's umbra and penumbra there (in moon radii; the shader draws them on its larger disc). */
+const MOON_REAL = 0.259 * (Math.PI / 180);
+export const UMBRA = 2.7, PENUMBRA = 4.7;
 /** Sky azimuth (from north, clockwise) to a world heading (north is -y). */
 const heading = (az: number) => az - Math.PI / 2;
 
@@ -64,10 +70,16 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
   moonDir(t, tmp);
   const moonEl = tmp[0], moonA = heading(tmp[1]), phase = moonPhase(t);
   const day = smooth(-0.1, 0.1, sunEl);
+  // the earth's shadow, opposite the sun, against the moon as the earth's center sees it (its parallax taken off)
+  const geoEl = moonEl + 0.951 * (Math.PI / 180) * Math.cos(moonEl);
+  let dA = sunA + Math.PI - moonA; dA -= Math.round(dA / (2 * Math.PI)) * 2 * Math.PI;
+  const eclU = (dA * Math.cos(moonEl)) / MOON_REAL, eclV = (-sunEl - geoEl) / MOON_REAL;
+  // in the umbra the moon dims to a copper glow (and the night with it)
+  const umbra = 1 - smooth(UMBRA - 0.8, UMBRA + 1, Math.hypot(eclU, eclV));
   // real-time drift, so clouds move at the wind's speed as you watch
   return {
-    day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase,
-    moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) : 0,
+    day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase, eclU, eclV,
+    moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) * (1 - 0.92 * umbra) : 0,
     cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,
     cityLit: grid.subs.reduce((a, _, k) => a + smoothPower(grid, k, sec, city.w, city.h), 0) / grid.subs.length,
   };
