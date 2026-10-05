@@ -327,3 +327,9 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O apagão geral não é um final:** a cidade reage em grande (uma noite inteira sem luz, lanternas, notícias por dias, a GridLink trocando tudo, a polícia em alerta máximo), depois a recuperação com cicatriz; o jogo segue.
 - **Duração do apagão pela causa (decidido):** o disjuntor de poste volta em 1–2 h de jogo; o apagão pelo caminho da subestação que exige mais do jogador (detalhe na Trilha de hacking, `docs/feedback-opus48.md`) dura muitas horas e precisa de uma **equipe que vem de caminhão** (visível na rua). **As torres de celular duram ~2 h de jogo na bateria**, algumas com gerador.
 - **O mapa de papel na 1.0: marcas com rótulo curto** (clicar para copiar do fórum, ou clicar no mapa e digitar "GL 4", "café bom"); desenho livre depois da 1.0.
+
+### O teste das duas camadas, aplicado (conversa de 2026-10-05)
+- **Implícito sem retorno explícito = sorteio, do ponto de vista do jogo** (o usuário): ao criar um sistema que afeta o jogo, perguntar se precisa de um retorno explícito natural e qual. **Preferir mecânicas que se associam pela vida real.**
+- **O calor da investigação vem com um mentor:** o fixer (ou um contato mentor) avisa por SMS quando o jogador passa a ser investigado e diz por quê ("you left your face on the cameras", "you left logs on the system"). O calor pode subir depois do ato (a investigação), desde que o mentor conte.
+- **Clima: só a tempestade derrubando a energia** (apagões naturais, que todo mundo já viveu e que escondem um apagão provocado no meio). **Recusados pelo usuário:** chuva esvaziando a rua, chuva e neblina cegando câmeras (subjetivo, impossível de medir, e esperar o clima não diverte), boné e guarda-chuva escondendo o rosto.
+- **Fome extrema: desmaio raro** (o jogador acorda num banco ou no motel, perdendo tempo; sem hospital nem ferimento, pela regra de violência).
