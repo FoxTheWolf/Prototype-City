@@ -166,3 +166,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **A ligação:** ao telefone a roupa e a aparência não contam, só o que se diz e o número de onde se liga; o NPC ouve o som de fundo de onde o jogador está (sirene, chuva, bar) e pode estranhar ("Where are you?"); ele pode desligar na cara, e ligar de volta custa confiança.
 - **O que conversar rende na 1.0:** informação (quem trabalha onde, horários, o que aconteceu), acesso (entrar onde não devia por ter convencido alguém), favores e preço (desconto com quem gosta do jogador, um conhecido que guarda algo, um informante que avisa da polícia) e trabalhos pequenos pedidos por NPCs comuns (passam pela máquina de trabalhos, que é da Trilha de hacking).
 - **Quem escreve as falas:** o Gemini em volume pelos briefings de `docs/tarefas/` (a 07 e a 08 já voltaram, em `docs/tarefas/retorno/`), o Claude confere por script (formato, palavrões, lacunas) e ajusta o tom, e **o usuário lê uma amostra antes de entrar**.
+
+### A web (etapa 15; conversa de 2026-10-05)
+- **Navegador:** um navegador fictício no notebook, com barra de endereço, abas e botão voltar; as páginas têm layout de site de 2008 (cabeçalho, menu, colunas, banners) desenhado nas células, com cores.
+- **Sites das empresas:** uns 6–8 modelos de layout por tipo (restaurante, loja, banco, operadora, jornal…), com cores, nome, logo ASCII e conteúdo tirados da simulação pela semente; cada empresa parece única sem escrever site por site.
+- **A web viva:** as manchetes saem da fila de eventos, preços e horários seguem a economia; um apagão no bairro do servidor derruba o site ("server not found"); o que o jogador causou aparece na web (a notícia do apagão, posts sobre o semáforo) sem nunca dizer que foi ele.
