@@ -83,6 +83,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **Orgânico:** as ações e reações são governadas por sistemas implícitos (memória, valores, regras) que **nunca ficam expostos** (sem barras nem tooltips); o jogador percebe só a reação explícita do mundo e dos NPCs, de forma natural, e não como mecânica a ser explorada. Exemplo: trocar de chip e ligar para um conhecido: "Who are you? I don't know this number." → o jogador diz o nome → "Oh, it's you!". O explícito guia, nunca governa.
 
+**As duas camadas se comunicam (usuário, 2026-10-05):** o implícito (o código: memória, valores, regras) governa, mas **todo efeito implícito precisa de um jeito orgânico de se mostrar**, senão confunde. Ex.: o NPC diz "I remember you, you lied to me about…"; na delegacia, o policial lê em voz alta o que está no caderno e a fiança sobe ali. Ao criar um sistema implícito, planejar junto como ele aparece.
+
 ## Como o usuário gosta de trabalhar (o mais produtivo do projeto, dito por ele em 2026-10-04)
 
 - **Perguntar:** qualquer dúvida vira pergunta ao usuário, em vez de supor.
