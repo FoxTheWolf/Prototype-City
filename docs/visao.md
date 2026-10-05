@@ -299,3 +299,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **As duas camadas se comunicam** (princípio no topo do CLAUDE.md): todo efeito implícito tem um jeito orgânico de se mostrar (o NPC dizendo o que lembra e por que não gosta mais do jogador; o policial lendo o caderno).
 - **Fofoca visível:** um NPC que o jogador nunca viu já sabe e diz a fonte ("You're the guy who lied to Marta"); o balconista fica frio (só junto de outro sinal); o NPC reclama no Streetwire com a descrição.
 - **Calor esfriando visível:** o bairro volta ao normal, uma notícia de fim ("Police scale back search"), o contato avisa por SMS, o rádio da polícia para de citar a descrição.
+
+### Salvar e errar (conversa de 2026-10-05)
+- **Salvar a qualquer hora** (escolha do usuário, contra a recomendação do Claude de salvar dormindo): menu com slots livres; **recarregar é livre**. A tensão vem das consequências dentro do jogo, não do save.
+- **O pior caso é recomeçar a vida, não o jogo:** prisão com ficha pesada, despejo, contatos perdidos, chip queimado levam de volta ao motel e ao pouco dinheiro; o mundo, o conhecimento e o equipamento escondido continuam. Nunca game over.
