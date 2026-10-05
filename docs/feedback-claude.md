@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-05, crítica das decisões da segunda entrevista (pedida pelo usuário)
+- **Contradição maior: salvar a qualquer hora + recarregar livre** esvazia o que a entrevista construiu (prazo real, mentira descoberta, prisão com confisco, o caderno lido, o chip que zera tudo). Com a caixa de texto livre, o jogador testa a mentira, recarrega e tenta outra. Proposta: salvar a qualquer hora **menos durante calor/perseguição/conversa** (a mesma trava de dormir), sem precisar de modo ferro.
+- **Física x softlock:** decidimos nunca apreender o notebook por ser softlock, mas com física o notebook pode ser jogado no mar, cair num vão, ficar preso numa parede. Regra proposta: o notebook (e o celular) nunca se perdem de vez (achado e perdido do motel, volta depois de um tempo). O custo da física não é CPU, é engenharia: colisão contra paredes e móveis na simulação, objetos atravessando lajes; seguir "uma fonte só" (a CPU já sabe a geometria).
+- **Tela em pixels x "só ASCII":** a identidade do jogo é tudo em ASCII; uma tela nítida no mundo pode parecer colada. Proposta: aplicar o princípio dos letreiros: **pixels de perto, ASCII de longe** (a tela vira glifos/faixa acesa com a distância). Na mão, como hoje.
+- **O caderno lido pela polícia** pode fazer o jogador parar de usar o caderno, que o jogo quer que ele use. Só contam fatos que batem com segredos reais (uma senha verdadeira, um alvo real), nunca o texto qualquer; e o **diário automático não pode incriminar** (o jogador não escreveu): deixá-lo vago ou fora da leitura.
+- **Escopo:** a sessão acrescentou física, aparelho estilo Flipper, rádio da polícia, postar na rede, diário, antena, fofoca, etapa de identidade. A maioria alimenta o laço, mas a coleção dos GridLinks e o Flipper são largura: limitar na 1.0 (poucos GridLinks, ~10–15, e o Flipper com 2–3 funções).
+- **Incertezas:** (1) a economia (~5–7 dias, 5x a TI, apertado no começo) só se confirma medindo: um script em `tests/` que simula a semana do jogador; (2) o prazo real da primeira noite exige que a geração ponha um cybercafé a uma distância andável do motel em toda semente (conferir pelo teste de plantas); (3) GRID DOWN pode estar registrado; (4) se a GridLink é remendada e cada caixa difere, o conteúdo por caixa custa caro: talvez 3–4 modelos de caixa.
+
 ## 2026-10-05, olhar cego do clima (`referencias/63–71`, da manhã à madrugada)
 
 - **O melhor:** o fim de tarde no Theater District (66: sol entre os prédios, sombras longas dos carros, nuvens douradas por baixo), a lua cheia sobre o neon (68) e a névoa alaranjada da cidade na chuva (69). O céu azul com nuvens de dia (63–65) também.
