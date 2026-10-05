@@ -80,8 +80,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 > - Ao terminar, dizer ao usuário em poucas linhas o que entra agora e o que fica para depois.
 > - Aviso: O notebook contém bastante código relacionado a hacking na shell, então, tomar cuidado ao ler e editar os arquivos do sistema interno dele quando não for o Opus 4.8. Se isso começar a causar problemas, deixar aqui pra pedir ao Opus 4.8 para criar um arquivo separado de mapeamento que deve indicar quais as linhas potencialmente perigosas de se mexer fora do modelo Opus 4.8. Esse arquivo deve ser atualizado toda vez que um dos arquivos for editado, para recalculo do numero das linhas correspondentes.
 
-- feedback, as estrelas ainda tem esse efeito de "trail". Sugestão: adicionar leve efeito de bloom nas estrelas, e aumentar a quantidade, pra deixar um pouco mais parecido como era antes de usarmos o catálogo real
-
 
 ### Feedback para o Opus 4.8
 
@@ -349,6 +347,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Cores:** o usuário julga as paletas com a **F4**; falta a saturação da noite (perguntar: forte demais ou fraca?). **Saturação demais** (faixas roxas no vidro, saguão verde-água): pedir capturas com a posição (`POS`).
 - **A tela do celular clara demais** (reforçado pelo usuário em 2026-10-04): as telas muito brancas do celular com um fundo um pouco mais escuro, **dependente do tema** (um branco gelo, um cinza claro), o que também tira o bloom excessivo; depois, se ainda precisar, o bloom e a adaptação do olho (`render/eye.ts`, `EYE.k`/`pageDim`, e o bloom em `gpu/shader.ts`).
 - **O bloom do relógio parece falso** (retorno do usuário em 2026-10-04): muito bloom na borda e quase nenhum dentro do visor; os dígitos pretos não são cobertos pelo brilho. O halo da luz azul deve passar também por cima dos dígitos e do papel do visor (`watch.ts`, `WATCH_LCD`, `HALO_TINT` em `gpu/compositor.ts`).
+- **Lua e estrelas (retorno do usuário em 2026-10-05, depois da 13.10d3):** (1) as manchas dos mares não ficaram boas: refazer **a partir de uma imagem de referência**, mas sem arquivo de imagem no jogo (regra "Tudo é código"): medir a imagem fora do jogo (Python) e ajustar ~10–20 elipses/manchas gaussianas nos mares reais (Imbrium, Serenitatis, Tranquillitatis, Procellarum, Crisium…), conferindo a diferença por número, como a análise por síntese dos sons; (2) **os mares cortam os god rays** (faixas escuras saindo de baixo da lua): a fonte dos raios deve usar o disco liso, sem a textura; (3) as estrelas ainda deixam **rastro**; o usuário sugere um bloom leve nelas e **mais estrelas** (como antes do catálogo real: completar com estrelas fracas pela semente).
 - **A lâmpada das marquises verdes** sem a emissão nova: dar `gEm` como os letreiros.
 - **Placas retrorrefletivas:** as placas de rua e de direção viradas contra o sol ficam escuras; dar um brilho leve de retrorrefletor (o Claude decide como, retorno do usuário em 2026-10-04).
 - **Chão na chuva com ladrilhos clareando e escurecendo:** código antigo de chão molhado; achar e tirar.
