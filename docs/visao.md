@@ -219,3 +219,6 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O primeiro teste é com o balconista da loja** (troca o balcão provisório da F.9): preço, quem trabalha aqui, horário.
 - **A memória dura pelo impacto:** uma pergunta comum some em horas; uma grosseria ou uma mentira descoberta dura dias. Pelo número e pela roupa, nunca pelo nome.
 - **Quando não entende:** o NPC estranha com uma fala própria e a tela sugere, discreta, os assuntos possíveis.
+
+### A curva de tom (teste de 2026-10-05)
+- **Fica o ACES na luminância** (a curva atual). A AgX foi testada lado a lado (F7, `referencias/72` x `73`): sem calibrar, desatura demais tudo; a única vantagem foi o brilho dos neons (o núcleo claro com a borda colorida). **Esse brilho será simulado** numa passada futura nos neons, com o diodo/núcleo visível, como os LEDs e os sete segmentos do Ostranauts, em vez de trocar a curva do jogo inteiro. O teste foi revertido.
