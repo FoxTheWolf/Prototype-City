@@ -1,0 +1,1039 @@
+{
+"symbols": {
+"#shrug#": [
+"shrugs",
+"gives a small shrug",
+"shrugs lightly"
+],
+"#hmm#": [
+"Hmm.",
+"Huh.",
+"Let me think."
+],
+"#nod#": [
+"nods",
+"nods once",
+"gives a quick nod"
+],
+"#sigh#": [
+"sighs",
+"lets out a tired sigh",
+"sighs quietly"
+],
+"#smile#": [
+"smiles",
+"gives a small smile",
+"smiles politely"
+]
+},
+"reply.greet.nice": [
+"3|Hey there. Nice to meet you.",
+"Good morning. Hope your day's treating you well.",
+"Evening. What can I do for you?",
+"[old/senior] Hello, young person. How are you?",
+"[teen/young] Hey. What's up?",
+"[rain] Morning. Quite a day for a walk.",
+"#smile# Hello there.",
+"[evening/late] Hey. You're out late."
+],
+"reply.greet.plain": [
+"Hey.",
+"Hello.",
+"Hi.",
+"#nod#",
+"[evening/late] Evening.",
+"[morning] Morning.",
+"Yeah?",
+"Can I help you?"
+],
+"reply.greet.rude": [
+"Yeah?",
+"What?",
+"Hey.",
+"I'm listening.",
+"#sigh# Yeah?",
+"Make it quick.",
+"[evening/late] It's late.",
+"I'm busy."
+],
+"reply.goodbye.nice": [
+"Take care.",
+"Have a good one.",
+"See you around.",
+"Take care of yourself.",
+"[old/senior] Good night, dear.",
+"[teen/young] Later.",
+"[morning] Have a good morning.",
+"[evening/late] Get home safe."
+],
+"reply.goodbye.plain": [
+"Bye.",
+"Later.",
+"Take care.",
+"See you.",
+"All right.",
+"#nod#",
+"Have a good one.",
+"Okay."
+],
+"reply.goodbye.rude": [
+"Bye.",
+"Good.",
+"Fine.",
+"Yeah, later.",
+"Okay, then.",
+"#sigh# Right.",
+"Go ahead.",
+"I'm done here."
+],
+"reply.thank.nice": [
+"You're welcome.",
+"Anytime.",
+"Happy to help.",
+"No problem at all.",
+"Sure thing.",
+"[old/senior] You're very welcome.",
+"[job] Just doing my job.",
+"#smile# Don't mention it."
+],
+"reply.thank.plain": [
+"Sure.",
+"No problem.",
+"You're welcome.",
+"Yeah, okay.",
+"Anytime.",
+"#nod#",
+"All right.",
+"No worries."
+],
+"reply.thank.rude": [
+"Sure.",
+"Yeah.",
+"Okay.",
+"Right.",
+"Fine.",
+"Mm-hm.",
+"#nod#",
+"You got it."
+],
+"reply.apologize.nice": [
+"It's all right.",
+"No harm done.",
+"Don't worry about it.",
+"You're fine.",
+"No need to apologize.",
+"[old/senior] It's quite all right.",
+"#smile# We're good.",
+"Forget it. No trouble."
+],
+"reply.apologize.plain": [
+"It's okay.",
+"All right.",
+"Fine.",
+"No problem.",
+"It's nothing.",
+"#nod#",
+"Okay.",
+"Forget it."
+],
+"reply.apologize.rude": [
+"Yeah, okay.",
+"Fine.",
+"Just watch it.",
+"All right.",
+"Whatever.",
+"#sigh# Fine.",
+"Let's move on.",
+"Okay. Enough."
+],
+"reply.ask_where.nice": [
+"Sure. The {place} is just down {road}.",
+"It's over on {road}, near the corner.",
+"[old/senior] The {place}? I can point you there.",
+"[rain] The {place} is a few blocks down {road}.",
+"Head toward {district}. You can't miss it.",
+"[job] I pass the {place} on my way to work.",
+"It's near {place}. About a ten-minute walk.",
+"#nod# Go straight, then look for {place}."
+],
+"reply.ask_where.plain": [
+"It's down {road}.",
+"Over near {district}.",
+"A few blocks that way.",
+"It's beside {place}.",
+"Down the street.",
+"[job] It's near my work at {biz}.",
+"That way, past the corner.",
+"#shrug# Not far."
+],
+"reply.ask_where.rude": [
+"Down {road}.",
+"That way.",
+"Near {place}.",
+"A few blocks over.",
+"#shrug# Somewhere around there.",
+"Ask somebody else.",
+"I don't know.",
+"I've got no idea."
+],
+"reply.ask_directions.nice": [
+"Sure. Go straight, then turn left at {road}.",
+"Take {road} toward {district}, then you'll see {place}.",
+"It's easy. Head that way for a few blocks.",
+"[old/senior] I'll walk you through it.",
+"[rain] Stay on the main road; the side streets are slick.",
+"[job] I take that route every morning.",
+"Turn right at the next light.",
+"#smile# You should be there in ten minutes."
+],
+"reply.ask_directions.plain": [
+"Go straight and turn left.",
+"Take {road} toward {district}.",
+"Right at the light.",
+"It's a few blocks that way.",
+"Follow {road}.",
+"#nod# Just keep going.",
+"Turn left after {place}.",
+"You should see it."
+],
+"reply.ask_directions.rude": [
+"Straight ahead.",
+"Left at the light.",
+"Right there.",
+"A few blocks over.",
+"Just follow {road}.",
+"I already told you. That way.",
+"Ask somebody else.",
+"I don't have time for directions."
+],
+"reply.ask_time.nice": [
+"It's about {time}.",
+"Sure. It's {time}.",
+"[morning] A little after {time}.",
+"[evening/late] It's getting close to {time}.",
+"[old/senior] It's {time}, dear.",
+"My watch says {time}.",
+"#smile# Right around {time}.",
+"About {time}, I believe."
+],
+"reply.ask_time.plain": [
+"It's {time}.",
+"About {time}.",
+"Around {time}.",
+"My watch says {time}.",
+"#nod# {time}.",
+"A little after {time}.",
+"Nearly {time}.",
+"I think it's {time}."
+],
+"reply.ask_time.rude": [
+"{time}.",
+"About {time}.",
+"It's late.",
+"It's early.",
+"Check your watch.",
+"No idea.",
+"#shrug# Around {time}.",
+"Not keeping track."
+],
+"reply.ask_price.nice": [
+"That's {number} dollars.",
+"It runs about {number} bucks.",
+"[job] That's {number} dollars, before tax.",
+"I can check the price for you.",
+"It's marked at {number}.",
+"About {number}. Pretty reasonable.",
+"#smile# It costs {number}.",
+"Let me make sure. I think it's {number}."
+],
+"reply.ask_price.plain": [
+"That's {number} dollars.",
+"About {number}.",
+"It's marked at {number}.",
+"[job] {number}, before tax.",
+"Costs {number}.",
+"Around {number}.",
+"#nod# {number}.",
+"I think it's {number}."
+],
+"reply.ask_price.rude": [
+"{number} dollars.",
+"It's {number}.",
+"The price is on the tag.",
+"Check the sign.",
+"About {number}.",
+"That's the price.",
+"I already said {number}.",
+"Take it or leave it."
+],
+"reply.buy_request.nice": [
+"Sure thing. I'll get that for you.",
+"Absolutely. What would you like?",
+"No problem. Just bring it up here.",
+"[job] Sure. I can ring that up.",
+"You got it.",
+"[job] I can help you with that.",
+"[morning] Fresh stock just came in.",
+"#smile# Good choice."
+],
+"reply.buy_request.plain": [
+"Sure.",
+"Okay.",
+"All right. That'll be {number}.",
+"You can have that one.",
+"[job] I'll ring it up.",
+"Yep, we have those.",
+"Go ahead.",
+"That's fine."
+],
+"reply.buy_request.rude": [
+"Fine.",
+"Take it to the counter.",
+"If you want it, buy it.",
+"That's over there.",
+"You can pay at the register.",
+"Not my department.",
+"Go ahead.",
+"Whatever works."
+],
+"reply.ask_who_works_here.nice": [
+"That's {first}. They work here most days.",
+"[job] {first} handles that department.",
+"Our manager is {first}.",
+"[old/senior] You might want to ask {first}.",
+"The person in charge is {first}.",
+"[morning] {first} should be in soon.",
+"[evening/late] {first} usually closes up.",
+"#nod# Ask {first}; they know the place."
+],
+"reply.ask_who_works_here.plain": [
+"{first} works here.",
+"That's {first}.",
+"{first} handles that.",
+"The manager is {first}.",
+"Ask {first}.",
+"[job] {first} works with me at {biz}.",
+"You'll find {first} nearby.",
+"I think {first} is here."
+],
+"reply.ask_who_works_here.rude": [
+"{first}.",
+"The manager.",
+"Ask {first}.",
+"People who work here.",
+"#shrug# I don't know.",
+"Why?",
+"Not telling.",
+"Look around."
+],
+"reply.ask_about_person.nice": [
+"Yes, I know {first}.",
+"I may have seen {first} around.",
+"What do you need to know about {first}?",
+"[job] {first} works over at {biz}.",
+"[old/senior] I know who you mean.",
+"[teen/young] Yeah, I've seen {first} around.",
+"I can tell you what I know.",
+"#hmm# Let me think about {first}."
+],
+"reply.ask_about_person.plain": [
+"Yeah, I know {first}.",
+"I've seen {first}.",
+"What about {first}?",
+"I know the name.",
+"I've seen them around.",
+"[job] {first} works at {biz}.",
+"Maybe. Why?",
+"#hmm# Not much to say."
+],
+"reply.ask_about_person.rude": [
+"Why do you ask?",
+"What about them?",
+"I don't know.",
+"Never heard of them.",
+"Ask someone else.",
+"That's none of your business.",
+"#shrug# No idea.",
+"I'm not talking about {first}."
+],
+"reply.ask_what_saw.nice": [
+"I saw {first} around earlier.",
+"Yesterday? I was near {place}.",
+"[morning] I saw a few people heading toward {district}.",
+"[evening/late] I noticed someone near {place}.",
+"[rain] Most people were staying indoors.",
+"[job] I was working, so I only saw a little.",
+"I remember seeing {first} yesterday.",
+"#hmm# Let me think. I saw something near {road}."
+],
+"reply.ask_what_saw.plain": [
+"I saw {first} earlier.",
+"I was near {place}.",
+"Not much.",
+"I saw people on {road}.",
+"Yesterday was pretty quiet.",
+"[job] I was working all morning.",
+"[evening/late] I noticed someone near {place}.",
+"#hmm# Nothing unusual."
+],
+"reply.ask_what_saw.rude": [
+"Nothing.",
+"Didn't see a thing.",
+"I wasn't looking.",
+"Ask somebody else.",
+"I don't remember.",
+"Not telling you.",
+"I was busy.",
+"#shrug# No idea."
+],
+"reply.ask_event.nice": [
+"I heard there was a power outage near {district}.",
+"The police were around {place} earlier.",
+"[old/senior] Everyone was talking about the outage.",
+"[rain] The storm may have caused some trouble.",
+"I heard about the accident on {road}.",
+"The sirens started around {time}.",
+"[job] We closed for a while because of it.",
+"#hmm# I don't know all the details."
+],
+"reply.ask_event.plain": [
+"There was a power outage.",
+"Police were around {place}.",
+"I heard about the accident.",
+"Something happened on {road}.",
+"The sirens started around {time}.",
+"I don't know much.",
+"[rain] Weather probably had something to do with it.",
+"#shrug# That's all I heard."
+],
+"reply.ask_event.rude": [
+"I don't know.",
+"Ask the police.",
+"Didn't see anything.",
+"Heard some sirens. That's it.",
+"It's none of my business.",
+"Nothing I can tell you.",
+"#shrug# No idea.",
+"Leave it alone."
+],
+"reply.ask_name.nice": [
+"I'm {first}. Nice to meet you.",
+"Sure. My name's {first}.",
+"[old/senior] {first}, dear.",
+"[teen/young] I'm {first}.",
+"#smile# {first}. And yours?",
+"You can call me {first}.",
+"[job] I'm {first}; I work at {biz}.",
+"It's {first}. Nice meeting you."
+],
+"reply.ask_name.plain": [
+"{first}.",
+"I'm {first}.",
+"Name's {first}.",
+"{first}. You?",
+"[job] I'm {first} from {biz}.",
+"It's {first}.",
+"#nod# {first}.",
+"You can call me {first}."
+],
+"reply.ask_name.rude": [
+"{first}.",
+"Why?",
+"I'm {first}.",
+"You can call me {first}.",
+"What's it to you?",
+"None of your concern.",
+"Just call me {first}.",
+"Does it matter?"
+],
+"reply.ask_job.nice": [
+"I'm a {job}.",
+"I work at {biz}.",
+"[old/senior] I'm retired now, mostly.",
+"[retired] These days, I keep busy with little projects.",
+"[job] I'm a {job}. Been at it a while.",
+"I work over at {biz}.",
+"I'm in the {job} business.",
+"#smile# I'm a {job}. What about you?"
+],
+"reply.ask_job.plain": [
+"I'm a {job}.",
+"I work at {biz}.",
+"[retired] I'm retired.",
+"I do {job} work.",
+"I'm with {biz}.",
+"I work nearby.",
+"I'm in {job}.",
+"#nod# Just regular work."
+],
+"reply.ask_job.rude": [
+"I work.",
+"I'm a {job}.",
+"That's personal.",
+"Why do you care?",
+"I have a job.",
+"None of your business.",
+"I work at {biz}.",
+"Let's leave it there."
+],
+"reply.compliment.nice": [
+"Thanks. That's kind of you.",
+"#smile# I appreciate that.",
+"Well, thank you.",
+"[teen/young] Hey, thanks.",
+"[old/senior] That's very sweet of you.",
+"[job] Thanks. I try to keep things neat.",
+"Glad you like it.",
+"That's nice to hear."
+],
+"reply.compliment.plain": [
+"Thanks.",
+"Appreciate it.",
+"That's nice.",
+"Sure, thanks.",
+"#nod#",
+"Glad you think so.",
+"Okay, thanks.",
+"Much appreciated."
+],
+"reply.compliment.rude": [
+"Okay.",
+"Thanks.",
+"Sure.",
+"Right.",
+"Whatever.",
+"I heard you.",
+"#nod# Fine.",
+"Let's move on."
+],
+"reply.complaint.nice": [
+"I'm sorry you're having trouble.",
+"I understand. Let me see what I can do.",
+"[job] I'll take a look at it.",
+"Thanks for telling me.",
+"That's frustrating. I understand.",
+"Let me find someone who can help.",
+"[job] I can check that for you.",
+"#sigh# Sorry about the inconvenience."
+],
+"reply.complaint.plain": [
+"Yeah, there's a problem.",
+"I know. We're working on it.",
+"[job] I'll check it.",
+"Sorry about that.",
+"That's been happening today.",
+"I can pass that along.",
+"#nod# Got it.",
+"We'll see what we can do."
+],
+"reply.complaint.rude": [
+"Take it up with the manager.",
+"Not my problem.",
+"That's how it is.",
+"You'll have to wait.",
+"I can't fix it.",
+"Nothing I can do.",
+"#sigh# Okay.",
+"Then leave it."
+],
+"reply.ask_favor.nice": [
+"Sure. What do you need?",
+"Of course. I'll help if I can.",
+"Absolutely. Tell me what's up.",
+"Sure thing. What's the favor?",
+"[old/senior] I'll see what I can do.",
+"[job] I can probably help with that.",
+"#smile# Go ahead.",
+"I'll do my best."
+],
+"reply.ask_favor.plain": [
+"Sure. What is it?",
+"Okay. What's the favor?",
+"I can try.",
+"Maybe. What do you need?",
+"All right.",
+"What's up?",
+"#nod# Go ahead.",
+"Tell me."
+],
+"reply.ask_favor.rude": [
+"What do you want?",
+"Make it quick.",
+"No promises.",
+"Depends.",
+"What's the favor?",
+"I don't have time.",
+"Ask someone else.",
+"#sigh# Go on."
+],
+"reply.borrow_money.nice": [
+"I can lend you a little.",
+"Sure. How much do you need?",
+"I might be able to help.",
+"[retired] I keep a little cash handy.",
+"[teen/young] I don't have much, but I'll see.",
+"[job] I get paid on Friday, so I'm a little tight.",
+"Tell me how much you're short.",
+"#smile# We'll figure something out."
+],
+"reply.borrow_money.plain": [
+"How much?",
+"I might have some.",
+"Maybe. How much do you need?",
+"I don't have much.",
+"I can spare a few dollars.",
+"[job] I'm a little short myself.",
+"Let me check my wallet.",
+"Not today."
+],
+"reply.borrow_money.rude": [
+"No.",
+"I don't lend money.",
+"I barely know you.",
+"Not happening.",
+"Ask somebody else.",
+"I need my own cash.",
+"No chance.",
+"#shrug# Sorry."
+],
+"reply.offer_money.nice": [
+"That's generous, but you don't have to.",
+"Are you sure? That's plenty.",
+"I appreciate the offer.",
+"[job] Just pay the usual amount.",
+"A little extra? Thanks.",
+"You really don't need to do that.",
+"#smile# That's kind of you.",
+"All right. Thank you."
+],
+"reply.offer_money.plain": [
+"Okay.",
+"All right.",
+"Thanks.",
+"How much?",
+"You don't have to.",
+"[job] Just pay the regular amount.",
+"Fine by me.",
+"#nod# Fair enough."
+],
+"reply.offer_money.rude": [
+"Keep it.",
+"I don't want your money.",
+"No thanks.",
+"Put it away.",
+"I'm not interested.",
+"Don't bother.",
+"You heard me.",
+"#sigh# No."
+],
+"reply.claim_identity.nice": [
+"Oh, all right. What can I do for you?",
+"Okay, I'll get out of your way.",
+"[job] Do you have some identification?",
+"Understood. Let me check with my supervisor.",
+"[job] What's the work order?",
+"All right. I'll cooperate.",
+"I wasn't expecting maintenance today.",
+"#hmm# Okay. What needs fixing?"
+],
+"reply.claim_identity.plain": [
+"Okay. What's the job?",
+"Do you have ID?",
+"Who sent you?",
+"What's the work order?",
+"[job] Let me check that.",
+"All right. Give me a moment.",
+"You're with {biz}?",
+"I wasn't told anyone was coming."
+],
+"reply.claim_identity.rude": [
+"Prove it.",
+"Show some ID.",
+"Who sent you?",
+"I'm not opening anything.",
+"No identification, no entry.",
+"Wait outside.",
+"That's not convincing.",
+"I'll call my supervisor."
+],
+"reply.ask_entry.nice": [
+"Sure. Come on in.",
+"Of course. The door's open.",
+"Yes, go ahead.",
+"[job] Sure, just sign in first.",
+"[old/senior] Come in, dear.",
+"[rain] Come in out of the rain.",
+"Certainly. Watch your step.",
+"#smile# You're welcome inside."
+],
+"reply.ask_entry.plain": [
+"Sure.",
+"Go ahead.",
+"You can come in.",
+"That's fine.",
+"[job] Sign in first.",
+"Not right now.",
+"Wait a minute.",
+"You can enter."
+],
+"reply.ask_entry.rude": [
+"No.",
+"Not allowed.",
+"Wait outside.",
+"You can't come in.",
+"Door's closed.",
+"Not today.",
+"Go somewhere else.",
+"I'm not letting you in."
+],
+"reply.ask_phone.nice": [
+"Sure. Go ahead.",
+"Of course. Here you are.",
+"[job] Just be quick; it's for work.",
+"[old/senior] Certainly, dear.",
+"No problem. Make your call.",
+"Sure, just let me know when you're done.",
+"#smile# Here you go.",
+"Absolutely."
+],
+"reply.ask_phone.plain": [
+"Sure.",
+"Okay, go ahead.",
+"You can use it.",
+"Make it quick.",
+"Here.",
+"[job] Just keep the call short.",
+"Fine.",
+"There you go."
+],
+"reply.ask_phone.rude": [
+"No.",
+"Use a pay phone.",
+"Find another phone.",
+"Not mine.",
+"I need it.",
+"No, sorry.",
+"Ask somebody else.",
+"Can't help you."
+],
+"reply.ask_wifi_password.nice": [
+"Sure. It's {thing}.",
+"Of course. The network is {biz}.",
+"[job] It's written on the little card by the register.",
+"[teen/young] It's pretty simple: {thing}.",
+"Sure, I can give you the password.",
+"It's {thing}.",
+"[old/senior] Let me see if I wrote it down.",
+"#smile# Here you go."
+],
+"reply.ask_wifi_password.plain": [
+"It's {thing}.",
+"Check the card.",
+"It's posted over there.",
+"[job] The password is by the register.",
+"Sure. It's {thing}.",
+"The network is {biz}.",
+"I think it's {thing}.",
+"There you go."
+],
+"reply.ask_wifi_password.rude": [
+"No.",
+"It's posted somewhere.",
+"Ask the manager.",
+"I don't give that out.",
+"Check the sign.",
+"Not to strangers.",
+"I don't know.",
+"Use your own connection."
+],
+"reply.threaten.nice": [
+"All right. Let's keep this calm.",
+"Okay. I'll give you some space.",
+"No need to get worked up.",
+"Fine. I'm backing off.",
+"[old/senior] Let's keep things peaceful.",
+"I hear you.",
+"All right. No trouble.",
+"#nod# I'm leaving."
+],
+"reply.threaten.plain": [
+"Okay.",
+"Fine. Backing off.",
+"All right.",
+"You made your point.",
+"I'm leaving.",
+"No trouble.",
+"#nod# Got it.",
+"Calm down."
+],
+"reply.threaten.rude": [
+"Fine. I'm done.",
+"Whatever.",
+"I'm leaving.",
+"Goodbye.",
+"You got your way.",
+"#sigh# Fine.",
+"Not worth the trouble.",
+"We're finished here."
+],
+"reply.flirt.nice": [
+"Well, thank you. That's sweet.",
+"#smile# You're charming yourself.",
+"That's a nice thing to say.",
+"[teen/young] Hey, thanks.",
+"[old/senior] That's very kind.",
+"Coffee sounds nice.",
+"You're making me smile.",
+"That's flattering."
+],
+"reply.flirt.plain": [
+"Thanks.",
+"That's nice.",
+"You're sweet.",
+"I appreciate that.",
+"Coffee? Maybe.",
+"#smile#",
+"Sure, why not?",
+"You're pretty friendly."
+],
+"reply.flirt.rude": [
+"Okay.",
+"Right.",
+"No thanks.",
+"Let's keep it simple.",
+"Not interested.",
+"I don't think so.",
+"You're being a little much.",
+"Let's change the subject."
+],
+"reply.yes.nice": [
+"Great.",
+"Wonderful.",
+"Sure thing.",
+"All right.",
+"#smile# Sounds good.",
+"Perfect.",
+"Happy to hear it.",
+"Absolutely."
+],
+"reply.yes.plain": [
+"Okay.",
+"Sure.",
+"Yeah.",
+"All right.",
+"Yep.",
+"Fine.",
+"#nod#",
+"That's right."
+],
+"reply.yes.rude": [
+"Fine.",
+"Yeah.",
+"Okay.",
+"Whatever.",
+"Sure.",
+"If you say so.",
+"#sigh# Fine.",
+"Right."
+],
+"reply.no.nice": [
+"All right. I understand.",
+"That's okay.",
+"No problem.",
+"Fair enough.",
+"I respect that.",
+"[old/senior] Quite all right.",
+"#smile# Maybe another time.",
+"Understood."
+],
+"reply.no.plain": [
+"Okay.",
+"All right.",
+"Fine.",
+"No problem.",
+"Understood.",
+"#nod#",
+"Fair enough.",
+"Sure."
+],
+"reply.no.rude": [
+"Fine.",
+"Whatever.",
+"Okay.",
+"Good.",
+"Your choice.",
+"I heard you.",
+"#sigh# Fine.",
+"Then no."
+],
+"reply.not_understood.nice": [
+"Sure. Let me explain.",
+"No problem. I'll say it another way.",
+"Of course.",
+"#smile# What part was unclear?",
+"Let me put it simply.",
+"Sorry, I wasn't clear.",
+"[old/senior] I'll explain it again.",
+"Sure. Take your time."
+],
+"reply.not_understood.plain": [
+"I'll say it again.",
+"What part?",
+"Okay. Let me explain.",
+"I mean this.",
+"Sure.",
+"You didn't understand?",
+"#hmm# Let me rephrase that.",
+"All right."
+],
+"reply.not_understood.rude": [
+"I said it already.",
+"Never mind.",
+"Forget it.",
+"It's simple.",
+"Whatever.",
+"Then don't worry about it.",
+"#sigh# Drop it.",
+"Ask someone else."
+],
+"reply.change_subject.nice": [
+"Sure. What do you want to talk about?",
+"No problem.",
+"All right, new subject.",
+"#smile# What else is on your mind?",
+"Fair enough.",
+"Sure. Let's talk about something else.",
+"[teen/young] Yeah, okay. What's up?",
+"Sounds good."
+],
+"reply.change_subject.plain": [
+"Okay.",
+"Sure.",
+"All right.",
+"Fine. What's next?",
+"What do you want to talk about?",
+"Yeah, okay.",
+"#nod# New subject.",
+"Go ahead."
+],
+"reply.change_subject.rude": [
+"Fine.",
+"Whatever.",
+"Your choice.",
+"Okay, then.",
+"Sure.",
+"Move on.",
+"#sigh# Fine. Next topic.",
+"Let's just finish this."
+],
+"reply.talk_weather.nice": [
+"Beautiful day, isn't it?",
+"[rain] Sure is wet out there.",
+"[morning] Nice morning for a walk.",
+"[evening/late] Getting chilly tonight.",
+"[old/senior] Weather's been strange lately.",
+"[kids] The kids love this kind of weather.",
+"Looks like the rain might let up soon.",
+"#smile# Can't complain about a day like this."
+],
+"reply.talk_weather.plain": [
+"Yeah, it's a nice day.",
+"[rain] Quite rainy today.",
+"Looks like rain.",
+"Pretty cold out.",
+"Warm enough.",
+"[evening/late] Chilly tonight.",
+"[morning] Nice morning.",
+"Weather's been odd lately."
+],
+"reply.talk_weather.rude": [
+"Yeah.",
+"It's weather.",
+"Rain's rain.",
+"Cold.",
+"Hot.",
+"I hadn't noticed.",
+"#shrug# Same as usual.",
+"Let's talk about something else."
+],
+"reply.banter.nice": [
+"#smile# Ha. Not bad.",
+"Okay, that got me.",
+"You have a strange sense of humor.",
+"[teen/young] Haha, fair enough.",
+"[old/senior] Well, that's one way to put it.",
+"You keep things interesting.",
+"All right, I'll give you that one.",
+"#laugh#"
+],
+"reply.banter.plain": [
+"Heh.",
+"Yeah, sure.",
+"That's funny.",
+"Okay.",
+"Ha.",
+"#shrug#",
+"Right.",
+"I see what you did there."
+],
+"reply.banter.rude": [
+"Okay.",
+"Sure.",
+"Funny.",
+"Whatever.",
+"Right.",
+"Can we keep this moving?",
+"#sigh#",
+"I'm busy."
+],
+"reply.unrecognized.nice": [
+"Sorry, I didn't quite follow that.",
+"I'm not sure what you mean.",
+"Could you say that another way?",
+"#hmm# I'm a little lost.",
+"I didn't catch that.",
+"Could you phrase that differently?",
+"[old/senior] I'm afraid I didn't understand.",
+"Sorry. What are you asking?"
+],
+"reply.unrecognized.plain": [
+"I don't follow.",
+"What do you mean?",
+"Didn't catch that.",
+"Say that again.",
+"I'm not sure what that means.",
+"#hmm#",
+"Could you rephrase that?",
+"I don't understand."
+],
+"reply.unrecognized.rude": [
+"What?",
+"I don't understand.",
+"Say it clearly.",
+"Try again.",
+"No idea what you're saying.",
+"Come again?",
+"#sigh# Never mind.",
+"I'm done."
+],
+"reply.confused": [
+"Sorry, what?",
+"I don't follow.",
+"What do you mean?",
+"Could you repeat that?",
+"#hmm#",
+"I didn't catch that.",
+"Try saying it another way.",
+"I'm not sure I understand."
+],
+"reply.leave": [
+"All right. Take care.",
+"Okay. Goodbye.",
+"I've got to get going.",
+"See you around.",
+"[evening/late] Have a good night.",
+"[morning] Have a good day.",
+"[rain] Stay dry.",
+"[job] I need to get back to work."
+]
+}
