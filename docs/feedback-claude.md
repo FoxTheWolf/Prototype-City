@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-05, olhar cego do clima (`referencias/63–71`, da manhã à madrugada)
+
+- **O melhor:** o fim de tarde no Theater District (66: sol entre os prédios, sombras longas dos carros, nuvens douradas por baixo), a lua cheia sobre o neon (68) e a névoa alaranjada da cidade na chuva (69). O céu azul com nuvens de dia (63–65) também.
+- **As bordas das nuvens granuladas e "pinceladas"** (64, 65, 67): de perto, as nuvens viram ruído serrilhado e arrastado, como tinta borrada; a forma de longe é boa, a borda não.
+- **O céu limpo de madrugada é um buraco preto** (71, 05:37): entre nuvens marrons iluminadas pela cidade, o céu aberto fica preto chapado, lido como vazio. Às 5h30 já deveria haver um azul-escuro do pré-amanhecer, e ao menos algumas estrelas.
+- **A chuva parece uma camada na tela** (69): os traços são todos do mesmo tamanho e densidade em toda a tela, do perto ao longe; não há profundidade. (Já no Plano, a chuva volumétrica.)
+- **Os contornos de neon acesos de dia** (65, 66, 67): as linhas roxas e rosa nas quinas dos prédios ao meio-dia — é o que eu tinha lido como falha nas capturas anteriores. De dia, deveriam apagar ou quase sumir.
+- **A sombra das copas** (63): no gramado, a sombra das árvores aparece como o contorno de uma caixa vazia, sem a mancha redonda da copa.
+- **O carro lilás brilhando** (70): parece aceso por dentro, mais claro que tudo; e um poste preto alto sem luminária no meio da calçada.
+- **A lua** (68): a mancha escura no disco ainda parece uma sombra, não um mar (já no Plano).
+- **No horizonte**, de novo os pilares vermelhos (66) e um brilho avermelhado (70): a borda da cidade.
+
 ## 2026-10-05, olhar cego (capturas `referencias/52–60`, lidas como jogador, sem o código)
 
 - **A rua vista de dentro parece água** (59, e o saguão em 55): pelo vidro, o asfalto fica azul-roxo e as faixas parecem ondas; quem está lá fora vira azul sólido. É o defeito que mais pesa nos interiores: deixa a loja com cara de aquário. O vidro deveria tingir pouco (um cinza-esverdeado leve) e deixar a rua com a cor dela.

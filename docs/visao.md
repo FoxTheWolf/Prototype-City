@@ -210,3 +210,4 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Telões e outdoors alternam notícias (da fila de eventos) e anúncios** de empresas que existem.
 - **O piso das praças varia por praça** pela semente (xadrez, faixas, pedra).
 - **Os carros vão para a etapa 18** (já precisam ser refeitos para o táxi), e **os materiais saem do refinamento e vêm antes**: o usuário quer materiais PBR (cor, rugosidade, metal) como base para o metal dos carros (hoje um só valor de reflexo, que parece falso), o molhado, o vidro e os detalhes que o ASCII tem dificuldade de mostrar.
+- **Os materiais PBR não furam a fila (decidido pelo usuário em 2026-10-05):** dão trabalho (dar material a tudo, sobre o shader frágil), então o ritmo de jogabilidade segue (14 diálogo, que o usuário considera o fator mais inovador do jogo, e 15); os materiais vão junto da arrumação do shader, antes da demo.
