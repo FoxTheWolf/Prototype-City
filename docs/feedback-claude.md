@@ -13,6 +13,11 @@
 - **Linhas coloridas nas arestas dos prédios de dia** (60: roxo e rosa nas quinas do prédio vermelho e do bege): parecem aberração cromática ou falha.
 - **A grama saturada demais na chuva** (60): verde vivo uniforme num dia cinza; deveria escurecer e dessaturar com o tempo fechado.
 - **O que está bonito:** a rua do Majestic à noite (58: letreiros de lâmpadas, o semáforo de pedestres com o "60" em pontos, a profundidade das torres), o parque com chuva e as torres do centro (60), o relógio com os segmentos apagados.
+- **"DRUGS 24H" no outdoor** (61): em inglês americano é farmácia, mas o jogador lê como "drogas 24 horas" (e esbarra na regra de conteúdo limpo). Trocar por "PHARMACY 24H" ou "DRUGSTORE" na gramática dos anúncios.
+- **Uma fileira de pilares de tijolo vermelho no horizonte** (61, à esquerda): parecem ruínas ou chaminés soltas; provavelmente a borda da cidade (cerca ou zona de fogo). Some com a praia da 13.15.
+- **A praça em xadrez** (61): o piso de ladrilhos enormes claro/escuro lê como tabuleiro; ladrilhos menores ou de duas cores próximas ficariam mais urbanos. As linhas coloridas nas quinas dos prédios aparecem de novo de dia.
+- **O notebook** (62): o texto âmbar escuro sobre o preto tem pouco contraste (as linhas do boot quase somem); as manchas escuras borradas na tela parecem falha de render, não sujeira (se são sujeira, precisam de forma de dedo/gordura); o notebook parece flutuar sobre o chão da praça, sem mãos, colo ou mesa; uma forma verde à direita do teclado (provavelmente a cadeira da praça atrás) confunde com um LED.
+- **O celular** (61) está legível e bonito (o tema escuro funciona); só os cantos de cima do corpo ficam serrilhados em degraus, mais grossos que o resto do desenho.
 - O vulto verde da captura 54 era a planta vista pelo vidro da porta (confirmado pelo usuário): não é bug.
 
 ## 2026-10-05, depois da 13.10d2 (o céu real)
