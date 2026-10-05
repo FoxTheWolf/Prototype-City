@@ -202,7 +202,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
   - **13.9b ✅** pedir direção (`askWay.ts`).
   - **Número nos prédios e endereços** ("1240 5th Ave") na porta, usados também pelo Maps, pelas lojas no telefone e pelos sites: quem sabe o endereço acha pela placa da rua.
   - **Placas de distrito** nas entradas ("ENTERING OLD MARLOW") e o nome do distrito nos toldos e pontos de ônibus.
-  - **Placas de distrito iluminadas sobre a pista** (pedido do usuário em 2026-10-04): como as das rodovias americanas, mas cobrindo uma faixa só: três distritos, a direção e talvez a distância.
+  - **Placas de distrito iluminadas sobre a pista:** como as das rodovias americanas, mas cobrindo uma faixa só: três distritos, a direção e talvez a distância.
   - **Placas de direção no lugar certo** (retorno de 2026-10-04): hoje a de destino (`guideSign`, "… 0.5 mi") está virada para o poste e em cima da faixa de pedestres. Ir para o braço do semáforo, acima das lentes, quando houver um cruzamento perto; senão, no meio do quarteirão, na calçada, entre os postes.
   - **Legibilidade:** placas e anúncios grandes desenhados em blocos/pontos, nunca com um glifo por letra esticado; vale sobretudo para as informativas e as de publicidade que hoje são difíceis de ler.
   - **Totens "YOU ARE HERE"** nas esquinas grandes e nos pontos de ônibus: um mapa de papel do bairro, lido com F.
@@ -210,7 +210,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
   - **Lista telefônica** nos orelhões (páginas amarelas com endereço).
   - Já ajudam: as placas de rua e de direção (13.7), a bússola do relógio, os marcos altos no horizonte, os letreiros das lojas. Depois: placas de hospital, estacionamento e estação (etapa 18).
   - **13.9a ✅** bateria do celular.
-  - **13.9c Tomadas (retorno do usuário em 2026-10-04):** o carregador do celular e o do notebook **não são upgrade nem item comprado** (quem tem o aparelho tem o carregador): tirar o carregador da loja e da mochila. As **tomadas viram objetos** nas paredes dos lugares (`OUTLETS`): F na tomada (ou sentar perto dela) pluga o aparelho, que carrega em tempo real; uma **outra tecla** (não o F) faz "esperar carregar", avançando o tempo até encher (o mesmo pulo de tempo de dormir; bloqueado durante perseguição/calor alto).
+  - **13.9c Tomadas:** o carregador do celular e o do notebook **não são upgrade nem item comprado** (quem tem o aparelho tem o carregador): tirar o carregador da loja e da mochila. As **tomadas viram objetos** nas paredes dos lugares (`OUTLETS`): F na tomada (ou sentar perto dela) pluga o aparelho, que carrega em tempo real; uma **outra tecla** (não o F) faz "esperar carregar", avançando o tempo até encher (o mesmo pulo de tempo de dormir; bloqueado durante perseguição/calor alto).
 - **Modelos do Blockbench:** as regras ficam em `docs/blockbench.md` (não decidido; só se um modelo gerado ficar ruim, ou para publicar).
 - **Depois, na mesma linha:** mais escritórios perto do centro; a renda dos moradores segue o lugar; `homeUnit` (ainda não existe) em `sim/citizens.ts`; o resto do catálogo (cinema, karaokê, fliperama, escritórios…); **shopping** (hoje toda empresa fica no térreo, `B.shop`; lojas em andares de cima só num prédio marcado como shopping; bares e restaurantes sempre no térreo).
 - **Cinema e outros interiores complicados ficam para depois da 1.0** (decidido pelo usuário em 2026-10-04): o cinema precisa de várias salas e peças novas; não entra agora. Veja "Escopo da 1.0" nas decisões.
@@ -247,7 +247,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 ### Etapa 15: Web e celular (o resto da antiga etapa 12)
 - **Sites das empresas** gerados da simulação (horário, endereço, o que vendem pela tabela da 13.1, quem trabalha lá), no notebook; alguns com versão para celular.
 - **Portal de notícias e busca:** as manchetes da fila de eventos; uma busca que acha empresas, pessoas e lugares.
-- **Fotos apontadas para o que importa (retorno do usuário em 2026-10-04),** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
+- **Fotos apontadas para o que importa,** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
 - **O resto da rede social:** respostas, compartilhamentos, assuntos em alta, o site do Streetwire no notebook, o jogador postar.
 - **Eclipse no Streetwire:** a lua já escurece (0.13.10d3, `jogar-eclipse-*.bat`); falta os cidadãos comentarem o de 20/02/2008 (totalidade 22:05–22:55). **Um eclipse solar total** emprestado de outro ano (2026-10-05): o dia escurece e os postes acendem.
 - **Registros dos cidadãos** (identidade e documentos): **Opus 4.8** (pode acionar o classificador).
@@ -270,7 +270,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Hackear o banco e os sistemas das empresas** é `[HACKING]` (Trilha de hacking).
 
 ### Etapa 18: Transporte e carros dos cidadãos (antes "12b" e "12c")
-- **Antes, refazer os carros** (retorno do usuário em 2026-10-04): não dá para entrar num táxi que é uma caixa; os ocupantes ainda são o modelo antigo de pedestre com o material metálico do carro.
+- **Antes, refazer os carros**: não dá para entrar num táxi que é uma caixa; os ocupantes ainda são o modelo antigo de pedestre com o material metálico do carro.
 - **Direção dos carros (retorno do usuário em 2026-10-04):** depois da curva eles corrigem demais para pegar a faixa mais à direita (fica agressivo): suavizar o ângulo da correção ou preferir a faixa mais à esquerda do sentido em que já estão; freiam na hora diante de pedestres (sem atropelamento no jogo, mas a freada deve ser progressiva); conferir quando um carro batido some, para não ficar parado para sempre causando engarrafamento; **batidas frequentes demais** (contar por `w.events.list` com `kind === 'crash'` por minuto de simulação, antes e depois; diagnóstico nas "Lições da 10.10").
 - **Carros que decidem** (entrevista de 2026-10-04): dar ré, contornar batidas e carros parados, desviar do jogador.
 - **Efeitos dos carros:** fumaça do escapamento (simples, sem ser volumétrica); fumaça volumétrica dos pneus nas freadas fortes.
@@ -292,7 +292,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Clima, segunda passada (depois dos materiais; retorno do usuário em 2026-10-04):** a chuva **volumétrica em volta do jogador** (hoje é um arco preso à câmera, que aparece ao olhar bem para cima ou para baixo; limitar o ângulo da câmera foi descartado porque quebraria com um FOV ajustável); os blocos grandes de chuva que acendem e apagam no chão; a neve no mesmo modelo; **relâmpagos localizados**, com forma de raio e *god rays*, como no GTA V. A chuva nas paredes internas fica para depois do rework dos interiores.
 - **Geração do mundo animada no carregamento** (pedido em 2026-10-03, como a caixa de status do Minecraft): distritos, ruas, prédios subindo, a rede elétrica, as antenas, a população; mais curta com o cache.
 - **A borda além do mar** (ideias de 2026-10-05: represa, porto; `docs/visao.md`).
-- **Nome da engine** (pedido do usuário em 2026-10-04): o Claude dá um nome ao motor próprio, e a abertura mostra "Powered by <nome>".
+- **Nome da engine**: o Claude dá um nome ao motor próprio, e a abertura mostra "Powered by <nome>".
 - As anotações de "Refinamento: anotações" e os defeitos visuais das notas técnicas.
 
 ### Etapa 21: Sound design (antes "15b")
@@ -392,6 +392,7 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas). Bugs novos entram aqui até a próxima organização.
 - **Interiores (capturas de 2026-10-05; antes da 13.10e):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho.
+- **Manchas no chão de noite (2026-10-05, `ver-sarcofago.bat` às 19:41):** um retângulo amarelo estourado no chão perto da cerca e manchas rosadas no asfalto em primeiro plano.
 - **Travada à meia-noite (retorno do usuário em 2026-10-04):** a simulação recalcula muita coisa na virada do dia e o jogo trava um instante. Espalhar esse trabalho por vários quadros (como o carregamento do começo), em vez de um fade com barra (que atrapalharia numa perseguição). Achar o que roda na virada (provavelmente as rotinas do dia em `sim/citizens.ts`/`world.ts`).
 - **`isOpen` não sabe o dia da semana (2026-10-04, visto na 13.3):** os bancos aparecem abertos no fim de semana sem ninguém no caixa (`sim/telco.ts`); dar os dias à tabela de `placeTypes.ts`.
 - **Fachada que muda bruscamente ao se aproximar:** a faixa de transição foi alongada na R.34 (esperando o teste do usuário). Se ainda aparecer, comparar as cores do visual de longe (`cF` em `wallCell`) com a média do detalhado: o de longe parece mais claro (parede marrom) que o de perto (vidros escuros).
