@@ -249,7 +249,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Portal de notícias e busca:** as manchetes da fila de eventos; uma busca que acha empresas, pessoas e lugares.
 - **Fotos apontadas para o que importa (retorno do usuário em 2026-10-04),** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
 - **O resto da rede social:** respostas, compartilhamentos, assuntos em alta, o site do Streetwire no notebook, o jogador postar.
-- **Eclipse no Streetwire:** a lua já escurece (0.13.10d3, `jogar-eclipse-*.bat`); falta os cidadãos comentarem o de 20/02/2008 (totalidade 22:05–22:55).
+- **Eclipse no Streetwire:** a lua já escurece (0.13.10d3, `jogar-eclipse-*.bat`); falta os cidadãos comentarem o de 20/02/2008 (totalidade 22:05–22:55). **Um eclipse solar total** emprestado de outro ano (2026-10-05): o dia escurece e os postes acendem.
 - **Registros dos cidadãos** (identidade e documentos): **Opus 4.8** (pode acionar o classificador).
 - **E-mail** (canal do contratante para contratos longos e do mistério de fundo; veja "Canais do contratante").
 - **Mais destinos do dinheiro:** lojas online, serviços, assinaturas, hardware pelo correio.
@@ -334,7 +334,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Barras de fome e cansaço no relógio** (pedido do usuário em 2026-10-04, as duas já existem: `sim/needs.ts`, o estômago e o fôlego): duas barrinhas no topo do visor, uma de cada lado (`watch.ts`).
 - **Barra de batimentos no centro do relógio** (pedido do usuário em 2026-10-04): a terceira barrinha, no meio do topo do visor; quanto mais alto o batimento, menos fôlego.
 - **O relógio acende a luz** quando sobe sozinho com o sinal de hora ou o alarme (`watch.ts`).
-- **Menu com a vista das câmeras:** o modo CCTV (já existe como "WATCH CCTV") vira o **fundo padrão** do menu, no lugar da vista do jogador girando; clicar em "WATCH CCTV" só tira o menu da frente. Cuidado: a câmera é 4:3 e o menu é adaptativo (mínimo de linhas): moldura ou barras.
+- **Menu com as câmeras:** o modo CCTV (já existe como "WATCH CCTV") vira o **fundo padrão** do menu, no lugar da vista do jogador girando; clicar em "WATCH CCTV" só tira o menu da frente. Cuidado: a câmera é 4:3 e o menu é adaptativo (mínimo de linhas): moldura ou barras.
 - **Linha de debug:** reorganizar e enxugar (as teclas que saíram já foram tiradas na 13.13).
 - **Notícias dominadas por batidas e apagões (retorno do usuário em 2026-10-04):** um limite de manchetes por assunto numa janela de tempo (`locale/news.ts`/`sim/events.ts`); junto, a notícia do apagão só depois que a luz volta.
 
