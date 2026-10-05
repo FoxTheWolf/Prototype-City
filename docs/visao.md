@@ -345,3 +345,9 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Close-up ao lado do objeto,** fugindo dos aparelhos abertos. **Regra: toda informação de um objeto do mundo aparece como o próprio objeto ampliado** (etiqueta, cardápio, placa, recibo, teclado do orelhão); caixa de texto só para fala. Passar por todos os elementos do jogo que merecem interface diegética própria.
 - **2D ou 3D (regra do usuário):** em 3D só o que precisa ser visto, mexido e carregado o tempo todo (o aparelho fechado, por fora); **abrir para modificar é interface 2D diegética** (estilo Ostranauts): o notebook aberto por dentro, a tampa traseira do celular, o servidor. Mais barato que modelar as peças em 3D, com o mesmo efeito.
 - **O mapa da tela antes do diálogo (etapa 14):** inventário do que ocupa a tela hoje e um desenho das zonas, antes da legenda, dos balões, da caixa de texto e do medidor de tom.
+
+### O diálogo na prática (conversa de 2026-10-05)
+- **F para falar:** o F escolhe o alvo e o NPC para e espera enquanto o jogador digita (digitar direto deixaria o NPC ir embora no meio da frase).
+- **Quem está perto ouve** (ideia do usuário): confessar um crime ao balconista com gente em volta cria testemunhas; é uma base da fofoca. Pelo teste das duas camadas, quem ouviu mostra (vira a cabeça, para, comenta "did he just say…?").
+- **Nem todo NPC aceita conversar:** depende da vida dele (pressa, desconfiança à noite; quem está parado no ponto ou no balcão conversa), e a recusa diz o porquê ("sorry, I'm late").
+- **Na tela:** a fala do NPC como legenda no centro de baixo (com o nome, se o jogador souber) e a caixa de texto logo abaixo, com a leitura de intenção e o medidor de tom acima dela.
