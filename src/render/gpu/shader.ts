@@ -2097,6 +2097,8 @@ const CLOUD_RUN = 5000.0;
 const CLOUD_STEPS = 12;
 const CLOUD_MFP = 140.0;
 const MOON_R = ${(3.4 * Math.PI) / 180};
+/** The stars' light over their catalog value, and how much more with the city dark (cityLit 0). */
+const STAR_K = 1.35; const STAR_DARK = 0.6;
 const TAU = 6.28318531;
 // the same smooth noise as sky.ts (its 256x256 table is hash3(i, j, 777), computed here instead)
 fn noise(x: f32, y: f32) -> f32 {
@@ -2149,7 +2151,9 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let up = -m / L; // tan of the elevation
   // the row relative to the horizon (the CPU's y + 0.5 - hor); the 3D camera takes it from the elevation
   let rowF = select(m * u.scale, -up * u.scale, u.cam3d > 0.5);
-  let t = clamp((u.hor + rowF) / max(1.0, u.hor), 0.0, 1.0);
+  // (the 3D camera's by the elevation alone: by u.hor, looking up stretched the horizon's glow over the whole sky)
+  let hor0 = select(max(1.0, u.hor), u.rows * 0.5, u.cam3d > 0.5);
+  let t = clamp((hor0 + rowF) / hor0, 0.0, 1.0);
   let az = atan2(rdy, rdx);
   let dA = wrapA(az - u.moonA);
   let moonCol = !gNoMoon && u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
@@ -2187,7 +2191,8 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     let R3 = vec3f(rdx, rdy, -m); let Dl = length(R3); let D = R3 / Dl;
     let rt = normalize(vec3f(-D.y, D.x, 0.0)); let upv = cross(D, rt);
     let sd = eqDir(D); let sr = eqDir(rt); let su = eqDir(upv);
-    let hw = 1.05 * u.plane / u.cols / Dl; let hh = 0.525 / u.scale / Dl; let cut = cos(2.0 * max(hw, hh));
+    // (exactly half a cell each way: any overlap lit a star in two cells as it crossed between them)
+    let hw = u.plane / u.cols / Dl; let hh = 0.5 / u.scale / Dl; let cut = cos(2.0 * max(hw, hh));
     for (var k = 0u; k < N_STARS; k++) {
       let w = SG_STARS + k * 4u; let sv = vec3f(bitcast<f32>(sg[w]), bitcast<f32>(sg[w + 1u]), bitcast<f32>(sg[w + 2u]));
       let c = dot(sv, sd);
@@ -2196,7 +2201,9 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
         let p = sg[w + 3u]; starC = vec3f(f32(p & 255u), f32((p >> 8u) & 255u), f32((p >> 16u) & 255u));
         // a slight twinkle, more the lower it is (more air)
         let tw = 1.0 - (0.08 + 0.25 * (1.0 - min(1.0, up * 2.0))) * hash3(i32(k), ifloor(u.sec * 6.0), 9);
-        star = max(starC.x, max(starC.y, starC.z)) * tw * night * night; starC *= tw * night * night;
+        // brighter than drawn, and more so in a blackout (no city glow washing them out)
+        let sb = tw * night * night * STAR_K * (1.0 + STAR_DARK * (1.0 - u.cityLit));
+        star = max(starC.x, max(starC.y, starC.z)) * sb; starC = min(starC * sb, vec3f(255.0));
         starCh = select(select(DOT, PLUS, star > 130.0), STAR, star > 190.0);
         break;
       }

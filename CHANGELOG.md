@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10d3 — Estrelas e luar (2026-10-05)
+- As estrelas brilham mais, e ainda mais num apagão; não aparecem mais duplicadas ao passar de uma célula para outra.
+- A lua cheia solta raios de luz pequenos entre os prédios, como o sol.
+- Olhar para o céu não deixa mais as bordas da tela vermelhas.
+- Os holofotes de fachada não aparecem mais no chão dos corredores do prédio vizinho.
+
 ## 0.13.10d2 — O céu de 2008 e portas sem vidro fantasma (2026-10-05)
 - A lua e o sol estão onde estavam de verdade em 2008, vistos da cidade: a lua nasce mais tarde a cada dia, some do céu da noite em parte do mês, e as fases batem com o calendário (em 21 de fevereiro, às 22h30, a lua cheia está alta no sudeste, na hora do eclipse daquele ano).
 - As estrelas do céu são as de verdade: Órion, Sírius, a Ursa Maior, a Polar sempre ao norte; cada uma com a sua cor (azuladas, brancas, alaranjadas) e mais cintilantes perto do horizonte. Giram com a noite.

@@ -219,7 +219,7 @@ fn src(x: i32, y: i32) -> vec4f {
  */
 const RAY_N = 32;
 const RAYS_WGSL = /* wgsl */ `
-struct RU { cols: f32, rows: f32, aspect: f32, k: f32, sx: f32, sy: f32, pad0: f32, pad1: f32 };
+struct RU { cols: f32, rows: f32, aspect: f32, k: f32, sx: f32, sy: f32, reach: f32, pad1: f32 };
 @group(0) @binding(0) var<uniform> r: RU;
 @group(0) @binding(1) var<storage, read> world: array<u32>;
 @group(0) @binding(2) var<storage, read_write> glow: array<vec4f>;
@@ -228,7 +228,7 @@ fn lit(x: i32, y: i32) -> vec3f {
   let n = u32(r.cols) * u32(r.rows); let w = world[n + u32(y) * u32(r.cols) + u32(x)];
   let c = vec3f(f32(w & 255u), f32((w >> 8u) & 255u), f32((w >> 16u) & 255u)) / 255.0;
   let d = length(vec2f((f32(x) - r.sx) / r.cols * r.aspect, (f32(y) - r.sy) / r.rows));
-  return c * smoothstep(0.35, 0.8, dot(c, vec3f(0.3, 0.5, 0.2))) * exp(-d / 0.22);
+  return c * smoothstep(0.35, 0.8, dot(c, vec3f(0.3, 0.5, 0.2))) * exp(-d / r.reach);
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let cols = u32(r.cols); let rows = u32(r.rows);
@@ -482,7 +482,7 @@ export class GpuCompositor {
     const S = gw.sunScreen;
     if (S[2] > 0) {
       const cv = this.ctx.canvas as HTMLCanvasElement;
-      this.RU.set([gw.cols, gw.rows, cv.width / Math.max(1, cv.height), S[2], S[0], S[1], 0, 0]);
+      this.RU.set([gw.cols, gw.rows, cv.width / Math.max(1, cv.height), S[2], S[0], S[1], S[3], 0]);
       this.dev.queue.writeBuffer(this.rayUni, 0, this.RU);
       const rp = enc.beginComputePass();
       rp.setPipeline(this.rayPipe); rp.setBindGroup(0, this.rayBind!); rp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));

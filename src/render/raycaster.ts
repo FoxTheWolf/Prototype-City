@@ -821,7 +821,10 @@ function collectObjects(world: World, v: View): Obj[] {
       if (!B.flood || Math.abs((B.x0 + B.x1) / 2 - v.x) > FLOOD_FIX_FAR + 60 || Math.abs((B.y0 + B.y1) / 2 - v.y) > FLOOD_FIX_FAR + 60) continue;
       const parts = wallFloodModel(B.flood, Math.round(Math.min(1, signPower(world, k, frameSec)) * 8) / 8);
       floodSpots(B, (x, y, nx, ny) => {
-        if (Math.abs(x - v.x) < FLOOD_FIX_FAR && Math.abs(y - v.y) < FLOOD_FIX_FAR && seen(x, y, 0.5)) out.push({ x, y, c: nx, s: ny, parts, r: 0.35, h: 0.35, seed: 0 });
+        if (Math.abs(x - v.x) >= FLOOD_FIX_FAR || Math.abs(y - v.y) >= FLOOD_FIX_FAR || !seen(x, y, 0.5)) return;
+        // not on a face against a neighbor's lot (the spot would stand inside its rooms)
+        for (let j = blk.b0; j < blk.b1; j++) { const N = city.buildings[j]; if (j !== k && x > N.x0 && x < N.x1 && y > N.y0 && y < N.y1) return; }
+        out.push({ x, y, c: nx, s: ny, parts, r: 0.35, h: 0.35, seed: 0 });
       });
     }
   }

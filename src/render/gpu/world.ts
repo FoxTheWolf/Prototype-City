@@ -18,6 +18,8 @@ const SHADOW_CONE = 1.6, SHADOW_CASTERS = 150;
 /** By day, how near an object behind the viewer must be to still cast its shadow forward (m; SG_LONG). */
 const SHADOW_BACK = 60;
 /** Objects within FLOOD_REACH m of a floodlit facade nearer than FLOOD_SHADOW_FAR cast its lamps' shadows on it (at most FLOOD_CASTERS). */
+/** The moon's rays against the sun's (moonlight 1: full moon). */
+const MOON_RAYS = 0.6;
 const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 /** The objects' shadow grid: cells per side, their size (m), and the longest shadow binned (m). */
 const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
@@ -96,8 +98,8 @@ export class GpuWorld {
   cam3d = true;
   private uni: GPUBuffer;
   private U = new Float32Array(Math.ceil(UNIFORMS.length / 4) * 4);
-  /** The sun on the screen this frame: cell column, row, and the strength of its rays (0: none). */
-  sunScreen = [0, 0, 0];
+  /** The sun (or, at night, the moon) on the screen this frame: cell column, row, the strength of its rays (0: none), their reach (screen heights). */
+  sunScreen = [0, 0, 0, 0.22];
   private pipe!: GPUComputePipeline;
   private mod: GPUShaderModule;
   /** The city's lists (fixed), then what changes: substations, light map, lamp colors, dynamic lights. */
@@ -360,8 +362,20 @@ export class GpuWorld {
       if (d > 0.05 && k > 0.01) {
         this.sunScreen[0] = (cols / 2) * (1 + lat / (d * plane));
         this.sunScreen[1] = this.cam3d ? rows / 2 - ((-f * sp + sz * cp) / d) * scale : vals.hor - (sz * scale) / f;
-        this.sunScreen[2] = k;
+        this.sunScreen[2] = k; this.sunScreen[3] = 0.22;
       } else this.sunScreen[2] = 0;
+    }
+    // with no sun, the moon's: small and faint (moonlight carries the phase), through the same pass
+    if (this.sunScreen[2] === 0 && sky.moonEl > 0) {
+      const ce = Math.cos(sky.moonEl), mx = Math.cos(sky.moonA) * ce, my = Math.sin(sky.moonA) * ce, mz = Math.sin(sky.moonEl);
+      const f = mx * dirX + my * dirY, lat = my * dirX - mx * dirY, cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);
+      const d = this.cam3d ? f * cp + mz * sp : f;
+      const k = MOON_RAYS * sky.moonlight * (1 - sky.day) * Math.min(1, mz * 12) * (1 - 0.8 * sky.cloud) * (1 - 0.8 * sky.precip);
+      if (d > 0.05 && k > 0.01) {
+        this.sunScreen[0] = (cols / 2) * (1 + lat / (d * plane));
+        this.sunScreen[1] = this.cam3d ? rows / 2 - ((-f * sp + mz * cp) / d) * scale : vals.hor - (mz * scale) / f;
+        this.sunScreen[2] = k; this.sunScreen[3] = 0.07;
+      }
     }
     this.objects(world, v, scale, plane, vals.hor, I, sky.day > 0.01 && F.sun[2] > 0.02 ? F.sun : null);
     q.writeBuffer(this.uni, 0, U);
