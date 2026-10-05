@@ -63,6 +63,11 @@ Enviadas em 2026-10-03: Kamurocho, da série Yakuza (a vibe de um distrito de en
 - `40-yakuza-beco-letreiros-verticais`: beco com letreiros verticais perpendiculares empilhados dos dois lados, molduras de lâmpadas, losangos acesos num poste, névoa
 - `41-yakuza-esquina-neon-lixo`: esquina com neon, letreiros de lâmpadas, sacos de lixo empilhados, ar-condicionado nas paredes, fios cruzando a rua, flores de plástico
 - `42-bug-luz-estourada-cinza` e `43-bug-cortes-de-luz`: a parede vermelha estourando para o cinza, as auréolas nas janelas e os cortes retos de luz (corrigidos na R.21c)
+- **Interfaces e inventário (dadas pelo usuário em 2026-10-05):**
+  - `44-cairn-mochila`: a mochila do Cairn; itens com o formato real, colisão pela silhueta, girar ao encaixar; o limite é o espaço. Alvo da mochila (etapa 22).
+  - `45-neo-scavenger-inventario` e `50-casualties-unknown-corpo`: inventário por grade e medicina profunda (só referência; a medicina fica fora).
+  - `46` a `49` (Ostranauts): **o melhor exemplo de interface diegética 2D** para o usuário. Displays de sete segmentos com o formato certo e o segmento apagado visível, LEDs com emissão e o diodo acendendo embaixo, chaves com guarda listrada, bloom na tela do mapa. Guia para desenhar painéis 2D (relógio, celular, caderno, painéis de máquinas). O editor de personagem (`47`) é referência do editor no jogo.
+  - `51-highfleet-painel-radio`: o painel físico do HighFleet (rádio com sintonia, telefone, manual colado).
 
 O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The Story So Far - Grow Now! Games (1080p, h264).mp4`. Dá para extrair mais quadros com Python + OpenCV (`cv2`), que já está instalado: `cap.set(cv2.CAP_PROP_POS_MSEC, t*1000)` e depois `cap.read()`. Para achar um trecho, monte primeiro folhas de miniaturas com o tempo escrito (uma a cada 8 s cabe em 8 folhas de 6×6) e só depois extraia em resolução cheia.
 
