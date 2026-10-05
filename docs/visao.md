@@ -359,3 +359,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O editor fica no espelho do motel:** o jogo começa direto no quarto com uma aparência sorteada pela semente; o espelho do banheiro abre o editor quando o jogador quiser.
 - **Falas neutras sobre o jogador:** os NPCs o descrevem pela roupa e pelo número ("the one in the grey jacket lied to Marta", "0179"), como se descreve um estranho; sem gênero na gramática do jogador, sem papel de gênero, sem risco de expressão ofensiva. Pronomes como opção do espelho só depois da 1.0, se o usuário quiser.
 - **Só a roupa e o estado mudam o tratamento** (molhada, suja, suspeita à noite), nunca idade ou rosto. **A roupa molhada tem que aparecer para o jogador** (manga escurecida, gotas no relógio), e **os carros passando em poças jogam água** e podem molhar o jogador (etapa 20, clima).
+
+### Rosto, memória e testemunhas (conversa de 2026-10-05)
+- **O rosto vale para as relações, não para a perseguição:** conhecidos reconhecem o jogador de qualquer roupa; a polícia, o calor e a perseguição funcionam só pela descrição (roupa, lugar, hora). O contato que entrega o jogador por medo (decidido antes) dá **informação** (onde mora, o número), não reconhecimento na perseguição.
+- **A memória do NPC dura pelo peso do que aconteceu:** uma pergunta casual some em 1–2 dias; uma conversa boa, semanas; mentira descoberta ou prejuízo, muito tempo. O NPC diz o que lembra ("you asked me about the bus yesterday").
+- **A testemunha reconhece só pela mesma roupa** perto do lugar ("that's him!"); com outra roupa, passa reto.
