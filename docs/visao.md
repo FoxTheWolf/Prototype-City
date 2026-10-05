@@ -319,3 +319,9 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **A economia se testa depois de existir:** medir o que o jogador ganha e o preço das coisas, quanto e com que frequência muda (o supermercado não muda o preço várias vezes por dia).
 - **A primeira noite:** o trabalho do cybercafé **fica ativo desde o SMS** (sem espera); o prazo pode ser generoso, quase a noite toda, cobrindo um café do outro lado da cidade.
 - **GRID DOWN:** o usuário não achou um jogo com esse nome (só outras obras); trocar depois é barato.
+
+### Mapa, recuperação e tempo (conversa de 2026-10-05)
+- **O mapa de papel é um upgrade** do mapa normal comprado; o que se acha no fórum (os GridLinks) o jogador põe no mapa. A impressão espera o quadro de investigação. Como marcar: clicar para copiar (marca à caneta) foi aceito como base; o usuário pensou em desenhar à mão num mapa de pixels com zoom, mas pesa controles e memória do desenho (a decidir; o Claude recomenda marcas com rótulo curto digitado na 1.0 e desenho livre depois).
+- **A cidade se recupera, com cicatriz.** Duas ressalvas do usuário: (1) **o apagão hoje acaba antes de as torres de celular ficarem sem bateria** (medido no jogo), então a mecânica nunca aparece: ou as torres caem na hora, ou a bateria dura menos, ou o apagão dura mais; (2) **a loja falida vira outra do mesmo tipo** (mesmo interior, outro nome, outro dono, outra empresa), nunca outro tipo, para não quebrar o interior gerado.
+- **O tempo corre com o notebook aberto,** como na conversa: hackear na rua é tenso, num lugar seguro não; escolher onde sentar importa.
+- **O apagão geral não é um final:** a cidade reage em grande (uma noite inteira sem luz, lanternas, notícias por dias, a GridLink trocando tudo, a polícia em alerta máximo), depois a recuperação com cicatriz; o jogo segue.
