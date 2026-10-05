@@ -56,7 +56,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O Sarcófago e o lado de fora estão em aberto** (o usuário duvida: a megaestrutura contrasta com 2008). Revisitar depois; hoje é só uma barreira. A luz de aviação sai da lista até lá.
 
 ## Pessoas
-- **O jogador aparece antes da 1.0**, no formato da Alex, com skin 64×64 importável.
+- **O jogador aparece antes da 1.0, no mesmo modelo dos NPCs** (sem importar skins: a roupa pintada da skin brigaria com o disfarce); aparência pelo criador dentro do jogo; o rework dos NPCs vem antes.
+- **Disfarce:** a roupa é dado (testemunhas e câmeras guardam a descrição); trocar de roupa confunde quem não conhece bem o jogador. O nome e o rosto ficam guardados separados do número: com chip novo, "Who are you?" → o nome → "Oh, it's you!".
 - **Os NPCs ganham um formato próprio**, mais próximo de gente real (ainda em bloco), com proporções variáveis (altos, baixos, braços longos/curtos).
 
 ## A demo
@@ -87,6 +88,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Em aberto, mas o Claude recomenda:** um medidor de exposição (como Thief) lendo a luz no lugar do jogador; a polícia acha mais fácil no claro. **As próprias luzes entregam o jogador** (tela do celular, luz do relógio, o celular tocando com uma ligação por engano). Depende da polícia sair dos trilhos (etapa 16).
 
 ### Sem trilhos (pedestres e carros)
+- **A cidade muda devagar, puxada pela reação:** o fundo muda pouco (lojas fecham e abrem, pessoas se mudam); as mudanças grandes vêm das consequências do jogador. O save guarda só o que mudou em relação à semente (kilobytes). Empurrar a simulação até achar um limite real (como a população, de 20 para 100 mil).
 - **Pedestres com objetivo:** um destino ("ir até a batida e fotografar para o Streetwire") e uma área caminhável com custos (calçada barata, rua cara mas permitida, praças), com desvio local entre todos; só perto do jogador. **É a fundação da etapa 16** (curiosos, polícia procurando, stealth): começar a 16 por ela.
 - **Carros que decidem:** dar ré, contornar uma batida ou um carro parado, desviar do jogador no meio da rua (como o Cyberpunk depois do rework). Vai para o rework de carros (18), junto da freada progressiva.
 
