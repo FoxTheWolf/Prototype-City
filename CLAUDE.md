@@ -392,7 +392,7 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas). Bugs novos entram aqui até a próxima organização.
 - **Interiores (capturas de 2026-10-05; antes da 13.10e):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho.
-- **Manchas no chão de noite (2026-10-05, `ver-sarcofago.bat` às 19:41):** um retângulo amarelo estourado no chão perto da cerca e manchas rosadas no asfalto em primeiro plano.
+- **Luzes do táxi no chão (2026-10-05):** a luz do teto estoura num retângulo amarelo e as duas lanternas traseiras se somam no asfalto até ficar esbranquiçado (limitar a soma ou tingir, como o `HALO_TINT`).
 - **Travada à meia-noite (retorno do usuário em 2026-10-04):** a simulação recalcula muita coisa na virada do dia e o jogo trava um instante. Espalhar esse trabalho por vários quadros (como o carregamento do começo), em vez de um fade com barra (que atrapalharia numa perseguição). Achar o que roda na virada (provavelmente as rotinas do dia em `sim/citizens.ts`/`world.ts`).
 - **`isOpen` não sabe o dia da semana (2026-10-04, visto na 13.3):** os bancos aparecem abertos no fim de semana sem ninguém no caixa (`sim/telco.ts`); dar os dias à tabela de `placeTypes.ts`.
 - **Fachada que muda bruscamente ao se aproximar:** a faixa de transição foi alongada na R.34 (esperando o teste do usuário). Se ainda aparecer, comparar as cores do visual de longe (`cF` em `wallCell`) com a média do detalhado: o de longe parece mais claro (parede marrom) que o de perto (vidros escuros).
