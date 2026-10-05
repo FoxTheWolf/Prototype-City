@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10d2 — O céu de 2008 e portas sem vidro fantasma (2026-10-05)
+- A lua e o sol estão onde estavam de verdade em 2008, vistos da cidade: a lua nasce mais tarde a cada dia, some do céu da noite em parte do mês, e as fases batem com o calendário (em 21 de fevereiro, às 22h30, a lua cheia está alta no sudeste, na hora do eclipse daquele ano).
+- As estrelas do céu são as de verdade: Órion, Sírius, a Ursa Maior, a Polar sempre ao norte; cada uma com a sua cor (azuladas, brancas, alaranjadas) e mais cintilantes perto do horizonte. Giram com a noite.
+- Pela porta aberta, a loja vista da calçada tem as mesmas cores vistas de dentro: acabou o vidro invisível que lavava a sala.
+- As lojas ficam com a luz acesa: não há mais loja escura que acende quando você entra.
+- As folhas das portas de vidro giram a partir da face de dentro da parede, sem entrar no batente.
+- A lanterna do celular ilumina a sala vista pela porta ou pela janela pela distância de verdade.
+
 ## 0.13.10d — Portas de verdade (2026-10-04)
 - As portas giram de verdade na dobradiça, e a porta de rua vista da calçada é a mesma vista de dentro: as duas folhas de vidro se abrem para dentro, e de lado se vê a espessura da folha.
 - Cada porta é feita de alguma coisa: vidro nas portas de rua, madeira nos apartamentos, aço com barra na porta do estoque, painel pintado nos escritórios e saguões. Cada uma tem o próprio som (o vidro tilinta ao fechar, a de aço bate pesada e fecha devagar com a mola).

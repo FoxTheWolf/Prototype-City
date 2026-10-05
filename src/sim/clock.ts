@@ -8,12 +8,9 @@ export const DAY_REAL_MIN = 120;
 /** Game seconds per real second. */
 export const TIME_SCALE = 86400 / (DAY_REAL_MIN * 60);
 export const YEAR0 = 2008;
-const LAT = (41 * Math.PI) / 180;
-const TILT = (23.44 * Math.PI) / 180;
+/** The city's latitude, radians (the render's stars turn by it too). */
+export const LAT = (41 * Math.PI) / 180;
 const DAY = 86400;
-/** A real new moon: 2008-01-08 11:37 UTC, as game time. */
-const NEW_MOON = 7 * DAY + 11.62 * 3600;
-const SYNODIC = 29.530589 * DAY;
 
 const leap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -55,26 +52,61 @@ function sky(dec: number, ha: number, out: Float64Array) {
   return out;
 }
 
-/** The sun's ecliptic longitude, roughly (0 at the March equinox). */
-const sunLon = (t: number) => (2 * Math.PI * (t / DAY - 79)) / 365.25;
+// ---- the real sky of 2008 (Meeus, Astronomical Algorithms, low precision: the sun to 0.01 degree, the moon to a
+// few tenths). The game's clock is the local mean time of the city's meridian, LON west of Greenwich, so the sun
+// is due south near noon as before; JD0 is the Julian day of 2008-01-01 0h UT.
+const LON = 74;
+const JD0 = 2454466.5;
+const RAD = Math.PI / 180;
+/** Julian centuries since J2000 at game time t. */
+const jc = (t: number) => (JD0 + (t + (LON / 15) * 3600) / DAY - 2451545) / 36525;
+/** The local sidereal time at game time t, radians. */
+export function siderealTime(t: number): number {
+  const d = JD0 + (t + (LON / 15) * 3600) / DAY - 2451545;
+  return (((280.46061837 + 360.98564736629 * d - LON) % 360) + 360) % 360 * RAD;
+}
+/** The obliquity of the ecliptic, radians. */
+const obliq = (T: number) => (23.439291 - 0.0130042 * T) * RAD;
+/** The sun's ecliptic longitude, radians. */
+function sunLon(T: number): number {
+  const L0 = 280.46646 + 36000.76983 * T, M = (357.52911 + 35999.05029 * T) * RAD;
+  return (L0 + (1.914602 - 0.004817 * T) * Math.sin(M) + 0.019993 * Math.sin(2 * M) + 0.000289 * Math.sin(3 * M)) * RAD;
+}
+/** The moon's ecliptic longitude and latitude, radians (the largest terms of Meeus' chapter 47). */
+function moonEcl(T: number): [number, number] {
+  const Lp = 218.3164477 + 481267.88123421 * T, D = (297.8501921 + 445267.1114034 * T) * RAD, M = (357.5291092 + 35999.0502909 * T) * RAD;
+  const Mp = (134.9633964 + 477198.8675055 * T) * RAD, F = (93.272095 + 483202.0175233 * T) * RAD, s = Math.sin;
+  const lon = Lp + 6.288774 * s(Mp) + 1.274027 * s(2 * D - Mp) + 0.658314 * s(2 * D) + 0.213618 * s(2 * Mp) - 0.185116 * s(M) - 0.114332 * s(2 * F)
+    + 0.058793 * s(2 * D - 2 * Mp) + 0.057066 * s(2 * D - M - Mp) + 0.053322 * s(2 * D + Mp) + 0.045758 * s(2 * D - M) - 0.040923 * s(M - Mp) - 0.03472 * s(D) - 0.030383 * s(M + Mp);
+  const lat = 5.128122 * s(F) + 0.280602 * s(Mp + F) + 0.277693 * s(Mp - F) + 0.173237 * s(2 * D - F) + 0.055413 * s(2 * D - Mp + F) + 0.046271 * s(2 * D - Mp - F);
+  return [lon * RAD, lat * RAD];
+}
+/** Right ascension and declination (radians) of ecliptic longitude lon and latitude lat. */
+function equatorial(lon: number, lat: number, eps: number): [number, number] {
+  const ra = Math.atan2(Math.sin(lon) * Math.cos(eps) - Math.tan(lat) * Math.sin(eps), Math.cos(lon));
+  return [ra, Math.asin(Math.sin(lat) * Math.cos(eps) + Math.cos(lat) * Math.sin(eps) * Math.sin(lon))];
+}
+/** The sun's right ascension and declination at game time t (for the tests). */
+export function sunRaDec(t: number): [number, number] { const T = jc(t); return equatorial(sunLon(T), 0, obliq(T)); }
+/** The moon's right ascension and declination at game time t (for the tests). */
+export function moonRaDec(t: number): [number, number] { const T = jc(t), [l, b] = moonEcl(T); return equatorial(l, b, obliq(T)); }
 
 /** The sun: [elevation, azimuth]. */
 export function sunDir(t: number, out: Float64Array) {
-  const hour = (((t / 3600) % 24) + 24) % 24;
-  return sky(Math.asin(Math.sin(TILT) * Math.sin(sunLon(t))), ((hour - 12) * Math.PI) / 12, out);
+  const [ra, dec] = sunRaDec(t);
+  return sky(dec, siderealTime(t) - ra, out);
 }
 
-/** Moon phase: 0 new, 0.25 first quarter, 0.5 full, 0.75 last quarter. */
+/** Moon phase: 0 new, 0.25 first quarter, 0.5 full, 0.75 last quarter (its longitude ahead of the sun's). */
 export function moonPhase(t: number): number {
-  const p = (t - NEW_MOON) / SYNODIC;
+  const T = jc(t), p = (moonEcl(T)[0] - sunLon(T)) / (2 * Math.PI);
   return p - Math.floor(p);
 }
 
-/**
- * The moon: [elevation, azimuth]. It trails the sun by its phase (rising about 50 minutes later
- * every day) and sits on the ecliptic that far from the sun, ignoring its 5 degree tilt.
- */
+/** The moon: [elevation, azimuth], as seen from the city (its parallax lowers it by up to a degree). */
 export function moonDir(t: number, out: Float64Array) {
-  const hour = (((t / 3600) % 24) + 24) % 24, p = moonPhase(t);
-  return sky(Math.asin(Math.sin(TILT) * Math.sin(sunLon(t) + 2 * Math.PI * p)), ((hour - 12) * Math.PI) / 12 - 2 * Math.PI * p, out);
+  const [ra, dec] = moonRaDec(t);
+  sky(dec, siderealTime(t) - ra, out);
+  out[0] -= 0.951 * RAD * Math.cos(out[0]);
+  return out;
 }

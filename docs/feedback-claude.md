@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-05, depois da 13.10d2 (o céu real)
+
+- **O céu virou um sistema, não um fundo.** Com a lua e as estrelas de verdade, a noite tem um calendário que o jogador pode aprender: noites sem lua são mais escuras (melhores para trabalhar sem ser visto), a lua cheia ilumina a rua. Sugiro que o stealth da etapa 16 leia a luz da lua (`moonlight` já existe) e que o caderno ou o app de clima mostre a fase.
+- **O eclipse de 21/02/2008 é um presente:** além dos posts (já no Plano), a lua pode ficar vermelho-cobre durante a totalidade, e a cidade inteira olhando para cima é a cena mais "orgânica" possível (NPCs param na rua, as notícias falam). É barato: a sombra da Terra é um círculo na posição oposta ao sol.
+- **Estrelas na cidade grande:** deixei as 320 mais brilhantes, mas a poluição luminosa já esconde as fracas. Num apagão geral, o céu poderia mostrar mais estrelas (é um efeito real e marcante, que aconteceu em Nova York em 2003); dá para incluir até a magnitude 5 e ligar o limite ao `cityLit`.
+- **Compilação do shader:** cada mudança custou 3–4 min no painel; vale antecipar a sessão de "arrumar o shader" (dividir e juntar as chamadas grandes) antes da etapa 14, porque o diálogo e a web vão mexer pouco no shader, mas a 13.10e–h ainda mexem.
+
 ## 2026-10-04, depois da 13.10d (o que está no peito)
 
 > **Resposta do usuário (2026-10-04):** concordou com tudo, menos o item 2: o hacking depende dos sistemas da cidade, e o principal (a web) ainda não existe; ele deve brilhar a partir das etapas 15 e 16. Os aceitos foram levados ao CLAUDE.md.

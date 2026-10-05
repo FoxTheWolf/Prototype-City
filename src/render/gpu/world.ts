@@ -1,6 +1,8 @@
 import { BAY, blockAt, faceSpan, FLOOR_H, SIDEWALK, type City } from '../../sim/city';
 import { carOf, liftTop } from '../../sim/lifts';
-import { shutterAt } from '../../sim/doors';
+import { doorLeaves, shutterAt } from '../../sim/doors';
+import { siderealTime } from '../../sim/clock';
+import STARS from '../stars.json';
 import { PLACES } from '../../sim/placeTypes';
 import { cachedPlan, cellAt, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
@@ -27,7 +29,7 @@ import { eyeHold, eyePush } from '../power';
 import { subAt } from '../../sim/power';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
-import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, SG_BIZ, SG_FONT, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
+import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
  * Stage R: the world drawn on the GPU (WebGPU). The city goes up once as lists (street boundaries,
@@ -342,7 +344,7 @@ export class GpuWorld {
       dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
       sarH: C.sarcophagus.h, towX: C.sarcophagus.tx, towY: C.sarcophagus.ty, towR: C.sarcophagus.tr, towH: C.sarcophagus.th,
-      starSlots: Math.round((cols * Math.PI) / Math.atan(plane)), tickN: Math.min(TICK_MAX, this.ticker.length),
+      lst: siderealTime(world.time), tickN: Math.min(TICK_MAX, this.ticker.length),
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
@@ -804,7 +806,8 @@ export class GpuWorld {
         const want = cachedPlan(C, k, 0) ? 2 : 1;
         if (this.fxState[k] >= want) continue;
         const doors = exitsOf(C, k, true), escs = escapesOf(C, k), n = doors.length + escs.length;
-        const o = n ? this.fxTake(1 + n * 3) : 0;
+        // (after the table, each street door's two leaves, seven floats each: sim/doors.ts doorLeaves, 13.10d2)
+        const size = 1 + n * 3 + doors.length * 14, o = n ? this.fxTake(size) : 0;
         if (o < 0) return;
         const start = o;
         this.fxState[k] = want;
@@ -816,9 +819,10 @@ export class GpuWorld {
           W[o + 1 + e * 3] = (D.face << 4) | (e > 0 && biz >= 0 ? 1 << 24 : 0); F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1;
           if (e > 0 && biz >= 0) this.shutters.set(o + 1 + e * 3, PLACES[C.businesses[biz].kind]?.hours ?? [9, 17]);
         });
+        doors.forEach((D, e) => doorLeaves(B, D).forEach((L, h) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w], o + 1 + n * 3 + e * 14 + h * 7)));
         escs.forEach((E, e) => { const w = o + 1 + (doors.length + e) * 3; W[w] = 1 | (E.face << 4); F[w + 1] = E.a0; F[w + 2] = E.a0 + 2 * BAY; });
         W[FX_TAB + k] = o; slots.push(FX_TAB + k);
-        q.writeBuffer(this.fx, start * 4, W, start, 1 + n * 3);
+        q.writeBuffer(this.fx, start * 4, W, start, size);
       }
     }
     for (const t of slots) q.writeBuffer(this.fx, t * 4, W, t, 1);
@@ -919,6 +923,17 @@ function signData(city: City) {
   OF.set(city.vents.flatMap((s) => [s.x, s.y, s.r, s.h]), v0);
   for (let k = 0; k < nAv; k++) { const X = zones.get(1024 + k)?.find((z) => z.isX); if (X) { OF[x0 + k * 2] = X.a0; OF[x0 + k * 2 + 1] = X.a1; } }
   for (let c = 0; c < 256; c++) { const r = fontRows(c); if (r) for (let k = 0; k < 7; k++) out[SG_FONT + c * 7 + k] = r[k]; }
+  // the stars (sky.ts STARS: RA and declination in degrees, magnitude, B-V): a unit vector in the equator's frame, then
+  // their light as a color, one byte a channel (a magnitude brighter is ~1.26x, so the faintest still show over the
+  // city's sky: 85 to 255; blue-white to orange by B-V)
+  STARS.forEach(([ra, dec, mag, bv], k) => {
+    const a = (ra * Math.PI) / 180, d = (dec * Math.PI) / 180, w = SG_STARS + k * 4;
+    OF[w] = Math.cos(d) * Math.cos(a); OF[w + 1] = Math.cos(d) * Math.sin(a); OF[w + 2] = Math.sin(d);
+    const L = Math.min(255, 255 * 10 ** (-0.1 * (mag + 1))), t = Math.min(1, Math.max(0, (bv + 0.3) / 1.8));
+    const c = t < 0.5 ? [155 + 200 * t, 176 + 136 * t, 255 - 42 * t] : [255, 244 - 80 * (t - 0.5), 234 - 246 * (t - 0.5)];
+    const m = Math.max(...c);
+    out[w + 3] = Math.round((c[0] / m) * L) | (Math.round((c[1] / m) * L) << 8) | (Math.round((c[2] / m) * L) << 16);
+  });
   out.set(words, SG_BIZ);
   out.set(chars, pool);
   return { data: out, tick };

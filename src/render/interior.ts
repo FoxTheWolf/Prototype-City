@@ -91,7 +91,7 @@ function roomLamp(base: Building, boxId: number, R: Room, r: number, f: number, 
     out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;
     return;
   }
-  on ||= common || hash3(boxId, r * 31 + f, 11) < (R.kind === 'shop' ? 0.8 : base.lit * (1 - 0.75 * day) * 1.3);
+  on ||= common || R.kind === 'shop' || hash3(boxId, r * 31 + f, 11) < base.lit * (1 - 0.75 * day) * 1.3;
   const c = !on ? null : R.kind === 'lobby' ? LOBBY : isOffice(base) || R.kind === 'stair' || R.kind === 'lift' ? TUBE : WARM;
   const k = c ? elec : 0;
   out[o] = c ? (c[0] / 255) * k : 0; out[o + 1] = c ? (c[1] / 255) * k : 0; out[o + 2] = c ? (c[2] / 255) * k : 0;

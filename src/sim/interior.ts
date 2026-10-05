@@ -1092,6 +1092,8 @@ export function inFurniture(P: Plan, x: number, y: number): boolean {
  */
 /** What a door leaf is made of (13.10d): the street doors' glass, a home's wood, the steel of a stockroom, an office's painted panel. */
 export const DOOR_GLASS = 0, DOOR_WOOD = 1, DOOR_METAL = 2, DOOR_OFFICE = 3;
+/** A door leaf's thickness, m (the renderer draws its free edge as a strip when it stands open). */
+export const LEAF_TH = 0.05;
 export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number; /** The rooms on either side (indexes; -1 for a street door). */ ra: number; rb: number; kind: number }
 const HOME = new Set<RoomKind>(['living', 'bedroom', 'kitchen', 'bath', 'foyer']);
 /** Steel onto a stockroom, wood in and into a home, a painted panel elsewhere (offices, lobbies, a shop's own rooms). */
