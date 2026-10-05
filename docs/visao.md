@@ -124,3 +124,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### O nome da cidade (em aberto)
 - O usuário vê benefícios nos dois lados; **a história não deve pesar nessa decisão** (é tempero, não o prato: o objetivo é o jogo que ele quer jogar).
 - **Ideia do usuário:** o nome sorteado pela semente, às vezes um **easter egg de homenagem** (ex.: "Uplink City"), como os agradecimentos. Os pontos fixos, se houver, são os sistemas (o fogo, o cordão), não o nome.
+
+### O ano no jogo e o que é a 1.0 (conversa de 2026-10-05)
+- **A 1.0 é a primeira versão completa, não o jogo acabado.** Depois vêm atualizações grandes, como o X4: Foundations (que já está na 6.0 ou 7.0). A demo para amigos não tem data: o usuário avisa quando considerar que chegou na 1.0.
+- **O jogo não fica preso a um ano.** Contra-argumento do usuário: o GTA IV pode ignorar o ano porque só usa os dias da semana; aqui as datas importam (estações, lua, eclipses). A época (por volta de 2008) e o lugar (latitude de Nova York) são **pontos de referência, não regras**: dá para usar algo de 2009, ou o céu de outro ano que tenha eclipse lunar e solar.
+- **Proposta do Claude (esperando resposta):** o ano nunca aparece na tela (relógio, celular, notícias: dia da semana, dia e mês); por dentro, o céu segue as efemérides reais a partir de uma data inicial escolhida, sem salto na virada do ano, com a tecnologia e as manchetes paradas "por volta de 2008". A dificuldade são os documentos (data de nascimento, extrato do banco, "desde 1987"): mostrar a idade em vez da data de nascimento e datas sem ano onde der.
