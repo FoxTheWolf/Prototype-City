@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-05, olhar cego (capturas `referencias/52–60`, lidas como jogador, sem o código)
+
+- **A rua vista de dentro parece água** (59, e o saguão em 55): pelo vidro, o asfalto fica azul-roxo e as faixas parecem ondas; quem está lá fora vira azul sólido. É o defeito que mais pesa nos interiores: deixa a loja com cara de aquário. O vidro deveria tingir pouco (um cinza-esverdeado leve) e deixar a rua com a cor dela.
+- **Os telões mostram uma mancha borrada** (58: o verde enorme no Majestic; 60: o roxo no prédio da direita). Como jogador, li como tela quebrada ou imagem que não carregou. Se é de propósito, precisa de conteúdo legível (texto, um logo de empresa da cidade, a fonte de pontos).
+- **O ciclista destoa** (58): cabeça redonda cor de pele sobre um bloco vermelho, sem braços, num mundo de pessoas em bloco. Parece um modelo provisório esquecido.
+- **Bases brancas dos postes estouradas** (52, 58): a base do poste do ponto e a do semáforo de pedestres parecem acesas, mais claras que tudo em volta.
+- **Linhas coloridas nas arestas dos prédios de dia** (60: roxo e rosa nas quinas do prédio vermelho e do bege): parecem aberração cromática ou falha.
+- **A grama saturada demais na chuva** (60): verde vivo uniforme num dia cinza; deveria escurecer e dessaturar com o tempo fechado.
+- **O que está bonito:** a rua do Majestic à noite (58: letreiros de lâmpadas, o semáforo de pedestres com o "60" em pontos, a profundidade das torres), o parque com chuva e as torres do centro (60), o relógio com os segmentos apagados.
+- O vulto verde da captura 54 era a planta vista pelo vidro da porta (confirmado pelo usuário): não é bug.
+
 ## 2026-10-05, depois da 13.10d2 (o céu real)
 
 - **O céu virou um sistema, não um fundo.** Com a lua e as estrelas de verdade, a noite tem um calendário que o jogador pode aprender: noites sem lua são mais escuras (melhores para trabalhar sem ser visto), a lua cheia ilumina a rua. Sugiro que o stealth da etapa 16 leia a luz da lua (`moonlight` já existe) e que o caderno ou o app de clima mostre a fase.
