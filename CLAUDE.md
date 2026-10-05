@@ -254,6 +254,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Refinamento da polícia** (pedido em 2026-10-03): como ela procura, o que a atrai, como se despista. **Luz deixada acesa como rastro** (ideia do Claude aceita pelo usuário em 2026-10-04, mas só quando as missões e a investigação chegarem a esse ponto): precisa dos interruptores (13.10g) e de uma polícia mais madura; não fazer antes. Easter egg: música tocando no celular chama a atenção quando o jogador se esconde.
 
 ### Etapa 17: Economia
+- **Decidido em 2026-10-05** (`docs/visao.md`): cadeia curta (fornecedor → loja → cliente, estoque, reposição, salários); a bolsa segue as empresas, e o jogador compra ações.
 - Empresas, preços, estoques e salários interligados (a tabela da 13.1 é a base); bolsa de valores com app e site; banco de dados de empresas com endereço físico; os fabricantes da cidade dando a marca dos celulares **e dos chips**; comprar pacote de dados com dinheiro de verdade.
 - **Hackear o banco e os sistemas das empresas** é `[HACKING]` (Trilha de hacking).
 

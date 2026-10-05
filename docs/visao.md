@@ -179,3 +179,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Dentro dos prédios:** trabalhar e comprar primeiro (funcionários nos postos, clientes comprando), depois morar (dormindo, vendo TV, luzes da rotina vistas de fora) e sentar e esperar (bancos, mesas, ponto, orelhões).
 - **A polícia procura pela descrição:** testemunhas e câmeras dão roupa, lugar e hora; a polícia vai ao lugar e olha quem bate com a descrição; trocar de roupa e sair da área despista. Sem estrela de procurado na tela.
 - **As pessoas reagem quando o jogador:** mexe num poste ou numa caixa (estranham, comentam, alguns ligam para a polícia, conforme a hora e quem é), corre ou esbarra, fica parado encarando ("Can I help you?") e entra onde não pode ("Employees only").
+
+### A economia (etapa 17; conversa de 2026-10-05)
+- **Cadeia curta na 1.0:** fornecedor → loja → cliente; o estoque acaba, o caminhão repõe, o preço sobe com a falta, os salários pagam as compras dos NPCs. O bastante para o hacking mexer em preços e entregas e a cidade reagir. Indústrias e empresas que quebram ficam para depois.
+- **A bolsa segue as empresas:** as ações sobem e descem com o que acontece com elas (apagão na fábrica, notícia ruim); o jogador pode comprar, e mexer na notícia mexe no preço.
