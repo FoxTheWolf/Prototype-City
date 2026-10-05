@@ -286,3 +286,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ### O ritmo de um dia comum (conversa de 2026-10-05)
 - **Sem trabalho marcado, o jogador vai para a rua por:** reconhecimento (ler a rua: caixas da GridLink, câmeras, redes no Wi-Fi, horários; anotar no caderno), chamados de TI por SMS (renda limpa, contatos novos), vida comum (comer, roupa, carregar no café, conversar com conhecidos) e boatos (conversas na rua e Streetwire viram trabalho por conta própria).
 - **Um trabalho grande de hacking a cada 1–2 dias de jogo,** com TI e preparação no meio; o calor esfria entre um e outro e cada trabalho pesa.
+
+### Identidade visual e progressão (conversa de 2026-10-05)
+- **O logo do jogo é o da GridLink vandalizado:** a empresa continua GridLink, com um logo corporativo sério no mundo (caixas, caminhões, contas de luz); o do jogo é o mesmo logo com "LINK" riscado e "DOWN" pichado ou em neon queimado. **Um manual de identidade visual só para os dois** (logo, tipografia, cores, usos no mundo), como uma etapa própria logo, para servir de inspiração desde já. Pode delegar ao Gemini a pesquisa de marcas de concessionárias de 2008.
+- **A primeira compra grande é a antena Wi-Fi direcional:** hackear de mais longe (da escada, do café em frente) expõe menos o corpo, mas a antena é grande, chama a atenção e gasta bateria. Side grade.
+- **Além das compras, o jogador progride** pelo conhecimento (fica na cabeça dele, não numa ficha), pelos contatos, pela reputação no meio (presa ao número) e pelos programas (pendrive, fórum, compra).
