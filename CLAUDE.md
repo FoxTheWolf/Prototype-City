@@ -332,7 +332,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Agradecimentos pelo sobrenome** onde o nome inteiro soa estranho (`thanks()` em `locale/names.ts`).
 - **Placas de rua dentro do semáforo:** o braço do semáforo corta a placa (`streetBlade`): levar a placa para a ponta do braço, do lado da calçada; o verde mais escuro e o branco mais claro.
 - **Barras de fome e cansaço no relógio** (já existem: `sim/needs.ts`, o estômago e o fôlego): duas barrinhas no topo do visor, uma de cada lado (`watch.ts`).
-- **Barra de batimentos no centro do relógio** (pedido do usuário em 2026-10-04): a terceira barrinha, no meio do topo do visor; quanto mais alto o batimento, menos fôlego.
+- **Barra de batimentos no centro do relógio**: a terceira barrinha, no meio do topo do visor; quanto mais alto o batimento, menos fôlego.
 - **O relógio acende a luz** quando sobe sozinho com o sinal de hora ou o alarme (`watch.ts`).
 - **Menu com as câmeras:** o modo CCTV (já existe como "WATCH CCTV") vira o **fundo padrão** do menu, no lugar da vista do jogador girando; clicar em "WATCH CCTV" só tira o menu da frente. Cuidado: a câmera é 4:3 e o menu é adaptativo (mínimo de linhas): moldura ou barras.
 - **Linha de debug:** reorganizar e enxugar (as teclas que saíram já foram tiradas na 13.13).
