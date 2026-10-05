@@ -364,3 +364,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O rosto vale para as relações, não para a perseguição:** conhecidos reconhecem o jogador de qualquer roupa; a polícia, o calor e a perseguição funcionam só pela descrição (roupa, lugar, hora). O contato que entrega o jogador por medo (decidido antes) dá **informação** (onde mora, o número), não reconhecimento na perseguição.
 - **A memória do NPC dura pelo peso do que aconteceu:** uma pergunta casual some em 1–2 dias; uma conversa boa, semanas; mentira descoberta ou prejuízo, muito tempo. O NPC diz o que lembra ("you asked me about the bus yesterday").
 - **A testemunha reconhece só pela mesma roupa** perto do lugar ("that's him!"); com outra roupa, passa reto.
+
+### Escala do tempo contra a distância (conversa de 2026-10-05)
+- **O problema (achado pelo Claude):** o tempo do jogo corre 30x o real (dia de 48 min); atravessar 2 km a pé leva ~25 min reais = ~12 h de jogo. O prazo "da noite toda" não cobre a cidade a pé, e as caminhadas podem engolir o ritmo de um trabalho a cada 1–2 dias.
+- **Decidido:** a geração garante **um cybercafé a 300–500 m do motel** inicial (2–3 h de jogo a pé), conferido por um teste em `tests/`. **A escala geral se mede com o registro de playtest (13.10p)**: quanto tempo de jogo os deslocamentos comem numa sessão real, e decidir com números, sem esperar a etapa 18 (ideia a testar: o tempo correr mais devagar na rua e mais rápido ao esperar).
