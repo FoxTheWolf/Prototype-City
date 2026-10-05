@@ -113,3 +113,10 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 
 ### Ritmo dos trabalhos
 - **Misto e adaptativo:** guiado no começo, depois natural (fórum, indicações); se o jogador anda parado no hacking, um contato manda um SMS empurrando, no máximo um por dia de jogo (Trilha de hacking: a máquina de trabalhos mora lá).
+
+### Segundo princípio: side grades, não upgrades
+- Quase tudo é **um jeito diferente de fazer a mesma coisa, com prós e contras** (como o celular contra pedir direções). Acessórios que mudam como se joga, com manias (falham, gastam bateria, precisam ser usados do jeito certo).
+- **Hardware diegético:** comprar RAM = virar o notebook, abrir a tampinha, trocar o pente. **Montar PC** (à la PC Building Simulator) como lazer para quem gosta; **PC pronto** para quem não gosta.
+- **O esconderijo** com servidor próprio (acessado de fora), o computador do motel/apartamento; acessórios para o notebook, o celular e avulsos; o carro como compra grande (se vier).
+- **Dois caminhos até um alvo:** chegar perto (fisicamente ou com antena direcional: rápido, expõe o corpo) ou pela rede até ele (lento, mais seguro para o corpo, mais logs). Detalhes na Trilha de hacking.
+- **Invariante da rede, como a das plantas:** um teste em `tests/` garante que todo alvo tem uma porta de entrada e um caminho até ele.
