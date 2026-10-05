@@ -178,7 +178,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. **Decidido:** um dia dura 48 minutos reais e o jogador pode dormir e pular o tempo (feito na 5.5; o dia ainda é um visual provisório).
 
-- **O ano no jogo (em aberto, 2026-10-05):** o calendário já vira para 2009; a dúvida é de design: tecnologia e manchetes paradas em 2008 num jogo sem fim. Decidir numa entrevista.
+- **O ano no jogo (em aberto, 2026-10-05):** o calendário já vira para 2009; a dúvida é de design: tecnologia e manchetes paradas em 2008 num jogo sem fim. Entrevista.
 - **Paleta:** sódio âmbar nos postes, cada fonte com a sua cor (temperatura real, 2026-10-03); fundo dos glifos fixo em 0,24; só ASCII; som sintetizado (Web Audio) desde a etapa 4.
 
 ## Plano: etapas 13 a 22 (renumerado em 2026-10-04)
@@ -398,7 +398,7 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas). Bugs novos entram aqui até a próxima organização.
-- **Interiores (capturas de 2026-10-05; antes da 13.10e):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho (as peças já saíram, `floodSpots`).
+- **Interiores (capturas de 2026-10-05; antes da 13.10e):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho.
 - **Travada à meia-noite (retorno do usuário em 2026-10-04):** a simulação recalcula muita coisa na virada do dia e o jogo trava um instante. Espalhar esse trabalho por vários quadros (como o carregamento do começo), em vez de um fade com barra (que atrapalharia numa perseguição). Achar o que roda na virada (provavelmente as rotinas do dia em `sim/citizens.ts`/`world.ts`).
 - **`isOpen` não sabe o dia da semana (2026-10-04, visto na 13.3):** os bancos aparecem abertos no fim de semana sem ninguém no caixa (`sim/telco.ts`); dar os dias à tabela de `placeTypes.ts`.
 - **Fachada que muda bruscamente ao se aproximar:** a faixa de transição foi alongada na R.34 (esperando o teste do usuário). Se ainda aparecer, comparar as cores do visual de longe (`cF` em `wallCell`) com a média do detalhado: o de longe parece mais claro (parede marrom) que o de perto (vidros escuros).
