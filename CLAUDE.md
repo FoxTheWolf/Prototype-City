@@ -245,6 +245,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **App de mensagens cifradas** (o canal dos hackers, decidido em 2026-10-04; veja "O jogador é o número dele"): nome fictício, ligado ao número; o contratante passa a escrever por ele em vez do SMS comum.
 
 ### Etapa 16: Os NPCs usando a cidade e reagindo ao jogador
+- **Decidido em 2026-10-05** (`docs/visao.md`): dentro dos prédios, trabalhar e comprar, depois morar e sentar; a polícia procura pela descrição (roupa, lugar, hora); reações a mexer em postes, correr, encarar e entrar onde não pode.
 - **Começar pelos pedestres sem trilhos** (entrevista de 2026-10-04, `docs/visao.md`): destino próprio e área caminhável com custos (a rua permitida, mais cara), desvio local; é a base dos curiosos na batida, da polícia procurando e do stealth (medidor de luz; as luzes do próprio jogador o entregam).
 - Usam a cidade: compram nas lojas, sentam nos bancos e nas mesas, esperam no ponto, usam os orelhões, entram nos cafés para fugir da chuva, reagem a apagões, batidas e sirenes (param, olham, fotografam), abrem guarda-chuvas, pegam táxi.
 - **Pessoas dentro dos prédios** (a simulação ainda não põe ninguém dentro) e as portas de rua abrindo vistas de fora.

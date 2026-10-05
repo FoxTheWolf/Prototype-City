@@ -174,3 +174,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Internet no celular:** lenta e cara (EDGE/3G), abrindo as versões móveis dos sites aos poucos e gastando o pacote de dados pago; a web de verdade é no notebook, no Wi-Fi (motivo para ir ao cybercafé).
 - **E-mail:** webmail no navegador, de um provedor que é empresa da cidade (hackeável), com spam gerado, newsletters das lojas, o banco e contratos longos; **só o celular estilo BlackBerry recebe e-mail** (push), os outros modelos não.
 - **Músicas inclusas:** chiptune sintetizado pelo jogo, com nomes de bandas fictícias da cidade, mais as do jogador pela pasta.
+
+### Os NPCs usando a cidade (etapa 16; conversa de 2026-10-05)
+- **Dentro dos prédios:** trabalhar e comprar primeiro (funcionários nos postos, clientes comprando), depois morar (dormindo, vendo TV, luzes da rotina vistas de fora) e sentar e esperar (bancos, mesas, ponto, orelhões).
+- **A polícia procura pela descrição:** testemunhas e câmeras dão roupa, lugar e hora; a polícia vai ao lugar e olha quem bate com a descrição; trocar de roupa e sair da área despista. Sem estrela de procurado na tela.
+- **As pessoas reagem quando o jogador:** mexe num poste ou numa caixa (estranham, comentam, alguns ligam para a polícia, conforme a hora e quem é), corre ou esbarra, fica parado encarando ("Can I help you?") e entra onde não pode ("Employees only").
