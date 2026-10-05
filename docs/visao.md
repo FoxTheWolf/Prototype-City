@@ -222,3 +222,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 
 ### A curva de tom (teste de 2026-10-05)
 - **Fica o ACES na luminância** (a curva atual). A AgX foi testada lado a lado (F7, `referencias/72` x `73`): sem calibrar, desatura demais tudo; a única vantagem foi o brilho dos neons (o núcleo claro com a borda colorida). **Esse brilho será simulado** numa passada futura nos neons, com o diodo/núcleo visível, como os LEDs e os sete segmentos do Ostranauts, em vez de trocar a curva do jogo inteiro. O teste foi revertido.
+
+### O que os NPCs sabem e como reconhecê-los (conversa de 2026-10-05)
+- **O balconista conhece a vida inteira dele** (casa, colegas, o que viu); se conta a um estranho depende de quanto quer conversar no horário de trabalho (personalidade, movimento da loja, tom do jogador).
+- **Serviço só no posto:** fora do trabalho, ele recusa tudo o que é atendimento (preço, estoque, vender), mesmo perto da loja; conhecimento do trabalho (o escritório, os colegas) ainda pode sair numa conversa. Distinguir "atendimento" de "saber do trabalho" nas intenções.
+- **Reconhecer pessoas (proposta do usuário):** nenhum NPC tem rótulo, mas **quem o jogador associa rosto e nome** (conversou e soube o nome) ganha o nome sobre a cabeça ao ser visto, enquanto o jogador lembrar. Com 100 mil pessoas, o resto é anônimo; o hacking é o outro caminho para achar alguém.
