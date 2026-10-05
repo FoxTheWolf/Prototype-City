@@ -4,8 +4,8 @@
 
 ### Lições do processo (documentação e conversas), para não repetir
 - **O CLAUDE.md cresce sozinho (2026-10-04):** chegou a 146 mil caracteres (~46 mil tokens relidos em **toda** mensagem) mesmo depois de vários enxugamentos, porque cada sessão acrescentava lá o texto longo (subetapas feitas com nomes de função, regras novas sem tirar as velhas, designs implementados). Enxugar não basta: valem o teto e o destino de cada acréscimo (regra "O CLAUDE.md tem teto" em "Como trabalhar").
-- **Editar o CLAUDE.md por script Python:** ler com `io.open(..., encoding='utf-8')` converte CRLF para LF; gravar com `newline='
-'` (ou ler e gravar com `newline=''` e usar `
+- **Editar o CLAUDE.md por script Python:** ler com `io.open(..., encoding='utf-8')` converte CRLF para LF; gravar com `newline='
+'` (ou ler e gravar com `newline=''` e usar `
 ` nas strings). `sed -i` também troca para LF. Conferir com `file CLAUDE.md`. Usar `assert s.count(old) == 1` antes de cada troca.
 - **As lições da etapa 13 quase não foram escritas** (só a da compilação travada): 13 subetapas sem registro. Por isso a regra "Lições a cada sessão".
 - **Entrevista com o usuário (2026-10-04):** uma pergunta por vez, com a opinião do Claude e uma recomendação, rendeu muito por pouco limite (~10% da janela de 5 h em ~25 perguntas). Ele quer que o Claude **conteste**: duas das melhores decisões vieram de ele discordar do Claude (TI depende da rede física; o gancho da história é a primeira quest, não um post) e uma de o Claude discordar dele (a fatia vertical). Gravar as respostas em `docs/visao.md` a cada 3–4 perguntas, para não perder.
