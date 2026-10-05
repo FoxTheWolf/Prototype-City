@@ -178,7 +178,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
   - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
   - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. **Decidido:** um dia dura 48 minutos reais e o jogador pode dormir e pular o tempo (feito na 5.5; o dia ainda é um visual provisório).
 
-- **O ano no jogo (em aberto, 2026-10-05):** o calendário já vira para 2009; a dúvida é de design (tecnologia e manchetes paradas em 2008 num jogo sem fim; tirar o ano daria atemporalidade). Decidir numa entrevista.
+- **O ano no jogo (em aberto, 2026-10-05):** o calendário já vira para 2009; a dúvida é de design: tecnologia e manchetes paradas em 2008 num jogo sem fim. Decidir numa entrevista.
 - **Paleta:** sódio âmbar nos postes, cada fonte com a sua cor (temperatura real, 2026-10-03); fundo dos glifos fixo em 0,24; só ASCII; som sintetizado (Web Audio) desde a etapa 4.
 
 ## Plano: etapas 13 a 22 (renumerado em 2026-10-04)
@@ -256,7 +256,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Portal de notícias e busca:** as manchetes da fila de eventos; uma busca que acha empresas, pessoas e lugares.
 - **Fotos apontadas para o que importa (retorno do usuário em 2026-10-04),** nas notícias e no Streetwire: na batida, enquadrar a frente ou a traseira de um dos carros envolvidos (registrar os carros no evento, se ainda não estiverem; procurar o outro carro na frente dele se não for caro); no engarrafamento, do ângulo do semáforo mirando um carro parado naquela via (hoje às vezes mira o próprio semáforo); para os posts do Streetwire, o Claude faz um plano.
 - **O resto da rede social:** respostas, compartilhamentos, assuntos em alta, o site do Streetwire no notebook, o jogador postar.
-- **Eclipse no Streetwire:** a lua já escurece (0.13.10d3, `jogar-eclipse-*.bat`); falta os cidadãos comentarem o de 20/02/2008 (totalidade 22:05–22:55; o de 16/08 não se vê na cidade).
+- **Eclipse no Streetwire:** a lua já escurece (0.13.10d3, `jogar-eclipse-*.bat`); falta os cidadãos comentarem o de 20/02/2008 (totalidade 22:05–22:55).
 - **Registros dos cidadãos** (identidade e documentos): **Opus 4.8** (pode acionar o classificador).
 - **E-mail** (canal do contratante para contratos longos e do mistério de fundo; veja "Canais do contratante").
 - **Mais destinos do dinheiro:** lojas online, serviços, assinaturas, hardware pelo correio.
