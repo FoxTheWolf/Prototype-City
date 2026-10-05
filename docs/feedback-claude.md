@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-10-05, comparação com uma captura antiga (semente 711445483, POS 771.2,971.9)
+- **Antes:** grade 272×80, silhuetas chapadas contra o céu, glifos legíveis como letras (`#`, `%`, `@`), paleta curta (âmbar, verde-água, rosa), sem chão, sem gente. **Agora:** 640×216, raio 3D na GPU, luz por fonte, gente e carros em bloco, semáforos, faixa de pedestre, o relógio na mão, 180 FPS com 3,7 ms de GPU.
+- **Ganho enorme:** profundidade, escala de rua (os prédios sobem de verdade), luz que molda volume, vida no chão.
+- **O que se perdeu (opinião):** (1) de longe o ASCII quase some: a 640×216 lê-se como pixel art, os glifos só aparecem de perto; (2) **contorno neon em quase toda aresta de torre** (roxo, verde, amarelo) dá cara de wireframe/Tron, não de noir de sódio; a captura antiga tinha mais identidade com menos cor; liga com o item "saturação demais" da lista de luz; (3) a composição antiga tinha silhuetas limpas contra o céu; hoje o céu quase não aparece entre as torres.
+- **Sugestões:** neon só em alguns prédios (os comerciais, pela semente), não em toda aresta; testar um modo/opção de grade mais grossa para devolver a leitura de glifo de longe.
+
 ## 2026-10-05, crítica das decisões da segunda entrevista (pedida pelo usuário)
 - **Contradição maior: salvar a qualquer hora + recarregar livre** esvazia o que a entrevista construiu (prazo real, mentira descoberta, prisão com confisco, o caderno lido, o chip que zera tudo). Com a caixa de texto livre, o jogador testa a mentira, recarrega e tenta outra. Proposta: salvar a qualquer hora **menos durante calor/perseguição/conversa** (a mesma trava de dormir), sem precisar de modo ferro.
 - **Física x softlock:** decidimos nunca apreender o notebook por ser softlock, mas com física o notebook pode ser jogado no mar, cair num vão, ficar preso numa parede. Regra proposta: o notebook (e o celular) nunca se perdem de vez (achado e perdido do motel, volta depois de um tempo). O custo da física não é CPU, é engenharia: colisão contra paredes e móveis na simulação, objetos atravessando lajes; seguir "uma fonte só" (a CPU já sabe a geometria).
