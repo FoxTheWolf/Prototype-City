@@ -27,7 +27,7 @@ import { type Look } from './render/palette';
 import { power } from './render/power';
 import { pickedButton } from './render/interior';
 import { VIEW_GLINT, VIEW_LIGHT, type View } from './render/raycaster';
-import { GpuWorld } from './render/gpu/world';
+import { GpuWorld, TONE } from './render/gpu/world';
 import { GpuCompositor } from './render/gpu/compositor';
 import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer } from './render/hd';
@@ -420,6 +420,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) { hudOn = !hudOn; saveOpts(); } return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
   if (e.code === 'F4') { e.preventDefault(); if (!e.repeat) calib = !calib; return; }
+  if (e.code === 'F7') { e.preventDefault(); if (!e.repeat) TONE.agx = !TONE.agx; return; }
   // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
   if (cctv && (e.code === 'Escape' || (e.code === 'KeyC' && !cctv.title))) { stopCctv(); return; }
   if (cctv?.title) return;
