@@ -1,0 +1,8 @@
+{
+  "sodium": { "band": "Neon Paycheck", "title": "Sodium Lights" },
+  "nightshift": { "band": "The Overpass Kids", "title": "Night Shift" },
+  "static": { "band": "Payphone Saints", "title": "Static on Line 2" },
+  "rails": { "band": "Lowtide Signal", "title": "Rain on the Rails" },
+  "waltz": { "band": "Grid Orphans", "title": "Blackout Waltz" },
+  "lasttrain": { "band": "Kiosk Dreamers", "title": "Last Train Home" }
+}

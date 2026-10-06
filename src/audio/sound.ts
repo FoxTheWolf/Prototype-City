@@ -7,6 +7,7 @@ import { power } from '../render/power';
 import { blackout, darkEvent, Kit, restore } from './blackout';
 import { type Car } from '../sim/traffic';
 import { type EventLog } from '../sim/events';
+import { Music } from './music';
 
 /**
  * (L.13) Development only: play the recorded blackout sounds the user keeps in
@@ -65,6 +66,8 @@ export class Sound {
   private tubes: GainNode;
   private nextDrop = 0;
   muted = false;
+  /** The phone's music (15.9b): the Tunes Player's songs and the SD card's files. */
+  readonly music: Music;
 
   private engines: { osc: OscillatorNode; lp: BiquadFilterNode; g: GainNode; tyre: GainNode; wet: GainNode; pan: StereoPannerNode }[] = [];
   private lastEvent = -1;
@@ -85,6 +88,7 @@ export class Sound {
     this.wall = filter(ctx, 'lowpass', 20000, 0.7);
     this.wall.connect(this.master);
     this.out = gain(ctx, 1, this.wall);
+    this.music = new Music(ctx, this.master);
     const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -810,6 +814,9 @@ export class Sound {
 
   /** Browsers only start audio after a click; call from one. */
   resume() { if (this.ctx.state !== 'running') this.ctx.resume(); }
+
+  /** A music file from the SD card, decoded (rejects what the browser cannot read). */
+  decode(data: ArrayBuffer) { return this.ctx.decodeAudioData(data); }
 
   toggleMute() {
     this.muted = !this.muted;
