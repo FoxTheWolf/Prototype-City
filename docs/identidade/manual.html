@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de identidade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f;
+    --navy: #1d3a6e; --teal: #0d6f6e; --cyan: #3aa6d8; --spray: #ff6a13; --paper: #efeee9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { min-height: 70vh; display: grid; place-items: center; text-align: center; padding: 40px 0; border-bottom: 1px solid var(--line); }
+  header.cover svg { width: min(640px, 100%); height: auto; }
+  header.cover p { color: var(--dim); margin: 8px 0 0; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; letter-spacing: .01em; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; letter-spacing: 0; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 22px 0 6px; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--spray); }
+  .do b { color: #6fd08c; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 70px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  .type { display: grid; gap: 12px; }
+  .type .s { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .type .s .n { font-size: 11px; color: var(--dim); }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 0; overflow-x: auto; line-height: 1.15; font-size: 15px; }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+  button:hover { background: #2c2f34; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .15; } }
+  .led { animation: blink 1.6s steps(1) infinite; }
+</style>
+</head>
+<body>
+<!-- the shared spray filters -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="rough" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="grime"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="11"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.9 0.62"/></filter>
+  <filter id="stitch"><feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="2"/><feDisplacementMap in="SourceGraphic" scale="1.2"/></filter>
+  <radialGradient id="lamp" cx="0.35" cy="-0.1" r="1.2"><stop offset="0" stop-color="#ffb347" stop-opacity="0"/><stop offset="1" stop-color="#140c04" stop-opacity="0.55"/></radialGradient>
+</svg>
+<main>
+  <header class="cover">
+    <div>
+      <svg viewBox="0 0 380 200" id="cover"></svg>
+      <p>Manual de identidade · GridLink e o jogo · v1 · 2026-10-06</p>
+    </div>
+  </header>
+  <nav class="toc">
+    <a href="#marcas">1 · Duas marcas</a><a href="#construcao">2 · Construção</a><a href="#versoes">3 · Versões</a><a href="#cores">4 · Cores</a>
+    <a href="#tipo">5 · Tipografia</a><a href="#pichacao">6 · A pichação</a><a href="#mundo">7 · No mundo</a><a href="#ascii">8 · No ASCII</a><a href="#abertura">9 · Abertura</a><a href="#regras">10 · Regras</a>
+  </nav>
+
+  <section id="marcas">
+    <h2>1 · Duas marcas, um logo <small>a empresa e o jogo</small></h2>
+    <p class="lead">A <b>GridLink</b> é a concessionária de energia e telefonia da cidade: terceirizada, barata, um remendo de sistemas velhos. O logo dela é sério, corporativo, de 2008. O <b>jogo</b> é o mesmo logo depois que alguém passou com uma lata de spray: o LINK riscado e um OWN pichado colado no D, que vira GRID DOWN. O jogador vê a empresa no mundo inteiro; o título é a cidade respondendo.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 380 180" data-logo='{"y":0,"tag":true}'></svg><div class="cap">A empresa: GridLink, com POWER · TELECOM.</div></div>
+      <div class="card"><svg viewBox="0 0 380 180" data-logo='{"y":0,"game":true,"sub":"TERMINAL STATE","night":true}'></svg><div class="cap">O jogo: GRID DOWN: TERMINAL STATE, sem POWER · TELECOM.</div></div>
+    </div>
+    <div class="rule"><b>!</b><span><b>POWER · TELECOM é da empresa.</b> Aparece em tudo o que é da GridLink (caixas, caminhões, contas, site, uniforme) e <b>nunca</b> no nome do jogo: ao lado de TERMINAL STATE, os dois textos brigariam e pareceriam um subtítulo só.</span></div>
+  </section>
+
+  <section id="construcao">
+    <h2>2 · Construção <small>como o logo é montado</small></h2>
+    <p class="lead">Duas palavras empilhadas numa sans larga e pesada. O L de LINK fica exatamente sob o I de GRID, e uma haste liga os dois: a rede ligando a cidade. A haste tem três peças separadas por juntas finas, como um fusível: o azul que sai do I, o quadradinho ciano no meio, e o teal que entra no L.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 380 200" data-logo='{"y":6,"tag":true,"anatomy":true}'></svg><div class="cap">Anatomia: (1) GRID, (2) a haste, (3) as juntas, (4) o quadradinho, (5) LINK sob o I, (6) a linha de apoio.</div></div>
+      <div class="card"><svg viewBox="0 0 380 200" data-logo='{"y":6,"tag":true,"clear":true}'></svg><div class="cap">Área de proteção: em volta do logo, nada mais perto que a altura do quadradinho (x). Tamanho mínimo: o quadradinho precisa continuar visível como uma peça separada; abaixo disso, use a versão em linha.</div></div>
+    </div>
+  </section>
+
+  <section id="versoes">
+    <h2>3 · Versões <small>o mesmo logo em lugares diferentes</small></h2>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 380 180" data-logo='{"tag":true}'></svg><div class="cap">Principal: sobre claro (porta de van, papel, placa).</div></div>
+      <div class="card"><svg viewBox="0 0 380 180" data-logo='{"tag":true,"neg":true}'></svg><div class="cap">Negativa: sobre o azul-marinho (site, cabeçalho, uniforme escuro).</div></div>
+      <div class="card"><svg viewBox="0 0 380 180" data-logo='{"tag":true,"mono":"#2a2f2b","bg":"#7f8f82"}'></svg><div class="cap">Uma cor: estêncil em caixa de rua e chapa de metal. A haste continua em três peças; as juntas fazem o desenho.</div></div>
+      <div class="card"><svg viewBox="0 0 380 120" id="inline"></svg><div class="cap">Em linha: GRID em azul e LINK em teal, numa palavra só. Para espaços baixos (rodapé de conta, cabeçalho de site, texto corrido). Não leva a haste.</div></div>
+    </div>
+  </section>
+
+  <section id="cores">
+    <h2>4 · Cores</h2>
+    <p class="lead">Concessionárias de 2008 viviam de azul-marinho e de verdes de serviço público. A GridLink usa os dois; o ciano é o "sinal" no meio. O laranja é só da pichação: a empresa nunca usa.</p>
+    <div class="sw">
+      <div><i style="background:#1d3a6e"></i><span><b>Azul GridLink</b>#1d3a6e<br><em>GRID, textos, fundo da versão negativa</em></span></div>
+      <div><i style="background:#0d6f6e"></i><span><b>Teal de serviço</b>#0d6f6e<br><em>LINK, a peça de baixo da haste</em></span></div>
+      <div><i style="background:#3aa6d8"></i><span><b>Ciano sinal</b>#3aa6d8<br><em>o quadradinho, POWER · TELECOM, detalhes</em></span></div>
+      <div><i style="background:#ff6a13"></i><span><b>Laranja spray</b>#ff6a13<br><em>só a pichação (vermelho #e3262b como alternativa)</em></span></div>
+      <div><i style="background:#efeee9"></i><span><b>Branco de frota</b>#efeee9<br><em>vans, papel, placas</em></span></div>
+      <div><i style="background:#7f8f82"></i><span><b>Verde de armário</b>#7f8f82<br><em>caixas de rua, gabinetes</em></span></div>
+    </div>
+    <p>No jogo, tudo isso passa pela luz da cena: à noite, sob o sódio, o azul quase some e o teal puxa para o verde-oliva; o laranja do spray continua forte, porque é tinta fresca contra um logo desbotado. É de propósito: <b>de noite, o DOWN aparece mais que o LINK</b>.</p>
+  </section>
+
+  <section id="tipo">
+    <h2>5 · Tipografia</h2>
+    <div class="type">
+      <div class="s"><div class="n">LOGO E TÍTULOS · sans larga e pesada (aqui, Archivo 850 a 112% de largura)</div><div style="font:850 40px Archivo,sans-serif;font-stretch:112%;color:#e8e6df">GRID LINK 0123</div></div>
+      <div class="s"><div class="n">TEXTO DA EMPRESA · a mesma família, normal e espaçada (avisos, placas, linha de apoio)</div><div style="font:500 16px Archivo,sans-serif;font-stretch:125%;letter-spacing:.12em;color:#3aa6d8">POWER · TELECOM · REPORT AN OUTAGE 1-800-555-0148</div></div>
+      <div class="s"><div class="n">PAPEL E SISTEMAS · monoespaçada de matriz de pontos (contas, recibos, terminais da empresa)</div><div style="font:400 15px 'IBM Plex Mono',monospace;color:#e8e6df">ACCT 0417-22981-3   KWH 612   AMOUNT DUE $84.17</div></div>
+      <div class="s"><div class="n">PICHAÇÃO · nunca uma fonte: letras de bloco feitas à mão, traço a traço (veja a seção 6)</div></div>
+    </div>
+    <p>No jogo não há arquivo de fonte para o logo: ele vira <b>geometria desenhada pelo código</b> (regra "tudo é código"), e o texto da empresa no mundo segue o princípio do texto no mundo: de perto em lâmpadas/pontos, de longe um caractere por letra (seção 8).</p>
+  </section>
+
+  <section id="pichacao">
+    <h2>6 · A pichação <small>como o DOWN é feito</small></h2>
+    <p class="lead">Spray barato de loja de ferragens, à mão, rápido. O vândalo não refaz o logo: ele aproveita o D que já existe.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 380 180" data-logo='{"game":true,"night":true,"tag":true}'></svg><div class="cap">Numa caixa da GridLink: o POWER · TELECOM da empresa continua lá, desbotado; o vândalo não mexe nele.</div></div>
+    </div>
+    <div class="rule do"><b>✓</b><span><b>OWN colado no D</b>, na altura das maiúsculas de GRID, um pouco torto, cada letra com a sua inclinação.</span></div>
+    <div class="rule do"><b>✓</b><span><b>LINK riscado com rabiscos</b> de vai e vem por cima, sem apagar: o LINK precisa continuar legível embaixo.</span></div>
+    <div class="rule do"><b>✓</b><span><b>Escorridos</b> onde a lata parou (começo e fim de traço), <b>névoa</b> de spray em volta do traço.</span></div>
+    <div class="rule"><b>✗</b><span>Nunca cobrir GRID nem a haste; nunca uma fonte de "grafite" pronta; nunca outra cor além do laranja (ou do vermelho alternativo).</span></div>
+  </section>
+
+  <section id="mundo">
+    <h2>7 · No mundo <small>onde a GridLink aparece na cidade</small></h2>
+    <p class="lead">O ponto fixo do jogo: a mesma marca em todo lugar, para o jogador aprender a reconhecer uma caixa da GridLink de longe. Ela aparece já no primeiro minuto, pela janela do motel, com o LED piscando.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 380 260" id="box"></svg><div class="cap">A caixa da GridLink no poste: nova, e semanas depois. Etiqueta de estêncil com o setor (3B), o LED de estado, o cadeado.</div></div>
+      <div class="card"><svg viewBox="0 0 380 260" id="van"></svg><div class="cap">A van de serviço: frota branca, logo na porta, número da unidade, telefone de emergência, chevrons na traseira.</div></div>
+      <div class="card"><svg viewBox="0 0 380 300" id="bill"></svg><div class="cap">A conta: cabeçalho com o logo pequeno, impressão de matriz de pontos, canhoto destacável. É também um dado da simulação (o endereço, o consumo).</div></div>
+      <div class="card"><svg viewBox="0 0 380 300" id="sign"></svg><div class="cap">A placa da subestação: o aviso grande, o logo pequeno no canto, o número para reportar.</div></div>
+      <div class="card"><svg viewBox="0 0 380 220" id="patch"></svg><div class="cap">O uniforme: patch bordado no peito, nome do técnico do outro lado. A roupa é disfarce no jogo: um uniforme da GridLink abre portas.</div></div>
+      <div class="card"><svg viewBox="0 0 380 260" id="site"></svg><div class="cap">O site em 2008 (no navegador Lodestar): barra azul com a versão negativa, abas com brilho, "pague sua conta" e "reporte uma falta de luz".</div></div>
+    </div>
+  </section>
+
+  <section id="ascii">
+    <h2>8 · No ASCII <small>o logo no motor do jogo</small></h2>
+    <p class="lead">Pelo princípio do texto no mundo: de perto, cada letra é feita de pontos (lâmpadas, tinta em estêncil); de longe, cada letra vira um único caractere na célula que contém o centro dela. A haste vira um <b>|</b> na cor dela.</p>
+    <div class="row">
+      <div class="card"><canvas id="dots" width="760" height="300" style="width:100%;height:auto;display:block;background:#07080a;border-radius:4px"></canvas><div class="cap">De perto: o logo em pontos (como os letreiros de lâmpadas da cidade).</div></div>
+      <div class="card"><pre class="ascii" id="far"></pre><div class="cap">De longe: uma letra por célula; a pichação também vira caracteres (o OWN em laranja, o LINK riscado com <b>~</b>).</div></div>
+    </div>
+  </section>
+
+  <section id="abertura">
+    <h2>9 · Abertura <small>o boot da GridLink, e a cidade respondendo</small></h2>
+    <p class="lead">Como o boot do celular: a marca da empresa se monta peça por peça, a linha de apoio é digitada; então o som de uma lata sendo sacudida, e o OWN é pichado traço por traço, o LINK riscado, POWER · TELECOM some e TERMINAL STATE aparece.</p>
+    <div class="card"><svg viewBox="0 0 380 200" id="anim"></svg><div class="cap" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span>Roteiro (~6 s): GRID letra a letra · a haste desce · LINK · POWER · TELECOM digitado · pausa · sacudir a lata · O, W, N · rabiscos no LINK · troca da linha de apoio pelo subtítulo.</span><button id="replay">De novo</button></div></div>
+    <table style="margin-top:14px">
+      <tr><th>tempo</th><th>imagem</th><th>som (sintetizado)</th></tr>
+      <tr><td>0,0–1,0 s</td><td>G, R, I, D sobem e acendem</td><td>um bipe de boot por letra, grave e limpo</td></tr>
+      <tr><td>1,0–1,6 s</td><td>a haste desce do I até o L; as juntas aparecem</td><td>um zumbido de transformador subindo</td></tr>
+      <tr><td>1,6–2,6 s</td><td>LINK; POWER · TELECOM é digitado</td><td>teclas de terminal</td></tr>
+      <tr><td>2,6–3,4 s</td><td>pausa, o logo parado</td><td>só o zumbido; ao fim, a lata sendo sacudida (a bolinha batendo)</td></tr>
+      <tr><td>3,4–4,8 s</td><td>O, W, N pichados, traço a traço</td><td>chiado de spray por traço, com o "tsst" curto no fim</td></tr>
+      <tr><td>4,8–5,5 s</td><td>rabiscos no LINK; POWER · TELECOM apaga</td><td>spray mais longo, de vai e vem</td></tr>
+      <tr><td>5,5–6,2 s</td><td>TERMINAL STATE aparece</td><td>o zumbido cai (a luz caindo): o apagão</td></tr>
+    </table>
+  </section>
+
+  <section id="regras">
+    <h2>10 · Regras rápidas</h2>
+    <div class="rule"><b>1</b><span>POWER · TELECOM só nos usos da empresa; nunca com o nome do jogo.</span></div>
+    <div class="rule"><b>2</b><span>O L sempre sob o I; as duas linhas nunca lado a lado (exceto a versão em linha, sem a haste).</span></div>
+    <div class="rule"><b>3</b><span>A haste sempre em três peças, com as juntas: azul, ciano, teal (ou uma cor só, na versão de estêncil).</span></div>
+    <div class="rule"><b>4</b><span>Não esticar, não inclinar, não trocar as cores de GRID e LINK entre si, não pôr sombra nem brilho de plástico.</span></div>
+    <div class="rule"><b>5</b><span>A pichação: só OWN depois do D e rabiscos no LINK, em laranja; GRID e a haste ficam intactos.</span></div>
+    <div class="rule"><b>6</b><span>No jogo, o logo é desenhado pelo código; de perto em pontos, de longe uma letra por célula.</span></div>
+  </section>
+</main>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const C = { navy: '#1d3a6e', teal: '#0d6f6e', cyan: '#3aa6d8', spray: '#ff6a13', paper: '#efeee9', night: '#c9ccd0' };
+const F = (w, s, st = 100) => `font-family:Archivo,sans-serif;font-weight:${w};font-size:${s}px;font-stretch:${st}%`;
+const TOP = 76, BOT = 146, SIZE = 60;
+
+/** A spray stroke: overspray, the stroke (rough-edged), drips. With `anim` [start s, length s], it draws itself. */
+function spray(path, col, w, drips = [], anim) {
+  const a = anim ? ` pathLength="1" style="stroke-dasharray:1;stroke-dashoffset:1;animation:draw ${anim[1]}s linear ${anim[0]}s forwards"` : '';
+  const ad = anim ? ` style="opacity:0;animation:fadeIn .25s ${anim[0] + anim[1]}s forwards"` : '';
+  let s = `<path d="${path}" fill="none" stroke="${col}" stroke-width="${w * 2.6}" stroke-linecap="round" stroke-linejoin="round" opacity=".16" filter="url(#blur)"${a}/>`;
+  s += `<path d="${path}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" filter="url(#rough)"${a}/>`;
+  for (const [x, y, l] of drips) s += `<g${ad}><path d="M${x} ${y} L${x + 0.6} ${y + l}" stroke="${col}" stroke-width="${w * 0.32}" stroke-linecap="round" filter="url(#rough)"/><circle cx="${x + 0.6}" cy="${y + l + 1}" r="${w * 0.3}" fill="${col}"/></g>`;
+  return s;
+}
+/** O, W, N by hand from x, cap top y, h tall; anim: when the first letter starts. */
+function own(x, y, h, col, anim) {
+  const w = h * 0.74, g = h * 0.16, L = [
+    (x0) => `M${x0 + w / 2} ${y} C${x0 - 3} ${y} ${x0 - 3} ${y + h} ${x0 + w / 2} ${y + h} C${x0 + w + 3} ${y + h} ${x0 + w + 3} ${y} ${x0 + w / 2 - 3} ${y + 2}`,
+    (x0) => `M${x0 - 2} ${y - 1} L${x0 + w * 0.2} ${y + h} L${x0 + w * 0.5} ${y + h * 0.3} L${x0 + w * 0.82} ${y + h} L${x0 + w + 3} ${y - 3}`,
+    (x0) => `M${x0} ${y + h} L${x0 + 1} ${y} L${x0 + w} ${y + h} L${x0 + w + 1} ${y - 3}`,
+  ];
+  let s = '';
+  L.forEach((fn, i) => {
+    const x0 = x + i * (w + g) + (i === 2 ? g : 0), rot = [3, -2, 4][i];
+    s += `<g transform="rotate(${rot} ${x0 + w / 2} ${y + h / 2})">${spray(fn(x0), col, h * 0.15, i === 1 ? [[x0 + w * 0.2, y + h, h * 0.3]] : i === 2 ? [[x0 + w + 1, y + h * 0.1, h * 0.45]] : [], anim !== undefined ? [anim + i * 0.45, 0.4] : undefined)}</g>`;
+  });
+  return s;
+}
+
+/**
+ * The logo into an svg (or a group), its top-left at (ox, oy), scale k. Options: tag (POWER · TELECOM),
+ * game (the spray), sub (subtitle), night (sodium light and grime over the whole svg), neg, mono+bg,
+ * anatomy / clear (construction marks), anim (the opening). Needs the font loaded (it measures the I).
+ */
+function logo(root, o = {}, ox = 0, oy = 0, k = 1) {
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('transform', `translate(${ox} ${oy}) scale(${k})`);
+  root.appendChild(g);
+  const top = o.mono || (o.neg ? '#ffffff' : C.navy), link = o.mono || (o.neg ? '#55c2bd' : C.teal), acc = o.mono || C.cyan;
+  const bgc = o.bg || (o.neg ? C.navy : o.night ? C.night : C.paper);
+  const A = (d0, len = 0.3, kf = 'fadeUp') => o.anim ? ` style="opacity:0;animation:${kf} ${len}s ${d0}s forwards"` : '';
+  g.innerHTML = `<text class="t" x="34" y="${TOP}" style="${F(850, SIZE, 112)}" fill="${top}">GRID</text><text class="b" x="0" y="${BOT}" style="${F(850, SIZE, 112)}" fill="${link}">LINK</text>`;
+  const t = g.querySelector('.t'), b = g.querySelector('.b');
+  const I = t.getExtentOfChar(2), D = t.getExtentOfChar(3), G0 = t.getExtentOfChar(0);
+  b.setAttribute('x', I.x - b.getExtentOfChar(0).x);
+  const L = b.getExtentOfChar(0), K = b.getExtentOfChar(3);
+  const sx = I.x + I.width * 0.5, sw = I.width * 0.47, capT = BOT - SIZE * 0.72, gap = capT - TOP, j1 = TOP + gap * 0.33, j2 = TOP + gap * 0.67, J = 2.5;
+  let s = '';
+  // in the opening, the letters rise one by one: rebuild GRID as four texts at the measured places
+  if (o.anim) {
+    const E = [0, 1, 2, 3].map((i) => t.getExtentOfChar(i));
+    t.remove();
+    s += [0, 1, 2, 3].map((i) => `<text x="${E[i].x}" y="${TOP}" style="${F(850, SIZE, 112)};opacity:0;animation:fadeUp .3s ${i * 0.22}s forwards" fill="${top}" class="ch${i}">${'GRID'[i]}</text>`).join('');
+  }
+  const stem = `<rect x="${sx - sw / 2}" y="${TOP - 20}" width="${sw}" height="${j1 - TOP + 20}" fill="${top}"/><rect x="${sx - sw / 2}" y="${j1 + J}" width="${sw}" height="${j2 - j1 - J}" fill="${acc}"/><rect x="${sx - sw / 2}" y="${j2 + J}" width="${sw}" height="${capT - j2 - J + 18}" fill="${link}"/>` +
+    [j1, j2].map((y) => `<rect x="${sx - sw / 2 - 1}" y="${y}" width="${sw + 2}" height="${J}" fill="${bgc}"/>`).join('');
+  s += o.anim ? `<g style="transform-origin:${sx}px ${TOP}px;transform:scaleY(0);animation:grow .6s ease-out 1.0s forwards">${stem}</g>` : stem;
+  const tagY = BOT + 16, tag = `<text x="34" y="${tagY}" style="${F(500, 8.5, 125)}" fill="${acc}" letter-spacing="1.6">POWER · TELECOM</text>`;
+  if (o.tag && !o.anim) s += o.game && !o.sub ? `<g opacity=".7">${tag}</g>` : tag;
+  if (o.anim) {
+    b.style.opacity = 0; b.style.animation = 'fadeIn .4s 1.6s forwards';
+    s += `<g style="opacity:0;animation:fadeIn .1s 2.0s forwards, fadeOut .5s 5.0s forwards"><clipPath id="type"><rect x="34" y="${tagY - 10}" width="0" height="14"><animate attributeName="width" from="0" to="120" begin="2s" dur=".6s" fill="freeze"/></rect></clipPath><g clip-path="url(#type)">${tag}</g></g>`;
+  }
+  if (o.game) {
+    const c = C.spray, lx = L.x - 8, rx = K.x + K.width + 10, mid = BOT - SIZE * 0.36;
+    s += own(D.x + D.width + 6, TOP - SIZE * 0.72, SIZE * 0.72, c, o.anim ? 3.4 : undefined);
+    s += spray(`M${lx + 24} ${mid - 16} Q${(lx + rx) / 2} ${mid - 24} ${rx} ${mid - 12} Q${(lx + rx) / 2} ${mid - 4} ${lx - 6} ${mid + 6} Q${(lx + rx) / 2} ${mid + 2} ${rx - 6} ${mid + 4} Q${(lx + rx) / 2 - 20} ${mid + 18} ${lx + 6} ${mid + 20}`, c, 4.5, [[lx - 5, mid + 8, 12], [lx + 7, mid + 22, 8]], o.anim ? [4.8, 0.7] : undefined);
+  }
+  if (o.sub) s += `<text x="190" y="${BOT + 34}" text-anchor="middle" style="${F(500, 15, 125)}${o.anim ? ';opacity:0;animation:fadeIn .7s 5.5s forwards' : ''}" fill="${o.night ? C.navy : top}" letter-spacing="6">${o.sub}</text>`;
+  if (o.anatomy) {
+    const n = (x, y, i) => `<circle cx="${x}" cy="${y}" r="7" fill="#ff6a13"/><text x="${x}" y="${y + 3.5}" text-anchor="middle" style="${F(700, 9)}" fill="#fff">${i}</text>`;
+    s += n(G0.x + 4, TOP - SIZE * 0.72 - 8, 1) + n(sx + sw + 10, TOP + 8, 2) + n(sx - sw - 8, j1 + 1, 3) + n(sx + sw + 10, (j1 + j2) / 2 + 1, 4) + n(K.x + K.width + 4, capT - 6, 5) + n(140, tagY - 3, 6);
+  }
+  if (o.clear) {
+    const x = j2 - j1, x0 = G0.x - x, y0 = TOP - SIZE * 0.72 - x, x1 = K.x + K.width + x, y1 = tagY + x * 0.6;
+    s += `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="none" stroke="#ff6a13" stroke-dasharray="4 3"/>`;
+    s += `<rect x="${x0}" y="${y0}" width="${x}" height="${x}" fill="#ff6a13" opacity=".35"/><text x="${x0 + x / 2}" y="${y0 + x / 2 + 3}" text-anchor="middle" style="${F(700, 9)}" fill="#ff6a13">x</text>`;
+  }
+  g.insertAdjacentHTML('beforeend', s);
+  return g;
+}
+/** The sodium night and the street's grime over a whole svg. */
+function night(svg, w, h) {
+  svg.insertAdjacentHTML('beforeend', `<rect width="${w}" height="${h}" fill="#e09a3a" opacity=".22" style="mix-blend-mode:multiply"/><rect width="${w}" height="${h}" filter="url(#grime)" opacity=".3"/><rect width="${w}" height="${h}" fill="url(#lamp)"/>`);
+}
+const vb = (svg) => svg.getAttribute('viewBox').split(' ').map(Number);
+
+function build() {
+  // the cover: the game's logo, alone
+  const cv = document.getElementById('cover');
+  cv.innerHTML = `<rect width="380" height="200" fill="${C.night}"/>`;
+  logo(cv, { game: true, sub: 'TERMINAL STATE', night: true }, 0, 4);
+  night(cv, 380, 200);
+  // the plain logos
+  document.querySelectorAll('svg[data-logo]').forEach((el) => {
+    const o = JSON.parse(el.dataset.logo), [, , w, h] = vb(el);
+    el.innerHTML = `<rect width="${w}" height="${h}" fill="${o.bg || (o.neg ? C.navy : o.night ? C.night : C.paper)}"/>`;
+    logo(el, o, 0, o.y ?? 0);
+    if (o.night) night(el, w, h);
+  });
+  // in line
+  const il = document.getElementById('inline');
+  il.innerHTML = `<rect width="380" height="120" fill="${C.paper}"/><text x="40" y="74" style="${F(850, 44, 112)}"><tspan fill="${C.navy}">GRID</tspan><tspan fill="${C.teal}">LINK</tspan></text><text x="42" y="94" style="${F(500, 8.5, 125)}" fill="${C.cyan}" letter-spacing="1.6">POWER · TELECOM</text>`;
+  mockups();
+  dots();
+  far();
+  anim();
+}
+
+function mockups() {
+  // the box on the pole: new, and weeks later
+  const bx = document.getElementById('box');
+  bx.innerHTML = `<rect width="380" height="260" fill="#1b1d22"/><rect x="0" y="0" width="380" height="260" fill="url(#lamp)" opacity=".4"/>`;
+  [[30, false], [205, true]].forEach(([x, v]) => {
+    bx.insertAdjacentHTML('beforeend', `<rect x="${x + 58}" y="0" width="28" height="260" fill="#3a3530"/>
+      <rect x="${x}" y="40" width="145" height="180" rx="6" fill="#7f8f82"/><rect x="${x}" y="40" width="145" height="180" rx="6" fill="none" stroke="#5d6b60" stroke-width="3"/>
+      ${[0, 1, 2, 3, 4].map((i) => `<rect x="${x + 22}" y="${166 + i * 8}" width="100" height="3" rx="1" fill="#5d6b60"/>`).join('')}
+      <rect x="${x + 18}" y="56" width="109" height="64" rx="2" fill="${C.paper}"/>
+      <text x="${x + 18}" y="138" style="font:600 9px 'IBM Plex Mono',monospace" fill="#2a2f2b">GL-SUB 3B · 041207</text>
+      <text x="${x + 18}" y="152" style="font:600 7.5px 'IBM Plex Mono',monospace" fill="#2a2f2b">AUTHORIZED PERSONNEL ONLY</text>
+      <circle class="led" cx="${x + 130}" cy="138" r="4" fill="#5dff7a"/><circle cx="${x + 130}" cy="138" r="9" fill="#5dff7a" opacity=".15" class="led"/>
+      <rect x="${x + 128}" y="190" width="10" height="14" rx="2" fill="#b8a050"/><path d="M${x + 130} 190 v-5 a3 3 0 0 1 6 0 v5" fill="none" stroke="#999" stroke-width="2"/>
+      <text x="${x + 72}" y="238" text-anchor="middle" style="font:600 10px 'IBM Plex Mono',monospace" fill="#8d8b84">${v ? 'semanas depois' : 'nova'}</text>`);
+    const g = logo(bx, { tag: true, game: v, night: v }, x + 18 + 4, 52, 0.27);
+    if (v) bx.insertAdjacentHTML('beforeend', `<rect x="${x}" y="40" width="145" height="180" rx="6" fill="#3a2f1c" opacity=".28" style="mix-blend-mode:multiply"/>${[[30, 70, 9], [118, 150, 6], [52, 196, 7], [96, 60, 5]].map(([a, b, r]) => `<circle cx="${x + a}" cy="${b}" r="${r}" fill="#6b4a2a" opacity=".35"/>`).join('')}`);
+  });
+  // the van
+  const vn = document.getElementById('van');
+  vn.innerHTML = `<rect width="380" height="260" fill="#2a2c30"/><rect y="215" width="380" height="45" fill="#1c1d20"/>
+    <path d="M30 210 V95 Q30 80 45 80 H255 Q262 80 268 88 L300 130 Q340 135 350 150 V210 Z" fill="${C.paper}"/>
+    <path d="M262 92 L292 132 H262 Z" fill="#26313d"/><rect x="232" y="92" width="24" height="40" fill="#26313d"/>
+    <rect x="30" y="195" width="320" height="15" fill="#d8d6cf"/>
+    ${[[85], [290]].map(([x]) => `<circle cx="${x}" cy="210" r="22" fill="#151515"/><circle cx="${x}" cy="210" r="10" fill="#8a8a8a"/>`).join('')}
+    <g>${[0, 1, 2, 3].map((i) => `<path d="M${30 + i * 10} 150 l10 0 l-10 14 l-10 0 Z" fill="${i % 2 ? '#fff' : '#ff6a13'}" transform="translate(0 0)"/>`).join('')}</g>
+    <text x="232" y="160" style="font:700 9px 'IBM Plex Mono',monospace" fill="#222">UNIT 0417</text>
+    <text x="60" y="186" style="${F(600, 10, 125)}" fill="${C.navy}" letter-spacing="1">OUTAGE? CALL 1-800-555-0148</text>`;
+  logo(vn, { tag: true }, 64, 84, 0.42);
+  // the bill
+  const bl = document.getElementById('bill');
+  const rows = [['PREVIOUS BALANCE', '76.40'], ['PAYMENT 03/11 - THANK YOU', '-76.40'], ['ELECTRIC 612 KWH @ .1188', '72.71'], ['LINE SERVICE  (555) 0179', '9.95'], ['CITY UTILITY TAX', '1.51']];
+  bl.innerHTML = `<rect width="380" height="300" fill="#2a2c30"/><rect x="30" y="14" width="320" height="276" fill="#f6f4ec"/>
+    <text x="300" y="44" text-anchor="end" style="font:600 9px 'IBM Plex Mono',monospace" fill="#333">STATEMENT OF ACCOUNT</text>
+    <text x="300" y="56" text-anchor="end" style="font:400 8px 'IBM Plex Mono',monospace" fill="#555">ACCT 0417-22981-3 · 04/02/08</text>
+    ${rows.map(([a, b], i) => `<text x="46" y="${104 + i * 14}" style="font:400 8.5px 'IBM Plex Mono',monospace" fill="#3a3a3a">${a}</text><text x="334" y="${104 + i * 14}" text-anchor="end" style="font:400 8.5px 'IBM Plex Mono',monospace" fill="#3a3a3a">${b}</text>`).join('')}
+    <rect x="46" y="178" width="288" height="1" fill="#999"/>
+    <text x="46" y="196" style="font:600 10px 'IBM Plex Mono',monospace" fill="#111">AMOUNT DUE BY 04/24/08</text><text x="334" y="196" text-anchor="end" style="font:600 12px 'IBM Plex Mono',monospace" fill="${C.navy}">$84.17</text>
+    <line x1="30" y1="218" x2="350" y2="218" stroke="#999" stroke-dasharray="3 3"/>
+    <text x="46" y="240" style="font:400 7.5px 'IBM Plex Mono',monospace" fill="#555">RETURN THIS PORTION WITH YOUR PAYMENT</text>
+    <text x="46" y="258" style="font:600 9px 'IBM Plex Mono',monospace" fill="#222">0417229813 00008417 7</text>
+    <rect x="250" y="234" width="84" height="34" fill="none" stroke="#888"/><text x="292" y="255" text-anchor="middle" style="font:400 8px 'IBM Plex Mono',monospace" fill="#888">AMOUNT PAID</text>`;
+  logo(bl, { tag: true }, 40, 24, 0.33);
+  // the substation sign
+  const sg = document.getElementById('sign');
+  sg.innerHTML = `<rect width="380" height="300" fill="#3a3d3a"/>${Array.from({ length: 14 }, (_, i) => `<path d="M${i * 30 - 60} 0 L${i * 30 + 240} 300 M${i * 30 + 60} 0 L${i * 30 - 240} 300" stroke="#55594f" stroke-width="2"/>`).join('')}
+    <rect x="70" y="30" width="240" height="240" rx="6" fill="#f2f0e8" stroke="#222" stroke-width="2"/>
+    <rect x="76" y="36" width="228" height="58" fill="#111"/><ellipse cx="190" cy="65" rx="90" ry="22" fill="#d81e1e"/><ellipse cx="190" cy="65" rx="90" ry="22" fill="none" stroke="#fff" stroke-width="2"/>
+    <text x="190" y="74" text-anchor="middle" style="${F(850, 26, 100)}" fill="#fff">DANGER</text>
+    <text x="190" y="136" text-anchor="middle" style="${F(850, 26, 112)}" fill="#111">HIGH VOLTAGE</text>
+    <text x="190" y="166" text-anchor="middle" style="${F(700, 18, 112)}" fill="#111">KEEP OUT</text>
+    <text x="88" y="250" style="${F(600, 8, 112)}" fill="#111">REPORT DAMAGE</text><text x="88" y="261" style="${F(600, 8, 112)}" fill="#111">1-800-555-0148</text>`;
+  logo(sg, { tag: true }, 214, 196, 0.24);
+  // the uniform patch
+  const pt = document.getElementById('patch');
+  pt.innerHTML = `<rect width="380" height="220" fill="#2b3442"/>${Array.from({ length: 30 }, (_, i) => `<line x1="0" y1="${i * 8}" x2="380" y2="${i * 8 - 30}" stroke="#313b4b" stroke-width="2"/>`).join('')}
+    <rect x="30" y="70" width="120" height="44" rx="22" fill="#e9e6da" stroke="${C.navy}" stroke-width="4"/><rect x="30" y="70" width="120" height="44" rx="22" fill="none" stroke="#fff" stroke-dasharray="2 2" stroke-width="1" transform="translate(0 0)"/>
+    <text x="90" y="99" text-anchor="middle" style="font:italic 700 18px Archivo,sans-serif" fill="${C.navy}" filter="url(#stitch)">Ray</text>
+    <rect x="190" y="50" width="160" height="96" rx="10" fill="#e9e6da" stroke="${C.navy}" stroke-width="5"/><rect x="194" y="54" width="152" height="88" rx="8" fill="none" stroke="#fff" stroke-dasharray="2 2"/>`;
+  const pg = logo(pt, { tag: true }, 196, 52, 0.42);
+  pg.setAttribute('filter', 'url(#stitch)');
+  // the website, 2008
+  const st = document.getElementById('site');
+  st.innerHTML = `<rect width="380" height="260" fill="#cfd3d8"/><rect x="0" y="0" width="380" height="18" fill="#9aa1aa"/><circle cx="10" cy="9" r="4" fill="#d55"/><circle cx="22" cy="9" r="4" fill="#db5"/><circle cx="34" cy="9" r="4" fill="#5b5"/>
+    <rect x="50" y="4" width="320" height="10" rx="3" fill="#fff"/><text x="56" y="12" style="font:400 7px 'IBM Plex Mono',monospace" fill="#444">http://www.gridlink-power.com/home.aspx</text>
+    <defs><linearGradient id="hb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d5496"/><stop offset="1" stop-color="${C.navy}"/></linearGradient>
+    <linearGradient id="tb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#e3e8ee"/><stop offset=".5" stop-color="#d2dae3"/><stop offset="1" stop-color="#e9edf1"/></linearGradient>
+    <linearGradient id="bt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd0f2"/><stop offset=".5" stop-color="${C.cyan}"/><stop offset=".5" stop-color="#2a8fc0"/><stop offset="1" stop-color="#3aa6d8"/></linearGradient></defs>
+    <rect x="0" y="18" width="380" height="64" fill="url(#hb)"/>
+    ${['HOME', 'MY ACCOUNT', 'OUTAGES', 'BUSINESS', 'ABOUT US'].map((t, i) => `<rect x="${10 + i * 72}" y="82" width="70" height="16" fill="url(#tb)" stroke="#aab4c0"/><text x="${45 + i * 72}" y="93" text-anchor="middle" style="${F(700, 7, 110)}" fill="${C.navy}">${t}</text>`).join('')}
+    <rect x="10" y="106" width="230" height="146" fill="#fff" stroke="#c3c9d0"/>
+    <text x="20" y="126" style="${F(800, 13, 110)}" fill="${C.navy}">Powering the city since 1961.</text>
+    <text x="20" y="144" style="font:400 7.5px 'IBM Plex Mono',monospace" fill="#555">Spring maintenance in Sector 3B: brief service</text>
+    <text x="20" y="155" style="font:400 7.5px 'IBM Plex Mono',monospace" fill="#555">interruptions possible Tue 1-4 AM. We apologize</text>
+    <text x="20" y="166" style="font:400 7.5px 'IBM Plex Mono',monospace" fill="#555">for any inconvenience.</text>
+    <rect x="248" y="106" width="122" height="146" fill="#eef2f6" stroke="#c3c9d0"/>
+    ${['PAY MY BILL', 'REPORT AN OUTAGE', 'START / STOP'].map((t, i) => `<rect x="258" y="${118 + i * 40}" width="102" height="28" rx="6" fill="url(#bt)"/><rect x="260" y="${120 + i * 40}" width="98" height="11" rx="5" fill="#fff" opacity=".28"/><text x="309" y="${136 + i * 40}" text-anchor="middle" style="${F(800, 7.5, 110)}" fill="#fff">${t}</text>`).join('')}
+    <text x="368" y="64" text-anchor="end" style="font:400 7px 'IBM Plex Mono',monospace" fill="#9fb6dc">Welcome! Sign in · Español</text>`;
+  logo(st, { tag: true, neg: true }, 2, 16, 0.38);
+}
+
+/** Close up: the logo sampled into dots, as the city's bulb signs. */
+function dots() {
+  const cv = document.getElementById('dots'), x = cv.getContext('2d');
+  const off = document.createElement('canvas'); off.width = 190; off.height = 75;
+  const o = off.getContext('2d');
+  // the logo drawn small on a canvas, then each pixel pair read as a bulb
+  o.fillStyle = '#000'; o.fillRect(0, 0, 190, 75);
+  o.font = '850 30px Archivo'; o.textBaseline = 'alphabetic';
+  try { o.fontStretch = 'semi-expanded'; } catch (e) {}
+  o.fillStyle = C.navy; o.fillText('GRID', 14, 34);
+  const iw = o.measureText('GR').width, w2 = o.measureText('I').width;
+  o.fillStyle = C.teal; o.fillText('LINK', 14 + iw, 70);
+  o.fillStyle = C.cyan; o.fillRect(14 + iw + w2 * 0.27, 40, w2 * 0.46, 6);
+  o.fillStyle = C.navy; o.fillRect(14 + iw + w2 * 0.27, 30, w2 * 0.46, 8);
+  o.fillStyle = C.teal; o.fillRect(14 + iw + w2 * 0.27, 48, w2 * 0.46, 4);
+  const d = o.getImageData(0, 0, 190, 75).data;
+  x.fillStyle = '#07080a'; x.fillRect(0, 0, 760, 300);
+  for (let y = 0; y < 75; y += 2) for (let X = 0; X < 190; X += 2) {
+    const k = (y * 190 + X) * 4, r = d[k], g = d[k + 1], b = d[k + 2], on = r + g + b > 60;
+    x.beginPath(); x.arc(X * 4 + 4, y * 4 + 4, on ? 3.2 : 1.4, 0, 7);
+    x.fillStyle = on ? `rgb(${Math.min(255, r * 1.8 + 40)},${Math.min(255, g * 1.8 + 40)},${Math.min(255, b * 1.8 + 40)})` : '#15171b';
+    x.fill();
+    if (on) { x.beginPath(); x.arc(X * 4 + 4, y * 4 + 4, 6, 0, 7); x.fillStyle = `rgba(${r * 2},${g * 2},${b * 2},.12)`; x.fill(); }
+  }
+}
+
+/** Far: a letter a cell. */
+function far() {
+  const s = (t, c) => `<span style="color:${c}">${t}</span>`;
+  document.getElementById('far').innerHTML =
+    `${s('GRID', '#5b7fc0')}${s('OWN', C.spray)}        ${s('GRID', '#5b7fc0')}\n` +
+    `  ${s('|', C.cyan)}              ${s('|', C.cyan)}\n` +
+    `  ${s('~~~~', C.spray)}           ${s('LINK', '#3fb3a9')}\n\n` +
+    `<span style="color:#8d8b84">o jogo         a empresa</span>`;
+}
+
+/** The opening, replayable. */
+function anim() {
+  const a = document.getElementById('anim');
+  a.innerHTML = `<rect width="380" height="200" fill="${C.night}"/>`;
+  logo(a, { game: true, tag: true, sub: 'TERMINAL STATE', night: true, anim: true }, 0, 4);
+  night(a, 380, 200);
+}
+document.getElementById('replay').onclick = anim;
+document.fonts.ready.then(build);
+</script>
+</body>
+</html>

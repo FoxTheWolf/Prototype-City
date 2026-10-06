@@ -230,7 +230,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **App de mensagens cifradas** (o canal dos hackers, decidido em 2026-10-04; veja "O jogador é o número dele"): nome fictício, ligado ao número; o contratante passa a escrever por ele em vez do SMS comum.
 
 ### Identidade visual (etapa própria, pedida em 2026-10-05; depois do diálogo e da web, sem renumerar)
-- **Logo fechado (2026-10-06):** **GRID DOWN: TERMINAL STATE**; GRID/LINK empilhados com a haste do I ao L, azul-marinho + teal + ciano, OWN pichado depois do D e LINK rabiscado em spray laranja (`docs/identidade/logo.html`; decisões em `docs/visao.md` > Nome). Falta o manual.
+- **Logo fechado (2026-10-06):** **GRID DOWN: TERMINAL STATE**; GRID/LINK empilhados com a haste do I ao L, azul-marinho + teal + ciano, OWN pichado depois do D e LINK rabiscado em spray laranja (`docs/identidade/logo.html`; decisões em `docs/visao.md` > Nome). **Manual v1 feito** (`docs/identidade/manual.html`: duas marcas, construção, versões, cores, tipografia, pichação, usos no mundo, ASCII, abertura animada com roteiro de som, regras). **Regra do usuário:** POWER · TELECOM só nos usos da empresa, nunca junto do nome do jogo/subtítulo. Falta levar ao jogo: a abertura (título) e a GridLink no mundo (caixas nos postes, vans, conta, site no Lodestar).
 - **Manual de identidade visual** da GridLink e do jogo (`docs/visao.md`): o logo corporativo da GridLink e o do jogo como o mesmo logo vandalizado ("LINK" riscado, "DOWN" pichado); tipografia, cores, usos no mundo (caixas, caminhões, contas, abertura, menu); antes, a busca de marca de "GRID DOWN". Tudo em código (SVG/HTML), nada de imagem no jogo; o manual pode ser um artifact.
 
 ### Etapa 16: Os NPCs usando a cidade e reagindo ao jogador
