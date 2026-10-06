@@ -741,41 +741,64 @@ export function songInfo(P: Phone, i: number): { title: string; band: string; kb
   return { title: f.name.replace(/\.[^.]+$/, ''), band: TN.sd, kb: f.secs ? Math.round(f.secs * MP3_KBS) : -1 };
 }
 /** The visualizer's falling peaks, and when they were last moved. */
-const peaks = new Float32Array(16);
+const peaks = new Float32Array(32);
 let peaksAt = 0;
 /**
- * A spectrum visualizer as the players of 2008 had (2026-10-06): a bar a band, `rows` tall, in quarter
- * blocks, green at the foot to yellow and red at the top, with a peak that falls slowly; x is the left.
+ * A spectrum visualizer as the players of 2008 had (2026-10-06): a bar a band in a dark well, green at
+ * the foot to yellow and red at the top, with a peak that falls slowly; w x rows cells from (x, y).
+ * In HD (2026-10-06, second pass) the well has rounded corners and each bar is drawn in pixels, its top
+ * pixel lit by how far into it the level reaches, so it moves smoothly instead of a cell at a time.
  */
-export function drawSpectrum(S: Lcd, x: number, y: number, rows: number, spec: Float32Array, now: number, bg: (y: number) => C3) {
+export function drawSpectrum(S: Lcd, x: number, y: number, w: number, rows: number, spec: Float32Array, now: number, bg: (y: number) => C3) {
   const dt = Math.min(0.2, Math.max(0, now - peaksAt)); peaksAt = now;
   for (let k = 0; k < spec.length; k++) peaks[k] = Math.max(spec[k], peaks[k] - dt * 0.5);
-  // in HD: the bars in pixels (HD a cell), a band two cells wide with a pixel between, lit as LEDs
-  // from green at the foot to red at the top, the unlit ones faint, the falling peak a bright pixel
   if (S.hd) {
-    const H = rows * HD, px = (X: number, Y: number, c: C3) => S.pixel(x + Math.floor(X / HD), y + Math.floor(Y / HD), X % HD, Y % HD, c[0], c[1], c[2]);
-    for (let r = 0; r < rows; r++) for (let c = 0; c < spec.length * 2; c++) S.put(x + c, y + r, 32, bg(y + r), bg(y + r));
-    for (let k = 0; k < spec.length; k++) {
-      const v = Math.round(spec[k] * H), pk = Math.min(H - 1, Math.round(peaks[k] * H));
-      for (let i = 0; i < H; i++) {
-        const f = i / (H - 1), lit = i < v, base: C3 = f < 0.5 ? lerp([60, 220, 110], [240, 220, 70], f * 2) : lerp([240, 220, 70], [255, 80, 60], (f - 0.5) * 2);
-        const c: C3 = lit ? base : i === pk && pk > 0 ? [220, 220, 235] : mul(bg(y + rows - 1 - Math.floor(i / HD)), 1.7);
-        for (let w = 0; w < HD * 2 - 1; w++) px(k * HD * 2 + w, H - 1 - i, c);
+    const W = w * HD, H = rows * HD, n = spec.length, bw = 4, x0 = (W - (n * bw - 1)) >> 1;
+    const px = (X: number, Y: number, c: C3) => S.pixel(x + Math.floor(X / HD), y + Math.floor(Y / HD), X % HD, Y % HD, c[0], c[1], c[2]);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < w; c++) S.put(x + c, y + r, 32, bg(y + r), bg(y + r));
+    // the well: darker than the panel, its corners rounded (the corner pixel gone, its neighbours half)
+    const well = (Y: number) => mul(bg(y + Math.floor(Y / HD)), 0.45);
+    const corner = (X: number, Y: number) => { const cx = Math.min(X, W - 1 - X), cy = Math.min(Y, H - 1 - Y); return cx + cy === 0 ? 0 : cx + cy === 1 ? 0.5 : 1; };
+    for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
+      const k = Math.floor((X - x0) / bw), inBar = X >= x0 && k < n && (X - x0) % bw < bw - 1;
+      const f = 1 - (Y + 0.5) / H, base: C3 = f < 0.5 ? lerp([60, 220, 110], [240, 220, 70], f * 2) : lerp([240, 220, 70], [255, 80, 60], (f - 0.5) * 2);
+      let c = well(Y);
+      if (inBar) {
+        const i = H - 1 - Y, lit = Math.max(0, Math.min(1, spec[k] * H - i)), pk = Math.min(H - 1, Math.floor(peaks[k] * H));
+        // the unlit LEDs faint; the falling peak a pale pixel; the lit ones from green to red
+        c = lit > 0 ? lerp(mul(base, 0.22), base, lit) : i === pk && pk > 0 ? [215, 215, 232] : mul(base, 0.16);
       }
+      const v = corner(X, Y);
+      if (v) px(X, Y, v === 1 ? c : lerp(bg(y + Math.floor(Y / HD)), c, v));
     }
     return;
   }
+  // in characters: two cells a band (as many bands as fit), in quarter blocks
   const COL: C3[] = [[90, 230, 120], [240, 220, 80], [255, 90, 70]];
-  const Q = [SHAPE.q1, SHAPE.bottom, SHAPE.q3, BLOCK.full];
-  for (let k = 0; k < spec.length; k++) {
-    const v = spec[k] * rows * 4, pk = peaks[k] * rows * 4;
+  const Q = [SHAPE.q1, SHAPE.bottom, SHAPE.q3, BLOCK.full], m = Math.floor(w / 2);
+  for (let j = 0; j < m; j++) {
+    const k = Math.floor((j * spec.length) / m), v = spec[k] * rows * 4, pk = peaks[k] * rows * 4;
     for (let r = 0; r < rows; r++) {
       const yy = y + rows - 1 - r, q = Math.min(4, Math.max(0, Math.round(v - r * 4)));
       const col = COL[Math.min(2, Math.floor((r / rows) * 3))];
-      if (q > 0) S.put(x + k * 2, yy, Q[q - 1], col, bg(yy));
-      else if (pk > 0.5 && Math.min(rows - 1, Math.floor(pk / 4)) === r) S.put(x + k * 2, yy, SHAPE.top, [200, 200, 220], bg(yy));
-      else S.put(x + k * 2, yy, ch('.'), mul(bg(yy), 1.6), bg(yy));
+      if (q > 0) S.put(x + j * 2, yy, Q[q - 1], col, bg(yy));
+      else if (pk > 0.5 && Math.min(rows - 1, Math.floor(pk / 4)) === r) S.put(x + j * 2, yy, SHAPE.top, [200, 200, 220], bg(yy));
+      else S.put(x + j * 2, yy, ch('.'), mul(bg(yy), 1.6), bg(yy));
     }
+  }
+}
+/**
+ * The volume (2026-10-06): ten little bars rising left to right, drawn in the lower part of the row so
+ * they stand apart from a line above; the lit ones in `acc`. In characters, a row of blocks and dots.
+ */
+export function volBars(S: Lcd, x: number, y: number, vol: number, acc: C3, grey: C3, bg: C3) {
+  const v = Math.round(vol * 10);
+  if (!S.hd) { for (let k = 0; k < 10; k++) S.put(x + k, y, k < v ? BLOCK.full : ch('.'), k < v ? acc : grey, bg); return; }
+  for (let k = 0; k < 10; k++) S.put(x + k, y, 32, bg, bg);
+  // ten bars 2 px wide with a 1 px gap (30 px = ten cells), from 1 px tall to the row's height less one
+  for (let k = 0; k < 10; k++) {
+    const h = 1 + Math.round((k / 9) * (HD - 2)), c = k < v ? acc : mul(grey, 0.6);
+    for (let i = 0; i < 2; i++) for (let Y = HD - h; Y < HD; Y++) { const X = k * 3 + i; S.pixel(x + Math.floor(X / HD), y, X % HD, Y, c[0], c[1], c[2]); }
   }
 }
 const TN = A.tunes;
@@ -812,13 +835,14 @@ function tunesApp(S: Lcd, P: Phone, t: number, now: number) {
     const s = songInfo(P, T2.cur);
     S.text(3, 4, typed(s.title.slice(0, SW - 6), t), INK2, pbg(4));
     S.text(3, 5, typed(s.band.slice(0, SW - 6), t - 0.05), GREY, pbg(5));
-    drawSpectrum(S, 5, 6, 3, P.spec, now, pbg);
+    drawSpectrum(S, 3, 6, SW - 6, 3, P.spec, now, pbg);
     progress(S, 3, SW - 3, 9, P, ACC, GREY, INK2, pbg(9));
   }
   // the volume, as ten little bars rising
   S.text(3, 11, 'VOL', GREY, bg(11));
-  for (let k = 0; k < 10; k++) S.put(7 + k, 11, k < Math.round(T2.vol * 10) ? BLOCK.full : ch('.'), k < Math.round(T2.vol * 10) ? ACC : GREY, bg(11));
-  S.text(SW - 12, 11, '* - # +', GREY, bg(11));
+  volBars(S, 7, 11, T2.vol, ACC, GREY, bg(11));
+  if (T2.shuffle) S.text(19, 11, TN.shuffle, ACC, bg(11));
+  S.text(SW - 16, 11, TN.keys, GREY, bg(11));
   // the list: a heading before each part, the picked row lit, kept in sight
   const rows: [string, number][] = [[TN.songs, -1], ...TRACKS.map((_, i): [string, number] => ['', i]), [TN.sd, -1], ...(P.sd.length ? P.sd.map((_, i): [string, number] => ['', TRACKS.length + i]) : [[TN.sdEmpty, -2] as [string, number]])];
   const top = 13, h = SH - 3 - top, at = rows.findIndex(([, i]) => i === T2.sel), off = Math.max(0, Math.min(rows.length - h, at - (h >> 1)));

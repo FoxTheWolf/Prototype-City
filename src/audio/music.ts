@@ -51,6 +51,8 @@ export class Music {
     const mp3a = biquad(ctx, 'lowpass', 16000, 0.7), mp3b = biquad(ctx, 'lowpass', 16000, 0.7);
     this.bus.connect(mp3a).connect(mp3b);
     this.an = ctx.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0.6;
+    // a wider range than the default (-100..-30 dB), so the loud parts do not all pin at the top (2026-10-06)
+    this.an.minDecibels = -90; this.an.maxDecibels = -12;
     this.bins = new Uint8Array(this.an.frequencyBinCount);
     mp3b.connect(this.an);
     // the earbuds: little drivers that lose the lowest bass, a bump where the voice sits, the top soft
@@ -96,8 +98,8 @@ export class Music {
       const f0 = 60 * (11000 / 60) ** (k / n), f1 = 60 * (11000 / 60) ** ((k + 1) / n);
       let a = Math.max(1, Math.floor(f0 / hzBin)), b = Math.max(a + 1, Math.ceil(f1 / hzBin)), m = 0;
       for (let i = a; i < b && i < this.bins.length; i++) m = Math.max(m, this.bins[i]);
-      // the analyser's floor sits around 40 of 255 in quiet parts
-      out[k] = Math.max(0, Math.min(1, (m - 60) / 170));
+      // the quiet floor cut, and a curve so only the loudest moments reach the top
+      out[k] = Math.max(0, Math.min(1, (m - 70) / 185)) ** 1.4;
     }
   }
 

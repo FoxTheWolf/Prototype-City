@@ -2,7 +2,7 @@ import { compass, cityName, operatorName, diagonalName, districtName, landmarkNa
 import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
-import { app, drawSpectrum, menu, progress, songInfo } from './apps';
+import { app, drawSpectrum, menu, progress, songInfo, volBars } from './apps';
 import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad, wallpaper } from './ui';
 import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
 import { type World } from '../sim/world';
@@ -47,21 +47,23 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
   // vibrating: the phone shakes in the hand in the same bursts as the buzz (0.47 s on every 0.8 s)
   const t = performance.now() / 1000, u = P.buzzUntil - t, on = u > 0 && (P.buzzLen - u) % 0.8 < 0.47;
   const sx = on ? (Math.floor(t * 34) % 2 ? 1 : -1) : 0, sy = on && Math.floor(t * 23) % 3 === 0 ? 1 : 0;
-  const peek = Math.round(9 * (1 - (1 - P.peek) ** 3));
+  // peeking for a notification, its top rows; Alt held in the pocket, just the music keys on top and a little of the body
+  const peek = Math.max(Math.round(9 * (1 - (1 - P.peek) ** 3)), Math.round(3 * (1 - (1 - P.handy) ** 3)));
   return [cols - PHONE_W - 6 + sx, rows - Math.max(peek, Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e)) + sy];
 }
 
 /**
- * The three keys on the left side (2026-10-06): the music's volume up, play/pause, volume down, each
- * a bump two rows tall standing out of the body by a column (rows from the phone's top).
+ * The music keys on the top edge, at the right of the earphone jack (2026-10-06; they were on the left
+ * side): previous, play/pause, next, then the volume down and up, each a bump a row tall standing out
+ * of the body (columns from the phone's left), with the keyboard's shortcut that does the same (Alt held).
  */
-const SIDE_KEYS: [Key, number, string][] = [['vup', 9, '+'], ['play', 12, '>'], ['vdown', 15, '-']];
+const TOP_KEYS: [Key, number, number, string, string][] = [['prev', 22, 4, '|<', '<'], ['play', 27, 4, '>', 'P'], ['next', 32, 4, '>|', '>'], ['vdown', 39, 3, '-', 'v'], ['vup', 43, 3, '+', '^']];
 
 /** The key under a grid cell, if any. */
 export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number): Key | null {
   const [ox, oy] = origin(cols, rows, P);
-  // the side keys: a column wider to hit than drawn
-  if (x >= ox - 2 && x <= ox) for (const [k, y0] of SIDE_KEYS) if (y >= oy + y0 && y < oy + y0 + 2) return k;
+  // the music keys on top: a row taller to hit than drawn
+  if (y >= oy - 2 && y < oy) for (const [k, x0, w] of TOP_KEYS) if (x >= ox + x0 && x < ox + x0 + w) return k;
   // the arrows are thin: their hit areas reach a row (or two columns) further out than they are drawn
   const grow: Partial<Record<Key, [number, number, number, number]>> = { up: [0, -1, 0, 1], down: [0, 0, 0, 1], left: [-2, 0, 2, 0], right: [0, 0, 2, 0] };
   for (const [k, x0, y0, w, h] of keysFor(P.look)) {
@@ -84,7 +86,7 @@ const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
 export const SCREEN: { at: number[] | null } = { at: null };
 
 export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
-  if (P.raise < 0.01 && P.peek < 0.01) return;
+  if (P.raise < 0.01 && P.peek < 0.01 && P.handy < 0.01) return;
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
   const SHL = SHELLS[P.look], KEYS = keysFor(P.look), CY = KEYS_Y;
@@ -228,28 +230,49 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   // the case: over the body's rim and around it, so only its own rim shows from the front
   if (P.case) drawCase(CASES[P.case], R, now, cell, over, inG, g);
   // the earphones plugged in (2026-10-06), in HD pixels: a metal plug in the jack on top, its white
-  // cable rising in a slack curve up and out of sight, toward the ears
+  // housing and strain relief above, and the cable rising in a slack loop up and to the left, then
+  // falling past the phone's side and out of sight at the bottom (2026-10-06: it went off the top before)
   const HL = hdLayer();
   if (P.earphones && HL) {
     const lit = (c: C3, k = 1): C3 => [c[0] * Lr * k, c[1] * Lg * k, c[2] * Lb * k];
-    const jx = (ox + 9) * HD + 1, jy = oy * HD;
-    for (let y = -7; y < 1; y++) for (let x = 0; x < 4; x++) {
-      const c = lit(y > -3 ? [150, 155, 165] : [228, 228, 232], x === 0 ? 1.15 : x === 3 ? 0.7 : 1);
-      HL.put(jx + x, jy + y, c[0], c[1], c[2], HdOrder.Over);
+    const jx = (ox + 9) * HD, jy = oy * HD;
+    for (let y = -13; y < 1; y++) {
+      // the sleeve (metal, 4 wide), the housing (6 wide), the relief (2 wide) the cable leaves from
+      const [x0, x1, c0]: [number, number, C3] = y > -4 ? [1, 5, [150, 155, 165]] : y > -11 ? [0, 6, [230, 230, 234]] : [2, 4, [214, 214, 218]];
+      for (let x = x0; x < x1; x++) { const c = lit(c0, x === x0 ? 1.15 : x === x1 - 1 ? 0.7 : 1); HL.put(jx + x, jy + y, c[0], c[1], c[2], HdOrder.Over); }
     }
-    // the cable: a quadratic curve from the plug's top to the top edge, a little left of the phone
-    const x0 = jx + 1.5, y0 = jy - 7, x2 = (ox - 14) * HD, y2 = -2, x1 = jx - 2, y1 = Math.max(0, y0 * 0.35), sway = Math.sin(now * 1.3) * 4;
-    for (let i = 0; i <= 160; i++) {
-      const u = i / 160, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), d = u * u;
-      const X = a * x0 + b * (x1 + sway) + d * x2, Y = a * y0 + b * y1 + d * y2, c = lit([214, 214, 218], 0.85 + 0.15 * Math.cos(u * 9));
-      HL.put(Math.round(X), Math.round(Y), c[0], c[1], c[2], HdOrder.Over);
-      HL.put(Math.round(X) + 1, Math.round(Y), c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, HdOrder.Over);
+    // the cable: a smooth curve (Catmull-Rom) through points in cells, swaying a little
+    const sway = Math.sin(now * 1.3) * 0.6, pts: [number, number][] = [
+      [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 5, oy - 6 + sway * 0.5], [ox - 6 + sway, oy - 3], [ox - 13 + sway, oy + 10], [ox - 11, g.rows + 3], [ox - 11, g.rows + 3]];
+    for (let s = 1; s < pts.length - 2; s++) {
+      const [p0, p1, p2, p3] = [pts[s - 1], pts[s], pts[s + 1], pts[s + 2]];
+      for (let i = 0; i <= 120; i++) {
+        const u = i / 120, u2 = u * u, u3 = u2 * u;
+        const cr = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (c - a) * u + (2 * a - 5 * b + 4 * c - d) * u2 + (3 * b - a - 3 * c + d) * u3);
+        const X = Math.round(cr(p0[0], p1[0], p2[0], p3[0]) * HD), Y = Math.round(cr(p0[1], p1[1], p2[1], p3[1]) * HD);
+        const c = lit([214, 214, 218], 0.85 + 0.15 * Math.cos((s + u) * 3));
+        HL.put(X, Y, c[0], c[1], c[2], HdOrder.Over);
+        HL.put(X + 1, Y, c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, HdOrder.Over);
+      }
     }
   }
-  // the side keys, over the rim (and the case's): sunk into it for a moment when pressed
-  for (const [k, y0, sym] of SIDE_KEYS) {
-    const down = isDown(k), c = mul(SHL.cap, down ? 0.5 : P.hover === k ? 1.35 : 1);
-    for (let y = 0; y < 2; y++) cell(down ? 0 : -1, y0 + y, y === 0 ? ch(k === 'play' && P.tn.playing ? '"' : sym) : 32, on ? SHL.label : SHL.labelOff, y === 0 ? SHL.capTop : c, 0.6, on);
+  // the music keys on top, over the rim (and the case's): sunk to half for a moment when pressed;
+  // with Alt held, the keyboard's shortcut for each above it
+  for (const [k, x0, w, sym, alt] of TOP_KEYS) {
+    const down = isDown(k), c = mul(SHL.cap, P.hover === k ? 1.35 : 1), label = k === 'play' && P.tn.playing ? '"' : sym;
+    for (let x = 0; x < w; x++) {
+      if (down) { over(x0 + x, -1, SHAPE.bottom, mul(SHL.cap, 0.5), 0.6); continue; }
+      const n = x - ((w - label.length) >> 1);
+      cell(x0 + x, -1, n >= 0 && n < label.length ? label.charCodeAt(n) : 32, on ? SHL.label : SHL.labelOff, x === 0 || x === w - 1 ? mul(c, 0.8) : c, 0.6, on);
+    }
+    if (P.handy > 0.5) {
+      const i = inG(x0 + (w >> 1), -2);
+      if (i >= 0) { g.setBg(i, 20, 16, 10); g.put(i, ch(alt), 255, 220, 140); }
+    }
+  }
+  if (P.handy > 0.5) {
+    const s = 'ALT+';
+    for (let n = 0; n < s.length; n++) { const i = inG(TOP_KEYS[0][1] - 5 + n, -2); if (i >= 0) { g.setBg(i, 20, 16, 10); g.put(i, s.charCodeAt(n), 255, 220, 140); } }
   }
 
   // the screen
@@ -269,10 +292,10 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       else app(S, P, world, t, now);
       // the volume, for a moment after a side key moved it, over whatever is open
       if (now - P.volAt < 1.4) {
-        const y = SH - 3, B: C3 = [10, 14, 24], v = Math.round(P.tn.vol * 10);
-        box(S, 9, y, SW - 10, y, B, B, 0);
-        S.text(11, y, T.apps.vol, [150, 165, 190], B);
-        for (let k = 0; k < 10; k++) S.put(16 + k * 2, y, k < v ? BLOCK.full : ch('.'), k < v ? [200, 130, 255] : [70, 80, 100], B);
+        const y = SH - 3, B: C3 = [10, 14, 24];
+        box(S, 11, y, SW - 12, y, B, B, 0);
+        S.text(13, y, T.apps.vol, [150, 165, 190], B);
+        volBars(S, 18, y, P.tn.vol, [200, 130, 255], [110, 120, 140], B);
       }
     }
   }
@@ -578,14 +601,15 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   const rem = P.cal.reminders.filter((r) => !r.done).sort((a, b) => a.at - b.at)[0];
   const tune = N.includes('tune');
   if (tune && t > 0.6) {
-    const s = songInfo(P, P.tn.cur), on = sel === 'tune', PB: C3 = on ? [62, 36, 92] : [30, 16, 44], ACC: C3 = [200, 130, 255], GR: C3 = [130, 110, 150], v = Math.round(P.tn.vol * 10);
+    const s = songInfo(P, P.tn.cur), on = sel === 'tune', PB: C3 = on ? [62, 36, 92] : [30, 16, 44], ACC: C3 = [200, 130, 255], GR: C3 = [130, 110, 150];
     box(S, 1, 17, SW - 2, 23, PB, PB, 1, on ? [44, 24, 66] : [20, 10, 30]);
     const pb = (y: number): C3 => lerp(PB, on ? [44, 24, 66] : [20, 10, 30], (y - 17) / 6);
     S.text(3, 18, `${s.title} - ${s.band}`.slice(0, SW - 6), [232, 218, 250], pb(18));
-    drawSpectrum(S, 5, 19, 2, P.spec, now, pb);
+    drawSpectrum(S, 3, 19, SW - 6, 2, P.spec, now, pb);
     progress(S, 3, SW - 3, 21, P, ACC, GR, [232, 218, 250], pb(21));
     S.text(3, 22, T.apps.vol, GR, pb(22));
-    for (let k = 0; k < 10; k++) S.put(7 + k, 22, k < v ? 128 : ch('.'), k < v ? ACC : GR, pb(22));
+    volBars(S, 7, 22, P.tn.vol, ACC, GR, pb(22));
+    if (P.tn.shuffle) S.text(19, 22, T.apps.tunes.shuffle, ACC, pb(22));
   }
   N.filter((n) => n !== 'tune').forEach((n, k) => {
     const y = (tune ? 15 : 16) + k * 2;

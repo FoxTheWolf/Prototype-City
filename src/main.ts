@@ -472,6 +472,11 @@ addEventListener('mousedown', (e) => {
     return;
   }
   if (watchClick(e)) return;
+  // Alt held with the phone in the pocket: its music keys on top, just out of it, take a click
+  if (e.button === 0 && altFree && !phone.out && !laptop.open) {
+    const [x, y] = cellAtClient(e.clientX, e.clientY), k = keyAt(ui.cols, ui.rows, phone, x, y);
+    if (k) { phonePress(k); return; }
+  }
   if (laptop.open) {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
@@ -544,6 +549,11 @@ addEventListener('keydown', (e) => {
   // Alt is the game's: no browser shortcut with it (Alt+Left would go back a page, Alt alone focuses the browser's menu)
   if (e.altKey) e.preventDefault();
   // Alt held frees the cursor (15.9a); the notebook open has it free already, and its own Alt keys
+  // the music from the keyboard (2026-10-06): the keyboard's own media keys, and with Alt the arrows
+  // (volume, previous and next) and P (play/pause), the same as the phone's keys on top
+  const mk: Key | null = e.code === 'MediaPlayPause' ? 'play' : e.code === 'MediaTrackNext' ? 'next' : e.code === 'MediaTrackPrevious' ? 'prev'
+    : e.altKey && !laptop.open && running ? ({ ArrowUp: 'vup', ArrowDown: 'vdown', ArrowLeft: 'prev', ArrowRight: 'next', KeyP: 'play' } as Record<string, Key>)[e.code] ?? null : null;
+  if (mk) { e.preventDefault(); if (!e.repeat || mk === 'vup' || mk === 'vdown') musicKey(mk); return; }
   if ((e.code === 'AltLeft' || e.code === 'AltRight') && !laptop.open) {
     if (!e.repeat && running && !paused && input.locked) { altFree = true; input.unlock(); }
     return;
@@ -771,7 +781,42 @@ function loadSd(name: string, gen: number) {
     .then((buf) => { if (phone.tn.gen !== gen || !sound) return; sound.music.play(buf); if (!phone.tn.playing) sound.music.pause(); })
     .catch(() => { if (phone.tn.gen === gen) phone.tn.playing = false; });
 }
+/** A music key from the keyboard (or the system's media controls): as the phone's own key, with its click. */
+function musicKey(k: Key) {
+  if (phone.screen === 'off' || phone.screen === 'boot') return;
+  phonePress(k);
+}
+/**
+ * The system's media controls (2026-10-06): Chromium hands the keyboard's media keys (and Windows'
+ * overlay) to a page with a media session playing, so a silent sound made here (a WAV written in code)
+ * loops while the music plays, and the session's actions press the phone's keys.
+ */
+const mediaEl = (() => {
+  if (!('mediaSession' in navigator)) return null;
+  const n = 8000 * 10, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  const el = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' })));
+  el.loop = true;
+  const S = navigator.mediaSession;
+  S.setActionHandler('play', () => { if (!phone.tn.playing) musicKey('play'); });
+  S.setActionHandler('pause', () => { if (phone.tn.playing) musicKey('play'); });
+  S.setActionHandler('nexttrack', () => musicKey('next'));
+  S.setActionHandler('previoustrack', () => musicKey('prev'));
+  return el;
+})();
+let mediaGen = -1;
+function syncMedia() {
+  if (!mediaEl) return;
+  const T = phone.tn, on = T.playing && T.cur >= 0;
+  if (on && mediaEl.paused) void mediaEl.play().catch(() => {});
+  else if (!on && !mediaEl.paused) mediaEl.pause();
+  navigator.mediaSession.playbackState = on ? 'playing' : T.cur >= 0 ? 'paused' : 'none';
+  if (T.cur >= 0 && T.gen !== mediaGen) { mediaGen = T.gen; const s = songInfo(phone, T.cur); navigator.mediaSession.metadata = new MediaMetadata({ title: s.title, artist: s.band }); }
+}
 function syncMusic() {
+  syncMedia();
   if (!sound) return;
   const M = sound.music, T = phone.tn;
   if (phone.screen === 'off') T.playing = false;
@@ -785,7 +830,7 @@ function syncMusic() {
   }
   if (T.playing) M.resume(); else M.pause();
   M.update();
-  if (M.ended) { M.ended = false; phone.tunesPlay(T.cur + 1); }
+  if (M.ended) { M.ended = false; phone.tunesSkip(1); }
   const r = phone.earphones ? 'phones' : phone.raise > 0.5 ? 'hand' : 'pocket';
   if (`${r}${T.vol}` !== tunesRoute) { tunesRoute = `${r}${T.vol}`; M.route(r, T.vol); }
   T.at = M.at; T.len = M.length;
@@ -1210,7 +1255,8 @@ function frame(now: number) {
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
-  phone.hover = phone.out || (laptop.open && phone.raise > 0.5) ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
+  phone.reach = altFree && !laptop.open;
+  phone.hover = phone.out || (laptop.open && phone.raise > 0.5) || phone.handy > 0.5 ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
   watch.update(dt, world.time, now / 1000, world.player.inside >= 0 ? 21 : world.weather.temp);
   for (const f of watch.sfx) {

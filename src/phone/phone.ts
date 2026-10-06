@@ -56,7 +56,7 @@ import { WebApp } from './webapp';
 export type App = 'map' | 'calls' | 'contacts' | 'tunes' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type CallKind = 'out' | 'failed' | 'in' | 'missed';
-export type Key = 'vup' | 'vdown' | 'play' | 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
+export type Key = 'vup' | 'vdown' | 'play' | 'prev' | 'next' | 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /**
  * The menu: a 4x4 grid of apps, picked with the arrows (or 1-9 and 0 for the first ten). Streetwire,
@@ -191,11 +191,13 @@ export class Phone {
    * came with it, then the SD card's), whether it plays, its volume (0..1), and a count that goes up
    * when a song is to start from its beginning (main plays it). Main fills in where the song is.
    */
-  tn = { sel: 0, cur: -1, playing: false, vol: 0.7, gen: 0, at: 0, len: 0 };
+  tn = { sel: 0, cur: -1, playing: false, vol: 0.7, gen: 0, at: 0, len: 0, shuffle: false };
+  /** The songs played before, newest last (shuffle's "previous" goes back through them). */
+  private tnHist: number[] = [];
   /** The SD card's songs: the player's own, from music/ beside the game (main reads the folder). */
   sd: { name: string; size: number; secs?: number }[] = [];
   /** The music's spectrum now, 16 bands 0..1 (main fills it from the player each frame), for the visualizer. */
-  spec = new Float32Array(16);
+  spec = new Float32Array(26);
   /** The earphones in (15.9d): the music for the player alone; else it comes out of the phone's speaker. */
   earphones = false;
   /** The bag's thing worn as earphones ('headphones' or 'hands_free'). */
@@ -256,6 +258,9 @@ export class Phone {
   /** 0 .. 1: peeking out of the pocket for a notification, until peekUntil. */
   peek = 0;
   peekUntil = 0;
+  /** Alt held (2026-10-06): main sets `reach`; `handy` 0..1 brings the top of the phone out of the pocket, its music keys in reach. */
+  reach = false;
+  handy = 0;
   /** Lowered while talking on it (14.7): held at the ear, the conversation at the bottom of the screen. */
   atEar = false;
   /** 0 .. 1: held up whole, the keypad in sight (since 2026-10-06 always, while it is out). */
@@ -441,7 +446,7 @@ export class Phone {
       looks: [...this.looks], cases: [...this.cases], reminders: this.cal.reminders, wifiOn: this.wifi.on, told: { ...this.told },
       // already switched on once (the line's numbers are in its contacts): it comes back on, in the pocket
       booted: this.screen !== 'off' || this.everOn, batt: this.batt,
-      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol }, earphones: this.earphones, earGood: this.earGood, rey: this.rey,
+      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol, shuffle: this.tn.shuffle }, earphones: this.earphones, earGood: this.earGood, rey: this.rey,
     };
   }
   /** Back to a saved phone: in the pocket and off; the screens' data is read back from the files at the next sync. */
@@ -497,6 +502,7 @@ export class Phone {
     const ringing = this.callIn && this.call?.state === 'ringing';
     this.raise += ((this.out || ringing ? (this.atEar ? 0.35 : 1) : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
+    this.handy += ((this.reach && !this.out && !ringing ? 1 : 0) - this.handy) * Math.min(1, dt * 12);
     // (2026-10-06) the phone is held up whole whenever it is out: no raising it to type
     this.lift += ((this.out ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     // reminders whose time has come ring, with a note in the inbox
@@ -736,8 +742,8 @@ export class Phone {
     if (k === 'end' && this.call && this.call.state !== 'ended') { this.call.hangUp(now); this.sfx.push(['stop']); return true; }
     if (k === 'end' && s !== 'boot' && s !== 'standby') { this.open('standby', now); return true; }
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
-    // the three keys on the side (2026-10-06): the music's volume up and down, and play/pause, from any screen
-    if (k === 'vup' || k === 'vdown' || k === 'play') return s !== 'boot' && this.sideKey(k);
+    // the music keys on top (2026-10-06): the volume up and down, previous, play/pause and next, from any screen
+    if (k === 'vup' || k === 'vdown' || k === 'play' || k === 'prev' || k === 'next') return s !== 'boot' && this.sideKey(k);
     switch (s) {
       case 'boot':
         if (k === 'rsoft') { this.out = false; return 'away'; }
@@ -1198,9 +1204,26 @@ export class Phone {
     const T = this.tn;
     T.cur = ((i % n) + n) % n; T.playing = true; T.gen++; T.at = 0;
   }
-  /** The side keys: the volume a step up or down; play/pause (the song picked when nothing is loaded). */
-  private sideKey(k: Key): boolean {
+  /**
+   * The next song (dir 1) or the one before (-1): in order, or with shuffle a random other one going
+   * forward and back through those played going back.
+   */
+  tunesSkip(dir: 1 | -1) {
+    const T = this.tn, n = this.tunesCount();
+    if (!n) return;
+    if (T.cur < 0) return this.tunesPlay(T.sel);
+    if (!T.shuffle || n < 2) { this.tunesPlay(T.cur + dir); T.sel = T.cur; return; }
+    if (dir < 0) { const b = this.tnHist.pop(); this.tunesPlay(b ?? T.cur); T.sel = T.cur; return; }
+    const was = T.cur;
+    let i = Math.floor(Math.random() * (n - 1));
+    if (i >= was) i++;
+    this.tunesPlay(i); T.sel = T.cur;
+    this.tnHist.push(was); if (this.tnHist.length > 50) this.tnHist.shift();
+  }
+  /** The music keys: the volume a step up or down; play/pause (the song picked when nothing is loaded); previous and next. */
+  sideKey(k: Key): boolean {
     const T = this.tn;
+    if (k === 'prev' || k === 'next') { if (!this.tunesCount()) return false; this.tunesSkip(k === 'next' ? 1 : -1); return true; }
     if (k === 'play') {
       if (!this.tunesCount()) return false;
       if (T.cur >= 0 && T.len > 0) T.playing = !T.playing; else this.tunesPlay(T.cur >= 0 ? T.cur : T.sel);
@@ -1222,7 +1245,9 @@ export class Phone {
       if (T.cur === T.sel && T.cur >= 0 && T.len > 0) T.playing = !T.playing; else this.tunesPlay(T.sel);
       return true;
     }
-    if ((k === 'left' || k === 'right' || k === '4' || k === '6') && T.cur >= 0) { this.tunesPlay(T.cur + (k === 'left' || k === '4' ? -1 : 1)); T.sel = T.cur; return true; }
+    if ((k === 'left' || k === 'right' || k === '4' || k === '6') && T.cur >= 0) { this.tunesSkip(k === 'left' || k === '4' ? -1 : 1); return true; }
+    // 0 turns shuffle on and off
+    if (k === '0') { T.shuffle = !T.shuffle; this.tnHist = []; return true; }
     if (k === '*' || k === '#') { T.vol = Math.max(0, Math.min(1, Math.round((T.vol + (k === '#' ? 0.1 : -0.1)) * 10) / 10)); return true; }
     return false;
   }

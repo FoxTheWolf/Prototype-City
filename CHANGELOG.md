@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.13 — Teclas de música no topo, shuffle e o fio que desce (2026-10-06)
+- **As teclas de música foram para o topo do celular**, à direita da entrada do fone: **|<  >  >|** e o volume **-  +**. Com o celular no bolso, **segure Alt** e o topo dele sai um pouco do bolso para você clicar nelas; as teclas de atalho aparecem em cima de cada uma.
+- **Atalhos de teclado:** **Alt+↑/↓** volume, **Alt+←/→** música anterior/próxima, **Alt+P** tocar/pausar. As **teclas de mídia do teclado** (como Fn+F9) também funcionam, e o Windows mostra a música que está tocando no controle de mídia dele.
+- **Shuffle:** no Tunes Player, a tecla **0** liga e desliga; o "anterior" volta pelas que já tocaram.
+- **Visualizador refeito em pixels finos:** barras mais finas que sobem e descem suavemente, num fundo escuro com cantos arredondados, e menos sensível (não fica mais no máximo o tempo todo).
+- **O volume** virou dez barrinhas subindo, separadas da barra de progresso.
+- **O fio do fone** agora faz uma volta para cima e desce pelo lado do celular até sair por baixo da tela; o plugue ficou maior.
+
 ## 0.15.12 — Título em 3D e o fio do fone (2026-10-06)
 - **O fundo do título agora é 3D:** linhas do terminal da cidade flutuam em profundidade, com tamanhos diferentes, e vêm na sua direção, como se você avançasse entre elas. As mais próximas desfocam e somem antes de passar.
 - **O fio do fone aparece:** com o fone posto, o plugue fica encaixado no topo do celular e o cabo branco sobe até sair da tela, em direção às orelhas.
