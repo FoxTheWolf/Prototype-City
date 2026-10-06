@@ -179,8 +179,12 @@ export const WATCH_LCD: { at: number[] | null } = { at: null };
  * under its crystal (the face's shadow on it, away from the light). `light` is the scene's light at the
  * hands (VIEW_LIGHT), `glint` VIEW_GLINT, `brand` the maker printed on the face.
  */
+/** Where the watch's buttons were drawn on the grid this frame (for the mouse, with the cursor free: 15.9a). */
+export const WATCH_BTN: [x: number, y: number, b: 'light' | 'mode' | 'start'][] = [];
+
 export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, glint: Float32Array, brand: string, yaw: number) {
   WATCH_LCD.at = null;
+  WATCH_BTN.length = 0;
   if (Wt.raise < 0.01) return;
   const e = 1 - (1 - Wt.raise) ** 3;
   const ox = 6, oy = g.rows - Math.round((CASE_Y + CASE_H + 1) * e);
@@ -236,7 +240,10 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
     cell(x, CASE_Y + y, (x + y * 3) % 7 === 0 && !top && !low ? '-' : ' ', mul(c, 1.12), c, top ? 0.9 : G_STEEL);
   }
   // the buttons on its sides, in steel too
-  for (const [x, y] of [[-1, LY + 1], [-1, LY + LH - 2], [W, LY + 1]] as const) cell(x, y, x < 0 ? '[' : ']', mul(STEEL, 1.3), mul(STEEL, 0.8), G_STEEL);
+  for (const [x, y, b] of [[-1, LY + 1, 'light'], [-1, LY + LH - 2, 'mode'], [W, LY + 1, 'start']] as const) {
+    cell(x, y, x < 0 ? '[' : ']', mul(STEEL, 1.3), mul(STEEL, 0.8), G_STEEL);
+    if (Wt.raise > 0.5) WATCH_BTN.push([ox + x, oy + y, b]);
+  }
   text(3, CASE_Y + 1, 'LIGHT', LABEL, FACE);
   // the buttons' names along the case: MODE by the lower left one, START/STOP by the right one
   text(3, CASE_Y + CASE_H - 2, 'MODE', LABEL, FACE);

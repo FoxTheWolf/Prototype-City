@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.9a — Alt solta o mouse (2026-10-06)
+- **Segure Alt para soltar o mouse:** enquanto Alt está apertado, o cursor aparece e você pode **clicar nos botões do relógio** (LIGHT, MODE, START; segurar START acerta o alarme, como o K). Você continua andando, e ao soltar Alt a câmera volta para o mouse. (Se você segurar Alt por mais de uns 5 s, o navegador pode pedir um clique para recapturar o mouse.)
+- O Alt não abre mais a barra de menus do Electron nem dispara atalhos do navegador (Alt+← voltava a página).
+
 ## 0.19.3 — Correção: o `tdump` já vem instalado (2026-10-06)
 - **O `tdump` agora vem pré-instalado no notebook** (junto do `wcrack`): o primeiro trabalho pede para quebrar uma rede WEP, e isso precisa do `tdump` — mas, sem uma rede aberta por perto, não dava para instalá-lo pelo `apt` e o jogo **empacava**. Agora os dois já estão em `~/bin` desde o começo. (As outras ferramentas — `mmap`, `tnet`, `mbus` — seguem vindo do `apt` quando você estiver on-line.)
 

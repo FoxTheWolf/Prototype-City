@@ -23,7 +23,7 @@ import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
-import { drawWatch, Watch, WATCH_LCD, WATCH_ON } from './watch/watch';
+import { drawWatch, Watch, WATCH_BTN, WATCH_LCD, WATCH_ON } from './watch/watch';
 import { drawLaptop3d, glassBox, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
@@ -375,6 +375,24 @@ addEventListener('wheel', (e) => {
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
 let rightAt = -1, rightMoved = 0;
+/** Alt held (15.9a): the cursor is free to click the watch (and what else is on the screen) while the keys still walk; let go, it is locked again. */
+let altFree = false, watchStartHeld = false;
+/** A left click on one of the watch's buttons, with the cursor free: presses it (true when it did). */
+function watchClick(e: MouseEvent): boolean {
+  if (e.button !== 0 || input.locked || !WATCH_ON || !WATCH_BTN.length) return false;
+  const [x, y] = cellAtClient(e.clientX, e.clientY), now = performance.now() / 1000;
+  const b = WATCH_BTN.find(([bx, by]) => by === y && Math.abs(bx - x) <= 1)?.[2];
+  if (b === 'light') watch.light(now);
+  else if (b === 'mode') watch.modeKey(now);
+  else if (b === 'start') { watch.startDown(now, false); watchStartHeld = true; }
+  return !!b;
+}
+function altUp() {
+  if (!altFree) return;
+  altFree = false;
+  if (running && !paused && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && !talkView.open && rightAt < 0) input.lock();
+}
+addEventListener('blur', () => { altFree = false; });
 /** The left button is held down over the notebook screen, dragging a selection (15.7c). */
 let lapDrag = false;
 /** The interface's cell under the system cursor. */
@@ -410,6 +428,7 @@ addEventListener('mousedown', (e) => {
     else if (e.button === 2) bagView.remove(phone.cx, phone.cy, performance.now() / 1000);
     return;
   }
+  if (watchClick(e)) return;
   if (laptop.open) {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
@@ -460,9 +479,10 @@ addEventListener('mousedown', (e) => {
 document.addEventListener('pointerlockchange', () => {
   if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open || bagView.open || talkView.open)) input.unlock();
   // the pointer freed by the player (Esc, or leaving the window), not by the game: pause
-  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && !talkView.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
+  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && !talkView.open && !altFree && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
 });
 addEventListener('mouseup', (e) => {
+  if (e.button === 0 && watchStartHeld) { watchStartHeld = false; watch.startUp(); }
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
   if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
   if (e.button !== 2 || rightAt < 0) return;
@@ -478,6 +498,13 @@ addEventListener('keydown', (e) => {
   // F3 hides and shows the debug lines (for clean screenshots), whatever is in the hands
   // the menu open takes the keys: Esc goes a page back, or out
   if (menu.isOpen) { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); menu.back(); } return; }
+  // Alt is the game's: no browser shortcut with it (Alt+Left would go back a page, Alt alone focuses the browser's menu)
+  if (e.altKey) e.preventDefault();
+  // Alt held frees the cursor (15.9a); the notebook open has it free already, and its own Alt keys
+  if ((e.code === 'AltLeft' || e.code === 'AltRight') && !laptop.open) {
+    if (!e.repeat && running && !paused && input.locked) { altFree = true; input.unlock(); }
+    return;
+  }
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
   // F8: a playtest note (the game pauses while it is written)
   if (e.code === 'F8') { e.preventDefault(); if (!e.repeat) openNote(); return; }
@@ -631,7 +658,10 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'PageUp' || e.code === 'PageDown') debugFloor(world, e.code === 'PageUp' ? 1 : -1);
 });
 
-addEventListener('keyup', (e) => { if (e.code === 'KeyK' && WATCH_ON) watch.startUp(); });
+addEventListener('keyup', (e) => {
+  if (e.code === 'KeyK' && WATCH_ON) watch.startUp();
+  if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); altUp(); }
+});
 
 /** `rows` sets the cell size; the grid then gets as many rows as fill the screen (no black bars, the phone on the bottom edge).
  *  cover: the world overfills by up to a cell (cut at the edges); the interface stays whole, the leftover (< a cell) on top. */
@@ -925,7 +955,7 @@ function cctvOverlay(k: number, now: number) {
   ui.text(x0 + 2, ui.rows - 2, `${M.color ? 'COLOR' : 'B/W'} ${M.res} ${M.px}  ${M.fps} FPS  ${C.sweep ? 'AUTO-PAN' : 'FIXED'}`, W, bgc);
   if (cctv?.title) ui.text(x1 - 26, ui.rows - 2, `NEXT ${Math.max(0, Math.ceil(CCTV_HOLD - (now - cctv.at)))}s  [ESC] MENU`, [150, 160, 150], bgc);
 }
-canvas.addEventListener('click', () => { if (!cctv?.title && !input.locked && !phone.out && !laptop.open) input.lock(); });
+canvas.addEventListener('click', () => { if (!cctv?.title && !input.locked && !altFree && !phone.out && !laptop.open) input.lock(); });
 
 const bolt = new Float64Array(2);
 let last = performance.now();
