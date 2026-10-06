@@ -78,6 +78,24 @@ export function aptInstall(pc: Computer, name: string, t: number): boolean {
   pc.put(`${p.dir}/${name}`, p.kb * 1024, 'root', t, name, p.mem);
   return true;
 }
+
+/** Split a shell line into command segments on &&, || and ; outside quotes; each segment is tagged
+ *  with the operator that came before it (the first is ''). Quotes (single or double) are respected,
+ *  so an operator inside a quoted ESSID is left alone. */
+export function splitChain(t: string): { op: string; cmd: string }[] {
+  const segs: { op: string; cmd: string }[] = [];
+  let buf = '', q = '', op = '';
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (q) { buf += ch; if (ch === q) q = ''; continue; }
+    if (ch === '"' || ch === "'") { q = ch; buf += ch; continue; }
+    if (ch === ';') { segs.push({ op, cmd: buf.trim() }); op = ';'; buf = ''; continue; }
+    if ((ch === '&' && t[i + 1] === '&') || (ch === '|' && t[i + 1] === '|')) { segs.push({ op, cmd: buf.trim() }); op = ch === '&' ? '&&' : '||'; buf = ''; i++; continue; }
+    buf += ch;
+  }
+  segs.push({ op, cmd: buf.trim() });
+  return segs;
+}
 /** The directional antenna's gain, dB (F.9b): reaches a maintenance AP (GRIDLINK) from further, e.g. out of the crossing camera. */
 const ANT_GAIN = 9;
 /** What the shell does itself, with no program on the disk. */
@@ -438,7 +456,7 @@ export class Shell {
     this.scroll = 0;
     const s = this.input;
     if (key === 'Enter') { this.run(s, now); return; }
-    if (key === 'Backspace') { if (this.cur > 0) { this.input = s.slice(0, this.cur - 1) + s.slice(this.cur); this.cur--; } return; }
+    if (key === 'Backspace') { if (this.cur > 0) { const pair = (s[this.cur - 1] === '"' || s[this.cur - 1] === "'") && s[this.cur] === s[this.cur - 1]; this.input = s.slice(0, this.cur - 1) + s.slice(this.cur + (pair ? 1 : 0)); this.cur--; } return; }
     if (key === 'Delete') { this.input = s.slice(0, this.cur) + s.slice(this.cur + 1); return; }
     if (key === 'ArrowLeft') { this.cur = Math.max(0, this.cur - 1); return; }
     if (key === 'ArrowRight') { this.cur = Math.min(s.length, this.cur + 1); return; }
@@ -452,6 +470,12 @@ export class Shell {
       return;
     }
     if (key === 'Tab') { this.complete(); return; }
+    // auto-pair quotes: typing a quote drops its match with the caret between; typing it again when
+    // the close is already right there just steps over it (so essid "NAME" is one keystroke lighter)
+    if ((key === '"' || key === "'") && s.length < 199) {
+      if (s[this.cur] === key) { this.cur++; return; }
+      this.input = s.slice(0, this.cur) + key + key + s.slice(this.cur); this.cur++; return;
+    }
     if (key.length === 1 && s.length < 200) { this.input = s.slice(0, this.cur) + key + s.slice(this.cur); this.cur++; }
   }
   /** Drop text into the prompt at the cursor (paste, 15.7c): newlines become spaces, no running a line on its own. */
@@ -492,21 +516,38 @@ export class Shell {
     const t = line.trim();
     if (!t) return;
     if (this.hist[this.hist.length - 1] !== t) this.hist.push(t);
+    // chain commands with && (and then), || (or else) and ; (always). Each segment runs after the
+    // one before it finishes printing (the time cursor this.tq carries forward). &&/|| gate on
+    // whether the previous command STARTED (found, fit in memory), not its exit code: a command's
+    // own error lines, and failures decided later (a bad DHCP key), are not seen here.
+    let prevOk = true;
+    for (const seg of splitChain(t)) {
+      if (!seg.cmd) continue;
+      const go = seg.op === '&&' ? prevOk : seg.op === '||' ? !prevOk : true;
+      if (go) prevOk = this.runOne(seg.cmd, now);
+    }
+    this.busyUntil = this.tq;
+  }
+
+  /** Run one command segment: parse its redirection, resolve and spawn the program, exec it, and
+   *  schedule its output over the work it takes. Returns whether it started (what &&/|| gate on). */
+  private runOne(t: string, now: number): boolean {
+    const pc = this.pc;
     // > and >> send what it prints to a file
     let redir: [string, boolean] | null = null;
     const m = /^(.*?)\s*(>>?)\s*(\S+)\s*$/.exec(t);
     let cmd = t;
     if (m) { cmd = m[1]; redir = [m[3], m[2] === '>>']; }
     const argv = cmd.match(/"[^"]*"|'[^']*'|\S+/g)?.map((a) => a.replace(/^["']|["']$/g, '')) ?? [];
-    if (!argv.length) return;
-    const name = argv[0], pc = this.pc;
+    if (!argv.length) return false;
+    const name = argv[0];
     // a program has to be on the disk and fit in the memory
     let prog: FsNode | null = null;
     if (!BUILTINS.has(name)) {
       for (const d of name.includes('/') ? [''] : [...PATH, `/home/${pc.hw.user}/bin`]) { const f = pc.get(d ? `${d}/${name}` : pc.abs(this.cwd, name)); if (f?.exec) { prog = f; break; } }
-      if (!prog) { this.say(now, fill(L.err.notfound, { c: name })); this.busyUntil = this.tq; return; }
+      if (!prog) { this.say(now, fill(L.err.notfound, { c: name })); return false; }
       const p = pc.spawn(prog.exec!, pc.hw.user, prog.memKB, now);
-      if (!p) { this.say(now, fill(L.err.nomem, { c: name }), 0, 0.05); this.busyUntil = this.tq; return; }
+      if (!p) { this.say(now, fill(L.err.nomem, { c: name }), 0, 0.05); return false; }
       this.job = p.pid;
       this.seeks(now, 0.01 + pc.workS(prog.size, 1) * 0.5, 30);
       this.at(now, pc.workS(prog.size, 1) * 0.3); // loading it (most of it is in the cache)
@@ -531,7 +572,7 @@ export class Shell {
     } else for (const s of out) this.say(now, s);
     const pid = this.job;
     if (pid) this.then(now, () => { this.pc.kill(pid); if (this.job === pid) this.job = 0; }, 0, true);
-    this.busyUntil = this.tq;
+    return true;
   }
 
   /** The strongest access point in range broadcasting this ESSID, or -1. */
