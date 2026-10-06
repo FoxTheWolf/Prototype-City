@@ -196,7 +196,7 @@ say();
 say('## Diálogo');
 say();
 const sayRecs = of('say');
-say(sayRecs.length ? sayRecs.map((r) => `- ${clock(r.gt)} ${r.who}: “${r.text}” → ${r.intent ?? 'NÃO ENTENDIDA'}${r.tone ? `, ${r.tone}` : ''}`).join('\n') : 'Nenhuma fala registrada (o diálogo da etapa 14 ainda não existe).');
+say(sayRecs.length ? sayRecs.map((r) => `- ${clock(r.gt)} ${r.who}: “${r.text}” → ${r.intent ?? 'NÃO ENTENDIDA'}${r.tone ? `, ${r.tone}` : ''}`).join('\n') : 'Nenhuma fala registrada.');
 say();
 say('## A cidade em volta (eventos a menos de 300 m)');
 say();

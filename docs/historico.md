@@ -2,6 +2,13 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.3: a conversa na tela (2026-10-06, sessão na nuvem)
+
+- **`src/talkUi.ts`:** `TalkView` (a conversa aberta: a caixa de texto, a resposta revelada a 45 letras/s, a leitura em cache) e `drawTalk` na zona A (x de 44 até `cols−62`): a última fala do jogador apagada, a resposta com o nome em âmbar (o nome só depois de dito; antes "Clerk"), a linha da intenção e do tom e o plano 9 × 5 do tom (respeito no x, pressão no y, fundo com a mistura das quatro cores dos cantos, o ponto `@`), a caixa com borda fina e as teclas. Sem moldura no resto, como legenda.
+- **`main.ts`:** F no caixa com alguém de turno abre a conversa (o balconista cumprimenta primeiro); as teclas vão para a caixa; Enter diz, Tab abre o balcão, Esc sai; pedir para comprar abre o balcão; ao acabar (tchau, ameaça, paciência), a conversa fecha 2,5 s depois da última letra. As dicas de baixo somem durante a conversa. O murmúrio (`sound.murmur`: um bipe de onda quadrada a cada 3 letras, grave ou agudo pela pessoa).
+- **Playtest:** cada linha vira um registro `say` (quem, o texto, a intenção ou nula, o tom, a resposta), que o relatório já lia na seção "Diálogo".
+- **Conferido:** a tela desenhada numa grade de 237 × 80 no Node e impressa como texto (as linhas, a caixa, o plano com o ponto no canto certo); `tests/talk.ts`, `tests/intent.ts`, `tests/playtest.ts` e o build. **Não visto:** no jogo (sem WebGPU na nuvem) e o som.
+
 ## 14.2: as respostas (2026-10-06, sessão na nuvem)
 
 - **`src/talk.ts`:** `new Talk(world, cidadão, empresa)` e `reply(world, talk, linha)` devolvem o texto, a leitura, se acabou, se abre o balcão e para onde a pessoa aponta. O registro (nice/plain/rude) vem do tom do jogador, do `social` da pessoa e da memória (`world.talks`: quando se falaram, quanto o jogador foi grosso, se ela disse o nome; vai no save); um balconista em serviço fica pelo menos educado. A paciência começa em 6–10 (+4 no trabalho, menos a grosseria lembrada) e cai a cada linha, mais com pressão, grosseria ou bobagem; ao zerar, a pessoa encerra.

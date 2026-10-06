@@ -6,6 +6,10 @@ import { drawPayphone, Payphone } from './phone/payphone';
 import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
 import { Counter, counterPrompt, drawCounter, money } from './counter';
+import { drawTalk, TalkView } from './talkUi';
+import { hash3 } from './core/rng';
+import { staffOn } from './sim/citizens';
+import { citizenNames } from './locale/names';
 import { BagView } from './bagUi';
 import { AskWay, drawAskWay } from './askWay';
 import { fit, swapSim } from './sim/gear';
@@ -149,6 +153,8 @@ const payphone = new Payphone(world);
 const counter = new Counter(world);
 const bagView = new BagView(world);
 const ask = new AskWay(world);
+/** Talking to someone (14.3): the clerk at a till, for now. */
+const talkView = new TalkView(world);
 // the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
 bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
 bagView.onSwap = (op) => { swapSim(world, op); phone.newSim(); };
@@ -471,6 +477,19 @@ addEventListener('keydown', (e) => {
     if (!e.repeat && counter.key(e.code, performance.now() / 1000)) { e.preventDefault(); if (world.gear.battery) gearBattery(true); }
     if (!counter.active || e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space' || e.code === 'Tab') return;
   }
+  // talking (14.3): the keys type into the box; Enter says it, Tab goes to the till, Esc walks off
+  if (talkView.open) {
+    e.preventDefault();
+    if (counter.active) return;
+    const T = talkView.talk!, r = talkView.key(e.code, e.key, performance.now() / 1000);
+    if (r === 'leave') { talkView.close(); input.lock(); }
+    else if (r === 'till') counter.open(T.biz);
+    else if (r) {
+      pt?.log('say', { who: citizenNames(world.city, world.pop, T.who)[0], text: talkView.mine, intent: r.reading.intent === 'unrecognized' ? null : r.reading.intent, tone: `${r.reading.toneLabel} p${r.reading.pressure}`, answer: r.text });
+      if (r.counter) counter.open(T.biz);
+    }
+    return;
+  }
   // the backpack open: B or Esc closes it, R turns what is held; the rest of the keys wait
   if (bagView.open) {
     e.preventDefault();
@@ -514,7 +533,8 @@ addEventListener('keydown', (e) => {
       return;
     }
     const c = counter.near();
-    if (c?.staffed && !phone.out) { counter.open(c.k); return; }
+    // the clerk: a conversation (14.3), the till through it
+    if (c?.staffed && !phone.out) { talkView.start(staffOn(world.pop, world.city, c.k, world.time)[0], c.k, performance.now() / 1000); return; }
     // a door in front: open it, close it, or find it locked (13.2c)
     // the lift's doors in front, its car elsewhere: call it (13.2d)
     if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
@@ -585,7 +605,7 @@ function resize() {
 }
 
 /** A screen the player is busy with (13.12): the bag, the counter, asking the way; they neither walk nor turn. */
-const uiBusy = () => counter.active || bagView.open || ask.open;
+const uiBusy = () => counter.active || bagView.open || ask.open || talkView.open;
 
 function readInput(): PlayerInput {
   // the up and down arrows belong to the phone (as in GTA IV); WASD walk
@@ -985,20 +1005,27 @@ function frame(now: number) {
     // a seat in front, or getting up from one (13.10f), when nothing else here takes F
     : !running || phone.out || counter.active || bagView.open || laptop.open || payphone.active || doorAhead(world, camera.yaw) || liftAhead(world, camera.yaw) || counter.near() ? ''
     : world.player.sit ? (sitK >= 1 ? en.seat.stand : '') : seatAhead(world, camera.yaw) ? en.seat.sit : '';
-  if (shelfMsg && !bagView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
+  if (shelfMsg && !bagView.open && !talkView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
   if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
   // a shop's till in front: how to use the counter, or when the shop opens
-  const till = !phone.out && !counter.active && !bagView.open ? counter.near() : null;
+  const till = !talkView.open && !phone.out && !counter.active && !bagView.open ? counter.near() : null;
   if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a door in front: F to open or close it, or that it is locked (for a moment after trying)
-  if (!till && !phone.out && !counter.active && !payphone.active) {
+  if (!till && !talkView.open && !phone.out && !counter.active && !payphone.active) {
     const lift = liftAhead(world, camera.yaw) && !carHere(world, world.player.inside, world.player.floor);
     const d = lift ? null : doorAhead(world, camera.yaw), late = now / 1000 - doorNoteAt < 1.5 && doorNote;
     if (d || late || lift) { const s = ` ${late ? doorNote : lift ? (carOf(world, world.player.inside).to === world.player.floor ? en.doors.coming : en.doors.call) : world.doorWant.has(d!.key) ? en.doors.close : en.doors.open} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   }
   // someone to ask the way, in front; the list, and what they said
   drawAskWay(ui, ask, now / 1000);
-  if (!till && !aim && !phone.out && !counter.active && !ask.open && !bagView.open && !payphone.active && !doorAhead(world, camera.yaw) && ask.near(camera.yaw)) { const s = ` ${en.ask.use} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
+  // the conversation (14.3): the answer appears letter by letter, murmured; once it ends, they turn back to their work
+  if (talkView.open) {
+    const t = now / 1000, n = talkView.revealed(t), T = talkView.talk!;
+    for (; talkView.shown + 3 <= n; talkView.shown += 3) if (/[a-z]/i.test(talkView.said[talkView.shown] ?? '')) sound?.murmur((world.pop.gender[T.who] ? 120 : 190) * (0.85 + hash3(T.who, 9, 9) * 0.4));
+    if (talkView.last?.end && t - talkView.saidAt > talkView.said.length / 45 + 2.5 && !counter.active) { talkView.close(); input.lock(); }
+    else drawTalk(ui, talkView, world, t);
+  }
+  if (!till && !talkView.open && !aim && !phone.out && !counter.active && !ask.open && !bagView.open && !payphone.active && !doorAhead(world, camera.yaw) && ask.near(camera.yaw)) { const s = ` ${en.ask.use} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a payphone in front: how to use it
   const nearPay = !phone.out && !payphone.active && payphone.near() >= 0;
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }

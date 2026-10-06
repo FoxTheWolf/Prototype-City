@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.3 — Conversar com o balconista (2026-10-06)
+- **F** no caixa agora é uma conversa: digite em inglês o que quiser dizer e aperte **Enter**. A resposta aparece embaixo, como legenda, letra por letra, com um murmúrio de chiptune (teste de ouvido seu). Acima da caixa, o jogo mostra o que entendeu da frase e o tom, com um ponto num pequeno quadro (mais à direita é mais educado, mais acima é mais pressionando), para você corrigir antes de enviar.
+- Para pagar, peça ("I want to pay", "I'd like a coffee") ou aperte **Tab**; **Esc** sai. O nome do balconista aparece depois que ele o diz.
+
 ## 0.14.2 — As respostas (2026-10-06)
 - Por baixo, ainda sem tela: os balconistas já respondem com a voz deles e com fatos do jogo (o preço da loja, o nome deles e de quem trabalha ali, o caminho de verdade até um lugar ou uma rua, a hora). Ficam mais simpáticos ou mais secos conforme o seu tom e se lembram de você. Perdem a paciência com quem grita bobagem. O que o jogo ainda não sabe fazer (emprestar dinheiro, deixar entrar) recebe um não educado.
 - Pedir direção na rua: as pessoas não falam mais com erros de digitação.

@@ -404,6 +404,18 @@ export class Sound {
       o.start(t + d); o.stop(t + d + 0.15);
     }
   }
+  /**
+   * A syllable of someone talking (14.3): the chiptune murmur, a short square-wave blip around the
+   * speaker's own pitch (lower or higher by the person), a little different every time.
+   */
+  murmur(pitch: number) {
+    const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'square'; o.frequency.setValueAtTime(pitch * (0.9 + Math.random() * 0.25), t);
+    o.frequency.linearRampToValueAtTime(pitch * (0.85 + Math.random() * 0.3), t + 0.05);
+    o.connect(filter(ctx, 'lowpass', 1800, 0.7)).connect(g);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.022, t + 0.006); g.gain.setTargetAtTime(0, t + 0.035, 0.01);
+    o.start(t); o.stop(t + 0.09);
+  }
   /** Coins falling back into the return cup. */
   coinsBack() { for (let k = 0; k < 3; k++) this.coin(0.05 + k * 0.11); }
   /** A payphone's handset lifted off (or put back on) its hook: a heavy clunk. */

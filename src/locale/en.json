@@ -1,5 +1,6 @@
 {
   "lang": "en",
+  "talk": { "clerk": "Clerk", "someone": "Stranger", "hint": "Type what you want to say.", "unrecognized": "Unrecognized", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
   "seat": { "sit": "[F] SIT DOWN", "stand": "[F] STAND UP" },
   "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED", "call": "[F] CALL THE LIFT", "coming": "THE LIFT IS COMING" },
   "counter": {
@@ -8,7 +9,7 @@
     "here": "EAT HERE", "toGo": "TO GO", "keysFood": "[UP/DN] PICK [L/R] PAY [TAB] HERE/TO GO [ENTER] OK [F] LEAVE",
     "pay": "Pay for {n} item(s)", "leave": "Leave them on the counter", "withdraw": "Withdraw cash",
     "cash": "CASH", "card": "CARD", "have": "OWNED", "keys": "[UP/DN] PICK [L/R] CASH/CARD [ENTER] OK [F] LEAVE",
-    "use": "[F] COUNTER", "closed": "CLOSED - OPENS AT {h}:00", "nobody": "NOBODY AT THE TILL",
+    "use": "[F] TALK TO THE CLERK", "closed": "CLOSED - OPENS AT {h}:00", "nobody": "NOBODY AT THE TILL",
     "items": {
       "sim": { "name": "Prepaid SIM card", "what": "A new number. The old line stays behind." },
       "antenna": { "name": "Directional Wi-Fi antenna", "what": "USB, for the notebook. Reaches further." },
