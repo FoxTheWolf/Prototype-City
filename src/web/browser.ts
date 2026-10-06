@@ -48,6 +48,43 @@ export class Browser {
     this.top = Math.max(0, Math.min(this.top, Math.max(0, rows - view)));
   }
 
+  /** Scroll the page by d rows (the mouse wheel, 15.7). */
+  scroll(d: number) {
+    const view = this.H - 4, rows = this.laid?.rows.length ?? 0;
+    this.top = Math.max(0, Math.min(Math.max(0, rows - view), this.top + d));
+  }
+
+  /** A click at (x, y) in the browser's own screen (the window manager maps the pane, 15.7). */
+  click(x: number, y: number, now: number) {
+    // the toolbar row: the back, reload and home buttons, then the address box
+    if (y === 1) {
+      if (x >= 1 && x <= 3) { const u = this.back.pop(); if (u) this.go(u, now, false); }
+      else if (x >= 9 && x <= 11) this.go(this.url, now, false);
+      else if (x >= 13 && x <= 15) this.go('', now);
+      else if (x >= 26) { this.editing = true; this.addr = this.url; }
+      return;
+    }
+    const view = this.H - 4;
+    if (y >= 2 && y < 2 + view) {
+      const py = this.top + (y - 2), L = this.items();
+      const on = L.find((it) => it.y === py && x >= it.x && x < it.x + it.w);
+      this.editing = false;
+      if (!on) return;
+      this.sel = L.indexOf(on);
+      if ('url' in on) { if (on.url === SUBMIT) this.submit(now); else this.go(on.url, now); }
+      // a text box: picking it (sel) is enough; keys and a paste now go into it
+    }
+  }
+
+  /** Drop text into the address box or the focused text box (paste, 15.7c). */
+  paste(text: string) {
+    const t = text.replace(/\s+/g, ' ').trim();
+    if (!t) return;
+    if (this.editing) { this.addr = (this.addr + t).slice(0, 120); return; }
+    const on = this.items()[this.sel];
+    if (on && 'name' in on) { const v = this.vals.get(on.name) ?? ''; this.vals.set(on.name, (v + t).slice(0, on.max)); }
+  }
+
   /** Ask for `url` (the start page when empty). */
   go(url: string, now: number, remember = true, form?: Map<string, string>) {
     url = url.trim() || portalUrl(this.world);

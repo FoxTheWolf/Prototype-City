@@ -256,6 +256,8 @@ const TEXT_MODE = [80, 25] as const;
 /** The notebook screen's shape: 16:10, as the widescreen notebooks of 2008 (1280 x 800). */
 const TERM_ASPECT = 16 / 10;
 let termFb: CharGrid, termTx: CharGrid, termCells: Record<'fb' | 'tx', [number, number]> = { fb: [8, 16], tx: [16, 32] }, termMode: 'fb' | 'tx' | '' = '';
+/** The notebook screen's size on the interface grid (cells), kept from the last frame so a click can be mapped to a terminal cell (15.7). */
+let scrTermW = 0, scrTermH = 0;
 function termLayout() {
   const w = canvas.width, h = canvas.height;
   // whole pixels a cell, as near the screen's shape (TERM_ASPECT) as they come: from the height (about two
@@ -360,7 +362,12 @@ canvas.addEventListener('contextmenu', noMenu, true);
 canvas.oncontextmenu = noMenu;
 // the mouse wheel zooms the phone's map, steps through the menu's apps and scrolls its lists
 addEventListener('wheel', (e) => {
-  if (laptop.open && e.deltaY) { laptop.scroll(-Math.sign(e.deltaY) * 3); return; }
+  if (laptop.open && e.deltaY) {
+    const wm = laptop.shell.wm, cell = wm && laptopCell(e.clientX, e.clientY);
+    if (wm && cell) wm.wheel(Math.sign(e.deltaY), cell[0]);
+    else laptop.scroll(-Math.sign(e.deltaY) * 3);
+    return;
+  }
   if (!phone.out || !e.deltaY) return;
   const d = Math.sign(e.deltaY);
   if (phone.screen === 'map') { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
@@ -372,6 +379,14 @@ let rightAt = -1, rightMoved = 0;
 function cellAtClient(cx: number, cy: number): [number, number] {
   const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
   return [Math.floor(((cx - r.left) * dpr - L.originX) / L.cellW), Math.floor(((cy - r.top) * dpr - L.originY) / L.cellH)];
+}
+/** The notebook terminal's cell under the system cursor, or null off the screen (15.7). Works head-on, when screenAt is set. */
+function laptopCell(cx: number, cy: number): [number, number] | null {
+  if (!screenAt || !scrTermW || !scrTermH) return null;
+  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
+  const fx = ((cx - r.left) * dpr - L.originX) / L.cellW, fy = ((cy - r.top) * dpr - L.originY) / L.cellH;
+  const tc = Math.floor(((fx - screenAt[0]) / scrTermW) * TERM_W), tr = Math.floor(((fy - screenAt[1]) / scrTermH) * TERM_H);
+  return tc >= 0 && tr >= 0 && tc < TERM_W && tr < TERM_H ? [tc, tr] : null;
 }
 addEventListener('mousemove', (e) => { [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY); });
 /** A payphone's key pressed: its sound, and the payphone. */
@@ -408,8 +423,12 @@ addEventListener('mousedown', (e) => {
       if (x >= pw[0] && x < pw[2] && y >= pw[1] && y < pw[3]) {
         if (laptop.shell.halted) laptop.key('Enter', 'Enter', false, performance.now() / 1000);
         else { laptop.shell.powerButton(performance.now() / 1000); sound?.powerClick(); }
+        return;
       }
     }
+    // the window manager (15.7): a click on the screen focuses a pane and follows links
+    const wm = laptop.shell.wm;
+    if (e.button === 0 && wm) { const cell = laptopCell(e.clientX, e.clientY); if (cell) wm.click(cell[0], cell[1], performance.now() / 1000); }
     return;
   }
   // the middle button: takes the phone out; on the standby screen it opens the dialer; elsewhere it
@@ -1123,7 +1142,8 @@ function frame(now: number) {
     // (the editor runs in the system's console, full screen; only the firmware is in text mode)
     const mode = laptop.shell.bios || laptop.shell.fw.mode ? 'tx' : 'fb', T = mode === 'fb' ? termFb : termTx, [cw, chh] = termCells[mode];
     if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); comp?.setTerm(T.cols, T.rows, cw, chh); }
-    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: (T.cols * cw) / uiLayout.cellW, termH: (T.rows * chh) / uiLayout.cellH });
+    scrTermW = (T.cols * cw) / uiLayout.cellW; scrTermH = (T.rows * chh) / uiLayout.cellH;
+    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: scrTermW, termH: scrTermH });
     // while the lid opens, the view tips down to the screen
     if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
   }

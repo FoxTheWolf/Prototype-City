@@ -65,6 +65,21 @@ export class WM {
     this.term.termKey(key, ctrl, now);
   }
 
+  /** A click at a composited cell (x, y): focus the pane it lands in, and pass it on to the browser. */
+  click(x: number, y: number, now: number) {
+    const R = this.rects();
+    if (R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.focus = 'web'; this.browser.click(x - R.wx, y, now); return; }
+    if (R.tw > 0 && x >= R.tx && x < R.tx + R.tw) this.focus = 'term';
+  }
+
+  /** The mouse wheel over a composited cell: scroll the pane it is over. */
+  wheel(dy: number, x: number) {
+    const R = this.rects(), step = 3;
+    if (R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.browser.scroll(dy > 0 ? step : -step); return; }
+    const cap = Math.max(0, this.term.lines.length - 4);
+    this.term.scroll = Math.max(0, Math.min(cap, this.term.scroll + (dy > 0 ? -step : step)));
+  }
+
   /** The whole console now, composed, and the caret of the focused pane. */
   cells(now: number): { scr: Scr; cx: number; cy: number } {
     const S = new Scr(this.w, this.h, St.Ink), R = this.rects();

@@ -73,7 +73,18 @@ wm.key('F11', false, 1);
 out = wm.cells(1);
 if (out.scr.ch[0][split] !== '|') fail('F11 again restores the split');
 
-console.log(fails ? `\n${fails} FAILED` : '\nOK — window manager composes, focuses, maximizes and routes keys');
+// --- mouse: a click on a pane focuses it; the wheel scrolls the pane under the cursor ---
+wm.focus = 'web';
+wm.click(5, 10, 1);
+if (wm.focus !== 'term') fail('a click on the terminal pane focuses it');
+wm.click(split + 10, 5, 1);
+if (wm.focus !== 'web') fail('a click on the browser pane focuses it');
+term.scroll = 0;
+wm.wheel(-1, 5); // wheel up over the terminal walks its scrollback
+if (term.scroll <= 0) fail('the wheel over the terminal scrolls it back');
+term.scroll = 0;
+
+console.log(fails ? `\n${fails} FAILED` : '\nOK — window manager composes, focuses, maximizes, routes keys and the mouse');
 console.log('\n--- top of the composed screen (split, terminal focused) ---');
 wm.key('ArrowLeft', true, 1);
 const show = wm.cells(1);
