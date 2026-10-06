@@ -2,6 +2,18 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## Texto completo de itens enxugados do CLAUDE.md (2026-10-06)
+
+- **Canais do contratante (decidido em 2026-10-03):** a máquina de trabalho (`sim/jobs.ts`) é **agnóstica de canal**; a entrega é só um adaptador. **SMS agora** (F.1, já feito). **E-mail na etapa 12:** uma conta de e-mail como a do banco, lida no notebook, de um provedor que é empresa da cidade e portanto **hackeável** — o canal de contratos mais longos e do mistério de fundo (Sarcófago, jornalista). **Ligação do contratante no 13c,** junto do sistema de diálogo: uma ligação com escolhas de fala é a mesma tecnologia de falar com NPCs e de engenharia social. Antes do 13c, nada de ligação de contratante (só daria um menu "aperte 1"). Acrescentar um canal é acoplar um adaptador, não reescrever.
+- **Clima e céu (pedido em 2026-09-30):** o usuário quer chuva, garoa, neve e afins, com partículas que caem de verdade e respingam no chão, além das fases da lua. A divisão pretendida:
+  - O *estado* do clima (se chove, a intensidade, o vento), a data e a hora ficam na simulação, com semente, porque um dia vão afetar as pessoas e o trânsito.
+  - As partículas são só render.
+- **Ciclo de dia e noite, com calendário (decidido em 2026-09-30, com ressalva de estética):** para o dia não estragar o clima de hacker:
+  - **O dia tem que ser tão bonito quanto a noite** (entrevista de 2026-10-04). O Claude sugere melhorias de luz e clima para o dia.
+  - **O dia e a noite mudam o jogo, não só a cor.** De dia, as ruas ficam cheias, há mais testemunhas, os escritórios estão ocupados e o trânsito é pesado. De noite, os sistemas estão menos vigiados, há menos gente e os plantões são curtos. O hacker tem motivo para preferir a noite, mas o dia tem alvos próprios, como as rotinas e as pessoas no trabalho.
+  - **Relógio e calendário na simulação:** hora, dia, estação e ano. A duração do dia varia com a estação, a lua segue o ciclo real de ~29,5 dias, e a probabilidade de chuva e neve depende da estação. **Decidido:** um dia dura 48 minutos reais e o jogador pode dormir e pular o tempo (feito na 5.5; o dia ainda é um visual provisório).
+
+
 ## Texto completo de itens enxugados do CLAUDE.md (2026-10-05)
 
 - **Pessoas: o que vem depois (decidido pelo usuário em 2026-10-04):**

@@ -1,6 +1,6 @@
 ---
 name: bugfix
-description: Correções pequenas e localizadas do jogo (a "Lista fixa: correções pequenas" do CLAUDE.md): bugs de interface, teclas, um ajuste num arquivo que já existe. Sem sistemas novos e sem arquivos [HACKING].
+description: Correções pequenas e localizadas do jogo (a "Lista fixa: correções pequenas" em docs/listas-fixas.md): bugs de interface, teclas, um ajuste num arquivo que já existe. Sem sistemas novos e sem arquivos [HACKING].
 model: claude-sonnet-5-5
 effort: medium
 ---
