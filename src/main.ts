@@ -3,6 +3,7 @@ import { Input } from './input';
 import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
+import { drawRemote, REMOTE_BTN, remotePressed, type RemoteBtn } from './phone/remote';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
@@ -170,6 +171,7 @@ function endTalk() {
   talkView.close(); input.lock(); relock = true;
 }
 // the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
+bagView.onEar = (good) => { phone.earphones = !phone.earphones || phone.earGood !== good; phone.earGood = good; return phone.earphones; };
 bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
 bagView.onSwap = (op) => { swapSim(world, op); phone.newSim(); };
 /** What taking a good off a shelf said, and when; and the last theft shown (its game time). */
@@ -388,6 +390,23 @@ function watchClick(e: MouseEvent): boolean {
   else if (b === 'start') { watch.startDown(now, false); watchStartHeld = true; }
   return !!b;
 }
+/** A left click on the earphones' remote, with the cursor free (15.9d): presses its button. */
+function remoteClick(e: MouseEvent): boolean {
+  if (e.button !== 0 || input.locked || !REMOTE_BTN.length) return false;
+  const [x, y] = cellAtClient(e.clientX, e.clientY);
+  const b = REMOTE_BTN.find(([x0, x1, by]) => by === y && x >= x0 - 1 && x <= x1 + 1)?.[3];
+  if (!b) return false;
+  remoteButton(b);
+  return true;
+}
+function remoteButton(b: RemoteBtn) {
+  const T = phone.tn;
+  remotePressed(b, performance.now() / 1000);
+  sound?.phoneKey(false, true, false);
+  if (b === 'play') T.playing = !T.playing;
+  else if (b === 'prev' || b === 'next') { phone.tunesPlay(T.cur + (b === 'prev' ? -1 : 1)); T.sel = T.cur; }
+  else T.vol = Math.max(0, Math.min(1, Math.round((T.vol + (b === 'vup' ? 0.1 : -0.1)) * 10) / 10));
+}
 function altUp() {
   if (!altFree) return;
   altFree = false;
@@ -429,7 +448,7 @@ addEventListener('mousedown', (e) => {
     else if (e.button === 2) bagView.remove(phone.cx, phone.cy, performance.now() / 1000);
     return;
   }
-  if (watchClick(e)) return;
+  if (watchClick(e) || remoteClick(e)) return;
   if (laptop.open) {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
@@ -725,6 +744,8 @@ function syncMusic() {
   if (!sound) return;
   const M = sound.music, T = phone.tn;
   if (phone.screen === 'off') T.playing = false;
+  // the earphones thrown away (or left on a shelf): out of the ears
+  if (phone.earphones && !world.bag.items.some((i) => i.good === phone.earGood)) phone.earphones = false;
   if (T.gen !== tunesGen) {
     tunesGen = T.gen;
     if (T.cur < 0) M.stop();
@@ -1184,6 +1205,9 @@ function frame(now: number) {
   }
   watch.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
+  // the earphones' remote on its cord, while they are in and a song is loaded (the phone off: nothing to control)
+  REMOTE_BTN.length = 0;
+  if (running && phone.earphones && phone.tn.cur >= 0 && phone.screen !== 'off' && !laptop.open) drawRemote(ui, phone.tn.playing, now / 1000, VIEW_LIGHT);
   if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null;

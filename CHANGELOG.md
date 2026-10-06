@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.9d — Fone de ouvido e o controle do fio (2026-10-06)
+- **Ponha o fone:** com fones (`headphones` da loja de eletrônicos, ou o `hands_free` da loja de celulares) na mochila, aperte **E** sobre eles para pôr ou tirar. Com o fone, a música fica limpa e em estéreo, e só você ouve.
+- **O controle do fio:** com o fone posto e uma música carregada, o controlezinho aparece pendurado no cabo, embaixo da tela. **Segure Alt** (ou tire o celular) e clique: **−**/**+** volume, **|<**/**>|** pulam, o do meio pausa ou continua.
+- Jogou o fone fora? Ele sai das orelhas, e a música volta para o alto-falante.
+
 ## 0.15.9c — Tunes Player e o cartão SD (2026-10-06)
 - **O Tunes Player funciona:** compre-o na loja do celular (Wi-Fi) e abra. **↑/↓** escolhem, **OK** toca (ou pausa a que está tocando), **←/→** pulam a faixa, **\*** e **#** mudam o volume. A música **continua com o celular no bolso** e passa sozinha para a próxima. Tocar gasta um pouco de bateria.
 - **Sem fone, ela sai do alto-falante do celular:** fininha e metálica na mão, e abafada no bolso. (O fone de ouvido vem na próxima.)

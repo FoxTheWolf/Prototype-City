@@ -22,8 +22,8 @@
     "north": "north", "south": "south", "east": "east", "west": "west"
   },
   "bag": {
-    "title": "BACKPACK", "keys": "[DRAG] MOVE  [R] TURN  [E] EAT  [DRAG TO A SLOT] USE  [RIGHT CLICK] PUT BACK / THROW AWAY  [B] CLOSE",
-    "keep": "You'll want to keep that.", "thrown": "{x}: thrown away.", "back": "{x}: back on the shelf.",
+    "title": "BACKPACK", "keys": "[DRAG] MOVE  [R] TURN  [E] EAT / WEAR  [DRAG TO A SLOT] USE  [RIGHT CLICK] PUT BACK / THROW AWAY  [B] CLOSE",
+    "keep": "You'll want to keep that.", "earIn": "You put the {x} in.", "earOut": "You take the {x} out.", "payFirst": "Pay for it first.", "thrown": "{x}: thrown away.", "back": "{x}: back on the shelf.",
     "cash": "CASH", "unpaid": "UNPAID", "phone": "PHONE", "laptop": "NOTEBOOK", "sim": "SIM CARD",
     "ask": "ASK AT THE COUNTER", "taken": "{x} in the bag (unpaid)", "room": "No room in your bag",
     "stole": "You walked out without paying for {n} item(s).",

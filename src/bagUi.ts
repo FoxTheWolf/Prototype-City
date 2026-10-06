@@ -40,6 +40,8 @@ export class BagView {
   readonly sfx: ('click' | 'slide')[] = [];
   /** What main does when gear is fitted to the notebook, and when the new SIM is in. */
   onFit: (id: 'antenna' | 'battery') => void = () => {};
+  /** (15.9d) Earphones put in or taken out (the phone keeps it): returns whether they are in now. */
+  onEar: (good: string) => boolean = () => false;
   onSwap: (op: number) => void = () => {};
   constructor(private world: World) {}
 
@@ -91,6 +93,13 @@ export class BagView {
     const w = this.world, [x, y] = this.cm(cx, cy), i = itemAt(w.bag, x, y);
     if (!i) return false;
     const name = NAMES[i.good] ?? i.good;
+    // earphones are not eaten: E puts them in (or takes them out); they stay in the bag, worn
+    if (i.good === 'headphones' || i.good === 'hands_free') {
+      if (!i.paid) { this.say(T.payFirst, now); return false; }
+      this.sfx.push('click');
+      this.say((this.onEar(i.good) ? T.earIn : T.earOut).replace('{x}', name.toLowerCase()), now);
+      return false;
+    }
     if (!edible(i.good)) { this.say(T.notFood, now); return false; }
     if (!eat(w, i.good)) { this.say(T.fullUp, now); return false; }
     if (this.held === i) this.held = null;

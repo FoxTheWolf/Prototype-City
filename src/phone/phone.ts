@@ -195,6 +195,8 @@ export class Phone {
   sd: { name: string; size: number }[] = [];
   /** The earphones in (15.9d): the music for the player alone; else it comes out of the phone's speaker. */
   earphones = false;
+  /** The bag's thing worn as earphones ('headphones' or 'hands_free'). */
+  earGood = '';
   /**
    * The body: the shell (one of SHELLS) and the case (one of CASES, 0 none), and those the player
    * has. The phone comes in a shell of its own; others are got later (for now, from the debug page).
@@ -425,7 +427,7 @@ export class Phone {
       looks: [...this.looks], cases: [...this.cases], reminders: this.cal.reminders, wifiOn: this.wifi.on, told: { ...this.told },
       // already switched on once (the line's numbers are in its contacts): it comes back on, in the pocket
       booted: this.screen !== 'off' || this.everOn, batt: this.batt,
-      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol }, earphones: this.earphones,
+      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol }, earphones: this.earphones, earGood: this.earGood,
     };
   }
   /** Back to a saved phone: in the pocket and off; the screens' data is read back from the files at the next sync. */
@@ -441,7 +443,7 @@ export class Phone {
     this.everOn = d.booted;
     if (d.batt !== undefined) this.batt = d.batt;
     if (d.tunes) this.tn = { ...this.tn, ...d.tunes, playing: false };
-    this.earphones = !!d.earphones;
+    this.earphones = !!d.earphones; this.earGood = d.earGood ?? '';
     if (d.booted && this.batt > 0.01) this.screen = 'standby';
   }
   /**
