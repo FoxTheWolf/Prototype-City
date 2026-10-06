@@ -367,6 +367,7 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas, `docs/listas-fixas.md`). Bugs novos entram aqui até a próxima organização.
+- **Relógio e legendas atrás do notebook ao mover a câmera (feedback 2026-10-06):** com o notebook levantado, o relógio de pulso e as legendas (barks/legendas de pedestres) são desenhados **atrás** da tela do notebook quando a câmera se move. Fere o princípio "efeitos/UI por cima": a ordem de composição do relógio e das legendas deve vir **depois** do notebook. Visual, conferir no PC (GPU/compositor).
 - **Interiores (capturas de 2026-10-05):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho.
 - **Porta e elevador (`referencias/52–60`):** ao cruzar a porta, **um quadro mostra a fachada de fora** no lugar do interior (52), e depois **o vidro da vitrine some** (53); a rua vista de dentro parece água (55, 59); o resto em `docs/feedback-claude.md` (olhar cego); elevador dentro de um cômodo, **oco**, de frente para a janela de um apartamento, e uma cunha preta na borda do corredor (56–57).
 - **A silhueta das janelas da fachada aparece através de NPCs e objetos** na frente dela (`referencias/74`: acima dos olhos do pedestre; `75`: o painel do ponto de ônibus).
@@ -385,6 +386,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
 
+- Lições da 15.7e-f2 (tdump contínuo, iwconfig, teclas no playtest), para não repetir
 - Lições da 15.7e Bloco 1 (realce + ghost no terminal), para não repetir
 - Lições da 15.7e c/d (campos do terminal: `fieldAt`, `argTemplate`), para não repetir
 - Lições da 15.8c / debug (fórum por número, formulários, `src/debug.ts`), para não repetir

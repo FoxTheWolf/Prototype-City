@@ -127,7 +127,10 @@ export function splitChain(t: string): { op: string; cmd: string }[] {
  *  full line and where to put the caret. `essid` is the strongest network in range to prefill (quoted,
  *  so spaces are fine), or '' for none. null for a command with no shaped template. Pure, so testable. */
 export function argTemplate(cmd: string, essid: string): { text: string; caret: number } | null {
-  if (cmd === 'iwconfig') { const t = `iwconfig wlan0 essid "${essid}"${essid ? ' key ' : ''}`; return { text: t, caret: essid ? t.length : t.length - 1 }; }
+  // iwconfig: scaffold empty quotes with the caret between them — the player types the ESSID or (QoL,
+  //   Bloco 2) clicks it from the iwlist output. We no longer prefill the strongest network: the one in
+  //   range is rarely the one wanted. The ' key ' field stays to show what comes next.
+  if (cmd === 'iwconfig') { void essid; return { text: 'iwconfig wlan0 essid "" key ', caret: 22 }; }
   if (cmd === 'tdump') { const t = `tdump mon "${essid}" -w capture.ivs`; return { text: t, caret: essid ? t.length : 11 }; }
   if (cmd === 'wcrack') return { text: 'wcrack capture.ivs', caret: 18 };
   return null;
@@ -234,6 +237,9 @@ export class Shell {
   private conn: { host: Host; stage: 'login' | 'pass' | 'shell'; tryUser: string } | null = null;
   /** [HACKING] A running WEP IV capture (tdump mon), accumulating until Ctrl+C writes the file. */
   private cap: { ap: number; essid: string; file: string; bssid: string; ch: number; ivs: number } | null = null;
+  /** [HACKING] A running packet watch (tdump with no -c), streaming frames off the joined network until
+   *  Ctrl+C — the player waits on a channel for a cleartext login to show. */
+  private sniff: { ap: number; ssid: string; ch: number; n: number; creds: boolean } | null = null;
   /** The next typed line is not echoed (a password prompt): draw.ts shows it masked. */
   mask = false;
   /** The firmware's SETUP and boot menu, after the self test. */
@@ -317,6 +323,7 @@ export class Shell {
     for (const q of left) q.fn?.();
     this.lines.push({ text: '^C', ink: 0 });
     if (this.cap) this.finishCapture(); // [HACKING] Ctrl+C on a WEP capture writes it out
+    if (this.sniff) this.finishSniff(); // [HACKING] Ctrl+C on a packet watch reports what it caught
     this.tq = now; this.busyUntil = now;
   }
 
@@ -341,6 +348,31 @@ export class Shell {
     const text = `# tdump WEP IV capture\nESSID ${C.essid}\nBSSID ${C.bssid}\nCH ${C.ch}\n#Data ${C.ivs}\n`;
     if (dir?.dir && pc.writable(path, pc.hw.user)) { pc.put(path, text, pc.hw.user, this.clock); dir.mtime = this.clock; this.lines.push({ text: `  wrote ${C.ivs} IVs to ${C.file}`, ink: 0 }); }
     else this.lines.push({ text: `  could not write ${C.file}`, ink: 0 });
+  }
+
+  /** [HACKING] One step of a running packet watch (tdump, no -c): materialize a few more frames off the
+   *  joined network and print them, flagging a cleartext login. Re-arms until Ctrl+C or the link drops. */
+  private sniffStep(now: number) {
+    const S = this.sniff;
+    if (!S) return;
+    if (this.net.state !== 'up' || this.net.ap !== S.ap) { this.say(now, '  [link lost]', 0, 0.1); this.finishSniff(); this.busyUntil = this.tq; return; }
+    const w = this.world, k = 2 + Math.floor(hash3(Math.floor(w.time), 3, 7) * 4);
+    const pkts = capture(w, S.ap, S.ssid, this.net.dbm, w.time, 8, k);
+    for (const p of pkts) {
+      this.say(now, `${p.t.toFixed(6).padStart(11)}  ${p.info}`, p.ink, 0.08 + hash3(Math.floor(p.t * 1000), 1, 2) * 0.1);
+      S.n++;
+      if (p.ink === 2 && p.info.startsWith('TELNET') && !S.creds) { S.creds = true; this.say(now, '  ^ cleartext credentials captured (Ctrl+C to stop)', 2, 0.1); }
+    }
+    this.then(now, () => this.sniffStep(this.tq), 0);
+    this.busyUntil = this.tq;
+  }
+
+  /** [HACKING] Stop a running packet watch (Ctrl+C or lost link) and report the tally. */
+  private finishSniff() {
+    const S = this.sniff!;
+    this.sniff = null;
+    this.lines.push({ text: `  ${S.n} frames captured on channel ${S.ch}.`, ink: 0 });
+    if (S.creds) this.lines.push({ text: '  ^ cleartext credentials captured', ink: 2 });
   }
 
   /** [HACKING] tdump mon "<essid>" [-w file]: capture WEP IVs off an AP without associating, until
@@ -370,7 +402,7 @@ export class Shell {
   /** Cold boot: the BIOS, the boot loader, the kernel, the services, the login. */
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
-    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.mask = false;
+    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.cap = null; this.sniff = null; this.mask = false;
     this.editor = null; this.browser = null; this.wm = null; this.fw.close(); this.inPost = true; this.postWant = null;
     pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
     // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
@@ -1205,16 +1237,26 @@ export class Shell {
         if (args[0] === 'mon') return this.tdumpMon(args.slice(1), a, now); // [HACKING] WEP IV capture, unassociated
         if (this.net.state !== 'up') { out.push('tdump: no network (join one with iwconfig/dhclient first, or `tdump mon "ESSID"` to capture WEP IVs)'); return 0; }
         const A = w.wifi[this.net.ap], ssid = wifiName(w.city, A), sec = A.sec === Sec.Open ? 'open' : A.sec === Sec.WEP ? 'WEP' : 'WPA';
-        const ci = a.indexOf('-c'), limit = ci >= 0 ? Math.max(1, Math.min(400, Number(a[ci + 1]) || 60)) : 60;
-        const pkts = capture(w, this.net.ap, ssid, this.net.dbm, w.time, 8, limit);
+        const ci = a.indexOf('-c');
         this.say(now, `tdump: listening on wlan0, channel ${A.ch}, ${sec}, link-type IEEE802_11 (${this.net.dbm} dBm)`, 0, 0.1);
-        for (const p of pkts) this.say(now, `${p.t.toFixed(6).padStart(11)}  ${p.info}`, p.ink, 0.05 + hash3(Math.floor(p.t * 1000), 1, 2) * 0.08);
-        const creds = pkts.some((p) => p.ink === 2 && p.info.startsWith('TELNET')), shake = pkts.some((p) => p.info.startsWith('EAPOL'));
-        this.say(now, '', 0, 0.1);
-        this.say(now, `${pkts.length} frames captured on channel ${A.ch}.`, 0, 0.1);
-        if (creds) this.say(now, '  ^ cleartext credentials captured', 2, 0.1);
-        else if (shake) this.say(now, '  ^ WPA four-way handshake captured (crackable offline)', 2, 0.1);
-        else if (A.sec === Sec.WPA) this.say(now, '  (WPA data protected; capture a handshake to crack it offline)', 0, 0.1);
+        if (ci >= 0) {
+          // -c N: a bounded one-shot — capture N frames, report, and stop.
+          const limit = Math.max(1, Math.min(400, Number(a[ci + 1]) || 60));
+          const pkts = capture(w, this.net.ap, ssid, this.net.dbm, w.time, 8, limit);
+          for (const p of pkts) this.say(now, `${p.t.toFixed(6).padStart(11)}  ${p.info}`, p.ink, 0.05 + hash3(Math.floor(p.t * 1000), 1, 2) * 0.08);
+          const creds = pkts.some((p) => p.ink === 2 && p.info.startsWith('TELNET')), shake = pkts.some((p) => p.info.startsWith('EAPOL'));
+          this.say(now, '', 0, 0.1);
+          this.say(now, `${pkts.length} frames captured on channel ${A.ch}.`, 0, 0.1);
+          if (creds) this.say(now, '  ^ cleartext credentials captured', 2, 0.1);
+          else if (shake) this.say(now, '  ^ WPA four-way handshake captured (crackable offline)', 2, 0.1);
+          else if (A.sec === Sec.WPA) this.say(now, '  (WPA data protected; capture a handshake to crack it offline)', 0, 0.1);
+          this.busyUntil = this.tq;
+          return 0;
+        }
+        // no -c: keep watching the channel, streaming frames, until Ctrl+C (wait for a login to show).
+        this.say(now, '  watching the channel — Ctrl+C to stop', 0, 0.2);
+        this.sniff = { ap: this.net.ap, ssid, ch: A.ch, n: 0, creds: false };
+        this.then(now, () => this.sniffStep(this.tq), 0);
         this.busyUntil = this.tq;
         return 0;
       }

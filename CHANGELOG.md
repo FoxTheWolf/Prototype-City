@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.7e-f2 — Terminal: tdump que fica escutando, iwconfig sem chute (2026-10-06)
+- **`tdump` sem `-c` agora fica escutando o canal** e mostrando os pacotes **até você apertar Ctrl+C** — para ficar de olho numa rede esperando uma credencial de login aparecer em texto claro. (Antes ele pegava um punhado de pacotes e parava sozinho. Com `-c N` ele continua pegando só N e para, como antes.)
+- **`iwconfig` montado com o Tab não chuta mais a rede:** vem `iwconfig wlan0 essid "" key ` com o cursor **entre as aspas**, para você digitar (ou, em breve, clicar na rede certa na lista do `iwlist`) — a rede mais forte por perto raramente era a que você queria.
+- *(ferramenta de playtest)* O registro de playtest agora anota as **teclas de navegação** que você usa no terminal (Tab, setas, Home/End, Backspace, Ctrl+…), para vermos onde a edição de comando ainda é desajeitada.
+
 ## 0.15.7e-f1 — Terminal: cores ao digitar e sugestão fantasma (2026-10-06)
 - **O terminal agora se colore enquanto você digita:** o comando fica aceso quando o notebook sabe rodá-lo e **vermelho** quando não existe; opções (`-w`), textos entre aspas, operadores (`&&`, `;`, `>`) e alvos de rede (um IP ou o nome de uma rede por perto) ganham cada um a sua cor. Ajuda a ver o erro antes de apertar Enter.
 - **Sugestão fantasma, estilo fish:** conforme você digita, o terminal mostra em cinza o resto mais provável do comando — do que você já rodou antes, ou o nome do comando que está começando. Aperte **→** ou **End** no fim da linha para aceitar. (Some quando não encaixa nada.)

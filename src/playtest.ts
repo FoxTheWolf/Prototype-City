@@ -149,6 +149,15 @@ export class Playtest {
   /** The bag's things at the last frame (to see what went). */
   private lastItems = new Set<object>();
 
+  /** A navigation/edit key pressed at the notebook's terminal prompt (main.ts gates it to the shell).
+   *  Only the keys that show how the player moves and edits — Tab, arrows, Home/End, Enter, Backspace,
+   *  Delete, and any Ctrl+key — not the characters they type. Shows editing habits in the report. */
+  termKey(code: string, ctrl: boolean) {
+    const nav = code === 'Tab' || code === 'Enter' || code === 'Home' || code === 'End' || code === 'Backspace' || code === 'Delete' || code.startsWith('Arrow');
+    if (!nav && !ctrl) return;
+    this.log('termkey', { key: ctrl ? `C-${code.replace(/^Key/, '')}` : code });
+  }
+
   /** A note (F8): its text, where and when, and the screen's picture (a PNG data URL), kept beside the log. */
   note(text: string, png: string | null) {
     const w = this.w, p = w.player, img = png ? `${this.file}_note${++this.notes}.png` : null;

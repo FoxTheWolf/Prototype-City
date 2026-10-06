@@ -26,10 +26,10 @@ eq(cmdSegmentStart('iwconfig essid "A && B" && dh'), 26, '&& inside quotes does 
 
 // argTemplate: Tab scaffolds a command's arguments (15.7e-d). The caret lands where the next field goes.
 const ti = argTemplate('iwconfig', 'Cafe')!;
-eq(ti.text, 'iwconfig wlan0 essid "Cafe" key ', 'iwconfig scaffolds with the ESSID and a key field');
-eq(ti.caret, ti.text.length, 'caret after "key " to type/click the key');
+eq(ti.text, 'iwconfig wlan0 essid "" key ', 'iwconfig scaffolds empty quotes (no prefill) + key field');
+eq(ti.text[ti.caret], '"', 'caret sits between the empty quotes to type/click the ESSID');
 const ti0 = argTemplate('iwconfig', '')!;
-eq(ti0.text, 'iwconfig wlan0 essid ""', 'iwconfig with no ESSID in range');
+eq(ti0.text, 'iwconfig wlan0 essid "" key ', 'iwconfig ignores the in-range ESSID too');
 eq(ti0.text[ti0.caret], '"', 'caret sits between the empty quotes');
 const td = argTemplate('tdump', 'GRIDLINK-03')!;
 eq(td.text, 'tdump mon "GRIDLINK-03" -w capture.ivs', 'tdump scaffolds monitor capture');

@@ -507,6 +507,7 @@ addEventListener('keydown', (e) => {
     }
     if (e.code === 'Escape' && !laptop.shell.fw.mode) { if (!e.repeat) { laptop.close(performance.now() / 1000); input.lock(); relock = true; } return; }
     if (e.repeat && !['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'].includes(e.code) && e.key.length !== 1) return;
+    if (pt && laptop.shell.ready && !laptop.shell.screen()) pt.termKey(e.code, e.ctrlKey);
     laptop.key(e.code, e.key, e.ctrlKey, performance.now() / 1000);
     return;
   }

@@ -199,6 +199,20 @@ say();
 const sayRecs = of('say');
 say(sayRecs.length ? sayRecs.map((r) => `- ${clock(r.gt)} ${r.who}: “${r.text}” → ${r.intent ?? 'NÃO ENTENDIDA'}${r.tone ? `, ${r.tone}` : ''}`).join('\n') : 'Nenhuma fala registrada.');
 say();
+say('## Terminal — teclas de navegação');
+say();
+const keys = of('termkey');
+if (!keys.length) say('Nenhuma tecla de navegação no terminal (ou não digitou no notebook).');
+else {
+  const count = new Map<string, number>();
+  for (const r of keys) count.set(r.key, (count.get(r.key) ?? 0) + 1);
+  say(`${keys.length} tecla(s) de navegação/edição no prompt:`);
+  say();
+  for (const [k, n] of [...count.entries()].sort((a, b) => b[1] - a[1])) say(`- ${k}: ${n}`);
+  say();
+  say('> Hábitos a considerar: muito Backspace/← pode indicar re-digitação (um campo navegável ajudaria); ↑/↓ = histórico; Tab = completar; C-* = atalhos readline (Bloco 3).');
+}
+say();
 say('## A cidade em volta (eventos a menos de 300 m)');
 say();
 const near = of('event').filter((r) => r.d < 300), byKind = new Map<string, number>();
