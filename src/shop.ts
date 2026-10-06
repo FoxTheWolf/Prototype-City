@@ -8,7 +8,8 @@ import { type World } from './sim/world';
 /** How far the hand reaches for a shelf, m. */
 const REACH = 2.2;
 
-export interface Aimed { f: Furn; good: string; cents: number; k: number }
+/** The good, its piece, its price and shop; where the sight meets it (x, y, z: m; z from the ground) and how far along the sight (d). */
+export interface Aimed { f: Furn; good: string; cents: number; k: number; x: number; y: number; z: number; d: number }
 
 /**
  * The good under the sight (13.4): the ray from the eye through the middle of the view against the
@@ -35,7 +36,7 @@ export function aimedGood(w: World, yaw: number, pitch: number, eye: number): Ai
       if (t < 0 || t >= bt) continue;
       bt = t;
       const n = q.shape !== Shape.Ball ? cols.findIndex((c) => c[0] === q.col[0] && c[1] === q.col[1] && c[2] === q.col[2]) : -1;
-      best = n >= 0 ? { f, good: f.stock[n], cents: priceAt(k, w, f.stock[n]), k } : null;
+      best = n >= 0 ? { f, good: f.stock[n], cents: priceAt(k, w, f.stock[n]), k, x: p.x + dx * t, y: p.y + dy * t, z: p.z + eye + dz * t, d: t } : null;
     }
   }
   return best;

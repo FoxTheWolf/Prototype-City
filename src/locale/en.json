@@ -1,6 +1,7 @@
 {
   "lang": "en",
   "talk": { "clerk": "Clerk", "someone": "Stranger", "passerby": "Passerby", "keysStreet": "[ENTER] SAY   [TAB] ASK THE WAY   [ESC] WALK OFF", "hint": "Type what you want to say.", "unrecognized": "Unrecognized", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
+  "tag": { "each": "EACH", "take": "[F] TAKE", "takeName": "[F] TAKE {x}" },
   "seat": { "sit": "[F] SIT DOWN", "stand": "[F] STAND UP" },
   "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED", "call": "[F] CALL THE LIFT", "coming": "THE LIFT IS COMING" },
   "counter": {
@@ -24,7 +25,7 @@
     "title": "BACKPACK", "keys": "[DRAG] MOVE  [R] TURN  [E] EAT  [DRAG TO A SLOT] USE  [RIGHT CLICK] PUT BACK / THROW AWAY  [B] CLOSE",
     "keep": "You'll want to keep that.", "thrown": "{x}: thrown away.", "back": "{x}: back on the shelf.",
     "cash": "CASH", "unpaid": "UNPAID", "phone": "PHONE", "laptop": "NOTEBOOK", "sim": "SIM CARD",
-    "take": "[F] TAKE {x}  {p}", "ask": "ASK AT THE COUNTER", "taken": "{x} in the bag (unpaid)", "room": "No room in your bag",
+    "ask": "ASK AT THE COUNTER", "taken": "{x} in the bag (unpaid)", "room": "No room in your bag",
     "stole": "You walked out without paying for {n} item(s).",
     "eat": "[E] EAT", "flat": "The phone's battery is dead.", "charging": "Phone charging.", "plug": "[F] PLUG IN THE PHONE", "unplug": "[F] UNPLUG THE PHONE", "unplugged": "Phone unplugged.", "pulled": "The cable came out: phone unplugged.", "dead": "The outlet is dead.", "battLow": "Phone battery low.", "battEmpty": "Phone battery almost dead.", "notHere": "That doesn't go there.", "fitted": "{x}: fitted to the notebook.", "swapping": "SWAPPING THE SIM...", "swapped": "New line {n} ({op}).", "ate": "{x}: eaten.", "notFood": "You can't eat that.", "fullUp": "You're full.", "stomach": "STOMACH",
     "stages": ["Fed", "Peckish", "Hungry", "Starving"], "hungry": ["", "You're getting peckish.", "You're hungry. Running wears you out fast.", "You're starving. You can barely run."]

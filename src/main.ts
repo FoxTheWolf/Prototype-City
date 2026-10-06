@@ -5,7 +5,7 @@ import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
-import { Counter, counterPrompt, drawCounter, money } from './counter';
+import { Counter, counterPrompt, drawCounter } from './counter';
 import { drawTalk, TalkView } from './talkUi';
 import { hash3 } from './core/rng';
 import { staffOn } from './sim/citizens';
@@ -13,6 +13,7 @@ import { citizenNames } from './locale/names';
 import { BagView } from './bagUi';
 import { AskWay, drawAskWay } from './askWay';
 import { Barks, drawBarks } from './barks';
+import { drawTag, TAG_NEAR, TAG_WAIT } from './tag';
 import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
@@ -898,6 +899,8 @@ let renderMs = 0, worstMs = 0, worstShown = 0, worstAt = 0;
 /** World frames shown a second (with the pool they can lag the screen's refreshes), and the count this second. */
 let worldFps = 0, worldFrames = 0, worldAt = 0;
 
+/** The good the sight rests on, and since when (real s), for its tag (14.5). */
+let tagWas = '', tagSince = 0;
 function frame(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
@@ -1021,13 +1024,18 @@ function frame(now: number) {
   const aim = running && !phone.out && !counter.active && !bagView.open && !laptop.open ? aimedGood(world, camera.yaw, camera.pitch, eyeNow()) : null;
   if (world.bag.stolenAt !== theftSeen) { theftSeen = world.bag.stolenAt; shelfNote = en.bag.stole.replace('{n}', String(world.bag.stolen)); shelfNoteAt = now / 1000; }
   const plugAt = !aim && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? outletAhead(world, camera.yaw) : null;
-  const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? en.bag.take.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good).replace('{p}', money(aim.cents))
+  // its tag, close up (14.5): after the sight rests on it a moment, within reach; before that only what F does
+  const tagKey = aim ? `${aim.f.x},${aim.f.y},${aim.good}` : '';
+  if (tagKey !== tagWas) { tagWas = tagKey; tagSince = now / 1000; }
+  const tagOn = !!aim && aim.d <= TAG_NEAR && now / 1000 - tagSince >= TAG_WAIT && !talkView.open;
+  const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? (tagOn ? '' : en.tag.takeName.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good))
     : plugAt ? (phone.plug?.f === plugAt ? en.bag.unplug : en.bag.plug)
     // a seat in front, or getting up from one (13.10f), when nothing else here takes F
     : !running || phone.out || counter.active || bagView.open || laptop.open || payphone.active || doorAhead(world, camera.yaw) || liftAhead(world, camera.yaw) || counter.near() ? ''
     : world.player.sit ? (sitK >= 1 ? en.seat.stand : '') : seatAhead(world, camera.yaw) ? en.seat.sit : '';
   if (shelfMsg && !bagView.open && !talkView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
   if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
+  if (tagOn) drawTag(ui, aim!, world, view, layout, uiLayout, VIEW_LIGHT);
   // a shop's till in front: how to use the counter, or when the shop opens
   const till = !talkView.open && !phone.out && !counter.active && !bagView.open ? counter.near() : null;
   if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }

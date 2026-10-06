@@ -2,6 +2,11 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.5: a etiqueta em close-up (2026-10-06, sessão na nuvem)
+- Olhando um produto da prateleira por 0,5 s, a até 1,5 m, uma etiqueta de papel desenhada em 2D aparece ao lado dele (no lado com mais espaço, acima da faixa da conversa): o nome da loja, o do produto, o preço em dígitos grandes 3×5 na faixa amarela, os centavos pequenos, "EACH", um código de barras e um número da loja; embaixo, "[F] TAKE". Iluminada pela luz da cena, como o orelhão: numa loja escura fica difícil de ler. Antes de aparecer (ou mais longe), só "[F] TAKE <produto>", sem o preço: a caixa de preço antiga saiu.
+- `aimedGood` (`src/shop.ts`) devolve também onde a mira encontra o produto (`x`, `y`, `z`) e a distância (`d`). Teste: `tests/tag.ts` (acha um produto pela mira numa mercearia, a etiqueta mostra o preço da loja e não entra na faixa da conversa; imprime a etiqueta em texto). **Falta ver no PC:** o tamanho, a posição e a leitura com pouca luz.
+- Fica para depois (o resto da regra "toda informação de um objeto numa versão 2D dele"): o cardápio dos cafés e restaurantes, as placas, o recibo.
+
 ## 14.4: falar na rua e os balões (2026-10-06, sessão na nuvem)
 - **O primeiro playtest do diálogo** (dois registros do usuário, guardados em `playtest/`): as 4 frases com a intenção certa; "I wanna pay" e "where do you live" com a resposta errada, corrigidas (`reply.pay`, `reply.personal.*`); o relatório conta como compra o `take` pago no balcão.
 - **Falar com quem está na calçada:** o F num pedestre abre a mesma conversa do balcão (`talkView.start(q.id, -1)`); ele para e olha para o jogador enquanto dura, aponta o caminho quando o diz (`point`), segue a vida se o jogador se afasta mais de 6 m; atravessando, entrando numa porta ou tarde da noite (35%), segue andando com uma fala. O Tab abre a lista antiga de "pedir direção" (13.9) para a mesma pessoa (a lista virou atalho, como previsto). Isso adianta parte da 14.6.
