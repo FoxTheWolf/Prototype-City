@@ -18,6 +18,8 @@ const fail = (m: string) => { if (++fails <= 30) console.log('FAIL ' + m); };
 const lines = Array.from({ length: 60 }, (_, i) => ({ text: `line ${i}`, ink: 0 }));
 lines.push({ text: 'bin  docs  tmp', ink: 0 });
 lines.push({ text: 'host 10.0.4.7:23 open', ink: 0 });
+lines.push({ text: 'Cell 01 - Address: AA:BB:CC:DD:EE:FF', ink: 0 });
+lines.push({ text: 'ESSID:"Petrovs Coffee"  key 7418529185', ink: 0 });
 const term: TermIO & { lines: { text: string; ink: number }[] } = {
   lines,
   prompt: 'user@host:~$ ',
@@ -104,7 +106,18 @@ for (let r = 0; r < H && ipr < 0; r++) { const c = scr.ch[r].join('').indexOf('1
 if (ipr < 0) fail('the address line is on screen');
 else { wm.down(ipc, ipr); wm.up(ipc, ipr, 1); if (!term.input.includes('10.0.4.7:23')) fail(`clicking an address types it at the prompt (got "${term.input}")`); }
 
-console.log(fails ? `\n${fails} FAILED` : '\nOK — composes, focuses, maximizes, routes keys, the mouse, copy/paste, and address clicks');
+// --- clicking other fields: a MAC, a quoted ESSID, a WEP key (15.7e-c) ---
+function clickField(needle: string, into: number, want: string, what: string) {
+  wm.focus = 'term'; term.scroll = 0; term.input = ''; term.cur = 0;
+  const s = wm.cells(1).scr;
+  for (let r = 0; r < H; r++) { const c = s.ch[r].join('').indexOf(needle); if (c >= 0 && c < split) { wm.down(c + into, r); wm.up(c + into, r, 1); if (term.input !== want) fail(`clicking ${what} types "${want}" (got "${term.input}")`); return; } }
+  fail(`the ${what} line is on screen`);
+}
+clickField('AA:BB:CC:DD:EE:FF', 2, 'AA:BB:CC:DD:EE:FF', 'a MAC/BSSID');
+clickField('"Petrovs Coffee"', 3, '"Petrovs Coffee"', 'a quoted ESSID');
+clickField('7418529185', 2, '7418529185', 'a WEP key');
+
+console.log(fails ? `\n${fails} FAILED` : '\nOK — composes, focuses, maximizes, routes keys, the mouse, copy/paste, and field clicks (ip, mac, essid, key)');
 console.log('\n--- top of the composed screen (split, terminal focused) ---');
 wm.key('ArrowLeft', true, 1);
 const show = wm.cells(1);
