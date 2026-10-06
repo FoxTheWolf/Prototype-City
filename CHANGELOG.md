@@ -6,6 +6,13 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Encadeie comandos** no notebook: `&&` roda o próximo se o anterior começou (ex.: `iwconfig wlan0 essid "Cafe" && dhclient`), `||` roda se não começou, `;` roda sempre. (Antes, só o primeiro comando rodava.)
 - **Aspas automáticas:** digitar `"` já põe o par `""` com o cursor no meio; digitar a aspa de novo em cima da que fecha só passa por ela; apagar a de abrir tira o par vazio junto.
 
+## 0.15.8c — Entrar no fórum e responder (2026-10-06)
+- **Agora dá para ter conta no Switchboard** — pelo seu número, como o resto da sua identidade na rua. Em **Sign up** você escolhe um apelido; o fórum te manda um **código por SMS**; você confirma e está dentro. (Perdeu o número, perdeu o apelido.)
+- **Responder nos tópicos:** logado, cada tópico tem uma caixa de resposta. O que você escreve entra com o seu apelido, e o autor do tópico responde um tempo depois — do jeito dele, lendo o tom do que você disse (seco se você foi grosso, "np" se agradeceu).
+
+## 0.19.2b — Debug: rede aberta no spawn, ferramentas no apt (2026-10-06)
+- **(debug)** Uma rede Wi-Fi **aberta no ponto inicial**, para testar ficar online sem ter que craquear antes. E o `bruter`/`wcrack` agora também aparecem no `apt` (como atalho de teste; a entrega "de verdade" será pelo fórum). Tudo agrupado em um só lugar, para sair fácil antes de uma versão pública.
+
 ## 0.19.2 — Quebrar a chave WEP pelo ar (2026-10-06)
 - **A rede da subestação (GRIDLINK-nn) é WEP — e dá para tirar a chave do ar.** Em vez de a chave aparecer de graça na tela de Wi-Fi do celular (muleta removida), agora: `tdump mon "GRIDLINK-nn" -w grid.cap` fica ouvindo **sem entrar na rede**, juntando os vetores (o contador de #Data sobe); quanto mais perto e mais forte o sinal, mais rápido enche. Quando tiver o bastante, **Ctrl+C** grava a captura; `wcrack grid.cap` resolve os 10 dígitos. Aí é o `iwconfig … key <chave>` + `dhclient` de sempre.
 - O `wcrack` já está em `~/bin` (como o `bruter`). **WPA continua fora de alcance** por aí — essas chaves vêm de outra fonte. O que você consegue depende só de quanto tempo capturou, não da sorte do trânsito da rede.

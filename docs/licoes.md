@@ -10,6 +10,14 @@
 - **Testável no Node sem UI:** exportar os pedaços puros do shell (`WEP_IVS`, `wepIvRate`, `parseCapture`) e testá-los + `buildWifi` (`tests/wep.ts`), em vez de dirigir o `run()`. Mesma lição do apt.
 - **Muleta de debug com flag, não apagada:** a chave na tela de Wi-Fi do celular virou `SHOW_WIFI_KEY=false` (alinhado ao pedido do usuário de marcar o que é debug para tirar depois), em vez de sumir.
 
+### Lições da 15.8c / debug — 2026-10-06
+- **Estado novo do jogador = campo no World + guarda no save.** `w.forum` (conta + respostas) entrou em `world.ts`, `snapWorld`/`applyWorld` e `WorldSave` com `forum?` opcional (migração: save antigo não tem). Mesmo padrão de `feed`/`mail`. O tipo mora em `sim/` (world.ts), não em `web/`, para o web depender do sim e não o contrário.
+- **Formulário no navegador do jogo:** uma página ganha `form: url(action)`; a submissão volta como `fetchUrl(w, url, form)` → `pageFn(w, path, form)`. Molde: `streetwire.ts`. O fluxo de várias etapas (join → confirm) é só páginas encadeadas, cada uma com o seu `action`.
+- **Confirmar por SMS:** `w.mail.sms.push({from,text})` e o phone.ts drena. A conta fica `ok:false` até o código bater — o código é sorteado de `w.rng()` (determinístico com a semente).
+- **Testar formulários no Node:** `fetchUrl(w, url, new Map(Object.entries(kv)))` simula o POST; checar o efeito no estado (`w.forum`) e nos blocos da página (`blocks.some(b=>b.t==='submit')` para a caixa, não o texto — labels de input/submit não são blocos `p`/`h`). `tests/forum.ts`.
+- **Modo debug central (`src/debug.ts`):** flags de teste num módulo sem imports (pode ser lido por `sim/`), agrupadas e removíveis. Pedido do usuário: manter conveniências de debug visíveis e fáceis de tirar, não espalhadas. Ao mexer no catálogo do apt condicionado por flag, o teste (`tests/apt.ts`) tem de ramificar pela flag também.
+- **`wifi` é gerado em `createWorld`, fora do `pop` cacheado** (popCache só guarda a `Population`): mudar `sim/wifi.ts` aparece na hora, sem `?fresh`; mas por isso `wifi.ts` **não** está na lista de hash do popCache (não precisa estar).
+
 ### Lições da 15.8 / 19.1 (fórum, apt, saves do notebook) — 2026-10-06
 - **O save do notebook guarda o disco inteiro** (`Laptop.snapshot` = `pc.root.kids`), então **binário novo adicionado a `PROGRAMS` não aparece em save antigo** — foi o bug do `lodestar` ("comando não encontrado"). Regra: ao somar algo a uma estrutura salva, pensar na migração; `syncPrograms` re-põe só os binários de sistema que faltam no `restore` (idempotente, não clobbera arquivos do usuário).
 - **Teclas de função são do host:** o Electron captura **F11** (`electron/main.cjs`, `preventDefault`), então o F11 do WM nunca disparava no PC. Não usar para UI do jogo teclas que o Electron/navegador tomam (F5/F11/etc.); usar Ctrl+seta e afins.
