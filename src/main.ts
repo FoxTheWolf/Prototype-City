@@ -375,6 +375,8 @@ addEventListener('wheel', (e) => {
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
 let rightAt = -1, rightMoved = 0;
+/** The left button is held down over the notebook screen, dragging a selection (15.7c). */
+let lapDrag = false;
 /** The interface's cell under the system cursor. */
 function cellAtClient(cx: number, cy: number): [number, number] {
   const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
@@ -388,7 +390,10 @@ function laptopCell(cx: number, cy: number): [number, number] | null {
   const tc = Math.floor(((fx - screenAt[0]) / scrTermW) * TERM_W), tr = Math.floor(((fy - screenAt[1]) / scrTermH) * TERM_H);
   return tc >= 0 && tr >= 0 && tc < TERM_W && tr < TERM_H ? [tc, tr] : null;
 }
-addEventListener('mousemove', (e) => { [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY); });
+addEventListener('mousemove', (e) => {
+  [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY);
+  if (lapDrag && laptop.shell.wm) { const cell = laptopCell(e.clientX, e.clientY); if (cell) laptop.shell.wm.drag(cell[0], cell[1]); }
+});
 /** A payphone's key pressed: its sound, and the payphone. */
 function payPress(k: Key) {
   if (/^[0-9*#]$/.test(k)) sound?.dtmf(k); else sound?.phoneKey(false);
@@ -426,9 +431,9 @@ addEventListener('mousedown', (e) => {
         return;
       }
     }
-    // the window manager (15.7): a click on the screen focuses a pane and follows links
+    // the window manager (15.7): press on the screen focuses a pane and starts a selection
     const wm = laptop.shell.wm;
-    if (e.button === 0 && wm) { const cell = laptopCell(e.clientX, e.clientY); if (cell) wm.click(cell[0], cell[1], performance.now() / 1000); }
+    if (e.button === 0 && wm) { const cell = laptopCell(e.clientX, e.clientY); if (cell) { wm.down(cell[0], cell[1]); lapDrag = true; } }
     return;
   }
   // the middle button: takes the phone out; on the standby screen it opens the dialer; elsewhere it
@@ -459,6 +464,7 @@ document.addEventListener('pointerlockchange', () => {
 });
 addEventListener('mouseup', (e) => {
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
+  if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
   rightAt = -1; input.drag = false;

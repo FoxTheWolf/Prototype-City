@@ -40,6 +40,14 @@ export class WM {
   private split: number;
   /** The width the browser was last laid out at, so it is re-laid only when the pane changes. */
   private bw = -1;
+  /** The text last copied (a selection released, 15.7c): the paste source, and what the viewer shows. */
+  clip = '';
+  /** The clipboard viewer box is open (Insert). */
+  private viewer = false;
+  /** A selection on the composed grid: the anchor and the head cell, and whether the mouse is down on it. */
+  private sel: { ax: number; ay: number; hx: number; hy: number; down: boolean; moved: boolean } | null = null;
+  /** The last composed screen, so a released selection can read its characters. */
+  private lastScr: Scr | null = null;
 
   constructor(private term: TermIO, private browser: Browser, private w: number, private h: number) {
     this.split = Math.floor((w - GAP) / 2);
@@ -55,7 +63,10 @@ export class WM {
 
   key(key: string, ctrl: boolean, now: number) {
     if (key === 'F11') { this.max = this.max ? null : this.focus; return; }
+    if (key === 'Insert') { this.viewer = !this.viewer; return; }
+    if (ctrl && (key === 'v' || key === 'V')) { this.paste(now); return; }
     if (ctrl && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Tab')) { this.focus = this.focus === 'term' ? 'web' : 'term'; return; }
+    if (this.viewer && key === 'Escape') { this.viewer = false; return; }
     if (this.focus === 'web') { this.browser.key(key, ctrl, now); return; }
     if (key === 'PageUp' || key === 'PageDown') {
       const page = this.h - 2, cap = Math.max(0, this.term.lines.length - 4);
@@ -65,11 +76,61 @@ export class WM {
     this.term.termKey(key, ctrl, now);
   }
 
-  /** A click at a composited cell (x, y): focus the pane it lands in, and pass it on to the browser. */
-  click(x: number, y: number, now: number) {
+  /** The left button pressed at a composited cell: focus that pane and start a selection (15.7c). */
+  down(x: number, y: number) {
+    if (this.viewer) { this.viewer = false; return; }
     const R = this.rects();
-    if (R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.focus = 'web'; this.browser.click(x - R.wx, y, now); return; }
-    if (R.tw > 0 && x >= R.tx && x < R.tx + R.tw) this.focus = 'term';
+    if (R.ww > 0 && x >= R.wx && x < R.wx + R.ww) this.focus = 'web';
+    else if (R.tw > 0 && x >= R.tx && x < R.tx + R.tw) this.focus = 'term';
+    this.sel = { ax: x, ay: y, hx: x, hy: y, down: true, moved: false };
+  }
+
+  /** The mouse moved with the button down: grow the selection. */
+  drag(x: number, y: number) {
+    if (!this.sel?.down) return;
+    if (x !== this.sel.hx || y !== this.sel.hy) this.sel.moved = true;
+    this.sel.hx = x; this.sel.hy = y;
+  }
+
+  /** The left button released: a drag copies the text under it; a plain click follows a link or presses a button. */
+  up(x: number, y: number, now: number) {
+    const s = this.sel;
+    if (!s) return;
+    s.down = false;
+    if (s.moved) { const t = this.selText(); if (t) this.copy(t); return; }
+    // a plain click: clear the mark and act on the pane
+    this.sel = null;
+    const R = this.rects();
+    if (this.focus === 'web' && R.ww > 0 && x >= R.wx && x < R.wx + R.ww) this.browser.click(x - R.wx, y, now);
+  }
+
+  /** Paste the clipboard into the focused pane (Ctrl+V). */
+  paste(now: number) {
+    if (!this.clip) return;
+    if (this.focus === 'web') this.browser.paste(this.clip); else this.term.paste(this.clip);
+    void now;
+  }
+
+  /** Put text on the clipboard: the notebook's own, and the system's where it can (so it leaves the game too). */
+  private copy(text: string) {
+    this.clip = text;
+    try { if (typeof navigator !== 'undefined') navigator.clipboard?.writeText(text); } catch { /* no clipboard permission */ }
+  }
+
+  /** The characters under the selection, read from the last composed screen, row by row (trailing spaces dropped). */
+  private selText(): string {
+    const s = this.sel, S = this.lastScr;
+    if (!s || !S) return '';
+    let [ax, ay, bx, by] = s.ay < s.hy || (s.ay === s.hy && s.ax <= s.hx) ? [s.ax, s.ay, s.hx, s.hy] : [s.hx, s.hy, s.ax, s.ay];
+    const rows: string[] = [];
+    for (let r = ay; r <= by; r++) {
+      if (r < 0 || r >= S.h) continue;
+      const c0 = r === ay ? ax : 0, c1 = r === by ? bx : this.w - 1;
+      let line = '';
+      for (let c = Math.max(0, c0); c <= Math.min(this.w - 1, c1); c++) line += S.ch[r][c] ?? ' ';
+      rows.push(line.replace(/\s+$/, ''));
+    }
+    return rows.join('\n');
   }
 
   /** The mouse wheel over a composited cell: scroll the pane it is over. */
@@ -96,7 +157,39 @@ export class WM {
       for (let r = 0; r < this.h; r++) S.text(dx, r, '|', St.Dim);
       S.text(dx, mid, this.focus === 'term' ? '<' : '>', St.Bright);
     }
+    this.lastScr = S;
+    if (this.sel) this.mark(S);
+    if (this.viewer) { cx = -1; cy = -1; this.drawViewer(S); }
     return { scr: S, cx, cy };
+  }
+
+  /** Invert the cells under the selection so it reads as highlighted (both inks and the browser's own colors). */
+  private mark(S: Scr) {
+    const s = this.sel!;
+    const [ax, ay, bx, by] = s.ay < s.hy || (s.ay === s.hy && s.ax <= s.hx) ? [s.ax, s.ay, s.hx, s.hy] : [s.hx, s.hy, s.ax, s.ay];
+    for (let r = Math.max(0, ay); r <= Math.min(this.h - 1, by); r++) {
+      const c0 = r === ay ? ax : 0, c1 = r === by ? bx : this.w - 1;
+      for (let c = Math.max(0, c0); c <= Math.min(this.w - 1, c1); c++) {
+        if (S.st[r][c] === St.Rgb) { const f = S.fg[r][c]; S.fg[r][c] = S.bg[r][c]; S.bg[r][c] = f; }
+        else S.st[r][c] = St.Inverse;
+      }
+    }
+  }
+
+  /** The clipboard viewer (Insert): a box in the middle with what was last copied, wrapped. */
+  private drawViewer(S: Scr) {
+    const w = Math.min(this.w - 8, 60), x = ((this.w - w) >> 1), lines: string[] = [];
+    for (const raw of (this.clip || '(clipboard empty)').split('\n')) {
+      for (let k = 0; k === 0 || k < raw.length; k += w - 4) lines.push(raw.slice(k, k + w - 4));
+      if (lines.length > this.h - 6) break;
+    }
+    const h = Math.min(this.h - 2, lines.length + 4), y = ((this.h - h) >> 1);
+    S.fill(x, y, w, h, St.Bright, ' ');
+    S.text(x, y, '+' + '-'.repeat(w - 2) + '+', St.Bright);
+    S.text(x, y + h - 1, '+' + '-'.repeat(w - 2) + '+', St.Bright);
+    for (let r = 1; r < h - 1; r++) { S.text(x, y + r, '|', St.Bright); S.text(x + w - 1, y + r, '|', St.Bright); }
+    S.text(x + 2, y, ' CLIPBOARD (Insert closes) ', St.Bright);
+    lines.slice(0, h - 4).forEach((l, i) => S.text(x + 2, y + 2 + i, l, St.Ink));
   }
 
   /** The terminal's visible lines (re-wrapped to the pane's width), prompt and caret, drawn into S. */

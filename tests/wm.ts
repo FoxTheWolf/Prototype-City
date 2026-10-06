@@ -73,18 +73,29 @@ wm.key('F11', false, 1);
 out = wm.cells(1);
 if (out.scr.ch[0][split] !== '|') fail('F11 again restores the split');
 
-// --- mouse: a click on a pane focuses it; the wheel scrolls the pane under the cursor ---
+// --- mouse: a press on a pane focuses it; the wheel scrolls the pane under the cursor ---
+wm.cells(1); // compose so the selection can read the grid
 wm.focus = 'web';
-wm.click(5, 10, 1);
-if (wm.focus !== 'term') fail('a click on the terminal pane focuses it');
-wm.click(split + 10, 5, 1);
-if (wm.focus !== 'web') fail('a click on the browser pane focuses it');
+wm.down(5, 10); wm.up(5, 10, 1); // a plain click, no drag
+if (wm.focus !== 'term') fail('a press on the terminal pane focuses it');
+wm.down(split + 10, 5); wm.up(split + 10, 5, 1);
+if (wm.focus !== 'web') fail('a press on the browser pane focuses it');
 term.scroll = 0;
 wm.wheel(-1, 5); // wheel up over the terminal walks its scrollback
 if (term.scroll <= 0) fail('the wheel over the terminal scrolls it back');
 term.scroll = 0;
 
-console.log(fails ? `\n${fails} FAILED` : '\nOK — window manager composes, focuses, maximizes, routes keys and the mouse');
+// --- select a run of the terminal and copy it, then paste into the prompt ---
+wm.focus = 'term';
+wm.cells(1);
+// the top row of the terminal pane reads "line 12" in the printout above; drag across it
+wm.down(0, 0); wm.drag(6, 0); wm.up(6, 0, 1);
+if (!/^line \d/.test(wm.clip)) fail(`a drag copies the text under it (got "${wm.clip}")`);
+term.input = ''; term.cur = 0;
+wm.key('v', true, 1); // Ctrl+V pastes into the prompt
+if (term.input !== wm.clip.replace(/\s+/g, ' ').trim()) fail(`Ctrl+V pastes the clipboard into the prompt (got "${term.input}")`);
+
+console.log(fails ? `\n${fails} FAILED` : '\nOK — composes, focuses, maximizes, routes keys, the mouse, and copy/paste');
 console.log('\n--- top of the composed screen (split, terminal focused) ---');
 wm.key('ArrowLeft', true, 1);
 const show = wm.cells(1);
