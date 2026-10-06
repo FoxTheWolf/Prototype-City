@@ -33,9 +33,11 @@ console.log(`  ${said} lines from ${keys.length} keys, e.g. "${B.line(people[0],
 let now = 10;
 w.weather.precip = 0; B.update(now, 0);
 w.weather.precip = 0.6; w.weather.snow = false;
-for (let k = 0; k < 20; k++) { now += 0.25; B.update(now, 0); }
-const rain = B.list.length;
-console.log(`  rain: ${rain} balloon(s): ${B.list.map((b) => `"${b.text}"`).join(' ')}`);
+// (counted as they show: a short line is gone again in a few seconds)
+const heard = new Map<number, string>();
+for (let k = 0; k < 20; k++) { now += 0.25; B.update(now, 0); for (const b of B.list) heard.set(b.who, b.text); }
+const rain = heard.size;
+console.log(`  rain: ${rain} balloon(s): ${[...heard.values()].map((t) => `"${t}"`).join(' ')}`);
 if (B.near().length && !rain) fail('nobody said a word when the rain started');
 
 // running into someone

@@ -44,6 +44,11 @@ export interface Player {
   cash: number;
   /** The seat the player sits on (13.10f), or null standing; saves from before it have none. */
   sit?: Sit | null;
+  /** Crouching (14.8): 0 standing .. 1 down (the eye lower, the steps slow and quiet; read by whoever looks for the player). */
+  crouch?: number;
+  /** A jump (14.8): how high the feet are off the ground (m) and how fast they rise (m/s). Only the view: it clears nothing. */
+  hop?: number;
+  hopV?: number;
 }
 
 /** What the player asks for this tick. The only way the outside world affects the sim. */
@@ -52,6 +57,9 @@ export interface PlayerInput {
   strafe: number;
   run: boolean;
   heading: number;
+  /** Jump (held: once, on the ground) and crouch (held), 14.8. */
+  jump?: boolean;
+  crouch?: boolean;
 }
 
 export interface World {
@@ -245,8 +253,18 @@ export function stepWorld(w: World, input: PlayerInput) {
   const len = Math.hypot(f, st);
   if (len > 1) { f /= len; st /= len; }
   // running spends breath, and a hungry stomach gives less of it (needs.ts)
-  const run = stepNeeds(w, input.run && (f !== 0 || st !== 0) && p.liftTo < 0, TICK, TICK * TIME_SCALE) && input.run;
-  const sp = p.liftTo >= 0 ? 0 : run ? 9 : 3.5; // a moving car holds the player still
+  // crouching: down in a moment, slow steps, no running (14.8)
+  const down = !!input.crouch && !p.sit && p.liftTo < 0;
+  p.crouch = (p.crouch ?? 0) + ((down ? 1 : 0) - (p.crouch ?? 0)) * Math.min(1, TICK * 10);
+  const low = (p.crouch ?? 0) > 0.5;
+  const run = stepNeeds(w, input.run && !low && (f !== 0 || st !== 0) && p.liftTo < 0, TICK, TICK * TIME_SCALE) && input.run && !low;
+  const sp = p.liftTo >= 0 ? 0 : run ? 9 : low ? 1.6 : 3.5; // a moving car holds the player still
+  // a jump: up from the ground, back down by gravity
+  if (input.jump && !p.hop && !p.hopV && !p.sit && !low && p.liftTo < 0) p.hopV = 3;
+  if (p.hopV || p.hop) {
+    p.hop = (p.hop ?? 0) + (p.hopV ?? 0) * TICK; p.hopV = (p.hopV ?? 0) - 9.8 * TICK;
+    if (p.hop <= 0) { p.hop = 0; p.hopV = 0; }
+  }
   if (p.liftTo >= 0) stepLift(p);
   const dx = Math.cos(input.heading), dy = Math.sin(input.heading);
   const vx = (dx * f - dy * st) * sp, vy = (dy * f + dx * st) * sp;

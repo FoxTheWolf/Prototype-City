@@ -28,8 +28,9 @@ export function drawTag(g: CharGrid, A: Aimed, w: World, v: Eye, world: Screen, 
   const at = toUi(v, A.x, A.y, A.z, world, ui);
   if (!at) return;
   const [ax, ay] = at, L = light;
-  // beside the good, on the side with more room; above the conversation's strip
-  let x0 = ax < g.cols / 2 ? Math.round(ax) + 6 : Math.round(ax) - 6 - W;
+  // beside the good, to the right of the sight (it is always the middle of the screen: choosing a side by it
+  // flipped the tag from side to side); to the left only if the right has no room; above the conversation's strip
+  let x0 = Math.round(ax) + 6 + W <= g.cols - 2 ? Math.round(ax) + 6 : Math.round(ax) - 6 - W;
   x0 = Math.max(2, Math.min(g.cols - W - 2, x0));
   const y0 = Math.max(2, Math.min(g.rows - 16 - H, Math.round(ay) - (H >> 1)));
   const put = (x: number, y: number, s: string, fg: C3, bg: C3) => {

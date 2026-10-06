@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.8 — Pular, agachar e andar entre as cadeiras (2026-10-06)
+- **Espaço** pula e **C** (segurando) agacha: o olho desce, os passos ficam lentos e não dá para correr. Quem está perto estranha se você fica agachado ou pula do lado. A câmera de segurança de debug passou do C para o **V**.
+- Cadeiras e banquinhos não bloqueiam mais o caminho: dá para andar entre as mesas de bares e lanchonetes.
+- A etiqueta de perto não pula mais de um lado para o outro do produto: fica à direita da mira (à esquerda só sem espaço).
+
 ## 0.14.7 — Falar ao telefone (2026-10-06)
 - Corrigido: na caixa da conversa, **Esc** abria o menu de pausa em vez de encerrar a conversa, e digitar **C** abria a câmera de segurança em vez de escrever a letra.
 - Ligue para alguém e, quando atender, a conversa fica aberta: o celular desce para perto da orelha e você digita embaixo da tela, como na rua. A resposta vem pela ligação, com a voz dela. Se você ficar calado, ela pergunta se tem alguém na linha e depois desliga. **Esc** desliga.

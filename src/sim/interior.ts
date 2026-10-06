@@ -1173,8 +1173,10 @@ export function reach(P: Plan, r: number, sx: number, sy: number, tx: number, ty
 }
 
 /** Whether (x, y) is inside a piece of the plan's furniture. */
-export function inFurniture(P: Plan, x: number, y: number): boolean {
+export function inFurniture(P: Plan, x: number, y: number, walking = false): boolean {
   for (const f of P.furn) {
+    // walking, chairs and stools are pushed aside, not walked round (bars and diners are full of them)
+    if (walking && (f.kind === 'chair' || f.kind === 'stool')) continue;
     const dx = x - f.x, dy = y - f.y, u = dx * f.c + dy * f.s, v = -dx * f.s + dy * f.c;
     if (Math.abs(u) < f.hx + 0.05 && Math.abs(v) < f.hy + 0.05) return true;
   }
@@ -1271,7 +1273,7 @@ export function blocked(city: City, f: number, ax: number, ay: number, bx: numbe
   if (ka < 0) return false;
   const P = planOf(city, ka, f);
   if (!P) return true;
-  if (inFurniture(P, bx, by)) return true;
+  if (inFurniture(P, bx, by, true)) return true;
   // walk the step in short hops; a wall is a cell with the WALL bit (stepping out of one is free, so
   // nobody gets stuck), or a change of room without the DOOR bit on both sides
   const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 0.1);

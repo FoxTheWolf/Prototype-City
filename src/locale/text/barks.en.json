@@ -121,5 +121,20 @@
   "No. What happened?",
   "Nothing surprises me anymore.",
   "This city, I swear."
+ ],
+ "bark.crouch": [
+  "You okay down there?",
+  "Uh... lose something?",
+  "What are you doing?",
+  "[old/senior] Are you alright, dear?",
+  "[child/teen] Weirdo.",
+  "Hey, you need help?"
+ ],
+ "bark.jump": [
+  "Whoa.",
+  "Uh, okay then.",
+  "Somebody's got energy.",
+  "[old/senior] Careful now.",
+  "Ha!"
  ]
 }

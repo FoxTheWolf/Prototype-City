@@ -2,6 +2,11 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.8: pular, agachar, cadeiras sem colisão (2026-10-06, pedido do usuário)
+- Pular (Espaço) e agachar (C segurando): `jump`/`crouch` no `PlayerInput`, `p.hop`/`p.hopV`/`p.crouch` no jogador (`sim/world.ts`); o pulo é só da vista (~0,46 m, 0,6 s), não passa por cima de nada; agachado: 1,6 m/s, sem correr, olho 0,65 m mais baixo (`eyeNow`). `p.crouch` fica para o stealth (etapa 16); por enquanto o retorno orgânico são os balões (`bark.crouch`, `bark.jump`). A câmera de debug foi do C para o V. Teste: `tests/move.ts`.
+- Cadeiras e banquinhos não bloqueiam o jogador (`inFurniture(..., walking)` em `blocked`); sentar continua igual.
+- A etiqueta (14.5) trocava de lado a cada quadro: o lado era escolhido pelo ponto da mira, que é sempre o meio da tela; agora fica à direita.
+
 ## 14.7: falar ao telefone (2026-10-06, sessão na nuvem)
 - Ligando para o celular ou a casa de alguém, quem atende diz alô e **a ligação fica aberta**: a conversa abre embaixo da tela (a mesma `TalkView`, em modo telefone) e o celular desce para perto da orelha (`phone.atEar`, a 35% da subida). O que o jogador digita é lido como no SMS (`smsReply(..., typed = false)`: número desconhecido → "who is this?", ninguém dá caminho porque não vê o jogador), e a resposta sai **pela própria ligação** (`Call.answer`, com a voz da ligação, sem o murmúrio). Calado por 10 s: "Hello? Are you there?"; mais 10 s: desligam. Esc desliga. A paciência acaba como na conversa (desligam depois da última fala). Sem mudança: secretária eletrônica, quem já foi incomodado demais, quem ligou por engano, lojas, menus.
 - Do segundo playtest (na calçada): três intenções novas de conversa fiada no léxico (`ask_how`, `ask_age`, `talk_sports`) e "today"/"yesterday" pesando 1 em `ask_what_saw`.

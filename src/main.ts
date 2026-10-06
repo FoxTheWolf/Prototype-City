@@ -188,7 +188,9 @@ let sitK = 0, sitEye = EYE;
 /** Eye height over the feet: lower while seated (13.10f), or sitting at the notebook (or leaning on a counter). */
 function eyeNow(): number {
   const s = laptop.seat, k = 1 - (1 - laptop.raise) ** 2, base = EYE + (sitEye - EYE) * (1 - (1 - sitK) ** 2);
-  return s ? base + (s.eye - base) * k : base;
+  // crouched, the eye drops; a jump lifts it (14.8)
+  const p = world.player, b = base - (p.crouch ?? 0) * 0.65 + (p.hop ?? 0);
+  return s ? b + (s.eye - b) * k : b;
 }
 payphone.outgoing = () => phone.call;
 phone.incomingCall = () => (payphone.call && payphone.active ? [payphone.call, world.telco.payphones[payphone.k].num] : null);
@@ -456,10 +458,10 @@ addEventListener('keydown', (e) => {
   if (e.code === 'F8') { e.preventDefault(); if (!e.repeat) openNote(); return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
   if (e.code === 'F4') { e.preventDefault(); if (!e.repeat) calib = !calib; return; }
-  // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
-  if (cctv && (e.code === 'Escape' || (e.code === 'KeyC' && !cctv.title))) { stopCctv(); return; }
+  // watching the cameras: Esc leaves (to the title, or back to the game); in the game, V toggles the nearest (C until 14.8, now crouching)
+  if (cctv && (e.code === 'Escape' || (e.code === 'KeyV' && !cctv.title))) { stopCctv(); return; }
   if (cctv?.title) return;
-  if (e.code === 'KeyC' && running && !laptop.open && !talkView.open && !e.repeat) {
+  if (e.code === 'KeyV' && running && !laptop.open && !talkView.open && !e.repeat) {
     const p = world.player;
     let best = -1, bd = 200;
     world.cctv.forEach((C, k) => { const d = Math.hypot(C.x - p.x, C.y - p.y); if (d < bd) { bd = d; best = k; } });
@@ -641,7 +643,9 @@ function readInput(): PlayerInput {
   const go = running && laptop.raise === 0 && !uiBusy();
   // walking off a seat stands the player up first (13.10f)
   if (go && (f || s) && world.player.sit) standUp(world);
-  return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
+  // Space jumps and C (held) crouches (14.8); with the phone out Space is its green key
+  const free = go && !phone.out && !payphone.active;
+  return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw, jump: free && input.down('Space'), crouch: free && input.down('KeyC') };
 }
 
 // audio can only start from a click, so it is made on entering the city

@@ -1,7 +1,7 @@
 /**
  * Balloons on the street (14.4, docs/mapa-da-tela.md zone B): short lines over the heads of people
  * near the player. They react to the world (the rain starting, a blackout, the lights coming back, a
- * crash up the street), to the player (running into them, staring) and talk among themselves (two
+ * crash up the street), to the player (running into them, staring, crouching or jumping beside them) and talk among themselves (two
  * waiting at the same light, someone on the phone). At most three show, the nearest first, up to
  * ~12 m; farther, an empty balloon (`...`); nearer than ~3 m the line is also a dim subtitle in zone
  * A, overheard. Only what is seen: not through a building, not from indoors.
@@ -42,6 +42,7 @@ export class Barks {
   private stare = -1;
   private stareAt = 0;
   private nextAmbient = 0;
+  private lowAt = -1;
   constructor(private w: World) {}
 
   /** What `who` says for grammar key `key`, in their voice. */
@@ -106,6 +107,13 @@ export class Barks {
     for (const { q, d } of near) {
       if (d > 1.4) break;
       if (p.speed > 6 && this.quiet(q.id, now, 8)) this.say(q.id, this.line(q.id, 'bark.bump'), now);
+    }
+    // crouched for a while beside someone, or jumping about next to them (14.8)
+    if ((p.crouch ?? 0) > 0.8) { if (this.lowAt < 0) this.lowAt = now; } else this.lowAt = -1;
+    for (const { q, d } of near) {
+      if (d > 4) break;
+      if (this.lowAt >= 0 && now - this.lowAt > 2 && this.quiet(q.id, now, 30)) { this.say(q.id, this.line(q.id, 'bark.crouch'), now); break; }
+      if ((p.hop ?? 0) > 0.3 && this.quiet(q.id, now, 30) && hash3(q.id, 13, Math.floor(now)) < 0.5) { this.say(q.id, this.line(q.id, 'bark.jump'), now); break; }
     }
     const fx = Math.cos(yaw), fy = Math.sin(yaw);
     const eyed = near.find(({ q, d }) => d < 6 && ((q.x - p.x) * fx + (q.y - p.y) * fy) / d > 0.995);
