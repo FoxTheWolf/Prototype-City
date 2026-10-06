@@ -44,6 +44,11 @@ a = ask('who works here?');
 if (!clean(a.text)) fail('who works here: ' + a.text);
 a = ask('can i borrow some money');
 if (!clean(a.text) || a.reading.intent !== 'borrow_money') fail('borrowing money is not a polite no: ' + a.text);
+// from the playtest of 2026-10-06: paying, and a question about them, not a place
+a = ask('I wanna pay');
+if (!a.counter || a.text !== a.text.trim() || !clean(a.text)) fail('"I wanna pay" does not open the till: ' + a.text);
+a = ask('where do you live');
+if (!clean(a.text) || a.point || /looking for|which place|where to/i.test(a.text)) fail('"where do you live" read as a place to go: ' + a.text);
 a = ask('bye');
 if (!a.end || !T.over) fail('goodbye did not end the talk');
 if (!w.talks.get(clerk)) fail('the clerk does not remember the player');

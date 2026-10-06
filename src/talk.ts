@@ -128,6 +128,7 @@ export function reply(w: World, T: Talk, line: string): Answer {
   T.said.push(key);
   if (again) return done(say('reply.again'));
   const kind = T.biz >= 0 ? c.businesses[T.biz].kind : null;
+  const ws = words(line), you = ws.includes('you') || ws.includes('your');
   switch (R.intent) {
     case 'goodbye': return done(say(`reply.goodbye.${style}`), { end: true });
     case 'threaten': mem.rude += 2; return done(say(`reply.threaten.${style}`), { end: true });
@@ -152,12 +153,15 @@ export function reply(w: World, T: Talk, line: string): Answer {
       if (g && !sold) return done(say('reply.notsold', { thing }));
       if (R.intent === 'ask_price') return sold ? done(say(`reply.ask_price.${style}`, { number: dollars(sold[1]), thing })) : done(say('reply.whatthing'));
       // to buy: made to order at the counter, else it is on the shelves
+      if (!sold && (ws.includes('pay') || /check ?out|ring (me|this|it) up/.test(ws.join(' ')))) return done(say('reply.pay'), { counter: true });
       if (PLACES[kind].order) return done(say('reply.order'), { counter: true });
       if (sold) return done(say('reply.onshelf', { thing }));
       return done(say(`reply.buy_request.${style}`), { counter: true });
     }
     case 'ask_where': case 'ask_directions': {
       const S = R.slots;
+      // "where do you live?": about them, not a place to go
+      if (you && !S.place && !S.kind && !S.street && ws.some((x) => ['live', 'from', 'home', 'house', 'stay', 'apartment'].includes(x))) return done(say(`reply.personal.${style}`));
       let pl: number | null = null, to: [number, number] | undefined;
       if (S.place) pl = S.place.id;
       else if (S.kind) {

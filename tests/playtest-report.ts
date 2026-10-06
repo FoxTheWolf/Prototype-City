@@ -165,7 +165,8 @@ for (const p of pos) {
   const k = date(p.gt), D = days.get(k);
   if (!D) days.set(k, { first: p, last: p, buy: 0, inc: 0 }); else D.last = p;
 }
-for (const r of of('buy')) { const D = days.get(date(r.gt)); if (D) D.buy += r.cents; }
+// a take already paid (a SIM card handed over the counter) is a purchase too
+for (const r of [...of('buy'), ...of('take').filter((t) => t.paid)]) { const D = days.get(date(r.gt)); if (D) D.buy += r.cents; }
 // income: the bank's entries in (pay, transfers)
 for (const r of of('bank')) { const D = days.get(date(r.gt)); if (D && r.cents > 0) D.inc += r.cents; }
 if (days.size) {
@@ -176,7 +177,7 @@ if (days.size) {
     say(`| ${k} | ${usd(w0)} | ${usd(w1)} | ${usd(w1 - w0)} | ${usd(D.buy)} | ${usd(D.inc)} |`);
   }
 }
-const buys = of('buy'), takes = of('take'), thefts = of('theft');
+const buys = [...of('buy'), ...of('take').filter((t) => t.paid)].sort((a, b) => a.gt - b.gt), takes = of('take'), thefts = of('theft');
 if (buys.length) { say(); say('Compras:'); for (const r of buys) say(`- ${clock(r.gt)}: ${r.good} por ${usd(r.cents)} em ${where(r)}`); }
 const bank = of('bank');
 if (bank.length) { say(); say('Banco:'); for (const r of bank) say(`- ${clock(r.gt)}: ${r.kind} ${usd(r.cents)}${r.biz ? ` (${r.biz})` : ''}, saldo ${usd(r.balance)}`); }

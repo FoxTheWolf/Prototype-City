@@ -725,5 +725,28 @@
   "[student] I'm still in school.",
   "[school] I'm in school.",
   "Nothing at the moment."
+ ],
+ "reply.pay": [
+  "Sure. I'll ring you up.",
+  "Okay, let's see what you've got.",
+  "Step right up.",
+  "[job] Right here, I'll ring it up.",
+  "#g.nod# Over here."
+ ],
+ "reply.personal.nice": [
+  "#g.smile# Not far from here.",
+  "Around the neighborhood. Why?",
+  "Oh, a few blocks away."
+ ],
+ "reply.personal.plain": [
+  "Around.",
+  "Why do you want to know?",
+  "Here and there.",
+  "I'd rather not say."
+ ],
+ "reply.personal.rude": [
+  "None of your business.",
+  "Why would I tell you that?",
+  "#g.sigh# That's personal."
  ]
 }
