@@ -22,6 +22,13 @@ export interface Seat { kind: SeatKind; /** Eye height over the feet while sitti
 export function findSeat(w: World): Seat | 'road' | 'lift' {
   const p = w.player, city = w.city;
   if (p.liftTo >= 0) return 'lift';
+  // already seated (13.10f): the same seat; on the table or the bar in front of it if there is one, else on the lap
+  if (p.sit) {
+    const S = p.sit, c = Math.cos(S.yaw), s = Math.sin(S.yaw);
+    const near = p.inside >= 0 && planOf(city, p.inside, p.floor)?.furn.some((f) => (f.kind === 'table' || f.kind === 'desk' || f.kind === 'bar' || f.kind === 'coffee')
+      && Math.hypot(f.x - S.x - c * 0.6, f.y - S.y - s * 0.6) < Math.max(f.hx, f.hy) + 0.5);
+    return { kind: near ? 'table' : S.kind === 'bench' ? 'bench' : 'sofa', eye: S.eye };
+  }
   if (p.inside >= 0) {
     const P = planOf(city, p.inside, p.floor);
     let best: Seat | null = null, bd = 0.9;
@@ -116,7 +123,7 @@ export class Laptop {
     this.sfx.push('zip');
     return true;
   }
-  /** Esc: close the lid and stand up; the system sleeps where it was. */
+  /** Esc: close the lid and stand up (or stay on the seat the player sat on first, 13.10f); the system sleeps where it was. */
   close(now: number) {
     if (!this.open) return;
     this.open = false; this.openedAt = now;

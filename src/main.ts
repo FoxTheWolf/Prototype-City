@@ -12,6 +12,7 @@ import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
 import { outletAhead, outletPower } from './sim/outlets';
+import { seatAhead, sitDown, standUp } from './sim/seats';
 import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
@@ -163,10 +164,12 @@ function gearBattery(fresh = false) {
 }
 const laptop = new Laptop(world);
 const watch = new Watch();
-/** Eye height over the feet: lower while sitting at the notebook (or leaning on a counter). */
+/** Sitting down (13.10f): 0 standing .. 1 seated, and the seat's eye height (kept while getting up). */
+let sitK = 0, sitEye = EYE;
+/** Eye height over the feet: lower while seated (13.10f), or sitting at the notebook (or leaning on a counter). */
 function eyeNow(): number {
-  const s = laptop.seat, k = 1 - (1 - laptop.raise) ** 2;
-  return s ? EYE + (s.eye - EYE) * k : EYE;
+  const s = laptop.seat, k = 1 - (1 - laptop.raise) ** 2, base = EYE + (sitEye - EYE) * (1 - (1 - sitK) ** 2);
+  return s ? base + (s.eye - base) * k : base;
 }
 payphone.outgoing = () => phone.call;
 phone.incomingCall = () => (payphone.call && payphone.active ? [payphone.call, world.telco.payphones[payphone.k].num] : null);
@@ -518,6 +521,10 @@ addEventListener('keydown', (e) => {
     if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
     // someone on the sidewalk in front: ask them the way (13.9)
     if (!phone.out) { const q = ask.near(camera.yaw); if (q) { ask.ask(q, performance.now() / 1000); return; } }
+    // a seat in front: sit on it, facing its way; seated, F with nothing else to do stands up (13.10f)
+    if (!phone.out && world.player.sit) { standUp(world); return; }
+    const seat = !phone.out ? seatAhead(world, camera.yaw) : null;
+    if (seat) { sitDown(world, seat); sitEye = seat.eye; camera.targetYaw = camera.yaw + Math.atan2(Math.sin(seat.yaw - camera.yaw), Math.cos(seat.yaw - camera.yaw)); return; }
   }
   const pp = payphone.active ? phoneKey(e.code, e.key) : null;
   if (pp) { e.preventDefault(); if (!e.repeat) payPress(pp); return; }
@@ -585,6 +592,8 @@ function readInput(): PlayerInput {
   const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
   const s = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
   const go = running && laptop.raise === 0 && !uiBusy();
+  // walking off a seat stands the player up first (13.10f)
+  if (go && (f || s) && world.player.sit) standUp(world);
   return { forward: go ? f : 0, strafe: go ? s : 0, run: input.down('ShiftLeft', 'ShiftRight'), heading: camera.yaw };
 }
 
@@ -664,6 +673,7 @@ function applySave(s: GameSave) {
   gearBattery();
   watch.restore(s.watch as ReturnType<Watch['snapshot']>, performance.now() / 1000);
   camera.yaw = camera.targetYaw = s.cam.yaw; camera.pitch = camera.targetPitch = s.cam.pitch;
+  sitEye = world.player.sit?.eye ?? EYE; sitK = world.player.sit ? 1 : 0;
 }
 /** The page again with these in the address (?mute kept): the title of another city. */
 function reloadWith(q: Record<string, string>) {
@@ -971,7 +981,10 @@ function frame(now: number) {
   if (world.bag.stolenAt !== theftSeen) { theftSeen = world.bag.stolenAt; shelfNote = en.bag.stole.replace('{n}', String(world.bag.stolen)); shelfNoteAt = now / 1000; }
   const plugAt = !aim && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? outletAhead(world, camera.yaw) : null;
   const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? en.bag.take.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good).replace('{p}', money(aim.cents))
-    : plugAt ? (phone.plug?.f === plugAt ? en.bag.unplug : en.bag.plug) : '';
+    : plugAt ? (phone.plug?.f === plugAt ? en.bag.unplug : en.bag.plug)
+    // a seat in front, or getting up from one (13.10f), when nothing else here takes F
+    : !running || phone.out || counter.active || bagView.open || laptop.open || payphone.active || doorAhead(world, camera.yaw) || liftAhead(world, camera.yaw) || counter.near() ? ''
+    : world.player.sit ? (sitK >= 1 ? en.seat.stand : '') : seatAhead(world, camera.yaw) ? en.seat.sit : '';
   if (shelfMsg && !bagView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
   if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
   // a shop's till in front: how to use the counter, or when the shop opens
@@ -1007,6 +1020,7 @@ function frame(now: number) {
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
+  sitK = world.player.sit ? Math.min(1, sitK + dt / 0.4) : Math.max(0, sitK - dt / 0.3);
   // the phone over its cable: mounted at /mnt/phone while the notebook is open and running
   {
     const want = phone.usb && laptop.open && laptop.pc.bootAt >= 0, mnt = laptop.pc.mkdirs('/mnt');

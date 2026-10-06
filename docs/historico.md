@@ -2,6 +2,13 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.10f: sentar (2026-10-06, sessão na nuvem)
+
+- **`src/sim/seats.ts`:** `seatAhead` acha o assento à frente (até 1,5 m): cadeira, banqueta e sofá da planta (no sofá, o ponto mais perto ao longo dele), e na rua o banco e o banco do ponto de ônibus (pelo modelo de `models.ts`: o assento olha para `a`). `sitDown` leva o jogador ao assento e guarda de onde ele veio; `standUp` o devolve. O assento fica em `player.sit` (vai junto no save; um save velho não tem).
+- **No jogo (`main.ts`):** F senta (o último da fila do F, depois de porta, elevador e pedir direção), F de novo ou andar levanta; a câmera gira para o lado do assento e o olho desce em 0,4 s (`sitK`, `sitEye`: cadeira 1,2 m, banqueta 1,4, sofá 1,1, banco 1,15); a dica "[F] SIT DOWN" / "[F] STAND UP".
+- **O notebook:** sentado, o `findSeat` usa o mesmo lugar: na mesa, mesa de centro ou balcão à frente se houver, senão no colo; fechar a tampa deixa o jogador sentado.
+- **Conferido:** `tests/seats.ts` (a cadeira à frente, não atrás; sentado não anda; o notebook na mesa; levantar volta ao lugar; o banco da rua e o rumo dele). **Não visto:** o visual (sem WebGPU na nuvem): a câmera dentro do assento, o encosto atrás do olho.
+
 ## 13.10i: lojas sem sala (2026-10-06, sessão na nuvem)
 
 - **O problema:** 1439 das 1618 empresas da semente 42 não tinham a sala da loja no térreo (só saguão e apartamentos). Três causas, medidas com um contador por empresa: (1) nos prédios de 7 a 10,5 m o corredor encostava na parede da porta, ou seja, na fachada da rua; (2) a loja só aceitava vitrine numa face comprida, e nos terrenos fundos e estreitos a rua fica na face curta; (3) nos prédios pequenos o saguão (3 módulos) e o núcleo do elevador (3 módulos) ocupavam a frente inteira.

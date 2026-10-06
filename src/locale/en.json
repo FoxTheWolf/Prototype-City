@@ -1,5 +1,6 @@
 {
   "lang": "en",
+  "seat": { "sit": "[F] SIT DOWN", "stand": "[F] STAND UP" },
   "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED", "call": "[F] CALL THE LIFT", "coming": "THE LIFT IS COMING" },
   "counter": {
     "hello": "What can I get you?", "nothing": "Just looking? Take what you need off the shelves.", "ok": "Paid. Thank you!", "funds": "Card declined: not enough in the account.", "noCash": "You don't have enough cash on you.",

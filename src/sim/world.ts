@@ -2,6 +2,7 @@ import { hash3, mulberry32, type Rng } from '../core/rng';
 import { drain, type Steps } from '../core/steps';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, ROOM } from './interior';
+import { type Sit } from './seats';
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
 import { openAccount, type BankAccount } from './bank';
@@ -41,6 +42,8 @@ export interface Player {
   liftTo: number;
   /** Cash in the pocket, in cents (coins for payphones now; the economy, stage 13, will use it). */
   cash: number;
+  /** The seat the player sits on (13.10f), or null standing; saves from before it have none. */
+  sit?: Sit | null;
 }
 
 /** What the player asks for this tick. The only way the outside world affects the sim. */
@@ -235,7 +238,8 @@ const JAM_CARS = 7, JAM_AGAIN = 60 * 300;
 export function stepWorld(w: World, input: PlayerInput) {
   const p = w.player;
   p.px = p.x; p.py = p.y;
-  let f = input.forward, st = input.strafe;
+  // seated, nobody walks (walking stands the player up first, main.ts)
+  let f = p.sit ? 0 : input.forward, st = p.sit ? 0 : input.strafe;
   const len = Math.hypot(f, st);
   if (len > 1) { f /= len; st /= len; }
   // running spends breath, and a hungry stomach gives less of it (needs.ts)
