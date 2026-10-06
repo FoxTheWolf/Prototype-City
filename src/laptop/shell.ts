@@ -123,6 +123,16 @@ export function splitChain(t: string): { op: string; cmd: string }[] {
   return segs;
 }
 
+/** [HACKING] The argument scaffold for a Wi-Fi/hacking command typed on its own (Tab, 15.7e-d): the
+ *  full line and where to put the caret. `essid` is the strongest network in range to prefill (quoted,
+ *  so spaces are fine), or '' for none. null for a command with no shaped template. Pure, so testable. */
+export function argTemplate(cmd: string, essid: string): { text: string; caret: number } | null {
+  if (cmd === 'iwconfig') { const t = `iwconfig wlan0 essid "${essid}"${essid ? ' key ' : ''}`; return { text: t, caret: essid ? t.length : t.length - 1 }; }
+  if (cmd === 'tdump') { const t = `tdump mon "${essid}" -w capture.ivs`; return { text: t, caret: essid ? t.length : 11 }; }
+  if (cmd === 'wcrack') return { text: 'wcrack capture.ivs', caret: 18 };
+  return null;
+}
+
 /** The index in `s` where the current command segment begins: just after the last unquoted ;, && or
  *  || before the end. 0 when there is none. Used by Tab completion so a command after a chain operator
  *  completes as a command name, not a path argument (15.7e). */
@@ -596,8 +606,26 @@ export class Shell {
     let pre = hits[0];
     for (const h of hits) while (!h.startsWith(pre)) pre = pre.slice(0, -1);
     if (hits.length > 1 && pre === base) { this.lines.push({ text: this.prompt + this.input, ink: 0 }, { text: hits.sort().join('  ').slice(0, TERM_W * 3), ink: 0 }); return; }
+    // a known command typed on its own: Tab scaffolds its arguments, VS Code-style, with the caret
+    // where the next field goes (and a nearby ESSID prefilled). 15.7e-d — a first slice; the drop-up
+    // menu and field-to-field cycling are a later step.
+    if (atCmd && hits.length === 1 && pre === base) {
+      const tpl = this.argTemplate(pre);
+      if (tpl) { const start = cmdSegmentStart(s); this.input = this.input.slice(0, start) + tpl.text + this.input.slice(this.cur); this.cur = start + tpl.caret; return; }
+    }
     const add = pre.slice(base.length) + (hits.length === 1 && atCmd ? ' ' : '');
     this.input = s + add + this.input.slice(this.cur); this.cur += add.length;
+  }
+
+  /** [HACKING] The argument scaffold for a command typed on its own (Tab, 15.7e-d): the full line and
+   *  where to put the caret. The Wi-Fi commands get a shaped template with the strongest ESSID in range
+   *  prefilled (quoted, so spaces are fine); the player fills or clicks the rest. null for the others. */
+  private argTemplate(cmd: string): { text: string; caret: number } | null {
+    const strongest = (wepOnly: boolean): string => {
+      for (const [i] of this.net.list) { const A = this.world.wifi[i]; if (!wepOnly || A.sec === Sec.WEP) return wifiName(this.world.city, A); }
+      return '';
+    };
+    return argTemplate(cmd, cmd === 'tdump' ? strongest(true) : strongest(false));
   }
 
   // ---- the commands ----
