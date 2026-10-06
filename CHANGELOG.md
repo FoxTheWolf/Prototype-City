@@ -3,6 +3,7 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.14.7 — Falar ao telefone (2026-10-06)
+- Corrigido: na caixa da conversa, **Esc** abria o menu de pausa em vez de encerrar a conversa, e digitar **C** abria a câmera de segurança em vez de escrever a letra.
 - Ligue para alguém e, quando atender, a conversa fica aberta: o celular desce para perto da orelha e você digita embaixo da tela, como na rua. A resposta vem pela ligação, com a voz dela. Se você ficar calado, ela pergunta se tem alguém na linha e depois desliga. **Esc** desliga.
 
 ## 0.14.6 — Conversar por SMS (2026-10-06)

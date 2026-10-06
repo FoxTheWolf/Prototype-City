@@ -5,6 +5,7 @@
 ## 14.7: falar ao telefone (2026-10-06, sessão na nuvem)
 - Ligando para o celular ou a casa de alguém, quem atende diz alô e **a ligação fica aberta**: a conversa abre embaixo da tela (a mesma `TalkView`, em modo telefone) e o celular desce para perto da orelha (`phone.atEar`, a 35% da subida). O que o jogador digita é lido como no SMS (`smsReply(..., typed = false)`: número desconhecido → "who is this?", ninguém dá caminho porque não vê o jogador), e a resposta sai **pela própria ligação** (`Call.answer`, com a voz da ligação, sem o murmúrio). Calado por 10 s: "Hello? Are you there?"; mais 10 s: desligam. Esc desliga. A paciência acaba como na conversa (desligam depois da última fala). Sem mudança: secretária eletrônica, quem já foi incomodado demais, quem ligou por engano, lojas, menus.
 - Do segundo playtest (na calçada): três intenções novas de conversa fiada no léxico (`ask_how`, `ask_age`, `talk_sports`) e "today"/"yesterday" pesando 1 em `ask_what_saw`.
+- Bugs do usuário: o Esc na conversa pausava (o Esc soltava o ponteiro do mouse e o `pointerlockchange` pausava); agora o ponteiro fica solto durante a conversa (`input.unlock()` ao abrir, `relock` ao fechar) e a pausa por ponteiro ignora a conversa. O C abria a câmera (o atalho vinha antes da caixa); agora não com a conversa aberta.
 - Teste: `tests/call.ts`. **Falta ver no PC:** o celular abaixado, a conversa embaixo e a voz da ligação.
 
 ## 14.6: o SMS pela mesma leitura (2026-10-06, sessão na nuvem)

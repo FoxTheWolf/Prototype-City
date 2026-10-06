@@ -165,7 +165,8 @@ function endTalk() {
   // on the phone (14.7): walking off is hanging up; the phone comes back up, the cursor stays free
   if (talkView.phone) { const c = phone.call; if (c && c.state !== 'ended') { c.hangUp(performance.now() / 1000); } phone.atEar = false; talkView.close(); return; }
   if (T && T.biz < 0) { const q = world.peds.find((e) => e.id === T.who); if (q && (q.hold ?? 0) > 300) { q.hold = 30; q.pdx = q.pdy = 0; } }
-  talkView.close(); input.lock();
+  // (if the browser will not lock the pointer without a click, the next key does: relock)
+  talkView.close(); input.lock(); relock = true;
 }
 // the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
 bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
@@ -431,9 +432,9 @@ addEventListener('mousedown', (e) => {
 });
 // the lock arrives a moment after it is asked for: if the right button is already up, free the cursor again
 document.addEventListener('pointerlockchange', () => {
-  if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open || bagView.open)) input.unlock();
+  if (input.locked && rightAt < 0 && (phone.out || payphone.active || laptop.open || bagView.open || talkView.open)) input.unlock();
   // the pointer freed by the player (Esc, or leaving the window), not by the game: pause
-  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
+  else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && !talkView.open && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
 });
 addEventListener('mouseup', (e) => {
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
@@ -458,7 +459,7 @@ addEventListener('keydown', (e) => {
   // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
   if (cctv && (e.code === 'Escape' || (e.code === 'KeyC' && !cctv.title))) { stopCctv(); return; }
   if (cctv?.title) return;
-  if (e.code === 'KeyC' && running && !laptop.open && !e.repeat) {
+  if (e.code === 'KeyC' && running && !laptop.open && !talkView.open && !e.repeat) {
     const p = world.player;
     let best = -1, bd = 200;
     world.cctv.forEach((C, k) => { const d = Math.hypot(C.x - p.x, C.y - p.y); if (d < bd) { bd = d; best = k; } });
@@ -496,7 +497,7 @@ addEventListener('keydown', (e) => {
     const T = talkView.talk!, r = talkView.key(e.code, e.key, performance.now() / 1000);
     if (r === 'leave') endTalk();
     // Tab: the till at a shop; on the sidewalk, the list of places to ask the way to (13.9), the same person
-    else if (r === 'till') { if (T.biz >= 0) counter.open(T.biz); else { talkView.close(); ask.who = T.who; ask.pick = 0; } }
+    else if (r === 'till') { if (T.biz >= 0) counter.open(T.biz); else { talkView.close(); ask.who = T.who; ask.pick = 0; relock = true; } }
     else if (r) {
       pt?.log('say', { who: citizenNames(world.city, world.pop, T.who)[0], text: talkView.mine, intent: r.reading.intent === 'unrecognized' ? null : r.reading.intent, tone: `${r.reading.toneLabel} p${r.reading.pressure}`, answer: r.text });
       if (r.counter) counter.open(T.biz);
@@ -552,7 +553,7 @@ addEventListener('keydown', (e) => {
     }
     const c = counter.near();
     // the clerk: a conversation (14.3), the till through it
-    if (c?.staffed && !phone.out) { talkView.start(staffOn(world.pop, world.city, c.k, world.time)[0], c.k, performance.now() / 1000); return; }
+    if (c?.staffed && !phone.out) { talkView.start(staffOn(world.pop, world.city, c.k, world.time)[0], c.k, performance.now() / 1000); input.unlock(); return; }
     // a door in front: open it, close it, or find it locked (13.2c)
     // the lift's doors in front, its car elsewhere: call it (13.2d)
     if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
@@ -563,7 +564,7 @@ addEventListener('keydown', (e) => {
       if (q) {
         if (q.way.length || q.door) ask.ask(q, t);
         else if ((h >= 23 || h < 5) && hash3(q.id, 11, Math.floor(world.time / 3600)) < 0.35) barks.say(q.id, barks.line(q.id, 'dir.busy'), t);
-        else { talkView.start(q.id, -1, t); q.hold = 3600; q.pdx = q.pdy = 0; }
+        else { talkView.start(q.id, -1, t); input.unlock(); q.hold = 3600; q.pdx = q.pdy = 0; }
         return;
       }
     }
