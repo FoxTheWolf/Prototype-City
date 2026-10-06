@@ -17,6 +17,7 @@ const fail = (m: string) => { if (++fails <= 30) console.log('FAIL ' + m); };
 
 const lines = Array.from({ length: 60 }, (_, i) => ({ text: `line ${i}`, ink: 0 }));
 lines.push({ text: 'bin  docs  tmp', ink: 0 });
+lines.push({ text: 'host 10.0.4.7:23 open', ink: 0 });
 const term: TermIO & { lines: { text: string; ink: number }[] } = {
   lines,
   prompt: 'user@host:~$ ',
@@ -95,7 +96,15 @@ term.input = ''; term.cur = 0;
 wm.key('v', true, 1); // Ctrl+V pastes into the prompt
 if (term.input !== wm.clip.replace(/\s+/g, ' ').trim()) fail(`Ctrl+V pastes the clipboard into the prompt (got "${term.input}")`);
 
-console.log(fails ? `\n${fails} FAILED` : '\nOK — composes, focuses, maximizes, routes keys, the mouse, and copy/paste');
+// --- clicking an address in the terminal types it at the prompt (15.7d) ---
+wm.focus = 'term'; term.scroll = 0; term.input = ''; term.cur = 0;
+const scr = wm.cells(1).scr;
+let ipr = -1, ipc = -1;
+for (let r = 0; r < H && ipr < 0; r++) { const c = scr.ch[r].join('').indexOf('10.0.4.7'); if (c >= 0 && c < split) { ipr = r; ipc = c + 3; } }
+if (ipr < 0) fail('the address line is on screen');
+else { wm.down(ipc, ipr); wm.up(ipc, ipr, 1); if (!term.input.includes('10.0.4.7:23')) fail(`clicking an address types it at the prompt (got "${term.input}")`); }
+
+console.log(fails ? `\n${fails} FAILED` : '\nOK — composes, focuses, maximizes, routes keys, the mouse, copy/paste, and address clicks');
 console.log('\n--- top of the composed screen (split, terminal focused) ---');
 wm.key('ArrowLeft', true, 1);
 const show = wm.cells(1);

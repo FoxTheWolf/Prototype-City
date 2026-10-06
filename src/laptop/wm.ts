@@ -101,7 +101,20 @@ export class WM {
     // a plain click: clear the mark and act on the pane
     this.sel = null;
     const R = this.rects();
-    if (this.focus === 'web' && R.ww > 0 && x >= R.wx && x < R.wx + R.ww) this.browser.click(x - R.wx, y, now);
+    if (this.focus === 'web' && R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.browser.click(x - R.wx, y, now); return; }
+    // clicking an address in the terminal (an IP, host or host:port, e.g. in a scan's output) types it at the
+    // prompt — plain text insertion, so the player need not retype it; the command itself is the player's to run
+    if (this.focus === 'term' && R.tw > 0 && x >= R.tx && x < R.tx + R.tw) { const a = this.addrAt(x, y); if (a) this.term.paste(a); }
+  }
+
+  /** An address under (x, y) on the last composed screen (an IPv4, optional :port, or a dotted host), or null. */
+  private addrAt(x: number, y: number): string | null {
+    const S = this.lastScr;
+    if (!S || y < 0 || y >= S.h) return null;
+    const row = S.ch[y].join(''), re = /(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?|(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(row))) if (x >= m.index && x < m.index + m[0].length) return m[0];
+    return null;
   }
 
   /** Paste the clipboard into the focused pane (Ctrl+V). */
