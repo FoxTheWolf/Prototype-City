@@ -5,6 +5,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 ## 0.15.14 — Três teclas no canto e a rodinha do fone (2026-10-06)
 - **Só três teclas de música no topo do celular**, no canto direito e desenhadas em pixels finos, levemente arredondadas: **anterior, tocar/pausar e próxima** (o ícone de tocar vira pausa quando a música toca).
 - **O volume foi para o fio do fone:** um controle branco com uma **rodinha** no cabo. Com o mouse solto (Alt ou celular na mão), passe o cursor perto dela e **gire a roda do mouse**; a área é maior que a rodinha, então ela pode balançar à vontade. Sem fone, o volume segue em Alt+↑/↓ e no Tunes Player.
+- **Segurar anterior/próxima avança ou volta dentro da música** (seek), cada vez mais rápido, tocando ou pausada; um toque rápido continua pulando de música. Vale para os botões do celular e para Alt+←/→.
+- As teclas ficaram um pouco à direita do centro do topo, longe da curva do canto.
 - **Dica no canto da tela:** "ALT  free the mouse", ou "ALT  free the mouse / music" quando há música carregada.
 
 ## 0.15.13 — Teclas de música no topo, shuffle e o fio que desce (2026-10-06)

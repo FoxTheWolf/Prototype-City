@@ -535,6 +535,7 @@ document.addEventListener('pointerlockchange', () => {
   else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && !talkView.open && !altFree && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
 });
 addEventListener('mouseup', (e) => {
+  if (e.button === 0) phone.release();
   if (e.button === 0 && watchStartHeld) { watchStartHeld = false; watch.startUp(); }
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
   if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
@@ -558,7 +559,7 @@ addEventListener('keydown', (e) => {
   // (volume, previous and next) and P (play/pause), the same as the phone's keys on top
   const mk: Key | null = e.code === 'MediaPlayPause' ? 'play' : e.code === 'MediaTrackNext' ? 'next' : e.code === 'MediaTrackPrevious' ? 'prev'
     : e.altKey && !laptop.open && running ? ({ ArrowUp: 'vup', ArrowDown: 'vdown', ArrowLeft: 'prev', ArrowRight: 'next', KeyP: 'play' } as Record<string, Key>)[e.code] ?? null : null;
-  if (mk) { e.preventDefault(); if (!e.repeat || mk === 'vup' || mk === 'vdown') musicKey(mk); return; }
+  if (mk) { e.preventDefault(); if (!e.repeat || mk === 'vup' || mk === 'vdown') (e.code.startsWith('Media') ? musicTap : musicKey)(mk); return; }
   if ((e.code === 'AltLeft' || e.code === 'AltRight') && !laptop.open) {
     if (!e.repeat && running && !paused && input.locked) { altFree = true; input.unlock(); }
     return;
@@ -719,6 +720,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => {
   if (e.code === 'KeyK' && WATCH_ON) watch.startUp();
   if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); altUp(); }
+  if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') phone.release();
 });
 
 /** `rows` sets the cell size; the grid then gets as many rows as fill the screen (no black bars, the phone on the bottom edge).
@@ -791,6 +793,8 @@ function musicKey(k: Key) {
   if (phone.screen === 'off' || phone.screen === 'boot') return;
   phonePress(k);
 }
+/** A tap from the system's media controls: pressed and let go at once (no seek). */
+const musicTap = (k: Key) => { musicKey(k); phone.release(); };
 /**
  * The system's media controls (2026-10-06): Chromium hands the keyboard's media keys (and Windows'
  * overlay) to a page with a media session playing, so a silent sound made here (a WAV written in code)
@@ -807,8 +811,8 @@ const mediaEl = (() => {
   const S = navigator.mediaSession;
   S.setActionHandler('play', () => { if (!phone.tn.playing) musicKey('play'); });
   S.setActionHandler('pause', () => { if (phone.tn.playing) musicKey('play'); });
-  S.setActionHandler('nexttrack', () => musicKey('next'));
-  S.setActionHandler('previoustrack', () => musicKey('prev'));
+  S.setActionHandler('nexttrack', () => musicTap('next'));
+  S.setActionHandler('previoustrack', () => musicTap('prev'));
   return el;
 })();
 let mediaGen = -1;
@@ -834,6 +838,12 @@ function syncMusic() {
     else { M.stop(); const f = phone.sd[T.cur - TRACKS.length]; if (f) loadSd(f.name, T.gen); }
   }
   if (T.playing) M.resume(); else M.pause();
+  // previous or next held: after a moment it seeks, faster the longer it is held, playing or paused
+  const H = phone.seekHold, tn = performance.now() / 1000;
+  if (H && T.cur >= 0 && M.length > 0) {
+    if (!H.on && tn - H.at > 0.35) { H.on = true; H.last = tn; }
+    if (H.on) { const dt = Math.min(0.1, tn - H.last); H.last = tn; M.seek(M.at + (H.k === 'next' ? 1 : -1) * (6 + 6 * Math.min(2, tn - H.at)) * dt); }
+  }
   M.update();
   if (M.ended) { M.ended = false; phone.tunesSkip(1); }
   const r = phone.earphones ? 'phones' : phone.raise > 0.5 ? 'hand' : 'pocket';

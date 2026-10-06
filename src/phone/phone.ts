@@ -1225,7 +1225,8 @@ export class Phone {
   /** The music keys: the volume a step up or down; play/pause (the song picked when nothing is loaded); previous and next. */
   sideKey(k: Key): boolean {
     const T = this.tn;
-    if (k === 'prev' || k === 'next') { if (!this.tunesCount()) return false; this.tunesSkip(k === 'next' ? 1 : -1); return true; }
+    // previous and next act when let go (release): a tap skips; held, they seek (main moves the song while seeking)
+    if (k === 'prev' || k === 'next') { if (!this.tunesCount()) return false; this.seekHold = { k, at: performance.now() / 1000, on: false, last: 0 }; return true; }
     if (k === 'play') {
       if (!this.tunesCount()) return false;
       if (T.cur >= 0 && T.len > 0) T.playing = !T.playing; else this.tunesPlay(T.cur >= 0 ? T.cur : T.sel);
@@ -1235,6 +1236,15 @@ export class Phone {
     if (v === T.vol) return false;
     T.vol = v; this.volAt = performance.now() / 1000;
     return true;
+  }
+  /** Previous or next held down (2026-10-06): since when, and whether it has turned into a seek. */
+  seekHold: { k: Key; at: number; on: boolean; last: number } | null = null;
+  /** The key let go: a previous or next that never became a seek skips the song. */
+  release() {
+    const H = this.seekHold;
+    if (!H) return;
+    this.seekHold = null;
+    if (!H.on) this.tunesSkip(H.k === 'next' ? 1 : -1);
   }
   /** When a side key last moved the volume (real s): the screen shows it for a moment. */
   volAt = -9;

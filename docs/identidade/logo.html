@@ -95,12 +95,17 @@ function finish(el) {
   bot.setAttribute('x', I.x - L0.x);
   const L = bot.getExtentOfChar(0), K = bot.getExtentOfChar(3);
   // the stem: about the I's middle third
-  const sx = I.x + I.width * 0.5, sw = I.width * 0.5, capT = BOT - SIZE * 0.72, y0 = TOP + 2, y1 = capT - 2;
+  const sx = I.x + I.width * 0.5, sw = I.width * 0.47, capT = BOT - SIZE * 0.72, y0 = TOP + 2, y1 = capT - 2;
   let s = '';
   if (d === 0) {
-    s += `<rect x="${sx - sw / 2}" y="${TOP - 2}" width="${sw}" height="${capT - TOP + 4}" fill="${P.link || P.main}"/>`;
-    for (const t of [0.35, 0.65]) s += `<rect x="${sx - sw / 2 - 1}" y="${TOP + (capT - TOP) * t - 1}" width="${sw + 2}" height="2.5" fill="${night ? P.night : P.day}"/>`;
-    s += `<rect x="${sx - sw / 2}" y="${TOP + (capT - TOP) * 0.35 + 1.5}" width="${sw}" height="${(capT - TOP) * 0.3 - 2.5}" fill="${P.acc}"/>`;
+    // the stem in three pieces: GRID's colour out of the I, the cyan square, LINK's colour into the L;
+    // each piece runs deep into its letter (same colour, so no seam shows where they meet), a fine
+    // joint of the background between them
+    const g = capT - TOP, j1 = TOP + g * 0.33, j2 = TOP + g * 0.67, J = 2.5, bgc = night ? P.night : P.day;
+    s += `<rect x="${sx - sw / 2}" y="${TOP - 20}" width="${sw}" height="${j1 - TOP + 20}" fill="${P.main}"/>`;
+    s += `<rect x="${sx - sw / 2}" y="${j1 + J}" width="${sw}" height="${j2 - j1 - J}" fill="${P.acc}"/>`;
+    s += `<rect x="${sx - sw / 2}" y="${j2 + J}" width="${sw}" height="${capT - j2 - J + 18}" fill="${P.link || P.main}"/>`;
+    for (const y of [j1, j2]) s += `<rect x="${sx - sw / 2 - 1}" y="${y}" width="${sw + 2}" height="${J}" fill="${bgc}"/>`;
   } else if (d === 1) {
     const a = sx - 9, b = sx + 9;
     s += `<path d="M${a} ${y0 + 2} L${a} ${y1 - 7}" stroke="${P.acc}" stroke-width="3"/><path d="M${a - 5} ${y1 - 8} L${a} ${y1} L${a + 5} ${y1 - 8} Z" fill="${P.acc}"/>`;

@@ -147,6 +147,16 @@ export class Music {
     this.ev = S.events.findIndex((e) => e.at >= this.from);
     if (this.ev < 0) this.ev = S.events.length;
   }
+  /** Jump to t seconds in, playing on if it was (2026-10-06: the phone's keys held seek). */
+  seek(t: number) {
+    if (!this.song && !this.buf) return;
+    const was = !this.paused;
+    if (was) { this.drop(); this.paused = true; }
+    t = Math.max(0, Math.min(this.length - 0.05, t));
+    this.from = this.song ? Math.floor(t / this.song.stepS) : t;
+    this.ended = false;
+    if (was) this.resume();
+  }
   stop() { this.drop(); this.song = null; this.buf = null; this.paused = true; this.from = 0; }
 
   /** Every frame: schedules the steps coming up. */
