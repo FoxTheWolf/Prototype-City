@@ -23,6 +23,20 @@
 - **Menu com as câmeras:** o modo CCTV (já existe como "WATCH CCTV") vira o **fundo padrão** do menu, no lugar da vista do jogador girando; clicar em "WATCH CCTV" só tira o menu da frente. Cuidado: a câmera é 4:3 e o menu é adaptativo (mínimo de linhas): moldura ou barras.
 - **Notícias dominadas por batidas e apagões (retorno do usuário em 2026-10-04):** um limite de manchetes por assunto numa janela de tempo (`locale/news.ts`/`sim/events.ts`); junto, a notícia do apagão só depois que a luz volta.
 
+### Da caixa de feedback de 2026-10-06 (playtest seed656322502)
+- **Webmail: erro mudo com senha < 6 caracteres** no cadastro — mostrar a mensagem de "senha curta" (`src/web/webmail.ts`/`sim/mail.ts`).
+- **Endereço de e-mail longo demais:** o domínio usa o nome inteiro da cidade ("newlockwoodonline.com"). Encurtar para 6–8 caracteres do nome (`sim/mail.ts`, a geração do domínio).
+- **Link "find" na homepage não funciona** (portal, `src/web/sites.ts`): o link da busca na página de entrada não leva ao Lookwise.
+- **Electron captura o botão "voltar" do mouse** e recarrega o jogo: desligar essa bind no Electron; se precisar, usar só dentro do navegador do notebook (`electron/main.cjs`/preload).
+- **T9 não reconhece "motel":** revisar os termos relevantes do jogo no dicionário T9; considerar uma lista de dicionário T9 real (`src/phone/` T9).
+- **Orelhão mostrar o custo da ligação** antes/ao discar; conferir, pelos playtests, se as situações de devolver o dinheiro estão cobertas (payphone).
+- **Diálogo — quadrante de tom descentralizado:** o plano cartesiano do tom está com o centro na parte de baixo, não no meio; centralizar.
+- **Diálogo — tirar o rótulo "unrecognized":** sem reconhecer, mostrar só "type what you want to say" (ver `docs/retoques-14-15.md`).
+- **ESC durante a conversa ainda abre o menu:** deveria fechar o diálogo primeiro.
+- **Recapturar o mouse ao despausar:** se o mouse estava capturado antes do ESC, ao apertar ESC de novo (fechar o menu) recapturar automaticamente — exceto com o notebook aberto.
+- **Colunas geram muito perto da parede** (nota F8 5): fundir colunas coladas na parede com a própria parede (`sim/interior.ts`/geometria).
+- **Legibilidade de placas por blocos:** a placa "GO" e as letras do semáforo de pedestre e da placa ao lado ficam quase invisíveis de perto/por tamanho (notas F8 8, 9) — compor por pontos/blocos como os letreiros (princípio "pontos de perto, ASCII de longe"), e a placa ao lado retrorreflexiva.
+
 ## Lista fixa: retoques de luz (Opus)
 - **Cores:** o usuário julga as paletas com a **F4**; falta a saturação da noite (perguntar: forte demais ou fraca?). **Saturação demais** (faixas roxas no vidro, saguão verde-água): pedir capturas com a posição (`POS`).
 - **A tela do celular clara demais** (reforçado pelo usuário em 2026-10-04): as telas muito brancas do celular com um fundo um pouco mais escuro, **dependente do tema** (um branco gelo, um cinza claro), o que também tira o bloom excessivo; depois, se ainda precisar, o bloom e a adaptação do olho (`render/eye.ts`, `EYE.k`/`pageDim`, e o bloom em `gpu/shader.ts`).
