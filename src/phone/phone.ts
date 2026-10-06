@@ -17,6 +17,7 @@ import en from '../locale/en.json';
 import { type FsNode } from '../sim/computer';
 import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
 import { businessName, makerName, operatorName, districtName } from '../locale/names';
+import { smsReply, Talk } from '../talk';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
 import { post } from '../sim/bank';
 import { jobReply, answerTrace } from '../sim/jobs'; // [HACKING] ver CLAUDE.md > Arquivos de hacking
@@ -1205,17 +1206,35 @@ export class Phone {
       const t = smsText(this.world, 'biz', -1, h(2)).replace('{num}', formatNumber(this.world.telco, this.world.telco.bizNum[c.k])).replace('{open}', hh(o)).replace('{close}', hh(z)).replace('{biz}', businessName(this.world.city, c.k));
       this.receive(D.to, t, now + 8 + h(3) * 20);
     }
+    // a text in a conversation going on by text (14.6): read like a line said, answered in their way of typing
+    else if (c.kind === 'cell' && this.textTalk(c.i, false)) this.answerText(c.i, D.to, D.text, now, h(3));
     // texted again and again: a person asks them to stop, then goes quiet
     else if (c.kind === 'cell' && n >= 6) { /* no answer */ }
     else if (c.kind === 'cell' && n >= 3) { if (h(1) < 0.8) this.receive(D.to, smsText(this.world, 'annoyed', c.i, h(2)), now + 10 + h(3) * 30); }
     else if (c.kind === 'cell' && this.wrongSms.has(c.i)) this.receive(D.to, smsText(this.world, 'oops', c.i, h(2)), now + 10 + h(3) * 30);
     else if (c.kind === 'home') this.receive(op, SMS.failed.replace('{to}', D.to), now + 5); // a landline takes no texts
-    else if (c.kind === 'cell' && h(1) < 0.25 + 0.5 * (this.world.pop.talk[c.i] / 255)) {
-      // the owner reads it when awake, and maybe answers
-      const asleep = whereIs(this.world.pop, this.world.city, c.i, this.world.time).doing === Doing.Asleep;
-      this.receive(D.to, smsText(this.world, 'res', c.i, h(2)), now + (asleep ? 240 : 15) + h(3) * 40);
-    }
+    // the owner reads it when awake, and maybe answers: the start of a conversation by text (14.6)
+    else if (c.kind === 'cell' && h(1) < 0.5 + 0.5 * (this.world.pop.talk[c.i] / 255)) this.answerText(c.i, D.to, D.text, now, h(3));
     return true;
+  }
+
+  /** The conversations by text going on (14.6), by citizen; a new one after a quiet game hour. */
+  private texting = new Map<number, { T: Talk; at: number }>();
+  private textTalk(i: number, make = true): Talk | null {
+    const t = this.world.time, c = this.texting.get(i);
+    if (c && !c.T.over && t - c.at < 3600) return c.T;
+    if (!make) return null;
+    const T = new Talk(this.world, i, -1, true);
+    this.texting.set(i, { T, at: t });
+    return T;
+  }
+  /** Citizen i's answer to `text`, from `from`, when they read it (asleep: much later). */
+  private answerText(i: number, from: string, text: string, now: number, q: number) {
+    const T = this.textTalk(i)!, a = smsReply(this.world, T, text);
+    this.texting.get(i)!.at = this.world.time;
+    if (!a) return;
+    const asleep = whereIs(this.world.pop, this.world.city, i, this.world.time).doing === Doing.Asleep;
+    this.receive(from, a, now + (asleep ? 240 : 12) + q * 30 + a.length * 0.15);
   }
 
   /** Call a number: the exchange decides who answers (see call.ts); a *code# opens the operator's service menu. */

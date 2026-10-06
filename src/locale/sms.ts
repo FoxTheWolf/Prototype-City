@@ -8,11 +8,11 @@ import NAMES from './text/names.en.json';
 
 /**
  * Text messages from the city's people, put together by the text grammar (locale/text/sms.en.json):
- * a text sent to the player by mistake, an "oops" when the player answers it, a stranger's "who is
- * this?", a shop's automatic reply, a shop's advertising (`biz`, the business sending it). They are in the sender's voice (their age, family, the hour).
+ * a text sent to the player by mistake, an "oops" when the player answers it, a shop's automatic
+ * reply (a stranger's "who is this?" is `sms.res`, said through talk.ts's smsReply), a shop's advertising (`biz`, the business sending it). They are in the sender's voice (their age, family, the hour).
  * `q` (0..1) picks the words; `i` is the citizen sending it (-1 for a business).
  */
-export function smsText(world: World, kind: 'wrong' | 'oops' | 'res' | 'biz' | 'promo' | 'annoyed', i: number, q: number, biz = -1): string {
+export function smsText(world: World, kind: 'wrong' | 'oops' | 'biz' | 'promo' | 'annoyed', i: number, q: number, biz = -1): string {
   const r = rngOf(Math.floor(q * 2147483647), i, 0x5a5), W = world.weather, P = world.pop;
   const sel = i >= 0 ? selFor(P, i, world.time, W.temp, W.precip, W.snow) : selOf(momentTags(world.time, W.temp, W.precip, W.snow), 0);
   const ctx = i >= 0 ? lifeCtx(world.city, P, i, r) : {};

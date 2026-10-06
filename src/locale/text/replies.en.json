@@ -748,5 +748,37 @@
   "None of your business.",
   "Why would I tell you that?",
   "#g.sigh# That's personal."
+ ],
+ "reply.sms.where.nice": [
+  "Where are you right now?",
+  "I can't really explain by text. Check the map on your phone?",
+  "Not sure where you are, sorry. Ask someone nearby?"
+ ],
+ "reply.sms.where.plain": [
+  "Where are you?",
+  "Just look it up.",
+  "Use the maps thing on your phone."
+ ],
+ "reply.sms.where.rude": [
+  "Look it up.",
+  "Not your GPS.",
+  "Figure it out."
+ ],
+ "reply.sms.knowyou": [
+  "Oh, it's you! Hi.",
+  "Oh right, I remember you.",
+  "Ha, okay. Saving your number.",
+  "Oh hey. How'd you get my number?"
+ ],
+ "reply.sms.dontknow": [
+  "Sorry, I don't think we've met.",
+  "I still don't know who you are.",
+  "Doesn't ring a bell. Wrong number?",
+  "I don't know anyone like that."
+ ],
+ "reply.sms.atwork": [
+  "At work, can't text much.",
+  "On shift, quick answer:",
+  "[job] At work right now."
  ]
 }

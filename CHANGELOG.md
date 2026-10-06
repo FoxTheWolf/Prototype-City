@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.6 — Conversar por SMS (2026-10-06)
+- Mandar SMS a alguém agora é uma conversa: a pessoa entende o que você escreveu e responde no jeito dela de digitar. Um "hey" de um número que ela não conhece recebe "Who is this?". Dizer quem você é ("it's me, we talked on the street") só funciona com quem já falou com você pessoalmente. Por mensagem ninguém explica caminho, porque não sabe onde você está. No trabalho, alguns avisam que não podem falar muito; quem está dormindo responde bem depois; e quem perde a paciência para de responder.
+
 ## 0.14.5 — A etiqueta de perto (2026-10-06)
 - Olhe um produto na prateleira por meio segundo, de perto, e a etiqueta dele aparece ao lado, ampliada: a loja, o nome, o preço grande na faixa amarela e o código de barras. Numa loja escura, ela também fica escura. A caixa de preço antiga saiu.
 

@@ -21,12 +21,14 @@ import { placeAt, placeName } from './phone/places';
 import { businessName, citizenNames, landmarkName, roadName, workplaceName } from './locale/names';
 import { expand, rngOf, tidy } from './locale/gen';
 import { TEXT } from './locale/text';
-import { selFor } from './locale/voice';
+import { selFor, voice } from './locale/voice';
+import { Doing, whereIs } from './sim/citizens';
 import { calendar } from './sim/clock';
 import en from './locale/en.json';
+import NAMES from './locale/text/names.en.json';
 
 /** What someone remembers of the player: when they last talked (game time), how rude the player has been, whether they gave their name. */
-export interface TalkMem { met: number; rude: number; name: boolean }
+export interface TalkMem { met: number; rude: number; name: boolean; /** They know the player's number (14.6); they have talked face to face. */ num?: boolean; face?: boolean }
 
 type Style = 'nice' | 'plain' | 'rude';
 /** Intentions with no system behind them yet: a polite no. */
@@ -43,7 +45,8 @@ export class Talk {
   over = false;
   /** Met before this talk (for "you again"). */
   readonly met: boolean;
-  constructor(private w: World, readonly who: number, readonly biz: number) {
+  /** `sms`: by text message (14.6), where they cannot see where the player is. */
+  constructor(private w: World, readonly who: number, readonly biz: number, readonly sms = false) {
     const warm = w.pop.social[who] / 255, mem = w.talks.get(who);
     this.met = !!mem;
     this.patience = 6 + Math.round(warm * 4) + (biz >= 0 ? 4 : 0) - (mem?.rude ?? 0);
@@ -117,6 +120,7 @@ export function reply(w: World, T: Talk, line: string): Answer {
   const say = (key: string, ctx: Record<string, string> = {}) => tidy(expand(`#${key}#`, TEXT, r, { first: citizenNames(c, P, who)[0], ...ctx }, sel));
   const done = (text: string, extra: Partial<Answer> = {}): Answer => {
     mem.met = w.time;
+    if (!T.sms) mem.face = true;
     if (T.patience <= 0 && !extra.end) { text += ' ' + say('reply.leave'); extra.end = true; }
     if (extra.end) T.over = true;
     return { text, reading: R, end: !!extra.end, ...extra };
@@ -159,6 +163,8 @@ export function reply(w: World, T: Talk, line: string): Answer {
       return done(say(`reply.buy_request.${style}`), { counter: true });
     }
     case 'ask_where': case 'ask_directions': {
+      // by text they do not know where the player is
+      if (T.sms) return done(say(`reply.sms.where.${style}`));
       const S = R.slots;
       // "where do you live?": about them, not a place to go
       if (you && !S.place && !S.kind && !S.street && ws.some((x) => ['live', 'from', 'home', 'house', 'stay', 'apartment'].includes(x))) return done(say(`reply.personal.${style}`));
@@ -181,4 +187,36 @@ export function reply(w: World, T: Talk, line: string): Answer {
       if (LATER.has(R.intent)) return done(say(`reply.deflect.${style}`));
       return done(say(`reply.${R.intent}.${style}`));
   }
+}
+
+/**
+ * A text message to citizen T.who (14.6), read like a line said (the same intents, the same answers),
+ * written as they type (voice()). A number they do not know gets "who is this?" to a bare greeting,
+ * and saying who it is only works on someone who has met the player; at work some say so first.
+ * Null: no answer (they are tired of the talk).
+ */
+export function smsReply(w: World, T: Talk, text: string): string | null {
+  if (T.over) return null;
+  const P = w.pop, who = T.who, mem = T.mem, R = readLine(text, cityNames(w)), r = rngOf(who, T.said.length + 77, Math.floor(w.time));
+  const W = w.weather, sel = selFor(P, who, w.time, W.temp, W.precip, W.snow, T.met ? ['met'] : []);
+  // (who they take the texter for, in "Is this {other}?")
+  const N = r() < 0.5 ? NAMES.female.mid : NAMES.male.mid;
+  const say = (key: string) => tidy(expand(`#${key}#`, TEXT, r, { first: citizenNames(w.city, P, who)[0], other: N[Math.floor(r() * N.length)] }, sel));
+  const tire = () => { if (--T.patience <= 0) T.over = true; };
+  let s: string;
+  if (R.intent === 'claim_identity' || /\b(it'?s me|this is|remember me|we (met|talked|spoke))\b/i.test(text)) {
+    // "it's me, from the shop": only someone who has met the player places them
+    const known = !!mem.face;
+    s = say(known ? 'reply.sms.knowyou' : 'reply.sms.dontknow');
+    if (known) mem.num = true;
+    T.said.push('claim'); tire();
+  } else if (!mem.num && (R.intent === 'greet' || R.intent === 'unrecognized' || R.banter)) {
+    s = say('sms.res');
+    T.said.push('who'); tire();
+  } else {
+    s = reply(w, T, text).text;
+    if (!s) return null;
+    if (whereIs(P, w.city, who, w.time).doing === Doing.Work && r() < 0.4) s = say('reply.sms.atwork') + ' ' + s;
+  }
+  return voice(s, P, who, r);
 }
