@@ -109,7 +109,8 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
       for (let c = 0; c < Math.min(W, F.w); c++) {
         const st = F.st[r][c], ch = F.ch[r][c].charCodeAt(0);
         let fg: C3, bg: C3;
-        if (st >= 10) [fg, bg] = FW[st];
+        if (st === St.Rgb) { const a = F.fg[r][c], b = F.bg[r][c]; fg = [a >> 16, (a >> 8) & 255, a & 255]; bg = [b >> 16, (b >> 8) & 255, b & 255]; }
+        else if (st >= 10) [fg, bg] = FW[st];
         else if (st === St.Inverse) { fg = [sbg[0] + 4, sbg[1] + 4, sbg[2] + 4]; bg = [ink[0][0] * 0.85, ink[0][1] * 0.85, ink[0][2] * 0.85]; }
         else { fg = ink[st]; bg = sbg; }
         put(sx + c, sy + r, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], [bg[0] * scan, bg[1] * scan, bg[2] * scan]);

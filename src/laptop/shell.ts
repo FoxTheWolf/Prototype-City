@@ -3,6 +3,7 @@ import { calendar } from '../sim/clock';
 import { type BootDev, type Computer, type FsNode } from '../sim/computer';
 import { Firmware, type FwAction } from './bios';
 import { Editor } from './editor';
+import { Browser } from '../web/browser';
 import { type Scr } from './screen';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
@@ -47,7 +48,7 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'free', 14, 320], ['/usr/bin', 'df', 64, 420], ['/usr/bin', 'whoami', 22, 260], ['/usr/bin', 'id', 30, 270],
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
   ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'iwlist', 40, 520], ['/sbin', 'dhclient', 120, 900], ['/bin', 'ping', 44, 420], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
-  ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300],
+  ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300], ['/usr/bin', 'lodestar', 9800, 38000],
 ];
 /** The hacker tools in ~/bin: fictional stand-ins (scanner, cracker, sniffer, console). Name, size KB, memory KB. */
 const HACK_TOOLS: [string, number, number][] = [
@@ -138,6 +139,8 @@ export class Shell {
   private postWant: null | 'setup' | 'menu' = null;
   /** The text editor, while it owns the screen. */
   editor: Editor | null = null;
+  /** The web browser (15.1), while it owns the screen. */
+  browser: Browser | null = null;
 
   constructor(readonly pc: Computer, private world: World) {
     this.cwd = `/home/${pc.hw.user}`;
@@ -149,6 +152,7 @@ export class Shell {
   screen(): { scr: Scr; cx: number; cy: number } | null {
     if (this.fw.mode) return { scr: this.fw.cells(), cx: -1, cy: -1 };
     if (this.editor && this.state === 'ready') return this.editor.cells();
+    if (this.browser && this.state === 'ready') return this.browser.cells(performance.now() / 1000);
     return null;
   }
   get prompt() {
@@ -213,7 +217,7 @@ export class Shell {
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
     this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.mask = false;
-    this.editor = null; this.fw.close(); this.inPost = true; this.postWant = null;
+    this.editor = null; this.browser = null; this.fw.close(); this.inPost = true; this.postWant = null;
     pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
     // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
     // up, the drives it finds; the drive spins up meanwhile
@@ -343,8 +347,8 @@ export class Shell {
    */
   powerButton(now: number) {
     if (this.halted) return;
-    if (this.state === 'ready' && !this.editor && !this.fw.mode) { this.shutdown(now, false); return; }
-    this.queue = []; this.editor = null; this.fw.close(); this.bios = false; this.inPost = false;
+    if (this.state === 'ready' && !this.editor && !this.browser && !this.fw.mode) { this.shutdown(now, false); return; }
+    this.queue = []; this.editor = null; this.browser = null; this.fw.close(); this.bios = false; this.inPost = false;
     this.pc.halt(); this.state = 'off'; this.halted = true; this.lines = [];
     this.sound(now, 'spindown', 0);
   }
@@ -382,6 +386,7 @@ export class Shell {
     }
     if (this.state !== 'ready') return;
     if (this.editor) { this.editor.key(key, ctrl); return; }
+    if (this.browser) { this.browser.key(key, ctrl, now); return; }
     if (ctrl && (key === 'c' || key === 'C')) {
       if (!this.ready) this.interrupt(now);
       else { this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(this.input.length) : this.input) + '^C', ink: 0 }); this.input = ''; this.cur = 0; this.mask = false; }
@@ -945,6 +950,16 @@ export class Shell {
         });
         return pc.workS(n?.size ?? 0, 1);
       }
+      case 'lodestar': {
+        // the web browser (15.1): it owns the screen and keeps its process until it closes; the network is the card's
+        const pid = this.job;
+        this.job = 0;
+        this.then(now, () => {
+          this.browser = new Browser(w, () => ({ up: this.net.state === 'up', kbps: this.net.kbps() }), () => { this.browser = null; pc.kill(pid); }, TERM_W, TERM_H);
+          this.browser.go(args[0] ?? '', performance.now() / 1000);
+        });
+        return pc.workS(9800, 1);
+      }
       case 'acpi': {
         const pct = Math.round(pc.charge * 100), hms = (t: number) => `${p2(Math.floor(t / 3600))}:${p2(Math.floor(t / 60) % 60)}:${p2(Math.floor(t) % 60)}`;
         const st = pc.plugged ? (pct >= 100 ? 'Full' : 'Charging') : 'Discharging';
@@ -992,14 +1007,14 @@ export class Shell {
   /** The battery is almost empty: the system halts itself, cleanly. */
   battCritical(now: number) {
     if (this.state !== 'ready') return;
-    this.editor = null;
+    this.editor = null; this.browser = null;
     this.broadcast(now, 'Critical battery level: the system is shutting down.');
     this.shutdown(now, false);
   }
   /** The battery is empty: the power is simply gone, whatever was on the screen. */
   powerLoss() {
     this.pc.halt();
-    this.queue = []; this.lines = []; this.state = 'off'; this.halted = true; this.bios = false; this.editor = null; this.fw.close(); this.inPost = false; this.conn = null; this.mask = false;
+    this.queue = []; this.lines = []; this.state = 'off'; this.halted = true; this.bios = false; this.editor = null; this.browser = null; this.fw.close(); this.inPost = false; this.conn = null; this.mask = false;
     this.sfx.push('spindown');
   }
   private logout(now: number) {

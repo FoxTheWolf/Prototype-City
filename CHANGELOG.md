@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.1 — A web no notebook (2026-10-06)
+- No notebook, com o Wi-Fi conectado, digite **`lodestar`**: abre o navegador. A página inicial é o portal da cidade, com as notícias do dia, o tempo e um diretório das empresas. Cada empresa com site tem cardápio ou produtos com os preços de verdade, o horário, o endereço, o telefone e quem trabalha lá. As lojas pequenas quase nunca têm site.
+- As páginas descem devagar, como em 2008, na velocidade do Wi-Fi. Se o prédio de uma empresa está sem luz, o site dela não responde.
+- Teclas: **F6** digita um endereço, as **setas** rolam, **Tab** escolhe o link, **Enter** segue, **Backspace** volta, **F10** fecha.
+
 ## 0.14.9 — Memória, nomes e números (2026-10-06)
 - Quem já falou com você lembra do que você perguntou ("Weren't you asking about Nguyen Pharmacy yesterday?") e esquece com o tempo; uma grosseria demora mais para ser esquecida.
 - Quem te disse o nome aparece com ele sobre a cabeça quando você o vê de novo.

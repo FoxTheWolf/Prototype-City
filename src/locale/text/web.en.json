@@ -1,0 +1,125 @@
+{
+ "web.welcome": [
+  "Welcome to {biz}!",
+  "Welcome to the official home of {biz}.",
+  "Thanks for visiting {biz} on the web.",
+  "{biz} - proudly serving {district} since {year}.",
+  "Hello and welcome!"
+ ],
+ "web.intro.diner": [
+  "Breakfast all day, the best pie in {district} and coffee that never runs out. Come as you are.",
+  "A real diner the way it used to be: hot food, cold milkshakes and a booth with your name on it.",
+  "Burgers, eggs, meatloaf and pie. Open early, open late, always fresh."
+ ],
+ "web.intro.cafe": [
+  "Fresh roasted coffee, warm muffins and free Wi-Fi. The perfect place to work, read or just relax.",
+  "Your neighborhood coffee house. Bring your laptop, we have the outlets and the espresso.",
+  "Hand-pulled espresso and home-baked bagels, right here in {district}."
+ ],
+ "web.intro.pizza": [
+  "New York style pizza by the slice or the whole pie. Hot, fast and cheap.",
+  "Real brick oven pizza since {year}. Ask about our late night specials!",
+  "The best slice in {district}, no contest. Open late every night."
+ ],
+ "web.intro.deli": [
+  "Fresh pastrami piled high, bagels every morning and the coldest soda on the block.",
+  "Your corner deli for sandwiches, coffee and everything in between."
+ ],
+ "web.intro.fastfood": [
+  "Hot, fast and made for you. Try our new combo meals today!",
+  "Burgers, fries and shakes at prices you'll love. Drive by, walk in, chow down."
+ ],
+ "web.intro.bar": [
+  "Cold beer, good music and the friendliest bartenders in {district}. Happy hour every weekday.",
+  "The neighborhood bar since {year}. Pool table, jukebox and drafts on tap.",
+  "No frills, no fuss. Just a good drink at a fair price."
+ ],
+ "web.intro.grocery": [
+  "Fresh produce, groceries and household goods at everyday low prices.",
+  "Everything you need for the week, close to home. Open seven days."
+ ],
+ "web.intro.liquor": [
+  "Beer, wine and spirits for every occasion. Must be 21 or older. Please drink responsibly.",
+  "The widest selection of wine and liquor in {district}."
+ ],
+ "web.intro.pharmacy": [
+  "Prescriptions, health and beauty products and friendly advice from our pharmacists.",
+  "Your health is our business. Fast prescription refills and everyday essentials."
+ ],
+ "web.intro.laundry": [
+  "Clean washers, fast dryers and a comfortable place to wait. Drop-off service available.",
+  "Wash, dry, fold. We make laundry day easy."
+ ],
+ "web.intro.pawn": [
+  "We buy, sell and loan. Electronics, jewelry, tools, instruments and more. Fast cash, no hassle.",
+  "Need cash today? Bring it in. Looking for a deal? Come see what's new on the shelves."
+ ],
+ "web.intro.electronics": [
+  "The latest TVs, cameras, laptops and accessories at unbeatable prices.",
+  "Computers, cables, batteries and gadgets. If it plugs in, we have it."
+ ],
+ "web.intro.phones": [
+  "The newest phones and the best prepaid plans in town. Unlock your phone, top up your line.",
+  "Cell phones, chargers, cases and SIM cards. Activation in minutes."
+ ],
+ "web.intro.cyber": [
+  "High speed internet, gaming and printing. Pay by the hour, stay as long as you like.",
+  "Fast connections, comfortable chairs and cold drinks. Open late for gamers."
+ ],
+ "web.intro.bank": [
+  "Personal and business banking you can trust. Visit a branch or call us today.",
+  "Checking, savings, loans and more. Building a stronger {city} together."
+ ],
+ "web.intro.hotel": [
+  "Comfortable rooms in the heart of {city}. Business center, room service and free parking.",
+  "Stay with us. Clean rooms, friendly staff and great rates for every traveler."
+ ],
+ "web.intro.motel": [
+  "Clean rooms at low nightly and weekly rates. Cable TV, free ice.",
+  "Budget rooms, no reservation needed. Open 24 hours."
+ ],
+ "web.intro.cinema": [
+  "The newest movies on the big screen. Matinees every day, midnight shows on weekends."
+ ],
+ "web.intro.books": [
+  "New and used books, magazines and maps. Come browse, stay a while.",
+  "Thousands of titles on every subject. Special orders welcome."
+ ],
+ "web.intro.tailor": [
+  "Alterations, repairs and custom suits. Quality work at fair prices.",
+  "Expert tailoring since {year}. Same-week alterations."
+ ],
+ "web.intro.autoparts": [
+  "Parts, oil, batteries and tools for every make and model. Ask our experts.",
+  "Everything for your car, at prices that won't break the bank."
+ ],
+ "web.intro.parking": [
+  "Secure parking by the hour, day or month. Attendant on duty."
+ ],
+ "web.about": [
+  "Family owned and operated since {year}.",
+  "We've been part of {district} since {year}, and we're not going anywhere.",
+  "Started in {year} with one small room. Still the same address, still the same promise.",
+  "Locally owned since {year}. Thank you for your support!"
+ ],
+ "web.team": [
+  "Come say hi to our team: {staff}.",
+  "Our friendly staff: {staff}.",
+  "Meet the people behind the counter: {staff}."
+ ],
+ "web.updated": [
+  "Last updated {date}.",
+  "Site updated {date}.",
+  "Page last modified {date}."
+ ],
+ "web.visitors": [
+  "You are visitor number {n}!",
+  "Visitors since 2004: {n}",
+  "{n} visitors and counting!"
+ ],
+ "web.portal.tagline": [
+  "Your home page for {city}.",
+  "News, weather and the whole city, all in one place.",
+  "{city}'s favorite start page."
+ ]
+}

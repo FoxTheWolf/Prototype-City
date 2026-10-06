@@ -110,7 +110,7 @@ export class Laptop {
   /** Flat and unplugged: the power button does nothing. */
   private get dead() { return !this.pc.plugged && this.pc.charge <= 0.005; }
   /** A program that owns the whole screen wants the keys a terminal would not (Esc, PageUp/PageDown). */
-  get owns() { return !!this.shell.fw.mode || !!this.shell.editor; }
+  get owns() { return !!this.shell.fw.mode || !!this.shell.editor || !!this.shell.browser; }
   /** N: take it out where it can be used (true), or say why not. */
   take(now: number): boolean {
     if (this.open) return false;
