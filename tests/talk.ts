@@ -49,6 +49,13 @@ a = ask('I wanna pay');
 if (!a.counter || a.text !== a.text.trim() || !clean(a.text)) fail('"I wanna pay" does not open the till: ' + a.text);
 a = ask('where do you live');
 if (!clean(a.text) || a.point || /looking for|which place|where to/i.test(a.text)) fail('"where do you live" read as a place to go: ' + a.text);
+// from the playtest on the sidewalk (2026-10-06): small talk read as small talk
+a = ask('how are you today');
+if (a.reading.intent !== 'ask_how' || !clean(a.text)) fail('"how are you today" is not small talk: ' + a.reading.intent);
+a = ask('whats your age');
+if (a.reading.intent !== 'ask_age' || !clean(a.text)) fail('"whats your age" not read: ' + a.reading.intent + ' ' + a.text);
+a = ask('did you watch the game yesterday?');
+if (a.reading.intent !== 'talk_sports' || !clean(a.text)) fail('"the game yesterday" not small talk: ' + a.reading.intent);
 a = ask('bye');
 if (!a.end || !T.over) fail('goodbye did not end the talk');
 if (!w.talks.get(clerk)) fail('the clerk does not remember the player');

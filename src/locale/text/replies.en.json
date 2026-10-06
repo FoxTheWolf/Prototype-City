@@ -780,5 +780,62 @@
   "At work, can't text much.",
   "On shift, quick answer:",
   "[job] At work right now."
+ ],
+ "reply.ask_how.nice": [
+  "Doing well, thanks for asking. You?",
+  "Not bad at all. And you?",
+  "[atwork] Busy, but good. You?",
+  "[morning] Still waking up, but good.",
+  "[evening/late] Long day, but okay. Thanks.",
+  "#g.smile# Pretty good, actually."
+ ],
+ "reply.ask_how.plain": [
+  "Fine.",
+  "Okay, I guess.",
+  "Can't complain.",
+  "[atwork] Busy.",
+  "Same as always.",
+  "[monday] It's Monday.",
+  "[friday] Better, it's Friday."
+ ],
+ "reply.ask_how.rude": [
+  "Why do you care?",
+  "Fine. What do you want?",
+  "Was doing better a minute ago.",
+  "#g.sigh# Fine."
+ ],
+ "reply.ask_age.nice": [
+  "[teen/young] I'm {age}. Why?",
+  "Ha. Old enough.",
+  "[old/senior] Older than I look, I hope. {age}.",
+  "{age}, if you must know."
+ ],
+ "reply.ask_age.plain": [
+  "That's a strange question.",
+  "Old enough.",
+  "Why do you want to know?",
+  "[teen] {age}."
+ ],
+ "reply.ask_age.rude": [
+  "None of your business.",
+  "Excuse me?",
+  "Not telling you that."
+ ],
+ "reply.talk_sports.nice": [
+  "Didn't catch it, sorry. Was it good?",
+  "Oh, I missed it. Who won?",
+  "[m] Yeah, what a finish!",
+  "Not really a sports person, but I heard it was close."
+ ],
+ "reply.talk_sports.plain": [
+  "Didn't see it.",
+  "Not really into that.",
+  "[m] Yeah, saw some of it.",
+  "Heard about it."
+ ],
+ "reply.talk_sports.rude": [
+  "Don't care.",
+  "Not interested.",
+  "#g.shrug# Whatever."
  ]
 }

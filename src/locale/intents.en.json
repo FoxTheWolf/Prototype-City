@@ -12,8 +12,7 @@
     "hiya": 2,
     "howdy": 2,
     "sup": 2,
-    "yo": 2,
-    "how are you": 2
+    "yo": 2
    },
    "question": false,
    "slots": [
@@ -21,7 +20,6 @@
    ],
    "examples": [
     "Hello there",
-    "hey, how are you",
     "yo"
    ]
   },
@@ -275,8 +273,8 @@
     "saw anything": 3,
     "what happened": 2,
     "what did you notice": 4,
-    "yesterday": 2,
-    "today": 2,
+    "yesterday": 1,
+    "today": 1,
     "this morning": 2,
     "last night": 2
    },
@@ -678,6 +676,75 @@
     "No",
     "Nah, not really",
     "I won't"
+   ]
+  },
+  "ask_how": {
+   "label": "Asking how they are",
+   "keywords": {
+    "how are you": 5,
+    "how are u": 5,
+    "how r u": 5,
+    "how's it going": 5,
+    "hows it going": 5,
+    "how you doing": 5,
+    "how are you doing": 5,
+    "how's your day": 4,
+    "hows your day": 4,
+    "how is your day": 4,
+    "how are things": 4,
+    "you okay": 3,
+    "you alright": 3,
+    "you good": 2
+   },
+   "question": true,
+   "slots": [],
+   "examples": [
+    "How are you today?",
+    "hey, how’s it going",
+    "how r u",
+    "How is your day going?",
+    "you alright?"
+   ]
+  },
+  "ask_age": {
+   "label": "Asking their age",
+   "keywords": {
+    "how old": 5,
+    "your age": 5,
+    "old are you": 4,
+    "age": 3
+   },
+   "question": true,
+   "slots": [],
+   "examples": [
+    "How old are you?",
+    "whats your age",
+    "what is your age?"
+   ]
+  },
+  "talk_sports": {
+   "label": "Small talk about sports",
+   "keywords": {
+    "the game": 4,
+    "game": 2,
+    "match": 3,
+    "score": 2,
+    "team": 2,
+    "playoffs": 3,
+    "football": 3,
+    "baseball": 3,
+    "basketball": 3,
+    "hockey": 3,
+    "super bowl": 4,
+    "world series": 4
+   },
+   "question": false,
+   "slots": [],
+   "examples": [
+    "did you watch the game yesterday?",
+    "what a match last night",
+    "who won the game",
+    "you follow baseball?"
    ]
   },
   "not_understood": {

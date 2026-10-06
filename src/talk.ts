@@ -137,6 +137,7 @@ export function reply(w: World, T: Talk, line: string): Answer {
     case 'goodbye': return done(say(`reply.goodbye.${style}`), { end: true });
     case 'threaten': mem.rude += 2; return done(say(`reply.threaten.${style}`), { end: true });
     case 'ask_time': return done(say(`reply.ask_time.${style}`, { time: sayTime(w.time) }));
+    case 'ask_age': return done(say(`reply.ask_age.${style}`, { age: String(P.age[who]) }));
     case 'ask_name': mem.name = true; return done(say(`reply.ask_name.${style}`, T.biz >= 0 ? { biz: businessName(c, T.biz) } : {}));
     case 'ask_job':
       if (P.job[who] < 0) return done(say('reply.nojob'));
