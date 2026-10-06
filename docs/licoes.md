@@ -10,6 +10,11 @@
 - **Testável no Node sem UI:** exportar os pedaços puros do shell (`WEP_IVS`, `wepIvRate`, `parseCapture`) e testá-los + `buildWifi` (`tests/wep.ts`), em vez de dirigir o `run()`. Mesma lição do apt.
 - **Muleta de debug com flag, não apagada:** a chave na tela de Wi-Fi do celular virou `SHOW_WIFI_KEY=false` (alinhado ao pedido do usuário de marcar o que é debug para tirar depois), em vez de sumir.
 
+### Lições da 15.7e c/d (campos do terminal) — 2026-10-06
+- **Clique-para-colar lê a tela composta, não o modelo:** `fieldAt` (antes `addrAt`) casa padrões na linha de texto do `lastScr` e devolve o token sob o x. Ampliar é só somar regex, do mais específico ao mais geral (aspas, MAC, IP, host, dígitos) — não precisa saber o que o comando imprimiu.
+- **Molde de argumentos no Tab:** a parte pura (`argTemplate(cmd, essid)` → `{text, caret}`) é exportada e testável (`tests/chain.ts`); o método do shell só resolve o ESSID (de `net.list`) e chama. Caret absoluto a partir do início do segmento (`cmdSegmentStart`). Dispara quando o comando está completo sozinho (`atCmd && hits===1 && pre===base`).
+- **O (d) completo (drop-up + Tab entre campos) é grande:** remexe o modelo de input do shell (placeholders/campos), o `draw.ts` (desenhar os campos) e um overlay de menu — é peça própria, não QoL. A fatia feita (scaffold no Tab) entrega o "digitar iwconfig abre os campos" sem a máquina de overlay.
+
 ### Lições da 15.8c / debug — 2026-10-06
 - **Estado novo do jogador = campo no World + guarda no save.** `w.forum` (conta + respostas) entrou em `world.ts`, `snapWorld`/`applyWorld` e `WorldSave` com `forum?` opcional (migração: save antigo não tem). Mesmo padrão de `feed`/`mail`. O tipo mora em `sim/` (world.ts), não em `web/`, para o web depender do sim e não o contrário.
 - **Formulário no navegador do jogo:** uma página ganha `form: url(action)`; a submissão volta como `fetchUrl(w, url, form)` → `pageFn(w, path, form)`. Molde: `streetwire.ts`. O fluxo de várias etapas (join → confirm) é só páginas encadeadas, cada uma com o seu `action`.

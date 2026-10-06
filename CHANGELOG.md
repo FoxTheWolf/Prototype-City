@@ -6,6 +6,10 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Encadeie comandos** no notebook: `&&` roda o próximo se o anterior começou (ex.: `iwconfig wlan0 essid "Cafe" && dhclient`), `||` roda se não começou, `;` roda sempre. (Antes, só o primeiro comando rodava.)
 - **Aspas automáticas:** digitar `"` já põe o par `""` com o cursor no meio; digitar a aspa de novo em cima da que fecha só passa por ela; apagar a de abrir tira o par vazio junto.
 
+## 0.15.7e-cd — Terminal: clicar campos e montar comandos (2026-10-06)
+- **Clique em qualquer campo** do que o terminal mostra para colá-lo no comando — não só IP/host, mas também MAC/BSSID, o nome de rede entre aspas e a chave de Wi-Fi. (Antes só IP e host.)
+- **Tab monta o comando:** digite `iwconfig`, `tdump` ou `wcrack` sozinho e aperte Tab — a linha vem pronta, com a rede mais forte por perto já no lugar e o cursor no próximo campo a preencher. (O menu suspenso de opções e o Tab entre campos vêm depois.)
+
 ## 0.15.8c — Entrar no fórum e responder (2026-10-06)
 - **Agora dá para ter conta no Switchboard** — pelo seu número, como o resto da sua identidade na rua. Em **Sign up** você escolhe um apelido; o fórum te manda um **código por SMS**; você confirma e está dentro. (Perdeu o número, perdeu o apelido.)
 - **Responder nos tópicos:** logado, cada tópico tem uma caixa de resposta. O que você escreve entra com o seu apelido, e o autor do tópico responde um tempo depois — do jeito dele, lendo o tom do que você disse (seco se você foi grosso, "np" se agradeceu).
