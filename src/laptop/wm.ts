@@ -4,7 +4,7 @@
  * while Lodestar runs (shell.wm); it composes both panes into the one screen the firmware draws.
  *
  * Layout: the terminal on the left, the browser on the right, a '|' divider between with a '<'/'>'
- * marker pointing at the pane that has the keys. F11 maximizes the focused pane; Ctrl+Left/Right (or
+ * marker pointing at the pane that has the keys. Ctrl+Up maximizes the focused pane; Ctrl+Left/Right (or
  * Ctrl+Tab) moves the focus. The focused pane takes the keys; while the terminal has them, PageUp and
  * PageDown walk its scrollback. The browser keeps its own keys (F6 address, Tab link, F10 closes).
  *
@@ -34,7 +34,7 @@ const GAP = 1;
 export class WM {
   /** Which pane has the keys. */
   focus: 'term' | 'web' = 'web';
-  /** A pane maximized over the other (F11), or null for the split. */
+  /** A pane maximized over the other (Ctrl+Up), or null for the split. */
   private max: null | 'term' | 'web' = null;
   /** The terminal pane's width in the split. */
   private split: number;
@@ -62,7 +62,8 @@ export class WM {
   }
 
   key(key: string, ctrl: boolean, now: number) {
-    if (key === 'F11') { this.max = this.max ? null : this.focus; return; }
+    // Ctrl+Up maximizes the focused pane and restores the split (not F11: the Electron shell owns F11 for its own fullscreen)
+    if (ctrl && key === 'ArrowUp') { this.max = this.max ? null : this.focus; return; }
     if (key === 'Insert') { this.viewer = !this.viewer; return; }
     if (ctrl && (key === 'v' || key === 'V')) { this.paste(now); return; }
     if (ctrl && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Tab')) { this.focus = this.focus === 'term' ? 'web' : 'term'; return; }

@@ -5,7 +5,7 @@ import { Computer, playerLaptop } from '../sim/computer';
 import { planOf } from '../sim/interior';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
-import { install, Shell, TERM_H, type LapSfx } from './shell';
+import { install, syncPrograms, Shell, TERM_H, type LapSfx } from './shell';
 
 /**
  * The player's notebook as an object: out of the backpack only where it can be used, sitting or
@@ -95,7 +95,7 @@ export class Laptop {
   }
   /** What the save keeps of the notebook (F.6): its disk, its firmware's settings and its battery; it comes back off, in the backpack. */
   snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge }; }
-  restore(d: ReturnType<Laptop['snapshot']>) { this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; }
+  restore(d: ReturnType<Laptop['snapshot']>) { this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; syncPrograms(this.pc, this.world.time); }
   /**
    * Is there a live outlet where the player sits: a wall outlet within the adapter's cable (13.9c),
    * in a building whose power is on (its substation, or a generator that feeds more than the

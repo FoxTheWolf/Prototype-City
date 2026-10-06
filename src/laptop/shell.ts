@@ -94,6 +94,13 @@ export function install(pc: Computer, t: number) {
   pc.put(`${H}/media/photos/IMG_0413.JPG`, 1_090_822, u, ago(40));
 }
 
+/** After a disk is loaded from a save (F.6), add any system program the save predates -- e.g. the
+ *  browser lodestar, added in 15.1, is missing from a disk saved before it. Only the missing system
+ *  binaries are put, never the owner's files, so a restored disk keeps everything it already had. */
+export function syncPrograms(pc: Computer, t: number) {
+  for (const [dir, name, kb, mem] of PROGRAMS) if (!pc.get(`${dir}/${name}`)) pc.put(`${dir}/${name}`, kb * 1024, 'root', t, name, mem);
+}
+
 export class Shell {
   lines: Line[] = [];
   private queue: Item[] = [];

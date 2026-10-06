@@ -5,6 +5,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 ## 0.15.8 — Switchboard, o fórum (2026-10-06)
 - **O fórum dos hackers da cidade**, em `www.switchboard.net`: não está no buscador nem no portal — você chega por alguém te passar o endereço. Três quadros: **Guides** (como as coisas se fazem, com os tutoriais fixos), **Contracts** (trabalhos abertos, sem nomes) e **Lounge** (conversa fiada).
 - Por enquanto é só leitura: cada tópico abre com os posts sob apelidos. Criar conta pelo número (confirmada por SMS) e responder vêm a seguir.
+- **Correções:** no notebook, **maximizar um painel agora é Ctrl+↑** (antes era F11, que abre/fecha a tela cheia do próprio jogo). E o navegador (`lodestar`) voltou a abrir em partidas salvas antes de ele existir.
 
 ## 0.15.7 — Janelas no notebook (2026-10-06)
 - **Terminal e navegador lado a lado:** abra o Lodestar (`lodestar`) com o terminal aberto e os dois dividem a tela, com um traço no meio e uma seta apontando qual tem o teclado. **Ctrl+←/→** (ou Ctrl+Tab) troca o foco; **F11** deixa um só painel em tela cheia e volta.

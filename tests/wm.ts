@@ -2,7 +2,7 @@
  * The notebook's window manager (15.7), in Node:
  *   npx rolldown tests/wm.ts --format esm --platform node -o tests/.out/wm.mjs && node tests/.out/wm.mjs [seed]
  * The terminal and the browser sit side by side with a '|' divider; the focus marker points at the
- * pane with the keys; Ctrl+Left/Right moves it; F11 maximizes a pane (no divider, full width) and
+ * pane with the keys; Ctrl+Left/Right moves it; Ctrl+Up maximizes a pane (no divider, full width) and
  * again restores the split; PageUp walks the terminal's scrollback; keys reach the focused pane.
  * Prints the top rows of the composed screen.
  */
@@ -64,15 +64,15 @@ wm.key('PageUp', false, 1);
 if (term.scroll <= 0) fail('PageUp scrolls the terminal back');
 term.scroll = 0;
 
-// --- F11 maximizes the terminal: full width, no divider ---
-wm.key('F11', false, 1);
+// --- Ctrl+Up maximizes the terminal: full width, no divider ---
+wm.key('ArrowUp', true, 1);
 out = wm.cells(1);
 if (rowStr(out.scr, 0).includes('|') && rowStr(out.scr, 0)[split] === '|') fail('no divider when a pane is maximized');
 if (out.scr.ch[0].slice(split).join('').includes('Lodestar')) fail('the browser is hidden when the terminal is maximized');
 // restore
-wm.key('F11', false, 1);
+wm.key('ArrowUp', true, 1);
 out = wm.cells(1);
-if (out.scr.ch[0][split] !== '|') fail('F11 again restores the split');
+if (out.scr.ch[0][split] !== '|') fail('Ctrl+Up again restores the split');
 
 // --- mouse: a press on a pane focuses it; the wheel scrolls the pane under the cursor ---
 wm.cells(1); // compose so the selection can read the grid
