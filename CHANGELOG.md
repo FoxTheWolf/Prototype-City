@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.8 — Switchboard, o fórum (2026-10-06)
+- **O fórum dos hackers da cidade**, em `www.switchboard.net`: não está no buscador nem no portal — você chega por alguém te passar o endereço. Três quadros: **Guides** (como as coisas se fazem, com os tutoriais fixos), **Contracts** (trabalhos abertos, sem nomes) e **Lounge** (conversa fiada).
+- Por enquanto é só leitura: cada tópico abre com os posts sob apelidos. Criar conta pelo número (confirmada por SMS) e responder vêm a seguir.
+
 ## 0.15.7 — Janelas no notebook (2026-10-06)
 - **Terminal e navegador lado a lado:** abra o Lodestar (`lodestar`) com o terminal aberto e os dois dividem a tela, com um traço no meio e uma seta apontando qual tem o teclado. **Ctrl+←/→** (ou Ctrl+Tab) troca o foco; **F11** deixa um só painel em tela cheia e volta.
 - **O mouse funciona no notebook:** o cursor aparece ao abrir a tampa. Clique num painel para focá-lo; no navegador, clique nos botões da barra, no endereço e nos links; a rodinha rola o painel sob o cursor.

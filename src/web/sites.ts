@@ -25,6 +25,7 @@ import en from '../locale/en.json';
 import { type Block, type C3, type Page, type Theme } from './page';
 import { mailHost, mailPage, provider } from './webmail';
 import { WIRE_HOST, wirePage } from './streetwire';
+import { FORUM_HOST, forumPage } from './forum';
 
 /** A hostname as written: lowercase letters and digits. */
 export const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
@@ -65,7 +66,7 @@ const ICONS: Partial<Record<BusinessKind | 'any', string[]>> = {
   any: [' ____ ', '| ** |', '|____|'],
 };
 
-export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'biz'; k: number };
+export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'forum' } | { kind: 'biz'; k: number };
 export interface Web { hosts: Map<string, SiteRef>; byBiz: Map<number, string>; portal: string; search: string }
 /** The search engine (15.3): its name and host. */
 export const SEARCH = 'Lookwise', SEARCH_HOST = 'www.lookwise.com';
@@ -81,6 +82,7 @@ export function webOf(w: World): Web {
   hosts.set(SEARCH_HOST, { kind: 'search' });
   hosts.set(mailHost(w), { kind: 'mail' });
   hosts.set(WIRE_HOST, { kind: 'wire' });
+  hosts.set(FORUM_HOST, { kind: 'forum' }); // not indexed by the search, not on the portal: you get the address from someone
   c.businesses.forEach((b, k) => {
     const head = b.hq ?? k;
     if (head !== k) { const h = byBiz.get(head); if (h) byBiz.set(k, h); return; }
@@ -115,6 +117,7 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
   if (S.kind === 'search') return { host, path, page: searchPage(w, host, path, query) };
   if (S.kind === 'mail') return { host, path, page: mailPage(w, host, path, form) };
   if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
+  if (S.kind === 'forum') return { host, path, page: forumPage(w, path) };
   return { host, path, page: portalPage(w, host, path) };
 }
 
