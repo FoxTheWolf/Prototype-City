@@ -503,6 +503,8 @@ addEventListener('keydown', (e) => {
     else if (r) {
       pt?.log('say', { who: citizenNames(world.city, world.pop, T.who)[0], text: talkView.mine, intent: r.reading.intent === 'unrecognized' ? null : r.reading.intent, tone: `${r.reading.toneLabel} p${r.reading.pressure}`, answer: r.text });
       if (r.counter) counter.open(T.biz);
+      // a number given (14.9): into the phone's contacts
+      if (r.contact && !phone.contacts.some((x) => x.number === r.contact!.number) && phone.contacts.length < 250) { phone.contacts.push(r.contact); phone.sfx.push(['sent']); }
       // on the phone their answer comes through the call (its voice), and they hang up after their last line
       if (talkView.phone) phone.call?.answer(r.text, performance.now() / 1000, r.end);
       // a way asked on the sidewalk: they point it while they say it

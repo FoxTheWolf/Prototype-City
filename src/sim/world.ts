@@ -72,7 +72,7 @@ export interface World {
   peds: Ped[];
   player: Player;
   /** What each citizen remembers of the player from talking (14.2, talk.ts), by citizen. */
-  talks: Map<number, { met: number; rude: number; name: boolean; num?: boolean; face?: boolean }>;
+  talks: Map<number, { met: number; rude: number; name: boolean; num?: boolean; face?: boolean; topic?: string }>;
   /** Game time in seconds since midnight, January 1st 2008 (see clock.ts), and at the previous tick. */
   time: number;
   ptime: number;

@@ -13,7 +13,7 @@ import { type CharGrid } from './render/grid';
 import { readLine, type Reading } from './sim/intent';
 import { type World } from './sim/world';
 import { citizenNames } from './locale/names';
-import { cityNames, reply, smsReply, Talk, type Answer } from './talk';
+import { cityNames, noiseAt, reply, smsReply, Talk, type Answer } from './talk';
 import en from './locale/en.json';
 
 type RGB = [number, number, number];
@@ -69,7 +69,7 @@ export class TalkView {
       const s = this.input.trim();
       if (!s || this.talk.over) return null;
       // on the phone, as by text: a number they may not know, no seeing where the player is
-      const a: Answer = this.phone ? { text: smsReply(this.world, this.talk, s, false) ?? '', reading: readLine(s, cityNames(this.world)), end: false } : reply(this.world, this.talk, s);
+      const a: Answer = this.phone ? { text: smsReply(this.world, this.talk, s, false, noiseAt(this.world)) ?? '', reading: readLine(s, cityNames(this.world)), end: false } : reply(this.world, this.talk, s);
       if (this.phone) a.end = this.talk.over;
       this.mine = s; this.input = '';
       this.said = a.text; this.saidAt = now; this.shown = 0; this.last = a;
@@ -126,7 +126,9 @@ export function drawTalk(g: CharGrid, V: TalkView, w: World, now: number) {
   }
   // the reading of the line being typed, and the tone's plane at the right
   const R = V.reading(), ry = g.rows - 10;
-  const label = !R ? L.hint : R.intent === 'unrecognized' ? L.unrecognized : R.banter ? L.banter : R.label;
+  // after a line they did not understand, what one might talk about instead (14.9), quietly, in place of the hint
+  const lost = !R && V.last && (V.last.reading.intent === 'unrecognized' || V.last.reading.intent === 'not_understood');
+  const label = !R ? (lost ? (T.biz >= 0 ? L.suggestShop : V.phone ? L.suggestPhone : L.suggestStreet) : L.hint) : R.intent === 'unrecognized' ? L.unrecognized : R.banter ? L.banter : R.label;
   text(x0 + 2, ry, label.slice(0, W - 30), R && R.intent !== 'unrecognized' ? [140, 210, 230] : DIM);
   if (R) text(x0 + 2 + Math.min(label.length, W - 30) + 2, ry, `${L.tone} ${R.toneLabel}`, DIM);
   const PW = 9, PH = 5, px = x1 - PW - 2, py = ry - PH + 1;

@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.9 — Memória, nomes e números (2026-10-06)
+- Quem já falou com você lembra do que você perguntou ("Weren't you asking about Nguyen Pharmacy yesterday?") e esquece com o tempo; uma grosseria demora mais para ser esquecida.
+- Quem te disse o nome aparece com ele sobre a cabeça quando você o vê de novo.
+- Peça o número ("can I get your number?"): quem gosta de você dá, e ele entra nos contatos do celular.
+- Por SMS, quem estava dormindo responde "just woke up"; ao telefone, de um bar ou na chuva, a pessoa estranha o barulho.
+- Quando não entendem o que você disse, aparecem sugestões do que dá para conversar.
+
 ## 0.14.8 — Pular, agachar e andar entre as cadeiras (2026-10-06)
 - **Espaço** pula e **C** (segurando) agacha: o olho desce, os passos ficam lentos e não dá para correr. Quem está perto estranha se você fica agachado ou pula do lado. A câmera de segurança de debug passou do C para o **V**.
 - Cadeiras e banquinhos não bloqueiam mais o caminho: dá para andar entre as mesas de bares e lanchonetes.

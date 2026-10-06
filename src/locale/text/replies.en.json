@@ -837,5 +837,67 @@
   "Don't care.",
   "Not interested.",
   "#g.shrug# Whatever."
+ ],
+ "reply.sms.woke": [
+  "Sorry, just woke up.",
+  "Just saw this, was asleep.",
+  "[late] Was asleep. What's up?",
+  "Ugh, just woke up."
+ ],
+ "reply.sms.out": [
+  "Sorry, was out.",
+  "On the bus, sorry.",
+  "Out right now, quick answer:",
+  "Was walking, sorry."
+ ],
+ "reply.call.bar": [
+  "Where are you? It's so loud.",
+  "Are you at a bar?",
+  "I can barely hear you, it's noisy there.",
+  "Sounds like a party over there."
+ ],
+ "reply.call.rain": [
+  "Is that rain? You're breaking up.",
+  "You outside? I can hear the rain.",
+  "Sounds like a storm where you are."
+ ],
+ "reply.call.street": [
+  "You're on the street? All I hear is cars.",
+  "Hang on, it's loud where you are.",
+  "Are you by a highway or something?"
+ ],
+ "reply.remember": [
+  "You asked me about {what} {when}.",
+  "Oh, you again. Did you find {what}?",
+  "Weren't you asking about {what} {when}?",
+  "Hey, it's you. {what}, right?"
+ ],
+ "reply.ask_number.give": [
+  "Sure. It's {num}.",
+  "Okay. {num}. Don't share it around.",
+  "Of course. {num}.",
+  "Here, {num}. Text me first.",
+  "#g.smile# {num}."
+ ],
+ "reply.ask_number.have": [
+  "You're texting me on it.",
+  "You already have it.",
+  "Ha. You just used it."
+ ],
+ "reply.ask_number.no.nice": [
+  "Sorry, I don't give my number out.",
+  "Maybe another time.",
+  "I don't really know you yet, sorry."
+ ],
+ "reply.ask_number.no.plain": [
+  "No, sorry.",
+  "I don't think so.",
+  "[atwork] Not while I'm working.",
+  "I don't know you."
+ ],
+ "reply.ask_number.no.rude": [
+  "No way.",
+  "Not happening.",
+  "Why would I give you my number?"
  ]
 }

@@ -17,6 +17,7 @@ import { isSolid } from './sim/city';
 import { type Ped } from './sim/peds';
 import { type World } from './sim/world';
 import { citizenNames } from './locale/names';
+import { knowsName } from './talk';
 import { expand, rngOf, tidy } from './locale/gen';
 import { TEXT } from './locale/text';
 import { lifeCtx, selFor } from './locale/voice';
@@ -180,8 +181,9 @@ const INK: RGB = [235, 228, 214], EDGE: RGB = [150, 132, 104], PAPER: RGB = [18,
  * conversation, the watch and the phone); and the nearest line as an overheard subtitle when `sub`.
  */
 export function drawBarks(g: CharGrid, B: Barks, w: World, v: Eye, world: Screen, ui: Screen, sub: boolean) {
-  if (!B.list.length) return;
   const p = w.player, shown: { b: Bark; q: Ped; d: number }[] = [];
+  if (p.inside < 0) drawNames(g, B, w, v, world, ui);
+  if (!B.list.length) return;
   for (const b of B.list) {
     const q = w.peds.find((e) => e.id === b.who);
     if (!q) continue;
@@ -220,4 +222,24 @@ export function drawBarks(g: CharGrid, B: Barks, w: World, v: Eye, world: Screen
     if (k === 0) { put(x0, y, who + ':', AMBER.map((c) => c * 0.75) as RGB, SHADOW); put(x0 + who.length + 1, y, l.slice(who.length + 1), DIM, SHADOW); }
     else put(x0, y, l, DIM, SHADOW);
   });
+}
+
+/**
+ * The names the player knows (14.9): over the head of whoever said theirs, while it is remembered
+ * (knowsName), up to 15 m, not behind a building, not over someone with a balloon up.
+ */
+function drawNames(g: CharGrid, B: Barks, w: World, v: Eye, world: Screen, ui: Screen) {
+  const p = w.player, limit = Math.floor((g.rows * 2) / 3);
+  let n = 0;
+  for (const q of w.peds) {
+    const d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d > 15 || n >= 6 || !knowsName(w, q.id) || B.list.some((b) => b.who === q.id) || !seen(w, p.x, p.y, q.x, q.y)) continue;
+    const at = toUi(v, q.x, q.y, HEAD, world, ui);
+    if (!at) continue;
+    const name = citizenNames(w.city, w.pop, q.id)[0], y = Math.round(at[1]) - 1, x = Math.round(at[0] - name.length / 2);
+    if (y < 0 || y >= limit) continue;
+    const k = 1 - d / 18;
+    for (let c = 0; c < name.length; c++) if (x + c >= 0 && x + c < g.cols) g.put(y * g.cols + x + c, name.charCodeAt(c), AMBER[0] * k, AMBER[1] * k, AMBER[2] * k);
+    n++;
+  }
 }

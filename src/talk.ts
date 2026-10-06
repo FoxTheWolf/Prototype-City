@@ -24,11 +24,21 @@ import { TEXT } from './locale/text';
 import { selFor, voice } from './locale/voice';
 import { Doing, whereIs } from './sim/citizens';
 import { calendar } from './sim/clock';
+import { formatNumber } from './sim/telco';
 import en from './locale/en.json';
 import NAMES from './locale/text/names.en.json';
 
 /** What someone remembers of the player: when they last talked (game time), how rude the player has been, whether they gave their name. */
-export interface TalkMem { met: number; rude: number; name: boolean; /** They know the player's number (14.6); they have talked face to face. */ num?: boolean; face?: boolean }
+export interface TalkMem {
+  met: number; rude: number; name: boolean;
+  /** They know the player's number (14.6); they have talked face to face. */ num?: boolean; face?: boolean;
+  /** What the player asked about last (a place, a good), for "you asked me about … yesterday" (14.9). */ topic?: string;
+}
+
+/** How long a talk is remembered (game s): an ordinary one fades in two days, a rudeness takes five days a step to fade (14.9). */
+export const FORGET = 2 * 86400, FORGIVE = 5 * 86400;
+/** Whether the player still knows the name someone gave (shown over their head, 14.9): for a month after they last talked. */
+export const knowsName = (w: World, who: number) => { const m = w.talks.get(who); return !!m?.name && w.time - m.met < 30 * 86400; };
 
 type Style = 'nice' | 'plain' | 'rude';
 /** Intentions with no system behind them yet: a polite no. */
@@ -48,7 +58,11 @@ export class Talk {
   /** `sms`: by text message (14.6) or on the phone (14.7), where they cannot see where the player is. */
   constructor(private w: World, readonly who: number, readonly biz: number, readonly sms = false) {
     const warm = w.pop.social[who] / 255, mem = w.talks.get(who);
-    this.met = !!mem;
+    // memory fades by the weight of what happened: an ordinary talk in two days, a rudeness a step every five
+    const age = mem ? w.time - mem.met : 0;
+    if (mem && mem.rude > 0 && age > FORGIVE) mem.rude = Math.max(0, mem.rude - Math.floor(age / FORGIVE));
+    if (mem && age > FORGET) mem.topic = undefined;
+    this.met = !!mem && (age < FORGET || mem.rude > 0 || mem.name);
     this.patience = 6 + Math.round(warm * 4) + (biz >= 0 ? 4 : 0) - (mem?.rude ?? 0);
   }
   get mem(): TalkMem {
@@ -67,6 +81,8 @@ export interface Answer {
   counter?: boolean;
   /** Which way they point, for a route. */
   point?: [number, number];
+  /** A number they gave (14.9): saved to the phone's contacts. */
+  contact?: { name: string; number: string };
 }
 
 const indexes = new WeakMap<object, EntityIndex>();
@@ -133,7 +149,19 @@ export function reply(w: World, T: Talk, line: string): Answer {
   if (again) return done(say('reply.again'));
   const kind = T.biz >= 0 ? c.businesses[T.biz].kind : null;
   const ws = words(line), you = ws.includes('you') || ws.includes('your');
+  // what they remember of the last talk, said at the first line of this one (14.9)
+  const was = T.said.length === 1 && T.met && mem.topic && w.time - mem.met > 1800 ? mem.topic : '';
+  const recall = (text: string) => (was ? say('reply.remember', { what: was, when: w.time - mem.met > 86400 * 1.5 ? 'the other day' : calendar(w.time).day !== calendar(mem.met).day ? 'yesterday' : 'earlier' }) + ' ' + text : text);
   switch (R.intent) {
+    case 'greet': return done(recall(say(`reply.greet.${style}`)));
+    case 'ask_number': {
+      // someone who likes the player (or a second friendly talk) gives their number, and now knows the player's
+      const num = P.mobile[who], likes = style !== 'rude' && (warm > 0.6 || (T.met && mem.rude === 0 && style === 'nice'));
+      if (T.sms) return done(say('reply.ask_number.have'));
+      if (!num || !likes || T.biz >= 0 && warm < 0.75) return done(say(`reply.ask_number.no.${style}`));
+      mem.num = true;
+      return done(say('reply.ask_number.give', { num: formatNumber(w.telco, num) }), { contact: { name: citizenNames(c, P, who).join(' '), number: num } });
+    }
     case 'goodbye': return done(say(`reply.goodbye.${style}`), { end: true });
     case 'threaten': mem.rude += 2; return done(say(`reply.threaten.${style}`), { end: true });
     case 'ask_time': return done(say(`reply.ask_time.${style}`, { time: sayTime(w.time) }));
@@ -156,6 +184,7 @@ export function reply(w: World, T: Talk, line: string): Answer {
       const sold = g ? PLACES[kind].sells.find(([s]) => s === g) ?? PLACES[kind].sells.find(([s]) => typed!.every((x) => words(G[s] ?? s.replace(/_/g, ' ')).includes(x))) : null;
       const thing = sold ? (G[sold[0]] ?? sold[0]).toLowerCase() : g ? G[g].toLowerCase() : '';
       if (g && !sold) return done(say('reply.notsold', { thing }));
+      if (thing) mem.topic = thing;
       if (R.intent === 'ask_price') return sold ? done(say(`reply.ask_price.${style}`, { number: dollars(sold[1]), thing })) : done(say('reply.whatthing'));
       // to buy: made to order at the counter, else it is on the shelves
       if (!sold && (ws.includes('pay') || /check ?out|ring (me|this|it) up/.test(ws.join(' ')))) return done(say('reply.pay'), { counter: true });
@@ -179,6 +208,7 @@ export function reply(w: World, T: Talk, line: string): Answer {
         to = id >= 0 ? [(c.xb[2 * id] + c.xb[2 * id + 1]) / 2, me.y] : [me.x, (c.yb[-2 * id - 2] + c.yb[-2 * id - 1]) / 2];
       } else return done(say('reply.whatplace'));
       if (pl === null && !to) return done(say('dir.dunno'));
+      mem.topic = pl !== null ? placeName(c, pl) : S.street ? roadName(c, S.street.id >= 0, S.street.id >= 0 ? S.street.id : -S.street.id - 1) : mem.topic;
       const D = routeTo(w, who, pl, me.x, me.y, to);
       if (S.street) D.ctx.road = roadName(c, S.street.id >= 0, S.street.id >= 0 ? S.street.id : -S.street.id - 1);
       return done(say(D.key, { ...D.ctx, place: pl === null ? (S.street ? roadName(c, S.street.id >= 0, S.street.id >= 0 ? S.street.id : -S.street.id - 1) : '') : placeName(c, pl) }), { point: [D.px, D.py] });
@@ -196,7 +226,15 @@ export function reply(w: World, T: Talk, line: string): Answer {
  * and saying who it is only works on someone who has met the player; at work some say so first.
  * Null: no answer (they are tired of the talk).
  */
-export function smsReply(w: World, T: Talk, text: string, typed = true): string | null {
+/** What a call from where the player stands sounds like to the other end (14.9): a bar, the rain, a busy street, or quiet (''). */
+export function noiseAt(w: World): string {
+  const p = w.player, c = w.city;
+  if (p.inside >= 0) { const k = c.buildings[p.inside].biz; return k >= 0 && (c.businesses[k].kind === 'bar' || c.businesses[k].kind === 'diner') ? 'bar' : ''; }
+  if (w.weather.precip > 0.35 && !w.weather.snow) return 'rain';
+  return w.cars.filter((q) => Math.hypot(q.x - p.x, q.y - p.y) < 20).length >= 3 ? 'street' : '';
+}
+
+export function smsReply(w: World, T: Talk, text: string, typed = true, noise = ''): string | null {
   if (T.over) return null;
   const P = w.pop, who = T.who, mem = T.mem, R = readLine(text, cityNames(w)), r = rngOf(who, T.said.length + 77, Math.floor(w.time));
   const W = w.weather, sel = selFor(P, who, w.time, W.temp, W.precip, W.snow, T.met ? ['met'] : []);
@@ -217,7 +255,12 @@ export function smsReply(w: World, T: Talk, text: string, typed = true): string 
   } else {
     s = reply(w, T, text).text;
     if (!s) return null;
-    if (typed && whereIs(P, w.city, who, w.time).doing === Doing.Work && r() < 0.4) s = say('reply.sms.atwork') + ' ' + s;
+    // a text answered says what they were doing (from their day, 14.9); a call hears where the player is
+    const doing = whereIs(P, w.city, who, w.time).doing;
+    if (typed && doing === Doing.Work && r() < 0.4) s = say('reply.sms.atwork') + ' ' + s;
+    else if (typed && doing === Doing.Asleep) s = say('reply.sms.woke') + ' ' + s;
+    else if (typed && (doing === Doing.Walk || doing === Doing.Out) && r() < 0.3) s = say('reply.sms.out') + ' ' + s;
   }
+  if (!typed && noise && !T.said.includes('noise')) { T.said.push('noise'); s = say(`reply.call.${noise}`) + ' ' + s; }
   return typed ? voice(s, P, who, r) : s;
 }

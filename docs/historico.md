@@ -2,6 +2,16 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.9: o que faltava do diálogo (2026-10-06, sessão na nuvem; fecha a etapa 14)
+- **Sugestões quando não entende:** depois de uma fala não entendida, a linha da leitura sugere os assuntos possíveis (no balcão, na rua, ao telefone: `talk.suggest*`).
+- **SMS justificado pela rotina:** além do "at work", "just woke up" para quem dormia e "sorry, was out" para quem estava na rua (`reply.sms.woke`/`out`).
+- **A memória se apaga pelo peso** (`FORGET` 2 dias, `FORGIVE` 5 dias por passo, em `src/talk.ts`): uma conversa comum some em dois dias, uma grosseria perde um passo a cada cinco; o NPC lembra o lugar ou o produto perguntado (`TalkMem.topic`) e diz no primeiro alô da conversa seguinte ("Weren't you asking about Nguyen Pharmacy yesterday?").
+- **O nome sobre a cabeça** de quem disse o nome dele, até 15 m, por um mês desde a última conversa (`knowsName`, `drawNames` em `barks.ts`).
+- **O som de fundo na ligação:** de um bar ou lanchonete, na chuva ou numa rua com carros, a primeira resposta estranha o barulho (`noiseAt`, `reply.call.*`).
+- **Pedir o número** (intenção nova `ask_number`; a `ask_phone` é "usar o seu telefone" e segue um não educado): quem gosta do jogador (calor social alto, ou uma segunda conversa simpática) dá o número, que entra nos contatos do celular, e passa a conhecer o do jogador; balconista só se gostar muito.
+- **A amostra de falas** para o usuário ler (combinado na entrevista): `docs/amostra-falas.md`, gerada por `tests/sample-lines.ts`. Teste: `tests/memory.ts`.
+- **Fica para depois:** testemunhas, sussurrar, o barulho do lugar mudando quem ouve, mentira pelos fatos e fingir ser alguém, a fofoca (etapa 16); comentários na rede social pela leitura (15); escolhas de assunto e tom como atalhos e a opção "opções ou texto primeiro" (esperar mais playtests); o contratante pela leitura (`[HACKING]`).
+
 ## 14.8: pular, agachar, cadeiras sem colisão (2026-10-06, pedido do usuário)
 - Pular (Espaço) e agachar (C segurando): `jump`/`crouch` no `PlayerInput`, `p.hop`/`p.hopV`/`p.crouch` no jogador (`sim/world.ts`); o pulo é só da vista (~0,46 m, 0,6 s), não passa por cima de nada; agachado: 1,6 m/s, sem correr, olho 0,65 m mais baixo (`eyeNow`). `p.crouch` fica para o stealth (etapa 16); por enquanto o retorno orgânico são os balões (`bark.crouch`, `bark.jump`). A câmera de debug foi do C para o V. Teste: `tests/move.ts`.
 - Cadeiras e banquinhos não bloqueiam o jogador (`inFurniture(..., walking)` em `blocked`); sentar continua igual.
