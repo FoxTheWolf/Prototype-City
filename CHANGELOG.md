@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.12 — Título em 3D e o fio do fone (2026-10-06)
+- **O fundo do título agora é 3D:** linhas do terminal da cidade flutuam em profundidade, com tamanhos diferentes, e vêm na sua direção, como se você avançasse entre elas. As mais próximas desfocam e somem antes de passar.
+- **O fio do fone aparece:** com o fone posto, o plugue fica encaixado no topo do celular e o cabo branco sobe até sair da tela, em direção às orelhas.
+
 ## 0.15.11 — Visualizador, música que os outros ouvem, e o celular sempre à mão (2026-10-06)
 - **Visualizador de espectro**, como os players de 2008: barras verdes, amarelas e vermelhas, com o pico caindo devagar, desenhadas em pixels finos (camada HD). Ele aparece no **Tunes Player** e no novo **painel de música da tela inicial**, que também mostra a barra de progresso, o tempo e o volume.
 - **Tela inicial navegável:** **↑/↓** passam pelas notificações (ligação perdida, mensagens, lembrete, a música) e **OK** abre o app da escolhida. Sem nada escolhido, OK abre o menu. Para limpar as notificações agora é o **\***.

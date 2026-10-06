@@ -1,7 +1,8 @@
 /**
- * The title's background (2026-10-06): a city's console scrolling, typed a few characters at a time,
- * instead of the city itself behind the title (making the city just to show it cost the wait on every
- * open). Plain 2D canvas under the overlay; stop() takes it away when the game starts.
+ * The title's background (2026-10-06): a city's console, its lines floating in depth and coming at the
+ * viewer as if flying forward through them (each typed in as it nears), instead of the city itself behind
+ * the title (making the city just to show it cost the wait on every open). Plain 2D canvas under the
+ * overlay, out of focus and dim the nearer a line comes; stop() takes it away when the game starts.
  */
 const LINES = [
   'GRID  SUB-{n}  LOAD {p}%  FREQ 60.0{d} HZ  OK',
@@ -22,13 +23,14 @@ const AMBER = '#ffb04a', DIM = '#9a6a2c', CYAN = '#6fd6e8';
 export class TitleFx {
   private cv = document.createElement('canvas');
   private g = this.cv.getContext('2d')!;
-  private lines: { text: string; shown: number; color: string }[] = [];
+  /** The lines in space: x, y across (units at depth 1), z how far, how much is typed. */
+  private lines: { text: string; x: number; y: number; z: number; shown: number; color: string }[] = [];
   private raf = 0;
   private last = 0;
 
   constructor(before: HTMLElement) {
     // out of focus and dim, behind the buttons (it must not read through them)
-    Object.assign(this.cv.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', pointerEvents: 'none', filter: 'blur(2px) brightness(0.6)' });
+    Object.assign(this.cv.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', pointerEvents: 'none', filter: 'brightness(0.7)' });
     before.before(this.cv);
     const loop = (t: number) => { this.step(t); this.raf = requestAnimationFrame(loop); };
     this.raf = requestAnimationFrame(loop);
@@ -62,29 +64,43 @@ export class TitleFx {
     return `${stamp} ${t}`;
   }
 
+  private spawn(z: number) {
+    const k = Math.random();
+    // anywhere across, but not straight down the middle, where the title and the buttons are
+    let x = 0, y = 0;
+    do { x = (Math.random() * 2 - 1) * 1.6; y = (Math.random() * 2 - 1) * 1.0; } while (Math.abs(x) < 0.5 && Math.abs(y) < 0.35);
+    this.lines.push({ text: this.line(), x, y, z, shown: 0, color: k < 0.1 ? CYAN : k < 0.65 ? DIM : AMBER });
+  }
+
   private step(t: number) {
     const W = innerWidth, H = innerHeight, dpr = devicePixelRatio || 1;
     if (this.cv.width !== Math.round(W * dpr)) { this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr); }
-    const g = this.g, fs = Math.max(11, Math.round(H / 60)), lh = Math.round(fs * 1.5), rows = Math.floor(H / lh) - 1;
-    // a few characters a frame onto the last line; a new one when it is done (now and then a pause)
-    const dt = Math.min(0.1, (t - this.last) / 1000); this.last = t;
-    const cur = this.lines[this.lines.length - 1];
-    if (!cur || cur.shown >= cur.text.length + 8 + Math.random() * 40) {
-      const k = Math.random();
-      this.lines.push({ text: this.line(), shown: 0, color: k < 0.08 ? CYAN : k < 0.7 ? DIM : AMBER });
-      if (this.lines.length > rows) this.lines.shift();
-    } else cur.shown += dt * 90;
+    const g = this.g, dt = Math.min(0.1, (t - this.last) / 1000); this.last = t;
+    const FAR = 9, NEAR = 0.6, SPEED = 0.55, F = Math.min(W, H) * 0.9;
+    if (!this.lines.length) for (let k = 0; k < 46; k++) this.spawn(NEAR + Math.random() * (FAR - NEAR));
+    // forward: every line comes nearer; one that passed the viewer goes back far away as a new line
+    for (const L of this.lines) { L.z -= dt * SPEED; L.shown += dt * 40; }
+    this.lines = this.lines.filter((L) => L.z > NEAR);
+    while (this.lines.length < 46) this.spawn(FAR - Math.random() * 0.5);
+    this.lines.sort((a, b) => b.z - a.z);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.filter = 'none';
     g.fillStyle = '#07080c'; g.fillRect(0, 0, W, H);
-    g.font = `${fs}px 'IBM Plex Mono', Consolas, monospace`; g.textBaseline = 'top';
-    this.lines.forEach((L, i) => {
-      const s = L.text.slice(0, Math.floor(L.shown)), y = lh * (i + 0.5);
-      g.fillStyle = L.color; g.globalAlpha = 0.35 + 0.65 * ((i + 1) / this.lines.length);
-      g.fillText(s, fs, y);
-      // the cursor on the line being typed
-      if (L === this.lines[this.lines.length - 1] && Math.floor(t / 400) & 1) g.fillRect(fs + g.measureText(s).width + 2, y, fs * 0.6, fs);
-    });
-    g.globalAlpha = 1;
+    g.textBaseline = 'middle';
+    for (const L of this.lines) {
+      const sx = W / 2 + (L.x / L.z) * F, sy = H / 2 + (L.y / L.z) * F, fs = 15 / L.z * (F / 600);
+      if (fs < 2) continue;
+      // faint far away (fog), brightest in the middle distance, fading as it comes too near (and blurred)
+      const fog = Math.min(1, (FAR - L.z) / 3), near = Math.min(1, (L.z - NEAR) / 1.2);
+      g.globalAlpha = 0.85 * fog * near;
+      g.filter = L.z < 2.2 ? `blur(${((2.2 - L.z) * 2.5).toFixed(1)}px)` : 'none';
+      g.font = `${fs.toFixed(1)}px 'IBM Plex Mono', Consolas, monospace`;
+      g.fillStyle = L.color;
+      // each line runs outward from the middle, so none crosses the title
+      g.textAlign = L.x < 0 ? 'right' : 'left';
+      g.fillText(L.text.slice(0, Math.floor(L.shown)), sx, sy);
+    }
+    g.filter = 'none'; g.globalAlpha = 1;
     // scanlines
     g.fillStyle = 'rgba(0,0,0,0.22)';
     for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);

@@ -11,7 +11,7 @@ import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } f
 import { cellAt, DOOR, planOf, ROOM, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
-import { HD } from '../render/hd';
+import { HD, HdOrder } from '../render/hd';
 import { EYE, pageDim } from '../render/eye';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
@@ -227,6 +227,25 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   }
   // the case: over the body's rim and around it, so only its own rim shows from the front
   if (P.case) drawCase(CASES[P.case], R, now, cell, over, inG, g);
+  // the earphones plugged in (2026-10-06), in HD pixels: a metal plug in the jack on top, its white
+  // cable rising in a slack curve up and out of sight, toward the ears
+  const HL = hdLayer();
+  if (P.earphones && HL) {
+    const lit = (c: C3, k = 1): C3 => [c[0] * Lr * k, c[1] * Lg * k, c[2] * Lb * k];
+    const jx = (ox + 9) * HD + 1, jy = oy * HD;
+    for (let y = -7; y < 1; y++) for (let x = 0; x < 4; x++) {
+      const c = lit(y > -3 ? [150, 155, 165] : [228, 228, 232], x === 0 ? 1.15 : x === 3 ? 0.7 : 1);
+      HL.put(jx + x, jy + y, c[0], c[1], c[2], HdOrder.Over);
+    }
+    // the cable: a quadratic curve from the plug's top to the top edge, a little left of the phone
+    const x0 = jx + 1.5, y0 = jy - 7, x2 = (ox - 14) * HD, y2 = -2, x1 = jx - 2, y1 = Math.max(0, y0 * 0.35), sway = Math.sin(now * 1.3) * 4;
+    for (let i = 0; i <= 160; i++) {
+      const u = i / 160, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), d = u * u;
+      const X = a * x0 + b * (x1 + sway) + d * x2, Y = a * y0 + b * y1 + d * y2, c = lit([214, 214, 218], 0.85 + 0.15 * Math.cos(u * 9));
+      HL.put(Math.round(X), Math.round(Y), c[0], c[1], c[2], HdOrder.Over);
+      HL.put(Math.round(X) + 1, Math.round(Y), c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, HdOrder.Over);
+    }
+  }
   // the side keys, over the rim (and the case's): sunk into it for a moment when pressed
   for (const [k, y0, sym] of SIDE_KEYS) {
     const down = isDown(k), c = mul(SHL.cap, down ? 0.5 : P.hover === k ? 1.35 : 1);

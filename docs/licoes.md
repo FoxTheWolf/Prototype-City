@@ -2,6 +2,15 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 0.15.10–12 (título, celular, música, camada HD) — 2026-10-06
+- **O `main.ts` é um módulo com `await` no topo:** tudo depois de `const world = …` espera a cidade. Para o título não gerar a cidade, a escolha (`titleChoice`) veio **antes** dessa linha, com listeners próprios. O que o título precisa antes do mundo (opções, fundo) não pode tocar em nada declarado depois (`const` em TDZ): as opções do título mexem só em `OPTS`/`style`/`resStep` e num `Menu` próprio, descartado com `dispose()`. O jogo entra sozinho no `.then` do `GpuWorld.create` (`enter()`).
+- **Voltar ao título = recarregar a página** (`reloadWith({})`): agora é barato, porque o título não gera nada. Foi o que simplificou o Esc do WATCH CCTV.
+- **A camada HD estava pronta e não foi usada de cara** (o usuário cobrou): o visualizador nasceu em blocos de caractere. Virou regra no CLAUDE.md ("Detalhe fino na camada HD"). No celular, `Lcd.pixel(x, y, ix, iy, …)` e `Lcd.hd`; fora da tela do celular, `hdLayer().put(px, py, …, HdOrder.Over)` em pixels absolutos (`HD` = 3 por célula). A camada é apagada a cada quadro (`hd.wipe()` no `main`), então é só desenhar de novo.
+- **Testar o celular no Node funciona bem:** `new Phone(createWorld(42))` e `P.press(k, now, 100, 100)` (`tests/phone-keys.ts`); o `Editor` do T9 também roda sem DOM.
+- **Toda fala nova com `{slot}` quebra o `tests/barks.ts`**, que expande todas as chaves `bark.*`: passar o `extra` no teste (foi o caso de `{band}`/`{song}`). Na gramática, a etiqueta de criança é `kid`, não `child` (`ageTag` em `locale/voice.ts`; há `[child/teen]` antigo em `barks.en.json` que nunca casa).
+- **O painel do app compila o shader em minutos:** para conferir só o título (que não usa a GPU), o painel serve; para o celular e o mundo, os testes no Node e o PC do usuário.
+- **Espectro:** `AnalyserNode` lido **antes** do volume (as barras dançam igual em qualquer volume), com `fftSize` 1024 (a 512 os graves caíam todos num bin). As bandas são logarítmicas, de 60 Hz a 11 kHz.
+
 ### Lições da 15.7e Bloco 1 (realce + ghost no terminal) — 2026-10-06
 - **A linha do prompt é desenhada em `draw.ts` como um `{text, ink}` só** (ink único por linha). Para cor por caractere, não reescrevi o modelo: deixei o loop genérico pintar tudo em ink[0] e **sobrepus** só as células do input (mesmo glifo, cor nova) depois do bloco `full` e **antes** do cursor, para o cursor ficar por cima. Barato e cirúrgico.
 - **Mapear idx→linha/coluna** do input: as linhas do prompt são fatiadas a cada `W` chars (draw.ts), então char absoluto `idx` está na linha `promptRow + floor(idx/W)`, coluna `idx%W`. O `first` (offset do scrollback) entra na conta da linha de tela. Apliquei o `scan` (0.9 nas ímpares) na sobreposição para não ficar mais claro que o resto.
