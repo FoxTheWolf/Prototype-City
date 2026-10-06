@@ -5,9 +5,11 @@
  * For every building with an inside, on the ground floor and the first floor up: every room can be
  * walked into (from the street doors downstairs, from the lift upstairs) going round the furniture,
  * the way `blocked` lets the player walk; every street door opens into the plan; no piece of furniture
- * stands on a wall or a doorway; every till can be walked up to from the street (13.10c). Prints the failures and exits with 1 if there are any.
+ * stands on a wall or a doorway; every till can be walked up to from the street (13.10c); every lot has a street door,
+ * and every street door opens onto ground that reaches the street, not a yard closed in behind the buildings (13.10e).
+ * Prints the failures and exits with 1 if there are any.
  */
-import { BAY, generateCity } from '../src/sim/city';
+import { BAY, generateCity, isSolid, type City } from '../src/sim/city';
 import { CELL, DOOR, exitsOf, facePoint, floorsOf, habitable, inFurniture, planOf, ROOM, WALL, type Plan } from '../src/sim/interior';
 import { CITY_SIZE } from '../src/sim/world';
 
@@ -19,6 +21,7 @@ const fail = (msg: string) => { if (++fails <= 40) console.log('FAIL ' + msg); }
 
 for (const seed of seeds) {
   const city = generateCity(seed, CITY_SIZE);
+  const reached = streetGround(city);
   // the buildings stand on the grid of the bays
   for (const B of city.buildings) if (B.tier === 1 && [B.x0, B.y0, B.x1, B.y1].some((v) => Math.abs(v / BAY - Math.round(v / BAY)) > 1e-6)) { fail(`seed ${seed}: a building off the grid of the bays (${B.x0}, ${B.y0}, ${B.x1}, ${B.y1})`); break; }
   city.buildings.forEach((B, k) => {
@@ -28,7 +31,8 @@ for (const seed of seeds) {
       if (!P) continue;
       plans++;
       const doors = f === 0 ? exitsOf(city, k).map((D) => facePoint(B, D.face, (D.a0 + D.a1) / 2)) : null;
-      if (doors && !doors.length) { noDoor++; continue; }
+      if (doors && !doors.length) { noDoor++; fail(`seed ${seed} lot ${k}: no street door`); continue; }
+      if (doors) for (const [x, y, nx, ny] of doors) if (!reached(x + nx * 0.8, y + ny * 0.8)) fail(`seed ${seed} lot ${k}: a street door at (${x.toFixed(1)}, ${y.toFixed(1)}) opens onto a yard closed in`);
       check(P, `seed ${seed} lot ${k} floor ${f}`, doors);
     }
   });
@@ -36,6 +40,19 @@ for (const seed of seeds) {
 console.log(`${plans} plans, ${rooms} rooms, ${tills} tills, ${fails} failures (known: ${noDoor} lots closed in with no street door, ${shutShops} shops with no way in)`);
 process.exit(fails ? 1 : 0);
 
+
+/** The open ground joined to the streets (a flood over a 0.5 m grid from the city's first open cell, on a road): is (x, y) on it? */
+function streetGround(city: City): (x: number, y: number) => boolean {
+  const S = 0.5, W = Math.ceil(city.w / S), H = Math.ceil(city.h / S), seen = new Uint8Array(W * H), open = new Uint8Array(W * H);
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) open[j * W + i] = isSolid(city, (i + 0.5) * S, (j + 0.5) * S) ? 0 : 1;
+  const q = [open.indexOf(1)];
+  seen[q[0]] = 1;
+  while (q.length) {
+    const k = q.pop()!, i = k % W, j = (k - i) / W;
+    for (const n of [i + 1 < W ? k + 1 : -1, i > 0 ? k - 1 : -1, j + 1 < H ? k + W : -1, j > 0 ? k - W : -1]) if (n >= 0 && open[n] && !seen[n]) { seen[n] = 1; q.push(n); }
+  }
+  return (x, y) => !!seen[Math.floor(y / S) * W + Math.floor(x / S)];
+}
 
 function check(P: Plan, at: string, doors: [number, number, number, number][] | null) {
   const { cells, nx, ny } = P, n = nx * ny;

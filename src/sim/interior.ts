@@ -147,13 +147,22 @@ const doorCache = new Map<number, Door | null>();
  * of it; near one end when the ground floor is a shop, in the middle otherwise. Null when the lot
  * is closed in on every side.
  */
+/** (13.10e) Whether a door at `a` along a face of lot k opens toward the street, not into a yard closed in behind the buildings. */
+export function toStreet(city: City, k: number, face: number, a: number): boolean {
+  const B = city.buildings[k], [x, y, nx, ny] = facePoint(B, face, a), X = x + nx * 0.6, Y = y + ny * 0.6;
+  return !blockAt(city, X, Y)?.yards?.some((r) => X > r[0] && X < r[2] && Y > r[1] && Y < r[3]);
+}
+
 export function doorOf(city: City, k: number): Door | null {
   if (doorCache.has(k)) return doorCache.get(k)!;
   const B = city.buildings[k], blk = blockAt(city, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2)!;
   let best: Door | null = null, bestGap = 1e9;
   for (let face = 0; face < (B.cut ? 5 : 4); face++) {
+    // a lot reached by an alley has its door on the alley (13.10e)
+    if (B.way && face !== B.way[0]) continue;
     const sp = faceSpan(B, face), lo = sp[0], hi = sp[1];
-    const w0 = Math.ceil((lo + 0.4) / BAY), w1 = Math.floor((hi - 0.4) / BAY) - 1;
+    let w0 = Math.ceil((lo + 0.4) / BAY), w1 = Math.floor((hi - 0.4) / BAY) - 1;
+    if (B.way) { w0 = Math.max(w0, Math.ceil(B.way[1] / BAY - 1e-6)); w1 = Math.min(w1, Math.floor(B.way[2] / BAY + 1e-6) - 1); }
     if (w1 < w0) continue;
     // the preferred bay, else the nearest one along the face with open ground before it (13.10c)
     const pref = B.shop && w1 > w0 ? w0 + 1 : Math.round((w0 + w1) / 2);
@@ -497,7 +506,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
       if (a0 < a + 0.3 || a0 + BAY > b - 0.3) continue;
       const [x, y, nX, nY] = facePoint(B, face, a0 + BAY / 2);
       if (C && C.nx * x + C.ny * y > C.c - 0.3) continue;
-      if (isSolid(city, x + nX * 0.6, y + nY * 0.6)) continue;
+      if (isSolid(city, x + nX * 0.6, y + nY * 0.6) || !toStreet(city, k, face, a0 + BAY / 2)) continue;
       return { face, a0, a1: a0 + BAY };
     }
     return null;

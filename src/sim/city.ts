@@ -47,6 +47,8 @@ export interface Cut {
  * box can be cut by it (`cut`), which gives wedge-shaped buildings on the sharp corners.
  */
 export interface Building {
+  /** (13.10e) A lot reached from the street by an alley: the face its street door must be on and the stretch of it along the alley (from, to); else the door takes the face nearest the street. */
+  way?: [number, number, number];
   x0: number;
   y0: number;
   x1: number;
@@ -336,6 +338,8 @@ export interface Block {
   /** Tallest building, so the renderer can skip blocks hidden behind nearer ones. */
   maxH: number;
   props: Prop[];
+  /** (13.10e) Open ground closed in behind the buildings, with no way to the street (x0, y0, x1, y1): no door opens onto it. */
+  yards?: [number, number, number, number][];
   /**
    * The diagonal avenue and this block: bit 1 when it crosses the block, bit 2 / bit 4 when the
    * piece left on its negative / positive side is too small for buildings and is a plaza.
@@ -724,15 +728,81 @@ export function generateCity(seed: number, size: number): City {
 
     // split the block into lots; downtown lots are bigger, for towers
     const maxLot = K.lot + K.lotCore * core;
-    const lot = (ax0: number, ay0: number, ax1: number, ay1: number) => {
+    const leaves: [number, number, number, number][] = [];
+    const split = (ax0: number, ay0: number, ax1: number, ay1: number) => {
       const lw = ax1 - ax0, lh = ay1 - ay0;
       if (Math.max(lw, lh) > maxLot) {
         const t = 0.35 + br() * 0.3;
-        if (lw >= lh) { const s = ax0 + bays(lw * t); lot(ax0, ay0, s, ay1); lot(s, ay0, ax1, ay1); }
-        else { const s = ay0 + bays(lh * t); lot(ax0, ay0, ax1, s); lot(ax0, s, ax1, ay1); }
+        if (lw >= lh) { const s = ax0 + bays(lw * t); split(ax0, ay0, s, ay1); split(s, ay0, ax1, ay1); }
+        else { const s = ay0 + bays(lh * t); split(ax0, ay0, ax1, s); split(ax0, s, ax1, ay1); }
         return;
       }
-      if (br() < K.empty) {
+      leaves.push([ax0, ay0, ax1, ay1]);
+    };
+    /**
+     * (13.10e) The lots of a block: split, then each lot that would be built is checked for a way in from
+     * the street: a side on the street, or a side along open ground (a lot too narrow to build on, or an
+     * empty one) that itself reaches the street, the block's alleys. A lot with neither joins a neighbour
+     * that has one and shares its whole side with it, as its back (more rooms, the stock room); the ones
+     * still closed in stay open ground, a yard behind the buildings (block.yards: no door opens onto them, no substation stands in them).
+     */
+    const lots = () => {
+      split(ix0, iy0, ix1, iy1);
+      const E = 1e-6, near = (a: number, b: number) => Math.abs(a - b) < E;
+      const onStreet = (L: number[]) => L[0] <= ix0 + E || L[1] <= iy0 + E || L[2] >= ix1 - E || L[3] >= iy1 - E;
+      /** How long a side two lots share (0 when they do not touch). */
+      const shared = (A: number[], B: number[]) =>
+        near(A[2], B[0]) || near(A[0], B[2]) ? Math.min(A[3], B[3]) - Math.max(A[1], B[1]) : near(A[3], B[1]) || near(A[1], B[3]) ? Math.min(A[2], B[2]) - Math.max(A[0], B[0]) : 0;
+      const L = leaves.map((r) => { const empty = br() < K.empty; return { r, empty, open: empty || Math.min(r[2] - r[0], r[3] - r[1]) < 8, ok: false }; });
+      // the open ground that reaches the street, through open ground a bay wide at least
+      const reach = L.filter((l) => l.open && onStreet(l.r));
+      for (const l of reach) l.ok = true;
+      while (reach.length) {
+        const a = reach.pop()!;
+        for (const l of L) if (l.open && !l.ok && shared(a.r, l.r) >= BAY - E) { l.ok = true; reach.push(l); }
+      }
+      // a door needs two bays of the alley (the bay at a corner takes none)
+      for (const l of L) if (!l.open) l.ok = onStreet(l.r) || L.some((o) => o.open && o.ok && shared(o.r, l.r) >= 2 * BAY - E);
+      for (let joined = true; joined;) {
+        joined = false;
+        for (let i = L.length - 1; i >= 0; i--) {
+          const l = L[i];
+          if (l.open || l.ok) continue;
+          let best = -1, area = Infinity;
+          L.forEach((n, j) => {
+            if (j === i || n.open || !n.ok) return;
+            const A = n.r, B = l.r;
+            const full = (near(A[0], B[0]) && near(A[2], B[2]) && (near(A[3], B[1]) || near(A[1], B[3]))) || (near(A[1], B[1]) && near(A[3], B[3]) && (near(A[2], B[0]) || near(A[0], B[2])));
+            const s = (A[2] - A[0]) * (A[3] - A[1]);
+            if (full && s < area) { area = s; best = j; }
+          });
+          if (best < 0) continue;
+          const A = L[best].r, B = l.r;
+          L[best].r = [Math.min(A[0], B[0]), Math.min(A[1], B[1]), Math.max(A[2], B[2]), Math.max(A[3], B[3])];
+          L.splice(i, 1);
+          joined = true;
+        }
+      }
+      const yards = L.filter((l) => !l.ok).map((l) => l.r as [number, number, number, number]);
+      if (yards.length) block.yards = yards;
+      for (const l of L) {
+        if (!l.ok) continue;
+        // the alley's side and stretch, for a lot with no side on the street (its longest stretch along open ground that reaches it)
+        let way: [number, number, number] | undefined, best = 2 * BAY - E;
+        if (!l.open && !onStreet(l.r)) for (const o of L) {
+          if (!o.open || !o.ok) continue;
+          const s = shared(o.r, l.r), A = l.r, B = o.r;
+          if (s < best) continue;
+          best = s;
+          if (near(A[0], B[2]) || near(A[2], B[0])) way = [near(A[0], B[2]) ? 0 : 1, Math.max(A[1], B[1]), Math.min(A[3], B[3])];
+          else way = [near(A[1], B[3]) ? 2 : 3, Math.max(A[0], B[0]), Math.min(A[2], B[2])];
+        }
+        lot(l.r[0], l.r[1], l.r[2], l.r[3], l.empty, way);
+      }
+    };
+    const lot = (ax0: number, ay0: number, ax1: number, ay1: number, empty: boolean, way?: [number, number, number]) => {
+      const lw = ax1 - ax0, lh = ay1 - ay0;
+      if (empty) {
         // empty lot: rubble piles (the power grid may fence one in for a substation)
         empties.push({ x0: ax0, y0: ay0, x1: ax1, y1: ay1, block: blocks.length - 1 });
         for (let n = 1 + ((fr() * 3) | 0); n > 0; n--) {
@@ -760,6 +830,7 @@ export function generateCity(seed: number, size: number): City {
         const f = k === tiers ? floors : Math.round(floors * (0.3 + (0.6 * k) / tiers) * (0.8 + br() * 0.2));
         const bh = f * (facade === 'warehouse' ? 5 : FLOOR_H) + 1;
         top = { x0: ax0 + inset, y0: ay0 + inset, x1: ax1 - inset, y1: ay1 - inset, h: bh, round: false, ...style, shop: style.shop && k === 1, cut: null, flood: null, floodH: 0, tier: k, crown: null, shed: false, ad: -1, board: null, neon: null, scaffold: 0, net: 0, screen: 0, ticker: false };
+        if (k === 1 && way) top.way = way;
         if (k === 1 && fl) { const u = hash3(seed, ax0 | 0, ay0 | 0); top.flood = fl; top.floodH = Math.min(bh, fl === FLOOD_WARM ? 14 + u * 30 : 30 + u * 60); }
         buildings.push(top);
         block.maxH = Math.max(block.maxH, bh);
@@ -908,7 +979,7 @@ export function generateCity(seed: number, size: number): City {
         const u = 0.25 + 0.25 * k;
         part(long ? ix0 + (ix1 - ix0) * u : mx + 10, long ? my + 10 : iy0 + (iy1 - iy0) * u, 3, 80 + br() * 15, 'chimney', true, frame, [255, 40, 40]);
       }
-    } else if (!open) lot(ix0, iy0, ix1, iy1);
+    } else if (!open) lots();
     const dr = diagRange(diagonal, x0, y0, x1, y1);
     if (dr.touches) {
       block.diag = 1;

@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10e — Todo prédio tem entrada (2026-10-06)
+- Os prédios no miolo dos quarteirões não ficam mais sem porta nem com a porta dando num quintal fechado: entram por becos que chegam à rua, viram os fundos do prédio da frente, ou o terreno vira um quintal.
+- A cidade de cada semente mudou (um save antigo pode começar dentro de um prédio: comece um jogo novo).
+
 ## 0.13.10p — Registro de playtest (2026-10-06)
 - Novo atalho `jogar-playtest.bat`: o jogo grava um registro da sessão na pasta `playtest/` (por onde você andou, o que comprou, o dinheiro, mensagens, onde travou) para o Claude ler depois num relatório.
 - **F8** escreve uma nota de teste: o jogo pausa, a tela é fotografada e a nota fica guardada com o lugar e a hora.
