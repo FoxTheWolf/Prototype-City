@@ -8,6 +8,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { playtest } = require('./playtest.cjs');
+const { sdcard } = require('./sdcard.cjs');
 
 const DIST = path.join(__dirname, '..', 'dist');
 const PORT = 47180;
@@ -15,12 +16,15 @@ const PORT = 47180;
 const EGGS = path.join(__dirname, '..', 'easter eggs');
 // (13.10p) the playtest record: playtest/ beside the game (the repository's in development, the .exe's folder when packaged)
 const PLAYTEST = app.isPackaged ? path.join(path.dirname(process.execPath), 'playtest') : path.join(__dirname, '..', 'playtest');
+// (15.9c) the phone's SD card: the player's music in music/ beside the game
+const MUSIC = app.isPackaged ? path.join(path.dirname(process.execPath), 'music') : path.join(__dirname, '..', 'music');
 const TYPES = { '.mp3': 'audio/mpeg', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const ISOLATE = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 
 function serve() {
   const server = http.createServer((req, res) => {
     if (playtest(PLAYTEST, req, res, ISOLATE)) return;
+    if (sdcard(MUSIC, req, res, ISOLATE)) return;
     const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (url.startsWith('/easter eggs/')) {
       const egg = path.join(EGGS, url.slice('/easter eggs/'.length));

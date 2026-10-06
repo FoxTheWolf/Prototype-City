@@ -2,6 +2,7 @@ import { Sound } from './audio/sound';
 import { Input } from './input';
 import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
+import { TRACKS } from './audio/tracks';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
@@ -216,7 +217,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp,
+  world, camera, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp, soundNow: () => sound,
   // the GPU world's characters (J on), read back from its output buffer, to compare with gridText
   gpuText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
     if (!gpu) return '';
@@ -708,6 +709,35 @@ function readInput(): PlayerInput {
 
 // audio can only start from a click, so it is made on entering the city
 let sound: Sound | null = null;
+/**
+ * The Tunes Player (15.9c): the phone says what is to play, and here it plays, through the earphones
+ * or the phone's speaker (muffled in the pocket); the SD card's songs are read from music/ beside the game.
+ */
+let tunesGen = 0, tunesRoute = '';
+fetch('/sd/').then((r) => (r.ok ? r.json() : [])).then((L: { name: string; size: number }[]) => { phone.sd = Array.isArray(L) ? L : []; }).catch(() => {});
+function loadSd(name: string, gen: number) {
+  fetch(`/sd/${encodeURIComponent(name)}`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+    .then((b) => sound!.decode(b))
+    .then((buf) => { if (phone.tn.gen !== gen || !sound) return; sound.music.play(buf); if (!phone.tn.playing) sound.music.pause(); })
+    .catch(() => { if (phone.tn.gen === gen) phone.tn.playing = false; });
+}
+function syncMusic() {
+  if (!sound) return;
+  const M = sound.music, T = phone.tn;
+  if (phone.screen === 'off') T.playing = false;
+  if (T.gen !== tunesGen) {
+    tunesGen = T.gen;
+    if (T.cur < 0) M.stop();
+    else if (T.cur < TRACKS.length) M.play(TRACKS[T.cur]);
+    else { M.stop(); const f = phone.sd[T.cur - TRACKS.length]; if (f) loadSd(f.name, T.gen); }
+  }
+  if (T.playing) M.resume(); else M.pause();
+  M.update();
+  if (M.ended) { M.ended = false; phone.tunesPlay(T.cur + 1); }
+  const r = phone.earphones ? 'phones' : phone.raise > 0.5 ? 'hand' : 'pocket';
+  if (`${r}${T.vol}` !== tunesRoute) { tunesRoute = `${r}${T.vol}`; M.route(r, T.vol); }
+  T.at = M.at; T.len = M.length;
+}
 /** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
 /** The debug lines (status, clock, substation, where): F3 shows them; the game always opens with them hidden. */
@@ -1056,6 +1086,7 @@ function frame(now: number) {
   }
   phone.light = (VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3;
   phone.update(dt, now / 1000);
+  syncMusic();
   // a code dialing itself (from the debug settings), and the sounds the phone asked for
   const ak = phone.out ? phone.autoKey(now / 1000) : null;
   if (ak) phonePress(ak);

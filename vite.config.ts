@@ -5,6 +5,8 @@ import { defineConfig } from 'vite';
 const ISOLATE = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 // (13.10p) the playtest record's writer, the same as Electron's: playtest/ in the repository
 const { playtest } = createRequire(import.meta.url)('./electron/playtest.cjs');
+// (15.9c) the phone's SD card: the player's music in music/
+const { sdcard } = createRequire(import.meta.url)('./electron/sdcard.cjs');
 // the version the game shows (F3) and records: the newest in CHANGELOG.md
 const VERSION = /^## (\S+)/m.exec(readFileSync('CHANGELOG.md', 'utf8'))?.[1] ?? '?';
 
@@ -15,5 +17,5 @@ export default defineConfig({
   server: { host: '127.0.0.1', port: Number(process.env.PORT) || 5173, strictPort: true, headers: ISOLATE },
   preview: { headers: ISOLATE },
   define: { __VERSION__: JSON.stringify(VERSION) },
-  plugins: [{ name: 'playtest', configureServer(s) { s.middlewares.use((req, res, next) => { if (!playtest('playtest', req, res)) next(); }); } }],
+  plugins: [{ name: 'playtest', configureServer(s) { s.middlewares.use((req, res, next) => { if (!playtest('playtest', req, res) && !sdcard('music', req, res, ISOLATE)) next(); }); } }],
 });

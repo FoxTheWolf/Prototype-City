@@ -22,8 +22,10 @@ import { APPS, EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROW
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
 import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
-import { SHAPE } from '../render/atlas';
+import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
+import { TRACKS } from '../audio/tracks';
+import SONGS from '../locale/music.en.json';
 
 /** An app's own page color over the whole screen (between the status bar and the soft keys). */
 function paint(S: Lcd, bg: C3) { for (let y = 1; y < SH - 1; y++) S.fill(y, bg); }
@@ -687,6 +689,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
     return newsApp(S, P, world, t, J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading'));
   }
   if (id === 'bank') return bankApp(S, P, world, t);
+  if (id === 'tunes') return tunesApp(S, P, t);
   if (id === 'web') return P.web.draw(S, now);
   if (id === 'convert') {
     const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');
@@ -708,6 +711,57 @@ const BK = A.bank;
  * its balance, the statement, a top-up of the phone's credit from the account, and the branch (where
  * it is, its hours, its number). Nothing shows until the account has come down over the network.
  */
+/** A song of the Tunes Player by its place on the list: its title, band and size on the phone. */
+export function songInfo(P: Phone, i: number): { title: string; band: string; kb: number } {
+  if (i < TRACKS.length) { const s = (SONGS as Record<string, { band: string; title: string }>)[TRACKS[i].id]; return { ...s, kb: 9 + (i * 7) % 6 }; }
+  const f = P.sd[i - TRACKS.length];
+  return { title: f.name.replace(/\.[^.]+$/, ''), band: TN.sd, kb: Math.round(f.size / 1024) };
+}
+const TN = A.tunes;
+/**
+ * The Tunes Player (15.9c): what plays on a panel at the top (title, band, how far in, the volume) and
+ * the songs below, those that came with it and then the SD card's; where the sound comes out at the right of the bar.
+ */
+function tunesApp(S: Lcd, P: Phone, t: number) {
+  const BG0: C3 = [34, 16, 48], BG1: C3 = [10, 5, 16], ACC: C3 = [200, 130, 255], INK2: C3 = [232, 218, 250], GREY: C3 = [130, 110, 150], PANEL: C3 = [58, 30, 80];
+  const T2 = P.tn, bg = (y: number) => lerp(BG0, BG1, (y - 1) / (SH - 3));
+  vgrad(S, 1, SH - 2, BG0, BG1);
+  bar(S, (ST.names as Record<string, string>).tunes.toUpperCase(), ACC, [20, 8, 30], P.earphones ? TN.phones : TN.speaker, GREY);
+  // the panel: what plays
+  box(S, 1, 3, SW - 2, 7, PANEL, bg, 1, [40, 20, 58]);
+  const pbg = (y: number) => lerp(PANEL, [40, 20, 58], (y - 3) / 4);
+  if (T2.cur < 0) S.text(3, 4, typed(TN.idle, t), GREY, pbg(4));
+  else {
+    const s = songInfo(P, T2.cur);
+    S.text(3, 4, typed(s.title.slice(0, SW - 6), t), INK2, pbg(4));
+    S.text(3, 5, typed(s.band.slice(0, SW - 6), t - 0.05), GREY, pbg(5));
+    const mm = (v: number) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`;
+    const time = `${mm(T2.at)}/${mm(T2.len)}`, w = SW - 10 - time.length, f = T2.len > 0 ? Math.min(1, T2.at / T2.len) : 0;
+    S.text(3, 6, T2.playing ? '>' : '"', ACC, pbg(6));
+    for (let k = 0; k < w; k++) S.put(5 + k, 6, k < Math.round(f * w) ? BLOCK.full : ch('-'), k < Math.round(f * w) ? ACC : GREY, pbg(6));
+    S.text(SW - 3 - time.length, 6, time, INK2, pbg(6));
+  }
+  // the volume, as ten little bars rising
+  S.text(3, 8, 'VOL', GREY, bg(8));
+  for (let k = 0; k < 10; k++) S.put(7 + k, 8, k < Math.round(T2.vol * 10) ? BLOCK.full : ch('.'), k < Math.round(T2.vol * 10) ? ACC : GREY, bg(8));
+  S.text(SW - 12, 8, '* - # +', GREY, bg(8));
+  // the list: a heading before each part, the picked row lit, kept in sight
+  const rows: [string, number][] = [[TN.songs, -1], ...TRACKS.map((_, i): [string, number] => ['', i]), [TN.sd, -1], ...(P.sd.length ? P.sd.map((_, i): [string, number] => ['', TRACKS.length + i]) : [[TN.sdEmpty, -2] as [string, number]])];
+  const top = 10, h = SH - 3 - top, at = rows.findIndex(([, i]) => i === T2.sel), off = Math.max(0, Math.min(rows.length - h, at - (h >> 1)));
+  rows.slice(off, off + h).forEach(([label, i], r) => {
+    const y = top + r;
+    if (i === -1) { S.text(1, y, label, ACC, bg(y)); for (let x = label.length + 2; x < SW - 1; x++) S.put(x, y, ch('-'), [70, 40, 90], bg(y)); return; }
+    if (i === -2) { S.text(3, y, label, GREY, bg(y)); return; }
+    const s = songInfo(P, i), sel = i === T2.sel, rb: C3 = sel ? [90, 46, 120] : bg(y);
+    if (sel) S.fill(y, rb);
+    const size = s.kb >= 1024 ? TN.mb.replace('{n}', (s.kb / 1024).toFixed(1)) : TN.kb.replace('{n}', String(s.kb));
+    S.text(1, y, i === T2.cur ? (T2.playing ? '>' : '"') : ' ', ACC, rb);
+    S.text(3, y, typed(`${s.title}${i < TRACKS.length ? ` - ${s.band}` : ''}`.slice(0, SW - 6 - size.length), t - 0.1 - r * 0.02), sel ? [255, 255, 255] : INK2, rb);
+    S.text(SW - 1 - size.length, y, size, GREY, rb);
+  });
+  softKeys(S, T2.cur === T2.sel && T2.playing ? TN.pause : TN.play, T.back);
+}
+
 function bankApp(S: Lcd, P: Phone, world: World, t: number) {
   const GREEN: C3 = [18, 64, 48], GOLD: C3 = [236, 200, 112], PAGE: C3 = [242, 238, 226], INK2: C3 = [34, 38, 34], GREY: C3 = [120, 122, 112], RED: C3 = [170, 40, 40], OK2: C3 = [30, 120, 60];
   const { city } = world, Acc = world.bank, B = P.bk, J = P.radio.job, op = operatorName(city, world.telco.player.op ?? 0);

@@ -867,6 +867,7 @@
         "stmt": "STATEMENT", "topupTitle": "TOP UP {op}", "credit": "Phone credit", "pay": "Pay", "paying": "Sending...", "notes": { "done": "Done. Your credit is topped up.", "funds": "Insufficient funds.", "signal": "No data connection." },
         "branch": "YOUR BRANCH", "hq": "Head office", "isHq": "This branch is the head office.", "hours": "Mon-Fri 9am-5pm", "callHint": "Green key calls the branch", "branches": "{n} branches in the city",
         "kinds": { "open": "Opening deposit", "cash": "Cash deposit", "atm": "ATM {biz}", "card": "{biz}", "fee": "Monthly fee", "topup": "{op} top-up", "transfer": "Transfer in" } },
+      "tunes": { "songs": "SONGS", "sd": "SD CARD", "sdEmpty": "No songs on the card.", "play": "Play", "pause": "Pause", "idle": "Pick a song", "speaker": "SPEAKER", "phones": "EARPHONES", "kb": "{n} KB", "mb": "{n} MB" },
       "wifi": { "wifi": "Wi-Fi", "on": "ON", "off": "OFF", "assoc": "Associating...", "dhcp": "Obtaining IP address...", "badKey": "Authentication failed: wrong key", "up": "Connected", "none": "No networks found", "join": "Join", "keyTitle": "WI-FI KEY", "key": "Key:", "debugKey": "(debug) key:", "openNet": "open" },
       "modeHint": "# Abc/T9/123  * next word (T9)  0 space",
       "shoot": "Shoot", "photos": "Photos", "noPhotos": "No photos yet", "full": "Storage full", "del": "* delete",

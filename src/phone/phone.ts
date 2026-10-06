@@ -14,6 +14,7 @@ import { Sec } from '../sim/wifi';
 import { ussd } from './ussd';
 import { smsText } from '../locale/sms';
 import en from '../locale/en.json';
+import { TRACKS } from '../audio/tracks';
 import { type FsNode } from '../sim/computer';
 import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
 import { businessName, makerName, operatorName, districtName } from '../locale/names';
@@ -184,6 +185,16 @@ export class Phone {
   appFrom: Screen = 'menu';
   /** The downloads folder: the app picked. */
   fsel = 0;
+  /**
+   * The Tunes Player (15.9c): the row picked on its list, the song playing (-1: none; the songs that
+   * came with it, then the SD card's), whether it plays, its volume (0..1), and a count that goes up
+   * when a song is to start from its beginning (main plays it). Main fills in where the song is.
+   */
+  tn = { sel: 0, cur: -1, playing: false, vol: 0.7, gen: 0, at: 0, len: 0 };
+  /** The SD card's songs: the player's own, from music/ beside the game (main reads the folder). */
+  sd: { name: string; size: number }[] = [];
+  /** The earphones in (15.9d): the music for the player alone; else it comes out of the phone's speaker. */
+  earphones = false;
   /**
    * The body: the shell (one of SHELLS) and the case (one of CASES, 0 none), and those the player
    * has. The phone comes in a shell of its own; others are got later (for now, from the debug page).
@@ -414,6 +425,7 @@ export class Phone {
       looks: [...this.looks], cases: [...this.cases], reminders: this.cal.reminders, wifiOn: this.wifi.on, told: { ...this.told },
       // already switched on once (the line's numbers are in its contacts): it comes back on, in the pocket
       booted: this.screen !== 'off' || this.everOn, batt: this.batt,
+      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol }, earphones: this.earphones,
     };
   }
   /** Back to a saved phone: in the pocket and off; the screens' data is read back from the files at the next sync. */
@@ -428,6 +440,8 @@ export class Phone {
     this.cal.reminders = d.reminders; this.wifi.on = d.wifiOn; this.told = d.told;
     this.everOn = d.booted;
     if (d.batt !== undefined) this.batt = d.batt;
+    if (d.tunes) this.tn = { ...this.tn, ...d.tunes, playing: false };
+    this.earphones = !!d.earphones;
     if (d.booted && this.batt > 0.01) this.screen = 'standby';
   }
   /**
@@ -442,12 +456,12 @@ export class Phone {
     if (this.charging) { this.batt = Math.min(1, this.batt + h / 1.5); if (this.batt > 0.2) this.low = 0; return; }
     if (this.screen === 'off') return;
     const call = this.call && this.call.state !== 'ended', data = this.radio.job && this.radio.job.state !== 'done';
-    const rate = 1 / 40 + (this.out ? 1 / 8 : 0) + (this.gps.state !== 'off' ? 1 / 5 : 0) + (call ? 1 / 6 : 0) + (data ? 1 / 10 : 0) + (this.wifi.on ? 1 / 40 : 0);
+    const rate = 1 / 40 + (this.out ? 1 / 8 : 0) + (this.gps.state !== 'off' ? 1 / 5 : 0) + (call ? 1 / 6 : 0) + (data ? 1 / 10 : 0) + (this.wifi.on ? 1 / 40 : 0) + (this.tn.playing ? 1 / 20 : 0);
     this.batt = Math.max(0, this.batt - h * rate);
     // low: a warning beep at 15% and 5%; flat, it switches off
     const lv = this.batt < 0.05 ? 2 : this.batt < 0.15 ? 1 : 0;
     if (lv > this.low) { this.low = lv; this.sfx.push(['beep']); this.buzz(performance.now() / 1000, 0.5); }
-    if (this.batt <= 0) { this.screen = 'off'; this.sfx.push(['stop']); }
+    if (this.batt <= 0) { this.screen = 'off'; this.tn.playing = false; this.sfx.push(['stop']); }
   }
 
   /** The shot taken, into the photos once its picture is there. */
@@ -1112,6 +1126,7 @@ export class Phone {
     if (id === 'bank') { const r = this.bankKey(k, now); if (r !== null) return r; }
     if (id === 'web') { const r = this.web.key(k, now); if (r !== null) return r; }
     if (k === 'rsoft') { if (this.appFrom === 'store') this.stab = 1; this.open(this.appFrom, now); return true; }
+    if (id === 'tunes') return this.tunesKey(k);
     if (id === 'snake') {
       const S = this.snake;
       if (S.over && (k === 'ok' || k === '5')) { S.reset(now); return true; }
@@ -1138,6 +1153,29 @@ export class Phone {
       if (k === '*') { C.input = C.input.slice(0, -1); return true; }
       return false;
     }
+    return false;
+  }
+
+  /** The Tunes Player's songs: those that came with it, then the SD card's. */
+  tunesCount() { return TRACKS.length + this.sd.length; }
+  /** Plays song i from its start. */
+  tunesPlay(i: number) {
+    const n = this.tunesCount();
+    if (!n) return;
+    const T = this.tn;
+    T.cur = ((i % n) + n) % n; T.playing = true; T.gen++; T.at = 0;
+  }
+  /** The Tunes Player's keys: the arrows pick, OK plays the song picked (or pauses the one playing), left and right skip, * and # the volume. */
+  private tunesKey(k: Key): boolean {
+    const T = this.tn, n = this.tunesCount();
+    if ((k === 'up' || k === 'down') && n) { T.sel = (T.sel + (k === 'up' ? -1 : 1) + n) % n; return true; }
+    if (k === 'ok' || k === 'lsoft' || k === '5') {
+      // the song loaded already (after a load from the save it is not): pause or go on; else from its start
+      if (T.cur === T.sel && T.cur >= 0 && T.len > 0) T.playing = !T.playing; else this.tunesPlay(T.sel);
+      return true;
+    }
+    if ((k === 'left' || k === 'right' || k === '4' || k === '6') && T.cur >= 0) { this.tunesPlay(T.cur + (k === 'left' || k === '4' ? -1 : 1)); T.sel = T.cur; return true; }
+    if (k === '*' || k === '#') { T.vol = Math.max(0, Math.min(1, Math.round((T.vol + (k === '#' ? 0.1 : -0.1)) * 10) / 10)); return true; }
     return false;
   }
 

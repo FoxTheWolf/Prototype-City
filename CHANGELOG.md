@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.9c — Tunes Player e o cartão SD (2026-10-06)
+- **O Tunes Player funciona:** compre-o na loja do celular (Wi-Fi) e abra. **↑/↓** escolhem, **OK** toca (ou pausa a que está tocando), **←/→** pulam a faixa, **\*** e **#** mudam o volume. A música **continua com o celular no bolso** e passa sozinha para a próxima. Tocar gasta um pouco de bateria.
+- **Sem fone, ela sai do alto-falante do celular:** fininha e metálica na mão, e abafada no bolso. (O fone de ouvido vem na próxima.)
+- **Suas músicas no cartão SD:** ponha MP3/OGG/WAV/M4A/FLAC na pasta **`music/`** ao lado do jogo, e elas aparecem na seção SD CARD. O cartão não ocupa a memória do celular.
+
+## 0.15.9b — Músicas chiptune da cidade (2026-10-06)
+- **Seis músicas chiptune de bandas da cidade** (Neon Paycheck, The Overpass Kids, Payphone Saints, Lowtide Signal, Grid Orphans, Kiosk Dreamers), tocadas em quatro vozes como num console antigo. **Ouça e diga quais ficaram boas e quais precisam de outra passada.**
+
 ## 0.15.9a — Alt solta o mouse (2026-10-06)
 - **Segure Alt para soltar o mouse:** enquanto Alt está apertado, o cursor aparece e você pode **clicar nos botões do relógio** (LIGHT, MODE, START; segurar START acerta o alarme, como o K). Você continua andando, e ao soltar Alt a câmera volta para o mouse. (Se você segurar Alt por mais de uns 5 s, o navegador pode pedir um clique para recapturar o mouse.)
 - O Alt não abre mais a barra de menus do Electron nem dispara atalhos do navegador (Alt+← voltava a página).
