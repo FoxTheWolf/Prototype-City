@@ -3,7 +3,7 @@
  *   npx rolldown tests/chain.ts --format esm --platform node -o tests/.out/chain.mjs && node tests/.out/chain.mjs
  * && / || / ; split outside quotes; an operator inside a quoted ESSID is left in the command.
  */
-import { splitChain } from '../src/laptop/shell';
+import { splitChain, cmdSegmentStart } from '../src/laptop/shell';
 
 let fails = 0;
 const fail = (m: string) => { if (++fails <= 20) console.log('FAIL ' + m); };
@@ -18,5 +18,11 @@ eq(splitChain('bruter x || tdump'), [{ op: '', cmd: 'bruter x' }, { op: '||', cm
 eq(splitChain('iwconfig wlan0 essid "A && B"'), [{ op: '', cmd: 'iwconfig wlan0 essid "A && B"' }], 'operator inside quotes is literal');
 eq(splitChain("echo 'a;b' && ls"), [{ op: '', cmd: "echo 'a;b'" }, { op: '&&', cmd: 'ls' }], '; inside single quotes is literal');
 
-console.log(fails ? `${fails} failure(s)` : 'OK — && / || / ; split outside quotes, literal inside them');
+// cmdSegmentStart: where the current command segment begins (Tab completion after a chain operator, 15.7e)
+eq(cmdSegmentStart('dhcl'), 0, 'no operator: segment starts at 0');
+eq(cmdSegmentStart('iwconfig wlan0 essid "X" && dhcl'), 27, 'after && the segment is the command word');
+eq(cmdSegmentStart('a ; b ; c'), 7, 'after the last ; ');
+eq(cmdSegmentStart('iwconfig essid "A && B" && dh'), 26, '&& inside quotes does not start a segment');
+
+console.log(fails ? `${fails} failure(s)` : 'OK — && / || / ; split outside quotes, literal inside them; cmdSegmentStart finds the segment');
 process.exit(fails ? 1 : 0);

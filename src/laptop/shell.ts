@@ -122,6 +122,21 @@ export function splitChain(t: string): { op: string; cmd: string }[] {
   segs.push({ op, cmd: buf.trim() });
   return segs;
 }
+
+/** The index in `s` where the current command segment begins: just after the last unquoted ;, && or
+ *  || before the end. 0 when there is none. Used by Tab completion so a command after a chain operator
+ *  completes as a command name, not a path argument (15.7e). */
+export function cmdSegmentStart(s: string): number {
+  let start = 0, q = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) { if (ch === q) q = ''; continue; }
+    if (ch === '"' || ch === "'") { q = ch; continue; }
+    if (ch === ';') start = i + 1;
+    else if ((ch === '&' && s[i + 1] === '&') || (ch === '|' && s[i + 1] === '|')) { start = i + 2; i++; }
+  }
+  return start;
+}
 /** The directional antenna's gain, dB (F.9b): reaches a maintenance AP (GRIDLINK) from further, e.g. out of the crossing camera. */
 const ANT_GAIN = 9;
 /** What the shell does itself, with no program on the disk. */
@@ -562,11 +577,14 @@ export class Shell {
     const add = t.slice(0, room);
     this.input = s.slice(0, this.cur) + add + s.slice(this.cur); this.cur += add.length;
   }
-  /** Tab: the command's name, or the path being typed, as far as it is the only way to go. */
+  /** Tab: the command's name, or the path being typed, as far as it is the only way to go. Works per
+   *  segment, so a command after && / || / ; completes as a command name too (15.7e). */
   private complete() {
-    const s = this.input.slice(0, this.cur), k = s.lastIndexOf(' ') + 1, word = s.slice(k);
+    const s = this.input.slice(0, this.cur);
+    const seg = s.slice(cmdSegmentStart(s)), ks = seg.lastIndexOf(' ') + 1, word = seg.slice(ks);
+    const atCmd = seg.slice(0, ks).trim() === ''; // the word is the segment's first (a command name)
     let names: string[], dir = '';
-    if (k === 0) names = [...BUILTINS, ...[...PATH, `/home/${this.pc.hw.user}/bin`].flatMap((d) => [...(this.pc.get(d)?.kids?.keys() ?? [])])];
+    if (atCmd) names = [...BUILTINS, ...[...PATH, `/home/${this.pc.hw.user}/bin`].flatMap((d) => [...(this.pc.get(d)?.kids?.keys() ?? [])])];
     else {
       const j = word.lastIndexOf('/');
       dir = j >= 0 ? word.slice(0, j + 1) : '';
@@ -578,7 +596,7 @@ export class Shell {
     let pre = hits[0];
     for (const h of hits) while (!h.startsWith(pre)) pre = pre.slice(0, -1);
     if (hits.length > 1 && pre === base) { this.lines.push({ text: this.prompt + this.input, ink: 0 }, { text: hits.sort().join('  ').slice(0, TERM_W * 3), ink: 0 }); return; }
-    const add = pre.slice(base.length) + (hits.length === 1 && k === 0 ? ' ' : '');
+    const add = pre.slice(base.length) + (hits.length === 1 && atCmd ? ' ' : '');
     this.input = s + add + this.input.slice(this.cur); this.cur += add.length;
   }
 
