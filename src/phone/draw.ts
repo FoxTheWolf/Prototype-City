@@ -53,12 +53,12 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
 }
 
 /**
- * The music keys on the top edge, in its right corner (2026-10-06; they were on the left side, then five):
+ * The music keys on the top edge, right of the centre (2026-10-06; they were on the left side, then five, then in the corner where the body rounds off):
  * previous, play/pause and next, each a rounded bump drawn in HD pixels standing out of the body
  * (columns from the phone's left), with the keyboard's shortcut that does the same (Alt held). The
  * volume is the earphones' thumbwheel on the cable (DIAL), or Alt with the arrows.
  */
-const TOP_KEYS: [Key, number, number, string][] = [['prev', 33, 4, '<'], ['play', 38, 4, 'P'], ['next', 43, 4, '>']];
+const TOP_KEYS: [Key, number, number, string][] = [['prev', 28, 4, '<'], ['play', 33, 4, 'P'], ['next', 38, 4, '>']];
 /** HD pixel icons for the keys, 5 wide by 3 tall ('#' lit, '+' half). */
 const ICONS: Record<string, string[]> = {
   prev: ['#.+#.', '#.##.', '#.+#.'], next: ['.#+.#', '.##.#', '.#+.#'],
