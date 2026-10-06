@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-06 — depois do WEP crack
+
+- **O WEP sem o "exposto = calor" ainda não morde.** Hoje capturar é parar ~20–60 s de jogo olhando o contador subir, sem risco. O que faz valer a pena é o follow-up (a): enquanto `tdump mon` roda, acumular calor em `heat.ts` (um ato contínuo, não pontual) e, melhor ainda, o mentor por SMS avisar "you've been sitting on that link too long". Sem isso, o crack é só uma espera. Sugiro fazer o calor contínuo logo após a 15.8c, junto com o resto do laço.
+- **O contador de IVs é a parte gostosa** (sobe mais rápido quando você chega perto da subestação): é diegético e ensina sozinho que a distância importa, sem tutorial. Vale reusar esse padrão "número que reage à sua posição" em outros alvos.
+- **Legibilidade das placas (notas F8 8 e 9) é um tema recorrente** — a placa "GO" e o semáforo de pedestre somem de perto. Já temos o princípio "pontos de perto, ASCII de longe" e a fonte 5×7; aplicá-lo às placas informativas é barato e resolve também o pedido do zoom (13.17): se a placa é legível, o zoom vira luxo, não necessidade.
+
 ---
 
 ## 2026-10-06, as lojas da 13.10i
