@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.9e — Reynard, o mensageiro cifrado (2026-10-06)
+- **Reynard** (em My Apps): mensagens cifradas de ponta a ponta, presas ao seu número. Para registrar, ele **manda um código por SMS** que você digita de volta, e o celular cria a sua chave.
+- **Número de segurança:** em Options → Verify, 60 dígitos para comparar com o contato (pessoalmente, ou lidos numa ligação). Bateu, marque como verificado (aparece um `v` ao lado do nome).
+- **Mensagens que somem** (1 hora, 1 dia, 1 semana), **apagar a conversa** e, no Menu, **apagar tudo** (as conversas e a chave). Sem rede, a mensagem fica esperando; depois vira `v` (enviada) e `vv` (entregue).
+- *(por enquanto)* Ele não está na loja: no jogo de verdade virá depois de desbloquear o celular. Agora o modo debug o instala, com uma conversa de teste.
+
 ## 0.15.9d — Fone de ouvido e o controle do fio (2026-10-06)
 - **Ponha o fone:** com fones (`headphones` da loja de eletrônicos, ou o `hands_free` da loja de celulares) na mochila, aperte **E** sobre eles para pôr ou tirar. Com o fone, a música fica limpa e em estéreo, e só você ouve.
 - **O controle do fio:** com o fone posto e uma música carregada, o controlezinho aparece pendurado no cabo, embaixo da tela. **Segure Alt** (ou tire o celular) e clique: **−**/**+** volume, **|<**/**>|** pulam, o do meio pausa ou continua.

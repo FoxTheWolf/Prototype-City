@@ -15,6 +15,8 @@ import { ussd } from './ussd';
 import { smsText } from '../locale/sms';
 import en from '../locale/en.json';
 import { TRACKS } from '../audio/tracks';
+import { DEBUG } from '../debug';
+import { debugChat, newRey, openRey, reyKey, reyTyping, stepRey } from './reynard';
 import { type FsNode } from '../sim/computer';
 import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
 import { businessName, makerName, operatorName, districtName } from '../locale/names';
@@ -67,6 +69,8 @@ export const APPS: App[] = ['calls', 'contacts', 'messages', 'camera', 'map', 'w
 const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake', bank: 'bank' };
 /** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
 export const BUNDLED = ['social', 'news', 'snake', 'bank'];
+/** (15.9e) Apps that are not in the store: installed by cable once the phone is unlocked (stage 19), and shown in My Apps. */
+export const SIDELOAD = ['reynard'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
 export const BOOT_LOG_S = 2.4, BOOT_S = 5.1;
 /** The map's zoom levels (local, district, sector, city): metres per screen row. */
@@ -114,7 +118,7 @@ const SYSTEM_KB = 40 * 1024;
  * The store's catalog: id, size in KB, price in cents. Small apps download over EDGE; past
  * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
  */
-export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0], ['bank', 96, 0], ['web', 110, 0]];
+export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0], ['bank', 96, 0], ['web', 110, 0], ['reynard', 220, 0]];
 /** Kilobytes the bank's app downloads to show the account, and to make a payment. */
 const BANK_KB = 6, BANK_PAY_KB = 2;
 /** What the bank's app can top the phone's credit up by, in cents. */
@@ -197,6 +201,8 @@ export class Phone {
   earphones = false;
   /** The bag's thing worn as earphones ('headphones' or 'hands_free'). */
   earGood = '';
+  /** Reynard, the encrypted messenger (15.9e): registered or not, the key, the chats. */
+  rey = newRey();
   /**
    * The body: the shell (one of SHELLS) and the case (one of CASES, 0 none), and those the player
    * has. The phone comes in a shell of its own; others are got later (for now, from the debug page).
@@ -240,6 +246,7 @@ export class Phone {
     this.looks = [this.look];
     this.web = new WebApp(world, this.radio, () => this.online());
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
+    this.debugRey();
     linkSubs(world.city, world.power.subs); // the Maps can find a job's GRIDLINK substation
 
     this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...APPS.filter((a) => a !== 'folder'), ...BUNDLED]);
@@ -418,6 +425,14 @@ export class Phone {
    * What the save keeps of the phone (F.6): its files (the contacts, calls, texts and notes live
    * there), the photos, the apps, the settings and looks, the reminders. Plain data (structured clone).
    */
+  /** (Debug, DEBUG.reynard) Reynard installed and registered, with a test chat: until the jailbreak (stage 19) installs it. */
+  private debugRey() {
+    if (!DEBUG.reynard) return;
+    const i = STORE.findIndex((a) => a[0] === 'reynard');
+    if (!this.apps.includes(i)) this.apps.push(i);
+    const R = this.rey;
+    if (R.reg === 'none' && !R.chats.length) { R.reg = 'ok'; R.mine = '738120946352817406938271650493'; R.chats.push(debugChat(this.world)); }
+  }
   /** A new SIM in the phone (13.6): it registers again, and the new operator says hello. */
   newSim() { this.told.welcome = false; this.radio.state = 'off'; }
 
@@ -427,7 +442,7 @@ export class Phone {
       looks: [...this.looks], cases: [...this.cases], reminders: this.cal.reminders, wifiOn: this.wifi.on, told: { ...this.told },
       // already switched on once (the line's numbers are in its contacts): it comes back on, in the pocket
       booted: this.screen !== 'off' || this.everOn, batt: this.batt,
-      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol }, earphones: this.earphones, earGood: this.earGood,
+      tunes: { sel: this.tn.sel, cur: this.tn.cur, vol: this.tn.vol }, earphones: this.earphones, earGood: this.earGood, rey: this.rey,
     };
   }
   /** Back to a saved phone: in the pocket and off; the screens' data is read back from the files at the next sync. */
@@ -444,6 +459,8 @@ export class Phone {
     if (d.batt !== undefined) this.batt = d.batt;
     if (d.tunes) this.tn = { ...this.tn, ...d.tunes, playing: false };
     this.earphones = !!d.earphones; this.earGood = d.earGood ?? '';
+    if (d.rey) this.rey = d.rey;
+    this.debugRey();
     if (d.booted && this.batt > 0.01) this.screen = 'standby';
   }
   /**
@@ -482,7 +499,7 @@ export class Phone {
     this.raise += ((this.out || ringing ? (this.atEar ? 0.35 : 1) : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
     const app = this.screen === 'app' ? STORE[this.appId][0] : '';
-    const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (app === 'web' && this.web.typing) || (this.screen === 'calendar' && this.cal.view === 'new');
+    const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (app === 'web' && this.web.typing) || (app === 'reynard' && reyTyping()) || (this.screen === 'calendar' && this.cal.view === 'new');
     this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
@@ -496,6 +513,7 @@ export class Phone {
     this.wifi.update(this.world, this.screen !== 'off', now);
     this.radio.wifiKbps = this.wifi.kbps();
     this.radio.update(this.world, this.screen !== 'off', now, dt);
+    stepRey(this, this.world);
     // the webmail's codes (15.4), texted to this line
     for (const m of this.world.mail.sms.splice(0)) this.receive(m.from, m.text, now + 3);
     // text messages arriving; the operator's notices
@@ -1094,7 +1112,7 @@ export class Phone {
   }
 
   /** The store's catalog: what it sells (not what came with the phone). */
-  catalog(): number[] { return STORE.map((_, i) => i).filter((i) => !BUNDLED.includes(STORE[i][0])); }
+  catalog(): number[] { return STORE.map((_, i) => i).filter((i) => !BUNDLED.includes(STORE[i][0]) && !SIDELOAD.includes(STORE[i][0])); }
   /** The apps downloaded from the store, in the folder. */
   downloads(): number[] { return this.apps.filter((i) => !BUNDLED.includes(STORE[i][0])); }
 
@@ -1106,6 +1124,7 @@ export class Phone {
     if (id === 'social') { this.wst.view = 'feed'; if (this.online()) this.fetchWire(now); }
     if (id === 'bank') { this.bk = { view: 'home', sel: 0, ok: false, note: '' }; if (this.online()) this.radio.fetch('bank', BANK_KB, now); }
     if (id === 'web') this.web.open(now);
+    if (id === 'reynard') openRey(this);
   }
 
   /** Download what is new on the wire: a little for the page, and each post since the last time. */
@@ -1127,6 +1146,7 @@ export class Phone {
     }
     if (id === 'bank') { const r = this.bankKey(k, now); if (r !== null) return r; }
     if (id === 'web') { const r = this.web.key(k, now); if (r !== null) return r; }
+    if (id === 'reynard') { const r = reyKey(this, this.world, k, now); if (r !== null) return r; }
     if (k === 'rsoft') { if (this.appFrom === 'store') this.stab = 1; this.open(this.appFrom, now); return true; }
     if (id === 'tunes') return this.tunesKey(k);
     if (id === 'snake') {

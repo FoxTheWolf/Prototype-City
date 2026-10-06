@@ -25,6 +25,7 @@ import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from '.
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 import { TRACKS } from '../audio/tracks';
+import { drawRey } from './reynard';
 import SONGS from '../locale/music.en.json';
 
 /** An app's own page color over the whole screen (between the status bar and the soft keys). */
@@ -54,7 +55,7 @@ const ICON: Record<App, [string, C3, C3]> = {
 /** The icons of apps from the store. */
 const STORE_ICON: Record<string, [string, C3, C3]> = {
   torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ['d', [130, 60, 170], [255, 220, 255]], atlas: ['3D', [60, 130, 90], [255, 255, 255]],
-  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ICON.bank, web: ['(e)', [30, 70, 150], [255, 210, 80]],
+  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ICON.bank, web: ['(e)', [30, 70, 150], [255, 210, 80]], reynard: ['^.^', [34, 30, 28], [232, 112, 44]],
 };
 const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
 const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
@@ -690,6 +691,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   }
   if (id === 'bank') return bankApp(S, P, world, t);
   if (id === 'tunes') return tunesApp(S, P, t);
+  if (id === 'reynard') return drawRey(S, P, world, t, now);
   if (id === 'web') return P.web.draw(S, now);
   if (id === 'convert') {
     const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');

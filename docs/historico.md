@@ -2,6 +2,14 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.9 ✅ Tocador de música, fone e o Reynard (2026-10-06, Opus 5.5)
+- **Entrevista** no fim de `docs/visao.md` ("O tocador e o app cifrado").
+- **15.9a** Alt segurado solta o mouse (`altFree`, `altUp` em `main.ts`); os botões do relógio são clicáveis (`WATCH_BTN` em `watch.ts`, `watchClick`); no Electron, a barra de menus não aparece mais com o Alt (`setMenuBarVisibility(false)`, sem `autoHideMenuBar`); `e.altKey` faz `preventDefault` (Alt+← voltava a página).
+- **15.9b** `src/audio/tracks.ts` (6 faixas em notação de tracker; os nomes em `locale/music.en.json`; `tests/music.ts` confere os compassos, a extensão e se a melodia cai nas notas do acorde) e `src/audio/music.ts` (4 vozes; o pulso por `PeriodicWave` com 48 harmônicos; o agendador olha 0,25 s à frente; saídas `phones`/`hand`/`pocket`: mono, passa-alta de 650 Hz, pico em 2,6 kHz, um clipe suave e o pano como passa-baixa de 1,3 kHz).
+- **15.9c** o Tunes Player (`phone.tn`, `tunesKey`, `tunesApp` em `apps.ts`; `syncMusic` em `main.ts` liga o estado do celular ao áudio, com `gen` subindo quando uma faixa começa); o cartão SD = `electron/sdcard.cjs` (`/sd/` lista, `/sd/<nome>` envia; Electron e Vite), pasta `music/` no `.gitignore`.
+- **15.9d** E na mochila põe/tira o fone (`headphones`/`hands_free`, `bagView.onEar`, `phone.earphones`/`earGood`); o controle do fio em `src/phone/remote.ts` (`REMOTE_BTN`, `remoteClick`), desenhado no `ui` antes do relógio.
+- **15.9e** o Reynard (`src/phone/reynard.ts`): registro pelo número com o código por SMS, a chave (`keyOf`), o número de segurança de 60 dígitos (`safety`), verificar, mensagens que somem (desligado/1 h/1 dia/1 semana), apagar a conversa, apagar tudo; a mensagem passa de `...` para `v` e `vv` só com rede. Não está na loja (`SIDELOAD`); `DEBUG.reynard` instala e registra com a conversa de teste "kestrel".
+
 ## 15.7 ✅ Gerenciador de janelas no notebook (2026-10-06, Opus 4.8)
 - **Feito (a–d), tudo em `src/laptop/wm.ts` (novo) + emendas neutras no `shell.ts` + mouse no `main.ts`:**
   - **15.7a** o WM compõe o terminal e o Lodestar numa só `Scr` (terminal à esquerda, navegador à direita, traço `|` com `<`/`>` apontando o foco); **Ctrl+←/→** ou **Ctrl+Tab** troca o foco; **F11** maximiza/restaura; o terminal focado anda a rolagem com PageUp/PageDown. O navegador cabe no painel com `Browser.resize` (re-`layout` sem re-buscar). `shell.ts`: campo `wm`, `screen()`/`key()` roteando, `termKey` extraído do `key()`, um `paste()`; o `lodestar` abre em painel. O `draw.ts` não mudou (o WM entra pelo caminho `full` do `screen()`).

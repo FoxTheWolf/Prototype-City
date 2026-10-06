@@ -14,4 +14,7 @@ export const DEBUG = {
   /** Show a locked network's key on the phone's Wi-Fi screen (the old crutch). OFF: a WEP key now
    *  comes from cracking it on the notebook; WPA from the world; open nets need none. [HACKING] */
   showWifiKey: false,
+  /** (15.9e) Reynard, the encrypted messenger, installed and registered with a test chat. The real way in
+   *  is the jailbreak at the end of the mentor's tutorial (stage 19). */
+  reynard: true,
 };

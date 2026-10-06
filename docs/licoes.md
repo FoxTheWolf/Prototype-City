@@ -41,6 +41,13 @@
 - **Molde de argumentos no Tab:** a parte pura (`argTemplate(cmd, essid)` → `{text, caret}`) é exportada e testável (`tests/chain.ts`); o método do shell só resolve o ESSID (de `net.list`) e chama. Caret absoluto a partir do início do segmento (`cmdSegmentStart`). Dispara quando o comando está completo sozinho (`atCmd && hits===1 && pre===base`).
 - **O (d) completo (drop-up + Tab entre campos) é grande:** remexe o modelo de input do shell (placeholders/campos), o `draw.ts` (desenhar os campos) e um overlay de menu — é peça própria, não QoL. A fatia feita (scaffold no Tab) entrega o "digitar iwconfig abre os campos" sem a máquina de overlay.
 
+### Lições da 15.9 (música, fone, Reynard) — 2026-10-06
+- **O laço do jogo morre com uma exceção no quadro:** `syncMusic` começou com `tunesGen = -1` e `cur = -1` e chamou `TRACKS[-1]`; o `world.tick` parou. Ao testar, olhar o `tick` subindo e o `read_console_messages` antes de concluir qualquer coisa. Estado novo do celular que o `main` segue: comparar contra um valor inicial igual ao do celular.
+- **Recarregar o save não recarrega o áudio:** `tn.cur` volta, mas nada está tocando; o OK conferia `cur === sel` e só alternava o `playing`, sem som. Hoje ele confere também `tn.len > 0` (o `main` preenche o tamanho só com algo carregado).
+- **`AudioBufferSourceNode.onended` é assíncrono:** se o quadro seguinte chamar `resume()` antes de ler `ended`, a faixa recomeça um instante. `resume()` sai cedo com `ended` ligado.
+- **Testar o celular por script:** `phone.openApp(i, t)`, `phone.press(tecla, t, 1600, 900)`, `soundNow().music` (exposto no DEV) e `world.bag.items.push({...})` para dar um item; o HMR do Vite recarrega a página (voltar a clicar NEW GAME).
+- **Python heredoc + barra invertida em TS:** inserir `'/\'` por `python` e `sed` deu errado três vezes; evitar a barra invertida em strings curtas (o ícone do Reynard virou `^.^`).
+
 ### Lições da 15.8c / debug — 2026-10-06
 - **Estado novo do jogador = campo no World + guarda no save.** `w.forum` (conta + respostas) entrou em `world.ts`, `snapWorld`/`applyWorld` e `WorldSave` com `forum?` opcional (migração: save antigo não tem). Mesmo padrão de `feed`/`mail`. O tipo mora em `sim/` (world.ts), não em `web/`, para o web depender do sim e não o contrário.
 - **Formulário no navegador do jogo:** uma página ganha `form: url(action)`; a submissão volta como `fetchUrl(w, url, form)` → `pageFn(w, path, form)`. Molde: `streetwire.ts`. O fluxo de várias etapas (join → confirm) é só páginas encadeadas, cada uma com o seu `action`.
