@@ -32,6 +32,7 @@ import { newWire, wireKey } from './wire';
 import { newsStories, type Story } from '../locale/news';
 import { calKey, newCal } from './calendar';
 import { CASES, SHELLS } from './shells';
+import { WebApp } from './webapp';
 
 /**
  * The player's phone as an object in hand: out of the pocket or not, powered or not, which screen
@@ -112,7 +113,7 @@ const SYSTEM_KB = 40 * 1024;
  * The store's catalog: id, size in KB, price in cents. Small apps download over EDGE; past
  * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
  */
-export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0], ['bank', 96, 0]];
+export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0], ['bank', 96, 0], ['web', 110, 0]];
 /** Kilobytes the bank's app downloads to show the account, and to make a payment. */
 const BANK_KB = 6, BANK_PAY_KB = 2;
 /** What the bank's app can top the phone's credit up by, in cents. */
@@ -140,6 +141,8 @@ export class Phone {
   get maker(): string { return makerName(this.world.city, this.device.maker); }
   readonly gps = new Gps();
   readonly radio = new Radio();
+  /** The web browser from the store (15.5). */
+  readonly web: WebApp;
   readonly wifi = new Wifi();
   /** Wi-Fi: the network whose key is being typed (index into world.wifi), and the key. */
   wkey = { ap: -1, key: '' };
@@ -222,6 +225,7 @@ export class Phone {
     this.device = playerPhone(world.seed);
     this.look = this.device.look;
     this.looks = [this.look];
+    this.web = new WebApp(world, this.radio, () => this.online());
     for (const id of BUNDLED) this.apps.push(STORE.findIndex((a) => a[0] === id));
     linkSubs(world.city, world.power.subs); // the Maps can find a job's GRIDLINK substation
 
@@ -462,7 +466,7 @@ export class Phone {
     this.raise += ((this.out || ringing ? (this.atEar ? 0.35 : 1) : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
     const app = this.screen === 'app' ? STORE[this.appId][0] : '';
-    const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (this.screen === 'calendar' && this.cal.view === 'new');
+    const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (app === 'web' && this.web.typing) || (this.screen === 'calendar' && this.cal.view === 'new');
     this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
@@ -1085,6 +1089,7 @@ export class Phone {
     if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
     if (id === 'social') { this.wst.view = 'feed'; if (this.online()) this.fetchWire(now); }
     if (id === 'bank') { this.bk = { view: 'home', sel: 0, ok: false, note: '' }; if (this.online()) this.radio.fetch('bank', BANK_KB, now); }
+    if (id === 'web') this.web.open(now);
   }
 
   /** Download what is new on the wire: a little for the page, and each post since the last time. */
@@ -1105,6 +1110,7 @@ export class Phone {
       return k === 'up' || k === 'down' ? (this.scroll = Math.max(0, this.scroll + (k === 'up' ? -1 : 1)), true) : false;
     }
     if (id === 'bank') { const r = this.bankKey(k, now); if (r !== null) return r; }
+    if (id === 'web') { const r = this.web.key(k, now); if (r !== null) return r; }
     if (k === 'rsoft') { if (this.appFrom === 'store') this.stab = 1; this.open(this.appFrom, now); return true; }
     if (id === 'snake') {
       const S = this.snake;

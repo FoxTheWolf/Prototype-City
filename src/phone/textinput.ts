@@ -42,7 +42,8 @@ export class Editor {
   private tapKey = '';
   private tapAt = 0;
   private tapN = 0;
-  constructor(public max: number, private names = false) {}
+  /** `plain`: no capital letters put in (an address, a password). */
+  constructor(public max: number, private names = false, private plain = false) {}
 
   /** The text with the word being guessed. */
   value(): string { return this.text + this.word(); }
@@ -65,6 +66,7 @@ export class Editor {
 
   /** Capital letters where they go: a name's words, or the start of a sentence. */
   private cap(w: string): string {
+    if (this.plain) return w;
     const start = this.names ? !this.text || this.text.endsWith(' ') : !this.text.trim() || /[.!?]\s*$/.test(this.text);
     return start && w ? w[0].toUpperCase() + w.slice(1) : w;
   }

@@ -51,7 +51,7 @@ const ICON: Record<App, [string, C3, C3]> = {
 /** The icons of apps from the store. */
 const STORE_ICON: Record<string, [string, C3, C3]> = {
   torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ['d', [130, 60, 170], [255, 220, 255]], atlas: ['3D', [60, 130, 90], [255, 255, 255]],
-  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ICON.bank,
+  snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ICON.bank, web: ['(e)', [30, 70, 150], [255, 210, 80]],
 };
 const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
 const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
@@ -686,6 +686,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
     return newsApp(S, P, world, t, J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading'));
   }
   if (id === 'bank') return bankApp(S, P, world, t);
+  if (id === 'web') return P.web.draw(S, now);
   if (id === 'convert') {
     const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');
     S.center(4, `< ${what} >`, HI, LCD);

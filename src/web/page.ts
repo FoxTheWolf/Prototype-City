@@ -32,6 +32,8 @@ export interface Page {
   url: string; title: string; theme: Theme; blocks: Block[]; /** Its weight, for the time it takes to come down the line. */ kb: number;
   /** Where the page's boxes are sent (a page with input blocks has one). */
   form?: string;
+  /** The site has a page made for phones (15.5): light and plain; without one a phone gets the whole page, squeezed. */
+  mobile?: boolean;
 }
 
 export interface Cell { ch: string; fg: C3; bg: C3 }
@@ -76,8 +78,8 @@ function wrapRich(s: string, w: number): Seg[][] {
   return lines;
 }
 
-/** Lay page P out `width` cells wide. */
-export function layout(P: Page, width: number): Laid {
+/** Lay page P out `width` cells wide (all of it on a phone's screen, `full`). */
+export function layout(P: Page, width: number, full = false): Laid {
   const T = P.theme, rows: Cell[][] = [], links: Link[] = [], fields: Field[] = [];
   const blank = (bg: C3): Cell[] => Array.from({ length: width }, () => ({ ch: ' ', fg: T.fg, bg }));
   const row = (y: number, _bg?: C3) => { while (rows.length <= y) rows.push(blank(T.page)); return rows[y]; };
@@ -165,10 +167,11 @@ export function layout(P: Page, width: number): Laid {
         case 'foot': fill(x, y, w, T.bar); put(x + Math.max(1, Math.floor((w - B.text.length) / 2)), y, B.text.slice(0, w - 2), T.barFg, T.bar); y++; break;
         case 'space': fill(x, y, w, T.bg); y++; break;
         case 'input': {
-          // a white box with a sunken edge, the label before it
-          const fw = Math.min(B.size ?? 24, w - B.label.length - 8);
+          // a white box with a sunken edge, the label before it (above it in a narrow column, a phone's)
+          const narrow = w < 60, fw = Math.min(B.size ?? 24, narrow ? w - 6 : w - B.label.length - 8);
           fill(x, y, w, T.bg); put(x + 2, y, B.label, T.fg, T.bg);
-          const bx = x + 3 + Math.max(B.label.length, 16);
+          if (narrow) { y++; fill(x, y, w, T.bg); }
+          const bx = narrow ? x + 2 : x + 3 + Math.max(B.label.length, 16);
           put(bx, y, '[', T.dim, T.bg); put(bx + 1, y, ' '.repeat(fw), BOX_FG, BOX); put(bx + 1 + fw, y, ']', T.dim, T.bg);
           fields.push({ x: bx + 1, y, w: fw, name: B.name, secret: !!B.secret });
           fill(x, y + 1, w, T.bg);
@@ -176,9 +179,9 @@ export function layout(P: Page, width: number): Laid {
           break;
         }
         case 'submit': {
-          const t = `[ ${B.label} ]`;
-          fill(x, y, w, T.bg); put(x + 3 + 16, y, t, T.barFg, T.bar);
-          links.push({ x: x + 3 + 16, y, w: t.length, url: SUBMIT });
+          const t = `[ ${B.label} ]`, bx = x + (w < 60 ? 2 : 3 + 16);
+          fill(x, y, w, T.bg); put(bx, y, t, T.barFg, T.bar);
+          links.push({ x: bx, y, w: t.length, url: SUBMIT });
           fill(x, y + 1, w, T.bg);
           y += 2;
           break;
@@ -188,8 +191,34 @@ export function layout(P: Page, width: number): Laid {
     return y;
   };
   // a 2008 site: a fixed-width column in the middle of the page's own color
-  const W = Math.min(width - 4, 124), x0 = Math.floor((width - W) / 2);
+  const W = full ? width : Math.min(width - 4, 124), x0 = Math.floor((width - W) / 2);
   const end = column(P.blocks, x0, W, 1);
   row(end + 1, T.page);
   return { rows, links, fields };
+}
+
+/**
+ * The page as a phone gets it (15.5), `width` cells wide: the columns one under the other, the menu
+ * and the tables too wide for the screen as lines of text, the pictures that do not fit left out;
+ * a site made for phones also leaves out its banner's picture and its ads, and weighs a fifth.
+ */
+export function mobilePage(P: Page, width: number): Page {
+  const W = width - 4;
+  const flat = (bs: Block[]): Block[] => bs.flatMap((B): Block[] => {
+    switch (B.t) {
+      case 'banner': return [{ t: 'foot', text: B.text.toUpperCase() }, ...(B.sub ? [{ t: 'p', text: B.sub } as Block] : [])];
+      case 'nav': return [{ t: 'p', text: B.links.map(([l, u]) => `[${l}](${u})`).join(' | ') }];
+      case 'cols': return flat(B.cols.flat());
+      case 'ad': return P.mobile ? [] : [B];
+      case 'art': return B.lines.every((l) => l.length <= W - 2) ? [B] : [];
+      case 'table': {
+        const n = Math.max(...B.rows.map((r) => r.length)), cw = Array.from({ length: n }, (_, c) => Math.max(...B.rows.map((r) => plain(r[c] ?? '').length)) + 3);
+        if (cw.reduce((a, b) => a + b, 0) <= W - 2) return [B];
+        const rows = B.head ? B.rows.slice(1) : B.rows;
+        return [{ t: 'list', items: rows.map((r) => r.map((c) => c.trim()).filter(Boolean).join(' - ')) }];
+      }
+      default: return [B];
+    }
+  });
+  return { ...P, blocks: flat(P.blocks), kb: P.mobile ? Math.max(2, Math.round(P.kb / 5)) : P.kb };
 }

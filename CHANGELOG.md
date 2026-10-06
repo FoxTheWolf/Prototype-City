@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.5 — A web no celular (2026-10-06)
+- **Lodestar Mini**, app grátis na loja do celular: a web da cidade numa coluna só. Para cima/baixo passa de link em link, esquerda/direita rola uma tela, OK abre o link ou escreve no campo, a tecla da esquerda digita um endereço (no multi-tap; palavras viram busca), a da direita volta, * recarrega e 0 vai para a página inicial.
+- É lento e caro, como em 2008: cada página sai do pacote de dados, a não ser no Wi-Fi. Os sites com versão para celular (o portal, o buscador, o e-mail, bancos e lojas de celular) pesam um quinto; os outros vêm inteiros, espremidos na tela.
+- Dá para entrar no e-mail pelo celular, digitando no teclado numérico.
+
 ## 0.15.4 — E-mail (2026-10-06)
 - **Webmail** do provedor da cidade: no navegador, o link "Mail" do portal. Crie uma conta com usuário e senha; o código de confirmação chega por SMS no seu celular. Tab passa entre os campos e Enter envia.
 - A caixa de entrada tem o que existe de verdade: spam de 2008, newsletters das lojas onde você pagou com cartão e, toda segunda-feira, o extrato do banco com as suas compras.

@@ -31,6 +31,9 @@ export const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(
 /** The share of each kind of business that has a site (in 2008 the corner shops mostly had none). */
 const ONLINE: Partial<Record<BusinessKind, number>> = { bank: 1, hotel: 0.95, cinema: 1, electronics: 0.9, phones: 0.9, cyber: 0.95, motel: 0.5, pizza: 0.6, fastfood: 0.8, bar: 0.5, diner: 0.45, cafe: 0.55, books: 0.6, pharmacy: 0.7, autoparts: 0.6, grocery: 0.4, liquor: 0.35, pawn: 0.4, tailor: 0.25, laundry: 0.2, deli: 0.25, parking: 0.3 };
 
+/** The share of each kind's sites that have a page made for phones (in 2008 mostly the big ones: banks, chains, the phone shops). */
+const MOBILE: Partial<Record<BusinessKind, number>> = { bank: 0.9, phones: 0.8, electronics: 0.5, hotel: 0.5, cinema: 0.6, fastfood: 0.5, cyber: 0.3, pharmacy: 0.3 };
+
 /** The colors of 2008's sites: page, paper, ink, dim, link, banner, banner ink, bar, bar ink. */
 const THEMES: Theme[] = [
   { page: [200, 200, 204], bg: [255, 255, 255], fg: [30, 30, 34], dim: [120, 120, 128], link: [0, 0, 204], head: [24, 52, 112], headFg: [255, 255, 255], bar: [214, 226, 246], barFg: [20, 40, 100] },
@@ -215,7 +218,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   const blocks: Block[] = tpl === Tpl.Center || tpl === Tpl.Bare ? [banner, ...notice, ...body, navB, { t: 'p', text: updated }, foot]
     : tpl === Tpl.LeftNav ? [banner, ...notice, { t: 'cols', widths: [0.2, 0.8], cols: [[{ t: 'h', text: 'Menu' }, { t: 'list', items: nav.map(([l, u]) => `[${l}](${u})`) }], body] }, { t: 'p', text: updated }, foot]
     : [banner, navB, ...notice, ...body, { t: 'p', text: updated }, foot];
-  return { url: `http://${host}${path}`, title: path === '/' ? name : `${name} - ${path.slice(1)}`, theme, blocks, kb: tpl === Tpl.Bare ? 12 : 30 + Math.floor(h(6) * 60) };
+  return { url: `http://${host}${path}`, title: path === '/' ? name : `${name} - ${path.slice(1)}`, theme, blocks, kb: tpl === Tpl.Bare ? 12 : 30 + Math.floor(h(6) * 60), mobile: h(7) < (MOBILE[b.kind] ?? 0.12) };
 }
 
 /** A page of the provider's portal: the start page, a story, the weather, the directory. */
@@ -252,7 +255,7 @@ function portalPage(w: World, host: string, path: string): Page {
     const heads = stories.map((S, n) => [S, n] as const).filter(([S]) => S.kind !== 'date').slice(0, 8).map(([S, n]) => `[${S.head}](http://${host}/news/${n})`);
     body = [{ t: 'cols', widths: [0.64, 0.36], cols: [[{ t: 'h', text: 'Top Stories' }, { t: 'list', items: heads.length ? heads : ['No news is good news.'] }], [...weather, ...(ad ? [{ t: 'ad', text: `Visit ${businessName(c, ad[0])}!`, url: `http://${ad[1]}/` } as Block] : []), { t: 'h', text: 'Find' }, { t: 'p', text: `[Business directory](http://${host}/directory)` }]] }];
   } else body = [{ t: 'h', text: '404 - Not Found' }, { t: 'p', text: `[Home](http://${host}/)` }];
-  return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60 };
+  return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60, mobile: true };
 }
 
 export const portalUrl = (w: World) => `http://${webOf(w).portal}/`;
@@ -298,8 +301,8 @@ function indexOf(w: World): Doc[] {
 function searchPage(w: World, host: string, path: string, q: string): Page {
   const theme: Theme = { page: [255, 255, 255], bg: [255, 255, 255], fg: [30, 30, 30], dim: [0, 128, 0], link: [17, 17, 204], head: [255, 255, 255], headFg: [40, 90, 200], bar: [235, 239, 249], barFg: [40, 40, 40] };
   const banner: Block = { t: 'banner', text: SEARCH, sub: 'Search the web', art: ['  ___  ', ' / _ \\ ', '| (_) |', ' \\___/\\'] };
-  const howto: Block = { t: 'p', text: 'Type what you are looking for in the address bar (F6) and press Enter.' };
-  if (path !== '/search' || !q.trim()) return { url: `http://${host}/`, title: SEARCH, theme, blocks: [banner, howto, { t: 'foot', text: `(c) 2008 ${SEARCH}` }], kb: 20 };
+  const howto: Block = { t: 'p', text: 'Type what you are looking for in the address bar and go.' };
+  if (path !== '/search' || !q.trim()) return { url: `http://${host}/`, title: SEARCH, theme, blocks: [banner, howto, { t: 'foot', text: `(c) 2008 ${SEARCH}` }], kb: 20, mobile: true };
   const terms = tokens(q), docs = indexOf(w);
   const hits = docs.map((d) => ({ d, s: terms.reduce((a, t) => a + (d.words.get(t) ?? (t.length > 3 ? [...d.words.keys()].some((x) => x.startsWith(t)) ? 0.5 : 0 : 0)), 0) * (terms.every((t) => d.words.has(t)) ? 2 : 1) }))
     .filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.d.title.localeCompare(b.d.title));
@@ -308,6 +311,6 @@ function searchPage(w: World, host: string, path: string, q: string): Page {
   for (const { d } of top) blocks.push({ t: 'p', text: `[${d.title}](${d.url})` }, { t: 'art', lines: [d.url.replace('http://', '')], col: theme.dim }, { t: 'p', text: d.snippet.length > 150 ? d.snippet.slice(0, 147) + '...' : d.snippet });
   if (!top.length) blocks.push({ t: 'p', text: `Your search - ${q} - did not match any documents.` }, { t: 'list', items: ['Make sure all words are spelled correctly.', 'Try different keywords.', 'Try more general keywords.'] });
   blocks.push({ t: 'foot', text: `(c) 2008 ${SEARCH}` });
-  return { url: searchUrl(q), title: `${q} - ${SEARCH} Search`, theme, blocks, kb: 45 + top.length * 6 };
+  return { url: searchUrl(q), title: `${q} - ${SEARCH} Search`, theme, blocks, kb: 45 + top.length * 6, mobile: true };
 }
 export type { C3 };

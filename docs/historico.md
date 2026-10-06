@@ -2,6 +2,11 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.5 ✅ O navegador do celular (2026-10-06)
+- **Lodestar Mini** (`src/phone/webapp.ts`), app grátis da loja (110 KB; `STORE` em `phone.ts`, ícone em `apps.ts`/`hdicons.ts`). Mesmas páginas do notebook (`fetchUrl`), passadas por `mobilePage` (`page.ts`): colunas empilhadas, o menu e as tabelas largas viram texto e lista, figuras largas saem; `layout(P, SW, true)` usa a tela inteira e os campos ficam em duas linhas numa coluna estreita.
+- **Lento e caro:** a página desce pelo rádio (`radio.fetch('web', kb)`), do pacote de dados, grátis no Wi-Fi; sem pacote, "Out of data". Sites com versão para celular (`Page.mobile`: portal, Lookwise, webmail sempre; das empresas pela tabela `MOBILE` em `sites.ts`, bancos e lojas de celular mais) pesam um quinto; os outros vêm inteiros (a semente 42: 171 de 600 páginas leves; 26 MB contra 34 MB).
+- Teclas: cima/baixo de link em link (rola quando o próximo está longe), esquerda/direita uma tela, OK segue ou escreve no campo (o `Editor` do multi-tap, com a opção nova `plain` sem maiúsculas automáticas), soft esquerda endereço, direita voltar/sair, * recarrega, 0 início. Conferido por `tests/phoneweb.ts` (sementes 42 e 711445483).
+
 ## 15.4 ✅ O webmail (2026-10-06)
 - O provedor do portal (`<Cidade> Online`) tem o webmail em `mail.<cidade>online.com` (`src/web/webmail.ts`; o link "Mail" no portal e no Lookwise). O navegador ganhou **campos de formulário** (`input`/`submit` em `page.ts`, `Page.form`; Tab passa por links e campos, digitar escreve, Enter envia, a senha aparece em estrelas, o primeiro campo pega o foco), que servem ao resto da web.
 - Cadastro: usuário (3–16 letras/números) e senha (≥ 6), **código de 6 dígitos por SMS** (do número curto 24245) ao número do jogador; a conta fica presa a esse número. Esqueci a senha: o código vai ao número da conta, e só chega se for o chip atual (trocar o chip = perder a conta). A sessão é do notebook (`w.mail.session`).

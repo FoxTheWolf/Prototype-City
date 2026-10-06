@@ -97,7 +97,7 @@ export function letters(w: World, A: MailAccount): Letter[] {
 export function mailPage(w: World, host: string, path: string, form?: Map<string, string>): Page {
   const M = w.mail, prov = provider(w), f = (k: string) => (form?.get(k) ?? '').trim();
   const page = (p: string, title: string, body: Block[], action?: string): Page => ({
-    url: `http://${host}${p}`, title: `${prov} Mail - ${title}`, theme: THEME, form: action ? `http://${host}${action}` : undefined, kb: 24 + body.length,
+    url: `http://${host}${p}`, title: `${prov} Mail - ${title}`, theme: THEME, form: action ? `http://${host}${action}` : undefined, kb: 24 + body.length, mobile: true,
     blocks: [{ t: 'banner', text: `${prov} Mail`, sub: say(w, 'mail.tagline', 0, {}), art: [' ______ ', '|\\    /|', '| \\__/ |', '|______|'] }, ...body, { t: 'foot', text: `(c) 2008 ${prov} - Privacy Policy - Terms of Service` }],
   });
   const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);
