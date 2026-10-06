@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.7 — Falar ao telefone (2026-10-06)
+- Ligue para alguém e, quando atender, a conversa fica aberta: o celular desce para perto da orelha e você digita embaixo da tela, como na rua. A resposta vem pela ligação, com a voz dela. Se você ficar calado, ela pergunta se tem alguém na linha e depois desliga. **Esc** desliga.
+
 ## 0.14.6 — Conversar por SMS (2026-10-06)
 - Depois do seu teste na calçada: "how are you today", "what's your age" e "did you watch the game?" agora são entendidos como conversa fiada (antes eram lidos como "o que você viu?" ou não eram entendidos).
 - Mandar SMS a alguém agora é uma conversa: a pessoa entende o que você escreveu e responde no jeito dela de digitar. Um "hey" de um número que ela não conhece recebe "Who is this?". Dizer quem você é ("it's me, we talked on the street") só funciona com quem já falou com você pessoalmente. Por mensagem ninguém explica caminho, porque não sabe onde você está. No trabalho, alguns avisam que não podem falar muito; quem está dormindo responde bem depois; e quem perde a paciência para de responder.

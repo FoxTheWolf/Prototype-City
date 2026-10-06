@@ -2,6 +2,11 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.7: falar ao telefone (2026-10-06, sessão na nuvem)
+- Ligando para o celular ou a casa de alguém, quem atende diz alô e **a ligação fica aberta**: a conversa abre embaixo da tela (a mesma `TalkView`, em modo telefone) e o celular desce para perto da orelha (`phone.atEar`, a 35% da subida). O que o jogador digita é lido como no SMS (`smsReply(..., typed = false)`: número desconhecido → "who is this?", ninguém dá caminho porque não vê o jogador), e a resposta sai **pela própria ligação** (`Call.answer`, com a voz da ligação, sem o murmúrio). Calado por 10 s: "Hello? Are you there?"; mais 10 s: desligam. Esc desliga. A paciência acaba como na conversa (desligam depois da última fala). Sem mudança: secretária eletrônica, quem já foi incomodado demais, quem ligou por engano, lojas, menus.
+- Do segundo playtest (na calçada): três intenções novas de conversa fiada no léxico (`ask_how`, `ask_age`, `talk_sports`) e "today"/"yesterday" pesando 1 em `ask_what_saw`.
+- Teste: `tests/call.ts`. **Falta ver no PC:** o celular abaixado, a conversa embaixo e a voz da ligação.
+
 ## 14.6: o SMS pela mesma leitura (2026-10-06, sessão na nuvem)
 - Um SMS a qualquer pessoa (celular) é lido como uma fala (`smsReply` em `src/talk.ts`, com uma `Talk` por conversa em `phone.ts`, `texting`; uma conversa nova depois de uma hora de jogo quieta): as mesmas intenções e respostas, escritas no jeito de digitar da pessoa (`voice()`). Um "hey" de número desconhecido recebe "who is this?" (`sms.res`); dizer quem é ("it's me", "we talked") só funciona com quem já falou com o jogador cara a cara (`TalkMem.face`), e aí ela guarda o número (`num`), como no exemplo do princípio orgânico. Por SMS ninguém dá caminho (não vê onde o jogador está: "Where are you?"). No trabalho, às vezes começam com "At work, can't text much." Dormindo, respondem bem depois. A paciência acaba como na conversa (sem resposta). O que já existia segue igual: número errado ("oops"), quem é incomodado demais, lojas, linha fixa; a resposta ao contratante (`[HACKING]`) não foi tocada.
 - Teste: `tests/sms.ts`. Pedir direção pela leitura já tinha vindo na 14.4 (a conversa na calçada).

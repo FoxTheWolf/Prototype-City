@@ -13,7 +13,7 @@ import { type CharGrid } from './render/grid';
 import { readLine, type Reading } from './sim/intent';
 import { type World } from './sim/world';
 import { citizenNames } from './locale/names';
-import { cityNames, reply, Talk, type Answer } from './talk';
+import { cityNames, reply, smsReply, Talk, type Answer } from './talk';
 import en from './locale/en.json';
 
 type RGB = [number, number, number];
@@ -40,13 +40,14 @@ export class TalkView {
 
   get open() { return !!this.talk; }
 
-  start(who: number, biz: number, now: number) {
-    this.talk = new Talk(this.world, who, biz);
-    this.input = ''; this.mine = ''; this.last = null;
+  /** On the phone (14.7): what they say comes through the call, which said hello already (`first`). */
+  phone = false;
+  start(who: number, biz: number, now: number, phone = false, first = '') {
+    this.talk = new Talk(this.world, who, biz, phone);
+    this.input = ''; this.mine = ''; this.last = null; this.phone = phone;
     // they look up: a greeting of their own, in the same voice
-    const a = reply(this.world, this.talk, 'hello');
-    this.talk.said.length = 0;
-    this.said = a.text; this.saidAt = now; this.shown = 0;
+    if (!phone) { const a = reply(this.world, this.talk, 'hello'); this.talk.said.length = 0; first = a.text; }
+    this.said = first; this.saidAt = now; this.shown = 0;
   }
   close() { this.talk = null; this.input = ''; }
 
@@ -67,7 +68,9 @@ export class TalkView {
     if (code === 'Enter') {
       const s = this.input.trim();
       if (!s || this.talk.over) return null;
-      const a = reply(this.world, this.talk, s);
+      // on the phone, as by text: a number they may not know, no seeing where the player is
+      const a: Answer = this.phone ? { text: smsReply(this.world, this.talk, s, false) ?? '', reading: readLine(s, cityNames(this.world)), end: false } : reply(this.world, this.talk, s);
+      if (this.phone) a.end = this.talk.over;
       this.mine = s; this.input = '';
       this.said = a.text; this.saidAt = now; this.shown = 0; this.last = a;
       return a;
@@ -92,6 +95,7 @@ function wrap(s: string, w: number): string[] {
   return out;
 }
 
+const keysOf = (V: TalkView, biz: number) => (V.phone ? L.keysPhone : biz >= 0 ? L.keys : L.keysStreet);
 const AMBER: RGB = [255, 176, 74], TEXT: RGB = [235, 228, 214], DIM: RGB = [150, 140, 125], SHADOW: RGB = [8, 7, 6], EDGE: RGB = [120, 104, 80];
 /** The tone plane's four corners: rude & calm, respectful & calm, rude & pressing, respectful & pressing. */
 const POLES: RGB[] = [[90, 40, 34], [40, 74, 60], [120, 36, 70], [70, 60, 110]];
@@ -110,7 +114,7 @@ export function drawTalk(g: CharGrid, V: TalkView, w: World, now: number) {
     }
   };
   // what they said: their name (if known) and the words so far, up to three lines, ending above the box
-  const mem = w.talks.get(T.who), who = mem?.name ? citizenNames(w.city, w.pop, T.who)[0] : T.biz >= 0 ? L.clerk : L.someone;
+  const mem = w.talks.get(T.who), who = mem?.name ? citizenNames(w.city, w.pop, T.who)[0] : T.biz >= 0 ? L.clerk : V.phone ? L.caller : L.someone;
   const n = V.revealed(now), lines = wrap(`${who}: ${V.said}`, W - 4).slice(-3);
   let shown = n + who.length + 2, y = g.rows - 14 - lines.length;
   if (V.mine) text(x0 + 2, y - 1, `> ${V.mine}`.slice(0, W - 4), DIM);
@@ -140,5 +144,5 @@ export function drawTalk(g: CharGrid, V: TalkView, w: World, now: number) {
   text(x0, by + 1, '|', EDGE, null); text(x0 + bw - 1, by + 1, '|', EDGE, null);
   text(x0 + 2, by + 1, ('> ' + shownIn + blink).padEnd(bw - 4), [255, 236, 200], [14, 12, 10]);
   text(x0, by + 2, '+' + '-'.repeat(bw - 2) + '+', EDGE, null);
-  text(x0 + 2, by + 3, T.over ? L.over : T.biz >= 0 ? L.keys : L.keysStreet, DIM, null);
+  text(x0 + 2, by + 3, T.over ? L.over : keysOf(V, T.biz), DIM, null);
 }

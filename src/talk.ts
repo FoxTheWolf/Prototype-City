@@ -45,7 +45,7 @@ export class Talk {
   over = false;
   /** Met before this talk (for "you again"). */
   readonly met: boolean;
-  /** `sms`: by text message (14.6), where they cannot see where the player is. */
+  /** `sms`: by text message (14.6) or on the phone (14.7), where they cannot see where the player is. */
   constructor(private w: World, readonly who: number, readonly biz: number, readonly sms = false) {
     const warm = w.pop.social[who] / 255, mem = w.talks.get(who);
     this.met = !!mem;
@@ -191,12 +191,12 @@ export function reply(w: World, T: Talk, line: string): Answer {
 }
 
 /**
- * A text message to citizen T.who (14.6), read like a line said (the same intents, the same answers),
- * written as they type (voice()). A number they do not know gets "who is this?" to a bare greeting,
+ * A text message to citizen T.who (14.6), or a line said on the phone (14.7, `typed` false), read like
+ * a line said face to face (the same intents, the same answers); a text written as they type (voice()). A number they do not know gets "who is this?" to a bare greeting,
  * and saying who it is only works on someone who has met the player; at work some say so first.
  * Null: no answer (they are tired of the talk).
  */
-export function smsReply(w: World, T: Talk, text: string): string | null {
+export function smsReply(w: World, T: Talk, text: string, typed = true): string | null {
   if (T.over) return null;
   const P = w.pop, who = T.who, mem = T.mem, R = readLine(text, cityNames(w)), r = rngOf(who, T.said.length + 77, Math.floor(w.time));
   const W = w.weather, sel = selFor(P, who, w.time, W.temp, W.precip, W.snow, T.met ? ['met'] : []);
@@ -217,7 +217,7 @@ export function smsReply(w: World, T: Talk, text: string): string | null {
   } else {
     s = reply(w, T, text).text;
     if (!s) return null;
-    if (whereIs(P, w.city, who, w.time).doing === Doing.Work && r() < 0.4) s = say('reply.sms.atwork') + ' ' + s;
+    if (typed && whereIs(P, w.city, who, w.time).doing === Doing.Work && r() < 0.4) s = say('reply.sms.atwork') + ' ' + s;
   }
-  return voice(s, P, who, r);
+  return typed ? voice(s, P, who, r) : s;
 }

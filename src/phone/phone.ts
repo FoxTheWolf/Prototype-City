@@ -233,6 +233,8 @@ export class Phone {
   /** 0 .. 1: peeking out of the pocket for a notification, until peekUntil. */
   peek = 0;
   peekUntil = 0;
+  /** Lowered while talking on it (14.7): held at the ear, the conversation at the bottom of the screen. */
+  atEar = false;
   /** 0 .. 1: held higher, the whole keypad in sight, while the screen wants typing (as in GTA IV). */
   lift = 0;
   /** The grid cell under the system cursor, and the key there. */
@@ -457,7 +459,7 @@ export class Phone {
     // in the pocket it still comes up for a call ringing in (all the way, while it rings) and peeks
     // out a little for a text or a reminder (its top row in sight for a few seconds)
     const ringing = this.callIn && this.call?.state === 'ringing';
-    this.raise += ((this.out || ringing ? 1 : 0) - this.raise) * Math.min(1, dt * 14);
+    this.raise += ((this.out || ringing ? (this.atEar ? 0.35 : 1) : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
     const app = this.screen === 'app' ? STORE[this.appId][0] : '';
     const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (this.screen === 'calendar' && this.cal.view === 'new');

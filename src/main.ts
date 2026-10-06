@@ -162,6 +162,8 @@ const barks = new Barks(world);
 /** Walking off a talk: someone stopped on the sidewalk goes on their way after a moment (unless still pointing it). */
 function endTalk() {
   const T = talkView.talk;
+  // on the phone (14.7): walking off is hanging up; the phone comes back up, the cursor stays free
+  if (talkView.phone) { const c = phone.call; if (c && c.state !== 'ended') { c.hangUp(performance.now() / 1000); } phone.atEar = false; talkView.close(); return; }
   if (T && T.biz < 0) { const q = world.peds.find((e) => e.id === T.who); if (q && (q.hold ?? 0) > 300) { q.hold = 30; q.pdx = q.pdy = 0; } }
   talkView.close(); input.lock();
 }
@@ -498,6 +500,8 @@ addEventListener('keydown', (e) => {
     else if (r) {
       pt?.log('say', { who: citizenNames(world.city, world.pop, T.who)[0], text: talkView.mine, intent: r.reading.intent === 'unrecognized' ? null : r.reading.intent, tone: `${r.reading.toneLabel} p${r.reading.pressure}`, answer: r.text });
       if (r.counter) counter.open(T.biz);
+      // on the phone their answer comes through the call (its voice), and they hang up after their last line
+      if (talkView.phone) phone.call?.answer(r.text, performance.now() / 1000, r.end);
       // a way asked on the sidewalk: they point it while they say it
       const q = T.biz < 0 && r.point ? world.peds.find((e) => e.id === T.who) : null;
       if (q) { q.pdx = r.point![0]; q.pdy = r.point![1]; q.hold = 299; }
@@ -899,6 +903,8 @@ let renderMs = 0, worstMs = 0, worstShown = 0, worstAt = 0;
 /** World frames shown a second (with the pool they can lag the screen's refreshes), and the count this second. */
 let worldFps = 0, worldFrames = 0, worldAt = 0;
 
+/** The call whose conversation was opened (14.7), so it opens once. */
+let talkedCall: unknown = null;
 /** The good the sight rests on, and since when (real s), for its tag (14.5). */
 let tagWas = '', tagSince = 0;
 function frame(now: number) {
@@ -1050,8 +1056,16 @@ function frame(now: number) {
   // someone to ask the way, in front; the list, and what they said
   drawAskWay(ui, ask, now / 1000);
   // the conversation (14.3): the answer appears letter by letter, murmured; once it ends, they turn back to their work
+  // a call picked up by someone (14.7): once they said hello, the talk opens at the bottom and the phone comes down
+  const call = phone.call;
+  if (call && call.chatWith >= 0 && call.state === 'talk' && call !== talkedCall && call.lines.length && !talkView.open && !counter.active) {
+    talkedCall = call; talkView.start(call.chatWith, -1, now / 1000, true, call.lines[call.lines.length - 1].text); phone.atEar = true;
+  }
+  if (talkView.open && talkView.phone && (!call || call.state === 'ended')) { phone.atEar = false; talkView.close(); }
   if (talkView.open) {
     const t = now / 1000, n = talkView.revealed(t), T = talkView.talk!;
+    // (on the phone the call's own voice says it)
+    if (talkView.phone) talkView.shown = n;
     for (; talkView.shown + 3 <= n; talkView.shown += 3) if (/[a-z]/i.test(talkView.said[talkView.shown] ?? '')) sound?.murmur((world.pop.gender[T.who] ? 120 : 190) * (0.85 + hash3(T.who, 9, 9) * 0.4));
     // someone on the sidewalk stays while talked to, and walks on if the player walks off
     const q = T.biz < 0 ? world.peds.find((e) => e.id === T.who) : null;

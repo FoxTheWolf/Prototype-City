@@ -62,6 +62,10 @@ export class Call {
   /** Citizens who called the player by mistake (calling them back, they say so). */
   static calledUs = new Set<number>();
   private mood: 'hello' | 'work' | 'out' | 'sleepy' | 'machine' = 'hello';
+  /** A conversation (14.7): the citizen who picked up and said hello, waiting for what the player says (main opens the talk); -1 none. */
+  chatWith = -1;
+  private heardAt = -1;
+  private nudged = false;
   /** Calls and texts from the player to this number lately (this one included): from 3 they are annoyed, from 6 they stop answering. */
   pester = 0;
 
@@ -119,6 +123,14 @@ export class Call {
       if (this.repeats++ < 1) this.q = this.menuSteps();
       else this.q = [{ who: 'rec', text: C.ivr.bye, gap: 0.5 }, { who: 'act', text: 'end', gap: 0.6 }];
     }
+    // in a conversation, silence: "Hello? Are you there?", then they hang up
+    if (this.chatWith >= 0 && !this.q.length && now >= this.nextAt) {
+      if (this.heardAt < 0) this.heardAt = now;
+      if (now - this.heardAt > 10) {
+        this.q = this.nudged ? [{ who: 'them', text: this.pick(C.res.hangup, 41), gap: 0 }, { who: 'act', text: 'end', gap: 0.8 }] : [{ who: 'them', text: this.pick(C.silence, 40), gap: 0 }];
+        this.nudged = true; this.heardAt = now;
+      }
+    }
     if (!this.q.length || now < this.nextAt) return;
     const s = this.q.shift()!;
     if (s.who === 'act') {
@@ -158,6 +170,14 @@ export class Call {
 
   /** Hang up (the player), or the far end did. */
   hangUp(now: number) { if (this.state !== 'ended') this.end(now, en.phone.apps.callEnded); }
+
+  /** The player said something in the conversation (14.7): they answer `text`, and hang up after it when `last`. */
+  answer(text: string, now: number, last: boolean) {
+    if (this.state !== 'talk') return;
+    this.heardAt = now + text.length * 0.065; this.nudged = false;
+    this.q = [{ who: 'them', text, gap: 0 }, ...(last ? [{ who: 'act' as const, text: 'end', gap: 1.2 }] : [])];
+    this.nextAt = now + 0.5;
+  }
 
   /** Seconds talked, and what the call costs in cents. */
   talked(now: number) { return this.connectAt < 0 ? 0 : (this.endAt >= 0 ? this.endAt : now) - this.connectAt; }
@@ -264,7 +284,9 @@ export class Call {
         // called again and again: they say so, and hang up
         if (this.pester >= 3) return [them(this.pick(C.pester.first, 38)), them(this.pick(C.pester.stop, 39), 1.5), end];
         const first = this.mood === 'hello' ? this.pick(L.hello, 31) : this.pick((C.cell as Record<string, string[]>)[this.mood] ?? L.hello, 31);
-        return [them(this.mood === 'sleepy' && c.kind === 'home' ? this.pick(C.res.sleepy, 31) : first), them(this.pick(C.res.who, 32), 3), them(this.pick(C.res.hangup, 33), 2.5), end];
+        // then they wait for the player to speak: the talk at the bottom of the screen (14.7)
+        this.chatWith = this.who;
+        return [them(this.mood === 'sleepy' && c.kind === 'home' ? this.pick(C.res.sleepy, 31) : first)];
       }
       case 'payphone': return [them(this.pick(C.payphone.hello, 35)), them(this.pick(C.payphone.who, 36), 3), them(this.pick(C.payphone.bye, 37), 2.5), end];
       case 'operator': this.menu = 'operator'; return this.menuSteps(true);
