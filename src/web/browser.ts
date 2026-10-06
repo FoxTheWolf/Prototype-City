@@ -4,12 +4,13 @@
  * and the keys. A page comes down the line as a 2008 one did: the host looked up, the connection
  * made, then the page drawn from the top as its bytes arrive, at the speed of the Wi-Fi it rides
  * (sim/wifi.ts through the notebook's card); no network, no page. Keys: F6 (or Ctrl+L) types an
- * address, the arrows scroll and Tab, Right and Left pick a link, Enter follows it, Backspace goes
- * back, F5 reloads, Home goes to the start page, F10 (or Ctrl+Q) closes it.
+ * address, the arrows scroll and Tab, Right and Left pick a link or a text box, Enter follows it,
+ * Backspace goes back, F5 reloads, Home goes to the start page, F10 (or Ctrl+Q) closes it. In a text
+ * box (15.4) the keys type into it, Backspace rubs out and Enter sends the page's form.
  */
 import { Scr } from '../laptop/screen';
 import { type World } from '../sim/world';
-import { layout, type C3, type Laid } from './page';
+import { layout, SUBMIT, type C3, type Field, type Laid, type Link } from './page';
 import { fetchUrl, portalUrl, searchUrl, type Fetched } from './sites';
 
 /** What the browser needs of the machine: whether the network is up, and its speed (kbit/s). */
@@ -30,6 +31,8 @@ export class Browser {
   private offline = false;
   private top = 0;
   private sel = -1;
+  /** What has been typed in the page's text boxes, by name. */
+  private vals = new Map<string, string>();
   /** Typing an address: what is in the box. */
   editing = false;
   private addr = '';
@@ -37,16 +40,31 @@ export class Browser {
   constructor(private world: World, private net: Net, private quit: () => void, private W: number, private H: number) {}
 
   /** Ask for `url` (the start page when empty). */
-  go(url: string, now: number, remember = true) {
+  go(url: string, now: number, remember = true, form?: Map<string, string>) {
     url = url.trim() || portalUrl(this.world);
     if (!/^https?:\/\//.test(url)) url = 'http://' + url;
     if (remember && this.url && this.url !== url) this.back.push(this.url);
-    this.url = url; this.at = now; this.top = 0; this.sel = -1; this.editing = false;
+    this.url = url; this.at = now; this.top = 0; this.sel = -1; this.editing = false; this.vals = new Map();
     const n = this.net();
     this.offline = !n.up; this.kbps = n.kbps;
-    this.got = this.offline ? null : fetchUrl(this.world, url);
+    this.got = this.offline ? null : fetchUrl(this.world, url, form);
     this.laid = this.got?.page ? layout(this.got.page, this.W - 1) : null;
     if (this.got?.page) this.url = this.got.page.url;
+    // a form's first box takes the keys at once, as the sign-in pages of 2008 did
+    const I = this.items();
+    if (I.length && this.laid?.fields.length) this.sel = I.findIndex((it) => 'name' in it);
+  }
+
+  /** What Tab goes through: the links and the text boxes, in reading order. */
+  private items(): (Link | Field)[] {
+    const L = this.laid;
+    return L ? [...L.links, ...L.fields].sort((a, b) => a.y - b.y || a.x - b.x) : [];
+  }
+
+  /** Send the page's boxes to its form. */
+  private submit(now: number) {
+    const to = this.got?.page?.form;
+    if (to) this.go(to, now, true, new Map(this.vals));
   }
 
   /** Where the page is in coming down: 0..1 of it arrived (1 also for an error shown), and what the status line says. */
@@ -72,8 +90,15 @@ export class Browser {
       else if (key.length === 1 && !ctrl && this.addr.length < 120) this.addr += key;
       return;
     }
-    const L = this.laid?.links ?? [], view = this.H - 4, rows = this.laid?.rows.length ?? 0;
+    const L = this.items(), view = this.H - 4, rows = this.laid?.rows.length ?? 0, on = L[this.sel];
     const seen = () => { const y = L[this.sel]?.y ?? 0; if (y < this.top) this.top = y; if (y >= this.top + view) this.top = y - view + 1; };
+    if (on && 'name' in on && key !== 'Tab' && !key.startsWith('Arrow') && !key.startsWith('Page') && !key.startsWith('F')) {
+      const v = this.vals.get(on.name) ?? '';
+      if (key === 'Enter') this.submit(now);
+      else if (key === 'Backspace') this.vals.set(on.name, v.slice(0, -1));
+      else if (key.length === 1 && !ctrl && v.length < 40) this.vals.set(on.name, v + key);
+      return;
+    }
     if (key === 'F5' || (ctrl && k === 'r')) this.go(this.url, now, false);
     else if (key === 'Home') this.go('', now);
     else if (key === 'Backspace') { const u = this.back.pop(); if (u) this.go(u, now, false); }
@@ -83,7 +108,7 @@ export class Browser {
     else if (key === 'PageUp') this.top = Math.max(0, this.top - view + 2);
     else if ((key === 'Tab' || key === 'ArrowRight') && L.length) { this.sel = (this.sel + 1) % L.length; seen(); }
     else if (key === 'ArrowLeft' && L.length) { this.sel = (this.sel - 1 + L.length) % L.length; seen(); }
-    else if (key === 'Enter' && L[this.sel]) this.go(L[this.sel].url, now);
+    else if (key === 'Enter' && on && 'url' in on) { if (on.url === SUBMIT) this.submit(now); else this.go(on.url, now); }
   }
 
   /** The whole screen now, and the cursor (in the address box while typing). */
@@ -98,13 +123,19 @@ export class Browser {
     S.paint(27, 1, ` ${shown}`.padEnd(W - 30).slice(0, W - 30), INK, WHITE);
     // the page, as much of it as has arrived
     if (this.laid && f > 0) {
-      const R = this.laid.rows, upto = f >= 1 ? R.length : Math.floor(R.length * f), L = this.laid.links, on = L[this.sel];
+      const R = this.laid.rows, upto = f >= 1 ? R.length : Math.floor(R.length * f), on = this.items()[this.sel];
       for (let r = 0; r < view; r++) {
         const y = this.top + r, row = R[y];
         if (!row || y >= upto) { S.paint(0, 2 + r, ' '.repeat(W - 1), INK, WHITE); continue; }
         for (let x = 0; x < W - 1; x++) {
           const c = row[x], hit = on && on.y === y && x >= on.x && x < on.x + on.w;
-          S.paint(x, 2 + r, c.ch, hit ? c.bg : c.fg, hit ? c.fg : c.bg);
+          S.paint(x, 2 + r, c.ch, hit && 'url' in on ? c.bg : c.fg, hit && 'url' in on ? c.fg : c.bg);
+        }
+        // what is typed in the boxes on this row (stars for a password)
+        for (const F of this.laid.fields) {
+          if (F.y !== y) continue;
+          const v = this.vals.get(F.name) ?? '', t = (F.secret ? '*'.repeat(v.length) : v).slice(-(F.w - 1));
+          S.paint(F.x, 2 + r, t.padEnd(F.w), INK, on === F ? [255, 255, 224] : WHITE);
         }
       }
       // the scroll bar
@@ -125,6 +156,12 @@ export class Browser {
     S.paint(0, H - 2, ` ${status}`.padEnd(W), INK, CHROME);
     if (f < 1 && !this.offline && !G?.error) { const pw = 30, n = Math.floor(f * pw); S.paint(W - pw - 3, H - 2, `[${'#'.repeat(n)}${' '.repeat(pw - n)}]`, [10, 36, 106], CHROME); }
     S.paint(0, H - 1, ' F6 address or search   Enter follow   Tab/Right next link   Left previous   Backspace back   F5 reload   Home start page   F10 close'.padEnd(W).slice(0, W), CHROME_DK, CHROME);
+    // the cursor: in the address box while typing, else at the end of the text box picked
+    const F = this.items()[this.sel];
+    if (!this.editing && F && 'name' in F && this.laid && f >= 1 && F.y >= this.top && F.y < this.top + view) {
+      const n = Math.min(F.w - 1, (this.vals.get(F.name) ?? '').length);
+      return { scr: S, cx: F.x + n, cy: 2 + F.y - this.top };
+    }
     return { scr: S, cx: this.editing ? Math.min(W - 4, 28 + this.addr.length) : -1, cy: this.editing ? 1 : -1 };
   }
 }

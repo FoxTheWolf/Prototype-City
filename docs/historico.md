@@ -2,6 +2,12 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.4 ✅ O webmail (2026-10-06)
+- O provedor do portal (`<Cidade> Online`) tem o webmail em `mail.<cidade>online.com` (`src/web/webmail.ts`; o link "Mail" no portal e no Lookwise). O navegador ganhou **campos de formulário** (`input`/`submit` em `page.ts`, `Page.form`; Tab passa por links e campos, digitar escreve, Enter envia, a senha aparece em estrelas, o primeiro campo pega o foco), que servem ao resto da web.
+- Cadastro: usuário (3–16 letras/números) e senha (≥ 6), **código de 6 dígitos por SMS** (do número curto 24245) ao número do jogador; a conta fica presa a esse número. Esqueci a senha: o código vai ao número da conta, e só chega se for o chip atual (trocar o chip = perder a conta). A sessão é do notebook (`w.mail.session`).
+- Estado em `sim/mail.ts` (salvo; `mail?` no `WorldSave`): contas, marcas de lida/apagada, `extra` (cartas entregues pela API `deliverMail`, pronta para o contratante, `[HACKING]`, sem tocar em `jobs.ts`). As cartas geradas não são guardadas: saem da semente e do razão do banco a cada leitura (boas-vindas, spam de 2008 em nove tipos, newsletters das lojas com site pagas no cartão depois da conta, o extrato semanal às segundas na primeira conta, com as linhas reais do `w.bank.ledger`). Textos em `locale/text/mail.en.json`. Conferido por `tests/web.ts` (sementes 42 e 711445483).
+- Ficou para depois: escrever e-mails (não há quem responda: sem sistema, sem botão), o e-mail no celular (BlackBerry), o contratante por e-mail.
+
 ## Etapa 14 fechada: o texto do Plano (movido do CLAUDE.md em 2026-10-06)
 
 #### Etapa 14: Diálogo com os NPCs

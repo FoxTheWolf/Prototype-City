@@ -476,6 +476,8 @@ export class Phone {
     this.wifi.update(this.world, this.screen !== 'off', now);
     this.radio.wifiKbps = this.wifi.kbps();
     this.radio.update(this.world, this.screen !== 'off', now, dt);
+    // the webmail's codes (15.4), texted to this line
+    for (const m of this.world.mail.sms.splice(0)) this.receive(m.from, m.text, now + 3);
     // text messages arriving; the operator's notices
     for (let i = this.incoming.length - 1; i >= 0; i--) {
       const m = this.incoming[i];

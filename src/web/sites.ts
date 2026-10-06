@@ -23,9 +23,10 @@ import { newsStories, storyBody } from '../locale/news';
 import { districtAt } from '../sim/city';
 import en from '../locale/en.json';
 import { type Block, type C3, type Page, type Theme } from './page';
+import { mailHost, mailPage, provider } from './webmail';
 
 /** A hostname as written: lowercase letters and digits. */
-const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
+export const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
 
 /** The share of each kind of business that has a site (in 2008 the corner shops mostly had none). */
 const ONLINE: Partial<Record<BusinessKind, number>> = { bank: 1, hotel: 0.95, cinema: 1, electronics: 0.9, phones: 0.9, cyber: 0.95, motel: 0.5, pizza: 0.6, fastfood: 0.8, bar: 0.5, diner: 0.45, cafe: 0.55, books: 0.6, pharmacy: 0.7, autoparts: 0.6, grocery: 0.4, liquor: 0.35, pawn: 0.4, tailor: 0.25, laundry: 0.2, deli: 0.25, parking: 0.3 };
@@ -60,7 +61,7 @@ const ICONS: Partial<Record<BusinessKind | 'any', string[]>> = {
   any: [' ____ ', '| ** |', '|____|'],
 };
 
-export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'biz'; k: number };
+export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'biz'; k: number };
 export interface Web { hosts: Map<string, SiteRef>; byBiz: Map<number, string>; portal: string; search: string }
 /** The search engine (15.3): its name and host. */
 export const SEARCH = 'Lookwise', SEARCH_HOST = 'www.lookwise.com';
@@ -74,6 +75,7 @@ export function webOf(w: World): Web {
   const portal = `www.${slug(cityName(c))}online.com`;
   hosts.set(portal, { kind: 'portal' });
   hosts.set(SEARCH_HOST, { kind: 'search' });
+  hosts.set(mailHost(w), { kind: 'mail' });
   c.businesses.forEach((b, k) => {
     const head = b.hq ?? k;
     if (head !== k) { const h = byBiz.get(head); if (h) byBiz.set(k, h); return; }
@@ -90,8 +92,8 @@ export function webOf(w: World): Web {
 
 export interface Fetched { host: string; path: string; page?: Page; error?: 'dns' | 'down' }
 
-/** What asking for `url` brings: the page, or why not (no such host; the server is down). */
-export function fetchUrl(w: World, url: string): Fetched {
+/** What asking for `url` brings (with a form's boxes, when one was sent): the page, or why not (no such host; the server is down). */
+export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fetched {
   const u = url.trim().toLowerCase().replace(/^https?:\/\//, '');
   const query = decodeURIComponent((u.split('?q=')[1] ?? '').replace(/\+/g, ' '));
   let host = u.split(/[/?]/)[0], path = '/' + u.split('?')[0].split('/').slice(1).join('/');
@@ -106,6 +108,7 @@ export function fetchUrl(w: World, url: string): Fetched {
     return { host, path, page: bizPage(w, S.k, host, path) };
   }
   if (S.kind === 'search') return { host, path, page: searchPage(w, host, path, query) };
+  if (S.kind === 'mail') return { host, path, page: mailPage(w, host, path, form) };
   return { host, path, page: portalPage(w, host, path) };
 }
 
@@ -117,8 +120,8 @@ export function addressOf(w: World, k: number): string {
   return onAve ? `${roadName(c, true, i)} at ${roadName(c, false, j)}` : `${roadName(c, false, j)} at ${roadName(c, true, i)}`;
 }
 
-const hh = (h: number) => (h % 24 === 0 ? 'midnight' : h % 24 === 12 ? 'noon' : `${((h + 11) % 12) + 1} ${h % 24 < 12 ? 'am' : 'pm'}`);
-const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+export const hh = (h: number) => (h % 24 === 0 ? 'midnight' : h % 24 === 12 ? 'noon' : `${((h + 11) % 12) + 1} ${h % 24 < 12 ? 'am' : 'pm'}`);
+export const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
 /** The layouts a site may have: a classic column, a sidebar on the right, a centered home page with a visitor
  *  counter, a menu down the left, a corporate one, a bare page "under construction"; each kind of place has its
@@ -218,7 +221,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
 /** A page of the provider's portal: the start page, a story, the weather, the directory. */
 function portalPage(w: World, host: string, path: string): Page {
   const c = w.city, city = cityName(c), r = rngOf(w.seed, 0x9047, Math.floor(w.time / 3600)), Wb = webOf(w);
-  const nav: [string, string][] = [['Home', `http://${host}/`], ['News', `http://${host}/news`], ['Weather', `http://${host}/weather`], ['Directory', `http://${host}/directory`], ['Search', `http://${SEARCH_HOST}/`]];
+  const nav: [string, string][] = [['Home', `http://${host}/`], ['News', `http://${host}/news`], ['Weather', `http://${host}/weather`], ['Directory', `http://${host}/directory`], ['Mail', `http://${mailHost(w)}/`], ['Search', `http://${SEARCH_HOST}/`]];
   const banner: Block = { t: 'banner', text: `${city} Online`, sub: tidy(expand('#web.portal.tagline#', TEXT, r, { city })), art: [' .--. ', '( @@ )', " '--' "] };
   const stories = newsStories(w), W = w.weather, f = (t: number) => Math.round(t * 1.8 + 32);
   const D = calendar(w.time), date = `${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][D.weekday]}, ${D.month}/${D.day}/${D.year}`;
@@ -285,6 +288,7 @@ function indexOf(w: World): Doc[] {
   doc(`http://${Wb.portal}/`, `${city} Online`, `News, weather and the business directory of ${city}.`, [[city, 3], ['online news weather directory portal home', 3]]);
   doc(`http://${Wb.portal}/news`, `${city} Online - News`, `Today's headlines from around ${city}.`, [['news headlines today', 4], [city, 2]]);
   doc(`http://${Wb.portal}/weather`, `${city} Online - Weather`, `The weather in ${city} today.`, [['weather forecast rain snow temperature', 4], [city, 2]]);
+  doc(`http://${mailHost(w)}/`, `${provider(w)} Mail`, `Free e-mail from ${provider(w)}. Sign in or sign up for a free account.`, [['mail email webmail inbox free account sign signup', 4], [city, 2]]);
   doc(`http://${Wb.portal}/directory`, `${city} Online - Business Directory`, 'Every business in the city by category, with address and phone.', [['directory business businesses yellow pages phone address', 4], [Object.values(kinds).join(' '), 1]]);
   indexes.set(w.city, I);
   return I;

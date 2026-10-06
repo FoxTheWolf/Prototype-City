@@ -22,15 +22,29 @@ export type Block =
   | { t: 'ad'; text: string; url: string }
   | { t: 'hr' }
   | { t: 'foot'; text: string }
-  | { t: 'space' };
+  | { t: 'space' }
+  /** A text box of the page's form (15.4): its label, the name it is sent by, and whether it shows stars. */
+  | { t: 'input'; name: string; label: string; secret?: boolean; size?: number }
+  /** The form's button: Enter on it (or in a box) sends the boxes to the page's form. */
+  | { t: 'submit'; label: string };
 
-export interface Page { url: string; title: string; theme: Theme; blocks: Block[]; /** Its weight, for the time it takes to come down the line. */ kb: number }
+export interface Page {
+  url: string; title: string; theme: Theme; blocks: Block[]; /** Its weight, for the time it takes to come down the line. */ kb: number;
+  /** Where the page's boxes are sent (a page with input blocks has one). */
+  form?: string;
+}
 
 export interface Cell { ch: string; fg: C3; bg: C3 }
 export interface Link { x: number; y: number; w: number; url: string }
-export interface Laid { rows: Cell[][]; links: Link[] }
+/** Where a text box landed (the browser writes what is typed into it). */
+export interface Field { x: number; y: number; w: number; name: string; secret: boolean }
+/** The url a submit button stands for, among the links. */
+export const SUBMIT = 'submit:';
+export interface Laid { rows: Cell[][]; links: Link[]; fields: Field[] }
 
 type Seg = { text: string; url?: string };
+/** A text box's paper and ink, the same on every site (the browser's own widget). */
+const BOX: C3 = [255, 255, 255], BOX_FG: C3 = [0, 0, 0];
 
 /** Text with [label](url) links, as segments. */
 export function segments(s: string): Seg[] {
@@ -64,7 +78,7 @@ function wrapRich(s: string, w: number): Seg[][] {
 
 /** Lay page P out `width` cells wide. */
 export function layout(P: Page, width: number): Laid {
-  const T = P.theme, rows: Cell[][] = [], links: Link[] = [];
+  const T = P.theme, rows: Cell[][] = [], links: Link[] = [], fields: Field[] = [];
   const blank = (bg: C3): Cell[] => Array.from({ length: width }, () => ({ ch: ' ', fg: T.fg, bg }));
   const row = (y: number, _bg?: C3) => { while (rows.length <= y) rows.push(blank(T.page)); return rows[y]; };
   const put = (x: number, y: number, s: string, fg: C3, bg: C3) => { const r = row(y, bg); for (let k = 0; k < s.length; k++) if (x + k >= 0 && x + k < width) r[x + k] = { ch: s[k], fg, bg }; };
@@ -150,6 +164,25 @@ export function layout(P: Page, width: number): Laid {
         case 'hr': fill(x, y, w, T.bg); put(x + 1, y, '-'.repeat(w - 2), T.dim, T.bg); y++; break;
         case 'foot': fill(x, y, w, T.bar); put(x + Math.max(1, Math.floor((w - B.text.length) / 2)), y, B.text.slice(0, w - 2), T.barFg, T.bar); y++; break;
         case 'space': fill(x, y, w, T.bg); y++; break;
+        case 'input': {
+          // a white box with a sunken edge, the label before it
+          const fw = Math.min(B.size ?? 24, w - B.label.length - 8);
+          fill(x, y, w, T.bg); put(x + 2, y, B.label, T.fg, T.bg);
+          const bx = x + 3 + Math.max(B.label.length, 16);
+          put(bx, y, '[', T.dim, T.bg); put(bx + 1, y, ' '.repeat(fw), BOX_FG, BOX); put(bx + 1 + fw, y, ']', T.dim, T.bg);
+          fields.push({ x: bx + 1, y, w: fw, name: B.name, secret: !!B.secret });
+          fill(x, y + 1, w, T.bg);
+          y += 2;
+          break;
+        }
+        case 'submit': {
+          const t = `[ ${B.label} ]`;
+          fill(x, y, w, T.bg); put(x + 3 + 16, y, t, T.barFg, T.bar);
+          links.push({ x: x + 3 + 16, y, w: t.length, url: SUBMIT });
+          fill(x, y + 1, w, T.bg);
+          y += 2;
+          break;
+        }
       }
     }
     return y;
@@ -158,5 +191,5 @@ export function layout(P: Page, width: number): Laid {
   const W = Math.min(width - 4, 124), x0 = Math.floor((width - W) / 2);
   const end = column(P.blocks, x0, W, 1);
   row(end + 1, T.page);
-  return { rows, links };
+  return { rows, links, fields };
 }

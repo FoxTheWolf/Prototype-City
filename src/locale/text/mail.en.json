@@ -1,0 +1,162 @@
+{
+ "mail.tagline": [
+  "Free e-mail for everyone in {city}.",
+  "Your free e-mail, anywhere in {city}.",
+  "2 GB of free storage. Less spam. Mail from anywhere."
+ ],
+ "mail.welcome.subject": [
+  "Welcome to {provider} Mail!",
+  "Your new {provider} Mail account is ready"
+ ],
+ "mail.welcome.body": [
+  "Hi {user},|Welcome to {provider} Mail! Your new address is {address}.|You can read your mail from any computer with an Internet connection: just go to {host} and sign in.|Keep your password safe. If you forget it, we will text a code to the phone number on your account ({num}).|Thanks for choosing {provider}.|The {provider} Team"
+ ],
+ "mail.bank.hello.subject": [
+  "Go paperless with {bank}",
+  "Your e-Statements from {bank}"
+ ],
+ "mail.bank.hello.body": [
+  "Dear customer,|We have matched this e-mail address to your account ending in {last4}. From now on your statement will arrive here every Monday, free of charge.|{bank} will never ask for your password or PIN by e-mail.|Sincerely,|{bank} Customer Service"
+ ],
+ "mail.bank.stmt.subject": [
+  "Your {bank} e-Statement is ready",
+  "{bank} weekly statement, account ending {last4}"
+ ],
+ "mail.bank.stmt.intro": [
+  "Here is the activity on your account ending in {last4} for the week of {week}.",
+  "Below is your statement for the week of {week}, account ending in {last4}."
+ ],
+ "mail.bank.stmt.outro": [
+  "Questions? Call us at {phone} or visit any branch.|{bank} will never ask for your password or PIN by e-mail."
+ ],
+ "mail.news.subject": [
+  "This week at {biz}",
+  "{biz} News: {promo}",
+  "Don't miss this, from {biz}",
+  "{promo}"
+ ],
+ "mail.news.first.subject": [
+  "Thanks for stopping by {biz}!",
+  "Welcome to the {biz} mailing list"
+ ],
+ "mail.news.first.body": [
+  "Thanks for shopping with us! You are now on the {biz} mailing list. Look out for deals and news from your friends in {district}.",
+  "Thank you for visiting {biz}. As a member of our mailing list you will be the first to hear about our specials."
+ ],
+ "mail.news.body": [
+  "{promo} Only at {biz}, {address}.",
+  "This week only: {promo} Come see us at {address}.",
+  "Good news from {biz}: {promo} We are open {hours}."
+ ],
+ "mail.news.outro": [
+  "To stop receiving these e-mails, reply with UNSUBSCRIBE in the subject line.",
+  "You are receiving this because you shopped at {biz}."
+ ],
+ "mail.spam.lottery.from": [
+  "Prize Department",
+  "Global Lottery Board",
+  "Claims Office"
+ ],
+ "mail.spam.lottery.subject": [
+  "CONGRATULATIONS!!! You are a WINNER",
+  "Your claim number is waiting",
+  "Re: your winning ticket"
+ ],
+ "mail.spam.lottery.body": [
+  "Dear Winner,|Your e-mail address was selected in our international draw and has won the sum of $1,500,000. To claim your prize, reply with your full name, address and phone number.|Yours faithfully,|{name}, Claims Agent"
+ ],
+ "mail.spam.watches.from": [
+  "Watch Outlet",
+  "Luxury Direct"
+ ],
+ "mail.spam.watches.subject": [
+  "Luxury watches at 90% off",
+  "Replica watches - perfect copies"
+ ],
+ "mail.spam.watches.body": [
+  "Hello friend,|Why pay full price? Top brand watches, perfect copies, shipped to your door in 3 days. Visit our store today, stock is limited!"
+ ],
+ "mail.spam.home.from": [
+  "Home Business Center",
+  "Opportunity Desk"
+ ],
+ "mail.spam.home.subject": [
+  "Earn $5000 a month from home!!!",
+  "Work 2 hours a day, earn more"
+ ],
+ "mail.spam.home.body": [
+  "Are you tired of your job? Thousands of people are making $5000 a month working from home just a few hours a day. No experience needed! Reply YES for more information."
+ ],
+ "mail.spam.loan.from": [
+  "Loan Approval Desk",
+  "Credit Center"
+ ],
+ "mail.spam.loan.subject": [
+  "You have been PRE-APPROVED",
+  "Lowest rates of the year - act now"
+ ],
+ "mail.spam.loan.body": [
+  "Congratulations, you have been pre-approved for a loan of up to $25,000. Bad credit OK. No questions asked. Reply within 48 hours to keep your rate."
+ ],
+ "mail.spam.software.from": [
+  "Software Warehouse",
+  "OEM Discount"
+ ],
+ "mail.spam.software.subject": [
+  "Office software for only $49",
+  "All the software you need, cheap"
+ ],
+ "mail.spam.software.body": [
+  "Office, photo editors, operating systems... all the software you need at a fraction of the price. Instant download. Satisfaction guaranteed!!!"
+ ],
+ "mail.spam.stock.from": [
+  "Investor Alert",
+  "Market Insider"
+ ],
+ "mail.spam.stock.subject": [
+  "HOT STOCK ALERT: this one will triple",
+  "Get in before Monday"
+ ],
+ "mail.spam.stock.body": [
+  "This small company is about to announce BIG news. Get in before the price goes through the roof. This is not a drill. Buy now!!!"
+ ],
+ "mail.spam.diploma.from": [
+  "Diploma Services",
+  "University Admissions"
+ ],
+ "mail.spam.diploma.subject": [
+  "Get a college diploma in 2 weeks",
+  "The degree you deserve"
+ ],
+ "mail.spam.diploma.body": [
+  "Get the degree you deserve. Bachelor, Master, even PhD. No exams, no classes. Based on your life experience. Call now."
+ ],
+ "mail.spam.money.from": [
+  "{name}"
+ ],
+ "mail.spam.money.subject": [
+  "URGENT: please reply",
+  "Confidential business proposal"
+ ],
+ "mail.spam.money.body": [
+  "Dear sir or madam,|I am writing to ask for your help moving a large sum of money out of my country. You will be rewarded with 30% for your trouble. Please reply in confidence.|{name}"
+ ],
+ "mail.spam.chain.from": [
+  "{name}"
+ ],
+ "mail.spam.chain.subject": [
+  "Fw: Fw: Fw: you have to read this",
+  "FW: this really works!!!"
+ ],
+ "mail.spam.chain.body": [
+  "Send this to 10 friends in the next hour and something good will happen to you tomorrow. Do NOT break the chain!!!"
+ ],
+ "mail.spam.name": [
+  "Mr. Edward Banks",
+  "Barrister Paul Grant",
+  "Mrs. Helen Morris",
+  "James Whitfield",
+  "Dr. Henry Cole",
+  "Mr. Victor Lane"
+ ]
+}

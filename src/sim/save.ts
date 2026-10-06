@@ -31,6 +31,8 @@ export interface WorldSave {
   needs?: World['needs'];
   /** Missing in saves from before 14.2. */
   talks?: World['talks'];
+  /** Missing in saves from before 15.4. */
+  mail?: World['mail'];
   events: World['events'];
   feed: World['feed'];
   weather: World['weather'];
@@ -43,7 +45,7 @@ export function snapWorld(w: World): WorldSave {
   return {
     time: w.time, tick: w.tick, player: { ...w.player },
     subs: w.power.subs.map((s) => ({ on: s.on, changed: s.changed, ox: s.ox, oy: s.oy, sig: s.sig, offAt: s.offAt })),
-    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, needs: { ...w.needs }, talks: w.talks, bag: { ...w.bag, items: w.bag.items.map(({ vx: _x, vy: _y, ...i }) => i) }, events: w.events, feed: w.feed, weather: { ...w.weather },
+    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, needs: { ...w.needs }, talks: w.talks, mail: w.mail, bag: { ...w.bag, items: w.bag.items.map(({ vx: _x, vy: _y, ...i }) => i) }, events: w.events, feed: w.feed, weather: { ...w.weather },
     jobs: saveJobs(w.jobs), heat: saveHeat(w.heat),
   };
 }
@@ -63,6 +65,7 @@ export function applyWorld(w: World, d: WorldSave) {
   if (d.bag) w.bag = d.bag;
   if (d.needs) Object.assign(w.needs, d.needs);
   if (d.talks) w.talks = d.talks;
+  if (d.mail) w.mail = d.mail;
   bagGear(w);
   w.events = d.events;
   w.feed = d.feed;
