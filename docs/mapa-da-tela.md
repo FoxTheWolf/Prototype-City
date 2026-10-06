@@ -80,3 +80,4 @@
 
 - **Ao telefone, o celular abaixa até a espiada** (só o topo à mostra) e a conversa fica na zona A, igual à conversa ao vivo: a conversa tem sempre o mesmo lugar.
 - **A conversa como legenda de filme:** sem moldura; a fala do NPC em letras claras com sombra escura, o nome em âmbar na frente; só a caixa de texto do jogador tem uma borda fina; a intenção e o medidor de tom logo acima dela, discretos. Se a fala ficar difícil de ler de dia, escurecer um pouco o fundo atrás das letras (sem virar painel).
+- **Balões, e de perto vira legenda:** balões sobre a cabeça de quem fala, no máximo 3 de uma vez, os mais perto primeiro, até ~12 m; mais longe, um balão vazio (`...`). A menos de ~3 m, a frase também aparece na zona A, mais apagada e sem a caixa de texto, como uma conversa ouvida sem querer (o "quem está perto ouve").
