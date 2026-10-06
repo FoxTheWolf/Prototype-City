@@ -382,6 +382,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
 
+- Lições da 15.8 / 19.1 (fórum, apt, saves do notebook), para não repetir
 - Lições da etapa 13 (portas, interiores e céu), para não repetir
 - Lições do processo (documentação e conversas), para não repetir
 - `[HACKING]` Lições da etapa 10 (notebook e hacking), para não repetir
