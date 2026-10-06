@@ -70,7 +70,7 @@
 		"iwconfig": "iwconfig [wlan0]\n  Show the wireless interface. To join a network:\n    iwconfig wlan0 essid \"NAME\" [key KEY]\n  An open network needs no key. Then run 'dhclient wlan0' to get an address.",
 		"sha1sum": "sha1sum file...\n  A file's SHA-1 checksum. It reads the whole file: slow on a big one.",
 		"sleep": "sleep seconds\n  Wait.",
-		"lodestar": "lodestar [address]\n  The web browser, full screen. F6 (or Ctrl+L) types an address, the arrows scroll, Tab/Right and Left pick a link, Enter follows it, Backspace goes back, F5 reloads, Home opens the start page, F10 (or Ctrl+Q) closes it. Needs a network: join one first (iwlist, iwconfig, dhclient).",
+		"lodestar": "lodestar [address]\n  The web browser, full screen. F6 (or Ctrl+L) types an address, or words to search the web, the arrows scroll, Tab/Right and Left pick a link, Enter follows it, Backspace goes back, F5 reloads, Home opens the start page, F10 (or Ctrl+Q) closes it. Needs a network: join one first (iwlist, iwconfig, dhclient).",
     "nano": "nano [file]\n  Edit a text file, full screen. ^O (or F3) writes it, ^X (or F2) leaves, ^K cuts a line, ^U pastes it, ^G is the help. Only your home and /tmp can be written.",
 		"acpi": "acpi [-a] [-V]\n  The battery: charging or not, its charge and the time left. -a: the AC adapter too. -V: also the battery's wear and the temperature. The adapter is plugged in only where you sit inside a building with power.",
 		"clear": "clear\n  Clear the screen.",

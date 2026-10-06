@@ -11,7 +11,8 @@ import { createWorld } from '../src/sim/world';
 import { subAt, switchSub } from '../src/sim/power';
 import { logEvent } from '../src/sim/events';
 import { placeAt } from '../src/phone/places';
-import { fetchUrl, portalUrl, webOf } from '../src/web/sites';
+import { fetchUrl, portalUrl, searchUrl, webOf } from '../src/web/sites';
+import { businessName } from '../src/locale/names';
 import { layout } from '../src/web/page';
 import { Browser } from '../src/web/browser';
 
@@ -56,6 +57,19 @@ if (!back) fail('the site did not come back with the power');
 else if (!back.blocks.some((b) => b.t === 'ad' && /outage|blackout|back|lights/i.test(b.text))) fail('back after a blackout, the site says nothing');
 if (fetchUrl(w, 'www.nosuchplaceatall.com').error !== 'dns') fail('a made-up host was found');
 
+// the search engine (15.3): finds the sites by what they are and their name; a shop without a site is not in it
+const res = (q: string) => { const P = fetchUrl(w, searchUrl(q)).page!; return P.blocks.filter((b) => b.t === 'p' && /^\[/.test(b.text)).map((b) => (b as { text: string }).text); };
+const pz = res('pizza');
+console.log(`  "pizza": ${pz.length} results, first ${pz[0]}`);
+if (!pz.length || !pz.slice(0, 5).some((t) => /pizz|slice/i.test(t) || /pizza/.test(t))) fail('a search for pizza found no pizzeria first');
+const sited = [...W.byBiz.keys()][3], nameS = businessName(c, sited);
+if (!res(nameS).some((t) => t.includes(nameS))) fail(`a site not found by its own name: ${nameS}`);
+// (a name of its own: "Beer Wine Liquor" is the name of several shops, some of them online)
+const sitedNames = new Set([...W.byBiz.keys()].map((k) => businessName(c, k)));
+const unsited = c.businesses.findIndex((b, k) => !W.byBiz.has(k) && (b.hq ?? k) === k && !sitedNames.has(businessName(c, k))), nameU = businessName(c, unsited);
+if (res(nameU).some((t) => t.startsWith(`[${nameU}]`))) fail(`a shop without a site found: ${nameU}`);
+if (res('zzqqxx').length) fail('nonsense found something');
+
 // the browser: the start page comes down at the line's speed, Tab picks a link, Enter follows it
 let up = true;
 const B = new Browser(w, () => ({ up, kbps: 900 }), () => {}, 160, 50);
@@ -71,6 +85,8 @@ if (B.url === before) fail('Enter on a link went nowhere');
 console.log(`  followed: ${before} -> ${B.url}`);
 B.key('Backspace', false, 11);
 if (B.url !== before) fail('Backspace did not go back');
+B.key('F6', false, 11.5); for (const ch of 'cheap pizza') B.key(ch, false, 11.5); B.key('Enter', false, 11.5);
+if (!B.url.includes('lookwise.com/search?q=cheap+pizza')) fail('words in the address are not a search: ' + B.url);
 up = false; B.go('', 12);
 if (!/Not connected/.test(B.cells(13).scr.ch[48].join(''))) fail('no network, and still a page');
 console.log(fails ? `${fails} failure(s)` : 'OK');

@@ -2,6 +2,11 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.3: o buscador (2026-10-06, sessão na nuvem)
+- **Lookwise** (`www.lookwise.com`, `searchPage`/`indexOf` em `src/web/sites.ts`): o índice tem a página de entrada de cada site de empresa (nome, tipo, bairro, endereço, a apresentação, o que vende) e as seções do portal; as páginas de dentro dos sites e as lojas sem site ficam fora (achadas pelo letreiro, pelo diretório, pela boca a boca). Os resultados: dez, pelo peso das palavras (o nome pesa mais, depois o tipo, o bairro e a rua), "about N results", o endereço em verde e um trecho, como em 2008; sem nada, as dicas de sempre.
+- No Lodestar, palavras digitadas no endereço (com espaço, ou sem ponto) viram busca. O portal ganhou o link "Search".
+- Teste: `tests/web.ts` ("pizza" acha pizzarias; um site pelo nome; uma loja sem site e de nome único não aparece; bobagem não acha nada; palavras no endereço viram busca).
+
 ## 15.2: sites mais variados e vivos (2026-10-06, sessão na nuvem)
 - Seis layouts (`Tpl` em `src/web/sites.ts`): clássico, barra à direita, caseiro centralizado com contador de visitas e "Best viewed at 800x600", menu na esquerda, corporativo em três colunas, e o "UNDER CONSTRUCTION" de quem mal tem site; cada tipo tem os seus prováveis (`TPLS`: banco corporativo, bar caseiro, lavanderia em construção).
 - Páginas próprias de cada tipo (`EXTRA`): as sessões da semana do cinema (filmes de `calls.json`), quartos e diárias do hotel e do motel, as taxas do banco e as agências da rede (os `hq`); "Menu" só para quem vende comida.

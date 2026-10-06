@@ -10,7 +10,7 @@
 import { Scr } from '../laptop/screen';
 import { type World } from '../sim/world';
 import { layout, type C3, type Laid } from './page';
-import { fetchUrl, portalUrl, type Fetched } from './sites';
+import { fetchUrl, portalUrl, searchUrl, type Fetched } from './sites';
 
 /** What the browser needs of the machine: whether the network is up, and its speed (kbit/s). */
 export type Net = () => { up: boolean; kbps: number };
@@ -66,7 +66,8 @@ export class Browser {
     if (key === 'F10' || (ctrl && k === 'q')) { this.quit(); return; }
     if (key === 'F6' || (ctrl && k === 'l')) { this.editing = true; this.addr = ''; return; }
     if (this.editing) {
-      if (key === 'Enter') this.go(this.addr, now);
+      // words that are not an address are a search (as the browsers of 2008 did)
+      if (key === 'Enter') this.go(/\s/.test(this.addr.trim()) || !this.addr.includes('.') && this.addr.trim() ? searchUrl(this.addr) : this.addr, now);
       else if (key === 'Backspace') this.addr = this.addr.slice(0, -1);
       else if (key.length === 1 && !ctrl && this.addr.length < 120) this.addr += key;
       return;
@@ -123,7 +124,7 @@ export class Browser {
     // the status line and the keys
     S.paint(0, H - 2, ` ${status}`.padEnd(W), INK, CHROME);
     if (f < 1 && !this.offline && !G?.error) { const pw = 30, n = Math.floor(f * pw); S.paint(W - pw - 3, H - 2, `[${'#'.repeat(n)}${' '.repeat(pw - n)}]`, [10, 36, 106], CHROME); }
-    S.paint(0, H - 1, ' F6 address   Enter follow   Tab/Right next link   Left previous   Backspace back   F5 reload   Home start page   F10 close'.padEnd(W).slice(0, W), CHROME_DK, CHROME);
+    S.paint(0, H - 1, ' F6 address or search   Enter follow   Tab/Right next link   Left previous   Backspace back   F5 reload   Home start page   F10 close'.padEnd(W).slice(0, W), CHROME_DK, CHROME);
     return { scr: S, cx: this.editing ? Math.min(W - 4, 28 + this.addr.length) : -1, cy: this.editing ? 1 : -1 };
   }
 }
