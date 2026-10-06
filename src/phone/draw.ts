@@ -53,11 +53,21 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
 }
 
 /**
- * The music keys on the top edge, at the right of the earphone jack (2026-10-06; they were on the left
- * side): previous, play/pause, next, then the volume down and up, each a bump a row tall standing out
- * of the body (columns from the phone's left), with the keyboard's shortcut that does the same (Alt held).
+ * The music keys on the top edge, in its right corner (2026-10-06; they were on the left side, then five):
+ * previous, play/pause and next, each a rounded bump drawn in HD pixels standing out of the body
+ * (columns from the phone's left), with the keyboard's shortcut that does the same (Alt held). The
+ * volume is the earphones' thumbwheel on the cable (DIAL), or Alt with the arrows.
  */
-const TOP_KEYS: [Key, number, number, string, string][] = [['prev', 22, 4, '|<', '<'], ['play', 27, 4, '>', 'P'], ['next', 32, 4, '>|', '>'], ['vdown', 39, 3, '-', 'v'], ['vup', 43, 3, '+', '^']];
+const TOP_KEYS: [Key, number, number, string][] = [['prev', 33, 4, '<'], ['play', 38, 4, 'P'], ['next', 43, 4, '>']];
+/** HD pixel icons for the keys, 5 wide by 3 tall ('#' lit, '+' half). */
+const ICONS: Record<string, string[]> = {
+  prev: ['#.+#.', '#.##.', '#.+#.'], next: ['.#+.#', '.##.#', '.#+.#'],
+  play: ['.#+..', '.##+.', '.#+..'], pause: ['.#.#.', '.#.#.', '.#.#.'],
+};
+/** The earphones' volume wheel on the cable this frame: its centre (interface cells), or null when not drawn. */
+export const DIAL: { at: [number, number] | null } = { at: null };
+/** Whether a grid cell is over the wheel's grab area (wider and taller than the wheel, as the cable sways). */
+export const onDial = (x: number, y: number) => !!DIAL.at && Math.abs(x - DIAL.at[0]) <= 5 && Math.abs(y - DIAL.at[1]) <= 3;
 
 /** The key under a grid cell, if any. */
 export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number): Key | null {
@@ -233,8 +243,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   // housing and strain relief above, and the cable rising in a slack loop up and to the left, then
   // falling past the phone's side and out of sight at the bottom (2026-10-06: it went off the top before)
   const HL = hdLayer();
+  const lit = (c: C3, k = 1): C3 => [c[0] * Lr * k, c[1] * Lg * k, c[2] * Lb * k];
   if (P.earphones && HL) {
-    const lit = (c: C3, k = 1): C3 => [c[0] * Lr * k, c[1] * Lg * k, c[2] * Lb * k];
     const jx = (ox + 9) * HD, jy = oy * HD;
     for (let y = -13; y < 1; y++) {
       // the sleeve (metal, 4 wide), the housing (6 wide), the relief (2 wide) the cable leaves from
@@ -243,7 +253,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     }
     // the cable: a smooth curve (Catmull-Rom) through points in cells, swaying a little
     const sway = Math.sin(now * 1.3) * 0.6, pts: [number, number][] = [
-      [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 5, oy - 6 + sway * 0.5], [ox - 6 + sway, oy - 3], [ox - 13 + sway, oy + 10], [ox - 11, g.rows + 3], [ox - 11, g.rows + 3]];
+      [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 5, oy - 6 + sway * 0.5], [ox - 5 + sway, oy - 4], [ox - 13 + sway, oy + 10], [ox - 11, g.rows + 3], [ox - 11, g.rows + 3]];
     for (let s = 1; s < pts.length - 2; s++) {
       const [p0, p1, p2, p3] = [pts[s - 1], pts[s], pts[s + 1], pts[s + 2]];
       for (let i = 0; i <= 120; i++) {
@@ -255,24 +265,40 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
         HL.put(X + 1, Y, c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, HdOrder.Over);
       }
     }
-  }
-  // the music keys on top, over the rim (and the case's): sunk to half for a moment when pressed;
-  // with Alt held, the keyboard's shortcut for each above it
-  for (const [k, x0, w, sym, alt] of TOP_KEYS) {
-    const down = isDown(k), c = mul(SHL.cap, P.hover === k ? 1.35 : 1), label = k === 'play' && P.tn.playing ? '"' : sym;
-    for (let x = 0; x < w; x++) {
-      if (down) { over(x0 + x, -1, SHAPE.bottom, mul(SHL.cap, 0.5), 0.6); continue; }
-      const n = x - ((w - label.length) >> 1);
-      cell(x0 + x, -1, n >= 0 && n < label.length ? label.charCodeAt(n) : 32, on ? SHL.label : SHL.labelOff, x === 0 || x === w - 1 ? mul(c, 0.8) : c, 0.6, on);
+    // the volume wheel on the cable (2026-10-06): a little white remote with a grey thumbwheel on its
+    // side, ridged; the ridges move with the volume, as the wheel turns under the mouse's wheel
+    const [dx, dy] = pts[3], X0 = Math.round(dx * HD) - 5, Y0 = Math.round(dy * HD) - 3, hot = P.dialHot;
+    DIAL.at = [Math.round(dx), Math.round(dy)];
+    for (let y = 0; y < 7; y++) for (let x = 0; x < 11; x++) {
+      const corner = (x === 0 || x === 10) && (y === 0 || y === 6);
+      if (corner) continue;
+      let c: C3;
+      if (x >= 7 && y >= 1 && y <= 5) c = (y + Math.round(P.tn.vol * 10)) % 2 ? [120, 124, 132] : [176, 180, 188];
+      else c = x === 0 || y === 0 ? [246, 246, 248] : x === 10 || y === 6 ? [170, 170, 176] : [226, 226, 230];
+      const q = lit(c, hot ? 1.25 : 1);
+      HL.put(X0 + x, Y0 + y, q[0], q[1], q[2], HdOrder.Over);
     }
-    if (P.handy > 0.5) {
-      const i = inG(x0 + (w >> 1), -2);
-      if (i >= 0) { g.setBg(i, 20, 16, 10); g.put(i, ch(alt), 255, 220, 140); }
+  } else DIAL.at = null;
+  // the music keys on top, in HD pixels (rounded, a little; sunk to a sliver for a moment when pressed);
+  // with Alt held, the keyboard's shortcut for each above it, and the wheel's
+  if (HL) for (const [k, x0, w] of TOP_KEYS) {
+    const down = isDown(k), hov = P.hover === k, W = w * HD, H = down ? 2 : 5, X0 = (ox + x0) * HD, Y0 = oy * HD - H;
+    const icon = ICONS[k === 'play' && P.tn.playing ? 'pause' : k], ic: C3 = on ? SHL.label : SHL.labelOff;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if ((x === 0 || x === W - 1) && y === 0) continue;
+      const shadeK = (y === 0 ? 1.15 : y === H - 1 ? 0.75 : 1) * (x === 0 ? 1.1 : x === W - 1 ? 0.8 : 1) * (hov ? 1.3 : 1) * (down ? 0.6 : 1);
+      let c = mul(SHL.cap, shadeK);
+      const ix = x - ((W - 5) >> 1), iy = y - 1, m = !down && iy >= 0 && iy < 3 && ix >= 0 && ix < 5 ? icon[iy][ix] : '.';
+      if (m === '#') c = ic; else if (m === '+') c = lerp(c, ic, 0.5);
+      const q = lit(c);
+      HL.put(X0 + x, Y0 + y, q[0], q[1], q[2], HdOrder.Over);
     }
   }
   if (P.handy > 0.5) {
-    const s = 'ALT+';
-    for (let n = 0; n < s.length; n++) { const i = inG(TOP_KEYS[0][1] - 5 + n, -2); if (i >= 0) { g.setBg(i, 20, 16, 10); g.put(i, s.charCodeAt(n), 255, 220, 140); } }
+    const tag = (x: number, y: number, s: string) => { for (let n = 0; n < s.length; n++) { const i = inG(x + n, y); if (i >= 0) { g.setBg(i, 20, 16, 10); g.put(i, s.charCodeAt(n), 255, 220, 140); } } };
+    tag(TOP_KEYS[0][1] - 5, -3, 'ALT+');
+    for (const [, x0, w, alt] of TOP_KEYS) tag(x0 + (w >> 1), -3, alt);
+    if (DIAL.at) tag(DIAL.at[0] - ox - 3, DIAL.at[1] - oy - 3, T.apps.tunes.wheel);
   }
 
   // the screen

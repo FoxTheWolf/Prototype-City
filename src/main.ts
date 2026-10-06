@@ -1,6 +1,6 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { drawPhone, keyAt, mapView, onDial, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
 import { drawPayphone, Payphone } from './phone/payphone';
@@ -405,6 +405,11 @@ canvas.addEventListener('contextmenu', noMenu, true);
 canvas.oncontextmenu = noMenu;
 // the mouse wheel zooms the phone's map, steps through the menu's apps and scrolls its lists
 addEventListener('wheel', (e) => {
+  // the earphones' volume wheel on the cable (2026-10-06): turned by the mouse's wheel anywhere near it, the cursor free
+  if (e.deltaY && !input.locked && phone.earphones) {
+    const [x, y] = cellAtClient(e.clientX, e.clientY);
+    if (onDial(x, y)) { phonePress(e.deltaY < 0 ? 'vup' : 'vdown'); return; }
+  }
   if (laptop.open && e.deltaY) {
     const wm = laptop.shell.wm, cell = wm && laptopCell(e.clientX, e.clientY);
     if (wm && cell) wm.wheel(Math.sign(e.deltaY), cell[0]);
@@ -1256,6 +1261,12 @@ function frame(now: number) {
   if (nearPay || payphone.active) { const s = ` ${nearPay ? en.phone.payphone.use : en.phone.payphone.leave} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   if (phone.cue) { if (phone.cue === 'ring') sound?.ring(phone.prefs.ring); else if (phone.cue === 'vibrate') sound?.vibrate(); else sound?.stopRing(); phone.cue = null; }
   phone.reach = altFree && !laptop.open;
+  phone.dialHot = !input.locked && onDial(phone.cx, phone.cy);
+  // how to reach the music with the phone in the pocket (2026-10-06): a quiet hint while Alt is up
+  if (running && !altFree && !phone.out && !laptop.open && !payphone.active && !bagView.open && !talkView.open && phone.handy < 0.05 && phone.peek < 0.05) {
+    const TU = en.phone.apps.tunes, s = ` ${phone.tn.cur >= 0 ? TU.altMusic : TU.altFree} `;
+    ui.text(ui.cols - s.length - 2, ui.rows - 2, s, [150, 130, 100], [16, 13, 9]);
+  }
   phone.hover = phone.out || (laptop.open && phone.raise > 0.5) || phone.handy > 0.5 ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
   watch.update(dt, world.time, now / 1000, world.player.inside >= 0 ? 21 : world.weather.temp);

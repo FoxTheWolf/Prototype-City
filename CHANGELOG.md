@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.14 — Três teclas no canto e a rodinha do fone (2026-10-06)
+- **Só três teclas de música no topo do celular**, no canto direito e desenhadas em pixels finos, levemente arredondadas: **anterior, tocar/pausar e próxima** (o ícone de tocar vira pausa quando a música toca).
+- **O volume foi para o fio do fone:** um controle branco com uma **rodinha** no cabo. Com o mouse solto (Alt ou celular na mão), passe o cursor perto dela e **gire a roda do mouse**; a área é maior que a rodinha, então ela pode balançar à vontade. Sem fone, o volume segue em Alt+↑/↓ e no Tunes Player.
+- **Dica no canto da tela:** "ALT  free the mouse", ou "ALT  free the mouse / music" quando há música carregada.
+
 ## 0.15.13 — Teclas de música no topo, shuffle e o fio que desce (2026-10-06)
 - **As teclas de música foram para o topo do celular**, à direita da entrada do fone: **|<  >  >|** e o volume **-  +**. Com o celular no bolso, **segure Alt** e o topo dele sai um pouco do bolso para você clicar nelas; as teclas de atalho aparecem em cima de cada uma.
 - **Atalhos de teclado:** **Alt+↑/↓** volume, **Alt+←/→** música anterior/próxima, **Alt+P** tocar/pausar. As **teclas de mídia do teclado** (como Fn+F9) também funcionam, e o Windows mostra a música que está tocando no controle de mídia dele.

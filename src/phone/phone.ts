@@ -261,6 +261,8 @@ export class Phone {
   /** Alt held (2026-10-06): main sets `reach`; `handy` 0..1 brings the top of the phone out of the pocket, its music keys in reach. */
   reach = false;
   handy = 0;
+  /** The cursor over the earphones' volume wheel (main sets it): the wheel lights. */
+  dialHot = false;
   /** Lowered while talking on it (14.7): held at the ear, the conversation at the bottom of the screen. */
   atEar = false;
   /** 0 .. 1: held up whole, the keypad in sight (since 2026-10-06 always, while it is out). */
