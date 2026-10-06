@@ -53,22 +53,23 @@ import { WebApp } from './webapp';
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
-export type App = 'map' | 'calls' | 'contacts' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
+export type App = 'map' | 'calls' | 'contacts' | 'tunes' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type CallKind = 'out' | 'failed' | 'in' | 'missed';
-export type Key = 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
+export type Key = 'vup' | 'vdown' | 'play' | 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /**
  * The menu: a 4x4 grid of apps, picked with the arrows (or 1-9 and 0 for the first ten). Streetwire,
- * the news and Snake come with the phone, as phones then came with a few apps and a game; the apps
- * downloaded from the store sit in their own folder.
+ * the news, Snake and the Tunes Player come with the phone, as phones then came with a few apps and a
+ * game; the apps downloaded from the store sit in their own folder. Calls and Contacts are one app,
+ * the Phone, with two tabs (left and right switch them; 2026-10-06, to make room for the music).
  */
 export const MENU_COLS = 4;
-export const APPS: App[] = ['calls', 'contacts', 'messages', 'camera', 'map', 'wire', 'news', 'weather', 'calendar', 'bank', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
+export const APPS: App[] = ['calls', 'messages', 'camera', 'map', 'tunes', 'wire', 'news', 'weather', 'calendar', 'bank', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
 /** The apps on the menu that are store apps installed at the factory (their entries in STORE); the bank's came with the account. */
-const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake', bank: 'bank' };
+const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake', bank: 'bank', tunes: 'tunes' };
 /** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
-export const BUNDLED = ['social', 'news', 'snake', 'bank'];
+export const BUNDLED = ['social', 'news', 'snake', 'bank', 'tunes'];
 /** (15.9e) Apps that are not in the store: installed by cable once the phone is unlocked (stage 19), and shown in My Apps. */
 export const SIDELOAD = ['reynard'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
@@ -249,7 +250,7 @@ export class Phone {
     this.debugRey();
     linkSubs(world.city, world.power.subs); // the Maps can find a job's GRIDLINK substation
 
-    this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...APPS.filter((a) => a !== 'folder'), ...BUNDLED]);
+    this.fs = phoneFs(this.device, world.seed, world.time, en.phone.apps.set.values.ring, [...new Set([...APPS.filter((a) => a !== 'folder' && a !== 'tunes'), 'contacts', ...BUNDLED])]);
   }
   out = false;
   /** 0 in the pocket .. 1 held up; eases toward out. */
@@ -737,6 +738,8 @@ export class Phone {
     if (k === 'end' && this.call && this.call.state !== 'ended') { this.call.hangUp(now); this.sfx.push(['stop']); return true; }
     if (k === 'end' && s !== 'boot' && s !== 'standby') { this.open('standby', now); return true; }
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
+    // the three keys on the side (2026-10-06): the music's volume up and down, and play/pause, from any screen
+    if (k === 'vup' || k === 'vdown' || k === 'play') return s !== 'boot' && this.sideKey(k);
     switch (s) {
       case 'boot':
         if (k === 'rsoft') { this.out = false; return 'away'; }
@@ -829,6 +832,8 @@ export class Phone {
         if ((k === 'send' || k === 'ok') && this.dial) { this.place(this.dial, now); return true; }
         // with nothing dialed, the arrows pick a call in the log and the green key (or OK) calls it back
         if (!this.dial && this.log.length && (k === 'up' || k === 'down')) { this.lsel = Math.max(0, Math.min(this.log.length - 1, this.lsel + (k === 'up' ? -1 : 1))); return true; }
+        // the Phone's tabs: right goes to Contacts
+        if (!this.dial && k === 'right') { this.open('contacts', now); return true; }
         if (!this.dial && this.log.length && (k === 'send' || k === 'ok')) { this.place(this.log[Math.min(this.lsel, this.log.length - 1)].number, now); return true; }
         if (k === 'lsoft' && this.dial) { this.edit = { name: '', number: this.dial, step: 0 }; this.open('contact', now); return true; }
         if (k === 'rsoft') { if (this.dial) this.dial = this.dial.slice(0, -1); else this.open('menu', now); return true; }
@@ -845,6 +850,8 @@ export class Phone {
       case 'contacts': {
         const n = this.contacts.length;
         if (n && (k === 'up' || k === 'down')) { this.csel = (this.csel + (k === 'up' ? -1 : 1) + n) % n; return true; }
+        // the Phone's tabs: left goes back to Calls
+        if (k === 'left') { this.dial = ''; this.open('calls', now); return true; }
         if (n && (k === 'ok' || k === 'send')) { this.open('calls', now); this.place(this.contacts[this.csel].number, now); return true; }
         if (k === 'lsoft') { this.edit = { name: '', number: '', step: 0 }; this.open('contact', now); return true; }
         if (k === 'rsoft') { this.open('menu', now); return true; }
@@ -1187,6 +1194,21 @@ export class Phone {
     const T = this.tn;
     T.cur = ((i % n) + n) % n; T.playing = true; T.gen++; T.at = 0;
   }
+  /** The side keys: the volume a step up or down; play/pause (the song picked when nothing is loaded). */
+  private sideKey(k: Key): boolean {
+    const T = this.tn;
+    if (k === 'play') {
+      if (!this.tunesCount()) return false;
+      if (T.cur >= 0 && T.len > 0) T.playing = !T.playing; else this.tunesPlay(T.cur >= 0 ? T.cur : T.sel);
+      return true;
+    }
+    const v = Math.max(0, Math.min(1, Math.round((T.vol + (k === 'vup' ? 0.1 : -0.1)) * 10) / 10));
+    if (v === T.vol) return false;
+    T.vol = v; this.volAt = performance.now() / 1000;
+    return true;
+  }
+  /** When a side key last moved the volume (real s): the screen shows it for a moment. */
+  volAt = -9;
   /** The Tunes Player's keys: the arrows pick, OK plays the song picked (or pauses the one playing), left and right skip, * and # the volume. */
   private tunesKey(k: Key): boolean {
     const T = this.tn, n = this.tunesCount();

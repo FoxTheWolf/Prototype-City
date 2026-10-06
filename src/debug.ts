@@ -17,4 +17,6 @@ export const DEBUG = {
   /** (15.9e) Reynard, the encrypted messenger, installed and registered with a test chat. The real way in
    *  is the jailbreak at the end of the mentor's tutorial (stage 19). */
   reynard: true,
+  /** (2026-10-06) Headphones in the bag on a new game, to test the music without buying them. */
+  earphones: true,
 };

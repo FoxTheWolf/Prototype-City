@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import en from '../locale/en.json';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
-import { type C3, type Lcd, SH, softKeys, SW, typed } from './lcd';
+import { type C3, type Lcd, SH, softKeys, SW, typed, typeHint } from './lcd';
 import { type Key, type Phone } from './phone';
 import { Editor } from './textinput';
 import { lerp } from './ui';
@@ -242,7 +242,7 @@ export function drawRey(S: Lcd, P: Phone, w: World, t: number, now: number) {
       S.fill(SH - 4, [44, 40, 38]);
       S.text(1, SH - 4, '>', RUST, [44, 40, 38]);
       S.text(3, SH - 4, v ? line : R.write, v ? CREAM : GREY, [44, 40, 38]);
-      S.text(1, SH - 3, rv.note || rv.ed.tapping(now) || `${rv.ed.label()}  ${R.sendHint}`, rv.note ? RUST : GREY, bg(SH - 3));
+      if (rv.note) S.text(1, SH - 3, rv.note, RUST, bg(SH - 3)); else typeHint(S, 1, SH - 3, rv.ed, now, `${rv.ed.label()}  ${R.sendHint}`, GREY, bg(SH - 3));
       return softKeys(S, R.options, v ? R.del : en.phone.back);
     }
     case 'opts': {

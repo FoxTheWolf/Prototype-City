@@ -2,6 +2,15 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.10 — Título mais rápido e o celular mais fácil de usar com música (2026-10-06)
+- **O título abre na hora:** a cidade não é mais gerada atrás do menu. Ela só é feita depois que você escolhe **CONTINUE** ou **NEW GAME**, e o jogo começa sozinho quando fica pronto. No fundo do título, agora há um terminal da cidade rolando. O botão **WATCH CCTV** saiu do título.
+- **NEW GAME apaga o save** (depois de um segundo clique de confirmação): não dá mais para voltar ao jogo antigo pelo CONTINUE.
+- **O app Phone:** Ligações e Contatos viraram um app só, com duas abas (**←/→** trocam). Na vaga que sobrou entrou o **Tunes Player, que agora vem instalado** em todo celular.
+- **Botões laterais no celular** (à esquerda do aparelho, clique com o cursor): **+** e **−** mudam o volume da música, e o do meio **toca ou pausa**, em qualquer tela. O volume aparece na tela por um instante.
+- **Tocando agora na tela inicial:** com uma música carregada, um cartão mostra o título e a banda, e se está tocando (`>`) ou pausada (`"`).
+- **Digitar ficou mais claro:** no modo Abc, a letra escolhida na tecla fica acesa; no T9, aparecem **todas as sugestões** da sequência, com a escolhida acesa (**\*** passa para a próxima).
+- *(debug)* Um jogo novo começa com um fone na mochila.
+
 ## 0.15.9e — Reynard, o mensageiro cifrado (2026-10-06)
 - **Reynard** (em My Apps): mensagens cifradas de ponta a ponta, presas ao seu número. Para registrar, ele **manda um código por SMS** que você digita de volta, e o celular cria a sua chave.
 - **Número de segurança:** em Options → Verify, 60 dígitos para comparar com o contato (pessoalmente, ou lidos numa ligação). Bateu, marque como verificado (aparece um `v` ao lado do nome).

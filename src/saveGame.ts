@@ -54,3 +54,15 @@ export async function writeSave(s: GameSave): Promise<boolean> {
     });
   } catch (e) { console.warn('save failed', e); return false; }
 }
+
+/** Erases the slot (NEW GAME starts over: no CONTINUE back to the old one). */
+export async function deleteSave(): Promise<void> {
+  try {
+    const db = await open();
+    await new Promise<void>((ok) => {
+      const t = db.transaction(STORE, 'readwrite');
+      t.objectStore(STORE).delete(SLOT);
+      t.oncomplete = t.onerror = t.onabort = () => ok();
+    });
+  } catch (e) { console.warn('could not erase the save', e); }
+}

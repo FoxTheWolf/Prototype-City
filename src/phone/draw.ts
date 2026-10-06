@@ -2,9 +2,9 @@ import { compass, cityName, operatorName, diagonalName, districtName, landmarkNa
 import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
-import { app, menu } from './apps';
+import { app, menu, songInfo } from './apps';
 import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad, wallpaper } from './ui';
-import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
+import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
 import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
@@ -51,9 +51,17 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
   return [cols - PHONE_W - 6 + sx, rows - Math.max(peek, Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e)) + sy];
 }
 
+/**
+ * The three keys on the left side (2026-10-06): the music's volume up, play/pause, volume down, each
+ * a bump two rows tall standing out of the body by a column (rows from the phone's top).
+ */
+const SIDE_KEYS: [Key, number, string][] = [['vup', 9, '+'], ['play', 12, '>'], ['vdown', 15, '-']];
+
 /** The key under a grid cell, if any. */
 export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number): Key | null {
   const [ox, oy] = origin(cols, rows, P);
+  // the side keys: a column wider to hit than drawn
+  if (x >= ox - 2 && x <= ox) for (const [k, y0] of SIDE_KEYS) if (y >= oy + y0 && y < oy + y0 + 2) return k;
   // the arrows are thin: their hit areas reach a row (or two columns) further out than they are drawn
   const grow: Partial<Record<Key, [number, number, number, number]>> = { up: [0, -1, 0, 1], down: [0, 0, 0, 1], left: [-2, 0, 2, 0], right: [0, 0, 2, 0] };
   for (const [k, x0, y0, w, h] of keysFor(P.look)) {
@@ -219,6 +227,11 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   }
   // the case: over the body's rim and around it, so only its own rim shows from the front
   if (P.case) drawCase(CASES[P.case], R, now, cell, over, inG, g);
+  // the side keys, over the rim (and the case's): sunk into it for a moment when pressed
+  for (const [k, y0, sym] of SIDE_KEYS) {
+    const down = isDown(k), c = mul(SHL.cap, down ? 0.5 : P.hover === k ? 1.35 : 1);
+    for (let y = 0; y < 2; y++) cell(down ? 0 : -1, y0 + y, y === 0 ? ch(k === 'play' && P.tn.playing ? '"' : sym) : 32, on ? SHL.label : SHL.labelOff, y === 0 ? SHL.capTop : c, 0.6, on);
+  }
 
   // the screen
   const S = new Lcd(g, ox + SX, oy + SY);
@@ -235,6 +248,13 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       else if (P.screen === 'map') map(S, P, world, aspect, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
       else app(S, P, world, t, now);
+      // the volume, for a moment after a side key moved it, over whatever is open
+      if (now - P.volAt < 1.4) {
+        const y = SH - 3, B: C3 = [10, 14, 24], v = Math.round(P.tn.vol * 10);
+        box(S, 9, y, SW - 10, y, B, B, 0);
+        S.text(11, y, T.apps.vol, [150, 165, 190], B);
+        for (let k = 0; k < 10; k++) S.put(16 + k * 2, y, k < v ? BLOCK.full : ch('.'), k < v ? [200, 130, 255] : [70, 80, 100], B);
+      }
     }
   }
   // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
@@ -540,12 +560,15 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   if (unread) cards.push(['[=]', `${unread} ${unread > 1 ? T.apps.newTexts : T.apps.newText}`, [150, 200, 255]]);
   const rem = P.cal.reminders.filter((r) => !r.done).sort((a, b) => a.at - b.at)[0];
   if (rem) cards.push(['31', `${hhmm(calendar(rem.at).hour)} ${rem.text}`, [255, 200, 120]]);
+  // what the Tunes Player has loaded, playing or paused (the side keys work it without opening the app)
+  if (P.tn.cur >= 0) { const s = songInfo(P, P.tn.cur); cards.push([P.tn.playing ? ' > ' : ' " ', `${s.title} - ${s.band}`, [200, 130, 255]]); }
   cards.slice(0, 3).forEach(([icon, s, col], k) => {
     const y = 16 + k * 2;
     if (t < 0.6 + k * 0.1) return;
     box(S, 2, y, SW - 3, y, [24, 32, 50], [0, 0, 0], 0);
     S.text(3, y, icon, col, [24, 32, 50]);
-    S.text(8, y, s.slice(0, SW - 12), Math.floor(now * 2) & 1 || k ? [235, 240, 250] : col, [24, 32, 50]);
+    // the first card blinks while something waits (a missed call, a text), not for the music
+    S.text(8, y, s.slice(0, SW - 12), Math.floor(now * 2) & 1 || k || !(P.missed || unread) ? [235, 240, 250] : col, [24, 32, 50]);
   });
   softKeys(S, T.menu, T.hide);
   // how to clear them (calls and texts; a reminder stays until its time), on the bar between the soft keys
@@ -905,7 +928,7 @@ function places(S: Lcd, P: Phone, world: World, t: number, now: number) {
   S.put(2, 3, ch('>'), on ? BLUE : GREY, on ? W : [234, 236, 242]);
   if (q) S.text(4, 3, q.slice(-(SW - 7)) + (on && blink ? '_' : ''), INK2, on ? W : [234, 236, 242]);
   else S.text(4, 3, on && blink ? '_' : F.hint.slice(0, SW - 7), GREY, on ? W : [234, 236, 242]);
-  S.text(1, 4, on ? ed.tapping(now) || T.apps.modeHint : '', GREY, PG);
+  if (on) typeHint(S, 1, 4, ed, now, T.apps.modeHint, GREY, PG);
   // what came back: the search under way, nothing, or the list
   const J = P.radio.job;
   if (P.places === null) {

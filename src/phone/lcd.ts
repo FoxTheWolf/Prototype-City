@@ -8,6 +8,7 @@ import { type World } from '../sim/world';
 import { type GpsState } from './gps';
 import { type Radio } from './radio';
 import { type Wifi } from './wifi';
+import { type Editor } from './textinput';
 
 /** The phone's screen: its size in cells, its colors, and the pieces every app draws with. */
 export const SW = 42, SH = 26;
@@ -141,3 +142,28 @@ export function bigText(S: Lcd, y: number, s: string, col: C3, t = 1e9, dx = 0) 
 
 export const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 export const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+/**
+ * The typing hint on row y (2026-10-06): in Abc, the tapping key's letters with the one picked lit;
+ * in T9, the guesses for the keys typed with the one shown lit (* steps through them); else `rest`.
+ */
+export function typeHint(S: Lcd, x: number, y: number, ed: Editor, now: number, rest: string, fg: C3, bg: C3) {
+  const tap = ed.tapping(now);
+  if (tap) {
+    const i = ed.tapIndex();
+    for (let k = 0; k < tap.length && x + k < SW - 1; k++) S.put(x + k, y, ch(tap[k] === ' ' ? '_' : tap[k]), k === i ? bg : fg, k === i ? fg : bg);
+    return;
+  }
+  const L = ed.guesses();
+  if (L.length < 2) { S.text(x, y, rest, fg, bg); return; }
+  // the words in a row; from the one shown back as far as fits, so it never falls off the edge
+  const i = ed.guessIndex(), room = SW - 1 - x;
+  let a = 0, w = L.slice(0, i + 1).reduce((n, s) => n + s.length + 1, 0);
+  while (w > room && a < i) w -= L[a++].length + 1;
+  let cx = x;
+  for (let k = a; k < L.length && cx < x + room; k++) {
+    const s = L[k].slice(0, x + room - cx), on = k === i;
+    S.text(cx, y, s, on ? bg : fg, on ? fg : bg);
+    cx += s.length + 1;
+  }
+}

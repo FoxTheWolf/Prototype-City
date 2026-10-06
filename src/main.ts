@@ -54,12 +54,15 @@ import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
 import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, CITY_SIZE, type PlayerInput } from './sim/world';
 import { tierOf } from './sim/heat'; // [HACKING]
+import { addToBag } from './sim/bag';
+import { DEBUG } from './debug';
 import { loadPop, savePop } from './popCache';
 import { pace } from './core/steps';
 import TIPS from './locale/tips.json';
 import TODAY_2008 from './locale/today2008.json';
 import { Menu, type Option } from './menu';
-import { readSave, SAVE_V, writeSave, type GameSave } from './saveGame';
+import { deleteSave, readSave, SAVE_V, writeSave, type GameSave } from './saveGame';
+import { TitleFx } from './titleFx';
 import { applyWorld, snapWorld } from './sim/save';
 import { NotePanel, Playtest } from './playtest';
 
@@ -89,15 +92,14 @@ const CELL_ASPECT = 0.6;
 const EYE = 1.7;
 const MOUSE_SENS = 0.0022;
 
-/** The loading bar on the title screen: how far (0..1) and what is being done; at 1 the buttons show. */
+/** The loading bar on the title screen, after the choice: how far (0..1) and what is being done; at 1 the game starts. */
 function load(f: number, what: string) {
   const L = document.getElementById('loading')!;
   (L.querySelector('.fill') as HTMLElement).style.transform = `scaleX(${f})`;
   L.querySelector('.what')!.textContent = `${what} ${'.'.repeat(1 + (Math.floor(performance.now() / 300) % 3))}`;
   L.querySelector('.pct')!.textContent = `${Math.floor(f * 100)}%`;
-  if (f >= 1) { L.hidden = true; document.getElementById('ready')!.hidden = false; }
+  if (f >= 1) L.hidden = true;
 }
-load(0.02, 'BOOTING');
 showTip(true);
 // the line changes every 15–20 s (it shows on the title and in the pause menu, where one may stay a while)
 (function cycle() { setTimeout(() => { showTip(false); cycle(); }, 15000 + Math.random() * 5000); })();
@@ -118,11 +120,47 @@ function showTip(load: boolean) {
   el.querySelector('.text')!.textContent = text;
 }
 
-// ?seed=123 reproduces a city; otherwise every game rolls a new one. ?mute starts with the sound off.
-// With a saved game the city is the save's (CONTINUE puts the save on it); ?new rolls a new one anyway.
+// The title (2026-10-06): the choice comes first, and the city is made only after it, once (it used to be
+// made behind the title, so opening the game waited on it). CONTINUE makes the save's city and puts the
+// save on it; NEW GAME erases the save and rolls a new city (?seed=123 reproduces one). Either way the game
+// starts by itself when it is ready. ?mute starts with the sound off.
 const params = new URLSearchParams(location.search), seedParam = params.get('seed');
 const saved = await readSave();
-const seed = seedParam !== null ? Number(seedParam) | 0 : saved && !params.has('new') ? saved.seed : (Math.random() * 2 ** 31) | 0;
+const titleFx = new TitleFx(document.getElementById('overlay')!);
+const choice = await titleChoice();
+const seed = choice === 'continue' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
+document.getElementById('ready')!.hidden = true;
+document.getElementById('loading')!.hidden = false;
+load(0.02, 'BOOTING');
+/** The title's buttons: CONTINUE (with a save), NEW GAME (a second click when it replaces a save), OPTIONS. */
+function titleChoice(): Promise<'continue' | 'new'> {
+  const cont = document.getElementById('continue') as HTMLButtonElement, nb = document.getElementById('start') as HTMLButtonElement;
+  if (saved) {
+    cont.hidden = false;
+    const c = calendar(saved.world.time), two = (n: number) => String(Math.floor(n)).padStart(2, '0');
+    document.querySelector('#ready .saveinfo')!.textContent = `SAVED ${new Date(saved.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · IN THE CITY ${c.year}-${two(c.month)}-${two(c.day)} ${two(c.hour)}:${two((c.hour % 1) * 60)}`;
+  }
+  // the options before there is a city: what they change is kept and read when the game is made
+  const titleMenu = new Menu({ options: [
+    { label: 'SOUND', value: () => (OPTS.mute ? 'OFF' : 'ON'), next: () => { OPTS.mute = !OPTS.mute; keepOpts(); } },
+    { label: 'STYLE', value: () => STYLES[style].name, next: () => { style = (style + 1) % STYLES.length; resStep = STYLES[style].res; OPTS.style = style; keepOpts(); } },
+    { label: 'SHARPNESS', value: () => (OPTS.fuse ? 'SOFT' : 'SHARP'), next: () => { OPTS.fuse = !OPTS.fuse; keepOpts(); } },
+  ], debug: () => '', save: async () => false, resume: () => {}, quit: () => {} });
+  document.getElementById('options')!.addEventListener('click', (e) => { e.stopPropagation(); titleMenu.open(true); });
+  addEventListener('keydown', (e) => { if (e.code === 'Escape' && titleMenu.isOpen) titleMenu.back(); });
+  return new Promise((ok) => {
+    const go = (c: 'continue' | 'new') => { titleMenu.dispose(); ok(c); };
+    cont.addEventListener('click', (e) => { e.stopPropagation(); go('continue'); }, { once: true });
+    let sure = !saved;
+    nb.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!sure) { sure = true; nb.textContent = 'NEW GAME (ERASES THE SAVE)'; return; }
+      if (saved) await deleteSave();
+      go('new');
+    });
+  });
+}
+function keepOpts() { try { localStorage.setItem('tc.opts2', JSON.stringify(OPTS)); } catch { /* no storage: the defaults next time */ } }
 // the city is made in steps, the page alive between them, with a bar on the title screen (load)
 const savedPop = await loadPop(seed);
 const world = await pace(worldSteps(seed, CITY_SIZE, true, savedPop), (f) => load(0.04 + 0.84 * f, f < 0.05 ? 'LAYING OUT STREETS' : f < 0.1 ? 'WIRING THE GRID' : 'REGISTERING CITIZENS'));
@@ -802,12 +840,12 @@ function begin() {
   sound.resume();
   if (INTRO && introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
   overlay.hidden = true;
+  titleFx.stop();
   running = true;
   if (pt && !ptPrimed) { pt.prime(phone, continued); ptPrimed = true; }
   lastSave = performance.now();
   input.lock();
 }
-document.getElementById('cctv')!.addEventListener('click', (e) => { e.stopPropagation(); startCctv(true); });
 
 /**
  * The saved game (F.6): the seed and what changed (sim/save.ts, and the phone's, the notebook's and the
@@ -842,29 +880,13 @@ function reloadWith(q: Record<string, string>) {
   if (params.has('playtest')) u.set('playtest', '');
   location.search = u.toString();
 }
-const contBtn = document.getElementById('continue') as HTMLButtonElement, newBtn = document.getElementById('start') as HTMLButtonElement;
-if (saved) {
-  contBtn.hidden = false;
-  const c = calendar(saved.world.time), hh = String(Math.floor(c.hour)).padStart(2, '0'), mm = String(Math.floor((c.hour % 1) * 60)).padStart(2, '0');
-  document.querySelector('#ready .saveinfo')!.textContent = `SAVED ${new Date(saved.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · IN THE CITY ${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')} ${hh}:${mm}`;
+/** The game starts by itself once the GPU is ready: CONTINUE puts the save on its city first. */
+function enter() {
+  if (choice === 'continue' && !continued) { applySave(saved!); continued = true; }
+  // (DEBUG.earphones) a new game starts with headphones in the bag
+  else if (DEBUG.earphones && !world.bag.items.some((i) => i.good === 'headphones')) addToBag(world.bag, 'headphones', 0, -1, true);
+  begin();
 }
-contBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (!saved || !gpu) return;
-  // the save is of another city than the one behind the title: load that one first
-  if (saved.seed !== seed) { reloadWith({}); return; }
-  if (!continued) { applySave(saved); continued = true; }
-  begin();
-});
-let sure = params.has('new');
-newBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (!gpu) return;
-  if (saved && !sure) { sure = true; newBtn.textContent = 'NEW GAME (REPLACES THE SAVE)'; return; }
-  // the city behind the title is the save's: roll another
-  if (saved && seed === saved.seed && seedParam === null && !params.has('new')) { reloadWith({ new: '' }); return; }
-  begin();
-});
 addEventListener('visibilitychange', () => { if (document.hidden) void saveNow(); });
 
 /** The pause menu (Esc in the game; menu.ts): the world stops while it is open. */
@@ -924,7 +946,6 @@ function debugText(): string {
   ].join('\n');
 }
 const menu = new Menu({ options: OPTIONS, debug: debugText, save: saveNow, resume, quit: async () => { await saveNow(); reloadWith({}); } });
-document.getElementById('options')!.addEventListener('click', (e) => { e.stopPropagation(); menu.open(true); });
 
 /**
  * Watching the security cameras: the title's other choice (the city goes on, seen only through its
@@ -1379,5 +1400,6 @@ document.fonts.load(`16px ${FONT}`).finally(() => {
     canvas.after(gpuCanvas); gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height;
     comp = new GpuCompositor(g, gpuCanvas); comp.setLayout(layout, uiLayout);
     if (termMode) { const T = termMode === 'fb' ? termFb : termTx, [cw, chh] = termCells[termMode]; comp.setTerm(T.cols, T.rows, cw, chh); }
+    enter();
   }, (err) => console.error('WebGPU:', err));
 });

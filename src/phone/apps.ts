@@ -11,7 +11,7 @@ import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
-import { BAR, bigText, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
+import { BAR, bigText, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, typeHint, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
@@ -21,7 +21,7 @@ import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APPS, EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
-import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
+import { box, CHROME, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 import { TRACKS } from '../audio/tracks';
@@ -51,10 +51,11 @@ const ICON: Record<App, [string, C3, C3]> = {
   camera: ['[o]', [90, 94, 104], [230, 235, 245]], wire: ['sw', [38, 62, 120], [255, 170, 60]], news: ['NEWS', [236, 228, 208], [24, 20, 16]], weather: ['\\o/', [70, 150, 230], [255, 230, 110]],
   calendar: ['31', [240, 240, 244], [210, 50, 50]], bank: ['$$', [22, 70, 52], [235, 200, 110]], calc: ['+-', [56, 56, 62], [255, 150, 30]], notes: ['~~', [250, 230, 120], [40, 50, 110]],
   snake: ['~o', [150, 178, 84], [36, 48, 22]], folder: ['[_]', [200, 150, 60], [255, 245, 220]], store: ['$', [110, 50, 130], [255, 140, 210]], settings: ['<o>', [120, 126, 140], [255, 255, 255]],
+  tunes: ['d', [130, 60, 170], [255, 220, 255]],
 };
 /** The icons of apps from the store. */
 const STORE_ICON: Record<string, [string, C3, C3]> = {
-  torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ['d', [130, 60, 170], [255, 220, 255]], atlas: ['3D', [60, 130, 90], [255, 255, 255]],
+  torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ICON.tunes, atlas: ['3D', [60, 130, 90], [255, 255, 255]],
   snake: ICON.snake, news: ICON.news, social: ICON.wire, bank: ICON.bank, web: ['(e)', [30, 70, 150], [255, 210, 80]], reynard: ['^.^', [34, 30, 28], [232, 112, 44]],
 };
 const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
@@ -147,7 +148,8 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
   const d = P.dial, c = P.call, who = P.contacts.find((x) => x.number === d)?.name;
   if (!c) {
     lightPage(S);
-    header(S, name('calls'), P.missed ? `${P.missed} missed` : '', ')))', [120, 230, 150]);
+    header(S, '', P.missed ? `${P.missed} missed` : '', ')))', [120, 230, 150]);
+    tabs(S, 5, 0, CHROME.text, CHROME.top, [40, 170, 90]);
     box(S, 1, 4, SW - 2, 11, [255, 255, 255], pageBg, 1, [244, 246, 250]);
     if (d.length <= 7) bigText(S, 5, d, INKD);
     else S.center(8, d, INKD, [250, 251, 253]);
@@ -204,11 +206,21 @@ function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
   softKeys(S, '', c.state === 'ended' ? '' : A.end);
 }
 
+/** The Phone's two tabs on the title row (Calls, Contacts), the one open lit; left and right switch them. */
+function tabs(S: Lcd, x: number, on: number, fg: C3, bg: C3, hi: C3) {
+  [A.tabCalls, A.tabContacts].forEach((l, k) => {
+    const s = ` ${l} `;
+    S.text(x, 1, s, k === on ? [255, 255, 255] : mul(fg, 0.6), k === on ? hi : bg);
+    x += s.length + 1;
+  });
+}
+
 /** Contacts: an address book (cream pages, a brown cover bar, the first letter as a tab); OK calls, New adds one. */
 function contacts(S: Lcd, P: Phone, t: number) {
   const PG: C3 = [240, 232, 212], INKC: C3 = [40, 32, 24], TAB: C3 = [170, 120, 70];
   paint(S, PG);
-  bar(S, name('contacts'), [250, 236, 210], [110, 64, 36], A.sim.replace('{n}', String(P.contacts.length)), [210, 180, 150]);
+  bar(S, '', [250, 236, 210], [110, 64, 36], A.sim.replace('{n}', String(P.contacts.length)), [210, 180, 150]);
+  tabs(S, 1, 1, [250, 236, 210], [110, 64, 36], [220, 140, 60]);
   if (!P.contacts.length) S.center(10, A.noContacts, [140, 120, 100], PG);
   const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.csel - view + 1, P.contacts.length - view));
   P.contacts.slice(top, top + view).forEach((c, n) => {
@@ -231,7 +243,7 @@ function contactEdit(S: Lcd, P: Phone, now: number) {
   S.text(1, 8, A.numberF, E.step === 1 ? HI : DIM, LCD);
   S.text(1, 9, E.number + (E.step === 1 && blink ? '_' : ''), WHITE, LCD);
   title(S, `${name('contacts').toUpperCase()} +`, 1, E.step === 0 ? P.nameEd.label() : '123');
-  S.text(1, SH - 3, E.step === 0 ? P.nameEd.tapping(now) || A.modeHint : 'v number', DIM, LCD);
+  if (E.step === 0) typeHint(S, 1, SH - 3, P.nameEd, now, A.modeHint, DIM, LCD); else S.text(1, SH - 3, 'v number', DIM, LCD);
   softKeys(S, E.name && E.number ? A.save : '', (E.step === 0 ? E.name : E.number) ? A.clear : T.back);
 }
 
@@ -307,7 +319,7 @@ function compose(S: Lcd, P: Phone, now: number) {
   lines.slice(-(SH - 11)).forEach((l, k) => S.text(2, 6 + k, l, INKD, pg));
   if (D.step === 1 && blink) S.put(2 + (lines[lines.length - 1]?.length ?? 0), 6 + Math.max(0, Math.min(lines.length, SH - 11) - 1), ch('_'), BLUE, pg);
   if (!D.text) S.text(2, 6, A.text, GREY, pg);
-  S.text(1, SH - 3, D.step === 0 ? '* <-   v text' : P.smsEd.tapping(now) || A.modeHint, GREY, pageBg(SH - 3));
+  if (D.step === 0) S.text(1, SH - 3, '* <-   v text', GREY, pageBg(SH - 3)); else typeHint(S, 1, SH - 3, P.smsEd, now, A.modeHint, GREY, pageBg(SH - 3));
   softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', D.step === 1 && D.text ? A.clear : T.back);
 }
 
@@ -361,7 +373,7 @@ function notes(S: Lcd, P: Phone, t: number, now: number) {
   for (let n = 0; n < live; n++) { const x = last.length - live + n; if (x >= 0) S.put(4 + x, y, ch(last[x]), PAD, INKN); }
   if (Math.floor(now * 2) & 1 && !live) S.put(4 + last.length, y, ch('_'), INKN, rowBg(y));
   if (!P.note) S.center(10, typed(A.notesHint, t - 0.2), [150, 130, 80], rowBg(10));
-  S.text(1, SH - 2, ed.tapping(now) || A.modeHint, [140, 120, 70], PAD);
+  typeHint(S, 1, SH - 2, ed, now, A.modeHint, [140, 120, 70], PAD);
   softKeys(S, '', P.note ? A.clear : T.back);
 }
 

@@ -44,6 +44,8 @@ export class Menu {
     this.show(fromTitle ? 'options' : 'main');
   }
   close() { this.el.hidden = true; clearInterval(this.debugTimer); }
+  /** Gone for good (the title's, once the game is chosen). */
+  dispose() { this.close(); this.el.remove(); }
   /** Esc: a page back, or out of the menu. */
   back() {
     if (this.page !== 'main' && !this.fromTitle) this.show('main');

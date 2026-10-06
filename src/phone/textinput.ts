@@ -50,19 +50,25 @@ export class Editor {
   /** The tapping key's letters, while a multi-tap is under way (for the hint). */
   tapping(now: number): string { return this.mode === 'abc' && this.tapKey && now - this.tapAt < 1 ? TAPS[this.tapKey] : ''; }
 
-  /** T9's guess for the keys typed: the words with that sequence, or the start of a longer one, or the keys' first letters. */
-  word(): string {
-    if (!this.seq) return '';
+  /** The letter picked among tapping()'s, for the hint's highlight. */
+  tapIndex(): number { return this.tapN; }
+
+  /** T9's guesses for the keys typed: the words with that sequence, or the start of a longer one, or the keys' first letters. */
+  guesses(): string[] {
+    if (!this.seq) return [];
     let L = dict.get(this.seq);
     if (!L?.length) {
       const longer: string[] = [];
       for (const [s, ws] of dict) if (s.startsWith(this.seq)) longer.push(...ws);
       longer.sort((a, b) => a.length - b.length);
-      L = longer.map((w) => w.slice(0, this.seq.length));
+      L = [...new Set(longer.map((w) => w.slice(0, this.seq.length)))];
     }
-    const w = L.length ? L[this.ci % L.length] : [...this.seq].map((k) => TAPS[k][0]).join('');
-    return this.cap(w);
+    return (L.length ? L : [[...this.seq].map((k) => TAPS[k][0]).join('')]).map((w) => this.cap(w));
   }
+  /** Which of guesses() shows. */
+  guessIndex(): number { const n = this.guesses().length; return n ? this.ci % n : 0; }
+  /** T9's guess now (the one picked among guesses()). */
+  word(): string { const L = this.guesses(); return L.length ? L[this.ci % L.length] : ''; }
 
   /** Capital letters where they go: a name's words, or the start of a sentence. */
   private cap(w: string): string {

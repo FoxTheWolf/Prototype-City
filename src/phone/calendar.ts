@@ -7,7 +7,7 @@ import { expand, rngOf, type Grammar } from '../locale/gen';
 import { TEXT } from '../locale/text';
 import CALLS from '../locale/calls.json';
 import en from '../locale/en.json';
-import { ch, type C3, type Lcd, SH, softKeys, SW } from './lcd';
+import { ch, type C3, type Lcd, SH, softKeys, SW, typeHint } from './lcd';
 import { type Key, type Phone } from './phone';
 import { Editor } from './textinput';
 
@@ -211,7 +211,7 @@ function newReminder(S: Lcd, P: Phone, now: number) {
   S.text(1, 8, T.when, C.step === 1 ? RED : DIM, PAPER);
   const tm = C.time.padEnd(4, '-');
   S.text(1, 9, `${tm.slice(0, 2)}:${tm.slice(2)}${C.step === 1 && blink ? '_' : ''}  ${T.hhmm}`, INK, PAPER);
-  S.text(1, SH - 3, C.step === 0 ? C.ed.tapping(now) || `${C.ed.label()}  ${T.next}` : T.timeHint, DIM, PAPER);
+  if (C.step === 0) typeHint(S, 1, SH - 3, C.ed, now, `${C.ed.label()}  ${T.next}`, DIM, PAPER); else S.text(1, SH - 3, T.timeHint, DIM, PAPER);
   softKeys(S, txt && C.time.length === 4 ? T.save : '', en.phone.back);
 }
 
