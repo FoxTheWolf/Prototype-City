@@ -57,14 +57,14 @@ import { NotePanel, Playtest } from './playtest';
 /** The grid has this many rows (chosen in the options; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
 /**
- * The options (the menu's; F3 also flips the debug lines), kept per viewer in the browser, apart from the save (deleting a save keeps them).
+ * The options (the menu's), kept per viewer in the browser, apart from the save (deleting a save keeps them).
  * The style (13.13) sets the rows and the old sharpness together: High Definition (200 rows, soft) or Classic (120, sharper);
  * Sharpness is the far glyphs' fusion (Soft: fused). The background and the glyphs are fixed (0.24 of the glyph's color, ASCII).
  */
-interface Opts { style: number; fuse: boolean; mute: boolean; hud: boolean }
+interface Opts { style: number; fuse: boolean; mute: boolean }
 const STYLES = [{ name: 'HIGH DEFINITION', res: 2, sharp: 0 }, { name: 'CLASSIC', res: 1, sharp: 2 }];
 const OPTS: Opts = (() => {
-  const d: Opts = { style: 0, fuse: false, mute: false, hud: false };
+  const d: Opts = { style: 0, fuse: false, mute: false };
   // the options before 13.13 are dropped once (tc.opts), so the game opens in the new defaults
   try { localStorage.removeItem('tc.opts'); return { ...d, ...JSON.parse(localStorage.getItem('tc.opts2') ?? '{}') }; } catch { return d; }
 })();
@@ -429,7 +429,7 @@ addEventListener('keydown', (e) => {
   // F3 hides and shows the debug lines (for clean screenshots), whatever is in the hands
   // the menu open takes the keys: Esc goes a page back, or out
   if (menu.isOpen) { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); menu.back(); } return; }
-  if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) { hudOn = !hudOn; saveOpts(); } return; }
+  if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
   // F8: a playtest note (the game pauses while it is written)
   if (e.code === 'F8') { e.preventDefault(); if (!e.repeat) openNote(); return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
@@ -592,8 +592,8 @@ function readInput(): PlayerInput {
 let sound: Sound | null = null;
 /** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
-/** The debug lines (status, clock, substation, where): F3 hides them. */
-let hudOn = OPTS.hud;
+/** The debug lines (status, clock, substation, where): F3 shows them; the game always opens with them hidden. */
+let hudOn = false;
 // [HACKING] the last arrest shown (its game time) and when (real time) the banner started, to time it
 let bustSeen = -1, bustShownAt = 0;
 /** Debug (F4): the same view at noon, at sunset and at night, side by side, to decide the palette by looking at it. */
@@ -720,7 +720,7 @@ function openNote() {
 /** What has the player's hands, for the playtest record ('' walking). */
 const handsOn = () => (notePanel.isOpen ? 'note' : paused ? 'pause' : laptop.open ? 'laptop' : counter.active ? 'counter' : bagView.open ? 'bag' : ask.open ? 'ask' : payphone.active ? 'payphone' : phone.out ? 'phone' : '');
 function saveOpts() {
-  Object.assign(OPTS, { style, fuse: look.fuse, hud: hudOn });
+  Object.assign(OPTS, { style, fuse: look.fuse });
   // ?mute is for a session (the tests), not a choice to remember
   if (sound && !params.has('mute')) OPTS.mute = sound.muted;
   try { localStorage.setItem('tc.opts2', JSON.stringify(OPTS)); } catch { /* no storage: the defaults next time */ }
@@ -729,7 +729,7 @@ const OPTIONS: Option[] = [
   { label: 'SOUND', value: () => ((sound ? sound.muted : OPTS.mute) ? 'OFF' : 'ON'), next: () => { if (sound) sound.toggleMute(); else OPTS.mute = !OPTS.mute; saveOpts(); } },
   { label: 'STYLE', value: () => STYLES[style].name, next: () => { style = (style + 1) % STYLES.length; look.sharp = STYLES[style].sharp; resStep = STYLES[style].res; resize(); saveOpts(); } },
   { label: 'SHARPNESS', value: () => (look.fuse ? 'SOFT' : 'SHARP'), next: () => { look.fuse = !look.fuse; saveOpts(); } },
-  { label: 'DEBUG LINES (F3)', value: () => (hudOn ? 'ON' : 'OFF'), next: () => { hudOn = !hudOn; saveOpts(); } },
+  { label: 'DEBUG LINES (F3)', value: () => (hudOn ? 'ON' : 'OFF'), next: () => { hudOn = !hudOn; } },
 ];
 /** The debug page: what the status lines show, as text. */
 function debugText(): string {
