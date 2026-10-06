@@ -12,6 +12,7 @@ import { staffOn } from './sim/citizens';
 import { citizenNames } from './locale/names';
 import { BagView } from './bagUi';
 import { AskWay, drawAskWay } from './askWay';
+import { Barks, drawBarks } from './barks';
 import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
@@ -153,8 +154,16 @@ const payphone = new Payphone(world);
 const counter = new Counter(world);
 const bagView = new BagView(world);
 const ask = new AskWay(world);
-/** Talking to someone (14.3): the clerk at a till, for now. */
+/** Talking to someone: the clerk at a till (14.3), someone on the sidewalk (14.4). */
 const talkView = new TalkView(world);
+/** The balloons over the heads of the people around (14.4). */
+const barks = new Barks(world);
+/** Walking off a talk: someone stopped on the sidewalk goes on their way after a moment (unless still pointing it). */
+function endTalk() {
+  const T = talkView.talk;
+  if (T && T.biz < 0) { const q = world.peds.find((e) => e.id === T.who); if (q && (q.hold ?? 0) > 300) { q.hold = 30; q.pdx = q.pdy = 0; } }
+  talkView.close(); input.lock();
+}
 // the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
 bagView.onFit = (id) => { fit(world, id); if (id === 'battery') gearBattery(true); plugIn(id); };
 bagView.onSwap = (op) => { swapSim(world, op); phone.newSim(); };
@@ -482,11 +491,15 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     if (counter.active) return;
     const T = talkView.talk!, r = talkView.key(e.code, e.key, performance.now() / 1000);
-    if (r === 'leave') { talkView.close(); input.lock(); }
-    else if (r === 'till') counter.open(T.biz);
+    if (r === 'leave') endTalk();
+    // Tab: the till at a shop; on the sidewalk, the list of places to ask the way to (13.9), the same person
+    else if (r === 'till') { if (T.biz >= 0) counter.open(T.biz); else { talkView.close(); ask.who = T.who; ask.pick = 0; } }
     else if (r) {
       pt?.log('say', { who: citizenNames(world.city, world.pop, T.who)[0], text: talkView.mine, intent: r.reading.intent === 'unrecognized' ? null : r.reading.intent, tone: `${r.reading.toneLabel} p${r.reading.pressure}`, answer: r.text });
       if (r.counter) counter.open(T.biz);
+      // a way asked on the sidewalk: they point it while they say it
+      const q = T.biz < 0 && r.point ? world.peds.find((e) => e.id === T.who) : null;
+      if (q) { q.pdx = r.point![0]; q.pdy = r.point![1]; q.hold = 299; }
     }
     return;
   }
@@ -539,8 +552,16 @@ addEventListener('keydown', (e) => {
     // the lift's doors in front, its car elsewhere: call it (13.2d)
     if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
     if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
-    // someone on the sidewalk in front: ask them the way (13.9)
-    if (!phone.out) { const q = ask.near(camera.yaw); if (q) { ask.ask(q, performance.now() / 1000); return; } }
+    // someone on the sidewalk in front: talk to them (14.4); crossing or going in, or late at night, some walk on
+    if (!phone.out) {
+      const q = ask.near(camera.yaw), t = performance.now() / 1000, h = (world.time / 3600) % 24;
+      if (q) {
+        if (q.way.length || q.door) ask.ask(q, t);
+        else if ((h >= 23 || h < 5) && hash3(q.id, 11, Math.floor(world.time / 3600)) < 0.35) barks.say(q.id, barks.line(q.id, 'dir.busy'), t);
+        else { talkView.start(q.id, -1, t); q.hold = 3600; q.pdx = q.pdy = 0; }
+        return;
+      }
+    }
     // a seat in front: sit on it, facing its way; seated, F with nothing else to do stands up (13.10f)
     if (!phone.out && world.player.sit) { standUp(world); return; }
     const seat = !phone.out ? seatAhead(world, camera.yaw) : null;
@@ -748,7 +769,7 @@ function openNote() {
   });
 }
 /** What has the player's hands, for the playtest record ('' walking). */
-const handsOn = () => (notePanel.isOpen ? 'note' : paused ? 'pause' : laptop.open ? 'laptop' : counter.active ? 'counter' : bagView.open ? 'bag' : ask.open ? 'ask' : payphone.active ? 'payphone' : phone.out ? 'phone' : '');
+const handsOn = () => (notePanel.isOpen ? 'note' : paused ? 'pause' : laptop.open ? 'laptop' : counter.active ? 'counter' : bagView.open ? 'bag' : ask.open ? 'ask' : talkView.open ? 'talk' : payphone.active ? 'payphone' : phone.out ? 'phone' : '');
 function saveOpts() {
   Object.assign(OPTS, { style, fuse: look.fuse });
   // ?mute is for a session (the tests), not a choice to remember
@@ -1016,13 +1037,19 @@ function frame(now: number) {
     const d = lift ? null : doorAhead(world, camera.yaw), late = now / 1000 - doorNoteAt < 1.5 && doorNote;
     if (d || late || lift) { const s = ` ${late ? doorNote : lift ? (carOf(world, world.player.inside).to === world.player.floor ? en.doors.coming : en.doors.call) : world.doorWant.has(d!.key) ? en.doors.close : en.doors.open} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   }
+  // the balloons of the people around (14.4), overheard as a subtitle when near and not talking
+  if (running && !cctv) { barks.update(now / 1000, camera.yaw); drawBarks(ui, barks, world, view, layout, uiLayout, !talkView.open && !counter.active); }
   // someone to ask the way, in front; the list, and what they said
   drawAskWay(ui, ask, now / 1000);
   // the conversation (14.3): the answer appears letter by letter, murmured; once it ends, they turn back to their work
   if (talkView.open) {
     const t = now / 1000, n = talkView.revealed(t), T = talkView.talk!;
     for (; talkView.shown + 3 <= n; talkView.shown += 3) if (/[a-z]/i.test(talkView.said[talkView.shown] ?? '')) sound?.murmur((world.pop.gender[T.who] ? 120 : 190) * (0.85 + hash3(T.who, 9, 9) * 0.4));
-    if (talkView.last?.end && t - talkView.saidAt > talkView.said.length / 45 + 2.5 && !counter.active) { talkView.close(); input.lock(); }
+    // someone on the sidewalk stays while talked to, and walks on if the player walks off
+    const q = T.biz < 0 ? world.peds.find((e) => e.id === T.who) : null;
+    if (q && q.hold! < 60) q.hold = 3600;
+    if (T.biz < 0 && (!q || Math.hypot(q.x - world.player.x, q.y - world.player.y) > 6)) endTalk();
+    else if (talkView.last?.end && t - talkView.saidAt > talkView.said.length / 45 + 2.5 && !counter.active) endTalk();
     else drawTalk(ui, talkView, world, t);
   }
   if (!till && !talkView.open && !aim && !phone.out && !counter.active && !ask.open && !bagView.open && !payphone.active && !doorAhead(world, camera.yaw) && ask.near(camera.yaw)) { const s = ` ${en.ask.use} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }

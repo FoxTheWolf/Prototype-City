@@ -2,6 +2,12 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.4: falar na rua e os balões (2026-10-06, sessão na nuvem)
+- **O primeiro playtest do diálogo** (dois registros do usuário, guardados em `playtest/`): as 4 frases com a intenção certa; "I wanna pay" e "where do you live" com a resposta errada, corrigidas (`reply.pay`, `reply.personal.*`); o relatório conta como compra o `take` pago no balcão.
+- **Falar com quem está na calçada:** o F num pedestre abre a mesma conversa do balcão (`talkView.start(q.id, -1)`); ele para e olha para o jogador enquanto dura, aponta o caminho quando o diz (`point`), segue a vida se o jogador se afasta mais de 6 m; atravessando, entrando numa porta ou tarde da noite (35%), segue andando com uma fala. O Tab abre a lista antiga de "pedir direção" (13.9) para a mesma pessoa (a lista virou atalho, como previsto). Isso adianta parte da 14.6.
+- **Balões** (`src/barks.ts`, zona B do mapa da tela): no máximo 3, os mais perto, até 12 m (até 20 m um `...`), só nos 2/3 de cima, nunca através de prédio nem de dentro; a menos de 3 m a fala também vira legenda apagada na zona A. Gatilhos: a chuva ou a neve começando, apagão e luz de volta a até 500 m, batida a até 150 m, o jogador correndo a menos de 1,4 m, encarar alguém por 2,5 s, alguém ao telefone, dois esperando o mesmo sinal (assunto: o sinal, o tempo, o trabalho, a notícia de um apagão ou batida recente).
+- Teste: `tests/barks.ts` (todas as chaves sem lacuna para 40 pessoas, a chuva faz falar, esbarrar faz falar, a projeção, a conversa na calçada). **Falta ver no PC:** o tamanho e a posição dos balões, a legenda ouvida, se incomodam.
+
 ## 14.3: a conversa na tela (2026-10-06, sessão na nuvem)
 
 - **`src/talkUi.ts`:** `TalkView` (a conversa aberta: a caixa de texto, a resposta revelada a 45 letras/s, a leitura em cache) e `drawTalk` na zona A (x de 44 até `cols−62`): a última fala do jogador apagada, a resposta com o nome em âmbar (o nome só depois de dito; antes "Clerk"), a linha da intenção e do tom e o plano 9 × 5 do tom (respeito no x, pressão no y, fundo com a mistura das quatro cores dos cantos, o ponto `@`), a caixa com borda fina e as teclas. Sem moldura no resto, como legenda.

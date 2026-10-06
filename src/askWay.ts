@@ -18,7 +18,7 @@ const KINDS: BusinessKind[] = ['cafe', 'diner', 'bar', 'grocery', 'pharmacy', 'b
 const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 
 /**
- * Asking the way (13.9): F by someone on the sidewalk lists where one might want to go (a kind of
+ * Asking the way (13.9; since 14.4 Tab in a talk on the sidewalk): the list of where one might want to go (a kind of
  * place, its nearest one; or a landmark); they stop, face the player, point the first way and say
  * the route in blocks and street names, in their own voice (locale/text/directions.en.json). Some
  * do not know it (the farther, the fewer), some are wrong (left for right), and late at night some

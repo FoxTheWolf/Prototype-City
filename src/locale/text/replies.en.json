@@ -31,7 +31,7 @@
   "Evening. What can I do for you?",
   "[old/senior] Hello, young person. How are you?",
   "[teen/young] Hey. What's up?",
-  "[rain] Morning. Quite a day for a walk.",
+  "[wet] Morning. Quite a day for a walk.",
   "#g.smile# Hello there.",
   "[evening/late] Hey. You're out late.",
   "[met] Oh, it's you again. Hello.",
@@ -552,7 +552,7 @@
  ],
  "reply.talk_weather.nice": [
   "Beautiful day, isn't it?",
-  "[rain] Sure is wet out there.",
+  "[wet] Sure is wet out there.",
   "[morning] Nice morning for a walk.",
   "[evening/late] Getting chilly tonight.",
   "[old/senior] Weather's been strange lately.",
@@ -562,7 +562,7 @@
  ],
  "reply.talk_weather.plain": [
   "Yeah, it's a nice day.",
-  "[rain] Quite rainy today.",
+  "[wet] Quite rainy today.",
   "Looks like rain.",
   "Pretty cold out.",
   "Warm enough.",
@@ -657,7 +657,7 @@
   "See you around.",
   "[evening/late] Have a good night.",
   "[morning] Have a good day.",
-  "[rain] Stay dry.",
+  "[wet] Stay dry.",
   "[job] I need to get back to work."
  ],
  "reply.deflect.nice": [

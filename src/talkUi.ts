@@ -6,7 +6,8 @@
  * with the tone as a dot on a small plane: respectful to the right, rude to the left, pressing up);
  * and the player's box, the only thing with a border. The world goes on behind it.
  *
- * F at a clerk opens it; Enter says the line, Esc walks off, Tab goes to the till (to pay).
+ * F at a clerk opens it, or at someone on the sidewalk (14.4); Enter says the line, Esc walks off, Tab goes to
+ * the till (to pay), or on the sidewalk to the list of places to ask the way to.
  */
 import { type CharGrid } from './render/grid';
 import { readLine, type Reading } from './sim/intent';
@@ -139,5 +140,5 @@ export function drawTalk(g: CharGrid, V: TalkView, w: World, now: number) {
   text(x0, by + 1, '|', EDGE, null); text(x0 + bw - 1, by + 1, '|', EDGE, null);
   text(x0 + 2, by + 1, ('> ' + shownIn + blink).padEnd(bw - 4), [255, 236, 200], [14, 12, 10]);
   text(x0, by + 2, '+' + '-'.repeat(bw - 2) + '+', EDGE, null);
-  text(x0 + 2, by + 3, T.over ? L.over : L.keys, DIM, null);
+  text(x0 + 2, by + 3, T.over ? L.over : T.biz >= 0 ? L.keys : L.keysStreet, DIM, null);
 }

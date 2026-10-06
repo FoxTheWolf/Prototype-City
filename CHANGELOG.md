@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.4 — Falar na rua e os balões (2026-10-06)
+- **F** em quem está na calçada agora abre uma conversa, como no balcão: pergunte o caminho, o nome, o que a pessoa faz. Ela para, olha para você e aponta o caminho quando o diz. Se você se afastar, ela segue a vida. **Tab** abre a lista de lugares do "pedir direção". Tarde da noite, ou atravessando a rua, nem todo mundo para.
+- **Balões** sobre a cabeça das pessoas: elas reclamam quando a chuva começa, comentam o apagão e a luz voltando, ouvem uma batida perto, reclamam se você esbarra correndo ou fica encarando, falam ao telefone, e duas esperando o mesmo sinal conversam entre si. Bem perto, a fala também aparece como legenda apagada embaixo.
+
 ## 0.14.3 — Conversar com o balconista (2026-10-06)
 - Depois do seu primeiro teste: "I wanna pay" agora recebe uma resposta de caixa ("Sure. I'll ring you up.") em vez de "You can have that one.", e "where do you live?" é uma pergunta pessoal ("Around. Why do you want to know?"), não um pedido de direção.
 - **F** no caixa agora é uma conversa: digite em inglês o que quiser dizer e aperte **Enter**. A resposta aparece embaixo, como legenda, letra por letra, com um murmúrio de chiptune (teste de ouvido seu). Acima da caixa, o jogo mostra o que entendeu da frase e o tom, com um ponto num pequeno quadro (mais à direita é mais educado, mais acima é mais pressionando), para você corrigir antes de enviar.

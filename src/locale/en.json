@@ -1,6 +1,6 @@
 {
   "lang": "en",
-  "talk": { "clerk": "Clerk", "someone": "Stranger", "hint": "Type what you want to say.", "unrecognized": "Unrecognized", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
+  "talk": { "clerk": "Clerk", "someone": "Stranger", "passerby": "Passerby", "keysStreet": "[ENTER] SAY   [TAB] ASK THE WAY   [ESC] WALK OFF", "hint": "Type what you want to say.", "unrecognized": "Unrecognized", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
   "seat": { "sit": "[F] SIT DOWN", "stand": "[F] STAND UP" },
   "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED", "call": "[F] CALL THE LIFT", "coming": "THE LIFT IS COMING" },
   "counter": {
@@ -17,7 +17,7 @@
     }
   },
   "ask": {
-    "use": "[F] ASK THE WAY", "title": "EXCUSE ME, HOW DO I GET TO...", "keys": "[UP/DN] PICK  [ENTER] ASK  [F] NEVER MIND", "they": "PASSERBY",
+    "use": "[F] TALK", "title": "EXCUSE ME, HOW DO I GET TO...", "keys": "[UP/DN] PICK  [ENTER] ASK  [F] NEVER MIND", "they": "PASSERBY",
     "north": "north", "south": "south", "east": "east", "west": "west"
   },
   "bag": {

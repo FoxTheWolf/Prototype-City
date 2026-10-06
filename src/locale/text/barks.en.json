@@ -1,0 +1,125 @@
+{
+ "bark.rain": [
+  "Great. Here it comes.",
+  "And I left my umbrella at home.",
+  "Of course it's raining.",
+  "[old/senior] Feel that? Rain.",
+  "Ugh, it's starting.",
+  "[cold] Cold rain. Perfect.",
+  "Should've taken the bus.",
+  "Run for it!"
+ ],
+ "bark.snow": [
+  "Snow already?",
+  "Look at that. Snow.",
+  "[child/teen] Snow!",
+  "Here we go, the sidewalks are going to be a mess."
+ ],
+ "bark.dark": [
+  "Whoa. Lights just went out.",
+  "Another blackout? Seriously?",
+  "Can't see a thing.",
+  "That's the second time this month.",
+  "Somebody call GridLink.",
+  "[old/senior] Never used to happen like this.",
+  "Great, my fridge.",
+  "Is it the whole block?"
+ ],
+ "bark.lights": [
+  "Oh, there we go.",
+  "Lights are back.",
+  "About time.",
+  "Finally."
+ ],
+ "bark.crash": [
+  "Did you hear that?",
+  "Somebody just hit somebody.",
+  "That sounded bad.",
+  "Was that a crash?",
+  "Everyone okay over there?",
+  "People drive like maniacs here."
+ ],
+ "bark.bump": [
+  "Hey, watch it!",
+  "Whoa, easy!",
+  "Where's the fire?",
+  "Excuse you.",
+  "[old/senior] Slow down, kid!",
+  "Careful!",
+  "Hey!"
+ ],
+ "bark.stare": [
+  "Can I help you?",
+  "What are you looking at?",
+  "Do I know you?",
+  "Uh, hi?",
+  "Something on my face?",
+  "[old/senior] Hmm?"
+ ],
+ "bark.phone": [
+  "Yeah, I'm on my way.",
+  "No, I told you, Thursday.",
+  "Can you hear me now?",
+  "Hold on, you're breaking up.",
+  "I'll call you back.",
+  "[partner] Did you get the milk?",
+  "[job] Tell them I'm running late.",
+  "[kids] Is {kid} asleep yet?",
+  "Uh huh. Uh huh. Okay.",
+  "No way. She said that?",
+  "[late] I know it's late. Sorry.",
+  "Just text me the address."
+ ],
+ "bark.chat.weather.a": [
+  "[cold] Freezing out tonight.",
+  "[hot] Is it ever going to cool down?",
+  "[wet] This rain, huh?",
+  "Nice out for once.",
+  "[snowy] They say more snow tomorrow."
+ ],
+ "bark.chat.weather.b": [
+  "Tell me about it.",
+  "Don't get me started.",
+  "Yeah, crazy.",
+  "#g.shrug# It's the city.",
+  "I heard it gets worse."
+ ],
+ "bark.chat.work.a": [
+  "[job] Long day?",
+  "[job] They've got me on doubles again.",
+  "[jobless] Still looking for work.",
+  "[student] Finals next week.",
+  "[weekend] Finally the weekend."
+ ],
+ "bark.chat.work.b": [
+  "Same here.",
+  "Hang in there.",
+  "Yeah, it's rough.",
+  "Something'll turn up.",
+  "You and me both."
+ ],
+ "bark.chat.light.a": [
+  "This light takes forever.",
+  "Come on, change already.",
+  "Do these lights even work?",
+  "Every single red light."
+ ],
+ "bark.chat.light.b": [
+  "Always the same at this corner.",
+  "#g.shrug# Just cross.",
+  "Ha. Right?",
+  "Somebody should fix that."
+ ],
+ "bark.chat.news.a": [
+  "Did you hear about the blackout?",
+  "There was a crash up the street.",
+  "Saw the news this morning?",
+  "Cops everywhere today."
+ ],
+ "bark.chat.news.b": [
+  "Yeah, crazy.",
+  "No. What happened?",
+  "Nothing surprises me anymore.",
+  "This city, I swear."
+ ]
+}
