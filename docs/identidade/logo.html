@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GRID DOWN: logo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #111214; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 'IBM Plex Mono', monospace; }
+  main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font: 800 28px 'Archivo', sans-serif; font-stretch: 125%; margin: 0 0 4px; }
+  p.lead { color: var(--dim); margin: 0 0 24px; max-width: 82ch; }
+  .grid { display: grid; grid-template-columns: 170px repeat(3, 1fr); gap: 10px; }
+  .head { font-weight: 600; color: var(--dim); padding: 4px 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  .row { font-weight: 600; padding: 8px 4px; border-top: 1px solid var(--line); }
+  .row small { display: block; font-weight: 400; color: var(--dim); margin-top: 4px; line-height: 1.35; }
+  .cell { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .cell svg { width: 100%; height: auto; display: block; border-radius: 6px; }
+  .tag { font-size: 11px; color: var(--dim); }
+  h2 { font: 700 18px 'Archivo', sans-serif; font-stretch: 110%; margin: 40px 0 10px; }
+  .subs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .chip { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  @media (max-width: 760px) { .grid, .subs { grid-template-columns: 1fr; } .head { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>GRID DOWN: TERMINAL STATE</h1>
+  <p class="lead">O logo escolhido (2026-10-06): GRID em azul-marinho, LINK em teal, a haste do I ao L com o quadradinho em ciano, e POWER · TELECOM na cor do quadradinho. As linhas ficaram mais juntas. Em cima, o corporativo; depois, a caixa de rua à noite, com o spray em laranja e, para comparar, em vermelho.</p>
+  <div class="subs" id="final"></div>
+</main>
+<script>
+const PALS = [
+  { name: 'final', main: '#1d3a6e', link: '#0d6f6e', acc: '#3aa6d8', spray: '#ff6a13', day: '#efeee9', night: '#c9ccd0' },
+  { name: 'final red', main: '#1d3a6e', link: '#0d6f6e', acc: '#3aa6d8', spray: '#e3262b', day: '#efeee9', night: '#c9ccd0' },
+  { name: 'Azul-marinho + laranja', main: '#1d3a6e', acc: '#3aa6d8', spray: '#ff6a13', day: '#efeee9', night: '#c9ccd0' },
+  { name: 'Teal + vermelho', main: '#0d6f6e', acc: '#55c2bd', spray: '#e3262b', day: '#eef0ed', night: '#cbd3d1' },
+  { name: 'Grafite + vermelho (o do seu esboço)', main: '#202226', acc: '#8a8f98', spray: '#e3262b', day: '#efeee9', night: '#c9c9c4' },
+];
+const DIRS = [
+  { name: 'Haste contínua', note: 'O I desce e vira o L: um traço só, com duas juntas finas como um fusível.' },
+  { name: 'Setas', note: 'Uma seta desce do I ao L e outra sobe: energia e dados nos dois sentidos.' },
+  { name: 'Fios paralelos', note: 'Três fios finos de I a L com nós nas pontas, como uma linha de transmissão.' },
+  { name: 'Swoosh 2008', note: 'Um arco com brilho de plástico (Web 2.0) saindo do I e chegando no L.' },
+];
+const NS = 'http://www.w3.org/2000/svg';
+const F = (w, s, st = 100) => `font-family:Archivo,sans-serif;font-weight:${w};font-size:${s}px;font-stretch:${st}%`;
+const W = 380, TOP = 76, BOT = 146, SIZE = 60;
+let uid = 0;
+
+function spray(path, col, w, f, drips = []) {
+  let s = `<path d="${path}" fill="none" stroke="${col}" stroke-width="${w * 2.6}" stroke-linecap="round" stroke-linejoin="round" opacity=".16" filter="url(#blur${f})"/>`;
+  s += `<path d="${path}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" filter="url(#rough${f})"/>`;
+  for (const [x, y, l] of drips) s += `<path d="M${x} ${y} L${x + 0.6} ${y + l}" stroke="${col}" stroke-width="${w * 0.32}" stroke-linecap="round" filter="url(#rough${f})"/><circle cx="${x + 0.6}" cy="${y + l + 1}" r="${w * 0.3}" fill="${col}"/>`;
+  return s;
+}
+/** O, W, N sprayed by hand from x, cap top y, h tall (the D is GRID's). */
+function own(x, y, h, col, f) {
+  const w = h * 0.74, g = h * 0.16, L = [
+    (x0) => `M${x0 + w / 2} ${y} C${x0 - 3} ${y} ${x0 - 3} ${y + h} ${x0 + w / 2} ${y + h} C${x0 + w + 3} ${y + h} ${x0 + w + 3} ${y} ${x0 + w / 2 - 3} ${y + 2}`,
+    (x0) => `M${x0 - 2} ${y - 1} L${x0 + w * 0.2} ${y + h} L${x0 + w * 0.5} ${y + h * 0.3} L${x0 + w * 0.82} ${y + h} L${x0 + w + 3} ${y - 3}`,
+    (x0) => `M${x0} ${y + h} L${x0 + 1} ${y} L${x0 + w} ${y + h} L${x0 + w + 1} ${y - 3}`,
+  ];
+  let s = '';
+  L.forEach((fn, i) => {
+    const x0 = x + i * (w + g) + (i === 2 ? g : 0), rot = [3, -2, 4][i];
+    s += `<g transform="rotate(${rot} ${x0 + w / 2} ${y + h / 2})">${spray(fn(x0), col, h * 0.15, f, i === 1 ? [[x0 + w * 0.2, y + h, h * 0.3]] : i === 2 ? [[x0 + w + 1, y + h * 0.1, h * 0.45]] : [])}</g>`;
+  });
+  return s;
+}
+
+function svg(d, p, night, sub) {
+  const f = ++uid, P = PALS[p], H = sub ? 196 : 170, bg = night ? P.night : P.day;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" data-d="${d}" data-p="${p}" data-night="${night ? 1 : 0}" data-f="${f}" data-sub="${sub || ''}">
+  <defs>
+    <filter id="rough${f}" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="${f}"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+    <filter id="blur${f}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="grime${f}"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="${f + 7}"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.9 0.62"/></filter>
+    <radialGradient id="lamp${f}" cx="0.35" cy="-0.1" r="1.2"><stop offset="0" stop-color="#ffb347" stop-opacity="0"/><stop offset="1" stop-color="#140c04" stop-opacity="0.55"/></radialGradient>
+    <linearGradient id="gloss${f}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.acc}"/><stop offset=".48" stop-color="${P.acc}"/><stop offset=".52" stop-color="${P.main}"/><stop offset="1" stop-color="${P.main}"/></linearGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="${bg}"/>
+  <text class="top" x="34" y="${TOP}" style="${F(850, SIZE, 112)}" fill="${P.main}">GRID</text>
+  <text class="bot" x="0" y="${BOT}" style="${F(850, SIZE, 112)}" fill="${P.link || P.main}">LINK</text>
+  <g class="extra"></g></svg>`;
+}
+
+/** Once the font is in: L under I, the link between them, and at night the vandal's marks. */
+function finish(el) {
+  const d = +el.dataset.d, P = PALS[+el.dataset.p], night = el.dataset.night === '1', f = el.dataset.f, sub = el.dataset.sub;
+  const H = +el.getAttribute('viewBox').split(' ')[3], top = el.querySelector('.top'), bot = el.querySelector('.bot'), ex = el.querySelector('.extra');
+  const I = top.getExtentOfChar(2), Dx = top.getExtentOfChar(3), L0 = bot.getExtentOfChar(0);
+  bot.setAttribute('x', I.x - L0.x);
+  const L = bot.getExtentOfChar(0), K = bot.getExtentOfChar(3);
+  // the stem: about the I's middle third
+  const sx = I.x + I.width * 0.5, sw = I.width * 0.5, capT = BOT - SIZE * 0.72, y0 = TOP + 2, y1 = capT - 2;
+  let s = '';
+  if (d === 0) {
+    s += `<rect x="${sx - sw / 2}" y="${TOP - 2}" width="${sw}" height="${capT - TOP + 4}" fill="${P.link || P.main}"/>`;
+    for (const t of [0.35, 0.65]) s += `<rect x="${sx - sw / 2 - 1}" y="${TOP + (capT - TOP) * t - 1}" width="${sw + 2}" height="2.5" fill="${night ? P.night : P.day}"/>`;
+    s += `<rect x="${sx - sw / 2}" y="${TOP + (capT - TOP) * 0.35 + 1.5}" width="${sw}" height="${(capT - TOP) * 0.3 - 2.5}" fill="${P.acc}"/>`;
+  } else if (d === 1) {
+    const a = sx - 9, b = sx + 9;
+    s += `<path d="M${a} ${y0 + 2} L${a} ${y1 - 7}" stroke="${P.acc}" stroke-width="3"/><path d="M${a - 5} ${y1 - 8} L${a} ${y1} L${a + 5} ${y1 - 8} Z" fill="${P.acc}"/>`;
+    s += `<path d="M${b} ${y1 - 2} L${b} ${y0 + 7}" stroke="${P.main}" stroke-width="3"/><path d="M${b - 5} ${y0 + 8} L${b} ${y0} L${b + 5} ${y0 + 8} Z" fill="${P.main}"/>`;
+  } else if (d === 2) {
+    for (const o of [-7, 0, 7]) s += `<path d="M${sx + o} ${y0} L${sx + o} ${y1}" stroke="${o ? P.main : P.acc}" stroke-width="1.6"/>`;
+    s += `<rect x="${sx - 10}" y="${y0 - 1}" width="20" height="3" rx="1" fill="${P.main}"/><rect x="${sx - 10}" y="${y1 - 2}" width="20" height="3" rx="1" fill="${P.main}"/>`;
+    for (const o of [-7, 0, 7]) s += `<circle cx="${sx + o}" cy="${(y0 + y1) / 2}" r="1.8" fill="${P.acc}"/>`;
+  } else {
+    const r = (capT - TOP) / 2 + 4, cx = sx - 2;
+    s += `<path d="M${sx} ${TOP - 4} C${sx - 46} ${TOP + 4}, ${sx - 40} ${capT - 6}, ${L.x + L.width * 0.5} ${capT + 2}" fill="none" stroke="url(#gloss${f})" stroke-width="7" stroke-linecap="round"/>`;
+    s += `<path d="M${sx - 4} ${TOP} C${sx - 40} ${TOP + 8}, ${sx - 36} ${capT - 10}, ${L.x + L.width * 0.4} ${capT - 2}" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"/>`;
+  }
+  // the corporate tagline under LINK's foot, to the left
+  s += `<text x="34" y="${BOT + 16}" style="${F(500, 8.5, 125)}" fill="${P.acc}" letter-spacing="1.6">POWER · TELECOM</text>`;
+  if (night) {
+    const c = P.spray;
+    // LINK scribbled out: strokes back and forth across it, as in the sketch
+    const lx = L.x - 8, rx = K.x + K.width + 10, mid = BOT - SIZE * 0.36;
+    s += spray(`M${lx + 24} ${mid - 16} Q${(lx + rx) / 2} ${mid - 24} ${rx} ${mid - 12} Q${(lx + rx) / 2} ${mid - 4} ${lx - 6} ${mid + 6} Q${(lx + rx) / 2} ${mid + 2} ${rx - 6} ${mid + 4} Q${(lx + rx) / 2 - 20} ${mid + 18} ${lx + 6} ${mid + 20}`, c, 4.5, f, [[lx - 5, mid + 8, 12], [lx + 7, mid + 22, 8]]);
+    // OWN after GRID's D
+    s += own(Dx.x + Dx.width + 6, TOP - SIZE * 0.72, SIZE * 0.72, c, f);
+    if (sub) s += `<text x="${W / 2}" y="${H - 14}" text-anchor="middle" style="${F(500, 15, 125)}" fill="${P.main}" letter-spacing="6">${sub}</text>`;
+    s += `<rect width="${W}" height="${H}" fill="#e09a3a" opacity=".22" style="mix-blend-mode:multiply"/><rect width="${W}" height="${H}" filter="url(#grime${f})" opacity=".3"/><rect width="${W}" height="${H}" fill="url(#lamp${f})"/>`;
+  }
+  ex.innerHTML = s;
+}
+
+document.getElementById('final').innerHTML = [svg(0, 0, false), svg(0, 0, true), svg(0, 0, true, 'TERMINAL STATE'), svg(0, 1, true, 'TERMINAL STATE')].map((x) => `<div class="cell">${x}</div>`).join('');
+document.fonts.ready.then(() => document.querySelectorAll('svg[data-d]').forEach(finish));
+</script>
+</body>
+</html>
