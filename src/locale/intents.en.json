@@ -199,7 +199,13 @@
     "i'd like": 3,
     "sell me": 4,
     "do you have": 2,
-    "available": 2
+    "available": 2,
+    "pay": 3,
+    "i want to pay": 5,
+    "check out": 3,
+    "ring me up": 4,
+    "ring this up": 4,
+    "pay for": 4
    },
    "question": false,
    "slots": [

@@ -37,6 +37,8 @@ want('could you please tell me where the pharmacy is, sir?', 'ask_where', (r) =>
 want('WHERE IS THE PHARMACY RIGHT NOW!!', 'ask_where', (r) => r.pressure >= 2, 'pressing');
 want('back off or else', 'threaten', (r) => r.respect <= -2, 'hostile');
 want('no way', 'no');
+want('i want to pay', 'buy_request');
+want('can you ring this up please', 'buy_request');
 console.log(`${ok} of ${all} examples read right`);
 if (fails) process.exit(1);
 console.log('OK');
