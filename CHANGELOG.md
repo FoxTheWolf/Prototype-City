@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.19.1 — apt: instalar os programas (2026-10-06)
+- **O notebook vem quase pelado.** As ferramentas comuns agora se instalam com `apt`, estando numa rede: `apt-get update` e depois `apt install mmap tdump tnet mbus` (ou `apt search` para ver o catálogo). Precisa de internet — baixa de um espelho pela linha, no tempo da conexão.
+- O `bruter` continua em `~/bin` por ora; as ferramentas mais afiadas não se compram em loja — essas você acha por aí.
+- (Adiantado da etapa 19 porque o laço da fatia vertical precisa dele.)
+
 ## 0.15.8 — Switchboard, o fórum (2026-10-06)
 - **O fórum dos hackers da cidade**, em `www.switchboard.net`: não está no buscador nem no portal — você chega por alguém te passar o endereço. Três quadros: **Guides** (como as coisas se fazem, com os tutoriais fixos), **Contracts** (trabalhos abertos, sem nomes) e **Lounge** (conversa fiada).
 - Por enquanto é só leitura: cada tópico abre com os posts sob apelidos. Criar conta pelo número (confirmada por SMS) e responder vêm a seguir.

@@ -50,11 +50,34 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
   ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'iwlist', 40, 520], ['/sbin', 'dhclient', 120, 900], ['/bin', 'ping', 44, 420], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
   ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300], ['/usr/bin', 'lodestar', 9800, 38000],
+  ['/usr/bin', 'apt', 420, 2600], ['/usr/bin', 'apt-get', 400, 2600],
 ];
-/** The hacker tools in ~/bin: fictional stand-ins (scanner, cracker, sniffer, console). Name, size KB, memory KB. */
+/** The hacker tools in ~/bin, there from the start. Name, size KB, memory KB. For now only the login
+ *  cracker: the well-known tools below are fetched with apt, and bruter will move to the forum once it
+ *  can deliver packages (15.8c). All fictional stand-ins, all run on the game's own network. */
 const HACK_TOOLS: [string, number, number][] = [
-  ['mmap', 220, 1400], ['bruter', 180, 1600], ['tdump', 260, 2200], ['tnet', 64, 520], ['mbus', 96, 700],
+  ['bruter', 180, 1600], // TODO [HACKING]: deliver from the forum (Switchboard), not preinstalled
 ];
+/** [HACKING] The apt catalog: the well-known, public tools the player fetches instead of having them
+ *  from the start (the scanner, the sniffer, the remote console, the controller-bus client). Each:
+ *  install dir, size KB, memory KB, and the one-line blurb apt-cache shows. The clandestine tools
+ *  (bruter, the WEP cracker) are not here -- those come from the forum. */
+const APT_CATALOG: Record<string, { dir: string; kb: number; mem: number; desc: string }> = {
+  mmap: { dir: '/usr/bin', kb: 220, mem: 1400, desc: 'network exploration tool and port scanner' },
+  tdump: { dir: '/usr/bin', kb: 260, mem: 2200, desc: 'dump traffic on a network' },
+  tnet: { dir: '/usr/bin', kb: 64, mem: 520, desc: 'the telnet remote-login client' },
+  mbus: { dir: '/usr/bin', kb: 96, mem: 700, desc: 'command-line client for the controller bus (port 502)' },
+};
+/** [HACKING] The apt package mirror, as a repository line would read (fictional, the notebook's OS vendor). */
+const APT_REPO = 'http://packages.osprey.org osprey/main';
+/** [HACKING] Put a catalog package on the disk as a runnable binary (what `apt install` does once it
+ *  has "downloaded" it). Returns false for a package not in the catalog. Only adds; never clobbers. */
+export function aptInstall(pc: Computer, name: string, t: number): boolean {
+  const p = APT_CATALOG[name];
+  if (!p) return false;
+  pc.put(`${p.dir}/${name}`, p.kb * 1024, 'root', t, name, p.mem);
+  return true;
+}
 /** The directional antenna's gain, dB (F.9b): reaches a maintenance AP (GRIDLINK) from further, e.g. out of the crossing camera. */
 const ANT_GAIN = 9;
 /** What the shell does itself, with no program on the disk. */
@@ -136,6 +159,8 @@ export class Shell {
   readonly net = new Wifi();
   /** The ESSID set with iwconfig, waiting for dhclient to lease an address. */
   private essid = '';
+  /** [HACKING] Whether `apt-get update` has fetched the package lists this session (needed before install). */
+  private aptUpdated = false;
   /** An open remote console (tnet): the host, its substation, and where we are in logging in. */
   private conn: { host: Host; stage: 'login' | 'pass' | 'shell'; tryUser: string } | null = null;
   /** The next typed line is not echoed (a password prompt): draw.ts shows it masked. */
@@ -824,6 +849,58 @@ export class Shell {
           this.lines.push({ text: `bound to ${N.ip} -- renewal in 43200 seconds.`, ink: 0 });
         }, 1.2);
         this.busyUntil = this.tq;
+        return 0;
+      }
+      // [HACKING] apt / apt-get: fetch the well-known tools instead of having them from the start. Needs
+      // the net up (it reaches a mirror on the city web), and `update` before `install`. The clandestine
+      // tools (bruter, the WEP cracker) are not in the catalog -- those come from the forum.
+      case 'apt': case 'apt-get': {
+        const sub = (args[0] ?? '').toLowerCase(), pkgs = args.slice(1), online = this.net.state === 'up';
+        const fmt = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} kB`);
+        const have = (n: string) => pc.get(`/usr/bin/${n}`)?.exec === n || pc.get(`/home/${u}/bin/${n}`)?.exec === n;
+        if (sub === 'update') {
+          if (!online) { out.push('Err:1 ' + APT_REPO, '  Could not resolve host packages.osprey.org (no network)'); return 0; }
+          this.say(now, `Hit:1 ${APT_REPO} Release`, 0, 0.3);
+          this.say(now, 'Reading package lists...', 0, 0.6);
+          this.then(now, () => { this.aptUpdated = true; this.lines.push({ text: 'Done', ink: 0 }); });
+          this.busyUntil = this.tq; return 0;
+        }
+        if (sub === 'install') {
+          if (!online) { out.push('E: Unable to connect to packages.osprey.org -- no network. Join one and run dhclient first.'); return 0; }
+          if (!this.aptUpdated) { out.push('E: Unable to locate package lists. Run `apt-get update` first.'); return 0; }
+          if (!pkgs.length) { out.push('E: You must give at least one package to install.'); return 0; }
+          const get: string[] = [];
+          for (const n of pkgs) {
+            if (have(n)) out.push(`${n} is already the newest version.`);
+            else if (!APT_CATALOG[n]) out.push(`E: Unable to locate package ${n}`);
+            else get.push(n);
+          }
+          if (!get.length) return 0;
+          const totalKB = get.reduce((s, n) => s + APT_CATALOG[n].kb, 0), dl = this.net.kbps() ? (totalKB * 8) / this.net.kbps() : 2;
+          this.say(now, 'Reading package lists... Done', 0, 0.3);
+          this.say(now, 'Building dependency tree... Done', 0, 0.3);
+          this.say(now, 'The following NEW packages will be installed:', 0, 0.2);
+          this.say(now, `  ${get.join(' ')}`, 0, 0.1);
+          this.say(now, `Need to get ${fmt(totalKB)} of archives.`, 0, 0.1);
+          get.forEach((n, i) => this.say(now, `Get:${i + 1} ${APT_REPO} ${n} [${fmt(APT_CATALOG[n].kb)}]`, 0, 0.2));
+          this.say(now, `Fetched ${fmt(totalKB)} in ${Math.max(1, Math.round(dl))}s`, 0, Math.min(8, dl));
+          for (const n of get) { this.say(now, `Unpacking ${n} ...`, 0, 0.4); this.then(now, () => { aptInstall(pc, n, w.time); this.lines.push({ text: `Setting up ${n} ...`, ink: 0 }); }, 0.3); }
+          this.busyUntil = this.tq; return 0;
+        }
+        if (sub === 'remove' || sub === 'purge') {
+          for (const n of pkgs) {
+            if (!APT_CATALOG[n]) { out.push(`E: Unable to locate package ${n}`); continue; }
+            if (!pc.get(`/usr/bin/${n}`)) { out.push(`Package '${n}' is not installed, so not removed`); continue; }
+            pc.parent(`/usr/bin/${n}`)[0]?.kids?.delete(n); out.push(`Removing ${n} ...`);
+          }
+          return 0;
+        }
+        if (sub === 'search' || sub === 'list') {
+          const term = (pkgs[0] ?? '').toLowerCase();
+          for (const [n, p] of Object.entries(APT_CATALOG)) if (!term || n.includes(term) || p.desc.includes(term)) out.push(`${n}/osprey${have(n) ? ',installed' : ''} - ${p.desc}`);
+          return 0;
+        }
+        out.push('usage: apt [update | install <pkg>... | remove <pkg>... | search <term> | list]');
         return 0;
       }
       case 'ping': {
