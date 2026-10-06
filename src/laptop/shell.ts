@@ -53,12 +53,15 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300], ['/usr/bin', 'lodestar', 9800, 38000],
   ['/usr/bin', 'apt', 420, 2600], ['/usr/bin', 'apt-get', 400, 2600],
 ];
-/** The hacker tools in ~/bin, there from the start. Name, size KB, memory KB. For now only the login
- *  cracker: the well-known tools below are fetched with apt, and bruter will move to the forum once it
- *  can deliver packages (15.8c). All fictional stand-ins, all run on the game's own network. */
+/** The hacker tools in ~/bin, there from the start. Name, size KB, memory KB. tdump+wcrack are the
+ *  minimum to crack WEP and must be preinstalled: the first tutorial job cracks a WEP GRIDLINK before
+ *  any network exists to `apt install` from -- without them it soft-locks. bruter will move to the
+ *  forum once it can deliver packages (15.8c). The well-known apt tools (mmap/tnet/mbus) are fetched
+ *  once online. All fictional stand-ins, all run on the game's own network. */
 const HACK_TOOLS: [string, number, number][] = [
+  ['tdump', 260, 2200], // [HACKING]: preinstalled -- needed to capture WEP IVs before any network exists
+  ['wcrack', 240, 2600], // [HACKING]: preinstalled with tdump -- the WEP-crack minimum, stays local
   ['bruter', 180, 1600], // TODO [HACKING]: deliver from the forum (Switchboard), not preinstalled
-  ['wcrack', 240, 2600], // TODO [HACKING]: deliver from the forum (Switchboard), not preinstalled
 ];
 
 /** [HACKING] WEP IV capture → crack (sim of airodump/aircrack, fictional names). The cost is the
@@ -84,7 +87,6 @@ export function parseCapture(text: string): { bssid: string; ivs: number } | nul
  *  (bruter, the WEP cracker) are not here -- those come from the forum. */
 const APT_CATALOG: Record<string, { dir: string; kb: number; mem: number; desc: string }> = {
   mmap: { dir: '/usr/bin', kb: 220, mem: 1400, desc: 'network exploration tool and port scanner' },
-  tdump: { dir: '/usr/bin', kb: 260, mem: 2200, desc: 'dump traffic on a network' },
   tnet: { dir: '/usr/bin', kb: 64, mem: 520, desc: 'the telnet remote-login client' },
   mbus: { dir: '/usr/bin', kb: 96, mem: 700, desc: 'command-line client for the controller bus (port 502)' },
   // (debug) the clandestine tools in apt too, until the forum delivers them (15.8c). The forum is the

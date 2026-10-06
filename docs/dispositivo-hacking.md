@@ -38,6 +38,7 @@ Ideias para pesar depois; nem todas entram:
 - **O aparelho como modem do notebook** (tethering, já citado na etapa 19) e talvez um cartão SD compartilhado entre os dois.
 - **Detector de sinais** (uma função do aparelho que o usuário citou): varrer o ambiente e revelar que tipos de sinal há ali (um portão, um crachá, uma câmera).
 - **Firmware "destravado"** achado no fórum que abre frequências/funções antes bloqueadas — recompensa de progressão, ecoa o custom firmware real.
+- **Alerta tipo "Amber Alert" no apagão geral (feedback 2026-10-06):** quando o jogador causa o apagão da **cidade toda** (coletar/ativar os 9 GridLinks), o celular recebe um alerta de emergência de alcance amplo (estilo Amber/EAS de 2008) — um retorno orgânico, à altura do evento, de que a cidade inteira notou. Liga ao push do celular (etapa 15) e às torres que sobrevivem (geradores) servirem de vetor do alerta. Ideia do usuário, "jogando por aí".
 
 ## Ligação com o que já existe (para não reinventar)
 

@@ -22,6 +22,8 @@
 - **O relógio acende a luz** quando sobe sozinho com o sinal de hora ou o alarme (`watch.ts`).
 - **Menu com as câmeras:** o modo CCTV (já existe como "WATCH CCTV") vira o **fundo padrão** do menu, no lugar da vista do jogador girando; clicar em "WATCH CCTV" só tira o menu da frente. Cuidado: a câmera é 4:3 e o menu é adaptativo (mínimo de linhas): moldura ou barras.
 - **Notícias dominadas por batidas e apagões (retorno do usuário em 2026-10-04):** um limite de manchetes por assunto numa janela de tempo (`locale/news.ts`/`sim/events.ts`); junto, a notícia do apagão só depois que a luz volta.
+- **A barra de status do notebook some com o navegador aberto (feedback 2026-10-06):** o "negocinho no canto" com os status do notebook (specs/rede/hora) desaparece quando o Lodestar está aberto. Casa com a limitação conhecida de que, com o wm aberto, o terminal é desenhado por `wm.cells()`; a barra de status deve continuar por cima do navegador. **Provavelmente `src/laptop/draw.ts`/`wm.ts` (camada de UI, NÃO o shell** — não abrir `shell.ts`).
+- **O celular usa o plano de dados mesmo no Wi-Fi (feedback 2026-10-06):** ao navegar no Lodestar conectado a um Wi-Fi, o celular parece consumir o plano de dados móvel em vez do Wi-Fi. Conferir o roteamento de rede do celular (`src/phone/`, a escolha Wi-Fi x dados; não é o `cellLog`/telco de hacking).
 
 ### Da caixa de feedback de 2026-10-06 (playtest seed656322502)
 - **Webmail: erro mudo com senha < 6 caracteres** no cadastro — mostrar a mensagem de "senha curta" (`src/web/webmail.ts`/`sim/mail.ts`).
@@ -46,6 +48,7 @@
 - **Placas retrorrefletivas:** as placas de rua e de direção viradas contra o sol ficam escuras; dar um brilho leve de retrorrefletor (o Claude decide como, retorno do usuário em 2026-10-04).
 - **Chão na chuva com ladrilhos clareando e escurecendo:** código antigo de chão molhado; achar e tirar.
 - **Blackout de noite claro demais:** a luz que sobra com `cityLit` = 0 (céu, `cityAmb`, névoa, lua); depois `ADAPT_DARK`.
+- **Alguns lugares acendem a luz de rua durante o blackout (nota F8 do playtest, 2026-10-06, `seed842808843_note1`):** certos postes/lugares seguem iluminados mesmo com a subestação deles caída. Conferir se esses postes estão ligados à subestação certa (`power.lamp[k]` em `sim/power.ts`) ou se alguma fonte de luz (letreiro/janela/holofote com backup) não respeita o corte; comparar com `generator`/`backup` (quem tem gerador fica aceso de propósito — distinguir dos que não deviam).
 - **Nuvens e raios, se ainda incomodarem:** os degraus dos 12 passos (um deslocamento por célula pequeno e estável, ou um desfoque leve); um desfoque 3×3 nos raios.
 - **Se o usuário quiser:** cones de luz nos holofotes das fachadas e nos faróis; a névoa laranja da cidade com luz de baixo para cima nas fachadas perto do centro.
 - **Ainda não feito na luz:** a sala vista de fora sem o rebote; os painéis, os faróis e os letreiros não fazem sombra; os prédios não fazem sombra da luz dos postes; os objetos atrás do jogador não fazem sombra dos postes à noite. A grade de luz em voxels (a L.5 adiada, e as 16 direções do céu calculadas uma vez por lugar) só se o escuro das sombras incomodar.

@@ -2,6 +2,16 @@
 
 > Pedido do usuário em 2026-10-06 (item 30): ao processar `FEEDBACK.md`, em vez de só apagar, mover os itens crus para cá, com a data. Assim a caixa fica só com o que ainda não foi processado, e o texto original não se perde. O mais novo em cima.
 
+## 2026-10-06 (tarde — processado por Opus 4.8, durante a entrevista do Jackdaw)
+
+Destino de cada item entre colchetes no fim.
+
+- Feedback. Uh, o negocinho que diz os status do notebook, ele não aparece mais, né? Quando você coloca o navegador. No canto ali. [listas-fixas: correções (draw.ts/wm.ts, não o shell)]
+- Uh, E o, o tdump, ele não vem instalado por padrão, e isso causa um soft lock, quando você não acha nenhuma re, uma rede. Uma rede aberta. Então eu recomendo deixar o tdump e o wcrack como instalados por padrão. Mas aí, é, é tipo o mínimo necessário para. Pra crackear uma rede wep. O resto não precisa. [FEITO — tdump pré-instalado em HACK_TOOLS; lição em licoes.md]
+- O celular parece que ele está utilizando o plano de dados também, mesmo quando está conectado no Wi-Fi, para navegar pelo Lodestar. [listas-fixas: correções (roteamento Wi-Fi x dados do celular)]
+- que tal um Amber Alert ou algo assim quando você tem um apagão na cidade toda e seu celular recebe. Uma ideia que eu tô jogando por aí. [docs/dispositivo-hacking.md, brainstorm — apagão geral]
+- A gente também tem que organizar a lista dos, dos jogos dos pedestres pensando assim, quais são os eventos que podem acontecer ao redor deles, quais eventos eles merecem reagir... se um carro bater, eles podem, eles deveriam ir olhar o carro, tirar foto, postar... Se tiver um blackout, eles podem ficar com medo, sair correndo... uma certa distância do player tem que ter essa IA, estilo GTA... ter animações e expressões e reagir aos eventos ao redor do mundo. Isso é uma coisa enorme que precisa ser feita. [CLAUDE.md etapa 16 — pedestres sem trilhos]
+
 ## 2026-10-06 (processado por Opus 4.8)
 
 Destino de cada item entre colchetes no fim.
