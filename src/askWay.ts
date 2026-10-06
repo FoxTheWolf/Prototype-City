@@ -7,7 +7,7 @@ import { placeAt, placeName, type Place } from './phone/places';
 import { landmarkName, roadName } from './locale/names';
 import { expand, rngOf, tidy } from './locale/gen';
 import { TEXT } from './locale/text';
-import { selFor, voice } from './locale/voice';
+import { selFor } from './locale/voice';
 import en from './locale/en.json';
 
 const T = en.ask;
@@ -81,7 +81,8 @@ export class AskWay {
   }
   private say(id: number, pl: Place | null, key: string, ctx: Record<string, string>, now: number) {
     const w = this.world, P = w.pop, W = w.weather, sel = selFor(P, id, w.time, W.temp, W.precip, W.snow), r = rngOf(id, pl ?? 0, Math.floor(w.time / 600));
-    this.said = voice(tidy(expand(`#${key}#`, TEXT, r, { ...ctx, place: pl === null ? '' : placeName(w.city, pl) }, sel)), P, id, r);
+    // spoken: no typing habits (voice() is for what they write)
+    this.said = tidy(expand(`#${key}#`, TEXT, r, { ...ctx, place: pl === null ? '' : placeName(w.city, pl) }, sel));
     this.saidAt = now;
   }
 
@@ -99,41 +100,46 @@ export class AskWay {
 
   /** Their answer about place pl: said, and they stop to say it (pointing the first way). */
   private answer(pl: Place | null, now: number) {
-    const w = this.world, c = w.city, id = this.who, q = w.peds.find((e) => e.id === id), me = w.player;
+    const w = this.world, id = this.who, q = w.peds.find((e) => e.id === id), me = w.player;
     if (!q) return;
-    const h = (k: number) => hash3(id, pl ?? -999, k + Math.floor(w.time / 3600)), hour = (w.time / 3600) % 24;
-    const say = (key: string, ctx: Record<string, string> = {}) => this.say(id, pl, key, ctx, now);
-    const hold = (s: number, px = 0, py = 0) => { q.hold = Math.round(s * 60); q.pdx = px; q.pdy = py; };
+    const hour = (w.time / 3600) % 24;
     // late at night some walk on
-    if ((hour >= 23 || hour < 5) && h(1) < 0.35) { say('dir.busy'); q.hold = 0; return; }
-    if (pl === null) { say('dir.dunno'); hold(3); return; }
-    const [tx, ty] = placeAt(c, pl), d = Math.hypot(tx - me.x, ty - me.y);
-    if (d > KNOWN || h(2) < 0.08 + 0.5 * (d / KNOWN) ** 2) { say('dir.dunno'); hold(3); return; }
-    // the route on the grid: so many streets north or south, so many avenues east or west
-    const i0 = nearestRoad(c.xb, c.xCell, me.x), i1 = nearestRoad(c.xb, c.xCell, tx), j0 = nearestRoad(c.yb, c.yCell, me.y), j1 = nearestRoad(c.yb, c.yCell, ty);
-    const wrong = h(3) < 0.1, ew = (i1 - i0) * (wrong ? -1 : 1), ns = j1 - j0;
-    const blocks = (n: number) => `${NUM[Math.abs(n)] ?? Math.abs(n)} block${Math.abs(n) === 1 ? '' : 's'}`;
-    const NS = ns < 0 ? T.north : T.south, EW = ew > 0 ? T.east : T.west;
-    if (!ns && !ew) {
-      const dx = tx - me.x, dy = ty - me.y, way = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? T.east : T.west) : dy < 0 ? T.north : T.south;
-      say('dir.near', { feet: String(Math.max(20, Math.round((d * 3.28) / 10) * 10)), way });
-      hold(4, Math.sign(dx), Math.sign(dy));
-      return;
-    }
-    // first along the longer way, to the street (or avenue) the place is on
-    const road = Math.abs(ns) >= Math.abs(ew) ? roadName(c, true, i1) : roadName(c, false, j1);
-    if (!ns || !ew) {
-      const leg1 = ns ? `${NS} ${blocks(ns)}` : `${EW} ${blocks(ew)}`;
-      say('dir.one', { leg1, road });
-      hold(5, ns ? 0 : Math.sign(ew), ns ? Math.sign(ns) : 0);
-      return;
-    }
-    const nsFirst = Math.abs(ns) >= Math.abs(ew);
-    const leg1 = nsFirst ? `${NS} ${blocks(ns)} to ${roadName(c, false, j1)}` : `${EW} ${blocks(ew)} to ${roadName(c, true, i1)}`;
-    const leg2 = nsFirst ? `${EW} ${blocks(ew)}` : `${NS} ${blocks(ns)}`;
-    say('dir.answer', { leg1, leg2, road });
-    hold(6, nsFirst ? 0 : Math.sign(ew), nsFirst ? Math.sign(ns) : 0);
+    if ((hour >= 23 || hour < 5) && hash3(id, pl ?? -999, 1 + Math.floor(w.time / 3600)) < 0.35) { this.say(id, pl, 'dir.busy', {}, now); q.hold = 0; return; }
+    const R = routeTo(w, id, pl, me.x, me.y);
+    this.say(id, pl, R.key, R.ctx, now);
+    q.hold = Math.round(R.hold * 60); q.pdx = R.px; q.pdy = R.py;
   }
+}
+
+/**
+ * The way from (x, y) to place pl as citizen `id` would say it: the text key (locale/text/directions.en.json), its slots,
+ * how long they hold still to say it and which way they point. Some do not know it (the farther, the fewer), some are
+ * wrong (left for right). Shared by asking the way and by the dialogue (14.2), which may ask for a point (a street) instead.
+ */
+export function routeTo(w: World, id: number, pl: Place | null, x: number, y: number, to?: [number, number]): { key: string; ctx: Record<string, string>; hold: number; px: number; py: number } {
+  const c = w.city, h = (k: number) => hash3(id, pl ?? (to ? Math.round(to[0] + to[1] * 7) : -999), k + Math.floor(w.time / 3600));
+  if (pl === null && !to) return { key: 'dir.dunno', ctx: {}, hold: 3, px: 0, py: 0 };
+  const [tx, ty] = to ?? placeAt(c, pl!), d = Math.hypot(tx - x, ty - y);
+  if (d > KNOWN || h(2) < 0.08 + 0.5 * (d / KNOWN) ** 2) return { key: 'dir.dunno', ctx: {}, hold: 3, px: 0, py: 0 };
+  // the route on the grid: so many streets north or south, so many avenues east or west
+  const i0 = nearestRoad(c.xb, c.xCell, x), i1 = nearestRoad(c.xb, c.xCell, tx), j0 = nearestRoad(c.yb, c.yCell, y), j1 = nearestRoad(c.yb, c.yCell, ty);
+  const wrong = h(3) < 0.1, ew = (i1 - i0) * (wrong ? -1 : 1), ns = j1 - j0;
+  const blocks = (n: number) => `${NUM[Math.abs(n)] ?? Math.abs(n)} block${Math.abs(n) === 1 ? '' : 's'}`;
+  const NS = ns < 0 ? T.north : T.south, EW = ew > 0 ? T.east : T.west;
+  if (!ns && !ew) {
+    const dx = tx - x, dy = ty - y, way = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? T.east : T.west) : dy < 0 ? T.north : T.south;
+    return { key: 'dir.near', ctx: { feet: String(Math.max(20, Math.round((d * 3.28) / 10) * 10)), way }, hold: 4, px: Math.sign(dx), py: Math.sign(dy) };
+  }
+  // first along the longer way, to the street (or avenue) the place is on
+  const road = Math.abs(ns) >= Math.abs(ew) ? roadName(c, true, i1) : roadName(c, false, j1);
+  if (!ns || !ew) {
+    const leg1 = ns ? `${NS} ${blocks(ns)}` : `${EW} ${blocks(ew)}`;
+    return { key: 'dir.one', ctx: { leg1, road }, hold: 5, px: ns ? 0 : Math.sign(ew), py: ns ? Math.sign(ns) : 0 };
+  }
+  const nsFirst = Math.abs(ns) >= Math.abs(ew);
+  const leg1 = nsFirst ? `${NS} ${blocks(ns)} to ${roadName(c, false, j1)}` : `${EW} ${blocks(ew)} to ${roadName(c, true, i1)}`;
+  const leg2 = nsFirst ? `${EW} ${blocks(ew)}` : `${NS} ${blocks(ns)}`;
+  return { key: 'dir.answer', ctx: { leg1, leg2, road }, hold: 6, px: nsFirst ? 0 : Math.sign(ew), py: nsFirst ? Math.sign(ns) : 0 };
 }
 
 /** The list of places, on paper in the middle of the screen; and what was said, under it, for a few seconds. */

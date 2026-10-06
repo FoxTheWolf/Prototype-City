@@ -63,6 +63,8 @@ export interface World {
   /** The people on the sidewalks near the player. */
   peds: Ped[];
   player: Player;
+  /** What each citizen remembers of the player from talking (14.2, talk.ts), by citizen. */
+  talks: Map<number, { met: number; rude: number; name: boolean }>;
   /** Game time in seconds since midnight, January 1st 2008 (see clock.ts), and at the previous tick. */
   time: number;
   ptime: number;
@@ -152,7 +154,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), talks: new Map(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

@@ -9,7 +9,8 @@
 import LEX from '../locale/intents.en.json';
 
 export type IntentId = keyof typeof LEX.intents;
-export type SlotKind = 'place' | 'person' | 'thing' | 'street';
+/** A business or landmark by name, a kind of place ("a pharmacy"), a street, a person, a good. */
+export type SlotKind = 'place' | 'kind' | 'street' | 'person' | 'thing';
 /** A name the city knows, as the player would type it (lowercase words), and what it is. */
 export interface Entity { words: string[]; kind: SlotKind; id: number }
 /** The names to look for, by their first word. */
@@ -115,12 +116,16 @@ function entities(ws: string[], idx: EntityIndex | undefined): Partial<Record<Sl
   if (!idx) return out;
   const taken = new Uint8Array(ws.length);
   for (let i = 0; i < ws.length; i++) {
-    let best: Entity | null = null;
+    // the longest names starting here; one word can be two things ("coffee": a good, and what a café is)
+    let n = 0;
+    const hits: Entity[] = [];
     for (const e of idx.get(ws[i]) ?? []) {
-      if (e.words.length > ws.length - i || (best && e.words.length <= best.words.length)) continue;
-      if (e.words.every((x, j) => ws[i + j] === x && !taken[i + j])) best = e;
+      if (e.words.length > ws.length - i || e.words.length < n || !e.words.every((x, j) => ws[i + j] === x && !taken[i + j])) continue;
+      if (e.words.length > n) { n = e.words.length; hits.length = 0; }
+      hits.push(e);
     }
-    if (best) { if (!out[best.kind]) out[best.kind] = best; taken.fill(1, i, i + best.words.length); i += best.words.length - 1; }
+    for (const e of hits) if (!out[e.kind]) out[e.kind] = e;
+    if (n) { taken.fill(1, i, i + n); i += n - 1; }
   }
   return out;
 }
@@ -163,7 +168,7 @@ export function readLine(line: string, idx?: EntityIndex): Reading {
     if (s > 0) {
       if (I.question && question) s += 1;
       // a name of the city pulls toward what is asked about it
-      if (slots.place || slots.street) { if (id === 'ask_where' || id === 'ask_directions') s += 2; }
+      if (slots.place || slots.street || slots.kind) { if (id === 'ask_where' || id === 'ask_directions') s += 2; }
       if (slots.person && id === 'ask_about_person') s += 2;
       if (slots.thing && (id === 'ask_price' || id === 'buy_request')) s += 1.5;
     }
@@ -171,7 +176,7 @@ export function readLine(line: string, idx?: EntityIndex): Reading {
     if (s > bestS || (s === bestS && top > bestTop)) { best = id; bestS = s; bestTop = top; }
   }
   // a known place alone ("the pharmacy?") is a question about where it is
-  if (bestS < MIN && (slots.place || slots.street) && question) { best = 'ask_where'; bestS = MIN; }
+  if (bestS < MIN && (slots.place || slots.street || slots.kind) && question) { best = 'ask_where'; bestS = MIN; }
   if (bestS < MIN) best = 'unrecognized';
   // the tone: please and thanks against "hey you"; urgency from its words, '!', capitals and repeating
   const T = (a: string) => axis(text, TONE.get(a) ?? []);

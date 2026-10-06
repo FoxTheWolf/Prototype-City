@@ -2,6 +2,15 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.2: as respostas (2026-10-06, sessão na nuvem)
+
+- **`src/talk.ts`:** `new Talk(world, cidadão, empresa)` e `reply(world, talk, linha)` devolvem o texto, a leitura, se acabou, se abre o balcão e para onde a pessoa aponta. O registro (nice/plain/rude) vem do tom do jogador, do `social` da pessoa e da memória (`world.talks`: quando se falaram, quanto o jogador foi grosso, se ela disse o nome; vai no save); um balconista em serviço fica pelo menos educado. A paciência começa em 6–10 (+4 no trabalho, menos a grosseria lembrada) e cai a cada linha, mais com pressão, grosseria ou bobagem; ao zerar, a pessoa encerra.
+- **As lacunas vêm da simulação:** o preço da tabela da loja (e "coffee" acha o "drip coffee" do café), o nome da pessoa, um colega de trabalho, a hora, o caminho real (`routeTo`, tirado de `askWay.ts` para ser compartilhado; agora também até uma rua), o lugar de trabalho. Pedir uma coisa feita na hora abre o balcão; uma coisa da prateleira, "pegue e traga aqui".
+- **O que ainda não tem sistema** (favor, dinheiro, entrar, telefone, Wi-Fi, perguntar de alguém, o que viu, eventos) recebe um não educado, para ninguém prometer o que não vai acontecer.
+- **As falas:** o retorno 08 filtrado (`src/locale/text/replies.en.json`): fora as que prometem algo (café juntos, "vou ver isso") e as que usam `{job}` como profissão (o jogo só tem o lugar de trabalho); gestos viraram `(nods)`; acrescentei poucas (o não educado, "qual lugar?", "não vendemos", "você já perguntou", "[met] você de novo").
+- **De carona:** quem ensina o caminho na rua falava com erros de digitação (`voice()` é o jeito de escrever, não de falar); tirado.
+- **Conferido:** `tests/talk.ts` (o nome, o preço, o caminho até a farmácia e até uma avenida, o colega, o não educado, o tchau, a memória, a paciência, 300 respostas sem lacuna).
+
 ## 14.1: a leitura do texto livre (2026-10-06, sessão na nuvem)
 
 - **Antes, o mapa da tela** (`docs/mapa-da-tela.md`): o inventário do que ocupa a tela, a proposta de zonas e quatro decisões do usuário (celular abaixa ao telefone; conversa como legenda de filme; balões até ~12 m e legenda de perto; close-up sozinho ao olhar).

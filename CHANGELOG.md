@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.2 — As respostas (2026-10-06)
+- Por baixo, ainda sem tela: os balconistas já respondem com a voz deles e com fatos do jogo (o preço da loja, o nome deles e de quem trabalha ali, o caminho de verdade até um lugar ou uma rua, a hora). Ficam mais simpáticos ou mais secos conforme o seu tom e se lembram de você. Perdem a paciência com quem grita bobagem. O que o jogo ainda não sabe fazer (emprestar dinheiro, deixar entrar) recebe um não educado.
+- Pedir direção na rua: as pessoas não falam mais com erros de digitação.
+
 ## 0.14.1 — A leitura do que se digita (2026-10-06)
 - Por baixo, ainda sem tela: o jogo já entende frases livres em inglês para os NPCs (cumprimentar, perguntar onde fica, o preço, quem trabalha aqui, pedir um favor...), com erros de digitação, abreviações de 2008 (u, thx, pls) e o tom (educado ou grosso, calmo ou pressionando). A conversa na tela vem nas próximas versões.
 
