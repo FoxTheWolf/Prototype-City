@@ -10,7 +10,9 @@
  * in (by number, confirmed by text) and posting are the next step (15.8c), like Streetwire's own.
  */
 import { hash3 } from '../core/rng';
+import { readLine } from '../sim/intent';
 import { type World } from '../sim/world';
+import { cityNames } from '../talk';
 import { GUIDES, gigs, type ForumThread } from '../locale/forum';
 import { type Block, type Page, type Theme } from './page';
 
@@ -48,17 +50,66 @@ function threads(w: World, slug: string): ForumThread[] {
 
 const bump = (d: number) => (d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`);
 
-/** A page of the board. */
-export function forumPage(w: World, path: string): Page {
+/** The op's short answer to the player's reply `text`, in the board's terse voice (read like a line
+ *  said). Clean and generic -- no technical content, so it stays in this framework file. */
+function opReply(w: World, text: string): string {
+  const R = readLine(text, cityNames(w));
+  if (R.respect <= -1 || R.intent === 'threaten') return "take it somewhere else. you're a handle here, act like one.";
+  const q = R.intent;
+  if (q === 'thank' || q === 'compliment' || q === 'greet' || q === 'yes') return 'np. good luck out there.';
+  if (q === 'ask_how') return "it's in the thread. read it again, slower.";
+  if (q === 'ask_where' || q === 'ask_directions') return 'no locations on the board. you know why.';
+  if (R.question) return 'asked and answered already -- search before you post.';
+  if (q === 'flirt') return 'lol. no.';
+  return 'noted.';
+}
+
+/** A page of the board; a page sent by a form brings its boxes in `form`. */
+export function forumPage(w: World, path: string, form?: Map<string, string>): Page {
   const url = (p: string) => `http://${FORUM_HOST}${p}`;
-  const nav: [string, string][] = [['Index', url('/')], ...BOARDS.map((b) => [b.name, url(`/b/${b.slug}`)] as [string, string])];
+  const fo = w.forum, me = fo.me, on = !!me?.ok, f = (k: string) => (form?.get(k) ?? '').trim();
+  const nav: [string, string][] = [['Index', url('/')], ...BOARDS.map((b) => [b.name, url(`/b/${b.slug}`)] as [string, string]), ...(on ? [[`@${me!.handle}`, url('/')] as [string, string]] : [['Sign up', url('/join')] as [string, string]])];
   const online = 20 + Math.floor(hash3(w.seed, Math.floor(w.time / 3600), 0x5b) * 40); // a plausible "users online" for flavor
-  const page = (p: string, title: string, body: Block[]): Page => ({
-    url: url(p), title: title ? `switchboard :: ${title}` : 'switchboard', theme: THEME, mobile: false, kb: 24 + body.length * 2,
+  const page = (p: string, title: string, body: Block[], action?: string): Page => ({
+    url: url(p), title: title ? `switchboard :: ${title}` : 'switchboard', theme: THEME, mobile: false, form: action ? url(action) : undefined, kb: 24 + body.length * 2,
     blocks: [{ t: 'banner', text: 'switchboard', sub: 'you got the address from someone. keep it that way.', art: ['[ :: ]', ' |__| '] },
       { t: 'nav', links: nav }, ...body, { t: 'hr' }, { t: 'foot', text: `${online} lurking - no names - no logs we can help - est. 2003` }],
   });
+  const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);
   const row = (t: ForumThread, slug: string): Block => ({ t: 'p', text: `[${t.title}](${url(`/t/${slug}/${t.id}`)}) - ${t.posts.length} post${t.posts.length === 1 ? '' : 's'} - ${bump(t.agoDays)}` });
+
+  // sign up: bound to your phone number, confirmed by a text (you are a handle on the board)
+  if (path === '/join') {
+    if (on) return page('/join', 'Signed in', [{ t: 'h', text: `You're in as @${me!.handle}.` }, { t: 'p', text: `[Back to the index](${url('/')})` }]);
+    if (!form) return page('/join', 'Sign up', [{ t: 'h', text: 'Make a handle' },
+      { t: 'p', text: 'No e-mail, no name. Pick a handle; we text a code to your number to keep the bots out. Lose the number, lose the handle.' },
+      { t: 'input', name: 'handle', label: 'Handle:', size: 20 }, { t: 'submit', label: 'Get code' }], '/join');
+    const handle = f('handle').toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(handle)) return page('/join', 'Sign up', [{ t: 'h', text: 'Make a handle' }, ...note('3 to 20 letters, numbers or underscores.'), { t: 'input', name: 'handle', label: 'Handle:', size: 20 }, { t: 'submit', label: 'Get code' }], '/join');
+    const num = w.telco.player.number, code = String(Math.floor(w.rng() * 1e6)).padStart(6, '0');
+    fo.me = { handle, num, code, ok: false };
+    w.mail.sms.push({ from: 'Switchboard', text: `Switchboard code: ${code}` });
+    return page('/join', 'Check your phone', [{ t: 'h', text: 'We texted you a code.' }, { t: 'p', text: `A 6-digit code is on its way to ${num}. Enter it below.` },
+      { t: 'input', name: 'code', label: 'Code:', size: 8 }, { t: 'submit', label: 'Confirm' }], '/confirm');
+  }
+  if (path === '/confirm') {
+    if (!me) return page('/confirm', 'Sign up', [{ t: 'h', text: 'Start over.' }, { t: 'p', text: `[Sign up](${url('/join')})` }]);
+    if (on) return page('/confirm', 'Signed in', [{ t: 'h', text: `You're in as @${me.handle}.` }, { t: 'p', text: `[Back to the index](${url('/')})` }]);
+    if (f('code') !== me.code) return page('/confirm', 'Check your phone', [{ t: 'h', text: 'That code did not match.' }, ...note('Check the text again.'), { t: 'input', name: 'code', label: 'Code:', size: 8 }, { t: 'submit', label: 'Confirm' }], '/confirm');
+    me.ok = true;
+    return page('/confirm', 'Welcome', [{ t: 'h', text: `You're in, @${me.handle}.` }, { t: 'p', text: `Lurk, then post. [To the boards](${url('/')})` }]);
+  }
+
+  // posting a reply: /reply/<board>/<id>
+  const mr = path.match(/^\/reply\/([a-z]+)\/([a-z0-9-]+)$/);
+  if (mr) {
+    const slug = mr[1], id = mr[2], th = threads(w, slug).find((x) => x.id === id);
+    if (on && th && f('text')) {
+      const n = fo.mine.length;
+      fo.mine.push({ tid: `${slug}/${id}`, time: w.time, text: f('text'), reply: opReply(w, f('text')), at: w.time + 600 + hash3(w.seed, n, 0x5c) * 3000 });
+    }
+    return forumPage(w, `/t/${slug}/${id}`, undefined);
+  }
 
   // a thread: /t/<board>/<id>
   const mt = path.match(/^\/t\/([a-z]+)\/([a-z0-9-]+)$/);
@@ -67,13 +118,21 @@ export function forumPage(w: World, path: string): Page {
     const board = BOARDS.find((b) => b.slug === slug);
     if (!th || !board) return page(path, 'Not found', [{ t: 'h', text: 'That thread is gone.' }, { t: 'p', text: `[Back to the index](${url('/')})` }]);
     const body: Block[] = [{ t: 'p', text: `${board.name} /` }, { t: 'h', text: th.title }];
+    const op = th.posts[0]?.by ?? 'op';
     th.posts.forEach((p, k) => {
       body.push({ t: 'p', text: `${p.by}${k === 0 ? ' (op)' : ''}:` });
       for (const line of p.body) body.push({ t: 'p', text: `  ${line}` });
       body.push({ t: 'hr' });
     });
-    body.push({ t: 'p', text: `[Back to ${board.name}](${url(`/b/${slug}`)}) - sign in to reply (soon)` });
-    return page(path, th.title, body);
+    // the player's replies in this thread, each with the op's later answer
+    for (const m of fo.mine.filter((x) => x.tid === `${slug}/${mt[2]}`)) {
+      body.push({ t: 'p', text: `@${me!.handle}:` }, { t: 'p', text: `  ${m.text}` }, { t: 'hr' });
+      if (m.reply && w.time >= m.at) body.push({ t: 'p', text: `${op}:` }, { t: 'p', text: `  @${me!.handle} ${m.reply}` }, { t: 'hr' });
+    }
+    if (on) { body.push({ t: 'input', name: 'text', label: 'Reply:', size: 60, max: 200 }, { t: 'submit', label: 'Post' }); }
+    else body.push({ t: 'p', text: `[Sign up](${url('/join')}) to reply.` });
+    body.push({ t: 'p', text: `[Back to ${board.name}](${url(`/b/${slug}`)})` });
+    return page(path, th.title, body, on ? `/reply/${slug}/${mt[2]}` : undefined);
   }
 
   // a board: /b/<slug>

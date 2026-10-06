@@ -42,5 +42,33 @@ for (const l of show(U + '/t/guides/g3').slice(0, 10)) console.log('  |' + l);
 console.log('  --- a contract board ---');
 for (const l of show(U + '/b/work').slice(0, 8)) console.log('  |' + l);
 
+// --- 15.8c: sign up by number + SMS, and reply to a thread ---
+const post = (p: string, kv: Record<string, string>) => fetchUrl(w, U + p, new Map(Object.entries(kv)));
+const text = (u: string) => fetchUrl(w, u).page!.blocks.filter((b) => b.t === 'p' || b.t === 'h').map((b) => (b as { text: string }).text).join(' | ');
+
+w.mail.sms.length = 0;
+post('/join', { handle: 'nightjar' });
+if (!w.forum.me || w.forum.me.handle !== 'nightjar') fail('sign up should create the account');
+if (w.forum.me?.ok) fail('account is not confirmed before the code');
+if (!w.mail.sms.some((m) => m.from === 'Switchboard' && m.text.includes(w.forum.me!.code))) fail('a code should be texted to the number');
+// a wrong code does not confirm; the right one does
+post('/confirm', { code: '000000' });
+if (w.forum.me?.ok) fail('a wrong code should not confirm');
+post('/confirm', { code: w.forum.me!.code });
+if (!w.forum.me?.ok) fail('the right code should confirm the account');
+// the thread now offers a reply box, and a reply is kept with the op's answer
+const tUrl = U + '/t/lounge/l1';
+const hasSubmit = (u: string) => fetchUrl(w, u).page!.blocks.some((b) => b.t === 'submit');
+if (!hasSubmit(tUrl)) fail('a signed-in reader should see a reply box');
+post('/reply/lounge/l1', { text: 'thanks, that helps' });
+const mine = w.forum.mine.filter((m) => m.tid === 'lounge/l1');
+if (mine.length !== 1) fail('the reply should be kept');
+if (!mine[0]?.reply) fail('the op should have an answer queued');
+if (text(tUrl).includes(mine[0].reply!)) fail('the op answer should not show before its time');
+w.time = mine[0].at + 1;
+if (!text(tUrl).includes('nightjar')) fail('the reply should show from the player handle');
+if (!text(tUrl).includes(mine[0].reply!)) fail('the op answer should show once its time has come');
+console.log(`  15.8c: joined @nightjar, code by SMS, reply + op answer "${mine[0].reply}"`);
+
 console.log(fails ? `${fails} failure(s)` : 'OK');
 process.exit(fails ? 1 : 0);

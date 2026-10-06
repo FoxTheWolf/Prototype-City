@@ -63,6 +63,13 @@ export interface PlayerInput {
   crouch?: boolean;
 }
 
+/** The player's Switchboard forum state (15.8c): the account (bound to the phone number, confirmed by
+ *  SMS) and the replies posted, each with the op's later answer. Kept in the save. */
+export interface ForumState {
+  me: { handle: string; num: string; code: string; ok: boolean } | null;
+  mine: { tid: string; time: number; text: string; reply: string | null; at: number }[];
+}
+
 export interface World {
   seed: number;
   tick: number;
@@ -101,6 +108,8 @@ export interface World {
   pop: Population;
   /** What they post (see social.ts). */
   feed: Feed;
+  /** The player's Switchboard forum account and replies (15.8c; web/forum.ts drives it). */
+  forum: ForumState;
   /** The security cameras (see cctv.ts). */
   cctv: Cctv[];
   /** The player's bank account (see bank.ts). */
@@ -165,7 +174,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   yield 0.95;
   telco.people = pop.byNum;
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), mail: newMail(), talks: new Map(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), forum: { me: null, mine: [] }, cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), mail: newMail(), talks: new Map(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

@@ -117,7 +117,7 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
   if (S.kind === 'search') return { host, path, page: searchPage(w, host, path, query) };
   if (S.kind === 'mail') return { host, path, page: mailPage(w, host, path, form) };
   if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
-  if (S.kind === 'forum') return { host, path, page: forumPage(w, path) };
+  if (S.kind === 'forum') return { host, path, page: forumPage(w, path, form) };
   return { host, path, page: portalPage(w, host, path) };
 }
 
