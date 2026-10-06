@@ -11,12 +11,13 @@ import { hash3 } from '../core/rng';
 import { nearestRoad, type BusinessKind } from '../sim/city';
 import { subAt } from '../sim/power';
 import { PLACES } from '../sim/placeTypes';
-import { formatNumber } from '../sim/telco';
+import { formatNumber, isOpen } from '../sim/telco';
 import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
 import { placeAt } from '../phone/places';
 import { businessName, cityName, citizenNames, districtName, roadName } from '../locale/names';
-import { expand, rngOf, tidy } from '../locale/gen';
+import { expand, rngOf, tidy, type Grammar } from '../locale/gen';
+import CALLS from '../locale/calls.json';
 import { TEXT } from '../locale/text';
 import { newsStories, storyBody } from '../locale/news';
 import { districtAt } from '../sim/city';
@@ -114,49 +115,99 @@ export function addressOf(w: World, k: number): string {
 const hh = (h: number) => (h % 24 === 0 ? 'midnight' : h % 24 === 12 ? 'noon' : `${((h + 11) % 12) + 1} ${h % 24 < 12 ? 'am' : 'pm'}`);
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
+/** The layouts a site may have: a classic column, a sidebar on the right, a centered home page with a visitor
+ *  counter, a menu down the left, a corporate one, a bare page "under construction"; each kind of place has its
+ *  likely ones (a bank looks corporate, a bar homemade, a laundry barely there). */
+const enum Tpl { Classic, Side, Center, LeftNav, Corporate, Bare }
+const TPLS: Partial<Record<BusinessKind, Tpl[]>> = {
+  bank: [Tpl.Corporate, Tpl.Classic], hotel: [Tpl.Corporate, Tpl.LeftNav, Tpl.Classic], cinema: [Tpl.Corporate, Tpl.Side], electronics: [Tpl.Corporate, Tpl.LeftNav, Tpl.Side],
+  phones: [Tpl.Corporate, Tpl.Side], fastfood: [Tpl.Corporate, Tpl.Classic], bar: [Tpl.Center, Tpl.Side, Tpl.LeftNav], pizza: [Tpl.Center, Tpl.Classic, Tpl.Side],
+  cyber: [Tpl.Center, Tpl.LeftNav], laundry: [Tpl.Bare, Tpl.Center], tailor: [Tpl.Bare, Tpl.Classic], deli: [Tpl.Bare, Tpl.Center], liquor: [Tpl.Bare, Tpl.Classic],
+  pawn: [Tpl.Bare, Tpl.Center], grocery: [Tpl.Bare, Tpl.Classic, Tpl.Side], parking: [Tpl.Bare], motel: [Tpl.Bare, Tpl.Center],
+};
+const ANY = [Tpl.Classic, Tpl.Side, Tpl.Center, Tpl.LeftNav];
+
+/** The kinds' own page beyond the menu or products: a cinema's showtimes, a hotel's rooms, a bank's rates and branches. */
+const EXTRA: Partial<Record<BusinessKind, [string, string]>> = { cinema: ['Showtimes', 'showtimes'], hotel: ['Rooms & Rates', 'rooms'], motel: ['Rates', 'rooms'], bank: ['Rates', 'rates'] };
+
 /** A page of business k's site. */
 function bizPage(w: World, k: number, host: string, path: string): Page {
   const c = w.city, b = c.businesses[k], P = w.pop, h = (q: number) => hash3(w.seed, k, q), name = businessName(c, k);
-  const theme = THEMES[Math.floor(h(1) * THEMES.length)], tpl = Math.floor(h(2) * 3), year = String(1958 + Math.floor(h(3) * 48));
+  const tpls = TPLS[b.kind] ?? ANY, tpl = tpls[Math.floor(h(2) * tpls.length)], theme = THEMES[Math.floor(h(1) * THEMES.length)], year = String(1958 + Math.floor(h(3) * 48));
   const r = rngOf(w.seed, k, 0xb10b), district = districtName(c, districtAt(c, ...placeAt(c, k)));
   const say = (key: string, ctx: Record<string, string> = {}) => tidy(expand(`#${key}#`, TEXT, r, { biz: name, district, year, city: cityName(c), ...ctx }));
   const T = PLACES[b.kind], goods = en.goods as Record<string, string>;
-  const food = !!T.order, list = food ? 'menu' : 'products';
-  const nav: [string, string][] = [['Home', `http://${host}/`], [food ? 'Menu' : 'Products', `http://${host}/${list}`], ['About Us', `http://${host}/about`], ['Contact', `http://${host}/contact`]];
-  const [o, z] = T.hours, open = o === 0 && z === 24 ? 'Open 24 hours' : `${b.kind === 'bank' ? 'Mon-Fri' : 'Daily'} ${hh(o)} - ${hh(z)}`;
+  const food = ['diner', 'cafe', 'pizza', 'deli', 'fastfood', 'bar'].includes(b.kind), sells = T.sells.length > 0, list = food ? 'menu' : 'products', extra = EXTRA[b.kind];
+  const nav: [string, string][] = [['Home', `http://${host}/`], ...(sells ? [[food ? 'Menu' : 'Products', `http://${host}/${list}`] as [string, string]] : []),
+    ...(extra ? [[extra[0], `http://${host}/${extra[1]}`] as [string, string]] : []), ...(b.kind === 'bank' ? [['Branches', `http://${host}/branches`] as [string, string]] : []),
+    ['About Us', `http://${host}/about`], ['Contact', `http://${host}/contact`]];
+  const [o, z] = T.hours, allDay = o === 0 && z === 24, open = allDay ? 'Open 24 hours' : `${b.kind === 'bank' ? 'Mon-Fri' : 'Daily'} ${hh(o)} - ${hh(z)}`;
   const phone = formatNumber(w.telco, w.telco.bizNum[k]), addr = addressOf(w, k);
-  const banner: Block = { t: 'banner', text: name, sub: `Since ${year} - ${district}`, art: ICONS[b.kind] ?? ICONS.any };
-  // last touched some days ago (never before the calendar starts, 2008-01-01: an older one says so in words)
+  // live: open or closed right now; back after an outage of its block (the city's doings show, never who did them)
+  const hour = calendar(w.time).hour, now = allDay || isOpen(b.kind, hour) ? 'OPEN NOW' : `CLOSED NOW - opens at ${hh(o)}`;
+  const [bx, by] = placeAt(c, k), sub = subAt(w.power, c, bx, by);
+  const back = w.events.list.some((e) => e.kind === 'restored' && e.refs[0] === sub && w.time - e.time < 86400);
+  const notice: Block[] = back ? [{ t: 'ad', text: say('web.outage'), url: `http://${host}/` }] : [];
+  const banner: Block = tpl === Tpl.Bare ? { t: 'h', text: name.toUpperCase() } : { t: 'banner', text: name, sub: `Since ${year} - ${district}`, art: ICONS[b.kind] ?? ICONS.any };
   const ago = Math.floor(h(4) * 400) * 86400, D = calendar(Math.max(0, w.time - ago));
   const updated = say('web.updated', { date: w.time - ago < 0 ? 'in 2007' : `${D.month}/${D.day}/${String(D.year).slice(2)}` });
   const counter = say('web.visitors', { n: String(1000 + Math.floor(h(5) * 90000)).padStart(6, '0') });
-  const foot: Block = { t: 'foot', text: `(c) ${D.year} ${name} - ${addr} - ${phone}` };
+  const foot: Block = { t: 'foot', text: `(c) ${calendar(w.time).year} ${name} - ${addr} - ${phone}` };
+  const info: Block[] = [{ t: 'h', text: 'Hours' }, { t: 'p', text: open }, { t: 'p', text: now }, { t: 'h', text: 'Find us' }, { t: 'p', text: `${addr}, ${district}` }, { t: 'p', text: `Call ${phone}` }];
   let body: Block[];
   switch (path) {
     case '/': {
-      const info: Block[] = [{ t: 'h', text: 'Hours' }, { t: 'p', text: open }, { t: 'h', text: 'Find us' }, { t: 'p', text: `${addr}, ${district}` }, { t: 'p', text: `Call ${phone}` }];
-      const main: Block[] = [{ t: 'h', text: say('web.welcome') }, { t: 'p', text: say(`web.intro.${b.kind}`) }, { t: 'p', text: `See our [${food ? 'menu' : 'products'}](http://${host}/${list}) or [get in touch](http://${host}/contact).` }];
-      body = tpl === 1 ? [{ t: 'cols', cols: [main, info], widths: [0.66, 0.34] }]
-        : tpl === 2 ? [{ t: 'space' }, ...main, { t: 'hr' }, ...info, { t: 'p', text: counter }]
-        : [...main, { t: 'hr' }, { t: 'cols', cols: [info.slice(0, 2), info.slice(2)] }];
+      const see = sells ? `See our [${food ? 'menu' : 'products'}](http://${host}/${list})` : extra ? `See our [${extra[0].toLowerCase()}](http://${host}/${extra[1]})` : 'Come visit us';
+      const main: Block[] = [{ t: 'h', text: say('web.welcome') }, { t: 'p', text: say(`web.intro.${b.kind}`) }, { t: 'p', text: `${see} or [get in touch](http://${host}/contact).` }];
+      body = tpl === Tpl.Side ? [{ t: 'cols', cols: [main, info], widths: [0.66, 0.34] }]
+        : tpl === Tpl.Center ? [{ t: 'art', lines: ['*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*'], col: theme.link }, ...main, { t: 'hr' }, ...info, { t: 'p', text: counter }, { t: 'p', text: 'Best viewed at 800x600.' }]
+        : tpl === Tpl.Corporate ? [...main, { t: 'cols', cols: [info.slice(0, 3), info.slice(3, 5), [{ t: 'h', text: 'Call us' }, info[5]]] }]
+        : tpl === Tpl.Bare ? [{ t: 'p', text: say(`web.intro.${b.kind}`) }, { t: 'art', lines: ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'], col: theme.head }, ...info]
+        : [...main, { t: 'hr' }, { t: 'cols', cols: [info.slice(0, 3), info.slice(3)] }];
       break;
     }
     case `/${list}`:
+      if (!sells) return bizPage(w, k, host, '/404');
       body = [{ t: 'h', text: food ? 'Our Menu' : 'Products & Prices' }, { t: 'table', head: true, rows: [['Item', 'Price'], ...T.sells.map(([g, p]) => [goods[g] ?? g.replace(/_/g, ' '), money(p)])] }, { t: 'p', text: food ? 'Prices include tax. Ask about our daily specials!' : 'Prices subject to change. Come see the full selection in store.' }];
       break;
+    case '/showtimes': {
+      if (b.kind !== 'cinema') return bizPage(w, k, host, '/404');
+      const films = Array.from({ length: 5 }, (_, n) => tidy(expand('#films#', CALLS as unknown as Grammar, rngOf(w.seed, k, Math.floor(w.time / (7 * 86400)) * 10 + n))));
+      body = [{ t: 'h', text: `Now Showing - week of ${calendar(w.time).month}/${calendar(w.time).day}` }, { t: 'table', head: true, rows: [['Film', 'Times'], ...films.map((f, n) => [f, ['1:10  4:20  7:30  10:15', '12:45  3:30  6:45  9:40', '2:00  5:15  8:20', '11:50  2:40  5:30  8:10  10:50', '7:00  9:45  12:05'][n]])] }, { t: 'p', text: 'Matinees before 5 pm: $5.50. Evening shows: $8.00.' }];
+      break;
+    }
+    case '/rooms': {
+      if (b.kind !== 'hotel' && b.kind !== 'motel') return bizPage(w, k, host, '/404');
+      const night = T.sells.find(([g]) => g === 'room_night')?.[1] ?? 7900 + Math.floor(h(7) * 8) * 1000;
+      body = [{ t: 'h', text: extra![0] }, { t: 'table', head: true, rows: [['Room', 'Per night'], ['Standard (one queen)', money(night)], ['Double (two fulls)', money(Math.round(night * 1.25))], ...(b.kind === 'hotel' ? [['Suite', money(night * 2)]] : [['Weekly (standard)', money(night * 6)]])] }, { t: 'p', text: `To book, call ${phone}. Check-in after 3 pm, check-out by 11 am.` }];
+      break;
+    }
+    case '/rates':
+      if (b.kind !== 'bank') return bizPage(w, k, host, '/404');
+      body = [{ t: 'h', text: 'Current Rates' }, { t: 'table', head: true, rows: [['Account', 'APY'], ['Savings', `${(1.5 + h(8)).toFixed(2)}%`], ['12-month CD', `${(3 + h(9)).toFixed(2)}%`], ['Money Market', `${(2 + h(10)).toFixed(2)}%`]] }, { t: 'p', text: 'Rates as of today and subject to change. Member FDIC.' }];
+      break;
+    case '/branches': {
+      if (b.kind !== 'bank') return bizPage(w, k, host, '/404');
+      const rows = c.businesses.map((x, n) => ({ x, n })).filter(({ x, n }) => (x.hq ?? n) === k).map(({ n }) => [addressOf(w, n), districtName(c, districtAt(c, ...placeAt(c, n))), formatNumber(w.telco, w.telco.bizNum[n])]);
+      body = [{ t: 'h', text: 'Branches & ATMs' }, { t: 'table', head: true, rows: [['Address', 'District', 'Phone'], ...rows] }, { t: 'p', text: 'Branch hours: Mon-Fri 9 am - 5 pm.' }];
+      break;
+    }
     case '/about': {
-      const W = P.workplaces.find((x) => x.biz === k), staff = (W?.staff ?? []).slice(0, 5).map((i) => citizenNames(c, P, i)[0]);
+      const Wk = P.workplaces.find((x) => x.biz === k), staff = (Wk?.staff ?? []).slice(0, 5).map((i) => citizenNames(c, P, i)[0]);
       body = [{ t: 'h', text: `About ${name}` }, { t: 'p', text: say('web.about') }, ...(staff.length ? [{ t: 'p', text: say('web.team', { staff: staff.join(', ') }) } as Block] : [])];
       break;
     }
     case '/contact':
-      body = [{ t: 'h', text: 'Contact Us' }, { t: 'table', rows: [['Address', `${addr}, ${district}`], ['Phone', phone], ['Hours', open]] }, { t: 'p', text: 'We do not take reservations or orders by e-mail.' }];
+      body = [{ t: 'h', text: 'Contact Us' }, { t: 'table', rows: [['Address', `${addr}, ${district}`], ['Phone', phone], ['Hours', open], ['Now', now]] }, { t: 'p', text: 'We do not take reservations or orders by e-mail.' }];
       break;
     default:
       body = [{ t: 'h', text: '404 - Page Not Found' }, { t: 'p', text: `The page you requested could not be found. Go back to the [home page](http://${host}/).` }];
   }
-  const blocks: Block[] = tpl === 2 ? [banner, ...body, { t: 'nav', links: nav }, { t: 'p', text: updated }, foot] : [banner, { t: 'nav', links: nav }, ...body, { t: 'p', text: updated }, foot];
-  return { url: `http://${host}${path}`, title: path === '/' ? name : `${name} - ${path.slice(1)}`, theme, blocks, kb: 30 + Math.floor(h(6) * 60) };
+  const navB: Block = { t: 'nav', links: nav };
+  const blocks: Block[] = tpl === Tpl.Center || tpl === Tpl.Bare ? [banner, ...notice, ...body, navB, { t: 'p', text: updated }, foot]
+    : tpl === Tpl.LeftNav ? [banner, ...notice, { t: 'cols', widths: [0.2, 0.8], cols: [[{ t: 'h', text: 'Menu' }, { t: 'list', items: nav.map(([l, u]) => `[${l}](${u})`) }], body] }, { t: 'p', text: updated }, foot]
+    : [banner, navB, ...notice, ...body, { t: 'p', text: updated }, foot];
+  return { url: `http://${host}${path}`, title: path === '/' ? name : `${name} - ${path.slice(1)}`, theme, blocks, kb: tpl === Tpl.Bare ? 12 : 30 + Math.floor(h(6) * 60) };
 }
 
 /** A page of the provider's portal: the start page, a story, the weather, the directory. */

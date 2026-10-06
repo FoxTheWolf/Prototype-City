@@ -121,5 +121,11 @@
   "Your home page for {city}.",
   "News, weather and the whole city, all in one place.",
   "{city}'s favorite start page."
+ ],
+ "web.outage": [
+  "We're back! Sorry for yesterday's power outage.",
+  "Power is back on. Thanks for your patience during the outage!",
+  "NOTICE: we were closed during the blackout. Open again as usual.",
+  "The lights are back on! See you soon."
  ]
 }

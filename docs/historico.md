@@ -2,6 +2,12 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.2: sites mais variados e vivos (2026-10-06, sessão na nuvem)
+- Seis layouts (`Tpl` em `src/web/sites.ts`): clássico, barra à direita, caseiro centralizado com contador de visitas e "Best viewed at 800x600", menu na esquerda, corporativo em três colunas, e o "UNDER CONSTRUCTION" de quem mal tem site; cada tipo tem os seus prováveis (`TPLS`: banco corporativo, bar caseiro, lavanderia em construção).
+- Páginas próprias de cada tipo (`EXTRA`): as sessões da semana do cinema (filmes de `calls.json`), quartos e diárias do hotel e do motel, as taxas do banco e as agências da rede (os `hq`); "Menu" só para quem vende comida.
+- A web segue a simulação: "OPEN NOW" ou "CLOSED NOW - opens at …" pela hora; depois de um apagão no quarteirão (um `restored` do mesmo substation há menos de um dia), o site avisa que voltou (`web.outage`), sem nunca dizer quem causou. Os preços que mudam esperam a economia (etapa 17).
+- Teste: `tests/web.ts` agora rastreia ~1500 páginas e confere que todas as páginas novas são alcançadas e o aviso de volta.
+
 ## 15.1: o navegador e os sites (2026-10-06, sessão na nuvem)
 - **Lodestar 2.0**, o navegador do notebook: o comando `lodestar [endereço]` (no `help` e no `man`) abre um programa de tela cheia como o `nano` (`Shell.browser`, `src/web/browser.ts`): a barra de título, o endereço, a página em cores (a tela do notebook ganhou cor por célula: `St.Rgb`/`Scr.paint` em `laptop/screen.ts` e `draw.ts`), a barra de rolagem, a linha de estado com a transferência e as teclas. A página desce como em 2008: procura o host, conecta, e desenha de cima para baixo conforme os KB chegam pela velocidade do Wi-Fi (`net.kbps()`); sem rede, "Unable to connect"; host inexistente, "Server not found"; servidor no apagão, espera e "The connection has timed out". Teclas: F6/Ctrl+L endereço, setas rolam, Tab/→/← escolhem o link, Enter segue, Backspace volta, F5 recarrega, Home a página inicial, F10/Ctrl+Q fecha.
 - **As páginas** (`src/web/page.ts`): blocos (banner com logo ASCII, menu, títulos, parágrafos, listas, tabelas, colunas, anúncios, rodapé), links escritos como `[texto](url)`, o layout numa coluna fixa no meio da página (o jeito dos sites de 2008).

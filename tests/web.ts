@@ -9,6 +9,7 @@
  */
 import { createWorld } from '../src/sim/world';
 import { subAt, switchSub } from '../src/sim/power';
+import { logEvent } from '../src/sim/events';
 import { placeAt } from '../src/phone/places';
 import { fetchUrl, portalUrl, webOf } from '../src/web/sites';
 import { layout } from '../src/web/page';
@@ -26,7 +27,8 @@ console.log('  ' + [...byKind].map(([k, [a, n]]) => `${k} ${a}/${n}`).join(', ')
 // crawl from the portal: every link a page of the city, no hole in any text
 const seen = new Set<string>(), queue = [portalUrl(w)];
 let pages = 0, links = 0;
-while (queue.length && pages < 400) {
+const kinds = new Set<string>();
+while (queue.length && pages < 3000) {
   const u = queue.shift()!;
   if (seen.has(u)) continue;
   seen.add(u);
@@ -36,8 +38,10 @@ while (queue.length && pages < 400) {
   const L = layout(F.page, 159), text = L.rows.map((r) => r.map((x) => x.ch).join('')).join('\n');
   if (/[{}#]/.test(text.replace(/\[#+ *\]/g, '').replace(/[#]{2,}/g, ''))) { const m = text.split('\n').find((l) => /[{}]/.test(l)); if (m) fail(`a hole on ${u}: ${m.trim()}`); }
   for (const l of L.links) { links++; if (!seen.has(l.url)) queue.push(l.url); }
+  const tail = u.split('/').slice(3).join('/'); if (tail) kinds.add(tail.replace(/\d+/g, 'N'));
 }
-console.log(`  crawled ${pages} pages, ${links} links`);
+console.log(`  crawled ${pages} pages, ${links} links; pages: ${[...kinds].sort().join(' ')}`);
+for (const want of ['showtimes', 'rooms', 'rates', 'branches', 'menu', 'products', 'about', 'contact']) if (![...kinds].some((x) => x === want)) fail(`no ${want} page reached`);
 if (pages < 20) fail('the crawl found too few pages');
 
 // a blackout takes a site down; a host that does not exist is not found
@@ -46,7 +50,10 @@ const [x, y] = placeAt(c, k), s = subAt(w.power, c, x, y);
 switchSub(w.power, s, false, w.tick, x, y);
 if (fetchUrl(w, host).error !== 'down') fail('a site in a blackout still answers');
 switchSub(w.power, s, true, w.tick, x, y);
-if (!fetchUrl(w, host).page) fail('the site did not come back with the power');
+logEvent(w.events, 'restored', w.tick, w.time, x, y, 0.8, [s]);
+const back = fetchUrl(w, host).page;
+if (!back) fail('the site did not come back with the power');
+else if (!back.blocks.some((b) => b.t === 'ad' && /outage|blackout|back|lights/i.test(b.text))) fail('back after a blackout, the site says nothing');
 if (fetchUrl(w, 'www.nosuchplaceatall.com').error !== 'dns') fail('a made-up host was found');
 
 // the browser: the start page comes down at the line's speed, Tab picks a link, Enter follows it
