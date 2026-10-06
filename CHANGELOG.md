@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.14.1 — A leitura do que se digita (2026-10-06)
+- Por baixo, ainda sem tela: o jogo já entende frases livres em inglês para os NPCs (cumprimentar, perguntar onde fica, o preço, quem trabalha aqui, pedir um favor...), com erros de digitação, abreviações de 2008 (u, thx, pls) e o tom (educado ou grosso, calmo ou pressionando). A conversa na tela vem nas próximas versões.
+
 ## 0.13.10f — Sentar (2026-10-06)
 - Aperte **F** de frente para uma cadeira, uma banqueta, um sofá ou um banco de praça (ou o do ponto de ônibus) para sentar, virado para onde o assento está virado. Andar, ou **F** de novo, levanta.
 - Sentado, o **N** abre o notebook ali mesmo: em cima da mesa ou do balcão da frente, se houver um, ou no colo.

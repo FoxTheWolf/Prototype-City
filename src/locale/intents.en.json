@@ -1,0 +1,902 @@
+{
+ "intents": {
+  "greet": {
+   "label": "Greeting",
+   "keywords": {
+    "hello": 3,
+    "hi": 3,
+    "hey": 2,
+    "good morning": 3,
+    "good afternoon": 3,
+    "good evening": 3,
+    "hiya": 2,
+    "howdy": 2,
+    "sup": 2,
+    "yo": 2,
+    "how are you": 2
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Hello there",
+    "hey, how are you",
+    "yo"
+   ]
+  },
+  "goodbye": {
+   "label": "Saying goodbye",
+   "keywords": {
+    "bye": 3,
+    "goodbye": 3,
+    "see you": 3,
+    "see ya": 3,
+    "later": 2,
+    "take care": 2,
+    "have a good one": 2,
+    "i'm leaving": 3,
+    "gotta go": 3
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Bye",
+    "see ya later",
+    "I gotta go"
+   ]
+  },
+  "thank": {
+   "label": "Thanking",
+   "keywords": {
+    "thank you": 4,
+    "thanks": 4,
+    "thx": 4,
+    "thank": 2,
+    "appreciate it": 3,
+    "much appreciated": 3,
+    "ty": 3
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Thanks for your help",
+    "thx",
+    "I appreciate it"
+   ]
+  },
+  "apologize": {
+   "label": "Apologizing",
+   "keywords": {
+    "sorry": 4,
+    "i'm sorry": 4,
+    "my bad": 3,
+    "pardon me": 2,
+    "forgive me": 3,
+    "i apologize": 4,
+    "excuse me": 2
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Sorry about that",
+    "my bad",
+    "I apologize"
+   ]
+  },
+  "ask_where": {
+   "label": "Question about a place's location",
+   "keywords": {
+    "where": 3,
+    "find": 2,
+    "get to": 3,
+    "located": 2,
+    "way to": 3,
+    "how do i get": 4,
+    "where is": 4,
+    "where's": 4,
+    "where are": 4,
+    "location": 2,
+    "around here": 2
+   },
+   "question": true,
+   "slots": [
+    "place"
+   ],
+   "examples": [
+    "Do you know where the bank is?",
+    "how do i get to 5th ave",
+    "where's a pharmacy around here"
+   ]
+  },
+  "ask_directions": {
+   "label": "Asking for directions",
+   "keywords": {
+    "which way": 4,
+    "what way": 3,
+    "turn": 2,
+    "left": 2,
+    "right": 2,
+    "straight": 2,
+    "cross": 2,
+    "road": 1,
+    "street": 1,
+    "directions": 4,
+    "how can i reach": 4,
+    "how can i get there": 4
+   },
+   "question": true,
+   "slots": [
+    "place"
+   ],
+   "examples": [
+    "Which way is the station?",
+    "Do I turn left here?",
+    "Can you give me directions to the hotel?"
+   ]
+  },
+  "ask_time": {
+   "label": "Asking about the time",
+   "keywords": {
+    "what time": 4,
+    "time": 3,
+    "what's the time": 4,
+    "do you know the time": 4,
+    "when": 2,
+    "clock": 2,
+    "how late": 2,
+    "how early": 2
+   },
+   "question": true,
+   "slots": [
+    "time"
+   ],
+   "examples": [
+    "What time is it?",
+    "do you know the time",
+    "How late is it?"
+   ]
+  },
+  "ask_price": {
+   "label": "Asking about the price",
+   "keywords": {
+    "how much": 4,
+    "price": 4,
+    "cost": 3,
+    "costs": 3,
+    "how much is": 4,
+    "how much does": 4,
+    "for sale": 2,
+    "cheap": 1,
+    "expensive": 1
+   },
+   "question": true,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "How much is this?",
+    "What does it cost?",
+    "How much does this phone cost?"
+   ]
+  },
+  "buy_request": {
+   "label": "Asking to buy something",
+   "keywords": {
+    "buy": 4,
+    "purchase": 4,
+    "get me": 3,
+    "i'll take": 4,
+    "can i buy": 4,
+    "can i get": 3,
+    "i want": 2,
+    "i'd like": 3,
+    "sell me": 4,
+    "do you have": 2,
+    "available": 2
+   },
+   "question": false,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "Can I buy this?",
+    "I'd like to get a newspaper",
+    "Do you have any batteries?"
+   ]
+  },
+  "ask_who_works_here": {
+   "label": "Asking who works here",
+   "keywords": {
+    "who works here": 5,
+    "who works": 4,
+    "staff": 3,
+    "employee": 3,
+    "employees": 3,
+    "manager": 2,
+    "boss": 2,
+    "clerk": 2,
+    "cashier": 2,
+    "who's in charge": 4,
+    "who's the manager": 4,
+    "in charge": 3
+   },
+   "question": true,
+   "slots": [
+    "person"
+   ],
+   "examples": [
+    "Who works here?",
+    "Who's the manager?",
+    "Who is in charge here?"
+   ]
+  },
+  "ask_about_person": {
+   "label": "Asking about a person",
+   "keywords": {
+    "who is": 3,
+    "who's": 3,
+    "do you know": 2,
+    "have you seen": 3,
+    "know where": 2,
+    "know this guy": 2,
+    "know this woman": 2,
+    "what do you know": 3,
+    "tell me about": 3
+   },
+   "question": true,
+   "slots": [
+    "person"
+   ],
+   "examples": [
+    "Do you know John?",
+    "Have you seen this woman?",
+    "What do you know about him?"
+   ]
+  },
+  "ask_what_saw": {
+   "label": "Asking what they saw",
+   "keywords": {
+    "what did you see": 5,
+    "did you see": 4,
+    "see anything": 3,
+    "saw anything": 3,
+    "what happened": 2,
+    "what did you notice": 4,
+    "yesterday": 2,
+    "today": 2,
+    "this morning": 2,
+    "last night": 2
+   },
+   "question": true,
+   "slots": [
+    "time"
+   ],
+   "examples": [
+    "What did you see yesterday?",
+    "Did you see anything this morning?",
+    "What did you notice last night?"
+   ]
+  },
+  "ask_event": {
+   "label": "Asking about an event",
+   "keywords": {
+    "what happened": 4,
+    "what was that": 3,
+    "did you hear": 3,
+    "blackout": 4,
+    "power outage": 5,
+    "accident": 4,
+    "crash": 4,
+    "police": 3,
+    "cops": 3,
+    "sirens": 3,
+    "incident": 4,
+    "emergency": 3
+   },
+   "question": true,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "What happened with the power outage?",
+    "Did you hear about the crash?",
+    "Why are the police here?"
+   ]
+  },
+  "ask_name": {
+   "label": "Asking for a name",
+   "keywords": {
+    "what's your name": 5,
+    "what is your name": 5,
+    "your name": 4,
+    "who are you": 4,
+    "may i have your name": 5,
+    "name": 2
+   },
+   "question": true,
+   "slots": [
+    "person"
+   ],
+   "examples": [
+    "What's your name?",
+    "May I have your name?",
+    "Who are you?"
+   ]
+  },
+  "ask_job": {
+   "label": "Asking about a job",
+   "keywords": {
+    "what do you do": 4,
+    "what do you do for work": 5,
+    "job": 3,
+    "work": 2,
+    "occupation": 4,
+    "where do you work": 4,
+    "what's your job": 4,
+    "profession": 4
+   },
+   "question": true,
+   "slots": [
+    "person"
+   ],
+   "examples": [
+    "What do you do for work?",
+    "Where do you work?",
+    "What's your job?"
+   ]
+  },
+  "compliment": {
+   "label": "Giving a compliment",
+   "keywords": {
+    "nice": 2,
+    "great": 2,
+    "good job": 4,
+    "looks good": 3,
+    "you look nice": 4,
+    "beautiful": 3,
+    "handsome": 3,
+    "cool": 3,
+    "love your": 3,
+    "well done": 3,
+    "look great": 3,
+    "you look": 2
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Nice jacket",
+    "You look great today",
+    "Cool place"
+   ]
+  },
+  "complaint": {
+   "label": "Making a complaint",
+   "keywords": {
+    "complaint": 4,
+    "complain": 4,
+    "terrible": 3,
+    "awful": 3,
+    "bad service": 5,
+    "not working": 4,
+    "doesn't work": 4,
+    "broken": 3,
+    "ridiculous": 3,
+    "unfair": 3,
+    "problem": 2,
+    "too slow": 3
+   },
+   "question": false,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "This place has terrible service",
+    "The machine isn't working",
+    "This is unfair"
+   ]
+  },
+  "ask_favor": {
+   "label": "Asking for a favor",
+   "keywords": {
+    "can you": 2,
+    "could you": 3,
+    "would you": 3,
+    "do me a favor": 5,
+    "help me": 3,
+    "help out": 3,
+    "could i ask": 3,
+    "i need a favor": 5,
+    "mind helping": 4
+   },
+   "question": false,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "Could you do me a favor?",
+    "Can you help me out?",
+    "I need a favor"
+   ]
+  },
+  "borrow_money": {
+   "label": "Asking to borrow money",
+   "keywords": {
+    "borrow": 5,
+    "lend me": 5,
+    "loan me": 5,
+    "spot me": 4,
+    "a few bucks": 4,
+    "some money": 3,
+    "cash": 2,
+    "can i borrow": 5,
+    "could you lend": 5
+   },
+   "question": false,
+   "slots": [
+    "number"
+   ],
+   "examples": [
+    "Can I borrow twenty bucks?",
+    "Could you lend me some cash?",
+    "Can you spot me a few dollars?"
+   ]
+  },
+  "offer_money": {
+   "label": "Offering money",
+   "keywords": {
+    "i'll pay": 4,
+    "i can pay": 4,
+    "how about some cash": 4,
+    "here's some money": 4,
+    "i'll give you": 3,
+    "keep the change": 3,
+    "worth your while": 4,
+    "a little extra": 3,
+    "for your trouble": 3,
+    "cash for": 4
+   },
+   "question": false,
+   "slots": [
+    "number"
+   ],
+   "examples": [
+    "I'll pay you twenty dollars",
+    "How about some cash for your trouble?",
+    "I can give you a little extra"
+   ]
+  },
+  "claim_identity": {
+   "label": "Claiming an identity",
+   "keywords": {
+    "i'm a technician": 5,
+    "i am a technician": 5,
+    "i'm with the police": 5,
+    "i work for the police": 5,
+    "i'm an officer": 5,
+    "i'm with maintenance": 4,
+    "maintenance": 3,
+    "delivery driver": 4,
+    "delivery": 3,
+    "i'm here to fix": 4,
+    "i'm here to deliver": 4,
+    "authorized": 3,
+    "on duty": 3
+   },
+   "question": false,
+   "slots": [
+    "person"
+   ],
+   "examples": [
+    "I'm a technician here to fix the wiring",
+    "I'm with the police",
+    "I'm here to deliver a package"
+   ]
+  },
+  "ask_entry": {
+   "label": "Asking to enter",
+   "keywords": {
+    "can i come in": 5,
+    "may i come in": 5,
+    "let me in": 4,
+    "can i enter": 5,
+    "may i enter": 5,
+    "go inside": 3,
+    "come inside": 3,
+    "allowed inside": 4,
+    "permission to enter": 5,
+    "open the door": 3
+   },
+   "question": true,
+   "slots": [
+    "place"
+   ],
+   "examples": [
+    "Can I come in?",
+    "Am I allowed inside?",
+    "May I enter the building?"
+   ]
+  },
+  "ask_phone": {
+   "label": "Asking to use the phone",
+   "keywords": {
+    "use your phone": 5,
+    "use the phone": 5,
+    "use your telephone": 5,
+    "make a call": 4,
+    "make a phone call": 5,
+    "borrow your phone": 5,
+    "use a phone": 4,
+    "phone call": 3,
+    "telephone": 3,
+    "borrow your telephone": 4,
+    "your telephone": 3
+   },
+   "question": true,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "Can I use your phone?",
+    "May I make a phone call?",
+    "Could I borrow your telephone?"
+   ]
+  },
+  "ask_wifi_password": {
+   "label": "Asking for the Wi-Fi password",
+   "keywords": {
+    "wifi": 5,
+    "wi-fi": 5,
+    "wireless": 3,
+    "password": 5,
+    "passcode": 5,
+    "network password": 5,
+    "network key": 4,
+    "internet password": 4,
+    "what's the wifi": 3
+   },
+   "question": true,
+   "slots": [
+    "thing"
+   ],
+   "examples": [
+    "What's the Wi-Fi password?",
+    "Can I get the wireless password?",
+    "Do you know the network key?"
+   ]
+  },
+  "threaten": {
+   "label": "Making a threat",
+   "keywords": {
+    "or else": 5,
+    "back off": 5,
+    "get lost": 4,
+    "leave me alone": 4,
+    "watch yourself": 4,
+    "don't make me": 4,
+    "you better": 4,
+    "you'd better": 4,
+    "step back": 3,
+    "last warning": 4
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Back off",
+    "You better leave me alone",
+    "Get lost, or else"
+   ]
+  },
+  "flirt": {
+   "label": "Flirting",
+   "keywords": {
+    "you look nice": 3,
+    "you're cute": 4,
+    "you're charming": 4,
+    "nice smile": 4,
+    "can i buy you": 4,
+    "want to grab coffee": 4,
+    "like you": 3,
+    "pretty": 3,
+    "handsome": 3,
+    "want to go out": 4,
+    "love to see you": 3,
+    "grab coffee": 4
+   },
+   "question": false,
+   "slots": [
+    "person"
+   ],
+   "examples": [
+    "You have a nice smile",
+    "Would you like to grab coffee sometime?",
+    "You're pretty charming"
+   ]
+  },
+  "yes": {
+   "label": "Yes",
+   "keywords": {
+    "yes": 5,
+    "yeah": 5,
+    "yep": 4,
+    "yup": 4,
+    "sure": 4,
+    "okay": 4,
+    "ok": 4,
+    "alright": 3,
+    "right": 2,
+    "absolutely": 5,
+    "of course": 5,
+    "uh huh": 3
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Yes",
+    "yeah, sure",
+    "Okay, absolutely"
+   ]
+  },
+  "no": {
+   "label": "No",
+   "keywords": {
+    "no": 5,
+    "nope": 5,
+    "nah": 4,
+    "not really": 4,
+    "no way": 5,
+    "never": 4,
+    "can't": 3,
+    "cannot": 3,
+    "won't": 3,
+    "i don't": 2,
+    "i won't": 4
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "No",
+    "Nah, not really",
+    "I won't"
+   ]
+  },
+  "not_understood": {
+   "label": "I don't understand",
+   "keywords": {
+    "i don't understand": 5,
+    "don't understand": 5,
+    "i dont get it": 5,
+    "don't get it": 4,
+    "what do you mean": 5,
+    "come again": 3,
+    "huh": 4,
+    "what": 2,
+    "sorry": 1
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "I don't understand",
+    "What do you mean?",
+    "I don't get it"
+   ]
+  },
+  "change_subject": {
+   "label": "Changing the subject",
+   "keywords": {
+    "change the subject": 5,
+    "change the topic": 5,
+    "let's talk about something else": 5,
+    "different subject": 4,
+    "never mind": 4,
+    "forget that": 3,
+    "anyway": 3,
+    "moving on": 4,
+    "on another note": 4
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Let's change the subject",
+    "Anyway, let's talk about something else",
+    "Never mind"
+   ]
+  },
+  "talk_weather": {
+   "label": "Talking about the weather",
+   "keywords": {
+    "weather": 5,
+    "hot": 2,
+    "cold": 2,
+    "rain": 3,
+    "raining": 3,
+    "sunny": 3,
+    "cloudy": 3,
+    "snow": 3,
+    "windy": 3,
+    "forecast": 4,
+    "temperature": 3,
+    "nice day": 4,
+    "beautiful day": 3
+   },
+   "question": false,
+   "slots": [
+    "time"
+   ],
+   "examples": [
+    "Nice day, huh?",
+    "Is it going to rain?",
+    "The weather is pretty cold today"
+   ]
+  },
+  "banter": {
+   "label": "Banter",
+   "keywords": {
+    "just kidding": 5,
+    "kidding": 4,
+    "haha": 4,
+    "lol": 4,
+    "lmao": 4,
+    "that's funny": 3,
+    "whatever": 2,
+    "guess what": 2,
+    "blah blah": 3,
+    "random": 3,
+    "just saying": 2,
+    "nice hat": 1
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Haha, just kidding",
+    "lol nice hat",
+    "blah blah, anyway"
+   ]
+  },
+  "unrecognized": {
+   "label": "Unrecognized",
+   "keywords": {},
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "asdf qwer",
+    "jkh something maybe",
+    "????"
+   ]
+  }
+ },
+ "tone": {
+  "polite": {
+   "please": 2,
+   "thank you": 3,
+   "thanks": 2,
+   "excuse me": 2,
+   "sorry": 1,
+   "sir": 1,
+   "ma'am": 1,
+   "could you": 2,
+   "would you": 2,
+   "may i": 2,
+   "i'd appreciate": 3,
+   "if you don't mind": 3
+  },
+  "rude": {
+   "hey you": 2,
+   "now": 1,
+   "move": 1,
+   "back off": 2,
+   "get lost": 3,
+   "shut up": 3,
+   "give me": 2,
+   "listen": 1,
+   "you better": 2,
+   "whatever": 1
+  },
+  "urgent": {
+   "quick": 2,
+   "hurry": 3,
+   "now": 1,
+   "right now": 3,
+   "as soon as possible": 2,
+   "please hurry": 3,
+   "!": 1,
+   "urgent": 3,
+   "immediately": 3
+  },
+  "unsure": {
+   "maybe": 1,
+   "i think": 1,
+   "kind of": 1,
+   "sort of": 1,
+   "probably": 1,
+   "i guess": 2,
+   "not sure": 2,
+   "i'm not sure": 2,
+   "perhaps": 1,
+   "?": 0
+  },
+  "lie_markers": {
+   "trust me": 2,
+   "honestly": 1,
+   "i swear": 2,
+   "believe me": 2,
+   "between you and me": 2,
+   "official business": 2,
+   "you can trust me": 2,
+   "i'm authorized": 3,
+   "don't worry about it": 1
+  },
+  "formal": {
+   "sir": 2,
+   "ma'am": 2,
+   "may i": 3,
+   "would you please": 3,
+   "i would like": 2,
+   "pardon me": 2,
+   "excuse me": 1,
+   "certainly": 2
+  },
+  "informal": {
+   "hey": 1,
+   "yo": 2,
+   "sup": 2,
+   "yeah": 1,
+   "yep": 1,
+   "wanna": 2,
+   "gonna": 2,
+   "gotta": 2,
+   "dude": 1,
+   "man": 1,
+   "u": 2,
+   "ur": 2,
+   "pls": 2,
+   "thx": 2,
+   "lol": 2
+  },
+  "nervous": {
+   "um": 1,
+   "uh": 1,
+   "uhh": 2,
+   "er": 1,
+   "sorry": 1,
+   "i guess": 1,
+   "maybe": 1,
+   "i'm not sure": 2,
+   "okay": 1,
+   "right": 1,
+   "you know": 1,
+   "...": 1
+  }
+ },
+ "toneLabels": {
+  "-3": "Hostile",
+  "-2": "Aggressive",
+  "-1": "Curt",
+  "0": "Neutral",
+  "1": "Polite",
+  "2": "Friendly",
+  "3": "Respectful"
+ }
+}

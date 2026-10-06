@@ -2,6 +2,13 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 14.1: a leitura do texto livre (2026-10-06, sessão na nuvem)
+
+- **Antes, o mapa da tela** (`docs/mapa-da-tela.md`): o inventário do que ocupa a tela, a proposta de zonas e quatro decisões do usuário (celular abaixa ao telefone; conversa como legenda de filme; balões até ~12 m e legenda de perto; close-up sozinho ao olhar).
+- **`src/sim/intent.ts`:** `readLine(linha, índice de nomes)` devolve a intenção (a de mais pontos; abaixo de 2, "unrecognized"), o rótulo, se é pergunta, os nomes da cidade achados (lugar, rua, pessoa, coisa), o tom em dois eixos (respeito −3..3, pressão 0..3) com o rótulo, e se é brincadeira. Abreviações de 2008 viram palavras; um erro de uma letra é corrigido para a palavra mais longa que encaixa; "not"/"don't" antes de uma palavra-chave a enfraquece; as frases da chave mais longas consomem as palavras antes das curtas; um nome de lugar puxa para "onde fica"; maiúsculas, "!" e repetição sobem a pressão.
+- **O léxico:** o retorno 07 tinha aspas quebradas nas regras (consertado no arquivo); as intenções e o tom foram para `src/locale/intents.en.json`, com cinco acréscimos para exemplos que erravam.
+- **Conferido:** `tests/intent.ts`, 98 dos 99 exemplos do próprio léxico e 14 casos (erros de digitação, nomes, tom, grosseria, "no way").
+
 ## 13.10f: sentar (2026-10-06, sessão na nuvem)
 
 - **`src/sim/seats.ts`:** `seatAhead` acha o assento à frente (até 1,5 m): cadeira, banqueta e sofá da planta (no sofá, o ponto mais perto ao longo dele), e na rua o banco e o banco do ponto de ônibus (pelo modelo de `models.ts`: o assento olha para `a`). `sitDown` leva o jogador ao assento e guarda de onde ele veio; `standUp` o devolve. O assento fica em `player.sit` (vai junto no save; um save velho não tem).
