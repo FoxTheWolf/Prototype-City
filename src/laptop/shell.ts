@@ -4,6 +4,7 @@ import { type BootDev, type Computer, type FsNode } from '../sim/computer';
 import { Firmware, type FwAction } from './bios';
 import { Editor } from './editor';
 import { Browser } from '../web/browser';
+import { WM } from './wm';
 import { type Scr } from './screen';
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
@@ -141,6 +142,8 @@ export class Shell {
   editor: Editor | null = null;
   /** The web browser (15.1), while it owns the screen. */
   browser: Browser | null = null;
+  /** The window manager (15.7): composes the terminal and the browser into the one screen while Lodestar runs. */
+  wm: WM | null = null;
 
   constructor(readonly pc: Computer, private world: World) {
     this.cwd = `/home/${pc.hw.user}`;
@@ -152,6 +155,7 @@ export class Shell {
   screen(): { scr: Scr; cx: number; cy: number } | null {
     if (this.fw.mode) return { scr: this.fw.cells(), cx: -1, cy: -1 };
     if (this.editor && this.state === 'ready') return this.editor.cells();
+    if (this.wm && this.state === 'ready') return this.wm.cells(performance.now() / 1000);
     if (this.browser && this.state === 'ready') return this.browser.cells(performance.now() / 1000);
     return null;
   }
@@ -217,7 +221,7 @@ export class Shell {
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
     this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.mask = false;
-    this.editor = null; this.browser = null; this.fw.close(); this.inPost = true; this.postWant = null;
+    this.editor = null; this.browser = null; this.wm = null; this.fw.close(); this.inPost = true; this.postWant = null;
     pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
     // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
     // up, the drives it finds; the drive spins up meanwhile
@@ -348,7 +352,7 @@ export class Shell {
   powerButton(now: number) {
     if (this.halted) return;
     if (this.state === 'ready' && !this.editor && !this.browser && !this.fw.mode) { this.shutdown(now, false); return; }
-    this.queue = []; this.editor = null; this.browser = null; this.fw.close(); this.bios = false; this.inPost = false;
+    this.queue = []; this.editor = null; this.browser = null; this.wm = null; this.fw.close(); this.bios = false; this.inPost = false;
     this.pc.halt(); this.state = 'off'; this.halted = true; this.lines = [];
     this.sound(now, 'spindown', 0);
   }
@@ -386,7 +390,12 @@ export class Shell {
     }
     if (this.state !== 'ready') return;
     if (this.editor) { this.editor.key(key, ctrl); return; }
+    if (this.wm) { this.wm.key(key, ctrl, now); return; }
     if (this.browser) { this.browser.key(key, ctrl, now); return; }
+    this.termKey(key, ctrl, now);
+  }
+  /** A key for the prompt itself: the window manager (15.7) routes here when the terminal pane has the focus. */
+  termKey(key: string, ctrl: boolean, now: number) {
     if (ctrl && (key === 'c' || key === 'C')) {
       if (!this.ready) this.interrupt(now);
       else { this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(this.input.length) : this.input) + '^C', ink: 0 }); this.input = ''; this.cur = 0; this.mask = false; }
@@ -412,6 +421,15 @@ export class Shell {
     }
     if (key === 'Tab') { this.complete(); return; }
     if (key.length === 1 && s.length < 200) { this.input = s.slice(0, this.cur) + key + s.slice(this.cur); this.cur++; }
+  }
+  /** Drop text into the prompt at the cursor (paste, 15.7c): newlines become spaces, no running a line on its own. */
+  paste(text: string) {
+    if (this.state !== 'ready' || !this.ready || this.mask) return;
+    this.scroll = 0;
+    const t = text.replace(/\s+/g, ' ').trim(), s = this.input, room = 200 - s.length;
+    if (room <= 0 || !t) return;
+    const add = t.slice(0, room);
+    this.input = s.slice(0, this.cur) + add + s.slice(this.cur); this.cur += add.length;
   }
   /** Tab: the command's name, or the path being typed, as far as it is the only way to go. */
   private complete() {
@@ -955,8 +973,10 @@ export class Shell {
         const pid = this.job;
         this.job = 0;
         this.then(now, () => {
-          this.browser = new Browser(w, () => ({ up: this.net.state === 'up', kbps: this.net.kbps() }), () => { this.browser = null; pc.kill(pid); }, TERM_W, TERM_H);
+          // the browser opens in a pane beside the terminal (the window manager, 15.7); closing it closes both
+          this.browser = new Browser(w, () => ({ up: this.net.state === 'up', kbps: this.net.kbps() }), () => { this.browser = null; this.wm = null; pc.kill(pid); }, TERM_W, TERM_H);
           this.browser.go(args[0] ?? '', performance.now() / 1000);
+          this.wm = new WM(this, this.browser, TERM_W, TERM_H);
         });
         return pc.workS(9800, 1);
       }
@@ -1007,14 +1027,14 @@ export class Shell {
   /** The battery is almost empty: the system halts itself, cleanly. */
   battCritical(now: number) {
     if (this.state !== 'ready') return;
-    this.editor = null; this.browser = null;
+    this.editor = null; this.browser = null; this.wm = null;
     this.broadcast(now, 'Critical battery level: the system is shutting down.');
     this.shutdown(now, false);
   }
   /** The battery is empty: the power is simply gone, whatever was on the screen. */
   powerLoss() {
     this.pc.halt();
-    this.queue = []; this.lines = []; this.state = 'off'; this.halted = true; this.bios = false; this.editor = null; this.browser = null; this.fw.close(); this.inPost = false; this.conn = null; this.mask = false;
+    this.queue = []; this.lines = []; this.state = 'off'; this.halted = true; this.bios = false; this.editor = null; this.browser = null; this.wm = null; this.fw.close(); this.inPost = false; this.conn = null; this.mask = false;
     this.sfx.push('spindown');
   }
   private logout(now: number) {

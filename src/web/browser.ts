@@ -39,6 +39,15 @@ export class Browser {
 
   constructor(private world: World, private net: Net, private quit: () => void, private W: number, private H: number) {}
 
+  /** The pane's size changed (the window manager, 15.7): re-lay the current page to the new width, keeping its state. */
+  resize(w: number, h: number) {
+    if (w === this.W && h === this.H) return;
+    this.W = w; this.H = h;
+    this.laid = this.got?.page ? layout(this.got.page, w - 1) : null;
+    const view = h - 4, rows = this.laid?.rows.length ?? 0;
+    this.top = Math.max(0, Math.min(this.top, Math.max(0, rows - view)));
+  }
+
   /** Ask for `url` (the start page when empty). */
   go(url: string, now: number, remember = true, form?: Map<string, string>) {
     url = url.trim() || portalUrl(this.world);

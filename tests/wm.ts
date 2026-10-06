@@ -1,0 +1,80 @@
+/**
+ * The notebook's window manager (15.7), in Node:
+ *   npx rolldown tests/wm.ts --format esm --platform node -o tests/.out/wm.mjs && node tests/.out/wm.mjs [seed]
+ * The terminal and the browser sit side by side with a '|' divider; the focus marker points at the
+ * pane with the keys; Ctrl+Left/Right moves it; F11 maximizes a pane (no divider, full width) and
+ * again restores the split; PageUp walks the terminal's scrollback; keys reach the focused pane.
+ * Prints the top rows of the composed screen.
+ */
+import { createWorld } from '../src/sim/world';
+import { Browser } from '../src/web/browser';
+import { WM, type TermIO } from '../src/laptop/wm';
+
+const W = 160, H = 50;
+const w = createWorld(Number(process.argv[2] ?? 42));
+let fails = 0;
+const fail = (m: string) => { if (++fails <= 30) console.log('FAIL ' + m); };
+
+const lines = Array.from({ length: 60 }, (_, i) => ({ text: `line ${i}`, ink: 0 }));
+lines.push({ text: 'bin  docs  tmp', ink: 0 });
+const term: TermIO & { lines: { text: string; ink: number }[] } = {
+  lines,
+  prompt: 'user@host:~$ ',
+  input: 'who',
+  cur: 3,
+  mask: false,
+  scroll: 0,
+  ready: true,
+  termKey(k) { if (k.length === 1) { this.input += k; this.cur++; } },
+  paste(t) { this.input += t; this.cur += t.length; },
+};
+
+const browser = new Browser(w, () => ({ up: true, kbps: 600 }), () => { }, W, H);
+browser.go('', 0);
+const wm = new WM(term, browser, W, H);
+
+const split = Math.floor((W - 1) / 2); // 79
+const rowStr = (scr: { ch: string[][] }, r: number) => scr.ch[r].join('');
+
+// --- split layout, web focused by default ---
+let out = wm.cells(1);
+if (out.scr.w !== W || out.scr.h !== H) fail('composed screen is the console size');
+if (rowStr(out.scr, 0)[split] !== '|') fail('a divider column between the panes');
+if (out.scr.ch[H >> 1][split] !== '>') fail('the marker points at the web pane when it has the focus');
+// the terminal pane holds the prompt line on the left; the browser's title bar is on the right
+const leftHasPrompt = out.scr.ch.some((row) => row.slice(0, split).join('').includes('user@host:~$ who'));
+if (!leftHasPrompt) fail('the terminal pane shows the prompt and what is typed');
+const rightHasChrome = out.scr.ch.some((row) => row.slice(split + 1).join('').includes('Lodestar'));
+if (!rightHasChrome) fail('the browser pane shows its chrome');
+
+// --- move the focus to the terminal ---
+wm.key('ArrowLeft', true, 1);
+out = wm.cells(1);
+if (out.scr.ch[H >> 1][split] !== '<') fail('the marker points at the terminal once it has the focus');
+if (out.cx !== 13 + 3 || out.cy !== H - 1) fail(`the caret sits after the prompt on the last row (got ${out.cx},${out.cy})`);
+
+// a letter typed reaches the terminal, not the browser
+wm.key('x', false, 1);
+if (term.input !== 'whox') fail('a key reaches the focused terminal');
+
+// PageUp walks the scrollback
+term.input = 'who'; term.cur = 3;
+wm.key('PageUp', false, 1);
+if (term.scroll <= 0) fail('PageUp scrolls the terminal back');
+term.scroll = 0;
+
+// --- F11 maximizes the terminal: full width, no divider ---
+wm.key('F11', false, 1);
+out = wm.cells(1);
+if (rowStr(out.scr, 0).includes('|') && rowStr(out.scr, 0)[split] === '|') fail('no divider when a pane is maximized');
+if (out.scr.ch[0].slice(split).join('').includes('Lodestar')) fail('the browser is hidden when the terminal is maximized');
+// restore
+wm.key('F11', false, 1);
+out = wm.cells(1);
+if (out.scr.ch[0][split] !== '|') fail('F11 again restores the split');
+
+console.log(fails ? `\n${fails} FAILED` : '\nOK — window manager composes, focuses, maximizes and routes keys');
+console.log('\n--- top of the composed screen (split, terminal focused) ---');
+wm.key('ArrowLeft', true, 1);
+const show = wm.cells(1);
+for (let r = 0; r < 6; r++) console.log(rowStr(show.scr, r).replace(/\s+$/, ''));
