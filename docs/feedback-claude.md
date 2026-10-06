@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-06 — depois da 15.9 (Opus 5.5)
+- **Eu não ouço as músicas.** Compus por teoria (a melodia cai em 82–97% nas notas do acorde, o `tests/music.ts` confere), mas o timbre e a mixagem precisam do seu ouvido. Se alguma soar sem graça, o caminho mais barato é me dizer "mais rápida", "mais triste" ou "a bateria alta demais", e eu mexo nos números, sem recompor.
+- **O alto-falante é um sistema implícito com retorno natural:** a música sai de verdade do celular. Na etapa 16, os NPCs que reagirem a ela fecham o laço das duas camadas sem nenhuma barra.
+- **O Reynard sem conteúdo é uma casca.** Ele só ganha vida quando o mentor passar a falar por ele. Proponho que a verificação do número de segurança seja um momento do tutorial: o mentor lê os dígitos numa ligação, e um número diferente um dia seria um gancho de história (alguém no meio).
+- **O controle do fio fica sempre visível** com fone e música, como você pediu. Se no teste ele atrapalhar a vista, dá para mostrá-lo só com o Alt segurado.
+
 ## 2026-10-06 — depois do WEP crack
 
 - **O WEP sem o "exposto = calor" ainda não morde.** Hoje capturar é parar ~20–60 s de jogo olhando o contador subir, sem risco. O que faz valer a pena é o follow-up (a): enquanto `tdump mon` roda, acumular calor em `heat.ts` (um ato contínuo, não pontual) e, melhor ainda, o mentor por SMS avisar "you've been sitting on that link too long". Sem isso, o crack é só uma espera. Sugiro fazer o calor contínuo logo após a 15.8c, junto com o resto do laço.
