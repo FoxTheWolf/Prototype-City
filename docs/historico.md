@@ -2,6 +2,16 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.7 ✅ Gerenciador de janelas no notebook (2026-10-06, Opus 4.8)
+- **Feito (a–d), tudo em `src/laptop/wm.ts` (novo) + emendas neutras no `shell.ts` + mouse no `main.ts`:**
+  - **15.7a** o WM compõe o terminal e o Lodestar numa só `Scr` (terminal à esquerda, navegador à direita, traço `|` com `<`/`>` apontando o foco); **Ctrl+←/→** ou **Ctrl+Tab** troca o foco; **F11** maximiza/restaura; o terminal focado anda a rolagem com PageUp/PageDown. O navegador cabe no painel com `Browser.resize` (re-`layout` sem re-buscar). `shell.ts`: campo `wm`, `screen()`/`key()` roteando, `termKey` extraído do `key()`, um `paste()`; o `lodestar` abre em painel. O `draw.ts` não mudou (o WM entra pelo caminho `full` do `screen()`).
+  - **15.7b** o mouse: o cursor do SO já aparece (a tecla N solta o pointer-lock); o clique foca o painel e, no navegador, aperta botões/endereço e segue links; a roda rola o painel sob o cursor. `main.ts` guarda `scrTermW/scrTermH` e mapeia o clique para a célula do terminal por `screenAt` + `termW/termH` (de frente).
+  - **15.7c** copiar/colar: arrastar marca na `Scr` composta (atravessa painéis, lido da própria `Scr`), copia ao soltar para a área do jogo e a do sistema; **Ctrl+V** cola no painel focado (`Shell.paste`/`Browser.paste`); **Insert** abre o visualizador; a seleção aparece invertida; um clique sem arrastar segue o link.
+  - **15.7d** clicar num IP/host no terminal o digita no prompt (via `Shell.paste` + regex de endereço no WM): **não** tocou nenhum comando de hacking do shell.
+- **Interface `TermIO`** (em `wm.ts`): `lines`/`prompt`/`input`/`cur`/`mask`/`scroll`/`ready`/`termKey`/`paste`. O `Shell` a implementa. Assim o WM é legível por sessões normais.
+- **Atrito hacking/normal:** o mapa das faixas sensíveis do `shell.ts` ficou em `docs/mapa-shell.md` (mantido pelo Opus 4.8). Teste em `tests/wm.ts` (compor, focar, maximizar, teclas, mouse, copiar/colar, clicar em endereço).
+- **Falta ver no PC** (precisa de WebGPU): os dois painéis lado a lado, a seta de foco, o F11, o cursor sobre a tela inclinada mirando certo (o mapeamento é de frente), a seleção invertida e o visualizador. **Decisões do usuário nesta sessão:** cursor do SO solto (não desenhado); escopo "completo" de copiar/colar.
+
 ## 15.6 ✅ O Streetwire na web e comentar (2026-10-06)
 - `src/web/streetwire.ts` (`www.streetwire.com`; link no portal e no Lookwise; `mobile: true`): o feed (os 25 posts mais novos), o post com os comentários (`comments`/`commentText`, os mesmos do app), o perfil (`profileOf` e os posts da pessoa).
 - **Conta:** usuário, senha e e-mail; o site manda o link de confirmação por `deliverMail` (15.4), e ele só chega se o endereço for uma conta do webmail da cidade (outro domínio não chega a lugar nenhum). O link confirma e já entra. Estado em `Feed.me` e `Feed.mine` (`sim/social.ts`; o `feed` já era salvo inteiro).

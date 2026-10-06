@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.7 — Janelas no notebook (2026-10-06)
+- **Terminal e navegador lado a lado:** abra o Lodestar (`lodestar`) com o terminal aberto e os dois dividem a tela, com um traço no meio e uma seta apontando qual tem o teclado. **Ctrl+←/→** (ou Ctrl+Tab) troca o foco; **F11** deixa um só painel em tela cheia e volta.
+- **O mouse funciona no notebook:** o cursor aparece ao abrir a tampa. Clique num painel para focá-lo; no navegador, clique nos botões da barra, no endereço e nos links; a rodinha rola o painel sob o cursor.
+- **Copiar e colar:** arraste para marcar um trecho da tela (vale atravessar do terminal para o navegador) e, ao soltar, ele vai para a área de transferência (e a do sistema, quando dá). **Ctrl+V** cola no prompt ou no campo do navegador. **Insert** mostra o que você copiou.
+- **Clicar num endereço** (um IP ou host no terminal) o digita no prompt, para não ter de redigitar.
+
 ## 0.15.6 — Streetwire na web (2026-10-06)
 - O **site do Streetwire** (`www.streetwire.com`, link no portal): o feed, cada post com os comentários e o perfil de cada pessoa, no notebook e no celular.
 - **Comente nos posts:** crie uma conta (o link de confirmação chega no seu e-mail da cidade) e escreva o que quiser. O autor lê do jeito dele e às vezes responde, um tempo depois (de manhã, se estava dormindo): agradece um elogio, diz onde fica o lugar se você perguntar, conta onde aconteceu a batida. Desconhecidos respondem menos que quem já conversou com você.
