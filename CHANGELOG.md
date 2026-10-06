@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10i — Toda loja tem sala (2026-10-06)
+- Quase todas as empresas da cidade não tinham loja de verdade: entrando pela porta, só havia o saguão e apartamentos. Agora toda empresa tem a sua sala no térreo, com caixa e prateleiras.
+- Nos prédios fundos e estreitos a loja fica na ponta que dá para a rua; nos prédios médios, o corredor dos moradores passou para os fundos e a porta deles fica ao lado da vitrine.
+- Nos prédios pequenos, o térreo inteiro é a loja, com um corredor no fundo que leva ao elevador dos moradores. Fora do horário, a porta desses prédios fica trancada por fora.
+- Lugares com mesas ganharam tomadas também nas lojas novas.
+- A cidade de cada semente mudou por dentro (um save antigo pode começar dentro de uma parede: comece um jogo novo).
+
 ## 0.13.10q — Debug fechado ao abrir (2026-10-06)
 - As linhas de debug começam sempre escondidas; **F3** as mostra (a escolha não fica mais salva entre sessões).
 

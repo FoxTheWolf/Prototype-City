@@ -6,17 +6,18 @@
  * walked into (from the street doors downstairs, from the lift upstairs) going round the furniture,
  * the way `blocked` lets the player walk; every street door opens into the plan; no piece of furniture
  * stands on a wall or a doorway; every till can be walked up to from the street (13.10c); every lot has a street door,
- * and every street door opens onto ground that reaches the street, not a yard closed in behind the buildings (13.10e).
+ * and every street door opens onto ground that reaches the street, not a yard closed in behind the buildings (13.10e);
+ * every lot with a business on the ground floor has its shop room (13.10i).
  * Prints the failures and exits with 1 if there are any.
  */
 import { BAY, generateCity, isSolid, type City } from '../src/sim/city';
-import { CELL, DOOR, exitsOf, facePoint, floorsOf, habitable, inFurniture, planOf, ROOM, WALL, type Plan } from '../src/sim/interior';
+import { CELL, DOOR, exitsOf, facePoint, fallbacks, floorsOf, habitable, inFurniture, planOf, ROOM, WALL, type Plan } from '../src/sim/interior';
 import { CITY_SIZE } from '../src/sim/world';
 
 const seeds = [Number(process.argv[2] ?? 42)];
 let fails = 0, plans = 0, rooms = 0;
 /** Known: lots closed in on every side (no street door at all); shops with no way in (none since 13.10c). */
-let noDoor = 0, shutShops = 0, tills = 0;
+let noDoor = 0, shutShops = 0, tills = 0, shops = 0;
 const fail = (msg: string) => { if (++fails <= 40) console.log('FAIL ' + msg); };
 
 for (const seed of seeds) {
@@ -31,13 +32,14 @@ for (const seed of seeds) {
       if (!P) continue;
       plans++;
       const doors = f === 0 ? exitsOf(city, k).map((D) => facePoint(B, D.face, (D.a0 + D.a1) / 2)) : null;
+      if (f === 0 && B.shop) { shops++; if (!P.rooms.some((R) => R.kind === 'shop')) fail(`seed ${seed} lot ${k}: a business with no shop room`); }
       if (doors && !doors.length) { noDoor++; fail(`seed ${seed} lot ${k}: no street door`); continue; }
       if (doors) for (const [x, y, nx, ny] of doors) if (!reached(x + nx * 0.8, y + ny * 0.8)) fail(`seed ${seed} lot ${k}: a street door at (${x.toFixed(1)}, ${y.toFixed(1)}) opens onto a yard closed in`);
       check(P, `seed ${seed} lot ${k} floor ${f}`, doors);
     }
   });
 }
-console.log(`${plans} plans, ${rooms} rooms, ${tills} tills, ${fails} failures (known: ${noDoor} lots closed in with no street door, ${shutShops} shops with no way in)`);
+console.log(`${plans} plans, ${rooms} rooms, ${shops} businesses (${fallbacks} as a whole-floor shop), ${tills} tills, ${fails} failures (known: ${noDoor} lots closed in with no street door, ${shutShops} shops with no way in)`);
 process.exit(fails ? 1 : 0);
 
 

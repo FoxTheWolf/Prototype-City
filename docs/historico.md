@@ -2,6 +2,14 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.10i: lojas sem sala (2026-10-06, sessão na nuvem)
+
+- **O problema:** 1439 das 1618 empresas da semente 42 não tinham a sala da loja no térreo (só saguão e apartamentos). Três causas, medidas com um contador por empresa: (1) nos prédios de 7 a 10,5 m o corredor encostava na parede da porta, ou seja, na fachada da rua; (2) a loja só aceitava vitrine numa face comprida, e nos terrenos fundos e estreitos a rua fica na face curta; (3) nos prédios pequenos o saguão (3 módulos) e o núcleo do elevador (3 módulos) ocupavam a frente inteira.
+- **O que mudou (`sim/interior.ts`):** sob uma loja, o corredor dos prédios médios vai para a parede dos fundos (`frameOf`); o saguão dos moradores tem só o módulo da porta; a loja pode ter vitrine numa ponta do prédio (`frontOn` para qualquer face; a loja ocupa a ponta, até 4 módulos de fundo, e o resto vira apartamentos ou escritórios); a margem da porta da loja só existe junto à parede externa (a parede entre duas salas é a última célula da sala de baixo).
+- **O que não coube:** quando o lote é pequeno demais para a loja e a entrada dos moradores lado a lado (769 na semente 42, quase todos de 8 a 12 m), o térreo inteiro vira a loja, pela porta do prédio, com um corredor de fundos e o elevador atrás de uma porta (a família de cima toca a loja). Um corredor de 1,6 m fica livre de móveis da porta da rua até a porta do fundo. Essa porta do fundo nunca tranca; a porta do prédio tranca por fora quando a loja fecha (`doorLocked` em `sim/doors.ts`).
+- **De carona:** `sides` (a parede de cada sala, onde os móveis encostam) olhava só o meio da parede e errava a posição quando havia uma porta ali: agora olha três pontos. As tomadas, quando não cabem duas a 2 m numa parede cega, ficam a 1 m e, em último caso, embaixo de uma janela.
+- **Medido (semente 42):** empresas sem sala de 1439 para 0; caixas de 351 para 1787; tomadas em 885 lugares (eram 86). `tests/plans.ts` agora falha se uma empresa não tiver sala e mostra quantas viraram térreo inteiro; `tests/outlets.ts`, `tests/city.ts` e `tests/playtest.ts` passam. **Não visto:** o visual (na nuvem não há WebGPU); ver no PC do usuário.
+
 ## 13.9c: tomadas (2026-10-06, sessão na nuvem)
 
 - **As tomadas viraram objetos:** móvel `outlet` (uma placa na altura do joelho), duas por loja dos tipos de `OUTLETS` (café, cybercafé, lanchonetes, bar, motel, lavanderia), nas paredes cegas (outra sala ou o vizinho atrás, nunca o ar livre da vitrine), o mais perto possível das mesas e bancos (`outlets` em `furnish`, `sim/interior.ts`).

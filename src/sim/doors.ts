@@ -100,14 +100,17 @@ const HOME_KINDS = new Set(['living', 'bedroom', 'kitchen', 'bath', 'foyer']);
 export function doorLocked(w: World, d: DoorRef): boolean {
   const hour = (w.time / 3600) % 24, B = w.city.buildings[d.k];
   if (d.street) {
-    // the shop's own door, outside its hours; the building's main door is open
-    return w.player.inside < 0 && d.n > 0 && B.biz >= 0 && !isOpen(w.city.businesses[B.biz].kind, hour);
+    // the shop's own door, outside its hours; the building's main door is open, unless the whole ground floor is the shop (13.10i)
+    const G = d.n === 0 && B.biz >= 0 ? planOf(w.city, d.k, 0) : null, whole = !!G && !G.exits.length && G.rooms.some((R) => R.kind === 'shop');
+    return w.player.inside < 0 && (d.n > 0 || whole) && B.biz >= 0 && !isOpen(w.city.businesses[B.biz].kind, hour);
   }
   const P = planOf(w.city, d.k, d.f), L = P && leavesOf(P)[d.n];
   if (!P || !L) return false;
   const A: Room | undefined = P.rooms[L.ra], C: Room | undefined = P.rooms[L.rb];
   if (!A || !C || A.unit === C.unit) return false; // within one home or suite: never locked
   const R = A.unit >= 0 ? A : C;
+  // the residents' way through a shop to their lift (13.10i)
+  if (R.kind === 'shop' && (A.kind === 'hall' || C.kind === 'hall')) return false;
   if (R.kind === 'office' || R.kind === 'open') return hour < 7 || hour >= 19;
   if (R.kind === 'store' || R.kind === 'shop') return B.biz < 0 || !isOpen(w.city.businesses[B.biz].kind, hour);
   // a home's front door: most are locked, a few left on the latch (fixed per home)
