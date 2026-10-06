@@ -79,3 +79,4 @@
 ## Decisões do usuário (entrevista de 2026-10-06)
 
 - **Ao telefone, o celular abaixa até a espiada** (só o topo à mostra) e a conversa fica na zona A, igual à conversa ao vivo: a conversa tem sempre o mesmo lugar.
+- **A conversa como legenda de filme:** sem moldura; a fala do NPC em letras claras com sombra escura, o nome em âmbar na frente; só a caixa de texto do jogador tem uma borda fina; a intenção e o medidor de tom logo acima dela, discretos. Se a fala ficar difícil de ler de dia, escurecer um pouco o fundo atrás das letras (sem virar painel).
