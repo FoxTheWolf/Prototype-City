@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### `[HACKING]` Lições do WEP crack (0.19.2) — 2026-10-06
+- **Comando "contínuo até Ctrl+C" no shell de agenda:** o shell é uma fila de eventos futuros (`queue`, `tq`); não há loop. Para rodar sem fim, cada passo **re-agenda o próximo** (`capStep` faz `then(() => this.capStep(this.tq))`). A fila nunca esvazia → `ready` fica `false` → Ctrl+C cai em `interrupt()`. Backstop: `busyUntil = this.tq` a cada passo.
+- **Limpeza no Ctrl+C:** `then(fn, delay, always=true)` **também roda no horário normal** quando o `at` chega — não serve para "só no Ctrl+C". Pôr a limpeza (gravar a captura) **dentro do `interrupt()`** (`if (this.cap) this.finishCapture()`), não como evento `always` agendado.
+- **`redo()` substitui a última linha** (`replace:true`): bom para um contador que sobe no lugar (o `#Data: N`). Imprimir o cabeçalho com `say()` e a linha do contador com `say()` uma vez; os passos seguintes usam `redo()`.
+- **Sucesso = só o que o jogador controla:** a taxa de IVs vem **só do sinal** (`wepIvRate(dbm)`), não do trânsito da cidade — padrão que o usuário exige. O `wcrack` não sorteia: com IVs ≥ limiar devolve a chave real (`AccessPoint.key`); a captura guarda o BSSID (não o índice do AP), e o `wcrack` acha o AP pelo BSSID (nada de vazar o índice).
+- **Testável no Node sem UI:** exportar os pedaços puros do shell (`WEP_IVS`, `wepIvRate`, `parseCapture`) e testá-los + `buildWifi` (`tests/wep.ts`), em vez de dirigir o `run()`. Mesma lição do apt.
+- **Muleta de debug com flag, não apagada:** a chave na tela de Wi-Fi do celular virou `SHOW_WIFI_KEY=false` (alinhado ao pedido do usuário de marcar o que é debug para tirar depois), em vez de sumir.
+
 ### Lições da 15.8 / 19.1 (fórum, apt, saves do notebook) — 2026-10-06
 - **O save do notebook guarda o disco inteiro** (`Laptop.snapshot` = `pc.root.kids`), então **binário novo adicionado a `PROGRAMS` não aparece em save antigo** — foi o bug do `lodestar` ("comando não encontrado"). Regra: ao somar algo a uma estrutura salva, pensar na migração; `syncPrograms` re-põe só os binários de sistema que faltam no `restore` (idempotente, não clobbera arquivos do usuário).
 - **Teclas de função são do host:** o Electron captura **F11** (`electron/main.cjs`, `preventDefault`), então o F11 do WM nunca disparava no PC. Não usar para UI do jogo teclas que o Electron/navegador tomam (F5/F11/etc.); usar Ctrl+seta e afins.

@@ -11,17 +11,19 @@
 > **nomes** (os `case '<cmd>'`, o método `remote`), não pelos números.
 >
 > Comando para reconferir as faixas:
-> `grep -nE "HACK_TOOLS|private conn|private remote|case 'job'|case 'mmap'|case 'bruter'|case 'tdump'|case 'tnet'|case 'mbus'|cellLog" src/laptop/shell.ts`
+> `grep -nE "HACK_TOOLS|WEP_IVS|private conn|private cap|private remote|private capStep|private tdumpMon|case 'job'|case 'mmap'|case 'bruter'|case 'wcrack'|case 'tdump'|case 'tnet'|case 'mbus'|cellLog" src/laptop/shell.ts`
 
-## `src/laptop/shell.ts` — faixas (conferidas em 2026-10-06, ~1072 linhas)
+## `src/laptop/shell.ts` — faixas (conferidas em 2026-10-06, ~1140 linhas; WEP crack acrescentado)
 
 **SENSÍVEIS (`[HACKING]`, não abrir numa sessão normal):**
 - **linha ~15** — `import ... from '../sim/network'` (`lanHosts`, `modbusRegs`, `setBreaker`, `setSignals`, `cellLog`, `WORDS`).
-- **~55–56 e ~90** — `HACK_TOOLS` (mmap/bruter/tdump/tnet/mbus) e sua instalação no `/bin` do jogador.
-- **~133, ~163** — o campo `private conn` (console remoto) e o ramo do `prompt` para ele.
-- **~459** — no `run()`, a linha que desvia para `remote()` quando há `conn`.
-- **~515–575** — o método `private remote(...)` inteiro (o console remoto; inclui o host `omc` da operadora e o comando `log <número>` que lê `cellLog`).
-- **no `exec()` (switch ~578–970), os `case`:** `job` (~736–770, o contrato do fixer), `mmap` (~839–856), `bruter` (~857–874), `tdump` (~875–894), `tnet` (~895–908), `mbus` (~909–970).
+- **~58–60** — `HACK_TOOLS` (bruter, wcrack); a instalação no `/bin` do jogador fica em ~150.
+- **~62–85** — `WEP_IVS`, `wepIvRate`, `parseCapture` (os helpers puros do crack de WEP, exportados; é o que os testes importam).
+- **~202, ~204** — os campos `private conn` (console remoto) e `private cap` (captura de IVs em andamento).
+- **~280 (dentro de `interrupt`)** — a linha que, no Ctrl+C, chama `finishCapture()` se há captura.
+- **~293–345** — `private capStep` / `private finishCapture` / `private tdumpMon` (o modo monitor do WEP).
+- **~630, ~656** — o desvio para `remote()` no `run()` e o método `private remote(...)` inteiro (o console remoto; inclui o host `omc` da operadora e o comando `log <número>` que lê `cellLog`).
+- **no `exec()` switch, os `case`:** `job` (~877), `mmap` (~1032), `bruter` (~1050), `wcrack` (~1068), `tdump` (~1088, inclui o ramo `mon` que chama `tdumpMon`), `tnet` (~1109), `mbus` (~1123).
 
 **NEUTRAS (seguras numa sessão normal):** todo o resto do arquivo — o boot/BIOS, o editor, o sistema de
 arquivos, o prompt e a edição de linha (`termKey`), o `paste`, o `screen()`/`key()`, o gerenciador de

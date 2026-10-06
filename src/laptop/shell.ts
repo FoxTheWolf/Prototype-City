@@ -57,7 +57,26 @@ const PROGRAMS: [string, string, number, number][] = [
  *  can deliver packages (15.8c). All fictional stand-ins, all run on the game's own network. */
 const HACK_TOOLS: [string, number, number][] = [
   ['bruter', 180, 1600], // TODO [HACKING]: deliver from the forum (Switchboard), not preinstalled
+  ['wcrack', 240, 2600], // TODO [HACKING]: deliver from the forum (Switchboard), not preinstalled
 ];
+
+/** [HACKING] WEP IV capture → crack (sim of airodump/aircrack, fictional names). The cost is the
+ *  time spent standing by the AP, exposed — not the city's traffic luck — so the IV rate is set only
+ *  by the signal: closer and stronger fills faster. Enough IVs resolves the 10-digit key; WPA cannot
+ *  be cracked this way. WEP_IVS is how many data frames (IVs) a crack needs. */
+export const WEP_IVS = 20000;
+/** IVs gathered per capture step (~0.4 s), from the signal in dBm: nothing out of reach, fast up close. */
+export function wepIvRate(dbm: number): number {
+  if (dbm <= -90) return 0;
+  const q = Math.max(0, Math.min(1, (dbm + 90) / 40)); // -90..-50 dBm → 0..1
+  return Math.round(20 + 440 * q * q);
+}
+/** [HACKING] Read a tdump capture's header: the BSSID it was taken off and how many IVs it holds. */
+export function parseCapture(text: string): { bssid: string; ivs: number } | null {
+  const b = /BSSID (\S+)/.exec(text), d = /#Data (\d+)/.exec(text);
+  if (!b) return null;
+  return { bssid: b[1], ivs: d ? Number(d[1]) : 0 };
+}
 /** [HACKING] The apt catalog: the well-known, public tools the player fetches instead of having them
  *  from the start (the scanner, the sniffer, the remote console, the controller-bus client). Each:
  *  install dir, size KB, memory KB, and the one-line blurb apt-cache shows. The clandestine tools
@@ -181,6 +200,8 @@ export class Shell {
   private aptUpdated = false;
   /** An open remote console (tnet): the host, its substation, and where we are in logging in. */
   private conn: { host: Host; stage: 'login' | 'pass' | 'shell'; tryUser: string } | null = null;
+  /** [HACKING] A running WEP IV capture (tdump mon), accumulating until Ctrl+C writes the file. */
+  private cap: { ap: number; essid: string; file: string; bssid: string; ch: number; ivs: number } | null = null;
   /** The next typed line is not echoed (a password prompt): draw.ts shows it masked. */
   mask = false;
   /** The firmware's SETUP and boot menu, after the self test. */
@@ -263,7 +284,54 @@ export class Shell {
     this.queue = [];
     for (const q of left) q.fn?.();
     this.lines.push({ text: '^C', ink: 0 });
+    if (this.cap) this.finishCapture(); // [HACKING] Ctrl+C on a WEP capture writes it out
     this.tq = now; this.busyUntil = now;
+  }
+
+  /** [HACKING] One step of a running WEP IV capture (tdump mon): add IVs at the rate the signal
+   *  allows, update the counter line, and re-arm the next step. Loops until Ctrl+C (interrupt). */
+  private capStep(now: number) {
+    const C = this.cap;
+    if (!C) return;
+    const A = this.world.wifi[C.ap], heard = this.net.list.find(([i]) => i === C.ap);
+    const dbm = heard ? heard[1] : -120, bars = [-85, -76, -67, -58].reduce((n, b) => (dbm >= b ? n + 1 : n), 0);
+    C.ivs += wepIvRate(dbm);
+    this.redo(now, `  CH ${A.ch}  ${dbm} dBm ${bars}/4  #Data: ${C.ivs}${heard ? '' : '  [out of range]'}`, 0.4);
+    this.then(now, () => this.capStep(this.tq), 0);
+    this.busyUntil = this.tq;
+  }
+
+  /** [HACKING] Write the running capture to its file (on Ctrl+C) and report the IV count. */
+  private finishCapture() {
+    const C = this.cap!;
+    this.cap = null;
+    const pc = this.pc, path = pc.abs(this.cwd, C.file), [dir] = pc.parent(path);
+    const text = `# tdump WEP IV capture\nESSID ${C.essid}\nBSSID ${C.bssid}\nCH ${C.ch}\n#Data ${C.ivs}\n`;
+    if (dir?.dir && pc.writable(path, pc.hw.user)) { pc.put(path, text, pc.hw.user, this.clock); dir.mtime = this.clock; this.lines.push({ text: `  wrote ${C.ivs} IVs to ${C.file}`, ink: 0 }); }
+    else this.lines.push({ text: `  could not write ${C.file}`, ink: 0 });
+  }
+
+  /** [HACKING] tdump mon "<essid>" [-w file]: capture WEP IVs off an AP without associating, until
+   *  Ctrl+C. Monitor mode needs no key and no DHCP; it just listens on the AP's channel. */
+  private tdumpMon(args: string[], a: string[], now: number): number {
+    const pc = this.pc, w = this.world;
+    if (!pc.bios.wlan) { this.say(now, 'tdump: wlan0: No such device'); return 0; }
+    const essid = args.find((x) => !x.startsWith('-'));
+    if (!essid) { this.say(now, 'usage: tdump mon "<essid>" [-w file]'); return 0; }
+    this.net.scanNow();
+    const ap = this.findAp(essid);
+    if (ap < 0) { this.say(now, `tdump: no network "${essid}" in range (run iwlist)`); return 0; }
+    const A = w.wifi[ap];
+    if (A.sec === Sec.Open) { this.say(now, 'tdump: that network is open — just join it, no key needed'); return 0; }
+    if (A.sec === Sec.WPA) { this.say(now, 'tdump: WPA — IV capture only breaks WEP; capture a handshake and crack it offline'); return 0; }
+    const wi = a.indexOf('-w'), file = wi >= 0 && a[wi + 1] ? a[wi + 1] : 'capture.ivs';
+    this.cap = { ap, essid, file, bssid: A.bssid, ch: A.ch, ivs: 0 };
+    this.say(now, `tdump: monitor mode on wlan0, channel ${A.ch}, WEP (BSSID ${A.bssid})`, 0, 0.1);
+    this.say(now, `  gathering IVs — Ctrl+C to stop and write ${file}`, 0, 0.2);
+    this.say(now, '  #Data: 0', 1, 0.2);
+    this.then(now, () => this.capStep(this.tq), 0);
+    this.busyUntil = this.tq;
+    return 0;
   }
 
   // ---- power ----
@@ -997,12 +1065,33 @@ export class Shell {
         this.busyUntil = this.tq;
         return 0;
       }
+      case 'wcrack': {
+        // [HACKING] the WEP cracker: read a tdump capture and, with enough IVs, resolve the key. The
+        // success is the player's own doing (capturing long enough), not the simulation's luck.
+        if (!args[0]) { out.push('usage: wcrack <capture>'); return 0; }
+        const f = pc.get(pc.abs(this.cwd, args[0]));
+        if (!f || f.dir || typeof f.data !== 'string') { out.push(`wcrack: ${args[0]}: no such capture`); return 0; }
+        const cap = parseCapture(f.data);
+        if (!cap) { out.push(`wcrack: ${args[0]}: not a capture file`); return 0; }
+        const ap = w.wifi.findIndex((A) => A.bssid === cap.bssid && A.sec === Sec.WEP);
+        this.say(now, `wcrack 1.0  —  WEP 64-bit`, 0, 0.1);
+        this.say(now, `  target ${cap.bssid}   IVs: ${cap.ivs}`, 0, 0.2);
+        if (ap < 0) { this.say(now, '  no WEP network matches this capture (BSSID not seen)', 0, 0.2); this.busyUntil = this.tq; return 0; }
+        if (cap.ivs < WEP_IVS) { this.say(now, `  not enough IVs (need ~${WEP_IVS}); leave tdump mon running longer`, 1, 0.3); this.busyUntil = this.tq; return 0; }
+        this.say(now, '  attack: testing key bytes [00-FF]', 1, 0.7);
+        this.say(now, '', 0, 0.1);
+        this.say(now, `  KEY FOUND  [ ${w.wifi[ap].key} ]`, 2, 0.1);
+        this.say(now, `  iwconfig wlan0 essid "${wifiName(w.city, w.wifi[ap])}" key ${w.wifi[ap].key}`, 0, 0.2);
+        this.busyUntil = this.tq;
+        return 0;
+      }
       case 'tdump': {
         // the packet sniffer: the frames on the joined network, materialized from the simulation's
         // flows (sim/packets.ts). What reads in the clear follows the encryption — an open or WEP
         // network (we hold the key), or a station whose WPA handshake was captured. A technician
         // logged into a substation terminal leaks the login that way. -c N caps the frame count.
-        if (this.net.state !== 'up') { out.push('tdump: no network (join one with iwconfig/dhclient first)'); return 0; }
+        if (args[0] === 'mon') return this.tdumpMon(args.slice(1), a, now); // [HACKING] WEP IV capture, unassociated
+        if (this.net.state !== 'up') { out.push('tdump: no network (join one with iwconfig/dhclient first, or `tdump mon "ESSID"` to capture WEP IVs)'); return 0; }
         const A = w.wifi[this.net.ap], ssid = wifiName(w.city, A), sec = A.sec === Sec.Open ? 'open' : A.sec === Sec.WEP ? 'WEP' : 'WPA';
         const ci = a.indexOf('-c'), limit = ci >= 0 ? Math.max(1, Math.min(400, Number(a[ci + 1]) || 60)) : 60;
         const pkts = capture(w, this.net.ap, ssid, this.net.dbm, w.time, 8, limit);

@@ -6,6 +6,10 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Encadeie comandos** no notebook: `&&` roda o próximo se o anterior começou (ex.: `iwconfig wlan0 essid "Cafe" && dhclient`), `||` roda se não começou, `;` roda sempre. (Antes, só o primeiro comando rodava.)
 - **Aspas automáticas:** digitar `"` já põe o par `""` com o cursor no meio; digitar a aspa de novo em cima da que fecha só passa por ela; apagar a de abrir tira o par vazio junto.
 
+## 0.19.2 — Quebrar a chave WEP pelo ar (2026-10-06)
+- **A rede da subestação (GRIDLINK-nn) é WEP — e dá para tirar a chave do ar.** Em vez de a chave aparecer de graça na tela de Wi-Fi do celular (muleta removida), agora: `tdump mon "GRIDLINK-nn" -w grid.cap` fica ouvindo **sem entrar na rede**, juntando os vetores (o contador de #Data sobe); quanto mais perto e mais forte o sinal, mais rápido enche. Quando tiver o bastante, **Ctrl+C** grava a captura; `wcrack grid.cap` resolve os 10 dígitos. Aí é o `iwconfig … key <chave>` + `dhclient` de sempre.
+- O `wcrack` já está em `~/bin` (como o `bruter`). **WPA continua fora de alcance** por aí — essas chaves vêm de outra fonte. O que você consegue depende só de quanto tempo capturou, não da sorte do trânsito da rede.
+
 ## 0.19.1 — apt: instalar os programas (2026-10-06)
 - **O notebook vem quase pelado.** As ferramentas comuns agora se instalam com `apt`, estando numa rede: `apt-get update` e depois `apt install mmap tdump tnet mbus` (ou `apt search` para ver o catálogo). Precisa de internet — baixa de um espelho pela linha, no tempo da conexão.
 - O `bruter` continua em `~/bin` por ora; as ferramentas mais afiadas não se compram em loja — essas você acha por aí.

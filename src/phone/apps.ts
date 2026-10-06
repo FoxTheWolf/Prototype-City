@@ -7,6 +7,9 @@ import { newsApp, weatherApp } from './skins';
 import PEOPLE from '../locale/people.en.json';
 import { Role, whereIs } from '../sim/citizens';
 import { Sec } from '../sim/wifi';
+// [HACKING] (debug) show a locked network's key on the phone's Wi-Fi screen. OFF: a WEP key now comes
+// from cracking it on the notebook (tdump mon + wcrack); WPA keys from the world; open nets need none.
+const SHOW_WIFI_KEY = false;
 import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
@@ -795,9 +798,9 @@ function wifiPage(S: Lcd, P: Phone, world: World, t: number) {
     const mark = i === W.ap && W.state === 'up' ? '>' : ' ', lock = A.sec === Sec.Open ? ' ' : A.sec === Sec.WEP ? 'w' : '*';
     row(S, 6 + n * 2, `${mark}${wifiName(world.city, A)}`.slice(0, SW - 9), `${lock} ${'|'.repeat(bars).padEnd(4, '.')}`, P.setSel === n + 1, t - 0.04 * n);
   });
-  // (debug, until the game has ways to learn them) the picked network's key
+  // (debug) the picked network's key
   const sel = W.list[P.setSel - 1];
-  if (sel) { const A = world.wifi[sel[0]]; S.text(1, SH - 3, `${WF.debugKey} ${A.sec === Sec.Open ? WF.openNet : A.key}`, DIM, LCD); }
+  if (SHOW_WIFI_KEY && sel) { const A = world.wifi[sel[0]]; S.text(1, SH - 3, `${WF.debugKey} ${A.sec === Sec.Open ? WF.openNet : A.key}`, DIM, LCD); }
   softKeys(S, P.setSel === 0 ? T.ok : WF.join, T.back);
 }
 
@@ -809,7 +812,7 @@ function wifiKey(S: Lcd, P: Phone, world: World, now: number) {
   S.text(1, 5, A.sec === Sec.WEP ? 'WEP' : 'WPA-PSK', DIM, LCD);
   S.text(1, 8, WF.key, HI, LCD);
   S.text(1, 9, '*'.repeat(Math.max(0, P.wkey.key.length - 1)) + P.wkey.key.slice(-1) + (Math.floor(now * 2) & 1 ? '_' : ''), WHITE, LCD);
-  S.text(1, SH - 4, `${WF.debugKey} ${A.key}`, DIM, LCD);
+  if (SHOW_WIFI_KEY) S.text(1, SH - 4, `${WF.debugKey} ${A.key}`, DIM, LCD);
   S.text(1, SH - 3, '0-9   * <-', DIM, LCD);
   softKeys(S, P.wkey.key ? WF.join : '', T.back);
 }
