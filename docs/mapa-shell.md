@@ -13,7 +13,9 @@
 > Comando para reconferir as faixas:
 > `grep -nE "HACK_TOOLS|WEP_IVS|private conn|private cap|private remote|private capStep|private tdumpMon|case 'job'|case 'mmap'|case 'bruter'|case 'wcrack'|case 'tdump'|case 'tnet'|case 'mbus'|cellLog" src/laptop/shell.ts`
 
-## `src/laptop/shell.ts` — faixas (conferidas em 2026-10-06, ~1474 linhas; +QoL Bloco 1/2 e +tdump vigília contínuo)
+## `src/laptop/shell.ts` — faixas (conferidas em 2026-10-06, ~1489 linhas; +QoL Bloco 1/2/3-readline e +tdump vigília)
+
+> Números pós-readline (Bloco 3): `sniffStep` ~359, `finishSniff` ~375, `tdumpMon` ~384, `remote` ~849 (`cellLog` ~898); switch: `job` ~1070, `mmap` ~1225, `bruter` ~1243, `wcrack` ~1261, `tdump` ~1281, `tnet` ~1312, `mbus` ~1326. (A lista detalhada abaixo é da f3; ancore pelos nomes.)
 
 **SENSÍVEIS (`[HACKING]`, não abrir numa sessão normal):**
 - **linha ~16** — `import ... from '../sim/network'` (`lanHosts`, `modbusRegs`, `setBreaker`, `setSignals`, `cellLog`, `WORDS`).

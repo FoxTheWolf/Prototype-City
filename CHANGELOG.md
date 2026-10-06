@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.7e-f4 — Terminal: atalhos de edição (readline) (2026-10-06)
+- **Edição de linha mais rápida no terminal:** **Ctrl+A/E** vão ao começo/fim, **Ctrl+U/K** apagam até o começo/fim, **Ctrl+W** (ou Ctrl+Backspace) apaga a palavra de trás, **Ctrl+←/→** (ou Ctrl+B/F) pulam palavra. (De quebra, Ctrl+tecla parou de digitar a letra solta por engano.)
+
 ## 0.15.7e-f3 — Terminal: menu de completar e clicar a rede no comando (2026-10-06)
 - **Tab com várias opções abre um menuzinho** acima do comando, em vez de só listar: **↑/↓ ou Tab** passam pelas opções, **Enter** ou **→** escolhem. (Some ao digitar qualquer coisa.)
 - **Clicar uma rede na lista do `iwlist` agora cai certinho** entre as aspas do `iwconfig` que o Tab montou — sem duplicar as aspas. (Vale para colar qualquer valor entre aspas.)

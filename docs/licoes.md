@@ -9,6 +9,11 @@
 - **Tokenizer que respeita aspas:** reusei a mesma lógica do `splitChain`/`cmdSegmentStart` (quebrar em `;`/`&&`/`||`/`>` fora de aspas; `atCmd` marca o primeiro token do segmento como comando). Testei a réplica pura em Node (offsets e sem loop infinito) antes de abrir o navegador — o `i` precisa avançar em todo ramo do `while` interno.
 - **Faixa `[HACKING]`:** os helpers novos (`cmdNames`/`isNet`/`hiTokens`/`ghost`) são render/parse comuns e ficam entre `complete()` e o `[HACKING] argTemplate`; não tocam rede/hosts. Recalcular o `docs/mapa-shell.md` foi obrigatório: o switch de hacking desceu ~59 linhas.
 
+### Lições da 15.7e-f4 (Bloco 3 readline; clique só no wm) — 2026-10-06
+- **No terminal puro (sem o navegador/wm) o clique NÃO é roteado:** `main.ts` só manda clique/drag para `laptop.shell.wm`, que só existe com o Lodestar aberto. Então "clicar campo do output"/"clicar na opção do drop-up" **não funcionam no terminal puro** hoje — precisaria de uma via de clique nova no `main.ts` + um `shell.click`. Por isso fiz readline (teclado) em vez de clique-na-opção com o pouco orçamento.
+- **Ctrl+tecla inseria a letra:** o insert final (`key.length === 1`) não checava `ctrl`, então Ctrl+A digitava 'a' etc. Guardei com `!ctrl` (e o auto-par de aspas também). Ctrl+C/Ctrl+L continuam no topo do `termKey`, antes do guard de `ready`.
+- **Sem `alt` no `termKey`** (só recebe `key, ctrl`): Alt+B/F de readline viraram Ctrl+B/F.
+
 ### Lições da 15.7e-f3 (Bloco 2: drop-up de completar) — 2026-10-06
 - **O terminal só passa pelo caminho do `draw.ts` (realce/ghost/drop-up) quando `this.wm` é null** — ou seja, terminal puro, sem o navegador Lodestar aberto. Com o wm (navegador ao lado), o terminal é desenhado por `wm.cells()` e esses efeitos **não aparecem**. Por isso abro o drop-up só quando `!this.wm` (senão caio no antigo "listar os candidatos"). Tratar o wm é trabalho futuro (replicar em `wm.ts`).
 - **Clicar campo do output já existia** (`fieldAt` no `wm.ts` → `term.paste` no cursor); o ESSID vem com aspas. O conflito era só com o scaffold `essid ""`: resolvi fundindo aspas no `paste` (se o cursor está entre aspas iguais e o valor colado vem aspado, tiro as aspas do valor).

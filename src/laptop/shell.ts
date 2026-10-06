@@ -600,6 +600,21 @@ export class Shell {
       this.menu = null;
     }
     const s = this.input;
+    // readline-style edit shortcuts (QoL Bloco 3): move and cut by word or line. Ctrl+C/Ctrl+L are
+    // handled above; here Ctrl+A/E go to the line ends, Ctrl+U/K cut to the ends, Ctrl+W (and Ctrl+
+    // Backspace) cut the word behind, Ctrl+←/→ (and Ctrl+B/F) step by word (skip spaces, then the run).
+    if (ctrl) {
+      const wordBack = (i: number) => { while (i > 0 && s[i - 1] === ' ') i--; while (i > 0 && s[i - 1] !== ' ') i--; return i; };
+      const wordFwd = (i: number) => { while (i < s.length && s[i] === ' ') i++; while (i < s.length && s[i] !== ' ') i++; return i; };
+      const k = key.toLowerCase();
+      if (k === 'a') { this.cur = 0; return; }
+      if (k === 'e') { this.cur = s.length; return; }
+      if (k === 'u') { this.input = s.slice(this.cur); this.cur = 0; return; }
+      if (k === 'k') { this.input = s.slice(0, this.cur); return; }
+      if (k === 'w' || key === 'Backspace') { const i = wordBack(this.cur); this.input = s.slice(0, i) + s.slice(this.cur); this.cur = i; return; }
+      if (key === 'ArrowLeft' || k === 'b') { this.cur = wordBack(this.cur); return; }
+      if (key === 'ArrowRight' || k === 'f') { this.cur = wordFwd(this.cur); return; }
+    }
     if (key === 'Enter') { this.run(s, now); return; }
     if (key === 'Backspace') { if (this.cur > 0) { const pair = (s[this.cur - 1] === '"' || s[this.cur - 1] === "'") && s[this.cur] === s[this.cur - 1]; this.input = s.slice(0, this.cur - 1) + s.slice(this.cur + (pair ? 1 : 0)); this.cur--; } return; }
     if (key === 'Delete') { this.input = s.slice(0, this.cur) + s.slice(this.cur + 1); return; }
@@ -616,11 +631,11 @@ export class Shell {
     if (key === 'Tab') { this.complete(); return; }
     // auto-pair quotes: typing a quote drops its match with the caret between; typing it again when
     // the close is already right there just steps over it (so essid "NAME" is one keystroke lighter)
-    if ((key === '"' || key === "'") && s.length < 199) {
+    if ((key === '"' || key === "'") && !ctrl && s.length < 199) {
       if (s[this.cur] === key) { this.cur++; return; }
       this.input = s.slice(0, this.cur) + key + key + s.slice(this.cur); this.cur++; return;
     }
-    if (key.length === 1 && s.length < 200) { this.input = s.slice(0, this.cur) + key + s.slice(this.cur); this.cur++; }
+    if (key.length === 1 && !ctrl && s.length < 200) { this.input = s.slice(0, this.cur) + key + s.slice(this.cur); this.cur++; }
   }
   /** Drop text into the prompt at the cursor (paste, 15.7c): newlines become spaces, no running a line on its own. */
   paste(text: string) {
