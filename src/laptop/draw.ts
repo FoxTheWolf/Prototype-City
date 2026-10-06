@@ -134,6 +134,25 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
     for (let j = 0; j < istr.length; j++) cell(plen + j, istr.charCodeAt(j), tokCol(kindAt[j]));
     const g = S.ghost(), dim: C3 = [ink[1][0] * 0.8, ink[1][1] * 0.8, ink[1][2] * 0.8];
     for (let j = 0; j < g.length; j++) cell(plen + istr.length + j, g.charCodeAt(j), dim);
+    // the completion drop-up (Bloco 2): a little list sitting just above the prompt, the choice
+    // highlighted. It grows upward from the prompt row, left-aligned under the word being completed.
+    const M = S.menu;
+    if (M) {
+      const pr = promptRow - first; // the prompt's row on screen
+      const rows = Math.min(8, M.items.length, Math.max(0, pr));
+      const top = Math.max(0, Math.min(M.sel - (rows >> 1), M.items.length - rows));
+      const wide = Math.max(...M.items.slice(top, top + rows).map((s) => s.length)) + 2;
+      let bx = (plen + M.start) % W;
+      bx = Math.max(0, Math.min(bx, W - Math.min(wide, W)));
+      const box = Math.min(wide, W - bx);
+      const lit: C3 = [sbg[0] + 16, sbg[1] + 18, sbg[2] + 16];
+      for (let r = 0; r < rows; r++) {
+        const srow = pr - rows + r, it = M.items[top + r], on2 = top + r === M.sel;
+        if (srow < 0 || srow >= H) continue;
+        const fg: C3 = on2 ? sbg : ink[0], bg: C3 = on2 ? ink[0] : lit;
+        for (let c = 0; c < box; c++) put(sx + bx + c, sy + srow, c >= 1 && c <= it.length ? it.charCodeAt(c - 1) : 32, fg, bg);
+      }
+    }
   }
   // the cursor: a block blinking where the next character goes
   if (on && !full && ready && S.scroll === 0 && Math.floor(now * 2.5) & 1) {

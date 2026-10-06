@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.7e-f3 — Terminal: menu de completar e clicar a rede no comando (2026-10-06)
+- **Tab com várias opções abre um menuzinho** acima do comando, em vez de só listar: **↑/↓ ou Tab** passam pelas opções, **Enter** ou **→** escolhem. (Some ao digitar qualquer coisa.)
+- **Clicar uma rede na lista do `iwlist` agora cai certinho** entre as aspas do `iwconfig` que o Tab montou — sem duplicar as aspas. (Vale para colar qualquer valor entre aspas.)
+- *(Falta do bloco:)* o Tab pular entre os campos do comando montado e clicar direto numa opção do menu — próxima leva.
+
 ## 0.15.7e-f2 — Terminal: tdump que fica escutando, iwconfig sem chute (2026-10-06)
 - **`tdump` sem `-c` agora fica escutando o canal** e mostrando os pacotes **até você apertar Ctrl+C** — para ficar de olho numa rede esperando uma credencial de login aparecer em texto claro. (Antes ele pegava um punhado de pacotes e parava sozinho. Com `-c N` ele continua pegando só N e para, como antes.)
 - **`iwconfig` montado com o Tab não chuta mais a rede:** vem `iwconfig wlan0 essid "" key ` com o cursor **entre as aspas**, para você digitar (ou, em breve, clicar na rede certa na lista do `iwlist`) — a rede mais forte por perto raramente era a que você queria.

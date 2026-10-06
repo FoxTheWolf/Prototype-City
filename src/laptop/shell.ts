@@ -206,6 +206,10 @@ export class Shell {
   state: 'off' | 'boot' | 'ready' = 'off';
   input = '';
   cur = 0;
+  /** An open completion drop-up (Tab with several candidates, QoL Bloco 2): the choices, which is
+   *  highlighted, and the span of `input` a pick replaces. draw.ts renders it above the prompt; only
+   *  used on the bare terminal (not inside the window manager). */
+  menu: { items: string[]; sel: number; start: number; end: number; atCmd: boolean } | null = null;
   readonly hist: string[] = [];
   private hi = -1;
   cwd: string;
@@ -402,7 +406,7 @@ export class Shell {
   /** Cold boot: the BIOS, the boot loader, the kernel, the services, the login. */
   boot(now: number) {
     const pc = this.pc, H = pc.hw, w = this.world;
-    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.cap = null; this.sniff = null; this.mask = false;
+    this.lines = []; this.queue = []; this.kmsg = []; this.tq = now; this.state = 'boot'; this.halted = false; this.scroll = 0; this.conn = null; this.cap = null; this.sniff = null; this.menu = null; this.mask = false;
     this.editor = null; this.browser = null; this.wm = null; this.fw.close(); this.inPost = true; this.postWant = null;
     pc.halt(); pc.bootAt = now; this.bootT = w.time; this.bios = false;
     // the BIOS's own screen (see draw.ts for its logos): the maker, the processor, the memory counting
@@ -579,6 +583,7 @@ export class Shell {
   /** A key for the prompt itself: the window manager (15.7) routes here when the terminal pane has the focus. */
   termKey(key: string, ctrl: boolean, now: number) {
     if (ctrl && (key === 'c' || key === 'C')) {
+      this.menu = null;
       if (!this.ready) this.interrupt(now);
       else { this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(this.input.length) : this.input) + '^C', ink: 0 }); this.input = ''; this.cur = 0; this.mask = false; }
       return;
@@ -586,6 +591,14 @@ export class Shell {
     if (ctrl && (key === 'l' || key === 'L')) { this.lines = []; return; }
     if (!this.ready) return; // what is typed while a command works is lost (no type-ahead yet)
     this.scroll = 0;
+    // a completion drop-up is open: the arrows/Tab move through it, Enter/→ pick, anything else closes it
+    if (this.menu) {
+      const M = this.menu;
+      if (key === 'Tab' || key === 'ArrowDown') { M.sel = (M.sel + 1) % M.items.length; return; }
+      if (key === 'ArrowUp') { M.sel = (M.sel - 1 + M.items.length) % M.items.length; return; }
+      if (key === 'Enter' || key === 'ArrowRight') { this.pickMenu(); return; }
+      this.menu = null;
+    }
     const s = this.input;
     if (key === 'Enter') { this.run(s, now); return; }
     if (key === 'Backspace') { if (this.cur > 0) { const pair = (s[this.cur - 1] === '"' || s[this.cur - 1] === "'") && s[this.cur] === s[this.cur - 1]; this.input = s.slice(0, this.cur - 1) + s.slice(this.cur + (pair ? 1 : 0)); this.cur--; } return; }
@@ -615,7 +628,11 @@ export class Shell {
     this.scroll = 0;
     const t = text.replace(/\s+/g, ' ').trim(), s = this.input, room = 200 - s.length;
     if (room <= 0 || !t) return;
-    const add = t.slice(0, room);
+    let add = t.slice(0, room);
+    // dropping a quoted value (an ESSID clicked from iwlist) between the scaffold's empty quotes
+    // would double them — strip the paste's own quotes so "<name>" lands inside the "" already there.
+    const q = s[this.cur - 1];
+    if ((q === '"' || q === "'") && s[this.cur] === q && (add[0] === '"' || add[0] === "'") && add[add.length - 1] === add[0] && add.length >= 2) add = add.slice(1, -1);
     this.input = s.slice(0, this.cur) + add + s.slice(this.cur); this.cur += add.length;
   }
   /** Tab: the command's name, or the path being typed, as far as it is the only way to go. Works per
@@ -636,7 +653,13 @@ export class Shell {
     if (!hits.length) return;
     let pre = hits[0];
     for (const h of hits) while (!h.startsWith(pre)) pre = pre.slice(0, -1);
-    if (hits.length > 1 && pre === base) { this.lines.push({ text: this.prompt + this.input, ink: 0 }, { text: hits.sort().join('  ').slice(0, TERM_W * 3), ink: 0 }); return; }
+    if (hits.length > 1 && pre === base) {
+      // several candidates and the common part is already typed: open a drop-up to choose (Bloco 2),
+      // except inside the window manager, which doesn't render it — there, list them as before.
+      if (!this.wm) { this.menu = { items: hits.sort(), sel: 0, start: this.cur - base.length, end: this.cur, atCmd }; return; }
+      this.lines.push({ text: this.prompt + this.input, ink: 0 }, { text: hits.sort().join('  ').slice(0, TERM_W * 3), ink: 0 });
+      return;
+    }
     // a known command typed on its own: Tab scaffolds its arguments, VS Code-style, with the caret
     // where the next field goes (and a nearby ESSID prefilled). 15.7e-d — a first slice; the drop-up
     // menu and field-to-field cycling are a later step.
@@ -646,6 +669,17 @@ export class Shell {
     }
     const add = pre.slice(base.length) + (hits.length === 1 && atCmd ? ' ' : '');
     this.input = s + add + this.input.slice(this.cur); this.cur += add.length;
+  }
+
+  /** Put the highlighted drop-up choice into the line, replacing the word it was completing. A command
+   *  name gets a trailing space; a path (which may continue) does not. */
+  private pickMenu() {
+    const M = this.menu;
+    if (!M) return;
+    const chosen = M.items[M.sel], tail = M.atCmd ? ' ' : '';
+    this.input = this.input.slice(0, M.start) + chosen + tail + this.input.slice(M.end);
+    this.cur = M.start + chosen.length + tail.length;
+    this.menu = null;
   }
 
   /** The command names the shell can run now: the builtins plus every program on the PATH and the
@@ -698,7 +732,7 @@ export class Shell {
    *  the first word. '' when the caret is not at the end, the line is masked, or nothing fits. */
   ghost(): string {
     const s = this.input;
-    if (this.mask || this.cur !== s.length || !s) return '';
+    if (this.mask || this.menu || this.cur !== s.length || !s) return '';
     for (let i = this.hist.length - 1; i >= 0; i--) { const h = this.hist[i]; if (h.length > s.length && h.startsWith(s)) return h.slice(s.length); }
     const start = cmdSegmentStart(s), word = s.slice(start);
     if (word && !word.includes(' ')) {
@@ -722,7 +756,7 @@ export class Shell {
   // ---- the commands ----
   private run(line: string, now: number) {
     this.lines.push({ text: this.prompt + (this.mask ? '*'.repeat(line.length) : line), ink: 2 });
-    this.input = ''; this.cur = 0; this.hi = -1; this.tq = now;
+    this.input = ''; this.cur = 0; this.hi = -1; this.menu = null; this.tq = now;
     const wasMasked = this.mask; this.mask = false;
     if (this.conn) { this.remote(line.trim(), wasMasked, now); this.busyUntil = this.tq; return; }
     const t = line.trim();

@@ -13,10 +13,14 @@
 ## Bloco 1 ✅ (2026-10-06) — cores ao digitar + ghost text
 Feito em `shell.ts` (métodos neutros `cmdNames`/`isNet`/`hiTokens`/`ghost`, logo após `complete()`) + render em `draw.ts` (recolore o input por token e pinta o ghost cinza antes do cursor) + aceite →/End em `termKey`. Tokens: cmd (conhecido) / bad (vermelho) / flag / str / op / net (IP ou ESSID no ar) / arg. Ghost: última linha do histórico que estende o que foi digitado, senão a completação única do nome do comando. **Falta ver no PC** (teste visual). **Destrava o realce do diálogo (etapa 14):** o mesmo motor de kind→cor pode ser reusado em `src/talk.ts`/`src/tag.ts`.
 
-## Faltando — do shell (bash/zsh/fish)
-Ordenado por valor para o jogo (o terminal é a ferramenta central do hacking), com esforço estimado. (Itens 1 e 2 = Bloco 1, feitos acima.)
+## Bloco 2 (parcial) ✅ (2026-10-06) — drop-up de completar + clicar a rede
+Feito: **drop-up** (item 3) — Tab com vários candidatos abre um menu acima do prompt (estado `menu` no shell; ↑/↓/Tab navegam, Enter/→ escolhem, qualquer tecla fecha), render em `draw.ts`, só no terminal puro (não dentro do wm). E **clicar a rede do `iwlist` cai entre as aspas** do scaffold sem duplicá-las (o `paste` funde aspas; o `fieldAt` do `wm.ts` já colava no cursor). **Falta do Bloco 2:** o Tab pular entre os **campos** do comando montado (item 4, `essid ""`→`key `) e **clicar direto numa opção do menu** (precisa compartilhar a geometria do drop-up entre `draw.ts` e `wm.ts`). **Falta ver no PC.**
 
-3. **Menu de completar (drop-up) com Tab ciclando / setas** — quando há vários candidatos, um menu suspenso em vez de só listar; Tab cicla, Enter escolhe. Base para o item 4. *Médio valor, médio-alto esforço (overlay + input).*
+## Faltando — do shell (bash/zsh/fish)
+Ordenado por valor para o jogo (o terminal é a ferramenta central do hacking), com esforço estimado. (Itens 1 e 2 = Bloco 1; item 3 e parte do 4 = Bloco 2, feitos acima.)
+
+3. ✅ **Menu de completar (drop-up) com Tab ciclando / setas** — feito (Bloco 2). Falta só clicar na opção.
+3b. **Menu de completar (drop-up) — resto: clicar na opção** (compartilhar geometria draw/wm) — quando há vários candidatos, um menu suspenso em vez de só listar; Tab cicla, Enter escolhe. Base para o item 4. *Médio valor, médio-alto esforço (overlay + input).*
 4. **Completar de argumentos e flags, com contexto (o "campos estilo VS Code", resto do 15.7e-d)** — `iwconfig <Tab>` sugere `wlan0`; depois de `essid` o drop-up lista os ESSIDs do último `iwlist`; `-c`/`-w` sugeridos; **Tab alterna entre os campos** do molde; clicar num ESSID/num campo preenche. *Alto valor, alto esforço — a peça grande.* Depende do item 3.
 5. **Busca reversa no histórico (Ctrl+R)** e **busca por prefixo** (digita prefixo + ↑). *Médio valor, baixo-médio esforço.*
 6. **Histórico persistido no save** (hoje o histórico é da sessão do shell; perde ao desligar). *Médio valor, baixo esforço — entra no save como `w.forum`.*
