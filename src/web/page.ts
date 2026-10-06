@@ -24,7 +24,7 @@ export type Block =
   | { t: 'foot'; text: string }
   | { t: 'space' }
   /** A text box of the page's form (15.4): its label, the name it is sent by, and whether it shows stars. */
-  | { t: 'input'; name: string; label: string; secret?: boolean; size?: number }
+  | { t: 'input'; name: string; label: string; secret?: boolean; size?: number; /** Letters it takes (40). */ max?: number }
   /** The form's button: Enter on it (or in a box) sends the boxes to the page's form. */
   | { t: 'submit'; label: string };
 
@@ -39,7 +39,7 @@ export interface Page {
 export interface Cell { ch: string; fg: C3; bg: C3 }
 export interface Link { x: number; y: number; w: number; url: string }
 /** Where a text box landed (the browser writes what is typed into it). */
-export interface Field { x: number; y: number; w: number; name: string; secret: boolean }
+export interface Field { x: number; y: number; w: number; name: string; secret: boolean; max: number }
 /** The url a submit button stands for, among the links. */
 export const SUBMIT = 'submit:';
 export interface Laid { rows: Cell[][]; links: Link[]; fields: Field[] }
@@ -173,7 +173,7 @@ export function layout(P: Page, width: number, full = false): Laid {
           if (narrow) { y++; fill(x, y, w, T.bg); }
           const bx = narrow ? x + 2 : x + 3 + Math.max(B.label.length, 16);
           put(bx, y, '[', T.dim, T.bg); put(bx + 1, y, ' '.repeat(fw), BOX_FG, BOX); put(bx + 1 + fw, y, ']', T.dim, T.bg);
-          fields.push({ x: bx + 1, y, w: fw, name: B.name, secret: !!B.secret });
+          fields.push({ x: bx + 1, y, w: fw, name: B.name, secret: !!B.secret, max: B.max ?? 40 });
           fill(x, y + 1, w, T.bg);
           y += 2;
           break;

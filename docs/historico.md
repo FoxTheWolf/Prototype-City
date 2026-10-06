@@ -2,6 +2,13 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.6 ✅ O Streetwire na web e comentar (2026-10-06)
+- `src/web/streetwire.ts` (`www.streetwire.com`; link no portal e no Lookwise; `mobile: true`): o feed (os 25 posts mais novos), o post com os comentários (`comments`/`commentText`, os mesmos do app), o perfil (`profileOf` e os posts da pessoa).
+- **Conta:** usuário, senha e e-mail; o site manda o link de confirmação por `deliverMail` (15.4), e ele só chega se o endereço for uma conta do webmail da cidade (outro domínio não chega a lugar nenhum). O link confirma e já entra. Estado em `Feed.me` e `Feed.mine` (`sim/social.ts`; o `feed` já era salvo inteiro).
+- **Comentar pela leitura de intenções:** `readLine` do comentário → a chave `wire.reply.*` (`locale/text/wire-reply.en.json`), pela `selFor` do autor e no jeito de digitar dele (`voice`): elogio/agradecimento → obrigado; "where is that?" → o lugar do post (`p.biz`) e o distrito; "what happened?" num post de evento → onde foi; nome/número de um desconhecido → "do I know you?"; hostil → frio, e muito hostil ou ameaça → bloqueio (`me.blocked`, o post não aceita mais comentário). Desconhecidos respondem menos (chance pela simpatia `P.social`; quem já falou cara a cara, `talks.face`, sempre). A resposta sai depois de 5–50 min, mais 6 h se o autor estava dormindo. O app do celular (`phone/wire.ts`) mostra os comentários do jogador e as respostas.
+- Campos com tamanho máximo próprio (`input.max`, `Field.max`; o comentário aceita 140). Conferido por `tests/wire-web.ts` (sementes 42 e 711445483: 8/12 respostas a elogios, 10/12 a "where is that?").
+- Ficou para depois: o jogador postar, compartilhar, assuntos em alta, os amigos do autor reagirem ao comentário do jogador.
+
 ## 15.5 ✅ O navegador do celular (2026-10-06)
 - **Lodestar Mini** (`src/phone/webapp.ts`), app grátis da loja (110 KB; `STORE` em `phone.ts`, ícone em `apps.ts`/`hdicons.ts`). Mesmas páginas do notebook (`fetchUrl`), passadas por `mobilePage` (`page.ts`): colunas empilhadas, o menu e as tabelas largas viram texto e lista, figuras largas saem; `layout(P, SW, true)` usa a tela inteira e os campos ficam em duas linhas numa coluna estreita.
 - **Lento e caro:** a página desce pelo rádio (`radio.fetch('web', kb)`), do pacote de dados, grátis no Wi-Fi; sem pacote, "Out of data". Sites com versão para celular (`Page.mobile`: portal, Lookwise, webmail sempre; das empresas pela tabela `MOBILE` em `sites.ts`, bancos e lojas de celular mais) pesam um quinto; os outros vêm inteiros (a semente 42: 171 de 600 páginas leves; 26 MB contra 34 MB).

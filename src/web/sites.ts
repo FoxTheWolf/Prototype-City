@@ -24,6 +24,7 @@ import { districtAt } from '../sim/city';
 import en from '../locale/en.json';
 import { type Block, type C3, type Page, type Theme } from './page';
 import { mailHost, mailPage, provider } from './webmail';
+import { WIRE_HOST, wirePage } from './streetwire';
 
 /** A hostname as written: lowercase letters and digits. */
 export const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
@@ -64,7 +65,7 @@ const ICONS: Partial<Record<BusinessKind | 'any', string[]>> = {
   any: [' ____ ', '| ** |', '|____|'],
 };
 
-export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'biz'; k: number };
+export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'biz'; k: number };
 export interface Web { hosts: Map<string, SiteRef>; byBiz: Map<number, string>; portal: string; search: string }
 /** The search engine (15.3): its name and host. */
 export const SEARCH = 'Lookwise', SEARCH_HOST = 'www.lookwise.com';
@@ -79,6 +80,7 @@ export function webOf(w: World): Web {
   hosts.set(portal, { kind: 'portal' });
   hosts.set(SEARCH_HOST, { kind: 'search' });
   hosts.set(mailHost(w), { kind: 'mail' });
+  hosts.set(WIRE_HOST, { kind: 'wire' });
   c.businesses.forEach((b, k) => {
     const head = b.hq ?? k;
     if (head !== k) { const h = byBiz.get(head); if (h) byBiz.set(k, h); return; }
@@ -112,6 +114,7 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
   }
   if (S.kind === 'search') return { host, path, page: searchPage(w, host, path, query) };
   if (S.kind === 'mail') return { host, path, page: mailPage(w, host, path, form) };
+  if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
   return { host, path, page: portalPage(w, host, path) };
 }
 
@@ -253,7 +256,7 @@ function portalPage(w: World, host: string, path: string): Page {
     }
   } else if (path === '/') {
     const heads = stories.map((S, n) => [S, n] as const).filter(([S]) => S.kind !== 'date').slice(0, 8).map(([S, n]) => `[${S.head}](http://${host}/news/${n})`);
-    body = [{ t: 'cols', widths: [0.64, 0.36], cols: [[{ t: 'h', text: 'Top Stories' }, { t: 'list', items: heads.length ? heads : ['No news is good news.'] }], [...weather, ...(ad ? [{ t: 'ad', text: `Visit ${businessName(c, ad[0])}!`, url: `http://${ad[1]}/` } as Block] : []), { t: 'h', text: 'Find' }, { t: 'p', text: `[Business directory](http://${host}/directory)` }]] }];
+    body = [{ t: 'cols', widths: [0.64, 0.36], cols: [[{ t: 'h', text: 'Top Stories' }, { t: 'list', items: heads.length ? heads : ['No news is good news.'] }], [...weather, ...(ad ? [{ t: 'ad', text: `Visit ${businessName(c, ad[0])}!`, url: `http://${ad[1]}/` } as Block] : []), { t: 'h', text: 'Find' }, { t: 'p', text: `[Business directory](http://${host}/directory)` }, { t: 'p', text: `[Streetwire](http://${WIRE_HOST}/): what the city is saying` }]] }];
   } else body = [{ t: 'h', text: '404 - Not Found' }, { t: 'p', text: `[Home](http://${host}/)` }];
   return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60, mobile: true };
 }
@@ -292,6 +295,7 @@ function indexOf(w: World): Doc[] {
   doc(`http://${Wb.portal}/news`, `${city} Online - News`, `Today's headlines from around ${city}.`, [['news headlines today', 4], [city, 2]]);
   doc(`http://${Wb.portal}/weather`, `${city} Online - Weather`, `The weather in ${city} today.`, [['weather forecast rain snow temperature', 4], [city, 2]]);
   doc(`http://${mailHost(w)}/`, `${provider(w)} Mail`, `Free e-mail from ${provider(w)}. Sign in or sign up for a free account.`, [['mail email webmail inbox free account sign signup', 4], [city, 2]]);
+  doc(`http://${WIRE_HOST}/`, 'Streetwire', "What's happening in your city, right now. Join free.", [['streetwire social network posts friends people feed', 4], [city, 1]]);
   doc(`http://${Wb.portal}/directory`, `${city} Online - Business Directory`, 'Every business in the city by category, with address and phone.', [['directory business businesses yellow pages phone address', 4], [Object.values(kinds).join(' '), 1]]);
   indexes.set(w.city, I);
   return I;

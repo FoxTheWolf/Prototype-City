@@ -65,12 +65,21 @@ export interface Post {
 /** A comment under a post: a friend of the author (mostly), when, how they take it, the wording's pick. */
 export interface Comment { who: number; time: number; mood: Mood; pick: number }
 
+/**
+ * A comment the player left on Streetwire's site (15.6): under which post, when, the words, and the
+ * author's answer (or null: they let it be), shown from its time `at`.
+ */
+export interface MyComment { post: number; time: number; text: string; reply: string | null; at: number }
+
 export interface Feed {
   posts: Post[];
   next: number;
   /** The last event looked at; posts about events still waiting to go up (people take a while). */
   seen: number;
   pending: Post[];
+  /** The player's account on the site (confirmed by a link e-mailed to them; signed in or not), and who blocked them. Missing before 15.6. */
+  me?: { user: string; pass: string; email: string; code: string; ok: boolean; on: boolean; blocked: number[] };
+  mine?: MyComment[];
 }
 
 export const newFeed = (): Feed => ({ posts: [], next: 0, seen: -1, pending: [] });

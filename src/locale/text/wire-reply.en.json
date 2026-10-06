@@ -1,0 +1,17 @@
+{
+ "wire.reply.thanks": ["thanks!!", "aww thank you", "thx {name} :)", "haha thanks", "appreciate it", "thank you, that's sweet", "glad you like it"],
+ "wire.reply.sorry": ["no worries", "it's ok", "all good, don't worry about it", "forget it :)"],
+ "wire.reply.laugh": ["lol", "haha exactly", "hahaha", "lol right?", "ha! tell me about it"],
+ "wire.reply.flirt": ["lol ok", "haha nice try", "um... thanks i guess?", "ha. smooth"],
+ "wire.reply.how": ["good, thanks for asking", "been better, been worse", "can't complain", "long day but ok", "tired but good"],
+ "wire.reply.where": ["{place}, in {district}", "it's {place}, over in {district}", "{place}! you should go", "right at {place}, {district}"],
+ "wire.reply.wherearea": ["over in {district}", "{district}", "around {district}, near my place"],
+ "wire.reply.saw": ["it was right here in {district}, still a mess", "{district}. i saw it from the window", "in {district}. everybody was out on the street", "{district}, just now. crazy"],
+ "wire.reply.who": ["do i know you?", "sorry, who is this?", "um, have we met?", "i don't give that out online, sorry", "how did you find my page?"],
+ "wire.reply.friend": ["hey you! :)", "haha hi, good to see you here", "oh hey! text me"],
+ "wire.reply.complaint": ["ok then don't read it", "sorry you feel that way", "it's my page...", "noted"],
+ "wire.reply.okay": ["ok :)", "yeah", "true", "right?", "yep", "same", "i know"],
+ "wire.reply.huh": ["?", "huh?", "what?", "not sure what you mean", "lol what"],
+ "wire.reply.cold": ["wow ok", "no need to be like that", "rude", "please keep it nice", "and you are...?"],
+ "wire.reply.blocked": ["ok, blocked.", "bye. blocked.", "not dealing with this. blocked", "reported and blocked"]
+}

@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.6 — Streetwire na web (2026-10-06)
+- O **site do Streetwire** (`www.streetwire.com`, link no portal): o feed, cada post com os comentários e o perfil de cada pessoa, no notebook e no celular.
+- **Comente nos posts:** crie uma conta (o link de confirmação chega no seu e-mail da cidade) e escreva o que quiser. O autor lê do jeito dele e às vezes responde, um tempo depois (de manhã, se estava dormindo): agradece um elogio, diz onde fica o lugar se você perguntar, conta onde aconteceu a batida. Desconhecidos respondem menos que quem já conversou com você.
+- Seja grosso e o autor bloqueia você dos posts dele. Seus comentários aparecem também no app do celular.
+
 ## 0.15.5 — A web no celular (2026-10-06)
 - **Lodestar Mini**, app grátis na loja do celular: a web da cidade numa coluna só. Para cima/baixo passa de link em link, esquerda/direita rola uma tela, OK abre o link ou escreve no campo, a tecla da esquerda digita um endereço (no multi-tap; palavras viram busca), a da direita volta, * recarrega e 0 vai para a página inicial.
 - É lento e caro, como em 2008: cada página sai do pacote de dados, a não ser no Wi-Fi. Os sites com versão para celular (o portal, o buscador, o e-mail, bancos e lojas de celular) pesam um quinto; os outros vêm inteiros, espremidos na tela.

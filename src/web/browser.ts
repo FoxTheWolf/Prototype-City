@@ -96,7 +96,7 @@ export class Browser {
       const v = this.vals.get(on.name) ?? '';
       if (key === 'Enter') this.submit(now);
       else if (key === 'Backspace') this.vals.set(on.name, v.slice(0, -1));
-      else if (key.length === 1 && !ctrl && v.length < 40) this.vals.set(on.name, v + key);
+      else if (key.length === 1 && !ctrl && v.length < on.max) this.vals.set(on.name, v + key);
       return;
     }
     if (key === 'F5' || (ctrl && k === 'r')) this.go(this.url, now, false);

@@ -189,12 +189,23 @@ function postPage(S: Lcd, P: Phone, world: World, p: Post, now: number, loading:
   const n = likes(Pop, p, world.time) + (V.liked.has(p.id) ? 1 : 0), cm = comments(Pop, p, world.time);
   rows.push([` ${V.liked.has(p.id) ? `<3 ${W.liked}` : `<3 ${W.like}`}  ${W.likes.replace('{n}', String(n))}`, V.liked.has(p.id) ? LOVE : LINK, CARD]);
   rows.push(['', TEXT, PAGE]);
-  if (!cm.length) rows.push([` ${W.noComments}`, DIM, PAGE]);
+  if (!cm.length && !(world.feed.mine ?? []).some((m) => m.post === p.id)) rows.push([` ${W.noComments}`, DIM, PAGE]);
   cm.forEach((cmt, k) => {
     rows.push([`   ${citizenNames(c, Pop, cmt.who).join(' ')}  ${postAge(world.time, cmt.time)}`, LINK, CARD, cmt.who]);
     for (const l of wrap(commentText(c, Pop, p, cmt, k), SW - 4)) rows.push([`   ${l}`, TEXT, CARD]);
     rows.push(['', TEXT, PAGE]);
   });
+  // what the player wrote on the site (15.6), and the author's answer once it is up
+  const you = world.feed.me?.user ?? 'you';
+  for (const m of world.feed.mine ?? []) if (m.post === p.id) {
+    rows.push([`   ${you}  ${postAge(world.time, m.time)}`, ORANGE, CARD]);
+    for (const l of wrap(m.text, SW - 4)) rows.push([`   ${l}`, TEXT, CARD]);
+    rows.push(['', TEXT, PAGE]);
+    if (!m.reply || world.time < m.at) continue;
+    rows.push([`   ${name}  ${postAge(world.time, m.at)}`, LINK, CARD, p.who]);
+    for (const l of wrap(`@${you} ${m.reply}`, SW - 4)) rows.push([`   ${l}`, TEXT, CARD]);
+    rows.push(['', TEXT, PAGE]);
+  }
   const view = SH - 4;
   V.scroll = Math.max(0, Math.min(V.scroll, rows.length - view));
   let picAt = -1;

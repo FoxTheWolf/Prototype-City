@@ -105,7 +105,7 @@ export class WebApp {
     }
     if (k === 'left' || k === 'right') { this.top = Math.max(0, Math.min(maxTop, this.top + (k === 'right' ? VIEW - 2 : 2 - VIEW))); if (on && !seen(on.y)) this.sel = -1; return true; }
     if (k === 'ok' && on) {
-      if ('name' in on) { this.edit = new Editor(40, false, true); this.edit.set(this.vals.get(on.name) ?? ''); this.editing = on.name; }
+      if ('name' in on) { this.edit = new Editor(on.max, false, true); this.edit.set(this.vals.get(on.name) ?? ''); this.editing = on.name; }
       else if (on.url === SUBMIT) { const to = this.got?.page?.form; if (to) this.go(to, now, true, new Map(this.vals)); }
       else this.go(on.url, now);
       return true;
