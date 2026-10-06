@@ -559,9 +559,8 @@ export class Shell {
     if (key === 'Backspace') { if (this.cur > 0) { const pair = (s[this.cur - 1] === '"' || s[this.cur - 1] === "'") && s[this.cur] === s[this.cur - 1]; this.input = s.slice(0, this.cur - 1) + s.slice(this.cur + (pair ? 1 : 0)); this.cur--; } return; }
     if (key === 'Delete') { this.input = s.slice(0, this.cur) + s.slice(this.cur + 1); return; }
     if (key === 'ArrowLeft') { this.cur = Math.max(0, this.cur - 1); return; }
-    if (key === 'ArrowRight') { this.cur = Math.min(s.length, this.cur + 1); return; }
+    if (key === 'ArrowRight' || key === 'End') { if (this.cur === s.length) { const g = this.ghost(); if (g) { this.input = s + g; this.cur = this.input.length; return; } } this.cur = key === 'End' ? s.length : Math.min(s.length, this.cur + 1); return; }
     if (key === 'Home') { this.cur = 0; return; }
-    if (key === 'End') { this.cur = s.length; return; }
     if (key === 'ArrowUp' || key === 'ArrowDown') {
       if (!this.hist.length) return;
       this.hi = key === 'ArrowUp' ? (this.hi < 0 ? this.hist.length - 1 : Math.max(0, this.hi - 1)) : this.hi < 0 ? -1 : this.hi + 1;
@@ -615,6 +614,66 @@ export class Shell {
     }
     const add = pre.slice(base.length) + (hits.length === 1 && atCmd ? ' ' : '');
     this.input = s + add + this.input.slice(this.cur); this.cur += add.length;
+  }
+
+  /** The command names the shell can run now: the builtins plus every program on the PATH and the
+   *  player's ~/bin. Used by Tab, the ghost-text and the syntax colours (QoL, Bloco 1). */
+  private cmdNames(): Set<string> {
+    return new Set([...BUILTINS, ...[...PATH, `/home/${this.pc.hw.user}/bin`].flatMap((d) => [...(this.pc.get(d)?.kids?.keys() ?? [])])]);
+  }
+
+  /** Does `word` read as a network target — a dotted IPv4, or an ESSID currently in range? Only to
+   *  tint it in the input line; no lookup, no side effect. */
+  private isNet(word: string): boolean {
+    const w = word.replace(/['"]/g, '');
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(w)) return true;
+    for (const [i] of this.net.list) if (wifiName(this.world.city, this.world.wifi[i]) === w) return true;
+    return false;
+  }
+
+  /** Syntax tokens for an input line (QoL render, Bloco 1): draw.ts turns the kinds into colours.
+   *  Kinds: cmd (a command it can run) / bad (an unknown first word) / flag (-x) / str ("quoted") /
+   *  op (&& || ; >) / net (an IP or ESSID) / arg (anything else). Respects quotes like the parser. */
+  hiTokens(line: string): { s: number; e: number; k: string }[] {
+    const out: { s: number; e: number; k: string }[] = [];
+    const names = this.cmdNames();
+    const n = line.length;
+    let i = 0, atCmd = true;
+    while (i < n) {
+      const ch = line[i];
+      if (ch === ' ') { i++; continue; }
+      if (ch === ';') { out.push({ s: i, e: i + 1, k: 'op' }); i++; atCmd = true; continue; }
+      if ((ch === '&' && line[i + 1] === '&') || (ch === '|' && line[i + 1] === '|')) { out.push({ s: i, e: i + 2, k: 'op' }); i += 2; atCmd = true; continue; }
+      if (ch === '>') { const e = line[i + 1] === '>' ? i + 2 : i + 1; out.push({ s: i, e, k: 'op' }); i = e; continue; }
+      const s = i; let q = '';
+      while (i < n) {
+        const c = line[i];
+        if (q) { if (c === q) q = ''; i++; continue; }
+        if (c === ' ' || c === ';' || c === '>' || (c === '&' && line[i + 1] === '&') || (c === '|' && line[i + 1] === '|')) break;
+        if (c === '"' || c === "'") q = c;
+        i++;
+      }
+      const word = line.slice(s, i);
+      const k = word[0] === '"' || word[0] === "'" ? 'str' : atCmd ? (names.has(word) ? 'cmd' : 'bad') : word[0] === '-' ? 'flag' : this.isNet(word) ? 'net' : 'arg';
+      out.push({ s, e: i, k });
+      atCmd = false;
+    }
+    return out;
+  }
+
+  /** Fish-style ghost text: the greyed continuation after the caret (accepted with →/End). The most
+   *  recent whole history line that extends what is typed, else the single command-name completion of
+   *  the first word. '' when the caret is not at the end, the line is masked, or nothing fits. */
+  ghost(): string {
+    const s = this.input;
+    if (this.mask || this.cur !== s.length || !s) return '';
+    for (let i = this.hist.length - 1; i >= 0; i--) { const h = this.hist[i]; if (h.length > s.length && h.startsWith(s)) return h.slice(s.length); }
+    const start = cmdSegmentStart(s), word = s.slice(start);
+    if (word && !word.includes(' ')) {
+      const hits = [...this.cmdNames()].filter((c) => c.startsWith(word) && c !== word).sort();
+      if (hits.length === 1) return hits[0].slice(word.length);
+    }
+    return '';
   }
 
   /** [HACKING] The argument scaffold for a command typed on its own (Tab, 15.7e-d): the full line and

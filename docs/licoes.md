@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.7e Bloco 1 (realce + ghost no terminal) — 2026-10-06
+- **A linha do prompt é desenhada em `draw.ts` como um `{text, ink}` só** (ink único por linha). Para cor por caractere, não reescrevi o modelo: deixei o loop genérico pintar tudo em ink[0] e **sobrepus** só as células do input (mesmo glifo, cor nova) depois do bloco `full` e **antes** do cursor, para o cursor ficar por cima. Barato e cirúrgico.
+- **Mapear idx→linha/coluna** do input: as linhas do prompt são fatiadas a cada `W` chars (draw.ts), então char absoluto `idx` está na linha `promptRow + floor(idx/W)`, coluna `idx%W`. O `first` (offset do scrollback) entra na conta da linha de tela. Apliquei o `scan` (0.9 nas ímpares) na sobreposição para não ficar mais claro que o resto.
+- **Ghost text + aceite:** o render é puro; o aceite com →/End é a única mudança de input, e é mínima (só quando `cur === input.length` e há ghost). Juntei `ArrowRight`/`End` num `if` só para não duplicar.
+- **Tokenizer que respeita aspas:** reusei a mesma lógica do `splitChain`/`cmdSegmentStart` (quebrar em `;`/`&&`/`||`/`>` fora de aspas; `atCmd` marca o primeiro token do segmento como comando). Testei a réplica pura em Node (offsets e sem loop infinito) antes de abrir o navegador — o `i` precisa avançar em todo ramo do `while` interno.
+- **Faixa `[HACKING]`:** os helpers novos (`cmdNames`/`isNet`/`hiTokens`/`ghost`) são render/parse comuns e ficam entre `complete()` e o `[HACKING] argTemplate`; não tocam rede/hosts. Recalcular o `docs/mapa-shell.md` foi obrigatório: o switch de hacking desceu ~59 linhas.
+
 ### `[HACKING]` Lições do WEP crack (0.19.2) — 2026-10-06
 - **Comando "contínuo até Ctrl+C" no shell de agenda:** o shell é uma fila de eventos futuros (`queue`, `tq`); não há loop. Para rodar sem fim, cada passo **re-agenda o próximo** (`capStep` faz `then(() => this.capStep(this.tq))`). A fila nunca esvazia → `ready` fica `false` → Ctrl+C cai em `interrupt()`. Backstop: `busyUntil = this.tq` a cada passo.
 - **Limpeza no Ctrl+C:** `then(fn, delay, always=true)` **também roda no horário normal** quando o `at` chega — não serve para "só no Ctrl+C". Pôr a limpeza (gravar a captura) **dentro do `interrupt()`** (`if (this.cap) this.finishCapture()`), não como evento `always` agendado.

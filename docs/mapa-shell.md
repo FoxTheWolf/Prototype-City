@@ -13,17 +13,19 @@
 > Comando para reconferir as faixas:
 > `grep -nE "HACK_TOOLS|WEP_IVS|private conn|private cap|private remote|private capStep|private tdumpMon|case 'job'|case 'mmap'|case 'bruter'|case 'wcrack'|case 'tdump'|case 'tnet'|case 'mbus'|cellLog" src/laptop/shell.ts`
 
-## `src/laptop/shell.ts` — faixas (conferidas em 2026-10-06, ~1140 linhas; WEP crack acrescentado)
+## `src/laptop/shell.ts` — faixas (conferidas em 2026-10-06, ~1398 linhas; +QoL Bloco 1: realce/ghost empurraram o switch ~59 linhas abaixo)
 
 **SENSÍVEIS (`[HACKING]`, não abrir numa sessão normal):**
-- **linha ~15** — `import ... from '../sim/network'` (`lanHosts`, `modbusRegs`, `setBreaker`, `setSignals`, `cellLog`, `WORDS`).
-- **~58–60** — `HACK_TOOLS` (bruter, wcrack); a instalação no `/bin` do jogador fica em ~150.
-- **~62–85** — `WEP_IVS`, `wepIvRate`, `parseCapture` (os helpers puros do crack de WEP, exportados; é o que os testes importam).
-- **~202, ~204** — os campos `private conn` (console remoto) e `private cap` (captura de IVs em andamento).
-- **~280 (dentro de `interrupt`)** — a linha que, no Ctrl+C, chama `finishCapture()` se há captura.
-- **~293–345** — `private capStep` / `private finishCapture` / `private tdumpMon` (o modo monitor do WEP).
-- **~630, ~656** — o desvio para `remote()` no `run()` e o método `private remote(...)` inteiro (o console remoto; inclui o host `omc` da operadora e o comando `log <número>` que lê `cellLog`).
-- **no `exec()` switch, os `case`:** `job` (~877), `mmap` (~1032), `bruter` (~1050), `wcrack` (~1068), `tdump` (~1088, inclui o ramo `mon` que chama `tdumpMon`), `tnet` (~1109), `mbus` (~1123).
+- **linha ~16** — `import ... from '../sim/network'` (`lanHosts`, `modbusRegs`, `setBreaker`, `setSignals`, `cellLog`, `WORDS`).
+- **~59–68** — `HACK_TOOLS` (bruter, wcrack) e `WEP_IVS`; a instalação no `/bin` do jogador fica em ~182.
+- **~62–85** (helpers do WEP) — `wepIvRate`, `parseCapture` (puros, exportados; é o que os testes importam).
+- **~234, ~236** — os campos `private conn` (console remoto) e `private cap` (captura de IVs em andamento).
+- **~319 (dentro de `interrupt`)** — a linha que, no Ctrl+C, chama `finishCapture()` se há captura.
+- **~325–360** — `private capStep` / `private finishCapture` (~337) / `private tdumpMon` (~348) (o modo monitor do WEP).
+- **~695, ~768** — o desvio para `remote()` no `run()` e o método `private remote(...)` inteiro (o console remoto; inclui o host `omc` da operadora e o comando `log <número>` que lê `cellLog` em ~817).
+- **no `exec()` switch, os `case`:** `job` (~989), `mmap` (~1144), `bruter` (~1162), `wcrack` (~1180), `tdump` (~1200, inclui o ramo `mon` que chama `tdumpMon`), `tnet` (~1221), `mbus` (~1235).
+
+> **NEUTRO acrescentado em 2026-10-06 (QoL Bloco 1):** `cmdNames`, `isNet`, `hiTokens`, `ghost` ficam logo **depois** de `complete()` e **antes** do `[HACKING] argTemplate` (~620 agora). São render/parse comuns (não abrem rede nem hosts); seguros numa sessão normal. O aceite do ghost com →/End está em `termKey` (`ArrowRight`/`End`), também neutro.
 
 **NEUTRAS (seguras numa sessão normal):** todo o resto do arquivo — o boot/BIOS, o editor, o sistema de
 arquivos, o prompt e a edição de linha (`termKey`), o `paste`, o `screen()`/`key()`, o gerenciador de

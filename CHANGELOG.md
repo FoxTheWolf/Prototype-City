@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.7e-f1 — Terminal: cores ao digitar e sugestão fantasma (2026-10-06)
+- **O terminal agora se colore enquanto você digita:** o comando fica aceso quando o notebook sabe rodá-lo e **vermelho** quando não existe; opções (`-w`), textos entre aspas, operadores (`&&`, `;`, `>`) e alvos de rede (um IP ou o nome de uma rede por perto) ganham cada um a sua cor. Ajuda a ver o erro antes de apertar Enter.
+- **Sugestão fantasma, estilo fish:** conforme você digita, o terminal mostra em cinza o resto mais provável do comando — do que você já rodou antes, ou o nome do comando que está começando. Aperte **→** ou **End** no fim da linha para aceitar. (Some quando não encaixa nada.)
+
 ## 0.15.7e — Terminal: encadear comandos e aspas (2026-10-06)
 - **Encadeie comandos** no notebook: `&&` roda o próximo se o anterior começou (ex.: `iwconfig wlan0 essid "Cafe" && dhclient`), `||` roda se não começou, `;` roda sempre. (Antes, só o primeiro comando rodava.)
 - **Aspas automáticas:** digitar `"` já põe o par `""` com o cursor no meio; digitar a aspa de novo em cima da que fecha só passa por ela; apagar a de abrir tira o par vazio junto.

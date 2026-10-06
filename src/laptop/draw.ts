@@ -118,6 +118,23 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
     }
     if (full.cy >= 0 && Math.floor(now * 2.5) & 1 && full.cx >= 0 && full.cx < W) put(sx + full.cx, sy + full.cy, 32, ink[0], ink[0]);
   }
+  // syntax colours over the input, and the fish-style ghost text after it (QoL, Bloco 1). The line
+  // was drawn in one ink above; here each typed character is recoloured by its token kind, and the
+  // suggested continuation is painted dim in the blank that follows. Masked input is left alone.
+  if (on && !full && ready && S.scroll === 0 && !S.mask && promptRow >= 0) {
+    const bad: C3 = [255, 110, 80], str: C3 = [150, 205, 120], net: C3 = [110, 200, 240];
+    const tokCol = (k: string): C3 => (k === 'cmd' ? ink[2] : k === 'bad' ? bad : k === 'str' ? str : k === 'net' ? net : k === 'flag' || k === 'op' ? ink[1] : ink[0]);
+    const istr = S.input, plen = S.prompt.length;
+    const kindAt = new Array<string>(istr.length).fill('arg');
+    for (const t of S.hiTokens(istr)) for (let j = t.s; j < t.e && j < istr.length; j++) kindAt[j] = t.k;
+    const cell = (idx: number, ch: number, fg: C3) => {
+      const row = promptRow + Math.floor(idx / W) - first, col = idx % W;
+      if (row >= 0 && row < H && col >= 0 && col < W) { const scan = row & 1 ? 0.9 : 1; put(sx + col, sy + row, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], sbg); }
+    };
+    for (let j = 0; j < istr.length; j++) cell(plen + j, istr.charCodeAt(j), tokCol(kindAt[j]));
+    const g = S.ghost(), dim: C3 = [ink[1][0] * 0.8, ink[1][1] * 0.8, ink[1][2] * 0.8];
+    for (let j = 0; j < g.length; j++) cell(plen + istr.length + j, g.charCodeAt(j), dim);
+  }
   // the cursor: a block blinking where the next character goes
   if (on && !full && ready && S.scroll === 0 && Math.floor(now * 2.5) & 1) {
     const pos = S.prompt.length + S.cur, row = lines.length - 1 - (Math.floor((S.prompt.length + S.input.length) / W) - Math.floor(pos / W)) - first;
