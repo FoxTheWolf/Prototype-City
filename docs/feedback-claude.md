@@ -4,6 +4,10 @@
 
 ---
 
+## 2026-10-06, as lojas da 13.10i
+- **Quase metade das lojas virou "térreo inteiro"** (769 de 1618 na semente 42): nos prédios de 8 a 12 m não cabem a vitrine e a porta dos moradores lado a lado, então os moradores passam pela loja até o elevador. É comum na vida real (a loja de família com a casa em cima), mas se ficar repetitivo, a saída é a cidade gerar menos lojas nos lotes pequenos ou lotes um pouco mais largos nas ruas comerciais.
+- **Isso abre jogo:** a porta do prédio trancada à noite e a loja como único caminho até os andares de cima são um pequeno problema de acesso para o jogador resolver (pela escada de incêndio, por um morador, pelo horário), sem nenhuma regra nova.
+
 ## 2026-10-05, comparação com uma captura antiga (semente 711445483, POS 771.2,971.9)
 - **Antes:** grade 272×80, silhuetas chapadas contra o céu, glifos legíveis como letras (`#`, `%`, `@`), paleta curta (âmbar, verde-água, rosa), sem chão, sem gente. **Agora:** 640×216, raio 3D na GPU, luz por fonte, gente e carros em bloco, semáforos, faixa de pedestre, o relógio na mão, 180 FPS com 3,7 ms de GPU.
 - **Ganho enorme:** profundidade, escala de rua (os prédios sobem de verdade), luz que molda volume, vida no chão.
