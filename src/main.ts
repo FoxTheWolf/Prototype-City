@@ -51,6 +51,7 @@ import TODAY_2008 from './locale/today2008.json';
 import { Menu, type Option } from './menu';
 import { readSave, SAVE_V, writeSave, type GameSave } from './saveGame';
 import { applyWorld, snapWorld } from './sim/save';
+import { NotePanel, Playtest } from './playtest';
 
 /** The grid has this many rows (chosen in the options; more rows cost more to draw); columns follow the window shape. */
 const RES_ROWS = [80, 120, 200];
@@ -244,6 +245,13 @@ function termLayout() {
 }
 let uiLayout: Layout;
 let running = false;
+/**
+ * The playtest record (13.10p; ?playtest, jogar-playtest.bat, always in the .exe): made once the
+ * server answers that it keeps the file, primed when the player goes in. F8 writes a note.
+ */
+let pt: Playtest | null = null, ptPrimed = false, noteShot: string | null = null, shotWanted = false;
+const notePanel = new NotePanel();
+if (params.has('playtest')) void Playtest.available().then((ok) => { if (ok) { pt = new Playtest(world, seed, __VERSION__); if (running && !ptPrimed) { pt.prime(phone, continued); ptPrimed = true; } } else console.warn('playtest: no server keeps the record (run it through Electron or Vite)'); });
 let lapWasOpen = false;
 // the solid background behind the glyphs: 0.24 of the glyph's color ("1/3"), the user's pick
 const look: Look = { solid: 0.24, blocks: false, sharp: STYLES[style].sharp, fuse: OPTS.fuse };
@@ -421,6 +429,8 @@ addEventListener('keydown', (e) => {
   // the menu open takes the keys: Esc goes a page back, or out
   if (menu.isOpen) { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); menu.back(); } return; }
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) { hudOn = !hudOn; saveOpts(); } return; }
+  // F8: a playtest note (the game pauses while it is written)
+  if (e.code === 'F8') { e.preventDefault(); if (!e.repeat) openNote(); return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
   if (e.code === 'F4') { e.preventDefault(); if (!e.repeat) calib = !calib; return; }
   // watching the cameras: Esc leaves (to the title, or back to the game); in the game, C toggles the nearest
@@ -613,6 +623,7 @@ function begin() {
   if (INTRO && introAt < 0) { introAt = performance.now() / 1000; sound.intro(); }
   overlay.hidden = true;
   running = true;
+  if (pt && !ptPrimed) { pt.prime(phone, continued); ptPrimed = true; }
   lastSave = performance.now();
   input.lock();
 }
@@ -647,6 +658,7 @@ function applySave(s: GameSave) {
 function reloadWith(q: Record<string, string>) {
   const u = new URLSearchParams(q);
   if (params.has('mute')) u.set('mute', '');
+  if (params.has('playtest')) u.set('playtest', '');
   location.search = u.toString();
 }
 const contBtn = document.getElementById('continue') as HTMLButtonElement, newBtn = document.getElementById('start') as HTMLButtonElement;
@@ -683,6 +695,19 @@ function pause() {
   menu.open(false);
 }
 function resume() { paused = false; menu.close(); input.lock(); }
+/** F8 (13.10p): the game pauses, the screen is kept as it is, and the note waits for its text. */
+function openNote() {
+  if (!pt || !running || paused || cctv || notePanel.isOpen) return;
+  paused = true; shotWanted = true; noteShot = null;
+  input.unlock();
+  notePanel.open((text) => {
+    if (text) pt?.note(text, noteShot);
+    noteShot = null; paused = false;
+    if (!phone.out && !payphone.active && !laptop.open && !bagView.open) input.lock();
+  });
+}
+/** What has the player's hands, for the playtest record ('' walking). */
+const handsOn = () => (notePanel.isOpen ? 'note' : paused ? 'pause' : laptop.open ? 'laptop' : counter.active ? 'counter' : bagView.open ? 'bag' : ask.open ? 'ask' : payphone.active ? 'payphone' : phone.out ? 'phone' : '');
 function saveOpts() {
   Object.assign(OPTS, { style, fuse: look.fuse, hud: hudOn });
   // ?mute is for a session (the tests), not a choice to remember
@@ -702,6 +727,7 @@ function debugText(): string {
   world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
   const S = world.power.subs[k];
   return [
+    `VERSION   ${__VERSION__}`,
     `SEED      ${seed}`,
     `POSITION  ${p.x.toFixed(1)}, ${p.y.toFixed(1)}${p.inside >= 0 ? `  INSIDE, FLOOR ${p.floor}` : ''}`,
     `DISTRICT  ${districtName(world.city, districtAt(world.city, p.x, p.y)).toUpperCase()}`,
@@ -712,7 +738,7 @@ function debugText(): string {
     `POWER     ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} ON  NEAREST ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}`,
     `HEAT      ${world.heat.points.toFixed(2)}  TIER ${tierOf(world.heat)}`,
     '',
-    'DEBUG KEYS  F3 lines  F4 noon/sunset/night  T/Shift+T +-1h  Y weather',
+    'DEBUG KEYS  F3 lines  F4 noon/sunset/night  F8 playtest note  T/Shift+T +-1h  Y weather',
     '            F6 substation (Shift: all)  C nearest camera  PgUp/PgDn floor',
   ].join('\n');
 }
@@ -1012,20 +1038,49 @@ function frame(now: number) {
       if (near || (now & 512)) ui.text((ui.cols - s.length) >> 1, 1, s, near ? [255, 90, 90] : [255, 170, 80], [30, 10, 8]);
     }
   }
+  if (pt && ptPrimed && running && !cctv) pt.frame(dt, phone, camera.yaw, camera.pitch, handsOn(), input.down('KeyW', 'KeyA', 'KeyS', 'KeyD'));
   if (hudOn) {
-    const status = ` SEED ${seed}  POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}  ` : ''}${p.speed > 4 ? 'RUN ' : 'WALK'} ${p.speed.toFixed(1)} m/s  GRID ${grid.cols}x${grid.rows}  ${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}  `
-      + `[^] PHONE  [N] LAPTOP  ${WATCH_ON ? '[H] WATCH [J] MODE [I] START  ' : ''}${STYLES[style].name} ${look.fuse ? 'SOFT' : 'SHARP'}  [M] SOUND ${sound && !sound.muted ? 'ON' : 'OFF'} `;
-    ui.text(1, ui.rows - 1, status, [255, 176, 74], [12, 10, 8]);
+    // the debug lines (F3; redrawn in 13.10p): one panel at the top left, in groups, cut to the screen's width
+    type RGB = [number, number, number];
+    const W = Math.min(ui.cols - 2, 74), BG: RGB = [10, 9, 8], EDGE: RGB = [110, 92, 66], AMBER: RGB = [255, 176, 74], CYAN: RGB = [120, 220, 255], DIM: RGB = [185, 165, 135];
+    const two = (n: number) => String(Math.floor(n)).padStart(2, '0');
+    let y = 1;
+    const head = (name: string, right = '') => {
+      const l = `+- ${name} `, r = right ? ` ${right} -+` : '+';
+      ui.text(1, y++, (l + '-'.repeat(Math.max(0, W - l.length - r.length)) + r).slice(0, W), EDGE, BG);
+    };
+    const row = (s: string, fg: RGB = DIM) => {
+      ui.text(1, y, '|' + ' '.repeat(W - 2) + '|', EDGE, BG);
+      ui.text(3, y++, s.slice(0, W - 4), fg, BG);
+    };
+    head('DEBUG', `v${__VERSION__}`);
+    row(`SEED ${seed}  GRID ${grid.cols}x${grid.rows}  ${STYLES[style].name} ${look.fuse ? 'SOFT' : 'SHARP'}`, AMBER);
+    row(`${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}`);
+    head('PLAYER');
+    row(`POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}` : 'OUTSIDE'}${p.liftTo >= 0 ? `  LIFT TO ${p.liftTo}` : ''}`, AMBER);
+    const deg = (r: number) => Math.round((r * 180) / Math.PI), bearing = ((deg(camera.yaw) + 90) % 360 + 360) % 360;
+    row(`LOOK ${String(bearing).padStart(3, '0')} ${compass(Math.cos(camera.yaw), Math.sin(camera.yaw))}  PITCH ${deg(camera.pitch) > 0 ? '+' : ''}${deg(camera.pitch)}  ${p.speed > 4 ? 'RUN' : 'WALK'} ${p.speed.toFixed(1)} m/s`);
+    head('PLACE');
+    row(`${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}`, CYAN);
+    row(`${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))}`);
+    if (p.inside >= 0) {
+      const k = city.businesses.findIndex((b) => b.building === p.inside);
+      row(k >= 0 ? `IN ${businessName(city, k).toUpperCase()} (${city.businesses[k].kind})  BUILDING ${p.inside}` : `IN BUILDING ${p.inside}`);
+    }
+    let lm = 0;
+    city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
+    const L = city.landmarks[lm];
+    row(`LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)}`);
+    head('TIME');
     const cal = calendar(world.time), wx = world.weather;
-    const clock = ` ${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')} ${String(Math.floor(cal.hour)).padStart(2, '0')}:${String(Math.floor((cal.hour % 1) * 60)).padStart(2, '0')}  `
-      + `${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s  [T] +1H [Y] SKY  POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} [K] `;
-    ui.text(ui.cols - clock.length - 1, ui.rows - 2, clock, [120, 220, 255], [8, 10, 14]);
-    // debug: the nearest substation (a fenced yard), how far, which way and whether it runs
+    row(`${cal.year}-${two(cal.month)}-${two(cal.day)} ${two(cal.hour)}:${two((cal.hour % 1) * 60)}  ${wx.preset >= 0 ? PRESETS[wx.preset][0].toUpperCase() : 'AUTO'} CLOUD ${Math.round(wx.cloud * 100)}% ${wx.precip > 0 ? `${wx.snow ? 'SNOW' : 'RAIN'} ${Math.round(wx.precip * 100)}% ` : ''}${wx.temp.toFixed(0)}C WIND ${Math.hypot(wx.windX, wx.windY).toFixed(0)} m/s`, CYAN);
+    head('SYSTEMS');
+    // the nearest substation (a fenced yard), how far, which way and whether it runs
     {
       let k = 0, bd = Infinity;
-      world.power.subs.forEach((S, i) => { const d = Math.hypot(S.x - p.x, S.y - p.y); if (d < bd) { bd = d; k = i; } });
-      const S = world.power.subs[k], s = ` SUBSTATION ${String(k + 1).padStart(2, '0')} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}${S.yard ? '' : ' (NO YARD)'} `;
-      ui.text(ui.cols - s.length - 1, ui.rows - 3, s, S.on ? [140, 255, 170] : [255, 120, 90], [8, 10, 14]);
+      world.power.subs.forEach((S, i) => { const dd = Math.hypot(S.x - p.x, S.y - p.y); if (dd < bd) { bd = dd; k = i; } });
+      const S = world.power.subs[k];
+      row(`POWER ${world.power.subs.filter((s) => s.on).length}/${world.power.subs.length} ON  SUBSTATION ${two(k + 1)} ${Math.round(bd)}m ${compass(S.x - p.x, S.y - p.y)} ${S.on ? 'ON' : 'OFF'}${S.yard ? '' : ' (NO YARD)'}`, S.on ? [140, 255, 170] : [255, 120, 90]);
     }
     // [HACKING] debug: the heat the player has drawn, its tier and the traces behind it
     if (world.heat.points > 0.005) {
@@ -1033,15 +1088,14 @@ function frame(now: number) {
       for (const t of H.traces) by[t.kind] = (by[t.kind] ?? 0) + 1;
       const tr = (['witness', 'camera', 'antenna', 'wifi'] as const).filter((k) => by[k]).map((k) => `${by[k]}${k[0].toUpperCase()}`).join(' ');
       const cop = H.cop ? ` COP ${Math.round(Math.hypot(H.cop.x - p.x, H.cop.y - p.y))}m ${compass(H.cop.x - p.x, H.cop.y - p.y)}` : '';
-      const hs = ` HEAT ${H.points.toFixed(2)} TIER ${tier} [${['CLEAN', 'LOCAL', 'CITY', 'FEDERAL'][tier]}] ${tr}${cop} `;
-      ui.text(ui.cols - hs.length - 1, ui.rows - 4, hs, tier >= 3 ? [255, 90, 90] : tier >= 2 ? [255, 150, 70] : [255, 210, 90], [14, 8, 6]);
+      row(`HEAT ${H.points.toFixed(2)} TIER ${tier} [${['CLEAN', 'LOCAL', 'CITY', 'FEDERAL'][tier]}] ${tr}${cop}`, tier >= 3 ? [255, 90, 90] : tier >= 2 ? [255, 150, 70] : [255, 210, 90]);
     }
-    const where = ` ${cityName(city).toUpperCase()} / ${districtName(city, d).toUpperCase()} (${districtType(city, d)})  SECTOR ${sectorCode(city, p.x, p.y)}  `
-      + `${Math.abs(diagS(city.diagonal, p.x, p.y)) < city.diagonal.w / 2 + SIDEWALK ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, p.x))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, p.y))} `;
-    let lm = 0;
-    city.landmarks.forEach((l, k) => { if (Math.hypot(l.x - p.x, l.y - p.y) < Math.hypot(city.landmarks[lm].x - p.x, city.landmarks[lm].y - p.y)) lm = k; });
-    const L = city.landmarks[lm];
-    ui.text(1, 0, where + ` LANDMARK ${landmarkName(city, lm)} ${Math.round(Math.hypot(L.x - p.x, L.y - p.y))}m ${compass(L.x - p.x, L.y - p.y)} `, [120, 220, 255], [8, 10, 14]);
+    row(pt ? `PLAYTEST REC ${pt.file}` : 'PLAYTEST OFF (jogar-playtest.bat)', pt ? [255, 120, 120] : DIM);
+    head('KEYS');
+    row('F3 LINES  F4 NOON/SUNSET/NIGHT  F8 NOTE  T/SHIFT+T +-1H  Y SKY');
+    row('K POWER  F6 SUBSTATION  C CAMERA  PGUP/PGDN FLOOR');
+    row(`^ PHONE  N LAPTOP  ${WATCH_ON ? 'H WATCH  J MODE  I START  ' : ''}M SOUND ${sound && !sound.muted ? 'ON' : 'OFF'}`);
+    ui.text(1, y, '+' + '-'.repeat(W - 2) + '+', EDGE, BG);
   }
   // the panel, while standing in a lift car; the chime when it arrives
   const nFloors = liftFloors(world);
@@ -1085,6 +1139,8 @@ function frame(now: number) {
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at);
   else renderer.draw(grid, ui, hd, termAt);
+  // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
+  if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }
   requestAnimationFrame(frame);
 }
 

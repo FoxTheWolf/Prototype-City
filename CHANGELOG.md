@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10p — Registro de playtest (2026-10-06)
+- Novo atalho `jogar-playtest.bat`: o jogo grava um registro da sessão na pasta `playtest/` (por onde você andou, o que comprou, o dinheiro, mensagens, onde travou) para o Claude ler depois num relatório.
+- **F8** escreve uma nota de teste: o jogo pausa, a tela é fotografada e a nota fica guardada com o lugar e a hora.
+- O painel de debug (**F3**) foi redesenhado: um quadro organizado no canto, com a versão, a posição, para onde você olha (em graus) e a loja em que está.
+- Novo atalho `atualizar.bat`: traz a versão mais nova do GitHub.
+
 ## 0.13.10d3 — Estrelas e luar (2026-10-05)
 - As estrelas brilham mais, e ainda mais num apagão; não aparecem mais duplicadas ao passar de uma célula para outra.
 - A lua cheia solta raios de luz pequenos entre os prédios, como o sol.

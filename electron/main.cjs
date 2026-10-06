@@ -7,16 +7,20 @@ const { app, BrowserWindow } = require('electron');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const { playtest } = require('./playtest.cjs');
 
 const DIST = path.join(__dirname, '..', 'dist');
 const PORT = 47180;
 // (L.13) the user's own recorded sounds for development, never copied into dist/ nor git: served when the folder exists
 const EGGS = path.join(__dirname, '..', 'easter eggs');
+// (13.10p) the playtest record: playtest/ beside the game (the repository's in development, the .exe's folder when packaged)
+const PLAYTEST = app.isPackaged ? path.join(path.dirname(process.execPath), 'playtest') : path.join(__dirname, '..', 'playtest');
 const TYPES = { '.mp3': 'audio/mpeg', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const ISOLATE = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 
 function serve() {
   const server = http.createServer((req, res) => {
+    if (playtest(PLAYTEST, req, res, ISOLATE)) return;
     const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (url.startsWith('/easter eggs/')) {
       const egg = path.join(EGGS, url.slice('/easter eggs/'.length));
@@ -51,7 +55,10 @@ app.whenReady().then(async () => {
   win.webContents.on('before-input-event', (e, input) => {
     if (input.type === 'keyDown' && input.key === 'F11') { win.setFullScreen(!win.isFullScreen()); e.preventDefault(); }
   });
-  const query = process.argv.slice(2).filter((a) => /^\w+(=.*)?$/.test(a)).join('&');
+  const args = process.argv.slice(2).filter((a) => /^\w+(=.*)?$/.test(a));
+  // the packaged .exe (the demo for friends) always keeps the playtest record (13.10p)
+  if (app.isPackaged && !args.includes('playtest')) args.push('playtest');
+  const query = args.join('&');
   win.loadURL(`http://127.0.0.1:${port}/${query ? '?' + query : ''}`);
 });
 app.on('window-all-closed', () => app.quit());
