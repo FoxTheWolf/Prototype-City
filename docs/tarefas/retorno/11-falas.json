@@ -1,0 +1,192 @@
+{
+"motel.rent_due": [
+"Tonight is paid, but tomorrow's room rate is due by noon.",
+"You're covered for tonight. Tomorrow's payment needs to be settled before checkout.",
+"Room's paid through tonight. Tomorrow will need a new payment.",
+"Just a reminder: tonight is covered, but tomorrow's room charge is still due.",
+"You're good for tonight. Come by the desk tomorrow morning about the next night.",
+"The room is paid tonight. Tomorrow's balance is due before noon.",
+"Tonight is already handled. Tomorrow's stay will need payment at the desk.",
+"Paid for tonight. Tomorrow's room is waiting on its payment."
+],
+"motel.manager_greet": [
+"Evening. Desk is open all night. Need a key, directions, or anything else?",
+"Night shift again. What can I help you with?",
+"Late one tonight. Let me know what you need.",
+"You're up late. The desk is still open.",
+"Evening. Rooms are quiet tonight. What brings you by?",
+"I have been here since sunset. Need something?",
+"Long night behind this counter. What can I do for you?",
+"The coffee's cold, but the desk is open. What do you need?"
+],
+"cafe.urgent_sms": [
+"Please come now. Network died at 6. Meet me at {place} on {street}.",
+"Emergency at the café. Internet went down at 6pm. I need you here now.",
+"Can you come right away? The whole network quit at 6. {place}, {street}.",
+"Please hurry over. Everything went offline at 6pm. Find me at {place} on {street}.",
+"I really need you tonight. Network has been down since 6. Come to {place}, {street}.",
+"Still offline since 6pm. Please get here as soon as possible. {place} on {street}.",
+"The network collapsed at 6. I hired you for this. Please come now, {place}, {street}.",
+"Please respond. The café's been offline since 6pm. I need you at {place} on {street}."
+],
+"cafe.call_again": [
+"Where are you? I have been waiting here all evening.",
+"Are you close? The network is still down. I need you here.",
+"Where are you? You said you'd come by now.",
+"Can you tell me where you are? I am still waiting at the café.",
+"You are running late. How much longer?",
+"Where did you get to? The computers are still offline.",
+"I am checking the door every few minutes. Where are you?",
+"Please call back. I need to know when you're arriving."
+],
+"cafe.thanks_credit": [
+"Thanks for getting us back online. Put your credit on the vending machine.",
+"You saved my evening. Drinks and snacks are on my machine.",
+"Much appreciated. Take whatever you like from the vending machine.",
+"You got the network working. The vending machine is free for you tonight.",
+"Thanks. I owe you one, so use the vending machine on me.",
+"Good work. I put some credit on the vending machine for you.",
+"You earned this. The vending machine has credit under your name.",
+"I appreciate the help. Grab something from the machine before you go."
+],
+"cafe.friend_intro": [
+"I know someone who knows computers like you. I can pass along your number.",
+"A friend of mine understands computers like you do. I'll give them your number.",
+"There is someone I know who could use your kind of skills. I'll pass on your number.",
+"Quietly, I know a person who works with computers. I'll give them your number.",
+"I have a friend who knows computers like you. Mind if I pass along your number?",
+"Someone I know has been looking for a person with your computer skills. I'll share your number.",
+"I know somebody who understands computers the way you do. I'll pass your number along.",
+"Keep this between us, but I know a friend who knows computers like you. I'll give them your number."
+],
+"phone_shop.new_sim": [
+"New SIM card's ready. You'll need to tell your friends the new number.",
+"This SIM is fresh. Just remember to let your friends know your new number.",
+"Here you go. Once it's active, make sure your friends have the new number.",
+"New SIM, new number. Better tell your friends before they call the old one.",
+"That'll get you a new number. You'll want to update your friends.",
+"Everything's set. Just spread the new number around to your friends.",
+"New SIM card installed. Your friends will need the new number.",
+"There you are. Don't forget to give your friends your new number."
+],
+"npc.unknown_number": [
+"Hello? Who's this?",
+"Hi. I don't recognize this number.",
+"Hello. May I ask who's calling?",
+"Who am I speaking with?",
+"Hi there. I don't have this number saved.",
+"Hello? I was not expecting this call.",
+"Sorry, who's this?",
+"Hello. Is there a reason you're calling?"
+],
+"npc.recognised_after_name": [
+"Oh, it's you! I remember now.",
+"Oh, it's you! I didn't recognize the number.",
+"Oh, it's you! That explains the call.",
+"Oh, it's you! I have your name now.",
+"Oh, it's you! Sorry, I wasn't sure who was calling.",
+"Oh, it's you! I know you.",
+"Oh, it's you! I should have known.",
+"Oh, it's you! Good to hear from you."
+],
+"npc.remembers_small": [
+"I remember that little chat we had about {place} {time} ago.",
+"We talked about {place} {time} ago, right? I remember that.",
+"I still remember our conversation about {place} from {time} ago.",
+"We had a brief talk about {place} {time} ago. It stuck with me.",
+"You mentioned {place} when we talked {time} ago. I remember.",
+"I remember you asking about {place} {time} ago.",
+"That chat about {place} was only {time} ago. I remember it.",
+"We spoke about {place} {time} ago. Small conversation, but I remember."
+],
+"npc.remembers_lie": [
+"I found out you weren't telling me the truth. Keep your distance.",
+"So you lied to me. I do not appreciate that.",
+"I know what you told me was false. We are done talking.",
+"You were not honest with me. I will remember that.",
+"I learned the truth. I have nothing more to say.",
+"You gave me a story that wasn't true. I am not interested anymore.",
+"I know you lied. That changes things between us.",
+"You weren't straight with me. I am keeping this conversation brief."
+],
+"npc.heard_gossip": [
+"{name} told me you lied to them.",
+"I have never met you, but {name} said you were not truthful.",
+"{name} mentioned that you lied. That is what I heard.",
+"I don't know you, but {name} told me what happened.",
+"According to {name}, you gave them a false story.",
+"{name} said you were not honest with them.",
+"We have never spoken, but {name} already told me about the lie.",
+"I heard from {name} that you told them something untrue."
+],
+"npc.refuse_busy": [
+"Sorry, I cannot talk. I am late for an appointment.",
+"Not now. I have to catch the next bus.",
+"I would help, but I am already late for work.",
+"Sorry, I am in a hurry. I have somewhere to be.",
+"Can't stop right now. My ride is waiting.",
+"I need to keep moving. I am due somewhere in a few minutes.",
+"Sorry, no time. I have an appointment across town.",
+"I would stay, but I need to get to the station."
+],
+"npc.refuse_wary_night": [
+"Sorry, not tonight. I do not usually stop for strangers after dark.",
+"I would rather keep walking. Nights like this make me cautious.",
+"Sorry, I am not comfortable talking out here this late.",
+"Maybe another time. I keep conversations short after dark.",
+"I do not mean anything by it. I am simply careful at night.",
+"Sorry, I am heading home. I do not stop much after dark.",
+"Not tonight. I prefer not to talk with strangers this late.",
+"I would rather not. I stay cautious when the streets get quiet."
+],
+"npc.overheard": [
+"Did they just say something about that?",
+"Wait, did you just say what I think you said?",
+"Did I hear you correctly?",
+"Excuse me, was that really what you just said?",
+"I could have sworn I heard something unusual.",
+"Did they just mention that?",
+"Sorry, I overheard that. What was that about?",
+"I heard part of that conversation. Did you really say that?"
+],
+"npc.whisper_odd": [
+"Why are you whispering?",
+"You can speak normally. I can hear you.",
+"That whispering is a little unusual.",
+"Is there a reason you are keeping your voice so low?",
+"I heard you. You do not need to whisper.",
+"You are making this sound more mysterious than it needs to be.",
+"Why so quiet all of a sudden?",
+"I can hear you fine. What is with the whisper?"
+],
+"clerk.shortage": [
+"That price went up because the delivery never came after the blackout on {street}.",
+"We had a delivery delay after the blackout on {street}, so the price changed.",
+"The shipment missed us during the blackout on {street}. That is why it costs more now.",
+"We are short on stock since the delivery failed after the blackout on {street}.",
+"The blackout on {street} delayed our delivery, and the replacement cost more.",
+"Our delivery did not arrive after the blackout on {street}. We had to raise the price.",
+"Supply is low because the truck missed us after the blackout on {street}.",
+"That increase is temporary. Our delivery was delayed by the blackout on {street}."
+],
+"police.again": [
+"You again? I remember the last time you were here.",
+"You again? I recognize you from our records.",
+"Well, you again. I know your name from the file.",
+"You again? Your record looks familiar.",
+"I recognize you. We have spoken before.",
+"You again? I remember seeing your name in the reports.",
+"Looks familiar. Your record has been here before.",
+"You again? I remember the earlier case."
+],
+"police.reads_report": [
+"Here are your belongings, along with a copy of the incident report.",
+"Everything is returned. This copy of the report is for your records.",
+"Your belongings are here. Take this report with you.",
+"That is everything we have for you, plus the incident report.",
+"Here are your things and a copy of today's report.",
+"Your belongings are all accounted for. Here is the report copy.",
+"You can have these back now. This is your copy of the incident report.",
+"Everything is in order. Take your belongings and this copy of the report."
+]
+}

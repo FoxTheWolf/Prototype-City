@@ -1,0 +1,370 @@
+[
+{
+"item": "Cheap motel night",
+"low": 35,
+"typical": 48,
+"high": 65,
+"unit": "night",
+"note": "Independent roadside motel or budget chain like Motel 6."
+},
+{
+"item": "Weekly rate at cheap motel",
+"low": 180,
+"typical": 230,
+"high": 310,
+"unit": "week",
+"note": "Long-stay/extended discount rate common in budget motels."
+},
+{
+"item": "Monthly rent: small studio apartment",
+"low": 425,
+"typical": 540,
+"high": 675,
+"unit": "month",
+"note": "Mid-size US city (e.g., Columbus, Indianapolis, Kansas City)."
+},
+{
+"item": "Monthly rent: 1-bedroom apartment",
+"low": 525,
+"typical": 650,
+"high": 825,
+"unit": "month",
+"note": "HUD Fair Market Rent standard for non-coastal mid-size metro."
+},
+{
+"item": "Security deposit",
+"low": 250,
+"typical": 600,
+"high": 800,
+"unit": "one-time",
+"note": "Standard was 1 month rent or a fixed promotional move-in deposit."
+},
+{
+"item": "Fast-food combo meal",
+"low": 4.5,
+"typical": 5.75,
+"high": 7.25,
+"unit": "meal",
+"note": "Burger, fries, and drink (value menu items ran $1.00)."
+},
+{
+"item": "Diner meal",
+"low": 6.5,
+"typical": 8.75,
+"high": 12.5,
+"unit": "meal",
+"note": "Breakfast plate (eggs, bacon, toast, hashbrowns) or meatloaf dinner."
+},
+{
+"item": "Deli/sub sandwich",
+"low": 4.0,
+"typical": 5.5,
+"high": 7.5,
+"unit": "sandwich",
+"note": "Era of the famous Subway $5 footlong promotion."
+},
+{
+"item": "Cup of coffee",
+"low": 1.0,
+"typical": 1.65,
+"high": 3.75,
+"unit": "cup",
+"note": "Drip at a gas station/diner ($1.00–$1.50) up to a Starbucks latte."
+},
+{
+"item": "Vending-machine snack",
+"low": 0.65,
+"typical": 0.85,
+"high": 1.25,
+"unit": "item",
+"note": "Bag of chips, candy bar, or pastries."
+},
+{
+"item": "Vending-machine soda (can/20 oz)",
+"low": 0.75,
+"typical": 1.1,
+"high": 1.5,
+"unit": "bottle/can",
+"note": "$0.75 for 12 oz can; $1.25 typical for 20 oz bottle."
+},
+{
+"item": "Week of cheap groceries for one",
+"low": 30,
+"typical": 42,
+"high": 55,
+"unit": "week",
+"note": "USDA 'Thrifty Food Plan' for adult male in 2008 was ~~$37–$43/week."
+},
+{
+"item": "Prepaid phone: basic handset (burner)",
+"low": 15,
+"typical": 25,
+"high": 40,
+"unit": "device",
+"note": "TracFone/Virgin Mobile clamshell or candybar phone off the shelf."
+},
+{
+"item": "Prepaid SIM card (standalone)",
+"low": 5,
+"typical": 10,
+"high": 15,
+"unit": "card",
+"note": "Often came bundled with $5–$10 of promotional starter talk time."
+},
+{
+"item": "Prepaid airtime top-up card",
+"low": 10,
+"typical": 25,
+"high": 50,
+"unit": "voucher",
+"note": "Sold in scratch-off denominations at convenience checkouts."
+},
+{
+"item": "Prepaid SMS rate",
+"low": 0.05,
+"typical": 0.1,
+"high": 0.15,
+"unit": "per text",
+"note": "Per outgoing/incoming text without a dedicated bundle."
+},
+{
+"item": "Prepaid voice call rate",
+"low": 0.1,
+"typical": 0.2,
+"high": 0.25,
+"unit": "per minute",
+"note": "Standard pay-as-you-go billing increments."
+},
+{
+"item": "Smartphone handset (unlocked / off-contract)",
+"low": 450,
+"typical": 550,
+"high": 650,
+"unit": "device",
+"note": "BlackBerry Bold/Curve or unsubsidized iPhone 3G (~~$499-$599 MSRP)."
+},
+{
+"item": "Monthly smartphone data plan (add-on)",
+"low": 20,
+"typical": 30,
+"high": 40,
+"unit": "month",
+"note": "AT&T iPhone unlimited 3G data add-on was $30/mo on top of voice."
+},
+{
+"item": "Budget laptop",
+"low": 350,
+"typical": 450,
+"high": 550,
+"unit": "device",
+"note": "Netbooks (Asus Eee PC) or clearance 15-inch Celeron/Sempron models."
+},
+{
+"item": "Mid-range laptop",
+"low": 650,
+"typical": 850,
+"high": 1050,
+"unit": "device",
+"note": "Intel Core 2 Duo, 2-3 GB RAM, 160-250 GB HDD (Dell Inspiron / HP)."
+},
+{
+"item": "High-end laptop",
+"low": 1300,
+"typical": 1800,
+"high": 2500,
+"unit": "device",
+"note": "MacBook Pro, Lenovo ThinkPad T-series, or Alienware gaming rig."
+},
+{
+"item": "RAM upgrade (1 GB - 2 GB DDR2)",
+"low": 25,
+"typical": 45,
+"high": 75,
+"unit": "module/kit",
+"note": "DDR2 SO-DIMM prices fell steadily throughout 2008."
+},
+{
+"item": "External hard drive (250 GB - 500 GB)",
+"low": 60,
+"typical": 95,
+"high": 130,
+"unit": "device",
+"note": "USB 2.0 Western Digital My Book or Seagate FreeAgent desktop drive."
+},
+{
+"item": "USB flash drive (1 GB - 4 GB)",
+"low": 8,
+"typical": 15,
+"high": 25,
+"unit": "drive",
+"note": "1 GB hovered around $8–$10; 4 GB ran $18–$25."
+},
+{
+"item": "Wi-Fi USB dongle (802.11g)",
+"low": 15,
+"typical": 25,
+"high": 40,
+"unit": "device",
+"note": "54 Mbps wireless-G adapter (Linksys, D-Link, Netgear)."
+},
+{
+"item": "Directional Wi-Fi antenna (Yagi / Panel / Cantenna)",
+"low": 35,
+"typical": 55,
+"high": 90,
+"unit": "device",
+"note": "High-gain 2.4 GHz RP-SMA directional antenna (wardriving kit)."
+},
+{
+"item": "Police radio scanner (handheld analog)",
+"low": 85,
+"typical": 120,
+"high": 175,
+"unit": "device",
+"note": "Uniden Bearcat handheld analog scanner (digital APCO-25 cost $450+)."
+},
+{
+"item": "Cheap point-and-shoot digital camera",
+"low": 70,
+"typical": 110,
+"high": 160,
+"unit": "device",
+"note": "6-8 megapixel compact camera running on AA or lithium batteries."
+},
+{
+"item": "Casual hoodie",
+"low": 15,
+"typical": 25,
+"high": 45,
+"unit": "garment",
+"note": "Target/Walmart ($15) to mall retail like Gap or American Apparel."
+},
+{
+"item": "Rain jacket",
+"low": 25,
+"typical": 50,
+"high": 90,
+"unit": "garment",
+"note": "Basic nylon windbreaker up to an entry Columbia shell."
+},
+{
+"item": "Leather jacket",
+"low": 90,
+"typical": 160,
+"high": 275,
+"unit": "garment",
+"note": "Mall brand / Wilson's Leather tier; genuine heavy cowhide ran higher."
+},
+{
+"item": "Wool overcoat / Peacoat",
+"low": 60,
+"typical": 110,
+"high": 200,
+"unit": "garment",
+"note": "Wool-blend double-breasted peacoat or overcoat from department store."
+},
+{
+"item": "Baseball cap",
+"low": 8,
+"typical": 16,
+"high": 28,
+"unit": "item",
+"note": "Unbranded/thrift to licensed New Era 59FIFTY fitted hat."
+},
+{
+"item": "Beanie / Knit cap",
+"low": 4,
+"typical": 10,
+"high": 18,
+"unit": "item",
+"note": "Basic acrylic watch cap or skater beanies."
+},
+{
+"item": "City bus fare (single ride)",
+"low": 1.25,
+"typical": 1.6,
+"high": 2.0,
+"unit": "ride",
+"note": "Exact change or magnetic transit token/ticket."
+},
+{
+"item": "Subway / light rail fare",
+"low": 1.5,
+"typical": 1.85,
+"high": 2.25,
+"unit": "ride",
+"note": "Light rail systems (e.g., Cleveland RTA, St. Louis MetroLink)."
+},
+{
+"item": "Taxi flag drop (base charge)",
+"low": 2.0,
+"typical": 2.6,
+"high": 3.25,
+"unit": "initial charge",
+"note": "Meter starting fee before distance accumulation."
+},
+{
+"item": "Taxi fare per mile",
+"low": 1.8,
+"typical": 2.2,
+"high": 2.8,
+"unit": "mile",
+"note": "Based on standard meter ticks plus idling time in traffic."
+},
+{
+"item": "Freelance small-business IT technician rate",
+"low": 45,
+"typical": 65,
+"high": 95,
+"unit": "hour",
+"note": "Independent contractor or break-fix MSP rate for local businesses."
+},
+{
+"item": "Service call: fix small office network / café router",
+"low": 75,
+"typical": 140,
+"high": 225,
+"unit": "job",
+"note": "Typical 1.5-2 hour on-site service call or flat diagnostic fee."
+},
+{
+"item": "Cashier wage",
+"low": 6.55,
+"typical": 8.45,
+"high": 10.25,
+"unit": "hour",
+"note": "Federal minimum wage rose to $6.55 in July 2008; BLS median ~$8.45."
+},
+{
+"item": "Café worker / Barista wage",
+"low": 6.55,
+"typical": 8.0,
+"high": 9.75,
+"unit": "hour",
+"note": "Base hourly wage before modest tip jar split."
+},
+{
+"item": "Motel night auditor / desk clerk wage",
+"low": 7.25,
+"typical": 8.85,
+"high": 10.8,
+"unit": "hour",
+"note": "Night shift differential often added $0.50–$1.00 over base clerk pay."
+},
+{
+"item": "Bail for minor misdemeanor",
+"low": 250,
+"typical": 750,
+"high": 1500,
+"unit": "case",
+"note": "Schedule bail; bond agents typically charged a non-refundable 10% cut."
+},
+{
+"item": "Small municipal fine (e.g., trespassing, loitering)",
+"low": 50,
+"typical": 115,
+"high": 250,
+"unit": "infraction",
+"note": "Base statutory fine plus mandatory court/administrative surcharges."
+}
+]
