@@ -6,6 +6,7 @@
  */
 import { Computer, playerLaptop } from '../src/sim/computer';
 import { install, aptInstall } from '../src/laptop/shell';
+import { DEBUG } from '../src/debug';
 
 const seed = Number(process.argv[2] ?? 42);
 let fails = 0;
@@ -29,9 +30,16 @@ const f = pc.get('/usr/bin/mmap');
 if (f?.exec !== 'mmap') fail('installed mmap is a runnable binary');
 if (!f?.size) fail('installed mmap has a size on disk');
 
-// an unknown package is refused, and bruter is NOT in the catalog (it comes from the forum)
+// an unknown package is refused
 if (aptInstall(pc, 'nmap', 1_200_000_100)) fail('aptInstall refuses an unknown package');
-if (aptInstall(pc, 'bruter', 1_200_000_100)) fail('bruter is not in the apt catalog (forum-only)');
+// the clandestine tools (bruter, wcrack) are in the catalog only as a DEBUG aid (DEBUG.aptClandestine);
+// their real source will be the forum (15.8c). With the flag on, aptInstall knows them.
+if (DEBUG.aptClandestine) {
+  if (!aptInstall(pc, 'bruter', 1_200_000_100)) fail('with aptClandestine, bruter is fetchable via apt');
+  if (!aptInstall(pc, 'wcrack', 1_200_000_101)) fail('with aptClandestine, wcrack is fetchable via apt');
+} else {
+  if (aptInstall(pc, 'bruter', 1_200_000_100)) fail('without the debug flag, bruter is forum-only (not in apt)');
+}
 
-console.log(fails ? `${fails} failure(s)` : 'OK — catalog tools come via apt, apt/bruter preinstalled, unknown and bruter refused');
+console.log(fails ? `${fails} failure(s)` : 'OK — catalog tools come via apt, apt/bruter preinstalled, unknown refused, clandestine tools in apt per debug flag');
 process.exit(fails ? 1 : 0);

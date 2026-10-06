@@ -1,4 +1,5 @@
 import { hash3 } from '../core/rng';
+import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
 import { type BootDev, type Computer, type FsNode } from '../sim/computer';
 import { Firmware, type FwAction } from './bios';
@@ -86,6 +87,12 @@ const APT_CATALOG: Record<string, { dir: string; kb: number; mem: number; desc: 
   tdump: { dir: '/usr/bin', kb: 260, mem: 2200, desc: 'dump traffic on a network' },
   tnet: { dir: '/usr/bin', kb: 64, mem: 520, desc: 'the telnet remote-login client' },
   mbus: { dir: '/usr/bin', kb: 96, mem: 700, desc: 'command-line client for the controller bus (port 502)' },
+  // (debug) the clandestine tools in apt too, until the forum delivers them (15.8c). The forum is the
+  // real source; this just lets the apt path be tested now. They are also preinstalled in ~/bin.
+  ...(DEBUG.aptClandestine ? {
+    bruter: { dir: '/usr/bin', kb: 180, mem: 1600, desc: '(unofficial) login word-list tester' },
+    wcrack: { dir: '/usr/bin', kb: 240, mem: 2600, desc: '(unofficial) WEP key recovery from captured IVs' },
+  } : {}),
 };
 /** [HACKING] The apt package mirror, as a repository line would read (fictional, the notebook's OS vendor). */
 const APT_REPO = 'http://packages.osprey.org osprey/main';

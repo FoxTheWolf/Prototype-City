@@ -1,4 +1,5 @@
 import { hash3 } from '../core/rng';
+import { DEBUG } from '../debug';
 import { FLOOR_H, type City } from './city';
 import { type PowerGrid } from './power';
 import { PLACES } from './placeTypes';
@@ -69,6 +70,8 @@ export function buildWifi(seed: number, city: City, sx: number, sy: number, powe
   let best = -1, bd = 1e9;
   out.forEach((a, i) => { const d = Math.hypot(a.x - sx, a.y - sy); if (a.biz >= 0 && d < bd) { bd = d; best = i; } });
   if (best >= 0) { out[best].sec = Sec.Open; out[best].key = ''; }
+  // (debug) an open network right at the spawn, to test going online without cracking first
+  if (DEBUG.spawnOpenAp) add(sx, sy, 2.4, -1, -1, Sec.Open, 990000);
   // the utility's maintenance link at each substation: a WEP network (the old kind) for the technicians' laptops
   power.subs.forEach((S, k) => {
     add(S.x, S.y, 2, -2, -1, Sec.WEP, 900000 + k);
