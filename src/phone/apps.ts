@@ -24,7 +24,7 @@ import { appIcon } from './hdicons';
 import { box, CHROME, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
-import { TRACKS } from '../audio/tracks';
+import { compile, TRACKS } from '../audio/tracks';
 import { drawRey } from './reynard';
 import SONGS from '../locale/music.en.json';
 
@@ -702,7 +702,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
     return newsApp(S, P, world, t, J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading'));
   }
   if (id === 'bank') return bankApp(S, P, world, t);
-  if (id === 'tunes') return tunesApp(S, P, t);
+  if (id === 'tunes') return tunesApp(S, P, t, now);
   if (id === 'reynard') return drawRey(S, P, world, t, now);
   if (id === 'web') return P.web.draw(S, now);
   if (id === 'convert') {
@@ -725,50 +725,110 @@ const BK = A.bank;
  * its balance, the statement, a top-up of the phone's credit from the account, and the branch (where
  * it is, its hours, its number). Nothing shows until the account has come down over the network.
  */
-/** A song of the Tunes Player by its place on the list: its title, band and size on the phone. */
+/** Kilobytes a second of the MP3s of 2008 (128 kbps): every song's size is its length at that rate, whatever the file really is (2026-10-06). */
+const MP3_KBS = 128 / 8;
+/** The songs' lengths (s), compiled once. */
+const trackSecs = new Map<number, number>();
+/** A song of the Tunes Player by its place on the list: its title, band and size on the phone (-1: not known yet). */
 export function songInfo(P: Phone, i: number): { title: string; band: string; kb: number } {
-  if (i < TRACKS.length) { const s = (SONGS as Record<string, { band: string; title: string }>)[TRACKS[i].id]; return { ...s, kb: 9 + (i * 7) % 6 }; }
+  if (i < TRACKS.length) {
+    const s = (SONGS as Record<string, { band: string; title: string }>)[TRACKS[i].id];
+    let secs = trackSecs.get(i);
+    if (secs === undefined) { const c = compile(TRACKS[i]); secs = c.steps * c.stepS; trackSecs.set(i, secs); }
+    return { ...s, kb: Math.round(secs * MP3_KBS) };
+  }
   const f = P.sd[i - TRACKS.length];
-  return { title: f.name.replace(/\.[^.]+$/, ''), band: TN.sd, kb: Math.round(f.size / 1024) };
+  return { title: f.name.replace(/\.[^.]+$/, ''), band: TN.sd, kb: f.secs ? Math.round(f.secs * MP3_KBS) : -1 };
+}
+/** The visualizer's falling peaks, and when they were last moved. */
+const peaks = new Float32Array(16);
+let peaksAt = 0;
+/**
+ * A spectrum visualizer as the players of 2008 had (2026-10-06): a bar a band, `rows` tall, in quarter
+ * blocks, green at the foot to yellow and red at the top, with a peak that falls slowly; x is the left.
+ */
+export function drawSpectrum(S: Lcd, x: number, y: number, rows: number, spec: Float32Array, now: number, bg: (y: number) => C3) {
+  const dt = Math.min(0.2, Math.max(0, now - peaksAt)); peaksAt = now;
+  for (let k = 0; k < spec.length; k++) peaks[k] = Math.max(spec[k], peaks[k] - dt * 0.5);
+  // in HD: the bars in pixels (HD a cell), a band two cells wide with a pixel between, lit as LEDs
+  // from green at the foot to red at the top, the unlit ones faint, the falling peak a bright pixel
+  if (S.hd) {
+    const H = rows * HD, px = (X: number, Y: number, c: C3) => S.pixel(x + Math.floor(X / HD), y + Math.floor(Y / HD), X % HD, Y % HD, c[0], c[1], c[2]);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < spec.length * 2; c++) S.put(x + c, y + r, 32, bg(y + r), bg(y + r));
+    for (let k = 0; k < spec.length; k++) {
+      const v = Math.round(spec[k] * H), pk = Math.min(H - 1, Math.round(peaks[k] * H));
+      for (let i = 0; i < H; i++) {
+        const f = i / (H - 1), lit = i < v, base: C3 = f < 0.5 ? lerp([60, 220, 110], [240, 220, 70], f * 2) : lerp([240, 220, 70], [255, 80, 60], (f - 0.5) * 2);
+        const c: C3 = lit ? base : i === pk && pk > 0 ? [220, 220, 235] : mul(bg(y + rows - 1 - Math.floor(i / HD)), 1.7);
+        for (let w = 0; w < HD * 2 - 1; w++) px(k * HD * 2 + w, H - 1 - i, c);
+      }
+    }
+    return;
+  }
+  const COL: C3[] = [[90, 230, 120], [240, 220, 80], [255, 90, 70]];
+  const Q = [SHAPE.q1, SHAPE.bottom, SHAPE.q3, BLOCK.full];
+  for (let k = 0; k < spec.length; k++) {
+    const v = spec[k] * rows * 4, pk = peaks[k] * rows * 4;
+    for (let r = 0; r < rows; r++) {
+      const yy = y + rows - 1 - r, q = Math.min(4, Math.max(0, Math.round(v - r * 4)));
+      const col = COL[Math.min(2, Math.floor((r / rows) * 3))];
+      if (q > 0) S.put(x + k * 2, yy, Q[q - 1], col, bg(yy));
+      else if (pk > 0.5 && Math.min(rows - 1, Math.floor(pk / 4)) === r) S.put(x + k * 2, yy, SHAPE.top, [200, 200, 220], bg(yy));
+      else S.put(x + k * 2, yy, ch('.'), mul(bg(yy), 1.6), bg(yy));
+    }
+  }
 }
 const TN = A.tunes;
+/** The song's place on row y from x0 to x1: playing or paused, a bar of how far in, the time and the length. */
+export function progress(S: Lcd, x0: number, x1: number, y: number, P: Phone, acc: C3, grey: C3, ink: C3, bg: C3) {
+  const T2 = P.tn, mm = (v: number) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`;
+  const time = `${mm(T2.at)}/${mm(T2.len)}`, w = x1 - x0 - 3 - time.length, f = T2.len > 0 ? Math.min(1, T2.at / T2.len) : 0;
+  S.text(x0, y, T2.playing ? '>' : '"', acc, bg);
+  // in HD: a thin track (a pixel tall) with the played part thicker in the accent, and a knob where it is
+  if (S.hd) {
+    const W = w * HD, at = Math.round(f * (W - 1));
+    for (let k = 0; k < w; k++) S.put(x0 + 2 + k, y, 32, bg, bg);
+    for (let X = 0; X < W; X++) for (let Y = 0; Y < HD; Y++) {
+      const c: C3 | null = X === at ? [245, 235, 255] : X < at ? (Y === 1 || Y === 2 ? acc : null) : Y === 1 ? grey : null;
+      if (c) S.pixel(x0 + 2 + Math.floor(X / HD), y, X % HD, Y, c[0], c[1], c[2]);
+    }
+  } else for (let k = 0; k < w; k++) S.put(x0 + 2 + k, y, k < Math.round(f * w) ? BLOCK.full : ch('-'), k < Math.round(f * w) ? acc : grey, bg);
+  S.text(x1 - time.length, y, time, ink, bg);
+}
 /**
  * The Tunes Player (15.9c): what plays on a panel at the top (title, band, how far in, the volume) and
  * the songs below, those that came with it and then the SD card's; where the sound comes out at the right of the bar.
  */
-function tunesApp(S: Lcd, P: Phone, t: number) {
+function tunesApp(S: Lcd, P: Phone, t: number, now: number) {
   const BG0: C3 = [34, 16, 48], BG1: C3 = [10, 5, 16], ACC: C3 = [200, 130, 255], INK2: C3 = [232, 218, 250], GREY: C3 = [130, 110, 150], PANEL: C3 = [58, 30, 80];
   const T2 = P.tn, bg = (y: number) => lerp(BG0, BG1, (y - 1) / (SH - 3));
   vgrad(S, 1, SH - 2, BG0, BG1);
   bar(S, (ST.names as Record<string, string>).tunes.toUpperCase(), ACC, [20, 8, 30], P.earphones ? TN.phones : TN.speaker, GREY);
-  // the panel: what plays
-  box(S, 1, 3, SW - 2, 7, PANEL, bg, 1, [40, 20, 58]);
-  const pbg = (y: number) => lerp(PANEL, [40, 20, 58], (y - 3) / 4);
+  // the panel: what plays, its spectrum dancing under the title
+  box(S, 1, 3, SW - 2, 10, PANEL, bg, 1, [40, 20, 58]);
+  const pbg = (y: number) => lerp(PANEL, [40, 20, 58], (y - 3) / 7);
   if (T2.cur < 0) S.text(3, 4, typed(TN.idle, t), GREY, pbg(4));
   else {
     const s = songInfo(P, T2.cur);
     S.text(3, 4, typed(s.title.slice(0, SW - 6), t), INK2, pbg(4));
     S.text(3, 5, typed(s.band.slice(0, SW - 6), t - 0.05), GREY, pbg(5));
-    const mm = (v: number) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`;
-    const time = `${mm(T2.at)}/${mm(T2.len)}`, w = SW - 10 - time.length, f = T2.len > 0 ? Math.min(1, T2.at / T2.len) : 0;
-    S.text(3, 6, T2.playing ? '>' : '"', ACC, pbg(6));
-    for (let k = 0; k < w; k++) S.put(5 + k, 6, k < Math.round(f * w) ? BLOCK.full : ch('-'), k < Math.round(f * w) ? ACC : GREY, pbg(6));
-    S.text(SW - 3 - time.length, 6, time, INK2, pbg(6));
+    drawSpectrum(S, 5, 6, 3, P.spec, now, pbg);
+    progress(S, 3, SW - 3, 9, P, ACC, GREY, INK2, pbg(9));
   }
   // the volume, as ten little bars rising
-  S.text(3, 8, 'VOL', GREY, bg(8));
-  for (let k = 0; k < 10; k++) S.put(7 + k, 8, k < Math.round(T2.vol * 10) ? BLOCK.full : ch('.'), k < Math.round(T2.vol * 10) ? ACC : GREY, bg(8));
-  S.text(SW - 12, 8, '* - # +', GREY, bg(8));
+  S.text(3, 11, 'VOL', GREY, bg(11));
+  for (let k = 0; k < 10; k++) S.put(7 + k, 11, k < Math.round(T2.vol * 10) ? BLOCK.full : ch('.'), k < Math.round(T2.vol * 10) ? ACC : GREY, bg(11));
+  S.text(SW - 12, 11, '* - # +', GREY, bg(11));
   // the list: a heading before each part, the picked row lit, kept in sight
   const rows: [string, number][] = [[TN.songs, -1], ...TRACKS.map((_, i): [string, number] => ['', i]), [TN.sd, -1], ...(P.sd.length ? P.sd.map((_, i): [string, number] => ['', TRACKS.length + i]) : [[TN.sdEmpty, -2] as [string, number]])];
-  const top = 10, h = SH - 3 - top, at = rows.findIndex(([, i]) => i === T2.sel), off = Math.max(0, Math.min(rows.length - h, at - (h >> 1)));
+  const top = 13, h = SH - 3 - top, at = rows.findIndex(([, i]) => i === T2.sel), off = Math.max(0, Math.min(rows.length - h, at - (h >> 1)));
   rows.slice(off, off + h).forEach(([label, i], r) => {
     const y = top + r;
     if (i === -1) { S.text(1, y, label, ACC, bg(y)); for (let x = label.length + 2; x < SW - 1; x++) S.put(x, y, ch('-'), [70, 40, 90], bg(y)); return; }
     if (i === -2) { S.text(3, y, label, GREY, bg(y)); return; }
     const s = songInfo(P, i), sel = i === T2.sel, rb: C3 = sel ? [90, 46, 120] : bg(y);
     if (sel) S.fill(y, rb);
-    const size = s.kb >= 1024 ? TN.mb.replace('{n}', (s.kb / 1024).toFixed(1)) : TN.kb.replace('{n}', String(s.kb));
+    const size = s.kb < 0 ? '--' : s.kb >= 1024 ? TN.mb.replace('{n}', (s.kb / 1024).toFixed(1)) : TN.kb.replace('{n}', String(s.kb));
     S.text(1, y, i === T2.cur ? (T2.playing ? '>' : '"') : ' ', ACC, rb);
     S.text(3, y, typed(`${s.title}${i < TRACKS.length ? ` - ${s.band}` : ''}`.slice(0, SW - 6 - size.length), t - 0.1 - r * 0.02), sel ? [255, 255, 255] : INK2, rb);
     S.text(SW - 1 - size.length, y, size, GREY, rb);

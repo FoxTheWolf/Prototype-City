@@ -70,8 +70,6 @@ export function stepRey(P: Phone, w: World) {
 export function openRey(P: Phone) {
   rv.view = P.rey.reg === 'ok' ? 'list' : 'reg'; rv.sel = 0; rv.note = ''; rv.scroll = 0;
 }
-/** Whether the screen wants the keypad's letters (the keypad comes up higher). */
-export const reyTyping = () => rv.view === 'chat' || rv.view === 'reg';
 
 /** The app's keys (null: Back on its first page, to leave the app). */
 export function reyKey(P: Phone, w: World, k: Key, now: number): boolean | null {

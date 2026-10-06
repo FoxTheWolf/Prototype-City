@@ -2,7 +2,7 @@ import { compass, cityName, operatorName, diagonalName, districtName, landmarkNa
 import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
-import { app, menu, songInfo } from './apps';
+import { app, drawSpectrum, menu, progress, songInfo } from './apps';
 import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad, wallpaper } from './ui';
 import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
 import { type World } from '../sim/world';
@@ -242,7 +242,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const t = now - P.since;
     if (P.screen === 'boot') boot(S, P, world, t);
     else {
-      statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi, P.batt, P.charging);
+      statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi, P.batt, P.charging, P.earphones);
       if (P.screen === 'standby') standby(S, P, world, t, now);
       else if (P.screen === 'menu') menu(S, P, t);
       else if (P.screen === 'map') map(S, P, world, aspect, t, now);
@@ -553,22 +553,32 @@ function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
   };
   if (t > 0.2) chip(11, typed(date, t - 0.2), [220, 228, 240]);
   if (t > 0.5) chip(13, typed(op, t - 0.5), R.state === 'service' ? [150, 200, 255] : [255, 120, 90]);
-  // what is waiting, as cards
-  const cards: [string, string, C3][] = [];
-  if (P.missed) cards.push([')))', (P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)), [255, 120, 90]]);
-  const unread = P.inbox.filter((m) => !m.read).length;
-  if (unread) cards.push(['[=]', `${unread} ${unread > 1 ? T.apps.newTexts : T.apps.newText}`, [150, 200, 255]]);
+  // what is waiting, as cards, and the music's panel at the foot (Phone.notices: the same list the
+  // arrows step through; the one picked is lit, and OK opens its app)
+  const unread = P.inbox.filter((m) => !m.read).length, N = P.notices(), sel = N[P.nsel];
   const rem = P.cal.reminders.filter((r) => !r.done).sort((a, b) => a.at - b.at)[0];
-  if (rem) cards.push(['31', `${hhmm(calendar(rem.at).hour)} ${rem.text}`, [255, 200, 120]]);
-  // what the Tunes Player has loaded, playing or paused (the side keys work it without opening the app)
-  if (P.tn.cur >= 0) { const s = songInfo(P, P.tn.cur); cards.push([P.tn.playing ? ' > ' : ' " ', `${s.title} - ${s.band}`, [200, 130, 255]]); }
-  cards.slice(0, 3).forEach(([icon, s, col], k) => {
-    const y = 16 + k * 2;
+  const tune = N.includes('tune');
+  if (tune && t > 0.6) {
+    const s = songInfo(P, P.tn.cur), on = sel === 'tune', PB: C3 = on ? [62, 36, 92] : [30, 16, 44], ACC: C3 = [200, 130, 255], GR: C3 = [130, 110, 150], v = Math.round(P.tn.vol * 10);
+    box(S, 1, 17, SW - 2, 23, PB, PB, 1, on ? [44, 24, 66] : [20, 10, 30]);
+    const pb = (y: number): C3 => lerp(PB, on ? [44, 24, 66] : [20, 10, 30], (y - 17) / 6);
+    S.text(3, 18, `${s.title} - ${s.band}`.slice(0, SW - 6), [232, 218, 250], pb(18));
+    drawSpectrum(S, 5, 19, 2, P.spec, now, pb);
+    progress(S, 3, SW - 3, 21, P, ACC, GR, [232, 218, 250], pb(21));
+    S.text(3, 22, T.apps.vol, GR, pb(22));
+    for (let k = 0; k < 10; k++) S.put(7 + k, 22, k < v ? 128 : ch('.'), k < v ? ACC : GR, pb(22));
+  }
+  N.filter((n) => n !== 'tune').forEach((n, k) => {
+    const y = (tune ? 15 : 16) + k * 2;
     if (t < 0.6 + k * 0.1) return;
-    box(S, 2, y, SW - 3, y, [24, 32, 50], [0, 0, 0], 0);
-    S.text(3, y, icon, col, [24, 32, 50]);
-    // the first card blinks while something waits (a missed call, a text), not for the music
-    S.text(8, y, s.slice(0, SW - 12), Math.floor(now * 2) & 1 || k || !(P.missed || unread) ? [235, 240, 250] : col, [24, 32, 50]);
+    const [icon, s, col]: [string, string, C3] = n === 'missed' ? [')))', (P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)), [255, 120, 90]]
+      : n === 'sms' ? ['[=]', `${unread} ${unread > 1 ? T.apps.newTexts : T.apps.newText}`, [150, 200, 255]]
+      : ['31', `${hhmm(calendar(rem.at).hour)} ${rem.text}`, [255, 200, 120]];
+    const on = sel === n, cb: C3 = on ? [56, 86, 140] : [24, 32, 50];
+    box(S, 2, y, SW - 3, y, cb, [0, 0, 0], 0);
+    S.text(3, y, icon, col, cb);
+    // the first card blinks while something waits (a missed call, a text)
+    S.text(8, y, s.slice(0, SW - 12), on || Math.floor(now * 2) & 1 || k || n === 'rem' ? [235, 240, 250] : col, cb);
   });
   softKeys(S, T.menu, T.hide);
   // how to clear them (calls and texts; a reminder stays until its time), on the bar between the soft keys

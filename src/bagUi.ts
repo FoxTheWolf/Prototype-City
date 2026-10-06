@@ -42,6 +42,8 @@ export class BagView {
   onFit: (id: 'antenna' | 'battery') => void = () => {};
   /** (15.9d) Earphones put in or taken out (the phone keeps it): returns whether they are in now. */
   onEar: (good: string) => boolean = () => false;
+  /** The good worn as earphones now ('' none), tagged in the bag (main sets it). */
+  worn = '';
   onSwap: (op: number) => void = () => {};
   constructor(private world: World) {}
 
@@ -150,6 +152,9 @@ export class BagView {
     }
     // the price tags on what is not paid for yet, over everything
     for (const it of B.items) if (!it.paid) g.text(Math.round(x0 + it.x * SX), Math.round(this.by - (it.y + it.h) * SY), '$', [20, 16, 8], [255, 210, 60]);
+    // the earphones worn: a tag on them (2026-10-06; an equipment screen comes later)
+    const ear = this.worn ? B.items.find((it) => it.good === this.worn) : undefined;
+    if (ear) g.text(Math.round(x0 + (ear.x + ear.w) * SX) - T.worn.length - 1, Math.round(this.by - (ear.y + ear.h) * SY), T.worn, [10, 24, 30], [110, 214, 232]);
     // the slots of their own, to the right
     let sy = y0 - 2;
     const sx = x0 + bw + 4, SW = 30;

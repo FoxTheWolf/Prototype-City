@@ -4,7 +4,8 @@ import { compile, type Song, type Track } from './tracks';
  * The phone's music (15.9b): the chiptune songs of tracks.ts played on four voices as an old console's
  * (a pulse lead, a thinner pulse arpeggio, a triangle bass, noise drums), or a decoded file from the SD
  * card, and where it comes out:
- * - `phones`: earphones, clean and in stereo, for the player alone;
+ * - `phones`: earphones, in stereo, for the player alone: the cheap earbuds of 2008 (thin lows, a
+ *   presence bump, the top rolled off) on a 128 kbps MP3 (nothing above ~16 kHz), 2026-10-06;
  * - `hand`: the phone's own little speaker, mono, no bass, a little harsh where it rattles;
  * - `pocket`: the same speaker muffled by the cloth.
  * The songs are scheduled a little ahead of the audio clock, a step at a time, as a tracker plays them.
@@ -37,13 +38,25 @@ export class Music {
   private readonly speaker: GainNode;
   private readonly cloth: BiquadFilterNode;
   private readonly vol: GainNode;
+  /** The spectrum the phone's visualizer draws, read before the volume (it dances the same at any level). */
+  private readonly an: AnalyserNode;
+  private readonly bins: Uint8Array<ArrayBuffer>;
   /** True once a song or a file reached its end (the player takes the next one and clears it). */
   ended = false;
 
   constructor(private ctx: AudioContext, dest: AudioNode) {
     this.vol = ctx.createGain(); this.vol.connect(dest);
     this.bus = ctx.createGain();
-    this.phones = ctx.createGain(); this.bus.connect(this.phones).connect(this.vol);
+    // a 128 kbps MP3 of the time cut everything above about 16 kHz (steeply: two filters)
+    const mp3a = biquad(ctx, 'lowpass', 16000, 0.7), mp3b = biquad(ctx, 'lowpass', 16000, 0.7);
+    this.bus.connect(mp3a).connect(mp3b);
+    this.an = ctx.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0.6;
+    this.bins = new Uint8Array(this.an.frequencyBinCount);
+    mp3b.connect(this.an);
+    // the earbuds: little drivers that lose the lowest bass, a bump where the voice sits, the top soft
+    const bud = [biquad(ctx, 'highpass', 90, 0.6), biquad(ctx, 'peaking', 3200, 1.1, 3), biquad(ctx, 'highshelf', 9000, 0.7, -5)];
+    this.phones = ctx.createGain();
+    bud.reduce<AudioNode>((a, b) => a.connect(b), mp3b).connect(this.phones).connect(this.vol);
     // the speaker: mono, the lows gone (it is a centimetre wide), a resonance where it rattles, a soft clip, and the cloth over it
     const mono = ctx.createGain();
     mono.channelCount = 1; mono.channelCountMode = 'explicit'; mono.channelInterpretation = 'speakers';
@@ -54,7 +67,7 @@ export class Music {
     clip.curve = c;
     this.cloth = biquad(ctx, 'lowpass', 20000, 0.7);
     this.speaker = ctx.createGain();
-    this.bus.connect(mono).connect(hp).connect(peak).connect(lp).connect(clip).connect(this.cloth).connect(this.speaker).connect(this.vol);
+    mp3b.connect(mono).connect(hp).connect(peak).connect(lp).connect(clip).connect(this.cloth).connect(this.speaker).connect(this.vol);
     const n = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = n.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     this.noise = n;
@@ -68,6 +81,24 @@ export class Music {
     this.speaker.gain.setTargetAtTime(r === 'phones' ? 0 : r === 'hand' ? 0.55 : 0.4, t, 0.02);
     this.cloth.frequency.setTargetAtTime(r === 'pocket' ? 1300 : 20000, t, 0.05);
     this.vol.gain.setTargetAtTime(v * v, t, 0.03);
+  }
+
+  /**
+   * The visualizer's bars (2026-10-06): n bands from ~60 Hz to ~11 kHz, spaced as the ear hears
+   * (log), each 0..1; all 0 when nothing plays.
+   */
+  spectrum(out: Float32Array) {
+    const n = out.length;
+    if (!this.playing) { out.fill(0); return; }
+    this.an.getByteFrequencyData(this.bins);
+    const hzBin = this.ctx.sampleRate / this.an.fftSize;
+    for (let k = 0; k < n; k++) {
+      const f0 = 60 * (11000 / 60) ** (k / n), f1 = 60 * (11000 / 60) ** ((k + 1) / n);
+      let a = Math.max(1, Math.floor(f0 / hzBin)), b = Math.max(a + 1, Math.ceil(f1 / hzBin)), m = 0;
+      for (let i = a; i < b && i < this.bins.length; i++) m = Math.max(m, this.bins[i]);
+      // the analyser's floor sits around 40 of 255 in quiet parts
+      out[k] = Math.max(0, Math.min(1, (m - 60) / 170));
+    }
   }
 
   /** Load a song (or a decoded file) and play it from its start. */

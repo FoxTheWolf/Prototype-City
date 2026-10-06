@@ -27,7 +27,8 @@ export class TitleFx {
   private last = 0;
 
   constructor(before: HTMLElement) {
-    Object.assign(this.cv.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', pointerEvents: 'none' });
+    // out of focus and dim, behind the buttons (it must not read through them)
+    Object.assign(this.cv.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', pointerEvents: 'none', filter: 'blur(2px) brightness(0.6)' });
     before.before(this.cv);
     const loop = (t: number) => { this.step(t); this.raf = requestAnimationFrame(loop); };
     this.raf = requestAnimationFrame(loop);

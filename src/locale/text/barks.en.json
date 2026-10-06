@@ -136,5 +136,25 @@
   "Somebody's got energy.",
   "[old/senior] Careful now.",
   "Ha!"
+ ],
+ "bark.music.band": [
+  "Is that {band}?",
+  "Hey, {band}! Good taste.",
+  "[kid/teen] No way, {band}? I love this one.",
+  "[young] {band}. Saw them at a little club downtown once.",
+  "That's {band}, right? \"{song}\"?",
+  "[old/senior] My grandkid plays that {band} stuff all day.",
+  "Oh, {band}. They're from around here, you know.",
+  "{band} again? You can't get away from them this year."
+ ],
+ "bark.music": [
+  "Nice tune.",
+  "What's that you're playing?",
+  "Could you turn that down a little?",
+  "[old/senior] Kids and their phones.",
+  "Catchy.",
+  "[kid/teen] What song is that?",
+  "Some people use earphones, you know.",
+  "Huh. Not bad."
  ]
 }

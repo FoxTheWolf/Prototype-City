@@ -3,8 +3,8 @@ import { Input } from './input';
 import { drawPhone, keyAt, mapView, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
-import { drawRemote, REMOTE_BTN, remotePressed, type RemoteBtn } from './phone/remote';
 import { drawPayphone, Payphone } from './phone/payphone';
+import { songInfo } from './phone/apps';
 import { doorAhead, useDoor } from './sim/doors';
 import { callCar, carHere, carOf, liftAhead } from './sim/lifts';
 import { Counter, counterPrompt, drawCounter } from './counter';
@@ -128,15 +128,16 @@ const params = new URLSearchParams(location.search), seedParam = params.get('see
 const saved = await readSave();
 const titleFx = new TitleFx(document.getElementById('overlay')!);
 const choice = await titleChoice();
-const seed = choice === 'continue' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
+const seed = choice !== 'new' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 document.getElementById('ready')!.hidden = true;
 document.getElementById('loading')!.hidden = false;
 load(0.02, 'BOOTING');
-/** The title's buttons: CONTINUE (with a save), NEW GAME (a second click when it replaces a save), OPTIONS. */
-function titleChoice(): Promise<'continue' | 'new'> {
+/** The title's buttons: CONTINUE and WATCH CCTV (with a save: its city), NEW GAME (a second click when it replaces a save), OPTIONS. */
+function titleChoice(): Promise<'continue' | 'new' | 'cctv'> {
   const cont = document.getElementById('continue') as HTMLButtonElement, nb = document.getElementById('start') as HTMLButtonElement;
+  const cam = document.getElementById('cctv') as HTMLButtonElement;
   if (saved) {
-    cont.hidden = false;
+    cont.hidden = false; cam.hidden = false;
     const c = calendar(saved.world.time), two = (n: number) => String(Math.floor(n)).padStart(2, '0');
     document.querySelector('#ready .saveinfo')!.textContent = `SAVED ${new Date(saved.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · IN THE CITY ${c.year}-${two(c.month)}-${two(c.day)} ${two(c.hour)}:${two((c.hour % 1) * 60)}`;
   }
@@ -149,8 +150,9 @@ function titleChoice(): Promise<'continue' | 'new'> {
   document.getElementById('options')!.addEventListener('click', (e) => { e.stopPropagation(); titleMenu.open(true); });
   addEventListener('keydown', (e) => { if (e.code === 'Escape' && titleMenu.isOpen) titleMenu.back(); });
   return new Promise((ok) => {
-    const go = (c: 'continue' | 'new') => { titleMenu.dispose(); ok(c); };
+    const go = (c: 'continue' | 'new' | 'cctv') => { titleMenu.dispose(); ok(c); };
     cont.addEventListener('click', (e) => { e.stopPropagation(); go('continue'); }, { once: true });
+    cam.addEventListener('click', (e) => { e.stopPropagation(); go('cctv'); }, { once: true });
     let sure = !saved;
     nb.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -271,7 +273,7 @@ if (import.meta.env.DEV) Object.assign(window, {
     return s;
   },
   // watch camera k as on the title (stopCctv to leave)
-  watchCam: (k: number) => { stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
+  watchCam: (k: number) => { if (cctv && !cctv.title) stopCctv(); startCctv(true, k); goToCam(k); }, stopCctv: () => stopCctv(),
   // the world's characters; with ui = true the interface's (where it drew, else the world's under it at 80 rows)
   gridText: (x0 = 0, y0 = 0, x1?: number, y1?: number, onUi = false) => {
     const G = onUi ? ui : grid;
@@ -428,23 +430,6 @@ function watchClick(e: MouseEvent): boolean {
   else if (b === 'start') { watch.startDown(now, false); watchStartHeld = true; }
   return !!b;
 }
-/** A left click on the earphones' remote, with the cursor free (15.9d): presses its button. */
-function remoteClick(e: MouseEvent): boolean {
-  if (e.button !== 0 || input.locked || !REMOTE_BTN.length) return false;
-  const [x, y] = cellAtClient(e.clientX, e.clientY);
-  const b = REMOTE_BTN.find(([x0, x1, by]) => by === y && x >= x0 - 1 && x <= x1 + 1)?.[3];
-  if (!b) return false;
-  remoteButton(b);
-  return true;
-}
-function remoteButton(b: RemoteBtn) {
-  const T = phone.tn;
-  remotePressed(b, performance.now() / 1000);
-  sound?.phoneKey(false, true, false);
-  if (b === 'play') T.playing = !T.playing;
-  else if (b === 'prev' || b === 'next') { phone.tunesPlay(T.cur + (b === 'prev' ? -1 : 1)); T.sel = T.cur; }
-  else T.vol = Math.max(0, Math.min(1, Math.round((T.vol + (b === 'vup' ? 0.1 : -0.1)) * 10) / 10));
-}
 function altUp() {
   if (!altFree) return;
   altFree = false;
@@ -486,7 +471,7 @@ addEventListener('mousedown', (e) => {
     else if (e.button === 2) bagView.remove(phone.cx, phone.cy, performance.now() / 1000);
     return;
   }
-  if (watchClick(e) || remoteClick(e)) return;
+  if (watchClick(e)) return;
   if (laptop.open) {
     // the middle button puts the notebook away too (a click can lock the pointer again at once)
     if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
@@ -771,7 +756,15 @@ let sound: Sound | null = null;
  * or the phone's speaker (muffled in the pocket); the SD card's songs are read from music/ beside the game.
  */
 let tunesGen = 0, tunesRoute = '';
-fetch('/sd/').then((r) => (r.ok ? r.json() : [])).then((L: { name: string; size: number }[]) => { phone.sd = Array.isArray(L) ? L : []; }).catch(() => {});
+fetch('/sd/').then((r) => (r.ok ? r.json() : [])).then((L: { name: string; size: number }[]) => { phone.sd = Array.isArray(L) ? L : []; void sdLengths(); }).catch(() => {});
+/** Each SD song's length, read one at a time in the background: its size on the phone is that length at 128 kbps (songInfo). */
+async function sdLengths() {
+  const ctx = new OfflineAudioContext(1, 1, 44100);
+  for (const f of phone.sd) {
+    if (f.secs) continue;
+    try { f.secs = (await ctx.decodeAudioData(await (await fetch(`/sd/${encodeURIComponent(f.name)}`)).arrayBuffer())).duration; } catch { /* not readable: no size */ }
+  }
+}
 function loadSd(name: string, gen: number) {
   fetch(`/sd/${encodeURIComponent(name)}`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
     .then((b) => sound!.decode(b))
@@ -796,6 +789,10 @@ function syncMusic() {
   const r = phone.earphones ? 'phones' : phone.raise > 0.5 ? 'hand' : 'pocket';
   if (`${r}${T.vol}` !== tunesRoute) { tunesRoute = `${r}${T.vol}`; M.route(r, T.vol); }
   T.at = M.at; T.len = M.length;
+  M.spectrum(phone.spec);
+  // heard out loud by the people around (the speaker in the hand carries further than in the pocket; earphones, not at all)
+  const s = T.cur >= 0 && M.playing ? songInfo(phone, T.cur) : null;
+  barks.music = s ? { gen: T.gen, band: T.cur < TRACKS.length ? s.band : '', song: s.title, reach: r === 'phones' ? 0 : (r === 'hand' ? 7 : 2.5) * (0.4 + 0.6 * T.vol) } : null;
 }
 /** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
 const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
@@ -880,8 +877,9 @@ function reloadWith(q: Record<string, string>) {
   if (params.has('playtest')) u.set('playtest', '');
   location.search = u.toString();
 }
-/** The game starts by itself once the GPU is ready: CONTINUE puts the save on its city first. */
+/** The game starts by itself once the GPU is ready: CONTINUE puts the save on its city first; WATCH CCTV watches that city's cameras (Esc: back to the title). */
 function enter() {
+  if (choice === 'cctv') { applySave(saved!); titleFx.stop(); startCctv(true); return; }
   if (choice === 'continue' && !continued) { applySave(saved!); continued = true; }
   // (DEBUG.earphones) a new game starts with headphones in the bag
   else if (DEBUG.earphones && !world.bag.items.some((i) => i.good === 'headphones')) addToBag(world.bag, 'headphones', 0, -1, true);
@@ -1002,12 +1000,8 @@ function stopCctv() {
   const C = cctv;
   cctv = null; dvr = null; cctvHold = null; termMode = '';
   resStep = C.res; camRows = 0; resize();
-  if (C.title) {
-    const p = world.player;
-    p.x = p.px = C.sx; p.y = p.py = C.sy;
-    world.peds = spawnPeds(world.city, world.pop, world.rng, world.time, p.x, p.y);
-    overlay.hidden = false;
-  }
+  // from the title: the title again (the page anew: it makes no city until the next choice)
+  if (C.title) reloadWith({});
 }
 /** The recorder's overlay over a camera's picture, inside the 4:3 frame (x0..x1 on the interface's grid). */
 function cctvOverlay(k: number, now: number) {
@@ -1157,6 +1151,7 @@ function frame(now: number) {
   drawCounter(ui, counter, world, now / 1000);
   // the backpack: its pile settles every frame, drawn while open
   bagView.step(dt, phone.cx, phone.cy);
+  bagView.worn = phone.earphones ? phone.earGood : '';
   bagView.draw(ui, phone.cx, phone.cy, [
     [en.bag.phone, `${phone.maker} ${phone.device.model}`],
     [en.bag.laptop, `${Math.round(laptop.pc.charge * 100)}% ${laptop.pc.battWh.toFixed(0)} Wh`],
@@ -1226,9 +1221,6 @@ function frame(now: number) {
   }
   watch.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
-  // the earphones' remote on its cord, while they are in and a song is loaded (the phone off: nothing to control)
-  REMOTE_BTN.length = 0;
-  if (running && phone.earphones && phone.tn.cur >= 0 && phone.screen !== 'off' && !laptop.open) drawRemote(ui, phone.tn.playing, now / 1000, VIEW_LIGHT);
   if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null;

@@ -46,10 +46,19 @@ export class Barks {
   private lowAt = -1;
   constructor(private w: World) {}
 
-  /** What `who` says for grammar key `key`, in their voice. */
-  line(who: number, key: string): string {
+  /**
+   * The player's music heard out loud (2026-10-06; main sets it each frame): the song (its band '' when
+   * it is the player's own file) and how far it carries (0 in earphones, a few metres from the speaker).
+   */
+  music: { gen: number; band: string; song: string; reach: number } | null = null;
+  private musicGen = -1;
+  private musicHeard = new Set<number>();
+  private musicAt = -99;
+
+  /** What `who` says for grammar key `key`, in their voice (`extra` fills more `{slots}`). */
+  line(who: number, key: string, extra: Record<string, string> = {}): string {
     const w = this.w, W = w.weather, r = rngOf(who, key.length, Math.floor(w.time / 60));
-    return tidy(expand(`#${key}#`, TEXT, r, lifeCtx(w.city, w.pop, who, r), selFor(w.pop, who, w.time, W.temp, W.precip, W.snow)));
+    return tidy(expand(`#${key}#`, TEXT, r, { ...lifeCtx(w.city, w.pop, who, r), ...extra }, selFor(w.pop, who, w.time, W.temp, W.precip, W.snow)));
   }
   say(who: number, text: string, now: number) {
     if (!text) return;
@@ -115,6 +124,21 @@ export class Barks {
       if (d > 4) break;
       if (this.lowAt >= 0 && now - this.lowAt > 2 && this.quiet(q.id, now, 30)) { this.say(q.id, this.line(q.id, 'bark.crouch'), now); break; }
       if ((p.hop ?? 0) > 0.3 && this.quiet(q.id, now, 30) && hash3(q.id, 13, Math.floor(now)) < 0.5) { this.say(q.id, this.line(q.id, 'bark.jump'), now); break; }
+    }
+    // the player's music out loud: someone near enough hears it, once a song, now and then one of them says
+    // something (a city band they know by name; the player's own file only as a tune)
+    const M = this.music;
+    if (M && M.gen !== this.musicGen) { this.musicGen = M.gen; this.musicHeard.clear(); }
+    if (M && M.reach > 0 && now - this.musicAt > 14) for (const { q, d } of near) {
+      if (d > M.reach) break;
+      if (this.musicHeard.has(q.id) || !this.quiet(q.id, now, 10)) continue;
+      this.musicHeard.add(q.id);
+      // not everyone remarks on it
+      if (hash3(q.id, M.gen, 17) > 0.55) continue;
+      const knows = !!M.band && hash3(q.id, M.gen, 19) < 0.6;
+      this.say(q.id, this.line(q.id, knows ? 'bark.music.band' : 'bark.music', { band: M.band, song: M.song }), now);
+      this.musicAt = now;
+      break;
     }
     const fx = Math.cos(yaw), fy = Math.sin(yaw);
     const eyed = near.find(({ q, d }) => d < 6 && ((q.x - p.x) * fx + (q.y - p.y) * fy) / d > 0.995);

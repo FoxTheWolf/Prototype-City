@@ -43,4 +43,17 @@ ok(P.tn.cur >= 0 && P.tn.playing, 'play starts a song');
 P.tn.len = 120;
 P.press('play', 1, 100, 100);
 ok(!P.tn.playing, 'play again pauses');
+// the standby screen: the arrows pick a notice, OK opens its app (the music: the Tunes Player)
+P.open('standby', 1);
+ok(P.notices().includes('tune'), `notices ${P.notices()}`);
+P.press('down', 1, 100, 100);
+ok(P.nsel === 0, `down picks the first notice (${P.nsel})`);
+const k = P.notices().indexOf('tune');
+for (let n = 0; n < k; n++) P.press('down', 1, 100, 100);
+P.press('ok', 1, 100, 100);
+ok(P.screen === 'app', `OK on the music opens the player (${P.screen})`);
+P.press('rsoft', 1, 100, 100);
+ok(P.screen === 'standby', `Back from it comes home (${P.screen})`);
+P.press('ok', 1, 100, 100);
+ok(P.screen === 'menu', `OK with nothing picked opens the menu (${P.screen})`);
 console.log(fails ? `${fails} FAILED` : 'phone keys: all ok');

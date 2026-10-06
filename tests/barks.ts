@@ -26,7 +26,7 @@ if (!B.near().length) fail('nobody near the player to hear');
 const keys = Object.keys(TEXT).filter((k) => k.startsWith('bark.')).concat('dir.busy');
 const people = w.peds.slice(0, 40).map((q) => q.id);
 let said = 0;
-for (const k of keys) for (const who of people) { const s = B.line(who, k); said++; if (!clean(s)) fail(`${k} by ${who}: "${s}"`); }
+for (const k of keys) for (const who of people) { const s = B.line(who, k, { band: 'Neon Paycheck', song: 'Night Shift' }); said++; if (!clean(s)) fail(`${k} by ${who}: "${s}"`); }
 console.log(`  ${said} lines from ${keys.length} keys, e.g. "${B.line(people[0], 'bark.phone')}"`);
 
 // the rain starting: the nearest speak up within a few seconds

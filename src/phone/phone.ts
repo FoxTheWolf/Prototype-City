@@ -16,7 +16,7 @@ import { smsText } from '../locale/sms';
 import en from '../locale/en.json';
 import { TRACKS } from '../audio/tracks';
 import { DEBUG } from '../debug';
-import { debugChat, newRey, openRey, reyKey, reyTyping, stepRey } from './reynard';
+import { debugChat, newRey, openRey, reyKey, stepRey } from './reynard';
 import { type FsNode } from '../sim/computer';
 import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, fsPut, inboxIn, inboxOut, phoneFs, sentIn, sentOut } from '../sim/phonefs';
 import { businessName, makerName, operatorName, districtName } from '../locale/names';
@@ -134,10 +134,6 @@ export const money = (c: number) => `${c < 0 ? '-' : ''}$${(Math.abs(c) / 100).t
 
 /** Kilobytes of a weather forecast download. */
 const WEATHER_KB = 12;
-/** The screens that take typing: the phone is held higher on them, the whole keypad in sight. */
-export const TYPING: Screen[] = ['calls', 'calc', 'notes', 'contact', 'ussd', 'compose', 'wifikey', 'places'];
-/** Screens with shortcuts on the lower keys (7-9, *, 0, #): held as high, so a click reaches them. */
-const LOW_KEYS: Screen[] = ['map', 'calendar', 'photos'];
 /** The letters on the keypad, for typing notes by tapping a key again and again (multi-tap). */
 export const TAPS: Record<string, string> = { '1': '.,?!-\'1', '2': 'abc2', '3': 'def3', '4': 'ghi4', '5': 'jkl5', '6': 'mno6', '7': 'pqrs7', '8': 'tuv8', '9': 'wxyz9', '0': ' 0' };
 
@@ -197,7 +193,9 @@ export class Phone {
    */
   tn = { sel: 0, cur: -1, playing: false, vol: 0.7, gen: 0, at: 0, len: 0 };
   /** The SD card's songs: the player's own, from music/ beside the game (main reads the folder). */
-  sd: { name: string; size: number }[] = [];
+  sd: { name: string; size: number; secs?: number }[] = [];
+  /** The music's spectrum now, 16 bands 0..1 (main fills it from the player each frame), for the visualizer. */
+  spec = new Float32Array(16);
   /** The earphones in (15.9d): the music for the player alone; else it comes out of the phone's speaker. */
   earphones = false;
   /** The bag's thing worn as earphones ('headphones' or 'hands_free'). */
@@ -260,7 +258,7 @@ export class Phone {
   peekUntil = 0;
   /** Lowered while talking on it (14.7): held at the ear, the conversation at the bottom of the screen. */
   atEar = false;
-  /** 0 .. 1: held higher, the whole keypad in sight, while the screen wants typing (as in GTA IV). */
+  /** 0 .. 1: held up whole, the keypad in sight (since 2026-10-06 always, while it is out). */
   lift = 0;
   /** The grid cell under the system cursor, and the key there. */
   cx = -1;
@@ -499,9 +497,8 @@ export class Phone {
     const ringing = this.callIn && this.call?.state === 'ringing';
     this.raise += ((this.out || ringing ? (this.atEar ? 0.35 : 1) : 0) - this.raise) * Math.min(1, dt * 14);
     this.peek += ((!this.out && !ringing && now < this.peekUntil ? 1 : 0) - this.peek) * Math.min(1, dt * 8);
-    const app = this.screen === 'app' ? STORE[this.appId][0] : '';
-    const typing = TYPING.includes(this.screen) || LOW_KEYS.includes(this.screen) || app === 'social' || app === 'convert' || (app === 'web' && this.web.typing) || (app === 'reynard' && reyTyping()) || (this.screen === 'calendar' && this.cal.view === 'new');
-    this.lift += ((this.out && typing ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
+    // (2026-10-06) the phone is held up whole whenever it is out: no raising it to type
+    this.lift += ((this.out ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
       r.done = true;
@@ -641,6 +638,7 @@ export class Phone {
     if (this.screen === 'calls' && s !== 'calls' && !this.call) this.dial = '';
     if (s === 'calls' && this.screen !== 'calls') this.lsel = 0;
     this.screen = s; this.since = now; this.scroll = 0;
+    if (s === 'standby') this.nsel = -1;
     if (s === 'settings') { this.setPage = 'root'; this.setSel = 0; }
     if (s === 'calls' && !this.call) this.missed = 0;
     if (s === 'compose') this.smsEd.set(this.draft.text);
@@ -745,10 +743,16 @@ export class Phone {
         if (k === 'rsoft') { this.out = false; return 'away'; }
         return false;
       case 'standby':
+        // (2026-10-06) the arrows step through what is waiting (notices); OK opens the one picked, or the menu
+        if (k === 'up' || k === 'down') {
+          const n = this.notices().length, s = Math.max(-1, Math.min(n - 1, this.nsel + (k === 'up' ? -1 : 1)));
+          if (s === this.nsel) return false;
+          this.nsel = s; return true;
+        }
+        if (k === 'ok' && this.nsel >= 0) { this.openNotice(this.notices()[this.nsel], now); return true; }
         if (k === 'ok' || k === 'lsoft') { this.open('menu', now); return true; }
-        if (k === 'up') { if (!this.call) this.dial = ''; this.open('calls', now); return true; }
-        // down clears what is waiting (missed calls, unread texts)
-        if (k === 'down') { if (!this.missed && this.inbox.every((m) => m.read)) return false; this.clearNotices(); return true; }
+        // * clears what is waiting (missed calls, unread texts)
+        if (k === '*' && (this.missed || this.inbox.some((m) => !m.read))) { this.clearNotices(); this.nsel = -1; return true; }
         // a number typed on the standby screen opens the dialer with it, as phones did
         if (/^[0-9*#]$/.test(k)) { this.dial = k; this.call = null; this.open('calls', now); return true; }
         if (k === 'rsoft') { this.out = false; return 'away'; }
@@ -1354,6 +1358,23 @@ export class Phone {
   }
 
   /** Every notification seen: missed calls counted, texts read. */
+  /** The notices on the standby screen, in their order: a missed call, unread texts, the next reminder, and the music loaded (with it, one card at most above its panel). */
+  notices(): ('missed' | 'sms' | 'rem' | 'tune')[] {
+    const L: ('missed' | 'sms' | 'rem' | 'tune')[] = [];
+    if (this.missed) L.push('missed');
+    if (this.inbox.some((m) => !m.read)) L.push('sms');
+    if (this.cal.reminders.some((r) => !r.done)) L.push('rem');
+    return this.tn.cur >= 0 ? [...L.slice(0, 1), 'tune'] : L.slice(0, 3);
+  }
+  /** The notice picked on the standby screen (-1: none; the arrows move it). */
+  nsel = -1;
+  /** OK on a notice: its app (the call log, the inbox, the calendar, the Tunes Player); Back comes home. */
+  private openNotice(n: 'missed' | 'sms' | 'rem' | 'tune', now: number) {
+    if (n === 'missed') { this.dial = ''; this.open('calls', now); }
+    else if (n === 'sms') { this.box = 0; this.msel = Math.max(0, this.inbox.findIndex((m) => !m.read)); this.open('msglist', now); }
+    else if (n === 'rem') this.open('calendar', now);
+    else this.openApp(STORE.findIndex((a) => a[0] === 'tunes'), now, 'standby');
+  }
   clearNotices() { this.missed = 0; for (const m of this.inbox) m.read = true; }
 
   /** A call into the log (newest first). */

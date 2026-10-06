@@ -2,6 +2,15 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.11 — Visualizador, música que os outros ouvem, e o celular sempre à mão (2026-10-06)
+- **Visualizador de espectro**, como os players de 2008: barras verdes, amarelas e vermelhas, com o pico caindo devagar, desenhadas em pixels finos (camada HD). Ele aparece no **Tunes Player** e no novo **painel de música da tela inicial**, que também mostra a barra de progresso, o tempo e o volume.
+- **Tela inicial navegável:** **↑/↓** passam pelas notificações (ligação perdida, mensagens, lembrete, a música) e **OK** abre o app da escolhida. Sem nada escolhido, OK abre o menu. Para limpar as notificações agora é o **\***.
+- **O celular fica sempre levantado por inteiro** quando está na mão (não sobe e desce mais para digitar). No bolso, ele continua espiando quando chega uma notificação.
+- **Os NPCs ouvem a sua música** quando ela sai do alto-falante (mais longe com o celular na mão, pouco no bolso, nada com fone). Às vezes alguém comenta, e quem conhece a banda da cidade fala dela pelo nome.
+- **Som de 2008:** a música passa por um MP3 de 128 kbps (nada acima de ~16 kHz) e, no fone, por fones baratos da época (grave fraco, médio na frente, agudo abafado). O **tamanho** de cada música no celular é calculado pela duração a 128 kbps (o arquivo não muda).
+- **O controle no fio saiu** (os botões laterais fazem o mesmo). Com o fone posto, aparece um **`(o)` na barra do celular**, e o fone ganha a etiqueta **WORN** na mochila.
+- **WATCH CCTV voltou ao título** (embaixo, com save): ele carrega a cidade do save e mostra as câmeras como antes; Esc volta ao título. O texto do fundo do título ficou desfocado e mais escuro.
+
 ## 0.15.10 — Título mais rápido e o celular mais fácil de usar com música (2026-10-06)
 - **O título abre na hora:** a cidade não é mais gerada atrás do menu. Ela só é feita depois que você escolhe **CONTINUE** ou **NEW GAME**, e o jogo começa sozinho quando fica pronto. No fundo do título, agora há um terminal da cidade rolando. O botão **WATCH CCTV** saiu do título.
 - **NEW GAME apaga o save** (depois de um segundo clique de confirmação): não dá mais para voltar ao jogo antigo pelo CONTINUE.
