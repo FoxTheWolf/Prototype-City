@@ -75,3 +75,7 @@
 - **(B) Balões:** presos ao mundo, só nos 2/3 de cima da tela; no máximo 2 ou 3 de uma vez, os mais perto primeiro; um balão que cairia sobre A, C ou D some.
 - **(F) Close-up:** ao lado do objeto, do lado que tiver mais espaço livre de C, D e A; sem espaço, no quadrante de cima à direita (acima do celular).
 - **Janelas do meio (balcão, pedir direção):** viram a conversa (zona A). A mochila continua no meio, porque é uma tela de mexer (regra 2D/3D).
+
+## Decisões do usuário (entrevista de 2026-10-06)
+
+- **Ao telefone, o celular abaixa até a espiada** (só o topo à mostra) e a conversa fica na zona A, igual à conversa ao vivo: a conversa tem sempre o mesmo lugar.
