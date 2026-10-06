@@ -58,7 +58,7 @@ const SIZE: Record<string, [number, number]> = {
   bread: [28, 12], milk: [16, 27], eggs: [26, 8], canned_soup: [8, 11], noodles: [11, 4], candy: [9, 3], cigarettes: [6, 9], batteries: [8, 12], umbrella: [7, 28],
   cough_syrup: [6, 14], painkillers: [6, 10], bandages: [9, 7], shampoo: [7, 20], toothpaste: [19, 5], memory_card: [6, 8],
   used_watch: [10, 10], dvd_player: [36, 6], power_drill: [25, 22], guitar: [100, 35], gold_chain: [8, 8],
-  headphones: [18, 20], usb_stick: [8, 12], charger: [10, 14], blank_cds: [13, 12], ethernet_cable: [15, 18], mp3_player: [10, 16],
+  headphones: [18, 20], usb_stick: [8, 12], blank_cds: [13, 12], ethernet_cable: [15, 18], mp3_player: [10, 16],
   prepaid_card: [6, 9], hands_free: [10, 16], phone_case: [9, 15],
   detergent: [10, 14], vending_snack: [8, 12],
   antenna: [6, 22], battery: [20, 6], sim: [9, 5],
@@ -96,9 +96,10 @@ export function addToBag(B: Bag, good: string, cents: number, shop: number, paid
   return true;
 }
 
-/** Saves from 13.4 kept the fitted antenna and battery in the bag too: fitted gear is on the notebook (13.6). */
+/** Saves from 13.4 kept the fitted antenna and battery in the bag too: fitted gear is on the notebook (13.6). Chargers are no item since 13.9c (whoever has the device has its charger). */
 export function bagGear(w: World) {
   for (const g of ['antenna', 'battery'] as const) if (w.gear[g]) w.bag.items = w.bag.items.filter((i) => i.good !== g);
+  w.bag.items = w.bag.items.filter((i) => i.good !== 'charger');
 }
 
 /** The unpaid things from shop k, and what they come to. */

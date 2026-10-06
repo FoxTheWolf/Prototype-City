@@ -1,7 +1,7 @@
 import { hash3, mulberry32 } from '../core/rng';
 import { BAY, blockAt, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
 import { FRONT, layoutsFor, MAXLEN, PIECES, SINGLE, stretch } from './layouts';
-import { COLD, PLACES } from './placeTypes';
+import { COLD, OUTLETS, PLACES } from './placeTypes';
 
 /**
  * The insides of the buildings, in the same space as the street: no loading, the door is a gap in
@@ -55,7 +55,7 @@ export interface Plan {
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
 export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table'
-  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer';
+  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet';
 export interface Furn {
   kind: FurnKind;
   x: number;
@@ -667,7 +667,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     const main = doorOf(city, k);
     for (const D of main ? [main, ...exits] : exits) streets.push(facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2));
   }
-  furnish(P, rnd, office, streets, shop && base.biz >= 0 ? city.businesses[base.biz]?.kind : undefined);
+  furnish(P, rnd, office, streets, shop && base.biz >= 0 ? city.businesses[base.biz]?.kind : undefined, (x, y) => !isSolid(city, x, y));
   return P;
 }
 
@@ -738,7 +738,8 @@ function connect(cells: Uint16Array, nx: number, ny: number, rooms: Room[]) {
  */
 /** Metres kept clear around doorways when furnishing. */
 const CLEAR = 0.9;
-function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number, number, number][], biz?: BusinessKind) {
+/** open: whether a point outside the building is open air (a wall there can be glass), not a neighbour's wall. */
+function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number, number, number][], biz?: BusinessKind, open: (x: number, y: number) => boolean = () => true) {
   const F = P.furn;
   const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
     // every cell the piece covers (13.10a: a wall is one cell thick, a looser sampling missed it)
@@ -1018,6 +1019,32 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
     }
     wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
   };
+  /**
+   * (13.9c) Wall outlets a customer may use: n of them on the room's blind walls (another room or a
+   * neighbour's building behind, never open air: the shop front's glass), the spots nearest a seat or
+   * a table first, 2 m apart at least.
+   */
+  const outlets = (r: number, R: Room, n: number) => {
+    const seats = F.filter((f) => f.x > R.x0 && f.x < R.x1 && f.y > R.y0 && f.y < R.y1 && ['table', 'stool', 'chair', 'sofa', 'bar', 'coffee', 'washer'].includes(f.kind));
+    const spots: [number, number, number, number, number][] = [];
+    for (const [wx, wy, c, s] of sides(R)) {
+      const lo = (c ? R.y0 : R.x0) + 0.4, hi = (c ? R.y1 : R.x1) - 0.4;
+      for (let a = lo; a <= hi; a += 0.6) {
+        const x = c ? wx : a, y = c ? a : wy, bx = x - c * (CELL * 1.5 + 0.05), by = y - s * (CELL * 1.5 + 0.05);
+        // behind the wall's cells: another room, or a neighbour's wall; open air is the street side
+        if (!(cellAt(P, bx, by) & (ROOM | WALL)) && open(bx, by)) continue;
+        spots.push([x, y, c, s, seats.reduce((m, f) => Math.min(m, Math.hypot(f.x - x, f.y - y)), 9)]);
+      }
+    }
+    spots.sort((A, B) => A[4] - B[4]);
+    const got: Furn[] = [];
+    for (const [x, y, c, s] of spots) {
+      if (got.length >= n) break;
+      if (got.some((o) => Math.hypot(o.x - x, o.y - y) < 2)) continue;
+      const o = put(r, 'outlet', x, y, c, s, 0.04, 0.12, 0.3);
+      if (o) got.push(o);
+    }
+  };
   /** A stockroom: shelves of boxes along the walls, a desk with its chair; a cooler for a place that sells cold goods. */
   const storeRoom = (r: number, R: Room, biz: BusinessKind | undefined) => {
     const dk = wall(r, R, 'desk', 0.75, 1.4, 1.0);
@@ -1052,7 +1079,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
         }
         wall(r, R, 'plant', 0.45, 0.45, 0.3, [0.05, 0.95]);
         break;
-      case 'shop': if (!layoutShop(r, R, biz)) shopFloor(r, R, biz); fillShop(r, R, biz); clearTill(R); break;
+      case 'shop': if (!layoutShop(r, R, biz)) shopFloor(r, R, biz); fillShop(r, R, biz); clearTill(R); if (biz && OUTLETS.has(biz)) outlets(r, R, 2); break;
       case 'store': storeRoom(r, R, biz); break;
       case 'lobby':
         if (office) wall(r, R, 'reception', 0.8, 2.2, 1.2);

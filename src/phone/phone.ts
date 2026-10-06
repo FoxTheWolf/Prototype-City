@@ -23,7 +23,8 @@ import { jobReply, answerTrace } from '../sim/jobs'; // [HACKING] ver CLAUDE.md 
 import { jobSms } from '../locale/jobs'; // [HACKING]
 import { hash3 } from '../core/rng';
 import { calendar as calendarOf, TIME_SCALE } from '../sim/clock';
-import { OUTLETS } from '../sim/placeTypes';
+import { CABLE, outletPower } from '../sim/outlets';
+import { type Furn } from '../sim/interior';
 import { Doing, residentsOf, whereIs } from '../sim/citizens';
 import { type Post } from '../sim/social';
 import { newWire, wireKey } from './wire';
@@ -310,11 +311,15 @@ export class Phone {
   /**
    * The battery (13.9), 0..1: it runs down with the game clock while the phone is on, faster with
    * the screen out, the GPS, a call, data moving or the Wi-Fi on; flat, the phone switches itself
-   * off and stays off. It charges at a café's (or a bar's, a cybercafé's...) outlet with a charger
-   * in the bag, on or off. `charging` while it does; `low` the last warning given (1 at 15%, 2 at 5%).
+   * off and stays off. It charges plugged into a wall outlet (13.9c: F at a café's, a bar's, a
+   * cybercafé's... outlet), on or off, while the player stays within the cable's reach. `charging`
+   * while it does; `low` the last warning given (1 at 15%, 2 at 5%).
    */
   batt = 0.8;
   charging = false;
+  /** The outlet it is plugged into (13.9c), with the building and the floor; `pulled` once the cable came out by walking off. */
+  plug: { f: Furn; b: number; floor: number } | null = null;
+  pulled = false;
   low = 0;
   /** Switched on before (the line's numbers are in its contacts): a boot after a flat battery does not add them again. */
   private everOn = false;
@@ -424,9 +429,9 @@ export class Phone {
    */
   private power(dt: number) {
     const w = this.world, p = w.player, h = (dt * TIME_SCALE) / 3600;
-    const B = p.inside >= 0 ? w.city.buildings[p.inside] : null, G = w.power;
-    this.charging = !!B && B.biz >= 0 && p.floor === 0 && OUTLETS.has(w.city.businesses[B.biz].kind) && G.subs[G.building[p.inside]].on
-      && w.bag.items.some((i) => i.good === 'charger' && i.paid);
+    const pl = this.plug;
+    if (pl && (p.inside !== pl.b || p.floor !== pl.floor || Math.hypot(pl.f.x - p.x, pl.f.y - p.y) > CABLE)) { this.plug = null; this.pulled = true; }
+    this.charging = !!this.plug && outletPower(w);
     if (this.charging) { this.batt = Math.min(1, this.batt + h / 1.5); if (this.batt > 0.2) this.low = 0; return; }
     if (this.screen === 'off') return;
     const call = this.call && this.call.state !== 'ended', data = this.radio.job && this.radio.job.state !== 'done';

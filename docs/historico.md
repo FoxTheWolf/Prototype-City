@@ -2,6 +2,15 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.9c: tomadas (2026-10-06, sessão na nuvem)
+
+- **As tomadas viraram objetos:** móvel `outlet` (uma placa na altura do joelho), duas por loja dos tipos de `OUTLETS` (café, cybercafé, lanchonetes, bar, motel, lavanderia), nas paredes cegas (outra sala ou o vizinho atrás, nunca o ar livre da vitrine), o mais perto possível das mesas e bancos (`outlets` em `furnish`, `sim/interior.ts`).
+- **O celular:** F de frente para a tomada pluga (e de novo despluga); carrega enquanto o jogador fica a até 2,5 m (`CABLE`); afastar-se solta o cabo ("The cable came out"). Sem luz no prédio, "The outlet is dead".
+- **O notebook:** só fica na tomada se o lugar em que se abre estiver a até 2,5 m de uma tomada com luz (antes, qualquer interior com luz).
+- **O carregador** saiu das lojas, da mochila e dos nomes; os saves velhos perdem o item ao carregar (`bagGear`).
+- **Não feito:** a tecla "esperar carregar" (não existe pulo de tempo de verdade; vai com o "esperar acelerando a simulação" da etapa 22).
+- **O texto do pedido:** - **13.9c Tomadas:** o carregador do celular e o do notebook **não são upgrade nem item comprado** (quem tem o aparelho tem o carregador): tirar o carregador da loja e da mochila. As **tomadas viram objetos** nas paredes dos lugares (`OUTLETS`): F na tomada (ou sentar perto dela) pluga o aparelho, que carrega em tempo real; uma **outra tecla** (não o F) faz "esperar carregar", avançando o tempo até encher (o mesmo pulo de tempo de dormir; bloqueado durante perseguição/calor alto).
+
 ## 13.10e: terrenos sem porta (2026-10-06, sessão na nuvem)
 
 - **O que o teste escondia:** além dos 1006 terrenos sem porta, 1714 prédios (316 lojas) tinham a porta dando num quintal fechado atrás dos prédios, sem caminho até a rua. Medido por uma inundação do chão aberto a partir da rua numa grade de 0,5 m (`streetGround` em `tests/plans.ts`).

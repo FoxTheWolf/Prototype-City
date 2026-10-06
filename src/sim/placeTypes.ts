@@ -51,9 +51,9 @@ export const PLACES: Record<BusinessKind, PlaceType> = {
   pawn: { catalog: 'local_pawn_shop', hours: [10, 19], staff: 2, blade: 0.6, cctv: 0.5, visit: ['errand', 'stroll'],
     sells: [['used_watch', 4500], ['dvd_player', 3500], ['power_drill', 4000], ['guitar', 12000], ['gold_chain', 15000]] },
   electronics: { catalog: 'consumer_electronics_store', hours: [10, 20], staff: 5, wifi: [0.6, 0.2], cctv: 0.35, visit: ['errand', 'stroll'],
-    sells: [['headphones', 1999], ['usb_stick', 2499], ['charger', 1999], ['batteries', 599], ['blank_cds', 899], ['ethernet_cable', 1299], ['mp3_player', 7999]] },
+    sells: [['headphones', 1999], ['usb_stick', 2499], ['batteries', 599], ['blank_cds', 899], ['ethernet_cable', 1299], ['mp3_player', 7999]] },
   phones: { catalog: 'mobile_phone_shop', hours: [10, 20], staff: 3, blade: 0.3, wifi: [0.3, 0.2], cctv: 0.3, visit: ['errand', 'stroll'],
-    sells: [['prepaid_card', 2000], ['charger', 1999], ['hands_free', 2999], ['phone_case', 1499]] },
+    sells: [['prepaid_card', 2000], ['hands_free', 2999], ['phone_case', 1499]] },
   cyber: { catalog: 'cybercafe', hours: [8, 26], staff: 2, rare: 0.1, blade: 0.6, wifi: [1, 0.15], visit: ['out', 'errand'], order: true,
     sells: [['internet_hour', 300], ['print_page', 15], ['soda_can', 125], ['chips', 125]] },
   motel: { catalog: 'budget_motel', hours: [0, 24], staff: 4, rare: 0.4, blade: 1, wifi: [0.3, 0.6], cctv: 0.3, order: true,
@@ -69,7 +69,7 @@ export const PLACES: Record<BusinessKind, PlaceType> = {
   parking: { catalog: '', hours: [0, 24], staff: 4, blade: 1, cctv: 0.3, sells: [] },
 };
 
-/** Places with an outlet a customer may use (13.9): the phone charges there, with a charger in the bag. */
+/** Places with wall outlets a customer may use (13.9c, sim/outlets.ts): the phone and the notebook charge there. */
 export const OUTLETS = new Set(['cafe', 'cyber', 'diner', 'fastfood', 'pizza', 'deli', 'bar', 'motel', 'laundry']);
 
 /** Goods kept cold (in the coolers; never on a dry shelf). */

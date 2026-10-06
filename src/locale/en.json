@@ -24,7 +24,7 @@
     "cash": "CASH", "unpaid": "UNPAID", "phone": "PHONE", "laptop": "NOTEBOOK", "sim": "SIM CARD",
     "take": "[F] TAKE {x}  {p}", "ask": "ASK AT THE COUNTER", "taken": "{x} in the bag (unpaid)", "room": "No room in your bag",
     "stole": "You walked out without paying for {n} item(s).",
-    "eat": "[E] EAT", "flat": "The phone's battery is dead.", "charging": "Phone charging (plugged in here).", "battLow": "Phone battery low.", "battEmpty": "Phone battery almost dead.", "notHere": "That doesn't go there.", "fitted": "{x}: fitted to the notebook.", "swapping": "SWAPPING THE SIM...", "swapped": "New line {n} ({op}).", "ate": "{x}: eaten.", "notFood": "You can't eat that.", "fullUp": "You're full.", "stomach": "STOMACH",
+    "eat": "[E] EAT", "flat": "The phone's battery is dead.", "charging": "Phone charging.", "plug": "[F] PLUG IN THE PHONE", "unplug": "[F] UNPLUG THE PHONE", "unplugged": "Phone unplugged.", "pulled": "The cable came out: phone unplugged.", "dead": "The outlet is dead.", "battLow": "Phone battery low.", "battEmpty": "Phone battery almost dead.", "notHere": "That doesn't go there.", "fitted": "{x}: fitted to the notebook.", "swapping": "SWAPPING THE SIM...", "swapped": "New line {n} ({op}).", "ate": "{x}: eaten.", "notFood": "You can't eat that.", "fullUp": "You're full.", "stomach": "STOMACH",
     "stages": ["Fed", "Peckish", "Hungry", "Starving"], "hungry": ["", "You're getting peckish.", "You're hungry. Running wears you out fast.", "You're starving. You can barely run."]
   },
   "roots": [
@@ -83,7 +83,7 @@
     "cough_syrup": "Cough syrup", "painkillers": "Painkillers", "bandages": "Bandages", "shampoo": "Shampoo", "toothpaste": "Toothpaste", "memory_card": "Memory card",
     "wash_load": "Wash (one load)", "dry_load": "Dry (one load)", "detergent": "Detergent",
     "used_watch": "Used watch", "dvd_player": "DVD player", "power_drill": "Power drill", "guitar": "Acoustic guitar", "gold_chain": "Gold chain",
-    "headphones": "Headphones", "usb_stick": "USB stick (1 GB)", "charger": "Phone charger", "blank_cds": "Blank CDs (10)", "ethernet_cable": "Ethernet cable", "mp3_player": "MP3 player",
+    "headphones": "Headphones", "usb_stick": "USB stick (1 GB)", "blank_cds": "Blank CDs (10)", "ethernet_cable": "Ethernet cable", "mp3_player": "MP3 player",
     "prepaid_card": "Prepaid card", "hands_free": "Hands-free earpiece", "phone_case": "Phone case",
     "internet_hour": "Internet (1 hour)", "print_page": "Print (1 page)", "room_night": "Room (1 night)", "vending_snack": "Vending snack"
   },

@@ -620,6 +620,8 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
     }
     case 'till': m = [part(Box, -hx, -hy, 0, hx, hy, 1.0, WOOD, Solid, '#', '='), part(Box, -0.15, -0.2, 1.0, 0.1, 0.2, 1.25, DARK, Solid, '#'), part(Box, 0.1, -0.15, 1.05, 0.12, 0.15, 1.2, [120, 255, 140], Glow, ':')]; break;
     case 'reception': m = [part(Box, -hx, -hy, 0, hx, hy, 1.05, [70, 60, 55], Solid, '#', '='), part(Box, -hx, -hy, 1.05, hx + 0.1, hy, 1.12, [170, 160, 140], Solid, '-', '_')]; break;
+    // (13.9c) a wall outlet: a plate at knee height, two dark sockets
+    case 'outlet': m = [part(Box, -hx, -hy, 0.28, hx, hy, 0.42, [215, 208, 190], Solid, ':', '='), part(Box, hx, -0.03, 0.31, hx + 0.005, 0.03, 0.39, [40, 38, 36], Solid, ':')]; break;
     case 'plant': m = [part(Cyl, -hx * 0.6, -hy * 0.6, 0, hx * 0.6, hy * 0.6, 0.4, [150, 90, 60], Solid, '|', 'o'), part(Ball, -hx, -hy, 0.35, hx, hy, 1.2, [60, 130, 70], Leaf, '@')]; break;
     default: m = [part(Box, -hx, -hy, 0, hx, hy, 0.8, WOOD, Solid, '#')];
   }

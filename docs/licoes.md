@@ -3,6 +3,8 @@
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
 ### Lições da etapa 13 (portas, interiores e céu), para não repetir
+- **(13.9c) Comparar com uma versão velha sem apagar o trabalho:** `git checkout <commit> -- arquivo` e depois `git checkout HEAD -- arquivo` apagou mudanças ainda não commitadas (tive de refazer). Comparar com `git stash` (que guarda e devolve) ou num `git worktree` à parte.
+- **(13.9c) Um objeto novo por tipo de lugar: contar onde ele foi parar.** As tomadas iam para só 86 de 885 lugares; o motivo era outro bug (91% das empresas sem sala de loja, a 13.10i), achado só porque a contagem foi feita por lugar.
 - **(13.10e) "Tem porta" não é "dá para entrar":** o `noDoor` do teste contava 1006, mas outras 1714 portas davam num quintal fechado. Medir o que o jogador sente (a frente da porta ligada à rua, por inundação do chão aberto) antes de confiar num contador indireto.
 - **(13.10e) Mudar a geração, medir a cidade inteira:** cada tentativa mudou a contagem de prédios (de 11538 para 1268, 4395, 5609, 8848); comparar o número de prédios, lojas e caixas antes e depois (`git stash` e o mesmo script) pegou o que o teste das plantas não pegava.
 - **(13.10e) As margens das quinas no `doorOf`:** o primeiro e o último módulo de uma face são pulados; restringir a porta a um trecho (o beco) deve manter essas margens só nas pontas da face, senão um beco de 2 módulos na quina não leva porta.

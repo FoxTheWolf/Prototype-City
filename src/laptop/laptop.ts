@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { blockAt, diagS } from '../sim/city';
-import { Backup } from '../sim/power';
+import { outletNear, outletPower } from '../sim/outlets';
 import { Computer, playerLaptop } from '../sim/computer';
 import { planOf } from '../sim/interior';
 import { type World } from '../sim/world';
@@ -90,14 +90,15 @@ export class Laptop {
   snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge }; }
   restore(d: ReturnType<Laptop['snapshot']>) { this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; }
   /**
-   * Is there a live outlet where the player sits: inside a building whose power is on (its
-   * substation, or a generator that feeds more than the emergency lights). Outside, on a fire
-   * escape or in a blackout, the notebook runs on its battery.
+   * Is there a live outlet where the player sits: a wall outlet within the adapter's cable (13.9c),
+   * in a building whose power is on (its substation, or a generator that feeds more than the
+   * emergency lights). Elsewhere, outside, on a fire escape or in a blackout, it runs on its battery.
    */
   private outlet(): boolean {
-    const w = this.world, p = w.player, G = w.power;
+    const w = this.world, p = w.player;
     if (p.inside < 0 || !this.seat || this.seat.kind === 'escape') return false;
-    return G.subs[G.building[p.inside]].on || G.backup[p.inside] >= Backup.Generator;
+    // a wall outlet within the adapter's cable (13.9c)
+    return !!outletNear(w, p.x, p.y) && outletPower(w);
   }
   /** Flat and unplugged: the power button does nothing. */
   private get dead() { return !this.pc.plugged && this.pc.charge <= 0.005; }

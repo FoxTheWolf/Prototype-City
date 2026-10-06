@@ -11,6 +11,7 @@ import { AskWay, drawAskWay } from './askWay';
 import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
+import { outletAhead, outletPower } from './sim/outlets';
 import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
@@ -499,6 +500,16 @@ addEventListener('keydown', (e) => {
       if (r === 'ok') sound?.phoneKey(false);
       return;
     }
+    // a wall outlet in front: plug the phone in, or out (13.9c)
+    const o = !phone.out ? outletAhead(world, camera.yaw) : null;
+    if (o) {
+      const p = world.player;
+      if (phone.plug?.f === o) { phone.plug = null; shelfNote = en.bag.unplugged; }
+      else { phone.plug = { f: o, b: p.inside, floor: p.floor }; shelfNote = outletPower(world) ? en.bag.charging : en.bag.dead; wasCharging = outletPower(world); }
+      shelfNoteAt = performance.now() / 1000;
+      sound?.phoneKey(false);
+      return;
+    }
     const c = counter.near();
     if (c?.staffed && !phone.out) { counter.open(c.k); return; }
     // a door in front: open it, close it, or find it locked (13.2c)
@@ -942,6 +953,7 @@ function frame(now: number) {
   if (counter.ate) { counter.ate = false; sound?.munch(); }
   // the phone's battery (13.9): plugged in at a café's outlet, and low
   if (phone.charging !== wasCharging) { wasCharging = phone.charging; if (phone.charging) { shelfNote = en.bag.charging; shelfNoteAt = now / 1000; } }
+  if (phone.pulled) { phone.pulled = false; shelfNote = en.bag.pulled; shelfNoteAt = now / 1000; }
   if (phone.low !== lowSeen) { if (phone.low > lowSeen) { shelfNote = phone.low === 2 ? en.bag.battEmpty : en.bag.battLow; shelfNoteAt = now / 1000; } lowSeen = phone.low; }
   // hunger (13.5): told once at each stage, with the stomach's growl
   const hs = hungerStage(world.needs.food);
@@ -957,7 +969,9 @@ function frame(now: number) {
   // a good on a shelf under the sight: what F takes, and its price; what taking it said; walking out unpaid
   const aim = running && !phone.out && !counter.active && !bagView.open && !laptop.open ? aimedGood(world, camera.yaw, camera.pitch, eyeNow()) : null;
   if (world.bag.stolenAt !== theftSeen) { theftSeen = world.bag.stolenAt; shelfNote = en.bag.stole.replace('{n}', String(world.bag.stolen)); shelfNoteAt = now / 1000; }
-  const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? en.bag.take.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good).replace('{p}', money(aim.cents)) : '';
+  const plugAt = !aim && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? outletAhead(world, camera.yaw) : null;
+  const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? en.bag.take.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good).replace('{p}', money(aim.cents))
+    : plugAt ? (phone.plug?.f === plugAt ? en.bag.unplug : en.bag.plug) : '';
   if (shelfMsg && !bagView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
   if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
   // a shop's till in front: how to use the counter, or when the shop opens
