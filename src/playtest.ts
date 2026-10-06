@@ -31,6 +31,8 @@ export class Playtest {
   private lastSample = -1e9;
   private lastFlush = 0;
   private notes = 0;
+  /** Nothing is written until the player goes into the city (a title left unplayed leaves no file). */
+  private primed = false;
   // what was already seen, so only the new is logged
   private seen = new WeakSet<object>();
   private paid = new WeakMap<object, boolean>();
@@ -71,6 +73,7 @@ export class Playtest {
   /** What the player already has (a save just loaded, or the start) counts as seen, not as new. */
   prime(phone: PhoneLogs, continued: boolean) {
     const w = this.w;
+    this.primed = true;
     for (const l of [phone.inbox, phone.sent, phone.log]) for (const o of l) this.seen.add(o);
     for (const it of w.bag.items) { this.seen.add(it); this.paid.set(it, it.paid); }
     this.lastItems = new Set(w.bag.items);
@@ -155,7 +158,7 @@ export class Playtest {
   }
 
   flush(leaving = false) {
-    if (!this.buf.length) return;
+    if (!this.buf.length || !this.primed) return;
     const body = this.buf.join('\n') + '\n';
     this.buf = [];
     // keepalive lets the last lines out as the window closes (it takes up to 64 KB)

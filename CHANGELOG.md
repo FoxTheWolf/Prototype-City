@@ -7,6 +7,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **F8** escreve uma nota de teste: o jogo pausa, a tela é fotografada e a nota fica guardada com o lugar e a hora.
 - O painel de debug (**F3**) foi redesenhado: um quadro organizado no canto, com a versão, a posição, para onde você olha (em graus) e a loja em que está.
 - Novo atalho `atualizar.bat`: traz a versão mais nova do GitHub.
+- Voltar ao título e fechar sem jogar não deixa mais um registro vazio na pasta `playtest/`.
 
 ## 0.13.10d3 — Estrelas e luar (2026-10-05)
 - As estrelas brilham mais, e ainda mais num apagão; não aparecem mais duplicadas ao passar de uma célula para outra.
