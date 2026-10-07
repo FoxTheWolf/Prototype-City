@@ -137,17 +137,20 @@ fn glassUv(f: vec2f) -> vec2f {
 }
 fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0; }
 
-// the phone screen's bloom at u, v: its bright parts (the cells' picture, which carries the pages and the big clock) blurred round it
+// the phone screen's bloom at u, v (across the whole glass): its bright parts blurred round it, from what shows
+// there (the pixel picture over the cells' one)
 fn phBloom(uv: vec2f) -> vec3f {
-  let pc = (vec2f(u.px0) + uv * vec2f(u.px1 - u.px0) - vec2f(u.ps0)) / vec2f(u.ps1 - u.ps0);
-  let r = vec2f(f32(${SCR_RX}), f32(${SCR_RY})) * vec2f(u.uiCell) / vec2f(u.ps1 - u.ps0);
+  let r = vec2f(f32(${SCR_RX}), f32(${SCR_RY})) * vec2f(u.uiCell) / vec2f(u.px1 - u.px0);
   var s = vec3f(0.0); var ws = 0.0;
   for (var j = -2; j <= 2; j++) {
     for (var i = -2; i <= 2; i++) {
       let o = vec2f(f32(i), f32(j)) * 0.5; let w = exp(-dot(o, o) * 2.5); ws += w;
-      let q = pc + o * r;
+      let q = uv + o * r;
       if (all(q >= vec2f(0.0)) && all(q < vec2f(1.0))) {
-        let t = textureSampleLevel(phPic, tmSamp, q, 0.0).rgb;
+        let pc = (vec2f(u.px0) + q * vec2f(u.px1 - u.px0) - vec2f(u.ps0)) / vec2f(u.ps1 - u.ps0);
+        var t = vec3f(0.0);
+        if (all(pc >= vec2f(0.0)) && all(pc < vec2f(1.0))) { t = textureSampleLevel(phPic, tmSamp, pc, 0.0).rgb; }
+        let x = textureSampleLevel(phPx, tmSamp, q, 0.0); t = mix(t, x.rgb, x.a);
         s += t * smoothstep(0.3, 0.85, dot(t, vec3f(0.3, 0.5, 0.2))) * w;
       }
     }

@@ -280,6 +280,12 @@ function art(S: Lcd, x: number, y: number, rows: string[], under: ((px: number, 
   });
 }
 
+/** An app's picture as colours a pixel (null: clear), for the screens drawn in pixels (pixpages.ts); null without one. */
+export function artColors(id: string): (C3 | null)[][] | null {
+  const rows = APP_ART[id];
+  return rows ? rows.map((r) => [...r].map((c) => (c === '.' ? null : PAL[c] ?? null))) : null;
+}
+
 /**
  * An app's icon on its tile, the tile's top-left cell at (x, y) (6 x 3 cells): a rounded square
  * shading from light to dark with a gloss over its top, the picture on it; `under` is what shows in

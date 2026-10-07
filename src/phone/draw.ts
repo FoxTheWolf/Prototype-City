@@ -1,12 +1,12 @@
 import { compass, cityName, operatorName, diagonalName, districtName, landmarkName, roadName } from '../locale/names';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
-import { app, drawSpectrum, menu, progress, songInfo, volBars } from './apps';
-import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad, wallpaper } from './ui';
-import { applyTheme, BAD, BAR, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
+import { app, appLabel, songInfo, volBars } from './apps';
+import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
+import { applyTheme, BAD, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
-import { BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
+import { APPS, BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
 import { cellAt, DOOR, planOf, ROOM, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
@@ -17,7 +17,10 @@ import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, pickBody } from './body3d';
-import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, SCR_H } from './pixui';
+import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
+import { APP_COL, HITS, paintMenu, paintStandby, paintVolume, type Card, type Standby, type Tile } from './pixpages';
+import { artColors } from './hdicons';
+import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
 import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
 import { formatNumber } from '../sim/telco';
@@ -246,6 +249,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   // the screen: the apps draw on its own grid and pixel layer (PHONE_PIC), which the compositor lays on the glass
   const PG = PHONE_PIC.grid, PH = PHONE_PIC.hd;
   PG.clear(); PH.wipe();
+  let page: ((Pt: Paint) => void) | null = null;
+  HITS.length = 0;
   const S = new Lcd(PG, 0, 0, PH);
   PHONE_PIC.on = true; PHONE_PIC.rect = [ox + SX, oy + CY, SWC, CHC]; PHONE_PIC.full = [ox + SX, oy + SY, SWC, SHC];
   SCREEN.at = on ? PHONE_PIC.full : null;
@@ -257,13 +262,18 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     if (P.screen === 'boot') boot(S, P, world, t);
     else {
       statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi, P.batt, P.charging, P.earphones);
-      if (P.screen === 'standby') standby(S, P, world, t, now);
-      else if (P.screen === 'menu') menu(S, P, t);
+      // the screens redrawn in pixels by the manual v2 (pixpages.ts) paint over the cells; the others still draw on them
+      if (P.screen === 'standby') { const d = standbyData(P, world, t, now); page = (Pt) => paintStandby(Pt, d, now); softKeys(S, T.menu, T.hide); }
+      else if (P.screen === 'menu') {
+        const tiles = APPS.map((a, n): Tile => ({ label: appLabel(a), col: APP_COL[n], art: artColors(a), sel: n === P.sel, pre: () => { P.sel = n; } }));
+        page = (Pt) => paintMenu(Pt, tiles, t); softKeys(S, T.open, T.back);
+      }
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
       else app(S, P, world, t, now);
       // the volume, for a moment after a side key moved it, over whatever is open
-      if (now - P.volAt < 1.4) {
+      if (now - P.volAt < 1.4 && page) { const pg = page; page = (Pt) => { pg(Pt); paintVolume(Pt, P.tn.vol, T.apps.vol); }; }
+      else if (now - P.volAt < 1.4) {
         const y = SH - 3, B: C3 = [10, 14, 24];
         box(S, 11, y, SW - 12, y, B, B, 0);
         S.text(13, y, T.apps.vol, [150, 165, 190], B);
@@ -290,6 +300,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       X[q] += 3 * Lr + sh * GL.r; X[q + 1] += 3 * Lg + sh * GL.g; X[q + 2] += 4 * Lb + sh * GL.b;
     }
   }
+  // the bars and a touch's answer, in pixels over the cells (the manual's section 6), and the screens drawn in pixels
+  paintChrome(now, on ? Math.min(1.1, gain) : 1, !on ? [5, 6, 8] : P.screen === 'boot' ? LCD : null, page);
   // under the picture, the interface's cells the glass covers get the screen's colors (the GPU's glow and
   // bloom read the screen's light from them; the picture hides them)
   const gx0 = Math.floor(ox + SX), gy0 = Math.floor(oy + SY), gx1 = Math.ceil(ox + SX + SWC), gy1 = Math.ceil(oy + SY + SHC);
@@ -297,11 +309,12 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const px = Math.min(SW - 1, Math.max(0, Math.floor(((gx + 0.5 - ox - SX) / SWC) * SW))), py = Math.min(SH - 1, Math.max(0, Math.floor(((gy + 0.5 - oy - SY) / SHC) * SH)));
     // (no letters: those peeked out under the picture's edge, a footer twice; a letter's light is mixed into the paper instead)
     const k = (py * SW + px) * 4, i = gy * g.cols + gx, gl = PG.cells[k] > 32 ? 0.3 : 0;
+    // where the pixel picture covers the cells, its colour
+    const X = PHONE_PX.img, q = (Math.min(SCR_H - 1, Math.max(0, Math.floor(((gy + 0.5 - oy - SY) / SHC) * SCR_H))) * X.w + Math.min(X.w - 1, Math.max(0, Math.floor(((gx + 0.5 - ox - SX) / SWC) * X.w)))) * 4;
+    if (X.px[q + 3] === 255) { g.setBg(i, X.px[q], X.px[q + 1], X.px[q + 2]); g.put(i, 32, 0, 0, 0); continue; }
     g.setBg(i, PG.bg[k] + (PG.cells[k + 1] - PG.bg[k]) * gl, PG.bg[k + 1] + (PG.cells[k + 2] - PG.bg[k + 1]) * gl, PG.bg[k + 2] + (PG.cells[k + 3] - PG.bg[k + 2]) * gl);
     g.put(i, 32, 0, 0, 0);
   }
-  // the bars and a touch's answer, in pixels over the cells (the manual's section 6)
-  paintChrome(now, on ? Math.min(1.1, gain) : 1, !on ? [5, 6, 8] : P.screen === 'boot' ? LCD : null);
   void bloom;
 }
 
@@ -503,56 +516,31 @@ function splash(S: Lcd, style: number, maker: string, model: string, u: number) 
 }
 
 /**
- * The standby screen: the wallpaper, the time big over it with a shadow, the date and the network
- * on glass chips, and cards for what is waiting (missed calls, unread texts, the next reminder).
+ * What the standby screen shows (painted in pixels by pixpages.ts paintStandby): the wallpaper, the hour,
+ * the date and the network it is on, a card for each thing waiting (missed calls, unread texts, the next
+ * reminder; Phone.notices, the same list the arrows step through, the one picked lit), the music's panel.
  */
-function standby(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  wallpaper(S, P.prefs.wall, 1, SH - 2, world.time, now);
-  const c = calendar(world.time), CHIP: C3 = [10, 14, 24];
-  bigText(S, 4, hhmm(c.hour), [0, 0, 0], t, 1);
-  bigText(S, 3, hhmm(c.hour), [255, 255, 255], t);
+function standbyData(P: Phone, world: World, t: number, now: number): Standby {
+  const c = calendar(world.time), R = P.radio;
   const date = `${DAYS[c.weekday]} ${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${c.year}`;
-  // the network it is on, as phones then showed it under the clock
-  const R = P.radio, op = R.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
-  const chip = (y: number, s: string, fg: C3) => {
-    if (!s) return;
-    const x0 = ((SW - s.length) >> 1) - 2;
-    box(S, x0, y, x0 + s.length + 3, y, CHIP, CHIP, 0);
-    S.text(x0 + 2, y, s, fg, CHIP);
-  };
-  if (t > 0.2) chip(11, typed(date, t - 0.2), [220, 228, 240]);
-  if (t > 0.5) chip(13, typed(op, t - 0.5), R.state === 'service' ? [150, 200, 255] : [255, 120, 90]);
-  // what is waiting, as cards, and the music's panel at the foot (Phone.notices: the same list the
-  // arrows step through; the one picked is lit, and OK opens its app)
+  const op = R.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).toUpperCase() : R.state === 'search' ? (Math.floor(now * 2) & 1 ? T.apps.searching : '') : T.noService;
   const unread = P.inbox.filter((m) => !m.read).length, N = P.notices(), sel = N[P.nsel];
   const rem = P.cal.reminders.filter((r) => !r.done).sort((a, b) => a.at - b.at)[0];
-  const tune = N.includes('tune');
-  if (tune && t > 0.6) {
-    const s = songInfo(P, P.tn.cur), on = sel === 'tune', PB: C3 = on ? [62, 36, 92] : [30, 16, 44], ACC: C3 = [200, 130, 255], GR: C3 = [130, 110, 150];
-    box(S, 1, 17, SW - 2, 23, PB, PB, 1, on ? [44, 24, 66] : [20, 10, 30]);
-    const pb = (y: number): C3 => lerp(PB, on ? [44, 24, 66] : [20, 10, 30], (y - 17) / 6);
-    S.text(3, 18, `${s.title} - ${s.band}`.slice(0, SW - 6), [232, 218, 250], pb(18));
-    drawSpectrum(S, 3, 19, SW - 6, 2, P.spec, now, pb);
-    progress(S, 3, SW - 3, 21, P, ACC, GR, [232, 218, 250], pb(21));
-    S.text(3, 22, T.apps.vol, GR, pb(22));
-    volBars(S, 7, 22, P.tn.vol, ACC, GR, pb(22));
-    if (P.tn.shuffle) S.text(19, 22, T.apps.tunes.shuffle, ACC, pb(22));
-  }
-  N.filter((n) => n !== 'tune').forEach((n, k) => {
-    const y = (tune ? 15 : 16) + k * 2;
-    if (t < 0.6 + k * 0.1) return;
-    const [icon, s, col]: [string, string, C3] = n === 'missed' ? [')))', (P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)), [255, 120, 90]]
-      : n === 'sms' ? ['[=]', `${unread} ${unread > 1 ? T.apps.newTexts : T.apps.newText}`, [150, 200, 255]]
-      : ['31', `${hhmm(calendar(rem.at).hour)} ${rem.text}`, [255, 200, 120]];
-    const on = sel === n, cb: C3 = on ? [56, 86, 140] : [24, 32, 50];
-    box(S, 2, y, SW - 3, y, cb, [0, 0, 0], 0);
-    S.text(3, y, icon, col, cb);
-    // the first card blinks while something waits (a missed call, a text)
-    S.text(8, y, s.slice(0, SW - 12), on || Math.floor(now * 2) & 1 || k || n === 'rem' ? [235, 240, 250] : col, cb);
+  const pick = (n: string) => () => { P.nsel = N.indexOf(n as never); };
+  const cards = N.filter((n) => n !== 'tune').map((n, k): Card => {
+    // each card in its app's colour (the phone's, the messages', the calendar's); the first blinks while something waits
+    const [text, col]: [string, C3] = n === 'missed' ? [(P.missed > 1 ? T.apps.missedN : T.apps.missed).replace('{n}', String(P.missed)), APP_COL[APPS.indexOf('calls')]]
+      : n === 'sms' ? [`${unread} ${unread > 1 ? T.apps.newTexts : T.apps.newText}`, APP_COL[APPS.indexOf('messages')]]
+      : [`${hhmm(calendar(rem.at).hour)} ${rem.text}`, APP_COL[APPS.indexOf('calendar')]];
+    return { col, text, sel: sel === n, blink: k === 0 && n !== 'rem' && sel !== n, pre: pick(n) };
   });
-  softKeys(S, T.menu, T.hide);
-  // how to clear them (calls and texts; a reminder stays until its time), on the bar between the soft keys
-  if ((P.missed || unread) && t > 0.9) { const h = T.apps.clearHint; S.text((SW - h.length) >> 1, SH - 1, h, [170, 185, 210], [BAR[0] * 0.55, BAR[1] * 0.55, BAR[2] * 0.55]); }
+  let tune: Standby['tune'] = null;
+  if (N.includes('tune')) {
+    const s = songInfo(P, P.tn.cur);
+    tune = { title: s.title, band: s.band, at: P.tn.at, len: P.tn.len, playing: P.tn.playing, vol: P.tn.vol, shuffle: P.tn.shuffle ? T.apps.tunes.shuffle : '', spec: P.spec, sel: sel === 'tune', pre: pick('tune') };
+  }
+  return { wall: P.prefs.wall, time: world.time, t, hour: hhmm(c.hour), date, op, opOk: R.state === 'service', cards, tune, volLabel: T.apps.vol,
+    hint: P.missed || unread ? T.apps.clearHint : '' };
 }
 
 // map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,

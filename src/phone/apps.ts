@@ -18,7 +18,7 @@ import { freeVoucher } from './ussd';
 import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APPS, EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
 import { box, CHROME, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
@@ -44,6 +44,8 @@ function bar(S: Lcd, text: string, fg: C3, bg: C3, right = '', rfg: C3 = fg) {
  */
 const A = T.apps;
 const name = (a: App) => (T.app as Record<string, string>)[a];
+/** An app's name on the menu (the screens drawn in pixels). */
+export const appLabel = name;
 
 /** Each app's icon: a symbol, its tile's color, the symbol's color. */
 const ICON: Record<App, [string, C3, C3]> = {
@@ -74,16 +76,6 @@ function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], la
   appIcon(S, x + 2, y, id, col, (r) => under(0, y + r));
   const l = label.slice(0, 10);
   S.text(x + ((10 - l.length) >> 1), y + 3, l, sel ? [255, 255, 255] : [150, 165, 190], sel ? [34, 54, 96] : menuBg(y + 3));
-}
-
-/** The menu: 16 apps in a 4x4 grid; the picked one named below with a word on what it does. */
-export function menu(S: Lcd, P: Phone, t: number) {
-  vgrad(S, 1, SH - 2, MENU_BG[0], MENU_BG[1]);
-  APPS.forEach((a, n) => tile(S, 1 + (n % MENU_COLS) * 10, 2 + Math.floor(n / MENU_COLS) * 5, ICON[a], name(a), n === P.sel, t - 0.06 - n * 0.025, a));
-  const a = APPS[P.sel], about = (A.about as Record<string, string>)[a] ?? '';
-  S.center(22, typed(name(a), t - 0.2), [255, 255, 255], menuBg(22));
-  S.center(23, typed(about, t - 0.3), [130, 150, 180], menuBg(23));
-  softKeys(S, T.open, T.back);
 }
 
 /** My Apps: the apps downloaded from the store, as tiles. */

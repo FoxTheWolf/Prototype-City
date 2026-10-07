@@ -3,8 +3,9 @@ import { Input } from './input';
 import { drawPhone, mapView, onDial, pickPhone, screenUv, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BODY_GPU } from './phone/body3d';
 import { CONTENT_Y0, CONTENT_Y1, FOOT_L, FOOT_R, PHONE_PX, SCR_H, SCR_W, tapFlash } from './phone/pixui';
+import { HITS } from './phone/pixpages';
 import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
-import { APPS, BOOT_LOG_S, MENU_COLS, Phone, phoneKey, type Key } from './phone/phone';
+import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { songInfo } from './phone/apps';
@@ -504,14 +505,11 @@ function phoneTouch(cx: number, cy: number): boolean {
     return true;
   }
   if (sy < CONTENT_Y0) return true;
-  const col = Math.floor(sx / 6), row = Math.floor((sy - CONTENT_Y0) / 12);
-  if (phone.screen === 'menu') {
-    // the grid's tiles (apps.ts menu: 10 cells wide, 5 rows tall, from column 1, row 2)
-    const c = Math.floor((col - 1) / 10), rr = Math.floor((row - 2) / 5), n = rr * MENU_COLS + c;
-    if (c < 0 || c >= MENU_COLS || rr < 0 || n >= APPS.length) return true;
-    phone.sel = n;
-    tapFlash({ x: (1 + c * 10) * 6, y: CONTENT_Y0 + (2 + rr * 5) * 12, w: 60, h: 60 }, now);
-  } else tapFlash({ x: 0, y: CONTENT_Y0 + row * 12, w: SCR_W, h: 12 }, now);
+  // a screen drawn in pixels (pixpages.ts) says where its items are; one of the cells' apps: OK on the row touched
+  const h = HITS.find((r) => sx >= r.x && sx < r.x + r.w && sy >= r.y && sy < r.y + r.h);
+  if (h) { tapFlash(h, now); h.pre?.(); phonePress(h.key, true); return true; }
+  if (phone.screen === 'standby' || phone.screen === 'menu') return true;
+  tapFlash({ x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12 }, now);
   phonePress('ok', true);
   return true;
 }

@@ -40,10 +40,12 @@ export function ptext(P: Paint, x: number, y: number, s: string, c: C3, k = 1, b
 }
 export const ptextW = (s: string, k = 1, bold = false) => [...s].reduce((w, ch) => w + ((plainGlyph(ch) ? 6 : 4) * k + (bold ? 1 : 0)), 0);
 
-/** The bars and the touch's answer over the picture (cleared first: the cells show through the rest). `gain`: the eye's adaptation. */
-export function paintChrome(now: number, gain: number, plain: C3 | null = null) {
+/** The bars and the touch's answer over the picture (cleared first: the cells show through the rest, unless `page` paints it). `gain`: the eye's adaptation. */
+export function paintChrome(now: number, gain: number, plain: C3 | null = null, page: ((P: Paint) => void) | null = null) {
   const I = PHONE_PX.img, P = new Paint(I);
   I.px.fill(0);
+  // a screen drawn in pixels (pixpages.ts) under the bars, over the cells
+  if (page && !plain) page(P);
   // off, or starting: no bars, the screen's own dark round the cells
   if (plain) { P.rect(0, 0, SCR_W, CONTENT_Y0, plain); P.rect(0, CONTENT_Y1, SCR_W, SCR_H - CONTENT_Y1, plain); PHONE_PX.ver++; return; }
   const S = CHROME.status;
