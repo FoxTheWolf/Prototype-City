@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, wrapText } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, wrapText } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -73,4 +73,27 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   const hd = new Uint8ClampedArray(126 * 54 * 3).map((_, i) => ((i / 3) % 126) < 60 ? 40 + (i % 3) * 30 : 120);
   shot('news-article', (Q) => paintNewsArticle(Q, { name: 'THE PORT HALVARD COURIER', date: 'Tue. Oct 14, 2008', ed: 'LATE ED.', head: wrapText(heads[0], 30), photo: { hd, w: 126, h: 54 }, hasPhoto: true,
     caption: 'Security camera still, CAM 04', body: [...wrapText('The lights went out across Riverside at nine last night, and the grid company says the cause is under review.', 36), '', ...wrapText('Shops closed early.', 36)], dateline: 'PORT HALVARD, Oct 14', scroll: 0, t: 5 }));
+}
+
+// 0.15.33: Streetwire
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const hd = new Uint8ClampedArray(126 * 42 * 3).map((_, i) => ((i / 3) % 126) < 60 ? 40 + (i % 3) * 30 : 120);
+  const faces = [{ col: [180, 110, 150] as [number, number, number], ini: 'MR' }, { col: [100, 170, 140] as [number, number, number], ini: 'ES' }, { col: [120, 120, 200] as [number, number, number], ini: 'JO' }];
+  const texts = ['tried to fix the sink myself. now the kitchen is a pond, send help', 'lights out on Kell Street again, third time this month', 'best coffee in Riverside is the little cart by the station. fight me'];
+  shot('wire-feed', (Q) => paintWireFeed(Q, { tab: 'Home', tagline: 'what the city is saying', wait: '', bad: false, photoWord: 'photo', t: 5,
+    posts: texts.map((s, k) => ({ face: faces[k], name: ['Maria Rossi', 'Eric Shi', 'Jo Okafor'][k], age: `${k * 4 + 2}m ago`, lines: wrapText(s, 33), hasPhoto: k < 2, photo: k === 0 ? { hd, w: 126, h: 42 } : null,
+      likes: String(3 + k), liked: k === 1, comments: `${k} comments`, sel: k === 1, pre: () => {} })) }));
+  shot('wire-post', (Q) => paintWirePost(Q, { tab: 'Post', tagline: 'what the city is saying', photo: { hd, w: 126, h: 42 }, loadingPhoto: 'loading photo...', scroll: 0, t: 5,
+    rows: [{ kind: 'who', face: faces[0], name: 'Maria Rossi', sub: '2m ago in Riverside', author: true }, ...wrapText(texts[0], 35).map((text) => ({ kind: 'text' as const, text })), { kind: 'photo' },
+      { kind: 'like', label: 'Like', count: '3 likes', liked: false }, { kind: 'gap' },
+      { kind: 'who', face: faces[1], name: 'Eric Shi', sub: '1m ago' }, { kind: 'text', text: 'call a plumber, @maria, not youtube' }, { kind: 'gap' },
+      { kind: 'who', face: { col: [255, 140, 40], ini: 'NI' }, name: 'nightowl', sub: 'just now', you: true }, { kind: 'text', text: 'rubber boots. trust me.' }, { kind: 'gap' }] }));
+  shot('wire-profile', (Q) => paintWireProfile(Q, { tab: 'Profile', tagline: 'Loading the wire..', face: faces[0], name: 'Maria Rossi', handle: '@mrossi82', friends: '214 friends', joined: 'joined Mar 2007',
+    info: [['Age', '26'], ['Lives in', 'Riverside'], ['Work', 'works at Kell Street Diner'], ['Likes', 'jazz, soccer, old films']], bio: wrapText('Night shift, day dreams. If the lights go out, I am the one with candles.', 36).slice(0, 3),
+    postsBy: 'Posts', noPosts: 'No recent posts.', t: 5, posts: texts.map((s, k) => ({ age: `${k * 4 + 2}m ago`, text: s, sel: k === 0, pre: () => {} })) }));
 }

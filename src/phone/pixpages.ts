@@ -824,3 +824,152 @@ export function paintNewsArticle(P: Paint, d: NewsArticle) {
   ptext(P, M, y, d.dateline, NEWS.faded, 1, true);
   P.clip(0, 0, SCR_W, SCR_H);
 }
+
+/** Streetwire, the city's social site as 2008 drew it: a navy bar with the lowercase logo, white cards on a pale page, each person a coloured square with their initials. */
+const WIRE = { page: [228, 233, 240] as C3, card: [250, 251, 253] as C3, navy: [28, 52, 102] as C3, navy2: [44, 74, 136] as C3, text: [28, 32, 42] as C3, dim: [112, 120, 134] as C3,
+  orange: [255, 140, 40] as C3, link: [40, 90, 180] as C3, love: [214, 52, 86] as C3, pick: [36, 64, 124] as C3, pText: [255, 255, 255] as C3, pDim: [176, 192, 226] as C3, pLink: [255, 200, 130] as C3, edge: [206, 212, 224] as C3 };
+/** Where a Streetwire page starts, under its bar. */
+const WTOP = Y0 + 33;
+export interface WFace { col: C3; ini: string }
+function wireFace(P: Paint, x: number, y: number, s: number, f: WFace) {
+  P.rrect(x, y, s, s, 2, f.col);
+  const k = s >= 40 ? 2 : 1;
+  ptext(P, Math.round(x + (s - ptextW(f.ini, k, true)) / 2), Math.round(y + (s - 8 * k) / 2), f.ini, [255, 255, 255], k, true);
+}
+const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+function heart(P: Paint, x: number, y: number, c: C3) { HEART.forEach((r, j) => [...r].forEach((q, i) => { if (q === '#') P.rect(x + i, y + j, 1, 1, c); })); }
+/** The site's bar: the logo with its orange dot, the page on the right, the tagline (or the loading dots) under it. */
+function wireBar(P: Paint, right: string, tagline: string) {
+  P.rect(0, 0, SCR_W, Y1, WIRE.page);
+  P.rect(0, Y0, SCR_W, 20, WIRE.navy); P.rect(0, Y0 + 20, SCR_W, 13, WIRE.navy2);
+  const w = ptext(P, M, Y0 + 6, 'streetwire', [255, 255, 255], 1, true);
+  P.rect(M + w + 1, Y0 + 12, 2, 2, WIRE.orange);
+  ptext(P, SCR_W - M - ptextW(right), Y0 + 6, right, [180, 200, 235]);
+  ptext(P, M, Y0 + 22, tagline, [170, 190, 225]);
+}
+
+/** The feed: a card for each post (who, how long ago, the words, the photo, likes and comments), newest first; the picked one navy, kept in sight. A touch picks, a second opens; the heart likes. */
+export interface WirePost { face: WFace; name: string; age: string; lines: string[]; hasPhoto: boolean; photo: Rgb | null; likes: string; liked: boolean; comments: string; sel: boolean; pre: () => void }
+export interface WireFeed { tab: string; tagline: string; wait: string; bad: boolean; photoWord: string; posts: WirePost[]; t: number }
+const feedH = (q: WirePost) => 32 + q.lines.length * 12 + (q.hasPhoto ? 50 : 0) + 20;
+export function paintWireFeed(P: Paint, d: WireFeed) {
+  wireBar(P, d.tab, d.tagline);
+  if (d.wait) { ctext(P, 180, d.wait, d.bad ? WIRE.love : WIRE.dim); return; }
+  let y = 0;
+  const at = d.posts.map((q) => { const a = y; y += feedH(q) + 6; return a; }), s = d.posts.findIndex((q) => q.sel);
+  const top = WTOP + 6, view = Y1 - 4 - top;
+  const off = s < 0 ? 0 : Math.max(0, Math.min(at[s], at[s] + feedH(d.posts[s]) - view));
+  P.clip(0, WTOP, SCR_W, Y1 - 2);
+  d.posts.forEach((q, n) => {
+    const qy = top + at[n] - off, qh = feedH(q);
+    if (qy > Y1 || qy + qh < WTOP) return;
+    HITS.push({ x: 6, y: qy, w: SCR_W - 12, h: qh - 20, pre: q.pre, key: q.sel ? 'ok' : undefined });
+    if (d.t < 0.04 * n) return;
+    const bg = q.sel ? WIRE.pick : WIRE.card, fg = q.sel ? WIRE.pText : WIRE.text, dim = q.sel ? WIRE.pDim : WIRE.dim;
+    P.rect(6, qy, SCR_W - 12, qh, q.sel ? WIRE.orange : WIRE.edge);
+    P.rect(9, qy + 1, SCR_W - 16, qh - 2, bg);
+    wireFace(P, M + 4, qy + 6, 22, q.face);
+    const aw = ptextW(q.age);
+    ptext(P, M + 32, qy + 8, q.name.slice(0, Math.floor((SCR_W - M - 6 - aw - M - 34) / 7)), q.sel ? WIRE.pLink : WIRE.link, 1, true);
+    ptext(P, SCR_W - M - 4 - aw, qy + 8, q.age, dim);
+    let ly = qy + 32;
+    q.lines.forEach((l, k) => { ptext(P, M + 4, ly, typed(l, d.t - n * 0.04 - k * 0.02), fg); ly += 12; });
+    if (q.hasPhoto) {
+      const pw = SCR_W - 2 * M - 8;
+      if (q.photo) paintRgb(P, q.photo, M + 4, ly + 2, pw, 42);
+      else {
+        const pb: C3 = q.sel ? WIRE.navy2 : [214, 219, 228], c = q.sel ? WIRE.pDim : WIRE.dim, px = Math.round(M + 4 + (pw - ptextW(d.photoWord) - 18) / 2);
+        P.rect(M + 4, ly + 2, pw, 42, pb);
+        P.rrect(px, ly + 19, 12, 7, 1, c); P.rect(px + 3, ly + 18, 4, 1, c); P.disc(px + 6, ly + 22.5, 2, pb);
+        ptext(P, px + 18, ly + 19, d.photoWord, c);
+      }
+      ly += 50;
+    }
+    // the likes (the heart is its own button) and the comments
+    HITS.push({ x: 6, y: ly - 4, w: 70, h: 24, pre: q.pre, key: '*' });
+    heart(P, M + 4, ly + 2, q.liked ? (q.sel ? [255, 130, 160] : WIRE.love) : dim);
+    const lw = ptext(P, M + 15, ly + 1, q.likes, dim);
+    ptext(P, M + 15 + lw + 14, ly + 1, q.comments, dim);
+  });
+  P.clip(0, 0, SCR_W, SCR_H);
+}
+
+/** A post open, as rows: who wrote (the author's name opens the profile), the words, the photo, the like button, the comments as cards. */
+export type WRow = { kind: 'who'; face: WFace; name: string; sub: string; you?: boolean; author?: boolean } | { kind: 'text'; text: string } | { kind: 'photo' }
+  | { kind: 'like'; label: string; count: string; liked: boolean } | { kind: 'gap' } | { kind: 'note'; text: string };
+const wRowH = (r: WRow) => ({ who: 30, text: 12, photo: 80, like: 28, gap: 12, note: 20 })[r.kind];
+export const wireRowsH = (rows: WRow[]) => rows.reduce((h, r) => h + wRowH(r), 0);
+/** How tall a post's page can show (it scrolls 12 px a step). */
+export const WIRE_VIEW = Y1 - 4 - WTOP - 6;
+export interface WirePostPage { tab: string; tagline: string; rows: WRow[]; photo: Rgb | null; loadingPhoto: string; scroll: number; t: number }
+export function paintWirePost(P: Paint, d: WirePostPage) {
+  wireBar(P, d.tab, d.tagline);
+  P.clip(0, WTOP, SCR_W, Y1 - 2);
+  // the cards first: each run of rows between gaps
+  let y = WTOP + 6 - d.scroll, start = -1;
+  const ys = d.rows.map((r) => { const a = y; y += wRowH(r); return a; });
+  const out = (r: WRow | undefined) => !r || r.kind === 'gap' || r.kind === 'note';
+  d.rows.forEach((r, n) => {
+    if (out(r)) return;
+    if (start < 0) start = ys[n];
+    if (out(d.rows[n + 1])) { const h = ys[n] + wRowH(r) - start; P.rect(6, start - 2, SCR_W - 12, h + 7, WIRE.edge); P.rect(7, start - 1, SCR_W - 14, h + 5, WIRE.card); start = -1; }
+  });
+  d.rows.forEach((r, n) => {
+    const ry = ys[n];
+    if (ry > Y1 || ry + wRowH(r) < WTOP) return;
+    if (r.kind === 'who') {
+      if (r.author) HITS.push({ x: 6, y: ry, w: SCR_W - 12, h: 30, key: '#' });
+      wireFace(P, M + 2, ry + 4, 22, r.face);
+      ptext(P, M + 30, ry + 5, r.name.slice(0, 26), r.you ? WIRE.orange : WIRE.link, 1, true);
+      ptext(P, M + 30, ry + 17, r.sub.slice(0, 30), WIRE.dim);
+    } else if (r.kind === 'text') ptext(P, M + 2, ry + 2, typed(r.text, d.t - n * 0.02), WIRE.text);
+    else if (r.kind === 'note') ptext(P, M + 2, ry + 6, r.text, WIRE.dim);
+    else if (r.kind === 'photo') {
+      const pw = SCR_W - 2 * M - 4, ph = 72;
+      if (d.photo) paintRgb(P, d.photo, M + 2, ry + 4, pw, ph);
+      else { P.rect(M + 2, ry + 4, pw, ph, [214, 219, 228]); ctext(P, ry + 36, d.loadingPhoto, WIRE.dim); }
+    } else if (r.kind === 'like') {
+      HITS.push({ x: 6, y: ry, w: SCR_W - 12, h: 28, key: '*' });
+      const bw = ptextW(r.label, 1, true) + 26, c = r.liked ? WIRE.love : WIRE.link;
+      P.rrect(M + 2, ry + 4, bw, 20, 3, r.liked ? [252, 228, 234] : [232, 238, 250]);
+      heart(P, M + 9, ry + 11, c);
+      ptext(P, M + 21, ry + 10, r.label, c, 1, true);
+      ptext(P, M + bw + 12, ry + 10, r.count, WIRE.dim);
+    }
+  });
+  P.clip(0, 0, SCR_W, SCR_H);
+}
+
+/** A profile: the picture big, the name, the handle and friends; who they are in a little table, the bio, their posts (a touch picks, a second opens). */
+export interface WireProfile { tab: string; tagline: string; face: WFace; name: string; handle: string; friends: string; joined: string; info: [string, string][]; bio: string[]; postsBy: string; noPosts: string;
+  posts: { age: string; text: string; sel: boolean; pre: () => void }[]; t: number }
+export function paintWireProfile(P: Paint, d: WireProfile) {
+  wireBar(P, d.tab, d.tagline);
+  let y = WTOP + 10;
+  wireFace(P, M, y, 48, d.face);
+  ptext(P, M + 58, y + 2, d.name.slice(0, 22), WIRE.text, 1, true);
+  ptext(P, M + 58, y + 14, d.handle.slice(0, 26), WIRE.dim);
+  ptext(P, M + 58, y + 27, d.friends.slice(0, 26), WIRE.dim);
+  ptext(P, M + 58, y + 39, d.joined.slice(0, 26), WIRE.dim);
+  y += 58;
+  for (const [a, b] of d.info) { ptext(P, M, y, a, WIRE.dim); ptext(P, M + 60, y, b.slice(0, 26), WIRE.text); y += 13; }
+  y += 4;
+  for (const l of d.bio) { ptext(P, M, y, typed(l, d.t), [60, 66, 80]); y += 12; }
+  y += 8;
+  const hw = ptext(P, M, y, d.postsBy, WIRE.navy, 1, true);
+  P.rect(M + hw + 6, y + 4, SCR_W - 2 * M - hw - 6, 1, WIRE.edge);
+  y += 14;
+  if (!d.posts.length) { ptext(P, M, y + 4, d.noPosts, WIRE.dim); return; }
+  // the posts, scrolled so the picked one shows
+  const rh = 30, fit = Math.max(1, Math.floor((Y1 - 4 - y) / rh)), s = Math.max(0, d.posts.findIndex((q) => q.sel)), first = Math.max(0, Math.min(s - fit + 1, d.posts.length - fit));
+  P.clip(0, y, SCR_W, Y1 - 2);
+  d.posts.slice(first, first + fit).forEach((q, k) => {
+    const qy = y + k * rh;
+    HITS.push({ x: 6, y: qy, w: SCR_W - 12, h: rh - 2, pre: q.pre, key: q.sel ? 'ok' : undefined });
+    P.rect(6, qy, SCR_W - 12, rh - 2, q.sel ? WIRE.orange : WIRE.edge);
+    P.rect(9, qy + 1, SCR_W - 16, rh - 4, q.sel ? WIRE.pick : WIRE.card);
+    ptext(P, M + 2, qy + 4, q.age, q.sel ? WIRE.pDim : WIRE.dim);
+    ptext(P, M + 2, qy + 15, q.text.length > 34 ? `${q.text.slice(0, 31).trimEnd()}...` : q.text, q.sel ? WIRE.pText : WIRE.text);
+  });
+  P.clip(0, 0, SCR_W, SCR_H);
+}

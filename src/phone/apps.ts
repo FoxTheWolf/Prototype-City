@@ -414,7 +414,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   }
   if (id === 'social') {
     const J = P.radio.job;
-    return drawWire(S, P, world, now, J?.what === 'social' && (J.state === 'connecting' || J.state === 'loading'));
+    return drawWire(S, P, world, now, J?.what === 'social' && (J.state === 'connecting' || J.state === 'loading'), t);
   }
   if (id === 'news') {
     const J = P.radio.job;

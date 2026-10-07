@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.33 — Streetwire em pixels (2026-10-07)
+- **O Streetwire redesenhado, ainda com cara de site de 2008:** a barra azul-marinho com o logo e o pontinho laranja, cartões brancos com a foto de cada pessoa (as iniciais num quadrado da cor dela), o texto, a foto do post (quando já foi aberta) e um coração de verdade para curtir. Um toque escolhe o post, outro abre; tocar no coração curte. O post aberto mostra a foto grande, o botão Like e os comentários em cartões (os seus em laranja); tocar no nome do autor abre o perfil, que tem a foto grande, a tabela (idade, bairro, trabalho, gostos), a bio e os posts da pessoa.
+
 ## 0.15.32 — Notícias em pixels (2026-10-07)
 - **O Courier redesenhado:** a capa com o nome do jornal entre filetes, a data e a edição, as manchetes em negrito (a principal na faixa sombreada) com uma camerazinha onde há foto; um toque escolhe a matéria, outro abre. A matéria aberta tem a foto grande com moldura e legenda, o texto e a linha de data.
 

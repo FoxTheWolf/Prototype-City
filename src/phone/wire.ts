@@ -1,5 +1,6 @@
 import { hash3 } from '../core/rng';
 import { CharGrid } from '../render/grid';
+import { type Paint } from '../render/paint2d';
 import { HD } from '../render/hd';
 import { cover } from './camera';
 import { districtAt, isSolid, type City } from '../sim/city';
@@ -7,7 +8,8 @@ import { comments, likes, type Post } from '../sim/social';
 import { type World } from '../sim/world';
 import { citizenNames, districtName } from '../locale/names';
 import { commentText, postAge, postText, profileOf, SOCIAL } from '../locale/social';
-import { ch, type C3, type Lcd, SH, softKeys, SW } from './lcd';
+import { type C3, type Lcd, softKeys } from './lcd';
+import { paintWireFeed, paintWirePost, paintWireProfile, WIRE_VIEW, wireRowsH, type WFace, type WireFeed, type WirePostPage, type WireProfile, type WRow } from './pixpages';
 import { type Key, type Phone } from './phone';
 
 /**
@@ -19,10 +21,6 @@ import { type Key, type Phone } from './phone';
  * A photo is a small render of the city from where the author stood, looking at what they posted
  * about, made once when the post is first opened (see Phone.shoot) and kept with the post.
  */
-const PAGE: C3 = [228, 233, 240], CARD: C3 = [250, 251, 253], NAVY: C3 = [28, 52, 102], NAVY2: C3 = [44, 74, 136];
-const TEXT: C3 = [28, 32, 42], DIM: C3 = [112, 120, 134], ORANGE: C3 = [255, 140, 40], LINK: C3 = [40, 90, 180], LOVE: C3 = [214, 52, 86];
-/** The picked card: the bar's navy with light words. */
-const PICK: C3 = [36, 64, 124], PTEXT: C3 = [255, 255, 255], PDIM: C3 = [176, 192, 226], PLINK: C3 = [255, 200, 130];
 const W = SOCIAL;
 
 export type WireView = 'feed' | 'post' | 'profile';
@@ -107,169 +105,91 @@ function wrap(s: string, w: number): string[] {
   return out;
 }
 
-/** Someone's picture: two cells in a color of their own, with their initials. */
-function avatar(S: Lcd, x: number, y: number, world: World, who: number) {
-  const h = hash3(who, 0xa7a, 1), col: C3 = [90 + Math.floor(h * 140), 80 + Math.floor(hash3(who, 0xa7a, 2) * 130), 100 + Math.floor(hash3(who, 0xa7a, 3) * 130)];
+/** Someone's picture: a square in a color of their own, with their initials. */
+function faceOf(world: World, who: number): WFace {
+  const col: C3 = [90 + Math.floor(hash3(who, 0xa7a, 1) * 140), 80 + Math.floor(hash3(who, 0xa7a, 2) * 130), 100 + Math.floor(hash3(who, 0xa7a, 3) * 130)];
   const [f, l] = citizenNames(world.city, world.pop, who);
-  S.put(x, y, ch(f[0] ?? '?'), [255, 255, 255], col);
-  S.put(x + 1, y, ch(l[0] ?? '?'), [255, 255, 255], col);
+  return { col, ini: `${f[0] ?? '?'}${l[0] ?? '?'}` };
 }
-
-/** The site's bar: the logo, and what page this is. */
-function header(S: Lcd, right: string, loading: boolean, now: number) {
-  for (let y = 1; y <= 2; y++) S.fill(y, y === 1 ? NAVY : NAVY2);
-  S.text(1, 1, 'streetwire', [255, 255, 255], NAVY);
-  S.put(11, 1, ch('.'), ORANGE, NAVY);
-  S.text(SW - right.length - 1, 1, right, [180, 200, 235], NAVY);
-  S.text(1, 2, loading ? `${W.wait.slice(0, -3)}${'.'.repeat(Math.floor(now * 3) % 4)}` : W.tagline, [170, 190, 225], NAVY2);
-}
-
-const page = (S: Lcd, y0 = 3) => { for (let y = y0; y < SH - 1; y++) S.fill(y, PAGE); };
+/** A picture as the painter takes it (its HD pixels). */
+const rgb = (pic: Pic | null | undefined) => (pic ? { hd: pic.hd, w: pic.w * HD, h: pic.h * HD } : null);
+/** Under the bar: the tagline, or the dots while the wire downloads. */
+const tagline = (loading: boolean, now: number) => (loading ? `${W.wait.slice(0, -3)}${'.'.repeat(Math.floor(now * 3) % 4)}` : W.tagline);
 
 /** The posts as the feed lists them: newest first. */
 const feedPosts = (P: Phone) => P.wire.slice().reverse();
 
-export function drawWire(S: Lcd, P: Phone, world: World, now: number, loading: boolean) {
+export function drawWire(S: Lcd, P: Phone, world: World, now: number, loading: boolean, t: number): (Pt: Paint) => void {
   const V = P.wst;
-  page(S);
-  if (V.view === 'post' && V.post) return postPage(S, P, world, V.post, now, loading);
-  if (V.view === 'profile' && V.who >= 0) return profilePage(S, P, world, now, loading);
-  header(S, 'Home', loading, now);
-  const L = feedPosts(P);
+  if (V.view === 'post' && V.post) return postPage(S, P, world, V.post, now, loading, t);
+  if (V.view === 'profile' && V.who >= 0) return profilePage(S, P, world, now, loading, t);
+  const L = feedPosts(P), c = world.city, Pop = world.pop;
+  const d: WireFeed = { tab: 'Home', tagline: tagline(loading, now), wait: '', bad: false, photoWord: 'photo', posts: [], t };
   if (!L.length) {
-    S.center(10, loading || P.online() ? W.wait : W.none, loading || P.online() ? DIM : LOVE, PAGE);
-    return softKeys(S, P.online() ? W.refresh : '', 'Back');
+    d.wait = loading || P.online() ? W.wait : W.none; d.bad = !(loading || P.online());
+    softKeys(S, P.online() ? W.refresh : '', 'Back');
+    return (Pt) => paintWireFeed(Pt, d);
   }
   V.sel = Math.min(V.sel, L.length - 1);
-  // the cards, laid out as rows; the picked one kept in sight
-  const rows: { text: string; fg: C3; bg: C3; card: number; av?: number; x?: number }[] = [];
-  const c = world.city, Pop = world.pop;
-  L.forEach((p, k) => {
-    const sel = k === V.sel, bg = sel ? PICK : CARD;
-    const name = citizenNames(c, Pop, p.who).join(' '), age = postAge(world.time, p.time);
-    rows.push({ text: `${name}`.slice(0, SW - 6 - age.length), fg: sel ? PLINK : LINK, bg, card: k, av: p.who });
-    rows[rows.length - 1].x = 3;
-    for (const l of wrap(postText(c, Pop, p), SW - 3)) rows.push({ text: l, fg: sel ? PTEXT : TEXT, bg, card: k });
-    if (p.photo) rows.push({ text: W.photo, fg: sel ? PDIM : DIM, bg, card: k });
-    const n = likes(Pop, p, world.time) + (V.liked.has(p.id) ? 1 : 0), cm = comments(Pop, p, world.time).length;
-    rows.push({ text: `${V.liked.has(p.id) ? '<3' : '<3'} ${n}   ${W.comments.replace('{n}', String(cm))}   ${age}`, fg: sel ? PDIM : DIM, bg, card: k });
-    rows.push({ text: '', fg: DIM, bg: PAGE, card: -1 });
-  });
-  const view = SH - 4, first = rows.findIndex((r) => r.card === V.sel), last = rows.length - 1 - [...rows].reverse().findIndex((r) => r.card === V.sel);
-  let top = Math.max(0, Math.min(first, rows.length - view));
-  if (last - top >= view) top = last - view + 1;
-  if (first < top) top = first;
-  rows.slice(top, top + view).forEach((r, k) => {
-    const y = 3 + k;
-    if (r.card < 0) return;
-    for (let x = 0; x < SW; x++) S.put(x, y, 32, r.bg, r.bg);
-    S.put(0, y, 32, r.card === V.sel ? ORANGE : [200, 206, 218], r.card === V.sel ? ORANGE : [200, 206, 218]);
-    if (r.av !== undefined) avatar(S, 1, y, world, r.av);
-    S.text(r.x ?? 2, y, r.text, r.fg, r.bg);
-    if (r.text.startsWith('<3')) {
-      const p = L[r.card];
-      S.text(2, y, '<3', V.liked.has(p.id) ? (r.card === V.sel ? [255, 130, 160] : LOVE) : r.fg, r.bg);
-    }
-  });
+  d.posts = L.map((p, k) => ({
+    face: faceOf(world, p.who), name: citizenNames(c, Pop, p.who).join(' '), age: postAge(world.time, p.time), lines: wrap(postText(c, Pop, p), 33),
+    // the photo shows once it has been taken (opening the post takes it)
+    hasPhoto: !!p.photo, photo: p.photo ? rgb(pics.get(p.id)) : null,
+    likes: String(likes(Pop, p, world.time) + (V.liked.has(p.id) ? 1 : 0)), liked: V.liked.has(p.id), comments: W.comments.replace('{n}', String(comments(Pop, p, world.time).length)),
+    sel: k === V.sel, pre: () => { V.sel = k; },
+  }));
   softKeys(S, W.refresh, 'Back');
-  S.text((SW - W.hint.length) >> 1, SH - 1, W.hint, [150, 160, 180], [28, 62, 82]);
+  return (Pt) => paintWireFeed(Pt, d);
 }
 
-/** A post: the photo, the words, its likes, and the comments as they came in. */
-function postPage(S: Lcd, P: Phone, world: World, p: Post, now: number, loading: boolean) {
+/** A post: who wrote it, the words, the photo, the like button, and the comments as they came in. */
+function postPage(S: Lcd, P: Phone, world: World, p: Post, now: number, loading: boolean, t: number): (Pt: Paint) => void {
   const V = P.wst, c = world.city, Pop = world.pop;
-  header(S, 'Post', loading, now);
-  const rows: [string, C3, C3, number?][] = [];
+  const rows: WRow[] = [];
   const name = citizenNames(c, Pop, p.who).join(' ');
-  rows.push([`   ${name}`, LINK, CARD, p.who]);
-  rows.push([`   ${postAge(world.time, p.time)} ${W.at.replace('{place}', districtName(c, districtAt(c, p.x, p.y)))}`, DIM, CARD]);
-  for (const l of wrap(postText(c, Pop, p), SW - 3)) rows.push([` ${l}`, TEXT, CARD]);
-  const picRows = p.photo ? PIC_H + 1 : 0;
-  for (let k = 0; k < picRows; k++) rows.push(['', TEXT, PAGE, -2]);
+  rows.push({ kind: 'who', face: faceOf(world, p.who), name, sub: `${postAge(world.time, p.time)} ${W.at.replace('{place}', districtName(c, districtAt(c, p.x, p.y)))}`, author: true });
+  for (const l of wrap(postText(c, Pop, p), 35)) rows.push({ kind: 'text', text: l });
+  if (p.photo) rows.push({ kind: 'photo' });
   const n = likes(Pop, p, world.time) + (V.liked.has(p.id) ? 1 : 0), cm = comments(Pop, p, world.time);
-  rows.push([` ${V.liked.has(p.id) ? `<3 ${W.liked}` : `<3 ${W.like}`}  ${W.likes.replace('{n}', String(n))}`, V.liked.has(p.id) ? LOVE : LINK, CARD]);
-  rows.push(['', TEXT, PAGE]);
-  if (!cm.length && !(world.feed.mine ?? []).some((m) => m.post === p.id)) rows.push([` ${W.noComments}`, DIM, PAGE]);
+  rows.push({ kind: 'like', label: V.liked.has(p.id) ? W.liked : W.like, count: W.likes.replace('{n}', String(n)), liked: V.liked.has(p.id) });
+  rows.push({ kind: 'gap' });
+  if (!cm.length && !(world.feed.mine ?? []).some((m) => m.post === p.id)) rows.push({ kind: 'note', text: W.noComments });
   cm.forEach((cmt, k) => {
-    rows.push([`   ${citizenNames(c, Pop, cmt.who).join(' ')}  ${postAge(world.time, cmt.time)}`, LINK, CARD, cmt.who]);
-    for (const l of wrap(commentText(c, Pop, p, cmt, k), SW - 4)) rows.push([`   ${l}`, TEXT, CARD]);
-    rows.push(['', TEXT, PAGE]);
+    rows.push({ kind: 'who', face: faceOf(world, cmt.who), name: citizenNames(c, Pop, cmt.who).join(' '), sub: postAge(world.time, cmt.time) });
+    for (const l of wrap(commentText(c, Pop, p, cmt, k), 35)) rows.push({ kind: 'text', text: l });
+    rows.push({ kind: 'gap' });
   });
   // what the player wrote on the site (15.6), and the author's answer once it is up
   const you = world.feed.me?.user ?? 'you';
   for (const m of world.feed.mine ?? []) if (m.post === p.id) {
-    rows.push([`   ${you}  ${postAge(world.time, m.time)}`, ORANGE, CARD]);
-    for (const l of wrap(m.text, SW - 4)) rows.push([`   ${l}`, TEXT, CARD]);
-    rows.push(['', TEXT, PAGE]);
+    rows.push({ kind: 'who', face: { col: [255, 140, 40], ini: you.slice(0, 2).toUpperCase() }, name: you, sub: postAge(world.time, m.time), you: true });
+    for (const l of wrap(m.text, 35)) rows.push({ kind: 'text', text: l });
+    rows.push({ kind: 'gap' });
     if (!m.reply || world.time < m.at) continue;
-    rows.push([`   ${name}  ${postAge(world.time, m.at)}`, LINK, CARD, p.who]);
-    for (const l of wrap(`@${you} ${m.reply}`, SW - 4)) rows.push([`   ${l}`, TEXT, CARD]);
-    rows.push(['', TEXT, PAGE]);
+    rows.push({ kind: 'who', face: faceOf(world, p.who), name, sub: postAge(world.time, m.at), author: true });
+    for (const l of wrap(`@${you} ${m.reply}`, 35)) rows.push({ kind: 'text', text: l });
+    rows.push({ kind: 'gap' });
   }
-  const view = SH - 4;
-  V.scroll = Math.max(0, Math.min(V.scroll, rows.length - view));
-  let picAt = -1;
-  rows.slice(V.scroll, V.scroll + view).forEach(([text, fg, bg, who], k) => {
-    const y = 3 + k;
-    for (let x = 0; x < SW; x++) S.put(x, y, 32, bg, bg);
-    if (who === -2) { if (picAt < 0) picAt = y; return; }
-    if (who !== undefined && who >= 0) avatar(S, 1, y, world, who);
-    S.text(0, y, text, fg, bg);
-    if (who !== undefined && who >= 0) avatar(S, 1, y, world, who);
-  });
-  // the photo, where its rows came up (it may be partly scrolled off)
-  if (p.photo) {
-    const first = rows.findIndex((r) => r[3] === -2), off = V.scroll - first;
-    const pic = picOf(P, world, p);
-    for (let r = Math.max(0, off); r < PIC_H; r++) {
-      const y = 3 + first + r - V.scroll;
-      if (y < 3 || y >= SH - 1) continue;
-      for (let x = 0; x < PIC_W && x < SW; x++) {
-        if (!pic) { S.put(x, y, r === 6 && x > 12 && x < 30 ? W.loadingPhoto.charCodeAt(x - 13) || 32 : 32, DIM, [200, 205, 214]); continue; }
-        const q = (r * pic.w + x) * 4;
-        S.put(x, y, pic.cells[q] || 32, [pic.cells[q + 1], pic.cells[q + 2], pic.cells[q + 3]], [pic.bg[q], pic.bg[q + 1], pic.bg[q + 2]]);
-        // in HD: the cell's nine pixels over it
-        for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
-          const h = ((r * HD + iy) * pic.w * HD + x * HD + ix) * 3;
-          S.pixel(x, y, ix, iy, pic.hd[h], pic.hd[h + 1], pic.hd[h + 2]);
-        }
-      }
-    }
-  }
+  // up and down scroll 12 px a step, to the end
+  V.scroll = Math.max(0, Math.min(V.scroll, Math.ceil(Math.max(0, wireRowsH(rows) - WIRE_VIEW) / 12)));
+  const d: WirePostPage = { tab: 'Post', tagline: tagline(loading, now), rows, photo: p.photo ? rgb(picOf(P, world, p)) : null, loadingPhoto: W.loadingPhoto, scroll: V.scroll * 12, t };
   softKeys(S, W.profileTab, 'Back');
-  S.text((SW - 9) >> 1, SH - 1, '* Like', [150, 160, 180], [28, 62, 82]);
+  return (Pt) => paintWirePost(Pt, d);
 }
 
 /** A profile: the picture, who they are, their bio and likes, and their posts on the wire. */
-function profilePage(S: Lcd, P: Phone, world: World, now: number, loading: boolean) {
+function profilePage(S: Lcd, P: Phone, world: World, now: number, loading: boolean, t: number): (Pt: Paint) => void {
   const V = P.wst, c = world.city, Pop = world.pop, pr = profileOf(c, Pop, V.who);
-  header(S, W.profileTab, loading, now);
-  // the picture: a 4x2 block in their color, the initials in it
-  const h = hash3(V.who, 0xa7a, 1), col: C3 = [90 + Math.floor(h * 140), 80 + Math.floor(hash3(V.who, 0xa7a, 2) * 130), 100 + Math.floor(hash3(V.who, 0xa7a, 3) * 130)];
-  for (let y = 4; y <= 6; y++) for (let x = 1; x <= 6; x++) S.put(x, y, 32, col, col);
-  const [f, l] = citizenNames(c, Pop, V.who);
-  S.put(3, 5, ch(f[0]), [255, 255, 255], col); S.put(4, 5, ch(l[0]), [255, 255, 255], col);
-  S.text(8, 4, pr.name.slice(0, SW - 9), TEXT, PAGE);
-  S.text(8, 5, `@${pr.handle}`.slice(0, SW - 9), DIM, PAGE);
-  S.text(8, 6, `${W.friendsN.replace('{n}', String(pr.friends))}  ${pr.joined}`.slice(0, SW - 9), DIM, PAGE);
-  const PR = W.profile, rows: [string, string][] = [[PR.age, String(pr.age)], [PR.lives, pr.home], [PR.work, pr.work]];
-  if (pr.status) rows.push([PR.status, pr.status]);
-  rows.push([PR.likes, pr.likes.join(', ')]);
-  let y = 8;
-  for (const [a, b] of rows) { S.text(1, y, a, DIM, PAGE); S.text(10, y, b.slice(0, SW - 11), TEXT, PAGE); y++; }
-  for (const ln of wrap(pr.bio, SW - 2).slice(0, 3)) { y++; S.text(1, y, ln, [60, 66, 80], PAGE); }
-  y += 2;
-  S.text(1, y, W.postsBy, NAVY, PAGE);
-  for (let x = 1 + W.postsBy.length + 1; x < SW - 1; x++) S.put(x, y, ch('-'), [190, 196, 208], PAGE);
+  const PR = W.profile, info: [string, string][] = [[PR.age, String(pr.age)], [PR.lives, pr.home], [PR.work, pr.work]];
+  if (pr.status) info.push([PR.status, pr.status]);
+  info.push([PR.likes, pr.likes.join(', ')]);
   const mine = feedPosts(P).filter((p) => p.who === V.who);
-  if (!mine.length) S.text(1, y + 1, W.noPosts, DIM, PAGE);
   V.psel = Math.min(V.psel, Math.max(0, mine.length - 1));
-  mine.slice(0, SH - 2 - (y + 1)).forEach((p, k) => {
-    const sel = k === V.psel, bg = sel ? PICK : CARD, yy = y + 1 + k;
-    for (let x = 0; x < SW; x++) S.put(x, yy, 32, bg, bg);
-    S.text(1, yy, `${postAge(world.time, p.time).padEnd(9)}${postText(c, Pop, p)}`.slice(0, SW - 2), sel ? PTEXT : TEXT, bg);
-  });
+  const d: WireProfile = { tab: W.profileTab, tagline: tagline(loading, now), face: faceOf(world, V.who), name: pr.name, handle: `@${pr.handle}`, friends: W.friendsN.replace('{n}', String(pr.friends)), joined: pr.joined,
+    info, bio: wrap(pr.bio, 36).slice(0, 3), postsBy: W.postsBy, noPosts: W.noPosts,
+    posts: mine.map((p, k) => ({ age: postAge(world.time, p.time), text: postText(c, Pop, p), sel: k === V.psel, pre: () => { V.psel = k; } })), t };
   softKeys(S, '', 'Back');
+  return (Pt) => paintWireProfile(Pt, d);
 }
 
 /** The keys on Streetwire; false when one does nothing. `refresh` downloads the wire again. */
