@@ -1,6 +1,7 @@
 import { castVox, shadeVox, Vox, type GBuf, type VoxLight, type VoxMat } from '../render/voxels';
 import { HD } from '../render/hd';
-import { KEYS_Y, PHONE_H, PHONE_W, type KeyRect, type Shell } from './shells';
+import { type Case, KEYS_Y, PHONE_H, PHONE_W, type KeyRect, type Shell } from './shells';
+import { hash3 } from '../core/rng';
 import { type C3 } from './lcd';
 import { type Key } from './phone';
 
@@ -23,7 +24,7 @@ const SX = 4, SY = 4, SW = 42, SH = 26, UP_ROWS = KEYS_Y + 6;
 const PITCH = 0.16, YAW = -0.05;
 
 /** Palette indices. */
-const enum P { Plate = 1, Low, Rim, Bezel, Glass, Slot, Lens }
+const enum P { Plate = 1, Low, Rim, Bezel, Glass, Slot, Lens, Send, End, Case, CaseAlt, Glitter }
 const KEY0 = 16;
 const GRAPHITE: C3 = [43, 45, 49], CHROME: C3 = [201, 206, 214], BEZEL: C3 = [7, 7, 9];
 
@@ -39,11 +40,12 @@ const inRound = (x: number, y: number, x0: number, y0: number, x1: number, y1: n
  * same size so they cast alike: the lower one as it lies with the rail open (the same length as the
  * upper, the keypad's rows below the upper plate's foot), drawn shifted up under the upper as it shuts.
  */
-function base(S: Shell): [Vox, Vox] {
+function base(S: Shell, K: Case | null): [Vox, Vox] {
   const lo = new Vox(NX, NY, NZ), V = new Vox(NX, NY, NZ), R = Math.max(2, S.round * 2.2);
   const upY = UP_ROWS * MMY;
   lo.draw(0, LOW, (x, y) => (inRound(x, y, 0, NY - upY, NX, NY, R) ? P.Low : 0));
   V.draw(LOW, LOW + UP, (x, y) => (inRound(x, y, 0, 0, NX, upY, R) ? P.Plate : 0));
+  if (K) { caseOn(lo, K, NY - upY, NY, 0, LOW, R); caseOn(V, K, 0, upY, LOW, LOW + UP, R); }
   // the upper plate's front edge, a millimetre in all round: the rim of a rounded edge
   const top = LOW + UP - 1;
   for (let y = 0; y < upY; y++) for (let x = 0; x < NX; x++) {
@@ -68,6 +70,29 @@ function base(S: Shell): [Vox, Vox] {
   return [lo, V];
 }
 
+/**
+ * A case over a plate (one piece a plate: they slide apart), from y0 to y1 and z0 to z1 (mm): the plate's
+ * outer 2 mm in the case's color, its lip a millimetre proud over the front's outer edge, so only the face
+ * is left free. Leather is stitched round the lip, a bumper ridged on its sides, glitter sparkles.
+ */
+function caseOn(V: Vox, K: Case, y0: number, y1: number, z0: number, z1: number, R: number) {
+  for (let y = y0; y < y1; y++) for (let x = 0; x < NX; x++) {
+    const cx = x + 0.5, cy = y + 0.5;
+    if (!inRound(cx, cy, 0, y0, NX, y1, R) || inRound(cx, cy, 2, y0 + 2, NX - 2, y1 - 2, Math.max(1, R - 2))) continue;
+    const lip = !inRound(cx, cy, 1, y0 + 1, NX - 1, y1 - 1, Math.max(1, R - 1));
+    const side = x < 2 || x >= NX - 2;
+    let c = P.Case;
+    if (K.pattern === 'ridge' && side && y % 4 < 2) c = P.CaseAlt;
+    else if (K.pattern === 'glitter' && hash3(x, y, 93) < 0.14) c = P.Glitter;
+    for (let z = z0; z < z1; z++) V.set(x, y, z, c);
+    // the lip, and the stitches along it (a stitch every third millimetre)
+    if (lip) V.set(x, y, z1, K.pattern === 'stitch' && (x + y) % 3 === 0 ? P.CaseAlt : c);
+  }
+}
+
+/** The handsets on the call and end keys (8 x 3 mm, '#' a cube): the receiver lifted, and laid down. */
+const HANDSET: Record<string, string[]> = { send: ['.######.', '##....##', '#......#'], end: ['#......#', '##....##', '.######.'] };
+
 /** The keys stamped on a copy of the base: a cap per key rect, 1 mm proud of its plate (or flush when pressed); its top edge shows by the tilt. */
 function withKeys([lo0, up0]: [Vox, Vox], S: Shell, keys: KeyRect[], down: (k: Key) => boolean, ids: Map<number, Key>): [Vox, Vox] {
   const lo = lo0.copy(), up = up0.copy(), upY = UP_ROWS * MMY;
@@ -82,6 +107,9 @@ function withKeys([lo0, up0]: [Vox, Vox], S: Shell, keys: KeyRect[], down: (k: K
       if (!inRound(x + 0.5, y + 0.5, x0 + 0.15, y0 + 0.3, x1 - 0.15, y1 - 0.3, r)) continue;
       for (let zz = face; zz <= z; zz++) V.set(x, y, zz, col);
     }
+    // the green and red handsets, in the cap's top (they sink with it)
+    const icon = HANDSET[k];
+    if (icon) icon.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') V.set(x0 + ((x1 - x0 - row.length) >> 1) + i, y0 + j, z, k === 'send' ? P.Send : P.End); }));
   });
   return [lo, up];
 }
@@ -101,13 +129,13 @@ let lit: { key: string; px: Float32Array; n0: number; n: number } | null = null;
  * and kept until the look or the keys pressed change. `rail` (rows, 0 open .. minus the keypad's rows
  * shut) is how far the lower plate is drawn up under the upper.
  */
-export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: number) => void, ox: number, oy: number, S: Shell, look: number, body: C3,
-  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0], rail = 0) {
+export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: number) => void, ox: number, oy: number, S: Shell, look: number, body: C3, K: Case | null,
+  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0], rail = 0, on = true) {
   const pressed = keys.filter(([k]) => down(k)).map(([k]) => k).join(',');
-  const ck = `${look}|${pressed}`;
+  const ck = `${look}|${pressed}|${K?.name ?? ''}`;
   if (!cache || cache.key !== ck) {
     const ids = new Map<number, Key>();
-    cache = { key: ck, ids, V: withKeys(base(S), S, keys, down, ids), poses: new Map() };
+    cache = { key: ck, ids, V: withKeys(base(S, K), S, keys, down, ids), poses: new Map() };
   }
   const step = (a: number) => Math.round(Math.max(-TILT_MAX, Math.min(TILT_MAX, a)) / TILT_STEP);
   const ty = step(tilt[0]), tp = step(tilt[1]), posk = `${ty},${tp}`;
@@ -117,7 +145,7 @@ export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: 
     G = [castVox(cache.V[0], view), castVox(cache.V[1], view)];
     cache.poses.set(posk, G);
   }
-  const pk = `${ck}|${hover}|${body}`;
+  const pk = `${ck}|${hover}|${body}|${on}`;
   if (!paint || paint.key !== pk) {
     const plate: C3 = S.face ?? S.body ?? body, gloss = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05 }[S.material];
     const pal: VoxMat[] = Array.from({ length: 256 }, () => ({ col: [0, 0, 0], gloss: 0 }));
@@ -128,6 +156,17 @@ export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: 
     pal[P.Glass] = { col: [5, 6, 8], gloss: 0.9 };
     pal[P.Slot] = { col: [16, 16, 18], gloss: 0.1 };
     pal[P.Lens] = { col: [60, 72, 96], gloss: 0.9 };
+    // the handsets: lit from behind while the phone is on, as the labels are
+    pal[P.Send] = { col: on ? [80, 230, 120] : [40, 90, 56], gloss: 0.3, glow: on };
+    pal[P.End] = { col: on ? [255, 80, 70] : [110, 44, 40], gloss: 0.3, glow: on };
+    if (K) {
+      // clear plastic: the plate's color through it, a little tinted; the rest in the case's own
+      const cc: C3 = K.material === 'clear' ? [plate[0] * 0.7 + K.color[0] * 0.3, plate[1] * 0.7 + K.color[1] * 0.3, plate[2] * 0.7 + K.color[2] * 0.3] : K.color;
+      const cg = { matte: 0.15, gloss: 0.6, metal: 0.42, rubber: 0.05, clear: 0.9 }[K.material];
+      pal[P.Case] = { col: cc, gloss: cg };
+      pal[P.CaseAlt] = { col: K.pattern === 'stitch' ? [196, 150, 100] : [cc[0] * 0.55, cc[1] * 0.55, cc[2] * 0.55], gloss: cg };
+      pal[P.Glitter] = { col: [255, 225, 245], gloss: 1 };
+    }
     // the keys: their caps, the arrows of a ring d-pad in its trim; one under the cursor lit, one pressed darker
     const mul = new Float32Array(256).fill(1);
     for (const [id, k] of cache.ids) {

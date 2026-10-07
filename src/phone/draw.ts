@@ -187,14 +187,15 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const HB = hdLayer();
   if (HB) {
     // 15.19: the body in little cubes, in the HD layer under the interface (body3d.ts); the key labels stay glyphs over it
-    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], railRows(P) - KP_ROWS);
+    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, P.case ? CASES[P.case] : null, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], railRows(P) - KP_ROWS, on);
     // the maker's name on the face, left of the earpiece, in its family's dot font (15.18)
     const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker), F = FAMILIES[fam], tc = F[lum(top) > 130 ? 'light' : 'dark'][2];
     const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 4) * HD, oy * HD, (ox + 29) * HD, (oy + 3) * HD);
     paintBrandText(decal, (ox + 4) * HD, oy * HD + 1, fam, P.maker, 1, [tc[0] * Lr, tc[1] * Lg, tc[2] * Lb]);
     for (const [k, x0, ky, w, h, label, col] of KEYS) {
       const y0 = keyRow(P, ky);
-      if (y0 === null) continue;
+      // the call and end keys carry their handsets in cubes (body3d.ts), no label
+      if (y0 === null || k === 'send' || k === 'end') continue;
       const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
       const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
       for (let n = 0; n < label.length; n++) {
@@ -295,7 +296,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     }
   }
   // the case: over the body's rim and around it, so only its own rim shows from the front
-  if (P.case) drawCase(CASES[P.case], R, now, cell, over, inG, g);
+  // (in the cubes, body3d.ts, when there is the pixel layer)
+  if (P.case && !HB) drawCase(CASES[P.case], R, now, cell, over, inG, g);
   // the earphones plugged in (2026-10-06), in HD pixels: a metal plug in the jack on top, its white
   // housing and strain relief above, and the cable rising in a slack loop up and to the left, then
   // falling past the phone's side and out of sight at the bottom (2026-10-06: it went off the top before)

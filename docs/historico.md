@@ -7,6 +7,8 @@
 - **Balanço:** `SWAY` em `phone/draw.ts` (a velocidade da câmera × 0,012, até 0,06 rad de lado e 0,045 de cima, volta em ~0,12 s); `body3d.ts` guarda cada pose em degraus de 0,015 rad (`TILT_STEP`; uma pose nova custa ~5–15 ms uma vez).
 - **Trilho:** `Phone.slid`/`slide`/`setRail` (Sfx `rail`, `Sound.railSlide`: atrito + "tchac"); as placas são dois modelos do mesmo tamanho (`base` → `[lo, up]`), a de baixo desenhada `rail` linhas acima; `railRows`/`keyRow` em `draw.ts` deslocam as letras e os cliques do teclado em linhas inteiras; a de baixo fica parada na tela e a de cima sobe. Botão do meio: `phoneMiddle` em `main.ts`. Testes: `tests/phone3d.ts` (trilho fechado/aberto).
 - **Não feito do manual:** segurar o botão direito continua olhando em volta (o manual pedia guardar; conflita).
+- **Capinhas e telefones em cubos:** `caseOn` em `body3d.ts` (uma peça por placa: a borda de 2 mm, o lábio de 1 mm; costura, nervura, glitter, transparente tingindo), `HANDSET` nas teclas `send`/`end` (sem a palavra; `glow` com a tela acesa); o `drawCase` em caracteres só no plano B. Imagem: `tests/.out/case-png.ts` (scratch).
+- **A tela como textura inclinada ficou de fora (contestado):** o corpo é ortográfico e inclina ≤ ~3°, então uma tela plana inclinada só encolhe ~0,2% e anda 1–2 px; não se vê. Ver a conversa de 2026-10-07 e o item no CLAUDE.md.
 
 ## 15.19a ✅ + 15.19b (1ª parte) Cubinhos e o corpo do celular (2026-10-07, Opus 5.5)
 - **Decisões (usuário):** pixels da camada HD; um corpo só (o deslizante). **Contestação do Claude:** para o aparelho na mão o raio roda na **CPU** (o visual escolhido é o mesmo), não num shader: um modelo só, testável no Node, sem risco de compilação; a versão GPU fica para os objetos do mundo (etapa 18).

@@ -32,7 +32,7 @@ SHELLS.forEach((S, look) => {
     drawBody3d((x, y, r, g, b) => {
       const X = look * (W + GAP) + x, Y = y0 + y, k = (Y * IW + X) * 4;
       img[k] = r; img[k + 1] = g; img[k + 2] = b; img[k + 3] = 255; n++;
-    }, 0, 0, S, look, [120, 124, 132], keysOf(S), (k) => pressOk && k === 'ok', null, L);
+    }, 0, 0, S, look, [120, 124, 132], null, keysOf(S), (k) => pressOk && k === 'ok', null, L);
     ms += performance.now() - t;
     check(`${S.name}${pressOk ? ' (OK pressed)' : ''}: drawn`, n > W * H * 0.7);
   }
@@ -41,7 +41,7 @@ SHELLS.forEach((S, look) => {
 {
   const S = SHELLS[0], up = (KEYS_Y + 6) * HD, low = (shut: boolean) => {
     let n = 0;
-    drawBody3d((_x, y) => { if (y >= up) n++; }, 0, 0, S, 0, [120, 124, 132], keysOf(S), () => false, null, L, [0, 0], shut ? -(PHONE_H - KEYS_Y - 6) : 0);
+    drawBody3d((_x, y) => { if (y >= up) n++; }, 0, 0, S, 0, [120, 124, 132], null, keysOf(S), () => false, null, L, [0, 0], shut ? -(PHONE_H - KEYS_Y - 6) : 0);
     return n;
   };
   check('rail shut: nothing below the upper plate (but the edge, seen tilted)', low(true) < W * 3);
@@ -51,9 +51,9 @@ console.log(`12 bodies cast and lit in ${ms.toFixed(0)} ms (${(ms / 12).toFixed(
 // a frame with nothing changed: only the light
 {
   const S = SHELLS[0], K = keysOf(S);
-  drawBody3d(() => {}, 0, 0, S, 0, [1, 1, 1], K, () => false, null, L);
+  drawBody3d(() => {}, 0, 0, S, 0, [1, 1, 1], null, K, () => false, null, L);
   const t = performance.now();
-  for (let i = 0; i < 200; i++) drawBody3d(() => {}, 0, 0, S, 0, [1, 1, 1], K, () => false, null, L);
+  for (let i = 0; i < 200; i++) drawBody3d(() => {}, 0, 0, S, 0, [1, 1, 1], null, K, () => false, null, L);
   const per = (performance.now() - t) / 200;
   console.log(`light only: ${per.toFixed(2)} ms a frame`);
   check('light only under 2 ms', per < 2);
