@@ -2,6 +2,7 @@ import { ATLAS_COLS, buildAtlas } from '../atlas';
 import type { CharGrid } from '../grid';
 import type { Layout } from '../glRenderer';
 import { HD, type HdLayer } from '../hd';
+import { quadInverse } from '../screens';
 import type { World } from '../../sim/world';
 import type { View } from '../raycaster';
 import type { GpuWorld } from './world';
@@ -44,8 +45,24 @@ struct CU {
 // g0 to g3: the notebook glass's corners (top-left, top-right, bottom-right, bottom-left), faced or from
 // aside, for its glow; eye.x: how bright the screens look to the eye (EYE.k, thousandths, 600 on a lit street at night);
 // eye.y, eye.z: the phone rectangle's glow reach and strength (hundredths; the watch's small LCD reaches further)
+// the signed distance from a convex quad's edge (corners in order), negative inside
+fn sdQuad(p: vec2f, v0: vec2f, v1: vec2f, v2: vec2f, v3: vec2f) -> f32 {
+  var v = array<vec2f, 4>(v0, v1, v2, v3);
+  var d = 1e12; var inside = true;
+  for (var i = 0; i < 4; i++) {
+    let a = v[i]; let e = v[(i + 1) % 4] - a; let w = p - a;
+    let b = w - e * clamp(dot(w, e) / max(dot(e, e), 1e-6), 0.0, 1.0);
+    d = min(d, dot(b, b));
+    if (e.x * w.y - e.y * w.x < 0.0) { inside = false; }
+  }
+  return select(sqrt(d), -sqrt(d), inside);
+}
 fn inPhone(p: vec2i) -> bool { return all(p >= u.ph0) && all(p < u.ph1); }
-fn inTerm(p: vec2i) -> bool { return u.tmShow.x > 0 && all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
+fn inTerm(p: vec2i) -> bool {
+  if (u.tmGrid.x == 0) { return false; }
+  if (u.tmShow.x > 0) { return all(p >= u.tmOrigin) && all(p < u.tmOrigin + u.tmGrid * u.tmCell); }
+  return sdQuad(vec2f(p) + 0.5, vec2f(u.g0), vec2f(u.g1), vec2f(u.g2), vec2f(u.g3)) <= 0.0;
+}
 // a screen cell's light: its paper, and a little of its glyph's color (a glyph covers part of the cell)
 fn cellLight(cells: texture_2d<f32>, bg: texture_2d<f32>, c: vec2i) -> vec3f {
   let k = textureLoad(cells, c, 0); let b = textureLoad(bg, c, 0).rgb;
@@ -63,16 +80,18 @@ ${CU}
 @group(0) @binding(4) var uiBg: texture_2d<f32>;
 @group(0) @binding(5) var uiAtlas: texture_2d<f32>;
 @group(0) @binding(6) var hd: texture_2d<f32>;
-@group(0) @binding(7) var tmCells: texture_2d<f32>;
-@group(0) @binding(8) var tmBg: texture_2d<f32>;
-@group(0) @binding(9) var tmAtlas: texture_2d<f32>;
+// 15.16: the notebook's screen, drawn into a picture of its own (SCREEN_WGSL), and the sampler that lays
+// it on the glass from aside; qi: the inverse of the glass's homography (a monitor pixel to u, v)
+@group(0) @binding(7) var tmPic: texture_2d<f32>;
+@group(0) @binding(8) var tmSamp: sampler;
+@group(0) @binding(9) var<uniform> qi: array<vec4f, 3>;
 @group(0) @binding(10) var<storage, read> glow: array<vec4f>;
 @group(0) @binding(11) var<storage, read> mean: array<vec4f>;
 @group(0) @binding(12) var<storage, read> scr: array<vec4f>;
-// a screen's bloom at pixel p: the cells' blur (from base, a grid of g cells of size cs at o), between
-// cell centers, within the cells a to b
-fn scrAt(p: vec2i, o: vec2i, cs: vec2i, base: u32, g: vec2i, a: vec2i, b: vec2i) -> vec3f {
-  let f = (vec2f(p - o) + 0.5) / vec2f(cs) - 0.5; let i = vec2i(floor(f)); let t = fract(f);
+// a screen's bloom at f (in its cells, from their centers): the cells' blur (from base, a grid of g cells),
+// between cell centers, within the cells a to b
+fn scrAt(f: vec2f, base: u32, g: vec2i, a: vec2i, b: vec2i) -> vec3f {
+  let i = vec2i(floor(f)); let t = fract(f);
   let i0 = clamp(i, a, b - 1); let i1 = clamp(i + 1, a, b - 1);
   let s00 = scr[base + u32(i0.y * g.x + i0.x)].rgb; let s10 = scr[base + u32(i0.y * g.x + i1.x)].rgb;
   let s01 = scr[base + u32(i1.y * g.x + i0.x)].rgb; let s11 = scr[base + u32(i1.y * g.x + i1.x)].rgb;
@@ -99,17 +118,11 @@ fn halo(d: f32, h: f32, m: vec3f) -> vec3f {
   if (d < 0.0) { return m * ${CORE_K + HALO_K} * exp(d / (${CORE_R / 2} * h)); }
   return m * (${CORE_K} * exp(-d / (${CORE_R} * h)) + ${HALO_K} * exp(-d / (${HALO_R} * h)));
 }
-// the signed distance from a convex quad's edge (corners in order), negative inside
-fn sdQuad(p: vec2f, v0: vec2f, v1: vec2f, v2: vec2f, v3: vec2f) -> f32 {
-  var v = array<vec2f, 4>(v0, v1, v2, v3);
-  var d = 1e12; var inside = true;
-  for (var i = 0; i < 4; i++) {
-    let a = v[i]; let e = v[(i + 1) % 4] - a; let w = p - a;
-    let b = w - e * clamp(dot(w, e) / max(dot(e, e), 1e-6), 0.0, 1.0);
-    d = min(d, dot(b, b));
-    if (e.x * w.y - e.y * w.x < 0.0) { inside = false; }
-  }
-  return select(sqrt(d), -sqrt(d), inside);
+// a monitor pixel on the notebook's glass: u, v from its top-left (0 to 1 on it)
+fn glassUv(f: vec2f) -> vec2f {
+  let q = vec3f(f, 1.0);
+  let w = dot(qi[2].xyz, q);
+  return vec2f(dot(qi[0].xyz, q), dot(qi[1].xyz, q)) / select(w, 1e-6, abs(w) < 1e-6);
 }
 fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0; }
 
@@ -127,15 +140,27 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
   if (q.x >= 0 && q.y >= 0 && uc.x < u.uiGrid.x && uc.y < u.uiGrid.y) {
     let hp = textureLoad(hd, (q * ${HD}) / u.uiCell, 0);
     if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; }
-    let m = s - u.tmOrigin; let mc = m / max(u.tmCell, vec2i(1));
-    // (like the interface: a cell nothing was drawn in is clear, one with a glyph only lies over what is under it)
-    if (u.tmShow.x > 0 && m.x >= 0 && m.y >= 0 && mc.x < u.tmGrid.x && mc.y < u.tmGrid.y) {
-      let tb = textureLoad(tmBg, mc, 0);
-      if (tb.a > 0.25) { col = layer(tmCells, tmAtlas, m, mc, u.tmCell, select(col, tb.rgb, tb.a > 0.75)); }
-    } else if (u.tmShow.x > 0 && m.x >= -u.uiCell.x && m.y >= -u.uiCell.y && m.x < u.tmGrid.x * u.tmCell.x + u.uiCell.x && m.y < u.tmGrid.y * u.tmCell.y + u.uiCell.y) {
-      // within an interface cell round the layer: its nearest edge cell's paper (the screen's black edge)
-      let tb = textureLoad(tmBg, clamp(m / max(u.tmCell, vec2i(1)), vec2i(0), u.tmGrid - 1), 0);
-      if (tb.a > 0.75) { col = tb.rgb; }
+    if (u.tmGrid.x > 0) {
+      // the notebook's screen: its picture (a clear pixel shows what is under it; a glyph alone lies over it)
+      let sz = vec2i(textureDimensions(tmPic)); let m = s - u.tmOrigin;
+      if (u.tmShow.x > 0) {
+        // faced squarely: pixel for pixel
+        if (all(m >= vec2i(0)) && all(m < sz)) { let t = textureLoad(tmPic, m, 0); col = mix(col, t.rgb, t.a); }
+        else if (all(m >= -u.uiCell) && all(m < sz + u.uiCell)) {
+          // within an interface cell round it: its nearest edge pixel (the screen's black edge)
+          let t = textureLoad(tmPic, clamp(m, vec2i(0), sz - 1), 0);
+          if (t.a > 0.75) { col = t.rgb; }
+        }
+      } else {
+        // from aside: leaning with the glass (the interface's cells the glass touches are left clear for it)
+        let f = vec2f(s) + 0.5; let uv = glassUv(f);
+        let d = sdQuad(f, vec2f(u.g0), vec2f(u.g1), vec2f(u.g2), vec2f(u.g3));
+        if (d <= 0.0) { let t = textureSampleLevel(tmPic, tmSamp, uv, 0.0); col = mix(col, t.rgb, t.a); }
+        else if (d < f32(max(u.uiCell.x, u.uiCell.y))) {
+          let t = textureSampleLevel(tmPic, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0);
+          if (t.a > 0.75) { col = t.rgb; }
+        }
+      }
     }
     let ub = textureLoad(uiBg, uc, 0);
     if (ub.a > 0.25) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
@@ -145,9 +170,12 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
   let ek = f32(u.eye.x) / 600.0;
   let kPh = ek * f32(max(u.eye.z, 1)) / 100.0 / (1.0 + 3.0 * dot(mean[0].rgb, vec3f(0.3, 0.5, 0.2))); let kTm = ek / (1.0 + 3.0 * dot(mean[1].rgb, vec3f(0.3, 0.5, 0.2)));
   if (inPhone(s)) {
-    col += scrAt(s, u.uiOrigin, u.uiCell, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh;
+    let f = (vec2f(s - u.uiOrigin) + 0.5) / vec2f(u.uiCell) - 0.5;
+    col += scrAt(f, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh;
   } else if (inTerm(s)) {
-    col += scrAt(s, u.tmOrigin, u.tmCell, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm;
+    var f = (vec2f(s - u.tmOrigin) + 0.5) / vec2f(u.tmCell) - 0.5;
+    if (u.tmShow.x == 0) { f = glassUv(vec2f(s) + 0.5) * vec2f(u.tmGrid) - 0.5; }
+    col += scrAt(f, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm;
   }
   if (inPhone(s) || inTerm(s)) {
     // the screen's glass: the frame's bright lights mirrored on it, blurred (the world's glow only, in .a),
@@ -307,6 +335,39 @@ fn bright(c: vec3f) -> vec3f { return c * smoothstep(0.3, 0.85, dot(c, vec3f(0.3
   scr[i] = vec4f(s / ws, 0.0);
 }
 `;
+/**
+ * 15.16: the notebook's screen drawn into a picture of its own, the size it shows at faced squarely: its
+ * cells' paper, its pixel layer under the text (HD order 128), the glyphs, the pixel layer over them (255).
+ * A pixel nothing was drawn in is clear; a glyph on a clear cell keeps its coverage as alpha.
+ */
+const SCREEN_WGSL = /* wgsl */ `
+struct SU { cell: vec2i, grid: vec2i, hd: vec2i, pad: vec2i };
+@group(0) @binding(0) var<uniform> su: SU;
+@group(0) @binding(1) var tmCells: texture_2d<f32>;
+@group(0) @binding(2) var tmBg: texture_2d<f32>;
+@group(0) @binding(3) var tmAtlas: texture_2d<f32>;
+@group(0) @binding(4) var tmHd: texture_2d<f32>;
+@vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+  let p = vec2f(f32((i << 1u) & 2u), f32(i & 2u));
+  return vec4f(p * 2.0 - 1.0, 0.0, 1.0);
+}
+@fragment fn fs(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let p = vec2i(pos.xy); let c = p / su.cell;
+  let tb = textureLoad(tmBg, c, 0);
+  let h = textureLoad(tmHd, (p * su.hd) / (su.grid * su.cell), 0);
+  var col = vec4f(0.0);
+  if (tb.a > 0.75) { col = vec4f(tb.rgb, 1.0); }
+  if (h.a > 0.25 && h.a < 0.75) { col = vec4f(h.rgb, 1.0); }
+  if (tb.a > 0.25) {
+    let k = textureLoad(tmCells, c, 0); let gi = i32(k.r * 255.0 + 0.5);
+    let a = vec2i(gi % ${ATLAS_COLS}, gi / ${ATLAS_COLS}) * su.cell + (p - c * su.cell);
+    let g = textureLoad(tmAtlas, a, 0).r;
+    if (col.a > 0.0) { col = vec4f(mix(col.rgb, k.gba, g), 1.0); } else { col = vec4f(k.gba, g); }
+  }
+  if (h.a > 0.75) { col = vec4f(h.rgb, 1.0); }
+  return col;
+}
+`;
 const TEX = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST;
 
 export class GpuCompositor {
@@ -317,7 +378,15 @@ export class GpuCompositor {
   private pipe: GPURenderPipeline;
   private uni: GPUBuffer;
   private U = new Int32Array(36);
-  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas', GPUTexture>;
+  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic', GPUTexture>;
+  /** The notebook screen's picture: its pass, uniform (SU) and bindings; the glass's inverse homography; the sampler. */
+  private picPipe: GPURenderPipeline;
+  private picUni: GPUBuffer;
+  private picBind: GPUBindGroup | null = null;
+  private qiUni: GPUBuffer;
+  private QI = new Float32Array(12);
+  private samp: GPUSampler;
+  private tmHdAll = true;
   private bind: GPUBindGroup | null = null;
   private ui: Layout | null = null;
   private tm = { cols: 1, rows: 1 };
@@ -363,7 +432,13 @@ export class GpuCompositor {
     this.rayPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: rm, entryPoint: 'main' } });
     this.rayUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const one = () => this.tex(1, 1);
-    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one() };
+    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one() };
+    const pm = dev.createShaderModule({ code: SCREEN_WGSL });
+    pm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL screen ${m.lineNum}:${m.linePos} ${m.message}`)));
+    this.picPipe = dev.createRenderPipeline({ layout: 'auto', vertex: { module: pm, entryPoint: 'vs' }, fragment: { module: pm, entryPoint: 'fs', targets: [{ format: 'rgba8unorm' }] }, primitive: { topology: 'triangle-list' } });
+    this.picUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.qiUni = dev.createBuffer({ size: this.QI.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.samp = dev.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge' });
   }
 
   private tex(w: number, h: number, usage = TEX): GPUTexture {
@@ -374,7 +449,7 @@ export class GpuCompositor {
     this.dev.queue.copyExternalImageToTexture({ source: cv }, { texture: t }, [cv.width, cv.height]);
     return t;
   }
-  private set(k: keyof GpuCompositor['t'], t: GPUTexture) { this.t[k].destroy(); this.t[k] = t; this.bind = null; }
+  private set(k: keyof GpuCompositor['t'], t: GPUTexture) { this.t[k].destroy(); this.t[k] = t; this.bind = null; this.picBind = null; }
 
   /** The same as GlyphRenderer.setLayout: the world's grid and atlas, the interface's, the HD layer. */
   setLayout(l: Layout, ui: Layout) {
@@ -396,6 +471,7 @@ export class GpuCompositor {
     this.set('tmCells', this.tex(cols, rows));
     this.set('tmBg', this.tex(cols, rows));
     this.set('tmAtlas', this.atlasTex(cellW, cellH));
+    this.set('tmPic', this.tex(cols * cellW, rows * cellH, GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT));
   }
 
   private up(t: GPUTexture, data: Uint8ClampedArray, w: number, h: number, y0 = 0) {
@@ -404,11 +480,12 @@ export class GpuCompositor {
 
   /**
    * This frame: the world drawn on the GPU (from `world` and `v`), then every layer over it, in one submit.
-   * term: the notebook's screen while it is up (its layer shown at x, y when `show`; `glass`, its glass's
-   * corners in pixels, x, y from the top-left clockwise, for its glow); phone: the phone's screen, in
+   * term: the notebook's screen while it is up (its cells, and its pixel layer `hd`; shown pixel for pixel
+   * at x, y when `show`, else laid on `glass`, its glass's corners in pixels, x, y from the top-left
+   * clockwise, which also give its glow); phone: the phone's screen, in
    * interface cells (a fifth number: how much further and stronger it glows, the watch's LCD).
    */
-  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null) {
+  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null) {
     const L = this.ui!, gw = this.gw;
     this.up(this.t.uiCells, ui.cells, L.cols, L.rows);
     this.up(this.t.uiBg, ui.bg, L.cols, L.rows);
@@ -426,6 +503,19 @@ export class GpuCompositor {
       this.U.set(term.glass.map(Math.round), 24);
       this.up(this.t.tmCells, term.grid.cells, this.tm.cols, this.tm.rows);
       this.up(this.t.tmBg, term.grid.bg, this.tm.cols, this.tm.rows);
+      // its pixel layer, as the interface's: only the rows touched since the last upload
+      const th = term.hd;
+      if (this.t.tmHd.width !== th.w || this.t.tmHd.height !== th.h) { this.set('tmHd', this.tex(th.w, th.h)); this.tmHdAll = true; }
+      th.mark();
+      if (this.tmHdAll) { this.up(this.t.tmHd, th.px, th.w, th.h); this.tmHdAll = false; }
+      else if (th.hi >= th.lo) {
+        const y0 = Math.max(0, th.lo), y1 = Math.min(th.h - 1, th.hi);
+        this.up(this.t.tmHd, th.px.subarray(y0 * th.w * 4, (y1 + 1) * th.w * 4), th.w, y1 - y0 + 1, y0);
+      }
+      th.lo = Infinity; th.hi = -1;
+      const qi = quadInverse(term.glass);
+      if (qi) { for (let r = 0; r < 3; r++) this.QI.set(qi.slice(r * 3, r * 3 + 3), r * 4); this.dev.queue.writeBuffer(this.qiUni, 0, this.QI); }
+      this.dev.queue.writeBuffer(this.picUni, 0, new Int32Array([this.U[12], this.U[13], this.tm.cols, this.tm.rows, th.w, th.h, 0, 0]));
     } else { this.U[16] = 0; this.U[17] = 0; this.U[22] = 0; }
     // the phone's screen (in interface cells) in pixels
     if (phone) {
@@ -466,7 +556,8 @@ export class GpuCompositor {
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: this.uni } }, { binding: 1, resource: { buffer: gw.out } },
-          ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmCells, T.tmBg, T.tmAtlas].map((t, k) => ({ binding: k + 2, resource: t.createView() })),
+          ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmPic].map((t, k) => ({ binding: k + 2, resource: t.createView() })),
+          { binding: 8, resource: this.samp }, { binding: 9, resource: { buffer: this.qiUni } },
           { binding: 10, resource: { buffer: G.glow } }, { binding: 11, resource: { buffer: this.meanBuf } },
           { binding: 12, resource: { buffer: this.scrBuf } }],
       });
@@ -493,6 +584,15 @@ export class GpuCompositor {
     mp.setPipeline(this.scrPipe); mp.setBindGroup(0, this.scrBind!);
     mp.dispatchWorkgroups(Math.ceil(Math.max(L.cols, this.tm.cols) / 8), Math.ceil(Math.max(L.rows, this.tm.rows) / 8), 2);
     mp.end();
+    if (term) {
+      // the notebook screen's picture, before the frame that lays it on the glass
+      if (!this.picBind) this.picBind = this.dev.createBindGroup({ layout: this.picPipe.getBindGroupLayout(0), entries: [
+        { binding: 0, resource: { buffer: this.picUni } },
+        ...[this.t.tmCells, this.t.tmBg, this.t.tmAtlas, this.t.tmHd].map((t, k) => ({ binding: k + 1, resource: t.createView() }))] });
+      const pp = enc.beginRenderPass({ colorAttachments: [{ view: this.t.tmPic.createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 0] }] });
+      pp.setPipeline(this.picPipe); pp.setBindGroup(0, this.picBind); pp.draw(3);
+      pp.end();
+    }
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind); pass.draw(3);
     pass.end();

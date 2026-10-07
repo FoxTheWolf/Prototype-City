@@ -41,6 +41,7 @@ import { GpuWorld } from './render/gpu/world';
 import { GpuCompositor } from './render/gpu/compositor';
 import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer } from './render/hd';
+import { SCREEN_PX, testPattern } from './render/screens';
 import { setHd } from './phone/lcd';
 import { daylight } from './render/sky';
 import { cctvLook } from './render/cctv';
@@ -289,6 +290,8 @@ let layout: Layout;
 let ui: CharGrid;
 /** The HD layer: pixels at HD x the interface's grid (the phone's photos). */
 let hd: HdLayer;
+/** 15.16: the notebook screen's own pixel layer, at the screen's resolution (wiped each frame, as hd). */
+const termHd = new HdLayer(SCREEN_PX.laptop[0], SCREEN_PX.laptop[1]);
 /**
  * The notebook's screen layer (3D look): the system's console, TERM_W x TERM_H, or the firmware's
  * text mode, 80 x 25, each with its cell size so both fill the same 16:10 screen, about two thirds of
@@ -1159,7 +1162,8 @@ function frame(now: number) {
     worldFrames++;
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
-  ui.wipe(); hd.wipe();
+  ui.wipe(); hd.wipe(); termHd.wipe();
+  if (DEBUG.screenTest && laptop.open) testPattern(termHd);
   if (calib) calibTags.forEach((tag, k) => {
     const x = Math.round((layout.originX + k * Math.floor(grid.cols / 3) * layout.cellW - uiLayout.originX) / uiLayout.cellW) + 1;
     ui.text(Math.max(0, x), 2, ` ${tag} `, [255, 230, 160], [12, 10, 8]);
@@ -1440,7 +1444,7 @@ function frame(now: number) {
   const termAt = screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null;
   // the GPU's compositor also takes the screen seen from aside (not shown as a layer), for its glow
   const G = glassBox, toPx = (c: number, k: number) => (k & 1 ? uiLayout.originY + c * uiLayout.cellH : uiLayout.originX + c * uiLayout.cellW);
-  const lapAt = G && termMode ? { grid: T3, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
+  const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at);
   else renderer.draw(grid, ui, hd, termAt);

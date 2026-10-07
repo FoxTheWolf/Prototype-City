@@ -146,16 +146,9 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
     let r = tmp.cells[k + 1], gg = tmp.cells[k + 2], b = tmp.cells[k + 3];
     const t = tmp.depth[i], camX = (2 * (x + 0.5)) / cols - 1, rx = dirX + cam.plX * camX, ry = dirY + cam.plY * camX, z = eye + ((cam.hor - (y + 0.5)) * t) / scale;
     const ox = rx * t - obj.x, wy = ry * t;
-    if (!square && P.lid >= 1 && Math.abs(ox - xh) < 0.002 && rx > 0.05) {
-      // from aside: the lid's glass shows the screen's characters where the ray meets it
-      const u = (wy + GW / 2) / GW, v = (glass1 - z) / GH;
-      if (u >= 0 && u < 1 && v >= 0 && v < 1) {
-        const q = (Math.floor(v * TH) * TW + Math.floor(u * TW)) * 4;
-        g.put(i, term.cells[q], term.cells[q + 1], term.cells[q + 2], term.cells[q + 3]);
-        g.setBg(i, term.bg[q], term.bg[q + 1], term.bg[q + 2]);
-        continue;
-      }
-    }
+    // from aside (15.16): every cell the glass touches is left clear, and the GPU lays the screen's own
+    // picture there in perspective (the compositor fills the sliver round it with its edge)
+    if (!square && glassBox && touches(glassBox, x, y)) continue;
     if (on && ox < xh - 0.001) {
       // the screen's light, falling off with the distance to the glass
       const d = Math.hypot(xh - ox, Math.max(0, Math.abs(wy) - halfLid), Math.max(0, glass0 - z, z - glass1));
@@ -226,6 +219,18 @@ function project(v: Cam, o: Obj, x: number, y: number, z: number, cols: number):
  * from, in its color, stronger for a light behind the player (the glass faces them). Off, the glint
  * shows plainly on the dark glass.
  */
+/** Whether the interface cell (x, y) touches the convex quad q (cells, from the top-left clockwise): a corner or its middle inside. */
+function touches(q: readonly number[], x: number, y: number): boolean {
+  const inside = (px: number, py: number) => {
+    for (let k = 0; k < 4; k++) {
+      const ax = q[k * 2], ay = q[k * 2 + 1], bx = q[((k + 1) % 4) * 2], by = q[((k + 1) % 4) * 2 + 1];
+      if ((bx - ax) * (py - ay) - (by - ay) * (px - ax) < 0) return false;
+    }
+    return true;
+  };
+  return inside(x + 0.5, y + 0.5) || inside(x, y) || inside(x + 1, y) || inside(x, y + 1) || inside(x + 1, y + 1);
+}
+
 function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: number, on: boolean) {
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;

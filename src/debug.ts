@@ -22,4 +22,7 @@ export const DEBUG = {
   /** (2026-10-06) Turning the view with the keyboard (Q/E, the arrows): taken off for players, the keys are
    *  worth more for other things; true brings it back for tests without a mouse. */
   keyTurn: false,
+  /** (15.16) A test pattern on the notebook screen's pixel layer: its edge, a grid, the diagonals, a circle
+   *  and color bars, to judge the screen faced, from aside and up close. */
+  screenTest: false,
 };
