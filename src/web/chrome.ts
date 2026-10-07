@@ -3,18 +3,20 @@ import { Img, dark, hex, Paint, type C3 } from '../render/paint2d';
 
 /**
  * 15.17c: the Ferret's frame in pixels (docs/identidade/ferret-manual.html, "A moldura"), painted on the
- * notebook screen's HD layer under the text the browser writes in its cells. The rows: the tabs (1), the
- * navigation bar (2: the round back button, forward, reload or stop, home, the address, the Lookwise box,
- * the ferret), the bookmarks (1), the page, the status line (1). Everything here is in the pane's cells
+ * notebook screen's HD layer under the text the browser writes in its cells. The rows: the tabs (2: the strip
+ * with the name Ferret on the right, the tabs' titles under it), the navigation bar (2 and a bit: the round back
+ * button, forward, reload or stop, home, the address, the Lookwise box, the ferret), the bookmarks (1 and a bit),
+ * the page, the status line (1). The frame is the Ferret's cream and earth (the user, 2026-10-07: a grey frame
+ * did not stand apart from a white page). Everything here is in the pane's cells
  * (CW x CH pixels each) from the pane's left edge `ox`, so the browser and this agree on where things are.
  */
 export const CW = 8, CH = 16;
-/** The rows: the tabs, the navigation bar (two), the bookmarks; the page starts at PAGE_Y; the status is the last. */
-export const TABS_Y = 0, NAV_Y = 1, MARKS_Y = 3, PAGE_Y = 4;
+/** The rows: the tabs (their titles on TAB_ROW), the navigation bar, the bookmarks; the page starts at PAGE_Y; the status is the last. */
+export const TABS_Y = 0, TAB_ROW = 1, NAV_Y = 2, MARKS_Y = 5, PAGE_Y = 6;
 /** A tab's width in cells; where its icon, title and close box fall within it. */
-export const TAB_W = 22, TAB_ICON = 1, TAB_TEXT = 3, TAB_TEXT_W = 15, TAB_X = 19;
+export const TAB_W = 22, TAB_ICON = 1, TAB_TEXT = 4, TAB_TEXT_W = 14, TAB_X = 19;
 /** The navigation bar's buttons (cell spans) and fields; the text of the address and the search is on NAV_TEXT_Y. */
-export const NAV_TEXT_Y = 2, BACK: [number, number] = [0, 4], FWD: [number, number] = [4, 7], RELOAD: [number, number] = [7, 9], HOME: [number, number] = [10, 13];
+export const NAV_TEXT_Y = 3, BACK: [number, number] = [0, 4], FWD: [number, number] = [4, 7], RELOAD: [number, number] = [7, 9], HOME: [number, number] = [10, 13];
 export const ADDR_X = 13;
 /** The address field ends SEARCH_W + 6 cells before the pane's right edge; the search box, then the ferret. */
 export const SEARCH_W = 16;
@@ -50,68 +52,75 @@ export interface ChromeState {
 const ERR_FERRET = 120, ERR_FERRET_AT: [number, number] = [3, 3];
 
 const B = { cream: hex('#f1e4c8'), cafe: hex('#4a2c1a'), pet: hex('#6b4a2e'), pet2: hex('#7a5838'), eye: hex('#120a06'), nose: hex('#2e170c'), muzzle: hex('#fbf6ea'), shade: hex('#d9c6a0') };
-const LINE: C3 = hex('#a3aab4'), FIELD_LINE: C3 = hex('#7f8b99'), GOLD: C3 = hex('#c9a227');
+const FIELD_LINE: C3 = hex('#a08c6a'), GOLD: C3 = hex('#c9a227');
+
+/** The frame's cream and earth (the cells' backgrounds under the text are these too, browser.ts). */
+export const FR = {
+  strip: hex('#d8c8a6'), strip2: hex('#c8b590'), tabOn: hex('#f8f1e2'), tabOff: hex('#e6d9bd'), tabOffHi: hex('#efe5cf'),
+  nav: hex('#f8f1e2'), nav2: hex('#e9dcc0'), marks: hex('#efe4cc'), status: hex('#ece0c6'), status2: hex('#dccdae'), line: hex('#b09a74'), brand: hex('#6b4a2e'),
+};
 
 /** The whole frame (not the page's own content), for a pane W x H cells at cell column ox. */
 export function paintChrome(P: Paint, S: ChromeState, ox: number) {
   const X = ox * CW, W = S.W, PW = W * CW, R = (r: number) => r * CH;
-  // the tabs: a strip, a rounded tab each (the active one lighter, merging into the bar below), the "+"
-  P.grad(X, R(TABS_Y), PW, CH, [[0, hex('#c3c8d0')], [1, hex('#b3b9c2')]]);
+  // the tabs: a strip two rows tall, a rounded tab each (the active one lighter, merging into the bar below), the "+"
+  P.grad(X, R(TABS_Y), PW, R(NAV_Y), [[0, FR.strip], [1, FR.strip2]]);
   S.tabs.forEach((t, i) => {
-    const tx = X + (1 + i * TAB_W) * CW, tw = (TAB_W - 1) * CW, y0 = R(TABS_Y) + 1, y1 = R(TABS_Y + 1);
-    const pts = [tx, y1, tx + 4, y0 + 1, tx + 8, y0, tx + tw - 8, y0, tx + tw - 4, y0 + 1, tx + tw, y1];
-    P.poly(pts, dark(LINE, 0.1));
-    const inner = [tx + 1, y1, tx + 5, y0 + 2, tx + 8, y0 + 1, tx + tw - 8, y0 + 1, tx + tw - 5, y0 + 2, tx + tw - 1, y1];
-    P.poly(inner, t.on ? hex('#f6f7f9') : hex('#d6dae0'));
-    if (!t.on) P.rect(tx + 2, y0 + 2, tw - 4, 4, hex('#e2e5e9'));
-    icon(P, t.icon, tx + TAB_ICON * CW, R(TABS_Y));
+    const tx = X + (1 + i * TAB_W) * CW, tw = (TAB_W - 1) * CW, y0 = R(TAB_ROW) - 7, y1 = R(NAV_Y);
+    const pts = [tx, y1, tx + 5, y0 + 1, tx + 9, y0, tx + tw - 9, y0, tx + tw - 5, y0 + 1, tx + tw, y1];
+    P.poly(pts, FR.line);
+    const inner = [tx + 1, y1, tx + 6, y0 + 2, tx + 9, y0 + 1, tx + tw - 9, y0 + 1, tx + tw - 6, y0 + 2, tx + tw - 1, y1];
+    P.poly(inner, t.on ? FR.tabOn : FR.tabOff);
+    if (!t.on) P.rect(tx + 3, y0 + 2, tw - 6, 5, FR.tabOffHi);
+    icon(P, t.icon, tx + TAB_ICON * CW + 4, R(TAB_ROW));
   });
+  // the name, on the strip's right: the ferret's face and "Ferret" (the cells write the word)
+  icon(P, { k: 'ferret' }, X + PW - 10 * CW, R(TABS_Y));
   // the navigation bar
-  const nb = R(NAV_Y), cy = nb + 20;
-  P.grad(X, nb, PW, 2 * CH, [[0, hex('#f6f7f9')], [1, hex('#d9dde3')]]);
-  P.rect(X, R(MARKS_Y) - 1, PW, 1, LINE);
+  const nb = R(NAV_Y), mb = R(MARKS_Y) - 6, cy = R(NAV_TEXT_Y) + 7;
+  P.grad(X, nb, PW, mb - nb, [[0, FR.nav], [1, FR.nav2]]);
   // back: the big round one; forward: smaller, brown only when there is somewhere to go
   const bx = X + 16;
-  P.disc(bx, cy, 12.5, hex('#6f7884'));
-  P.grad(bx - 11.5, cy - 11.5, 23, 23, [[0, hex('#fdfdfd')], [0.5, hex('#e3e7ec')], [1, hex('#b9c1cb')]], true, 11.5);
-  P.poly([bx - 7, cy, bx + 1, cy - 7, bx + 1, cy - 2.5, bx + 8, cy - 2.5, bx + 8, cy + 2.5, bx + 1, cy + 2.5, bx + 1, cy + 7], S.canBack ? B.pet : hex('#9aa3ad'));
+  P.disc(bx, cy, 12.5, hex('#8a7556'));
+  P.grad(bx - 11.5, cy - 11.5, 23, 23, [[0, hex('#fffdf8')], [0.5, hex('#efe6d4')], [1, hex('#cdbd9f')]], true, 11.5);
+  P.poly([bx - 7, cy, bx + 1, cy - 7, bx + 1, cy - 2.5, bx + 8, cy - 2.5, bx + 8, cy + 2.5, bx + 1, cy + 2.5, bx + 1, cy + 7], S.canBack ? B.pet : hex('#b3a68e'));
   const fx = X + 41;
-  P.disc(fx, cy, 8.5, hex('#8a929d'));
-  P.grad(fx - 7.5, cy - 7.5, 15, 15, [[0, hex('#fdfdfd')], [1, hex('#c3cad3')]], true, 7.5);
-  P.poly([fx + 5, cy, fx - 0.5, cy - 5, fx - 0.5, cy - 2, fx - 5, cy - 2, fx - 5, cy + 2, fx - 0.5, cy + 2, fx - 0.5, cy + 5], S.canFwd ? B.pet : hex('#a9b1ba'));
+  P.disc(fx, cy, 8.5, hex('#9a8868'));
+  P.grad(fx - 7.5, cy - 7.5, 15, 15, [[0, hex('#fffdf8')], [1, hex('#d6c8ac')]], true, 7.5);
+  P.poly([fx + 5, cy, fx - 0.5, cy - 5, fx - 0.5, cy - 2, fx - 5, cy - 2, fx - 5, cy + 2, fx - 0.5, cy + 2, fx - 0.5, cy + 5], S.canFwd ? B.pet : hex('#bdb19a'));
   // reload (a green turning arrow) or, while loading, stop (a red cross)
   const rx = X + RELOAD[0] * CW + 8;
   if (S.loading) { P.line(rx - 5, cy - 5, rx + 5, cy + 5, 2.6, hex('#c0392b')); P.line(rx + 5, cy - 5, rx - 5, cy + 5, 2.6, hex('#c0392b')); }
   else {
     P.ring(rx, cy, 6.5, 2.2, hex('#2e7d4f'));
-    P.rect(rx + 1, cy - 8, 7, 6, hex('#eceef1'));
+    P.rect(rx + 1, cy - 8, 7, 6, FR.nav);
     P.poly([rx + 1, cy - 9, rx + 6, cy - 6, rx + 1, cy - 2], hex('#2e7d4f'));
   }
   // home: a house's outline
-  const hx = X + HOME[0] * CW + 12, hc: C3 = hex('#4a5563');
+  const hx = X + HOME[0] * CW + 12, hc: C3 = hex('#5a4630');
   P.line(hx - 9, cy + 1, hx, cy - 7, 2, hc); P.line(hx, cy - 7, hx + 9, cy + 1, 2, hc);
   P.line(hx - 6, cy, hx - 6, cy + 7, 2, hc); P.line(hx + 6, cy, hx + 6, cy + 7, 2, hc); P.line(hx - 6, cy + 7, hx + 6, cy + 7, 2, hc);
   // the address: a white field (light yellow with a padlock on https), the site's icon, the star
-  const ax = X + ADDR_X * CW, aw = (addrEnd(W) - ADDR_X) * CW, fy = R(NAV_TEXT_Y) - 2, fh = CH + 1;
+  const ax = X + ADDR_X * CW, aw = (addrEnd(W) - ADDR_X) * CW, fy = R(NAV_TEXT_Y) - 2, fh = CH + 3;
   P.rrect(ax, fy, aw, fh, 3, S.secure ? GOLD : FIELD_LINE);
   P.rrect(ax + 1, fy + 1, aw - 2, fh - 2, 2, S.secure ? hex('#fff8c4') : [255, 255, 255]);
-  icon(P, S.icon, ax + CW, fy + 1);
+  icon(P, S.icon, ax + CW - 2, fy + 2);
   if (S.secure) lock(P, ax + aw - 4 * CW + 2, fy + 6, GOLD);
   starIcon(P, ax + aw - 2 * CW + 2, fy + fh / 2, S.marked ? hex('#f2b51c') : null);
   // the search box: rounded, the owl, the name in grey (the cells write it)
   const sx = X + searchX(W) * CW, sw = SEARCH_W * CW;
   P.rrect(sx, fy, sw, fh, fh / 2, FIELD_LINE);
   P.rrect(sx + 1, fy + 1, sw - 2, fh - 2, fh / 2 - 1, [255, 255, 255]);
-  icon(P, { k: 'look' }, sx + 6, fy + 1);
+  icon(P, { k: 'look' }, sx + 6, fy + 2);
   // the ferret in the corner, behind a thin rule
-  P.rect(X + PW - 4 * CW - 3, nb + 4, 1, 2 * CH - 8, hex('#b6bdc6'));
-  sprite(P, ferretSprite(S.ferret[0], S.ferret[1]), X + PW - 4 * CW + 1, nb + 2);
-  // the bookmarks
-  const mb = R(MARKS_Y);
-  P.rect(X, mb, PW, CH, hex('#e6e9ed'));
-  P.rect(X, mb + CH - 1, PW, 1, LINE);
+  P.rect(X + PW - 4 * CW - 3, nb + 6, 1, mb - nb - 12, FR.line);
+  sprite(P, ferretSprite(S.ferret[0], S.ferret[1]), X + PW - 4 * CW + 1, cy - 14);
+  // the bookmarks: a band a row and a bit, a rule over it and under it
+  P.rect(X, mb, PW, R(PAGE_Y) - mb, FR.marks);
+  P.rect(X, mb, PW, 1, FR.line);
+  P.rect(X, R(PAGE_Y) - 1, PW, 1, FR.line);
   let mx = 1;
-  for (const m of S.marks) { if (mx + 2 + m.w > W) break; icon(P, m.icon, X + mx * CW, mb); mx += m.w + 4; }
+  for (const m of S.marks) { if (mx + 3 + m.w > W) break; icon(P, m.icon, X + mx * CW, R(MARKS_Y)); mx += m.w + 5; }
   // the page's scroll bar: thin, rounded, in the last column
   const py = R(PAGE_Y), ph = (S.H - PAGE_Y - 1) * CH;
   if (S.scroll) {
@@ -128,11 +137,11 @@ export function paintChrome(P: Paint, S: ChromeState, ox: number) {
   }
   // the status line, its progress bar (the burrow's earth) and the padlock
   const sb = R(S.H - 1);
-  P.grad(X, sb, PW, CH, [[0, hex('#e9ecef')], [1, hex('#d6dae0')]]);
-  P.rect(X, sb, PW, 1, LINE);
+  P.grad(X, sb, PW, CH, [[0, FR.status], [1, FR.status2]]);
+  P.rect(X, sb, PW, 1, FR.line);
   if (S.progress !== null) {
     const gx = X + PW - 32 * CW, gw = 16 * CW;
-    P.rect(gx, sb + 4, gw, 9, hex('#8a929d')); P.rect(gx + 1, sb + 5, gw - 2, 7, [255, 255, 255]);
+    P.rect(gx, sb + 4, gw, 9, hex('#9a8868')); P.rect(gx + 1, sb + 5, gw - 2, 7, [255, 255, 255]);
     if (S.progress > 0) P.grad(gx + 1, sb + 5, (gw - 2) * S.progress, 7, [[0, hex('#a27a52')], [1, B.pet]]);
   }
   if (S.secure) lock(P, X + PW - 14 * CW, sb + 4, GOLD);

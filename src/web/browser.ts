@@ -16,11 +16,15 @@
 import { Scr } from '../laptop/screen';
 import { type World } from '../sim/world';
 import { layout, opKb, SUBMIT, type C3, type Field, type HdOp, type Laid, type Link } from './page';
-import { animated, paintOps } from './ops';
+import { animated, paintOps, type OwlCtx } from './ops';
 import { CH, CW } from './chrome';
 import { certExpiry, fetchUrl, portalUrl, searchUrl, SEARCH_HOST, webOf, type Fetched } from './sites';
 import { mailHost } from './webmail';
-import { ADDR_X, addrEnd, BACK, FWD, HOME, iconOf, MARKS_Y, NAV_TEXT_Y, PAGE_Y, RELOAD, SEARCH_W, searchX, TAB_TEXT, TAB_TEXT_W, TAB_W, TAB_X, paintChrome, type ChromeState, type FerretState, type Icon } from './chrome';
+import { WIRE_HOST } from './streetwire';
+import { GRID_HOST } from './gridlink';
+import { FORUM_HOST } from './forum';
+import { DEBUG } from '../debug';
+import { ADDR_X, addrEnd, BACK, FWD, HOME, iconOf, MARKS_Y, NAV_TEXT_Y, NAV_Y, PAGE_Y, TAB_ROW, FR, RELOAD, SEARCH_W, searchX, TAB_TEXT, TAB_TEXT_W, TAB_W, TAB_X, paintChrome, type ChromeState, type FerretState, type Icon } from './chrome';
 import { hash3 } from '../core/rng';
 import { type Paint } from '../render/paint2d';
 
@@ -40,7 +44,7 @@ const HISTORY_MAX = 300;
 export const ERR_X = 22;
 
 const INK: C3 = [0, 0, 0], WHITE: C3 = [255, 255, 255], ERR: C3 = [250, 250, 250], VISITED: C3 = [85, 26, 139];
-const TAB_BG: C3 = [187, 192, 200], NAV_BG: C3 = [232, 234, 238], MARK_BG: C3 = [230, 233, 237], STATUS_BG: C3 = [222, 225, 230], GREY: C3 = [154, 163, 173];
+const TAB_BG: C3 = [208, 192, 158], NAV_BG: C3 = [240, 230, 210], MARK_BG: C3 = [239, 228, 204], STATUS_BG: C3 = [228, 216, 190], GREY: C3 = [160, 148, 128];
 
 /** One tab: its page and where it is in it, its own back and forward. */
 interface Tab {
@@ -77,6 +81,8 @@ export class Browser {
   constructor(private world: World, private net: Net, private quit: () => void, private W: number, private H: number, private files: Files | null = null) {
     const m = files?.read('bookmarks');
     this.marks = m === null || m === undefined ? this.factoryMarks() : m.split('\n').filter((l) => l.includes('\t')).map((l) => l.split('\t') as [string, string]);
+    // (debug) the canonical sites a click away, added once if missing
+    if (DEBUG.webMarks) for (const [t, u] of [['(dbg) Streetwire', `http://${WIRE_HOST}/`], ['(dbg) GridLink', `http://${GRID_HOST}/`], ['(dbg) Switchboard', `http://${FORUM_HOST}/`]] as [string, string][]) if (!this.marks.some(([, x]) => x === u)) this.marks.push([t, u]);
     this.seen = new Set((files?.read('history') ?? '').split('\n').filter(Boolean));
     this.trusted = new Set((files?.read('exceptions') ?? '').split('\n').filter(Boolean));
   }
@@ -122,14 +128,14 @@ export class Browser {
 
   /** A click at (x, y) in the browser's own pane (the window manager maps it, 15.7). */
   click(x: number, y: number, now: number) {
-    if (y === 0) {
+    if (y < NAV_Y) {
       // a tab: its close box, or picking it; the "+" after the last
       const i = Math.floor((x - 1) / TAB_W), off = x - 1 - i * TAB_W;
       if (i >= 0 && i < this.tabs.length) { if (i === this.cur && off === TAB_X) this.closeTab(); else if (i !== this.cur) { this.cur = i; this.sfx.push('tick'); } }
       else if (i === this.tabs.length && off >= 0 && off < 3) this.newTab(now);
       return;
     }
-    if (y === 1 || y === 2) {
+    if (y >= NAV_Y && y < MARKS_Y) {
       const on = ([a, b]: [number, number]) => x >= a && x < b;
       this.editing = false;
       if (on(BACK)) this.goBack(now);
@@ -143,7 +149,7 @@ export class Browser {
     }
     if (y === MARKS_Y) {
       let mx = 1;
-      for (const [title, url] of this.marks) { const w = Math.min(18, title.length); if (x >= mx && x < mx + 2 + w) { this.go(url, now); return; } mx += w + 4; }
+      for (const [title, url] of this.marks) { const w = Math.min(18, title.length); if (x >= mx && x < mx + 3 + w) { this.go(url, now); return; } mx += w + 5; }
       return;
     }
     const eb = this.errBtns.find((b) => b.y === y && x >= b.x && x < b.x + b.w);
@@ -154,7 +160,7 @@ export class Browser {
       this.editing = false;
       if (!on) return;
       T.sel = L.indexOf(on);
-      if ('url' in on) { if (on.url === SUBMIT) this.submit(now); else this.go(on.url, now); }
+      if ('url' in on) { if (on.url.startsWith(SUBMIT)) this.submit(now, on.url.slice(SUBMIT.length)); else this.go(on.url, now); }
       // a text box: picking it (sel) is enough; keys and a paste now go into it
     }
   }
@@ -180,6 +186,7 @@ export class Browser {
     T.offline = !n.up; T.kbps = n.kbps;
     T.got = T.offline ? null : fetchUrl(this.world, url, form);
     T.laid = T.got?.page ? layout(T.got.page, this.W - 1) : null;
+    for (const F of T.laid?.fields ?? []) if (F.init) T.vals.set(F.name, F.init);
     if (T.got?.page) { T.url = T.got.cert ? T.got.page.url.replace(/^http:/, 'https:') : T.got.page.url; this.remember(T.url); }
     else if (T.got?.cert) T.url = T.url.replace(/^http:/, 'https:');
     // a form's first box takes the keys at once, as the sign-in pages of 2008 did
@@ -219,10 +226,11 @@ export class Browser {
     return L ? [...L.links, ...L.fields].sort((a, b) => a.y - b.y || a.x - b.x) : [];
   }
 
-  /** Send the page's boxes to its form. */
-  private submit(now: number) {
-    const to = this.T.got?.page?.form;
-    if (to) this.go(to, now, true, new Map(this.T.vals));
+  /** Send the page's boxes to its form (with the button's name set, when it has one: Owl's Pick). */
+  private submit(now: number, name = '') {
+    const to = this.T.got?.page?.form, vals = new Map(this.T.vals);
+    if (name) vals.set(name, '1');
+    if (to) this.go(to, now, true, vals);
   }
 
   /** Where the tab's page is in coming down: 0..1 of it arrived (1 also for an error shown), what the status line says, and when it ended. */
@@ -233,11 +241,14 @@ export class Browser {
     if (t < LOOKUP) return [0, `Looking up ${host}...`, 0];
     if (G.error === 'dns') return [1, 'Done', T.at + LOOKUP];
     if (t < LOOKUP + CONNECT) return [0, `Connecting to ${host}...`, 0];
+    // (a server that thinks first: Lookwise searching, its owl at work on the empty page)
+    const think = G.think ?? 0;
+    if (t < LOOKUP + CONNECT + think) return [0, `Waiting for ${host}...`, 0];
     if (G.error === 'down') return t < LOOKUP + CONNECT + TIMEOUT ? [0, `Waiting for ${host}...`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + TIMEOUT];
     if (this.untrusted(T)) return [1, 'Done', T.at + LOOKUP + CONNECT];
     // the text first, then the pictures one by one (as a page of 2008 came down)
-    const kb = G.page!.kb, total = kb + this.itemsKb(T), dur = (total * 8) / Math.max(1, T.kbps), f = Math.min(1, (t - LOOKUP - CONNECT) / dur);
-    if (f >= 1) return [1, 'Done', T.at + LOOKUP + CONNECT + dur];
+    const kb = G.page!.kb, total = kb + this.itemsKb(T), dur = (total * 8) / Math.max(1, T.kbps), f = Math.min(1, (t - LOOKUP - CONNECT - think) / dur);
+    if (f >= 1) return [1, 'Done', T.at + LOOKUP + CONNECT + think + dur];
     if (f * total < kb) return [f, `Transferring data from ${host}... ${Math.floor(f * total)} of ${kb} KB`, 0];
     return [f, `Loading ${this.arrived(T, f)} of ${this.items(T).length} items...`, 0];
   }
@@ -295,7 +306,7 @@ export class Browser {
     else if (key === 'PageUp') T.top = Math.max(0, T.top - view + 2);
     else if ((key === 'Tab' || key === 'ArrowRight') && L.length) { T.sel = (T.sel + 1) % L.length; seen(); }
     else if (key === 'ArrowLeft' && L.length) { T.sel = (T.sel - 1 + L.length) % L.length; seen(); }
-    else if (key === 'Enter' && on && 'url' in on) { if (on.url === SUBMIT) this.submit(now); else this.go(on.url, now); }
+    else if (key === 'Enter' && on && 'url' in on) { if (on.url.startsWith(SUBMIT)) this.submit(now, on.url.slice(SUBMIT.length)); else this.go(on.url, now); }
   }
 
   /** A page's icon by its host (the search's owl, the mail's envelope, else its letter). */
@@ -329,9 +340,14 @@ export class Browser {
     };
     // the page's pixels: those on the rows in view, the pictures only once they have come
     const top = T.top, bottom = top + this.view, inView = (o: HdOp) => o.y < bottom && o.y + ('h' in o ? o.h + 3 : 2) > top - 1;
-    const back = !ek && T.laid ? T.laid.back.filter(inView) : [], front = !ek && T.laid ? this.items(T).slice(0, this.arrived(T, f)).filter(inView) : [];
-    const moving = animated(front) ? `${Math.floor(now * 2)}:${front.some((o) => o.k === 'marquee') ? Math.floor(now * 8) : 0}` : '';
-    const key = `${JSON.stringify(S)}|${T.url}|${this.W}|${top}|${back.length}|${front.length}|${moving}`;
+    const back = !ek && T.laid && f > 0 ? T.laid.back.filter(inView) : [], front = !ek && T.laid ? this.items(T).slice(0, this.arrived(T, f)).filter(inView) : [];
+    // Lookwise's owl (15.17h): working while the search thinks (on the empty page); its eyes on the text being typed; wide a moment when the results come
+    const thinking = f === 0 && !!T.got?.think && now - T.at > LOOKUP + CONNECT;
+    const F = this.picks()[T.sel], ctx: OwlCtx = { since: f >= 1 ? now - end : 0 };
+    if (F && 'name' in F && F.name === 'q') ctx.cursor = [F.x + Math.min(F.w - 1, (T.vals.get(F.name) ?? '').length), F.y];
+    const owlish = thinking || front.some((o) => o.k === 'owlface' && (o.mood === 'fly' || o.mood === 'search'));
+    const moving = animated(front) || thinking ? `${Math.floor(now * 2)}:${front.some((o) => o.k === 'marquee') || owlish ? Math.floor(now * 10) : 0}` : '';
+    const key = `${JSON.stringify(S)}|${T.url}|${this.W}|${top}|${back.length}|${front.length}|${ctx.cursor ?? ''}|${(ctx.since ?? 9) < 0.6}|${thinking}|${moving}`;
     return {
       key,
       paint: (P, ox) => {
@@ -339,8 +355,9 @@ export class Browser {
         // clipped to the page's rows and the pane's width (not the scroll bar's column)
         const save = [P.x0, P.y0, P.x1, P.y1];
         P.x0 = ox * CW; P.y0 = PAGE_Y * CH; P.x1 = (ox + this.W - 1) * CW; P.y1 = (PAGE_Y + this.view) * CH;
-        paintOps(P, back, ox * CW, (PAGE_Y - top) * CH, now);
-        paintOps(P, front, ox * CW, (PAGE_Y - top) * CH, now);
+        paintOps(P, back, ox * CW, (PAGE_Y - top) * CH, now, ctx);
+        paintOps(P, front, ox * CW, (PAGE_Y - top) * CH, now, ctx);
+        if (thinking) paintOps(P, [{ k: 'owlface', x: Math.floor(this.W / 2) - 6, y: Math.floor(this.view / 2) - 4, size: 6, mood: 'search' }], ox * CW, PAGE_Y * CH, now);
         [P.x0, P.y0, P.x1, P.y1] = save;
       },
     };
@@ -355,24 +372,25 @@ export class Browser {
     const W = this.W, H = this.H, S = new Scr(W, H, 0), view = this.view, T = this.T;
     const [f, status] = this.progress(now);
     // the tabs: each one's title, the active one's close box, the "+"
-    S.paint(0, 0, ' '.repeat(W), INK, TAB_BG);
+    S.paint(0, 0, ' '.repeat(W), INK, TAB_BG); S.paint(0, TAB_ROW, ' '.repeat(W), INK, TAB_BG);
+    if (W > 40) S.paint(W - 7, 0, 'Ferret', FR.brand, TAB_BG);
     this.tabs.forEach((t, i) => {
       const x = 1 + i * TAB_W, on = i === this.cur;
       if (x + TAB_W > W) return;
-      S.paint(x + TAB_TEXT, 0, this.titleOf(t, now).slice(0, TAB_TEXT_W), on ? [17, 17, 17] : [60, 60, 60], on ? [246, 247, 249] : [214, 218, 224]);
-      if (on) S.paint(x + TAB_X, 0, 'x', [102, 102, 102], [246, 247, 249]);
+      S.paint(x + TAB_TEXT, TAB_ROW, this.titleOf(t, now).slice(0, TAB_TEXT_W), on ? [17, 17, 17] : [60, 50, 40], on ? FR.tabOn : FR.tabOff);
+      if (on) S.paint(x + TAB_X, TAB_ROW, 'x', [120, 100, 80], FR.tabOn);
     });
-    if (1 + this.tabs.length * TAB_W + 2 < W) S.paint(2 + this.tabs.length * TAB_W, 0, '+', [51, 51, 51], TAB_BG);
+    if (1 + this.tabs.length * TAB_W + 2 < W) S.paint(2 + this.tabs.length * TAB_W, TAB_ROW, '+', [70, 50, 30], TAB_BG);
     // the navigation bar: the address (or what is typed), the search box
-    S.paint(0, 1, ' '.repeat(W), INK, NAV_BG); S.paint(0, 2, ' '.repeat(W), INK, NAV_BG);
-    const a0 = ADDR_X + 3, aw = addrEnd(W) - 4 - a0, shown = this.editing === 'addr' ? this.addr : this.url;
+    for (let r = NAV_Y; r < MARKS_Y; r++) S.paint(0, r, ' '.repeat(W), INK, NAV_BG);
+    const a0 = ADDR_X + 4, aw = addrEnd(W) - 4 - a0, shown = this.editing === 'addr' ? this.addr : this.url;
     S.paint(a0, NAV_TEXT_Y, shown.slice(this.editing === 'addr' ? Math.max(0, shown.length - aw + 1) : 0).padEnd(aw).slice(0, aw), INK, T.url.startsWith('https:') ? [255, 248, 196] : WHITE);
-    const s0 = searchX(W) + 3, sw = SEARCH_W - 4;
+    const s0 = searchX(W) + 4, sw = SEARCH_W - 5;
     S.paint(s0, NAV_TEXT_Y, (this.editing === 'search' ? this.addr.slice(-sw + 1) : 'Lookwise').padEnd(sw).slice(0, sw), this.editing === 'search' ? INK : GREY, WHITE);
     // the bookmarks
     S.paint(0, MARKS_Y, ' '.repeat(W), INK, MARK_BG);
     let mx = 1;
-    for (const [title] of this.marks) { const w = Math.min(18, title.length); if (mx + 2 + w > W) break; S.paint(mx + 2, MARKS_Y, title.slice(0, w), [34, 34, 34], MARK_BG); mx += w + 4; }
+    for (const [title] of this.marks) { const w = Math.min(18, title.length); if (mx + 3 + w > W) break; S.paint(mx + 3, MARKS_Y, title.slice(0, w), [40, 30, 20], MARK_BG); mx += w + 5; }
     // the page, as much of it as has arrived
     if (T.laid && f > 0) {
       const kb = T.got?.page?.kb ?? 1, tf = Math.min(1, (f * (kb + this.itemsKb(T))) / kb);
@@ -389,7 +407,7 @@ export class Browser {
         // in the site's link color (a menu button keeps its own colors, as the sites' CSS made it)
         const LC = T.got?.page?.theme.link, linkInk = (c: C3) => !!LC && c[0] === LC[0] && c[1] === LC[1] && c[2] === LC[2];
         for (const l of T.laid.links) {
-          if (l.y !== y || l.url === SUBMIT || !this.seen.has(this.abs(l.url)) || (on === l)) continue;
+          if (l.y !== y || l.url.startsWith(SUBMIT) || !this.seen.has(this.abs(l.url)) || (on === l)) continue;
           for (let x = l.x; x < Math.min(W - 1, l.x + l.w); x++) { const c = row[x]; if (c && c.ch !== ' ' && linkInk(c.fg)) S.paint(x, PAGE_Y + r, c.ch, VISITED, c.bg); }
         }
         // what is typed in the boxes on this row (stars for a password)

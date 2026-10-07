@@ -16,7 +16,7 @@ import { logEvent } from '../src/sim/events';
 import { placeAt } from '../src/phone/places';
 import { fetchUrl, portalUrl, searchUrl, webOf } from '../src/web/sites';
 import { businessName } from '../src/locale/names';
-import { layout, SUBMIT } from '../src/web/page';
+import { layout, SUBMIT, type Block } from '../src/web/page';
 import { Browser } from '../src/web/browser';
 import { mailHost } from '../src/web/webmail';
 import { post } from '../src/sim/bank';
@@ -43,7 +43,7 @@ while (queue.length && pages < 3000) {
   pages++;
   const L = layout(F.page, 159), text = L.rows.map((r) => r.map((x) => x.ch).join('')).join('\n');
   if (/[{}#]/.test(text.replace(/\[#+ *\]/g, '').replace(/[#]{2,}/g, ''))) { const m = text.split('\n').find((l) => /[{}]/.test(l)); if (m) fail(`a hole on ${u}: ${m.trim()}`); }
-  for (const l of L.links) { links++; if (l.url !== SUBMIT && !seen.has(l.url)) queue.push(l.url); }
+  for (const l of L.links) { links++; if (!l.url.startsWith(SUBMIT) && !seen.has(l.url)) queue.push(l.url); }
   const tail = u.split('/').slice(3).join('/'); if (tail) kinds.add(tail.replace(/\d+/g, 'N'));
 }
 console.log(`  crawled ${pages} pages, ${links} links; pages: ${[...kinds].sort().join(' ')}`);
@@ -63,7 +63,9 @@ else if (!back.blocks.some((b) => b.t === 'notice' && /outage|blackout|back|ligh
 if (fetchUrl(w, 'www.nosuchplaceatall.com').error !== 'dns') fail('a made-up host was found');
 
 // the search engine (15.3): finds the sites by what they are and their name; a shop without a site is not in it
-const res = (q: string) => { const P = fetchUrl(w, searchUrl(q)).page!; return P.blocks.filter((b) => b.t === 'p' && /^\[/.test(b.text)).map((b) => (b as { text: string }).text); };
+// (15.17h: the results are 'hit' blocks in the left column)
+const flat = (bs: Block[]): Block[] => bs.flatMap((b) => (b.t === 'cols' ? flat(b.cols.flat()) : b.t === 'box' ? [b, ...flat(b.blocks)] : [b]));
+const res = (q: string) => { const P = fetchUrl(w, searchUrl(q)).page!; return flat(P.blocks).filter((b): b is Extract<Block, { t: 'hit' }> => b.t === 'hit').map((b) => `[${b.title}](${b.url})`); };
 const pz = res('pizza');
 console.log(`  "pizza": ${pz.length} results, first ${pz[0]}`);
 if (!pz.length || !pz.slice(0, 5).some((t) => /pizz|slice/i.test(t) || /pizza/.test(t))) fail('a search for pizza found no pizzeria first');
@@ -98,7 +100,7 @@ if (!/no network/.test(B.cells(13).scr.ch[49].join(''))) fail('no network, and s
 // the webmail (15.4)
 const MH = `http://${mailHost(w)}`, M = w.mail;
 const send = (path: string, f: Record<string, string>) => fetchUrl(w, MH + path, new Map(Object.entries(f))).page!;
-const txt = (P: { blocks: { t: string; text?: string }[] }) => P.blocks.map((b) => b.text ?? '').join(' ');
+const txt = (P: { blocks: Block[] }) => flat(P.blocks).map((b) => ('text' in b ? b.text : b.t === 'submit' || b.t === 'input' ? b.label : b.t === 'box' ? b.title : '')).join(' ');
 if (!/Sign in/.test(txt(fetchUrl(w, MH).page!))) fail('the webmail does not ask to sign in');
 if (!/taken/.test(txt(send('/signup', { user: 'admin', pass: 'secret1', pass2: 'secret1' })))) fail('a taken name was let through');
 if (!/match/.test(txt(send('/signup', { user: 'zed', pass: 'secret1', pass2: 'secret2' })))) fail('different passwords were let through');

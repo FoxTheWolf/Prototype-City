@@ -19,12 +19,14 @@ import { businessName, cityName, citizenNames, districtName, roadName } from '..
 import { expand, rngOf, tidy, type Grammar } from '../locale/gen';
 import CALLS from '../locale/calls.json';
 import { TEXT } from '../locale/text';
-import { newsStories, storyBody } from '../locale/news';
+import { newsStories, storyBody, type Story } from '../locale/news';
+import { postText } from '../locale/social';
+import { type Post } from '../sim/social';
 import { districtAt } from '../sim/city';
 import en from '../locale/en.json';
 import { type Block, type C3, type Page, type PhotoSubj, type Sky, type Theme } from './page';
 import { groundAt, mapRaster } from '../phone/mapdata';
-import { mailHost, mailPage, provider } from './webmail';
+import { mailHost, mailPage } from './webmail';
 import { WIRE_HOST, wirePage } from './streetwire';
 import { FORUM_HOST, forumPage } from './forum';
 import { GRID_HOST, gridHome, gridPage } from './gridlink';
@@ -51,22 +53,6 @@ const THEMES: Theme[] = [
 ];
 /** The portal's own: the provider's blue. */
 const PORTAL: Theme = { page: [180, 196, 220], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 204, 0], barFg: [0, 30, 90], gloss: true, tile: 'stripes' };
-
-/** A logo of a few lines for each kind of place (the sites' "images", drawn in characters). */
-const ICONS: Partial<Record<BusinessKind | 'any', string[]>> = {
-  cafe: [' ( (  ', '  ) ) ', '|____|>', ' \\__/ '],
-  diner: [' _____ ', '|DINER|', '|_____|', ' O   O '],
-  pizza: ['  /\\  ', ' /o.\\ ', '/.o.o\\', '------'],
-  bar: [' _____ ', ' \\   / ', '  \\ /  ', '  _|_  '],
-  bank: ['  /\\  ', ' /$$\\ ', '|_||_|', '======'],
-  phones: [' ___ ', '|[_]|', '|:::|', '|___|'],
-  electronics: [' ____ ', '|    |', '|____|', ' /__\\ '],
-  cyber: [' ____ ', '|>_  |', '|____|', '[####]'],
-  hotel: [' _H_ ', '|o o|', '|o o|', '|_n_|'],
-  books: [' ____ ', '|||||\\', '|||||/', ' ---- '],
-  pharmacy: ['  _  ', ' | | ', '|+ +|', ' |_| '],
-  any: [' ____ ', '| ** |', '|____|'],
-};
 
 export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'forum' } | { kind: 'grid' } | { kind: 'biz'; k: number };
 export interface Web { hosts: Map<string, SiteRef>; byBiz: Map<number, string>; portal: string; search: string }
@@ -101,7 +87,7 @@ export function webOf(w: World): Web {
 }
 
 /** cert (15.17d): the site is on https, with a good certificate or an expired one (the browser warns before showing it). */
-export interface Fetched { host: string; path: string; page?: Page; error?: 'dns' | 'down'; cert?: 'ok' | 'bad' }
+export interface Fetched { host: string; path: string; page?: Page; error?: 'dns' | 'down'; cert?: 'ok' | 'bad'; /** 15.17h: seconds the server thinks before it answers (Lookwise searching). */ think?: number }
 
 /**
  * Which sites are on https, and whose certificate has lapsed (15.17d): the mail and the banks are on it
@@ -130,7 +116,9 @@ export function certExpiry(w: World, host: string): string {
 /** What asking for `url` brings (with a form's boxes, when one was sent): the page, or why not (no such host; the server is down). */
 export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fetched {
   const u = url.trim().toLowerCase().replace(/^https?:\/\//, '');
-  const query = form?.get('q') ?? decodeURIComponent((u.split('?q=')[1] ?? '').replace(/\+/g, ' '));
+  // the address's own boxes (?q=pizza&p=2), the form's over them
+  const params = new Map((u.split('?')[1] ?? '').split('&').filter(Boolean).map((kv) => { const [k, v = ''] = kv.split('='); return [k, decodeURIComponent(v.replace(/\+/g, ' '))] as [string, string]; }));
+  const query = form?.get('q') ?? params.get('q') ?? '';
   let host = u.split(/[/?]/)[0], path = '/' + u.split('?')[0].split('/').slice(1).join('/');
   if (!host.includes('.')) host = `www.${host}.com`;
   if (!host.startsWith('www.') && !webOf(w).hosts.has(host)) host = 'www.' + host;
@@ -143,7 +131,7 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
     if (!w.power.subs[subAt(w.power, w.city, x, y)].on) return { host, path, error: 'down' };
     return { host, path, cert, page: bizPage(w, S.k, host, path) };
   }
-  if (S.kind === 'search') return { host, path, page: searchPage(w, host, path, query) };
+  if (S.kind === 'search') return searchPage(w, host, path, query, +(params.get('p') ?? 1) || 1, !!(form?.get('pick') ?? params.get('pick')));
   if (S.kind === 'mail') return { host, path, cert, page: mailPage(w, host, path, form) };
   if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
   if (S.kind === 'forum') return { host, path, cert, page: forumPage(w, path, form) };
@@ -222,7 +210,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   const [bx, by] = placeAt(c, k), sub = subAt(w.power, c, bx, by);
   const back = w.events.list.some((e) => e.kind === 'restored' && e.refs[0] === sub && w.time - e.time < 86400);
   const notice: Block[] = back ? [{ t: 'notice', text: say('web.outage') }] : [];
-  const banner: Block = tpl === Tpl.Bare ? { t: 'h', text: name.toUpperCase() } : { t: 'banner', text: name, sub: `Since ${year} - ${district}`, art: ICONS[b.kind] ?? ICONS.any, look: tpl === Tpl.Classic ? 'bevel' : undefined };
+  const banner: Block = tpl === Tpl.Bare ? { t: 'h', text: name.toUpperCase() } : { t: 'banner', text: name, sub: `Since ${year} - ${district}`, logo: b.kind, look: tpl === Tpl.Classic ? 'bevel' : undefined };
   // the photos by the place's kind, the special of the day and the slogan from the grammar, the map round the door
   const subj: PhotoSubj = GROUP[b.kind] ?? 'store', seed = Math.floor(h(12) * 1e9), pitch = pitchOf(b.kind);
   // the special is one of the things it really sells, at its price
@@ -325,7 +313,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   const navB: Block = { t: 'nav', links: nav, look: tpl === Tpl.Classic ? 'bevel' : undefined }, on = Math.max(0, nav.findIndex(([, u]) => u === `http://${host}${path === '/' ? '/' : path}`));
   const blocks: Block[] = tpl === Tpl.Center ? [{ t: 'marquee', text: `*** Welcome to ${name}! *** ${special} *** Sign our guestbook! *** Thanks for visiting ***` }, { t: 'big', text: name, kind: 'word', rows: 4, center: true }, { t: 'rule', kind: 'rainbow' }, ...notice, ...body, ...(path === '/' ? [] : [navB]), { t: 'p', text: updated }]
     : tpl === Tpl.Bare ? [{ t: 'ad', name: `${cityName(c)}Net`, text: 'Free web pages - get your own site today!', url: portalUrl(w), c1: [0, 51, 153], c2: [255, 204, 0] }, banner, ...notice, ...body, navB, { t: 'p', text: `Hosted by ${cityName(c)}Net` }]
-    : tpl === Tpl.LeftNav ? [{ t: 'photo', subj: 'sky', seed, h: 4, w: 124, frame: 'none' }, { ...banner, art: undefined } as Block, ...notice, { t: 'cols', widths: [0.22, 0.78], cols: [[{ t: 'buttons', links: nav, on }], body] }, { t: 'p', text: 'Site by Pixelworks Web Design' }, foot]
+    : tpl === Tpl.LeftNav ? [{ t: 'photo', subj: 'sky', seed, h: 4, w: 124, frame: 'none' }, { ...banner, logo: undefined } as Block, ...notice, { t: 'cols', widths: [0.22, 0.78], cols: [[{ t: 'buttons', links: nav, on }], body] }, { t: 'p', text: 'Site by Pixelworks Web Design' }, foot]
     : tpl === Tpl.Side ? [banner, { t: 'tabs', links: nav, on }, ...notice, ...body, { t: 'p', text: `(c) ${calendar(w.time).year} ${name} - Powered by Blogsmith` }]
     : tpl === Tpl.Corporate ? [banner, navB, ...notice, ...body, { t: 'rule', kind: 'groove' }, foot]
     : [banner, navB, ...notice, ...body, { t: 'p', text: updated }, foot];
@@ -336,7 +324,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
 function portalPage(w: World, host: string, path: string): Page {
   const c = w.city, city = cityName(c), r = rngOf(w.seed, 0x9047, Math.floor(w.time / 3600)), Wb = webOf(w);
   const nav: [string, string][] = [['Home', `http://${host}/`], ['News', `http://${host}/news`], ['Weather', `http://${host}/weather`], ['Directory', `http://${host}/directory`], ['Mail', `http://${mailHost(w)}/`], ['Search', `http://${SEARCH_HOST}/`]];
-  const banner: Block = { t: 'banner', text: `${city} Online`, sub: tidy(expand('#web.portal.tagline#', TEXT, r, { city })), art: [' .--. ', '( @@ )', " '--' "] };
+  const banner: Block = { t: 'banner', text: `${city} Online`, sub: tidy(expand('#web.portal.tagline#', TEXT, r, { city })), logo: 'portal' };
   const stories = newsStories(w), W = w.weather, f = (t: number) => Math.round(t * 1.8 + 32);
   const D = calendar(w.time), date = `${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][D.weekday]}, ${D.month}/${D.day}/${D.year}`;
   const sky = W.snow && W.precip > 0.15 ? 'Snow' : W.precip > 0.4 ? 'Rain' : W.precip > 0.15 ? 'Showers' : 'Fair';
@@ -355,9 +343,9 @@ function portalPage(w: World, host: string, path: string): Page {
   const ad = adOf(7);
   const foot: Block = { t: 'foot', text: `${city} Online - ${date}` };
   let body: Block[];
-  const m = path.match(/^\/news\/(\d+)$/);
-  if (m && stories[+m[1]]) {
-    const S = stories[+m[1]];
+  // a story by its place on the ticker, or (15.17h, what Lookwise links to) by what it is, kept by the crawler
+  const m = path.match(/^\/news\/(\d+)$/), ms = path.match(/^\/story\/([a-z]+-\d+)$/), S = ms ? storyById(w, ms[1]) : m ? stories[+m[1]] : undefined;
+  if (S) {
     body = [{ t: 'h', text: S.head }, ...storyBody(w, S).map((p) => ({ t: 'p', text: p }) as Block), { t: 'p', text: `[Back to the news](http://${host}/news)` }];
   } else if (path === '/news') {
     body = [{ t: 'h', text: `News - ${date}` }, { t: 'list', items: stories.map((S, n) => [S, n] as const).filter(([S]) => S.kind !== 'date').map(([S, n]) => `[${S.head}](http://${host}/news/${n})`) }];
@@ -395,59 +383,181 @@ function portalPage(w: World, host: string, path: string): Page {
 
 export const portalUrl = (w: World) => `http://${webOf(w).portal}/`;
 /** The address of a search for `q`. */
-export const searchUrl = (q: string) => `http://${SEARCH_HOST}/search?q=${encodeURIComponent(q.trim()).replace(/%20/g, '+')}`;
+export const searchUrl = (q: string, p = 1) => `http://${SEARCH_HOST}/search?q=${encodeURIComponent(q.trim()).replace(/%20/g, '+')}${p > 1 ? `&p=${p}` : ''}`;
 
-/** A page in the search engine's index: what it is called, where, and the words it is found by. */
-interface Doc { url: string; title: string; snippet: string; words: Map<string, number> }
-const indexes = new WeakMap<object, Doc[]>();
-const tokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((x) => x.length > 1);
+/** A page in the search engine's index: its address, title and snippet, the words it is found by; when it went up (-1: always there), whose site. */
+interface Doc { url: string; title: string; snippet: string; words: Map<string, number>; t: number; k?: number; post?: boolean }
 /**
- * The index (15.3): the front page of every business site and the portal's sections, made once per
- * city. Only what has a site is in it (the corner shops are found by their sign, the directory, word
- * of mouth); the pages deeper in the sites are not crawled.
+ * The crawler (15.17h): Lookwise's index is made again once a night, when the clock passes 3 am. What
+ * went up during the day (the posts on Streetwire, the headlines) waits in `pending` and only goes in
+ * then; the owl flies over the city on the start page while it does. The index keeps only the title and
+ * the snippet, never the page: a site in the dark is still listed, and does not open. Kept in memory
+ * (a loaded game starts with the sites only and fills in from the next night).
  */
-function indexOf(w: World): Doc[] {
-  let I = indexes.get(w.city);
-  if (I) return I;
-  const c = w.city, Wb = webOf(w), kinds = en.phone.find.kinds as Record<string, string>, goods = en.goods as Record<string, string>;
-  I = [];
-  const doc = (url: string, title: string, snippet: string, parts: [string, number][]) => {
-    const words = new Map<string, number>();
-    for (const [t, wt] of parts) for (const x of tokens(t)) words.set(x, Math.max(words.get(x) ?? 0, wt));
-    I!.push({ url, title, snippet, words });
-  };
+export interface Crawl { night: number; base: Doc[]; index: Doc[]; pending: Doc[]; post: number; told: Map<string, number>; stories: Map<string, Story>; found: number }
+const crawls = new WeakMap<object, Crawl>();
+const CRAWL_H = 3;
+/** The night a moment belongs to (its crawl is at 3 am); how long the index keeps a post, a story (s). */
+const nightOf = (t: number) => Math.floor((t - CRAWL_H * 3600) / 86400);
+const KEEP_POST = 2 * 86400, KEEP_NEWS = 7 * 86400;
+const tokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((x) => x.length > 1);
+const mkDoc = (url: string, title: string, snippet: string, parts: [string, number][], t = -1, extra: Partial<Doc> = {}): Doc => {
+  const words = new Map<string, number>();
+  for (const [s, wt] of parts) for (const x of tokens(s)) words.set(x, Math.max(words.get(x) ?? 0, wt));
+  return { url, title, snippet, words, t, ...extra };
+};
+const storyId = (S: Story) => `${S.kind}-${S.key}`;
+/** Words for what a story or a post is about, by its kind (the data, never the generated wording: lessons of 15.17g). */
+const ABOUT: Record<string, string> = { blackout: 'blackout power outage lights dark', restored: 'power restored lights blackout', crash: 'crash accident collision traffic', jam: 'traffic jam', manhunt: 'police manhunt investigation', bust: 'police arrest', rain: 'rain weather', snow: 'snow weather' };
+const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (_, a, b) => a + b.toUpperCase());
+
+/** What is always in the index: the front page of every business site and the portal's sections (never the mail, nor the forum). */
+function baseDocs(w: World): Doc[] {
+  const c = w.city, Wb = webOf(w), kinds = en.phone.find.kinds as Record<string, string>, also = en.phone.find.also as Record<string, string>, goods = en.goods as Record<string, string>, I: Doc[] = [];
   for (const [host, S] of Wb.hosts) {
     if (S.kind !== 'biz') continue;
     const k = S.k, b = c.businesses[k], name = businessName(c, k), district = districtName(c, districtAt(c, ...placeAt(c, k))), addr = addressOf(w, k);
     const intro = tidy(expand(`#web.intro.${b.kind}#`, TEXT, rngOf(w.seed, k, 0xb10b), { biz: name, district, year: '', city: cityName(c) }));
-    doc(`http://${host}/`, name, `${kinds[b.kind] ?? b.kind} - ${addr}, ${district}. ${intro}`, [[name, 5], [kinds[b.kind] ?? b.kind, 3], [b.kind, 3], [district, 2], [addr, 2], [intro, 1], [PLACES[b.kind].sells.map(([g]) => goods[g] ?? g).join(' '), 1]]);
+    I.push(mkDoc(`http://${host}/`, name, `${kinds[b.kind] ?? b.kind} - ${addr}, ${district}. ${intro}`, [[name, 5], [kinds[b.kind] ?? b.kind, 3], [b.kind, 3], [also[b.kind] ?? '', 2], [district, 2], [addr, 2], [PLACES[b.kind].sells.map(([g]) => goods[g] ?? g).join(' '), 1]], -1, { k }));
   }
   const city = cityName(c);
-  doc(`http://${Wb.portal}/`, `${city} Online`, `News, weather and the business directory of ${city}.`, [[city, 3], ['online news weather directory portal home', 3]]);
-  doc(`http://${Wb.portal}/news`, `${city} Online - News`, `Today's headlines from around ${city}.`, [['news headlines today', 4], [city, 2]]);
-  doc(`http://${Wb.portal}/weather`, `${city} Online - Weather`, `The weather in ${city} today.`, [['weather forecast rain snow temperature', 4], [city, 2]]);
-  doc(`http://${mailHost(w)}/`, `${provider(w)} Mail`, `Free e-mail from ${provider(w)}. Sign in or sign up for a free account.`, [['mail email webmail inbox free account sign signup', 4], [city, 2]]);
-  doc(`http://${GRID_HOST}/`, 'GridLink - Power & Telecom', `Power and home phone service for ${city}. Outage map, report an outage.`, [['gridlink power electricity outage outages blackout lights phone telecom utility', 4], [city, 1]]);
-  doc(`http://${WIRE_HOST}/`, 'Streetwire', "What's happening in your city, right now. Join free.", [['streetwire social network posts friends people feed', 4], [city, 1]]);
-  doc(`http://${Wb.portal}/directory`, `${city} Online - Business Directory`, 'Every business in the city by category, with address and phone.', [['directory business businesses yellow pages phone address', 4], [Object.values(kinds).join(' '), 1]]);
-  indexes.set(w.city, I);
+  I.push(mkDoc(`http://${Wb.portal}/`, `${city} Online`, `News, weather and the business directory of ${city}.`, [[city, 3], ['online news weather directory portal home', 3]]));
+  I.push(mkDoc(`http://${Wb.portal}/news`, `${city} Online - News`, `Today's headlines from around ${city}.`, [['news headlines today', 4], [city, 2]]));
+  I.push(mkDoc(`http://${Wb.portal}/weather`, `${city} Online - Weather`, `The weather in ${city} today.`, [['weather forecast rain snow temperature', 4], [city, 2]]));
+  I.push(mkDoc(`http://${GRID_HOST}/`, 'GridLink - Power & Telecom', `Power and home phone service for ${city}. Outage map, report an outage.`, [['gridlink power electricity outage outages blackout lights phone telecom utility', 4], [city, 1]]));
+  I.push(mkDoc(`http://${WIRE_HOST}/`, 'Streetwire', "What's happening in your city, right now. Join free.", [['streetwire social network posts friends people feed', 4], [city, 1]]));
+  I.push(mkDoc(`http://${Wb.portal}/directory`, `${city} Online - Business Directory`, 'Every business in the city by category, with address and phone.', [['directory business businesses yellow pages phone address', 4], [Object.values(kinds).join(' '), 1]]));
   return I;
 }
 
-/** The search engine: its front page, or the results for `q` (the best ten first). */
-function searchPage(w: World, host: string, path: string, q: string): Page {
-  const theme: Theme = { page: [255, 255, 255], bg: [255, 255, 255], fg: [30, 30, 30], dim: [0, 128, 0], link: [17, 17, 204], head: [255, 255, 255], headFg: [40, 90, 200], bar: [235, 239, 249], barFg: [40, 40, 40] };
-  const banner: Block = { t: 'banner', text: SEARCH, sub: 'Search the web', art: ['  ___  ', ' / _ \\ ', '| (_) |', ' \\___/\\'] };
-  const howto: Block = { t: 'p', text: 'Type what you are looking for in the address bar and go.' };
-  if (path !== '/search' || !q.trim()) return { url: `http://${host}/`, title: SEARCH, theme, blocks: [banner, howto, { t: 'foot', text: `(c) 2008 ${SEARCH}` }], kb: 20, mobile: true };
-  const terms = tokens(q), docs = indexOf(w);
-  const hits = docs.map((d) => ({ d, s: terms.reduce((a, t) => a + (d.words.get(t) ?? (t.length > 3 ? [...d.words.keys()].some((x) => x.startsWith(t)) ? 0.5 : 0 : 0)), 0) * (terms.every((t) => d.words.has(t)) ? 2 : 1) }))
-    .filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.d.title.localeCompare(b.d.title));
-  const top = hits.slice(0, 10);
-  const blocks: Block[] = [banner, { t: 'p', text: `Results 1 - ${top.length} of about ${hits.length} for ${q}.` }];
-  for (const { d } of top) blocks.push({ t: 'p', text: `[${d.title}](${d.url})` }, { t: 'art', lines: [d.url.replace('http://', '')], col: theme.dim }, { t: 'p', text: d.snippet.length > 150 ? d.snippet.slice(0, 147) + '...' : d.snippet });
-  if (!top.length) blocks.push({ t: 'p', text: `Your search - ${q} - did not match any documents.` }, { t: 'list', items: ['Make sure all words are spelled correctly.', 'Try different keywords.', 'Try more general keywords.'] });
-  blocks.push({ t: 'foot', text: `(c) 2008 ${SEARCH}` });
-  return { url: searchUrl(q), title: `${q} - ${SEARCH} Search`, theme, blocks, kb: 45 + top.length * 6, mobile: true };
+/** A post as the crawler keeps it: the author's line and the words of what it is about (the district, the happening, the place). */
+function postDoc(w: World, p: Post): Doc {
+  const c = w.city, name = citizenNames(c, w.pop, p.who).join(' '), district = districtName(c, districtAt(c, p.x, p.y)), biz = p.biz >= 0 ? businessName(c, p.biz) : '';
+  return mkDoc(`http://${WIRE_HOST}/post/${p.id}`, `${name} on Streetwire - ${biz || district}`, postText(c, w.pop, p), [[name, 3], [district, 2], [biz, 3], [ABOUT[p.kind] ?? '', 2], ['streetwire', 1]], p.time, { post: true });
+}
+/** A headline as the crawler keeps it: its words (it is the paper's own text) and what it is about. */
+function storyDoc(w: World, S: Story): Doc {
+  const first = storyBody(w, S)[0] ?? '';
+  return mkDoc(`http://${webOf(w).portal}/story/${storyId(S)}`, `${titleCase(S.head)} - ${cityName(w.city)} Online`, first, [[S.head, 2], [S.district, 2], [S.road, 2], [S.cross, 1], [ABOUT[S.kind] ?? '', 2], ['news', 1]], S.at);
+}
+
+/**
+ * The crawler's state for this game, brought up to now: what went up since the last look waits for the
+ * night; past 3 am the night's crawl puts it in the index (and lets the oldest go). Cheap when nothing
+ * changed; the game calls it often (main.ts), the search before it answers.
+ */
+export function crawl(w: World): Crawl {
+  let C = crawls.get(w);
+  if (!C) {
+    const base = baseDocs(w);
+    C = { night: nightOf(w.time), base, index: base, pending: [], post: -1, told: new Map(), stories: new Map(), found: 0 };
+    crawls.set(w, C);
+  }
+  for (const p of w.feed.posts) if (p.id > C.post) { C.pending.push(postDoc(w, p)); C.post = p.id; }
+  for (const S of newsStories(w)) {
+    if (S.kind === 'date' || S.kind === 'weather') continue;
+    const id = storyId(S);
+    if (C.told.has(id)) continue;
+    C.told.set(id, S.at); C.stories.set(id, S); C.pending.push(storyDoc(w, S));
+  }
+  const n = nightOf(w.time);
+  if (n > C.night) {
+    const at = n * 86400 + CRAWL_H * 3600, keep = (d: Doc) => w.time - d.t < (d.post ? KEEP_POST : KEEP_NEWS);
+    const fresh = C.pending.filter((d) => d.t < at && keep(d));
+    C.pending = C.pending.filter((d) => d.t >= at);
+    C.index = [...C.base, ...C.index.filter((d) => d.t >= 0 && keep(d)), ...fresh];
+    C.found = fresh.length; C.night = n;
+    for (const [id, t] of C.told) if (w.time - t > KEEP_NEWS) { C.told.delete(id); C.stories.delete(id); }
+  }
+  return C;
+}
+/** A story the portal can still show by its address: on the ticker now, or kept by the crawler. */
+function storyById(w: World, id: string): Story | undefined {
+  return newsStories(w).find((S) => storyId(S) === id) ?? crawls.get(w)?.stories.get(id);
+}
+
+/** The kind of place the words ask for (by its key, its name, then the words it is also known by), or null. */
+function kindAsked(terms: string[]): BusinessKind | null {
+  const kinds = en.phone.find.kinds as Record<string, string>, also = en.phone.find.also as Record<string, string>;
+  const is = (t: string, x: string) => t === x || t === x + 's' || t + 's' === x;
+  let best: BusinessKind | null = null, score = 0;
+  for (const k of Object.keys(kinds) as BusinessKind[]) {
+    for (const t of terms) {
+      const s = is(t, k) || tokens(kinds[k]).some((x) => is(t, x)) ? 3 : tokens(also[k] ?? '').some((x) => is(t, x)) ? 1 : 0;
+      if (s > score) { score = s; best = k; }
+    }
+  }
+  return best;
+}
+
+const LOOK: Theme = { page: [255, 255, 255], bg: [255, 255, 255], fg: [30, 30, 30], dim: [112, 112, 112], link: [17, 17, 204], head: [22, 36, 74], headFg: [255, 255, 255], bar: [232, 238, 250], barFg: [30, 30, 30] };
+const PER_PAGE = 10, MAX_PAGES = 6;
+
+/** The search engine: its start page, or the results for `q` (page `pg`, ten a page); with `pick` (Owl's Pick) the first result's own page. */
+function searchPage(w: World, host: string, path: string, q: string, pg = 1, pick = false): Fetched {
+  const c = w.city, city = cityName(c), Wb = webOf(w), C = crawl(w), portal = `http://${Wb.portal}`;
+  const top: Block = { t: 'p', text: `Web   [News](${portal}/news)   [Local](${portal}/directory)   [Streetwire](http://${WIRE_HOST}/)` };
+  const foot: Block[] = [{ t: 'space' }, { t: 'center', text: 'Advertising - Business Solutions - About Lookwise', col: LOOK.dim }, { t: 'center', text: `(c)2008 Lookwise - ${city}`, col: LOOK.dim }];
+  const page = (url: string, title: string, blocks: Block[], kb: number): Page => ({ url, title, theme: LOOK, blocks, kb, mobile: true, form: `http://${host}/search` });
+  if (path !== '/search' || !q.trim()) {
+    // the start page; from 2 to 5 am the owl is out, with the count of what the night's crawl found
+    const h = calendar(w.time).hour, night = h >= 2 && h < 5;
+    const count = h < CRAWL_H ? C.pending.filter((d) => d.t <= w.time).length : C.found;
+    const owl: Block[] = night ? [{ t: 'owl', mood: 'fly', rows: 3, center: true, lines: [`The owl is out: tonight's crawl found ${count} new page${count === 1 ? '' : 's'}.`] }] : [{ t: 'space' }, { t: 'space' }, { t: 'space' }];
+    return { host, path: '/', page: page(`http://${host}/`, SEARCH, [top, { t: 'space' }, { t: 'lwlogo', s: 5, center: true }, { t: 'center', text: 'Look it up. Look wise.', col: LOOK.dim }, { t: 'space' },
+      { t: 'lookbox', name: 'q', size: 46, buttons: [['Lookwise Search'], ["Owl's Pick", 'pick']] }, ...owl, ...foot], 20) };
+  }
+  const terms = tokens(q);
+  const hits = C.index.map((d) => ({ d, s: terms.reduce((a, t) => a + (d.words.get(t) ?? (t.length > 3 ? ([...d.words.keys()].some((x) => x.startsWith(t)) ? 0.5 : 0) : 0)), 0) * (terms.every((t) => d.words.has(t)) ? 2 : 1) }))
+    .filter((x) => x.s > 0).sort((a, b) => b.s - a.s || b.d.t - a.d.t || a.d.title.localeCompare(b.d.title));
+  if (pick && hits.length) return fetchUrl(w, hits[0].d.url);
+  const think = 0.5 + Math.min(1.2, hits.length / 40), secs = (0.08 + hits.length * 0.006 + hash3(w.seed, q.length, terms.length) * 0.2).toFixed(2);
+  const head: Block = { t: 'lookhead', name: 'q', value: q, button: 'Search' };
+  if (!hits.length) {
+    return { host, path, think, page: page(searchUrl(q), `${q} - ${SEARCH} Search`, [top, head, { t: 'catbar', text: 'Web', right: 'Results 0 of about 0' }, { t: 'space' },
+      { t: 'owl', mood: 'hoo', rows: 5, lines: [`Hoo? Your search - ${q} - did not match any documents.`, 'Suggestions:', '- Make sure all words are spelled correctly.', '- Try different or more general keywords.', `- Small shops often have no web site: try the [phone book](${portal}/directory).`] }, ...foot], 20) };
+  }
+  const pages = Math.min(MAX_PAGES, Math.ceil(hits.length / PER_PAGE)), p = Math.max(1, Math.min(pages, pg)), shown = hits.slice((p - 1) * PER_PAGE, p * PER_PAGE);
+  const kinds = en.phone.find.kinds as Record<string, string>;
+  const left: Block[] = [];
+  // local results: the three places of the kind asked for nearest to where the notebook is, on the city's map
+  const kind = kindAsked(terms);
+  if (kind && p === 1) {
+    const { x: px, y: py } = w.player;
+    const near = c.businesses.map((b, k) => ({ b, k })).filter(({ b }) => b.kind === kind).map(({ k }) => { const [x, y] = placeAt(c, k); return { k, x, y, d: Math.hypot(x - px, y - py) }; }).sort((a, b) => a.d - b.d).slice(0, 3);
+    if (near.length) {
+      const cx = near.reduce((a, b) => a + b.x, 0) / near.length, cy = near.reduce((a, b) => a + b.y, 0) / near.length, gw = 48, gh = 30;
+      const span = Math.max(...near.map((b) => Math.max(Math.abs(b.x - cx) / gw, Math.abs(b.y - cy) / gh))), step = Math.max(4, Math.ceil(span * 2.6));
+      const spots = near.map((b) => [0.5 + (b.x - cx) / (gw * step), 0.55 + (b.y - cy) / (gh * step)] as [number, number]);
+      const list = near.flatMap((b, i): Block[] => {
+        const name = businessName(c, b.k), site = Wb.byBiz.get(b.k);
+        return [{ t: 'p', tight: true, text: `${'ABC'[i]}  ${site ? `[${name}](http://${site}/)` : name}` }, { t: 'p', text: `   ${addressOf(w, b.k)} - ${formatNumber(w.telco, w.telco.bizNum[b.k])}` }];
+      });
+      left.push({ t: 'p', text: `[Local results for ${q}](${portal}/directory/${kind}) near ${districtName(c, districtAt(c, px, py))}` },
+        { t: 'cols', widths: [0.42, 0.58], cols: [[{ t: 'map', seed: 404, pins: near.map((_, i) => 'ABC'[i]), h: 5, ground: groundAround(w, cx, cy, gw, gh, step), gw, gh, spots }], list] });
+    }
+  }
+  for (const { d } of shown) {
+    const short = d.snippet.length > 160 ? d.snippet.slice(0, d.snippet.lastIndexOf(' ', 157)) + ' ...' : d.snippet, kb = 4 + Math.floor(hash3(d.url.length, d.title.length, 7) * 30);
+    const similar = d.k !== undefined ? ` - [Similar pages](${searchUrl(kinds[c.businesses[d.k].kind] ?? c.businesses[d.k].kind)})` : '';
+    left.push({ t: 'hit', title: d.title, url: d.url, snippet: short, terms, foot: `${d.url.replace(/^http:\/\//, '')} - ${kb}k${similar}` });
+  }
+  // the sponsored links on the right: three businesses with a site, of the kind asked for first, by the day
+  const day = Math.floor(w.time / 86400), qh = [...q].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const sites = [...Wb.hosts.entries()].filter((e): e is [string, { kind: 'biz'; k: number }] => e[1].kind === 'biz');
+  const ads: [string, number][] = [];
+  for (let i = 0; ads.length < 3 && i < 24 && sites.length; i++) {
+    const own = sites.filter(([, S]) => c.businesses[S.k].kind === kind), from = own.length > ads.length ? own : sites;
+    const [h2, S] = from[Math.floor(hash3(w.seed + day, qh, i) * from.length)];
+    if (!ads.some(([x]) => x === h2)) ads.push([h2, S.k]);
+  }
+  const right: Block[] = [{ t: 'art', lines: ['Sponsored Links'], col: LOOK.dim }, ...ads.flatMap(([h2, k]): Block[] => {
+    const [sl1] = tidy(expand(`#web.slogan.${pitchOf(c.businesses[k].kind)}#`, TEXT, rngOf(w.seed, k, day), { biz: businessName(c, k), city })).split('|');
+    return [{ t: 'p', tight: true, text: `[${businessName(c, k)}](http://${h2}/)` }, { t: 'p', tight: true, text: sl1 }, { t: 'art', lines: [h2], col: [0, 128, 0] }, { t: 'space' }];
+  })];
+  const eyes: Block[] = pages > 1 ? [{ t: 'eyes', pages: Array.from({ length: pages }, (_, i) => searchUrl(q, i + 1)), on: p - 1, next: p < pages ? searchUrl(q, p + 1) : undefined }] : [];
+  const a = (p - 1) * PER_PAGE + 1, b = a + shown.length - 1;
+  return { host, path, think, page: page(searchUrl(q, p), `${q} - ${SEARCH} Search`, [top, head, { t: 'catbar', text: 'Web', right: `Results ${a} - ${b} of about ${hits.length} for ${q} (${secs} seconds)` }, { t: 'space' },
+    { t: 'cols', widths: [0.72, 0.28], cols: [left, right] }, ...eyes, ...foot], 45 + shown.length * 6) };
 }
 export type { C3 };

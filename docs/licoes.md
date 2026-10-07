@@ -2,6 +2,12 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.17h (Lookwise, rastreador, moldura) — 2026-10-07
+- **Um índice "de ontem" precisa ser juntado ao longo do dia:** o feed guarda só 300 posts e o ticker só as manchetes recentes; montar o índice na hora da busca perderia o que já saiu. Por isso o `crawl` observa (a cada minuto de jogo em `main.ts`) e guarda em `pending` até as 3 h. Chaves de manchete: `kind-key` (as `key` de tipos diferentes colidem).
+- **Mudar as linhas da moldura (`PAGE_Y`, `TAB_ROW`) quebra testes que leem linhas fixas** (`scr.ch[3]`, `ch[0]`): usar as constantes de `chrome.ts` nos testes. A chave de redesenho do navegador (`art().key`) tem o pedaço que muda com o relógio **por último** (o `browser-tabs` corta o último `|`).
+- **`node -e` com crases e `\` dentro de aspas duplas do Bash não funciona** (o Bash executa as crases como comando; textos com código Markdown viraram dezenas de "No such file"). Arquivos com CRLF (`browser.ts`, `CHANGELOG.md`) não casam com `\n` no `includes`. Para texto de documento: sempre o Edit; para trocas de código, o Edit também (mais seguro que o sed com escapes).
+- **Sem arte ASCII nas páginas da web (regra do usuário, 2026-10-07):** banners e ícones de site em pixels (`web/logos.ts`); ASCII só onde a época do site pede. Falta o quadro `+---+` do bloco `notice`.
+
 ### Lições da 15.17g (páginas canônicas) — 2026-10-07
 - **Ordem dos ops de fundo importa:** um bloco que embrulha outros (a `box`) e só sabe a altura depois deles precisa entrar **antes** deles na lista `back` (`splice(at, 0, …)`); empurrado no fim, o preenchimento dela cobria os campos e os botões de dentro (o login do webmail e a busca do portal apareciam vazios). Os PNGs de teste pegaram isso na hora.
 - **"Assuntos em alta" por palavra dos posts dá lixo** (a gramática repete palavras de enfeite: "#nothing", "#blanket", "#third"). Tópico de verdade sai dos **dados** do post: o tipo do evento, o bairro, a loja. Vale para o índice do Lookwise (15.17h): indexar pelos dados, não pelo texto gerado.

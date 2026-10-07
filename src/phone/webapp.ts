@@ -50,6 +50,7 @@ export class WebApp {
     this.got = fetchUrl(this.world, url, form);
     const P = this.got.page ? mobilePage(this.got.page, SW) : null;
     this.laid = P ? layout(P, SW, true) : null;
+    for (const F of this.laid?.fields ?? []) if (F.init) this.vals.set(F.name, F.init);
     if (P) this.url = P.url;
     this.radio.fetch('web', P ? P.kb : ERR_KB, now);
     const I = this.items();
@@ -106,7 +107,7 @@ export class WebApp {
     if (k === 'left' || k === 'right') { this.top = Math.max(0, Math.min(maxTop, this.top + (k === 'right' ? VIEW - 2 : 2 - VIEW))); if (on && !seen(on.y)) this.sel = -1; return true; }
     if (k === 'ok' && on) {
       if ('name' in on) { this.edit = new Editor(on.max, false, true); this.edit.set(this.vals.get(on.name) ?? ''); this.editing = on.name; }
-      else if (on.url === SUBMIT) { const to = this.got?.page?.form; if (to) this.go(to, now, true, new Map(this.vals)); }
+      else if (on.url.startsWith(SUBMIT)) { const to = this.got?.page?.form; if (to) this.go(to, now, true, new Map(this.vals)); }
       else this.go(on.url, now);
       return true;
     }

@@ -54,6 +54,7 @@ import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar, sunDir } from './sim/clock';
 import { isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
+import { crawl } from './web/sites';
 import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, CITY_SIZE, type PlayerInput } from './sim/world';
 import { tierOf } from './sim/heat'; // [HACKING]
 import { addToBag } from './sim/bag';
@@ -295,6 +296,7 @@ let hd: HdLayer;
 const termHd = new HdLayer(SCREEN_PX.laptop[0], SCREEN_PX.laptop[1]);
 /** What the notebook screen's pixels show now (the program's art key): they are painted again when it changes. */
 let termHdKey = '';
+let crawlMin = -1;
 /**
  * The notebook's screen layer (3D look): the system's console, TERM_W x TERM_H, or the firmware's
  * text mode, 80 x 25, each with its cell size so both fill the same 16:10 screen, about two thirds of
@@ -1129,6 +1131,8 @@ function frame(now: number) {
   // paused (the menu): the world waits
   if (paused) acc = 0;
   while (acc >= TICK) { stepWorld(world, cmd); acc -= TICK; }
+  // Lookwise's crawler sees what went up on the web (posts, headlines) about once a game minute (15.17h)
+  if (Math.floor(world.time / 60) !== crawlMin) { crawlMin = Math.floor(world.time / 60); crawl(world); }
   if (running && !paused && !cctv && now - lastSave > AUTOSAVE_S * 1000) void saveNow();
   const alpha = acc / TICK;
 

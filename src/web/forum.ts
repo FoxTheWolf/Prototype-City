@@ -72,7 +72,7 @@ export function forumPage(w: World, path: string, form?: Map<string, string>): P
   const online = 20 + Math.floor(hash3(w.seed, Math.floor(w.time / 3600), 0x5b) * 40); // a plausible "users online" for flavor
   const page = (p: string, title: string, body: Block[], action?: string): Page => ({
     url: url(p), title: title ? `switchboard :: ${title}` : 'switchboard', theme: THEME, mobile: false, form: action ? url(action) : undefined, kb: 24 + body.length * 2,
-    blocks: [{ t: 'banner', text: 'switchboard', sub: 'you got the address from someone. keep it that way.', art: ['[ :: ]', ' |__| '] },
+    blocks: [{ t: 'banner', text: 'switchboard', sub: 'you got the address from someone. keep it that way.', logo: 'board' },
       { t: 'nav', links: nav }, ...body, { t: 'hr' }, { t: 'foot', text: `${online} lurking - no names - no logs we can help - est. 2003` }],
   });
   const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);

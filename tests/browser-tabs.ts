@@ -6,6 +6,8 @@ import { png, shot } from './png';
 import { createWorld } from '../src/sim/world';
 import { Browser } from '../src/web/browser';
 import { fetchUrl } from '../src/web/sites';
+import { MARKS_Y, TAB_ROW } from '../src/web/chrome';
+import { DEBUG } from '../src/debug';
 
 let bad = 0;
 const check = (name: string, ok: boolean) => { if (!ok) { bad++; console.log('FAIL', name); } };
@@ -17,7 +19,7 @@ const B = new Browser(w, () => ({ up: true, kbps: 900 }), () => { quit++; }, 160
 B.go('', 0);
 const home = B.url;
 const rowText = (t: number, r: number) => B.cells(t).scr.ch[r].join('');
-check('the factory bookmarks: Lookwise, the mail, the portal', /Lookwise.*Mail/.test(rowText(10, 3)));
+check('the factory bookmarks: Lookwise, the mail, the portal', /Lookwise.*Mail/.test(rowText(10, MARKS_Y)));
 check('the forum is never a factory bookmark', !/switchboard/i.test(rowText(10, 3)));
 // follow a link, then back and forward
 B.key('Tab', false, 10); B.key('Tab', false, 10); B.key('Enter', false, 10);
@@ -51,14 +53,14 @@ B.key('d', true, 40);
 check('Ctrl+D: the page in the bookmarks file', (disk.get('bookmarks') ?? '').includes(sUrl));
 const B2 = new Browser(w, () => ({ up: true, kbps: 900 }), () => {}, 160, 50, files);
 B2.go('', 50);
-check('a Ferret opened again reads the bookmarks', /pizza|Lookwise/i.test(B2.cells(60).scr.ch[3].join('')) && (disk.get('bookmarks') ?? '').split('\n').length === 4);
+check('a Ferret opened again reads the bookmarks', /pizza|Lookwise/i.test(B2.cells(60).scr.ch[MARKS_Y].join('')) && (disk.get('bookmarks') ?? '').split('\n').length === (DEBUG.webMarks ? 7 : 4));
 B.key('d', true, 41);
 check('Ctrl+D again takes it away', !(disk.get('bookmarks') ?? '').includes(sUrl));
 // the search box: words typed there are always a search
 B.key('k', true, 42); for (const ch of 'motel') B.key(ch, false, 42); B.key('Enter', false, 42);
 check('the Lookwise box searches', B.url.includes('lookwise.com/search?q=motel'));
 // closing the tabs one by one; the last one closes the browser
-const tabs = () => B.cells(50).scr.ch[0].join('').split('x').length;
+const tabs = () => B.cells(50).scr.ch[TAB_ROW].join('').split('x').length;
 B.key('w', true, 50); B.key('w', true, 50);
 check('Ctrl+W closes a tab', quit === 0);
 B.key('w', true, 50);

@@ -1,6 +1,11 @@
 import { dark, hex, Img, lite, mixC, Paint, paintMap, photoOf, star, type C3 } from '../render/paint2d';
 import { CH, CW, icon } from './chrome';
 import { type Face, type HdOp } from './page';
+import { logoW, OW, owlLook, paintLogo, paintOwl } from './owl';
+import { paintLogo as paintBadge } from './logos';
+
+/** 15.17h: what the page's owl reacts to: the text cursor in its box (page cells), seconds since the page came. */
+export interface OwlCtx { cursor?: [number, number]; since?: number }
 
 /**
  * 15.17e: a page's pixels (the operations its layout returned, page.ts) painted by the 2D painter, from
@@ -8,7 +13,7 @@ import { type Face, type HdOp } from './page';
  * tabs, the boxes, the tiles round the column, the photos and the banner ads. (x, y): the page cell
  * (0, 0) on the screen in pixels; `now` runs the blinking button and the marquee.
  */
-export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, now: number) {
+export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, now: number, ctx: OwlCtx = {}) {
   const px = (x: number) => X + x * CW, py = (y: number) => Y + y * CH;
   for (const o of ops) {
     switch (o.k) {
@@ -137,7 +142,7 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
         P.image(o.ground ? groundMap(o.ground, o.gw!, o.gh!) : paintMap(Math.round(o.w * 3), Math.round(o.h * 5), o.seed), x0, y0, W, H);
         o.pins.forEach((p, i) => {
           // the city's own map has its pin in the middle (the place); a made-up one scatters them
-          const fx = o.ground ? 0.5 : 0.2 + ((o.seed * (i + 3) * 0.37) % 1) * 0.6, fy = o.ground ? 0.55 : 0.35 + ((o.seed * (i + 7) * 0.23) % 1) * 0.45, x = x0 + W * fx, y = y0 + H * fy, s = CH * 0.55;
+          const fx = o.spots?.[i] ? o.spots[i][0] : o.ground ? 0.5 : 0.2 + ((o.seed * (i + 3) * 0.37) % 1) * 0.6, fy = o.spots?.[i] ? o.spots[i][1] : o.ground ? 0.55 : 0.35 + ((o.seed * (i + 7) * 0.23) % 1) * 0.45, x = x0 + W * fx, y = y0 + H * fy, s = CH * 0.55;
           P.poly([x, y, x - s * 0.7, y - s * 1.3, x - s * 0.5, y - s * 1.8, x, y - s * 2, x + s * 0.5, y - s * 1.8, x + s * 0.7, y - s * 1.3], hex('#8e1a12'));
           P.disc(x, y - s * 1.35, s * 0.62, hex('#e2352a'));
           P.text(x - 2, y - s * 1.35 - 3, p, 1, [255, 255, 255]);
@@ -208,6 +213,27 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
         break;
       }
       case 'owl': icon(P, { k: 'look' }, px(o.x), py(o.y)); break;
+      case 'lwlogo': {
+        // still: the eyes on the text cursor while something is typed; found: wide for a moment
+        let look: [number, number] = [0, 0.2];
+        if (o.mood === 'idle' && ctx.cursor) {
+          const dx = px(ctx.cursor[0]) - (px(o.x) + logoW(o.s) * 0.3), dy = py(ctx.cursor[1] + 0.5) - (py(o.y) + 6.5 * o.s), d = Math.hypot(dx, dy) || 1;
+          look = [dx / d, dy / d];
+        }
+        paintLogo(P, px(o.x), py(o.y), o.s, { look, wide: o.mood === 'found' && (ctx.since ?? 9) < 0.6 });
+        break;
+      }
+      case 'badge': paintBadge(P, o.kind, px(o.x), py(o.y), o.size * CH, o.fg, o.bg); break;
+      case 'owlface': paintOwl(P, px(o.x), py(o.y), o.size * CH, owlLook(o.mood, now)); break;
+      case 'eyes': {
+        const r = CH * 0.27, cy = py(o.y) + CH * 0.5;
+        for (const sg of [-1, 1]) {
+          const cx = px(o.x) + CW + sg * r * 1.1;
+          P.disc(cx, cy, r, OW.ink); P.disc(cx, cy, r - 1.4, o.on ? OW.amber : [255, 255, 255]);
+          if (o.on) P.disc(cx, cy, r * 0.42, OW.pupil); else P.rect(cx - r * 0.55, cy - 0.5, r * 1.1, 1, OW.ink);
+        }
+        break;
+      }
       case 'folder': {
         // the phpBB folder: a tab on the left, the body; amber when there is something new
         const x0 = px(o.x), y0 = py(o.y) + CH * 0.35, s = CH * 0.95, col = o.lit ? hex('#e6b04a') : hex('#5a6068'), ink = o.lit ? hex('#8a6010') : hex('#2a2e34');
@@ -263,7 +289,7 @@ function paintFace(P: Paint, F: Face, x0: number, y0: number, W: number, H: numb
 }
 
 /** Whether ops are moving now (a blinking ad or line, a marquee): the frame's key then changes with the clock. */
-export const animated = (ops: readonly HdOp[]) => ops.some((o) => o.k === 'ad' || o.k === 'marquee' || o.k === 'blink');
+export const animated = (ops: readonly HdOp[]) => ops.some((o) => o.k === 'ad' || o.k === 'marquee' || o.k === 'blink' || (o.k === 'owlface' && (o.mood === 'fly' || o.mood === 'search')));
 
 /** The colors of the city's own map (the Lookwise Local look): out of the city (the sea), road, sidewalk, lot, building, park, plaza, yard. */
 const GROUND: C3[] = [hex('#a7c8e6'), hex('#fbfaf5'), hex('#ece8de'), hex('#e8e1cf'), hex('#ddd0b4'), hex('#c6dfa8'), hex('#efe9dc'), hex('#e3dccb')];

@@ -72,7 +72,7 @@ export function wirePage(w: World, path: string, form?: Map<string, string>): Pa
   const nav: [string, string][] = on ? [['Home', url('/')], [`Signed in as ${me!.user}`, url('/')], ['Sign out', url('/logout')]] : [['Home', url('/')], ['Join', url('/join')], ['Sign in', url('/login')]];
   const page = (p: string, title: string, body: Block[], action?: string): Page => ({
     url: url(p), title: title ? `streetwire - ${title}` : 'streetwire', theme: THEME, form: action ? url(action) : undefined, mobile: true, kb: 30 + body.length * 2,
-    blocks: [{ t: 'banner', text: 'streetwire', sub: "What's happening in your city, right now.", art: [' _/\\_ ', '<(sw)>', ' \\/\\/ '], badge: 'beta' }, { t: 'nav', links: nav }, ...body, { t: 'foot', text: '(c) 2008 Streetwire - About - Privacy - Help' }],
+    blocks: [{ t: 'banner', text: 'streetwire', sub: "What's happening in your city, right now.", logo: 'wire', badge: 'beta' }, { t: 'nav', links: nav }, ...body, { t: 'foot', text: '(c) 2008 Streetwire - About - Privacy - Help' }],
   });
   const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);
   const name = (i: number) => citizenNames(c, P, i).join(' ');

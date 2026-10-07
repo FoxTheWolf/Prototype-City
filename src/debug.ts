@@ -25,4 +25,7 @@ export const DEBUG = {
   /** (15.16) A test pattern on the notebook screen's pixel layer: its edge, a grid, the diagonals, a circle
    *  and color bars, to judge the screen faced, from aside and up close. */
   screenTest: false,
+  /** (15.17h) The canonical sites in the Ferret's bookmarks (Streetwire, GridLink, the Switchboard), marked '(dbg)',
+   *  so they are a click away while testing; the real game comes with only Lookwise, the mail and the portal. */
+  webMarks: true,
 };
