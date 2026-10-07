@@ -16,7 +16,7 @@
 import { Scr } from '../laptop/screen';
 import { type World } from '../sim/world';
 import { layout, SUBMIT, type C3, type Field, type Laid, type Link } from './page';
-import { fetchUrl, portalUrl, searchUrl, SEARCH_HOST, webOf, type Fetched } from './sites';
+import { certExpiry, fetchUrl, portalUrl, searchUrl, SEARCH_HOST, webOf, type Fetched } from './sites';
 import { mailHost } from './webmail';
 import { ADDR_X, addrEnd, BACK, FWD, HOME, iconOf, MARKS_Y, NAV_TEXT_Y, PAGE_Y, RELOAD, SEARCH_W, searchX, TAB_TEXT, TAB_TEXT_W, TAB_W, TAB_X, paintChrome, type ChromeState, type FerretState, type Icon } from './chrome';
 import { hash3 } from '../core/rng';
@@ -34,6 +34,8 @@ const LOOKUP = 0.5, CONNECT = 0.4, TIMEOUT = 8;
 /** The ferret: frames a second digging; how long it takes to come out; how long it looks round when lost. */
 const DIG_FPS = 8, OUT_S = 0.75, LOST_S = 1.5;
 const HISTORY_MAX = 300;
+/** The error page's words start this many cells in (the lost ferret is on their left). */
+export const ERR_X = 22;
 
 const INK: C3 = [0, 0, 0], WHITE: C3 = [255, 255, 255], ERR: C3 = [250, 250, 250], VISITED: C3 = [85, 26, 139];
 const TAB_BG: C3 = [187, 192, 200], NAV_BG: C3 = [232, 234, 238], MARK_BG: C3 = [230, 233, 237], STATUS_BG: C3 = [222, 225, 230], GREY: C3 = [154, 163, 173];
@@ -63,6 +65,10 @@ export class Browser {
   /** The bookmarks (title, address) and the addresses seen (the history: visited links are purple). */
   private marks: [string, string][];
   private seen: Set<string>;
+  /** Hosts whose lapsed certificate the player let through (Add Exception..., 15.17d), kept on the disk. */
+  private trusted: Set<string>;
+  /** The error page's buttons on screen (cells in the pane), for a click. */
+  private errBtns: { x: number; y: number; w: number; act: () => void }[] = [];
   /** Sounds for the notebook to play: the back button's thump, a tab's click. */
   readonly sfx: ('thump' | 'tick')[] = [];
 
@@ -70,6 +76,7 @@ export class Browser {
     const m = files?.read('bookmarks');
     this.marks = m === null || m === undefined ? this.factoryMarks() : m.split('\n').filter((l) => l.includes('\t')).map((l) => l.split('\t') as [string, string]);
     this.seen = new Set((files?.read('history') ?? '').split('\n').filter(Boolean));
+    this.trusted = new Set((files?.read('exceptions') ?? '').split('\n').filter(Boolean));
   }
 
   /** The current page's address (the tab in front). */
@@ -126,6 +133,8 @@ export class Browser {
       for (const [title, url] of this.marks) { const w = Math.min(18, title.length); if (x >= mx && x < mx + 2 + w) { this.go(url, now); return; } mx += w + 4; }
       return;
     }
+    const eb = this.errBtns.find((b) => b.y === y && x >= b.x && x < b.x + b.w);
+    if (eb) { eb.act(); return; }
     if (y >= PAGE_Y && y < PAGE_Y + this.view) {
       const T = this.T, py = T.top + (y - PAGE_Y), L = this.items();
       const on = L.find((it) => it.y === py && x >= it.x && x < it.x + it.w);
@@ -158,7 +167,8 @@ export class Browser {
     T.offline = !n.up; T.kbps = n.kbps;
     T.got = T.offline ? null : fetchUrl(this.world, url, form);
     T.laid = T.got?.page ? layout(T.got.page, this.W - 1) : null;
-    if (T.got?.page) { T.url = T.got.page.url; this.remember(T.url); }
+    if (T.got?.page) { T.url = T.got.cert ? T.got.page.url.replace(/^http:/, 'https:') : T.got.page.url; this.remember(T.url); }
+    else if (T.got?.cert) T.url = T.url.replace(/^http:/, 'https:');
     // a form's first box takes the keys at once, as the sign-in pages of 2008 did
     const I = this.items();
     if (I.length && T.laid?.fields.length) T.sel = I.findIndex((it) => 'name' in it);
@@ -211,10 +221,28 @@ export class Browser {
     if (G.error === 'dns') return [1, 'Done', T.at + LOOKUP];
     if (t < LOOKUP + CONNECT) return [0, `Connecting to ${host}...`, 0];
     if (G.error === 'down') return t < LOOKUP + CONNECT + TIMEOUT ? [0, `Waiting for ${host}...`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + TIMEOUT];
+    if (this.untrusted(T)) return [1, 'Done', T.at + LOOKUP + CONNECT];
     const dur = (G.page!.kb * 8) / Math.max(1, T.kbps), f = Math.min(1, (t - LOOKUP - CONNECT) / dur);
     return f < 1 ? [f, `Transferring data from ${host}... ${Math.floor(f * G.page!.kb)} of ${G.page!.kb} KB`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + dur];
   }
   private loading(now: number) { return this.progress(now)[0] < 1; }
+  /** A page on https whose certificate has lapsed, not let through (yet). */
+  private untrusted(T: Tab) { return T.got?.cert === 'bad' && !this.trusted.has(T.got.host); }
+  /** What has gone wrong with the tab's page, once it shows: no network, no such server, no answer, a lapsed certificate; null if none. */
+  private errOf(T: Tab, now: number): 'offline' | 'dns' | 'down' | 'cert' | null {
+    if (this.progress(now, T)[0] < 1) return null;
+    if (T.offline) return 'offline';
+    if (T.got?.error) return T.got.error;
+    return this.untrusted(T) ? 'cert' : null;
+  }
+  /** Let a lapsed certificate through for this host from now on, and show its page. */
+  private trust(now: number) {
+    const host = this.T.got?.host;
+    if (!host) return;
+    this.trusted.add(host);
+    this.files?.write('exceptions', [...this.trusted].join('\n'));
+    this.go(this.url, now, false);
+  }
 
   key(key: string, ctrl: boolean, now: number) {
     const k = key.toLowerCase(), T = this.T;
@@ -266,7 +294,7 @@ export class Browser {
 
   /** The frame's pixels as they are now (chrome.ts paints them). */
   art(now: number): Art {
-    const T = this.T, [f, , end] = this.progress(now), err = !!(T.got?.error || T.offline);
+    const T = this.T, [f, , end] = this.progress(now), ek = this.errOf(T, now), err = !!ek;
     let ferret: [FerretState, number] = ['peek', 0];
     if (f < 1) ferret = ['dig', Math.floor((now - T.at) * DIG_FPS)];
     else if (err && now - end < LOST_S) ferret = ['lost', Math.floor((now - end) * 4)];
@@ -276,11 +304,12 @@ export class Browser {
     const S: ChromeState = {
       W: this.W, H: this.H,
       tabs: this.tabs.map((t, i) => ({ icon: this.iconFor(t), on: i === this.cur })),
-      canBack: T.back.length > 0, canFwd: T.fwd.length > 0, loading: f < 1, secure: T.url.startsWith('https:'),
+      canBack: T.back.length > 0, canFwd: T.fwd.length > 0, loading: f < 1, secure: !!T.got?.cert && !this.untrusted(T),
       icon: this.iconFor(T),
       scroll: T.laid && rows > this.view ? [T.top / Math.max(1, rows - this.view), this.view / rows] : null,
       ferret, progress: f < 1 && !T.offline ? f : null, marked: this.marks.some(([, u]) => u === T.url),
       marks: this.marks.map(([t, u]) => ({ icon: this.markIcon(u), w: Math.min(18, t.length) })),
+      err: ek ? { kind: ek, btns: this.errBtns.map((b) => [b.x, b.y, b.w] as [number, number, number]) } : null,
     };
     return { key: JSON.stringify(S), paint: (P, ox) => paintChrome(P, S, ox) };
   }
@@ -292,7 +321,7 @@ export class Browser {
   /** The whole pane now (the text over the frame's pixels), and the cursor (in the address box while typing). */
   cells(now: number): { scr: Scr; cx: number; cy: number } {
     const W = this.W, H = this.H, S = new Scr(W, H, 0), view = this.view, T = this.T;
-    const [f, status] = this.progress(now), G = T.got;
+    const [f, status] = this.progress(now);
     // the tabs: each one's title, the active one's close box, the "+"
     S.paint(0, 0, ' '.repeat(W), INK, TAB_BG);
     this.tabs.forEach((t, i) => {
@@ -336,19 +365,14 @@ export class Browser {
         }
       }
     } else {
-      const bad = f >= 1 && (G?.error || T.offline);
-      for (let r = 0; r < view; r++) S.paint(0, PAGE_Y + r, ' '.repeat(W), INK, bad ? ERR : WHITE);
-      if (bad) {
-        const lines = T.offline
-          ? ['Unable to connect', '', 'The notebook is not connected to a network.', 'Join a wireless network first (iwlist, iwconfig, dhclient), then try again.']
-          : G!.error === 'dns'
-            ? ['Server not found', '', `${NAME} can't find the server at ${G!.host}.`, 'Check the address for typing errors such as ww.example.com instead of www.example.com.']
-            : ['The connection has timed out', '', `The server at ${G!.host} is taking too long to respond.`, 'The site could be temporarily unavailable or too busy. Try again in a few moments.'];
-        lines.forEach((l, k) => S.paint(8, PAGE_Y + 4 + k, l, k === 0 ? [140, 20, 20] : [40, 40, 40], ERR));
-      }
+      for (let r = 0; r < view; r++) S.paint(0, PAGE_Y + r, ' '.repeat(W), INK, WHITE);
     }
+    // an error: the browser's own page (the manual's: the lost ferret, a title, why, what to try)
+    this.errBtns = [];
+    const ek = this.errOf(T, now);
+    if (ek) this.errPage(S, ek, now);
     // the status line: what is happening, and the line's speed
-    S.paint(0, H - 1, ` ${status}`.padEnd(W).slice(0, W), [34, 34, 34], STATUS_BG);
+    S.paint(0, H - 1, ` ${T.offline ? 'no network' : status}`.padEnd(W).slice(0, W), [34, 34, 34], STATUS_BG);
     if (!T.offline) { const kb = `${(T.kbps / 8).toFixed(1)} kB/s `; S.paint(W - kb.length, H - 1, kb, [51, 51, 51], STATUS_BG); }
     // the cursor: in the address or search box while typing, else at the end of the text box picked
     const F = this.items()[T.sel];
@@ -359,6 +383,35 @@ export class Browser {
     if (this.editing === 'addr') return { scr: S, cx: a0 + Math.min(aw - 1, this.addr.length), cy: NAV_TEXT_Y };
     if (this.editing === 'search') return { scr: S, cx: s0 + Math.min(sw - 1, this.addr.length), cy: NAV_TEXT_Y };
     return { scr: S, cx: -1, cy: -1 };
+  }
+  /** The error page over the page's rows: the words at ERR_X, wrapped; the button under them. */
+  private errPage(S: Scr, kind: 'offline' | 'dns' | 'down' | 'cert', now: number) {
+    const host = this.T.got?.host ?? '', W = this.W, x0 = ERR_X, ww = W - x0 - 6;
+    const T = {
+      dns: ['Server not found', `${NAME} can't find the server at ${host}.`, ['Check the address for typing errors such as ww.example.com instead of www.example.com.', "If you are unable to load any pages, check your computer's network connection."], 'Try Again'],
+      offline: ['Offline', `${NAME} is not connected to a network.`, ['Turn on the wireless radio, or move closer to an access point.', 'Then try again.'], 'Try Again'],
+      down: ['The connection has timed out', `The server at ${host} is taking too long to respond.`, ['The site could be temporarily unavailable or too busy. Try again in a few moments.', 'A weak wireless signal can also cause this.'], 'Try Again'],
+      cert: ['This Connection is Untrusted', `You have asked ${NAME} to connect securely to ${host}, but we can't confirm that your connection is secure.`, ['If you usually connect to this site without problems, this error could mean that someone is trying to impersonate the site.', `The certificate expired on ${certExpiry(this.world, host)}.`], 'Get me out of here!'],
+    }[kind] as [string, string, string[], string];
+    for (let r = PAGE_Y; r < PAGE_Y + this.view; r++) S.paint(0, r, ' '.repeat(W), INK, ERR);
+    const wrap = (y: number, x: number, w: number, s: string, c: C3) => {
+      let line = '', n = 0;
+      for (const wd of s.split(' ')) { if ((line + ' ' + wd).trim().length > w) { S.paint(x, y + n++, line, c, ERR); line = wd; } else line = (line + ' ' + wd).trim(); }
+      if (line) S.paint(x, y + n++, line, c, ERR);
+      return n;
+    };
+    let y = PAGE_Y + 4;
+    S.paint(x0, y, T[0], [30, 30, 30], ERR); y += 2;
+    y += wrap(y, x0, ww, T[1], [40, 40, 40]) + 1;
+    for (const s of T[2]) { S.paint(x0, y, '*', [90, 90, 90], ERR); y += wrap(y, x0 + 2, ww - 2, s, [60, 60, 60]) + 1; }
+    y++;
+    S.paint(x0, y, ` ${T[3]} `, INK, [228, 228, 228]);
+    this.errBtns.push({ x: x0, y, w: T[3].length + 2, act: kind === 'cert' ? () => this.go('', now) : () => this.go(this.url, now, false) });
+    if (kind === 'cert') {
+      const ax = x0 + T[3].length + 5, lab = 'Add Exception...';
+      S.paint(ax, y, lab, [0, 0, 204], ERR);
+      this.errBtns.push({ x: ax, y, w: lab.length, act: () => this.trust(now) });
+    }
   }
   /** A link's address as the history keeps it (with its scheme). */
   private abs(url: string) { return /^https?:\/\//.test(url) ? url : 'http://' + url; }

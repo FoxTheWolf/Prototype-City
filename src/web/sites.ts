@@ -97,7 +97,32 @@ export function webOf(w: World): Web {
   return W;
 }
 
-export interface Fetched { host: string; path: string; page?: Page; error?: 'dns' | 'down' }
+/** cert (15.17d): the site is on https, with a good certificate or an expired one (the browser warns before showing it). */
+export interface Fetched { host: string; path: string; page?: Page; error?: 'dns' | 'down'; cert?: 'ok' | 'bad' }
+
+/**
+ * Which sites are on https, and whose certificate has lapsed (15.17d): the mail and the banks are on it
+ * (one small bank in four let its certificate lapse), a few shops (half of them lapsed too), and the
+ * forum, on a certificate of its own making. The rest are plain http, as most of the web of 2008 was.
+ */
+export function certOf(w: World, host: string): 'ok' | 'bad' | undefined {
+  const S = webOf(w).hosts.get(host);
+  if (!S) return undefined;
+  if (S.kind === 'mail') return 'ok';
+  if (S.kind === 'forum') return 'bad';
+  if (S.kind !== 'biz') return undefined;
+  const h = hash3(w.seed, S.k, 0xce27);
+  if (w.city.businesses[S.k].kind === 'bank') return h < 0.25 ? 'bad' : 'ok';
+  return h < 0.04 ? 'bad' : h < 0.08 ? 'ok' : undefined;
+}
+/** When a lapsed certificate ran out: a day in the year before now, from the host. */
+export function certExpiry(w: World, host: string): string {
+  const ago = (20 + Math.floor(hash3(host.length, host.charCodeAt(5) || 1, w.seed) * 340)) * 86400, p2 = (n: number) => String(n).padStart(2, '0');
+  if (w.time - ago >= 0) { const D = calendar(w.time - ago); return `${p2(D.month)}/${p2(D.day)}/${D.year}`; }
+  // before the calendar's start: a day of the year before (months of 30 days are near enough on a certificate)
+  const back = Math.floor((ago - w.time) / 86400) % 360;
+  return `${p2(12 - Math.floor(back / 30))}/${p2(28 - (back % 28))}/${calendar(0).year - 1}`;
+}
 
 /** What asking for `url` brings (with a form's boxes, when one was sent): the page, or why not (no such host; the server is down). */
 export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fetched {
@@ -109,15 +134,16 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
   path = path.replace(/\/+$/, '') || '/';
   const S = webOf(w).hosts.get(host);
   if (!S) return { host, path, error: 'dns' };
+  const cert = certOf(w, host);
   if (S.kind === 'biz') {
     const [x, y] = placeAt(w.city, S.k);
     if (!w.power.subs[subAt(w.power, w.city, x, y)].on) return { host, path, error: 'down' };
-    return { host, path, page: bizPage(w, S.k, host, path) };
+    return { host, path, cert, page: bizPage(w, S.k, host, path) };
   }
   if (S.kind === 'search') return { host, path, page: searchPage(w, host, path, query) };
-  if (S.kind === 'mail') return { host, path, page: mailPage(w, host, path, form) };
+  if (S.kind === 'mail') return { host, path, cert, page: mailPage(w, host, path, form) };
   if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
-  if (S.kind === 'forum') return { host, path, page: forumPage(w, path, form) };
+  if (S.kind === 'forum') return { host, path, cert, page: forumPage(w, path, form) };
   return { host, path, page: portalPage(w, host, path) };
 }
 

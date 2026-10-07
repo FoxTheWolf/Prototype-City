@@ -93,7 +93,7 @@ if (B.url !== before) fail('Backspace did not go back');
 B.key('F6', false, 11.5); for (const ch of 'cheap pizza') B.key(ch, false, 11.5); B.key('Enter', false, 11.5);
 if (!B.url.includes('lookwise.com/search?q=cheap+pizza')) fail('words in the address are not a search: ' + B.url);
 up = false; B.go('', 12);
-if (!/Not connected/.test(B.cells(13).scr.ch[49].join(''))) fail('no network, and still a page');
+if (!/no network/.test(B.cells(13).scr.ch[49].join(''))) fail('no network, and still a page');
 
 // the webmail (15.4)
 const MH = `http://${mailHost(w)}`, M = w.mail;

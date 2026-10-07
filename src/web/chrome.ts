@@ -43,7 +43,11 @@ export interface ChromeState {
   progress: number | null;
   /** A bookmark star: lit when the page is one. */
   marked: boolean;
+  /** The browser's own error page (15.17d): which, and its buttons (cells x, y, width) to frame. */
+  err: { kind: 'offline' | 'dns' | 'down' | 'cert'; btns: [number, number, number][] } | null;
 }
+/** The lost ferret on an error page: its size, and where it sits (cells from the page's top-left). */
+const ERR_FERRET = 120, ERR_FERRET_AT: [number, number] = [3, 3];
 
 const B = { cream: hex('#f1e4c8'), cafe: hex('#4a2c1a'), pet: hex('#6b4a2e'), pet2: hex('#7a5838'), eye: hex('#120a06'), nose: hex('#2e170c'), muzzle: hex('#fbf6ea'), shade: hex('#d9c6a0') };
 const LINE: C3 = hex('#a3aab4'), FIELD_LINE: C3 = hex('#7f8b99'), GOLD: C3 = hex('#c9a227');
@@ -115,6 +119,13 @@ export function paintChrome(P: Paint, S: ChromeState, ox: number) {
     P.rrect(tx, py + 2, 4, ph - 4, 2, hex('#c9ced5'));
     P.rrect(tx, py + 2 + (ph - 4 - th) * at, 4, th, 2, hex('#8f98a3'));
   }
+  // an error page: the lost ferret, a frame round each button, and for a lapsed certificate the yellow band
+  if (S.err) {
+    if (S.err.kind === 'cert') P.rect(X, py, PW - 8, 4, hex('#e8b400'));
+    sprite(P, ferretSprite('lost', 2, ERR_FERRET), X + ERR_FERRET_AT[0] * CW, py + ERR_FERRET_AT[1] * CH);
+    const [bx0, by0, bw0] = S.err.btns[0] ?? [0, -1, 0];
+    if (by0 >= 0) { P.rrect(X + bx0 * CW - 3, by0 * CH - 3, bw0 * CW + 6, CH + 6, 4, hex('#8a8a8a')); P.rrect(X + bx0 * CW - 2, by0 * CH - 2, bw0 * CW + 4, CH + 4, 3, hex('#e4e4e4')); }
+  }
   // the status line, its progress bar (the burrow's earth) and the padlock
   const sb = R(S.H - 1);
   P.grad(X, sb, PW, CH, [[0, hex('#e9ecef')], [1, hex('#d6dae0')]]);
@@ -182,10 +193,10 @@ const FERRET_PX = 28, SS = 4;
 const sprites = new Map<string, Sprite>();
 /** The ferret's frames: digging loops 6 (~8 a second); coming out plays 6 once; lost looks side to side. */
 export const FERRET_FRAMES = 6;
-export function ferretSprite(state: FerretState, frame: number): Sprite {
-  const f = state === 'peek' ? 0 : frame % FERRET_FRAMES, key = `${state}${f}`;
+export function ferretSprite(state: FerretState, frame: number, size = FERRET_PX): Sprite {
+  const f = state === 'peek' ? 0 : frame % FERRET_FRAMES, key = `${state}${f}:${size}`;
   let s = sprites.get(key);
-  if (!s) { s = paintFerret(state, f); sprites.set(key, s); }
+  if (!s) { s = paintFerret(state, f, size); sprites.set(key, s); }
   return s;
 }
 
@@ -217,8 +228,8 @@ const BIB = pathPts('M84 172 C 83 154, 90 140, 100 138 C 110 140, 117 154, 116 1
 const NOSE = pathPts('M87 110 C 87 103, 113 103, 113 110 C 113 117, 105 122, 100 122 C 95 122, 87 117, 87 110 Z');
 const CROWN = pathPts('M30 30 L170 30 L170 80 C 140 64, 60 64, 30 80 Z');
 
-function paintFerret(state: FerretState, f: number): Sprite {
-  const N = FERRET_PX * SS, k = N / 200, base = new Img(N, N), P = new Paint(base);
+function paintFerret(state: FerretState, f: number, size: number): Sprite {
+  const N = size * SS, k = N / 200, base = new Img(N, N), P = new Paint(base);
   const sc = (pts: number[], dx = 0, dy = 0) => pts.map((v, i) => (i & 1 ? (v + dy) * k : (v + dx) * k));
   const headDy = state === 'peek' ? 44 : state === 'dig' ? [30, 44, 56, 44, 30, 22][f] : state === 'out' ? [40, 20, 0, 0, 0, 0][f] : 0;
   const look = state === 'lost' ? [-7, -7, 0, 7, 7, 0][f] : 0, blink = state === 'out' && f === 4;
@@ -264,12 +275,12 @@ function paintFerret(state: FerretState, f: number): Sprite {
   P.ring(cx, cy, 76 * k, 8 * k, B.cafe);
   if (headDy <= 8) for (const px of [78, 122]) { P.disc(px * k, 166 * k, 13 * k, hex('#a88a66'), 1, 8.5 * k); P.disc(px * k, 166 * k, 11 * k, hex('#f4e9d3'), 1, 7 * k); }
   // shrink SS x SS: the colour of what is covered, and how much is
-  const out: Sprite = { w: FERRET_PX, h: FERRET_PX, px: new Uint8ClampedArray(FERRET_PX * FERRET_PX * 4) };
-  for (let j = 0; j < FERRET_PX; j++) for (let i = 0; i < FERRET_PX; i++) {
+  const out: Sprite = { w: size, h: size, px: new Uint8ClampedArray(size * size * 4) };
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
     let r = 0, g = 0, b = 0, n = 0;
     for (let y = 0; y < SS; y++) for (let x = 0; x < SS; x++) { const q = ((j * SS + y) * N + i * SS + x) * 4; if (base.px[q + 3]) { r += base.px[q]; g += base.px[q + 1]; b += base.px[q + 2]; n++; } }
     if (!n) continue;
-    const o = (j * FERRET_PX + i) * 4;
+    const o = (j * size + i) * 4;
     out.px[o] = r / n; out.px[o + 1] = g / n; out.px[o + 2] = b / n; out.px[o + 3] = (255 * n) / (SS * SS);
   }
   return out;
