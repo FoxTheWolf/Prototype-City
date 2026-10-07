@@ -76,7 +76,8 @@ export function forumPage(w: World, path: string, form?: Map<string, string>): P
       { t: 'nav', links: nav }, ...body, { t: 'hr' }, { t: 'foot', text: `${online} lurking - no names - no logs we can help - est. 2003` }],
   });
   const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);
-  const row = (t: ForumThread, slug: string): Block => ({ t: 'p', text: `[${t.title}](${url(`/t/${slug}/${t.id}`)}) - ${t.posts.length} post${t.posts.length === 1 ? '' : 's'} - ${bump(t.agoDays)}` });
+  // a thread's row (15.17g, the phpBB look): the folder lit when it moved today or yesterday
+  const row = (t: ForumThread, slug: string): Block => ({ t: 'folder', lit: t.agoDays <= 1, title: `[${t.title}](${url(`/t/${slug}/${t.id}`)})`, text: `by ${t.posts[0]?.by ?? 'anon'} - last post ${bump(t.agoDays)}`, right: `${String(t.posts.length).padStart(5)} posts` });
 
   // sign up: bound to your phone number, confirmed by a text (you are a handle on the board)
   if (path === '/join') {
@@ -141,17 +142,25 @@ export function forumPage(w: World, path: string, form?: Map<string, string>): P
     const board = BOARDS.find((b) => b.slug === mb[1]);
     if (!board) return page(path, 'Not found', [{ t: 'h', text: 'No such board.' }, { t: 'p', text: `[Back to the index](${url('/')})` }]);
     const list = threads(w, board.slug);
-    return page(path, board.name, [{ t: 'h', text: board.name }, { t: 'p', text: board.blurb },
+    return page(path, board.name, [{ t: 'h', text: board.name }, { t: 'p', text: board.blurb }, { t: 'catbar', text: 'Topics', right: 'Posts' },
       ...(list.length ? list.map((t) => row(t, board.slug)) : [{ t: 'p', text: 'Nothing here right now.' } as Block])]);
   }
 
   // the index: the boards, and the latest across them
   if (path !== '/') return page(path, 'Not found', [{ t: 'h', text: 'Page not found.' }, { t: 'p', text: `[Back to the index](${url('/')})` }]);
   const latest = BOARDS.flatMap((b) => threads(w, b.slug).map((t) => ({ t, slug: b.slug }))).sort((a, c) => a.t.agoDays - c.t.agoDays).slice(0, 6);
+  // who is online: the handles that posted lately (and the player's), the rest guests
+  const recent = [...new Set([...(on ? [me!.handle] : []), ...latest.flatMap(({ t }) => (t.agoDays <= 1 ? t.posts.map((p) => p.by) : []))])].slice(0, 8);
   return page('/', '', [
-    { t: 'h', text: 'Boards' },
-    ...BOARDS.map((b): Block => ({ t: 'p', text: `[${b.name}](${url(`/b/${b.slug}`)}) - ${b.blurb}` })),
-    { t: 'hr' }, { t: 'h', text: 'Latest' },
+    { t: 'catbar', text: 'Boards', right: 'Topics  Posts' },
+    ...BOARDS.map((b): Block => {
+      const T = threads(w, b.slug), n = T.reduce((a, t) => a + t.posts.length, 0);
+      return { t: 'folder', lit: T.some((t) => t.agoDays <= 1), title: `[${b.name}](${url(`/b/${b.slug}`)})`, text: b.blurb, right: `${String(T.length).padStart(6)}  ${String(n).padStart(5)}` };
+    }),
+    { t: 'space' }, { t: 'catbar', text: 'Latest' },
     ...latest.map(({ t, slug }) => row(t, slug)),
+    { t: 'space' }, { t: 'catbar', text: 'Who is online' },
+    { t: 'p', text: `In total there are ${online} users online :: ${recent.length} registered and ${Math.max(0, online - recent.length)} guests` },
+    { t: 'p', text: recent.length ? recent.join(', ') : 'nobody you would know' },
   ]);
 }

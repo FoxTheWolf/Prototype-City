@@ -248,5 +248,38 @@
   "Questions? Email the webmaster",
   "Write to the webmaster",
   "Comments? Email us"
+ ],
+ "web.grid.slogan": [
+  "Powering the city since 1961.",
+  "Keeping {city} lit since 1961.",
+  "The lights and the line, since 1961."
+ ],
+ "web.grid.ok": [
+  "All sectors are running normally.",
+  "No outages right now. Every sector is up.",
+  "Service is normal across the city."
+ ],
+ "web.grid.out": [
+  "Outage in sector {sectors}. Our crews are on it.",
+  "Power is out in sector {sectors}. We are working to restore it.",
+  "Service interrupted in sector {sectors}. We apologize for the inconvenience."
+ ],
+ "web.grid.intro": [
+  "GridLink brings power and home phone service to every street in {city}. The map below shows each sector right now.",
+  "From the docks to downtown, one company keeps the lights on and the home phones ringing. Here is the grid as it stands.",
+  "Your power and your home phone, from one company you can call. This is how the city looks right now."
+ ],
+ "web.grid.safety": [
+  "Stay away from fallen lines and never open a GridLink box.",
+  "Our boxes on the poles carry high voltage. Leave them to our crews.",
+  "See a damaged box or a line down? Keep clear and call us."
+ ],
+ "web.grid.report": [
+  "When the lights go out, we usually know already: our control room watches every sector. Still, your call helps us find the trouble faster.",
+  "Our control room sees most outages the moment they happen, but a call from you helps the crews find the spot."
+ ],
+ "web.grid.about": [
+  "GridLink Power & Telecom has served {city} since 1961. Today {n} substations feed the city, each one its own sector, run from our control room downtown.",
+  "Founded in 1961, GridLink runs {city}'s power grid and its home phone lines: {n} substations, {n} sectors, and the crews who answer at any hour."
  ]
 }

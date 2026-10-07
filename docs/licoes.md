@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.17g (páginas canônicas) — 2026-10-07
+- **Ordem dos ops de fundo importa:** um bloco que embrulha outros (a `box`) e só sabe a altura depois deles precisa entrar **antes** deles na lista `back` (`splice(at, 0, …)`); empurrado no fim, o preenchimento dela cobria os campos e os botões de dentro (o login do webmail e a busca do portal apareciam vazios). Os PNGs de teste pegaram isso na hora.
+- **"Assuntos em alta" por palavra dos posts dá lixo** (a gramática repete palavras de enfeite: "#nothing", "#blanket", "#third"). Tópico de verdade sai dos **dados** do post: o tipo do evento, o bairro, a loja. Vale para o índice do Lookwise (15.17h): indexar pelos dados, não pelo texto gerado.
+- **Não há Python nesta máquina** (o `python3` abre a Microsoft Store): editar com o Edit, ou `sed` para trocas de uma linha (e conferir com `grep`: um `sed` com padrão mal escapado insere em silêncio ou duplica).
+- **A fonte 5×7 do PNG de teste (`tests/png.ts`) não tem `_`, `\` nem `>`**: no PNG as artes dos banners e o "More news >>" perdem pedaços, mas no jogo (o átlas) aparecem. Não "consertar" pelo PNG; o envelope do webmail virou ícone em pixels (`banner.logo: 'mail'`) porque fica melhor, não por isso.
+- O teste de páginas com feed precisa rodar a cidade antes (`stepWorld` 20 mil vezes ≈ 1 min no Node) para haver posts e notícias.
+
 ### Lições da 15.16–15.17f (tela como textura, pintor 2D, Ferret) — 2026-10-07
 - **A tela do notebook virou textura sem mexer no shader do mundo:** um passe próprio (`SCREEN_WGSL` em `gpu/compositor.ts`) desenha células + átlas + camada HD numa textura do tamanho da tela de frente (`cols*cw × rows*ch`, o átlas do monitor, nítido); o compositor a lê pixel a pixel quando `show` (de frente) e por **homografia inversa** do quadrilátero do vidro quando de lado (`quadInverse` em `render/screens.ts`, 3 vec4f num uniform; `tests/screens.ts`). De lado, o `look3d` deixa limpas as células que tocam o vidro (`touches`) e o compositor preenche a lasca em volta com a borda da textura.
 - **Não use uma textura 1280×800 fixa para o texto num monitor 1080p:** o vidro mede ~1120×700 lá e o texto de 1 px borraria. A tela de pixels "do aparelho" (1280×800) é só a camada HD; o texto continua no átlas do monitor.

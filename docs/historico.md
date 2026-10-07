@@ -2,6 +2,15 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 15.17g ✅ As páginas canônicas (2026-10-07, Opus 5.5)
+- **Peças novas em `web/page.ts`/`ops.ts`:** blocos `avatar` (post com rosto, foto e linha de baixo), `weather`, `folder`, `catbar`, `sectors`; `banner.badge` (o selo inclinado), `banner.logo` (`gridlink`, `mail`), `box.owl`; ops `ribbon`, `face` (`paintFace`: a cabeça 8×8 do `mcSkin` em pixels), `wx`, `owl`, `folder`, `sectors`, `gridlink`. Num tema `gloss`, `input` ganha o campo afundado (`field`) e `submit` a pílula aqua (`btn`), sem os colchetes. A caixa (`box`) agora vai **embaixo** do que tem dentro (`splice`; antes cobria os campos). `p`/`list` pintam as próprias margens (`edges`).
+- **Portal** (`portalPage` em `sites.ts`): tema com brilho e listras; o anúncio do provedor (webmail grátis) no topo; a manchete com foto pelo tipo da notícia + o começo do texto; o tempo com ícone e vento (de onde sopra); a busca com a coruja (`Page.form` → Lookwise; `fetchUrl` lê `q` do formulário); anúncios **pelo dia** de empresas com site, nas cores delas e com o slogan da gramática (`adOf`); o diretório por grupos; link para o mapa de falta de luz da GridLink. Ações da bolsa: só na etapa 17.
+- **Streetwire** (`streetwire.ts`): `faceOf` (em `render/models.ts`, sobre `pedLook`/`looksOf`); a foto do post (`photoOf`: apagão → `blackout`, loja → `store`, senão `sky`); os assuntos em alta são **tags** (o acontecimento, o bairro, a loja; `tagsOf`), contados por pessoas no dia, eventos valem o dobro, e `/tag/<x>` lista os posts. Palavras soltas dos posts davam lixo ("#nothing", "#blanket"). A caixa "What are you doing right now?" convida a entrar (postar fica para "o resto da rede social").
+- **Webmail:** o login em `box` com degradê, `burst` "25 MB!" (texto pequeno quando passa de 4 letras), ícones de SMS e conexão segura; o ícone de envelope no lugar da arte ASCII.
+- **GridLink** (`web/gridlink.ts`, `www.gridlink-power.com`): `/`, `/outages`, `/report`, `/about`; setores pelo `sectorOf` ("2B": linha do norte + coluna do oeste); servida pela subestação do meio (`gridHome`), cai com ela; textos `web.grid.*` em `locale/text/web.en.json`; no índice do Lookwise.
+- **Switchboard** (só a casca, `forum.ts`): `catbar` + `folder` (acesa com post de hoje/ontem), "Who is online" com os handles recentes. O conteúdo `[HACKING]` não mudou.
+- **Teste:** `tests/web-canon.ts` (checa cada página e grava `tests/.out/canon-*.png`); `web-sites`, `web-layout`, `web-errors`, `browser-tabs` continuam passando.
+
 ## 15.9 ✅ Tocador de música, fone e o Reynard (2026-10-06, Opus 5.5)
 - **Entrevista** no fim de `docs/visao.md` ("O tocador e o app cifrado").
 - **15.9a** Alt segurado solta o mouse (`altFree`, `altUp` em `main.ts`); os botões do relógio são clicáveis (`WATCH_BTN` em `watch.ts`, `watchClick`); no Electron, a barra de menus não aparece mais com o Alt (`setMenuBarVisibility(false)`, sem `autoHideMenuBar`); `e.altKey` faz `preventDefault` (Alt+← voltava a página).

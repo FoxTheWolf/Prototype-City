@@ -24,7 +24,7 @@ import { addressOf, hh, money, slug, webOf } from './sites';
 
 const DAY = 86400;
 /** The mail's own colors: the provider's blue and yellow, a little lighter than its portal. */
-const THEME: Theme = { page: [196, 210, 232], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 214, 60], barFg: [0, 30, 90] };
+const THEME: Theme = { page: [196, 210, 232], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 214, 60], barFg: [0, 30, 90], gloss: true, tile: 'dots' };
 /** The short code the provider texts from. */
 const SHORT = '24245';
 
@@ -98,12 +98,16 @@ export function mailPage(w: World, host: string, path: string, form?: Map<string
   const M = w.mail, prov = provider(w), f = (k: string) => (form?.get(k) ?? '').trim();
   const page = (p: string, title: string, body: Block[], action?: string): Page => ({
     url: `http://${host}${p}`, title: `${prov} Mail - ${title}`, theme: THEME, form: action ? `http://${host}${action}` : undefined, kb: 24 + body.length, mobile: true,
-    blocks: [{ t: 'banner', text: `${prov} Mail`, sub: say(w, 'mail.tagline', 0, {}), art: [' ______ ', '|\\    /|', '| \\__/ |', '|______|'] }, ...body, { t: 'foot', text: `(c) 2008 ${prov} - Privacy Policy - Terms of Service` }],
+    blocks: [{ t: 'banner', text: `${prov} Mail`, sub: say(w, 'mail.tagline', 0, {}), logo: 'mail' }, ...body, { t: 'foot', text: `(c) 2008 ${prov} - Privacy Policy - Terms of Service` }],
   });
   const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);
-  const signIn = (msg = '') => page('/', 'Sign In', [{ t: 'h', text: 'Sign in to your account' }, ...note(msg),
-    { t: 'input', name: 'user', label: 'Username:', size: 20 }, { t: 'input', name: 'pass', label: 'Password:', secret: true, size: 20 }, { t: 'submit', label: 'Sign In' },
-    { t: 'p', text: `New to ${prov} Mail? [Sign up for free](http://${host}/signup)` }, { t: 'p', text: `[Forgot your password?](http://${host}/forgot)` }], '/login');
+  // the sign-in of 2008 (15.17g): the box with its gradient title, the sunken boxes, the aqua button; beside it, why to join
+  const signIn = (msg = '') => page('/', 'Sign In', [{ t: 'cols', widths: [0.56, 0.44], cols: [
+    [{ t: 'box', title: 'Sign in to your mail', blocks: [...note(msg), { t: 'input', name: 'user', label: 'Username:', size: 20 }, { t: 'input', name: 'pass', label: 'Password:', secret: true, size: 20 }, { t: 'submit', label: 'Sign In' },
+      { t: 'p', text: `[Forgot your password?](http://${host}/forgot)` }] }],
+    [{ t: 'burst', label: '25 MB!', text: 'of free storage for every account.' }, { t: 'icon', icon: 'phone', title: 'Sign up by SMS', text: 'We text a code to your mobile. No forms, no waiting.' },
+      { t: 'icon', icon: 'lock', title: 'Secure connection', text: 'Your mail is sent over https.' }, { t: 'p', text: `New to ${prov} Mail? [Sign up for free](http://${host}/signup)` }],
+  ] }], '/login');
   const signUp = (msg = '') => page('/signup', 'Sign Up', [{ t: 'h', text: 'Create your free account' }, ...note(msg),
     { t: 'p', text: `Choose a username (3 to 16 letters or numbers) and a password of at least 6 characters. Your address will be username@${mailDomain(w)}. To keep out spammers we will text a code to your mobile phone.` },
     { t: 'input', name: 'user', label: 'Username:', size: 16 }, { t: 'input', name: 'pass', label: 'Password:', secret: true, size: 20 }, { t: 'input', name: 'pass2', label: 'Retype password:', secret: true, size: 20 },

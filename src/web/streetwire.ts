@@ -21,13 +21,23 @@ import { expand, rngOf, tidy } from '../locale/gen';
 import { TEXT } from '../locale/text';
 import { selFor, voice } from '../locale/voice';
 import { cityNames } from '../talk';
-import { type Block, type Page, type Theme } from './page';
+import { faceOf } from '../render/models';
+import { type Block, type Page, type PhotoSubj, type Theme } from './page';
 import { mailDomain } from './webmail';
 
 export const WIRE_HOST = 'www.streetwire.com';
-const THEME: Theme = { page: [228, 233, 240], bg: [250, 251, 253], fg: [28, 32, 42], dim: [112, 120, 134], link: [40, 90, 180], head: [28, 52, 102], headFg: [255, 255, 255], bar: [44, 74, 136], barFg: [255, 255, 255] };
+const THEME: Theme = { page: [228, 233, 240], bg: [250, 251, 253], fg: [28, 32, 42], dim: [112, 120, 134], link: [40, 90, 180], head: [44, 74, 136], headFg: [255, 255, 255], bar: [28, 52, 102], barFg: [255, 255, 255], gloss: true };
 /** Posts on the front page. */
 const FRONT = 25;
+/** What a post is about, as tags (shown as #Tag, found by the lowercase): the happening, the district, the place. */
+const EVENT_TAG: Partial<Record<Post['kind'], string>> = { crash: 'Crash', jam: 'Traffic', blackout: 'Blackout', restored: 'Blackout', rain: 'Rain', snow: 'Snow', manhunt: 'Police', bust: 'Police' };
+const camel = (s: string) => s.replace(/&/g, 'And').replace(/[^A-Za-z0-9 ]+/g, '').split(/\s+/).map((x) => x.charAt(0).toUpperCase() + x.slice(1)).join('');
+function tagsOf(w: World, p: Post): string[] {
+  const c = w.city, T = [camel(districtName(c, districtAt(c, p.x, p.y)))];
+  if (EVENT_TAG[p.kind]) T.push(EVENT_TAG[p.kind]!);
+  if (p.biz >= 0) T.push(camel(businessName(c, p.biz)));
+  return T;
+}
 
 type Me = NonNullable<Feed['me']>;
 
@@ -62,15 +72,29 @@ export function wirePage(w: World, path: string, form?: Map<string, string>): Pa
   const nav: [string, string][] = on ? [['Home', url('/')], [`Signed in as ${me!.user}`, url('/')], ['Sign out', url('/logout')]] : [['Home', url('/')], ['Join', url('/join')], ['Sign in', url('/login')]];
   const page = (p: string, title: string, body: Block[], action?: string): Page => ({
     url: url(p), title: title ? `streetwire - ${title}` : 'streetwire', theme: THEME, form: action ? url(action) : undefined, mobile: true, kb: 30 + body.length * 2,
-    blocks: [{ t: 'banner', text: 'streetwire', sub: "What's happening in your city, right now.", art: [' _/\\_ ', '<(sw)>', ' \\/\\/ '] }, { t: 'nav', links: nav }, ...body, { t: 'foot', text: '(c) 2008 Streetwire - About - Privacy - Help' }],
+    blocks: [{ t: 'banner', text: 'streetwire', sub: "What's happening in your city, right now.", art: [' _/\\_ ', '<(sw)>', ' \\/\\/ '], badge: 'beta' }, { t: 'nav', links: nav }, ...body, { t: 'foot', text: '(c) 2008 Streetwire - About - Privacy - Help' }],
   });
   const note = (s: string): Block[] => (s ? [{ t: 'p', text: `>> ${s}` }] : []);
   const name = (i: number) => citizenNames(c, P, i).join(' ');
-  const card = (p: Post): Block[] => [
-    { t: 'p', text: `[${name(p.who)}](${url(`/u/${p.who}`)}) - ${postAge(w.time, p.time)} in ${districtName(c, districtAt(c, p.x, p.y))}` },
-    { t: 'p', text: postText(c, P, p) + (p.photo ? ' [photo]' : '') },
-    { t: 'p', text: `[${comments(P, p, w.time).length + (F.mine ?? []).filter((m) => m.post === p.id).length} comments](${url(`/post/${p.id}`)}) - ${likes(P, p, w.time)} likes` }, { t: 'hr' },
-  ];
+  // the picture taken where they were: the dark street in a blackout, the shop they were at, the city
+  const photoOf = (p: Post) => (p.photo ? { subj: (p.kind === 'blackout' ? 'blackout' : p.biz >= 0 ? 'store' : 'sky') as PhotoSubj, seed: p.id * 7919 + 13 } : undefined);
+  const card = (p: Post): Block[] => [{
+    t: 'avatar', face: faceOf(P, p.who), photo: photoOf(p),
+    title: `[${name(p.who)}](${url(`/u/${p.who}`)}) - ${postAge(w.time, p.time)} in ${districtName(c, districtAt(c, p.x, p.y))}`,
+    text: postText(c, P, p),
+    foot: `[${comments(P, p, w.time).length + (F.mine ?? []).filter((m) => m.post === p.id).length} comments](${url(`/post/${p.id}`)}) - ${likes(P, p, w.time)} likes`,
+  }];
+  /** What the city is talking about: the day's tags, by how many people posted them (a happening counts double). */
+  const trending = (): [string, number][] => {
+    const n = new Map<string, Set<number>>();
+    for (const p of F.posts) if (w.time - p.time < 86400) for (const x of tagsOf(w, p)) { let s = n.get(x); if (!s) n.set(x, (s = new Set())); s.add(p.who); }
+    const score = (x: string, k: number) => k * (Object.values(EVENT_TAG).includes(x) ? 2 : 1);
+    return [...n.entries()].map(([x, s]) => [x, s.size] as [string, number]).filter(([, k]) => k > 1).sort((a, b) => score(b[0], b[1]) - score(a[0], a[1]) || a[0].localeCompare(b[0])).slice(0, 8);
+  };
+  const side = (): Block[] => {
+    const T = trending();
+    return [{ t: 'box', title: 'Trending', blocks: [T.length ? { t: 'list', items: T.map(([x, k]) => `[#${x}](${url(`/tag/${x.toLowerCase()}`)}) ${k}`) } : { t: 'p', text: 'Nothing yet today.' }] }];
+  };
   const login = (msg = '') => page('/login', 'Sign in', [{ t: 'h', text: 'Sign in' }, ...note(msg), { t: 'input', name: 'user', label: 'Username:', size: 20 }, { t: 'input', name: 'pass', label: 'Password:', secret: true, size: 20 }, { t: 'submit', label: 'Sign In' }, { t: 'p', text: `Not on Streetwire yet? [Join now](${url('/join')})` }], '/login');
   const join = (msg = '') => page('/join', 'Join', [{ t: 'h', text: 'Join Streetwire' }, ...note(msg),
     { t: 'p', text: "It's free. Pick a username and a password, and give us your e-mail address: we will send you a link to confirm it." },
@@ -90,7 +114,7 @@ export function wirePage(w: World, path: string, form?: Map<string, string>): Pa
     const box: Block[] = !on ? [{ t: 'p', text: `[Sign in](${url('/login')}) or [join](${url('/join')}) to comment.` }]
       : blocked ? [{ t: 'p', text: "You can't comment on this person's posts." }]
       : [{ t: 'input', name: 'text', label: 'Your comment:', size: 60, max: 140 }, { t: 'submit', label: 'Comment' }];
-    return page(`/post/${id}`, name(p.who), [...card(p).slice(0, 2), { t: 'p', text: `${likes(P, p, w.time)} likes` }, { t: 'h', text: 'Comments' }, ...note(msg),
+    return page(`/post/${id}`, name(p.who), [{ ...(card(p)[0] as Extract<Block, { t: 'avatar' }>), foot: `${likes(P, p, w.time)} likes` }, { t: 'h', text: 'Comments' }, ...note(msg),
       ...(items.length ? items.flatMap((x) => x.b) : [{ t: 'p', text: 'No comments yet.' } as Block]), { t: 'hr' }, ...box], on && !blocked ? `/comment/${id}` : undefined);
   };
 
@@ -142,7 +166,15 @@ export function wirePage(w: World, path: string, form?: Map<string, string>): Pa
       { t: 'table', rows: [['Age', String(pr.age)], ['Lives in', pr.home], ['Work', pr.work], ...(pr.status ? [['Status', pr.status]] : []), ['Likes', pr.likes.join(', ')], ['Friends', String(pr.friends)], ['Member since', pr.joined]] },
       { t: 'p', text: pr.bio }, { t: 'h', text: 'Posts' }, ...(theirs.length ? theirs.flatMap(card) : [{ t: 'p', text: 'Nothing posted lately.' } as Block])]);
   }
+  const mt = path.match(/^\/tag\/([a-z0-9]+)$/);
+  if (mt) {
+    const x = mt[1], theirs = F.posts.filter((p) => w.time - p.time < 7 * 86400 && tagsOf(w, p).some((t) => t.toLowerCase() === x)).slice(-FRONT).reverse();
+    const shown = theirs.length ? tagsOf(w, theirs[0]).find((t) => t.toLowerCase() === x)! : x;
+    return page(path, `#${shown}`, [{ t: 'cols', widths: [0.7, 0.3], cols: [[{ t: 'h', text: `Posts about #${shown}` }, ...(theirs.length ? theirs.flatMap(card) : [{ t: 'p', text: 'Nobody is talking about that this week.' } as Block]), { t: 'p', text: `[Back to the feed](${url('/')})` }], side()] }]);
+  }
   if (path !== '/') return page(path, 'Not found', [{ t: 'h', text: 'Page not found.' }, { t: 'p', text: `[Back to the feed](${url('/')})` }]);
   const top = F.posts.slice(-FRONT).reverse();
-  return page('/', '', [{ t: 'h', text: on ? `Hi ${me!.user}! What's happening now` : "What's happening now" }, ...(top.length ? top.flatMap(card) : [{ t: 'p', text: 'Quiet day. Nobody has posted yet.' } as Block])]);
+  // the question every 2008 network asked; posting your own comes later, so for now it asks you to join
+  const ask: Block = { t: 'box', title: 'What are you doing right now?', blocks: [{ t: 'p', text: on ? `Signed in as ${me!.user}. Comment on what the city is saying below.` : `[Join](${url('/join')}) to tell the city, or [sign in](${url('/login')}).` }] };
+  return page('/', '', [{ t: 'cols', widths: [0.7, 0.3], cols: [[ask, { t: 'h', text: on ? `Hi ${me!.user}! What's happening now` : "What's happening now" }, ...(top.length ? top.flatMap(card) : [{ t: 'p', text: 'Quiet day. Nobody has posted yet.' } as Block])], side()] }]);
 }

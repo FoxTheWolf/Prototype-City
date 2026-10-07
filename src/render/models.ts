@@ -133,6 +133,13 @@ export function pedLook(P: Population, who: number) {
   };
 }
 
+const EYE_RGB: RGB[] = [[70, 45, 25], [120, 90, 45], [60, 120, 70], [60, 110, 190]];
+/** A person's face for an avatar on the web (15.17g): the same skin, hair, eyes and shirt as their body in the street. */
+export function faceOf(P: Population, who: number) {
+  const L = looksOf(P, who), b = pedLook(P, who);
+  return { skin: b.skin, hair: b.hair, shirt: L.jacketOn ? b.jacket : b.shirt, eyes: EYE_RGB[L.eyes], hairLen: L.hairLen, beard: L.beard };
+}
+
 const UMBRELLAS: RGB[] = [[30, 30, 34], [150, 30, 40], [40, 60, 120], [200, 180, 60], [60, 110, 70], [150, 150, 155]];
 /**
  * A person standing or walking, facing +x: jointed legs and arms with the step (`step`: 0 standing, 1..8 the walk),

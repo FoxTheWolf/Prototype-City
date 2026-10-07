@@ -22,11 +22,12 @@ import { TEXT } from '../locale/text';
 import { newsStories, storyBody } from '../locale/news';
 import { districtAt } from '../sim/city';
 import en from '../locale/en.json';
-import { type Block, type C3, type Page, type PhotoSubj, type Theme } from './page';
+import { type Block, type C3, type Page, type PhotoSubj, type Sky, type Theme } from './page';
 import { groundAt, mapRaster } from '../phone/mapdata';
 import { mailHost, mailPage, provider } from './webmail';
 import { WIRE_HOST, wirePage } from './streetwire';
 import { FORUM_HOST, forumPage } from './forum';
+import { GRID_HOST, gridHome, gridPage } from './gridlink';
 
 /** A hostname as written: lowercase letters and digits. */
 export const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
@@ -49,7 +50,7 @@ const THEMES: Theme[] = [
   { page: [250, 230, 200], bg: [255, 250, 240], fg: [60, 40, 20], dim: [150, 120, 90], link: [200, 90, 0], head: [230, 120, 20], headFg: [255, 255, 255], bar: [250, 210, 150], barFg: [110, 50, 0] },
 ];
 /** The portal's own: the provider's blue. */
-const PORTAL: Theme = { page: [180, 196, 220], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 204, 0], barFg: [0, 30, 90] };
+const PORTAL: Theme = { page: [180, 196, 220], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 204, 0], barFg: [0, 30, 90], gloss: true, tile: 'stripes' };
 
 /** A logo of a few lines for each kind of place (the sites' "images", drawn in characters). */
 const ICONS: Partial<Record<BusinessKind | 'any', string[]>> = {
@@ -67,7 +68,7 @@ const ICONS: Partial<Record<BusinessKind | 'any', string[]>> = {
   any: [' ____ ', '| ** |', '|____|'],
 };
 
-export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'forum' } | { kind: 'biz'; k: number };
+export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'forum' } | { kind: 'grid' } | { kind: 'biz'; k: number };
 export interface Web { hosts: Map<string, SiteRef>; byBiz: Map<number, string>; portal: string; search: string }
 /** The search engine (15.3): its name and host. */
 export const SEARCH = 'Lookwise', SEARCH_HOST = 'www.lookwise.com';
@@ -83,6 +84,7 @@ export function webOf(w: World): Web {
   hosts.set(SEARCH_HOST, { kind: 'search' });
   hosts.set(mailHost(w), { kind: 'mail' });
   hosts.set(WIRE_HOST, { kind: 'wire' });
+  hosts.set(GRID_HOST, { kind: 'grid' });
   hosts.set(FORUM_HOST, { kind: 'forum' }); // not indexed by the search, not on the portal: you get the address from someone
   c.businesses.forEach((b, k) => {
     const head = b.hq ?? k;
@@ -128,7 +130,7 @@ export function certExpiry(w: World, host: string): string {
 /** What asking for `url` brings (with a form's boxes, when one was sent): the page, or why not (no such host; the server is down). */
 export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fetched {
   const u = url.trim().toLowerCase().replace(/^https?:\/\//, '');
-  const query = decodeURIComponent((u.split('?q=')[1] ?? '').replace(/\+/g, ' '));
+  const query = form?.get('q') ?? decodeURIComponent((u.split('?q=')[1] ?? '').replace(/\+/g, ' '));
   let host = u.split(/[/?]/)[0], path = '/' + u.split('?')[0].split('/').slice(1).join('/');
   if (!host.includes('.')) host = `www.${host}.com`;
   if (!host.startsWith('www.') && !webOf(w).hosts.has(host)) host = 'www.' + host;
@@ -145,6 +147,7 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
   if (S.kind === 'mail') return { host, path, cert, page: mailPage(w, host, path, form) };
   if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
   if (S.kind === 'forum') return { host, path, cert, page: forumPage(w, path, form) };
+  if (S.kind === 'grid') return w.power.subs[gridHome(w)].on ? { host, path, page: gridPage(w, path) } : { host, path, error: 'down' };
   return { host, path, page: portalPage(w, host, path) };
 }
 
@@ -337,9 +340,19 @@ function portalPage(w: World, host: string, path: string): Page {
   const stories = newsStories(w), W = w.weather, f = (t: number) => Math.round(t * 1.8 + 32);
   const D = calendar(w.time), date = `${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][D.weekday]}, ${D.month}/${D.day}/${D.year}`;
   const sky = W.snow && W.precip > 0.15 ? 'Snow' : W.precip > 0.4 ? 'Rain' : W.precip > 0.15 ? 'Showers' : 'Fair';
-  const weather: Block[] = [{ t: 'h', text: 'Weather' }, { t: 'p', text: `${sky}, ${f(W.temp)}F` }, { t: 'p', text: `[Full forecast](http://${host}/weather)` }];
-  const ads = [...Wb.byBiz.entries()].filter(([k, h2]) => Wb.hosts.get(h2)?.kind === 'biz' && (Wb.hosts.get(h2) as { k: number }).k === k);
-  const ad = ads.length ? ads[Math.floor(hash3(w.seed, Math.floor(w.time / 3600), 7) * ads.length)] : null;
+  // the icon by the sky and the hour; the wind by the compass
+  const hour = D.hour, night = hour < 6 || hour >= 19, icon: Sky = W.precip > 0.15 ? (W.snow ? 'snow' : 'rain') : W.cloud > 0.6 ? 'cloud' : night ? 'moon' : 'sun';
+  const mph = Math.round(Math.hypot(W.windX, W.windY) * 2.2), wdir = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'][((Math.round(Math.atan2(W.windY, W.windX) / (Math.PI / 4)) + 4) % 8 + 8) % 8]; // where it blows from
+  const weather: Block[] = [{ t: 'weather', sky: icon, title: `${night ? 'Tonight' : 'Today'}: ${sky.toLowerCase()}`, text: `${f(W.temp)} F  wind ${wdir} ${mph}  [Forecast](http://${host}/weather)` }];
+  // the ads of the day: businesses of the city that have a site (in their own colors), never the same two
+  const ads = [...Wb.hosts.entries()].filter((e): e is [string, { kind: 'biz'; k: number }] => e[1].kind === 'biz');
+  const day = Math.floor(w.time / 86400), adOf = (q: number) => {
+    if (!ads.length) return null;
+    const [h2, S] = ads[Math.floor(hash3(w.seed, day, q) * ads.length)], b = c.businesses[S.k], T = THEMES[Math.floor(hash3(w.seed, S.k, 1) * THEMES.length)];
+    const [sl] = tidy(expand(`#web.slogan.${pitchOf(b.kind)}#`, TEXT, rngOf(w.seed, S.k, day), { biz: businessName(c, S.k), city })).split('|');
+    return { t: 'ad', name: businessName(c, S.k), text: sl, url: `http://${h2}/`, c1: T.head, c2: T.headFg } as Block;
+  };
+  const ad = adOf(7);
   const foot: Block = { t: 'foot', text: `${city} Online - ${date}` };
   let body: Block[];
   const m = path.match(/^\/news\/(\d+)$/);
@@ -360,10 +373,24 @@ function portalPage(w: World, host: string, path: string): Page {
       body = [{ t: 'h', text: kinds[kind] ?? kind }, { t: 'table', head: true, rows: [['Name', 'Address', 'Phone'], ...rows] }, { t: 'p', text: `[All categories](http://${host}/directory)` }];
     }
   } else if (path === '/') {
-    const heads = stories.map((S, n) => [S, n] as const).filter(([S]) => S.kind !== 'date').slice(0, 8).map(([S, n]) => `[${S.head}](http://${host}/news/${n})`);
-    body = [{ t: 'cols', widths: [0.64, 0.36], cols: [[{ t: 'h', text: 'Top Stories' }, { t: 'list', items: heads.length ? heads : ['No news is good news.'] }], [...weather, ...(ad ? [{ t: 'ad', name: businessName(c, ad[0]), text: `Visit us at ${ad[1].replace(/^www\./, '')}`, url: `http://${ad[1]}/` } as Block] : []), { t: 'h', text: 'Find' }, { t: 'p', text: `[Business directory](http://${host}/directory)` }, { t: 'p', text: `[Streetwire](http://${WIRE_HOST}/): what the city is saying` }]] }];
+    const news = stories.map((S, n) => [S, n] as const).filter(([S]) => S.kind !== 'date');
+    // the top story with its photo (a dark street for a blackout, the street for the traffic, the city for the rest) and its first lines
+    const lead = news[0], rest = news.slice(1, 8).map(([S, n]) => `[${S.head}](http://${host}/news/${n})`);
+    const subjOf = (k: string): PhotoSubj => (k === 'blackout' ? 'blackout' : k === 'crash' || k === 'jam' ? 'sky' : k === 'weather' ? 'sky' : 'store');
+    const first = lead ? (storyBody(w, lead[0])[0] ?? '') : '', short = first.length > 130 ? first.slice(0, first.lastIndexOf(' ', 127)) + '...' : first;
+    const top: Block[] = lead
+      ? [{ t: 'cols', widths: [0.34, 0.66], cols: [[{ t: 'photo', subj: subjOf(lead[0].kind), seed: lead[0].key * 31 + 7, h: 5, w: 18, frame: 'line' }], [{ t: 'p', text: `[${lead[0].head}](http://${host}/news/${lead[1]})` }, { t: 'p', text: short }]] }]
+      : [{ t: 'p', text: 'No news is good news.' }];
+    // the provider's own banner on top; the search box with the owl, sent to Lookwise; the directory's big groups
+    const kinds = en.phone.find.kinds as Record<string, string>, groups: [string, BusinessKind][] = ([['Food & drink', 'diner'], ['Coffee', 'cafe'], ['Banks', 'bank'], ['Night life', 'bar'], ['Hotels', 'hotel']] as [string, BusinessKind][]).filter(([, k2]) => kinds[k2]);
+    const search: Block = { t: 'box', title: 'Search the web', owl: true, blocks: [{ t: 'input', name: 'q', label: 'Look it up:', size: 26 }, { t: 'submit', label: 'Go' }] };
+    body = [{ t: 'ad', name: `${city} Online`, text: 'Free e-mail with 25 MB for everyone. Sign up by SMS today!', url: `http://${mailHost(w)}/signup`, c1: [0, 51, 153], c2: [255, 204, 0] },
+      { t: 'cols', widths: [0.62, 0.38], cols: [
+        [{ t: 'h', text: `Top Stories - ${date}` }, ...top, { t: 'list', items: rest }, { t: 'p', text: `[More news >>](http://${host}/news)` }, { t: 'p', text: `[Streetwire](http://${WIRE_HOST}/): what the city is saying` }, { t: 'p', text: `Lights out? [GridLink's outage map](http://${GRID_HOST}/outages)` }],
+        [{ t: 'box', title: 'Weather', blocks: weather }, search, ...(ad ? [ad] : []), { t: 'box', title: 'Directory', blocks: [{ t: 'list', items: [...groups.map(([l, k2]) => `[${l}](http://${host}/directory/${k2})`), `[All categories](http://${host}/directory)`] }] }],
+      ] }];
   } else body = [{ t: 'h', text: '404 - Not Found' }, { t: 'p', text: `[Home](http://${host}/)` }];
-  return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60, mobile: true };
+  return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60, mobile: true, form: path === '/' ? `http://${SEARCH_HOST}/search` : undefined };
 }
 
 export const portalUrl = (w: World) => `http://${webOf(w).portal}/`;
@@ -400,6 +427,7 @@ function indexOf(w: World): Doc[] {
   doc(`http://${Wb.portal}/news`, `${city} Online - News`, `Today's headlines from around ${city}.`, [['news headlines today', 4], [city, 2]]);
   doc(`http://${Wb.portal}/weather`, `${city} Online - Weather`, `The weather in ${city} today.`, [['weather forecast rain snow temperature', 4], [city, 2]]);
   doc(`http://${mailHost(w)}/`, `${provider(w)} Mail`, `Free e-mail from ${provider(w)}. Sign in or sign up for a free account.`, [['mail email webmail inbox free account sign signup', 4], [city, 2]]);
+  doc(`http://${GRID_HOST}/`, 'GridLink - Power & Telecom', `Power and home phone service for ${city}. Outage map, report an outage.`, [['gridlink power electricity outage outages blackout lights phone telecom utility', 4], [city, 1]]);
   doc(`http://${WIRE_HOST}/`, 'Streetwire', "What's happening in your city, right now. Join free.", [['streetwire social network posts friends people feed', 4], [city, 1]]);
   doc(`http://${Wb.portal}/directory`, `${city} Online - Business Directory`, 'Every business in the city by category, with address and phone.', [['directory business businesses yellow pages phone address', 4], [Object.values(kinds).join(' '), 1]]);
   indexes.set(w.city, I);

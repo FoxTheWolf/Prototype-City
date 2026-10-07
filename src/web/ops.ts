@@ -1,6 +1,6 @@
 import { dark, hex, Img, lite, mixC, Paint, paintMap, photoOf, star, type C3 } from '../render/paint2d';
-import { CH, CW } from './chrome';
-import { type HdOp } from './page';
+import { CH, CW, icon } from './chrome';
+import { type Face, type HdOp } from './page';
 
 /**
  * 15.17e: a page's pixels (the operations its layout returned, page.ts) painted by the 2D painter, from
@@ -113,8 +113,9 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
         const cx = px(o.x), cy = py(o.y), R = 1.6 * CH;
         P.poly(star(cx, cy, R, R * 0.76, 14), dark(o.col, 0.4));
         P.poly(star(cx, cy, R - 1.5, R * 0.76 - 1.5, 14), o.col);
-        const w = Paint.textW(o.text, 2);
-        P.text(cx - w / 2, cy - 7, o.text, 2, [255, 255, 255]);
+        // (a longer word, "25 MB!", in the small letters, to fit inside the star)
+        const s = o.text.length > 4 ? 1 : 2, w = Paint.textW(o.text, s);
+        P.text(cx - w / 2, cy - 3.5 * s, o.text, s, [255, 255, 255]);
         break;
       }
       case 'rss': {
@@ -183,8 +184,82 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
         P.disc(cx, cy - R * 0.48, R * 0.72, [255, 255, 255], 0.3, R * 0.38);
         break;
       }
+      case 'ribbon': {
+        // a little red tag tilted 14 degrees, the word in white over it
+        const cx = px(o.x), cy = py(o.y), hw = CH * 1.2, hh = CH * 0.38, a = (-14 * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+        const pt = (u: number, v: number) => [cx + u * c - v * s, cy + u * s + v * c];
+        const quad = (k: number) => [...pt(-hw - k, -hh - k), ...pt(hw + k, -hh - k), ...pt(hw + k, hh + k), ...pt(-hw - k, hh + k)];
+        P.poly(quad(0.8), dark(o.col, 0.35)); P.poly(quad(0), o.col); P.poly([...pt(-hw, -hh), ...pt(hw, -hh), ...pt(hw, -hh * 0.1), ...pt(-hw, -hh * 0.1)], [255, 255, 255], 0.22);
+        P.text(cx - Paint.textW(o.text, 1) / 2, cy - 3 - s * 2, o.text, 1, [255, 255, 255]);
+        break;
+      }
+      case 'face': paintFace(P, o.face, px(o.x), py(o.y), o.w * CW, o.h * CH); break;
+      case 'wx': {
+        const R = CH * 0.9, cx = px(o.x) + R, cy = py(o.y) + R;
+        const cloud = (x: number, y: number, k: number, col: C3) => { P.disc(x - k * 0.45, y + k * 0.1, k * 0.42, col); P.disc(x + k * 0.05, y - k * 0.2, k * 0.55, col); P.disc(x + k * 0.55, y + k * 0.12, k * 0.38, col); P.rect(x - k * 0.45, y + k * 0.1, k, k * 0.42, col); };
+        if (o.sky === 'sun') { for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4; P.line(cx + Math.cos(a) * R * 0.62, cy + Math.sin(a) * R * 0.62, cx + Math.cos(a) * R * 0.95, cy + Math.sin(a) * R * 0.95, 1.6, hex('#f0a800')); } P.disc(cx, cy, R * 0.5, hex('#e0a000')); P.disc(cx, cy, R * 0.44, hex('#f6c21c')); }
+        else if (o.sky === 'moon') { P.disc(cx, cy, R * 0.66, hex('#f4e3a0')); P.disc(cx + R * 0.3, cy - R * 0.2, R * 0.56, o.bg); }
+        else {
+          if (o.sky === 'cloud') P.disc(cx + R * 0.35, cy - R * 0.35, R * 0.4, hex('#f6c21c'));
+          cloud(cx, cy - R * 0.1, R * 1.05, hex('#9aa6bc')); cloud(cx, cy - R * 0.14, R * 0.98, o.sky === 'cloud' ? [255, 255, 255] : hex('#d8dee8'));
+          if (o.sky === 'rain') for (let i = 0; i < 4; i++) P.line(cx - R * 0.5 + i * R * 0.34, cy + R * 0.45, cx - R * 0.62 + i * R * 0.34, cy + R * 0.85, 1.2, hex('#3a78d8'));
+          if (o.sky === 'snow') for (let i = 0; i < 4; i++) P.disc(cx - R * 0.5 + i * R * 0.34, cy + R * (i % 2 ? 0.55 : 0.8), 1.4, hex('#7fa6d8'));
+        }
+        break;
+      }
+      case 'owl': icon(P, { k: 'look' }, px(o.x), py(o.y)); break;
+      case 'folder': {
+        // the phpBB folder: a tab on the left, the body; amber when there is something new
+        const x0 = px(o.x), y0 = py(o.y) + CH * 0.35, s = CH * 0.95, col = o.lit ? hex('#e6b04a') : hex('#5a6068'), ink = o.lit ? hex('#8a6010') : hex('#2a2e34');
+        const shape = (k: number) => [x0 - k, y0 - k, x0 + s * 0.4 + k, y0 - k, x0 + s * 0.52 + k, y0 + s * 0.14 - k, x0 + s * 1.22 + k, y0 + s * 0.14 - k, x0 + s * 1.22 + k, y0 + s * 0.9 + k, x0 - k, y0 + s * 0.9 + k];
+        P.poly(shape(0.8), ink); P.poly(shape(0), col);
+        P.rect(x0, y0 + s * 0.3, s * 1.22, s * 0.12, [255, 255, 255], o.lit ? 0.3 : 0.12);
+        break;
+      }
+      case 'sectors': {
+        const x0 = px(o.x), y0 = py(o.y), W = o.w * CW, H = o.h * CH, rws = Math.ceil(o.on.length / o.cols), bw = W / o.cols, bh = H / rws, NAVY = hex('#1d3a6e');
+        P.rect(x0 - 2, y0 - 2, W + 4, H + 4, NAVY);
+        o.on.forEach((on, k) => {
+          const bx = x0 + (k % o.cols) * bw, by = y0 + Math.floor(k / o.cols) * bh;
+          P.grad(bx + 1, by + 1, bw - 2, bh - 2, on ? [[0, hex('#7dd0f2')], [1, hex('#3aa6d8')]] : [[0, hex('#2a2e38')], [1, hex('#14161c')]]);
+          if (!on) for (let i = 0; i < 3; i++) P.disc(bx + bw * (0.3 + i * 0.2), by + bh * 0.72, 1.5, hex('#ff6a13'));
+          const lw = Paint.textW(o.labels[k] ?? '', 2);
+          P.text(bx + (bw - lw) / 2, by + bh * 0.22, o.labels[k] ?? '', 2, on ? NAVY : hex('#8d8b84'));
+        });
+        break;
+      }
+      case 'gridlink': {
+        // GRID in white over LINK in cyan; LINK starts under the I, and the I's stem runs down into the L's
+        const s = o.s, x0 = px(o.x), y0 = py(o.y), step = 6 * s, lx = x0 + 2 * step + 2 * s;
+        P.text(x0, y0, 'GRID', s, [255, 255, 255]);
+        P.text(lx, y0 + 8 * s, 'LINK', s, hex('#3aa6d8'));
+        P.rect(lx, y0 + 7 * s, s, s, hex('#3aa6d8'));
+        break;
+      }
     }
   }
+}
+
+/**
+ * An avatar: the city's blocky head (the same 8 x 8 skin the people wear, 13.8) and shoulders, in the
+ * person's own skin, hair, eyes and shirt, on a pale ground, framed; w x h pixels.
+ */
+function paintFace(P: Paint, F: Face, x0: number, y0: number, W: number, H: number) {
+  const u = Math.min(W, H) / 8, ox = x0 + (W - u * 8) / 2, oy = y0 + (H - u * 8) / 2;
+  const cell = (i: number, j: number, c: C3) => P.rect(ox + i * u, oy + j * u, u, u, c);
+  P.rect(x0 - 1, y0 - 1, W + 2, H + 2, hex('#8a94a6'));
+  P.rect(x0, y0, W, H, lite(F.shirt, 0.78));
+  for (let j = 0; j < 6; j++) for (let i = 1; i < 7; i++) cell(i, j, F.skin);
+  // the hair: a cap of it, down the sides when long; a bald head keeps its skin
+  if (F.hairLen > 0) { for (let i = 1; i < 7; i++) cell(i, 0, F.hair); cell(1, 1, F.hair); cell(6, 1, F.hair); }
+  if (F.hairLen > 1) for (let j = 1; j < 6; j++) { cell(0, j, F.hair); cell(7, j, F.hair); cell(1, j, F.hair); cell(6, j, F.hair); }
+  // the eyes: white and the color, looking a little to the side
+  cell(2, 3, [245, 245, 245]); cell(3, 3, F.eyes); cell(4, 3, [245, 245, 245]); cell(5, 3, F.eyes);
+  if (F.beard) { cell(2, 5, F.hair); cell(5, 5, F.hair); cell(1, 4, F.hair); cell(6, 4, F.hair); }
+  P.rect(ox + 3 * u, oy + 5 * u + u * 0.35, u * 2, u * 0.35, dark(F.skin, 0.35));
+  // the neck and the shoulders in the shirt
+  cell(3, 6, dark(F.skin, 0.12)); cell(4, 6, dark(F.skin, 0.12));
+  for (let i = 0; i < 8; i++) { if (i < 3 || i > 4) cell(i, 6, F.shirt); cell(i, 7, F.shirt); }
 }
 
 /** Whether ops are moving now (a blinking ad or line, a marquee): the frame's key then changes with the clock. */
