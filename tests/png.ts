@@ -2,7 +2,8 @@
 // paper where the frame left nothing and their text in the 5 x 7 font; and a tiny PNG writer.
 import { deflateSync } from 'node:zlib';
 import { HdLayer, HdOrder } from '../src/render/hd';
-import { onHd, Paint } from '../src/render/paint2d';
+import { Img, onHd, Paint } from '../src/render/paint2d';
+import { type CharGrid } from '../src/render/grid';
 import { CH, CW } from '../src/web/chrome';
 import { type Browser } from '../src/web/browser';
 
@@ -27,4 +28,28 @@ export function png(px: Uint8ClampedArray, w: number, h: number): Buffer {
   const chunk = (t: string, d: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+
+/**
+ * 15.17i: a picture of the phone's screen (cols x rows cells of a CharGrid from its top-left, with the HD
+ * layer at HD x HD a cell): each cell 9 x 15 pixels, an HD pixel 3 x 5; the paper, the pixels under the
+ * text, the text in the 5 x 7 font, the pixels over it.
+ */
+export function phoneShot(g: CharGrid, hd: HdLayer, cols: number, rows: number): Buffer {
+  const CWp = 9, CHp = 15, w = cols * CWp, h = rows * CHp, img = new Img(w, h), P = new Paint(img), S = 3;
+  const pix = (over: boolean) => {
+    for (let Y = 0; Y < rows * S; Y++) for (let X = 0; X < cols * S; X++) {
+      const k = hd.at(X, Y);
+      if (k < 0 || (hd.px[k + 3] === 255) !== over) continue;
+      P.rect(X * 3, Y * 5, 3, 5, [hd.px[k], hd.px[k + 1], hd.px[k + 2]]);
+    }
+  };
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const i = (r * g.cols + c) * 4; P.rect(c * CWp, r * CHp, CWp, CHp, [g.bg[i], g.bg[i + 1], g.bg[i + 2]]); }
+  pix(false);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const i = (r * g.cols + c) * 4, code = g.cells[i];
+    if (code > 32 && code < 127) P.text(c * CWp + 2, r * CHp + 4, String.fromCharCode(code), 1, [g.cells[i + 1], g.cells[i + 2], g.cells[i + 3]]);
+  }
+  pix(true);
+  return png(img.px, w, h);
 }

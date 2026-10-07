@@ -61,10 +61,10 @@ export class Lcd {
   }
   /** Whether there is an HD layer to draw pixels on. */
   get hd(): boolean { return !!HDL; }
-  /** HD pixel (ix, iy) (0..HD-1 each) of screen cell (x, y), over the interface. */
-  pixel(x: number, y: number, ix: number, iy: number, r: number, g: number, b: number) {
+  /** HD pixel (ix, iy) (0..HD-1 each) of screen cell (x, y), over the interface (or under its letters, 15.17i). */
+  pixel(x: number, y: number, ix: number, iy: number, r: number, g: number, b: number, under = false) {
     if (!HDL || x < 0 || y < 0 || x >= SW || y >= SH) return;
-    HDL.put((this.x0 + x) * HD + ix, (this.y0 + y) * HD + iy, r, g, b, HdOrder.Over);
+    HDL.put((this.x0 + x) * HD + ix, (this.y0 + y) * HD + iy, r, g, b, under ? HdOrder.Under : HdOrder.Over);
   }
 }
 
