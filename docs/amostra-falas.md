@@ -51,11 +51,12 @@ Gerada por `tests/sample-lines.ts` (semente 42). Cada linha: a fala, depois quem
 - “There was a crash up the street.” — Kristin, 27 (young, trabalha) · `bark.chat.news.a`
 - “Uh, did you lose something?” — Andres, 26 (young, trabalha) · `bark.crouch`
 - “Somebody's got energy.” — Hugh, 39 (adult, trabalha) · `bark.jump`
+- “{band} again? You can't get away from them this year.” — Isaac, 33 (young, trabalha) · `bark.music.band`
+- “Huh. Not bad.” — Ryder, 23 (young) · `bark.music`
 
 ## Pedir direção
 
-- “You want to go north two blocks to Kessler St, then east one block. You'll see it on Marlow Ave.” — Isaac, 33 (young, trabalha) · `dir.answer`
-- “Go north two blocks to Kessler St. You'll see it on Marlow Ave.” — Ryder, 23 (young) · `dir.one`
-- “Oh, it's just east of here.” — Mariko, 30 (young, trabalha) · `dir.near`
-- “Never heard of it, sorry.” — Karla, 31 (young, trabalha) · `dir.dunno`
-- “Sorry, in a hurry.” — Duc, 25 (young) · `dir.busy`
+- “You want to go north two blocks to Kessler St, then east one block. You'll see it on Marlow Ave.” — Mariko, 30 (young, trabalha) · `dir.answer`
+- “Let me think. It's north two blocks to Kessler St from here. You'll see it on Marlow Ave.” — Karla, 31 (young, trabalha) · `dir.one`
+- “You're practically there. About 120 feet east.” — Duc, 25 (young) · `dir.near`
+- “Sorry, can't stop.” — Darrell, 36 (adult, trabalha) · `dir.busy`
