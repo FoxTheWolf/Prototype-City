@@ -1,7 +1,7 @@
 /**
  * Ferret Mini, the phone's web browser (15.5; the Lodestar Mini renamed and given the manual's frame in
  * 15.17i, docs/identidade/ferret-manual.html part 11), a free app from the store: the city's web on a
- * 42-column screen, over EDGE. A page comes down through the phone's radio (radio.ts), slow and out of
+ * 40-column screen (6 x 12 pixels a cell), over EDGE. A page comes down through the phone's radio (radio.ts), slow and out of
  * the prepaid bundle unless a Wi-Fi is joined; a site made for phones weighs a fifth of its page and
  * leaves its pictures out, the others come whole (pictures and all) squeezed into one column (page.ts
  * mobilePage), so they cost more, and before a heavy one comes over EDGE the browser says what it may
@@ -21,25 +21,27 @@ import { paintOps } from '../web/ops';
 import { debugMarks, factoryMarks } from '../web/browser';
 import { CH, CW } from '../web/chrome';
 import { Img, Paint } from '../render/paint2d';
-import { HD } from '../render/hd';
 import { Editor } from './textinput';
 import { type Radio } from './radio';
 import { BUNDLES } from './ussd';
-import { BAD, DIM, LCD, SH, softKeys, SW, type C3, type Lcd } from './lcd';
+import { softKeys, type C3, type Lcd } from './lcd';
+import { ptext, ptextW, SCR_H, SCR_W } from './pixui';
+import { HITS, M, Y0, Y1 } from './pixpages';
+import { artColors } from './hdicons';
 import { type Key } from './phone';
 
-/** The page's rows on the screen: between the title (the address) and the soft keys. */
-const TOP = 2, VIEW = SH - 3;
+/** The page on the phone (the manual): 40 columns of 6 x 12 pixels under the 16-pixel strip; the rows that fit. */
+const COLS = 40, PX = 6, PY = 12, STRIP = 16, VIEW = Math.floor((Y1 - Y0 - STRIP) / PY);
 /** Kilobytes of an answer that is only an error (no such host, a dead server). */
 const ERR_KB = 0.5;
 /** Over EDGE, a page heavier than this (KB) is asked about first. */
 const ASK_KB = 30;
-/** The frame's colors (the manual's): the earth strip and its cream letters, the ferret's fur; the question's box. */
-const EARTH: C3 = [107, 74, 46], CREAM: C3 = [241, 228, 200], FUR: C3 = [214, 170, 120], ASK_BG: C3 = [241, 243, 246], ASK_FG: C3 = [17, 17, 17];
+/** The frame's colors (the manual's): the earth strip and its cream letters, the question's box. */
+const EARTH: C3 = [107, 74, 46], CREAM: C3 = [241, 228, 200], ASK_BG: C3 = [241, 243, 246], ASK_FG: C3 = [17, 17, 17];
 
 /** A page ready to show: where, what came, how it is laid out on the phone, what it weighs coming down. */
 interface Got { url: string; got: Fetched; laid: Laid | null; kb: number }
-/** A page's pictures brought down to the phone's pixels: HD x HD per cell, RGBA, the back ones (under the text) and the front ones. */
+/** A page's pictures brought down to the phone's pixels: PX x PY per cell, RGBA, the back ones (under the text) and the front ones. */
 interface Pix { rows: number; back: Uint8ClampedArray; front: Uint8ClampedArray }
 
 export class WebApp {
@@ -79,7 +81,7 @@ export class WebApp {
       this.url = url; this.top = 0; this.sel = -1; this.vals = new Map(); this.got = null; this.laid = null; this.pix = null;
       return;
     }
-    const got = fetchUrl(this.world, url, form), P = got.page ? mobilePage(got.page, SW) : null, laid = P ? layout(P, SW, true) : null;
+    const got = fetchUrl(this.world, url, form), P = got.page ? mobilePage(got.page, COLS) : null, laid = P ? layout(P, COLS, true) : null;
     // a page made for phones is light; a whole one brings its pictures too
     const kb = P ? P.kb + (P.mobile ? 0 : (laid?.front ?? []).reduce((n, o) => n + opKb(o), 0)) : ERR_KB;
     const G: Got = { url: P ? P.url : url, got, laid, kb };
@@ -183,17 +185,17 @@ export class WebApp {
 
   /**
    * The page's pictures for the phone: its ops painted by the notebook's painter at the notebook's cell
-   * size (CW x CH a cell), then each cell's pixels averaged down to HD x HD (a pixel drawn where at least
-   * half of what it covers was).
+   * size (CW x CH a cell), then brought down to the phone's (PX x PY a cell, a pixel drawn where at
+   * least half of what it covers was).
    */
   private picture(L: Laid): Pix {
-    const rows = L.rows.length, w = SW * HD, h = rows * HD;
+    const rows = L.rows.length, w = COLS * PX, h = rows * PY;
     const down = (ops: HdOp[]) => {
       const out = new Uint8ClampedArray(w * h * 4);
       if (!ops.length) return out;
-      const img = new Img(SW * CW, rows * CH), P = new Paint(img);
+      const img = new Img(COLS * CW, rows * CH), P = new Paint(img);
       paintOps(P, ops, 0, 0, 0);
-      const sx = CW / HD, sy = CH / HD;
+      const sx = CW / PX, sy = CH / PY;
       for (let Y = 0; Y < h; Y++) for (let X = 0; X < w; X++) {
         let r = 0, g = 0, b = 0, n = 0, all = 0;
         for (let y = Math.floor(Y * sy); y < Math.floor((Y + 1) * sy); y++) for (let x = Math.floor(X * sx); x < Math.floor((X + 1) * sx); x++) {
@@ -210,88 +212,139 @@ export class WebApp {
     return { rows, back: down(L.back), front: down(L.front) };
   }
 
-  /** The title row: the earth strip with the address (or what is typed, or how much has come), the ferret a dot that digs. */
-  private strip(S: Lcd, loading: boolean, now: number) {
-    const J = this.radio.job;
-    S.fill(1, EARTH);
-    const text = this.edit && this.editing === 'addr' ? `> ${this.edit.value()}_`.slice(-(SW - 4)) : this.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const right = loading ? (J?.state === 'connecting' ? 'Connecting' : `${Math.floor((J?.done ?? 0) + 0.5)}/${Math.ceil(J?.kb ?? 0)} KB`) : '';
-    S.text(3, 1, text.slice(0, SW - 4 - (right ? right.length + 1 : 0)), CREAM, EARTH);
-    if (right) S.text(SW - right.length - 1, 1, right, [200, 170, 130], EARTH);
-    // the ferret: a dot that bobs while it digs, still on top when the page is in
-    const dy = loading ? [2, 1, 0, 1][Math.floor(now * 8) % 4] : 0;
-    if (S.hd) for (const [ix, iy] of [[1, 0], [2, 0], [1, 1], [2, 1]]) S.pixel(0, 1, ix, Math.min(HD - 1, iy + dy), FUR[0], FUR[1], FUR[2]);
-    else S.put(1, 1, loading ? '.:'.charCodeAt(Math.floor(now * 4) % 2) : 'o'.charCodeAt(0), FUR, EARTH);
-  }
-
-  draw(S: Lcd, now: number) {
-    const [f, err] = this.progress();
-    const loading = f < 1 && !err;
-    this.strip(S, loading, now);
-    const L = this.laid, on = this.items()[this.sel];
+  /** What the screen shows now (kept for the tests), and what paints it. */
+  last: FerretMini | null = null;
+  draw(S: Lcd, now: number): (Pt: Paint) => void {
+    const [f, err] = this.progress(), loading = f < 1 && !err, J = this.radio.job;
+    const addr = this.edit && this.editing === 'addr' ? `> ${this.edit.value()}${Math.floor(now * 2) & 1 ? '_' : ' '}` : this.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const d: FerretMini = { url: addr, right: loading ? (J?.state === 'connecting' ? 'Connecting' : `${Math.floor((J?.done ?? 0) + 0.5)}/${Math.ceil(J?.kb ?? 0)} KB`) : '', loading, now,
+      rows: [], items: [], fields: [], pix: null, pixTop: this.top, pixFront: f >= 1, say: [], ask: null, go: null, bar: loading ? f : null };
+    const L = this.laid, I = this.items(), on = I[this.sel];
     if (L && f > 0) {
       const upto = f >= 1 ? L.rows.length : Math.floor(L.rows.length * f);
-      if (S.hd && !this.pix) this.pix = this.picture(L);
-      for (let r = 0; r < VIEW; r++) {
-        const y = this.top + r, row = L.rows[y];
-        if (!row || y >= upto) { S.fill(TOP + r, [255, 255, 255]); continue; }
-        for (let x = 0; x < SW; x++) {
-          const c = row[x], hit = on && 'url' in on && on.y === y && x >= on.x && x < on.x + on.w;
-          S.put(x, TOP + r, c.ch.charCodeAt(0), hit ? c.bg : c.fg, hit ? c.fg : c.bg);
-        }
-        for (const F of L.fields) {
-          if (F.y !== y) continue;
-          const live = this.edit && this.editing === F.name, v = live ? this.edit!.value() + (Math.floor(now * 2) & 1 ? '_' : ' ') : this.vals.get(F.name) ?? '';
-          const secret = F.secret && !live ? '*'.repeat(v.length) : F.secret && live ? '*'.repeat(Math.max(0, v.length - 2)) + v.slice(-2) : v;
-          S.text(F.x, TOP + r, secret.slice(-F.w).padEnd(F.w), [0, 0, 0], on === F ? [255, 255, 200] : [255, 255, 255]);
-        }
-        // the pictures: what goes under the text as the text comes, the pictures once it has all come
-        if (this.pix) this.pixRow(S, this.pix, y, TOP + r, f >= 1);
+      if (!this.pix) this.pix = this.picture(L);
+      d.pix = this.pix;
+      for (let r = 0; r < VIEW; r++) { const y = this.top + r; d.rows.push(y < upto ? L.rows[y] ?? null : null); }
+      I.forEach((it, n) => {
+        const r = it.y - this.top;
+        if (r < 0 || r >= VIEW || it.y >= upto) return;
+        d.items.push({ x: it.x, y: r, w: it.w, sel: n === this.sel, link: 'url' in it, pre: () => { this.sel = n; } });
+      });
+      for (const F of L.fields) {
+        const r = F.y - this.top;
+        if (r < 0 || r >= VIEW || F.y >= upto) continue;
+        const live = this.edit && this.editing === F.name, v = live ? this.edit!.value() + (Math.floor(now * 2) & 1 ? '_' : ' ') : this.vals.get(F.name) ?? '';
+        const secret = F.secret && !live ? '*'.repeat(v.length) : F.secret && live ? '*'.repeat(Math.max(0, v.length - 2)) + v.slice(-2) : v;
+        d.fields.push({ x: F.x, y: r, w: F.w, text: secret.slice(-F.w), on: on === F });
       }
-    } else for (let r = 0; r < VIEW; r++) S.fill(TOP + r, LCD);
-    const say = (lines: string[]) => lines.forEach((l, k) => S.text(1, 6 + k, l.slice(0, SW - 2), k ? DIM : BAD, LCD));
-    if (err === 'offline') say(['No connection.', 'No network signal and no Wi-Fi.', '* to try again']);
-    else if (err === 'nosignal') say(['Connection lost.', 'The signal dropped.', '* to try again']);
-    else if (err === 'nodata') say(['Out of data.', 'Your data bundle is used up.', 'Dial *100# to buy more.']);
-    else if (f >= 1 && this.got?.error && this.radio.job?.what === 'web') say(this.got.error === 'dns' ? ['Server not found:', this.got.host] : ['The server is not responding:', this.got.host]);
+    }
+    if (err === 'offline') d.say = ['No connection.', 'No network signal and no Wi-Fi.', '* to try again'];
+    else if (err === 'nosignal') d.say = ['Connection lost.', 'The signal dropped.', '* to try again'];
+    else if (err === 'nodata') d.say = ['Out of data.', 'Your data bundle is used up.', 'Dial *100# to buy more.'];
+    else if (f >= 1 && this.got?.error && J?.what === 'web') d.say = this.got.error === 'dns' ? ['Server not found:', this.got.host] : ['The server is not responding:', this.got.host];
     if (this.ask) {
       // the price, before a heavy page comes over EDGE
-      const lines = [`This page is about ${Math.round(this.ask.kb)} KB`, `and may cost ${WebApp.price(this.ask.kb)} of data.`, 'Continue?'], y0 = 8;
-      for (let r = y0 - 1; r <= y0 + lines.length; r++) { S.fill(r, [255, 255, 255]); for (let x = 3; x < SW - 3; x++) S.put(x, r, 32, ASK_FG, ASK_BG); S.put(2, r, 32, EARTH, EARTH); S.put(SW - 3, r, 32, EARTH, EARTH); }
-      for (let x = 2; x < SW - 2; x++) { S.put(x, y0 - 2, 32, EARTH, EARTH); S.put(x, y0 + lines.length + 1, 32, EARTH, EARTH); }
-      lines.forEach((l, k) => S.text(5, y0 + k, l, ASK_FG, ASK_BG));
+      d.ask = [`This page is about ${Math.round(this.ask.kb)} KB`, `and may cost ${WebApp.price(this.ask.kb)} of data.`, 'Continue?'];
       softKeys(S, 'Yes', 'No');
-      return;
-    }
-    if (this.goSel >= 0) { this.goList(S); return; }
-    if (this.edit) softKeys(S, 'OK', this.edit.value() ? 'Del' : 'Cancel');
+    } else if (this.goSel >= 0) {
+      // Go to: "Enter address" and the bookmarks, numbered for the keypad
+      d.go = { rows: ['Enter address...', ...this.marks().map(([t]) => t)], sel: this.goSel, pick: (k) => { this.goSel = k; } };
+      softKeys(S, 'Select', 'Cancel');
+    } else if (this.edit) softKeys(S, 'OK', this.edit.value() ? 'Del' : 'Cancel');
     else softKeys(S, 'Go to', this.back.length ? 'Back' : 'Exit');
+    this.last = d;
+    return (Pt) => paintFerretMini(Pt, d);
   }
+}
 
-  /** Go to: a box over the page with "Enter address" and the bookmarks, numbered for the keypad. */
-  private goList(S: Lcd) {
-    const rows = ['Enter address...', ...this.marks().map(([t]) => t)];
-    const y0 = TOP + 1, x0 = 2, x1 = SW - 3;
-    for (let r = y0 - 1; r <= y0 + rows.length + 1; r++) for (let x = x0; x <= x1; x++) S.put(x, r, 32, ASK_FG, r === y0 - 1 || x === x0 || x === x1 || r === y0 + rows.length + 1 ? EARTH : ASK_BG);
-    S.text(x0 + 2, y0 - 1, 'Go to', CREAM, EARTH);
-    rows.forEach((l, k) => {
-      const on = k === this.goSel, fg: C3 = on ? CREAM : k ? ASK_FG : EARTH, bg: C3 = on ? EARTH : ASK_BG;
-      S.text(x0 + 1, y0 + k, ` ${k ? `${k} ` : '  '}${l}`.slice(0, x1 - x0 - 1).padEnd(x1 - x0 - 1), fg, bg);
-    });
-    softKeys(S, 'Select', 'Cancel');
-  }
+/** The page's cells and what goes over them, as the screen shows them now. */
+export interface FerretMini {
+  /** The earth strip: the address (or what is typed), how much has come, the ferret digging while it comes. */
+  url: string; right: string; loading: boolean; now: number;
+  /** The rows in sight (null: not come yet, or past the page). */
+  rows: ({ ch: string; fg: C3; bg: C3 }[] | null)[];
+  /** The links and boxes in sight (to touch, and the picked link drawn inverted), the boxes' contents. */
+  items: { x: number; y: number; w: number; sel: boolean; link: boolean; pre: () => void }[];
+  fields: { x: number; y: number; w: number; text: string; on: boolean }[];
+  /** The page's pictures, the row they start at, and whether the ones over the text have come. */
+  pix: Pix | null; pixTop: number; pixFront: boolean;
+  say: string[]; ask: string[] | null; go: { rows: string[]; sel: number; pick: (k: number) => void } | null; bar: number | null;
+}
 
-  /** Page row y's pictures on screen row sy. */
-  private pixRow(S: Lcd, X: Pix, y: number, sy: number, front: boolean) {
-    const w = SW * HD;
-    for (const [buf, under] of front ? [[X.back, true], [X.front, false]] as const : [[X.back, true]] as const) {
-      for (let iy = 0; iy < HD; iy++) {
-        const Y = y * HD + iy;
+/** Ferret Mini (the manual, part 11): the address on a thin earth strip, the page in cells of 6 x 12 under it, the price asked in a box, Go to over the page. */
+export function paintFerretMini(P: Paint, d: FerretMini) {
+  const top = Y0 + STRIP;
+  P.rect(0, 0, SCR_W, Y1, [255, 255, 255]);
+  // the strip, and the ferret's face beside the address: it peeks, and digs while the page comes
+  P.rect(0, Y0, SCR_W, STRIP, EARTH);
+  const art = artColors('web'), dy = d.loading ? [3, 5, 7, 5][Math.floor(d.now * 8) % 4] : 3;
+  P.clip(0, Y0, SCR_W, top);
+  art?.forEach((row, j) => row.forEach((c, i) => { if (c) P.rect(2 + i, Y0 + dy + j, 1, 1, c); }));
+  P.clip(0, 0, SCR_W, SCR_H);
+  const rw = d.right ? ptextW(d.right) + 6 : 0;
+  ptext(P, 24, Y0 + 4, d.url.slice(-Math.floor((SCR_W - 28 - rw) / 6)), CREAM);
+  if (d.right) ptext(P, SCR_W - 4 - ptextW(d.right), Y0 + 4, d.right, [200, 170, 130]);
+  // the page, as the manual layers it: each cell's back, the pictures under the text (gloss, tabs),
+  // the letters (the picked link inverted), then the pictures over empty cells (photos, ads)
+  P.clip(0, top, SCR_W, Y1);
+  const sel = d.items.find((it) => it.sel && it.link), inv = (r: number, x: number) => !!sel && sel.y === r && x >= sel.x && x < sel.x + sel.w;
+  const pics = (buf: Uint8ClampedArray, emptyOnly: boolean) => {
+    const w = COLS * PX, X = d.pix!;
+    d.rows.forEach((row, r) => {
+      if (!row) return;
+      for (let iy = 0; iy < PY; iy++) {
+        const Y = (d.pixTop + r) * PY + iy;
+        if (Y >= X.rows * PY) return;
         for (let x = 0; x < w; x++) {
           const o = (Y * w + x) * 4;
-          if (buf[o + 3]) S.pixel(Math.floor(x / HD), sy, x % HD, iy, buf[o], buf[o + 1], buf[o + 2], under);
+          if (buf[o + 3] && !(emptyOnly && row[Math.floor(x / PX)]?.ch !== ' ')) P.s.set(x, top + r * PY + iy, buf[o], buf[o + 1], buf[o + 2]);
         }
       }
-    }
+    });
+  };
+  d.rows.forEach((row, r) => row?.forEach((c, x) => { const bg = inv(r, x) ? c.fg : c.bg; if (bg[0] !== 255 || bg[1] !== 255 || bg[2] !== 255) P.rect(x * PX, top + r * PY, PX, PY, bg); }));
+  if (d.pix) pics(d.pix.back, false);
+  d.rows.forEach((row, r) => row?.forEach((c, x) => { if (c.ch !== ' ') ptext(P, x * PX, top + r * PY + 2, c.ch, inv(r, x) ? c.bg : c.fg); }));
+  if (d.pix && d.pixFront) pics(d.pix.front, true);
+  // the boxes, with what is typed in them
+  for (const F of d.fields) {
+    const y = top + F.y * PY;
+    P.rect(F.x * PX, y, F.w * PX, PY, F.on ? [255, 255, 200] : [255, 255, 255]);
+    P.rect(F.x * PX, y + PY - 1, F.w * PX, 1, [150, 150, 150]);
+    ptext(P, F.x * PX + 1, y + 2, F.text, [0, 0, 0]);
+  }
+  for (const it of d.items) HITS.push({ x: it.x * PX - 2, y: top + it.y * PY - 2, w: it.w * PX + 4, h: PY + 4, pre: it.pre, key: it.sel ? 'ok' : undefined });
+  P.clip(0, 0, SCR_W, SCR_H);
+  if (d.say.length) {
+    P.rect(0, top, SCR_W, Y1 - top, [255, 255, 255]);
+    d.say.forEach((l, k) => ptext(P, M, top + 60 + k * 14, l.slice(0, 36), k ? [110, 110, 110] : [190, 40, 30], 1, !k));
+  }
+  // loading: the bar at the foot
+  if (d.bar !== null) {
+    const y = Y1 - 26;
+    P.rect(0, y - 6, SCR_W, Y1 - y + 6, [255, 255, 255]);
+    P.rect(10, y, SCR_W - 20, 8, [138, 146, 157]); P.rect(11, y + 1, SCR_W - 22, 6, [255, 255, 255]);
+    P.rect(11, y + 1, Math.max(2, Math.round((SCR_W - 22) * Math.min(1, d.bar))), 6, [162, 122, 82]);
+  }
+  if (d.ask) {
+    // the price: a box with the earth's border, Yes and No
+    const x = 16, y = top + 110, w = SCR_W - 32, h = 98;
+    P.rrect(x - 2, y - 2, w + 4, h + 4, 5, EARTH); P.rrect(x, y, w, h, 4, ASK_BG);
+    d.ask.forEach((l, k) => ptext(P, x + 10, y + 12 + k * 16, l, ASK_FG, 1, !k));
+    HITS.push({ x, y: y + h - 30, w: 70, h: 30, key: 'lsoft' }); HITS.push({ x: x + w - 70, y: y + h - 30, w: 70, h: 30, key: 'rsoft' });
+    ptext(P, x + 10, y + h - 20, 'Yes', EARTH, 1, true); ptext(P, x + w - 10 - ptextW('No', 1, true), y + h - 20, 'No', EARTH, 1, true);
+  }
+  if (d.go) {
+    // Go to, over the page: its title on the earth, the rows numbered for the keypad
+    const x = 10, w = SCR_W - 20, rh = 24, h = 22 + d.go.rows.length * rh + 6, y = top + 8;
+    P.rrect(x - 2, y - 2, w + 4, h + 4, 5, EARTH); P.rrect(x, y + 20, w, h - 20, 3, ASK_BG);
+    ptext(P, x + 8, y + 6, 'Go to', CREAM, 1, true);
+    d.go.rows.forEach((l, k) => {
+      const ry = y + 22 + k * rh, picked = k === d.go!.sel;
+      HITS.push({ x, y: ry, w, h: rh, pre: () => d.go!.pick(k), key: 'ok' });
+      if (picked) P.rect(x, ry, w, rh, EARTH);
+      if (k) ptext(P, x + 8, ry + 8, String(k), picked ? CREAM : [150, 120, 90], 1, true);
+      ptext(P, x + 22, ry + 8, l.slice(0, 31), picked ? CREAM : k ? ASK_FG : EARTH, 1, !k);
+    });
   }
 }

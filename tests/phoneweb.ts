@@ -3,7 +3,7 @@
  *   npx rolldown tests/phoneweb.ts --format esm --platform node -o tests/.out/phoneweb.mjs && node tests/.out/phoneweb.mjs [seed]
  * Ferret Mini from the store: the start page comes down over EDGE out of the data bundle (free on
  * Wi-Fi), a site made for phones weighs a fifth of a whole page, every page of the city fits the
- * 42-column screen in one column, the keys follow links and go back, an address is typed by
+ * 40-column screen in one column, the keys follow links and go back, an address is typed by
  * multi-tap, a box of the webmail is filled and sent, and no bundle left means no page.
  */
 import { createWorld } from '../src/sim/world';
@@ -11,12 +11,16 @@ import { Phone } from '../src/phone/phone';
 import { STORE } from '../src/phone/phone';
 import { fetchUrl, portalUrl, searchUrl, webOf } from '../src/web/sites';
 import { writeFileSync } from 'node:fs';
-import { HdLayer } from '../src/render/hd';
-import { phoneShot } from './png';
+import { Img, Paint } from '../src/render/paint2d';
+import { png } from './png';
 import { layout, mobilePage, SUBMIT } from '../src/web/page';
 import { mailHost } from '../src/web/webmail';
 import { CharGrid } from '../src/render/grid';
-import { Lcd, SW, SH, setHd } from '../src/phone/lcd';
+import { Lcd } from '../src/phone/lcd';
+import { type FerretMini } from '../src/phone/webapp';
+
+/** The phone's browser lays pages out in 40 columns (the manual). */
+const SW = 40;
 
 const w = createWorld(Number(process.argv[2] ?? 42));
 let fails = 0;
@@ -46,15 +50,18 @@ const P = new Phone(w), idx = STORE.findIndex((a) => a[0] === 'web');
 if (idx < 0) fail('no browser in the store');
 P.apps.push(idx);
 P.radio.state = 'service'; P.radio.bars = 3;
-const g = new CharGrid(80, 40), S = new Lcd(g, 0, 0), hd = new HdLayer(80 * 3, 40 * 3);
-const screen = () => { const out: string[] = []; for (let y = 0; y < SH; y++) { let l = ''; for (let x = 0; x < SW; x++) l += String.fromCharCode(g.cells[(y * g.cols + x) * 4] || 32); out.push(l); } return out; };
+const g = new CharGrid(80, 40), S = new Lcd(g, 0, 0);
+/** What the screen says: the strip, the page's rows, then any message, price question or Go to list. */
+const screen = () => { const d = (P.web as unknown as { last: FerretMini }).last; return [d.right || d.url, ...d.rows.map((r) => (r ?? []).map((c) => c.ch).join('')), ...d.say, ...(d.ask ?? []), ...(d.go?.rows ?? [])]; };
+/** The screen in pixels, to a PNG. */
+const shotPng = (file: string) => { const J = new Img(240, 432), Q = new Paint(J); P.web.draw(S, now)(Q); const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < o.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; } writeFileSync(file, png(o, 240, 432)); return J; };
 let now = 100;
 const run = (s: number) => { for (let t = 0; t < s; t += 0.1) { now += 0.1; P.radio.update(w, true, now, 0.1); P.radio.state = 'service'; P.radio.bars = 3; } };
 const key = (k: string) => (P as unknown as { appKey(k: string, n: number): boolean }).appKey(k, now);
 (P as unknown as { openApp(i: number, n: number, f: string): void }).openApp(idx, now, 'menu');
 const kb0 = w.telco.player.dataKB;
 run(1); P.web.draw(S, now);
-if (!/Connecting|Loading/.test(screen()[1])) fail('no loading at first: ' + screen()[1]);
+if (!/Connecting|KB/.test(screen()[0])) fail('no loading at first: ' + screen()[0]);
 run(20); P.web.draw(S, now);
 for (const l of screen()) console.log('  |' + l);
 const used = kb0 - w.telco.player.dataKB;
@@ -71,7 +78,7 @@ console.log(`  followed: ${start} -> ${P.web.url}`);
 key('rsoft'); run(20);
 if (P.web.url !== start) fail('Back did not go back');
 // Go to: the list with the bookmarks; the second one is the mail, picked with its number
-key('lsoft'); hd.wipe(); P.web.draw(S, now); writeFileSync('tests/.out/phone-goto.png', phoneShot(g, hd, SW, SH));
+key('lsoft'); P.web.draw(S, now); shotPng('tests/.out/phone-goto.png');
 if (!screen().some((l) => l.includes('Lookwise'))) fail('no bookmarks in Go to');
 key('2'); run(30);
 if (!P.web.url.includes(mailHost(w))) fail('the Mail bookmark was not followed: ' + P.web.url);
@@ -91,24 +98,24 @@ key('down'); key('ok'); run(30);
 P.web.draw(S, now);
 if (!screen().join('\n').includes('incorrect')) fail('the sign-in form did not go:\n' + screen().join('\n'));
 // 15.17i: a whole page over EDGE asks its price first; No stays, Yes brings it with its pictures
-setHd(hd);
 const heavy = [...webOf(w).hosts.entries()].find(([h, S]) => S.kind === 'biz' && !fetchUrl(w, h).page?.mobile && JSON.stringify(fetchUrl(w, h).page?.blocks).includes('"photo"'))?.[0];
 if (heavy) {
   const here = P.web.url;
   P.web.go(heavy, now);
   P.web.draw(S, now);
   if (!W.ask || !screen().join('\n').includes('may cost')) fail('a whole page came without asking its price');
-  console.log('  asked: ' + screen().slice(8, 11).map((l) => l.trim()).join(' / '));
+  console.log('  asked: ' + ((P.web as unknown as { last: FerretMini }).last.ask ?? []).join(' / '));
   key('rsoft');
   if (W.ask || P.web.url !== here) fail('No did not stay');
-  P.web.go(heavy, now); key('lsoft'); run(60); hd.wipe(); P.web.draw(S, now);
-  let n = 0; for (let k = 3; k < hd.px.length; k += 4) if (hd.px[k]) n++;
+  P.web.go(heavy, now); key('lsoft'); run(60);
+  shotPng('tests/.out/phone-site.png');
+  const X = (P.web as unknown as { last: FerretMini }).last.pix;
+  let n = 0; if (X) for (let k = 3; k < X.front.length; k += 4) if (X.front[k] || X.back[k]) n++;
   if (!n) fail('the whole page brought no pictures');
   console.log(`  ${heavy}: ${n} pixels of pictures`);
-  writeFileSync('tests/.out/phone-site.png', phoneShot(g, hd, SW, SH));
 }
-P.web.go(portalUrl(w), now, false); run(20); hd.wipe(); P.web.draw(S, now); writeFileSync('tests/.out/phone-portal.png', phoneShot(g, hd, SW, SH));
-P.web.go(searchUrl('pizza'), now, false); if (W.ask) key('lsoft'); run(30); hd.wipe(); P.web.draw(S, now); writeFileSync('tests/.out/phone-lookwise.png', phoneShot(g, hd, SW, SH));
+P.web.go(portalUrl(w), now, false); run(20); shotPng('tests/.out/phone-portal.png');
+P.web.go(searchUrl('pizza'), now, false); if (W.ask) key('lsoft'); run(30); shotPng('tests/.out/phone-lookwise.png');
 // Wi-Fi: free; no bundle: no page
 const kb1 = w.telco.player.dataKB;
 P.radio.wifiKbps = 2000; key('*'); run(5); P.radio.wifiKbps = 0;
