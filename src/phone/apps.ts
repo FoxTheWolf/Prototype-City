@@ -18,7 +18,7 @@ import { freeVoucher } from './ussd';
 import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APP_COL, INK as PINK_INK, paintBank, type BankPage, type BankView, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
+import { APP_COL, INK as PINK_INK, paintBank, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
 import { EDGE_LIMIT_KB, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
@@ -29,14 +29,6 @@ import { CASES, SHELLS } from './shells';
 import { compile, TRACKS } from '../audio/tracks';
 import { drawRey } from './reynard';
 import SONGS from '../locale/music.en.json';
-
-/** An app's own page color over the whole screen (between the status bar and the soft keys). */
-function paint(S: Lcd, bg: C3) { for (let y = 1; y < SH - 1; y++) S.fill(y, bg); }
-/** An app's own title bar. */
-function bar(S: Lcd, text: string, fg: C3, bg: C3, right = '', rfg: C3 = fg) {
-  S.fill(1, bg); S.text(1, 1, text, fg, bg);
-  if (right) S.text(SW - right.length - 1, 1, right, rfg, bg);
-}
 
 /**
  * The phone's menu and its apps besides the map. Those that need nothing more work for real
@@ -393,24 +385,14 @@ function photosScreen(S: Lcd, P: Phone, t: number) {
 }
 
 /** The app from the store that is open. */
-function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
+function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number): Pg | void {
   const id = STORE[P.appId][0];
-  if (id === 'torch') {
-    // the whole screen white, as bright as it goes
-    for (let y = 0; y < SH; y++) S.fill(y, [255, 255, 250]);
-    return;
-  }
+  if (id === 'torch') return paintTorch;
   title(S, appName(P.appId).toUpperCase(), t);
   if (id === 'snake') {
-    // the green screen of the old phones, dark pixels on it
-    const G = P.snake, x0 = 1, y0 = 3, GR: C3 = [150, 178, 84], PX: C3 = [36, 48, 22];
-    paint(S, GR);
-    bar(S, `${ST.score} ${G.score}  ${ST.best} ${G.best}`, PX, [132, 160, 70]);
-    for (let y = -1; y <= SNAKE_H; y++) for (let x = -1; x <= SNAKE_W; x++) if (x < 0 || y < 0 || x === SNAKE_W || y === SNAKE_H) S.put(x0 + x, y0 + y, 32, PX, PX);
-    S.put(x0 + G.food[0], y0 + G.food[1], ch('o'), PX, GR);
-    G.body.forEach(([x, y], n) => S.put(x0 + x, y0 + y, n ? 32 : ch('@'), GR, n ? PX : GR));
-    if (G.over) { S.center(10, ` ${ST.gameOver} `, GR, PX); S.center(12, ` ${ST.again} `, PX, GR); }
-    return softKeys(S, '', T.back);
+    const G = P.snake, d: SnakePage = { w: SNAKE_W, h: SNAKE_H, body: G.body.map(([x, y]) => [x, y]), food: [G.food[0], G.food[1]], score: `${ST.score} ${G.score}   ${ST.best} ${G.best}`, over: G.over, gameOver: ST.gameOver, again: ST.again };
+    softKeys(S, '', T.back);
+    return (Pt) => paintSnake(Pt, d);
   }
   if (id === 'social') {
     const J = P.radio.job;
@@ -425,16 +407,13 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
   if (id === 'web') return P.web.draw(S, now);
   if (id === 'convert') {
     const C = P.conv, [what, from, to, f] = CONVERT[C.pair], v = parseFloat(C.input || '0');
-    S.center(4, `< ${what} >`, HI, LCD);
-    S.text(4, 8, `${C.input || '0'} ${from}`, WHITE, LCD);
-    S.text(4, 11, `= ${+f(v).toFixed(3)} ${to}`, [120, 255, 150], LCD);
-    S.text(1, SH - 3, '^ v units   # .   * <-', DIM, LCD);
-    return softKeys(S, '', T.back);
+    const d: Convert = { title: appName(P.appId), col: STORE_ICON.convert[1], what, input: C.input, from, out: String(+f(v).toFixed(3)), to, blink: (Math.floor(now * 2) & 1) === 0, hint: '0-9 type   # .   * del' };
+    softKeys(S, '', T.back);
+    return (Pt) => paintConvert(Pt, d);
   }
   // too big to have come over EDGE: nothing to show yet
-  S.center(10, (ST.about as Record<string, string>)[id], DIM, LCD);
   softKeys(S, '', T.back);
-  void now;
+  return listPage({ title: appName(P.appId), note: '', t, rows: [{ kind: 'text', label: (ST.about as Record<string, string>)[id] }] });
 }
 
 const BK = A.bank;

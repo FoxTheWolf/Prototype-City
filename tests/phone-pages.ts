@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, wrapText } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, paintSnake, paintConvert, wrapText } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -115,4 +115,17 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   shot('bank-branch', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'branch', title: 'YOUR BRANCH', call: 'Call the branch', lines: [{ text: '5th Avenue &', kind: 'ink' }, { text: 'Mercer Street', kind: 'ink' }, { text: 'Riverside', kind: 'ink' },
     { text: '', kind: 'ink' }, { text: 'Mon-Fri 9am-5pm', kind: 'dim' }, { text: '(555) 014-2233', kind: 'num' }, { text: 'Head office', kind: 'head' }, { text: 'Kell Street &', kind: 'ink' }, { text: '2nd Avenue', kind: 'ink' }, { text: 'Downtown', kind: 'ink' },
     { text: '', kind: 'ink' }, { text: '6 branches in the city', kind: 'dim' }] } }));
+}
+
+// 0.15.35: Snake, the converter
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const body: [number, number][] = [[20, 10], [19, 10], [18, 10], [17, 10], [17, 9], [17, 8], [16, 8]];
+  shot('snake', (Q) => paintSnake(Q, { w: 40, h: 20, body, food: [30, 4], score: 'SCORE 6   BEST 40', over: false, gameOver: 'GAME OVER', again: 'OK to play again' }));
+  shot('snake-over', (Q) => paintSnake(Q, { w: 40, h: 20, body, food: [30, 4], score: 'SCORE 6   BEST 40', over: true, gameOver: 'GAME OVER', again: 'OK to play again' }));
+  shot('convert', (Q) => paintConvert(Q, { title: 'Converter', col: [40, 150, 150], what: 'Temperature', input: '72.5', from: 'F', out: '22.5', to: 'C', blink: true, hint: '0-9 type   # .   * del' }));
 }

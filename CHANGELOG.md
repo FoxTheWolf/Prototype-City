@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.35 — Snake, Lanterna e Conversor em pixels (2026-10-07)
+- **Snake na tela verde dos celulares antigos:** pontos de 5 px, a moldura grossa, o placar no topo e um direcional de quatro setas embaixo para jogar com o toque; o GAME OVER numa caixa (tocar joga de novo).
+- **Lanterna:** a tela inteira branca, agora em pixels.
+- **Conversor:** o que se converte com setas dos lados (tocar troca), o número digitado grande num poço escuro com o cursor, o resultado grande em verde.
+
 ## 0.15.34 — Banco em pixels (2026-10-07)
 - **O app do banco com cara de banco:** papel creme, verde-escuro e dourado, o emblema da fachada com colunas na barra. O saldo aparece grande num cartão, o menu em botões; o extrato em linhas com as entradas em verde; a recarga em quatro botões (um toque escolhe, outro paga); a agência com o endereço, o horário, o telefone e um botão para ligar.
 

@@ -1077,3 +1077,65 @@ export function paintBank(P: Paint, d: BankPage) {
     ptext(P, M + 27, by + 11, V.call, BANK.gold, 1, true);
   }
 }
+
+/** Snake: the green screen of the old phones, dark pixels on it (a 5 px square a cell, as the LCD dots were); a pad of four arrows under the board steers by touch. */
+const SNK = { lcd: [150, 178, 84] as C3, px: [36, 48, 22] as C3, dim: [118, 146, 62] as C3 };
+export interface SnakePage { w: number; h: number; body: [number, number][]; food: [number, number]; score: string; over: boolean; gameOver: string; again: string }
+export function paintSnake(P: Paint, d: SnakePage) {
+  P.rect(0, 0, SCR_W, Y1, SNK.lcd);
+  ptext(P, M, Y0 + 8, d.score, SNK.px, 1, true);
+  P.rect(M, Y0 + 20, SCR_W - 2 * M, 1, SNK.px);
+  const c = 5, bw = d.w * c, bh = d.h * c, bx = (SCR_W - bw) >> 1, by = Y0 + 30;
+  // the frame, two dots thick
+  P.rect(bx - 3, by - 3, bw + 6, 2, SNK.px); P.rect(bx - 3, by + bh + 1, bw + 6, 2, SNK.px); P.rect(bx - 3, by - 1, 2, bh + 2, SNK.px); P.rect(bx + bw + 1, by - 1, 2, bh + 2, SNK.px);
+  // the food: a round dot; the snake: a square a cell (with its gap), the head whole
+  const [fx, fy] = d.food;
+  P.rect(bx + fx * c + 1, by + fy * c, 2, 4, SNK.px); P.rect(bx + fx * c, by + fy * c + 1, 4, 2, SNK.px);
+  d.body.forEach(([x, y], n) => P.rect(bx + x * c, by + y * c, n ? 4 : 5, n ? 4 : 5, SNK.px));
+  // the pad: up, left, right, down, each a big square with its arrow
+  const s = 44, cx = SCR_W >> 1, cy = by + bh + 26 + s + s / 2;
+  const pads: [number, number, Key][] = [[cx - s / 2, cy - s * 1.5 - 4, 'up'], [cx - s * 1.5 - 4, cy - s / 2, 'left'], [cx + s / 2 + 4, cy - s / 2, 'right'], [cx - s / 2, cy + s / 2 + 4, 'down']];
+  for (const [x, y, k] of pads) {
+    HITS.push({ x, y, w: s, h: s, key: k });
+    P.rrect(x, y, s, s, 6, SNK.dim);
+    const mx = x + s / 2, my = y + s / 2, a = 8;
+    const tri = k === 'up' ? [mx, my - a, mx - a, my + a / 2, mx + a, my + a / 2] : k === 'down' ? [mx, my + a, mx - a, my - a / 2, mx + a, my - a / 2]
+      : k === 'left' ? [mx - a, my, mx + a / 2, my - a, mx + a / 2, my + a] : [mx + a, my, mx - a / 2, my - a, mx - a / 2, my + a];
+    P.poly(tri, SNK.px);
+  }
+  if (d.over) {
+    const w = 180, h = 50, x = (SCR_W - w) >> 1, y = by + (bh - h) / 2;
+    HITS.push({ x: 0, y: by - 4, w: SCR_W, h: bh + 8, key: 'ok' });
+    P.rect(x, y, w, h, SNK.px); P.rect(x + 2, y + 2, w - 4, h - 4, SNK.lcd); P.rect(x + 4, y + 4, w - 8, h - 8, SNK.px);
+    ctext(P, y + 12, d.gameOver, SNK.lcd, 1, true);
+    ctext(P, y + 30, d.again, SNK.lcd);
+  }
+}
+
+/** The torch: the whole screen white, as bright as it goes. */
+export function paintTorch(P: Paint) { P.rect(0, 0, SCR_W, SCR_H, [255, 255, 250]); }
+
+/** The converter: what is converted with its arrows (a touch steps it), the number typed big, the answer big below it; the keys at the foot. */
+export interface Convert { title: string; col: C3; what: string; input: string; from: string; out: string; to: string; blink: boolean; hint: string }
+export function paintConvert(P: Paint, d: Convert) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, '', d.col);
+  // the pair, with its arrows
+  const y = Y0 + 48, ww = ptextW(d.what, 1, true);
+  HITS.push({ x: 6, y: y - 10, w: 60, h: 30, key: 'up' }); HITS.push({ x: SCR_W - 66, y: y - 10, w: 60, h: 30, key: 'down' });
+  P.poly([M + 4, y + 4, M + 10, y - 2, M + 10, y + 10], ICE); P.poly([SCR_W - M - 4, y + 4, SCR_W - M - 10, y - 2, SCR_W - M - 10, y + 10], ICE);
+  ptext(P, (SCR_W - ww) >> 1, y, d.what, INK, 1, true);
+  ctext(P, y + 14, `${d.from}  >  ${d.to}`, DIM);
+  // the number typed, on its well
+  const wy = y + 40;
+  P.rrect(M, wy, SCR_W - 2 * M, 48, 5, [19, 31, 42]); ring(P, M, wy, SCR_W - 2 * M, 48, [44, 62, 80]);
+  const s = `${d.input || '0'}${d.blink ? '_' : ' '}`, k = ptextW(`${s} ${d.from}`, 2, true) <= SCR_W - 2 * M - 20 ? 2 : 1;
+  const iw = ptext(P, M + 10, wy + 24 - 4 * k, s, [255, 255, 255], k, true);
+  ptext(P, M + 14 + iw, wy + 24 + 4 * k - 8, d.from, SOFT);
+  // the answer
+  const ay = wy + 64;
+  ptext(P, M, ay, '=', DIM, 2, true);
+  const ow = ptext(P, M + 22, ay, d.out, [120, 255, 150], 2, true);
+  ptext(P, M + 26 + ow, ay + 8, d.to, SOFT);
+  ctext(P, Y1 - 18, d.hint, DIM);
+}
