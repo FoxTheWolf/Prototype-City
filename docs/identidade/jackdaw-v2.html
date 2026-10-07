@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jackdaw Mini · v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Varela+Round&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --yel: #f2b01e; --body: #f2b01e; --bodyD: #b98510; --bodyL: #ffd25e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 52px 0 24px; border-bottom: 1px solid var(--line); }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 122%; margin: 0; }
+  header.cover h1 span { color: var(--yel); }
+  header.cover p { color: var(--dim); margin: 6px 0 0; max-width: 80ch; }
+  section { padding: 38px 0 16px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  p, li { max-width: 80ch; }
+  p.lead { color: var(--dim); }
+  .stage { background: radial-gradient(ellipse at 40% 20%, #25272c 0%, #0c0d0f 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .stage svg { width: 100%; height: auto; display: block; max-width: 880px; margin: 0 auto; touch-action: manipulation; user-select: none; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px; font-size: 12px; color: var(--dim); align-items: center; justify-content: center; }
+  .ctl .grp { display: flex; gap: 6px; align-items: center; }
+  .chip { font: 600 11px 'IBM Plex Mono'; background: #1e2024; color: var(--ink); border: 1px solid #3a3c42; border-radius: 99px; padding: 3px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .chip i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1px solid #0007; }
+  .chip.on { border-color: var(--yel); color: #fff; box-shadow: 0 0 0 1px var(--yel) inset; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; text-align: center; }
+  kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3a3c42; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  [data-btn] { cursor: pointer; }
+  [data-btn].pressed { transform: translateY(1.6px); filter: brightness(.72); }
+  .sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+  .lcd { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .lcd canvas { width: 100%; height: auto; display: block; border-radius: 6px; image-rendering: auto; }
+  .lcd b { display: block; margin-top: 8px; font: 700 15px 'Archivo'; font-stretch: 110%; }
+  .lcd span { font-size: 12px; color: var(--dim); }
+  .big canvas { max-width: 768px; margin: 0 auto; }
+  .logos { display: grid; gap: 14px; margin-top: 14px; }
+  .logo { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; cursor: pointer; }
+  .logo.on { border-color: var(--yel); box-shadow: 0 0 0 1px var(--yel); }
+  .logo > div { padding: 22px; display: grid; place-items: center; min-height: 120px; }
+  .logo .y { background: var(--body); } .logo .d { background: #141517; }
+  .logo svg { width: 100%; max-width: 420px; height: auto; }
+  .logo .cap { grid-column: 1 / -1; background: var(--panel); padding: 10px 14px; min-height: 0; place-items: start; font-size: 12px; color: var(--dim); }
+  .logo .cap b { color: var(--ink); }
+  @media (max-width: 700px) { .logo { grid-template-columns: 1fr; } header.cover h1 { font-size: 32px; } }
+  .led { animation: blink 1.6s steps(1) infinite; }
+  @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .15; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="plastic"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.6 0.36"/></filter>
+</svg>
+<main>
+  <header class="cover">
+    <h1>JACKDAW <span>MINI</span> · v2</h1>
+    <p>A segunda rodada, de 2026-10-06. O corpo é o da proposta A em <b>amarelo</b>, mais arredondado e “bonitinho”. O logo é de verdade (são 3 opções) e a gralha foi refeita para ser fofa, centrada no rosto e cheia de personalidade, ocupando a tela inteira como uma cena.</p>
+    <p>Use os botões abaixo do aparelho para trocar a cor do corpo, a luz da tela e o logo. No aparelho, <kbd>OK</kbd> abre o menu, e o app <b>PET</b> mostra as expressões (<kbd>←→</kbd> trocam e <kbd>OK</kbd> faz carinho). O teclado funciona: <kbd>↑↓←→</kbd>, <kbd>Enter</kbd> e <kbd>Backspace</kbd>.</p>
+  </header>
+
+  <section id="aparelho">
+    <h2>O aparelho <small>A, amarelo</small></h2>
+    <div class="stage">
+      <svg viewBox="0 0 560 300" data-dev="A">
+        <defs>
+          <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".12" stop-color="#fff" stop-opacity="0"/><stop offset=".85" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient>
+        </defs>
+        <ellipse cx="280" cy="288" rx="250" ry="10" fill="#000" opacity=".45" filter="url(#soft)"/>
+        <rect x="86" y="30" width="150" height="12" rx="2" fill="#1a1b1d"/><g id="pins"></g>
+        <g data-btn="power"><rect x="452" y="26" width="46" height="18" rx="4" fill="#1a1b1d"/><rect id="lever" x="470" y="6" width="9" height="28" rx="3" fill="#c6c9ce" stroke="#6b6f75" transform="rotate(-24 474 34)"/></g>
+        <g id="module" style="display:none">
+          <g transform="rotate(-118 70 -6)"><rect x="66" y="-14" width="150" height="17" rx="8.5" fill="#26282b" stroke="#4a4d52"/><rect x="66" y="-14" width="34" height="17" rx="3" fill="#2a2b2e"/><path d="M110 -12 v13 M118 -12 v13 M126 -12 v13" stroke="#2c2d30" stroke-width="2"/><rect x="70" y="-12" width="140" height="3" rx="1.5" fill="#fff" opacity=".08"/></g>
+          <rect x="56" y="-14" width="26" height="16" rx="2" fill="#c9a24a"/><rect x="58" y="-12" width="6" height="12" fill="#e2c26a"/>
+          <rect x="80" y="-62" width="166" height="96" rx="5" fill="#173a2c" stroke="#0b1d15" stroke-width="1.5"/>
+          <g fill="none" stroke="#2f6b52" stroke-width="1.3"><path d="M96 -40 H150 V-20 H230"/><path d="M100 10 H200 V-8"/><path d="M220 -50 V-30"/><path d="M160 18 V0 H236"/></g>
+          <rect x="132" y="-48" width="48" height="40" rx="2" fill="#b9bcc1"/><rect x="132" y="-48" width="48" height="40" rx="2" fill="url(#shade)"/><text x="156" y="-25" text-anchor="middle" font-family="IBM Plex Mono" font-size="7" fill="#55585d">RF-433</text>
+          <rect x="196" y="-44" width="22" height="16" rx="1" fill="#0e0f10"/>
+          <circle cx="232" cy="-50" r="3" fill="#ff5a36" class="led"/>
+          <g fill="#c8cbd0"><circle cx="90" cy="-52" r="4.5"/><circle cx="236" cy="22" r="4.5"/></g><g fill="#173a2c"><circle cx="90" cy="-52" r="2"/><circle cx="236" cy="22" r="2"/></g>
+          <text x="96" y="-3" font-family="IBM Plex Mono" font-size="7.5" fill="#d8e6dd" opacity=".8">EXP-1 · JKD</text>
+          <rect x="86" y="24" width="150" height="10" rx="1" fill="#0d0e0f"/>
+        </g>
+        <rect x="20" y="40" width="520" height="236" rx="30" style="fill:var(--body)" stroke="#000" stroke-opacity=".45" stroke-width="2"/>
+        <rect x="20" y="40" width="520" height="236" rx="30" fill="url(#shade)"/>
+        <rect x="20" y="40" width="520" height="236" rx="30" filter="url(#plastic)" opacity=".5"/>
+        <rect x="30" y="47" width="500" height="4" rx="2" fill="#fff" opacity=".25"/>
+        <!-- recessed panel under the keys -->
+        <rect x="372" y="74" width="138" height="138" rx="69" style="fill:var(--bodyD)" opacity=".55"/>
+        <circle class="led" cx="362" cy="70" r="3.5" fill="#ff5a36"/><circle cx="362" cy="70" r="8" fill="#ff5a36" opacity=".2" filter="url(#soft)"/>
+        <rect x="44" y="60" width="300" height="168" rx="12" fill="#151618" stroke="#000" stroke-opacity=".5"/>
+        <image id="lcdA" x="66" y="80" width="256" height="128"/>
+        <rect x="66" y="80" width="256" height="34" rx="6" fill="#fff" opacity=".05"/>
+        <g data-btn="up"><rect x="423" y="88" width="36" height="34" rx="6" fill="#33363b" stroke="#141516" stroke-width="1.5"/><rect x="427" y="91" width="28" height="4" rx="2" fill="#4c5056"/><path d="M441 99 l-6 9 h12z" fill="#7d8188"/></g>
+        <g data-btn="down"><rect x="423" y="164" width="36" height="34" rx="6" fill="#33363b" stroke="#141516" stroke-width="1.5"/><rect x="427" y="167" width="28" height="4" rx="2" fill="#4c5056"/><path d="M441 187 l-6 -9 h12z" fill="#7d8188"/></g>
+        <g data-btn="left"><rect x="385" y="126" width="34" height="36" rx="6" fill="#33363b" stroke="#141516" stroke-width="1.5"/><rect x="389" y="129" width="26" height="4" rx="2" fill="#4c5056"/><path d="M396 144 l9 -6 v12z" fill="#7d8188"/></g>
+        <g data-btn="right"><rect x="463" y="126" width="34" height="36" rx="6" fill="#33363b" stroke="#141516" stroke-width="1.5"/><rect x="467" y="129" width="26" height="4" rx="2" fill="#4c5056"/><path d="M486 144 l-9 -6 v12z" fill="#7d8188"/></g>
+        <g data-btn="ok"><circle cx="441" cy="144" r="17" fill="#3e4247" stroke="#141516" stroke-width="1.5"/><circle cx="437" cy="139" r="7" fill="#fff" opacity=".1"/></g>
+        <g data-btn="back"><circle cx="502" cy="232" r="15" fill="#b8321f" stroke="#4a1009" stroke-width="1.5"/><circle cx="498" cy="227" r="6" fill="#fff" opacity=".18"/><path d="M496 232 l6 -5 v3 h6 v4 h-6 v3z" fill="#f6d8d0"/></g>
+        <g id="logoSlot"></g>
+        <text x="340" y="250" text-anchor="end" font-family="IBM Plex Mono" font-size="7.5" fill="#000" opacity=".45">JKD-M · REV.C</text>
+        <rect x="258" y="274" width="44" height="6" rx="2" fill="#0a0a0b"/>
+      </svg>
+      <div class="ctl">
+        <div class="grp">corpo <span id="cBody"></span></div>
+        <div class="grp">tela <span id="cLcd"></span></div>
+        <div class="grp">logo <span id="cLogo"></span></div>
+        <div class="grp">módulo <span id="cMod"></span></div>
+      </div>
+      <div class="hint">liga e desliga na alavanca do topo</div>
+    </div>
+  </section>
+
+  <section id="gralha">
+    <h2>A gralha <small>folha de expressões</small></h2>
+    <p class="lead">É uma gralha-bolinha de pelúcia: a cabeça é grande e felpuda, tem o tufo rebelde no alto, o boné preto e as bochechas cinza, e usa um cachecol listrado porque a cidade é fria. O traço da gralha de verdade é o <b>olho claro</b>, aqui o branco grande com a pupila e dois brilhos. As sobrancelhas são penas brancas, para a expressão aparecer sobre o preto. Cada cena ocupa a tela inteira, como as do Flipper: a gralha e uma fala curta.</p>
+    <div class="lcd big"><canvas id="hero" width="1024" height="512"></canvas><b>Tela inicial</b><span>A gralha pisca, olha para os lados e pula de vez em quando. As bugigangas que você junta ficam na prateleira.</span></div>
+    <div class="sheet" id="sheet"></div>
+  </section>
+
+  <section id="logos">
+    <h2>O logo <small>clique para pôr no aparelho</small></h2>
+    <p class="lead">Os três usam a mesma cabeça da gralha em silhueta: o olho e o bico são recortes, então o logo funciona sobre qualquer fundo, impresso no plástico amarelo, na caixa ou numa tela.</p>
+    <div class="logos" id="logoList"></div>
+  </section>
+
+  <section>
+    <h2>Minha opinião</h2>
+    <p>O <b>logo 1</b> (a palavra larga com a cabeça) é o que melhor se lê impresso no corpo, e o “MINI” na caixinha lembra os selos de aparelho de 2008. O <b>logo 3</b> (de pontos) é o mais nosso, porque segue a regra “texto do mundo é de pontos”, mas fica melhor na caixa e na tela de boot do que no corpo. Para a tela, eu iria de <b>gelo</b>: com o amarelo ela contrasta sem ficar laranja como o Flipper. O verde fica com cara de Game Boy.</p>
+  </section>
+</main>
+
+<script>
+// ================= 1-bit buffer + 3x5 font =================
+const W = 128, H = 64;
+const FONT = {
+  'A':'.#. #.# ### #.# #.#','B':'##. #.# ##. #.# ##.','C':'.## #.. #.. #.. .##','D':'##. #.# #.# #.# ##.','E':'### #.. ##. #.. ###',
+  'F':'### #.. ##. #.. #..','G':'.## #.. #.# #.# .##','H':'#.# #.# ### #.# #.#','I':'### .#. .#. .#. ###','J':'..# ..# ..# #.# .#.',
+  'K':'#.# #.# ##. #.# #.#','L':'#.. #.. #.. #.. ###','M':'#.# ### ### #.# #.#','N':'##. #.# #.# #.# #.#','O':'.#. #.# #.# #.# .#.',
+  'P':'##. #.# ##. #.. #..','Q':'.#. #.# #.# ##. .##','R':'##. #.# ##. #.# #.#','S':'.## #.. .#. ..# ##.','T':'### .#. .#. .#. .#.',
+  'U':'#.# #.# #.# #.# ###','V':'#.# #.# #.# #.# .#.','W':'#.# #.# ### ### #.#','X':'#.# #.# .#. #.# #.#','Y':'#.# #.# .#. .#. .#.',
+  'Z':'### ..# .#. #.. ###','0':'### #.# #.# #.# ###','1':'.#. ##. .#. .#. ###','2':'##. ..# .#. #.. ###','3':'##. ..# .#. ..# ##.',
+  '4':'#.# #.# ### ..# ..#','5':'### #.. ##. ..# ##.','6':'.## #.. ### #.# ###','7':'### ..# .#. .#. .#.','8':'### #.# ### #.# ###',
+  '9':'### #.# ### ..# ##.',':':'... .#. ... .#. ...','.':'... ... ... ... .#.','-':'... ... ### ... ...','>':'#.. .#. ..# .#. #..',
+  '!':'.#. .#. .#. ... .#.','?':'##. ..# .#. ... .#.','/':'..# ..# .#. #.. #..','%':'#.# ..# .#. #.. #.#','+':'... .#. ### .#. ...',"'":'.#. .#. ... ... ...',' ':'... ... ... ... ...'
+};
+class Buf {
+  constructor() { this.p = new Uint8Array(W * H); }
+  clr() { this.p.fill(0); }
+  fill(x, y, w, h, v = 1) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (i >= 0 && j >= 0 && i < W && j < H) this.p[j * W + i] = v; }
+  text(x, y, s, sc = 1, v = 1) {
+    for (const ch of s.toUpperCase()) {
+      (FONT[ch] || FONT[' ']).split(' ').forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') this.fill(x + i * sc, y + j * sc, sc, sc, v); });
+      x += 4 * sc;
+    }
+    return x;
+  }
+  tw(s, sc = 1) { return s.length * 4 * sc - sc; }
+  spr(x, y, rows, sc = 1, v = 1) { rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') this.fill(x + i * sc, y + j * sc, sc, sc, v); }); }
+}
+
+// ================= vector -> 1-bit (8x supersample, mode per cell, ordered dither) =================
+const INK = '#000', G75 = '#404040', G50 = '#808080', G25 = '#c0c0c0', PAP = '#fff';
+const SS = 8, big = document.createElement('canvas'); big.width = W * SS; big.height = H * SS;
+const bg = big.getContext('2d', { willReadFrequently: true });
+function raster(draw, buf) {
+  bg.setTransform(1, 0, 0, 1, 0, 0); bg.fillStyle = PAP; bg.fillRect(0, 0, big.width, big.height);
+  bg.setTransform(SS, 0, 0, SS, 0, 0); draw(bg);
+  const d = bg.getImageData(0, 0, big.width, big.height).data, bw = big.width, cnt = new Int32Array(5);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    cnt.fill(0);
+    for (let sy = 0; sy < SS; sy++) { let o = ((y * SS + sy) * bw + x * SS) * 4; for (let sx = 0; sx < SS; sx++, o += 4) cnt[Math.round(d[o] / 64)]++; }
+    let k = 0; for (let i = 1; i < 5; i++) if (cnt[i] > cnt[k]) k = i;
+    const ev = (x & 1) === 0 && (y & 1) === 0;
+    buf.p[y * W + x] = k === 0 ? 1 : k === 1 ? (ev ? 0 : 1) : k === 2 ? (((x + y) & 1) === 0 ? 1 : 0) : k === 3 ? (ev ? 1 : 0) : 0;
+  }
+}
+
+// ================= the jackdaw =================
+function fluff(g, cx, cy, r, n, amp, rot = 0) {
+  g.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const a = rot + i / n * Math.PI * 2, b = a + Math.PI / n, am = amp * (i % 2 ? 0.65 : 1);
+    const vx = cx + Math.cos(a) * r, vy = cy + Math.sin(a) * r;
+    if (i === 0) g.moveTo(vx, vy);
+    else g.quadraticCurveTo(cx + Math.cos(a - Math.PI / n) * (r + am * 1.9), cy + Math.sin(a - Math.PI / n) * (r + am * 1.9), vx, vy);
+  }
+  g.closePath();
+}
+const circ = (g, x, y, r, c) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = c; g.fill(); };
+const ell = (g, x, y, rx, ry, c, rot = 0) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.fillStyle = c; g.fill(); };
+function line(g, pts, w, c) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.lineWidth = w; g.strokeStyle = c; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); }
+function curve(g, x0, y0, cx, cy, x1, y1, w, c) { g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.lineWidth = w; g.strokeStyle = c; g.lineCap = 'round'; g.stroke(); }
+function star(g, x, y, r) { line(g, [x - r, y, x + r, y], 1.1, INK); line(g, [x, y - r, x, y + r], 1.1, INK); line(g, [x - r * .45, y - r * .45, x + r * .45, y + r * .45], .9, INK); line(g, [x - r * .45, y + r * .45, x + r * .45, y - r * .45], .9, INK); }
+
+// mood: neutral happy sulky sleepy surprised smug
+function gralha(g, o) {
+  const { x = 0, y = 0, s = 1, look = 0, mood = 'neutral', blink = false, tilt = 0, coin = false } = o;
+  g.save(); g.translate(x, y); g.rotate(tilt); g.scale(s, s);
+  // body: black plumage, pale fluffy belly
+  fluff(g, 0, 37, 20, 16, 1.8, .2); g.fillStyle = INK; g.fill();
+  fluff(g, 0, 41, 10.5, 12, 1.4, .3); g.fillStyle = G25; g.fill();
+  curve(g, -15, 30, -13, 40, -8, 46, 1.2, G50); curve(g, 15, 30, 13, 40, 8, 46, 1.2, G50);
+  // wing with the shiny
+  if (coin) {
+    ell(g, 17, 27, 6.5, 9, INK, -.7); ell(g, 17, 27, 5.2, 7.6, G75, -.7);
+    circ(g, 22, 16, 5.6, INK); circ(g, 22, 16, 4.4, PAP); circ(g, 22, 16, 2.6, INK); circ(g, 22, 16, 1.4, PAP);
+    star(g, 30, 9, 3); star(g, 14, 6, 2);
+  }
+  // head
+  fluff(g, 0, 0, 19.5, 22, 2.2, .1); g.fillStyle = INK; g.fill();
+  fluff(g, 0, 0, 18.2, 22, 2.0, .1); g.fillStyle = PAP; g.fill();
+  // grey nape shading on the sides, black mask over crown and eyes (the real jackdaw: black face, grey nape)
+  g.save(); fluff(g, 0, 0, 18.2, 22, 2.0, .1); g.clip();
+  ell(g, -17, 4, 7, 14, G50); ell(g, 17, 4, 7, 14, G50);
+  g.beginPath(); g.moveTo(-19, 4); g.quadraticCurveTo(-15, 10.5, -8, 9.5); g.quadraticCurveTo(-3, 9, 0, 6); g.quadraticCurveTo(3, 9, 8, 9.5); g.quadraticCurveTo(15, 10.5, 19, 4);
+  g.lineTo(24, -30); g.lineTo(-24, -30); g.closePath(); g.fillStyle = INK; g.fill();
+  g.restore();
+  // crest
+  for (const [bx, tx, ty] of [[-4, -8, -27], [0, 1, -30], [4, 8, -25]]) { g.beginPath(); g.moveTo(bx - 3, -16); g.quadraticCurveTo(tx - 2, ty + 4, tx, ty); g.quadraticCurveTo(bx + 2, ty + 7, bx + 3, -16); g.fillStyle = INK; g.fill(); }
+  // blush
+  const bl = mood === 'sulky' ? 1.3 : 1;
+  ell(g, -11.5, 13, 3.4 * bl, 2 * bl, G50); ell(g, 11.5, 13, 3.4 * bl, 2 * bl, G50);
+  // eyes
+  const EY = 1.5;
+  for (const side of [-1, 1]) {
+    const ex = side * 8.6;
+    const closed = blink || mood === 'happy' || mood === 'sleepy';
+    if (closed) {
+      if (mood === 'happy') curve(g, ex - 4.5, EY + 2, ex, EY - 4, ex + 4.5, EY + 2, 2, PAP);
+      else curve(g, ex - 4.5, EY + .5, ex, EY + 3, ex + 4.5, EY + .5, 1.8, PAP);
+      continue;
+    }
+    const R = mood === 'surprised' ? 7.4 : 6.8, pr = mood === 'surprised' ? 2.2 : 3.9;
+    circ(g, ex, EY, R, PAP);
+    const lk = mood === 'smug' ? 1 : look, px = ex + lk * 1.9, py = EY + .8;
+    circ(g, px, py, pr, INK);
+    circ(g, px - 1.3, py - 1.4, 1.2, PAP); circ(g, px + 1.2, py + 1.3, .6, PAP);
+    if (mood === 'sulky' || mood === 'smug') { // heavy lids
+      const lid = mood === 'sulky' ? (side < 0 ? .35 : -.35) : 0;
+      g.save(); g.beginPath(); g.arc(ex, EY, R, 0, Math.PI * 2); g.clip();
+      g.beginPath(); g.moveTo(ex - R - 1, EY - 1.2 - lid * 4); g.lineTo(ex + R + 1, EY - 1.2 + lid * 4); g.lineTo(ex + R + 1, EY - R - 2); g.lineTo(ex - R - 1, EY - R - 2); g.closePath();
+      g.fillStyle = INK; g.fill(); g.restore();
+    }
+  }
+  // brows: white feathers
+  const BR = { neutral: [-6.5, -6.5], happy: [-8, -8], sulky: [-8.8, -5], sleepy: [-6, -6], surprised: [-10, -10], smug: [-6, -9] }[mood];
+  for (const side of [-1, 1]) {
+    const outer = BR[0], inner = side < 0 ? BR[1] : (mood === 'smug' ? BR[0] : BR[1]);
+    const oo = mood === 'smug' && side > 0 ? BR[1] : outer, ii = mood === 'smug' && side > 0 ? BR[1] + 1 : inner;
+    if (mood !== 'neutral') line(g, [side * 11.5, oo, side * 5, ii], 1.2, PAP);
+  }
+  // beak
+  // beak: big, black, with a white rim so it reads against the mask
+  const open = mood === 'happy' || mood === 'surprised';
+  const upper = (tip) => { g.beginPath(); g.moveTo(-5.2, 6.2); g.quadraticCurveTo(0, 4, 5.2, 6.2); g.quadraticCurveTo(3, 9, 0, tip); g.quadraticCurveTo(-3, 9, -5.2, 6.2); g.closePath(); };
+  if (open) {
+    g.beginPath(); g.ellipse(0, 13.2, mood === 'surprised' ? 3.2 : 4.4, mood === 'surprised' ? 3.6 : 2.8, 0, 0, Math.PI * 2); g.fillStyle = INK; g.fill();
+    if (mood === 'happy') ell(g, 0, 14.2, 2.4, 1.3, G50);
+    upper(11.6); g.lineWidth = 2.2; g.strokeStyle = PAP; g.stroke(); g.fillStyle = INK; g.fill();
+  } else {
+    upper(14.4); g.lineWidth = 2.2; g.strokeStyle = PAP; g.stroke(); g.fillStyle = INK; g.fill();
+    if (mood === 'smug') line(g, [3.4, 13.4, 6.4, 12], 1.1, INK);
+  }
+  line(g, [-2.6, 6.6, -1.2, 9], 1, PAP);
+  // scarf
+  g.save();
+  g.beginPath(); g.roundRect(-16.5, 16, 33, 8.4, 4.2); g.fillStyle = INK; g.fill();
+  g.beginPath(); g.roundRect(-15.3, 17.2, 30.6, 6, 3); g.fillStyle = PAP; g.fill();
+  for (let sx = -9; sx < 12; sx += 8) { g.fillStyle = INK; g.fillRect(sx, 17, 2.2, 6.4); }
+  g.translate(-10, 22); g.rotate(.18);
+  g.beginPath(); g.roundRect(-3.6, 0, 7.2, 14, 1.5); g.fillStyle = INK; g.fill();
+  g.beginPath(); g.roundRect(-2.4, 1.2, 4.8, 11.6, 1); g.fillStyle = PAP; g.fill();
+  g.fillStyle = INK; g.fillRect(-2.4, 5, 4.8, 1.6); g.fillRect(-2.4, 9, 4.8, 1.6);
+  for (let k = -2; k <= 2; k += 2) g.fillRect(k - .45, 14, .9, 2.4);
+  g.restore();
+  g.restore();
+}
+
+// ================= scenes =================
+const TRINKETS = [
+  ['..###..', '.#...#.', '#..#..#', '#.###.#', '#..#..#', '.#...#.', '..###..'],
+  ['.......', '.##....', '#..#...', '#..####', '.##..#.', '.....#.', '.......'],
+  ['...#...', '..#.#..', '.#####.', '#.....#', '#.....#', '.#...#.', '..###..'],
+  ['.#.#.#.', '#######', '#.....#', '#.###.#', '#.....#', '#######', '.#.#.#.'],
+  ['..###..', '.#####.', '.##.##.', '..###..', '..#.#..', '..###..', '...#...'],
+];
+const cache = new Map();
+function scene(name, st = {}) {
+  const key = name + JSON.stringify(st);
+  if (cache.has(key)) return cache.get(key);
+  const b = new Buf(), hop = st.hop ? -2.5 : 0, look = st.look || 0, blink = !!st.blink;
+  const S = {
+    home: () => { raster(g => gralha(g, { x: 32, y: 33 + hop, s: 1.22, look, blink }), b);
+      b.text(66, 6, st.time || '21:47', 2); b.text(66, 20, 'TUE 06 OCT');
+      b.text(66, 34, 'SHINIES 5/40'); b.fill(64, 43, 64, 1); TRINKETS.forEach((t, i) => b.spr(66 + i * 12, 47, t)); },
+    happy: () => { raster(g => gralha(g, { x: 34, y: 33 + hop, s: 1.22, mood: 'happy', coin: true }), b); b.text(72, 18, 'FOUND A', 1); b.text(72, 27, 'SHINY!', 2); },
+    sulky: () => { raster(g => gralha(g, { x: 34, y: 33, s: 1.22, mood: 'sulky', blink }), b); b.text(76, 22, 'HMPH.', 2); b.text(76, 40, "IT DIDN'T"); b.text(76, 47, 'WORK.'); },
+    sleepy: () => { raster(g => { gralha(g, { x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -.14 }); }, b); b.text(74, 8, 'Z', 2); b.text(86, 2, 'Z'); b.text(72, 38, 'BATTERY 4%'); b.text(72, 46, 'PLUG ME IN'); },
+    surprised: () => { raster(g => gralha(g, { x: 34, y: 33 + hop, s: 1.22, mood: 'surprised' }), b); b.text(80, 20, '!?', 3); },
+    smug: () => { raster(g => gralha(g, { x: 34, y: 33, s: 1.22, mood: 'smug' }), b); b.text(72, 22, 'TOO', 2); b.text(72, 36, 'EASY.', 2); },
+    neutral: () => { raster(g => gralha(g, { x: 34, y: 33 + hop, s: 1.22, look, blink }), b); },
+  };
+  S[name]();
+  if (cache.size > 300) cache.clear();
+  cache.set(key, b); return b;
+}
+
+// ================= palettes, paint =================
+const LCDS = {
+  gelo:  { label: 'gelo', bg: '#a6d0dd', on: '#0c2631', ghost: '#9bc4d1' },
+  ambar: { label: 'âmbar', bg: '#f0aa45', on: '#2a1404', ghost: '#e39e3d' },
+  verde: { label: 'verde', bg: '#aab86a', on: '#1f2a0c', ghost: '#a0ae62' },
+};
+const BODIES = {
+  sodio:    { label: 'sódio', c: '#f2b01e', d: '#b98510' },
+  mostarda: { label: 'mostarda', c: '#d4a12a', d: '#9a7114' },
+  sinal:    { label: 'sinal', c: '#ffd02e', d: '#c49a10' },
+};
+let lcdKey = 'gelo', bodyKey = 'sodio', logoKey = 1;
+function paint(buf, cv) {
+  const pal = LCDS[lcdKey], g = cv.getContext('2d'), s = cv.width / W, d = s * .86;
+  g.fillStyle = pal.bg; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = pal.ghost; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!buf.p[y * W + x]) g.fillRect(x * s, y * s, d, d);
+  g.fillStyle = pal.on; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (buf.p[y * W + x]) g.fillRect(x * s, y * s, d, d);
+  const gr = g.createLinearGradient(0, 0, 0, cv.height); gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(0,0,0,.10)'); g.fillStyle = gr; g.fillRect(0, 0, cv.width, cv.height);
+}
+
+// ================= logos =================
+function head(c, cut, x = 0, y = 0, s = 1) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <path d="M13 8 Q9 1 8 -2 Q14 2 17 7 Q18 -1 20 -4 Q23 2 22 7 Q26 2 31 1 Q28 6 26 9Z" fill="${c}"/>
+    <circle cx="20" cy="22" r="15" fill="${c}"/>
+    <path d="M6 30 Q20 44 34 30 L34 40 L6 40Z" fill="${c}"/>
+    <circle cx="14.5" cy="21" r="5.4" fill="${cut}"/><circle cx="25.5" cy="21" r="5.4" fill="${cut}"/>
+    <circle cx="15.6" cy="21.8" r="2.7" fill="${c}"/><circle cx="26.6" cy="21.8" r="2.7" fill="${c}"/>
+    <circle cx="14.6" cy="20.6" r="1" fill="${cut}"/><circle cx="25.6" cy="20.6" r="1" fill="${cut}"/>
+    <path d="M17 26.5 Q20 25.5 23 26.5 L20 31.5Z" fill="${cut}"/>
+    <path d="M7 15 L13 16 M33 15 L27 16" stroke="${cut}" stroke-width="1.6" stroke-linecap="round"/>
+  </g>`;
+}
+const F57 = {
+  J: ['..###', '...#.', '...#.', '...#.', '#..#.', '#..#.', '.##..'], A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  C: ['.###.', '#...#', '#....', '#....', '#....', '#...#', '.###.'], K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
+  D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'], W: ['#...#', '#...#', '#...#', '#.#.#', '#.#.#', '##.##', '#...#'],
+  M: ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'], I: ['###', '.#.', '.#.', '.#.', '.#.', '.#.', '###'], N: ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'],
+};
+function dots(word, x, y, p, c) {
+  let out = '';
+  for (const ch of word) { const g = F57[ch]; g.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') out += `<circle cx="${x + i * p + p / 2}" cy="${y + j * p + p / 2}" r="${p * .42}" fill="${c}"/>`; }); x += (g[0].length + 1) * p; }
+  return out;
+}
+const LOGOS = {
+  1: { name: '1 · Palavra larga', note: 'A cabeça e JACKDAW em letra larga e pesada, com o MINI numa caixinha. É o que melhor se lê impresso no plástico.',
+       svg: (c, cut) => `<svg viewBox="0 0 300 48">${head(c, cut, 2, 4, 1)}<text x="50" y="36" font-family="Archivo" font-weight="900" font-size="31" style="font-stretch:125%" fill="${c}">JACKDAW</text><rect x="256" y="14" width="40" height="20" rx="3" fill="none" stroke="${c}" stroke-width="2"/><text x="276" y="29" text-anchor="middle" font-family="Archivo" font-weight="800" font-size="11.5" style="font-stretch:120%" fill="${c}">MINI</text></svg>` },
+  2: { name: '2 · Selo redondo', note: 'A cabeça dentro de um círculo e o nome em letra arredondada minúscula. É o mais “brinquedo de 2008” e o mais amigável.',
+       svg: (c, cut) => `<svg viewBox="0 0 300 48"><circle cx="24" cy="24" r="22" fill="${c}"/>${head(cut, c, 7, 6, .85)}<text x="56" y="34" font-family="Varela Round" font-size="28" fill="${c}">jackdaw</text><text x="200" y="34" font-family="Varela Round" font-size="28" fill="${c}" opacity=".6">mini</text></svg>` },
+  3: { name: '3 · Pontos', note: 'O nome feito de pontos, como a matriz da tela e os letreiros do jogo. É o mais nosso, mas impresso no corpo fica mais fino.',
+       svg: (c, cut) => `<svg viewBox="0 0 300 48">${head(c, cut, 0, 4, 1)}${dots('JACKDAW', 48, 6, 4.4, c)}${dots('MINI', 236, 22, 2.4, c)}</svg>` },
+};
+function placeLogo() {
+  const ink = '#1d1e20', cut = BODIES[bodyKey].c;
+  document.getElementById('logoSlot').innerHTML = `<svg x="46" y="232" width="200" height="32" viewBox="0 0 300 48">${LOGOS[logoKey].svg(ink, cut).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>`;
+  document.querySelectorAll('.logo').forEach(e => e.classList.toggle('on', +e.dataset.k === logoKey));
+  document.querySelectorAll('.logo .y').forEach(e => { e.style.background = BODIES[bodyKey].c; e.innerHTML = LOGOS[e.parentNode.dataset.k].svg('#1d1e20', BODIES[bodyKey].c); });
+}
+for (const k in LOGOS) {
+  const L = LOGOS[k], div = document.createElement('div'); div.className = 'logo'; div.dataset.k = k;
+  div.innerHTML = `<div class="y"></div><div class="d">${L.svg('#f2b01e', '#141517')}</div><div class="cap"><span><b>${L.name}.</b> ${L.note}</span></div>`;
+  div.onclick = () => { logoKey = +k; placeLogo(); beep(1760, .04, .03); };
+  document.getElementById('logoList').append(div);
+}
+
+// ================= controls =================
+function chips(id, obj, get, set, swatch) {
+  const el = document.getElementById(id); el.innerHTML = '';
+  for (const k in obj) {
+    const c = document.createElement('span'); c.className = 'chip' + (get() == k ? ' on' : '');
+    c.innerHTML = (swatch ? `<i style="background:${swatch(obj[k])}"></i>` : '') + (obj[k].label || obj[k].name);
+    c.onclick = () => { set(k); chips(id, obj, get, set, swatch); };
+    el.append(c);
+  }
+}
+function applyBody() { const b = BODIES[bodyKey]; document.documentElement.style.setProperty('--body', b.c); document.documentElement.style.setProperty('--bodyD', b.d); placeLogo(); }
+chips('cBody', BODIES, () => bodyKey, k => { bodyKey = k; applyBody(); }, o => o.c);
+chips('cLcd', LCDS, () => lcdKey, k => { lcdKey = k; }, o => o.bg);
+let modOn = false;
+chips('cMod', { 0: { label: 'sem' }, 1: { label: 'com antena' } }, () => +modOn, k => {
+  modOn = k == 1; const svg = document.querySelector('[data-dev]');
+  document.getElementById('module').style.display = modOn ? '' : 'none';
+  svg.setAttribute('viewBox', modOn ? '0 -150 560 450' : '0 0 560 300');
+  if (modOn) { ac(); noise(AC.currentTime, 'bandpass', 1400, .5, .03, 3); noise(AC.currentTime + .05, 'bandpass', 1100, .5, .03, 3); }
+});
+chips('cLogo',{ 1: { label: '1' }, 2: { label: '2' }, 3: { label: '3' } }, () => logoKey, k => { logoKey = +k; placeLogo(); });
+
+// ================= sound =================
+let AC = null, NOISE = null;
+function ac() { if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); NOISE = AC.createBuffer(1, AC.sampleRate * .2, AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } if (AC.state === 'suspended') AC.resume(); return AC; }
+function env(g, t, a, p, dec) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(p, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + dec); }
+function noise(t, type, f, p, dec, q = .7) { const a = ac(), s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(); s.buffer = NOISE; fl.type = type; fl.frequency.value = f; fl.Q.value = q; env(g, t, .001, p, dec); s.connect(fl).connect(g).connect(a.destination); s.start(t); s.stop(t + dec + .05); }
+function tone(t, type, f0, f1, p, dec) { const a = ac(), o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dec); env(g, t, .002, p, dec); o.connect(g).connect(a.destination); o.start(t); o.stop(t + dec + .05); }
+const clickDown = t => { noise(t, 'highpass', 2600, .45, .016); tone(t, 'square', 2300, 2300, .025, .007); };
+const clickUp = t => noise(t, 'highpass', 3400, .2, .011);
+const clack = t => { noise(t, 'bandpass', 900, .7, .05, 2); tone(t, 'triangle', 160, 90, .25, .06); };
+function beep(f, d = .05, v = .05) { const a = ac(); tone(a.currentTime + .005, 'square', f, f, v, d); }
+function chirp(up = true) { const a = ac(), t = a.currentTime + .01; tone(t, 'square', up ? 1800 : 1400, up ? 2600 : 900, .035, .07); tone(t + .09, 'square', up ? 2200 : 1100, up ? 3000 : 700, .03, .06); }
+
+// ================= device =================
+const ITEMS = ['PET', 'IR REMOTE', 'TONE', 'LIGHT', 'CLOCK', 'FILES', 'SETTINGS'];
+const MOODS = ['neutral', 'happy', 'smug', 'surprised', 'sulky', 'sleepy'];
+const BOOT = ['JACKDAW FW 0.8.2', 'BOARD JKD-M REV.C', 'SD CARD....... OK', 'APPS........... 7', 'PET......... AWAKE'];
+const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+const D = { mode: 'off', t: 0, sel: 0, app: null, look: 0, hop: 0, mood: 0, freq: 440, buf: new Buf() };
+const img = document.getElementById('lcdA');
+const clock = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+function copy(src) { D.buf.p.set(src.p); return D.buf; }
+function render() {
+  let b = D.buf;
+  const blink = D.t % 38 < 2;
+  if (D.mode === 'off') { b.clr(); }
+  else if (D.mode === 'boot') {
+    b.clr(); let t = D.t;
+    for (let i = 0; i < BOOT.length; i++) {
+      const n = Math.max(0, Math.min(BOOT[i].length, Math.floor(t * 2.4)));
+      b.text(2, 4 + i * 8, BOOT[i].slice(0, n));
+      if (n < BOOT[i].length) { if (D.t % 4 < 2) b.fill(2 + n * 4, 4 + i * 8, 3, 5); t = -1; break; }
+      t -= BOOT[i].length / 2.4 + 2;
+    }
+    if (t > 6) { D.mode = 'home'; D.t = 0; chirp(); }
+  }
+  else if (D.mode === 'home') b = copy(scene('home', { look: D.look, hop: D.hop > 0, blink, time: clock() }));
+  else if (D.mode === 'menu') {
+    b.clr(); b.fill(0, 0, 128, 7); b.text(2, 1, 'MENU', 1, 0); b.text(128 - b.tw(clock()) - 2, 1, clock(), 1, 0);
+    const vis = 6, start = Math.max(0, Math.min(D.sel - 2, ITEMS.length - vis));
+    for (let k = 0; k < vis; k++) { const i = start + k, y = 9 + k * 9, on = i === D.sel; if (on) b.fill(0, y - 1, 124, 9); b.text(4, y + 1, (on ? '> ' : '  ') + ITEMS[i], 1, on ? 0 : 1); }
+    const bh = Math.round(54 * vis / ITEMS.length), by = 9 + Math.round((54 - bh) * D.sel / (ITEMS.length - 1)); b.fill(126, 9, 1, 54); b.fill(125, by, 3, bh);
+  } else {
+    const a = D.app;
+    if (a === 'PET') b = copy(scene(MOODS[D.mood], { hop: D.hop > 0, blink, look: D.look }));
+    else if (a === 'LIGHT') { b.clr(); b.fill(0, 0, 128, 64); }
+    else {
+      b.clr(); b.fill(0, 0, 128, 7); b.text(2, 1, a, 1, 0);
+      if (a === 'TONE') { const s = D.freq + ' HZ'; b.text(64 - b.tw(s, 3) / 2, 18, s, 3); b.text(20, 44, 'UP DN  PITCH'); b.text(20, 52, 'OK     PLAY'); }
+      else if (a === 'CLOCK') { const s = clock(); b.text(64 - b.tw(s, 4) / 2, 20, s, 4); b.text(42, 50, 'TUE 06 OCT'); }
+      else if (a === 'IR REMOTE') { b.text(6, 14, 'POINT AT A TV OR SCREEN'); b.text(6, 30, 'OK  POWER'); b.text(6, 38, 'UP  CH +'); b.text(6, 46, 'DN  CH -'); if (D.hop > 0) b.text(80, 38, 'IR >>>'); }
+      else if (a === 'FILES') ['/SD', '  CAPTURES/', '  APPS/', '  PET.SAV', '  README.TXT'].forEach((l, i) => b.text(4, 11 + i * 9, l));
+      else if (a === 'SETTINGS') { b.text(4, 12, 'BRIGHT'); b.fill(50, 12, 60, 5); b.fill(91, 13, 18, 3, 0); b.text(4, 22, 'SOUND'); b.text(50, 22, 'ON'); b.text(4, 32, 'FIRMWARE'); b.text(50, 32, '0.8.2'); }
+    }
+  }
+  paint(b, cv); img.setAttribute('href', cv.toDataURL());
+}
+function power() {
+  ac(); clack(AC.currentTime);
+  D.mode = D.mode === 'off' ? 'boot' : 'off'; D.t = 0;
+  document.getElementById('lever').setAttribute('transform', D.mode === 'off' ? 'rotate(-24 474 34)' : 'rotate(24 474 34)');
+}
+function press(btn) {
+  if (btn === 'power') return power();
+  if (D.mode === 'off' || D.mode === 'boot') return;
+  if (D.mode === 'home') {
+    if (btn === 'ok') { D.mode = 'menu'; beep(1320, .035); }
+    else if (btn === 'left') { D.look = -1; D.hop = 3; } else if (btn === 'right') { D.look = 1; D.hop = 3; }
+    else if (btn === 'up') { D.hop = 4; chirp(); }
+  } else if (D.mode === 'menu') {
+    if (btn === 'up') D.sel = (D.sel + ITEMS.length - 1) % ITEMS.length;
+    else if (btn === 'down') D.sel = (D.sel + 1) % ITEMS.length;
+    else if (btn === 'ok') { D.mode = 'app'; D.app = ITEMS[D.sel]; beep(1320, .035); }
+    else if (btn === 'back') { D.mode = 'home'; beep(660, .05); }
+  } else {
+    if (btn === 'back') { D.mode = 'menu'; beep(660, .05); render(); return; }
+    if (D.app === 'PET') {
+      if (btn === 'left') D.mood = (D.mood + MOODS.length - 1) % MOODS.length;
+      if (btn === 'right') D.mood = (D.mood + 1) % MOODS.length;
+      if (btn === 'ok') { D.mood = 1; D.hop = 4; chirp(); }
+    } else if (D.app === 'TONE') { if (btn === 'up') D.freq = Math.min(2000, D.freq + 40); if (btn === 'down') D.freq = Math.max(120, D.freq - 40); if (btn === 'ok') beep(D.freq, .3, .06); }
+    else if (D.app === 'IR REMOTE' && btn === 'ok') { D.hop = 6; beep(2600, .02, .02); }
+  }
+  render();
+}
+(function () {
+  const ns = 'http://www.w3.org/2000/svg', pins = document.getElementById('pins');
+  for (let i = 0; i < 18; i++) { const r = document.createElementNS(ns, 'rect'); r.setAttribute('x', 92 + i * 8); r.setAttribute('y', 33); r.setAttribute('width', 4); r.setAttribute('height', 6); r.setAttribute('fill', '#c9a24a'); pins.append(r); }
+})();
+let held = null;
+document.querySelector('[data-dev]').addEventListener('pointerdown', e => {
+  const b = e.target.closest('[data-btn]'); if (!b) return; e.preventDefault(); ac();
+  b.classList.add('pressed'); held = b; if (b.dataset.btn !== 'power') clickDown(AC.currentTime); press(b.dataset.btn);
+});
+addEventListener('pointerup', () => { if (!held) return; held.classList.remove('pressed'); if (held.dataset.btn !== 'power') clickUp(AC.currentTime); held = null; });
+const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Backspace: 'back', Escape: 'back' };
+addEventListener('keydown', e => { const k = KEYS[e.key]; if (!k || e.repeat) return; e.preventDefault(); ac(); clickDown(AC.currentTime); setTimeout(() => clickUp(AC.currentTime), 70);
+  const g = document.querySelector(`[data-btn="${k}"]`); g.classList.add('pressed'); setTimeout(() => g.classList.remove('pressed'), 90); press(k); });
+
+// ================= sheet =================
+const SHEET = [
+  ['happy', 'Achou', 'Um app terminou bem: a gralha fecha os olhos sorrindo e mostra a bugiganga brilhando.'],
+  ['smug', 'Convencida', 'Uma coisa difícil deu certo: as pálpebras ficam pesadas, ela olha de lado e uma sobrancelha sobe.'],
+  ['surprised', 'Assustada', 'Algo inesperado aconteceu: os olhos crescem e as pupilas encolhem.'],
+  ['sulky', 'Emburrada', 'Falhou: as sobrancelhas descem para o meio e as bochechas inflam.'],
+  ['sleepy', 'Com sono', 'Bateria fraca ou muito tempo parada: a cabeça tomba e ela cochila.'],
+  ['neutral', 'Neutra', 'A base de todas as outras: olhos abertos, pisca e acompanha o D-pad com o olhar.'],
+];
+const sheetCv = SHEET.map(([m, n, note]) => {
+  const div = document.createElement('div'); div.className = 'lcd';
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  div.append(c); div.insertAdjacentHTML('beforeend', `<b>${n}</b><span>${note}</span>`);
+  document.getElementById('sheet').append(div); return [m, c];
+});
+const hero = document.getElementById('hero'), H2 = { t: 0, look: 0, hop: 0 };
+
+// ================= loop =================
+setInterval(() => {
+  D.t++; if (D.hop > 0) D.hop--;
+  if (D.mode === 'home') { if (D.t % 47 === 30) D.hop = 3; if (D.t % 60 === 0) D.look = [0, 1, 0, -1][(D.t / 60) % 4]; }
+  render();
+  H2.t++; if (H2.hop > 0) H2.hop--; if (H2.t % 41 === 20) H2.hop = 3; if (H2.t % 50 === 0) H2.look = [0, 1, 0, -1][(H2.t / 50) % 4];
+  paint(scene('home', { look: H2.look, hop: H2.hop > 0, blink: H2.t % 38 < 2, time: clock() }), hero);
+  sheetCv.forEach(([m, c], i) => paint(scene(m, { blink: (H2.t + i * 7) % 40 < 2 }), c));
+}, 100);
+applyBody();
+setTimeout(() => { D.mode = 'boot'; D.t = 0; document.getElementById('lever').setAttribute('transform', 'rotate(24 474 34)'); }, 300);
+</script>
+</body>
+</html>
