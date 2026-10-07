@@ -1,4 +1,4 @@
-import { dark, hex, lite, mixC, Paint, paintMap, photoOf, star } from '../render/paint2d';
+import { dark, hex, Img, lite, mixC, Paint, paintMap, photoOf, star, type C3 } from '../render/paint2d';
 import { CH, CW } from './chrome';
 import { type HdOp } from './page';
 
@@ -133,13 +133,28 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
       case 'map': {
         const x0 = px(o.x), y0 = py(o.y), W = o.w * CW, H = o.h * CH;
         P.rect(x0 - 1, y0 - 1, W + 2, H + 2, hex('#99aaaa'));
-        P.image(paintMap(Math.round(o.w * 3), Math.round(o.h * 5), o.seed), x0, y0, W, H);
+        P.image(o.ground ? groundMap(o.ground, o.gw!, o.gh!) : paintMap(Math.round(o.w * 3), Math.round(o.h * 5), o.seed), x0, y0, W, H);
         o.pins.forEach((p, i) => {
-          const fx = 0.2 + ((o.seed * (i + 3) * 0.37) % 1) * 0.6, fy = 0.35 + ((o.seed * (i + 7) * 0.23) % 1) * 0.45, x = x0 + W * fx, y = y0 + H * fy, s = CH * 0.55;
+          // the city's own map has its pin in the middle (the place); a made-up one scatters them
+          const fx = o.ground ? 0.5 : 0.2 + ((o.seed * (i + 3) * 0.37) % 1) * 0.6, fy = o.ground ? 0.55 : 0.35 + ((o.seed * (i + 7) * 0.23) % 1) * 0.45, x = x0 + W * fx, y = y0 + H * fy, s = CH * 0.55;
           P.poly([x, y, x - s * 0.7, y - s * 1.3, x - s * 0.5, y - s * 1.8, x, y - s * 2, x + s * 0.5, y - s * 1.8, x + s * 0.7, y - s * 1.3], hex('#8e1a12'));
           P.disc(x, y - s * 1.35, s * 0.62, hex('#e2352a'));
           P.text(x - 2, y - s * 1.35 - 3, p, 1, [255, 255, 255]);
         });
+        break;
+      }
+      case 'broken': {
+        const x0 = px(o.x), y0 = py(o.y), W = o.w * CW, H = o.h * CH;
+        P.rect(x0, y0, W, 1, hex('#a0a0a0')); P.rect(x0, y0 + H - 1, W, 1, hex('#a0a0a0')); P.rect(x0, y0, 1, H, hex('#a0a0a0')); P.rect(x0 + W - 1, y0, 1, H, hex('#a0a0a0'));
+        const ix = x0 + 3, iy = y0 + 3;
+        P.rect(ix, iy, 10, 11, hex('#8a8a8a')); P.rect(ix + 1, iy + 1, 8, 9, [255, 255, 255]);
+        P.line(ix + 2.5, iy + 3, ix + 7.5, iy + 8, 1.5, hex('#d01010')); P.line(ix + 7.5, iy + 3, ix + 2.5, iy + 8, 1.5, hex('#d01010'));
+        break;
+      }
+      case 'blink': {
+        if (Math.floor(now * 2) % 2) break;
+        const tw = Paint.textW(o.text, 1);
+        P.text(px(o.x) + (o.w * CW - tw) / 2, py(o.y) + 4, o.text, 1, o.col);
         break;
       }
       case 'marquee': {
@@ -159,9 +174,12 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
         const R = CH * 0.92, cx = px(o.x) + R, cy = py(o.y) + R * 1.05;
         P.disc(cx, cy, R, dark(o.col, 0.35));
         P.grad(cx - R + 1, cy - R + 1, R * 2 - 2, R * 2 - 2, [[0, lite(o.col, 0.45)], [1, dark(o.col, 0.15)]], true, R - 1);
-        const sym = { star: '*', pin: 'V', lock: 'L', mail: 'M', phone: 'T' }[o.kind];
-        if (o.kind === 'star') P.poly(star(cx, cy, R * 0.55, R * 0.22, 5), [255, 255, 255]);
-        else P.text(cx - 5, cy - 7, sym, 2, [255, 255, 255]);
+        const s = R * 0.5, wh: C3 = [255, 255, 255];
+        if (o.kind === 'star') P.poly(star(cx, cy, s * 1.1, s * 0.45, 5), wh);
+        else if (o.kind === 'pin') { P.poly([cx, cy + s * 1.1, cx - s * 0.75, cy - s * 0.1, cx - s * 0.55, cy - s * 0.8, cx, cy - s * 1.1, cx + s * 0.55, cy - s * 0.8, cx + s * 0.75, cy - s * 0.1], wh); P.disc(cx, cy - s * 0.35, s * 0.3, o.col); }
+        else if (o.kind === 'phone') { P.rrect(cx - s * 0.55, cy - s, s * 1.1, s * 2, s * 0.25, wh); P.rect(cx - s * 0.35, cy - s * 0.75, s * 0.7, s * 1.05, o.col); P.disc(cx, cy + s * 0.65, s * 0.13, o.col); }
+        else if (o.kind === 'lock') { P.ring(cx, cy - s * 0.15, s * 0.5, s * 0.18, wh); P.rrect(cx - s * 0.8, cy - s * 0.1, s * 1.6, s * 1.1, s * 0.2, wh); }
+        else { P.rect(cx - s, cy - s * 0.65, s * 2, s * 1.3, wh); P.line(cx - s, cy - s * 0.6, cx, cy + s * 0.1, s * 0.15, o.col); P.line(cx + s, cy - s * 0.6, cx, cy + s * 0.1, s * 0.15, o.col); }
         P.disc(cx, cy - R * 0.48, R * 0.72, [255, 255, 255], 0.3, R * 0.38);
         break;
       }
@@ -169,5 +187,19 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
   }
 }
 
-/** Whether ops are moving now (a blinking ad, a marquee): the frame's key then changes with the clock. */
-export const animated = (ops: readonly HdOp[]) => ops.some((o) => o.k === 'ad' || o.k === 'marquee');
+/** Whether ops are moving now (a blinking ad or line, a marquee): the frame's key then changes with the clock. */
+export const animated = (ops: readonly HdOp[]) => ops.some((o) => o.k === 'ad' || o.k === 'marquee' || o.k === 'blink');
+
+/** The colors of the city's own map (the Lookwise Local look): out of the city (the sea), road, sidewalk, lot, building, park, plaza, yard. */
+const GROUND: C3[] = [hex('#a7c8e6'), hex('#fbfaf5'), hex('#ece8de'), hex('#e8e1cf'), hex('#ddd0b4'), hex('#c6dfa8'), hex('#efe9dc'), hex('#e3dccb')];
+const grounds = new Map<string, Img>();
+/** A map picture from the city's ground (gw x gh digits), kept while the page is open. */
+function groundMap(g: string, gw: number, gh: number): Img {
+  let img = grounds.get(g);
+  if (img) return img;
+  img = new Img(gw, gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) { const c = GROUND[+g[j * gw + i]] ?? GROUND[0]; img.set(i, j, c[0], c[1], c[2]); }
+  grounds.set(g, img);
+  if (grounds.size > 16) grounds.delete(grounds.keys().next().value!);
+  return img;
+}

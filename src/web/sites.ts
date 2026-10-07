@@ -22,7 +22,8 @@ import { TEXT } from '../locale/text';
 import { newsStories, storyBody } from '../locale/news';
 import { districtAt } from '../sim/city';
 import en from '../locale/en.json';
-import { type Block, type C3, type Page, type Theme } from './page';
+import { type Block, type C3, type Page, type PhotoSubj, type Theme } from './page';
+import { groundAt, mapRaster } from '../phone/mapdata';
 import { mailHost, mailPage, provider } from './webmail';
 import { WIRE_HOST, wirePage } from './streetwire';
 import { FORUM_HOST, forumPage } from './forum';
@@ -173,10 +174,37 @@ const ANY = [Tpl.Classic, Tpl.Side, Tpl.Center, Tpl.LeftNav];
 /** The kinds' own page beyond the menu or products: a cinema's showtimes, a hotel's rooms, a bank's rates and branches. */
 const EXTRA: Partial<Record<BusinessKind, [string, string]>> = { cinema: ['Showtimes', 'showtimes'], hotel: ['Rooms & Rates', 'rooms'], motel: ['Rates', 'rooms'], bank: ['Rates', 'rates'] };
 
+/** What a place's photos show, by its kind (the manual's GROUP): food, a shop front, a bar, electronics, a room. */
+const GROUP: Partial<Record<BusinessKind, PhotoSubj>> = {
+  diner: 'food', cafe: 'food', pizza: 'food', deli: 'food', fastfood: 'food', bar: 'bar', liquor: 'bar',
+  hotel: 'room', motel: 'room', electronics: 'tech', phones: 'tech', cyber: 'tech',
+};
+/** The grammar's key for a kind's special and slogan (a few kinds have their own). */
+const pitchOf = (kind: BusinessKind) => (kind === 'bank' || kind === 'cinema' ? kind : GROUP[kind] ?? 'store');
+
+/**
+ * The city's own ground round a point, for a site's "Find us" map (the Maps raster, phone/mapdata.ts):
+ * gw x gh spots `step` metres apart, one digit each (the Ground kind), as data the page carries.
+ */
+function groundAround(w: World, x: number, y: number, gw = 48, gh = 30, step = 5): string {
+  const m = mapRaster(w.city);
+  let g = '';
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) g += String(groundAt(m, x + (i - gw / 2) * step, y + (j - gh * 0.55) * step));
+  return g;
+}
+
 /** A page of business k's site. */
 function bizPage(w: World, k: number, host: string, path: string): Page {
   const c = w.city, b = c.businesses[k], P = w.pop, h = (q: number) => hash3(w.seed, k, q), name = businessName(c, k);
-  const tpls = TPLS[b.kind] ?? ANY, tpl = tpls[Math.floor(h(2) * tpls.length)], theme = THEMES[Math.floor(h(1) * THEMES.length)], year = String(1958 + Math.floor(h(3) * 48));
+  const tpls = TPLS[b.kind] ?? ANY, tpl = tpls[Math.floor(h(2) * tpls.length)], base = THEMES[Math.floor(h(1) * THEMES.length)], year = String(1958 + Math.floor(h(3) * 48));
+  // each template is a year of the web (15.17f): its background, its shine
+  const TILES = ['stripes', 'dots', 'checks', 'diag'] as const;
+  const theme: Theme = tpl === Tpl.Center ? { ...base, page: [8, 8, 40], bg: [8, 8, 40], fg: [255, 255, 255], dim: [170, 170, 255], link: [0, 255, 255], head: [8, 8, 40], headFg: [255, 255, 0], tile: 'stars' }
+    : tpl === Tpl.Classic ? { ...base, tile: TILES[Math.floor(h(11) * 4)] }
+    : tpl === Tpl.LeftNav ? { ...base, tile: 'checks', gloss: true }
+    : tpl === Tpl.Side ? { ...base, tile: 'diag', gloss: true }
+    : tpl === Tpl.Corporate ? { ...base, page: [228, 231, 236], bg: [255, 255, 255], gloss: true, head: base.head[0] + base.head[1] + base.head[2] > 600 ? [40, 44, 52] : base.head }
+    : { page: [255, 255, 255], bg: [255, 255, 255], fg: [0, 0, 0], dim: [120, 120, 120], link: [0, 0, 204], head: [255, 255, 255], headFg: [0, 0, 0], bar: [230, 230, 230], barFg: [0, 0, 0] };
   const r = rngOf(w.seed, k, 0xb10b), district = districtName(c, districtAt(c, ...placeAt(c, k)));
   const say = (key: string, ctx: Record<string, string> = {}) => tidy(expand(`#${key}#`, TEXT, r, { biz: name, district, year, city: cityName(c), ...ctx }));
   const T = PLACES[b.kind], goods = en.goods as Record<string, string>;
@@ -191,7 +219,25 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   const [bx, by] = placeAt(c, k), sub = subAt(w.power, c, bx, by);
   const back = w.events.list.some((e) => e.kind === 'restored' && e.refs[0] === sub && w.time - e.time < 86400);
   const notice: Block[] = back ? [{ t: 'notice', text: say('web.outage') }] : [];
-  const banner: Block = tpl === Tpl.Bare ? { t: 'h', text: name.toUpperCase() } : { t: 'banner', text: name, sub: `Since ${year} - ${district}`, art: ICONS[b.kind] ?? ICONS.any };
+  const banner: Block = tpl === Tpl.Bare ? { t: 'h', text: name.toUpperCase() } : { t: 'banner', text: name, sub: `Since ${year} - ${district}`, art: ICONS[b.kind] ?? ICONS.any, look: tpl === Tpl.Classic ? 'bevel' : undefined };
+  // the photos by the place's kind, the special of the day and the slogan from the grammar, the map round the door
+  const subj: PhotoSubj = GROUP[b.kind] ?? 'store', seed = Math.floor(h(12) * 1e9), pitch = pitchOf(b.kind);
+  // the special is one of the things it really sells, at its price
+  const deal = T.sells.length ? T.sells[Math.floor(h(18) * T.sells.length)] : null, item = deal ? (goods[deal[0]] ?? deal[0].replace(/_/g, ' ')).toLowerCase() : 'a coffee';
+  const special = say(`web.special.${pitch}`, { item, price: money(deal?.[1] ?? 150), pct: String(10 + Math.floor(h(13) * 4) * 5), rate: (1.5 + h(8)).toFixed(2) });
+  const [sl1, sl2 = ''] = say(`web.slogan.${pitch}`).split('|');
+  const ground = groundAround(w, bx, by);
+  const findMap: Block = { t: 'map', seed, pins: ['A'], h: 6, ground, gw: 48, gh: 30 };
+  const reviews = 3 + Math.floor(h(14) * 3), nRev = 12 + Math.floor(h(15) * 60);
+  // the blog's posts: what happened near the shop this week (the city's doings), else the shop's own news
+  const near = w.events.list.filter((e) => (e.kind === 'restored' ? e.refs[0] === sub : (e.kind === 'crash' || e.kind === 'jam') && Math.hypot(e.x - bx, e.y - by) < 250) && w.time - e.time < 7 * 86400).slice(-2).reverse();
+  const when = (t: number) => { const d = Math.floor((w.time - t) / 86400); return d < 1 ? 'today' : d < 2 ? 'yesterday' : `on ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][calendar(t).weekday]}`; };
+  const dated = (t: number) => { const Dd = calendar(Math.max(0, t)); return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Dd.month - 1]} ${Dd.day}, ${Dd.year}`; };
+  const posts: [string, string, string][] = near.map((e) => [dated(e.time), say(`web.post.${e.kind}.title`), say(`web.post.${e.kind}.body`, { when: when(e.time) })]);
+  for (let tries = 0; posts.length < 2 && tries < 8; tries++) {
+    const t = say('web.post.generic.title'), x = say('web.post.generic.body');
+    if (!posts.some((p) => p[1] === t || p[2] === x)) posts.push([dated(w.time - (posts.length + 1) * (5 + Math.floor(h(16 + posts.length) * 20)) * 86400), t, x]);
+  }
   const ago = Math.floor(h(4) * 400) * 86400, D = calendar(Math.max(0, w.time - ago));
   const updated = say('web.updated', { date: w.time - ago < 0 ? 'in 2007' : `${D.month}/${D.day}/${String(D.year).slice(2)}` });
   const counter = say('web.visitors', { n: String(1000 + Math.floor(h(5) * 90000)).padStart(6, '0') });
@@ -202,11 +248,38 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
     case '/': {
       const see = sells ? `See our [${food ? 'menu' : 'products'}](http://${host}/${list})` : extra ? `See our [${extra[0].toLowerCase()}](http://${host}/${extra[1]})` : 'Come visit us';
       const main: Block[] = [{ t: 'h', text: say('web.welcome') }, { t: 'p', text: say(`web.intro.${b.kind}`) }, { t: 'p', text: `${see} or [get in touch](http://${host}/contact).` }];
-      body = tpl === Tpl.Side ? [{ t: 'cols', cols: [main, info], widths: [0.66, 0.34] }]
-        : tpl === Tpl.Center ? [{ t: 'art', lines: ['*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*'], col: theme.link }, ...main, { t: 'hr' }, ...info, { t: 'p', text: counter }, { t: 'p', text: 'Best viewed at 800x600.' }]
-        : tpl === Tpl.Corporate ? [...main, { t: 'cols', cols: [info.slice(0, 3), info.slice(3, 5), [{ t: 'h', text: 'Call us' }, info[5]]] }]
-        : tpl === Tpl.Bare ? [{ t: 'p', text: say(`web.intro.${b.kind}`) }, { t: 'art', lines: ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'], col: theme.head }, ...info]
-        : [...main, { t: 'hr' }, { t: 'cols', cols: [info.slice(0, 3), info.slice(3)] }];
+      const priceRows = T.sells.slice(0, 4).map(([g, p]) => [goods[g] ?? g.replace(/_/g, ' '), money(p)]);
+      switch (tpl) {
+        case Tpl.Center: // 1998: the homepage that was never updated
+          body = [{ t: 'photo', subj, seed, h: 6, w: 22, center: true, frame: 'line' }, { t: 'big', text: say('web.welcome.home98'), kind: 'hero', rows: 2, center: true, col: [255, 255, 255] },
+            { t: 'blink', text: `*** ${special} ***` }, { t: 'space' },
+            { t: 'list', items: nav.slice(1).map(([l, u]) => `[${l}](${u})`) }, { t: 'p', text: `${now} - ${addr} - ${phone}` }, { t: 'rule', kind: 'rainbow' }, { t: 'p', text: counter }, { t: 'p', text: 'Best viewed at 800x600 with Ferret.' }];
+          break;
+        case Tpl.Classic: // 2001: tables, a framed photo beside the welcome, the special of the day
+          body = [{ t: 'cols', widths: [0.3, 0.7], cols: [[{ t: 'photo', subj, seed, h: 6, w: 20 }], main] }, { t: 'rule', kind: 'groove' },
+            { t: 'burst', label: 'NEW!', text: `TODAY'S SPECIAL: ${special}` }, { t: 'rule', kind: 'groove' },
+            { t: 'cols', cols: [priceRows.length ? [{ t: 'table', rows: priceRows }] : info.slice(0, 3), info.slice(1)] }];
+          break;
+        case Tpl.LeftNav: // 2003: the welcome, the prices, the button to book or order
+          body = [...main, ...(priceRows.length ? [{ t: 'table', head: true, rows: [['', 'Price'], ...priceRows] } as Block] : []), { t: 'submit', label: subj === 'room' ? 'Book now' : subj === 'food' ? 'Order online' : 'Contact us' }, ...info.slice(1, 3), ...info.slice(4)];
+          break;
+        case Tpl.Side: // 2005: a blog, with boxes on the side
+          body = [{ t: 'cols', widths: [0.66, 0.34], cols: [
+            [{ t: 'rss', text: `LATEST NEWS - [RSS](http://${host}/)` }, ...posts.flatMap(([d, t, x], i): Block[] => [{ t: 'p', text: d }, { t: 'h', text: t }, ...(i === 0 ? [{ t: 'photo', subj, seed, h: 4, w: 14, frame: 'line' } as Block] : []), { t: 'p', text: x }, { t: 'rule', kind: 'dots' }])],
+            [{ t: 'box', title: 'Hours', blocks: [{ t: 'p', text: open }, { t: 'p', text: now }] }, { t: 'box', title: 'Find us', blocks: [findMap, { t: 'p', text: addr }, { t: 'p', text: phone }] },
+              { t: 'box', title: 'Reviews', blocks: [{ t: 'stars', n: reviews }, { t: 'p', text: `${reviews}.${Math.floor(h(17) * 10)} - ${nRev} reviews` }] }],
+          ] }];
+          break;
+        case Tpl.Corporate: // 2008: the hero, three boxes with glossy icons
+          body = [{ t: 'hero', title: sl1.toUpperCase(), sub: `${sl2} ${special}.`, subj, seed, btn: ['Learn more >>', `http://${host}/about`] },
+            { t: 'cols', cols: [[{ t: 'icon', icon: b.kind === 'bank' ? 'lock' : 'star', title: 'Hours', text: `${open}. ${now}` }], [{ t: 'icon', icon: 'pin', title: 'Find us', text: `${addr}, ${district}` }], [{ t: 'icon', icon: 'phone', title: 'Call us', text: phone }]] },
+            { t: 'cols', widths: [0.55, 0.45], cols: [[{ t: 'box', title: b.kind === 'bank' ? 'Online banking' : 'Find a store', blocks: [{ t: 'p', text: `[${b.kind === 'bank' ? 'Sign in' : 'Store locator'}](http://${host}/contact)` }] }], [findMap]] }];
+          break;
+        default: // Bare: free hosting, the picture that never loaded, under construction
+          body = [{ t: 'broken', name: 'logo.jpg', text: `${say(`web.intro.${b.kind}`)} ${addr}. Call ${phone}.` },
+            { t: 'art', lines: ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'], col: [200, 120, 0] },
+            { t: 'p', text: `[${say('web.webmaster')}](http://${mailHost(w)}/)` }];
+      }
       break;
     }
     case `/${list}`:
@@ -246,9 +319,12 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
     default:
       body = [{ t: 'h', text: '404 - Page Not Found' }, { t: 'p', text: `The page you requested could not be found. Go back to the [home page](http://${host}/).` }];
   }
-  const navB: Block = { t: 'nav', links: nav };
-  const blocks: Block[] = tpl === Tpl.Center || tpl === Tpl.Bare ? [banner, ...notice, ...body, navB, { t: 'p', text: updated }, foot]
-    : tpl === Tpl.LeftNav ? [banner, ...notice, { t: 'cols', widths: [0.2, 0.8], cols: [[{ t: 'h', text: 'Menu' }, { t: 'list', items: nav.map(([l, u]) => `[${l}](${u})`) }], body] }, { t: 'p', text: updated }, foot]
+  const navB: Block = { t: 'nav', links: nav, look: tpl === Tpl.Classic ? 'bevel' : undefined }, on = Math.max(0, nav.findIndex(([, u]) => u === `http://${host}${path === '/' ? '/' : path}`));
+  const blocks: Block[] = tpl === Tpl.Center ? [{ t: 'marquee', text: `*** Welcome to ${name}! *** ${special} *** Sign our guestbook! *** Thanks for visiting ***` }, { t: 'big', text: name, kind: 'word', rows: 4, center: true }, { t: 'rule', kind: 'rainbow' }, ...notice, ...body, ...(path === '/' ? [] : [navB]), { t: 'p', text: updated }]
+    : tpl === Tpl.Bare ? [{ t: 'ad', name: `${cityName(c)}Net`, text: 'Free web pages - get your own site today!', url: portalUrl(w), c1: [0, 51, 153], c2: [255, 204, 0] }, banner, ...notice, ...body, navB, { t: 'p', text: `Hosted by ${cityName(c)}Net` }]
+    : tpl === Tpl.LeftNav ? [{ t: 'photo', subj: 'sky', seed, h: 4, w: 124, frame: 'none' }, { ...banner, art: undefined } as Block, ...notice, { t: 'cols', widths: [0.22, 0.78], cols: [[{ t: 'buttons', links: nav, on }], body] }, { t: 'p', text: 'Site by Pixelworks Web Design' }, foot]
+    : tpl === Tpl.Side ? [banner, { t: 'tabs', links: nav, on }, ...notice, ...body, { t: 'p', text: `(c) ${calendar(w.time).year} ${name} - Powered by Blogsmith` }]
+    : tpl === Tpl.Corporate ? [banner, navB, ...notice, ...body, { t: 'rule', kind: 'groove' }, foot]
     : [banner, navB, ...notice, ...body, { t: 'p', text: updated }, foot];
   return { url: `http://${host}${path}`, title: path === '/' ? name : `${name} - ${path.slice(1)}`, theme, blocks, kb: tpl === Tpl.Bare ? 12 : 30 + Math.floor(h(6) * 60), mobile: h(7) < (MOBILE[b.kind] ?? 0.12) };
 }

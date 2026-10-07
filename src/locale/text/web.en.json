@@ -127,5 +127,126 @@
   "Power is back on. Thanks for your patience during the outage!",
   "NOTICE: we were closed during the blackout. Open again as usual.",
   "The lights are back on! See you soon."
+ ],
+ "web.special.food": [
+  "{item} for {price}, today only",
+  "Lunch special: {item}, just {price}",
+  "Try our {item} - only {price} this week",
+  "Two-for-one on {item} every Tuesday"
+ ],
+ "web.special.store": [
+  "{pct}% off everything this weekend",
+  "New stock every week: {item} from {price}",
+  "Bring a friend, get {pct}% off",
+  "Clearance sale: {pct}% off while it lasts"
+ ],
+ "web.special.room": [
+  "Weekly rates available - ask at the desk",
+  "Weekend package: two nights for {price}",
+  "Free coffee and a newspaper every morning",
+  "Stay three nights, the fourth is on us"
+ ],
+ "web.special.bar": [
+  "Happy hour 5 - 7 pm, every day",
+  "Pool table and the game on the big screen",
+  "Ladies night every Thursday",
+  "Two-dollar drafts until 8 pm"
+ ],
+ "web.special.tech": [
+  "Prepaid SIM cards in stock",
+  "Free phone with a 2-year plan",
+  "Repairs while you wait",
+  "Wi-Fi $3 a day - 1 hour $2"
+ ],
+ "web.special.bank": [
+  "Free checking with direct deposit",
+  "Savings at {rate}% APY",
+  "No-fee ATMs all over the city",
+  "Open an account online in minutes"
+ ],
+ "web.special.cinema": [
+  "Tuesday matinee only {price}",
+  "Student night every Wednesday",
+  "Midnight shows every Friday"
+ ],
+ "web.slogan.food": [
+  "Hot, fast|and cheap.",
+  "Made fresh|every day.",
+  "Come hungry,|leave happy."
+ ],
+ "web.slogan.store": [
+  "Everything you need,|right around the corner.",
+  "Your neighborhood|store.",
+  "Quality you can|count on."
+ ],
+ "web.slogan.room": [
+  "Your home|in the city.",
+  "Rest easy|downtown.",
+  "A quiet room|in a busy city."
+ ],
+ "web.slogan.bar": [
+  "Cold drinks,|good company.",
+  "Your local|since {year}."
+ ],
+ "web.slogan.tech": [
+  "Talk more,|pay less.",
+  "Connected,|anywhere.",
+  "The latest|for less."
+ ],
+ "web.slogan.bank": [
+  "Banking that works|as hard as you do.",
+  "Safe, simple|and close to home."
+ ],
+ "web.slogan.cinema": [
+  "The best seats|in town.",
+  "Big screen,|small prices."
+ ],
+ "web.post.restored.title": [
+  "We're back!",
+  "The lights are on again",
+  "Back to business"
+ ],
+ "web.post.restored.body": [
+  "The power went out on our block {when}, and we had to close for a while. Everything is running again. Thank you for your patience, neighbors!",
+  "Sorry to everyone who found our doors closed {when}: the whole block lost power. We're open as usual now."
+ ],
+ "web.post.crash.title": [
+  "Careful out there",
+  "A bump on our corner",
+  "Drive safe, {district}"
+ ],
+ "web.post.crash.body": [
+  "Two cars bumped right outside our window {when}. Nobody was hurt, but traffic was a mess for a while. Watch that corner!",
+  "There was a fender-bender on our corner {when}. Everyone was fine, and the street is clear again."
+ ],
+ "web.post.jam.title": [
+  "Traffic, again",
+  "Stuck in traffic?"
+ ],
+ "web.post.jam.body": [
+  "The street out front was backed up for blocks {when}. Walking over? You'll get here faster than the cars.",
+  "If you got stuck in the traffic {when}, come in and take a break. Coffee's on."
+ ],
+ "web.post.generic.title": [
+  "New hours",
+  "Thank you, neighbors!",
+  "Now hiring",
+  "Our new website"
+ ],
+ "web.post.generic.body": [
+  "Starting this week we open a little earlier. See you soon!",
+  "{biz} was voted one of the best in {district}. Thank you to everyone who stops by!",
+  "We're looking for friendly people to join our team. Ask at the counter.",
+  "Welcome to our new website! Tell us what you think next time you stop by."
+ ],
+ "web.welcome.home98": [
+  "Welcome to our homepage!!",
+  "Welcome to the {biz} home page!",
+  "Hi! Thanks for stopping by!!"
+ ],
+ "web.webmaster": [
+  "Questions? Email the webmaster",
+  "Write to the webmaster",
+  "Comments? Email us"
  ]
 }

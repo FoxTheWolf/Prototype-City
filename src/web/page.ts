@@ -39,11 +39,15 @@ export type HdOp =
   | { k: 'burst'; x: number; y: number; text: string; col: C3 }
   | { k: 'rss'; x: number; y: number }
   | { k: 'stars'; x: number; y: number; n: number }
-  | { k: 'map'; x: number; y: number; w: number; h: number; seed: number; pins: string[] }
+  /** A street map; `ground` (gw x gh, one digit a spot: render/../phone/mapdata Ground) is the city's own, round the pin. */
+  | { k: 'map'; x: number; y: number; w: number; h: number; seed: number; pins: string[]; ground?: string; gw?: number; gh?: number }
+  | { k: 'broken'; x: number; y: number; w: number; h: number }
+  | { k: 'blink'; x: number; y: number; w: number; text: string; col: C3 }
   | { k: 'marquee'; x: number; y: number; w: number; text: string; col: C3 }
   | { k: 'big'; x: number; y: number; text: string; size: number; kind: 'word' | 'hero'; col: C3 }
   | { k: 'icon'; x: number; y: number; kind: 'star' | 'pin' | 'lock' | 'mail' | 'phone'; col: C3 };
 /** What a front op weighs coming down the line (KB): the pictures come after the text, one by one. */
+/** Whether a front op is a picture that has to come down the line (the others are drawn by the browser itself). */
 export function opKb(o: HdOp): number {
   if (o.k === 'photo') return Math.max(4, Math.round(o.w * o.h * 0.6));
   if (o.k === 'map') return 12;
@@ -52,8 +56,8 @@ export function opKb(o: HdOp): number {
 }
 
 export type Block =
-  | { t: 'banner'; text: string; sub?: string; art?: string[] }
-  | { t: 'nav'; links: [string, string][] }
+  | { t: 'banner'; text: string; sub?: string; art?: string[]; /** 15.17f: the 2001 bevel or the Web 2.0 shine (the theme's by default). */ look?: 'bevel' | 'gloss' | 'flat' }
+  | { t: 'nav'; links: [string, string][]; look?: 'bevel' | 'gloss' | 'flat' }
   | { t: 'h'; text: string }
   | { t: 'p'; text: string }
   | { t: 'list'; items: string[] }
@@ -65,9 +69,9 @@ export type Block =
   /** A line framed in a box, in the site's colors (an outage notice: the old text ad). */
   | { t: 'notice'; text: string; url?: string }
   /** 15.17e: a photo the column's width (or w cells), h rows tall, with a caption under it. */
-  | { t: 'photo'; subj: PhotoSubj; seed: number; h?: number; w?: number; caption?: string; reflect?: boolean }
+  | { t: 'photo'; subj: PhotoSubj; seed: number; h?: number; w?: number; caption?: string; reflect?: boolean; center?: boolean; frame?: 'white' | 'line' | 'none' }
   /** A street map with pins (A, B, C...). */
-  | { t: 'map'; seed: number; pins?: string[]; h?: number }
+  | { t: 'map'; seed: number; pins?: string[]; h?: number; ground?: string; gw?: number; gh?: number }
   /** A rating: n of 5 stars, and a line after them. */
   | { t: 'stars'; n: number; text?: string }
   /** The "NEW!" starburst with a line beside it. */
@@ -82,6 +86,18 @@ export type Block =
   | { t: 'box'; title: string; blocks: Block[] }
   /** The <marquee>: a line sliding right to left. */
   | { t: 'marquee'; text: string }
+  /** 15.17f: a big title in pixels, `rows` tall: the 1998 WordArt or the Web 2.0 headline; centered or not. */
+  | { t: 'big'; text: string; kind: 'word' | 'hero'; rows?: number; center?: boolean; col?: C3 }
+  /** A rule: the 1998 rainbow, the 2001 groove, a dotted line. */
+  | { t: 'rule'; kind: 'rainbow' | 'groove' | 'dots' }
+  /** The <blink> tag: a line that blinks, centered. */
+  | { t: 'blink'; text: string; col?: C3 }
+  /** The picture that never loaded: a grey frame, the red X, its file name. */
+  | { t: 'broken'; name: string; text?: string }
+  /** The 2003 menu: bevelled buttons one under the other (the one at `on` pressed, the next lit as if the mouse were on it). */
+  | { t: 'buttons'; links: [string, string][]; on: number }
+  /** A glossy round icon with a title and a line beside it. */
+  | { t: 'icon'; icon: 'star' | 'pin' | 'lock' | 'mail' | 'phone'; title: string; text: string }
   | { t: 'hr' }
   | { t: 'foot'; text: string }
   | { t: 'space' }
@@ -143,6 +159,8 @@ function wrapRich(s: string, w: number): Seg[][] {
 /** Lay page P out `width` cells wide (all of it on a phone's screen, `full`). */
 export function layout(P: Page, width: number, full = false): Laid {
   const T = P.theme, rows: Cell[][] = [], links: Link[] = [], fields: Field[] = [], back: HdOp[] = [], front: HdOp[] = [];
+  // a heading in the banner's color, unless that is the paper's (a white banner): then in its ink
+  const near = (a: C3, b: C3) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) < 90, HEAD = near(T.head, T.bg) ? T.headFg : T.head;
   const blank = (bg: C3): Cell[] => Array.from({ length: width }, () => ({ ch: ' ', fg: T.fg, bg }));
   const row = (y: number, _bg?: C3) => { while (rows.length <= y) rows.push(blank(T.page)); return rows[y]; };
   const put = (x: number, y: number, s: string, fg: C3, bg: C3) => { const r = row(y, bg); for (let k = 0; k < s.length; k++) if (x + k >= 0 && x + k < width) r[x + k] = { ch: s[k], fg, bg }; };
@@ -169,20 +187,25 @@ export function layout(P: Page, width: number, full = false): Laid {
         case 'banner': {
           const h = Math.max(5, (B.art?.length ?? 0) + 2);
           for (let k = 0; k < h; k++) fill(x, y + k, w, T.head);
-          if (T.gloss) back.push({ k: 'gloss', x, y, w, h, col: T.head });
+          const look = B.look ?? (T.gloss ? 'gloss' : 'flat');
+          if (look === 'gloss') back.push({ k: 'gloss', x, y, w, h, col: T.head });
+          else if (look === 'bevel') back.push({ k: 'bevel', x, y, w, h, col: T.head });
           const ax = x + 2;
           B.art?.forEach((l, k) => put(ax, y + 1 + k, l, T.headFg, T.head));
           const tx = x + (B.art ? Math.max(...B.art.map((l) => l.length)) + 5 : 3), big = B.text.toUpperCase().split('').join(' ');
           put(tx, y + Math.floor(h / 2) - (B.sub ? 1 : 0), big.length < w - tx + x - 2 ? big : B.text.toUpperCase(), T.headFg, T.head);
-          if (B.sub) put(tx, y + Math.floor(h / 2) + 1, B.sub, T.bar, T.head);
+          if (B.sub) put(tx, y + Math.floor(h / 2) + 1, B.sub, near(T.bar, T.head) ? T.headFg : T.bar, T.head);
           y += h;
           break;
         }
         case 'nav': {
           fill(x, y, w, T.bar);
-          if (T.gloss) back.push({ k: 'gloss', x, y, w, h: 1, col: T.bar });
+          const look = B.look ?? (T.gloss ? 'gloss' : 'flat');
+          if (look === 'gloss') back.push({ k: 'gloss', x, y, w, h: 1, col: T.bar });
           let cx = x + 2;
           for (const [label, url] of B.links) {
+            // 2001: each link a bevelled button (the first pressed: the page you are on)
+            if (look === 'bevel') back.push({ k: 'bevel', x: cx - 1, y, w: label.length + 2, h: 1, col: T.bar, down: cx === x + 2 });
             put(cx, y, label, T.barFg, T.bar);
             links.push({ x: cx, y, w: label.length, url });
             cx += label.length + 3;
@@ -192,7 +215,7 @@ export function layout(P: Page, width: number, full = false): Laid {
           y += 2;
           break;
         }
-        case 'h': fill(x, y, w, T.bg); put(x + 2, y, B.text, T.head, T.bg); fill(x, y + 1, w, T.bg); put(x + 2, y + 1, '~'.repeat(Math.min(w - 4, B.text.length)), T.dim, T.bg); y += 2; break;
+        case 'h': fill(x, y, w, T.bg); put(x + 2, y, B.text, HEAD, T.bg); fill(x, y + 1, w, T.bg); put(x + 2, y + 1, '~'.repeat(Math.min(w - 4, B.text.length)), T.dim, T.bg); y += 2; break;
         case 'p': y += rich(x + 2, y, w - 4, B.text, T.fg, T.bg); fill(x, y, w, T.bg); y += 1; break;
         case 'list': for (const it of B.items) y += rich(x + 2, y, w - 4, it, T.fg, T.bg, '* '); fill(x, y, w, T.bg); y += 1; break;
         case 'table': {
@@ -238,9 +261,10 @@ export function layout(P: Page, width: number, full = false): Laid {
           break;
         }
         case 'photo': {
-          const ph = B.h ?? 8, pw = Math.min(w - 4, B.w ?? Math.round(ph * 3.2)), px = x + 2;
+          // (a strip with no frame runs the column's whole width, as the 2003 sites' top picture did)
+          const strip = B.frame === 'none', ph = B.h ?? 8, pw = strip ? w : Math.min(w - 4, B.w ?? Math.round(ph * 3.2)), px = strip ? x : B.center ? x + Math.floor((w - pw) / 2) : x + 2;
           for (let k = 0; k < ph + (B.reflect ? 3 : 1); k++) fill(x, y + k, w, T.bg);
-          front.push({ k: 'photo', x: px, y, w: pw, h: ph, subj: B.subj, seed: B.seed, frame: 'white', reflect: B.reflect });
+          front.push({ k: 'photo', x: px, y, w: pw, h: ph, subj: B.subj, seed: B.seed, frame: B.frame === 'none' ? undefined : B.frame ?? 'white', reflect: B.reflect });
           y += ph + (B.reflect ? 3 : 1);
           if (B.caption) { y += rich(x + 2, y, w - 4, B.caption, T.dim, T.bg); fill(x, y, w, T.bg); y++; }
           break;
@@ -248,7 +272,7 @@ export function layout(P: Page, width: number, full = false): Laid {
         case 'map': {
           const mh = B.h ?? 8, mw = Math.min(w - 4, Math.round(mh * 3.4));
           for (let k = 0; k <= mh; k++) fill(x, y + k, w, T.bg);
-          front.push({ k: 'map', x: x + 2, y, w: mw, h: mh, seed: B.seed, pins: B.pins ?? ['A'] });
+          front.push({ k: 'map', x: x + 2, y, w: mw, h: mh, seed: B.seed, pins: B.pins ?? ['A'], ground: B.ground, gw: B.gw, gh: B.gh });
           y += mh + 1;
           break;
         }
@@ -311,6 +335,45 @@ export function layout(P: Page, width: number, full = false): Laid {
           break;
         }
         case 'marquee': fill(x, y, w, T.bg); front.push({ k: 'marquee', x: x + 2, y, w: w - 4, text: B.text, col: T.link }); fill(x, y + 1, w, T.bg); y += 2; break;
+        case 'big': {
+          // the bulb font at s pixels a bulb (6 s a letter with its gap): rows * 2 bulbs tall at most, narrower to fit
+          const rows = B.rows ?? 3, s = Math.max(2, Math.min(Math.floor((rows * 16) / 8), Math.floor(((w - 4) * 8) / (6 * Math.max(1, B.text.length))))), tw = (B.text.length * 6 * s) / 8;
+          for (let k = 0; k < rows; k++) fill(x, y + k, w, T.bg);
+          front.push({ k: 'big', x: B.center ? x + (w - tw) / 2 : x + 2, y: y + (rows - (7 * s) / 16) / 2, text: B.text, size: (s * 8) / 16, kind: B.kind, col: B.col ?? T.head });
+          y += rows;
+          break;
+        }
+        case 'rule': fill(x, y, w, T.bg); back.push({ k: 'hr', x: x + 2, y, w: w - 4, kind: B.kind, col: T.dim }); y++; break;
+        case 'blink': fill(x, y, w, T.bg); front.push({ k: 'blink', x: x + 2, y, w: w - 4, text: B.text, col: B.col ?? [255, 60, 60] }); y++; break;
+        case 'broken': {
+          const bw = 14, bh = 4;
+          for (let k = 0; k <= bh; k++) fill(x, y + k, w, T.bg);
+          back.push({ k: 'broken', x: x + 2, y, w: bw, h: bh });
+          put(x + 5, y, B.name, T.dim, T.bg);
+          if (B.text) rich(x + bw + 4, y, w - bw - 6, B.text, T.fg, T.bg);
+          y += bh + 1;
+          break;
+        }
+        case 'buttons': {
+          B.links.forEach(([label, url], i) => {
+            const col: C3 = i === B.on + 1 ? T.head.map((v) => Math.min(255, v + 50)) as C3 : T.head;
+            fill(x, y, w, T.bg); put(x + 2, y, label.padEnd(w - 4).slice(0, w - 4), T.headFg, col);
+            back.push({ k: 'bevel', x: x + 1, y, w: w - 2, h: 1, col, down: i === B.on });
+            links.push({ x: x + 2, y, w: Math.min(w - 4, label.length), url });
+            fill(x, y + 1, w, T.bg);
+            y += 2;
+          });
+          break;
+        }
+        case 'icon': {
+          fill(x, y, w, T.bg); fill(x, y + 1, w, T.bg);
+          front.push({ k: 'icon', x: x + 1, y, kind: B.icon, col: T.link });
+          put(x + 6, y, B.title, T.fg, T.bg);
+          const n = rich(x + 6, y + 1, w - 8, B.text, T.dim, T.bg);
+          y += Math.max(3, n + 2);
+          fill(x, y - 1, w, T.bg);
+          break;
+        }
         case 'hr': fill(x, y, w, T.bg); if (T.gloss) back.push({ k: 'hr', x: x + 1, y, w: w - 2, kind: 'groove', col: T.bar }); else put(x + 1, y, '-'.repeat(w - 2), T.dim, T.bg); y++; break;
         case 'foot': fill(x, y, w, T.bar); put(x + Math.max(1, Math.floor((w - B.text.length) / 2)), y, B.text.slice(0, w - 2), T.barFg, T.bar); y++; break;
         case 'space': fill(x, y, w, T.bg); y++; break;
@@ -367,6 +430,12 @@ export function mobilePage(P: Page, width: number): Page {
       case 'hero': return [{ t: 'h', text: B.title }, ...(B.sub ? [{ t: 'p', text: B.sub } as Block] : [])];
       case 'photo': case 'map': case 'marquee': return B.t === 'marquee' ? [{ t: 'p', text: B.text }] : [];
       case 'stars': return [{ t: 'p', text: `${'*'.repeat(B.n)}${'.'.repeat(5 - B.n)} ${B.text ?? ''}` }];
+      case 'big': return [{ t: 'h', text: B.text }];
+      case 'rule': return [{ t: 'hr' }];
+      case 'blink': return [{ t: 'p', text: B.text }];
+      case 'broken': return B.text ? [{ t: 'p', text: B.text }] : [];
+      case 'buttons': return [{ t: 'p', text: B.links.map(([l, u]) => `[${l}](${u})`).join(' | ') }];
+      case 'icon': return [{ t: 'h', text: B.title }, { t: 'p', text: B.text }];
       case 'burst': return [{ t: 'p', text: `${B.label} ${B.text}` }];
       case 'rss': return [{ t: 'p', text: B.text }];
       case 'box': return [{ t: 'h', text: B.title }, ...flat(B.blocks)];

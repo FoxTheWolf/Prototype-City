@@ -5,6 +5,7 @@ import { writeFileSync } from 'node:fs';
 import { png, shot } from './png';
 import { createWorld } from '../src/sim/world';
 import { Browser } from '../src/web/browser';
+import { fetchUrl } from '../src/web/sites';
 
 let bad = 0;
 const check = (name: string, ok: boolean) => { if (!ok) { bad++; console.log('FAIL', name); } };
@@ -35,8 +36,10 @@ B.key('Backspace', false, 14);
 check('the new tab has its own (empty) history', B.url === home);
 B.key('Tab', true, 15);
 check('Ctrl+Tab: back to the first tab', B.url === second);
-// visited links are purple: the start page's links include the second page, now seen
-B.key('Backspace', false, 16);
+// visited links are purple: a story linked in the start page's text, seen, then back home
+const story = (fetchUrl(w, home).page!.blocks.flatMap((b) => (b.t === 'cols' ? b.cols.flat() : [b])).find((b) => b.t === 'list') as { items: string[] } | undefined)?.items.map((s) => s.match(/\]\(([^)]+)\)/)?.[1]).find(Boolean);
+if (story) { B.go(story, 16); B.go(home, 16.5); }
+check('the start page links a story in its text', !!story);
 const S = B.cells(30).scr;
 let purple = false;
 for (let r = 4; r < 49; r++) for (let c = 0; c < 159; c++) if (S.fg[r][c] === 0x551a8b) purple = true;

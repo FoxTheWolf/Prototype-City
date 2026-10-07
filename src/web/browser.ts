@@ -385,10 +385,12 @@ export class Browser {
           S.paint(x, PAGE_Y + r, c.ch, hit && 'url' in on ? c.bg : c.fg, hit && 'url' in on ? c.fg : c.bg);
         }
         S.paint(W - 1, PAGE_Y + r, ' ', INK, row[W - 2]?.bg ?? WHITE);
-        // a link already seen is purple (the history), as in every browser of the time
+        // a link already seen is purple (the history), as in every browser of the time: the links written
+        // in the site's link color (a menu button keeps its own colors, as the sites' CSS made it)
+        const LC = T.got?.page?.theme.link, linkInk = (c: C3) => !!LC && c[0] === LC[0] && c[1] === LC[1] && c[2] === LC[2];
         for (const l of T.laid.links) {
           if (l.y !== y || l.url === SUBMIT || !this.seen.has(this.abs(l.url)) || (on === l)) continue;
-          for (let x = l.x; x < Math.min(W - 1, l.x + l.w); x++) { const c = row[x]; if (c && c.ch !== ' ') S.paint(x, PAGE_Y + r, c.ch, VISITED, c.bg); }
+          for (let x = l.x; x < Math.min(W - 1, l.x + l.w); x++) { const c = row[x]; if (c && c.ch !== ' ' && linkInk(c.fg)) S.paint(x, PAGE_Y + r, c.ch, VISITED, c.bg); }
         }
         // what is typed in the boxes on this row (stars for a password)
         for (const F of T.laid.fields) {
