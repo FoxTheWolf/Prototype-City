@@ -65,3 +65,9 @@ export function post(A: BankAccount, at: number, kind: EntryKind, amount: number
   A.ledger.push({ at, kind, amount, ref });
   return true;
 }
+
+/** The branches of a bank (its chain), nearest (x, y) first: where to take cash out at the counter. */
+export function branchesNear(city: City, bank: number, x: number, y: number): number[] {
+  const at = (k: number) => { const B = city.buildings[city.businesses[k].building]; return Math.hypot((B.x0 + B.x1) / 2 - x, (B.y0 + B.y1) / 2 - y); };
+  return city.banks[bank].branches.slice().sort((a, b) => at(a) - at(b));
+}

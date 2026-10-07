@@ -977,11 +977,11 @@ export function paintWireProfile(P: Paint, d: WireProfile) {
 /** The bank's app: its own look (a bank's, not the phone's): cream paper, deep green, gold. */
 const BANK = { page: [242, 238, 226] as C3, card: [251, 249, 242] as C3, green: [18, 64, 48] as C3, green2: [30, 92, 68] as C3, gold: [236, 200, 112] as C3, ink: [34, 38, 34] as C3,
   grey: [120, 122, 112] as C3, red: [170, 40, 40] as C3, plus: [30, 120, 60] as C3, line: [214, 206, 186] as C3, pale: [222, 230, 214] as C3 };
-/** One of the bank's pages: waiting (connecting, with its bar; or no signal), home (the balance, the menu), the statement, topping up the phone, the branch. */
+/** One of the bank's pages: waiting (connecting, with its bar; or no signal), home (the balance, the menu), the statement, the branches nearby, the branch. */
 export type BankView = { kind: 'wait'; lines: string[]; bar: number | null }
   | { kind: 'home'; acct: string; label: string; balance: string; asOf: string; menu: { label: string; sel: boolean; pre: () => void }[] }
   | { kind: 'stmt'; title: string; rows: { date: string; what: string; amt: string; plus: boolean; sel: boolean; pre: () => void }[] }
-  | { kind: 'topup'; title: string; info: [string, string][]; amounts: { label: string; sel: boolean; pre: () => void }[]; note: string; noteKind: 'ok' | 'bad' | 'dim' }
+  | { kind: 'near'; title: string; rows: { name: string; where: string; dist: string; open: boolean; openLabel: string; sel: boolean; pre: () => void }[]; hint: string; call: string }
   | { kind: 'branch'; title: string; lines: { text: string; kind: 'head' | 'ink' | 'dim' | 'num' }[]; call: string };
 export interface BankPage { name: string; view: BankView; t: number }
 /** The bank's little emblem: a pediment on three columns, in gold. */
@@ -1043,21 +1043,25 @@ export function paintBank(P: Paint, d: BankPage) {
     });
     return;
   }
-  if (V.kind === 'topup') {
-    let y = bankTitle(P, top, V.title);
-    for (const [a, b] of V.info) { ptext(P, M, y, a, BANK.grey); ptext(P, SCR_W - M - ptextW(b), y, b, BANK.ink, 1, true); y += 14; }
-    y += 10;
-    // the amounts as buttons, two by two; a touch picks, a second pays
-    const bw = (SCR_W - 2 * M - 8) / 2;
-    V.amounts.forEach((a, n) => {
-      const x = Math.round(M + (n % 2) * (bw + 8)), by = y + Math.floor(n / 2) * 46;
-      HITS.push({ x, y: by, w: Math.round(bw), h: 40, pre: a.pre, key: a.sel ? 'ok' : undefined });
-      P.rrect(x, by, Math.round(bw), 40, 4, a.sel ? BANK.green : BANK.line);
-      if (!a.sel) P.rrect(x + 1, by + 1, Math.round(bw) - 2, 38, 4, BANK.card);
-      ptext(P, Math.round(x + (bw - ptextW(a.label, 1, true)) / 2), by + 16, a.label, a.sel ? BANK.gold : BANK.green, 1, true);
+  if (V.kind === 'near') {
+    // the bank's branches, nearest first: name, corner, how far, open or not; the picked one called by the button
+    const y0 = bankTitle(P, top, V.title), rh = 44, fit = Math.max(1, Math.floor((Y1 - 52 - y0) / rh));
+    const s = Math.max(0, V.rows.findIndex((r) => r.sel)), first = Math.max(0, Math.min(s - fit + 1, V.rows.length - fit));
+    V.rows.slice(first, first + fit).forEach((r, k) => {
+      const y = y0 + k * rh;
+      HITS.push({ x: M, y, w: SCR_W - 2 * M, h: rh - 4, pre: r.pre });
+      P.rrect(M, y, SCR_W - 2 * M, rh - 4, 4, r.sel ? BANK.green : BANK.line);
+      if (!r.sel) P.rrect(M + 1, y + 1, SCR_W - 2 * M - 2, rh - 6, 4, BANK.card);
+      const dw = ptextW(r.dist, 1, true);
+      ptext(P, M + 8, y + 7, r.name.slice(0, Math.floor((SCR_W - 2 * M - 24 - dw) / 7)), r.sel ? BANK.gold : BANK.ink, 1, true);
+      ptext(P, SCR_W - M - 8 - dw, y + 7, r.dist, r.sel ? BANK.gold : BANK.green, 1, true);
+      ptext(P, M + 8, y + 22, r.where.slice(0, 22), r.sel ? BANK.pale : BANK.grey);
+      const ow = ptextW(r.openLabel);
+      P.disc(SCR_W - M - 14 - ow, y + 25.5, 2.5, r.open ? [80, 200, 110] : BANK.red);
+      ptext(P, SCR_W - M - 8 - ow, y + 22, r.openLabel, r.sel ? BANK.pale : BANK.grey);
     });
-    y += Math.ceil(V.amounts.length / 2) * 46 + 8;
-    if (V.note) wrapText(V.note, 36).forEach((l, k) => ptext(P, M, y + k * 12, l, V.noteKind === 'ok' ? BANK.plus : V.noteKind === 'bad' ? BANK.red : BANK.grey));
+    wrapText(V.hint, 36).forEach((l, k) => ptext(P, M, Y1 - 82 + k * 12, l, BANK.grey));
+    callButton(P, V.call);
     return;
   }
   // the branch: where it is, its hours and number (a button calls it), the head office
@@ -1068,14 +1072,15 @@ export function paintBank(P: Paint, d: BankPage) {
     ptext(P, M, y, tx(l.text, k * 0.04).slice(0, 36), l.kind === 'dim' ? BANK.grey : BANK.ink, 1, l.kind === 'num');
     y += 13;
   });
-  if (V.call) {
-    const w = ptextW(V.call, 1, true) + 34, by = Y1 - 40;
-    HITS.push({ x: M, y: by, w, h: 30, key: 'send' });
-    P.rrect(M, by, w, 30, 5, BANK.green);
-    // a handset
-    P.rrect(M + 9, by + 10, 12, 4, 2, BANK.gold); P.rect(M + 9, by + 13, 3, 4, BANK.gold); P.rect(M + 18, by + 13, 3, 4, BANK.gold);
-    ptext(P, M + 27, by + 11, V.call, BANK.gold, 1, true);
-  }
+  callButton(P, V.call);
+}
+/** The bank's call button (the green key's): a handset and the words, at the page's foot. */
+function callButton(P: Paint, label: string) {
+  const w = ptextW(label, 1, true) + 34, by = Y1 - 40;
+  HITS.push({ x: M, y: by, w, h: 30, key: 'send' });
+  P.rrect(M, by, w, 30, 5, BANK.green);
+  P.rrect(M + 9, by + 10, 12, 4, 2, BANK.gold); P.rect(M + 9, by + 13, 3, 4, BANK.gold); P.rect(M + 18, by + 13, 3, 4, BANK.gold);
+  ptext(P, M + 27, by + 11, label, BANK.gold, 1, true);
 }
 
 /** Snake: the green screen of the old phones, dark pixels on it (a 5 px square a cell, as the LCD dots were); a pad of four arrows under the board steers by touch. */

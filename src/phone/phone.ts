@@ -22,7 +22,7 @@ import { callsIn, callsOut, contactsIn, contactsOut, DATA, DCIM, fsDirs, fsGet, 
 import { businessName, makerName, operatorName, districtName } from '../locale/names';
 import { smsReply, Talk } from '../talk';
 import { BIZ_HOURS, formatNumber, lookup } from '../sim/telco';
-import { post } from '../sim/bank';
+import { branchesNear } from '../sim/bank';
 import { jobReply, answerTrace } from '../sim/jobs'; // [HACKING] ver CLAUDE.md > Arquivos de hacking
 import { jobSms } from '../locale/jobs'; // [HACKING]
 import { hash3 } from '../core/rng';
@@ -120,10 +120,8 @@ const SYSTEM_KB = 40 * 1024;
  * EDGE_LIMIT_KB they need Wi-Fi (as the 2008 store did with its 10 MB limit over the cell network).
  */
 export const STORE: [string, number, number][] = [['snake', 48, 0], ['torch', 12, 0], ['news', 64, 0], ['convert', 36, 99], ['tunes', 14 * 1024, 499], ['atlas', 38 * 1024, 999], ['social', 180, 0], ['bank', 96, 0], ['web', 110, 0], ['reynard', 220, 0]];
-/** Kilobytes the bank's app downloads to show the account, and to make a payment. */
-const BANK_KB = 6, BANK_PAY_KB = 2;
-/** What the bank's app can top the phone's credit up by, in cents. */
-export const TOPUPS = [500, 1000, 2000, 5000];
+/** Kilobytes the bank's app downloads to show the account. */
+const BANK_KB = 6;
 /** Kilobytes the news reader downloads each time. */
 const NEWS_KB = 8;
 /** Posts a Streetwire page holds. */
@@ -236,7 +234,7 @@ export class Phone {
    * scroll of the statement, whether the account has been downloaded since it was opened, and a note
    * on the last top-up (done, no funds, no data connection).
    */
-  bk = { view: 'home' as 'home' | 'stmt' | 'topup' | 'branch', sel: 0, ok: false, note: '' };
+  bk = { view: 'home' as 'home' | 'stmt' | 'near' | 'branch', sel: 0, ok: false };
   /** The player's bank, by its name. */
   get bankName(): string { const c = this.world.city; return businessName(c, c.banks[this.world.bank.bank].hq); }
   /** Weather: game time the forecast was last downloaded (-1: never); it keeps an hour. */
@@ -631,15 +629,6 @@ export class Phone {
     }
     if (J?.what === 'news' && J.state === 'done') { this.newsAt = this.world.time; this.radio.job = null; }
     if (J?.what === 'bank' && J.state === 'done') { this.bk.ok = true; this.radio.job = null; }
-    // a top-up from the bank: off the account, onto the line's credit, and the operator says so
-    if (J?.what.startsWith('banktop:') && J.state === 'done') {
-      const c = +J.what.slice(8), op = operatorName(this.world.city, this.world.telco.player.op ?? 0);
-      this.radio.job = null;
-      if (post(this.world.bank, this.world.time, 'topup', -c, 0)) {
-        this.world.telco.player.credit += c; this.bk.note = 'done'; this.sfx.push(['sent']);
-        this.receive(op, SMS.topup.replace('{amount}', money(c)).replace('{credit}', money(this.world.telco.player.credit)), now + 3);
-      } else this.bk.note = 'funds';
-    }
     if (J?.what === 'social' && J.state === 'done') {
       this.wire = this.world.feed.posts.slice(-WIRE_POSTS); this.wireAt = this.world.time; this.wireId = this.world.feed.next - 1; this.radio.job = null; this.scroll = 0;
       if (this.wst.view === 'feed') this.wst.sel = 0;
@@ -1166,7 +1155,7 @@ export class Phone {
     if (id === 'snake') this.snake.reset(now);
     if (id === 'news' && this.world.time - this.newsAt > 3600 && this.online()) this.radio.fetch('news', NEWS_KB, now);
     if (id === 'social') { this.wst.view = 'feed'; if (this.online()) this.fetchWire(now); }
-    if (id === 'bank') { this.bk = { view: 'home', sel: 0, ok: false, note: '' }; if (this.online()) this.radio.fetch('bank', BANK_KB, now); }
+    if (id === 'bank') { this.bk = { view: 'home', sel: 0, ok: false }; if (this.online()) this.radio.fetch('bank', BANK_KB, now); }
     if (id === 'web') this.web.open(now);
     if (id === 'reynard') openRey(this);
   }
@@ -1291,25 +1280,19 @@ export class Phone {
 
   /** The bank's app: its pages (null: the key is the app's Back, to leave it). */
   private bankKey(k: Key, now: number): boolean | null {
-    const B = this.bk, rows = B.view === 'home' ? 3 : B.view === 'topup' ? TOPUPS.length : B.view === 'stmt' ? this.world.bank.ledger.length : 0;
+    const B = this.bk, W = this.world, rows = B.view === 'home' ? 3 : B.view === 'near' ? W.city.banks[W.bank.bank].branches.length : B.view === 'stmt' ? W.bank.ledger.length : 0;
     if (!B.ok) {
       // not downloaded (no signal when it was opened): OK tries again
       if (k === 'ok' && this.online()) { this.radio.fetch('bank', BANK_KB, now); this.since = now; return true; }
       return k === 'rsoft' ? null : false;
     }
-    if (k === 'rsoft') { if (B.view === 'home') return null; B.view = 'home'; B.sel = 0; B.note = ''; this.since = now; return true; }
-    if ((k === 'up' || k === 'down') && rows) { B.sel = Math.max(0, Math.min(rows - 1, B.sel + (k === 'up' ? -1 : 1))); B.note = ''; return true; }
-    if (B.view === 'home' && (k === 'ok' || k === 'lsoft')) { B.view = (['stmt', 'topup', 'branch'] as const)[B.sel]; B.sel = 0; this.since = now; return true; }
-    if (B.view === 'topup' && (k === 'ok' || k === 'lsoft')) {
-      const J = this.radio.job;
-      if (J?.what.startsWith('banktop:') && (J.state === 'connecting' || J.state === 'loading')) return true;
-      if (!this.online()) B.note = 'signal';
-      else if (this.world.bank.balance < TOPUPS[B.sel]) B.note = 'funds';
-      else { this.radio.fetch(`banktop:${TOPUPS[B.sel]}`, BANK_PAY_KB, now); B.note = ''; }
-      return true;
-    }
+    if (k === 'rsoft') { if (B.view === 'home') return null; B.view = 'home'; B.sel = 0; this.since = now; return true; }
+    if ((k === 'up' || k === 'down') && rows) { B.sel = Math.max(0, Math.min(rows - 1, B.sel + (k === 'up' ? -1 : 1))); return true; }
+    if (B.view === 'home' && (k === 'ok' || k === 'lsoft')) { B.view = (['stmt', 'near', 'branch'] as const)[B.sel]; B.sel = 0; this.since = now; return true; }
     // the branch's page: the green key calls it
-    if (B.view === 'branch' && k === 'send') { this.open('calls', now); this.place(this.world.telco.bizNum[this.world.bank.branch], now); return true; }
+    if (B.view === 'branch' && k === 'send') { this.open('calls', now); this.place(W.telco.bizNum[W.bank.branch], now); return true; }
+    // the branches nearby: the green key calls the one picked
+    if (B.view === 'near' && k === 'send') { const P = W.player; this.open('calls', now); this.place(W.telco.bizNum[branchesNear(W.city, W.bank.bank, P.x, P.y)[B.sel]], now); return true; }
     return false;
   }
 

@@ -107,11 +107,12 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   };
   const nm = 'HALVARD SAVINGS & TRUST', f = () => {};
   shot('bank-home', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'home', acct: 'Checking ****4471', label: 'Available balance', balance: '$1,284.50', asOf: 'As of 21:04',
-    menu: ['Statement', 'Top up phone', 'Branch & contact'].map((label, n) => ({ label, sel: n === 1, pre: f })) } }));
+    menu: ['Statement', 'Branches nearby', 'Branch & contact'].map((label, n) => ({ label, sel: n === 1, pre: f })) } }));
   shot('bank-stmt', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'stmt', title: 'STATEMENT', rows: [['10/14', 'Card: Kell Street Diner', '-$8.40', false], ['10/14', 'ATM: 5th Ave Deli', '-$40.00', false], ['10/13', 'Transfer in', '+$600.00', true], ['10/12', 'Top up Corvia', '-$20.00', false]]
     .map(([date, what, amt, plus], n) => ({ date: date as string, what: what as string, amt: amt as string, plus: plus as boolean, sel: n === 1, pre: f })) } }));
-  shot('bank-topup', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'topup', title: 'TOP UP CORVIA', info: [['Phone credit', '$3.20'], ['Available balance', '$1,284.50']],
-    amounts: ['$5.00', '$10.00', '$20.00', '$50.00'].map((label, n) => ({ label, sel: n === 2, pre: f })), note: 'Done. Your credit is topped up.', noteKind: 'ok' } }));
+  shot('bank-near', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'near', title: 'BRANCHES NEARBY', hint: 'Take cash out at the counter. Green key calls.', call: 'Call the branch',
+    rows: [['Halvard Savings', '5th Avenue & Mercer St', '240m', true], ['Halvard Savings Downtown', 'Kell Street & 2nd Avenue', '1.2km', true], ['Halvard Savings', 'Bay Road & 9th St', '2.1km', false]]
+      .map(([name, where, dist, open], n) => ({ name: name as string, where: where as string, dist: dist as string, open: open as boolean, openLabel: open ? 'Open now' : 'Closed', sel: n === 0, pre: f })) } }));
   shot('bank-branch', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'branch', title: 'YOUR BRANCH', call: 'Call the branch', lines: [{ text: '5th Avenue &', kind: 'ink' }, { text: 'Mercer Street', kind: 'ink' }, { text: 'Riverside', kind: 'ink' },
     { text: '', kind: 'ink' }, { text: 'Mon-Fri 9am-5pm', kind: 'dim' }, { text: '(555) 014-2233', kind: 'num' }, { text: 'Head office', kind: 'head' }, { text: 'Kell Street &', kind: 'ink' }, { text: '2nd Avenue', kind: 'ink' }, { text: 'Downtown', kind: 'ink' },
     { text: '', kind: 'ink' }, { text: '6 branches in the city', kind: 'dim' }] } }));

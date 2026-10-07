@@ -9,7 +9,8 @@ import { whereIs } from '../sim/citizens';
 import { Sec } from '../sim/wifi';
 import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
-import { formatNumber } from '../sim/telco';
+import { formatNumber, isOpen } from '../sim/telco';
+import { branchesNear } from '../sim/bank';
 import { type World } from '../sim/world';
 import { BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
@@ -19,7 +20,7 @@ import { expose, OPTICAL, photoCols, type Photo } from './camera';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { APP_COL, INK as PINK_INK, paintBank, paintCamera, paintPhotos, type CamPage, type PhotosPage, type Rgb, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
-import { EDGE_LIMIT_KB, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { EDGE_LIMIT_KB, money, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { artColors } from './hdicons';
 import { mul } from './ui';
@@ -453,7 +454,7 @@ function bankApp(S: Lcd, P: Phone, world: World, t: number): Pg {
     const Bd = city.buildings[city.businesses[k].building], x = (Bd.x0 + Bd.x1) / 2, y = (Bd.y0 + Bd.y1) / 2;
     return [`${roadName(city, true, nearestRoad(city.xb, city.xCell, x))} &`, roadName(city, false, nearestRoad(city.yb, city.yCell, y)), districtName(city, districtAt(city, x, y))];
   };
-  const pick = (n: number) => () => { B.sel = n; B.note = ''; };
+  const pick = (n: number) => () => { B.sel = n; };
   if (B.view === 'home') {
     softKeys(S, T.ok, T.back);
     return page({ kind: 'home', acct: `${BK.checking} ****${Acc.number.slice(-4)}`, label: BK.balance, balance: money(Acc.balance), asOf: BK.asOf.replace('{t}', hhmm(calendar(world.time).hour)),
@@ -468,12 +469,14 @@ function bankApp(S: Lcd, P: Phone, world: World, t: number): Pg {
       return { date: date(e.at), what, amt: `${e.amount > 0 ? '+' : ''}${money(e.amount)}`, plus: e.amount > 0, sel: n === B.sel, pre: pick(n) };
     }) });
   }
-  if (B.view === 'topup') {
-    const busy = J?.what.startsWith('banktop:') && (J.state === 'connecting' || J.state === 'loading');
-    softKeys(S, busy ? '' : BK.pay, T.back);
-    return page({ kind: 'topup', title: BK.topupTitle.replace('{op}', op.toUpperCase()), info: [[BK.credit, money(world.telco.player.credit)], [BK.balance, money(Acc.balance)]],
-      amounts: TOPUPS.map((c, n) => ({ label: money(c), sel: n === B.sel, pre: pick(n) })),
-      note: busy ? BK.paying : B.note ? (BK.notes as Record<string, string>)[B.note] : '', noteKind: busy ? 'dim' : B.note === 'done' ? 'ok' : 'bad' });
+  if (B.view === 'near') {
+    // the bank's branches, nearest the player first: where to take cash out
+    const me = world.player, hour = calendar(world.time).hour;
+    softKeys(S, '', T.back);
+    return page({ kind: 'near', title: BK.near, hint: BK.nearHint, call: BK.call, rows: branchesNear(city, Acc.bank, me.x, me.y).map((k, n) => {
+      const Bd = city.buildings[city.businesses[k].building], [a, b2] = corner(k), open = isOpen('bank', hour);
+      return { name: businessName(city, k), where: `${a} ${b2}`, dist: fmtDist(Math.hypot((Bd.x0 + Bd.x1) / 2 - me.x, (Bd.y0 + Bd.y1) / 2 - me.y), P.prefs.dist), open, openLabel: open ? BK.open : BK.closed, sel: n === B.sel, pre: pick(n) };
+    }) });
   }
   // the branch where the account is, and the head office
   const k = Acc.branch, chain = city.banks[Acc.bank], hq = chain.hq;
