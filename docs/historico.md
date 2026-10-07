@@ -3,6 +3,15 @@
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
 
+## 3b do celular: os últimos apps em pixels (0.15.33–41, 2026-10-07)
+- **0.15.33 Streetwire** (`paintWireFeed/Post/Profile` em `pixpages.ts`; a paleta saiu de `wire.ts`): cartões com o rosto (iniciais na cor da pessoa), o coração como botão, a foto do post quando já tirada, comentários em cartões, o perfil com tabela e posts.
+- **0.15.34 Banco** (`paintBank`): papel creme, verde e ouro, o emblema de colunas; saldo grande, extrato, agência com botão de ligar. **0.15.37:** a recarga saiu (pedido do usuário: o banco não sabe o chip; a recarga é da operadora, pelo USSD); entrou "Branches nearby" (`branchesNear` em `sim/bank.ts`; a tecla verde liga para a escolhida). Saíram `TOPUPS`, `BANK_PAY_KB`, o SMS `topup` e o `note` do `bk`; o tipo `topup` do extrato ficou (saves antigos).
+- **0.15.35 Snake/Lanterna/Conversor** (`paintSnake` com direcional de toque, `paintTorch`, `paintConvert`).
+- **0.15.36 Câmera/Fotos** (`paintCamera`, `paintPhotos`): o visor é renderizado no tamanho da foto (`photoCols`), em blocos (`blockRgb`), com botões de flash, disparo e zoom; as fotos em cache por `WeakMap`.
+- **0.15.38 Mapa, mapa interno e busca** (`src/phone/pixmap.ts`): `streetMap`/`indoorMap` fazem a imagem (ruas exatas por `roadIn` a cada pixel, prédios contornados até 2 m/px, parques/praças com textura, bairros tingidos de longe; no interno, paredes pelos quatro vizinhos e as portas abertas) com margem de 64 px e origem em grade, refeita só a cada 64 px andados; `paintMap` desenha rota, marcos, nomes sem sobrepor, alfinete, seta do GPS, disco da precisão, botões de zoom, a caixa do GPS e o pé (rua, cartão do lugar com Route/Call, barra da rota). `mapView(zoom, indoor)` passou a ser em pixels quadrados (`mapMpp` = metros da linha antiga / 13); `drawPhone` perdeu o parâmetro `aspect`.
+- **0.15.39 Ferret Mini** (`paintFerretMini` em `webapp.ts`): a página em 40 colunas de 6 × 12 pelo manual do Ferret (parte 11), a faixa de terra com o furão da arte do ícone, a barra de progresso, as camadas na ordem do manual (fundo das células, figuras de fundo, letras, figuras da frente só em células vazias), caixa de preço e Go to tocáveis. `WebApp.last` guarda o que a tela mostra (o teste lê o texto dali).
+- **0.15.40 Reynard** (`paintRey` em `reynard.ts`) e **0.15.41 GPS/teclas/LCD** (`paintGpsTest/KeyTest/LcdTest`).
+
 ## Texto enxugado do CLAUDE.md (2026-10-07)
 > O texto inteiro das linhas que o CLAUDE.md condensou ao passar de 100 mil caracteres.
 

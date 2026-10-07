@@ -36,6 +36,15 @@
 - **A fonte 5×7 do PNG de teste (`tests/png.ts`) não tem `_`, `\` nem `>`**: no PNG as artes dos banners e o "More news >>" perdem pedaços, mas no jogo (o átlas) aparecem. Não "consertar" pelo PNG; o envelope do webmail virou ícone em pixels (`banner.logo: 'mail'`) porque fica melhor, não por isso.
 - O teste de páginas com feed precisa rodar a cidade antes (`stepWorld` 20 mil vezes ≈ 1 min no Node) para haver posts e notícias.
 
+### Lições do fim da 3b (Streetwire ao LCD) — 2026-10-07
+- **Uma imagem que depende da posição da vista é refeita a cada quadro se a vista segue o GPS.** O mapa em pixels custava 20–45 ms por imagem; a saída foi a imagem com margem (PAD = 64 px) e a origem presa a uma grade de 64 px, desenhada com o deslocamento: só é refeita quando a vista anda 64 px (`tests/phone-map.ts` confere que andar 20 m mantém a imagem).
+- **Paredes de uma planta em pixels: olhar os quatro vizinhos**, não só direita e baixo (senão a parede só sai em dois lados da sala).
+- **Ordem das camadas da web (manual do Ferret):** fundo das células → figuras de fundo (brilho, abas) → letras → figuras da frente só em células sem letra; desenhar as figuras por cima das letras escondeu o texto dos botões.
+- **Testes de telas em pixels que conferiam o texto das células:** guardar os dados da última tela (`WebApp.last`) e ler o texto dali, em vez de ler a grade.
+- **`Float32Array.map` devolve outro Float32Array** (o TS reclama ao montar objetos): `Array.from(arr, fn)`.
+- **Script de teste dentro de `tests/.out/`** importa com `../../src`, não `../src`. Heredoc com Python inline continuou falhando no Git Bash quando o texto tem aspas e crases: Write num arquivo do scratchpad e `python arquivo`.
+- **A fonte de pontos não tem `\`, `` ` ``, `{` e `}`** (o resto do ASCII imprimível existe).
+
 ### Lições da 3b do celular (apps em pixels) — 2026-10-07
 - **A fonte de pontos (`plainGlyph`) não tinha vários sinais** (`< > ^ = [ ] |`…): `ptext` só deixava um espaço, e as dicas ("< > change") saíam sem as setas. Conferir com um script que lista o que `plainGlyph` não acha antes de usar um sinal novo.
 - **O negrito ocupa 7 px por letra** (5 + 1 + 1): quebrar manchetes e títulos em negrito em ~30 caracteres para 216 px, não 36.

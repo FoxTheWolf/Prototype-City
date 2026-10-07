@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-07 — o fim da 3b (Opus 5.5)
+- **"Branches nearby" alimenta o laço do dinheiro vivo:** hoje o saque é no balcão da agência; com a lista por distância e "aberta agora", o jogador aprende sozinho que de madrugada não há onde sacar, uma pressão orgânica para andar com dinheiro na mochila (e um alvo para quando houver caixas eletrônicos hackeáveis).
+- **A câmera agora mostra exatamente o que a foto vai ser** (o visor no tamanho da foto): quando as fotos virarem pistas nas investigações, isso evita a frustração de "não era isso que eu enquadrei".
+- **O mapa em pixels ficou bom o bastante para ser uma referência visual da cidade:** dá para usar a mesma imagem (`streetMap`) no mapa de papel da 13.9 e nos totens "YOU ARE HERE", em vez de inventar outro desenho.
+
 ## 2026-10-07 — 15.17g, as páginas canônicas (Opus 5.5)
 - **O mapa da GridLink é uma ferramenta de jogo sem parecer uma:** é a forma orgânica de o jogador conferir se o apagão que causou "pegou" e quanto tempo dura, como qualquer morador faria. Sugiro que, quando o calor existir de verdade (etapa 16), a página também mostre "investigating the cause" depois de um apagão do jogador: o implícito (a investigação) aparecendo pelo explícito (o site da empresa).
 - **Os rostos no Streetwire ligam a web à rua:** dá para reconhecer na calçada quem postou. Quando vierem as investigações, "ache a pessoa deste post" vira missão sem nenhuma interface nova.
