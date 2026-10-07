@@ -507,8 +507,8 @@ function phoneTouch(cx: number, cy: number): boolean {
   if (sy < CONTENT_Y0) return true;
   // a screen drawn in pixels (pixpages.ts) says where its items are; one of the cells' apps: OK on the row touched
   const h = HITS.find((r) => sx >= r.x && sx < r.x + r.w && sy >= r.y && sy < r.y + r.h);
-  if (h) { tapFlash(h, now); h.pre?.(); phonePress(h.key, true); return true; }
-  if (phone.screen === 'standby' || phone.screen === 'menu') return true;
+  if (h) { tapFlash(h, now); h.pre?.(); if (h.key) phonePress(h.key, true); else if (phone.prefs.profile !== 2) sound?.phoneTap(); return true; }
+  if (phone.screen === 'standby' || phone.screen === 'menu' || (phone.screen === 'calls' && !phone.call)) return true;
   tapFlash({ x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12 }, now);
   phonePress('ok', true);
   return true;

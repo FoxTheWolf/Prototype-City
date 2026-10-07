@@ -9,9 +9,9 @@ import { type Key } from './phone';
  * footer, a 12 px margin, the night-blue theme with an ice-blue accent and a colour an app): they paint the
  * whole content area of the screen's pixel picture (pixui.ts PHONE_PX), over the cells, which they replace.
  * Each records where a touch lands (HITS): a rectangle, and the key it presses (after `pre`, which picks
- * the item touched).
+ * the item touched; no key: the touch only picks it).
  */
-export interface Hit { x: number; y: number; w: number; h: number; key: Key; pre?: () => void }
+export interface Hit { x: number; y: number; w: number; h: number; key?: Key; pre?: () => void }
 export const HITS: Hit[] = [];
 
 /** The theme (the manual's section 6). */
@@ -183,4 +183,54 @@ export function paintVolume(P: Paint, vol: number, label: string) {
   ptext(P, x + 10, y + 7, label, SOFT);
   const v = Math.round(vol * 10), vx = x + 16 + ptextW(label);
   for (let k = 0; k < 10; k++) { const bh = 3 + k; P.rect(vx + k * 7, y + 16 - bh, 5, bh, k < v ? [200, 130, 255] : [70, 76, 90]); }
+}
+
+/** A call in the dialer's log: who, how it went, when; picked or not. */
+export interface LogRow { who: string; kind: 'out' | 'in' | 'missed' | 'failed'; when: string; sel: boolean; pre: () => void; call: boolean }
+export interface Dial { t: number; dial: string; who: string; missed: string; hint: string; tabs: [string, string]; toContacts: () => void; recent: string; log: LogRow[] }
+
+/** The app's header: its tabs (the one open white over an ice line, the other touched to go to it), and a note on the right. */
+function tabsBar(P: Paint, tabs: [string, string], on: number, note: string, noteCol: C3, go: (() => void) | null) {
+  P.rect(0, Y0, SCR_W, 32, [15, 25, 34]);
+  let x = M;
+  tabs.forEach((l, k) => {
+    const w = ptextW(l, 1, true);
+    ptext(P, x, Y0 + 11, l, k === on ? INK : DIM, 1, true);
+    if (k === on) P.rect(x, Y0 + 23, w, 2, ICE);
+    else if (go) HITS.push({ x: x - 8, y: Y0, w: w + 16, h: 32, pre: go });
+    x += w + 18;
+  });
+  if (note) ptext(P, SCR_W - M - ptextW(note), Y0 + 11, note, noteCol);
+  P.rect(0, Y0 + 31, SCR_W, 1, [30, 46, 60]);
+}
+
+/** The dialer (the manual's): the number big on the right with the cursor blinking, whose it is, and the calls of late. */
+export function paintDial(P: Paint, d: Dial, now: number) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  tabsBar(P, d.tabs, 0, d.missed, [255, 120, 90], d.dial ? null : d.toContacts);
+  // the number: as big as fits, right-aligned, the ice cursor after it
+  const n = d.dial, s = n.length <= 8 ? 4 : n.length <= 11 ? 3 : 2, w = Paint.textW(n, s), x = SCR_W - M - 6 - w, ny = 96 - s * 7;
+  if (n) P.text(x, ny, n, s, [255, 255, 255]);
+  if (Math.floor(now * 2) % 2 === 0) P.rect(SCR_W - M - 3, ny - 2, 2, s * 7 + 4, ICE);
+  if (n && d.who) ptext(P, SCR_W - M - ptextW(d.who, 1, true), 112, d.who, ICE, 1, true);
+  if (!n) ptext(P, M, 112, typed(d.hint, d.t - 0.2), DIM);
+  // the log: each call with how it went (out green, in blue, missed or unanswered red) and when; touched it is
+  // picked, touched again it is called back
+  if (!d.log.length) return;
+  ptext(P, M, 140, d.recent, DIM, 1, true);
+  d.log.forEach((r, k) => {
+    const y = 154 + k * 34;
+    if (d.t < 0.15 + k * 0.05) return;
+    if (r.sel) { P.rrect(6, y, SCR_W - 12, 30, 5, ICE, 0.16); ring(P, 6, y, SCR_W - 12, 30, ICE); }
+    else P.rect(M, y + 30, SCR_W - 2 * M, 1, [24, 36, 48]);
+    const bad = r.kind === 'missed' || r.kind === 'failed', col: C3 = bad ? [235, 90, 80] : r.kind === 'in' ? [100, 160, 240] : [70, 190, 110];
+    // an arrow: out of the phone up and right, into it down and left
+    const ax = M + 4, ay = y + 11;
+    if (r.kind === 'in' || r.kind === 'missed') { P.line(ax + 8, ay, ax + 1, ay + 7, 1.5, col); P.rect(ax, ay + 3, 2, 5, col); P.rect(ax, ay + 7, 5, 2, col); }
+    else { P.line(ax, ay + 8, ax + 7, ay + 1, 1.5, col); P.rect(ax + 4, ay, 5, 2, col); P.rect(ax + 7, ay, 2, 5, col); }
+    const ww = ptextW(r.when);
+    ptext(P, M + 20, y + 11, r.who.slice(0, Math.floor((SCR_W - 2 * M - 30 - ww) / 6)), bad ? [255, 170, 160] : INK, 1, true);
+    ptext(P, SCR_W - M - ww, y + 11, r.when, r.sel ? SOFT : DIM);
+    HITS.push({ x: 6, y, w: SCR_W - 12, h: 30, pre: r.pre, key: r.call ? 'ok' : undefined });
+  });
 }

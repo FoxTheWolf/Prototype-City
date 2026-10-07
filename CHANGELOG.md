@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.23 — As telas do celular em pixels (2026-10-07)
+- **Tela de espera nova:** a hora grande, a data e a operadora, e o que espera em cartões com a cor do app na borda (chamadas perdidas, mensagens, lembretes); o painel da música com o visualizador, o andamento e o volume. Os quatro papéis de parede foram redesenhados em pixels (a cidade sob o céu da hora, com a lua na fase certa).
+- **Grade de apps nova:** 4 × 4 ícones grandes, alvos fáceis para o toque; o escolhido ganha a moldura azul-gelo.
+- **Discador novo:** o número grande à direita com o cursor piscando, o nome do contato, e as chamadas recentes: um toque escolhe, outro toque liga de volta. A aba Contacts também é tocável.
+- **Tocar num cartão, num ícone ou numa chamada responde no item tocado**, não mais na linha inteira.
+
 ## 0.15.22 — A tela inclina com o celular (2026-10-07)
 - **A tela acompanha o aparelho:** a imagem fica no vidro e inclina e balança junto com o corpo, em vez de ficar reta por cima.
 - **O brilho da tela fica por cima e sem borrões:** o bloom sai da própria imagem e inclina junto; as manchas cinzas em blocos sobre a página sumiram.

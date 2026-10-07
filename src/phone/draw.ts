@@ -18,7 +18,7 @@ import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
-import { APP_COL, HITS, paintMenu, paintStandby, paintVolume, type Card, type Standby, type Tile } from './pixpages';
+import { APP_COL, HITS, paintDial, paintMenu, paintStandby, paintVolume, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
@@ -268,6 +268,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
         const tiles = APPS.map((a, n): Tile => ({ label: appLabel(a), col: APP_COL[n], art: artColors(a), sel: n === P.sel, pre: () => { P.sel = n; } }));
         page = (Pt) => paintMenu(Pt, tiles, t); softKeys(S, T.open, T.back);
       }
+      else if (P.screen === 'calls' && !P.call) { const d = dialData(P, world, t); page = (Pt) => paintDial(Pt, d, now); softKeys(S, P.dial ? T.apps.save : '', P.dial ? T.apps.clear : T.back); }
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
       else app(S, P, world, t, now);
@@ -541,6 +542,21 @@ function standbyData(P: Phone, world: World, t: number, now: number): Standby {
   }
   return { wall: P.prefs.wall, time: world.time, t, hour: hhmm(c.hour), date, op, opOk: R.state === 'service', cards, tune, volLabel: T.apps.vol,
     hint: P.missed || unread ? T.apps.clearHint : '' };
+}
+
+/**
+ * What the dialer shows (painted in pixels by pixpages.ts paintDial): the number typed and whose it is, and
+ * the calls of late, the one picked lit (seven at a time, scrolled to keep it in view).
+ */
+function dialData(P: Phone, world: World, t: number): Dial {
+  const A = T.apps, d = P.dial, view = 7, sel = Math.min(P.lsel, P.log.length - 1), top = Math.max(0, Math.min(sel - view + 1, P.log.length - view));
+  const log = P.log.slice(top, top + view).map((e, n) => {
+    const k = top + n, nm = P.contacts.find((x) => x.number === e.number)?.name, num = /^[0-9]{7}$/.test(e.number) ? formatNumber(world.telco, e.number) : e.number;
+    const picked = k === sel && !d;
+    return { who: nm ?? num, kind: e.kind, when: `${A.log[e.kind]} ${hhmm(calendar(e.at).hour)}`, sel: picked, call: picked, pre: () => { P.dial = ''; P.lsel = k; } };
+  });
+  return { t, dial: d, who: P.contacts.find((x) => x.number === d)?.name ?? '', missed: P.missed ? `${P.missed} missed` : '', hint: A.dialHint,
+    tabs: [A.tabCalls, A.tabContacts], toContacts: () => { P.open('contacts', performance.now() / 1000); }, recent: A.recent, log };
 }
 
 // map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,
