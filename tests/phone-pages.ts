@@ -2,7 +2,7 @@
 // game or a GPU: tests/.out/tunes.png (the Tunes Player). The bars on top are pixui.ts's, not drawn here.
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
-import { paintTunes } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -12,3 +12,24 @@ const rows = [{ kind: 'head' as const, label: 'Songs', size: '', mark: '' as con
 paintTunes(P, { title: 'Tunes', out: 'SPEAKER', idle: 'Nothing playing', tune: { title: 'Night Shift', band: 'The Overpass Kids', at: 42, len: 180, playing: true, vol: 0.7, shuffle: '', spec, sel: false, pre: () => {} }, volLabel: 'VOL', keys: '< > skip  * # volume  0 shuffle', rows, t: 5 }, 1);
 const out = new Uint8ClampedArray(I.px.length); for (let k = 0; k < I.px.length; k += 4) { const a = I.px[k + 3] / 255; out[k] = I.px[k] * a; out[k + 1] = I.px[k + 1] * a; out[k + 2] = I.px[k + 2] * a; out[k + 3] = 255; }
 writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
+
+// 0.15.29: the list pages (settings), the calculator, notes, the store and My Apps
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const f = () => {}, col = [138, 147, 160] as const;
+  shot('settings', (Q) => paintList(Q, { title: 'Settings', note: '', col, t: 5, rows: ['Sounds', 'Display', 'Phone & case', 'Units', 'Wi-Fi', 'USB cable', 'About phone', 'Debug (game)', 'People here (debug)'].map((l, n) => ({ kind: 'go' as const, label: l, sel: n === 2, pre: f })) }));
+  shot('sounds', (Q) => paintList(Q, { title: 'Sounds', note: '', col, t: 5, foot: '< > change   OK next', rows: [['Profile', 'Normal'], ['Ringtone', 'Nocturne'], ['Keypad tones', 'Touch-tone']].map(([l, v], n) => ({ kind: 'opt' as const, label: l, value: v, sel: n === 1, pre: f })) }));
+  shot('wifi', (Q) => paintList(Q, { title: 'Wi-Fi', note: '', col, t: 5, foot: 'KEY (debug) 4417', rows: [{ kind: 'pick', label: 'Wi-Fi', value: 'ON', col: [120, 255, 150], sel: false, pre: f },
+    { kind: 'text', label: 'Connected 192.168.1.23', col: [120, 255, 150] }, { kind: 'pick', label: '> Petrovs Coffee', value: 'WEP', bars: 3, col: [120, 255, 150], sel: false, pre: f }, { kind: 'pick', label: 'NETGEAR', value: 'WPA', bars: 1, sel: true, pre: f }, { kind: 'pick', label: 'linksys', value: '', bars: 2, sel: false, pre: f }] }));
+  shot('about', (Q) => paintList(Q, { title: 'About phone', note: '', col, t: 5, rows: [['Network', 'NORTEL'], ['Signal', '-71 dBm (3/4)'], ['Number', '555-0179'], ['Credit', '$4.20'], ['Model', 'Kesion S2'], ['CPU', 'ARM9 200 MHz'], ['Camera', '2 MP'], ['GPS now', 'OFF']].map(([l, v]) => ({ kind: 'info' as const, label: l, value: v })) }));
+  shot('calc', (Q) => paintCalc(Q, { title: 'Calc', value: '1234.5', op: '+', err: false, hint: 'Type the numbers on the keypad',
+    keys: [['+', '^'], ['-', 'v'], ['x', '<'], ['/', '>'], ['C', '*'], ['.', '#'], ['=', 'OK']].map(([sym, hint]) => ({ sym, key: 'ok' as const, hint, kind: sym === 'C' ? 'clear' as const : sym === '.' ? 'point' as const : 'op' as const })) }));
+  shot('notes', (Q) => paintNotes(Q, { title: 'Notes', note: 'Abc 52/400', text: 'meet at the diner 9pm\nbring the cable and the old phone', live: 1, blink: false, empty: '', hint: { chips: ['m', 'n', 'o', '6'], on: 1 }, t: 5 }));
+  shot('store', (Q) => paintStore(Q, { title: 'Kesion Store', tabs: ['CATALOG', 'INSTALLED'], tab: 0, goTab: f, empty: '', t: 5, bar: 0.4, note: '', about: 'A torch: the whole screen white, as bright as it goes.',
+    rows: [['Snake', 'INSTALLED', true], ['Torch', '12KB FREE', false], ['Converter', '36KB $0.99', false], ['Atlas 3D', '38MB $9.99', false]].map(([l, r, h], n) => ({ label: l as string, right: r as string, col: [110, 50, 130] as const, big: n === 3, have: h as boolean, sel: n === 1, pre: f })) }));
+  shot('folder', (Q) => paintMenu(Q, ['Snake', 'Torch', 'Converter'].map((l, n) => ({ label: l, col: [150, 178, 84] as const, art: null, sel: n === 0, pre: f })), 5, { title: 'My Apps', note: '3', col: [224, 154, 58], empty: [] }));
+}

@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.29 — Ajustes, Calc, Notas e Store em pixels (2026-10-07)
+- **Ajustes redesenhados:** a lista das páginas com setas, as opções com ◂ valor ▸ (tocar numa ponta muda para aquele lado), o Wi-Fi com as barras de sinal e o cadeado, o Sobre o aparelho, o cabo USB, as páginas de debug e as telas dos códigos secretos (IMEI, rede, sensores, versão).
+- **Calculadora:** as operações viraram botões grandes na tela (+ − × ÷, C, ponto e =), cada um com a tecla do PC que faz o mesmo; os números continuam no teclado numérico.
+- **Notas:** o bloco amarelo pautado com a margem vermelha, a tinta azul e as letras da tecla em fichas.
+- **Store e My Apps:** a loja do fabricante em ameixa e rosa, com as abas tocáveis, o que o app faz e a barra do download; My Apps na grade do menu.
+- As dicas voltaram a mostrar `<`, `>` e `^` (a fonte da tela não tinha esses sinais).
+
 ## 0.15.28 — Tunes em pixels (2026-10-07)
 - **Tunes Player redesenhado:** o painel do que toca (título, banda, visualizador, andamento, volume) igual ao da tela de espera, e a lista das músicas e do cartão SD; um toque escolhe a música, outro toca ou pausa.
 

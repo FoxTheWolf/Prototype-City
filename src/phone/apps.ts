@@ -5,24 +5,25 @@ import { drawWire } from './wire';
 import { drawCalendar } from './calendar';
 import { newsApp, weatherApp } from './skins';
 import PEOPLE from '../locale/people.en.json';
-import { Role, whereIs } from '../sim/citizens';
+import { whereIs } from '../sim/citizens';
 import { Sec } from '../sim/wifi';
 import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
-import { BAR, bigText, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, typeHint, WHITE, type C3 } from './lcd';
+import { BAR, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
 import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { type TunesPage } from './pixpages';
-import { EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
+import { APP_COL, INK as PINK_INK, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
+import { type Paint } from '../render/paint2d';
+import { EDGE_LIMIT_KB, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
-import { appIcon } from './hdicons';
-import { box, header, lerp, mul, vgrad } from './ui';
+import { artColors } from './hdicons';
+import { mul } from './ui';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 import { compile, TRACKS } from '../audio/tracks';
@@ -61,51 +62,152 @@ const STORE_ICON: Record<string, [string, C3, C3]> = {
   torch: ['*', [230, 200, 60], [255, 255, 255]], convert: ['<>', [40, 150, 150], [255, 255, 255]], tunes: ICON.tunes, atlas: ['3D', [60, 130, 90], [255, 255, 255]],
   snake: ['~o', [150, 178, 84], [36, 48, 22]], news: ICON.news, social: ICON.wire, bank: ICON.bank, web: ICON.web, reynard: ['^.^', [34, 30, 28], [232, 112, 44]],
 };
-const MENU_BG: [C3, C3] = [[18, 26, 46], [6, 8, 16]];
-const menuBg = (y: number): C3 => lerp(MENU_BG[0], MENU_BG[1], (y - 1) / (SH - 3));
-
-/** An app's tile on a grid: the icon (a glossy rounded square with its symbol) and its name; the picked one on a lit panel. */
-function tile(S: Lcd, x: number, y: number, [sym, col, fg]: [string, C3, C3], label: string, sel: boolean, t: number, id = '') {
-  if (t < 0) return;
-  if (sel) box(S, x, y, x + 9, y + 3, [56, 86, 140], menuBg, 1, [34, 54, 96]);
-  const under = (_x: number, yy: number) => (sel ? lerp([56, 86, 140], [34, 54, 96], (yy - y) / 3) : menuBg(yy));
-  box(S, x + 2, y, x + 7, y + 2, mul(col, 1.18), under, 1, mul(col, 0.78));
-  // the gloss: the top of the icon brighter
-  for (let k = x + 3; k <= x + 6; k++) S.put(k, y, SHAPE.top, lerp(mul(col, 1.18), [255, 255, 255], 0.35), mul(col, 1.18));
-  S.text(x + 5 - (sym.length >> 1) - (sym.length & 1 ? 0 : 0), y + 1, sym, fg, col);
-  // in HD: the icon as a picture over the characters' one
-  appIcon(S, x + 2, y, id, col, (r) => under(0, y + r));
-  const l = label.slice(0, 10);
-  S.text(x + ((10 - l.length) >> 1), y + 3, l, sel ? [255, 255, 255] : [150, 165, 190], sel ? [34, 54, 96] : menuBg(y + 3));
-}
-
-/** My Apps: the apps downloaded from the store, as tiles. */
-function folder(S: Lcd, P: Phone, t: number) {
-  vgrad(S, 1, SH - 2, MENU_BG[0], MENU_BG[1]);
-  header(S, name('folder'), `${P.downloads().length}`, '[_]', ICON.folder[1]);
-  const L = P.downloads();
-  if (!L.length) { A.set.noDownloads.forEach((l, k) => S.center(10 + k, l, [150, 165, 190], menuBg(10 + k))); return softKeys(S, '', T.back); }
-  L.forEach((i, n) => tile(S, 1 + (n % MENU_COLS) * 10, 4 + Math.floor(n / MENU_COLS) * 5, STORE_ICON[STORE[i][0]] ?? ICON.store, appName(i), n === P.fsel, t - n * 0.04, STORE[i][0] === 'social' ? 'wire' : STORE[i][0]));
-  softKeys(S, T.open, T.back);
-}
-
-export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
+/** A screen drawn in pixels (pixpages.ts): what paints it. */
+type Pg = (Pt: Paint) => void;
+/** The apps besides those draw.ts picks itself; those drawn in pixels return their painter, the rest draw on the cells. */
+export function app(S: Lcd, P: Phone, world: World, t: number, now: number): Pg | void {
   switch (P.screen as App) {
     case 'camera': return cameraScreen(S, P, now);
     case 'calendar': return drawCalendar(S, P, world, now);
     case 'weather': return weatherApp(S, P, world, t, now);
-    case 'store': return store(S, P, t, now);
-    case 'calc': return calc(S, P, t);
+    case 'store': return store(S, P, t);
+    case 'calc': return calc(S, P);
     case 'notes': return notes(S, P, t, now);
     case 'settings': return settings(S, P, world, t);
     default:
       if (P.screen === 'code') return service(S, P, world, t, now);
-      if (P.screen === 'ussd') return ussdScreen(S, P, t, now);
+      if (P.screen === 'ussd') return ussdScreen(S, P, now);
       if (P.screen === 'photos') return photosScreen(S, P, t);
       if (P.screen === 'app') return appScreen(S, P, world, t, now);
       if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
       if (P.screen === 'folder') return folder(S, P, t);
   }
+}
+
+/** The colour of the settings' header, and a list page with it. */
+const SET_COL = APP_COL[15];
+const listPage = (d: Omit<ListPage, 'col'> & { col?: ListPage['col'] }): Pg => (Pt) => paintList(Pt, { col: SET_COL, ...d });
+
+/** My Apps: the apps downloaded from the store, on a grid as the menu's, under a header. */
+function folder(S: Lcd, P: Phone, t: number): Pg {
+  const L = P.downloads();
+  const tiles = L.map((i, n): Tile => ({ label: appName(i), col: (STORE_ICON[STORE[i][0]] ?? ICON.store)[1], art: artColors(STORE[i][0] === 'social' ? 'wire' : STORE[i][0]), sel: n === P.fsel, pre: () => { P.fsel = n; } }));
+  softKeys(S, L.length ? T.open : '', T.back);
+  return (Pt) => paintMenu(Pt, tiles, t, { title: name('folder'), note: `${L.length}`, col: APP_COL[APPS_FOLDER], empty: A.set.noDownloads });
+}
+const APPS_FOLDER = 13;
+
+/** The operator's service menu: "running" for a moment, then its text and, on a menu, the answer being typed. */
+function ussdScreen(S: Lcd, P: Phone, now: number): Pg {
+  const U = P.us, run = now - U.at < 1.4;
+  const rows: Row[] = run ? [{ kind: 'text', label: `${A.running}${'.'.repeat(Math.floor(now * 3) % 4)}` }]
+    : U.text.split('\n').flatMap((l) => wrap(l, 36)).map((l, k): Row => ({ kind: 'text', label: l, col: k === 0 ? [143, 211, 255] : PINK_INK }));
+  if (!run && U.menu) rows.push({ kind: 'field', label: `${A.reply} ${U.input}${Math.floor(now * 2) & 1 ? '_' : ''}`, sel: true });
+  softKeys(S, run ? '' : U.menu ? (U.input ? A.send : '') : T.ok, T.back);
+  return listPage({ title: U.code, note: '', rows, t: run ? 9 : now - U.at - 1.4 });
+}
+
+/** The calculator: the display, and the operations as buttons on the glass (the numbers come from the keypad). */
+function calc(S: Lcd, P: Phone): Pg {
+  const v = P.calc.cur;
+  softKeys(S, '=', T.back);
+  return (Pt) => paintCalc(Pt, { title: name('calc'), value: v, op: P.calc.op, err: v === 'ERROR', hint: A.calcType,
+    keys: [['+', 'up', '^'], ['-', 'down', 'v'], ['x', 'left', '<'], ['/', 'right', '>'], ['C', '*', '*'], ['.', '#', '#'], ['=', 'ok', 'OK']].map(([sym, key, hint]) => ({ sym, key: key as Key, hint, kind: sym === 'C' ? 'clear' as const : sym === '.' ? 'point' as const : 'op' as const })) });
+}
+
+/** Notes: the legal pad, the text typed on the keypad (Abc, T9 or 123, see textinput.ts). */
+function notes(S: Lcd, P: Phone, t: number, now: number): Pg {
+  const ed = P.noteEd, live = ed.seq ? ed.word().length : ed.tapping(now) ? 1 : 0;
+  softKeys(S, '', P.note ? A.clear : T.back);
+  return (Pt) => paintNotes(Pt, { title: name('notes'), note: `${ed.label()} ${P.note.length}/400`, text: P.note, live, blink: (Math.floor(now * 2) & 1) === 1, empty: A.notesHint, hint: edHint(ed, now, A.modeHint), t });
+}
+
+const SET = A.set;
+/** Settings: the list of pages, the pages of options, about the phone, the cable, Wi-Fi, and the debug pages. */
+function settings(S: Lcd, P: Phone, world: World, t: number): Pg {
+  const pg = P.setPage, pick = (n: number) => () => { P.setSel = n; };
+  if (pg === 'root') {
+    softKeys(S, T.open, T.back);
+    return listPage({ title: name('settings'), note: '', t, rows: SET_PAGES.map((p, n): Row => ({ kind: 'go', label: SET.pages[p as keyof typeof SET.pages], sel: n === P.setSel, pre: pick(n) })) });
+  }
+  const title = SET.pages[pg];
+  if (pg === 'about') { softKeys(S, '', T.back); return listPage({ title, note: '', t, rows: about(P, world) }); }
+  if (pg === 'wifi') return wifiPage(S, P, world, t);
+  if (pg === 'people') return peoplePage(S, P, world, t);
+  if (pg === 'usb') {
+    // the cable to the notebook: plugged in or not, and what the notebook sees
+    const U = SET.usb, say = P.usb ? (P.usbLinked ? U.linked : U.waiting) : U.hint;
+    softKeys(S, P.usb ? U.unplug : U.plug, T.back);
+    return listPage({ title, note: '', t, rows: [{ kind: 'pick', label: U.cable, value: P.usb ? U.in : U.out, col: P.usb ? [120, 255, 150] : undefined, sel: true, key: 'ok' }, { kind: 'text', label: '' },
+      ...say.map((l, k): Row => ({ kind: 'text', label: l, col: k ? undefined : PINK_INK }))] });
+  }
+  if (pg === 'looks') {
+    softKeys(S, T.ok, T.back);
+    return listPage({ title, note: '', t, foot: SET.looksHint, rows: [
+      { kind: 'opt', label: SET.rows.shell, value: `${P.maker} ${SHELLS[P.look].name}`, sel: P.setSel === 0, pre: pick(0) },
+      { kind: 'opt', label: SET.rows.case, value: CASES[P.case].name, sel: P.setSel === 1, pre: pick(1) },
+      { kind: 'text', label: '' }, { kind: 'text', label: `${P.looks.length}/${SHELLS.length}  ${CASES.length > 1 ? `${P.cases.length - 1}/${CASES.length - 1}` : ''}` }] });
+  }
+  if (pg === 'debug') {
+    const C = secretCodes(world.seed);
+    softKeys(S, SET.dial, T.back);
+    return listPage({ title, note: '', t, rows: [...SET.debugHint.map((l): Row => ({ kind: 'text', label: l })), { kind: 'text', label: '' },
+      ...C.map((c, n): Row => ({ kind: 'pick', label: c.code, value: A.code[c.kind], sel: n === P.setSel, pre: pick(n) })),
+      { kind: 'pick', label: SET.unlock, sel: P.setSel === C.length, pre: pick(C.length) },
+      { kind: 'text', label: '' }, { kind: 'text', label: A.voucher }, { kind: 'text', label: freeVoucher(world), col: PINK_INK }] });
+  }
+  softKeys(S, T.ok, T.back);
+  return listPage({ title, note: '', t, foot: SET.hint, rows: PREF_ROWS[pg].map((key, n): Row => ({ kind: 'opt', label: SET.rows[key], value: SET.values[key][P.prefs[key]], sel: n === P.setSel, pre: pick(n) })) });
+}
+
+/** About the phone: its hardware, its radios, and what the GPS is doing. */
+function about(P: Phone, world: World): Row[] {
+  const D = P.device, g = P.gps;
+  const imei = imeiOf(world.seed);
+  const gps = g.state === 'fix' ? `${A.gpsFix} ${g.sats} SAT +-${fmtDist(g.acc, P.prefs.dist)}` : g.state === 'search' ? `${A.gpsSearch} ${g.sats} SAT` : g.state === 'lost' ? A.gpsLost : A.gpsOff;
+  const R = P.radio, acc = world.telco.player, site = R.site >= 0 ? world.telco.sites[R.site] : null;
+  const net = R.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
+  const rows: [string, string][] = [
+    [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
+    [A.number, formatNumber(world.telco, acc.number.replace('-', ''))], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
+    [A.model, `${P.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
+    [A.display, D.screen], [A.cameraRow, D.cameraMP ? `${D.cameraMP} MP` : T.off], [A.radio, D.radio], [A.wlan, P.wifi.state === 'up' ? `${wifiName(world.city, world.wifi[P.wifi.ap])} ${P.wifi.ip}` : `${D.wlan} ${P.wifi.on ? '' : T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
+  ];
+  return rows.map(([k, v]): Row => ({ kind: 'info', label: k, value: v, col: v === T.noService || v.endsWith(T.off) ? BAD : undefined }));
+}
+
+/** (Debug) Who lives in the building next to the player: name, age, what they do, where they are now, their number. */
+function peoplePage(S: Lcd, P: Phone, world: World, t: number): Pg {
+  const L = P.people.ids, Pop = world.pop, c = world.city, title = SET.pages.people;
+  if (!L.length) { softKeys(S, '', T.back); return listPage({ title, note: '', t, rows: [{ kind: 'text', label: SET.peopleNone }] }); }
+  const R = PEOPLE.role, D = PEOPLE.doing, roles = [R.worker, R.student, R.retired, R.idle, R.child];
+  const doings = [D.asleep, D.home, D.commute, D.work, D.out, D.errand];
+  const rows = L.map((i, n): Row => {
+    const H = Pop.households[Pop.home[i]], job = Pop.job[i] >= 0 ? workplaceName(c, Pop, Pop.job[i]) : '';
+    const W = whereIs(Pop, c, i, world.time), doing = doings[W.doing].replace('{place}', W.biz >= 0 ? businessName(c, W.biz) : '');
+    const num = Pop.mobile[i] ? formatNumber(world.telco, Pop.mobile[i]) : H.line ? `${formatNumber(world.telco, H.line)} H` : '-';
+    return { kind: 'pick', label: `${citizenName(c, Pop, i)}, ${Pop.age[i]}`, value: `F${H.floor + 1}`, sub: [roles[Pop.role[i]].replace('{place}', job), `${doing.slice(0, 18)} ${num}`], sel: n === P.setSel, pre: () => { P.setSel = n; } };
+  });
+  softKeys(S, SET.dial, T.back);
+  return listPage({ title, note: `#${P.people.building} (${L.length})`, t, foot: SET.peopleHint, rows });
+}
+
+const ST = A.shop;
+const appName = (i: number) => (ST.names as Record<string, string>)[STORE[i][0]];
+
+/** The store: the maker's own shop (plum, pink accents); the catalog (size, price, whether it fits over EDGE) and the apps installed; a download's progress. */
+function store(S: Lcd, P: Phone, t: number): Pg {
+  const list = P.stab === 0 ? P.catalog() : P.downloads(), view = 7, top = Math.max(0, Math.min(P.ssel - view + 1, list.length - view));
+  const rows = list.slice(top, top + view).map((i, n) => {
+    const [id, kb, price] = STORE[i], have = P.apps.includes(i), k = top + n;
+    const right = P.stab === 1 ? '' : have ? ST.installed : `${kb >= 1024 ? `${(kb / 1024).toFixed(0)}MB` : `${kb}KB`} ${price ? `$${(price / 100).toFixed(2)}` : ST.free}`;
+    return { label: appName(i), right, col: (STORE_ICON[id] ?? ICON.store)[1], big: kb > EDGE_LIMIT_KB, have, sel: k === P.ssel, pre: () => { P.ssel = k; P.storeNote = ''; } };
+  });
+  const J = P.radio.job, sel = list[P.ssel];
+  const bar = J?.what.startsWith('app:') && (J.state === 'connecting' || J.state === 'loading') ? J.done / J.kb : -1;
+  softKeys(S, P.stab === 1 || P.apps.includes(sel) ? ST.open : ST.get, T.back);
+  return (Pt) => paintStore(Pt, { title: `${P.maker} ${name('store')}`, tabs: [ST.tabs[0], ST.tabs[1]], tab: P.stab, goTab: (k) => { P.stab = k; P.ssel = 0; P.storeNote = ''; }, empty: ST.none, rows,
+    about: P.stab === 0 && sel !== undefined ? (ST.about as Record<string, string>)[STORE[sel][0]] : '', bar, note: P.storeNote ? (ST.notes as Record<string, string>)[P.storeNote] : '', t });
 }
 
 /** Text wrapped to a width. */
@@ -120,174 +222,27 @@ function wrap(s: string, w: number): string[] {
   return out;
 }
 
-/** The operator's service menu: "running" for a moment, then its text and, on a menu, the answer being typed. */
-function ussdScreen(S: Lcd, P: Phone, t: number, now: number) {
-  const U = P.us;
-  title(S, U.code, t);
-  if (now - U.at < 1.4) { S.center(10, `${A.running}${'.'.repeat(Math.floor(now * 3) % 4)}`.slice(0, SW - 2), DIM, LCD); return softKeys(S, '', T.back); }
-  const lines = U.text.split('\n').flatMap((l) => wrap(l, SW - 4));
-  lines.forEach((l, k) => S.text(2, 3 + k, typed(l, now - U.at - 1.4 - k * 0.05, 90), k === 0 ? HI : WHITE, LCD));
-  if (U.menu) {
-    S.text(2, SH - 4, `${A.reply} ${U.input}${Math.floor(now * 2) & 1 ? '_' : ''}`, INK, LCD);
-    return softKeys(S, U.input ? A.send : '', T.back);
-  }
-  softKeys(S, T.ok, T.back);
-}
-
-/** The calculator: a dark body, the display in big white digits, and its keys drawn as buttons with what they do. */
-function calc(S: Lcd, P: Phone, t: number) {
-  const BODY: C3 = [38, 38, 42], DISP: C3 = [12, 12, 14], OR: C3 = [255, 150, 30], KEY: C3 = [80, 80, 86];
-  paint(S, BODY);
-  bar(S, name('calc').toUpperCase(), [220, 220, 225], BODY, P.calc.op, OR);
-  for (let y = 3; y <= 11; y++) for (let x = 1; x < SW - 1; x++) S.put(x, y, 32, DISP, DISP);
-  const v = P.calc.cur;
-  if (v.length <= 6) bigText(S, 4, v, v === 'ERROR' ? BAD : WHITE);
-  else S.text(SW - v.length - 2, 8, v, WHITE, DISP);
-  // the keys: the arrows are the operations, OK equals, * clears, # the point
-  const keys: [string, string, C3][] = [['^', '+', OR], ['v', '-', OR], ['<', 'x', OR], ['>', '/', OR], ['OK', '=', OR], ['*', 'C', [170, 170, 176]], ['#', '.', KEY]];
-  keys.forEach(([k, op, col], n) => {
-    const x0 = 2 + (n % 4) * 10, y0 = 14 + Math.floor(n / 4) * 4;
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 8; x++) S.put(x0 + x, y0 + y, 32, col, col);
-    S.text(x0 + 3, y0 + 1, op, n === 6 ? WHITE : [20, 20, 20], col);
-    S.text(x0 + 1, y0 + 2, k, n === 6 ? [200, 200, 200] : [70, 40, 10], col);
-  });
-  void t;
-  softKeys(S, '=', T.back);
-}
-
-/** Notes: a yellow legal pad (ruled lines, the red margin); the text typed on the keypad (Abc, T9 or 123, see textinput.ts). */
-function notes(S: Lcd, P: Phone, t: number, now: number) {
-  const PAD: C3 = [252, 238, 150], RULE: C3 = [236, 220, 128], INKN: C3 = [30, 40, 90], RED: C3 = [210, 80, 80];
-  paint(S, PAD);
-  bar(S, name('notes'), [250, 236, 210], [122, 72, 40], `${P.noteEd.label()} ${P.note.length}/400`, [220, 190, 160]);
-  const rowBg = (y: number): C3 => (y % 2 ? PAD : RULE);
-  for (let y = 3; y < SH - 2; y++) { for (let x = 0; x < SW; x++) S.put(x, y, 32, rowBg(y), rowBg(y)); S.put(2, y, ch('|'), RED, rowBg(y)); }
-  const lines: string[] = [], w = SW - 5;
-  for (const para of P.note.split('\n')) { let s2 = para; do { lines.push(s2.slice(0, w)); s2 = s2.slice(w); } while (s2.length); }
-  const rows = SH - 6, shown = lines.slice(-rows);
-  shown.forEach((l, k) => S.text(4, 3 + k, l, INKN, rowBg(3 + k)));
-  const ed = P.noteEd, live = ed.seq ? ed.word().length : ed.tapping(now) ? 1 : 0, last = shown.length ? shown[shown.length - 1] : '', y = 2 + Math.max(1, shown.length);
-  for (let n = 0; n < live; n++) { const x = last.length - live + n; if (x >= 0) S.put(4 + x, y, ch(last[x]), PAD, INKN); }
-  if (Math.floor(now * 2) & 1 && !live) S.put(4 + last.length, y, ch('_'), INKN, rowBg(y));
-  if (!P.note) S.center(10, typed(A.notesHint, t - 0.2), [150, 130, 80], rowBg(10));
-  typeHint(S, 1, SH - 2, ed, now, A.modeHint, [140, 120, 70], PAD);
-  softKeys(S, '', P.note ? A.clear : T.back);
-}
-
-/** About the phone: its hardware, its radios, and what the GPS is doing. */
-const SET = A.set;
-/** A row of a list, picked or not: the label on the left, a value on the right. */
-function row(S: Lcd, y: number, label: string, value: string, sel: boolean, t: number) {
-  const bg = sel ? SEL : LCD;
-  if (sel) S.fill(y, bg);
-  S.text(1, y, typed(label, t), sel ? WHITE : INK, bg);
-  if (value) S.text(SW - value.length - 1, y, typed(value, t - 0.1), sel ? WHITE : DIM, bg);
-}
-
-/** Settings: the list of pages, the pages of options, about the phone, and the debug page. */
-function settings(S: Lcd, P: Phone, world: World, t: number) {
-  const pg = P.setPage;
-  if (pg === 'root') {
-    title(S, name('settings').toUpperCase(), t);
-    SET_PAGES.forEach((p, n) => row(S, 3 + n * 2, `${n + 1} ${SET.pages[p as keyof typeof SET.pages]}`, '>', n === P.setSel, t - 0.05 * n));
-    return softKeys(S, T.open, T.back);
-  }
-  title(S, SET.pages[pg].toUpperCase(), t);
-  if (pg === 'about') return about(S, P, world, t);
-  if (pg === 'wifi') return wifiPage(S, P, world, t);
-  if (pg === 'people') return peoplePage(S, P, world, t);
-  if (pg === 'usb') {
-    // the cable to the notebook: plugged in or not, and what the notebook sees
-    const U = SET.usb;
-    row(S, 3, U.cable, P.usb ? U.in : U.out, true, t);
-    const say = P.usb ? (P.usbLinked ? U.linked : U.waiting) : U.hint;
-    say.forEach((l, k) => S.text(1, 6 + k, typed(l, t - 0.1 - 0.05 * k), k ? DIM : INK, LCD));
-    return softKeys(S, P.usb ? U.unplug : U.plug, T.back);
-  }
-  if (pg === 'looks') {
-    row(S, 3, SET.rows.shell, `< ${P.maker} ${SHELLS[P.look].name} >`, P.setSel === 0, t);
-    row(S, 5, SET.rows.case, `< ${CASES[P.case].name} >`, P.setSel === 1, t - 0.05);
-    S.text(1, 8, `${P.looks.length}/${SHELLS.length}  ${CASES.length > 1 ? `${P.cases.length - 1}/${CASES.length - 1}` : ''}`, DIM, LCD);
-    S.text(1, 9, SET.looksHint, DIM, LCD);
-    return softKeys(S, T.ok, T.back);
-  }
-  if (pg === 'debug') {
-    SET.debugHint.forEach((l, k) => S.text(1, 3 + k, typed(l, t - 0.05 * k), DIM, LCD));
-    secretCodes(world.seed).forEach((c, n) => row(S, 7 + n * 2, c.code, A.code[c.kind], n === P.setSel, t - 0.2 - 0.05 * n));
-    row(S, 7 + secretCodes(world.seed).length * 2, SET.unlock, '', P.setSel === secretCodes(world.seed).length, t - 0.4);
-    S.text(1, 22, A.voucher, DIM, LCD); S.text(1, 23, freeVoucher(world), INK, LCD);
-    return softKeys(S, SET.dial, T.back);
-  }
-  PREF_ROWS[pg].forEach((key, n) => row(S, 3 + n * 2, SET.rows[key], `< ${SET.values[key][P.prefs[key]]} >`, n === P.setSel, t - 0.05 * n));
-  S.center(SH - 3, SET.hint, DIM, LCD);
-  softKeys(S, T.ok, T.back);
-}
-
-function about(S: Lcd, P: Phone, world: World, t: number) {
-  const D = P.device, g = P.gps;
-  const imei = imeiOf(world.seed);
-  const gps = g.state === 'fix' ? `${A.gpsFix} ${g.sats} SAT +-${fmtDist(g.acc, P.prefs.dist)}` : g.state === 'search' ? `${A.gpsSearch} ${g.sats} SAT` : g.state === 'lost' ? A.gpsLost : A.gpsOff;
-  const R = P.radio, acc = world.telco.player, site = R.site >= 0 ? world.telco.sites[R.site] : null;
-  const net = R.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).toUpperCase() : R.state === 'search' ? A.searching : T.noService;
-  const rows: [string, string][] = [
-    [A.network, net], [A.signal, R.state === 'service' ? `${R.dbm} dBm (${R.bars}/4)` : '-'], [A.cell, site ? `ID ${site.id}` : '-'],
-    [A.number, formatNumber(world.telco, acc.number.replace('-', ''))], [A.credit, `$${(acc.credit / 100).toFixed(2)}`], [A.dataLeft, kbText(acc.dataKB)], [A.dataUsed, kbText(acc.usedKB)],
-    [A.model, `${P.maker} ${D.model}`], [A.os, D.os], [A.cpu, `${D.cpu} ${D.cpuMHz} MHz`], [A.ram, `${D.ramMB} MB`], [A.flash, `${D.flashMB} MB`],
-    [A.display, D.screen], [A.cameraRow, D.cameraMP ? `${D.cameraMP} MP` : T.off], [A.radio, D.radio], [A.wlan, P.wifi.state === 'up' ? `${wifiName(world.city, world.wifi[P.wifi.ap])} ${P.wifi.ip}` : `${D.wlan} ${P.wifi.on ? '' : T.off}`], [A.gps, D.gps], [A.gpsNow, gps], [A.imei, imei],
-  ];
-  const view = SH - 5, top = Math.min(P.scroll, Math.max(0, rows.length * 2 - view));
-  P.scroll = top;
-  rows.forEach(([k, v], n) => {
-    const y = 3 + n * 2 - top;
-    if (y < 3 || y >= SH - 2) return;
-    S.text(1, y, typed(k, t - 0.05 * n), DIM, LCD);
-    S.text(SW - v.length - 1, y, typed(v, t - 0.05 * n - 0.1), v === T.noService || v.endsWith(T.off) ? BAD : INK, LCD);
-  });
-  softKeys(S, '', T.back);
-}
-
-/** (Debug) Who lives in the building next to the player: name, age, what they do, where they are now, their number. */
-function peoplePage(S: Lcd, P: Phone, world: World, t: number) {
-  const L = P.people.ids, Pop = world.pop, c = world.city;
-  if (!L.length) { S.text(1, 3, SET.peopleNone, DIM, LCD); return softKeys(S, '', T.back); }
-  S.text(1, 3, `${SET.peopleAt} #${P.people.building} (${L.length})`, DIM, LCD);
-  const per = 3, view = Math.floor((SH - 7) / per), top = Math.max(0, Math.min(P.setSel - Math.floor(view / 2), L.length - view));
-  const R = PEOPLE.role, D = PEOPLE.doing, roles = [R.worker, R.student, R.retired, R.idle, R.child];
-  const doings = [D.asleep, D.home, D.commute, D.work, D.out, D.errand];
-  for (let n = 0; n < view && top + n < L.length; n++) {
-    const i = L[top + n], y = 5 + n * per, sel = top + n === P.setSel, H = Pop.households[Pop.home[i]];
-    const job = Pop.job[i] >= 0 ? workplaceName(c, Pop, Pop.job[i]) : '';
-    const W = whereIs(Pop, c, i, world.time), doing = doings[W.doing].replace('{place}', W.biz >= 0 ? businessName(c, W.biz) : '');
-    row(S, y, `${citizenName(c, Pop, i)}, ${Pop.age[i]}`.slice(0, SW - 6), `F${H.floor + 1}`, sel, t - 0.04 * n);
-    S.text(2, y + 1, typed(`${roles[Pop.role[i]].replace('{place}', job)}`.slice(0, SW - 3), t - 0.04 * n - 0.05), DIM, LCD);
-    const num = Pop.mobile[i] ? formatNumber(world.telco, Pop.mobile[i]) : H.line ? `${formatNumber(world.telco, H.line)} H` : '-';
-    S.text(2, y + 2, typed(`${doing.slice(0, 16)} ${num}`.slice(0, SW - 3), t - 0.04 * n - 0.1), Pop.role[i] === Role.Child ? DIM : INK, LCD);
-  }
-  S.center(SH - 3, SET.peopleHint, DIM, LCD);
-  softKeys(S, SET.dial, T.back);
-}
-
 const kbText = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${Math.round(kb)} KB`);
 
 const C = A.code;
 const imeiOf = (seed: number) => String(Math.floor(hash3(seed, 7, 7) * 1e15)).padStart(15, '0');
 
 /** The service screens the secret codes open (see codes.ts). */
-function service(S: Lcd, P: Phone, world: World, t: number, now: number) {
+function service(S: Lcd, P: Phone, world: World, t: number, now: number): Pg | void {
   const k = P.code;
   if (k === 'lcd') return lcdTest(S, P);
-  title(S, `${C[k]}`, t);
+  softKeys(S, '', T.back);
+  const page = (rows: Row[]) => listPage({ title: `${C[k]}`, note: '', t, rows, col: [120, 60, 50] });
   if (k === 'imei') {
     const im = imeiOf(world.seed);
-    S.center(8, C.imei, DIM, LCD);
-    S.center(10, typed(`${im.slice(0, 2)} ${im.slice(2, 8)} ${im.slice(8, 14)} ${im[14]}`, t, 30), WHITE, LCD);
-    S.center(12, typed(C.sv, t - 0.6), DIM, LCD);
-  } else if (k === 'gps') gpsTest(S, P, t);
-  else if (k === 'field') fieldTest(S, P, world, t);
-  else if (k === 'sensors') sensors(S, P, world, t, now);
+    return page([{ kind: 'info', label: C.imei, value: `${im.slice(0, 2)} ${im.slice(2, 8)} ${im.slice(8, 14)} ${im[14]}` }, { kind: 'text', label: '' }, { kind: 'text', label: C.sv }]);
+  }
+  if (k === 'field') return page(fieldTest(P, world));
+  if (k === 'sensors') return page(sensors(P, world, now));
+  if (k === 'version') return page([...version(P, world), { kind: 'text', label: '' }, { kind: 'text', label: C.eng, col: BAD }]);
+  title(S, `${C[k]}`, t);
+  if (k === 'gps') gpsTest(S, P, t);
   else if (k === 'keys') keyTest(S, P, now);
-  else if (k === 'version') version(S, P, world, t);
-  softKeys(S, '', T.back);
 }
 
 /** GPS test: the sky as a plot (north up, the horizon the ring, overhead the middle) and each satellite's signal. */
@@ -312,23 +267,19 @@ function gpsTest(S: Lcd, P: Phone, t: number) {
 }
 
 /** Field test: the cell it camps on (id, area, channel, level, timing advance) and the neighbours it hears. */
-function fieldTest(S: Lcd, P: Phone, world: World, t: number) {
+function fieldTest(P: Phone, world: World): Row[] {
   const R = P.radio, T2 = world.telco, p = world.player;
   const lac = (k: number) => 1000 + Math.floor(hash3(world.seed, T2.sites[k].building, 77) * 8) * 111;
   const arfcn = (k: number) => 1 + Math.floor(hash3(world.seed, k, 78) * 124);
-  if (R.site < 0) { S.center(8, C.noCell, BAD, LCD); return; }
+  if (R.site < 0) return [{ kind: 'text', label: C.noCell, col: BAD }];
   const s = T2.sites[R.site], d = Math.hypot(s.x - p.x, s.y - p.y);
-  S.text(1, 3, C.serving, HI, LCD);
   const rows: [string, string][] = [['CID', String(s.id)], [C.lac, String(lac(R.site))], [C.arfcn, String(arfcn(R.site))], [C.rxlev, `${R.dbm} dBm`], [C.ta, `${Math.round(d / 550)} (${fmtDist(d, P.prefs.dist)})`]];
-  rows.forEach(([a, b], n) => { S.text(2, 4 + n, typed(a, t - n * 0.05), DIM, LCD); S.text(12, 4 + n, typed(b, t - n * 0.05), INK, LCD); });
-  S.text(1, 10, C.neighbours, HI, LCD);
-  R.heard.filter(([k]) => k !== R.site).slice(0, 6).forEach(([k, dbm], n) => {
-    S.text(2, 11 + n * 2, typed(`${String(T2.sites[k].id).padEnd(7)}${String(arfcn(k)).padStart(4)}  ${dbm} dBm`, t - 0.3 - n * 0.05), INK, LCD);
-  });
+  return [{ kind: 'head', label: C.serving }, ...rows.map(([a, b]): Row => ({ kind: 'info', label: a, value: b })), { kind: 'head', label: C.neighbours },
+    ...R.heard.filter(([k]) => k !== R.site).slice(0, 6).map(([k, dbm]): Row => ({ kind: 'info', label: `${T2.sites[k].id}  ARFCN ${arfcn(k)}`, value: `${dbm} dBm` }))];
 }
 
 /** Sensors: the battery, its temperature, the ambient light sensor (from the light in the hands), the radio. */
-function sensors(S: Lcd, P: Phone, world: World, t: number, now: number) {
+function sensors(P: Phone, world: World, now: number): Row[] {
   const pct = Math.max(5, Math.round(100 - world.tick / 60 / 600)), lux = Math.round(((VIEW_LIGHT[0] + VIEW_LIGHT[1] + VIEW_LIGHT[2]) / 3) * 420);
   const btemp = world.player.inside >= 0 ? 29 : 24 + world.weather.temp * 0.25, R = P.radio;
   const temp = (c: number) => (P.prefs.temp ? `${c.toFixed(1)}°C` : `${(c * 1.8 + 32).toFixed(1)}°F`);
@@ -337,7 +288,7 @@ function sensors(S: Lcd, P: Phone, world: World, t: number, now: number) {
     [C.light, `${lux} lx`], [C.rf, R.state === 'service' ? `${R.dbm} dBm` : '-'], [C.radioTemp, temp(btemp + 3 + (R.job ? 4 : 0))],
     [C.uptime, `${Math.floor(world.tick / 3600)}:${String(Math.floor(world.tick / 60) % 60).padStart(2, '0')}`],
   ];
-  rows.forEach(([a, b], n) => { S.text(1, 3 + n * 2, typed(a, t - n * 0.05), DIM, LCD); S.text(SW - b.length - 1, 3 + n * 2, b, INK, LCD); });
+  return rows.map(([a, b]): Row => ({ kind: 'info', label: a, value: b }));
 }
 
 const TEST_KEYS: Key[] = ['lsoft', 'up', 'rsoft', 'left', 'ok', 'right', 'send', 'down', 'end', '1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
@@ -364,14 +315,13 @@ function lcdTest(S: Lcd, P: Phone) {
 }
 
 /** Version: the firmware's build, as an engineering screen lists it. */
-function version(S: Lcd, P: Phone, world: World, t: number) {
+function version(P: Phone, world: World): Row[] {
   const D = P.device, h = (q: number) => hash3(world.seed, 31, q);
   const rows: [string, string][] = [
     [C.build, `${D.os}.${Math.floor(h(1) * 9)}.${100 + Math.floor(h(2) * 800)}`], [C.date, `2008-0${1 + Math.floor(h(3) * 2)}-${10 + Math.floor(h(4) * 18)}`],
     [C.baseband, `BB ${(h(5) * 0xffff | 0).toString(16).toUpperCase()}`], [C.bootloader, `BL 1.${Math.floor(h(6) * 9)}`], [C.hw, `R${1 + Math.floor(h(7) * 4)}`], [C.imei, imeiOf(world.seed)],
   ];
-  rows.forEach(([a, b], n) => { S.text(1, 3 + n * 2, typed(a, t - n * 0.05), DIM, LCD); S.text(SW - b.length - 1, 3 + n * 2, typed(b, t - n * 0.05), INK, LCD); });
-  S.center(SH - 3, typed(C.eng, t - 0.5), BAD, LCD);
+  return rows.map(([a, b]): Row => ({ kind: 'info', label: a, value: b }));
 }
 
 /** A picture (w x h cells) shown over the screen's rows y0..y1, scaled to fit. */
@@ -440,34 +390,6 @@ function photosScreen(S: Lcd, P: Phone, t: number) {
   const c = calendar(p.at);
   S.text(1, SH - 2, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}  ${p.kb} KB  ${A.del}`, DIM, LCD);
   softKeys(S, '< >', T.back);
-}
-
-const ST = A.shop;
-const appName = (i: number) => (ST.names as Record<string, string>)[STORE[i][0]];
-
-/** The store: the maker's own shop (dark plum, pink accents); the catalog (size, price, whether it fits over EDGE) and the apps installed; a download's progress. */
-function store(S: Lcd, P: Phone, t: number, now: number) {
-  const BG: C3 = [30, 18, 42], PINK: C3 = [255, 120, 200], CARD: C3 = [52, 32, 70], PICKC: C3 = [176, 52, 140], TXT: C3 = [240, 226, 250], DIMS: C3 = [160, 130, 180];
-  paint(S, BG);
-  bar(S, `${P.maker} ${name('store')}`, [255, 255, 255], [70, 30, 90], '', PINK);
-  ST.tabs.forEach((tb, k) => S.text(2 + k * 14, 3, k === P.stab ? `[${tb}]` : ` ${tb} `, k === P.stab ? PINK : DIMS, BG));
-  const list = P.stab === 0 ? P.catalog() : P.downloads();
-  if (!list.length) S.center(10, ST.none, DIMS, BG);
-  list.forEach((i, n) => {
-    const [id, kb, price] = STORE[i], y = 5 + n * 2, sel = n === P.ssel, bg = sel ? PICKC : CARD, have = P.apps.includes(i);
-    for (let x = 1; x < SW - 1; x++) S.put(x, y, 32, bg, bg);
-    const right = P.stab === 1 ? '' : have ? ST.installed : `${kb >= 1024 ? `${(kb / 1024).toFixed(0)}MB` : `${kb}KB`} ${price ? `$${(price / 100).toFixed(2)}` : ST.free}`;
-    S.text(2, y, typed(appName(i), t - n * 0.04), kb > EDGE_LIMIT_KB && !have ? DIMS : TXT, bg);
-    S.text(SW - right.length - 2, y, right, sel ? TXT : have ? PINK : DIMS, bg);
-    if (sel && P.stab === 0) S.text(1, SH - 4, (ST.about as Record<string, string>)[id], DIMS, BG);
-  });
-  const J = P.radio.job;
-  if (J?.what.startsWith('app:') && (J.state === 'connecting' || J.state === 'loading')) {
-    const f = J.done / J.kb, n = Math.round(f * (SW - 16));
-    S.text(1, SH - 3, `${ST.downloading} [${'#'.repeat(n).padEnd(SW - 16, '.')}]`, PINK, BG);
-  } else if (P.storeNote) S.text(1, SH - 3, (ST.notes as Record<string, string>)[P.storeNote], BAD, BG);
-  softKeys(S, P.stab === 1 || P.apps.includes(list[P.ssel]) ? ST.open : ST.get, T.back);
-  void now;
 }
 
 /** The app from the store that is open. */
@@ -641,32 +563,27 @@ function bankApp(S: Lcd, P: Phone, world: World, t: number) {
 
 const WF = A.wifi;
 /** Wi-Fi: on or off, the networks around with their signal and lock, the one joined; for now the selected one's key shows (debug). */
-function wifiPage(S: Lcd, P: Phone, world: World, t: number) {
+function wifiPage(S: Lcd, P: Phone, world: World, t: number): Pg {
   const W = P.wifi;
-  row(S, 3, WF.wifi, `< ${W.on ? WF.on : WF.off} >`, P.setSel === 0, t);
   const st = W.state === 'assoc' ? WF.assoc : W.state === 'dhcp' ? WF.dhcp : W.state === 'badkey' ? WF.badKey : W.state === 'up' ? `${WF.up} ${W.ip}` : '';
-  if (st) S.text(1, 4, st.slice(0, SW - 2), W.state === 'badkey' ? BAD : W.state === 'up' ? [120, 255, 150] : HI, LCD);
-  if (W.on && !W.list.length) S.center(10, WF.none, DIM, LCD);
+  const rows: Row[] = [{ kind: 'pick', label: WF.wifi, value: W.on ? WF.on : WF.off, col: W.on ? [120, 255, 150] : undefined, sel: P.setSel === 0, pre: () => { P.setSel = 0; }, key: 'ok' }];
+  if (st) rows.push({ kind: 'text', label: st, col: W.state === 'badkey' ? BAD : W.state === 'up' ? [120, 255, 150] : [143, 211, 255] });
+  if (W.on && !W.list.length) rows.push({ kind: 'text', label: '' }, { kind: 'text', label: WF.none });
   W.list.slice(0, 8).forEach(([i, dbm], n) => {
-    const A = world.wifi[i], bars = [-85, -76, -67, -58].reduce((c, b) => (dbm >= b ? c + 1 : c), 0);
-    const mark = i === W.ap && W.state === 'up' ? '>' : ' ', lock = A.sec === Sec.Open ? ' ' : A.sec === Sec.WEP ? 'w' : '*';
-    row(S, 6 + n * 2, `${mark}${wifiName(world.city, A)}`.slice(0, SW - 9), `${lock} ${'|'.repeat(bars).padEnd(4, '.')}`, P.setSel === n + 1, t - 0.04 * n);
+    const A2 = world.wifi[i], bars = [-85, -76, -67, -58].reduce((c, b) => (dbm >= b ? c + 1 : c), 0), up = i === W.ap && W.state === 'up';
+    rows.push({ kind: 'pick', label: `${up ? '> ' : ''}${wifiName(world.city, A2)}`, value: A2.sec === Sec.Open ? '' : A2.sec === Sec.WEP ? 'WEP' : 'WPA', col: up ? [120, 255, 150] : undefined, bars, sel: P.setSel === n + 1, pre: () => { P.setSel = n + 1; } });
   });
   // (debug) the picked network's key
-  const sel = W.list[P.setSel - 1];
-  if (DEBUG.showWifiKey && sel) { const A = world.wifi[sel[0]]; S.text(1, SH - 3, `${WF.debugKey} ${A.sec === Sec.Open ? WF.openNet : A.key}`, DIM, LCD); }
+  const sel = W.list[P.setSel - 1], A3 = sel ? world.wifi[sel[0]] : null;
   softKeys(S, P.setSel === 0 ? T.ok : WF.join, T.back);
+  return listPage({ title: SET.pages.wifi, note: '', t, rows, foot: DEBUG.showWifiKey && A3 ? `${WF.debugKey} ${A3.sec === Sec.Open ? WF.openNet : A3.key}` : '' });
 }
 
 /** Typing a network's key. */
-function wifiKey(S: Lcd, P: Phone, world: World, now: number) {
-  const A = world.wifi[P.wkey.ap];
-  title(S, WF.keyTitle, 1);
-  S.text(1, 4, wifiName(world.city, A), WHITE, LCD);
-  S.text(1, 5, A.sec === Sec.WEP ? 'WEP' : 'WPA-PSK', DIM, LCD);
-  S.text(1, 8, WF.key, HI, LCD);
-  S.text(1, 9, '*'.repeat(Math.max(0, P.wkey.key.length - 1)) + P.wkey.key.slice(-1) + (Math.floor(now * 2) & 1 ? '_' : ''), WHITE, LCD);
-  if (DEBUG.showWifiKey) S.text(1, SH - 4, `${WF.debugKey} ${A.key}`, DIM, LCD);
-  S.text(1, SH - 3, '0-9   * <-', DIM, LCD);
-  softKeys(S, P.wkey.key ? WF.join : '', T.back);
+function wifiKey(S: Lcd, P: Phone, world: World, now: number): Pg {
+  const A2 = world.wifi[P.wkey.ap], K = P.wkey.key;
+  softKeys(S, K ? WF.join : '', T.back);
+  return listPage({ title: WF.keyTitle, note: A2.sec === Sec.WEP ? 'WEP' : 'WPA-PSK', t: 9, foot: DEBUG.showWifiKey ? `${WF.debugKey} ${A2.key}` : '0-9   * <-', rows: [
+    { kind: 'text', label: wifiName(world.city, A2), col: PINK_INK }, { kind: 'text', label: '' }, { kind: 'head', label: WF.key },
+    { kind: 'field', label: '*'.repeat(Math.max(0, K.length - 1)) + K.slice(-1) + (Math.floor(now * 2) & 1 ? '_' : ''), sel: true }] });
 }

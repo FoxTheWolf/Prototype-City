@@ -18,7 +18,7 @@ import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
-import { APP_COL, HITS, PAGED, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintTunes, paintStandby, paintVolume, type CallPage, type Card, type TypeHint, type Dial, type Standby, type Tile } from './pixpages';
+import { APP_COL, HITS, PAGED, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintTunes, paintStandby, paintVolume, edHint, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
@@ -287,7 +287,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       else if (P.screen === 'messages' || P.screen === 'msglist' || P.screen === 'msg' || P.screen === 'compose') page = msgPage(S, P, t, now);
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
-      else app(S, P, world, t, now);
+      else page = app(S, P, world, t, now) ?? null;
       // the volume, for a moment after a side key moved it, over whatever is open
       if (now - P.volAt < 1.4 && page) { const pg = page; page = (Pt) => { pg(Pt); paintVolume(Pt, P.tn.vol, T.apps.vol); }; }
       else if (now - P.volAt < 1.4) {
@@ -587,13 +587,6 @@ function callData(P: Phone, world: World, now: number): CallPage {
   const cost = c.state === 'ended' && !P.callIn && c.cost() ? A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`) : '';
   const lines = c.lines.map((L) => ({ who: L.who, text: L.text.slice(0, Math.ceil(((now - L.at) / L.dur) * L.text.length)) })).filter((L) => L.text);
   return { label: who ?? num, number: who ? num : '', state, stateCol, cost, ringingIn: ringIn, lines };
-}
-
-/** The typing's state for an editor (pixpages.ts paintHint): the key's letters while it is tapped, T9's words, or the keys' hint. */
-function edHint(ed: Phone['smsEd'], now: number, rest: string): TypeHint {
-  const tap = ed.tapping(now), G = ed.guesses();
-  return tap ? { chips: [...tap].map((c) => (c === ' ' ? '_' : c)), on: ed.tapIndex() }
-    : G.length >= 2 ? { chips: G.slice(Math.max(0, ed.guessIndex() - 3)), on: Math.min(3, ed.guessIndex()) } : rest;
 }
 
 /** Contacts and a new contact, painted in pixels (pixpages.ts); sets the footer's actions, returns the page's painter. */

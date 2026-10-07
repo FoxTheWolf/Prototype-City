@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import { moonPhase, sunDir } from '../sim/clock';
 import { Paint, type C3 } from '../render/paint2d';
 import { FOOT_H, ICE, ptext, ptextW, SCR_H, SCR_W, STATUS_H } from './pixui';
-import { type Key } from './phone';
+import { type Key, type Phone } from './phone';
 import { faceOf } from './ui';
 
 /**
@@ -129,11 +129,13 @@ export function paintIcon(P: Paint, x: number, y: number, T: Pick<Tile, 'label' 
   else { const s = T.label[0] ?? '?'; ptext(P, x + 21 - ptextW(s, 2, true) / 2, y + 13, s, [255, 255, 255], 2, true); }
 }
 
-/** The menu (the manual's): the apps' grid on the night blue, the picked one in an ice frame. */
-export function paintMenu(P: Paint, tiles: Tile[], t: number) {
+/** The menu (the manual's): the apps' grid on the night blue, the picked one in an ice frame; with a header (My Apps), the grid under it. */
+export function paintMenu(P: Paint, tiles: Tile[], t: number, head: { title: string; note: string; col: C3; empty: string[] } | null = null) {
   P.rect(0, 0, SCR_W, Y1, BG);
+  const dy = head ? 30 : 0;
+  if (head) { appHeader(P, head.title, head.note, head.col); if (!tiles.length) head.empty.forEach((l, k) => ctext(P, 150 + k * 14, l, DIM)); }
   tiles.forEach((T, n) => {
-    const { x, y, w, h } = cellOf(n);
+    const c = cellOf(n), { x, w, h } = c, y = c.y + dy;
     HITS.push({ x, y, w, h, key: 'ok', pre: T.pre });
     if (t < 0.06 + n * 0.025) return;
     if (T.sel) { P.rrect(x + 1, y + 2, w - 2, 82, 6, ICE, 0.16); ring(P, x + 1, y + 2, w - 2, 82, ICE); }
@@ -347,8 +349,8 @@ export function paintCompose(P: Paint, d: Compose) {
 
 /** The typing's state on a row at y: the letters of the key being tapped (the one it is on lit), the words T9 guesses, or the keys' hint. */
 export type TypeHint = { chips: string[]; on: number } | string;
-export function paintHint(P: Paint, y: number, hint: TypeHint) {
-  if (typeof hint === 'string') { ptext(P, M, y + 6, hint.slice(0, 36), DIM); return; }
+export function paintHint(P: Paint, y: number, hint: TypeHint, dim: C3 = DIM) {
+  if (typeof hint === 'string') { ptext(P, M, y + 6, hint.slice(0, 36), dim); return; }
   let x = M;
   hint.chips.forEach((c, k) => {
     const w = ptextW(c) + 8;
@@ -357,6 +359,13 @@ export function paintHint(P: Paint, y: number, hint: TypeHint) {
     ptext(P, x + 4, y + 5, c, k === hint.on ? BG : INK);
     x += w + 4;
   });
+}
+
+/** The typing's state for an editor (paintHint): the key's letters while it is tapped, T9's words, or the keys' hint. */
+export function edHint(ed: Phone['smsEd'], now: number, rest: string): TypeHint {
+  const tap = ed.tapping(now), G = ed.guesses();
+  return tap ? { chips: [...tap].map((c) => (c === ' ' ? '_' : c)), on: ed.tapIndex() }
+    : G.length >= 2 ? { chips: G.slice(Math.max(0, ed.guessIndex() - 3)), on: Math.min(3, ed.guessIndex()) } : rest;
 }
 
 /** Contacts (the Phone's second tab): each with the picture, the name and the number; touched it is picked, touched again it is called. */
@@ -446,4 +455,174 @@ export function paintTunes(P: Paint, d: TunesPage, now: number) {
     ptext(P, M + 10, y + 8, typed(r.label, d.t - 0.1 - n * 0.02).slice(0, Math.floor((SCR_W - 2 * M - 18 - sw) / 6)), r.sel ? [255, 255, 255] : [232, 218, 250]);
     ptext(P, SCR_W - M - sw, y + 8, r.size, [130, 110, 150]);
   });
+}
+
+/**
+ * A row of a list page: 'go' opens a page (a chevron on the right), 'opt' steps through values (< value >:
+ * touched at either end it steps that way; touched again once picked, forward), 'pick' does what OK does
+ * once picked (its value on the right, signal bars if `bars`), 'info' a label and its value (not touched),
+ * 'text' a line on its own, 'head' a heading over the rows, 'field' a framed box being typed in. `sub`:
+ * lines under the label.
+ */
+export interface Row { kind: 'go' | 'opt' | 'pick' | 'info' | 'text' | 'head' | 'field'; label: string; value?: string; col?: C3; sub?: string[]; bars?: number; sel?: boolean; pre?: () => void; key?: Key }
+/** A list page: the header in the app's colour, the rows (scrolled to keep the picked one in view), a line (or a progress bar) at the foot. */
+export interface ListPage { title: string; note: string; col: C3; rows: Row[]; foot?: string; footCol?: C3; bar?: number; t: number }
+const touched = (r: Row) => r.kind === 'go' || r.kind === 'opt' || r.kind === 'pick';
+const rowH = (r: Row) => (r.kind === 'info' ? 16 : r.kind === 'text' ? 13 : r.kind === 'head' ? 22 : r.kind === 'field' ? 34 : 30) + (r.sub?.length ?? 0) * 12;
+export function paintList(P: Paint, d: ListPage) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, d.note, d.col);
+  const top = Y0 + 36, bot = Y1 - (d.foot || d.bar !== undefined ? 34 : 4);
+  // the rows' places; scrolled so the picked one ends above the foot
+  let y = top, off = 0;
+  const at = d.rows.map((r) => { const a = y; y += rowH(r) + (touched(r) ? 4 : 0); return a; });
+  const s = d.rows.findIndex((r) => r.sel);
+  if (s >= 0 && at[s] + rowH(d.rows[s]) > bot) off = at[s] + rowH(d.rows[s]) - bot;
+  P.clip(0, top - 2, SCR_W, bot);
+  d.rows.forEach((r, n) => {
+    const ry = at[n] - off, h = rowH(r);
+    if (ry + h < top - 2 || ry > bot) return;
+    const vis = d.t >= 0.03 * n, txt = (v: string, lag = 0) => typed(v, d.t - 0.03 * n - lag);
+    if (r.kind === 'text') { if (vis) ptext(P, M, ry + 2, txt(r.label).slice(0, 36), r.col ?? DIM); return; }
+    if (r.kind === 'head') {
+      if (!vis) return;
+      const w = ptextW(r.label, 1, true);
+      ptext(P, M, ry + 9, r.label, r.col ?? ICE, 1, true); P.rect(M + w + 6, ry + 13, SCR_W - 2 * M - w - 6, 1, [30, 46, 60]);
+      return;
+    }
+    if (r.kind === 'info') {
+      if (!vis) return;
+      const v = r.value ?? '', vw = ptextW(v);
+      ptext(P, M, ry + 4, txt(r.label).slice(0, Math.max(4, Math.floor((SCR_W - 2 * M - vw - 6) / 6))), DIM);
+      ptext(P, SCR_W - M - vw, ry + 4, txt(v, 0.08), r.col ?? INK);
+      return;
+    }
+    if (r.kind === 'field') {
+      P.rrect(M, ry, SCR_W - 2 * M, 30, 5, r.sel ? [22, 36, 50] : [19, 31, 42]); ring(P, M, ry, SCR_W - 2 * M, 30, r.sel ? ICE : [44, 62, 80]);
+      ptext(P, M + 8, ry + 11, r.label, INK, 1, true);
+      return;
+    }
+    // the touched rows: the frame when picked, the label, what is on the right
+    if (r.kind === 'opt') {
+      // its two ends step the value (pushed first: the first hit found wins)
+      HITS.push({ x: SCR_W - 40, y: ry, w: 34, h, key: 'right', pre: r.pre });
+      HITS.push({ x: SCR_W / 2 - 10, y: ry, w: 40, h, key: 'left', pre: r.pre });
+    }
+    HITS.push({ x: 6, y: ry, w: SCR_W - 12, h, pre: r.pre, key: r.key ?? (r.kind === 'go' ? 'ok' : r.sel ? (r.kind === 'opt' ? 'right' : 'ok') : undefined) });
+    if (!vis) return;
+    if (r.sel) { P.rrect(6, ry, SCR_W - 12, h, 5, ICE, 0.16); ring(P, 6, ry, SCR_W - 12, h, ICE); }
+    else P.rect(M, ry + h + 1, SCR_W - 2 * M, 1, [24, 36, 48]);
+    const v = r.value ?? '', ly = ry + 11;
+    let right = SCR_W - M - 2;
+    if (r.kind === 'go') { const c = r.sel ? ICE : DIM; P.line(right - 4, ly, right, ly + 4, 1.5, c); P.line(right, ly + 4, right - 4, ly + 8, 1.5, c); right -= 12; }
+    if (r.kind === 'opt') {
+      const ac = r.sel ? ICE : DIM, vw = ptextW(v, 1, true), vx = right - 10 - vw;
+      P.poly([right, ly + 4, right - 5, ly, right - 5, ly + 8], ac);
+      ptext(P, vx, ly, txt(v, 0.08), r.sel ? [255, 255, 255] : SOFT, 1, true);
+      P.poly([vx - 10, ly + 4, vx - 5, ly, vx - 5, ly + 8], ac);
+      right = vx - 14;
+    } else if (r.bars !== undefined) {
+      for (let b = 0; b < 4; b++) P.rect(right - 15 + b * 4, ly + 7 - b * 2, 3, 2 + b * 2, b < r.bars ? (r.sel ? ICE : INK) : [50, 62, 74]);
+      right -= 20;
+    }
+    if (v && r.kind !== 'opt') { const vw = ptextW(v); ptext(P, right - vw, ly, txt(v, 0.08), r.col ?? (r.sel ? SOFT : DIM)); right -= vw + 6; }
+    ptext(P, M + 4, ly, txt(r.label).slice(0, Math.max(3, Math.floor((right - M - 6) / 6))), r.sel ? [255, 255, 255] : INK, 1, true);
+    r.sub?.forEach((l, k) => ptext(P, M + 4, ly + 13 + k * 12, txt(l, 0.05 + 0.04 * k).slice(0, 35), k ? SOFT : DIM));
+  });
+  P.clip(0, 0, SCR_W, SCR_H);
+  // the foot: a progress bar under its line, or a line of hint or warning
+  if (d.bar !== undefined) {
+    const bw = SCR_W - 2 * M;
+    P.rrect(M, Y1 - 16, bw, 8, 3, [24, 36, 48]); P.rrect(M, Y1 - 16, Math.max(6, Math.round(bw * Math.min(1, d.bar))), 8, 3, d.footCol ?? ICE);
+    if (d.foot) ptext(P, M, Y1 - 30, d.foot.slice(0, 36), d.footCol ?? ICE);
+  } else if (d.foot) wrapText(d.foot, 36).slice(-2).forEach((l, k, L) => ptext(P, M, Y1 - 14 - (L.length - 1 - k) * 12, l, d.footCol ?? DIM));
+}
+
+/** The calculator: the display in big digits on its dark well, the operation waiting, and its keys as buttons on the glass (with the PC key that does each). */
+export interface Calc { title: string; value: string; op: string; err: boolean; keys: { sym: string; key: Key; hint: string; kind: 'op' | 'clear' | 'point' }[]; hint: string }
+export function paintCalc(P: Paint, d: Calc) {
+  P.grad(0, 0, SCR_W, Y1, [[0, [34, 34, 38]], [1, [20, 20, 24]]]);
+  appHeader(P, d.title, '', [122, 128, 144]);
+  const OR: C3 = [255, 150, 30], dy = Y0 + 40;
+  P.rrect(M, dy, SCR_W - 2 * M, 84, 6, [10, 10, 12]);
+  P.rect(M + 4, dy + 2, SCR_W - 2 * M - 8, 1, [40, 40, 46]);
+  if (d.op) ptext(P, M + 10, dy + 10, d.op, OR, 2, true);
+  // the number as big as fits, right-aligned
+  const v = d.value, s = [5, 4, 3, 2].find((k) => Paint.textW(v, k) <= SCR_W - 2 * M - 20) ?? 2;
+  P.text(SCR_W - M - 10 - Paint.textW(v, s), dy + 74 - s * 7, v, s, d.err ? [255, 110, 90] : [255, 255, 255]);
+  // the keys: four a row, = twice as wide
+  const bw = Math.floor((SCR_W - 2 * M - 18) / 4);
+  let col = 0, y = dy + 100;
+  d.keys.forEach((K) => {
+    const span = K.sym === '=' ? 2 : 1, w = bw * span + 6 * (span - 1);
+    if (col + span > 4) { col = 0; y += 58; }
+    const x = M + col * (bw + 6);
+    col += span;
+    const c: C3 = K.kind === 'op' ? OR : K.kind === 'clear' ? [170, 170, 176] : [80, 80, 86], fg: C3 = K.kind === 'point' ? [240, 240, 244] : [26, 22, 18];
+    P.grad(x, y, w, 52, [[0, mul(c, 1.12)], [1, mul(c, 0.82)]], true, 7);
+    P.rrect(x + 2, y + 2, w - 4, 10, 5, [255, 255, 255], 0.18);
+    ptext(P, Math.round(x + (w - ptextW(K.sym, 3, true)) / 2), y + 10, K.sym, fg, 3, true);
+    ptext(P, Math.round(x + (w - ptextW(K.hint)) / 2), y + 40, K.hint, mul(c, 0.5));
+    HITS.push({ x, y, w, h: 52, key: K.key });
+  });
+  ctext(P, y + 70, d.hint, [130, 130, 140]);
+}
+
+/** Notes: a yellow legal pad (ruled lines, the red margin), the text in blue ink; the letters still being tapped lit, the cursor, the typing's state at the foot. */
+export interface Notes { title: string; note: string; text: string; live: number; blink: boolean; empty: string; hint: TypeHint; t: number }
+export function paintNotes(P: Paint, d: Notes) {
+  const PAD: C3 = [252, 238, 150], RULE: C3 = [222, 200, 110], INKN: C3 = [30, 40, 110], RED: C3 = [210, 80, 80];
+  P.rect(0, 0, SCR_W, Y1, PAD);
+  P.grad(0, Y0, SCR_W, 28, [[0, [140, 84, 48]], [1, [110, 64, 36]]]);
+  ptext(P, M, Y0 + 10, d.title, [250, 236, 210], 1, true);
+  ptext(P, SCR_W - M - ptextW(d.note), Y0 + 10, d.note, [230, 200, 170]);
+  const y0 = Y0 + 40, lh = 14, rows = Math.floor((Y1 - 30 - y0) / lh);
+  for (let k = 0; k <= rows; k++) P.rect(0, y0 + k * lh + 11, SCR_W, 1, RULE);
+  P.rect(24, Y0 + 28, 1, Y1 - Y0 - 28, RED); P.rect(26, Y0 + 28, 1, Y1 - Y0 - 28, RED, 0.5);
+  const w = Math.floor((SCR_W - 32 - M) / 6), lines: string[] = [];
+  for (const para of d.text.split('\n')) { let s2 = para; do { lines.push(s2.slice(0, w)); s2 = s2.slice(w); } while (s2.length); }
+  const shown = lines.slice(-rows);
+  shown.forEach((l, k) => ptext(P, 32, y0 + k * lh + 1, l, INKN));
+  const last = shown[shown.length - 1] ?? '', ly = y0 + Math.max(0, shown.length - 1) * lh;
+  // the letters still being tapped (or T9's word) in ink with the paper's colour on them
+  if (d.live) { const lx = 32 + ptextW(last.slice(0, last.length - d.live)); P.rect(lx - 1, ly - 1, ptextW(last.slice(-d.live)) + 1, 10, INKN); ptext(P, lx, ly + 1, last.slice(-d.live), PAD); }
+  else if (d.blink) P.rect(32 + ptextW(last), ly, 2, 10, INKN);
+  if (!d.text) ctext(P, 160, typed(d.empty, d.t - 0.2), [150, 120, 60]);
+  paintHint(P, Y1 - 22, d.hint, [140, 110, 60]);
+}
+
+/** The store: the maker's own shop in plum and pink; its two tabs (touched to switch), the apps with their size and price (or installed), what the picked one does, a download's progress. */
+export interface Store { title: string; tabs: [string, string]; tab: number; goTab: (k: number) => void; empty: string;
+  rows: { label: string; right: string; col: C3; big: boolean; have: boolean; sel: boolean; pre: () => void }[]; about: string; bar: number; note: string; t: number }
+export function paintStore(P: Paint, d: Store) {
+  const PINK: C3 = [255, 120, 200], TXT: C3 = [240, 226, 250], DIMS: C3 = [160, 130, 180];
+  P.grad(0, 0, SCR_W, Y1, [[0, [40, 22, 56]], [1, [18, 10, 26]]]);
+  appHeader(P, d.title, '', [110, 50, 130]);
+  // the tabs
+  let x = M;
+  d.tabs.forEach((l, k) => {
+    const w = ptextW(l, 1, true);
+    ptext(P, x, Y0 + 40, l, k === d.tab ? PINK : DIMS, 1, true);
+    if (k === d.tab) P.rect(x, Y0 + 52, w, 2, PINK); else HITS.push({ x: x - 8, y: Y0 + 30, w: w + 16, h: 30, pre: () => d.goTab(k) });
+    x += w + 22;
+  });
+  if (!d.rows.length) ctext(P, 170, d.empty, DIMS);
+  d.rows.forEach((r, n) => {
+    const y = Y0 + 64 + n * 34;
+    if (y + 30 > Y1 - 56) return;
+    HITS.push({ x: 6, y, w: SCR_W - 12, h: 30, pre: r.pre, key: r.sel ? 'lsoft' : undefined });
+    if (d.t < 0.04 * n) return;
+    P.rrect(6, y, SCR_W - 12, 30, 5, r.sel ? [150, 46, 120] : [52, 32, 70], r.sel ? 0.95 : 0.85);
+    if (r.sel) ring(P, 6, y, SCR_W - 12, 30, PINK);
+    P.rrect(M, y + 5, 20, 20, 5, r.col);
+    P.rrect(M + 1, y + 6, 18, 7, 3, [255, 255, 255], 0.25);
+    const c0 = r.label[0] ?? '?';
+    ptext(P, Math.round(M + 10 - ptextW(c0, 1, true) / 2), y + 11, c0, [255, 255, 255], 1, true);
+    const rw = ptextW(r.right);
+    ptext(P, M + 28, y + 11, r.label.slice(0, Math.floor((SCR_W - 2 * M - 40 - rw) / 6)), r.big && !r.have ? DIMS : TXT, 1, true);
+    ptext(P, SCR_W - M - 4 - rw, y + 11, r.right, r.sel ? TXT : r.have ? PINK : DIMS);
+  });
+  if (d.about) wrapText(d.about, 36).slice(0, 2).forEach((l, k) => ptext(P, M, Y1 - 50 + k * 12, l, DIMS));
+  if (d.bar >= 0) { const bw = SCR_W - 2 * M; P.rrect(M, Y1 - 18, bw, 8, 3, [52, 32, 70]); P.rrect(M, Y1 - 18, Math.max(6, Math.round(bw * d.bar)), 8, 3, PINK); }
+  else if (d.note) ptext(P, M, Y1 - 18, d.note.slice(0, 36), [255, 120, 90]);
 }

@@ -83,13 +83,19 @@ const LOWER: Record<string, number[]> = {
   u: [0, 0, 17, 17, 17, 19, 13], v: [0, 0, 17, 17, 17, 10, 4], w: [0, 0, 17, 17, 21, 21, 10], x: [0, 0, 17, 10, 4, 10, 17],
   y: [0, 0, 17, 17, 17, 15, 1, 14], z: [0, 0, 31, 2, 4, 8, 31],
 };
+/** Signs the bulb font lacks, in the same 5 x 7 (the phone's small text: hints, arrows, markers). */
+const SIGNS: Record<string, number[]> = {
+  '<': [2, 4, 8, 16, 8, 4, 2], '>': [8, 4, 2, 1, 2, 4, 8], '^': [4, 10, 17, 0, 0, 0, 0], _: [0, 0, 0, 0, 0, 0, 31], '=': [0, 0, 31, 0, 31, 0, 0],
+  '[': [14, 8, 8, 8, 8, 8, 14], ']': [14, 2, 2, 2, 2, 2, 14], '|': [4, 4, 4, 4, 4, 4, 4], '"': [10, 10, 0, 0, 0, 0, 0], ';': [0, 12, 12, 0, 12, 4, 8],
+  '@': [14, 17, 23, 21, 23, 16, 14], '~': [0, 0, 8, 21, 2, 0, 0],
+};
 /** A letter of a dot font: w columns, 8 rows of bits (the high bit of w is the left column). */
 export interface Glyph { w: number; rows: number[] }
 const H = 8;
 
 /** The base letter (5 wide, 8 rows): the 5 x 7 bulb font's, or the lower case above. */
 function base(ch: string): Glyph | undefined {
-  const r = LOWER[ch] ?? fontRows(ch.charCodeAt(0)) ?? fontRows(ch.toUpperCase().charCodeAt(0));
+  const r = LOWER[ch] ?? fontRows(ch.charCodeAt(0)) ?? fontRows(ch.toUpperCase().charCodeAt(0)) ?? SIGNS[ch];
   if (!r) return undefined;
   const rows = r.slice();
   while (rows.length < H) rows.push(0);

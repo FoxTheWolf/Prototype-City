@@ -32,13 +32,15 @@ export function tapFlash(r: { x: number; y: number; w: number; h: number }, now:
 export function ptext(P: Paint, x: number, y: number, s: string, c: C3, k = 1, bold = false): number {
   let cx = x;
   for (const ch of s) {
+    // the degree sign, which the dot font lacks: a small ring on top
+    if (ch === '°') { for (const [i, j] of [[1, 0], [0, 1], [2, 1], [1, 2]]) P.rect(cx + i * k, y + j * k, k, k, c); cx += 4 * k; continue; }
     const g = plainGlyph(ch);
     if (g) for (let j = 0; j < 8; j++) for (let i = 0; i < g.w; i++) if (glyphBit(g, i, j)) P.rect(cx + i * k, y + j * k, k + (bold ? 1 : 0), k, c);
     cx += (g ? g.w + 1 : 4) * k + (bold ? 1 : 0);
   }
   return cx - x;
 }
-export const ptextW = (s: string, k = 1, bold = false) => [...s].reduce((w, ch) => w + ((plainGlyph(ch) ? 6 : 4) * k + (bold ? 1 : 0)), 0);
+export const ptextW = (s: string, k = 1, bold = false) => [...s].reduce((w, ch) => w + ((plainGlyph(ch) && ch !== '°' ? 6 : 4) * k + (bold ? 1 : 0)), 0);
 
 /** The bars and the touch's answer over the picture (cleared first: the cells show through the rest, unless `page` paints it). `gain`: the eye's adaptation. */
 export function paintChrome(now: number, gain: number, plain: C3 | null = null, page: ((P: Paint) => void) | null = null) {
