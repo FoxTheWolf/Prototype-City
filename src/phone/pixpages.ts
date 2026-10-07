@@ -627,3 +627,56 @@ export function paintStore(P: Paint, d: Store) {
   if (d.bar >= 0) { const bw = SCR_W - 2 * M; P.rrect(M, Y1 - 18, bw, 8, 3, [52, 32, 70]); P.rrect(M, Y1 - 18, Math.max(6, Math.round(bw * d.bar)), 8, 3, PINK); }
   else if (d.note) ptext(P, M, Y1 - 18, d.note.slice(0, 36), [255, 120, 90]);
 }
+
+/** A weather picture (wxColors) at (x, y), k pixels a dot. */
+function wxPic(P: Paint, x: number, y: number, art: (C3 | null)[][], k: number) {
+  art.forEach((row, j) => row.forEach((c, i) => { if (c) P.rect(x + i * k, y + j * k, k, k, c); }));
+}
+/**
+ * The weather (Skycast): the sky of the hour behind it all; the city and the service; then the forecast as it
+ * came down (the picture big, the temperature, the sky in words, high, low and wind, the hours ahead as cards),
+ * or the download's log and progress, or why there is none.
+ */
+export interface WxCard { label: string; hour: string; art: (C3 | null)[][]; temp: string }
+export interface Weather { city: string; brand: string; top: C3; bot: C3; t: number;
+  msg: string[]; log: string[]; bar: number; kb: string; warn: string[];
+  now: { art: (C3 | null)[][]; temp: string; unit: string; sky: string; line: string } | null; cards: WxCard[]; moon: string; updated: string }
+export function paintWeather(P: Paint, d: Weather) {
+  P.grad(0, 0, SCR_W, Y1, [[0, d.top], [1, d.bot]]);
+  const WH: C3 = [255, 255, 255], SO: C3 = [225, 235, 250], WARN: C3 = [255, 200, 190];
+  P.rect(0, Y0, SCR_W, 26, [0, 0, 0], 0.18);
+  ptext(P, M, Y0 + 9, d.city, WH, 1, true);
+  ptext(P, SCR_W - M - ptextW(d.brand), Y0 + 9, d.brand, SO);
+  d.msg.forEach((l, k) => ctext(P, 170 + k * 16, l, k ? SO : WH, 1, k === 0));
+  d.log.forEach((l, k) => ptext(P, M, Y0 + 44 + k * 14, l.slice(0, 36), SO));
+  if (d.bar >= 0) {
+    const bw = SCR_W - 2 * M;
+    P.rrect(M, 120, bw, 8, 3, [0, 0, 0], 0.3); P.rrect(M, 120, Math.max(6, Math.round(bw * Math.min(1, d.bar))), 8, 3, WH);
+    ctext(P, 136, d.kb, SO);
+  }
+  d.warn.forEach((l, k) => ctext(P, 170 + k * 16, l, k ? SO : WARN, 1, k === 0));
+  const N = d.now;
+  if (!N) return;
+  // now: the picture big over the temperature, the sky in words, high, low and wind
+  wxPic(P, (SCR_W - 60) >> 1, Y0 + 34, N.art, 4);
+  const tw = Paint.textW(N.temp, 6), uw = ptextW(N.unit, 2, true), tx = (SCR_W - tw - uw - 4) >> 1;
+  P.text(tx + 2, Y0 + 82, N.temp, 6, [0, 0, 0], 0.3);
+  P.text(tx, Y0 + 80, N.temp, 6, WH);
+  ptext(P, tx + tw + 4, Y0 + 80, N.unit, WH, 2, true);
+  ctext(P, Y0 + 132, typed(N.sky, d.t), WH, 1, true);
+  ctext(P, Y0 + 148, typed(N.line, d.t - 0.1), SO);
+  // the hours ahead: a card each, coming in one after another
+  const cw = Math.floor((SCR_W - 2 * M - 4 * 4) / 5);
+  d.cards.forEach((c, k) => {
+    if (d.t < 0.15 + k * 0.1) return;
+    const x = M + k * (cw + 4), y = Y0 + 170;
+    P.rrect(x, y, cw, 96, 6, [255, 255, 255], 0.16);
+    P.rect(x + 3, y + 1, cw - 6, 1, [255, 255, 255], 0.25);
+    ptext(P, Math.round(x + (cw - ptextW(c.label, 1, true)) / 2), y + 8, c.label, WH, 1, true);
+    ptext(P, Math.round(x + (cw - ptextW(c.hour)) / 2), y + 22, c.hour, SO);
+    wxPic(P, x + ((cw - 30) >> 1), y + 38, c.art, 2);
+    ptext(P, Math.round(x + (cw - ptextW(c.temp, 1, true)) / 2), y + 70, c.temp, WH, 1, true);
+  });
+  ptext(P, M, Y1 - 16, d.moon, SO);
+  ptext(P, SCR_W - M - ptextW(d.updated), Y1 - 16, d.updated, SO);
+}

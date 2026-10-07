@@ -273,6 +273,11 @@ const WX_ART: Record<string, string[]> = {
   snow: ['.....eeee......', '...eeeeeeee....', '.eeeeeeeeeeee..', 'eeeeeeeeeeeeee.', '.eeeeeeeeeeee..', '...i...i...i...', '.....i...i.....', '...i...i...i...', '...............'],
 };
 
+/** A weather picture as colours a pixel (null: clear), for the screens drawn in pixels (pixpages.ts). */
+export function wxColors(kind: string): (C3 | null)[][] {
+  return (WX_ART[kind] ?? WX_ART.cloudy).map((r) => [...r].map((c) => (c === '.' ? null : PAL[c] ?? null)));
+}
+
 /** Which picture the weather is (the same choice as the characters' version in skins.ts). */
 export function wxArt(precip: number, snow: boolean, cloud: number, night: boolean): string {
   if (precip > 0.02) return snow ? 'snow' : precip > 0.75 ? 'storm' : precip < 0.25 ? 'drizzle' : 'rain';
@@ -316,12 +321,5 @@ export function appIcon(S: Lcd, x: number, y: number, id: string, col: C3, under
   // the tile under the picture, then the picture
   for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) { const c = bg(px, py); S.pixel(x + Math.floor(px / HD), y + Math.floor(py / HD), px % HD, py % HD, c[0], c[1], c[2]); }
   art(S, x, y, rows, null);
-  return true;
-}
-
-/** The weather's picture at cell (x, y), 5 x 3 cells, on a card of colour bg. */
-export function weatherIcon(S: Lcd, x: number, y: number, kind: string, bg: C3) {
-  if (!S.hd) return false;
-  art(S, x, y, WX_ART[kind], () => bg);
   return true;
 }

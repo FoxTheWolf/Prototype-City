@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.30 — Clima em pixels (2026-10-07)
+- **Skycast redesenhado:** o céu da hora no fundo, a figura grande do tempo agora, a temperatura em números grandes, o céu em palavras com máxima, mínima e vento, e as próximas horas em cartões com a figura de cada uma; o download mostra o registro e a barra.
+
 ## 0.15.29 — Ajustes, Calc, Notas e Store em pixels (2026-10-07)
 - **Ajustes redesenhados:** a lista das páginas com setas, as opções com ◂ valor ▸ (tocar numa ponta muda para aquele lado), o Wi-Fi com as barras de sinal e o cadeado, o Sobre o aparelho, o cabo USB, as páginas de debug e as telas dos códigos secretos (IMEI, rede, sensores, versão).
 - **Calculadora:** as operações viraram botões grandes na tela (+ − × ÷, C, ponto e =), cada um com a tecla do PC que faz o mesmo; os números continuam no teclado numérico.
