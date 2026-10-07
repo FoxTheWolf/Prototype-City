@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-07 — 15.17g, as páginas canônicas (Opus 5.5)
+- **O mapa da GridLink é uma ferramenta de jogo sem parecer uma:** é a forma orgânica de o jogador conferir se o apagão que causou "pegou" e quanto tempo dura, como qualquer morador faria. Sugiro que, quando o calor existir de verdade (etapa 16), a página também mostre "investigating the cause" depois de um apagão do jogador: o implícito (a investigação) aparecendo pelo explícito (o site da empresa).
+- **Os rostos no Streetwire ligam a web à rua:** dá para reconhecer na calçada quem postou. Quando vierem as investigações, "ache a pessoa deste post" vira missão sem nenhuma interface nova.
+- **Os assuntos em alta pelos dados** (evento, bairro, loja) são o começo natural do índice de madrugada do Lookwise (15.17h): proponho indexar os posts pelas mesmas tags.
+
 ## 2026-10-07 — manual dos fabricantes (Opus 5.5)
 - **O custo dos nomes sorteados vai para o motor:** com nome fixo, bastaria um bitmap por logo. Com o nome sorteado, cada família precisa de uma **fonte de pontos própria** no jogo (como a 5×7 dos letreiros), com o jeito da tipografia: o estêncil, a fina arredondada, a condensada. São ~9 fontes pequenas. Proponho começar só pelas que aparecem na rua (as fachadas das operadoras) e deixar as dos aparelhos para o remake 3D.
 - **A família vale mais que o nome:** como o jogador não pode decorar nomes que mudam de cidade para cidade, a cor e o símbolo é que dizem "operadora antiga" ou "celular robusto". É um bom caso do princípio das duas camadas: a regra fica escondida (o índice do fabricante), e o que aparece é o visual.
