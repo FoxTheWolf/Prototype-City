@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-07 — manual dos fabricantes (Opus 5.5)
+- **O custo dos nomes sorteados vai para o motor:** com nome fixo, bastaria um bitmap por logo. Com o nome sorteado, cada família precisa de uma **fonte de pontos própria** no jogo (como a 5×7 dos letreiros), com o jeito da tipografia: o estêncil, a fina arredondada, a condensada. São ~9 fontes pequenas. Proponho começar só pelas que aparecem na rua (as fachadas das operadoras) e deixar as dos aparelhos para o remake 3D.
+- **A família vale mais que o nome:** como o jogador não pode decorar nomes que mudam de cidade para cidade, a cor e o símbolo é que dizem "operadora antiga" ou "celular robusto". É um bom caso do princípio das duas camadas: a regra fica escondida (o índice do fabricante), e o que aparece é o visual.
+- **Uma ideia para depois:** a operadora de desconto é a do chip descartável. O cartaz amarelo na farmácia pode ser a dica orgânica de onde zerar a reputação, sem tutorial.
+
 ## 2026-10-06 — depois da 15.9 (Opus 5.5)
 - **Eu não ouço as músicas.** Compus por teoria (a melodia cai em 82–97% nas notas do acorde, o `tests/music.ts` confere), mas o timbre e a mixagem precisam do seu ouvido. Se alguma soar sem graça, o caminho mais barato é me dizer "mais rápida", "mais triste" ou "a bateria alta demais", e eu mexo nos números, sem recompor.
 - **O alto-falante é um sistema implícito com retorno natural:** a música sai de verdade do celular. Na etapa 16, os NPCs que reagirem a ela fecham o laço das duas camadas sem nenhuma barra.
