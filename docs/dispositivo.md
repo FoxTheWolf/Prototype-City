@@ -66,3 +66,14 @@ interface DeviceApp {
 ## Onde encaixa no plano
 
 Grande sistema da **Trilha de hacking / etapa 19**, mas a **fundação (o objeto + o shell) é não-hacking e pode começar quando o usuário quiser**, em paralelo. Depende de: aparelhos 3D (celular/relógio/notebook em 3D — decidido para antes do caderno, `docs/visao.md`), tomadas (13.9c ✅, para carregar), e a técnica de telas em perspectiva (etapa 20). A parte de hacking depende da web (etapa 15, em andamento) e das pessoas/carros (16/18) para ter alvos ricos.
+
+## Visual decidido (2026-10-06, com o usuário)
+
+Base: `docs/identidade/jackdaw-v2.html` (as propostas da 1ª rodada ficam em `jackdaw-propostas.html`, só como histórico).
+- **Corpo:** o da proposta A (tela à esquerda, D-pad de 5 teclas soltas à direita, voltar vermelho, fileira de pinos e alavanca de ligar no topo), na cor **sinal** (`#ffd02e`), arredondado. Teclas grafite, para fugir do laranja e branco do Flipper; não copiar a silhueta chanfrada dele.
+- **Tela:** LCD **verde** com os pontos escuros (`#aab86a` / `#1f2a0c`), 128×64, 1 bit.
+- **Logo:** o 1 (a cabeça da gralha em silhueta, com olho e bico recortados, + JACKDAW largo + MINI numa caixinha).
+- **Gralha:** a da v2 (máscara preta, olhos claros grandes, bico grande, cabeça felpuda com tufo, cachecol), desenhada em vetor e convertida para 1 bit (supersample 8x, moda por ponto, pontilhado ordenado em 5 tons). Aprovada "por enquanto".
+- **Cada ferramenta tem a própria cena da gralha** (como as animações do Flipper): os apps pedem uma cena pelo nome; as cenas das ferramentas não-hacking são do Opus 5.5, e as de hacking podem ser só a gralha com um objeto (antena, lupa), desenhadas por qualquer sessão.
+- **Módulos de expansão:** placas que encaixam nos pinos do topo (com antena etc.), candidatos a forma física dos upgrades.
+- **No jogo:** a tela é uma textura própria de 128×64 lida pela GPU na resolução do monitor (a técnica das telas em perspectiva), não a camada HD; ver a resposta de 2026-10-06 em `docs/visao.md`.
