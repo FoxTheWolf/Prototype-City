@@ -148,7 +148,9 @@ function viewLight(I: Inside | null, px: number, py: number, dirX: number, dirY:
   const here = sample(px, py, S), g = Math.hypot(ex, ey);
   if (I) { const L = insideLight(I, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
   else {
-    const base = 0.3 + 0.55 * sky.day + 0.08 * sky.moonlight + 0.8 * sky.flash;
+    // in a building's shadow the hands keep the sky's light but lose the sun's (less of a difference under clouds)
+    const shade = sky.day > 0 ? 0.55 * (1 - handSun(sky.city, px, py)) * (1 - 0.85 * sky.cloud) : 0;
+    const base = 0.3 + 0.55 * sky.day * (1 - shade) + 0.08 * sky.moonlight + 0.8 * sky.flash;
     for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
   }
   const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0;
@@ -156,6 +158,40 @@ function viewLight(I: Inside | null, px: number, py: number, dirX: number, dirY:
   VIEW_GLINT[0] = lat;
   VIEW_GLINT[1] = Math.min(1, here / 300) * (0.45 + 0.55 * Math.max(0, back)) * Math.min(1, 0.4 + g / Math.max(1, here));
   VIEW_GLINT[2] = S[0] / m; VIEW_GLINT[3] = S[1] / m; VIEW_GLINT[4] = S[2] / m; VIEW_GLINT[5] = back;
+}
+
+/** handSun's last answer, kept while the viewer and the sun stay put. */
+const HS = { x: NaN, y: NaN, sx: NaN, sy: NaN, sz: NaN, lit: 1 };
+/**
+ * Whether the sun reaches the viewer's hands (1.3 m up): 1 lit, 0 in a building's shadow. The CPU's copy of the
+ * shader's dirLit (gpu/shader.ts), over every building at once (once per step of the viewer or the sun).
+ */
+function handSun(city: City, px: number, py: number): number {
+  const [sx, sy, sz] = SUN;
+  if (Math.abs(px - HS.x) < 0.2 && Math.abs(py - HS.y) < 0.2 && Math.abs(sx - HS.sx) + Math.abs(sy - HS.sy) + Math.abs(sz - HS.sz) < 0.003) return HS.lit;
+  Object.assign(HS, { x: px, y: py, sx, sy, sz });
+  const L = Math.hypot(sx, sy);
+  if (sz <= 0 || L < 1e-4) return (HS.lit = 1);
+  const rdx = sx / L, rdy = sy / L, k = sz / L, pz = 1.3, ix = rdx !== 0 ? 1 / rdx : 1e12, iy = rdy !== 0 ? 1 / rdy : 1e12;
+  for (const B of city.buildings) {
+    let tN: number, tF: number;
+    if (B.round) {
+      const rr = (B.x1 - B.x0) * 0.5, ox = px - (B.x0 + rr), oy = py - (B.y0 + rr), qb = ox * rdx + oy * rdy, disc = qb * qb - (ox * ox + oy * oy - rr * rr);
+      if (disc <= 0) continue;
+      tN = -qb - Math.sqrt(disc); tF = -qb + Math.sqrt(disc);
+    } else {
+      const ax = (B.x0 - px) * ix, bx = (B.x1 - px) * ix, ay = (B.y0 - py) * iy, by = (B.y1 - py) * iy;
+      tN = Math.max(Math.min(ax, bx), Math.min(ay, by)); tF = Math.min(Math.max(ax, bx), Math.max(ay, by));
+      const K = B.cut;
+      if (K) {
+        const dn = K.nx * rdx + K.ny * rdy, th = (K.c - K.nx * px - K.ny * py) / dn;
+        if (dn < 0) tN = Math.max(tN, th); else if (dn > 0) tF = Math.min(tF, th); else if (K.nx * px + K.ny * py > K.c) continue;
+      }
+    }
+    if (tF <= 0.03 || tN >= tF) continue;
+    if (pz + k * Math.max(tN, 0) < B.h - 0.05) return (HS.lit = 0);
+  }
+  return (HS.lit = 1);
 }
 
 /** The floor the viewer stands in (null outdoors), with its doors' swing and its lamps made ready for this frame. */

@@ -1306,7 +1306,7 @@ function frame(now: number) {
   if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null;
-  if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
+  if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
   sitK = world.player.sit ? Math.min(1, sitK + dt / 0.4) : Math.max(0, sitK - dt / 0.3);
@@ -1342,7 +1342,7 @@ function frame(now: number) {
     // while the lid opens, the view tips down to the screen
     if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
   }
-  if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT);
+  if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);

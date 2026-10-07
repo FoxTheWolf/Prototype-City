@@ -6,6 +6,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **O corpo do celular agora é feito de cubinhos de 1 mm**, desenhado em pixels: as duas placas do deslizante (a de cima com a cor e o material do visual escolhido, a de baixo grafite com o teclado numérico), a borda arredondada, o aro cromado em volta da tela nos visuais que têm, a fenda do alto-falante e a câmera da frente. Ele aparece um pouco inclinado, com a borda de cima e o topo das teclas à mostra.
 - **As teclas saltam 1 mm e afundam de verdade quando apertadas**; os vãos entre elas ficam na sombra, e o brilho da luz mais próxima corre pela frente como antes.
 - **O nome do fabricante aparece na frente, na letra da marca**, à esquerda do alto-falante.
+- **O celular balança de leve na mão:** ao virar a câmera ele fica um pouquinho para trás e mostra a lateral ou o topo, e volta quando você para.
+- **O celular fica na sombra dos prédios:** de dia, na sombra, ele perde a luz do sol (com nuvens a diferença é menor); antes ficava sempre como se estivesse ao sol.
 
 ## 0.15.18 — As marcas da cidade (2026-10-07)
 - **Quatro fabricantes de celular em vez de seis, cada um com o seu jeito:** a gigante confiável (modelos só com números, "6230i"), a do executivo ("Courier 8820"), a da moda e da música ("glide 52") e a robusta de obra ("Anvil X3"). O nome de cada uma continua sendo da cidade; o seu celular de começo é sempre da gigante.

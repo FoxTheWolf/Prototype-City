@@ -83,7 +83,9 @@ function withKeys(V0: Vox, S: Shell, keys: KeyRect[], down: (k: Key) => boolean,
   return V;
 }
 
-let cache: { key: string; G: GBuf; ids: Map<number, Key> } | null = null;
+/** The sway's step (rad) and how far it goes either way: small, so the screen and the labels (still drawn flat over it) stay on their keys. */
+const TILT_STEP = 0.015, TILT_MAX = 0.06;
+let cache: { key: string; V: Vox; ids: Map<number, Key>; poses: Map<string, GBuf> } | null = null;
 /** The palette and the keys' light, kept while the look, its color and the keys under the cursor or pressed stay the same. */
 let paint: { key: string; pal: VoxMat[]; mul: Float32Array } | null = null;
 /** The body as last lit (x, y, r, g, b per pixel met), kept while the light stays the same (standing still). */
@@ -91,17 +93,24 @@ let lit: { key: string; px: Float32Array; n: number } | null = null;
 
 /**
  * The body into the HD layer (put: x, y in the layer's pixels), its top-left at cell (ox, oy). Keys
- * sunk come from `down`; a key under the cursor is lit a little (`hover`). The geometry is cast again
- * only when the look or the keys pressed change.
+ * sunk come from `down`; a key under the cursor is lit a little (`hover`). `tilt` sways it a little off
+ * its pose (yaw, pitch in rad, as the hand lags the eye), in steps: each step's geometry is cast once
+ * and kept until the look or the keys pressed change.
  */
 export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: number) => void, ox: number, oy: number, S: Shell, look: number, body: C3,
-  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight) {
+  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0]) {
   const pressed = keys.filter(([k]) => down(k)).map(([k]) => k).join(',');
   const ck = `${look}|${pressed}`;
   if (!cache || cache.key !== ck) {
     const ids = new Map<number, Key>();
-    const V = withKeys(base(S), S, keys, down, ids);
-    cache = { key: ck, ids, G: castVox(V, { w: PHONE_W * HD, h: PHONE_H * HD, sx: MMX / HD, sy: MMY / HD, yaw: YAW, pitch: PITCH }) };
+    cache = { key: ck, ids, V: withKeys(base(S), S, keys, down, ids), poses: new Map() };
+  }
+  const step = (a: number) => Math.round(Math.max(-TILT_MAX, Math.min(TILT_MAX, a)) / TILT_STEP);
+  const ty = step(tilt[0]), tp = step(tilt[1]), posk = `${ty},${tp}`;
+  let G = cache.poses.get(posk);
+  if (!G) {
+    G = castVox(cache.V, { w: PHONE_W * HD, h: PHONE_H * HD, sx: MMX / HD, sy: MMY / HD, yaw: YAW + ty * TILT_STEP, pitch: PITCH + tp * TILT_STEP });
+    cache.poses.set(posk, G);
   }
   const pk = `${ck}|${hover}|${body}`;
   if (!paint || paint.key !== pk) {
@@ -123,9 +132,9 @@ export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: 
     paint = { key: pk, pal, mul };
   }
   const q = (v: number) => Math.round(v * 64);
-  const lk = `${pk}|${q(L.rgb[0])},${q(L.rgb[1])},${q(L.rgb[2])},${q(L.lat)},${q(L.str)},${q(L.glint[0])},${q(L.glint[1])},${q(L.glint[2])}`;
+  const lk = `${pk}|${posk}|${q(L.rgb[0])},${q(L.rgb[1])},${q(L.rgb[2])},${q(L.lat)},${q(L.str)},${q(L.glint[0])},${q(L.glint[1])},${q(L.glint[2])}`;
   if (!lit || lit.key !== lk) {
-    const G = cache.G, px = lit?.px.length === G.w * G.h * 5 ? lit.px : new Float32Array(G.w * G.h * 5);
+    const px = lit?.px.length === G.w * G.h * 5 ? lit.px : new Float32Array(G.w * G.h * 5);
     let n = 0;
     shadeVox(G, paint.pal, L, (x, y, r, g, b) => { px[n++] = x; px[n++] = y; px[n++] = r; px[n++] = g; px[n++] = b; }, paint.mul);
     lit = { key: lk, px, n };

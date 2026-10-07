@@ -95,11 +95,17 @@ const GLOSS: Record<string, number> = { matte: 0.2, gloss: 0.6, metal: 0.42, rub
 /** The glint, eased over time so it does not jump from frame to frame. */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
 
+/**
+ * The sway: the hand lags the eye, so as the view turns the body turns a little the other way and eases
+ * back when it stops (yaw, pitch in rad, to body3d.ts), from the camera's last angles.
+ */
+const SWAY = { yaw: NaN, pitch: 0, ty: 0, tp: 0 };
+
 /** Where this frame drew the phone's lit screen (interface cells: x, y, w, h), for the bloom; null when off or not drawn. */
 export const SCREEN: { at: number[] | null } = { at: null };
 
-export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array) {
-  if (P.raise < 0.01 && P.peek < 0.01 && P.handy < 0.01) return;
+export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array, cam?: { yaw: number; pitch: number }) {
+  if (P.raise < 0.01 && P.peek < 0.01 && P.handy < 0.01) { SWAY.yaw = NaN; return; }
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
   const SHL = SHELLS[P.look], KEYS = keysFor(P.look), CY = KEYS_Y;
@@ -108,6 +114,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const Lr = light[0], Lg = light[1], Lb = light[2];
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
+  if (cam) {
+    // the view's turn this frame (unwrapped), as a speed; the body leans with it, a fifth of a second behind
+    const dy = Number.isNaN(SWAY.yaw) ? 0 : Math.atan2(Math.sin(cam.yaw - SWAY.yaw), Math.cos(cam.yaw - SWAY.yaw)), dp = Number.isNaN(SWAY.yaw) ? 0 : cam.pitch - SWAY.pitch;
+    SWAY.yaw = cam.yaw; SWAY.pitch = cam.pitch;
+    const inv = dt > 1e-4 ? 1 / dt : 0, k = 1 - Math.exp(-dt / 0.12);
+    SWAY.ty += (Math.max(-0.06, Math.min(0.06, dy * inv * 0.012)) - SWAY.ty) * k;
+    SWAY.tp += (Math.max(-0.045, Math.min(0.045, dp * inv * 0.012)) - SWAY.tp) * k;
+  }
   GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
   GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
   // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by
@@ -156,7 +170,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const HB = hdLayer();
   if (HB) {
     // 15.19: the body in little cubes, in the HD layer under the interface (body3d.ts); the key labels stay glyphs over it
-    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] });
+    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp]);
     // the maker's name on the face, left of the earpiece, in its family's dot font (15.18)
     const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker), F = FAMILIES[fam], tc = F[lum(top) > 130 ? 'light' : 'dark'][2];
     const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 4) * HD, oy * HD, (ox + 29) * HD, (oy + 3) * HD);
