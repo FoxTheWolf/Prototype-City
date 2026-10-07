@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@600;800;900&family=Bitter:wght@700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; --cream: #f1e4c8; --cafe: #4a2c1a; --pet: #6b4a2e; --pet2: #2e1d12; --pet3: #a27a52; --acc: #e0823a; }
+  :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; --cream: #f1e4c8; --cafe: #4a2c1a; --pet: #6b4a2e; --pet2: #7a5838; --pet3: #a27a52; --acc: #e0823a; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
   main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
@@ -132,7 +132,7 @@
     <h3>Os botões, um por um</h3>
     <div class="grid4" id="buttons"></div>
     <h3>Teclas</h3>
-    <p><kbd>F6</kbd> ou <kbd>Ctrl</kbd>+<kbd>L</kbd> o endereço · <kbd>Backspace</kbd> voltar · <kbd>F5</kbd> recarregar · <kbd>Esc</kbd> parar · <kbd>Home</kbd> o portal · <kbd>Ctrl</kbd>+<kbd>T</kbd> aba nova · <kbd>Ctrl</kbd>+<kbd>Tab</kbd> próxima aba · <kbd>Ctrl</kbd>+<kbd>W</kbd> fecha a aba · <kbd>Ctrl</kbd>+<kbd>D</kbd> favorito · <kbd>Tab</kbd> próximo link · <kbd>F10</kbd> sai. Os links visitados ficam roxos (pelo cache).</p>
+    <p><kbd>F6</kbd> ou <kbd>Ctrl</kbd>+<kbd>L</kbd> o endereço · <kbd>Backspace</kbd> voltar · <kbd>F5</kbd> recarregar · <kbd>Esc</kbd> parar · <kbd>Home</kbd> o portal · <kbd>Ctrl</kbd>+<kbd>T</kbd> aba nova · <kbd>Ctrl</kbd>+<kbd>Tab</kbd> próxima aba · <kbd>Ctrl</kbd>+<kbd>W</kbd> fecha a aba · <kbd>Ctrl</kbd>+<kbd>D</kbd> favorito · <kbd>Tab</kbd> próximo link · <kbd>F10</kbd> sai. Os links visitados ficam roxos (pelo histórico).</p>
   </section>
 
   <section id="mascote">
@@ -151,9 +151,9 @@
     <div class="tbl"><table>
       <tr><th>Estado</th><th>De onde vem</th><th>Como aparece</th></tr>
       <tr><td>carregando</td><td>a velocidade do Wi-Fi (<code>sim/wifi.ts</code>) e o peso da página (kb)</td><td>"Looking up host…", "Connecting…", "Waiting for…", "Transferring data from…"; a página desce de cima para baixo; o furão cava</td></tr>
-      <tr><td>server not found</td><td>o servidor está num setor em apagão (<code>subAt</code> da empresa)</td><td>"Server not found. Ferret can't find the server at www.…"; o furão perdido; "Try Again"</td></tr>
+      <tr><td>server not found</td><td>o endereço não existe (erro de digitação, site que nunca houve)</td><td>"Server not found. Ferret can't find the server at www.…"; o furão perdido; "Try Again"</td></tr>
       <tr><td>sem rede</td><td>o notebook sem Wi-Fi, ou o rádio desligado</td><td>"Offline. Ferret is not connected to a network."; a barra de status mostra "no network"</td></tr>
-      <tr><td>tempo esgotado</td><td>o sinal fraco demais (longe do ponto)</td><td>"The connection has timed out." depois de 8 s cavando</td></tr>
+      <tr><td>tempo esgotado</td><td>o servidor está num setor em apagão (<code>subAt</code> da empresa; o código já faz assim) ou o sinal fraco demais</td><td>"The connection has timed out." depois de 8 s cavando</td></tr>
       <tr><td>certificado</td><td>um site de https com o certificado vencido ou falso (o banco pequeno, o fórum)</td><td>uma faixa amarela e o cadeado partido: "This connection is untrusted"; "Add Exception…" deixa entrar</td></tr>
       <tr><td>404</td><td>um endereço que não existe no site</td><td>a página do próprio site (nas cores dele), "404 Not Found", nunca a do Ferret</td></tr>
       <tr><td>fora do índice</td><td>a busca não acha (loja pequena sem site, página escondida)</td><td>o Lookwise: "Your search did not match any documents."; a página escondida só abre pelo endereço exato</td></tr>
@@ -226,17 +226,17 @@
       <div class="card"><svg viewBox="0 0 576 360" id="lwHome"></svg><div class="cap"><b>A página inicial.</b> Branca, quase vazia, como os buscadores de 2008: o logo, uma frase, o campo e dois botões. "Lookwise Search" busca; "Owl's Pick" vai direto para o primeiro resultado.</div></div>
       <div class="card"><svg viewBox="0 0 576 360" id="lwNight"></svg><div class="cap"><b>De madrugada.</b> A mesma página, com a coruja voando e a conta do que o rastreador achou naquela noite. É o jeito orgânico de explicar por que um site novo só aparece no dia seguinte.</div></div>
     </div>
-    <div class="card"><svg viewBox="0 0 768 544" id="lwRes"></svg><div class="cap"><b>Os resultados.</b> Em cima, os resultados locais com o mapa e os pinos A, B, C (o endereço real das empresas da simulação). Depois a web: o título, o trecho com a palavra buscada em negrito, o endereço em verde, "Cached" e "Similar pages". À direita, os links patrocinados, pagos pelas empresas da cidade. Embaixo, a paginação são pares de olhos: a página atual é a que está de olhos abertos.</div></div>
+    <div class="card"><svg viewBox="0 0 768 544" id="lwRes"></svg><div class="cap"><b>Os resultados.</b> Em cima, os resultados locais com o mapa e os pinos A, B, C (o endereço real das empresas da simulação). Depois a web: o título, o trecho com a palavra buscada em negrito, o endereço em verde e "Similar pages" (sem "Cached": o Lookwise não guarda cópia das páginas). À direita, os links patrocinados, pagos pelas empresas da cidade. Embaixo, a paginação são pares de olhos: a página atual é a que está de olhos abertos.</div></div>
     <div class="row">
       <div class="card"><svg viewBox="0 0 576 216" id="lwNone"></svg><div class="cap"><b>Fora do índice.</b> A loja pequena sem site, a página escondida, o fórum: "did not match any documents", com a coruja de cabeça tombada e a dica da lista telefônica.</div></div>
-      <div class="card"><svg viewBox="0 0 576 216" id="lwCache"></svg><div class="cap"><b>A cópia em cache.</b> "Cached" abre a página como a coruja a viu na última madrugada, com a faixa do Lookwise em cima. Funciona mesmo com o servidor no escuro do apagão: o jogador lê o cardápio de uma pizzaria que está fora do ar.</div></div>
+      <div class="card"><svg viewBox="0 0 576 216" id="lwCache"></svg><div class="cap"><b>Fora do ar, sem cópia.</b> O índice é de ontem, então a pizzaria apagada continua nos resultados; o clique é que não chega: o furão cava os 8 s e a página cai em "timed out". Não há cache de propósito: ver os sites caírem é como o jogador sente o tamanho do apagão que causou, e derrubar um site vira objetivo de trabalho.</div></div>
     </div>
     <h3>O índice, pelo bicho</h3>
     <div class="tbl"><table>
       <tr><th>O quê</th><th>Como funciona</th><th>Como o jogador percebe</th></tr>
       <tr><td>o que entra</td><td>a página inicial de cada site de empresa, as seções do portal, os posts públicos do Streetwire e as manchetes</td><td>buscar "pizza" acha as pizzarias com site, a notícia e o post</td></tr>
       <tr><td>quando entra</td><td>o índice é refeito uma vez por noite, entre 2 h e 5 h do jogo</td><td>a coruja voando na página inicial; o site novo, a notícia de ontem e o post só aparecem na manhã seguinte</td></tr>
-      <tr><td>o cache</td><td>cada página indexada guarda a cópia daquela noite</td><td>"Cached" abre a página mesmo com o servidor no apagão, mas com o preço e o "OPEN NOW" de ontem</td></tr>
+      <tr><td>sem cache</td><td>o índice guarda só o título e o trecho, nunca a página (decidido em 2026-10-07)</td><td>no apagão, os resultados ainda apontam para os sites apagados, mas eles não abrem: o estrago aparece</td></tr>
       <tr><td>o que não entra</td><td>loja sem site, as páginas de dentro dos sites, o Switchboard, o webmail</td><td>"did not match any documents"; o fórum só se acha pelo endereço que alguém passa</td></tr>
       <tr><td>locais</td><td>as empresas do tipo buscado mais perto de onde o jogador está (pelo Wi-Fi em que está conectado)</td><td>o mapa com A, B, C muda quando ele busca de outro cybercafé</td></tr>
       <tr><td>patrocinados</td><td>empresas da cidade pagam para aparecer na direita (na economia, etapa 17, viram um gasto delas)</td><td>o anúncio da loja que está indo mal some; o da que vai bem aparece em toda busca</td></tr>
@@ -269,7 +269,7 @@
       <tr><td><code>src/web/sites.ts</code></td><td>os selos pela semente e pelo molde; o site da Burrow Labs (burrow-labs.net, com "Get Ferret" e as notas de versão) como uma empresa da cidade</td></tr>
       <tr><td><code>src/render/hd.ts</code> e o desenho das páginas</td><td>uma camada HD <i>de fundo</i>, desenhada antes dos glifos (brilho, abas, biséis, ladrilhos, sombra da coluna), além da de frente; o kit da seção 7 como funções de HD; as fotos pintadas pela semente e o mapa pela grade da cidade</td></tr>
       <tr><td><code>src/web/sites.ts</code> (os moldes)</td><td>os seis moldes refeitos como anos da web; os anúncios vindos de <code>city.businesses</code>; o letreiro e o pisca pelo relógio do jogo</td></tr>
-      <tr><td><code>src/web/sites.ts</code> (o Lookwise)</td><td>o logo da coruja em HD e o ícone de 16 px; o índice refeito de madrugada (hoje é feito uma vez por cidade), a cópia em cache, os resultados locais com mapa e pinos, os patrocinados e a paginação de olhos; a coruja na página inicial</td></tr>
+      <tr><td><code>src/web/sites.ts</code> (o Lookwise)</td><td>o logo da coruja em HD e o ícone de 16 px; o índice refeito de madrugada (hoje é feito uma vez por cidade), sem cópia em cache, os resultados locais com mapa e pinos, os patrocinados e a paginação de olhos; a coruja na página inicial</td></tr>
       <tr><td><code>src/phone/webapp.ts</code>, <code>src/locale/en.json</code></td><td>"Lodestar Mini" vira "Ferret Mini"; o ícone do app é o furão em 16 px</td></tr>
       <tr><td><code>src/laptop/wm.ts</code>, o comando em <code>shell.ts</code></td><td>o comando <code>ferret</code> (com <code>lodestar</code> como apelido); só a linha do nome no shell, pela emenda segura de <code>docs/mapa-shell.md</code></td></tr>
     </table></div>
@@ -286,9 +286,9 @@ const $ = (id) => document.getElementById(id);
 let uid = 0;
 
 // ---- the brand ----
-const B = { cream: '#f1e4c8', shade: '#d9c6a0', line: '#b89c72', cafe: '#4a2c1a', ear: '#b07c58', muzzle: '#fbf6ea', eye: '#120a06', nose: '#2e170c', pet: '#6b4a2e', pet2: '#2e1d12', pet3: '#8a6440' };
+const B = { cream: '#f1e4c8', shade: '#d9c6a0', line: '#b89c72', cafe: '#4a2c1a', ear: '#b07c58', muzzle: '#fbf6ea', eye: '#120a06', nose: '#2e170c', pet: '#6b4a2e', pet2: '#7a5838', pet3: '#8a6440' };
 const PAL = {
-  color: { hole: B.pet2, rim: B.pet, mer: B.pet3, merOp: .8, fur: '#f4e9d3', crown: '#cfae84', line: '#a88a66', mask: '#55361f', half: '#a98563', neck: B.cafe, ear: '#d9a08c', muzzle: '#fffaf0', eye: B.eye, glint: '#fff', nose: '#e0948c', nostril: '#9a5550', whisk: '#b8a488' },
+  color: { hole: B.pet2, lit: ['#a8845a', '#5a3c24'], rim: B.cafe, mer: '#c4a27a', merOp: .7, fur: '#f4e9d3', crown: '#cfae84', line: '#a88a66', mask: '#55361f', half: '#a98563', neck: B.cafe, ear: '#d9a08c', muzzle: '#fffaf0', eye: B.eye, glint: '#fff', nose: '#e0948c', nostril: '#9a5550', whisk: '#b8a488' },
   mono: { hole: B.cafe, rim: B.cafe, mer: '#efe6d6', merOp: .35, fur: '#efe6d6', crown: '#efe6d6', line: B.cafe, mask: B.cafe, half: B.cafe, neck: B.cafe, ear: B.cafe, muzzle: '#efe6d6', eye: '#efe6d6', glint: B.cafe, nose: B.cafe, nostril: '#efe6d6', whisk: B.cafe },
   neg: { hole: '#1b1a18', rim: B.cream, mer: B.cream, merOp: .3, fur: B.cream, crown: B.cream, line: B.cream, mask: '#1b1a18', half: '#1b1a18', neck: B.cream, ear: '#1b1a18', muzzle: B.cream, eye: B.cream, glint: '#1b1a18', nose: '#1b1a18', nostril: B.cream, whisk: B.cream },
 };
@@ -302,7 +302,8 @@ function ferret(parent, o = {}) {
   const id = 'fc' + (++uid), defs = el('defs', {}, g);
   el('circle', { cx: 100, cy: 96, r: 68 }, el('clipPath', { id }, defs));
   el('path', { d: HEAD }, el('clipPath', { id: id + 'h' }, defs));
-  el('circle', { cx: 100, cy: 96, r: 72, fill: P.hole }, g);
+  let hole = P.hole; if (P.lit) { const gi = 'th' + (++uid), gr = el('radialGradient', { id: gi, cx: .5, cy: .42, r: .6 }, el('defs', {}, g)); el('stop', { offset: 0, 'stop-color': P.lit[0] }, gr); el('stop', { offset: 1, 'stop-color': P.lit[1] }, gr); hole = `url(#${gi})`; }
+  el('circle', { cx: 100, cy: 96, r: 72, fill: hole }, g);
   if (o.meridians !== false) {
     const m = el('g', { stroke: P.mer, 'stroke-width': 2.2, fill: 'none', opacity: P.merOp, 'clip-path': `url(#${id})` }, g);
     for (const rx of [26, 52]) el('ellipse', { cx: 100, cy: 96, rx, ry: 72 }, m);
@@ -346,7 +347,7 @@ function wordmark(g, x, y, size, fill, mini) {
 }
 
 // the 16 px icon, drawn by hand; the 32 px one built from it and refined (the ears' insides, a lighter rim inside, the muzzle)
-const PX = { '.': null, D: B.pet2, R: B.pet, c: B.cream, s: B.shade, m: B.cafe, k: B.eye, w: B.muzzle, n: B.nose, e: '#d9a08c', t: '#cfae84', p: '#e0948c', l: '#4a3220' };
+const PX = { '.': null, D: B.pet2, R: B.cafe, c: B.cream, s: B.shade, m: B.cafe, k: B.eye, w: B.muzzle, n: B.nose, e: '#d9a08c', t: '#cfae84', p: '#e0948c', l: '#4a3220' };
 const I16 = [
   '.....RRRRRR.....', '...RRDDDDDDRR...', '..RDcDDDDDDcDR..', '.RDcettttttecDR.', '.RDccccccccccDR.', 'RDcmmmmmmmmmmcDR', 'RDcmkmmmmmmkmcDR', 'RDccwmmppmmwccDR', 'RDDcwwwppwwwcDDR', 'RDDcwwwwwwwwcDDR', 'RDDDcwwwwwwcDDDR', '.RDDmccccccmDDR.', '.RDDmmccccmmDDR.', '..RRmmccccmmRR..', '..sccRRRRRRccs..', '................'];
 const I32 = (() => {
@@ -429,7 +430,7 @@ $('ascii').textContent = [
 // swatches
 $('swatches').innerHTML = [
   [B.cream, 'Pelagem', '#f1e4c8 · a cabeça, as patas'], [B.shade, 'Sombra', '#d9c6a0 · o pescoço, o contorno claro'], [B.cafe, 'Café', '#4a2c1a · a máscara, o nome'],
-  [B.muzzle, 'Focinho', '#fbf6ea · o focinho, o papel do site'], [B.pet, 'Terra', '#6b4a2e · o aro, a assinatura'], [B.pet2, 'Toca', '#2e1d12 · o fundo da toca'], ['#8a6440', 'Meridianos', '#8a6440 · o globo'], ['#e0948c', 'Nariz', '#e0948c · o nariz, o dentro das orelhas'],
+  [B.muzzle, 'Focinho', '#fbf6ea · o focinho, o papel do site'], [B.pet, 'Terra', '#6b4a2e · a assinatura, a seta, a barra; o aro da toca é o café, mais escuro'], [B.pet2, 'Toca', '#7A5838 · o fundo da toca (no vetor, um degradê de #A8845A atrás da cabeça a #5A3C24 junto do aro; chapado nos ícones)'], ['#8a6440', 'Meridianos', '#8a6440 · o globo'], ['#e0948c', 'Nariz', '#e0948c · o nariz, o dentro das orelhas'],
   ['linear-gradient(#f2f3f5,#c5c9cf)', 'Prata', '#f2f3f5 → #c5c9cf · a moldura'], ['#fff8c4', 'Amarelo https', '#fff8c4 · o endereço seguro'],
 ].map(([c, n, d]) => `<div><i style="background:${c}"></i><span><b>${n}</b><em>${d}</em></span></div>`).join('');
 
@@ -956,14 +957,14 @@ function lookHead(C, W, q) {
 }
 /** The query's words in bold inside the snippets, as every search engine did. */
 function boldWord(C, y, n, q) { for (let k = 0; k < n; k++) { const row = C.c[y + k]; if (!row) continue; const line = row.map((z) => z.ch).join('').toLowerCase(); let i = line.indexOf(q.toLowerCase()); while (i >= 0) { for (let j = 0; j < q.length; j++) row[i + j].b = 1; i = line.indexOf(q.toLowerCase(), i + q.length); } } }
-/** The results page: local results with the map, the web results with Cached, sponsored links on the right, the eyes for pages. */
+/** The results page: local results with the map, the web results, sponsored links on the right, the eyes for pages. */
 function lookResults(W, H, q) {
   const t = LOOKT, C = new Cells(W, H, t.bg), rw = W >= 80 ? 26 : 0, mw = W - rw - 3;
   lookHead(C, W, q); const sum = `Results 1 - 10 of about 37 for ${q} (0.41 seconds)`; C.put(W - sum.length - 1, 4, sum, t.fg, t.bar);
   C.rich(2, 6, `[Local results for ${q}] near Union Sq`, t.fg, t.link); K.map(C, 2, 7, 16, 5, 404, ['A', 'B', 'C']);
   [["Rosetti's Pizza", '412 Canal St', '555-2290'], ["Gino's Slice", '88 Dock St', '555-7314'], ['Burger Barn', '9th St & Marlow', '555-0420']].forEach(([n, a, p], i) => { C.put(20, 7 + i * 2, 'ABC'[i], [226, 53, 42], null, { b: 1 }); C.put(22, 7 + i * 2, n, t.link, null, { u: 1 }); C.put(22, 8 + i * 2, `${a} - ${p}`, t.dim); });
   const res = [["Rosetti's Pizza - Since 1971", 'Family business serving the neighborhood. Large pie + 2 sodas for $9.99. Open daily 11 am - 10 pm.', 'www.rosettispizza.com/'], ['Where to eat after midnight - Halden Online', 'Our readers picked the best late-night pizza, noodles and diners in the city, from the docks to Union Sq.', 'www.halden-online.com/news/'], ['streetwire: #pizza', 'petrovs_coffee: we have no pizza but we have cocoa. mel_on_9th: Rosettis was closed in the blackout', 'www.streetwire.com/tag/pizza']];
-  let y = 13; for (const [ti, sn, u] of res) { if (y > H - 6) break; C.put(2, y, ti.slice(0, mw), t.link, null, { u: 1 }); const n = C.wrap(2, y + 1, mw - 2, sn, t.fg, null, 2); C.rich(2, y + 1 + n, `${u} - 12k - [Cached] - [Similar pages]`, t.url, t.link); boldWord(C, y + 1, n, q); y += 3 + n; }
+  let y = 13; for (const [ti, sn, u] of res) { if (y > H - 6) break; C.put(2, y, ti.slice(0, mw), t.link, null, { u: 1 }); const n = C.wrap(2, y + 1, mw - 2, sn, t.fg, null, 2); C.rich(2, y + 1 + n, `${u} - 12k - [Similar pages]`, t.url, t.link); boldWord(C, y + 1, n, q); y += 3 + n; }
   if (rw) { const ax = W - rw - 1; C.hd.push((g, X, Y) => el('line', { x1: X(ax - 1), x2: X(ax - 1), y1: Y(6), y2: Y(H - 4), stroke: '#c9d7f1' }, g)); C.put(ax, 6, 'Sponsored Links', t.dim);
     [['Burger Barn', 'Two Double Barns for $3!', 'Open late, every district.', 'www.burgerbarn.com'], ['Pizza delivered fast', 'Order online from', "Rosetti's in 30 minutes.", 'www.rosettispizza.com'], ['Cellmart', 'Prepaid SIM only $9.99', 'Free phone with a plan.', 'www.cellmart.com']].forEach(([a, b1, b2, u], i) => { const yy = 8 + i * 5; C.put(ax, yy, a, t.link, null, { u: 1 }); C.put(ax, yy + 1, b1, t.fg); C.put(ax, yy + 2, b2, t.fg); C.put(ax, yy + 3, u, t.url); }); }
   C.hd.push((g, X, Y, a, b) => { const y0 = Y(H - 3), mid = X(W / 2 - 8), r = b * .28; for (let i = 0; i < 6; i++) { const ex = mid + i * a * 3.4, on = i === 0; for (const sg of [-1, 1]) { const cx = ex + sg * r * 1.08; el('circle', { cx, cy: y0, r, fill: on ? OW.amber : '#fff', stroke: OW.ink, 'stroke-width': b * .09 }, g); if (on) el('circle', { cx, cy: y0, r: r * .42, fill: OW.pupil }, g); else el('line', { x1: cx - r * .6, x2: cx + r * .6, y1: y0, y2: y0, stroke: OW.ink, 'stroke-width': 1 }, g); } htxt(g, ex, y0 + b * .95, String(i + 1), a / .6, { fill: on ? '#000' : '#11c', 'text-anchor': 'middle', 'text-decoration': on ? 'none' : 'underline' }); } htxt(g, mid + 6 * a * 3.4, y0 + b * .95, 'Next', a / .6, { fill: '#11c', 'text-decoration': 'underline' }); });
@@ -1247,12 +1248,7 @@ lookHome(96, 30, { q: 'pizza near union sq' }).draw($('lwHome'), 0, 0, 6, 12);
 lookHome(96, 30, { night: 1 }).draw($('lwNight'), 0, 0, 6, 12);
 lookResults(96, 34, 'pizza').draw($('lwRes'), 0, 0, 8, 16);
 lookNone(96, 18, "sal's deli").draw($('lwNone'), 0, 0, 6, 12);
-(() => {
-  const s = $('lwCache'), C = new Cells(96, 3, [255, 251, 214]);
-  C.put(1, 0, "This is Lookwise's cache of", [0, 0, 0]); C.put(29, 0, 'www.rosettispizza.com/', [17, 17, 204], null, { u: 1 }); C.put(1, 1, 'as the owl saw it on Feb 21, 2008 03:12. The current page could have changed.', [0, 0, 0]);
-  C.hd.push((g, X, Y, a, b) => { pixMap(g, X(94) - 16, Y(0) + 4, 1, OWL16, OWLPAL); el('line', { x1: X(0), x2: X(96), y1: Y(3) - .5, y2: Y(3) - .5, stroke: '#c9b458' }, g); });
-  C.draw(s, 0, 0, 6, 12); bizSite(96, 30, 'Classic', 'pizza', THEMES[1], rng(11)).draw(s, 0, 36, 6, 12);
-})();
+errPage(96, 18, 'timeout', 'www.rosettispizza.com').draw($('lwCache'), 0, 0, 6, 12);
 </script>
 </body>
 </html>
