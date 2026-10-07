@@ -82,7 +82,7 @@
   </header>
   <nav class="toc">
     <a href="#aparelho">1 · O aparelho</a><a href="#estagios">2 · Os estágios</a><a href="#vistas">3 · As vistas</a><a href="#cores">4 · Cores e materiais</a>
-    <a href="#teclas">5 · Teclas e sons</a><a href="#tela">6 · A tela</a><a href="#variacoes">7 · Variações</a><a href="#fone">8 · O fone</a>
+    <a href="#teclas">5 · Teclas e sons</a><a href="#tela">6 · A tela</a><a href="#pixels">6b · A tela no jogo</a><a href="#variacoes">7 · Variações</a><a href="#fone">8 · O fone</a>
     <a href="#jogo">9 · No jogo</a><a href="#regras">10 · Regras</a>
   </nav>
 
@@ -197,6 +197,29 @@
       <tr><td>rodapé</td><td>sempre as duas ações das teclas de função: a da esquerda (Menu, Open, Save…) e a da direita (Back, Clear…)</td></tr>
       <tr><td>a arte de hoje</td><td>a interface atual (42 × 26 células + HD) é portada para a textura: uma célula vira ~5,7 × 15 px (ou a interface ganha linhas a mais), e os ícones e fotos HD passam a ter pixels de verdade</td></tr>
       <tr><td>à noite</td><td>a tela não segue a luz da cena: é ela que ilumina (o rosto do jogador, a mão, o chão perto)</td></tr>
+    </table></div>
+  </section>
+
+  <section id="pixels">
+    <h2>6b · A tela no jogo <small>168 × 168 pixels do celular, 2026-10-07</small></h2>
+    <p class="lead">No jogo, a tela do celular mede 336 × 338 pixels num monitor 1080p, quase quadrada (o 240 × 400 em pé acima é o do desenho do aparelho e não cabe). A tela passa a ser uma grade de <b>168 × 168 pixels do celular</b>, cada um com 2 × 2 pixels do monitor: nítida, com cara de 2008 (o Palm Centro de 2008 tinha tela quadrada). Noutras resoluções, a maior escala inteira que couber, com a sobra em preto. Tudo aqui (fontes, ícones, cores) é desenhado por código e vai igual para o jogo.</p>
+    <div class="grid4">
+      <div class="card"><canvas data-scr="grid" data-grid="1" width="504" height="504"></canvas><div class="cap"><b>A grade e as letras:</b> barra de estado de 10 px, rodapé das teclas de função de 11 px. A pequena (3 × 5, só maiúsculas) para rótulos e a barra; a de texto (5 × 7 com minúsculas, que descem) para o resto; o relógio é a de texto × 3.</div></div>
+      <div class="card"><canvas data-scr="standby" width="504" height="504"></canvas><div class="cap"><b>Espera:</b> a hora grande, a data, a operadora; os avisos em cartões com a cor do app na borda (o escolhido aceso); o painel da música com o visualizador e a barra.</div></div>
+      <div class="card"><canvas data-scr="menu" width="504" height="504"></canvas><div class="cap"><b>Menu:</b> 4 × 4 ícones de 16 px (o quadrado brilhante de 2008 com o desenho em branco), o nome em baixo; o escolhido numa moldura, o nome e uma linha sobre o app no pé.</div></div>
+      <div class="card"><canvas data-scr="messages" width="504" height="504"></canvas><div class="cap"><b>Mensagens:</b> a barra de título com o ícone; cada conversa com o rosto (as iniciais na cor do nome), o nome, a hora e o começo do texto; um ponto azul-gelo nas não lidas.</div></div>
+      <div class="card"><canvas data-scr="thread" width="504" height="504"></canvas><div class="cap"><b>Conversa e escrever:</b> os balões (os seus à direita, em azul), a hora ao lado; embaixo a resposta, a palavra do T9 sublinhada, o modo e os caracteres que restam.</div></div>
+      <div class="card"><canvas data-scr="mapScreen" width="504" height="504"></canvas><div class="cap"><b>Mapa:</b> as cores dos mapas de celular da época (chão claro, ruas brancas, avenidas amarelas, parques verdes, prédios do cinza ao azul pela altura); a seta do jogador, o alfinete, a escala e o cartão do lugar.</div></div>
+      <div class="card"><canvas data-scr="tunes" width="504" height="504"></canvas><div class="cap"><b>Tunes:</b> a capa em pixels feita do nome da música, o título e a banda, o visualizador grande, a barra, o volume em degraus.</div></div>
+      <div class="card"><canvas data-scr="dialer" width="504" height="504"></canvas><div class="cap"><b>Discador:</b> as últimas chamadas em cima; o número grande à direita, o cursor azul-gelo.</div></div>
+    </div>
+    <div class="tbl"><table>
+      <tr><th>regra</th><th></th></tr>
+      <tr><td>tamanho</td><td>168 × 168; barra de estado 10 px, rodapé 11 px, conteúdo 147 px; margem de 4 px nas laterais</td></tr>
+      <tr><td>letras</td><td>pequena 3 × 5 (casa 4 × 6: 42 colunas, a mesma densidade de hoje) só em maiúsculas; texto 5 × 7 com minúsculas (casa 6 × 10: 28 colunas); relógio = texto × 3. Nunca uma fonte de arquivo</td></tr>
+      <tr><td>ícones</td><td>16 × 16: o quadrado na cor do app, mais claro em cima, o desenho de 10 × 10 em branco com sombra; os mesmos desenhos (10 × 10) servem de ícone pequeno nas barras de título</td></tr>
+      <tr><td>cores</td><td>o tema de hoje continua (os seis temas do Settings trocam as cores); o padrão: fundo #0b1219, texto #dceeff, apagado #6f8aa0, acento azul-gelo #8fd3ff, escolha #1f4a6e, destaque #ffc45a</td></tr>
+      <tr><td>o porte</td><td>o <code>Lcd</code> passa a pintar pixels (uma tela 168 × 168 guardada entre quadros, repintada só quando muda); as telas de hoje em caracteres são portadas uma a uma, nesta ordem: espera, menu, mensagens, discador, mapa, Tunes, depois o resto</td></tr>
     </table></div>
   </section>
 
@@ -617,6 +640,417 @@ addEventListener('load', () => fontsIn().then(() => {
   ['scrF0', 'scrF1', 'scrF2', 'scrCover', 'scrV1', 'scrSh', 'scrE'].forEach(c => fillScreens(c, { screen: 'standby' }));
   fillScreens('scrF3', { screen: 'dial', digits: '555 0148' }); fillScreens('scrV2', { screen: 'menu', sel: 0 });
 }));
+</script>
+<script>
+// Manual do celular, seção 6: a tela em pixels (168 x 168). Desenha as telas de referência que o jogo
+// vai copiar: as fontes, os ícones e as cores daqui são as que vão para src/phone (tudo em código).
+'use strict';
+(() => {
+const W = 168, H = 168, STATUS = 10, SOFT = 11;
+const C = {
+  bg: '#0b1219', bg2: '#060b10', ink: '#dceeff', dim: '#6f8aa0', ice: '#8fd3ff', sel: '#1f4a6e', selHi: '#2d6491',
+  bar: '#15212c', barHi: '#22354a', hi: '#ffc45a', bad: '#ff7a5a', green: '#50e678', red: '#ff5046', white: '#ffffff',
+};
+
+// ---------- the fonts ----------
+// small: 3 x 5, capitals, digits and signs (a cell of 4 x 6); each a row of 3 per line, top to bottom
+const F35 = {
+  A: '.#.#.#####.##.#',
+  B: '##.#.###.#.###.',
+  C: '.###..#..#...##',
+  D: '##.#.##.##.###.',
+  E: '####..##.#..###',
+  F: '####..##.#..#..',
+  G: '.###..#.##.#.##',
+  H: '#.##.#####.##.#',
+  I: '###.#..#..#.###',
+  J: '..#..#..##.#.#.',
+  K: '#.##.###.#.##.#',
+  L: '#..#..#..#..###',
+  M: '#.########.##.#',
+  N: '##.#.##.##.##.#',
+  O: '.#.#.##.##.#.#.',
+  P: '##.#.###.#..#..',
+  Q: '.#.#.##.###..##',
+  R: '##.#.###.#.##.#',
+  S: '.###...#...###.',
+  T: '###.#..#..#..#.',
+  U: '#.##.##.##.####',
+  V: '#.##.##.##.#.#.',
+  W: '#.##.########.#',
+  X: '#.##.#.#.#.##.#',
+  Y: '#.##.#.#..#..#.',
+  Z: '###..#.#.#..###',
+  '0': '####.##.##.####',
+  '1': '.#.##..#..#.###',
+  '2': '##...#.#.#..###',
+  '3': '##...#.#...###.',
+  '4': '#.##.####..#..#',
+  '5': '####..##...###.',
+  '6': '.###..####.####',
+  '7': '###..#.#..#..#.',
+  '8': '####.#####.####',
+  '9': '####.####..###.',
+  ':': '....#.....#....',
+  '.': '.............#.',
+  ',': '..........#.#..',
+  '-': '......###......',
+  '/': '..#..#.#.#..#..',
+  '%': '#.#..#.#.#..#.#',
+  '+': '....#.###.#....',
+  '(': '.#.#..#..#...#.',
+  ')': '.#...#..#..#.#.',
+  '!': '.#..#..#.....#.',
+  '?': '##...#.#.....#.',
+  "'": '.#..#..........',
+  '&': '.#.#.#.#.#.#.##',
+  '#': '#.#####.#####.#',
+  '<': '..#.#.#...#...#',
+  '>': '#...#...#.#.#..',
+  '_': '............###',
+  '@': '.#.#.#####...##',
+  '$': '.####..#..####.',
+  '*': '#.#.#.#.#......',
+  '=': '...###...###...',
+  '|': '.#..#..#..#..#.',
+  ' ': '...............',
+};
+
+// body: 5 x 7 capitals (the game's sign font), lowercase with ascenders and descenders, in a 6 x 10 cell
+const CAPS = {
+  A: [14, 17, 17, 31, 17, 17, 17], B: [30, 17, 17, 30, 17, 17, 30], C: [14, 17, 16, 16, 16, 17, 14], D: [30, 17, 17, 17, 17, 17, 30],
+  E: [31, 16, 16, 30, 16, 16, 31], F: [31, 16, 16, 30, 16, 16, 16], G: [14, 17, 16, 23, 17, 17, 15], H: [17, 17, 17, 31, 17, 17, 17],
+  I: [14, 4, 4, 4, 4, 4, 14], J: [7, 2, 2, 2, 2, 18, 12], K: [17, 18, 20, 24, 20, 18, 17], L: [16, 16, 16, 16, 16, 16, 31],
+  M: [17, 27, 21, 21, 17, 17, 17], N: [17, 17, 25, 21, 19, 17, 17], O: [14, 17, 17, 17, 17, 17, 14], P: [30, 17, 17, 30, 16, 16, 16],
+  Q: [14, 17, 17, 17, 21, 18, 13], R: [30, 17, 17, 30, 20, 18, 17], S: [15, 16, 16, 14, 1, 1, 30], T: [31, 4, 4, 4, 4, 4, 4],
+  U: [17, 17, 17, 17, 17, 17, 14], V: [17, 17, 17, 17, 17, 10, 4], W: [17, 17, 17, 21, 21, 21, 10], X: [17, 17, 10, 4, 10, 17, 17],
+  Y: [17, 17, 17, 10, 4, 4, 4], Z: [31, 1, 2, 4, 8, 16, 31],
+  0: [14, 17, 19, 21, 25, 17, 14], 1: [4, 12, 4, 4, 4, 4, 14], 2: [14, 17, 1, 2, 4, 8, 31], 3: [31, 2, 4, 2, 1, 17, 14],
+  4: [2, 6, 10, 18, 31, 2, 2], 5: [31, 16, 30, 1, 1, 17, 14], 6: [6, 8, 16, 30, 17, 17, 14], 7: [31, 1, 2, 4, 8, 8, 8],
+  8: [14, 17, 17, 14, 17, 17, 14], 9: [14, 17, 17, 15, 1, 2, 12],
+  '&': [12, 18, 20, 8, 21, 18, 13], "'": [4, 4, 8, 0, 0, 0, 0], '.': [0, 0, 0, 0, 0, 12, 12], '-': [0, 0, 0, 31, 0, 0, 0],
+  ',': [0, 0, 0, 0, 12, 4, 8], ':': [0, 12, 12, 0, 12, 12, 0], '!': [4, 4, 4, 4, 4, 0, 4], '?': [14, 17, 1, 2, 4, 0, 4],
+  '/': [1, 1, 2, 4, 8, 16, 16], '+': [0, 4, 4, 31, 4, 4, 0], '$': [4, 15, 20, 14, 5, 30, 4], '%': [24, 25, 2, 4, 8, 19, 3],
+  '(': [2, 4, 8, 8, 8, 4, 2], ')': [8, 4, 2, 2, 2, 4, 8], '*': [0, 4, 21, 14, 21, 4, 0], '#': [10, 10, 31, 10, 31, 10, 10],
+  '@': [14, 17, 23, 21, 23, 16, 14], '"': [10, 10, 0, 0, 0, 0, 0], '=': [0, 0, 31, 0, 31, 0, 0], '<': [2, 4, 8, 16, 8, 4, 2],
+  '>': [8, 4, 2, 1, 2, 4, 8], '|': [4, 4, 4, 4, 4, 4, 4], '_': [0, 0, 0, 0, 0, 0, 31], ';': [0, 12, 12, 0, 12, 4, 8], ' ': [0, 0, 0, 0, 0, 0, 0],
+};
+// lowercase: 9 rows (0-1 ascenders, 2-6 the x-height, 7-8 descenders)
+const LOWER = {
+  a: ['', '', '.###.', '....#', '.####', '#...#', '.####'],
+  b: ['#....', '#....', '#.##.', '##..#', '#...#', '#...#', '####.'],
+  c: ['', '', '.###.', '#....', '#....', '#...#', '.###.'],
+  d: ['....#', '....#', '.##.#', '#..##', '#...#', '#...#', '.####'],
+  e: ['', '', '.###.', '#...#', '#####', '#....', '.###.'],
+  f: ['..##.', '.#..#', '.#...', '###..', '.#...', '.#...', '.#...'],
+  g: ['', '', '.####', '#...#', '#...#', '#...#', '.####', '....#', '.###.'],
+  h: ['#....', '#....', '#.##.', '##..#', '#...#', '#...#', '#...#'],
+  i: ['..#..', '', '.##..', '..#..', '..#..', '..#..', '.###.'],
+  j: ['...#.', '', '..##.', '...#.', '...#.', '...#.', '...#.', '#..#.', '.##..'],
+  k: ['#....', '#....', '#..#.', '#.#..', '##...', '#.#..', '#..#.'],
+  l: ['.##..', '..#..', '..#..', '..#..', '..#..', '..#..', '.###.'],
+  m: ['', '', '##.#.', '#.#.#', '#.#.#', '#.#.#', '#...#'],
+  n: ['', '', '#.##.', '##..#', '#...#', '#...#', '#...#'],
+  o: ['', '', '.###.', '#...#', '#...#', '#...#', '.###.'],
+  p: ['', '', '####.', '#...#', '#...#', '#...#', '####.', '#....', '#....'],
+  q: ['', '', '.####', '#...#', '#...#', '#...#', '.####', '....#', '....#'],
+  r: ['', '', '#.##.', '##..#', '#....', '#....', '#....'],
+  s: ['', '', '.####', '#....', '.###.', '....#', '####.'],
+  t: ['.#...', '.#...', '###..', '.#...', '.#...', '.#..#', '..##.'],
+  u: ['', '', '#...#', '#...#', '#...#', '#..##', '.##.#'],
+  v: ['', '', '#...#', '#...#', '#...#', '.#.#.', '..#..'],
+  w: ['', '', '#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'],
+  x: ['', '', '#...#', '.#.#.', '..#..', '.#.#.', '#...#'],
+  y: ['', '', '#...#', '#...#', '#...#', '#...#', '.####', '....#', '.###.'],
+  z: ['', '', '#####', '...#.', '..#..', '.#...', '#####'],
+};
+
+/** Draws text at (x, y) (the top of the capitals) in one of the fonts; returns the width it took. */
+function text(g, x, y, s, col, font = 'body', scale = 1) {
+  g.fillStyle = col;
+  let cx = x;
+  for (const ch of s) {
+    if (font === 'small') {
+      const p = F35[ch.toUpperCase()] ?? F35['?'];
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (p[r * 3 + c] === '#') g.fillRect(cx + c * scale, y + r * scale, scale, scale);
+      cx += 4 * scale;
+    } else {
+      const lo = LOWER[ch];
+      if (lo) { lo.forEach((row, r) => { for (let c = 0; c < 5; c++) if (row[c] === '#') g.fillRect(cx + c * scale, y + r * scale, scale, scale); }); }
+      else {
+        const rows = CAPS[ch] ?? CAPS[ch.toUpperCase()] ?? CAPS['?'];
+        rows.forEach((bits, r) => { for (let c = 0; c < 5; c++) if (bits & (16 >> c)) g.fillRect(cx + c * scale, y + r * scale, scale, scale); });
+      }
+      cx += 6 * scale;
+    }
+  }
+  return cx - x;
+}
+const tw = (s, font = 'body', scale = 1) => s.length * (font === 'small' ? 4 : 6) * scale;
+/** The big digits of the clock: the body font at x3, its pixels with the corners of each step filled, a shadow under. */
+function big(g, x, y, s, col) {
+  text(g, x + 1, y + 1, s, 'rgba(0,0,0,.6)', 'body', 3);
+  text(g, x, y, s, col, 'body', 3);
+}
+
+// ---------- the pieces every screen has ----------
+const px = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+function vgrad(g, x, y, w, h, a, b) { const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, a); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(x, y, w, h); }
+/** A rounded box in whole pixels (the corner pixel left out, r = 1 or 2). */
+function rbox(g, x, y, w, h, c, r = 1) {
+  g.fillStyle = c;
+  g.fillRect(x + r, y, w - 2 * r, h); g.fillRect(x, y + r, w, h - 2 * r);
+  if (r === 2) { g.fillRect(x + 1, y + 1, 1, 1); g.fillRect(x + w - 2, y + 1, 1, 1); g.fillRect(x + 1, y + h - 2, 1, 1); g.fillRect(x + w - 2, y + h - 2, 1, 1); }
+}
+function status(g, opt = {}) {
+  vgrad(g, 0, 0, W, STATUS, '#1d2b38', '#0c141c');
+  px(g, 0, STATUS - 1, W, 1, '#000000');
+  // signal: four bars, three lit
+  for (let i = 0; i < 4; i++) px(g, 3 + i * 3, 7 - i * 2, 2, 1 + i * 2, i < (opt.bars ?? 3) ? C.ink : '#3a4a58');
+  text(g, 17, 3, opt.net ?? 'E', C.ice, 'small');
+  if (opt.sms) { px(g, 26, 3, 7, 5, C.ink); px(g, 27, 4, 5, 1, '#0c141c'); px(g, 29, 5, 1, 1, '#0c141c'); }
+  // music playing: a note (its head and stem)
+  if (opt.note) { px(g, 36, 6, 2, 2, '#c890ff'); px(g, 37, 2, 1, 5, '#c890ff'); px(g, 38, 2, 2, 1, '#c890ff'); px(g, 39, 3, 1, 1, '#c890ff'); }
+  // battery, and the hour
+  px(g, W - 14, 3, 10, 5, C.ink); px(g, W - 4, 4, 1, 3, C.ink); px(g, W - 13, 4, 8, 3, '#0c141c'); px(g, W - 13, 4, 6, 3, C.green);
+  text(g, W - 35, 3, opt.time ?? '21:47', C.ink, 'small');
+}
+function soft(g, l, r, mid = '') {
+  vgrad(g, 0, H - SOFT, W, SOFT, '#22354a', '#0d1620');
+  px(g, 0, H - SOFT, W, 1, C.ice);
+  text(g, 4, H - SOFT + 3, l.toUpperCase(), C.white);
+  text(g, W - 4 - tw(r.toUpperCase()), H - SOFT + 3, r.toUpperCase(), C.white);
+  if (mid) { const m = mid.toUpperCase(); text(g, (W - tw(m, 'small')) >> 1, H - SOFT + 4, m, C.dim, 'small'); }
+}
+/** A title bar under the status bar: an icon, the title, something on the right. */
+function title(g, s, right = '', icon = null) {
+  vgrad(g, 0, STATUS, W, 13, '#2c3e5c', '#16203a');
+  px(g, 0, STATUS + 13, W, 1, '#000000');
+  let x = 4;
+  if (icon) { glyph(g, x, STATUS + 2, icon, C.hi); x += 13; }
+  text(g, x, STATUS + 3, s, C.white);
+  if (right) text(g, W - 4 - tw(right, 'small'), STATUS + 4, right, C.dim, 'small');
+}
+
+// ---------- icons: 10 x 10 pictures in white, on a glossy square in the app's color ----------
+const PICS = {
+  calls:    ['..........', '.##.......', '.###......', '.##.......', '..##......', '...##..##.', '....#####.', '.....###..', '..........', '..........'],
+  messages: ['..........', '##########', '##......##', '#.#....#.#', '#..#..#..#', '#...##...#', '#........#', '##########', '..........', '..........'],
+  camera:   ['..........', '...###....', '##########', '#...##...#', '#..#..#..#', '#..#..#..#', '#...##...#', '##########', '..........', '..........'],
+  map:      ['...####...', '..##..##..', '..#....#..', '..##..##..', '...####...', '...####...', '....##....', '....##....', '..........', '.########.'],
+  tunes:    ['....#####.', '....#####.', '....#...#.', '....#...#.', '....#...#.', '..###.###.', '.####.###.', '..##......', '..........', '..........'],
+  web:      ['...####...', '.##.##.##.', '.#..##..#.', '##########', '#...##...#', '##########', '.#..##..#.', '.##.##.##.', '...####...', '..........'],
+  wire:     ['.#######..', '#.......#.', '#.#.#.#.#.', '#.......#.', '.###.###..', '....#.....', '...#......', '..........', '..........', '..........'],
+  news:     ['########..', '#......##.', '#.####.#.#', '#......#.#', '#.##.#.#.#', '#.##.#.#.#', '#......#.#', '#.####.#.#', '########..', '..........'],
+  weather:  ['..#...#...', '...###....', '..#####...', '#.#####.#.', '..#####...', '...###....', '..#...#...', '..........', '..........', '..........'],
+  calendar: ['.#.....#..', '#########.', '#.......#.', '#.##.##.#.', '#..#..#.#.', '#.##..#.#.', '#..#..#.#.', '#.##..#.#.', '#########.', '..........'],
+  bank:     ['....#.....', '..#####...', '.#.#......', '..####....', '....#.#...', '.#####....', '....#.....', '..........', '..........', '..........'],
+  calc:     ['..........', '..#....#.#', '.###....#.', '..#....#.#', '..........', '.###...###', '..........', '.......###', '..........', '..........'],
+  notes:    ['########..', '#......#..', '#.####.#..', '#......#..', '#.####.#.#', '#......#.#', '#.###..##.', '#......#..', '########..', '..........'],
+  folder:   ['..........', '####......', '#..#####..', '#.......#.', '##########', '#........#', '#........#', '#........#', '##########', '..........'],
+  store:    ['..........', '...####...', '..#....#..', '##########', '#........#', '#..#..#..#', '#........#', '#........#', '##########', '..........'],
+  settings: ['....##....', '.#.####.#.', '..######..', '.###..###.', '####..####', '.###..###.', '..######..', '.#.####.#.', '....##....', '..........'],
+  snake:    ['..........', '.######...', '.#....#...', '.#.####...', '.#.#......', '.#.######.', '.#......#.', '.######.#.', '......#.#.', '..........'],
+};
+const APPS = [
+  ['calls', 'Phone', '#28aa5a'], ['messages', 'Messages', '#3c78d2'], ['camera', 'Camera', '#5a5e68'], ['map', 'Maps', '#38965a'],
+  ['tunes', 'Tunes', '#8236aa'], ['web', 'Ferret', '#6a3e22'], ['wire', 'Streetwire', '#263e78'], ['news', 'News', '#b8ac8c'],
+  ['weather', 'Weather', '#4696e6'], ['calendar', 'Calendar', '#c84040'], ['bank', 'Bank', '#16463a'], ['calc', 'Calc', '#38383e'],
+  ['notes', 'Notes', '#c8a838'], ['folder', 'My Apps', '#c8963c'], ['store', 'Store', '#6e3282'], ['settings', 'Settings', '#787e8c'],
+];
+function glyph(g, x, y, name, col) {
+  const p = PICS[name]; if (!p) return;
+  g.fillStyle = col;
+  p.forEach((row, r) => { for (let c = 0; c < 10; c++) if (row[c] === '#') g.fillRect(x + c, y + r, 1, 1); });
+}
+/** An app's icon: 16 x 16, a rounded square in its color, lit on top (2008's gloss), the picture in white with a shadow. */
+function icon(g, x, y, name, col) {
+  rbox(g, x, y, 16, 16, shade(col, 0.6), 2);
+  rbox(g, x, y, 16, 15, col, 2);
+  g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(x + 2, y + 1, 12, 6);
+  glyph(g, x + 4, y + 4, name, 'rgba(0,0,0,.45)');
+  glyph(g, x + 3, y + 3, name, '#ffffff');
+}
+function shade(hex, k) { const n = parseInt(hex.slice(1), 16); return `rgb(${((n >> 16) & 255) * k | 0},${((n >> 8) & 255) * k | 0},${(n & 255) * k | 0})`; }
+/** A contact's face: the initials on a square in a color from the name. */
+function face(g, x, y, name) {
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) | 0;
+  const hue = Math.abs(h) % 360;
+  g.fillStyle = `hsl(${hue} 45% 42%)`; g.fillRect(x, y, 13, 13);
+  const ini = name.split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase();
+  text(g, x + 7 - ini.length * 2, y + 4, ini, '#fff', 'small');
+}
+
+// ---------- the screens ----------
+function wallpaper(g) {
+  vgrad(g, 0, STATUS, W, H - STATUS - SOFT, '#0c1a2b', '#2a2418');
+  let x = 0, k = 1;
+  const r = (n) => Math.abs(Math.sin(n * 12.9898) * 43758.5453) % 1;
+  // the moon, and the skyline with its windows
+  g.fillStyle = '#e8e2c8'; g.beginPath(); g.arc(18, 30, 6, 0, 7); g.fill();
+  g.fillStyle = '#0c1a2b'; g.beginPath(); g.arc(21, 28, 5, 0, 7); g.fill();
+  while (x < W) {
+    const w = 10 + Math.floor(r(k) * 16), h = 26 + Math.floor(r(k + 7) * 52), top = H - SOFT - h;
+    px(g, x, top, w, h, '#07101b');
+    for (let yy = top + 3; yy < H - SOFT - 3; yy += 4) for (let xx = x + 2; xx < x + w - 2; xx += 3) if (r(xx * 3 + yy) > 0.74) px(g, xx, yy, 1, 2, '#e8b04a');
+    x += w + 1; k++;
+  }
+}
+function card(g, y, h, edge, on) {
+  g.fillStyle = on ? 'rgba(45,100,145,.9)' : 'rgba(8,16,26,.82)'; g.fillRect(6, y, W - 12, h);
+  px(g, 6, y, 2, h, edge);
+}
+function standby(g) {
+  wallpaper(g); status(g, { sms: true, note: true });
+  big(g, (W - tw('21:47', 'body', 3)) >> 1, 20, '21:47', C.white);
+  const d = 'Tue 07 Oct 2008';
+  g.fillStyle = 'rgba(6,10,18,.75)'; g.fillRect((W - tw(d)) / 2 - 4, 46, tw(d) + 6, 11);
+  text(g, (W - tw(d)) >> 1, 48, d, '#dce4f0');
+  const op = 'NORTHLINE';
+  text(g, (W - tw(op, 'small')) >> 1, 61, op, C.ice, 'small');
+  // what is waiting, as cards (the picked one lit), and the music's panel
+  card(g, 72, 13, C.bad, true); text(g, 12, 75, 'TEL', C.bad, 'small'); text(g, 28, 75, '2 missed calls', C.white);
+  card(g, 87, 13, C.ice, false); text(g, 12, 90, 'SMS', C.ice, 'small'); text(g, 28, 90, '1 new text', C.ink);
+  g.fillStyle = 'rgba(30,16,44,.9)'; g.fillRect(6, 104, W - 12, 39); px(g, 6, 104, 2, 39, '#c890ff');
+  text(g, 12, 107, 'Night Shift', '#ecdcfa'); text(g, 12 + tw('Night Shift') + 4, 108, 'GLASSHOUSE', '#9a86b0', 'small');
+  for (let i = 0; i < 38; i++) { const v = 2 + Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.37)) * 11; px(g, 12 + i * 4, 129 - v, 3, v, i < 15 ? '#c890ff' : '#5c4478'); }
+  px(g, 12, 133, W - 24, 2, '#3c2c50'); px(g, 12, 133, 58, 2, '#c890ff'); px(g, 69, 132, 3, 4, '#ffffff');
+  text(g, 12, 137, '1:42', '#9a86b0', 'small'); text(g, W - 12 - tw('3:58', 'small'), 137, '3:58', '#9a86b0', 'small');
+  soft(g, 'Menu', 'Hide', '* clears');
+}
+function menu(g) {
+  vgrad(g, 0, STATUS, W, H, '#121a2e', '#060810'); status(g, { sms: true });
+  APPS.forEach(([n, label, col], i) => {
+    const cx = 2 + (i % 4) * 41, cy = 13 + Math.floor(i / 4) * 31, on = i === 5;
+    if (on) { rbox(g, cx, cy, 41, 30, C.selHi, 2); rbox(g, cx + 1, cy + 1, 39, 28, C.sel, 2); }
+    icon(g, cx + 12, cy + 3, n, col);
+    const l = label.toUpperCase().slice(0, 10);
+    text(g, cx + ((41 - tw(l, 'small')) >> 1) + 1, cy + 22, l, on ? C.white : '#93a5be', 'small');
+  });
+  text(g, 4, 139, 'Ferret Mini', C.white); text(g, 4 + tw('Ferret Mini') + 4, 140, 'THE WEB, SLOWLY', C.dim, 'small');
+  soft(g, 'Open', 'Back');
+}
+function messages(g) {
+  px(g, 0, 0, W, H, C.bg); status(g, { sms: true });
+  title(g, 'Messages', '3 NEW', 'messages');
+  const rows = [['Mara Okafor', 'see you at petrov\'s at 9?', '21:40', true], ['Northline', 'Your balance is $4.10. Top', '20:02', true],
+    ['0179 ...', 'job done. the rest friday.', '18:55', true], ['Dee Lindqvist', 'did you catch the game?', 'Mon', false], ['Tomas Reyes', 'ok', 'Sun', false]];
+  rows.forEach(([who, msg, at, nu], i) => {
+    const y = 26 + i * 25, on = i === 0;
+    if (on) px(g, 0, y - 2, W, 24, C.sel);
+    face(g, 4, y, who);
+    text(g, 21, y, who, nu ? C.white : C.ink);
+    text(g, W - 4 - tw(at, 'small'), y + 1, at, on ? C.ink : C.dim, 'small');
+    text(g, 21, y + 11, msg.length > 23 ? msg.slice(0, 22) + '.' : msg, on ? '#bcd6ea' : C.dim);
+    if (nu) px(g, 18, y + 1, 2, 2, C.ice);
+    px(g, 4, y + 22, W - 8, 1, '#16222d');
+  });
+  soft(g, 'Options', 'Back', 'new: 1');
+}
+function thread(g) {
+  px(g, 0, 0, W, H, C.bg); status(g, {});
+  title(g, 'Mara Okafor', '555-0142');
+  const bub = (y, lines, mine, at) => {
+    const w = Math.max(...lines.map((l) => tw(l))) + 8, h = lines.length * 10 + 6, x = mine ? W - w - 4 : 4;
+    rbox(g, x, y, w, h, mine ? '#1f4a6e' : '#1a2530', 2);
+    lines.forEach((l, i) => text(g, x + 4, y + 4 + i * 10, l, mine ? C.white : C.ink));
+    text(g, mine ? x - tw(at, 'small') - 3 : x + w + 3, y + h - 6, at, C.dim, 'small');
+    return y + h + 4;
+  };
+  let y = 28;
+  y = bub(y, ['are you still', 'up?'], false, '21:31');
+  y = bub(y, ['yeah. on my way', 'out'], true, '21:33');
+  y = bub(y, ['see you at', 'petrov\'s at 9?'], false, '21:40');
+  // writing a reply: the T9 word being made, the mode on the right
+  px(g, 0, 124, W, 1, '#22354a'); px(g, 0, 125, W, 32, '#08101a');
+  text(g, 4, 129, 'sure, i\'ll be', C.white);
+  const word = 'thdre'; text(g, 4 + tw('sure, i\'ll be '), 129, 'there', C.white);
+  px(g, 4 + tw('sure, i\'ll be '), 138, tw('there'), 1, C.ice); px(g, 4 + tw('sure, i\'ll be there'), 128, 1, 9, C.ice);
+  text(g, W - 4 - tw('T9 ABC', 'small'), 147, 'T9 ABC', C.hi, 'small'); text(g, 4, 147, '142/160', C.dim, 'small');
+  soft(g, 'Send', 'Clear', 'next: 0');
+  void word;
+}
+function mapScreen(g) {
+  px(g, 0, 0, W, H, '#e4e0d8'); status(g, {});
+  const r = (n) => Math.abs(Math.sin(n * 91.7) * 4371.53) % 1;
+  // the blocks, the streets white, the avenues yellow, a park
+  for (let by = 0; by < 6; by++) for (let bx = 0; bx < 6; bx++) {
+    const x = -8 + bx * 31, y = 4 + by * 27, park = bx === 3 && by === 2;
+    px(g, x, y, 26, 22, park ? '#bade a4'.replace(' ', '') : '#d0ccc4');
+    if (!park) for (let k = 0; k < 4; k++) { const t = r(bx * 13 + by * 7 + k); px(g, x + 1 + (k % 2) * 12, y + 1 + (k >> 1) * 10, 11, 9, t > 0.6 ? '#a8b0c0' : t > 0.3 ? '#bcbcb8' : '#c6c2ba'); }
+  }
+  for (let bx = 0; bx < 7; bx++) px(g, -12 + bx * 31, 0, 4, H, bx === 2 ? '#fce280' : '#ffffff');
+  for (let by = 0; by < 7; by++) px(g, 0, by * 27, W, 4, by === 3 ? '#fce280' : '#ffffff');
+  text(g, 54, 83, 'NORTH AVE', '#7a6a30', 'small');
+  // the player: an arrow with a halo; the place picked, a pin
+  g.fillStyle = 'rgba(60,140,255,.25)'; g.beginPath(); g.arc(82, 98, 9, 0, 7); g.fill();
+  g.fillStyle = '#2a6ae0'; g.beginPath(); g.moveTo(82, 92); g.lineTo(87, 103); g.lineTo(82, 100); g.lineTo(77, 103); g.closePath(); g.fill();
+  px(g, 118, 52, 7, 7, '#e2352a'); px(g, 120, 59, 3, 4, '#e2352a'); px(g, 120, 54, 3, 3, '#ffffff');
+  // the place, a card at the foot; the compass and the scale
+  g.fillStyle = 'rgba(11,18,25,.92)'; g.fillRect(0, 128, W, 29); px(g, 0, 128, W, 1, C.ice);
+  text(g, 4, 131, 'Petrov\'s Coffee', C.white); text(g, W - 4 - tw('OPEN', 'small'), 132, 'OPEN', C.green, 'small');
+  text(g, 4, 143, '320 M NE - 4 MIN', C.dim, 'small');
+  rbox(g, W - 16, 14, 13, 13, 'rgba(11,18,25,.85)', 2); text(g, W - 11, 18, 'N', C.white, 'small');
+  text(g, 4, 116, '100 M', '#555', 'small'); px(g, 4, 123, 24, 1, '#555'); px(g, 4, 121, 1, 3, '#555'); px(g, 27, 121, 1, 3, '#555');
+  soft(g, 'Places', 'Back', 'zoom 2');
+}
+function tunes(g) {
+  vgrad(g, 0, 0, W, H, '#1e1030', '#08040e'); status(g, { note: true });
+  title(g, 'Tunes', '3/6', 'tunes');
+  // the cover: a pixel picture made from the song's name
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const v = Math.abs(Math.sin(x * 0.7 + y * 1.3) * Math.cos(x * y * 0.11)); px(g, 8 + x * 3, 30 + y * 3, 3, 3, v > 0.6 ? '#c890ff' : v > 0.3 ? '#6a3c9c' : '#2a1640'); }
+  text(g, 64, 32, 'Night Shift', C.white);
+  text(g, 64, 44, 'GLASSHOUSE', '#b49ad0', 'small');
+  text(g, 64, 54, 'STREETLIGHTS', '#7a6a90', 'small');
+  text(g, 64, 66, 'MP3 128 KBPS', '#7a6a90', 'small');
+  for (let i = 0; i < 38; i++) { const v = 3 + Math.abs(Math.sin(i * 1.3) * Math.cos(i * 0.29)) * 22; px(g, 8 + i * 4, 112 - v, 3, v, '#c890ff'); px(g, 8 + i * 4, 113, 3, Math.min(5, v / 3), '#3c2456'); }
+  px(g, 8, 124, W - 16, 2, '#3c2c50'); px(g, 8, 124, 64, 2, '#c890ff'); px(g, 71, 123, 3, 4, '#ffffff');
+  text(g, 8, 129, '1:42', '#b49ad0', 'small'); text(g, W - 8 - tw('3:58', 'small'), 129, '3:58', '#b49ad0', 'small');
+  text(g, 8, 140, 'VOL', '#7a6a90', 'small'); for (let i = 0; i < 8; i++) px(g, 22 + i * 4, 145 - i, 3, i + 1, i < 5 ? '#c890ff' : '#3c2c50');
+  text(g, 70, 140, '<<   ||   >>', C.white, 'small');
+  soft(g, 'Songs', 'Back');
+}
+function dialer(g) {
+  px(g, 0, 0, W, H, C.bg); status(g, {});
+  title(g, 'Phone', 'DIAL', 'calls');
+  text(g, 4, 30, 'RECENT', C.dim, 'small');
+  [['Mara Okafor', 'in  21:31'], ['Northline', 'out 20:05']].forEach(([n, s], i) => { face(g, 4, 39 + i * 16, n); text(g, 21, 42 + i * 16, n, C.ink); text(g, W - 4 - tw(s, 'small'), 43 + i * 16, s.toUpperCase(), C.dim, 'small'); });
+  const n = '555-01';
+  px(g, 0, 78, W, 46, '#08101a');
+  big(g, W - 8 - tw(n, 'body', 3), 90, n, C.white);
+  px(g, W - 6, 88, 2, 23, C.ice);
+  text(g, 4, 130, 'GREEN KEY TO CALL', C.dim, 'small');
+  soft(g, 'Save', 'Clear');
+}
+/** The grid: the bars, the margins, both fonts at their size. */
+function grid(g) {
+  px(g, 0, 0, W, H, C.bg); status(g, {});
+  text(g, 4, 14, 'small 3x5 (4x6 cell)', C.dim, 'small');
+  text(g, 4, 22, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', C.ink, 'small');
+  text(g, 4, 29, '0123456789 :.,-/%+()!?\'&#<>_@$*=', C.ink, 'small');
+  text(g, 4, 40, 'body 5x7 (6x10 cell)', C.dim, 'small');
+  text(g, 4, 48, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', C.ink);
+  text(g, 4, 59, 'abcdefghijklmnopqrstuvwxyz', C.ink);
+  text(g, 4, 70, '0123456789 .,:;!?\'"-+=/$%&@', C.ink);
+  text(g, 4, 82, 'The quick fox, jumping by.', C.white);
+  text(g, 4, 98, 'clock: body x3', C.dim, 'small');
+  big(g, 4, 106, '09:41', C.white);
+  [['ICE', C.ice], ['INK', C.ink], ['DIM', C.dim], ['SEL', C.sel], ['HI', C.hi], ['BAD', C.bad]].forEach(([n, c], i) => { px(g, 96 + (i % 3) * 24, 106 + Math.floor(i / 3) * 18, 10, 8, c); text(g, 96 + (i % 3) * 24, 116 + Math.floor(i / 3) * 18, n, C.dim, 'small'); });
+  soft(g, 'Left', 'Right', 'soft keys');
+}
+
+// ---------- on the page: each screen at x3, the pixels square ----------
+const SCREENS = { grid, standby, menu, messages, thread, mapScreen, tunes, dialer };
+document.querySelectorAll('canvas[data-scr]').forEach((cv) => {
+  const off = document.createElement('canvas'); off.width = W; off.height = H;
+  SCREENS[cv.dataset.scr](off.getContext('2d'));
+  const k = cv.width / W, g = cv.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(off, 0, 0, W * k, H * k);
+  // the grid of the phone's pixels, faint, on the first one
+  if (cv.dataset.grid) { g.strokeStyle = 'rgba(143,211,255,.5)'; g.setLineDash([4, 3]); for (const y of [STATUS, H - SOFT]) { g.beginPath(); g.moveTo(0, y * k + 0.5); g.lineTo(W * k, y * k + 0.5); g.stroke(); } }
+});
+})();
 </script>
 </body>
 </html>

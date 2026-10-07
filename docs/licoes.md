@@ -36,6 +36,13 @@
 - **A fonte 5×7 do PNG de teste (`tests/png.ts`) não tem `_`, `\` nem `>`**: no PNG as artes dos banners e o "More news >>" perdem pedaços, mas no jogo (o átlas) aparecem. Não "consertar" pelo PNG; o envelope do webmail virou ícone em pixels (`banner.logo: 'mail'`) porque fica melhor, não por isso.
 - O teste de páginas com feed precisa rodar a cidade antes (`stepWorld` 20 mil vezes ≈ 1 min no Node) para haver posts e notícias.
 
+### Lições da 15.19b (trilho, sombra, capinhas, telas em pixels) — 2026-10-07
+- **Projeção ortográfica não mostra inclinação pequena:** o corpo em cubos é ortográfico; a ≤3° uma face plana só encolhe ~0,2% e anda 1–2 px. Fazer a conta antes de construir um "inclinar a tela" (foi contestado e trocado pelo redesenho dos apps).
+- **A tela do celular no jogo é quase quadrada** (42 × 26 células = 336 × 338 px em 1080p: `CELL_ASPECT` 0,6 e 80 linhas), não 240 × 400; o corpo também sai ~20% mais largo que o real (1 coluna = 1 mm = 8 px, 1 linha = 2 mm = 13 px).
+- **O painel do navegador abre um manual como cópia `data:`:** um `<script src>` relativo não carrega (os canvas ficam vazios, sem erro no console). Manual = um arquivo só, script dentro.
+- **Duas placas que deslizam = dois modelos de cubos do mesmo tamanho** desenhados em ordem (a de baixo deslocada), não um modelo recalculado a cada passo: o trilho fica de graça; a pose nova custa ~15 ms uma vez (duas lançadas).
+- **A sombra do sol nas mãos:** o `VIEW_LIGHT` só sabia "é dia"; o teste de sombra só existia no shader. Copiar o `dirLit` para a CPU (`handSun`) com cache por passo é barato.
+
 ### Lições da 15.16–15.17f (tela como textura, pintor 2D, Ferret) — 2026-10-07
 - **A tela do notebook virou textura sem mexer no shader do mundo:** um passe próprio (`SCREEN_WGSL` em `gpu/compositor.ts`) desenha células + átlas + camada HD numa textura do tamanho da tela de frente (`cols*cw × rows*ch`, o átlas do monitor, nítido); o compositor a lê pixel a pixel quando `show` (de frente) e por **homografia inversa** do quadrilátero do vidro quando de lado (`quadInverse` em `render/screens.ts`, 3 vec4f num uniform; `tests/screens.ts`). De lado, o `look3d` deixa limpas as células que tocam o vidro (`touches`) e o compositor preenche a lasca em volta com a borda da textura.
 - **Não use uma textura 1280×800 fixa para o texto num monitor 1080p:** o vidro mede ~1120×700 lá e o texto de 1 px borraria. A tela de pixels "do aparelho" (1280×800) é só a camada HD; o texto continua no átlas do monitor.
