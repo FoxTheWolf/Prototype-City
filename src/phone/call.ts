@@ -25,7 +25,7 @@ const CALLG: Grammar[] = [C as unknown as Grammar, TEXT];
  * landline, a mobile is answered at work, out or at home, rarely in the middle of the night. Calls
  * cost credit by the started minute; 911 and the operator's line are free.
  */
-export type Sfx = ['bell', number] | ['shutter'] | ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
+export type Sfx = ['bell', number] | ['shutter'] | ['fail'] | ['stop'] | ['sms'] | ['sent'] | ['hook'] | ['coin'] | ['coins'] | ['ringback'] | ['busy'] | ['intercept'] | ['click'] | ['rail', boolean] | ['beep'] | ['hold', number] | ['voice', number, number, boolean];
 export interface Line { who: 'them' | 'rec' | 'sys'; text: string; at: number; dur: number }
 type Step = { who: Line['who'] | 'act'; text: string; gap: number };
 

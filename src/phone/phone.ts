@@ -267,6 +267,19 @@ export class Phone {
   atEar = false;
   /** 0 .. 1: held up whole, the keypad in sight (since 2026-10-06 always, while it is out). */
   lift = 0;
+  /**
+   * 15.19b: the slider's rail open (the keypad out under the screen), and how far it is (0 shut .. 1
+   * open): it runs fast and ends on the spring's catch. Taken out it comes shut; the middle button or a
+   * number opens it, Back on the standby screen shuts it.
+   */
+  slid = false;
+  slide = 0;
+  /** The rail open or shut, with its sound (the run and the catch). */
+  setRail(open: boolean) {
+    if (this.slid === open) return;
+    this.slid = open;
+    this.sfx.push(['rail', open]);
+  }
   /** The grid cell under the system cursor, and the key there. */
   cx = -1;
   cy = -1;
@@ -377,6 +390,7 @@ export class Phone {
   toggle(now: number): 'out' | 'in' | 'boot' {
     this.out = !this.out;
     if (!this.out) return 'in';
+    this.slid = false; this.slide = 0;
     if (this.screen === 'off') {
       // flat: it stays dark in the hand
       if (this.batt <= 0.01) return 'out';
@@ -510,6 +524,8 @@ export class Phone {
     this.handy += ((this.reach && !this.out && !ringing ? 1 : 0) - this.handy) * Math.min(1, dt * 12);
     // (2026-10-06) the phone is held up whole whenever it is out: no raising it to type
     this.lift += ((this.out ? 1 : 0) - this.lift) * Math.min(1, dt * 10);
+    // the rail: a steady run (~0.14 s end to end), the spring's catch at the end (draw.ts eases it)
+    this.slide = Math.max(0, Math.min(1, this.slide + (this.slid ? 1 : -1) * dt / 0.14));
     // reminders whose time has come ring, with a note in the inbox
     for (const r of this.cal.reminders) if (!r.done && r.at <= this.world.time) {
       r.done = true;
@@ -749,6 +765,8 @@ export class Phone {
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
     // the music keys on top (2026-10-06): the volume up and down, previous, play/pause and next, from any screen
     if (k === 'vup' || k === 'vdown' || k === 'play' || k === 'prev' || k === 'next') return s !== 'boot' && this.sideKey(k);
+    // a number typed with the rail shut opens it first, and is typed too
+    if (/^[0-9*#]$/.test(k) && !this.slid) this.setRail(true);
     switch (s) {
       case 'boot':
         if (k === 'rsoft') { this.out = false; return 'away'; }
@@ -766,6 +784,8 @@ export class Phone {
         if (k === '*' && (this.missed || this.inbox.some((m) => !m.read))) { this.clearNotices(); this.nsel = -1; return true; }
         // a number typed on the standby screen opens the dialer with it, as phones did
         if (/^[0-9*#]$/.test(k)) { this.dial = k; this.call = null; this.open('calls', now); return true; }
+        // Back steps down a stage: the rail shuts, then the phone goes back in the pocket
+        if (k === 'rsoft' && this.slid) { this.setRail(false); return true; }
         if (k === 'rsoft') { this.out = false; return 'away'; }
         return false;
       case 'menu': {

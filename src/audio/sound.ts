@@ -662,6 +662,30 @@ export class Sound {
     k.start(at, Math.random()); k.stop(at + 0.08);
   }
 
+  /**
+   * The slider's rail (15.19b): the plastic plates rubbing as it runs (a narrow hiss that rises), then the
+   * spring's catch, the "tchac": a bright snap with a short knock under it. Shutting it is a little lower.
+   */
+  railSlide(open: boolean) {
+    const ctx = this.ctx, t = ctx.currentTime, p = open ? 1 : 0.8;
+    const s = ctx.createBufferSource(), f = filter(ctx, 'bandpass', 2600 * p, 3), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(f).connect(g);
+    f.frequency.setValueAtTime(2000 * p, t); f.frequency.linearRampToValueAtTime(3400 * p, t + 0.11);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03, t + 0.04); g.gain.linearRampToValueAtTime(0.018, t + 0.11); g.gain.linearRampToValueAtTime(0, t + 0.13);
+    s.start(t, Math.random()); s.stop(t + 0.15);
+    const at = t + 0.13;
+    // the snap: noise through a high band, very short
+    const c = ctx.createBufferSource(), cg = gain(ctx, 0, this.master);
+    c.buffer = this.noise; c.connect(filter(ctx, 'bandpass', 4200 * p, 1.5)).connect(cg);
+    cg.gain.setValueAtTime(0.16, at); cg.gain.exponentialRampToValueAtTime(0.0005, at + 0.025);
+    c.start(at, Math.random()); c.stop(at + 0.04);
+    // the knock of the plates meeting the stop
+    const o = ctx.createOscillator(), og = gain(ctx, 0, this.master);
+    o.type = 'triangle'; o.frequency.setValueAtTime(420 * p, at); o.frequency.exponentialRampToValueAtTime(160 * p, at + 0.04); o.connect(og);
+    og.gain.setValueAtTime(0.09, at); og.gain.exponentialRampToValueAtTime(0.0005, at + 0.06);
+    o.start(at); o.stop(at + 0.08);
+  }
+
   /** The phone powering on: three soft rising notes, a bell on top. */
   phoneBoot(delay = 0) {
     const ctx = this.ctx, t = ctx.currentTime + delay;

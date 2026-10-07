@@ -44,7 +44,21 @@ export const mapView = (aspect: number, zoom: number, indoor = false): [number, 
 const keyRects = new Map<number, KeyRect[]>();
 const keysFor = (look: number) => { let k = keyRects.get(look); if (!k) keyRects.set(look, (k = keysOf(SHELLS[look]))); return k; };
 
-/** Where the phone's top left corner is on the grid: held up higher while typing, the whole keypad in sight. */
+/** The rows the upper plate of the slider covers (the screen, the soft keys, the d-pad), and the keypad's under it. */
+const UP_ROWS = KEYS_Y + 6, KP_ROWS = PHONE_H - UP_ROWS;
+/**
+ * How many of the keypad's rows the rail has out (15.19b), in whole rows so the key labels and the clicks
+ * keep to the keys: eased out of the run into the spring's catch.
+ */
+export const railRows = (P: Phone) => Math.round(KP_ROWS * (1 - (1 - P.slide) ** 2));
+/** Where a key is drawn and clicked: the keypad's rows ride up under the upper plate as the rail shuts (null: out of sight). */
+const keyRow = (P: Phone, y0: number): number | null => {
+  if (y0 < UP_ROWS) return y0;
+  const y = y0 - (KP_ROWS - railRows(P));
+  return y >= UP_ROWS ? y : null;
+};
+
+/** Where the phone's top left corner is on the grid: held up whole, as far as the rail is open (the lower plate stays put in the hand, the screen rides up). */
 function origin(cols: number, rows: number, P: Phone): [number, number] {
   const e = 1 - (1 - P.raise) ** 3;
   // vibrating: the phone shakes in the hand in the same bursts as the buzz (0.47 s on every 0.8 s)
@@ -52,7 +66,8 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
   const sx = on ? (Math.floor(t * 34) % 2 ? 1 : -1) : 0, sy = on && Math.floor(t * 23) % 3 === 0 ? 1 : 0;
   // peeking for a notification, its top rows; Alt held in the pocket, just the music keys on top and a little of the body
   const peek = Math.max(Math.round(9 * (1 - (1 - P.peek) ** 3)), Math.round(3 * (1 - (1 - P.handy) ** 3)));
-  return [cols - PHONE_W - 6 + sx, rows - Math.max(peek, Math.round((SHOWN + (PHONE_H - SHOWN) * P.lift) * e)) + sy];
+  const full = UP_ROWS + railRows(P), shown = Math.min(SHOWN, full);
+  return [cols - PHONE_W - 6 + sx, rows - Math.max(peek, Math.round((shown + (full - shown) * P.lift) * e)) + sy];
 }
 
 /**
@@ -79,7 +94,9 @@ export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number
   if (y >= oy - 2 && y < oy) for (const [k, x0, w] of TOP_KEYS) if (x >= ox + x0 && x < ox + x0 + w) return k;
   // the arrows are thin: their hit areas reach a row (or two columns) further out than they are drawn
   const grow: Partial<Record<Key, [number, number, number, number]>> = { up: [0, -1, 0, 1], down: [0, 0, 0, 1], left: [-2, 0, 2, 0], right: [0, 0, 2, 0] };
-  for (const [k, x0, y0, w, h] of keysFor(P.look)) {
+  for (const [k, x0, ky, w, h] of keysFor(P.look)) {
+    const y0 = keyRow(P, ky);
+    if (y0 === null) continue;
     const [gx, gy, gw, gh] = grow[k] ?? [0, 0, 0, 0];
     if (x >= ox + x0 + gx && x < ox + x0 + gx + w + gw && y >= oy + y0 + gy && y < oy + y0 + gy + h + gh) return k;
   }
@@ -170,12 +187,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const HB = hdLayer();
   if (HB) {
     // 15.19: the body in little cubes, in the HD layer under the interface (body3d.ts); the key labels stay glyphs over it
-    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp]);
+    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], railRows(P) - KP_ROWS);
     // the maker's name on the face, left of the earpiece, in its family's dot font (15.18)
     const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker), F = FAMILIES[fam], tc = F[lum(top) > 130 ? 'light' : 'dark'][2];
     const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 4) * HD, oy * HD, (ox + 29) * HD, (oy + 3) * HD);
     paintBrandText(decal, (ox + 4) * HD, oy * HD + 1, fam, P.maker, 1, [tc[0] * Lr, tc[1] * Lg, tc[2] * Lb]);
-    for (const [k, x0, y0, w, h, label, col] of KEYS) {
+    for (const [k, x0, ky, w, h, label, col] of KEYS) {
+      const y0 = keyRow(P, ky);
+      if (y0 === null) continue;
       const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
       const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
       for (let n = 0; n < label.length; n++) {

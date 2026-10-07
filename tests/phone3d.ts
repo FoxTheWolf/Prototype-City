@@ -3,7 +3,7 @@
 // tests/.out/phone3d.png (the six looks; under each, the one with the OK key pressed).
 import { writeFileSync } from 'node:fs';
 import { drawBody3d } from '../src/phone/body3d';
-import { keysOf, PHONE_H, PHONE_W, SHELLS } from '../src/phone/shells';
+import { KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS } from '../src/phone/shells';
 import { HD } from '../src/render/hd';
 import { castVox, Vox } from '../src/render/voxels';
 import { png } from './png';
@@ -37,6 +37,16 @@ SHELLS.forEach((S, look) => {
     check(`${S.name}${pressOk ? ' (OK pressed)' : ''}: drawn`, n > W * H * 0.7);
   }
 });
+// 15.19b: the rail shut, the lower plate lies under the upper (below its foot only its edge, seen tilted); open, the keypad shows below it
+{
+  const S = SHELLS[0], up = (KEYS_Y + 6) * HD, low = (shut: boolean) => {
+    let n = 0;
+    drawBody3d((_x, y) => { if (y >= up) n++; }, 0, 0, S, 0, [120, 124, 132], keysOf(S), () => false, null, L, [0, 0], shut ? -(PHONE_H - KEYS_Y - 6) : 0);
+    return n;
+  };
+  check('rail shut: nothing below the upper plate (but the edge, seen tilted)', low(true) < W * 3);
+  check('rail open: the keypad below it', low(false) > W * (PHONE_H - KEYS_Y - 6) * HD * 0.7);
+}
 console.log(`12 bodies cast and lit in ${ms.toFixed(0)} ms (${(ms / 12).toFixed(1)} each)`);
 // a frame with nothing changed: only the light
 {

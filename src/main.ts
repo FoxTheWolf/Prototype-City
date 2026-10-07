@@ -367,6 +367,7 @@ function playSfx(list: Sfx[]) {
       case 'busy': sound.busy(); break;
       case 'intercept': sound.intercept(); break;
       case 'click': sound.stopRing(); sound.hangClick(); break;
+      case 'rail': sound.railSlide(f[1]); break;
       case 'beep': sound.beep(true); break;
       case 'hold': sound.holdMusic(f[1]); break;
       case 'voice': sound.voice(f[1], f[2], f[3]); break;
@@ -394,6 +395,16 @@ function playLap(list: LapSound[]) {
     }
   }
   list.length = 0;
+}
+/**
+ * The middle button (15.19b): a stage up each time: out of the pocket (shut), the rail open, then on the
+ * standby screen the dialer; anywhere else with the rail open it lowers the phone, as before.
+ */
+function phoneMiddle() {
+  if (!phone.out) phoneToggle();
+  else if (!phone.slid) phone.setRail(true);
+  else if (phone.screen === 'standby') phonePress('send');
+  else phoneToggle();
 }
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
@@ -520,7 +531,7 @@ addEventListener('mousedown', (e) => {
   }
   // the middle button: takes the phone out; on the standby screen it opens the dialer; elsewhere it
   // lowers the phone, which keeps its screen and state for when it comes up again
-  if (e.button === 1) { e.preventDefault(); if (!payphone.active) { if (phone.out && phone.screen === 'standby') phonePress('up'); else phoneToggle(); } return; }
+  if (e.button === 1) { e.preventDefault(); if (!payphone.active) { phoneMiddle(); } return; }
   if (payphone.active) {
     if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(ui.cols, ui.rows, x, y); if (k) payPress(k); }
     else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }

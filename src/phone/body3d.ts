@@ -34,12 +34,15 @@ const inRound = (x: number, y: number, x0: number, y0: number, x1: number, y1: n
   return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
 };
 
-/** The model, without its keys (they are stamped on per frame, up or sunk). */
-function base(S: Shell): Vox {
-  const V = new Vox(NX, NY, NZ), R = Math.max(2, S.round * 2.2);
+/**
+ * The two plates, without their keys (they are stamped on per frame, up or sunk), as two models of the
+ * same size so they cast alike: the lower one as it lies with the rail open (the same length as the
+ * upper, the keypad's rows below the upper plate's foot), drawn shifted up under the upper as it shuts.
+ */
+function base(S: Shell): [Vox, Vox] {
+  const lo = new Vox(NX, NY, NZ), V = new Vox(NX, NY, NZ), R = Math.max(2, S.round * 2.2);
   const upY = UP_ROWS * MMY;
-  // the lower plate, the whole length; the upper over it down to the seam
-  V.draw(0, LOW, (x, y) => (inRound(x, y, 0, 0, NX, NY, R) ? P.Low : 0));
+  lo.draw(0, LOW, (x, y) => (inRound(x, y, 0, NY - upY, NX, NY, R) ? P.Low : 0));
   V.draw(LOW, LOW + UP, (x, y) => (inRound(x, y, 0, 0, NX, upY, R) ? P.Plate : 0));
   // the upper plate's front edge, a millimetre in all round: the rim of a rounded edge
   const top = LOW + UP - 1;
@@ -62,14 +65,14 @@ function base(S: Shell): Vox {
   // the earpiece (a slot) right of the middle, the maker's name being left of it (draw.ts), and the front camera (a lens)
   for (let x = 30; x < 39; x++) for (let y = 2; y < 4; y++) { V.set(x, y, top, 0); V.set(x, y, top - 1, P.Slot); }
   for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { V.set(43 + dx, 2 + dy, top, 0); V.set(43 + dx, 2 + dy, top - 1, P.Lens); }
-  return V;
+  return [lo, V];
 }
 
 /** The keys stamped on a copy of the base: a cap per key rect, 1 mm proud of its plate (or flush when pressed); its top edge shows by the tilt. */
-function withKeys(V0: Vox, S: Shell, keys: KeyRect[], down: (k: Key) => boolean, ids: Map<number, Key>): Vox {
-  const V = V0.copy(), upY = UP_ROWS * MMY;
+function withKeys([lo0, up0]: [Vox, Vox], S: Shell, keys: KeyRect[], down: (k: Key) => boolean, ids: Map<number, Key>): [Vox, Vox] {
+  const lo = lo0.copy(), up = up0.copy(), upY = UP_ROWS * MMY;
   keys.forEach(([k, cx, cy, cw, ch], n) => {
-    const x0 = cx * MMX, y0 = cy * MMY, x1 = (cx + cw) * MMX, y1 = (cy + ch) * MMY, onUp = y0 < upY;
+    const x0 = cx * MMX, y0 = cy * MMY, x1 = (cx + cw) * MMX, y1 = (cy + ch) * MMY, onUp = y0 < upY, V = onUp ? up : lo;
     const face = onUp ? LOW + UP - 1 : LOW - 1, z = down(k) ? face : face + 1;
     const col = KEY0 + n;
     ids.set(col, k);
@@ -80,25 +83,26 @@ function withKeys(V0: Vox, S: Shell, keys: KeyRect[], down: (k: Key) => boolean,
       for (let zz = face; zz <= z; zz++) V.set(x, y, zz, col);
     }
   });
-  return V;
+  return [lo, up];
 }
 
 /** The sway's step (rad) and how far it goes either way: small, so the screen and the labels (still drawn flat over it) stay on their keys. */
 const TILT_STEP = 0.015, TILT_MAX = 0.06;
-let cache: { key: string; V: Vox; ids: Map<number, Key>; poses: Map<string, GBuf> } | null = null;
+let cache: { key: string; V: [Vox, Vox]; ids: Map<number, Key>; poses: Map<string, [GBuf, GBuf]> } | null = null;
 /** The palette and the keys' light, kept while the look, its color and the keys under the cursor or pressed stay the same. */
 let paint: { key: string; pal: VoxMat[]; mul: Float32Array } | null = null;
-/** The body as last lit (x, y, r, g, b per pixel met), kept while the light stays the same (standing still). */
-let lit: { key: string; px: Float32Array; n: number } | null = null;
+/** The plates as last lit (x, y, r, g, b per pixel met; the lower plate's first, n0 of them), kept while the light stays the same (standing still). */
+let lit: { key: string; px: Float32Array; n0: number; n: number } | null = null;
 
 /**
  * The body into the HD layer (put: x, y in the layer's pixels), its top-left at cell (ox, oy). Keys
  * sunk come from `down`; a key under the cursor is lit a little (`hover`). `tilt` sways it a little off
  * its pose (yaw, pitch in rad, as the hand lags the eye), in steps: each step's geometry is cast once
- * and kept until the look or the keys pressed change.
+ * and kept until the look or the keys pressed change. `rail` (rows, 0 open .. minus the keypad's rows
+ * shut) is how far the lower plate is drawn up under the upper.
  */
 export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: number) => void, ox: number, oy: number, S: Shell, look: number, body: C3,
-  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0]) {
+  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0], rail = 0) {
   const pressed = keys.filter(([k]) => down(k)).map(([k]) => k).join(',');
   const ck = `${look}|${pressed}`;
   if (!cache || cache.key !== ck) {
@@ -109,7 +113,8 @@ export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: 
   const ty = step(tilt[0]), tp = step(tilt[1]), posk = `${ty},${tp}`;
   let G = cache.poses.get(posk);
   if (!G) {
-    G = castVox(cache.V, { w: PHONE_W * HD, h: PHONE_H * HD, sx: MMX / HD, sy: MMY / HD, yaw: YAW + ty * TILT_STEP, pitch: PITCH + tp * TILT_STEP });
+    const view = { w: PHONE_W * HD, h: PHONE_H * HD, sx: MMX / HD, sy: MMY / HD, yaw: YAW + ty * TILT_STEP, pitch: PITCH + tp * TILT_STEP };
+    G = [castVox(cache.V[0], view), castVox(cache.V[1], view)];
     cache.poses.set(posk, G);
   }
   const pk = `${ck}|${hover}|${body}`;
@@ -134,11 +139,16 @@ export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: 
   const q = (v: number) => Math.round(v * 64);
   const lk = `${pk}|${posk}|${q(L.rgb[0])},${q(L.rgb[1])},${q(L.rgb[2])},${q(L.lat)},${q(L.str)},${q(L.glint[0])},${q(L.glint[1])},${q(L.glint[2])}`;
   if (!lit || lit.key !== lk) {
-    const px = lit?.px.length === G.w * G.h * 5 ? lit.px : new Float32Array(G.w * G.h * 5);
+    const size = G[0].w * G[0].h * 10, px = lit?.px.length === size ? lit.px : new Float32Array(size);
     let n = 0;
-    shadeVox(G, paint.pal, L, (x, y, r, g, b) => { px[n++] = x; px[n++] = y; px[n++] = r; px[n++] = g; px[n++] = b; }, paint.mul);
-    lit = { key: lk, px, n };
+    const keep = (x: number, y: number, r: number, g: number, b: number) => { px[n++] = x; px[n++] = y; px[n++] = r; px[n++] = g; px[n++] = b; };
+    shadeVox(G[0], paint.pal, L, keep, paint.mul);
+    const n0 = n;
+    shadeVox(G[1], paint.pal, L, keep, paint.mul);
+    lit = { key: lk, px, n0, n };
   }
-  const X0 = ox * HD, Y0 = oy * HD, A = lit.px;
-  for (let i = 0; i < lit.n; i += 5) put(X0 + A[i], Y0 + A[i + 1], A[i + 2], A[i + 3], A[i + 4]);
+  // the lower plate first (shifted up by the rail), the upper over it
+  const X0 = ox * HD, Y0 = oy * HD, A = lit.px, dy = rail * HD;
+  for (let i = 0; i < lit.n0; i += 5) put(X0 + A[i], Y0 + dy + A[i + 1], A[i + 2], A[i + 3], A[i + 4]);
+  for (let i = lit.n0; i < lit.n; i += 5) put(X0 + A[i], Y0 + A[i + 1], A[i + 2], A[i + 3], A[i + 4]);
 }
