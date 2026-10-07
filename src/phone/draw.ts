@@ -352,14 +352,14 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   }
   ar /= Math.max(1, n); ag /= Math.max(1, n); ab /= Math.max(1, n);
   // (less of it for a bright page: the eye adapts to what it looks at)
-  const bl = Math.min(0.7, bloom * pageDim(lum([ar, ag, ab])));
+  const bl = Math.min(0.5, bloom * pageDim(lum([ar, ag, ab])));
   if (bl > 0.01 && n && on) {
     // bloom in the dark: the screen's own light haloes over the glass and spills on the bezel around it
     for (let y = SY - 3; y <= SY + SH + 2; y++) for (let x = SX - 3; x <= SX + SW + 2; x++) {
       const gx = ox + x, gy = oy + y;
       if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
       const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
-      const w = bl * (d === 0 ? 0.22 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
+      const w = bl * (d === 0 ? 0.05 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
       g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
       // the glyphs there too (the bezel's rounded corners), so the halo does not leave them dark
       if (d > 0) { g.cells[k + 1] += ar * w; g.cells[k + 2] += ag * w; g.cells[k + 3] += ab * w; }

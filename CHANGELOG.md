@@ -3,6 +3,7 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.15.17 — O Ferret (2026-10-07)
+- **O brilho (bloom) das telas do notebook e do celular ficou bem mais fraco e tem um teto:** no escuro a tela ainda brilha em volta, mas não borra mais o texto nem as imagens.
 - **O navegador do celular agora é o Ferret Mini:** o endereço numa faixa marrom-terra, o furão como um pontinho que cava enquanto a página vem, e o ícone do app é a cara do furão.
 - **Antes de uma página pesada pelo EDGE, o Ferret Mini avisa o preço** ("This page is about 172 KB and may cost $0.10 of data. Continue?"); Yes baixa, No fica onde estava. No Wi-Fi não pergunta.
 - **As páginas no celular ganharam imagens:** fotos, mapas, anúncios, os rostos do Streetwire, o mapa da GridLink, a coruja. Os sites feitos para celular continuam leves e sem fotos; os outros chegam inteiros, com tudo, e custam mais.

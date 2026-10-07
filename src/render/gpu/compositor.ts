@@ -30,9 +30,11 @@ const CORE_K = 1.0, CORE_R = 0.06, HALO_K = 0.8, HALO_R = 0.4, SCREEN_REFL = 0.5
 const HALO_TINT = 3;
 /**
  * The screens' own bloom (R.36): their bright parts (the phone's big clock, white text) blurred over the
- * screen cells round them (SCR_RX x SCR_RY cells) and added over the screen, times SCR_K.
+ * screen cells round them (SCR_RX x SCR_RY cells) and added over the screen, times SCR_K, and never more than
+ * SCR_CAP (of full white, per channel): a glow on the glass, not a blur over the text and the pictures (the
+ * user, 2026-10-07: it hid the details). The same for every handheld screen: the phone, the notebook, the Jackdaw.
  */
-const SCR_K = 0.9, SCR_RX = 4, SCR_RY = 3;
+const SCR_K = 0.35, SCR_CAP = 0.07, SCR_RX = 4, SCR_RY = 3;
 
 const CU = /* wgsl */ `
 struct CU {
@@ -171,11 +173,11 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
   let kPh = ek * f32(max(u.eye.z, 1)) / 100.0 / (1.0 + 3.0 * dot(mean[0].rgb, vec3f(0.3, 0.5, 0.2))); let kTm = ek / (1.0 + 3.0 * dot(mean[1].rgb, vec3f(0.3, 0.5, 0.2)));
   if (inPhone(s)) {
     let f = (vec2f(s - u.uiOrigin) + 0.5) / vec2f(u.uiCell) - 0.5;
-    col += scrAt(f, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh;
+    col += min(scrAt(f, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh, vec3f(${SCR_CAP}));
   } else if (inTerm(s)) {
     var f = (vec2f(s - u.tmOrigin) + 0.5) / vec2f(u.tmCell) - 0.5;
     if (u.tmShow.x == 0) { f = glassUv(vec2f(s) + 0.5) * vec2f(u.tmGrid) - 0.5; }
-    col += scrAt(f, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm;
+    col += min(scrAt(f, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm, vec3f(${SCR_CAP}));
   }
   if (inPhone(s) || inTerm(s)) {
     // the screen's glass: the frame's bright lights mirrored on it, blurred (the world's glow only, in .a),
