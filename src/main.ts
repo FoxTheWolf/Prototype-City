@@ -398,7 +398,7 @@ function playLap(list: LapSound[]) {
 }
 /**
  * The stages (the phone's manual, section 2): the middle button goes a stage up each time: out of the
- * pocket (shut), the rail open, then the dialer from whatever screen; the right button's click a stage
+ * pocket (shut), the rail open, then the dialer from the standby screen or the apps' grid; the right button's click a stage
  * down: out of the app to the standby screen, the rail shut, back in the pocket; holding it puts the
  * phone away at once, as it is.
  */
@@ -406,7 +406,8 @@ function phoneMiddle() {
   const now = performance.now() / 1000;
   if (!phone.out) phoneToggle();
   else if (!phone.slid) phone.setRail(true);
-  else if (phone.screen !== 'calls' && phone.screen !== 'boot' && phone.screen !== 'off') { phone.toDialer(now); sound?.phoneKey(false, true, true); }
+  // (the user, 2026-10-07) the dialer from the standby screen or the apps' grid; in an app it does nothing, never lowers the phone
+  else if (phone.screen === 'standby' || phone.screen === 'menu') { phone.toDialer(now); sound?.phoneKey(false, true, true); }
 }
 function phoneBack() {
   const now = performance.now() / 1000, s = phone.screen;
