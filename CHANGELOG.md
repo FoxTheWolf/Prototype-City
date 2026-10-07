@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.17 — O pintor da web de 2008 (2026-10-07)
+- Por dentro: as peças com que as páginas do Ferret vão ser desenhadas em pixels (brilhos, degradês, cantos redondos, estrelas, fotos granuladas de 2008, mapas, letras grandes). Por ora só aparecem na amostra de teste da tela.
+
+## 0.15.16 — A tela do notebook inclina junto (2026-10-07)
+- **Olhando o notebook de lado, a tela acompanha a tampa em perspectiva**, com o texto inteiro, em vez de virar blocos de letras. De frente continua nítida, pixel por pixel.
+
 ## 0.15.15 — O fone isola, e o teclado livre (2026-10-06)
 - **Com o fone, o mundo fica abafado e mais baixo** (a chuva não cobre mais a música); sem fone, nada muda.
 - **A música no bolso ficou menos abafada** e um pouco mais alta.

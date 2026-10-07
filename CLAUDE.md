@@ -232,7 +232,8 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **App de mensagens cifradas** (o canal dos hackers, decidido em 2026-10-04; veja "O jogador é o número dele"): nome fictício, ligado ao número; o contratante passa a escrever por ele em vez do SMS comum.
 
 - **15.16–15.21: os manuais de identidade no jogo (plano de 2026-10-07, detalhe técnico em `docs/plano-interfaces.md`; nesta ordem, antes da etapa 16):**
-  - **15.16** telas como textura própria (notebook 1280×800, celular 240×400, Jackdaw 128×64; textura, não storage buffer; recorta o ASCII; sobe da etapa 20).
+  - **15.16 ✅ (notebook)** a tela do notebook vira uma textura desenhada na GPU (`SCREEN_WGSL` em `gpu/compositor.ts`) e deitada no vidro pela homografia (`render/screens.ts`), com uma camada de pixels própria de 1280×800 (`termHd` em `main.ts`); **o celular passou para a 15.19b** (sem corpo 3D a tela dele não inclina; refazer os apps agora seria trabalho dobrado).
+  - **15.17b ✅** pintor 2D (`render/paint2d.ts`, `tests/paint2d.ts`); amostra no `DEBUG.screenTest` (ligado para o teste do usuário: **desligar depois**). Falta: a fonte HD grossa se a 5×7 ficar pobre (perguntar com captura).
   - **15.17** o Ferret e a web de 2008 (manual do Ferret v2): pintor 2D, moldura com abas/favoritos/roxo, estados (apagão = tempo esgotado), blocos com camadas HD, moldes como anos, canônicas (+ site da GridLink), Lookwise com a coruja e o índice de madrugada, Ferret Mini, selos e Burrow Labs. **Sem cache** (decidido: ver os sites caírem no apagão).
   - **15.18** os fabricantes no código (`MAKERS = 4`, séries por família, megacorp com nome cunhado, fontes de pontos e símbolos 16×16). Dá para a nuvem.
   - **15.19** o pipeline de cubinhos na GPU (grade de ocupação por modelo, LOD) e o celular em 3D.
