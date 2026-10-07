@@ -36,6 +36,13 @@
 - **A fonte 5×7 do PNG de teste (`tests/png.ts`) não tem `_`, `\` nem `>`**: no PNG as artes dos banners e o "More news >>" perdem pedaços, mas no jogo (o átlas) aparecem. Não "consertar" pelo PNG; o envelope do webmail virou ícone em pixels (`banner.logo: 'mail'`) porque fica melhor, não por isso.
 - O teste de páginas com feed precisa rodar a cidade antes (`stepWorld` 20 mil vezes ≈ 1 min no Node) para haver posts e notícias.
 
+### Lições da 15.19b v2 (corpo na GPU, tela de toque) — 2026-10-07
+- **Cubinhos na CPU na resolução do monitor não cabem:** 331 × 869 px = 575 mil raios = 130 ms por pose, 23 ms só de luz, 93 ms por tecla. Na GPU (`voxBody.ts`, um raio por pixel no fragment shader do compositor, modelos num storage buffer de bytes, paleta no uniform) a CPU cai para ~0,9 ms. Regra: objeto de cubinhos grande na tela = GPU desde o começo.
+- **Legendas e marcas sobre cubos:** um decal no espaço do modelo (8 px por mm) amostrado no ponto onde o raio bate na face da frente; afunda junto com a tecla sem conta extra.
+- **O rodapé duplicado ("Open/Oen")** eram as letras das células da interface sob o vidro (copiadas para a bloom) aparecendo abaixo da borda da imagem da tela: copiar só a cor, nunca a letra.
+- **Vite no painel:** com outro chat usando a porta 5180, subir `vite-5175`; o `resize_window` para 1920 × 1080 não aumenta o canvas do jogo (a página fica no canto) — medir em 800 px e deixar a nitidez para o PC do usuário. `import('/src/...')` pelo `javascript_tool` dá o mesmo módulo do jogo (bom para ler estado e medir).
+- **`cat > arquivo` sem entrada trava o Bash** (esperava o stdin): o script Python vai num arquivo do scratchpad.
+
 ### Lições da 15.19b (trilho, sombra, capinhas, telas em pixels) — 2026-10-07
 - **Projeção ortográfica não mostra inclinação pequena:** o corpo em cubos é ortográfico; a ≤3° uma face plana só encolhe ~0,2% e anda 1–2 px. Fazer a conta antes de construir um "inclinar a tela" (foi contestado e trocado pelo redesenho dos apps).
 - **A tela do celular no jogo é quase quadrada** (42 × 26 células = 336 × 338 px em 1080p: `CELL_ASPECT` 0,6 e 80 linhas), não 240 × 400; o corpo também sai ~20% mais largo que o real (1 coluna = 1 mm = 8 px, 1 linha = 2 mm = 13 px).

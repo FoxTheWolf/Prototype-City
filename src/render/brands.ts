@@ -95,6 +95,9 @@ function base(ch: string): Glyph | undefined {
   while (rows.length < H) rows.push(0);
   return { w: 5, rows };
 }
+/** A plain letter of the dot font (5 x 8, with lower case), for small pixel text (the phone's screen). */
+export const plainGlyph = (ch: string): Glyph | undefined => base(ch);
+export const glyphBit = (g: Glyph, x: number, y: number) => bit(g, x, y);
 const bit = (g: Glyph, x: number, y: number) => x >= 0 && x < g.w && y >= 0 && y < H && ((g.rows[y] >> (g.w - 1 - x)) & 1) === 1;
 /** A glyph from a test on its pixels. */
 const make = (w: number, on: (x: number, y: number) => boolean): Glyph => {

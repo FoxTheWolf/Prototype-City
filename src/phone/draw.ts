@@ -17,6 +17,7 @@ import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { brandColor, drawBody3d } from './body3d';
+import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, SCR_H } from './pixui';
 import { phoneFam } from '../render/brands';
 import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
 import { formatNumber } from '../sim/telco';
@@ -41,8 +42,10 @@ const SX = SCREEN_MM[0] / COL_MM, SY = SCREEN_MM[1] / ROW_MM, SWC = (SCREEN_MM[2
  * For now the apps of before (42 x 26 cells) go on it as they are, a cell ~5.7 x 15 pixels.
  */
 /** How the screen's cells' shape compares to the interface's (width over height): the map keeps its scale with it. */
-const PIC_K = (SWC * SH) / (SHC * SW);
-export const PHONE_PIC = { grid: new CharGrid(SW, SH), hd: new HdLayer(SW * HD, SH * HD), on: false, rect: [0, 0, 1, 1] as number[] };
+/** The cells' part of the screen (the content area between the pixel bars, pixui.ts): its top and height in interface cells. */
+const CY = SY + (SHC * CONTENT_Y0) / SCR_H, CHC = (SHC * (CONTENT_Y1 - CONTENT_Y0)) / SCR_H;
+const PIC_K = (SWC * SH) / (CHC * SW);
+export const PHONE_PIC = { grid: new CharGrid(SW, SH), hd: new HdLayer(SW * HD, SH * HD), on: false, rect: [0, 0, 1, 1] as number[], full: [0, 0, 1, 1] as number[] };
 const MAP_ROWS = SH - 4;
 /** Metres the map shows across and down, for a cell aspect (width / height) and zoom (a column is the cell aspect of a row, so nothing is stretched). */
 export const mapView = (aspect: number, zoom: number, indoor = false): [number, number] => {
@@ -223,8 +226,9 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const PG = PHONE_PIC.grid, PH = PHONE_PIC.hd;
   PG.clear(); PH.wipe();
   const S = new Lcd(PG, 0, 0, PH);
-  PHONE_PIC.on = true; PHONE_PIC.rect = [ox + SX, oy + SY, SWC, SHC];
-  SCREEN.at = on ? PHONE_PIC.rect : null;
+  PHONE_PIC.on = true; PHONE_PIC.rect = [ox + SX, oy + CY, SWC, CHC]; PHONE_PIC.full = [ox + SX, oy + SY, SWC, SHC];
+  SCREEN.at = on ? PHONE_PIC.full : null;
+  BARS.status = null; BARS.soft = ['', ''];
   if (!on) for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]);
   else {
     for (let y = 0; y < SH; y++) S.fill(y, LCD);
@@ -248,7 +252,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   }
   // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
   for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
-    const k = (y * SW + x) * 4, sh = sheen(SX + (x * SWC) / SW, SY + (y * SHC) / SH) * amp * 0.45, C = PG.cells, B = PG.bg;
+    const k = (y * SW + x) * 4, sh = sheen(SX + (x * SWC) / SW, CY + (y * CHC) / SH) * amp * 0.45, C = PG.cells, B = PG.bg;
     // the glass's ceiling: past 200 the light rolls off, so the brightest pages keep their detail
     const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
     for (let c = 1; c < 4; c++) C[k + c] = roll(C[k + c] * gain);
@@ -271,10 +275,13 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const gx0 = Math.floor(ox + SX), gy0 = Math.floor(oy + SY), gx1 = Math.ceil(ox + SX + SWC), gy1 = Math.ceil(oy + SY + SHC);
   for (let gy = Math.max(0, gy0); gy < Math.min(g.rows, gy1); gy++) for (let gx = Math.max(0, gx0); gx < Math.min(g.cols, gx1); gx++) {
     const px = Math.min(SW - 1, Math.max(0, Math.floor(((gx + 0.5 - ox - SX) / SWC) * SW))), py = Math.min(SH - 1, Math.max(0, Math.floor(((gy + 0.5 - oy - SY) / SHC) * SH)));
-    const k = (py * SW + px) * 4, i = gy * g.cols + gx;
-    g.setBg(i, PG.bg[k], PG.bg[k + 1], PG.bg[k + 2]);
-    g.put(i, PG.cells[k], PG.cells[k + 1], PG.cells[k + 2], PG.cells[k + 3]);
+    // (no letters: those peeked out under the picture's edge, a footer twice; a letter's light is mixed into the paper instead)
+    const k = (py * SW + px) * 4, i = gy * g.cols + gx, gl = PG.cells[k] > 32 ? 0.3 : 0;
+    g.setBg(i, PG.bg[k] + (PG.cells[k + 1] - PG.bg[k]) * gl, PG.bg[k + 1] + (PG.cells[k + 2] - PG.bg[k + 1]) * gl, PG.bg[k + 2] + (PG.cells[k + 3] - PG.bg[k + 2]) * gl);
+    g.put(i, 32, 0, 0, 0);
   }
+  // the bars and a touch's answer, in pixels over the cells (the manual's section 6)
+  paintChrome(now, on ? Math.min(1.1, gain) : 1, !on ? [5, 6, 8] : P.screen === 'boot' ? LCD : null);
   void bloom;
 }
 

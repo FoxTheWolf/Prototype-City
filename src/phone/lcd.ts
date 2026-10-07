@@ -2,16 +2,17 @@ import en from '../locale/en.json';
 import { type CharGrid } from '../render/grid';
 import { HD, HdOrder, type HdLayer } from '../render/hd';
 import { fontRows } from '../render/signs';
-import { SHAPE } from '../render/atlas';
 import { calendar } from '../sim/clock';
 import { type World } from '../sim/world';
 import { type GpsState } from './gps';
 import { type Radio } from './radio';
 import { type Wifi } from './wifi';
 import { type Editor } from './textinput';
+import { CHROME } from './pixui';
 
 /** The phone's screen: its size in cells, its colors, and the pieces every app draws with. */
-export const SW = 42, SH = 26;
+/** The screen's cells (the content area between the pixel bars, pixui.ts): 40 x 32 cells of 6 x 12 pixels on the 240 x 432 screen. */
+export const SW = 40, SH = 32;
 export type C3 = readonly [number, number, number];
 export const T = en.phone;
 export const LCD: C3 = [8, 15, 20], INK: C3 = [170, 225, 245], DIM: C3 = [80, 120, 140], BAR: C3 = [28, 62, 82], HI: C3 = [255, 196, 90];
@@ -85,42 +86,18 @@ export const hhmm = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0
  * while data moves over EDGE, Wi-Fi, the GPS while it runs, an envelope for unread messages, the
  * time, the battery.
  */
-export function statusBar(S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false, wifi: Wifi | null = null, batt = 1, charging = false, phones = false) {
-  const B: C3 = [BAR[0] * 0.55, BAR[1] * 0.55, BAR[2] * 0.55], OK: C3 = [150, 235, 150], OFF: C3 = [BAR[0] * 1.4, BAR[1] * 1.4, BAR[2] * 1.4];
-  S.fill(0, B);
-  S.put(1, 0, ch('Y'), INK, B);
-  const G = [SHAPE.q1, SHAPE.bottom, SHAPE.q3, 128];
-  if (radio.state === 'service') for (let b = 0; b < 4; b++) S.put(2 + b, 0, G[b], b < radio.bars ? OK : OFF, B);
-  else if (radio.state !== 'search' || Math.floor(now * 2) & 1) S.text(2, 0, 'x', BAD, B);
-  const J = radio.job;
-  if (J && (J.state === 'connecting' || J.state === 'loading') && Math.floor(now * 6) & 1) S.text(7, 0, 'E', HI, B);
-  // GPS: blinking while it searches, steady with a fix, dim when it lost the satellites
-  if (gps === 'fix') S.text(9, 0, 'GPS', [120, 255, 150], B);
-  else if (gps === 'search' && Math.floor(now * 2) & 1) S.text(9, 0, 'GPS', [255, 220, 120], B);
-  else if (gps === 'lost') S.text(9, 0, 'GPS', [110, 110, 110], B);
-  // an envelope while there are unread messages
-  if (unread) { const c: C3 = Math.floor(now * 1.5) & 1 ? HI : INK; S.put(14, 0, 128, c, B); S.put(15, 0, ch('='), B, c); }
-  // Wi-Fi: a W and its bars while joined, blinking while it joins
-  if (wifi && (wifi.state === 'up' || ((wifi.state === 'assoc' || wifi.state === 'dhcp') && Math.floor(now * 3) & 1))) {
-    S.text(18, 0, 'W', [150, 230, 255], B);
-    for (let b = 0; b < 3; b++) S.put(19 + b, 0, G[b + 1], b < Math.ceil(wifi.bars * 0.75) ? [150, 230, 255] : OFF, B);
-  }
-  // earphones plugged in (2026-10-06): a little headset, as the phones of the time showed it
-  if (phones) S.text(23, 0, '(o)', [200, 160, 255], B);
-  S.text(SW - 12, 0, hhmm(calendar(world.time).hour), INK, B);
-  // the battery: a cell with its level (red when low), a nub; while charging the level climbs
-  const bars = charging ? Math.floor(now * 2) % 5 : Math.ceil(batt * 4), BC: C3 = batt < 0.15 && !charging ? BAD : OK;
-  for (let k = 0; k < 4; k++) S.put(SW - 6 + k, 0, 128, k < bars ? BC : [70, 90, 70], B);
-  S.put(SW - 2, 0, SHAPE.left, [120, 140, 120], B);
+export function statusBar(_S: Lcd, world: World, gps: GpsState, now: number, radio: Radio, unread = false, wifi: Wifi | null = null, batt = 1, charging = false, phones = false) {
+  // drawn in pixels over the screen's top (pixui.ts, the manual's 18 px bar)
+  const J = radio.job, blink = (Math.floor(now * 2) & 1) === 1;
+  CHROME.status = {
+    bars: radio.bars, service: radio.state === 'service', search: radio.state === 'search', edge: !!J && (J.state === 'connecting' || J.state === 'loading'),
+    gps: gps === 'off' ? '' : gps, unread, wifi: wifi && (wifi.state === 'up' || ((wifi.state === 'assoc' || wifi.state === 'dhcp') && blink)) ? Math.ceil(wifi.bars * 0.75) : -1,
+    phones, time: hhmm(calendar(world.time).hour), batt, charging, blink,
+  };
 }
 
-/** The soft keys' labels on the bottom row, each on a key-shaped tab. */
-export function softKeys(S: Lcd, left: string, right: string) {
-  const B: C3 = [BAR[0] * 0.55, BAR[1] * 0.55, BAR[2] * 0.55], TAB: C3 = [BAR[0] * 1.25 + 8, BAR[1] * 1.25 + 8, BAR[2] * 1.25 + 8];
-  S.fill(SH - 1, B);
-  if (left) { S.put(0, SH - 1, 32, TAB, TAB); S.text(1, SH - 1, left + ' ', [255, 255, 255], TAB); S.put(2 + left.length, SH - 1, SHAPE.left, TAB, B); }
-  if (right) { const x = SW - 2 - right.length; S.put(x - 1, SH - 1, SHAPE.right, TAB, B); S.text(x, SH - 1, ' ' + right, [255, 255, 255], TAB); S.put(SW - 1, SH - 1, 32, TAB, TAB); }
-}
+/** The soft keys' actions: drawn in pixels as the footer's touch buttons (pixui.ts, the manual's 26 px footer). */
+export function softKeys(_S: Lcd, left: string, right: string) { CHROME.soft = [left, right]; }
 
 /** A title on row 1. */
 export function title(S: Lcd, s: string, t: number, right = '') {

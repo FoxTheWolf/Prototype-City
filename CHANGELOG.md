@@ -2,6 +2,16 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.20 — O celular de toque (2026-10-07)
+- **Celular novo, igual ao manual:** uma tela de toque bem maior e, no lugar da cruz e das teclas de função, um botão central redondo (cromado, com um anel azul-gelo) entre atender e desligar. O botão central leva à grade de apps e, na grade, volta à tela inicial (no teclado do PC, Home).
+- **Toque na tela com o mouse:** clicar num app da grade abre o app; os dois botões do rodapé da tela (Menu, Back…) são tocáveis; no resto, o toque escolhe a linha tocada. Todo toque responde com um tique do alto-falante e o item aceso em azul-gelo.
+- **O corpo agora é nítido:** os cubinhos são desenhados pela placa de vídeo na resolução do monitor (antes borravam, principalmente as teclas quando o celular inclinava). O teclado tem o número grande e as letras pequenas, como num celular de verdade, e o aro, o botão central e as teclas de música são cromados de verdade (claro em cima, uma faixa escura no meio).
+- **O celular de começo é preto brilhante** (o Slate, da marca do executivo). Jogos já salvos mantêm o aparelho que tinham.
+- **As barras da tela foram refeitas em pixels:** sinal, rede, GPS, mensagens, Wi-Fi, fone, a hora e a bateria em cima; as ações embaixo, como botões. As letras dos apps não ficam mais espremidas.
+- **Segurar o botão do meio guarda o celular de uma vez**; segurar o direito volta a só olhar em volta.
+- **O sol aquece o que você segura:** ao sol o celular fica mais claro e amarelado (âmbar com o sol baixo); na sombra a tela não fica mais tão apagada.
+- **O fone de ouvido é preto** e entra no topo, à direita das teclas de música; a rodinha de volume é cromada e acende em azul-gelo sob o cursor.
+
 ## 0.15.19 — O celular de cubinhos (2026-10-07)
 - **O corpo do celular agora é feito de cubinhos de 1 mm**, desenhado em pixels: as duas placas do deslizante (a de cima com a cor e o material do visual escolhido, a de baixo grafite com o teclado numérico), a borda arredondada, o aro cromado em volta da tela nos visuais que têm, a fenda do alto-falante e a câmera da frente. Ele aparece um pouco inclinado, com a borda de cima e o topo das teclas à mostra.
 - **As teclas saltam 1 mm e afundam de verdade quando apertadas**; os vãos entre elas ficam na sombra, e o brilho da luz mais próxima corre pela frente como antes.

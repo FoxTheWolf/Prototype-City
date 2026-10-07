@@ -2,8 +2,9 @@ import { Sound } from './audio/sound';
 import { Input } from './input';
 import { drawPhone, keyAt, mapView, onDial, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BODY_GPU } from './phone/body3d';
+import { CONTENT_Y0, CONTENT_Y1, FOOT_L, FOOT_R, PHONE_PX, SCR_H, SCR_W, tapFlash } from './phone/pixui';
 import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
-import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
+import { APPS, BOOT_LOG_S, MENU_COLS, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
 import { drawPayphone, Payphone } from './phone/payphone';
 import { songInfo } from './phone/apps';
@@ -336,12 +337,14 @@ let lapWasOpen = false;
 // the solid background behind the glyphs: 0.24 of the glyph's color ("1/3"), the user's pick
 const look: Look = { solid: 0.24, blocks: false, sharp: STYLES[style].sharp, fuse: OPTS.fuse };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
-function phonePress(pk: Key) {
+function phonePress(pk: Key, touch = false) {
   const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(uiLayout.cellW / uiLayout.cellH, phone.zoom, world.player.inside >= 0));
   // keypad tones as the settings say: none in silent or with them off, the dome's click only, or a
-  // tone (touch-tones on the dialer, or on every digit); a call fails for want of a network
+  // tone (touch-tones on the dialer, or on every digit); a call fails for want of a network. A touch on
+  // the screen: the speaker's tick instead (the phone's manual v2)
   const pr = phone.prefs;
-  if (pr.profile !== 2 && pr.keys !== 3) {
+  if (touch) { if (pr.profile !== 2) sound?.phoneTap(); }
+  else if (pr.profile !== 2 && pr.keys !== 3) {
     if (done && /^[0-9*#]$/.test(pk) && (pr.keys === 2 || (pr.keys === 0 && was === 'calls'))) sound?.dtmf(pk);
     else sound?.phoneKey(/^\d$/.test(pk), done !== false, pr.keys !== 1);
   }
@@ -477,6 +480,34 @@ function altUp() {
 addEventListener('blur', () => { altFree = false; });
 /** The left button is held down over the notebook screen, dragging a selection (15.7c). */
 let lapDrag = false;
+/**
+ * A touch on the phone's screen (the manual v2: a touch screen for choosing) at the system cursor: the
+ * footer's buttons are the two actions, the apps' grid opens the app touched, elsewhere it is OK on the row
+ * touched; what was touched lights a moment. False when the cursor is not on the screen.
+ */
+function phoneTouch(cx: number, cy: number): boolean {
+  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout, F = PHONE_PIC.full;
+  if (!PHONE_PIC.on || phone.screen === 'off' || phone.screen === 'boot') return false;
+  const sx = ((((cx - r.left) * dpr - L.originX) / L.cellW - F[0]) / F[2]) * SCR_W, sy = ((((cy - r.top) * dpr - L.originY) / L.cellH - F[1]) / F[3]) * SCR_H;
+  if (sx < 0 || sy < 0 || sx >= SCR_W || sy >= SCR_H) return false;
+  const now = performance.now() / 1000;
+  if (sy >= FOOT_L.y) {
+    const left = sx < SCR_W / 2, B = left ? FOOT_L : FOOT_R;
+    if (sx >= B.x && sx < B.x + B.w) { tapFlash(B, now); phonePress(left ? 'lsoft' : 'rsoft', true); }
+    return true;
+  }
+  if (sy < CONTENT_Y0) return true;
+  const col = Math.floor(sx / 6), row = Math.floor((sy - CONTENT_Y0) / 12);
+  if (phone.screen === 'menu') {
+    // the grid's tiles (apps.ts menu: 10 cells wide, 5 rows tall, from column 1, row 2)
+    const c = Math.floor((col - 1) / 10), rr = Math.floor((row - 2) / 5), n = rr * MENU_COLS + c;
+    if (c < 0 || c >= MENU_COLS || rr < 0 || n >= APPS.length) return true;
+    phone.sel = n;
+    tapFlash({ x: (1 + c * 10) * 6, y: CONTENT_Y0 + (2 + rr * 5) * 12, w: 60, h: 60 }, now);
+  } else tapFlash({ x: 0, y: CONTENT_Y0 + row * 12, w: SCR_W, h: 12 }, now);
+  phonePress('ok', true);
+  return true;
+}
 /** The interface's cell under the system cursor. */
 function cellAtClient(cx: number, cy: number): [number, number] {
   const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
@@ -553,7 +584,7 @@ addEventListener('mousedown', (e) => {
   if (phone.out) {
     if (e.button === 0) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
-      phonePress(keyAt(ui.cols, ui.rows, phone, x, y) ?? 'ok');
+      if (!phoneTouch(e.clientX, e.clientY)) phonePress(keyAt(ui.cols, ui.rows, phone, x, y) ?? 'ok');
     } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
@@ -762,7 +793,8 @@ addEventListener('keyup', (e) => {
  *  cover: the world overfills by up to a cell (cut at the edges); the interface stays whole, the leftover (< a cell) on top. */
 /** The phone screen's picture (15.19b): its cells sized so the picture is about the glass's size in pixels (240 x 400 at 1080p). */
 function phonePic() {
-  const [x0, y0, x1, y1] = SCREEN_MM, w = ((x1 - x0) / COL_MM) * uiLayout.cellW, h = ((y1 - y0) / ROW_MM) * uiLayout.cellH;
+  // the cells lie in the content area between the pixel bars (phone/pixui.ts): 384 of the screen's 432 pixels
+  const [x0, y0, x1, y1] = SCREEN_MM, w = ((x1 - x0) / COL_MM) * uiLayout.cellW, h = ((y1 - y0) / ROW_MM) * uiLayout.cellH * ((CONTENT_Y1 - CONTENT_Y0) / SCR_H);
   comp?.setPhone(PHONE_SW, PHONE_SH, Math.max(4, Math.round(w / PHONE_SW)), Math.max(8, Math.round(h / PHONE_SH)));
   // the body's picture follows the interface's cells: square pixels at the monitor's resolution
   PHONE_BODY.cw = uiLayout.cellW; PHONE_BODY.ch = uiLayout.cellH;
@@ -1498,7 +1530,7 @@ function frame(now: number) {
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? PHONE_PIC : null, bodyAt);
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt);
   else renderer.draw(grid, ui, hd, termAt);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }

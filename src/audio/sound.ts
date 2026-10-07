@@ -282,6 +282,17 @@ export class Sound {
     o.start(t); o.stop(t + 0.2);
   }
 
+  /** A touch on the phone's screen (the manual v2): not a key's click but a short high tick from its speaker, a sine and its octave. */
+  phoneTap() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (const [f, v] of [[1250, 0.045], [2500, 0.012]] as const) {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+      o.type = 'sine'; o.frequency.value = f; o.connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.032);
+      o.start(t); o.stop(t + 0.05);
+    }
+  }
+
   /** A key on the dialer: its touch-tone (DTMF), the two frequencies of its row and column, for a moment. */
   dtmf(key: string) {
     const n = '123456789*0#'.indexOf(key);
