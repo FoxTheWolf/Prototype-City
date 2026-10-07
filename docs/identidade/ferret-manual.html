@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do Ferret</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; --cream: #f1e4c8; --cafe: #4a2c1a; --pet: #1f5a6b; --pet2: #123844; --pet3: #5fa3b3; --acc: #e0823a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 48px 0 28px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 28px; align-items: center; }
+  header.cover svg { width: 100%; max-width: 380px; height: auto; display: block; margin: 0 auto; }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 118%; margin: 0; line-height: 1.05; }
+  header.cover h1 span { color: var(--pet3); }
+  header.cover p { color: var(--dim); margin: 10px 0 0; max-width: 60ch; }
+  @media (max-width: 760px) { header.cover { grid-template-columns: 1fr; } header.cover h1 { font-size: 32px; } }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 26px 0 6px; }
+  .part { font: 700 12px 'IBM Plex Mono'; color: var(--pet3); letter-spacing: .2em; padding: 36px 0 0; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 14px 0; }
+  .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--acc); }
+  .do b { color: #6fd08c; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 64px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 0; overflow-x: auto; line-height: 1.2; font-size: 13px; color: var(--cream); }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #24221f; color: var(--ink); border: 1px solid #3c3934; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #2e2b27; }
+  button.on { border-color: var(--pet3); color: var(--pet3); }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3c3934; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  .stage { background: radial-gradient(ellipse at 50% 30%, #26241f 0%, #0c0b0a 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-top: 14px; }
+  .stage > svg { width: 100%; height: auto; display: block; user-select: none; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  svg text { white-space: pre; }
+  .pix { image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<main>
+  <header class="cover">
+    <svg viewBox="0 0 200 200" id="cover"></svg>
+    <div>
+      <h1>O FERRET <span>E A WEB DE 2008</span></h1>
+      <p>Manual de identidade · v1 · 2026-10-07 · substitui o "Lodestar"</p>
+      <p>O Ferret é o navegador da Burrow Labs, uma empresa de software pequena e independente da cidade. Vem instalado no Osprey, mas não é do Osprey: tem marca, mascote e site próprios, como a Mozilla e a Opera tinham em 2008. O nome vem de "to ferret out", vasculhar até achar. O furão sai da toca, e a toca é ao mesmo tempo o globo, a lupa e o "O".</p>
+      <p>A segunda metade do manual é a web que ele mostra: os seis moldes de site das empresas, os selos da época, as páginas canônicas, o Ferret Mini no celular e o que aparece quando dá errado.</p>
+    </div>
+  </header>
+  <nav class="toc">
+    <a href="#marca">1 · A marca</a><a href="#simbolo">2 · O símbolo</a><a href="#cores">3 · Cores e letras</a><a href="#moldura">4 · A moldura</a><a href="#mascote">5 · O furão carregando</a><a href="#estados">6 · Estados e erros</a><a href="#layouts">7 · Os seis moldes</a><a href="#selos">8 · Os selos de 2008</a><a href="#canon">9 · As páginas canônicas</a><a href="#mini">10 · Ferret Mini</a><a href="#regras">11 · Regras</a><a href="#jogo">12 · No jogo</a>
+  </nav>
+
+  <div class="part">PARTE 1 · A MARCA</div>
+  <section id="marca">
+    <h2>A Burrow Labs e o Ferret <small>quem faz, o que é</small></h2>
+    <p class="lead">A Burrow Labs é uma loja de software de dez pessoas num escritório em cima de uma lavanderia. O Ferret é o único produto dela. Ela vive de um acordo com o buscador Lookwise, que é a busca padrão do navegador, e de doações. O site dela, burrow-labs.net, tem o botão "Get Ferret", as notas de versão e um fórum de bugs. É uma empresa da cidade como as outras: tem endereço, funcionários e um servidor que cai no apagão.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 520 200" id="lockups"></svg><div class="cap"><b>As assinaturas.</b> O símbolo com o nome ao lado (o uso principal), empilhado (caixas e o site) e o nome da empresa, sempre menor, "by Burrow Labs".</div></div>
+    </div>
+    <div class="tbl"><table>
+      <tr><th>Nome</th><th>Escrita</th><th>Onde</th></tr>
+      <tr><td>Ferret</td><td>"Ferret" com F maiúsculo; no logo, "ferret" em minúscula</td><td>o programa no Osprey (o comando é <code>ferret</code>)</td></tr>
+      <tr><td>Ferret 2.0</td><td>com a versão, na barra de título e no "About"</td><td>a versão que vem no notebook usado do jogador</td></tr>
+      <tr><td>Ferret Mini</td><td>"Mini" em peso menor</td><td>o navegador do celular</td></tr>
+      <tr><td>Burrow Labs</td><td>sempre por extenso, nunca "BL"</td><td>o "About", o site, a assinatura das notas de versão</td></tr>
+    </table></div>
+  </section>
+
+  <section id="simbolo">
+    <h2>O símbolo <small>o furão saindo da toca</small></h2>
+    <p class="lead">A toca é um círculo azul-petróleo com meridianos (o globo da web) e um aro claro (a lente da lupa). O furão põe a cabeça e as patas da frente para fora, por cima do aro de baixo, e quebra o círculo. A máscara marrom nos olhos é o traço que diz "furão" em qualquer tamanho, e é também a máscara do ladrão: um piscar de olho para quem joga.</p>
+    <div class="grid3">
+      <div class="card"><svg viewBox="0 0 260 260" id="build"></svg><div class="cap"><b>Construção.</b> Toca: círculo de raio R. A cabeça é uma cunha de 1R de largura que afina até o focinho; as orelhas são pequenas e baixas, dos lados. A máscara são duas manchas ligadas por uma ponte fina sobre o nariz. As patas pousam no aro. A margem mínima em volta é 0,25R.</div></div>
+      <div class="card"><svg viewBox="0 0 260 260" id="sizes"></svg><div class="cap"><b>Tamanhos.</b> O vetor de 48 px para cima. De 32 e de 16 px, os desenhos são feitos à mão em pixels (abaixo): sem meridianos, a máscara e as orelhas ganham peso.</div></div>
+      <div class="card"><svg viewBox="0 0 260 260" id="versions"></svg><div class="cap"><b>Versões.</b> Cor (padrão), uma cor em café (carimbo, impressão barata) e negativa em creme (sobre fundo escuro, a camiseta).</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 520 170" id="pixels" class="pix"></svg><div class="cap"><b>O ícone em pixels</b>, para a camada HD: 16 × 16 (a aba, os favoritos, a barra do Osprey) e 32 × 32 (o atalho e o "About"), ampliados aqui. 6 cores, sem transparência parcial.</div></div>
+      <div class="card"><pre class="ascii" id="ascii"></pre><div class="cap"><b>Em ASCII</b>, para o site da Burrow Labs e para o Ferret Mini sem imagens: cinco linhas, a máscara é o <code>(o--o)</code>.</div></div>
+    </div>
+  </section>
+
+  <section id="cores">
+    <h2>Cores e letras <small>pelagem, máscara, toca</small></h2>
+    <div class="sw" id="swatches"></div>
+    <h3>Tipografia</h3>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 520 150" id="type"></svg><div class="cap"><b>O nome</b> é uma redonda grossa e simpática (aqui Nunito 900), em minúscula, com o "f" apertado contra o "e". O texto da moldura e das páginas mora nas células do console (a fonte mono do Osprey); o brilho, os botões, os ícones e os selos moram na camada HD.</div></div>
+    </div>
+  </section>
+
+  <div class="part">PARTE 2 · O NAVEGADOR</div>
+  <section id="moldura">
+    <h2>A moldura <small>o brilho de 2008, no mosaico do Osprey</small></h2>
+    <p class="lead">O Ferret roda num painel do mosaico do Osprey, sem janela própria: a moldura é dele, a borda é do Osprey. Ela tem o brilho de 2008 (o cinza-prata com gradiente, o voltar grande e redondo, as abas com reflexo) e por isso contrasta de propósito com o console âmbar ao lado: abrir o Ferret é sair do terminal e entrar na rua. O texto fica nas células; o resto, na camada HD.</p>
+    <div class="stage"><svg viewBox="0 0 784 676" id="chrome"></svg></div>
+    <div class="ctl" id="stateBtns"></div>
+    <div class="hint">Os botões trocam o estado da página (a seção 6 explica cada um). Clique nas abas e no voltar.</div>
+    <div class="tbl"><table>
+      <tr><th>Faixa</th><th>Altura</th><th>O que tem</th></tr>
+      <tr><td>abas</td><td>1 linha</td><td>uma aba por página, com o ícone do site (16 px) e o título cortado; a aba ativa é mais clara e se funde à barra; o "+" abre uma nova; o "×" aparece só na ativa</td></tr>
+      <tr><td>barra de navegação</td><td>2 linhas</td><td>voltar (redondo, 28 px), avançar (menor, colado), recarregar/parar (o mesmo botão), início; o campo do endereço com o ícone do site e, em https, o fundo amarelo-claro e o cadeado; a busca do Lookwise; o furão no canto direito</td></tr>
+      <tr><td>favoritos</td><td>1 linha</td><td>de fábrica: Lookwise, o webmail e o portal da cidade; o jogador acrescenta (o fórum nunca vem de fábrica)</td></tr>
+      <tr><td>página</td><td>o resto</td><td>as cores do site, nunca a tinta do terminal; barra de rolagem fina em HD à direita</td></tr>
+      <tr><td>status</td><td>1 linha</td><td>o link sob o cursor ou a transferência ("Transferring data from…", "Loading 34 of 52 items…"), a barra de progresso, o cadeado, a velocidade da rede (kB/s)</td></tr>
+    </table></div>
+    <h3>Os botões, um por um</h3>
+    <div class="grid4" id="buttons"></div>
+    <h3>Teclas</h3>
+    <p><kbd>F6</kbd> ou <kbd>Ctrl</kbd>+<kbd>L</kbd> o endereço · <kbd>Backspace</kbd> voltar · <kbd>F5</kbd> recarregar · <kbd>Esc</kbd> parar · <kbd>Home</kbd> o portal · <kbd>Ctrl</kbd>+<kbd>T</kbd> aba nova · <kbd>Ctrl</kbd>+<kbd>Tab</kbd> próxima aba · <kbd>Ctrl</kbd>+<kbd>W</kbd> fecha a aba · <kbd>Ctrl</kbd>+<kbd>D</kbd> favorito · <kbd>Tab</kbd> próximo link · <kbd>F10</kbd> sai. Os links visitados ficam roxos (pelo cache).</p>
+  </section>
+
+  <section id="mascote">
+    <h2>O furão carregando <small>a cara do navegador</small></h2>
+    <p class="lead">No canto direito da barra fica o símbolo, de 28 px, em HD. Parado, o furão só espia: as orelhas e a máscara aparecem acima do aro. Enquanto a página vem, ele mergulha e cava, e pedrinhas de terra saltam da toca. Quando termina, ele põe a cabeça para fora e pisca. Na internet de 2008 a página demora, então o furão passa muito tempo cavando: ele é o que o jogador olha enquanto espera, como o "N" com estrelas do Netscape.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 520 190" id="throb"></svg><div class="ctl" id="throbBtns"></div><div class="cap"><b>Os quadros.</b> Espiando (parado), cavando (laço de 6 quadros, ~8 por segundo), saindo (uma vez, ao terminar) e perdido (o erro: a cabeça para fora, olhando para os lados, sem terra).</div></div>
+    </div>
+    <div class="rule do"><b>✓</b><span>O furão só se mexe quando a rede está trabalhando. Parado é parado: nada de animação de enfeite.</span></div>
+    <div class="rule do"><b>✓</b><span>Num site que nunca responde, ele cava até o tempo esgotar (8 s) e então fica perdido. O jogador aprende a ler a rede pelo bicho.</span></div>
+  </section>
+
+  <section id="estados">
+    <h2>Estados e erros <small>a rede de 2008 falha, e a cidade aparece nisso</small></h2>
+    <p class="lead">Cada estado é uma página do próprio Ferret, com o furão perdido e um texto curto, à moda das páginas de erro de 2008. Todos vêm de um fato da simulação: o servidor está num quarteirão sem luz, o notebook está longe do Wi-Fi, a página não existe. A página nunca diz por quê; o jogador junta as peças (a duas camadas).</p>
+    <div class="tbl"><table>
+      <tr><th>Estado</th><th>De onde vem</th><th>Como aparece</th></tr>
+      <tr><td>carregando</td><td>a velocidade do Wi-Fi (<code>sim/wifi.ts</code>) e o peso da página (kb)</td><td>"Looking up host…", "Connecting…", "Waiting for…", "Transferring data from…"; a página desce de cima para baixo; o furão cava</td></tr>
+      <tr><td>server not found</td><td>o servidor está num setor em apagão (<code>subAt</code> da empresa)</td><td>"Server not found. Ferret can't find the server at www.…"; o furão perdido; "Try Again"</td></tr>
+      <tr><td>sem rede</td><td>o notebook sem Wi-Fi, ou o rádio desligado</td><td>"Offline. Ferret is not connected to a network."; a barra de status mostra "no network"</td></tr>
+      <tr><td>tempo esgotado</td><td>o sinal fraco demais (longe do ponto)</td><td>"The connection has timed out." depois de 8 s cavando</td></tr>
+      <tr><td>certificado</td><td>um site de https com o certificado vencido ou falso (o banco pequeno, o fórum)</td><td>uma faixa amarela e o cadeado partido: "This connection is untrusted"; "Add Exception…" deixa entrar</td></tr>
+      <tr><td>404</td><td>um endereço que não existe no site</td><td>a página do próprio site (nas cores dele), "404 Not Found", nunca a do Ferret</td></tr>
+      <tr><td>fora do índice</td><td>a busca não acha (loja pequena sem site, página escondida)</td><td>o Lookwise: "Your search did not match any documents."; a página escondida só abre pelo endereço exato</td></tr>
+    </table></div>
+  </section>
+
+  <div class="part">PARTE 3 · A WEB</div>
+  <section id="layouts">
+    <h2>Os seis moldes <small>cada empresa parece única, ninguém escreve site por site</small></h2>
+    <p class="lead">Um site de empresa é um dos seis moldes, com uma das oito paletas, o nome, o logo em ASCII do tipo de lugar e o conteúdo tirados da simulação (o horário, o endereço, o cardápio pela tabela da 13.1, "OPEN NOW" ao vivo). A semente escolhe o molde entre os prováveis do tipo (o banco é corporativo, o bar é caseiro, a lavanderia mal tem site). As páginas ficam numa coluna de largura fixa sobre o fundo da página, como em 2008.</p>
+    <div class="ctl"><button id="reroll">sortear outra semente</button><span class="hint" id="seedLab"></span></div>
+    <div class="grid3" id="tpls"></div>
+    <div class="tbl"><table>
+      <tr><th>Molde</th><th>Como é</th><th>Prováveis</th><th>Selos</th></tr>
+      <tr><td>Classic</td><td>faixa com o logo, menu em barra, uma coluna</td><td>pizzaria, banco, mercado, alfaiate</td><td>às vezes (1)</td></tr>
+      <tr><td>Side</td><td>coluna principal e uma lateral à direita com o horário e o endereço</td><td>cinema, bar, eletrônicos</td><td>às vezes (1)</td></tr>
+      <tr><td>Center</td><td>a home centrada de site caseiro, com o contador de visitas e o livro de visitas</td><td>bar, pizzaria, cybercafé, motel</td><td>quase sempre (2–3)</td></tr>
+      <tr><td>LeftNav</td><td>o menu numa coluna à esquerda, em botões</td><td>hotel, eletrônicos, cybercafé</td><td>às vezes (1–2)</td></tr>
+      <tr><td>Corporate</td><td>barra escura, faixa larga, três caixas e um rodapé de letra miúda</td><td>banco, operadora, hotel, fast-food</td><td>nunca (só o cadeado)</td></tr>
+      <tr><td>Bare</td><td>o nome em título, um parágrafo e o "under construction"</td><td>lavanderia, loja de penhores, estacionamento</td><td>sempre o "under construction"</td></tr>
+    </table></div>
+  </section>
+
+  <section id="selos">
+    <h2>Os selos de 2008 <small>88 × 31 px, em HD, no pé da página</small></h2>
+    <p class="lead">Os botõezinhos que todo site caseiro de 2008 tinha. Ficam na camada HD (11 × 2 células) e são links de verdade: o "Get Ferret" leva ao site da Burrow Labs. A semente decide quais aparecem, pela tabela dos moldes. Os selos de outros navegadores não existem: a web da cidade só conhece o Ferret.</p>
+    <div class="card"><svg viewBox="0 0 640 150" id="badges" class="pix"></svg><div class="cap"><b>Os selos.</b> "Best viewed with Ferret at 1024x768", "Get Ferret", "Valid HTML 4.01", o contador de visitas (o número sai da semente e cresce devagar com o tempo de jogo), o operário do "under construction" (2 quadros) e o "Powered by" do provedor do portal.</div></div>
+  </section>
+
+  <section id="canon">
+    <h2>As páginas canônicas <small>as que todo mundo conhece</small></h2>
+    <p class="lead">Cinco sites não saem dos moldes: têm identidade própria e fixa, porque o jogador volta a eles todo dia. As cores abaixo são as que o código já usa.</p>
+    <div class="row" id="canonCards"></div>
+  </section>
+
+  <section id="mini">
+    <h2>Ferret Mini <small>o celular, na tela de 240 × 400</small></h2>
+    <p class="lead">No celular a web é lenta e cara (EDGE, o pacote pago por kB). O Ferret Mini é a moldura mínima: o endereço numa faixa fina em cima e as teclas de função embaixo. Só alguns sites têm versão para celular (os grandes: bancos, redes, as operadoras); o resto chega inteiro, espremido e caro. O furão vira um ponto que cava ao lado do endereço.</p>
+    <div class="grid3" id="minis"></div>
+  </section>
+
+  <section id="regras">
+    <h2>Regras <small>o que vale sempre</small></h2>
+    <div class="rule do"><b>✓</b><span>A página tem as cores dela; a moldura é prata; o console é âmbar. As três camadas nunca se misturam.</span></div>
+    <div class="rule do"><b>✓</b><span>Tudo que a web mostra vem da simulação: preço, horário, "OPEN NOW", a manchete, o site fora do ar no apagão.</span></div>
+    <div class="rule do"><b>✓</b><span>O furão só se mexe quando a rede trabalha; a velocidade em kB/s está sempre na barra de status.</span></div>
+    <div class="rule do"><b>✓</b><span>Texto nas células, detalhe fino (brilho, ícones, selos, barras) em HD.</span></div>
+    <div class="rule"><b>✗</b><span>Nada de raposa nem de globo azul com um bicho laranja em volta: o furão sai da toca, de frente, e é creme e café.</span></div>
+    <div class="rule"><b>✗</b><span>Nada de web de 2026: sem rolagem infinita, sem vídeo embutido, sem layout que se adapta. A coluna tem largura fixa e sobra fundo dos lados.</span></div>
+    <div class="rule"><b>✗</b><span>A web nunca diz que foi o jogador: a notícia do apagão sai, o nome dele não.</span></div>
+    <div class="rule"><b>✗</b><span>"Lodestar" sai de todo lugar; o comando antigo pode ficar como apelido escondido por um tempo, para os saves antigos.</span></div>
+  </section>
+
+  <section id="jogo">
+    <h2>No jogo <small>o que muda no código, depois do manual</small></h2>
+    <div class="tbl"><table>
+      <tr><th>Onde</th><th>O quê</th></tr>
+      <tr><td><code>src/web/browser.ts</code></td><td><code>NAME = 'Ferret 2.0'</code>; a moldura passa de 2 para 4 linhas em cima (abas, navegação em 2, favoritos) e 1 embaixo; as cores <code>CHROME</code>/<code>TITLE</code> dão lugar ao prata; abas e favoritos (estes já estavam nos retoques da 15)</td></tr>
+      <tr><td><code>src/render/hd.ts</code> e os ícones HD</td><td>o brilho da moldura, os botões redondos, o furão (4 estados) e os selos de 88 × 31 desenhados em pixels</td></tr>
+      <tr><td><code>src/web/sites.ts</code></td><td>os selos pela semente e pelo molde; o site da Burrow Labs (burrow-labs.net, com "Get Ferret" e as notas de versão) como uma empresa da cidade</td></tr>
+      <tr><td><code>src/phone/webapp.ts</code>, <code>src/locale/en.json</code></td><td>"Lodestar Mini" vira "Ferret Mini"; o ícone do app é o furão em 16 px</td></tr>
+      <tr><td><code>src/laptop/wm.ts</code>, o comando em <code>shell.ts</code></td><td>o comando <code>ferret</code> (com <code>lodestar</code> como apelido); só a linha do nome no shell, pela emenda segura de <code>docs/mapa-shell.md</code></td></tr>
+    </table></div>
+  </section>
+</main>
+<script>
+// ---- helpers ----
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, at, parent) { const e = document.createElementNS(NS, tag); for (const k in at || {}) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; }
+function txt(g, x, y, s, at) { const t = el('text', Object.assign({ x, y, 'font-family': 'IBM Plex Mono, monospace' }, at || {}), g); t.textContent = s; return t; }
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+const $ = (id) => document.getElementById(id);
+let uid = 0;
+
+// ---- the brand ----
+const B = { cream: '#f1e4c8', shade: '#d9c6a0', line: '#b89c72', cafe: '#4a2c1a', ear: '#b07c58', muzzle: '#fbf6ea', eye: '#120a06', nose: '#2e170c', pet: '#1f5a6b', pet2: '#123844', pet3: '#5fa3b3' };
+const PAL = {
+  color: { hole: B.pet2, rim: B.pet, mer: B.pet, merOp: .75, fur: B.cream, shade: B.shade, furLine: B.line, mask: B.cafe, ear: B.ear, muzzle: B.muzzle, eye: B.eye, glint: '#fff', nose: B.nose },
+  mono: { hole: B.cafe, rim: B.cafe, mer: '#efe6d6', merOp: .35, fur: '#efe6d6', shade: '#efe6d6', furLine: B.cafe, mask: B.cafe, ear: B.cafe, muzzle: '#efe6d6', eye: '#efe6d6', glint: B.cafe, nose: B.cafe },
+  neg: { hole: '#1b1a18', rim: B.cream, mer: B.cream, merOp: .3, fur: B.cream, shade: B.cream, furLine: B.cream, mask: '#1b1a18', ear: '#1b1a18', muzzle: B.cream, eye: B.cream, glint: '#1b1a18', nose: '#1b1a18' },
+};
+/** The ferret coming out of its burrow, in a 200 x 200 box. o: { pal, x, y, size, meridians, headDy, paws, dirt, blink, look } */
+function ferret(parent, o = {}) {
+  const P = PAL[o.pal || 'color'], s = (o.size || 200) / 200;
+  const g = el('g', { transform: `translate(${o.x || 0},${o.y || 0}) scale(${s})` }, parent);
+  const id = 'fc' + (++uid);
+  const cp = el('clipPath', { id }, el('defs', {}, g)); el('circle', { cx: 100, cy: 96, r: 68 }, cp);
+  el('circle', { cx: 100, cy: 96, r: 72, fill: P.hole }, g);
+  if (o.meridians !== false) {
+    const m = el('g', { stroke: P.mer, 'stroke-width': 2.2, fill: 'none', opacity: P.merOp, 'clip-path': `url(#${id})` }, g);
+    for (const rx of [24, 50]) el('ellipse', { cx: 100, cy: 96, rx, ry: 72 }, m);
+    el('line', { x1: 100, x2: 100, y1: 20, y2: 172 }, m);
+    for (const y of [56, 96, 136]) el('line', { x1: 20, x2: 180, y1: y, y2: y }, m);
+  }
+  // the dirt thrown out while digging
+  if (o.dirt) { const r = rng(o.dirt); for (let i = 0; i < 9; i++) { const a = -Math.PI * (0.15 + r() * 0.7), d = 78 + r() * 26, cx = 100 + Math.cos(a) * d, cy = 96 + Math.sin(a) * d * 0.95; el('rect', { x: cx - 3, y: cy - 3, width: 4 + r() * 4, height: 4 + r() * 3, rx: 1.5, fill: i % 3 ? '#7a5434' : '#5a3a22', transform: `rotate(${r() * 90} ${cx} ${cy})` }, g); } }
+  // the head, clipped to the burrow so it can sink into it
+  const hg = el('g', { 'clip-path': `url(#${id})` }, g), h = el('g', { transform: `translate(${o.look || 0},${o.headDy || 0})` }, hg);
+  el('path', { d: 'M82 172 C 80 156, 88 146, 96 143 L 112 143 C 120 146, 128 156, 126 172 Z', fill: P.shade, stroke: P.furLine, 'stroke-width': 2 }, h);
+  for (const ex of [70, 138]) { el('circle', { cx: ex, cy: 90, r: 10, fill: P.fur, stroke: P.furLine, 'stroke-width': 2 }, h); el('circle', { cx: ex, cy: 91, r: 5, fill: P.ear }, h); }
+  el('path', { d: 'M104 76 C 126 76, 143 88, 143 104 C 143 122, 122 138, 112 147 Q 104 152 96 147 C 86 138, 65 122, 65 104 C 65 88, 82 76, 104 76 Z', fill: P.fur, stroke: P.furLine, 'stroke-width': 2 }, h);
+  el('path', { d: 'M68 101 C 76 91, 92 94, 100 104 C 98 115, 88 119, 78 117 C 71 113, 67 107, 68 101 Z M140 101 C 132 91, 116 94, 108 104 C 110 115, 120 119, 130 117 C 137 113, 141 107, 140 101 Z M97 102 Q 104 99 111 102 L 111 107 Q 104 104 97 107 Z', fill: P.mask }, h);
+  el('ellipse', { cx: 104, cy: 133, rx: 16, ry: 13, fill: P.muzzle }, h);
+  if (o.blink) for (const ex of [87, 121]) el('path', { d: `M${ex - 5} 106 Q ${ex} 109 ${ex + 5} 106`, stroke: P.eye, 'stroke-width': 2.4, fill: 'none', 'stroke-linecap': 'round' }, h);
+  else for (const ex of [87, 121]) { el('circle', { cx: ex, cy: 106, r: 4.8, fill: P.eye }, h); el('circle', { cx: ex + 1.6, cy: 104.4, r: 1.5, fill: P.glint }, h); }
+  el('path', { d: 'M98 127 Q 104 124 110 127 Q 107 133 104 134 Q 101 133 98 127 Z', fill: P.nose }, h);
+  el('path', { d: 'M104 134 L104 139 M98 141 Q 104 144 110 141', stroke: P.nose, 'stroke-width': 1.6, fill: 'none', 'stroke-linecap': 'round' }, h);
+  // the rim on top of the neck, then the paws over the rim
+  el('circle', { cx: 100, cy: 96, r: 72, fill: 'none', stroke: P.rim, 'stroke-width': 8 }, g);
+  if (o.paws !== false && !(o.headDy > 8)) for (const px of [84, 124]) {
+    el('ellipse', { cx: px, cy: 166, rx: 13, ry: 8.5, fill: P.fur, stroke: P.furLine, 'stroke-width': 2 }, g);
+    for (const d of [-5, 0, 5]) el('line', { x1: px + d, x2: px + d, y1: 169, y2: 173, stroke: P.furLine, 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g);
+  }
+  return g;
+}
+function wordmark(g, x, y, size, fill, mini) {
+  const t = el('text', { x, y, 'font-family': 'Nunito, sans-serif', 'font-weight': 900, 'font-size': size, fill, 'letter-spacing': -size * 0.035 }, g);
+  t.textContent = 'ferret';
+  if (mini) { const m = el('tspan', { 'font-weight': 600, dx: size * 0.12 }, t); m.textContent = 'mini'; }
+  return t;
+}
+
+// the 16 px icon, drawn by hand; the 32 px one built from it and refined (the ears' insides, a lighter rim inside, the muzzle)
+const PX = { '.': null, D: B.pet2, R: B.pet, c: B.cream, s: B.shade, m: B.cafe, k: B.eye, w: B.muzzle, n: B.nose, e: B.ear, l: '#2d7487' };
+const I16 = [
+  '.....RRRRRR.....', '...RRDDDDDDRR...', '..RDDDDDDDDDDR..', '.RDDDDccccDDDDR.', '.RDecccccccceDR.', 'RDDmmmccccmmmDDR', 'RDDmkmmmmmmkmDDR', 'RDDcmmccccmmcDDR', 'RDDDcccwwcccDDDR', 'RDDDDcwnnwcDDDDR', 'RDDDDcwwwwcDDDDR', '.RDDDDcwwcDDDDR.', '.RDDDDDssDDDDDR.', '..RRDDDssDDDRR..', '...ccRRssRRcc...', '................'];
+const I32 = (() => {
+  const g = I16.flatMap((r) => { const d = [...r].map((c) => c + c).join(''); return [d, d]; }).map((r) => [...r]);
+  const set = (x, y, c) => { if (g[y] && g[y][x] !== undefined) g[y][x] = c; };
+  for (let y = 4; y < 26; y++) for (const x of [5, 26]) if (g[y][x] === 'D') set(x, y, 'l');
+  for (let x = 4; x < 28; x++) if (g[4][x] === 'D') set(x, 4, 'l');
+  set(9, 12, 'w'); set(22, 12, 'w');
+  return g.map((r) => r.join(''));
+})();
+function pixIcon(svg, x, y, sc, n) {
+  const map = n === 32 ? I32 : I16;
+  map.forEach((row, j) => [...row].forEach((c, i) => { if (PX[c]) el('rect', { x: x + i * sc, y: y + j * sc, width: sc + 0.02, height: sc + 0.02, fill: PX[c] }, svg); }));
+}
+
+// cover
+ferret($('cover'), {});
+
+// lockups
+(() => {
+  const s = $('lockups');
+  el('rect', { width: 520, height: 200, rx: 6, fill: '#f4efe6' }, s);
+  ferret(s, { x: 20, y: 34, size: 120 });
+  wordmark(s, 148, 112, 66, B.cafe);
+  txt(s, 152, 138, 'by Burrow Labs', { fill: B.pet, 'font-size': 13, 'font-weight': 600 });
+  el('line', { x1: 370, x2: 370, y1: 24, y2: 176, stroke: '#d8cfbf' }, s);
+  ferret(s, { x: 405, y: 26, size: 90 });
+  wordmark(s, 450, 150, 36, B.cafe).setAttribute('text-anchor', 'middle');
+  txt(s, 450, 172, 'by Burrow Labs', { fill: B.pet, 'font-size': 9.5, 'text-anchor': 'middle', 'font-weight': 600 });
+})();
+
+// construction
+(() => {
+  const s = $('build'); el('rect', { width: 260, height: 260, rx: 6, fill: '#f4efe6' }, s);
+  ferret(s, { x: 30, y: 30, size: 200 });
+  const G = el('g', { stroke: '#d8452b', 'stroke-width': 1, fill: 'none', 'stroke-dasharray': '3 3' }, s);
+  el('circle', { cx: 130, cy: 126, r: 72 }, G); el('line', { x1: 130, x2: 202, y1: 126, y2: 126 }, G);
+  el('line', { x1: 97, x2: 97, y1: 92, y2: 210 }, G); el('line', { x1: 171, x2: 171, y1: 92, y2: 210 }, G);
+  el('line', { x1: 20, x2: 240, y1: 198, y2: 198 }, G); el('rect', { x: 12, y: 12, width: 236, height: 236 }, G);
+  const L = (x, y, s2) => txt(s, x, y, s2, { fill: '#d8452b', 'font-size': 10, 'font-weight': 600 });
+  L(162, 121, 'R'); L(106, 222, '1R cabeça'); L(204, 194, 'aro'); L(16, 26, 'margem 0,25R');
+})();
+
+// sizes
+(() => {
+  const s = $('sizes'); el('rect', { width: 260, height: 260, rx: 6, fill: '#f4efe6' }, s);
+  ferret(s, { x: 10, y: 10, size: 128 }); ferret(s, { x: 160, y: 14, size: 64 }); ferret(s, { x: 168, y: 104, size: 48 });
+  const L = (x, y, t) => txt(s, x, y, t, { fill: '#6b6256', 'font-size': 9.5 });
+  L(52, 150, '128 px'); L(172, 92, '64 px'); L(172, 166, '48 px');
+  pixIcon(s, 26, 190, 2, 16); pixIcon(s, 84, 198, 1, 16); pixIcon(s, 124, 190, 1, 32);
+  L(22, 238, '16 (×2)'); L(80, 238, '16'); L(122, 238, '32');
+})();
+
+// versions
+(() => {
+  const s = $('versions');
+  const tiles = [['#f4efe6', 'color', 'cor'], ['#efe6d6', 'mono', 'uma cor'], ['#1b1a18', 'neg', 'negativa']];
+  tiles.forEach(([bg, pal, lab], i) => {
+    const y = i * 86 + 2; el('rect', { x: 0, y, width: 260, height: 82, rx: 6, fill: bg }, s);
+    ferret(s, { x: 12, y: y + 6, size: 70, pal });
+    wordmark(s, 94, y + 52, 38, pal === 'neg' ? B.cream : B.cafe);
+    txt(s, 250, y + 74, lab, { fill: pal === 'neg' ? '#8f897d' : '#8a7f6e', 'font-size': 9, 'text-anchor': 'end' });
+  });
+})();
+
+(() => {
+  const s = $('pixels'); el('rect', { width: 520, height: 170, rx: 6, fill: '#f4efe6' }, s);
+  pixIcon(s, 20, 20, 8, 16); pixIcon(s, 180, 13, 4.5, 32);
+  pixIcon(s, 360, 40, 1, 16); pixIcon(s, 390, 32, 1, 32); pixIcon(s, 440, 40, 2, 16);
+  txt(s, 20, 160, '16 × 16 (×8)', { fill: '#6b6256', 'font-size': 10 }); txt(s, 180, 160, '32 × 32 (×4,5)', { fill: '#6b6256', 'font-size': 10 }); txt(s, 360, 100, 'reais e ×2', { fill: '#6b6256', 'font-size': 10 });
+})();
+$('ascii').textContent = [
+  "   .--------.",
+  "  / (\\    /) \\    ferret",
+  " |  (o----o)  |   by Burrow Labs",
+  " |   ( ,, )   |",
+  "  '--(____)--'",
+].join('\n');
+
+// swatches
+$('swatches').innerHTML = [
+  [B.cream, 'Pelagem', '#f1e4c8 · a cabeça, as patas'], [B.shade, 'Sombra', '#d9c6a0 · o pescoço, o contorno claro'], [B.cafe, 'Café', '#4a2c1a · a máscara, o nome'],
+  [B.muzzle, 'Focinho', '#fbf6ea · o focinho, o papel do site'], [B.pet, 'Petróleo', '#1f5a6b · o aro, a assinatura'], [B.pet2, 'Toca', '#123844 · o fundo da toca'],
+  ['linear-gradient(#f2f3f5,#c5c9cf)', 'Prata', '#f2f3f5 → #c5c9cf · a moldura'], ['#fff8c4', 'Amarelo https', '#fff8c4 · o endereço seguro'],
+].map(([c, n, d]) => `<div><i style="background:${c}"></i><span><b>${n}</b><em>${d}</em></span></div>`).join('');
+
+// type
+(() => {
+  const s = $('type'); el('rect', { width: 520, height: 150, rx: 6, fill: '#f4efe6' }, s);
+  wordmark(s, 20, 80, 80, B.cafe);
+  wordmark(s, 300, 60, 34, B.cafe, true);
+  txt(s, 300, 92, 'Ferret 2.0 · About', { fill: B.pet, 'font-size': 13, 'font-weight': 600 });
+  txt(s, 300, 112, 'Get Ferret · burrow-labs.net', { fill: '#0000cc', 'font-size': 12, 'text-decoration': 'underline' });
+  txt(s, 22, 128, 'abcdefghijklm · nopqrstuvwxyz · 0123456789', { fill: '#6b6256', 'font-size': 11 });
+})();
+</script>
+<script>
+// ---- a page in cells, the way the game lays it out (text in cells, fine detail in HD) ----
+class Cells {
+  constructor(W, H, bg) { this.W = W; this.H = H; this.c = Array.from({ length: H }, () => Array.from({ length: W }, () => ({ ch: ' ', fg: [0, 0, 0], bg, u: 0, b: 0 }))); this.hd = []; }
+  fill(x, y, w, h, bg) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (this.c[j] && this.c[j][i]) { this.c[j][i].bg = bg; this.c[j][i].ch = ' '; } }
+  put(x, y, s, fg, bg, at = {}) { if (!this.c[y]) return; [...s].forEach((ch, k) => { const c = this.c[y][x + k]; if (!c) return; c.ch = ch; c.fg = fg; if (bg) c.bg = bg; c.u = at.u ? 1 : 0; c.b = at.b ? 1 : 0; }); }
+  center(x, w, y, s, fg, bg, at) { this.put(x + Math.max(0, Math.floor((w - s.length) / 2)), y, s, fg, bg, at); }
+  wrap(x, y, w, s, fg, bg, maxRows = 99) { const words = s.split(' '); let line = '', n = 0; for (const wd of words) { if ((line + ' ' + wd).trim().length > w) { this.put(x, y + n, line.trim(), fg, bg); n++; line = wd; if (n >= maxRows) return n; } else line += ' ' + wd; } if (line.trim()) { this.put(x, y + n, line.trim(), fg, bg); n++; } return n; }
+  /** Text with [links]: the bracketed words in the link colour, underlined. */
+  rich(x, y, s, fg, link, bg) { let cx = x; for (const part of s.split(/(\[[^\]]+\])/)) { if (!part) continue; const L = part.startsWith('['); const t = L ? part.slice(1, -1) : part; this.put(cx, y, t, L ? link : fg, bg, { u: L }); cx += t.length; } }
+  draw(svg, x0, y0, cw, ch) {
+    const fs = cw / 0.6, g = el('g', {}, svg);
+    for (let j = 0; j < this.H; j++) {
+      let i = 0; while (i < this.W) { const b = this.c[j][i].bg; let k = i; while (k < this.W && this.c[j][k].bg === b) k++; el('rect', { x: x0 + i * cw, y: y0 + j * ch, width: (k - i) * cw + .3, height: ch + .3, fill: rgb(b), 'shape-rendering': 'crispEdges' }, g); i = k; }
+      i = 0; while (i < this.W) { const c0 = this.c[j][i]; if (c0.ch === ' ' && !c0.u) { i++; continue; } let k = i, s = ''; while (k < this.W && rgb(this.c[j][k].fg) === rgb(c0.fg) && this.c[j][k].u === c0.u && this.c[j][k].b === c0.b && !(this.c[j][k].ch === ' ' && this.c[j][k + 1] && this.c[j][k + 1].ch === ' ')) { s += this.c[j][k].ch; k++; } if (s.trim()) txt(g, x0 + i * cw, y0 + j * ch + ch * 0.76, s, { fill: rgb(c0.fg), 'font-size': fs, 'font-weight': c0.b ? 600 : 400, 'text-decoration': c0.u ? 'underline' : 'none', textLength: s.length * cw, lengthAdjust: 'spacingAndGlyphs' }); i = Math.max(k, i + 1); }
+    }
+    for (const f of this.hd) f(g, (cx) => x0 + cx * cw, (cy) => y0 + cy * ch, cw, ch);
+    return g;
+  }
+}
+
+// the sites' palettes, as in src/web/sites.ts (THEMES), and the canonical ones
+const THEMES = [
+  { page: [200, 200, 204], bg: [255, 255, 255], fg: [30, 30, 34], dim: [120, 120, 128], link: [0, 0, 204], head: [24, 52, 112], headFg: [255, 255, 255], bar: [214, 226, 246], barFg: [20, 40, 100] },
+  { page: [60, 30, 20], bg: [252, 244, 224], fg: [50, 30, 20], dim: [140, 110, 90], link: [170, 40, 20], head: [140, 30, 20], headFg: [255, 236, 190], bar: [230, 200, 140], barFg: [90, 30, 10] },
+  { page: [0, 0, 0], bg: [16, 16, 20], fg: [210, 210, 210], dim: [110, 110, 120], link: [120, 200, 255], head: [0, 0, 0], headFg: [255, 120, 0], bar: [40, 40, 48], barFg: [255, 170, 60] },
+  { page: [214, 230, 214], bg: [255, 255, 250], fg: [20, 50, 30], dim: [100, 130, 110], link: [0, 110, 60], head: [30, 110, 60], headFg: [240, 255, 240], bar: [200, 230, 200], barFg: [20, 80, 40] },
+  { page: [236, 236, 236], bg: [255, 255, 255], fg: [40, 40, 40], dim: [140, 140, 140], link: [200, 0, 90], head: [255, 255, 255], headFg: [200, 0, 90], bar: [60, 60, 60], barFg: [255, 255, 255] },
+  { page: [0, 0, 80], bg: [0, 0, 120], fg: [255, 255, 0], dim: [170, 170, 255], link: [0, 255, 255], head: [120, 0, 120], headFg: [255, 255, 255], bar: [0, 0, 60], barFg: [0, 255, 0] },
+  { page: [90, 90, 96], bg: [240, 240, 244], fg: [30, 30, 40], dim: [120, 120, 130], link: [40, 90, 180], head: [50, 56, 66], headFg: [255, 210, 80], bar: [80, 86, 96], barFg: [240, 240, 240] },
+  { page: [250, 230, 200], bg: [255, 250, 240], fg: [60, 40, 20], dim: [150, 120, 90], link: [200, 90, 0], head: [230, 120, 20], headFg: [255, 255, 255], bar: [250, 210, 150], barFg: [110, 50, 0] },
+];
+const PORTAL = { page: [180, 196, 220], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 204, 0], barFg: [0, 30, 90] };
+const SEARCHT = { page: [255, 255, 255], bg: [255, 255, 255], fg: [30, 30, 30], dim: [0, 128, 0], link: [17, 17, 204], head: [255, 255, 255], headFg: [40, 90, 200], bar: [235, 239, 249], barFg: [40, 40, 40] };
+const MAILT = { page: [196, 210, 232], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 214, 60], barFg: [0, 30, 90] };
+const WIRET = { page: [228, 233, 240], bg: [250, 251, 253], fg: [28, 32, 42], dim: [112, 120, 134], link: [40, 90, 180], head: [28, 52, 102], headFg: [255, 255, 255], bar: [44, 74, 136], barFg: [255, 255, 255] };
+const FORUMT = { page: [16, 18, 22], bg: [26, 29, 35], fg: [198, 204, 210], dim: [120, 126, 136], link: [120, 198, 142], head: [28, 38, 32], headFg: [184, 230, 192], bar: [34, 46, 38], barFg: [190, 235, 200] };
+const CITY = 'Halden', GREEN = [0, 140, 40], RED = [190, 20, 20];
+
+const BIZ = {
+  pizza: ["Rosetti's Pizza", ['  _____  ', ' /o  o \\ ', '/__o___o\\']], bank: ['Harbor Savings Bank', [' _/\\_ ', '|_||_|', '|____|']], cinema: ['The Rialto', ['[=====]', '| >>> |', '[=====]']],
+  bar: ['The Low Tide', ['  \\_/ ', '  |_| ', '  /_\\ ']], laundry: ['Suds & Spin', ['[ o ]', '[(@)]', '[___]']], hotel: ['Hotel Calder', [' _||_ ', '|o  o|', '|_[]_|']],
+  electronics: ['Volt Electronics', [' __ ', '|//|', '|__|']], cyber: ['Byte Stop Cybercafe', [' ____ ', '|>_  |', '|____|']], motel: ['Starlite Motel', ['  *   ', ' MOTEL', ' [][] ']],
+  pawn: ['Lucky Pawn & Loan', [' o o ', '  o  ', ' $$$ ']], fastfood: ['Burger Barn', [' ____ ', '(____)', '(____)']], grocery: ["Kim's Market", ['\\___/', ' (o) ', ' o o ']],
+  deli: ["Sal's Deli", [' ___ ', '(___)', ' ||| ']], tailor: ["Ivan's Tailoring", [' >8 ', ' /\\ ', '/  \\']], phones: ['Cellmart', [' [] ', ' :: ', ' :: ']], parking: ['Dock St. Parking', [' P ', '[=]', ' | ']],
+};
+const TPL = { Classic: ['pizza', 'bank', 'grocery', 'tailor', 'fastfood'], Side: ['cinema', 'bar', 'electronics', 'pizza', 'phones'], Center: ['bar', 'pizza', 'cyber', 'motel', 'laundry'], LeftNav: ['hotel', 'electronics', 'cyber', 'bar'], Corporate: ['bank', 'phones', 'hotel', 'fastfood', 'cinema'], Bare: ['laundry', 'pawn', 'parking', 'deli', 'tailor'] };
+const STREETS = ['Dock St', 'Marlow Ave', '9th St', 'Canal St', 'Ferris Ave', 'Union Sq'];
+const NAV = (kind) => ['Home', ['pizza', 'fastfood', 'bar', 'deli'].includes(kind) ? 'Menu' : 'Products', 'About Us', 'Contact'];
+const LOREM = 'We are a family business serving the neighborhood since the old days. Come in and say hello, we will be glad to see you. Ask about our weekly specials and our friendly service.';
+
+/** One business site in one of the six templates. */
+function bizSite(W, H, tpl, kind, th, r, opt = {}) {
+  const C = new Cells(W, H, th.page), [name, art] = BIZ[kind], year = 1958 + Math.floor(r() * 48), addr = `${10 + Math.floor(r() * 880)} ${STREETS[Math.floor(r() * STREETS.length)]}`;
+  const phone = `555-${String(1000 + Math.floor(r() * 9000))}`, open = r() < 0.7, cw = Math.min(W - 4, 60), x0 = Math.floor((W - cw) / 2);
+  C.fill(x0, 0, cw, H, th.bg);
+  const hours = open ? 'OPEN NOW' : 'CLOSED NOW - opens at 11 am';
+  const navBar = (y) => { C.fill(x0, y, cw, 1, th.bar); let cx = x0 + 1; NAV(kind).forEach((n, i) => { C.put(cx, y, n, th.barFg, th.bar, { u: i > 0 }); cx += n.length + 3; if (i < 3) C.put(cx - 2, y, '|', th.barFg, th.bar); }); };
+  const banner = (y, h = 4) => { C.fill(x0, y, cw, h, th.head); art.forEach((l, i) => C.put(x0 + 1, y + i + (h > 3 ? 0 : 0), l, th.headFg, th.head)); C.put(x0 + 12, y + 1, name.toUpperCase(), th.headFg, th.head, { b: 1 }); C.put(x0 + 12, y + 2, `Since ${year} - ${CITY}`, th.headFg, th.head); };
+  let y = 0;
+  if (opt.p404) { banner(0); navBar(4); C.put(x0 + 2, 6, '404 Not Found', th.fg, null, { b: 1 }); C.wrap(x0 + 2, 8, cw - 4, 'The page you are looking for is not here. It may have moved, or it was never here at all.', th.fg); C.rich(x0 + 2, 11, 'Go back to the [home page].', th.fg, th.link); return C; }
+  if (tpl === 'Classic') {
+    banner(0); navBar(4); y = 6;
+    C.put(x0 + 2, y, 'Welcome!', th.fg, null, { b: 1 }); y += 2; y += C.wrap(x0 + 2, y, cw - 4, LOREM, th.fg) + 1;
+    C.put(x0 + 2, y, hours, open ? GREEN : RED, null, { b: 1 }); y += 2;
+    for (const [a, b] of [['Hours', 'Daily 11 am - 10 pm'], ['Address', addr], ['Phone', phone]]) { C.put(x0 + 2, y, a, th.dim); C.put(x0 + 12, y, b, th.fg); y++; }
+    y++; C.rich(x0 + 2, y, 'See our [menu] or [get in touch].', th.fg, th.link);
+  } else if (tpl === 'Side') {
+    banner(0); navBar(4); y = 6; const mw = cw - 22;
+    C.put(x0 + 2, y, 'Welcome!', th.fg, null, { b: 1 }); C.wrap(x0 + 2, y + 2, mw - 2, LOREM + ' ' + LOREM, th.fg, null, 9);
+    C.fill(x0 + mw + 1, y, 20, 10, th.bar); C.put(x0 + mw + 2, y, 'HOURS', th.barFg, th.bar, { b: 1 }); C.put(x0 + mw + 2, y + 1, '11 am - 10 pm', th.barFg, th.bar); C.put(x0 + mw + 2, y + 2, hours.slice(0, 18), open ? GREEN : RED, th.bar, { b: 1 });
+    C.put(x0 + mw + 2, y + 4, 'FIND US', th.barFg, th.bar, { b: 1 }); C.put(x0 + mw + 2, y + 5, addr, th.barFg, th.bar); C.put(x0 + mw + 2, y + 6, phone, th.barFg, th.bar);
+    C.rich(x0 + mw + 2, y + 8, '[Showtimes]', th.barFg, th.link, th.bar);
+  } else if (tpl === 'Center') {
+    C.center(x0, cw, 1, '~*~ ' + name + ' ~*~', th.link, null, { b: 1 }); art.forEach((l, i) => C.center(x0, cw, 3 + i, l, th.fg));
+    C.center(x0, cw, 7, 'Welcome to our homepage!!', th.fg, null, { b: 1 }); C.center(x0, cw, 8, '*** NEW: two-for-one on Tuesdays ***', RED);
+    y = 10; for (const n of NAV(kind).slice(1).concat(['Guestbook', 'Links'])) { C.center(x0, cw, y, n, th.link, null, { u: 1 }); y++; }
+    C.center(x0, cw, y + 1, hours, open ? GREEN : RED, null, { b: 1 }); C.center(x0, cw, y + 2, addr + ' - ' + phone, th.dim);
+    C.center(x0, cw, y + 4, 'You are visitor number', th.dim);
+    badgesRow(C, x0, cw, y + 5, ['counter'], r, true); badgesRow(C, x0, cw, y + 8, ['best', 'html', 'guest'].slice(0, 2 + Math.floor(r() * 2)), r);
+  } else if (tpl === 'LeftNav') {
+    banner(0); y = 5; const nw = 14;
+    C.fill(x0, 4, nw, H, th.bar);
+    NAV(kind).concat(['Rooms', 'Gallery']).forEach((n, i) => { C.fill(x0 + 1, y + i * 2, nw - 2, 1, th.head); C.put(x0 + 2, y + i * 2, n, th.headFg, th.head); });
+    C.put(x0 + nw + 2, y, 'Welcome!', th.fg, null, { b: 1 }); y += 2; y += C.wrap(x0 + nw + 2, y, cw - nw - 4, LOREM, th.fg) + 1;
+    C.put(x0 + nw + 2, y, hours, open ? GREEN : RED, null, { b: 1 }); C.put(x0 + nw + 2, y + 1, addr, th.dim); C.put(x0 + nw + 2, y + 2, phone, th.dim);
+    if (r() < 0.6) badgesRow(C, x0 + nw, cw - nw, y + 5, ['best'], r);
+  } else if (tpl === 'Corporate') {
+    const dk = th.head[0] + th.head[1] + th.head[2] > 600 ? [40, 44, 52] : th.head;
+    C.fill(x0, 0, cw, 2, dk); C.put(x0 + 2, 0, name.toUpperCase(), [255, 255, 255], dk, { b: 1 }); C.put(x0 + 2, 1, 'Personal  Business  About  Careers', [200, 205, 215], dk);
+    C.fill(x0, 2, cw, 5, th.bar); const sl = { bank: ['Banking that works', 'as hard as you do.'], phones: ['Talk more,', 'pay less.'], hotel: ['Your home', 'in the city.'], fastfood: ['Hot, fast', 'and cheap.'], cinema: ['The best seats', 'in town.'] }[kind] || ['Welcome', '']; C.put(x0 + 3, 3, sl[0], th.barFg, th.bar, { b: 1 }); C.put(x0 + 3, 4, sl[1], th.barFg, th.bar); C.rich(x0 + 3, 5, '[Learn more >>]', th.barFg, th.link, th.bar);
+    const bw = Math.floor((cw - 4) / 3); (kind === 'bank' ? ['Accounts', 'Loans', 'Branches'] : kind === 'phones' ? ['Phones', 'Plans', 'Stores'] : kind === 'hotel' ? ['Rooms', 'Dining', 'Location'] : ['Menu', 'Deals', 'Locations']).forEach((t, i) => { const bx = x0 + 1 + i * (bw + 1); C.fill(bx, 8, bw, 6, [244, 245, 248]); C.put(bx + 1, 8, t, th.fg, [244, 245, 248], { b: 1 }); C.wrap(bx + 1, 10, bw - 2, 'Simple, safe and close to home.', th.dim, [244, 245, 248], 3); });
+    C.put(x0 + 2, 15, hours, open ? GREEN : RED, null, { b: 1 }); C.put(x0 + 2, 16, addr + '  ' + phone, th.dim);
+    C.put(x0 + 2, H - 2, `(c) 2008 ${name}.${kind === 'bank' ? ' Member FDIC.' : ''} Privacy | Terms`, th.dim);
+    C.hd.push((g, X, Y, cw2, ch2) => { const lx = X(x0 + cw - 4), ly = Y(H - 2); el('rect', { x: lx, y: ly + 1, width: cw2 * 1.6, height: ch2 - 3, rx: 2, fill: '#c9a227' }, g); el('rect', { x: lx + cw2 * 0.4, y: ly - ch2 * 0.1, width: cw2 * 0.8, height: ch2 * 0.6, rx: cw2 * 0.4, fill: 'none', stroke: '#c9a227', 'stroke-width': 1.4 }, g); });
+  } else {
+    C.put(x0 + 2, 1, name, th.fg, null, { b: 1 }); C.wrap(x0 + 2, 3, cw - 4, 'Open every day. ' + addr + '. Call ' + phone + '.', th.fg);
+    ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'].forEach((l, i) => C.put(x0 + 2, 6 + i, l, th.head[0] + th.head[1] > 400 ? th.headFg : th.head));
+    badgesRow(C, x0, cw, 11, ['uc'], r);
+  }
+  if ((tpl === 'Classic' || tpl === 'Side') && r() < 0.5) badgesRow(C, x0, cw, H - 4, ['best'], r);
+  return C;
+}
+/** A row of 88 x 31 badges (11 x 2 cells each), centred; drawn in HD over the cells. */
+function badgesRow(C, x0, cw, y, kinds, r, big) {
+  const w = 11, gap = 1, tot = kinds.length * w + (kinds.length - 1) * gap; let x = x0 + Math.floor((cw - tot) / 2);
+  const seed = Math.floor(r() * 1e6);
+  for (const k of kinds) { const bx = x; C.hd.push((g, X, Y, cw2, ch2) => badge(g, X(bx), Y(y), (w * cw2) / 88, k, seed)); x += w + gap; }
+}
+
+// ---- the badges, 88 x 31 px ----
+function badge(g, x, y, s, kind, seed = 1) {
+  const b = el('g', { transform: `translate(${x},${y}) scale(${s})` }, g), T = (tx, ty, t, at) => txt(b, tx, ty, t, Object.assign({ 'font-size': 7, 'font-family': 'Verdana, sans-serif' }, at));
+  el('rect', { width: 88, height: 31, fill: '#fff' }, b);
+  if (kind === 'best') {
+    const id = 'bg' + (++uid), gr = el('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, el('defs', {}, b)); el('stop', { offset: 0, 'stop-color': '#fdf6e6' }, gr); el('stop', { offset: 1, 'stop-color': '#e6d3ad' }, gr);
+    el('rect', { width: 88, height: 31, fill: `url(#${id})`, stroke: '#4a2c1a' }, b); pixIcon(b, 4, 7.5, 1, 16);
+    T(23, 10, 'Best viewed with', { fill: '#4a2c1a', 'font-size': 6 }); T(23, 20, 'ferret', { fill: '#4a2c1a', 'font-size': 10, 'font-weight': 700, 'font-family': 'Nunito, sans-serif' }); T(56, 20, '2.0', { fill: '#1f5a6b', 'font-size': 6.5 }); T(23, 28, 'at 1024x768', { fill: '#1f5a6b', 'font-size': 5.5 });
+  } else if (kind === 'get') {
+    el('rect', { width: 88, height: 31, fill: '#1f5a6b', stroke: '#123844' }, b); el('rect', { x: 1, y: 1, width: 86, height: 12, fill: '#fff', opacity: .12 }, b); pixIcon(b, 4, 7.5, 1, 16);
+    T(24, 14, 'Get', { fill: '#f1e4c8', 'font-size': 7 }); T(24, 25, 'ferret!', { fill: '#f1e4c8', 'font-size': 11, 'font-weight': 900, 'font-family': 'Nunito, sans-serif' });
+  } else if (kind === 'html') {
+    el('rect', { width: 88, height: 31, fill: '#fff', stroke: '#888' }, b); el('rect', { x: 1, y: 1, width: 34, height: 29, fill: '#1c3f8c' }, b);
+    T(18, 19, 'HTML', { fill: '#fff', 'font-size': 9, 'font-weight': 700, 'text-anchor': 'middle' }); T(61, 13, 'VALID', { fill: '#c03', 'font-size': 8, 'font-weight': 700, 'text-anchor': 'middle' }); T(61, 24, 'HTML 4.01', { fill: '#1c3f8c', 'font-size': 7, 'text-anchor': 'middle' });
+  } else if (kind === 'counter') {
+    el('rect', { width: 88, height: 31, fill: '#111' }, b); const n = String(10000 + (seed % 89999)).padStart(7, '0');
+    [...n].forEach((d, i) => { el('rect', { x: 4 + i * 11.6, y: 5, width: 10, height: 21, rx: 1, fill: '#000', stroke: '#333' }, b); T(9 + i * 11.6, 21, d, { fill: '#3cff5a', 'font-size': 15, 'font-family': 'IBM Plex Mono, monospace', 'text-anchor': 'middle', 'font-weight': 600 }); });
+  } else if (kind === 'uc') {
+    const id = 'uc' + (++uid), p = el('pattern', { id, width: 8, height: 8, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, el('defs', {}, b)); el('rect', { width: 4, height: 8, fill: '#111' }, p); el('rect', { x: 4, width: 4, height: 8, fill: '#f6d200' }, p);
+    el('rect', { width: 88, height: 31, fill: `url(#${id})` }, b); el('rect', { x: 26, y: 4, width: 58, height: 23, fill: '#f6d200', stroke: '#111' }, b);
+    T(55, 14, 'UNDER', { fill: '#111', 'font-size': 7.5, 'font-weight': 700, 'text-anchor': 'middle' }); T(55, 23, 'CONSTRUCTION', { fill: '#111', 'font-size': 6, 'font-weight': 700, 'text-anchor': 'middle' });
+    const m = el('g', { class: 'worker' }, b); el('circle', { cx: 12, cy: 9, r: 3.2, fill: '#f6d200', stroke: '#111', 'stroke-width': .8 }, m); el('rect', { x: 9.5, y: 12, width: 5, height: 8, fill: '#e06a10' }, m); el('line', { x1: 10, y1: 20, x2: 9, y2: 27, stroke: '#111', 'stroke-width': 1.6 }, m); el('line', { x1: 14, y1: 20, x2: 15, y2: 27, stroke: '#111', 'stroke-width': 1.6 }, m); el('line', { class: 'shovel', x1: 15, y1: 14, x2: 22, y2: 25, stroke: '#666', 'stroke-width': 1.4 }, m);
+  } else if (kind === 'guest') {
+    el('rect', { width: 88, height: 31, fill: '#ffd6ea', stroke: '#c0407a' }, b); T(44, 13, 'Sign my', { fill: '#c0407a', 'font-size': 7.5, 'text-anchor': 'middle' }); T(44, 25, 'GUESTBOOK!', { fill: '#7a1a4a', 'font-size': 9, 'font-weight': 700, 'text-anchor': 'middle' });
+  } else if (kind === 'powered') {
+    el('rect', { width: 88, height: 31, fill: '#003399' }, b); el('rect', { y: 22, width: 88, height: 9, fill: '#ffcc00' }, b); T(44, 10, 'powered by', { fill: '#cfe0ff', 'font-size': 6, 'text-anchor': 'middle' }); T(44, 19, `${CITY}Net`, { fill: '#fff', 'font-size': 9, 'font-weight': 700, 'text-anchor': 'middle' }); T(44, 29, 'DSL - dial-up', { fill: '#002266', 'font-size': 6, 'text-anchor': 'middle' });
+  }
+  return b;
+}
+setInterval(() => document.querySelectorAll('.shovel').forEach((s) => { const up = s.getAttribute('x2') === '22'; s.setAttribute('x2', up ? '20' : '22'); s.setAttribute('y2', up ? '18' : '25'); }), 500);
+</script>
+<script>
+// ---- the canonical pages ----
+function portalPage(W, H, rows) {
+  const t = PORTAL, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 84), x0 = Math.floor((W - cw) / 2);
+  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 3, t.head);
+  [' .--. ', '( @@ )', " '--' "].forEach((l, i) => C.put(x0 + 1, i, l, [255, 204, 0], t.head));
+  C.put(x0 + 9, 0, `${CITY} Online`, t.headFg, t.head, { b: 1 }); C.put(x0 + 9, 1, 'Your city, your news, your mail.', [200, 214, 240], t.head);
+  C.fill(x0, 3, cw, 1, t.bar); let cx = x0 + 1; for (const n of ['Home', 'News', 'Weather', 'Directory', 'Mail', 'Search']) { C.put(cx, 3, n, t.barFg, t.bar, { u: n !== 'Home', b: n === 'Home' }); cx += n.length + 3; }
+  const lw = Math.floor(cw * 0.62); let y = 5;
+  C.put(x0 + 2, y, 'TOP STORIES - Thu Feb 21, 2008', t.fg, null, { b: 1 }); y += 2;
+  for (const h of ['Power cut leaves Marlow Ave dark for an hour', 'Traffic lights on 9th St fail at rush hour', 'Lunar eclipse tonight: clear skies expected', 'Harbor Savings opens new branch on Canal St', 'Rialto brings back the late show', 'City council debates new bus line']) { C.put(x0 + 2, y, '*', t.dim); C.put(x0 + 4, y, h.slice(0, lw - 6), t.link, null, { u: 1 }); y += 1; }
+  y += 1; C.put(x0 + 2, y, 'MOST READ', t.fg, null, { b: 1 }); y += 1;
+  for (const h of ['Where to eat after midnight', 'The best coffee near the docks']) { C.put(x0 + 4, ++y, h, t.link, null, { u: 1 }); }
+  const rx = x0 + lw + 2, rw = cw - lw - 3;
+  C.fill(rx, 5, rw, 6, [240, 244, 252]); C.put(rx + 1, 5, 'WEATHER', t.fg, [240, 244, 252], { b: 1 }); C.put(rx + 1, 7, 'Tonight: clear', t.fg, [240, 244, 252]); C.put(rx + 1, 8, '28 F  wind NW 8', t.dim, [240, 244, 252]);
+  C.hd.push((g, X, Y, a, b) => { el('circle', { cx: X(rx + rw - 4), cy: Y(7.6), r: b * 0.8, fill: '#e9edf5', stroke: '#aab4c8' }, g); });
+  C.fill(rx, 12, rw, 4, [255, 248, 214]); C.put(rx + 1, 12, 'SEARCH THE WEB', t.fg, [255, 248, 214], { b: 1 }); C.fill(rx + 1, 14, rw - 6, 1, [255, 255, 255]); C.put(rx + rw - 4, 14, 'Go', t.barFg, [255, 204, 0], { b: 1 });
+  C.put(rx + 1, 17, 'DIRECTORY', t.fg, null, { b: 1 }); ['Food & drink', 'Shopping', 'Banks', 'Hotels', 'Night life'].forEach((d, i) => C.put(rx + 1, 18 + i, d, t.link, null, { u: 1 }));
+  C.put(x0 + 2, H - 2, `(c) 2008 ${CITY} Online  -  Help  -  Privacy`, t.dim); badgesRow(C, x0 + cw - 14, 12, H - 4, ['powered'], rng(3));
+  if (rows !== undefined) for (let j = rows; j < H; j++) for (let i = 0; i < W; i++) { C.c[j][i] = { ch: ' ', fg: [0, 0, 0], bg: [255, 255, 255], u: 0, b: 0 }; }
+  if (rows !== undefined) C.hd = C.hd.filter(() => rows >= H - 4);
+  return C;
+}
+function searchPage(W, H, q) {
+  const t = SEARCHT, C = new Cells(W, H, t.bg), cols = ['#1d4fa0', '#d8452b', '#f2b51c', '#1d4fa0', '#2e9a48', '#d8452b', '#1d4fa0', '#f2b51c'];
+  C.put(2, 0, 'Web  Images  News  Maps  Local  more >>', t.link, null, { u: 1 });
+  if (!q) {
+    C.hd.push((g, X, Y, a, b) => { const tx = el('text', { x: X(W / 2), y: Y(6), 'text-anchor': 'middle', 'font-size': b * 3, 'font-family': 'Georgia, serif', 'font-weight': 700 }, g); [...'Lookwise'].forEach((ch, i) => { el('tspan', { fill: cols[i] }, tx).textContent = ch; }); });
+    C.fill(Math.floor(W / 2) - 20, 9, 40, 1, [255, 255, 255]); C.hd.push((g, X, Y) => el('rect', { x: X(W / 2 - 20), y: Y(9), width: X(W / 2 + 20) - X(W / 2 - 20), height: Y(10) - Y(9), fill: 'none', stroke: '#7f9db9' }, g));
+    C.center(0, W, 11, '[Lookwise Search]   [I\'m Feeling Lucky]', t.fg);
+    C.center(0, W, 14, 'Advertising - Business Solutions - About Lookwise', t.link, null, { u: 1 }); C.center(0, W, H - 2, '(c)2008 Lookwise', [119, 119, 119]);
+    return C;
+  }
+  C.hd.push((g, X, Y, a, b) => { const tx = el('text', { x: X(2), y: Y(3.3), 'font-size': b * 1.6, 'font-family': 'Georgia, serif', 'font-weight': 700 }, g); [...'Lookwise'].forEach((ch, i) => { el('tspan', { fill: cols[i] }, tx).textContent = ch; }); el('rect', { x: X(15), y: Y(2), width: X(55) - X(15), height: b, fill: '#fff', stroke: '#7f9db9' }, g); });
+  C.put(16, 2, q, t.fg, [255, 255, 255]); C.fill(0, 4, W, 1, t.bar); C.put(1, 4, 'Web', t.fg, t.bar, { b: 1 }); C.put(W - 30, 4, 'Results 0 of about 0', t.fg, t.bar);
+  C.wrap(2, 6, W - 6, `Your search - ${q} - did not match any documents.`, t.fg); C.put(2, 8, 'Suggestions:', t.fg);
+  ['Make sure all words are spelled correctly.', 'Try different keywords.', 'Try more general keywords.', 'Small shops often have no web site: try the phone book.'].forEach((s, i) => C.put(4, 9 + i, '- ' + s, t.fg));
+  return C;
+}
+function mailPage(W, H) {
+  const t = MAILT, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 70), x0 = Math.floor((W - cw) / 2);
+  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 2, t.head); C.put(x0 + 2, 0, `${CITY} Online Mail`, t.headFg, t.head, { b: 1 }); C.put(x0 + 2, 1, 'Free web mail - 25 MB of storage!', [200, 214, 240], t.head);
+  C.fill(x0, 2, cw, 1, t.bar);
+  const bx = x0 + Math.floor(cw / 2) - 16; C.fill(bx, 5, 32, 10, [240, 244, 252]); C.put(bx + 2, 5, 'Sign in', t.fg, [240, 244, 252], { b: 1 });
+  C.put(bx + 2, 7, 'Number:', t.fg, [240, 244, 252]); C.fill(bx + 12, 7, 18, 1, [255, 255, 255]); C.put(bx + 12, 7, '555-0179', t.fg, [255, 255, 255]);
+  C.put(bx + 2, 9, 'Password:', t.fg, [240, 244, 252]); C.fill(bx + 12, 9, 18, 1, [255, 255, 255]); C.put(bx + 12, 9, '********', t.fg, [255, 255, 255]);
+  C.put(bx + 2, 11, '[ Sign in ]', t.barFg, [255, 214, 60], { b: 1 }); C.put(bx + 2, 13, 'Forgot password?', t.link, [240, 244, 252], { u: 1 });
+  C.wrap(x0 + 4, 17, cw - 8, 'New here? Sign up with your phone number: we send you a code by SMS. Your mail is protected with a secure connection.', t.fg);
+  return C;
+}
+function wirePage(W, H) {
+  const t = WIRET, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 70), x0 = Math.floor((W - cw) / 2);
+  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 2, t.bar); C.put(x0 + 2, 0, 'streetwire', [255, 255, 255], t.bar, { b: 1 }); C.put(x0 + 2, 1, 'what the city is saying', [190, 205, 235], t.bar); C.put(x0 + cw - 16, 0, 'Sign in | Join', [255, 255, 255], t.bar);
+  const posts = [['mel_on_9th', '2 min ago', 'lights out on 9th again. third time this month??'], ['dockrat', '14 min ago', 'anyone else see the cop cars outside the Rialto'], ['petrovs_coffee', '1 hr ago', 'Open late tonight for the eclipse! Hot cocoa $1'], ['jules.k', '2 hr ago', 'bus 4 never came. walking home in the snow. great']];
+  let y = 3; for (const [u, when, s] of posts) { C.hd.push(((yy) => (g, X, Y, a, b) => el('rect', { x: X(x0 + 2), y: Y(yy), width: a * 4, height: b * 2 - 2, rx: 2, fill: '#c8d2e4' }, g))(y)); C.put(x0 + 7, y, u, t.link, null, { b: 1 }); C.put(x0 + 8 + u.length, y, when, t.dim); const n = C.wrap(x0 + 7, y + 1, cw - 10, s, t.fg); C.put(x0 + 7, y + 1 + n, 'Reply  Share', t.link, null, { u: 1 }); y += 3 + n; }
+  return C;
+}
+function forumPage(W, H) {
+  const t = FORUMT, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 70), x0 = Math.floor((W - cw) / 2);
+  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 2, t.head); C.put(x0 + 2, 0, 'switchboard', t.headFg, t.head, { b: 1 }); C.put(x0 + 2, 1, 'questions and answers', t.dim, t.head);
+  C.fill(x0, 2, cw, 1, t.bar); C.put(x0 + 2, 2, 'Boards  Newest  Members  Search', t.barFg, t.bar);
+  const th = [['Welcome - read this before posting', 12, 'admin'], ['Off-topic: best diner open after 2 am?', 31, 'nightowl'], ['My laptop fan sounds like a jet', 8, 'kettle'], ['Lost a charger at the cyber cafe on Dock St', 3, 'mira_p'], ['Which phone has the best battery?', 19, 'lowbatt']];
+  C.put(x0 + 2, 4, 'Thread', t.dim); C.put(x0 + cw - 18, 4, 'Replies  By', t.dim);
+  th.forEach(([s, n, by], i) => { const y = 6 + i * 2; C.put(x0 + 2, y, s.slice(0, cw - 22), t.link, null, { u: 1 }); C.put(x0 + cw - 17, y, String(n).padStart(3), t.fg); C.put(x0 + cw - 10, y, by, t.dim); });
+  return C;
+}
+/** Ferret's own error pages: white, the ferret lost on the left, a title and a short text. */
+function errPage(W, H, kind, host) {
+  const C = new Cells(W, H, [246, 246, 246]), x0 = 22;
+  const T = {
+    notfound: ['Server not found', `Ferret can't find the server at ${host}.`, ['Check the address for typing errors such as ww.example.com instead of www.example.com.', 'If you are unable to load any pages, check your computer\'s network connection.'], 'Try Again'],
+    offline: ['Offline', 'Ferret is not connected to a network.', ['Turn on the wireless radio, or move closer to an access point.', 'Then try again.'], 'Try Again'],
+    timeout: ['The connection has timed out', `The server at ${host} is taking too long to respond.`, ['The site could be temporarily unavailable or too busy.', 'A weak wireless signal can also cause this.'], 'Try Again'],
+    cert: ['This Connection is Untrusted', `You have asked Ferret to connect securely to ${host}, but we can't confirm that your connection is secure.`, ['If you usually connect to this site without problems, this error could mean that someone is trying to impersonate the site.', 'The certificate expired on 01/14/2008.'], 'Get me out of here!'],
+  }[kind];
+  C.put(x0, 4, T[0], [30, 30, 30], null, { b: 1 }); let y = 6 + C.wrap(x0, 6, W - x0 - 6, T[1], [40, 40, 40]) + 1;
+  for (const s of T[2]) { C.put(x0, y, '*', [90, 90, 90]); y += C.wrap(x0 + 2, y, W - x0 - 8, s, [60, 60, 60]) + 1; }
+  C.put(x0, y + 1, ` ${T[3]} `, [0, 0, 0], [228, 228, 228]);
+  if (kind === 'cert') C.put(x0 + T[3].length + 4, y + 1, 'Add Exception...', [0, 0, 204], null, { u: 1 });
+  C.hd.push((g, X, Y, a, b) => { el('rect', { x: X(x0 - 1), y: Y(y + 1) - 2, width: (T[3].length + 2) * a + 2, height: b + 4, rx: 3, fill: 'none', stroke: '#8a8a8a' }, g); if (kind === 'cert') el('rect', { x: X(0), y: Y(0), width: X(W) - X(0), height: 4, fill: '#e8b400' }, g); ferret(g, { x: X(3), y: Y(3), size: 15 * a, look: 0, headDy: 0, paws: true }); });
+  return C;
+}
+
+// ---- the chrome ----
+const CH = { X: 8, Y: 2, cw: 8, ch: 16, W: 96, H: 42 };
+const STATES = {
+  ready: { lab: 'pronta', tab: 0, url: 'http://www.halden-online.com/', page: () => portalPage(96, 37), status: 'Done', kbps: '42.1 kB/s' },
+  loading: { lab: 'carregando', tab: 0, url: 'http://www.halden-online.com/', page: () => portalPage(96, 37, 15), status: 'Transferring data from www.halden-online.com...', kbps: '3.8 kB/s', prog: .46, dig: 1 },
+  https: { lab: 'https', tab: 2, url: 'https://mail.halden-online.com/', page: () => mailPage(96, 37), status: 'Done', kbps: '40.6 kB/s', secure: 1 },
+  notfound: { tt: "Problem loading page", lab: 'server not found', tab: 0, url: 'http://www.rosettispizza.com/', page: () => errPage(96, 37, 'notfound', 'www.rosettispizza.com'), status: 'Done', kbps: '-', lost: 1 },
+  offline: { tt: "Problem loading page", lab: 'sem rede', tab: 0, url: 'http://www.halden-online.com/', page: () => errPage(96, 37, 'offline'), status: 'no network', kbps: '-', lost: 1 },
+  timeout: { tt: "Problem loading page", lab: 'tempo esgotado', tab: 0, url: 'http://www.lowtidebar.net/', page: () => errPage(96, 37, 'timeout', 'www.lowtidebar.net'), status: 'Done', kbps: '0.2 kB/s', lost: 1 },
+  cert: { tt: "Untrusted Connection", lab: 'certificado', tab: 0, url: 'https://www.harborsavings.com/', page: () => errPage(96, 37, 'cert', 'www.harborsavings.com'), status: 'Done', kbps: '-', lost: 1 },
+  p404: { tt: "Rosetti's Pizza - 404", lab: '404 do site', tab: 0, url: 'http://www.rosettispizza.com/specials', page: () => bizSite(96, 37, 'Classic', 'pizza', THEMES[1], rng(7), { p404: 1 }), status: 'Done', kbps: '38.0 kB/s' },
+  noindex: { lab: 'fora do índice', tab: 1, url: 'http://www.lookwise.com/search?q=sals+deli', page: () => searchPage(96, 37, "sal's deli"), status: 'Done', kbps: '41.3 kB/s' },
+};
+let chromeState = 'ready', throbG = null, throbFrame = 0;
+function gradient(svg, id, stops, vertical = true) { const gr = el('linearGradient', { id, x1: 0, y1: 0, x2: vertical ? 0 : 1, y2: vertical ? 1 : 0 }, el('defs', {}, svg)); stops.forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, gr)); return `url(#${id})`; }
+function favicon(g, x, y, kind) {
+  if (kind === 'ferret') return pixIcon(g, x, y, 1, 16);
+  const c = { portal: ['#003399', '#ffcc00'], look: ['#fff', '#1d4fa0'], mail: ['#003399', '#fff'], wire: ['#2c4a88', '#fff'], pizza: ['#8c1e14', '#ffecbe'] }[kind];
+  el('rect', { x, y, width: 16, height: 16, rx: 2, fill: c[0], stroke: '#9aa' }, g); txt(g, x + 8, y + 12.5, { portal: 'H', look: 'L', mail: '@', wire: 's', pizza: 'R' }[kind], { fill: c[1], 'font-size': 12, 'font-weight': 700, 'text-anchor': 'middle', 'font-family': 'Georgia, serif' });
+}
+function drawChrome() {
+  const svg = $('chrome'), S = STATES[chromeState], { X, Y, cw, ch, W } = CH, R = (r) => Y + r * ch, PW = W * cw;
+  svg.innerHTML = '';
+  // the Osprey pane around it (its border, not the browser's)
+  el('rect', { x: X - 3, y: Y - 1, width: PW + 6, height: 42 * ch + 2, fill: 'none', stroke: '#ffd68c', 'stroke-width': 1 }, svg);
+  // tabs
+  el('rect', { x: X, y: R(0), width: PW, height: ch, fill: gradient(svg, 'tabbg', [[0, '#c3c8d0'], [1, '#b3b9c2']]) }, svg);
+  const tabs = [['portal', `${CITY} Online`], ['look', 'Lookwise'], ['mail', `${CITY} Online Mail`]];
+  tabs.forEach(([ic, t], i) => {
+    const on = i === S.tab, tx = X + 4 + i * 172, g = el('g', { 'data-tab': i, style: 'cursor:pointer' }, svg);
+    el('path', { d: `M${tx} ${R(1)} L${tx + 4} ${R(0) + 2} Q${tx + 5} ${R(0) + 1} ${tx + 8} ${R(0) + 1} L${tx + 160} ${R(0) + 1} Q${tx + 163} ${R(0) + 1} ${tx + 164} ${R(0) + 2} L${tx + 168} ${R(1)} Z`, fill: on ? gradient(svg, 'ta' + i, [[0, '#fbfcfd'], [1, '#eef0f3']]) : gradient(svg, 'ti' + i, [[0, '#dde1e6'], [1, '#cdd2d9']]), stroke: '#8d949e', 'stroke-width': .8 }, g);
+    favicon(g, tx + 10, R(0) + 0.5, ic === 'portal' && chromeState === 'notfound' ? 'pizza' : ic); txt(g, tx + 30, R(0) + 12, (on && S.tt ? S.tt : t).slice(0, 16), { fill: on ? '#111' : '#444', 'font-size': 11 });
+    if (on) txt(g, tx + 154, R(0) + 12, '×', { fill: '#666', 'font-size': 12 });
+    g.addEventListener('click', () => { chromeState = ['ready', 'noindex', 'https'][i]; drawChrome(); paintStateBtns(); });
+  });
+  txt(svg, X + 4 + 3 * 172 + 6, R(0) + 12.5, '+', { fill: '#333', 'font-size': 14, 'font-weight': 600 });
+  // the navigation bar
+  el('rect', { x: X, y: R(1), width: PW, height: 2 * ch, fill: gradient(svg, 'nav', [[0, '#f6f7f9'], [1, '#d9dde3']]) }, svg);
+  el('line', { x1: X, x2: X + PW, y1: R(3) - .5, y2: R(3) - .5, stroke: '#a3aab4' }, svg);
+  const cy = R(2), back = el('g', { style: 'cursor:pointer' }, svg);
+  el('circle', { cx: X + 20, cy, r: 13.5, fill: gradient(svg, 'bk', [[0, '#fdfdfd'], [.5, '#e3e7ec'], [1, '#b9c1cb']]), stroke: '#6f7884' }, back);
+  el('path', { d: `M${X + 13} ${cy} l8 -7 v4.5 h7 v5 h-7 v4.5 z`, fill: '#1f5a6b' }, back);
+  back.addEventListener('pointerdown', () => back.setAttribute('transform', 'translate(0 1)')); back.addEventListener('pointerup', () => back.removeAttribute('transform'));
+  el('circle', { cx: X + 42, cy, r: 9, fill: gradient(svg, 'fw', [[0, '#fdfdfd'], [1, '#c3cad3']]), stroke: '#8a929d' }, svg); el('path', { d: `M${X + 47} ${cy} l-5.5 -5 v3 h-4.5 v4 h4.5 v3 z`, fill: '#8e98a4' }, svg);
+  // reload or stop, home
+  if (S.dig) { el('path', { d: `M${X + 59} ${cy - 5} l10 10 M${X + 69} ${cy - 5} l-10 10`, stroke: '#c0392b', 'stroke-width': 2.6, 'stroke-linecap': 'round' }, svg); }
+  else { el('path', { d: `M${X + 70} ${cy} a6 6 0 1 1 -2 -4.5`, stroke: '#2e7d4f', 'stroke-width': 2.4, fill: 'none' }, svg); el('path', { d: `M${X + 69.5} ${cy - 9} l1 5.5 l-5.5 -.5 z`, fill: '#2e7d4f' }, svg); }
+  el('path', { d: `M${X + 80} ${cy + 1} l9 -8 l9 8 M${X + 83} ${cy} v7 h12 v-7`, stroke: '#4a5563', 'stroke-width': 2, fill: 'none', 'stroke-linejoin': 'round' }, svg);
+  // the address field
+  const ax = X + 106, aw = PW - 106 - 210, sec = S.secure;
+  el('rect', { x: ax, y: cy - 10, width: aw, height: 20, rx: 3, fill: sec ? '#fff8c4' : '#fff', stroke: sec ? '#c9a227' : '#7f8b99' }, svg);
+  favicon(svg, ax + 4, cy - 8, ['portal', 'look', 'mail'][S.tab] === 'portal' && chromeState === 'notfound' ? 'pizza' : ['portal', 'look', 'mail'][S.tab]);
+  txt(svg, ax + 26, cy + 4.5, S.url, { fill: '#111', 'font-size': 12 });
+  if (sec) { el('rect', { x: ax + aw - 40, y: cy - 3, width: 10, height: 8, rx: 1.5, fill: '#c9a227' }, svg); el('path', { d: `M${ax + aw - 38} ${cy - 3} v-3 a3 3 0 0 1 6 0 v3`, stroke: '#c9a227', 'stroke-width': 1.6, fill: 'none' }, svg); }
+  txt(svg, ax + aw - 18, cy + 5, '☆', { fill: '#7a8594', 'font-size': 13 });
+  // the search box
+  const sx = ax + aw + 8, sw = 160;
+  el('rect', { x: sx, y: cy - 10, width: sw, height: 20, rx: 10, fill: '#fff', stroke: '#7f8b99' }, svg); favicon(svg, sx + 4, cy - 8, 'look'); txt(svg, sx + 26, cy + 4.5, 'Lookwise', { fill: '#9aa3ad', 'font-size': 12, 'font-style': 'italic' });
+  // the ferret in the corner
+  el('line', { x1: X + PW - 34, x2: X + PW - 34, y1: R(1) + 4, y2: R(3) - 4, stroke: '#b6bdc6' }, svg);
+  throbG = el('g', {}, svg); throbState();
+  // bookmarks
+  el('rect', { x: X, y: R(3), width: PW, height: ch, fill: '#e6e9ed' }, svg); el('line', { x1: X, x2: X + PW, y1: R(4) - .5, y2: R(4) - .5, stroke: '#a3aab4' }, svg);
+  let bx = X + 6; for (const [ic, t] of [['look', 'Lookwise'], ['mail', 'Mail'], ['portal', `${CITY} Online`], ['ferret', 'Ferret Help']]) { favicon(svg, bx, R(3), ic); txt(svg, bx + 20, R(3) + 12, t, { fill: '#222', 'font-size': 11 }); bx += 36 + t.length * 7; }
+  // the page
+  const P = S.page(); P.draw(svg, X, R(4), cw, ch);
+  if (S.dig) { el('rect', { x: X, y: R(4 + 15), width: PW, height: ch * 22, fill: '#fff' }, svg); }
+  el('rect', { x: X + PW - 6, y: R(4) + 2, width: 4, height: 37 * ch - 4, rx: 2, fill: '#c9ced5' }, svg); el('rect', { x: X + PW - 6, y: R(4) + 2, width: 4, height: 80, rx: 2, fill: '#8f98a3' }, svg);
+  // status
+  el('rect', { x: X, y: R(41), width: PW, height: ch, fill: gradient(svg, 'st', [[0, '#e9ecef'], [1, '#d6dae0']]) }, svg); el('line', { x1: X, x2: X + PW, y1: R(41), y2: R(41), stroke: '#a3aab4' }, svg);
+  txt(svg, X + 6, R(41) + 12, S.status, { fill: '#222', 'font-size': 11 });
+  if (S.prog) { el('rect', { x: X + PW - 250, y: R(41) + 4, width: 120, height: 9, fill: '#fff', stroke: '#8a929d' }, svg); el('rect', { x: X + PW - 249, y: R(41) + 5, width: 118 * S.prog, height: 7, fill: gradient(svg, 'pg', [[0, '#5fa3b3'], [1, '#1f5a6b']]) }, svg); txt(svg, X + PW - 300, R(41) + 12, '24 of 52', { fill: '#444', 'font-size': 10 }); }
+  if (S.secure) { el('rect', { x: X + PW - 112, y: R(41) + 6, width: 8, height: 7, rx: 1, fill: '#c9a227' }, svg); el('path', { d: `M${X + PW - 110} ${R(41) + 6} v-2 a2 2 0 0 1 4 0 v2`, stroke: '#c9a227', fill: 'none', 'stroke-width': 1.3 }, svg); }
+  txt(svg, X + PW - 8, R(41) + 12, S.kbps, { fill: '#333', 'font-size': 11, 'text-anchor': 'end' });
+}
+function throbState() {
+  if (!throbG) return; throbG.innerHTML = '';
+  const S = STATES[chromeState], x = CH.X + CH.W * CH.cw - 30, y = CH.Y + CH.ch + 3, f = throbFrame % 6;
+  if (S.dig) ferret(throbG, { x, y, size: 26, headDy: [30, 44, 56, 44, 30, 22][f], meridians: false, dirt: 1 + f });
+  else if (S.lost) ferret(throbG, { x, y, size: 26, look: [-7, -7, 0, 7, 7, 0][f], meridians: false });
+  else ferret(throbG, { x, y, size: 26, headDy: 44, meridians: false });
+}
+function paintStateBtns() { $('stateBtns').innerHTML = ''; for (const k in STATES) { const b = document.createElement('button'); b.textContent = STATES[k].lab; if (k === chromeState) b.className = 'on'; b.onclick = () => { chromeState = k; drawChrome(); paintStateBtns(); }; $('stateBtns').appendChild(b); } }
+drawChrome(); paintStateBtns();
+setInterval(() => { throbFrame++; throbState(); }, 130);
+
+// ---- the buttons, one by one ----
+(() => {
+  const B2 = [
+    ['Voltar', 'redondo, 28 px, o maior da barra: é o que mais se aperta. Seta petróleo. Clique "tum" grave.', (s) => { el('circle', { cx: 50, cy: 30, r: 22, fill: gradient(s, 'b1', [[0, '#fdfdfd'], [.5, '#e3e7ec'], [1, '#b9c1cb']]), stroke: '#6f7884' }, s); el('path', { d: 'M38 30 l13 -11 v7 h11 v8 h-11 v7 z', fill: '#1f5a6b' }, s); }],
+    ['Avançar', 'menor e cinza; só fica petróleo quando há para onde avançar.', (s) => { el('circle', { cx: 50, cy: 30, r: 15, fill: gradient(s, 'b2', [[0, '#fdfdfd'], [1, '#c3cad3']]), stroke: '#8a929d' }, s); el('path', { d: 'M58 30 l-9 -8 v5 h-7 v6 h7 v5 z', fill: '#8e98a4' }, s); }],
+    ['Recarregar / parar', 'o mesmo lugar: a seta verde, e o X vermelho enquanto carrega.', (s) => { el('path', { d: 'M40 30 a10 10 0 1 1 3 7', stroke: '#2e7d4f', 'stroke-width': 3.5, fill: 'none' }, s); el('path', { d: 'M36 22 l2 10 l8 -5 z', fill: '#2e7d4f' }, s); el('path', { d: 'M66 20 l16 16 M82 20 l-16 16', stroke: '#c0392b', 'stroke-width': 3.5, 'stroke-linecap': 'round' }, s); }],
+    ['Endereço seguro', 'https: o campo amarelo-claro e o cadeado dourado. Certificado ruim: o cadeado partido.', (s) => { el('rect', { x: 6, y: 18, width: 88, height: 24, rx: 3, fill: '#fff8c4', stroke: '#c9a227' }, s); txt(s, 12, 34, 'https://', { fill: '#111', 'font-size': 10 }); el('rect', { x: 74, y: 28, width: 12, height: 9, rx: 1.5, fill: '#c9a227' }, s); el('path', { d: 'M76 28 v-3 a4 4 0 0 1 8 0 v3', stroke: '#c9a227', 'stroke-width': 1.8, fill: 'none' }, s); }],
+  ];
+  $('buttons').innerHTML = B2.map((b, i) => `<div class="card"><svg viewBox="0 0 100 60" id="btn${i}"></svg><div class="cap"><b>${b[0]}.</b> ${b[1]}</div></div>`).join('');
+  B2.forEach((b, i) => b[2]($('btn' + i)));
+})();
+
+// ---- the ferret's frames ----
+let throbMode = 'dig', tf = 0;
+function drawThrob() {
+  const s = $('throb'); s.innerHTML = ''; el('rect', { width: 520, height: 190, rx: 6, fill: '#eceef1' }, s);
+  const frames = [['espiando', { headDy: 44 }], ['cavando', { headDy: [30, 44, 56, 44, 30, 22][tf % 6], dirt: 1 + tf % 6 }], ['saindo', { headDy: [40, 20, 0, 0, 0, 0][tf % 6], blink: tf % 6 === 4 }], ['perdido', { look: [-8, -8, 0, 8, 8, 0][tf % 6] }]];
+  frames.forEach(([lab, o], i) => { ferret(s, Object.assign({ x: 20 + i * 126, y: 18, size: 110, meridians: false }, o)); txt(s, 75 + i * 126, 172, lab, { fill: '#444', 'font-size': 12, 'text-anchor': 'middle' }); });
+}
+setInterval(() => { tf++; drawThrob(); }, 140); drawThrob();
+$('throbBtns').innerHTML = '';
+
+// ---- the six templates ----
+let tplSeed = 20080221;
+function drawTpls() {
+  const r = rng(tplSeed); $('seedLab').textContent = 'semente ' + tplSeed; $('tpls').innerHTML = '';
+  for (const tpl of ['Classic', 'Side', 'Center', 'LeftNav', 'Corporate', 'Bare']) {
+    const kinds = TPL[tpl], kind = kinds[Math.floor(r() * kinds.length)], th = THEMES[Math.floor(r() * THEMES.length)];
+    const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<svg viewBox="0 0 ${64 * 6} ${30 * 12}"></svg><div class="cap"><b>${tpl}</b> · ${BIZ[kind][0]} (${kind})</div>`;
+    $('tpls').appendChild(d); bizSite(64, 30, tpl, kind, th, r).draw(d.querySelector('svg'), 0, 0, 6, 12);
+  }
+}
+$('reroll').onclick = () => { tplSeed = Math.floor(Math.random() * 1e9); drawTpls(); }; drawTpls();
+
+// ---- the badges ----
+(() => {
+  const s = $('badges'); el('rect', { width: 640, height: 150, rx: 6, fill: '#c8c8cc' }, s);
+  ['best', 'get', 'counter'].forEach((k, i) => badge(s, 22 + i * 206, 10, 2, k, 12847));
+  ['best', 'get', 'html', 'counter', 'uc', 'guest', 'powered'].forEach((k, i) => badge(s, 14 + i * 89, 100, 1, k, 12847));
+  txt(s, 14, 144, '×2 em cima; tamanho real embaixo (88 × 31)', { fill: '#333', 'font-size': 10 });
+})();
+
+// ---- the canonical pages ----
+(() => {
+  const C = [
+    ['portal', `<b>${CITY} Online</b> (o portal do provedor). A página inicial do Ferret. Azul e amarelo; manchetes da fila de eventos, o tempo, a busca, a lista de empresas. É a assinatura "powered by".`, () => portalPage(64, 30)],
+    ['look', '<b>Lookwise</b> (o buscador). Branco, o nome em letras de cores alternadas, duas caixas de botão. Lento: indexa os sites gerados, mas não as lojas sem site nem as páginas escondidas.', () => searchPage(64, 30)],
+    ['mail', `<b>${CITY} Online Mail</b> (o webmail). As cores do portal, o login pelo número e a conexão segura (o endereço amarelo).`, () => mailPage(64, 30)],
+    ['wire', '<b>Streetwire</b> (a rede social). Azul-ardósia, posts curtos com avatar quadrado, "Reply" e "Share". Fala do apagão, nunca de quem causou.', () => wirePage(64, 30)],
+    ['forum', '<b>Switchboard</b> (o fórum). Escuro e verde, de quem passa a noite nele. Fora do índice e do portal: só se chega pelo endereço (o conteúdo é da Trilha de hacking; aqui só a casca).', () => forumPage(64, 30)],
+  ];
+  $('canonCards').innerHTML = C.map((c, i) => `<div class="card"><svg viewBox="0 0 ${64 * 6} ${30 * 12}" id="cn${i}"></svg><div class="cap">${c[1]}</div></div>`).join('');
+  C.forEach((c, i) => c[2]().draw($('cn' + i), 0, 0, 6, 12));
+})();
+
+// ---- Ferret Mini on the phone ----
+(() => {
+  const mk = (title, cap, build) => { const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<svg viewBox="0 0 280 470"></svg><div class="cap"><b>${title}.</b> ${cap}</div>`; $('minis').appendChild(d); build(d.querySelector('svg')); };
+  const shell = (s, url, data, frame) => {
+    el('rect', { x: 2, y: 2, width: 276, height: 466, rx: 26, fill: '#0b0b0d', stroke: '#9aa0a8', 'stroke-width': 2 }, s);
+    const X = 20, Y = 30; el('rect', { x: X, y: Y, width: 240, height: 400, fill: '#fff' }, s);
+    el('rect', { x: X, y: Y, width: 240, height: 14, fill: '#10151c' }, s); txt(s, X + 4, Y + 10.5, 'EDGE ▂▄▆', { fill: '#bfe3ff', 'font-size': 9 }); txt(s, X + 236, Y + 10.5, data + '  22:41', { fill: '#bfe3ff', 'font-size': 9, 'text-anchor': 'end' });
+    el('rect', { x: X, y: Y + 14, width: 240, height: 16, fill: '#1f5a6b' }, s);
+    if (frame !== undefined) ferret(s, { x: X + 2, y: Y + 15, size: 14, meridians: false, headDy: [30, 44, 56, 44][frame % 4] }); else pixIcon(s, X + 2, Y + 14.5, 0.9, 16);
+    txt(s, X + 20, Y + 26, url, { fill: '#f1e4c8', 'font-size': 9.5 });
+    el('rect', { x: X, y: Y + 386, width: 240, height: 14, fill: '#10151c' }, s); txt(s, X + 4, Y + 396.5, 'Options', { fill: '#bfe3ff', 'font-size': 9.5 }); txt(s, X + 236, Y + 396.5, 'Back', { fill: '#bfe3ff', 'font-size': 9.5, 'text-anchor': 'end' });
+    return [X, Y + 30];
+  };
+  mk('A versão para celular', 'o banco tem página leve: texto, uma coluna, links em lista. 6 KB, alguns centavos.', (s) => {
+    const [X, Y] = shell(s, 'm.harborsavings.com', '6 KB $0.03'), C = new Cells(40, 29, [255, 255, 255]), th = THEMES[0];
+    C.fill(0, 0, 40, 2, th.head); C.put(1, 0, 'HARBOR SAVINGS', th.headFg, th.head, { b: 1 }); C.put(1, 1, 'Mobile Banking', [200, 214, 240], th.head);
+    C.put(1, 3, 'OPEN NOW - until 5 pm', GREEN, null, { b: 1 }); ['1 Branches & ATMs', '2 Rates', '3 Sign in', '4 Contact us', '5 Full site'].forEach((l, i) => C.put(1, 5 + i * 2, l, th.link, null, { u: 1 }));
+    C.wrap(1, 16, 38, 'Find the nearest branch: 412 Canal St. Call 555-2290.', th.fg); C.put(1, 27, '(c) 2008 Harbor Savings', th.dim);
+    C.draw(s, X, Y, 6, 12);
+  });
+  mk('A página inteira, espremida', 'sem versão para celular: o site chega todo (84 KB, caro), cortado à direita e com o menu quebrado.', (s) => {
+    const [X, Y] = shell(s, 'www.rosettispizza.com', '84 KB $0.42'), P = bizSite(64, 29, 'Side', 'pizza', THEMES[1], rng(11));
+    const g = el('g', {}, s), cp = el('clipPath', { id: 'mcp' }, el('defs', {}, s)); el('rect', { x: X, y: Y, width: 240, height: 356 }, cp); g.setAttribute('clip-path', 'url(#mcp)');
+    P.draw(g, X - 30, Y, 5.2, 12.3);
+  });
+  mk('Carregando no EDGE', 'antes de baixar uma página pesada, o Ferret Mini avisa o preço; o furão cava ao lado do endereço.', (s) => {
+    const [X, Y] = shell(s, 'www.streetwire.com', '2 KB $0.01', 1), C = wirePage(40, 10); C.draw(s, X, Y, 6, 12);
+    el('rect', { x: X, y: Y + 120, width: 240, height: 236, fill: '#fff' }, s);
+    el('rect', { x: X + 16, y: Y + 150, width: 208, height: 96, rx: 4, fill: '#f1f3f6', stroke: '#1f5a6b', 'stroke-width': 1.5 }, s);
+    txt(s, X + 26, Y + 172, 'This page is about 120 KB', { fill: '#111', 'font-size': 10.5, 'font-weight': 600 }); txt(s, X + 26, Y + 190, 'and may cost $0.60 of data.', { fill: '#111', 'font-size': 10.5 }); txt(s, X + 26, Y + 208, 'Continue?', { fill: '#111', 'font-size': 10.5 });
+    txt(s, X + 26, Y + 234, 'Yes', { fill: '#1f5a6b', 'font-size': 11, 'font-weight': 600 }); txt(s, X + 214, Y + 234, 'No', { fill: '#1f5a6b', 'font-size': 11, 'font-weight': 600, 'text-anchor': 'end' });
+    el('rect', { x: X + 10, y: Y + 330, width: 220, height: 8, fill: '#fff', stroke: '#8a929d' }, s); el('rect', { x: X + 11, y: Y + 331, width: 50, height: 6, fill: '#5fa3b3' }, s); txt(s, X + 10, Y + 352, 'Connecting... 3.1 kB/s', { fill: '#444', 'font-size': 9.5 });
+  });
+})();
+</script>
+</body>
+</html>
