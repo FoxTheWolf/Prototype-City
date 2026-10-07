@@ -1,76 +1,137 @@
 /**
- * Lodestar, the notebook's web browser (15.1): a program that owns the whole console, like the
- * editor. A title bar, the address, the page laid out in colors, a status line with the transfer
- * and the keys. A page comes down the line as a 2008 one did: the host looked up, the connection
- * made, then the page drawn from the top as its bytes arrive, at the speed of the Wi-Fi it rides
- * (sim/wifi.ts through the notebook's card); no network, no page. Keys: F6 (or Ctrl+L) types an
- * address, the arrows scroll and Tab, Right and Left pick a link or a text box, Enter follows it,
- * Backspace goes back, F5 reloads, Home goes to the start page, F10 (or Ctrl+Q) closes it. In a text
- * box (15.4) the keys type into it, Backspace rubs out and Enter sends the page's form.
+ * Ferret, the notebook's web browser (15.1; the Lodestar renamed and given its frame in 15.17c, by the
+ * manual docs/identidade/ferret-manual.html): a program that owns a pane of the console. The frame's
+ * pixels (the tabs, the round back button, the address, the Lookwise box, the bookmarks, the status
+ * line, the ferret digging in the corner) are painted on the screen's HD layer by chrome.ts; the text
+ * is in the cells, as is the page, laid out in its own colors. A page comes down the line as a 2008
+ * one did: the host looked up, the connection made, then the page drawn from the top as its bytes
+ * arrive, at the speed of the Wi-Fi it rides (sim/wifi.ts through the notebook's card); no network, no page.
+ *
+ * Keys: F6 (or Ctrl+L) types an address, Ctrl+K a search, the arrows scroll, Tab/Right and Left pick a
+ * link or a text box, Enter follows it, Backspace goes back, F5 reloads, Home goes to the start page,
+ * Ctrl+T opens a tab, Ctrl+Tab goes to the next, Ctrl+W closes one, Ctrl+D bookmarks the page, F10 (or
+ * Ctrl+Q) closes the browser. In a text box (15.4) the keys type into it and Enter sends the page's form.
+ * The bookmarks and the history are files on the notebook's disk (~/.ferret), so the save keeps them.
  */
 import { Scr } from '../laptop/screen';
 import { type World } from '../sim/world';
 import { layout, SUBMIT, type C3, type Field, type Laid, type Link } from './page';
-import { fetchUrl, portalUrl, searchUrl, type Fetched } from './sites';
+import { fetchUrl, portalUrl, searchUrl, SEARCH_HOST, webOf, type Fetched } from './sites';
+import { mailHost } from './webmail';
+import { ADDR_X, addrEnd, BACK, FWD, HOME, iconOf, MARKS_Y, NAV_TEXT_Y, PAGE_Y, RELOAD, SEARCH_W, searchX, TAB_TEXT, TAB_TEXT_W, TAB_W, TAB_X, paintChrome, type ChromeState, type FerretState, type Icon } from './chrome';
+import { hash3 } from '../core/rng';
+import { type Paint } from '../render/paint2d';
 
 /** What the browser needs of the machine: whether the network is up, and its speed (kbit/s). */
 export type Net = () => { up: boolean; kbps: number };
-const NAME = 'Lodestar 2.0';
+/** Its files on the notebook's disk (bookmarks, history), by name; none in a test. */
+export interface Files { read(name: string): string | null; write(name: string, text: string): void }
+/** The frame's pixels for the screen's HD layer: what they show (a key that changes when they do) and how to paint them. */
+export interface Art { key: string; paint(P: Paint, ox: number): void }
+export const NAME = 'Ferret 2.0';
 /** Seconds to look a host up and to connect; how long a dead server is waited for. */
 const LOOKUP = 0.5, CONNECT = 0.4, TIMEOUT = 8;
+/** The ferret: frames a second digging; how long it takes to come out; how long it looks round when lost. */
+const DIG_FPS = 8, OUT_S = 0.75, LOST_S = 1.5;
+const HISTORY_MAX = 300;
 
-const CHROME: C3 = [212, 208, 200], CHROME_DK: C3 = [128, 124, 116], INK: C3 = [0, 0, 0], WHITE: C3 = [255, 255, 255], TITLE: C3 = [10, 36, 106], TITLE_FG: C3 = [255, 255, 255], ERR: C3 = [250, 250, 250];
+const INK: C3 = [0, 0, 0], WHITE: C3 = [255, 255, 255], ERR: C3 = [250, 250, 250], VISITED: C3 = [85, 26, 139];
+const TAB_BG: C3 = [187, 192, 200], NAV_BG: C3 = [232, 234, 238], MARK_BG: C3 = [230, 233, 237], STATUS_BG: C3 = [222, 225, 230], GREY: C3 = [154, 163, 173];
+
+/** One tab: its page and where it is in it, its own back and forward. */
+interface Tab {
+  url: string;
+  back: string[];
+  fwd: string[];
+  got: Fetched | null;
+  laid: Laid | null;
+  at: number;
+  kbps: number;
+  offline: boolean;
+  top: number;
+  sel: number;
+  vals: Map<string, string>;
+}
+const blank = (): Tab => ({ url: '', back: [], fwd: [], got: null, laid: null, at: -1e9, kbps: 0, offline: false, top: 0, sel: -1, vals: new Map() });
 
 export class Browser {
-  url = '';
-  private back: string[] = [];
-  private got: Fetched | null = null;
-  private laid: Laid | null = null;
-  private at = 0;
-  private kbps = 0;
-  private offline = false;
-  private top = 0;
-  private sel = -1;
-  /** What has been typed in the page's text boxes, by name. */
-  private vals = new Map<string, string>();
-  /** Typing an address: what is in the box. */
-  editing = false;
+  private tabs: Tab[] = [blank()];
+  private cur = 0;
+  /** Typing an address (or a search, in the Lookwise box). */
+  editing: false | 'addr' | 'search' = false;
   private addr = '';
+  /** The bookmarks (title, address) and the addresses seen (the history: visited links are purple). */
+  private marks: [string, string][];
+  private seen: Set<string>;
+  /** Sounds for the notebook to play: the back button's thump, a tab's click. */
+  readonly sfx: ('thump' | 'tick')[] = [];
 
-  constructor(private world: World, private net: Net, private quit: () => void, private W: number, private H: number) {}
+  constructor(private world: World, private net: Net, private quit: () => void, private W: number, private H: number, private files: Files | null = null) {
+    const m = files?.read('bookmarks');
+    this.marks = m === null || m === undefined ? this.factoryMarks() : m.split('\n').filter((l) => l.includes('\t')).map((l) => l.split('\t') as [string, string]);
+    this.seen = new Set((files?.read('history') ?? '').split('\n').filter(Boolean));
+  }
+
+  /** The current page's address (the tab in front). */
+  get url() { return this.T.url; }
+  private get T() { return this.tabs[this.cur]; }
+  private get view() { return this.H - PAGE_Y - 1; }
+
+  /** The bookmarks a new Ferret comes with: the search, the mail, the city's portal (never the forum). */
+  private factoryMarks(): [string, string][] {
+    const w = this.world;
+    return [['Lookwise', `http://${SEARCH_HOST}/`], ['Mail', `http://${mailHost(w)}/`], [this.siteTitle(webOf(w).portal), portalUrl(w)]];
+  }
+  private siteTitle(host: string) { return host.replace(/^www\./, '').replace(/\.(com|net|org)$/, '').replace(/^\w/, (c) => c.toUpperCase()); }
 
   /** The pane's size changed (the window manager, 15.7): re-lay the current page to the new width, keeping its state. */
   resize(w: number, h: number) {
     if (w === this.W && h === this.H) return;
     this.W = w; this.H = h;
-    this.laid = this.got?.page ? layout(this.got.page, w - 1) : null;
-    const view = h - 4, rows = this.laid?.rows.length ?? 0;
-    this.top = Math.max(0, Math.min(this.top, Math.max(0, rows - view)));
+    for (const T of this.tabs) {
+      T.laid = T.got?.page ? layout(T.got.page, w - 1) : null;
+      T.top = Math.max(0, Math.min(T.top, Math.max(0, (T.laid?.rows.length ?? 0) - this.view)));
+    }
   }
 
   /** Scroll the page by d rows (the mouse wheel, 15.7). */
   scroll(d: number) {
-    const view = this.H - 4, rows = this.laid?.rows.length ?? 0;
-    this.top = Math.max(0, Math.min(Math.max(0, rows - view), this.top + d));
+    const T = this.T, rows = T.laid?.rows.length ?? 0;
+    T.top = Math.max(0, Math.min(Math.max(0, rows - this.view), T.top + d));
   }
 
-  /** A click at (x, y) in the browser's own screen (the window manager maps the pane, 15.7). */
+  /** A click at (x, y) in the browser's own pane (the window manager maps it, 15.7). */
   click(x: number, y: number, now: number) {
-    // the toolbar row: the back, reload and home buttons, then the address box
-    if (y === 1) {
-      if (x >= 1 && x <= 3) { const u = this.back.pop(); if (u) this.go(u, now, false); }
-      else if (x >= 9 && x <= 11) this.go(this.url, now, false);
-      else if (x >= 13 && x <= 15) this.go('', now);
-      else if (x >= 26) { this.editing = true; this.addr = this.url; }
+    if (y === 0) {
+      // a tab: its close box, or picking it; the "+" after the last
+      const i = Math.floor((x - 1) / TAB_W), off = x - 1 - i * TAB_W;
+      if (i >= 0 && i < this.tabs.length) { if (i === this.cur && off === TAB_X) this.closeTab(); else if (i !== this.cur) { this.cur = i; this.sfx.push('tick'); } }
+      else if (i === this.tabs.length && off >= 0 && off < 3) this.newTab(now);
       return;
     }
-    const view = this.H - 4;
-    if (y >= 2 && y < 2 + view) {
-      const py = this.top + (y - 2), L = this.items();
+    if (y === 1 || y === 2) {
+      const on = ([a, b]: [number, number]) => x >= a && x < b;
+      this.editing = false;
+      if (on(BACK)) this.goBack(now);
+      else if (on(FWD)) this.goFwd(now);
+      else if (on(RELOAD)) { if (this.loading(now)) this.stop(); else this.go(this.url, now, false); }
+      else if (on(HOME)) this.go('', now);
+      else if (x >= addrEnd(this.W) - 3 && x < addrEnd(this.W)) this.toggleMark();
+      else if (x >= ADDR_X && x < addrEnd(this.W)) { this.editing = 'addr'; this.addr = this.url; }
+      else if (x >= searchX(this.W) && x < searchX(this.W) + SEARCH_W) { this.editing = 'search'; this.addr = ''; }
+      return;
+    }
+    if (y === MARKS_Y) {
+      let mx = 1;
+      for (const [title, url] of this.marks) { const w = Math.min(18, title.length); if (x >= mx && x < mx + 2 + w) { this.go(url, now); return; } mx += w + 4; }
+      return;
+    }
+    if (y >= PAGE_Y && y < PAGE_Y + this.view) {
+      const T = this.T, py = T.top + (y - PAGE_Y), L = this.items();
       const on = L.find((it) => it.y === py && x >= it.x && x < it.x + it.w);
       this.editing = false;
       if (!on) return;
-      this.sel = L.indexOf(on);
+      T.sel = L.indexOf(on);
       if ('url' in on) { if (on.url === SUBMIT) this.submit(now); else this.go(on.url, now); }
       // a text box: picking it (sel) is enough; keys and a paste now go into it
     }
@@ -81,133 +142,224 @@ export class Browser {
     const t = text.replace(/\s+/g, ' ').trim();
     if (!t) return;
     if (this.editing) { this.addr = (this.addr + t).slice(0, 120); return; }
-    const on = this.items()[this.sel];
-    if (on && 'name' in on) { const v = this.vals.get(on.name) ?? ''; this.vals.set(on.name, (v + t).slice(0, on.max)); }
+    const on = this.items()[this.T.sel];
+    if (on && 'name' in on) { const v = this.T.vals.get(on.name) ?? ''; this.T.vals.set(on.name, (v + t).slice(0, on.max)); }
   }
 
-  /** Ask for `url` (the start page when empty). */
+  /** Ask for `url` (the start page when empty), in the tab in front. */
   go(url: string, now: number, remember = true, form?: Map<string, string>) {
+    const T = this.T;
     url = url.trim() || portalUrl(this.world);
     if (!/^https?:\/\//.test(url)) url = 'http://' + url;
-    if (remember && this.url && this.url !== url) this.back.push(this.url);
-    this.url = url; this.at = now; this.top = 0; this.sel = -1; this.editing = false; this.vals = new Map();
+    if (remember && T.url && T.url !== url) { T.back.push(T.url); T.fwd = []; }
+    T.url = url; T.at = now; T.top = 0; T.sel = -1; T.vals = new Map();
+    this.editing = false;
     const n = this.net();
-    this.offline = !n.up; this.kbps = n.kbps;
-    this.got = this.offline ? null : fetchUrl(this.world, url, form);
-    this.laid = this.got?.page ? layout(this.got.page, this.W - 1) : null;
-    if (this.got?.page) this.url = this.got.page.url;
+    T.offline = !n.up; T.kbps = n.kbps;
+    T.got = T.offline ? null : fetchUrl(this.world, url, form);
+    T.laid = T.got?.page ? layout(T.got.page, this.W - 1) : null;
+    if (T.got?.page) { T.url = T.got.page.url; this.remember(T.url); }
     // a form's first box takes the keys at once, as the sign-in pages of 2008 did
     const I = this.items();
-    if (I.length && this.laid?.fields.length) this.sel = I.findIndex((it) => 'name' in it);
+    if (I.length && T.laid?.fields.length) T.sel = I.findIndex((it) => 'name' in it);
+  }
+  private goBack(now: number) { const T = this.T, u = T.back.pop(); if (u === undefined) return; T.fwd.push(T.url); this.go(u, now, false); this.sfx.push('thump'); }
+  private goFwd(now: number) { const T = this.T, u = T.fwd.pop(); if (u === undefined) return; T.back.push(T.url); this.go(u, now, false); }
+  /** Stop a page coming down: what has arrived is all there is (an error page stays as it was). */
+  private stop() { const T = this.T; T.at = -1e9; }
+  private newTab(now: number) { this.tabs.push(blank()); this.cur = this.tabs.length - 1; this.sfx.push('tick'); this.go('', now); }
+  private closeTab() {
+    if (this.tabs.length === 1) { this.quit(); return; }
+    this.tabs.splice(this.cur, 1);
+    this.cur = Math.min(this.cur, this.tabs.length - 1);
+    this.sfx.push('tick');
+  }
+
+  /** An address seen goes in the history (kept on the disk, the newest last). */
+  private remember(url: string) {
+    if (this.seen.has(url)) return;
+    this.seen.add(url);
+    if (this.seen.size > HISTORY_MAX) this.seen.delete(this.seen.values().next().value!);
+    this.files?.write('history', [...this.seen].join('\n'));
+  }
+  /** Bookmark the page in front, or take its bookmark away. */
+  private toggleMark() {
+    const T = this.T, i = this.marks.findIndex(([, u]) => u === T.url);
+    if (i >= 0) this.marks.splice(i, 1);
+    else if (T.url) this.marks.push([T.got?.page?.title ?? this.siteTitle(T.got?.host ?? T.url), T.url]);
+    this.files?.write('bookmarks', this.marks.map(([t, u]) => `${t.replace(/\t/g, ' ')}\t${u}`).join('\n'));
   }
 
   /** What Tab goes through: the links and the text boxes, in reading order. */
   private items(): (Link | Field)[] {
-    const L = this.laid;
+    const L = this.T.laid;
     return L ? [...L.links, ...L.fields].sort((a, b) => a.y - b.y || a.x - b.x) : [];
   }
 
   /** Send the page's boxes to its form. */
   private submit(now: number) {
-    const to = this.got?.page?.form;
-    if (to) this.go(to, now, true, new Map(this.vals));
+    const to = this.T.got?.page?.form;
+    if (to) this.go(to, now, true, new Map(this.T.vals));
   }
 
-  /** Where the page is in coming down: 0..1 of it arrived (1 also for an error shown), and what the status line says. */
-  private progress(now: number): [number, string] {
-    const t = now - this.at, G = this.got, host = G?.host ?? '';
-    if (this.offline) return [1, 'Not connected: no network'];
-    if (t < LOOKUP) return [0, `Looking up ${host}...`];
-    if (G?.error === 'dns') return [1, 'Done'];
-    if (t < LOOKUP + CONNECT) return [0, `Connecting to ${host}...`];
-    if (G?.error === 'down') return t < LOOKUP + CONNECT + TIMEOUT ? [0, `Waiting for ${host}...`] : [1, 'Done'];
-    const dur = ((G!.page!.kb * 8) / Math.max(1, this.kbps)), f = Math.min(1, (t - LOOKUP - CONNECT) / dur);
-    return f < 1 ? [f, `Transferring data from ${host}... ${Math.floor(f * G!.page!.kb)} of ${G!.page!.kb} KB`] : [1, 'Done'];
+  /** Where the tab's page is in coming down: 0..1 of it arrived (1 also for an error shown), what the status line says, and when it ended. */
+  private progress(now: number, T = this.T): [number, string, number] {
+    const t = now - T.at, G = T.got, host = G?.host ?? '';
+    if (T.offline) return [1, 'Not connected: no network', T.at];
+    if (!G) return [1, 'Done', T.at];
+    if (t < LOOKUP) return [0, `Looking up ${host}...`, 0];
+    if (G.error === 'dns') return [1, 'Done', T.at + LOOKUP];
+    if (t < LOOKUP + CONNECT) return [0, `Connecting to ${host}...`, 0];
+    if (G.error === 'down') return t < LOOKUP + CONNECT + TIMEOUT ? [0, `Waiting for ${host}...`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + TIMEOUT];
+    const dur = (G.page!.kb * 8) / Math.max(1, T.kbps), f = Math.min(1, (t - LOOKUP - CONNECT) / dur);
+    return f < 1 ? [f, `Transferring data from ${host}... ${Math.floor(f * G.page!.kb)} of ${G.page!.kb} KB`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + dur];
   }
+  private loading(now: number) { return this.progress(now)[0] < 1; }
 
   key(key: string, ctrl: boolean, now: number) {
-    const k = key.toLowerCase();
+    const k = key.toLowerCase(), T = this.T;
     if (key === 'F10' || (ctrl && k === 'q')) { this.quit(); return; }
-    if (key === 'F6' || (ctrl && k === 'l')) { this.editing = true; this.addr = ''; return; }
+    if (key === 'F6' || (ctrl && k === 'l')) { this.editing = 'addr'; this.addr = ''; return; }
+    if (ctrl && k === 'k') { this.editing = 'search'; this.addr = ''; return; }
+    if (ctrl && k === 't') { this.newTab(now); return; }
+    if (ctrl && k === 'w') { this.closeTab(); return; }
+    if (ctrl && key === 'Tab') { this.cur = (this.cur + 1) % this.tabs.length; this.editing = false; this.sfx.push('tick'); return; }
+    if (ctrl && k === 'd') { this.toggleMark(); return; }
     if (this.editing) {
-      // words that are not an address are a search (as the browsers of 2008 did)
-      if (key === 'Enter') this.go(/\s/.test(this.addr.trim()) || !this.addr.includes('.') && this.addr.trim() ? searchUrl(this.addr) : this.addr, now);
+      // words that are not an address are a search (as the browsers of 2008 did); the Lookwise box always searches
+      const a = this.addr.trim();
+      if (key === 'Enter') this.go(this.editing === 'search' || /\s/.test(a) || (!a.includes('.') && a) ? searchUrl(a) : a, now);
       else if (key === 'Backspace') this.addr = this.addr.slice(0, -1);
       else if (key.length === 1 && !ctrl && this.addr.length < 120) this.addr += key;
       return;
     }
-    const L = this.items(), view = this.H - 4, rows = this.laid?.rows.length ?? 0, on = L[this.sel];
-    const seen = () => { const y = L[this.sel]?.y ?? 0; if (y < this.top) this.top = y; if (y >= this.top + view) this.top = y - view + 1; };
+    const L = this.items(), view = this.view, rows = T.laid?.rows.length ?? 0, on = L[T.sel];
+    const seen = () => { const y = L[T.sel]?.y ?? 0; if (y < T.top) T.top = y; if (y >= T.top + view) T.top = y - view + 1; };
     if (on && 'name' in on && key !== 'Tab' && !key.startsWith('Arrow') && !key.startsWith('Page') && !key.startsWith('F')) {
-      const v = this.vals.get(on.name) ?? '';
+      const v = T.vals.get(on.name) ?? '';
       if (key === 'Enter') this.submit(now);
-      else if (key === 'Backspace') this.vals.set(on.name, v.slice(0, -1));
-      else if (key.length === 1 && !ctrl && v.length < on.max) this.vals.set(on.name, v + key);
+      else if (key === 'Backspace') T.vals.set(on.name, v.slice(0, -1));
+      else if (key.length === 1 && !ctrl && v.length < on.max) T.vals.set(on.name, v + key);
       return;
     }
     if (key === 'F5' || (ctrl && k === 'r')) this.go(this.url, now, false);
     else if (key === 'Home') this.go('', now);
-    else if (key === 'Backspace') { const u = this.back.pop(); if (u) this.go(u, now, false); }
-    else if (key === 'ArrowDown') this.top = Math.min(Math.max(0, rows - view), this.top + 1);
-    else if (key === 'ArrowUp') this.top = Math.max(0, this.top - 1);
-    else if (key === 'PageDown' || key === ' ') this.top = Math.min(Math.max(0, rows - view), this.top + view - 2);
-    else if (key === 'PageUp') this.top = Math.max(0, this.top - view + 2);
-    else if ((key === 'Tab' || key === 'ArrowRight') && L.length) { this.sel = (this.sel + 1) % L.length; seen(); }
-    else if (key === 'ArrowLeft' && L.length) { this.sel = (this.sel - 1 + L.length) % L.length; seen(); }
+    else if (key === 'Backspace') this.goBack(now);
+    else if (key === 'ArrowDown') T.top = Math.min(Math.max(0, rows - view), T.top + 1);
+    else if (key === 'ArrowUp') T.top = Math.max(0, T.top - 1);
+    else if (key === 'PageDown' || key === ' ') T.top = Math.min(Math.max(0, rows - view), T.top + view - 2);
+    else if (key === 'PageUp') T.top = Math.max(0, T.top - view + 2);
+    else if ((key === 'Tab' || key === 'ArrowRight') && L.length) { T.sel = (T.sel + 1) % L.length; seen(); }
+    else if (key === 'ArrowLeft' && L.length) { T.sel = (T.sel - 1 + L.length) % L.length; seen(); }
     else if (key === 'Enter' && on && 'url' in on) { if (on.url === SUBMIT) this.submit(now); else this.go(on.url, now); }
   }
 
-  /** The whole screen now, and the cursor (in the address box while typing). */
+  /** A page's icon by its host (the search's owl, the mail's envelope, else its letter). */
+  private iconFor(T: Tab): Icon {
+    const host = T.got?.host ?? '', S = host ? webOf(this.world).hosts.get(host) : undefined;
+    return iconOf(S?.kind ?? (host ? 'other' : 'ferret'), host.replace(/^www\./, ''), hash3(host.length, host.charCodeAt(4) || 0, host.charCodeAt(host.length - 5) || 0));
+  }
+  private titleOf(T: Tab, now: number) {
+    const [f] = this.progress(now, T), G = T.got;
+    return G?.page && f >= 1 ? G.page.title : G?.error || T.offline ? 'Problem loading page' : !G ? 'New Tab' : 'Loading...';
+  }
+
+  /** The frame's pixels as they are now (chrome.ts paints them). */
+  art(now: number): Art {
+    const T = this.T, [f, , end] = this.progress(now), err = !!(T.got?.error || T.offline);
+    let ferret: [FerretState, number] = ['peek', 0];
+    if (f < 1) ferret = ['dig', Math.floor((now - T.at) * DIG_FPS)];
+    else if (err && now - end < LOST_S) ferret = ['lost', Math.floor((now - end) * 4)];
+    else if (err) ferret = ['lost', 5];
+    else if (T.got && now - end < OUT_S) ferret = ['out', Math.min(5, Math.floor(((now - end) / OUT_S) * 6))];
+    const rows = T.laid?.rows.length ?? 0;
+    const S: ChromeState = {
+      W: this.W, H: this.H,
+      tabs: this.tabs.map((t, i) => ({ icon: this.iconFor(t), on: i === this.cur })),
+      canBack: T.back.length > 0, canFwd: T.fwd.length > 0, loading: f < 1, secure: T.url.startsWith('https:'),
+      icon: this.iconFor(T),
+      scroll: T.laid && rows > this.view ? [T.top / Math.max(1, rows - this.view), this.view / rows] : null,
+      ferret, progress: f < 1 && !T.offline ? f : null, marked: this.marks.some(([, u]) => u === T.url),
+      marks: this.marks.map(([t, u]) => ({ icon: this.markIcon(u), w: Math.min(18, t.length) })),
+    };
+    return { key: JSON.stringify(S), paint: (P, ox) => paintChrome(P, S, ox) };
+  }
+  private markIcon(url: string): Icon {
+    const host = url.replace(/^https?:\/\//, '').split(/[/?]/)[0], S = webOf(this.world).hosts.get(host);
+    return iconOf(S?.kind ?? 'other', host.replace(/^www\./, ''), hash3(host.length, host.charCodeAt(4) || 0, host.charCodeAt(host.length - 5) || 0));
+  }
+
+  /** The whole pane now (the text over the frame's pixels), and the cursor (in the address box while typing). */
   cells(now: number): { scr: Scr; cx: number; cy: number } {
-    const W = this.W, H = this.H, S = new Scr(W, H, 0), view = H - 4;
-    const [f, status] = this.progress(now), G = this.got;
-    // the title bar and the address
-    const title = G?.page && f >= 1 ? G.page.title : G?.error || this.offline ? 'Problem loading page' : 'Loading...';
-    S.paint(0, 0, ` ${title} - ${NAME}`.padEnd(W).slice(0, W), TITLE_FG, TITLE);
-    S.paint(0, 1, ' [<] [>] [R] [H]  Address '.padEnd(W), INK, CHROME);
-    const shown = this.editing ? this.addr : this.url;
-    S.paint(27, 1, ` ${shown}`.padEnd(W - 30).slice(0, W - 30), INK, WHITE);
+    const W = this.W, H = this.H, S = new Scr(W, H, 0), view = this.view, T = this.T;
+    const [f, status] = this.progress(now), G = T.got;
+    // the tabs: each one's title, the active one's close box, the "+"
+    S.paint(0, 0, ' '.repeat(W), INK, TAB_BG);
+    this.tabs.forEach((t, i) => {
+      const x = 1 + i * TAB_W, on = i === this.cur;
+      if (x + TAB_W > W) return;
+      S.paint(x + TAB_TEXT, 0, this.titleOf(t, now).slice(0, TAB_TEXT_W), on ? [17, 17, 17] : [60, 60, 60], on ? [246, 247, 249] : [214, 218, 224]);
+      if (on) S.paint(x + TAB_X, 0, 'x', [102, 102, 102], [246, 247, 249]);
+    });
+    if (1 + this.tabs.length * TAB_W + 2 < W) S.paint(2 + this.tabs.length * TAB_W, 0, '+', [51, 51, 51], TAB_BG);
+    // the navigation bar: the address (or what is typed), the search box
+    S.paint(0, 1, ' '.repeat(W), INK, NAV_BG); S.paint(0, 2, ' '.repeat(W), INK, NAV_BG);
+    const a0 = ADDR_X + 3, aw = addrEnd(W) - 4 - a0, shown = this.editing === 'addr' ? this.addr : this.url;
+    S.paint(a0, NAV_TEXT_Y, shown.slice(this.editing === 'addr' ? Math.max(0, shown.length - aw + 1) : 0).padEnd(aw).slice(0, aw), INK, T.url.startsWith('https:') ? [255, 248, 196] : WHITE);
+    const s0 = searchX(W) + 3, sw = SEARCH_W - 4;
+    S.paint(s0, NAV_TEXT_Y, (this.editing === 'search' ? this.addr.slice(-sw + 1) : 'Lookwise').padEnd(sw).slice(0, sw), this.editing === 'search' ? INK : GREY, WHITE);
+    // the bookmarks
+    S.paint(0, MARKS_Y, ' '.repeat(W), INK, MARK_BG);
+    let mx = 1;
+    for (const [title] of this.marks) { const w = Math.min(18, title.length); if (mx + 2 + w > W) break; S.paint(mx + 2, MARKS_Y, title.slice(0, w), [34, 34, 34], MARK_BG); mx += w + 4; }
     // the page, as much of it as has arrived
-    if (this.laid && f > 0) {
-      const R = this.laid.rows, upto = f >= 1 ? R.length : Math.floor(R.length * f), on = this.items()[this.sel];
+    if (T.laid && f > 0) {
+      const R = T.laid.rows, upto = f >= 1 ? R.length : Math.floor(R.length * f), on = this.items()[T.sel];
       for (let r = 0; r < view; r++) {
-        const y = this.top + r, row = R[y];
-        if (!row || y >= upto) { S.paint(0, 2 + r, ' '.repeat(W - 1), INK, WHITE); continue; }
+        const y = T.top + r, row = R[y];
+        if (!row || y >= upto) { S.paint(0, PAGE_Y + r, ' '.repeat(W), INK, WHITE); continue; }
         for (let x = 0; x < W - 1; x++) {
           const c = row[x], hit = on && on.y === y && x >= on.x && x < on.x + on.w;
-          S.paint(x, 2 + r, c.ch, hit && 'url' in on ? c.bg : c.fg, hit && 'url' in on ? c.fg : c.bg);
+          S.paint(x, PAGE_Y + r, c.ch, hit && 'url' in on ? c.bg : c.fg, hit && 'url' in on ? c.fg : c.bg);
+        }
+        S.paint(W - 1, PAGE_Y + r, ' ', INK, row[W - 2]?.bg ?? WHITE);
+        // a link already seen is purple (the history), as in every browser of the time
+        for (const l of T.laid.links) {
+          if (l.y !== y || l.url === SUBMIT || !this.seen.has(this.abs(l.url)) || (on === l)) continue;
+          for (let x = l.x; x < Math.min(W - 1, l.x + l.w); x++) { const c = row[x]; if (c && c.ch !== ' ') S.paint(x, PAGE_Y + r, c.ch, VISITED, c.bg); }
         }
         // what is typed in the boxes on this row (stars for a password)
-        for (const F of this.laid.fields) {
+        for (const F of T.laid.fields) {
           if (F.y !== y) continue;
-          const v = this.vals.get(F.name) ?? '', t = (F.secret ? '*'.repeat(v.length) : v).slice(-(F.w - 1));
-          S.paint(F.x, 2 + r, t.padEnd(F.w), INK, on === F ? [255, 255, 224] : WHITE);
+          const v = T.vals.get(F.name) ?? '', t = (F.secret ? '*'.repeat(v.length) : v).slice(-(F.w - 1));
+          S.paint(F.x, PAGE_Y + r, t.padEnd(F.w), INK, on === F ? [255, 255, 224] : WHITE);
         }
       }
-      // the scroll bar
-      const n = Math.max(1, R.length), bar = Math.max(1, Math.round((view * view) / Math.max(view, n))), at = Math.round(((view - bar) * this.top) / Math.max(1, n - view));
-      for (let r = 0; r < view; r++) S.paint(W - 1, 2 + r, r >= at && r < at + bar ? '#' : ':', CHROME_DK, CHROME);
     } else {
-      for (let r = 0; r < view; r++) S.paint(0, 2 + r, ' '.repeat(W), INK, f >= 1 && (G?.error || this.offline) ? ERR : WHITE);
-      if (f >= 1 && (G?.error || this.offline)) {
-        const lines = this.offline
+      const bad = f >= 1 && (G?.error || T.offline);
+      for (let r = 0; r < view; r++) S.paint(0, PAGE_Y + r, ' '.repeat(W), INK, bad ? ERR : WHITE);
+      if (bad) {
+        const lines = T.offline
           ? ['Unable to connect', '', 'The notebook is not connected to a network.', 'Join a wireless network first (iwlist, iwconfig, dhclient), then try again.']
           : G!.error === 'dns'
             ? ['Server not found', '', `${NAME} can't find the server at ${G!.host}.`, 'Check the address for typing errors such as ww.example.com instead of www.example.com.']
             : ['The connection has timed out', '', `The server at ${G!.host} is taking too long to respond.`, 'The site could be temporarily unavailable or too busy. Try again in a few moments.'];
-        lines.forEach((l, k) => S.paint(8, 6 + k, l, k === 0 ? [140, 20, 20] : [40, 40, 40], ERR));
+        lines.forEach((l, k) => S.paint(8, PAGE_Y + 4 + k, l, k === 0 ? [140, 20, 20] : [40, 40, 40], ERR));
       }
     }
-    // the status line and the keys
-    S.paint(0, H - 2, ` ${status}`.padEnd(W), INK, CHROME);
-    if (f < 1 && !this.offline && !G?.error) { const pw = 30, n = Math.floor(f * pw); S.paint(W - pw - 3, H - 2, `[${'#'.repeat(n)}${' '.repeat(pw - n)}]`, [10, 36, 106], CHROME); }
-    S.paint(0, H - 1, ' F6 address or search   Enter follow   Tab/Right next link   Left previous   Backspace back   F5 reload   Home start page   F10 close'.padEnd(W).slice(0, W), CHROME_DK, CHROME);
-    // the cursor: in the address box while typing, else at the end of the text box picked
-    const F = this.items()[this.sel];
-    if (!this.editing && F && 'name' in F && this.laid && f >= 1 && F.y >= this.top && F.y < this.top + view) {
-      const n = Math.min(F.w - 1, (this.vals.get(F.name) ?? '').length);
-      return { scr: S, cx: F.x + n, cy: 2 + F.y - this.top };
+    // the status line: what is happening, and the line's speed
+    S.paint(0, H - 1, ` ${status}`.padEnd(W).slice(0, W), [34, 34, 34], STATUS_BG);
+    if (!T.offline) { const kb = `${(T.kbps / 8).toFixed(1)} kB/s `; S.paint(W - kb.length, H - 1, kb, [51, 51, 51], STATUS_BG); }
+    // the cursor: in the address or search box while typing, else at the end of the text box picked
+    const F = this.items()[T.sel];
+    if (!this.editing && F && 'name' in F && T.laid && f >= 1 && F.y >= T.top && F.y < T.top + view) {
+      const n = Math.min(F.w - 1, (T.vals.get(F.name) ?? '').length);
+      return { scr: S, cx: F.x + n, cy: PAGE_Y + F.y - T.top };
     }
-    return { scr: S, cx: this.editing ? Math.min(W - 4, 28 + this.addr.length) : -1, cy: this.editing ? 1 : -1 };
+    if (this.editing === 'addr') return { scr: S, cx: a0 + Math.min(aw - 1, this.addr.length), cy: NAV_TEXT_Y };
+    if (this.editing === 'search') return { scr: S, cx: s0 + Math.min(sw - 1, this.addr.length), cy: NAV_TEXT_Y };
+    return { scr: S, cx: -1, cy: -1 };
   }
+  /** A link's address as the history keeps it (with its scheme). */
+  private abs(url: string) { return /^https?:\/\//.test(url) ? url : 'http://' + url; }
 }

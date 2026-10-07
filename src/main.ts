@@ -40,7 +40,8 @@ import { VIEW_GLINT, VIEW_LIGHT, type View } from './render/raycaster';
 import { GpuWorld } from './render/gpu/world';
 import { GpuCompositor } from './render/gpu/compositor';
 import { intro, INTRO_S } from './render/intro';
-import { HD, HdLayer } from './render/hd';
+import { HD, HdLayer, HdOrder } from './render/hd';
+import { onHd, Paint } from './render/paint2d';
 import { painterSample, SCREEN_PX, testPattern } from './render/screens';
 import { setHd } from './phone/lcd';
 import { daylight } from './render/sky';
@@ -292,7 +293,8 @@ let ui: CharGrid;
 let hd: HdLayer;
 /** 15.16: the notebook screen's own pixel layer, at the screen's resolution (kept between frames; only rows painted are uploaded). */
 const termHd = new HdLayer(SCREEN_PX.laptop[0], SCREEN_PX.laptop[1]);
-let termHdTest = false;
+/** What the notebook screen's pixels show now (the program's art key): they are painted again when it changes. */
+let termHdKey = '';
 /**
  * The notebook's screen layer (3D look): the system's console, TERM_W x TERM_H, or the firmware's
  * text mode, 80 x 25, each with its cell size so both fill the same 16:10 screen, about two thirds of
@@ -385,6 +387,8 @@ function playLap(list: LapSound[]) {
       case 'power': sound.powerClick(); break;
       case 'spin': sound.hddSpinUp(); break;
       case 'spindown': sound.hddPark(); break; // the hum follows the power (laptopHum)
+      case 'thump': sound.ferretBack(); break;
+      case 'tick': sound.ferretTab(); break;
     }
   }
   list.length = 0;
@@ -1165,7 +1169,6 @@ function frame(now: number) {
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
   ui.wipe(); hd.wipe();
   // the notebook screen's pixels are kept between frames: painted only when what they show changes
-  if (DEBUG.screenTest && !termHdTest) { termHdTest = true; testPattern(termHd); painterSample(termHd); }
   if (calib) calibTags.forEach((tag, k) => {
     const x = Math.round((layout.originX + k * Math.floor(grid.cols / 3) * layout.cellW - uiLayout.originX) / uiLayout.cellW) + 1;
     ui.text(Math.max(0, x), 2, ` ${tag} `, [255, 230, 160], [12, 10, 8]);
@@ -1323,7 +1326,15 @@ function frame(now: number) {
     const mode = laptop.shell.bios || laptop.shell.fw.mode ? 'tx' : 'fb', T = mode === 'fb' ? termFb : termTx, [cw, chh] = termCells[mode];
     if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); comp?.setTerm(T.cols, T.rows, cw, chh); }
     scrTermW = (T.cols * cw) / uiLayout.cellW; scrTermH = (T.rows * chh) / uiLayout.cellH;
+    laptop.shell.art = null;
     drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: scrTermW, termH: scrTermH });
+    // the screen's own pixels (15.17c: the browser's frame), painted again only when what they show changes
+    const art = laptop.shell.art as { key: string; paint(P: Paint): void } | null, akey = DEBUG.screenTest && laptop.open ? 'test' : art?.key ?? '';
+    if (akey !== termHdKey) {
+      termHdKey = akey; termHd.wipe();
+      if (akey === 'test') { testPattern(termHd); painterSample(termHd); }
+      else art?.paint(new Paint(onHd(termHd, HdOrder.Under)));
+    }
     // while the lid opens, the view tips down to the screen
     if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
   }

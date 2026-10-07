@@ -47,7 +47,7 @@ if (out.scr.ch[H >> 1][split] !== '>') fail('the marker points at the web pane w
 // the terminal pane holds the prompt line on the left; the browser's title bar is on the right
 const leftHasPrompt = out.scr.ch.some((row) => row.slice(0, split).join('').includes('user@host:~$ who'));
 if (!leftHasPrompt) fail('the terminal pane shows the prompt and what is typed');
-const rightHasChrome = out.scr.ch.some((row) => row.slice(split + 1).join('').includes('Lodestar'));
+const rightHasChrome = out.scr.ch.some((row) => row.slice(split + 1).join('').includes('Lookwise'));
 if (!rightHasChrome) fail('the browser pane shows its chrome');
 
 // --- move the focus to the terminal ---
@@ -70,7 +70,7 @@ term.scroll = 0;
 wm.key('ArrowUp', true, 1);
 out = wm.cells(1);
 if (rowStr(out.scr, 0).includes('|') && rowStr(out.scr, 0)[split] === '|') fail('no divider when a pane is maximized');
-if (out.scr.ch[0].slice(split).join('').includes('Lodestar')) fail('the browser is hidden when the terminal is maximized');
+if (out.scr.ch[2].slice(split).join('').includes('Lookwise')) fail('the browser is hidden when the terminal is maximized');
 // restore
 wm.key('ArrowUp', true, 1);
 out = wm.cells(1);

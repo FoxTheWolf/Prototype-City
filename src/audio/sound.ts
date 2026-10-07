@@ -595,6 +595,24 @@ export class Sound {
     g.gain.setValueAtTime(0.035, t); g.gain.setValueAtTime(0.035, t + 0.12); g.gain.linearRampToValueAtTime(0, t + 0.13);
     o.start(t); o.stop(t + 0.15);
   }
+  /** The Ferret's back button (15.17c): a low, soft "tum", a pitch falling under a felt click. */
+  ferretBack() {
+    const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
+    o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(65, t + 0.11); o.connect(g);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.16);
+    o.start(t); o.stop(t + 0.18);
+    const s = ctx.createBufferSource(), c = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(filter(ctx, 'lowpass', 1800, 0.7)).connect(c);
+    c.gain.setValueAtTime(0.03, t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.02);
+    s.start(t, Math.random()); s.stop(t + 0.03);
+  }
+  /** A Ferret tab picked, opened or closed: a small, bright plastic tick. */
+  ferretTab() {
+    const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', 2600, 2.5)).connect(g);
+    g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.012);
+    s.start(t, Math.random()); s.stop(t + 0.02);
+  }
   /** The power button's click. */
   powerClick() {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);

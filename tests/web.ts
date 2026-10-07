@@ -79,7 +79,7 @@ if (res('zzqqxx').length) fail('nonsense found something');
 let up = true;
 const B = new Browser(w, () => ({ up, kbps: 900 }), () => {}, 160, 50);
 B.go('', 0);
-const S0 = B.cells(0.2).scr, loading = S0.ch[48].join('');
+const S0 = B.cells(0.2).scr, loading = S0.ch[49].join('');
 if (!/Looking up/.test(loading)) fail('no lookup at first: ' + loading.trim());
 const S = B.cells(10).scr;
 for (let r = 0; r < 26; r++) console.log('  |' + S.ch[r].join('').trimEnd());
@@ -93,7 +93,7 @@ if (B.url !== before) fail('Backspace did not go back');
 B.key('F6', false, 11.5); for (const ch of 'cheap pizza') B.key(ch, false, 11.5); B.key('Enter', false, 11.5);
 if (!B.url.includes('lookwise.com/search?q=cheap+pizza')) fail('words in the address are not a search: ' + B.url);
 up = false; B.go('', 12);
-if (!/Not connected/.test(B.cells(13).scr.ch[48].join(''))) fail('no network, and still a page');
+if (!/Not connected/.test(B.cells(13).scr.ch[49].join(''))) fail('no network, and still a page');
 
 // the webmail (15.4)
 const MH = `http://${mailHost(w)}`, M = w.mail;

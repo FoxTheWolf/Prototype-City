@@ -167,6 +167,8 @@ export class Laptop {
       else if (pc.charge < 0.1 && st === 'on' && !this.lowSaid) { this.lowSaid = true; S.broadcast(now, `Battery low (${Math.round(pc.charge * 100)}%): plug in the adapter or save your work.`); }
     }
     if (pc.charge > 0.12) this.lowSaid = this.critSaid = false;
+    const B = this.shell.browser;
+    if (B) { for (const s of B.sfx) this.shell.sfx.push(s); B.sfx.length = 0; }
     for (const s of this.shell.sfx) { this.sfx.push(s); if (s === 'seek') this.hddAt = now; }
     this.shell.sfx.length = 0;
   }

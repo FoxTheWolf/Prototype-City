@@ -1,3 +1,4 @@
+import { type Paint } from '../render/paint2d';
 import { hash3 } from '../core/rng';
 import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
@@ -36,7 +37,7 @@ const KEEP = 800;
 export type Ink = 0 | 1 | 2;
 export interface Line { text: string; ink: Ink }
 /** A sound the shell asks for: a seek of the drive, the BIOS beep, the drive spinning up or down. */
-export type LapSfx = 'seek' | 'beep' | 'spin' | 'spindown';
+export type LapSfx = 'seek' | 'beep' | 'spin' | 'spindown' | 'thump' | 'tick';
 
 interface Item { at: number; text?: string; ink?: Ink; replace?: boolean; sfx?: LapSfx; fn?: () => void; always?: boolean }
 
@@ -50,7 +51,7 @@ const PROGRAMS: [string, string, number, number][] = [
   ['/usr/bin', 'free', 14, 320], ['/usr/bin', 'df', 64, 420], ['/usr/bin', 'whoami', 22, 260], ['/usr/bin', 'id', 30, 270],
   ['/usr/bin', 'sha1sum', 38, 520], ['/usr/bin', 'man', 96, 2400], ['/usr/bin', 'lshw', 540, 3800], ['/usr/bin', 'clear', 10, 240],
   ['/usr/bin', 'color', 12, 240], ['/sbin', 'ifconfig', 66, 520], ['/sbin', 'iwconfig', 26, 440], ['/sbin', 'iwlist', 40, 520], ['/sbin', 'dhclient', 120, 900], ['/bin', 'ping', 44, 420], ['/usr/bin', 'sensors', 28, 360], ['/sbin', 'shutdown', 18, 400], ['/sbin', 'reboot', 12, 380],
-  ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300], ['/usr/bin', 'lodestar', 9800, 38000],
+  ['/usr/bin', 'nano', 160, 1600], ['/usr/bin', 'acpi', 20, 300], ['/usr/bin', 'ferret', 9800, 38000], ['/usr/bin', 'lodestar', 1, 38000],
   ['/usr/bin', 'apt', 420, 2600], ['/usr/bin', 'apt-get', 400, 2600],
 ];
 /** The hacker tools in ~/bin, there from the start. Name, size KB, memory KB. tdump+wcrack are the
@@ -192,7 +193,7 @@ export function install(pc: Computer, t: number) {
 }
 
 /** After a disk is loaded from a save (F.6), add any system program the save predates -- e.g. the
- *  browser lodestar, added in 15.1, is missing from a disk saved before it. Only the missing system
+ *  browser (ferret, added in 15.1 as lodestar), is missing from a disk saved before it. Only the missing system
  *  binaries are put, never the owner's files, so a restored disk keeps everything it already had. */
 export function syncPrograms(pc: Computer, t: number) {
   for (const [dir, name, kb, mem] of PROGRAMS) if (!pc.get(`${dir}/${name}`)) pc.put(`${dir}/${name}`, kb * 1024, 'root', t, name, mem);
@@ -257,7 +258,7 @@ export class Shell {
   editor: Editor | null = null;
   /** The web browser (15.1), while it owns the screen. */
   browser: Browser | null = null;
-  /** The window manager (15.7): composes the terminal and the browser into the one screen while Lodestar runs. */
+  /** The window manager (15.7): composes the terminal and the browser into the one screen while Ferret runs. */
   wm: WM | null = null;
 
   constructor(readonly pc: Computer, private world: World) {
@@ -268,12 +269,16 @@ export class Shell {
   private get clock() { return this.world.time + this.pc.bios.clockOffset; }
   /** A program drawing the whole screen (SETUP, the editor), with its cursor; null for the scrolling lines. */
   screen(): { scr: Scr; cx: number; cy: number } | null {
+    this.art = null;
     if (this.fw.mode) return { scr: this.fw.cells(), cx: -1, cy: -1 };
     if (this.editor && this.state === 'ready') return this.editor.cells();
-    if (this.wm && this.state === 'ready') return this.wm.cells(performance.now() / 1000);
-    if (this.browser && this.state === 'ready') return this.browser.cells(performance.now() / 1000);
+    const now = performance.now() / 1000;
+    if (this.wm && this.state === 'ready') { this.art = this.wm.art(now); return this.wm.cells(now); }
+    if (this.browser && this.state === 'ready') { const a = this.browser.art(now); this.art = { key: a.key, paint: (P) => a.paint(P, 0) }; return this.browser.cells(now); }
     return null;
   }
+  /** The pixels the program on the screen paints on the screen's HD layer (the browser's frame, 15.17c), as of the last screen(). */
+  art: { key: string; paint(P: Paint): void } | null = null;
   get prompt() {
     if (this.conn) return this.conn.stage === 'login' ? `${this.conn.host.name} login: ` : this.conn.stage === 'pass' ? 'Password: ' : `admin@${this.conn.host.name}# `;
     const H = `/home/${this.pc.hw.user}`, w = this.cwd === H ? '~' : this.cwd.startsWith(H + '/') ? '~' + this.cwd.slice(H.length) : this.cwd;
@@ -1387,13 +1392,15 @@ export class Shell {
         });
         return pc.workS(n?.size ?? 0, 1);
       }
-      case 'lodestar': {
-        // the web browser (15.1): it owns the screen and keeps its process until it closes; the network is the card's
-        const pid = this.job;
+      case 'ferret': case 'lodestar': {
+        // the web browser (15.1; Lodestar was its old name, still answered to): it owns the screen and keeps
+        // its process until it closes; the network is the card's; its bookmarks and history are files in ~/.ferret
+        const pid = this.job, dir = `/home/${pc.hw.user}/.ferret`;
         this.job = 0;
+        const files = { read: (n: string) => pc.get(`${dir}/${n}`)?.data ?? null, write: (n: string, t: string) => { pc.put(`${dir}/${n}`, t, pc.hw.user, this.clock); } };
         this.then(now, () => {
           // the browser opens in a pane beside the terminal (the window manager, 15.7); closing it closes both
-          this.browser = new Browser(w, () => ({ up: this.net.state === 'up', kbps: this.net.kbps() }), () => { this.browser = null; this.wm = null; pc.kill(pid); }, TERM_W, TERM_H);
+          this.browser = new Browser(w, () => ({ up: this.net.state === 'up', kbps: this.net.kbps() }), () => { this.browser = null; this.wm = null; pc.kill(pid); }, TERM_W, TERM_H, files);
           this.browser.go(args[0] ?? '', performance.now() / 1000);
           this.wm = new WM(this, this.browser, TERM_W, TERM_H);
         });

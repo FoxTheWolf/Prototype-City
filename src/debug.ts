@@ -24,5 +24,5 @@ export const DEBUG = {
   keyTurn: false,
   /** (15.16) A test pattern on the notebook screen's pixel layer: its edge, a grid, the diagonals, a circle
    *  and color bars, to judge the screen faced, from aside and up close. */
-  screenTest: true,
+  screenTest: false,
 };

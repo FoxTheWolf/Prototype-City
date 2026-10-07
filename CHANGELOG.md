@@ -2,7 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
-## 0.15.17 — O pintor da web de 2008 (2026-10-07)
+## 0.15.17 — O Ferret (2026-10-07)
+- **O navegador do notebook agora se chama Ferret** (`ferret` no terminal; `lodestar` ainda funciona) e ganhou a moldura de 2008 desenhada em pixels: abas, o botão voltar grande e redondo (com um "tum" grave), avançar, recarregar/parar, início, o campo do endereço (amarelo com cadeado em https), a busca do Lookwise com a coruja, a barra de favoritos e a linha de status com a barra de progresso cor de terra.
+- **O furão no canto cava enquanto a página carrega**, sai da toca quando termina e fica perdido quando o site não responde.
+- **Abas:** Ctrl+T abre, Ctrl+Tab passa para a próxima, Ctrl+W fecha (ou o x da aba e o +). Cada aba tem o próprio voltar/avançar.
+- **Favoritos:** de fábrica, o Lookwise, o webmail e o portal da cidade; Ctrl+D ou a estrela acrescenta ou tira. Ficam guardados no disco do notebook (`~/.ferret`), junto do histórico.
+- **Links já visitados ficam roxos.** Ctrl+K digita direto na busca do Lookwise.
+- Ctrl+←/→ continua trocando entre o terminal e o navegador; Ctrl+Tab agora é das abas.
 - Por dentro: as peças com que as páginas do Ferret vão ser desenhadas em pixels (brilhos, degradês, cantos redondos, estrelas, fotos granuladas de 2008, mapas, letras grandes). Por ora só aparecem na amostra de teste da tela.
 
 ## 0.15.16 — A tela do notebook inclina junto (2026-10-07)

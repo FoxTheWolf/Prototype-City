@@ -1,11 +1,11 @@
 /**
- * The notebook's window manager (15.7): the terminal and the web browser (Lodestar) side by side on
+ * The notebook's window manager (15.7): the terminal and the web browser (Ferret) side by side on
  * the one console, the way a tiling manager of 2008 split an xterm and a browser. The shell owns it
- * while Lodestar runs (shell.wm); it composes both panes into the one screen the firmware draws.
+ * while Ferret runs (shell.wm); it composes both panes into the one screen the firmware draws.
  *
  * Layout: the terminal on the left, the browser on the right, a '|' divider between with a '<'/'>'
- * marker pointing at the pane that has the keys. Ctrl+Up maximizes the focused pane; Ctrl+Left/Right (or
- * Ctrl+Tab) moves the focus. The focused pane takes the keys; while the terminal has them, PageUp and
+ * marker pointing at the pane that has the keys. Ctrl+Up maximizes the focused pane; Ctrl+Left/Right
+ * moves the focus (Ctrl+Tab is the browser's, for its tabs). The focused pane takes the keys; while the terminal has them, PageUp and
  * PageDown walk its scrollback. The browser keeps its own keys (F6 address, Tab link, F10 closes).
  *
  * This file is NOT hacking: it reads the terminal through a small interface (TermIO) and the browser
@@ -13,6 +13,7 @@
  */
 import { Browser } from '../web/browser';
 import { Scr, St } from './screen';
+import { type Paint } from '../render/paint2d';
 
 /** What the window manager needs of the terminal: its visible state, and a way to feed it keys and a paste. */
 export interface TermIO {
@@ -66,7 +67,8 @@ export class WM {
     if (ctrl && key === 'ArrowUp') { this.max = this.max ? null : this.focus; return; }
     if (key === 'Insert') { this.viewer = !this.viewer; return; }
     if (ctrl && (key === 'v' || key === 'V')) { this.paste(now); return; }
-    if (ctrl && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Tab')) { this.focus = this.focus === 'term' ? 'web' : 'term'; return; }
+    // (Ctrl+Tab is the browser's: its next tab, 15.17c)
+    if (ctrl && (key === 'ArrowLeft' || key === 'ArrowRight')) { this.focus = this.focus === 'term' ? 'web' : 'term'; return; }
     if (this.viewer && key === 'Escape') { this.viewer = false; return; }
     if (this.focus === 'web') { this.browser.key(key, ctrl, now); return; }
     if (key === 'PageUp' || key === 'PageDown') {
@@ -165,6 +167,15 @@ export class WM {
     if (R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.browser.scroll(dy > 0 ? step : -step); return; }
     const cap = Math.max(0, this.term.lines.length - 4);
     this.term.scroll = Math.max(0, Math.min(cap, this.term.scroll + (dy > 0 ? -step : step)));
+  }
+
+  /** The browser's frame in pixels (15.17c), where its pane is; null while it is hidden. */
+  art(now: number): { key: string; paint(P: Paint): void } | null {
+    const R = this.rects();
+    if (R.ww <= 0) return null;
+    if (R.ww !== this.bw) { this.browser.resize(R.ww, this.h); this.bw = R.ww; }
+    const a = this.browser.art(now);
+    return { key: `${R.wx}:${a.key}`, paint: (P) => a.paint(P, R.wx) };
   }
 
   /** The whole console now, composed, and the caret of the focused pane. */
