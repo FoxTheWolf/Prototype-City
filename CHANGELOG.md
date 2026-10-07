@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.40 — Reynard em pixels (2026-10-07)
+- **O Reynard redesenhado, carvão, creme e ferrugem:** a raposa grande no registro com o código em seis dígitos; as conversas com a inicial num disco ferrugem, o visto verde de verificada, a hora e o começo da última mensagem; os balões (os seus em ferrugem à direita, os da outra pessoa à esquerda) com "sent"/"delivered" embaixo; a linha de escrever e a digitação; o número de segurança grande em três linhas; botões de toque para registrar, verificar, apagar e manter.
+
 ## 0.15.39 — Ferret Mini em pixels (2026-10-07)
 - **O navegador do celular pelo manual do Ferret:** a página em 40 colunas de 6 × 12 pixels, letras nítidas; a faixa de terra com o rosto do furão (que mergulha e cava enquanto a página vem) e o endereço em creme; a barra de progresso embaixo ao carregar.
 - **As figuras das páginas na ordem certa:** o brilho e as abas embaixo do texto, as fotos e os anúncios só em cima de células vazias (o botão "Contact us" não some mais embaixo da pílula).
