@@ -41,6 +41,9 @@
 - **A tela do celular no jogo é quase quadrada** (42 × 26 células = 336 × 338 px em 1080p: `CELL_ASPECT` 0,6 e 80 linhas), não 240 × 400; o corpo também sai ~20% mais largo que o real (1 coluna = 1 mm = 8 px, 1 linha = 2 mm = 13 px).
 - **O painel do navegador abre um manual como cópia `data:`:** um `<script src>` relativo não carrega (os canvas ficam vazios, sem erro no console). Manual = um arquivo só, script dentro.
 - **Duas placas que deslizam = dois modelos de cubos do mesmo tamanho** desenhados em ordem (a de baixo deslocada), não um modelo recalculado a cada passo: o trilho fica de graça; a pose nova custa ~15 ms uma vez (duas lançadas).
+- **(O erro maior) o corpo do celular e as telas da 6b saíram fora do manual:** o corpo foi feito em cima do layout 2D antigo, sem ler o `celular-manual.html` inteiro; as telas novas herdaram a proporção errada, e a lógica dos estágios ficou diferente da tabela do manual. Regra nova no CLAUDE.md: **MANUAL = LEI** (ler o manual todo, o texto **e o `<script>`** — as medidas e o comportamento estão nele —, e seguir à risca). O `<script>` do manual tem as coordenadas exatas (4 unidades = 1 mm; corpo em 58,230, 204 × 412).
+- **Medidas do celular no jogo (do manual):** 1 coluna = 1,4 mm, 1 linha = 2,275 mm (a grade de 80 linhas: em 1080p a célula é 8 × 13 px, e a tela de 42 × 70 mm fica 240 × 400 px, 1:1); o corpo 37 colunas, 46 linhas fechado, 65 aberto (`shells.ts`: `BODY_MM`, `SCREEN_MM`, `KEYS_MM`, `COL_MM`, `ROW_MM`).
+- **Heredoc com aspas no Bash do Windows quebra** (de novo): scripts Python grandes vão por Write no scratchpad e `python <arquivo>`.
 - **A sombra do sol nas mãos:** o `VIEW_LIGHT` só sabia "é dia"; o teste de sombra só existia no shader. Copiar o `dirLit` para a CPU (`handSun`) com cache por passo é barato.
 
 ### Lições da 15.16–15.17f (tela como textura, pintor 2D, Ferret) — 2026-10-07

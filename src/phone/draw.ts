@@ -1,5 +1,4 @@
 import { compass, cityName, operatorName, diagonalName, districtName, landmarkName, roadName } from '../locale/names';
-import { type CharGrid } from '../render/grid';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, drawSpectrum, menu, progress, songInfo, volBars } from './apps';
@@ -12,9 +11,11 @@ import { cellAt, DOOR, planOf, ROOM, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
 import { HD, HdOrder } from '../render/hd';
-import { EYE, pageDim } from '../render/eye';
-import { BLOCK, SHAPE } from '../render/atlas';
-import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
+import { EYE } from '../render/eye';
+import { SHAPE } from '../render/atlas';
+import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_ROWS, type KeyRect } from './shells';
+import { CharGrid } from '../render/grid';
+import { HdLayer } from '../render/hd';
 import { drawBody3d } from './body3d';
 import { FAMILIES, paintBrandText, phoneFam } from '../render/brands';
 import { Paint } from '../render/paint2d';
@@ -31,21 +32,30 @@ import { formatNumber } from '../sim/telco';
  * its body and its glass that slides as you turn, stronger the glossier the material.
  */
 export { PHONE_W };
-/** How much of it shows when held up (the rest is below the screen edge). */
-const SHOWN = 46;
-const SX = 4, SY = 4;
+/** How much of it shows when held up (the rest is below the screen edge): the closed phone, whole. */
+const SHOWN = UP_ROWS;
+/** The screen on the phone, in cells from its top left (fractions: it lies in pixels, not on the grid; the phone's manual). */
+const SX = SCREEN_MM[0] / COL_MM, SY = SCREEN_MM[1] / ROW_MM, SWC = (SCREEN_MM[2] - SCREEN_MM[0]) / COL_MM, SHC = (SCREEN_MM[3] - SCREEN_MM[1]) / ROW_MM;
+/**
+ * The screen's own picture (the manual: a texture of its own, upright, 240 x 400 at 1080p): the apps draw
+ * on a grid of SW x SH cells and its pixel layer, and the compositor lays it on the glass (main passes it).
+ * For now the apps of before (42 x 26 cells) go on it as they are, a cell ~5.7 x 15 pixels.
+ */
+/** How the screen's cells' shape compares to the interface's (width over height): the map keeps its scale with it. */
+const PIC_K = (SWC * SH) / (SHC * SW);
+export const PHONE_PIC = { grid: new CharGrid(SW, SH), hd: new HdLayer(SW * HD, SH * HD), on: false, rect: [0, 0, 1, 1] as number[] };
 const MAP_ROWS = SH - 4;
 /** Metres the map shows across and down, for a cell aspect (width / height) and zoom (a column is the cell aspect of a row, so nothing is stretched). */
 export const mapView = (aspect: number, zoom: number, indoor = false): [number, number] => {
   const r = (indoor ? INDOOR_ROW_M : ZOOM_ROW_M)[zoom];
-  return [SW * r * aspect, MAP_ROWS * r];
+  return [SW * r * aspect * PIC_K, MAP_ROWS * r];
 };
 
 const keyRects = new Map<number, KeyRect[]>();
 const keysFor = (look: number) => { let k = keyRects.get(look); if (!k) keyRects.set(look, (k = keysOf(SHELLS[look]))); return k; };
 
-/** The rows the upper plate of the slider covers (the screen, the soft keys, the d-pad), and the keypad's under it. */
-const UP_ROWS = KEYS_Y + 6, KP_ROWS = PHONE_H - UP_ROWS;
+/** The keypad's rows under the upper plate (the rail's run, in rows). */
+const KP_ROWS = PHONE_H - UP_ROWS;
 /**
  * How many of the keypad's rows the rail has out (15.19b), in whole rows so the key labels and the clicks
  * keep to the keys: eased out of the run into the spring's catch.
@@ -76,7 +86,7 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
  * (columns from the phone's left), with the keyboard's shortcut that does the same (Alt held). The
  * volume is the earphones' thumbwheel on the cable (DIAL), or Alt with the arrows.
  */
-const TOP_KEYS: [Key, number, number, string][] = [['prev', 28, 4, '<'], ['play', 33, 4, 'P'], ['next', 38, 4, '>']];
+const TOP_KEYS: [Key, number, number, string][] = [['prev', 8, 4, '<'], ['play', 16, 4, 'P'], ['next', 24, 4, '>']];
 /** HD pixel icons for the keys, 5 wide by 3 tall ('#' lit, '+' half). */
 const ICONS: Record<string, string[]> = {
   prev: ['#.+#.', '#.##.', '#.+#.'], next: ['.#+.#', '.##.#', '.#+.#'],
@@ -103,11 +113,10 @@ export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number
   return null;
 }
 
-const BEZEL: C3 = [7, 7, 9];
+/** The keypad's light (the manual: ice-blue), and unlit. */
+const ICE: C3 = [143, 211, 255], ICE_OFF: C3 = [70, 92, 108];
 const mul = (c: C3, k: number): C3 => [c[0] * k, c[1] * k, c[2] * k];
 const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
-/** How much of the scene's glint a material gives back. */
-const GLOSS: Record<string, number> = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05, clear: 0.9 };
 
 /** The glint, eased over time so it does not jump from frame to frame. */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
@@ -125,9 +134,9 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   if (P.raise < 0.01 && P.peek < 0.01 && P.handy < 0.01) { SWAY.yaw = NaN; return; }
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
-  const SHL = SHELLS[P.look], KEYS = keysFor(P.look), CY = KEYS_Y;
-  // the body in the shell's color (or the model's), the face of a slider above its seam
-  const BODY: C3 = SHL.body ?? P.device.body, FACE: C3 = SHL.face ?? BODY;
+  const SHL = SHELLS[P.look], KEYS = keysFor(P.look);
+  // the upper plate in the look's color (the manual's section 7)
+  const BODY: C3 = SHL.body ?? P.device.body;
   const Lr = light[0], Lg = light[1], Lb = light[2];
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
@@ -149,54 +158,25 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
   const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 5) ** 2));
   const inG = (x: number, y: number) => { const gx = ox + x, gy = oy + y; return gx >= 0 && gy >= 0 && gx < g.cols && gy < g.rows ? gy * g.cols + gx : -1; };
-  // a cell of the phone's surface: lit by the scene, darker toward the bottom, the glint on top in
-  // proportion to its gloss; `glow` is light of its own (backlit key labels) the scene does not dim
-  const cell = (x: number, y: number, c: number, fg: C3, bg: C3, gloss = 0.25, glow = false) => {
-    const i = inG(x, y);
-    if (i < 0) return;
-    const k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * amp;
-    g.setBg(i, bg[0] * Lr * k + sh * GL.r, bg[1] * Lg * k + sh * GL.g, bg[2] * Lb * k + sh * GL.b);
-    if (glow) g.put(i, c, Math.max(fg[0], fg[0] * Lr), Math.max(fg[1], fg[1] * Lg), Math.max(fg[2], fg[2] * Lb));
-    else g.put(i, c, fg[0] * Lr * k + sh * GL.r, fg[1] * Lg * k + sh * GL.g, fg[2] * Lb * k + sh * GL.b);
-  };
-  // a glyph alone, lit the same way, over what is behind it (a rounded corner: outside it, the world)
-  const over = (x: number, y: number, c: number, fg: C3, gloss = 0.25) => {
-    const i = inG(x, y);
-    if (i < 0) return;
-    const k = 1 - (y / PHONE_H) * 0.25, sh = sheen(x, y) * gloss * amp;
-    g.put(i, c, fg[0] * Lr * k + sh * GL.r, fg[1] * Lg * k + sh * GL.g, fg[2] * Lb * k + sh * GL.b);
-  };
-  // the glint's light added to a cell's background; a cell darkened by a shadow
-  const addBg = (x: number, y: number, v: number) => {
-    const i = inG(x, y);
-    if (i < 0) return;
-    const k = i * 4;
-    g.bg[k] += v * GL.r; g.bg[k + 1] += v * GL.g; g.bg[k + 2] += v * GL.b;
-  };
-  const shade = (x: number, y: number, f: number) => {
-    const i = inG(x, y);
-    if (i < 0) return;
-    const k = i * 4;
-    for (let c = 0; c < 3; c++) { g.bg[k + c] *= 1 - f; g.cells[k + c + 1] *= 1 - f; }
-  };
-  const gl = GLOSS[SHL.material], W1 = PHONE_W - 1, H1 = PHONE_H - 1, R = SHL.round;
-  const inBody = (x: number, y: number) => inBox(x, y, 0, 0, W1, H1, R);
-  const surface = (_x: number, y: number): C3 => (SHL.face && y < CY - 1 ? FACE : BODY);
+
+
+
+
   const on = P.screen !== 'off';
   const isDown = (k: Key) => { const t = P.pressed.get(k); return t !== undefined && now - t < 0.14; };
   const HB = hdLayer();
   if (HB) {
-    // 15.19: the body in little cubes, in the HD layer under the interface (body3d.ts); the key labels stay glyphs over it
-    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, P.case ? CASES[P.case] : null, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], railRows(P) - KP_ROWS, on);
-    // the maker's name on the face, left of the earpiece, in its family's dot font (15.18)
+    // 15.19: the body in little cubes, as the phone's manual draws it (body3d.ts); the keypad's labels are glyphs over it
+    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, P.case ? CASES[P.case] : null, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], railRows(P) - KP_ROWS, on);
+    // the maker's name on the face, above the screen, left of the earpiece, in its family's dot font (15.18)
     const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker), F = FAMILIES[fam], tc = F[lum(top) > 130 ? 'light' : 'dark'][2];
-    const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 4) * HD, oy * HD, (ox + 29) * HD, (oy + 3) * HD);
-    paintBrandText(decal, (ox + 4) * HD, oy * HD + 1, fam, P.maker, 1, [tc[0] * Lr, tc[1] * Lg, tc[2] * Lb]);
-    for (const [k, x0, ky, w, h, label, col] of KEYS) {
+    const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 2) * HD, oy * HD, (ox + 12) * HD, (oy + 3) * HD);
+    paintBrandText(decal, (ox + 2) * HD + 1, oy * HD + 2, fam, P.maker, 1, [tc[0] * Lr, tc[1] * Lg, tc[2] * Lb]);
+    // the keypad's numbers and letters, ice-blue (the manual), lit from behind while the screen is on
+    for (const [k, x0, ky, w, h, label] of KEYS) {
       const y0 = keyRow(P, ky);
-      // the call and end keys carry their handsets in cubes (body3d.ts), no label
-      if (y0 === null || k === 'send' || k === 'end') continue;
-      const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
+      if (y0 === null || !label) continue;
+      const down = isDown(k), fg: C3 = on ? ICE : ICE_OFF;
       const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
       for (let n = 0; n < label.length; n++) {
         const i = inG(lx + n, ly);
@@ -206,98 +186,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
         else g.put(i, label.charCodeAt(n), c[0] * Lr, c[1] * Lg, c[2] * Lb);
       }
     }
-  } else {
-    // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
-    for (let y = 0; y < PHONE_H; y++) for (let x = 0; x < PHONE_W; x++) {
-      const v = inBody(x, y);
-      if (!v) continue;
-      const base = surface(x, y);
-      const rimL = !inBody(x - 1, y), rimR = !inBody(x + 1, y), rimT = !inBody(x, y - 1);
-      let col: C3 = rimT || rimL ? [base[0] * 1.5 + 18, base[1] * 1.5 + 18, base[2] * 1.5 + 18] : rimR ? mul(base, 0.6) : base;
-      let glyph = 32, fg = col;
-      if (SHL.material === 'metal' && !rimL && !rimR && !rimT) {
-        // brushed metal: rows of slightly different shades, a fine streak now and then
-        const s = 1 + (hash3(y, x >> 3, 91) - 0.5) * 0.1;
-        col = mul(col, s);
-        if (hash3(y, x, 92) < 0.18) { glyph = ch('-'); fg = mul(col, 1.12); }
-      } else if (SHL.material === 'rubber' && (x < 3 || x > W1 - 3) && y > 4 && !rimL && !rimR) { glyph = ch('='); fg = mul(col, 0.7); }
-      if (v === 1) cell(x, y, glyph, fg, col, rimL || rimR || rimT ? 0.9 : gl);
-      else over(x, y, v, col, 0.9);
-    }
-    // a slider's seam: the upper half's edge, its shadow on the lower
-    if (SHL.face) for (let x = 0; x < PHONE_W; x++) if (inBody(x, CY - 1) === 1) { cell(x, CY - 2, 32, mul(FACE, 1.6), mul(FACE, 1.6), 0.9); shade(x, CY - 1, 0.45); }
-    // a rugged phone's bumpers and screws
-    if (SHL.material === 'rubber') {
-      for (const [x0, y0] of [[0, 0], [W1 - 4, 0]]) for (let y = 0; y < 3; y++) for (let x = 0; x < 5; x++) { const v = inBody(x0 + x, y0 + y); if (v === 1) cell(x0 + x, y0 + y, 32, SHL.trim, SHL.trim, 0.3); else if (v) over(x0 + x, y0 + y, v, SHL.trim, 0.3); }
-      for (const [x, y] of [[2, 4], [W1 - 2, 4]]) cell(x, y, ch('+'), [150, 150, 150], mul(BODY, 0.8), 0.6);
-    }
-    // earpiece, front camera, maker's name (dark on a light body)
-    const top = surface(0, 1), dark = lum(top) > 130;
-    if (SHL.name === 'Pebble') for (let x = 21; x < 29; x += 2) cell(x, 1, SHAPE.dot, mul(top, 0.55), top, gl);
-    else for (let x = 20; x < 30; x++) cell(x, 1, ch('='), [16, 16, 18], [20, 20, 23], 0.6);
-    cell(38, 1, ch('o'), [70, 80, 100], [12, 12, 14], 0.8);
-    const brand = P.maker.toUpperCase().split('').join(' ');
-    for (let k = 0; k < brand.length; k++) cell(25 - (brand.length >> 1) + k, 2, brand.charCodeAt(k), dark ? [80, 76, 84] : [150, 156, 168], top, gl);
-    // the screen's surround: a chrome ring on some, then the black bezel, rounded
-    if (SHL.chrome) for (let y = SY - 2; y <= SY + SH + 1; y++) for (let x = SX - 2; x <= SX + SW + 1; x++) {
-      const v = inBox(x, y, SX - 2, SY - 2, SX + SW + 1, SY + SH + 1, 1);
-      if (v === 1) cell(x, y, 32, SHL.trim, SHL.trim, 0.95); else if (v) cell(x, y, v, SHL.trim, surface(x, y), 0.95);
-    }
-    for (let y = SY - 1; y <= SY + SH; y++) for (let x = SX - 1; x <= SX + SW; x++) {
-      const v = inBox(x, y, SX - 1, SY - 1, SX + SW, SY + SH, 1);
-      if (v === 1) cell(x, y, 32, BEZEL, BEZEL, 0.7); else if (v) cell(x, y, v, BEZEL, SHL.chrome ? SHL.trim : surface(x, y), 0.7);
-    }
-
-    // keys: lit from behind while the phone is on, sunk for a moment when pressed
-    const ring = SHL.dpad === 'ring', onRing = (k: Key) => ring && (k === 'up' || k === 'down' || k === 'left' || k === 'right');
-    // a ring d-pad: a rounded ring of trim around OK, its four sides the arrows
-    if (ring) for (let y = CY; y <= CY + 4; y++) for (let x = 16; x <= 33; x++) {
-      const v = inBox(x, y, 16, CY, 33, CY + 4, 2);
-      const k: Key | null = y === CY ? 'up' : y === CY + 4 ? 'down' : x < 21 ? 'left' : x > 28 ? 'right' : null;
-      const hot = k && (isDown(k) ? 0.55 : P.hover === k ? 1.25 : 1);
-      const c = mul(SHL.trim, hot || 1);
-      if (v === 1) cell(x, y, 32, c, c, 0.8); else if (v) cell(x, y, v, c, surface(x, y), 0.8);
-    }
-    // first the keys' shadows on the body, cast away from the light: sideways by the light's side,
-    // down for a light ahead (from above the phone), up for one behind (always some, from the room
-    // around); then the caps over them, so a shadow never darkens a neighbouring key. Flush keys
-    // have no shadows: dark lines run between them instead.
-    const vx = -GL.lat, vy = Math.max(-1, Math.min(1, 0.55 - 0.9 * GL.back)), darkS = 0.2 + 0.4 * GL.str;
-    const sx = Math.abs(vx) > 0.3 ? Math.sign(vx) : 0, sy = Math.abs(vy) > 0.3 ? Math.sign(vy) : 0;
-    const flush = SHL.keys === 'flush';
-    for (const [k, x0, y0, w, h] of KEYS) {
-      if (isDown(k) || onRing(k) || (flush && k.length === 1 && /[0-9*#]/.test(k))) continue;
-      const ex = sx > 0 ? x0 + w : x0 - 1, ey = sy > 0 ? y0 + h : y0 - 1;
-      if (sx) for (let y = 0; y < h; y++) shade(ex, y0 + y, darkS * Math.abs(vx));
-      if (sy) for (let x = 0; x < w; x++) shade(x0 + x, ey, darkS * Math.abs(vy));
-      if (sx && sy) shade(ex, ey, darkS * Math.min(Math.abs(vx), Math.abs(vy)));
-    }
-    if (flush) {
-      for (let y = CY + 6; y < CY + 18; y++) for (const x of [17, 32]) shade(x, y, 0.5);
-      for (const y of [CY + 8, CY + 11, CY + 14]) for (let x = 3; x < 47; x++) shade(x, y, 0.5);
-    }
-    // the caps in relief, unless pushed in: lit along the top edge; the edge facing the nearest light
-    // catches its glint; lit from behind while the phone is on; pebbles rounded at the corners
-    const side = GL.lat > 0 ? 1 : 0, rim = GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
-    for (const [k, x0, y0, w, h, label, col] of KEYS) {
-      const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
-      if (onRing(k)) { cell(x0 + (w >> 1), y0 + ((h - 1) >> 1), ch(label), down ? mul(fg, 0.7) : fg, mul(SHL.trim, down ? 0.55 : P.hover === k ? 1.25 : 1), 0.8, on); continue; }
-      const hov = P.hover === k && !down ? 1.3 : 1;
-      const capAt = (y: number): C3 => mul(down ? mul(SHL.cap, 0.45) : y === 0 && h > 1 ? SHL.capTop : SHL.cap, hov);
-      const pebble = (SHL.keys === 'pebble' || (ring && k === 'ok')) && h > 1;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const v = pebble ? inBox(x, y, 0, 0, w - 1, h - 1, 1) : 1;
-        if (v === 1) cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
-        else if (v) cell(x0 + x, y0 + y, v, capAt(y), ring && k === 'ok' ? SHL.trim : surface(x0 + x, y0 + y), 0.5);
-        if (!down && rim > 1 && x === side * (w - 1) && v === 1) addBg(x0 + x, y0 + y, rim);
-      }
-      const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
-      for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? mul(fg, 0.7) : fg, capAt(ly - y0), 0.5, on);
-    }
   }
-  // the case: over the body's rim and around it, so only its own rim shows from the front
-  // (in the cubes, body3d.ts, when there is the pixel layer)
-  if (P.case && !HB) drawCase(CASES[P.case], R, now, cell, over, inG, g);
   // the earphones plugged in (2026-10-06), in HD pixels: a metal plug in the jack on top, its white
   // housing and strain relief above, and the cable rising in a slack loop up and to the left, then
   // falling past the phone's side and out of sight at the bottom (2026-10-06: it went off the top before)
@@ -360,9 +249,12 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     if (DIAL.at) tag(DIAL.at[0] - ox - 3, DIAL.at[1] - oy - 3, T.apps.tunes.wheel);
   }
 
-  // the screen
-  const S = new Lcd(g, ox + SX, oy + SY);
-  SCREEN.at = on ? [ox + SX, oy + SY, SW, SH] : null;
+  // the screen: the apps draw on its own grid and pixel layer (PHONE_PIC), which the compositor lays on the glass
+  const PG = PHONE_PIC.grid, PH = PHONE_PIC.hd;
+  PG.clear(); PH.wipe();
+  const S = new Lcd(PG, 0, 0, PH);
+  PHONE_PIC.on = true; PHONE_PIC.rect = [ox + SX, oy + SY, SWC, SHC];
+  SCREEN.at = on ? PHONE_PIC.rect : null;
   if (!on) for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]);
   else {
     for (let y = 0; y < SH; y++) S.fill(y, LCD);
@@ -372,7 +264,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi, P.batt, P.charging, P.earphones);
       if (P.screen === 'standby') standby(S, P, world, t, now);
       else if (P.screen === 'menu') menu(S, P, t);
-      else if (P.screen === 'map') map(S, P, world, aspect, t, now);
+      else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
       else app(S, P, world, t, now);
       // the volume, for a moment after a side key moved it, over whatever is open
@@ -385,82 +277,35 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     }
   }
   // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
-  let ar = 0, ag = 0, ab = 0, n = 0;
-  const H = hdLayer();
   for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
-    const gx = ox + SX + x, gy = oy + SY + y;
-    if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
-    const k = (gy * g.cols + gx) * 4, sh = sheen(SX + x, SY + y) * amp * 0.45, C = g.cells, B = g.bg;
+    const k = (y * SW + x) * 4, sh = sheen(SX + (x * SWC) / SW, SY + (y * SHC) / SH) * amp * 0.45, C = PG.cells, B = PG.bg;
     // the glass's ceiling: past 200 the light rolls off, so the brightest pages keep their detail
     const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
     for (let c = 1; c < 4; c++) C[k + c] = roll(C[k + c] * gain);
     for (let c = 0; c < 3; c++) B[k + c] = roll(B[k + c] * gain);
-    ar += B[k] + C[k + 1] * 0.3; ag += B[k + 1] + C[k + 2] * 0.3; ab += B[k + 2] + C[k + 3] * 0.3; n++;
     // fingerprints: smudges on the glass that catch the scene's light (and the glint)
     const fp = smudge(x, y) * (14 + sh * 0.6);
     B[k] += 3 * Lr + sh * GL.r + fp * Lr; B[k + 1] += 3 * Lg + sh * GL.g + fp * Lg; B[k + 2] += 4 * Lb + sh * GL.b + fp * Lb;
     C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;
-    // the HD pixels over this cell (a photo) under the same glass
-    if (H) for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
-      const q = H.at(gx * HD + ix, gy * HD + iy);
+    // the pixels over this cell (a photo) under the same glass
+    for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
+      const q = PH.at(x * HD + ix, y * HD + iy);
       if (q < 0) continue;
-      const X = H.px;
+      const X = PH.px;
       for (let c = 0; c < 3; c++) X[q + c] = roll(X[q + c] * gain);
       X[q] += 3 * Lr + sh * GL.r + fp * Lr; X[q + 1] += 3 * Lg + sh * GL.g + fp * Lg; X[q + 2] += 4 * Lb + sh * GL.b + fp * Lb;
     }
   }
-  ar /= Math.max(1, n); ag /= Math.max(1, n); ab /= Math.max(1, n);
-  // (less of it for a bright page: the eye adapts to what it looks at)
-  const bl = Math.min(0.5, bloom * pageDim(lum([ar, ag, ab])));
-  if (bl > 0.01 && n && on) {
-    // bloom in the dark: the screen's own light haloes over the glass and spills on the bezel around it
-    for (let y = SY - 3; y <= SY + SH + 2; y++) for (let x = SX - 3; x <= SX + SW + 2; x++) {
-      const gx = ox + x, gy = oy + y;
-      if (gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) continue;
-      const d = Math.max(SX - x, x - (SX + SW - 1), SY - y, y - (SY + SH - 1), 0);
-      const w = bl * (d === 0 ? 0.05 : 0.85 / (d + 0.5)), k = (gy * g.cols + gx) * 4;
-      g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
-      // the glyphs there too (the bezel's rounded corners), so the halo does not leave them dark
-      if (d > 0) { g.cells[k + 1] += ar * w; g.cells[k + 2] += ag * w; g.cells[k + 3] += ab * w; }
-    }
+  // under the picture, the interface's cells the glass covers get the screen's colors (the GPU's glow and
+  // bloom read the screen's light from them; the picture hides them)
+  const gx0 = Math.floor(ox + SX), gy0 = Math.floor(oy + SY), gx1 = Math.ceil(ox + SX + SWC), gy1 = Math.ceil(oy + SY + SHC);
+  for (let gy = Math.max(0, gy0); gy < Math.min(g.rows, gy1); gy++) for (let gx = Math.max(0, gx0); gx < Math.min(g.cols, gx1); gx++) {
+    const px = Math.min(SW - 1, Math.max(0, Math.floor(((gx + 0.5 - ox - SX) / SWC) * SW))), py = Math.min(SH - 1, Math.max(0, Math.floor(((gy + 0.5 - oy - SY) / SHC) * SH)));
+    const k = (py * SW + px) * 4, i = gy * g.cols + gx;
+    g.setBg(i, PG.bg[k], PG.bg[k + 1], PG.bg[k + 2]);
+    g.put(i, PG.cells[k], PG.cells[k + 1], PG.cells[k + 2], PG.cells[k + 3]);
   }
-}
-
-type CellFn = (x: number, y: number, c: number, fg: C3, bg: C3, gloss?: number, glow?: boolean) => void;
-type OverFn = (x: number, y: number, c: number, fg: C3, gloss?: number) => void;
-/**
- * A case: a rounded rim two columns and a row wider than the body, over the body's outer cells,
- * lit like the body. Leather is stitched, a bumper ridged, glitter twinkles as the light moves;
- * clear plastic tints the body under it and lies over the world as a thin film.
- */
-function drawCase(K: Case, R: number, now: number, cell: CellFn, over: OverFn, inG: (x: number, y: number) => number, g: CharGrid) {
-  const W1 = PHONE_W - 1, H1 = PHONE_H - 1, gl = GLOSS[K.material], col = K.color;
-  for (let y = -1; y <= H1 + 1; y++) for (let x = -2; x <= W1 + 2; x++) {
-    const o = inBox(x, y, -2, -1, W1 + 2, H1 + 1, R + 1);
-    if (!o) continue;
-    const n = inBox(x, y, 1, 1, W1 - 1, H1, Math.max(1, R));
-    if (n === 1) continue;
-    const i = inG(x, y);
-    if (i < 0) continue;
-    if (K.material === 'clear') {
-      // over the body: its color tinted; past it, a film over the world
-      if (g.bg[i * 4 + 3] === 255 && !(x < 0 || x > W1 || y < 0)) { const k = i * 4; for (let c = 0; c < 3; c++) g.bg[k + c] = g.bg[k + c] * 0.8 + col[c] * 0.12; }
-      else over(x, y, BLOCK.light, col, gl);
-      continue;
-    }
-    const h = hash3(x, y, 93), solid = o === 1 && !n;
-    let glyph = 32, fg: C3 = col;
-    if (K.pattern === 'stitch' && solid && (x === -1 || x === W1 + 1 || y === 0) && (x + y) % 2 === 0) { glyph = ch(y === 0 ? '-' : ':'); fg = [196, 150, 100]; }
-    else if (K.pattern === 'ridge' && solid && (x < 0 || x > W1) && y % 2 === 0) { glyph = ch('='); fg = mul(col, 2.2); }
-    else if (K.pattern === 'glitter' && solid && h < 0.3) { const tw = 0.5 + 0.5 * Math.sin(now * 3 + h * 40); glyph = ch(h < 0.08 ? '*' : h < 0.18 ? '+' : '.'); fg = [255, 200 + 55 * tw, 240]; }
-    if (o !== 1) over(x, y, o, col, gl);
-    else if (n) {
-      // the body's corner shows through the case's: its color over the case's
-      const k = i * 4, b: C3 = [g.bg[k], g.bg[k + 1], g.bg[k + 2]];
-      cell(x, y, n, [0, 0, 0], col, gl);
-      g.put(i, n, b[0], b[1], b[2]);
-    } else cell(x, y, glyph, fg, col, gl, glyph !== 32 && K.pattern === 'glitter');
-  }
+  void bloom;
 }
 
 /**

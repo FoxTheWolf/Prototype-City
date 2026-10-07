@@ -35,12 +35,12 @@ export interface Shell {
 }
 
 export const SHELLS: Shell[] = [
-  { name: 'Classic', body: null, face: null, material: 'matte', round: 2, keys: 'spaced', dpad: 'cross', cap: [48, 50, 57], capTop: [64, 67, 75], label: [150, 205, 255], labelOff: [125, 128, 138], trim: [90, 94, 104], chrome: false },
+  { name: 'Classic', body: [58, 66, 80], face: null, material: 'matte', round: 2, keys: 'spaced', dpad: 'cross', cap: [48, 50, 57], capTop: [64, 67, 75], label: [150, 205, 255], labelOff: [125, 128, 138], trim: [90, 94, 104], chrome: false },
   { name: 'Slate', body: [14, 14, 17], face: null, material: 'gloss', round: 2, keys: 'flush', dpad: 'ring', cap: [24, 24, 28], capTop: [36, 36, 42], label: [235, 240, 255], labelOff: [120, 122, 130], trim: [170, 176, 188], chrome: true },
   { name: 'Brushed', body: [150, 154, 160], face: null, material: 'metal', round: 1, keys: 'pebble', dpad: 'cross', cap: [28, 29, 33], capTop: [44, 46, 52], label: [255, 190, 110], labelOff: [140, 140, 146], trim: [200, 204, 210], chrome: false },
   { name: 'Pebble', body: [226, 214, 220], face: null, material: 'matte', round: 5, keys: 'pebble', dpad: 'ring', cap: [244, 238, 242], capTop: [255, 252, 254], label: [210, 90, 150], labelOff: [150, 130, 140], trim: [236, 150, 190], chrome: false },
   { name: 'Rugged', body: [44, 46, 44], face: null, material: 'rubber', round: 1, keys: 'spaced', dpad: 'cross', cap: [70, 72, 70], capTop: [88, 90, 88], label: [255, 170, 60], labelOff: [150, 150, 140], trim: [230, 120, 30], chrome: false },
-  { name: 'Slider', body: [120, 22, 30], face: [12, 12, 15], material: 'gloss', round: 3, keys: 'flush', dpad: 'cross', cap: [40, 10, 14], capTop: [58, 16, 22], label: [255, 215, 220], labelOff: [150, 110, 116], trim: [210, 212, 220], chrome: true },
+  { name: 'Slider', body: [120, 22, 30], face: null, material: 'gloss', round: 3, keys: 'flush', dpad: 'cross', cap: [40, 10, 14], capTop: [58, 16, 22], label: [255, 215, 220], labelOff: [150, 110, 116], trim: [210, 212, 220], chrome: true },
 ];
 
 export interface Case {
@@ -61,30 +61,54 @@ export const CASES: Case[] = [
   { name: 'Glitter', color: [220, 110, 180], material: 'gloss', pattern: 'glitter' },
 ];
 
-/** The phone's size in cells (every shell); the screen's place on it (see draw.ts) is the same for all. */
-export const PHONE_W = 50, PHONE_H = 52;
-/** The top of the keys' area. */
-export const KEYS_Y = 32;
+/**
+ * The body, as the phone's manual draws it (docs/identidade/celular-manual.html, sections 1 to 3 and 9), in
+ * millimetres: one slider for every look (a look is the upper plate's color and material). The upper plate
+ * 51 x 103 with the screen, the soft keys, call and end and the round d-pad; the lower one the same size,
+ * with the keypad, 44 mm under it when the rail is open. Coordinates are the open phone's, from the upper
+ * plate's top left; the lower plate's top is at RAIL_MM.
+ */
+export const BODY_MM = [51, 103] as const, CORNER_MM = 6.5, RAIL_MM = 43;
+/** The screen's black surround and the screen itself (240 x 400 pixels on it, the manual's section 6). */
+export const BEZEL_MM = [3, 6.5, 48, 79.5] as const, SCREEN_MM = [4.5, 8, 46.5, 78] as const;
+/**
+ * Millimetres a column and a row of the interface's grid span (the grid is 80 rows tall: at 1080p a cell is
+ * 8 x 13 pixels, so the 42 mm screen is 240 pixels across, one to one).
+ */
+export const COL_MM = 1.4, ROW_MM = 2.275;
+/** The phone's size in cells: its width, the closed phone's rows (the upper plate), the open one's. */
+export const PHONE_W = Math.ceil(BODY_MM[0] / COL_MM), UP_ROWS = Math.ceil(BODY_MM[1] / ROW_MM), PHONE_H = UP_ROWS + Math.round(RAIL_MM / ROW_MM);
+/** The d-pad: its centre, the chrome ring's outer radius, the arrows' ring and OK's (mm). */
+export const DPAD_MM = { x: 25.5, y: 91.25, chrome: 8.25, out: 7.5, ice: 4.3, ok: 3.5 } as const;
+
+/** A key's place (mm, x0, y0, x1, y1, the open phone's) and its outline: a pill, a box rounded at r, the call or end key, a sector of the d-pad, OK's disc. */
+export type KeyShape = 'pill' | 'box' | 'send' | 'end' | 'arrow' | 'disc';
+export interface KeyMm { k: Key; box: readonly [number, number, number, number]; shape: KeyShape; r?: number; label: string }
+const LABELS = ['1', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'];
+const D = DPAD_MM;
+export const KEYS_MM: KeyMm[] = [
+  { k: 'lsoft', box: [3.5, 82, 15.5, 84.75], shape: 'pill', label: '' }, { k: 'rsoft', box: [35.5, 82, 47.5, 84.75], shape: 'pill', label: '' },
+  { k: 'send', box: [2, 88.5, 14.5, 100], shape: 'send', label: '' }, { k: 'end', box: [36.5, 88.5, 49, 100], shape: 'end', label: '' },
+  { k: 'ok', box: [D.x - D.ok, D.y - D.ok, D.x + D.ok, D.y + D.ok], shape: 'disc', label: '' },
+  { k: 'up', box: [D.x - D.out, D.y - D.out, D.x + D.out, D.y - D.ice], shape: 'arrow', label: '' },
+  { k: 'down', box: [D.x - D.out, D.y + D.ice, D.x + D.out, D.y + D.out], shape: 'arrow', label: '' },
+  { k: 'left', box: [D.x - D.out, D.y - D.out, D.x - D.ice, D.y + D.out], shape: 'arrow', label: '' },
+  { k: 'right', box: [D.x + D.ice, D.y - D.out, D.x + D.out, D.y + D.out], shape: 'arrow', label: '' },
+  // the keypad on the lower plate: 3 x 4 keys of 13 x 8 mm (the manual's lower slab, 61 mm down it)
+  ...LABELS.map((label, n): KeyMm => {
+    const x = 3.5 + (n % 3) * 15.5, y = RAIL_MM + 61 + Math.floor(n / 3) * 10;
+    return { k: label[0] as Key, box: [x, y, x + 13, y + 8], shape: 'box', r: 1.75, label };
+  }),
+];
 
 export type KeyRect = [Key, number, number, number, number, string, C3?];
-const GREEN: C3 = [80, 230, 120], RED: C3 = [255, 80, 70];
-const LABELS = ['1 .,', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'];
 
-/** The keys on a shell's face: key, column, row, width, height, label, label color. */
-export function keysOf(S: Shell): KeyRect[] {
-  const CY = KEYS_Y;
-  const K: KeyRect[] = [
-    ['lsoft', 3, CY, 10, 2, '--'], ['rsoft', 37, CY, 10, 2, '--'],
-    ['send', 3, CY + 3, 10, 2, 'SEND', GREEN], ['end', 37, CY + 3, 10, 2, 'END', RED],
-    ['up', 21, CY, 8, 1, '^'], ['left', 16, CY + 1, 4, 3, '<'], ['right', 30, CY + 1, 4, 3, '>'], ['ok', 21, CY + 1, 8, 3, 'OK'], ['down', 21, CY + 4, 8, 1, 'v'],
-  ];
-  // flush keys fill the width in a grid, a line of the body between them; the others stand apart
-  LABELS.forEach((label, n) => {
-    const c = n % 3, r = Math.floor(n / 3);
-    if (S.keys === 'flush') K.push([label[0] as never, 3 + c * 15, CY + 6 + r * 3, 14, 2, label]);
-    else K.push([label[0] as never, 3 + c * 16, CY + 6 + r * 3, 12, 2, label]);
+/** The keys in cells (key, column, row, width, height, label), for the clicks and the labels: each key's box rounded to the grid. */
+export function keysOf(_S: Shell): KeyRect[] {
+  return KEYS_MM.map(({ k, box: [x0, y0, x1, y1], label }): KeyRect => {
+    const c0 = Math.round(x0 / COL_MM), r0 = Math.round(y0 / ROW_MM);
+    return [k, c0, r0, Math.max(1, Math.round(x1 / COL_MM) - c0), Math.max(1, Math.round(y1 / ROW_MM) - r0), label];
   });
-  return K;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, keyAt, mapView, onDial, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { drawPhone, keyAt, mapView, onDial, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
 import { drawPayphone, Payphone } from './phone/payphone';
@@ -43,7 +44,7 @@ import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer, HdOrder } from './render/hd';
 import { onHd, Paint } from './render/paint2d';
 import { painterSample, SCREEN_PX, testPattern } from './render/screens';
-import { setHd } from './phone/lcd';
+import { setHd, SH as PHONE_SH, SW as PHONE_SW } from './phone/lcd';
 import { daylight } from './render/sky';
 import { cctvLook } from './render/cctv';
 import { CAMS, cctvYaw } from './sim/cctv';
@@ -755,6 +756,11 @@ addEventListener('keyup', (e) => {
 
 /** `rows` sets the cell size; the grid then gets as many rows as fill the screen (no black bars, the phone on the bottom edge).
  *  cover: the world overfills by up to a cell (cut at the edges); the interface stays whole, the leftover (< a cell) on top. */
+/** The phone screen's picture (15.19b): its cells sized so the picture is about the glass's size in pixels (240 x 400 at 1080p). */
+function phonePic() {
+  const [x0, y0, x1, y1] = SCREEN_MM, w = ((x1 - x0) / COL_MM) * uiLayout.cellW, h = ((y1 - y0) / ROW_MM) * uiLayout.cellH;
+  comp?.setPhone(PHONE_SW, PHONE_SH, Math.max(4, Math.round(w / PHONE_SW)), Math.max(8, Math.round(h / PHONE_SH)));
+}
 function computeLayout(rows: number, cover: boolean): Layout {
   const dpr = devicePixelRatio || 1;
   const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
@@ -777,7 +783,7 @@ function resize() {
   setHd(hd);
   gpu?.resize(layout.cols, layout.rows);
   renderer.setLayout(layout, uiLayout);
-  if (comp) { gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height; comp.setLayout(layout, uiLayout); }
+  if (comp) { gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height; comp.setLayout(layout, uiLayout); phonePic(); }
   if (cctv) dvrLayout();
 }
 
@@ -1327,7 +1333,7 @@ function frame(now: number) {
   // in the game only (not over the title or the loading screen)
   if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
-  PHONE_SCREEN.at = null;
+  PHONE_SCREEN.at = null; PHONE_PIC.on = false;
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
@@ -1485,7 +1491,7 @@ function frame(now: number) {
   const G = glassBox, toPx = (c: number, k: number) => (k & 1 ? uiLayout.originY + c * uiLayout.cellH : uiLayout.originX + c * uiLayout.cellW);
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at);
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? PHONE_PIC : null);
   else renderer.draw(grid, ui, hd, termAt);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }
@@ -1502,7 +1508,7 @@ document.fonts.load(`16px ${FONT}`).finally(() => {
     load(1, 'READY');
     gpu = g; g.resize(layout.cols, layout.rows);
     canvas.after(gpuCanvas); gpuCanvas.width = canvas.width; gpuCanvas.height = canvas.height;
-    comp = new GpuCompositor(g, gpuCanvas); comp.setLayout(layout, uiLayout);
+    comp = new GpuCompositor(g, gpuCanvas); comp.setLayout(layout, uiLayout); phonePic();
     if (termMode) { const T = termMode === 'fb' ? termFb : termTx, [cw, chh] = termCells[termMode]; comp.setTerm(T.cols, T.rows, cw, chh); }
     enter();
   }, (err) => console.error('WebGPU:', err));

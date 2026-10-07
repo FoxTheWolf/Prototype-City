@@ -41,7 +41,8 @@ export function applyTheme(k: number) {
 
 /** The screen's cells, clipped to the grid: (x, y) are screen columns and rows. */
 export class Lcd {
-  constructor(private g: CharGrid, private x0: number, private y0: number) {}
+  /** `hd`: the pixel layer the screen draws on (its own, since the screen is a picture of its own; else the interface's). */
+  constructor(private g: CharGrid, private x0: number, private y0: number, private hdl: HdLayer | null = null) {}
   put(x: number, y: number, c: number, fg: C3, bg: C3) {
     const gx = this.x0 + x, gy = this.y0 + y, g = this.g;
     if (x < 0 || y < 0 || x >= SW || y >= SH || gx < 0 || gy < 0 || gx >= g.cols || gy >= g.rows) return;
@@ -60,11 +61,12 @@ export class Lcd {
     return [g.bg[k], g.bg[k + 1], g.bg[k + 2]];
   }
   /** Whether there is an HD layer to draw pixels on. */
-  get hd(): boolean { return !!HDL; }
+  get hd(): boolean { return !!(this.hdl ?? HDL); }
   /** HD pixel (ix, iy) (0..HD-1 each) of screen cell (x, y), over the interface (or under its letters, 15.17i). */
   pixel(x: number, y: number, ix: number, iy: number, r: number, g: number, b: number, under = false) {
-    if (!HDL || x < 0 || y < 0 || x >= SW || y >= SH) return;
-    HDL.put((this.x0 + x) * HD + ix, (this.y0 + y) * HD + iy, r, g, b, under ? HdOrder.Under : HdOrder.Over);
+    const H = this.hdl ?? HDL;
+    if (!H || x < 0 || y < 0 || x >= SW || y >= SH) return;
+    H.put((this.x0 + x) * HD + ix, (this.y0 + y) * HD + iy, r, g, b, under ? HdOrder.Under : HdOrder.Over);
   }
 }
 

@@ -40,10 +40,10 @@ export interface GBuf { w: number; h: number; mat: Uint8Array; face: Uint8Array;
  * the model's (0, 0) and the view runs down -z. yaw turns it about its vertical axis (its right side
  * toward the viewer), pitch about its horizontal one (its top toward the viewer), both about its middle.
  */
-export interface VoxView { w: number; h: number; sx: number; sy: number; yaw: number; pitch: number }
+export interface VoxView { w: number; h: number; sx: number; sy: number; yaw: number; pitch: number; /** the model's point at pixel (0, 0)'s corner, untilted (mm; 0 by default) */ x0?: number; y0?: number }
 
 export function castVox(V: Vox, view: VoxView): GBuf {
-  const { w, h, sx, sy } = view, n = w * h;
+  const { w, h, sx, sy } = view, n = w * h, X0 = view.x0 ?? 0, Y0 = view.y0 ?? 0;
   const G: GBuf = { w, h, mat: new Uint8Array(n), face: new Uint8Array(n), ao: new Uint8Array(n), vx: new Uint8Array(n), vy: new Uint8Array(n) };
   const cy = Math.cos(view.yaw), syw = Math.sin(view.yaw), cp = Math.cos(view.pitch), sp = Math.sin(view.pitch);
   // the camera's axes in the model's frame: R = Ry(yaw) * Rx(pitch) applied to the screen's right, down and the view
@@ -59,7 +59,7 @@ export function castVox(V: Vox, view: VoxView): GBuf {
   const fX = stx > 0 ? Face.XN : Face.XP, fY = sty > 0 ? Face.YN : Face.YP, fZ = stz > 0 ? Face.ZN : Face.ZP;
   const slab = (o: number, i: number, n: number): [number, number] => { const a = -o * i, b = (n - o) * i; return a < b ? [a, b] : [b, a]; };
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    const u = (i + 0.5) * sx - mx, v = (j + 0.5) * sy - my;
+    const u = X0 + (i + 0.5) * sx - mx, v = Y0 + (j + 0.5) * sy - my;
     const ox = mx + R[0] * u + D[0] * v - dx * far, oy = my + R[1] * u + D[1] * v - dy * far, oz = mz + R[2] * u + D[2] * v - dz * far;
     // into the grid's box (slabs), then cell by cell
     const [ax, bx] = slab(ox, ix, NX), [ay, by] = slab(oy, iy, NY), [az, bz] = slab(oz, iz, NZ);

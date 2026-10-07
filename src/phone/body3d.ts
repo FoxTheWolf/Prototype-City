@@ -1,120 +1,150 @@
 import { castVox, shadeVox, Vox, type GBuf, type VoxLight, type VoxMat } from '../render/voxels';
 import { HD } from '../render/hd';
-import { type Case, KEYS_Y, PHONE_H, PHONE_W, type KeyRect, type Shell } from './shells';
+import { BEZEL_MM, BODY_MM, COL_MM, CORNER_MM, DPAD_MM, KEYS_MM, PHONE_H, PHONE_W, RAIL_MM, ROW_MM, SCREEN_MM, type Case, type KeyMm, type Shell } from './shells';
 import { hash3 } from '../core/rng';
 import { type C3 } from './lcd';
 import { type Key } from './phone';
 
 /**
- * 15.19b: the phone's body in little cubes (docs/identidade/celular-manual.html, section 9), drawn into
- * the HD layer under the interface: the key labels, the screen and the case are still the interface's
- * (draw.ts) on top. One body for every look, the slider: the upper plate (the look's color and
- * material) with the screen, its chrome ring, the soft, call and end keys and the d-pad; under it the
- * graphite lower plate with the number keys. A cube is 1 mm; a column of the phone is 1 mm across and a
- * row 2 mm down (the phone is 50 x 104 mm), so the keys fall on the cells they are clicked on. The keys
- * stand a millimetre proud and sink when pressed.
+ * 15.19b: the phone's body in little cubes of 1 mm, as the phone's manual draws it
+ * (docs/identidade/celular-manual.html: the slider, its colors and materials, its keys; section 9 for the
+ * cubes), drawn into the HD layer under the interface. Two models of the same size, cast alike: the upper
+ * plate (the look's color and material, the chrome edge, the earpiece, the screen's black surround, the soft
+ * keys, call and end, the round d-pad with its chrome ring and OK, the volume on the right side) and the
+ * graphite lower plate with the keypad, drawn shifted up under the upper as the rail shuts. The screen
+ * itself is not cubes: its picture goes over the glass (draw.ts). Keys stand a millimetre proud and sink
+ * when pressed. A case goes round both plates, 2.5 mm out.
  */
-const MMX = 1, MMY = 2;
-const NX = PHONE_W * MMX, NY = PHONE_H * MMY;
-/** The plates' thickness (mm): the lower 8, the upper 7 over it; the keys stand 1 mm proud of their plate. */
+/** The plates' thickness (mm): the lower 8, the upper 7 over it; a key or the chrome ring stands 1 mm proud. */
 const LOW = 8, UP = 7, NZ = LOW + UP + 1;
-/** The screen (cells), as draw.ts puts it, and the rows the upper plate covers (down to the d-pad's foot and a row more). */
-const SX = 4, SY = 4, SW = 42, SH = 26, UP_ROWS = KEYS_Y + 6;
+/** Room round the body in the model for the case (mm), and the model's size. */
+const OFF = 3, NX = BODY_MM[0] + 2 * OFF + 1, NY = RAIL_MM + BODY_MM[1] + 2 * OFF;
+/** The picture's margin round the phone's cells (HD pixels, about OFF mm), so the case shows. */
+const MXP = Math.round(OFF / (COL_MM / HD)), MYP = Math.round(OFF / (ROW_MM / HD));
 /** A slight tilt, its top toward the eye: the top edge and the keys' tops show, as held below the eye. */
 const PITCH = 0.16, YAW = -0.05;
 
 /** Palette indices. */
-const enum P { Plate = 1, Low, Rim, Bezel, Glass, Slot, Lens, Send, End, Case, CaseAlt, Glitter }
-const KEY0 = 16;
-const GRAPHITE: C3 = [43, 45, 49], CHROME: C3 = [201, 206, 214], BEZEL: C3 = [7, 7, 9];
+const enum P { Plate = 1, Low, LowGrain, Rim, Bezel, Glass, Slot, Lens, Ice, Send, End, Seg, Case, CaseAlt, Glitter }
+const KEY0 = 32;
+/** The manual's colors (section 4). */
+const CHROME: C3 = [201, 206, 214], GRAPHITE: C3 = [43, 45, 49], CAP: C3 = [28, 30, 34], FRONT_CAP: C3 = [22, 24, 28], ICE: C3 = [143, 211, 255], ICE_OFF: C3 = [59, 111, 143];
+const CALL: C3 = [47, 174, 90], END: C3 = [210, 58, 46], BEZEL: C3 = [5, 6, 7], SEG: C3 = [18, 19, 23], OK: C3 = [36, 38, 43];
 
-/** Whether (x, y), in mm, lies in a box with corners rounded to r mm (r in rows on draw.ts's scale: x2 across). */
-const inRound = (x: number, y: number, x0: number, y0: number, x1: number, y1: number, r: number) => {
+/** Whether (x, y) (mm) lies in a box with corners rounded: r, or [top-left, top-right, bottom-right, bottom-left]. */
+function inRound(x: number, y: number, x0: number, y0: number, x1: number, y1: number, r: number | readonly number[]): boolean {
   if (x < x0 || x > x1 || y < y0 || y > y1) return false;
-  const rx = r, ry = r, cx = Math.min(Math.max(x, x0 + rx), x1 - rx), cy = Math.min(Math.max(y, y0 + ry), y1 - ry);
-  return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+  const left = x < (x0 + x1) / 2, top = y < (y0 + y1) / 2, R = typeof r === 'number' ? r : r[top ? (left ? 0 : 1) : left ? 3 : 2];
+  if (R <= 0) return true;
+  const cx = left ? Math.max(x, x0 + R) : Math.min(x, x1 - R), cy = top ? Math.max(y, y0 + R) : Math.min(y, y1 - R);
+  return (x - cx) ** 2 + (y - cy) ** 2 <= R * R;
+}
+/** A voxel's centre in the phone's millimetres (the model is shifted by OFF for the case). */
+const mm = (v: number) => v - OFF + 0.5;
+
+/** Whether the phone's point (x, y) (mm, the open phone's) is on a key's outline. */
+function onKey(K: KeyMm, x: number, y: number): boolean {
+  const [x0, y0, x1, y1] = K.box, D = DPAD_MM;
+  if (K.shape === 'pill') return inRound(x, y, x0, y0, x1, y1, (y1 - y0) / 2);
+  if (K.shape === 'box') return inRound(x, y, x0, y0, x1, y1, K.r ?? 1);
+  if (K.shape === 'send') return inRound(x, y, x0, y0, x1, y1, [1.5, 1.5, 1.5, 5.5]);
+  if (K.shape === 'end') return inRound(x, y, x0, y0, x1, y1, [1.5, 1.5, 5.5, 1.5]);
+  const dx = x - D.x, dy = y - D.y, r = Math.hypot(dx, dy);
+  if (K.shape === 'disc') return r <= D.ok;
+  // an arrow: its quarter of the ring between the ice ring and the outer edge, a hair apart from the next
+  if (r < D.ice || r > D.out || Math.abs(Math.abs(dx) - Math.abs(dy)) < 0.6) return false;
+  return K.k === 'up' ? -dy > Math.abs(dx) : K.k === 'down' ? dy > Math.abs(dx) : K.k === 'left' ? -dx > Math.abs(dy) : dx > Math.abs(dy);
+}
+
+/** The handsets on the call and end keys ('#' a cube, 1 mm): the receiver lifted, tilted; and laid down, an arch. */
+const HANDSET: Record<string, string[]> = {
+  send: ['.##.....', '###.....', '##......', '.##.....', '..###.##', '...#####', '....###.'],
+  end: ['..######..', '.########.', '##......##', '##......##'],
+};
+/** The ice-blue arrows on the d-pad: their cubes from the centre (mm). */
+const ARROWS: Record<string, [number, number][]> = {
+  up: [[0, -6.4], [-1, -5.4], [0, -5.4], [1, -5.4]], down: [[0, 6.4], [-1, 5.4], [0, 5.4], [1, 5.4]],
+  left: [[-6.4, 0], [-5.4, -1], [-5.4, 0], [-5.4, 1]], right: [[6.4, 0], [5.4, -1], [5.4, 0], [5.4, 1]],
 };
 
 /**
- * The two plates, without their keys (they are stamped on per frame, up or sunk), as two models of the
- * same size so they cast alike: the lower one as it lies with the rail open (the same length as the
- * upper, the keypad's rows below the upper plate's foot), drawn shifted up under the upper as it shuts.
+ * The two plates without their keys (stamped on per frame, up or sunk), as two models of the same size: the
+ * lower one as it lies with the rail open (RAIL_MM down), the upper over it.
  */
-function base(S: Shell, K: Case | null): [Vox, Vox] {
-  const lo = new Vox(NX, NY, NZ), V = new Vox(NX, NY, NZ), R = Math.max(2, S.round * 2.2);
-  const upY = UP_ROWS * MMY;
-  lo.draw(0, LOW, (x, y) => (inRound(x, y, 0, NY - upY, NX, NY, R) ? P.Low : 0));
-  V.draw(LOW, LOW + UP, (x, y) => (inRound(x, y, 0, 0, NX, upY, R) ? P.Plate : 0));
-  if (K) { caseOn(lo, K, NY - upY, NY, 0, LOW, R); caseOn(V, K, 0, upY, LOW, LOW + UP, R); }
-  // the upper plate's front edge, a millimetre in all round: the rim of a rounded edge
+function base(K: Case | null): [Vox, Vox] {
+  const lo = new Vox(NX, NY, NZ), V = new Vox(NX, NY, NZ), [W, H] = BODY_MM, R = CORNER_MM;
   const top = LOW + UP - 1;
-  for (let y = 0; y < upY; y++) for (let x = 0; x < NX; x++) {
-    if (!V.at(x, y, top)) continue;
-    if (!V.at(x - 1, y, top) || !V.at(x + 1, y, top) || !V.at(x, y - 1, top) || !V.at(x, y + 1, top)) V.set(x, y, top, 0);
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    const X = mm(x), Y = mm(y);
+    // the lower plate: graphite, matte and grainy
+    if (inRound(X, Y, 0, RAIL_MM, W, RAIL_MM + H, R)) for (let z = 0; z < LOW; z++) lo.set(x, y, z, hash3(x, y, z) < 0.3 ? P.LowGrain : P.Low);
+    if (!inRound(X, Y, 0, 0, W, H, R)) continue;
+    // the upper plate, its front edge chrome (the manual's ring round it)
+    for (let z = LOW; z < top; z++) V.set(x, y, z, P.Plate);
+    V.set(x, y, top, inRound(X, Y, 1, 1, W - 1, H - 1, R - 1) ? P.Plate : P.Rim);
+    // the earpiece (a slot) and the front camera, above the screen
+    if (X >= 18 && X < 33 && Y >= 3 && Y < 5) { V.set(x, y, top, 0); V.set(x, y, top - 1, P.Slot); }
+    if (Math.hypot(X - 39, Y - 4) < 1) { V.set(x, y, top, 0); V.set(x, y, top - 1, P.Lens); }
+    // the screen's black surround, the glass sunk in it (its picture lies over it)
+    const [bx0, by0, bx1, by1] = BEZEL_MM, [sx0, sy0, sx1, sy1] = SCREEN_MM;
+    if (inRound(X, Y, bx0, by0, bx1, by1, 1.5)) {
+      const glass = X >= sx0 && X < sx1 && Y >= sy0 && Y < sy1;
+      V.set(x, y, top, glass ? 0 : P.Bezel);
+      V.set(x, y, top - 1, glass ? P.Glass : P.Bezel);
+    }
+    // the d-pad: its chrome ring a millimetre proud, the dark well inside, an ice ring round OK
+    const D = DPAD_MM, r = Math.hypot(X - D.x, Y - D.y);
+    if (r <= D.chrome) {
+      if (r > D.out - 0.2) { V.set(x, y, top, P.Rim); V.set(x, y, top + 1, P.Rim); }
+      else V.set(x, y, top, r > D.ok && r < D.ice ? P.Ice : P.Seg);
+    }
   }
-  // the screen: the chrome ring (on the looks that have one) a millimetre proud, the black bezel, the glass sunk a millimetre
-  const sx0 = SX * MMX, sy0 = SY * MMY, sx1 = (SX + SW) * MMX, sy1 = (SY + SH) * MMY;
-  if (S.chrome) for (let y = sy0 - 4; y < sy1 + 4; y++) for (let x = sx0 - 2; x < sx1 + 2; x++) {
-    const ring = inRound(x + 0.5, y + 0.5, sx0 - 2, sy0 - 4, sx1 + 2, sy1 + 4, 3) && !inRound(x + 0.5, y + 0.5, sx0 - 1, sy0 - 2, sx1 + 1, sy1 + 2, 2);
-    if (ring) { V.set(x, y, top, P.Rim); V.set(x, y, top + 1, P.Rim); }
-  }
-  for (let y = sy0 - 2; y < sy1 + 2; y++) for (let x = sx0 - 1; x < sx1 + 1; x++) {
-    if (!inRound(x + 0.5, y + 0.5, sx0 - 1, sy0 - 2, sx1 + 1, sy1 + 2, 2)) continue;
-    const glass = x >= sx0 && x < sx1 && y >= sy0 && y < sy1;
-    V.set(x, y, top, glass ? 0 : P.Bezel);
-    V.set(x, y, top - 1, glass ? P.Glass : P.Bezel);
-  }
-  // the earpiece (a slot) right of the middle, the maker's name being left of it (draw.ts), and the front camera (a lens)
-  for (let x = 30; x < 39; x++) for (let y = 2; y < 4; y++) { V.set(x, y, top, 0); V.set(x, y, top - 1, P.Slot); }
-  for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { V.set(43 + dx, 2 + dy, top, 0); V.set(43 + dx, 2 + dy, top - 1, P.Lens); }
+  // the volume on the right side: a chrome rocker standing out of the upper plate's edge
+  for (let y = 0; y < NY; y++) { const Y = mm(y); if (Y >= 17.5 && Y < 31.5) for (let z = LOW + 2; z < LOW + 6; z++) V.set(OFF + BODY_MM[0], y, z, P.Rim); }
+  if (K) { caseOn(lo, K, RAIL_MM, 0, LOW); caseOn(V, K, 0, LOW, LOW + UP); }
   return [lo, V];
 }
 
 /**
- * A case over a plate (one piece a plate: they slide apart), from y0 to y1 and z0 to z1 (mm): the plate's
- * outer 2 mm in the case's color, its lip a millimetre proud over the front's outer edge, so only the face
- * is left free. Leather is stitched round the lip, a bumper ridged on its sides, glitter sparkles.
+ * A case round a plate (one piece a plate: they slide apart), as the manual draws it: a rounded band 2.5 mm
+ * out round the body, as thick as the plate, the front left free. Leather is stitched along it, glitter sparkles.
  */
-function caseOn(V: Vox, K: Case, y0: number, y1: number, z0: number, z1: number, R: number) {
-  for (let y = y0; y < y1; y++) for (let x = 0; x < NX; x++) {
-    const cx = x + 0.5, cy = y + 0.5;
-    if (!inRound(cx, cy, 0, y0, NX, y1, R) || inRound(cx, cy, 2, y0 + 2, NX - 2, y1 - 2, Math.max(1, R - 2))) continue;
-    const lip = !inRound(cx, cy, 1, y0 + 1, NX - 1, y1 - 1, Math.max(1, R - 1));
-    const side = x < 2 || x >= NX - 2;
+function caseOn(V: Vox, K: Case, y0: number, z0: number, z1: number) {
+  const [W, H] = BODY_MM, R = CORNER_MM;
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    const X = mm(x), Y = mm(y);
+    if (!inRound(X, Y, -2.5, y0 - 2.5, W + 2.5, y0 + H + 2.5, R + 2.5) || inRound(X, Y, 0, y0, W, y0 + H, R)) continue;
     let c = P.Case;
-    if (K.pattern === 'ridge' && side && y % 4 < 2) c = P.CaseAlt;
-    else if (K.pattern === 'glitter' && hash3(x, y, 93) < 0.14) c = P.Glitter;
+    if (K.pattern === 'glitter' && hash3(x, y, 93) < 0.16) c = P.Glitter;
     for (let z = z0; z < z1; z++) V.set(x, y, z, c);
-    // the lip, and the stitches along it (a stitch every third millimetre)
-    if (lip) V.set(x, y, z1, K.pattern === 'stitch' && (x + y) % 3 === 0 ? P.CaseAlt : c);
+    // the stitches: dashes along the band's middle, on its front
+    if (K.pattern === 'stitch' && !inRound(X, Y, -1.2, y0 - 1.2, W + 1.2, y0 + H + 1.2, R + 1.2) && inRound(X, Y, -1.9, y0 - 1.9, W + 1.9, y0 + H + 1.9, R + 1.9) && (x + y) % 3 !== 0) V.set(x, y, z1 - 1, P.CaseAlt);
   }
 }
 
-/** The handsets on the call and end keys (8 x 3 mm, '#' a cube): the receiver lifted, and laid down. */
-const HANDSET: Record<string, string[]> = { send: ['.######.', '##....##', '#......#'], end: ['#......#', '##....##', '.######.'] };
-
-/** The keys stamped on a copy of the base: a cap per key rect, 1 mm proud of its plate (or flush when pressed); its top edge shows by the tilt. */
-function withKeys([lo0, up0]: [Vox, Vox], S: Shell, keys: KeyRect[], down: (k: Key) => boolean, ids: Map<number, Key>): [Vox, Vox] {
-  const lo = lo0.copy(), up = up0.copy(), upY = UP_ROWS * MMY;
-  keys.forEach(([k, cx, cy, cw, ch], n) => {
-    const x0 = cx * MMX, y0 = cy * MMY, x1 = (cx + cw) * MMX, y1 = (cy + ch) * MMY, onUp = y0 < upY, V = onUp ? up : lo;
-    const face = onUp ? LOW + UP - 1 : LOW - 1, z = down(k) ? face : face + 1;
+/** The keys stamped on a copy of the base: each a millimetre proud of its plate (flush when pressed), with its marks. */
+function withKeys([lo0, up0]: [Vox, Vox], down: (k: Key) => boolean, ids: Map<number, Key>): [Vox, Vox] {
+  const lo = lo0.copy(), up = up0.copy();
+  KEYS_MM.forEach((K, n) => {
+    const onUp = K.box[1] < BODY_MM[1], V = onUp ? up : lo, face = onUp ? LOW + UP - 1 : LOW - 1, z = down(K.k) ? face : face + 1;
     const col = KEY0 + n;
-    ids.set(col, k);
-    const r = S.keys === 'pebble' || (S.dpad === 'ring' && k === 'ok') ? 1.6 : 0.8;
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-      // a hair of the plate between keys side by side; the corners rounded
-      if (!inRound(x + 0.5, y + 0.5, x0 + 0.15, y0 + 0.3, x1 - 0.15, y1 - 0.3, r)) continue;
+    ids.set(col, K.k);
+    const [x0, y0, x1, y1] = K.box;
+    for (let y = Math.floor(y0) + OFF; y <= Math.ceil(y1) + OFF; y++) for (let x = Math.floor(x0) + OFF; x <= Math.ceil(x1) + OFF; x++) {
+      if (!onKey(K, mm(x), mm(y))) continue;
       for (let zz = face; zz <= z; zz++) V.set(x, y, zz, col);
     }
-    // the green and red handsets, in the cap's top (they sink with it)
-    const icon = HANDSET[k];
-    if (icon) icon.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') V.set(x0 + ((x1 - x0 - row.length) >> 1) + i, y0 + j, z, k === 'send' ? P.Send : P.End); }));
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, at = (X: number, Y: number, c: number) => V.set(Math.floor(X) + OFF, Math.floor(Y) + OFF, z, c);
+    // the soft keys' ice line; the handsets; the d-pad's arrows
+    if (K.shape === 'pill') for (let X = x0 + 2.5; X < x1 - 2.5; X++) at(X, cy, P.Ice);
+    const icon = HANDSET[K.k];
+    if (icon) icon.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') at(cx - row.length / 2 + i, cy - icon.length / 2 + j, K.k === 'send' ? P.Send : P.End); }));
+    for (const [dx, dy] of ARROWS[K.k] ?? []) at(DPAD_MM.x + dx, DPAD_MM.y + dy, P.Ice);
   });
   return [lo, up];
 }
 
-/** The sway's step (rad) and how far it goes either way: small, so the screen and the labels (still drawn flat over it) stay on their keys. */
+/** The sway's step (rad) and how far it goes either way: small, so the screen and the labels (drawn flat over it) stay on their keys. */
 const TILT_STEP = 0.015, TILT_MAX = 0.06;
 let cache: { key: string; V: [Vox, Vox]; ids: Map<number, Key>; poses: Map<string, [GBuf, GBuf]> } | null = null;
 /** The palette and the keys' light, kept while the look, its color and the keys under the cursor or pressed stay the same. */
@@ -123,55 +153,60 @@ let paint: { key: string; pal: VoxMat[]; mul: Float32Array } | null = null;
 let lit: { key: string; px: Float32Array; n0: number; n: number } | null = null;
 
 /**
- * The body into the HD layer (put: x, y in the layer's pixels), its top-left at cell (ox, oy). Keys
- * sunk come from `down`; a key under the cursor is lit a little (`hover`). `tilt` sways it a little off
- * its pose (yaw, pitch in rad, as the hand lags the eye), in steps: each step's geometry is cast once
- * and kept until the look or the keys pressed change. `rail` (rows, 0 open .. minus the keypad's rows
- * shut) is how far the lower plate is drawn up under the upper.
+ * The body into the HD layer (put: x, y in the layer's pixels), its top-left at cell (ox, oy) (the case
+ * reaches a little past it). Keys sunk come from `down`; a key under the cursor is lit a little (`hover`).
+ * `tilt` sways it a little off its pose (yaw, pitch in rad, as the hand lags the eye), in steps: each
+ * step's geometry is cast once and kept until the look or the keys pressed change. `rail` (rows, 0 open ..
+ * minus the keypad's rows shut) is how far the lower plate is drawn up under the upper. `on`: the screen
+ * lit, the keys' marks glow.
  */
 export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: number) => void, ox: number, oy: number, S: Shell, look: number, body: C3, K: Case | null,
-  keys: KeyRect[], down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0], rail = 0, on = true) {
-  const pressed = keys.filter(([k]) => down(k)).map(([k]) => k).join(',');
-  const ck = `${look}|${pressed}|${K?.name ?? ''}`;
+  down: (k: Key) => boolean, hover: Key | null, L: VoxLight, tilt: readonly [number, number] = [0, 0], rail = 0, on = true) {
+  const pressed = KEYS_MM.filter(({ k }) => down(k)).map(({ k }) => k).join(',');
+  const ck = `${pressed}|${K?.name ?? ''}`;
   if (!cache || cache.key !== ck) {
     const ids = new Map<number, Key>();
-    cache = { key: ck, ids, V: withKeys(base(S, K), S, keys, down, ids), poses: new Map() };
+    cache = { key: ck, ids, V: withKeys(base(K), down, ids), poses: new Map() };
   }
   const step = (a: number) => Math.round(Math.max(-TILT_MAX, Math.min(TILT_MAX, a)) / TILT_STEP);
   const ty = step(tilt[0]), tp = step(tilt[1]), posk = `${ty},${tp}`;
   let G = cache.poses.get(posk);
   if (!G) {
-    const view = { w: PHONE_W * HD, h: PHONE_H * HD, sx: MMX / HD, sy: MMY / HD, yaw: YAW + ty * TILT_STEP, pitch: PITCH + tp * TILT_STEP };
+    const sx = COL_MM / HD, sy = ROW_MM / HD;
+    const view = { w: PHONE_W * HD + 2 * MXP, h: PHONE_H * HD + 2 * MYP, sx, sy, x0: OFF - MXP * sx, y0: OFF - MYP * sy, yaw: YAW + ty * TILT_STEP, pitch: PITCH + tp * TILT_STEP };
     G = [castVox(cache.V[0], view), castVox(cache.V[1], view)];
     cache.poses.set(posk, G);
   }
-  const pk = `${ck}|${hover}|${body}|${on}`;
+  const pk = `${ck}|${look}|${hover}|${body}|${on}`;
   if (!paint || paint.key !== pk) {
     const plate: C3 = S.face ?? S.body ?? body, gloss = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05 }[S.material];
     const pal: VoxMat[] = Array.from({ length: 256 }, () => ({ col: [0, 0, 0], gloss: 0 }));
     pal[P.Plate] = { col: plate, gloss, metal: S.material === 'metal' };
-    pal[P.Low] = { col: S.face ? (S.body ?? body) : GRAPHITE, gloss: 0.12 };
-    pal[P.Rim] = { col: S.chrome ? CHROME : S.trim, gloss: 0.95 };
+    pal[P.Low] = { col: GRAPHITE, gloss: 0.05 };
+    pal[P.LowGrain] = { col: [GRAPHITE[0] * 0.86, GRAPHITE[1] * 0.86, GRAPHITE[2] * 0.86], gloss: 0.05 };
+    pal[P.Rim] = { col: CHROME, gloss: 0.95, metal: true };
     pal[P.Bezel] = { col: BEZEL, gloss: 0.7 };
-    pal[P.Glass] = { col: [5, 6, 8], gloss: 0.9 };
-    pal[P.Slot] = { col: [16, 16, 18], gloss: 0.1 };
-    pal[P.Lens] = { col: [60, 72, 96], gloss: 0.9 };
-    // the handsets: lit from behind while the phone is on, as the labels are
-    pal[P.Send] = { col: on ? [80, 230, 120] : [40, 90, 56], gloss: 0.3, glow: on };
-    pal[P.End] = { col: on ? [255, 80, 70] : [110, 44, 40], gloss: 0.3, glow: on };
+    pal[P.Glass] = { col: BEZEL, gloss: 0.9 };
+    pal[P.Slot] = { col: [29, 31, 35], gloss: 0.1 };
+    pal[P.Lens] = { col: [21, 23, 27], gloss: 0.9 };
+    pal[P.Seg] = { col: SEG, gloss: 0.3 };
+    // the keys' marks: lit from behind while the screen is on
+    pal[P.Ice] = { col: on ? ICE : ICE_OFF, gloss: 0.3, glow: on };
+    pal[P.Send] = { col: CALL, gloss: 0.3, glow: on };
+    pal[P.End] = { col: END, gloss: 0.3, glow: on };
     if (K) {
-      // clear plastic: the plate's color through it, a little tinted; the rest in the case's own
-      const cc: C3 = K.material === 'clear' ? [plate[0] * 0.7 + K.color[0] * 0.3, plate[1] * 0.7 + K.color[1] * 0.3, plate[2] * 0.7 + K.color[2] * 0.3] : K.color;
+      // clear plastic: the plates' color through it, a little tinted; the rest in the case's own
+      const cc: C3 = K.material === 'clear' ? [plate[0] * 0.65 + K.color[0] * 0.35, plate[1] * 0.65 + K.color[1] * 0.35, plate[2] * 0.65 + K.color[2] * 0.35] : K.color;
       const cg = { matte: 0.15, gloss: 0.6, metal: 0.42, rubber: 0.05, clear: 0.9 }[K.material];
       pal[P.Case] = { col: cc, gloss: cg };
-      pal[P.CaseAlt] = { col: K.pattern === 'stitch' ? [196, 150, 100] : [cc[0] * 0.55, cc[1] * 0.55, cc[2] * 0.55], gloss: cg };
-      pal[P.Glitter] = { col: [255, 225, 245], gloss: 1 };
+      pal[P.CaseAlt] = { col: [201, 160, 112], gloss: cg };
+      pal[P.Glitter] = { col: [255, 236, 248], gloss: 1 };
     }
-    // the keys: their caps, the arrows of a ring d-pad in its trim; one under the cursor lit, one pressed darker
+    // the keys: rubber caps (the front ones a shade darker), OK a little lighter; one under the cursor lit, one pressed darker
     const mul = new Float32Array(256).fill(1);
     for (const [id, k] of cache.ids) {
-      pal[id] = { col: S.dpad === 'ring' && (k === 'up' || k === 'down' || k === 'left' || k === 'right') ? S.trim : S.cap, gloss: 0.5 };
-      mul[id] = down(k) ? 0.6 : hover === k ? 1.3 : 1;
+      pal[id] = { col: k === 'ok' ? OK : /^[0-9*#]$/.test(k) ? CAP : FRONT_CAP, gloss: k === 'ok' ? 0.5 : 0.15 };
+      mul[id] = down(k) ? 0.6 : hover === k ? 1.5 : 1;
     }
     paint = { key: pk, pal, mul };
   }
@@ -187,7 +222,7 @@ export function drawBody3d(put: (x: number, y: number, r: number, g: number, b: 
     lit = { key: lk, px, n0, n };
   }
   // the lower plate first (shifted up by the rail), the upper over it
-  const X0 = ox * HD, Y0 = oy * HD, A = lit.px, dy = rail * HD;
+  const X0 = ox * HD - MXP, Y0 = oy * HD - MYP, A = lit.px, dy = rail * HD;
   for (let i = 0; i < lit.n0; i += 5) put(X0 + A[i], Y0 + dy + A[i + 1], A[i + 2], A[i + 3], A[i + 4]);
   for (let i = lit.n0; i < lit.n; i += 5) put(X0 + A[i], Y0 + A[i + 1], A[i + 2], A[i + 3], A[i + 4]);
 }

@@ -40,13 +40,14 @@ const CU = /* wgsl */ `
 struct CU {
   cell: vec2i, origin: vec2i, grid: vec2i, uiCell: vec2i, uiOrigin: vec2i, uiGrid: vec2i,
   tmCell: vec2i, tmOrigin: vec2i, tmGrid: vec2i, ph0: vec2i, ph1: vec2i, tmShow: vec2i, g0: vec2i, g1: vec2i, g2: vec2i, g3: vec2i,
-  eye: vec4i,
+  eye: vec4i, ps0: vec2i, ps1: vec2i,
 };
 // the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's layer
 // (tmGrid is set while the notebook's screen is up, tmShow.x while its layer is shown: faced squarely);
 // g0 to g3: the notebook glass's corners (top-left, top-right, bottom-right, bottom-left), faced or from
 // aside, for its glow; eye.x: how bright the screens look to the eye (EYE.k, thousandths, 600 on a lit street at night);
-// eye.y, eye.z: the phone rectangle's glow reach and strength (hundredths; the watch's small LCD reaches further)
+// eye.y, eye.z: the phone rectangle's glow reach and strength (hundredths; the watch's small LCD reaches further);
+// ps0 to ps1: the phone's screen picture on the glass (15.19b, pixels; empty when the phone is not up)
 // the signed distance from a convex quad's edge (corners in order), negative inside
 fn sdQuad(p: vec2f, v0: vec2f, v1: vec2f, v2: vec2f, v3: vec2f) -> f32 {
   var v = array<vec2f, 4>(v0, v1, v2, v3);
@@ -90,6 +91,8 @@ ${CU}
 @group(0) @binding(10) var<storage, read> glow: array<vec4f>;
 @group(0) @binding(11) var<storage, read> mean: array<vec4f>;
 @group(0) @binding(12) var<storage, read> scr: array<vec4f>;
+// 15.19b: the phone's screen, a picture of its own (as the notebook's), upright on its glass
+@group(0) @binding(13) var phPic: texture_2d<f32>;
 // a screen's bloom at f (in its cells, from their centers): the cells' blur (from base, a grid of g cells),
 // between cell centers, within the cells a to b
 fn scrAt(f: vec2f, base: u32, g: vec2i, a: vec2i, b: vec2i) -> vec3f {
@@ -166,6 +169,15 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     }
     let ub = textureLoad(uiBg, uc, 0);
     if (ub.a > 0.25) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
+    if (all(s >= u.ps0) && all(s < u.ps1)) {
+      // the phone's screen: its picture scaled onto the glass, and the glass's wide faint reflection in its
+      // top corner (the phone's manual: down the right side to 29%, curving to 35% on the left)
+      let uv = (vec2f(s - u.ps0) + 0.5) / vec2f(u.ps1 - u.ps0);
+      let t = textureSampleLevel(phPic, tmSamp, uv, 0.0);
+      col = mix(col, t.rgb, t.a);
+      let b = 1.0 - uv.x; let edge = (1.0 - b) * (1.0 - b) * 0.286 + 2.0 * b * (1.0 - b) * 0.207 + b * b * 0.35;
+      if (uv.y < edge) { col += vec3f(0.05); }
+    }
     if (hp.a > 0.75) { col = hp.rgb; }
   }
   // the screens' glow follows the eye (none by day, more in the dark) and is less for a bright page (the eye adapts to it)
@@ -379,8 +391,13 @@ export class GpuCompositor {
   private ctx: GPUCanvasContext;
   private pipe: GPURenderPipeline;
   private uni: GPUBuffer;
-  private U = new Int32Array(36);
-  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic', GPUTexture>;
+  private U = new Int32Array(40);
+  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic' | 'phCells' | 'phBg' | 'phAtlas' | 'phHd' | 'phPic', GPUTexture>;
+  /** The phone screen's picture (15.19b): its grid, cell size, pass uniform and bindings (the same pass as the notebook's). */
+  private ph = { cols: 1, rows: 1, cw: 1, ch: 1 };
+  private phUni: GPUBuffer;
+  private phBind: GPUBindGroup | null = null;
+  private phHdAll = true;
   /** The notebook screen's picture: its pass, uniform (SU) and bindings; the glass's inverse homography; the sampler. */
   private picPipe: GPURenderPipeline;
   private picUni: GPUBuffer;
@@ -434,7 +451,8 @@ export class GpuCompositor {
     this.rayPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: rm, entryPoint: 'main' } });
     this.rayUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const one = () => this.tex(1, 1);
-    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one() };
+    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one(), phCells: one(), phBg: one(), phAtlas: one(), phHd: one(), phPic: one() };
+    this.phUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const pm = dev.createShaderModule({ code: SCREEN_WGSL });
     pm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL screen ${m.lineNum}:${m.linePos} ${m.message}`)));
     this.picPipe = dev.createRenderPipeline({ layout: 'auto', vertex: { module: pm, entryPoint: 'vs' }, fragment: { module: pm, entryPoint: 'fs', targets: [{ format: 'rgba8unorm' }] }, primitive: { topology: 'triangle-list' } });
@@ -451,7 +469,18 @@ export class GpuCompositor {
     this.dev.queue.copyExternalImageToTexture({ source: cv }, { texture: t }, [cv.width, cv.height]);
     return t;
   }
-  private set(k: keyof GpuCompositor['t'], t: GPUTexture) { this.t[k].destroy(); this.t[k] = t; this.bind = null; this.picBind = null; }
+  private set(k: keyof GpuCompositor['t'], t: GPUTexture) { this.t[k].destroy(); this.t[k] = t; this.bind = null; this.picBind = null; this.phBind = null; }
+
+  /** The phone screen's grid (cols x rows cells of cw x ch pixels: its picture's size). */
+  setPhone(cols: number, rows: number, cw: number, ch: number) {
+    if (this.ph.cols === cols && this.ph.rows === rows && this.ph.cw === cw && this.ph.ch === ch) return;
+    this.ph = { cols, rows, cw, ch };
+    this.set('phCells', this.tex(cols, rows));
+    this.set('phBg', this.tex(cols, rows));
+    this.set('phAtlas', this.atlasTex(cw, ch));
+    this.set('phPic', this.tex(cols * cw, rows * ch, GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT));
+    this.phHdAll = true;
+  }
 
   /** The same as GlyphRenderer.setLayout: the world's grid and atlas, the interface's, the HD layer. */
   setLayout(l: Layout, ui: Layout) {
@@ -487,7 +516,8 @@ export class GpuCompositor {
    * clockwise, which also give its glow); phone: the phone's screen, in
    * interface cells (a fifth number: how much further and stronger it glows, the watch's LCD).
    */
-  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null) {
+  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null,
+    pic: { grid: CharGrid; hd: HdLayer; rect: readonly number[] } | null = null) {
     const L = this.ui!, gw = this.gw;
     this.up(this.t.uiCells, ui.cells, L.cols, L.rows);
     this.up(this.t.uiBg, ui.bg, L.cols, L.rows);
@@ -522,6 +552,22 @@ export class GpuCompositor {
       const x0 = L.originX + phone[0] * L.cellW, y0 = L.originY + phone[1] * L.cellH;
       this.U.set([x0, y0, x0 + phone[2] * L.cellW, y0 + phone[3] * L.cellH], 18);
     } else this.U.fill(0, 18, 22);
+    // the phone screen's picture: its cells and pixels up, its place on the glass (interface cells to pixels)
+    if (pic) {
+      const P = this.ph, th = pic.hd, r = pic.rect;
+      this.up(this.t.phCells, pic.grid.cells, P.cols, P.rows);
+      this.up(this.t.phBg, pic.grid.bg, P.cols, P.rows);
+      if (this.t.phHd.width !== th.w || this.t.phHd.height !== th.h) { this.set('phHd', this.tex(th.w, th.h)); this.phHdAll = true; }
+      if (this.phHdAll) { this.up(this.t.phHd, th.px, th.w, th.h); this.phHdAll = false; }
+      else if (th.hi >= th.lo) {
+        const y0 = Math.max(0, th.lo), y1 = Math.min(th.h - 1, th.hi);
+        this.up(this.t.phHd, th.px.subarray(y0 * th.w * 4, (y1 + 1) * th.w * 4), th.w, y1 - y0 + 1, y0);
+      }
+      th.lo = Infinity; th.hi = -1;
+      const x0 = L.originX + r[0] * L.cellW, y0 = L.originY + r[1] * L.cellH;
+      this.U.set([Math.round(x0), Math.round(y0), Math.round(x0 + r[2] * L.cellW), Math.round(y0 + r[3] * L.cellH)], 36);
+      this.dev.queue.writeBuffer(this.phUni, 0, new Int32Array([P.cw, P.ch, P.cols, P.rows, th.w, th.h, 0, 0]));
+    } else this.U.fill(0, 36, 40);
     const boost = phone?.[4] ?? 1;
     this.U[33] = Math.round(100 * boost); this.U[34] = Math.round(100 * Math.sqrt(boost));
     this.U[32] = Math.round(EYE.k * 1000);
@@ -559,7 +605,7 @@ export class GpuCompositor {
           ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmPic].map((t, k) => ({ binding: k + 2, resource: t.createView() })),
           { binding: 8, resource: this.samp }, { binding: 9, resource: { buffer: this.qiUni } },
           { binding: 10, resource: { buffer: G.glow } }, { binding: 11, resource: { buffer: this.meanBuf } },
-          { binding: 12, resource: { buffer: this.scrBuf } }],
+          { binding: 12, resource: { buffer: this.scrBuf } }, { binding: 13, resource: T.phPic.createView() }],
       });
     }
     const enc = this.dev.createCommandEncoder();
@@ -591,6 +637,15 @@ export class GpuCompositor {
         ...[this.t.tmCells, this.t.tmBg, this.t.tmAtlas, this.t.tmHd].map((t, k) => ({ binding: k + 1, resource: t.createView() }))] });
       const pp = enc.beginRenderPass({ colorAttachments: [{ view: this.t.tmPic.createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 0] }] });
       pp.setPipeline(this.picPipe); pp.setBindGroup(0, this.picBind); pp.draw(3);
+      pp.end();
+    }
+    if (pic) {
+      // the phone screen's picture, in the same pass as the notebook's
+      if (!this.phBind) this.phBind = this.dev.createBindGroup({ layout: this.picPipe.getBindGroupLayout(0), entries: [
+        { binding: 0, resource: { buffer: this.phUni } },
+        ...[this.t.phCells, this.t.phBg, this.t.phAtlas, this.t.phHd].map((t, k) => ({ binding: k + 1, resource: t.createView() }))] });
+      const pp = enc.beginRenderPass({ colorAttachments: [{ view: this.t.phPic.createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 0] }] });
+      pp.setPipeline(this.picPipe); pp.setBindGroup(0, this.phBind); pp.draw(3);
       pp.end();
     }
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
