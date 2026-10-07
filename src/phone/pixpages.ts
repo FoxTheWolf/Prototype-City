@@ -1139,3 +1139,55 @@ export function paintConvert(P: Paint, d: Convert) {
   ptext(P, M + 26 + ow, ay + 8, d.to, SOFT);
   ctext(P, Y1 - 18, d.hint, DIM);
 }
+
+/** The camera: the viewfinder as wide as the screen (what the photo will be), corner marks, the megapixels and photos left, the zoom and flash; under it the flash, shutter and zoom buttons. */
+export interface CamPage { pic: Rgb | null; ar: number; flash: boolean; info: string; mode: string; flashOn: boolean; zoom: string }
+export function paintCamera(P: Paint, d: CamPage) {
+  P.rect(0, 0, SCR_W, Y1, [0, 0, 0]);
+  const h = Math.round(SCR_W / d.ar), y = Y0 + 26;
+  if (d.pic) paintRgb(P, d.pic, 0, y, SCR_W, h);
+  // the frame's corners
+  const W2 = [255, 255, 255] as C3, a = 12, i = 8;
+  for (const [cx, cy, sx, sy] of [[i, y + i, 1, 1], [SCR_W - i, y + i, -1, 1], [i, y + h - i, 1, -1], [SCR_W - i, y + h - i, -1, -1]]) {
+    P.rect(sx > 0 ? cx : cx - a, sy > 0 ? cy : cy - 2, a, 2, W2); P.rect(sx > 0 ? cx : cx - 2, sy > 0 ? cy : cy - a, 2, a, W2);
+  }
+  ptext(P, M, Y0 + 9, d.info, W2, 1, true);
+  ptext(P, SCR_W - M - ptextW(d.mode), Y0 + 9, d.mode, d.flashOn ? [255, 220, 120] : SOFT);
+  // the buttons: the flash on the left, the shutter in the middle, the zoom on the right
+  const by = y + h + 24, cx = SCR_W >> 1;
+  HITS.push({ x: cx - 30, y: by - 4, w: 60, h: 60, key: 'ok' });
+  P.disc(cx, by + 26, 26, W2); P.disc(cx, by + 26, 22, [0, 0, 0]); P.disc(cx, by + 26, 19, W2);
+  HITS.push({ x: M, y: by + 6, w: 52, h: 40, key: 'left' });
+  P.rrect(M, by + 10, 52, 32, 6, [34, 38, 44]);
+  // a bolt
+  const fc: C3 = d.flashOn ? [255, 220, 120] : DIM, fx = M + 26, fy = by + 26;
+  P.poly([fx + 2, fy - 10, fx - 6, fy + 2, fx, fy + 2, fx - 2, fy + 10, fx + 6, fy - 2, fx, fy - 2], fc);
+  for (const [k, sym, dx] of [['down', '-', 0], ['up', '+', 28]] as const) {
+    const x = SCR_W - M - 54 + dx;
+    HITS.push({ x, y: by + 6, w: 26, h: 40, key: k });
+    P.rrect(x, by + 10, 24, 32, 6, [34, 38, 44]);
+    ptext(P, x + 12 - ptextW(sym, 2, true) / 2, by + 18, sym, INK, 2, true);
+  }
+  ctext(P, by + 62, d.zoom, DIM);
+  if (d.flash) P.rect(0, 0, SCR_W, Y1, [255, 255, 255]);
+}
+
+/** The photos taken: one at a time, as wide as the screen, arrows on its sides to step (a touch steps), when it was taken and its size under it. */
+export interface PhotosPage { title: string; count: string; col: C3; pic: Rgb | null; ar: number; date: string; kb: string; del: string; empty: string }
+export function paintPhotos(P: Paint, d: PhotosPage) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, d.count, d.col);
+  if (!d.pic) { ctext(P, 180, d.empty, DIM); return; }
+  const h = Math.round(SCR_W / d.ar), y = Y0 + 28 + Math.max(0, (Y1 - Y0 - 28 - 60 - h) >> 1);
+  paintRgb(P, d.pic, 0, y, SCR_W, h);
+  // the arrows, on dark tabs at the sides
+  for (const [k, x] of [['left', 0], ['right', SCR_W - 22]] as const) {
+    HITS.push({ x: k === 'left' ? 0 : SCR_W - 60, y, w: 60, h, key: k });
+    P.rrect(x, y + h / 2 - 18, 22, 36, 4, [0, 0, 0], 0.55);
+    const mx = x + 11, my = y + h / 2;
+    P.poly(k === 'left' ? [mx - 5, my, mx + 3, my - 7, mx + 3, my + 7] : [mx + 5, my, mx - 3, my - 7, mx - 3, my + 7], INK);
+  }
+  ptext(P, M, y + h + 12, d.date, INK, 1, true);
+  ptext(P, SCR_W - M - ptextW(d.kb), y + h + 12, d.kb, DIM);
+  ptext(P, M, y + h + 28, d.del, DIM);
+}

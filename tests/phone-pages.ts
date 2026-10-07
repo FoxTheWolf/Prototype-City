@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, paintSnake, paintConvert, wrapText } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, paintSnake, paintConvert, paintCamera, paintPhotos, wrapText } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -128,4 +128,23 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   shot('snake', (Q) => paintSnake(Q, { w: 40, h: 20, body, food: [30, 4], score: 'SCORE 6   BEST 40', over: false, gameOver: 'GAME OVER', again: 'OK to play again' }));
   shot('snake-over', (Q) => paintSnake(Q, { w: 40, h: 20, body, food: [30, 4], score: 'SCORE 6   BEST 40', over: true, gameOver: 'GAME OVER', again: 'OK to play again' }));
   shot('convert', (Q) => paintConvert(Q, { title: 'Converter', col: [40, 150, 150], what: 'Temperature', input: '72.5', from: 'F', out: '22.5', to: 'C', blink: true, hint: '0-9 type   # .   * del' }));
+}
+
+// 0.15.36: the camera and the photos
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  // a night street: dark sky, a lit window band, the road
+  const w = 128, h = 128, hd = new Uint8ClampedArray(w * h * 3);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 3, win = y > 30 && y < 80 && x % 16 < 6 && y % 12 < 6, road = y > 96;
+    const c = win ? [255, 200, 110] : road ? [50, 46, 40] : y < 30 ? [14, 18, 30] : [40, 34, 44];
+    hd[i] = c[0]; hd[i + 1] = c[1]; hd[i + 2] = c[2];
+  }
+  const pic = { hd, w, h };
+  shot('camera', (Q) => paintCamera(Q, { pic, ar: 1.2, flash: false, info: '2MP  34', mode: 'FLASH', flashOn: true, zoom: '1.6x digital' }));
+  shot('photos', (Q) => paintPhotos(Q, { title: 'Photos', count: '3/7', col: [154, 159, 168], pic, ar: 1.2, date: '14 Oct  21:04', kb: '612 KB', del: '* delete', empty: 'No photos yet' }));
 }

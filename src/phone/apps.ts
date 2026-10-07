@@ -11,20 +11,19 @@ import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
-import { BAR, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, WHITE, type C3 } from './lcd';
+import { BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
-import { expose, OPTICAL, type Photo } from './camera';
-import { type CharGrid } from '../render/grid';
+import { expose, OPTICAL, photoCols, type Photo } from './camera';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APP_COL, INK as PINK_INK, paintBank, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
+import { APP_COL, INK as PINK_INK, paintBank, paintCamera, paintPhotos, type CamPage, type PhotosPage, type Rgb, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
 import { EDGE_LIMIT_KB, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { artColors } from './hdicons';
 import { mul } from './ui';
-import { BLOCK, SHAPE } from '../render/atlas';
+import { BLOCK } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 import { compile, TRACKS } from '../audio/tracks';
 import { drawRey } from './reynard';
@@ -69,7 +68,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number): Pg 
     default:
       if (P.screen === 'code') return service(S, P, world, t, now);
       if (P.screen === 'ussd') return ussdScreen(S, P, now);
-      if (P.screen === 'photos') return photosScreen(S, P, t);
+      if (P.screen === 'photos') return photosScreen(S, P);
       if (P.screen === 'app') return appScreen(S, P, world, t, now);
       if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
       if (P.screen === 'folder') return folder(S, P, t);
@@ -316,72 +315,48 @@ function version(P: Phone, world: World): Row[] {
   return rows.map(([a, b]): Row => ({ kind: 'info', label: a, value: b }));
 }
 
-/** A picture (w x h cells) shown over the screen's rows y0..y1, scaled to fit. */
-function picture(S: Lcd, cells: Uint8ClampedArray, bg: Uint8ClampedArray, w: number, h: number, y0: number, y1: number) {
-  const rows = y1 - y0, k = Math.max(w / SW, h / rows), dw = Math.floor(w / k), dh = Math.floor(h / k), x0 = (SW - dw) >> 1, top = y0 + ((rows - dh) >> 1);
-  for (let y = 0; y < dh; y++) for (let x = 0; x < dw; x++) {
-    const i = Math.floor(y * k) * w + Math.floor(x * k), q = i * 4;
-    S.put(x0 + x, top + y, cells[q] || 32, [cells[q + 1], cells[q + 2], cells[q + 3]], [bg[q], bg[q + 1], bg[q + 2]]);
+/** A picture in blocks (each cell two pixels: its glyph's colour on top, its background below) as the painter takes it, w x 2h pixels. */
+function blockRgb(cells: Uint8ClampedArray, bg: Uint8ClampedArray, w: number, h: number): Rgb {
+  const hd = new Uint8ClampedArray(w * h * 2 * 3);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const q = (y * w + x) * 4, a = (y * 2 * w + x) * 3, b = a + w * 3;
+    for (let c = 0; c < 3; c++) { hd[a + c] = cells[q + 1 + c]; hd[b + c] = bg[q + c]; }
   }
+  return { hd, w, h: h * 2 };
 }
+/** How wide a picture of w x h cells shows for its height (the cells are tall). */
+const cellsAr = (w: number, h: number) => (w * 0.6) / h;
 
-/**
- * A photo in blocks shown on the screen's rows y0..y1: scaled down by averaging its pixels (two per
- * cell), so a big picture keeps its detail instead of skipping rows and columns.
- */
-function photoBlocks(S: Lcd, p: Photo, y0: number, y1: number) {
-  const rows = y1 - y0, pw = p.w, ph = p.h * 2;
-  const k = Math.max(pw / SW, ph / (rows * 2)), dw = Math.floor(pw / k), dh = Math.floor(ph / k / 2), x0 = (SW - dw) >> 1, top = y0 + ((rows - dh) >> 1);
-  const px = (x: number, y: number, c: number) => { const q = ((y >> 1) * pw + x) * 4; return y & 1 ? p.bg[q + c] : p.cells[q + 1 + c]; };
-  const avg = (sx0: number, sy0: number): C3 => {
-    const sx1 = Math.max(sx0 + 1, Math.floor(sx0 + k)), sy1 = Math.max(sy0 + 1, Math.floor(sy0 + k)), o = [0, 0, 0];
-    let n = 0;
-    // the root of the mean square: small bright lights (signs, lamps, windows) keep their light instead of being averaged into the dark
-    for (let y = sy0; y < sy1 && y < ph; y++) for (let x = sx0; x < sx1 && x < pw; x++) { for (let c = 0; c < 3; c++) o[c] += px(x, y, c) ** 2; n++; }
-    return [Math.sqrt(o[0] / n), Math.sqrt(o[1] / n), Math.sqrt(o[2] / n)];
-  };
-  for (let y = 0; y < dh; y++) for (let x = 0; x < dw; x++) {
-    const sx = Math.floor(x * k), a = avg(sx, Math.floor(y * 2 * k)), b = avg(sx, Math.floor((y * 2 + 1) * k));
-    S.put(x0 + x, top + y, SHAPE.top, a, b);
+let finder: Rgb | null = null, finderAt = -1, finderN = 0;
+/** The camera: the viewfinder live (15 times a second, at the photo's own size: what you see is what it takes), a white flash on a shot, how many fit in the storage. */
+function cameraScreen(S: Lcd, P: Phone, now: number): Pg {
+  const w = photoCols(P.device.cameraMP), h = Math.round(w / 2);
+  if (P.render && (now - finderAt > 1 / 15 || !finder || finder.w !== w)) {
+    const g = expose(P.render, w, h, P.light, finderN++, P.camBlocks, P.camZoom);
+    if (g) finder = blockRgb(g.cells, g.bg, w, h);
+    finderAt = now;
   }
-  if (!S.hd) return;
-  // in HD, each cell's nine pixels over it, each the mean square of the photo's pixels under it (a
-  // cell is k photo pixels wide and 2k tall, so an HD pixel is k/HD by 2k/HD of them)
-  const fw = k / HD, fh = (2 * k) / HD;
-  for (let y = 0; y < dh * HD; y++) for (let x = 0; x < dw * HD; x++) {
-    const sx0 = Math.floor(x * fw), sy0 = Math.floor(y * fh), sx1 = Math.max(sx0 + 1, Math.floor((x + 1) * fw)), sy1 = Math.max(sy0 + 1, Math.floor((y + 1) * fh));
-    let r = 0, g = 0, bl = 0, n = 0;
-    for (let yy = sy0; yy < sy1 && yy < ph; yy++) for (let xx = sx0; xx < sx1 && xx < pw; xx++) { r += px(xx, yy, 0) ** 2; g += px(xx, yy, 1) ** 2; bl += px(xx, yy, 2) ** 2; n++; }
-    if (n) S.pixel(x0 + Math.floor(x / HD), top + Math.floor(y / HD), x % HD, y % HD, Math.sqrt(r / n), Math.sqrt(g / n), Math.sqrt(bl / n));
-  }
-}
-
-let finder: CharGrid | null = null, finderAt = -1, finderN = 0;
-/** The camera: the viewfinder live (15 times a second), a white flash on a shot, how many fit in the storage. */
-function cameraScreen(S: Lcd, P: Phone, now: number) {
-  if (P.render && (now - finderAt > 1 / 15 || !finder)) { finder = expose(P.render, SW, SH - 2, P.light, finderN++, P.camBlocks, P.camZoom) ?? finder; finderAt = now; }
-  if (finder) picture(S, finder.cells, finder.bg, SW, SH - 2, 1, SH - 1);
-  if (now - P.shotAt < 0.15) for (let y = 1; y < SH - 1; y++) S.fill(y, WHITE);
-  // the frame's corners, the resolution and the photos left
-  for (const [x, y, c] of [[1, 2, '+'], [SW - 2, 2, '+'], [1, SH - 3, '+'], [SW - 2, SH - 3, '+']] as const) S.put(x, y, ch(c), WHITE, [0, 0, 0]);
   const left = Math.max(0, Math.floor(P.freeKB() / (P.device.cameraMP * 340)));
-  S.text(1, 1, ` ${P.device.cameraMP}MP  ${left} `, WHITE, [0, 0, 0]);
-  const mode = `${P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? 'D' : ''} ` : ''}${P.camFlash ? A.flashOn : A.flashOff}`;
-  S.text(SW - mode.length - 2, 1, ` ${mode} `, WHITE, [0, 0, 0]);
-  S.text(1, SH - 2, ` ${A.camKeys} `, [200, 200, 200], [0, 0, 0]);
+  const d: CamPage = { pic: finder, ar: cellsAr(w, h), flash: now - P.shotAt < 0.15, info: `${P.device.cameraMP}MP  ${left}`, mode: P.camFlash ? A.flashOn : A.flashOff, flashOn: P.camFlash,
+    zoom: P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? ' digital' : ''}` : '' };
   softKeys(S, `${A.photos} (${P.photos.length})`, T.back);
-  S.text((SW - A.shoot.length) >> 1, SH - 1, A.shoot, HI, BAR);
+  return (Pt) => paintCamera(Pt, d);
 }
 
+/** The pictures of the photos, made once each. */
+const photoPics = new WeakMap<Photo, Rgb>();
 /** The photos taken: one at a time, with when it was taken. */
-function photosScreen(S: Lcd, P: Phone, t: number) {
+function photosScreen(S: Lcd, P: Phone): Pg {
   const p: Photo | undefined = P.photos[P.phsel];
-  title(S, `${A.photos.toUpperCase()} ${p ? `${P.phsel + 1}/${P.photos.length}` : ''}`, t);
-  if (!p) { S.center(10, A.noPhotos, DIM, LCD); return softKeys(S, '', T.back); }
-  if (p.blocks) photoBlocks(S, p, 2, SH - 2); else picture(S, p.cells, p.bg, p.w, p.h, 2, SH - 2);
-  const c = calendar(p.at);
-  S.text(1, SH - 2, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}  ${p.kb} KB  ${A.del}`, DIM, LCD);
-  softKeys(S, '< >', T.back);
+  const d: PhotosPage = { title: A.photos, count: p ? `${P.phsel + 1}/${P.photos.length}` : '', col: APP_COL[2], pic: null, ar: 1, date: '', kb: '', del: A.del, empty: A.noPhotos };
+  if (p) {
+    let pic = photoPics.get(p);
+    if (!pic) { pic = blockRgb(p.cells, p.bg, p.w, p.h); photoPics.set(p, pic); }
+    const c = calendar(p.at);
+    Object.assign(d, { pic, ar: cellsAr(p.w, p.h), date: `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]}  ${hhmm(c.hour)}`, kb: `${p.kb} KB` });
+  }
+  softKeys(S, '', T.back);
+  return (Pt) => paintPhotos(Pt, d);
 }
 
 /** The app from the store that is open. */

@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.36 — Câmera e Fotos em pixels (2026-10-07)
+- **Câmera:** o visor ocupa a largura da tela no tamanho da própria foto (o que se vê é o que sai), com as marcas dos cantos, os megapixels e as fotos que cabem; embaixo, botões de toque para o flash (o raio acende), o disparo e o zoom (- e +).
+- **Fotos:** uma por vez, da largura da tela, com setas nos lados para passar (tocar passa), a data e o tamanho embaixo.
+
 ## 0.15.35 — Snake, Lanterna e Conversor em pixels (2026-10-07)
 - **Snake na tela verde dos celulares antigos:** pontos de 5 px, a moldura grossa, o placar no topo e um direcional de quatro setas embaixo para jogar com o toque; o GAME OVER numa caixa (tocar joga de novo).
 - **Lanterna:** a tela inteira branca, agora em pixels.
