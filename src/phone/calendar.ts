@@ -7,7 +7,9 @@ import { expand, rngOf, type Grammar } from '../locale/gen';
 import { TEXT } from '../locale/text';
 import CALLS from '../locale/calls.json';
 import en from '../locale/en.json';
-import { ch, type C3, type Lcd, SH, softKeys, SW, typeHint } from './lcd';
+import { type Lcd, softKeys } from './lcd';
+import { edHint, paintCalDay, paintCalMonth, paintCalNew, type CalDay, type CalDayPage } from './pixpages';
+import { type Paint } from '../render/paint2d';
 import { type Key, type Phone } from './phone';
 import { Editor } from './textinput';
 
@@ -20,8 +22,6 @@ import { Editor } from './textinput';
  * reminder (typed like a text, then its time) rings when its time comes, with a note in the inbox.
  */
 const T = en.phone.cal;
-const PAPER: C3 = [246, 245, 240], INK: C3 = [30, 30, 34], DIM: C3 = [130, 130, 140], RED: C3 = [200, 40, 46], BAR2: C3 = [168, 28, 34];
-const SEL: C3 = [40, 70, 130], GRID: C3 = [222, 220, 212], BLUE: C3 = [40, 90, 170];
 const DAY = 86400;
 const MONTHS = T.months, WEEK = T.week;
 
@@ -129,90 +129,67 @@ function sunTimes(t: number): [number, number] {
 const hm = (h: number) => `${((Math.floor(h) + 11) % 12) + 1}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 const wx = newWeather();
 
-export function drawCalendar(S: Lcd, P: Phone, world: World, now: number) {
+/** The calendar, painted in pixels by pixpages.ts: the month, a day open, a new reminder. */
+export function drawCalendar(S: Lcd, P: Phone, world: World, now: number): (Pt: Paint) => void {
   const C = P.cal;
-  for (let y = 1; y < SH - 1; y++) S.fill(y, PAPER);
   if (C.view === 'month') return month(S, P, world);
   if (C.view === 'day') return dayPage(S, P, world);
   return newReminder(S, P, now);
 }
 
-function month(S: Lcd, P: Phone, world: World) {
-  const C = P.cal, today = calendar(world.time);
-  S.fill(1, RED); S.fill(2, BAR2);
-  const title = `${MONTHS[C.m - 1].toUpperCase()} ${C.y}`;
-  S.text(1, 1, '<', [255, 210, 210], RED); S.text(SW - 2, 1, '>', [255, 210, 210], RED);
-  S.center(1, title, [255, 255, 255], RED);
-  WEEK.forEach((w, k) => S.text(k * 6 + 2, 2, w, [255, 220, 220], BAR2));
-  const first = weekday(C.y, C.m, 1), n = dim(C.y, C.m);
+function month(S: Lcd, P: Phone, world: World): (Pt: Paint) => void {
+  const C = P.cal, today = calendar(world.time), first = weekday(C.y, C.m, 1), n = dim(C.y, C.m);
+  const days: CalDay[] = [];
   for (let d = 1; d <= n; d++) {
-    const cell = first + d - 1, col = cell % 7, row = Math.floor(cell / 7), x = col * 6, y = 4 + row * 2;
-    const isToday = today.year === C.y && today.month === C.m && today.day === d, sel = d === C.d;
-    const hol = holidays(world, C.y, C.m, d).length > 0, t0 = dateT(C.y, C.m, d);
-    const rem = C.reminders.some((r) => r.at >= t0 && r.at < t0 + DAY), ev = hash3(world.seed, Math.floor(t0 / DAY), 0xe7) < 0.35;
-    const bg: C3 = isToday ? RED : sel ? SEL : PAPER, fg: C3 = isToday || sel ? [255, 255, 255] : hol || col === 0 ? RED : INK;
-    for (let k = 0; k < 5; k++) S.put(x + k, y, 32, bg, bg);
-    S.text(x + 1, y, String(d).padStart(2), fg, bg);
-    if (rem) S.put(x + 3, y, ch('.'), isToday || sel ? [255, 255, 255] : BLUE, bg);
-    if (ev) S.put(x + 4, y, ch('*'), isToday ? [255, 230, 150] : [200, 150, 40], bg);
-    if (sel && isToday) { S.put(x, y, ch('['), [255, 255, 255], bg); S.put(x + 4, y, ch(']'), [255, 255, 255], bg); }
+    const cell = first + d - 1, t0 = dateT(C.y, C.m, d);
+    days.push({ d, col: cell % 7, row: Math.floor(cell / 7), today: today.year === C.y && today.month === C.m && today.day === d, sel: d === C.d,
+      red: holidays(world, C.y, C.m, d).length > 0 || cell % 7 === 0, rem: C.reminders.some((r) => r.at >= t0 && r.at < t0 + DAY), ev: hash3(world.seed, Math.floor(t0 / DAY), 0xe7) < 0.35, pre: () => { C.d = d; } });
   }
   // what the picked day has, in brief
-  const t0 = dateT(C.y, C.m, C.d), hol = holidays(world, C.y, C.m, C.d);
-  for (let x = 0; x < SW; x++) S.put(x, 17, ch('-'), GRID, PAPER);
-  const ph = en.phone.apps.wx.phases[Math.round(moonPhase(t0 + DAY / 2) * 8) % 8];
-  S.text(1, 18, `${WEEK[weekday(C.y, C.m, C.d)]} ${MONTHS[C.m - 1]} ${C.d}`, INK, PAPER);
-  S.text(SW - ph.length - 1, 18, ph, DIM, PAPER);
-  const lines = [...hol.map((h) => [h, RED] as const), ...events(world, t0).slice(0, 3).map((e) => [`* ${e}`, INK] as const)];
-  lines.slice(0, 5).forEach(([l, col], k) => S.text(1, 19 + k, l.slice(0, SW - 2), col, PAPER));
+  const t0 = dateT(C.y, C.m, C.d);
+  const lines = [...holidays(world, C.y, C.m, C.d).map((h) => ({ text: h, red: true })), ...events(world, t0).slice(0, 3).map((e) => ({ text: `* ${e}`, red: false }))];
   softKeys(S, T.open, en.phone.back);
-  S.text((SW - T.hint.length) >> 1, SH - 1, T.hint, [150, 160, 180], [28, 62, 82]);
+  const d = { title: `${MONTHS[C.m - 1].toUpperCase()} ${C.y}`, week: WEEK, days, date: `${WEEK[weekday(C.y, C.m, C.d)]} ${MONTHS[C.m - 1]} ${C.d}`,
+    moon: en.phone.apps.wx.phases[Math.round(moonPhase(t0 + DAY / 2) * 8) % 8], lines, hint: T.hint };
+  return (Pt) => paintCalMonth(Pt, d);
 }
 
-function dayPage(S: Lcd, P: Phone, world: World) {
+function dayPage(S: Lcd, P: Phone, world: World): (Pt: Paint) => void {
   const C = P.cal, t0 = dateT(C.y, C.m, C.d);
-  S.fill(1, RED); S.fill(2, BAR2);
-  S.center(1, `${WEEK[weekday(C.y, C.m, C.d)].toUpperCase()} ${MONTHS[C.m - 1].toUpperCase()} ${C.d}, ${C.y}`, [255, 255, 255], RED);
-  const rows: [string, C3][] = [];
-  for (const h of holidays(world, C.y, C.m, C.d)) rows.push([h, RED]);
+  const rows: CalDayPage['lines'] = [];
+  const add = (text: string, col: CalDayPage['lines'][number]['col'] = 'ink', head = false) => rows.push({ text, col, head });
+  for (const h of holidays(world, C.y, C.m, C.d)) add(h, 'red');
   const [rise, set] = sunTimes(t0);
-  rows.push([`${T.sunrise} ${hm(rise)}   ${T.sunset} ${hm(set)}`, INK]);
-  rows.push([`${T.moon} ${en.phone.apps.wx.phases[Math.round(moonPhase(t0 + DAY / 2) * 8) % 8]}`, INK]);
+  add(`${T.sunrise} ${hm(rise)}   ${T.sunset} ${hm(set)}`);
+  add(`${T.moon} ${en.phone.apps.wx.phases[Math.round(moonPhase(t0 + DAY / 2) * 8) % 8]}`);
   // the forecast, while the day is near enough for it to mean something
   if (t0 + DAY > world.time && t0 < world.time + 3 * DAY) {
     forecast(world.seed, Math.max(world.time, t0 + 14 * 3600), wx);
     const temp = P.prefs.temp ? `${Math.round(wx.temp)}°C` : `${Math.round(wx.temp * 1.8 + 32)}°F`;
     const sky = wx.precip > 0.05 ? (wx.snow ? T.snow : T.rain) : wx.cloud > 0.6 ? T.cloudy : T.clear;
-    rows.push([`${T.forecast} ${sky}, ${temp}`, BLUE]);
+    add(`${T.forecast} ${sky}, ${temp}`, 'blue');
   }
-  rows.push(['', INK]);
-  rows.push([T.reminders, RED]);
+  add('');
+  add(T.reminders, 'red', true);
   const rems = C.reminders.filter((r) => r.at >= t0 && r.at < t0 + DAY).sort((a, b) => a.at - b.at);
-  if (!rems.length) rows.push([T.noReminders, DIM]);
-  for (const r of rems) rows.push([`${hm((r.at - t0) / 3600).padStart(8)}  ${r.text}`, r.done ? DIM : INK]);
-  rows.push(['', INK]);
-  rows.push([T.inCity, RED]);
-  for (const e of events(world, t0)) rows.push([`* ${e}`, INK]);
-  const wrapped: [string, C3][] = [];
-  for (const [l, c] of rows) { let s = l; do { wrapped.push([s.slice(0, SW - 2), c]); s = s.slice(SW - 2); } while (s.length); }
-  C.scroll = Math.max(0, Math.min(C.scroll, wrapped.length - (SH - 5)));
-  wrapped.slice(C.scroll, C.scroll + SH - 5).forEach(([l, c], k) => S.text(1, 4 + k, l, c, PAPER));
+  if (!rems.length) add(T.noReminders, 'dim');
+  for (const r of rems) add(`${hm((r.at - t0) / 3600)}  ${r.text}`, r.done ? 'dim' : 'ink');
+  add('');
+  add(T.inCity, 'red', true);
+  for (const e of events(world, t0)) add(`* ${e}`);
+  C.scroll = Math.max(0, Math.min(C.scroll, rows.length + 4));
   softKeys(S, T.add, en.phone.back);
+  const d = { title: `${WEEK[weekday(C.y, C.m, C.d)].toUpperCase()} ${MONTHS[C.m - 1].toUpperCase()} ${C.d}, ${C.y}`, lines: rows, scroll: C.scroll };
+  return (Pt) => paintCalDay(Pt, d);
 }
 
-function newReminder(S: Lcd, P: Phone, now: number) {
-  const C = P.cal, blink = Math.floor(now * 2) & 1;
-  S.fill(1, RED); S.fill(2, BAR2);
-  S.center(1, `${T.newReminder} - ${MONTHS[C.m - 1]} ${C.d}`, [255, 255, 255], RED);
-  S.text(1, 4, T.what, C.step === 0 ? RED : DIM, PAPER);
-  const txt = C.ed.value();
-  S.text(1, 5, (txt + (C.step === 0 && blink ? '_' : '')).slice(-(SW - 2)), INK, PAPER);
-  for (let x = 1; x < SW - 1; x++) S.put(x, 6, ch('_'), GRID, PAPER);
-  S.text(1, 8, T.when, C.step === 1 ? RED : DIM, PAPER);
-  const tm = C.time.padEnd(4, '-');
-  S.text(1, 9, `${tm.slice(0, 2)}:${tm.slice(2)}${C.step === 1 && blink ? '_' : ''}  ${T.hhmm}`, INK, PAPER);
-  if (C.step === 0) typeHint(S, 1, SH - 3, C.ed, now, `${C.ed.label()}  ${T.next}`, DIM, PAPER); else S.text(1, SH - 3, T.timeHint, DIM, PAPER);
+function newReminder(S: Lcd, P: Phone, now: number): (Pt: Paint) => void {
+  const C = P.cal, txt = C.ed.value(), tm = C.time.padEnd(4, '-');
   softKeys(S, txt && C.time.length === 4 ? T.save : '', en.phone.back);
+  const d = { title: `${T.newReminder} - ${MONTHS[C.m - 1]} ${C.d}`, whatLabel: T.what, what: txt, whenLabel: T.when, when: `${tm.slice(0, 2)}:${tm.slice(2)}  ${T.hhmm}`, step: C.step,
+    blink: (Math.floor(now * 2) & 1) === 1, hint: C.step === 0 ? edHint(C.ed, now, `${C.ed.label()}  ${T.next}`) : T.timeHint,
+    goWhat: () => { C.step = 0; }, goWhen: () => { C.step = 1; } };
+  return (Pt) => paintCalNew(Pt, d);
 }
 
 /** The calendar's keys; false when one does nothing. */

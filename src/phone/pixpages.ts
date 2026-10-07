@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { moonPhase, sunDir } from '../sim/clock';
-import { Paint, type C3 } from '../render/paint2d';
+import { Paint, star, type C3 } from '../render/paint2d';
 import { FOOT_H, ICE, ptext, ptextW, SCR_H, SCR_W, STATUS_H } from './pixui';
 import { type Key, type Phone } from './phone';
 import { faceOf } from './ui';
@@ -679,4 +679,75 @@ export function paintWeather(P: Paint, d: Weather) {
   });
   ptext(P, M, Y1 - 16, d.moon, SO);
   ptext(P, SCR_W - M - ptextW(d.updated), Y1 - 16, d.updated, SO);
+}
+
+/** The calendar's paper, red bars and inks (the organizer of a 2008 phone). */
+const CAL = { paper: [246, 245, 240] as C3, ink: [30, 30, 34] as C3, dim: [130, 130, 140] as C3, red: [200, 40, 46] as C3, bar2: [168, 28, 34] as C3, sel: [40, 70, 130] as C3, grid: [222, 220, 212] as C3, blue: [40, 90, 170] as C3 };
+/** The calendar's red header: the title, and on the month its two arrows (touched: the month before, the next). */
+function calHeader(P: Paint, title: string, arrows: boolean) {
+  P.grad(0, Y0, SCR_W, 28, [[0, [214, 50, 56]], [1, CAL.red]]);
+  ctext(P, Y0 + 10, title, [255, 255, 255], 1, true);
+  if (!arrows) return;
+  const c: C3 = [255, 210, 210];
+  P.poly([M, Y0 + 14, M + 6, Y0 + 9, M + 6, Y0 + 19], c); P.poly([SCR_W - M, Y0 + 14, SCR_W - M - 6, Y0 + 9, SCR_W - M - 6, Y0 + 19], c);
+  HITS.push({ x: 0, y: Y0, w: 40, h: 28, key: '*' }, { x: SCR_W - 40, y: Y0, w: 40, h: 28, key: '#' }, { x: 40, y: Y0, w: SCR_W - 80, h: 28, key: '0' });
+}
+/** A day on the month's grid: its number, whether it is today, picked, a holiday or a Sunday, has a reminder or something on in the city. */
+export interface CalDay { d: number; col: number; row: number; today: boolean; sel: boolean; red: boolean; rem: boolean; ev: boolean; pre: () => void }
+export interface CalMonth { title: string; week: string[]; days: CalDay[]; date: string; moon: string; lines: { text: string; red: boolean }[]; hint: string }
+export function paintCalMonth(P: Paint, d: CalMonth) {
+  P.rect(0, 0, SCR_W, Y1, CAL.paper);
+  calHeader(P, d.title, true);
+  P.rect(0, Y0 + 28, SCR_W, 16, CAL.bar2);
+  const cw = Math.floor((SCR_W - 2 * 6) / 7), x0 = (SCR_W - cw * 7) >> 1, y0 = Y0 + 48, ch2 = 32;
+  d.week.forEach((w, k) => ptext(P, Math.round(x0 + k * cw + (cw - ptextW(w)) / 2), Y0 + 32, w, [255, 220, 220]));
+  for (let r = 1; r < 6; r++) P.rect(x0, y0 + r * ch2 - 1, cw * 7, 1, CAL.grid);
+  for (const D of d.days) {
+    const x = x0 + D.col * cw, y = y0 + D.row * ch2;
+    HITS.push({ x, y, w: cw, h: ch2, pre: D.pre, key: D.sel ? 'ok' : undefined });
+    if (D.today) P.rrect(x + 2, y + 2, cw - 4, ch2 - 5, 5, CAL.red);
+    else if (D.sel) P.rrect(x + 2, y + 2, cw - 4, ch2 - 5, 5, CAL.sel);
+    if (D.sel && D.today) ring(P, x + 1, y + 1, cw - 2, ch2 - 3, CAL.sel);
+    const s = String(D.d), on = D.today || D.sel;
+    ptext(P, Math.round(x + (cw - ptextW(s, 1, true)) / 2), y + 8, s, on ? [255, 255, 255] : D.red ? CAL.red : CAL.ink, 1, true);
+    // a dot for a reminder, a little star for something on
+    if (D.rem) P.disc(x + cw / 2 - (D.ev ? 4 : 0), y + 22, 2, on ? [255, 255, 255] : CAL.blue);
+    if (D.ev) P.poly(star(x + cw / 2 + (D.rem ? 4 : 0), y + 22, 3.2, 1.4, 5), on ? [255, 230, 150] : [200, 150, 40]);
+  }
+  // what the picked day has, in brief
+  const by = y0 + 6 * ch2 + 4;
+  P.rect(M, by, SCR_W - 2 * M, 1, CAL.grid);
+  ptext(P, M, by + 8, d.date, CAL.ink, 1, true);
+  ptext(P, SCR_W - M - ptextW(d.moon), by + 8, d.moon, CAL.dim);
+  d.lines.slice(0, 4).forEach((l, k) => ptext(P, M, by + 24 + k * 13, l.text.slice(0, 36), l.red ? CAL.red : CAL.ink));
+  ctext(P, Y1 - 14, d.hint, CAL.dim);
+}
+/** A day open: the lines of what is known of it (headings red and bold), scrolled. */
+export interface CalDayPage { title: string; lines: { text: string; col: 'ink' | 'red' | 'dim' | 'blue'; head: boolean }[]; scroll: number }
+export function paintCalDay(P: Paint, d: CalDayPage) {
+  P.rect(0, 0, SCR_W, Y1, CAL.paper);
+  calHeader(P, d.title, false);
+  const L = d.lines.flatMap((l) => wrapText(l.text, 36).map((t) => ({ ...l, text: t })).concat(l.text ? [] : [{ ...l, text: '' }]));
+  const fit = Math.floor((Y1 - Y0 - 44) / 14);
+  L.slice(d.scroll, d.scroll + fit).forEach((l, k) => {
+    const y = Y0 + 40 + k * 14;
+    if (l.head) { ptext(P, M, y, l.text, CAL.red, 1, true); P.rect(M + ptextW(l.text, 1, true) + 6, y + 4, SCR_W - 2 * M - ptextW(l.text, 1, true) - 6, 1, CAL.grid); }
+    else ptext(P, M, y, l.text, CAL[l.col]);
+  });
+}
+/** Writing a reminder: its words (typed like a text), then its time; the field being typed in framed in red. */
+export interface CalNew { title: string; whatLabel: string; what: string; whenLabel: string; when: string; step: number; blink: boolean; hint: TypeHint; goWhat: () => void; goWhen: () => void }
+export function paintCalNew(P: Paint, d: CalNew) {
+  P.rect(0, 0, SCR_W, Y1, CAL.paper);
+  calHeader(P, d.title, false);
+  [[d.whatLabel, d.what, d.goWhat], [d.whenLabel, d.when, d.goWhen]].forEach(([label, v, go], k) => {
+    const y = Y0 + 44 + k * 64, on = d.step === k;
+    ptext(P, M, y, label as string, on ? CAL.red : CAL.dim, 1, true);
+    P.rrect(M, y + 14, SCR_W - 2 * M, 30, 5, on ? [255, 255, 255] : [238, 236, 228]);
+    ring(P, M, y + 14, SCR_W - 2 * M, 30, on ? CAL.red : CAL.grid);
+    const s = (v as string) + (on && d.blink ? '_' : '');
+    ptext(P, M + 8, y + 25, s.slice(-34), CAL.ink, 1, true);
+    HITS.push({ x: M, y, w: SCR_W - 2 * M, h: 44, pre: go as () => void });
+  });
+  paintHint(P, Y1 - 22, d.hint, CAL.dim);
 }

@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -43,4 +43,19 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
     now: { art: wxColors('partlyNight'), temp: '54', unit: '°F', sky: 'Partly cloudy', line: 'H 60°   L 48°   wind 4 m/s' }, cards, moon: 'Moon: waxing gibbous', updated: 'updated 20:41' });
   const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
   writeFileSync('tests/.out/weather.png', png(o, 240, 432));
+}
+
+// 0.15.31: the calendar
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const days = Array.from({ length: 31 }, (_, i) => { const c = 3 + i; return { d: i + 1, col: c % 7, row: Math.floor(c / 7), today: i === 6, sel: i === 13, red: c % 7 === 0 || i === 12, rem: i === 13 || i === 20, ev: i % 4 === 1, pre: () => {} }; });
+  shot('cal-month', (Q) => paintCalMonth(Q, { title: 'OCTOBER 2008', week: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'], days, date: 'Tu Oct 14', moon: 'full moon', hint: '* # month  0 today',
+    lines: [{ text: 'Columbus Day', red: true }, { text: '* Live band at The Copper Owl', red: false }, { text: '* Sale at Halvard Hardware', red: false }] }));
+  shot('cal-day', (Q) => paintCalDay(Q, { title: 'TU OCTOBER 14, 2008', scroll: 0, lines: [{ text: 'Sunrise 7:02 am   Sunset 6:21 pm', col: 'ink', head: false }, { text: 'Moon: full moon', col: 'ink', head: false }, { text: 'Forecast: rain, 51°F', col: 'blue', head: false },
+    { text: '', col: 'ink', head: false }, { text: 'REMINDERS', col: 'red', head: true }, { text: '9:00 pm  meet at the diner', col: 'ink', head: false }, { text: '', col: 'ink', head: false }, { text: 'IN THE CITY', col: 'red', head: true }, { text: '* Live band at The Copper Owl', col: 'ink', head: false }] }));
+  shot('cal-new', (Q) => paintCalNew(Q, { title: 'New reminder - Oct 14', whatLabel: 'What', what: 'meet at the dine', whenLabel: 'When', when: '21:--  HHMM', step: 0, blink: true, hint: { chips: ['d', 'e', 'f', '3'], on: 1 }, goWhat: () => {}, goWhen: () => {} }));
 }
