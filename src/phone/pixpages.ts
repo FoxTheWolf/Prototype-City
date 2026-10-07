@@ -15,7 +15,7 @@ import { faceOf } from './ui';
 export interface Hit { x: number; y: number; w: number; h: number; key?: Key; pre?: () => void }
 export const HITS: Hit[] = [];
 /** The screens drawn in pixels: a touch off their items does nothing (on the cells' screens it is OK on the row touched). */
-export const PIXEL_SCREENS = new Set<string>(['standby', 'menu', 'calls', 'messages', 'msglist', 'msg', 'compose']);
+export const PIXEL_SCREENS = new Set<string>(['standby', 'menu', 'calls', 'messages', 'msglist', 'msg', 'compose', 'contacts', 'contact']);
 
 /** The theme (the manual's section 6). */
 export const BG: C3 = [11, 18, 25], INK: C3 = [232, 244, 255], DIM: C3 = [127, 151, 170], SOFT: C3 = [169, 188, 203];
@@ -355,11 +355,11 @@ export function paintMsgRead(P: Paint, d: MsgRead) {
 }
 
 /** Writing a message: the number on a field of its own, the text below, the field being typed in framed in ice; the typing's state at the foot. */
-export interface Compose { title: string; note: string; toLabel: string; to: string; text: string; textLabel: string; step: number; blink: boolean; hint: { chips: string[]; on: number } | string; goTo: () => void; goText: () => void }
+export interface Compose { title: string; note: string; toLabel: string; to: string; text: string; textLabel: string; step: number; blink: boolean; hint: TypeHint; goTo: () => void; goText: () => void }
 export function paintCompose(P: Paint, d: Compose) {
   P.rect(0, 0, SCR_W, Y1, BG);
   appHeader(P, d.title, d.note, [70, 170, 100]);
-  const field = (y: number, h: number, on: boolean) => { P.rrect(M, y, SCR_W - 2 * M, h, 5, on ? [22, 36, 50] : [15, 25, 34]); if (on) ring(P, M, y, SCR_W - 2 * M, h, ICE); };
+  const field = (y: number, h: number, on: boolean) => { P.rrect(M, y, SCR_W - 2 * M, h, 5, on ? [22, 36, 50] : [19, 31, 42]); ring(P, M, y, SCR_W - 2 * M, h, on ? ICE : [44, 62, 80]); };
   const fy = Y0 + 38;
   field(fy, 26, d.step === 0);
   ptext(P, M + 8, fy + 9, d.toLabel, d.step === 0 ? ICE : DIM, 1, true);
@@ -372,18 +372,53 @@ export function paintCompose(P: Paint, d: Compose) {
   if (!d.text) ptext(P, M + 8, ty + 8, d.textLabel, DIM);
   shown.forEach((l, k) => ptext(P, M + 8, ty + 8 + k * 12, l, INK));
   if (d.step === 1 && d.blink) { const last = shown[shown.length - 1] ?? ''; P.rect(M + 8 + ptextW(last) + 1, ty + 7 + Math.max(0, shown.length - 1) * 12, 2, 10, ICE); }
-  // the typing: the letters of the key being tapped (the one it is on lit), the words T9 guesses, or the keys' hint
-  const hy = Y1 - 22;
-  if (typeof d.hint === 'string') ptext(P, M, hy + 6, d.hint.slice(0, 36), DIM);
-  else {
-    const H = d.hint;
-    let x = M;
-    H.chips.forEach((c, k) => {
-      const w = ptextW(c) + 8;
-      if (x + w > SCR_W - M) return;
-      P.rrect(x, hy, w, 18, 4, k === H.on ? ICE : [22, 36, 50]);
-      ptext(P, x + 4, hy + 5, c, k === H.on ? BG : INK);
-      x += w + 4;
-    });
-  }
+  paintHint(P, Y1 - 22, d.hint);
+}
+
+/** The typing's state on a row at y: the letters of the key being tapped (the one it is on lit), the words T9 guesses, or the keys' hint. */
+export type TypeHint = { chips: string[]; on: number } | string;
+export function paintHint(P: Paint, y: number, hint: TypeHint) {
+  if (typeof hint === 'string') { ptext(P, M, y + 6, hint.slice(0, 36), DIM); return; }
+  let x = M;
+  hint.chips.forEach((c, k) => {
+    const w = ptextW(c) + 8;
+    if (x + w > SCR_W - M) return;
+    P.rrect(x, y, w, 18, 4, k === hint.on ? ICE : [22, 36, 50]);
+    ptext(P, x + 4, y + 5, c, k === hint.on ? BG : INK);
+    x += w + 4;
+  });
+}
+
+/** Contacts (the Phone's second tab): each with the picture, the name and the number; touched it is picked, touched again it is called. */
+export interface Contacts { tabs: [string, string]; toCalls: () => void; note: string; empty: string; rows: { name: string; number: string; sel: boolean; pre: () => void }[]; t: number }
+export function paintContacts(P: Paint, d: Contacts) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  tabsBar(P, d.tabs, 1, d.note, DIM, d.toCalls);
+  if (!d.rows.length) { ctext(P, 160, d.empty, DIM); return; }
+  d.rows.forEach((r, n) => {
+    const y = Y0 + 40 + n * 34;
+    HITS.push({ x: 6, y, w: SCR_W - 12, h: 30, pre: r.pre, key: r.sel ? 'ok' : undefined });
+    if (d.t < 0.04 * n) return;
+    rowMark(P, y, 30, r.sel);
+    paintFace(P, M + 2, y + 4, 22, r.name);
+    const ww = ptextW(r.number);
+    ptext(P, M + 32, y + 11, r.name.slice(0, Math.floor((SCR_W - 2 * M - 40 - ww) / 6)), INK, 1, true);
+    ptext(P, SCR_W - M - 4 - ww, y + 11, r.number, r.sel ? SOFT : DIM);
+  });
+}
+
+/** A new contact: the name (typed by multi-tap or T9), then the number; the field being typed in framed in ice. */
+export interface ContactEdit { title: string; note: string; nameLabel: string; name: string; numLabel: string; number: string; step: number; blink: boolean; hint: TypeHint; goName: () => void; goNum: () => void }
+export function paintContactEdit(P: Paint, d: ContactEdit) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, d.note, [47, 174, 90]);
+  [[d.nameLabel, d.name, d.goName], [d.numLabel, d.number, d.goNum]].forEach(([label, v, go], k) => {
+    const y = Y0 + 44 + k * 64, on = d.step === k;
+    ptext(P, M, y, label as string, on ? ICE : DIM, 1, true);
+    P.rrect(M, y + 14, SCR_W - 2 * M, 30, 5, on ? [22, 36, 50] : [19, 31, 42]);
+    ring(P, M, y + 14, SCR_W - 2 * M, 30, on ? ICE : [44, 62, 80]);
+    ptext(P, M + 8, y + 25, (v as string) + (on && d.blink ? '_' : ''), INK, 1, true);
+    HITS.push({ x: M, y, w: SCR_W - 2 * M, h: 44, pre: go as () => void });
+  });
+  paintHint(P, Y1 - 22, d.hint);
 }

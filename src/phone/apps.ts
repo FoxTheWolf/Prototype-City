@@ -90,7 +90,6 @@ function folder(S: Lcd, P: Phone, t: number) {
 
 export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
   switch (P.screen as App) {
-    case 'contacts': return contacts(S, P, t);
     case 'camera': return cameraScreen(S, P, now);
     case 'calendar': return drawCalendar(S, P, world, now);
     case 'weather': return weatherApp(S, P, world, t, now);
@@ -100,7 +99,6 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
     case 'settings': return settings(S, P, world, t);
     default:
       if (P.screen === 'code') return service(S, P, world, t, now);
-      if (P.screen === 'contact') return contactEdit(S, P, now);
       if (P.screen === 'ussd') return ussdScreen(S, P, t, now);
       if (P.screen === 'photos') return photosScreen(S, P, t);
       if (P.screen === 'app') return appScreen(S, P, world, t, now);
@@ -119,47 +117,6 @@ function wrap(s: string, w: number): string[] {
   }
   if (line) out.push(line);
   return out;
-}
-
-/** The Phone's two tabs on the title row (Calls, Contacts), the one open lit; left and right switch them. */
-function tabs(S: Lcd, x: number, on: number, fg: C3, bg: C3, hi: C3) {
-  [A.tabCalls, A.tabContacts].forEach((l, k) => {
-    const s = ` ${l} `;
-    S.text(x, 1, s, k === on ? [255, 255, 255] : mul(fg, 0.6), k === on ? hi : bg);
-    x += s.length + 1;
-  });
-}
-
-/** Contacts: an address book (cream pages, a brown cover bar, the first letter as a tab); OK calls, New adds one. */
-function contacts(S: Lcd, P: Phone, t: number) {
-  const PG: C3 = [240, 232, 212], INKC: C3 = [40, 32, 24], TAB: C3 = [170, 120, 70];
-  paint(S, PG);
-  bar(S, '', [250, 236, 210], [110, 64, 36], A.sim.replace('{n}', String(P.contacts.length)), [210, 180, 150]);
-  tabs(S, 1, 1, [250, 236, 210], [110, 64, 36], [220, 140, 60]);
-  if (!P.contacts.length) S.center(10, A.noContacts, [140, 120, 100], PG);
-  const view = Math.floor((SH - 5) / 2), top = Math.max(0, Math.min(P.csel - view + 1, P.contacts.length - view));
-  P.contacts.slice(top, top + view).forEach((c, n) => {
-    const k = top + n, sel = k === P.csel, y = 3 + n * 2, bg: C3 = sel ? [110, 64, 36] : PG;
-    for (let x = 0; x < SW; x++) S.put(x, y, 32, bg, bg);
-    S.put(0, y, ch(c.name[0]?.toUpperCase() ?? '#'), [255, 255, 255], TAB);
-    S.text(2, y, typed(c.name, t - 0.04 * n), sel ? [255, 244, 224] : INKC, bg);
-    S.text(SW - c.number.length - 1, y, c.number, sel ? [230, 200, 160] : [120, 100, 80], bg);
-    for (let x = 2; x < SW - 1; x++) S.put(x, y + 1, ch('.'), [214, 204, 180], PG);
-  });
-  softKeys(S, A.new, T.back);
-}
-
-/** A new contact: the name typed by multi-tap, then the number. */
-function contactEdit(S: Lcd, P: Phone, now: number) {
-  const E = P.edit, blink = Math.floor(now * 2) & 1;
-  title(S, `${name('contacts').toUpperCase()} +`, 1);
-  S.text(1, 4, A.name, E.step === 0 ? HI : DIM, LCD);
-  S.text(1, 5, E.name + (E.step === 0 && blink ? '_' : ''), WHITE, LCD);
-  S.text(1, 8, A.numberF, E.step === 1 ? HI : DIM, LCD);
-  S.text(1, 9, E.number + (E.step === 1 && blink ? '_' : ''), WHITE, LCD);
-  title(S, `${name('contacts').toUpperCase()} +`, 1, E.step === 0 ? P.nameEd.label() : '123');
-  if (E.step === 0) typeHint(S, 1, SH - 3, P.nameEd, now, A.modeHint, DIM, LCD); else S.text(1, SH - 3, 'v number', DIM, LCD);
-  softKeys(S, E.name && E.number ? A.save : '', (E.step === 0 ? E.name : E.number) ? A.clear : T.back);
 }
 
 /** The operator's service menu: "running" for a moment, then its text and, on a menu, the answer being typed. */

@@ -18,7 +18,7 @@ import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
-import { APP_COL, HITS, paintCall, paintCompose, paintDial, paintMenu, paintMsgHome, paintMsgList, paintMsgRead, paintStandby, paintVolume, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
+import { APP_COL, HITS, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintStandby, paintVolume, type CallPage, type Card, type TypeHint, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
@@ -279,6 +279,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
         if (P.callIn && c.state === 'ringing') softKeys(S, T.apps.answer, T.apps.end); else softKeys(S, '', c.state === 'ended' ? '' : T.apps.end);
       }
       else if (P.screen === 'calls' && !P.call) { const d = dialData(P, world, t); page = (Pt) => paintDial(Pt, d, now); softKeys(S, P.dial ? T.apps.save : '', P.dial ? T.apps.clear : T.back); }
+      else if (P.screen === 'contacts' || P.screen === 'contact') page = contactsPage(S, P, t, now);
       else if (P.screen === 'messages' || P.screen === 'msglist' || P.screen === 'msg' || P.screen === 'compose') page = msgPage(S, P, t, now);
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
@@ -583,6 +584,28 @@ function callData(P: Phone, world: World, now: number): CallPage {
   return { label: who ?? num, number: who ? num : '', state, stateCol, cost, ringingIn: ringIn, lines };
 }
 
+/** The typing's state for an editor (pixpages.ts paintHint): the key's letters while it is tapped, T9's words, or the keys' hint. */
+function edHint(ed: Phone['smsEd'], now: number, rest: string): TypeHint {
+  const tap = ed.tapping(now), G = ed.guesses();
+  return tap ? { chips: [...tap].map((c) => (c === ' ' ? '_' : c)), on: ed.tapIndex() }
+    : G.length >= 2 ? { chips: G.slice(Math.max(0, ed.guessIndex() - 3)), on: Math.min(3, ed.guessIndex()) } : rest;
+}
+
+/** Contacts and a new contact, painted in pixels (pixpages.ts); sets the footer's actions, returns the page's painter. */
+function contactsPage(S: Lcd, P: Phone, t: number, now: number): (Pt: Paint) => void {
+  const A = T.apps;
+  if (P.screen === 'contacts') {
+    const view = 9, top = Math.max(0, Math.min(P.csel - view + 1, P.contacts.length - view));
+    const rows = P.contacts.slice(top, top + view).map((c, n) => ({ name: c.name, number: c.number, sel: top + n === P.csel, pre: () => { P.csel = top + n; } }));
+    softKeys(S, A.new, T.back);
+    return (Pt) => paintContacts(Pt, { tabs: [A.tabCalls, A.tabContacts], toCalls: () => { P.dial = ''; P.open('calls', performance.now() / 1000); }, note: A.sim.replace('{n}', String(P.contacts.length)), empty: A.noContacts, rows, t });
+  }
+  const E = P.edit, title = `${(T.app as Record<string, string>).contacts} +`;
+  softKeys(S, E.name && E.number ? A.save : '', (E.step === 0 ? E.name : E.number) ? A.clear : T.back);
+  return (Pt) => paintContactEdit(Pt, { title, note: E.step === 0 ? P.nameEd.label() : '123', nameLabel: A.name, name: E.name, numLabel: A.numberF, number: E.number, step: E.step,
+    blink: (Math.floor(now * 2) & 1) === 1, hint: E.step === 0 ? edHint(P.nameEd, now, A.modeHint) : 'v number', goName: () => { E.step = 0; }, goNum: () => { E.step = 1; } });
+}
+
 /**
  * The messages' screens, painted in pixels (pixpages.ts): the boxes, a box's list, a message open, writing one.
  * Sets the footer's actions as the cells' screens did; returns the page's painter.
@@ -610,10 +633,7 @@ function msgPage(S: Lcd, P: Phone, t: number, now: number): (Pt: Paint) => void 
     softKeys(S, /^[0-9*#]+$/.test(who) ? A.replyK : '', T.back);
     return (Pt) => paintMsgRead(Pt, { head: `${P.box === 0 ? A.from : A.to}: ${nameOf(who)}`, when: when(at), text, mine: P.box === 1, t });
   }
-  const D = P.draft, ed = P.smsEd, tap = ed.tapping(now), G = ed.guesses();
-  const hint = tap ? { chips: [...tap].map((c) => (c === ' ' ? '_' : c)), on: ed.tapIndex() }
-    : D.step === 1 && G.length >= 2 ? { chips: G.slice(Math.max(0, ed.guessIndex() - 3)), on: Math.min(3, ed.guessIndex()) }
-    : D.step === 0 ? '* <-   v text' : A.modeHint;
+  const D = P.draft, ed = P.smsEd, hint = D.step === 0 ? '* <-   v text' : edHint(ed, now, A.modeHint);
   softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', D.step === 1 && D.text ? A.clear : T.back);
   return (Pt) => paintCompose(Pt, { title: A.newMsg, note: `${D.step === 1 ? ed.label() : '123'} ${D.text.length}/160`, toLabel: A.to, to: nameOf(D.to), text: D.text, textLabel: A.text,
     step: D.step, blink: (Math.floor(now * 2) & 1) === 1, hint, goTo: () => { D.step = 0; }, goText: () => { D.step = 1; } });

@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.27 — Contatos em pixels (2026-10-07)
+- **Contatos redesenhados:** a segunda aba do Phone, com o retrato, o nome e o número; um toque escolhe, outro liga. A aba Calls é tocável. O novo contato tem os campos Nome e Número (tocar num passa a escrever nele) e as letras da tecla em fichas.
+- Os campos de texto apagados ganharam contorno, para não sumirem no fundo.
+
 ## 0.15.26 — Mensagens em pixels (2026-10-07)
 - **Mensagens redesenhadas:** as caixas (entrada, enviadas, nova, limpar), a lista de conversas com o retrato, a hora e as primeiras palavras (as não lidas em azul-gelo com um ponto), a mensagem aberta num balão, e a tela de escrever com o campo do número e o do texto, as letras da tecla que você está tocando em fichas embaixo. Tocar escolhe; tocar num campo passa a escrever nele.
 - **Sem a faixa reta ao lado da tela:** as bordas da tela não deixam mais um pedaço reto (a faixa azul à direita e a do topo) quando o celular inclina.
