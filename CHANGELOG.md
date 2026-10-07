@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.21 — Retoques do celular de toque (2026-10-07)
+- **Ao sol, o plástico escuro aparece:** o celular preto mostra o cinza do plástico na luz forte, em vez de continuar um buraco preto.
+- **Clicar no corpo do celular não avança mais:** fora do celular o clique continua sendo OK; sobre a tela, a carcaça ou o teclado, só a tela e as teclas respondem (errar uma tecla por pouco não faz nada).
+- **O quadradinho do botão central está no centro** (estava meio milímetro para a direita e para baixo).
+
 ## 0.15.20 — O celular de toque (2026-10-07)
 - **Celular novo, igual ao manual:** uma tela de toque bem maior e, no lugar da cruz e das teclas de função, um botão central redondo (cromado, com um anel azul-gelo) entre atender e desligar. O botão central leva à grade de apps e, na grade, volta à tela inicial (no teclado do PC, Home).
 - **Toque na tela com o mouse:** clicar num app da grade abre o app; os dois botões do rodapé da tela (Menu, Back…) são tocáveis; no resto, o toque escolhe a linha tocada. Todo toque responde com um tique do alto-falante e o item aceso em azul-gelo.

@@ -110,6 +110,15 @@ export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number
   return null;
 }
 
+/**
+ * Whether the interface cell (x, y) is on the phone's body (the music keys on top included): a click there
+ * that hits no key and not the screen is a miss and does nothing, instead of OK (playtest 2026-10-07).
+ */
+export function onBody(cols: number, rows: number, P: Phone, x: number, y: number): boolean {
+  const [ox, oy] = origin(cols, rows, P);
+  return x >= ox && x < ox + PHONE_W && y >= oy - 2 && y < rows;
+}
+
 const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
 
 /** The glint, eased over time so it does not jump from frame to frame. */

@@ -79,7 +79,8 @@ export const COL_MM = 1.4, ROW_MM = 2.275;
 /** The phone's size in cells: its width, the closed phone's rows (the upper plate), the open one's. */
 export const PHONE_W = Math.ceil(BODY_MM[0] / COL_MM), UP_ROWS = Math.ceil(BODY_MM[1] / ROW_MM), PHONE_H = UP_ROWS + Math.round(RAIL_MM / ROW_MM);
 /** The home button (manual v2): its centre, the chrome ring's outer radius, the ice ring's, the button's, the ice square's half side (mm). */
-export const HOME_MM = { x: 25.5, y: 94, chrome: 6, ice: 5.4, disc: 5, icon: 1.5 } as const;
+// x and y on a cube's centre (n + 0.5), so the disc and the square are an odd number of cubes wide and share their middle cube
+export const HOME_MM = { x: 25.5, y: 93.5, chrome: 6, ice: 5.4, disc: 5, icon: 1 } as const;
 
 /** A key's place (mm, x0, y0, x1, y1, the open phone's) and its outline: a box rounded at r, the call or end key, the home button's disc, a music key on the top edge. */
 export type KeyShape = 'box' | 'send' | 'end' | 'disc' | 'top';

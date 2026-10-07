@@ -152,7 +152,7 @@ function withKeys([lo0, up0]: [Vox, Vox], down: (k: Key) => boolean, ids: Map<nu
     if (icon) icon.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') at(cx - row.length / 2 + i, cy - icon.length / 2 + j, K.k === 'send' ? P.Send : P.End); }));
     if (K.k === 'home') {
       const s = HOME_MM.icon;
-      for (let Y = -s; Y <= s; Y++) for (let X = -s; X <= s; X++) if (Math.max(Math.abs(X), Math.abs(Y)) > s - 1) at(HOME_MM.x + X, HOME_MM.y + Y, P.Ice);
+      for (let Y = -s; Y <= s; Y++) for (let X = -s; X <= s; X++) if (Math.max(Math.abs(X), Math.abs(Y)) === s) at(HOME_MM.x + X, HOME_MM.y + Y, P.Ice);
     }
   });
   return [lo, up];

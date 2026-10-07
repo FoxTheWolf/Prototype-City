@@ -1,6 +1,6 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, keyAt, mapView, onDial, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { drawPhone, keyAt, mapView, onBody, onDial, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BODY_GPU } from './phone/body3d';
 import { CONTENT_Y0, CONTENT_Y1, FOOT_L, FOOT_R, PHONE_PX, SCR_H, SCR_W, tapFlash } from './phone/pixui';
 import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
@@ -584,7 +584,8 @@ addEventListener('mousedown', (e) => {
   if (phone.out) {
     if (e.button === 0) {
       const [x, y] = cellAtClient(e.clientX, e.clientY);
-      if (!phoneTouch(e.clientX, e.clientY)) phonePress(keyAt(ui.cols, ui.rows, phone, x, y) ?? 'ok');
+      // off the phone a click is OK; on its body only its keys and its screen take one (a key just missed does nothing)
+      if (!phoneTouch(e.clientX, e.clientY)) { const k = keyAt(ui.cols, ui.rows, phone, x, y); if (k) phonePress(k); else if (!onBody(ui.cols, ui.rows, phone, x, y)) phonePress('ok'); }
     } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
