@@ -1,6 +1,6 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, keyAt, mapView, onBody, onDial, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { drawPhone, mapView, onDial, pickPhone, screenUv, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BODY_GPU } from './phone/body3d';
 import { CONTENT_Y0, CONTENT_Y1, FOOT_L, FOOT_R, PHONE_PX, SCR_H, SCR_W, tapFlash } from './phone/pixui';
 import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
@@ -451,10 +451,15 @@ addEventListener('wheel', (e) => {
     else laptop.scroll(-Math.sign(e.deltaY) * 3);
     return;
   }
-  if (!phone.out || !e.deltaY) return;
-  const d = Math.sign(e.deltaY);
-  if (phone.screen === 'map') { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
-  phonePress(phone.screen === 'menu' ? (d > 0 ? 'right' : 'left') : d > 0 ? 'down' : 'up');
+  if (!e.deltaY) return;
+  // the wheel is the phone's volume (its rocker on the side; the screen is touched now): in the hand, and with
+  // music playing also in the pocket. On the map, with the cursor on the glass, it zooms
+  const d = Math.sign(e.deltaY), vk: Key = d < 0 ? 'vup' : 'vdown';
+  if (phone.out) {
+    const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, g = screenUv((e.clientX - r.left) * dpr - uiLayout.originX, (e.clientY - r.top) * dpr - uiLayout.originY, uiLayout.cellW, uiLayout.cellH);
+    if (phone.screen === 'map' && g && g[0] >= 0 && g[1] >= 0 && g[0] < 1 && g[1] < 1) { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
+    phonePress(vk);
+  } else if (phone.tn.playing && running && !paused && !payphone.active && !bagView.open && !talkView.open) musicKey(vk);
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
 let rightAt = -1, rightMoved = 0;
@@ -488,7 +493,9 @@ let lapDrag = false;
 function phoneTouch(cx: number, cy: number): boolean {
   const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout, F = PHONE_PIC.full;
   if (!PHONE_PIC.on || phone.screen === 'off' || phone.screen === 'boot') return false;
-  const sx = ((((cx - r.left) * dpr - L.originX) / L.cellW - F[0]) / F[2]) * SCR_W, sy = ((((cy - r.top) * dpr - L.originY) / L.cellH - F[1]) / F[3]) * SCR_H;
+  // on the glass as it leans with the body (the picture is laid by the same ray), else on its upright rectangle
+  const px = (cx - r.left) * dpr - L.originX, py = (cy - r.top) * dpr - L.originY, g = screenUv(px, py, L.cellW, L.cellH);
+  const sx = (g ? g[0] : (px / L.cellW - F[0]) / F[2]) * SCR_W, sy = (g ? g[1] : (py / L.cellH - F[1]) / F[3]) * SCR_H;
   if (sx < 0 || sy < 0 || sx >= SCR_W || sy >= SCR_H) return false;
   const now = performance.now() / 1000;
   if (sy >= FOOT_L.y) {
@@ -513,6 +520,15 @@ function cellAtClient(cx: number, cy: number): [number, number] {
   const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
   return [Math.floor(((cx - r.left) * dpr - L.originX) / L.cellW), Math.floor(((cy - r.top) * dpr - L.originY) / L.cellH)];
 }
+/** What of the phone is under the system cursor (a key, 'body' for the rest of it, null off it), by the body's own ray. */
+function phoneAt(cx: number, cy: number): Key | 'body' | null {
+  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout;
+  return pickPhone(ui.cols, ui.rows, phone, (cx - r.left) * dpr - L.originX, (cy - r.top) * dpr - L.originY, L.cellW, L.cellH);
+}
+/** The phone's key under the system cursor, if any. */
+const phoneKeyAt = (cx: number, cy: number): Key | null => { const k = phoneAt(cx, cy); return k === 'body' ? null : k; };
+/** The system cursor's last place (client pixels), for the keys' hover. */
+let cursorX = -1, cursorY = -1;
 /** The notebook terminal's cell under the system cursor, or null off the screen (15.7). Works head-on, when screenAt is set. */
 function laptopCell(cx: number, cy: number): [number, number] | null {
   if (!screenAt || !scrTermW || !scrTermH) return null;
@@ -522,7 +538,7 @@ function laptopCell(cx: number, cy: number): [number, number] | null {
   return tc >= 0 && tr >= 0 && tc < TERM_W && tr < TERM_H ? [tc, tr] : null;
 }
 addEventListener('mousemove', (e) => {
-  [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY);
+  [phone.cx, phone.cy] = cellAtClient(e.clientX, e.clientY); cursorX = e.clientX; cursorY = e.clientY;
   if (lapDrag && laptop.shell.wm) { const cell = laptopCell(e.clientX, e.clientY); if (cell) laptop.shell.wm.drag(cell[0], cell[1]); }
 });
 /** A payphone's key pressed: its sound, and the payphone. */
@@ -544,7 +560,7 @@ addEventListener('mousedown', (e) => {
   if (watchClick(e)) return;
   // Alt held with the phone in the pocket: its music keys on top, just out of it, take a click
   if (e.button === 0 && altFree && !phone.out && !laptop.open) {
-    const [x, y] = cellAtClient(e.clientX, e.clientY), k = keyAt(ui.cols, ui.rows, phone, x, y);
+    const k = phoneKeyAt(e.clientX, e.clientY);
     if (k) { phonePress(k); return; }
   }
   if (laptop.open) {
@@ -554,7 +570,7 @@ addEventListener('mousedown', (e) => {
     // the phone stays usable by the mouse over the notebook (a call coming in, or taken out before):
     // a click on one of its keys presses it, and takes it into the hand if it was only up for the call
     if (e.button === 0 && phone.raise > 0.5) {
-      const [x, y] = cellAtClient(e.clientX, e.clientY), k = keyAt(ui.cols, ui.rows, phone, x, y);
+      const k = phoneKeyAt(e.clientX, e.clientY);
       if (k) { if (!phone.out) phone.out = true; phonePress(k); return; }
     }
     // the notebook's power button
@@ -583,9 +599,8 @@ addEventListener('mousedown', (e) => {
   }
   if (phone.out) {
     if (e.button === 0) {
-      const [x, y] = cellAtClient(e.clientX, e.clientY);
       // off the phone a click is OK; on its body only its keys and its screen take one (a key just missed does nothing)
-      if (!phoneTouch(e.clientX, e.clientY)) { const k = keyAt(ui.cols, ui.rows, phone, x, y); if (k) phonePress(k); else if (!onBody(ui.cols, ui.rows, phone, x, y)) phonePress('ok'); }
+      if (!phoneTouch(e.clientX, e.clientY)) { const k = phoneAt(e.clientX, e.clientY); if (k === null) phonePress('ok'); else if (k !== 'body') phonePress(k); }
     } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
@@ -1359,7 +1374,7 @@ function frame(now: number) {
     const TU = en.phone.apps.tunes, s = ` ${phone.tn.cur >= 0 ? TU.altMusic : TU.altFree} `;
     ui.text(ui.cols - s.length - 2, ui.rows - 2, s, [150, 130, 100], [16, 13, 9]);
   }
-  phone.hover = phone.out || (laptop.open && phone.raise > 0.5) || phone.handy > 0.5 ? keyAt(ui.cols, ui.rows, phone, phone.cx, phone.cy) : null;
+  phone.hover = phone.out || (laptop.open && phone.raise > 0.5) || phone.handy > 0.5 ? phoneKeyAt(cursorX, cursorY) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
   watch.update(dt, world.time, now / 1000, world.player.inside >= 0 ? 21 : world.weather.temp);
   for (const f of watch.sfx) {

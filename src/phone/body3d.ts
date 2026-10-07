@@ -1,4 +1,4 @@
-import { voxAxes, Vox, type VoxLight, type VoxMat } from '../render/voxels';
+import { castVox, voxAxes, Vox, type VoxLight, type VoxMat } from '../render/voxels';
 import { BODY_U_FLOATS } from '../render/gpu/voxBody';
 import { BEZEL_MM, BODY_MM, CORNER_MM, HOME_MM, KEY_LEGEND, KEYS_MM, RAIL_MM, SCREEN_MM, type Case, type KeyMm, type Shell } from './shells';
 import { hash3 } from '../core/rng';
@@ -30,6 +30,8 @@ const PITCH = 0.16, YAW = -0.05;
 /** Palette indices. */
 const enum P { Plate = 1, Low, LowGrain, Rim, RimHome, RimVol, Bezel, Glass, Slot, Lens, Ice, Send, End, Case, CaseAlt, Glitter, Jack }
 const KEY0 = 32;
+/** The glass's palette index: the compositor lays the screen's picture where the body's ray meets it (so it leans with the body). */
+export const GLASS_MAT: number = P.Glass;
 /** The manual's colors (section 4). */
 const GRAPHITE: C3 = [43, 45, 49], CAP: C3 = [28, 30, 34], FRONT_CAP: C3 = [22, 24, 28], ICE: C3 = [143, 211, 255], ICE_OFF: C3 = [59, 111, 143];
 const CALL: C3 = [47, 174, 90], END: C3 = [210, 58, 46], BEZEL: C3 = [5, 6, 7], HOME: C3 = [30, 32, 37];
@@ -252,7 +254,7 @@ export function drawBody3d(kx: number, ky: number, S: Shell, look: number, body:
   // the palette
   const plate: C3 = S.face ?? S.body ?? body, gloss = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05 }[S.material];
   const U = B.uni, pal = (i: number, m: VoxMat, mul = 1) => {
-    const o = 36 + i * 8;
+    const o = 40 + i * 8;
     U[o] = m.col[0]; U[o + 1] = m.col[1]; U[o + 2] = m.col[2]; U[o + 3] = m.gloss;
     U[o + 4] = (m.metal ? 1 : 0) | (m.glow ? 2 : 0) | (m.chrome ? 4 : 0); U[o + 5] = m.chrome?.[0] ?? 0; U[o + 6] = m.chrome?.[1] ?? 0; U[o + 7] = mul;
   };
@@ -295,9 +297,48 @@ export function drawBody3d(kx: number, ky: number, S: Shell, look: number, body:
   U.set([B.w, B.h, DK, 0.68 + L.lat * 0.44, L.rgb[0], L.rgb[1], L.rgb[2], L.lat, L.glint[0], L.glint[1], L.glint[2], L.str], 16);
   const ice = on ? ICE : ICE_OFF, bc = brand?.col ?? [0, 0, 0];
   U.set([ice[0], ice[1], ice[2], on ? 1 : 0, bc[0], bc[1], bc[2], 0], 28);
+  // the glass's cells (model cells: x0, y0, width, height): those whose centre is on SCREEN_MM, as base() lays them
+  const [s0, t0, s1, t1] = SCREEN_MM, g = (v: number) => Math.ceil(v + OFF - 0.5);
+  U.set([g(s0), g(t0), g(s1) - g(s0), g(t1) - g(t0)], 36);
+  VIEW.kx = kx; VIEW.ky = ky; VIEW.yaw = yaw; VIEW.pitch = pitch; VIEW.rail = Math.round(railPx);
   void look;
   return B;
 }
 
+/** The last frame's view of the body, for the picks. */
+const VIEW = { kx: 0, ky: 0, yaw: 0, pitch: 0, rail: 0 };
+/**
+ * What the body shows at pixel (i, j) of its rectangle (as the GPU casts it: the upper plate, then the lower
+ * one drawn down by the rail): a key, 'body' for the rest of it, or null off it. The keys' hit areas are
+ * so exactly what is drawn, leaning and swaying with it.
+ */
+export function pickBody(i: number, j: number): Key | 'body' | null {
+  if (!models || !VIEW.kx) return null;
+  const sx = 1 / VIEW.kx, sy = 1 / VIEW.ky, at = (V: Vox, jj: number) => castVox(V, { w: 1, h: 1, sx, sy, yaw: VIEW.yaw, pitch: VIEW.pitch, x0: i * sx, y0: jj * sy });
+  let G = at(models.V[1], j);
+  if (!G.mat[0]) G = at(models.V[0], j - VIEW.rail);
+  const m = G.mat[0];
+  if (!m) return null;
+  const k = models.ids.get(m);
+  if (k) return k;
+  // the marks on the keys (the handsets, the home button's square and ring) are the key under them
+  const X = mm(G.vx[0]), Y = mm(G.vy[0]);
+  return KEYS_MM.find((K) => (K.k === 'home' ? Math.hypot(X - HOME_MM.x, Y - HOME_MM.y) <= HOME_MM.chrome : onKey(K, X, Y)))?.k ?? 'body';
+}
+
 /** The maker's name color on a plate: its family's color for a light or a dark face. */
 export function brandColor(fam: number, plateLum: number): C3 { return FAMILIES[fam][plateLum > 130 ? 'light' : 'dark'][2] as unknown as C3; }
+
+/**
+ * Where the ray of pixel (i, j) of the body's rectangle meets the glass's plane, as the screen's u, v (0..1
+ * across it: the compositor lays the picture by the same), or null without a body drawn.
+ */
+export function glassUv(i: number, j: number): [number, number] | null {
+  if (!VIEW.kx) return null;
+  const [R, D, d] = voxAxes(VIEW.yaw, VIEW.pitch), mx = NX / 2, my = NY / 2, mz = NZ / 2, far = NX + NY + NZ;
+  const u = (i + 0.5) / VIEW.kx - mx, v = (j + 0.5) / VIEW.ky - my;
+  const o = [mx + R[0] * u + D[0] * v - d[0] * far, my + R[1] * u + D[1] * v - d[1] * far, mz + R[2] * u + D[2] * v - d[2] * far];
+  // the glass's top face (base(): its cells one under the plate's top layer)
+  const t = (LOW + UP - 1 - o[2]) / d[2], U = BODY_GPU.uni;
+  return [(o[0] + d[0] * t - U[36]) / U[38], (o[1] + d[1] * t - U[37]) / U[39]];
+}

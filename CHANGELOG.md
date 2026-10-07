@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.22 — A tela inclina com o celular (2026-10-07)
+- **A tela acompanha o aparelho:** a imagem fica no vidro e inclina e balança junto com o corpo, em vez de ficar reta por cima.
+- **O brilho da tela fica por cima e sem borrões:** o bloom sai da própria imagem e inclina junto; as manchas cinzas em blocos sobre a página sumiram.
+- **As teclas acertam onde estão desenhadas:** as de música no topo (antes a área de clique ficava acima delas), atender, desligar e o botão central, mesmo com o celular inclinado.
+- **A rodinha do mouse é o volume:** com o celular na mão (no mapa, sobre a tela, ela continua dando zoom) e, com música tocando, também com ele no bolso.
+
 ## 0.15.21 — Retoques do celular de toque (2026-10-07)
 - **Ao sol, o plástico escuro aparece:** o celular preto mostra o cinza do plástico na luz forte, em vez de continuar um buraco preto.
 - **Clicar no corpo do celular não avança mais:** fora do celular o clique continua sendo OK; sobre a tela, a carcaça ou o teclado, só a tela e as teclas respondem (errar uma tecla por pouco não faz nada).

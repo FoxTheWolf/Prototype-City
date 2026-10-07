@@ -16,7 +16,7 @@ import { SHAPE } from '../render/atlas';
 import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_ROWS, type KeyRect } from './shells';
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
-import { brandColor, drawBody3d } from './body3d';
+import { BODY_GPU, brandColor, drawBody3d, glassUv, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, SCR_H } from './pixui';
 import { phoneFam } from '../render/brands';
 import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
@@ -111,12 +111,24 @@ export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number
 }
 
 /**
- * Whether the interface cell (x, y) is on the phone's body (the music keys on top included): a click there
- * that hits no key and not the screen is a miss and does nothing, instead of OK (playtest 2026-10-07).
+ * What the phone shows at a point (pixels from the interface's top-left; cw x ch pixels a cell): a key, 'body'
+ * for the rest of it (a click there that hits no key and not the screen is a miss and does nothing, instead
+ * of OK: playtest 2026-10-07), or null off it. With the body drawn in cubes, the same ray as the GPU's
+ * (body3d.ts pickBody), so the keys' hit areas are what is drawn; else the keys' cells.
  */
-export function onBody(cols: number, rows: number, P: Phone, x: number, y: number): boolean {
-  const [ox, oy] = origin(cols, rows, P);
-  return x >= ox && x < ox + PHONE_W && y >= oy - 2 && y < rows;
+export function pickPhone(cols: number, rows: number, P: Phone, px: number, py: number, cw: number, ch: number): Key | 'body' | null {
+  const B = BODY_GPU;
+  if (PHONE_BODY.on && B.w) {
+    const i = Math.floor(px - PHONE_BODY.ox * cw - B.dx), j = Math.floor(py - PHONE_BODY.oy * ch - B.dy);
+    return i >= 0 && j >= 0 && i < B.w && j < B.h ? pickBody(i, j) : null;
+  }
+  const x = Math.floor(px / cw), y = Math.floor(py / ch), [ox, oy] = origin(cols, rows, P);
+  return keyAt(cols, rows, P, x, y) ?? (x >= ox && x < ox + PHONE_W && y >= oy - 2 && y < rows ? 'body' : null);
+}
+
+/** The phone screen's u, v (0..1 across it) at a point (pixels from the interface's top-left), on the leaning glass; null without the body drawn. */
+export function screenUv(px: number, py: number, cw: number, ch: number): [number, number] | null {
+  return PHONE_BODY.on && BODY_GPU.w ? glassUv(px - PHONE_BODY.ox * cw - BODY_GPU.dx, py - PHONE_BODY.oy * ch - BODY_GPU.dy) : null;
 }
 
 const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
@@ -266,9 +278,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
     for (let c = 1; c < 4; c++) C[k + c] = roll(C[k + c] * gain);
     for (let c = 0; c < 3; c++) B[k + c] = roll(B[k + c] * gain);
-    // fingerprints: smudges on the glass that catch the scene's light (and the glint)
-    const fp = smudge(x, y) * (14 + sh * 0.6);
-    B[k] += 3 * Lr + sh * GL.r + fp * Lr; B[k + 1] += 3 * Lg + sh * GL.g + fp * Lg; B[k + 2] += 4 * Lb + sh * GL.b + fp * Lb;
+    // (no fingerprints here: drawn a cell at a time they were grey blocks over the page; the manual puts them on the plate)
+    B[k] += 3 * Lr + sh * GL.r; B[k + 1] += 3 * Lg + sh * GL.g; B[k + 2] += 4 * Lb + sh * GL.b;
     C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;
     // the pixels over this cell (a photo) under the same glass
     for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
@@ -276,7 +287,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       if (q < 0) continue;
       const X = PH.px;
       for (let c = 0; c < 3; c++) X[q + c] = roll(X[q + c] * gain);
-      X[q] += 3 * Lr + sh * GL.r + fp * Lr; X[q + 1] += 3 * Lg + sh * GL.g + fp * Lg; X[q + 2] += 4 * Lb + sh * GL.b + fp * Lb;
+      X[q] += 3 * Lr + sh * GL.r; X[q + 1] += 3 * Lg + sh * GL.g; X[q + 2] += 4 * Lb + sh * GL.b;
     }
   }
   // under the picture, the interface's cells the glass covers get the screen's colors (the GPU's glow and
@@ -927,13 +938,3 @@ function places(S: Lcd, P: Phone, world: World, t: number, now: number) {
   softKeys(S, P.psel >= 0 ? T.show : F.search, T.back);
 }
 
-/** Fingerprints on the phone's glass: a few oval smudges where a thumb goes (low and to the right), 0..1 at screen cell (x, y). */
-function smudge(x: number, y: number): number {
-  let v = 0;
-  for (let k = 0; k < 6; k++) {
-    const cx = SW * (0.35 + hash3(k, 51, 1) * 0.6), cy = SH * (0.3 + hash3(k, 51, 2) * 0.65), rx = 2 + hash3(k, 51, 3) * 3.5, ry = 1 + hash3(k, 51, 4) * 1.8;
-    const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
-    if (d < 1) v += (1 - d) * (0.5 + 0.5 * hash3(x, y, k + 60));
-  }
-  return Math.min(1, v);
-}

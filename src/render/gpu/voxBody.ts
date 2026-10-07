@@ -8,8 +8,8 @@
  * models when they change (a key sinks) and fills the uniform each frame (phone/body3d.ts).
  */
 
-/** How many floats the body's uniform holds: 9 vec4 of view and light, then the palette (2 vec4 an entry, 256 entries). */
-export const BODY_U_FLOATS = 9 * 4 + 512 * 4;
+/** How many floats the body's uniform holds: 10 vec4 of view and light, then the palette (2 vec4 an entry, 256 entries). */
+export const BODY_U_FLOATS = 10 * 4 + 512 * 4;
 
 export const BODY_WGSL = /* wgsl */ `
 struct BodyU {
@@ -22,6 +22,8 @@ struct BodyU {
   light: vec4f, glint: vec4f,
   // the legends' ice (0..255) and whether it glows; the maker's name's color (0..255)
   ice: vec4f, brand: vec4f,
+  // the glass's cells in the upper model (x0, y0, width, height): the screen's picture lies on them
+  scr: vec4f,
   // per entry: color (0..255) and gloss; flags (1 metal, 2 glow, 4 chrome), the chrome's rows (y0, y1), the light multiplier
   pal: array<vec4f, 512>,
 };

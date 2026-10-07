@@ -8,7 +8,7 @@ import type { View } from '../raycaster';
 import type { GpuWorld } from './world';
 import { EYE } from '../eye';
 import { BODY_U_FLOATS, BODY_WGSL } from './voxBody';
-import type { BodyGpu } from '../../phone/body3d';
+import { GLASS_MAT, type BodyGpu } from '../../phone/body3d';
 
 /**
  * Stage R.3: the compositor of glRenderer.ts on WebGPU, on a canvas of its own laid over the WebGL one.
@@ -137,6 +137,23 @@ fn glassUv(f: vec2f) -> vec2f {
 }
 fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0; }
 
+// the phone screen's bloom at u, v: its bright parts (the cells' picture, which carries the pages and the big clock) blurred round it
+fn phBloom(uv: vec2f) -> vec3f {
+  let pc = (vec2f(u.px0) + uv * vec2f(u.px1 - u.px0) - vec2f(u.ps0)) / vec2f(u.ps1 - u.ps0);
+  let r = vec2f(f32(${SCR_RX}), f32(${SCR_RY})) * vec2f(u.uiCell) / vec2f(u.ps1 - u.ps0);
+  var s = vec3f(0.0); var ws = 0.0;
+  for (var j = -2; j <= 2; j++) {
+    for (var i = -2; i <= 2; i++) {
+      let o = vec2f(f32(i), f32(j)) * 0.5; let w = exp(-dot(o, o) * 2.5); ws += w;
+      let q = pc + o * r;
+      if (all(q >= vec2f(0.0)) && all(q < vec2f(1.0))) {
+        let t = textureSampleLevel(phPic, tmSamp, q, 0.0).rgb;
+        s += t * smoothstep(0.3, 0.85, dot(t, vec3f(0.3, 0.5, 0.2))) * w;
+      }
+    }
+  }
+  return s / ws;
+}
 @fragment fn fs(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   let s = vec2i(pos.xy);
   var col = vec3f(0.0);
@@ -148,6 +165,8 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     col = mix(bg, rgb(w), glyphAt(atlas, i32(w & 255u), p, c, u.cell)) + glow[i].rgb * ${GLOW_K};
   }
   let q = s - u.uiOrigin; let uc = q / u.uiCell;
+  // the phone screen's u, v where this pixel sees its glass (-1 off it)
+  var phUv = vec2f(-1.0);
   if (q.x >= 0 && q.y >= 0 && uc.x < u.uiGrid.x && uc.y < u.uiGrid.y) {
     let hp = textureLoad(hd, (q * ${HD}) / u.uiCell, 0);
     if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; }
@@ -158,6 +177,8 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
       var bh = bcast(1, bq.x, bq.y);
       if (bh.mat == 0u) { bh = bcast(0, bq.x, bq.y - bu.dir.w); }
       if (bh.mat != 0u) { col = bshade(bh, bq); }
+      // on the glass: where on the screen's picture, so it leans and sways with the body
+      if (bh.mat == ${GLASS_MAT}u && u.px1.x > u.px0.x) { phUv = (bh.p.xy - bu.scr.xy) / bu.scr.zw; }
     }
     if (u.tmGrid.x > 0) {
       // the notebook's screen: its picture (a clear pixel shows what is under it; a glyph alone lies over it)
@@ -182,17 +203,15 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
       }
     }
     let ub = textureLoad(uiBg, uc, 0);
-    if (ub.a > 0.25) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
-    if (all(s >= u.ps0) && all(s < u.ps1)) {
-      // the phone's screen: its picture scaled onto the glass, and the glass's wide faint reflection in its
-      // top corner (the phone's manual: down the right side to 29%, curving to 35% on the left)
-      let uv = (vec2f(s - u.ps0) + 0.5) / vec2f(u.ps1 - u.ps0);
-      let t = textureSampleLevel(phPic, tmSamp, uv, 0.0);
-      col = mix(col, t.rgb, t.a);
-    }
-    if (all(s >= u.px0) && all(s < u.px1)) {
-      let uv = (vec2f(s - u.px0) + 0.5) / vec2f(u.px1 - u.px0);
-      let t = textureSampleLevel(phPx, tmSamp, uv, 0.0);
+    // (the interface's cells under the phone's glass only carry its light for the glow; the glass leans off them)
+    if (ub.a > 0.25 && !inPhone(s)) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
+    if (phUv.x >= 0.0) {
+      // the phone's screen: its cells' picture (the content area) and its pixel picture (the whole glass), and the
+      // glass's wide faint reflection in its top corner (the phone's manual: down the right side to 29%, curving to 35% on the left)
+      let uv = phUv;
+      let pc = (vec2f(u.px0) + uv * vec2f(u.px1 - u.px0) - vec2f(u.ps0)) / vec2f(u.ps1 - u.ps0);
+      if (all(pc >= vec2f(0.0)) && all(pc < vec2f(1.0))) { let t = textureSampleLevel(phPic, tmSamp, pc, 0.0); col = mix(col, t.rgb, t.a); }
+      let t = textureSampleLevel(phPx, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0);
       col = mix(col, t.rgb, t.a);
       let b = 1.0 - uv.x; let edge = (1.0 - b) * (1.0 - b) * 0.286 + 2.0 * b * (1.0 - b) * 0.207 + b * b * 0.35;
       if (uv.y < edge) { col += vec3f(0.05); }
@@ -202,15 +221,15 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
   // the screens' glow follows the eye (none by day, more in the dark) and is less for a bright page (the eye adapts to it)
   let ek = f32(u.eye.x) / 600.0;
   let kPh = ek * f32(max(u.eye.z, 1)) / 100.0 / (1.0 + 3.0 * dot(mean[0].rgb, vec3f(0.3, 0.5, 0.2))); let kTm = ek / (1.0 + 3.0 * dot(mean[1].rgb, vec3f(0.3, 0.5, 0.2)));
-  if (inPhone(s)) {
-    let f = (vec2f(s - u.uiOrigin) + 0.5) / vec2f(u.uiCell) - 0.5;
-    col += min(scrAt(f, 0u, u.uiGrid, (u.ph0 - u.uiOrigin) / u.uiCell, (u.ph1 - u.uiOrigin) / u.uiCell) * ${SCR_K} * kPh, vec3f(${SCR_CAP}));
+  if (phUv.x >= 0.0) {
+    // the screen's own bloom, from its picture round the same point of the glass (it leans with it, over the details)
+    col += min(phBloom(phUv) * ${SCR_K} * kPh, vec3f(${SCR_CAP}));
   } else if (inTerm(s)) {
     var f = (vec2f(s - u.tmOrigin) + 0.5) / vec2f(u.tmCell) - 0.5;
     if (u.tmShow.x == 0) { f = glassUv(vec2f(s) + 0.5) * vec2f(u.tmGrid) - 0.5; }
     col += min(scrAt(f, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm, vec3f(${SCR_CAP}));
   }
-  if (inPhone(s) || inTerm(s)) {
+  if (phUv.x >= 0.0 || inTerm(s)) {
     // the screen's glass: the frame's bright lights mirrored on it, blurred (the world's glow only, in .a),
     // seen where the screen is dark
     let mx = clamp(u.grid.x - 1 - c.x, 0, u.grid.x - 1); let my = clamp(c.y, 0, u.grid.y - 1);
@@ -221,7 +240,7 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
     let f = vec2f(s) + 0.5;
     if (u.ph1.x > u.ph0.x) {
       let q = abs(f - vec2f(u.ph0 + u.ph1) * 0.5) - vec2f(u.ph1 - u.ph0) * 0.5;
-      let g = halo(length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0), f32(u.ph1.y - u.ph0.y) * f32(max(u.eye.y, 1)) / 100.0, mean[0].rgb * kPh);
+      let g = halo(length(max(q, vec2f(0.0))), f32(u.ph1.y - u.ph0.y) * f32(max(u.eye.y, 1)) / 100.0, mean[0].rgb * kPh);
       // added alone, it is lost on what is already bright (the watch's steel case near white clips): tint that
       // toward the glow's color first, so the glow reads over the case and not behind it
       let gl = max(g.r, max(g.g, g.b));
