@@ -41,7 +41,7 @@ import { GpuWorld } from './render/gpu/world';
 import { GpuCompositor } from './render/gpu/compositor';
 import { intro, INTRO_S } from './render/intro';
 import { HD, HdLayer } from './render/hd';
-import { SCREEN_PX, testPattern } from './render/screens';
+import { painterSample, SCREEN_PX, testPattern } from './render/screens';
 import { setHd } from './phone/lcd';
 import { daylight } from './render/sky';
 import { cctvLook } from './render/cctv';
@@ -1163,7 +1163,7 @@ function frame(now: number) {
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
   ui.wipe(); hd.wipe(); termHd.wipe();
-  if (DEBUG.screenTest && laptop.open) testPattern(termHd);
+  if (DEBUG.screenTest && laptop.open) { testPattern(termHd); painterSample(termHd); }
   if (calib) calibTags.forEach((tag, k) => {
     const x = Math.round((layout.originX + k * Math.floor(grid.cols / 3) * layout.cellW - uiLayout.originX) / uiLayout.cellW) + 1;
     ui.text(Math.max(0, x), 2, ` ${tag} `, [255, 230, 160], [12, 10, 8]);

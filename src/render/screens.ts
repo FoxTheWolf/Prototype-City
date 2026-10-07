@@ -1,5 +1,6 @@
 import type { HdLayer } from './hd';
 import { HdOrder } from './hd';
+import { dark, lite, onHd, Paint, paintMap, photoOf, star } from './paint2d';
 
 /**
  * 15.16: the devices' screens as textures of their own. Each screen is drawn into a picture of its own
@@ -45,4 +46,30 @@ export function testPattern(hd: HdLayer) {
   const bars = [[255, 255, 255], [255, 255, 0], [0, 255, 255], [0, 255, 0], [255, 0, 255], [255, 0, 0], [0, 0, 255], [0, 0, 0]];
   const bw = Math.floor(w / bars.length);
   for (let y = h - 60; y < h - 20; y++) for (let x = 0; x < bars.length * bw; x++) { const c = bars[Math.floor(x / bw)]; hd.put(x, y, c[0], c[1], c[2], HdOrder.Under); }
+}
+
+/** DEBUG.screenTest, the painter's half (15.17b): a sample of the Ferret's kit, to judge it on the real glass. */
+export function painterSample(hd: HdLayer) {
+  const P = new Paint(onHd(hd, HdOrder.Over)), x = 40, y = 40, W = 560, H = 330, head: [number, number, number] = [30, 80, 160];
+  P.rrect(x + 3, y + 4, W, H, 8, [0, 0, 0], 0.35);
+  P.rrect(x, y, W, H, 8, [246, 246, 240]);
+  P.grad(x, y, W, 28, [[0, lite(head, 0.3)], [1, head]], true, 8);
+  P.rect(x, y + 20, W, 8, head);
+  P.text(x + 12, y + 7, 'FERRET KIT', 2, [255, 255, 255]);
+  // web 2.0 gloss on a button
+  P.grad(x + W - 150, y + 44, 130, 30, [[0, lite([20, 140, 60], 0.34)], [0.5, lite([20, 140, 60], 0.1)], [0.5, [20, 140, 60]], [1, dark([20, 140, 60], 0.16)]], true, 15);
+  P.text(x + W - 130, y + 52, 'CLICK!', 2, [255, 255, 255]);
+  // a photo in its white frame, with the reflection
+  const ph = photoOf(64, 40, 'store', 42);
+  P.rect(x + 18, y + 46, 168, 108, [255, 255, 255]); P.image(ph, x + 22, y + 50, 160, 100);
+  P.image(ph, x + 22, y + 152, 160, 44, 0.3, true);
+  P.image(photoOf(64, 40, 'blackout', 9), x + 200, y + 50, 160, 100);
+  P.image(paintMap(48, 30, 5), x + 200, y + 170, 160, 100);
+  P.disc(x + 280, y + 205, 7, [226, 53, 42]); P.ring(x + 280, y + 205, 7, 2, [142, 26, 18]);
+  // the NEW! burst and the rating stars
+  P.poly(star(x + 470, y + 150, 46, 35, 14), [226, 30, 30]);
+  P.text(x + 439, y + 143, 'NEW!', 2, [255, 255, 255]);
+  for (let i = 0; i < 5; i++) P.poly(star(x + 400 + i * 30, y + 240, 13, 5.5, 5), i < 4 ? [242, 181, 28] : [212, 212, 212]);
+  P.text(x + 18, y + 290, 'LOOKWISE HOO?', 3, [60, 60, 60]);
+  P.line(x + 400, y + 280, x + 540, y + 310, 3, [255, 79, 163]);
 }
