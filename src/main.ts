@@ -290,8 +290,9 @@ let layout: Layout;
 let ui: CharGrid;
 /** The HD layer: pixels at HD x the interface's grid (the phone's photos). */
 let hd: HdLayer;
-/** 15.16: the notebook screen's own pixel layer, at the screen's resolution (wiped each frame, as hd). */
+/** 15.16: the notebook screen's own pixel layer, at the screen's resolution (kept between frames; only rows painted are uploaded). */
 const termHd = new HdLayer(SCREEN_PX.laptop[0], SCREEN_PX.laptop[1]);
+let termHdTest = false;
 /**
  * The notebook's screen layer (3D look): the system's console, TERM_W x TERM_H, or the firmware's
  * text mode, 80 x 25, each with its cell size so both fill the same 16:10 screen, about two thirds of
@@ -1162,8 +1163,9 @@ function frame(now: number) {
     worldFrames++;
   }
   if (now - worldAt > 1000) { worldFps = (worldFrames * 1000) / (now - worldAt); worldFrames = 0; worldAt = now; }
-  ui.wipe(); hd.wipe(); termHd.wipe();
-  if (DEBUG.screenTest && laptop.open) { testPattern(termHd); painterSample(termHd); }
+  ui.wipe(); hd.wipe();
+  // the notebook screen's pixels are kept between frames: painted only when what they show changes
+  if (DEBUG.screenTest && !termHdTest) { termHdTest = true; testPattern(termHd); painterSample(termHd); }
   if (calib) calibTags.forEach((tag, k) => {
     const x = Math.round((layout.originX + k * Math.floor(grid.cols / 3) * layout.cellW - uiLayout.originX) / uiLayout.cellW) + 1;
     ui.text(Math.max(0, x), 2, ` ${tag} `, [255, 230, 160], [12, 10, 8]);

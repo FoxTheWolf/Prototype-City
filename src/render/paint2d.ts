@@ -74,39 +74,61 @@ export class Paint {
     for (let j = Y0; j < Y1; j++) for (let i = X0; i < X1; i++) this.dot(i, j, c, a);
   }
 
-  /** A shape by its coverage test (inside at a point), 2 x 2 samples a pixel within the box x, y, w, h. */
-  private cover(x: number, y: number, w: number, h: number, inside: (px: number, py: number) => boolean, c: C3 | ((i: number, j: number) => C3), a = 1) {
+  /** A shape by its coverage test (inside at a point), 2 x 2 samples a pixel within the box x, y, w, h (thin shapes: lines). */
+  private cover(x: number, y: number, w: number, h: number, inside: (px: number, py: number) => boolean, c: C3, a = 1) {
     const X0 = Math.floor(x), Y0 = Math.floor(y), X1 = Math.ceil(x + w), Y1 = Math.ceil(y + h);
     for (let j = Y0; j < Y1; j++) for (let i = X0; i < X1; i++) {
       const n = +inside(i + 0.25, j + 0.25) + +inside(i + 0.75, j + 0.25) + +inside(i + 0.25, j + 0.75) + +inside(i + 0.75, j + 0.75);
-      if (n) this.dot(i, j, typeof c === 'function' ? c(i, j) : c, (a * n) / 4);
+      if (n) this.dot(i, j, c, (a * n) / 4);
     }
+  }
+
+  /**
+   * A shape by its spans (the faster way, for anything with area): `cross(py)` gives the x where the
+   * shape's edge crosses the line at height py, sorted (inside between the 1st and 2nd, 3rd and 4th...);
+   * each pixel's 2 x 2 samples are counted from them. `col` gives the color (and opacity) of a pixel.
+   */
+  private spans(y0: number, y1: number, cross: (py: number) => number[], col: C3 | ((i: number, j: number) => readonly [C3, number]), a = 1) {
+    const J0 = Math.max(this.y0, Math.floor(y0)), J1 = Math.min(this.y1, Math.ceil(y1));
+    for (let j = J0; j < J1; j++) {
+      let lo = Infinity, hi = -Infinity;
+      const xs = [cross(j + 0.25), cross(j + 0.75)];
+      for (const X of xs) if (X.length) { lo = Math.min(lo, X[0]); hi = Math.max(hi, X[X.length - 1]); }
+      if (lo > hi) continue;
+      const I0 = Math.max(this.x0, Math.floor(lo)), I1 = Math.min(this.x1, Math.ceil(hi));
+      if (I1 <= I0) continue;
+      const n = new Uint8Array(I1 - I0);
+      for (const X of xs) for (let k = 0; k + 1 < X.length; k += 2) {
+        // the samples (i + 0.25 and i + 0.75: s / 2 + 0.25) between X[k] and X[k + 1]
+        const s0 = Math.max(I0 * 2, Math.ceil(X[k] * 2 - 0.5)), s1 = Math.min(I1 * 2 - 1, Math.floor(X[k + 1] * 2 - 0.5));
+        for (let s = s0; s <= s1; s++) n[(s >> 1) - I0]++;
+      }
+      for (let i = I0; i < I1; i++) {
+        const m = n[i - I0];
+        if (!m) continue;
+        if (typeof col === 'function') { const [c, ca] = col(i, j); this.dot(i, j, c, (a * ca * m) / 4); }
+        else if (m === 4 && a >= 1) this.s.set(i, j, col[0], col[1], col[2]); // (inside the clip already: the plain fill)
+        else this.dot(i, j, col, (a * m) / 4);
+      }
+    }
+  }
+  /** Where a rectangle with round corners (radius r) crosses height py. */
+  private static rrX(x: number, y: number, w: number, h: number, r: number, py: number): number[] {
+    if (py < y || py > y + h) return [];
+    const dy = Math.max(y + r - py, py - (y + h - r), 0), d = r - Math.sqrt(Math.max(0, r * r - dy * dy));
+    return [x + d, x + w - d];
   }
 
   /** A rectangle with round corners of radius r. */
   rrect(x: number, y: number, w: number, h: number, r: number, c: C3, a = 1) {
     r = Math.max(0, Math.min(r, w / 2, h / 2));
-    this.cover(x, y, w, h, (px, py) => {
-      const dx = Math.max(x + r - px, px - (x + w - r), 0), dy = Math.max(y + r - py, py - (y + h - r), 0);
-      return dx * dx + dy * dy <= r * r;
-    }, c, a);
+    this.spans(y, y + h, (py) => Paint.rrX(x, y, w, h, r, py), c, a);
   }
 
   /** A gradient across (vertical: top to bottom) a rectangle with round corners (r 0 for square). */
   grad(x: number, y: number, w: number, h: number, stops: Stops, vertical = true, r = 0) {
-    const at = (i: number, j: number) => stopAt(stops, vertical ? (j + 0.5 - y) / h : (i + 0.5 - x) / w);
     r = Math.max(0, Math.min(r, w / 2, h / 2));
-    const X0 = Math.floor(x), Y0 = Math.floor(y), X1 = Math.ceil(x + w), Y1 = Math.ceil(y + h);
-    for (let j = Y0; j < Y1; j++) for (let i = X0; i < X1; i++) {
-      let n = 4;
-      if (r > 0) {
-        const inn = (px: number, py: number) => { const dx = Math.max(x + r - px, px - (x + w - r), 0), dy = Math.max(y + r - py, py - (y + h - r), 0); return dx * dx + dy * dy <= r * r; };
-        n = +inn(i + 0.25, j + 0.25) + +inn(i + 0.75, j + 0.25) + +inn(i + 0.25, j + 0.75) + +inn(i + 0.75, j + 0.75);
-      }
-      if (!n) continue;
-      const [c, a] = at(i, j);
-      this.dot(i, j, c, (a * n) / 4);
-    }
+    this.spans(y, y + h, (py) => Paint.rrX(x, y, w, h, r, py), (i, j) => stopAt(stops, vertical ? (j + 0.5 - y) / h : (i + 0.5 - x) / w));
   }
 
   /** A line w pixels thick, with round ends. */
@@ -120,26 +142,32 @@ export class Paint {
 
   /** A filled ellipse round cx, cy (a circle when ry is left out). */
   disc(cx: number, cy: number, rx: number, c: C3, a = 1, ry = rx) {
-    this.cover(cx - rx, cy - ry, rx * 2, ry * 2, (px, py) => ((px - cx) / rx) ** 2 + ((py - cy) / ry) ** 2 <= 1, c, a);
+    this.spans(cy - ry, cy + ry, (py) => { const t = 1 - ((py - cy) / ry) ** 2; if (t < 0) return []; const d = rx * Math.sqrt(t); return [cx - d, cx + d]; }, c, a);
   }
   /** An elliptic ring w pixels thick (its outer edge at rx, ry). */
   ring(cx: number, cy: number, rx: number, w: number, c: C3, a = 1, ry = rx) {
     const ix = Math.max(0.01, rx - w), iy = Math.max(0.01, ry - w);
-    this.cover(cx - rx, cy - ry, rx * 2, ry * 2, (px, py) => ((px - cx) / rx) ** 2 + ((py - cy) / ry) ** 2 <= 1 && ((px - cx) / ix) ** 2 + ((py - cy) / iy) ** 2 > 1, c, a);
+    this.spans(cy - ry, cy + ry, (py) => {
+      const t = 1 - ((py - cy) / ry) ** 2; if (t < 0) return [];
+      const d = rx * Math.sqrt(t), u = 1 - ((py - cy) / iy) ** 2;
+      if (u <= 0) return [cx - d, cx + d];
+      const e = ix * Math.sqrt(u);
+      return [cx - d, cx - e, cx + e, cx + d];
+    }, c, a);
   }
 
   /** A filled polygon (x, y pairs; even-odd). */
   poly(pts: readonly number[], c: C3, a = 1) {
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let k = 0; k < pts.length; k += 2) { x0 = Math.min(x0, pts[k]); x1 = Math.max(x1, pts[k]); y0 = Math.min(y0, pts[k + 1]); y1 = Math.max(y1, pts[k + 1]); }
+    let y0 = Infinity, y1 = -Infinity;
+    for (let k = 1; k < pts.length; k += 2) { y0 = Math.min(y0, pts[k]); y1 = Math.max(y1, pts[k]); }
     const n = pts.length >> 1;
-    this.cover(x0, y0, x1 - x0, y1 - y0, (px, py) => {
-      let inside = false;
+    this.spans(y0, y1, (py) => {
+      const X: number[] = [];
       for (let i = 0, j = n - 1; i < n; j = i++) {
         const xi = pts[i * 2], yi = pts[i * 2 + 1], xj = pts[j * 2], yj = pts[j * 2 + 1];
-        if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+        if (yi > py !== yj > py) X.push(((xj - xi) * (py - yi)) / (yj - yi) + xi);
       }
-      return inside;
+      return X.sort((p, q) => p - q);
     }, c, a);
   }
 
@@ -189,7 +217,10 @@ export class Paint {
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
       const sx = Math.min(img.w - 1, Math.floor((i * img.w) / W)), sy0 = Math.min(img.h - 1, Math.floor((j * img.h) / H)), sy = flipY ? img.h - 1 - sy0 : sy0;
       const k = (sy * img.w + sx) * 4;
-      if (P[k + 3]) this.dot(X0 + i, Y0 + j, [P[k], P[k + 1], P[k + 2]], a);
+      if (!P[k + 3]) continue;
+      const x = X0 + i, y = Y0 + j;
+      if (a >= 1) { if (x >= this.x0 && y >= this.y0 && x < this.x1 && y < this.y1) this.s.set(x, y, P[k], P[k + 1], P[k + 2]); }
+      else this.dot(x, y, [P[k], P[k + 1], P[k + 2]], a);
     }
   }
 }

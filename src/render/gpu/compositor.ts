@@ -490,7 +490,6 @@ export class GpuCompositor {
     this.up(this.t.uiCells, ui.cells, L.cols, L.rows);
     this.up(this.t.uiBg, ui.bg, L.cols, L.rows);
     // the HD layer: only the rows drawn or cleared since the last upload (all of it after a resize)
-    hd.mark();
     if (this.hdAll) { this.up(this.t.hd, hd.px, hd.w, hd.h); this.hdAll = false; hd.lo = Infinity; hd.hi = -1; }
     else if (hd.hi >= hd.lo) {
       const y0 = Math.max(0, hd.lo), y1 = Math.min(hd.h - 1, hd.hi);
@@ -506,7 +505,6 @@ export class GpuCompositor {
       // its pixel layer, as the interface's: only the rows touched since the last upload
       const th = term.hd;
       if (this.t.tmHd.width !== th.w || this.t.tmHd.height !== th.h) { this.set('tmHd', this.tex(th.w, th.h)); this.tmHdAll = true; }
-      th.mark();
       if (this.tmHdAll) { this.up(this.t.tmHd, th.px, th.w, th.h); this.tmHdAll = false; }
       else if (th.hi >= th.lo) {
         const y0 = Math.max(0, th.lo), y1 = Math.min(th.h - 1, th.hi);

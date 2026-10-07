@@ -26,6 +26,8 @@ export class HdLayer {
     P[k] = r; P[k + 1] = g; P[k + 2] = b; P[k + 3] = order;
     if (y < this.y0) this.y0 = y;
     if (y > this.y1) this.y1 = y;
+    if (y < this.lo) this.lo = y;
+    if (y > this.hi) this.hi = y;
   }
 
   /** Index of pixel (x, y) in px if something was put there, else -1. */
@@ -42,7 +44,7 @@ export class HdLayer {
     this.y0 = Infinity; this.y1 = -1;
   }
 
-  /** Fold the rows drawn into the rows to upload (called before an upload and on a wipe). */
+  /** Fold the rows drawn into the rows to upload (on a wipe: the rows cleared need one more upload). */
   mark() {
     if (this.y0 < this.lo) this.lo = this.y0;
     if (this.y1 > this.hi) this.hi = this.y1;
