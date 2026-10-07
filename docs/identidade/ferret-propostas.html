@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ferret: propostas</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@900&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } p { color: var(--dim); max-width: 80ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card b { display: block; margin-top: 8px; } .card span { font-size: 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <h1>O furão refeito · e quatro cores para a toca</h1>
+  <p>Cabeça larga e redonda, orelhas pequenas no alto dos lados, a faixa clara na testa, a máscara pelos olhos descendo pela ponte do nariz, nariz grande e rosado, almofadas brancas com bigodes, pescoço com os lados escuros e a garganta clara (o padrão "sable"). Cada card mostra o símbolo grande sobre claro e sobre escuro e o tamanho de 48 px.</p>
+  <div class="grid" id="g"></div>
+</main>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, at, p) { const e = document.createElementNS(NS, tag); for (const k in at || {}) e.setAttribute(k, at[k]); if (p) p.appendChild(e); return e; }
+let uid = 0;
+const F = { fur: '#f4e9d3', line: '#a88a66', crown: '#cfae84', mask: '#55361f', half: '#a98563', neck: '#4a2c1a', muzzle: '#fffaf0', nose: '#e0948c', nostril: '#9a5550', ear: '#d9a08c', eye: '#140b06', whisk: '#b8a488' };
+const GLOBES = [
+  { name: 'Petróleo (o atual)', note: 'frio e sóbrio; some um pouco no escuro', hole: '#123844', rim: '#1f5a6b', mer: '#2c7487' },
+  { name: 'Azul brilhante de 2008', note: 'o globo de ícone da época, com reflexo; o mais "navegador"', hole: '#2f6fb3', hole2: '#7fb8e6', rim: '#1d4a80', mer: '#bfe0fa', gloss: 1 },
+  { name: 'Noite com sódio', note: 'azul-noite com meridianos âmbar: a cidade do jogo à noite', hole: '#141c30', rim: '#2a3756', mer: '#e8a33c' },
+  { name: 'Terra da toca', note: 'marrom-escuro, a toca de verdade; o furão claro salta, o globo é mais sutil', hole: '#2e1d12', rim: '#6b4a2e', mer: '#8a6440' },
+];
+function ferret(parent, o) {
+  const G = o.globe, s = o.size / 200, g = el('g', { transform: `translate(${o.x},${o.y}) scale(${s})` }, parent), id = 'c' + (++uid), defs = el('defs', {}, g);
+  el('circle', { cx: 100, cy: 96, r: 68 }, el('clipPath', { id }, defs));
+  let fill = G.hole;
+  if (G.hole2) { const gr = el('radialGradient', { id: id + 'r', cx: .38, cy: .3, r: .8 }, defs); el('stop', { offset: 0, 'stop-color': G.hole2 }, gr); el('stop', { offset: 1, 'stop-color': G.hole }, gr); fill = `url(#${id}r)`; }
+  el('circle', { cx: 100, cy: 96, r: 72, fill }, g);
+  const m = el('g', { stroke: G.mer, 'stroke-width': 2.2, fill: 'none', opacity: .8, 'clip-path': `url(#${id})` }, g);
+  for (const rx of [26, 52]) el('ellipse', { cx: 100, cy: 96, rx, ry: 72 }, m);
+  el('line', { x1: 100, x2: 100, y1: 20, y2: 172 }, m); for (const y of [50, 96, 142]) el('line', { x1: 20, x2: 180, y1: y, y2: y }, m);
+  if (G.gloss) el('ellipse', { cx: 82, cy: 52, rx: 44, ry: 22, fill: '#fff', opacity: .28, transform: 'rotate(-20 82 52)', 'clip-path': `url(#${id})` }, g);
+  const h = el('g', { 'clip-path': `url(#${id})` }, g);
+  // neck: dark sides, pale throat
+  el('path', { d: 'M60 172 C 58 150, 64 134, 76 126 L 124 126 C 136 134, 142 150, 140 172 Z', fill: F.neck }, h);
+  el('path', { d: 'M84 172 C 83 154, 90 140, 100 138 C 110 140, 117 154, 116 172 Z', fill: F.fur }, h);
+  // ears, small and round, high on the sides
+  for (const [ex, ix] of [[60, 63], [140, 137]]) { el('circle', { cx: ex, cy: 68, r: 14, fill: F.fur, stroke: F.line, 'stroke-width': 2 }, h); el('circle', { cx: ix, cy: 71, r: 7.5, fill: F.ear }, h); }
+  // the head: broad and round, full cheeks
+  const hid = id + 'h', head = 'M100 50 C 129 50, 149 65, 151 89 C 153 111, 143 128, 128 138 C 117 146, 83 146, 72 138 C 57 128, 47 111, 49 89 C 51 65, 71 50, 100 50 Z';
+  el('path', { d: head }, el('clipPath', { id: hid }, defs));
+  el('path', { d: head, fill: F.fur }, h);
+  const hc = el('g', { 'clip-path': `url(#${hid})` }, h);
+  el('path', { d: 'M30 30 L170 30 L170 80 C 140 64, 60 64, 30 80 Z', fill: F.crown }, hc);
+  // the mask: over the eyes, out to the cheeks, down the bridge to the nose
+  for (const d of ['M50 92 C 56 82, 76 80, 92 88 C 96 92, 96 100, 92 104 C 84 110, 66 112, 56 106 C 51 102, 49 97, 50 92 Z', 'M150 92 C 144 82, 124 80, 108 88 C 104 92, 104 100, 108 104 C 116 110, 134 112, 144 106 C 149 102, 151 97, 150 92 Z', 'M91 86 Q 100 82 109 86 L 106 108 Q 100 106 94 108 Z']) el('path', { d, fill: F.half, stroke: F.half, 'stroke-width': 9, 'stroke-linejoin': 'round' }, hc);
+  for (const d of ['M50 92 C 56 82, 76 80, 92 88 C 96 92, 96 100, 92 104 C 84 110, 66 112, 56 106 C 51 102, 49 97, 50 92 Z', 'M150 92 C 144 82, 124 80, 108 88 C 104 92, 104 100, 108 104 C 116 110, 134 112, 144 106 C 149 102, 151 97, 150 92 Z', 'M91 86 Q 100 82 109 86 L 106 108 Q 100 106 94 108 Z']) el('path', { d, fill: F.mask }, hc);
+  // whisker pads and chin
+  for (const cx of [86, 114]) el('ellipse', { cx, cy: 124, rx: 17, ry: 12.5, fill: F.muzzle }, hc);
+  el('ellipse', { cx: 100, cy: 137, rx: 13, ry: 7, fill: F.muzzle }, hc);
+  el('path', { d: head, fill: 'none', stroke: F.line, 'stroke-width': 2 }, h);
+  // whiskers
+  for (const sgn of [-1, 1]) for (const [dy, len] of [[-3, 40], [2, 44], [7, 38]]) el('path', { d: `M${100 + sgn * 18} ${124 + dy} q ${sgn * len * 0.6} ${dy * 1.5 - 4} ${sgn * len} ${dy * 2.5}`, stroke: F.whisk, 'stroke-width': 1, fill: 'none', opacity: .9 }, h);
+  // eyes: small, dark, set wide
+  for (const ex of [79, 121]) { el('circle', { cx: ex, cy: 96, r: 5.5, fill: F.eye }, h); el('circle', { cx: ex + 1.8, cy: 94.2, r: 1.7, fill: '#fff' }, h); }
+  // the nose, big and pink; the mouth
+  el('path', { d: 'M87 110 C 87 103, 113 103, 113 110 C 113 117, 105 122, 100 122 C 95 122, 87 117, 87 110 Z', fill: F.nose, stroke: F.nostril, 'stroke-width': 1 }, h);
+  for (const nx of [95, 105]) el('ellipse', { cx: nx, cy: 114, rx: 2, ry: 1.4, fill: F.nostril }, h);
+  el('path', { d: 'M100 122 L100 126 M92 127 Q 96 130 100 126 Q 104 130 108 127', stroke: F.nostril, 'stroke-width': 1.5, fill: 'none', 'stroke-linecap': 'round' }, h);
+  // rim, then the white mitts over it
+  el('circle', { cx: 100, cy: 96, r: 72, fill: 'none', stroke: G.rim, 'stroke-width': 8 }, g);
+  for (const px of [78, 122]) { el('ellipse', { cx: px, cy: 166, rx: 13, ry: 8.5, fill: F.fur, stroke: F.line, 'stroke-width': 2 }, g); for (const d of [-5, 0, 5]) el('line', { x1: px + d, x2: px + d, y1: 169, y2: 173, stroke: F.line, 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g); }
+}
+const root = document.getElementById('g');
+GLOBES.forEach((G) => {
+  const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<svg viewBox="0 0 300 420"></svg><b>${G.name}</b><span>${G.note}</span>`; root.appendChild(d);
+  const s = d.querySelector('svg');
+  el('rect', { width: 300, height: 260, fill: '#f4efe6' }, s); ferret(s, { globe: G, x: 30, y: 16, size: 240 });
+  el('rect', { y: 260, width: 300, height: 160, fill: '#1b1a18' }, s); ferret(s, { globe: G, x: 20, y: 280, size: 120 });
+  ferret(s, { globe: G, x: 170, y: 300, size: 48 }); ferret(s, { globe: G, x: 236, y: 312, size: 24 });
+  const t = el('text', { x: 194, y: 390, fill: '#8f897d', 'font-size': 10, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono' }, s); t.textContent = '48 · 24 px';
+});
+</script>
+</body>
+</html>

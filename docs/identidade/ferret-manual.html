@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; --cream: #f1e4c8; --cafe: #4a2c1a; --pet: #1f5a6b; --pet2: #123844; --pet3: #5fa3b3; --acc: #e0823a; }
+  :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; --cream: #f1e4c8; --cafe: #4a2c1a; --pet: #6b4a2e; --pet2: #2e1d12; --pet3: #a27a52; --acc: #e0823a; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
   main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
@@ -93,14 +93,14 @@
 
   <section id="simbolo">
     <h2>O símbolo <small>o furão saindo da toca</small></h2>
-    <p class="lead">A toca é um círculo azul-petróleo com meridianos (o globo da web) e um aro claro (a lente da lupa). O furão põe a cabeça e as patas da frente para fora, por cima do aro de baixo, e quebra o círculo. A máscara marrom nos olhos é o traço que diz "furão" em qualquer tamanho, e é também a máscara do ladrão: um piscar de olho para quem joga.</p>
+    <p class="lead">A toca é um círculo de terra escura com meridianos (o globo da web) e um aro marrom (a lente da lupa). O furão põe a cabeça e as patas da frente para fora, por cima do aro de baixo, e quebra o círculo. O padrão é o do furão sable, o mais comum: rosto claro, a máscara marrom nos olhos, pescoço escuro e as patas brancas. A máscara é o traço que diz "furão" em qualquer tamanho, e é também a máscara do ladrão: um piscar de olho para quem joga.</p>
     <div class="grid3">
-      <div class="card"><svg viewBox="0 0 260 260" id="build"></svg><div class="cap"><b>Construção.</b> Toca: círculo de raio R. A cabeça é uma cunha de 1R de largura que afina até o focinho; as orelhas são pequenas e baixas, dos lados. A máscara são duas manchas ligadas por uma ponte fina sobre o nariz. As patas pousam no aro. A margem mínima em volta é 0,25R.</div></div>
+      <div class="card"><svg viewBox="0 0 260 260" id="build"></svg><div class="cap"><b>Construção.</b> Toca: círculo de raio R. A cabeça é larga e redonda (1,4R), com as bochechas cheias; as orelhas são pequenas e redondas, no alto dos lados. Testa com o alto mais escuro e uma faixa clara; a máscara são duas manchas nos olhos ligadas pela ponte do nariz, com uma borda mais clara (o pelo em degradê). Nariz grande e rosado, almofadas brancas com três bigodes de cada lado. O pescoço tem os lados escuros e a garganta clara; as luvas brancas pousam no aro. A margem mínima em volta é 0,25R.</div></div>
       <div class="card"><svg viewBox="0 0 260 260" id="sizes"></svg><div class="cap"><b>Tamanhos.</b> O vetor de 48 px para cima. De 32 e de 16 px, os desenhos são feitos à mão em pixels (abaixo): sem meridianos, a máscara e as orelhas ganham peso.</div></div>
       <div class="card"><svg viewBox="0 0 260 260" id="versions"></svg><div class="cap"><b>Versões.</b> Cor (padrão), uma cor em café (carimbo, impressão barata) e negativa em creme (sobre fundo escuro, a camiseta).</div></div>
     </div>
     <div class="row">
-      <div class="card"><svg viewBox="0 0 520 170" id="pixels" class="pix"></svg><div class="cap"><b>O ícone em pixels</b>, para a camada HD: 16 × 16 (a aba, os favoritos, a barra do Osprey) e 32 × 32 (o atalho e o "About"), ampliados aqui. 6 cores, sem transparência parcial.</div></div>
+      <div class="card"><svg viewBox="0 0 520 170" id="pixels" class="pix"></svg><div class="cap"><b>O ícone em pixels</b>, para a camada HD: 16 × 16 (a aba, os favoritos, a barra do Osprey) e 32 × 32 (o atalho e o "About"), ampliados aqui. 10 cores, sem transparência parcial.</div></div>
       <div class="card"><pre class="ascii" id="ascii"></pre><div class="cap"><b>Em ASCII</b>, para o site da Burrow Labs e para o Ferret Mini sem imagens: cinco linhas, a máscara é o <code>(o--o)</code>.</div></div>
     </div>
   </section>
@@ -201,7 +201,7 @@
     <div class="rule do"><b>✓</b><span>Tudo que a web mostra vem da simulação: preço, horário, "OPEN NOW", a manchete, o site fora do ar no apagão.</span></div>
     <div class="rule do"><b>✓</b><span>O furão só se mexe quando a rede trabalha; a velocidade em kB/s está sempre na barra de status.</span></div>
     <div class="rule do"><b>✓</b><span>Texto nas células, detalhe fino (brilho, ícones, selos, barras) em HD.</span></div>
-    <div class="rule"><b>✗</b><span>Nada de raposa nem de globo azul com um bicho laranja em volta: o furão sai da toca, de frente, e é creme e café.</span></div>
+    <div class="rule"><b>✗</b><span>Nada de raposa nem de globo azul com um bicho laranja em volta: o furão sai da toca de terra, de frente, e é um sable (rosto claro, máscara, pescoço escuro, luvas brancas).</span></div>
     <div class="rule"><b>✗</b><span>Nada de web de 2026: sem rolagem infinita, sem vídeo embutido, sem layout que se adapta. A coluna tem largura fixa e sobra fundo dos lados.</span></div>
     <div class="rule"><b>✗</b><span>A web nunca diz que foi o jogador: a notícia do apagão sai, o nome dele não.</span></div>
     <div class="rule"><b>✗</b><span>"Lodestar" sai de todo lugar; o comando antigo pode ficar como apelido escondido por um tempo, para os saves antigos.</span></div>
@@ -230,43 +230,55 @@ const $ = (id) => document.getElementById(id);
 let uid = 0;
 
 // ---- the brand ----
-const B = { cream: '#f1e4c8', shade: '#d9c6a0', line: '#b89c72', cafe: '#4a2c1a', ear: '#b07c58', muzzle: '#fbf6ea', eye: '#120a06', nose: '#2e170c', pet: '#1f5a6b', pet2: '#123844', pet3: '#5fa3b3' };
+const B = { cream: '#f1e4c8', shade: '#d9c6a0', line: '#b89c72', cafe: '#4a2c1a', ear: '#b07c58', muzzle: '#fbf6ea', eye: '#120a06', nose: '#2e170c', pet: '#6b4a2e', pet2: '#2e1d12', pet3: '#8a6440' };
 const PAL = {
-  color: { hole: B.pet2, rim: B.pet, mer: B.pet, merOp: .75, fur: B.cream, shade: B.shade, furLine: B.line, mask: B.cafe, ear: B.ear, muzzle: B.muzzle, eye: B.eye, glint: '#fff', nose: B.nose },
-  mono: { hole: B.cafe, rim: B.cafe, mer: '#efe6d6', merOp: .35, fur: '#efe6d6', shade: '#efe6d6', furLine: B.cafe, mask: B.cafe, ear: B.cafe, muzzle: '#efe6d6', eye: '#efe6d6', glint: B.cafe, nose: B.cafe },
-  neg: { hole: '#1b1a18', rim: B.cream, mer: B.cream, merOp: .3, fur: B.cream, shade: B.cream, furLine: B.cream, mask: '#1b1a18', ear: '#1b1a18', muzzle: B.cream, eye: B.cream, glint: '#1b1a18', nose: '#1b1a18' },
+  color: { hole: B.pet2, rim: B.pet, mer: B.pet3, merOp: .8, fur: '#f4e9d3', crown: '#cfae84', line: '#a88a66', mask: '#55361f', half: '#a98563', neck: B.cafe, ear: '#d9a08c', muzzle: '#fffaf0', eye: B.eye, glint: '#fff', nose: '#e0948c', nostril: '#9a5550', whisk: '#b8a488' },
+  mono: { hole: B.cafe, rim: B.cafe, mer: '#efe6d6', merOp: .35, fur: '#efe6d6', crown: '#efe6d6', line: B.cafe, mask: B.cafe, half: B.cafe, neck: B.cafe, ear: B.cafe, muzzle: '#efe6d6', eye: '#efe6d6', glint: B.cafe, nose: B.cafe, nostril: '#efe6d6', whisk: B.cafe },
+  neg: { hole: '#1b1a18', rim: B.cream, mer: B.cream, merOp: .3, fur: B.cream, crown: B.cream, line: B.cream, mask: '#1b1a18', half: '#1b1a18', neck: B.cream, ear: '#1b1a18', muzzle: B.cream, eye: B.cream, glint: '#1b1a18', nose: '#1b1a18', nostril: B.cream, whisk: B.cream },
 };
-/** The ferret coming out of its burrow, in a 200 x 200 box. o: { pal, x, y, size, meridians, headDy, paws, dirt, blink, look } */
+const HEAD = 'M100 50 C 129 50, 149 65, 151 89 C 153 111, 143 128, 128 138 C 117 146, 83 146, 72 138 C 57 128, 47 111, 49 89 C 51 65, 71 50, 100 50 Z';
+const MASK = ['M50 92 C 56 82, 76 80, 92 88 C 96 92, 96 100, 92 104 C 84 110, 66 112, 56 106 C 51 102, 49 97, 50 92 Z', 'M150 92 C 144 82, 124 80, 108 88 C 104 92, 104 100, 108 104 C 116 110, 134 112, 144 106 C 149 102, 151 97, 150 92 Z', 'M91 86 Q 100 82 109 86 L 106 108 Q 100 106 94 108 Z'];
+/** The ferret coming out of its burrow, in a 200 x 200 box (a sable: pale face, the mask, dark neck, white mitts).
+ *  o: { pal, x, y, size, meridians, headDy, paws, dirt, blink, look } */
 function ferret(parent, o = {}) {
   const P = PAL[o.pal || 'color'], s = (o.size || 200) / 200;
   const g = el('g', { transform: `translate(${o.x || 0},${o.y || 0}) scale(${s})` }, parent);
-  const id = 'fc' + (++uid);
-  const cp = el('clipPath', { id }, el('defs', {}, g)); el('circle', { cx: 100, cy: 96, r: 68 }, cp);
+  const id = 'fc' + (++uid), defs = el('defs', {}, g);
+  el('circle', { cx: 100, cy: 96, r: 68 }, el('clipPath', { id }, defs));
+  el('path', { d: HEAD }, el('clipPath', { id: id + 'h' }, defs));
   el('circle', { cx: 100, cy: 96, r: 72, fill: P.hole }, g);
   if (o.meridians !== false) {
     const m = el('g', { stroke: P.mer, 'stroke-width': 2.2, fill: 'none', opacity: P.merOp, 'clip-path': `url(#${id})` }, g);
-    for (const rx of [24, 50]) el('ellipse', { cx: 100, cy: 96, rx, ry: 72 }, m);
+    for (const rx of [26, 52]) el('ellipse', { cx: 100, cy: 96, rx, ry: 72 }, m);
     el('line', { x1: 100, x2: 100, y1: 20, y2: 172 }, m);
-    for (const y of [56, 96, 136]) el('line', { x1: 20, x2: 180, y1: y, y2: y }, m);
+    for (const y of [50, 96, 142]) el('line', { x1: 20, x2: 180, y1: y, y2: y }, m);
   }
   // the dirt thrown out while digging
   if (o.dirt) { const r = rng(o.dirt); for (let i = 0; i < 9; i++) { const a = -Math.PI * (0.15 + r() * 0.7), d = 78 + r() * 26, cx = 100 + Math.cos(a) * d, cy = 96 + Math.sin(a) * d * 0.95; el('rect', { x: cx - 3, y: cy - 3, width: 4 + r() * 4, height: 4 + r() * 3, rx: 1.5, fill: i % 3 ? '#7a5434' : '#5a3a22', transform: `rotate(${r() * 90} ${cx} ${cy})` }, g); } }
   // the head, clipped to the burrow so it can sink into it
   const hg = el('g', { 'clip-path': `url(#${id})` }, g), h = el('g', { transform: `translate(${o.look || 0},${o.headDy || 0})` }, hg);
-  el('path', { d: 'M82 172 C 80 156, 88 146, 96 143 L 112 143 C 120 146, 128 156, 126 172 Z', fill: P.shade, stroke: P.furLine, 'stroke-width': 2 }, h);
-  for (const ex of [70, 138]) { el('circle', { cx: ex, cy: 90, r: 10, fill: P.fur, stroke: P.furLine, 'stroke-width': 2 }, h); el('circle', { cx: ex, cy: 91, r: 5, fill: P.ear }, h); }
-  el('path', { d: 'M104 76 C 126 76, 143 88, 143 104 C 143 122, 122 138, 112 147 Q 104 152 96 147 C 86 138, 65 122, 65 104 C 65 88, 82 76, 104 76 Z', fill: P.fur, stroke: P.furLine, 'stroke-width': 2 }, h);
-  el('path', { d: 'M68 101 C 76 91, 92 94, 100 104 C 98 115, 88 119, 78 117 C 71 113, 67 107, 68 101 Z M140 101 C 132 91, 116 94, 108 104 C 110 115, 120 119, 130 117 C 137 113, 141 107, 140 101 Z M97 102 Q 104 99 111 102 L 111 107 Q 104 104 97 107 Z', fill: P.mask }, h);
-  el('ellipse', { cx: 104, cy: 133, rx: 16, ry: 13, fill: P.muzzle }, h);
-  if (o.blink) for (const ex of [87, 121]) el('path', { d: `M${ex - 5} 106 Q ${ex} 109 ${ex + 5} 106`, stroke: P.eye, 'stroke-width': 2.4, fill: 'none', 'stroke-linecap': 'round' }, h);
-  else for (const ex of [87, 121]) { el('circle', { cx: ex, cy: 106, r: 4.8, fill: P.eye }, h); el('circle', { cx: ex + 1.6, cy: 104.4, r: 1.5, fill: P.glint }, h); }
-  el('path', { d: 'M98 127 Q 104 124 110 127 Q 107 133 104 134 Q 101 133 98 127 Z', fill: P.nose }, h);
-  el('path', { d: 'M104 134 L104 139 M98 141 Q 104 144 110 141', stroke: P.nose, 'stroke-width': 1.6, fill: 'none', 'stroke-linecap': 'round' }, h);
-  // the rim on top of the neck, then the paws over the rim
+  el('path', { d: 'M60 172 C 58 150, 64 134, 76 126 L 124 126 C 136 134, 142 150, 140 172 Z', fill: P.neck }, h);
+  el('path', { d: 'M84 172 C 83 154, 90 140, 100 138 C 110 140, 117 154, 116 172 Z', fill: P.fur }, h);
+  for (const [ex, ix] of [[60, 63], [140, 137]]) { el('circle', { cx: ex, cy: 68, r: 14, fill: P.fur, stroke: P.line, 'stroke-width': 2 }, h); el('circle', { cx: ix, cy: 71, r: 7.5, fill: P.ear }, h); }
+  el('path', { d: HEAD, fill: P.fur }, h);
+  const hc = el('g', { 'clip-path': `url(#${id}h)` }, h);
+  el('path', { d: 'M30 30 L170 30 L170 80 C 140 64, 60 64, 30 80 Z', fill: P.crown }, hc);
+  for (const d of MASK) el('path', { d, fill: P.half, stroke: P.half, 'stroke-width': 9, 'stroke-linejoin': 'round' }, hc);
+  for (const d of MASK) el('path', { d, fill: P.mask }, hc);
+  for (const cx of [86, 114]) el('ellipse', { cx, cy: 124, rx: 17, ry: 12.5, fill: P.muzzle }, hc);
+  el('ellipse', { cx: 100, cy: 137, rx: 13, ry: 7, fill: P.muzzle }, hc);
+  el('path', { d: HEAD, fill: 'none', stroke: P.line, 'stroke-width': 2 }, h);
+  for (const sgn of [-1, 1]) for (const [dy, len] of [[-3, 40], [2, 44], [7, 38]]) el('path', { d: `M${100 + sgn * 18} ${124 + dy} q ${sgn * len * 0.6} ${dy * 1.5 - 4} ${sgn * len} ${dy * 2.5}`, stroke: P.whisk, 'stroke-width': 1, fill: 'none', opacity: .9 }, h);
+  if (o.blink) for (const ex of [79, 121]) el('path', { d: `M${ex - 5} 96 Q ${ex} 99 ${ex + 5} 96`, stroke: P.eye, 'stroke-width': 2.4, fill: 'none', 'stroke-linecap': 'round' }, h);
+  else for (const ex of [79, 121]) { el('circle', { cx: ex, cy: 96, r: 5.5, fill: P.eye }, h); el('circle', { cx: ex + 1.8, cy: 94.2, r: 1.7, fill: P.glint }, h); }
+  el('path', { d: 'M87 110 C 87 103, 113 103, 113 110 C 113 117, 105 122, 100 122 C 95 122, 87 117, 87 110 Z', fill: P.nose, stroke: P.nostril, 'stroke-width': 1 }, h);
+  for (const nx of [95, 105]) el('ellipse', { cx: nx, cy: 114, rx: 2, ry: 1.4, fill: P.nostril }, h);
+  el('path', { d: 'M100 122 L100 126 M92 127 Q 96 130 100 126 Q 104 130 108 127', stroke: P.nostril, 'stroke-width': 1.5, fill: 'none', 'stroke-linecap': 'round' }, h);
+  // the rim on top of the neck, then the white mitts over the rim
   el('circle', { cx: 100, cy: 96, r: 72, fill: 'none', stroke: P.rim, 'stroke-width': 8 }, g);
-  if (o.paws !== false && !(o.headDy > 8)) for (const px of [84, 124]) {
-    el('ellipse', { cx: px, cy: 166, rx: 13, ry: 8.5, fill: P.fur, stroke: P.furLine, 'stroke-width': 2 }, g);
-    for (const d of [-5, 0, 5]) el('line', { x1: px + d, x2: px + d, y1: 169, y2: 173, stroke: P.furLine, 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g);
+  if (o.paws !== false && !(o.headDy > 8)) for (const px of [78, 122]) {
+    el('ellipse', { cx: px, cy: 166, rx: 13, ry: 8.5, fill: P.fur, stroke: P.line, 'stroke-width': 2 }, g);
+    for (const d of [-5, 0, 5]) el('line', { x1: px + d, x2: px + d, y1: 169, y2: 173, stroke: P.line, 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g);
   }
   return g;
 }
@@ -278,15 +290,15 @@ function wordmark(g, x, y, size, fill, mini) {
 }
 
 // the 16 px icon, drawn by hand; the 32 px one built from it and refined (the ears' insides, a lighter rim inside, the muzzle)
-const PX = { '.': null, D: B.pet2, R: B.pet, c: B.cream, s: B.shade, m: B.cafe, k: B.eye, w: B.muzzle, n: B.nose, e: B.ear, l: '#2d7487' };
+const PX = { '.': null, D: B.pet2, R: B.pet, c: B.cream, s: B.shade, m: B.cafe, k: B.eye, w: B.muzzle, n: B.nose, e: '#d9a08c', t: '#cfae84', p: '#e0948c', l: '#4a3220' };
 const I16 = [
-  '.....RRRRRR.....', '...RRDDDDDDRR...', '..RDDDDDDDDDDR..', '.RDDDDccccDDDDR.', '.RDecccccccceDR.', 'RDDmmmccccmmmDDR', 'RDDmkmmmmmmkmDDR', 'RDDcmmccccmmcDDR', 'RDDDcccwwcccDDDR', 'RDDDDcwnnwcDDDDR', 'RDDDDcwwwwcDDDDR', '.RDDDDcwwcDDDDR.', '.RDDDDDssDDDDDR.', '..RRDDDssDDDRR..', '...ccRRssRRcc...', '................'];
+  '.....RRRRRR.....', '...RRDDDDDDRR...', '..RDcDDDDDDcDR..', '.RDcettttttecDR.', '.RDccccccccccDR.', 'RDcmmmmmmmmmmcDR', 'RDcmkmmmmmmkmcDR', 'RDccwmmppmmwccDR', 'RDDcwwwppwwwcDDR', 'RDDcwwwwwwwwcDDR', 'RDDDcwwwwwwcDDDR', '.RDDmccccccmDDR.', '.RDDmmccccmmDDR.', '..RRmmccccmmRR..', '..sccRRRRRRccs..', '................'];
 const I32 = (() => {
   const g = I16.flatMap((r) => { const d = [...r].map((c) => c + c).join(''); return [d, d]; }).map((r) => [...r]);
   const set = (x, y, c) => { if (g[y] && g[y][x] !== undefined) g[y][x] = c; };
   for (let y = 4; y < 26; y++) for (const x of [5, 26]) if (g[y][x] === 'D') set(x, y, 'l');
   for (let x = 4; x < 28; x++) if (g[4][x] === 'D') set(x, 4, 'l');
-  set(9, 12, 'w'); set(22, 12, 'w');
+  set(9, 12, 'w'); set(23, 12, 'w');
   return g.map((r) => r.join(''));
 })();
 function pixIcon(svg, x, y, sc, n) {
@@ -316,10 +328,10 @@ ferret($('cover'), {});
   ferret(s, { x: 30, y: 30, size: 200 });
   const G = el('g', { stroke: '#d8452b', 'stroke-width': 1, fill: 'none', 'stroke-dasharray': '3 3' }, s);
   el('circle', { cx: 130, cy: 126, r: 72 }, G); el('line', { x1: 130, x2: 202, y1: 126, y2: 126 }, G);
-  el('line', { x1: 97, x2: 97, y1: 92, y2: 210 }, G); el('line', { x1: 171, x2: 171, y1: 92, y2: 210 }, G);
+  el('line', { x1: 79, x2: 79, y1: 80, y2: 210 }, G); el('line', { x1: 181, x2: 181, y1: 80, y2: 210 }, G);
   el('line', { x1: 20, x2: 240, y1: 198, y2: 198 }, G); el('rect', { x: 12, y: 12, width: 236, height: 236 }, G);
   const L = (x, y, s2) => txt(s, x, y, s2, { fill: '#d8452b', 'font-size': 10, 'font-weight': 600 });
-  L(162, 121, 'R'); L(106, 222, '1R cabeça'); L(204, 194, 'aro'); L(16, 26, 'margem 0,25R');
+  L(162, 121, 'R'); L(98, 222, '1,4R cabeça'); L(204, 194, 'aro'); L(16, 26, 'margem 0,25R');
 })();
 
 // sizes
@@ -361,7 +373,7 @@ $('ascii').textContent = [
 // swatches
 $('swatches').innerHTML = [
   [B.cream, 'Pelagem', '#f1e4c8 · a cabeça, as patas'], [B.shade, 'Sombra', '#d9c6a0 · o pescoço, o contorno claro'], [B.cafe, 'Café', '#4a2c1a · a máscara, o nome'],
-  [B.muzzle, 'Focinho', '#fbf6ea · o focinho, o papel do site'], [B.pet, 'Petróleo', '#1f5a6b · o aro, a assinatura'], [B.pet2, 'Toca', '#123844 · o fundo da toca'],
+  [B.muzzle, 'Focinho', '#fbf6ea · o focinho, o papel do site'], [B.pet, 'Terra', '#6b4a2e · o aro, a assinatura'], [B.pet2, 'Toca', '#2e1d12 · o fundo da toca'], ['#8a6440', 'Meridianos', '#8a6440 · o globo'], ['#e0948c', 'Nariz', '#e0948c · o nariz, o dentro das orelhas'],
   ['linear-gradient(#f2f3f5,#c5c9cf)', 'Prata', '#f2f3f5 → #c5c9cf · a moldura'], ['#fff8c4', 'Amarelo https', '#fff8c4 · o endereço seguro'],
 ].map(([c, n, d]) => `<div><i style="background:${c}"></i><span><b>${n}</b><em>${d}</em></span></div>`).join('');
 
@@ -492,9 +504,9 @@ function badge(g, x, y, s, kind, seed = 1) {
   if (kind === 'best') {
     const id = 'bg' + (++uid), gr = el('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, el('defs', {}, b)); el('stop', { offset: 0, 'stop-color': '#fdf6e6' }, gr); el('stop', { offset: 1, 'stop-color': '#e6d3ad' }, gr);
     el('rect', { width: 88, height: 31, fill: `url(#${id})`, stroke: '#4a2c1a' }, b); pixIcon(b, 4, 7.5, 1, 16);
-    T(23, 10, 'Best viewed with', { fill: '#4a2c1a', 'font-size': 6 }); T(23, 20, 'ferret', { fill: '#4a2c1a', 'font-size': 10, 'font-weight': 700, 'font-family': 'Nunito, sans-serif' }); T(56, 20, '2.0', { fill: '#1f5a6b', 'font-size': 6.5 }); T(23, 28, 'at 1024x768', { fill: '#1f5a6b', 'font-size': 5.5 });
+    T(23, 10, 'Best viewed with', { fill: '#4a2c1a', 'font-size': 6 }); T(23, 20, 'ferret', { fill: '#4a2c1a', 'font-size': 10, 'font-weight': 700, 'font-family': 'Nunito, sans-serif' }); T(56, 20, '2.0', { fill: '#6b4a2e', 'font-size': 6.5 }); T(23, 28, 'at 1024x768', { fill: '#6b4a2e', 'font-size': 5.5 });
   } else if (kind === 'get') {
-    el('rect', { width: 88, height: 31, fill: '#1f5a6b', stroke: '#123844' }, b); el('rect', { x: 1, y: 1, width: 86, height: 12, fill: '#fff', opacity: .12 }, b); pixIcon(b, 4, 7.5, 1, 16);
+    el('rect', { width: 88, height: 31, fill: '#6b4a2e', stroke: '#2e1d12' }, b); el('rect', { x: 1, y: 1, width: 86, height: 12, fill: '#fff', opacity: .12 }, b); pixIcon(b, 4, 7.5, 1, 16);
     T(24, 14, 'Get', { fill: '#f1e4c8', 'font-size': 7 }); T(24, 25, 'ferret!', { fill: '#f1e4c8', 'font-size': 11, 'font-weight': 900, 'font-family': 'Nunito, sans-serif' });
   } else if (kind === 'html') {
     el('rect', { width: 88, height: 31, fill: '#fff', stroke: '#888' }, b); el('rect', { x: 1, y: 1, width: 34, height: 29, fill: '#1c3f8c' }, b);
@@ -640,7 +652,7 @@ function drawChrome() {
   el('line', { x1: X, x2: X + PW, y1: R(3) - .5, y2: R(3) - .5, stroke: '#a3aab4' }, svg);
   const cy = R(2), back = el('g', { style: 'cursor:pointer' }, svg);
   el('circle', { cx: X + 20, cy, r: 13.5, fill: gradient(svg, 'bk', [[0, '#fdfdfd'], [.5, '#e3e7ec'], [1, '#b9c1cb']]), stroke: '#6f7884' }, back);
-  el('path', { d: `M${X + 13} ${cy} l8 -7 v4.5 h7 v5 h-7 v4.5 z`, fill: '#1f5a6b' }, back);
+  el('path', { d: `M${X + 13} ${cy} l8 -7 v4.5 h7 v5 h-7 v4.5 z`, fill: '#6b4a2e' }, back);
   back.addEventListener('pointerdown', () => back.setAttribute('transform', 'translate(0 1)')); back.addEventListener('pointerup', () => back.removeAttribute('transform'));
   el('circle', { cx: X + 42, cy, r: 9, fill: gradient(svg, 'fw', [[0, '#fdfdfd'], [1, '#c3cad3']]), stroke: '#8a929d' }, svg); el('path', { d: `M${X + 47} ${cy} l-5.5 -5 v3 h-4.5 v4 h4.5 v3 z`, fill: '#8e98a4' }, svg);
   // reload or stop, home
@@ -670,7 +682,7 @@ function drawChrome() {
   // status
   el('rect', { x: X, y: R(41), width: PW, height: ch, fill: gradient(svg, 'st', [[0, '#e9ecef'], [1, '#d6dae0']]) }, svg); el('line', { x1: X, x2: X + PW, y1: R(41), y2: R(41), stroke: '#a3aab4' }, svg);
   txt(svg, X + 6, R(41) + 12, S.status, { fill: '#222', 'font-size': 11 });
-  if (S.prog) { el('rect', { x: X + PW - 250, y: R(41) + 4, width: 120, height: 9, fill: '#fff', stroke: '#8a929d' }, svg); el('rect', { x: X + PW - 249, y: R(41) + 5, width: 118 * S.prog, height: 7, fill: gradient(svg, 'pg', [[0, '#5fa3b3'], [1, '#1f5a6b']]) }, svg); txt(svg, X + PW - 300, R(41) + 12, '24 of 52', { fill: '#444', 'font-size': 10 }); }
+  if (S.prog) { el('rect', { x: X + PW - 250, y: R(41) + 4, width: 120, height: 9, fill: '#fff', stroke: '#8a929d' }, svg); el('rect', { x: X + PW - 249, y: R(41) + 5, width: 118 * S.prog, height: 7, fill: gradient(svg, 'pg', [[0, '#a27a52'], [1, '#6b4a2e']]) }, svg); txt(svg, X + PW - 300, R(41) + 12, '24 of 52', { fill: '#444', 'font-size': 10 }); }
   if (S.secure) { el('rect', { x: X + PW - 112, y: R(41) + 6, width: 8, height: 7, rx: 1, fill: '#c9a227' }, svg); el('path', { d: `M${X + PW - 110} ${R(41) + 6} v-2 a2 2 0 0 1 4 0 v2`, stroke: '#c9a227', fill: 'none', 'stroke-width': 1.3 }, svg); }
   txt(svg, X + PW - 8, R(41) + 12, S.kbps, { fill: '#333', 'font-size': 11, 'text-anchor': 'end' });
 }
@@ -688,8 +700,8 @@ setInterval(() => { throbFrame++; throbState(); }, 130);
 // ---- the buttons, one by one ----
 (() => {
   const B2 = [
-    ['Voltar', 'redondo, 28 px, o maior da barra: é o que mais se aperta. Seta petróleo. Clique "tum" grave.', (s) => { el('circle', { cx: 50, cy: 30, r: 22, fill: gradient(s, 'b1', [[0, '#fdfdfd'], [.5, '#e3e7ec'], [1, '#b9c1cb']]), stroke: '#6f7884' }, s); el('path', { d: 'M38 30 l13 -11 v7 h11 v8 h-11 v7 z', fill: '#1f5a6b' }, s); }],
-    ['Avançar', 'menor e cinza; só fica petróleo quando há para onde avançar.', (s) => { el('circle', { cx: 50, cy: 30, r: 15, fill: gradient(s, 'b2', [[0, '#fdfdfd'], [1, '#c3cad3']]), stroke: '#8a929d' }, s); el('path', { d: 'M58 30 l-9 -8 v5 h-7 v6 h7 v5 z', fill: '#8e98a4' }, s); }],
+    ['Voltar', 'redondo, 28 px, o maior da barra: é o que mais se aperta. Seta marrom-terra. Clique "tum" grave.', (s) => { el('circle', { cx: 50, cy: 30, r: 22, fill: gradient(s, 'b1', [[0, '#fdfdfd'], [.5, '#e3e7ec'], [1, '#b9c1cb']]), stroke: '#6f7884' }, s); el('path', { d: 'M38 30 l13 -11 v7 h11 v8 h-11 v7 z', fill: '#6b4a2e' }, s); }],
+    ['Avançar', 'menor e cinza; só fica marrom quando há para onde avançar.', (s) => { el('circle', { cx: 50, cy: 30, r: 15, fill: gradient(s, 'b2', [[0, '#fdfdfd'], [1, '#c3cad3']]), stroke: '#8a929d' }, s); el('path', { d: 'M58 30 l-9 -8 v5 h-7 v6 h7 v5 z', fill: '#8e98a4' }, s); }],
     ['Recarregar / parar', 'o mesmo lugar: a seta verde, e o X vermelho enquanto carrega.', (s) => { el('path', { d: 'M40 30 a10 10 0 1 1 3 7', stroke: '#2e7d4f', 'stroke-width': 3.5, fill: 'none' }, s); el('path', { d: 'M36 22 l2 10 l8 -5 z', fill: '#2e7d4f' }, s); el('path', { d: 'M66 20 l16 16 M82 20 l-16 16', stroke: '#c0392b', 'stroke-width': 3.5, 'stroke-linecap': 'round' }, s); }],
     ['Endereço seguro', 'https: o campo amarelo-claro e o cadeado dourado. Certificado ruim: o cadeado partido.', (s) => { el('rect', { x: 6, y: 18, width: 88, height: 24, rx: 3, fill: '#fff8c4', stroke: '#c9a227' }, s); txt(s, 12, 34, 'https://', { fill: '#111', 'font-size': 10 }); el('rect', { x: 74, y: 28, width: 12, height: 9, rx: 1.5, fill: '#c9a227' }, s); el('path', { d: 'M76 28 v-3 a4 4 0 0 1 8 0 v3', stroke: '#c9a227', 'stroke-width': 1.8, fill: 'none' }, s); }],
   ];
@@ -747,7 +759,7 @@ $('reroll').onclick = () => { tplSeed = Math.floor(Math.random() * 1e9); drawTpl
     el('rect', { x: 2, y: 2, width: 276, height: 466, rx: 26, fill: '#0b0b0d', stroke: '#9aa0a8', 'stroke-width': 2 }, s);
     const X = 20, Y = 30; el('rect', { x: X, y: Y, width: 240, height: 400, fill: '#fff' }, s);
     el('rect', { x: X, y: Y, width: 240, height: 14, fill: '#10151c' }, s); txt(s, X + 4, Y + 10.5, 'EDGE ▂▄▆', { fill: '#bfe3ff', 'font-size': 9 }); txt(s, X + 236, Y + 10.5, data + '  22:41', { fill: '#bfe3ff', 'font-size': 9, 'text-anchor': 'end' });
-    el('rect', { x: X, y: Y + 14, width: 240, height: 16, fill: '#1f5a6b' }, s);
+    el('rect', { x: X, y: Y + 14, width: 240, height: 16, fill: '#6b4a2e' }, s);
     if (frame !== undefined) ferret(s, { x: X + 2, y: Y + 15, size: 14, meridians: false, headDy: [30, 44, 56, 44][frame % 4] }); else pixIcon(s, X + 2, Y + 14.5, 0.9, 16);
     txt(s, X + 20, Y + 26, url, { fill: '#f1e4c8', 'font-size': 9.5 });
     el('rect', { x: X, y: Y + 386, width: 240, height: 14, fill: '#10151c' }, s); txt(s, X + 4, Y + 396.5, 'Options', { fill: '#bfe3ff', 'font-size': 9.5 }); txt(s, X + 236, Y + 396.5, 'Back', { fill: '#bfe3ff', 'font-size': 9.5, 'text-anchor': 'end' });
@@ -768,10 +780,10 @@ $('reroll').onclick = () => { tplSeed = Math.floor(Math.random() * 1e9); drawTpl
   mk('Carregando no EDGE', 'antes de baixar uma página pesada, o Ferret Mini avisa o preço; o furão cava ao lado do endereço.', (s) => {
     const [X, Y] = shell(s, 'www.streetwire.com', '2 KB $0.01', 1), C = wirePage(40, 10); C.draw(s, X, Y, 6, 12);
     el('rect', { x: X, y: Y + 120, width: 240, height: 236, fill: '#fff' }, s);
-    el('rect', { x: X + 16, y: Y + 150, width: 208, height: 96, rx: 4, fill: '#f1f3f6', stroke: '#1f5a6b', 'stroke-width': 1.5 }, s);
+    el('rect', { x: X + 16, y: Y + 150, width: 208, height: 96, rx: 4, fill: '#f1f3f6', stroke: '#6b4a2e', 'stroke-width': 1.5 }, s);
     txt(s, X + 26, Y + 172, 'This page is about 120 KB', { fill: '#111', 'font-size': 10.5, 'font-weight': 600 }); txt(s, X + 26, Y + 190, 'and may cost $0.60 of data.', { fill: '#111', 'font-size': 10.5 }); txt(s, X + 26, Y + 208, 'Continue?', { fill: '#111', 'font-size': 10.5 });
-    txt(s, X + 26, Y + 234, 'Yes', { fill: '#1f5a6b', 'font-size': 11, 'font-weight': 600 }); txt(s, X + 214, Y + 234, 'No', { fill: '#1f5a6b', 'font-size': 11, 'font-weight': 600, 'text-anchor': 'end' });
-    el('rect', { x: X + 10, y: Y + 330, width: 220, height: 8, fill: '#fff', stroke: '#8a929d' }, s); el('rect', { x: X + 11, y: Y + 331, width: 50, height: 6, fill: '#5fa3b3' }, s); txt(s, X + 10, Y + 352, 'Connecting... 3.1 kB/s', { fill: '#444', 'font-size': 9.5 });
+    txt(s, X + 26, Y + 234, 'Yes', { fill: '#6b4a2e', 'font-size': 11, 'font-weight': 600 }); txt(s, X + 214, Y + 234, 'No', { fill: '#6b4a2e', 'font-size': 11, 'font-weight': 600, 'text-anchor': 'end' });
+    el('rect', { x: X + 10, y: Y + 330, width: 220, height: 8, fill: '#fff', stroke: '#8a929d' }, s); el('rect', { x: X + 11, y: Y + 331, width: 50, height: 6, fill: '#a27a52' }, s); txt(s, X + 10, Y + 352, 'Connecting... 3.1 kB/s', { fill: '#444', 'font-size': 9.5 });
   });
 })();
 </script>
