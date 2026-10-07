@@ -3,6 +3,7 @@ import { moonPhase, sunDir } from '../sim/clock';
 import { Paint, type C3 } from '../render/paint2d';
 import { FOOT_H, ICE, ptext, ptextW, SCR_H, SCR_W, STATUS_H } from './pixui';
 import { type Key } from './phone';
+import { faceOf } from './ui';
 
 /**
  * The phone's screens drawn in pixels by the manual v2's grid (section 6: the 18 px bar on top, the 26 px
@@ -233,4 +234,56 @@ export function paintDial(P: Paint, d: Dial, now: number) {
     ptext(P, SCR_W - M - ww, y + 11, r.when, r.sel ? SOFT : DIM);
     HITS.push({ x: 6, y, w: SCR_W - 12, h: 30, pre: r.pre, key: r.call ? 'ok' : undefined });
   });
+}
+
+/** Text wrapped to a width in characters. */
+export function wrapText(s: string, w: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const word of s.split(' ')) {
+    if (line && line.length + 1 + word.length > w) { out.push(line); line = word; }
+    else line = line ? `${line} ${word}` : word;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+/** A person's picture at (x, y), s px square: a rounded tile in their colour, their initials big on it. */
+export function paintFace(P: Paint, x: number, y: number, s: number, name: string) {
+  const { c, ini } = faceOf(name), k = s >= 48 ? 3 : s >= 24 ? 2 : 1;
+  P.grad(x, y, s, s, [[0, mul(c, 1.15)], [1, mul(c, 0.8)]], true, Math.round(s * 0.2));
+  ptext(P, Math.round(x + (s - ptextW(ini, k, true)) / 2), Math.round(y + (s - 8 * k) / 2), ini, [255, 255, 255], k, true);
+}
+
+/** A call (made or coming in): who, how it stands, what is said, the latest at the foot. */
+export interface CallPage { label: string; number: string; state: string; stateCol: C3; cost: string; ringingIn: boolean; lines: { who: 'them' | 'rec' | 'sys'; text: string }[] }
+export function paintCall(P: Paint, d: CallPage, now: number) {
+  P.grad(0, 0, SCR_W, Y1, [[0, [26, 44, 70]], [1, [8, 12, 22]]]);
+  const fs = 72, fx = (SCR_W - fs) >> 1, fy = Y0 + 18;
+  // ringing in: rings spreading from the picture
+  if (d.ringingIn) { const r = (now * 1.2) % 1; for (let k = 0; k < 3; k++) { const q = (r + k / 3) % 1; P.ring(SCR_W / 2, fy + fs / 2, fs / 2 + 6 + q * 40, 1.5, ICE, (1 - q) * 0.6); } }
+  paintFace(P, fx, fy, fs, d.label);
+  const k = ptextW(d.label, 2, true) <= SCR_W - 2 * M ? 2 : 1;
+  ctext(P, fy + fs + 14, d.label, [255, 255, 255], k, true);
+  let y = fy + fs + 14 + 8 * k + 6;
+  if (d.number) { ctext(P, y, d.number, SOFT); y += 14; }
+  ctext(P, y + 4, d.state, d.stateCol, 1, true); y += 18;
+  if (d.cost) { ctext(P, y, d.cost, SOFT); y += 14; }
+  // what is said: theirs in light bubbles, recordings in amber, the rest dim; the latest at the foot
+  const rows: { t: string; who: 'them' | 'rec' | 'sys'; first: boolean; last: boolean }[] = [];
+  for (const L of d.lines) {
+    const ls = wrapText(L.who === 'rec' ? `~ ${L.text}` : L.text, 32);
+    ls.forEach((t, n) => rows.push({ t, who: L.who, first: n === 0, last: n === ls.length - 1 }));
+  }
+  const lh = 12, top = y + 8, fit = Math.floor((Y1 - 8 - top) / lh), shown = rows.slice(-fit);
+  P.clip(0, top, SCR_W, Y1 - 4);
+  shown.forEach((r, n) => {
+    const ry = Y1 - 8 - (shown.length - n) * lh;
+    if (r.who === 'them') {
+      const w = ptextW(r.t) + 14;
+      P.rect(M, ry - (r.first ? 3 : 0), w, lh + (r.first ? 3 : 0) + (r.last ? 3 : 0), [236, 240, 246]);
+      ptext(P, M + 7, ry + 2, r.t, [30, 34, 44]);
+    } else ptext(P, M + 2, ry + 2, r.t, r.who === 'rec' ? [255, 200, 110] : [150, 170, 200]);
+  });
+  P.clip(0, 0, SCR_W, SCR_H);
 }

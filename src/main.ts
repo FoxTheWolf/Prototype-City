@@ -515,7 +515,7 @@ function touchDown(cx: number, cy: number): boolean {
     // a screen drawn in pixels (pixpages.ts) says where its items are; one of the cells' apps: OK on the row touched
     const h = HITS.find((r) => sx >= r.x && sx < r.x + r.w && sy >= r.y && sy < r.y + r.h);
     if (h) { h.pre?.(); t = { x: h.x, y: h.y, w: h.w, h: h.h, act: () => (h.key ? phonePress(h.key, true) : tap()) }; }
-    else if (!(phone.screen === 'standby' || phone.screen === 'menu' || (phone.screen === 'calls' && !phone.call))) t = { x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12, act: () => phonePress('ok', true) };
+    else if (!(phone.screen === 'standby' || phone.screen === 'menu' || phone.screen === 'calls')) t = { x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12, act: () => phonePress('ok', true) };
   }
   touchHeld = t;
   if (t) tapFlash(t, Infinity);

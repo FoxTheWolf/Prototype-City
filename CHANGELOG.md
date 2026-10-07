@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.25 — A chamada em pixels (2026-10-07)
+- **Tela de chamada nova:** o retrato grande com as iniciais na cor da pessoa, o nome e o número, como a ligação está (chamando, tocando, o tempo de conversa, o motivo do fim), o custo, e o que é dito em balões (gravações em âmbar). Recebendo, anéis se espalham do retrato.
+
 ## 0.15.24 — Controles do celular mais claros (2026-10-07)
 - **O mouse mexe no aparelho, a tela mexe nos apps:** o botão do meio sobe um estágio (bolso → fechado → aberto) e o direito desce (fecha o teclado, depois guarda), sem nunca sair do app em que você está. Para voltar no app: o Back do rodapé, o botão central ou desligar.
 - **O toque age ao soltar:** apertar acende o item (na grade, o app fica escolhido enquanto você segura); soltar abre. Arrastar para fora antes de soltar cancela.

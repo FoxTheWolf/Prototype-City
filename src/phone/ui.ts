@@ -31,15 +31,18 @@ export function box(S: Lcd, x0: number, y0: number, x1: number, y1: number, col:
   }
 }
 
-/** A person's picture: two cells in a color of their own (from the name), their initials in it. */
-export function face(S: Lcd, x: number, y: number, name: string) {
+/** A person's colour (from the name) and initials ('#' for a number), for their picture. */
+export function faceOf(name: string): { c: C3; ini: string } {
   let h = 0;
   for (let k = 0; k < name.length; k++) h = (h * 31 + name.charCodeAt(k)) | 0;
   const hue = hash3(h, 1, 2) * 6, i = Math.floor(hue), f = hue - i;
   const rgb = [[1, f, 0], [1 - f, 1, 0], [0, 1, f], [0, 1 - f, 1], [f, 0, 1], [1, 0, 1 - f]][i % 6];
-  const c: C3 = [60 + rgb[0] * 130, 60 + rgb[1] * 130, 60 + rgb[2] * 130];
   const parts = name.replace(/[^A-Za-z0-9 ]/g, '').trim().split(/\s+/);
-  const ini = /^[0-9]/.test(name) ? '#' : ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
+  return { c: [60 + rgb[0] * 130, 60 + rgb[1] * 130, 60 + rgb[2] * 130], ini: /^[0-9]/.test(name) ? '#' : ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase() };
+}
+/** A person's picture: two cells in a color of their own (from the name), their initials in it. */
+export function face(S: Lcd, x: number, y: number, name: string) {
+  const { c, ini } = faceOf(name);
   S.put(x, y, ch(ini[0] ?? ' '), [255, 255, 255], c);
   S.put(x + 1, y, ch(ini[1] ?? ' '), [255, 255, 255], c);
 }

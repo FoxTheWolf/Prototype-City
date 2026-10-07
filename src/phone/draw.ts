@@ -18,7 +18,7 @@ import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
-import { APP_COL, HITS, paintDial, paintMenu, paintStandby, paintVolume, type Card, type Dial, type Standby, type Tile } from './pixpages';
+import { APP_COL, HITS, paintCall, paintDial, paintMenu, paintStandby, paintVolume, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
@@ -272,6 +272,11 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       else if (P.screen === 'menu') {
         const tiles = APPS.map((a, n): Tile => ({ label: appLabel(a), col: APP_COL[n], art: artColors(a), sel: n === P.sel, pre: () => { P.sel = n; } }));
         page = (Pt) => paintMenu(Pt, tiles, t); softKeys(S, T.open, T.back);
+      }
+      else if (P.screen === 'calls' && P.call) {
+        const d = callData(P, world, now), c = P.call;
+        page = (Pt) => paintCall(Pt, d, now);
+        if (P.callIn && c.state === 'ringing') softKeys(S, T.apps.answer, T.apps.end); else softKeys(S, '', c.state === 'ended' ? '' : T.apps.end);
       }
       else if (P.screen === 'calls' && !P.call) { const d = dialData(P, world, t); page = (Pt) => paintDial(Pt, d, now); softKeys(S, P.dial ? T.apps.save : '', P.dial ? T.apps.clear : T.back); }
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
@@ -562,6 +567,19 @@ function dialData(P: Phone, world: World, t: number): Dial {
   });
   return { t, dial: d, who: P.contacts.find((x) => x.number === d)?.name ?? '', missed: P.missed ? `${P.missed} missed` : '', hint: A.dialHint,
     tabs: [A.tabCalls, A.tabContacts], toContacts: () => { P.open('contacts', performance.now() / 1000); }, recent: A.recent, log };
+}
+
+/** What a call's screen shows (painted in pixels by pixpages.ts paintCall): who, how it stands, what is said so far. */
+function callData(P: Phone, world: World, now: number): CallPage {
+  const A = T.apps, c = P.call!, d = P.dial, who = P.contacts.find((x) => x.number === d)?.name;
+  const num = d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d;
+  const u = Math.max(0, now - (c.connectAt >= 0 ? c.connectAt : now)), tm = `${String(Math.floor(u / 60)).padStart(2, '0')}:${String(Math.floor(u % 60)).padStart(2, '0')}`;
+  const ringIn = P.callIn && c.state === 'ringing';
+  const state = ringIn ? A.incoming : c.state === 'dialing' ? `${A.calling}${'.'.repeat(Math.floor(now * 3) % 4)}` : c.state === 'ringing' ? `${A.ringing} (${c.rings})` : c.state === 'talk' ? tm : c.reason;
+  const stateCol: C3 = c.state === 'ended' ? [255, 120, 90] : c.state === 'talk' ? [120, 255, 150] : [143, 211, 255];
+  const cost = c.state === 'ended' && !P.callIn && c.cost() ? A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`) : '';
+  const lines = c.lines.map((L) => ({ who: L.who, text: L.text.slice(0, Math.ceil(((now - L.at) / L.dur) * L.text.length)) })).filter((L) => L.text);
+  return { label: who ?? num, number: who ? num : '', state, stateCol, cost, ringingIn: ringIn, lines };
 }
 
 // map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,

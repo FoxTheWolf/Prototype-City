@@ -21,7 +21,7 @@ import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
-import { box, CHROME, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
+import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 import { compile, TRACKS } from '../audio/tracks';
@@ -90,7 +90,6 @@ function folder(S: Lcd, P: Phone, t: number) {
 
 export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
   switch (P.screen as App) {
-    case 'calls': return calls(S, P, world, t, now);
     case 'contacts': return contacts(S, P, t);
     case 'messages': return messages(S, P, t);
     case 'camera': return cameraScreen(S, P, now);
@@ -130,73 +129,6 @@ function wrap(s: string, w: number): string[] {
 const PG0: C3 = [234, 238, 244], PG1: C3 = [206, 212, 222], INKD: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], BLUE: C3 = [40, 90, 170];
 const pageBg = (y: number): C3 => lerp(PG0, PG1, (y - 1) / (SH - 3));
 const lightPage = (S: Lcd) => vgrad(S, 1, SH - 2, PG0, PG1);
-
-/**
- * The dialer: the number big on a white display, who it is, the numbers called last. During a call:
- * a dark page, the other end's picture, name and number, the state and the time, and what is said
- * in bubbles, typing in as it is spoken.
- */
-function calls(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  const d = P.dial, c = P.call, who = P.contacts.find((x) => x.number === d)?.name;
-  if (!c) {
-    lightPage(S);
-    header(S, '', P.missed ? `${P.missed} missed` : '', ')))', [120, 230, 150]);
-    tabs(S, 5, 0, CHROME.text, CHROME.top, [40, 170, 90]);
-    box(S, 1, 4, SW - 2, 11, [255, 255, 255], pageBg, 1, [244, 246, 250]);
-    if (d.length <= 7) bigText(S, 5, d, INKD);
-    else S.center(8, d, INKD, [250, 251, 253]);
-    if (who) S.center(10, who, BLUE, [246, 248, 251]);
-    if (!d) S.center(8, typed(A.dialHint, t - 0.2), GREY, [250, 251, 253]);
-    // the call log: each call with how it went (arrow out made, arrow in received, red missed or not
-    // completed) and when; with nothing dialed the arrows pick one and the green key calls it back
-    if (P.log.length) {
-      S.text(2, 13, A.recent, GREY, pageBg(13));
-      const view = 5, sel = Math.min(P.lsel, P.log.length - 1), top = Math.max(0, Math.min(sel - view + 1, P.log.length - view));
-      P.log.slice(top, top + view).forEach((e, n) => {
-        const k = top + n, y = 14 + n * 2, on = k === sel && !d, nm = P.contacts.find((x) => x.number === e.number)?.name, num = /^[0-9]{7}$/.test(e.number) ? formatNumber(world.telco, e.number) : e.number;
-        if (t < 0.15 + n * 0.05) return;
-        const bg: C3 = on ? PICK : [242, 245, 249];
-        box(S, 1, y, SW - 2, y, bg, pageBg, 0);
-        face(S, 2, y, nm ?? e.number);
-        const bad = e.kind === 'missed' || e.kind === 'failed', col: C3 = bad ? [200, 50, 50] : e.kind === 'in' ? BLUE : [40, 150, 80];
-        S.text(5, y, e.kind === 'in' || e.kind === 'missed' ? '<' : '>', on ? (bad ? [255, 150, 140] : PICK_INK) : col, bg);
-        const c = calendar(e.at), when = `${A.log[e.kind]} ${hhmm(c.hour)}`;
-        S.text(7, y, (nm ?? num).slice(0, SW - when.length - 10), on ? PICK_INK : bad ? [170, 40, 40] : INKD, bg);
-        S.text(SW - when.length - 2, y, when, on ? PICK_DIM : GREY, bg);
-      });
-    }
-    return softKeys(S, d ? A.save : '', d ? A.clear : T.back);
-  }
-  const D0: C3 = [26, 44, 70], D1: C3 = [8, 12, 22], dbg = (y: number) => lerp(D0, D1, (y - 1) / (SH - 3));
-  vgrad(S, 1, SH - 2, D0, D1);
-  const label = who ?? (d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d);
-  // their picture: a rounded tile in their color, the initials in it
-  box(S, 17, 2, 24, 5, [70, 90, 130], dbg, 1, [40, 56, 90]);
-  face(S, 20, 3, label);
-  S.center(6, label, WHITE, dbg(6));
-  if (who) S.center(7, d.replace(/\D/g, '').length === 7 ? formatNumber(world.telco, d) : d, [150, 170, 200], dbg(7));
-  const u = Math.max(0, now - (c.connectAt >= 0 ? c.connectAt : now)), tm = `${String(Math.floor(u / 60)).padStart(2, '0')}:${String(Math.floor(u % 60)).padStart(2, '0')}`;
-  const state = P.callIn && c.state === 'ringing' ? A.incoming : c.state === 'dialing' ? `${A.calling}${'.'.repeat(Math.floor(now * 3) % 4)}` : c.state === 'ringing' ? `${A.ringing} (${c.rings})` : c.state === 'talk' ? tm : c.reason;
-  S.center(9, state, c.state === 'ended' ? BAD : c.state === 'talk' ? [120, 255, 150] : HI, dbg(9));
-  if (c.state === 'ended' && !P.callIn && c.cost()) S.center(10, A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`), [150, 170, 200], dbg(10));
-  // ringing in: rings spreading from the picture
-  if (P.callIn && c.state === 'ringing') { const r = Math.floor(now * 3) % 3; for (let k = 0; k <= r; k++) { S.put(15 - k * 2, 3, ch(')'), [120, 200, 255], dbg(3)); S.put(26 + k * 2, 3, ch('('), [120, 200, 255], dbg(3)); } }
-  // what is said, the latest at the bottom: theirs in white bubbles, recordings in amber
-  const rows: [string, C3, C3 | null][] = [];
-  for (const L of c.lines) {
-    const shown = L.text.slice(0, Math.ceil(((now - L.at) / L.dur) * L.text.length));
-    const them = L.who === 'them';
-    for (const l of wrap(L.who === 'rec' ? `~ ${shown}` : shown, SW - 6)) rows.push([l, them ? INKD : L.who === 'rec' ? HI : [150, 170, 200], them ? [236, 240, 246] : null]);
-    rows.push(['', INKD, null]);
-  }
-  rows.slice(-(SH - 14)).forEach(([l, col, bub], k) => {
-    const y = 12 + k;
-    if (bub && l) { for (let x = 1; x < l.length + 3; x++) S.put(x, y, 32, bub, bub); S.text(2, y, l, col, bub); }
-    else S.text(2, y, l, col, dbg(y));
-  });
-  if (P.callIn && c.state === 'ringing') return softKeys(S, A.answer, A.end);
-  softKeys(S, '', c.state === 'ended' ? '' : A.end);
-}
 
 /** The Phone's two tabs on the title row (Calls, Contacts), the one open lit; left and right switch them. */
 function tabs(S: Lcd, x: number, on: number, fg: C3, bg: C3, hi: C3) {
