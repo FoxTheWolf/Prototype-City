@@ -11,14 +11,14 @@ import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
 import { formatNumber } from '../sim/telco';
 import { type World } from '../sim/world';
-import { BAR, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, typed, WHITE, type C3 } from './lcd';
+import { BAR, BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, WHITE, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
 import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APP_COL, INK as PINK_INK, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
+import { APP_COL, INK as PINK_INK, paintBank, type BankPage, type BankView, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
 import { EDGE_LIMIT_KB, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
@@ -486,79 +486,50 @@ export function tunesData(P: Phone, t: number): TunesPage {
   return { title: (ST.names as Record<string, string>).tunes, out: P.earphones ? TN.phones : TN.speaker, idle: TN.idle, tune, volLabel: 'VOL', keys: TN.keys, rows: all.slice(off, off + h), t };
 }
 
-function bankApp(S: Lcd, P: Phone, world: World, t: number) {
-  const GREEN: C3 = [18, 64, 48], GOLD: C3 = [236, 200, 112], PAGE: C3 = [242, 238, 226], INK2: C3 = [34, 38, 34], GREY: C3 = [120, 122, 112], RED: C3 = [170, 40, 40], OK2: C3 = [30, 120, 60];
+function bankApp(S: Lcd, P: Phone, world: World, t: number): Pg {
   const { city } = world, Acc = world.bank, B = P.bk, J = P.radio.job, op = operatorName(city, world.telco.player.op ?? 0);
-  paint(S, PAGE);
-  bar(S, P.bankName.toUpperCase().slice(0, SW - 4), GOLD, GREEN, '$$', GOLD);
+  const page = (view: BankView): Pg => { const d: BankPage = { name: P.bankName.toUpperCase(), view, t }; return (Pt) => paintBank(Pt, d); };
   if (!B.ok) {
     const busy = J?.what === 'bank' && (J.state === 'connecting' || J.state === 'loading');
-    if (busy) {
-      S.center(10, typed(BK.connecting, t), INK2, PAGE);
-      const n = Math.round((J!.done / J!.kb) * 20);
-      S.center(12, `[${'#'.repeat(n).padEnd(20, '.')}]`, GREEN, PAGE);
-    } else BK.offline.forEach((l, k) => S.center(10 + k, l, GREY, PAGE));
-    return softKeys(S, busy ? '' : T.ok, T.back);
+    softKeys(S, busy ? '' : T.ok, T.back);
+    return page(busy ? { kind: 'wait', lines: [BK.connecting], bar: J!.done / J!.kb } : { kind: 'wait', lines: BK.offline, bar: null });
   }
   const date = (at: number) => { const c = calendar(at); return `${String(c.month).padStart(2, '0')}/${String(c.day).padStart(2, '0')}`; };
   const corner = (k: number) => {
     const Bd = city.buildings[city.businesses[k].building], x = (Bd.x0 + Bd.x1) / 2, y = (Bd.y0 + Bd.y1) / 2;
     return [`${roadName(city, true, nearestRoad(city.xb, city.xCell, x))} &`, roadName(city, false, nearestRoad(city.yb, city.yCell, y)), districtName(city, districtAt(city, x, y))];
   };
+  const pick = (n: number) => () => { B.sel = n; B.note = ''; };
   if (B.view === 'home') {
-    S.text(2, 3, typed(`${BK.checking} ****${Acc.number.slice(-4)}`, t), GREY, PAGE);
-    S.text(2, 5, typed(BK.balance, t - 0.1), INK2, PAGE);
-    S.text(2, 6, typed(money(Acc.balance), t - 0.15), GREEN, PAGE);
-    S.text(2, 7, typed(BK.asOf.replace('{t}', hhmm(calendar(world.time).hour)), t - 0.2), GREY, PAGE);
-    BK.menu.forEach((m, n) => {
-      const sel = n === B.sel, bg: C3 = sel ? GREEN : PAGE;
-      S.fill(10 + n * 2, bg);
-      S.text(2, 10 + n * 2, typed(m, t - 0.25 - n * 0.05), sel ? GOLD : INK2, bg);
-      S.text(SW - 3, 10 + n * 2, '>', sel ? GOLD : GREY, bg);
-    });
-    return softKeys(S, T.ok, T.back);
+    softKeys(S, T.ok, T.back);
+    return page({ kind: 'home', acct: `${BK.checking} ****${Acc.number.slice(-4)}`, label: BK.balance, balance: money(Acc.balance), asOf: BK.asOf.replace('{t}', hhmm(calendar(world.time).hour)),
+      menu: BK.menu.map((m, n) => ({ label: m, sel: n === B.sel, pre: pick(n) })) });
   }
   if (B.view === 'stmt') {
-    S.text(1, 2, BK.stmt, GREEN, PAGE);
-    const L = Acc.ledger, rows = SH - 6, top = Math.max(0, Math.min(B.sel - (rows >> 1), L.length - rows));
-    for (let n = 0; n < rows && top + n < L.length; n++) {
-      const e = L[L.length - 1 - (top + n)], y = 4 + n, sel = top + n === B.sel, bg: C3 = sel ? [222, 230, 214] : PAGE;
+    const L = Acc.ledger;
+    softKeys(S, '', T.back);
+    return page({ kind: 'stmt', title: BK.stmt, rows: L.map((_, n) => {
+      const e = L[L.length - 1 - n];
       const what = (BK.kinds as Record<string, string>)[e.kind].replace('{biz}', e.kind === 'card' || e.kind === 'atm' ? businessName(city, e.ref) : '').replace('{op}', op);
-      const amt = `${e.amount > 0 ? '+' : ''}${money(e.amount)}`;
-      S.fill(y, bg);
-      S.text(1, y, date(e.at), GREY, bg);
-      S.text(7, y, what.slice(0, SW - 9 - amt.length), INK2, bg);
-      S.text(SW - amt.length - 1, y, amt, e.amount > 0 ? OK2 : INK2, bg);
-    }
-    return softKeys(S, '', T.back);
+      return { date: date(e.at), what, amt: `${e.amount > 0 ? '+' : ''}${money(e.amount)}`, plus: e.amount > 0, sel: n === B.sel, pre: pick(n) };
+    }) });
   }
   if (B.view === 'topup') {
-    S.text(1, 2, BK.topupTitle.replace('{op}', op.toUpperCase()).slice(0, SW - 2), GREEN, PAGE);
-    S.text(2, 4, BK.credit, GREY, PAGE); S.text(SW - money(world.telco.player.credit).length - 2, 4, money(world.telco.player.credit), INK2, PAGE);
-    S.text(2, 5, BK.balance, GREY, PAGE); S.text(SW - money(Acc.balance).length - 2, 5, money(Acc.balance), INK2, PAGE);
-    TOPUPS.forEach((c, n) => {
-      const sel = n === B.sel, bg: C3 = sel ? GREEN : PAGE;
-      S.fill(8 + n * 2, bg);
-      S.text(2, 8 + n * 2, money(c), sel ? GOLD : INK2, bg);
-    });
     const busy = J?.what.startsWith('banktop:') && (J.state === 'connecting' || J.state === 'loading');
-    if (busy) S.text(2, SH - 4, BK.paying, GREY, PAGE);
-    else if (B.note) S.text(2, SH - 4, (BK.notes as Record<string, string>)[B.note], B.note === 'done' ? OK2 : RED, PAGE);
-    return softKeys(S, busy ? '' : BK.pay, T.back);
+    softKeys(S, busy ? '' : BK.pay, T.back);
+    return page({ kind: 'topup', title: BK.topupTitle.replace('{op}', op.toUpperCase()), info: [[BK.credit, money(world.telco.player.credit)], [BK.balance, money(Acc.balance)]],
+      amounts: TOPUPS.map((c, n) => ({ label: money(c), sel: n === B.sel, pre: pick(n) })),
+      note: busy ? BK.paying : B.note ? (BK.notes as Record<string, string>)[B.note] : '', noteKind: busy ? 'dim' : B.note === 'done' ? 'ok' : 'bad' });
   }
   // the branch where the account is, and the head office
   const k = Acc.branch, chain = city.banks[Acc.bank], hq = chain.hq;
-  S.text(1, 2, BK.branch, GREEN, PAGE);
-  corner(k).forEach((l, n) => S.text(2, 4 + n, typed(l.slice(0, SW - 4), t - n * 0.05), INK2, PAGE));
-  S.text(2, 8, BK.hours, GREY, PAGE);
-  S.text(2, 9, formatNumber(world.telco, world.telco.bizNum[k]), INK2, PAGE);
-  if (hq !== k) {
-    S.text(2, 12, BK.hq, GREEN, PAGE);
-    corner(hq).forEach((l, n) => S.text(2, 13 + n, l.slice(0, SW - 4), INK2, PAGE));
-  } else S.text(2, 12, BK.isHq, GREEN, PAGE);
-  S.text(2, 17, BK.branches.replace('{n}', String(chain.branches.length)), GREY, PAGE);
-  S.text(2, SH - 4, BK.callHint, GREY, PAGE);
+  const lines: Extract<BankView, { kind: 'branch' }>['lines'] = corner(k).map((text) => ({ text, kind: 'ink' as const }));
+  lines.push({ text: '', kind: 'ink' }, { text: BK.hours, kind: 'dim' }, { text: formatNumber(world.telco, world.telco.bizNum[k]), kind: 'num' });
+  if (hq !== k) { lines.push({ text: BK.hq, kind: 'head' }); for (const l of corner(hq)) lines.push({ text: l, kind: 'ink' }); }
+  else lines.push({ text: BK.isHq, kind: 'head' });
+  lines.push({ text: '', kind: 'ink' }, { text: BK.branches.replace('{n}', String(chain.branches.length)), kind: 'dim' });
   softKeys(S, '', T.back);
+  return page({ kind: 'branch', title: BK.branch, lines, call: BK.call });
 }
 
 const WF = A.wifi;

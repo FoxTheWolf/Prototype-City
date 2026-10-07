@@ -973,3 +973,107 @@ export function paintWireProfile(P: Paint, d: WireProfile) {
   });
   P.clip(0, 0, SCR_W, SCR_H);
 }
+
+/** The bank's app: its own look (a bank's, not the phone's): cream paper, deep green, gold. */
+const BANK = { page: [242, 238, 226] as C3, card: [251, 249, 242] as C3, green: [18, 64, 48] as C3, green2: [30, 92, 68] as C3, gold: [236, 200, 112] as C3, ink: [34, 38, 34] as C3,
+  grey: [120, 122, 112] as C3, red: [170, 40, 40] as C3, plus: [30, 120, 60] as C3, line: [214, 206, 186] as C3, pale: [222, 230, 214] as C3 };
+/** One of the bank's pages: waiting (connecting, with its bar; or no signal), home (the balance, the menu), the statement, topping up the phone, the branch. */
+export type BankView = { kind: 'wait'; lines: string[]; bar: number | null }
+  | { kind: 'home'; acct: string; label: string; balance: string; asOf: string; menu: { label: string; sel: boolean; pre: () => void }[] }
+  | { kind: 'stmt'; title: string; rows: { date: string; what: string; amt: string; plus: boolean; sel: boolean; pre: () => void }[] }
+  | { kind: 'topup'; title: string; info: [string, string][]; amounts: { label: string; sel: boolean; pre: () => void }[]; note: string; noteKind: 'ok' | 'bad' | 'dim' }
+  | { kind: 'branch'; title: string; lines: { text: string; kind: 'head' | 'ink' | 'dim' | 'num' }[]; call: string };
+export interface BankPage { name: string; view: BankView; t: number }
+/** The bank's little emblem: a pediment on three columns, in gold. */
+function bankMark(P: Paint, x: number, y: number) {
+  P.poly([x, y + 5, x + 7, y, x + 14, y + 5], BANK.gold);
+  for (let k = 0; k < 3; k++) P.rect(x + 2 + k * 4, y + 6, 2, 6, BANK.gold);
+  P.rect(x, y + 12, 15, 2, BANK.gold);
+}
+function bankTitle(P: Paint, y: number, s: string): number {
+  ptext(P, M, y, s, BANK.green, 1, true);
+  P.rect(M, y + 12, SCR_W - 2 * M, 1, BANK.gold);
+  return y + 20;
+}
+export function paintBank(P: Paint, d: BankPage) {
+  P.rect(0, 0, SCR_W, Y1, BANK.page);
+  P.grad(0, Y0, SCR_W, 30, [[0, BANK.green2], [1, BANK.green]]);
+  bankMark(P, M, Y0 + 8);
+  ptext(P, M + 22, Y0 + 11, d.name.slice(0, 30), BANK.gold, 1, true);
+  P.rect(0, Y0 + 30, SCR_W, 2, BANK.gold);
+  const V = d.view, top = Y0 + 42, tx = (s: string, lag = 0) => typed(s, d.t - lag);
+  if (V.kind === 'wait') {
+    V.lines.forEach((l, k) => ctext(P, 180 + k * 14, tx(l, k * 0.05), V.bar === null ? BANK.grey : BANK.ink));
+    if (V.bar !== null) {
+      const bw = 160, bx = (SCR_W - bw) >> 1;
+      P.rrect(bx, 206, bw, 8, 3, BANK.line); P.rrect(bx, 206, Math.max(6, Math.round(bw * Math.min(1, V.bar))), 8, 3, BANK.green);
+    } else HITS.push({ x: 0, y: top, w: SCR_W, h: Y1 - top, key: 'ok' });
+    return;
+  }
+  if (V.kind === 'home') {
+    ptext(P, M, top, tx(V.acct), BANK.grey);
+    // the balance on its card, big
+    P.rrect(M, top + 16, SCR_W - 2 * M, 66, 4, BANK.line); P.rrect(M + 1, top + 17, SCR_W - 2 * M - 2, 64, 4, BANK.card);
+    ptext(P, M + 10, top + 26, tx(V.label, 0.1), BANK.ink);
+    ptext(P, M + 10, top + 42, tx(V.balance, 0.15), BANK.green, 2, true);
+    ptext(P, M + 10, top + 64, tx(V.asOf, 0.2), BANK.grey);
+    V.menu.forEach((m, n) => {
+      const y = top + 98 + n * 40;
+      HITS.push({ x: M, y, w: SCR_W - 2 * M, h: 34, key: 'ok', pre: m.pre });
+      if (d.t < 0.25 + n * 0.05) return;
+      P.rrect(M, y, SCR_W - 2 * M, 34, 4, m.sel ? BANK.green : BANK.line);
+      if (!m.sel) P.rrect(M + 1, y + 1, SCR_W - 2 * M - 2, 32, 4, BANK.card);
+      const c = m.sel ? BANK.gold : BANK.ink, cx = SCR_W - M - 14;
+      ptext(P, M + 10, y + 13, m.label, c, 1, true);
+      P.line(cx, y + 13, cx + 4, y + 17, 1.5, m.sel ? BANK.gold : BANK.grey); P.line(cx + 4, y + 17, cx, y + 21, 1.5, m.sel ? BANK.gold : BANK.grey);
+    });
+    return;
+  }
+  if (V.kind === 'stmt') {
+    const y0 = bankTitle(P, top, V.title), rh = 20, fit = Math.floor((Y1 - 4 - y0) / rh);
+    const s = Math.max(0, V.rows.findIndex((r) => r.sel)), first = Math.max(0, Math.min(s - (fit >> 1), V.rows.length - fit));
+    V.rows.slice(first, first + fit).forEach((r, k) => {
+      const y = y0 + k * rh;
+      HITS.push({ x: 6, y, w: SCR_W - 12, h: rh, pre: r.pre });
+      if (r.sel) P.rect(6, y, SCR_W - 12, rh, BANK.pale); else P.rect(M, y + rh - 1, SCR_W - 2 * M, 1, BANK.line);
+      const aw = ptextW(r.amt, 1, true);
+      ptext(P, M, y + 6, r.date, BANK.grey);
+      ptext(P, M + 36, y + 6, r.what.slice(0, Math.floor((SCR_W - 2 * M - 42 - aw) / 6)), BANK.ink);
+      ptext(P, SCR_W - M - aw, y + 6, r.amt, r.plus ? BANK.plus : BANK.ink, 1, true);
+    });
+    return;
+  }
+  if (V.kind === 'topup') {
+    let y = bankTitle(P, top, V.title);
+    for (const [a, b] of V.info) { ptext(P, M, y, a, BANK.grey); ptext(P, SCR_W - M - ptextW(b), y, b, BANK.ink, 1, true); y += 14; }
+    y += 10;
+    // the amounts as buttons, two by two; a touch picks, a second pays
+    const bw = (SCR_W - 2 * M - 8) / 2;
+    V.amounts.forEach((a, n) => {
+      const x = Math.round(M + (n % 2) * (bw + 8)), by = y + Math.floor(n / 2) * 46;
+      HITS.push({ x, y: by, w: Math.round(bw), h: 40, pre: a.pre, key: a.sel ? 'ok' : undefined });
+      P.rrect(x, by, Math.round(bw), 40, 4, a.sel ? BANK.green : BANK.line);
+      if (!a.sel) P.rrect(x + 1, by + 1, Math.round(bw) - 2, 38, 4, BANK.card);
+      ptext(P, Math.round(x + (bw - ptextW(a.label, 1, true)) / 2), by + 16, a.label, a.sel ? BANK.gold : BANK.green, 1, true);
+    });
+    y += Math.ceil(V.amounts.length / 2) * 46 + 8;
+    if (V.note) wrapText(V.note, 36).forEach((l, k) => ptext(P, M, y + k * 12, l, V.noteKind === 'ok' ? BANK.plus : V.noteKind === 'bad' ? BANK.red : BANK.grey));
+    return;
+  }
+  // the branch: where it is, its hours and number (a button calls it), the head office
+  let y = bankTitle(P, top, V.title);
+  V.lines.forEach((l, k) => {
+    if (l.kind === 'head') { y += 8; ptext(P, M, y, l.text, BANK.green, 1, true); y += 14; return; }
+    if (!l.text) { y += 6; return; }
+    ptext(P, M, y, tx(l.text, k * 0.04).slice(0, 36), l.kind === 'dim' ? BANK.grey : BANK.ink, 1, l.kind === 'num');
+    y += 13;
+  });
+  if (V.call) {
+    const w = ptextW(V.call, 1, true) + 34, by = Y1 - 40;
+    HITS.push({ x: M, y: by, w, h: 30, key: 'send' });
+    P.rrect(M, by, w, 30, 5, BANK.green);
+    // a handset
+    P.rrect(M + 9, by + 10, 12, 4, 2, BANK.gold); P.rect(M + 9, by + 13, 3, 4, BANK.gold); P.rect(M + 18, by + 13, 3, 4, BANK.gold);
+    ptext(P, M + 27, by + 11, V.call, BANK.gold, 1, true);
+  }
+}

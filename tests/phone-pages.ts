@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, wrapText } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, wrapText } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -96,4 +96,23 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   shot('wire-profile', (Q) => paintWireProfile(Q, { tab: 'Profile', tagline: 'Loading the wire..', face: faces[0], name: 'Maria Rossi', handle: '@mrossi82', friends: '214 friends', joined: 'joined Mar 2007',
     info: [['Age', '26'], ['Lives in', 'Riverside'], ['Work', 'works at Kell Street Diner'], ['Likes', 'jazz, soccer, old films']], bio: wrapText('Night shift, day dreams. If the lights go out, I am the one with candles.', 36).slice(0, 3),
     postsBy: 'Posts', noPosts: 'No recent posts.', t: 5, posts: texts.map((s, k) => ({ age: `${k * 4 + 2}m ago`, text: s, sel: k === 0, pre: () => {} })) }));
+}
+
+// 0.15.34: the bank
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const nm = 'HALVARD SAVINGS & TRUST', f = () => {};
+  shot('bank-home', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'home', acct: 'Checking ****4471', label: 'Available balance', balance: '$1,284.50', asOf: 'As of 21:04',
+    menu: ['Statement', 'Top up phone', 'Branch & contact'].map((label, n) => ({ label, sel: n === 1, pre: f })) } }));
+  shot('bank-stmt', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'stmt', title: 'STATEMENT', rows: [['10/14', 'Card: Kell Street Diner', '-$8.40', false], ['10/14', 'ATM: 5th Ave Deli', '-$40.00', false], ['10/13', 'Transfer in', '+$600.00', true], ['10/12', 'Top up Corvia', '-$20.00', false]]
+    .map(([date, what, amt, plus], n) => ({ date: date as string, what: what as string, amt: amt as string, plus: plus as boolean, sel: n === 1, pre: f })) } }));
+  shot('bank-topup', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'topup', title: 'TOP UP CORVIA', info: [['Phone credit', '$3.20'], ['Available balance', '$1,284.50']],
+    amounts: ['$5.00', '$10.00', '$20.00', '$50.00'].map((label, n) => ({ label, sel: n === 2, pre: f })), note: 'Done. Your credit is topped up.', noteKind: 'ok' } }));
+  shot('bank-branch', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'branch', title: 'YOUR BRANCH', call: 'Call the branch', lines: [{ text: '5th Avenue &', kind: 'ink' }, { text: 'Mercer Street', kind: 'ink' }, { text: 'Riverside', kind: 'ink' },
+    { text: '', kind: 'ink' }, { text: 'Mon-Fri 9am-5pm', kind: 'dim' }, { text: '(555) 014-2233', kind: 'num' }, { text: 'Head office', kind: 'head' }, { text: 'Kell Street &', kind: 'ink' }, { text: '2nd Avenue', kind: 'ink' }, { text: 'Downtown', kind: 'ink' },
+    { text: '', kind: 'ink' }, { text: '6 branches in the city', kind: 'dim' }] } }));
 }

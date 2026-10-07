@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.34 — Banco em pixels (2026-10-07)
+- **O app do banco com cara de banco:** papel creme, verde-escuro e dourado, o emblema da fachada com colunas na barra. O saldo aparece grande num cartão, o menu em botões; o extrato em linhas com as entradas em verde; a recarga em quatro botões (um toque escolhe, outro paga); a agência com o endereço, o horário, o telefone e um botão para ligar.
+
 ## 0.15.33 — Streetwire em pixels (2026-10-07)
 - **O Streetwire redesenhado, ainda com cara de site de 2008:** a barra azul-marinho com o logo e o pontinho laranja, cartões brancos com a foto de cada pessoa (as iniciais num quadrado da cor dela), o texto, a foto do post (quando já foi aberta) e um coração de verdade para curtir. Um toque escolhe o post, outro abre; tocar no coração curte. O post aberto mostra a foto grande, o botão Like e os comentários em cartões (os seus em laranja); tocar no nome do autor abre o perfil, que tem a foto grande, a tabela (idade, bairro, trabalho, gostos), a bio e os posts da pessoa.
 
