@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do Jackdaw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --sig: #ffd02e; --acc: #ff6a13; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { min-height: 60vh; display: grid; place-items: center; text-align: center; padding: 40px 0; border-bottom: 1px solid var(--line); }
+  header.cover .plate { background: var(--sig); border-radius: 22px; padding: 30px 36px; display: inline-block; box-shadow: inset 0 3px 0 #fff6, inset 0 -4px 0 #0003; }
+  header.cover .plate svg { width: min(540px, 74vw); height: auto; display: block; }
+  header.cover canvas { width: min(420px, 90%); height: auto; display: block; margin: 22px auto 0; border-radius: 8px; border: 10px solid #151618; }
+  header.cover p { color: var(--dim); margin: 10px auto 0; max-width: 70ch; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg, .card canvas { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--acc); }
+  .do b { color: #6fd08c; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 64px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  .type { display: grid; gap: 12px; }
+  .type .s { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: hidden; }
+  .type .s .n { font-size: 11px; color: var(--dim); }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 0; overflow-x: auto; line-height: 1.05; font-size: 11px; }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  button:hover { background: #2c2f34; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3a3c42; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  .stage { background: radial-gradient(ellipse at 40% 20%, #25272c 0%, #0c0d0f 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-top: 14px; }
+  .stage svg { width: 100%; height: auto; display: block; max-width: 880px; margin: 0 auto; touch-action: manipulation; user-select: none; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 14px; font-size: 12px; color: var(--dim); align-items: center; justify-content: center; }
+  .chip { font: 600 11px 'IBM Plex Mono'; background: #1e2024; color: var(--ink); border: 1px solid #3a3c42; border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+  .chip.on { border-color: var(--sig); color: #fff; box-shadow: 0 0 0 1px var(--sig) inset; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; text-align: center; }
+  [data-btn] { cursor: pointer; }
+  [data-btn].pressed { transform: translateY(1.6px); filter: brightness(.72); }
+  .tilt { perspective: 760px; background: #0c0d0f; border-radius: 6px; padding: 30px 10px 24px; overflow: hidden; }
+  .tilt canvas { width: 82%; margin: 0 auto; transform: rotateX(30deg) rotateZ(-5deg); border: 8px solid #151618; border-radius: 6px; box-shadow: 0 30px 40px #000a; }
+  .led { animation: blink 1.6s steps(1) infinite; }
+  @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .15; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".12" stop-color="#fff" stop-opacity="0"/><stop offset=".85" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="plastic"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.6 0.36"/></filter>
+  </defs>
+</svg>
+<main>
+  <header class="cover">
+    <div>
+      <div class="plate"><svg viewBox="0 0 300 48" id="coverLogo"></svg></div>
+      <canvas id="hero" width="1024" height="512"></canvas>
+      <p>Manual de identidade · Jackdaw Mini · v1 · 2026-10-06</p>
+      <p>Um bichinho virtual de bolso de 2008: uma gralha que mora numa telinha verde de 128×64 e anda com o jogador pela cidade.</p>
+    </div>
+  </header>
+  <nav class="toc">
+    <a href="#aparelho">1 · O aparelho</a><a href="#vistas">2 · As vistas</a><a href="#cores">3 · Cores e materiais</a><a href="#logo">4 · Logo</a>
+    <a href="#teclas">5 · Teclas e sons</a><a href="#tela">6 · A tela</a><a href="#gralha">7 · A gralha</a><a href="#sistema">8 · Telas do sistema</a>
+    <a href="#jogo">9 · No jogo</a><a href="#regras">10 · Regras</a>
+  </nav>
+
+  <section id="aparelho">
+    <h2>1 · O aparelho <small>JKD-M, revisão C</small></h2>
+    <p class="lead">Um brinquedo de chaveiro de plástico amarelo, como os bichinhos virtuais que todo mundo tinha em 2008. A gralha mora na tela: tem humor, pede atenção, cochila quando a bateria acaba e reage ao que acontece no aparelho.</p>
+    <div class="stage">
+      <svg viewBox="0 0 560 300" id="dev"></svg>
+      <div class="ctl"><span>luz ambiente</span><span id="cAmb"></span></div>
+      <div class="hint">Ligue na alavanca do topo. <kbd>OK</kbd> abre o menu; no app <b>PET</b>, <kbd>←→</kbd> trocam a expressão e <kbd>OK</kbd> faz carinho. Teclado: <kbd>↑↓←→</kbd> <kbd>Enter</kbd> <kbd>Backspace</kbd>. À noite, qualquer tecla acende a luz da tela por 5 s.</div>
+    </div>
+    <div class="tbl"><table>
+      <tr><th>ficha</th><th></th></tr>
+      <tr><td>corpo</td><td>110 × 50 × 22 mm, cantos de raio 6 mm, ~70 g, plástico fosco cor sinal</td></tr>
+      <tr><td>tela</td><td>LCD de 128 × 64 pontos, 1 bit, verde com pontos escuros; área de 54 × 27 mm; luz de fundo verde</td></tr>
+      <tr><td>teclas</td><td>cruz de 4 teclas soltas com OK no meio (grafite), VOLTAR (vermelha) e a alavanca de ligar no topo</td></tr>
+      <tr><td>topo</td><td>a alavanca e uma tampinha de borracha grafite</td></tr>
+      <tr><td>base</td><td>a entrada do carregador e o cartão de memória</td></tr>
+      <tr><td>verso</td><td>a tampa da bateria, o alto-falante, a etiqueta, 4 pés de borracha e a cabeça do logo em relevo</td></tr>
+      <tr><td>frente</td><td>o LED vermelho que pisca quando está ligado, o logo impresso e JKD-M · REV.C</td></tr>
+    </table></div>
+  </section>
+
+  <section id="vistas">
+    <h2>2 · As vistas <small>frente, topo, base, laterais e verso</small></h2>
+    <p class="lead">Todas na mesma escala (1 mm ≈ 4,7 unidades do desenho). O topo fica acima da frente, a base abaixo e cada lateral do seu lado. Esta é a planta do modelo de cubinhos (seção 9).</p>
+    <div class="card"><svg viewBox="0 0 975 700" id="views"></svg></div>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 560 300" id="back"></svg><div class="cap"><b>Verso.</b> A tampa da bateria com o parafuso e a cabeça do logo em relevo (na mesma cor, só o volume), a grade do alto-falante, a etiqueta e os quatro pés.</div></div>
+    </div>
+  </section>
+
+  <section id="cores">
+    <h2>3 · Cores e materiais</h2>
+    <p class="lead">O amarelo sinal é a assinatura: de noite, sob o sódio, é o único objeto do jogador que ainda chama a atenção. As teclas são grafite; o vermelho fica só para a tecla VOLTAR e o LED.</p>
+    <div class="sw">
+      <div><i style="background:#ffd02e"></i><span><b>Amarelo sinal</b>#ffd02e<br><em>o corpo</em></span></div>
+      <div><i style="background:#c49a10"></i><span><b>Sinal escuro</b>#c49a10<br><em>o rebaixo das teclas, o relevo</em></span></div>
+      <div><i style="background:#33363b"></i><span><b>Grafite</b>#33363b<br><em>as teclas e a tampinha (OK em #3e4247)</em></span></div>
+      <div><i style="background:#b8321f"></i><span><b>Vermelho</b>#b8321f<br><em>a tecla VOLTAR</em></span></div>
+      <div><i style="background:#ff5a36"></i><span><b>LED</b>#ff5a36<br><em>a luz de ligado</em></span></div>
+      <div><i style="background:#151618"></i><span><b>Moldura</b>#151618<br><em>a moldura da tela, as entradas</em></span></div>
+      <div><i style="background:#1d1e20"></i><span><b>Tinta</b>#1d1e20<br><em>o logo e os textos impressos</em></span></div>
+      <div><i style="background:#c6c9ce"></i><span><b>Alumínio</b>#c6c9ce<br><em>a alavanca</em></span></div>
+      <div><i style="background:#aab86a"></i><span><b>LCD</b>#aab86a<br><em>o fundo da tela</em></span></div>
+      <div><i style="background:#1f2a0c"></i><span><b>Ponto</b>#1f2a0c<br><em>o ponto aceso</em></span></div>
+      <div><i style="background:#a0ae62"></i><span><b>Fantasma</b>#a0ae62<br><em>o ponto apagado, visível de leve</em></span></div>
+      <div><i style="background:#c4dc62"></i><span><b>Luz de fundo</b>#c4dc62<br><em>o fundo com a luz acesa</em></span></div>
+    </div>
+    <h3>Materiais</h3>
+    <div class="tbl"><table>
+      <tr><th>peça</th><th>material</th><th>como a luz bate</th></tr>
+      <tr><td>corpo</td><td>plástico fosco com granulado fino</td><td>difuso, um brilho largo e fraco na quina de cima; nunca espelhado</td></tr>
+      <tr><td>teclas</td><td>borracha dura (cruz e OK), plástico brilhante (VOLTAR)</td><td>a cruz é fosca; a VOLTAR tem um ponto de brilho</td></tr>
+      <tr><td>tela</td><td>vidro sobre o LCD</td><td>um reflexo largo e fraco na metade de cima; o fundo segue a luz da cena quando a luz de fundo está apagada</td></tr>
+      <tr><td>alavanca</td><td>alumínio escovado</td><td>um risco claro no comprimento</td></tr>
+      <tr><td>tampinha e pés</td><td>borracha</td><td>nenhum brilho</td></tr>
+    </table></div>
+    <p>Com o uso (ideia para depois, ligada ao tempo de jogo): o amarelo das quinas gasta e clareia, e as teclas da cruz ficam lisas no centro.</p>
+  </section>
+
+  <section id="logo">
+    <h2>4 · Logo <small>o 1: a cabeça e a palavra larga</small></h2>
+    <p class="lead">A cabeça da gralha em silhueta, com o olho, a pupila, o bico e as sobrancelhas recortados. O recorte é sempre a cor do fundo, então o logo funciona com uma cor só sobre qualquer superfície. Ao lado vem JACKDAW numa letra larga e pesada, e MINI numa caixinha, como os selos dos aparelhos de 2008.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="-24 -30 348 108" id="logoAnat"></svg><div class="cap"><b>Construção:</b> (1) a cabeça com o tufo de três penas; (2) os recortes dos olhos, das pupilas, do bico e das sobrancelhas; (3) JACKDAW; (4) a caixa do MINI. A área de proteção (tracejada) vale x, o diâmetro do olho do logo.</div></div>
+    </div>
+    <h3>Versões</h3>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 320 80" id="lgMain"></svg><div class="cap"><b>Principal:</b> tinta grafite sobre o sinal. É a do corpo e da caixa.</div></div>
+      <div class="card"><svg viewBox="0 0 320 80" id="lgNeg"></svg><div class="cap"><b>Negativa:</b> sinal sobre grafite, para fundos escuros (o site, o carregador, a etiqueta da loja).</div></div>
+      <div class="card"><svg viewBox="0 0 320 80" id="lgRel"></svg><div class="cap"><b>Ícone:</b> a cabeça sozinha. Em relevo na tampa do verso, e onde o nome não cabe.</div></div>
+      <div class="card"><canvas id="lgLcd" width="512" height="256"></canvas><div class="cap"><b>Na tela:</b> a abertura. A palavra vira a fonte de pontos em tamanho 2, e a cabeça é o mesmo desenho reduzido.</div></div>
+    </div>
+    <h3>Tipografia</h3>
+    <div class="type">
+      <div class="s"><div class="n">A MARCA · sans larga e pesada (aqui, Archivo 900 a 125% de largura); MINI em 800</div><div style="font:900 36px Archivo,sans-serif;font-stretch:125%;color:#ffd02e">JACKDAW <span style="font-weight:800;font-size:17px;border:2px solid;border-radius:4px;padding:0 6px;vertical-align:middle">MINI</span></div></div>
+      <div class="s"><div class="n">A TELA · a fonte de pontos 3×5, só maiúsculas, nos tamanhos 1 a 4 (seção 6)</div><canvas id="fontLcd" width="512" height="256" style="max-width:512px;width:100%;height:auto;border-radius:6px;display:block"></canvas></div>
+      <div class="s"><div class="n">IMPRESSO · monoespaçada (a etiqueta do verso, o manual de papel, a caixa)</div><div style="font:400 14px 'IBM Plex Mono',monospace">MODEL JKD-M · REV.C · S/N 08-0417-2263</div></div>
+    </div>
+    <div class="rule"><b>✗</b><span>Não colorir os recortes com outra cor, não pôr contorno, sombra ou degradê, não tirar o MINI da caixa e não esticar.</span></div>
+    <div class="rule"><b>✗</b><span>O logo não é a mascote: a cabeça do logo é uma silhueta de carimbo, e a gralha da tela é a personagem. Nunca usar uma no lugar da outra.</span></div>
+    <div class="rule do"><b>✓</b><span>Tamanho mínimo no corpo: 42 mm de largura, para a pupila recortada continuar aberta. Abaixo de 20 mm, usar só a cabeça.</span></div>
+  </section>
+
+  <section id="teclas">
+    <h2>5 · Teclas e sons</h2>
+    <p class="lead">As teclas são soltas e duras, com curso curto e um clique seco que se ouve. Cada tecla tem um papel só, o mesmo em todas as telas. Todo som é sintetizado e curto, no espírito chiptune: aperte ▶ para ouvir.</p>
+    <div class="tbl"><table>
+      <tr><th>tecla</th><th>tamanho</th><th>na tela inicial</th><th>no menu</th><th>num app</th></tr>
+      <tr><td>↑ ↓ ← →</td><td>7,2 × 7,6 mm, grafite, seta em relevo</td><td>a gralha olha para o lado (←→) ou pula (↑)</td><td>sobe e desce</td><td>o que o app pedir</td></tr>
+      <tr><td>OK</td><td>Ø 7,2 mm, grafite mais claro</td><td>abre o menu</td><td>abre o app</td><td>a ação principal</td></tr>
+      <tr><td>VOLTAR</td><td>Ø 6,3 mm, vermelha, seta curva</td><td>nada</td><td>volta à tela inicial</td><td>volta ao menu</td></tr>
+      <tr><td>alavanca</td><td>1,9 × 5,9 mm, alumínio, tomba 24° para cada lado</td><td colspan="3">liga e desliga em qualquer tela, com um clac mecânico</td></tr>
+    </table></div>
+    <div class="tbl"><table>
+      <tr><th></th><th>som</th><th>quando</th><th>receita</th></tr>
+      <tr><td><button data-snd="key">▶</button></td><td>tecla</td><td>apertar e soltar</td><td>descer: ruído agudo curtíssimo + um tique de 2,3 kHz; subir: um ruído ainda mais curto</td></tr>
+      <tr><td><button data-snd="lever">▶</button></td><td>alavanca</td><td>ligar e desligar</td><td>ruído médio de 50 ms + um baque grave que cai de 160 para 90 Hz</td></tr>
+      <tr><td><button data-snd="boot">▶</button></td><td>ligou</td><td>o logo aparece</td><td>três notas subindo: 880, 1320 e 1760 Hz</td></tr>
+      <tr><td><button data-snd="enter">▶</button></td><td>entrar</td><td>abrir o menu ou um app</td><td>uma nota de 1320 Hz, 35 ms</td></tr>
+      <tr><td><button data-snd="back">▶</button></td><td>voltar</td><td>VOLTAR</td><td>uma nota de 660 Hz, 50 ms</td></tr>
+      <tr><td><button data-snd="happy">▶</button></td><td>gralha contente</td><td>carinho, algo deu certo, chegou à tela inicial</td><td>dois piados que sobem</td></tr>
+      <tr><td><button data-snd="sad">▶</button></td><td>gralha emburrada</td><td>algo não deu certo</td><td>dois piados que descem</td></tr>
+      <tr><td><button data-snd="err">▶</button></td><td>não dá</td><td>tecla sem função naquela tela</td><td>uma nota grave de 220 Hz, 140 ms</td></tr>
+      <tr><td><button data-snd="low">▶</button></td><td>bateria fraca</td><td>ao chegar a 5%, e a cada minuto depois</td><td>duas vezes, uma nota alta e uma baixa</td></tr>
+    </table></div>
+    <p>No jogo, o som sai do próprio aparelho, na mão do jogador, e passa pelo mesmo filtro do mundo: no bolso fica abafado, e os NPCs por perto ouvem o bipe.</p>
+  </section>
+
+  <section id="tela">
+    <h2>6 · A tela <small>128 × 64, 1 bit</small></h2>
+    <p class="lead">Cada ponto está aceso ou apagado, sem meio-termo: o cinza da gralha é pontilhado. O ponto aceso é escuro sobre o verde, e o apagado ainda aparece de leve (o "fantasma"), como nos LCDs de verdade. Há uma fresta entre os pontos: cada ponto ocupa 86% da sua casa.</p>
+    <div class="card"><div style="position:relative"><canvas id="anat" width="1024" height="512"></canvas><canvas id="anatOv" width="1024" height="512" style="position:absolute;inset:0"></canvas></div><div class="cap"><b>A grade do menu,</b> ampliada 8×: a barra de título tem 7 pontos de altura (o texto vai em negativo), cada linha tem 9, a margem é de 2 a 3 e a barra de rolagem ocupa 3 na borda direita. O ícone de 7×7 vem antes do nome.</div></div>
+    <div class="tbl"><table>
+      <tr><th>regra</th><th></th></tr>
+      <tr><td>texto</td><td>a fonte 3×5 em maiúsculas, com 1 ponto entre as letras e uma linha a cada 8 ou 9 pontos; os tamanhos 2 a 4 ficam para a palavra que importa (a hora, a fala da gralha)</td></tr>
+      <tr><td>cena da gralha</td><td>a gralha na metade esquerda (0–64) e a fala na direita, a partir do x 66–76, com no máximo 10 letras por linha</td></tr>
+      <tr><td>tela de app</td><td>barra de título no topo (o nome do app à esquerda, a hora à direita) e o conteúdo abaixo</td></tr>
+      <tr><td>tons de cinza</td><td>pontilhado ordenado de 75%, 50% (xadrez) e 25%, só dentro dos desenhos, nunca atrás de texto</td></tr>
+      <tr><td>movimento</td><td>10 quadros por segundo; tudo se move de 1 a 3 pontos por vez</td></tr>
+    </table></div>
+    <h3>Três luzes</h3>
+    <div class="grid3">
+      <div class="card"><canvas id="palDay" width="512" height="256"></canvas><div class="cap"><b>Dia:</b> sem a luz de fundo, o verde vem do ambiente.</div></div>
+      <div class="card"><canvas id="palLit" width="512" height="256"></canvas><div class="cap"><b>Luz acesa:</b> qualquer tecla acende por 5 s, e o fundo vira um verde-limão.</div></div>
+      <div class="card"><canvas id="palNight" width="512" height="256"></canvas><div class="cap"><b>Noite, apagada:</b> a tela quase some; só se lê com a luz acesa ou sob um poste.</div></div>
+    </div>
+  </section>
+
+  <section id="gralha">
+    <h2>7 · A gralha <small>anatomia, expressões e animações</small></h2>
+    <p class="lead">Uma gralha-bolinha de pelúcia: a cabeça grande e felpuda do tamanho do corpo, o tufo rebelde no alto, o boné preto que desce em máscara sobre os olhos, a nuca e as bochechas cinza, e um cachecol listrado porque a cidade é fria. O traço da gralha de verdade é o <b>olho claro</b>: aqui, o branco grande com a pupila e dois brilhos.</p>
+    <div class="row">
+      <div class="card"><canvas id="bird" width="680" height="440"></canvas><div class="cap"><b>Anatomia</b> em vetor, antes de virar pontos, nos cinco tons: preto, cinza 75, 50, 25 e branco.</div></div>
+      <div class="card"><canvas id="bird1" width="512" height="256"></canvas><div class="cap"><b>Em 1 bit:</b> o vetor é desenhado 8× maior, cada ponto fica com o tom que mais aparece na sua casa e os cinzas viram pontilhado. Na tela inicial a gralha tem 1,22× o tamanho base e ocupa a altura toda (o tufo pode encostar no topo).</div></div>
+    </div>
+    <h3>Expressões</h3>
+    <p>A silhueta nunca muda. Só mudam os olhos, as sobrancelhas (penas brancas, para aparecerem sobre a máscara preta), o bico, as bochechas e a postura: uma expressão nova se faz com essas cinco peças.</p>
+    <div class="grid3" id="sheet"></div>
+    <h3>Animações</h3>
+    <div class="grid3" id="anims"></div>
+    <div class="tbl"><table>
+      <tr><th>animação</th><th>o que muda</th><th>tempo</th><th>quando</th></tr>
+      <tr><td>piscar</td><td>os olhos viram arcos por 2 quadros</td><td>a cada ~3,8 s, com variação</td><td>sempre que ela está acordada</td></tr>
+      <tr><td>olhar</td><td>a pupila anda 2 pontos para o lado</td><td>troca a cada ~5 s; na hora, com ←→</td><td>tela inicial; segue a cruz</td></tr>
+      <tr><td>pular</td><td>o corpo todo sobe 2 a 3 pontos</td><td>0,3 s, a cada ~5 s e com ↑</td><td>tela inicial, contente</td></tr>
+      <tr><td>cochilar</td><td>cabeça tombada, olhos em arco e um Z subindo</td><td>um Z a cada 0,5 s</td><td>bateria fraca, ou 2 min sem tecla</td></tr>
+      <tr><td>carinho</td><td>neutra, depois contente com um pulo e o piado</td><td>1 s</td><td>OK no app PET</td></tr>
+      <tr><td>achou</td><td>contente, com a bugiganga brilhando na asa</td><td>as estrelas piscam a cada 0,4 s</td><td>ganhou uma bugiganga nova</td></tr>
+    </table></div>
+    <h3>Cenas dos apps</h3>
+    <p>Cada app abre com a sua própria cena da gralha, que ocupa a tela inteira: a mesma personagem com um objeto ou uma pose. O app pede a cena pelo nome. Estas são as dos apps de fábrica; as de outros apps entram aqui depois, no mesmo traço.</p>
+    <div class="grid3" id="appScenes"></div>
+  </section>
+
+  <section id="sistema">
+    <h2>8 · Telas do sistema</h2>
+    <p class="lead">As telas que não são de nenhum app. Todas seguem a seção 6 e todas têm a gralha ou o logo: o aparelho nunca mostra uma tela "sem dono".</p>
+    <div class="grid3" id="sys"></div>
+    <div class="tbl"><table>
+      <tr><th>tela</th><th>duração</th><th>som</th><th>sai para</th></tr>
+      <tr><td>abertura</td><td>logo 1,4 s, depois as linhas digitadas (~2,4 letras por quadro)</td><td>"ligou" no logo, "contente" no fim</td><td>início</td></tr>
+      <tr><td>início</td><td>fica</td><td>nenhum (piado ao pular com ↑)</td><td>menu (OK)</td></tr>
+      <tr><td>menu</td><td>fica</td><td>tecla; "entrar" e "voltar"</td><td>carregando (OK), início (VOLTAR)</td></tr>
+      <tr><td>carregando</td><td>~1 s; a gralha atravessa a barra pulando</td><td>nenhum</td><td>o app</td></tr>
+      <tr><td>bateria fraca</td><td>aparece por cima de tudo aos 5%; some com qualquer tecla</td><td>"bateria fraca"</td><td>a tela de antes</td></tr>
+    </table></div>
+  </section>
+
+  <section id="jogo">
+    <h2>9 · No jogo <small>cubinhos, a tela como textura, ASCII de longe</small></h2>
+    <h3>O corpo em cubinhos</h3>
+    <p>Pela regra dos objetos de cubinhos, o aparelho é montado numa grade de <b>2 mm</b>: 55 × 25 cubos de frente e 11 de espessura. Na mão, levantado como o celular, ele ocupa uns dois terços da largura da tela, então cada cubo dá umas 3 células. O corpo é uma laje com os cantos em degraus; as teclas, a alavanca, a tampinha e o LED são cubos à parte, que afundam ou tombam quando apertados. O logo e os textos impressos não são cubos: são desenhados pelo código sobre a face, como uma pintura.</p>
+    <div class="card"><canvas id="vox" width="680" height="380"></canvas><div class="cap"><b>A frente na grade de 2 mm.</b> A tela não é feita de cubos: no lugar dela vai a textura da tela (abaixo).</div></div>
+    <div class="tbl"><table>
+      <tr><th>distância</th><th>como aparece</th></tr>
+      <tr><td>na mão (levantado)</td><td>os cubinhos completos, as teclas se movendo, a tela como textura própria, o LED aceso</td></tr>
+      <tr><td>no bolso ou na mesa, de perto</td><td>uma caixa amarela, a tela num retângulo com a cor média dela e o LED como um ponto</td></tr>
+      <tr><td>longe</td><td>um caractere (abaixo)</td></tr>
+    </table></div>
+    <h3>A tela como textura própria</h3>
+    <p>A tela <b>não</b> passa pela grade de células nem pela camada HD. Ela é uma textura de 128 × 64 que a GPU lê na resolução do monitor, na técnica das telas em perspectiva: o contorno da tela recorta o ASCII, e dentro dele os pontos são desenhados nítidos e inclinados junto com o aparelho. Por isso a gralha continua legível mesmo pequena e de lado. A textura só é enviada de novo quando o quadro muda (10 vezes por segundo, no máximo). O fundo segue a luz da cena quando a luz de fundo está apagada e emite luz própria quando está acesa.</p>
+    <div class="row">
+      <div class="card"><div class="tilt"><canvas id="tiltCv" width="1024" height="512"></canvas></div><div class="cap"><b>Como textura:</b> inclinada, nítida, com a fresta entre os pontos.</div></div>
+      <div class="card"><pre class="ascii" id="cellsAscii" style="color:#aab86a;font-size:14px;line-height:1.1"></pre><div class="cap"><b>Se fosse pela grade de células</b> (4 × 8 pontos por célula), a gralha vira uma mancha. É por isso que a tela tem caminho próprio.</div></div>
+    </div>
+    <h3>ASCII de longe</h3>
+    <p>Pelo princípio do texto no mundo: de perto, pontos; de longe, um caractere por célula. Quando o aparelho fica longe demais para a textura (na mesa a alguns metros, na mão de um NPC), ele vira caracteres na cor dele.</p>
+    <div class="row">
+      <div class="card"><pre class="ascii" id="midAscii" style="color:#aab86a;background:#161a0b"></pre><div class="cap"><b>A meia distância,</b> a tela pode virar ASCII pela densidade (2 × 4 pontos por caractere).</div></div>
+      <div class="card"><pre class="ascii" id="farAscii" style="font-size:18px;line-height:1.4"></pre><div class="cap"><b>Longe:</b> 3 células, depois 1.</div></div>
+    </div>
+  </section>
+
+  <section id="regras">
+    <h2>10 · Regras rápidas</h2>
+    <div class="rule"><b>1</b><span>O corpo é sempre amarelo sinal; as teclas, grafite; o vermelho só na VOLTAR e no LED.</span></div>
+    <div class="rule"><b>2</b><span>A tela é sempre o LCD verde de 128 × 64, 1 bit, com o fantasma e a fresta entre os pontos.</span></div>
+    <div class="rule"><b>3</b><span>Na tela, só a fonte 3×5 em maiúsculas; os cinzas, pontilhados, nunca atrás de texto.</span></div>
+    <div class="rule"><b>4</b><span>A gralha tem uma silhueta só; as expressões mudam os olhos, as sobrancelhas, o bico, as bochechas e a postura.</span></div>
+    <div class="rule"><b>5</b><span>Cada app abre com a própria cena da gralha, desenhada no mesmo traço e pedida pelo nome.</span></div>
+    <div class="rule"><b>6</b><span>O logo é o 1, com os recortes na cor do fundo; o logo não é a mascote.</span></div>
+    <div class="rule"><b>7</b><span>Toda tecla faz barulho; todo som é sintetizado e curto.</span></div>
+    <div class="rule"><b>8</b><span>No jogo: cubinhos de 2 mm na mão, a tela como textura própria, caracteres de longe; nada de arquivo de imagem.</span></div>
+  </section>
+</main>
+<script>
+// ================= colors =================
+const SIG = '#ffd02e', SIGD = '#c49a10', GRA = '#33363b', OKC = '#3e4247', RED = '#b8321f', LEDC = '#ff5a36', FRAME = '#151618', TINTA = '#1d1e20', ALU = '#c6c9ce';
+const DAY = { bg: '#aab86a', on: '#1f2a0c', ghost: '#a0ae62' }, LIT = { bg: '#c4dc62', on: '#1b2a05', ghost: '#b8d05a' }, NIGHT = { bg: '#272c17', on: '#0b0e04', ghost: '#242918' };
+
+// ================= 1-bit buffer + 3x5 font =================
+const W = 128, H = 64;
+const FONT = {
+  'A':'.#. #.# ### #.# #.#','B':'##. #.# ##. #.# ##.','C':'.## #.. #.. #.. .##','D':'##. #.# #.# #.# ##.','E':'### #.. ##. #.. ###',
+  'F':'### #.. ##. #.. #..','G':'.## #.. #.# #.# .##','H':'#.# #.# ### #.# #.#','I':'### .#. .#. .#. ###','J':'..# ..# ..# #.# .#.',
+  'K':'#.# #.# ##. #.# #.#','L':'#.. #.. #.. #.. ###','M':'#.# ### ### #.# #.#','N':'##. #.# #.# #.# #.#','O':'.#. #.# #.# #.# .#.',
+  'P':'##. #.# ##. #.. #..','Q':'.#. #.# #.# ##. .##','R':'##. #.# ##. #.# #.#','S':'.## #.. .#. ..# ##.','T':'### .#. .#. .#. .#.',
+  'U':'#.# #.# #.# #.# ###','V':'#.# #.# #.# #.# .#.','W':'#.# #.# ### ### #.#','X':'#.# #.# .#. #.# #.#','Y':'#.# #.# .#. .#. .#.',
+  'Z':'### ..# .#. #.. ###','0':'### #.# #.# #.# ###','1':'.#. ##. .#. .#. ###','2':'##. ..# .#. #.. ###','3':'##. ..# .#. ..# ##.',
+  '4':'#.# #.# ### ..# ..#','5':'### #.. ##. ..# ##.','6':'.## #.. ### #.# ###','7':'### ..# .#. .#. .#.','8':'### #.# ### #.# ###',
+  '9':'### #.# ### ..# ##.',':':'... .#. ... .#. ...','.':'... ... ... ... .#.','-':'... ... ### ... ...','>':'#.. .#. ..# .#. #..',
+  '!':'.#. .#. .#. ... .#.','?':'##. ..# .#. ... .#.','/':'..# ..# .#. #.. #..','%':'#.# ..# .#. #.. #.#','+':'... .#. ### .#. ...',"'":'.#. .#. ... ... ...',' ':'... ... ... ... ...'
+};
+class Buf {
+  constructor() { this.p = new Uint8Array(W * H); }
+  clr() { this.p.fill(0); }
+  fill(x, y, w, h, v = 1) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (i >= 0 && j >= 0 && i < W && j < H) this.p[j * W + i] = v; }
+  text(x, y, s, sc = 1, v = 1) {
+    for (const ch of s.toUpperCase()) {
+      (FONT[ch] || FONT[' ']).split(' ').forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') this.fill(x + i * sc, y + j * sc, sc, sc, v); });
+      x += 4 * sc;
+    }
+    return x;
+  }
+  tw(s, sc = 1) { return s.length * 4 * sc - sc; }
+  spr(x, y, rows, sc = 1, v = 1) { rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') this.fill(x + i * sc, y + j * sc, sc, sc, v); }); }
+  box(x, y, w, h) { this.fill(x, y, w, 1); this.fill(x, y + h - 1, w, 1); this.fill(x, y, 1, h); this.fill(x + w - 1, y, 1, h); }
+}
+
+// ================= vector -> 1-bit (8x supersample, mode per cell, ordered dither) =================
+const INK = '#000', G75 = '#404040', G50 = '#808080', G25 = '#c0c0c0', PAP = '#fff';
+const SS = 8, big = document.createElement('canvas'); big.width = W * SS; big.height = H * SS;
+const bg = big.getContext('2d', { willReadFrequently: true });
+function raster(draw, buf) {
+  bg.setTransform(1, 0, 0, 1, 0, 0); bg.fillStyle = PAP; bg.fillRect(0, 0, big.width, big.height);
+  bg.setTransform(SS, 0, 0, SS, 0, 0); draw(bg);
+  const d = bg.getImageData(0, 0, big.width, big.height).data, bw = big.width, cnt = new Int32Array(5);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    cnt.fill(0);
+    for (let sy = 0; sy < SS; sy++) { let o = ((y * SS + sy) * bw + x * SS) * 4; for (let sx = 0; sx < SS; sx++, o += 4) cnt[Math.round(d[o] / 64)]++; }
+    let k = 0; for (let i = 1; i < 5; i++) if (cnt[i] > cnt[k]) k = i;
+    const ev = (x & 1) === 0 && (y & 1) === 0;
+    buf.p[y * W + x] = k === 0 ? 1 : k === 1 ? (ev ? 0 : 1) : k === 2 ? (((x + y) & 1) === 0 ? 1 : 0) : k === 3 ? (ev ? 1 : 0) : 0;
+  }
+}
+function paint(buf, cv, pal = DAY) {
+  const g = cv.getContext('2d'), s = cv.width / W, d = s * .86;
+  g.fillStyle = pal.bg; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = pal.ghost; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!buf.p[y * W + x]) g.fillRect(x * s, y * s, d, d);
+  g.fillStyle = pal.on; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (buf.p[y * W + x]) g.fillRect(x * s, y * s, d, d);
+  const gr = g.createLinearGradient(0, 0, 0, cv.height); gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(0,0,0,.10)'); g.fillStyle = gr; g.fillRect(0, 0, cv.width, cv.height);
+}
+
+// ================= the jackdaw =================
+function fluff(g, cx, cy, r, n, amp, rot = 0) {
+  g.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const a = rot + i / n * Math.PI * 2, vx = cx + Math.cos(a) * r, vy = cy + Math.sin(a) * r;
+    if (i === 0) g.moveTo(vx, vy);
+    else g.quadraticCurveTo(cx + Math.cos(a - Math.PI / n) * (r + amp * 1.9), cy + Math.sin(a - Math.PI / n) * (r + amp * 1.9), vx, vy);
+  }
+  g.closePath();
+}
+const circ = (g, x, y, r, c) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = c; g.fill(); };
+const ell = (g, x, y, rx, ry, c, rot = 0) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.fillStyle = c; g.fill(); };
+function line(g, pts, w, c) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.lineWidth = w; g.strokeStyle = c; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); }
+function curve(g, x0, y0, cx, cy, x1, y1, w, c) { g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.lineWidth = w; g.strokeStyle = c; g.lineCap = 'round'; g.stroke(); }
+function star(g, x, y, r) { line(g, [x - r, y, x + r, y], 1.1, INK); line(g, [x, y - r, x, y + r], 1.1, INK); line(g, [x - r * .45, y - r * .45, x + r * .45, y + r * .45], .9, INK); line(g, [x - r * .45, y + r * .45, x + r * .45, y - r * .45], .9, INK); }
+
+// mood: neutral happy sulky sleepy surprised smug. hold(g): an object in the raised wing, in the bird's own space.
+function gralha(g, o) {
+  const { x = 0, y = 0, s = 1, look = 0, mood = 'neutral', blink = false, tilt = 0, coin = false, sparkle = true, hold = null } = o;
+  g.save(); g.translate(x, y); g.rotate(tilt); g.scale(s, s);
+  fluff(g, 0, 37, 20, 16, 1.8, .2); g.fillStyle = INK; g.fill();
+  fluff(g, 0, 41, 10.5, 12, 1.4, .3); g.fillStyle = G25; g.fill();
+  curve(g, -15, 30, -13, 40, -8, 46, 1.2, G50); curve(g, 15, 30, 13, 40, 8, 46, 1.2, G50);
+  if (coin || hold) { ell(g, 17, 27, 6.5, 9, INK, -.7); ell(g, 17, 27, 5.2, 7.6, G75, -.7); }
+  if (coin) {
+    circ(g, 22, 16, 5.6, INK); circ(g, 22, 16, 4.4, PAP); circ(g, 22, 16, 2.6, INK); circ(g, 22, 16, 1.4, PAP);
+    if (sparkle) { star(g, 30, 9, 3); star(g, 14, 6, 2); }
+  }
+  fluff(g, 0, 0, 19.5, 22, 2.2, .1); g.fillStyle = INK; g.fill();
+  fluff(g, 0, 0, 18.2, 22, 2.0, .1); g.fillStyle = PAP; g.fill();
+  g.save(); fluff(g, 0, 0, 18.2, 22, 2.0, .1); g.clip();
+  ell(g, -17, 4, 7, 14, G50); ell(g, 17, 4, 7, 14, G50);
+  g.beginPath(); g.moveTo(-19, 4); g.quadraticCurveTo(-15, 10.5, -8, 9.5); g.quadraticCurveTo(-3, 9, 0, 6); g.quadraticCurveTo(3, 9, 8, 9.5); g.quadraticCurveTo(15, 10.5, 19, 4);
+  g.lineTo(24, -30); g.lineTo(-24, -30); g.closePath(); g.fillStyle = INK; g.fill();
+  g.restore();
+  for (const [bx, tx, ty] of [[-4, -8, -27], [0, 1, -30], [4, 8, -25]]) { g.beginPath(); g.moveTo(bx - 3, -16); g.quadraticCurveTo(tx - 2, ty + 4, tx, ty); g.quadraticCurveTo(bx + 2, ty + 7, bx + 3, -16); g.fillStyle = INK; g.fill(); }
+  const bl = mood === 'sulky' ? 1.3 : 1;
+  ell(g, -11.5, 13, 3.4 * bl, 2 * bl, G50); ell(g, 11.5, 13, 3.4 * bl, 2 * bl, G50);
+  const EY = 1.5;
+  for (const side of [-1, 1]) {
+    const ex = side * 8.6;
+    if (blink || mood === 'happy' || mood === 'sleepy') {
+      if (mood === 'happy') curve(g, ex - 4.5, EY + 2, ex, EY - 4, ex + 4.5, EY + 2, 2, PAP);
+      else curve(g, ex - 4.5, EY + .5, ex, EY + 3, ex + 4.5, EY + .5, 1.8, PAP);
+      continue;
+    }
+    const R = mood === 'surprised' ? 7.4 : 6.8, pr = mood === 'surprised' ? 2.2 : 3.9;
+    circ(g, ex, EY, R, PAP);
+    const lk = mood === 'smug' ? 1 : look, px = ex + lk * 1.9, py = EY + .8;
+    circ(g, px, py, pr, INK);
+    circ(g, px - 1.3, py - 1.4, 1.2, PAP); circ(g, px + 1.2, py + 1.3, .6, PAP);
+    if (mood === 'sulky' || mood === 'smug') {
+      const lid = mood === 'sulky' ? (side < 0 ? .35 : -.35) : 0;
+      g.save(); g.beginPath(); g.arc(ex, EY, R, 0, Math.PI * 2); g.clip();
+      g.beginPath(); g.moveTo(ex - R - 1, EY - 1.2 - lid * 4); g.lineTo(ex + R + 1, EY - 1.2 + lid * 4); g.lineTo(ex + R + 1, EY - R - 2); g.lineTo(ex - R - 1, EY - R - 2); g.closePath();
+      g.fillStyle = INK; g.fill(); g.restore();
+    }
+  }
+  const BR = { neutral: [-6.5, -6.5], happy: [-8, -8], sulky: [-8.8, -5], sleepy: [-6, -6], surprised: [-10, -10], smug: [-6, -9] }[mood];
+  for (const side of [-1, 1]) {
+    const smugR = mood === 'smug' && side > 0;
+    if (mood !== 'neutral') line(g, [side * 11.5, smugR ? BR[1] : BR[0], side * 5, smugR ? BR[1] + 1 : BR[1]], 1.2, PAP);
+  }
+  const open = mood === 'happy' || mood === 'surprised';
+  const upper = (tip) => { g.beginPath(); g.moveTo(-5.2, 6.2); g.quadraticCurveTo(0, 4, 5.2, 6.2); g.quadraticCurveTo(3, 9, 0, tip); g.quadraticCurveTo(-3, 9, -5.2, 6.2); g.closePath(); };
+  if (open) {
+    g.beginPath(); g.ellipse(0, 13.2, mood === 'surprised' ? 3.2 : 4.4, mood === 'surprised' ? 3.6 : 2.8, 0, 0, Math.PI * 2); g.fillStyle = INK; g.fill();
+    if (mood === 'happy') ell(g, 0, 14.2, 2.4, 1.3, G50);
+    upper(11.6); g.lineWidth = 2.2; g.strokeStyle = PAP; g.stroke(); g.fillStyle = INK; g.fill();
+  } else {
+    upper(14.4); g.lineWidth = 2.2; g.strokeStyle = PAP; g.stroke(); g.fillStyle = INK; g.fill();
+    if (mood === 'smug') line(g, [3.4, 13.4, 6.4, 12], 1.1, INK);
+  }
+  line(g, [-2.6, 6.6, -1.2, 9], 1, PAP);
+  g.save();
+  g.beginPath(); g.roundRect(-16.5, 16, 33, 8.4, 4.2); g.fillStyle = INK; g.fill();
+  g.beginPath(); g.roundRect(-15.3, 17.2, 30.6, 6, 3); g.fillStyle = PAP; g.fill();
+  for (let sx = -9; sx < 12; sx += 8) { g.fillStyle = INK; g.fillRect(sx, 17, 2.2, 6.4); }
+  g.translate(-10, 22); g.rotate(.18);
+  g.beginPath(); g.roundRect(-3.6, 0, 7.2, 14, 1.5); g.fillStyle = INK; g.fill();
+  g.beginPath(); g.roundRect(-2.4, 1.2, 4.8, 11.6, 1); g.fillStyle = PAP; g.fill();
+  g.fillStyle = INK; g.fillRect(-2.4, 5, 4.8, 1.6); g.fillRect(-2.4, 9, 4.8, 1.6);
+  for (let k = -2; k <= 2; k += 2) g.fillRect(k - .45, 14, .9, 2.4);
+  g.restore();
+  if (hold) hold(g);
+  g.restore();
+}
+
+// ================= logo 1 =================
+function head(c, cut, x = 0, y = 0, s = 1) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <path d="M13 8 Q9 1 8 -2 Q14 2 17 7 Q18 -1 20 -4 Q23 2 22 7 Q26 2 31 1 Q28 6 26 9Z" fill="${c}"/>
+    <circle cx="20" cy="22" r="15" fill="${c}"/>
+    <path d="M6 30 Q20 44 34 30 L34 40 L6 40Z" fill="${c}"/>
+    <circle cx="14.5" cy="21" r="5.4" fill="${cut}"/><circle cx="25.5" cy="21" r="5.4" fill="${cut}"/>
+    <circle cx="15.6" cy="21.8" r="2.7" fill="${c}"/><circle cx="26.6" cy="21.8" r="2.7" fill="${c}"/>
+    <circle cx="14.6" cy="20.6" r="1" fill="${cut}"/><circle cx="25.6" cy="20.6" r="1" fill="${cut}"/>
+    <path d="M17 26.5 Q20 25.5 23 26.5 L20 31.5Z" fill="${cut}"/>
+    <path d="M7 15 L13 16 M33 15 L27 16" stroke="${cut}" stroke-width="1.6" stroke-linecap="round"/>
+  </g>`;
+}
+const logo1 = (c, cut) => `${head(c, cut, 2, 4, 1)}<text x="50" y="36" font-family="Archivo" font-weight="900" font-size="31" style="font-stretch:125%" fill="${c}">JACKDAW</text><rect x="256" y="14" width="40" height="20" rx="3" fill="none" stroke="${c}" stroke-width="2"/><text x="276" y="29" text-anchor="middle" font-family="Archivo" font-weight="800" font-size="11.5" style="font-stretch:120%" fill="${c}">MINI</text>`;
+/** The same head on a canvas, for the 1-bit screens. */
+function headVec(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.fillStyle = INK; g.fill(new Path2D('M13 8 Q9 1 8 -2 Q14 2 17 7 Q18 -1 20 -4 Q23 2 22 7 Q26 2 31 1 Q28 6 26 9Z'));
+  circ(g, 20, 22, 15, INK); g.fillStyle = INK; g.fill(new Path2D('M6 30 Q20 44 34 30 L34 40 L6 40Z'));
+  circ(g, 14.5, 21, 5.4, PAP); circ(g, 25.5, 21, 5.4, PAP); circ(g, 15.6, 21.8, 2.7, INK); circ(g, 26.6, 21.8, 2.7, INK);
+  g.fillStyle = PAP; g.fill(new Path2D('M17 26.5 Q20 25.5 23 26.5 L20 31.5Z'));
+  line(g, [7, 15, 13, 16], 1.6, PAP); line(g, [33, 15, 27, 16], 1.6, PAP);
+  g.restore();
+}
+// ================= screens =================
+const TRINKETS = [
+  ['..###..', '.#...#.', '#..#..#', '#.###.#', '#..#..#', '.#...#.', '..###..'],
+  ['.......', '.##....', '#..#...', '#..####', '.##..#.', '.....#.', '.......'],
+  ['...#...', '..#.#..', '.#####.', '#.....#', '#.....#', '.#...#.', '..###..'],
+  ['.#.#.#.', '#######', '#.....#', '#.###.#', '#.....#', '#######', '.#.#.#.'],
+  ['..###..', '.#####.', '.##.##.', '..###..', '..#.#..', '..###..', '...#...'],
+];
+const ICONS = {
+  PET: ['.#.#.#.', '.#####.', '##.#.##', '#######', '.##.##.', '..###..', '.......'],
+  TONE: ['...##..', '...#.#.', '...#...', '...#...', '.###...', '####...', '.##....'],
+  LIGHT: ['..###..', '.#...#.', '.#...#.', '..#.#..', '..###..', '..###..', '...#...'],
+  CLOCK: ['..###..', '.#.#.#.', '#..#..#', '#..##.#', '#.....#', '.#...#.', '..###..'],
+  FILES: ['###....', '#..####', '#.....#', '#.....#', '#.....#', '#######', '.......'],
+  SETTINGS: ['..#.#..', '.#####.', '##...##', '.#...#.', '##...##', '.#####.', '..#.#..'],
+};
+const ITEMS = Object.keys(ICONS);
+const NOTE = ['..##', '..#.#', '..#', '..#', '###', '###'];
+const hopY = st => st.hop ? -2.5 : 0;
+function batIcon(b, x, y, n) { b.box(x, y, 12, 6); b.fill(x + 12, y + 2, 1, 2); for (let i = 0; i < n; i++) b.fill(x + 2 + i * 3, y + 2, 2, 2); }
+function hdr(b, title, time) { b.fill(0, 0, 128, 7); b.text(2, 1, title, 1, 0); if (time) b.text(128 - b.tw(time) - 2, 1, time, 1, 0); }
+function clockFace(g, cx, cy, r, h, m) {
+  circ(g, cx, cy, r, INK); circ(g, cx, cy, r - 2.2, PAP);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; line(g, [cx + Math.cos(a) * (r - 5), cy + Math.sin(a) * (r - 5), cx + Math.cos(a) * (r - 3.2), cy + Math.sin(a) * (r - 3.2)], i % 3 ? .9 : 1.6, INK); }
+  const ah = ((h % 12) + m / 60) / 12 * Math.PI * 2 - Math.PI / 2, am = m / 60 * Math.PI * 2 - Math.PI / 2;
+  line(g, [cx, cy, cx + Math.cos(ah) * r * .5, cy + Math.sin(ah) * r * .5], 2.2, INK);
+  line(g, [cx, cy, cx + Math.cos(am) * r * .75, cy + Math.sin(am) * r * .75], 1.4, INK);
+  circ(g, cx, cy, 1.6, INK);
+}
+const cache = new Map();
+function scene(name, st = {}) {
+  const key = name + JSON.stringify(st);
+  let b = cache.get(key); if (b) return b;
+  b = new Buf(); SC[name](b, st);
+  if (cache.size > 900) cache.clear();
+  cache.set(key, b); return b;
+}
+const SC = {
+  home: (b, st) => { raster(g => gralha(g, { x: 32, y: 33 + hopY(st), s: 1.22, look: st.look || 0, blink: !!st.blink }), b);
+    b.text(66, 6, st.time || '21:47', 2); b.text(66, 20, 'TUE 06 OCT'); b.text(66, 34, 'SHINIES 5/40'); b.fill(64, 43, 64, 1);
+    TRINKETS.forEach((t, i) => b.spr(66 + i * 12, 47, t)); batIcon(b, 114, 0, 3); },
+  neutral: (b, st) => raster(g => gralha(g, { x: 34, y: 33 + hopY(st), s: 1.22, look: st.look || 0, blink: !!st.blink }), b),
+  happy: (b, st) => { raster(g => gralha(g, { x: 34, y: 33 + hopY(st), s: 1.22, mood: 'happy', coin: true, sparkle: st.sp !== false }), b); b.text(72, 18, 'FOUND A'); b.text(72, 27, 'SHINY!', 2); },
+  smug: (b) => { raster(g => gralha(g, { x: 34, y: 33, s: 1.22, mood: 'smug' }), b); b.text(72, 22, 'TOO', 2); b.text(72, 36, 'EASY.', 2); },
+  surprised: (b, st) => { raster(g => gralha(g, { x: 34, y: 33 + hopY(st), s: 1.22, mood: 'surprised' }), b); b.text(80, 20, '!?', 3); },
+  sulky: (b, st) => { raster(g => gralha(g, { x: 34, y: 33, s: 1.22, mood: 'sulky', blink: !!st.blink }), b); b.text(76, 22, 'HMPH.', 2); b.text(76, 40, "IT DIDN'T"); b.text(76, 47, 'WORK.'); },
+  sleepy: (b, st) => { const z = st.z || 0; raster(g => gralha(g, { x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -.14 }), b);
+    b.text(74, 12 - z * 3, 'Z', 2); if (z > 0) b.text(88, 8 - z * 2, 'Z'); b.text(72, 40, '5 MORE'); b.text(72, 48, 'MINUTES'); },
+  bootlogo: (b) => { raster(g => headVec(g, 6, 9, 1.15), b);
+    b.text(56, 14, 'JACKDAW', 2); b.box(56, 30, 21, 11); b.text(59, 33, 'MINI'); b.text(56, 52, 'FW 0.8.2'); },
+  loading: (b, st) => { const p = st.p || 0; raster(g => gralha(g, { x: 14 + p * 100, y: 23 + hopY(st), s: .5, look: 1 }), b);
+    b.text(64 - b.tw('LOADING') / 2, 0, 'LOADING'); b.box(8, 56, 112, 7); b.fill(10, 58, Math.round(108 * p), 3); },
+  lowbat: (b, st) => { const z = st.z || 0; raster(g => gralha(g, { x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -.14 }), b);
+    b.text(74, 14 - z * 3, 'Z', 2); if (z > 0) b.text(88, 10 - z * 2, 'Z'); batIcon(b, 114, 0, st.on ? 1 : 0);
+    b.text(72, 40, 'BATTERY 4%'); b.text(72, 48, 'PLUG ME IN'); },
+  clock: (b, st) => { raster(g => { gralha(g, { x: 32, y: 33, s: 1.22, look: 1 }); clockFace(g, 96, 32, 22, st.h ?? 21, st.m ?? 47); }, b); },
+  tone: (b, st) => { const f = st.f || 0; raster(g => gralha(g, { x: 34, y: 33 + (f % 2 ? -2 : 0), s: 1.22, mood: 'happy' }), b);
+    b.spr(78, 8 + (f % 2) * 3, NOTE, 2); b.spr(100, 14 - (f % 2) * 3, NOTE, 2); b.text(80, 50, 'LA LA LA'); },
+  light: (b) => { raster(g => {
+      g.beginPath(); g.moveTo(68, 44); g.lineTo(128, 18); g.lineTo(128, 64); g.lineTo(68, 52); g.closePath(); g.fillStyle = G25; g.fill();
+      gralha(g, { x: 32, y: 33, s: 1.22, look: 1, hold: h => { h.fillStyle = INK; h.fillRect(18, 11, 10, 6); h.fillRect(27, 9.5, 3.5, 9); } });
+    }, b); },
+};
+function menuFrame(sel, time) {
+  const b = new Buf(); hdr(b, 'MENU', time);
+  ITEMS.forEach((it, i) => { const y = 9 + i * 9, on = i === sel; if (on) b.fill(0, y - 1, 123, 9); b.spr(3, y, ICONS[it], 1, on ? 0 : 1); b.text(13, y + 1, it, 1, on ? 0 : 1); });
+  const bh = Math.round(54 / ITEMS.length); b.fill(126, 9, 1, 54); b.fill(125, 9 + sel * bh, 3, bh);
+  return b;
+}
+const BOOT = ['JACKDAW FW 0.8.2', 'BOARD JKD-M REV.C', 'SD CARD....... OK', 'APPS........... 6', 'PET......... AWAKE'];
+/** t ticks since power on: the logo, then the lines typed out. Returns [buffer, done]. */
+function bootFrame(t) {
+  if (t < 14) return [scene('bootlogo'), false];
+  const b = new Buf(); let r = t - 14;
+  for (let i = 0; i < BOOT.length; i++) {
+    const n = Math.max(0, Math.min(BOOT[i].length, Math.floor(r * 2.4)));
+    b.text(2, 4 + i * 8, BOOT[i].slice(0, n));
+    if (n < BOOT[i].length) { if (t % 4 < 2) b.fill(2 + n * 4, 4 + i * 8, 3, 5); return [b, false]; }
+    r -= BOOT[i].length / 2.4 + 2;
+  }
+  return [b, r > 6];
+}
+const clock = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+// ================= sound =================
+let AC = null, NOISE = null;
+function ac() { if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); NOISE = AC.createBuffer(1, AC.sampleRate * .2, AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } if (AC.state === 'suspended') AC.resume(); return AC; }
+function env(g, t, a, p, dec) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(p, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + dec); }
+function noise(t, type, f, p, dec, q = .7) { const a = ac(), s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(); s.buffer = NOISE; fl.type = type; fl.frequency.value = f; fl.Q.value = q; env(g, t, .001, p, dec); s.connect(fl).connect(g).connect(a.destination); s.start(t); s.stop(t + dec + .05); }
+function tone(t, type, f0, f1, p, dec) { const a = ac(), o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dec); env(g, t, .002, p, dec); o.connect(g).connect(a.destination); o.start(t); o.stop(t + dec + .05); }
+const clickDown = t => { noise(t, 'highpass', 2600, .45, .016); tone(t, 'square', 2300, 2300, .025, .007); };
+const clickUp = t => noise(t, 'highpass', 3400, .2, .011);
+const clack = t => { noise(t, 'bandpass', 900, .7, .05, 2); tone(t, 'triangle', 160, 90, .25, .06); };
+function beep(f, d = .05, v = .05) { const a = ac(); tone(a.currentTime + .005, 'square', f, f, v, d); }
+function chirp(up = true) { const a = ac(), t = a.currentTime + .01; tone(t, 'square', up ? 1800 : 1400, up ? 2600 : 900, .035, .07); tone(t + .09, 'square', up ? 2200 : 1100, up ? 3000 : 700, .03, .06); }
+function bootSnd() { const a = ac(), t = a.currentTime + .01; [880, 1320, 1760].forEach((f, i) => tone(t + i * .07, 'square', f, f, .035, .06)); }
+function lowSnd() { const a = ac(), t = a.currentTime + .01; [0, .3].forEach(d => { tone(t + d, 'square', 1200, 1200, .04, .08); tone(t + d + .11, 'square', 800, 800, .04, .1); }); }
+
+// ================= the front, drawn in the units of the views (body at 20,40; 520 x 236 = 110 x 50 mm) =================
+function frontMarkup(live) {
+  const b = n => live ? ` data-btn="${n}"` : '';
+  const key = (n, x, y, w, h, arrow) => `<g${b(n)}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${GRA}" stroke="#141516" stroke-width="1.5"/><rect x="${x + 4}" y="${y + 3}" width="${w - 8}" height="4" rx="2" fill="#4c5056"/><path d="${arrow}" fill="#7d8188"/></g>`;
+  return `${live ? '<ellipse cx="280" cy="288" rx="250" ry="10" fill="#000" opacity=".45" filter="url(#soft)"/>' : ''}
+    <rect x="80" y="30" width="160" height="14" rx="6" fill="${GRA}"/><rect x="74" y="33" width="10" height="9" rx="3" fill="${GRA}"/>
+    <rect x="86" y="32" width="148" height="3" rx="1.5" fill="#fff" opacity=".08"/>
+    <g${b('power')}><rect x="452" y="26" width="46" height="18" rx="4" fill="#1a1b1d"/><rect ${live ? 'id="lever"' : ''} x="470" y="6" width="9" height="28" rx="3" fill="${ALU}" stroke="#6b6f75" transform="rotate(${live ? -24 : 24} 474 34)"/></g>
+    <rect x="20" y="40" width="520" height="236" rx="30" fill="${SIG}" stroke="#000" stroke-opacity=".45" stroke-width="2"/>
+    <rect x="20" y="40" width="520" height="236" rx="30" fill="url(#shade)"/>
+    <rect x="20" y="40" width="520" height="236" rx="30" filter="url(#plastic)" opacity=".5"/>
+    <rect x="30" y="47" width="500" height="4" rx="2" fill="#fff" opacity=".25"/>
+    <circle cx="441" cy="143" r="69" fill="${SIGD}" opacity=".55"/>
+    <rect x="44" y="60" width="300" height="168" rx="12" fill="${FRAME}" stroke="#000" stroke-opacity=".5"/>
+    ${key('up', 423, 88, 36, 34, 'M441 99 l-6 9 h12z')}${key('down', 423, 164, 36, 34, 'M441 187 l-6 -9 h12z')}
+    ${key('left', 385, 126, 34, 36, 'M396 144 l9 -6 v12z')}${key('right', 463, 126, 34, 36, 'M486 144 l-9 -6 v12z')}
+    <g${b('ok')}><circle cx="441" cy="144" r="17" fill="${OKC}" stroke="#141516" stroke-width="1.5"/><circle cx="437" cy="139" r="7" fill="#fff" opacity=".1"/></g>
+    <g${b('back')}><circle cx="502" cy="232" r="15" fill="${RED}" stroke="#4a1009" stroke-width="1.5"/><circle cx="498" cy="227" r="6" fill="#fff" opacity=".18"/><path d="M496 232 l6 -5 v3 h6 v4 h-6 v3z" fill="#f6d8d0"/></g>
+    <svg x="46" y="232" width="200" height="32" viewBox="0 0 300 48">${logo1(TINTA, SIG)}</svg>
+    <text x="340" y="250" text-anchor="end" font-family="IBM Plex Mono" font-size="7.5" fill="#000" opacity=".45">JKD-M · REV.C</text>
+    ${live ? `<rect id="nightOv" x="0" y="0" width="560" height="300" fill="#04060d" opacity=".66" pointer-events="none" style="display:none"/>` : ''}
+    <circle class="led" cx="362" cy="70" r="3.5" fill="${LEDC}"/><circle class="led" cx="362" cy="70" r="8" fill="${LEDC}" opacity=".2" filter="url(#soft)"/>
+    <image class="${live ? 'lcdLive' : 'lcdStatic'}" x="66" y="80" width="256" height="128"/>
+    <rect x="66" y="80" width="256" height="34" rx="6" fill="#fff" opacity=".05" pointer-events="none"/>`;
+}
+
+// ================= the live device =================
+const devSvg = document.getElementById('dev');
+devSvg.innerHTML = frontMarkup(true);
+const lcdLive = devSvg.querySelector('.lcdLive'), cvDev = document.createElement('canvas'); cvDev.width = 512; cvDev.height = 256;
+const MOODS = ['neutral', 'happy', 'smug', 'surprised', 'sulky', 'sleepy'];
+const D = { mode: 'off', t: 0, sel: 0, app: null, look: 0, hop: 0, mood: 0, freq: 440, light: 0, night: false };
+function devRender() {
+  let b = new Buf();
+  const blink = D.t % 38 < 2;
+  if (D.mode === 'boot') { const [bb, done] = bootFrame(D.t); b = bb; if (D.t === 1) bootSnd(); if (done) { D.mode = 'home'; D.t = 0; chirp(); } }
+  else if (D.mode === 'home') b = scene('home', { look: D.look, hop: D.hop > 0, blink, time: clock() });
+  else if (D.mode === 'menu') b = menuFrame(D.sel, clock());
+  else if (D.mode === 'loading') { b = scene('loading', { p: Math.min(1, D.t / 9), hop: D.t % 4 < 2 }); if (D.t > 10) { D.mode = 'app'; D.t = 0; } }
+  else if (D.mode === 'app') {
+    const a = D.app;
+    if (a === 'PET') b = scene(MOODS[D.mood], { hop: D.hop > 0, blink, look: D.look, z: (D.t >> 2) % 3 });
+    else if (a === 'LIGHT') D.light = 50;
+    else {
+      hdr(b, a, clock());
+      if (a === 'TONE') { const s = D.freq + ' HZ'; b.text(64 - b.tw(s, 3) / 2, 16, s, 3); b.text(20, 42, 'UP DN  PITCH'); b.text(20, 51, 'OK     PLAY'); }
+      else if (a === 'CLOCK') { const s = clock(); b.text(64 - b.tw(s, 4) / 2, 18, s, 4); b.text(44, 50, 'TUE 06 OCT'); }
+      else if (a === 'FILES') ['/SD', '  PET.SAV', '  SHINIES/', '  MUSIC/', '  README.TXT'].forEach((l, i) => b.text(4, 11 + i * 9, l));
+      else if (a === 'SETTINGS') { b.text(4, 12, 'BRIGHT'); b.box(50, 12, 60, 5); b.fill(52, 14, 36, 1); b.text(4, 22, 'SOUND'); b.text(50, 22, 'ON'); b.text(4, 32, 'BACKLIGHT'); b.text(50, 32, '5 S'); b.text(4, 42, 'FIRMWARE'); b.text(50, 42, '0.8.2'); }
+    }
+  }
+  const lit = D.light > 0 && D.mode !== 'off';
+  paint(b, cvDev, lit ? LIT : D.night ? NIGHT : DAY);
+  lcdLive.setAttribute('href', cvDev.toDataURL());
+}
+function setLever() { devSvg.querySelector('#lever').setAttribute('transform', D.mode === 'off' ? 'rotate(-24 474 34)' : 'rotate(24 474 34)'); }
+function devPress(btn) {
+  if (btn === 'power') { ac(); clack(AC.currentTime); D.mode = D.mode === 'off' ? 'boot' : 'off'; D.t = 0; setLever(); return devRender(); }
+  if (D.mode === 'off' || D.mode === 'boot') return;
+  D.light = 50;
+  if (D.mode === 'home') {
+    if (btn === 'ok') { D.mode = 'menu'; beep(1320, .035); }
+    else if (btn === 'left' || btn === 'right') { D.look = btn === 'left' ? -1 : 1; D.hop = 3; }
+    else if (btn === 'up') { D.hop = 4; chirp(); }
+    else beep(220, .14);
+  } else if (D.mode === 'menu') {
+    if (btn === 'up') D.sel = (D.sel + ITEMS.length - 1) % ITEMS.length;
+    else if (btn === 'down') D.sel = (D.sel + 1) % ITEMS.length;
+    else if (btn === 'ok') { D.mode = 'loading'; D.t = 0; D.app = ITEMS[D.sel]; beep(1320, .035); }
+    else if (btn === 'back') { D.mode = 'home'; beep(660, .05); }
+  } else if (D.mode === 'app') {
+    if (btn === 'back') { D.mode = 'menu'; beep(660, .05); }
+    else if (D.app === 'PET') {
+      if (btn === 'left') D.mood = (D.mood + MOODS.length - 1) % MOODS.length;
+      if (btn === 'right') D.mood = (D.mood + 1) % MOODS.length;
+      if (btn === 'ok') { D.mood = 1; D.hop = 4; chirp(); }
+    } else if (D.app === 'TONE') { if (btn === 'up') D.freq = Math.min(2000, D.freq + 40); if (btn === 'down') D.freq = Math.max(120, D.freq - 40); if (btn === 'ok') beep(D.freq, .3, .06); }
+  }
+  devRender();
+}
+let held = null;
+devSvg.addEventListener('pointerdown', e => {
+  const k = e.target.closest('[data-btn]'); if (!k) return; e.preventDefault(); ac();
+  k.classList.add('pressed'); held = k; if (k.dataset.btn !== 'power') clickDown(AC.currentTime); devPress(k.dataset.btn);
+});
+addEventListener('pointerup', () => { if (!held) return; held.classList.remove('pressed'); if (held.dataset.btn !== 'power') clickUp(AC.currentTime); held = null; });
+const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Backspace: 'back' };
+addEventListener('keydown', e => {
+  const k = KEYS[e.key], r = devSvg.getBoundingClientRect();
+  if (!k || e.repeat || r.bottom < 0 || r.top > innerHeight) return;
+  e.preventDefault(); ac(); clickDown(AC.currentTime); setTimeout(() => clickUp(AC.currentTime), 70);
+  const g = devSvg.querySelector(`[data-btn="${k}"]`); g.classList.add('pressed'); setTimeout(() => g.classList.remove('pressed'), 90); devPress(k);
+});
+(function ambChips() {
+  const el = document.getElementById('cAmb'); el.innerHTML = '';
+  [['dia', false], ['noite', true]].forEach(([n, v]) => {
+    const c = document.createElement('span'); c.className = 'chip' + (D.night === v ? ' on' : ''); c.textContent = n;
+    c.onclick = () => { D.night = v; devSvg.querySelector('#nightOv').style.display = v ? '' : 'none'; ambChips(); devRender(); };
+    el.append(c);
+  });
+})();
+
+// ================= the views =================
+function dimH(x1, x2, y, label) { return `<g stroke="#8d8b84" fill="#8d8b84"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 6}" x2="${x1}" y2="${y + 6}"/><line x1="${x2}" y1="${y - 6}" x2="${x2}" y2="${y + 6}"/></g><text x="${(x1 + x2) / 2}" y="${y - 6}" text-anchor="middle" font-size="13" fill="#e8e6df" font-family="IBM Plex Mono">${label}</text>`; }
+function dimV(x, y1, y2, label) { return `<g stroke="#8d8b84"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 6}" y1="${y1}" x2="${x + 6}" y2="${y1}"/><line x1="${x - 6}" y1="${y2}" x2="${x + 6}" y2="${y2}"/></g><text x="${x + 8}" y="${(y1 + y2) / 2 + 4}" font-size="13" fill="#e8e6df" font-family="IBM Plex Mono">${label}</text>`; }
+const lbl = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-size="12" fill="#8d8b84" font-family="IBM Plex Mono">${t}</text>`;
+const note = (x1, y1, x2, y2, t, a = 'start') => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ff6a13"/><circle cx="${x1}" cy="${y1}" r="2.5" fill="#ff6a13"/><text x="${x2 + (a === 'start' ? 4 : -4)}" y="${y2 + 4}" text-anchor="${a}" font-size="11" fill="#ff6a13" font-family="IBM Plex Mono">${t}</text>`;
+const slab = (x, y, w, h, r) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${SIG}" stroke="#000" stroke-opacity=".45" stroke-width="2"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" filter="url(#plastic)" opacity=".5"/>`;
+const ridges = (x, y, w, n) => Array.from({ length: n }, (_, i) => `<rect x="${x}" y="${y + i * 9}" width="${w}" height="3" rx="1.5" fill="${SIGD}" opacity=".7"/>`).join('');
+function views() {
+  const T = 104, F = { x: 200, y: 230 }, TOPV = { x: 200, y: 40 }, BOTV = { x: 200, y: 540 }, LS = { x: 50, y: 230 }, RS = { x: 786, y: 230 };
+  let s = `<rect width="975" height="700" fill="#141518"/>`;
+  // top: the front edge at the bottom of the drawing
+  s += slab(TOPV.x, TOPV.y, 520, T, 18);
+  s += `<rect x="${TOPV.x + 60}" y="${TOPV.y + 34}" width="160" height="36" rx="8" fill="${GRA}"/><rect x="${TOPV.x + 54}" y="${TOPV.y + 42}" width="10" height="20" rx="3" fill="${GRA}"/>`;
+  s += `<rect x="${TOPV.x + 432}" y="${TOPV.y + 30}" width="46" height="44" rx="4" fill="#1a1b1d"/><rect x="${TOPV.x + 450}" y="${TOPV.y + 36}" width="9" height="32" rx="3" fill="${ALU}" stroke="#6b6f75"/>`;
+  s += note(TOPV.x + 140, TOPV.y + 52, TOPV.x + 140, TOPV.y - 14, 'tampinha de borracha') + note(TOPV.x + 455, TOPV.y + 40, TOPV.x + 455, TOPV.y - 14, 'alavanca');
+  s += lbl(TOPV.x + 260, TOPV.y + T + 22, 'TOPO') + dimV(TOPV.x - 30, TOPV.y, TOPV.y + T, '');
+  s += `<text x="${TOPV.x - 40}" y="${TOPV.y + T / 2 + 4}" text-anchor="end" font-size="13" fill="#e8e6df" font-family="IBM Plex Mono">22 mm</text>`;
+  // front
+  s += `<g transform="translate(${F.x - 20} ${F.y - 40})">${frontMarkup(false)}</g>` + lbl(F.x + 260, F.y + 236 + 30, 'FRENTE');
+  // bottom: the front edge at the top of the drawing
+  s += slab(BOTV.x, BOTV.y, 520, T, 18);
+  s += `<path d="M${BOTV.x + 238} ${BOTV.y + 44} h44 l-5 14 h-34z" fill="${FRAME}"/><rect x="${BOTV.x + 246}" y="${BOTV.y + 48}" width="28" height="4" fill="#5a5d62"/>`;
+  s += `<rect x="${BOTV.x + 360}" y="${BOTV.y + 48}" width="60" height="7" rx="2" fill="${FRAME}"/>`;
+  s += note(BOTV.x + 260, BOTV.y + 52, BOTV.x + 180, BOTV.y + 90, 'carregador', 'end') + note(BOTV.x + 390, BOTV.y + 52, BOTV.x + 460, BOTV.y + 90, 'cartão');
+  s += lbl(BOTV.x + 260, BOTV.y + T + 22, 'BASE') + dimH(BOTV.x, BOTV.x + 520, BOTV.y + T + 46, '110 mm');
+  // left side: the front toward the right
+  s += slab(LS.x, LS.y, T, 236, 16) + `<rect x="${LS.x + 34}" y="${LS.y - 14}" width="36" height="14" rx="5" fill="${GRA}"/>` + ridges(LS.x + 22, LS.y + 92, 60, 7);
+  s += `<circle cx="${LS.x + 26}" cy="${LS.y + 30}" r="8" fill="none" stroke="#1a1b1d" stroke-width="4"/><path d="M${LS.x + 18} ${LS.y + 30} q-24 6 -30 40" fill="none" stroke="#3b3e44" stroke-width="5" stroke-linecap="round"/>`;
+  s += note(LS.x + 26, LS.y + 22, LS.x + 26, LS.y - 30, 'argola da cordinha') + lbl(LS.x + T / 2, LS.y + 236 + 30, 'LATERAL ESQ.');
+  // right side: the front toward the left
+  s += slab(RS.x, RS.y, T, 236, 16) + `<rect x="${RS.x + 34}" y="${RS.y - 10}" width="36" height="10" rx="4" fill="${GRA}"/>`;
+  s += `<rect x="${RS.x + 30}" y="${RS.y - 14}" width="44" height="14" rx="4" fill="#1a1b1d"/><rect x="${RS.x + 48}" y="${RS.y - 34}" width="9" height="24" rx="3" fill="${ALU}" stroke="#6b6f75"/>` + ridges(RS.x + 22, RS.y + 92, 60, 7);
+  s += lbl(RS.x + T / 2, RS.y + 236 + 30, 'LATERAL DIR.') + dimV(RS.x + T + 14, RS.y, RS.y + 236, '50 mm');
+  const v = document.getElementById('views'); v.innerHTML = s;
+}
+function backView() {
+  const ink = '#2b2c2e';
+  let s = `<rect width="560" height="300" fill="#141518"/>`;
+  s += `<rect x="320" y="30" width="160" height="14" rx="6" fill="${GRA}"/><rect x="476" y="33" width="10" height="9" rx="3" fill="${GRA}"/>`;
+  s += `<rect x="62" y="26" width="46" height="18" rx="4" fill="#1a1b1d"/><rect x="81" y="6" width="9" height="28" rx="3" fill="${ALU}" stroke="#6b6f75" transform="rotate(-24 86 34)"/>`;
+  s += `<rect x="20" y="40" width="520" height="236" rx="30" fill="${SIG}" stroke="#000" stroke-opacity=".45" stroke-width="2"/><rect x="20" y="40" width="520" height="236" rx="30" fill="url(#shade)"/><rect x="20" y="40" width="520" height="236" rx="30" filter="url(#plastic)" opacity=".5"/>`;
+  s += `<rect x="290" y="82" width="210" height="150" rx="12" fill="${SIG}" stroke="${SIGD}" stroke-width="2.5"/><rect x="292" y="84" width="206" height="3" rx="1.5" fill="#fff" opacity=".3"/>`;
+  s += `<g opacity=".9"><g transform="translate(372 104)">${head(SIGD, SIG, 0, 0, 1.4)}</g><g transform="translate(371 103)" opacity=".5">${head('#fff2', 'none', 0, 0, 1.4)}</g></g>`;
+  s += `<circle cx="395" cy="214" r="7" fill="#9a9da2"/><path d="M390 214 h10" stroke="#55585d" stroke-width="2"/>`;
+  s += Array.from({ length: 20 }, (_, i) => `<circle cx="${82 + (i % 5) * 14}" cy="${96 + Math.floor(i / 5) * 14}" r="3.6" fill="${ink}"/>`).join('');
+  s += `<rect x="64" y="168" width="190" height="62" rx="3" fill="#f2f0e8"/>` + ['JACKDAW MINI', 'MODEL JKD-M  REV.C', '5V 500mA  LI-ION 3.7V', 'S/N 08-0417-2263'].map((t, i) => `<text x="74" y="${186 + i * 12}" font-family="IBM Plex Mono" font-size="${i ? 8.5 : 10}" font-weight="${i ? 400 : 600}" fill="#222">${t}</text>`).join('');
+  s += [[52, 72], [508, 72], [52, 244], [508, 244]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" fill="#232427"/>`).join('');
+  document.getElementById('back').innerHTML = s;
+}
+views(); backView();
+{ const c = document.createElement('canvas'); c.width = 512; c.height = 256; paint(scene('home', { time: '21:47' }), c); const u = c.toDataURL(); document.querySelectorAll('.lcdStatic').forEach(i => i.setAttribute('href', u)); }
+document.getElementById('coverLogo').innerHTML = logo1(TINTA, SIG);
+// ================= logo section =================
+{
+  const n = (x, y, i) => `<circle cx="${x}" cy="${y}" r="7" fill="#ff6a13"/><text x="${x}" y="${y + 3.5}" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="9" fill="#fff">${i}</text>`;
+  const x = 10.8;
+  document.getElementById('logoAnat').innerHTML = `<rect x="-24" y="-30" width="348" height="108" fill="${SIG}"/>${logo1(TINTA, SIG)}
+    <rect x="${2 - x}" y="${0 - x}" width="${296 + 2 * x}" height="${44 + 2 * x}" fill="none" stroke="#ff6a13" stroke-dasharray="4 3"/>
+    <rect x="${2 - x}" y="${0 - x}" width="${x}" height="${x}" fill="#ff6a13" opacity=".35"/><text x="${2 - x / 2}" y="${-x / 2 + 3}" text-anchor="middle" font-size="8" fill="#a33c00" font-family="Archivo" font-weight="700">x</text>
+    ${n(10, -22, 1)}${n(27, 66, 2)}${n(150, 66, 3)}${n(276, -22, 4)}
+    <line x1="10" y1="-15" x2="18" y2="6" stroke="#ff6a13"/><line x1="27" y1="59" x2="24" y2="34" stroke="#ff6a13"/><line x1="150" y1="59" x2="150" y2="40" stroke="#ff6a13"/><line x1="276" y1="-15" x2="276" y2="14" stroke="#ff6a13"/>`;
+  document.getElementById('lgMain').innerHTML = `<rect width="320" height="80" fill="${SIG}"/><g transform="translate(10 16)">${logo1(TINTA, SIG)}</g>`;
+  document.getElementById('lgNeg').innerHTML = `<rect width="320" height="80" fill="${TINTA}"/><g transform="translate(10 16)">${logo1(SIG, TINTA)}</g>`;
+  document.getElementById('lgRel').innerHTML = `<rect width="320" height="80" fill="${SIG}"/><g transform="translate(70 14)">${head(TINTA, SIG, 0, 0, 1.25)}</g>
+    <g transform="translate(200 14)"><g transform="translate(-1 -1)">${head('#fff8', 'none', 0, 0, 1.25)}</g>${head(SIGD, SIG, 0, 0, 1.25)}</g>
+    <text x="95" y="76" text-anchor="middle" font-size="8" fill="#5a4600" font-family="IBM Plex Mono">impresso</text><text x="225" y="76" text-anchor="middle" font-size="8" fill="#5a4600" font-family="IBM Plex Mono">relevo</text>`;
+  paint(scene('bootlogo'), document.getElementById('lgLcd'));
+  const f = new Buf();
+  f.text(2, 2, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'); f.text(2, 10, "0123456789 :.-!?/%+'>");
+  f.text(2, 20, 'SIZE 2', 2); f.text(2, 34, '21:47', 3); f.text(66, 36, 'SIZE 3');
+  f.text(66, 46, 'X1'); f.text(78, 46, 'X2', 2);
+  paint(f, document.getElementById('fontLcd'));
+}
+// ================= sound buttons =================
+const SND = {
+  key: () => { ac(); clickDown(AC.currentTime); setTimeout(() => clickUp(AC.currentTime), 80); },
+  lever: () => { ac(); clack(AC.currentTime); }, boot: bootSnd, enter: () => beep(1320, .035), back: () => beep(660, .05),
+  happy: () => chirp(true), sad: () => chirp(false), err: () => beep(220, .14), low: lowSnd,
+};
+document.querySelectorAll('[data-snd]').forEach(b => b.onclick = () => SND[b.dataset.snd]());
+// ================= screen section =================
+const TICK = []; // functions called every 100 ms with the tick count
+{
+  paint(menuFrame(1, '21:47'), document.getElementById('anat'));
+  const o = document.getElementById('anatOv').getContext('2d'), s = 8;
+  const mark = (x, y, w, h, t, tx, ty) => {
+    o.strokeStyle = '#ff6a13'; o.lineWidth = 3; o.setLineDash([10, 6]); o.strokeRect(x * s, y * s, w * s, h * s); o.setLineDash([]);
+    o.font = '600 22px IBM Plex Mono'; const tw = o.measureText(t).width;
+    o.fillStyle = '#ff6a13'; o.fillRect(tx, ty - 22, tw + 14, 30); o.fillStyle = '#fff'; o.fillText(t, tx + 7, ty);
+  };
+  o.strokeStyle = 'rgba(0,0,0,.12)'; o.lineWidth = 1;
+  for (let x = 0; x <= 128; x += 8) { o.beginPath(); o.moveTo(x * s, 0); o.lineTo(x * s, 512); o.stroke(); }
+  for (let y = 0; y <= 64; y += 8) { o.beginPath(); o.moveTo(0, y * s); o.lineTo(1024, y * s); o.stroke(); }
+  mark(0, 0, 128, 7, 'título · 7', 560, 100);
+  mark(0, 17, 123, 9, 'linha · 9', 560, 200);
+  mark(3, 27, 7, 7, 'ícone 7×7', 130, 320);
+  mark(125, 9, 3, 55, 'rolagem · 3', 790, 420);
+  paint(scene('home', { time: '21:47' }), document.getElementById('palDay'), DAY);
+  paint(scene('home', { time: '21:47' }), document.getElementById('palLit'), LIT);
+  paint(scene('home', { time: '21:47' }), document.getElementById('palNight'), NIGHT);
+}
+// ================= the bird, anatomy =================
+{
+  const c = document.getElementById('bird'), g = c.getContext('2d'), ox = 340, oy = 160, s = 3.8;
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height);
+  gralha(g, { x: ox, y: oy, s });
+  const L = [
+    [1, 1, -27, 470, 40, 'tufo de 3 penas'], [2, -8, -12, 26, 60, 'boné preto (máscara)'], [3, 8.6, 1.5, 470, 110, 'olho claro, 2 brilhos'],
+    [4, -17, 6, 26, 160, 'nuca cinza'], [5, 11.5, 13, 470, 175, 'bochecha cinza'], [6, 0, 10, 470, 230, 'bico com contorno'],
+    [7, 6, 20, 470, 285, 'cachecol listrado'], [8, -11, 32, 26, 290, 'ponta do cachecol'], [9, -17, 40, 26, 360, 'corpo felpudo'], [10, 2, 46, 470, 350, 'barriga clara'],
+  ];
+  g.font = '600 14px IBM Plex Mono';
+  for (const [n, bx, by, tx, ty, t] of L) {
+    const px = ox + bx * s, py = oy + by * s, left = tx < ox;
+    g.strokeStyle = '#ff6a13'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(px, py); g.lineTo(left ? tx + 200 : tx, ty); g.stroke();
+    g.fillStyle = '#ff6a13'; g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill();
+    g.beginPath(); g.arc(left ? tx + 190 : tx + 10, ty, 10, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(n, left ? tx + 190 : tx + 10, ty + 5);
+    g.fillStyle = '#2a2b2f'; g.textAlign = left ? 'right' : 'left'; g.fillText(t, left ? tx + 174 : tx + 26, ty + 5);
+  }
+  paint(scene('neutral'), document.getElementById('bird1'));
+}
+// ================= expressions, animations, app scenes =================
+function lcdCard(parent, title, text) {
+  const div = document.createElement('div'); div.className = 'card';
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  div.append(c); div.insertAdjacentHTML('beforeend', `<div class="cap"><b>${title}.</b> ${text}</div>`);
+  document.getElementById(parent).append(div); return c;
+}
+[
+  ['neutral', 'Neutra', 'A base de todas: olhos abertos; pisca e segue a cruz com o olhar.'],
+  ['happy', 'Contente', 'Algo deu certo: os olhos fecham sorrindo e o bico abre.'],
+  ['smug', 'Convencida', 'Uma coisa difícil deu certo: pálpebras pesadas, olhar de lado e uma sobrancelha erguida.'],
+  ['surprised', 'Assustada', 'Algo inesperado: os olhos crescem e as pupilas encolhem.'],
+  ['sulky', 'Emburrada', 'Não deu certo: as sobrancelhas descem para o meio e as bochechas incham.'],
+  ['sleepy', 'Com sono', 'Muito tempo parada: a cabeça tomba e ela cochila.'],
+].forEach(([m, n, t], i) => { const c = lcdCard('sheet', n, t); TICK.push(k => paint(scene(m, { blink: (k + i * 7) % 40 < 2 }), c)); });
+{
+  const A = [
+    ['Piscar', 'olhos em arco por 2 quadros', k => scene('neutral', { blink: k % 20 < 2 })],
+    ['Olhar', 'a pupila anda para os lados', k => scene('neutral', { look: [0, 1, 0, -1][(k / 12 | 0) % 4] })],
+    ['Pular', 'sobe 2 a 3 pontos por 0,3 s', k => scene('neutral', { hop: k % 12 < 3 })],
+    ['Cochilar', 'o Z sobe e recomeça', k => scene('sleepy', { z: (k / 5 | 0) % 3 })],
+    ['Carinho', 'neutra, depois contente', k => (k % 20 < 10 ? scene('neutral', { blink: k % 20 === 8 }) : scene('happy', { hop: k % 20 < 13 }))],
+    ['Achou', 'a bugiganga brilha', k => scene('happy', { sp: k % 8 < 4 })],
+  ];
+  A.forEach(([n, t, f]) => { const c = lcdCard('anims', n, t); TICK.push(k => paint(f(k), c)); });
+  const P = [
+    ['CLOCK', 'a gralha olha o relógio, que mostra a hora de verdade', () => { const d = new Date(); return scene('clock', { h: d.getHours(), m: d.getMinutes() }); }],
+    ['TONE', 'canta junto, com as notas pulando', k => scene('tone', { f: (k / 4 | 0) % 2 })],
+    ['LIGHT', 'segura uma lanterna; o facho é o cinza 25', () => scene('light')],
+  ];
+  P.forEach(([n, t, f]) => { const c = lcdCard('appScenes', n, t); TICK.push(k => paint(f(k), c)); });
+}
+// ================= system screens =================
+{
+  let bt = 0;
+  const S = [
+    ['Abertura', 'o logo, depois as linhas digitadas', () => { const [b, done] = bootFrame(bt++); if (done || bt > 160) bt = 0; return b; }],
+    ['Início', 'a hora, a data, as bugigangas e a bateria', k => scene('home', { look: [0, 1, 0, -1][(k / 25 | 0) % 4], hop: k % 47 > 43, blink: k % 38 < 2, time: clock() })],
+    ['Menu', 'barra de título, ícone e nome', k => menuFrame((k / 10 | 0) % ITEMS.length, clock())],
+    ['Carregando', 'a gralha atravessa a barra', k => scene('loading', { p: (k % 24) / 20 > 1 ? 1 : (k % 24) / 20, hop: k % 4 < 2 })],
+    ['Bateria fraca', 'ela cochila e o ícone pisca', k => scene('lowbat', { z: (k / 5 | 0) % 3, on: k % 10 < 5 })],
+  ];
+  S.forEach(([n, t, f]) => { const c = lcdCard('sys', n, t); TICK.push(k => paint(f(k), c)); });
+}
+// ================= in the game =================
+{
+  const off = document.createElement('canvas'), TOPX = 30; off.width = 520; off.height = 236 + TOPX;
+  const g = off.getContext('2d', { willReadFrequently: true });
+  g.translate(0, TOPX);
+  g.fillStyle = GRA; g.beginPath(); g.roundRect(60, -10, 160, 14, 6); g.fill();
+  g.fillStyle = '#1a1b1d'; g.fillRect(432, -14, 46, 18); g.fillStyle = ALU; g.fillRect(450, -30, 9, 20);
+  g.fillStyle = SIG; g.beginPath(); g.roundRect(0, 0, 520, 236, 30); g.fill();
+  g.fillStyle = SIGD; g.beginPath(); g.arc(421, 103, 69, 0, 7); g.fill();
+  g.fillStyle = FRAME; g.beginPath(); g.roundRect(24, 20, 300, 168, 12); g.fill();
+  g.fillStyle = '#00ff00'; g.fillRect(46, 40, 256, 128);
+  g.fillStyle = GRA; [[403, 48, 36, 34], [403, 124, 36, 34], [365, 86, 34, 36], [443, 86, 34, 36]].forEach(r => g.fillRect(...r));
+  g.fillStyle = OKC; g.beginPath(); g.arc(421, 104, 17, 0, 7); g.fill();
+  g.fillStyle = RED; g.beginPath(); g.arc(482, 192, 15, 0, 7); g.fill();
+  const NX = 55, NY = 28, cw = 520 / NX, ch = (236 + TOPX) / NY, d = g.getImageData(0, 0, off.width, off.height).data;
+  const cv = document.getElementById('vox'), x = cv.getContext('2d'), C = 12, ox = 10, oy = 10;
+  x.fillStyle = '#141518'; x.fillRect(0, 0, cv.width, cv.height);
+  let n = 0;
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+    const px = Math.floor((i + .5) * cw), py = Math.floor((j + .5) * ch), k = (py * off.width + px) * 4;
+    if (d[k + 3] < 128) continue;
+    const col = `rgb(${d[k]},${d[k + 1]},${d[k + 2]})`;
+    if (col === 'rgb(0,255,0)') continue;
+    n++;
+    const X = ox + i * C, Y = oy + j * C;
+    x.fillStyle = col; x.fillRect(X, Y, C - 1, C - 1);
+    x.fillStyle = 'rgba(255,255,255,.22)'; x.fillRect(X, Y, C - 1, 2); x.fillRect(X, Y, 2, C - 1);
+    x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(X, Y + C - 3, C - 1, 2); x.fillRect(X + C - 3, Y, 2, C - 1);
+  }
+  const ledI = Math.floor(342 / cw), ledJ = Math.floor((30 + TOPX) / ch);
+  x.fillStyle = LEDC; x.fillRect(ox + ledI * C + 2, oy + ledJ * C + 2, C - 5, C - 5);
+  const sc = document.createElement('canvas'); sc.width = 512; sc.height = 256; paint(scene('home', { time: '21:47' }), sc);
+  x.drawImage(sc, ox + 46 / cw * C, oy + (40 + TOPX) / ch * C, 256 / cw * C, 128 / ch * C);
+  x.fillStyle = '#e8e6df'; x.font = '600 13px IBM Plex Mono'; x.fillText(`${n} cubos de frente · 2 mm cada`, ox, cv.height - 12);
+  paint(scene('home', { time: '21:47' }), document.getElementById('tiltCv'));
+  const asc = (b, cw2, ch2, ramp) => {
+    let s = '';
+    for (let y = 0; y < H; y += ch2) { for (let X = 0; X < W; X += cw2) { let c = 0; for (let j = 0; j < ch2; j++) for (let i = 0; i < cw2; i++) c += b.p[(y + j) * W + X + i]; s += ramp[Math.round(c / (cw2 * ch2) * (ramp.length - 1))]; } s += '\n'; }
+    return s;
+  };
+  document.getElementById('cellsAscii').textContent = asc(scene('home', { time: '21:47' }), 4, 8, ' .:=#');
+  document.getElementById('midAscii').textContent = asc(scene('home', { time: '21:47' }), 2, 4, ' .:-=+*#%@');
+  const sp = (t, c) => `<span style="color:${c}">${t}</span>`;
+  document.getElementById('farAscii').innerHTML =
+    `${sp('[', SIG)}${sp('#', '#aab86a')}${sp(':]', SIG)}   ${sp('3 células: o corpo, a tela, as teclas', '#8d8b84')}\n` +
+    `${sp('=', SIG)}      ${sp('1 célula: o amarelo', '#8d8b84')}\n` +
+    `${sp('.', LEDC)}      ${sp('de noite, só o LED', '#8d8b84')}`;
+}
+// ================= the loop =================
+const hero = document.getElementById('hero');
+let K = 0;
+setInterval(() => {
+  K++;
+  D.t++; if (D.hop > 0) D.hop--; if (D.light > 0 && !(D.mode === 'app' && D.app === 'LIGHT')) D.light--;
+  if (D.mode === 'home') { if (D.t % 47 === 30) D.hop = 3; if (D.t % 60 === 0) D.look = [0, 1, 0, -1][(D.t / 60) % 4]; }
+  devRender();
+  paint(scene('home', { look: [0, 1, 0, -1][(K / 50 | 0) % 4], hop: K % 41 > 37, blink: K % 38 < 2, time: clock() }), hero);
+  TICK.forEach(f => f(K));
+}, 100);
+setTimeout(() => { D.mode = 'boot'; D.t = 0; setLever(); }, 300);
+</script>
+</body>
+</html>
