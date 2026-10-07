@@ -400,8 +400,8 @@ function playLap(list: LapSound[]) {
 /**
  * The stages (the phone's manual, section 2): the middle button goes a stage up each time: out of the
  * pocket (shut), the rail open, then the dialer from the standby screen or the apps' grid; the right button's click a stage
- * down: out of the app to the standby screen, the rail shut, back in the pocket; holding it puts the
- * phone away at once, as it is.
+ * down: out of the app to the standby screen, the rail shut, back in the pocket. Holding the middle one
+ * puts the phone away at once, as it is (the user, 2026-10-07); holding the right one only looks around.
  */
 function phoneMiddle() {
   const now = performance.now() / 1000;
@@ -427,7 +427,7 @@ function phoneToggle() {
 }
 // with the phone out the mouse moves a cursor: a click on one of its keys presses it, the left
 // button elsewhere is OK and a click of the right one Back (as in GTA IV); holding the right button
-// looks around instead. The middle button (or P) takes the phone out and lowers it; on the standby screen it opens the dialer.
+// looks around instead. The middle button goes a stage up (out, the rail open, the dialer); held, it puts the phone away.
 // Otherwise, in a lift car, aim at a button of its panel and click it.
 // no browser menu on the right button (it is Back and look-around): stopped early, on the canvas and the document
 const noMenu = (e: Event) => { e.preventDefault(); e.stopPropagation(); return false; };
@@ -454,6 +454,8 @@ addEventListener('wheel', (e) => {
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
 let rightAt = -1, rightMoved = 0;
+/** The middle button held down since when (-1 up): a short press goes a stage up, held it puts the phone away. */
+let midAt = -1;
 /** Alt held (15.9a): the cursor is free to click the watch (and what else is on the screen) while the keys still walk; let go, it is locked again. */
 let altFree = false, watchStartHeld = false;
 /** A left click on one of the watch's buttons, with the cursor free: presses it (true when it did). */
@@ -541,7 +543,7 @@ addEventListener('mousedown', (e) => {
   }
   // the middle button: takes the phone out; on the standby screen it opens the dialer; elsewhere it
   // lowers the phone, which keeps its screen and state for when it comes up again
-  if (e.button === 1) { e.preventDefault(); if (!payphone.active) { phoneMiddle(); } return; }
+  if (e.button === 1) { e.preventDefault(); if (!payphone.active) midAt = performance.now(); return; }
   if (payphone.active) {
     if (e.button === 0) { const [x, y] = cellAtClient(e.clientX, e.clientY), k = payphone.keyAt(ui.cols, ui.rows, x, y); if (k) payPress(k); }
     else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
@@ -570,6 +572,7 @@ addEventListener('mouseup', (e) => {
   if (e.button === 0 && watchStartHeld) { watchStartHeld = false; watch.startUp(); }
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
   if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
+  if (e.button === 1 && midAt >= 0) { midAt = -1; if (!payphone.active) phoneMiddle(); }
   if (e.button !== 2 || rightAt < 0) return;
   if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phoneBack();
   rightAt = -1; input.drag = false;
@@ -1139,8 +1142,8 @@ function frame(now: number) {
   fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
 
   // camera first, so this frame's movement uses the heading the player sees
-  // the right button held with the phone in the hand puts it away at once (the manual's stages); held on, it looks around
-  if (rightAt >= 0 && phone.out && !payphone.active && !laptop.open && performance.now() - rightAt > 350) phoneToggle();
+  // (the user, 2026-10-07) the middle button held with the phone in the hand puts it away at once, as it is; the right one held only looks around
+  if (midAt >= 0 && performance.now() - midAt > 350) { midAt = -1; if (phone.out && !payphone.active) phoneToggle(); }
   const [mx, my] = input.takeMouse();
   if (!uiBusy()) camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);

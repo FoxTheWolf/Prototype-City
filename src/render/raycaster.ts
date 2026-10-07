@@ -148,10 +148,11 @@ function viewLight(I: Inside | null, px: number, py: number, dirX: number, dirY:
   const here = sample(px, py, S), g = Math.hypot(ex, ey);
   if (I) { const L = insideLight(I, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
   else {
-    // in a building's shadow the hands keep the sky's light but lose the sun's (less of a difference under clouds)
-    const shade = sky.day > 0 ? 0.55 * (1 - handSun(sky.city, px, py)) * (1 - 0.85 * sky.cloud) : 0;
-    const base = 0.3 + 0.55 * sky.day * (1 - shade) + 0.08 * sky.moonlight + 0.8 * sky.flash;
-    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + S[c] / 150);
+    // in a building's shadow the hands keep the sky's light but lose the sun's; clouds spread the sun into the sky's.
+    // The sun on them warms and brightens them as it does the street (playtest 2026-10-07: the phone in the sun stayed grey); low, it is amber
+    const sun = sky.day > 0 ? sky.day * handSun(sky.city, px, py) * (1 - 0.85 * sky.cloud) : 0, low = Math.max(0, 1 - Math.max(0, sky.sunEl) / 0.5);
+    const base = 0.3 + sky.day * (0.25 + 0.3 * sky.cloud) + 0.08 * sky.moonlight + 0.8 * sky.flash, tint = [1, 0.95 - 0.13 * low, 0.86 - 0.3 * low];
+    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + 0.55 * sun * tint[c] + S[c] / 150);
   }
   const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0;
   const m = Math.max(1, S[0], S[1], S[2]);

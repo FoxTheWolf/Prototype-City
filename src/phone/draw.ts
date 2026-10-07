@@ -152,7 +152,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
   // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by
   // day it looks dimmer (capped: a bright page must not wash out in the dark, see the ceiling on the glass below)
-  const gain = Math.min(1.18, 0.65 + 0.55 * Math.min(1, EYE.k / 0.6)), bloom = EYE.k;
+  const gain = Math.min(1.18, 0.85 + 0.35 * Math.min(1, EYE.k / 0.6)), bloom = EYE.k;
   // the glint: the brightest light nearby mirrored in the phone, a soft diagonal band on the side
   // it comes from, in its color, stronger for a light behind the player
   const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
