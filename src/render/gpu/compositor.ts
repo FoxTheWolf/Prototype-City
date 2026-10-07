@@ -7,6 +7,8 @@ import type { World } from '../../sim/world';
 import type { View } from '../raycaster';
 import type { GpuWorld } from './world';
 import { EYE } from '../eye';
+import { BODY_U_FLOATS, BODY_WGSL } from './voxBody';
+import type { BodyGpu } from '../../phone/body3d';
 
 /**
  * Stage R.3: the compositor of glRenderer.ts on WebGPU, on a canvas of its own laid over the WebGL one.
@@ -40,7 +42,7 @@ const CU = /* wgsl */ `
 struct CU {
   cell: vec2i, origin: vec2i, grid: vec2i, uiCell: vec2i, uiOrigin: vec2i, uiGrid: vec2i,
   tmCell: vec2i, tmOrigin: vec2i, tmGrid: vec2i, ph0: vec2i, ph1: vec2i, tmShow: vec2i, g0: vec2i, g1: vec2i, g2: vec2i, g3: vec2i,
-  eye: vec4i, ps0: vec2i, ps1: vec2i,
+  eye: vec4i, ps0: vec2i, ps1: vec2i, pb0: vec2i, pb1: vec2i,
 };
 // the screens' rectangles in pixels: the phone's (ph0 to ph1, empty when off) and the notebook's layer
 // (tmGrid is set while the notebook's screen is up, tmShow.x while its layer is shown: faced squarely);
@@ -48,6 +50,7 @@ struct CU {
 // aside, for its glow; eye.x: how bright the screens look to the eye (EYE.k, thousandths, 600 on a lit street at night);
 // eye.y, eye.z: the phone rectangle's glow reach and strength (hundredths; the watch's small LCD reaches further);
 // ps0 to ps1: the phone's screen picture on the glass (15.19b, pixels; empty when the phone is not up)
+// pb0 to pb1: the phone's body, a picture of its own (15.19b, pixels, square, at the monitor's resolution; empty when not drawn)
 // the signed distance from a convex quad's edge (corners in order), negative inside
 fn sdQuad(p: vec2f, v0: vec2f, v1: vec2f, v2: vec2f, v3: vec2f) -> f32 {
   var v = array<vec2f, 4>(v0, v1, v2, v3);
@@ -93,6 +96,7 @@ ${CU}
 @group(0) @binding(12) var<storage, read> scr: array<vec4f>;
 // 15.19b: the phone's screen, a picture of its own (as the notebook's), upright on its glass
 @group(0) @binding(13) var phPic: texture_2d<f32>;
+${BODY_WGSL}
 // a screen's bloom at f (in its cells, from their centers): the cells' blur (from base, a grid of g cells),
 // between cell centers, within the cells a to b
 fn scrAt(f: vec2f, base: u32, g: vec2i, a: vec2i, b: vec2i) -> vec3f {
@@ -145,6 +149,14 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
   if (q.x >= 0 && q.y >= 0 && uc.x < u.uiGrid.x && uc.y < u.uiGrid.y) {
     let hp = textureLoad(hd, (q * ${HD}) / u.uiCell, 0);
     if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; }
+    // the phone's body, under the interface as the HD layer's under-pixels were
+    if (all(s >= u.pb0) && all(s < u.pb1)) {
+      // a ray through the upper plate's cubes; past it, through the lower one's, drawn down by the rail
+      let bq = vec2f(s - u.pb0);
+      var bh = bcast(1, bq.x, bq.y);
+      if (bh.mat == 0u) { bh = bcast(0, bq.x, bq.y - bu.dir.w); }
+      if (bh.mat != 0u) { col = bshade(bh, bq); }
+    }
     if (u.tmGrid.x > 0) {
       // the notebook's screen: its picture (a clear pixel shows what is under it; a glyph alone lies over it)
       let sz = vec2i(textureDimensions(tmPic)); let m = s - u.tmOrigin;
@@ -391,13 +403,18 @@ export class GpuCompositor {
   private ctx: GPUCanvasContext;
   private pipe: GPURenderPipeline;
   private uni: GPUBuffer;
-  private U = new Int32Array(40);
-  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic' | 'phCells' | 'phBg' | 'phAtlas' | 'phHd' | 'phPic', GPUTexture>;
+  private U = new Int32Array(44);
+  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic' | 'phCells' | 'phBg' | 'phAtlas' | 'phHd' | 'phPic' | 'bDecal', GPUTexture>;
   /** The phone screen's picture (15.19b): its grid, cell size, pass uniform and bindings (the same pass as the notebook's). */
   private ph = { cols: 1, rows: 1, cw: 1, ch: 1 };
   private phUni: GPUBuffer;
   private phBind: GPUBindGroup | null = null;
   private phHdAll = true;
+  /** The phone body's cubes and uniform (voxBody.ts), and the versions of its models and decal last sent up. */
+  private bodyVox: GPUBuffer | null = null;
+  private bodyUni: GPUBuffer | null = null;
+  private bodyVer = -1;
+  private decalVer = -1;
   /** The notebook screen's picture: its pass, uniform (SU) and bindings; the glass's inverse homography; the sampler. */
   private picPipe: GPURenderPipeline;
   private picUni: GPUBuffer;
@@ -451,7 +468,7 @@ export class GpuCompositor {
     this.rayPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: rm, entryPoint: 'main' } });
     this.rayUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const one = () => this.tex(1, 1);
-    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one(), phCells: one(), phBg: one(), phAtlas: one(), phHd: one(), phPic: one() };
+    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one(), phCells: one(), phBg: one(), phAtlas: one(), phHd: one(), phPic: one(), bDecal: one() };
     this.phUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const pm = dev.createShaderModule({ code: SCREEN_WGSL });
     pm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL screen ${m.lineNum}:${m.linePos} ${m.message}`)));
@@ -517,7 +534,8 @@ export class GpuCompositor {
    * interface cells (a fifth number: how much further and stronger it glows, the watch's LCD).
    */
   draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null,
-    pic: { grid: CharGrid; hd: HdLayer; rect: readonly number[] } | null = null) {
+    pic: { grid: CharGrid; hd: HdLayer; rect: readonly number[] } | null = null,
+    body: { g: BodyGpu; x: number; y: number } | null = null) {
     const L = this.ui!, gw = this.gw;
     this.up(this.t.uiCells, ui.cells, L.cols, L.rows);
     this.up(this.t.uiBg, ui.bg, L.cols, L.rows);
@@ -568,6 +586,22 @@ export class GpuCompositor {
       this.U.set([Math.round(x0), Math.round(y0), Math.round(x0 + r[2] * L.cellW), Math.round(y0 + r[3] * L.cellH)], 36);
       this.dev.queue.writeBuffer(this.phUni, 0, new Int32Array([P.cw, P.ch, P.cols, P.rows, th.w, th.h, 0, 0]));
     } else this.U.fill(0, 36, 40);
+    // the phone's body: its cubes and decal sent up when they changed, its view and light every frame
+    if (!this.bodyVox) {
+      this.bodyVox = this.dev.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+      this.bodyUni = this.dev.createBuffer({ size: BODY_U_FLOATS * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    }
+    if (body && body.g.w > 0) {
+      const B = body.g;
+      if (this.bodyVox.size !== B.vox.byteLength) { this.bodyVox.destroy(); this.bodyVox = this.dev.createBuffer({ size: B.vox.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST }); this.bind = null; this.bodyVer = -1; }
+      if (this.bodyVer !== B.voxVer) { this.dev.queue.writeBuffer(this.bodyVox, 0, B.vox); this.bodyVer = B.voxVer; }
+      if (this.decalVer !== B.decalVer) {
+        if (this.t.bDecal.width !== B.decal.w || this.t.bDecal.height !== B.decal.h) this.set('bDecal', this.tex(B.decal.w, B.decal.h));
+        this.up(this.t.bDecal, B.decal.px, B.decal.w, B.decal.h); this.decalVer = B.decalVer;
+      }
+      this.dev.queue.writeBuffer(this.bodyUni!, 0, B.uni);
+      this.U.set([Math.round(body.x), Math.round(body.y), Math.round(body.x) + B.w, Math.round(body.y) + B.h], 40);
+    } else this.U.fill(0, 40, 44);
     const boost = phone?.[4] ?? 1;
     this.U[33] = Math.round(100 * boost); this.U[34] = Math.round(100 * Math.sqrt(boost));
     this.U[32] = Math.round(EYE.k * 1000);
@@ -605,7 +639,8 @@ export class GpuCompositor {
           ...[T.atlas, T.uiCells, T.uiBg, T.uiAtlas, T.hd, T.tmPic].map((t, k) => ({ binding: k + 2, resource: t.createView() })),
           { binding: 8, resource: this.samp }, { binding: 9, resource: { buffer: this.qiUni } },
           { binding: 10, resource: { buffer: G.glow } }, { binding: 11, resource: { buffer: this.meanBuf } },
-          { binding: 12, resource: { buffer: this.scrBuf } }, { binding: 13, resource: T.phPic.createView() }],
+          { binding: 12, resource: { buffer: this.scrBuf } }, { binding: 13, resource: T.phPic.createView() }, { binding: 14, resource: T.bDecal.createView() },
+          { binding: 15, resource: { buffer: this.bodyUni! } }, { binding: 16, resource: { buffer: this.bodyVox! } }],
       });
     }
     const enc = this.dev.createCommandEncoder();

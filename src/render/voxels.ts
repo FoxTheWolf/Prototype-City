@@ -91,8 +91,35 @@ export function castVox(V: Vox, view: VoxView): GBuf {
   return G;
 }
 
-/** How a palette entry takes the light: its color and how much of the scene's glint it gives back; metal streaks along its rows, glow is light of its own. */
-export interface VoxMat { col: readonly [number, number, number]; gloss: number; metal?: boolean; glow?: boolean }
+/** The camera's axes in the model's frame for a yaw and pitch (castVox's): the screen's right, its down, and the view. */
+export function voxAxes(yaw: number, pitch: number): [number[], number[], number[]] {
+  const cy = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const rot = (a: number, b: number, c: number): number[] => { const y1 = b * cp - c * sp, z1 = b * sp + c * cp; return [a * cy + z1 * syw, y1, -a * syw + z1 * cy]; };
+  return [rot(1, 0, 0), rot(0, 1, 0), rot(0, 0, -1)];
+}
+/** Where a point of the model (x, y, z in cells) falls in the view, in pixels from its top-left (pixel i spans i to i + 1), as castVox sees it. */
+export function voxProject(V: { nx: number; ny: number; nz: number }, view: VoxView, x: number, y: number, z: number): [number, number] {
+  const [R, D] = voxAxes(view.yaw, view.pitch), mx = V.nx / 2, my = V.ny / 2, mz = V.nz / 2;
+  const u = (x - mx) * R[0] + (y - my) * R[1] + (z - mz) * R[2], v = (x - mx) * D[0] + (y - my) * D[1] + (z - mz) * D[2];
+  return [(u + mx - (view.x0 ?? 0)) / view.sx, (v + my - (view.y0 ?? 0)) / view.sy];
+}
+
+/**
+ * How a palette entry takes the light: its color and how much of the scene's glint it gives back; metal
+ * streaks along its rows, glow is light of its own. chrome: a curved mirror (the manual's chrome: light at
+ * the top, a dark band past the middle, light again at the foot) over the rows y0 to y1 of the model,
+ * instead of col, a little tinted by the scene's light.
+ */
+export interface VoxMat { col: readonly [number, number, number]; gloss: number; metal?: boolean; glow?: boolean; chrome?: readonly [number, number] }
+/** The manual's chrome gradient (#eef2f7, #8d939c at 45%, #5d626a at 55%, #c9ced6). */
+const CHROME_STOPS: readonly [number, number, number, number][] = [[0, 238, 242, 247], [0.45, 141, 147, 156], [0.55, 93, 98, 106], [1, 201, 206, 214]];
+function chromeAt(t: number, out: number[]) {
+  t = Math.max(0, Math.min(1, t));
+  let i = 0;
+  while (i < CHROME_STOPS.length - 2 && t > CHROME_STOPS[i + 1][0]) i++;
+  const a = CHROME_STOPS[i], b = CHROME_STOPS[i + 1], f = (t - a[0]) / (b[0] - a[0]);
+  for (let c = 0; c < 3; c++) out[c] = a[c + 1] + (b[c + 1] - a[c + 1]) * f;
+}
 /**
  * The scene's light on the model: its color (rgb, 0..1.5), the side the brightest light comes from
  * (lat, -1 left to 1 right) and how strong its glint is (str, 0..1), and the glint's color.
@@ -110,7 +137,12 @@ export function shadeVox(G: GBuf, pal: readonly VoxMat[], L: VoxLight, put: (x: 
   const amp = L.str * 55, s0 = 0.68 + L.lat * 0.44;
   // the palette flattened (one shape for the loop below)
   const n = pal.length, cr = new Float32Array(n), cg = new Float32Array(n), cb = new Float32Array(n), gl = new Float32Array(n), fl = new Uint8Array(n);
-  for (let i = 1; i < n; i++) { const M = pal[i]; if (!M) continue; cr[i] = M.col[0]; cg[i] = M.col[1]; cb[i] = M.col[2]; gl[i] = M.gloss; fl[i] = (M.metal ? 1 : 0) | (M.glow ? 2 : 0); }
+  const c0 = new Float32Array(n), c1 = new Float32Array(n), ch = [0, 0, 0];
+  for (let i = 1; i < n; i++) {
+    const M = pal[i]; if (!M) continue;
+    cr[i] = M.col[0]; cg[i] = M.col[1]; cb[i] = M.col[2]; gl[i] = M.gloss; fl[i] = (M.metal ? 1 : 0) | (M.glow ? 2 : 0) | (M.chrome ? 4 : 0);
+    if (M.chrome) { c0[i] = M.chrome[0]; c1[i] = M.chrome[1]; }
+  }
   const Lr = L.rgb[0], Lg = L.rgb[1], Lb = L.rgb[2], [Gr, Gg, Gb] = L.glint;
   // the light on each face, once
   const dif = FACE_N.map((N) => { const nl = N[0] * lx + N[1] * ly + N[2] * lz; return (0.42 + 0.58 * Math.max(0, nl)) * (N[2] !== 1 && nl > 0.3 ? 1.3 : 1); });
@@ -125,7 +157,12 @@ export function shadeVox(G: GBuf, pal: readonly VoxMat[], L: VoxLight, put: (x: 
       if (mul) d *= mul[m];
       // the sheen: a band across the face, along a diagonal that slides with the light's side
       const u = x / G.w + (y / G.h) * 0.55 - s0, sh = gl[m] && amp ? Math.exp(-((u / 0.1) ** 2)) * gl[m] * amp * (f === Face.ZP ? 1 : 0.5) : 0;
-      if (fl[m] & 2) put(x, y, cr[m] * Math.max(1, Lr) + sh * Gr, cg[m] * Math.max(1, Lg) + sh * Gg, cb[m] * Math.max(1, Lb) + sh * Gb);
+      if (fl[m] & 4) {
+        // chrome: the mirror's gradient down the part (the sides a little darker), lit only a little by the scene, and the glint
+        chromeAt((G.vy[k] + 0.5 - c0[m]) / Math.max(1, c1[m] - c0[m]), ch);
+        const e = (f === Face.ZP ? 1 : 0.82) * (mul ? mul[m] : 1);
+        put(x, y, ch[0] * (0.55 + 0.45 * Lr) * e + sh * Gr, ch[1] * (0.55 + 0.45 * Lg) * e + sh * Gg, ch[2] * (0.55 + 0.45 * Lb) * e + sh * Gb);
+      } else if (fl[m] & 2) put(x, y, cr[m] * Math.max(1, Lr) + sh * Gr, cg[m] * Math.max(1, Lg) + sh * Gg, cb[m] * Math.max(1, Lb) + sh * Gb);
       else put(x, y, cr[m] * Lr * d + sh * Gr, cg[m] * Lg * d + sh * Gg, cb[m] * Lb * d + sh * Gb);
     }
   }

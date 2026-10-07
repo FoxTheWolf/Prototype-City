@@ -56,7 +56,7 @@ import { WebApp } from './webapp';
 export type App = 'map' | 'calls' | 'contacts' | 'tunes' | 'messages' | 'camera' | 'wire' | 'news' | 'web' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type CallKind = 'out' | 'failed' | 'in' | 'missed';
-export type Key = 'vup' | 'vdown' | 'play' | 'prev' | 'next' | 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
+export type Key = 'vup' | 'vdown' | 'play' | 'prev' | 'next' | 'home' | 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /**
  * The menu: a 4x4 grid of apps, picked with the arrows (or 1-9 and 0 for the first ten). Streetwire,
@@ -765,6 +765,8 @@ export class Phone {
     if (k === 'end' && this.call && this.call.state !== 'ended') { this.call.hangUp(now); this.sfx.push(['stop']); return true; }
     if (k === 'end' && s !== 'boot' && s !== 'standby') { this.open('standby', now); return true; }
     if (k === 'send' && (s === 'standby' || s === 'menu')) { this.open('calls', now); return true; }
+    // the home button (the phone's manual v2): to the apps' grid; on the grid, back to the standby screen
+    if (k === 'home') { if (s === 'boot' || s === 'off') return false; this.open(s === 'menu' ? 'standby' : 'menu', now); return true; }
     // the music keys on top (2026-10-06): the volume up and down, previous, play/pause and next, from any screen
     if (k === 'vup' || k === 'vdown' || k === 'play' || k === 'prev' || k === 'next') return s !== 'boot' && this.sideKey(k);
     // a number typed with the rail shut opens it first, and is typed too
@@ -1498,6 +1500,7 @@ export function phoneKey(code: string, key = ''): Key | null {
     case 'Backspace': return 'rsoft';
     case 'Space': return 'send';
     case 'Delete': return 'end';
+    case 'Home': return 'home';
     // * (zoom in on the map) is also + on the keyboard; # (zoom out, the point in the calculator) also - and .
     case 'NumpadMultiply': case 'Equal': case 'NumpadAdd': return '*';
     case 'Minus': case 'NumpadSubtract': case 'Period': case 'NumpadDecimal': return '#';

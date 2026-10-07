@@ -1,11 +1,10 @@
-// 15.19: the phone's body in little cubes (phone/body3d.ts over render/voxels.ts). Every look drawn into
-// pixels, a key pressed sinks (the geometry is cast again), the time it takes. Picture:
-// tests/.out/phone3d.png (the six looks; under each, the one with the OK key pressed).
+// 15.19: the phone's body in little cubes (phone/body3d.ts; drawn by the GPU, render/gpu/voxBody.ts). Here the
+// models and the palette body3d hands the GPU, cast and lit by the CPU's twin (render/voxels.ts) for a picture
+// (no legends: those are the GPU's decal): tests/.out/phone3d.png, each look open and shut, and the checks.
 import { writeFileSync } from 'node:fs';
-import { drawBody3d } from '../src/phone/body3d';
-import { KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS } from '../src/phone/shells';
-import { HD } from '../src/render/hd';
-import { castVox, Vox } from '../src/render/voxels';
+import { BODY_GPU, drawBody3d } from '../src/phone/body3d';
+import { SHELLS } from '../src/phone/shells';
+import { castVox, shadeVox, Vox, type VoxMat } from '../src/render/voxels';
 import { png } from './png';
 
 let bad = 0;
@@ -21,43 +20,55 @@ const check = (name: string, ok: boolean) => { if (!ok) { bad++; console.log('FA
   check('tilted toward the eye, its top face shows', [...T.face].some((f, k) => T.mat[k] && f === 2));
 }
 
-const W = PHONE_W * HD, H = PHONE_H * HD, GAP = 12, img = new Uint8ClampedArray((W + GAP) * SHELLS.length * (H * 2 + GAP) * 4), IW = (W + GAP) * SHELLS.length;
-const L = { rgb: [1, 0.95, 0.85], lat: 0.4, str: 0.6, glint: [1, 0.9, 0.7] as const };
-let ms = 0;
-SHELLS.forEach((S, look) => {
-  for (const pressOk of [false, true]) {
-    const y0 = pressOk ? H + GAP : 0;
-    let n = 0;
+const K = 4, L = { rgb: [1, 0.97, 0.92], lat: 0.4, str: 0.4, glint: [1, 0.9, 0.7] as const };
+/** The two models body3d last built, out of the GPU's buffer. */
+function models(): [Vox, Vox] {
+  const B = BODY_GPU, n = B.nx * B.ny * B.nz, bytes = new Uint8Array(B.vox.buffer);
+  return [0, 1].map((m) => { const V = new Vox(B.nx, B.ny, B.nz); V.cells.set(bytes.subarray(m * n, (m + 1) * n)); return V; }) as [Vox, Vox];
+}
+/** The palette out of the uniform (voxBody.ts BodyU.pal). */
+function palette(): VoxMat[] {
+  const U = BODY_GPU.uni;
+  return Array.from({ length: 256 }, (_, i) => {
+    const o = 36 + i * 8, f = U[o + 4];
+    return { col: [U[o], U[o + 1], U[o + 2]] as const, gloss: U[o + 3], metal: !!(f & 1), glow: !!(f & 2), chrome: f & 4 ? [U[o + 5], U[o + 6]] as const : undefined };
+  });
+}
+const count = (V: Vox) => V.cells.reduce((a, c) => a + (c ? 1 : 0), 0);
+
+const W = 0, looks = SHELLS.map((S, look) => {
+  const shots: [Uint8ClampedArray, number, number][] = [];
+  for (const rail of [0, -43 * K]) {
     const t = performance.now();
-    drawBody3d((x, y, r, g, b) => {
-      const X = look * (W + GAP) + x, Y = y0 + y, k = (Y * IW + X) * 4;
-      img[k] = r; img[k + 1] = g; img[k + 2] = b; img[k + 3] = 255; n++;
-    }, 0, 0, S, look, [120, 124, 132], null, keysOf(S), (k) => pressOk && k === 'ok', null, L);
-    ms += performance.now() - t;
-    check(`${S.name}${pressOk ? ' (OK pressed)' : ''}: drawn`, n > W * H * 0.7);
+    drawBody3d(K, K, S, look, [120, 124, 132], null, () => false, null, L, [0, 0], rail, true, null);
+    const ms = performance.now() - t, [lo, up] = models(), pal = palette(), B = BODY_GPU;
+    check(`${S.name}: built in ${ms.toFixed(1)} ms`, ms < 200);
+    const view = { w: B.w, h: B.h, sx: 1 / K, sy: 1 / K, x0: 0, y0: 0, yaw: -0.05, pitch: 0.16 };
+    const img = new Uint8ClampedArray(B.w * B.h * 4);
+    const put = (dy: number) => (x: number, y: number, r: number, g: number, b: number) => { const Y = y + dy; if (Y < 0 || Y >= B.h) return; const k = (Y * B.w + x) * 4; img[k] = r; img[k + 1] = g; img[k + 2] = b; img[k + 3] = 255; };
+    shadeVox(castVox(lo, view), pal, L, put(rail));
+    shadeVox(castVox(up, view), pal, L, put(0));
+    shots.push([img, B.w, B.h]);
   }
+  return shots;
 });
-// 15.19b: the rail shut, the lower plate lies under the upper (below its foot only its edge, seen tilted); open, the keypad shows below it
+void W;
+// a key pressed sinks: the model loses a layer of cubes under it
 {
-  const S = SHELLS[0], up = (KEYS_Y + 6) * HD, low = (shut: boolean) => {
-    let n = 0;
-    drawBody3d((_x, y) => { if (y >= up) n++; }, 0, 0, S, 0, [120, 124, 132], null, keysOf(S), () => false, null, L, [0, 0], shut ? -(PHONE_H - KEYS_Y - 6) : 0);
-    return n;
-  };
-  check('rail shut: nothing below the upper plate (but the edge, seen tilted)', low(true) < W * 3);
-  check('rail open: the keypad below it', low(false) > W * (PHONE_H - KEYS_Y - 6) * HD * 0.7);
+  drawBody3d(K, K, SHELLS[1], 1, [0, 0, 0], null, () => false, null, L);
+  const up0 = count(models()[1]);
+  drawBody3d(K, K, SHELLS[1], 1, [0, 0, 0], null, (k) => k === 'home', null, L);
+  check('the home button sinks when pressed', count(models()[1]) < up0);
 }
-console.log(`12 bodies cast and lit in ${ms.toFixed(0)} ms (${(ms / 12).toFixed(1)} each)`);
-// a frame with nothing changed: only the light
-{
-  const S = SHELLS[0], K = keysOf(S);
-  drawBody3d(() => {}, 0, 0, S, 0, [1, 1, 1], null, K, () => false, null, L);
-  const t = performance.now();
-  for (let i = 0; i < 200; i++) drawBody3d(() => {}, 0, 0, S, 0, [1, 1, 1], null, K, () => false, null, L);
-  const per = (performance.now() - t) / 200;
-  console.log(`light only: ${per.toFixed(2)} ms a frame`);
-  check('light only under 2 ms', per < 2);
-}
-for (let k = 3; k < img.length; k += 4) if (!img[k]) { img[k - 3] = 40; img[k - 2] = 46; img[k - 1] = 58; }
-writeFileSync('tests/.out/phone3d.png', png(img, IW, H * 2 + GAP));
+// the picture: the looks side by side, open on top and shut below
+const [w, h] = [looks[0][0][1], looks[0][0][2]], GAP = 8, IW = (w + GAP) * looks.length, IH = h * 2 + GAP, out = new Uint8ClampedArray(IW * IH * 4);
+looks.forEach((shots, i) => shots.forEach(([img], j) => {
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const s = (y * w + x) * 4, d = ((y + j * (h + GAP)) * IW + x + i * (w + GAP)) * 4;
+    if (img[s + 3]) { out[d] = img[s]; out[d + 1] = img[s + 1]; out[d + 2] = img[s + 2]; }
+    else { out[d] = 40; out[d + 1] = 46; out[d + 2] = 58; }
+    out[d + 3] = 255;
+  }
+}));
+writeFileSync('tests/.out/phone3d.png', png(out, IW, IH));
 console.log(bad ? `${bad} failed` : 'phone3d: all passed (picture in tests/.out/phone3d.png)');

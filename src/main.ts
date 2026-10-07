@@ -1,6 +1,7 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, keyAt, mapView, onDial, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { drawPhone, keyAt, mapView, onDial, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { BODY_GPU } from './phone/body3d';
 import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
@@ -763,6 +764,8 @@ addEventListener('keyup', (e) => {
 function phonePic() {
   const [x0, y0, x1, y1] = SCREEN_MM, w = ((x1 - x0) / COL_MM) * uiLayout.cellW, h = ((y1 - y0) / ROW_MM) * uiLayout.cellH;
   comp?.setPhone(PHONE_SW, PHONE_SH, Math.max(4, Math.round(w / PHONE_SW)), Math.max(8, Math.round(h / PHONE_SH)));
+  // the body's picture follows the interface's cells: square pixels at the monitor's resolution
+  PHONE_BODY.cw = uiLayout.cellW; PHONE_BODY.ch = uiLayout.cellH;
 }
 function computeLayout(rows: number, cover: boolean): Layout {
   const dpr = devicePixelRatio || 1;
@@ -1336,7 +1339,7 @@ function frame(now: number) {
   // in the game only (not over the title or the loading screen)
   if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
-  PHONE_SCREEN.at = null; PHONE_PIC.on = false;
+  PHONE_SCREEN.at = null; PHONE_PIC.on = false; PHONE_BODY.on = false;
   if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
@@ -1494,7 +1497,8 @@ function frame(now: number) {
   const G = glassBox, toPx = (c: number, k: number) => (k & 1 ? uiLayout.originY + c * uiLayout.cellH : uiLayout.originX + c * uiLayout.cellW);
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? PHONE_PIC : null);
+  const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? PHONE_PIC : null, bodyAt);
   else renderer.draw(grid, ui, hd, termAt);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }

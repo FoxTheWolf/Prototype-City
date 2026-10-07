@@ -16,9 +16,8 @@ import { SHAPE } from '../render/atlas';
 import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_ROWS, type KeyRect } from './shells';
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
-import { drawBody3d } from './body3d';
-import { FAMILIES, paintBrandText, phoneFam } from '../render/brands';
-import { Paint } from '../render/paint2d';
+import { brandColor, drawBody3d } from './body3d';
+import { phoneFam } from '../render/brands';
 import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
 import { formatNumber } from '../sim/telco';
 
@@ -87,11 +86,6 @@ function origin(cols: number, rows: number, P: Phone): [number, number] {
  * volume is the earphones' thumbwheel on the cable (DIAL), or Alt with the arrows.
  */
 const TOP_KEYS: [Key, number, number, string][] = [['prev', 8, 4, '<'], ['play', 16, 4, 'P'], ['next', 24, 4, '>']];
-/** HD pixel icons for the keys, 5 wide by 3 tall ('#' lit, '+' half). */
-const ICONS: Record<string, string[]> = {
-  prev: ['#.+#.', '#.##.', '#.+#.'], next: ['.#+.#', '.##.#', '.#+.#'],
-  play: ['.#+..', '.##+.', '.#+..'], pause: ['.#.#.', '.#.#.', '.#.#.'],
-};
 /** The earphones' volume wheel on the cable this frame: its centre (interface cells), or null when not drawn. */
 export const DIAL: { at: [number, number] | null } = { at: null };
 /** Whether a grid cell is over the wheel's grab area (wider and taller than the wheel, as the cable sways). */
@@ -113,9 +107,6 @@ export function keyAt(cols: number, rows: number, P: Phone, x: number, y: number
   return null;
 }
 
-/** The keypad's light (the manual: ice-blue), and unlit. */
-const ICE: C3 = [143, 211, 255], ICE_OFF: C3 = [70, 92, 108];
-const mul = (c: C3, k: number): C3 => [c[0] * k, c[1] * k, c[2] * k];
 const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
 
 /** The glint, eased over time so it does not jump from frame to frame. */
@@ -127,6 +118,11 @@ const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
  */
 const SWAY = { yaw: NaN, pitch: 0, ty: 0, tp: 0 };
 
+/**
+ * The body's picture this frame (body3d.ts BODY_PIC): whether it is drawn, the phone's top-left (interface
+ * cells), and the interface's cell size in pixels (main sets it with the layout), which gives its resolution.
+ */
+export const PHONE_BODY = { on: false, ox: 0, oy: 0, cw: 0, ch: 0 };
 /** Where this frame drew the phone's lit screen (interface cells: x, y, w, h), for the bloom; null when off or not drawn. */
 export const SCREEN: { at: number[] | null } = { at: null };
 
@@ -134,7 +130,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   if (P.raise < 0.01 && P.peek < 0.01 && P.handy < 0.01) { SWAY.yaw = NaN; return; }
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
-  const SHL = SHELLS[P.look], KEYS = keysFor(P.look);
+  const SHL = SHELLS[P.look];
   // the upper plate in the look's color (the manual's section 7)
   const BODY: C3 = SHL.body ?? P.device.body;
   const Lr = light[0], Lg = light[1], Lb = light[2];
@@ -164,84 +160,58 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
 
   const on = P.screen !== 'off';
   const isDown = (k: Key) => { const t = P.pressed.get(k); return t !== undefined && now - t < 0.14; };
-  const HB = hdLayer();
-  if (HB) {
-    // 15.19: the body in little cubes, as the phone's manual draws it (body3d.ts); the keypad's labels are glyphs over it
-    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, P.case ? CASES[P.case] : null, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], railRows(P) - KP_ROWS, on);
-    // the maker's name on the face, above the screen, left of the earpiece, in its family's dot font (15.18)
-    const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker), F = FAMILIES[fam], tc = F[lum(top) > 130 ? 'light' : 'dark'][2];
-    const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 2) * HD, oy * HD, (ox + 12) * HD, (oy + 3) * HD);
-    paintBrandText(decal, (ox + 2) * HD + 1, oy * HD + 2, fam, P.maker, 1, [tc[0] * Lr, tc[1] * Lg, tc[2] * Lb]);
-    // the keypad's numbers and letters, ice-blue (the manual), lit from behind while the screen is on
-    for (const [k, x0, ky, w, h, label] of KEYS) {
-      const y0 = keyRow(P, ky);
-      if (y0 === null || !label) continue;
-      const down = isDown(k), fg: C3 = on ? ICE : ICE_OFF;
-      const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
-      for (let n = 0; n < label.length; n++) {
-        const i = inG(lx + n, ly);
-        if (i < 0 || label[n] === ' ') continue;
-        const c = down ? mul(fg, 0.7) : fg;
-        if (on) g.put(i, label.charCodeAt(n), Math.max(c[0], c[0] * Lr), Math.max(c[1], c[1] * Lg), Math.max(c[2], c[2] * Lb));
-        else g.put(i, label.charCodeAt(n), c[0] * Lr, c[1] * Lg, c[2] * Lb);
-      }
-    }
+  // 15.19: the body in little cubes, as the phone's manual draws it (body3d.ts), in a picture of its own at the
+  // monitor's resolution (the compositor lays it under the interface), with the keypad's legends and the maker's name on it
+  if (PHONE_BODY.cw > 0) {
+    const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker);
+    drawBody3d(PHONE_BODY.cw / COL_MM, PHONE_BODY.ch / ROW_MM, SHL, P.look, BODY, P.case ? CASES[P.case] : null, isDown, P.hover,
+      { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], (railRows(P) - KP_ROWS) * PHONE_BODY.ch, on,
+      { fam, name: P.maker, col: brandColor(fam, lum(top)) });
+    PHONE_BODY.on = true; PHONE_BODY.ox = ox; PHONE_BODY.oy = oy;
   }
-  // the earphones plugged in (2026-10-06), in HD pixels: a metal plug in the jack on top, its white
-  // housing and strain relief above, and the cable rising in a slack loop up and to the left, then
+  // the earphones plugged in (2026-10-06), in HD pixels: a chrome plug in the jack on top, its black
+  // housing (the manual's section 8: black earphones) and strain relief above, and the cable rising in a slack loop up and to the left, then
   // falling past the phone's side and out of sight at the bottom (2026-10-06: it went off the top before)
   const HL = hdLayer();
   const lit = (c: C3, k = 1): C3 => [c[0] * Lr * k, c[1] * Lg * k, c[2] * Lb * k];
   if (P.earphones && HL) {
-    const jx = (ox + 9) * HD, jy = oy * HD;
+    // the jack on the top edge, right of the music keys (the manual: 43.5 to 47 mm)
+    const jc = ox + 45.25 / COL_MM, jx = Math.round(jc * HD) - 3, jy = oy * HD;
     for (let y = -13; y < 1; y++) {
       // the sleeve (metal, 4 wide), the housing (6 wide), the relief (2 wide) the cable leaves from
-      const [x0, x1, c0]: [number, number, C3] = y > -4 ? [1, 5, [150, 155, 165]] : y > -11 ? [0, 6, [230, 230, 234]] : [2, 4, [214, 214, 218]];
+      const [x0, x1, c0]: [number, number, C3] = y > -4 ? [1, 5, [201, 206, 214]] : y > -11 ? [0, 6, [34, 35, 39]] : [2, 4, [26, 27, 30]];
       for (let x = x0; x < x1; x++) { const c = lit(c0, x === x0 ? 1.15 : x === x1 - 1 ? 0.7 : 1); HL.put(jx + x, jy + y, c[0], c[1], c[2], HdOrder.Over); }
     }
     // the cable: a smooth curve (Catmull-Rom) through points in cells, swaying a little
     const sway = Math.sin(now * 1.3) * 0.6, pts: [number, number][] = [
-      [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 9.5 + 1 / HD, oy - 13 / HD], [ox + 5, oy - 6 + sway * 0.5], [ox - 5 + sway, oy - 4], [ox - 13 + sway, oy + 10], [ox - 11, g.rows + 3], [ox - 11, g.rows + 3]];
+      [jc, oy - 13 / HD], [jc, oy - 13 / HD], [ox + 5, oy - 6 + sway * 0.5], [ox - 5 + sway, oy - 4], [ox - 13 + sway, oy + 10], [ox - 11, g.rows + 3], [ox - 11, g.rows + 3]];
     for (let s = 1; s < pts.length - 2; s++) {
       const [p0, p1, p2, p3] = [pts[s - 1], pts[s], pts[s + 1], pts[s + 2]];
       for (let i = 0; i <= 120; i++) {
         const u = i / 120, u2 = u * u, u3 = u2 * u;
         const cr = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (c - a) * u + (2 * a - 5 * b + 4 * c - d) * u2 + (3 * b - a - 3 * c + d) * u3);
         const X = Math.round(cr(p0[0], p1[0], p2[0], p3[0]) * HD), Y = Math.round(cr(p0[1], p1[1], p2[1], p3[1]) * HD);
-        const c = lit([214, 214, 218], 0.85 + 0.15 * Math.cos((s + u) * 3));
+        const c = lit([30, 31, 35], 0.85 + 0.15 * Math.cos((s + u) * 3));
         HL.put(X, Y, c[0], c[1], c[2], HdOrder.Over);
         HL.put(X + 1, Y, c[0] * 0.7, c[1] * 0.7, c[2] * 0.7, HdOrder.Over);
       }
     }
-    // the volume wheel on the cable (2026-10-06): a little white remote with a grey thumbwheel on its
-    // side, ridged; the ridges move with the volume, as the wheel turns under the mouse's wheel
+    // the volume wheel on the cable (2026-10-06): a little black remote with a chrome thumbwheel on its
+    // side, knurled (the manual), lit ice-blue under the cursor; the ridges move with the volume, as the wheel turns under the mouse's wheel
     const [dx, dy] = pts[3], X0 = Math.round(dx * HD) - 5, Y0 = Math.round(dy * HD) - 3, hot = P.dialHot;
     DIAL.at = [Math.round(dx), Math.round(dy)];
     for (let y = 0; y < 7; y++) for (let x = 0; x < 11; x++) {
       const corner = (x === 0 || x === 10) && (y === 0 || y === 6);
       if (corner) continue;
       let c: C3;
-      if (x >= 7 && y >= 1 && y <= 5) c = (y + Math.round(P.tn.vol * 10)) % 2 ? [120, 124, 132] : [176, 180, 188];
-      else c = x === 0 || y === 0 ? [246, 246, 248] : x === 10 || y === 6 ? [170, 170, 176] : [226, 226, 230];
-      const q = lit(c, hot ? 1.25 : 1);
+      const wheel = x >= 7 && y >= 1 && y <= 5;
+      if (wheel) c = (y + Math.round(P.tn.vol * 10)) % 2 ? [93, 98, 106] : [201, 206, 214];
+      else c = x === 0 || y === 0 ? [44, 45, 50] : x === 10 || y === 6 ? [12, 12, 14] : [26, 27, 30];
+      const q = wheel && hot ? [143, 211, 255] as C3 : lit(c);
       HL.put(X0 + x, Y0 + y, q[0], q[1], q[2], HdOrder.Over);
     }
   } else DIAL.at = null;
-  // the music keys on top, in HD pixels (rounded, a little; sunk to a sliver for a moment when pressed);
-  // with Alt held, the keyboard's shortcut for each above it, and the wheel's
-  if (HL) for (const [k, x0, w] of TOP_KEYS) {
-    const down = isDown(k), hov = P.hover === k, W = w * HD, H = down ? 2 : 5, X0 = (ox + x0) * HD, Y0 = oy * HD - H;
-    const icon = ICONS[k === 'play' && P.tn.playing ? 'pause' : k], ic: C3 = on ? SHL.label : SHL.labelOff;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if ((x === 0 || x === W - 1) && y === 0) continue;
-      const shadeK = (y === 0 ? 1.15 : y === H - 1 ? 0.75 : 1) * (x === 0 ? 1.1 : x === W - 1 ? 0.8 : 1) * (hov ? 1.3 : 1) * (down ? 0.6 : 1);
-      let c = mul(SHL.cap, shadeK);
-      const ix = x - ((W - 5) >> 1), iy = y - 1, m = !down && iy >= 0 && iy < 3 && ix >= 0 && ix < 5 ? icon[iy][ix] : '.';
-      if (m === '#') c = ic; else if (m === '+') c = lerp(c, ic, 0.5);
-      const q = lit(c);
-      HL.put(X0 + x, Y0 + y, q[0], q[1], q[2], HdOrder.Over);
-    }
-  }
+  // the music keys on top are cubes of the body (body3d.ts); with Alt held, the keyboard's shortcut for each above it, and the wheel's
   if (P.handy > 0.5) {
     const tag = (x: number, y: number, s: string) => { for (let n = 0; n < s.length; n++) { const i = inG(x + n, y); if (i >= 0) { g.setBg(i, 20, 16, 10); g.put(i, s.charCodeAt(n), 255, 220, 140); } } };
     tag(TOP_KEYS[0][1] - 5, -3, 'ALT+');

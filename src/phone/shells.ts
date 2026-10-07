@@ -62,15 +62,15 @@ export const CASES: Case[] = [
 ];
 
 /**
- * The body, as the phone's manual draws it (docs/identidade/celular-manual.html, sections 1 to 3 and 9), in
- * millimetres: one slider for every look (a look is the upper plate's color and material). The upper plate
- * 51 x 103 with the screen, the soft keys, call and end and the round d-pad; the lower one the same size,
- * with the keypad, 44 mm under it when the rail is open. Coordinates are the open phone's, from the upper
+ * The body, as the phone's manual draws it (docs/identidade/celular-manual.html v2, sections 1 to 3 and 9),
+ * in millimetres: one slider for every look (a look is the upper plate's color and material). The upper
+ * plate 51 x 103 with the touch screen, call, the round home button and end; the lower one the same size,
+ * with the keypad, 43 mm under it when the rail is open. Coordinates are the open phone's, from the upper
  * plate's top left; the lower plate's top is at RAIL_MM.
  */
 export const BODY_MM = [51, 103] as const, CORNER_MM = 6.5, RAIL_MM = 43;
-/** The screen's black surround and the screen itself (240 x 400 pixels on it, the manual's section 6). */
-export const BEZEL_MM = [3, 6.5, 48, 79.5] as const, SCREEN_MM = [4.5, 8, 46.5, 78] as const;
+/** The screen's black surround and the screen itself (a touch screen, 240 x 432 pixels on it, the manual's section 6). */
+export const BEZEL_MM = [3, 6, 48, 85] as const, SCREEN_MM = [4.5, 7.5, 46.5, 83] as const;
 /**
  * Millimetres a column and a row of the interface's grid span (the grid is 80 rows tall: at 1080p a cell is
  * 8 x 13 pixels, so the 42 mm screen is 240 pixels across, one to one).
@@ -78,26 +78,29 @@ export const BEZEL_MM = [3, 6.5, 48, 79.5] as const, SCREEN_MM = [4.5, 8, 46.5, 
 export const COL_MM = 1.4, ROW_MM = 2.275;
 /** The phone's size in cells: its width, the closed phone's rows (the upper plate), the open one's. */
 export const PHONE_W = Math.ceil(BODY_MM[0] / COL_MM), UP_ROWS = Math.ceil(BODY_MM[1] / ROW_MM), PHONE_H = UP_ROWS + Math.round(RAIL_MM / ROW_MM);
-/** The d-pad: its centre, the chrome ring's outer radius, the arrows' ring and OK's (mm). */
-export const DPAD_MM = { x: 25.5, y: 91.25, chrome: 8.25, out: 7.5, ice: 4.3, ok: 3.5 } as const;
+/** The home button (manual v2): its centre, the chrome ring's outer radius, the ice ring's, the button's, the ice square's half side (mm). */
+export const HOME_MM = { x: 25.5, y: 94, chrome: 6, ice: 5.4, disc: 5, icon: 1.5 } as const;
 
-/** A key's place (mm, x0, y0, x1, y1, the open phone's) and its outline: a pill, a box rounded at r, the call or end key, a sector of the d-pad, OK's disc. */
-export type KeyShape = 'pill' | 'box' | 'send' | 'end' | 'arrow' | 'disc';
+/** A key's place (mm, x0, y0, x1, y1, the open phone's) and its outline: a box rounded at r, the call or end key, the home button's disc, a music key on the top edge. */
+export type KeyShape = 'box' | 'send' | 'end' | 'disc' | 'top';
 export interface KeyMm { k: Key; box: readonly [number, number, number, number]; shape: KeyShape; r?: number; label: string }
-const LABELS = ['1', '2 abc', '3 def', '4 ghi', '5 jkl', '6 mno', '7 pqrs', '8 tuv', '9 wxyz', '* +', '0 _', '# ^'];
-const D = DPAD_MM;
+/** The keypad's legends: the number, and the letters (T9) or the sign beside it (the manual's lower slab). */
+export const KEY_LEGEND: Record<string, [string, string]> = {
+  '1': ['1', ''], '2': ['2', 'ABC'], '3': ['3', 'DEF'], '4': ['4', 'GHI'], '5': ['5', 'JKL'], '6': ['6', 'MNO'],
+  '7': ['7', 'PQRS'], '8': ['8', 'TUV'], '9': ['9', 'WXYZ'], '*': ['*', '+'], '0': ['0', '_'], '#': ['#', '^'],
+};
+const PAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+const H = HOME_MM;
 export const KEYS_MM: KeyMm[] = [
-  { k: 'lsoft', box: [3.5, 82, 15.5, 84.75], shape: 'pill', label: '' }, { k: 'rsoft', box: [35.5, 82, 47.5, 84.75], shape: 'pill', label: '' },
-  { k: 'send', box: [2, 88.5, 14.5, 100], shape: 'send', label: '' }, { k: 'end', box: [36.5, 88.5, 49, 100], shape: 'end', label: '' },
-  { k: 'ok', box: [D.x - D.ok, D.y - D.ok, D.x + D.ok, D.y + D.ok], shape: 'disc', label: '' },
-  { k: 'up', box: [D.x - D.out, D.y - D.out, D.x + D.out, D.y - D.ice], shape: 'arrow', label: '' },
-  { k: 'down', box: [D.x - D.out, D.y + D.ice, D.x + D.out, D.y + D.out], shape: 'arrow', label: '' },
-  { k: 'left', box: [D.x - D.out, D.y - D.out, D.x - D.ice, D.y + D.out], shape: 'arrow', label: '' },
-  { k: 'right', box: [D.x + D.ice, D.y - D.out, D.x + D.out, D.y + D.out], shape: 'arrow', label: '' },
+  { k: 'send', box: [2, 88, 15.5, 100], shape: 'send', label: '' }, { k: 'end', box: [35.5, 88, 49, 100], shape: 'end', label: '' },
+  { k: 'home', box: [H.x - H.disc, H.y - H.disc, H.x + H.disc, H.y + H.disc], shape: 'disc', label: '' },
+  // the music keys: chrome bumps standing 2 mm out of the top edge
+  { k: 'prev', box: [11.5, -2, 17, 0], shape: 'top', label: '' }, { k: 'play', box: [22.75, -2, 28.25, 0], shape: 'top', label: '' },
+  { k: 'next', box: [34, -2, 39.5, 0], shape: 'top', label: '' },
   // the keypad on the lower plate: 3 x 4 keys of 13 x 8 mm (the manual's lower slab, 61 mm down it)
-  ...LABELS.map((label, n): KeyMm => {
+  ...PAD.map((k, n): KeyMm => {
     const x = 3.5 + (n % 3) * 15.5, y = RAIL_MM + 61 + Math.floor(n / 3) * 10;
-    return { k: label[0] as Key, box: [x, y, x + 13, y + 8], shape: 'box', r: 1.75, label };
+    return { k: k as Key, box: [x, y, x + 13, y + 8], shape: 'box', r: 1.75, label: k };
   }),
 ];
 

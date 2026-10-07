@@ -88,7 +88,7 @@ export function lookPhone(seed: number, look: number): Device {
   return { ...phoneModel(seed, LOOK_MAKER[look], 2), look };
 }
 
-/** The player's phone: the giant's top model (the manual: the giant is the player's first phone), in one of its looks. */
+/** The player's phone: the executive's top model, its Slate look, black gloss (the phone's manual; the user, 2026-10-07). */
 export function playerPhone(seed: number): Device {
-  return phoneModel(seed, 0, 2);
+  return phoneModel(seed, 1, 2);
 }
