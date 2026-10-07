@@ -70,8 +70,14 @@ if (P.web.url === start) fail('OK on a link went nowhere');
 console.log(`  followed: ${start} -> ${P.web.url}`);
 key('rsoft'); run(20);
 if (P.web.url !== start) fail('Back did not go back');
+// Go to: the list with the bookmarks; the second one is the mail, picked with its number
+key('lsoft'); hd.wipe(); P.web.draw(S, now); writeFileSync('tests/.out/phone-goto.png', phoneShot(g, hd, SW, SH));
+if (!screen().some((l) => l.includes('Lookwise'))) fail('no bookmarks in Go to');
+key('2'); run(30);
+if (!P.web.url.includes(mailHost(w))) fail('the Mail bookmark was not followed: ' + P.web.url);
+key('rsoft'); run(20);
 // an address by multi-tap: "mail" goes to a search; the webmail's host typed in full
-key('lsoft');
+key('lsoft'); key('ok');
 const tap = (s: string) => { for (const c of s) { const k = { a: '2', b: '22', c: '222', d: '3', e: '33', f: '333', g: '4', h: '44', i: '444', j: '5', k: '55', l: '555', m: '6', n: '66', o: '666', p: '7', q: '77', r: '777', s: '7777', t: '8', u: '88', v: '888', w: '9', x: '99', y: '999', z: '9999', '.': '1', '0': '', '1': '', '2': '' }[c] ?? ''; for (const d of k) key(d); now += 1.2; } };
 tap(mailHost(w));
 key('ok'); run(30);

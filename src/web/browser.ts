@@ -62,6 +62,16 @@ interface Tab {
 }
 const blank = (): Tab => ({ url: '', back: [], fwd: [], got: null, laid: null, at: -1e9, kbps: 0, offline: false, top: 0, sel: -1, vals: new Map() });
 
+/** The bookmarks a new Ferret (and the Ferret Mini) comes with: the search, the mail, the city's portal (never the forum). */
+export function factoryMarks(w: World): [string, string][] {
+  return [['Lookwise', `http://${SEARCH_HOST}/`], ['Mail', `http://${mailHost(w)}/`], [siteTitle(webOf(w).portal), portalUrl(w)]];
+}
+const siteTitle = (host: string) => host.replace(/^www\./, '').replace(/\.(com|net|org)$/, '').replace(/^\w/, (c) => c.toUpperCase());
+/** (Debug, DEBUG.webMarks) The canonical sites a click away, marked '(dbg)'. */
+export function debugMarks(): [string, string][] {
+  return DEBUG.webMarks ? [['(dbg) Streetwire', `http://${WIRE_HOST}/`], ['(dbg) GridLink', `http://${GRID_HOST}/`], ['(dbg) Switchboard', `http://${FORUM_HOST}/`]] : [];
+}
+
 export class Browser {
   private tabs: Tab[] = [blank()];
   private cur = 0;
@@ -82,7 +92,7 @@ export class Browser {
     const m = files?.read('bookmarks');
     this.marks = m === null || m === undefined ? this.factoryMarks() : m.split('\n').filter((l) => l.includes('\t')).map((l) => l.split('\t') as [string, string]);
     // (debug) the canonical sites a click away, added once if missing
-    if (DEBUG.webMarks) for (const [t, u] of [['(dbg) Streetwire', `http://${WIRE_HOST}/`], ['(dbg) GridLink', `http://${GRID_HOST}/`], ['(dbg) Switchboard', `http://${FORUM_HOST}/`]] as [string, string][]) if (!this.marks.some(([, x]) => x === u)) this.marks.push([t, u]);
+    for (const [t, u] of debugMarks()) if (!this.marks.some(([, x]) => x === u)) this.marks.push([t, u]);
     this.seen = new Set((files?.read('history') ?? '').split('\n').filter(Boolean));
     this.trusted = new Set((files?.read('exceptions') ?? '').split('\n').filter(Boolean));
   }
@@ -93,11 +103,7 @@ export class Browser {
   private get view() { return this.H - PAGE_Y - 1; }
 
   /** The bookmarks a new Ferret comes with: the search, the mail, the city's portal (never the forum). */
-  private factoryMarks(): [string, string][] {
-    const w = this.world;
-    return [['Lookwise', `http://${SEARCH_HOST}/`], ['Mail', `http://${mailHost(w)}/`], [this.siteTitle(webOf(w).portal), portalUrl(w)]];
-  }
-  private siteTitle(host: string) { return host.replace(/^www\./, '').replace(/\.(com|net|org)$/, '').replace(/^\w/, (c) => c.toUpperCase()); }
+  private factoryMarks(): [string, string][] { return factoryMarks(this.world); }
 
   /** The page's pictures in the order they come down (top first), and what they weigh (KB) together. */
   private items(T: Tab): HdOp[] { return T.laid ? [...T.laid.front].sort((a, b) => a.y - b.y) : []; }
@@ -216,7 +222,7 @@ export class Browser {
   private toggleMark() {
     const T = this.T, i = this.marks.findIndex(([, u]) => u === T.url);
     if (i >= 0) this.marks.splice(i, 1);
-    else if (T.url) this.marks.push([T.got?.page?.title ?? this.siteTitle(T.got?.host ?? T.url), T.url]);
+    else if (T.url) this.marks.push([T.got?.page?.title ?? siteTitle(T.got?.host ?? T.url), T.url]);
     this.files?.write('bookmarks', this.marks.map(([t, u]) => `${t.replace(/\t/g, ' ')}\t${u}`).join('\n'));
   }
 

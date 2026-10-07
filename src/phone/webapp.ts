@@ -10,13 +10,15 @@
  * HD pixels.
  * Keys: Up and Down go from link to link (scrolling when the next is out of sight), Left and Right a
  * screen up and down, OK follows a link or types into a box (multi-tap, OK to finish), the left soft
- * key types an address (words are a search), the right one goes back (or leaves), * reloads, 0 the
+ * key opens Go to (type an address, words being a search, or pick a bookmark: the same ones the
+ * notebook's Ferret comes with, 2026-10-07), the right one goes back (or leaves), * reloads, 0 the
  * start page. On the price question: the left soft key (or OK) goes on, the right one stays.
  */
 import { type World } from '../sim/world';
 import { fetchUrl, portalUrl, searchUrl, type Fetched } from '../web/sites';
 import { layout, mobilePage, opKb, SUBMIT, type Field, type HdOp, type Laid, type Link } from '../web/page';
 import { paintOps } from '../web/ops';
+import { debugMarks, factoryMarks } from '../web/browser';
 import { CH, CW } from '../web/chrome';
 import { Img, Paint } from '../render/paint2d';
 import { HD } from '../render/hd';
@@ -54,11 +56,16 @@ export class WebApp {
   private editing = '';
   /** A heavy page waiting for a yes (its price asked over EDGE), and whether it goes in the history. */
   private ask: (Got & { remember: boolean }) | null = null;
+  /** The Go to list open: the row picked (0 types an address, the others are the bookmarks). */
+  private goSel = -1;
 
   constructor(private world: World, private radio: Radio, private online: () => boolean) {}
 
   /** Whether the keypad is being typed on (the phone is held higher). */
   get typing() { return !!this.edit; }
+
+  /** The bookmarks in the Go to list (title, address). */
+  private marks(): [string, string][] { return [...factoryMarks(this.world), ...debugMarks()]; }
 
   /** Opened from the menu: the page it was left on, or the start page. */
   open(now: number) { if (!this.url) this.go('', now, false); }
@@ -117,6 +124,19 @@ export class WebApp {
       else if (k === 'rsoft') this.ask = null;
       return true;
     }
+    if (this.goSel >= 0) {
+      const M = this.marks(), n = M.length + 1;
+      if (k === 'up' || k === 'down') this.goSel = (this.goSel + (k === 'down' ? 1 : n - 1)) % n;
+      else if (k === 'rsoft') this.goSel = -1;
+      else if (k === 'ok' || k === 'lsoft' || /^[1-9]$/.test(k)) {
+        const i = /^[1-9]$/.test(k) ? +k : this.goSel;
+        if (i > n - 1) return true;
+        this.goSel = -1;
+        if (i === 0) { this.edit = new Editor(120, false, true); this.editing = 'addr'; }
+        else this.go(M[i - 1][1], now);
+      }
+      return true;
+    }
     if (this.edit) {
       const E = this.edit;
       if (k === 'ok' || k === 'lsoft') {
@@ -131,7 +151,7 @@ export class WebApp {
     }
     const I = this.items(), on = I[this.sel], rows = this.laid?.rows.length ?? 0, maxTop = Math.max(0, rows - VIEW);
     const seen = (y: number) => y >= this.top && y < this.top + VIEW;
-    if (k === 'lsoft') { this.edit = new Editor(120, false, true); this.editing = 'addr'; return true; }
+    if (k === 'lsoft') { this.goSel = 0; return true; }
     if (k === 'rsoft') { const u = this.back.pop(); if (!u) return null; this.go(u, now, false); return true; }
     if (k === '*') { this.go(this.url, now, false); return true; }
     if (k === '0') { this.go('', now); return true; }
@@ -243,8 +263,22 @@ export class WebApp {
       softKeys(S, 'Yes', 'No');
       return;
     }
+    if (this.goSel >= 0) { this.goList(S); return; }
     if (this.edit) softKeys(S, 'OK', this.edit.value() ? 'Del' : 'Cancel');
     else softKeys(S, 'Go to', this.back.length ? 'Back' : 'Exit');
+  }
+
+  /** Go to: a box over the page with "Enter address" and the bookmarks, numbered for the keypad. */
+  private goList(S: Lcd) {
+    const rows = ['Enter address...', ...this.marks().map(([t]) => t)];
+    const y0 = TOP + 1, x0 = 2, x1 = SW - 3;
+    for (let r = y0 - 1; r <= y0 + rows.length + 1; r++) for (let x = x0; x <= x1; x++) S.put(x, r, 32, ASK_FG, r === y0 - 1 || x === x0 || x === x1 || r === y0 + rows.length + 1 ? EARTH : ASK_BG);
+    S.text(x0 + 2, y0 - 1, 'Go to', CREAM, EARTH);
+    rows.forEach((l, k) => {
+      const on = k === this.goSel, fg: C3 = on ? CREAM : k ? ASK_FG : EARTH, bg: C3 = on ? EARTH : ASK_BG;
+      S.text(x0 + 1, y0 + k, ` ${k ? `${k} ` : '  '}${l}`.slice(0, x1 - x0 - 1).padEnd(x1 - x0 - 1), fg, bg);
+    });
+    softKeys(S, 'Select', 'Cancel');
   }
 
   /** Page row y's pictures on screen row sy. */

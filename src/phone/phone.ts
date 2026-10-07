@@ -53,23 +53,23 @@ import { WebApp } from './webapp';
  * green call key and Delete the red end key. In the map, 1-4 (or * and #, or the mouse wheel)
  * pick the zoom, and OK opens the list of places (or, with the view moved, centers it again).
  */
-export type App = 'map' | 'calls' | 'contacts' | 'tunes' | 'messages' | 'camera' | 'wire' | 'news' | 'snake' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
+export type App = 'map' | 'calls' | 'contacts' | 'tunes' | 'messages' | 'camera' | 'wire' | 'news' | 'web' | 'calendar' | 'bank' | 'calc' | 'notes' | 'weather' | 'folder' | 'store' | 'settings';
 export type Screen = 'off' | 'boot' | 'standby' | 'menu' | 'places' | 'code' | 'contact' | 'ussd' | 'msglist' | 'msg' | 'compose' | 'photos' | 'app' | 'wifikey' | App;
 export type CallKind = 'out' | 'failed' | 'in' | 'missed';
 export type Key = 'vup' | 'vdown' | 'play' | 'prev' | 'next' | 'lsoft' | 'rsoft' | 'up' | 'down' | 'left' | 'right' | 'ok' | 'send' | 'end' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '*' | '#';
 
 /**
  * The menu: a 4x4 grid of apps, picked with the arrows (or 1-9 and 0 for the first ten). Streetwire,
- * the news, Snake and the Tunes Player come with the phone, as phones then came with a few apps and a
- * game; the apps downloaded from the store sit in their own folder. Calls and Contacts are one app,
+ * the news, the Ferret Mini and the Tunes Player come with the phone, as phones then came with a few apps and a
+ * game; the game (Snake) and the apps downloaded from the store sit in their own folder (2026-10-07). Calls and Contacts are one app,
  * the Phone, with two tabs (left and right switch them; 2026-10-06, to make room for the music).
  */
 export const MENU_COLS = 4;
-export const APPS: App[] = ['calls', 'messages', 'camera', 'map', 'tunes', 'wire', 'news', 'weather', 'calendar', 'bank', 'calc', 'notes', 'snake', 'folder', 'store', 'settings'];
+export const APPS: App[] = ['calls', 'messages', 'camera', 'map', 'tunes', 'web', 'wire', 'news', 'weather', 'calendar', 'bank', 'calc', 'notes', 'folder', 'store', 'settings'];
 /** The apps on the menu that are store apps installed at the factory (their entries in STORE); the bank's came with the account. */
-const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', snake: 'snake', bank: 'bank', tunes: 'tunes' };
+const BUNDLED_APP: Partial<Record<App, string>> = { wire: 'social', news: 'news', web: 'web', bank: 'bank', tunes: 'tunes' };
 /** Store apps that come installed (for now the same on every phone; later each model will come with its own). */
-export const BUNDLED = ['social', 'news', 'snake', 'bank', 'tunes'];
+export const BUNDLED = ['social', 'news', 'snake', 'bank', 'tunes', 'web'];
 /** (15.9e) Apps that are not in the store: installed by cable once the phone is unlocked (stage 19), and shown in My Apps. */
 export const SIDELOAD = ['reynard'];
 /** Power on: the hardware check scrolls by fast for BOOT_LOG_S, then the splash screen until BOOT_S. */
@@ -458,6 +458,8 @@ export class Phone {
     for (const path of Object.values(DATA)) this.fsSaid[path] = '\u0000';
     this.photos.splice(0, this.photos.length, ...d.photos); this.photoN = d.photoN;
     this.apps.splice(0, this.apps.length, ...d.apps);
+    // a save from before an app came bundled (the Ferret Mini, 2026-10-07): it comes installed
+    for (const id of BUNDLED) { const i = STORE.findIndex((a) => a[0] === id); if (!this.apps.includes(i)) this.apps.push(i); }
     this.prefs = { ...this.prefs, ...d.prefs };
     this.look = d.look; this.case = d.case; this.looks = d.looks; this.cases = d.cases;
     this.cal.reminders = d.reminders; this.wifi.on = d.wifiOn; this.told = d.told;
@@ -1132,8 +1134,8 @@ export class Phone {
 
   /** The store's catalog: what it sells (not what came with the phone). */
   catalog(): number[] { return STORE.map((_, i) => i).filter((i) => !BUNDLED.includes(STORE[i][0]) && !SIDELOAD.includes(STORE[i][0])); }
-  /** The apps downloaded from the store, in the folder. */
-  downloads(): number[] { return this.apps.filter((i) => !BUNDLED.includes(STORE[i][0])); }
+  /** The apps in the folder: the ones downloaded from the store, and the bundled ones without a place on the menu (Snake). */
+  downloads(): number[] { return this.apps.filter((i) => !Object.values(BUNDLED_APP).includes(STORE[i][0])); }
 
   private openApp(i: number, now: number, from: Screen) {
     this.appId = i; this.appFrom = from; this.open('app', now);
