@@ -254,6 +254,7 @@ export function paintOps(P: Paint, ops: readonly HdOp[], X: number, Y: number, n
         });
         break;
       }
+      case 'seal': paintSeal(P, o.kind, px(o.x), py(o.y), now, o.n ?? 0, o.text ?? ''); break;
       case 'gridlink': {
         // GRID in white over LINK in cyan; LINK starts under the I, and the I's stem runs down into the L's
         const s = o.s, x0 = px(o.x), y0 = py(o.y), step = 6 * s, lx = x0 + 2 * step + 2 * s;
@@ -289,7 +290,7 @@ function paintFace(P: Paint, F: Face, x0: number, y0: number, W: number, H: numb
 }
 
 /** Whether ops are moving now (a blinking ad or line, a marquee): the frame's key then changes with the clock. */
-export const animated = (ops: readonly HdOp[]) => ops.some((o) => o.k === 'ad' || o.k === 'marquee' || o.k === 'blink' || (o.k === 'owlface' && (o.mood === 'fly' || o.mood === 'search')));
+export const animated = (ops: readonly HdOp[]) => ops.some((o) => o.k === 'ad' || (o.k === 'seal' && o.kind === 'uc') || o.k === 'marquee' || o.k === 'blink' || (o.k === 'owlface' && (o.mood === 'fly' || o.mood === 'search')));
 
 /** The colors of the city's own map (the Lookwise Local look): out of the city (the sea), road, sidewalk, lot, building, park, plaza, yard. */
 const GROUND: C3[] = [hex('#a7c8e6'), hex('#fbfaf5'), hex('#ece8de'), hex('#e8e1cf'), hex('#ddd0b4'), hex('#c6dfa8'), hex('#efe9dc'), hex('#e3dccb')];
@@ -303,4 +304,72 @@ function groundMap(g: string, gw: number, gh: number): Img {
   grounds.set(g, img);
   if (grounds.size > 16) grounds.delete(grounds.keys().next().value!);
   return img;
+}
+
+/**
+ * 15.17j: an 88 x 31 seal (the manual's section 9) at (x, y), in the 5 x 7 font a pixel a bulb: "Best viewed
+ * with Ferret", "Get Ferret!", "Valid HTML 4.01", the hit counter (n), the worker of "under construction"
+ * (two frames, by now), the guestbook, the provider's "powered by" (its name in text).
+ */
+function paintSeal(P: Paint, kind: string, x: number, y: number, now: number, n: number, text: string) {
+  const W = 88, H = 31, T = (tx: number, ty: number, t: string, c: C3) => P.text(x + tx, y + ty, t, 1, c);
+  // centered on cx, or bold (drawn twice, a pixel apart)
+  const C = (cx: number, ty: number, t: string, c: C3, bold = false) => { const tx = Math.round(cx - Paint.textW(t, 1) / 2); T(tx, ty, t, c); if (bold) T(tx + 1, ty, t, c); };
+  const edge = (c: C3) => { P.rect(x, y, W, 1, c); P.rect(x, y + H - 1, W, 1, c); P.rect(x, y, 1, H, c); P.rect(x + W - 1, y, 1, H, c); };
+  switch (kind) {
+    case 'best': {
+      P.grad(x, y, W, H, [[0, hex('#fdf6e6')], [1, hex('#e6d3ad')]]); edge(hex('#4a2c1a'));
+      icon(P, { k: 'ferret' }, x + 3, y + 8);
+      T(21, 3, 'BEST VIEWED', hex('#4a2c1a')); T(21, 12, 'FERRET', hex('#4a2c1a')); T(22, 12, 'FERRET', hex('#4a2c1a')); T(63, 12, '2.0', hex('#6b4a2e')); T(21, 21, '1024X768', hex('#6b4a2e'));
+      break;
+    }
+    case 'get': {
+      P.rect(x, y, W, H, hex('#6b4a2e')); P.rect(x + 1, y + 1, W - 2, 12, [255, 255, 255], 0.12); edge(hex('#2e1d12'));
+      icon(P, { k: 'ferret' }, x + 4, y + 8);
+      const cream = hex('#f1e4c8');
+      T(26, 5, 'GET', cream); T(26, 16, 'FERRET!', cream); T(27, 16, 'FERRET!', cream);
+      break;
+    }
+    case 'html': {
+      P.rect(x, y, W, H, [255, 255, 255]); edge(hex('#888888')); P.rect(x + 1, y + 1, 34, 29, hex('#1c3f8c'));
+      C(18, 12, 'HTML', [255, 255, 255], true);
+      C(62, 4, 'VALID', hex('#cc0033'), true); C(62, 13, 'HTML', hex('#1c3f8c')); C(62, 22, '4.01', hex('#1c3f8c'));
+      break;
+    }
+    case 'counter': {
+      // seven digits in their little boxes, green on black (the number grows as the city lives)
+      P.rect(x, y, W, H, hex('#111111'));
+      const d = String(Math.floor(n) % 1e7).padStart(7, '0');
+      for (let i = 0; i < 7; i++) {
+        const bx = x + 2 + i * 12;
+        P.rect(bx, y + 4, 11, 23, hex('#333333')); P.rect(bx + 1, y + 5, 9, 21, [0, 0, 0]);
+        P.text(bx + 1, y + 8, d[i], 2, hex('#3cff5a'), 1, 0);
+        P.rect(bx + 1, y + 15, 9, 1, [0, 0, 0], 0.6);
+      }
+      break;
+    }
+    case 'uc': {
+      // the hazard stripes top and bottom, the sign in the middle, the worker digging (two frames)
+      const yel = hex('#f6d200'), ink = hex('#111111');
+      P.rect(x, y, W, H, yel);
+      for (const y0 of [0, 26]) for (let j = 0; j < 5; j++) for (let i = -8; i < W; i += 8) { const a = Math.max(0, i + j), e = Math.min(W, i + j + 4); if (e > a) P.rect(x + a, y + y0 + j, e - a, 1, ink); }
+      P.rect(x, y + 5, W, 1, ink); P.rect(x, y + 25, W, 1, ink);
+      const up = Math.floor(now * 2) % 2 === 0;
+      P.disc(x + 7, y + 9, 2.5, yel); P.ring(x + 7, y + 9, 2.5, 0.8, ink);
+      P.rect(x + 5, y + 12, 5, 7, hex('#e06a10'));
+      P.line(x + 6, y + 19, x + 5, y + 24, 1.4, ink); P.line(x + 9, y + 19, x + 10, y + 24, 1.4, ink);
+      P.line(x + 9, y + 13, up ? x + 13 : x + 14, up ? y + 17 : y + 23, 1.2, hex('#666666'));
+      C(52, 8, 'UNDER', ink, true); T(16, 17, 'CONSTRUCTION', ink);
+      break;
+    }
+    case 'guest': {
+      P.rect(x, y, W, H, hex('#ffd6ea')); edge(hex('#c0407a'));
+      C(44, 5, 'SIGN MY', hex('#c0407a')); C(44, 17, 'GUESTBOOK!', hex('#7a1a4a'), true);
+      break;
+    }
+    default: { // powered by the provider
+      P.rect(x, y, W, H, hex('#003399')); P.rect(x, y + 22, W, 9, hex('#ffcc00'));
+      C(44, 3, 'POWERED BY', hex('#cfe0ff')); C(44, 12, text.toUpperCase().slice(0, 13), [255, 255, 255], true); C(44, 23, 'DSL DIAL-UP', hex('#002266'));
+    }
+  }
 }

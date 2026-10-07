@@ -24,12 +24,13 @@ import { postText } from '../locale/social';
 import { type Post } from '../sim/social';
 import { districtAt } from '../sim/city';
 import en from '../locale/en.json';
-import { type Block, type C3, type Page, type PhotoSubj, type Sky, type Theme } from './page';
+import { type Block, type C3, type Page, type PhotoSubj, type SealKind, type Sky, type Theme } from './page';
 import { groundAt, mapRaster } from '../phone/mapdata';
 import { mailHost, mailPage } from './webmail';
 import { WIRE_HOST, wirePage } from './streetwire';
 import { FORUM_HOST, forumPage } from './forum';
 import { GRID_HOST, gridHome, gridPage } from './gridlink';
+import { BURROW_HOST, burrowHome, burrowPage, burrowUp } from './burrow';
 
 /** A hostname as written: lowercase letters and digits. */
 export const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
@@ -54,7 +55,7 @@ const THEMES: Theme[] = [
 /** The portal's own: the provider's blue. */
 const PORTAL: Theme = { page: [180, 196, 220], bg: [255, 255, 255], fg: [24, 24, 32], dim: [110, 116, 130], link: [0, 51, 153], head: [0, 51, 153], headFg: [255, 255, 255], bar: [255, 204, 0], barFg: [0, 30, 90], gloss: true, tile: 'stripes' };
 
-export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'forum' } | { kind: 'grid' } | { kind: 'biz'; k: number };
+export type SiteRef = { kind: 'portal' } | { kind: 'search' } | { kind: 'mail' } | { kind: 'wire' } | { kind: 'forum' } | { kind: 'grid' } | { kind: 'burrow' } | { kind: 'biz'; k: number };
 export interface Web { hosts: Map<string, SiteRef>; byBiz: Map<number, string>; portal: string; search: string }
 /** The search engine (15.3): its name and host. */
 export const SEARCH = 'Lookwise', SEARCH_HOST = 'www.lookwise.com';
@@ -71,6 +72,7 @@ export function webOf(w: World): Web {
   hosts.set(mailHost(w), { kind: 'mail' });
   hosts.set(WIRE_HOST, { kind: 'wire' });
   hosts.set(GRID_HOST, { kind: 'grid' });
+  hosts.set(BURROW_HOST, { kind: 'burrow' });
   hosts.set(FORUM_HOST, { kind: 'forum' }); // not indexed by the search, not on the portal: you get the address from someone
   c.businesses.forEach((b, k) => {
     const head = b.hq ?? k;
@@ -135,13 +137,16 @@ export function fetchUrl(w: World, url: string, form?: Map<string, string>): Fet
   if (S.kind === 'mail') return { host, path, cert, page: mailPage(w, host, path, form) };
   if (S.kind === 'wire') return { host, path, page: wirePage(w, path, form) };
   if (S.kind === 'forum') return { host, path, cert, page: forumPage(w, path, form) };
+  if (S.kind === 'burrow') return burrowUp(w) ? { host, path, page: burrowPage(w, path, addressAt(w, ...burrowHome(w).at)) } : { host, path, error: 'down' };
   if (S.kind === 'grid') return w.power.subs[gridHome(w)].on ? { host, path, page: gridPage(w, path) } : { host, path, error: 'down' };
   return { host, path, page: portalPage(w, host, path) };
 }
 
 /** The address of business k as one would write it: on its street, at the nearest corner. */
-export function addressOf(w: World, k: number): string {
-  const c = w.city, [x, y] = placeAt(c, k);
+export function addressOf(w: World, k: number): string { return addressAt(w, ...placeAt(w.city, k)); }
+/** The address of a spot (x, y) as one would write it: its street, at the nearest corner. */
+export function addressAt(w: World, x: number, y: number): string {
+  const c = w.city;
   const i = nearestRoad(c.xb, c.xCell, x), j = nearestRoad(c.yb, c.yCell, y);
   const onAve = Math.abs((c.xb[2 * i] + c.xb[2 * i + 1]) / 2 - x) < Math.abs((c.yb[2 * j] + c.yb[2 * j + 1]) / 2 - y);
   return onAve ? `${roadName(c, true, i)} at ${roadName(c, false, j)}` : `${roadName(c, false, j)} at ${roadName(c, true, i)}`;
@@ -231,7 +236,9 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   }
   const ago = Math.floor(h(4) * 400) * 86400, D = calendar(Math.max(0, w.time - ago));
   const updated = say('web.updated', { date: w.time - ago < 0 ? 'in 2007' : `${D.month}/${D.day}/${String(D.year).slice(2)}` });
-  const counter = say('web.visitors', { n: String(1000 + Math.floor(h(5) * 90000)).padStart(6, '0') });
+  // the hit counter: a number from the seed, a few more visitors every day the city lives
+  const hits = 1000 + Math.floor(h(5) * 90000) + Math.floor((w.time / 86400) * (3 + h(19) * 40));
+  const ferret = `http://${BURROW_HOST}/`, seals = (p: number, kinds: [SealKind, string?][]): Block[] => (h(20) < p ? [{ t: 'seals', seals: kinds }] : []);
   const foot: Block = { t: 'foot', text: `(c) ${calendar(w.time).year} ${name} - ${addr} - ${phone}` };
   const info: Block[] = [{ t: 'h', text: 'Hours' }, { t: 'p', text: open }, { t: 'p', text: now }, { t: 'h', text: 'Find us' }, { t: 'p', text: `${addr}, ${district}` }, { t: 'p', text: `Call ${phone}` }];
   let body: Block[];
@@ -244,7 +251,9 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
         case Tpl.Center: // 1998: the homepage that was never updated
           body = [{ t: 'photo', subj, seed, h: 6, w: 22, center: true, frame: 'line' }, { t: 'big', text: say('web.welcome.home98'), kind: 'hero', rows: 2, center: true, col: [255, 255, 255] },
             { t: 'blink', text: `*** ${special} ***` }, { t: 'space' },
-            { t: 'list', items: nav.slice(1).map(([l, u]) => `[${l}](${u})`) }, { t: 'p', text: `${now} - ${addr} - ${phone}` }, { t: 'rule', kind: 'rainbow' }, { t: 'p', text: counter }, { t: 'p', text: 'Best viewed at 800x600 with Ferret.' }];
+            { t: 'list', items: nav.slice(1).map(([l, u]) => `[${l}](${u})`) }, { t: 'p', text: `${now} - ${addr} - ${phone}` }, { t: 'rule', kind: 'rainbow' },
+            { t: 'center', text: say('web.visitors.lead') }, { t: 'seals', seals: [['counter']], n: hits },
+            { t: 'seals', seals: ([['best', ferret], ['html'], ['guest']] as [SealKind, string?][]).slice(0, 2 + Math.floor(h(21) * 2)) }];
           break;
         case Tpl.Classic: // 2001: tables, a framed photo beside the welcome, the special of the day
           body = [{ t: 'cols', widths: [0.3, 0.7], cols: [[{ t: 'photo', subj, seed, h: 6, w: 20 }], main] }, { t: 'rule', kind: 'groove' },
@@ -268,7 +277,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
           break;
         default: // Bare: free hosting, the picture that never loaded, under construction
           body = [{ t: 'broken', name: 'logo.jpg', text: `${say(`web.intro.${b.kind}`)} ${addr}. Call ${phone}.` },
-            { t: 'art', lines: ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'], col: [200, 120, 0] },
+            { t: 'seals', seals: [['uc']] }, { t: 'center', text: 'Our new website is coming soon!' },
             { t: 'p', text: `[${say('web.webmaster')}](http://${mailHost(w)}/)` }];
       }
       break;
@@ -313,10 +322,10 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   const navB: Block = { t: 'nav', links: nav, look: tpl === Tpl.Classic ? 'bevel' : undefined }, on = Math.max(0, nav.findIndex(([, u]) => u === `http://${host}${path === '/' ? '/' : path}`));
   const blocks: Block[] = tpl === Tpl.Center ? [{ t: 'marquee', text: `*** Welcome to ${name}! *** ${special} *** Sign our guestbook! *** Thanks for visiting ***` }, { t: 'big', text: name, kind: 'word', rows: 4, center: true }, { t: 'rule', kind: 'rainbow' }, ...notice, ...body, ...(path === '/' ? [] : [navB]), { t: 'p', text: updated }]
     : tpl === Tpl.Bare ? [{ t: 'ad', name: `${cityName(c)}Net`, text: 'Free web pages - get your own site today!', url: portalUrl(w), c1: [0, 51, 153], c2: [255, 204, 0] }, banner, ...notice, ...body, navB, { t: 'p', text: `Hosted by ${cityName(c)}Net` }]
-    : tpl === Tpl.LeftNav ? [{ t: 'photo', subj: 'sky', seed, h: 4, w: 124, frame: 'none' }, { ...banner, logo: undefined } as Block, ...notice, { t: 'cols', widths: [0.22, 0.78], cols: [[{ t: 'buttons', links: nav, on }], body] }, { t: 'p', text: 'Site by Pixelworks Web Design' }, foot]
-    : tpl === Tpl.Side ? [banner, { t: 'tabs', links: nav, on }, ...notice, ...body, { t: 'p', text: `(c) ${calendar(w.time).year} ${name} - Powered by Blogsmith` }]
+    : tpl === Tpl.LeftNav ? [{ t: 'photo', subj: 'sky', seed, h: 4, w: 124, frame: 'none' }, { ...banner, logo: undefined } as Block, ...notice, { t: 'cols', widths: [0.22, 0.78], cols: [[{ t: 'buttons', links: nav, on }], body] }, ...seals(0.6, [['best', ferret]]), { t: 'p', text: 'Site by Pixelworks Web Design' }, foot]
+    : tpl === Tpl.Side ? [banner, { t: 'tabs', links: nav, on }, ...notice, ...body, ...seals(0.15, [['best', ferret]]), { t: 'p', text: `(c) ${calendar(w.time).year} ${name} - Powered by Blogsmith` }]
     : tpl === Tpl.Corporate ? [banner, navB, ...notice, ...body, { t: 'rule', kind: 'groove' }, foot]
-    : [banner, navB, ...notice, ...body, { t: 'p', text: updated }, foot];
+    : [banner, navB, ...notice, ...body, ...seals(0.5, [['best', ferret]]), { t: 'p', text: updated }, foot];
   return { url: `http://${host}${path}`, title: path === '/' ? name : `${name} - ${path.slice(1)}`, theme, blocks, kb: tpl === Tpl.Bare ? 12 : 30 + Math.floor(h(6) * 60), mobile: h(7) < (MOBILE[b.kind] ?? 0.12) };
 }
 
@@ -378,7 +387,7 @@ function portalPage(w: World, host: string, path: string): Page {
         [{ t: 'box', title: 'Weather', blocks: weather }, search, ...(ad ? [ad] : []), { t: 'box', title: 'Directory', blocks: [{ t: 'list', items: [...groups.map(([l, k2]) => `[${l}](http://${host}/directory/${k2})`), `[All categories](http://${host}/directory)`] }] }],
       ] }];
   } else body = [{ t: 'h', text: '404 - Not Found' }, { t: 'p', text: `[Home](http://${host}/)` }];
-  return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60, mobile: true, form: path === '/' ? `http://${SEARCH_HOST}/search` : undefined };
+  return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, { t: 'seals', seals: [['powered', `http://${host}/`]], text: `${city}Net` }, foot], kb: 60, mobile: true, form: path === '/' ? `http://${SEARCH_HOST}/search` : undefined };
 }
 
 export const portalUrl = (w: World) => `http://${webOf(w).portal}/`;
@@ -425,6 +434,7 @@ function baseDocs(w: World): Doc[] {
   I.push(mkDoc(`http://${Wb.portal}/news`, `${city} Online - News`, `Today's headlines from around ${city}.`, [['news headlines today', 4], [city, 2]]));
   I.push(mkDoc(`http://${Wb.portal}/weather`, `${city} Online - Weather`, `The weather in ${city} today.`, [['weather forecast rain snow temperature', 4], [city, 2]]));
   I.push(mkDoc(`http://${GRID_HOST}/`, 'GridLink - Power & Telecom', `Power and home phone service for ${city}. Outage map, report an outage.`, [['gridlink power electricity outage outages blackout lights phone telecom utility', 4], [city, 1]]));
+  I.push(mkDoc(`http://${BURROW_HOST}/`, 'Ferret - the web browser that digs', 'Get Ferret, the free web browser by Burrow Labs. Release notes, bug forum.', [['ferret browser web burrow labs download help bugs', 4], [city, 1]]));
   I.push(mkDoc(`http://${WIRE_HOST}/`, 'Streetwire', "What's happening in your city, right now. Join free.", [['streetwire social network posts friends people feed', 4], [city, 1]]));
   I.push(mkDoc(`http://${Wb.portal}/directory`, `${city} Online - Business Directory`, 'Every business in the city by category, with address and phone.', [['directory business businesses yellow pages phone address', 4], [Object.values(kinds).join(' '), 1]]));
   return I;

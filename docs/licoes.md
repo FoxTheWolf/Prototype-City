@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.17j (selos, Burrow Labs, grade do celular) — 2026-10-07
+- **Um app de fábrica fora da grade:** `BUNDLED` (instalado) e `BUNDLED_APP` (tem vaga na grade) são coisas diferentes; a pasta My Apps mostra o que está instalado **sem** vaga (`downloads()`), por isso o Snake foi para lá só saindo do `BUNDLED_APP`. Save antigo: o `restore` do celular acrescenta os `BUNDLED` que faltam.
+- **`ICON` do celular é `Record<App,…>`:** tirar um app do tipo `App` exige mover o ícone dele para o `STORE_ICON`, senão o tsc acusa.
+- **Selos de 88×31 cabem exatos em 11×2 células** (CW=8, CH=16) e a fonte 5×7 a 1 px dá 6 px por letra: 11 letras = 65 px; contar a largura antes (o "BEST VIEWED" saiu cortado no 1º PNG).
+- **O banner já aceita um pictograma (`logo`) por `paintLogo` em `logos.ts`;** um ícone de 16 px vira logo grande pintando-o num `Img` e passando por `P.image` escalado.
+- **Bash do Windows + Python com barras invertidas:** trocar uma linha que tem `\` por heredoc deu errado três vezes (o texto chegava com outra contagem de barras). Para linhas com barras, usar o Edit direto no arquivo.
+
 ### Lições da 15.17h (Lookwise, rastreador, moldura) — 2026-10-07
 - **Um índice "de ontem" precisa ser juntado ao longo do dia:** o feed guarda só 300 posts e o ticker só as manchetes recentes; montar o índice na hora da busca perderia o que já saiu. Por isso o `crawl` observa (a cada minuto de jogo em `main.ts`) e guarda em `pending` até as 3 h. Chaves de manchete: `kind-key` (as `key` de tipos diferentes colidem).
 - **Mudar as linhas da moldura (`PAGE_Y`, `TAB_ROW`) quebra testes que leem linhas fixas** (`scr.ch[3]`, `ch[0]`): usar as constantes de `chrome.ts` nos testes. A chave de redesenho do navegador (`art().key`) tem o pedaço que muda com o relógio **por último** (o `browser-tabs` corta o último `|`).

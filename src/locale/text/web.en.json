@@ -281,5 +281,55 @@
  "web.grid.about": [
   "GridLink Power & Telecom has served {city} since 1961. Today {n} substations feed the city, each one its own sector, run from our control room downtown.",
   "Founded in 1961, GridLink runs {city}'s power grid and its home phone lines: {n} substations, {n} sectors, and the crews who answer at any hour."
+ ],
+ "web.visitors.lead": [
+  "You are visitor number",
+  "Visitors since 2004:",
+  "Visitors so far:",
+  "Hits on this page:"
+ ],
+ "web.burrow.intro": [
+  "Ferret is a small, fast web browser for Osprey, made by ten people in {city}. It is free, it has tabs, and it always will be.",
+  "A web browser that digs. Ferret is free, quick on old machines and made right here in {city}.",
+  "Tabs, a search box, bookmarks that stay put. Ferret is the free browser for Osprey, made in {city} by Burrow Labs."
+ ],
+ "web.burrow.about": [
+  "Burrow Labs started in 2004 as three people in a room over a laundromat, writing a browser at night. Today we are ten, on one floor of an office building at {addr}, and Ferret is still the only thing we make. Lookwise pays to be the search box; you help with donations. Thank you.",
+  "We wrote the first Ferret in a room over a laundromat, with the dryers keeping the computers warm. Now the whole city browses with it, and we have a real office at {addr}. Still ten of us. Still one product.",
+  "Burrow Labs makes Ferret and nothing else. It began in 2004 in a rented room over a laundromat; today the team works from {addr}, and the server sits in the same building."
+ ],
+ "web.burrow.fix": [
+  "Fixed a crash when a page has more than 40 tabs open.",
+  "Pages with a blinking banner use less of the processor.",
+  "The back button remembers where you scrolled.",
+  "Bookmarks are no longer lost when the disk is full.",
+  "Faster loading of pictures on dial-up.",
+  "The ferret in the corner no longer digs forever when a page is already done.",
+  "Fixed a memory leak on pages with a marquee.",
+  "Secure pages show the padlock in the address bar.",
+  "Visited links are purple again after a reload.",
+  "The search box sends the right words with accents.",
+  "Ctrl+W closes the tab, not the whole window.",
+  "A warning before a page with a lapsed certificate.",
+  "Smaller download for Ferret Mini on phones.",
+  "Fixed tables wider than the window on old sites.",
+  "Typing in a box no longer jumps to the address bar."
+ ],
+ "web.burrow.bug": [
+  "Blank page when the power is out on the server's block",
+  "Ferret freezes on sites with three marquees",
+  "Counter on my homepage says 0000000",
+  "Tabs disappear after the laptop sleeps",
+  "Guestbook form sends twice",
+  "Pictures load before the text on one site",
+  "Ferret Mini cuts the menu on my phone",
+  "Bookmark star does nothing on https pages",
+  "Under construction GIF stuck on one frame",
+  "Can't type in the search box after Ctrl+K",
+  "Lookwise owl looks the wrong way",
+  "Page is too wide for 800x600",
+  "Back button goes back two pages",
+  "Download stops at 99%",
+  "Address bar turns yellow on http sites"
  ]
 }

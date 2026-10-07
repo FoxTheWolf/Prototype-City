@@ -1,4 +1,5 @@
-import { dark, lite, Paint, type C3 } from '../render/paint2d';
+import { dark, Img, lite, Paint, type C3 } from '../render/paint2d';
+import { icon } from './chrome';
 
 /**
  * A site's banner picture in pixels (the user's rule, 2026-10-07: no ASCII pictures on a 2008 web page;
@@ -17,6 +18,9 @@ export function paintLogo(P: Paint, kind: string, x: number, y: number, s: numbe
   const L = (a: number, b: number, c2: number, d: number, w: number, c = fg) => P.line(x + a * u, y + b * u, x + c2 * u, y + d * u, w * u, c);
   const G = (pts: number[], c = fg) => P.poly(pts.map((v, i) => (i % 2 ? y : x) + v * u), c);
   switch (kind) {
+    case 'ferret': { // (15.17j) Burrow Labs: the ferret's face from the browser's icon, big
+      const im = new Img(16, 16); icon(new Paint(im), { k: 'ferret' }, 0, 0); P.image(im, x + 2 * u, y + 2 * u, 12 * u, 12 * u); break;
+    }
     case 'portal': // a globe: the ring, the meridian, the parallels
       D(8, 8, 5.5); D(8, 8, 4.4, bg); P.disc(cx, cy, 2 * u, fg, 1, 4.4 * u); P.disc(cx, cy, 1.1 * u, bg, 1, 4.4 * u); R(3, 7.5, 10, 1); R(4, 5, 8, 0.8); R(4, 10.2, 8, 0.8); break;
     case 'wire': // a speech bubble with the signal's waves

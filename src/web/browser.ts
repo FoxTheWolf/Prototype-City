@@ -23,6 +23,7 @@ import { mailHost } from './webmail';
 import { WIRE_HOST } from './streetwire';
 import { GRID_HOST } from './gridlink';
 import { FORUM_HOST } from './forum';
+import { BURROW_HOST } from './burrow';
 import { DEBUG } from '../debug';
 import { ADDR_X, addrEnd, BACK, FWD, HOME, iconOf, MARKS_Y, NAV_TEXT_Y, NAV_Y, PAGE_Y, TAB_ROW, FR, RELOAD, SEARCH_W, searchX, TAB_TEXT, TAB_TEXT_W, TAB_W, TAB_X, paintChrome, type ChromeState, type FerretState, type Icon } from './chrome';
 import { hash3 } from '../core/rng';
@@ -62,9 +63,9 @@ interface Tab {
 }
 const blank = (): Tab => ({ url: '', back: [], fwd: [], got: null, laid: null, at: -1e9, kbps: 0, offline: false, top: 0, sel: -1, vals: new Map() });
 
-/** The bookmarks a new Ferret (and the Ferret Mini) comes with: the search, the mail, the city's portal (never the forum). */
+/** The bookmarks a new Ferret (and the Ferret Mini) comes with: the search, the mail, the city's portal, the maker's help (never the forum). */
 export function factoryMarks(w: World): [string, string][] {
-  return [['Lookwise', `http://${SEARCH_HOST}/`], ['Mail', `http://${mailHost(w)}/`], [siteTitle(webOf(w).portal), portalUrl(w)]];
+  return [['Lookwise', `http://${SEARCH_HOST}/`], ['Mail', `http://${mailHost(w)}/`], [siteTitle(webOf(w).portal), portalUrl(w)], ['Ferret Help', `http://${BURROW_HOST}/`]];
 }
 const siteTitle = (host: string) => host.replace(/^www\./, '').replace(/\.(com|net|org)$/, '').replace(/^\w/, (c) => c.toUpperCase());
 /** (Debug, DEBUG.webMarks) The canonical sites a click away, marked '(dbg)'. */

@@ -3,6 +3,8 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.15.17 — O Ferret (2026-10-07)
+- **Os selos de 2008 nos sites:** os botõezinhos de 88×31 no pé das páginas, em pixels: "Best viewed with Ferret", "Valid HTML 4.01", "Sign my guestbook", o contador de visitas (que cresce com os dias da cidade), o "under construction" com o operário cavando e o "powered by" do provedor no portal. As páginas caseiras de 1998 têm vários; os sites corporativos, nenhum. O "Best viewed" e o "Get Ferret" levam ao site do Ferret.
+- **burrow-labs.net, o site de quem faz o Ferret:** "Get Ferret", notas de versão, fórum de bugs e a equipe (dez moradores da cidade que trabalham num prédio de escritórios). Começou numa sala em cima de uma lavanderia; cai no apagão do quarteirão como qualquer site. Entra nos favoritos de fábrica como **Ferret Help** e aparece no Lookwise.
 - **O Ferret Mini vem instalado no celular**, na grade entre o Tunes e o Streetwire; o **Snake** foi para a pasta My Apps, para abrir espaço.
 - **"Go to" no Ferret Mini abre uma lista:** "Enter address..." para digitar, e embaixo os favoritos (Lookwise, Mail, o portal), escolhidos com as setas ou direto pelo número.
 - **O brilho (bloom) das telas do notebook e do celular ficou bem mais fraco e tem um teto:** no escuro a tela ainda brilha em volta, mas não borra mais o texto nem as imagens.

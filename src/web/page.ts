@@ -21,6 +21,10 @@ export type PhotoSubj = 'store' | 'food' | 'room' | 'bar' | 'tech' | 'sky' | 'bl
 /** 15.17g: a face for an avatar, from how a citizen looks (render/models faceOf): the blocky head of the city's people. */
 type RC3 = readonly [number, number, number];
 export interface Face { skin: RC3; hair: RC3; shirt: RC3; eyes: RC3; /** 0 bald, 1 short, 2 long. */ hairLen: number; beard: boolean }
+/** 15.17j: the 88 x 31 buttons of 2008's sites (the manual's section 9): best viewed with, get Ferret, valid HTML, the hit counter, under construction, the guestbook, the provider's "powered by". */
+export type SealKind = 'best' | 'get' | 'html' | 'counter' | 'uc' | 'guest' | 'powered';
+/** A seal's size in cells (88 x 32 pixels at the notebook's cell). */
+export const SEAL_W = 11, SEAL_H = 2;
 /** The sky of a weather icon. */
 export type Sky = 'sun' | 'moon' | 'cloud' | 'rain' | 'snow';
 
@@ -74,7 +78,9 @@ export type HdOp =
   /** The power company's map of its sectors (cols x rows, row by row): lit or dark, with their codes. */
   | { k: 'sectors'; x: number; y: number; w: number; h: number; cols: number; on: boolean[]; labels: string[] }
   /** The GridLink mark in its negative (on the navy): GRID over LINK, the I's stem running down into the L; s pixels a bulb. */
-  | { k: 'gridlink'; x: number; y: number; s: number };
+  | { k: 'gridlink'; x: number; y: number; s: number }
+  /** 15.17j: an 88 x 31 seal (SEAL_W x SEAL_H cells); n: the counter's number, text: the provider's name. */
+  | { k: 'seal'; x: number; y: number; kind: SealKind; n?: number; text?: string };
 /** What a front op weighs coming down the line (KB): the pictures come after the text, one by one. */
 /** Whether a front op is a picture that has to come down the line (the others are drawn by the browser itself). */
 export function opKb(o: HdOp): number {
@@ -137,6 +143,8 @@ export type Block =
   | { t: 'folder'; lit: boolean; title: string; text: string; right?: string }
   /** A forum's category bar: its name, the columns' names on the right. */
   | { t: 'catbar'; text: string; right?: string }
+  /** 15.17j: a row of 88 x 31 seals, centered, each a link where it has one (the counter's number, the provider's name). */
+  | { t: 'seals'; seals: [SealKind, string?][]; n?: number; text?: string }
   /** The power company's map of its sectors. */
   | { t: 'sectors'; cols: number; on: boolean[]; labels: string[] }
   | { t: 'hr' }
@@ -338,6 +346,19 @@ export function layout(P: Page, width: number, full = false): Laid {
           for (let k = 0; k <= mh; k++) fill(x, y + k, w, T.bg);
           front.push({ k: 'map', x: x + 2, y, w: mw, h: mh, seed: B.seed, pins: B.pins ?? ['A'], ground: B.ground, gw: B.gw, gh: B.gh, spots: B.spots });
           y += mh + 1;
+          break;
+        }
+        case 'seals': {
+          // side by side, a cell between them, as many as the column takes
+          const n = Math.max(1, Math.min(B.seals.length, Math.floor((w + 1) / (SEAL_W + 1)))), tot = n * (SEAL_W + 1) - 1;
+          let sx = x + Math.floor((w - tot) / 2);
+          for (let k = 0; k <= SEAL_H; k++) fill(x, y + k, w, T.bg);
+          for (const [kind, url] of B.seals.slice(0, n)) {
+            front.push({ k: 'seal', x: sx, y, kind, n: B.n, text: B.text });
+            if (url) for (let k = 0; k < SEAL_H; k++) links.push({ x: sx, y: y + k, w: SEAL_W, url });
+            sx += SEAL_W + 1;
+          }
+          y += SEAL_H + 1;
           break;
         }
         case 'stars': {
@@ -639,6 +660,7 @@ export function mobilePage(P: Page, width: number): Page {
       case 'map': return P.mobile ? [] : [B];
       case 'marquee': return [{ t: 'p', text: B.text }];
       case 'stars': return [B];
+      case 'seals': return P.mobile ? [] : [B];
       case 'big': return [{ t: 'h', text: B.text }];
       case 'rule': return [{ t: 'hr' }];
       case 'blink': return [{ t: 'p', text: B.text }];

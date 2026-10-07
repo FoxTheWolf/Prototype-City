@@ -297,7 +297,7 @@ function paintFerret(state: FerretState, f: number, size: number): Sprite {
 
 /** A site's icon from its host: the browser's own pages, the search, the mail, else its first letter in a color of its own. */
 export function iconOf(kind: string, name: string, seed: number): Icon {
-  if (kind === 'ferret') return { k: 'ferret' };
+  if (kind === 'ferret' || kind === 'burrow') return { k: 'ferret' };
   if (kind === 'search') return { k: 'look' };
   if (kind === 'mail') return { k: 'mail' };
   const r = mulberry32(seed), bg: C3 = kind === 'portal' ? hex('#003399') : kind === 'wire' ? hex('#2c4a88') : [40 + r() * 170, 40 + r() * 170, 40 + r() * 170];

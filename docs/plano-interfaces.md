@@ -158,6 +158,8 @@
 
 ### 15.17j Os selos e a Burrow Labs
 
+> **Feito em 2026-10-07.** Mudança do plano, decidida com o usuário: a Burrow Labs **não** fica em cima da lavanderia (o Ferret é o navegador de todo mundo, e uma empresa de fundo de quintal destoava dos selos nos sites grandes). Meio-termo: começou numa sala sobre uma lavanderia em 2004 (a história no "About"), hoje é um andar de um prédio de escritórios (`burrowHome`: um `Workplace` de escritório pela semente, a equipe = 10 do `staff`). Um modo/plugin escondido que os hackers conhecem fica para a etapa 19 (`[HACKING]`).
+
 - Os selos de 88 × 31 (manual, seção 9) como operações de HD de frente, pela semente e pelo molde ("Best viewed with Ferret", "Get Ferret", "Valid HTML 4.01", o contador que cresce com o tempo de jogo, o "under construction" com 2 quadros, o "powered by" do provedor).
 - **burrow-labs.net:** o site da empresa (o "Get Ferret", as notas de versão, o fórum de bugs), num prédio de escritórios de verdade, para cair no apagão como os outros. É o "Ferret Help" dos favoritos.
 

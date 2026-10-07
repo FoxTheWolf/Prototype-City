@@ -53,7 +53,7 @@ B.key('d', true, 40);
 check('Ctrl+D: the page in the bookmarks file', (disk.get('bookmarks') ?? '').includes(sUrl));
 const B2 = new Browser(w, () => ({ up: true, kbps: 900 }), () => {}, 160, 50, files);
 B2.go('', 50);
-check('a Ferret opened again reads the bookmarks', /pizza|Lookwise/i.test(B2.cells(60).scr.ch[MARKS_Y].join('')) && (disk.get('bookmarks') ?? '').split('\n').length === (DEBUG.webMarks ? 7 : 4));
+check('a Ferret opened again reads the bookmarks', /pizza|Lookwise/i.test(B2.cells(60).scr.ch[MARKS_Y].join('')) && (disk.get('bookmarks') ?? '').split('\n').length === (DEBUG.webMarks ? 8 : 5));
 B.key('d', true, 41);
 check('Ctrl+D again takes it away', !(disk.get('bookmarks') ?? '').includes(sUrl));
 // the search box: words typed there are always a search
