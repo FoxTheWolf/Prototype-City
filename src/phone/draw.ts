@@ -413,7 +413,7 @@ function drawCase(K: Case, R: number, now: number, cell: CellFn, over: OverFn, i
 function boot(S: Lcd, P: Phone, world: World, t: number) {
   if (t < 0) { for (let y = 0; y < SH; y++) S.fill(y, [5, 6, 8]); return; }
   const D = P.device;
-  if (t >= BOOT_LOG_S) return splash(S, D.maker, P.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
+  if (t >= BOOT_LOG_S) return splash(S, D.look, P.maker.toUpperCase(), D.model.toUpperCase(), t - BOOT_LOG_S);
   mapRaster(world.city); // the map database loads during the check (built once per city)
   // the parts the board finds, each with whether it passed (all do, until something can break)
   const L: [string, boolean][] = [
@@ -498,7 +498,7 @@ function boot(S: Lcd, P: Phone, world: World, t: number) {
 }
 
 /**
- * The maker's splash: one maker per body (shells.ts), each with its own, in the spirit of its body.
+ * The maker's splash: one per body (shells.ts; a maker has one or two bodies), in the spirit of its body.
  * Classic: a deep blue field, the logo in amber with a gloss. Slate (glossy black, chrome): the logo
  * swept in by a white scan line, mirrored below as on black glass. Brushed (metal): a silver plate
  * with streaks, the logo stamped into it and lit along its lower edge. Pebble (soft, round): white,

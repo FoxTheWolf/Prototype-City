@@ -2,6 +2,12 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.18 (fabricantes, marcas) — 2026-10-07
+- **Os nomes da cidade saem de slots em `L.roots` (64 raízes):** `(nameSeed + (len - slot) * 7919) % len`. Dois slots iguais dão a mesma raiz em toda cidade (o 4º fabricante e a operadora 1 dividiam o 36). Antes de criar um nome novo, listar os slots usados (`grep -n "roots.length - " src/locale/names.ts`) e conferir no `tests/makers.ts` (raízes distintas).
+- **Um `City` falso basta para os nomes:** `{ nameSeed } as unknown as City` serve para `makerName`/`operatorName`/`computerMakerName`/`watchMakerName`/`cctvMakerName` (o `businessName` precisa da cidade inteira).
+- **Variantes "pela semente" precisam ser conferidas como distintas:** a do manual (`1 + v % 3`) repetia a variante 0 na 3; o teste compara as quatro.
+- **Símbolo vetorial amostrado por maioria de 4×4** dá pixel art limpa em 16×16; formas finas (a órbita do de vitrine, traço de 7/100) ficam com 1 px, no limite.
+
 ### Lições da 15.17j (selos, Burrow Labs, grade do celular) — 2026-10-07
 - **Um app de fábrica fora da grade:** `BUNDLED` (instalado) e `BUNDLED_APP` (tem vaga na grade) são coisas diferentes; a pasta My Apps mostra o que está instalado **sem** vaga (`downloads()`), por isso o Snake foi para lá só saindo do `BUNDLED_APP`. Save antigo: o `restore` do celular acrescenta os `BUNDLED` que faltam.
 - **`ICON` do celular é `Record<App,…>`:** tirar um app do tipo `App` exige mover o ícone dele para o `STORE_ICON`, senão o tsc acusa.

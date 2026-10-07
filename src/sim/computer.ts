@@ -226,8 +226,10 @@ export class Computer {
   }
 }
 
+/** The notebook makers, by role (15.18, the makers' manual): 0 the work brick (the player's, always), 1 the shop-window one. */
 export const LAPTOP_MAKERS = 2;
-const SERIES = ['Traveler', 'Vector', 'Latitude', 'Courier', 'Pilot', 'Atlas', 'Scout', 'Envoy'];
+/** The work brick's model letters: a letter and two or three digits, short, from a company catalog ("T61", "X300"). */
+const SERIES = ['T', 'X', 'R'];
 const CPUS: [string, number, number][] = [['XC Solo T1350', 1600, 1], ['XC Duo T2250', 1730, 2], ['XC Duo T5450', 1660, 2], ['XC Duo T7250', 2000, 2], ['K8 Mobile TL-56', 1800, 2]];
 const BODIES: [number, number, number][] = [[34, 36, 40], [150, 152, 158], [24, 24, 26], [60, 64, 72], [196, 196, 192]];
 
@@ -239,7 +241,7 @@ export function playerLaptop(seed: number): Hardware {
   const ramMB = pick([512, 1024, 1024, 2048], 2), diskGB = pick([60, 80, 80, 120], 3);
   const host = `${pick(['nb', 'deck', 'rig', 'box', 'term'], 4)}-${Math.floor(h(5) * 900 + 100)}`;
   return {
-    maker: Math.floor(h(0) * LAPTOP_MAKERS), model: `${pick(SERIES, 6)} ${Math.floor(h(7) * 8 + 2)}${Math.floor(h(8) * 90 + 10)}`,
+    maker: 0, model: `${pick(SERIES, 6)}${h(7) < 0.7 ? Math.floor(h(8) * 60 + 40) : Math.floor(h(8) * 4 + 2) * 100}`,
     cpu, cpuMHz, cores, ramMB, diskMB: diskGB * 1000, disk: `DTK-${diskGB}G54 ATA`, diskMBs: 32 + Math.floor(h(9) * 12), seekMs: 12 + Math.floor(h(10) * 4),
     eth: '10/100 Ethernet', wlan: '802.11b/g, 54 Mbit/s', bios: `v1.${Math.floor(h(11) * 20)}`,
     os: 'Osprey/UX 4.2', kernel: '2.6.24-19', host, user: 'user', body: pick(BODIES, 12),

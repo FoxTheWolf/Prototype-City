@@ -156,16 +156,28 @@ export function businessName(city: City, k: number): string {
     .replace('{w}', L.words[(n >>> 15) % L.words.length]);
 }
 
-/** The mobile operator, named from a slot of its own. */
-/** The city's operators: 0 owns the masts; the others (13.6) sell prepaid lines over the same network. */
+/**
+ * The city's operators (13.6), each named from a slot of its own: 0 the megacorp, with a coined name
+ * (15.18, the makers' manual), and two prepaid ones from the operator templates.
+ */
 export function operatorName(city: City, op = 0): string {
-  return fill(L.operator[(city.nameSeed + op * 2) % L.operator.length], L.roots[(city.nameSeed + (L.roots.length - 23 - op * 13) * 7919) % L.roots.length]);
+  const root = L.roots[(city.nameSeed + (L.roots.length - 23 - op * 13) * 7919) % L.roots.length];
+  return op ? fill(L.operator[(city.nameSeed + op * 2) % L.operator.length], root) : coin(root, city.nameSeed);
+}
+
+/** A coined corporate name, 5-7 letters: the root's first syllable and a corporate ending ("Kessler" -> "Kesion"), as Verizon came out of veritas + horizon. */
+export function coin(root: string, seed: number): string {
+  let stem = (root.match(/^[^aeiouy]*[aeiouy]+[^aeiouy]?/i)?.[0] ?? root.slice(0, 3)).replace(/[hw]$/i, '');
+  let suf = ['ion', 'ix', 'ora', 'eon', 'ent', 'ara'][((seed % 6) + 6) % 6];
+  while (stem.length + suf.length < 5 && stem.length < root.length) stem = root.slice(0, stem.length + 1);
+  if (/[aeiouy]$/i.test(stem) && /^[aeiou]/.test(suf)) suf = suf.slice(1);
+  return (stem + suf).slice(0, 7);
 }
 
 /** The phone maker k of the city (see sim/device.ts), named from a slot of its own. */
 export function makerName(city: City, k: number): string {
-  // the first three keep the slots they always had; the rest past the computer makers'
-  const slot = k < 3 ? 25 + k : 33 + k;
+  // the first three keep the slots they always had; the fourth past the computer makers' and the second operator's
+  const slot = k < 3 ? 25 + k : 34 + k;
   return L.roots[(city.nameSeed + (L.roots.length - slot) * 7919) % L.roots.length];
 }
 

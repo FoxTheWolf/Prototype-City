@@ -462,6 +462,7 @@ export class Phone {
     for (const id of BUNDLED) { const i = STORE.findIndex((a) => a[0] === id); if (!this.apps.includes(i)) this.apps.push(i); }
     this.prefs = { ...this.prefs, ...d.prefs };
     this.look = d.look; this.case = d.case; this.looks = d.looks; this.cases = d.cases;
+    if (this.look !== this.device.look) this.device = lookPhone(this.world.seed, this.look); // the body worn when saved, its maker's phone
     this.cal.reminders = d.reminders; this.wifi.on = d.wifiOn; this.told = d.told;
     this.everOn = d.booted;
     if (d.batt !== undefined) this.batt = d.batt;

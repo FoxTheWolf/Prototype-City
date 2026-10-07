@@ -36,6 +36,7 @@
     - `sarcophagus.ts`: a cúpula e a constante `CURVE_R`.
     - `objects.ts` e `models.ts`: objetos com volume (inclusive semáforos e placas de PARE, `signalModel`, `signalFarModel`).
     - `signs.ts`: letreiros, lâmpadas e símbolos.
+    - `brands.ts` (15.18): as marcas como famílias (fontes de pontos, símbolos 16×16 com 4 variantes, cores, `paintLogo`); teste `tests/makers.ts`.
     - `lights.ts`: luzes dinâmicas.
     - `lightmap.ts`: poças de luz dos postes.
     - `lamps.ts`: falhas e fotocélula.

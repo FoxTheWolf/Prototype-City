@@ -165,7 +165,7 @@
 
 ---
 
-## 15.18 Os fabricantes no código (manual `fabricantes-manual.html`, seção 11)
+## 15.18 ✅ Os fabricantes no código (manual `fabricantes-manual.html`, seção 11; feito em 2026-10-07, detalhe em `docs/historico.md`)
 
 - **Dados** (`sim/device.ts`, `sim/computer.ts`, `locale/names.ts`): `MAKERS = 4` e `LOOK_MAKER = [0, 1, 0, 2, 3, 2]` (o índice é a família: gigante, executivo, moda, robusta); `SERIES` por família, com o formato de cada uma; `LAPTOP_MAKERS` com papel (0 = o de trabalho, sempre o do jogador; 1 = o de vitrine); a operadora 0 (a megacorp) com o nome cunhado (`coin`: a 1ª sílaba da raiz + um sufixo de corporação); `watchMakerName`, `cctvMakerName` e `BOARDS` só ganham símbolo e tipografia.
 - **Fontes de pontos por família** (`render/signs.ts`, ao lado da 5 × 7): o "jeito" de cada tipografia (estêncil com cortes, fina arredondada, condensada…) em bitmap gerado por código, para letreiros de perto e decalques nos aparelhos.

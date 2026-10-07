@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.18 — As marcas da cidade (2026-10-07)
+- **Quatro fabricantes de celular em vez de seis, cada um com o seu jeito:** a gigante confiável (modelos só com números, "6230i"), a do executivo ("Courier 8820"), a da moda e da música ("glide 52") e a robusta de obra ("Anvil X3"). O nome de cada uma continua sendo da cidade; o seu celular de começo é sempre da gigante.
+- **O notebook do jogador é sempre o "tijolo de trabalho"**, com modelo curto de catálogo de empresa ("T61", "X300").
+- **A maior operadora ganhou um nome cunhado de corporação** (como "Kesion" ou "Garix"), em vez de "Fulano Telecom"; as duas pré-pagas continuam com o nome de molde.
+- **Os logos já existem no jogo** (ainda sem aparecer no mundo): cada marca com a sua letra de pontos (estêncil, itálico, condensada, com serifa…) e o seu símbolo em pixels, com uma variação pela cidade. Eles entram nos aparelhos em 3D, nas fachadas e nas telas de abertura nas próximas versões.
+- Ao carregar um save, o celular volta com o corpo **e o fabricante** de quando foi salvo.
+
 ## 0.15.17 — O Ferret (2026-10-07)
 - **Os selos de 2008 nos sites:** os botõezinhos de 88×31 no pé das páginas, em pixels: "Best viewed with Ferret", "Valid HTML 4.01", "Sign my guestbook", o contador de visitas (que cresce com os dias da cidade), o "under construction" com o operário cavando e o "powered by" do provedor no portal. As páginas caseiras de 1998 têm vários; os sites corporativos, nenhum. O "Best viewed" e o "Get Ferret" levam ao site do Ferret.
 - **burrow-labs.net, o site de quem faz o Ferret:** "Get Ferret", notas de versão, fórum de bugs e a equipe (dez moradores da cidade que trabalham num prédio de escritórios). Começou numa sala em cima de uma lavanderia; cai no apagão do quarteirão como qualquer site. Entra nos favoritos de fábrica como **Ferret Help** e aparece no Lookwise.
