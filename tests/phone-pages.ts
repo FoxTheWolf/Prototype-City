@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, paintSnake, paintConvert, paintCamera, paintPhotos, wrapText } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, paintWireFeed, paintWirePost, paintWireProfile, paintBank, paintSnake, paintConvert, paintCamera, paintPhotos, paintGpsTest, paintKeyTest, paintLcdTest, wrapText } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -148,4 +148,18 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   const pic = { hd, w, h };
   shot('camera', (Q) => paintCamera(Q, { pic, ar: 1.2, flash: false, info: '2MP  34', mode: 'FLASH', flashOn: true, zoom: '1.6x digital' }));
   shot('photos', (Q) => paintPhotos(Q, { title: 'Photos', count: '3/7', col: [154, 159, 168], pic, ar: 1.2, date: '14 Oct  21:04', kb: '612 KB', del: '* delete', empty: 'No photos yet' }));
+}
+
+// 0.15.41: the service screens (GPS, keys, LCD)
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const sats = Array.from({ length: 12 }, (_, s) => ({ id: '0123456789AB'[s], az: s * 0.55, el: 0.2 + (s % 5) * 0.28, snr: s < 9 ? 12 + s * 4 : 0, use: s < 6 }));
+  shot('svc-gps', (Q) => paintGpsTest(Q, { title: 'GPS test', sats, status: 'FIX 6 SAT +-8m', fix: true, t: 5 }));
+  const keys = ['lsoft', 'up', 'rsoft', 'left', 'ok', 'right', 'send', 'down', 'end', '1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+  shot('svc-keys', (Q) => paintKeyTest(Q, { title: 'Key test', hint: 'Press every key', keys: keys.map((k, n) => ({ label: k.toUpperCase(), seen: n % 3 === 0, hot: n === 4 })) }));
+  shot('svc-lcd', (Q) => paintLcdTest(Q, { step: 5, cols: [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255], [0, 0, 0]], label: 'LCD 6/6  OK next' }));
 }

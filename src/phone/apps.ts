@@ -12,13 +12,13 @@ import { calendar } from '../sim/clock';
 import { formatNumber, isOpen } from '../sim/telco';
 import { branchesNear } from '../sim/bank';
 import { type World } from '../sim/world';
-import { BAD, ch, DIM, HI, hhmm, INK, LCD, type Lcd, MONTHS, SEL, SH, softKeys, SW, T, title, WHITE, type C3 } from './lcd';
+import { BAD, ch, hhmm, type Lcd, MONTHS, softKeys, T, title, type C3 } from './lcd';
 import { VIEW_LIGHT } from '../render/raycaster';
 import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
 import { expose, OPTICAL, photoCols, type Photo } from './camera';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APP_COL, INK as PINK_INK, paintBank, paintCamera, paintPhotos, type CamPage, type PhotosPage, type Rgb, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
+import { APP_COL, INK as PINK_INK, paintBank, paintGpsTest, paintKeyTest, paintLcdTest, type GpsTest, type KeyTest, type LcdTest, paintCamera, paintPhotos, type CamPage, type PhotosPage, type Rgb, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
 import { EDGE_LIMIT_KB, money, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
@@ -232,30 +232,16 @@ function service(S: Lcd, P: Phone, world: World, t: number, now: number): Pg | v
   if (k === 'field') return page(fieldTest(P, world));
   if (k === 'sensors') return page(sensors(P, world, now));
   if (k === 'version') return page([...version(P, world), { kind: 'text', label: '' }, { kind: 'text', label: C.eng, col: BAD }]);
-  title(S, `${C[k]}`, t);
-  if (k === 'gps') gpsTest(S, P, t);
-  else if (k === 'keys') keyTest(S, P, now);
+  if (k === 'gps') return gpsTest(P, t);
+  if (k === 'keys') return keyTest(P, now);
 }
 
 /** GPS test: the sky as a plot (north up, the horizon the ring, overhead the middle) and each satellite's signal. */
-function gpsTest(S: Lcd, P: Phone, t: number) {
-  const g = P.gps, cx = 13, cy = 12, R = 8, RX = 13;
-  for (let a = 0; a < 64; a++) S.put(Math.round(cx + Math.cos((a / 64) * 6.283) * RX), Math.round(cy + Math.sin((a / 64) * 6.283) * R), ch('.'), DIM, LCD);
-  for (let a = 0; a < 32; a++) S.put(Math.round(cx + Math.cos((a / 32) * 6.283) * RX / 2), Math.round(cy + Math.sin((a / 32) * 6.283) * R / 2), ch('.'), DIM, LCD);
-  S.put(cx, cy - R - 1, ch('N'), INK, LCD); S.put(cx, cy, ch('+'), DIM, LCD);
-  for (let s = 0; s < g.satAz.length; s++) {
-    const r = 1 - Math.min(1, g.satEl[s] / (Math.PI / 2)), x = Math.round(cx + Math.cos(g.satAz[s]) * r * RX), y = Math.round(cy + Math.sin(g.satAz[s]) * r * R);
-    const col: C3 = g.satUse[s] ? [120, 255, 150] : g.satSnr[s] ? HI : DIM;
-    S.put(x, y, ch('0123456789AB'[s]), col, LCD);
-    // the list: id, signal, a bar, in use
-    if (t < 0.1 + s * 0.05) continue;
-    const snr = Math.round(g.satSnr[s]), ly = 3 + s * 2;
-    S.text(29, ly, `${'0123456789AB'[s]} ${String(snr).padStart(2)}`, col, LCD);
-    S.text(35, ly, '#'.repeat(Math.round(snr / 10)).padEnd(5, '.'), col, LCD);
-    if (g.satUse[s]) S.put(41, ly, ch('*'), col, LCD);
-  }
-  const st = g.state === 'fix' ? `${C.fix} ${g.sats} ${C.sat} +-${fmtDist(g.acc, P.prefs.dist)}` : `${C.noFix} ${g.sats} ${C.sat}`;
-  S.text(1, SH - 2, st, g.state === 'fix' ? [120, 255, 150] : BAD, LCD);
+function gpsTest(P: Phone, t: number): Pg {
+  const g = P.gps, d: GpsTest = { title: C.gps, t, fix: g.state === 'fix',
+    sats: Array.from(g.satAz, (az, s) => ({ id: '0123456789AB'[s], az, el: g.satEl[s], snr: g.satSnr[s], use: !!g.satUse[s] })),
+    status: g.state === 'fix' ? `${C.fix} ${g.sats} ${C.sat} +-${fmtDist(g.acc, P.prefs.dist)}` : `${C.noFix} ${g.sats} ${C.sat}` };
+  return (Pt) => paintGpsTest(Pt, d);
 }
 
 /** Field test: the cell it camps on (id, area, channel, level, timing advance) and the neighbours it hears. */
@@ -285,25 +271,17 @@ function sensors(P: Phone, world: World, now: number): Row[] {
 
 const TEST_KEYS: Key[] = ['lsoft', 'up', 'rsoft', 'left', 'ok', 'right', 'send', 'down', 'end', '1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 /** Key test: every key, lit once pressed since the screen opened, bright while held. */
-function keyTest(S: Lcd, P: Phone, now: number) {
-  S.center(3, C.keysHint, DIM, LCD);
-  TEST_KEYS.forEach((k, n) => {
-    const at = P.pressed.get(k) ?? -1, seen = at >= P.since, hot = now - at < 0.2;
-    const x = 4 + (n % 3) * 13, y = 5 + Math.floor(n / 3) * 3, bg: C3 = hot ? WHITE : seen ? [40, 140, 70] : SEL;
-    for (let dx = 0; dx < 10; dx++) S.put(x + dx, y, 32, bg, bg);
-    S.text(x + ((10 - k.length) >> 1), y, k.toUpperCase(), hot ? LCD : WHITE, bg);
-  });
+function keyTest(P: Phone, now: number): Pg {
+  const d: KeyTest = { title: C.keys, hint: C.keysHint, keys: TEST_KEYS.map((k) => { const at = P.pressed.get(k) ?? -1; return { label: k.toUpperCase(), seen: at >= P.since, hot: now - at < 0.2 }; }) };
+  return (Pt) => paintKeyTest(Pt, d);
 }
 
 /** LCD test: the whole screen in one color after another (OK for the next). */
-function lcdTest(S: Lcd, P: Phone) {
+function lcdTest(S: Lcd, P: Phone): Pg {
   const cols: C3[] = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255], [0, 0, 0]];
-  const n = P.lcdStep % (cols.length + 1);
-  for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
-    const c: C3 = n < cols.length ? cols[n] : [Math.round((x / SW) * 255), Math.round((y / SH) * 255), 128];
-    S.put(x, y, 32, c, c);
-  }
-  S.text(1, SH - 1, `${C.lcd} ${n + 1}/${cols.length + 1}  ${C.lcdHint}`, n === 3 ? [0, 0, 0] : WHITE, n < cols.length ? cols[n] : [0, 0, 0]);
+  const n = P.lcdStep % (cols.length + 1), d: LcdTest = { step: n, cols, label: `${C.lcd} ${n + 1}/${cols.length + 1}  ${C.lcdHint}` };
+  softKeys(S, '', '');
+  return (Pt) => paintLcdTest(Pt, d);
 }
 
 /** Version: the firmware's build, as an engineering screen lists it. */

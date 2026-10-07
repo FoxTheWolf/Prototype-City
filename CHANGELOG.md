@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.41 — Telas de serviço em pixels (2026-10-07)
+- **Teste de GPS:** o céu como um gráfico redondo (norte em cima), cada satélite um disco (verde quando em uso) e a lista com o sinal em barras.
+- **Teste de teclas:** as teclas em botões, verdes depois de apertadas e brancas enquanto seguradas.
+- **Teste de LCD:** as cores lisas e um degradê de verdade, pixel a pixel; tocar a tela passa para a próxima.
+- **Com isso todas as telas do celular estão em pixels** (a 3b do manual v2).
+
 ## 0.15.40 — Reynard em pixels (2026-10-07)
 - **O Reynard redesenhado, carvão, creme e ferrugem:** a raposa grande no registro com o código em seis dígitos; as conversas com a inicial num disco ferrugem, o visto verde de verificada, a hora e o começo da última mensagem; os balões (os seus em ferrugem à direita, os da outra pessoa à esquerda) com "sent"/"delivered" embaixo; a linha de escrever e a digitação; o número de segurança grande em três linhas; botões de toque para registrar, verificar, apagar e manter.
 

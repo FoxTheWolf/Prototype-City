@@ -1196,3 +1196,54 @@ export function paintPhotos(P: Paint, d: PhotosPage) {
   ptext(P, SCR_W - M - ptextW(d.kb), y + h + 12, d.kb, DIM);
   ptext(P, M, y + h + 28, d.del, DIM);
 }
+
+/** The service screens' header colour (the engineering menu's). */
+const SVC: C3 = [120, 60, 50];
+/** GPS test: the sky as a plot (north up, the horizon the ring, overhead the middle), each satellite placed by where it is and listed with its signal. */
+export interface GpsTest { title: string; sats: { id: string; az: number; el: number; snr: number; use: boolean }[]; status: string; fix: boolean; t: number }
+export function paintGpsTest(P: Paint, d: GpsTest) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, '', SVC);
+  const cx = SCR_W / 2, cy = Y0 + 122, R = 76;
+  P.ring(cx, cy, R, 1, [44, 62, 80]); P.ring(cx, cy, R / 2, 1, [30, 46, 60]); P.line(cx - R, cy, cx + R, cy, 1, [30, 46, 60]); P.line(cx, cy - R, cx, cy + R, 1, [30, 46, 60]);
+  ctext(P, cy - R - 12, 'N', INK, 1, true);
+  const col = (s: GpsTest['sats'][number]): C3 => (s.use ? [120, 255, 150] : s.snr ? ICE : DIM);
+  for (const s of d.sats) {
+    const r = (1 - Math.min(1, s.el / (Math.PI / 2))) * R, x = cx + Math.cos(s.az) * r, y = cy + Math.sin(s.az) * r;
+    P.disc(x, y, 6, col(s), s.use ? 1 : 0.35); ptext(P, Math.round(x - 2), Math.round(y - 4), s.id, s.use ? [10, 30, 16] : INK);
+  }
+  // the list: id, signal, a bar, in use
+  const ly = cy + R + 20;
+  d.sats.forEach((s, n) => {
+    if (d.t < 0.1 + n * 0.05) return;
+    const x = M + (n % 2) * 110, y = ly + Math.floor(n / 2) * 16, c = col(s);
+    ptext(P, x, y, `${s.id} ${String(Math.round(s.snr)).padStart(2)}`, c);
+    P.rect(x + 34, y + 1, 50, 6, [24, 36, 48]); P.rect(x + 34, y + 1, Math.round(Math.min(1, s.snr / 50) * 50), 6, c);
+    if (s.use) P.disc(x + 92, y + 4, 2.5, c);
+  });
+  ptext(P, M, Y1 - 16, d.status, d.fix ? [120, 255, 150] : [255, 110, 90], 1, true);
+}
+
+/** Key test: every key on a grid, lit green once pressed since the screen opened, white while held. */
+export interface KeyTest { title: string; hint: string; keys: { label: string; seen: boolean; hot: boolean }[] }
+export function paintKeyTest(P: Paint, d: KeyTest) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, '', SVC);
+  ctext(P, Y0 + 40, d.hint, DIM);
+  const w = (SCR_W - 2 * M - 16) / 3;
+  d.keys.forEach((k, n) => {
+    const x = Math.round(M + (n % 3) * (w + 8)), y = Y0 + 58 + Math.floor(n / 3) * 40;
+    P.rrect(x, y, Math.round(w), 32, 5, k.hot ? [255, 255, 255] : k.seen ? [40, 140, 70] : [24, 36, 48]);
+    ptext(P, Math.round(x + (w - ptextW(k.label, 1, true)) / 2), y + 12, k.label, k.hot ? [10, 18, 25] : INK, 1, true);
+  });
+}
+
+/** LCD test: the whole screen in one colour after another, then a gradient of every colour (a touch, or OK, for the next). */
+export interface LcdTest { step: number; cols: C3[]; label: string }
+export function paintLcdTest(P: Paint, d: LcdTest) {
+  HITS.push({ x: 0, y: 0, w: SCR_W, h: Y1, key: 'ok' });
+  if (d.step < d.cols.length) P.rect(0, 0, SCR_W, SCR_H, d.cols[d.step]);
+  else for (let y = 0; y < SCR_H; y++) for (let x = 0; x < SCR_W; x++) P.s.set(x, y, Math.round((x / SCR_W) * 255), Math.round((y / SCR_H) * 255), 128);
+  const c = d.cols[d.step], light = !!c && c[0] + c[1] + c[2] > 600;
+  ptext(P, M, Y1 - 16, d.label, light ? [0, 0, 0] : [255, 255, 255], 1, true);
+}
