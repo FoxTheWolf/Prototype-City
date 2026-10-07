@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manual do Ferret</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@600;800;900&family=Bitter:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root { --bg: #121110; --panel: #1a1917; --ink: #ece6da; --dim: #8f897d; --line: #2c2a27; --cream: #f1e4c8; --cafe: #4a2c1a; --pet: #6b4a2e; --pet2: #2e1d12; --pet3: #a27a52; --acc: #e0823a; }
   * { box-sizing: border-box; }
@@ -66,13 +66,13 @@
     <svg viewBox="0 0 200 200" id="cover"></svg>
     <div>
       <h1>O FERRET <span>E A WEB DE 2008</span></h1>
-      <p>Manual de identidade · v1 · 2026-10-07 · substitui o "Lodestar"</p>
+      <p>Manual de identidade · v2 · 2026-10-07 · substitui o "Lodestar"</p>
       <p>O Ferret é o navegador da Burrow Labs, uma empresa de software pequena e independente da cidade. Vem instalado no Osprey, mas não é do Osprey: tem marca, mascote e site próprios, como a Mozilla e a Opera tinham em 2008. O nome vem de "to ferret out", vasculhar até achar. O furão sai da toca, e a toca é ao mesmo tempo o globo, a lupa e o "O".</p>
-      <p>A segunda metade do manual é a web que ele mostra: os seis moldes de site das empresas, os selos da época, as páginas canônicas, o Ferret Mini no celular e o que aparece quando dá errado.</p>
+      <p>A segunda metade do manual é a web que ele mostra: o kit que faz uma página parecer de 2008, os seis moldes de site das empresas (cada um, um ano da web), os selos da época, as páginas canônicas, o Ferret Mini no celular e o que aparece quando dá errado. A última parte é o Lookwise, o buscador, com a coruja.</p>
     </div>
   </header>
   <nav class="toc">
-    <a href="#marca">1 · A marca</a><a href="#simbolo">2 · O símbolo</a><a href="#cores">3 · Cores e letras</a><a href="#moldura">4 · A moldura</a><a href="#mascote">5 · O furão carregando</a><a href="#estados">6 · Estados e erros</a><a href="#layouts">7 · Os seis moldes</a><a href="#selos">8 · Os selos de 2008</a><a href="#canon">9 · As páginas canônicas</a><a href="#mini">10 · Ferret Mini</a><a href="#regras">11 · Regras</a><a href="#jogo">12 · No jogo</a>
+    <a href="#marca">1 · A marca</a><a href="#simbolo">2 · O símbolo</a><a href="#cores">3 · Cores e letras</a><a href="#moldura">4 · A moldura</a><a href="#mascote">5 · O furão carregando</a><a href="#estados">6 · Estados e erros</a><a href="#web08">7 · A web de 2008</a><a href="#layouts">8 · Os seis moldes</a><a href="#selos">9 · Os selos</a><a href="#canon">10 · As páginas canônicas</a><a href="#mini">11 · Ferret Mini</a><a href="#lookwise">12 · Lookwise e a coruja</a><a href="#regras">13 · Regras</a><a href="#jogo">14 · No jogo</a>
   </nav>
 
   <div class="part">PARTE 1 · A MARCA</div>
@@ -161,19 +161,29 @@
   </section>
 
   <div class="part">PARTE 3 · A WEB</div>
+  <section id="web08">
+    <h2>A web de 2008 <small>o que faz uma página parecer daquele ano</small></h2>
+    <p class="lead">A web de 2008 não era só texto em caixas de cor: era a época do brilho da Web 2.0, dos anúncios piscando, das fotos pequenas e granuladas, dos mapas embutidos, do "beta" em tudo, e dos sites de 1998 que ninguém atualizou convivendo com os portais novos. Cada página do jogo tem três camadas: o <b>fundo em HD</b> (degradês, brilho, abas, biséis, ladrilhos, a sombra da coluna), o <b>texto nas células</b> (todo texto que se lê e se clica) e a <b>frente em HD</b> (fotos, anúncios, selos, ícones, o mapa, as estrelas). O texto nunca sai da célula; o resto é pixel.</p>
+    <div class="stage"><svg viewBox="0 0 768 640" id="anat"></svg></div>
+    <div class="ctl" id="anatBtns"></div>
+    <div class="hint">O site do banco no molde Corporate, em 96 × 40 células. Os botões tiram as camadas de HD para mostrar o que é só célula.</div>
+    <h3>O kit</h3>
+    <p>As peças que os moldes combinam. Todas são código (degradês, formas, pixels pintados num canvas), nenhuma é arquivo de imagem. As fotos são pintadas pela semente a partir do tipo do lugar (a fachada da loja, o prato, o quarto, o balcão do bar, a prateleira de eletrônicos, a cidade à noite, o rosto do avatar), em baixa resolução e com o grão de uma câmera barata.</p>
+    <div class="grid4" id="kit"></div>
+  </section>
   <section id="layouts">
     <h2>Os seis moldes <small>cada empresa parece única, ninguém escreve site por site</small></h2>
-    <p class="lead">Um site de empresa é um dos seis moldes, com uma das oito paletas, o nome, o logo em ASCII do tipo de lugar e o conteúdo tirados da simulação (o horário, o endereço, o cardápio pela tabela da 13.1, "OPEN NOW" ao vivo). A semente escolhe o molde entre os prováveis do tipo (o banco é corporativo, o bar é caseiro, a lavanderia mal tem site). As páginas ficam numa coluna de largura fixa sobre o fundo da página, como em 2008.</p>
+    <p class="lead">Um site de empresa é um dos seis moldes (cada um imita um ano da web, de 1998 a 2008), com uma das oito paletas, as peças do kit, o nome, o logo em ASCII do tipo de lugar e o conteúdo tirados da simulação (o horário, o endereço, o cardápio pela tabela da 13.1, "OPEN NOW" ao vivo). A semente escolhe o molde entre os prováveis do tipo (o banco é corporativo, o bar é caseiro, a lavanderia mal tem site). As páginas ficam numa coluna de largura fixa sobre o fundo da página, como em 2008.</p>
     <div class="ctl"><button id="reroll">sortear outra semente</button><span class="hint" id="seedLab"></span></div>
     <div class="grid3" id="tpls"></div>
     <div class="tbl"><table>
-      <tr><th>Molde</th><th>Como é</th><th>Prováveis</th><th>Selos</th></tr>
-      <tr><td>Classic</td><td>faixa com o logo, menu em barra, uma coluna</td><td>pizzaria, banco, mercado, alfaiate</td><td>às vezes (1)</td></tr>
-      <tr><td>Side</td><td>coluna principal e uma lateral à direita com o horário e o endereço</td><td>cinema, bar, eletrônicos</td><td>às vezes (1)</td></tr>
-      <tr><td>Center</td><td>a home centrada de site caseiro, com o contador de visitas e o livro de visitas</td><td>bar, pizzaria, cybercafé, motel</td><td>quase sempre (2–3)</td></tr>
-      <tr><td>LeftNav</td><td>o menu numa coluna à esquerda, em botões</td><td>hotel, eletrônicos, cybercafé</td><td>às vezes (1–2)</td></tr>
-      <tr><td>Corporate</td><td>barra escura, faixa larga, três caixas e um rodapé de letra miúda</td><td>banco, operadora, hotel, fast-food</td><td>nunca (só o cadeado)</td></tr>
-      <tr><td>Bare</td><td>o nome em título, um parágrafo e o "under construction"</td><td>lavanderia, loja de penhores, estacionamento</td><td>sempre o "under construction"</td></tr>
+      <tr><th>Molde</th><th>O ano que imita</th><th>Como é</th><th>Prováveis</th><th>Selos</th></tr>
+      <tr><td>Center</td><td>1998, a home caseira</td><td>fundo de estrelas, o letreiro correndo, o nome em WordArt, a régua arco-íris, a foto centrada, o "NEW" piscando, links em lista, o contador, "Last updated 2003"</td><td>bar, pizzaria, cybercafé, motel</td><td>quase sempre (2–3)</td></tr>
+      <tr><td>Classic</td><td>2001, tabelas</td><td>cabeçalho e botões em bisel, a foto com moldura branca ao lado do texto, a oferta do dia com a estrela, a tabela de linhas alternadas</td><td>pizzaria, banco, mercado, alfaiate</td><td>às vezes (1)</td></tr>
+      <tr><td>LeftNav</td><td>2003, Dreamweaver e Flash</td><td>uma faixa de foto em cima com o "Skip intro", o menu de botões de rollover à esquerda (com a mãozinha), a tabela de preços e o "Book now"</td><td>hotel, eletrônicos, cybercafé</td><td>às vezes (1)</td></tr>
+      <tr><td>Side</td><td>2005, o blog</td><td>cabeçalho com brilho, abas, notícias com RSS e foto pequena, caixas arredondadas na lateral (horário, o mapa, as estrelas das resenhas)</td><td>cinema, bar, eletrônicos, pizzaria</td><td>raramente</td></tr>
+      <tr><td>Corporate</td><td>2008, a Web 2.0</td><td>barra escura com busca, o herói em degradê com a manchete grande, a foto com reflexo e o botão aqua, três caixas com ícones brilhantes, o login ou o "find a store"</td><td>banco, operadora, hotel, fast-food</td><td>nunca (só o cadeado)</td></tr>
+      <tr><td>Bare</td><td>a hospedagem grátis</td><td>o anúncio do provedor em cima, o nome, a imagem que não carregou, o "under construction" e o "email the webmaster"</td><td>lavanderia, loja de penhores, estacionamento</td><td>sempre o "under construction"</td></tr>
     </table></div>
   </section>
 
@@ -185,7 +195,7 @@
 
   <section id="canon">
     <h2>As páginas canônicas <small>as que todo mundo conhece</small></h2>
-    <p class="lead">Cinco sites não saem dos moldes: têm identidade própria e fixa, porque o jogador volta a eles todo dia. As cores abaixo são as que o código já usa.</p>
+    <p class="lead">Cinco sites não saem dos moldes: têm identidade própria e fixa, porque o jogador volta a eles todo dia. As cores são as que o código já usa; o brilho, as fotos, os anúncios e os ícones são do kit. O Lookwise tem uma parte só dele (a 12).</p>
     <div class="row" id="canonCards"></div>
   </section>
 
@@ -195,12 +205,55 @@
     <div class="grid3" id="minis"></div>
   </section>
 
+  <div class="part">PARTE 4 · O LOOKWISE</div>
+  <section id="lookwise">
+    <h2>Lookwise e a coruja <small>look wise: olhe com sabedoria</small></h2>
+    <p class="lead">O Lookwise é o buscador da cidade, uma empresa de verdade com endereço, que paga à Burrow Labs para ser a busca padrão do Ferret. O nome é "look wise", olhar com sabedoria, e a coruja é o bicho sábio de olhos grandes: os dois "o" do nome são os olhos dela. É o mesmo tema de bichos do Osprey, do Reynard, do Jackdaw e do Ferret, mas é noturna, e isso vira regra: a coruja voa de madrugada, e é de madrugada que o índice anda.</p>
+    <div class="card"><svg viewBox="0 0 640 200" id="lwLogo"></svg><div class="cap"><b>O logo.</b> "L", os dois olhos e "kwise" numa serifa grossa de livro (aqui Bitter 800), em tinta azul-noite. Os "o" são anéis de tinta com a íris âmbar e a pupila; os tufos saem do alto dos dois olhos e o bico fica no vão entre eles. Fora dos olhos, nenhuma letra tem cor: o âmbar é só do olhar.</div></div>
+    <div class="grid3">
+      <div class="card"><svg viewBox="0 0 260 260" id="lwBuild"></svg><div class="cap"><b>Construção.</b> O "o" é um anel da espessura do traço das letras (0,085 do corpo), com o raio de 0,27 do corpo; os dois quase se tocam. O tufo nasce no alto de cada olho e sobe para fora até a altura das maiúsculas. O bico é um triângulo pequeno no vão de baixo, nunca maior que a pupila.</div></div>
+      <div class="card"><svg viewBox="0 0 260 260" id="lwVer"></svg><div class="cap"><b>Versões.</b> Cor (padrão, sobre o branco da busca); uma cor (os olhos ocos, para carimbo e impressão barata); negativa sobre o azul-noite (a camiseta, o anúncio no metrô), com os olhos âmbar acesos.</div></div>
+      <div class="card"><svg viewBox="0 0 260 260" id="lwPix" class="pix"></svg><div class="cap"><b>O ícone em pixels</b>, para a aba, os favoritos e a caixa de busca do Ferret: 16 × 16 em 8 cores (ampliado em cima; em tamanho real e dobrado embaixo). Só a cara: tufos, os dois olhos anelados e o bico.</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><pre class="ascii" id="lwAscii"></pre><div class="cap"><b>Em ASCII</b>, para o Ferret Mini sem imagens e para o rodapé de quem cita a busca: a coruja de três linhas e o nome com os olhos no lugar dos "o".</div></div>
+      <div class="card"><div class="sw" id="lwSw"></div></div>
+    </div>
+    <h3>A coruja trabalhando</h3>
+    <div class="card"><svg viewBox="0 0 640 210" id="lwOwl"></svg><div class="cap"><b>Os estados.</b> <i>Parada</i>: na página inicial, os olhos seguem o cursor de texto enquanto o jogador digita (e só então se mexem). <i>Procurando</i>: enquanto a busca lenta trabalha, a cabeça gira de um lado a outro e as pupilas varrem. <i>Achou</i>: os olhos se arregalam uma vez. <i>Nada</i>: a cabeça tomba e um olho se fecha, "Hoo?". <i>De madrugada</i>: a coruja voa sobre a cidade; aparece na página inicial entre 2 h e 5 h, quando o índice está sendo refeito.</div></div>
+    <h3>As páginas</h3>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 576 360" id="lwHome"></svg><div class="cap"><b>A página inicial.</b> Branca, quase vazia, como os buscadores de 2008: o logo, uma frase, o campo e dois botões. "Lookwise Search" busca; "Owl's Pick" vai direto para o primeiro resultado.</div></div>
+      <div class="card"><svg viewBox="0 0 576 360" id="lwNight"></svg><div class="cap"><b>De madrugada.</b> A mesma página, com a coruja voando e a conta do que o rastreador achou naquela noite. É o jeito orgânico de explicar por que um site novo só aparece no dia seguinte.</div></div>
+    </div>
+    <div class="card"><svg viewBox="0 0 768 544" id="lwRes"></svg><div class="cap"><b>Os resultados.</b> Em cima, os resultados locais com o mapa e os pinos A, B, C (o endereço real das empresas da simulação). Depois a web: o título, o trecho com a palavra buscada em negrito, o endereço em verde, "Cached" e "Similar pages". À direita, os links patrocinados, pagos pelas empresas da cidade. Embaixo, a paginação são pares de olhos: a página atual é a que está de olhos abertos.</div></div>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 576 216" id="lwNone"></svg><div class="cap"><b>Fora do índice.</b> A loja pequena sem site, a página escondida, o fórum: "did not match any documents", com a coruja de cabeça tombada e a dica da lista telefônica.</div></div>
+      <div class="card"><svg viewBox="0 0 576 216" id="lwCache"></svg><div class="cap"><b>A cópia em cache.</b> "Cached" abre a página como a coruja a viu na última madrugada, com a faixa do Lookwise em cima. Funciona mesmo com o servidor no escuro do apagão: o jogador lê o cardápio de uma pizzaria que está fora do ar.</div></div>
+    </div>
+    <h3>O índice, pelo bicho</h3>
+    <div class="tbl"><table>
+      <tr><th>O quê</th><th>Como funciona</th><th>Como o jogador percebe</th></tr>
+      <tr><td>o que entra</td><td>a página inicial de cada site de empresa, as seções do portal, os posts públicos do Streetwire e as manchetes</td><td>buscar "pizza" acha as pizzarias com site, a notícia e o post</td></tr>
+      <tr><td>quando entra</td><td>o índice é refeito uma vez por noite, entre 2 h e 5 h do jogo</td><td>a coruja voando na página inicial; o site novo, a notícia de ontem e o post só aparecem na manhã seguinte</td></tr>
+      <tr><td>o cache</td><td>cada página indexada guarda a cópia daquela noite</td><td>"Cached" abre a página mesmo com o servidor no apagão, mas com o preço e o "OPEN NOW" de ontem</td></tr>
+      <tr><td>o que não entra</td><td>loja sem site, as páginas de dentro dos sites, o Switchboard, o webmail</td><td>"did not match any documents"; o fórum só se acha pelo endereço que alguém passa</td></tr>
+      <tr><td>locais</td><td>as empresas do tipo buscado mais perto de onde o jogador está (pelo Wi-Fi em que está conectado)</td><td>o mapa com A, B, C muda quando ele busca de outro cybercafé</td></tr>
+      <tr><td>patrocinados</td><td>empresas da cidade pagam para aparecer na direita (na economia, etapa 17, viram um gasto delas)</td><td>o anúncio da loja que está indo mal some; o da que vai bem aparece em toda busca</td></tr>
+    </table></div>
+    <div class="rule do"><b>✓</b><span>Os olhos da coruja são sempre os dois "o": no logo, no ícone, na paginação. Âmbar só nos olhos.</span></div>
+    <div class="rule do"><b>✓</b><span>A coruja só se mexe quando a busca trabalha, quando o jogador digita ou de madrugada.</span></div>
+    <div class="rule"><b>✗</b><span>Nada de letras de cores alternadas nem de "o" repetidos na paginação: o Lookwise tem a identidade dele, não a de buscadores reais.</span></div>
+  </section>
+
   <section id="regras">
     <h2>Regras <small>o que vale sempre</small></h2>
     <div class="rule do"><b>✓</b><span>A página tem as cores dela; a moldura é prata; o console é âmbar. As três camadas nunca se misturam.</span></div>
     <div class="rule do"><b>✓</b><span>Tudo que a web mostra vem da simulação: preço, horário, "OPEN NOW", a manchete, o site fora do ar no apagão.</span></div>
     <div class="rule do"><b>✓</b><span>O furão só se mexe quando a rede trabalha; a velocidade em kB/s está sempre na barra de status.</span></div>
-    <div class="rule do"><b>✓</b><span>Texto nas células, detalhe fino (brilho, ícones, selos, barras) em HD.</span></div>
+    <div class="rule do"><b>✓</b><span>Texto nas células, detalhe fino (brilho, ícones, selos, barras, fotos, mapas) em HD; o brilho e as abas ficam <i>embaixo</i> do texto, as fotos e os anúncios <i>em cima</i> de células vazias.</span></div>
+    <div class="rule do"><b>✓</b><span>Cada site é de um ano: o de 1998 nunca ganha brilho, o de 2008 nunca ganha estrelas no fundo. A mistura de épocas é a da cidade, não a de uma página.</span></div>
+    <div class="rule do"><b>✓</b><span>Foto, anúncio, mapa e ação na bolsa saem da simulação: a foto pelo tipo do lugar, o anúncio de uma empresa que existe, o pino no endereço real.</span></div>
     <div class="rule"><b>✗</b><span>Nada de raposa nem de globo azul com um bicho laranja em volta: o furão sai da toca de terra, de frente, e é um sable (rosto claro, máscara, pescoço escuro, luvas brancas).</span></div>
     <div class="rule"><b>✗</b><span>Nada de web de 2026: sem rolagem infinita, sem vídeo embutido, sem layout que se adapta. A coluna tem largura fixa e sobra fundo dos lados.</span></div>
     <div class="rule"><b>✗</b><span>A web nunca diz que foi o jogador: a notícia do apagão sai, o nome dele não.</span></div>
@@ -214,6 +267,9 @@
       <tr><td><code>src/web/browser.ts</code></td><td><code>NAME = 'Ferret 2.0'</code>; a moldura passa de 2 para 4 linhas em cima (abas, navegação em 2, favoritos) e 1 embaixo; as cores <code>CHROME</code>/<code>TITLE</code> dão lugar ao prata; abas e favoritos (estes já estavam nos retoques da 15)</td></tr>
       <tr><td><code>src/render/hd.ts</code> e os ícones HD</td><td>o brilho da moldura, os botões redondos, o furão (4 estados) e os selos de 88 × 31 desenhados em pixels</td></tr>
       <tr><td><code>src/web/sites.ts</code></td><td>os selos pela semente e pelo molde; o site da Burrow Labs (burrow-labs.net, com "Get Ferret" e as notas de versão) como uma empresa da cidade</td></tr>
+      <tr><td><code>src/render/hd.ts</code> e o desenho das páginas</td><td>uma camada HD <i>de fundo</i>, desenhada antes dos glifos (brilho, abas, biséis, ladrilhos, sombra da coluna), além da de frente; o kit da seção 7 como funções de HD; as fotos pintadas pela semente e o mapa pela grade da cidade</td></tr>
+      <tr><td><code>src/web/sites.ts</code> (os moldes)</td><td>os seis moldes refeitos como anos da web; os anúncios vindos de <code>city.businesses</code>; o letreiro e o pisca pelo relógio do jogo</td></tr>
+      <tr><td><code>src/web/sites.ts</code> (o Lookwise)</td><td>o logo da coruja em HD e o ícone de 16 px; o índice refeito de madrugada (hoje é feito uma vez por cidade), a cópia em cache, os resultados locais com mapa e pinos, os patrocinados e a paginação de olhos; a coruja na página inicial</td></tr>
       <tr><td><code>src/phone/webapp.ts</code>, <code>src/locale/en.json</code></td><td>"Lodestar Mini" vira "Ferret Mini"; o ícone do app é o furão em 16 px</td></tr>
       <tr><td><code>src/laptop/wm.ts</code>, o comando em <code>shell.ts</code></td><td>o comando <code>ferret</code> (com <code>lodestar</code> como apelido); só a linha do nome no shell, pela emenda segura de <code>docs/mapa-shell.md</code></td></tr>
     </table></div>
@@ -389,21 +445,25 @@ $('swatches').innerHTML = [
 </script>
 <script>
 // ---- a page in cells, the way the game lays it out (text in cells, fine detail in HD) ----
+let gid = 0;
 class Cells {
-  constructor(W, H, bg) { this.W = W; this.H = H; this.c = Array.from({ length: H }, () => Array.from({ length: W }, () => ({ ch: ' ', fg: [0, 0, 0], bg, u: 0, b: 0 }))); this.hd = []; }
+  constructor(W, H, bg) { this.W = W; this.H = H; this.c = Array.from({ length: H }, () => Array.from({ length: W }, () => ({ ch: ' ', fg: [0, 0, 0], bg, u: 0, b: 0 }))); this.hd = []; this.back = []; }
   fill(x, y, w, h, bg) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (this.c[j] && this.c[j][i]) { this.c[j][i].bg = bg; this.c[j][i].ch = ' '; } }
   put(x, y, s, fg, bg, at = {}) { if (!this.c[y]) return; [...s].forEach((ch, k) => { const c = this.c[y][x + k]; if (!c) return; c.ch = ch; c.fg = fg; if (bg) c.bg = bg; c.u = at.u ? 1 : 0; c.b = at.b ? 1 : 0; }); }
   center(x, w, y, s, fg, bg, at) { this.put(x + Math.max(0, Math.floor((w - s.length) / 2)), y, s, fg, bg, at); }
   wrap(x, y, w, s, fg, bg, maxRows = 99) { const words = s.split(' '); let line = '', n = 0; for (const wd of words) { if ((line + ' ' + wd).trim().length > w) { this.put(x, y + n, line.trim(), fg, bg); n++; line = wd; if (n >= maxRows) return n; } else line += ' ' + wd; } if (line.trim()) { this.put(x, y + n, line.trim(), fg, bg); n++; } return n; }
   /** Text with [links]: the bracketed words in the link colour, underlined. */
   rich(x, y, s, fg, link, bg) { let cx = x; for (const part of s.split(/(\[[^\]]+\])/)) { if (!part) continue; const L = part.startsWith('['); const t = L ? part.slice(1, -1) : part; this.put(cx, y, t, L ? link : fg, bg, { u: L }); cx += t.length; } }
-  draw(svg, x0, y0, cw, ch) {
-    const fs = cw / 0.6, g = el('g', {}, svg);
+  /** Background first, then the HD under the text (gloss, tabs, tiles), the text, and the HD in front (photos, ads, badges). */
+  draw(svg, x0, y0, cw, ch, o = {}) {
+    const fs = cw / 0.6, id = 'cl' + (++gid), cp = el('clipPath', { id }, el('defs', {}, svg)); el('rect', { x: x0, y: y0, width: this.W * cw, height: this.H * ch }, cp);
+    const g = el('g', { 'clip-path': `url(#${id})` }, svg), X = (cx) => x0 + cx * cw, Y = (cy) => y0 + cy * ch;
+    for (let j = 0; j < this.H; j++) { let i = 0; while (i < this.W) { const b = this.c[j][i].bg; let k = i; while (k < this.W && this.c[j][k].bg === b) k++; el('rect', { x: x0 + i * cw, y: y0 + j * ch, width: (k - i) * cw + .3, height: ch + .3, fill: rgb(b), 'shape-rendering': 'crispEdges' }, g); i = k; } }
+    if (!o.noBack) for (const f of this.back) f(g, X, Y, cw, ch);
     for (let j = 0; j < this.H; j++) {
-      let i = 0; while (i < this.W) { const b = this.c[j][i].bg; let k = i; while (k < this.W && this.c[j][k].bg === b) k++; el('rect', { x: x0 + i * cw, y: y0 + j * ch, width: (k - i) * cw + .3, height: ch + .3, fill: rgb(b), 'shape-rendering': 'crispEdges' }, g); i = k; }
-      i = 0; while (i < this.W) { const c0 = this.c[j][i]; if (c0.ch === ' ' && !c0.u) { i++; continue; } let k = i, s = ''; while (k < this.W && rgb(this.c[j][k].fg) === rgb(c0.fg) && this.c[j][k].u === c0.u && this.c[j][k].b === c0.b && !(this.c[j][k].ch === ' ' && this.c[j][k + 1] && this.c[j][k + 1].ch === ' ')) { s += this.c[j][k].ch; k++; } if (s.trim()) txt(g, x0 + i * cw, y0 + j * ch + ch * 0.76, s, { fill: rgb(c0.fg), 'font-size': fs, 'font-weight': c0.b ? 600 : 400, 'text-decoration': c0.u ? 'underline' : 'none', textLength: s.length * cw, lengthAdjust: 'spacingAndGlyphs' }); i = Math.max(k, i + 1); }
+      let i = 0; while (i < this.W) { const c0 = this.c[j][i]; if (c0.ch === ' ' && !c0.u) { i++; continue; } let k = i, s = ''; while (k < this.W && rgb(this.c[j][k].fg) === rgb(c0.fg) && this.c[j][k].u === c0.u && this.c[j][k].b === c0.b && !(this.c[j][k].ch === ' ' && this.c[j][k + 1] && this.c[j][k + 1].ch === ' ')) { s += this.c[j][k].ch; k++; } if (s.trim()) txt(g, x0 + i * cw, y0 + j * ch + ch * 0.76, s, { fill: rgb(c0.fg), 'font-size': fs, 'font-weight': c0.b ? 600 : 400, 'text-decoration': c0.u ? 'underline' : 'none', textLength: s.length * cw, lengthAdjust: 'spacingAndGlyphs' }); i = Math.max(k, i + 1); }
     }
-    for (const f of this.hd) f(g, (cx) => x0 + cx * cw, (cy) => y0 + cy * ch, cw, ch);
+    if (!o.noHd) for (const f of this.hd) f(g, X, Y, cw, ch);
     return g;
   }
 }
@@ -438,56 +498,301 @@ const STREETS = ['Dock St', 'Marlow Ave', '9th St', 'Canal St', 'Ferris Ave', 'U
 const NAV = (kind) => ['Home', ['pizza', 'fastfood', 'bar', 'deli'].includes(kind) ? 'Menu' : 'Products', 'About Us', 'Contact'];
 const LOREM = 'We are a family business serving the neighborhood since the old days. Come in and say hello, we will be glad to see you. Ask about our weekly specials and our friendly service.';
 
-/** One business site in one of the six templates. */
+// ---- the HD kit: what makes a page look like 2008 (the text stays in the cells; all of this is pixels) ----
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const lite = (c, t) => mix(c, [255, 255, 255], t), dark = (c, t) => mix(c, [0, 0, 0], t);
+const lum = (c) => c[0] * .3 + c[1] * .59 + c[2] * .11;
+function grad(g, stops, vertical = true) { const id = 'k' + (++gid), gr = el('linearGradient', { id, x1: 0, y1: 0, x2: vertical ? 0 : 1, y2: vertical ? 1 : 0 }, el('defs', {}, g)); stops.forEach(([o, c, a]) => el('stop', { offset: o, 'stop-color': Array.isArray(c) ? rgb(c) : c, 'stop-opacity': a ?? 1 }, gr)); return `url(#${id})`; }
+function star(cx, cy, R, r, n) { let d = ''; for (let i = 0; i < n * 2; i++) { const a = Math.PI * i / n - Math.PI / 2, q = i % 2 ? r : R; d += (i ? 'L' : 'M') + (cx + Math.cos(a) * q).toFixed(2) + ' ' + (cy + Math.sin(a) * q).toFixed(2); } return d + 'Z'; }
+function htxt(g, x, y, s, size, at) { return txt(g, x, y, s, Object.assign({ 'font-size': size }, at || {})); }
+/** A low-resolution picture painted by code on a canvas and scaled up with hard pixels. */
+function pixImg(g, x, y, w, h, pw, ph, paint, at = {}) { const cv = document.createElement('canvas'); cv.width = pw; cv.height = ph; paint(cv.getContext('2d'), pw, ph); return el('image', Object.assign({ x, y, width: w, height: h, href: cv.toDataURL(), preserveAspectRatio: 'none', style: 'image-rendering:pixelated' }, at), g); }
+function pixMap(g, x, y, sc, rows, pal) { rows.forEach((row, j) => [...row].forEach((ch, i) => { const c = pal[ch]; if (c) el('rect', { x: x + i * sc, y: y + j * sc, width: sc, height: sc, fill: c, 'shape-rendering': 'crispEdges' }, g); })); }
+const MARQ = [];
+
+/** The photos of 2008: small, grainy, a bit too warm. The subject comes from the place type. */
+function paintPhoto(c, W, H, subj, seed) {
+  const r = rng(seed), pick = (a) => a[Math.floor(r() * a.length)];
+  const F = (col, x, y, w, h) => { c.fillStyle = typeof col === 'string' ? col : rgb(col); c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+  const V = (y0, y1, a, b) => { const gr = c.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, a); gr.addColorStop(1, b); c.fillStyle = gr; c.fillRect(0, Math.round(y0), W, Math.round(y1 - y0)); };
+  const glow = (x, y, rad, col) => { const gr = c.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(x - rad, y - rad, rad * 2, rad * 2); };
+  const disc = (x, y, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); };
+  if (subj === 'store') {
+    V(0, H * .3, '#7fa6d0', '#d6e3ee');
+    const wall = pick([[150, 72, 52], [118, 108, 98], [92, 100, 118], [168, 146, 116]]); F(wall, 0, H * .1, W, H * .76);
+    for (let i = 0; i < 4; i++) F(dark(wall, .55), W * (.07 + i * .24), H * .15, W * .13, H * .13);
+    F('#efe6d2', W * .18, H * .31, W * .64, H * .08); F(dark(wall, .45), W * .26, H * .33, W * .48, H * .03);
+    const aw = pick([[188, 32, 30], [28, 112, 60], [30, 62, 150], [206, 122, 20]]);
+    for (let i = 0; i < W; i += 4) F(i % 8 ? [244, 240, 230] : aw, i, H * .42, 4, H * .09);
+    F(dark(aw, .35), 0, H * .51, W, 1);
+    F('#1a232e', W * .05, H * .55, W * .6, H * .3); glow(W * .3, H * .7, W * .25, 'rgba(255,200,120,.55)');
+    F('#2f2219', W * .72, H * .55, W * .19, H * .31); F('#c9a227', W * .87, H * .7, 1, 2);
+    V(H * .86, H, '#a29d93', '#7b766d');
+  } else if (subj === 'food') {
+    V(0, H, '#6b3e22', '#3e2213'); for (let y = 2; y < H; y += 5) F('rgba(0,0,0,.15)', 0, y, W, 1);
+    disc(W / 2, H * .55, W * .4, H * .36, '#f4f1ea');
+    const k = pick(['pie', 'burger', 'sandwich']);
+    if (k === 'pie') { disc(W / 2, H * .55, W * .32, H * .28, '#d99a3a'); disc(W / 2, H * .55, W * .27, H * .23, '#c4381c'); for (let i = 0; i < 9; i++) disc(W / 2 + (r() - .5) * W * .4, H * .55 + (r() - .5) * H * .32, Math.max(1, W * .03), Math.max(1, W * .03), i % 3 ? '#8e1f12' : '#f3e2a0'); }
+    else if (k === 'burger') { F('#d99a3a', W * .3, H * .3, W * .4, H * .12); F('#3d7a28', W * .27, H * .42, W * .46, H * .05); F('#5a2e17', W * .28, H * .47, W * .44, H * .12); F('#f1c232', W * .29, H * .59, W * .42, H * .04); F('#c8862e', W * .3, H * .63, W * .4, H * .1); }
+    else { F('#e8cf98', W * .22, H * .38, W * .56, H * .1); F('#c0503a', W * .23, H * .48, W * .54, H * .08); F('#5c9a3a', W * .22, H * .56, W * .56, H * .04); F('#e8cf98', W * .22, H * .6, W * .56, H * .1); }
+    glow(W * .2, H * .1, W * .4, 'rgba(255,240,200,.25)');
+  } else if (subj === 'room') {
+    V(0, H, '#d8c7a4', '#a99677'); F('#1c2742', W * .62, H * .12, W * .28, H * .36); F('#e9b44c', W * .7, H * .3, 1, 1); F('#e9b44c', W * .8, H * .22, 1, 1);
+    F('#5a3a22', W * .08, H * .34, W * .46, H * .18); F('#f4f2ec', W * .06, H * .5, W * .52, H * .26); F('#8b2f3c', W * .06, H * .66, W * .52, H * .1);
+    glow(W * .62, H * .5, W * .18, 'rgba(255,214,140,.7)'); F('#3a2a1e', W * .6, H * .56, W * .06, H * .2);
+    F('#6e5a44', 0, H * .86, W, H * .14);
+  } else if (subj === 'bar') {
+    V(0, H, '#21140d', '#0b0705');
+    for (let i = 0; i < 3; i++) { F('#3a2416', 0, H * (.2 + i * .16), W, 1); for (let x = 2; x < W - 2; x += 3 + Math.floor(r() * 2)) F(pick(['#7a3b12', '#2f6b3a', '#b8902e', '#5a1d1d', '#c7c2b0']), x, H * (.2 + i * .16) - 4, 2, 4); }
+    glow(W * .25, H * .2, W * .2, 'rgba(255,170,80,.45)'); glow(W * .75, H * .2, W * .2, 'rgba(255,170,80,.45)');
+    c.strokeStyle = '#ff4fa3'; c.lineWidth = 1; c.beginPath(); c.moveTo(W * .6, H * .62); for (let i = 0; i < 6; i++) c.lineTo(W * (.62 + i * .05), H * (i % 2 ? .56 : .62)); c.stroke(); glow(W * .75, H * .6, W * .15, 'rgba(255,80,160,.3)');
+    F('#4a2c18', 0, H * .72, W, H * .06); F('#2a180d', 0, H * .78, W, H * .22);
+  } else if (subj === 'tech') {
+    V(0, H, '#d9dde3', '#9ea6b0');
+    for (let j = 0; j < 2; j++) { F('#6d747d', 0, H * (.45 + j * .35), W, 1); for (let x = 3; x < W - 6; x += 9) { F('#1b1f24', x, H * (.2 + j * .35), 7, H * .22); F(pick(['#2f6fd0', '#3aa0c8', '#5a9a3a', '#8a5ac0']), x + 1, H * (.2 + j * .35) + 1, 5, H * .22 - 2); } }
+  } else if (subj === 'sky' || subj === 'blackout') {
+    const off = subj === 'blackout'; V(0, H, '#0b1324', '#2b2a3a');
+    for (let x = 0; x < W;) { const bw = 3 + Math.floor(r() * 6), bh = H * (.3 + r() * .55); F('#0a0d14', x, H - bh, bw, bh); if (!off || x > W * .8) for (let yy = Math.round(H - bh + 2); yy < H - 2; yy += 3) for (let xx = x + 1; xx < x + bw - 1; xx += 2) if (r() < .35) F('#e8b04a', xx, yy, 1, 1); x += bw + (r() < .3 ? 1 : 0); }
+    glow(W / 2, H * 1.05, W * .7, off ? 'rgba(80,90,120,.15)' : 'rgba(255,170,60,.35)');
+    if (off) { F('#fff6d0', W * .3, H * .9, 1, 1); F('#fff6d0', W * .34, H * .9, 1, 1); glow(W * .32, H * .9, W * .12, 'rgba(255,240,200,.4)'); }
+  } else if (subj === 'face') {
+    const bg = pick(['#c8d2e4', '#e4d2c8', '#d2e4c8', '#e4e0c8']), skin = pick([[241, 200, 160], [214, 160, 116], [160, 108, 70], [104, 68, 44]]), hair = pick([[30, 20, 14], [90, 56, 30], [200, 160, 90], [60, 60, 66]]), shirt = pick([[40, 70, 140], [150, 40, 40], [50, 50, 54], [60, 120, 70]]);
+    F(bg, 0, 0, W, H); F(shirt, W * .15, H * .74, W * .7, H * .26); F(skin, W * .28, H * .2, W * .44, H * .52); F(hair, W * .26, H * .12, W * .48, H * .14); if (r() < .5) F(hair, W * .26, H * .2, W * .08, H * .28);
+    F('#1b1410', W * .38, H * .42, W * .08, H * .07); F('#1b1410', W * .56, H * .42, W * .08, H * .07); F(dark(skin, .3), W * .44, H * .6, W * .14, H * .04);
+  }
+  // the grain of a cheap camera and a heavy JPEG
+  const im = c.getImageData(0, 0, W, H), d = im.data; for (let i = 0; i < d.length; i += 4) { const n = (r() - .5) * 14; d[i] += n; d[i + 1] += n; d[i + 2] += n; } c.putImageData(im, 0, 0);
+}
+/** A street map in the Lookwise Local style: the blocks, one avenue, a park and the sea at the bottom. */
+function paintMap(c, W, H, seed) {
+  const r = rng(seed), sx = 7 + Math.floor(r() * 3), sy = 5 + Math.floor(r() * 2), ox = Math.floor(r() * sx), oy = Math.floor(r() * sy);
+  c.fillStyle = '#fbfaf5'; c.fillRect(0, 0, W, H);
+  for (let y = -oy; y < H; y += sy) for (let x = -ox; x < W; x += sx) { c.fillStyle = r() < .1 ? '#c6dfa8' : '#e8e1cf'; c.fillRect(x + 1, y + 1, sx - 2, sy - 2); }
+  c.fillStyle = '#f3cf63'; c.fillRect(0, sy * 2 - oy - 1, W, 2); c.fillRect(sx * 3 - ox - 1, 0, 2, H);
+  c.fillStyle = '#a7c8e6'; c.fillRect(0, H - 3, W, 3);
+}
+
+// the ads: the city's own businesses buying space (later, from city.businesses and the economy)
+const ADS = [
+  ['Cellmart', 'Prepaid SIM only $9.99!', [200, 0, 40], [255, 220, 0]],
+  ['Harbor Savings Bank', 'Savings at 4.10% APY', [20, 52, 112], [255, 255, 255]],
+  ['Burger Barn', 'Two Double Barns for $3!', [214, 104, 14], [255, 255, 255]],
+  ['Starlite Motel', 'Rooms from $39 a night', [60, 20, 90], [255, 210, 80]],
+  ['Byte Stop Cybercafe', 'Fast Wi-Fi - 1 hour $2', [0, 90, 60], [190, 255, 210]],
+  [`${CITY}Net DSL`, 'Up to 3 Mbps! Free modem', [0, 51, 153], [255, 204, 0]],
+];
+
+const K = {
+  /** Web 2.0 gloss: the top half lighter, a hard line in the middle. */
+  gloss(C, x, y, w, h, col, r = 0) { C.back.push((g, X, Y, a, b) => { el('rect', { x: X(x), y: Y(y), width: w * a, height: h * b, rx: r * b, fill: grad(g, [[0, lite(col, .34)], [.5, lite(col, .1)], [.5, col], [1, dark(col, .16)]]) }, g); if (!r) el('rect', { x: X(x), y: Y(y + h) - 1, width: w * a, height: 1, fill: rgb(dark(col, .35)) }, g); }); },
+  /** A plain vertical gradient. */
+  fade(C, x, y, w, h, c1, c2) { C.back.push((g, X, Y, a, b) => el('rect', { x: X(x), y: Y(y), width: w * a, height: h * b, fill: grad(g, [[0, c1], [1, c2]]) }, g)); },
+  /** The aqua pill button, with its shine. */
+  btn(C, x, y, w, col) { C.back.push((g, X, Y, a, b) => { const px = X(x) - a * .4, py = Y(y) + 1, W = (w + .8) * a, H = b - 2; el('rect', { x: px, y: py, width: W, height: H, rx: H / 2, fill: grad(g, [[0, lite(col, .35)], [.48, col], [.52, dark(col, .12)], [1, lite(col, .1)]]), stroke: rgb(dark(col, .4)), 'stroke-width': .8 }, g); el('rect', { x: px + H * .45, y: py + 1, width: W - H * .9, height: H * .22, rx: H * .11, fill: '#fff', opacity: .32 }, g); }); },
+  /** The 2008 grey push button of search engines and forms. */
+  soft(C, x, y, w) { C.back.push((g, X, Y, a, b) => el('rect', { x: X(x) - a * .3, y: Y(y) + .5, width: (w + .6) * a, height: b - 1, rx: 3, fill: grad(g, [[0, '#fbfbfb'], [1, '#dcdcdc']]), stroke: '#9a9a9a', 'stroke-width': .8 }, g)); },
+  /** The 2001 bevel: light top-left, dark bottom-right; pressed swaps them. */
+  bevel(C, x, y, w, h, col, down) { C.back.push((g, X, Y, a, b) => { const x0 = X(x), y0 = Y(y), W = w * a, H = h * b, hi = rgb(lite(col, .6)), lo = rgb(dark(col, .5)); el('rect', { x: x0, y: y0, width: W, height: H, fill: grad(g, [[0, lite(col, down ? 0 : .18)], [1, dark(col, down ? .1 : .06)]]) }, g); el('path', { d: `M${x0 + .75} ${y0 + H} V${y0 + .75} H${x0 + W}`, stroke: down ? lo : hi, 'stroke-width': 1.5, fill: 'none' }, g); el('path', { d: `M${x0 + W - .75} ${y0} V${y0 + H - .75} H${x0}`, stroke: down ? hi : lo, 'stroke-width': 1.5, fill: 'none' }, g); }); },
+  /** A rounded tab; the active one is taller and takes the page colour. */
+  tab(C, x, y, w, col, on) { C.back.push((g, X, Y, a, b) => { const x0 = X(x) - a * .5, x1 = X(x + w) + a * .5, y0 = Y(y) + (on ? 0 : 2), y1 = Y(y + 1) + (on ? 1 : 0), r = Math.min(5, b * .4); el('path', { d: `M${x0} ${y1} V${y0 + r} Q${x0} ${y0} ${x0 + r} ${y0} H${x1 - r} Q${x1} ${y0} ${x1} ${y0 + r} V${y1} Z`, fill: on ? rgb(col) : grad(g, [[0, lite(col, .3)], [1, col]]), stroke: rgb(dark(col, on ? .25 : .35)), 'stroke-width': .8 }, g); }); },
+  /** The soft shadow of a fixed-width column on the page. */
+  shadow(C, x, w, h) { C.back.push((g, X, Y, a, b) => { const H = h * b; el('rect', { x: X(x) - a * 1.2, y: Y(0), width: a * 1.2, height: H, fill: grad(g, [[0, '#000', 0], [1, '#000', .3]], false) }, g); el('rect', { x: X(x + w), y: Y(0), width: a * 1.2, height: H, fill: grad(g, [[0, '#000', .3], [1, '#000', 0]], false) }, g); }); },
+  /** A tiled background on both sides of the column (x = W and w = 0 tiles the whole page). */
+  tile(C, x, w, kind, col) { C.back.push((g, X, Y, a, b) => { const id = 'p' + (++gid), s = b, p = el('pattern', { id, width: s, height: s, patternUnits: 'userSpaceOnUse' }, el('defs', {}, g)), c2 = rgb(lum(col) > 128 ? dark(col, .08) : lite(col, .1));
+    if (kind === 'stripes') el('rect', { width: s / 2, height: s, fill: c2 }, p);
+    else if (kind === 'dots') el('circle', { cx: s / 2, cy: s / 2, r: s * .13, fill: c2 }, p);
+    else if (kind === 'checks') { el('rect', { width: s / 2, height: s / 2, fill: c2 }, p); el('rect', { x: s / 2, y: s / 2, width: s / 2, height: s / 2, fill: c2 }, p); }
+    else if (kind === 'diag') el('path', { d: `M-1 ${s * .25} L${s * .25} -1 M0 ${s} L${s} 0 M${s * .75} ${s + 1} L${s + 1} ${s * .75}`, stroke: c2, 'stroke-width': s * .12 }, p);
+    else if (kind === 'stars') { p.setAttribute('width', s * 3); p.setAttribute('height', s * 3); el('path', { d: star(s * .7, s * .8, s * .32, s * .12, 5), fill: '#fff6a8' }, p); el('circle', { cx: s * 2.2, cy: s * 1.9, r: s * .07, fill: '#fff' }, p); el('circle', { cx: s * 1.4, cy: s * 2.6, r: s * .05, fill: '#cfd8ff' }, p); }
+    const H = Y(C.H) - Y(0); el('rect', { x: X(0), y: Y(0), width: X(x) - X(0), height: H, fill: `url(#${id})` }, g); el('rect', { x: X(x + w), y: Y(0), width: Math.max(0, X(C.W) - X(x + w)), height: H, fill: `url(#${id})` }, g); }); },
+  /** A rounded box with an optional gradient title strip in its first row. */
+  box(C, x, y, w, h, fill, stroke, head) { C.back.push((g, X, Y, a, b) => { const x0 = X(x) + .5, y0 = Y(y) + .5, x1 = X(x + w) - .5, r = 4; el('rect', { x: x0, y: y0, width: x1 - x0, height: h * b - 1, rx: r, fill: rgb(fill), stroke: rgb(stroke) }, g); if (head) el('path', { d: `M${x0} ${Y(y + 1)} V${y0 + r} Q${x0} ${y0} ${x0 + r} ${y0} H${x1 - r} Q${x1} ${y0} ${x1} ${y0 + r} V${Y(y + 1)} Z`, fill: grad(g, [[0, lite(head, .3)], [1, head]]) }, g); }); },
+  /** A sunken text field. */
+  field(C, x, y, w) { C.back.push((g, X, Y, a, b) => { el('rect', { x: X(x) - 1, y: Y(y) + .5, width: w * a + 2, height: b - 1, fill: '#fff', stroke: '#7f9db9' }, g); el('line', { x1: X(x), x2: X(x + w), y1: Y(y) + 1.5, y2: Y(y) + 1.5, stroke: '#000', 'stroke-opacity': .12 }, g); }); },
+  /** A dark veil behind text laid over a photo. */
+  veil(C, x, y, w, h, op = .5) { C.back.push((g, X, Y, a, b) => el('rect', { x: X(x), y: Y(y), width: w * a, height: h * b, rx: 3, fill: '#000', opacity: op }, g)); },
+  /** A grainy photo; front by default, back when text goes on top of it; can carry the Web 2.0 reflection. */
+  photo(C, x, y, w, h, subj, seed, o = {}) { (o.back ? C.back : C.hd).push((g, X, Y, a, b) => { const W = w * a, H = h * b, pw = Math.max(10, Math.round(w * 4)), ph = Math.max(8, Math.round(h * 7)), frame = o.frame ?? 'white';
+    if (frame === 'white') { el('rect', { x: X(x) + 1, y: Y(y) + 2, width: W + 2, height: H + 2, fill: '#000', opacity: .22 }, g); el('rect', { x: X(x) - 2, y: Y(y) - 2, width: W + 4, height: H + 4, fill: '#fff', stroke: '#c4c4c4', 'stroke-width': .6 }, g); }
+    else if (frame === 'line') el('rect', { x: X(x) - 1.5, y: Y(y) - 1.5, width: W + 3, height: H + 3, fill: '#888', stroke: '#ddd' }, g);
+    const paint = (cx, pw2, ph2) => paintPhoto(cx, pw2, ph2, subj, seed); pixImg(g, X(x), Y(y), W, H, pw, ph, paint);
+    if (o.reflect) { const id = 'm' + (++gid), m = el('mask', { id }, el('defs', {}, g)); el('rect', { x: X(x), y: Y(y + h), width: W, height: H * .45, fill: grad(g, [[0, '#fff', .4], [1, '#fff', 0]]) }, m); const top = Y(y + h) + 1; pixImg(el('g', { mask: `url(#${id})` }, g), X(x), top, W, H, pw, ph, paint, { transform: `translate(0 ${2 * top + H}) scale(1 -1)` }); }
+  }); },
+  /** A banner ad from a city business, with the blinking button. */
+  ad(C, x, y, w, h, i, label = true) { C.hd.push((g, X, Y, a, b) => { const [nm, sl, c1, c2] = ADS[i % ADS.length], x0 = X(x), y0 = Y(y), W = w * a, H = h * b;
+    if (label) htxt(g, x0 + W, y0 - 2, 'Advertisement', Math.max(6, b * .42), { fill: '#999', 'text-anchor': 'end' });
+    el('rect', { x: x0, y: y0, width: W, height: H, fill: grad(g, [[0, lite(c1, .25)], [1, dark(c1, .2)]]), stroke: rgb(dark(c1, .5)) }, g); el('rect', { x: x0 + 1, y: y0 + 1, width: W - 2, height: H * .45, fill: '#fff', opacity: .12 }, g);
+    for (let k = 0; k < 6; k++) el('path', { d: star(x0 + W * (.42 + k * .07), y0 + H * (k % 2 ? .3 : .7), H * .09, H * .035, 4), fill: '#fff', opacity: .35 }, g);
+    htxt(g, x0 + H * .3, y0 + H * .47, nm, H * .34, { fill: rgb(c2), 'font-weight': 800, 'font-family': 'Archivo, sans-serif' });
+    htxt(g, x0 + H * .3, y0 + H * .84, sl, H * .25, { fill: '#fff', 'font-family': 'Verdana, sans-serif' });
+    const bw = Math.min(W * .28, H * 2.3), bx = x0 + W - bw - H * .2, bt = el('g', { class: 'blink' }, g);
+    el('rect', { x: bx, y: y0 + H * .22, width: bw, height: H * .56, rx: H * .28, fill: rgb(c2), stroke: '#000', 'stroke-opacity': .3 }, bt);
+    htxt(bt, bx + bw / 2, y0 + H * .58, 'CLICK HERE!', H * .22, { fill: rgb(c1), 'font-weight': 800, 'text-anchor': 'middle', 'font-family': 'Verdana, sans-serif' });
+  }); },
+  /** The "NEW!" starburst. */
+  burst(C, x, y, s, col = [226, 30, 30], rad = 1.6) { C.hd.push((g, X, Y, a, b) => { const cx = X(x), cy = Y(y), R = rad * b, gg = el('g', { transform: `rotate(-12 ${cx} ${cy})` }, g); el('path', { d: star(cx, cy, R, R * .76, 14), fill: grad(gg, [[0, lite(col, .2)], [1, col]]), stroke: rgb(dark(col, .4)), 'stroke-width': .8 }, gg); htxt(gg, cx, cy + R * .2, s, R * .56, { fill: '#fff', 'font-weight': 900, 'text-anchor': 'middle', 'font-family': 'Archivo, sans-serif' }); }); },
+  rss(C, x, y) { C.hd.push((g, X, Y, a, b) => { const s = b * .8, x0 = X(x), y0 = Y(y) + b * .1; el('rect', { x: x0, y: y0, width: s, height: s, rx: s * .2, fill: grad(g, [[0, '#f8a53a'], [1, '#e2650f']]) }, g); el('circle', { cx: x0 + s * .28, cy: y0 + s * .72, r: s * .1, fill: '#fff' }, g); el('path', { d: `M${x0 + s * .22} ${y0 + s * .45} a${s * .33} ${s * .33} 0 0 1 ${s * .33} ${s * .33} M${x0 + s * .22} ${y0 + s * .22} a${s * .56} ${s * .56} 0 0 1 ${s * .56} ${s * .56}`, stroke: '#fff', 'stroke-width': s * .12, fill: 'none' }, g); }); },
+  stars(C, x, y, n) { C.hd.push((g, X, Y, a, b) => { for (let i = 0; i < 5; i++) el('path', { d: star(X(x) + a * (i * 1.4 + .7), Y(y) + b * .52, b * .44, b * .19, 5), fill: i < n ? '#f2b51c' : '#d4d4d4', stroke: i < n ? '#b47a00' : '#aaa', 'stroke-width': .5 }, g); }); },
+  map(C, x, y, w, h, seed, pins = ['A']) { C.hd.push((g, X, Y, a, b) => { el('rect', { x: X(x) - 1, y: Y(y) - 1, width: w * a + 2, height: h * b + 2, fill: '#9aa' }, g); pixImg(g, X(x), Y(y), w * a, h * b, Math.round(w * 3), Math.round(h * 5), (c, W, H) => paintMap(c, W, H, seed)); const r = rng(seed + 1);
+    pins.forEach((p) => { const px = X(x) + w * a * (.2 + r() * .6), py = Y(y) + h * b * (.25 + r() * .45), s = b * .55; el('path', { d: `M${px} ${py} C ${px - s} ${py - s}, ${px - s} ${py - s * 2}, ${px} ${py - s * 2} C ${px + s} ${py - s * 2}, ${px + s} ${py - s}, ${px} ${py} Z`, fill: '#e2352a', stroke: '#8e1a12', 'stroke-width': .6 }, g); htxt(g, px, py - s * 1.25, p, s * .95, { fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle', 'font-family': 'Verdana, sans-serif' }); }); }); },
+  hr(C, x, y, w, kind = 'groove', col = [150, 150, 150]) { C.back.push((g, X, Y, a, b) => { const y0 = Y(y) + b / 2, x0 = X(x), W = w * a;
+    if (kind === 'rainbow') el('rect', { x: x0, y: y0 - 2, width: W, height: 4, fill: grad(g, [[0, '#ff2a2a'], [.2, '#ffa020'], [.4, '#fff020'], [.6, '#20d040'], [.8, '#2080ff'], [1, '#c040ff']], false) }, g);
+    else if (kind === 'dots') el('line', { x1: x0, x2: x0 + W, y1: y0, y2: y0, stroke: rgb(col), 'stroke-dasharray': '1 3', 'stroke-linecap': 'round', 'stroke-width': 1.3 }, g);
+    else { el('line', { x1: x0, x2: x0 + W, y1: y0 - .5, y2: y0 - .5, stroke: rgb(dark(col, .2)) }, g); el('line', { x1: x0, x2: x0 + W, y1: y0 + .5, y2: y0 + .5, stroke: rgb(lite(col, .75)) }, g); } }); },
+  /** The "beta" tag every Web 2.0 site wore. */
+  ribbon(C, x, y, s, col = [230, 70, 30]) { C.hd.push((g, X, Y, a, b) => { const cx = X(x), cy = Y(y), gg = el('g', { transform: `rotate(-14 ${cx} ${cy})` }, g); el('rect', { x: cx - b * 1.2, y: cy - b * .38, width: b * 2.4, height: b * .76, rx: b * .14, fill: grad(gg, [[0, lite(col, .3)], [1, col]]), stroke: rgb(dark(col, .35)), 'stroke-width': .6 }, gg); htxt(gg, cx, cy + b * .2, s, b * .52, { fill: '#fff', 'font-weight': 800, 'text-anchor': 'middle', 'font-style': 'italic', 'font-family': 'Verdana, sans-serif' }); }); },
+  /** The picture that never loaded: a grey frame and the little red X. */
+  broken(C, x, y, w, h) { C.back.push((g, X, Y, a, b) => { el('rect', { x: X(x) + .5, y: Y(y) + .5, width: w * a - 1, height: h * b - 1, fill: 'none', stroke: '#a0a0a0' }, g); const ix = X(x) + 3, iy = Y(y) + Math.max(2, (b - 11) / 2); el('rect', { x: ix, y: iy, width: 10, height: 11, fill: '#fff', stroke: '#8a8a8a' }, g); el('path', { d: `M${ix + 2.5} ${iy + 3} l5 5 m0 -5 l-5 5`, stroke: '#d01010', 'stroke-width': 1.5 }, g); }); },
+  /** A glossy round icon, two rows tall. */
+  icon(C, x, y, kind, col) { C.hd.push((g, X, Y, a, b) => { const R = b * .92, cx = X(x) + R, cy = Y(y) + R * 1.05, s = R * .5, p = { stroke: '#fff', 'stroke-width': R * .15, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+    el('circle', { cx, cy, r: R, fill: grad(g, [[0, lite(col, .45)], [1, dark(col, .15)]]), stroke: rgb(dark(col, .35)), 'stroke-width': .7 }, g);
+    const ic = { lock: () => { el('rect', { x: cx - s * .8, y: cy - s * .1, width: s * 1.6, height: s * 1.1, rx: s * .2, fill: '#fff' }, g); el('path', Object.assign({ d: `M${cx - s * .5} ${cy - s * .1} v${-s * .4} a${s * .5} ${s * .5} 0 0 1 ${s} 0 v${s * .4}` }, p), g); },
+      card: () => { el('rect', Object.assign({ x: cx - s, y: cy - s * .65, width: s * 2, height: s * 1.3, rx: s * .15 }, p), g); el('line', Object.assign({ x1: cx - s, x2: cx + s, y1: cy - s * .2, y2: cy - s * .2 }, p), g); },
+      pin: () => { el('path', { d: `M${cx} ${cy + s * 1.1} C ${cx - s * 1.2} ${cy - s * .1}, ${cx - s * .7} ${cy - s * 1.1}, ${cx} ${cy - s * 1.1} C ${cx + s * .7} ${cy - s * 1.1}, ${cx + s * 1.2} ${cy - s * .1}, ${cx} ${cy + s * 1.1} Z`, fill: '#fff' }, g); el('circle', { cx, cy: cy - s * .35, r: s * .3, fill: rgb(col) }, g); },
+      phone: () => { el('rect', Object.assign({ x: cx - s * .5, y: cy - s, width: s, height: s * 2, rx: s * .2 }, p), g); el('circle', { cx, cy: cy + s * .6, r: s * .12, fill: '#fff' }, g); },
+      bed: () => el('path', Object.assign({ d: `M${cx - s} ${cy + s * .6} V${cy - s * .6} M${cx - s} ${cy + s * .1} H${cx + s} V${cy + s * .6} M${cx - s * .4} ${cy - s * .2} h${s * 1.2}` }, p), g),
+      fork: () => el('path', Object.assign({ d: `M${cx - s * .5} ${cy - s} v${s * .7} a${s * .5} ${s * .5} 0 0 0 ${s} 0 v${-s * .7} M${cx} ${cy - s} v${s * 2}` }, p), g),
+      star: () => el('path', { d: star(cx, cy, s * 1.1, s * .45, 5), fill: '#fff' }, g),
+      mail: () => { el('rect', Object.assign({ x: cx - s, y: cy - s * .65, width: s * 2, height: s * 1.3, rx: s * .1 }, p), g); el('path', Object.assign({ d: `M${cx - s} ${cy - s * .6} L${cx} ${cy + s * .1} L${cx + s} ${cy - s * .6}` }, p), g); },
+      bolt: () => el('path', { d: `M${cx + s * .2} ${cy - s * 1.1} L${cx - s * .6} ${cy + s * .15} H${cx} L${cx - s * .2} ${cy + s * 1.1} L${cx + s * .6} ${cy - s * .15} H${cx} Z`, fill: '#fff' }, g),
+      chat: () => el('path', { d: `M${cx - s} ${cy - s * .7} h${s * 2} v${s * 1.2} h${-s * 1.1} l${-s * .6} ${s * .5} v${-s * .5} h${-s * .3} Z`, fill: '#fff' }, g) };
+    (ic[kind] || ic.star)(); el('ellipse', { cx, cy: cy - R * .48, rx: R * .72, ry: R * .38, fill: '#fff', opacity: .38 }, g); }); },
+  weather(C, x, y, kind, bgc = '#f0f4fc') { C.hd.push((g, X, Y, a, b) => { const cx = X(x) + b, cy = Y(y) + b * .9; if (kind === 'moon') { el('circle', { cx, cy, r: b * .7, fill: '#f4e3a0' }, g); el('circle', { cx: cx + b * .32, cy: cy - b * .22, r: b * .6, fill: bgc }, g); } else el('circle', { cx, cy, r: b * .62, fill: '#f6c21c', stroke: '#e0a000' }, g); el('path', { d: `M${cx - b * .5} ${cy + b * .9} a${b * .38} ${b * .38} 0 0 1 ${b * .25} ${-b * .72} a${b * .55} ${b * .55} 0 0 1 ${b * 1.02} ${-b * .05} a${b * .36} ${b * .36} 0 0 1 ${b * .24} ${b * .77} Z`, fill: '#fff', stroke: '#9aa6bc', 'stroke-width': .8 }, g); }); },
+  /** The <marquee>: text sliding right to left forever. */
+  marquee(C, x, y, w, s, col) { C.hd.push((g, X, Y, a, b) => { const id = 'q' + (++gid), cp = el('clipPath', { id }, el('defs', {}, g)); el('rect', { x: X(x), y: Y(y), width: w * a, height: b }, cp); const gg = el('g', { 'clip-path': `url(#${id})` }, g), t = htxt(gg, X(x + w), Y(y) + b * .78, s, a / .6, { fill: rgb(col), 'font-weight': 600, textLength: s.length * a, lengthAdjust: 'spacingAndGlyphs' }); MARQ.push({ t, x0: X(x), x1: X(x + w), len: s.length * a, off: w * a * .55 }); }); },
+  /** Big decorated HD text: 'word' is the 1998 WordArt, 'hero' the clean Web 2.0 headline. */
+  big(C, x, y, s, size, kind = 'hero', o = {}) { C.hd.push((g, X, Y, a, b) => { const sz = size * b, at = { 'font-size': sz, 'font-family': 'Archivo, sans-serif', 'font-weight': 900, 'text-anchor': o.center ? 'middle' : 'start' }; if (o.fit) at.textLength = Math.min(o.fit * a, s.length * sz * .62), at.lengthAdjust = 'spacingAndGlyphs';
+    if (kind === 'word') { const gg = el('g', { transform: `translate(${X(x)} ${Y(y)}) skewX(-8)` }, g); txt(gg, 3, 3, s, Object.assign({}, at, { fill: '#000', opacity: .6 })); txt(gg, 0, 0, s, Object.assign({}, at, { fill: grad(g, [[0, '#fff36a'], [.5, '#ffa21a'], [1, '#e8261a']]), stroke: '#7a1000', 'stroke-width': 1.2 })); }
+    else { txt(g, X(x) + 1, Y(y) + 1.5, s, Object.assign({}, at, { fill: '#000', opacity: .25, 'font-weight': 800 })); txt(g, X(x), Y(y), s, Object.assign({}, at, { fill: o.fill || '#fff', 'font-weight': 800 })); } }); },
+  /** Front text that blinks (the <blink> tag). */
+  blink(C, x, y, s, col, center) { C.hd.push((g, X, Y, a, b) => htxt(el('g', { class: 'blink' }, g), center ? X(x) : X(x), Y(y) + b * .76, s, a / .6, { fill: rgb(col), 'font-weight': 700, 'text-anchor': center ? 'middle' : 'start', textLength: s.length * a, lengthAdjust: 'spacingAndGlyphs' })); },
+  /** The hand cursor of a rollover menu. */
+  hand(C, x, y) { C.hd.push((g, X, Y, a, b) => { const x0 = X(x), y0 = Y(y), s = b / 16; el('path', { d: `M${x0} ${y0} l0 ${13 * s} l${3 * s} ${-3 * s} l${2.5 * s} ${5 * s} l${2 * s} ${-1 * s} l${-2.5 * s} ${-5 * s} l${4.5 * s} 0 Z`, fill: '#fff', stroke: '#000', 'stroke-width': .9 }, g); }); },
+};
+setInterval(() => { for (const m of MARQ) { m.off = (m.off + 2) % (m.x1 - m.x0 + m.len); m.t.setAttribute('x', m.x1 - m.off); } }, 50);
+setInterval(() => document.querySelectorAll('.blink').forEach((b) => b.setAttribute('opacity', b.getAttribute('opacity') === '0.15' ? '1' : '0.15')), 520);
+
+const SPECIAL = { pizza: 'Large pie + 2 sodas for $9.99', bank: 'Free checking with direct deposit', grocery: 'Fresh bread every morning at 7', tailor: 'Suits altered in 48 hours', fastfood: 'Double Barn burger $1.99', cinema: 'Tuesday matinee only $4', bar: 'Happy hour 5 - 7 pm, every day', electronics: 'Prepaid SIM cards in stock', phones: 'Free phone with a 2-year plan', cyber: '1 hour $2 - Wi-Fi $3 a day', motel: 'Weekly rates available', laundry: 'Wash & fold 89c a pound', hotel: 'Weekend package $129', pawn: 'We buy gold - best prices', deli: 'Pastrami on rye $5.50', parking: 'Overnight $12' };
+const GROUP = { pizza: 'food', fastfood: 'food', deli: 'food', grocery: 'store', bank: 'store', tailor: 'store', laundry: 'store', pawn: 'store', parking: 'store', cinema: 'store', bar: 'bar', cyber: 'tech', electronics: 'tech', phones: 'tech', hotel: 'room', motel: 'room' };
+const PHOTO = { food: 'food', store: 'store', bar: 'bar', tech: 'tech', room: 'room' };
+const LIST = {
+  food: ['MENU', [['Cheese pie', '$8.50'], ['Pepperoni pie', '$9.75'], ['Slice + soda', '$2.50'], ['Garlic knots', '$1.95']]],
+  room: ['RATES', [['Single', '$89'], ['Double', '$119'], ['Suite', '$210'], ['Weekly', 'ask us']]],
+  tech: ['PRODUCTS', [['Prepaid SIM', '$9.99'], ['Charger', '$14.99'], ['Headphones', '$19.99'], ['Repairs', 'from $30']]],
+  bar: ['DRINKS', [['Draft beer', '$3.00'], ['House wine', '$4.50'], ['Happy hour', '5 - 7 pm'], ['Pool table', '$1 a game']]],
+  store: ['HOURS', [['Mon - Fri', '9 am - 7 pm'], ['Saturday', '10 am - 5 pm'], ['Sunday', 'closed'], ['Holidays', 'call us']]],
+};
+const POSTS = (name) => [['Feb 18, 2008', 'New winter hours', 'Starting this week we close an hour earlier on Sundays. Thank you for understanding, and stay warm out there!'], ['Feb 02, 2008', 'Thank you, neighbors!', `${name} was voted one of the best in the neighborhood by the readers of ${CITY} Online.`]];
+const FEAT = { bank: [['Accounts', 'card', 'Checking and savings with no hidden fees.'], ['Loans', 'star', 'Home, car and student loans at fair rates.'], ['Branches', 'pin', 'Twelve branches and 40 ATMs in the city.']], phones: [['Phones', 'phone', 'The newest handsets, free on a plan.'], ['Plans', 'chat', 'Talk and text from $29.99 a month.'], ['Stores', 'pin', 'A store in every district.']], hotel: [['Rooms', 'bed', 'Quiet rooms with a view of the city.'], ['Dining', 'fork', 'Breakfast served from 6 am.'], ['Location', 'pin', 'Steps from the theaters and the docks.']], fastfood: [['Menu', 'fork', 'Burgers, fries and shakes, hot and fast.'], ['Deals', 'star', 'Two Double Barns for $3, all week.'], ['Locations', 'pin', 'Open late in every district.']], cinema: [['Showtimes', 'star', 'Six screens and the late show on Fridays.'], ['Tickets', 'card', 'Buy online and skip the line.'], ['Find us', 'pin', 'Right on the square, by the station.']] };
+const SLOGAN = { bank: ['Banking that works', 'as hard as you do.'], phones: ['Talk more,', 'pay less.'], hotel: ['Your home', 'in the city.'], fastfood: ['Hot, fast', 'and cheap.'], cinema: ['The best seats', 'in town.'] };
+const BOXIN = { bank: ['ONLINE BANKING', 'User ID', 'Sign in', 'lock'], phones: ['FIND A STORE', 'ZIP code', 'Go', 'pin'], hotel: ['RESERVATIONS', 'Check-in', 'Search', 'bed'], fastfood: ['FIND A LOCATION', 'ZIP code', 'Go', 'pin'], cinema: ['SHOWTIMES', 'Date', 'Go', 'star'] };
+
+/** One business site in one of the six templates; each template is a year of the web. */
 function bizSite(W, H, tpl, kind, th, r, opt = {}) {
   const C = new Cells(W, H, th.page), [name, art] = BIZ[kind], year = 1958 + Math.floor(r() * 48), addr = `${10 + Math.floor(r() * 880)} ${STREETS[Math.floor(r() * STREETS.length)]}`;
-  const phone = `555-${String(1000 + Math.floor(r() * 9000))}`, open = r() < 0.7, cw = Math.min(W - 4, 60), x0 = Math.floor((W - cw) / 2);
+  const phone = `555-${String(1000 + Math.floor(r() * 9000))}`, open = r() < 0.7, cw = Math.min(W - 6, 60), x0 = Math.floor((W - cw) / 2), seed = Math.floor(r() * 1e9);
+  const pick = (a) => a[Math.floor(r() * a.length)], grp = GROUP[kind], hours = open ? 'OPEN NOW' : 'CLOSED NOW - opens at 11 am', ok = open ? GREEN : RED;
+  const light = lum(th.bg) > 128, soft = light ? mix(th.bg, th.bar, .35) : lite(th.bg, .07), edge = light ? dark(th.bar, .25) : lite(th.bg, .25);
   C.fill(x0, 0, cw, H, th.bg);
-  const hours = open ? 'OPEN NOW' : 'CLOSED NOW - opens at 11 am';
-  const navBar = (y) => { C.fill(x0, y, cw, 1, th.bar); let cx = x0 + 1; NAV(kind).forEach((n, i) => { C.put(cx, y, n, th.barFg, th.bar, { u: i > 0 }); cx += n.length + 3; if (i < 3) C.put(cx - 2, y, '|', th.barFg, th.bar); }); };
-  const banner = (y, h = 4) => { C.fill(x0, y, cw, h, th.head); art.forEach((l, i) => C.put(x0 + 1, y + i + (h > 3 ? 0 : 0), l, th.headFg, th.head)); C.put(x0 + 12, y + 1, name.toUpperCase(), th.headFg, th.head, { b: 1 }); C.put(x0 + 12, y + 2, `Since ${year} - ${CITY}`, th.headFg, th.head); };
-  let y = 0;
-  if (opt.p404) { banner(0); navBar(4); C.put(x0 + 2, 6, '404 Not Found', th.fg, null, { b: 1 }); C.wrap(x0 + 2, 8, cw - 4, 'The page you are looking for is not here. It may have moved, or it was never here at all.', th.fg); C.rich(x0 + 2, 11, 'Go back to the [home page].', th.fg, th.link); return C; }
-  if (tpl === 'Classic') {
-    banner(0); navBar(4); y = 6;
-    C.put(x0 + 2, y, 'Welcome!', th.fg, null, { b: 1 }); y += 2; y += C.wrap(x0 + 2, y, cw - 4, LOREM, th.fg) + 1;
-    C.put(x0 + 2, y, hours, open ? GREEN : RED, null, { b: 1 }); y += 2;
-    for (const [a, b] of [['Hours', 'Daily 11 am - 10 pm'], ['Address', addr], ['Phone', phone]]) { C.put(x0 + 2, y, a, th.dim); C.put(x0 + 12, y, b, th.fg); y++; }
-    y++; C.rich(x0 + 2, y, 'See our [menu] or [get in touch].', th.fg, th.link);
-  } else if (tpl === 'Side') {
-    banner(0); navBar(4); y = 6; const mw = cw - 22;
-    C.put(x0 + 2, y, 'Welcome!', th.fg, null, { b: 1 }); C.wrap(x0 + 2, y + 2, mw - 2, LOREM + ' ' + LOREM, th.fg, null, 9);
-    C.fill(x0 + mw + 1, y, 20, 10, th.bar); C.put(x0 + mw + 2, y, 'HOURS', th.barFg, th.bar, { b: 1 }); C.put(x0 + mw + 2, y + 1, '11 am - 10 pm', th.barFg, th.bar); C.put(x0 + mw + 2, y + 2, hours.slice(0, 18), open ? GREEN : RED, th.bar, { b: 1 });
-    C.put(x0 + mw + 2, y + 4, 'FIND US', th.barFg, th.bar, { b: 1 }); C.put(x0 + mw + 2, y + 5, addr, th.barFg, th.bar); C.put(x0 + mw + 2, y + 6, phone, th.barFg, th.bar);
-    C.rich(x0 + mw + 2, y + 8, '[Showtimes]', th.barFg, th.link, th.bar);
-  } else if (tpl === 'Center') {
-    C.center(x0, cw, 1, '~*~ ' + name + ' ~*~', th.link, null, { b: 1 }); art.forEach((l, i) => C.center(x0, cw, 3 + i, l, th.fg));
-    C.center(x0, cw, 7, 'Welcome to our homepage!!', th.fg, null, { b: 1 }); C.center(x0, cw, 8, '*** NEW: two-for-one on Tuesdays ***', RED);
-    y = 10; for (const n of NAV(kind).slice(1).concat(['Guestbook', 'Links'])) { C.center(x0, cw, y, n, th.link, null, { u: 1 }); y++; }
-    C.center(x0, cw, y + 1, hours, open ? GREEN : RED, null, { b: 1 }); C.center(x0, cw, y + 2, addr + ' - ' + phone, th.dim);
-    C.center(x0, cw, y + 4, 'You are visitor number', th.dim);
-    badgesRow(C, x0, cw, y + 5, ['counter'], r, true); badgesRow(C, x0, cw, y + 8, ['best', 'html', 'guest'].slice(0, 2 + Math.floor(r() * 2)), r);
-  } else if (tpl === 'LeftNav') {
-    banner(0); y = 5; const nw = 14;
-    C.fill(x0, 4, nw, H, th.bar);
-    NAV(kind).concat(['Rooms', 'Gallery']).forEach((n, i) => { C.fill(x0 + 1, y + i * 2, nw - 2, 1, th.head); C.put(x0 + 2, y + i * 2, n, th.headFg, th.head); });
-    C.put(x0 + nw + 2, y, 'Welcome!', th.fg, null, { b: 1 }); y += 2; y += C.wrap(x0 + nw + 2, y, cw - nw - 4, LOREM, th.fg) + 1;
-    C.put(x0 + nw + 2, y, hours, open ? GREEN : RED, null, { b: 1 }); C.put(x0 + nw + 2, y + 1, addr, th.dim); C.put(x0 + nw + 2, y + 2, phone, th.dim);
-    if (r() < 0.6) badgesRow(C, x0 + nw, cw - nw, y + 5, ['best'], r);
-  } else if (tpl === 'Corporate') {
-    const dk = th.head[0] + th.head[1] + th.head[2] > 600 ? [40, 44, 52] : th.head;
-    C.fill(x0, 0, cw, 2, dk); C.put(x0 + 2, 0, name.toUpperCase(), [255, 255, 255], dk, { b: 1 }); C.put(x0 + 2, 1, 'Personal  Business  About  Careers', [200, 205, 215], dk);
-    C.fill(x0, 2, cw, 5, th.bar); const sl = { bank: ['Banking that works', 'as hard as you do.'], phones: ['Talk more,', 'pay less.'], hotel: ['Your home', 'in the city.'], fastfood: ['Hot, fast', 'and cheap.'], cinema: ['The best seats', 'in town.'] }[kind] || ['Welcome', '']; C.put(x0 + 3, 3, sl[0], th.barFg, th.bar, { b: 1 }); C.put(x0 + 3, 4, sl[1], th.barFg, th.bar); C.rich(x0 + 3, 5, '[Learn more >>]', th.barFg, th.link, th.bar);
-    const bw = Math.floor((cw - 4) / 3); (kind === 'bank' ? ['Accounts', 'Loans', 'Branches'] : kind === 'phones' ? ['Phones', 'Plans', 'Stores'] : kind === 'hotel' ? ['Rooms', 'Dining', 'Location'] : ['Menu', 'Deals', 'Locations']).forEach((t, i) => { const bx = x0 + 1 + i * (bw + 1); C.fill(bx, 8, bw, 6, [244, 245, 248]); C.put(bx + 1, 8, t, th.fg, [244, 245, 248], { b: 1 }); C.wrap(bx + 1, 10, bw - 2, 'Simple, safe and close to home.', th.dim, [244, 245, 248], 3); });
-    C.put(x0 + 2, 15, hours, open ? GREEN : RED, null, { b: 1 }); C.put(x0 + 2, 16, addr + '  ' + phone, th.dim);
-    C.put(x0 + 2, H - 2, `(c) 2008 ${name}.${kind === 'bank' ? ' Member FDIC.' : ''} Privacy | Terms`, th.dim);
-    C.hd.push((g, X, Y, cw2, ch2) => { const lx = X(x0 + cw - 4), ly = Y(H - 2); el('rect', { x: lx, y: ly + 1, width: cw2 * 1.6, height: ch2 - 3, rx: 2, fill: '#c9a227' }, g); el('rect', { x: lx + cw2 * 0.4, y: ly - ch2 * 0.1, width: cw2 * 0.8, height: ch2 * 0.6, rx: cw2 * 0.4, fill: 'none', stroke: '#c9a227', 'stroke-width': 1.4 }, g); });
-  } else {
-    C.put(x0 + 2, 1, name, th.fg, null, { b: 1 }); C.wrap(x0 + 2, 3, cw - 4, 'Open every day. ' + addr + '. Call ' + phone + '.', th.fg);
-    ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'].forEach((l, i) => C.put(x0 + 2, 6 + i, l, th.head[0] + th.head[1] > 400 ? th.headFg : th.head));
-    badgesRow(C, x0, cw, 11, ['uc'], r);
+  const navBevel = (y) => { let cx = x0 + 1; NAV(kind).forEach((n, i) => { const w = n.length + 2; C.fill(cx, y, w, 1, th.bar); K.bevel(C, cx, y, w, 1, th.bar, i === 0); C.put(cx + 1, y, n, th.barFg, th.bar, { b: i === 0 }); cx += w + 1; }); };
+  const header = () => { C.fill(x0, 0, cw, 4, th.head); K.bevel(C, x0, 0, cw, 4, th.head); art.forEach((l, i) => C.put(x0 + 2, i, l, th.headFg, th.head)); C.put(x0 + 13, 1, name.toUpperCase(), th.headFg, th.head, { b: 1 }); C.put(x0 + 13, 2, `Since ${year} - ${CITY}`, th.headFg, th.head); };
+  const table = (x, y, w, rows) => rows.forEach(([a, b2], i) => { const bg = i % 2 ? th.bg : soft; C.fill(x, y + i, w, 1, bg); C.put(x + 1, y + i, a, th.fg, bg); C.put(x + w - 1 - b2.length, y + i, b2, th.fg, bg, { b: 1 }); });
+  const footer = () => { K.hr(C, x0 + 2, H - 4, cw - 4, 'groove', edge); C.center(x0, cw, H - 3, NAV(kind).join(' | '), th.link, null, { u: 1 }); C.center(x0, cw, H - 2, `(c) ${2003 + Math.floor(r() * 5)} ${name}`, th.dim); };
+
+  if (opt.p404) {
+    K.tile(C, x0, cw, 'dots', th.page); header(); navBevel(4);
+    C.put(x0 + 2, 7, '404 - Page Not Found', th.fg, null, { b: 1 });
+    K.broken(C, x0 + 2, 9, 14, 4); C.put(x0 + 5, 9, 'specials.gif', th.dim);
+    C.wrap(x0 + 18, 9, cw - 20, 'The page you are looking for is not here. It may have moved, or it was never here at all.', th.fg);
+    C.rich(x0 + 18, 13, 'Go back to the [home page].', th.fg, th.link);
+    return C;
   }
-  if ((tpl === 'Classic' || tpl === 'Side') && r() < 0.5) badgesRow(C, x0, cw, H - 4, ['best'], r);
+  if (tpl === 'Classic') { // 2001: tables, bevelled buttons, a framed photo, the special of the day
+    K.tile(C, x0, cw, pick(['stripes', 'dots', 'checks', 'diag']), th.page); header(); navBevel(4);
+    K.photo(C, x0 + 2, 6, 16, 6, PHOTO[grp], seed);
+    C.put(x0 + 20, 6, 'Welcome!', th.fg, null, { b: 1 }); C.wrap(x0 + 20, 7, cw - 22, LOREM, th.fg, null, 5);
+    K.hr(C, x0 + 2, 13, cw - 4, 'groove', edge);
+    C.put(x0 + 2, 14, "TODAY'S SPECIAL", th.link, null, { b: 1 }); C.put(x0 + 2, 15, SPECIAL[kind], th.fg); K.burst(C, x0 + cw - 6, 15, 'NEW!');
+    K.hr(C, x0 + 2, 17, cw - 4, 'groove', edge);
+    const [lt, rows] = LIST[grp]; C.put(x0 + 2, 18, lt, th.dim, null, { b: 1 }); table(x0 + 2, 19, 30, rows);
+    C.put(x0 + 34, 19, hours, ok, null, { b: 1 }); C.put(x0 + 34, 20, addr, th.fg); C.put(x0 + 34, 21, phone, th.fg);
+    if (r() < .5) badgesRow(C, x0 + 34, 22, 24, ['best'], r);
+    footer();
+  } else if (tpl === 'Side') { // 2005: a blog in CSS, gloss, tabs, RSS, rounded boxes, a map and stars
+    K.tile(C, x0, cw, 'diag', th.page); K.shadow(C, x0, cw, H);
+    C.fill(x0, 0, cw, 4, th.head); K.gloss(C, x0, 0, cw, 4, th.head);
+    C.put(x0 + 2, 0, name.toUpperCase(), th.headFg, th.head, { b: 1 }); C.put(x0 + 2, 1, `${pick(['Fresh', 'Friendly', 'Local', 'Proud'])} since ${year}`, th.headFg, th.head);
+    art.forEach((l, i) => C.put(x0 + cw - art[0].length - 2, i, l, th.headFg, th.head));
+    let tx = x0 + 2; NAV(kind).forEach((n, i) => { const w = n.length + 2, on = i === 0, col = on ? th.bg : dark(th.head, .18); K.tab(C, tx, 3, w, col, on); C.put(tx + 1, 3, n, on ? th.fg : th.headFg, null, { b: on }); tx += w + 2; });
+    const mw = cw - 23, sx = x0 + mw + 1, P = POSTS(name);
+    C.put(x0 + 2, 5, 'LATEST NEWS', th.dim, null, { b: 1 }); K.rss(C, x0 + 14, 5);
+    C.put(x0 + 2, 7, P[0][0], th.dim); C.put(x0 + 2, 8, P[0][1], th.link, null, { b: 1 });
+    K.photo(C, x0 + 2, 9, 9, 3, PHOTO[grp], seed, { frame: 'line' }); C.wrap(x0 + 13, 9, mw - 13, P[0][2], th.fg, null, 4); C.rich(x0 + 13, 13, '[Read more >>]', th.fg, th.link);
+    K.hr(C, x0 + 2, 14, mw - 3, 'dots', edge);
+    C.put(x0 + 2, 15, P[1][0], th.dim); C.put(x0 + 2, 16, P[1][1], th.link, null, { b: 1 }); C.wrap(x0 + 2, 17, mw - 3, P[1][2], th.fg, null, 3);
+    K.box(C, sx, 5, 21, 6, soft, edge, th.head); C.fill(sx, 5, 21, 1, th.head); C.put(sx + 1, 5, 'HOURS', th.headFg, th.head, { b: 1 });
+    C.fill(sx + 1, 6, 19, 4, soft); C.put(sx + 1, 6, 'Mon-Sat 11 - 10', th.fg, soft); C.put(sx + 1, 7, 'Sunday  12 - 9', th.fg, soft); C.put(sx + 1, 9, hours.slice(0, 19), ok, soft, { b: 1 });
+    K.box(C, sx, 12, 21, 9, soft, edge, th.head); C.fill(sx, 12, 21, 1, th.head); C.put(sx + 1, 12, 'FIND US', th.headFg, th.head, { b: 1 });
+    K.map(C, sx + 1, 13, 19, 4, seed); C.fill(sx + 1, 17, 19, 3, soft); C.put(sx + 1, 17, addr, th.fg, soft); C.put(sx + 1, 18, phone, th.fg, soft); C.rich(sx + 1, 19, '[Directions]', th.fg, th.link, soft);
+    K.box(C, sx, 22, 21, 4, soft, edge, th.head); C.fill(sx, 22, 21, 1, th.head); C.put(sx + 1, 22, 'REVIEWS', th.headFg, th.head, { b: 1 });
+    C.fill(sx + 1, 23, 19, 2, soft); K.stars(C, sx + 1, 23, 4); C.put(sx + 1, 24, `4.${2 + Math.floor(r() * 7)} - ${12 + Math.floor(r() * 60)} reviews`, th.dim, soft);
+    C.put(x0 + 2, H - 2, `(c) 2008 ${name} - Powered by Blogsmith`, th.dim);
+  } else if (tpl === 'Center') { // 1998: the homepage that was never updated
+    const night = lum(th.page) < 60 ? th.page : [8, 8, 40], fg = [255, 255, 255], link = [0, 255, 255];
+    C.fill(0, 0, W, H, night); K.tile(C, W, 0, 'stars', night);
+    K.marquee(C, x0, 0, cw, `*** Welcome to ${name}! *** NEW: two-for-one on Tuesdays *** Sign our guestbook! *** Thanks for visiting ***`, [255, 255, 0]);
+    K.big(C, x0 + cw / 2, 3.8, name, 2.3, 'word', { center: 1, fit: cw - 4 });
+    K.hr(C, x0 + 6, 5, cw - 12, 'rainbow');
+    K.photo(C, x0 + Math.floor((cw - 18) / 2), 6, 18, 6, PHOTO[grp], seed, { frame: 'line' });
+    C.center(x0, cw, 13, 'Welcome to our homepage!!', fg, null, { b: 1 });
+    K.blink(C, x0 + cw / 2, 14, `*** ${SPECIAL[kind]} ***`, [255, 60, 60], true);
+    let y = 16; for (const n of [NAV(kind)[1], 'About Us', 'Photos', 'Guestbook', 'Links', 'E-mail me!']) { const s = '> ' + n, lx = x0 + Math.floor((cw - s.length) / 2); C.put(lx, y, '>', [255, 255, 0]); C.put(lx + 2, y, n, link, null, { u: 1 }); if (n === 'Guestbook') K.burst(C, lx + s.length + 3, y + .5, 'NEW', [226, 30, 30], .9); y++; }
+    C.center(x0, cw, y, hours, open ? [80, 255, 80] : [255, 90, 90], null, { b: 1 }); C.center(x0, cw, y + 1, addr + ' - ' + phone, [170, 170, 255]);
+    C.center(x0, cw, y + 3, 'You are visitor number', [170, 170, 255]); badgesRow(C, x0, cw, y + 4, ['counter'], r, true);
+    badgesRow(C, x0, cw, y + 7, ['best', 'html', 'guest'].slice(0, 2 + Math.floor(r() * 2)), r);
+    C.center(x0, cw, H - 1, 'Last updated: March 14, 2003', [120, 120, 180]);
+  } else if (tpl === 'LeftNav') { // 2003: Dreamweaver and Flash, a strip of photo, rollover buttons
+    K.tile(C, x0, cw, 'checks', th.page); K.shadow(C, x0, cw, H);
+    K.photo(C, x0, 0, cw, 4, 'sky', seed, { back: 1, frame: 'none' });
+    K.veil(C, x0 + cw - 16, 0, 15, 1); C.put(x0 + cw - 15, 0, '[Skip intro >>]', [255, 255, 255]);
+    C.fill(x0, 4, cw, 2, th.head); K.gloss(C, x0, 4, cw, 2, th.head); C.put(x0 + 2, 4, name.toUpperCase(), th.headFg, th.head, { b: 1 }); C.put(x0 + 2, 5, `Since ${year} - ${CITY}`, th.headFg, th.head);
+    const nw = 14; C.fill(x0, 6, nw, H - 6, th.bar);
+    NAV(kind).concat(grp === 'room' ? ['Rooms', 'Gallery'] : ['Gallery', 'Links']).forEach((n, i) => { const yy = 7 + i * 2, col = i === 1 ? lite(th.head, .3) : th.head; C.fill(x0 + 1, yy, nw - 2, 1, col); K.bevel(C, x0 + 1, yy, nw - 2, 1, col, i === 0); C.put(x0 + 2, yy, n, th.headFg, col, { b: i === 1 }); if (i === 1) K.hand(C, x0 + nw - 4, yy + .45); });
+    const cx = x0 + nw + 2, cwid = cw - nw - 4;
+    C.put(cx, 7, 'Welcome!', th.fg, null, { b: 1 }); C.wrap(cx, 8, cwid, LOREM, th.fg, null, 4);
+    const [lt, rows] = LIST[grp]; C.put(cx, 13, lt, th.dim, null, { b: 1 }); table(cx, 14, Math.min(cwid, 32), rows);
+    const bl = grp === 'room' ? 'Book now' : grp === 'food' ? 'Order online' : 'Contact us'; C.fill(cx, 19, bl.length + 4, 1, th.head); K.bevel(C, cx, 19, bl.length + 4, 1, th.head); C.put(cx + 2, 19, bl, th.headFg, th.head, { b: 1 });
+    C.put(cx, 21, hours, ok, null, { b: 1 }); C.put(cx, 22, addr, th.dim); C.put(cx, 23, phone, th.dim);
+    if (r() < .6) badgesRow(C, cx, 12, 25, ['best'], r);
+    C.put(cx, H - 2, 'Site by Pixelworks Web Design', th.dim);
+  } else if (tpl === 'Corporate') { // 2008: Web 2.0, gloss, a hero with a reflected photo, aqua buttons, glossy icons
+    const ab = mix(th.link, [50, 130, 220], .55), dk = lum(th.head) > 200 ? [40, 44, 52] : dark(th.head, .25), hero = lum(th.head) > 200 ? th.bar : th.head, feat = FEAT[kind] || FEAT.bank, sl = SLOGAN[kind] || ['Welcome', ''], bx2 = BOXIN[kind] || BOXIN.bank;
+    K.shadow(C, x0, cw, H);
+    C.fill(x0, 0, cw, 2, dk); K.gloss(C, x0, 0, cw, 2, dk); K.icon(C, x0 + 1, 0, feat[0][1], th.link);
+    C.put(x0 + 6, 0, name.toUpperCase(), [255, 255, 255], dk, { b: 1 }); C.put(x0 + 6, 1, kind === 'bank' ? 'Member FDIC' : 'Since ' + year, lite(dk, .55), dk);
+    C.fill(x0 + cw - 18, 0, 12, 1, [255, 255, 255]); K.field(C, x0 + cw - 18, 0, 12); C.put(x0 + cw - 17, 0, 'Search', [150, 150, 150], [255, 255, 255]); K.btn(C, x0 + cw - 4, 0, 2, ab); C.put(x0 + cw - 4, 0, 'Go', [255, 255, 255], null, { b: 1 });
+    C.fill(x0, 2, cw, 1, lite(dk, .15)); let nx = x0 + 2; ['Personal', 'Business', 'About Us', 'Careers', 'Contact'].forEach((n, i) => { C.put(nx, 2, n, i ? lite(dk, .7) : [255, 255, 255], lite(dk, .15), { b: !i }); nx += n.length + 3; });
+    C.fill(x0, 3, cw, 8, hero); K.fade(C, x0, 3, cw, 8, lite(hero, .18), dark(hero, .28));
+    K.big(C, x0 + 3, 5.4, sl[0], 1.5); K.big(C, x0 + 3, 7.1, sl[1], 1.5);
+    C.put(x0 + 3, 8, 'Simple, safe and close to home.', lite(hero, .75)); K.btn(C, x0 + 3, 9, 14, ab); C.put(x0 + 4, 9, 'Learn more >>', [255, 255, 255], null, { b: 1 });
+    K.photo(C, x0 + cw - 21, 4, 18, 4, PHOTO[grp], seed, { frame: 'none', reflect: 1 }); K.burst(C, x0 + cw - 21, 4.2, 'NEW!', [226, 30, 30], 1.4);
+    const bw = Math.floor((cw - 4) / 3);
+    feat.forEach(([t, ic, d], i) => { const bx = x0 + 1 + i * (bw + 1), bg = [248, 249, 251]; K.box(C, bx, 12, bw, 7, bg, [208, 213, 222]); C.fill(bx + 1, 12, bw - 2, 7, bg); K.icon(C, bx + 1, 12.5, ic, th.link); C.put(bx + 6, 13, t, th.fg, bg, { b: 1 }); C.wrap(bx + 6, 14, bw - 7, d, th.dim, bg, 3); C.rich(bx + 6, 17, '[More >>]', th.fg, th.link, bg); });
+    const lw = Math.floor(cw * .55), lb = [244, 246, 250]; K.box(C, x0 + 1, 20, lw, 5, lb, [208, 213, 222], dk); C.fill(x0 + 1, 20, lw, 1, dk); C.put(x0 + 2, 20, bx2[0], [255, 255, 255], dk, { b: 1 });
+    C.fill(x0 + 2, 21, lw - 7, 3, lb); C.put(x0 + 2, 22, bx2[1], th.fg, lb); C.fill(x0 + 11, 22, 12, 1, [255, 255, 255]); K.field(C, x0 + 11, 22, 12); K.btn(C, x0 + 25, 22, bx2[2].length + 1, ab); C.put(x0 + 25, 22, bx2[2], [255, 255, 255], null, { b: 1 });
+    C.put(x0 + lw + 3, 21, hours, ok, null, { b: 1 }); C.put(x0 + lw + 3, 22, addr, th.dim); C.put(x0 + lw + 3, 23, phone, th.dim);
+    K.hr(C, x0 + 1, H - 3, cw - 2, 'groove', [200, 204, 212]); C.put(x0 + 2, H - 2, `(c) 2008 ${name}.${kind === 'bank' ? ' Member FDIC.' : ''} Privacy | Terms | Site map`, th.dim);
+    C.hd.push((g, X, Y, cw2, ch2) => { const lx = X(x0 + cw - 4), ly = Y(H - 2); el('rect', { x: lx, y: ly + 1, width: cw2 * 1.6, height: ch2 - 3, rx: 2, fill: '#c9a227' }, g); el('rect', { x: lx + cw2 * 0.4, y: ly - ch2 * 0.1, width: cw2 * 0.8, height: ch2 * 0.6, rx: cw2 * 0.4, fill: 'none', stroke: '#c9a227', 'stroke-width': 1.4 }, g); });
+  } else { // Bare: free hosting, the host's ad on top, the picture that never loaded
+    const wh = [255, 255, 255], ink = [0, 0, 0];
+    C.fill(0, 0, W, H, wh); K.ad(C, x0, 0, cw, 2, 5, false); C.center(x0, cw, 2, `Free web pages by ${CITY}Net - get your own site today!`, [0, 0, 204], null, { u: 1 });
+    C.put(x0 + 2, 4, name, ink, null, { b: 1 });
+    K.broken(C, x0 + 2, 6, 14, 5); C.put(x0 + 5, 6, 'logo.jpg', [90, 90, 90]);
+    C.wrap(x0 + 18, 6, cw - 20, 'Open every day. ' + addr + '. Call ' + phone + '. Cash only.', ink);
+    ['   /\\', '  /!!\\    UNDER CONSTRUCTION', ' /____\\   Our new website is coming soon!'].forEach((l, i) => C.put(x0 + 2, 13 + i, l, [200, 120, 0]));
+    badgesRow(C, x0, cw, 17, ['uc'], r); C.rich(x0 + 2, 21, 'Questions? [Email the webmaster]', ink, [0, 0, 204]);
+    K.hr(C, x0 + 2, 23, cw - 4); C.put(x0 + 2, 24, `Hosted by ${CITY}Net`, [120, 120, 120]);
+  }
   return C;
 }
 /** A row of 88 x 31 badges (11 x 2 cells each), centred; drawn in HD over the cells. */
@@ -530,70 +835,149 @@ setInterval(() => document.querySelectorAll('.shovel').forEach((s) => { const up
 </script>
 <script>
 // ---- the canonical pages ----
-function portalPage(W, H, rows) {
-  const t = PORTAL, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 84), x0 = Math.floor((W - cw) / 2);
-  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 3, t.head);
-  [' .--. ', '( @@ )', " '--' "].forEach((l, i) => C.put(x0 + 1, i, l, [255, 204, 0], t.head));
-  C.put(x0 + 9, 0, `${CITY} Online`, t.headFg, t.head, { b: 1 }); C.put(x0 + 9, 1, 'Your city, your news, your mail.', [200, 214, 240], t.head);
-  C.fill(x0, 3, cw, 1, t.bar); let cx = x0 + 1; for (const n of ['Home', 'News', 'Weather', 'Directory', 'Mail', 'Search']) { C.put(cx, 3, n, t.barFg, t.bar, { u: n !== 'Home', b: n === 'Home' }); cx += n.length + 3; }
-  const lw = Math.floor(cw * 0.62); let y = 5;
-  C.put(x0 + 2, y, 'TOP STORIES - Thu Feb 21, 2008', t.fg, null, { b: 1 }); y += 2;
-  for (const h of ['Power cut leaves Marlow Ave dark for an hour', 'Traffic lights on 9th St fail at rush hour', 'Lunar eclipse tonight: clear skies expected', 'Harbor Savings opens new branch on Canal St', 'Rialto brings back the late show', 'City council debates new bus line']) { C.put(x0 + 2, y, '*', t.dim); C.put(x0 + 4, y, h.slice(0, lw - 6), t.link, null, { u: 1 }); y += 1; }
-  y += 1; C.put(x0 + 2, y, 'MOST READ', t.fg, null, { b: 1 }); y += 1;
-  for (const h of ['Where to eat after midnight', 'The best coffee near the docks']) { C.put(x0 + 4, ++y, h, t.link, null, { u: 1 }); }
-  const rx = x0 + lw + 2, rw = cw - lw - 3;
-  C.fill(rx, 5, rw, 6, [240, 244, 252]); C.put(rx + 1, 5, 'WEATHER', t.fg, [240, 244, 252], { b: 1 }); C.put(rx + 1, 7, 'Tonight: clear', t.fg, [240, 244, 252]); C.put(rx + 1, 8, '28 F  wind NW 8', t.dim, [240, 244, 252]);
-  C.hd.push((g, X, Y, a, b) => { el('circle', { cx: X(rx + rw - 4), cy: Y(7.6), r: b * 0.8, fill: '#e9edf5', stroke: '#aab4c8' }, g); });
-  C.fill(rx, 12, rw, 4, [255, 248, 214]); C.put(rx + 1, 12, 'SEARCH THE WEB', t.fg, [255, 248, 214], { b: 1 }); C.fill(rx + 1, 14, rw - 6, 1, [255, 255, 255]); C.put(rx + rw - 4, 14, 'Go', t.barFg, [255, 204, 0], { b: 1 });
-  C.put(rx + 1, 17, 'DIRECTORY', t.fg, null, { b: 1 }); ['Food & drink', 'Shopping', 'Banks', 'Hotels', 'Night life'].forEach((d, i) => C.put(rx + 1, 18 + i, d, t.link, null, { u: 1 }));
+function portalPage(W, H) {
+  const t = PORTAL, C = new Cells(W, H, t.page), cw = Math.min(W - 4, 84), x0 = Math.floor((W - cw) / 2), lw = Math.floor(cw * .62), rx = x0 + lw + 2, rw = cw - lw - 3;
+  C.fill(x0, 0, cw, H, t.bg); K.tile(C, x0, cw, 'stripes', t.page); K.shadow(C, x0, cw, H);
+  C.fill(x0, 0, cw, 3, t.head); K.gloss(C, x0, 0, cw, 3, t.head);
+  C.hd.push((g, X, Y, a, b) => { const cx = X(x0 + 1) + b * 1.3, cy = Y(1.5), R = b * 1.2; el('circle', { cx, cy, r: R, fill: grad(g, [[0, '#ffe680'], [1, '#f2b400']]), stroke: '#a87a00' }, g); el('ellipse', { cx, cy, rx: R * .45, ry: R, fill: 'none', stroke: '#003399', 'stroke-width': 1.2 }, g); el('line', { x1: cx - R, x2: cx + R, y1: cy, y2: cy, stroke: '#003399', 'stroke-width': 1.2 }, g); el('ellipse', { cx, cy: cy - R * .45, rx: R * .7, ry: R * .35, fill: '#fff', opacity: .45 }, g); });
+  C.put(x0 + 7, 0, `${CITY} Online`, t.headFg, t.head, { b: 1 }); C.put(x0 + 7, 1, 'Your city, your news, your mail.', [200, 214, 240], t.head);
+  C.put(x0 + cw - 15, 0, 'Sign in | Mail', [255, 230, 120], t.head, { u: 1 }); if (cw >= 76) C.put(x0 + cw - 27, 1, 'Thu Feb 21, 2008  9:41 PM', [200, 214, 240], t.head);
+  C.fill(x0, 3, cw, 1, t.bar); K.gloss(C, x0, 3, cw, 1, t.bar); let cx = x0 + 2; for (const n of ['Home', 'News', 'Weather', 'Directory', 'Mail', 'Search']) { C.put(cx, 3, n, t.barFg, null, { u: n !== 'Home', b: n === 'Home' }); cx += n.length + 3; }
+  const aw = Math.min(cw - 4, 64); K.ad(C, x0 + Math.floor((cw - aw) / 2), 5, aw, 2, 5);
+  C.put(x0 + 2, 8, 'TOP STORIES', t.fg, null, { b: 1 }); C.put(x0 + 15, 8, 'Thu Feb 21, 2008', t.dim);
+  K.photo(C, x0 + 2, 10, 11, 4, 'blackout', 7, { frame: 'line' }); C.wrap(x0 + 15, 10, lw - 15, 'Power cut leaves Marlow Ave dark for an hour', t.link, null, 2); C.wrap(x0 + 15, 12, lw - 15, 'Shops closed early and the lights on 9th St went out at rush hour.', t.dim, null, 2);
+  let y = 15; for (const h of ['Traffic lights on 9th St fail at rush hour', 'Lunar eclipse tonight: clear skies expected', 'Harbor Savings opens new branch on Canal St', 'Rialto brings back the late show', 'City council debates new bus line']) { C.put(x0 + 2, y, '>', t.dim); C.put(x0 + 4, y, h.slice(0, lw - 5), t.link, null, { u: 1 }); y++; }
+  C.rich(x0 + 2, y, '[More news >>]', t.fg, t.link); y += 2; C.put(x0 + 2, y, 'MOST READ', t.fg, null, { b: 1 }); ['Where to eat after midnight', 'The best coffee near the docks'].forEach((h, i) => C.put(x0 + 2, y + 1 + i, `${i + 1}. ${h}`, t.link));
+  const wb = [240, 244, 252]; K.box(C, rx, 8, rw, 5, wb, [190, 200, 220]); C.fill(rx + 1, 8, rw - 2, 5, wb); C.put(rx + 1, 8, 'WEATHER', t.fg, wb, { b: 1 }); K.weather(C, rx + rw - 5, 9, 'moon'); C.put(rx + 1, 10, 'Tonight: clear', t.fg, wb); C.put(rx + 1, 11, '28 F  wind NW 8', t.dim, wb);
+  const sb = [255, 248, 214]; K.box(C, rx, 14, rw, 4, sb, [220, 200, 130]); C.fill(rx + 1, 14, rw - 2, 4, sb); C.hd.push((g, X, Y, a, b) => pixMap(g, X(rx + 1), Y(14) + (b - 16) / 2 + 1, 1, OWL16, OWLPAL)); C.put(rx + 5, 14, 'SEARCH THE WEB', t.fg, sb, { b: 1 }); C.fill(rx + 1, 16, rw - 7, 1, [255, 255, 255]); K.field(C, rx + 1, 16, rw - 7); K.soft(C, rx + rw - 5, 16, 4); C.put(rx + rw - 5, 16, ' Go', [0, 0, 0], null, { b: 1 });
+  C.put(rx + 1, 19, 'STOCKS', t.fg, null, { b: 1 }); [['HSB', '41.20', '+0.42'], ['CLM', '12.05', '-0.31'], ['VOLT', '7.88', '+0.10'], ['BRN', '3.15', '-0.02']].forEach(([s, p, d], i) => { const bg = i % 2 ? t.bg : [244, 246, 250]; C.fill(rx, 20 + i, rw, 1, bg); C.put(rx + 1, 20 + i, s, t.link, bg, { b: 1 }); C.put(rx + 7, 20 + i, p, t.fg, bg); C.put(rx + rw - 7, 20 + i, (d[0] === '+' ? '^' : 'v') + d, d[0] === '+' ? GREEN : RED, bg); });
+  C.put(rx + 1, 25, 'DIRECTORY', t.fg, null, { b: 1 }); ['Food & drink', 'Shopping', 'Banks', 'Night life'].forEach((d, i) => C.put(rx + 1, 26 + i, d, t.link, null, { u: 1 }));
   C.put(x0 + 2, H - 2, `(c) 2008 ${CITY} Online  -  Help  -  Privacy`, t.dim); badgesRow(C, x0 + cw - 14, 12, H - 4, ['powered'], rng(3));
-  if (rows !== undefined) for (let j = rows; j < H; j++) for (let i = 0; i < W; i++) { C.c[j][i] = { ch: ' ', fg: [0, 0, 0], bg: [255, 255, 255], u: 0, b: 0 }; }
-  if (rows !== undefined) C.hd = C.hd.filter(() => rows >= H - 4);
-  return C;
-}
-function searchPage(W, H, q) {
-  const t = SEARCHT, C = new Cells(W, H, t.bg), cols = ['#1d4fa0', '#d8452b', '#f2b51c', '#1d4fa0', '#2e9a48', '#d8452b', '#1d4fa0', '#f2b51c'];
-  C.put(2, 0, 'Web  Images  News  Maps  Local  more >>', t.link, null, { u: 1 });
-  if (!q) {
-    C.hd.push((g, X, Y, a, b) => { const tx = el('text', { x: X(W / 2), y: Y(6), 'text-anchor': 'middle', 'font-size': b * 3, 'font-family': 'Georgia, serif', 'font-weight': 700 }, g); [...'Lookwise'].forEach((ch, i) => { el('tspan', { fill: cols[i] }, tx).textContent = ch; }); });
-    C.fill(Math.floor(W / 2) - 20, 9, 40, 1, [255, 255, 255]); C.hd.push((g, X, Y) => el('rect', { x: X(W / 2 - 20), y: Y(9), width: X(W / 2 + 20) - X(W / 2 - 20), height: Y(10) - Y(9), fill: 'none', stroke: '#7f9db9' }, g));
-    C.center(0, W, 11, '[Lookwise Search]   [I\'m Feeling Lucky]', t.fg);
-    C.center(0, W, 14, 'Advertising - Business Solutions - About Lookwise', t.link, null, { u: 1 }); C.center(0, W, H - 2, '(c)2008 Lookwise', [119, 119, 119]);
-    return C;
-  }
-  C.hd.push((g, X, Y, a, b) => { const tx = el('text', { x: X(2), y: Y(3.3), 'font-size': b * 1.6, 'font-family': 'Georgia, serif', 'font-weight': 700 }, g); [...'Lookwise'].forEach((ch, i) => { el('tspan', { fill: cols[i] }, tx).textContent = ch; }); el('rect', { x: X(15), y: Y(2), width: X(55) - X(15), height: b, fill: '#fff', stroke: '#7f9db9' }, g); });
-  C.put(16, 2, q, t.fg, [255, 255, 255]); C.fill(0, 4, W, 1, t.bar); C.put(1, 4, 'Web', t.fg, t.bar, { b: 1 }); C.put(W - 30, 4, 'Results 0 of about 0', t.fg, t.bar);
-  C.wrap(2, 6, W - 6, `Your search - ${q} - did not match any documents.`, t.fg); C.put(2, 8, 'Suggestions:', t.fg);
-  ['Make sure all words are spelled correctly.', 'Try different keywords.', 'Try more general keywords.', 'Small shops often have no web site: try the phone book.'].forEach((s, i) => C.put(4, 9 + i, '- ' + s, t.fg));
   return C;
 }
 function mailPage(W, H) {
-  const t = MAILT, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 70), x0 = Math.floor((W - cw) / 2);
-  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 2, t.head); C.put(x0 + 2, 0, `${CITY} Online Mail`, t.headFg, t.head, { b: 1 }); C.put(x0 + 2, 1, 'Free web mail - 25 MB of storage!', [200, 214, 240], t.head);
-  C.fill(x0, 2, cw, 1, t.bar);
-  const bx = x0 + Math.floor(cw / 2) - 16; C.fill(bx, 5, 32, 10, [240, 244, 252]); C.put(bx + 2, 5, 'Sign in', t.fg, [240, 244, 252], { b: 1 });
-  C.put(bx + 2, 7, 'Number:', t.fg, [240, 244, 252]); C.fill(bx + 12, 7, 18, 1, [255, 255, 255]); C.put(bx + 12, 7, '555-0179', t.fg, [255, 255, 255]);
-  C.put(bx + 2, 9, 'Password:', t.fg, [240, 244, 252]); C.fill(bx + 12, 9, 18, 1, [255, 255, 255]); C.put(bx + 12, 9, '********', t.fg, [255, 255, 255]);
-  C.put(bx + 2, 11, '[ Sign in ]', t.barFg, [255, 214, 60], { b: 1 }); C.put(bx + 2, 13, 'Forgot password?', t.link, [240, 244, 252], { u: 1 });
-  C.wrap(x0 + 4, 17, cw - 8, 'New here? Sign up with your phone number: we send you a code by SMS. Your mail is protected with a secure connection.', t.fg);
+  const t = MAILT, C = new Cells(W, H, t.page), cw = Math.min(W - 4, 70), x0 = Math.floor((W - cw) / 2), lb = [240, 244, 252];
+  C.fill(x0, 0, cw, H, t.bg); K.tile(C, x0, cw, 'dots', t.page); K.shadow(C, x0, cw, H);
+  C.fill(x0, 0, cw, 2, t.head); K.gloss(C, x0, 0, cw, 2, t.head); K.icon(C, x0 + 1, 0, 'mail', [255, 190, 0]); C.put(x0 + 6, 0, `${CITY} Online Mail`, t.headFg, t.head, { b: 1 }); C.put(x0 + 6, 1, 'Free web mail for everyone in the city', [200, 214, 240], t.head);
+  C.fill(x0, 2, cw, 1, t.bar); K.gloss(C, x0, 2, cw, 1, t.bar);
+  const bx = x0 + 3, bw = 32; K.box(C, bx, 4, bw, 11, lb, [170, 186, 214], t.head); C.fill(bx, 4, bw, 1, t.head); C.put(bx + 2, 4, 'Sign in to your mail', t.headFg, t.head, { b: 1 }); C.fill(bx + 1, 5, bw - 2, 9, lb);
+  C.put(bx + 2, 6, 'Number:', t.fg, lb); C.fill(bx + 12, 6, 18, 1, [255, 255, 255]); K.field(C, bx + 12, 6, 18); C.put(bx + 13, 6, '555-0179', t.fg, [255, 255, 255]);
+  C.put(bx + 2, 8, 'Password:', t.fg, lb); C.fill(bx + 12, 8, 18, 1, [255, 255, 255]); K.field(C, bx + 12, 8, 18); C.put(bx + 13, 8, '********', t.fg, [255, 255, 255]);
+  C.put(bx + 12, 10, '[x] Remember me', t.dim, lb); K.btn(C, bx + 12, 12, 9, [40, 110, 210]); C.put(bx + 13, 12, 'Sign in', [255, 255, 255], null, { b: 1 }); C.put(bx + 2, 12, 'Forgot?', t.link, lb, { u: 1 });
+  const fx = bx + bw + 3; C.put(fx, 4, 'NEW HERE?', t.fg, null, { b: 1 }); K.burst(C, x0 + cw - 5, 5.5, '25 MB!', [226, 30, 30], 1.6);
+  [['lock', 'Secure connection'], ['chat', 'Sign up by SMS'], ['star', 'Spam filter']].forEach(([ic, s], i) => { K.icon(C, fx, 6 + i * 3, ic, [40, 110, 210]); C.put(fx + 5, 6.5 + i * 3 | 0, s, t.fg); });
+  C.wrap(x0 + 3, 17, cw - 6, 'New here? Sign up with your phone number: we send you a code by SMS. Your mail is protected with a secure connection.', t.dim);
   return C;
 }
 function wirePage(W, H) {
-  const t = WIRET, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 70), x0 = Math.floor((W - cw) / 2);
-  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 2, t.bar); C.put(x0 + 2, 0, 'streetwire', [255, 255, 255], t.bar, { b: 1 }); C.put(x0 + 2, 1, 'what the city is saying', [190, 205, 235], t.bar); C.put(x0 + cw - 16, 0, 'Sign in | Join', [255, 255, 255], t.bar);
-  const posts = [['mel_on_9th', '2 min ago', 'lights out on 9th again. third time this month??'], ['dockrat', '14 min ago', 'anyone else see the cop cars outside the Rialto'], ['petrovs_coffee', '1 hr ago', 'Open late tonight for the eclipse! Hot cocoa $1'], ['jules.k', '2 hr ago', 'bus 4 never came. walking home in the snow. great']];
-  let y = 3; for (const [u, when, s] of posts) { C.hd.push(((yy) => (g, X, Y, a, b) => el('rect', { x: X(x0 + 2), y: Y(yy), width: a * 4, height: b * 2 - 2, rx: 2, fill: '#c8d2e4' }, g))(y)); C.put(x0 + 7, y, u, t.link, null, { b: 1 }); C.put(x0 + 8 + u.length, y, when, t.dim); const n = C.wrap(x0 + 7, y + 1, cw - 10, s, t.fg); C.put(x0 + 7, y + 1 + n, 'Reply  Share', t.link, null, { u: 1 }); y += 3 + n; }
+  const t = WIRET, wide = W >= 60, C = new Cells(W, H, t.page), cw = Math.min(W - (wide ? 4 : 0), 72), x0 = Math.floor((W - cw) / 2), side = wide ? 21 : 0, mw = cw - side - (wide ? 1 : 0);
+  C.fill(x0, 0, cw, H, t.bg); if (wide) K.shadow(C, x0, cw, H);
+  C.fill(x0, 0, cw, 2, t.bar); K.gloss(C, x0, 0, cw, 2, t.bar); C.put(x0 + 2, 0, 'streetwire', [255, 255, 255], t.bar, { b: 1 }); C.put(x0 + 2, 1, 'what the city is saying', [190, 205, 235], t.bar); K.ribbon(C, x0 + 15.5, .55, 'beta');
+  if (wide) C.put(x0 + cw - 16, 0, 'Sign in | Join', [255, 255, 255], t.bar, { u: 1 });
+  let y = 3;
+  if (wide) { const sb = [236, 241, 248]; K.box(C, x0 + 1, 3, mw - 1, 4, sb, [196, 208, 228]); C.fill(x0 + 2, 3, mw - 3, 4, sb); C.put(x0 + 2, 3, 'What are you doing right now?', t.fg, sb, { b: 1 }); C.fill(x0 + 2, 4, mw - 11, 2, [255, 255, 255]); K.field(C, x0 + 2, 4, mw - 11); K.field(C, x0 + 2, 5, mw - 11); K.btn(C, x0 + mw - 7, 5, 5, [60, 120, 210]); C.put(x0 + mw - 6, 5, 'Post', [255, 255, 255], null, { b: 1 }); y = 8; }
+  const posts = [['mel_on_9th', '2 min ago', 'lights out on 9th again. third time this month??', 'blackout'], ['dockrat', '14 min ago', 'anyone else see the cop cars outside the Rialto'], ['petrovs_coffee', '1 hr ago', 'Open late tonight for the eclipse! Hot cocoa $1'], ['jules.k', '2 hr ago', 'bus 4 never came. walking home in the snow. great']];
+  posts.forEach(([u, when, s, pic], i) => { if (y >= H - 1) return; K.photo(C, x0 + 2, y, 4, 2, 'face', 31 + i * 7, { frame: 'line' }); C.put(x0 + 7, y, u, t.link, null, { b: 1 }); C.put(x0 + 8 + u.length, y, when, t.dim); const n = C.wrap(x0 + 7, y + 1, mw - 9, s, t.fg); y += 1 + n;
+    if (pic && wide) { K.photo(C, x0 + 7, y, 14, 4, pic, 99, { frame: 'white' }); y += 5; }
+    C.put(x0 + 7, y, 'Reply  Share', t.link, null, { u: 1 }); C.put(x0 + 21, y, `* ${3 + i * 5}`, [200, 150, 0]); K.hr(C, x0 + 2, y + 1, mw - 3, 'dots', [180, 190, 210]); y += 3; });
+  if (wide) { const sx = x0 + mw + 1, sb = [244, 247, 252]; K.box(C, sx, 3, side - 1, 10, sb, [196, 208, 228], t.bar); C.fill(sx, 3, side - 1, 1, t.bar); C.put(sx + 1, 3, 'TRENDING', [255, 255, 255], t.bar, { b: 1 }); C.fill(sx + 1, 4, side - 3, 8, sb);
+    C.hd.push((g, X, Y, a, b) => { [['#blackout', 1.5, 0], ['#eclipse', 1.15, 1], ['#9thstreet', .9, 0], ['#snow', 1.25, 1], ['rialto', .8, 0], ['bus4', .95, 1], ['dock st', .75, 0]].reduce((p, [s, z, k], i) => { const fs = a / .6 * z, w = s.length * fs * (z > 1 ? .68 : .6); let [px, py] = p; if (px + w > X(sx + side - 2)) { px = X(sx + 1); py += b * 1.3; } htxt(g, px, py, s, fs, { fill: k ? '#2c4a88' : '#5a7ab8', 'font-weight': z > 1 ? 700 : 400, 'font-family': 'Verdana, sans-serif' }); return [px + w + a, py]; }, [X(sx + 1), Y(5) + b * .3]); });
+    C.put(sx + 1, 14, 'WHO TO FOLLOW', t.fg, null, { b: 1 }); [['nightbus_hal', 61], ['canalst_eats', 62]].forEach(([u, s2], i) => { K.photo(C, sx + 1, 15 + i * 3, 4, 2, 'face', s2, { frame: 'line' }); C.put(sx + 6, 15 + i * 3, u, t.link, null, { b: 1 }); C.put(sx + 6, 16 + i * 3, '+ Follow', t.dim); }); }
   return C;
 }
 function forumPage(W, H) {
-  const t = FORUMT, C = new Cells(W, H, t.page), cw = Math.min(W - 2, 70), x0 = Math.floor((W - cw) / 2);
-  C.fill(x0, 0, cw, H, t.bg); C.fill(x0, 0, cw, 2, t.head); C.put(x0 + 2, 0, 'switchboard', t.headFg, t.head, { b: 1 }); C.put(x0 + 2, 1, 'questions and answers', t.dim, t.head);
-  C.fill(x0, 2, cw, 1, t.bar); C.put(x0 + 2, 2, 'Boards  Newest  Members  Search', t.barFg, t.bar);
-  const th = [['Welcome - read this before posting', 12, 'admin'], ['Off-topic: best diner open after 2 am?', 31, 'nightowl'], ['My laptop fan sounds like a jet', 8, 'kettle'], ['Lost a charger at the cyber cafe on Dock St', 3, 'mira_p'], ['Which phone has the best battery?', 19, 'lowbatt']];
-  C.put(x0 + 2, 4, 'Thread', t.dim); C.put(x0 + cw - 18, 4, 'Replies  By', t.dim);
-  th.forEach(([s, n, by], i) => { const y = 6 + i * 2; C.put(x0 + 2, y, s.slice(0, cw - 22), t.link, null, { u: 1 }); C.put(x0 + cw - 17, y, String(n).padStart(3), t.fg); C.put(x0 + cw - 10, y, by, t.dim); });
+  const t = FORUMT, C = new Cells(W, H, t.page), cw = Math.min(W - 4, 72), x0 = Math.floor((W - cw) / 2);
+  C.fill(x0, 0, cw, H, t.bg); K.shadow(C, x0, cw, H);
+  C.fill(x0, 0, cw, 3, t.head); K.fade(C, x0, 0, cw, 3, lite(t.head, .12), dark(t.head, .3)); C.put(x0 + 2, 0, 'switchboard', t.headFg, null, { b: 1 }); C.put(x0 + 2, 1, 'questions and answers', t.dim); C.put(x0 + cw - 18, 0, 'Register  Log in', t.link, null, { u: 1 });
+  C.put(x0 + 2, 4, 'Board index', t.link, null, { u: 1 }); C.put(x0 + cw - 26, 4, 'It is Thu Feb 21, 2008 9:41 pm', t.dim);
+  C.fill(x0 + 1, 6, cw - 2, 1, t.bar); K.gloss(C, x0 + 1, 6, cw - 2, 1, t.bar, .3); C.put(x0 + 2, 6, 'GENERAL', t.barFg, null, { b: 1 }); C.put(x0 + cw - 30, 6, 'Topics  Posts  Last post', t.barFg);
+  [['Welcome', 'Read this first: the rules, and say hello.', 12, 140, 'admin', 1], ['Hardware', 'Laptops, phones, batteries, fans that sound like jets.', 48, 611, 'kettle', 1], ['Off-topic', 'Food after 2 am, the weather, the trains.', 95, 1302, 'nightowl', 0], ['Lost & found', 'Chargers, cables and the odd umbrella.', 7, 31, 'mira_p', 0]].forEach(([f, d, tp, ps, by, nw], i) => {
+    const y = 7 + i * 2, bg = i % 2 ? t.bg : lite(t.bg, .04); C.fill(x0 + 1, y, cw - 2, 2, bg);
+    C.hd.push((g, X, Y, a, b) => { const fx = X(x0 + 2), fy = Y(y) + b * .45, s = b * .9; el('path', { d: `M${fx} ${fy} h${s * .4} l${s * .12} ${s * .14} h${s * .7} v${s * .75} h${-s * 1.22} Z`, fill: nw ? '#e6b04a' : '#5a6068', stroke: nw ? '#8a6010' : '#2a2e34', 'stroke-width': .7 }, g); });
+    C.put(x0 + 6, y, f, t.link, bg, { b: 1 }); C.put(x0 + 6, y + 1, d.slice(0, cw - 38), t.dim, bg); C.put(x0 + cw - 29, y, String(tp).padStart(5), t.fg, bg); C.put(x0 + cw - 22, y, String(ps).padStart(5), t.fg, bg); C.put(x0 + cw - 14, y, 'by ' + by, t.dim, bg); C.put(x0 + cw - 14, y + 1, '9:12 pm', t.dim, bg);
+  });
+  C.fill(x0 + 1, 16, cw - 2, 1, t.bar); K.gloss(C, x0 + 1, 16, cw - 2, 1, t.bar, .3); C.put(x0 + 2, 16, 'WHO IS ONLINE', t.barFg, null, { b: 1 });
+  C.wrap(x0 + 2, 17, cw - 4, 'In total there are 7 users online :: 3 registered and 4 guests', t.fg); C.put(x0 + 2, 18, 'nightowl, kettle, admin', t.link);
   return C;
 }
+
+// ---- Lookwise: the owl ----
+const OW = { ink: '#16244a', feath: '#5e6f8e', feath2: '#3f4d6a', disc: '#d6dde8', disc2: '#aab6c9', amber: '#f4a91c', amber2: '#b8720c', pupil: '#0b0e16', beak: '#e08a1a', night: '#0f1a33' };
+const OWLPAL = { f: OW.feath2, F: OW.feath, k: OW.ink, a: OW.amber, p: OW.pupil, b: OW.beak, d: OW.disc, w: '#ffffff' };
+const OWL16 = ['................', '.ff..........ff.', '.fFf........fFf.', '.fFFFFFFFFFFFFf.', 'fFFFFFFFFFFFFFFf', 'FFkkkkFFFFkkkkFF', 'FkaaaakFFkaaaakF', 'FkapwakddkapwakF', 'FkappakbbkappakF', 'FkaaaakbbkaaaakF', 'FFkkkkFbbFkkkkFF', 'fFFFFFFFFFFFFFFf', '.fFdFdFFFFdFdFf.', '..fFFdFFFFdFFf..', '...ffFFFFFFff...', '................'];
+/** The owl's head: two ink-ringed amber eyes (the two o's of the name), tufts, a facial disc, a small beak. */
+function owl(parent, o = {}) {
+  const s = (o.size || 200) / 200, g = el('g', { transform: `translate(${o.x || 0},${o.y || 0}) scale(${s}) rotate(${o.tilt || 0} 100 112)` }, parent), [lx, ly] = o.look || [0, 0];
+  el('path', { d: 'M50 74 L34 18 L88 54 Z', fill: OW.feath2 }, g); el('path', { d: 'M150 74 L166 18 L112 54 Z', fill: OW.feath2 }, g);
+  el('ellipse', { cx: 100, cy: 114, rx: 84, ry: 78, fill: OW.feath }, g);
+  el('path', { d: 'M40 86 Q70 54 100 84 Q130 54 160 86 L160 98 Q130 72 100 100 Q70 72 40 98 Z', fill: OW.feath2 }, g);
+  for (const ex of [68, 132]) { el('circle', { cx: ex, cy: 110, r: 38, fill: OW.disc }, g); el('circle', { cx: ex, cy: 110, r: 32, fill: 'none', stroke: OW.disc2, 'stroke-width': 2 }, g); }
+  [68, 132].forEach((ex, i) => {
+    const shut = o.blink || (o.squint && i === 1), R = o.wide ? 24 : 22;
+    el('circle', { cx: ex, cy: 110, r: R, fill: shut ? OW.feath2 : OW.amber, stroke: OW.ink, 'stroke-width': 8 }, g);
+    if (shut) el('path', { d: `M${ex - 16} 110 Q${ex} 120 ${ex + 16} 110`, stroke: OW.disc, 'stroke-width': 4, fill: 'none', 'stroke-linecap': 'round' }, g);
+    else { el('circle', { cx: ex + lx * 8, cy: 110 + ly * 8, r: o.wide ? 13 : 10, fill: OW.pupil }, g); el('circle', { cx: ex + lx * 8 - 4, cy: 106 + ly * 8, r: 3.2, fill: '#fff' }, g); }
+  });
+  el('path', { d: 'M90 128 L110 128 L100 150 Z', fill: OW.beak, stroke: OW.amber2, 'stroke-width': 2, 'stroke-linejoin': 'round' }, g);
+  el('path', { d: 'M76 178 q6 6 12 0 M94 182 q6 6 12 0 M112 178 q6 6 12 0', stroke: OW.disc2, 'stroke-width': 3, fill: 'none', 'stroke-linecap': 'round' }, g);
+  if (o.wings) { const f = o.wings; el('path', { d: `M30 120 Q-10 ${100 - f * 30} -40 ${120 - f * 50} Q-6 ${140 - f * 10} 34 150 Z`, fill: OW.feath2 }, g); el('path', { d: `M170 120 Q210 ${100 - f * 30} 240 ${120 - f * 50} Q206 ${140 - f * 10} 166 150 Z`, fill: OW.feath2 }, g); }
+  return g;
+}
+/** The wordmark, placed by the point between the eyes: "L" ends before the first o, "kwise" starts after the second. */
+function lookLogo(g, cx, y, size, o = {}) {
+  const r = size * .27, sw = size * .085, cy = y - size * .27, dx = r + sw * .25, ink = o.mono || o.ink || OW.ink, F = { 'font-family': 'Bitter, Georgia, serif', 'font-weight': 800, 'font-size': size, fill: ink };
+  txt(g, cx - dx - r - size * .03, y, 'L', Object.assign({ 'text-anchor': 'end' }, F));
+  if (!o.plain) for (const sg of [-1, 1]) { const ex = cx + sg * dx; el('path', { d: `M${ex + sg * r * .15} ${cy - r * .96} L${ex + sg * r * 1.05} ${cy - r * 1.7} L${ex + sg * r * .82} ${cy - r * .55} Z`, fill: o.mono || o.tuft || OW.feath2 }, g); }
+  for (const sg of [-1, 1]) { const ex = cx + sg * dx; el('circle', { cx: ex, cy, r: r - sw / 2, fill: o.mono ? 'none' : OW.amber, stroke: ink, 'stroke-width': sw }, g); if (!o.mono) { const [lx, ly] = o.look || [0, 0]; el('circle', { cx: ex + lx * r * .3, cy: cy + ly * r * .3, r: r * .36, fill: OW.pupil }, g); el('circle', { cx: ex + lx * r * .3 - r * .13, cy: cy + ly * r * .3 - r * .13, r: r * .1, fill: '#fff' }, g); } }
+  el('path', { d: `M${cx - r * .26} ${cy + r * .62} L${cx + r * .26} ${cy + r * .62} L${cx} ${cy + r * 1.08} Z`, fill: o.mono || OW.beak }, g);
+  txt(g, cx + dx + r + size * .03, y, 'kwise', Object.assign({ 'text-anchor': 'start' }, F));
+}
+/** The same logo placed by its own centre (the eyes sit left of the middle). */
+const lookLogoC = (g, mid, y, size, o) => lookLogo(g, mid - size * 1.1, y, size, o);
+const LOOKT = { bg: [255, 255, 255], fg: [30, 30, 30], dim: [112, 112, 112], url: [0, 128, 0], link: [17, 17, 204], bar: [232, 238, 250], ad: [255, 251, 230] };
+function lookTop(C, W) { let x = 2; ['Web', 'Images', 'News', 'Local', 'Directory', 'more >>'].forEach((n, i) => { C.put(x, 0, n, i ? LOOKT.link : LOOKT.fg, null, { u: i > 0, b: !i }); x += n.length + 2; }); C.put(W - 10, 0, 'Sign in', LOOKT.link, null, { u: 1 }); }
+function lookHome(W, H, o = {}) {
+  const t = LOOKT, C = new Cells(W, H, t.bg), mid = W / 2, fw = Math.min(46, W - 10), fx = Math.floor(mid - fw / 2);
+  lookTop(C, W);
+  C.hd.push((g, X, Y, a, b) => lookLogoC(g, X(mid), Y(8), b * 3.3, { look: o.look || [0, .2] }));
+  C.center(0, W, 10, 'Look it up. Look wise.', t.dim);
+  C.fill(fx, 12, fw, 1, [255, 255, 255]); K.field(C, fx, 12, fw); if (o.q) C.put(fx + 1, 12, o.q, t.fg, [255, 255, 255]);
+  const b1 = 'Lookwise Search', b2 = "Owl's Pick", bx = Math.floor(mid - (b1.length + b2.length + 6) / 2); K.soft(C, bx, 14, b1.length + 2); C.put(bx + 1, 14, b1, t.fg); K.soft(C, bx + b1.length + 4, 14, b2.length + 2); C.put(bx + b1.length + 5, 14, b2, t.fg);
+  C.put(fx + fw + 2, 12, 'Advanced', t.link, null, { u: 1 });
+  if (o.night) { const nt = "The owl is out: tonight's crawl found 214 new pages.", nx = Math.floor(mid - nt.length / 2) + 2; C.hd.push((g, X, Y, a, b) => owl(g, { x: X(nx) - b * 3.2, y: Y(17), size: b * 2.6, wings: .6 })); C.put(nx, 18, nt, t.dim); }
+  C.center(0, W, H - 3, 'Advertising - Business Solutions - About Lookwise', t.link, null, { u: 1 }); C.center(0, W, H - 2, `(c)2008 Lookwise - ${CITY}`, t.dim);
+  return C;
+}
+function lookHead(C, W, q) {
+  const t = LOOKT; lookTop(C, W);
+  C.hd.push((g, X, Y, a, b) => lookLogo(g, X(2) + b * 1.5 * .62 + b * 1.5 * .58, Y(3.1), b * 1.5));
+  C.fill(18, 2, 36, 1, [255, 255, 255]); K.field(C, 18, 2, 36); C.put(19, 2, q, t.fg, [255, 255, 255]); K.soft(C, 56, 2, 8); C.put(57, 2, ' Search', t.fg);
+  C.fill(0, 4, W, 1, t.bar); C.hd.push((g, X, Y) => el('line', { x1: X(0), x2: X(W), y1: Y(4) + .5, y2: Y(4) + .5, stroke: '#6b90da' }, g)); C.put(1, 4, 'Web', t.fg, t.bar, { b: 1 });
+}
+/** The query's words in bold inside the snippets, as every search engine did. */
+function boldWord(C, y, n, q) { for (let k = 0; k < n; k++) { const row = C.c[y + k]; if (!row) continue; const line = row.map((z) => z.ch).join('').toLowerCase(); let i = line.indexOf(q.toLowerCase()); while (i >= 0) { for (let j = 0; j < q.length; j++) row[i + j].b = 1; i = line.indexOf(q.toLowerCase(), i + q.length); } } }
+/** The results page: local results with the map, the web results with Cached, sponsored links on the right, the eyes for pages. */
+function lookResults(W, H, q) {
+  const t = LOOKT, C = new Cells(W, H, t.bg), rw = W >= 80 ? 26 : 0, mw = W - rw - 3;
+  lookHead(C, W, q); const sum = `Results 1 - 10 of about 37 for ${q} (0.41 seconds)`; C.put(W - sum.length - 1, 4, sum, t.fg, t.bar);
+  C.rich(2, 6, `[Local results for ${q}] near Union Sq`, t.fg, t.link); K.map(C, 2, 7, 16, 5, 404, ['A', 'B', 'C']);
+  [["Rosetti's Pizza", '412 Canal St', '555-2290'], ["Gino's Slice", '88 Dock St', '555-7314'], ['Burger Barn', '9th St & Marlow', '555-0420']].forEach(([n, a, p], i) => { C.put(20, 7 + i * 2, 'ABC'[i], [226, 53, 42], null, { b: 1 }); C.put(22, 7 + i * 2, n, t.link, null, { u: 1 }); C.put(22, 8 + i * 2, `${a} - ${p}`, t.dim); });
+  const res = [["Rosetti's Pizza - Since 1971", 'Family business serving the neighborhood. Large pie + 2 sodas for $9.99. Open daily 11 am - 10 pm.', 'www.rosettispizza.com/'], ['Where to eat after midnight - Halden Online', 'Our readers picked the best late-night pizza, noodles and diners in the city, from the docks to Union Sq.', 'www.halden-online.com/news/'], ['streetwire: #pizza', 'petrovs_coffee: we have no pizza but we have cocoa. mel_on_9th: Rosettis was closed in the blackout', 'www.streetwire.com/tag/pizza']];
+  let y = 13; for (const [ti, sn, u] of res) { if (y > H - 6) break; C.put(2, y, ti.slice(0, mw), t.link, null, { u: 1 }); const n = C.wrap(2, y + 1, mw - 2, sn, t.fg, null, 2); C.rich(2, y + 1 + n, `${u} - 12k - [Cached] - [Similar pages]`, t.url, t.link); boldWord(C, y + 1, n, q); y += 3 + n; }
+  if (rw) { const ax = W - rw - 1; C.hd.push((g, X, Y) => el('line', { x1: X(ax - 1), x2: X(ax - 1), y1: Y(6), y2: Y(H - 4), stroke: '#c9d7f1' }, g)); C.put(ax, 6, 'Sponsored Links', t.dim);
+    [['Burger Barn', 'Two Double Barns for $3!', 'Open late, every district.', 'www.burgerbarn.com'], ['Pizza delivered fast', 'Order online from', "Rosetti's in 30 minutes.", 'www.rosettispizza.com'], ['Cellmart', 'Prepaid SIM only $9.99', 'Free phone with a plan.', 'www.cellmart.com']].forEach(([a, b1, b2, u], i) => { const yy = 8 + i * 5; C.put(ax, yy, a, t.link, null, { u: 1 }); C.put(ax, yy + 1, b1, t.fg); C.put(ax, yy + 2, b2, t.fg); C.put(ax, yy + 3, u, t.url); }); }
+  C.hd.push((g, X, Y, a, b) => { const y0 = Y(H - 3), mid = X(W / 2 - 8), r = b * .28; for (let i = 0; i < 6; i++) { const ex = mid + i * a * 3.4, on = i === 0; for (const sg of [-1, 1]) { const cx = ex + sg * r * 1.08; el('circle', { cx, cy: y0, r, fill: on ? OW.amber : '#fff', stroke: OW.ink, 'stroke-width': b * .09 }, g); if (on) el('circle', { cx, cy: y0, r: r * .42, fill: OW.pupil }, g); else el('line', { x1: cx - r * .6, x2: cx + r * .6, y1: y0, y2: y0, stroke: OW.ink, 'stroke-width': 1 }, g); } htxt(g, ex, y0 + b * .95, String(i + 1), a / .6, { fill: on ? '#000' : '#11c', 'text-anchor': 'middle', 'text-decoration': on ? 'none' : 'underline' }); } htxt(g, mid + 6 * a * 3.4, y0 + b * .95, 'Next', a / .6, { fill: '#11c', 'text-decoration': 'underline' }); });
+  return C;
+}
+/** Nothing found: the owl tilts its head. */
+function lookNone(W, H, q) {
+  const t = LOOKT, C = new Cells(W, H, t.bg); lookHead(C, W, q); C.put(W - 22, 4, 'Results 0 of about 0', t.fg, t.bar);
+  C.hd.push((g, X, Y, a, b) => { owl(g, { x: X(2), y: Y(6), size: b * 4.2, tilt: -18, squint: 1, look: [.4, -.4] }); htxt(g, X(3), Y(12.2), 'Hoo?', b * .95, { fill: OW.ink, 'font-weight': 800, 'font-family': 'Bitter, Georgia, serif' }); });
+  C.wrap(14, 7, W - 18, `Your search - ${q} - did not match any documents.`, t.fg); C.put(14, 9, 'Suggestions:', t.fg);
+  ['Make sure all words are spelled correctly.', 'Try different keywords.', 'Try more general keywords.', 'Small shops often have no web site: try the phone book.'].forEach((s, i) => C.put(16, 10 + i, '- ' + s, t.fg));
+  return C;
+}
+const searchPage = (W, H, q) => (q ? lookNone(W, H, q) : lookHome(W, H));
 /** Ferret's own error pages: white, the ferret lost on the left, a title and a short text. */
 function errPage(W, H, kind, host) {
   const C = new Cells(W, H, [246, 246, 246]), x0 = 22;
@@ -615,19 +999,21 @@ function errPage(W, H, kind, host) {
 const CH = { X: 8, Y: 2, cw: 8, ch: 16, W: 96, H: 42 };
 const STATES = {
   ready: { lab: 'pronta', tab: 0, url: 'http://www.halden-online.com/', page: () => portalPage(96, 37), status: 'Done', kbps: '42.1 kB/s' },
-  loading: { lab: 'carregando', tab: 0, url: 'http://www.halden-online.com/', page: () => portalPage(96, 37, 15), status: 'Transferring data from www.halden-online.com...', kbps: '3.8 kB/s', prog: .46, dig: 1 },
+  loading: { lab: 'carregando', tab: 0, url: 'http://www.halden-online.com/', page: () => portalPage(96, 37), status: 'Transferring data from www.halden-online.com...', kbps: '3.8 kB/s', prog: .46, dig: 1 },
   https: { lab: 'https', tab: 2, url: 'https://mail.halden-online.com/', page: () => mailPage(96, 37), status: 'Done', kbps: '40.6 kB/s', secure: 1 },
   notfound: { tt: "Problem loading page", lab: 'server not found', tab: 0, url: 'http://www.rosettispizza.com/', page: () => errPage(96, 37, 'notfound', 'www.rosettispizza.com'), status: 'Done', kbps: '-', lost: 1 },
   offline: { tt: "Problem loading page", lab: 'sem rede', tab: 0, url: 'http://www.halden-online.com/', page: () => errPage(96, 37, 'offline'), status: 'no network', kbps: '-', lost: 1 },
   timeout: { tt: "Problem loading page", lab: 'tempo esgotado', tab: 0, url: 'http://www.lowtidebar.net/', page: () => errPage(96, 37, 'timeout', 'www.lowtidebar.net'), status: 'Done', kbps: '0.2 kB/s', lost: 1 },
   cert: { tt: "Untrusted Connection", lab: 'certificado', tab: 0, url: 'https://www.harborsavings.com/', page: () => errPage(96, 37, 'cert', 'www.harborsavings.com'), status: 'Done', kbps: '-', lost: 1 },
   p404: { tt: "Rosetti's Pizza - 404", lab: '404 do site', tab: 0, url: 'http://www.rosettispizza.com/specials', page: () => bizSite(96, 37, 'Classic', 'pizza', THEMES[1], rng(7), { p404: 1 }), status: 'Done', kbps: '38.0 kB/s' },
+  search: { lab: 'busca', tab: 1, url: 'http://www.lookwise.com/search?q=pizza', page: () => lookResults(96, 37, 'pizza'), status: 'Done', kbps: '41.3 kB/s' },
   noindex: { lab: 'fora do índice', tab: 1, url: 'http://www.lookwise.com/search?q=sals+deli', page: () => searchPage(96, 37, "sal's deli"), status: 'Done', kbps: '41.3 kB/s' },
 };
 let chromeState = 'ready', throbG = null, throbFrame = 0;
 function gradient(svg, id, stops, vertical = true) { const gr = el('linearGradient', { id, x1: 0, y1: 0, x2: vertical ? 0 : 1, y2: vertical ? 1 : 0 }, el('defs', {}, svg)); stops.forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, gr)); return `url(#${id})`; }
 function favicon(g, x, y, kind) {
   if (kind === 'ferret') return pixIcon(g, x, y, 1, 16);
+  if (kind === 'look') return pixMap(g, x, y, 1, OWL16, OWLPAL);
   const c = { portal: ['#003399', '#ffcc00'], look: ['#fff', '#1d4fa0'], mail: ['#003399', '#fff'], wire: ['#2c4a88', '#fff'], pizza: ['#8c1e14', '#ffecbe'] }[kind];
   el('rect', { x, y, width: 16, height: 16, rx: 2, fill: c[0], stroke: '#9aa' }, g); txt(g, x + 8, y + 12.5, { portal: 'H', look: 'L', mail: '@', wire: 's', pizza: 'R' }[kind], { fill: c[1], 'font-size': 12, 'font-weight': 700, 'text-anchor': 'middle', 'font-family': 'Georgia, serif' });
 }
@@ -644,7 +1030,7 @@ function drawChrome() {
     el('path', { d: `M${tx} ${R(1)} L${tx + 4} ${R(0) + 2} Q${tx + 5} ${R(0) + 1} ${tx + 8} ${R(0) + 1} L${tx + 160} ${R(0) + 1} Q${tx + 163} ${R(0) + 1} ${tx + 164} ${R(0) + 2} L${tx + 168} ${R(1)} Z`, fill: on ? gradient(svg, 'ta' + i, [[0, '#fbfcfd'], [1, '#eef0f3']]) : gradient(svg, 'ti' + i, [[0, '#dde1e6'], [1, '#cdd2d9']]), stroke: '#8d949e', 'stroke-width': .8 }, g);
     favicon(g, tx + 10, R(0) + 0.5, ic === 'portal' && chromeState === 'notfound' ? 'pizza' : ic); txt(g, tx + 30, R(0) + 12, (on && S.tt ? S.tt : t).slice(0, 16), { fill: on ? '#111' : '#444', 'font-size': 11 });
     if (on) txt(g, tx + 154, R(0) + 12, '×', { fill: '#666', 'font-size': 12 });
-    g.addEventListener('click', () => { chromeState = ['ready', 'noindex', 'https'][i]; drawChrome(); paintStateBtns(); });
+    g.addEventListener('click', () => { chromeState = ['ready', 'search', 'https'][i]; drawChrome(); paintStateBtns(); });
   });
   txt(svg, X + 4 + 3 * 172 + 6, R(0) + 12.5, '+', { fill: '#333', 'font-size': 14, 'font-weight': 600 });
   // the navigation bar
@@ -725,8 +1111,8 @@ function drawTpls() {
   const r = rng(tplSeed); $('seedLab').textContent = 'semente ' + tplSeed; $('tpls').innerHTML = '';
   for (const tpl of ['Classic', 'Side', 'Center', 'LeftNav', 'Corporate', 'Bare']) {
     const kinds = TPL[tpl], kind = kinds[Math.floor(r() * kinds.length)], th = THEMES[Math.floor(r() * THEMES.length)];
-    const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<svg viewBox="0 0 ${64 * 6} ${30 * 12}"></svg><div class="cap"><b>${tpl}</b> · ${BIZ[kind][0]} (${kind})</div>`;
-    $('tpls').appendChild(d); bizSite(64, 30, tpl, kind, th, r).draw(d.querySelector('svg'), 0, 0, 6, 12);
+    const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<svg viewBox="0 0 ${64 * 6} ${34 * 12}"></svg><div class="cap"><b>${tpl}</b> · ${BIZ[kind][0]} (${kind})</div>`;
+    $('tpls').appendChild(d); bizSite(64, 34, tpl, kind, th, r).draw(d.querySelector('svg'), 0, 0, 6, 12);
   }
 }
 $('reroll').onclick = () => { tplSeed = Math.floor(Math.random() * 1e9); drawTpls(); }; drawTpls();
@@ -742,13 +1128,13 @@ $('reroll').onclick = () => { tplSeed = Math.floor(Math.random() * 1e9); drawTpl
 // ---- the canonical pages ----
 (() => {
   const C = [
-    ['portal', `<b>${CITY} Online</b> (o portal do provedor). A página inicial do Ferret. Azul e amarelo; manchetes da fila de eventos, o tempo, a busca, a lista de empresas. É a assinatura "powered by".`, () => portalPage(64, 30)],
-    ['look', '<b>Lookwise</b> (o buscador). Branco, o nome em letras de cores alternadas, duas caixas de botão. Lento: indexa os sites gerados, mas não as lojas sem site nem as páginas escondidas.', () => searchPage(64, 30)],
-    ['mail', `<b>${CITY} Online Mail</b> (o webmail). As cores do portal, o login pelo número e a conexão segura (o endereço amarelo).`, () => mailPage(64, 30)],
-    ['wire', '<b>Streetwire</b> (a rede social). Azul-ardósia, posts curtos com avatar quadrado, "Reply" e "Share". Fala do apagão, nunca de quem causou.', () => wirePage(64, 30)],
-    ['forum', '<b>Switchboard</b> (o fórum). Escuro e verde, de quem passa a noite nele. Fora do índice e do portal: só se chega pelo endereço (o conteúdo é da Trilha de hacking; aqui só a casca).', () => forumPage(64, 30)],
+    ['portal', `<b>${CITY} Online</b> (o portal do provedor). A página inicial do Ferret. Azul e amarelo com brilho; o anúncio do provedor, as manchetes da fila de eventos com a foto, o tempo, a busca, as ações das empresas da cidade, a lista de empresas. É a assinatura "powered by".`, () => portalPage(64, 36)],
+    ['look', '<b>Lookwise</b> (o buscador). Branco e vazio, a coruja no nome. Lento: indexa de madrugada os sites gerados, mas não as lojas sem site nem as páginas escondidas (a parte 12).', () => lookHome(64, 36)],
+    ['mail', `<b>${CITY} Online Mail</b> (o webmail). As cores do portal, o login pelo número e a conexão segura (o endereço amarelo).`, () => mailPage(64, 36)],
+    ['wire', '<b>Streetwire</b> (a rede social). Azul-ardósia com o selo "beta", a caixa "What are you doing right now?", posts com avatar (o rosto pintado pela semente), fotos, os assuntos em alta. Fala do apagão, nunca de quem causou.', () => wirePage(64, 36)],
+    ['forum', '<b>Switchboard</b> (o fórum). Escuro e verde, de quem passa a noite nele. Fora do índice e do portal: só se chega pelo endereço (o conteúdo é da Trilha de hacking; aqui só a casca).', () => forumPage(64, 36)],
   ];
-  $('canonCards').innerHTML = C.map((c, i) => `<div class="card"><svg viewBox="0 0 ${64 * 6} ${30 * 12}" id="cn${i}"></svg><div class="cap">${c[1]}</div></div>`).join('');
+  $('canonCards').innerHTML = C.map((c, i) => `<div class="card"><svg viewBox="0 0 ${64 * 6} ${36 * 12}" id="cn${i}"></svg><div class="cap">${c[1]}</div></div>`).join('');
   C.forEach((c, i) => c[2]().draw($('cn' + i), 0, 0, 6, 12));
 })();
 
@@ -785,6 +1171,87 @@ $('reroll').onclick = () => { tplSeed = Math.floor(Math.random() * 1e9); drawTpl
     txt(s, X + 26, Y + 234, 'Yes', { fill: '#6b4a2e', 'font-size': 11, 'font-weight': 600 }); txt(s, X + 214, Y + 234, 'No', { fill: '#6b4a2e', 'font-size': 11, 'font-weight': 600, 'text-anchor': 'end' });
     el('rect', { x: X + 10, y: Y + 330, width: 220, height: 8, fill: '#fff', stroke: '#8a929d' }, s); el('rect', { x: X + 11, y: Y + 331, width: 50, height: 6, fill: '#a27a52' }, s); txt(s, X + 10, Y + 352, 'Connecting... 3.1 kB/s', { fill: '#444', 'font-size': 9.5 });
   });
+})();
+</script>
+<script>
+// ---- the 2008 web: the anatomy and the kit ----
+let anatMode = 'all';
+function drawAnat() { const s = $('anat'); s.innerHTML = ''; bizSite(96, 40, 'Corporate', 'bank', THEMES[0], rng(5)).draw(s, 0, 0, 8, 16, { noBack: anatMode === 'cells', noHd: anatMode !== 'all' }); }
+function paintAnatBtns() { $('anatBtns').innerHTML = ''; for (const [k, lab] of [['all', 'as três camadas'], ['back', 'células + fundo HD'], ['cells', 'só as células']]) { const b = document.createElement('button'); b.textContent = lab; if (k === anatMode) b.className = 'on'; b.onclick = () => { anatMode = k; drawAnat(); paintAnatBtns(); }; $('anatBtns').appendChild(b); } }
+drawAnat(); paintAnatBtns();
+(() => {
+  const W = [255, 255, 255], NAVY = [28, 52, 102], BLUE = [40, 110, 210], PAPER = [246, 246, 242];
+  const KIT = [
+    ['Brilho', 'o degradê com a linha no meio, em barras, cabeçalhos e menus', (C) => { C.fill(1, 1, 28, 2, NAVY); K.gloss(C, 1, 1, 28, 2, NAVY); C.put(3, 1, 'HARBOR SAVINGS', W, null, { b: 1 }); C.put(3, 2, 'Member FDIC', [190, 200, 225]); C.fill(1, 5, 28, 1, [255, 204, 0]); K.gloss(C, 1, 5, 28, 1, [255, 204, 0]); C.put(3, 5, 'Home   News   Mail', [0, 30, 90], null, { b: 1 }); }],
+    ['Botões', 'a pílula aqua da Web 2.0 e o cinza dos formulários', (C) => { K.btn(C, 3, 2, 14, BLUE); C.put(4, 2, 'Learn more >>', W, null, { b: 1 }); K.btn(C, 20, 2, 7, [60, 160, 60]); C.put(21, 2, 'Join!', W, null, { b: 1 }); K.soft(C, 3, 5, 16); C.put(4, 5, 'Lookwise Search', [0, 0, 0]); K.soft(C, 22, 5, 5); C.put(23, 5, ' Go', [0, 0, 0]); }],
+    ['Abas', 'a aba ativa tem a cor da página e "entra" nela', (C) => { C.fill(0, 0, 30, 4, NAVY); K.gloss(C, 0, 0, 30, 4, NAVY); C.fill(0, 4, 30, 4, W); let x = 2; ['Home', 'Menu', 'About'].forEach((n, i) => { K.tab(C, x, 3, n.length + 2, i ? dark(NAVY, .18) : W, !i); C.put(x + 1, 3, n, i ? W : [20, 20, 20], null, { b: !i }); x += n.length + 4; }); C.put(2, 5, 'Welcome!', [20, 20, 20], null, { b: 1 }); }],
+    ['Bisel de 2001', 'o botão em relevo; o apertado inverte a luz', (C) => { let x = 1; ['Home', 'Menu', 'Contact'].forEach((n, i) => { const w = n.length + 2; C.fill(x, 2, w, 1, [200, 200, 204]); K.bevel(C, x, 2, w, 1, [200, 200, 204], !i); C.put(x + 1, 2, n, [0, 0, 0], null, { b: !i }); x += w + 1; }); C.fill(1, 5, 12, 1, [140, 30, 20]); K.bevel(C, 1, 5, 12, 1, [140, 30, 20]); C.put(2, 5, ' Book now', W, null, { b: 1 }); }],
+    ['Ladrilhos', 'o fundo da página dos dois lados da coluna', (C) => { C.fill(0, 0, 30, 8, [60, 30, 20]); C.fill(8, 0, 14, 8, [252, 244, 224]); K.tile(C, 8, 14, 'checks', [60, 30, 20]); K.shadow(C, 8, 14, 8); C.put(10, 3, 'a coluna', [50, 30, 20]); }],
+    ['Fotos', 'pintadas pela semente: loja, prato, quarto, bar, prateleira, cidade, rosto', (C) => { ['store', 'food', 'room', 'bar'].forEach((s2, i) => K.photo(C, 1 + i * 7.3, .6, 6, 3, s2, 11 + i, { frame: 'line' })); ['tech', 'sky', 'blackout', 'face'].forEach((s2, i) => K.photo(C, 1 + i * 7.3, 4.4, 6, 3, s2, 21 + i, { frame: 'line' })); }],
+    ['Anúncio', 'de uma empresa da cidade; o botão pisca', (C) => { K.ad(C, 1, 1.2, 28, 3, 0); K.ad(C, 1, 5, 28, 2, 3, false); }],
+    ['Estrela, RSS e nota', 'o "NEW!", o assinar e as estrelinhas das resenhas', (C) => { K.burst(C, 5, 3.5, 'NEW!'); K.rss(C, 11, 1); C.put(13, 1, 'Subscribe', [17, 17, 204], null, { u: 1 }); K.stars(C, 11, 3, 4); C.put(11, 4, '4.2 - 31 reviews', [120, 120, 120]); K.burst(C, 26, 6, 'SALE', [20, 140, 60], 1.3); }],
+    ['Mapa', 'a planta das ruas e os pinos; vem da grade da cidade', (C) => K.map(C, 1, .5, 28, 7, 404, ['A', 'B', 'C'])],
+    ['Réguas e letreiro', 'a régua arco-íris de 1998, a pontilhada, a sulcada, o marquee', (C) => { C.fill(0, 0, 30, 8, [8, 8, 40]); K.hr(C, 1, 0, 28, 'rainbow'); K.marquee(C, 1, 2, 28, '*** Welcome to my homepage! *** Sign my guestbook! ***', [255, 255, 0]); K.hr(C, 1, 4, 28, 'dots', [170, 170, 255]); K.hr(C, 1, 6, 28, 'groove', [120, 120, 160]); }],
+    ['Beta e imagem quebrada', 'o selo de todo site novo e a figura que não carregou', (C) => { C.fill(0, 0, 30, 2, [44, 74, 136]); C.put(1, 0, 'streetwire', W, null, { b: 1 }); K.ribbon(C, 14.5, .55, 'beta'); K.broken(C, 1, 3, 14, 4); C.put(4, 3, 'logo.jpg', [90, 90, 90]); C.put(17, 4, 'Cash only.', [0, 0, 0]); }],
+    ['Ícones brilhantes', 'redondos, com o reflexo em cima', (C) => ['lock', 'card', 'pin', 'phone', 'bed', 'mail', 'chat'].forEach((k, i) => K.icon(C, 1 + (i % 4) * 7, i < 4 ? .5 : 4.3, k, [[40, 110, 210], [200, 60, 40], [40, 150, 80], [120, 70, 180]][i % 4]))],
+    ['Títulos grandes', 'o WordArt de 1998 e a manchete limpa da Web 2.0', (C) => { C.fill(0, 0, 30, 4, [8, 8, 40]); K.big(C, 15, 3, "Sal's Deli", 2, 'word', { center: 1 }); C.fill(0, 4, 30, 4, NAVY); K.fade(C, 0, 4, 30, 4, lite(NAVY, .2), dark(NAVY, .3)); K.big(C, 2, 6.8, 'Talk more, pay less.', 1.25); }],
+    ['Campos', 'o campo afundado e a caixa com o título em degradê', (C) => { K.box(C, 1, 0, 28, 7, [240, 244, 252], [170, 186, 214], NAVY); C.put(2, 0, 'Sign in', W, null, { b: 1 }); C.put(2, 3, 'Number:', [20, 20, 30]); K.field(C, 11, 3, 16); C.put(12, 3, '555-0179', [20, 20, 30]); K.btn(C, 11, 5, 7, BLUE); C.put(12, 5, 'Sign in', W, null, { b: 1 }); }],
+  ];
+  $('kit').innerHTML = KIT.map((k, i) => `<div class="card"><svg viewBox="0 0 180 96" id="kit${i}"></svg><div class="cap"><b>${k[0]}.</b> ${k[1]}</div></div>`).join('');
+  KIT.forEach((k, i) => { const C = new Cells(30, 8, PAPER); k[2](C); C.draw($('kit' + i), 0, 0, 6, 12); });
+})();
+
+// ---- Lookwise ----
+(() => {
+  const s = $('lwLogo'); el('rect', { width: 640, height: 200, rx: 6, fill: '#fff' }, s);
+  lookLogoC(s, 320, 118, 88, { look: [.25, .15] }); txt(s, 320, 168, 'Look it up. Look wise.', { fill: '#707070', 'font-size': 14, 'text-anchor': 'middle', 'font-family': 'Verdana, sans-serif' });
+})();
+(() => {
+  const s = $('lwBuild'); el('rect', { width: 260, height: 260, rx: 6, fill: '#fff' }, s);
+  const size = 170, y = 175, cx = 130, r = size * .27, dx = r + size * .085 * .25, cy = y - r;
+  lookLogo(s, cx, y, size, { look: [0, 0] });
+  const D = { stroke: '#d8452b', 'stroke-width': 1, fill: 'none', 'stroke-dasharray': '3 3' }, L = (x, yy, t, a) => txt(s, x, yy, t, Object.assign({ fill: '#d8452b', 'font-size': 10, 'font-weight': 600 }, a));
+  el('line', Object.assign({ x1: 0, x2: 260, y1: y, y2: y }, D), s); L(4, y + 12, 'linha de base');
+  el('line', Object.assign({ x1: 0, x2: 260, y1: y - size * .54, y2: y - size * .54 }, D), s); L(4, y - size * .54 - 4, 'altura-x');
+  for (const sg of [-1, 1]) el('circle', Object.assign({ cx: cx + sg * dx, cy, r: r + 5 }, D), s);
+  el('line', Object.assign({ x1: cx - dx, x2: cx + dx, y1: cy, y2: cy }, D), s); L(cx, y + 40, 'os 2 olhos = "oo"', { 'text-anchor': 'middle' });
+  L(cx + dx + r * .9, cy - r * 1.8, 'tufo', { 'text-anchor': 'middle' }); L(cx, y + 26, 'bico no vão', { 'text-anchor': 'middle' });
+  el('path', { d: `M${cx} ${y + 16} L${cx} ${cy + r * 1.1}`, stroke: '#d8452b', 'stroke-width': 1 }, s);
+})();
+(() => {
+  const s = $('lwVer'); el('rect', { width: 260, height: 86, fill: '#fff' }, s); el('rect', { y: 87, width: 260, height: 86, fill: '#efe8d8' }, s); el('rect', { y: 174, width: 260, height: 86, fill: OW.night }, s);
+  lookLogoC(s, 130, 58, 40); lookLogoC(s, 130, 145, 40, { mono: '#4a3a2a' }); lookLogoC(s, 130, 232, 40, { ink: '#e8ecf4', tuft: '#9fb0cc' });
+})();
+(() => {
+  const s = $('lwPix'); el('rect', { width: 260, height: 260, rx: 6, fill: '#e9ecf1' }, s);
+  pixMap(s, 50, 14, 10, OWL16, OWLPAL); pixMap(s, 70, 196, 1, OWL16, OWLPAL); pixMap(s, 110, 188, 2, OWL16, OWLPAL);
+  txt(s, 78, 230, '16', { fill: '#555', 'font-size': 10, 'text-anchor': 'middle' }); txt(s, 126, 230, '32', { fill: '#555', 'font-size': 10, 'text-anchor': 'middle' });
+  el('rect', { x: 150, y: 190, width: 96, height: 22, rx: 3, fill: '#fff', stroke: '#8a929d' }, s); pixMap(s, 153, 193, 1, OWL16, OWLPAL); txt(s, 173, 205, 'Lookwise', { fill: '#9aa3ad', 'font-size': 10, 'font-style': 'italic' }); txt(s, 198, 230, 'na barra do Ferret', { fill: '#555', 'font-size': 9, 'text-anchor': 'middle' });
+})();
+$('lwAscii').textContent = ['   /\\_/\\', '  ((@v@))     L(@)(@)kwise', '  /)   (\\     look it up. look wise.', '  -"---"-'].join('\n');
+$('lwSw').innerHTML = [['tinta', OW.ink, 'as letras e o anel dos olhos'], ['âmbar', OW.amber, 'só a íris; o olhar'], ['pena', OW.feath, 'a cabeça da coruja'], ['pena escura', OW.feath2, 'tufos e sobrancelha'], ['disco', OW.disc, 'o rosto em volta dos olhos'], ['bico', OW.beak, 'o bico'], ['noite', OW.night, 'o fundo da versão negativa']].map(([n, c, d]) => `<div><i style="background:${c}"></i><span><b>${n}</b>${c}<br><em>${d}</em></span></div>`).join('');
+let lwF = 0;
+function drawLwOwl() {
+  const s = $('lwOwl'); s.innerHTML = ''; el('rect', { width: 640, height: 210, rx: 6, fill: '#f4f6fa' }, s); el('rect', { x: 512, width: 128, height: 210, rx: 6, fill: OW.night }, s);
+  const f = lwF, sw = Math.sin(f / 3), lab = (x, t, c = '#444') => txt(s, x, 196, t, { fill: c, 'font-size': 12, 'text-anchor': 'middle' });
+  owl(s, { x: 14, y: 30, size: 100, look: [Math.sin(f / 9) * .8, .3] }); lab(64, 'parada');
+  owl(s, { x: 142, y: 30, size: 100, tilt: sw * 14, look: [sw, 0] }); lab(192, 'procurando');
+  owl(s, { x: 270, y: 30, size: 100, wide: f % 14 < 7 }); lab(320, 'achou');
+  owl(s, { x: 398, y: 30, size: 100, tilt: -18, squint: 1, look: [.4, -.4] }); txt(s, 492, 44, 'Hoo?', { fill: OW.ink, 'font-size': 14, 'font-weight': 800, 'font-family': 'Bitter, Georgia, serif', 'text-anchor': 'end' }); lab(448, 'nada');
+  el('circle', { cx: 610, cy: 28, r: 12, fill: '#f4e3a0' }, s); el('circle', { cx: 615, cy: 24, r: 10, fill: OW.night }, s);
+  for (let i = 0; i < 9; i++) el('rect', { x: 516 + i * 13, y: 150 - (i * 37 % 40), width: 11, height: 60, fill: '#060a14' }, s);
+  owl(s, { x: 546, y: 60 + Math.sin(f / 2) * 6, size: 60, wings: (Math.sin(f / 1.5) + 1) / 2 }); lab(576, 'de madrugada', '#c9d3e6');
+}
+setInterval(() => { lwF++; drawLwOwl(); }, 140); drawLwOwl();
+lookHome(96, 30, { q: 'pizza near union sq' }).draw($('lwHome'), 0, 0, 6, 12);
+lookHome(96, 30, { night: 1 }).draw($('lwNight'), 0, 0, 6, 12);
+lookResults(96, 34, 'pizza').draw($('lwRes'), 0, 0, 8, 16);
+lookNone(96, 18, "sal's deli").draw($('lwNone'), 0, 0, 6, 12);
+(() => {
+  const s = $('lwCache'), C = new Cells(96, 3, [255, 251, 214]);
+  C.put(1, 0, "This is Lookwise's cache of", [0, 0, 0]); C.put(29, 0, 'www.rosettispizza.com/', [17, 17, 204], null, { u: 1 }); C.put(1, 1, 'as the owl saw it on Feb 21, 2008 03:12. The current page could have changed.', [0, 0, 0]);
+  C.hd.push((g, X, Y, a, b) => { pixMap(g, X(94) - 16, Y(0) + 4, 1, OWL16, OWLPAL); el('line', { x1: X(0), x2: X(96), y1: Y(3) - .5, y2: Y(3) - .5, stroke: '#c9b458' }, g); });
+  C.draw(s, 0, 0, 6, 12); bizSite(96, 30, 'Classic', 'pizza', THEMES[1], rng(11)).draw(s, 0, 36, 6, 12);
 })();
 </script>
 </body>
