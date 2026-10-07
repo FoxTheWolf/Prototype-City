@@ -190,7 +190,7 @@ function bizPage(w: World, k: number, host: string, path: string): Page {
   const hour = calendar(w.time).hour, now = allDay || isOpen(b.kind, hour) ? 'OPEN NOW' : `CLOSED NOW - opens at ${hh(o)}`;
   const [bx, by] = placeAt(c, k), sub = subAt(w.power, c, bx, by);
   const back = w.events.list.some((e) => e.kind === 'restored' && e.refs[0] === sub && w.time - e.time < 86400);
-  const notice: Block[] = back ? [{ t: 'ad', text: say('web.outage'), url: `http://${host}/` }] : [];
+  const notice: Block[] = back ? [{ t: 'notice', text: say('web.outage') }] : [];
   const banner: Block = tpl === Tpl.Bare ? { t: 'h', text: name.toUpperCase() } : { t: 'banner', text: name, sub: `Since ${year} - ${district}`, art: ICONS[b.kind] ?? ICONS.any };
   const ago = Math.floor(h(4) * 400) * 86400, D = calendar(Math.max(0, w.time - ago));
   const updated = say('web.updated', { date: w.time - ago < 0 ? 'in 2007' : `${D.month}/${D.day}/${String(D.year).slice(2)}` });
@@ -285,7 +285,7 @@ function portalPage(w: World, host: string, path: string): Page {
     }
   } else if (path === '/') {
     const heads = stories.map((S, n) => [S, n] as const).filter(([S]) => S.kind !== 'date').slice(0, 8).map(([S, n]) => `[${S.head}](http://${host}/news/${n})`);
-    body = [{ t: 'cols', widths: [0.64, 0.36], cols: [[{ t: 'h', text: 'Top Stories' }, { t: 'list', items: heads.length ? heads : ['No news is good news.'] }], [...weather, ...(ad ? [{ t: 'ad', text: `Visit ${businessName(c, ad[0])}!`, url: `http://${ad[1]}/` } as Block] : []), { t: 'h', text: 'Find' }, { t: 'p', text: `[Business directory](http://${host}/directory)` }, { t: 'p', text: `[Streetwire](http://${WIRE_HOST}/): what the city is saying` }]] }];
+    body = [{ t: 'cols', widths: [0.64, 0.36], cols: [[{ t: 'h', text: 'Top Stories' }, { t: 'list', items: heads.length ? heads : ['No news is good news.'] }], [...weather, ...(ad ? [{ t: 'ad', name: businessName(c, ad[0]), text: `Visit us at ${ad[1].replace(/^www\./, '')}`, url: `http://${ad[1]}/` } as Block] : []), { t: 'h', text: 'Find' }, { t: 'p', text: `[Business directory](http://${host}/directory)` }, { t: 'p', text: `[Streetwire](http://${WIRE_HOST}/): what the city is saying` }]] }];
   } else body = [{ t: 'h', text: '404 - Not Found' }, { t: 'p', text: `[Home](http://${host}/)` }];
   return { url: `http://${host}${path}`, title: path === '/' ? `${city} Online` : `${city} Online - ${path.slice(1)}`, theme: PORTAL, blocks: [banner, { t: 'nav', links: nav }, ...body, foot], kb: 60, mobile: true };
 }

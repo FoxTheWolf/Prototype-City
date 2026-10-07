@@ -15,7 +15,9 @@
  */
 import { Scr } from '../laptop/screen';
 import { type World } from '../sim/world';
-import { layout, SUBMIT, type C3, type Field, type Laid, type Link } from './page';
+import { layout, opKb, SUBMIT, type C3, type Field, type HdOp, type Laid, type Link } from './page';
+import { animated, paintOps } from './ops';
+import { CH, CW } from './chrome';
 import { certExpiry, fetchUrl, portalUrl, searchUrl, SEARCH_HOST, webOf, type Fetched } from './sites';
 import { mailHost } from './webmail';
 import { ADDR_X, addrEnd, BACK, FWD, HOME, iconOf, MARKS_Y, NAV_TEXT_Y, PAGE_Y, RELOAD, SEARCH_W, searchX, TAB_TEXT, TAB_TEXT_W, TAB_W, TAB_X, paintChrome, type ChromeState, type FerretState, type Icon } from './chrome';
@@ -91,6 +93,17 @@ export class Browser {
   }
   private siteTitle(host: string) { return host.replace(/^www\./, '').replace(/\.(com|net|org)$/, '').replace(/^\w/, (c) => c.toUpperCase()); }
 
+  /** The page's pictures in the order they come down (top first), and what they weigh (KB) together. */
+  private items(T: Tab): HdOp[] { return T.laid ? [...T.laid.front].sort((a, b) => a.y - b.y) : []; }
+  private itemsKb(T: Tab) { return this.items(T).reduce((n, o) => n + opKb(o), 0); }
+  /** How many of the page's pictures have come (after the text), at overall progress f. */
+  private arrived(T: Tab, f: number): number {
+    const kb = T.got?.page?.kb ?? 0, I = this.items(T), total = kb + this.itemsKb(T);
+    let got = f * total - kb, n = 0;
+    for (const o of I) { got -= opKb(o); if (got < 0) break; n++; }
+    return f >= 1 ? I.length : n;
+  }
+
   /** The pane's size changed (the window manager, 15.7): re-lay the current page to the new width, keeping its state. */
   resize(w: number, h: number) {
     if (w === this.W && h === this.H) return;
@@ -136,7 +149,7 @@ export class Browser {
     const eb = this.errBtns.find((b) => b.y === y && x >= b.x && x < b.x + b.w);
     if (eb) { eb.act(); return; }
     if (y >= PAGE_Y && y < PAGE_Y + this.view) {
-      const T = this.T, py = T.top + (y - PAGE_Y), L = this.items();
+      const T = this.T, py = T.top + (y - PAGE_Y), L = this.picks();
       const on = L.find((it) => it.y === py && x >= it.x && x < it.x + it.w);
       this.editing = false;
       if (!on) return;
@@ -151,7 +164,7 @@ export class Browser {
     const t = text.replace(/\s+/g, ' ').trim();
     if (!t) return;
     if (this.editing) { this.addr = (this.addr + t).slice(0, 120); return; }
-    const on = this.items()[this.T.sel];
+    const on = this.picks()[this.T.sel];
     if (on && 'name' in on) { const v = this.T.vals.get(on.name) ?? ''; this.T.vals.set(on.name, (v + t).slice(0, on.max)); }
   }
 
@@ -170,7 +183,7 @@ export class Browser {
     if (T.got?.page) { T.url = T.got.cert ? T.got.page.url.replace(/^http:/, 'https:') : T.got.page.url; this.remember(T.url); }
     else if (T.got?.cert) T.url = T.url.replace(/^http:/, 'https:');
     // a form's first box takes the keys at once, as the sign-in pages of 2008 did
-    const I = this.items();
+    const I = this.picks();
     if (I.length && T.laid?.fields.length) T.sel = I.findIndex((it) => 'name' in it);
   }
   private goBack(now: number) { const T = this.T, u = T.back.pop(); if (u === undefined) return; T.fwd.push(T.url); this.go(u, now, false); this.sfx.push('thump'); }
@@ -201,7 +214,7 @@ export class Browser {
   }
 
   /** What Tab goes through: the links and the text boxes, in reading order. */
-  private items(): (Link | Field)[] {
+  private picks(): (Link | Field)[] {
     const L = this.T.laid;
     return L ? [...L.links, ...L.fields].sort((a, b) => a.y - b.y || a.x - b.x) : [];
   }
@@ -222,8 +235,11 @@ export class Browser {
     if (t < LOOKUP + CONNECT) return [0, `Connecting to ${host}...`, 0];
     if (G.error === 'down') return t < LOOKUP + CONNECT + TIMEOUT ? [0, `Waiting for ${host}...`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + TIMEOUT];
     if (this.untrusted(T)) return [1, 'Done', T.at + LOOKUP + CONNECT];
-    const dur = (G.page!.kb * 8) / Math.max(1, T.kbps), f = Math.min(1, (t - LOOKUP - CONNECT) / dur);
-    return f < 1 ? [f, `Transferring data from ${host}... ${Math.floor(f * G.page!.kb)} of ${G.page!.kb} KB`, 0] : [1, 'Done', T.at + LOOKUP + CONNECT + dur];
+    // the text first, then the pictures one by one (as a page of 2008 came down)
+    const kb = G.page!.kb, total = kb + this.itemsKb(T), dur = (total * 8) / Math.max(1, T.kbps), f = Math.min(1, (t - LOOKUP - CONNECT) / dur);
+    if (f >= 1) return [1, 'Done', T.at + LOOKUP + CONNECT + dur];
+    if (f * total < kb) return [f, `Transferring data from ${host}... ${Math.floor(f * total)} of ${kb} KB`, 0];
+    return [f, `Loading ${this.arrived(T, f)} of ${this.items(T).length} items...`, 0];
   }
   private loading(now: number) { return this.progress(now)[0] < 1; }
   /** A page on https whose certificate has lapsed, not let through (yet). */
@@ -261,7 +277,7 @@ export class Browser {
       else if (key.length === 1 && !ctrl && this.addr.length < 120) this.addr += key;
       return;
     }
-    const L = this.items(), view = this.view, rows = T.laid?.rows.length ?? 0, on = L[T.sel];
+    const L = this.picks(), view = this.view, rows = T.laid?.rows.length ?? 0, on = L[T.sel];
     const seen = () => { const y = L[T.sel]?.y ?? 0; if (y < T.top) T.top = y; if (y >= T.top + view) T.top = y - view + 1; };
     if (on && 'name' in on && key !== 'Tab' && !key.startsWith('Arrow') && !key.startsWith('Page') && !key.startsWith('F')) {
       const v = T.vals.get(on.name) ?? '';
@@ -311,7 +327,23 @@ export class Browser {
       marks: this.marks.map(([t, u]) => ({ icon: this.markIcon(u), w: Math.min(18, t.length) })),
       err: ek ? { kind: ek, btns: this.errBtns.map((b) => [b.x, b.y, b.w] as [number, number, number]) } : null,
     };
-    return { key: JSON.stringify(S), paint: (P, ox) => paintChrome(P, S, ox) };
+    // the page's pixels: those on the rows in view, the pictures only once they have come
+    const top = T.top, bottom = top + this.view, inView = (o: HdOp) => o.y < bottom && o.y + ('h' in o ? o.h + 3 : 2) > top - 1;
+    const back = !ek && T.laid ? T.laid.back.filter(inView) : [], front = !ek && T.laid ? this.items(T).slice(0, this.arrived(T, f)).filter(inView) : [];
+    const moving = animated(front) ? `${Math.floor(now * 2)}:${front.some((o) => o.k === 'marquee') ? Math.floor(now * 8) : 0}` : '';
+    const key = `${JSON.stringify(S)}|${T.url}|${this.W}|${top}|${back.length}|${front.length}|${moving}`;
+    return {
+      key,
+      paint: (P, ox) => {
+        paintChrome(P, S, ox);
+        // clipped to the page's rows and the pane's width (not the scroll bar's column)
+        const save = [P.x0, P.y0, P.x1, P.y1];
+        P.x0 = ox * CW; P.y0 = PAGE_Y * CH; P.x1 = (ox + this.W - 1) * CW; P.y1 = (PAGE_Y + this.view) * CH;
+        paintOps(P, back, ox * CW, (PAGE_Y - top) * CH, now);
+        paintOps(P, front, ox * CW, (PAGE_Y - top) * CH, now);
+        [P.x0, P.y0, P.x1, P.y1] = save;
+      },
+    };
   }
   private markIcon(url: string): Icon {
     const host = url.replace(/^https?:\/\//, '').split(/[/?]/)[0], S = webOf(this.world).hosts.get(host);
@@ -343,7 +375,8 @@ export class Browser {
     for (const [title] of this.marks) { const w = Math.min(18, title.length); if (mx + 2 + w > W) break; S.paint(mx + 2, MARKS_Y, title.slice(0, w), [34, 34, 34], MARK_BG); mx += w + 4; }
     // the page, as much of it as has arrived
     if (T.laid && f > 0) {
-      const R = T.laid.rows, upto = f >= 1 ? R.length : Math.floor(R.length * f), on = this.items()[T.sel];
+      const kb = T.got?.page?.kb ?? 1, tf = Math.min(1, (f * (kb + this.itemsKb(T))) / kb);
+      const R = T.laid.rows, upto = tf >= 1 ? R.length : Math.floor(R.length * tf), on = this.picks()[T.sel];
       for (let r = 0; r < view; r++) {
         const y = T.top + r, row = R[y];
         if (!row || y >= upto) { S.paint(0, PAGE_Y + r, ' '.repeat(W), INK, WHITE); continue; }
@@ -375,7 +408,7 @@ export class Browser {
     S.paint(0, H - 1, ` ${T.offline ? 'no network' : status}`.padEnd(W).slice(0, W), [34, 34, 34], STATUS_BG);
     if (!T.offline) { const kb = `${(T.kbps / 8).toFixed(1)} kB/s `; S.paint(W - kb.length, H - 1, kb, [51, 51, 51], STATUS_BG); }
     // the cursor: in the address or search box while typing, else at the end of the text box picked
-    const F = this.items()[T.sel];
+    const F = this.picks()[T.sel];
     if (!this.editing && F && 'name' in F && T.laid && f >= 1 && F.y >= T.top && F.y < T.top + view) {
       const n = Math.min(F.w - 1, (T.vals.get(F.name) ?? '').length);
       return { scr: S, cx: F.x + n, cy: PAGE_Y + F.y - T.top };

@@ -66,7 +66,9 @@ const C = new Browser(w, () => ({ up: true, kbps: 120 }), () => {}, 160, 50, nul
 C.go('', 100);
 const k1 = C.art(100.6).key, k2 = C.art(100.75).key, kDone = C.art(200).key;
 check('the ferret digs while the page comes', /"dig"/.test(k1) && k1 !== k2);
-check('the frame holds still once the page is in', kDone === C.art(260).key && /"peek"/.test(kDone));
+// (only a blinking ad or a marquee moves it then: the key's last part)
+const still = (k: string) => k.split('|').slice(0, -1).join('|');
+check('the frame holds still once the page is in', still(kDone) === still(C.art(260).key) && /"peek"/.test(kDone));
 
 writeFileSync('tests/.out/ferret.png', shot(C, 200));
 console.log(bad ? `${bad} failed` : 'browser-tabs: all passed (picture in tests/.out/ferret.png)');

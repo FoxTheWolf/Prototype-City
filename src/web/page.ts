@@ -7,8 +7,49 @@
  */
 export type C3 = [number, number, number];
 
-/** A site's colors: the page, its text and links, the banner, the menu bar. */
-export interface Theme { page: C3; bg: C3; fg: C3; dim: C3; link: C3; head: C3; headFg: C3; bar: C3; barFg: C3 }
+/**
+ * A site's colors: the page, its text and links, the banner, the menu bar; and (15.17e) the year of the
+ * web it looks like: `gloss` (the Web 2.0 shine on its banner and menu), `tile` (the pattern on the
+ * page round its column, which then casts a soft shadow).
+ */
+export interface Theme { page: C3; bg: C3; fg: C3; dim: C3; link: C3; head: C3; headFg: C3; bar: C3; barFg: C3; gloss?: boolean; tile?: TileKind }
+export type TileKind = 'stripes' | 'dots' | 'checks' | 'diag' | 'stars';
+/** What a photo shows (render/paint2d.ts paints it). */
+export type PhotoSubj = 'store' | 'food' | 'room' | 'bar' | 'tech' | 'sky' | 'blackout' | 'face';
+
+/**
+ * 15.17e: what a page paints in pixels, as data (the layout stays pure): in the page's cells (fractions
+ * allowed), from its top-left. The `back` ones go under the text (shine, gradients, bevels, tabs, boxes,
+ * tiles, shadows, fields, rules); the `front` ones over empty cells only (photos, ads, maps, stars, the
+ * starburst, the RSS icon, the marquee, big headlines, round icons).
+ */
+export type HdOp =
+  | { k: 'gloss'; x: number; y: number; w: number; h: number; col: C3; r?: number }
+  | { k: 'fade'; x: number; y: number; w: number; h: number; c1: C3; c2: C3 }
+  | { k: 'bevel'; x: number; y: number; w: number; h: number; col: C3; down?: boolean }
+  | { k: 'box'; x: number; y: number; w: number; h: number; fill: C3; stroke: C3; head?: C3 }
+  | { k: 'tab'; x: number; y: number; w: number; col: C3; on: boolean }
+  | { k: 'shadow'; x: number; y: number; w: number; h: number }
+  | { k: 'tile'; x: number; y: number; w: number; h: number; col: C3; kind: TileKind; /** The column left clear of it (from x0, w0 wide). */ x0: number; w0: number }
+  | { k: 'btn'; x: number; y: number; w: number; col: C3 }
+  | { k: 'field'; x: number; y: number; w: number }
+  | { k: 'hr'; x: number; y: number; w: number; kind: 'groove' | 'rainbow' | 'dots'; col: C3 }
+  | { k: 'photo'; x: number; y: number; w: number; h: number; subj: PhotoSubj; seed: number; frame?: 'white' | 'line'; reflect?: boolean }
+  | { k: 'ad'; x: number; y: number; w: number; h: number; name: string; slogan: string; c1: C3; c2: C3 }
+  | { k: 'burst'; x: number; y: number; text: string; col: C3 }
+  | { k: 'rss'; x: number; y: number }
+  | { k: 'stars'; x: number; y: number; n: number }
+  | { k: 'map'; x: number; y: number; w: number; h: number; seed: number; pins: string[] }
+  | { k: 'marquee'; x: number; y: number; w: number; text: string; col: C3 }
+  | { k: 'big'; x: number; y: number; text: string; size: number; kind: 'word' | 'hero'; col: C3 }
+  | { k: 'icon'; x: number; y: number; kind: 'star' | 'pin' | 'lock' | 'mail' | 'phone'; col: C3 };
+/** What a front op weighs coming down the line (KB): the pictures come after the text, one by one. */
+export function opKb(o: HdOp): number {
+  if (o.k === 'photo') return Math.max(4, Math.round(o.w * o.h * 0.6));
+  if (o.k === 'map') return 12;
+  if (o.k === 'ad') return 9;
+  return 1;
+}
 
 export type Block =
   | { t: 'banner'; text: string; sub?: string; art?: string[] }
@@ -19,7 +60,28 @@ export type Block =
   | { t: 'table'; rows: string[][]; head?: boolean }
   | { t: 'cols'; cols: Block[][]; widths?: number[] }
   | { t: 'art'; lines: string[]; col?: C3 }
-  | { t: 'ad'; text: string; url: string }
+  /** A banner ad (15.17e: drawn, 468 x 60 in the column's proportion, with a blinking button): whose, its line, its colors (the theme's by default). */
+  | { t: 'ad'; text: string; url: string; name?: string; c1?: C3; c2?: C3 }
+  /** A line framed in a box, in the site's colors (an outage notice: the old text ad). */
+  | { t: 'notice'; text: string; url?: string }
+  /** 15.17e: a photo the column's width (or w cells), h rows tall, with a caption under it. */
+  | { t: 'photo'; subj: PhotoSubj; seed: number; h?: number; w?: number; caption?: string; reflect?: boolean }
+  /** A street map with pins (A, B, C...). */
+  | { t: 'map'; seed: number; pins?: string[]; h?: number }
+  /** A rating: n of 5 stars, and a line after them. */
+  | { t: 'stars'; n: number; text?: string }
+  /** The "NEW!" starburst with a line beside it. */
+  | { t: 'burst'; label: string; text: string; col?: C3 }
+  /** The orange RSS icon and a link. */
+  | { t: 'rss'; text: string }
+  /** The Web 2.0 hero: a big headline and a line on the left, a photo with its reflection on the right, a glossy button. */
+  | { t: 'hero'; title: string; sub?: string; subj: PhotoSubj; seed: number; btn?: [string, string] }
+  /** The menu as tabs (the one at `on` is the page's). */
+  | { t: 'tabs'; links: [string, string][]; on: number }
+  /** A rounded box with a gradient title, its blocks inside. */
+  | { t: 'box'; title: string; blocks: Block[] }
+  /** The <marquee>: a line sliding right to left. */
+  | { t: 'marquee'; text: string }
   | { t: 'hr' }
   | { t: 'foot'; text: string }
   | { t: 'space' }
@@ -42,7 +104,7 @@ export interface Link { x: number; y: number; w: number; url: string }
 export interface Field { x: number; y: number; w: number; name: string; secret: boolean; max: number }
 /** The url a submit button stands for, among the links. */
 export const SUBMIT = 'submit:';
-export interface Laid { rows: Cell[][]; links: Link[]; fields: Field[] }
+export interface Laid { rows: Cell[][]; links: Link[]; fields: Field[]; back: HdOp[]; front: HdOp[] }
 
 type Seg = { text: string; url?: string };
 /** A text box's paper and ink, the same on every site (the browser's own widget). */
@@ -80,7 +142,7 @@ function wrapRich(s: string, w: number): Seg[][] {
 
 /** Lay page P out `width` cells wide (all of it on a phone's screen, `full`). */
 export function layout(P: Page, width: number, full = false): Laid {
-  const T = P.theme, rows: Cell[][] = [], links: Link[] = [], fields: Field[] = [];
+  const T = P.theme, rows: Cell[][] = [], links: Link[] = [], fields: Field[] = [], back: HdOp[] = [], front: HdOp[] = [];
   const blank = (bg: C3): Cell[] => Array.from({ length: width }, () => ({ ch: ' ', fg: T.fg, bg }));
   const row = (y: number, _bg?: C3) => { while (rows.length <= y) rows.push(blank(T.page)); return rows[y]; };
   const put = (x: number, y: number, s: string, fg: C3, bg: C3) => { const r = row(y, bg); for (let k = 0; k < s.length; k++) if (x + k >= 0 && x + k < width) r[x + k] = { ch: s[k], fg, bg }; };
@@ -107,6 +169,7 @@ export function layout(P: Page, width: number, full = false): Laid {
         case 'banner': {
           const h = Math.max(5, (B.art?.length ?? 0) + 2);
           for (let k = 0; k < h; k++) fill(x, y + k, w, T.head);
+          if (T.gloss) back.push({ k: 'gloss', x, y, w, h, col: T.head });
           const ax = x + 2;
           B.art?.forEach((l, k) => put(ax, y + 1 + k, l, T.headFg, T.head));
           const tx = x + (B.art ? Math.max(...B.art.map((l) => l.length)) + 5 : 3), big = B.text.toUpperCase().split('').join(' ');
@@ -117,6 +180,7 @@ export function layout(P: Page, width: number, full = false): Laid {
         }
         case 'nav': {
           fill(x, y, w, T.bar);
+          if (T.gloss) back.push({ k: 'gloss', x, y, w, h: 1, col: T.bar });
           let cx = x + 2;
           for (const [label, url] of B.links) {
             put(cx, y, label, T.barFg, T.bar);
@@ -154,16 +218,100 @@ export function layout(P: Page, width: number, full = false): Laid {
         }
         case 'art': B.lines.forEach((l) => { fill(x, y, w, T.bg); put(x + 2, y, l, B.col ?? T.fg, T.bg); y++; }); break;
         case 'ad': {
+          // the banner of 2008 (468 x 60): in the column's proportion, at most 58 cells by 4 rows
+          const bw = Math.min(w - 4, 58), bx = x + Math.floor((w - bw) / 2);
+          for (let k = 0; k < 6; k++) fill(x, y + k, w, T.bg);
+          put(bx + bw - 13, y, 'Advertisement', T.dim, T.bg);
+          front.push({ k: 'ad', x: bx, y: y + 1, w: bw, h: 3.75, name: B.name ?? B.text, slogan: B.name ? B.text : '', c1: B.c1 ?? T.head, c2: B.c2 ?? T.headFg });
+          for (let k = 1; k < 5; k++) links.push({ x: bx, y: y + k, w: bw, url: B.url });
+          y += 6;
+          break;
+        }
+        case 'notice': {
           const t = ` ${B.text} `, bw = Math.min(w - 4, t.length + 4);
           fill(x, y, w, T.bg); put(x + 2, y, '+' + '-'.repeat(bw - 2) + '+', T.dim, T.bg);
           fill(x, y + 1, w, T.bg); put(x + 2, y + 1, '|', T.dim, T.bg); put(x + 3, y + 1, t.padEnd(bw - 2).slice(0, bw - 2), T.headFg, T.head); put(x + bw + 1, y + 1, '|', T.dim, T.bg);
-          links.push({ x: x + 4, y: y + 1, w: Math.min(bw - 4, B.text.length), url: B.url });
+          if (B.url) links.push({ x: x + 4, y: y + 1, w: Math.min(bw - 4, B.text.length), url: B.url });
           fill(x, y + 2, w, T.bg); put(x + 2, y + 2, '+' + '-'.repeat(bw - 2) + '+', T.dim, T.bg);
           fill(x, y + 3, w, T.bg);
           y += 4;
           break;
         }
-        case 'hr': fill(x, y, w, T.bg); put(x + 1, y, '-'.repeat(w - 2), T.dim, T.bg); y++; break;
+        case 'photo': {
+          const ph = B.h ?? 8, pw = Math.min(w - 4, B.w ?? Math.round(ph * 3.2)), px = x + 2;
+          for (let k = 0; k < ph + (B.reflect ? 3 : 1); k++) fill(x, y + k, w, T.bg);
+          front.push({ k: 'photo', x: px, y, w: pw, h: ph, subj: B.subj, seed: B.seed, frame: 'white', reflect: B.reflect });
+          y += ph + (B.reflect ? 3 : 1);
+          if (B.caption) { y += rich(x + 2, y, w - 4, B.caption, T.dim, T.bg); fill(x, y, w, T.bg); y++; }
+          break;
+        }
+        case 'map': {
+          const mh = B.h ?? 8, mw = Math.min(w - 4, Math.round(mh * 3.4));
+          for (let k = 0; k <= mh; k++) fill(x, y + k, w, T.bg);
+          front.push({ k: 'map', x: x + 2, y, w: mw, h: mh, seed: B.seed, pins: B.pins ?? ['A'] });
+          y += mh + 1;
+          break;
+        }
+        case 'stars': {
+          fill(x, y, w, T.bg);
+          front.push({ k: 'stars', x: x + 2, y, n: B.n });
+          if (B.text) rich(x + 10, y, w - 12, B.text, T.fg, T.bg);
+          fill(x, y + 1, w, T.bg);
+          y += 2;
+          break;
+        }
+        case 'burst': {
+          for (let k = 0; k < 4; k++) fill(x, y + k, w, T.bg);
+          front.push({ k: 'burst', x: x + 5, y: y + 1.6, text: B.label, col: B.col ?? [226, 30, 30] });
+          rich(x + 11, y + 1, w - 13, B.text, T.fg, T.bg);
+          y += 4;
+          break;
+        }
+        case 'rss': fill(x, y, w, T.bg); front.push({ k: 'rss', x: x + 2, y }); rich(x + 5, y, w - 7, B.text, T.fg, T.bg); fill(x, y + 1, w, T.bg); y += 2; break;
+        case 'hero': {
+          const hh = 9, pw = Math.min(30, Math.floor(w * 0.42)), tw = w - pw - 8;
+          for (let k = 0; k < hh; k++) fill(x, y + k, w, T.head);
+          back.push({ k: 'fade', x, y, w, h: hh, c1: T.head, c2: T.head.map((v) => v * 0.55) as C3 });
+          front.push({ k: 'big', x: x + 3, y: y + 1, text: B.title, size: 2, kind: 'hero', col: T.headFg });
+          if (B.sub) rich(x + 3, y + 4, tw, B.sub, T.headFg, T.head);
+          if (B.btn) {
+            const [label, url] = B.btn, bw = label.length + 4;
+            put(x + 3, y + 7, `  ${label}  `, [255, 255, 255], T.head);
+            back.push({ k: 'btn', x: x + 3, y: y + 7, w: bw, col: [40, 150, 60] });
+            links.push({ x: x + 3, y: y + 7, w: bw, url });
+          }
+          front.push({ k: 'photo', x: x + w - pw - 3, y: y + 1, w: pw, h: 5.4, subj: B.subj, seed: B.seed, reflect: true });
+          y += hh + 1;
+          fill(x, y - 1, w, T.bg);
+          break;
+        }
+        case 'tabs': {
+          fill(x, y, w, T.bg);
+          let cx = x + 2;
+          B.links.forEach(([label, url], i) => {
+            const tw = label.length + 4, on = i === B.on;
+            back.push({ k: 'tab', x: cx, y, w: tw, col: on ? T.bg : T.bar, on });
+            put(cx + 2, y, label, on ? T.fg : T.barFg, on ? T.bg : T.bar);
+            links.push({ x: cx + 2, y, w: label.length, url });
+            cx += tw + 1;
+          });
+          y++;
+          fill(x, y, w, T.bg);
+          back.push({ k: 'hr', x, y: y - 0.5, w, kind: 'groove', col: T.bar });
+          y++;
+          break;
+        }
+        case 'box': {
+          const y0 = y;
+          fill(x, y, w, T.bg); put(x + 3, y, B.title.toUpperCase(), T.headFg, T.head);
+          y = column(B.blocks, x + 1, w - 2, y + 1);
+          fill(x, y, w, T.bg);
+          back.push({ k: 'box', x: x + 1, y: y0, w: w - 2, h: y - y0, fill: T.bg, stroke: T.dim, head: T.head });
+          y++;
+          break;
+        }
+        case 'marquee': fill(x, y, w, T.bg); front.push({ k: 'marquee', x: x + 2, y, w: w - 4, text: B.text, col: T.link }); fill(x, y + 1, w, T.bg); y += 2; break;
+        case 'hr': fill(x, y, w, T.bg); if (T.gloss) back.push({ k: 'hr', x: x + 1, y, w: w - 2, kind: 'groove', col: T.bar }); else put(x + 1, y, '-'.repeat(w - 2), T.dim, T.bg); y++; break;
         case 'foot': fill(x, y, w, T.bar); put(x + Math.max(1, Math.floor((w - B.text.length) / 2)), y, B.text.slice(0, w - 2), T.barFg, T.bar); y++; break;
         case 'space': fill(x, y, w, T.bg); y++; break;
         case 'input': {
@@ -194,7 +342,12 @@ export function layout(P: Page, width: number, full = false): Laid {
   const W = full ? width : Math.min(width - 4, 124), x0 = Math.floor((width - W) / 2);
   const end = column(P.blocks, x0, W, 1);
   row(end + 1, T.page);
-  return { rows, links, fields };
+  // round the column: the page's tile pattern, and the column's soft shadow on it
+  if (T.tile && !full) {
+    back.unshift({ k: 'tile', x: 0, y: 0, w: width, h: rows.length, col: T.page, kind: T.tile, x0, w0: W });
+    back.push({ k: 'shadow', x: x0, y: 0, w: W, h: rows.length });
+  }
+  return { rows, links, fields, back, front };
 }
 
 /**
@@ -209,7 +362,15 @@ export function mobilePage(P: Page, width: number): Page {
       case 'banner': return [{ t: 'foot', text: B.text.toUpperCase() }, ...(B.sub ? [{ t: 'p', text: B.sub } as Block] : [])];
       case 'nav': return [{ t: 'p', text: B.links.map(([l, u]) => `[${l}](${u})`).join(' | ') }];
       case 'cols': return flat(B.cols.flat());
-      case 'ad': return P.mobile ? [] : [B];
+      // (the phone paints no pixels yet, 15.17i: the ad as a line, the pictures left out, the rest as text)
+      case 'ad': return P.mobile ? [] : [{ t: 'notice', text: B.name ? `${B.name}: ${B.text}` : B.text, url: B.url }];
+      case 'hero': return [{ t: 'h', text: B.title }, ...(B.sub ? [{ t: 'p', text: B.sub } as Block] : [])];
+      case 'photo': case 'map': case 'marquee': return B.t === 'marquee' ? [{ t: 'p', text: B.text }] : [];
+      case 'stars': return [{ t: 'p', text: `${'*'.repeat(B.n)}${'.'.repeat(5 - B.n)} ${B.text ?? ''}` }];
+      case 'burst': return [{ t: 'p', text: `${B.label} ${B.text}` }];
+      case 'rss': return [{ t: 'p', text: B.text }];
+      case 'box': return [{ t: 'h', text: B.title }, ...flat(B.blocks)];
+      case 'tabs': return [{ t: 'p', text: B.links.map(([l, u]) => `[${l}](${u})`).join(' | ') }];
       case 'art': return B.lines.every((l) => l.length <= W - 2) ? [B] : [];
       case 'table': {
         const n = Math.max(...B.rows.map((r) => r.length)), cw = Array.from({ length: n }, (_, c) => Math.max(...B.rows.map((r) => plain(r[c] ?? '').length)) + 3);

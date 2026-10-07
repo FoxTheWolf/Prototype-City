@@ -59,7 +59,7 @@ switchSub(w.power, s, true, w.tick, x, y);
 logEvent(w.events, 'restored', w.tick, w.time, x, y, 0.8, [s]);
 const back = fetchUrl(w, host).page;
 if (!back) fail('the site did not come back with the power');
-else if (!back.blocks.some((b) => b.t === 'ad' && /outage|blackout|back|lights/i.test(b.text))) fail('back after a blackout, the site says nothing');
+else if (!back.blocks.some((b) => b.t === 'notice' && /outage|blackout|back|lights/i.test(b.text))) fail('back after a blackout, the site says nothing');
 if (fetchUrl(w, 'www.nosuchplaceatall.com').error !== 'dns') fail('a made-up host was found');
 
 // the search engine (15.3): finds the sites by what they are and their name; a shop without a site is not in it

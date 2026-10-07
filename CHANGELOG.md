@@ -11,6 +11,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - Ctrl+←/→ continua trocando entre o terminal e o navegador; Ctrl+Tab agora é das abas.
 - **Páginas de erro do Ferret**, com o furão perdido: "The connection has timed out" (o site está num bairro sem luz: o furão cava 8 s antes de desistir), "Server not found" (o endereço não existe), "Offline" (sem rede) e o botão **Try Again**.
 - **Sites seguros (https):** o webmail e os bancos têm cadeado. Alguns sites (um banco pequeno, umas lojas, um certo fórum) estão com o **certificado vencido**: aparece a faixa amarela "This Connection is Untrusted", e **Add Exception...** deixa entrar (o Ferret lembra a exceção).
+- **As páginas ganharam pixels:** o anúncio do portal virou um banner de verdade (468 × 60, com o botão "CLICK HERE!" piscando), e os sites podem ter fotos granuladas de 2008 com moldura e reflexo, mapa com pinos, estrelas de avaliação, o "NEW!", o ícone RSS, abas, caixas arredondadas, o letreiro que corre e o fundo com padrão em volta da coluna. **As imagens chegam depois do texto**, uma por uma ("Loading 3 of 7 items...").
 - Por dentro: as peças com que as páginas do Ferret vão ser desenhadas em pixels (brilhos, degradês, cantos redondos, estrelas, fotos granuladas de 2008, mapas, letras grandes). Por ora só aparecem na amostra de teste da tela.
 
 ## 0.15.16 — A tela do notebook inclina junto (2026-10-07)
