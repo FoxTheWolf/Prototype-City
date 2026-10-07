@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do celular</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --ice: #8fd3ff; --acc: #ff6a13; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 48px 0 28px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 28px; align-items: center; }
+  header.cover svg { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 118%; margin: 0; line-height: 1.05; }
+  header.cover h1 span { color: var(--ice); }
+  header.cover p { color: var(--dim); margin: 10px 0 0; max-width: 60ch; }
+  @media (max-width: 700px) { header.cover { grid-template-columns: 1fr; } header.cover h1 { font-size: 32px; } }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg, .card canvas { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--acc); }
+  .do b { color: #6fd08c; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 64px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 0; overflow-x: auto; line-height: 1.2; font-size: 15px; }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #2c2f34; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3a3c42; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  .stage { background: radial-gradient(ellipse at 50% 25%, #23262d 0%, #0b0c0e 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+  @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+  .stage > svg { width: 100%; max-width: 330px; height: auto; display: block; margin: 0 auto; touch-action: manipulation; user-select: none; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .slab { transition: transform .22s cubic-bezier(.3, .7, .2, 1); }
+  [data-k] { cursor: pointer; }
+  [data-k].pressed { transform: translateY(1.4px); filter: brightness(.7); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gloss" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".35" stop-color="#fff" stop-opacity=".03"/><stop offset=".36" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".05"/></linearGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef2f7"/><stop offset=".45" stop-color="#8d939c"/><stop offset=".55" stop-color="#5d626a"/><stop offset="1" stop-color="#c9ced6"/></linearGradient>
+    <linearGradient id="matte" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34373c"/><stop offset="1" stop-color="#232528"/></linearGradient>
+    <radialGradient id="okg" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#3a3d44"/><stop offset="1" stop-color="#0b0c0e"/></radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.2"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.7 0.32"/></filter>
+  </defs>
+</svg>
+<main>
+  <header class="cover">
+    <svg viewBox="40 30 240 640" id="coverPhone"></svg>
+    <div>
+      <h1>O CELULAR <span>DO JOGADOR</span></h1>
+      <p>Manual de identidade · v1 · 2026-10-07</p>
+      <p>Um deslizante de 2008: a placa de cima em preto brilhante com aro cromado, a de baixo em grafite fosco, as teclas com luz azul-gelo. Fechado, mostra a tela e as teclas de navegar; aberto, mostra o teclado numérico. É o primeiro aparelho do jogador; o modelo e a marca mudam pelo manual dos fabricantes.</p>
+    </div>
+  </header>
+  <nav class="toc">
+    <a href="#aparelho">1 · O aparelho</a><a href="#estagios">2 · Os estágios</a><a href="#vistas">3 · As vistas</a><a href="#cores">4 · Cores e materiais</a>
+    <a href="#teclas">5 · Teclas e sons</a><a href="#tela">6 · A tela</a><a href="#variacoes">7 · Variações</a><a href="#fone">8 · O fone</a>
+    <a href="#jogo">9 · No jogo</a><a href="#regras">10 · Regras</a>
+  </nav>
+
+  <section id="aparelho">
+    <h2>1 · O aparelho <small>deslizante, 2008</small></h2>
+    <p class="lead">Duas placas sobre um trilho com mola. A de cima carrega a tela, o alto-falante de ouvido e as teclas de navegar; a de baixo, o teclado numérico, a bateria e a câmera. O trilho tem um ponto de mola: empurrado até a metade, ele termina de abrir sozinho, com um "tchac". É o barulho do aparelho.</p>
+    <div class="stage">
+      <svg viewBox="0 0 320 700" id="dev"></svg>
+      <div>
+        <div class="ctl">
+          <button id="bMid">botão do meio ▲</button><button id="bRight">botão direito ▼</button><button id="bHold">segurar o direito ⤓</button>
+        </div>
+        <div class="hint" id="stageName"></div>
+        <div class="hint">Clique nas teclas do aparelho. No teclado do PC: os números são o teclado numérico, <kbd>Espaço</kbd> atende e <kbd>Delete</kbd> desliga.</div>
+        <div class="tbl"><table>
+          <tr><th>ficha</th><th></th></tr>
+          <tr><td>fechado</td><td>51 × 103 × 15 mm, ~120 g</td></tr>
+          <tr><td>aberto</td><td>51 × 147 mm (o trilho corre 44 mm)</td></tr>
+          <tr><td>tela</td><td>2,8", 240 × 400, colorida; luz azul-gelo</td></tr>
+          <tr><td>frente</td><td>tela, duas teclas de função, atender (verde), desligar (vermelha), a cruz com OK</td></tr>
+          <tr><td>escondido</td><td>o teclado numérico de 12 teclas, com a luz das letras</td></tr>
+          <tr><td>topo</td><td>anterior, tocar/pausar, próxima e a entrada do fone</td></tr>
+          <tr><td>lado direito</td><td>o volume (balancim cromado)</td></tr>
+          <tr><td>verso</td><td>câmera de 2 MP com flash, alto-falante, tampa da bateria</td></tr>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="estagios">
+    <h2>2 · Os estágios <small>bolso, fechado, aberto, discador</small></h2>
+    <p class="lead">O celular sobe na tela em estágios, para ocupar só o espaço que o momento pede: espiar as horas ou mexer na música não precisa do teclado.</p>
+    <div class="grid4" id="frames"></div>
+    <div class="tbl"><table>
+      <tr><th>entrada</th><th>o que faz</th></tr>
+      <tr><td>botão do meio</td><td>avança um estágio: bolso → fechado → aberto → o app de chamadas, pronto para discar</td></tr>
+      <tr><td>botão direito (clique)</td><td>volta um estágio: sai do app → fecha o trilho → desce para o bolso</td></tr>
+      <tr><td>botão direito (segurar)</td><td>desce de uma vez, do jeito que estiver (aberto ou fechado), com a tela no mesmo lugar. Com o celular guardado, segurar o direito fica livre para o zoom de ler placas.</td></tr>
+      <tr><td>teclas de número</td><td>com o celular fechado na mão, abrem o trilho sozinhas e já digitam (T9 ou ABC)</td></tr>
+      <tr><td>Alt (segurado)</td><td>no bolso, traz só o topo para fora: as teclas de música ao alcance</td></tr>
+    </table></div>
+    <p>Digitar é sempre pelo teclado numérico, com T9 ou ABC, de propósito: escrever muito e navegar ficam melhores no notebook.</p>
+  </section>
+
+  <section id="vistas">
+    <h2>3 · As vistas <small>fechado, aberto, verso, topo, base e laterais</small></h2>
+    <p class="lead">Na mesma escala (1 mm = 4 unidades do desenho). O topo fica acima da frente fechada e a base abaixo. As laterais mostram as duas placas: a de cima (7 mm, brilhante) e a de baixo (8 mm, fosca).</p>
+    <div class="card"><svg viewBox="-70 0 1210 900" id="views"></svg></div>
+  </section>
+
+  <section id="cores">
+    <h2>4 · Cores e materiais</h2>
+    <p class="lead">Preto que reflete a rua, cromado que pega os neons e grafite que some na mão. A cor fica com a luz: azul-gelo nas teclas e na tela, verde para atender e vermelho para desligar.</p>
+    <div class="sw">
+      <div><i style="background:#0d0e11"></i><span><b>Preto brilhante</b>#0d0e11<br><em>a placa de cima</em></span></div>
+      <div><i style="background:linear-gradient(#eef2f7,#8d939c 45%,#5d626a 55%,#c9ced6)"></i><span><b>Cromado</b>#c9ced6<br><em>o aro, a cruz, as teclas do topo, o volume</em></span></div>
+      <div><i style="background:#2b2d31"></i><span><b>Grafite fosco</b>#2b2d31<br><em>a placa de baixo, o verso</em></span></div>
+      <div><i style="background:#1c1e22"></i><span><b>Tecla</b>#1c1e22<br><em>as teclas de borracha</em></span></div>
+      <div><i style="background:#8fd3ff"></i><span><b>Azul-gelo</b>#8fd3ff<br><em>a luz das teclas, o acento da tela</em></span></div>
+      <div><i style="background:#2fae5a"></i><span><b>Verde</b>#2fae5a<br><em>atender</em></span></div>
+      <div><i style="background:#d23a2e"></i><span><b>Vermelho</b>#d23a2e<br><em>desligar</em></span></div>
+      <div><i style="background:#0b1219"></i><span><b>Fundo da tela</b>#0b1219<br><em>os apps e o menu</em></span></div>
+    </div>
+    <h3>Materiais</h3>
+    <div class="tbl"><table>
+      <tr><th>peça</th><th>material</th><th>como a luz bate</th></tr>
+      <tr><td>placa de cima</td><td>plástico preto de alto brilho</td><td>um reflexo diagonal nítido; à noite, os letreiros e os postes aparecem nele, borrados; marcas de dedo com o uso</td></tr>
+      <tr><td>aro e cruz</td><td>cromado</td><td>uma faixa clara no alto e uma escura no meio, como um espelho curvo</td></tr>
+      <tr><td>placa de baixo</td><td>plástico grafite fosco, granulado</td><td>difuso, sem reflexo</td></tr>
+      <tr><td>teclas</td><td>borracha com a legenda translúcida</td><td>foscas; a legenda acende em azul-gelo por dentro enquanto a tela está acesa</td></tr>
+      <tr><td>tela</td><td>vidro sobre a tela colorida</td><td>um reflexo largo e fraco no canto de cima; a imagem tem luz própria</td></tr>
+    </table></div>
+  </section>
+
+  <section id="teclas">
+    <h2>5 · Teclas e sons</h2>
+    <p class="lead">As teclas de borracha fazem um clique abafado; o trilho faz o som que marca o aparelho. O teclado numérico toca os tons de discagem de verdade (dois tons somados, como em todo telefone de teclas). Aperte ▶ para ouvir.</p>
+    <div class="tbl"><table>
+      <tr><th>onde</th><th>teclas</th><th>luz</th></tr>
+      <tr><td>frente</td><td>duas de função (as ações escritas no rodapé da tela), atender, desligar, a cruz e o OK</td><td>as de função com um traço azul-gelo; atender e desligar com o desenho verde e vermelho; um anel azul-gelo em volta do OK</td></tr>
+      <tr><td>embaixo do trilho</td><td>1 a 9, *, 0, #, com as letras do T9</td><td>números e letras em azul-gelo</td></tr>
+      <tr><td>topo</td><td>anterior, tocar/pausar, próxima; a entrada do fone à direita</td><td>sem luz (cromado)</td></tr>
+      <tr><td>lado direito</td><td>o volume, um balancim</td><td>sem luz</td></tr>
+    </table></div>
+    <div class="tbl"><table>
+      <tr><th></th><th>som</th><th>quando</th><th>receita</th></tr>
+      <tr><td><button data-snd="key">▶</button></td><td>tecla</td><td>as teclas da frente</td><td>ruído médio curto + um tique grave que cai: borracha, não plástico</td></tr>
+      <tr><td><button data-snd="dtmf">▶</button></td><td>tom de discagem</td><td>as teclas de número</td><td>duas senoides somadas (a linha e a coluna da tecla), 140 ms</td></tr>
+      <tr><td><button data-snd="open">▶</button></td><td>abrir o trilho</td><td>o 2º estágio, ou ao digitar com ele fechado</td><td>o atrito do trilho, e o "tchac" da mola no fim</td></tr>
+      <tr><td><button data-snd="close">▶</button></td><td>fechar o trilho</td><td>voltar do aberto</td><td>o mesmo, um pouco mais grave</td></tr>
+      <tr><td><button data-snd="lift">▶</button></td><td>tirar do bolso</td><td>o 1º estágio</td><td>um roçar de tecido, grave</td></tr>
+      <tr><td><button data-snd="away">▶</button></td><td>guardar</td><td>voltar ao bolso</td><td>o roçar, mais longo</td></tr>
+      <tr><td><button data-snd="send">▶</button></td><td>atender</td><td>a tecla verde</td><td>duas notas subindo</td></tr>
+      <tr><td><button data-snd="end">▶</button></td><td>desligar</td><td>a tecla vermelha</td><td>duas notas descendo</td></tr>
+      <tr><td><button data-snd="music">▶</button></td><td>tecla de música</td><td>as do topo</td><td>um clique metálico seco</td></tr>
+    </table></div>
+  </section>
+
+  <section id="tela">
+    <h2>6 · A tela <small>240 × 400, uma textura própria</small></h2>
+    <p class="lead">A tela é desenhada numa textura de 240 × 400 e lida pela GPU na resolução do monitor. Fica nítida, inclina junto com o corpo 3D e tem luz própria. É a mesma técnica da tela do Jackdaw: a grade de células e a camada HD não entram nela.</p>
+    <div class="grid4">
+      <div class="card"><div style="position:relative"><canvas id="sLay" width="480" height="800"></canvas><canvas id="sLayOv" width="480" height="800" style="position:absolute;inset:0"></canvas></div><div class="cap"><b>A grade:</b> barra de estado de 18 px no topo, rodapé das teclas de função de 26 px embaixo e o conteúdo no meio, com margem de 12 px.</div></div>
+      <div class="card"><canvas id="sStandby" width="480" height="800"></canvas><div class="cap"><b>Espera:</b> a hora grande, a data e os avisos em cartões (cada um com a cor do app na borda).</div></div>
+      <div class="card"><canvas id="sMenu" width="480" height="800"></canvas><div class="cap"><b>Menu:</b> uma grade de ícones de 46 px; o escolhido ganha a moldura azul-gelo.</div></div>
+      <div class="card"><canvas id="sDial" width="480" height="800"></canvas><div class="cap"><b>Discador:</b> os números grandes à direita, o cursor piscando.</div></div>
+    </div>
+    <div class="tbl"><table>
+      <tr><th>regra</th><th></th></tr>
+      <tr><td>tema</td><td>fundo azul-noite (#0b1219), texto branco-azulado, acento azul-gelo; cada app tem uma cor própria, usada no ícone e na borda dos avisos</td></tr>
+      <tr><td>letras</td><td>no jogo, uma fonte de pixels desenhada pelo código (sem arquivo de fonte), em dois tamanhos e um peso grande para a hora; aqui, a Archivo faz as vezes dela</td></tr>
+      <tr><td>rodapé</td><td>sempre as duas ações das teclas de função: a da esquerda (Menu, Open, Save…) e a da direita (Back, Clear…)</td></tr>
+      <tr><td>a arte de hoje</td><td>a interface atual (42 × 26 células + HD) é portada para a textura: uma célula vira ~5,7 × 15 px (ou a interface ganha linhas a mais), e os ícones e fotos HD passam a ter pixels de verdade</td></tr>
+      <tr><td>à noite</td><td>a tela não segue a luz da cena: é ela que ilumina (o rosto do jogador, a mão, o chão perto)</td></tr>
+    </table></div>
+  </section>
+
+  <section id="variacoes">
+    <h2>7 · Variações <small>as cores dos modelos e as capinhas</small></h2>
+    <p class="lead">O corpo deslizante é um só. Cada visual de hoje (<code>phone/shells.ts</code>) passa a ser uma cor e um material da placa de cima. As capinhas vestem as duas placas e deixam a frente livre. Os formatos de tecla diferentes (soltas, juntas, redondas) ficam para o manual dos fabricantes.</p>
+    <div class="grid4" id="shells"></div>
+    <h3>Capinhas</h3>
+    <div class="grid4" id="cases"></div>
+  </section>
+
+  <section id="fone">
+    <h2>8 · O fone</h2>
+    <p class="lead">Um fone de ouvido com fio, preto, que entra no topo do aparelho. No meio do fio fica o controle com a rodinha de volume, que gira com a roda do mouse quando o cursor está sobre ela, e acende em azul-gelo.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 520 360" id="earphones" style="max-width:640px;margin:0 auto"></svg><div class="cap"><b>O fone:</b> o plugue de 3,5 mm cromado, o fio que se divide em Y, os dois fones e o controle com a rodinha recartilhada.</div></div>
+    </div>
+    <div class="rule do"><b>✓</b><span>Com o fone, a música é só do jogador e o mundo fica abafado; sem o fone, ela sai pelo alto-falante do verso e os NPCs por perto ouvem.</span></div>
+    <div class="rule do"><b>✓</b><span>O fio aparece pendurado do topo do aparelho em qualquer estágio, e com o celular no bolso sai do bolso.</span></div>
+  </section>
+
+  <section id="jogo">
+    <h2>9 · No jogo <small>cubinhos, a tela, de longe</small></h2>
+    <h3>O corpo em cubinhos</h3>
+    <p>Grade de <b>2 mm</b>: cada placa é uma laje de cubos (a de cima com 3–4 de espessura, a de baixo com 4), e as duas deslizam uma sobre a outra no estágio 2. As teclas, a cruz, o OK, as teclas do topo e o volume são cubos à parte, que afundam quando apertados. O aro cromado é uma fileira de cubos na borda. O nome do fabricante (acima da tela, à esquerda do alto-falante de ouvido) é pintado pelo código sobre a face, e vem do manual dos fabricantes.</p>
+    <div class="row">
+      <div class="card"><canvas id="vox" width="700" height="760"></canvas><div class="cap"><b>Aberto, na grade de 2 mm.</b> A tela não é de cubos: no lugar dela vai a textura.</div></div>
+      <div class="card"><div style="background:#0c0d0f;border-radius:6px;padding:30px 10px 26px;perspective:700px;overflow:hidden"><canvas id="tiltCv" width="480" height="800" style="width:52%;margin:0 auto;transform:rotateY(-24deg) rotateX(12deg);border:8px solid #050607;border-radius:6px;box-shadow:0 30px 40px #000a"></canvas></div><div class="cap"><b>A tela inclinada com o corpo:</b> nítida, sem os glifos repetidos que a grade dava ao olhar de lado.</div></div>
+    </div>
+    <h3>De longe</h3>
+    <div class="card"><pre class="ascii" id="far"></pre><div class="cap">Na mão de um NPC, na mesa ou no chão: o corpo vira um caractere escuro; com a tela acesa, um ponto azul-gelo.</div></div>
+  </section>
+
+  <section id="regras">
+    <h2>10 · Regras rápidas</h2>
+    <div class="rule"><b>1</b><span>Deslizante: a placa de cima preta brilhante com aro cromado, a de baixo grafite fosca.</span></div>
+    <div class="rule"><b>2</b><span>Luz azul-gelo; atender é verde e desligar é vermelho, sempre.</span></div>
+    <div class="rule"><b>3</b><span>Os estágios: o meio avança, o direito volta, segurar o direito guarda; números abrem o trilho.</span></div>
+    <div class="rule"><b>4</b><span>Digitar é só pelo teclado numérico (T9 ou ABC).</span></div>
+    <div class="rule"><b>5</b><span>A tela é uma textura de 240 × 400 com luz própria; o rodapé sempre mostra as duas teclas de função.</span></div>
+    <div class="rule"><b>6</b><span>O trilho sempre faz o "tchac"; toda tecla faz barulho; os números tocam os tons de discagem.</span></div>
+    <div class="rule"><b>7</b><span>As variações mudam cor e material, nunca a forma; a forma é do fabricante.</span></div>
+  </section>
+</main>
+<script>
+// ================= colors =================
+const ICE = '#8fd3ff', ICED = '#3b6f8f', GLOSS = '#0d0e11', MATTE = '#2b2d31', CALL = '#2fae5a', END = '#d23a2e';
+const SLIDE = 176; // the rail's travel in drawing units (44 mm at 4 units a mm)
+
+// ================= the phone drawing (units: 4 a mm; the closed body at 58,230, 204 x 412) =================
+const KEYPAD = [['1', ''], ['2', 'ABC'], ['3', 'DEF'], ['4', 'GHI'], ['5', 'JKL'], ['6', 'MNO'], ['7', 'PQRS'], ['8', 'TUV'], ['9', 'WXYZ'], ['*', '+'], ['0', '_'], ['#', '⇧']];
+function lowerSlab(live, low = 'url(#matte)') {
+  const k = n => live ? ` data-k="${n}"` : '';
+  let s = `<rect x="58" y="230" width="204" height="412" rx="26" fill="${low}" stroke="#000" stroke-opacity=".6" stroke-width="2"/>
+    <rect x="58" y="230" width="204" height="412" rx="26" filter="url(#grain)" opacity=".5"/>`;
+  KEYPAD.forEach(([d, l], i) => {
+    const x = 72 + (i % 3) * 62, y = 474 + Math.floor(i / 3) * 40;
+    s += `<g${k(d)}><rect x="${x}" y="${y}" width="52" height="32" rx="7" fill="#1c1e22" stroke="#0a0b0c"/><rect x="${x + 3}" y="${y + 2}" width="46" height="3" rx="1.5" fill="#fff" opacity=".07"/>
+      <text x="${x + 17}" y="${y + 22}" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="16" fill="${ICE}">${d}</text>
+      <text x="${x + 37}" y="${y + 21}" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="7.5" fill="${ICE}" opacity=".75">${l}</text></g>`;
+  });
+  return s;
+}
+function upperSlab(live, screenId, body = GLOSS) {
+  const k = n => live ? ` data-k="${n}"` : '';
+  const D = 600, R = 34; // the d-pad's center y and radius
+  const arrow = (x, y, r) => `<path d="M${x} ${y - 4} l4 6 h-8z" fill="${ICE}" transform="rotate(${r} ${x} ${y})" opacity=".85"/>`;
+  return `<rect x="58" y="230" width="204" height="412" rx="26" fill="${body}"/>
+    <rect x="58" y="230" width="204" height="412" rx="26" fill="url(#gloss)"/>
+    <rect x="59.5" y="231.5" width="201" height="409" rx="25" fill="none" stroke="url(#chrome)" stroke-width="3"/>
+    <rect x="130" y="243" width="60" height="6" rx="3" fill="#1d1f23"/><rect x="132" y="244" width="56" height="1.5" rx=".75" fill="#3a3d43"/>
+    <circle cx="214" cy="246" r="3" fill="#15171b"/>
+    <rect x="70" y="256" width="180" height="292" rx="6" fill="#050607"/>
+    <image class="${screenId}" x="76" y="262" width="168" height="280" preserveAspectRatio="none"/>
+    <path d="M76 262 h168 v80 Q160 320 76 360z" fill="#fff" opacity=".05" pointer-events="none"/>
+    <g${k('lsoft')}><rect x="74" y="556" width="50" height="11" rx="5.5" fill="#16181c" stroke="#000"/><rect x="85" y="560.5" width="28" height="2" rx="1" fill="${ICE}" opacity=".8"/></g>
+    <g${k('rsoft')}><rect x="196" y="556" width="50" height="11" rx="5.5" fill="#16181c" stroke="#000"/><rect x="207" y="560.5" width="28" height="2" rx="1" fill="${ICE}" opacity=".8"/></g>
+    <g${k('send')}><path d="M74 578 h38 q6 0 6 6 v28 q0 6 -6 6 h-14 q-24 0 -24 -24z" fill="#16181c" stroke="#000"/><path d="M84 605 q2 -9 7 -11 l3 3.5 q-3.5 2.5 -2.5 6 q2.5 2.5 6 2 l3 3.5 q-5 3.5 -11.5 0z" fill="${CALL}"/></g>
+    <g${k('end')}><path d="M246 578 h-38 q-6 0 -6 6 v28 q0 6 6 6 h14 q24 0 24 -24z" fill="#16181c" stroke="#000"/><path d="M212 600 q10 -8 20 0 l-2 4.5 q-3.5 -2 -4.5 -4.5 q-3.5 -1 -7 0 q-1 2.5 -4.5 4.5z" fill="${END}"/></g>
+    <circle cx="160" cy="${D}" r="${R + 3}" fill="url(#chrome)"/><circle cx="160" cy="${D}" r="${R}" fill="#121317"/>
+    <g${k('up')}><path d="M160 ${D - R} a${R} ${R} 0 0 1 24 10 l-11 11 a16 16 0 0 0 -26 0 l-11 -11 a${R} ${R} 0 0 1 24 -10z" fill="#121317"/>${arrow(160, D - 25, 0)}</g>
+    <g${k('down')}><path d="M160 ${D + R} a${R} ${R} 0 0 1 -24 -10 l11 -11 a16 16 0 0 0 26 0 l11 11 a${R} ${R} 0 0 1 -24 10z" fill="#121317"/>${arrow(160, D + 25, 180)}</g>
+    <g${k('left')}><path d="M${160 - R} ${D} a${R} ${R} 0 0 1 10 -24 l11 11 a16 16 0 0 0 0 26 l-11 11 a${R} ${R} 0 0 1 -10 -24z" fill="#121317"/>${arrow(135, D, -90)}</g>
+    <g${k('right')}><path d="M${160 + R} ${D} a${R} ${R} 0 0 1 -10 24 l-11 -11 a16 16 0 0 0 0 -26 l11 -11 a${R} ${R} 0 0 1 10 24z" fill="#121317"/>${arrow(185, D, 90)}</g>
+    <circle cx="160" cy="${D}" r="16.5" fill="none" stroke="${ICE}" stroke-width="1.2" opacity=".55" filter="url(#glow)"/>
+    <g${k('ok')}><circle cx="160" cy="${D}" r="14" fill="url(#okg)" stroke="#000"/><circle cx="155" cy="${D - 5}" r="4.5" fill="#fff" opacity=".08"/></g>
+    <g${k('prev')}><rect x="104" y="223" width="22" height="9" rx="3" fill="url(#chrome)"/></g>
+    <g${k('play')}><rect x="149" y="223" width="22" height="9" rx="3" fill="url(#chrome)"/></g>
+    <g${k('next')}><rect x="194" y="223" width="22" height="9" rx="3" fill="url(#chrome)"/></g>
+    <rect x="232" y="225" width="14" height="7" rx="2" fill="#090a0b"/>
+    <rect x="260" y="300" width="5" height="56" rx="2.5" fill="url(#chrome)"/>`;
+}
+/** The whole phone: lower slab, then the upper one slid by `open` (0..1). */
+function phoneMarkup(live, screenId, open = 0, body = GLOSS, low = 'url(#matte)') {
+  return `<g class="${live ? 'lift slab' : ''}">
+    ${live ? '<ellipse cx="160" cy="660" rx="120" ry="10" fill="#000" opacity=".5" filter="url(#soft)"/>' : ''}
+    ${lowerSlab(live, low)}
+    <g class="${live ? 'upper slab' : ''}" style="transform:translateY(${-SLIDE * open}px)">${upperSlab(live, screenId, body)}</g></g>`;
+}
+
+// ================= the screen (240 x 320, a texture of its own) =================
+const SCR_W = 240, SCR_H = 400;
+const KEYS_TONE = { '1': [697, 1209], '2': [697, 1336], '3': [697, 1477], '4': [770, 1209], '5': [770, 1336], '6': [770, 1477], '7': [852, 1209], '8': [852, 1336], '9': [852, 1477], '*': [941, 1209], '0': [941, 1336], '#': [941, 1477] };
+const MENU = [['Phone', CALL], ['Messages', '#3f8fe0'], ['Map', '#5fbf6f'], ['Camera', '#9a9fa8'], ['Streetwire', '#e0663f'], ['News', '#d8c7a0'], ['Tunes', '#b05fd0'], ['Bank', '#3fb0a0'], ['Settings', '#7a8090']];
+function statusBar(g) {
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(0, 0, SCR_W, 18);
+  for (let i = 0; i < 4; i++) { g.fillStyle = i < 3 ? '#e8f4ff' : '#4a5560'; g.fillRect(6 + i * 5, 12 - i * 2.5, 3, 3 + i * 2.5); }
+  g.fillStyle = '#e8f4ff'; g.font = '600 10px IBM Plex Mono'; g.fillText('EDGE', 30, 13);
+  g.strokeStyle = '#e8f4ff'; g.lineWidth = 1; g.strokeRect(208, 5, 22, 9); g.fillRect(230, 8, 2, 3); g.fillRect(210, 7, 13, 5);
+  g.textAlign = 'right'; g.fillText('21:47', 202, 13); g.textAlign = 'left';
+}
+function softBar(g, l, r) {
+  const gr = g.createLinearGradient(0, SCR_H - 26, 0, SCR_H); gr.addColorStop(0, '#1b2a36'); gr.addColorStop(1, '#0a1118');
+  g.fillStyle = gr; g.fillRect(0, SCR_H - 26, SCR_W, 26);
+  g.fillStyle = ICE; g.fillRect(0, SCR_H - 26, SCR_W, 1);
+  g.font = '600 12px Archivo'; g.fillStyle = '#e8f4ff'; g.fillText(l, 10, SCR_H - 9); g.textAlign = 'right'; g.fillText(r, SCR_W - 10, SCR_H - 9); g.textAlign = 'left';
+}
+function wallpaper(g) {
+  const gr = g.createLinearGradient(0, 0, 0, SCR_H); gr.addColorStop(0, '#0c1a2b'); gr.addColorStop(.7, '#16263a'); gr.addColorStop(1, '#2a2418');
+  g.fillStyle = gr; g.fillRect(0, 0, SCR_W, SCR_H);
+  let x = 0; const r = (n) => (Math.sin(n * 12.9898) * 43758.5453) % 1;
+  while (x < SCR_W) { const w = 14 + Math.abs(r(x)) * 22, h = 50 + Math.abs(r(x + 7)) * 120; g.fillStyle = '#07101b'; g.fillRect(x, SCR_H - 26 - h, w, h);
+    for (let yy = SCR_H - 26 - h + 6; yy < SCR_H - 30; yy += 9) for (let xx = x + 3; xx < x + w - 3; xx += 6) if (Math.abs(r(xx * 3 + yy)) > .72) { g.fillStyle = '#e8b04a'; g.fillRect(xx, yy, 2, 3); }
+    x += w + 2; }
+}
+function drawScreen(cv, st) {
+  const g = cv.getContext('2d'); g.save(); g.scale(cv.width / SCR_W, cv.height / SCR_H);
+  if (st.off) { g.fillStyle = '#020304'; g.fillRect(0, 0, SCR_W, SCR_H); g.restore(); return; }
+  if (st.screen === 'standby') {
+    wallpaper(g); statusBar(g);
+    g.fillStyle = '#ffffff'; g.font = '800 54px Archivo'; g.textAlign = 'center'; g.fillText('21:47', SCR_W / 2, 92);
+    g.font = '500 13px Archivo'; g.fillStyle = '#cfe6f7'; g.fillText('TUE 7 OCT 2008', SCR_W / 2, 112); g.textAlign = 'left';
+    g.fillStyle = 'rgba(10,20,30,.78)'; g.fillRect(14, 136, SCR_W - 28, 30); g.fillStyle = ICE; g.fillRect(14, 136, 3, 30);
+    g.font = '600 12px Archivo'; g.fillStyle = '#e8f4ff'; g.fillText('1 missed call', 26, 155);
+    g.fillStyle = 'rgba(10,20,30,.78)'; g.fillRect(14, 172, SCR_W - 28, 30); g.fillStyle = '#b05fd0'; g.fillRect(14, 172, 3, 30);
+    g.fillStyle = '#e8f4ff'; g.fillText('♪  Night Shift — 1:42', 26, 191);
+    softBar(g, 'Menu', 'Back');
+  } else if (st.screen === 'menu') {
+    g.fillStyle = '#0b1219'; g.fillRect(0, 0, SCR_W, SCR_H); statusBar(g);
+    MENU.forEach(([n, c], i) => {
+      const x = 12 + (i % 3) * 74, y = 34 + Math.floor(i / 3) * 112, on = i === st.sel;
+      if (on) { g.fillStyle = 'rgba(143,211,255,.18)'; g.fillRect(x - 4, y - 4, 70, 80); g.strokeStyle = ICE; g.lineWidth = 1.5; g.strokeRect(x - 4, y - 4, 70, 80); }
+      g.fillStyle = c; g.beginPath(); g.roundRect(x + 8, y + 4, 46, 46, 10); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.roundRect(x + 10, y + 6, 42, 18, 8); g.fill();
+      g.fillStyle = '#fff'; g.font = '800 20px Archivo'; g.textAlign = 'center'; g.fillText(n[0], x + 31, y + 35);
+      g.font = '500 10.5px Archivo'; g.fillStyle = on ? '#fff' : '#a9bccb'; g.fillText(n, x + 31, y + 66); g.textAlign = 'left';
+    });
+    softBar(g, 'Open', 'Back');
+  } else if (st.screen === 'dial') {
+    g.fillStyle = '#0b1219'; g.fillRect(0, 0, SCR_W, SCR_H); statusBar(g);
+    g.font = '600 12px Archivo'; g.fillStyle = '#7f97aa'; g.fillText('Phone  ·  Dial', 12, 38);
+    g.fillStyle = ICE; g.fillRect(12, 46, 70, 2);
+    const n = st.digits || '', size = n.length > 9 ? 30 : 40;
+    g.font = `700 ${size}px Archivo`; g.fillStyle = '#ffffff'; g.textAlign = 'right'; g.fillText(n || ' ', SCR_W - 14, 150);
+    if (Date.now() % 1000 < 520) { g.fillStyle = ICE; g.fillRect(SCR_W - 12, 150 - size * .8, 2, size * .85); }
+    g.textAlign = 'left'; g.font = '500 11px Archivo'; g.fillStyle = '#7f97aa'; g.fillText(n ? 'Green key to call' : 'Type a number', 14, 196);
+    softBar(g, 'Save', n ? 'Clear' : 'Back');
+  }
+  g.restore();
+}
+
+// ================= sound =================
+let AC = null, NOISE = null;
+function ac() { if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); NOISE = AC.createBuffer(1, AC.sampleRate * .3, AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } if (AC.state === 'suspended') AC.resume(); return AC; }
+function env(g, t, a, p, dec) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(p, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + dec); }
+function noise(t, type, f, p, dec, q = .7) { const a = ac(), s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(); s.buffer = NOISE; fl.type = type; fl.frequency.value = f; fl.Q.value = q; env(g, t, .001, p, dec); s.connect(fl).connect(g).connect(a.destination); s.start(t); s.stop(t + dec + .05); }
+function tone(t, type, f0, f1, p, dec) { const a = ac(), o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dec); env(g, t, .002, p, dec); o.connect(g).connect(a.destination); o.start(t); o.stop(t + dec + .05); }
+const SFX = {
+  key: () => { const t = ac().currentTime; noise(t, 'bandpass', 1800, .25, .02, 1.5); tone(t, 'sine', 900, 700, .05, .02); },
+  dtmf: (d) => { const t = ac().currentTime, [a, b] = KEYS_TONE[d]; tone(t, 'sine', a, a, .07, .14); tone(t, 'sine', b, b, .07, .14); },
+  open: () => { const t = ac().currentTime; noise(t, 'bandpass', 2400, .25, .06, 2); noise(t + .09, 'highpass', 3000, .5, .03); tone(t + .09, 'triangle', 420, 240, .25, .05); },
+  close: () => { const t = ac().currentTime; noise(t, 'bandpass', 2000, .22, .05, 2); noise(t + .07, 'highpass', 2600, .45, .03); tone(t + .07, 'triangle', 300, 180, .25, .05); },
+  lift: () => { const t = ac().currentTime; noise(t, 'lowpass', 900, .25, .18, .8); },
+  away: () => { const t = ac().currentTime; noise(t, 'lowpass', 700, .25, .2, .8); },
+  send: () => { const t = ac().currentTime; tone(t, 'sine', 1320, 1320, .05, .06); tone(t + .08, 'sine', 1760, 1760, .05, .08); },
+  end: () => { const t = ac().currentTime; tone(t, 'sine', 880, 880, .05, .06); tone(t + .08, 'sine', 587, 587, .05, .1); },
+  music: () => { const t = ac().currentTime; noise(t, 'highpass', 4200, .3, .012); },
+};
+// ================= static pictures of the screen =================
+function screenURL(st) { const c = document.createElement('canvas'); c.width = 480; c.height = 800; drawScreen(c, st); return c.toDataURL(); }
+function fillScreens(cls, st) { const u = screenURL(st); document.querySelectorAll('.' + cls).forEach(i => i.setAttribute('href', u)); }
+
+// ================= the live phone =================
+const dev = document.getElementById('dev');
+dev.innerHTML = phoneMarkup(true, 'scrLive', 0);
+const lift = dev.querySelector('.lift'), upper = dev.querySelector('.upper'), scrLive = dev.querySelector('.scrLive');
+const cvLive = document.createElement('canvas'); cvLive.width = 480; cvLive.height = 800;
+const P = { up: true, open: false, screen: 'standby', sel: 0, digits: '' };
+const STAGES = ['0 · no bolso', '1 · fechado: só a tela e as teclas da frente', '2 · aberto: o teclado à mostra', '3 · o app de chamadas, pronto para discar'];
+const stage = () => !P.up ? 0 : !P.open ? 1 : P.screen === 'dial' ? 3 : 2;
+function apply() {
+  lift.style.transform = `translateY(${P.up ? 0 : 560}px)`;
+  upper.style.transform = `translateY(${P.open ? -SLIDE : 0}px)`;
+  document.getElementById('stageName').innerHTML = `estágio <b>${STAGES[stage()]}</b>`;
+}
+function drawLive() { drawScreen(cvLive, P); scrLive.setAttribute('href', cvLive.toDataURL()); }
+function setOpen(v) { if (P.open === v) return; P.open = v; v ? SFX.open() : SFX.close(); }
+function mid() {
+  if (!P.up) { P.up = true; SFX.lift(); }
+  else if (!P.open) setOpen(true);
+  else if (P.screen !== 'dial') { P.screen = 'dial'; P.digits = ''; SFX.key(); }
+  apply(); drawLive();
+}
+function back() {
+  if (!P.up) return;
+  if (P.screen !== 'standby') { P.screen = 'standby'; SFX.key(); }
+  else if (P.open) setOpen(false);
+  else { P.up = false; SFX.away(); }
+  apply(); drawLive();
+}
+function holdAway() { if (P.up) { P.up = false; SFX.away(); apply(); } }
+function press(k) {
+  if (!P.up) return;
+  if (k in KEYS_TONE) {
+    SFX.dtmf(k);
+    if (!P.open) setOpen(true);
+    if (P.screen !== 'dial') { P.screen = 'dial'; P.digits = ''; }
+    if (P.digits.length < 14) P.digits += k;
+  } else if (k === 'prev' || k === 'play' || k === 'next') SFX.music();
+  else if (k === 'send') { SFX.send(); if (P.screen !== 'dial') { P.screen = 'dial'; P.digits = ''; } }
+  else if (k === 'end') { SFX.end(); P.screen = 'standby'; }
+  else if (k === 'rsoft') { if (P.screen === 'dial' && P.digits) { P.digits = P.digits.slice(0, -1); SFX.key(); } else back(); return; }
+  else {
+    SFX.key();
+    if (P.screen === 'standby' && (k === 'ok' || k === 'lsoft')) { P.screen = 'menu'; }
+    else if (P.screen === 'menu') {
+      if (k === 'left') P.sel = (P.sel + 8) % 9; if (k === 'right') P.sel = (P.sel + 1) % 9;
+      if (k === 'up') P.sel = (P.sel + 6) % 9; if (k === 'down') P.sel = (P.sel + 3) % 9;
+      if ((k === 'ok' || k === 'lsoft') && P.sel === 0) { setOpen(true); P.screen = 'dial'; P.digits = ''; }
+    }
+  }
+  apply(); drawLive();
+}
+let held = null;
+dev.addEventListener('pointerdown', e => { const k = e.target.closest('[data-k]'); if (!k) return; e.preventDefault(); k.classList.add('pressed'); held = k; press(k.dataset.k); });
+addEventListener('pointerup', () => { if (held) { held.classList.remove('pressed'); held = null; } });
+document.getElementById('bMid').onclick = mid;
+document.getElementById('bRight').onclick = back;
+document.getElementById('bHold').onclick = holdAway;
+const PCKEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Backspace: 'rsoft', ' ': 'send', Delete: 'end' };
+addEventListener('keydown', e => {
+  const r = dev.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight || e.repeat) return;
+  const k = KEYS_TONE[e.key] ? e.key : PCKEYS[e.key]; if (!k) return;
+  e.preventDefault(); const g = dev.querySelector(`[data-k="${k}"]`); if (g) { g.classList.add('pressed'); setTimeout(() => g.classList.remove('pressed'), 90); }
+  press(k);
+});
+apply(); drawLive();
+setInterval(() => { if (P.up && P.screen === 'dial') drawLive(); }, 500);
+
+// ================= the stages on the game's screen =================
+function scene(w, h) {
+  let s = `<rect width="${w}" height="${h}" fill="#0a0d14"/><rect y="${h * .62}" width="${w}" height="${h * .38}" fill="#15120c"/>`;
+  [[0, 40, 50], [46, 70, 30], [110, 30, 60], [150, 55, 40], [196, 45, 75], [250, 70, 35]].forEach(([x, ww, hh]) => {
+    s += `<rect x="${x}" y="${h * .62 - hh}" width="${ww}" height="${hh}" fill="#121722"/>`;
+    for (let yy = h * .62 - hh + 6; yy < h * .62 - 6; yy += 8) for (let xx = x + 4; xx < x + ww - 4; xx += 7) if ((xx * 7 + yy * 13) % 5 === 0) s += `<rect x="${xx}" y="${yy}" width="2" height="3" fill="#d9a441"/>`;
+  });
+  s += `<circle cx="70" cy="${h * .5}" r="22" fill="#e8b04a" opacity=".13"/><rect x="69" y="${h * .5}" width="2" height="${h * .12}" fill="#333"/>`;
+  return s;
+}
+[
+  ['Bolso', 'nada na tela; com Alt, só o topo aparece, com as teclas de música', -1, 0],
+  ['Fechado', 'a tela e as teclas da frente: espiar as horas, a música, uma mensagem', 0, 1],
+  ['Aberto', 'o teclado à mostra, o aparelho sobe mais e ocupa mais espaço', 1, 2],
+  ['Discador', 'aberto, no app de chamadas, já digitando', 1, 3],
+].forEach(([n, t, open, i]) => {
+  const W = 320, H = 180, s = .3, d = document.createElement('div'); d.className = 'card';
+  let body = scene(W, H);
+  if (open < 0) body += `<g transform="translate(${W - 204 * s - 24 - 58 * s} ${H - 14 - 222 * s}) scale(${s})">${upperSlab(false, 'scrF0')}</g>`;
+  else body += `<g transform="translate(${W - 204 * s - 24 - 58 * s} ${H - 2 - 642 * s}) scale(${s})">${phoneMarkup(false, 'scrF' + i, open)}</g>`;
+  d.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${body}</svg><div class="cap"><b>${n}.</b> ${t}</div>`;
+  document.getElementById('frames').append(d);
+});
+fillScreens('scrF0', { screen: 'standby' }); fillScreens('scrF1', { screen: 'standby' }); fillScreens('scrF2', { screen: 'standby' }); fillScreens('scrF3', { screen: 'dial', digits: '555 0148' });
+
+// ================= cover =================
+document.getElementById('coverPhone').innerHTML = phoneMarkup(false, 'scrCover', 1);
+fillScreens('scrCover', { screen: 'standby' });
+// ================= the views =================
+{
+  const lbl = (x, y, t) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="13" fill="#8d8b84" font-family="IBM Plex Mono">${t}</text>`;
+  const note = (x1, y1, x2, y2, t, a = 'start') => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ff6a13"/><circle cx="${x1}" cy="${y1}" r="2.5" fill="#ff6a13"/><text x="${x2 + (a === 'start' ? 4 : -4)}" y="${y2 + 4}" text-anchor="${a}" font-size="11" fill="#ff6a13" font-family="IBM Plex Mono">${t}</text>`;
+  const dimH = (x1, x2, y, t) => `<g stroke="#8d8b84"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 6}" x2="${x1}" y2="${y + 6}"/><line x1="${x2}" y1="${y - 6}" x2="${x2}" y2="${y + 6}"/></g><text x="${(x1 + x2) / 2}" y="${y - 6}" text-anchor="middle" font-size="12" fill="#e8e6df" font-family="IBM Plex Mono">${t}</text>`;
+  const dimV = (x, y1, y2, t) => `<g stroke="#8d8b84"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 6}" y1="${y1}" x2="${x + 6}" y2="${y1}"/><line x1="${x - 6}" y1="${y2}" x2="${x + 6}" y2="${y2}"/></g><text x="${x - 8}" y="${(y1 + y2) / 2 + 4}" text-anchor="end" font-size="12" fill="#e8e6df" font-family="IBM Plex Mono">${t}</text>`;
+  const Y = 260, T1 = 28, T2 = 32;
+  let s = `<rect x="-70" width="1210" height="900" fill="#131417"/>`;
+  // front, closed (x 60) and open (x 400)
+  s += `<g transform="translate(2 ${Y - 230})">${phoneMarkup(false, 'scrV1', 0)}</g>` + lbl(162, Y + 412 + 72, 'FRENTE, FECHADO');
+  s += `<g transform="translate(342 ${Y - 230})">${phoneMarkup(false, 'scrV2', 1)}</g>` + lbl(502, Y + 412 + 72, 'FRENTE, ABERTO');
+  s += dimV(38, Y, Y + 412, '103 mm') + dimV(622, Y - SLIDE, Y + 412, '') + `<text x="630" y="${Y + 120}" font-size="12" fill="#e8e6df" font-family="IBM Plex Mono">147 mm</text>`;
+  // top view, over the closed front: the lower slab behind, the upper (the front) toward the bottom
+  const TY = 150;
+  s += `<rect x="60" y="${TY}" width="204" height="${T2}" rx="10" fill="url(#matte)"/><rect x="60" y="${TY + T2}" width="204" height="${T1}" rx="10" fill="${GLOSS}" stroke="url(#chrome)" stroke-width="2"/>`;
+  s += [104, 149, 194].map(x => `<rect x="${x + 2}" y="${TY + T2 + 9}" width="22" height="10" rx="3" fill="url(#chrome)"/>`).join('') + `<circle cx="241" cy="${TY + T2 + 14}" r="5" fill="#090a0b" stroke="#555"/>`;
+  s += note(160, TY + T2 + 14, 160, TY - 30, 'anterior · tocar · próxima') + note(241, TY + T2 + 14, 290, TY - 10, 'entrada do fone');
+  s += lbl(162, TY - 52, 'TOPO') + dimV(52, TY, TY + T1 + T2, '15 mm');
+  // bottom view, under the closed front: the upper slab (front) toward the top
+  const BY = Y + 412 + 90;
+  s += `<rect x="60" y="${BY}" width="204" height="${T1}" rx="10" fill="${GLOSS}" stroke="url(#chrome)" stroke-width="2"/><rect x="60" y="${BY + T1}" width="204" height="${T2}" rx="10" fill="url(#matte)"/>`;
+  s += `<rect x="146" y="${BY + T1 + 10}" width="28" height="10" rx="2" fill="#090a0b"/><circle cx="210" cy="${BY + 14}" r="2.5" fill="#050505"/><rect x="236" y="${BY + T1 + 10}" width="12" height="10" rx="3" fill="none" stroke="#090a0b" stroke-width="3"/>`;
+  s += note(160, BY + T1 + 15, 300, BY + T1 + 15, 'carregador e cabo') + note(210, BY + 14, 300, BY - 4, 'microfone');
+  s += lbl(162, BY + 82, 'BASE') + dimH(60, 264, BY + 104, '51 mm');
+  // right side (x 290): front toward the left
+  const RX = 290;
+  s += `<rect x="${RX}" y="${Y}" width="${T1}" height="412" rx="8" fill="${GLOSS}" stroke="url(#chrome)" stroke-width="2"/><rect x="${RX + T1}" y="${Y}" width="${T2}" height="412" rx="8" fill="url(#matte)"/>`;
+  s += `<rect x="${RX + 8}" y="${Y + 70}" width="12" height="56" rx="5" fill="url(#chrome)"/>` + note(RX + 14, Y + 98, RX + 30, Y + 30, 'volume');
+  s += lbl(RX + 30, Y + 412 + 30, 'DIREITA');
+  // back (x 650): the lower slab
+  const BX = 700;
+  s += `<rect x="${BX}" y="${Y}" width="204" height="412" rx="26" fill="url(#matte)" stroke="#000" stroke-width="2"/><rect x="${BX}" y="${Y}" width="204" height="412" rx="26" filter="url(#grain)" opacity=".5"/>`;
+  s += `<rect x="${BX + 62}" y="${Y + 24}" width="80" height="44" rx="12" fill="#16181c" stroke="url(#chrome)" stroke-width="2.5"/><circle cx="${BX + 88}" cy="${Y + 46}" r="14" fill="#06070a" stroke="#555" stroke-width="2"/><circle cx="${BX + 88}" cy="${Y + 46}" r="7" fill="#1b2a44"/><circle cx="${BX + 85}" cy="${Y + 43}" r="2.5" fill="#fff" opacity=".6"/>`;
+  s += `<rect x="${BX + 112}" y="${Y + 38}" width="18" height="14" rx="3" fill="#e6e1c8" opacity=".85"/><text x="${BX + 102}" y="${Y + 88}" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8d939c">2.0 MP</text>`;
+  s += Array.from({ length: 12 }, (_, i) => `<circle cx="${BX + 78 + (i % 6) * 10}" cy="${Y + 330 + Math.floor(i / 6) * 10}" r="2.6" fill="#0c0d0f"/>`).join('');
+  s += `<rect x="${BX + 16}" y="${Y + 120}" width="172" height="190" rx="14" fill="none" stroke="#1a1c1f" stroke-width="2"/><rect x="${BX + 92}" y="${Y + 300}" width="20" height="6" rx="3" fill="#1a1c1f"/>`;
+  s += `<rect x="${BX + 72}" y="${Y + 372}" width="60" height="6" rx="3" fill="url(#chrome)" opacity=".5"/>`;
+  s += note(BX + 88, Y + 46, BX + 220, Y + 30, 'câmera e flash') + note(BX + 100, Y + 340, BX + 220, Y + 340, 'alto-falante') + note(BX + 186, Y + 200, BX + 220, Y + 200, 'tampa da bateria');
+  s += lbl(BX + 102, Y + 412 + 72, 'VERSO');
+  // left side (x 930): front toward the right
+  const LX = 1056;
+  s += `<rect x="${LX}" y="${Y}" width="${T2}" height="412" rx="8" fill="url(#matte)"/><rect x="${LX + T2}" y="${Y}" width="${T1}" height="412" rx="8" fill="${GLOSS}" stroke="url(#chrome)" stroke-width="2"/>`;
+  s += `<path d="M${LX + 8} ${Y + 392} q-14 4 -14 22" fill="none" stroke="#3b3e44" stroke-width="4" stroke-linecap="round"/>` + lbl(LX + 30, Y + 412 + 30, 'ESQUERDA');
+  document.getElementById('views').innerHTML = s;
+  fillScreens('scrV1', { screen: 'standby' }); fillScreens('scrV2', { screen: 'menu', sel: 0 });
+}
+document.querySelectorAll('[data-snd]').forEach(b => b.onclick = () => (b.dataset.snd === 'dtmf' ? SFX.dtmf('5') : SFX[b.dataset.snd]()));
+// ================= screen section =================
+function screens() {
+  drawScreen(document.getElementById('sLay'), { screen: 'standby' });
+  drawScreen(document.getElementById('sStandby'), { screen: 'standby' });
+  drawScreen(document.getElementById('sMenu'), { screen: 'menu', sel: 4 });
+  drawScreen(document.getElementById('sDial'), { screen: 'dial', digits: '555 0148' });
+  drawScreen(document.getElementById('tiltCv'), { screen: 'standby' });
+  const o = document.getElementById('sLayOv').getContext('2d'), k = 2;
+  o.clearRect(0, 0, 480, 640);
+  const mark = (x, y, w, h, t, ty) => { o.strokeStyle = '#ff6a13'; o.lineWidth = 2.5; o.setLineDash([8, 5]); o.strokeRect(x * k, y * k, w * k, h * k); o.setLineDash([]);
+    o.font = '600 20px IBM Plex Mono'; const tw = o.measureText(t).width; o.fillStyle = '#ff6a13'; o.fillRect(14, ty - 20, tw + 12, 28); o.fillStyle = '#fff'; o.fillText(t, 20, ty); };
+  mark(0, 0, 240, 18, 'estado · 18', 66);
+  mark(12, 24, 216, 346, 'conteúdo', 400);
+  mark(0, 374, 240, 26, 'rodapé · 26', 720);
+}
+screens();
+// ================= variations =================
+{
+  const SH = [['Classic', '#3a4250', 'fosco'], ['Slate', '#0e0e11', 'brilhante (o de fábrica)'], ['Brushed', '#969aa0', 'metal escovado'], ['Pebble', '#e2d6dc', 'fosco'], ['Rugged', '#2c2e2c', 'borracha'], ['Slider', '#78161e', 'brilhante']];
+  SH.forEach(([n, c, m]) => {
+    const d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<svg viewBox="50 220 220 430">${phoneMarkup(false, 'scrSh', 0, c)}</svg><div class="cap"><b>${n}.</b> ${m}</div>`;
+    document.getElementById('shells').append(d);
+  });
+  const CS = [['Black silicone', '#18181a'], ['Red silicone', '#aa1e28'], ['Teal silicone', '#1e828c'], ['Leather', '#603a20'], ['Bumper', '#1e1e1e'], ['Clear', 'rgba(200,225,240,.35)'], ['Glitter', '#dc6eb4']];
+  CS.forEach(([n, c]) => {
+    const d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<svg viewBox="40 210 240 450"><rect x="50" y="222" width="220" height="428" rx="32" fill="${c}"/>${n === 'Leather' ? '<rect x="55" y="227" width="210" height="418" rx="29" fill="none" stroke="#c9a070" stroke-dasharray="4 4"/>' : ''}${n === 'Glitter' ? Array.from({ length: 60 }, (_, i) => `<circle cx="${55 + (i * 37) % 210}" cy="${228 + (i * 71) % 415}" r="1.4" fill="#fff" opacity=".7"/>`).join('') : ''}${phoneMarkup(false, 'scrSh', 0)}</svg><div class="cap"><b>${n}.</b></div>`;
+    document.getElementById('cases').append(d);
+  });
+  fillScreens('scrSh', { screen: 'standby' });
+}
+// ================= earphones =================
+document.getElementById('earphones').innerHTML = `<rect width="520" height="360" fill="#131417"/>
+  <g transform="translate(20 40) scale(.5)">${upperSlab(false, 'scrE')}</g>
+  <path d="M141 152 v-40 q0 -30 40 -40 q60 -14 110 6" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round"/>
+  <rect x="136" y="148" width="10" height="16" rx="2" fill="url(#chrome)"/>
+  <g transform="translate(290 70) rotate(18)"><rect x="-26" y="-14" width="70" height="28" rx="12" fill="#1a1b1e" stroke="#000"/>
+    <rect x="-6" y="-17" width="22" height="34" rx="5" fill="url(#chrome)"/>${Array.from({ length: 7 }, (_, i) => `<rect x="${-4 + i * 3}" y="-17" width="1.2" height="34" fill="#4a4f56"/>`).join('')}
+    <rect x="-6" y="-17" width="22" height="34" rx="5" fill="none" stroke="${ICE}" stroke-width="1.2" opacity=".7" filter="url(#glow)"/></g>
+  <path d="M330 86 q50 22 70 70 M400 156 q-10 70 -60 110 M400 156 q40 60 90 80" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round"/>
+  <g transform="translate(330 280)"><ellipse rx="22" ry="18" fill="#141518" stroke="#000"/><ellipse rx="14" ry="11" fill="#22252a"/><circle cx="-6" cy="-5" r="4" fill="#fff" opacity=".08"/></g>
+  <g transform="translate(494 240)"><ellipse rx="22" ry="18" fill="#141518" stroke="#000"/><ellipse rx="14" ry="11" fill="#22252a"/><circle cx="-6" cy="-5" r="4" fill="#fff" opacity=".08"/></g>
+  <text x="250" y="34" font-family="IBM Plex Mono" font-size="10" fill="#ff6a13">a rodinha de volume (acende com o cursor)</text>
+  <text x="166" y="170" font-family="IBM Plex Mono" font-size="10" fill="#ff6a13">o plugue no topo, à direita</text><text x="166" y="183" font-family="IBM Plex Mono" font-size="10" fill="#ff6a13">das teclas de música</text>`;
+fillScreens('scrE', { screen: 'standby' });
+// ================= cubes and far =================
+function vox() {
+  const cv = document.getElementById('vox'), x = cv.getContext('2d'), C = 10, mm = 2, u = 4; // drawing units a mm
+  x.fillStyle = '#131417'; x.fillRect(0, 0, cv.width, cv.height);
+  const W2 = Math.round(51 / mm), H2 = Math.round(147 / mm), ox = (cv.width - W2 * C) / 2, oy = 14;
+  const at = (i, j) => { // the drawing-unit point at cell center, in the open phone (upper slab top at y 54)
+    const px = 58 + (i + .5) * mm * u, py = 54 + (j + .5) * mm * u; return [px, py]; };
+  const inR = (px, py, x0, y0, w, h, r = 0) => { if (px < x0 || py < y0 || px > x0 + w || py > y0 + h) return false; const cx = Math.max(x0 + r, Math.min(x0 + w - r, px)), cy = Math.max(y0 + r, Math.min(y0 + h - r, py)); return Math.hypot(px - cx, py - cy) <= r; };
+  let n = 0;
+  for (let j = 0; j < H2; j++) for (let i = 0; i < W2; i++) {
+    const [px, py] = at(i, j); let col = null;
+    const uy = py + SLIDE; // the upper slab's own coordinates (it is slid up)
+    if (inR(px, uy, 58, 230, 204, 412, 26)) {
+      col = inR(px, uy, 61, 233, 198, 406, 23) ? '#0d0e11' : '#c9ced6';
+      if (inR(px, uy, 70, 256, 180, 292, 6)) col = '#050607';
+      if (inR(px, uy, 76, 262, 168, 280)) col = 'SCREEN';
+      { const r = Math.hypot(px - 160, uy - 600); if (r < 37) col = r < 14 ? '#3a3d44' : r < 34 ? '#121317' : '#c9ced6'; }
+      if (inR(px, uy, 74, 578, 44, 40, 8)) col = '#2fae5a'; if (inR(px, uy, 202, 578, 44, 40, 8)) col = '#d23a2e';
+      if (inR(px, uy, 74, 556, 50, 11, 5) || inR(px, uy, 196, 556, 50, 11, 5)) col = '#3b6f8f';
+    } else if (inR(px, py, 58, 230, 204, 412, 26)) {
+      col = '#45484e';
+      for (let k = 0; k < 12; k++) { const kx = 72 + (k % 3) * 62, ky = 474 + Math.floor(k / 3) * 40; if (inR(px, py, kx, ky, 52, 32, 7)) col = '#16171a'; }
+    }
+    if (!col || col === 'SCREEN') continue;
+    n++;
+    const X = ox + i * C, Y = oy + j * C;
+    x.fillStyle = col; x.fillRect(X, Y, C - 1, C - 1);
+    x.fillStyle = 'rgba(255,255,255,.07)'; x.fillRect(X, Y, C - 1, 1); x.fillRect(X, Y, 1, C - 1);
+    x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(X, Y + C - 2, C - 1, 1); x.fillRect(X + C - 2, Y, 1, C - 1);
+  }
+  const sc = document.createElement('canvas'); sc.width = 480; sc.height = 800; drawScreen(sc, { screen: 'standby' });
+  const sx = ox + (76 - 58) / (mm * u) * C, sy = oy + (262 - SLIDE - 54) / (mm * u) * C;
+  x.drawImage(sc, sx, sy, 168 / (mm * u) * C, 280 / (mm * u) * C);
+  x.fillStyle = '#e8e6df'; x.font = '600 13px IBM Plex Mono'; x.fillText(`${n} cubos de frente · 2 mm`, 12, cv.height - 10);
+  const sp = (t, c) => `<span style="color:${c}">${t}</span>`;
+  document.getElementById('far').innerHTML =
+    `${sp('[', '#c9ced6')}${sp('#', ICE)}${sp(']', '#c9ced6')}    ${sp('perto: o aro, a tela acesa', '#8d8b84')}\n` +
+    `${sp('|', '#5d626a')}      ${sp('longe, apagado', '#8d8b84')}\n` +
+    `${sp('.', ICE)}      ${sp('longe, de noite, com a tela acesa', '#8d8b84')}`;
+}
+vox();
+// ================= the fonts: redraw the canvases once they load =================
+const fontsIn = () => Promise.all(['800 54px Archivo', '600 12px Archivo', '500 13px Archivo', '600 10px "IBM Plex Mono"'].map(f => document.fonts.load(f)));
+addEventListener('load', () => fontsIn().then(() => {
+  drawLive(); screens(); vox();
+  ['scrF0', 'scrF1', 'scrF2', 'scrCover', 'scrV1', 'scrSh', 'scrE'].forEach(c => fillScreens(c, { screen: 'standby' }));
+  fillScreens('scrF3', { screen: 'dial', digits: '555 0148' }); fillScreens('scrV2', { screen: 'menu', sel: 0 });
+}));
+</script>
+</body>
+</html>
