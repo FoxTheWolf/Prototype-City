@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.24 — Controles do celular mais claros (2026-10-07)
+- **O mouse mexe no aparelho, a tela mexe nos apps:** o botão do meio sobe um estágio (bolso → fechado → aberto) e o direito desce (fecha o teclado, depois guarda), sem nunca sair do app em que você está. Para voltar no app: o Back do rodapé, o botão central ou desligar.
+- **O toque age ao soltar:** apertar acende o item (na grade, o app fica escolhido enquanto você segura); soltar abre. Arrastar para fora antes de soltar cancela.
+- **A rodinha rola de novo** (a grade, as listas, as páginas). O volume fica sobre o balancim do lado do celular (ou a rodinha do fone) e, com música tocando, com o celular no bolso.
+- **A moldura preta da tela não fica mais cinza sob os postes:** o clareamento do sol só vale para o plástico e só com luz forte.
+
 ## 0.15.23 — As telas do celular em pixels (2026-10-07)
 - **Tela de espera nova:** a hora grande, a data e a operadora, e o que espera em cartões com a cor do app na borda (chamadas perdidas, mensagens, lembretes); o painel da música com o visualizador, o andamento e o volume. Os quatro papéis de parede foram redesenhados em pixels (a cidade sob o céu da hora, com a lua na fase certa).
 - **Grade de apps nova:** 4 × 4 ícones grandes, alvos fáceis para o toque; o escolhido ganha a moldura azul-gelo.

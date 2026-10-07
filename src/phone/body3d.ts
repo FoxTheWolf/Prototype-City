@@ -342,3 +342,14 @@ export function glassUv(i: number, j: number): [number, number] | null {
   const t = (LOW + UP - 1 - o[2]) / d[2], U = BODY_GPU.uni;
   return [(o[0] + d[0] * t - U[36]) / U[38], (o[1] + d[1] * t - U[37]) / U[39]];
 }
+
+/** Whether pixel (i, j) of the body's rectangle is on the volume rocker on the side, or within 3 mm of it (a thin thing to aim at). */
+export function nearRocker(i: number, j: number): boolean {
+  if (!models || !VIEW.kx) return false;
+  const sx = 1 / VIEW.kx, sy = 1 / VIEW.ky;
+  for (let d = -3; d <= 3; d++) {
+    const ii = i + d * VIEW.kx;
+    if (castVox(models.V[1], { w: 1, h: 1, sx, sy, yaw: VIEW.yaw, pitch: VIEW.pitch, x0: ii * sx, y0: j * sy }).mat[0] === P.RimVol) return true;
+  }
+  return false;
+}

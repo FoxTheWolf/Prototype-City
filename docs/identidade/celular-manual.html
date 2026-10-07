@@ -118,14 +118,14 @@
     <div class="grid4" id="frames"></div>
     <div class="tbl"><table>
       <tr><th>entrada</th><th>o que faz</th></tr>
-      <tr><td>botão do meio</td><td>avança um estágio: bolso → fechado → aberto → o app de chamadas, pronto para discar</td></tr>
-      <tr><td>botão direito (clique)</td><td>volta um estágio: sai do app → fecha o trilho → desce para o bolso</td></tr>
+      <tr><td>botão do meio</td><td>sobe um estágio: bolso → fechado → aberto (para aí). O mouse mexe no aparelho; a tela, nos apps (2026-10-07)</td></tr>
+      <tr><td>botão direito (clique)</td><td>desce um estágio, só o aparelho: fecha o trilho → desce para o bolso; nunca volta no app (voltar é o Back do rodapé, o botão central ou desligar)</td></tr>
       <tr><td>botão do meio (segurar)</td><td>desce de uma vez, do jeito que estiver (aberto ou fechado), com a tela no mesmo lugar</td></tr>
       <tr><td>botão direito (segurar)</td><td>só olha em volta, como sempre (é como se controla a câmera); com o celular guardado, fica livre para o zoom de ler placas</td></tr>
-      <tr><td>botão esquerdo na tela</td><td>o toque: escolhe o que estiver ali (um ícone, um item da lista, as ações do rodapé)</td></tr>
+      <tr><td>botão esquerdo na tela</td><td>o toque: apertar acende o item, soltar escolhe (um ícone, um item da lista, as ações do rodapé); soltar fora dele cancela</td></tr>
       <tr><td>teclas de número</td><td>com o celular fechado na mão, abrem o trilho sozinhas e já digitam (T9 ou ABC)</td></tr>
       <tr><td>Alt (segurado)</td><td>no bolso, traz só o topo para fora: as teclas de música ao alcance</td></tr>
-      <tr><td>rodinha do mouse</td><td>o volume (o balancim do lado): com o celular na mão e, com música tocando, também no bolso; no mapa, com o cursor na tela, o zoom (2026-10-07)</td></tr>
+      <tr><td>rodinha do mouse</td><td>rola a grade, as listas e as páginas; sobre o balancim do lado (ou a rodinha do fone), o volume, e no bolso com música tocando também; no mapa, com o cursor na tela, o zoom (2026-10-07)</td></tr>
     </table></div>
     <p>Digitar é sempre pelo teclado numérico, com T9 ou ABC, de propósito: escrever muito e navegar ficam melhores no notebook. A tela de toque só escolhe.</p>
   </section>
@@ -240,7 +240,7 @@
     <h2>10 · Regras rápidas</h2>
     <div class="rule"><b>1</b><span>Deslizante: a placa de cima preta brilhante com aro cromado, a de baixo grafite fosca.</span></div>
     <div class="rule"><b>2</b><span>Luz azul-gelo; atender é verde e desligar é vermelho, sempre.</span></div>
-    <div class="rule"><b>3</b><span>Os estágios: o meio avança, o direito volta, segurar o meio guarda; números abrem o trilho.</span></div>
+    <div class="rule"><b>3</b><span>Os estágios: o meio sobe, o direito desce (só o aparelho), segurar o meio guarda; números abrem o trilho; voltar no app é pela tela.</span></div>
     <div class="rule"><b>4</b><span>Digitar é só pelo teclado numérico (T9 ou ABC); a tela de toque só escolhe.</span></div>
     <div class="rule"><b>5</b><span>A tela é uma textura de 240 × 432 com luz própria; o rodapé sempre mostra as duas ações como botões de toque.</span></div>
     <div class="rule"><b>6</b><span>O trilho sempre faz o "tchac"; toda tecla faz barulho; os números tocam os tons de discagem.</span></div>
@@ -403,7 +403,7 @@ dev.innerHTML = phoneMarkup(true, 'scrLive', 0);
 const lift = dev.querySelector('.lift'), upper = dev.querySelector('.upper'), scrLive = dev.querySelector('.scrLive');
 const cvLive = document.createElement('canvas'); cvLive.width = 480; cvLive.height = 864;
 const P = { up: true, open: false, screen: 'standby', sel: 0, digits: '' };
-const STAGES = ['0 · no bolso', '1 · fechado: só a tela e as teclas da frente', '2 · aberto: o teclado à mostra', '3 · o app de chamadas, pronto para discar'];
+const STAGES = ['0 · no bolso', '1 · fechado: só a tela e as teclas da frente', '2 · aberto: o teclado à mostra', '2 · aberto, no app de chamadas'];
 const stage = () => !P.up ? 0 : !P.open ? 1 : P.screen === 'dial' ? 3 : 2;
 function apply() {
   lift.style.transform = `translateY(${P.up ? 0 : 560}px)`;
@@ -415,13 +415,18 @@ function setOpen(v) { if (P.open === v) return; P.open = v; v ? SFX.open() : SFX
 function mid() {
   if (!P.up) { P.up = true; SFX.lift(); }
   else if (!P.open) setOpen(true);
-  else if (P.screen !== 'dial') { P.screen = 'dial'; P.digits = ''; SFX.key(); }
   apply(); drawLive();
 }
+/** Back in the apps (the footer's right action): to the standby screen. */
 function back() {
   if (!P.up) return;
   if (P.screen !== 'standby') { P.screen = 'standby'; SFX.key(); }
-  else if (P.open) setOpen(false);
+  apply(); drawLive();
+}
+/** The right button: a stage down, the phone only (the rail shut, then the pocket); never back in an app. */
+function down() {
+  if (!P.up) return;
+  if (P.open) setOpen(false);
   else { P.up = false; SFX.away(); }
   apply(); drawLive();
 }
@@ -483,7 +488,7 @@ dev.addEventListener('pointerdown', e => {
 });
 addEventListener('pointerup', () => { if (held) { held.classList.remove('pressed'); held = null; } });
 document.getElementById('bMid').onclick = mid;
-document.getElementById('bRight').onclick = back;
+document.getElementById('bRight').onclick = down;
 document.getElementById('bHold').onclick = holdAway;
 const PCKEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Backspace: 'rsoft', ' ': 'send', Delete: 'end', Home: 'home' };
 addEventListener('keydown', e => {

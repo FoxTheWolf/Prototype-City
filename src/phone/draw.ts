@@ -16,7 +16,7 @@ import { SHAPE } from '../render/atlas';
 import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_ROWS, type KeyRect } from './shells';
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
-import { BODY_GPU, brandColor, drawBody3d, glassUv, pickBody } from './body3d';
+import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
 import { APP_COL, HITS, paintDial, paintMenu, paintStandby, paintVolume, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
@@ -132,6 +132,11 @@ export function pickPhone(cols: number, rows: number, P: Phone, px: number, py: 
 /** The phone screen's u, v (0..1 across it) at a point (pixels from the interface's top-left), on the leaning glass; null without the body drawn. */
 export function screenUv(px: number, py: number, cw: number, ch: number): [number, number] | null {
   return PHONE_BODY.on && BODY_GPU.w ? glassUv(px - PHONE_BODY.ox * cw - BODY_GPU.dx, py - PHONE_BODY.oy * ch - BODY_GPU.dy) : null;
+}
+
+/** Whether a point (pixels from the interface's top-left) is on the phone's volume rocker, or near it (the wheel turns the volume there). */
+export function onRocker(px: number, py: number, cw: number, ch: number): boolean {
+  return PHONE_BODY.on && BODY_GPU.w > 0 && nearRocker(Math.floor(px - PHONE_BODY.ox * cw - BODY_GPU.dx), Math.floor(py - PHONE_BODY.oy * ch - BODY_GPU.dy));
 }
 
 const lum = (c: C3) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];

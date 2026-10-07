@@ -98,7 +98,8 @@ fn bshade(h: BHit, q: vec2f) -> vec3f {
   if ((fl & 4u) != 0u) { col = bchrome((f32(h.c.y) + 0.5 - B.y) / max(1.0, B.z - B.y)) * (0.55 + 0.45 * L) * select(0.82, 1.0, h.face == 5u) * B.w + G; }
   else if ((fl & 2u) != 0u) { col = A.rgb * max(vec3f(1.0), L) + G; }
   // in strong light (the sun on the hand) dark plastic shows its grey, not a black hole (playtest 2026-10-07)
-  else { let lift = 60.0 * clamp((dot(L, vec3f(0.333)) - 0.85) / 0.6, 0.0, 1.0); col = (A.rgb + lift) * L * d + G; }
+  // (only the plastic: the glass and the screen's black surround stay black; and only in the sun, not under a street lamp)
+  else { let lift = select(0.0, 60.0 * clamp((dot(L, vec3f(0.333)) - 1.05) / 0.45, 0.0, 1.0), A.w < 0.65); col = (A.rgb + lift) * L * d + G; }
   if (h.face == 5u) {
     let dc = textureSampleLevel(bDecal, tmSamp, h.p.xy / vec2f(bu.dim.xy), 0.0);
     let ice = bu.ice.rgb * select(L, max(vec3f(1.0), L), bu.ice.w > 0.5) * select(1.0, 0.7, B.w < 0.99);

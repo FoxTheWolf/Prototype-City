@@ -1,6 +1,6 @@
 import { Sound } from './audio/sound';
 import { Input } from './input';
-import { drawPhone, mapView, onDial, pickPhone, screenUv, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
+import { drawPhone, mapView, onDial, onRocker, pickPhone, screenUv, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BODY_GPU } from './phone/body3d';
 import { CONTENT_Y0, CONTENT_Y1, FOOT_L, FOOT_R, PHONE_PX, SCR_H, SCR_W, tapFlash } from './phone/pixui';
 import { HITS } from './phone/pixpages';
@@ -409,16 +409,13 @@ function playLap(list: LapSound[]) {
  * puts the phone away at once, as it is (the user, 2026-10-07); holding the right one only looks around.
  */
 function phoneMiddle() {
-  const now = performance.now() / 1000;
   if (!phone.out) phoneToggle();
+  // (the user, 2026-10-07) the stages stop at the rail open: the mouse moves the phone, the screen moves the apps
   else if (!phone.slid) phone.setRail(true);
-  // (the user, 2026-10-07) the dialer from the standby screen or the apps' grid; in an app it does nothing, never lowers the phone
-  else if (phone.screen === 'standby' || phone.screen === 'menu') { phone.toDialer(now); sound?.phoneKey(false, true, true); }
 }
+/** The right button's click: a stage down, the phone only (the rail shut, then the pocket); never back in an app (2026-10-07). */
 function phoneBack() {
-  const now = performance.now() / 1000, s = phone.screen;
-  if (s !== 'standby' && s !== 'boot' && s !== 'off') { phone.open('standby', now); sound?.phoneKey(false, true, true); }
-  else if (phone.slid) phone.setRail(false);
+  if (phone.slid) phone.setRail(false);
   else phoneToggle();
 }
 function phoneToggle() {
@@ -430,9 +427,10 @@ function phoneToggle() {
   sound?.phoneSlide(r !== 'in');
   if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
 }
-// with the phone out the mouse moves a cursor: a click on one of its keys presses it, the left
-// button elsewhere is OK and a click of the right one Back (as in GTA IV); holding the right button
-// looks around instead. The middle button goes a stage up (out, the rail open, the dialer); held, it puts the phone away.
+// with the phone out the mouse moves a cursor: a click on one of its keys presses it, on its screen touches
+// (acted on when let go), off the phone it is OK. The mouse's buttons move the phone, the screen the apps
+// (2026-10-07): the middle one a stage up (out, the rail open; held, it puts the phone away), a click of the
+// right one a stage down (the rail shut, the pocket); holding the right button looks around instead.
 // Otherwise, in a lift car, aim at a button of its panel and click it.
 // no browser menu on the right button (it is Back and look-around): stopped early, on the canvas and the document
 const noMenu = (e: Event) => { e.preventDefault(); e.stopPropagation(); return false; };
@@ -453,13 +451,15 @@ addEventListener('wheel', (e) => {
     return;
   }
   if (!e.deltaY) return;
-  // the wheel is the phone's volume (its rocker on the side; the screen is touched now): in the hand, and with
-  // music playing also in the pocket. On the map, with the cursor on the glass, it zooms
+  // the wheel scrolls (the grid, the lists, the pages); over the phone's volume rocker it turns the volume, and with
+  // music playing in the pocket too (2026-10-07). On the map, with the cursor on the glass, it zooms
   const d = Math.sign(e.deltaY), vk: Key = d < 0 ? 'vup' : 'vdown';
   if (phone.out) {
-    const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, g = screenUv((e.clientX - r.left) * dpr - uiLayout.originX, (e.clientY - r.top) * dpr - uiLayout.originY, uiLayout.cellW, uiLayout.cellH);
+    const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, px = (e.clientX - r.left) * dpr - uiLayout.originX, py = (e.clientY - r.top) * dpr - uiLayout.originY;
+    if (onRocker(px, py, uiLayout.cellW, uiLayout.cellH)) { phonePress(vk); return; }
+    const g = screenUv(px, py, uiLayout.cellW, uiLayout.cellH);
     if (phone.screen === 'map' && g && g[0] >= 0 && g[1] >= 0 && g[0] < 1 && g[1] < 1) { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
-    phonePress(vk);
+    phonePress(phone.screen === 'menu' ? (d > 0 ? 'right' : 'left') : d > 0 ? 'down' : 'up');
   } else if (phone.tn.playing && running && !paused && !payphone.active && !bagView.open && !talkView.open) musicKey(vk);
 });
 /** The right button held down: since when, and how far the mouse went (a short still click is Back). */
@@ -486,32 +486,48 @@ function altUp() {
 addEventListener('blur', () => { altFree = false; });
 /** The left button is held down over the notebook screen, dragging a selection (15.7c). */
 let lapDrag = false;
-/**
- * A touch on the phone's screen (the manual v2: a touch screen for choosing) at the system cursor: the
- * footer's buttons are the two actions, the apps' grid opens the app touched, elsewhere it is OK on the row
- * touched; what was touched lights a moment. False when the cursor is not on the screen.
- */
-function phoneTouch(cx: number, cy: number): boolean {
+/** Where the system cursor is on the phone's screen (its pixels, 240 x 432), or null off it (or the screen dark). */
+function glassAt(cx: number, cy: number): [number, number] | null {
   const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, L = uiLayout, F = PHONE_PIC.full;
-  if (!PHONE_PIC.on || phone.screen === 'off' || phone.screen === 'boot') return false;
+  if (!PHONE_PIC.on || phone.screen === 'off' || phone.screen === 'boot') return null;
   // on the glass as it leans with the body (the picture is laid by the same ray), else on its upright rectangle
   const px = (cx - r.left) * dpr - L.originX, py = (cy - r.top) * dpr - L.originY, g = screenUv(px, py, L.cellW, L.cellH);
   const sx = (g ? g[0] : (px / L.cellW - F[0]) / F[2]) * SCR_W, sy = (g ? g[1] : (py / L.cellH - F[1]) / F[3]) * SCR_H;
-  if (sx < 0 || sy < 0 || sx >= SCR_W || sy >= SCR_H) return false;
-  const now = performance.now() / 1000;
+  return sx < 0 || sy < 0 || sx >= SCR_W || sy >= SCR_H ? null : [sx, sy];
+}
+/** A touch held on the screen: what it lit, and what it does when let go over it (2026-10-07: as a phone, on the release). */
+let touchHeld: { x: number; y: number; w: number; h: number; act: () => void } | null = null;
+/**
+ * A touch going down on the phone's screen (the manual v2: a touch screen for choosing) at the system cursor:
+ * the footer's buttons are the two actions; on a screen drawn in pixels, the item touched (picked at once,
+ * acted on when let go over it); on one of the cells' apps, OK on the row touched. What was touched stays lit
+ * while held. False when the cursor is not on the screen.
+ */
+function touchDown(cx: number, cy: number): boolean {
+  const at = glassAt(cx, cy);
+  if (!at) return false;
+  const [sx, sy] = at, tap = () => { if (phone.prefs.profile !== 2) sound?.phoneTap(); };
+  let t: typeof touchHeld = null;
   if (sy >= FOOT_L.y) {
     const left = sx < SCR_W / 2, B = left ? FOOT_L : FOOT_R;
-    if (sx >= B.x && sx < B.x + B.w) { tapFlash(B, now); phonePress(left ? 'lsoft' : 'rsoft', true); }
-    return true;
+    if (sx >= B.x && sx < B.x + B.w) t = { ...B, act: () => phonePress(left ? 'lsoft' : 'rsoft', true) };
+  } else if (sy >= CONTENT_Y0) {
+    // a screen drawn in pixels (pixpages.ts) says where its items are; one of the cells' apps: OK on the row touched
+    const h = HITS.find((r) => sx >= r.x && sx < r.x + r.w && sy >= r.y && sy < r.y + r.h);
+    if (h) { h.pre?.(); t = { x: h.x, y: h.y, w: h.w, h: h.h, act: () => (h.key ? phonePress(h.key, true) : tap()) }; }
+    else if (!(phone.screen === 'standby' || phone.screen === 'menu' || (phone.screen === 'calls' && !phone.call))) t = { x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12, act: () => phonePress('ok', true) };
   }
-  if (sy < CONTENT_Y0) return true;
-  // a screen drawn in pixels (pixpages.ts) says where its items are; one of the cells' apps: OK on the row touched
-  const h = HITS.find((r) => sx >= r.x && sx < r.x + r.w && sy >= r.y && sy < r.y + r.h);
-  if (h) { tapFlash(h, now); h.pre?.(); if (h.key) phonePress(h.key, true); else if (phone.prefs.profile !== 2) sound?.phoneTap(); return true; }
-  if (phone.screen === 'standby' || phone.screen === 'menu' || (phone.screen === 'calls' && !phone.call)) return true;
-  tapFlash({ x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12 }, now);
-  phonePress('ok', true);
+  touchHeld = t;
+  if (t) tapFlash(t, Infinity);
   return true;
+}
+/** The touch let go: acted on if over what it lit (the tick and a last flash), else let go of. */
+function touchUp(cx: number, cy: number) {
+  const t = touchHeld, at = glassAt(cx, cy), now = performance.now() / 1000;
+  touchHeld = null;
+  if (!t) return;
+  if (at && at[0] >= t.x && at[0] < t.x + t.w && at[1] >= t.y && at[1] < t.y + t.h) { tapFlash(t, now); t.act(); }
+  else tapFlash(t, -1);
 }
 /** The interface's cell under the system cursor. */
 function cellAtClient(cx: number, cy: number): [number, number] {
@@ -598,7 +614,7 @@ addEventListener('mousedown', (e) => {
   if (phone.out) {
     if (e.button === 0) {
       // off the phone a click is OK; on its body only its keys and its screen take one (a key just missed does nothing)
-      if (!phoneTouch(e.clientX, e.clientY)) { const k = phoneAt(e.clientX, e.clientY); if (k === null) phonePress('ok'); else if (k !== 'body') phonePress(k); }
+      if (!touchDown(e.clientX, e.clientY)) { const k = phoneAt(e.clientX, e.clientY); if (k === null) phonePress('ok'); else if (k !== 'body') phonePress(k); }
     } else if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     return;
   }
@@ -614,7 +630,7 @@ document.addEventListener('pointerlockchange', () => {
   else if (!input.locked && running && !cctv && !phone.out && !payphone.active && !laptop.open && !bagView.open && !talkView.open && !altFree && laptop.raise === 0 && rightAt < 0 && performance.now() - input.unlockedAt > 300) pause();
 });
 addEventListener('mouseup', (e) => {
-  if (e.button === 0) phone.release();
+  if (e.button === 0) { phone.release(); touchUp(e.clientX, e.clientY); }
   if (e.button === 0 && watchStartHeld) { watchStartHeld = false; watch.startUp(); }
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
   if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
