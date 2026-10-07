@@ -37,6 +37,15 @@ for (let z = 0; z < 4; z++) {
   if (z === 2) d.gps = { lost: false, line: 'SEARCHING SATELLITES', sub: 'IN VIEW 4/11', bar: 0.4 };
   shot(`map-z${z}`, (Q) => paintMap(Q, d));
 }
+// walking: the view moving a few metres keeps the same picture (made again only every 64 pixels)
+{
+  const mpp = mapMpp(ZOOM_ROW_M[0]), X0 = cx - (MAP_W / 2) * mpp, Y0 = cy - (MAP_H / 2) * mpp, a = streetMap(city, m, X0, Y0, mpp, 0);
+  let made = 0;
+  for (let k = 1; k <= 40; k++) if (streetMap(city, m, X0 + k * 0.5, Y0, mpp, 0).pic !== a.pic) { made++; break; }
+  const b = streetMap(city, m, X0 + 3, Y0, mpp, 0);
+  console.log(made ? `walking 20 m made the picture again (ok if past 64 px: ${(64 * mpp).toFixed(0)} m)` : 'walking 20 m kept the picture');
+  if (b.pic === a.pic && b.ox - a.ox !== Math.round(3 / mpp)) { console.log('FAIL the view did not move in the picture'); process.exitCode = 1; }
+}
 // a place's card over the closest zoom
 {
   const mpp = mapMpp(ZOOM_ROW_M[0]), d = base(streetMap(city, m, cx - (MAP_W / 2) * mpp, cy - (MAP_H / 2) * mpp, mpp, 0));

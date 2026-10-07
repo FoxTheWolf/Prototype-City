@@ -6,6 +6,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **O mapa redesenhado como um mapa de celular de 2008:** as ruas exatas (brancas, as avenidas amarelas), os prédios contornados e mais azulados quanto mais altos, parques e praças com textura, os bairros tingidos de longe; continua se desenhando de cima para baixo. Por cima: a rota em azul, os marcos (estrela num disco vermelho), os nomes das ruas e dos bairros sem se sobrepor, o alfinete do lugar, a seta do GPS na direção em que você anda e o disco da precisão. Botões + e - para o zoom, a escala no cabeçalho.
 - **O cartão do lugar** com aberto/fechado, telefone, distância, endereço e os botões Route e Call; **a barra da rota** com a próxima curva e uma seta dobrada.
 - **O mapa de dentro dos prédios** com as salas na cor do tipo, as paredes, as portas entre as salas, a escada listrada e o elevador.
+- **Andar com o mapa aberto não pesa:** a imagem cobre um pouco além da tela e só é refeita a cada ~40 m andados (no zoom mais perto), em vez de a cada quadro.
 - **A busca de lugares:** o campo com a lupa e a digitação, e os resultados com alfinete (ou estrela), distância, tipo e aberto/fechado; um toque escolhe, outro mostra no mapa.
 
 ## 0.15.37 — Banco: agências por perto no lugar da recarga (2026-10-07)

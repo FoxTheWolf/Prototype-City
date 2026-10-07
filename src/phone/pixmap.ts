@@ -59,6 +59,16 @@ export function roadsIn(b: number[], a0: number, a1: number): [number, number][]
 }
 
 const img = (w: number, h: number): Rgb => ({ hd: new Uint8ClampedArray(w * h * 3), w, h });
+/**
+ * A map's picture and where the view starts in it. The picture reaches PAD pixels past the view on
+ * every side, from an origin on a grid of PAD pixels, so walking (the view follows the GPS) only
+ * makes it again every PAD pixels instead of every frame.
+ */
+export interface MapPic { pic: Rgb; ox: number; oy: number }
+const PAD = 64, IW = MAP_W + 2 * PAD, IH = MAP_H + 2 * PAD;
+/** The picture's origin for a view at (X0, Y0): one PAD step before the grid line under it. */
+const padOrigin = (v: number, mpp: number) => (Math.floor(v / (PAD * mpp)) - 1) * PAD * mpp;
+const placed = (pic: Rgb, sx: number, sy: number, X0: number, Y0: number, mpp: number): MapPic => ({ pic, ox: Math.round((X0 - sx) / mpp), oy: Math.round((Y0 - sy) / mpp) });
 const set = (R: Rgb, i: number, c: C3) => { R.hd[i * 3] = c[0]; R.hd[i * 3 + 1] = c[1]; R.hd[i * 3 + 2] = c[2]; };
 const shade = (c: C3, k: number): C3 => [c[0] * k, c[1] * k, c[2] * k];
 
@@ -68,10 +78,10 @@ let streetCache: { key: string; pic: Rgb } | null = null;
  * than a pixel), the ground by its most common kind, the buildings outlined and darker the taller,
  * parks and plazas with a fine pattern, the districts tinted on the far zooms. Kept until the view moves.
  */
-export function streetMap(city: City, m: MapRaster, X0: number, Y0: number, mpp: number, zoom: number): Rgb {
-  const key = `${X0.toFixed(2)},${Y0.toFixed(2)},${mpp},${zoom}`;
-  if (streetCache?.key === key) return streetCache.pic;
-  const W = MAP_W, H = MAP_H, R = img(W, H), kinds = new Uint8Array(W * H), out = new Int32Array(2), D = city.diagonal;
+export function streetMap(city: City, m: MapRaster, VX: number, VY: number, mpp: number, zoom: number): MapPic {
+  const X0 = padOrigin(VX, mpp), Y0 = padOrigin(VY, mpp), key = `${X0.toFixed(2)},${Y0.toFixed(2)},${mpp},${zoom}`;
+  if (streetCache?.key === key) return placed(streetCache.pic, X0, Y0, VX, VY, mpp);
+  const W = IW, H = IH, R = img(W, H), kinds = new Uint8Array(W * H), out = new Int32Array(2), D = city.diagonal;
   const colRoad: boolean[] = [], rowRoad: boolean[] = [], colWide: boolean[] = [], rowWide: boolean[] = [];
   for (let c = 0; c < W; c++) { colWide[c] = roadIn(city.xb, city.xCell, X0 + c * mpp, X0 + (c + 1) * mpp, true); colRoad[c] = roadIn(city.xb, city.xCell, X0 + c * mpp, X0 + (c + 1) * mpp, false); }
   for (let r = 0; r < H; r++) { rowWide[r] = roadIn(city.yb, city.yCell, Y0 + r * mpp, Y0 + (r + 1) * mpp, true); rowRoad[r] = roadIn(city.yb, city.yCell, Y0 + r * mpp, Y0 + (r + 1) * mpp, zoom === 3); }
@@ -107,7 +117,7 @@ export function streetMap(city: City, m: MapRaster, X0: number, Y0: number, mpp:
     if (edge) for (let q = 0; q < 3; q++) R.hd[i * 3 + q] *= 0.72;
   }
   streetCache = { key, pic: R };
-  return R;
+  return placed(R, X0, Y0, VX, VY, mpp);
 }
 
 /** Floor colours of the rooms on the indoor map, by kind. */
@@ -121,10 +131,10 @@ let indoorCache: { key: string; pic: Rgb } | null = null;
  * striped, the lift crossed), a wall where two rooms meet (open where both sides are a doorway), and
  * past the outer walls the street or the neighbours' walls.
  */
-export function indoorMap(m: MapRaster, plan: Plan | null, id: string, X0: number, Y0: number, mpp: number): Rgb {
-  const key = `${id},${X0.toFixed(2)},${Y0.toFixed(2)},${mpp}`;
-  if (indoorCache?.key === key) return indoorCache.pic;
-  const W = MAP_W, H = MAP_H, R = img(W, H), room = new Int16Array(W * H), door = new Uint8Array(W * H);
+export function indoorMap(m: MapRaster, plan: Plan | null, id: string, VX: number, VY: number, mpp: number): MapPic {
+  const X0 = padOrigin(VX, mpp), Y0 = padOrigin(VY, mpp), key = `${id},${X0.toFixed(2)},${Y0.toFixed(2)},${mpp}`;
+  if (indoorCache?.key === key) return placed(indoorCache.pic, X0, Y0, VX, VY, mpp);
+  const W = IW, H = IH, R = img(W, H), room = new Int16Array(W * H), door = new Uint8Array(W * H);
   for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
     const v = plan ? cellAt(plan, X0 + (c + 0.5) * mpp, Y0 + (r + 0.5) * mpp) : 0;
     room[r * W + c] = v & ROOM; door[r * W + c] = v & DOOR ? 1 : 0;
@@ -146,7 +156,7 @@ export function indoorMap(m: MapRaster, plan: Plan | null, id: string, X0: numbe
     set(R, i, wall ? WALL : col);
   }
   indoorCache = { key, pic: R };
-  return R;
+  return placed(R, X0, Y0, VX, VY, mpp);
 }
 
 /** A label on the map: its text, where (the middle of its left edge), its colours; placed in order, skipped where it would overlap one before it. */
@@ -156,7 +166,7 @@ export type MapFoot = { kind: 'street'; text: string; back: string }
   | { kind: 'card'; name: string; sub: string; open: boolean | null; openLabel: string; hours: string; number: string; hasNumber: boolean; far: string; address: string; route: string; call: string }
   | { kind: 'nav'; line: string; sub: string; turn: 'left' | 'right' | null };
 export interface MapPage {
-  title: string; scale: string; scalePx: number; acc: string; accBad: boolean; pic: Rgb; t: number; now: number;
+  title: string; scale: string; scalePx: number; acc: string; accBad: boolean; pic: MapPic; t: number; now: number;
   route: number[]; stars: { x: number; y: number }[]; labels: MapLabel[]; pin: { x: number; y: number } | null; halo: { x: number; y: number; r: number } | null;
   me: { x: number; y: number; fix: boolean; heading: number } | null;
   gps: { lost: boolean; line: string; sub: string; bar: number | null } | null; foot: MapFoot; zoomIn: boolean; zoomOut: boolean;
@@ -173,8 +183,8 @@ export function paintMap(P: Paint, d: MapPage) {
   // the picture, row by row as the slow phone draws it in
   const shown = Math.max(0, Math.min(MAP_H, Math.floor(((d.t - 0.15) / 0.03) * 13)));
   P.clip(0, MAP_T, SCR_W, MAP_T + shown);
-  const px = d.pic.hd;
-  for (let r = 0; r < shown; r++) for (let c = 0; c < MAP_W; c++) { const q = (r * MAP_W + c) * 3; P.s.set(c, MAP_T + r, px[q], px[q + 1], px[q + 2]); }
+  const px = d.pic.pic.hd, { ox, oy } = d.pic;
+  for (let r = 0; r < shown; r++) for (let c = 0; c < MAP_W; c++) { const q = ((r + oy) * IW + c + ox) * 3; P.s.set(c, MAP_T + r, px[q], px[q + 1], px[q + 2]); }
   // the GPS's accuracy: a pale blue disc around the position
   if (d.halo) P.disc(d.halo.x, MAP_T + d.halo.y, d.halo.r, [60, 140, 255], 0.16);
   // the route: a blue line along its legs
