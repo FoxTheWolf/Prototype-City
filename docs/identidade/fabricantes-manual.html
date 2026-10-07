@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual dos fabricantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Nunito:wght@800;900&family=Marcellus+SC&family=Comfortaa:wght@300;600&family=Black+Ops+One&family=Exo+2:ital,wght@1,300;1,500&family=Libre+Franklin:wght@600;800&family=Baloo+2:wght@800&family=Oswald:wght@500;700&family=Cormorant+Garamond:ital,wght@1,500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --amb: #ffb030; --acc: #ff6a13; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 48px 0 28px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 118%; margin: 0; line-height: 1.05; }
+  header.cover h1 span { color: var(--amb); }
+  header.cover p { color: var(--dim); margin: 10px 0 0; max-width: 60ch; }
+  #wall { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  #wall div { background: #f1efe9; border-radius: 6px; padding: 10px 8px; display: flex; align-items: center; justify-content: center; min-height: 64px; }
+  #wall div.dk { background: #0b0c0e; border: 1px solid var(--line); }
+  #wall svg { width: 100%; max-height: 40px; }
+  @media (max-width: 760px) { header.cover { grid-template-columns: 1fr; } header.cover h1 { font-size: 32px; } }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; align-items: center; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  .seedbar { position: sticky; top: 0; z-index: 5; background: rgba(16,17,19,.94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 8px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--dim); }
+  .seedbar b { color: var(--amb); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 26px 0 6px; }
+  .part { font: 700 12px 'IBM Plex Mono'; color: var(--amb); letter-spacing: .2em; padding: 36px 0 0; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 12px 0; }
+  .logos > div { border-radius: 8px; padding: 18px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 110px; }
+  .logos svg { width: 100%; max-height: 54px; }
+  .logos span { font-size: 11px; opacity: .6; }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--acc); }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 52px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  .fam { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 760px) { .fam { grid-template-columns: 1fr; } }
+  .fam dl { margin: 0; font-size: 12px; }
+  .fam dt { color: var(--dim); margin-top: 8px; }
+  .fam dd { margin: 0; }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 0; overflow-x: auto; line-height: 1.2; font-size: 13px; }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #2c2f34; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  code { color: var(--amb); }
+  svg text { white-space: pre; }
+</style>
+</head>
+<body>
+<main>
+  <header class="cover">
+    <div id="wall"></div>
+    <div>
+      <h1>OS <span>FABRICANTES</span></h1>
+      <p>Manual de identidade · v1 · 2026-10-07</p>
+      <p>Celulares, notebooks, operadoras e as marcas pequenas da cidade. Os nomes saem da semente, e cada cidade tem os seus. O que não muda são as <b>famílias</b>: cada uma tem tipografia, símbolo, cores e jeito de aparecer no mundo. Quem conhece a cidade reconhece "um daqueles robustos" ou "a operadora velha das antenas" antes de ler o nome.</p>
+    </div>
+  </header>
+  <div class="seedbar"><button id="reroll">↻ sortear outra cidade</button> semente <b id="seedv">42</b> · <span id="seednames"></span></div>
+  <nav class="toc">
+    <a href="#regra">0 · A regra</a><a href="#cel">1–4 · Celulares</a><a href="#nb">5–6 · Notebooks</a><a href="#op">7–9 · Operadoras</a><a href="#peq">10 · Marcas pequenas</a><a href="#jogo">11 · No jogo</a><a href="#regras">12 · Regras rápidas</a>
+  </nav>
+
+  <section id="regra">
+    <h2>0 · A regra <small>o nome é da cidade, a família é do jogo</small></h2>
+    <p>Cada cidade sorteia os nomes das marcas da mesma lista de raízes de que saem as ruas e as empresas (<code>L.roots</code>). Por isso o manual não desenha um logo: desenha <b>uma família</b>, e o logo se monta sozinho com o nome que a semente der. A família fixa quatro coisas:</p>
+    <ul>
+      <li><b>a tipografia</b> e a caixa (maiúsculas, minúsculas, a primeira maiúscula) em que o nome é escrito;</li>
+      <li><b>o símbolo</b>, que é o mesmo desenho em toda cidade, com <b>uma variante em quatro</b> tirada da semente (as ondas, os rebites, o canto vazio…). Isso basta para duas cidades não terem logos idênticos;</li>
+      <li><b>as cores</b> no papel e no escuro;</li>
+      <li><b>o arquétipo</b>: quem compra, onde se vende, como se fala dos modelos e onde a marca aparece.</li>
+    </ul>
+    <p class="lead">Use o botão no topo para sortear outra cidade: todo o manual se redesenha com os nomes dela.</p>
+    <div class="grid4" id="pipe"></div>
+    <h3>Esta cidade</h3>
+    <div class="tbl"><table id="citytab"></table></div>
+  </section>
+
+  <div class="part" id="cel">PARTE I · CELULARES</div>
+  <p class="lead">Quatro fabricantes no lugar dos seis de hoje, cada um com um ou dois dos seis corpos de <code>phone/shells.ts</code>. O índice do fabricante <b>é</b> a família: o fabricante 0 é sempre a gigante, o 1 sempre o do executivo, e assim por diante. Só o nome muda de cidade para cidade.</p>
+  <section><h2>1 · A gigante <small>confiável, do barato ao topo</small></h2><div data-f="gigante"></div></section>
+  <section><h2>2 · A do executivo <small>teclado completo, o topo dos tiers</small></h2><div data-f="exec"></div></section>
+  <section><h2>3 · A da moda e da música <small>slider, cores, tocador</small></h2><div data-f="moda"></div></section>
+  <section><h2>4 · A robusta <small>obra e rua</small></h2><div data-f="robusta"></div></section>
+
+  <div class="part" id="nb">PARTE II · NOTEBOOKS</div>
+  <p class="lead">Dois fabricantes, como hoje (<code>LAPTOP_MAKERS = 2</code>), agora com papéis: o do trabalho e o da vitrine. O corpo do notebook do jogador está no <a href="notebook-manual.html" style="color:var(--amb)">manual do notebook</a>. Aqui fica só a marca dele.</p>
+  <section><h2>5 · O tijolo de trabalho <small>o notebook do jogador</small></h2><div data-f="trabalho"></div></section>
+  <section><h2>6 · O de vitrine <small>prata brilhante, loja de departamento</small></h2><div data-f="consumo"></div></section>
+
+  <div class="part" id="op">PARTE III · OPERADORAS</div>
+  <p class="lead">As três da 13.6, na mesma rede de antenas. O nome é o molde sorteado (<code>{r} Mobile</code>, <code>{r}Cell</code>, <code>{r}Tel</code>…) com uma raiz. A família decide como ele é escrito: a jovem junta tudo em minúsculas, e a antiga põe tudo em maiúsculas espaçadas. Em todo celular, a operadora aparece no topo da tela de espera, em texto.</p>
+  <section><h2>7 · A operadora antiga <small>dona das antenas, a ex-estatal</small></h2><div data-f="antiga"></div></section>
+  <section><h2>8 · A pré-paga jovem <small>cor viva e recarga na banca</small></h2><div data-f="jovem"></div></section>
+  <section><h2>9 · A de desconto <small>chip na farmácia, sem perguntas</small></h2><div data-f="desconto"></div></section>
+
+  <div class="part" id="peq">PARTE IV · AS MARCAS PEQUENAS</div>
+  <section>
+    <h2>10 · Relógio, câmeras e placas <small>só o logo e um uso</small></h2>
+    <h3>O relógio do jogador</h3>
+    <div class="grid4" id="watch"></div>
+    <h3>As três marcas de câmera</h3>
+    <p class="lead">Uma família só, industrial: monoespaçada em maiúsculas espaçadas, amarelo de aviso, e uma plaqueta no corpo da câmera. Cada uma das três tem o seu símbolo (são os modelos de <code>CAMS</code> em <code>sim/cctv.ts</code>), sem variante. Quem olha a câmera de perto lê a marca. É o primeiro passo para saber o que ela grava.</p>
+    <div class="grid4" id="cams"></div>
+    <h3>As placas (bootloaders)</h3>
+    <p>São as únicas marcas com nome fixo aqui (<code>BOARDS</code> em <code>sim/device.ts</code>): fornecedores de placas que ninguém vê, menos quem liga o celular e lê a primeira tela. Não têm logo, só a linha da ROM, em texto cinza e sem cor:</p>
+    <pre class="ascii" style="color:#9a9a9a">SB-11 bootrom v2.04 (c) 2006
+  DRAM 16M ......... ok    NAND 32M ...... ok
+  loading kernel ... ok
+
+MX2 loader 1.7.3 build 0412
+  ram:64M  flash:128M  bb:ok  >> boot
+
+ORCA-3 IPL r5
+  [ IPL ] mem 128MB ok / nand 160MB ok / sig ok
+  [ IPL ] jump 0x80008000</pre>
+  </section>
+
+  <section id="jogo">
+    <h2>11 · No jogo <small>o que muda no código, e como a marca aparece</small></h2>
+    <div class="tbl"><table>
+      <tr><th>O quê</th><th>Hoje</th><th>Com o manual</th></tr>
+      <tr><td>Fabricantes de celular</td><td><code>MAKERS = 6</code>, um por corpo (<code>LOOK_MAKER = [0..5]</code>)</td><td><code>MAKERS = 4</code>; <code>LOOK_MAKER = [0, 1, 0, 2, 3, 2]</code> (Classic, Slate, Brushed, Pebble, Rugged, Slider). O índice é a família.</td></tr>
+      <tr><td>Nomes dos modelos</td><td>uma lista <code>SERIES</code> para todos</td><td>uma lista por família, com o formato da família ("6230i", "Courier 8820", "glide 52", "Anvil X3").</td></tr>
+      <tr><td>Notebooks</td><td><code>LAPTOP_MAKERS = 2</code>, sem papel</td><td>0 = o de trabalho (o do jogador, sempre), 1 = o de vitrine.</td></tr>
+      <tr><td>Operadoras</td><td><code>operatorName(op)</code>, o molde e a raiz</td><td>igual. A família vem do índice <code>op</code> e só decide como o nome é escrito e desenhado.</td></tr>
+      <tr><td>Relógio, câmeras, placas</td><td><code>watchMakerName</code>, <code>cctvMakerName</code>, <code>BOARDS</code></td><td>iguais; ganham símbolo e tipografia.</td></tr>
+    </table></div>
+    <h3>Como o logo vai para o mundo</h3>
+    <ul>
+      <li><b>No jogo não há fonte web:</b> cada família vira uma <b>fonte de pontos própria</b>, como a 5×7 dos letreiros (<code>signs.ts</code>), com o "jeito" da tipografia: o estêncil com os cortes, a fina arredondada, a condensada. O símbolo é um desenho de pixels de 16×16, com as 4 variantes.</li>
+      <li><b>De perto, pontos; de longe, ASCII</b> (a regra dos letreiros): a fachada da operadora lida da calçada mostra o símbolo e o nome em pontos; do outro lado da rua, uma letra ASCII por letra, na cor da marca; mais longe, uma faixa acesa.</li>
+      <li><b>Nas telas</b> (a abertura do celular, o site), o logo é desenhado na textura da tela ou na camada HD, nunca em caracteres.</li>
+      <li><b>No aparelho 3D</b>, o nome no aro do celular e na tampa do notebook é um decalque de cubinhos de 1 mm na face, como as teclas.</li>
+    </ul>
+    <pre class="ascii"><span style="color:#c9a24a">  ═══════════════════════════════</span>
+<span style="color:#c9a24a">   (o)</span>  <span style="color:#f2efe6">K E S S L E R   T E L E C O M</span>      ← de longe: uma célula por letra
+<span style="color:#c9a24a">  ═══════════════════════════════</span>
+<span style="color:#7c8ea6">   [##]  TAKE A NUMBER   047</span></pre>
+  </section>
+
+  <section id="regras">
+    <h2>12 · Regras rápidas</h2>
+    <div class="rule"><b>✕</b><span>Nunca desenhar um logo para um nome fixo. O nome é da semente. Só o Osprey e a GridLink são canônicos.</span></div>
+    <div class="rule"><b>✕</b><span>Nunca usar o símbolo de uma família com a tipografia de outra, nem trocar as cores entre famílias.</span></div>
+    <div class="rule"><b>✕</b><span>Nada que lembre as marcas reais de 2008 além do gênero: nada de "mãos se tocando", amora com sete gomos, globo verde, pingo vermelho ou janela colorida.</span></div>
+    <div class="rule"><b>✕</b><span>A operadora nunca aparece como logo na tela do celular, só como texto. A marca do celular aparece só na abertura.</span></div>
+    <div class="rule"><b>✓</b><span>Reconhecer a família de longe tem que bastar: a cor e o símbolo dizem "operadora antiga" antes do nome.</span></div>
+    <div class="rule"><b>✓</b><span>A variante da semente é pequena: mudar a cara do símbolo, nunca o desenho.</span></div>
+    <div class="rule"><b>✓</b><span>Toda marca nova (bebida, banco, jornal) entra como família: arquétipo, tipografia, símbolo com 4 variantes, cores, usos.</span></div>
+  </section>
+
+</main>
+<script>
+// The roots of the city's names (the start of L.roots in src/locale/en.json) and the operator templates (L.operator).
+const ROOTS = 'Ashford Kessler Marlow Greyhaven Calloway Thornbury Holloway Brandt Sable Mercer Dunmore Carver Radley Whitlock Garrison Blackmoor Fenwick Harlan Corrigan Lockwood Pruitt Stanton Vickery Moreau Delacroix Hadley Quinlan Barlow Everett Kingsley Draper Osgood Pemberton Rook Sterling Tolliver Ulrich Vail Wexford Yardley Ambrose Beckett Colfax Dorsey Easton Faraday Gallagher Hawthorne Irving Jericho Kimball Latimer Monroe Nash Orwell Prescott Redfield Sawyer Thorne Underhill'.split(' ');
+const OPS = ['{r} Mobile', '{r} Wireless', '{r}Cell', '{r} Telecom', '{r}Tel'];
+const mulberry = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const P = (a, r, d = 0) => [Math.cos((a * Math.PI) / 180) * r + 50, Math.sin((a * Math.PI) / 180) * r + 50].map((x) => x.toFixed(1)).join(',');
+
+// The symbols, in a 100 x 100 box: (v = the seed's variant 0..3, a/b = the two colors of the mode).
+const SYM = {
+  gigante: (v, a, b) => {
+    // an ear and a voice: a ring open to one side, with the dot of the voice in it
+    const open = [0, -45, 45, 90][v], g = 50, r = 25;
+    const [x1, y1] = P(open + g, r).split(','), [x2, y2] = P(open - g, r).split(',');
+    return `<circle cx="50" cy="50" r="46" fill="${a}"/><path d="M${x1} ${y1} A${r} ${r} 0 1 1 ${x2} ${y2}" stroke="${b}" stroke-width="12" stroke-linecap="round" fill="none"/><circle cx="50" cy="50" r="8" fill="${b}"/>`;
+  },
+  exec: (v, a) => {
+    const skip = [0, 2, 6, 8][v]; let s = '';
+    for (let i = 0; i < 9; i++) if (i !== skip) s += `<rect x="${4 + (i % 3) * 32}" y="${4 + Math.floor(i / 3) * 32}" width="26" height="26" rx="4" fill="${a}"/>`;
+    return s;
+  },
+  moda: (v, a, b) => { const d = 6 + v * 4; return `<path d="M4 47 A46 46 0 0 1 96 47 Z" fill="${a}" transform="translate(${d},0)"/><path d="M4 53 A46 46 0 0 0 96 53 Z" fill="${b}" transform="translate(${-d},0)"/>`; },
+  robusta: (v, a, b) => {
+    let s = `<polygon points="${[0, 1, 2, 3, 4, 5].map((i) => P(i * 60, 48)).join(' ')}" fill="${a}"/><circle cx="50" cy="50" r="17" fill="${b}"/><rect x="44" y="20" width="12" height="60" rx="2" fill="${b}"/>`;
+    const n = [2, 3, 4, 6][v];
+    for (let i = 0; i < n; i++) { const [x, y] = P(30 + (i * 360) / n, 37).split(','); s += `<circle cx="${x}" cy="${y}" r="5" fill="${b}"/>`; }
+    return s;
+  },
+  trabalho: (v, a, b) => { const c = [[22, 22], [52, 22], [22, 52], [52, 52]][v]; return `<rect x="8" y="8" width="84" height="84" fill="none" stroke="${a}" stroke-width="12"/><rect x="${c[0]}" y="${c[1]}" width="26" height="26" fill="${b}"/>`; },
+  consumo: (v, a, b) => `<ellipse cx="50" cy="50" rx="50" ry="17" fill="none" stroke="${a}" stroke-width="7" transform="rotate(${[-22, -35, -12, 25][v]} 50 50)"/><circle cx="50" cy="50" r="19" fill="${b}"/>`,
+  antiga: (v, a, b) => {
+    let s = `<circle cx="50" cy="50" r="47" fill="${a}"/><path d="M50 32 L39 84 M50 32 L61 84 M43 66 L57 66 M41 76 L59 76" stroke="${b}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="50" cy="30" r="5" fill="${b}"/>`;
+    for (let i = 1; i <= 1 + (v & 1) + (v >> 1); i++) { const r = 8 + i * 9, k = r * 0.7; s += `<path d="M${50 - k} ${30 - k} A${r} ${r} 0 0 0 ${50 - k} ${30 + k} M${50 + k} ${30 - k} A${r} ${r} 0 0 1 ${50 + k} ${30 + k}" stroke="${b}" stroke-width="4" fill="none" stroke-linecap="round"/>`; }
+    return s;
+  },
+  jovem: (v, a, b) => {
+    let s = `<rect x="4" y="8" width="92" height="64" rx="30" fill="${a}"/><path d="M26 66 L16 94 L48 70 Z" fill="${a}"/>`;
+    const n = 1 + (v % 3);
+    for (let i = 0; i < n; i++) s += `<circle cx="${50 + (i - (n - 1) / 2) * 20}" cy="40" r="7" fill="${b}"/>`;
+    return s;
+  },
+  desconto: (v, a, b) => {
+    const n = [10, 12, 14, 16][v], pts = [];
+    for (let i = 0; i < n * 2; i++) pts.push(P((i * 180) / n - 90, i % 2 ? 39 : 49));
+    return `<polygon points="${pts.join(' ')}" fill="${b}" stroke="${a}" stroke-width="4" stroke-linejoin="round"/><text x="50" y="67" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="46" fill="${a}">%</text>`;
+  },
+  relogio: (v, a) => {
+    let s = `<circle cx="50" cy="50" r="44" fill="none" stroke="${a}" stroke-width="4"/><circle cx="50" cy="50" r="5" fill="${a}"/>`;
+    for (let i = 0; i < 4; i++) { const [x1, y1] = P(i * 90, 34).split(','), [x2, y2] = P(i * 90, 42).split(','); s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${a}" stroke-width="4"/>`; }
+    const [hx, hy] = P([40, 130, 220, 310][v] - 90, 32).split(',');
+    return s + `<line x1="50" y1="50" x2="${hx}" y2="${hy}" stroke="${a}" stroke-width="5" stroke-linecap="round"/>`;
+  },
+  cctv: (k, a, b) => [
+    `<circle cx="50" cy="50" r="46" fill="${a}"/><circle cx="50" cy="50" r="30" fill="${b}"/><circle cx="50" cy="50" r="15" fill="${a}"/><circle cx="43" cy="43" r="5" fill="${b}"/>`,
+    `<polygon points="${[0, 1, 2, 3, 4, 5].map((i) => P(i * 60 + 30, 47)).join(' ')}" fill="${a}"/>` + [0, 1, 2, 3, 4, 5].map((i) => `<line x1="${P(i * 60 + 30, 47).split(',')[0]}" y1="${P(i * 60 + 30, 47).split(',')[1]}" x2="${P(i * 60 + 90, 18).split(',')[0]}" y2="${P(i * 60 + 90, 18).split(',')[1]}" stroke="${b}" stroke-width="5"/>`).join(''),
+    `<path d="M8 56 A42 42 0 0 1 92 56 Z" fill="${a}"/><rect x="2" y="62" width="96" height="14" fill="${a}"/><circle cx="50" cy="44" r="10" fill="${b}"/>`,
+  ][k],
+};
+
+// The families. col(mode) gives [symbol color a, symbol color b, text color]; modes: light (on paper), dark (on black), mono (one ink).
+const FAM = {
+  gigante: {
+    kind: 'cel', n: 1, title: 'A gigante', sub: 'confiável, do barato ao topo', bodies: ['Classic', 'Brushed'],
+    font: 'Nunito', weight: 900, style: 'normal', case: 'title', track: 0,
+    col: { light: ['#1f5fbf', '#ffffff', '#183a6e'], dark: ['#3b82e6', '#0b0c0e', '#e9eef7'], mono: ['currentColor', 'var(--mb)', 'currentColor'] },
+    sw: [['#1f5fbf', 'Azul gigante', 'símbolo, faixas das caixas'], ['#183a6e', 'Azul tinta', 'o nome no papel'], ['#e9eef7', 'Gelo', 'o nome no escuro'], ['#8d9097', 'Cinza Classic', 'corpos de plástico']],
+    series: ['1110', '2610', '6230i', '6300', '3120c'],
+    arch: 'O celular que todo mundo já teve: o porteiro, a mãe, o taxista. Barato, aguenta queda, a bateria dura uma semana, e o menu é igual em todos os modelos. É a marca do celular inicial do jogador e a do topo "comum" (o smartphone atual).',
+    typo: 'Sans arredondada e pesada (Nunito 900), com a primeira letra maiúscula. É amigável e não grita.',
+    sym: 'Um disco azul com um anel aberto de um lado (o ouvido) e um ponto no meio (a voz). A semente gira a abertura.',
+    model: 'Os modelos são só números de 4 dígitos com uma letra às vezes ("6230i"). É uma marca de engenheiros.',
+  },
+  exec: {
+    kind: 'cel', n: 2, title: 'A do executivo', sub: 'teclado completo, o topo dos tiers', bodies: ['Slate', '(futuro corpo de teclado)'],
+    font: 'Marcellus SC', weight: 400, style: 'normal', case: 'upper', track: 7,
+    col: { light: ['#1a1b1f', '', '#1a1b1f'], dark: ['#c9ccd3', '', '#e4e6ea'], mono: ['currentColor', '', 'currentColor'] },
+    sw: [['#0e0e11', 'Preto ônix', 'o corpo, a caixa'], ['#c9ccd3', 'Prata', 'o símbolo e o nome no escuro'], ['#7fb8ff', 'Azul-gelo', 'a luz do teclado'], ['#1a1b1f', 'Grafite', 'o nome no papel']],
+    series: ['Ledger', 'Courier', 'Quorum', 'Charter'],
+    arch: 'O aparelho de quem recebe e-mail no táxi. É preto, sério e tem teclado completo; vicia ("crackberry" era a piada de 2008). No jogo é o topo dos tiers, o que faz um pouco do trabalho do notebook, com plano de dados caro e bateria menor.',
+    typo: 'Versaletes com serifa leve (Marcellus SC) e espaçamento largo. Lembra cartão de visita e papel timbrado.',
+    sym: 'Uma grade 3 × 3 de teclas com uma faltando. A semente escolhe o canto vazio (nunca o meio).',
+    model: 'Os modelos são palavras de escritório com um número de 4 dígitos ("Courier 8820").',
+  },
+  moda: {
+    kind: 'cel', n: 3, title: 'A da moda e da música', sub: 'slider, cores, tocador', bodies: ['Slider', 'Pebble'],
+    font: 'Comfortaa', weight: 300, style: 'normal', case: 'lower', track: 1,
+    col: { light: ['#d2387f', '#7b3fd0', '#5a1a40'], dark: ['#ff5aa5', '#9b6bff', '#ffe4f0'], mono: ['currentColor', 'currentColor', 'currentColor'] },
+    sw: [['#d2387f', 'Magenta', 'metade de cima'], ['#7b3fd0', 'Violeta', 'metade de baixo'], ['#78161e', 'Vinho Slider', 'corpo brilhante'], ['#e2d6dc', 'Pérola Pebble', 'corpo claro']],
+    series: ['tempo', 'loop', 'glide', 'beat'],
+    arch: 'O celular que se mostra: desliza com um clique, toca música alto no ônibus e vem em cores. Vende na vitrine do shopping, com fone de brinde. É a família do corpo deslizante do jogador.',
+    typo: 'Geométrica fina e arredondada (Comfortaa 300), toda em minúsculas. Leve, de revista.',
+    sym: 'Duas meias-luas deslocadas, como as duas placas de um slider abrindo. A semente varia o quanto elas se afastam.',
+    model: 'Os modelos são palavras de música em minúsculas com dois dígitos ("glide 52").',
+  },
+  robusta: {
+    kind: 'cel', n: 4, title: 'A robusta', sub: 'obra e rua', bodies: ['Rugged'],
+    font: 'Black Ops One', weight: 400, style: 'normal', case: 'upper', track: 2,
+    col: { light: ['#ff7a1a', '#1d1f1d', '#1d1f1d'], dark: ['#ff7a1a', '#1d1f1d', '#ff9a4a'], mono: ['currentColor', 'var(--mb)', 'currentColor'] },
+    sw: [['#ff7a1a', 'Laranja sinal', 'o símbolo, os cantos'], ['#2c2e2c', 'Borracha', 'o corpo'], ['#1d1f1d', 'Carvão', 'o nome no papel'], ['#f2c300', 'Amarelo obra', 'as etiquetas de aviso']],
+    series: ['Field', 'Anvil', 'Trek', 'Brick'],
+    arch: 'O celular de obra, de segurança de boate e de entregador: cai, molha, e a lanterna é a tecla mais usada. Feio de propósito. Com ele, ninguém olha duas vezes para você.',
+    typo: 'Estêncil pesado (Black Ops One) em maiúsculas, como em caixa de ferramenta.',
+    sym: 'Uma porca sextavada laranja com o rasgo de chave e os rebites. A semente varia o número de rebites (2, 3, 4 ou 6).',
+    model: 'Os modelos são palavras de campo com "X" e um número ("Anvil X3").',
+  },
+  trabalho: {
+    kind: 'nb', n: 5, title: 'O tijolo de trabalho', sub: 'o notebook do jogador', bodies: [],
+    font: 'Archivo', weight: 850, style: 'normal', case: 'upper', track: 5, stretch: 125,
+    col: { light: ['#18191c', '#ffb030', '#18191c'], dark: ['#d9d7d0', '#ffb030', '#d9d7d0'], mono: ['currentColor', 'currentColor', 'currentColor'] },
+    sw: [['#1c1d20', 'Preto fosco', 'o corpo'], ['#d9d7d0', 'Gelo', 'o nome na tampa'], ['#ffb030', 'Âmbar', 'a lâmpada do símbolo (é a cor do nub)'], ['#18191c', 'Carbono', 'o nome no papel']],
+    series: ['T', 'X', 'R'],
+    arch: 'O notebook de quem trabalha: quadrado, preto e fosco, que dura dez anos e se conserta com uma chave de fenda. As empresas compram aos montes e depois vendem de segunda mão. Foi assim que o do jogador chegou até ele.',
+    typo: 'Grotesca larga e pesada (Archivo 850, largura 125%), em maiúsculas espaçadas. Placa de máquina.',
+    sym: 'Um quadrado vazado com uma "lâmpada" âmbar num canto, a mesma cor do nub. A semente escolhe o canto.',
+    model: 'Os modelos são uma letra e três dígitos ("T61", "X300"): curtos, de catálogo de empresa.',
+  },
+  consumo: {
+    kind: 'nb', n: 6, title: 'O de vitrine', sub: 'prata brilhante, loja de departamento', bodies: [],
+    font: 'Exo 2', weight: 300, style: 'italic', case: 'title', track: 1,
+    col: { light: ['#5d6670', '#2fb6ff', '#3c434b'], dark: ['#c6ccd3', '#2fb6ff', '#eef2f6'], mono: ['currentColor', 'currentColor', 'currentColor'] },
+    sw: [['#c6ccd3', 'Prata', 'a tampa, a órbita'], ['#2fb6ff', 'Azul LED', 'o ponto do símbolo e os LEDs'], ['#3c434b', 'Chumbo', 'o nome no papel'], ['#111216', 'Piano', 'a moldura da tela, brilhante']],
+    series: ['Aspire', 'Vivid', 'Pavilion', 'Satell'],
+    arch: 'O notebook da família: prata, brilhante, com tela "widescreen" espelhada, alto-falantes com nome e adesivos de recursos no apoio das mãos. Esquenta, faz barulho e vem cheio de programas de teste. Está em toda vitrine.',
+    typo: 'Itálico fino e técnico (Exo 2 300), com a primeira letra maiúscula. Parece rápido.',
+    sym: 'Uma órbita inclinada em volta de um ponto azul de LED. A semente varia a inclinação.',
+    model: 'Os modelos são uma palavra "de tecnologia" com 4 dígitos e um sufixo ("Vivid 5520 WXi").',
+  },
+  antiga: {
+    kind: 'op', n: 7, title: 'A operadora antiga', sub: 'dona das antenas, a ex-estatal', op: 0,
+    font: 'Libre Franklin', weight: 800, style: 'normal', case: 'upper', track: 3,
+    col: { light: ['#12305e', '#c9a24a', '#12305e'], dark: ['#c9a24a', '#0b0c0e', '#f2efe6'], mono: ['currentColor', 'var(--mb)', 'currentColor'] },
+    sw: [['#12305e', 'Azul estado', 'o disco, a fachada, a conta'], ['#c9a24a', 'Ouro velho', 'a antena, os filetes'], ['#f2efe6', 'Papel', 'a conta e o nome no escuro']],
+    series: [],
+    arch: 'A antiga companhia do estado, privatizada nos anos 90. É dona de todas as antenas da cidade (as outras duas alugam a rede). Tem loja de balcão com senha de fila, conta mensal pelo correio e atendente que pede documento. É a operadora "séria" e a mais cara.',
+    typo: 'Grotesca clássica pesada (Libre Franklin 800) em maiúsculas: placa de repartição.',
+    sym: 'Um disco azul com uma torre de transmissão em ouro e as ondas saindo do topo. A semente varia as ondas (1 a 3 pares).',
+    model: '',
+  },
+  jovem: {
+    kind: 'op', n: 8, title: 'A pré-paga jovem', sub: 'cor viva e recarga na banca', op: 1,
+    font: 'Baloo 2', weight: 800, style: 'normal', case: 'lower', track: 0,
+    col: { light: ['#6cc11a', '#ffffff', '#1b1b1b'], dark: ['#8ee63a', '#0b0c0e', '#f6ffe8'], mono: ['currentColor', 'var(--mb)', 'currentColor'] },
+    sw: [['#7ed321', 'Lima', 'o balão, a fachada'], ['#ff5a1f', 'Laranja', 'os preços, o "novo!"'], ['#1b1b1b', 'Preto', 'o nome no papel']],
+    series: [],
+    arch: 'A pré-paga de quem tem 19 anos: SMS barato, cartão de recarga em toda banca, publicidade em ponto de ônibus e camisa de time. Usa a rede da antiga, mas finge que é outra coisa.',
+    typo: 'Arredondada gorda (Baloo 2 800) em minúsculas. Fala alto.',
+    sym: 'Um balão de conversa lima com 1 a 3 pontos (os de "digitando"). A semente varia os pontos.',
+    model: '',
+  },
+  desconto: {
+    kind: 'op', n: 9, title: 'A de desconto', sub: 'chip na farmácia, sem perguntas', op: 2,
+    font: 'Oswald', weight: 700, style: 'normal', case: 'upper', track: 1,
+    col: { light: ['#e3161b', '#ffd400', '#e3161b'], dark: ['#e3161b', '#ffd400', '#ffd400'], mono: ['currentColor', 'var(--mb)', 'currentColor'] },
+    sw: [['#e3161b', 'Vermelho preço', 'o nome, o contorno'], ['#ffd400', 'Amarelo oferta', 'a estrela'], ['#ffffff', 'Branco', 'o fundo dos cartazes']],
+    series: [],
+    arch: 'O chip vendido na farmácia e na loja de conveniência, num cartaz amarelo de oferta. É o mais barato para ligar para fora do país e não pergunta o seu nome. É a operadora de quem não quer ser achado (e a do chip descartável, que zera a reputação).',
+    typo: 'Condensada e pesada (Oswald 700) em maiúsculas, como etiqueta de preço.',
+    sym: 'Uma estrela de oferta amarela com um "%" vermelho. A semente varia as pontas (10 a 16).',
+    model: '',
+  },
+  relogio: {
+    kind: 'peq', title: 'O relógio', font: 'Cormorant Garamond', weight: 500, style: 'italic', case: 'title', track: 1,
+    col: { light: ['#8a6a35', '', '#3a2c16'], dark: ['#d4b27a', '', '#e9dcc4'], mono: ['currentColor', '', 'currentColor'] },
+  },
+  cctv: {
+    kind: 'peq', title: 'As câmeras', font: 'Share Tech Mono', weight: 400, style: 'normal', case: 'upper', track: 4,
+    col: { light: ['#3a3d42', '#f2c300', '#3a3d42'], dark: ['#f2c300', '#0b0c0e', '#d8d8d8'], mono: ['currentColor', 'var(--mb)', 'currentColor'] },
+  },
+};
+for (const k in FAM) FAM[k].id = k;
+
+const word = (f, s) => (f.case === 'upper' ? s.toUpperCase() : f.case === 'lower' ? s.toLowerCase().replace(/ /g, '') : s);
+/** The logo: the symbol and the drawn name, side by side; the viewBox is fitted to the drawing once the fonts are in (fit). */
+function logo(f, name, v, mode = 'light', sym = true) {
+  const [a, b, t] = f.col[mode], s = f.id === 'cctv' ? SYM.cctv(v, a, b) : SYM[f.id](v, a, b);
+  const st = f.stretch ? ` font-stretch="${f.stretch}%"` : '';
+  return `<svg class="logo" viewBox="0 0 600 100"><g>${sym ? s : ''}<text x="${sym ? 116 : 0}" y="70" font-family="'${f.font}'" font-weight="${f.weight}" font-style="${f.style}"${st} font-size="58" letter-spacing="${f.track}" fill="${t}">${esc(word(f, name))}</text></g></svg>`;
+}
+function fit(root = document) {
+  for (const s of root.querySelectorAll('svg.logo')) {
+    try { const b = s.firstElementChild.getBBox(); if (b.width) s.setAttribute('viewBox', `${b.x - 2} ${b.y - 2} ${b.width + 4} ${b.height + 4}`); } catch (e) {}
+  }
+}
+
+/** A city: the names in the same slots the game takes them from (in the game, makerName and its kin in locale/names.ts). */
+function city(seed) {
+  const r = mulberry(seed), pool = ROOTS.slice();
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const take = () => pool.shift(), v = () => Math.floor(r() * 4);
+  const C = { seed, brand: {} };
+  for (const k of ['gigante', 'exec', 'moda', 'robusta', 'trabalho', 'consumo', 'relogio']) C.brand[k] = { name: take(), v: v() };
+  for (const k of ['antiga', 'jovem', 'desconto']) C.brand[k] = { name: OPS[(seed + FAM[k].op * 2) % OPS.length].replace('{r}', take()), v: v() };
+  C.cctv = [take(), take(), take()];
+  C.others = Array.from({ length: 6 }, take);
+  return C;
+}
+// ---- the brand put to use: small drawings, each a viewBox with nested logos (fit sizes them) ----
+const nest = (f, B, mode, x, y, w, h, sym = true) => logo(f, B.name, B.v, mode, sym).replace('<svg class="logo"', `<svg class="logo" x="${x}" y="${y}" width="${w}" height="${h}"`);
+const svg = (w, h, body) => `<svg viewBox="0 0 ${w} ${h}">${body}</svg>`;
+const card = (body, cap) => `<div class="card">${body}<div class="cap">${cap}</div></div>`;
+const T = (x, y, s, size, fill, extra = '') => `<text x="${x}" y="${y}" font-family="Verdana, sans-serif" font-size="${size}" fill="${fill}" ${extra}>${esc(s)}</text>`;
+
+function modelName(f, seed) {
+  const r = mulberry(seed * 31 + f.n * 977), s = f.series[Math.floor(r() * f.series.length)], d = (n) => Math.floor(r() * n);
+  return { gigante: s, exec: `${s} ${8100 + d(9) * 100 + d(5) * 10}`, moda: `${s} ${20 + d(70)}`, robusta: `${s} X${1 + d(6)}`, trabalho: `${s}${40 + d(60)}`, consumo: `${s} ${5000 + d(9) * 100 + 20} WXi` }[f.id];
+}
+
+const BODY = { Classic: ['#3a3c42', '#c8cad0', 18], Brushed: ['#969aa0', '#1a1b1f', 12], Slate: ['#0e0e11', '#c9ccd3', 12], Slider: ['#78161e', '#ffd7dc', 14], Pebble: ['#e2d6dc', '#5a1a40', 34], Rugged: ['#2c2e2c', '#ff9a4a', 10] };
+function phone(f, B, body, model) {
+  if (!BODY[body]) { // the keyboard body to come: landscape screen, a ball, the full keyboard
+    let k = '';
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 10 - (r === 3 ? 4 : 0); c++) k += `<rect x="${22 + c * 11.8 + (r === 3 ? 35 : 0)}" y="${150 + r * 22}" width="9.5" height="17" rx="4" fill="#26272c"/>`;
+    return svg(160, 300, `<rect x="10" y="18" width="140" height="268" rx="16" fill="#0e0e11" stroke="#2a2b30"/>${T(80, 34, word(f, B.name), 9, '#c9ccd3', `text-anchor="middle" font-family="'${f.font}'" letter-spacing="2"`)}<rect x="22" y="42" width="116" height="84" rx="3" fill="#000"/>${nest(f, B, 'dark', 40, 70, 80, 26)}<circle cx="80" cy="138" r="6" fill="#3a3c42" stroke="#7fb8ff" stroke-width="1"/>${k}`);
+  }
+  const [c, ink, rx] = BODY[body], rug = body === 'Rugged';
+  const bump = rug ? [[10, 8], [126, 8], [10, 268], [126, 268]].map(([x, y]) => `<rect x="${x}" y="${y}" width="24" height="24" rx="8" fill="#e6781e"/>`).join('') : '';
+  return svg(160, 300, `<rect x="10" y="8" width="140" height="284" rx="${rx}" fill="${c}"/>${bump}${T(80, 27, word(f, B.name), 9, ink, `text-anchor="middle" font-family="'${f.font}'" font-style="${f.style}" letter-spacing="${f.track / 3}"`)}<rect x="24" y="36" width="112" height="186" rx="3" fill="#000"/>${nest(f, B, 'dark', 38, 112, 84, 30)}${T(80, 170, model, 8, '#6f7a88', 'text-anchor="middle" font-family="IBM Plex Mono"')}<circle cx="80" cy="${rug ? 244 : 254}" r="17" fill="${ink}" opacity=".18"/><circle cx="80" cy="${rug ? 244 : 254}" r="7" fill="${ink}" opacity=".25"/><rect x="${rug ? 40 : 28}" y="${rug ? 236 : 266}" width="20" height="9" rx="3" fill="#3fbf5a"/><rect x="${rug ? 100 : 108}" y="${rug ? 236 : 266}" width="20" height="9" rx="3" fill="#e0453a"/>`);
+}
+
+const BOX = { gigante: ['#ffffff', 'light', '#1f5fbf', '#183a6e'], exec: ['#0e0e11', 'dark', '#2a2b30', '#c9ccd3'], moda: ['#2a0f22', 'dark', '#d2387f', '#ffe4f0'], robusta: ['#1d1f1d', 'dark', 'hazard', '#ff9a4a'], trabalho: ['#b08a5a', 'light', '#8a6a42', '#18191c'], consumo: ['#ffffff', 'light', '#2fb6ff', '#3c434b'] };
+const FEATS = { gigante: 'FM radio · Bluetooth · VGA camera', exec: 'Push mail · QWERTY · EDGE', moda: 'Music player · 2.0 MP · microSD', robusta: 'Splash proof · Torch · Loud speaker', trabalho: 'Dual core · Osprey/UX · 3-year warranty', consumo: '15.4" wide · Webcam · DVD±RW' };
+function box(f, B, model) {
+  const [bg, mode, band, ink] = BOX[f.id];
+  const stripe = band === 'hazard' ? Array.from({ length: 9 }, (_, i) => `<path d="M${20 + i * 18} 160 l10 -16 h9 l-10 16 z" fill="#f2c300"/>`).join('') : `<rect x="20" y="144" width="150" height="16" fill="${band}"/>`;
+  return svg(220, 170, `<g stroke="#4a4c52" stroke-width=".8"><path d="M20 30 L58 10 L208 10 L170 30 Z" fill="${bg}" opacity=".75"/><path d="M170 30 L208 10 L208 140 L170 160 Z" fill="${bg}" opacity=".55"/><rect x="20" y="30" width="150" height="130" fill="${bg}"/></g><g clip-path="inset(0)">${stripe}</g>${nest(f, B, mode, 30, 44, 120, 24)}${T(30, 96, model, 15, ink, `font-family="'${f.font}'" font-style="${f.style}"`)}${T(30, 116, FEATS[f.id], 6.4, ink, 'opacity=".8"')}${f.id === 'trabalho' ? T(118, 136, 'THIS SIDE UP ↑', 6, ink) : ''}`);
+}
+
+function site(f, B) {
+  const dk = f.id === 'exec', bg = dk ? '#0e0e11' : '#ffffff', nav = { gigante: '#1f5fbf', exec: '#2a2b30', moda: '#d2387f', robusta: '#ff7a1a', trabalho: '#1c1d20', consumo: '#2fb6ff' }[f.id];
+  const links = f.kind === 'nb' ? 'Notebooks   Desktops   Support   Drivers   Buy online' : 'Phones   Accessories   Ringtones   Support   Store locator';
+  return svg(320, 110, `<rect width="320" height="110" fill="#d8d8d8"/><rect x="6" y="6" width="308" height="104" fill="${bg}"/>${nest(f, B, dk ? 'dark' : 'light', 16, 14, 130, 24)}${T(304, 30, 'Search', 7, '#888', 'text-anchor="end"')}<rect x="6" y="46" width="308" height="16" fill="${nav}"/>${T(16, 57, links, 7.5, '#fff')}<rect x="16" y="70" width="140" height="34" fill="${dk ? '#1a1b1f' : '#eef1f5'}"/><rect x="164" y="70" width="140" height="34" fill="${dk ? '#1a1b1f' : '#eef1f5'}"/>${T(22, 84, 'NEW! ' + modelName(f, 7), 7, dk ? '#c9ccd3' : nav, 'font-weight="bold"')}${T(170, 84, 'Find a store near you', 7, dk ? '#c9ccd3' : '#333')}`);
+}
+
+function lid(f, B) {
+  if (f.id === 'trabalho') return svg(260, 180, `<rect x="10" y="10" width="240" height="160" rx="6" fill="#1c1d20"/><path d="M40 60 l60 -8 M150 120 l40 10 M60 140 l18 -3" stroke="#2c2d31" stroke-width="1.5"/>${nest(f, B, 'dark', 22, 146, 80, 14)}<rect x="196" y="16" width="44" height="7" rx="2" fill="#2c2d31"/><circle cx="218" cy="19.5" r="2" fill="#ffb030" opacity=".8"/>`);
+  return svg(260, 180, `<defs><linearGradient id="slv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6e9ed"/><stop offset=".5" stop-color="#b9c0c7"/><stop offset="1" stop-color="#8f979f"/></linearGradient></defs><rect x="10" y="10" width="240" height="160" rx="12" fill="url(#slv)"/><path d="M10 120 L250 30 L250 10 L10 10 Z" fill="#fff" opacity=".14"/>${nest(f, B, 'light', 70, 76, 120, 28)}`);
+}
+
+function palm(f, B) {
+  let keys = '';
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 14; c++) keys += `<rect x="${18 + c * 16.5}" y="${12 + r * 15}" width="14" height="12" rx="2" fill="${f.id === 'trabalho' ? '#111214' : '#2a2c30'}"/>`;
+  const base = f.id === 'trabalho' ? '#1c1d20' : '#c3c9cf';
+  const stick = f.id === 'trabalho'
+    ? `<rect x="196" y="92" width="44" height="26" rx="2" fill="#0a0602" stroke="#3a2410"/>${T(218, 109, 'OSprey', 8, '#ffb030', 'text-anchor="middle" font-family="IBM Plex Mono"')}${T(22, 112, modelName(f, 3), 8, '#55575c', 'font-family="Archivo" font-weight="800"')}`
+    : [['Osprey ready', '#0a2a4a', '#7fd0ff'], ['HD AUDIO', '#d7dbe0', '#333'], ['Wide view', '#111', '#2fb6ff']].map(([s, b, c], i) => `<rect x="${186 + (i % 2) * 34}" y="${84 + Math.floor(i / 2) * 20}" width="30" height="16" rx="2" fill="${b}"/>${T(201 + (i % 2) * 34, 94 + Math.floor(i / 2) * 20, s, 4.6, c, 'text-anchor="middle"')}`).join('');
+  return svg(260, 130, `<rect x="6" y="4" width="248" height="122" rx="6" fill="${base}"/>${keys}<rect x="96" y="70" width="68" height="46" rx="3" fill="${f.id === 'trabalho' ? '#16171a' : '#b3b9c0'}"/>${f.id === 'trabalho' ? '<circle cx="130" cy="39" r="3" fill="#ffb030"/>' : ''}${stick}`);
+}
+
+// the operators: paint = the band color and the logo's mode on it
+const PAINT = { antiga: ['#12305e', 'dark'], jovem: ['#1b1b1b', 'dark'], desconto: ['#ffffff', 'light'] };
+function store(f, B) {
+  const [bg, mode] = PAINT[f.id], ph = f.id === 'desconto';
+  const band = ph
+    ? `<rect x="10" y="18" width="300" height="42" fill="#1f8a4c"/><path d="M30 30 h8 v-8 h8 v8 h8 v8 h-8 v8 h-8 v-8 h-8 z" fill="#fff" transform="translate(0,9)"/>${T(70, 47, 'PHARMACY · 24H', 18, '#fff', 'font-family="Oswald" font-weight="700" letter-spacing="2"')}`
+    : `<rect x="10" y="18" width="300" height="42" fill="${bg}"/>${f.id === 'antiga' ? '<rect x="10" y="20" width="300" height="2" fill="#c9a24a"/><rect x="10" y="56" width="300" height="2" fill="#c9a24a"/>' : '<rect x="10" y="58" width="300" height="4" fill="#7ed321"/>'}${nest(f, B, mode, 70, 26, 180, 26)}`;
+  const win = ph ? `<rect x="36" y="80" width="110" height="64" rx="3" fill="#ffd400"/>${nest(f, B, 'light', 44, 90, 94, 20)}${T(91, 128, 'SIM $4.99 · NO ID', 8, '#e3161b', 'text-anchor="middle" font-family="Oswald" font-weight="700"')}`
+    : f.id === 'antiga' ? `${T(60, 100, 'TAKE A NUMBER', 7, '#c9a24a', 'letter-spacing="2"')}<rect x="60" y="106" width="36" height="22" fill="#000"/>${T(78, 122, '047', 12, '#ff3b2f', 'text-anchor="middle" font-family="IBM Plex Mono"')}`
+    : `<rect x="34" y="78" width="54" height="70" fill="#7ed321"/>${T(61, 104, 'sms', 13, '#1b1b1b', 'text-anchor="middle" font-family="\'Baloo 2\'" font-weight="800"')}${T(61, 126, '1¢', 18, '#ff5a1f', 'text-anchor="middle" font-family="\'Baloo 2\'" font-weight="800"')}<rect x="94" y="78" width="54" height="70" fill="#ff5a1f"/>${T(121, 118, 'new!', 13, '#fff', 'text-anchor="middle" font-family="\'Baloo 2\'" font-weight="800"')}`;
+  return svg(320, 170, `<rect width="320" height="170" fill="#22201e"/><rect x="10" y="66" width="300" height="104" fill="#151d22"/><rect x="24" y="72" width="180" height="84" fill="#1a2b33" opacity=".9"/>${win}<rect x="220" y="72" width="76" height="98" fill="#0f1417" stroke="#3a3d42"/><line x1="258" y1="72" x2="258" y2="170" stroke="#3a3d42"/>${band}`);
+}
+
+function sim(f, B, seed) {
+  const [bg, mode] = PAINT[f.id], ink = mode === 'dark' ? '#f2efe6' : '#e3161b';
+  const r = mulberry(seed * 7 + f.op), iccid = '8901 ' + Array.from({ length: 4 }, () => String(Math.floor(r() * 10000)).padStart(4, '0')).join(' ');
+  const tag = { antiga: 'SIM CARD · KEEP THIS CARD', jovem: 'prepaid · pay as you go', desconto: 'NO CONTRACT · NO ID · CALL THE WORLD' }[f.id];
+  return svg(258, 162, `<rect x="2" y="2" width="254" height="158" rx="10" fill="${bg}" stroke="#3a3c42"/>${nest(f, B, mode, 16, 16, 130, 24)}<path d="M150 62 h76 v54 h-66 l-10 -10 z" fill="none" stroke="${ink}" stroke-opacity=".35" stroke-dasharray="3 2"/><rect x="170" y="74" width="38" height="30" rx="4" fill="#d4b05a"/><path d="M170 89 h38 M189 74 v30 M176 81 h8 M194 81 h8 M176 97 h8 M194 97 h8" stroke="#a88838" stroke-width="1"/>${T(16, 128, tag, 7, ink, 'opacity=".85"')}${T(16, 146, iccid, 8, ink, 'font-family="IBM Plex Mono" opacity=".6"')}`);
+}
+
+function third(f, B) {
+  if (f.id === 'antiga') return svg(220, 170, `<rect x="10" y="4" width="200" height="162" fill="#f2efe6"/>${nest(f, B, 'light', 20, 14, 110, 20)}${T(200, 28, 'MONTHLY STATEMENT', 6, '#12305e', 'text-anchor="end"')}<rect x="20" y="42" width="180" height="1" fill="#c9a24a"/>${['Line rental', 'Local calls (212 min)', 'SMS (88)', 'Data (3.1 MB)', 'Tax'].map((s, i) => T(22, 60 + i * 13, s, 7, '#333') + T(198, 60 + i * 13, ['24.00', '19.08', '8.80', '6.20', '6.12'][i], 7, '#333', 'text-anchor="end" font-family="IBM Plex Mono"')).join('')}<rect x="20" y="128" width="180" height="1" fill="#12305e"/>${T(22, 145, 'TOTAL DUE', 8, '#12305e', 'font-weight="bold"')}${T(198, 145, '$ 64.20', 10, '#12305e', 'text-anchor="end" font-family="IBM Plex Mono" font-weight="bold"')}`);
+  if (f.id === 'jovem') return svg(258, 162, `<rect x="2" y="2" width="254" height="158" rx="10" fill="#7ed321"/>${nest(f, B, 'light', 16, 14, 120, 26)}${T(240, 92, '$10', 46, '#1b1b1b', 'text-anchor="end" font-family="\'Baloo 2\'" font-weight="800"')}${T(18, 70, 'top-up!', 16, '#ff5a1f', 'font-family="\'Baloo 2\'" font-weight="800"')}<rect x="18" y="108" width="222" height="22" rx="4" fill="#b8bcc2"/>${T(129, 123, 'SCRATCH HERE', 8, '#6c7076', 'text-anchor="middle" letter-spacing="3"')}${T(18, 148, 'text the code to 333 · valid 30 days', 6.5, '#1b1b1b')}`);
+  return svg(220, 170, `<rect x="10" y="4" width="200" height="162" fill="#ffd400"/>${T(110, 34, 'CALL HOME', 22, '#e3161b', 'text-anchor="middle" font-family="Oswald" font-weight="700"')}${[['Manila', '9¢'], ['Lagos', '12¢'], ['Lima', '8¢'], ['Warsaw', '6¢'], ['Dhaka', '11¢']].map(([c, p], i) => T(40, 56 + i * 14, c, 9, '#1b1b1b', 'font-family="Oswald"') + T(180, 56 + i * 14, p + '/min', 9, '#e3161b', 'text-anchor="end" font-family="Oswald" font-weight="700"')).join('')}<rect x="10" y="128" width="200" height="38" fill="#fff"/>${nest(f, B, 'light', 40, 136, 140, 22)}`);
+}
+const THIRD = { antiga: '<b>A conta mensal</b>, pelo correio: a única com o seu nome impresso.', jovem: '<b>O cartão de recarga</b> da banca: raspar, mandar o código por SMS.', desconto: '<b>O cartaz da farmácia</b>: as tarifas para fora do país, e o chip embaixo.' };
+
+function idle(f, B) {
+  const nm = word(FAM.gigante, B.name).toUpperCase();
+  return svg(160, 120, `<rect width="160" height="120" rx="4" fill="#000"/><rect x="0" y="0" width="160" height="16" fill="#0d1a2a"/>${T(6, 12, nm, 8, '#cfe3ff', 'font-family="IBM Plex Mono"')}${T(154, 12, 'E ▂▄▆', 8, '#cfe3ff', 'text-anchor="end" font-family="IBM Plex Mono"')}${T(80, 66, '21:08', 26, '#e8f1ff', 'text-anchor="middle" font-family="IBM Plex Mono"')}${T(80, 86, 'Wed 20 Feb', 8, '#7c8ea6', 'text-anchor="middle" font-family="IBM Plex Mono"')}`);
+}
+
+// ---- assembling: each family block, the wall, the city table ----
+function famBlock(f, C) {
+  const B = C.brand[f.id], other = (i) => (f.kind === 'op' ? OPS[(C.seed + f.op * 2 + i) % OPS.length].replace('{r}', C.others[i + f.n % 3]) : C.others[i + f.n % 3]);
+  const ex = [B.name, other(0), other(2)];
+  let h = `<div class="fam"><div><p>${f.arch}</p><dl><dt>Tipografia</dt><dd>${f.typo}</dd><dt>Símbolo</dt><dd>${f.sym}</dd>${f.model ? `<dt>Modelos</dt><dd>${f.model}</dd>` : ''}${f.bodies && f.bodies.length ? `<dt>Corpos (shells.ts)</dt><dd>${f.bodies.join(' + ')}</dd>` : ''}</dl></div><div>`;
+  h += `<div class="logos"><div style="background:#f1efe9;color:#111">${logo(f, B.name, B.v, 'light')}<span>no papel · ${esc(B.name)}</span></div><div style="background:#0b0c0e;border:1px solid var(--line);color:#eee">${logo(f, B.name, B.v, 'dark')}<span>no escuro</span></div></div>`;
+  h += `<div class="logos"><div style="background:#17181b;border:1px solid var(--line);flex-direction:row;gap:14px">${[0, 1, 2, 3].map((v) => `<svg viewBox="-4 -4 108 108" style="width:44px">${f.id === 'cctv' ? '' : SYM[f.id](v, ...f.col.dark.slice(0, 2))}</svg>`).join('')}<span>as 4 variantes da semente</span></div><div style="background:#f1efe9;color:#111">${ex.slice(1).map((n) => logo(f, n, (B.v + 1) % 4, 'light')).join('')}<span>outras cidades: ${ex.slice(1).map(esc).join(', ')}</span></div></div></div></div>`;
+  h += `<div class="sw">${f.sw.map(([c, n, u]) => `<div><i style="background:${c}"></i><span><b>${n}</b>${c}<br><em>${u}</em></span></div>`).join('')}</div><div class="grid4">`;
+  if (f.kind === 'cel') {
+    const m = modelName(f, C.seed);
+    for (const b of f.bodies) h += card(phone(f, B, b, m), `<b>${esc(b)}</b>: o nome no aro, e o logo na tela de abertura.`);
+    h += card(box(f, B, m), '<b>A caixa</b> da vitrine.') + card(site(f, B), '<b>O site</b> no Lodestar.');
+  } else if (f.kind === 'nb') {
+    h += card(lid(f, B), f.id === 'trabalho' ? '<b>A tampa</b>: o logo pequeno num canto, gasto. A tampa é dos adesivos.' : '<b>A tampa</b>: o logo cromado no meio, grande.');
+    h += card(palm(f, B), f.id === 'trabalho' ? '<b>O apoio das mãos</b>: só o selo do Osprey e o modelo.' : '<b>O apoio das mãos</b>, cheio de adesivos de recursos.');
+    h += card(box(f, B, modelName(f, C.seed)), f.id === 'trabalho' ? '<b>A caixa</b>: papelão pardo, carimbado. Empresas compram em lote.' : '<b>A caixa</b> de loja de departamento.') + card(site(f, B), '<b>O site</b> no Lodestar.');
+  } else {
+    h += card(store(f, B), f.id === 'desconto' ? '<b>No balcão</b>: não tem loja própria. É um adesivo na vitrine da farmácia.' : '<b>A loja</b>, com o letreiro na fachada.');
+    h += card(sim(f, B, C.seed), '<b>O chip</b> no cartão de plástico.') + card(third(f, B), THIRD[f.id]) + card(idle(f, B), '<b>Na tela de espera</b>: o nome em texto, na fonte do celular, e nunca o logo.');
+  }
+  return h + '</div>';
+}
+
+const NICK = { gigante: 'celular 1', exec: 'celular 2', moda: 'celular 3', robusta: 'celular 4', trabalho: 'notebook 1', consumo: 'notebook 2', antiga: 'operadora 0', jovem: 'operadora 1', desconto: 'operadora 2', relogio: 'relógio' };
+function render(seed) {
+  const C = city(seed);
+  document.getElementById('seedv').textContent = seed;
+  document.getElementById('seednames').textContent = ['gigante', 'exec', 'moda', 'robusta'].map((k) => C.brand[k].name).join(' · ');
+  for (const el of document.querySelectorAll('[data-f]')) el.innerHTML = famBlock(FAM[el.dataset.f], C);
+  document.getElementById('wall').innerHTML = ['gigante', 'exec', 'moda', 'robusta', 'trabalho', 'consumo', 'antiga', 'jovem', 'desconto'].map((k, i) => `<div class="${[1, 3, 4, 6].includes(i) ? 'dk' : ''}">${logo(FAM[k], C.brand[k].name, C.brand[k].v, [1, 3, 4, 6].includes(i) ? 'dark' : 'light')}</div>`).join('');
+  const raw = C.brand.robusta;
+  document.getElementById('pipe').innerHTML = card(svg(300, 60, `${T(150, 38, raw.name, 22, '#e8e6df', 'text-anchor="middle" font-family="IBM Plex Mono"')}`), '<b>1 ·</b> a raiz que a semente tirou da lista').concat(card(svg(300, 60, T(150, 42, word(FAM.robusta, raw.name), 30, '#ff9a4a', `text-anchor="middle" font-family="Black Ops One" letter-spacing="2"`)), '<b>2 ·</b> escrita na tipografia da família (aqui, a robusta)'), card(`<div style="padding:8px 30px">${logo(FAM.robusta, raw.name, raw.v, 'dark')}</div>`, `<b>3 ·</b> com o símbolo, na variante ${raw.v + 1} de 4`));
+  document.getElementById('citytab').innerHTML = `<tr><th>Família</th><th>Nesta cidade</th><th>Variante</th><th>No código hoje</th></tr>` + Object.keys(NICK).map((k) => `<tr><td>${FAM[k].title}</td><td>${esc(C.brand[k].name)}</td><td>${C.brand[k].v + 1}</td><td><code>${{ cel: 'makerName(k)', nb: 'computerMakerName(k)', op: 'operatorName(op)', peq: 'watchMakerName()' }[FAM[k].kind]}</code></td></tr>`).join('') + `<tr><td>As câmeras</td><td>${C.cctv.map(esc).join(', ')}</td><td>—</td><td><code>cctvMakerName(k)</code></td></tr>`;
+  document.getElementById('watch').innerHTML = card(svg(220, 150, `<rect x="40" y="0" width="140" height="150" fill="#2a2b2e"/><rect x="18" y="20" width="184" height="110" rx="22" fill="#9aa0a6"/><rect x="26" y="28" width="168" height="94" rx="16" fill="#1c1e22"/>${nest(FAM.relogio, C.brand.relogio, 'dark', 70, 34, 80, 14)}<rect x="44" y="54" width="132" height="54" rx="4" fill="#42483a"/>${T(110, 96, '21:08', 34, '#181c18', 'text-anchor="middle" font-family="IBM Plex Mono"')}${T(48, 64, 'WED', 7, '#181c18', 'font-family="IBM Plex Mono"')}${T(172, 64, '20', 7, '#181c18', 'text-anchor="end" font-family="IBM Plex Mono"')}${T(38, 118, 'LIGHT', 5, '#d4b27a')}${T(182, 118, 'MODE', 5, '#d4b27a', 'text-anchor="end"')}<rect x="10" y="56" width="8" height="14" rx="2" fill="#7c8288"/><rect x="202" y="56" width="8" height="14" rx="2" fill="#7c8288"/>`), '<b>No relógio</b>: o símbolo e o nome em ouro velho sobre o LCD, pequenos, como um relógio caro.') + `<div class="card"><div class="logos" style="margin:0"><div style="background:#f1efe9;color:#111">${logo(FAM.relogio, C.brand.relogio.name, C.brand.relogio.v, 'light')}</div><div style="background:#0b0c0e;color:#eee">${logo(FAM.relogio, C.brand.relogio.name, C.brand.relogio.v, 'dark')}</div></div><div class="cap"><b>${esc(C.brand.relogio.name)}</b>: serifa itálica fina (Cormorant Garamond), com o símbolo de um mostrador de um ponteiro só. A semente gira o ponteiro. É uma relojoaria antiga da cidade, que vende relógios digitais baratos com o nome de marca cara.</div></div>`;
+  document.getElementById('cams').innerHTML = C.cctv.map((n, k) => card(svg(240, 130, `<rect width="240" height="130" fill="#0b0c0e"/>${logo(FAM.cctv, n, k, 'dark').replace('<svg class="logo"', '<svg class="logo" x="16" y="10" width="208" height="26"')}<path d="M40 60 h150 l14 -8 v8 v44 h-164 z" fill="#d8d8d8"/><rect x="40" y="60" width="164" height="44" rx="3" fill="#c9cacc"/><circle cx="196" cy="82" r="14" fill="#1a1b1f"/><circle cx="196" cy="82" r="7" fill="#2a3a55"/><rect x="58" y="72" width="80" height="20" rx="2" fill="#222"/>${logo(FAM.cctv, n, k, 'dark').replace('<svg class="logo"', '<svg class="logo" x="62" y="76" width="72" height="12"')}<rect x="100" y="104" width="12" height="18" fill="#9a9a9a"/>`), `<b>${esc(n)}</b>: ${['a lente; a marca barata das lojas', 'o diafragma; a do trânsito e dos bancos', 'a cúpula; a dos corredores e dos saguões'][k]}.`)).join('');
+  fit();
+}
+
+let SEED = 42;
+document.getElementById('reroll').onclick = () => { SEED = Math.floor(Math.random() * 1e6); render(SEED); };
+render(SEED);
+document.fonts.ready.then(() => fit());
+window.addEventListener('load', () => Promise.all(['900 20px Nunito', '20px "Marcellus SC"', '300 20px Comfortaa', '20px "Black Ops One"', 'italic 300 20px "Exo 2"', '800 20px "Libre Franklin"', '800 20px "Baloo 2"', '700 20px Oswald', 'italic 500 20px "Cormorant Garamond"', '20px "Share Tech Mono"', '850 20px Archivo'].map((s) => document.fonts.load(s))).then(() => fit()));
+</script>
+</body>
+</html>
