@@ -2,12 +2,12 @@ import { compass, cityName, operatorName, diagonalName, districtName, landmarkNa
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
 import { app, appLabel, songInfo, tunesData, volBars } from './apps';
-import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
-import { applyTheme, BAD, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
+import { box, CHROME, lerp, vgrad } from './ui';
+import { applyTheme, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, type C3 } from './lcd';
 import { type World } from '../sim/world';
-import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
+import { mapRaster } from './mapdata';
 import { APPS, BOOT_LOG_S, STORE, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
-import { cellAt, DOOR, planOf, ROOM, type RoomKind } from '../sim/interior';
+import { cellAt, planOf, ROOM } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
 import { HD, HdOrder } from '../render/hd';
@@ -17,13 +17,14 @@ import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
-import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
+import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, ptextW, SCR_H } from './pixui';
 import { APP_COL, HITS, PAGED, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintTunes, paintStandby, paintVolume, edHint, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
 import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
 import { formatNumber } from '../sim/telco';
+import { indoorMap, isWideRoad, mapMpp, MAP_H, MAP_W, paintMap, paintPlaces, roadsIn, streetMap, type MapFoot, type MapLabel, type MapPage, type PlacesPage } from './pixmap';
 
 /**
  * The phone drawn in the player's hand, over the bottom right of the view: a 2008 handset with a
@@ -44,16 +45,13 @@ const SX = SCREEN_MM[0] / COL_MM, SY = SCREEN_MM[1] / ROW_MM, SWC = (SCREEN_MM[2
  * on a grid of SW x SH cells and its pixel layer, and the compositor lays it on the glass (main passes it).
  * For now the apps of before (42 x 26 cells) go on it as they are, a cell ~5.7 x 15 pixels.
  */
-/** How the screen's cells' shape compares to the interface's (width over height): the map keeps its scale with it. */
 /** The cells' part of the screen (the content area between the pixel bars, pixui.ts): its top and height in interface cells. */
 const CY = SY + (SHC * CONTENT_Y0) / SCR_H, CHC = (SHC * (CONTENT_Y1 - CONTENT_Y0)) / SCR_H;
-const PIC_K = (SWC * SH) / (CHC * SW);
 export const PHONE_PIC = { grid: new CharGrid(SW, SH), hd: new HdLayer(SW * HD, SH * HD), on: false, rect: [0, 0, 1, 1] as number[], full: [0, 0, 1, 1] as number[] };
-const MAP_ROWS = SH - 4;
-/** Metres the map shows across and down, for a cell aspect (width / height) and zoom (a column is the cell aspect of a row, so nothing is stretched). */
-export const mapView = (aspect: number, zoom: number, indoor = false): [number, number] => {
-  const r = (indoor ? INDOOR_ROW_M : ZOOM_ROW_M)[zoom];
-  return [SW * r * aspect * PIC_K, MAP_ROWS * r];
+/** Metres the map shows across and down at a zoom (its pixels are square). */
+export const mapView = (zoom: number, indoor = false): [number, number] => {
+  const mpp = mapMpp((indoor ? INDOOR_ROW_M : ZOOM_ROW_M)[zoom]);
+  return [MAP_W * mpp, MAP_H * mpp];
 };
 
 const keyRects = new Map<number, KeyRect[]>();
@@ -158,7 +156,7 @@ export const PHONE_BODY = { on: false, ox: 0, oy: 0, cw: 0, ch: 0 };
 /** Where this frame drew the phone's lit screen (interface cells: x, y, w, h), for the bloom; null when off or not drawn. */
 export const SCREEN: { at: number[] | null } = { at: null };
 
-export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, now: number, light: Float32Array, glint: Float32Array, cam?: { yaw: number; pitch: number }) {
+export function drawPhone(g: CharGrid, P: Phone, world: World, now: number, light: Float32Array, glint: Float32Array, cam?: { yaw: number; pitch: number }) {
   if (P.raise < 0.01 && P.peek < 0.01 && P.handy < 0.01) { SWAY.yaw = NaN; return; }
   const [ox, oy] = origin(g.cols, g.rows, P);
   applyTheme(P.prefs.theme);
@@ -285,8 +283,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
         page = (Pt) => paintTunes(Pt, d, now); softKeys(S, P.tn.cur === P.tn.sel && P.tn.playing ? T.apps.tunes.pause : T.apps.tunes.play, T.back);
       }
       else if (P.screen === 'messages' || P.screen === 'msglist' || P.screen === 'msg' || P.screen === 'compose') page = msgPage(S, P, t, now);
-      else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
-      else if (P.screen === 'places') places(S, P, world, t, now);
+      else if (P.screen === 'map') page = mapPage(S, P, world, t, now);
+      else if (P.screen === 'places') page = placesPage(S, P, world, t, now);
       else page = app(S, P, world, t, now) ?? null;
       // the volume, for a moment after a side key moved it, over whatever is open
       if (now - P.volAt < 1.4 && page) { const pg = page; page = (Pt) => { pg(Pt); paintVolume(Pt, P.tn.vol, T.apps.vol); }; }
@@ -637,386 +635,158 @@ function msgPage(S: Lcd, P: Phone, t: number, now: number): (Pt: Paint) => void 
     step: D.step, blink: (Math.floor(now * 2) & 1) === 1, hint, goTo: () => { D.step = 0; }, goText: () => { D.step = 1; } });
 }
 
-// map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,
-// green parks, buildings in grey that turns blue-grey the taller they are; the burning ground brown
-const G_BG: C3[] = [[112, 84, 72], [255, 255, 255], [228, 224, 216], [238, 234, 224], [0, 0, 0], [186, 222, 164], [234, 228, 212], [208, 204, 198]];
-const G_CH = [ch('.'), 32, 32, ch('.'), 32, ch('"'), ch('+'), ch('=')];
-const G_FG: C3[] = [[160, 90, 60], [0, 0, 0], [0, 0, 0], [214, 208, 196], [0, 0, 0], [130, 186, 116], [212, 202, 182], [172, 166, 160]];
-const WIDE: C3 = [252, 226, 128];
-const ARROWS = ['>', '\\', 'v', '/', '<', '\\', '^', '/'];
-
-/**
- * What a map cell shows: the most common ground over its 2 m squares (buildings win ties; at most
- * 4x4 samples, so the far zooms stay cheap), and the tallest building in it.
- */
-function sample(m: MapRaster, x0: number, y0: number, w: number, h: number, out: Int32Array) {
-  const counts = [0, 0, 0, 0, 0, 0, 0, 0], sx = Math.max(MAP_RES, w / 4), sy = Math.max(MAP_RES, h / 4);
-  let hmax = 0;
-  for (let y = y0 + sy / 2; y < y0 + h; y += sy) for (let x = x0 + sx / 2; x < x0 + w; x += sx) {
-    const i = Math.floor(x / MAP_RES), j = Math.floor(y / MAP_RES);
-    if (i < 0 || j < 0 || i >= m.w || j >= m.h) { counts[Ground.Out]++; continue; }
-    const q = j * m.w + i, k = m.kind[q];
-    counts[k]++;
-    if (k === Ground.Building && m.height[q] > hmax) hmax = m.height[q];
-  }
-  let best = 0;
-  for (let k = 1; k < 8; k++) if (counts[k] > counts[best] || (counts[k] === counts[best] && k === Ground.Building)) best = k;
-  out[0] = best; out[1] = hmax * 2;
-}
-
-const isWideRoad = (b: number[], k: number) => b[2 * k + 1] - b[2 * k] >= b[1] - b[0];
-
-/**
- * Whether a road runs inside [a0, a1) along one axis (b: its boundaries, cells: the cell of every
- * metre); wide: only the wide ones. Zoomed out, a road is far thinner than a cell, so it is drawn
- * as a line where it falls instead of being outvoted by the blocks around it.
- */
-function roadIn(b: number[], cells: Uint16Array, a0: number, a1: number, wide: boolean): boolean {
-  const n = cells.length - 1;
-  if (a1 < 0 || a0 > n) return false;
-  const c0 = cells[Math.max(0, Math.min(n, Math.floor(a0)))], c1 = cells[Math.max(0, Math.min(n, Math.floor(a1)))];
-  for (let c = c0; c <= c1; c++) if (!(c & 1) && (!wide || isWideRoad(b, c >> 1))) return true;
-  return false;
-}
-
-/** The roads crossing the view: [index, middle] of the avenues (x) or streets (y) whose middle is in [a0, a1). */
-function roadsIn(b: number[], a0: number, a1: number): [number, number][] {
-  const out: [number, number][] = [];
-  for (let c = 0; c + 1 < b.length; c += 2) { const m = (b[c] + b[c + 1]) / 2; if (m >= a0 && m < a1) out.push([c >> 1, m]); }
-  return out;
-}
-
-/** District tints for the far zooms, by type. */
-const D_TINT: Record<string, C3> = { financial: [70, 110, 190], commercial: [200, 140, 60], residential: [90, 150, 90], historic: [170, 110, 80], industrial: [120, 120, 120], theater: [210, 80, 200] };
-const ROAD: C3 = [255, 255, 255], LABEL: C3 = [70, 76, 92], TB: C3 = CHROME.top, FOOT: C3 = [248, 249, 252], ROUTE: C3 = [70, 140, 250];
+const ROAD: C3 = [255, 255, 255], LABEL: C3 = [70, 76, 92];
 const F = T.find, A = T.apps;
+
+/** The GPS over the map: where it puts the player, the accuracy's disc, and the box while it searches (or has lost the sky). */
+function gpsParts(P: Phone, at: (x: number, y: number) => number[], mpp: number, now: number, indoor: boolean): Pick<MapPage, 'me' | 'halo' | 'gps' | 'acc' | 'accBad'> {
+  const g = P.gps, G = T.gps, [x, y] = at(g.x, g.y);
+  const me = g.known ? { x, y, fix: g.state === 'fix', heading: g.heading } : null;
+  const halo = g.state === 'fix' && g.acc > 0 ? { x, y, r: g.acc / mpp } : null;
+  let gps: MapPage['gps'] = null;
+  if (g.state === 'search') gps = { lost: false, line: G.search, sub: `${G.inView} ${g.sats}/11${indoor ? '  ' + G.indoor : ''}`, bar: Math.max(0, 1 - g.wait / g.waitOf) };
+  else if (g.state === 'lost') gps = { lost: true, line: G.lost, sub: g.known && Math.floor(now * 2) & 1 ? G.lastKnown : `${G.inView} ${g.sats}/11${indoor ? '  ' + G.indoor : ''}`, bar: null };
+  return { me, halo, gps, acc: g.state === 'fix' ? G.acc.replace('{n}m', fmtDist(g.acc, P.prefs.dist)) : '', accBad: g.acc > 30 };
+}
 
 /**
  * The map app: north up, centered on the GPS position (or moved off it with the d-pad), drawing in
- * row by row, at one of four zooms. Up close it names the streets; farther out the districts, tinted
- * by type; landmarks are stars, named while there is room.
+ * from the top, at one of four zooms. Up close it names the streets; farther out the districts,
+ * tinted by type; landmarks are stars, named while there is room.
  */
-function map(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: number) {
-  if (world.player.inside >= 0) return indoorMap(S, P, world, aspect, t, now);
-  const { city } = world, m = mapRaster(city), zoom = P.zoom, rowM = ZOOM_ROW_M[zoom], colM = rowM * aspect;
+function mapPage(S: Lcd, P: Phone, world: World, t: number, now: number): (Pt: Paint) => void {
+  if (world.player.inside >= 0) return indoorPage(S, P, world, t, now);
+  const { city } = world, zoom = P.zoom, mpp = mapMpp(ZOOM_ROW_M[zoom]);
   const [hx, hy] = P.here(), cx = hx + P.panX, cy = hy + P.panY;
-  const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, D = city.diagonal;
-  // title: the district at the view's middle (the city, all zoomed out), the zoom, the scale and north
-  const bar = 6, scale = `${T.zoom[zoom]} |${'-'.repeat(bar - 2)}| ${fmtDist(bar * colM, P.prefs.dist)} N^`;
-  S.fill(1, TB);
-  const title = zoom === 3 ? cityName(city) : districtName(city, districtAt(city, cx, cy));
-  S.text(1, 1, '+N', [120, 230, 150], TB);
-  S.text(4, 1, typed(title.slice(0, Math.max(0, SW - scale.length - 6)), t), CHROME.text, TB);
-  S.text(SW - scale.length - 1, 1, scale, CHROME.dim, TB);
-  const out = new Int32Array(2);
-  const colRoad: boolean[] = [], rowRoad: boolean[] = [], colWide: boolean[] = [], rowWide: boolean[] = [];
-  for (let c = 0; c < SW; c++) colWide[c] = roadIn(city.xb, city.xCell, X0 + c * colM, X0 + (c + 1) * colM, true);
-  for (let r = 0; r < MAP_ROWS; r++) rowWide[r] = roadIn(city.yb, city.yCell, Y0 + r * rowM, Y0 + (r + 1) * rowM, true);
-  const G = P.gps, halo = G.state === 'fix' ? G.acc : 0;
-  if (zoom > 0) {
-    // zoomed out, the roads are lines: all of them up to the sector zoom; for the city, the avenues and the wide streets
-    for (let c = 0; c < SW; c++) colRoad[c] = roadIn(city.xb, city.xCell, X0 + c * colM, X0 + (c + 1) * colM, false);
-    for (let r = 0; r < MAP_ROWS; r++) rowRoad[r] = roadIn(city.yb, city.yCell, Y0 + r * rowM, Y0 + (r + 1) * rowM, zoom === 3);
-  }
-  const diagHalf = Math.max(D.w / 2, 0.45 * Math.max(colM, rowM));
-  for (let r = 0; r < MAP_ROWS; r++) {
-    if (t < 0.15 + r * 0.03) break; // the slow phone draws the map in from the top
-    for (let c = 0; c < SW; c++) {
-      const x0 = X0 + c * colM, y0 = Y0 + r * rowM, mx = x0 + colM / 2, my = y0 + rowM / 2;
-      const inCity = mx >= 0 && my >= 0 && mx < city.w && my < city.h;
-      const diag = inCity && Math.abs(diagS(D, mx, my)) < diagHalf;
-      let bg: C3, fg: C3, glyph: number, k: number;
-      if (zoom > 0 && inCity && (colRoad[c] || rowRoad[r] || diag)) { k = Ground.Road; bg = colWide[c] || rowWide[r] || diag ? WIDE : ROAD; fg = bg; glyph = 32; }
-      else {
-        sample(m, x0, y0, colM, rowM, out);
-        k = out[0]; fg = G_FG[k]; glyph = G_CH[k];
-        if (k === Ground.Building) {
-          const f = Math.min(1, out[1] / 120);
-          bg = [214 - 64 * f, 210 - 56 * f, 202 - 28 * f]; fg = [80, 86, 110];
-          // the skyline's few giants get a mark, to steer by
-          glyph = out[1] > 200 ? ch('^') : 32;
-        } else bg = k === Ground.Road && (colWide[c] || rowWide[r] || diag) ? WIDE : G_BG[k];
-      }
-      // the GPS's accuracy: a pale blue ring around the position
-      if (halo && Math.hypot(mx - G.x, my - G.y) < halo) bg = [bg[0] * 0.75 + 30, bg[1] * 0.75 + 46, bg[2] * 0.75 + 64];
-      if (zoom >= 2 && inCity && k !== Ground.Out) {
-        // the districts, tinted by type
-        const tint = D_TINT[city.districts[districtAt(city, mx, my)].type];
-        if (k !== Ground.Road) bg = [bg[0] * 0.8 + tint[0] * 0.2, bg[1] * 0.8 + tint[1] * 0.2, bg[2] * 0.8 + tint[2] * 0.2];
-      }
-      S.put(c, 2 + r, glyph, fg, bg);
-    }
-  }
-  const drawn = Math.max(0, Math.floor((t - 0.15) / 0.03));
-  const at = (x: number, y: number) => [Math.floor((x - X0) / colM), Math.floor((y - Y0) / rowM)];
-  // labels never overlap each other or a landmark's star (one cell apart); the ones placed first win
-  const used = new Uint8Array(SW * MAP_ROWS);
-  const free = (x: number, r: number, n: number) => { for (let c = Math.max(0, x - 1); c < Math.min(SW, x + n + 1); c++) if (used[r * SW + c]) return false; return true; };
-  const label = (c: number, r: number, s: string, fg: C3, bg: C3) => {
-    if (r < 0 || r >= MAP_ROWS || r >= drawn) return;
-    s = s.slice(0, SW);
-    const x = Math.max(0, Math.min(SW - s.length, c));
-    if (!free(x, r, s.length)) return;
-    for (let k = 0; k < s.length; k++) used[r * SW + x + k] = 1;
-    S.text(x, 2 + r, s, fg, bg);
-  };
-  // the route: a blue line along its legs; the destination (or the place shown): a red pin, drawn last
-  const N = P.nav, dest = N ? N.to : P.pin;
-  if (N?.R.length) {
-    const step = 0.5 * Math.min(colM, rowM), R = N.R;
-    for (let k = 0; k + 3 < R.length; k += 2) {
-      const L = Math.hypot(R[k + 2] - R[k], R[k + 3] - R[k + 1]);
-      for (let d = 0; d <= L; d += step) {
-        const [c, r] = at(R[k] + ((R[k + 2] - R[k]) * d) / (L || 1), R[k + 1] + ((R[k + 3] - R[k + 1]) * d) / (L || 1));
-        if (c >= 0 && c < SW && r >= 0 && r < MAP_ROWS && r < drawn) S.put(c, 2 + r, 32, ROUTE, ROUTE);
-      }
-    }
-  }
-  // landmarks: a star (named below, where there is room)
-  const stars: [number, number, number][] = [];
+  const X0 = cx - (MAP_W / 2) * mpp, Y0 = cy - (MAP_H / 2) * mpp, D = city.diagonal;
+  const at = (x: number, y: number) => [(x - X0) / mpp, (y - Y0) / mpp];
+  const inView = ([x, y]: number[]) => x >= 0 && x < MAP_W && y >= 0 && y < MAP_H;
+  const labels: MapLabel[] = [], stars: MapPage['stars'] = [];
   city.landmarks.forEach((L, k) => {
-    const [c, r] = at(L.x, L.y);
-    if (c < 0 || c >= SW || r < 0 || r >= MAP_ROWS || r >= drawn) return;
-    S.put(c, 2 + r, ch('*'), [255, 255, 255], [210, 60, 50]);
-    used[r * SW + c] = 1;
-    stars.push([k, c, r]);
+    const p = at(L.x, L.y);
+    if (!inView(p)) return;
+    stars.push({ x: p[0], y: p[1] });
+    // up close, their names beside them, before any street name
+    if (zoom <= 1) labels.push({ x: p[0] + 8, y: p[1], text: landmarkName(city, k), ink: [160, 40, 30], back: [255, 244, 238] });
   });
-  // up close, their names beside them, before any street name
-  if (zoom <= 1) for (const [k, c, r] of stars) {
-    const room = SW - c - 2;
-    if (room >= 5) label(c + 2, r, landmarkName(city, k).slice(0, room), [160, 40, 30], [255, 244, 238]);
-  }
   if (zoom <= 1) {
     // street names: the avenues across the top, the streets along their own rows (zoomed out, only the wide ones)
-    for (const [k, x] of roadsIn(city.xb, X0, X0 + SW * colM)) {
-      if (zoom === 1 && !isWideRoad(city.xb, k)) continue;
-      const name = roadName(city, true, k);
-      label(Math.floor((x - X0) / colM) - (name.length >> 1), 0, name, LABEL, ROAD);
-    }
-    for (const [k, y] of roadsIn(city.yb, Y0 + rowM, Y0 + MAP_ROWS * rowM)) {
-      if (zoom === 1 && !isWideRoad(city.yb, k)) continue;
-      label(2, Math.floor((y - Y0) / rowM), roadName(city, false, k), LABEL, ROAD);
-    }
+    for (const [k, x] of roadsIn(city.xb, X0, X0 + MAP_W * mpp)) if (zoom === 0 || isWideRoad(city.xb, k)) labels.push({ x: (x - X0) / mpp, y: 8, text: roadName(city, true, k), ink: LABEL, back: ROAD, center: true });
+    for (const [k, y] of roadsIn(city.yb, Y0 + 20 * mpp, Y0 + MAP_H * mpp)) if (zoom === 0 || isWideRoad(city.yb, k)) labels.push({ x: 4, y: (y - Y0) / mpp, text: roadName(city, false, k), ink: LABEL, back: ROAD });
     // the diagonal, named at the point of it nearest the view's middle
-    const s = diagS(D, cx, cy), [dc, dr] = at(cx - s * D.nx, cy - s * D.ny);
-    if (dc >= 0 && dc < SW) { const n = diagonalName(city); label(dc - (n.length >> 1), dr, n, LABEL, ROAD); }
+    const s = diagS(D, cx, cy), [dx, dy] = at(cx - s * D.nx, cy - s * D.ny);
+    if (dx >= 0 && dx < MAP_W) labels.push({ x: dx, y: dy, text: diagonalName(city), ink: LABEL, back: ROAD, center: true });
   } else {
     // district names at their middles, the ones nearest the view's middle first
     city.districts.map((Dd, k) => [k, Math.hypot(Dd.x - cx, Dd.y - cy)]).sort((a, b) => a[1] - b[1]).forEach(([k]) => {
-      const Dd = city.districts[k], [c, r] = at(Dd.x, Dd.y), n = districtName(city, k).toUpperCase();
-      if (c >= 0 && c < SW) label(c - (n.length >> 1), r, n, [40, 44, 56], [255, 255, 255]);
+      const [x, y] = at(city.districts[k].x, city.districts[k].y);
+      labels.push({ x, y, text: districtName(city, k).toUpperCase(), ink: [40, 44, 56], back: [255, 255, 255], bold: true, center: true });
     });
   }
-  if (dest !== null) {
-    const [px, py] = placeAt(city, dest), [c, r] = at(px, py);
-    if (c >= 0 && c < SW && r >= 0 && r < MAP_ROWS && r < drawn) S.put(c, 2 + r, ch('v'), [255, 255, 255], Math.floor(now * 2) & 1 ? [230, 50, 40] : [180, 30, 24]);
-  }
-  marker(S, P, at, drawn, now);
-  if (P.pin !== null) return placeCard(S, P, world, P.pin, t);
-  if (N) return navBar(S, P, world, N, t, now);
-  // the street at the view's middle
-  const onDiag = Math.abs(diagS(D, cx, cy)) < D.w / 2 + SIDEWALK;
-  const street = `${onDiag ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, cx))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, cy))}`;
-  S.fill(SH - 2, FOOT);
-  S.text(1, SH - 2, typed(street.slice(0, SW - 2), t - 0.3), [30, 34, 44], FOOT);
+  // the route, the destination (or the place shown)
+  const N = P.nav, dest = N ? N.to : P.pin, route: number[] = [];
+  if (N?.R.length) for (let k = 0; k + 1 < N.R.length; k += 2) route.push(...at(N.R[k], N.R[k + 1]));
+  let pin: MapPage['pin'] = null;
+  if (dest !== null) { const [px, py] = placeAt(city, dest), p = at(px, py); if (inView(p)) pin = { x: p[0], y: p[1] }; }
+  // the scale: a bar of 40 pixels
+  const title = zoom === 3 ? cityName(city) : districtName(city, districtAt(city, cx, cy));
+  const d: MapPage = { title, scale: `${T.zoom[zoom]}  ${fmtDist(40 * mpp, P.prefs.dist)}`, scalePx: 40, pic: streetMap(city, mapRaster(city), X0, Y0, mpp, zoom), t, now,
+    route, stars, labels, pin, ...gpsParts(P, at, mpp, now, false), foot: { kind: 'street', text: '', back: '' }, zoomIn: zoom > 0, zoomOut: zoom < 3 };
   const panned = P.panX !== 0 || P.panY !== 0;
-  if (panned) {
-    // moved off the position: which way back to it
-    const back = `${fmtDist(Math.hypot(P.panX, P.panY), P.prefs.dist)} ${compass(-P.panX, -P.panY)}`;
-    S.text(SW - back.length - 1, SH - 2, back, [40, 90, 170], FOOT);
+  if (P.pin !== null) { d.foot = placeCard(P, world, P.pin); softKeys(S, F.route, T.back); }
+  else if (N) { d.foot = navFoot(P, world, N, now); softKeys(S, F.end, T.back); }
+  else {
+    // the street at the view's middle, and which way back when moved off the position
+    const onDiag = Math.abs(diagS(D, cx, cy)) < D.w / 2 + SIDEWALK;
+    const street = `${onDiag ? diagonalName(city) : roadName(city, true, nearestRoad(city.xb, city.xCell, cx))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, cy))}`;
+    d.foot = { kind: 'street', text: typed(street, t - 0.3), back: panned ? `${fmtDist(Math.hypot(P.panX, P.panY), P.prefs.dist)} ${compass(-P.panX, -P.panY)}` : '' };
+    softKeys(S, panned ? T.center : F.search, T.back);
   }
-  gpsInfo(S, P, now, false);
-  softKeys(S, panned ? T.center : F.search, T.back);
+  return (Pt) => paintMap(Pt, d);
 }
 
-/** The card of a place shown on the map: name, kind, open or not, phone, address, how far; OK walks there. */
-function placeCard(S: Lcd, P: Phone, world: World, p: Place, t: number) {
-  const { city } = world, CARD: C3 = [252, 252, 254], INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], y0 = SH - 8;
-  box(S, 0, y0, SW - 1, SH - 2, CARD, CARD, 0);
-  for (let x = 0; x < SW; x++) S.put(x, y0, 32, [200, 204, 214], [200, 204, 214]);
-  S.put(1, y0 + 1, ch('v'), [255, 255, 255], [220, 46, 38]);
-  S.text(3, y0 + 1, typed(placeName(city, p).slice(0, SW - 4), t), INK2, CARD);
-  S.text(3, y0 + 2, typed(`${placeKind(city, p)} - ${placeDistrict(city, p)}`.slice(0, SW - 4), t - 0.1), GREY, CARD);
-  const h = placeHours(city, p, calendar(world.time).hour);
-  if (h) {
-    const tag = h.open ? F.openNow : F.closed, col: C3 = h.open ? [40, 150, 70] : [200, 50, 40];
-    S.text(3, y0 + 3, tag, [255, 255, 255], col);
-    S.text(4 + tag.length, y0 + 3, typed(h.text, t - 0.15), GREY, CARD);
-  }
-  const num = p >= 0 ? formatNumber(world.telco, world.telco.bizNum[p]) : F.noPhone;
-  S.text(3, y0 + 4, typed(num, t - 0.2), p >= 0 ? [40, 90, 170] : GREY, CARD);
-  const [hx, hy] = P.gps.known ? [P.gps.x, P.gps.y] : [NaN, NaN], [px, py] = placeAt(city, p);
-  const far = P.gps.known ? `${fmtDist(Math.hypot(px - hx, py - hy), P.prefs.dist)} ${compass(px - hx, py - hy)}` : '--';
-  S.text(SW - far.length - 1, y0 + 4, far, INK2, CARD);
-  S.text(3, y0 + 5, typed(placeAddress(city, p).slice(0, SW - 4), t - 0.25), INK2, CARD);
-  softKeys(S, F.route, T.back);
+/** The card of a place shown on the map: name, kind, open or not, phone, address, how far; Route walks there, Call calls it. */
+function placeCard(P: Phone, world: World, p: Place): MapFoot {
+  const { city } = world, h = placeHours(city, p, calendar(world.time).hour);
+  const [hx, hy] = [P.gps.x, P.gps.y], [px, py] = placeAt(city, p);
+  return { kind: 'card', name: placeName(city, p), sub: `${placeKind(city, p)} - ${placeDistrict(city, p)}`, open: h ? h.open : null, openLabel: h?.open ? F.openNow : F.closed, hours: h?.text ?? '',
+    number: p >= 0 ? formatNumber(world.telco, world.telco.bizNum[p]) : F.noPhone, hasNumber: p >= 0, far: P.gps.known ? `${fmtDist(Math.hypot(px - hx, py - hy), P.prefs.dist)} ${compass(px - hx, py - hy)}` : '--',
+    address: placeAddress(city, p), route: F.route, call: F.call };
 }
 
 /** Under the map while a route is followed: the next turn (or how it stands) and the way left. */
-function navBar(S: Lcd, P: Phone, world: World, N: NonNullable<Phone['nav']>, t: number, now: number) {
-  const { city } = world, BAR2: C3 = [30, 66, 140], W2: C3 = [255, 255, 255], DIM2: C3 = [176, 196, 232], g = P.gps, d = (m: number) => fmtDist(m, P.prefs.dist);
-  S.fill(SH - 3, BAR2); S.fill(SH - 2, BAR2);
-  let line = '', sub = placeName(city, N.to);
+function navFoot(P: Phone, world: World, N: NonNullable<Phone['nav']>, now: number): MapFoot {
+  const { city } = world, g = P.gps, d = (m: number) => fmtDist(m, P.prefs.dist);
+  let line = '', sub = placeName(city, N.to), turn: 'left' | 'right' | null = null;
   if (N.state === 'arrived') line = F.arrived;
   else if (N.state === 'none') line = F.noRoute;
   else if (N.state === 'routing') {
     const J = P.radio.job;
-    line = (N.R.length || N.off > 0 ? F.rerouting : F.routing).slice(0, SW - 2);
+    line = N.R.length || N.off > 0 ? F.rerouting : F.routing;
     if (!g.known) sub = T.gps.search;
     else if (J?.what === 'route' && J.state === 'loading') sub = A.wx.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', J.kb.toFixed(1));
     else if (!P.online()) sub = F.offline;
     line += '.'.repeat(Math.floor(now * 3) % 4);
   } else if (g.known) {
-    const o = onRoute(N.R, g.x, g.y), turn = nextTurn(city, N.R, o.leg, o.px, o.py);
-    line = turn ? F.turn.replace('{d}', d(turn.dist)).replace('{side}', turn.right ? F.right : F.left).replace('{road}', turn.road) : F.straight.replace('{d}', d(o.left));
+    const o = onRoute(N.R, g.x, g.y), next = nextTurn(city, N.R, o.leg, o.px, o.py);
+    line = next ? F.turn.replace('{d}', d(next.dist)).replace('{side}', next.right ? F.right : F.left).replace('{road}', next.road) : F.straight.replace('{d}', d(o.left));
     sub = `${F.togo.replace('{d}', d(o.left))} - ${sub}`;
-    // which way the next turn goes
-    if (turn) S.text(SW - 3, SH - 3, turn.right ? '->' : '<-', [255, 220, 120], BAR2);
+    if (next) turn = next.right ? 'right' : 'left';
   }
-  S.text(1, SH - 3, typed(line.slice(0, SW - 5), t - 0.2), W2, BAR2);
-  S.text(1, SH - 2, typed(sub.slice(0, SW - 2), t - 0.3), DIM2, BAR2);
-  softKeys(S, F.end, T.back);
+  return { kind: 'nav', line, sub, turn };
 }
-
-/**
- * Where the GPS puts the player: an arrow along the way they move (there is no compass), a ring
- * standing still, blinking; with no fix, the last known position as a dim '?'.
- */
-function marker(S: Lcd, P: Phone, at: (x: number, y: number) => number[], drawn: number, now: number) {
-  const g = P.gps;
-  if (!g.known) return;
-  const [c, r] = at(g.x, g.y);
-  if (c < 0 || c >= SW || r < 0 || r >= MAP_ROWS || r >= drawn) return;
-  const blink = Math.floor(now * 3) & 1;
-  if (g.state !== 'fix') { if (blink) S.put(c, 2 + r, ch('?'), [255, 255, 255], [140, 146, 160]); return; }
-  const glyph = Number.isNaN(g.heading) ? SHAPE.dot : ch(ARROWS[Math.round(g.heading / (Math.PI / 4)) & 7]);
-  S.put(c, 2 + r, glyph, [255, 255, 255], blink ? [60, 140, 255] : [30, 100, 220]);
-}
-
-/** The GPS's state over the map: searching (satellites in view, time to the fix), signal lost, or the accuracy. */
-function gpsInfo(S: Lcd, P: Phone, now: number, indoor: boolean) {
-  const g = P.gps, G = T.gps, card: C3 = [252, 252, 254], ink: C3 = [30, 34, 44], grey: C3 = [110, 118, 132];
-  if (g.state === 'search' || g.state === 'lost') {
-    box(S, 5, 9, SW - 6, 14, card, [200, 200, 200], 1);
-    S.center(10, g.state === 'search' ? G.search : G.lost, g.state === 'search' ? [40, 90, 170] : [200, 60, 50], card);
-    S.center(12, `${G.inView} ${g.sats}/11${indoor ? '  ' + G.indoor : ''}`, grey, card);
-    if (g.state === 'search') {
-      const n = Math.round(Math.max(0, 1 - g.wait / g.waitOf) * 20);
-      for (let x = 0; x < 20; x++) S.put(11 + x, 13, 32, ink, x < n ? [60, 140, 255] : [220, 224, 232]);
-    } else if (g.known && Math.floor(now * 2) & 1) S.center(13, G.lastKnown, grey, card);
-  } else if (g.state === 'fix') {
-    const a = G.acc.replace('{n}m', fmtDist(g.acc, P.prefs.dist));
-    S.text(SW - a.length - 1, 1, a, g.acc > 30 ? BAD : CHROME.dim, CHROME.top);
-  }
-}
-
-/** Floor colors of the rooms on the indoor map, by kind; the stairs and the lift get a glyph. */
-const ROOM_BG: Record<RoomKind, C3> = {
-  lobby: [222, 214, 196], hall: [210, 204, 194], stair: [190, 196, 206], lift: [184, 196, 220], foyer: [230, 214, 190], living: [240, 216, 180],
-  bedroom: [214, 204, 236], kitchen: [214, 230, 196], bath: [190, 226, 234], office: [204, 214, 230], open: [212, 222, 236], shop: [248, 226, 170], store: [222, 208, 180],
-};
-const ROOM_CH: Partial<Record<RoomKind, number>> = { stair: ch('='), lift: ch('X') };
 
 /**
  * The map inside a building: the plan of the floor the player is on, around them (rooms tinted by
  * what they are and named where they fit, walls, doorways, the stairs and the lift), and the street
  * past the outer walls. The same zoom keys pick the scale.
  */
-function indoorMap(S: Lcd, P: Phone, world: World, aspect: number, t: number, now: number) {
+function indoorPage(S: Lcd, P: Phone, world: World, t: number, now: number): (Pt: Paint) => void {
   const { city, player } = world, B = city.buildings[player.inside], plan = planOf(city, player.inside, player.floor);
-  const rowM = INDOOR_ROW_M[P.zoom], colM = rowM * aspect, [hx, hy] = P.here(), cx = hx + P.panX, cy = hy + P.panY;
-  const X0 = cx - (SW / 2) * colM, Y0 = cy - (MAP_ROWS / 2) * rowM, m = mapRaster(city);
-  const where = `${T.floor} ${player.floor === 0 ? T.ground : player.floor}`, scale = `|${'--'}| ${fmtDist(4 * colM, P.prefs.dist)} N^`;
-  S.fill(1, TB);
-  S.text(1, 1, typed(where, t), CHROME.text, TB);
-  S.text(SW - scale.length - 1, 1, scale, CHROME.dim, TB);
-  const WALL: C3 = [86, 90, 102], OUT: C3 = [238, 234, 224];
-  for (let r = 0; r < MAP_ROWS; r++) {
-    if (t < 0.15 + r * 0.03) break;
-    for (let c = 0; c < SW; c++) {
-      const x0 = X0 + c * colM, y0 = Y0 + r * rowM;
-      // 3x3 points per cell: one room all over is its floor; two rooms meeting is a wall, unless both sides are a doorway
-      let first = -1, mixed = false, door = true, any = false;
-      for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
-        const v = plan ? cellAt(plan, x0 + ((i + 0.5) / 3) * colM, y0 + ((j + 0.5) / 3) * rowM) : 0, room = v & ROOM;
-        if (room) any = true;
-        if (!(v & DOOR)) door = false;
-        if (first < 0) first = room; else if (room !== first) mixed = true;
-      }
-      if (!any) {
-        // past the outer walls: the street, or a neighbor's wall
-        const k = groundAt(m, x0 + colM / 2, y0 + rowM / 2);
-        S.put(c, 2 + r, k === Ground.Building ? ch(':') : 32, [190, 186, 178], k === Ground.Building ? [214, 210, 202] : OUT);
-      } else if (mixed && !door) S.put(c, 2 + r, 32, WALL, WALL);
-      else {
-        const R = plan!.rooms[first - 1], bg = R ? ROOM_BG[R.kind] : WALL;
-        S.put(c, 2 + r, mixed ? 32 : R ? ROOM_CH[R.kind] ?? 32 : 32, [90, 96, 110], mixed ? [Math.min(255, bg[0] * 1.08), Math.min(255, bg[1] * 1.08), Math.min(255, bg[2] * 1.08)] : bg);
-      }
-    }
-  }
-  const drawn = Math.max(0, Math.floor((t - 0.15) / 0.03));
+  const mpp = mapMpp(INDOOR_ROW_M[P.zoom]), [hx, hy] = P.here(), cx = hx + P.panX, cy = hy + P.panY;
+  const X0 = cx - (MAP_W / 2) * mpp, Y0 = cy - (MAP_H / 2) * mpp, at = (x: number, y: number) => [(x - X0) / mpp, (y - Y0) / mpp];
+  const labels: MapLabel[] = [];
   // the rooms' names, at their middles, where they fit
-  if (plan && P.zoom <= 1) plan.rooms.forEach((R, n) => {
-    const mx = (R.x0 + R.x1) / 2, my = (R.y0 + R.y1) / 2;
-    if ((cellAt(plan, mx, my) & ROOM) !== n + 1) return;
-    const name = (T.room as Record<string, string>)[R.kind], c = Math.floor((mx - X0) / colM) - (name.length >> 1), r = Math.floor((my - Y0) / rowM);
-    if (r < 0 || r >= MAP_ROWS || r >= drawn || c < 0 || c + name.length > SW || name.length * colM > R.x1 - R.x0 + 0.5) return;
-    S.text(c, 2 + r, name, [50, 54, 66], ROOM_BG[R.kind]);
+  if (plan) plan.rooms.forEach((R, n) => {
+    const mx = (R.x0 + R.x1) / 2, my = (R.y0 + R.y1) / 2, name = (T.room as Record<string, string>)[R.kind];
+    if ((cellAt(plan, mx, my) & ROOM) !== n + 1 || ptextW(name) + 6 > (R.x1 - R.x0) / mpp) return;
+    const [x, y] = at(mx, my);
+    labels.push({ x, y, text: name, ink: [50, 54, 66], back: null, center: true });
   });
-  marker(S, P, (x, y) => [Math.floor((x - X0) / colM), Math.floor((y - Y0) / rowM)], drawn, now);
-  // the address: the building's corner
   const addr = `${roadName(city, true, nearestRoad(city.xb, city.xCell, (B.x0 + B.x1) / 2))} & ${roadName(city, false, nearestRoad(city.yb, city.yCell, (B.y0 + B.y1) / 2))}`;
-  S.fill(SH - 2, FOOT);
-  S.text(1, SH - 2, typed(addr.slice(0, SW - 2), t - 0.3), [30, 34, 44], FOOT);
-  gpsInfo(S, P, now, true);
+  const d: MapPage = { title: `${T.floor} ${player.floor === 0 ? T.ground : player.floor}`, scale: fmtDist(40 * mpp, P.prefs.dist), scalePx: 40,
+    pic: indoorMap(mapRaster(city), plan, `${player.inside}:${player.floor}`, X0, Y0, mpp), t, now, route: [], stars: [], labels, pin: null,
+    ...gpsParts(P, at, mpp, now, true), foot: { kind: 'street', text: typed(addr, t - 0.3), back: '' }, zoomIn: P.zoom > 0, zoomOut: P.zoom < 3 };
   softKeys(S, P.panX || P.panY ? T.center : P.nav ? F.end : F.search, T.back);
+  return (Pt) => paintMap(Pt, d);
 }
 
 /**
  * Maps' search: a field typed on the keypad (Abc, T9 or 123, as messages are), and under it the
  * places the server sent back, nearest first, each with its kind, whether it is open and how far.
  */
-function places(S: Lcd, P: Phone, world: World, t: number, now: number) {
-  const { city } = world, PG: C3 = [244, 246, 250], W: C3 = [255, 255, 255], INK2: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], BLUE: C3 = [40, 90, 170];
-  for (let y = 1; y < SH - 1; y++) S.fill(y, PG);
-  S.fill(1, CHROME.top);
-  S.text(1, 1, '?', [255, 196, 90], CHROME.top);
-  S.text(3, 1, typed(F.title, t), CHROME.text, CHROME.top);
-  const ed = P.findEd, mode = ed.label();
-  S.text(SW - mode.length - 1, 1, mode, CHROME.dim, CHROME.top);
-  // the field, outlined while it is the one picked
-  const on = P.psel < 0, q = ed.value(), blink = Math.floor(now * 2) & 1;
-  box(S, 1, 3, SW - 2, 3, on ? W : [234, 236, 242], PG, 0);
-  S.put(2, 3, ch('>'), on ? BLUE : GREY, on ? W : [234, 236, 242]);
-  if (q) S.text(4, 3, q.slice(-(SW - 7)) + (on && blink ? '_' : ''), INK2, on ? W : [234, 236, 242]);
-  else S.text(4, 3, on && blink ? '_' : F.hint.slice(0, SW - 7), GREY, on ? W : [234, 236, 242]);
-  if (on) typeHint(S, 1, 4, ed, now, T.apps.modeHint, GREY, PG);
-  // what came back: the search under way, nothing, or the list
-  const J = P.radio.job;
+function placesPage(S: Lcd, P: Phone, world: World, t: number, now: number): (Pt: Paint) => void {
+  const { city } = world, ed = P.findEd, q = ed.value(), on = P.psel < 0, J = P.radio.job;
+  const d: PlacesPage = { title: F.title, mode: ed.label(), query: q, placeholder: F.hint, on, blink: (Math.floor(now * 2) & 1) === 1, hint: edHint(ed, now, T.apps.modeHint),
+    goField: () => { P.psel = -1; }, status: '', statusBad: false, status2: '', count: '', rows: [], t };
   if (P.places === null) {
-    if (P.findNote === 'offline') S.center(9, F.offline, BAD, PG);
+    if (P.findNote === 'offline') { d.status = F.offline; d.statusBad = true; }
     else if (J?.what === 'find') {
-      const msg = J.state === 'nodata' ? T.apps.wx.noData : J.state === 'nosignal' ? T.apps.wx.lost : `${F.searching}${'.'.repeat(Math.floor(now * 3) % 4)}`;
-      S.center(9, msg, J.state === 'nodata' || J.state === 'nosignal' ? BAD : BLUE, PG);
-      if (J.state === 'loading') S.center(10, T.apps.wx.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', J.kb.toFixed(1)), GREY, PG);
+      const bad = J.state === 'nodata' || J.state === 'nosignal';
+      d.status = J.state === 'nodata' ? T.apps.wx.noData : J.state === 'nosignal' ? T.apps.wx.lost : `${F.searching}${'.'.repeat(Math.floor(now * 3) % 4)}`; d.statusBad = bad;
+      if (J.state === 'loading') d.status2 = T.apps.wx.kb.replace('{a}', J.done.toFixed(1)).replace('{b}', J.kb.toFixed(1));
     }
-    return softKeys(S, q ? F.search : '', q ? T.apps.clear : T.back);
+    softKeys(S, q ? F.search : '', q ? T.apps.clear : T.back);
+    return (Pt) => paintPlaces(Pt, d);
   }
-  if (!P.places.length) { S.center(9, F.none, GREY, PG); return softKeys(S, F.search, T.back); }
-  S.text(1, 5, F.results.replace('{n}', String(P.places.length)), GREY, PG);
-  const [hx, hy] = P.here(), hour = calendar(world.time).hour, rows = Math.floor((SH - 8) / 2), sel = Math.max(0, P.psel);
-  const top = Math.max(0, Math.min(sel - (rows >> 1), P.places.length - rows));
-  for (let n = 0; n < rows && top + n < P.places.length; n++) {
-    const p = P.places[top + n], y = 6 + 2 * n, picked = top + n === P.psel, bg: C3 = picked ? PICK : PG;
-    const [px, py] = placeAt(city, p), far = P.gps.known ? `${fmtDist(Math.hypot(px - hx, py - hy), P.prefs.dist)} ${compass(px - hx, py - hy)}` : '--';
-    if (picked) { S.fill(y, bg); S.fill(y + 1, bg); }
-    S.put(1, y, ch(p >= 0 ? 'v' : '*'), W, p >= 0 ? [220, 46, 38] : [210, 60, 50]);
-    S.text(3, y, typed(placeName(city, p).slice(0, SW - far.length - 5), t - 0.1 - n * 0.04), picked ? PICK_INK : INK2, bg);
-    S.text(SW - far.length - 1, y, far, picked ? PICK_DIM : GREY, bg);
-    const h = placeHours(city, p, hour), kind = placeKind(city, p);
-    S.text(3, y + 1, kind, picked ? PICK_DIM : GREY, bg);
-    if (h) S.text(4 + kind.length, y + 1, h.open ? F.openNow : F.closed, picked ? W : h.open ? [40, 150, 70] : [200, 50, 40], bg);
-  }
+  if (!P.places.length) { d.status = F.none; softKeys(S, F.search, T.back); return (Pt) => paintPlaces(Pt, d); }
+  d.count = F.results.replace('{n}', String(P.places.length));
+  const [hx, hy] = P.here(), hour = calendar(world.time).hour;
+  d.rows = P.places.map((p, n) => {
+    const [px, py] = placeAt(city, p), h = placeHours(city, p, hour);
+    return { name: placeName(city, p), far: P.gps.known ? `${fmtDist(Math.hypot(px - hx, py - hy), P.prefs.dist)} ${compass(px - hx, py - hy)}` : '--', kind: placeKind(city, p),
+      open: h ? h.open : null, openLabel: h?.open ? F.openNow : F.closed, landmark: p < 0, sel: n === P.psel, pre: () => { P.psel = n; } };
+  });
   softKeys(S, P.psel >= 0 ? T.show : F.search, T.back);
+  return (Pt) => paintPlaces(Pt, d);
 }
-

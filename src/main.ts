@@ -339,7 +339,7 @@ let lapWasOpen = false;
 const look: Look = { solid: 0.24, blocks: false, sharp: STYLES[style].sharp, fuse: OPTS.fuse };
 // the phone's keys (see phone.ts): sounds, and the slide back into the pocket
 function phonePress(pk: Key, touch = false) {
-  const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(uiLayout.cellW / uiLayout.cellH, phone.zoom, world.player.inside >= 0));
+  const was = phone.screen, now = performance.now() / 1000, done = phone.press(pk, now, ...mapView(phone.zoom, world.player.inside >= 0));
   // keypad tones as the settings say: none in silent or with them off, the dome's click only, or a
   // tone (touch-tones on the dialer, or on every digit); a call fails for want of a network. A touch on
   // the screen: the speaker's tick instead (the phone's manual v2)
@@ -1402,7 +1402,7 @@ function frame(now: number) {
   if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null; PHONE_PIC.on = false; PHONE_BODY.on = false;
-  if (!phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
+  if (!phoneOnTop) drawPhone(ui, phone, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
   // the notebook: its schedule, its sounds, the drive's hum, and on screen
   laptop.update(dt, now / 1000);
   sitK = world.player.sit ? Math.min(1, sitK + dt / 0.4) : Math.max(0, sitK - dt / 0.3);
@@ -1438,7 +1438,7 @@ function frame(now: number) {
     // while the lid opens, the view tips down to the screen
     if (laptop.open && laptop.raise < 1 && !input.drag) camera.targetPitch = laptopPitch();
   }
-  if (phoneOnTop) drawPhone(ui, phone, world, uiLayout.cellW / uiLayout.cellH, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
+  if (phoneOnTop) drawPhone(ui, phone, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
   if (!laptop.open && now / 1000 - laptop.noticeAt < 2.5) { const s = ` ${laptop.notice} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   renderMs += (ms - renderMs) * 0.05;
   worstMs = Math.max(worstMs, ms);

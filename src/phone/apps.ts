@@ -395,7 +395,7 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number): Pg |
 const BK = A.bank;
 /**
  * The bank's app, in the bank's own colors (a deep green bar, gold, a cream page): the account and
- * its balance, the statement, a top-up of the phone's credit from the account, and the branch (where
+ * its balance, the statement, the branches nearby (where to take cash out), and the branch (where
  * it is, its hours, its number). Nothing shows until the account has come down over the network.
  */
 /** Kilobytes a second of the MP3s of 2008 (128 kbps): every song's size is its length at that rate, whatever the file really is (2026-10-06). */

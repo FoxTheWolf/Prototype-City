@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.38 — Mapa e busca em pixels (2026-10-07)
+- **O mapa redesenhado como um mapa de celular de 2008:** as ruas exatas (brancas, as avenidas amarelas), os prédios contornados e mais azulados quanto mais altos, parques e praças com textura, os bairros tingidos de longe; continua se desenhando de cima para baixo. Por cima: a rota em azul, os marcos (estrela num disco vermelho), os nomes das ruas e dos bairros sem se sobrepor, o alfinete do lugar, a seta do GPS na direção em que você anda e o disco da precisão. Botões + e - para o zoom, a escala no cabeçalho.
+- **O cartão do lugar** com aberto/fechado, telefone, distância, endereço e os botões Route e Call; **a barra da rota** com a próxima curva e uma seta dobrada.
+- **O mapa de dentro dos prédios** com as salas na cor do tipo, as paredes, as portas entre as salas, a escada listrada e o elevador.
+- **A busca de lugares:** o campo com a lupa e a digitação, e os resultados com alfinete (ou estrela), distância, tipo e aberto/fechado; um toque escolhe, outro mostra no mapa.
+
 ## 0.15.37 — Banco: agências por perto no lugar da recarga (2026-10-07)
 - **Sai a recarga do celular pelo app do banco:** o banco não tem como saber qual chip está no aparelho (os chips se trocam); a recarga continua pela operadora, no *100#.
 - **Entra "Branches nearby":** as agências do seu banco da mais perto para a mais longe, com a esquina, a distância e se estão abertas agora; é no balcão delas que se saca dinheiro vivo. O botão verde (ou o da tela) liga para a escolhida.
