@@ -401,3 +401,16 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **A tela na mão vira textura própria** na resolução do monitor, como a do Jackdaw: nítida e inclinando com o corpo 3D. A arte atual (células + HD) é portada junto do remake.
 - **O corpo-base:** a placa da tela em preto brilhante com aro cromado, e a de baixo em grafite fosco. **A luz das teclas e da tela é azul-gelo**, mas **atender é verde e desligar é vermelho**; as cores das outras teclas ficam a critério do Claude.
 - **A frente, revista pelo usuário ao ver o manual:** a tela estava pequena. Saiu a plaqueta cromada embaixo da cruz; a cruz ficou menor e desceu até a base; atender e desligar foram para os cantos de baixo; a tela cresceu para baixo e virou **240 × 400** (2,8", o formato largo de 2008).
+
+### O notebook e o Osprey (entrevista de 2026-10-07, para o manual)
+- **Um manual só, em duas partes:** o aparelho (corpo, teclas, sons, tela como textura) e o SO **Osprey** (boot, firmware, janelas, terminal, cores).
+- **O corpo é fortemente inspirado num ThinkPad** (escolha do usuário): o tijolo preto fosco, quadrado, de quem trabalha. Pela regra de originalidade, copia-se o gênero (a forma, o nub no teclado, a luz do teclado na tampa) e não a identidade (o nub vermelho, o pingo vermelho do logo, o nome).
+- **Osprey:** console de texto com mosaico, como hoje (estilo dwm, barra no topo, boot verboso); o manual define as bordas, a barra, os ícones HD e as cores.
+- **Tinta:** âmbar por padrão e verde como opção, como hoje; o manual fixa as duas paletas.
+- **O nub é âmbar** (o detalhe de cor do aparelho, no lugar do vermelho); **nub + touchpad**, como os de 2008 (três botões em cima, dois embaixo).
+- **A luz do teclado na tampa, com tecla própria:** ilumina as teclas no escuro, mas é vista de longe (as luzes do próprio jogador o entregam).
+- **O notebook inicial é usado, com marcas:** teclas gastas brilhando, arranhões, a etiqueta meio descolada e **um ou dois adesivos já colados**, sorteados pela semente (bandas da cidade, empresas da simulação, símbolos).
+- **O jogador cola os próprios adesivos** (o usuário mudou de ideia duas vezes até aqui): os **achados ou comprados no jogo** (lojas, brindes de bandas e empresas) e **imagens importadas do PC**, dentro de limites técnicos. Proposta do Claude: a imagem vira um adesivo de pixels (até 64×64, até 16 cores, recortado com borda branca), guardado no save como dados; importa-se por uma pasta ao lado do jogo, como o cartão SD da música (o precedente de conteúdo do jogador, que não fere "Tudo é código", porque o jogo não leva o arquivo). Colar é pela interface 2D da tampa (arrastar, girar); descolar deixa marca de cola.
+- **Logo do Osprey:** águia-pescadora geométrica em mergulho, de asas fechadas, que vira ASCII de 6–8 linhas no boot.
+- **A barra do topo** (o usuário deixou com o Claude, pedindo stats que mostrem que tudo é simulado): áreas de trabalho, título da janela em foco, rede com sinal, carga da CPU, memória usada/total da máquina virtual, bateria com o tempo restante e a hora do jogo.
+- **Bordas das janelas em linhas finas na camada HD** (a janela em foco em âmbar claro); **a tela é um LCD fosco de 2008** (sem scanlines, preto acinzentado do backlight, escurece de lado).

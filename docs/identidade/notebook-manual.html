@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --amb: #ffb030; --amb2: #aa6e22; --amb3: #ffd68c; --grn: #5aff78; --acc: #ff6a13; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 48px 0 28px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+  header.cover svg { width: 100%; height: auto; display: block; }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 118%; margin: 0; line-height: 1.05; }
+  header.cover h1 span { color: var(--amb); }
+  header.cover p { color: var(--dim); margin: 10px 0 0; max-width: 60ch; }
+  @media (max-width: 760px) { header.cover { grid-template-columns: 1fr; } header.cover h1 { font-size: 32px; } }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 26px 0 6px; }
+  .part { font: 700 12px 'IBM Plex Mono'; color: var(--amb); letter-spacing: .2em; padding: 36px 0 0; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--acc); }
+  .do b { color: #6fd08c; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 64px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 0; overflow-x: auto; line-height: 1.2; font-size: 13px; }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #2c2f34; }
+  button.on { border-color: var(--amb); color: var(--amb); }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3a3c42; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  .stage { background: radial-gradient(ellipse at 50% 30%, #23262d 0%, #0b0c0e 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-top: 14px; transition: background .4s; }
+  .stage.night { background: radial-gradient(ellipse at 50% 30%, #0b0c10 0%, #020203 75%); }
+  .stage > svg { width: 100%; height: auto; display: block; touch-action: manipulation; user-select: none; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  [data-k] { cursor: pointer; }
+  [data-k].pressed { transform: translateY(1px); filter: brightness(.65); }
+  /* the Osprey console, as the screen texture draws it (8 x 16 px cells at 1280 x 800) */
+  .con { background: #0a0602; color: var(--amb); border-radius: 6px; border: 1px solid var(--line); font: 12px/16px 'IBM Plex Mono', monospace; overflow: hidden; position: relative; }
+  .con.green { background: #030904; color: var(--grn); }
+  .con pre { margin: 0; padding: 6px 8px; white-space: pre; overflow-x: auto; }
+  .bar { display: flex; gap: 0; font: 12px/18px 'IBM Plex Mono'; color: var(--amb2); border-bottom: 1px solid #3a2410; white-space: nowrap; overflow-x: auto; }
+  .bar span { padding: 0 8px; border-right: 1px solid #3a2410; }
+  .bar span b { color: var(--amb3); font-weight: 600; }
+  .bar .sel { background: var(--amb); color: #0a0602; }
+</style>
+</head>
+<body>
+<main>
+  <header class="cover">
+    <svg viewBox="0 0 640 420" id="cover"></svg>
+    <div>
+      <h1>O NOTEBOOK <span>E O OSPREY</span></h1>
+      <p>Manual de identidade · v1 · 2026-10-07</p>
+      <p>Um tijolo executivo de 2008, preto fosco e quadrado, com o nub âmbar no meio do teclado, a luz das teclas na tampa e cara de muito uso. Por dentro roda o Osprey/UX, um sistema de console em mosaico. O jogador chega à cidade com ele, de segunda mão, com um ou dois adesivos do dono anterior; o resto da tampa é para os adesivos do jogador.</p>
+    </div>
+  </header>
+  <nav class="toc">
+    <a href="#aparelho">1 · O aparelho</a><a href="#vistas">2 · As vistas</a><a href="#cores">3 · Cores e materiais</a><a href="#uso">4 · Uso e adesivos</a>
+    <a href="#teclas">5 · Teclas e sons</a><a href="#tela">6 · A tela</a><a href="#osprey">7 · O Osprey</a><a href="#console">8 · O console</a>
+    <a href="#firmware">9 · O firmware</a><a href="#jogo">10 · No jogo</a><a href="#regras">11 · Regras</a>
+  </nav>
+
+<div class="part">PARTE I · O APARELHO</div>
+  <section id="aparelho">
+    <h2>1 · O aparelho <small>tijolo executivo, 13,3", 2008</small></h2>
+    <p class="lead">Uma caixa de plástico preto fosco, de cantos quase retos, com dobradiças de metal aparentes. Tudo o que se usa é uma peça que se aperta: o botão de ligar com o anel de LED, as teclas de volume, a tecla da luz, o nub âmbar e seus três botões, o touchpad e seus dois botões, a chave do rádio na frente. É o notebook de quem trabalha, e não de quem desfila. A forma se inspira no gênero dos executivos de 2008, mas o nub não é vermelho e não há pingo vermelho em logo nenhum.</p>
+    <div class="stage" id="stage">
+      <svg viewBox="0 0 660 930" id="dev"></svg>
+      <div class="ctl">
+        <button id="bPower">ligar ⏻</button><button id="bLamp">luz do teclado</button><button id="bNight">noite</button>
+      </div>
+      <div class="hint">Clique nas peças do aparelho: o botão de ligar, a luz, as teclas, os botões do nub e do touchpad. Com ele ligado, o teclado do PC digita no terminal. Em "noite", as teclas somem no escuro, e só a tela e a luz da tampa as mostram.</div>
+      <div class="tbl"><table>
+        <tr><th>ficha</th><th></th></tr>
+        <tr><td>fechado</td><td>310 × 225 × 32 mm, ~2,2 kg (a bateria de 6 células salta 15 mm atrás)</td></tr>
+        <tr><td>tela</td><td>13,3", 16:10, 1280 × 800, LCD fosco; o console tem 160 × 50 células de 8 × 16 px</td></tr>
+        <tr><td>em cima da tela</td><td>a luz do teclado (um LED âmbar-claro virado para baixo) e os dois fechos da tampa</td></tr>
+        <tr><td>embaixo da tela</td><td>a marca do fabricante à esquerda e os LEDs de estado à direita</td></tr>
+        <tr><td>faixa de cima</td><td>volume −, volume +, mudo, a tecla da luz e o botão de ligar</td></tr>
+        <tr><td>teclado</td><td>84 teclas, 19 mm de passo, as setas em T invertido e o nub âmbar entre G, H e B</td></tr>
+        <tr><td>apontar</td><td>o nub com três botões e o touchpad com dois</td></tr>
+        <tr><td>descanso</td><td>o selo do Osprey à direita e a etiqueta de série embaixo</td></tr>
+        <tr><td>por dentro</td><td>CPU, RAM, disco e rádio <b>variam a cada jogo</b> (sim/computer.ts); a RAM e o disco se trocam pela tampinha de baixo</td></tr>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="vistas">
+    <h2>2 · As vistas <small>frente, laterais, trás e fundo</small></h2>
+    <p class="lead">Na mesma escala (1 mm = 2 unidades). As portas são as de 2008, e cada uma é um lugar onde um cabo de verdade entra no jogo: o carregador, a rede com fio, o USB do pendrive e dos aparelhos. A chave do rádio na frente desliga o Wi-Fi com um "tlec" e apaga o LED da antena.</p>
+    <div class="card"><svg viewBox="0 0 900 480" id="views"></svg></div>
+  </section>
+
+<section id="cores">
+    <h2>3 · Cores e materiais</h2>
+    <p class="lead">Quase tudo é grafite. A cor do aparelho está em três lugares pequenos: o nub âmbar, os LEDs e a luz da tampa. Na rua, de noite, é isso que se vê de longe.</p>
+    <div class="sw">
+      <div><i style="background:#1c1d20"></i><span><b>Grafite fosco</b><em>#1C1D20 · a caixa, plástico com textura fina (o "pêssego" que gasta e brilha com o uso)</em></span></div>
+      <div><i style="background:#232528"></i><span><b>Tecla</b><em>#232528 · côncava, de legenda cinza #A7A9AD; gasta, ganha um brilho de 7%</em></span></div>
+      <div><i style="background:#ff9a1f"></i><span><b>Nub âmbar</b><em>#FF9A1F · borracha de pontinhos, o único ponto de cor forte</em></span></div>
+      <div><i style="background:#55595f"></i><span><b>Dobradiça</b><em>#55595F · metal escovado, com dois parafusos</em></span></div>
+      <div><i style="background:#5aff78"></i><span><b>LED verde</b><em>#5AFF78 · ligado, rádio ligado</em></span></div>
+      <div><i style="background:#ffb030"></i><span><b>LED âmbar</b><em>#FFB030 · disco, carregando; pisca ao dormir</em></span></div>
+      <div><i style="background:#ffe2b0"></i><span><b>Luz da tampa</b><em>#FFE2B0 · um LED quente que cai num leque sobre o teclado</em></span></div>
+      <div><i style="background:#e9e6dc"></i><span><b>Selos e etiquetas</b><em>#E9E6DC · papel envelhecido, a cola amarelando na borda</em></span></div>
+    </div>
+    <p>Os outros computadores do mundo (no cybercafé, nos escritórios) têm as cinco cores de corpo que <code>sim/computer.ts</code> já sorteia; o do jogador é sempre este grafite. As marcas e os modelos dos outros ficam no manual dos fabricantes. <b>HALDEN</b> é só um nome de exemplo: no jogo, a marca sai da semente (<code>computerMakerName</code>).</p>
+  </section>
+
+  <section id="uso">
+    <h2>4 · Uso e adesivos <small>de segunda mão, e depois do jogador</small></h2>
+    <p class="lead">O notebook chega usado. As teclas mais apertadas brilham (W A S D, E, Enter, Espaço, Backspace, Ctrl), há riscos na tampa e no descanso de pulso, e o selo do Osprey solta um canto. Na tampa vêm <b>um ou dois adesivos já colados</b> pelo dono anterior, sorteados pela semente entre as bandas da cidade, as empresas que existem na simulação e uns símbolos. O resto da tampa é do jogador.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 660 460" id="lid"></svg>
+        <div class="ctl"><button id="bSeed">outra semente</button><button id="bClear">só os de fábrica</button></div>
+        <div class="cap" id="lidCap"></div></div>
+      <div class="card">
+        <h3 style="margin-top:0">Colar os seus</h3>
+        <p style="font-size:12px">Adesivos se acham e se compram: brindes de banda no balcão do bar, o da loja de eletrônicos no saco da compra, os de máquina de moedas. E o jogador pode <b>importar uma imagem do PC</b>, que vira um adesivo do jogo. Teste aqui:</p>
+        <input type="file" id="imp" accept="image/*" style="font-size:12px;color:var(--dim)">
+        <svg viewBox="0 0 300 160" id="impPrev" style="margin-top:10px"></svg>
+        <div class="tbl"><table>
+          <tr><th>limite</th><th>por quê</th></tr>
+          <tr><td>até 64 × 64 pixels</td><td>a tampa tem 300 × 210 mm, então 64 px num adesivo de 8 cm dão ~1,25 mm por pixel; de perto, cada pixel é um cubinho fino na tampa</td></tr>
+          <tr><td>até 16 cores</td><td>a paleta é cortada (mediana) e guardada junto; o save leva ~2 KB por adesivo, como dados</td></tr>
+          <tr><td>recorte com borda branca</td><td>o fundo transparente (ou o canto dominante) sai; a borda de 2 px faz cara de vinil cortado</td></tr>
+          <tr><td>até 12 na tampa</td><td>cada um é um retângulo amostrado pela GPU; doze cabem sem pesar</td></tr>
+        </table></div>
+        <p style="font-size:12px;color:var(--dim)">A importação é por uma pasta ao lado do jogo, como o cartão SD da música. O jogo não leva o arquivo, só os pixels que o jogador escolheu, e por isso a regra "Tudo é código" continua valendo. Colar é na interface 2D da tampa (arrastar e girar de 15 em 15°). Descolar deixa uma marca de cola por alguns dias de jogo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="teclas">
+    <h2>5 · Teclas e sons</h2>
+    <p class="lead">Cada peça tem o seu som, sintetizado como no jogo (aperte no aparelho da seção 1). A ordem de importância é a do usuário: coisas que se apertam e fazem barulho.</p>
+    <div class="tbl"><table>
+      <tr><th>peça</th><th>som</th><th>no jogo</th></tr>
+      <tr><td>tecla</td><td>um estalo seco e agudo e um baque curto da base; a altura varia um pouco a cada tecla</td><td><code>key</code> (já existe)</td></tr>
+      <tr><td>Espaço / Enter</td><td>mais grave e mais longo, com a barra de metal batendo</td><td><code>space</code>, <code>enter</code> (já existem)</td></tr>
+      <tr><td>botão de ligar</td><td>um clique e, por baixo, o ventilador subindo e o disco procurando (tic-tic-tic)</td><td><code>power</code> + o ventilador contínuo</td></tr>
+      <tr><td>vol− vol+ mudo</td><td>um clique pequeno de borracha com um bipe do sistema</td><td>novo</td></tr>
+      <tr><td>luz do teclado</td><td>um tique fino e o zumbido baixíssimo do LED</td><td>novo</td></tr>
+      <tr><td>botões do nub</td><td>cliques curtos e secos; o do meio rola a tela com o nub</td><td>novo</td></tr>
+      <tr><td>touchpad</td><td>o toque é mudo; os dois botões dão um clique abafado</td><td>novo</td></tr>
+      <tr><td>chave do rádio</td><td>um "tlec" de duas batidas</td><td>novo; desliga o rádio da máquina virtual</td></tr>
+      <tr><td>tampa</td><td>abre com o atrito da dobradiça e fecha com o "clac" dos fechos</td><td><code>open</code>, <code>close</code> (já existem)</td></tr>
+      <tr><td>disco</td><td>um tic-tic baixo quando o disco trabalha, junto do LED âmbar</td><td>novo; segue o tempo de disco de <code>computer.ts</code></td></tr>
+      <tr><td>ventilador</td><td>um chiado que sobe com a carga da CPU da barra</td><td>novo; com o fone posto, quase some</td></tr>
+    </table></div>
+  </section>
+
+  <section id="tela">
+    <h2>6 · A tela <small>LCD fosco de 2008, 1280 × 800, uma textura própria</small></h2>
+    <p class="lead">Não é CRT: sem linhas de varredura e sem curvatura. É um painel fosco de 2008, com o preto acinzentado do backlight, um brilho leve que vaza nas bordas e um ângulo de visão ruim. De lado, a imagem escurece e as cores puxam para o inverso. Como no celular, a tela é uma <b>textura própria</b> de 1280 × 800, amostrada pela GPU na resolução do monitor: o console de 160 × 50 cabe exato em células de 8 × 16 px, e o firmware (80 × 25) usa células de 16 × 32.</p>
+    <div class="card">
+      <svg viewBox="0 0 660 250" id="angle"></svg>
+      <div class="ctl"><input type="range" id="ang" min="-70" max="70" value="0" style="width:260px"><span class="hint" id="angLab"></span></div>
+    </div>
+    <div class="tbl"><table>
+      <tr><th>efeito</th><th>como</th></tr>
+      <tr><td>preto do backlight</td><td>o fundo nunca é zero: #0A0602 no âmbar e #030904 no verde, como hoje (<code>SCREEN_BG</code>)</td></tr>
+      <tr><td>vazamento</td><td>um véu de 3–5% mais claro nos cantos de baixo, visível só no escuro</td></tr>
+      <tr><td>ângulo</td><td>de lado, o contraste cai e as cores puxam para o inverso; de cima para baixo, piora mais rápido</td></tr>
+      <tr><td>halo e reflexo</td><td>desenhados <b>por cima</b> da tela, tingindo antes de somar (a regra do <code>HALO_TINT</code>)</td></tr>
+      <tr><td>luz no mundo</td><td>a tela acende o teclado, as mãos e o rosto; numa rua escura, de longe, é um retângulo âmbar</td></tr>
+    </table></div>
+  </section>
+
+<div class="part">PARTE II · O OSPREY</div>
+  <section id="osprey">
+    <h2>7 · O Osprey <small>a marca do sistema</small></h2>
+    <p class="lead">O Osprey/UX é o sistema de console da cidade: o que vem nos notebooks, no cybercafé, nos escritórios. É uma empresa fixa e não sorteada, porque os tutoriais e o manual o citam pelo nome. A marca é uma águia-pescadora geométrica em mergulho, de asas fechadas para trás e bico em gancho embaixo. Ela é da mesma família de bichos do Jackdaw (a gralha) e do Reynard (a raposa).</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 520 260" id="logoBig"></svg><div class="cap"><b>A marca e o nome.</b> O nome é sempre "Osprey" com maiúscula e, na versão, "Osprey/UX 4.2". Em minúsculas espaçadas ("o s p r e y") só no boot.</div></div>
+      <div class="card"><pre class="ascii" style="color:var(--amb)" id="asciiLogo"></pre><div class="cap"><b>No boot, em ASCII:</b> 7 linhas × 44 colunas, só com <code>` - . _ / \ | )</code>: as asas para trás, a cauda aberta em cima, o bico embaixo. O desenho em pontos vira caracteres na mesma regra do texto no mundo, e de longe é uma faixa âmbar.</div></div>
+    </div>
+    <div class="tbl"><table>
+      <tr><th>elemento</th><th>regra</th></tr>
+      <tr><td>tipografia na tela</td><td>só a fonte de células do console; o Osprey não tem fonte "de marca" na tela</td></tr>
+      <tr><td>tipografia impressa</td><td>no selo, na caixa e no manual de papel, Archivo semi-expandida, peso 600</td></tr>
+      <tr><td>voz</td><td>seca e técnica, de Unix de 2008: "[ OK ]", "command not found"; nunca simpática, nunca com emoji</td></tr>
+      <tr><td>selo</td><td>papel creme, águia e nome em grafite, no descanso de pulso; em cada computador do mundo que roda o Osprey</td></tr>
+    </table></div>
+  </section>
+
+  <section id="console">
+    <h2>8 · O console <small>a barra, o mosaico, as tintas</small></h2>
+    <p class="lead">Modo texto, 160 × 50 células, com um gerenciador de janelas em mosaico (owm, à moda do dwm). Sem janelas soltas: tela cheia, lado a lado, em cima e embaixo. O texto mora nas células; as linhas finas, as barras e os ícones moram na camada HD.</p>
+    <h3>A barra do topo</h3>
+    <p>Uma linha só, que mostra que tudo ali é simulado: cada número sai da máquina virtual e do mundo.</p>
+    <div class="con"><div class="bar" id="barDemo"></div></div>
+    <div class="tbl"><table>
+      <tr><th>campo</th><th>de onde vem</th></tr>
+      <tr><td>[1] 2 3</td><td>as áreas de trabalho, <kbd>Ctrl</kbd>+<kbd>1</kbd>..<kbd>3</kbd> (o mesmo Ctrl das setas do mosaico; o Alt fica com o mouse); a atual em âmbar cheio, as que têm janela em âmbar, as vazias apagadas</td></tr>
+      <tr><td>term: ~</td><td>o título da janela em foco (o diretório do terminal, o título da página no Lodestar)</td></tr>
+      <tr><td>wlan0 + sinal</td><td>o nome da rede e as barras de sinal, pela distância física ao ponto de acesso; "off" com a chave do rádio desligada</td></tr>
+      <tr><td>cpu</td><td>a carga da CPU virtual; sobe com os programas, e o ventilador sobe junto</td></tr>
+      <tr><td>mem</td><td>usada/total da RAM virtual (<code>usedKB</code>/<code>ramMB</code>); fica âmbar-claro acima de 85%, quando os programas deixam de caber</td></tr>
+      <tr><td>bat</td><td>a carga e o tempo restante; um raio ⚡ na tomada; pisca abaixo de 10%</td></tr>
+      <tr><td>hora</td><td>a hora do jogo (o relógio do sistema pode estar errado, se o firmware foi mexido)</td></tr>
+    </table></div>
+    <h3>O mosaico</h3>
+    <div class="grid4" id="tiles"></div>
+    <h3>As tintas</h3>
+    <p>O âmbar é o padrão e casa com o HUD. O verde é a opção. Cada tinta tem três tons e os mesmos papéis.</p>
+    <div class="row">
+      <div class="sw" id="inkAmb"></div>
+      <div class="sw" id="inkGrn"></div>
+    </div>
+    <div class="row">
+      <div class="con"><pre id="sampAmb"></pre></div>
+      <div class="con green"><pre id="sampGrn"></pre></div>
+    </div>
+  </section>
+
+  <section id="firmware">
+    <h2>9 · O firmware <small>80 × 25, antes do sistema</small></h2>
+    <p class="lead">Antes do Osprey vem o firmware do fabricante, em cinza claro sobre preto. É outra voz e outra empresa: o Osprey nunca aparece aqui. O F1 do boot leva ao SETUP (<code>laptop/bios.ts</code>).</p>
+    <div class="con" style="background:#020204;color:#c4c4c8"><pre id="fw"></pre></div>
+  </section>
+
+<section id="jogo">
+    <h2>10 · No jogo <small>cubinhos, a tela, de longe</small></h2>
+    <div class="tbl"><table>
+      <tr><th>distância</th><th>como aparece</th></tr>
+      <tr><td>no colo (aberto)</td><td>como hoje em <code>look3d.ts</code>, mas com o corpo de cubinhos deste manual: teclas, nub, botões, dobradiças e LEDs como peças, cada uma com o seu som. A tela é a textura de 1280 × 800 inclinada com a tampa. A luz da tela e a da tampa caem no teclado e nas mãos.</td></tr>
+      <tr><td>na mesa, a 1–3 m</td><td>poucas caixas (o LOD), a tela como um retângulo âmbar que pisca com o texto, os LEDs como pontos. Os adesivos ficam como manchas de cor na tampa.</td></tr>
+      <tr><td>de longe, de noite</td><td>só a luz: o retângulo âmbar da tela e, com a luz do teclado, um leque quente embaixo. É o que denuncia o jogador num banco de praça.</td></tr>
+      <tr><td>fechado na mochila</td><td>a interface 2D da mochila mostra a tampa com os adesivos (o desenho da seção 4)</td></tr>
+      <tr><td>virado para trocar peças</td><td>interface 2D diegética do fundo (seção 2): parafusos, tampinhas, os pentes e o disco</td></tr>
+    </table></div>
+    <p>As medidas valem para o remake. Hoje <code>look3d.ts</code> usa um descanso de 200 mm de fundo (<code>DECK_D</code>); pelo manual são 225 mm, com o touchpad.</p>
+  </section>
+
+  <section id="regras">
+    <h2>11 · Regras rápidas</h2>
+    <div class="rule do"><b>✓</b><span>O corpo é grafite; a cor fica no nub âmbar, nos LEDs e nas luzes.</span></div>
+    <div class="rule do"><b>✓</b><span>Toda peça que aparece se aperta e tem som. Nenhum botão de enfeite.</span></div>
+    <div class="rule do"><b>✓</b><span>Cada número da barra vem da máquina virtual ou do mundo. Não há número decorativo.</span></div>
+    <div class="rule do"><b>✓</b><span>O texto fica nas células; as linhas, os ícones e as barras ficam na camada HD.</span></div>
+    <div class="rule do"><b>✓</b><span>Os adesivos de fábrica vêm da semente e saem das coisas da cidade (bandas, empresas).</span></div>
+    <div class="rule"><b>✗</b><span>Nub vermelho, pingo vermelho em logo, ou o nome e o desenho de qualquer marca real.</span></div>
+    <div class="rule"><b>✗</b><span>Linhas de varredura ou curvatura de CRT: é um LCD.</span></div>
+    <div class="rule"><b>✗</b><span>Halo ou reflexo desenhado por baixo da tela.</span></div>
+    <div class="rule"><b>✗</b><span>O Osprey no firmware, ou o firmware falando como o Osprey.</span></div>
+    <div class="rule"><b>✗</b><span>Imagem importada maior que 64 × 64 ou com mais de 16 cores; o jogo nunca guarda o arquivo original.</span></div>
+  </section>
+
+</main>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, at, parent) { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; }
+function txt(parent, x, y, s, at) { const t = el('text', Object.assign({ x, y, 'font-family': 'IBM Plex Mono, monospace' }, at || {}), parent); t.textContent = s; return t; }
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+// ---- sound: every part is a synthesized click (no files, as in the game) ----
+let AC = null;
+function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); return AC; }
+function noise(dur, f, q, gain, t0) {
+  const c = ac(), t = c.currentTime + (t0 || 0), n = Math.ceil(c.sampleRate * dur), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+  const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = b; bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; g.gain.value = gain;
+  s.connect(bp).connect(g).connect(c.destination); s.start(t);
+}
+function tone(f0, f1, dur, gain, type, t0) {
+  const c = ac(), t = c.currentTime + (t0 || 0), o = c.createOscillator(), g = c.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const SFX = {
+  key: () => { noise(0.03, 2600 + Math.random() * 900, 1.4, 0.5); noise(0.05, 520, 2, 0.25, 0.012); },
+  space: () => { noise(0.05, 1400, 1, 0.45); noise(0.08, 260, 1.5, 0.45, 0.01); },
+  enter: () => { noise(0.04, 1900, 1.2, 0.55); noise(0.09, 300, 1.4, 0.5, 0.015); },
+  button: () => { noise(0.02, 4200, 3, 0.45); tone(1800, 900, 0.03, 0.06, 'square'); },
+  nub: () => { noise(0.02, 3200, 2.5, 0.4); },
+  pad: () => { noise(0.025, 1600, 2, 0.4); noise(0.04, 420, 2, 0.2, 0.01); },
+  lamp: () => { noise(0.015, 5000, 4, 0.4); tone(60, 50, 0.08, 0.03, 'sine'); },
+  power: () => { noise(0.03, 3000, 2, 0.5); tone(90, 240, 1.6, 0.05, 'sawtooth', 0.15); for (let i = 0; i < 6; i++) noise(0.012, 6000, 6, 0.18, 0.5 + i * 0.09 + Math.random() * 0.05); },
+  off: () => { noise(0.03, 3000, 2, 0.5); tone(240, 70, 1.0, 0.04, 'sawtooth', 0.05); },
+  radio: () => { noise(0.02, 2400, 3, 0.55); noise(0.02, 3600, 3, 0.4, 0.035); },
+};
+
+// ---- the notebook seen from above, the lid folded back flat: 1 mm = 2 units ----
+const MM = 2, W = 310 * MM, LID_H = 210 * MM, OX = 20, OY = 14, HY = OY + LID_H; // hinge line
+const SCR = { x: OX + 12 * MM, y: OY + 16 * MM, w: 286 * MM, h: 179 * MM }; // 572 x 358: 160 x 50 cells of 3.575 x 7.16
+const CW = SCR.w / 160, CH = SCR.h / 50;
+const KB = { x: OX + 15 * MM, y: HY + 20 * MM, w: 280 * MM };
+const U = KB.w / 15.5, KH = U * 0.92; // a key unit and a row's height
+const ROWS = [
+  [['Esc', 1], [0, .5], ['F1', 1], ['F2', 1], ['F3', 1], ['F4', 1], [0, .5], ['F5', 1], ['F6', 1], ['F7', 1], ['F8', 1], [0, .5], ['F9', 1], ['F10', 1], ['F11', 1], ['F12', 1], ['Del', 1]],
+  [['`', 1], ['1', 1], ['2', 1], ['3', 1], ['4', 1], ['5', 1], ['6', 1], ['7', 1], ['8', 1], ['9', 1], ['0', 1], ['-', 1], ['=', 1], ['Bksp', 1.5], ['Home', 1]],
+  [['Tab', 1.5], ['Q', 1], ['W', 1], ['E', 1], ['R', 1], ['T', 1], ['Y', 1], ['U', 1], ['I', 1], ['O', 1], ['P', 1], ['[', 1], [']', 1], ['\\', 1], ['End', 1]],
+  [['Caps', 1.75], ['A', 1], ['S', 1], ['D', 1], ['F', 1], ['G', 1], ['H', 1], ['J', 1], ['K', 1], ['L', 1], [';', 1], ["'", 1], ['Enter', 1.75], ['PgUp', 1]],
+  [['Shift', 2.25], ['Z', 1], ['X', 1], ['C', 1], ['V', 1], ['B', 1], ['N', 1], ['M', 1], [',', 1], ['.', 1], ['/', 1], ['Shift', 2.25], ['PgDn', 1]],
+  [['Fn', 1], ['Ctrl', 1.25], ['Alt', 1.25], [' ', 5.5], ['Alt', 1.25], ['Ctrl', 1.25], [0, .25], ['←', 1], ['↓↑', 1], ['→', 1]],
+];
+const WORN = new Set(['W', 'A', 'S', 'D', 'Enter', ' ', 'Bksp', 'E', 'Ctrl']);
+const keyEls = {}; // label -> [rect group]
+
+function drawDeck(svg, o) {
+  o = o || {};
+  svg.innerHTML = '';
+  const main = svg.id === 'dev'; if (main) for (const k in keyEls) delete keyEls[k];
+  const defs = el('defs', {}, svg);
+  const g1 = el('linearGradient', { id: 'shellG', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#232427' }, g1); el('stop', { offset: 1, 'stop-color': '#18191b' }, g1);
+  const lamp = el('radialGradient', { id: 'lampG', cx: .5, cy: 0, r: 1, fx: .5, fy: 0 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#ffe2b0', 'stop-opacity': .38 }, lamp); el('stop', { offset: .5, 'stop-color': '#ffd59a', 'stop-opacity': .12 }, lamp); el('stop', { offset: 1, 'stop-color': '#ffd59a', 'stop-opacity': 0 }, lamp);
+  const scrGlow = el('radialGradient', { id: 'scrG', cx: .5, cy: 0, r: .9 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#ffb030', 'stop-opacity': .22 }, scrGlow); el('stop', { offset: 1, 'stop-color': '#ffb030', 'stop-opacity': 0 }, scrGlow);
+  // lid (folded back) and deck
+  el('rect', { x: OX, y: OY, width: W, height: LID_H, rx: 9, fill: 'url(#shellG)', stroke: '#2e3034' }, svg);
+  el('rect', { x: OX, y: HY + 4, width: W, height: 225 * MM, rx: 9, fill: 'url(#shellG)', stroke: '#2e3034' }, svg);
+  // hinges (metal) and the hinge barrel
+  el('rect', { x: OX + 30, y: HY - 6, width: W - 60, height: 14, rx: 6, fill: '#141517' }, svg);
+  for (const hx of [OX + 40, OX + W - 92]) el('rect', { x: hx, y: HY - 8, width: 52, height: 18, rx: 4, fill: '#55595f', stroke: '#2b2d31' }, svg);
+  // latches and the keyboard lamp over the glass
+  for (const lx of [OX + 70, OX + W - 90]) el('rect', { x: lx, y: OY + 5, width: 20, height: 5, rx: 2, fill: '#0f1011' }, svg);
+  el('rect', { x: OX + W / 2 - 14, y: OY + 8, width: 28, height: 8, rx: 3, fill: o.lamp ? '#ffe9c4' : '#2a2b2e', stroke: '#111' }, svg);
+  // the glass
+  el('rect', { x: SCR.x - 3, y: SCR.y - 3, width: SCR.w + 6, height: SCR.h + 6, rx: 3, fill: '#0b0b0c' }, svg);
+  el('rect', { x: SCR.x, y: SCR.y, width: SCR.w, height: SCR.h, fill: o.on ? '#0a0602' : '#121315', id: 'glass' }, svg);
+  el('g', { id: 'scr' }, svg);
+  // under the glass: the maker's mark and the status LEDs
+  txt(svg, OX + 112, SCR.y + SCR.h + 21, 'HALDEN', { fill: '#6c6f75', 'font-size': 11, 'font-weight': 600, 'letter-spacing': 2.5 });
+  const leds = [['⏻', o.on ? '#5aff78' : '#1b2a1e'], ['▤', o.on && o.disk ? '#ffb030' : '#2b2416'], ['((·))', o.on && o.radio !== false ? '#5aff78' : '#1b2a1e'], ['⚡', o.on ? '#ffb030' : '#2b2416']];
+  leds.forEach(([s, c], i) => { const x = OX + W - 210 + i * 26; el('circle', { cx: x, cy: SCR.y + SCR.h + 17, r: 2.4, fill: c }, svg); txt(svg, x - 6, SCR.y + SCR.h + 29, s, { fill: '#55585e', 'font-size': 6 }); });
+  // the top strip of the deck
+  const sy = HY + 9 * MM;
+  const strip = [['vol−', 'button', OX + 40], ['vol+', 'button', OX + 72], ['mudo', 'button', OX + 104], ['luz', 'lamp', OX + W - 132]];
+  for (const [n, k, x] of strip) {
+    const g = el('g', { 'data-k': n, 'data-snd': k }, svg);
+    el('rect', { x, y: sy - 6, width: 26, height: 11, rx: 3, fill: n === 'luz' && o.lamp ? '#3a3326' : '#101113', stroke: '#2e3034' }, g);
+    txt(g, x + 13, sy + 15, n, { fill: '#6c6f75', 'font-size': 6.5, 'text-anchor': 'middle' });
+  }
+  const pw = el('g', { 'data-k': 'power', 'data-snd': 'power', id: 'pwr' }, svg);
+  el('circle', { cx: OX + W - 70, cy: sy, r: 10, fill: '#101113', stroke: o.on ? '#5aff78' : '#2e3034', 'stroke-width': 2 }, pw);
+  txt(pw, OX + W - 70, sy + 3.5, '⏻', { fill: o.on ? '#5aff78' : '#6c6f75', 'font-size': 10, 'text-anchor': 'middle' });
+  // the keyboard well and the keys
+  el('rect', { x: KB.x - 6, y: KB.y - 6, width: KB.w + 12, height: KH * 0.62 + KH * 5 + 12 + 6, rx: 5, fill: '#0e0f10' }, svg);
+  let y = KB.y;
+  for (let r = 0; r < ROWS.length; r++) {
+    const h = r === 0 ? KH * 0.62 : KH; let x = KB.x;
+    for (const [lab, w] of ROWS[r]) {
+      const kw = w * U;
+      if (lab) {
+        const g = el('g', { 'data-k': lab, 'data-snd': lab === ' ' ? 'space' : lab === 'Enter' ? 'enter' : 'key' }, svg);
+        el('rect', { x: x + 1.2, y: y + 1.2, width: kw - 2.4, height: h - 2.4, rx: 3, fill: '#1d1e21', stroke: '#2c2e32', 'stroke-width': .8, class: 'cap' }, g);
+        el('rect', { x: x + 3, y: y + 2.4, width: kw - 6, height: h - 6, rx: 2.4, fill: '#232528' }, g);
+        if (o.worn && WORN.has(lab)) el('ellipse', { cx: x + kw / 2, cy: y + h * 0.45, rx: kw * 0.32, ry: h * 0.26, fill: '#fff', opacity: .06 }, g);
+        const ls = lab === '↓↑' ? '▲▼' : lab;
+        txt(g, x + 5, y + (r === 0 ? 10 : 12), ls, { fill: '#a7a9ad', 'font-size': ls.length > 2 ? 6 : 8, class: 'leg' });
+        if (lab === 'Fn') txt(g, x + 5, y + 22, '', {});
+        if (main) (keyEls[lab] = keyEls[lab] || []).push(g);
+      }
+      x += kw;
+    }
+    y += h;
+  }
+  // the amber nub between G, H and B, and its three buttons
+  const nx = KB.x + 6.75 * U, ny = KB.y + KH * 0.62 + KH * 4;
+  el('circle', { cx: nx, cy: ny, r: 5.2, fill: '#ff9a1f', stroke: '#7a4508' }, svg);
+  el('circle', { cx: nx - 1.4, cy: ny - 1.6, r: 1.6, fill: '#ffd08a', opacity: .7 }, svg);
+  const by = KB.y + KH * 5.62 + 12;
+  [['nubL', -54, 44], ['nubM', -8, 16], ['nubR', 10, 44]].forEach(([n, dx, w]) => {
+    const g = el('g', { 'data-k': n, 'data-snd': 'nub' }, svg);
+    el('rect', { x: OX + W / 2 + dx + (n === 'nubM' ? 0 : 0) - (n === 'nubR' ? -2 : 0), y: by, width: w, height: 12, rx: 3, fill: '#151618', stroke: '#2e3034' }, g);
+    if (n === 'nubM') for (let i = 0; i < 3; i++) el('line', { x1: OX + W / 2 - 4, x2: OX + W / 2 + 4, y1: by + 3.5 + i * 2.5, y2: by + 3.5 + i * 2.5, stroke: '#3a3c42' }, g);
+  });
+  // the touchpad and its two buttons
+  const tpW = 70 * MM, tpH = 44 * MM, tpx = OX + W / 2 - tpW / 2, tpy = by + 22;
+  const tp = el('g', { 'data-k': 'pad', 'data-snd': 'pad' }, svg);
+  el('rect', { x: tpx, y: tpy, width: tpW, height: tpH, rx: 4, fill: '#141517', stroke: '#2a2c30' }, tp);
+  el('rect', { x: tpx + tpW - 10, y: tpy + 6, width: 4, height: tpH - 12, rx: 2, fill: '#1b1c1f' }, tp); // the scroll strip
+  ['padL', 'padR'].forEach((n, i) => {
+    const g = el('g', { 'data-k': n, 'data-snd': 'pad' }, svg);
+    el('rect', { x: tpx + i * (tpW / 2 + 2), y: tpy + tpH + 4, width: tpW / 2 - 2, height: 14, rx: 3, fill: '#151618', stroke: '#2e3034' }, g);
+  });
+  // the Osprey seal on the palm rest, the serial label under
+  const seal = el('g', { transform: `translate(${OX + W - 90},${tpy + tpH - 14}) scale(.32)` }, svg);
+  el('rect', { x: -6, y: -6, width: 150, height: 66, rx: 6, fill: '#e9e6dc', opacity: o.worn ? .8 : .95 }, seal);
+  ospreyMark(seal, 8, 2, 50, '#1a1b1e'); txt(seal, 66, 32, 'Osprey', { fill: '#1a1b1e', 'font-size': 22, 'font-weight': 600 }); txt(seal, 66, 50, 'UX 4', { fill: '#55585e', 'font-size': 13 });
+  if (o.worn) { // a corner coming away
+    el('path', { d: `M${OX + W - 92 + 48},${tpy + tpH - 16} l7,0 l-7,7 z`, fill: '#cfcbbf' }, svg);
+    for (const [x, y2, l] of [[OX + 30, HY + 400, 40], [OX + 44, HY + 410, 22], [OX + W - 40, HY + 70, 18]]) el('line', { x1: x, y1: y2, x2: x + l, y2: y2 - l * 0.18, stroke: '#3a3c40', 'stroke-width': .7 }, svg);
+  }
+  // light: the screen's glow on the keys, the lamp's cone, the night
+  if (o.night) {
+    el('rect', { x: OX, y: HY + 4, width: W, height: 225 * MM, rx: 9, fill: '#000', opacity: o.lamp || o.on ? .55 : .9, 'pointer-events': 'none' }, svg);
+    el('path', { d: `M${OX},${OY}h${W}v${LID_H}h${-W}z M${SCR.x},${SCR.y}v${SCR.h}h${SCR.w}v${-SCR.h}z`, 'fill-rule': 'evenodd', fill: '#000', opacity: o.on ? .7 : .85, 'pointer-events': 'none' }, svg);
+    if (!o.on) el('rect', { x: SCR.x, y: SCR.y, width: SCR.w, height: SCR.h, fill: '#000', opacity: .85, 'pointer-events': 'none' }, svg);
+  }
+  if (o.on) el('rect', { x: OX, y: HY + 4, width: W, height: 140, fill: 'url(#scrG)', 'pointer-events': 'none' }, svg);
+  if (o.lamp) {
+    const cp = el('clipPath', { id: 'deckClip' }, defs); el('rect', { x: OX, y: HY + 4, width: W, height: 225 * MM, rx: 9 }, cp);
+    el('ellipse', { cx: OX + W / 2, cy: HY - 20, rx: W * 0.62, ry: 330, fill: 'url(#lampG)', 'clip-path': 'url(#deckClip)', 'pointer-events': 'none' }, svg);
+  }
+}
+
+// the Osprey's mark: a fish hawk diving, wings folded back, the hooked beak at the bottom
+function ospreyMark(parent, x, y, s, fill) {
+  const g = el('g', { transform: `translate(${x},${y}) scale(${s / 100})` }, parent);
+  el('path', { d: 'M46 18 L42 4 L50 11 L58 4 L54 18 Z', fill }, g);                   // the forked tail, up
+  el('path', { d: 'M50 14 L58 20 L56 64 L50 80 L44 64 L42 20 Z', fill }, g);            // body, tapering down
+  el('path', { d: 'M46 24 L2 4 L12 14 L45 44 Z', fill }, g);                             // left wing, swept back
+  el('path', { d: 'M54 24 L98 4 L88 14 L55 44 Z', fill }, g);                            // right wing
+  el('path', { d: 'M50 78 L56 87 L50 96 L44 87 Z', fill }, g);                           // the head
+  el('path', { d: 'M50 95 L57 99 L55 92 Z', fill }, g);                                  // the hook of the beak
+  return g;
+}
+
+// ---- the stage: power, lamp, night; keys sound, and type on the screen once it is up ----
+const ST = { on: false, lamp: false, night: false, booting: false, lines: [], input: '', worn: true };
+function redraw() { drawDeck(document.getElementById('dev'), { on: ST.on, lamp: ST.lamp, night: ST.night, worn: ST.worn, disk: ST.booting }); paintScreen(); hookKeys(); }
+function hookKeys() {
+  document.querySelectorAll('#dev [data-k]').forEach(g => g.addEventListener('pointerdown', ev => { ev.preventDefault(); press(g.getAttribute('data-k'), g.getAttribute('data-snd')); }));
+}
+function flash(lab) { (keyEls[lab] || []).forEach(g => { g.classList.add('pressed'); setTimeout(() => g.classList.remove('pressed'), 110); }); }
+function press(k, snd) {
+  if (k === 'power') return togglePower();
+  if (k === 'luz') { ST.lamp = !ST.lamp; SFX.lamp(); syncBtns(); return redraw(); }
+  (SFX[snd] || SFX.key)();
+  document.querySelectorAll(`#dev [data-k="${CSS.escape(k)}"]`).forEach(g => { g.classList.add('pressed'); setTimeout(() => g.classList.remove('pressed'), 110); });
+  if (ST.on && !ST.booting) typeKey(k);
+}
+function syncBtns() { document.getElementById('bLamp').classList.toggle('on', ST.lamp); document.getElementById('bNight').classList.toggle('on', ST.night); document.getElementById('bPower').classList.toggle('on', ST.on); }
+document.getElementById('bPower').onclick = () => togglePower();
+document.getElementById('bLamp').onclick = () => press('luz');
+document.getElementById('bNight').onclick = () => { ST.night = !ST.night; document.getElementById('stage').classList.toggle('night', ST.night); syncBtns(); redraw(); };
+addEventListener('keydown', ev => {
+  if (!ST.on || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  const r = document.getElementById('dev').getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+  let lab = ev.key.length === 1 ? (ev.key === ' ' ? ' ' : ev.key.toUpperCase()) : ev.key === 'Backspace' ? 'Bksp' : ev.key === 'Enter' ? 'Enter' : null;
+  if (!lab) return; ev.preventDefault();
+  (lab === ' ' ? SFX.space : lab === 'Enter' ? SFX.enter : SFX.key)(); flash(lab);
+  if (!ST.booting) typeKey(lab, ev.key);
+});
+// the screen's text: written into the glass as 160 x 50 cells
+function paintScreen() {
+  const g = document.getElementById('scr'); if (!g) return; g.innerHTML = '';
+  if (!ST.on) return;
+  const fs = CH * 0.86;
+  if (ST.booting) { ST.lines.slice(-49).forEach((l, i) => txt(g, SCR.x + CW, SCR.y + CH * (i + 1), l, { fill: '#ffb030', 'font-size': fs, 'xml:space': 'preserve' })); return; }
+  consoleView(g, fs);
+}
+function typeKey(lab, raw) {
+  if (lab === 'Bksp') ST.input = ST.input.slice(0, -1);
+  else if (lab === 'Enter') { ST.term.push('user@halden:~$ ' + ST.input); ST.term.push(...answer(ST.input)); ST.input = ''; }
+  else if (lab.length === 1) ST.input += raw ? raw : lab.toLowerCase();
+  if (ST.input.length > 70) ST.input = ST.input.slice(0, 70);
+  paintScreen();
+}
+
+// ---- booting: the text is set down line by line, at the pace of the real thing ----
+const BOOT = [
+  ['HALDEN Phoenix-style BIOS v1.27  (C) 2007', 120], ['CPU: Core 2 Duo T7300 @ 2.00GHz   Memory Test: 1048576K OK', 380], ['Primary Master: DTK-80G54 ATA  Ultra DMA 5', 160], ['Press F1 for SETUP, F12 for Boot Menu', 600], ['', 60],
+  ['ASCII:OSPREY', 900],
+  ['Osprey/UX 4.2 loader -- booting from (hd0,1)', 200], ['Linux-style kernel 2.6.24-19 ............................ [ OK ]', 160], ['Detecting memory: 1024 MB, 98 MB reserved for video', 120],
+  ['Mounting /dev/hda1 on / (ext3) ............................ [ OK ]', 220], ['Checking file systems: 61% used, clean ................... [ OK ]', 260], ['Loading modules: snd-hda ac97 usb-storage wlan ......... [ OK ]', 300],
+  ['Bringing up lo ............................................. [ OK ]', 100], ['Bringing up wlan0: radio on, not associated ............... [WAIT]', 420], ['Battery: 64% (1:52 remaining), on battery ................ [ OK ]', 140],
+  ['Starting the tiling window manager (owm) ................. [ OK ]', 300], ['', 200],
+];
+const ASCII_OSPREY = [
+  ' `-.__                                __.-`',
+  '      `--.__                    __.--`',
+  '            `-.__   /\\   __.-`',
+  '                 `-/  \\-`',
+  '                   \\  /         o s p r e y',
+  '                    \\/          ux 4.2',
+  '                    |)',
+];
+function togglePower() {
+  if (ST.booting) return;
+  if (ST.on) { SFX.off(); ST.on = false; syncBtns(); return redraw(); }
+  SFX.power(); ST.on = true; ST.booting = true; ST.lines = []; ST.term = ['Osprey/UX 4.2 (halden) -- type help', '']; ST.input = ''; syncBtns(); redraw();
+  let i = 0;
+  const next = () => {
+    if (i >= BOOT.length) { ST.booting = false; return redraw(); }
+    const [l, ms] = BOOT[i++];
+    if (l === 'ASCII:OSPREY') ST.lines.push('', ...ASCII_OSPREY, ''); else ST.lines.push(l);
+    if (ms > 150) noise(0.012, 6000, 6, 0.12); // the disk's seek, under the text
+    paintScreen(); setTimeout(next, ms);
+  };
+  setTimeout(next, 700);
+}
+// a few plain commands, only to show the console is alive
+function answer(cmd) {
+  const c = cmd.trim().split(/\s+/)[0];
+  if (!c) return [];
+  if (c === 'help') return ['commands: help uname free df date ls clear', ''];
+  if (c === 'uname') return ['Osprey/UX 4.2 halden 2.6.24-19 i686', ''];
+  if (c === 'free') return ['        total    used    free', 'Mem:  1048576  217088  831488', ''];
+  if (c === 'df') return ['/dev/hda1   80G   49G   31G  61% /', ''];
+  if (c === 'date') return ['Thu Feb 21 22:41:07 2008', ''];
+  if (c === 'ls') return ['bin/  docs/  music/  notes.txt  start-here.txt', ''];
+  if (c === 'clear') { ST.term = []; return []; }
+  return [c + ': command not found', ''];
+}
+// the console: the bar on top, two panes in a mosaic, the HD divider between them
+function consoleView(g, fs) {
+  const ink = '#ffb030', dim = '#aa6e22', hi = '#ffd68c', bg = '#0a0602';
+  // the bar (one row)
+  el('rect', { x: SCR.x, y: SCR.y, width: SCR.w, height: CH * 1.2, fill: '#140c04' }, g);
+  const bar = [['[1]', 1], ['2', 0], ['3', 0], ['│ term: ~', 0], ['│ wlan0 —— ▁▃▅_', 0], ['│ cpu 12%', 0], ['│ mem 212/1024M', 0], ['│ bat 64% 1:52', 0], ['│ 22:41', 0]];
+  let cx = 1;
+  for (const [s, sel] of bar) {
+    if (sel) el('rect', { x: SCR.x + cx * CW - 1, y: SCR.y + 1, width: s.length * CW + 2, height: CH * 1.2 - 2, fill: ink }, g);
+    txt(g, SCR.x + cx * CW, SCR.y + CH * 0.95, s, { fill: sel ? bg : (s.startsWith('│ term') ? hi : dim), 'font-size': fs, 'xml:space': 'preserve' });
+    cx += s.length + 1;
+  }
+  el('line', { x1: SCR.x, x2: SCR.x + SCR.w, y1: SCR.y + CH * 1.2, y2: SCR.y + CH * 1.2, stroke: '#3a2410', 'stroke-width': .6 }, g);
+  // the divider, a 1 px HD line; the focused pane's edge in light amber
+  const mid = SCR.x + 80 * CW;
+  el('line', { x1: mid, x2: mid, y1: SCR.y + CH * 1.4, y2: SCR.y + SCR.h - 2, stroke: hi, 'stroke-width': .7 }, g);
+  el('rect', { x: SCR.x + 1, y: SCR.y + CH * 1.35, width: 80 * CW - 2, height: SCR.h - CH * 1.35 - 1, fill: 'none', stroke: hi, 'stroke-width': .5, opacity: .5 }, g);
+  // the terminal, left
+  const rows = [...ST.term, 'user@halden:~$ ' + ST.input + '█'].slice(-45);
+  rows.forEach((l, i) => txt(g, SCR.x + CW, SCR.y + CH * (i + 2.6), l, { fill: l.startsWith('user@') ? hi : ink, 'font-size': fs, 'xml:space': 'preserve' }));
+  // the browser, right: Lodestar on the search page
+  const bx = mid + CW, by = SCR.y + CH * 2.6;
+  el('rect', { x: mid + 2, y: SCR.y + CH * 1.5, width: 79 * CW, height: CH * 1.2, fill: '#1c1206' }, g);
+  txt(g, bx, by - CH * 0.2, '◄ ► ⟳ │ lookwise.com/                                  Lodestar', { fill: dim, 'font-size': fs, 'xml:space': 'preserve' });
+  txt(g, bx + 24 * CW, by + CH * 9, 'L o o k w i s e', { fill: hi, 'font-size': fs * 2, 'xml:space': 'preserve' });
+  el('rect', { x: bx + 18 * CW, y: by + CH * 11, width: 42 * CW, height: CH * 1.4, fill: 'none', stroke: dim, 'stroke-width': .6 }, g);
+  txt(g, bx + 30 * CW, by + CH * 14, '[ Search ]   [ Lucky ]', { fill: ink, 'font-size': fs, 'xml:space': 'preserve' });
+  txt(g, bx + 20 * CW, by + CH * 40, 'Directory · News · Maps · Classifieds', { fill: dim, 'font-size': fs, 'xml:space': 'preserve' });
+}
+
+// ---- the views: front, both sides, back, bottom (1 mm = 2 units again) ----
+function drawViews(svg) {
+  svg.innerHTML = '';
+  const W2 = 310 * MM, T = 32 * MM;
+  const box = (x, y, w, h, lab) => { el('rect', { x, y, width: w, height: h, rx: 5, fill: '#1d1e21', stroke: '#33353a' }, svg); el('line', { x1: x + 3, x2: x + w - 3, y1: y + h * 0.42, y2: y + h * 0.42, stroke: '#0e0f10', 'stroke-width': 1.4 }, svg); txt(svg, x, y - 8, lab, { fill: '#8d8b84', 'font-size': 11 }); };
+  const port = (x, y, w, h, lab, c) => { el('rect', { x, y, width: w, height: h, rx: 1.5, fill: c || '#08090a', stroke: '#45484e', 'stroke-width': .8 }, svg); if (lab) txt(svg, x + w / 2, y + h + 13, lab, { fill: '#8d8b84', 'font-size': 8, 'text-anchor': 'middle' }); };
+  // front
+  let x = 40, y = 40; box(x, y, W2, T, 'FRENTE · o fecho, os LEDs, a chave do rádio, o fone');
+  el('rect', { x: x + W2 / 2 - 20, y: y + 4, width: 40, height: 8, rx: 2, fill: '#2a2c30' }, svg);
+  const sw = el('g', { 'data-k': 'radio', id: 'rsw', style: 'cursor:pointer' }, svg);
+  el('rect', { x: x + 40, y: y + T * 0.55, width: 30, height: 10, rx: 3, fill: '#08090a', stroke: '#45484e' }, sw);
+  const knob = el('rect', { x: x + 56, y: y + T * 0.55 + 1.5, width: 12, height: 7, rx: 2, fill: '#9aa0a8', id: 'rknob' }, sw);
+  txt(svg, x + 55, y + T + 13, 'rádio liga/desliga', { fill: '#8d8b84', 'font-size': 8, 'text-anchor': 'middle' });
+  port(x + W2 - 70, y + T * 0.58, 7, 7, '', '#3a2a12'); port(x + W2 - 55, y + T * 0.58, 7, 7, 'fone · mic', '#1a2a3a');
+  let radioOn = true;
+  sw.addEventListener('pointerdown', () => { radioOn = !radioOn; SFX.radio(); knob.setAttribute('x', x + (radioOn ? 56 : 42)); });
+  // left side
+  y = 170; box(x, y, 225 * MM, T, 'LADO ESQUERDO · da traseira (esq.) para a frente');
+  port(x + 20, y + 18, 34, 22, 'VGA'); port(x + 70, y + 20, 22, 16, 'rede (RJ-45)'); port(x + 110, y + 24, 18, 8, 'USB'); port(x + 142, y + 24, 18, 8, 'USB');
+  for (let i = 0; i < 9; i++) el('rect', { x: x + 190 + i * 7, y: y + 14, width: 3, height: 34, rx: 1, fill: '#08090a' }, svg); txt(svg, x + 220, y + T + 13, 'saída do ventilador', { fill: '#8d8b84', 'font-size': 8, 'text-anchor': 'middle' });
+  port(x + 300, y + 22, 60, 6, 'PC Card'); port(x + 380, y + 23, 14, 9, 'SD');
+  // right side
+  y = 290; box(x, y, 225 * MM, T, 'LADO DIREITO · da frente (esq.) para a traseira');
+  port(x + 40, y + 16, 90, 30, 'leitor de DVD (gaveta, botão de ejetar)', '#16171a'); el('circle', { cx: x + 120, cy: y + 31, r: 3, fill: '#2a2c30' }, svg);
+  port(x + 170, y + 24, 18, 8, 'USB'); port(x + 210, y + 22, 16, 12, 'modem (RJ-11)'); el('rect', { x: x + 300, y: y + 20, width: 22, height: 14, rx: 2, fill: '#08090a', stroke: '#45484e' }, svg); txt(svg, x + 311, y + T + 13, 'trava', { fill: '#8d8b84', 'font-size': 8, 'text-anchor': 'middle' });
+  // back
+  y = 410; box(x, y, W2, T, 'TRÁS · a bateria salta 15 mm, o carregador');
+  el('rect', { x: x + 60, y: y + 4, width: 190, height: T - 8, rx: 4, fill: '#16171a', stroke: '#2e3034' }, svg); txt(svg, x + 155, y + T / 2 + 4, 'bateria 6 células', { fill: '#55585e', 'font-size': 9, 'text-anchor': 'middle' });
+  el('circle', { cx: x + W2 - 50, cy: y + T / 2, r: 6, fill: '#08090a', stroke: '#45484e' }, svg); el('circle', { cx: x + W2 - 50, cy: y + T / 2, r: 1.6, fill: '#777' }, svg); txt(svg, x + W2 - 50, y + T + 13, 'carregador (DC 20 V)', { fill: '#8d8b84', 'font-size': 8, 'text-anchor': 'middle' });
+  // bottom, small
+  const bx = 700, by = 190, bw = 155, bh = 112;
+  txt(svg, bx, by - 8, 'FUNDO (½ escala)', { fill: '#8d8b84', 'font-size': 11 });
+  el('rect', { x: bx, y: by, width: bw, height: bh, rx: 5, fill: '#1a1b1e', stroke: '#33353a' }, svg);
+  el('rect', { x: bx + 18, y: by + 20, width: 48, height: 34, rx: 3, fill: '#202125', stroke: '#45484e' }, svg); txt(svg, bx + 42, by + 41, 'RAM', { fill: '#8d8b84', 'font-size': 9, 'text-anchor': 'middle' });
+  el('rect', { x: bx + 80, y: by + 64, width: 56, height: 30, rx: 3, fill: '#202125', stroke: '#45484e' }, svg); txt(svg, bx + 108, by + 83, 'disco', { fill: '#8d8b84', 'font-size': 9, 'text-anchor': 'middle' });
+  el('rect', { x: bx + 20, y: by + 70, width: 44, height: 16, rx: 2, fill: '#d9d5c9' }, svg); txt(svg, bx + 42, by + 81, 'S/N', { fill: '#333', 'font-size': 7, 'text-anchor': 'middle' });
+  for (const [cx2, cy2] of [[8, 8], [bw - 8, 8], [8, bh - 8], [bw - 8, bh - 8]]) el('circle', { cx: bx + cx2, cy: by + cy2, r: 3.5, fill: '#0e0f10' }, svg);
+  txt(svg, bx, by + bh + 18, 'as tampinhas abrem com a chave de fenda', { fill: '#8d8b84', 'font-size': 8 });
+  txt(svg, bx, by + bh + 30, 'da mochila: a troca de RAM e disco é 2D', { fill: '#8d8b84', 'font-size': 8 });
+}
+
+// ---- the lid, outside: wear, the maker's mark, the stickers ----
+const BANDS = ['Grid Orphans', 'Kiosk Dreamers', 'Lowtide Signal', 'Neon Paycheck', 'Payphone Saints', 'The Overpass Kids'];
+const SHOPS = [["Petrov's Coffee", '#6b3a1e', '#f3e2c4'], ['Lookwise', '#1d4fa0', '#ffffff'], ['Streetwire', '#d8452b', '#fff6e8'], ['Lodestar', '#13283f', '#ffd68c']];
+const IMPORTED = []; // {url, w, h}
+function sticker(g, kind, r, x, y, rot) {
+  const s = el('g', { transform: `translate(${x},${y}) rotate(${rot})` }, g);
+  const pal = [['#ff6a13', '#1a1b1e'], ['#5ec8e8', '#0d2230'], ['#f2d53c', '#1a1b1e'], ['#e94b7b', '#fff'], ['#ffffff', '#1a1b1e'], ['#7ee08a', '#10301a']][Math.floor(r() * 6)];
+  if (kind === 'band') {
+    const name = BANDS[Math.floor(r() * BANDS.length)], shape = Math.floor(r() * 3);
+    if (shape === 0) { el('circle', { r: 44, fill: '#fff' }, s); el('circle', { r: 40, fill: pal[0] }, s); txt(s, 0, -4, name.split(' ')[0].toUpperCase(), { fill: pal[1], 'font-size': 12, 'font-weight': 600, 'text-anchor': 'middle' }); txt(s, 0, 12, (name.split(' ').slice(1).join(' ') || '').toUpperCase(), { fill: pal[1], 'font-size': 10, 'text-anchor': 'middle' }); }
+    else if (shape === 1) { el('rect', { x: -70, y: -20, width: 140, height: 40, rx: 6, fill: '#fff' }, s); el('rect', { x: -66, y: -16, width: 132, height: 32, rx: 4, fill: pal[1] === '#fff' ? '#1a1b1e' : pal[1] }, s); txt(s, 0, 5, name.toUpperCase(), { fill: pal[0], 'font-size': 10.5, 'font-weight': 600, 'text-anchor': 'middle', 'letter-spacing': 1 }); }
+    else { const pts = []; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, rr = i % 2 ? 38 : 48; pts.push((Math.cos(a) * rr).toFixed(1) + ',' + (Math.sin(a) * rr).toFixed(1)); } el('polygon', { points: pts.join(' '), fill: '#fff' }, s); el('circle', { r: 33, fill: pal[0] }, s); txt(s, 0, 4, name.replace('The ', '').toUpperCase(), { fill: pal[1], 'font-size': 7.5, 'font-weight': 600, 'text-anchor': 'middle' }); }
+    return name;
+  }
+  if (kind === 'shop') {
+    const [name, bg, fg] = SHOPS[Math.floor(r() * SHOPS.length)];
+    el('rect', { x: -58, y: -24, width: 116, height: 48, rx: 24, fill: '#fff' }, s); el('rect', { x: -54, y: -20, width: 108, height: 40, rx: 20, fill: bg }, s);
+    txt(s, 0, 5, name, { fill: fg, 'font-size': 12, 'font-weight': 600, 'text-anchor': 'middle' });
+    return name;
+  }
+  const sym = Math.floor(r() * 3);
+  if (sym === 0) { el('path', { d: 'M8,-40 L-22,6 L-2,6 L-10,40 L24,-8 L4,-8 Z', fill: '#fff', stroke: '#fff', 'stroke-width': 8, 'stroke-linejoin': 'round' }, s); el('path', { d: 'M8,-40 L-22,6 L-2,6 L-10,40 L24,-8 L4,-8 Z', fill: pal[0] }, s); return 'raio'; }
+  if (sym === 1) { el('rect', { x: -40, y: -26, width: 80, height: 52, rx: 6, fill: '#fff' }, s); el('rect', { x: -36, y: -22, width: 72, height: 44, rx: 4, fill: '#1a1b1e' }, s); for (let i = 0; i < 6; i++) el('rect', { x: -30 + i * 10, y: -14, width: 9, height: 22, fill: ['#fff', '#f2d53c', '#5ec8e8', '#7ee08a', '#e94b7b', '#ff6a13'][i] }, s); txt(s, 0, 18, 'NO SIGNAL', { fill: '#fff', 'font-size': 7, 'text-anchor': 'middle' }); return 'NO SIGNAL'; }
+  el('circle', { r: 30, fill: '#fff' }, s); el('circle', { r: 26, fill: pal[0] }, s); for (const rr of [8, 15, 22]) el('path', { d: `M${-rr * .7},${rr * .7 - 4} A${rr},${rr} 0 0 1 ${rr * .7},${rr * .7 - 4}`, transform: 'rotate(180 0 0)', fill: 'none', stroke: pal[1], 'stroke-width': 3 }, s); el('circle', { cx: 0, cy: 10, r: 3, fill: pal[1] }, s); return 'ondas';
+}
+let lidSeed = 20080221, factoryOnly = false;
+function drawLid(svg, seed, only) {
+  svg.innerHTML = '';
+  const r = rng(seed), X = 20, Y = 20, LW = 310 * MM, LH = 210 * MM;
+  el('rect', { x: X, y: Y, width: LW, height: LH, rx: 10, fill: '#1c1d20', stroke: '#2e3034' }, svg);
+  el('rect', { x: X + 6, y: Y + 6, width: LW - 12, height: LH - 12, rx: 7, fill: 'none', stroke: '#222327' }, svg);
+  for (let i = 0; i < 14; i++) { const x = X + 20 + r() * (LW - 60), y = Y + 20 + r() * (LH - 40), l = 6 + r() * 40, a = r() * Math.PI; el('line', { x1: x, y1: y, x2: x + Math.cos(a) * l, y2: y + Math.sin(a) * l, stroke: '#34363b', 'stroke-width': .6 + r() * .6 }, svg); }
+  el('path', { d: `M${X + 4},${Y + LH - 40} q 0,36 36,36`, fill: 'none', stroke: '#3a3c41', 'stroke-width': 3 }, svg); // a rubbed corner
+  txt(svg, X + LW - 30, Y + LH - 26, 'HALDEN', { fill: '#7b7f86', 'font-size': 18, 'font-weight': 600, 'letter-spacing': 5, 'text-anchor': 'end' });
+  const g = el('g', {}, svg), names = [];
+  const n = 1 + Math.floor(r() * 2);
+  const spots = [[160, 120], [480, 300], [140, 330], [470, 110], [320, 220], [560, 210]];
+  for (let i = 0; i < n; i++) { const [x, y] = spots[i]; names.push(sticker(g, r() < .5 ? 'band' : 'shop', r, X + x, Y + y, (r() - .5) * 40)); }
+  // the previous owner peeled one off: a ghost of glue
+  el('rect', { x: X + 400, y: Y + 160, width: 70, height: 46, rx: 8, fill: '#2a2b2f', opacity: .7, transform: `rotate(${(r() - .5) * 30} ${X + 435} ${Y + 183})` }, svg);
+  if (!only) {
+    for (let i = n; i < 5; i++) { const [x, y] = spots[i]; names.push('(jogador) ' + sticker(g, ['band', 'shop', 'sym'][i % 3], r, X + x, Y + y, (r() - .5) * 50)); }
+    IMPORTED.forEach((im, i) => { const [x, y] = spots[(5 + i) % spots.length]; el('image', { href: im.url, x: X + x - 50, y: Y + y - 50, width: 100, height: 100, style: 'image-rendering:pixelated', transform: `rotate(${-8 + i * 11} ${X + x} ${Y + y})` }, g); names.push('(importado)'); });
+  }
+  return names;
+}
+function renderLid() { const names = drawLid(document.getElementById('lid'), lidSeed, factoryOnly); document.getElementById('lidCap').innerHTML = `<b>semente ${lidSeed}</b> · ${names.join(' · ')} · a mancha escura é a cola de um adesivo que o dono anterior tirou.`; }
+document.getElementById('bSeed').onclick = () => { lidSeed = (lidSeed * 48271 + 11) % 2147483647; renderLid(); };
+document.getElementById('bClear').onclick = e => { factoryOnly = !factoryOnly; e.target.classList.toggle('on', factoryOnly); renderLid(); };
+
+// ---- importing: fit to 60 px, cut the background, 16 colours by median cut, a 2 px white border ----
+function medianCut(px, k) {
+  let boxes = [px];
+  while (boxes.length < k) {
+    boxes.sort((a, b) => b.length - a.length); const b = boxes.shift(); if (!b || b.length < 2) { if (b) boxes.push(b); break; }
+    let best = 0, span = -1; for (let c = 0; c < 3; c++) { let lo = 255, hi = 0; for (const p of b) { lo = Math.min(lo, p[c]); hi = Math.max(hi, p[c]); } if (hi - lo > span) { span = hi - lo; best = c; } }
+    b.sort((p, q) => p[best] - q[best]); boxes.push(b.slice(0, b.length >> 1), b.slice(b.length >> 1));
+  }
+  return boxes.map(b => [0, 1, 2].map(c => Math.round(b.reduce((s, p) => s + p[c], 0) / b.length)));
+}
+document.getElementById('imp').onchange = ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => { importImage(img); factoryOnly = false; document.getElementById('bClear').classList.remove('on'); renderLid(); };
+  img.src = URL.createObjectURL(f);
+};
+function importImage(img) {
+  {
+    const S = 64, I = 60, sc = Math.min(I / img.width, I / img.height), w = Math.max(1, Math.round(img.width * sc)), h = Math.max(1, Math.round(img.height * sc));
+    const c = document.createElement('canvas'); c.width = S; c.height = S; const x = c.getContext('2d');
+    x.drawImage(img, (S - w) >> 1, (S - h) >> 1, w, h);
+    const d = x.getImageData(0, 0, S, S), D = d.data, mask = new Uint8Array(S * S);
+    const cx0 = ((S - w) >> 1) + 1, cy0 = ((S - h) >> 1) + 1, bgc = [D[(cy0 * S + cx0) * 4], D[(cy0 * S + cx0) * 4 + 1], D[(cy0 * S + cx0) * 4 + 2]];
+    const hasAlpha = (() => { for (let i = 3; i < D.length; i += 4) if (D[i] > 0 && D[i] < 250) return true; return false; })();
+    const pix = [];
+    for (let i = 0; i < S * S; i++) {
+      const a = D[i * 4 + 3]; let keep = a > 128;
+      if (keep && !hasAlpha) keep = Math.abs(D[i * 4] - bgc[0]) + Math.abs(D[i * 4 + 1] - bgc[1]) + Math.abs(D[i * 4 + 2] - bgc[2]) > 60;
+      mask[i] = keep ? 1 : 0; if (keep) pix.push([D[i * 4], D[i * 4 + 1], D[i * 4 + 2]]);
+    }
+    const pal = pix.length ? medianCut(pix, 16) : [[255, 255, 255]];
+    const out = x.createImageData(S, S), O = out.data;
+    for (let i = 0; i < S * S; i++) {
+      const px = i % S, py = (i / S) | 0;
+      if (mask[i]) { let bi = 0, bd = 1e9; for (let j = 0; j < pal.length; j++) { const dd = (pal[j][0] - D[i * 4]) ** 2 + (pal[j][1] - D[i * 4 + 1]) ** 2 + (pal[j][2] - D[i * 4 + 2]) ** 2; if (dd < bd) { bd = dd; bi = j; } } O.set([...pal[bi], 255], i * 4); continue; }
+      let near = false; for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) { const qx = px + dx, qy = py + dy; if (qx >= 0 && qy >= 0 && qx < S && qy < S && mask[qy * S + qx] && dx * dx + dy * dy <= 5) { near = true; break; } }
+      if (near) O.set([250, 248, 240, 255], i * 4);
+    }
+    x.putImageData(out, 0, 0);
+    const url = c.toDataURL();
+    if (IMPORTED.length >= 3) IMPORTED.shift(); IMPORTED.push({ url });
+    const pv = document.getElementById('impPrev'); pv.innerHTML = '';
+    el('image', { href: url, x: 10, y: 10, width: 140, height: 140, style: 'image-rendering:pixelated' }, pv);
+    pal.forEach((p, i) => el('rect', { x: 165 + (i % 4) * 30, y: 14 + Math.floor(i / 4) * 30, width: 26, height: 26, rx: 3, fill: `rgb(${p})` }, pv));
+    txt(pv, 165, 140, `64×64 · ${pal.length} cores`, { fill: '#8d8b84', 'font-size': 9 }); txt(pv, 165, 153, `~${Math.round((64 * 64 / 2 + pal.length * 3) / 1024 * 10) / 10} KB no save`, { fill: '#8d8b84', 'font-size': 9 });
+  }
+}
+// an example before any import: a drawing on a white background, as a photo of a sketch would come
+(function () {
+  const c = document.createElement('canvas'); c.width = c.height = 240; const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, 240, 240);
+  const g = x.createRadialGradient(100, 90, 10, 120, 120, 100); g.addColorStop(0, '#ffd27a'); g.addColorStop(1, '#d9531e');
+  x.fillStyle = g; x.beginPath(); x.arc(120, 120, 96, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#1a1b1e'; x.font = 'bold 64px monospace'; x.textAlign = 'center'; x.fillText('0179', 120, 142);
+  importImage(c); IMPORTED.length = 0;
+})();
+
+// ---- the viewing angle ----
+function drawAngle(deg) {
+  const svg = document.getElementById('angle'); svg.innerHTML = '';
+  const a = deg * Math.PI / 180, k = Math.cos(a), off = Math.abs(deg) / 70;
+  const g = el('g', { transform: `translate(330,125) scale(${k},1) skewY(${-deg * 0.12}) translate(-200,-100)` }, svg);
+  el('rect', { x: -10, y: -10, width: 420, height: 220, rx: 6, fill: '#1c1d20' }, g);
+  el('rect', { x: 0, y: 0, width: 400, height: 200, fill: '#0a0602' }, g);
+  const lines = ['user@halden:~$ uname', 'Osprey/UX 4.2 halden 2.6.24-19 i686', '', 'user@halden:~$ free', '        total    used    free', 'Mem:  1048576  217088  831488', '', 'user@halden:~$ █'];
+  lines.forEach((l, i) => txt(g, 12, 22 + i * 18, l, { fill: i % 3 === 0 ? '#ffd68c' : '#ffb030', 'font-size': 12, 'xml:space': 'preserve' }));
+  // the panel's loss of contrast and its pull toward the inverse, laid over the glass
+  el('rect', { x: 0, y: 0, width: 400, height: 200, fill: '#6a5a8a', opacity: off * 0.42, style: 'mix-blend-mode:difference' }, g);
+  el('rect', { x: 0, y: 0, width: 400, height: 200, fill: '#000', opacity: off * 0.45 }, g);
+  el('rect', { x: 0, y: 150, width: 400, height: 50, fill: 'url(#leakG)', opacity: .9 }, g);
+  const defs = el('defs', {}, svg), lg = el('linearGradient', { id: 'leakG', x1: 0, y1: 1, x2: 0, y2: 0 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#ffcf8a', 'stop-opacity': .06 }, lg); el('stop', { offset: 1, 'stop-color': '#ffcf8a', 'stop-opacity': 0 }, lg);
+  document.getElementById('angLab').textContent = deg === 0 ? 'de frente: nítido' : `${Math.abs(deg)}° de lado: ${Math.abs(deg) < 30 ? 'quase igual' : Math.abs(deg) < 55 ? 'o contraste cai' : 'escuro e meio invertido'}`;
+}
+document.getElementById('ang').oninput = e => drawAngle(+e.target.value);
+
+// ---- the Osprey section ----
+(function () {
+  const s = document.getElementById('logoBig');
+  el('rect', { width: 520, height: 260, fill: '#0e0f11' }, s);
+  ospreyMark(s, 40, 40, 180, '#ffb030');
+  txt(s, 240, 140, 'Osprey', { fill: '#e8e6df', 'font-size': 64, 'font-family': 'Archivo, sans-serif', 'font-weight': 600, 'font-stretch': '112%' });
+  txt(s, 244, 172, 'UX 4.2', { fill: '#8d8b84', 'font-size': 18 });
+  ospreyMark(s, 420, 196, 40, '#e8e6df'); ospreyMark(s, 470, 206, 24, '#8d8b84');
+  document.getElementById('asciiLogo').textContent = ASCII_OSPREY.join('\n');
+  // the bar
+  const bar = document.getElementById('barDemo');
+  bar.innerHTML = '<span class="sel">1</span><span><b>2</b></span><span style="opacity:.5">3</span><span><b>term: ~/notes</b></span><span>wlan0 PetrovsCoffee ▁▃▅_</span><span>cpu 12%</span><span>mem 212/1024M</span><span>bat 64% 1:52</span><span><b>22:41</b></span>';
+  // the mosaic
+  const tiles = document.getElementById('tiles');
+  const lay = [['tela cheia', [[0, 0, 1, 1, 'term']], 'Ctrl+↑ maximiza a janela em foco'], ['lado a lado', [[0, 0, .5, 1, 'term'], [.5, 0, .5, 1, 'Lodestar']], 'o padrão com duas janelas'], ['em cima / embaixo', [[0, 0, 1, .5, 'Lodestar'], [0, .5, 1, .5, 'term']], 'para ler uma página longa'], ['mestre + pilha', [[0, 0, .5, 1, 'term'], [.5, 0, .5, .5, 'Lodestar'], [.5, .5, .5, .5, 'edit']], 'três janelas, à moda do dwm']];
+  for (const [name, panes, cap] of lay) {
+    const d = document.createElement('div'); d.className = 'card';
+    const sv = el('svg', { viewBox: '0 0 160 106' }, d);
+    el('rect', { width: 160, height: 106, fill: '#0a0602' }, sv); el('rect', { width: 160, height: 6, fill: '#140c04' }, sv);
+    panes.forEach(([x, y, w, h, lab], i) => {
+      el('rect', { x: x * 160 + 1, y: 7 + y * 99, width: w * 160 - 2, height: h * 99 - 2, fill: 'none', stroke: i === 0 ? '#ffd68c' : '#3a2410', 'stroke-width': .7 }, sv);
+      txt(sv, x * 160 + 5, 7 + y * 99 + 10, lab, { fill: i === 0 ? '#ffd68c' : '#aa6e22', 'font-size': 7 });
+      for (let k = 0; k < Math.floor(h * 99 / 9) - 1; k++) el('rect', { x: x * 160 + 5, y: 7 + y * 99 + 15 + k * 8, width: (w * 160 - 14) * (0.3 + ((k * 37 + i * 11) % 10) / 16), height: 2, fill: '#aa6e22', opacity: .5 }, sv);
+    });
+    const c = document.createElement('div'); c.className = 'cap'; c.innerHTML = `<b>${name}</b> · ${cap}`; d.appendChild(c); tiles.appendChild(d);
+  }
+  // inks
+  const inks = [['inkAmb', 'Âmbar (padrão)', [['#ffb030', 'texto'], ['#aa6e22', 'apagado, bordas sem foco'], ['#ffd68c', 'realce, prompt, foco'], ['#0a0602', 'fundo do backlight']]], ['inkGrn', 'Verde (opção)', [['#5aff78', 'texto'], ['#2ca046', 'apagado, bordas sem foco'], ['#beffc8', 'realce, prompt, foco'], ['#030904', 'fundo do backlight']]]];
+  for (const [id, name, list] of inks) document.getElementById(id).innerHTML = list.map(([c, r], i) => `<div><i style="background:${c}"></i><span><b>${i === 0 ? name : c.toUpperCase()}</b><em>${i === 0 ? c.toUpperCase() + ' · ' : ''}${r}</em></span></div>`).join('');
+  const samp = `user@halden:~$ df\n/dev/hda1   80G   49G   31G  61% /\nuser@halden:~$ cat notes.txt\nmotel: room 12, two nights paid\nuser@halden:~$ foo\nfoo: command not found\nuser@halden:~$ █`;
+  const NL = String.fromCharCode(10);
+  const paint = (hi, dim) => samp.split(NL).map(l => `<span style="color:${l.startsWith('user@') ? hi : l.includes('not found') ? dim : 'inherit'}">${l}</span>`).join(NL);
+  document.getElementById('sampAmb').innerHTML = paint('#ffd68c', '#aa6e22'); document.getElementById('sampGrn').innerHTML = paint('#beffc8', '#2ca046');
+  // the firmware
+  const L = [];
+  L.push(' HALDEN Setup Utility                                                    v1.27  ');
+  L.push('  Main    Advanced    Boot    Security    Exit                                   ');
+  L.push('┌──────────────────────────────────────────────────────┬───────────────────────┐');
+  const rows = [['System Time', '[22:41:07]'], ['System Date', '[Thu 02/21/2008]'], ['', ''], ['BIOS Version', '1.27'], ['Processor', 'Core 2 Duo T7300'], ['CPU Speed', '2.00 GHz'], ['Installed Memory', '1024 MB'], ['Hard Drive', 'DTK-80G54 ATA'], ['', ''], ['Wireless Radio', '[Enabled]'], ['Keyboard Lamp', '[Enabled]']];
+  const help = ['Item Specific Help', '', 'Set the system time.', '<Tab> moves between', 'the fields.'];
+  for (let i = 0; i < 18; i++) { const [a, b] = rows[i] || ['', '']; const l = ('  ' + a.padEnd(22) + b).padEnd(54); L.push('│' + l + '│ ' + (help[i] || '').padEnd(22) + '│'); }
+  L.push('├──────────────────────────────────────────────────────┴───────────────────────┤');
+  L.push('│ F1 Help   ↑↓ Select Item   +/- Change Value   F9 Defaults   F10 Save and Exit│');
+  L.push('└──────────────────────────────────────────────────────────────────────────────┘');
+  document.getElementById('fw').textContent = L.join('\n');
+})();
+
+// ---- the cover: the lid with its stickers and the open notebook, small ----
+(function () {
+  const s = document.getElementById('cover');
+  const lid = el('svg', { x: 0, y: 0, width: 400, height: 280, viewBox: '0 0 660 460' }, s); drawLid(lid, 20080221, true);
+  const d = el('svg', { x: 330, y: 70, width: 300, height: 340, viewBox: '0 0 660 930' }, s);
+  drawDeck(d, { on: false, worn: true });
+  const g = d.querySelector('#scr'); if (g) { g.removeAttribute('id'); txt(g, SCR.x + 30, SCR.y + 60, '', {}); }
+  const gl = d.querySelector('#glass'); if (gl) { gl.removeAttribute('id'); gl.setAttribute('fill', '#0a0602'); ASCII_OSPREY.forEach((l, i) => txt(d, SCR.x + 40, SCR.y + 70 + i * 30, l, { fill: '#ffb030', 'font-size': 22, 'xml:space': 'preserve' })); }
+  d.querySelectorAll('[data-k]').forEach(n => n.removeAttribute('data-k'));
+})();
+
+redraw(); drawViews(document.getElementById('views')); renderLid(); drawAngle(0);
+addEventListener('load', () => { document.fonts.load('600 12px "IBM Plex Mono"').then(() => { redraw(); renderLid(); }); });
+</script>
+</body>
+</html>
