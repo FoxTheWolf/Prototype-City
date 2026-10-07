@@ -14,8 +14,8 @@ import { faceOf } from './ui';
  */
 export interface Hit { x: number; y: number; w: number; h: number; key?: Key; pre?: () => void }
 export const HITS: Hit[] = [];
-/** The screens drawn in pixels: a touch off their items does nothing (on the cells' screens it is OK on the row touched). */
-export const PIXEL_SCREENS = new Set<string>(['standby', 'menu', 'calls', 'messages', 'msglist', 'msg', 'compose', 'contacts', 'contact']);
+/** Whether this frame's screen is drawn in pixels: a touch off its items does nothing (on the cells' screens it is OK on the row touched). */
+export const PAGED = { on: false };
 
 /** The theme (the manual's section 6). */
 export const BG: C3 = [11, 18, 25], INK: C3 = [232, 244, 255], DIM: C3 = [127, 151, 170], SOFT: C3 = [169, 188, 203];
@@ -112,37 +112,7 @@ export function paintStandby(P: Paint, d: Standby, now: number) {
     y += 36;
   });
   // the music: the song, the visualizer in its well, how far in, the volume
-  const T = d.tune;
-  if (T && d.t > 0.6) {
-    const h = 96, PB: C3 = T.sel ? [62, 36, 92] : [30, 16, 44], ACC: C3 = [200, 130, 255], GR: C3 = [130, 110, 150], TX: C3 = [232, 218, 250];
-    P.rect(14, y, SCR_W - 28, h, PB, 0.85); P.rect(14, y, 3, h, [176, 95, 208]);
-    if (T.sel) { P.rect(14, y, SCR_W - 28, 1, ICE, 0.7); P.rect(14, y + h - 1, SCR_W - 28, 1, ICE, 0.7); }
-    ptext(P, 26, y + 8, T.title.slice(0, 32), TX, 1, true);
-    ptext(P, 26, y + 20, T.band.slice(0, 32), GR);
-    // the visualizer: a bar a band in a dark well, green rising to yellow and red, the peaks falling
-    const wx = 26, wy = y + 33, ww = SCR_W - 52, wh = 28, n = T.spec.length, bw = Math.floor(ww / n);
-    P.rrect(wx - 2, wy - 2, ww + 4, wh + 4, 3, mul(PB, 0.45));
-    const dt = Math.min(0.2, Math.max(0, now - peaksAt)); peaksAt = now;
-    for (let k = 0; k < n; k++) {
-      peaks[k] = Math.max(T.spec[k], peaks[k] - dt * 0.5);
-      const bh = Math.round(Math.min(1, T.spec[k]) * wh), bx = wx + k * bw + Math.floor((ww - n * bw) / 2);
-      for (let j = 0; j < bh; j++) { const f = j / wh; P.rect(bx, wy + wh - 1 - j, bw - 1, 1, f < 0.5 ? lerp([60, 220, 110], [240, 220, 70], f * 2) : lerp([240, 220, 70], [255, 80, 60], (f - 0.5) * 2)); }
-      P.rect(bx, wy + wh - 1 - Math.round(Math.min(1, peaks[k]) * (wh - 1)), bw - 1, 1, [240, 240, 255], 0.8);
-    }
-    // how far in: a thin track, the played part thicker, a knob; playing or paused; the time
-    const mm = (v: number) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`, time = `${mm(T.at)}/${mm(T.len)}`;
-    const ty = y + 70, tx0 = 38, tx1 = SCR_W - 26 - ptextW(time) - 8, f = T.len > 0 ? Math.min(1, T.at / T.len) : 0, at = Math.round(tx0 + f * (tx1 - tx0));
-    if (T.playing) P.poly([26, ty, 26, ty + 8, 32, ty + 4], ACC); else { P.rect(26, ty, 2, 8, ACC); P.rect(30, ty, 2, 8, ACC); }
-    P.rect(tx0, ty + 4, tx1 - tx0, 1, GR); P.rect(tx0, ty + 3, at - tx0, 3, ACC); P.rect(at - 1, ty + 1, 3, 7, [245, 235, 255]);
-    ptext(P, SCR_W - 26 - ptextW(time), ty, time, TX);
-    // the volume: ten bars rising
-    const vy = y + 82;
-    ptext(P, 26, vy, d.volLabel, GR);
-    const v = Math.round(T.vol * 10), vx = 26 + ptextW(d.volLabel) + 6;
-    for (let k = 0; k < 10; k++) { const bh = 2 + Math.round(k * 0.7); P.rect(vx + k * 4, vy + 8 - bh, 3, bh, k < v ? ACC : mul(GR, 0.6)); }
-    if (T.shuffle) ptext(P, SCR_W - 26 - ptextW(T.shuffle), vy, T.shuffle, ACC);
-    HITS.push({ x: 14, y, w: SCR_W - 28, h, key: 'ok', pre: T.pre });
-  }
+  if (d.tune && d.t > 0.6) { tunePanel(P, y, d.tune, now, d.volLabel); HITS.push({ x: 14, y, w: SCR_W - 28, h: 96, key: 'ok', pre: d.tune.pre }); }
   if (d.hint && d.t > 0.9) ctext(P, Y1 - 14, d.hint, SOFT);
 }
 
@@ -421,4 +391,59 @@ export function paintContactEdit(P: Paint, d: ContactEdit) {
     HITS.push({ x: M, y, w: SCR_W - 2 * M, h: 44, pre: go as () => void });
   });
   paintHint(P, Y1 - 22, d.hint);
+}
+
+/** The music's panel, 96 px tall from y (the standby screen's and the Tunes Player's): the song, the visualizer in its well, how far in, the volume. */
+function tunePanel(P: Paint, y: number, T: Tune, now: number, volLabel: string) {
+  const h = 96, PB: C3 = T.sel ? [62, 36, 92] : [30, 16, 44], ACC: C3 = [200, 130, 255], GR: C3 = [130, 110, 150], TX: C3 = [232, 218, 250];
+  P.rect(14, y, SCR_W - 28, h, PB, 0.85); P.rect(14, y, 3, h, [176, 95, 208]);
+  if (T.sel) { P.rect(14, y, SCR_W - 28, 1, ICE, 0.7); P.rect(14, y + h - 1, SCR_W - 28, 1, ICE, 0.7); }
+  ptext(P, 26, y + 8, T.title.slice(0, 32), TX, 1, true);
+  ptext(P, 26, y + 20, T.band.slice(0, 32), GR);
+  // the visualizer: a bar a band in a dark well, green rising to yellow and red, the peaks falling
+  const wx = 26, wy = y + 33, ww = SCR_W - 52, wh = 28, n = T.spec.length, bw = Math.floor(ww / n);
+  P.rrect(wx - 2, wy - 2, ww + 4, wh + 4, 3, mul(PB, 0.45));
+  const dt = Math.min(0.2, Math.max(0, now - peaksAt)); peaksAt = now;
+  for (let k = 0; k < n; k++) {
+    peaks[k] = Math.max(T.spec[k], peaks[k] - dt * 0.5);
+    const bh = Math.round(Math.min(1, T.spec[k]) * wh), bx = wx + k * bw + Math.floor((ww - n * bw) / 2);
+    for (let j = 0; j < bh; j++) { const f = j / wh; P.rect(bx, wy + wh - 1 - j, bw - 1, 1, f < 0.5 ? lerp([60, 220, 110], [240, 220, 70], f * 2) : lerp([240, 220, 70], [255, 80, 60], (f - 0.5) * 2)); }
+    P.rect(bx, wy + wh - 1 - Math.round(Math.min(1, peaks[k]) * (wh - 1)), bw - 1, 1, [240, 240, 255], 0.8);
+  }
+  // how far in: a thin track, the played part thicker, a knob; playing or paused; the time
+  const mm = (v: number) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`, time = `${mm(T.at)}/${mm(T.len)}`;
+  const ty = y + 70, tx0 = 38, tx1 = SCR_W - 26 - ptextW(time) - 8, f = T.len > 0 ? Math.min(1, T.at / T.len) : 0, at = Math.round(tx0 + f * (tx1 - tx0));
+  if (T.playing) P.poly([26, ty, 26, ty + 8, 32, ty + 4], ACC); else { P.rect(26, ty, 2, 8, ACC); P.rect(30, ty, 2, 8, ACC); }
+  P.rect(tx0, ty + 4, tx1 - tx0, 1, GR); P.rect(tx0, ty + 3, at - tx0, 3, ACC); P.rect(at - 1, ty + 1, 3, 7, [245, 235, 255]);
+  ptext(P, SCR_W - 26 - ptextW(time), ty, time, TX);
+  // the volume: ten bars rising
+  const vy = y + 82;
+  ptext(P, 26, vy, volLabel, GR);
+  const v = Math.round(T.vol * 10), vx = 26 + ptextW(volLabel) + 6;
+  for (let k = 0; k < 10; k++) { const bh = 2 + Math.round(k * 0.7); P.rect(vx + k * 4, vy + 8 - bh, 3, bh, k < v ? ACC : mul(GR, 0.6)); }
+  if (T.shuffle) ptext(P, SCR_W - 26 - ptextW(T.shuffle), vy, T.shuffle, ACC);
+}
+
+/** The Tunes Player: what plays on the panel, then the songs (those that came with it, then the SD card's), the picked one lit. */
+export interface TunesPage { title: string; out: string; idle: string; tune: Tune | null; volLabel: string; keys: string; rows: { kind: 'head' | 'song' | 'note'; label: string; size: string; mark: '' | 'play' | 'pause'; sel: boolean; pre?: () => void }[]; t: number }
+export function paintTunes(P: Paint, d: TunesPage, now: number) {
+  P.grad(0, 0, SCR_W, Y1, [[0, [34, 16, 48]], [1, [10, 5, 16]]]);
+  appHeader(P, d.title, d.out, [176, 95, 208]);
+  const py = Y0 + 36;
+  if (d.tune) tunePanel(P, py, d.tune, now, d.volLabel);
+  else { P.rect(14, py, SCR_W - 28, 96, [30, 16, 44], 0.85); P.rect(14, py, 3, 96, [176, 95, 208]); ptext(P, 26, py + 44, typed(d.idle, d.t), [130, 110, 150]); }
+  ptext(P, M, py + 104, d.keys.slice(0, 36), [130, 110, 150]);
+  const ACC: C3 = [200, 130, 255];
+  d.rows.forEach((r, n) => {
+    const y = py + 120 + n * 26;
+    if (y + 24 > Y1) return;
+    if (r.kind === 'head') { ptext(P, M, y + 12, r.label, ACC, 1, true); P.rect(M + ptextW(r.label, 1, true) + 6, y + 16, SCR_W - 2 * M - ptextW(r.label, 1, true) - 6, 1, [70, 40, 90]); return; }
+    if (r.kind === 'note') { ptext(P, M + 12, y + 9, r.label, [130, 110, 150]); return; }
+    HITS.push({ x: 6, y, w: SCR_W - 12, h: 24, pre: r.pre, key: r.sel ? 'lsoft' : undefined });
+    if (r.sel) { P.rrect(6, y, SCR_W - 12, 24, 5, ICE, 0.14); ring(P, 6, y, SCR_W - 12, 24, ICE); }
+    if (r.mark === 'play') P.poly([M, y + 8, M, y + 16, M + 5, y + 12], ACC); else if (r.mark === 'pause') { P.rect(M, y + 8, 2, 8, ACC); P.rect(M + 3, y + 8, 2, 8, ACC); }
+    const sw = ptextW(r.size);
+    ptext(P, M + 10, y + 8, typed(r.label, d.t - 0.1 - n * 0.02).slice(0, Math.floor((SCR_W - 2 * M - 18 - sw) / 6)), r.sel ? [255, 255, 255] : [232, 218, 250]);
+    ptext(P, SCR_W - M - sw, y + 8, r.size, [130, 110, 150]);
+  });
 }

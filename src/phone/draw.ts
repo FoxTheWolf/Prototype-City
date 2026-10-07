@@ -1,12 +1,12 @@
 import { compass, cityName, operatorName, diagonalName, districtName, landmarkName, roadName } from '../locale/names';
 import { diagS, districtAt, nearestRoad, SIDEWALK } from '../sim/city';
 import { calendar } from '../sim/clock';
-import { app, appLabel, songInfo, volBars } from './apps';
+import { app, appLabel, songInfo, tunesData, volBars } from './apps';
 import { box, CHROME, lerp, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
 import { applyTheme, BAD, hdLayer, bigText, ch, DAYS, hhmm, INK, LCD, Lcd, MONTHS, SH, softKeys, statusBar, SW, T, typed, typeHint, type C3 } from './lcd';
 import { type World } from '../sim/world';
 import { Ground, groundAt, MAP_RES, mapRaster, type MapRaster } from './mapdata';
-import { APPS, BOOT_LOG_S, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
+import { APPS, BOOT_LOG_S, STORE, fmtDist, INDOOR_ROW_M, ZOOM_ROW_M, type Key, type Phone } from './phone';
 import { cellAt, DOOR, planOf, ROOM, type RoomKind } from '../sim/interior';
 import { hash3 } from '../core/rng';
 import { BOARDS } from '../sim/device';
@@ -18,7 +18,7 @@ import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
-import { APP_COL, HITS, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintStandby, paintVolume, type CallPage, type Card, type TypeHint, type Dial, type Standby, type Tile } from './pixpages';
+import { APP_COL, HITS, PAGED, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintTunes, paintStandby, paintVolume, type CallPage, type Card, type TypeHint, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
@@ -280,6 +280,10 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
       }
       else if (P.screen === 'calls' && !P.call) { const d = dialData(P, world, t); page = (Pt) => paintDial(Pt, d, now); softKeys(S, P.dial ? T.apps.save : '', P.dial ? T.apps.clear : T.back); }
       else if (P.screen === 'contacts' || P.screen === 'contact') page = contactsPage(S, P, t, now);
+      else if (P.screen === 'app' && STORE[P.appId][0] === 'tunes') {
+        const d = tunesData(P, t);
+        page = (Pt) => paintTunes(Pt, d, now); softKeys(S, P.tn.cur === P.tn.sel && P.tn.playing ? T.apps.tunes.pause : T.apps.tunes.play, T.back);
+      }
       else if (P.screen === 'messages' || P.screen === 'msglist' || P.screen === 'msg' || P.screen === 'compose') page = msgPage(S, P, t, now);
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
@@ -314,6 +318,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
     }
   }
   // the bars and a touch's answer, in pixels over the cells (the manual's section 6), and the screens drawn in pixels
+  PAGED.on = page !== null;
   paintChrome(now, on ? Math.min(1.1, gain) : 1, !on ? [5, 6, 8] : P.screen === 'boot' ? LCD : null, page);
   // under the picture, the interface's cells the glass covers get the screen's colors (the GPU's glow and
   // bloom read the screen's light from them; the picture hides them)

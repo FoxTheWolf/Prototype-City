@@ -18,6 +18,7 @@ import { freeVoucher } from './ussd';
 import { expose, OPTICAL, type Photo } from './camera';
 import { type CharGrid } from '../render/grid';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
+import { type TunesPage } from './pixpages';
 import { EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
@@ -498,7 +499,6 @@ function appScreen(S: Lcd, P: Phone, world: World, t: number, now: number) {
     return newsApp(S, P, world, t, J?.what === 'news' && (J.state === 'connecting' || J.state === 'loading'));
   }
   if (id === 'bank') return bankApp(S, P, world, t);
-  if (id === 'tunes') return tunesApp(S, P, t, now);
   if (id === 'reynard') return drawRey(S, P, world, t, now);
   if (id === 'web') return P.web.draw(S, now);
   if (id === 'convert') {
@@ -536,53 +536,6 @@ export function songInfo(P: Phone, i: number): { title: string; band: string; kb
   const f = P.sd[i - TRACKS.length];
   return { title: f.name.replace(/\.[^.]+$/, ''), band: TN.sd, kb: f.secs ? Math.round(f.secs * MP3_KBS) : -1 };
 }
-/** The visualizer's falling peaks, and when they were last moved. */
-const peaks = new Float32Array(32);
-let peaksAt = 0;
-/**
- * A spectrum visualizer as the players of 2008 had (2026-10-06): a bar a band in a dark well, green at
- * the foot to yellow and red at the top, with a peak that falls slowly; w x rows cells from (x, y).
- * In HD (2026-10-06, second pass) the well has rounded corners and each bar is drawn in pixels, its top
- * pixel lit by how far into it the level reaches, so it moves smoothly instead of a cell at a time.
- */
-export function drawSpectrum(S: Lcd, x: number, y: number, w: number, rows: number, spec: Float32Array, now: number, bg: (y: number) => C3) {
-  const dt = Math.min(0.2, Math.max(0, now - peaksAt)); peaksAt = now;
-  for (let k = 0; k < spec.length; k++) peaks[k] = Math.max(spec[k], peaks[k] - dt * 0.5);
-  if (S.hd) {
-    const W = w * HD, H = rows * HD, n = spec.length, bw = 4, x0 = (W - (n * bw - 1)) >> 1;
-    const px = (X: number, Y: number, c: C3) => S.pixel(x + Math.floor(X / HD), y + Math.floor(Y / HD), X % HD, Y % HD, c[0], c[1], c[2]);
-    for (let r = 0; r < rows; r++) for (let c = 0; c < w; c++) S.put(x + c, y + r, 32, bg(y + r), bg(y + r));
-    // the well: darker than the panel, its corners rounded (the corner pixel gone, its neighbours half)
-    const well = (Y: number) => mul(bg(y + Math.floor(Y / HD)), 0.45);
-    const corner = (X: number, Y: number) => { const cx = Math.min(X, W - 1 - X), cy = Math.min(Y, H - 1 - Y); return cx + cy === 0 ? 0 : cx + cy === 1 ? 0.5 : 1; };
-    for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
-      const k = Math.floor((X - x0) / bw), inBar = X >= x0 && k < n && (X - x0) % bw < bw - 1;
-      const f = 1 - (Y + 0.5) / H, base: C3 = f < 0.5 ? lerp([60, 220, 110], [240, 220, 70], f * 2) : lerp([240, 220, 70], [255, 80, 60], (f - 0.5) * 2);
-      let c = well(Y);
-      if (inBar) {
-        const i = H - 1 - Y, lit = Math.max(0, Math.min(1, spec[k] * H - i)), pk = Math.min(H - 1, Math.floor(peaks[k] * H));
-        // the unlit LEDs faint; the falling peak a pale pixel; the lit ones from green to red
-        c = lit > 0 ? lerp(mul(base, 0.22), base, lit) : i === pk && pk > 0 ? [215, 215, 232] : mul(base, 0.16);
-      }
-      const v = corner(X, Y);
-      if (v) px(X, Y, v === 1 ? c : lerp(bg(y + Math.floor(Y / HD)), c, v));
-    }
-    return;
-  }
-  // in characters: two cells a band (as many bands as fit), in quarter blocks
-  const COL: C3[] = [[90, 230, 120], [240, 220, 80], [255, 90, 70]];
-  const Q = [SHAPE.q1, SHAPE.bottom, SHAPE.q3, BLOCK.full], m = Math.floor(w / 2);
-  for (let j = 0; j < m; j++) {
-    const k = Math.floor((j * spec.length) / m), v = spec[k] * rows * 4, pk = peaks[k] * rows * 4;
-    for (let r = 0; r < rows; r++) {
-      const yy = y + rows - 1 - r, q = Math.min(4, Math.max(0, Math.round(v - r * 4)));
-      const col = COL[Math.min(2, Math.floor((r / rows) * 3))];
-      if (q > 0) S.put(x + j * 2, yy, Q[q - 1], col, bg(yy));
-      else if (pk > 0.5 && Math.min(rows - 1, Math.floor(pk / 4)) === r) S.put(x + j * 2, yy, SHAPE.top, [200, 200, 220], bg(yy));
-      else S.put(x + j * 2, yy, ch('.'), mul(bg(yy), 1.6), bg(yy));
-    }
-  }
-}
 /**
  * The volume (2026-10-06): ten little bars rising left to right, drawn in the lower part of the row so
  * they stand apart from a line above; the lit ones in `acc`. In characters, a row of blocks and dots.
@@ -598,62 +551,17 @@ export function volBars(S: Lcd, x: number, y: number, vol: number, acc: C3, grey
   }
 }
 const TN = A.tunes;
-/** The song's place on row y from x0 to x1: playing or paused, a bar of how far in, the time and the length. */
-export function progress(S: Lcd, x0: number, x1: number, y: number, P: Phone, acc: C3, grey: C3, ink: C3, bg: C3) {
-  const T2 = P.tn, mm = (v: number) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`;
-  const time = `${mm(T2.at)}/${mm(T2.len)}`, w = x1 - x0 - 3 - time.length, f = T2.len > 0 ? Math.min(1, T2.at / T2.len) : 0;
-  S.text(x0, y, T2.playing ? '>' : '"', acc, bg);
-  // in HD: a thin track (a pixel tall) with the played part thicker in the accent, and a knob where it is
-  if (S.hd) {
-    const W = w * HD, at = Math.round(f * (W - 1));
-    for (let k = 0; k < w; k++) S.put(x0 + 2 + k, y, 32, bg, bg);
-    for (let X = 0; X < W; X++) for (let Y = 0; Y < HD; Y++) {
-      const c: C3 | null = X === at ? [245, 235, 255] : X < at ? (Y === 1 || Y === 2 ? acc : null) : Y === 1 ? grey : null;
-      if (c) S.pixel(x0 + 2 + Math.floor(X / HD), y, X % HD, Y, c[0], c[1], c[2]);
-    }
-  } else for (let k = 0; k < w; k++) S.put(x0 + 2 + k, y, k < Math.round(f * w) ? BLOCK.full : ch('-'), k < Math.round(f * w) ? acc : grey, bg);
-  S.text(x1 - time.length, y, time, ink, bg);
-}
-/**
- * The Tunes Player (15.9c): what plays on a panel at the top (title, band, how far in, the volume) and
- * the songs below, those that came with it and then the SD card's; where the sound comes out at the right of the bar.
- */
-function tunesApp(S: Lcd, P: Phone, t: number, now: number) {
-  const BG0: C3 = [34, 16, 48], BG1: C3 = [10, 5, 16], ACC: C3 = [200, 130, 255], INK2: C3 = [232, 218, 250], GREY: C3 = [130, 110, 150], PANEL: C3 = [58, 30, 80];
-  const T2 = P.tn, bg = (y: number) => lerp(BG0, BG1, (y - 1) / (SH - 3));
-  vgrad(S, 1, SH - 2, BG0, BG1);
-  bar(S, (ST.names as Record<string, string>).tunes.toUpperCase(), ACC, [20, 8, 30], P.earphones ? TN.phones : TN.speaker, GREY);
-  // the panel: what plays, its spectrum dancing under the title
-  box(S, 1, 3, SW - 2, 10, PANEL, bg, 1, [40, 20, 58]);
-  const pbg = (y: number) => lerp(PANEL, [40, 20, 58], (y - 3) / 7);
-  if (T2.cur < 0) S.text(3, 4, typed(TN.idle, t), GREY, pbg(4));
-  else {
-    const s = songInfo(P, T2.cur);
-    S.text(3, 4, typed(s.title.slice(0, SW - 6), t), INK2, pbg(4));
-    S.text(3, 5, typed(s.band.slice(0, SW - 6), t - 0.05), GREY, pbg(5));
-    drawSpectrum(S, 3, 6, SW - 6, 3, P.spec, now, pbg);
-    progress(S, 3, SW - 3, 9, P, ACC, GREY, INK2, pbg(9));
-  }
-  // the volume, as ten little bars rising
-  S.text(3, 11, 'VOL', GREY, bg(11));
-  volBars(S, 7, 11, T2.vol, ACC, GREY, bg(11));
-  if (T2.shuffle) S.text(19, 11, TN.shuffle, ACC, bg(11));
-  S.text(SW - 16, 11, TN.keys, GREY, bg(11));
-  // the list: a heading before each part, the picked row lit, kept in sight
-  const rows: [string, number][] = [[TN.songs, -1], ...TRACKS.map((_, i): [string, number] => ['', i]), [TN.sd, -1], ...(P.sd.length ? P.sd.map((_, i): [string, number] => ['', TRACKS.length + i]) : [[TN.sdEmpty, -2] as [string, number]])];
-  const top = 13, h = SH - 3 - top, at = rows.findIndex(([, i]) => i === T2.sel), off = Math.max(0, Math.min(rows.length - h, at - (h >> 1)));
-  rows.slice(off, off + h).forEach(([label, i], r) => {
-    const y = top + r;
-    if (i === -1) { S.text(1, y, label, ACC, bg(y)); for (let x = label.length + 2; x < SW - 1; x++) S.put(x, y, ch('-'), [70, 40, 90], bg(y)); return; }
-    if (i === -2) { S.text(3, y, label, GREY, bg(y)); return; }
-    const s = songInfo(P, i), sel = i === T2.sel, rb: C3 = sel ? [90, 46, 120] : bg(y);
-    if (sel) S.fill(y, rb);
-    const size = s.kb < 0 ? '--' : s.kb >= 1024 ? TN.mb.replace('{n}', (s.kb / 1024).toFixed(1)) : TN.kb.replace('{n}', String(s.kb));
-    S.text(1, y, i === T2.cur ? (T2.playing ? '>' : '"') : ' ', ACC, rb);
-    S.text(3, y, typed(`${s.title}${i < TRACKS.length ? ` - ${s.band}` : ''}`.slice(0, SW - 6 - size.length), t - 0.1 - r * 0.02), sel ? [255, 255, 255] : INK2, rb);
-    S.text(SW - 1 - size.length, y, size, GREY, rb);
-  });
-  softKeys(S, T2.cur === T2.sel && T2.playing ? TN.pause : TN.play, T.back);
+/** The Tunes Player's page (painted in pixels by pixpages.ts paintTunes): what plays, and the songs (those that came with it, then the SD card's), kept in sight round the one picked. */
+export function tunesData(P: Phone, t: number): TunesPage {
+  const T2 = P.tn, mark = (i: number): '' | 'play' | 'pause' => (i === T2.cur ? (T2.playing ? 'play' : 'pause') : '');
+  const size = (kb: number) => (kb < 0 ? '--' : kb >= 1024 ? TN.mb.replace('{n}', (kb / 1024).toFixed(1)) : TN.kb.replace('{n}', String(kb)));
+  const song = (i: number): TunesPage['rows'][number] => { const s = songInfo(P, i); return { kind: 'song', label: `${s.title}${i < TRACKS.length ? ` - ${s.band}` : ''}`, size: size(s.kb), mark: mark(i), sel: i === T2.sel, pre: () => { T2.sel = i; } }; };
+  const all: TunesPage['rows'] = [{ kind: 'head', label: TN.songs, size: '', mark: '', sel: false }, ...TRACKS.map((_, i) => song(i)), { kind: 'head', label: TN.sd, size: '', mark: '', sel: false },
+    ...(P.sd.length ? P.sd.map((_, i) => song(TRACKS.length + i)) : [{ kind: 'note' as const, label: TN.sdEmpty, size: '', mark: '' as const, sel: false }])];
+  const h = 8, at = all.findIndex((r) => r.sel), off = Math.max(0, Math.min(all.length - h, at - (h >> 1)));
+  let tune: TunesPage['tune'] = null;
+  if (T2.cur >= 0) { const s = songInfo(P, T2.cur); tune = { title: s.title, band: s.band, at: T2.at, len: T2.len, playing: T2.playing, vol: T2.vol, shuffle: T2.shuffle ? TN.shuffle : '', spec: P.spec, sel: false, pre: () => {} }; }
+  return { title: (ST.names as Record<string, string>).tunes, out: P.earphones ? TN.phones : TN.speaker, idle: TN.idle, tune, volLabel: 'VOL', keys: TN.keys, rows: all.slice(off, off + h), t };
 }
 
 function bankApp(S: Lcd, P: Phone, world: World, t: number) {
