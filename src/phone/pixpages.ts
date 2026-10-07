@@ -593,7 +593,7 @@ export function paintNotes(P: Paint, d: Notes) {
 
 /** The store: the maker's own shop in plum and pink; its two tabs (touched to switch), the apps with their size and price (or installed), what the picked one does, a download's progress. */
 export interface Store { title: string; tabs: [string, string]; tab: number; goTab: (k: number) => void; empty: string;
-  rows: { label: string; right: string; col: C3; big: boolean; have: boolean; sel: boolean; pre: () => void }[]; about: string; bar: number; note: string; t: number }
+  rows: { label: string; right: string; col: C3; art: (C3 | null)[][] | null; big: boolean; have: boolean; sel: boolean; pre: () => void }[]; about: string; bar: number; note: string; t: number }
 export function paintStore(P: Paint, d: Store) {
   const PINK: C3 = [255, 120, 200], TXT: C3 = [240, 226, 250], DIMS: C3 = [160, 130, 180];
   P.grad(0, 0, SCR_W, Y1, [[0, [40, 22, 56]], [1, [18, 10, 26]]]);
@@ -614,10 +614,11 @@ export function paintStore(P: Paint, d: Store) {
     if (d.t < 0.04 * n) return;
     P.rrect(6, y, SCR_W - 12, 30, 5, r.sel ? [150, 46, 120] : [52, 32, 70], r.sel ? 0.95 : 0.85);
     if (r.sel) ring(P, 6, y, SCR_W - 12, 30, PINK);
-    P.rrect(M, y + 5, 20, 20, 5, r.col);
-    P.rrect(M + 1, y + 6, 18, 7, 3, [255, 255, 255], 0.25);
-    const c0 = r.label[0] ?? '?';
-    ptext(P, Math.round(M + 10 - ptextW(c0, 1, true) / 2), y + 11, c0, [255, 255, 255], 1, true);
+    // the app's icon, small: its colour, the gloss, its picture a pixel by two a dot (its letter if it has none)
+    P.grad(M - 2, y + 3, 24, 24, [[0, mul(r.col, 1.18)], [1, mul(r.col, 0.78)]], true, 5);
+    P.rrect(M - 1, y + 4, 22, 9, 4, [255, 255, 255], 0.22);
+    if (r.art) r.art.forEach((row, j) => row.forEach((c, i) => { if (c) P.rect(M + 1 + i, y + 6 + j * 2, 1, 2, c); }));
+    else { const c0 = r.label[0] ?? '?'; ptext(P, Math.round(M + 10 - ptextW(c0, 1, true) / 2), y + 11, c0, [255, 255, 255], 1, true); }
     const rw = ptextW(r.right);
     ptext(P, M + 28, y + 11, r.label.slice(0, Math.floor((SCR_W - 2 * M - 40 - rw) / 6)), r.big && !r.have ? DIMS : TXT, 1, true);
     ptext(P, SCR_W - M - 4 - rw, y + 11, r.right, r.sel ? TXT : r.have ? PINK : DIMS);

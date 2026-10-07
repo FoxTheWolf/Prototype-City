@@ -7,6 +7,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Calculadora:** as operações viraram botões grandes na tela (+ − × ÷, C, ponto e =), cada um com a tecla do PC que faz o mesmo; os números continuam no teclado numérico.
 - **Notas:** o bloco amarelo pautado com a margem vermelha, a tinta azul e as letras da tecla em fichas.
 - **Store e My Apps:** a loja do fabricante em ameixa e rosa, com as abas tocáveis, o que o app faz e a barra do download; My Apps na grade do menu.
+- Os apps do Store mostram o próprio ícone (a cobra, a lanterna, as setas do conversor…) em vez de uma letra; o Reynard ganhou o dele, uma raposa.
 - As dicas voltaram a mostrar `<`, `>` e `^` (a fonte da tela não tinha esses sinais).
 
 ## 0.15.28 — Tunes em pixels (2026-10-07)

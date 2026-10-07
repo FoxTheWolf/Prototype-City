@@ -201,7 +201,7 @@ function store(S: Lcd, P: Phone, t: number): Pg {
   const rows = list.slice(top, top + view).map((i, n) => {
     const [id, kb, price] = STORE[i], have = P.apps.includes(i), k = top + n;
     const right = P.stab === 1 ? '' : have ? ST.installed : `${kb >= 1024 ? `${(kb / 1024).toFixed(0)}MB` : `${kb}KB`} ${price ? `$${(price / 100).toFixed(2)}` : ST.free}`;
-    return { label: appName(i), right, col: (STORE_ICON[id] ?? ICON.store)[1], big: kb > EDGE_LIMIT_KB, have, sel: k === P.ssel, pre: () => { P.ssel = k; P.storeNote = ''; } };
+    return { label: appName(i), right, col: (STORE_ICON[id] ?? ICON.store)[1], art: artColors(id === 'social' ? 'wire' : id), big: kb > EDGE_LIMIT_KB, have, sel: k === P.ssel, pre: () => { P.ssel = k; P.storeNote = ''; } };
   });
   const J = P.radio.job, sel = list[P.ssel];
   const bar = J?.what.startsWith('app:') && (J.state === 'connecting' || J.state === 'loading') ? J.done / J.kb : -1;

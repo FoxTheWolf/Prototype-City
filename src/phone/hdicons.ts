@@ -236,6 +236,17 @@ export const APP_ART: Record<string, string[]> = {
     '.......ww.........',
     '..................',
   ],
+  reynard: [
+    '...o..........o...',
+    '...oo........oo...',
+    '...oooooooooooo...',
+    '..oookooooookooo..',
+    '..wwooooooooooww..',
+    '...wwwwoooowwww...',
+    '.....wwwkkwww.....',
+    '.......wwww.......',
+    '..................',
+  ],
   atlas: [
     '..................',
     '.......wwww.......',

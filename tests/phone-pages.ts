@@ -2,6 +2,7 @@
 // game or a GPU: tests/.out/tunes.png (the Tunes Player). The bars on top are pixui.ts's, not drawn here.
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
+import { artColors } from '../src/phone/hdicons';
 import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
@@ -30,6 +31,6 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
     keys: [['+', '^'], ['-', 'v'], ['x', '<'], ['/', '>'], ['C', '*'], ['.', '#'], ['=', 'OK']].map(([sym, hint]) => ({ sym, key: 'ok' as const, hint, kind: sym === 'C' ? 'clear' as const : sym === '.' ? 'point' as const : 'op' as const })) }));
   shot('notes', (Q) => paintNotes(Q, { title: 'Notes', note: 'Abc 52/400', text: 'meet at the diner 9pm\nbring the cable and the old phone', live: 1, blink: false, empty: '', hint: { chips: ['m', 'n', 'o', '6'], on: 1 }, t: 5 }));
   shot('store', (Q) => paintStore(Q, { title: 'Kesion Store', tabs: ['CATALOG', 'INSTALLED'], tab: 0, goTab: f, empty: '', t: 5, bar: 0.4, note: '', about: 'A torch: the whole screen white, as bright as it goes.',
-    rows: [['Snake', 'INSTALLED', true], ['Torch', '12KB FREE', false], ['Converter', '36KB $0.99', false], ['Atlas 3D', '38MB $9.99', false]].map(([l, r, h], n) => ({ label: l as string, right: r as string, col: [110, 50, 130] as const, big: n === 3, have: h as boolean, sel: n === 1, pre: f })) }));
-  shot('folder', (Q) => paintMenu(Q, ['Snake', 'Torch', 'Converter'].map((l, n) => ({ label: l, col: [150, 178, 84] as const, art: null, sel: n === 0, pre: f })), 5, { title: 'My Apps', note: '3', col: [224, 154, 58], empty: [] }));
+    rows: [['Snake', 'INSTALLED', true, 'snake', [150, 178, 84]], ['Torch', '12KB FREE', false, 'torch', [230, 200, 60]], ['Converter', '36KB $0.99', false, 'convert', [40, 150, 150]], ['Atlas 3D', '38MB $9.99', false, 'atlas', [60, 130, 90]], ['Reynard', 'INSTALLED', true, 'reynard', [34, 30, 28]]].map(([l, r, h, id, c], n) => ({ label: l as string, right: r as string, col: c as [number, number, number], art: artColors(id as string), big: n === 3, have: h as boolean, sel: n === 1, pre: f })) }));
+  shot('folder', (Q) => paintMenu(Q, [['Snake', 'snake', [150, 178, 84]], ['Torch', 'torch', [230, 200, 60]], ['Converter', 'convert', [40, 150, 150]], ['Reynard', 'reynard', [34, 30, 28]]].map(([l, id, c], n) => ({ label: l as string, col: c as [number, number, number], art: artColors(id as string), sel: n === 0, pre: f })), 5, { title: 'My Apps', note: '3', col: [224, 154, 58], empty: [] }));
 }
