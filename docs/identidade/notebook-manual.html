@@ -56,6 +56,7 @@
   .stage > svg { width: 100%; height: auto; display: block; touch-action: manipulation; user-select: none; }
   .ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  svg text { white-space: pre; }
   [data-k] { cursor: pointer; }
   [data-k].pressed { transform: translateY(1px); filter: brightness(.65); }
   /* the Osprey console, as the screen texture draws it (8 x 16 px cells at 1280 x 800) */
@@ -71,7 +72,7 @@
 <body>
 <main>
   <header class="cover">
-    <svg viewBox="0 0 640 420" id="cover"></svg>
+    <svg viewBox="0 0 646 452" id="cover"></svg>
     <div>
       <h1>O NOTEBOOK <span>E O OSPREY</span></h1>
       <p>Manual de identidade · v1 · 2026-10-07</p>
@@ -89,7 +90,7 @@
     <h2>1 · O aparelho <small>tijolo executivo, 13,3", 2008</small></h2>
     <p class="lead">Uma caixa de plástico preto fosco, de cantos quase retos, com dobradiças de metal aparentes. Tudo o que se usa é uma peça que se aperta: o botão de ligar com o anel de LED, as teclas de volume, a tecla da luz, o nub âmbar e seus três botões, o touchpad e seus dois botões, a chave do rádio na frente. É o notebook de quem trabalha, e não de quem desfila. A forma se inspira no gênero dos executivos de 2008, mas o nub não é vermelho e não há pingo vermelho em logo nenhum.</p>
     <div class="stage" id="stage">
-      <svg viewBox="0 0 660 930" id="dev"></svg>
+      <svg viewBox="0 0 660 940" id="dev"></svg>
       <div class="ctl">
         <button id="bPower">ligar ⏻</button><button id="bLamp">luz do teclado</button><button id="bNight">noite</button>
       </div>
@@ -135,7 +136,7 @@
     <h2>4 · Uso e adesivos <small>de segunda mão, e depois do jogador</small></h2>
     <p class="lead">O notebook chega usado. As teclas mais apertadas brilham (W A S D, E, Enter, Espaço, Backspace, Ctrl), há riscos na tampa e no descanso de pulso, e o selo do Osprey solta um canto. Na tampa vêm <b>um ou dois adesivos já colados</b> pelo dono anterior, sorteados pela semente entre as bandas da cidade, as empresas que existem na simulação e uns símbolos. O resto da tampa é do jogador.</p>
     <div class="row">
-      <div class="card"><svg viewBox="0 0 660 460" id="lid"></svg>
+      <div class="card"><svg viewBox="0 0 660 490" id="lid"></svg>
         <div class="ctl"><button id="bSeed">outra semente</button><button id="bClear">só os de fábrica</button></div>
         <div class="cap" id="lidCap"></div></div>
       <div class="card">
@@ -194,23 +195,23 @@
 <div class="part">PARTE II · O OSPREY</div>
   <section id="osprey">
     <h2>7 · O Osprey <small>a marca do sistema</small></h2>
-    <p class="lead">O Osprey/UX é o sistema de console da cidade: o que vem nos notebooks, no cybercafé, nos escritórios. É uma empresa fixa e não sorteada, porque os tutoriais e o manual o citam pelo nome. A marca é uma águia-pescadora geométrica em mergulho, de asas fechadas para trás e bico em gancho embaixo. Ela é da mesma família de bichos do Jackdaw (a gralha) e do Reynard (a raposa).</p>
+    <p class="lead">O Osprey/UX é o sistema de console da cidade: o que vem nos notebooks, no cybercafé, nos escritórios. É uma empresa fixa e não sorteada, porque os tutoriais e o manual o citam pelo nome. O nome esconde um jogo: <b>OS</b> + <b>prey</b>, o sistema e a presa, o que cai bem num jogo em que as vítimas do hacker são as presas. A marca é a águia-pescadora vista de baixo, planando, com o "M" torto das asas, que é o que identifica a espécie no céu, as pontas das asas abertas como dedos e a cauda em leque. Ela é da mesma família de bichos do Jackdaw (a gralha) e do Reynard (a raposa).</p>
     <div class="row">
-      <div class="card"><svg viewBox="0 0 520 260" id="logoBig"></svg><div class="cap"><b>A marca e o nome.</b> O nome é sempre "Osprey" com maiúscula e, na versão, "Osprey/UX 4.2". Em minúsculas espaçadas ("o s p r e y") só no boot.</div></div>
-      <div class="card"><pre class="ascii" style="color:var(--amb)" id="asciiLogo"></pre><div class="cap"><b>No boot, em ASCII:</b> 7 linhas × 44 colunas, só com <code>` - . _ / \ | )</code>: as asas para trás, a cauda aberta em cima, o bico embaixo. O desenho em pontos vira caracteres na mesma regra do texto no mundo, e de longe é uma faixa âmbar.</div></div>
+      <div class="card"><svg viewBox="0 0 520 260" id="logoBig"></svg><div class="cap"><b>A marca e o nome.</b> Escreve-se "OSprey": o <b>OS</b> em maiúsculas e na cor da marca (âmbar na tela, laranja queimado no papel) e o <b>prey</b> em branco, ou em grafite no papel. No texto corrido e nos comandos, "Osprey" e "Osprey/UX 4.2".</div></div>
+      <div class="card"><pre class="ascii" style="color:var(--amb)" id="asciiLogo"></pre><div class="cap"><b>No boot, em ASCII:</b> 6 linhas, com <code>_ . - ' ` / \ ( ) |</code>: o M das asas com as pontas abertas (<code>/\/\/\</code>), a cabeça, o corpo e a cauda. O desenho em pontos vira caracteres pela mesma regra do texto no mundo; de longe, é uma faixa âmbar.</div></div>
     </div>
     <div class="tbl"><table>
       <tr><th>elemento</th><th>regra</th></tr>
       <tr><td>tipografia na tela</td><td>só a fonte de células do console; o Osprey não tem fonte "de marca" na tela</td></tr>
-      <tr><td>tipografia impressa</td><td>no selo, na caixa e no manual de papel, Archivo semi-expandida, peso 600</td></tr>
+      <tr><td>tipografia impressa</td><td>no selo, na caixa e no manual de papel: Archivo semi-expandida, OS em peso 700 e prey em 500</td></tr>
       <tr><td>voz</td><td>seca e técnica, de Unix de 2008: "[ OK ]", "command not found"; nunca simpática, nunca com emoji</td></tr>
-      <tr><td>selo</td><td>papel creme, águia e nome em grafite, no descanso de pulso; em cada computador do mundo que roda o Osprey</td></tr>
+      <tr><td>selo</td><td>papel creme com a águia em grafite e o nome com o OS em laranja queimado, no descanso de pulso; vai em cada computador do mundo que roda o Osprey</td></tr>
     </table></div>
   </section>
 
   <section id="console">
     <h2>8 · O console <small>a barra, o mosaico, as tintas</small></h2>
-    <p class="lead">Modo texto, 160 × 50 células, com um gerenciador de janelas em mosaico (owm, à moda do dwm). Sem janelas soltas: tela cheia, lado a lado, em cima e embaixo. O texto mora nas células; as linhas finas, as barras e os ícones moram na camada HD.</p>
+    <p class="lead">Modo texto, 160 × 50 células, com um gerenciador de janelas em mosaico (owm, à moda do dwm). Sem janelas soltas: tela cheia, lado a lado, em cima e embaixo. O texto mora nas células; as linhas finas, as barras e os ícones moram na camada HD. <b>A tinta é só do terminal:</b> o Lodestar mostra as páginas com as cores delas, como um navegador de 2008 de verdade (fundo branco, links azuis sublinhados, cada site com a sua identidade; o detalhe fica no manual do Lodestar).</p>
     <h3>A barra do topo</h3>
     <p>Uma linha só, que mostra que tudo ali é simulado: cada número sai da máquina virtual e do mundo.</p>
     <div class="con"><div class="bar" id="barDemo"></div></div>
@@ -239,9 +240,12 @@
   </section>
 
   <section id="firmware">
-    <h2>9 · O firmware <small>80 × 25, antes do sistema</small></h2>
-    <p class="lead">Antes do Osprey vem o firmware do fabricante, em cinza claro sobre preto. É outra voz e outra empresa: o Osprey nunca aparece aqui. O F1 do boot leva ao SETUP (<code>laptop/bios.ts</code>).</p>
-    <div class="con" style="background:#020204;color:#c4c4c8"><pre id="fw"></pre></div>
+    <h2>9 · O firmware <small>o POST e o SETUP, da placa-mãe</small></h2>
+    <p class="lead">O firmware é do fabricante e não do Osprey: roda antes do sistema e é igual com qualquer SO. Por isso fica <b>como já está no jogo</b> (<code>draw.ts</code>, <code>bios.ts</code>): o POST em cinza sobre preto, inspirado nas telas de 2008 (a fita azul do fabricante no alto à esquerda, o selo de economia de energia no alto à direita), e o SETUP azul e branco. O manual só fixa a arte dos dois selos, que passam para a camada HD (hoje são ASCII) e ficam nítidos de perto, como na tela de verdade.</p>
+    <div class="row">
+      <div class="card"><svg viewBox="0 0 640 400" id="post"></svg><div class="cap"><b>O POST.</b> As linhas são as do jogo (<code>shell.ts</code>): o processador, a memória contando, os discos. O selo à direita é o do programa de economia de energia da cidade, uma homenagem às telas antigas com o nosso nome e o nosso desenho: um arco amarelo com estrela, "powersave" em cursiva, o fio verde e EFFICIENCY PARTNER. <kbd>F2</kbd> abre o SETUP e <kbd>F12</kbd>, o menu de boot.</div></div>
+      <div class="card"><svg viewBox="0 0 640 400" id="setup"></svg><div class="cap"><b>O SETUP</b>, como está: o corpo azul-marinho, as barras cinza, a ajuda em ciano e o item escolhido em azul claro. As abas são Main, Advanced, Boot, Security e Exit.</div></div>
+    </div>
   </section>
 
 <section id="jogo">
@@ -265,9 +269,10 @@
     <div class="rule do"><b>✓</b><span>O texto fica nas células; as linhas, os ícones e as barras ficam na camada HD.</span></div>
     <div class="rule do"><b>✓</b><span>Os adesivos de fábrica vêm da semente e saem das coisas da cidade (bandas, empresas).</span></div>
     <div class="rule"><b>✗</b><span>Nub vermelho, pingo vermelho em logo, ou o nome e o desenho de qualquer marca real.</span></div>
+    <div class="rule do"><b>✓</b><span>A tinta âmbar ou verde é só do terminal; o Lodestar mostra as páginas com as cores delas.</span></div>
     <div class="rule"><b>✗</b><span>Linhas de varredura ou curvatura de CRT: é um LCD.</span></div>
     <div class="rule"><b>✗</b><span>Halo ou reflexo desenhado por baixo da tela.</span></div>
-    <div class="rule"><b>✗</b><span>O Osprey no firmware, ou o firmware falando como o Osprey.</span></div>
+    <div class="rule"><b>✗</b><span>O Osprey no firmware, ou mudar o firmware (POST e SETUP) para combinar com o Osprey: ele é da placa-mãe.</span></div>
     <div class="rule"><b>✗</b><span>Imagem importada maior que 64 × 64 ou com mais de 16 cores; o jogo nunca guarda o arquivo original.</span></div>
   </section>
 
@@ -308,8 +313,8 @@ const SFX = {
 };
 
 // ---- the notebook seen from above, the lid folded back flat: 1 mm = 2 units ----
-const MM = 2, W = 310 * MM, LID_H = 210 * MM, OX = 20, OY = 14, HY = OY + LID_H; // hinge line
-const SCR = { x: OX + 12 * MM, y: OY + 16 * MM, w: 286 * MM, h: 179 * MM }; // 572 x 358: 160 x 50 cells of 3.575 x 7.16
+const MM = 2, W = 310 * MM, LID_H = 225 * MM, OX = 20, OY = 14, HY = OY + LID_H; // hinge line
+const SCR = { x: OX + 12 * MM, y: OY + 20 * MM, w: 286 * MM, h: 179 * MM }; // 572 x 358: 160 x 50 cells of 3.575 x 7.16
 const CW = SCR.w / 160, CH = SCR.h / 50;
 const KB = { x: OX + 15 * MM, y: HY + 20 * MM, w: 280 * MM };
 const U = KB.w / 15.5, KH = U * 0.92; // a key unit and a row's height
@@ -406,7 +411,7 @@ function drawDeck(svg, o) {
   // the Osprey seal on the palm rest, the serial label under
   const seal = el('g', { transform: `translate(${OX + W - 90},${tpy + tpH - 14}) scale(.32)` }, svg);
   el('rect', { x: -6, y: -6, width: 150, height: 66, rx: 6, fill: '#e9e6dc', opacity: o.worn ? .8 : .95 }, seal);
-  ospreyMark(seal, 8, 2, 50, '#1a1b1e'); txt(seal, 66, 32, 'Osprey', { fill: '#1a1b1e', 'font-size': 22, 'font-weight': 600 }); txt(seal, 66, 50, 'UX 4', { fill: '#55585e', 'font-size': 13 });
+  ospreyMark(seal, 4, 2, 56, '#1a1b1e'); wordmark(seal, 64, 34, 24, '#c97a10', '#1a1b1e'); txt(seal, 66, 50, 'UX 4', { fill: '#55585e', 'font-size': 13 });
   if (o.worn) { // a corner coming away
     el('path', { d: `M${OX + W - 92 + 48},${tpy + tpH - 16} l7,0 l-7,7 z`, fill: '#cfcbbf' }, svg);
     for (const [x, y2, l] of [[OX + 30, HY + 400, 40], [OX + 44, HY + 410, 22], [OX + W - 40, HY + 70, 18]]) el('line', { x1: x, y1: y2, x2: x + l, y2: y2 - l * 0.18, stroke: '#3a3c40', 'stroke-width': .7 }, svg);
@@ -424,15 +429,21 @@ function drawDeck(svg, o) {
   }
 }
 
+// the name: OS in the mark's colour, prey in the other ("OS" + "prey": the system that hunts)
+function wordmark(parent, x, y, size, osFill, preyFill) {
+  const t = el('text', { x, y, 'font-family': 'Archivo, sans-serif', 'font-size': size, 'font-weight': 700, 'font-stretch': '112%' }, parent);
+  el('tspan', { fill: osFill }, t).textContent = 'OS'; el('tspan', { fill: preyFill, 'font-weight': 500 }, t).textContent = 'prey';
+  return t;
+}
 // the Osprey's mark: a fish hawk diving, wings folded back, the hooked beak at the bottom
 function ospreyMark(parent, x, y, s, fill) {
   const g = el('g', { transform: `translate(${x},${y}) scale(${s / 100})` }, parent);
-  el('path', { d: 'M46 18 L42 4 L50 11 L58 4 L54 18 Z', fill }, g);                   // the forked tail, up
-  el('path', { d: 'M50 14 L58 20 L56 64 L50 80 L44 64 L42 20 Z', fill }, g);            // body, tapering down
-  el('path', { d: 'M46 24 L2 4 L12 14 L45 44 Z', fill }, g);                             // left wing, swept back
-  el('path', { d: 'M54 24 L98 4 L88 14 L55 44 Z', fill }, g);                            // right wing
-  el('path', { d: 'M50 78 L56 87 L50 96 L44 87 Z', fill }, g);                           // the head
-  el('path', { d: 'M50 95 L57 99 L55 92 Z', fill }, g);                                  // the hook of the beak
+  // seen from below, gliding: the osprey's crooked M of the wings, the fingered primaries, head, fanned tail
+  el('path', { d: 'M50 40 C46 38 42 33 36 30 C28 27 16 32 4 46 L10 45 L6 50 L13 48 L10 53 L17 50 L16 55 L23 51 C30 47 38 46 45 52 Z', fill }, g);
+  el('path', { d: 'M50 40 C54 38 58 33 64 30 C72 27 84 32 96 46 L90 45 L94 50 L87 48 L90 53 L83 50 L84 55 L77 51 C70 47 62 46 55 52 Z', fill }, g);
+  el('ellipse', { cx: 50, cy: 50, rx: 6, ry: 14, fill }, g);
+  el('circle', { cx: 50, cy: 36, r: 5, fill }, g);
+  el('path', { d: 'M45 60 L55 60 L58 74 L50 72 L42 74 Z', fill }, g);
   return g;
 }
 
@@ -467,6 +478,7 @@ function paintScreen() {
   const g = document.getElementById('scr'); if (!g) return; g.innerHTML = '';
   if (!ST.on) return;
   const fs = CH * 0.86;
+  if (ST.booting && ST.post) { drawPost(g, SCR.x, SCR.y, SCR.w, SCR.h, ST.lines); return; }
   if (ST.booting) { ST.lines.slice(-49).forEach((l, i) => txt(g, SCR.x + CW, SCR.y + CH * (i + 1), l, { fill: '#ffb030', 'font-size': fs, 'xml:space': 'preserve' })); return; }
   consoleView(g, fs);
 }
@@ -480,7 +492,9 @@ function typeKey(lab, raw) {
 
 // ---- booting: the text is set down line by line, at the pace of the real thing ----
 const BOOT = [
-  ['HALDEN Phoenix-style BIOS v1.27  (C) 2007', 120], ['CPU: Core 2 Duo T7300 @ 2.00GHz   Memory Test: 1048576K OK', 380], ['Primary Master: DTK-80G54 ATA  Ultra DMA 5', 160], ['Press F1 for SETUP, F12 for Boot Menu', 600], ['', 60],
+  ['', 400], ['     HALDEN BIOS (C) 2007 HALDEN Systems, Inc.', 100], ['     HALDEN N400 BIOS Revision 1.27', 300], ['', 0], ['', 0], ['  Main Processor  : Core 2 Duo T7300 @ 2.00GHz', 300],
+  ['  Memory Test     :  262144K', 250], ['MEM: 524288K', 250], ['MEM: 786432K', 250], ['MEM:1048576K OK', 300], ['', 0], ['  Detecting Primary Master   ... DTK-80G54 ATA 80G', 900], ['  Detecting Primary Slave    ... None', 500], ['  Detecting Secondary Master ... DVD+-RW 8X', 600],
+  ['', 0], ['', 0], ['', 0], ['', 0], ['', 0], ['', 0], ['', 0], ['', 0], ['', 0], ['  Press F2 to enter SETUP, F12 for the boot menu', 1500], ['POST:END', 300],
   ['ASCII:OSPREY', 900],
   ['Osprey/UX 4.2 loader -- booting from (hd0,1)', 200], ['Linux-style kernel 2.6.24-19 ............................ [ OK ]', 160], ['Detecting memory: 1024 MB, 98 MB reserved for video', 120],
   ['Mounting /dev/hda1 on / (ext3) ............................ [ OK ]', 220], ['Checking file systems: 61% used, clean ................... [ OK ]', 260], ['Loading modules: snd-hda ac97 usb-storage wlan ......... [ OK ]', 300],
@@ -488,23 +502,24 @@ const BOOT = [
   ['Starting the tiling window manager (owm) ................. [ OK ]', 300], ['', 200],
 ];
 const ASCII_OSPREY = [
-  ' `-.__                                __.-`',
-  '      `--.__                    __.--`',
-  '            `-.__   /\\   __.-`',
-  '                 `-/  \\-`',
-  '                   \\  /         o s p r e y',
-  '                    \\/          ux 4.2',
-  '                    |)',
+  '      __.._         _..__',
+  ' _.-\'     `-.  _  .-\'     `-._',
+  '/_/\\/\\/\\_    `(_)\'    _/\\/\\/\\_\\',
+  '         `-.__/ \\__.-\'        OSprey',
+  '             |   |            UX 4.2',
+  '             /_._\\',
 ];
 function togglePower() {
   if (ST.booting) return;
   if (ST.on) { SFX.off(); ST.on = false; syncBtns(); return redraw(); }
-  SFX.power(); ST.on = true; ST.booting = true; ST.lines = []; ST.term = ['Osprey/UX 4.2 (halden) -- type help', '']; ST.input = ''; syncBtns(); redraw();
+  SFX.power(); ST.on = true; ST.booting = true; ST.post = true; ST.lines = []; ST.term = ['Osprey/UX 4.2 (halden) -- type help', '']; ST.input = ''; syncBtns(); redraw();
   let i = 0;
   const next = () => {
     if (i >= BOOT.length) { ST.booting = false; return redraw(); }
     const [l, ms] = BOOT[i++];
-    if (l === 'ASCII:OSPREY') ST.lines.push('', ...ASCII_OSPREY, ''); else ST.lines.push(l);
+    if (l === 'POST:END') { ST.post = false; ST.lines = []; }
+    else if (l.startsWith('MEM:')) ST.lines[ST.lines.length - 1] = '  Memory Test     : ' + l.slice(4);
+    else if (l === 'ASCII:OSPREY') ST.lines.push('', ...ASCII_OSPREY, ''); else ST.lines.push(l);
     if (ms > 150) noise(0.012, 6000, 6, 0.12); // the disk's seek, under the text
     paintScreen(); setTimeout(next, ms);
   };
@@ -543,14 +558,70 @@ function consoleView(g, fs) {
   // the terminal, left
   const rows = [...ST.term, 'user@halden:~$ ' + ST.input + '█'].slice(-45);
   rows.forEach((l, i) => txt(g, SCR.x + CW, SCR.y + CH * (i + 2.6), l, { fill: l.startsWith('user@') ? hi : ink, 'font-size': fs, 'xml:space': 'preserve' }));
-  // the browser, right: Lodestar on the search page
-  const bx = mid + CW, by = SCR.y + CH * 2.6;
-  el('rect', { x: mid + 2, y: SCR.y + CH * 1.5, width: 79 * CW, height: CH * 1.2, fill: '#1c1206' }, g);
-  txt(g, bx, by - CH * 0.2, '◄ ► ⟳ │ lookwise.com/                                  Lodestar', { fill: dim, 'font-size': fs, 'xml:space': 'preserve' });
-  txt(g, bx + 24 * CW, by + CH * 9, 'L o o k w i s e', { fill: hi, 'font-size': fs * 2, 'xml:space': 'preserve' });
-  el('rect', { x: bx + 18 * CW, y: by + CH * 11, width: 42 * CW, height: CH * 1.4, fill: 'none', stroke: dim, 'stroke-width': .6 }, g);
-  txt(g, bx + 30 * CW, by + CH * 14, '[ Search ]   [ Lucky ]', { fill: ink, 'font-size': fs, 'xml:space': 'preserve' });
-  txt(g, bx + 20 * CW, by + CH * 40, 'Directory · News · Maps · Classifieds', { fill: dim, 'font-size': fs, 'xml:space': 'preserve' });
+  // the browser, right: Lodestar keeps the pages' own colours (a 2008 web page), never the terminal's ink
+  lodestarPane(g, mid + 1.5, SCR.y + CH * 1.4, SCR.x + SCR.w - mid - 2, SCR.h - CH * 1.4 - 1, fs);
+}
+function lodestarPane(g, x, y, w, h, fs) {
+  const cw = fs / 0.86 * 0.5;
+  el('rect', { x, y, width: w, height: h, fill: '#ffffff' }, g);
+  // the browser's chrome: grey toolbar, the address field, a tab
+  el('rect', { x, y, width: w, height: fs * 3.4, fill: '#dcdad5' }, g);
+  el('line', { x1: x, x2: x + w, y1: y + fs * 3.4, y2: y + fs * 3.4, stroke: '#9c9a94', 'stroke-width': .6 }, g);
+  txt(g, x + 4, y + fs * 1.3, '◄  ►  ⟳', { fill: '#333', 'font-size': fs, 'xml:space': 'preserve' });
+  el('rect', { x: x + 40, y: y + fs * 0.35, width: w - 48, height: fs * 1.25, fill: '#fff', stroke: '#7f9db9', 'stroke-width': .5 }, g);
+  txt(g, x + 43, y + fs * 1.3, 'http://www.lookwise.com/', { fill: '#000', 'font-size': fs }, g);
+  el('rect', { x: x + 4, y: y + fs * 2.05, width: 70, height: fs * 1.35, fill: '#fff', stroke: '#9c9a94', 'stroke-width': .5 }, g);
+  txt(g, x + 8, y + fs * 3.05, 'Lookwise Search', { fill: '#000', 'font-size': fs * 0.9 }, g);
+  // the page: a top bar of links, the coloured logo, the box, the buttons, links in blue
+  const py = y + fs * 3.4, cx = x + w / 2;
+  txt(g, x + 6, py + fs * 1.6, 'Web  Images  News  Maps  Local  more »', { fill: '#0000cc', 'font-size': fs, 'text-decoration': 'underline', 'xml:space': 'preserve' });
+  txt(g, x + w - 6, py + fs * 1.6, 'Sign in', { fill: '#0000cc', 'font-size': fs, 'text-anchor': 'end', 'text-decoration': 'underline' });
+  const logo = 'Lookwise', cols = ['#1d4fa0', '#d8452b', '#f2b51c', '#1d4fa0', '#2e9a48', '#d8452b', '#1d4fa0', '#f2b51c'];
+  const lt = el('text', { x: cx, y: py + h * 0.33, 'text-anchor': 'middle', 'font-size': fs * 2.9, 'font-family': 'Georgia, serif', 'font-weight': 700 }, g);
+  [...logo].forEach((ch, i) => { el('tspan', { fill: cols[i] }, lt).textContent = ch; });
+  el('rect', { x: cx - w * 0.3, y: py + h * 0.38, width: w * 0.6, height: fs * 1.7, fill: '#fff', stroke: '#7f9db9', 'stroke-width': .7 }, g);
+  for (const [lab, dx] of [['Lookwise Search', -w * 0.13], ["I'm Feeling Lucky", w * 0.13]]) {
+    el('rect', { x: cx + dx - w * 0.11, y: py + h * 0.38 + fs * 2.6, width: w * 0.22, height: fs * 1.6, rx: 2, fill: '#efefef', stroke: '#9c9a94', 'stroke-width': .5 }, g);
+    txt(g, cx + dx, py + h * 0.38 + fs * 3.75, lab, { fill: '#000', 'font-size': fs * 0.9, 'text-anchor': 'middle' });
+  }
+  txt(g, cx, py + h * 0.38 + fs * 7, 'Advertising  ·  Business Solutions  ·  About Lookwise', { fill: '#0000cc', 'font-size': fs * 0.9, 'text-anchor': 'middle', 'text-decoration': 'underline' });
+  txt(g, cx, y + h - fs * 1.2, '©2008 Lookwise', { fill: '#777', 'font-size': fs * 0.85, 'text-anchor': 'middle' });
+}
+
+// ---- the firmware: the POST (gray on black, the two badges in HD) and SETUP (navy), 80 x 25 cells ----
+function drawPost(g, x, y, w, h, lines) {
+  const cw = w / 80, ch = h / 25, fs = ch * 0.8;
+  el('rect', { x, y, width: w, height: h, fill: '#020204' }, g);
+  lines.slice(0, 25).forEach((l, i) => txt(g, x + cw * 0.5, y + ch * (i + 0.85), l, { fill: '#c4c4c8', 'font-size': fs, 'font-weight': 600, 'xml:space': 'preserve' }));
+  // the maker's blue ribbon, top left (a medal: the disc and two tails)
+  const r = el('g', { transform: `translate(${x + cw * 0.6},${y + ch * 0.9}) scale(${ch / 16})` }, g);
+  el('path', { d: 'M5 13 L1 30 L7 26 L10 32 L12 16 Z M19 13 L23 30 L17 26 L14 32 L12 16 Z', fill: '#2a4fe0' }, r);
+  el('circle', { cx: 12, cy: 10, r: 9, fill: '#3c6eff' }, r);
+  el('circle', { cx: 12, cy: 10, r: 5, fill: 'none', stroke: '#a9c0ff', 'stroke-width': 1.4 }, r);
+  // the power-saving programme's badge, top right: a yellow sweep, a star at its end, the script name, a green rule
+  const b = el('g', { transform: `translate(${x + w - cw * 30},${y + ch * 0.6}) scale(${cw * 29 / 270})` }, g);
+  el('path', { d: 'M18 92 C10 40 70 6 140 8 C190 9 226 22 240 40', fill: 'none', stroke: '#ffe628', 'stroke-width': 5, 'stroke-linecap': 'round' }, b);
+  const star = []; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? 11 : 26; star.push((238 + Math.cos(a) * rr).toFixed(1) + ',' + (68 + Math.sin(a) * rr).toFixed(1)); }
+  el('polygon', { points: star.join(' '), fill: 'none', stroke: '#ffe628', 'stroke-width': 4.5, 'stroke-linejoin': 'round' }, b);
+  txt(b, 26, 86, 'powersave', { fill: '#ffe628', 'font-size': 38, textLength: 180, lengthAdjust: 'spacingAndGlyphs', 'font-style': 'italic', 'font-family': '"Segoe Script", "Brush Script MT", cursive' });
+  el('rect', { x: 14, y: 106, width: 252, height: 3, fill: '#46dc5a' }, b);
+  txt(b, 140, 130, 'EFFICIENCY  PARTNER', { fill: '#46dc5a', 'font-size': 19, 'text-anchor': 'middle', 'font-family': 'Archivo, sans-serif', 'font-weight': 600, 'letter-spacing': 2 }, b);
+}
+function drawSetup(svg) {
+  const cw = 8, ch = 16, fs = 12.5, NAVY = '#000078', GRAY = '#b0b0b8', BODY = '#b8bcc8';
+  const T = (c, r, s, fill, at) => txt(svg, c * cw, r * ch + 12.5, s, Object.assign({ fill, 'font-size': fs, 'font-weight': 600, 'xml:space': 'preserve' }, at || {}));
+  el('rect', { width: 640, height: 400, fill: NAVY }, svg);
+  el('rect', { width: 640, height: ch, fill: GRAY }, svg); T(26, 0, 'HALDEN BIOS Setup Utility', '#000');
+  el('rect', { y: ch, width: 640, height: ch, fill: GRAY }, svg);
+  const tabs = ['Main', 'Advanced', 'Boot', 'Security', 'Exit']; let c = 2;
+  tabs.forEach((t, i) => { if (i === 0) el('rect', { x: (c - 1) * cw, y: ch, width: (t.length + 2) * cw, height: ch, fill: '#e0e0e8' }, svg); T(c, 1, t, i === 0 ? NAVY : '#000'); c += t.length + 4; });
+  el('line', { x1: 56 * cw, x2: 56 * cw, y1: ch * 2.3, y2: ch * 22.7, stroke: BODY, 'stroke-width': 1 }, svg);
+  const rows = [['System Time', '[22:41:07]'], ['System Date', '[Thu 02/21/2008]'], ['', ''], ['BIOS Version', '1.27'], ['Processor', 'Core 2 Duo T7300'], ['CPU Speed', '2.00 GHz'], ['Installed Memory', '1024 MB'], ['Hard Drive', 'DTK-80G54 ATA'], ['', ''], ['Wireless Radio', '[Enabled]'], ['Keyboard Lamp', '[Enabled]'], ['Quick Boot', '[Disabled]']];
+  rows.forEach(([a, v], i) => { if (!a) return; const r = 3 + i; if (i === 0) el('rect', { x: 2 * cw, y: r * ch, width: 52 * cw, height: ch, fill: '#006eaa' }, svg); T(3, r, a, i === 0 ? '#fff' : BODY); T(27, r, v, i === 0 ? '#fff' : v.startsWith('[') ? '#fafaff' : '#787ca0'); });
+  ['Item Specific Help', '', 'Set the system', 'time: hour,', 'minute, second.', '', '<Tab> moves', 'between fields.'].forEach((l, i) => T(58, 3 + i, l, i === 0 ? '#ffe650' : '#6ec8e6'));
+  el('rect', { y: ch * 23, width: 640, height: ch * 2, fill: GRAY }, svg);
+  T(1, 23, '^v  Select Item   +/- Change Values      F9  Setup Defaults', '#000');
+  T(1, 24, '<>  Select Menu   Enter Select Sub-Menu  F10 Save and Exit', '#000');
 }
 
 // ---- the views: front, both sides, back, bottom (1 mm = 2 units again) ----
@@ -622,7 +693,7 @@ function sticker(g, kind, r, x, y, rot) {
 let lidSeed = 20080221, factoryOnly = false;
 function drawLid(svg, seed, only) {
   svg.innerHTML = '';
-  const r = rng(seed), X = 20, Y = 20, LW = 310 * MM, LH = 210 * MM;
+  const r = rng(seed), X = 20, Y = 20, LW = 310 * MM, LH = 225 * MM;
   el('rect', { x: X, y: Y, width: LW, height: LH, rx: 10, fill: '#1c1d20', stroke: '#2e3034' }, svg);
   el('rect', { x: X + 6, y: Y + 6, width: LW - 12, height: LH - 12, rx: 7, fill: 'none', stroke: '#222327' }, svg);
   for (let i = 0; i < 14; i++) { const x = X + 20 + r() * (LW - 60), y = Y + 20 + r() * (LH - 40), l = 6 + r() * 40, a = r() * Math.PI; el('line', { x1: x, y1: y, x2: x + Math.cos(a) * l, y2: y + Math.sin(a) * l, stroke: '#34363b', 'stroke-width': .6 + r() * .6 }, svg); }
@@ -724,11 +795,11 @@ document.getElementById('ang').oninput = e => drawAngle(+e.target.value);
 (function () {
   const s = document.getElementById('logoBig');
   el('rect', { width: 520, height: 260, fill: '#0e0f11' }, s);
-  ospreyMark(s, 40, 40, 180, '#ffb030');
-  txt(s, 240, 140, 'Osprey', { fill: '#e8e6df', 'font-size': 64, 'font-family': 'Archivo, sans-serif', 'font-weight': 600, 'font-stretch': '112%' });
-  txt(s, 244, 172, 'UX 4.2', { fill: '#8d8b84', 'font-size': 18 });
-  ospreyMark(s, 420, 196, 40, '#e8e6df'); ospreyMark(s, 470, 206, 24, '#8d8b84');
-  document.getElementById('asciiLogo').textContent = ASCII_OSPREY.join('\n');
+  ospreyMark(s, 20, 30, 200, '#ffb030');
+  wordmark(s, 236, 142, 70, '#ffb030', '#e8e6df');
+  txt(s, 242, 176, 'UX 4.2', { fill: '#8d8b84', 'font-size': 18 });
+  ospreyMark(s, 410, 190, 50, '#e8e6df'); ospreyMark(s, 466, 202, 28, '#8d8b84');
+  document.getElementById('asciiLogo').innerHTML = ASCII_OSPREY.join('\n').replace('OSprey', '<span style="color:#ffb030">OS</span><span style="color:#e8e6df">prey</span>').replace('UX 4.2', '<span style="color:#8d8b84">UX 4.2</span>');
   // the bar
   const bar = document.getElementById('barDemo');
   bar.innerHTML = '<span class="sel">1</span><span><b>2</b></span><span style="opacity:.5">3</span><span><b>term: ~/notes</b></span><span>wlan0 PetrovsCoffee ▁▃▅_</span><span>cpu 12%</span><span>mem 212/1024M</span><span>bat 64% 1:52</span><span><b>22:41</b></span>';
@@ -740,9 +811,16 @@ document.getElementById('ang').oninput = e => drawAngle(+e.target.value);
     const sv = el('svg', { viewBox: '0 0 160 106' }, d);
     el('rect', { width: 160, height: 106, fill: '#0a0602' }, sv); el('rect', { width: 160, height: 6, fill: '#140c04' }, sv);
     panes.forEach(([x, y, w, h, lab], i) => {
-      el('rect', { x: x * 160 + 1, y: 7 + y * 99, width: w * 160 - 2, height: h * 99 - 2, fill: 'none', stroke: i === 0 ? '#ffd68c' : '#3a2410', 'stroke-width': .7 }, sv);
-      txt(sv, x * 160 + 5, 7 + y * 99 + 10, lab, { fill: i === 0 ? '#ffd68c' : '#aa6e22', 'font-size': 7 });
-      for (let k = 0; k < Math.floor(h * 99 / 9) - 1; k++) el('rect', { x: x * 160 + 5, y: 7 + y * 99 + 15 + k * 8, width: (w * 160 - 14) * (0.3 + ((k * 37 + i * 11) % 10) / 16), height: 2, fill: '#aa6e22', opacity: .5 }, sv);
+      const web = lab === 'Lodestar', px = x * 160 + 1, py = 7 + y * 99, pw = w * 160 - 2, ph = h * 99 - 2;
+      if (web) {
+        el('rect', { x: px, y: py, width: pw, height: ph, fill: '#fff' }, sv); el('rect', { x: px, y: py, width: pw, height: 8, fill: '#dcdad5' }, sv);
+        txt(sv, px + 4, py + 6.5, lab, { fill: '#333', 'font-size': 6 });
+        for (let k = 0; k < Math.floor(ph / 9) - 1; k++) el('rect', { x: px + 4, y: py + 13 + k * 8, width: (pw - 12) * (0.3 + ((k * 37 + i * 11) % 10) / 16), height: 2, fill: k === 0 ? '#1d4fa0' : k % 3 === 1 ? '#0000cc' : '#888', opacity: .7 }, sv);
+      } else {
+        txt(sv, px + 4, py + 10, lab, { fill: i === 0 ? '#ffd68c' : '#aa6e22', 'font-size': 7 });
+        for (let k = 0; k < Math.floor(ph / 9) - 1; k++) el('rect', { x: px + 4, y: py + 15 + k * 8, width: (pw - 12) * (0.3 + ((k * 37 + i * 11) % 10) / 16), height: 2, fill: '#aa6e22', opacity: .5 }, sv);
+      }
+      el('rect', { x: px, y: py, width: pw, height: ph, fill: 'none', stroke: i === 0 ? '#ffd68c' : '#3a2410', 'stroke-width': .7 }, sv);
     });
     const c = document.createElement('div'); c.className = 'cap'; c.innerHTML = `<b>${name}</b> · ${cap}`; d.appendChild(c); tiles.appendChild(d);
   }
@@ -753,25 +831,15 @@ document.getElementById('ang').oninput = e => drawAngle(+e.target.value);
   const NL = String.fromCharCode(10);
   const paint = (hi, dim) => samp.split(NL).map(l => `<span style="color:${l.startsWith('user@') ? hi : l.includes('not found') ? dim : 'inherit'}">${l}</span>`).join(NL);
   document.getElementById('sampAmb').innerHTML = paint('#ffd68c', '#aa6e22'); document.getElementById('sampGrn').innerHTML = paint('#beffc8', '#2ca046');
-  // the firmware
-  const L = [];
-  L.push(' HALDEN Setup Utility                                                    v1.27  ');
-  L.push('  Main    Advanced    Boot    Security    Exit                                   ');
-  L.push('┌──────────────────────────────────────────────────────┬───────────────────────┐');
-  const rows = [['System Time', '[22:41:07]'], ['System Date', '[Thu 02/21/2008]'], ['', ''], ['BIOS Version', '1.27'], ['Processor', 'Core 2 Duo T7300'], ['CPU Speed', '2.00 GHz'], ['Installed Memory', '1024 MB'], ['Hard Drive', 'DTK-80G54 ATA'], ['', ''], ['Wireless Radio', '[Enabled]'], ['Keyboard Lamp', '[Enabled]']];
-  const help = ['Item Specific Help', '', 'Set the system time.', '<Tab> moves between', 'the fields.'];
-  for (let i = 0; i < 18; i++) { const [a, b] = rows[i] || ['', '']; const l = ('  ' + a.padEnd(22) + b).padEnd(54); L.push('│' + l + '│ ' + (help[i] || '').padEnd(22) + '│'); }
-  L.push('├──────────────────────────────────────────────────────┴───────────────────────┤');
-  L.push('│ F1 Help   ↑↓ Select Item   +/- Change Value   F9 Defaults   F10 Save and Exit│');
-  L.push('└──────────────────────────────────────────────────────────────────────────────┘');
-  document.getElementById('fw').textContent = L.join('\n');
+  drawPost(document.getElementById('post'), 0, 0, 640, 400, ['', '     HALDEN BIOS (C) 2007 HALDEN Systems, Inc.', '     HALDEN N400 BIOS Revision 1.27', '', '', '  Main Processor  : Core 2 Duo T7300 @ 2.00GHz', '  Memory Test     : 1048576K OK', '', '  Detecting Primary Master   ... DTK-80G54 ATA 80G', '  Detecting Primary Slave    ... None', '  Detecting Secondary Master ... DVD+-RW 8X', '', '', '', '', '', '', '', '', '', '', '', '', '  Press F2 to enter SETUP, F12 for the boot menu']);
+  drawSetup(document.getElementById('setup'));
 })();
 
 // ---- the cover: the lid with its stickers and the open notebook, small ----
 (function () {
   const s = document.getElementById('cover');
-  const lid = el('svg', { x: 0, y: 0, width: 400, height: 280, viewBox: '0 0 660 460' }, s); drawLid(lid, 20080221, true);
-  const d = el('svg', { x: 330, y: 70, width: 300, height: 340, viewBox: '0 0 660 930' }, s);
+  const lid = el('svg', { x: 6, y: 40, width: 310, height: 230, viewBox: '0 0 660 490' }, s); drawLid(lid, 20080221, true);
+  const d = el('svg', { x: 330, y: 6, width: 310, height: 441, viewBox: '0 0 660 940' }, s);
   drawDeck(d, { on: false, worn: true });
   const g = d.querySelector('#scr'); if (g) { g.removeAttribute('id'); txt(g, SCR.x + 30, SCR.y + 60, '', {}); }
   const gl = d.querySelector('#glass'); if (gl) { gl.removeAttribute('id'); gl.setAttribute('fill', '#0a0602'); ASCII_OSPREY.forEach((l, i) => txt(d, SCR.x + 40, SCR.y + 70 + i * 30, l, { fill: '#ffb030', 'font-size': 22, 'xml:space': 'preserve' })); }
