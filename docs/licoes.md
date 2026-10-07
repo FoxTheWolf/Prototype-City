@@ -36,6 +36,14 @@
 - **A fonte 5×7 do PNG de teste (`tests/png.ts`) não tem `_`, `\` nem `>`**: no PNG as artes dos banners e o "More news >>" perdem pedaços, mas no jogo (o átlas) aparecem. Não "consertar" pelo PNG; o envelope do webmail virou ícone em pixels (`banner.logo: 'mail'`) porque fica melhor, não por isso.
 - O teste de páginas com feed precisa rodar a cidade antes (`stepWorld` 20 mil vezes ≈ 1 min no Node) para haver posts e notícias.
 
+### Lições da 3b do celular (apps em pixels) — 2026-10-07
+- **A fonte de pontos (`plainGlyph`) não tinha vários sinais** (`< > ^ = [ ] |`…): `ptext` só deixava um espaço, e as dicas ("< > change") saíam sem as setas. Conferir com um script que lista o que `plainGlyph` não acha antes de usar um sinal novo.
+- **O negrito ocupa 7 px por letra** (5 + 1 + 1): quebrar manchetes e títulos em negrito em ~30 caracteres para 216 px, não 36.
+- **Layout de botões por coluna, não por x acumulado:** somar larguras arredondadas fez a 4ª tecla da calculadora cair na linha de baixo.
+- **Ver as páginas sem o jogo:** `tests/phone-pages.ts` pinta cada página num PNG; juntar várias numa folha com PIL (`python -c "from PIL import Image..."`) e ler uma imagem só economiza contexto.
+- **Escrever patches grandes por arquivo (Write + `python script.py`)**, não por heredoc no Bash: um heredoc longo com aspas triplas quebrou o Git Bash ("unexpected EOF").
+- **O classificador de segurança parou a resposta duas vezes** sem conteúdo de hacking (ao escrever o Banco/Snake e ao abrir `wire.ts`): um app por vez, em blocos menores; numa conversa longa, preferir chat novo.
+
 ### Lições da 15.19b v2 (corpo na GPU, tela de toque) — 2026-10-07
 - **A faixa reta ao lado da tela (achada pelo usuário):** as células da interface sob o vidro saem arredondadas para fora do retângulo da tela; esconder só os pixels dentro do retângulo deixava a parte de fora dessas células à mostra, reta, ao lado do vidro inclinado. Esconder pela célula (`underGlass` no compositor), não pelo pixel.
 - **0.15.23–24, páginas em pixels e controles:** uma página nova = `paintX` em `pixpages.ts` + dados em `draw.ts` + `HITS` (o `pre` escolhe na hora do aperto, a tecla age no soltar; `touchDown`/`touchUp` em `main.ts`). O brilho e a luz do vidro leem a imagem em pixels onde ela é opaca (`phBloom`, o preenchimento das células sob o vidro). Um efeito de luz que clareia "o plástico" pega também o vidro e a moldura se não filtrar pelo material (`A.w`, o brilho): foi o "plástico no topo da tela". Botão que faz duas coisas (o direito voltava no app e descia o aparelho) confunde: separar físico (mouse) de software (tela).
