@@ -221,9 +221,9 @@
   <section id="jogo">
     <h2>9 · No jogo <small>cubinhos, a tela, de longe</small></h2>
     <h3>O corpo em cubinhos</h3>
-    <p>Grade de <b>2 mm</b>: cada placa é uma laje de cubos (a de cima com 3–4 de espessura, a de baixo com 4), e as duas deslizam uma sobre a outra no estágio 2. As teclas, a cruz, o OK, as teclas do topo e o volume são cubos à parte, que afundam quando apertados. O aro cromado é uma fileira de cubos na borda. O nome do fabricante (acima da tela, à esquerda do alto-falante de ouvido) é pintado pelo código sobre a face, e vem do manual dos fabricantes.</p>
+    <p><b>Grade de 1 mm na face, caixas no resto.</b> Na comparação abaixo, a grade de 2 mm (a do Jackdaw) não serve para o celular: a cruz vira uma mancha, os desenhos de atender e desligar somem e o aro cromado fica serrilhado. A de 1 mm lê bem: o anel e o OK da cruz, os telefones verde e vermelho, os números. Então a face de cada placa (teclas, cruz, aro, os detalhes) é feita de cubos de 1 mm, e o miolo das duas placas são caixas inteiras, sem cubos por dentro. As duas placas deslizam uma sobre a outra no estágio 2, e as teclas são cubos à parte, que afundam quando apertados. O nome do fabricante (acima da tela, à esquerda do alto-falante de ouvido) é pintado pelo código sobre a face e vem do manual dos fabricantes. Com uns 4–5 mil cubos de face, o modelo precisa da grade de ocupação por modelo na GPU (a regra dos objetos de cubinhos).</p>
     <div class="row">
-      <div class="card"><canvas id="vox" width="700" height="760"></canvas><div class="cap"><b>Aberto, na grade de 2 mm.</b> A tela não é de cubos: no lugar dela vai a textura.</div></div>
+      <div class="card"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><canvas id="voxRef" width="260" height="700"></canvas><canvas id="vox2" width="260" height="700"></canvas><canvas id="vox1" width="260" height="700"></canvas></div><div class="cap"><b>O desenho, 2 mm e 1 mm,</b> lado a lado e no mesmo tamanho. Os cubos saem do próprio desenho (a cor no centro de cada casa). A tela não é de cubos: no lugar dela vai a textura.</div></div>
       <div class="card"><div style="background:#0c0d0f;border-radius:6px;padding:30px 10px 26px;perspective:700px;overflow:hidden"><canvas id="tiltCv" width="480" height="800" style="width:52%;margin:0 auto;transform:rotateY(-24deg) rotateX(12deg);border:8px solid #050607;border-radius:6px;box-shadow:0 30px 40px #000a"></canvas></div><div class="cap"><b>A tela inclinada com o corpo:</b> nítida, sem os glifos repetidos que a grade dava ao olhar de lado.</div></div>
     </div>
     <h3>De longe</h3>
@@ -262,8 +262,12 @@ function lowerSlab(live, low = 'url(#matte)') {
 }
 function upperSlab(live, screenId, body = GLOSS) {
   const k = n => live ? ` data-k="${n}"` : '';
-  const D = 600, R = 34; // the d-pad's center y and radius
-  const arrow = (x, y, r) => `<path d="M${x} ${y - 4} l4 6 h-8z" fill="${ICE}" transform="rotate(${r} ${x} ${y})" opacity=".85"/>`;
+  const D = 595, R = 30, r = 14, ar = (R + r) / 2; // the d-pad: center y, outer and inner radius
+  const pt = (rad, deg) => [160 + rad * Math.cos(deg * Math.PI / 180), D + rad * Math.sin(deg * Math.PI / 180)];
+  const seg = (th) => { const [a, b] = [pt(R, th - 45), pt(R, th + 45)], [c, d] = [pt(r, th + 45), pt(r, th - 45)];
+    return `M${a[0]} ${a[1]} A${R} ${R} 0 0 1 ${b[0]} ${b[1]} L${c[0]} ${c[1]} A${r} ${r} 0 0 0 ${d[0]} ${d[1]}Z`; };
+  const arrow = (th) => { const [x, y] = pt(ar, th); return `<path d="M${x} ${y - 4} l4 6 h-8z" fill="${ICE}" transform="rotate(${th + 90} ${x} ${y})" opacity=".85"/>`; };
+  const dir = (n, th) => `<g${k(n)}><path d="${seg(th)}" fill="#121317" stroke="#07080a" stroke-width=".8"/>${arrow(th)}</g>`;
   return `<rect x="58" y="230" width="204" height="412" rx="26" fill="${body}"/>
     <rect x="58" y="230" width="204" height="412" rx="26" fill="url(#gloss)"/>
     <rect x="59.5" y="231.5" width="201" height="409" rx="25" fill="none" stroke="url(#chrome)" stroke-width="3"/>
@@ -272,17 +276,14 @@ function upperSlab(live, screenId, body = GLOSS) {
     <rect x="70" y="256" width="180" height="292" rx="6" fill="#050607"/>
     <image class="${screenId}" x="76" y="262" width="168" height="280" preserveAspectRatio="none"/>
     <path d="M76 262 h168 v80 Q160 320 76 360z" fill="#fff" opacity=".05" pointer-events="none"/>
-    <g${k('lsoft')}><rect x="74" y="556" width="50" height="11" rx="5.5" fill="#16181c" stroke="#000"/><rect x="85" y="560.5" width="28" height="2" rx="1" fill="${ICE}" opacity=".8"/></g>
-    <g${k('rsoft')}><rect x="196" y="556" width="50" height="11" rx="5.5" fill="#16181c" stroke="#000"/><rect x="207" y="560.5" width="28" height="2" rx="1" fill="${ICE}" opacity=".8"/></g>
-    <g${k('send')}><path d="M74 578 h38 q6 0 6 6 v28 q0 6 -6 6 h-14 q-24 0 -24 -24z" fill="#16181c" stroke="#000"/><path d="M84 605 q2 -9 7 -11 l3 3.5 q-3.5 2.5 -2.5 6 q2.5 2.5 6 2 l3 3.5 q-5 3.5 -11.5 0z" fill="${CALL}"/></g>
-    <g${k('end')}><path d="M246 578 h-38 q-6 0 -6 6 v28 q0 6 6 6 h14 q24 0 24 -24z" fill="#16181c" stroke="#000"/><path d="M212 600 q10 -8 20 0 l-2 4.5 q-3.5 -2 -4.5 -4.5 q-3.5 -1 -7 0 q-1 2.5 -4.5 4.5z" fill="${END}"/></g>
+    <g${k('lsoft')}><rect x="72" y="558" width="48" height="11" rx="5.5" fill="#16181c" stroke="#000"/><rect x="82" y="562.5" width="28" height="2" rx="1" fill="${ICE}" opacity=".8"/></g>
+    <g${k('rsoft')}><rect x="200" y="558" width="48" height="11" rx="5.5" fill="#16181c" stroke="#000"/><rect x="210" y="562.5" width="28" height="2" rx="1" fill="${ICE}" opacity=".8"/></g>
+    <g${k('send')}><path d="M66 584 h44 q6 0 6 6 v34 q0 6 -6 6 h-22 a22 22 0 0 1 -22 -22z" fill="#16181c" stroke="#000"/><path d="M80 614 q2 -9 7 -11 l3 3.5 q-3.5 2.5 -2.5 6 q2.5 2.5 6 2 l3 3.5 q-5 3.5 -11.5 0z" fill="${CALL}"/></g>
+    <g${k('end')}><path d="M254 584 h-44 q-6 0 -6 6 v34 q0 6 6 6 h22 a22 22 0 0 0 22 -22z" fill="#16181c" stroke="#000"/><path d="M220 609 q10 -8 20 0 l-2 4.5 q-3.5 -2 -4.5 -4.5 q-3.5 -1 -7 0 q-1 2.5 -4.5 4.5z" fill="${END}"/></g>
     <circle cx="160" cy="${D}" r="${R + 3}" fill="url(#chrome)"/><circle cx="160" cy="${D}" r="${R}" fill="#121317"/>
-    <g${k('up')}><path d="M160 ${D - R} a${R} ${R} 0 0 1 24 10 l-11 11 a16 16 0 0 0 -26 0 l-11 -11 a${R} ${R} 0 0 1 24 -10z" fill="#121317"/>${arrow(160, D - 25, 0)}</g>
-    <g${k('down')}><path d="M160 ${D + R} a${R} ${R} 0 0 1 -24 -10 l11 -11 a16 16 0 0 0 26 0 l11 11 a${R} ${R} 0 0 1 -24 10z" fill="#121317"/>${arrow(160, D + 25, 180)}</g>
-    <g${k('left')}><path d="M${160 - R} ${D} a${R} ${R} 0 0 1 10 -24 l11 11 a16 16 0 0 0 0 26 l-11 11 a${R} ${R} 0 0 1 -10 -24z" fill="#121317"/>${arrow(135, D, -90)}</g>
-    <g${k('right')}><path d="M${160 + R} ${D} a${R} ${R} 0 0 1 -10 24 l-11 -11 a16 16 0 0 0 0 -26 l11 -11 a${R} ${R} 0 0 1 10 24z" fill="#121317"/>${arrow(185, D, 90)}</g>
-    <circle cx="160" cy="${D}" r="16.5" fill="none" stroke="${ICE}" stroke-width="1.2" opacity=".55" filter="url(#glow)"/>
-    <g${k('ok')}><circle cx="160" cy="${D}" r="14" fill="url(#okg)" stroke="#000"/><circle cx="155" cy="${D - 5}" r="4.5" fill="#fff" opacity=".08"/></g>
+    ${dir('up', -90)}${dir('right', 0)}${dir('down', 90)}${dir('left', 180)}
+    <circle cx="160" cy="${D}" r="${r + 2.5}" fill="none" stroke="${ICE}" stroke-width="1.2" opacity=".55" filter="url(#glow)"/>
+    <g${k('ok')}><circle cx="160" cy="${D}" r="${r}" fill="url(#okg)" stroke="#000"/><circle cx="155" cy="${D - 5}" r="4.5" fill="#fff" opacity=".08"/></g>
     <g${k('prev')}><rect x="104" y="223" width="22" height="9" rx="3" fill="url(#chrome)"/></g>
     <g${k('play')}><rect x="149" y="223" width="22" height="9" rx="3" fill="url(#chrome)"/></g>
     <g${k('next')}><rect x="194" y="223" width="22" height="9" rx="3" fill="url(#chrome)"/></g>
@@ -568,43 +569,44 @@ document.getElementById('earphones').innerHTML = `<rect width="520" height="360"
   <text x="166" y="170" font-family="IBM Plex Mono" font-size="10" fill="#ff6a13">o plugue no topo, à direita</text><text x="166" y="183" font-family="IBM Plex Mono" font-size="10" fill="#ff6a13">das teclas de música</text>`;
 fillScreens('scrE', { screen: 'standby' });
 // ================= cubes and far =================
-function vox() {
-  const cv = document.getElementById('vox'), x = cv.getContext('2d'), C = 10, mm = 2, u = 4; // drawing units a mm
-  x.fillStyle = '#131417'; x.fillRect(0, 0, cv.width, cv.height);
-  const W2 = Math.round(51 / mm), H2 = Math.round(147 / mm), ox = (cv.width - W2 * C) / 2, oy = 14;
-  const at = (i, j) => { // the drawing-unit point at cell center, in the open phone (upper slab top at y 54)
-    const px = 58 + (i + .5) * mm * u, py = 54 + (j + .5) * mm * u; return [px, py]; };
-  const inR = (px, py, x0, y0, w, h, r = 0) => { if (px < x0 || py < y0 || px > x0 + w || py > y0 + h) return false; const cx = Math.max(x0 + r, Math.min(x0 + w - r, px)), cy = Math.max(y0 + r, Math.min(y0 + h - r, py)); return Math.hypot(px - cx, py - cy) <= r; };
-  let n = 0;
-  for (let j = 0; j < H2; j++) for (let i = 0; i < W2; i++) {
-    const [px, py] = at(i, j); let col = null;
-    const uy = py + SLIDE; // the upper slab's own coordinates (it is slid up)
-    if (inR(px, uy, 58, 230, 204, 412, 26)) {
-      col = inR(px, uy, 61, 233, 198, 406, 23) ? '#0d0e11' : '#c9ced6';
-      if (inR(px, uy, 70, 256, 180, 292, 6)) col = '#050607';
-      if (inR(px, uy, 76, 262, 168, 280)) col = 'SCREEN';
-      { const r = Math.hypot(px - 160, uy - 600); if (r < 37) col = r < 14 ? '#3a3d44' : r < 34 ? '#121317' : '#c9ced6'; }
-      if (inR(px, uy, 74, 578, 44, 40, 8)) col = '#2fae5a'; if (inR(px, uy, 202, 578, 44, 40, 8)) col = '#d23a2e';
-      if (inR(px, uy, 74, 556, 50, 11, 5) || inR(px, uy, 196, 556, 50, 11, 5)) col = '#3b6f8f';
-    } else if (inR(px, py, 58, 230, 204, 412, 26)) {
-      col = '#45484e';
-      for (let k = 0; k < 12; k++) { const kx = 72 + (k % 3) * 62, ky = 474 + Math.floor(k / 3) * 40; if (inR(px, py, kx, ky, 52, 32, 7)) col = '#16171a'; }
+/** The open phone's drawing as an image (the shared gradients copied in), at `k` pixels a drawing unit. */
+function phoneImage(k) {
+  const defs = document.querySelector('svg defs').outerHTML, W = 220, H = 600;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * k}" height="${H * k}" viewBox="50 48 ${W} ${H}">${defs}${phoneMarkup(false, 'none', 0).replace(/<g class="" style="transform:translateY\(-?\d*\.?\d*px\)">/, `<g transform="translate(0 ${-SLIDE})">`)}</svg>`;
+  return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+}
+async function vox() {
+  const k = 3, im = await phoneImage(k), W = 220, H = 600;
+  const src = document.createElement('canvas'); src.width = W * k; src.height = H * k;
+  const g = src.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, src.width, src.height).data;
+  const scr = document.createElement('canvas'); scr.width = 480; scr.height = 800; drawScreen(scr, { screen: 'standby' });
+  // the screen, in the open phone's drawing units (the upper slab slid up)
+  const S = { x: 76, y: 262 - SLIDE, w: 168, h: 280 };
+  const fit = (cv) => { const c = cv.getContext('2d'); c.fillStyle = '#131417'; c.fillRect(0, 0, cv.width, cv.height); return [c, cv.width / W]; };
+  { const [c, z] = fit(document.getElementById('voxRef')); c.drawImage(im, 0, 0, W * z, H * z); c.drawImage(scr, (S.x - 50) * z, (S.y - 48) * z, S.w * z, S.h * z); }
+  for (const [id, mm] of [['vox2', 2], ['vox1', 1]]) {
+    const [c, z] = fit(document.getElementById(id)), step = mm * 4, C = step * z;
+    let n = 0;
+    for (let y = 48; y < 48 + H; y += step) for (let x = 50; x < 50 + W; x += step) {
+      const cx = x + step / 2, cy = y + step / 2;
+      if (cx > S.x && cx < S.x + S.w && cy > S.y && cy < S.y + S.h) continue;
+      const i = (Math.floor((cy - 48) * k) * src.width + Math.floor((cx - 50) * k)) * 4;
+      if (d[i + 3] < 128) continue;
+      n++;
+      const X = (x - 50) * z, Y = (y - 48) * z;
+      c.fillStyle = `rgb(${d[i]},${d[i + 1]},${d[i + 2]})`; c.fillRect(X, Y, C - (mm > 1 ? 1 : .5), C - (mm > 1 ? 1 : .5));
+      if (mm > 1) { c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(X, Y, C - 1, 1); }
     }
-    if (!col || col === 'SCREEN') continue;
-    n++;
-    const X = ox + i * C, Y = oy + j * C;
-    x.fillStyle = col; x.fillRect(X, Y, C - 1, C - 1);
-    x.fillStyle = 'rgba(255,255,255,.07)'; x.fillRect(X, Y, C - 1, 1); x.fillRect(X, Y, 1, C - 1);
-    x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(X, Y + C - 2, C - 1, 1); x.fillRect(X + C - 2, Y, 1, C - 1);
+    c.drawImage(scr, (S.x - 50) * z, (S.y - 48) * z, S.w * z, S.h * z);
+    c.fillStyle = '#e8e6df'; c.font = '600 11px IBM Plex Mono'; c.fillText(`${mm} mm · ${n} cubos`, 6, document.getElementById(id).height - 6);
   }
-  const sc = document.createElement('canvas'); sc.width = 480; sc.height = 800; drawScreen(sc, { screen: 'standby' });
-  const sx = ox + (76 - 58) / (mm * u) * C, sy = oy + (262 - SLIDE - 54) / (mm * u) * C;
-  x.drawImage(sc, sx, sy, 168 / (mm * u) * C, 280 / (mm * u) * C);
-  x.fillStyle = '#e8e6df'; x.font = '600 13px IBM Plex Mono'; x.fillText(`${n} cubos de frente · 2 mm`, 12, cv.height - 10);
   const sp = (t, c) => `<span style="color:${c}">${t}</span>`;
   document.getElementById('far').innerHTML =
-    `${sp('[', '#c9ced6')}${sp('#', ICE)}${sp(']', '#c9ced6')}    ${sp('perto: o aro, a tela acesa', '#8d8b84')}\n` +
-    `${sp('|', '#5d626a')}      ${sp('longe, apagado', '#8d8b84')}\n` +
+    `${sp('[', '#c9ced6')}${sp('#', ICE)}${sp(']', '#c9ced6')}    ${sp('perto: o aro, a tela acesa', '#8d8b84')}
+` +
+    `${sp('|', '#5d626a')}      ${sp('longe, apagado', '#8d8b84')}
+` +
     `${sp('.', ICE)}      ${sp('longe, de noite, com a tela acesa', '#8d8b84')}`;
 }
 vox();
