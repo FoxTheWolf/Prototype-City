@@ -274,6 +274,8 @@ export class Phone {
    */
   slid = false;
   slide = 0;
+  /** The dialer (the Phone app with nothing typed), as the middle button's last stage opens it from any screen. */
+  toDialer(now: number) { this.dial = ''; if (!this.call || this.call.state === 'ended') this.call = null; this.open('calls', now); }
   /** The rail open or shut, with its sound (the run and the catch). */
   setRail(open: boolean) {
     if (this.slid === open) return;

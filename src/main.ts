@@ -397,13 +397,21 @@ function playLap(list: LapSound[]) {
   list.length = 0;
 }
 /**
- * The middle button (15.19b): a stage up each time: out of the pocket (shut), the rail open, then on the
- * standby screen the dialer; anywhere else with the rail open it lowers the phone, as before.
+ * The stages (the phone's manual, section 2): the middle button goes a stage up each time: out of the
+ * pocket (shut), the rail open, then the dialer from whatever screen; the right button's click a stage
+ * down: out of the app to the standby screen, the rail shut, back in the pocket; holding it puts the
+ * phone away at once, as it is.
  */
 function phoneMiddle() {
+  const now = performance.now() / 1000;
   if (!phone.out) phoneToggle();
   else if (!phone.slid) phone.setRail(true);
-  else if (phone.screen === 'standby') phonePress('send');
+  else if (phone.screen !== 'calls' && phone.screen !== 'boot' && phone.screen !== 'off') { phone.toDialer(now); sound?.phoneKey(false, true, true); }
+}
+function phoneBack() {
+  const now = performance.now() / 1000, s = phone.screen;
+  if (s !== 'standby' && s !== 'boot' && s !== 'off') { phone.open('standby', now); sound?.phoneKey(false, true, true); }
+  else if (phone.slid) phone.setRail(false);
   else phoneToggle();
 }
 function phoneToggle() {
@@ -561,7 +569,7 @@ addEventListener('mouseup', (e) => {
   if (e.button === 0 && bagView.open) bagView.release(phone.cx, phone.cy, performance.now() / 1000);
   if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
   if (e.button !== 2 || rightAt < 0) return;
-  if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phonePress('rsoft');
+  if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phoneBack();
   rightAt = -1; input.drag = false;
   // the 3D notebook: let go, the view comes back to it, its screen centred
   if (laptop.open) { camera.targetYaw = laptopAnchor(); camera.targetPitch = laptopPitch(); }
@@ -1124,6 +1132,8 @@ function frame(now: number) {
   fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
 
   // camera first, so this frame's movement uses the heading the player sees
+  // the right button held with the phone in the hand puts it away at once (the manual's stages); held on, it looks around
+  if (rightAt >= 0 && phone.out && !payphone.active && !laptop.open && performance.now() - rightAt > 350) phoneToggle();
   const [mx, my] = input.takeMouse();
   if (!uiBusy()) camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
