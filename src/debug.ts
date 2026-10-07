@@ -19,4 +19,7 @@ export const DEBUG = {
   reynard: true,
   /** (2026-10-06) Headphones in the bag on a new game, to test the music without buying them. */
   earphones: true,
+  /** (2026-10-06) Turning the view with the keyboard (Q/E, the arrows): taken off for players, the keys are
+   *  worth more for other things; true brings it back for tests without a mouse. */
+  keyTurn: false,
 };

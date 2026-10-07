@@ -80,8 +80,9 @@ export class Music {
   route(r: Route, v: number) {
     const t = this.ctx.currentTime;
     this.phones.gain.setTargetAtTime(r === 'phones' ? 1 : 0, t, 0.02);
-    this.speaker.gain.setTargetAtTime(r === 'phones' ? 0 : r === 'hand' ? 0.55 : 0.4, t, 0.02);
-    this.cloth.frequency.setTargetAtTime(r === 'pocket' ? 1300 : 20000, t, 0.05);
+    this.speaker.gain.setTargetAtTime(r === 'phones' ? 0 : r === 'hand' ? 0.55 : 0.48, t, 0.02);
+    // the pocket's cloth (2026-10-06: less muffled than at first, 1300 Hz)
+    this.cloth.frequency.setTargetAtTime(r === 'pocket' ? 2600 : 20000, t, 0.05);
     this.vol.gain.setTargetAtTime(v * v, t, 0.03);
   }
 

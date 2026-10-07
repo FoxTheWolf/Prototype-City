@@ -826,6 +826,7 @@ function syncMedia() {
 }
 function syncMusic() {
   syncMedia();
+  sound?.earphones(phone.earphones);
   if (!sound) return;
   const M = sound.music, T = phone.tn;
   if (phone.screen === 'off') T.playing = false;
@@ -1105,7 +1106,8 @@ function frame(now: number) {
   const [mx, my] = input.takeMouse();
   if (!uiBusy()) camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
-  const turn = (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
+  // (2026-10-06) the keyboard no longer turns the view, unless the debug switch brings it back
+  const turn = !DEBUG.keyTurn ? 0 : (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
   if (running) { if (!laptop.open && !uiBusy()) camera.look(turn * 2.2 * dt, 0); }
   else camera.look(dt * 0.08, 0); // idle drift behind the title
   camera.update(dt);

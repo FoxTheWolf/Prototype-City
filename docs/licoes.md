@@ -2,6 +2,15 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 0.15.13–14 e da identidade visual — 2026-10-06
+- **Teclas de mídia:** o Chromium só entrega as teclas de mídia (e o painel do Windows) a uma página com sessão de mídia tocando; Web Audio não conta. Solução: um `<audio>` em loop com um WAV silencioso escrito no código + `navigator.mediaSession` (handlers chamam as teclas do celular). Teclas de mídia são toques (sem seek): `musicTap`.
+- **Segurar = seek, tocar = pular:** prev/next agem no soltar (`phone.release()` no mouseup e no keyup das setas); o `syncMusic` move a música enquanto `seekHold.on`. `Music.seek` recria a sessão (som picota durante o seek, aceito).
+- **Hitbox maior que o desenho** para coisa que balança (a rodinha no fio): `onDial` ±5 col/±3 lin em volta de `DIAL.at`, que o `drawPhone` grava a cada quadro.
+- **Botões pequenos em HD:** cabem 5×3 px de ícone numa tecla de 4 colunas × 5 px (pixels HD não são quadrados: ~2,6×5 px de tela).
+- **Python no Windows:** heredoc com "…" ou acentos quebra o `assert` (stdin em cp1252): usar `PYTHONIOENCODING=utf-8 python -X utf8`, e `cygpath -w` para caminhos de `/tmp`. Templates JS dentro de strings Python: conferir aspas escapadas (`y=""${TOP}"` saiu de um `\"`).
+- **Logos em SVG com fonte web:** alinhar letras de linhas diferentes por `getExtentOfChar` depois de `document.fonts.ready`; a junta entre peças da mesma cor some se a peça entrar fundo na letra.
+- **O fone abafa o mundo:** um lowpass + ganho entre `wall` e `master` (`Sound.earphones`), sem tocar na música (que vai direto ao `master`).
+
 ### Lições da 0.15.10–12 (título, celular, música, camada HD) — 2026-10-06
 - **O `main.ts` é um módulo com `await` no topo:** tudo depois de `const world = …` espera a cidade. Para o título não gerar a cidade, a escolha (`titleChoice`) veio **antes** dessa linha, com listeners próprios. O que o título precisa antes do mundo (opções, fundo) não pode tocar em nada declarado depois (`const` em TDZ): as opções do título mexem só em `OPTS`/`style`/`resStep` e num `Menu` próprio, descartado com `dispose()`. O jogo entra sozinho no `.then` do `GpuWorld.create` (`enter()`).
 - **Voltar ao título = recarregar a página** (`reloadWith({})`): agora é barato, porque o título não gera nada. Foi o que simplificou o Esc do WATCH CCTV.

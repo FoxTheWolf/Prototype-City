@@ -62,6 +62,10 @@ export class Sound {
   /** Everything outdoors reaches the ear through this: muffled by the walls indoors. */
   private out: GainNode;
   private wall: BiquadFilterNode;
+  /** The earphones in (2026-10-06): the world comes through them muffled and quieter. */
+  private ears: BiquadFilterNode;
+  private earsGain: GainNode;
+  private earsOn = false;
   /** Indoors: the buzz of office tubes, and when the next raindrop hits the glass. */
   private tubes: GainNode;
   private nextDrop = 0;
@@ -86,7 +90,10 @@ export class Sound {
     const ctx = (this.ctx = new AudioContext());
     this.master = gain(ctx, 0.5, ctx.destination);
     this.wall = filter(ctx, 'lowpass', 20000, 0.7);
-    this.wall.connect(this.master);
+    this.earsGain = gain(ctx, 1, this.master);
+    this.ears = filter(ctx, 'lowpass', 20000, 0.7);
+    this.ears.connect(this.earsGain);
+    this.wall.connect(this.ears);
     this.out = gain(ctx, 1, this.wall);
     this.music = new Music(ctx, this.master);
     const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -931,6 +938,14 @@ export class Sound {
     s.start(t, Math.random() * 1.5); s.stop(t + len + 0.05);
   }
 
+  /** The earphones in or out: the world's sounds (not the phone's music) muffled and lowered while in. */
+  earphones(on: boolean) {
+    if (on === this.earsOn) return;
+    this.earsOn = on;
+    const t = this.ctx.currentTime;
+    this.ears.frequency.setTargetAtTime(on ? 1800 : 20000, t, 0.08);
+    this.earsGain.gain.setTargetAtTime(on ? 0.4 : 1, t, 0.08);
+  }
   /** A siren far off: the wail (or the yelp) of an emergency vehicle rising out of the city and fading, dulled by the buildings. */
   private siren(t: number, v: number, pan: number) {
     const ctx = this.ctx, p = ctx.createStereoPanner(), g = gain(ctx, 0, p), lp = filter(ctx, 'lowpass', 1600, 0.7), o = ctx.createOscillator();

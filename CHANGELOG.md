@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.15 — O fone isola, e o teclado livre (2026-10-06)
+- **Com o fone, o mundo fica abafado e mais baixo** (a chuva não cobre mais a música); sem fone, nada muda.
+- **A música no bolso ficou menos abafada** e um pouco mais alta.
+- **Q/E e ←/→ não giram mais a câmera:** a vista é só pelo mouse, e essas teclas ficam livres (Alt+←/→ agora só mexe na música).
+
 ## 0.15.14 — Três teclas no canto e a rodinha do fone (2026-10-06)
 - **Só três teclas de música no topo do celular**, no canto direito e desenhadas em pixels finos, levemente arredondadas: **anterior, tocar/pausar e próxima** (o ícone de tocar vira pausa quando a música toca).
 - **O volume foi para o fio do fone:** um controle branco com uma **rodinha** no cabo. Com o mouse solto (Alt ou celular na mão), passe o cursor perto dela e **gire a roda do mouse**; a área é maior que a rodinha, então ela pode balançar à vontade. Sem fone, o volume segue em Alt+↑/↓ e no Tunes Player.
