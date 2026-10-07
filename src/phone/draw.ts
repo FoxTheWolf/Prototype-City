@@ -15,6 +15,9 @@ import { HD, HdOrder } from '../render/hd';
 import { EYE, pageDim } from '../render/eye';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, inBox, KEYS_Y, keysOf, PHONE_H, PHONE_W, SHELLS, type Case, type KeyRect } from './shells';
+import { drawBody3d } from './body3d';
+import { FAMILIES, paintBrandText, phoneFam } from '../render/brands';
+import { Paint } from '../render/paint2d';
 import { nextTurn, onRoute, placeAddress, placeAt, placeDistrict, placeHours, placeKind, placeName, type Place } from './places';
 import { formatNumber } from '../sim/telco';
 
@@ -148,94 +151,115 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
   const gl = GLOSS[SHL.material], W1 = PHONE_W - 1, H1 = PHONE_H - 1, R = SHL.round;
   const inBody = (x: number, y: number) => inBox(x, y, 0, 0, W1, H1, R);
   const surface = (_x: number, y: number): C3 => (SHL.face && y < CY - 1 ? FACE : BODY);
-  // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
-  for (let y = 0; y < PHONE_H; y++) for (let x = 0; x < PHONE_W; x++) {
-    const v = inBody(x, y);
-    if (!v) continue;
-    const base = surface(x, y);
-    const rimL = !inBody(x - 1, y), rimR = !inBody(x + 1, y), rimT = !inBody(x, y - 1);
-    let col: C3 = rimT || rimL ? [base[0] * 1.5 + 18, base[1] * 1.5 + 18, base[2] * 1.5 + 18] : rimR ? mul(base, 0.6) : base;
-    let glyph = 32, fg = col;
-    if (SHL.material === 'metal' && !rimL && !rimR && !rimT) {
-      // brushed metal: rows of slightly different shades, a fine streak now and then
-      const s = 1 + (hash3(y, x >> 3, 91) - 0.5) * 0.1;
-      col = mul(col, s);
-      if (hash3(y, x, 92) < 0.18) { glyph = ch('-'); fg = mul(col, 1.12); }
-    } else if (SHL.material === 'rubber' && (x < 3 || x > W1 - 3) && y > 4 && !rimL && !rimR) { glyph = ch('='); fg = mul(col, 0.7); }
-    if (v === 1) cell(x, y, glyph, fg, col, rimL || rimR || rimT ? 0.9 : gl);
-    else over(x, y, v, col, 0.9);
-  }
-  // a slider's seam: the upper half's edge, its shadow on the lower
-  if (SHL.face) for (let x = 0; x < PHONE_W; x++) if (inBody(x, CY - 1) === 1) { cell(x, CY - 2, 32, mul(FACE, 1.6), mul(FACE, 1.6), 0.9); shade(x, CY - 1, 0.45); }
-  // a rugged phone's bumpers and screws
-  if (SHL.material === 'rubber') {
-    for (const [x0, y0] of [[0, 0], [W1 - 4, 0]]) for (let y = 0; y < 3; y++) for (let x = 0; x < 5; x++) { const v = inBody(x0 + x, y0 + y); if (v === 1) cell(x0 + x, y0 + y, 32, SHL.trim, SHL.trim, 0.3); else if (v) over(x0 + x, y0 + y, v, SHL.trim, 0.3); }
-    for (const [x, y] of [[2, 4], [W1 - 2, 4]]) cell(x, y, ch('+'), [150, 150, 150], mul(BODY, 0.8), 0.6);
-  }
-  // earpiece, front camera, maker's name (dark on a light body)
-  const top = surface(0, 1), dark = lum(top) > 130;
-  if (SHL.name === 'Pebble') for (let x = 21; x < 29; x += 2) cell(x, 1, SHAPE.dot, mul(top, 0.55), top, gl);
-  else for (let x = 20; x < 30; x++) cell(x, 1, ch('='), [16, 16, 18], [20, 20, 23], 0.6);
-  cell(38, 1, ch('o'), [70, 80, 100], [12, 12, 14], 0.8);
-  const brand = P.maker.toUpperCase().split('').join(' ');
-  for (let k = 0; k < brand.length; k++) cell(25 - (brand.length >> 1) + k, 2, brand.charCodeAt(k), dark ? [80, 76, 84] : [150, 156, 168], top, gl);
-  // the screen's surround: a chrome ring on some, then the black bezel, rounded
-  if (SHL.chrome) for (let y = SY - 2; y <= SY + SH + 1; y++) for (let x = SX - 2; x <= SX + SW + 1; x++) {
-    const v = inBox(x, y, SX - 2, SY - 2, SX + SW + 1, SY + SH + 1, 1);
-    if (v === 1) cell(x, y, 32, SHL.trim, SHL.trim, 0.95); else if (v) cell(x, y, v, SHL.trim, surface(x, y), 0.95);
-  }
-  for (let y = SY - 1; y <= SY + SH; y++) for (let x = SX - 1; x <= SX + SW; x++) {
-    const v = inBox(x, y, SX - 1, SY - 1, SX + SW, SY + SH, 1);
-    if (v === 1) cell(x, y, 32, BEZEL, BEZEL, 0.7); else if (v) cell(x, y, v, BEZEL, SHL.chrome ? SHL.trim : surface(x, y), 0.7);
-  }
-
-  // keys: lit from behind while the phone is on, sunk for a moment when pressed
   const on = P.screen !== 'off';
   const isDown = (k: Key) => { const t = P.pressed.get(k); return t !== undefined && now - t < 0.14; };
-  const ring = SHL.dpad === 'ring', onRing = (k: Key) => ring && (k === 'up' || k === 'down' || k === 'left' || k === 'right');
-  // a ring d-pad: a rounded ring of trim around OK, its four sides the arrows
-  if (ring) for (let y = CY; y <= CY + 4; y++) for (let x = 16; x <= 33; x++) {
-    const v = inBox(x, y, 16, CY, 33, CY + 4, 2);
-    const k: Key | null = y === CY ? 'up' : y === CY + 4 ? 'down' : x < 21 ? 'left' : x > 28 ? 'right' : null;
-    const hot = k && (isDown(k) ? 0.55 : P.hover === k ? 1.25 : 1);
-    const c = mul(SHL.trim, hot || 1);
-    if (v === 1) cell(x, y, 32, c, c, 0.8); else if (v) cell(x, y, v, c, surface(x, y), 0.8);
-  }
-  // first the keys' shadows on the body, cast away from the light: sideways by the light's side,
-  // down for a light ahead (from above the phone), up for one behind (always some, from the room
-  // around); then the caps over them, so a shadow never darkens a neighbouring key. Flush keys
-  // have no shadows: dark lines run between them instead.
-  const vx = -GL.lat, vy = Math.max(-1, Math.min(1, 0.55 - 0.9 * GL.back)), darkS = 0.2 + 0.4 * GL.str;
-  const sx = Math.abs(vx) > 0.3 ? Math.sign(vx) : 0, sy = Math.abs(vy) > 0.3 ? Math.sign(vy) : 0;
-  const flush = SHL.keys === 'flush';
-  for (const [k, x0, y0, w, h] of KEYS) {
-    if (isDown(k) || onRing(k) || (flush && k.length === 1 && /[0-9*#]/.test(k))) continue;
-    const ex = sx > 0 ? x0 + w : x0 - 1, ey = sy > 0 ? y0 + h : y0 - 1;
-    if (sx) for (let y = 0; y < h; y++) shade(ex, y0 + y, darkS * Math.abs(vx));
-    if (sy) for (let x = 0; x < w; x++) shade(x0 + x, ey, darkS * Math.abs(vy));
-    if (sx && sy) shade(ex, ey, darkS * Math.min(Math.abs(vx), Math.abs(vy)));
-  }
-  if (flush) {
-    for (let y = CY + 6; y < CY + 18; y++) for (const x of [17, 32]) shade(x, y, 0.5);
-    for (const y of [CY + 8, CY + 11, CY + 14]) for (let x = 3; x < 47; x++) shade(x, y, 0.5);
-  }
-  // the caps in relief, unless pushed in: lit along the top edge; the edge facing the nearest light
-  // catches its glint; lit from behind while the phone is on; pebbles rounded at the corners
-  const side = GL.lat > 0 ? 1 : 0, rim = GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
-  for (const [k, x0, y0, w, h, label, col] of KEYS) {
-    const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
-    if (onRing(k)) { cell(x0 + (w >> 1), y0 + ((h - 1) >> 1), ch(label), down ? mul(fg, 0.7) : fg, mul(SHL.trim, down ? 0.55 : P.hover === k ? 1.25 : 1), 0.8, on); continue; }
-    const hov = P.hover === k && !down ? 1.3 : 1;
-    const capAt = (y: number): C3 => mul(down ? mul(SHL.cap, 0.45) : y === 0 && h > 1 ? SHL.capTop : SHL.cap, hov);
-    const pebble = (SHL.keys === 'pebble' || (ring && k === 'ok')) && h > 1;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const v = pebble ? inBox(x, y, 0, 0, w - 1, h - 1, 1) : 1;
-      if (v === 1) cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
-      else if (v) cell(x0 + x, y0 + y, v, capAt(y), ring && k === 'ok' ? SHL.trim : surface(x0 + x, y0 + y), 0.5);
-      if (!down && rim > 1 && x === side * (w - 1) && v === 1) addBg(x0 + x, y0 + y, rim);
+  const HB = hdLayer();
+  if (HB) {
+    // 15.19: the body in little cubes, in the HD layer under the interface (body3d.ts); the key labels stay glyphs over it
+    drawBody3d((x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under), ox, oy, SHL, P.look, BODY, KEYS, isDown, P.hover, { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] });
+    // the maker's name on the face, left of the earpiece, in its family's dot font (15.18)
+    const top = SHL.face ?? BODY, fam = phoneFam(P.device.maker), F = FAMILIES[fam], tc = F[lum(top) > 130 ? 'light' : 'dark'][2];
+    const decal = new Paint({ w: HB.w, h: HB.h, px: HB.px, has: (x, y) => HB.at(x, y) >= 0, set: (x, y, r, gg, b) => HB.put(x, y, r, gg, b, HdOrder.Under) }).clip((ox + 4) * HD, oy * HD, (ox + 29) * HD, (oy + 3) * HD);
+    paintBrandText(decal, (ox + 4) * HD, oy * HD + 1, fam, P.maker, 1, [tc[0] * Lr, tc[1] * Lg, tc[2] * Lb]);
+    for (const [k, x0, y0, w, h, label, col] of KEYS) {
+      const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
+      const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
+      for (let n = 0; n < label.length; n++) {
+        const i = inG(lx + n, ly);
+        if (i < 0 || label[n] === ' ') continue;
+        const c = down ? mul(fg, 0.7) : fg;
+        if (on) g.put(i, label.charCodeAt(n), Math.max(c[0], c[0] * Lr), Math.max(c[1], c[1] * Lg), Math.max(c[2], c[2] * Lb));
+        else g.put(i, label.charCodeAt(n), c[0] * Lr, c[1] * Lg, c[2] * Lb);
+      }
     }
-    const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
-    for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? mul(fg, 0.7) : fg, capAt(ly - y0), 0.5, on);
+  } else {
+    // the body, rounded at the corners: its rim catches the light on top and left, falls dark on the right
+    for (let y = 0; y < PHONE_H; y++) for (let x = 0; x < PHONE_W; x++) {
+      const v = inBody(x, y);
+      if (!v) continue;
+      const base = surface(x, y);
+      const rimL = !inBody(x - 1, y), rimR = !inBody(x + 1, y), rimT = !inBody(x, y - 1);
+      let col: C3 = rimT || rimL ? [base[0] * 1.5 + 18, base[1] * 1.5 + 18, base[2] * 1.5 + 18] : rimR ? mul(base, 0.6) : base;
+      let glyph = 32, fg = col;
+      if (SHL.material === 'metal' && !rimL && !rimR && !rimT) {
+        // brushed metal: rows of slightly different shades, a fine streak now and then
+        const s = 1 + (hash3(y, x >> 3, 91) - 0.5) * 0.1;
+        col = mul(col, s);
+        if (hash3(y, x, 92) < 0.18) { glyph = ch('-'); fg = mul(col, 1.12); }
+      } else if (SHL.material === 'rubber' && (x < 3 || x > W1 - 3) && y > 4 && !rimL && !rimR) { glyph = ch('='); fg = mul(col, 0.7); }
+      if (v === 1) cell(x, y, glyph, fg, col, rimL || rimR || rimT ? 0.9 : gl);
+      else over(x, y, v, col, 0.9);
+    }
+    // a slider's seam: the upper half's edge, its shadow on the lower
+    if (SHL.face) for (let x = 0; x < PHONE_W; x++) if (inBody(x, CY - 1) === 1) { cell(x, CY - 2, 32, mul(FACE, 1.6), mul(FACE, 1.6), 0.9); shade(x, CY - 1, 0.45); }
+    // a rugged phone's bumpers and screws
+    if (SHL.material === 'rubber') {
+      for (const [x0, y0] of [[0, 0], [W1 - 4, 0]]) for (let y = 0; y < 3; y++) for (let x = 0; x < 5; x++) { const v = inBody(x0 + x, y0 + y); if (v === 1) cell(x0 + x, y0 + y, 32, SHL.trim, SHL.trim, 0.3); else if (v) over(x0 + x, y0 + y, v, SHL.trim, 0.3); }
+      for (const [x, y] of [[2, 4], [W1 - 2, 4]]) cell(x, y, ch('+'), [150, 150, 150], mul(BODY, 0.8), 0.6);
+    }
+    // earpiece, front camera, maker's name (dark on a light body)
+    const top = surface(0, 1), dark = lum(top) > 130;
+    if (SHL.name === 'Pebble') for (let x = 21; x < 29; x += 2) cell(x, 1, SHAPE.dot, mul(top, 0.55), top, gl);
+    else for (let x = 20; x < 30; x++) cell(x, 1, ch('='), [16, 16, 18], [20, 20, 23], 0.6);
+    cell(38, 1, ch('o'), [70, 80, 100], [12, 12, 14], 0.8);
+    const brand = P.maker.toUpperCase().split('').join(' ');
+    for (let k = 0; k < brand.length; k++) cell(25 - (brand.length >> 1) + k, 2, brand.charCodeAt(k), dark ? [80, 76, 84] : [150, 156, 168], top, gl);
+    // the screen's surround: a chrome ring on some, then the black bezel, rounded
+    if (SHL.chrome) for (let y = SY - 2; y <= SY + SH + 1; y++) for (let x = SX - 2; x <= SX + SW + 1; x++) {
+      const v = inBox(x, y, SX - 2, SY - 2, SX + SW + 1, SY + SH + 1, 1);
+      if (v === 1) cell(x, y, 32, SHL.trim, SHL.trim, 0.95); else if (v) cell(x, y, v, SHL.trim, surface(x, y), 0.95);
+    }
+    for (let y = SY - 1; y <= SY + SH; y++) for (let x = SX - 1; x <= SX + SW; x++) {
+      const v = inBox(x, y, SX - 1, SY - 1, SX + SW, SY + SH, 1);
+      if (v === 1) cell(x, y, 32, BEZEL, BEZEL, 0.7); else if (v) cell(x, y, v, BEZEL, SHL.chrome ? SHL.trim : surface(x, y), 0.7);
+    }
+
+    // keys: lit from behind while the phone is on, sunk for a moment when pressed
+    const ring = SHL.dpad === 'ring', onRing = (k: Key) => ring && (k === 'up' || k === 'down' || k === 'left' || k === 'right');
+    // a ring d-pad: a rounded ring of trim around OK, its four sides the arrows
+    if (ring) for (let y = CY; y <= CY + 4; y++) for (let x = 16; x <= 33; x++) {
+      const v = inBox(x, y, 16, CY, 33, CY + 4, 2);
+      const k: Key | null = y === CY ? 'up' : y === CY + 4 ? 'down' : x < 21 ? 'left' : x > 28 ? 'right' : null;
+      const hot = k && (isDown(k) ? 0.55 : P.hover === k ? 1.25 : 1);
+      const c = mul(SHL.trim, hot || 1);
+      if (v === 1) cell(x, y, 32, c, c, 0.8); else if (v) cell(x, y, v, c, surface(x, y), 0.8);
+    }
+    // first the keys' shadows on the body, cast away from the light: sideways by the light's side,
+    // down for a light ahead (from above the phone), up for one behind (always some, from the room
+    // around); then the caps over them, so a shadow never darkens a neighbouring key. Flush keys
+    // have no shadows: dark lines run between them instead.
+    const vx = -GL.lat, vy = Math.max(-1, Math.min(1, 0.55 - 0.9 * GL.back)), darkS = 0.2 + 0.4 * GL.str;
+    const sx = Math.abs(vx) > 0.3 ? Math.sign(vx) : 0, sy = Math.abs(vy) > 0.3 ? Math.sign(vy) : 0;
+    const flush = SHL.keys === 'flush';
+    for (const [k, x0, y0, w, h] of KEYS) {
+      if (isDown(k) || onRing(k) || (flush && k.length === 1 && /[0-9*#]/.test(k))) continue;
+      const ex = sx > 0 ? x0 + w : x0 - 1, ey = sy > 0 ? y0 + h : y0 - 1;
+      if (sx) for (let y = 0; y < h; y++) shade(ex, y0 + y, darkS * Math.abs(vx));
+      if (sy) for (let x = 0; x < w; x++) shade(x0 + x, ey, darkS * Math.abs(vy));
+      if (sx && sy) shade(ex, ey, darkS * Math.min(Math.abs(vx), Math.abs(vy)));
+    }
+    if (flush) {
+      for (let y = CY + 6; y < CY + 18; y++) for (const x of [17, 32]) shade(x, y, 0.5);
+      for (const y of [CY + 8, CY + 11, CY + 14]) for (let x = 3; x < 47; x++) shade(x, y, 0.5);
+    }
+    // the caps in relief, unless pushed in: lit along the top edge; the edge facing the nearest light
+    // catches its glint; lit from behind while the phone is on; pebbles rounded at the corners
+    const side = GL.lat > 0 ? 1 : 0, rim = GL.str * Math.min(1, Math.abs(GL.lat) * 1.6) * 60;
+    for (const [k, x0, y0, w, h, label, col] of KEYS) {
+      const down = isDown(k), fg: C3 = col ?? (on ? SHL.label : SHL.labelOff);
+      if (onRing(k)) { cell(x0 + (w >> 1), y0 + ((h - 1) >> 1), ch(label), down ? mul(fg, 0.7) : fg, mul(SHL.trim, down ? 0.55 : P.hover === k ? 1.25 : 1), 0.8, on); continue; }
+      const hov = P.hover === k && !down ? 1.3 : 1;
+      const capAt = (y: number): C3 => mul(down ? mul(SHL.cap, 0.45) : y === 0 && h > 1 ? SHL.capTop : SHL.cap, hov);
+      const pebble = (SHL.keys === 'pebble' || (ring && k === 'ok')) && h > 1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const v = pebble ? inBox(x, y, 0, 0, w - 1, h - 1, 1) : 1;
+        if (v === 1) cell(x0 + x, y0 + y, 32, fg, capAt(y), 0.5);
+        else if (v) cell(x0 + x, y0 + y, v, capAt(y), ring && k === 'ok' ? SHL.trim : surface(x0 + x, y0 + y), 0.5);
+        if (!down && rim > 1 && x === side * (w - 1) && v === 1) addBg(x0 + x, y0 + y, rim);
+      }
+      const lx = x0 + ((w - label.length) >> 1), ly = y0 + ((h - 1) >> 1);
+      for (let n = 0; n < label.length; n++) if (label[n] !== ' ') cell(lx + n, ly, label.charCodeAt(n), down ? mul(fg, 0.7) : fg, capAt(ly - y0), 0.5, on);
+    }
   }
   // the case: over the body's rim and around it, so only its own rim shows from the front
   if (P.case) drawCase(CASES[P.case], R, now, cell, over, inG, g);

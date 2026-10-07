@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.19 (cubinhos, corpo do celular) — 2026-10-07
+- **Medir aquecido:** o 1º `castVox` custa ~7 ms (JIT), os seguintes ~2,7 ms. Num teste de tempo, repetir e descartar as primeiras.
+- **Paleta com objetos de formas diferentes** (`metal` às vezes ausente) e um callback por pixel pesavam: achatar a paleta em arrays tipados por chamada e trocar o fator por pixel por uma tabela por índice (`mul[m]`).
+- **O que mais economizou foi o cache da luz quantizada:** parado, o corpo inteiro é só copiado (~0,5 ms com 23 mil `HdLayer.put`).
+- **Célula sem `setBg` = "só glifo" (alfa 128):** é o que deixa os rótulos das teclas por cima dos pixels `Under` da camada HD sem apagar o corpo.
+- **Painel do app:** depois do NEW GAME o shader leva ~1,5 min; esperar com `await` de até 40 s por chamada (o `javascript_tool` estoura em 45 s). `P` tira o celular.
+- **Heredoc com aspas no Bash quebrou de novo** (um `git commit -F -` depois de um Python com aspas): scripts de edição de docs vão para um `.py` no scratchpad.
+
 ### Lições da 15.18 (fabricantes, marcas) — 2026-10-07
 - **Os nomes da cidade saem de slots em `L.roots` (64 raízes):** `(nameSeed + (len - slot) * 7919) % len`. Dois slots iguais dão a mesma raiz em toda cidade (o 4º fabricante e a operadora 1 dividiam o 36). Antes de criar um nome novo, listar os slots usados (`grep -n "roots.length - " src/locale/names.ts`) e conferir no `tests/makers.ts` (raízes distintas).
 - **Um `City` falso basta para os nomes:** `{ nameSeed } as unknown as City` serve para `makerName`/`operatorName`/`computerMakerName`/`watchMakerName`/`cctvMakerName` (o `businessName` precisa da cidade inteira).

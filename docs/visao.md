@@ -402,6 +402,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O corpo-base:** a placa da tela em preto brilhante com aro cromado, e a de baixo em grafite fosco. **A luz das teclas e da tela é azul-gelo**, mas **atender é verde e desligar é vermelho**; as cores das outras teclas ficam a critério do Claude.
 - **A frente, revista pelo usuário ao ver o manual:** a tela estava pequena. Saiu a plaqueta cromada embaixo da cruz; a cruz ficou menor e desceu até a base; atender e desligar foram para os cantos de baixo; a tela cresceu para baixo e virou **240 × 400** (2,8", o formato largo de 2008).
 
+- **Decidido ao começar a 15.19 (2026-10-07):** (1) os cubinhos do celular são desenhados **em pixels da camada HD** (3×3 por célula), não em caracteres (os cubos de 1 mm sumiriam: 1 col = 1 mm, 1 linha = 2 mm) nem na resolução do monitor (destoaria do ASCII). O Claude traça os raios na CPU para o aparelho na mão (um modelo, ~23 mil raios, testável no Node); a GPU fica para os objetos do mundo. (2) **Um corpo só agora** (o deslizante, cada visual uma cor/material); as formas por família ficam para depois, no mesmo pipeline.
+
 ### O notebook e o Osprey (entrevista de 2026-10-07, para o manual)
 - **Um manual só, em duas partes:** o aparelho (corpo, teclas, sons, tela como textura) e o SO **Osprey** (boot, firmware, janelas, terminal, cores).
 - **O corpo é fortemente inspirado num ThinkPad** (escolha do usuário): o tijolo preto fosco, quadrado, de quem trabalha. Pela regra de originalidade, copia-se o gênero (a forma, o nub no teclado, a luz do teclado na tampa) e não a identidade (o nub vermelho, o pingo vermelho do logo, o nome).

@@ -175,7 +175,7 @@
 
 ## 15.19 Os objetos de cubinhos na GPU e o celular em 3D (manual `celular-manual.html`)
 
-**15.19a O pipeline de cubinhos** (a regra "objetos de cubinhos" das decisões):
+**15.19a ✅ (2026-10-07, na CPU para o aparelho na mão, em pixels HD; ver `docs/historico.md`) O pipeline de cubinhos** (a regra "objetos de cubinhos" das decisões):
 - Um modelo é uma **grade de ocupação** (bits por célula de 1 ou 2 mm) com uma paleta por cubo, mais "caixas inteiras" para os miolos (o manual do celular: face em cubos de 1 mm, miolo em caixas). Gerado por código a partir do desenho (a cor no centro de cada casa), nunca de arquivo.
 - Na GPU: os modelos ficam numa **textura 3D** (ou atlas 2D em fatias) e o raio de cada célula anda pela grade do modelo (DDA) dentro da caixa que a contém. É a "grade de ocupação por modelo" que a regra pedia acima de dezenas de cubos. Partes móveis (as teclas que afundam, a placa que desliza) são instâncias com transformação própria.
 - **LOD por distância:** cubos < ~10 cm somem a 20 m; de longe o modelo vira as poucas caixas de hoje (`render/objects.ts`); mais longe, um caractere.

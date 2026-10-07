@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.19 — O celular de cubinhos (2026-10-07)
+- **O corpo do celular agora é feito de cubinhos de 1 mm**, desenhado em pixels: as duas placas do deslizante (a de cima com a cor e o material do visual escolhido, a de baixo grafite com o teclado numérico), a borda arredondada, o aro cromado em volta da tela nos visuais que têm, a fenda do alto-falante e a câmera da frente. Ele aparece um pouco inclinado, com a borda de cima e o topo das teclas à mostra.
+- **As teclas saltam 1 mm e afundam de verdade quando apertadas**; os vãos entre elas ficam na sombra, e o brilho da luz mais próxima corre pela frente como antes.
+- **O nome do fabricante aparece na frente, na letra da marca**, à esquerda do alto-falante.
+
 ## 0.15.18 — As marcas da cidade (2026-10-07)
 - **Quatro fabricantes de celular em vez de seis, cada um com o seu jeito:** a gigante confiável (modelos só com números, "6230i"), a do executivo ("Courier 8820"), a da moda e da música ("glide 52") e a robusta de obra ("Anvil X3"). O nome de cada uma continua sendo da cidade; o seu celular de começo é sempre da gigante.
 - **O notebook do jogador é sempre o "tijolo de trabalho"**, com modelo curto de catálogo de empresa ("T61", "X300").
