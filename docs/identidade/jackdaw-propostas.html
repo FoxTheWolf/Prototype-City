@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jackdaw Mini · propostas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&family=Permanent+Marker&family=Varela+Round&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f;
+    --amber: #ffb22e; --cyan: #3aa6d8; --spray: #ff6a13;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 56px 0 28px; border-bottom: 1px solid var(--line); }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 118%; margin: 0; letter-spacing: .01em; }
+  header.cover h1 span { color: var(--amber); }
+  header.cover p { color: var(--dim); margin: 6px 0 0; max-width: 78ch; }
+  section { padding: 40px 0 16px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 18px 0 6px; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .stage { background: radial-gradient(ellipse at 40% 20%, #23252a 0%, #0c0d0f 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; place-items: center; }
+  .stage svg { width: 100%; height: auto; display: block; max-width: 860px; touch-action: manipulation; user-select: none; }
+  .stage.tall svg { max-width: 400px; }
+  .cols { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; margin-top: 14px; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } header.cover h1 { font-size: 32px; } }
+  .sw { display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+  .sw i { width: 34px; height: 22px; border-radius: 4px; border: 1px solid #0006; display: inline-block; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 99px; color: var(--dim); margin-right: 4px; }
+  ul.pc { padding-left: 18px; margin: 6px 0; }
+  ul.pc li::marker { color: var(--dim); }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 8px 0 0; overflow-x: auto; line-height: 1.15; font-size: 13px; color: #c9b07a; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; text-align: center; }
+  .hint kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3a3c42; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  button.re { font: 600 11px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 4px 10px; cursor: pointer; margin-left: 8px; }
+  button.re:hover { background: #2c2f34; }
+  [data-btn] { cursor: pointer; }
+  [data-btn].pressed { transform: translateY(1.6px); filter: brightness(.72); }
+  .pets { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .pet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; transition: border-color .15s; }
+  .pet:hover { border-color: #4a4c52; }
+  .pet.on { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .pet canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
+  .pet b { display: block; margin-top: 8px; font: 700 15px 'Archivo'; font-stretch: 110%; }
+  .pet span { font-size: 12px; color: var(--dim); }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  .led { animation: blink 1.6s steps(1) infinite; }
+  @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .15; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="grime"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.9 0.55"/></filter>
+  <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="1.6"/></filter>
+  <filter id="glowA" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="b"/></feMerge></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+</svg>
+<main>
+  <header class="cover">
+    <h1>JACKDAW <span>MINI</span></h1>
+    <p>Propostas de visual · v1 · 2026-10-06. Três corpos e três gralhas, que podem ser misturados. <b>Aperte os botões</b> (cada corpo tem o próprio clique) ou use o teclado no último aparelho que você tocou: <kbd>↑↓←→</kbd> navegam, <kbd>Enter</kbd> é OK e <kbd>Backspace</kbd> é voltar. A tela é a de verdade: 128×64 pontos, com boot, menu e apps de brinquedo. A parte de hacking ficou de fora de propósito.</p>
+    <p>Para escolher, diga a <b>letra do corpo + o número da gralha</b> (ex.: “B com a gralha 2”) e o que quer misturar (ex.: “o corpo do C com a tela âmbar do A”).</p>
+  </header>
+
+  <!-- ===================== A ===================== -->
+  <section id="A">
+    <h2>A · Garagem <small>o kit clandestino</small></h2>
+    <p class="lead">Feito numa bancada, não numa fábrica. Uma caixa de alumínio pintada de grafite, parafusos à mostra, o nome escrito à mão em fita crepe, a fileira de pinos no topo e uma <b>chave de alavanca</b> para ligar (clack). A tela é âmbar sobre preto, a mesma família do HUD, e brilha. É o objeto de quem vive no submundo da cidade.</p>
+    <div class="stage">
+      <svg viewBox="0 0 560 290" data-dev="A">
+        <!-- pin header + toggle -->
+        <g fill="#c9a24a"><rect x="86" y="30" width="150" height="12" rx="2" fill="#1a1b1d"/>
+          <g id="pinsA"></g></g>
+        <g data-btn="power"><rect x="452" y="26" width="46" height="18" rx="3" fill="#1a1b1d"/><rect id="leverA" x="470" y="6" width="9" height="28" rx="3" fill="#b8bcc2" stroke="#6b6f75" transform="rotate(-24 474 34)"/></g>
+        <!-- body -->
+        <rect x="20" y="40" width="520" height="226" rx="16" fill="#2c2e31" stroke="#141516" stroke-width="2"/>
+        <rect x="24" y="43" width="512" height="6" rx="3" fill="#3d4044" opacity=".8"/>
+        <rect x="20" y="40" width="520" height="226" rx="16" filter="url(#grime)" opacity=".35"/>
+        <!-- screws -->
+        <g id="screwsA"></g>
+        <!-- engraving -->
+        <text x="382" y="68" font-family="IBM Plex Mono" font-size="9" fill="#6b6e73">JKD-M · rev.C · 2008</text>
+        <circle class="led" cx="364" cy="65" r="3.5" fill="#ffb22e"/><circle cx="364" cy="65" r="8" fill="#ffb22e" opacity=".18" filter="url(#soft)"/>
+        <!-- lcd -->
+        <rect x="46" y="66" width="296" height="168" rx="8" fill="#0e0f11" stroke="#3b3e43"/>
+        <image id="lcdA" x="66" y="84" width="256" height="128" filter="url(#glowA)"/>
+        <text x="66" y="228" font-family="IBM Plex Mono" font-size="8" fill="#4a4c50">128×64 DOT MATRIX</text>
+        <!-- dpad -->
+        <g data-btn="up"><rect x="423" y="86" width="36" height="36" rx="4" fill="#46494e" stroke="#1b1c1e" stroke-width="1.5"/><rect x="426" y="89" width="30" height="5" rx="2" fill="#5a5e64"/><path d="M441 98 l-6 9 h12z" fill="#22252a"/></g>
+        <g data-btn="down"><rect x="423" y="162" width="36" height="36" rx="4" fill="#46494e" stroke="#1b1c1e" stroke-width="1.5"/><rect x="426" y="165" width="30" height="5" rx="2" fill="#5a5e64"/><path d="M441 187 l-6 -9 h12z" fill="#22252a"/></g>
+        <g data-btn="left"><rect x="385" y="124" width="36" height="36" rx="4" fill="#46494e" stroke="#1b1c1e" stroke-width="1.5"/><rect x="388" y="127" width="30" height="5" rx="2" fill="#5a5e64"/><path d="M397 142 l9 -6 v12z" fill="#22252a"/></g>
+        <g data-btn="right"><rect x="461" y="124" width="36" height="36" rx="4" fill="#46494e" stroke="#1b1c1e" stroke-width="1.5"/><rect x="464" y="127" width="30" height="5" rx="2" fill="#5a5e64"/><path d="M485 142 l-9 -6 v12z" fill="#22252a"/></g>
+        <g data-btn="ok"><rect x="423" y="124" width="36" height="36" rx="18" fill="#55595f" stroke="#1b1c1e" stroke-width="1.5"/><circle cx="441" cy="142" r="11" fill="#4a4d52"/></g>
+        <g data-btn="back"><circle cx="502" cy="222" r="15" fill="#8f2c20" stroke="#3d0f0a" stroke-width="1.5"/><circle cx="499" cy="218" r="6" fill="#b04a3c" opacity=".6"/><text x="502" y="226" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" font-weight="600" fill="#f2d9d2">BK</text></g>
+        <!-- tape -->
+        <g transform="rotate(-3 410 242)"><rect x="352" y="228" width="122" height="28" fill="#d8cda4" opacity=".93" filter="url(#rough)"/><text x="413" y="248" text-anchor="middle" font-family="Permanent Marker" font-size="14" fill="#1f1f22">JACKDAW MINI</text></g>
+        <rect x="256" y="264" width="44" height="7" rx="2" fill="#0a0a0b"/>
+      </svg>
+      <div class="hint">liga na alavanca do topo · <button class="re" data-reboot="A">religar</button></div>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>Ideia</h3>
+        <ul class="pc">
+          <li><b>A favor:</b> é o mais coerente com o noir e com “hacker clandestino”. A tela âmbar já conversa com o HUD. A alavanca e as teclas soltas são o esqueuomorfismo que você gosta: cada peça faz um barulho diferente.</li>
+          <li><b>Contra:</b> o corpo escuro some à noite, o que pede a luz da tela e o LED para recortar a silhueta. Ao lado da gralha fofa ele fica mais sério.</li>
+          <li><b>Fabricante:</b> nenhum. Ninguém vende isso: é de um tal “JKD”, e a fita crepe é o logo.</li>
+        </ul>
+        <h3>Som</h3>
+        <p>Um clique seco de domo metálico, em dois tempos (aperta e solta). A alavanca faz um <i>clack</i> grave.</p>
+      </div>
+      <div>
+        <h3>Cores</h3>
+        <div class="sw"><i style="background:#2c2e31"></i><i style="background:#46494e"></i><i style="background:#8f2c20"></i><i style="background:#d8cda4"></i><i style="background:#ffb22e"></i><i style="background:#160d03"></i></div>
+        <h3>De longe, no ASCII</h3>
+<pre class="ascii"> _o_o_o_o_o_      [/]
+|.---------.  ^   |
+|| ^v^     | &lt;o&gt;  |
+||  o * +  |  v  (B)
+|'---------' [JACKDAW]
+'======================'</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== B ===================== -->
+  <section id="B">
+    <h2>B · Fumê <small>o brinquedo translúcido</small></h2>
+    <p class="lead">O plástico fumê dos anos 2000 (Game Boy Color, iMac, telefones transparentes), com a placa, os chips e a bateria aparecendo por dentro. Ele tem o formato de seixo e se navega por uma <b>roda de clique</b> estilo iPod de 2008, com a tela verde-água iluminada. É o mais fofo dos três e o que mais combina com a gralha.</p>
+    <div class="stage">
+      <svg viewBox="0 0 560 290" data-dev="B">
+        <defs>
+          <clipPath id="clipB"><rect x="24" y="36" width="512" height="216" rx="100"/></clipPath>
+          <linearGradient id="glossB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          <radialGradient id="wheelG" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#eeeaf6"/><stop offset="1" stop-color="#bcb6cf"/></radialGradient>
+        </defs>
+        <circle cx="22" cy="144" r="13" fill="none" stroke="#5b5276" stroke-width="5"/>
+        <g clip-path="url(#clipB)">
+          <rect x="24" y="36" width="512" height="216" fill="#1b2824"/>
+          <g id="pcbB" stroke="#4f8a74" stroke-width="1.4" fill="none" opacity=".55"></g>
+          <rect x="370" y="60" width="44" height="28" rx="2" fill="#0d0e10"/><rect x="100" y="226" width="110" height="20" rx="3" fill="#2d2a3a"/>
+          <rect x="24" y="36" width="512" height="216" fill="#4a3f6e" opacity=".62"/>
+          <rect x="24" y="36" width="512" height="120" fill="url(#glossB)"/>
+        </g>
+        <rect x="24" y="36" width="512" height="216" rx="100" fill="none" stroke="#2a2440" stroke-width="2.5"/>
+        <text x="84" y="66" font-family="Varela Round" font-size="16" fill="#ece8f8">jackdaw<tspan fill="#8fd9c6"> mini</tspan></text>
+        <rect x="72" y="78" width="276" height="148" rx="16" fill="#0b1615" stroke="#2a2440" stroke-width="2"/>
+        <image id="lcdB" x="82" y="88" width="256" height="128"/>
+        <rect x="82" y="88" width="256" height="40" rx="8" fill="#fff" opacity=".06"/>
+        <g id="wheelB"></g>
+        <g data-btn="back"><rect x="414" y="222" width="64" height="18" rx="9" fill="#cfc9df" stroke="#7c7596"/><text x="446" y="235" text-anchor="middle" font-family="Varela Round" font-size="10" fill="#4a4366">back</text></g>
+        <g data-btn="power"><rect x="230" y="30" width="34" height="8" rx="4" fill="#cfc9df" stroke="#7c7596"/></g>
+        <circle cx="356" cy="58" r="3" fill="#8fd9c6" class="led"/>
+      </svg>
+      <div class="hint">liga no botão do topo · <button class="re" data-reboot="B">religar</button></div>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>Ideia</h3>
+        <ul class="pc">
+          <li><b>A favor:</b> é o mais carismático, porque a placa à mostra conta que é eletrônica de verdade, e a roda de clique é muito 2008. A tela clara se destaca na noite âmbar do jogo, então é fácil achar o aparelho na mão.</li>
+          <li><b>Contra:</b> o translúcido custa caro em cubinhos (é preciso desenhar o miolo) e fica menos “clandestino”. A roda é tátil, mas tem menos peças soltas.</li>
+          <li><b>Fabricante:</b> uma marca de consumo da cidade, a decidir junto do manual dos fabricantes. O firmware Jackdaw seria de outra fonte.</li>
+        </ul>
+        <h3>Som</h3>
+        <p>Um <i>thock</i> macio de plástico, mais grave. A roda faz um tique curtinho.</p>
+      </div>
+      <div>
+        <h3>Cores</h3>
+        <div class="sw"><i style="background:#4a3f6e"></i><i style="background:#1b2824"></i><i style="background:#dcd8e8"></i><i style="background:#8fd9c6"></i><i style="background:#0d3b37"></i><i style="background:#ece8f8"></i></div>
+        <h3>De longe, no ASCII</h3>
+<pre class="ascii" style="color:#9fd6c8">  .-~~~~~~~~~~~~~~~-.
+ ( .--------.  .-.   )
+O( |  (^v^) | ( o )  )
+ ( '--------'  '-'   )
+  '-~~~~~~~~~~~~~~~-'</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== C ===================== -->
+  <section id="C">
+    <h2>C · Campo <small>o testador disfarçado</small></h2>
+    <p class="lead">Um testador de linha de técnico de telefonia (o <b>Halvard LT-8</b>, fictício), com capa de borracha amarela de segurança, teclas de membrana e a tela verde-oliva clássica de Nokia. Alguém trocou o firmware e colou um adesivo da gralha por cima de “LINE TESTER”. Na rua ele passa por ferramenta de trabalho, e o mundo da GridLink já está cheio desses técnicos.</p>
+    <div class="stage tall">
+      <svg viewBox="0 0 300 470" data-dev="C">
+        <rect x="88" y="4" width="26" height="16" rx="3" fill="#1d1e20"/><rect x="186" y="4" width="26" height="16" rx="3" fill="#1d1e20"/><circle cx="199" cy="12" r="4" fill="#5a5d61"/>
+        <rect x="20" y="16" width="260" height="440" rx="36" fill="#e2ae1d" stroke="#9c740c" stroke-width="2"/>
+        <rect x="20" y="16" width="260" height="440" rx="36" filter="url(#grime)" opacity=".22"/>
+        <g fill="#c99a14"><rect x="14" y="60" width="10" height="60" rx="5"/><rect x="276" y="60" width="10" height="60" rx="5"/><rect x="14" y="350" width="10" height="60" rx="5"/><rect x="276" y="350" width="10" height="60" rx="5"/></g>
+        <rect x="40" y="36" width="220" height="400" rx="20" fill="#2a2c2e" stroke="#151617"/>
+        <text x="58" y="62" font-family="Archivo" font-weight="900" font-size="17" style="font-stretch:120%" fill="#e2ae1d">HALVARD</text>
+        <text x="188" y="62" font-family="IBM Plex Mono" font-size="9" fill="#8c8e90">LT-8</text>
+        <rect x="52" y="78" width="196" height="112" rx="6" fill="#141516" stroke="#3a3d40"/>
+        <image id="lcdC" x="60" y="88" width="180" height="90"/>
+        <text x="60" y="186" font-family="IBM Plex Mono" font-size="7" fill="#4b4e52">LINE TESTER · 600V CAT II</text>
+        <g transform="rotate(-8 176 206)"><rect x="140" y="194" width="78" height="26" rx="4" fill="#111" stroke="#f4f1e8" stroke-width="1.5"/><text x="179" y="212" text-anchor="middle" font-family="Archivo" font-weight="800" font-size="12" style="font-stretch:115%" fill="#f4f1e8">JACKDAW</text></g>
+        <g data-btn="back"><rect x="58" y="218" width="64" height="20" rx="10" fill="#3d4043" stroke="#18191a"/><text x="90" y="232" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#b9bbbd">BACK</text></g>
+        <g data-btn="power"><rect x="178" y="218" width="64" height="20" rx="10" fill="#7a2a22" stroke="#18191a"/><text x="210" y="232" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#e8c9c3">PWR</text></g>
+        <path d="M128 252 h44 v40 h40 v44 h-40 v40 h-44 v-40 h-40 v-44 h40z" fill="#3d4043" stroke="#151617" stroke-width="2" stroke-linejoin="round"/>
+        <g data-btn="up"><rect x="128" y="252" width="44" height="40" fill="#000" opacity="0"/><path d="M150 262 l-7 10 h14z" fill="#9a9c9f"/></g>
+        <g data-btn="down"><rect x="128" y="336" width="44" height="40" fill="#000" opacity="0"/><path d="M150 366 l-7 -10 h14z" fill="#9a9c9f"/></g>
+        <g data-btn="left"><rect x="88" y="292" width="40" height="44" fill="#000" opacity="0"/><path d="M98 314 l10 -7 v14z" fill="#9a9c9f"/></g>
+        <g data-btn="right"><rect x="172" y="292" width="40" height="44" fill="#000" opacity="0"/><path d="M202 314 l-10 -7 v14z" fill="#9a9c9f"/></g>
+        <g data-btn="ok"><circle cx="150" cy="314" r="19" fill="#55595d" stroke="#151617" stroke-width="1.5"/><text x="150" y="318" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" font-weight="600" fill="#d6d8da">OK</text></g>
+        <g id="grilleC" fill="#151617"></g>
+      </svg>
+      <div class="hint">liga no PWR · <button class="re" data-reboot="C">religar</button></div>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>Ideia</h3>
+        <ul class="pc">
+          <li><b>A favor:</b> tem uma história embutida (um aparelho legítimo adulterado) e casa com a GridLink e com o tema da rede física. Em pé, ele é diferente do celular e do notebook na mão. O amarelo se lê de longe até no escuro e no ASCII.</li>
+          <li><b>Contra:</b> é o menos “fofo” e o mais parecido com equipamento comum. O amarelo é chamativo, o que pode virar mecânica: um policial pergunta o que é isso.</li>
+          <li><b>Fabricante:</b> a Halvard Instruments, que faz testadores para a GridLink. Pode aparecer em vans e catálogos.</li>
+        </ul>
+        <h3>Som</h3>
+        <p>Membrana de borracha: abafado, curto e “emborrachado”, com um bip agudo de confirmação.</p>
+      </div>
+      <div>
+        <h3>Cores</h3>
+        <div class="sw"><i style="background:#e2ae1d"></i><i style="background:#2a2c2e"></i><i style="background:#3d4043"></i><i style="background:#7a2a22"></i><i style="background:#aab86a"></i><i style="background:#1f2a0c"></i></div>
+        <h3>De longe, no ASCII</h3>
+<pre class="ascii" style="color:#e2ae1d">  _[]___[]_
+ /HALVARD  \
+| .-------. |
+| | ^v^   | |
+| '-------' |
+|  [JACKDAW]|
+|    _^_    |
+|   &lt;(o)&gt;   |
+|    "v"    |
+| ::::::::: |
+ \_________/</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== mascote ===================== -->
+  <section id="gralha">
+    <h2>A gralha <small>clique para pôr no aparelho</small></h2>
+    <p class="lead">A prioridade é que ela seja fofa. A gralha de verdade é preta com a nuca cinza e tem o <b>olho claro</b>, um traço que a reconhece. Na tela de 1 bit, a nuca vira pontilhado e o olho vira um buraco com a pupila. As três piscam e pulam; na tela inicial ela fica em cima da prateleira das bugigangas que você junta.</p>
+    <div class="pets" id="pets"></div>
+  </section>
+
+  <section id="escolha">
+    <h2>Para comparar</h2>
+    <table>
+      <tr><th></th><th>A · Garagem</th><th>B · Fumê</th><th>C · Campo</th></tr>
+      <tr><td>Tom</td><td>noir, artesanal</td><td>fofo, 2008 de consumo</td><td>disfarce, operário</td></tr>
+      <tr><td>Na mão, à noite</td><td>a tela âmbar recorta</td><td>a tela clara e o corpo roxo</td><td>o amarelo se vê de longe</td></tr>
+      <tr><td>Navegação</td><td>5 teclas soltas + BK vermelho</td><td>roda de clique</td><td>cruz de borracha</td></tr>
+      <tr><td>Combina com</td><td>o HUD e o notebook</td><td>a gralha e o celular</td><td>a GridLink e a rua</td></tr>
+      <tr><td>Custo em cubinhos</td><td>baixo</td><td>alto (miolo visível)</td><td>médio</td></tr>
+    </table>
+    <p class="lead" style="margin-top:14px">Minha opinião: o <b>C</b> tem a melhor história e é o que mais usa o mundo (disfarce, GridLink, rua). A melhor mistura seria o corpo do C com a <b>tela âmbar do A</b>, para ficar na família do HUD, e a gralha 1. Se o critério for a fofura, o B ganha.</p>
+  </section>
+</main>
+
+<script>
+// ---------- 1-bit buffer ----------
+const W = 128, H = 64;
+const FONT = {
+  'A':'.#. #.# ### #.# #.#','B':'##. #.# ##. #.# ##.','C':'.## #.. #.. #.. .##','D':'##. #.# #.# #.# ##.','E':'### #.. ##. #.. ###',
+  'F':'### #.. ##. #.. #..','G':'.## #.. #.# #.# .##','H':'#.# #.# ### #.# #.#','I':'### .#. .#. .#. ###','J':'..# ..# ..# #.# .#.',
+  'K':'#.# #.# ##. #.# #.#','L':'#.. #.. #.. #.. ###','M':'#.# ### ### #.# #.#','N':'##. #.# #.# #.# #.#','O':'.#. #.# #.# #.# .#.',
+  'P':'##. #.# ##. #.. #..','Q':'.#. #.# #.# ##. .##','R':'##. #.# ##. #.# #.#','S':'.## #.. .#. ..# ##.','T':'### .#. .#. .#. .#.',
+  'U':'#.# #.# #.# #.# ###','V':'#.# #.# #.# #.# .#.','W':'#.# #.# ### ### #.#','X':'#.# #.# .#. #.# #.#','Y':'#.# #.# .#. .#. .#.',
+  'Z':'### ..# .#. #.. ###','0':'### #.# #.# #.# ###','1':'.#. ##. .#. .#. ###','2':'##. ..# .#. #.. ###','3':'##. ..# .#. ..# ##.',
+  '4':'#.# #.# ### ..# ..#','5':'### #.. ##. ..# ##.','6':'.## #.. ### #.# ###','7':'### ..# .#. .#. .#.','8':'### #.# ### #.# ###',
+  '9':'### #.# ### ..# ##.',':':'... .#. ... .#. ...','.':'... ... ... ... .#.','-':'... ... ### ... ...','>':'#.. .#. ..# .#. #..',
+  '<':'..# .#. #.. .#. ..#','/':'..# ..# .#. #.. #..','%':'#.# ..# .#. #.. #.#','+':'... .#. ### .#. ...','_':'... ... ... ... ###',' ':'... ... ... ... ...'
+};
+class Buf {
+  constructor() { this.p = new Uint8Array(W * H); }
+  clr() { this.p.fill(0); }
+  fill(x, y, w, h, v = 1) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (i >= 0 && j >= 0 && i < W && j < H) this.p[j * W + i] = v; }
+  text(x, y, s, sc = 1, v = 1) {
+    for (const ch of s.toUpperCase()) {
+      const g = (FONT[ch] || FONT[' ']).split(' ');
+      g.forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') this.fill(x + i * sc, y + j * sc, sc, sc, v); });
+      x += 4 * sc;
+    }
+    return x;
+  }
+  tw(s, sc = 1) { return s.length * 4 * sc - sc; }
+  spr(x, y, rows, sc = 1, flip = false, v = 1) {
+    const w = Math.max(...rows.map(r => r.length));
+    rows.forEach((r, j) => {
+      for (let i = 0; i < w; i++) {
+        const c = r[flip ? w - 1 - i : i] || '.';
+        if (c === '#' || (c === 'x' && ((i + j) & 1) === 0)) this.fill(x + i * sc, y + j * sc, sc, sc, v);
+      }
+    });
+  }
+}
+function paint(buf, pal, cv) {
+  const g = cv.getContext('2d');
+  g.fillStyle = pal.bg; g.fillRect(0, 0, cv.width, cv.height);
+  const s = cv.width / W, d = s * 0.84;
+  g.fillStyle = pal.ghost;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!buf.p[y * W + x]) g.fillRect(x * s, y * s, d, d);
+  g.fillStyle = pal.on;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (buf.p[y * W + x]) g.fillRect(x * s, y * s, d, d);
+}
+
+// ---------- sprites ----------
+function stamp(rows, x, y, pat) {
+  rows = rows.slice();
+  pat.forEach((p, j) => { const r = rows[y + j]; rows[y + j] = r.slice(0, x) + p + r.slice(x + p.length); });
+  return rows;
+}
+const MA = [
+  '......######..........',
+  '....##xxxxxx##........',
+  '...##xxxxxx####.......',
+  '..##xxxxx#######......',
+  '.#xxxxx##...#####.....',
+  '.#xxxxx##.#.######....',
+  '.#xxxx###...##########',
+  '.#################.##.',
+  '.##.#############.....',
+  '.###.############.....',
+  '..###...########......',
+  '...############.......',
+  '....##########........',
+  '......#...#...........',
+  '.....##..##...........'];
+const MB0 = [
+  '......########......',
+  '....##xxxxxxxx##....',
+  '...#xxxxxxxxxxxx#...',
+  '..#xxxxxxxxxxxxxx#..',
+  '.#................#.',
+  '.#................#.',
+  '#..................#',
+  '#..................#',
+  '#..................#',
+  '#..................#',
+  '#..................#',
+  '.#................#.',
+  '.#.#............#.#.',
+  '..#..............#..',
+  '...##..........##...',
+  '.....##########.....',
+  '......#......#......',
+  '.....##.....##......'];
+const EYE = ['.####.', '#....#', '#..#.#', '#.##.#', '#....#', '.####.'];
+const EYEC = ['......', '......', '.#..#.', '..##..', '......', '......'];
+const MC = [
+  '..........######........',
+  '........##xxxxxx#.......',
+  '.......#xxxxxxxx##......',
+  '......#xxxxxx######.....',
+  '......#xxxx##....###....',
+  '......#xxxx##.##.###....',
+  '......#xxxx##.##.#######',
+  '......#xxxxx#....######.',
+  '......##xxxx########....',
+  '.....##############.....',
+  '....################....',
+  '...####.############....',
+  '..####.##.##########....',
+  '.####.##.##.########....',
+  '####.##.##.#########....',
+  '###..#..#.##########....',
+  '##.......##########.....',
+  '..........########......',
+  '...........#....#.......',
+  '...........#....#.......',
+  '..........##...##.......'];
+const PETS = [
+  { name: '1 · Bolinha', note: 'Silhueta redonda de perfil, estilo Tamagotchi. Lê bem em qualquer tamanho.', get: b => b ? stamp(MA, 9, 4, ['###', '...', '###']) : MA },
+  { name: '2 · De frente', note: 'Olhos grandes de frente, kawaii. Fecha os olhos sorrindo ao piscar.', get: b => stamp(stamp(stamp(MB0, 2, 5, b ? EYEC : EYE), 12, 5, b ? EYEC : EYE), 8, 10, ['####', '.##.']) },
+  { name: '3 · Sprite', note: 'Mais ave e menos bola: postura de pé, cauda e asa com penas. Fica mais esperta que fofa.', get: b => b ? stamp(MC, 13, 4, ['####', '####', '....', '####']) : MC },
+];
+let petIdx = 0;
+const TRINKETS = [
+  ['..###..', '.#...#.', '#..#..#', '#.###.#', '#..#..#', '.#...#.', '..###..'],
+  ['.......', '.##....', '#..#...', '#..####', '.##..#.', '.....#.', '.......'],
+  ['...#...', '..#.#..', '.#####.', '#.....#', '#.....#', '.#...#.', '..###..'],
+  ['.#.#.#.', '#######', '#.....#', '#.###.#', '#.....#', '#######', '.#.#.#.'],
+  ['..###..', '.#####.', '.##.##.', '..###..', '..#.#..', '..###..', '...#...'],
+  ['#####..', '#...##.', '#.#.#.#', '#.....#', '#.#.#.#', '#.....#', '#######'],
+];
+const ICON = {
+  'PET': ['..###..', '.#####.', '##.####', '######.', '.#####.', '..###..', '.......'],
+  'IR REMOTE': ['.#####.', '.#.#.#.', '.#####.', '.#.#.#.', '.#####.', '.#.#.#.', '.#####.'],
+  'TONE': ['...###.', '...#.#.', '...#.#.', '...#...', '.###...', '####...', '.##....'],
+  'LIGHT': ['..###..', '.#...#.', '.#...#.', '..#.#..', '..###..', '..###..', '...#...'],
+  'CLOCK': ['..###..', '.#.#.#.', '#..#..#', '#..##.#', '#.....#', '.#...#.', '..###..'],
+  'FILES': ['.......', '###....', '#..####', '#.....#', '#.....#', '#######', '.......'],
+  'SETTINGS': ['..#.#..', '.#####.', '##...##', '.#.#.#.', '##...##', '.#####.', '..#.#..'],
+};
+const ITEMS = Object.keys(ICON);
+
+// ---------- sound ----------
+let AC = null, NOISE = null;
+function ac() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    NOISE = AC.createBuffer(1, AC.sampleRate * 0.2, AC.sampleRate);
+    const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return AC;
+}
+function env(g, t, a, peak, dec) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
+function noise(t, type, f, peak, dec, q = 0.7) {
+  const a = ac(), s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = NOISE; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+  env(g, t, 0.001, peak, dec); s.connect(fl).connect(g).connect(a.destination); s.start(t); s.stop(t + dec + 0.05);
+}
+function tone(t, type, f0, f1, peak, dec) {
+  const a = ac(), o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dec);
+  env(g, t, 0.002, peak, dec); o.connect(g).connect(a.destination); o.start(t); o.stop(t + dec + 0.05);
+}
+const SND = {
+  A: { down: t => { noise(t, 'highpass', 2600, .5, .018); tone(t, 'square', 2300, 2300, .03, .008); }, up: t => noise(t, 'highpass', 3400, .22, .012),
+       power: t => { noise(t, 'bandpass', 900, .7, .05, 2); tone(t, 'triangle', 160, 90, .25, .06); } },
+  B: { down: t => { tone(t, 'sine', 230, 95, .45, .045); noise(t, 'lowpass', 1300, .14, .02); }, up: t => tone(t, 'sine', 180, 120, .12, .02),
+       power: t => tone(t, 'sine', 300, 110, .4, .08) },
+  C: { down: t => { noise(t, 'lowpass', 650, .55, .03); tone(t, 'triangle', 140, 100, .2, .025); }, up: () => {},
+       power: t => { noise(t, 'lowpass', 500, .6, .04); tone(t, 'triangle', 120, 80, .25, .05); } },
+};
+function beep(f, d = .05, vol = .05) { const a = ac(); tone(a.currentTime + .005, 'square', f, f, vol, d); }
+
+// ---------- devices ----------
+const PAL = {
+  A: { bg: '#160d03', on: '#ffb22e', ghost: '#24170a' },
+  B: { bg: '#8fd9c6', on: '#0d3b37', ghost: '#83cdb9' },
+  C: { bg: '#aab86a', on: '#1f2a0c', ghost: '#a0ae62' },
+};
+const BOOT = {
+  A: ['JACKDAW FW 0.8.2', 'BOARD JKD-M REV.C', 'SD CARD....... OK', 'APPS........... 7', 'PET......... AWAKE'],
+  B: ['JACKDAW FW 0.8.2', 'SHELL SMOKE ED.', 'SD CARD....... OK', 'APPS........... 7', 'PET......... AWAKE'],
+  C: ['HALVARD LT-8 BIOS', 'FW PATCHED: JACKDAW', 'SD CARD....... OK', 'APPS........... 7', 'PET......... AWAKE'],
+};
+const devs = {};
+let focus = 'A';
+function mkDev(id) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  devs[id] = { id, cv, buf: new Buf(), img: document.getElementById('lcd' + id), mode: 'off', t: 0, sel: 0, app: null, look: false, hop: 0, freq: 440, irFlash: 0 };
+}
+['A', 'B', 'C'].forEach(mkDev);
+
+function clock() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function statusBar(b) {
+  b.text(2, 1, clock());
+  b.fill(110, 1, 14, 5); b.fill(111, 2, 12, 3, 0); b.fill(124, 2, 1, 3); b.fill(112, 3 - 0, 8, 1);
+  b.fill(112, 2, 8, 3);
+  b.fill(0, 7, 128, 1);
+}
+function drawHome(d) {
+  const b = d.buf; statusBar(b);
+  const pet = PETS[petIdx], blink = (d.t % 38) < 2, rows = pet.get(blink);
+  const w = Math.max(...rows.map(r => r.length)) * 2, h = rows.length * 2;
+  const y = 52 - h - (d.hop > 0 ? 3 : 0);
+  b.spr(Math.round(64 - w / 2), y, rows, 2, d.look);
+  b.fill(0, 53, 128, 1);
+  TRINKETS.forEach((t, i) => b.spr(4 + i * 11, 56, t));
+  b.text(98, 57, '6/40');
+}
+function drawMenu(d) {
+  const b = d.buf;
+  b.fill(0, 0, 128, 7); b.text(2, 1, 'MENU', 1, 0); b.text(128 - b.tw(clock()) - 2, 1, clock(), 1, 0);
+  const vis = 6, start = Math.max(0, Math.min(d.sel - 2, ITEMS.length - vis));
+  for (let k = 0; k < vis; k++) {
+    const i = start + k; if (i >= ITEMS.length) break;
+    const y = 9 + k * 9, on = i === d.sel, v = on ? 0 : 1;
+    if (on) b.fill(0, y - 1, 124, 9);
+    b.spr(3, y, ICON[ITEMS[i]], 1, false, v);
+    b.text(14, y + 1, ITEMS[i], 1, v);
+  }
+  const bh = Math.round(54 * vis / ITEMS.length), by = 9 + Math.round((54 - bh) * d.sel / (ITEMS.length - 1));
+  b.fill(126, 9, 1, 54); b.fill(125, by, 3, bh);
+}
+function drawApp(d) {
+  const b = d.buf, a = d.app;
+  if (a === 'LIGHT') { b.fill(0, 0, 128, 64); return; }
+  b.fill(0, 0, 128, 7); b.text(2, 1, a, 1, 0);
+  if (a === 'PET') {
+    const rows = PETS[petIdx].get((d.t % 38) < 2), w = Math.max(...rows.map(r => r.length)) * 2;
+    b.spr(Math.round(40 - w / 2), 14 + (d.hop > 0 ? -3 : 0), rows, 2, d.look);
+    b.text(80, 14, 'MOOD'); b.text(80, 21, 'HAPPY'); b.text(80, 32, 'SHINY'); b.text(80, 39, '6 OF 40');
+    b.text(80, 54, 'OK: PET');
+  } else if (a === 'IR REMOTE') {
+    b.spr(6, 14, ICON['IR REMOTE'], 4);
+    b.text(44, 14, 'POINT AT'); b.text(44, 21, 'A TV OR SCREEN');
+    b.text(44, 34, 'OK  POWER'); b.text(44, 41, 'UP  CH +'); b.text(44, 48, 'DN  CH -');
+    if (d.irFlash > 0) { b.text(44, 56, 'IR >>>'); }
+  } else if (a === 'TONE') {
+    const s = d.freq + ' HZ'; b.text(64 - b.tw(s, 3) / 2, 18, s, 3);
+    b.text(20, 44, 'UP DN  PITCH'); b.text(20, 52, 'OK     PLAY');
+  } else if (a === 'CLOCK') {
+    const s = clock(); b.text(64 - b.tw(s, 4) / 2, 20, s, 4);
+    b.text(34, 50, 'TUE 06 OCT');
+  } else if (a === 'FILES') {
+    ['/SD', '  CAPTURES/', '  APPS/', '  PET.SAV', '  README.TXT'].forEach((l, i) => b.text(4, 11 + i * 9, l));
+  } else if (a === 'SETTINGS') {
+    b.text(4, 12, 'BRIGHT'); b.fill(50, 12, 40, 5); b.fill(91, 12, 20, 5); b.fill(92, 13, 18, 3, 0);
+    b.text(4, 22, 'SOUND'); b.text(50, 22, 'ON');
+    b.text(4, 32, 'FIRMWARE'); b.text(50, 32, '0.8.2');
+    b.text(4, 42, 'BATTERY'); b.text(50, 42, '78%');
+  }
+}
+function drawBoot(d) {
+  const b = d.buf, lines = BOOT[d.id];
+  let t = d.t;
+  for (let i = 0; i < lines.length; i++) {
+    const n = Math.max(0, Math.min(lines[i].length, Math.floor(t * 2.2)));
+    b.text(2, 4 + i * 8, lines[i].slice(0, n));
+    if (n < lines[i].length) { if (d.t % 4 < 2) b.fill(2 + n * 4, 4 + i * 8, 3, 5); return; }
+    t -= lines[i].length / 2.2 + 2;
+  }
+  if (t > 6) { d.mode = 'home'; d.t = 0; }
+}
+function render(d) {
+  d.buf.clr();
+  if (d.mode === 'off') { if (d.id !== 'A' || true) { const s = 'PRESS POWER'; if (d.t % 20 < 14) d.buf.text(64 - d.buf.tw(s) / 2, 29, s); } }
+  else if (d.mode === 'boot') drawBoot(d);
+  else if (d.mode === 'home') drawHome(d);
+  else if (d.mode === 'menu') drawMenu(d);
+  else drawApp(d);
+  paint(d.buf, PAL[d.id], d.cv);
+  d.img.setAttribute('href', d.cv.toDataURL());
+}
+function power(d) {
+  if (d.mode === 'off') { d.mode = 'boot'; d.t = 0; beep(880, .06); setTimeout(() => beep(1320, .08), 90); }
+  else { d.mode = 'off'; d.t = 0; beep(440, .08); }
+  if (d.id === 'A') document.getElementById('leverA').setAttribute('transform', d.mode === 'off' ? 'rotate(-24 474 34)' : 'rotate(24 474 34)');
+}
+function press(id, btn) {
+  const d = devs[id]; focus = id;
+  if (btn === 'power') return power(d);
+  if (d.mode === 'off' || d.mode === 'boot') return;
+  if (d.mode === 'home') {
+    if (btn === 'ok') { d.mode = 'menu'; beep(1320, .035); }
+    else if (btn === 'left') { d.look = true; d.hop = 3; }
+    else if (btn === 'right') { d.look = false; d.hop = 3; }
+    else if (btn === 'up') { d.hop = 4; beep(1760, .03, .03); }
+  } else if (d.mode === 'menu') {
+    if (btn === 'up') d.sel = (d.sel + ITEMS.length - 1) % ITEMS.length;
+    else if (btn === 'down') d.sel = (d.sel + 1) % ITEMS.length;
+    else if (btn === 'ok') { d.mode = 'app'; d.app = ITEMS[d.sel]; beep(1320, .035); }
+    else if (btn === 'back') { d.mode = 'home'; beep(660, .05); }
+  } else {
+    if (btn === 'back') { d.mode = 'menu'; beep(660, .05); return; }
+    if (d.app === 'TONE') {
+      if (btn === 'up') d.freq = Math.min(2000, d.freq + 40); if (btn === 'down') d.freq = Math.max(120, d.freq - 40);
+      if (btn === 'ok') beep(d.freq, .3, .06);
+    } else if (d.app === 'IR REMOTE') { if (btn !== 'left' && btn !== 'right') { d.irFlash = 6; beep(2600, .02, .02); } }
+    else if (d.app === 'PET') { if (btn === 'ok') { d.hop = 4; beep(1760, .04, .03); setTimeout(() => beep(2093, .05, .03), 70); } if (btn === 'left') d.look = true; if (btn === 'right') d.look = false; }
+  }
+  render(d);
+}
+
+// ---------- svg extras ----------
+(function () {
+  const ns = 'http://www.w3.org/2000/svg', el = (tag, at, p) => { const e = document.createElementNS(ns, tag); for (const k in at) e.setAttribute(k, at[k]); p.appendChild(e); return e; };
+  const pins = document.getElementById('pinsA'); for (let i = 0; i < 18; i++) el('rect', { x: 92 + i * 8, y: 33, width: 4, height: 6, fill: '#c9a24a' }, pins);
+  const sc = document.getElementById('screwsA');
+  [[38, 58], [522, 58], [38, 248], [522, 248]].forEach(([x, y]) => { el('circle', { cx: x, cy: y, r: 6.5, fill: '#5d6066', stroke: '#1b1c1e' }, sc); el('path', { d: `M${x - 3.5} ${y - 1}l7 2 M${x - 1} ${y + 3.5}l2 -7`, stroke: '#26282b', 'stroke-width': 1.6 }, sc); });
+  const pcb = document.getElementById('pcbB');
+  ['M40 120 H140 V100 H360', 'M60 160 H300 V180 H520', 'M350 70 V40', 'M420 74 H520', 'M200 240 V200 H380 V250', 'M30 210 H90 V250', 'M470 60 V110 H530', 'M260 30 V60'].forEach(d => el('path', { d }, pcb));
+  for (let i = 0; i < 9; i++) el('circle', { cx: 380 + (i % 3) * 14, cy: 220 + Math.floor(i / 3) * 10, r: 2.4, fill: '#4f8a74', stroke: 'none' }, pcb);
+  const wh = document.getElementById('wheelB'), cx = 446, cy = 140, r1 = 25, r2 = 64, rad = a => a * Math.PI / 180;
+  el('circle', { cx, cy, r: r2 + 2, fill: '#2a2440' }, wh);
+  const sector = (a0, a1) => { const P = (r, a) => [cx + r * Math.cos(rad(a)), cy + r * Math.sin(rad(a))]; const [x0, y0] = P(r2, a0), [x1, y1] = P(r2, a1), [x2, y2] = P(r1, a1), [x3, y3] = P(r1, a0); return `M${x0} ${y0}A${r2} ${r2} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${r1} ${r1} 0 0 0 ${x3} ${y3}Z`; };
+  [['right', -45], ['down', 45], ['left', 135], ['up', 225]].forEach(([b, a]) => {
+    const g = el('g', { 'data-btn': b }, wh);
+    el('path', { d: sector(a, a + 90), fill: 'url(#wheelG)', stroke: '#9d97b4', 'stroke-width': 1 }, g);
+    const m = rad(a + 45), mx = cx + 46 * Math.cos(m), my = cy + 46 * Math.sin(m);
+    el('circle', { cx: mx, cy: my, r: 2.6, fill: '#6c6588' }, g);
+  });
+  const ok = el('g', { 'data-btn': 'ok' }, wh);
+  el('circle', { cx, cy, r: r1 - 3, fill: '#c9c3da', stroke: '#8d86a6' }, ok);
+  el('circle', { cx: cx - 5, cy: cy - 6, r: 8, fill: '#fff', opacity: .25 }, ok);
+  const gr = document.getElementById('grilleC'); for (let j = 0; j < 4; j++) for (let i = 0; i < 9; i++) el('circle', { cx: 102 + i * 12, cy: 392 + j * 10, r: 2.4 }, gr);
+})();
+
+// ---------- input ----------
+let held = null;
+document.querySelectorAll('[data-dev]').forEach(svg => {
+  svg.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-btn]'); if (!b) return;
+    e.preventDefault();
+    const id = svg.dataset.dev; ac(); if (AC.state === 'suspended') AC.resume();
+    b.classList.add('pressed'); held = { b, id };
+    const name = b.dataset.btn, s = SND[id];
+    (name === 'power' ? s.power : s.down)(AC.currentTime);
+    press(id, name);
+  });
+});
+addEventListener('pointerup', () => { if (!held) return; held.b.classList.remove('pressed'); SND[held.id].up(AC.currentTime); held = null; });
+const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Backspace: 'back', Escape: 'back' };
+addEventListener('keydown', e => {
+  const btn = KEYS[e.key]; if (!btn || e.repeat) return; e.preventDefault();
+  ac(); SND[focus].down(AC.currentTime); setTimeout(() => SND[focus].up(AC.currentTime), 70);
+  const g = document.querySelector(`[data-dev="${focus}"] [data-btn="${btn}"]`); if (g) { g.classList.add('pressed'); setTimeout(() => g.classList.remove('pressed'), 90); }
+  press(focus, btn);
+});
+document.querySelectorAll('[data-reboot]').forEach(b => b.onclick = () => { const d = devs[b.dataset.reboot]; ac(); d.mode = 'off'; power(d); });
+
+// ---------- pet cards ----------
+const petCards = PETS.map((p, i) => {
+  const div = document.createElement('div'); div.className = 'pet' + (i === petIdx ? ' on' : '');
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  div.append(cv); div.insertAdjacentHTML('beforeend', `<b>${p.name}</b><span>${p.note}</span>`);
+  div.onclick = () => { petIdx = i; petCards.forEach((c, k) => c.div.classList.toggle('on', k === i)); beep(1760, .04, .03); };
+  document.getElementById('pets').append(div);
+  return { div, cv, buf: new Buf(), t: i * 13, hop: 0, look: false };
+});
+function renderPet(c, i) {
+  const b = c.buf; b.clr();
+  const rows = PETS[i].get((c.t % 38) < 2), w = Math.max(...rows.map(r => r.length)) * 2, h = rows.length * 2;
+  b.spr(Math.round(64 - w / 2), 52 - h - (c.hop > 0 ? 3 : 0), rows, 2, c.look);
+  b.fill(0, 53, 128, 1); TRINKETS.forEach((t, k) => b.spr(4 + k * 11, 56, t));
+  paint(b, { bg: '#0f1110', on: '#d8d4c4', ghost: '#171918' }, c.cv);
+}
+
+// ---------- loop ----------
+let tick = 0;
+setInterval(() => {
+  tick++;
+  for (const id in devs) {
+    const d = devs[id]; d.t++; if (d.hop > 0) d.hop--; if (d.irFlash > 0) d.irFlash--;
+    if (d.mode === 'home' && d.t % 47 === 30) { d.hop = 3; }
+    if (d.mode === 'home' && d.t % 90 === 60) d.look = !d.look;
+    render(d);
+  }
+  petCards.forEach((c, i) => { c.t++; if (c.hop > 0) c.hop--; if (c.t % 41 === 7) c.hop = 3; if (c.t % 73 === 20) c.look = !c.look; renderPet(c, i); });
+}, 100);
+// boot all three once, staggered, so the page opens alive (silent until you touch something)
+['A', 'B', 'C'].forEach((id, i) => setTimeout(() => { devs[id].mode = 'boot'; devs[id].t = 0; if (id === 'A') document.getElementById('leverA').setAttribute('transform', 'rotate(24 474 34)'); }, 300 + i * 700));
+</script>
+</body>
+</html>
