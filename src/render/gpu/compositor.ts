@@ -206,8 +206,11 @@ fn phBloom(uv: vec2f) -> vec3f {
       }
     }
     let ub = textureLoad(uiBg, uc, 0);
-    // (the interface's cells under the phone's glass only carry its light for the glow; the glass leans off them)
-    if (ub.a > 0.25 && !inPhone(s)) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
+    // (the interface's cells under the phone's glass only carry its light for the glow; the glass leans off them.
+    // All of them, the edge ones too, which reach past the glass's rectangle: drawn there they stood upright beside it)
+    let pc0 = (u.ph0 - u.uiOrigin) / u.uiCell; let pc1 = (u.ph1 - u.uiOrigin + u.uiCell - 1) / u.uiCell;
+    let underGlass = u.ph1.x > u.ph0.x && all(uc >= pc0) && all(uc < pc1);
+    if (ub.a > 0.25 && !underGlass) { col = layer(uiCells, uiAtlas, q, uc, u.uiCell, select(col, ub.rgb, ub.a > 0.75)); }
     if (phUv.x >= 0.0) {
       // the phone's screen: its cells' picture (the content area) and its pixel picture (the whole glass), and the
       // glass's wide faint reflection in its top corner (the phone's manual: down the right side to 29%, curving to 35% on the left)

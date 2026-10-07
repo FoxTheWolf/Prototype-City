@@ -14,6 +14,8 @@ import { faceOf } from './ui';
  */
 export interface Hit { x: number; y: number; w: number; h: number; key?: Key; pre?: () => void }
 export const HITS: Hit[] = [];
+/** The screens drawn in pixels: a touch off their items does nothing (on the cells' screens it is OK on the row touched). */
+export const PIXEL_SCREENS = new Set<string>(['standby', 'menu', 'calls', 'messages', 'msglist', 'msg', 'compose']);
 
 /** The theme (the manual's section 6). */
 export const BG: C3 = [11, 18, 25], INK: C3 = [232, 244, 255], DIM: C3 = [127, 151, 170], SOFT: C3 = [169, 188, 203];
@@ -286,4 +288,102 @@ export function paintCall(P: Paint, d: CallPage, now: number) {
     } else ptext(P, M + 2, ry + 2, r.t, r.who === 'rec' ? [255, 200, 110] : [150, 170, 200]);
   });
   P.clip(0, 0, SCR_W, SCR_H);
+}
+
+/** An app's header (the manual's): a band in its colour, its name white, a note on the right. */
+export function appHeader(P: Paint, title: string, note: string, col: C3) {
+  P.grad(0, Y0, SCR_W, 28, [[0, mul(col, 1.1)], [1, mul(col, 0.8)]]);
+  ptext(P, M, Y0 + 10, title, [255, 255, 255], 1, true);
+  if (note) ptext(P, SCR_W - M - ptextW(note), Y0 + 10, note, [235, 242, 250]);
+}
+/** A list row's frame when picked (an ice frame on a faint ice), or the thin line under it. */
+function rowMark(P: Paint, y: number, h: number, sel: boolean) {
+  if (sel) { P.rrect(6, y, SCR_W - 12, h, 5, ICE, 0.16); ring(P, 6, y, SCR_W - 12, h, ICE); }
+  else P.rect(M, y + h, SCR_W - 2 * M, 1, [24, 36, 48]);
+}
+const MSG: C3 = [63, 143, 224];
+
+/** Messages: the boxes (Inbox, Sent), a new message, clearing the notices; each a row with its mark and count. */
+export interface MsgHome { title: string; rows: { label: string; count: string; hot: boolean; col: C3; mark: string; sel: boolean; pre: () => void }[]; t: number }
+export function paintMsgHome(P: Paint, d: MsgHome) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, '', MSG);
+  d.rows.forEach((r, k) => {
+    const y = Y0 + 40 + k * 46;
+    HITS.push({ x: 6, y, w: SCR_W - 12, h: 40, key: 'ok', pre: r.pre });
+    if (d.t < 0.05 * k) return;
+    rowMark(P, y, 40, r.sel);
+    P.rrect(M + 2, y + 8, 24, 24, 5, r.col);
+    ptext(P, M + 14 - ptextW(r.mark, 1, true) / 2, y + 16, r.mark, [255, 255, 255], 1, true);
+    ptext(P, M + 36, y + 16, r.label, INK, 1, true);
+    if (r.count) ptext(P, SCR_W - M - 6 - ptextW(r.count), y + 16, r.count, r.hot ? [255, 120, 90] : DIM);
+  });
+}
+
+/** A box of messages: each conversation with the picture, who, when, the first words; unread ones in ice with a dot. */
+export interface MsgList { title: string; count: string; empty: string; rows: { who: string; when: string; text: string; read: boolean; sel: boolean; pre: () => void }[]; t: number }
+export function paintMsgList(P: Paint, d: MsgList) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, d.count, MSG);
+  if (!d.rows.length) { ctext(P, 160, d.empty, DIM); return; }
+  d.rows.forEach((r, n) => {
+    const y = Y0 + 34 + n * 46;
+    HITS.push({ x: 6, y, w: SCR_W - 12, h: 42, key: 'ok', pre: r.pre });
+    if (d.t < 0.04 * n) return;
+    rowMark(P, y, 42, r.sel);
+    paintFace(P, M + 2, y + 7, 28, r.who);
+    const ww = ptextW(r.when), tx = M + 38, room = Math.floor((SCR_W - M - tx - 4) / 6);
+    ptext(P, tx, y + 9, r.who.slice(0, Math.floor((SCR_W - M - tx - ww - 8) / 6)), r.read ? INK : ICE, 1, true);
+    ptext(P, SCR_W - M - 4 - ww, y + 9, r.when, DIM);
+    ptext(P, tx, y + 24, r.text.slice(0, room - (r.read ? 0 : 2)), r.read ? DIM : SOFT);
+    if (!r.read) P.disc(SCR_W - M - 6, y + 28, 3, ICE);
+  });
+}
+
+/** A message open: who, when, and the message as a bubble (theirs light on the left, the player's green on the right). */
+export interface MsgRead { head: string; when: string; text: string; mine: boolean; t: number }
+export function paintMsgRead(P: Paint, d: MsgRead) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.head.slice(0, 36), '', MSG);
+  ctext(P, Y0 + 40, d.when, DIM);
+  const lines = wrapText(d.text, 30).slice(0, 24), w = Math.max(...lines.map((l) => ptextW(l)), 10) + 20, h = lines.length * 12 + 14;
+  const x = d.mine ? SCR_W - M - w : M, y = Y0 + 58, BUB: C3 = d.mine ? [150, 222, 130] : [236, 240, 246];
+  P.rrect(x, y, w, h, 8, BUB);
+  // the bubble's tail at its foot, toward who wrote it
+  if (d.mine) P.poly([x + w - 14, y + h - 1, x + w + 2, y + h + 7, x + w - 4, y + h - 1], BUB); else P.poly([x + 4, y + h - 1, x - 2, y + h + 7, x + 14, y + h - 1], BUB);
+  lines.forEach((l, k) => ptext(P, x + 10, y + 8 + k * 12, typed(l, d.t - k * 0.05), [24, 28, 34]));
+}
+
+/** Writing a message: the number on a field of its own, the text below, the field being typed in framed in ice; the typing's state at the foot. */
+export interface Compose { title: string; note: string; toLabel: string; to: string; text: string; textLabel: string; step: number; blink: boolean; hint: { chips: string[]; on: number } | string; goTo: () => void; goText: () => void }
+export function paintCompose(P: Paint, d: Compose) {
+  P.rect(0, 0, SCR_W, Y1, BG);
+  appHeader(P, d.title, d.note, [70, 170, 100]);
+  const field = (y: number, h: number, on: boolean) => { P.rrect(M, y, SCR_W - 2 * M, h, 5, on ? [22, 36, 50] : [15, 25, 34]); if (on) ring(P, M, y, SCR_W - 2 * M, h, ICE); };
+  const fy = Y0 + 38;
+  field(fy, 26, d.step === 0);
+  ptext(P, M + 8, fy + 9, d.toLabel, d.step === 0 ? ICE : DIM, 1, true);
+  ptext(P, M + 14 + ptextW(d.toLabel, 1, true), fy + 9, d.to + (d.step === 0 && d.blink ? '_' : ''), INK);
+  HITS.push({ x: M, y: fy, w: SCR_W - 2 * M, h: 26, pre: d.goTo });
+  const ty = fy + 34, th = Y1 - 30 - ty;
+  field(ty, th, d.step === 1);
+  HITS.push({ x: M, y: ty, w: SCR_W - 2 * M, h: th, pre: d.goText });
+  const lines = wrapText(d.text, 33), fit = Math.floor((th - 12) / 12), shown = lines.slice(-fit);
+  if (!d.text) ptext(P, M + 8, ty + 8, d.textLabel, DIM);
+  shown.forEach((l, k) => ptext(P, M + 8, ty + 8 + k * 12, l, INK));
+  if (d.step === 1 && d.blink) { const last = shown[shown.length - 1] ?? ''; P.rect(M + 8 + ptextW(last) + 1, ty + 7 + Math.max(0, shown.length - 1) * 12, 2, 10, ICE); }
+  // the typing: the letters of the key being tapped (the one it is on lit), the words T9 guesses, or the keys' hint
+  const hy = Y1 - 22;
+  if (typeof d.hint === 'string') ptext(P, M, hy + 6, d.hint.slice(0, 36), DIM);
+  else {
+    const H = d.hint;
+    let x = M;
+    H.chips.forEach((c, k) => {
+      const w = ptextW(c) + 8;
+      if (x + w > SCR_W - M) return;
+      P.rrect(x, hy, w, 18, 4, k === H.on ? ICE : [22, 36, 50]);
+      ptext(P, x + 4, hy + 5, c, k === H.on ? BG : INK);
+      x += w + 4;
+    });
+  }
 }

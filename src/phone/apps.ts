@@ -21,7 +21,7 @@ import { CONVERT, SNAKE_H, SNAKE_W } from './store';
 import { EDGE_LIMIT_KB, MENU_COLS, money, STORE, TOPUPS, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
 import { appIcon } from './hdicons';
-import { box, face, header, lerp, mul, PICK, PICK_DIM, PICK_INK, vgrad } from './ui';
+import { box, header, lerp, mul, vgrad } from './ui';
 import { BLOCK, SHAPE } from '../render/atlas';
 import { CASES, SHELLS } from './shells';
 import { compile, TRACKS } from '../audio/tracks';
@@ -91,7 +91,6 @@ function folder(S: Lcd, P: Phone, t: number) {
 export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
   switch (P.screen as App) {
     case 'contacts': return contacts(S, P, t);
-    case 'messages': return messages(S, P, t);
     case 'camera': return cameraScreen(S, P, now);
     case 'calendar': return drawCalendar(S, P, world, now);
     case 'weather': return weatherApp(S, P, world, t, now);
@@ -106,10 +105,7 @@ export function app(S: Lcd, P: Phone, world: World, t: number, now: number) {
       if (P.screen === 'photos') return photosScreen(S, P, t);
       if (P.screen === 'app') return appScreen(S, P, world, t, now);
       if (P.screen === 'wifikey') return wifiKey(S, P, world, now);
-      if (P.screen === 'msglist') return msgList(S, P, t);
       if (P.screen === 'folder') return folder(S, P, t);
-      if (P.screen === 'msg') return msgRead(S, P, t);
-      if (P.screen === 'compose') return compose(S, P, now);
   }
 }
 
@@ -124,11 +120,6 @@ function wrap(s: string, w: number): string[] {
   if (line) out.push(line);
   return out;
 }
-
-/** The light pages of the phone's own apps (dialer, messages): a pale gradient, dark ink, blue accents. */
-const PG0: C3 = [234, 238, 244], PG1: C3 = [206, 212, 222], INKD: C3 = [30, 34, 44], GREY: C3 = [110, 118, 132], BLUE: C3 = [40, 90, 170];
-const pageBg = (y: number): C3 => lerp(PG0, PG1, (y - 1) / (SH - 3));
-const lightPage = (S: Lcd) => vgrad(S, 1, SH - 2, PG0, PG1);
 
 /** The Phone's two tabs on the title row (Calls, Contacts), the one open lit; left and right switch them. */
 function tabs(S: Lcd, x: number, on: number, fg: C3, bg: C3, hi: C3) {
@@ -169,82 +160,6 @@ function contactEdit(S: Lcd, P: Phone, now: number) {
   title(S, `${name('contacts').toUpperCase()} +`, 1, E.step === 0 ? P.nameEd.label() : '123');
   if (E.step === 0) typeHint(S, 1, SH - 3, P.nameEd, now, A.modeHint, DIM, LCD); else S.text(1, SH - 3, 'v number', DIM, LCD);
   softKeys(S, E.name && E.number ? A.save : '', (E.step === 0 ? E.name : E.number) ? A.clear : T.back);
-}
-
-/** Messages: the boxes as cards (inbox with the unread count, sent, a new message). */
-function messages(S: Lcd, P: Phone, t: number) {
-  lightPage(S);
-  header(S, name('messages'), '', '[=]', [150, 200, 255]);
-  const unread = P.inbox.filter((m) => !m.read).length;
-  const cards: [string, string, string, C3][] = [['[v]', A.inbox, unread ? `${unread} new` : `${P.inbox.length}`, BLUE], ['[^]', A.sent, `${P.sent.length}`, GREY], ['[+]', A.newMsg, '', [40, 160, 80]], ['[x]', A.clearAll, '', [200, 60, 50]]];
-  cards.forEach(([icon, label, count, col], k) => {
-    const y = 4 + k * 4, sel = k === P.box, bg: C3 = sel ? [44, 88, 170] : [240, 243, 248], bot: C3 = sel ? PICK : [228, 232, 240], mid = lerp(bg, bot, 0.5);
-    if (t < 0.05 * k) return;
-    box(S, 1, y, SW - 2, y + 2, bg, pageBg, 1, bot);
-    S.text(3, y + 1, icon, sel ? PICK_INK : col, mid);
-    S.text(8, y + 1, label, sel ? PICK_INK : INKD, mid);
-    if (count) S.text(SW - count.length - 3, y + 1, count, sel ? (unread && k === 0 ? [255, 190, 170] : PICK_DIM) : unread && k === 0 ? [210, 60, 50] : GREY, mid);
-  });
-  softKeys(S, T.open, T.back);
-}
-
-/** Who a message is from (or to): the contact's name when there is one. */
-const nameOf = (P: Phone, n: string) => P.contacts.find((c) => c.number === n)?.name ?? n;
-
-/** A box of messages as a list of conversations: the picture, who, when, the first words; unread ones marked. */
-function msgList(S: Lcd, P: Phone, t: number) {
-  const L = P.box === 0 ? P.inbox.map((m) => [m.from, m.text, m.read, m.at] as const) : P.sent.map((m) => [m.to, m.text, true, m.at] as const);
-  lightPage(S);
-  header(S, P.box === 0 ? A.inbox : A.sent, `${L.length}`, '[=]', [150, 200, 255]);
-  if (!L.length) S.center(10, A.noMsgs, GREY, pageBg(10));
-  const per = 3, view = Math.floor((SH - 5) / per), top = Math.max(0, Math.min(P.msel - view + 1, L.length - view));
-  L.slice(top, top + view).forEach(([who, text, read, at], n) => {
-    const sel = top + n === P.msel, y = 3 + n * per, bg: C3 = sel ? PICK : pageBg(y);
-    if (t < 0.04 * n) return;
-    if (sel) box(S, 0, y, SW - 1, y + 1, bg, pageBg, 0);
-    face(S, 1, y, nameOf(P, who));
-    const c = calendar(at), when = `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`;
-    S.text(4, y, nameOf(P, who).slice(0, SW - when.length - 7), sel ? PICK_INK : read ? INKD : BLUE, bg);
-    S.text(SW - when.length - 1, y, when, sel ? PICK_DIM : GREY, bg);
-    S.text(4, y + 1, text.slice(0, SW - 6), sel ? (read ? PICK_DIM : PICK_INK) : read ? GREY : INKD, sel ? bg : pageBg(y + 1));
-    if (!read) S.put(SW - 2, y + 1, SHAPE.dot, sel ? [150, 200, 255] : BLUE, sel ? bg : pageBg(y + 1));
-    for (let x = 4; x < SW - 1; x++) S.put(x, y + 2, SHAPE.top, [218, 222, 230], pageBg(y + 2));
-  });
-  softKeys(S, A.new, T.back);
-}
-
-function msgRead(S: Lcd, P: Phone, t: number) {
-  const m = P.box === 0 ? P.inbox[P.msel] : null, s2 = P.box === 1 ? P.sent[P.msel] : null;
-  const who = m ? m.from : s2?.to ?? '', text = m ? m.text : s2?.text ?? '', at = m ? m.at : s2?.at ?? 0, c = calendar(at);
-  const PG: C3 = [214, 222, 232];
-  paint(S, PG);
-  bar(S, `${P.box === 0 ? A.from : A.to}: ${nameOf(P, who)}`.slice(0, SW - 2), WHITE, [60, 90, 130]);
-  S.center(3, `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`, [110, 120, 136], PG);
-  // the message as a bubble: theirs white on the left, the player's green on the right
-  const mine = P.box === 1, lines = wrap(text, SW - 10).slice(0, SH - 9), w = Math.max(1, ...lines.map((l) => l.length)) + 2;
-  const x0 = mine ? SW - w - 2 : 2, BUB: C3 = mine ? [150, 222, 130] : [250, 250, 252];
-  for (let k = -1; k <= lines.length; k++) for (let x = 0; x < w; x++) S.put(x0 + x, 5 + k, 32, BUB, BUB);
-  lines.forEach((l, k) => S.text(x0 + 1, 5 + k, typed(l, t - k * 0.05), [24, 28, 34], BUB));
-  S.put(mine ? x0 + w : x0 - 1, 5 + lines.length, ch(mine ? '/' : '\\'), BUB, PG);
-  softKeys(S, /^[0-9*#]+$/.test(who) ? A.replyK : '', T.back);
-}
-
-function compose(S: Lcd, P: Phone, now: number) {
-  const D = P.draft, blink = Math.floor(now * 2) & 1, W: C3 = [255, 255, 255];
-  lightPage(S);
-  header(S, A.newMsg, `${D.step === 1 ? P.smsEd.label() : '123'} ${D.text.length}/160`, '[+]', [120, 230, 150]);
-  // the number on a field of its own, the text on a white page; the field being typed in outlined in blue
-  box(S, 1, 3, SW - 2, 3, D.step === 0 ? W : [244, 246, 250], pageBg, 0);
-  S.text(2, 3, A.to, D.step === 0 ? BLUE : GREY, D.step === 0 ? W : [244, 246, 250]);
-  S.text(6, 3, nameOf(P, D.to) + (D.step === 0 && blink ? '_' : ''), INKD, D.step === 0 ? W : [244, 246, 250]);
-  const pg: C3 = D.step === 1 ? W : [244, 246, 250];
-  box(S, 1, 5, SW - 2, SH - 4, pg, pageBg, 1);
-  const lines = wrap(D.text, SW - 4);
-  lines.slice(-(SH - 11)).forEach((l, k) => S.text(2, 6 + k, l, INKD, pg));
-  if (D.step === 1 && blink) S.put(2 + (lines[lines.length - 1]?.length ?? 0), 6 + Math.max(0, Math.min(lines.length, SH - 11) - 1), ch('_'), BLUE, pg);
-  if (!D.text) S.text(2, 6, A.text, GREY, pg);
-  if (D.step === 0) S.text(1, SH - 3, '* <-   v text', GREY, pageBg(SH - 3)); else typeHint(S, 1, SH - 3, P.smsEd, now, A.modeHint, GREY, pageBg(SH - 3));
-  softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', D.step === 1 && D.text ? A.clear : T.back);
 }
 
 /** The operator's service menu: "running" for a moment, then its text and, on a menu, the answer being typed. */

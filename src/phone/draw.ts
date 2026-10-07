@@ -18,7 +18,7 @@ import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, SCR_H } from './pixui';
-import { APP_COL, HITS, paintCall, paintDial, paintMenu, paintStandby, paintVolume, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
+import { APP_COL, HITS, paintCall, paintCompose, paintDial, paintMenu, paintMsgHome, paintMsgList, paintMsgRead, paintStandby, paintVolume, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
 import { type Paint } from '../render/paint2d';
 import { phoneFam } from '../render/brands';
@@ -279,6 +279,7 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, aspect: number, n
         if (P.callIn && c.state === 'ringing') softKeys(S, T.apps.answer, T.apps.end); else softKeys(S, '', c.state === 'ended' ? '' : T.apps.end);
       }
       else if (P.screen === 'calls' && !P.call) { const d = dialData(P, world, t); page = (Pt) => paintDial(Pt, d, now); softKeys(S, P.dial ? T.apps.save : '', P.dial ? T.apps.clear : T.back); }
+      else if (P.screen === 'messages' || P.screen === 'msglist' || P.screen === 'msg' || P.screen === 'compose') page = msgPage(S, P, t, now);
       else if (P.screen === 'map') map(S, P, world, aspect * PIC_K, t, now);
       else if (P.screen === 'places') places(S, P, world, t, now);
       else app(S, P, world, t, now);
@@ -580,6 +581,42 @@ function callData(P: Phone, world: World, now: number): CallPage {
   const cost = c.state === 'ended' && !P.callIn && c.cost() ? A.cost.replace('{c}', `$${(c.cost() / 100).toFixed(2)}`) : '';
   const lines = c.lines.map((L) => ({ who: L.who, text: L.text.slice(0, Math.ceil(((now - L.at) / L.dur) * L.text.length)) })).filter((L) => L.text);
   return { label: who ?? num, number: who ? num : '', state, stateCol, cost, ringingIn: ringIn, lines };
+}
+
+/**
+ * The messages' screens, painted in pixels (pixpages.ts): the boxes, a box's list, a message open, writing one.
+ * Sets the footer's actions as the cells' screens did; returns the page's painter.
+ */
+function msgPage(S: Lcd, P: Phone, t: number, now: number): (Pt: Paint) => void {
+  const A = T.apps, nameOf = (n: string) => P.contacts.find((c) => c.number === n)?.name ?? n;
+  const when = (at: number) => { const c = calendar(at); return `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]} ${hhmm(c.hour)}`; };
+  if (P.screen === 'messages') {
+    const unread = P.inbox.filter((m) => !m.read).length;
+    const R: [string, string, string, boolean, C3][] = [['v', A.inbox, unread ? `${unread} new` : `${P.inbox.length}`, unread > 0, [63, 143, 224]], ['^', A.sent, `${P.sent.length}`, false, [110, 118, 132]], ['+', A.newMsg, '', false, [47, 174, 90]], ['x', A.clearAll, '', false, [210, 58, 46]]];
+    const rows = R.map(([mark, label, count, hot, col], k) => ({ mark, label, count, hot, col, sel: k === P.box, pre: () => { P.box = k; } }));
+    softKeys(S, T.open, T.back);
+    return (Pt) => paintMsgHome(Pt, { title: (T.app as Record<string, string>).messages, rows, t });
+  }
+  if (P.screen === 'msglist') {
+    const L = P.box === 0 ? P.inbox.map((m) => [m.from, m.text, m.read, m.at] as const) : P.sent.map((m) => [m.to, m.text, true, m.at] as const);
+    const view = 7, top = Math.max(0, Math.min(P.msel - view + 1, L.length - view));
+    const rows = L.slice(top, top + view).map(([who, text, read, at], n) => ({ who: nameOf(who), when: when(at), text, read, sel: top + n === P.msel, pre: () => { P.msel = top + n; } }));
+    softKeys(S, A.new, T.back);
+    return (Pt) => paintMsgList(Pt, { title: P.box === 0 ? A.inbox : A.sent, count: `${L.length}`, empty: A.noMsgs, rows, t });
+  }
+  if (P.screen === 'msg') {
+    const m = P.box === 0 ? P.inbox[P.msel] : null, s2 = P.box === 1 ? P.sent[P.msel] : null;
+    const who = m ? m.from : s2?.to ?? '', text = m ? m.text : s2?.text ?? '', at = m ? m.at : s2?.at ?? 0;
+    softKeys(S, /^[0-9*#]+$/.test(who) ? A.replyK : '', T.back);
+    return (Pt) => paintMsgRead(Pt, { head: `${P.box === 0 ? A.from : A.to}: ${nameOf(who)}`, when: when(at), text, mine: P.box === 1, t });
+  }
+  const D = P.draft, ed = P.smsEd, tap = ed.tapping(now), G = ed.guesses();
+  const hint = tap ? { chips: [...tap].map((c) => (c === ' ' ? '_' : c)), on: ed.tapIndex() }
+    : D.step === 1 && G.length >= 2 ? { chips: G.slice(Math.max(0, ed.guessIndex() - 3)), on: Math.min(3, ed.guessIndex()) }
+    : D.step === 0 ? '* <-   v text' : A.modeHint;
+  softKeys(S, D.step === 0 ? T.ok : D.to && D.text ? A.send : '', D.step === 1 && D.text ? A.clear : T.back);
+  return (Pt) => paintCompose(Pt, { title: A.newMsg, note: `${D.step === 1 ? ed.label() : '123'} ${D.text.length}/160`, toLabel: A.to, to: nameOf(D.to), text: D.text, textLabel: A.text,
+    step: D.step, blink: (Math.floor(now * 2) & 1) === 1, hint, goTo: () => { D.step = 0; }, goText: () => { D.step = 1; } });
 }
 
 // map colours, as the phone maps of the time drew them: pale ground, white streets, yellow avenues,
