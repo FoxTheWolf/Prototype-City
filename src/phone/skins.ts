@@ -1,5 +1,5 @@
 import { wxArt, wxColors } from './hdicons';
-import { paintWeather, type Weather as WeatherPage } from './pixpages';
+import { articleLines, paintNewsArticle, paintNewsFront, paintWeather, type NewsArticle, type NewsFront, type Weather as WeatherPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
 import en from '../locale/en.json';
 import { cityName } from '../locale/names';
@@ -7,11 +7,10 @@ import { newsStories, storyBody, type Story } from '../locale/news';
 import { HD } from '../render/hd';
 import { isSolid } from '../sim/city';
 import { takePic } from './wire';
-import { PICK, PICK_INK } from './ui';
 import { calendar, moonPhase, sunDir } from '../sim/clock';
 import { forecast, newWeather, type Weather } from '../sim/weather';
 import { type World } from '../sim/world';
-import { ch, type C3, hhmm, type Lcd, MONTHS, DAYS, SH, softKeys, SW, typed } from './lcd';
+import { type C3, hhmm, type Lcd, MONTHS, DAYS, softKeys } from './lcd';
 import { type Phone } from './phone';
 
 /**
@@ -71,44 +70,23 @@ export function weatherApp(S: Lcd, P: Phone, world: World, t: number, now: numbe
   return page;
 }
 
-const PAPER: C3 = [236, 228, 208], INK: C3 = [24, 20, 16], FADED: C3 = [110, 98, 82], RULE: C3 = [150, 136, 112];
 /** The news: the front page of the city's paper, the same headlines the tickers run. */
-export function newsApp(S: Lcd, P: Phone, world: World, t: number, loading: boolean) {
-  for (let y = 1; y < SH - 1; y++) S.fill(y, PAPER);
-  const name = `THE ${cityName(world.city).toUpperCase()} COURIER`, c = calendar(world.time);
-  S.center(1, name.length <= SW - 2 ? name : 'THE COURIER', INK, PAPER);
-  for (let x = 0; x < SW; x++) { S.put(x, 2, ch('='), INK, PAPER); S.put(x, 4, ch('-'), RULE, PAPER); }
-  const line = `${DAYS[c.weekday]}. ${MONTHS[c.month - 1]} ${c.day}, ${c.year}`;
-  S.text(1, 3, line, FADED, PAPER);
-  S.text(SW - 10, 3, 'LATE ED.', FADED, PAPER);
+export function newsApp(S: Lcd, P: Phone, world: World, t: number, loading: boolean): (Pt: Paint) => void {
+  const full = `THE ${cityName(world.city).toUpperCase()} COURIER`, c = calendar(world.time);
+  const name = full.length <= 36 ? full : 'THE COURIER', date = `${DAYS[c.weekday]}. ${MONTHS[c.month - 1]} ${c.day}, ${c.year}`, ed = 'LATE ED.';
   if (loading || world.time - P.newsAt > 3600) {
-    S.center(10, P.online() ? A.shop.newsWait : A.shop.newsNone, P.online() ? FADED : [170, 40, 30], PAPER);
-    return softKeys(S, '', en.phone.back);
+    softKeys(S, '', en.phone.back);
+    const d: NewsFront = { name, date, ed, wait: P.online() ? A.shop.newsWait : A.shop.newsNone, bad: !P.online(), stories: [], t };
+    return (Pt) => paintNewsFront(Pt, d);
   }
-  // the front page: every story under its headline; the picked one dark, OK opens it
-  if (P.newsOpen) return article(S, P, world, P.newsOpen, t);
+  if (P.newsOpen) return article(S, P, world, P.newsOpen, t, name, date, ed);
+  // the front page: every story under its headline; the picked one dark, OK (or a second touch) opens it
   const list = newsStories(world).filter((q) => q.kind !== 'date');
   P.newsSel = Math.max(0, Math.min(P.newsSel, list.length - 1));
-  const rows: [string, number][] = [];
-  let selRow = 0;
-  list.forEach((q, k) => {
-    if (k === P.newsSel) selRow = rows.length;
-    for (const l of wrapW(q.head + (isNaN(q.x) ? '' : ' [PHOTO]'), SW - 2)) rows.push([l, k]);
-    if (k < list.length - 1) rows.push(['~', -1]);
-  });
-  const view = SH - 7;
-  // keep the picked story in view
-  if (selRow < P.scroll) P.scroll = selRow;
-  const selEnd = rows.findIndex((r, i) => i > selRow && r[1] !== P.newsSel);
-  if ((selEnd < 0 ? rows.length : selEnd) > P.scroll + view) P.scroll = (selEnd < 0 ? rows.length : selEnd) - view;
-  P.scroll = Math.max(0, Math.min(P.scroll, Math.max(0, rows.length - view)));
-  rows.slice(P.scroll, P.scroll + view).forEach(([l, k], i) => {
-    const y = 5 + i, pick = k === P.newsSel;
-    if (l === '~') { S.center(y, '*  *  *', RULE, PAPER); return; }
-    if (pick) S.fill(y, PICK);
-    S.text(1, y, typed(l, t - i * 0.03, 140), pick ? PICK_INK : INK, pick ? PICK : k === 0 ? [228, 216, 190] : PAPER);
-  });
+  const stories = list.map((q, k) => ({ lines: wrapW(q.head, 30), photo: !isNaN(q.x), sel: k === P.newsSel, pre: () => { P.newsSel = k; } }));
   softKeys(S, W.refresh, en.phone.back);
+  const d: NewsFront = { name, date, ed, wait: '', bad: false, stories, t };
+  return (Pt) => paintNewsFront(Pt, d);
 }
 
 /** Photos of the stories: bigger than Streetwire's (the paper's), 42 x 18. */
@@ -138,41 +116,24 @@ function photoSpot(world: World, q: Story): [number, number, number, number, num
 }
 
 /** A story opened: its headline, its photo (when it happened somewhere), the article and the dateline; up and down scroll. */
-function article(S: Lcd, P: Phone, world: World, q: Story, t: number) {
-  const rows: [string, C3, C3][] = [];
-  for (const l of wrapW(q.head, SW - 2)) rows.push([l, INK, [228, 216, 190]]);
-  rows.push(['', INK, PAPER]);
-  let photoAt = -1, cam = -1;
-  if (!isNaN(q.x)) {
-    photoAt = rows.length;
-    for (let r = 0; r < PHOTO_H; r++) rows.push(['', INK, PAPER]);
-    cam = photoSpot(world, q)[5];
-    rows.push([cam >= 0 ? `Security camera still, CAM ${String(cam + 1).padStart(2, '0')}` : 'Courier photo', FADED, PAPER]);
-    rows.push(['', INK, PAPER]);
+function article(S: Lcd, P: Phone, world: World, q: Story, t: number, name: string, date: string, ed: string): (Pt: Paint) => void {
+  const head = wrapW(q.head, 30), body: string[] = [];
+  for (const para of storyBody(world, q)) { body.push(...wrapW(para, 36), ''); }
+  const hasPhoto = !isNaN(q.x);
+  let photo: NewsArticle['photo'] = null, caption = '';
+  if (hasPhoto) {
+    const [x, y, yaw, eye, pitch, cam] = photoSpot(world, q);
+    const pic = takePic(P, 0x7e000000 + q.key * 8 + (q.kind === 'crash' ? 1 : q.kind === 'jam' ? 2 : q.kind === 'blackout' ? 3 : 4), x, y, yaw, PHOTO_W, PHOTO_H, eye, pitch);
+    if (pic) photo = { hd: pic.hd, w: pic.w * HD, h: pic.h * HD };
+    caption = cam >= 0 ? `Security camera still, CAM ${String(cam + 1).padStart(2, '0')}` : 'Courier photo';
   }
-  for (const para of storyBody(world, q)) { for (const l of wrapW(para, SW - 2)) rows.push([l, INK, PAPER]); rows.push(['', INK, PAPER]); }
-  const c = calendar(q.at);
-  rows.push([`${cityName(world.city).toUpperCase()}, ${MONTHS[c.month - 1]} ${c.day}`, FADED, PAPER]);
-  const view = SH - 7;
-  P.scroll = Math.max(0, Math.min(P.scroll, Math.max(0, rows.length - view)));
-  rows.slice(P.scroll, P.scroll + view).forEach(([l, fg, bg], i) => { if (bg !== PAPER) S.fill(5 + i, bg); S.text(1, 5 + i, typed(l, t - i * 0.02, 160), fg, bg); });
-  if (photoAt >= 0) {
-    const [x, y, yaw, eye, pitch] = photoSpot(world, q), pic = takePic(P, 0x7e000000 + q.key * 8 + (q.kind === 'crash' ? 1 : q.kind === 'jam' ? 2 : q.kind === 'blackout' ? 3 : 4), x, y, yaw, PHOTO_W, PHOTO_H, eye, pitch);
-    for (let r = 0; r < PHOTO_H; r++) {
-      const yy = 5 + photoAt + r - P.scroll;
-      if (yy < 5 || yy >= 5 + view) continue;
-      for (let cx = 0; cx < PHOTO_W && cx < SW; cx++) {
-        if (!pic) { S.put(cx, yy, 32, FADED, [200, 192, 172]); continue; }
-        const o = (r * pic.w + cx) * 4;
-        S.put(cx, yy, 32, [pic.cells[o + 1], pic.cells[o + 2], pic.cells[o + 3]], [pic.bg[o], pic.bg[o + 1], pic.bg[o + 2]]);
-        for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
-          const h = ((r * HD + iy) * pic.w * HD + cx * HD + ix) * 3;
-          S.pixel(cx, yy, ix, iy, pic.hd[h], pic.hd[h + 1], pic.hd[h + 2]);
-        }
-      }
-    }
-  }
+  const c = calendar(q.at), d: NewsArticle = { name, date, ed, head, photo, hasPhoto, caption, body, dateline: `${cityName(world.city).toUpperCase()}, ${MONTHS[c.month - 1]} ${c.day}`, scroll: 0, t };
+  // up and down scroll, a line at a time, to the end
+  const view = 24;
+  P.scroll = Math.max(0, Math.min(P.scroll, Math.max(0, articleLines(d) - view)));
+  d.scroll = P.scroll;
   softKeys(S, '', en.phone.back);
+  return (Pt) => paintNewsArticle(Pt, d);
 }
 
 function wrapW(s: string, w: number): string[] {

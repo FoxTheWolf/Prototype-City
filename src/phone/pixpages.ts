@@ -3,7 +3,7 @@ import { moonPhase, sunDir } from '../sim/clock';
 import { Paint, star, type C3 } from '../render/paint2d';
 import { FOOT_H, ICE, ptext, ptextW, SCR_H, SCR_W, STATUS_H } from './pixui';
 import { type Key, type Phone } from './phone';
-import { faceOf } from './ui';
+import { faceOf, PICK, PICK_INK } from './ui';
 
 /**
  * The phone's screens drawn in pixels by the manual v2's grid (section 6: the 18 px bar on top, the 26 px
@@ -750,4 +750,77 @@ export function paintCalNew(P: Paint, d: CalNew) {
     HITS.push({ x: M, y, w: SCR_W - 2 * M, h: 44, pre: go as () => void });
   });
   paintHint(P, Y1 - 22, d.hint, CAL.dim);
+}
+
+/** A photo as RGB pixels (a wire.ts Pic's hd), drawn at (x, y) scaled to w x h (nearest). */
+export interface Rgb { hd: Uint8ClampedArray; w: number; h: number }
+export function paintRgb(P: Paint, pic: Rgb, x: number, y: number, w: number, h: number) {
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const q = (Math.min(pic.h - 1, Math.floor((j * pic.h) / h)) * pic.w + Math.min(pic.w - 1, Math.floor((i * pic.w) / w))) * 3;
+    P.rect(x + i, y + j, 1, 1, [pic.hd[q], pic.hd[q + 1], pic.hd[q + 2]]);
+  }
+}
+
+/** The city's paper: newsprint, black ink, faded ink, the rules. */
+const NEWS = { paper: [236, 228, 208] as C3, ink: [24, 20, 16] as C3, faded: [110, 98, 82] as C3, rule: [150, 136, 112] as C3, lead: [228, 216, 190] as C3 };
+/** The masthead: the paper's name big between two rules, the date and the edition under it. Returns where the page starts. */
+function masthead(P: Paint, name: string, date: string, ed: string): number {
+  P.rect(0, 0, SCR_W, Y1, NEWS.paper);
+  const k = ptextW(name, 2, true) <= SCR_W - 2 * M ? 2 : 1;
+  ctext(P, Y0 + 8, name, NEWS.ink, k, true);
+  const y = Y0 + 12 + 8 * k;
+  P.rect(M, y, SCR_W - 2 * M, 2, NEWS.ink); P.rect(M, y + 3, SCR_W - 2 * M, 1, NEWS.ink);
+  ptext(P, M, y + 8, date, NEWS.faded); ptext(P, SCR_W - M - ptextW(ed), y + 8, ed, NEWS.faded);
+  P.rect(M, y + 20, SCR_W - 2 * M, 1, NEWS.rule);
+  return y + 26;
+}
+/** The front page: every story under its headline (the lead on its shaded band), a photo mark where there is one; the picked one dark. Touched once a story is picked, touched again it opens. */
+export interface NewsFront { name: string; date: string; ed: string; wait: string; bad: boolean; stories: { lines: string[]; photo: boolean; sel: boolean; pre: () => void }[]; t: number }
+export function paintNewsFront(P: Paint, d: NewsFront) {
+  const top = masthead(P, d.name, d.date, d.ed);
+  if (d.wait) { ctext(P, 180, d.wait, d.bad ? [170, 40, 30] : NEWS.faded); return; }
+  // the stories' places; scrolled so the picked one shows
+  let y = 0;
+  const at = d.stories.map((q) => { const a = y; y += q.lines.length * 12 + 8 + 14; return a; }), s = d.stories.findIndex((q) => q.sel);
+  const view = Y1 - 4 - top, h = (n: number) => d.stories[n].lines.length * 12 + 8;
+  const off = s < 0 ? 0 : Math.max(0, Math.min(at[s], at[s] + h(s) - view));
+  P.clip(0, top, SCR_W, Y1 - 2);
+  d.stories.forEach((q, n) => {
+    const qy = top + at[n] - off, qh = h(n);
+    if (qy > Y1 || qy + qh < top) return;
+    HITS.push({ x: 4, y: qy, w: SCR_W - 8, h: qh, pre: q.pre, key: q.sel ? 'ok' : undefined });
+    const bg = q.sel ? PICK : n === 0 ? NEWS.lead : null, fg = q.sel ? PICK_INK : NEWS.ink;
+    if (bg) P.rrect(6, qy, SCR_W - 12, qh, 4, bg);
+    q.lines.forEach((l, k) => ptext(P, M, qy + 4 + k * 12, typed(l, d.t - n * 0.05 - k * 0.03), fg, 1, true));
+    // the photo mark: a little camera after the last line
+    if (q.photo) {
+      const last = q.lines[q.lines.length - 1] ?? '', px = Math.min(SCR_W - M - 14, M + ptextW(last, 1, true) + 6), py = qy + 4 + (q.lines.length - 1) * 12;
+      const c: C3 = q.sel ? PICK_INK : NEWS.faded;
+      P.rrect(px, py + 1, 12, 7, 1, c); P.rect(px + 3, py, 4, 1, c); P.disc(px + 6, py + 4.5, 2, bg ?? NEWS.paper);
+    }
+    if (n < d.stories.length - 1) for (let k = -1; k <= 1; k++) P.poly(star(SCR_W / 2 + k * 12, qy + qh + 7, 2.6, 1.1, 5), NEWS.rule);
+  });
+  P.clip(0, 0, SCR_W, SCR_H);
+}
+/** A story open: its headline on the shaded band, the photo and its caption, the article, the dateline; scrolled by lines. */
+export interface NewsArticle { name: string; date: string; ed: string; head: string[]; photo: Rgb | null; hasPhoto: boolean; caption: string; body: string[]; dateline: string; scroll: number; t: number }
+/** How many 12 px lines an article takes (the photo and its caption count as 10), for its scroll. */
+export const articleLines = (d: Pick<NewsArticle, 'head' | 'hasPhoto' | 'body'>) => d.head.length + 1 + (d.hasPhoto ? 10 : 0) + d.body.length + 1;
+export function paintNewsArticle(P: Paint, d: NewsArticle) {
+  const top = masthead(P, d.name, d.date, d.ed);
+  P.clip(0, top, SCR_W, Y1 - 2);
+  let y = top - d.scroll * 12;
+  P.rect(6, y, SCR_W - 12, d.head.length * 12 + 6, NEWS.lead);
+  d.head.forEach((l) => { ptext(P, M, y + 4, l, NEWS.ink, 1, true); y += 12; });
+  y += 12;
+  if (d.hasPhoto) {
+    const pw = SCR_W - 2 * M, ph = Math.round(pw * 0.43);
+    if (d.photo) paintRgb(P, d.photo, M, y, pw, ph); else P.rect(M, y, pw, ph, [200, 192, 172]);
+    P.rect(M - 1, y - 1, pw + 2, 1, NEWS.ink); P.rect(M - 1, y + ph, pw + 2, 1, NEWS.ink); P.rect(M - 1, y, 1, ph, NEWS.ink); P.rect(M + pw, y, 1, ph, NEWS.ink);
+    ptext(P, M, y + ph + 4, d.caption.slice(0, 36), NEWS.faded);
+    y += 10 * 12;
+  }
+  d.body.forEach((l, k) => { if (l) ptext(P, M, y, typed(l, d.t - k * 0.02), NEWS.ink); y += 12; });
+  ptext(P, M, y, d.dateline, NEWS.faded, 1, true);
+  P.clip(0, 0, SCR_W, SCR_H);
 }

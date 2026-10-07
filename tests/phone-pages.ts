@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { Img, Paint } from '../src/render/paint2d';
 import { artColors, wxColors } from '../src/phone/hdicons';
-import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew } from '../src/phone/pixpages';
+import { paintCalc, paintList, paintMenu, paintNotes, paintStore, paintTunes, paintWeather, paintCalMonth, paintCalDay, paintCalNew, paintNewsFront, paintNewsArticle, wrapText } from '../src/phone/pixpages';
 import { png } from './png';
 const I = new Img(240, 432), P = new Paint(I);
 const spec = new Float32Array(16).map((_, k) => 0.2 + 0.6 * Math.abs(Math.sin(k)));
@@ -58,4 +58,19 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
   shot('cal-day', (Q) => paintCalDay(Q, { title: 'TU OCTOBER 14, 2008', scroll: 0, lines: [{ text: 'Sunrise 7:02 am   Sunset 6:21 pm', col: 'ink', head: false }, { text: 'Moon: full moon', col: 'ink', head: false }, { text: 'Forecast: rain, 51°F', col: 'blue', head: false },
     { text: '', col: 'ink', head: false }, { text: 'REMINDERS', col: 'red', head: true }, { text: '9:00 pm  meet at the diner', col: 'ink', head: false }, { text: '', col: 'ink', head: false }, { text: 'IN THE CITY', col: 'red', head: true }, { text: '* Live band at The Copper Owl', col: 'ink', head: false }] }));
   shot('cal-new', (Q) => paintCalNew(Q, { title: 'New reminder - Oct 14', whatLabel: 'What', what: 'meet at the dine', whenLabel: 'When', when: '21:--  HHMM', step: 0, blink: true, hint: { chips: ['d', 'e', 'f', '3'], on: 1 }, goWhat: () => {}, goWhen: () => {} }));
+}
+
+// 0.15.32: the news
+{
+  const shot = (name: string, paint: (P: Paint) => void) => {
+    const J = new Img(240, 432), Q = new Paint(J); paint(Q);
+    const o = new Uint8ClampedArray(J.px.length); for (let k = 0; k < J.px.length; k += 4) { const a = J.px[k + 3] / 255; o[k] = J.px[k] * a; o[k + 1] = J.px[k + 1] * a; o[k + 2] = J.px[k + 2] * a; o[k + 3] = 255; }
+    writeFileSync(`tests/.out/${name}.png`, png(o, 240, 432));
+  };
+  const heads = ['Blackout darkens Riverside for two hours', 'Two cars collide at 5th and Mercer; no one hurt', 'Diner on Kell Street opens late for the night shift', 'City council meets on the tram budget'];
+  shot('news-front', (Q) => paintNewsFront(Q, { name: 'THE PORT HALVARD COURIER', date: 'Tue. Oct 14, 2008', ed: 'LATE ED.', wait: '', bad: false, t: 5,
+    stories: heads.map((h, k) => ({ lines: wrapText(h, 30), photo: k < 2, sel: k === 1, pre: () => {} })) }));
+  const hd = new Uint8ClampedArray(126 * 54 * 3).map((_, i) => ((i / 3) % 126) < 60 ? 40 + (i % 3) * 30 : 120);
+  shot('news-article', (Q) => paintNewsArticle(Q, { name: 'THE PORT HALVARD COURIER', date: 'Tue. Oct 14, 2008', ed: 'LATE ED.', head: wrapText(heads[0], 30), photo: { hd, w: 126, h: 54 }, hasPhoto: true,
+    caption: 'Security camera still, CAM 04', body: [...wrapText('The lights went out across Riverside at nine last night, and the grid company says the cause is under review.', 36), '', ...wrapText('Shops closed early.', 36)], dateline: 'PORT HALVARD, Oct 14', scroll: 0, t: 5 }));
 }
