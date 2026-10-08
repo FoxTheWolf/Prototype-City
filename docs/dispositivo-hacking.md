@@ -50,7 +50,9 @@ Ideias para pesar depois; nem todas entram:
 
 ## Faseamento proposto (a decidir com o usuário)
 
-1. **Fundação (não-hacking, Opus 5.5):** o objeto 3D, a tela, o shell (boot, menu, mascote, arquivos, ajustes), os sons, o registro de apps (`DeviceApp`), e 1–2 apps de brinquedo (IR, pet). Nada meu ainda.
+> **Estado real (corrigido em 2026-10-08, lendo o código):** a Fundação (fase 1) **já está feita** — `src/jackdaw/` (jackdaw.ts, screen.ts, body3d.ts, vec.ts), feita na 15.22. O chassi tem: a alavanca liga/desliga, o boot verboso, a home com a gralha (olha, pula, pisca, cochila), o menu, o loading, os apps de fábrica (PET, TONE, LIGHT, CLOCK, FILES, SETTINGS), a interface `DeviceApp {id,title,icon,hacking?,render,input,open,scene}`, a API `dev` (`beep`, `pet('win'|'fail'|'idle')`, `collect(id)`, `sd` Map, `freq`, `batt`, `shinies`/`TRINKETS`), o cartão SD no save e `save`/`restore`. As **cenas da gralha** são por nome em `screen.ts` (`scene(name, st)`, cacheadas); `gralha(g, {hold})` aceita um objeto na pata/asa. **Como eu encaixo:** apps `[HACKING]` que se registram em `device.apps` e, para o mascote, cenas novas adicionadas ao `SC` de `screen.ts` — descritas por mim **sem termo técnico** e desenhadas pelo Opus 5.5 (ver `docs/feedback-opus48.md`). **As funções do Jackdaw só serão definidas depois de a rede estar planejada** (`docs/design-rede-hacking.md`): ele existe para alcançar o que a rede NÃO alcança (dispositivos offline), então o lugar dele é consequência da rede (decisão do usuário, 2026-10-08).
+
+1. ~~**Fundação (não-hacking, Opus 5.5):**~~ **FEITA (15.22).** O objeto 3D, a tela, o shell, os sons, o registro de apps e os apps de brinquedo.
 2. **Primeiro app de hacking meu:** o **sub-GHz de portão** (ler + repetir) — autocontido, satisfatório, bom tutorial; alvo já existe (`doors.ts`).
 3. **Radar de Wi-Fi** (orgânico, espelha o celular) e o **detector de sinais**.
 4. **Crachás** (RFID/NFC) quando os NPCs estiverem nos prédios (etapa 16).
