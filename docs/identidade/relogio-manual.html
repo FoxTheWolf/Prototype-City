@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do relógio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --blue: #4696f5; --acc: #ff6a13; --gold: #aa8c46; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { padding: 48px 0 28px; border-bottom: 1px solid var(--line); }
+  header.cover h1 { font: 900 44px 'Archivo', sans-serif; font-stretch: 118%; margin: 0; line-height: 1.05; }
+  header.cover h1 span { color: var(--blue); }
+  header.cover p { color: var(--dim); margin: 10px 0 0; max-width: 72ch; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 850 26px 'Archivo', sans-serif; font-stretch: 112%; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Archivo', sans-serif; font-stretch: 110%; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg { width: 100%; height: auto; display: block; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--acc); }
+  .do b { color: #6fd08c; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 56px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  button { font: 600 12px 'IBM Plex Mono', monospace; background: #222428; color: var(--ink); border: 1px solid #3a3c42; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #2c2f34; }
+  button.on { border-color: var(--blue); color: #bcd8ff; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; margin-top: 10px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  kbd { font: 600 11px 'IBM Plex Mono'; border: 1px solid #3a3c42; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); }
+  .stage { background: radial-gradient(ellipse at 50% 30%, #2a2c31 0%, #0b0c0e 75%); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+  .stage.night { background: radial-gradient(ellipse at 50% 30%, #0b0c10 0%, #020203 75%); }
+  @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+  .stage > svg { width: 100%; max-width: 460px; height: auto; display: block; margin: 0 auto; user-select: none; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  [data-b] { cursor: pointer; }
+  [data-b].pressed { transform: translateX(var(--push)); }
+  .new { color: #6fd08c; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+<header class="cover">
+  <h1>O RELÓGIO <span>DE PULSO</span></h1>
+  <p>Manual de identidade · v1 · 2026-10-07. O relógio digital de resina e aço que o jogador usa no pulso esquerdo: um quartzo barato de 2008, estilo Casio, sempre no canto de baixo da vista. Este manual é o de hoje (<code>watch/watch.ts</code>) refinado, mais o que entra agora (o 4º botão, o sol, a lua e o pulso) e o plano do 3D em cubinhos.</p>
+</header>
+<nav class="toc">
+  <a href="#s1">1 · O aparelho</a><a href="#s2">2 · Botões e modos</a><a href="#s3">3 · Os mostradores de baixo</a><a href="#s4">4 · Cores e materiais</a>
+  <a href="#s5">5 · O LCD</a><a href="#s6">6 · Sons</a><a href="#s7">7 · No jogo e em 3D</a><a href="#s8">8 · Regras</a>
+</nav>
+
+<section id="s1">
+  <h2>1 · O aparelho <small>resina, aço escovado, LCD verde-oliva</small></h2>
+  <p class="lead">Uma caixa de aço escovado sobre resina preta, a face escura com as legendas dos botões, o nome da marca em creme sobre um filete dourado, e o LCD afundado sob o cristal. Quatro botões, dois de cada lado. Nada de ponteiros: é o relógio de quem precisa da hora exata, de um cronômetro e de saber para onde está indo.</p>
+  <div class="stage" id="stage">
+    <svg id="dev" viewBox="0 0 460 330"></svg>
+    <div>
+      <div class="ctl"><button id="bNight">noite</button><button id="bRun">correr</button></div>
+      <div class="hint">Clique nos botões dos lados (ou use <kbd>L</kbd> luz, <kbd>J</kbd> modo, <kbd>K</kbd> start, <kbd>Ç</kbd> mostrador, como no jogo). Em "noite", o LCD some no escuro até a luz acender o azul. "Correr" gasta o fôlego, e o pulso sobe.</div>
+      <div class="tbl"><table id="ficha"></table></div>
+    </div>
+  </div>
+</section>
+
+<section id="s2">
+  <h2>2 · Botões e modos <small>os de hoje, mais um</small></h2>
+  <p class="lead">Como num Casio de verdade: os dois botões da esquerda são a luz e o modo; os da direita agem dentro do modo. O 4º botão, embaixo à direita, é novo: troca o mostrador da linha de baixo em qualquer modo.</p>
+  <div class="tbl"><table>
+    <tr><th>botão</th><th>tecla</th><th>lugar</th><th>o que faz</th></tr>
+    <tr><td>LIGHT</td><td><kbd>L</kbd></td><td>em cima, à esquerda</td><td>acende o azul do LCD por 3 s; apaga o alarme tocando</td></tr>
+    <tr><td>MODE</td><td><kbd>J</kbd></td><td>embaixo, à esquerda</td><td>hora → alarme → cronômetro; ajustando o alarme, passa ao campo seguinte</td></tr>
+    <tr><td>START</td><td><kbd>K</kbd></td><td>em cima, à direita</td><td>no alarme: alarme / SIG / os dois / nenhum (segurado, ajusta a hora do alarme); no cronômetro: corre e para (segurado parado, zera)</td></tr>
+    <tr><td class="new">DISPLAY</td><td><kbd>Ç</kbd></td><td>embaixo, à direita</td><td class="new">troca a linha de baixo: bússola e temperatura → nascer e pôr do sol → lua → pulso (e volta)</td></tr>
+  </table></div>
+  <p>O <kbd>I</kbd> abaixa e ergue o relógio; abaixado, ele ainda sobe sozinho no sinal de hora (com o SIG ligado) e quando o alarme toca. Com o <kbd>Alt</kbd> segurado, os quatro botões se clicam com o mouse.</p>
+  <h3>Os três modos <small>a parte de cima e o meio do LCD</small></h3>
+  <div class="tbl"><table>
+    <tr><th>modo</th><th>em cima</th><th>no meio</th></tr>
+    <tr><td>HORA</td><td>o dia da semana, <code>(*)</code> e <code>SIG</code> se ligados, o mês e o dia</td><td>hh:mm grandes, os segundos pequenos</td></tr>
+    <tr><td>ALARME</td><td><code>AL</code>, <code>SET</code> enquanto se ajusta</td><td>a hora do alarme (o campo ajustado pisca), <code>ON</code> ou <code>--</code></td></tr>
+    <tr><td>CRONÔMETRO</td><td><code>ST</code>, as horas passadas da primeira</td><td>mm:ss grandes, os centésimos pequenos; conta segundos reais (cronometra o que o jogador faz)</td></tr>
+  </table></div>
+</section>
+
+<section id="s3">
+  <h2>3 · Os mostradores de baixo <small>DISPLAY</small></h2>
+  <p class="lead">A linha de baixo do LCD aparece em todo modo e mostra uma coisa por vez. Cada uma vem da simulação: nada é número decorativo.</p>
+  <div class="row" id="faces"></div>
+  <div class="tbl"><table>
+    <tr><th>mostrador</th><th>no LCD</th><th>de onde vem</th><th>para que serve</th></tr>
+    <tr><td>BÚSSOLA (hoje)</td><td><code>NE 047</code> · <code>-3C</code></td><td>para onde o jogador olha (lê o sensor a cada 0,6 s) e o ar em volta (segue devagar, como um termômetro no pulso)</td><td>achar o caminho sem o Maps (13.9); sentir o frio</td></tr>
+    <tr><td class="new">SOL</td><td><code>&#8593;06:12 &#8595;18:40</code></td><td>o nascer e o pôr do sol do dia, pelas efemérides do céu (<code>sunDir</code>)</td><td>saber quanto falta para a noite proteger (ou para o dia trazer gente)</td></tr>
+    <tr><td class="new">LUA</td><td>a lua em 8 fatias · <code>AGE 14</code></td><td>a fase de <code>moonPhase</code> e a idade da lua em dias</td><td>noites de lua cheia são claras; os eclipses do calendário</td></tr>
+    <tr><td class="new">PULSO</td><td>&#9829; <code>072</code></td><td>o fôlego (<code>needs.breath</code>): parado, ~70; correndo, sobe até ~170; descansando, desce. O coração pisca a cada batida</td><td>mostrar o fôlego sem barra: quando o pulso está lá em cima, a corrida vai acabar (o implícito com um jeito orgânico de aparecer)</td></tr>
+  </table></div>
+</section>
+
+<section id="s4">
+  <h2>4 · Cores e materiais <small>as do jogo</small></h2>
+  <div class="sw" id="sw"></div>
+  <p>A marca sai da semente (<code>watchMakerName</code>, a família "relógio" do manual dos fabricantes): só o nome, em maiúsculas largas cor de creme, no meio de cima (o canto direito agora é do START), sobre o filete dourado. Sem símbolo: num relógio de resina barato, a marca é a impressão.</p>
+</section>
+
+<section id="s5">
+  <h2>5 · O LCD <small>reflexivo, barato, de 2008</small></h2>
+  <ul>
+    <li><b>Lê pela luz da cena:</b> é um LCD que só reflete. Abaixo de um certo nível de luz (o "joelho", 35%), escurece mais rápido que a cena; de noite, numa rua mal iluminada, é preciso a luz.</li>
+    <li><b>A luz:</b> o azul acende da borda esquerda do LCD (mais forte lá), dura 3 s e vaza um pouco para a caixa em volta. Brilha no mundo como uma tela pequena: <b>de longe, de noite, é uma luzinha azul que entrega o jogador</b>.</li>
+    <li><b>Segmentos-fantasma:</b> os apagados aparecem bem de leve (um "8" em todo dígito), como num LCD barato.</li>
+    <li><b>O cristal:</b> a borda da face faz sombra na linha de cima do LCD e no lado longe da luz; o brilho da luz mais forte por perto escorrega pela caixa de aço.</li>
+    <li><b>Nos pixels (a camada HD):</b> os segmentos, os ícones (o coração, a lua, as setas do sol) e o filete dourado são desenhados em pixels; as células ficam só como plano B. Os segmentos são barras com cantos chanfrados, não caracteres.</li>
+  </ul>
+</section>
+
+<section id="s6">
+  <h2>6 · Sons <small>tudo sintetizado</small></h2>
+  <div class="tbl"><table>
+    <tr><th>som</th><th>como</th><th>no jogo</th></tr>
+    <tr><td>bipe de botão</td><td>onda quadrada a 4096 Hz, 35 ms, filtrada</td><td><code>watchBeep</code> (MODE, START e agora o DISPLAY)</td></tr>
+    <tr><td>clique da luz</td><td>o clique macio de um botão de borracha</td><td>LIGHT</td></tr>
+    <tr><td>sinal de hora</td><td>dois bipes curtos</td><td><code>watchChime</code></td></tr>
+    <tr><td>alarme</td><td>rajadas de 4 bipes por segundo, 20 s</td><td><code>watchAlarm</code></td></tr>
+    <tr><td class="new">o botão afundando (3D)</td><td>um tique seco de metal sob o bipe, diferente em cada lado</td><td>novo, com o corpo em cubinhos</td></tr>
+  </table></div>
+  <p class="hint">Aqui no manual os bipes tocam ao apertar. O teste de ouvido é do usuário.</p>
+</section>
+
+<section id="s7">
+  <h2>7 · No jogo e em 3D <small>a 15.21</small></h2>
+  <div class="tbl"><table>
+    <tr><th>onde</th><th>como aparece</th></tr>
+    <tr><td>no pulso (o HUD)</td><td>no canto de baixo à esquerda, erguido por padrão; em cubinhos de 1 mm (a caixa de 46 × 40 × 13 mm, os botões como peças que afundam, a pulseira com os furos), desenhado na GPU na resolução do monitor como o corpo do celular; o LCD como textura de pixels sob o cristal</td></tr>
+    <tr><td>olhando o relógio</td><td>(ideia) segurar o <kbd>I</kbd> traz o pulso para perto do rosto, para ler de perto e de lado</td></tr>
+    <tr><td>de longe, de noite</td><td>só a luz azul, por 3 s, quando o jogador acende</td></tr>
+    <tr><td>molhado (etapa 20)</td><td>gotas no cristal; WATER RESIST: entra no mar e continua funcionando</td></tr>
+  </table></div>
+  <p><b>Ordem do 3D:</b> (1) o 4º botão e os mostradores novos nas células de hoje (já valem no jogo); (2) o LCD em pixels; (3) a caixa, os botões e a pulseira em cubinhos na GPU (o passe do celular, ortográfico, serve: o relógio fica de frente para o olho); (4) os botões clicáveis pelo raio, afundando com o som.</p>
+</section>
+
+<section id="s8">
+  <h2>8 · Regras rápidas</h2>
+  <div class="rule do"><b>✓</b><span>É digital, de resina e aço, estilo Casio. Nada de ponteiros.</span></div>
+  <div class="rule do"><b>✓</b><span>Todo número do LCD vem da simulação (hora, alarme, sol, lua, ar, fôlego).</span></div>
+  <div class="rule do"><b>✓</b><span>Todo botão afunda e faz barulho; os quatro funcionam em qualquer modo.</span></div>
+  <div class="rule do"><b>✓</b><span>O LCD some no escuro: de noite, a luz é necessária (e entrega o jogador).</span></div>
+  <div class="rule do"><b>✓</b><span>A marca é só o nome, em creme, sobre o filete dourado.</span></div>
+  <div class="rule"><b>✗</b><span>Barras de vida, de fome ou de fôlego no relógio: o pulso mostra o fôlego como um relógio mostraria.</span></div>
+  <div class="rule"><b>✗</b><span>Funções que um relógio de 2008 não teria (GPS, mensagens, tela colorida).</span></div>
+  <div class="rule"><b>✗</b><span>Halo ou brilho desenhado por baixo do relógio: por cima, tingindo antes de somar (<code>HALO_TINT</code>).</span></div>
+</section>
+</main>
+
+<script>
+// ---- the watch, as watch/watch.ts draws it, at 1 unit = 0.1 mm-ish; its four buttons work ----
+const NS = 'http://www.w3.org/2000/svg';
+const ST = { mode: 'time', face: 0, lit: -99, alarm: { on: true, min: 7 * 60 }, chime: true, swAt: -1, swAcc: 0, night: false, run: false, breath: 1, pulse: 70, beatAt: 0, pressed: '' };
+const FACES = ['compass', 'sun', 'moon', 'pulse'];
+const SEG7 = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
+const C = { steel: '#5c5e64', face: '#1a1a1d', strap: '#18181a', label: '#969696', brand: '#e6e2d6', gold: '#aa8c46', lcd: '#42483a', ink: '#181c18', blue: '#4696f5' };
+let AC = null;
+const ac = () => (AC = AC || new (window.AudioContext || window.webkitAudioContext)());
+function beep(dur = 0.035, n = 1) {
+  const c = ac();
+  for (let i = 0; i < n; i++) {
+    const t = c.currentTime + i * 0.16, o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+    o.type = 'square'; o.frequency.value = 4096; f.type = 'lowpass'; f.frequency.value = 6000;
+    g.gain.setValueAtTime(0.03, t); g.gain.setValueAtTime(0, t + dur);
+    o.connect(f).connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.01);
+  }
+}
+function click() {
+  const c = ac(), n = Math.ceil(c.sampleRate * 0.02), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 3;
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = b; f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 2; g.gain.value = 0.25;
+  s.connect(f).connect(g).connect(c.destination); s.start();
+}
+
+// the city's sky, as the game reckons it (a latitude like New York's): the day's sunrise and sunset, the moon's age
+const LAT = 40.7 * Math.PI / 180;
+function sunTimes(d) {
+  const day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), dec = -23.44 * Math.PI / 180 * Math.cos(2 * Math.PI * (day + 10) / 365);
+  const h0 = -0.833 * Math.PI / 180, cosH = (Math.sin(h0) - Math.sin(LAT) * Math.sin(dec)) / (Math.cos(LAT) * Math.cos(dec));
+  const H = Math.acos(Math.max(-1, Math.min(1, cosH))) * 12 / Math.PI, noon = 12 + 0.1;
+  return [noon - H, noon + H];
+}
+const moonAge = (d) => { const s = 29.530589, a = ((d - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % s; return a < 0 ? a + s : a; };
+const hm = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+
+function el(tag, a, parent) { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; }
+function txt(parent, x, y, s, a) { const t = el('text', { x, y, 'font-family': 'IBM Plex Mono', 'font-weight': 600, ...a }, parent); t.textContent = s; return t; }
+function seg7(g, x, y, w, h, n, ink, ghost) {
+  const s = n < 0 ? 0 : SEG7[n], t = Math.max(2, w * 0.18), m = (h - t) / 2;
+  const R = [[x + t, y, w - 2 * t, t], [x + w - t, y + t, t, m - t], [x + w - t, y + m + t, t, m - t], [x + t, y + h - t, w - 2 * t, t], [x, y + m + t, t, m - t], [x, y + t, t, m - t], [x + t, y + m, w - 2 * t, t]];
+  R.forEach(([a, b, c, d], k) => el('rect', { x: a, y: b, width: c, height: d, rx: 0.8, fill: ink, opacity: s & (1 << k) ? 1 : ghost }, g));
+}
+// the moon on the LCD: a disc of 8 slices, lit from the right while it waxes
+function moonIcon(g, cx, cy, r, age, ink, ghost) {
+  const p = age / 29.53, lit = p < 0.5 ? p * 2 : (1 - p) * 2, n = Math.round(lit * 8);
+  for (let i = 0; i < 8; i++) {
+    const x0 = cx - r + (i * 2 * r) / 8, on = p < 0.5 ? i >= 8 - n : i < n;
+    const hw = Math.sqrt(Math.max(0, r * r - (x0 + r / 8 - cx) ** 2));
+    el('rect', { x: x0 + 0.4, y: cy - hw, width: (2 * r) / 8 - 0.8, height: hw * 2, rx: 0.6, fill: ink, opacity: on ? 1 : ghost }, g);
+  }
+}
+
+function draw() {
+  const svg = document.getElementById('dev'); svg.innerHTML = '';
+  const now = performance.now() / 1000, lit = now - ST.lit < 3, d = new Date();
+  const ghost = 0.07, night = ST.night, dim = night && !lit ? 0.18 : 1;
+  const defs = el('defs', {}, svg);
+  const st = el('linearGradient', { id: 'st', x1: 0, y1: 0, x2: 1, y2: 1 }, defs);
+  [[0, '#c4c7cc'], [0.45, '#8a8d93'], [1, '#4e5056']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, st));
+  const bl = el('linearGradient', { id: 'bl', x1: 0, x2: 1 }, defs);
+  [[0, '#4696f5'], [1, '#2e62a0']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, bl));
+  // the strap, with its holes
+  el('rect', { x: 150, y: 0, width: 160, height: 330, fill: C.strap }, svg);
+  for (let y = 6; y < 330; y += 16) if (y < 40 || y > 290) el('ellipse', { cx: 230, cy: y, rx: 4, ry: 3, fill: '#0b0b0c' }, svg);
+  for (let y = 4; y < 330; y += 12) el('line', { x1: 154, y1: y, x2: 306, y2: y, stroke: '#232327', 'stroke-width': 1.5 }, svg);
+  // the four buttons (the pressed one pushed into the case)
+  const btn = (x, y, b, side) => el('rect', { 'data-b': b, x, y, width: 16, height: 28, rx: 4, fill: '#8e9298', stroke: '#5c5e64', style: `--push:${side * 4}px`, class: ST.pressed === b ? 'pressed' : '' }, svg);
+  btn(14, 96, 'light', 1); btn(14, 212, 'mode', 1); btn(430, 96, 'start', -1); btn(430, 212, 'display', -1);
+  // the case and the face
+  el('rect', { x: 28, y: 50, width: 404, height: 232, rx: 34, fill: 'url(#st)' }, svg);
+  el('rect', { x: 44, y: 66, width: 372, height: 200, rx: 16, fill: C.face }, svg);
+  const lab = { 'font-size': 11, fill: C.label };
+  // each button's name by it: LIGHT and START over the LCD, MODE and DISPLAY under it; the maker between the top two
+  txt(svg, 60, 88, 'LIGHT', lab); txt(svg, 400, 88, 'START', { ...lab, 'text-anchor': 'end' });
+  txt(svg, 60, 256, 'MODE', lab); txt(svg, 400, 256, 'DISPLAY', { ...lab, 'text-anchor': 'end' });
+  txt(svg, 230, 256, 'WATER RESIST', { ...lab, 'font-size': 9, 'text-anchor': 'middle' });
+  txt(svg, 230, 89, 'TOLLIVER', { 'font-family': 'Archivo', 'font-weight': 700, 'font-stretch': '115%', 'letter-spacing': 3, 'font-size': 14, fill: C.brand, 'text-anchor': 'middle' });
+  el('line', { x1: 60, y1: 96, x2: 400, y2: 96, stroke: C.gold, 'stroke-width': 2, 'stroke-dasharray': '4 2' }, svg);
+  // the LCD under its crystal
+  const L = el('g', { opacity: dim }, svg);
+  L.before(el('rect', { x: 74, y: 108, width: 312, height: 128, rx: 4, fill: lit ? 'url(#bl)' : C.lcd, opacity: dim }, svg));
+  el('rect', { x: 74, y: 108, width: 312, height: 6, fill: '#000', opacity: 0.25 }, L);
+  const ink = C.ink, sm = { 'font-size': 15, fill: ink };
+  const two = (x, n) => { seg7(L, x, 186, 16, 28, Math.floor(n / 10) % 10, ink, ghost); seg7(L, x + 21, 186, 16, 28, n % 10, ink, ghost); };
+  const big = (h, m, zero) => {
+    seg7(L, 86, 152 - 20, 34, 62, h < 10 && !zero ? -1 : Math.floor(h / 10), ink, ghost); seg7(L, 128, 132, 34, 62, h % 10, ink, ghost);
+    el('rect', { x: 170, y: 146, width: 6, height: 6, fill: ink }, L); el('rect', { x: 170, y: 172, width: 6, height: 6, fill: ink }, L);
+    seg7(L, 184, 132, 34, 62, Math.floor(m / 10), ink, ghost); seg7(L, 226, 132, 34, 62, m % 10, ink, ghost);
+  };
+  txt(L, 196, 128, '(*)', { ...sm, 'font-size': 13, opacity: ST.alarm.on ? 1 : ghost }); txt(L, 230, 128, 'SIG', { ...sm, 'font-size': 13, opacity: ST.chime ? 1 : ghost });
+  if (ST.mode === 'time') {
+    txt(L, 86, 130, ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][d.getDay()], sm);
+    txt(L, 374, 130, `${d.getMonth() + 1}-${String(d.getDate()).padStart(2, ' ')}`, { ...sm, 'text-anchor': 'end' });
+    big(d.getHours(), d.getMinutes()); two(290, d.getSeconds());
+  } else if (ST.mode === 'alarm') {
+    txt(L, 86, 130, 'AL', sm); big(Math.floor(ST.alarm.min / 60), ST.alarm.min % 60);
+    txt(L, 310, 212, ST.alarm.on ? 'ON' : '--', { ...sm, 'font-size': 20, 'text-anchor': 'middle' });
+  } else {
+    const sw = ST.swAcc + (ST.swAt >= 0 ? now - ST.swAt : 0);
+    txt(L, 86, 130, 'ST', sm); big(Math.floor(sw / 60) % 60, Math.floor(sw) % 60, true); two(290, Math.floor((sw % 1) * 100));
+  }
+  // the bottom row: one face at a time
+  const f = FACES[ST.face], y = 228;
+  if (f === 'compass') { txt(L, 86, y, 'NE 047', sm); txt(L, 374, y, '-3C', { ...sm, 'text-anchor': 'end' }); }
+  else if (f === 'sun') { const [a, b] = sunTimes(d); txt(L, 86, y, `↑${hm(a)}`, sm); txt(L, 374, y, `↓${hm(b)}`, { ...sm, 'text-anchor': 'end' }); }
+  else if (f === 'moon') { const age = moonAge(d); moonIcon(L, 96, y - 5, 9, age, ink, ghost); txt(L, 374, y, `AGE ${String(Math.floor(age)).padStart(2, '0')}`, { ...sm, 'text-anchor': 'end' }); }
+  else { const on = now - ST.beatAt < 0.12; txt(L, 86, y, '♥', { ...sm, opacity: on ? 1 : ghost }); txt(L, 106, y, String(Math.round(ST.pulse)).padStart(3, '0'), sm); txt(L, 374, y, 'BPM', { ...sm, 'text-anchor': 'end' }); }
+  // which face (four little ticks over the bottom row)
+  for (let i = 0; i < 4; i++) el('rect', { x: 210 + i * 12, y: 216, width: 8, height: 3, fill: ink, opacity: i === ST.face ? 1 : ghost }, L);
+  if (lit) el('rect', { x: 50, y: 72, width: 360, height: 188, rx: 14, fill: '#4696f5', opacity: 0.1 }, svg);
+  if (night) el('rect', { x: 0, y: 0, width: 460, height: 330, fill: '#000', opacity: lit ? 0.35 : 0.6, 'pointer-events': 'none' }, svg);
+  for (const r of svg.querySelectorAll('[data-b]')) r.onpointerdown = () => press(r.dataset.b);
+}
+function press(b) {
+  const now = performance.now() / 1000;
+  ST.pressed = b; setTimeout(() => { ST.pressed = ''; draw(); }, 120);
+  if (b === 'light') { ST.lit = now; click(); }
+  else if (b === 'mode') { ST.mode = { time: 'alarm', alarm: 'chrono', chrono: 'time' }[ST.mode]; beep(); }
+  else if (b === 'display') { ST.face = (ST.face + 1) % FACES.length; beep(); }
+  else {
+    if (ST.mode === 'chrono') { if (ST.swAt >= 0) { ST.swAcc += now - ST.swAt; ST.swAt = -1; } else ST.swAt = now; }
+    else if (ST.mode === 'alarm') { const n = ((ST.alarm.on ? 1 : 0) + (ST.chime ? 2 : 0) + 1) % 4; ST.alarm.on = !!(n & 1); ST.chime = !!(n & 2); }
+    beep();
+  }
+  draw();
+}
+addEventListener('keydown', (e) => { const b = { KeyL: 'light', KeyJ: 'mode', KeyK: 'start', Semicolon: 'display' }[e.code]; if (b && !e.repeat) press(b); });
+document.getElementById('bNight').onclick = (e) => { ST.night = !ST.night; e.target.classList.toggle('on', ST.night); document.getElementById('stage').classList.toggle('night', ST.night); draw(); };
+document.getElementById('bRun').onclick = (e) => { ST.run = !ST.run; e.target.classList.toggle('on', ST.run); };
+// the pulse follows the breath: running spends it (as needs.ts), and the heart beats faster the less is left
+let last = performance.now() / 1000;
+setInterval(() => {
+  const now = performance.now() / 1000, dt = now - last; last = now;
+  ST.breath = ST.run ? Math.max(0, ST.breath - dt / 12) : Math.min(1, ST.breath + dt / 20);
+  const want = (ST.run ? 120 : 68) + (1 - ST.breath) * 50;
+  ST.pulse += (want - ST.pulse) * Math.min(1, dt / 4);
+  if (now - ST.beatAt > 60 / ST.pulse) ST.beatAt = now;
+  draw();
+}, 50);
+
+document.getElementById('ficha').innerHTML = [
+  ['caixa', '46 × 40 × 13 mm, aço escovado sobre resina preta'],
+  ['face', 'grafite escuro, as legendas dos botões em cinza, a marca em creme sobre o filete dourado'],
+  ['LCD', '31 × 13 mm, verde-oliva reflexivo, luz azul por 3 s; 4 dígitos grandes, 2 pequenos, duas linhas de texto e os ícones'],
+  ['botões', 'LIGHT e MODE à esquerda, START e DISPLAY à direita'],
+  ['pulseira', 'resina preta, com furos; o jogador o usa no pulso esquerdo'],
+  ['água', 'WATER RESIST: entra no mar e continua'],
+].map(([a, b]) => `<tr><th>${a}</th><td>${b}</td></tr>`).join('');
+document.getElementById('sw').innerHTML = [
+  ['Aço', '#5c5e64', 'a caixa e os botões, escovado; acende na borda de cima e da esquerda'],
+  ['Face', '#1a1a1d', 'a moldura escura em volta do LCD'],
+  ['Pulseira', '#18181a', 'resina preta com furos'],
+  ['LCD', '#42483a', 'o papel verde-oliva; os segmentos #181C18'],
+  ['Luz', '#4696f5', 'o azul do LCD aceso, mais forte à esquerda'],
+  ['Filete', '#aa8c46', 'a linha dourada tracejada sob a marca'],
+  ['Marca', '#e6e2d6', 'o nome em creme, maiúsculas largas'],
+  ['Legendas', '#969696', 'LIGHT, MODE, START, DISPLAY, WATER RESIST'],
+].map(([n, c, t]) => `<div><i style="background:${c}"></i><span><b>${n} ${c.toUpperCase()}</b><em>${t}</em></span></div>`).join('');
+// the four faces side by side
+const faces = document.getElementById('faces');
+faces.innerHTML = ['bússola e ar', 'sol', 'lua', 'pulso'].map((n, i) => `<div class="card"><svg viewBox="0 0 220 60" id="f${i}"></svg><div class="cap"><b>${n}</b></div></div>`).join('');
+{
+  const d = new Date(), [a, b] = sunTimes(d), age = moonAge(d), sm = { 'font-size': 15, fill: C.ink };
+  for (let i = 0; i < 4; i++) {
+    const s = document.getElementById(`f${i}`);
+    el('rect', { x: 0, y: 0, width: 220, height: 60, rx: 4, fill: C.lcd }, s);
+    if (i === 0) { txt(s, 14, 37, 'NE 047', sm); txt(s, 206, 37, '-3C', { ...sm, 'text-anchor': 'end' }); }
+    if (i === 1) { txt(s, 14, 37, `↑${hm(a)}`, sm); txt(s, 206, 37, `↓${hm(b)}`, { ...sm, 'text-anchor': 'end' }); }
+    if (i === 2) { moonIcon(s, 26, 32, 11, age, C.ink, 0.07); txt(s, 206, 37, `AGE ${String(Math.floor(age)).padStart(2, '0')}`, { ...sm, 'text-anchor': 'end' }); }
+    if (i === 3) { txt(s, 14, 37, '♥', sm); txt(s, 34, 37, '072', sm); txt(s, 206, 37, 'BPM', { ...sm, 'text-anchor': 'end' }); }
+  }
+}
+draw();
+</script>
+</body>
+</html>
