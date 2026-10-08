@@ -15,7 +15,17 @@
 
 ## Os passos, em ordem (cada um com o seu commit e o seu teste)
 
-1. **O catálogo na geração da cidade** (`src/sim/city.ts`). O lote de cada prédio com interior é arredondado para o
+1. **O catálogo na geração da cidade** (`src/sim/city.ts`).
+   **Como os lotes nascem hoje (lido em 2026-10-08):** `split` (dentro do laço dos quarteirões, ~linha 730) corta o
+   quarteirão ao meio recursivamente em `bays(lw * t)` (múltiplos de 2 m, t entre 0,35 e 0,65) até `maxLot`
+   (`K.lot + K.lotCore * core`); `lots()` marca como aberto o lote com lado < 8 m e junta lotes sem rua ao vizinho.
+   **A regra sugerida:** a **largura na rua** é que precisa ser do catálogo (8, 10 ou 12 m; torres 16–24), porque o
+   **fundo** já se ajusta pelas linhas `*` (é preciso dar faixas `*` a todas as famílias, de 8 a 24 m). Todo trecho
+   par ≥ 16 m se escreve com 8, 10 e 12 (16 = 8 + 8, 18 = 8 + 10, …); um trecho de 14 m vira 12 m + 2 m de vão
+   (um beco de ventilação, comum em 2008). Então: no `split`, ao cortar ao longo da rua, escolher o corte entre
+   as larguras do catálogo, não por `t`. A junção de lotes de `lots()` (o vizinho sem rua vira os fundos) pode
+   gerar fundos fora do catálogo: limitar o fundo a 24 m ou fazer o resto virar quintal.
+   Antes, medir quantos lotes mudam de tamanho e se o motel/cybercafé continuam (o `tests/city.ts` já confere). O lote de cada prédio com interior é arredondado para o
    tamanho do catálogo mais perto (a tabela da seção 3 do manual; torres em 16 × 16, 16 × 24, 20 × 20, 24 × 24,
    24 × 32). Prédios sem planta desenhada para o tamanho/estilo continuam no gerador velho até a planta existir
    (a lista do que falta está na seção 11 do manual). Teste: `tests/city.ts` em 5 sementes, contando quantos prédios
