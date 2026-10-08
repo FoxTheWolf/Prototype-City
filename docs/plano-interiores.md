@@ -86,7 +86,7 @@
    - **Estado (2026-10-08):** (a) ✅ `Shape.Vox` em `gpu/objects.ts` (DDA na caixa da parte; a grade vai no lugar do texto,
      `world.ts` `packParts`), `stairModel` em `render/models.ts`; (b) ✅ `feetZ`/`STEP_UP`/`FLIGHT_TOP` em `sim/interior.ts`, `steep`
      em `world.ts`, `flightOf` (o lance de 1 m do lado oposto às entradas, a ponta baixa do lado delas), `tests/stairs.ts`;
-     (c) ✅ (visto no painel; falta o usuário no PC) o buraco no piso/teto (`gWell` no `roomWalk`, campos 16–21 do bloco `IB`, `IN_LEAVES` = 22) e as
+     (c) ✅ (visto no painel; falta o usuário no PC); **(e) ✅ 0.13.10n, a escada em U** (pedido do usuário no playtest de 2026-10-08, referências `referencias/79–93`): dois lances lado a lado e o patamar do meio (`flightOf`/`stairRise` em `sim/interior.ts`, `stairModel` em `render/models.ts`), as entradas no patamar da mesma ponta (R11), a cabeça no poço sem o prédio sumir; o D com a escada de 3 × 4,5 m, o B com o hall à esquerda, o A0/F0 com um hall até a lavanderia, as portas dos telhados no patamar o buraco no piso/teto (`gWell` no `roomWalk`, campos 16–21 do bloco `IB`, `IN_LEAVES` = 22) e as
      escadas dos andares vizinhos como objetos, `roomWalk` num laço de duas voltas no `main` (compila em ~2 min); (d) falta (o telhado; hoje o lance do último andar entra no teto).
 5. **Interruptores (R10, 13.10g):** um por cômodo, na primeira parede que não é vidro, do lado da maçaneta; sala vazia
    e loja fechada apagadas.
@@ -114,6 +114,7 @@
      o homem saindo à esquerda, sobre as portas de saída e as escadas, aceso no apagão; a placa de andar ao lado da
      escada/elevador). O gerador traça o caminho de cada cômodo comum até a porta da rua (BFS na planta) e põe a placa
      sobre cada porta desse caminho e uma seta onde o caminho vira, como em prédio real. Absorve "EXIT e diretório" da 13.7.
+     **Hoje o EXIT sobre a porta da rua é verde** (`exitPx` no `roomWalk`, visto no playtest de 2026-10-08); o manual de sinalização pede vermelho.
 
 ## Riscos e o que conferir
 

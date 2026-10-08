@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da escada em U (0.13.10n) — 2026-10-08
+- **O prédio sumia no meio da subida:** com a cabeça entre o teto (`CEIL` 3,2 m) e o piso de cima (3,5 m), o `roomWalk` só desenhava paredes e teto até `zc` e devolvia "nada" → o `cityCell` desenhava a cidade (o prédio parecia oco). Duas correções juntas: o andar da vista sai da altura **do olho** (`viewFloor` em `main.ts`), e com o olho acima do teto o `zc` do andar do jogador vai até o piso de cima.
+- **Escada reta não empilha:** chega na ponta oposta, que no andar de cima é parede ou o lance seguinte. A escada em L também não empilha num poço (chega no canto onde o lance de cima está a meia altura). Em prédio de escada, só a U (ou a reta com corredor dos dois lados).
+- **A planta tem de concordar com a escada:** as entradas de todos os andares (portas, corredores, a casinha do telhado) no patamar da mesma ponta. Virou a regra **R11** (`checkU` em `floorplans.ts` e no manual); só o teste de subir e descer (`tests/stairs.ts`) não pegava a lavanderia do A0 presa atrás do patamar do meio.
+- **Testes que empacotam o JSON:** `tests/floorplans.ts` e `tests/plans.ts` levam o `floorplans.json` dentro do bundle; depois de `floorplans-sync.mjs`, empacotar de novo antes de rodar. E nunca `git stash` com o JSON gerado modificado (o sync por cima trava o `stash pop`).
+- **Física por rampa, desenho por degraus:** `stairRise` é uma rampa contínua (a câmera não pula a cada degrau); os degraus em cubinhos ficam a menos de 2 cm dela.
+
 ### Lições do rework dos interiores (passos 1, 2 e 4) — 2026-10-08
 - **Medir antes de mudar o corte da cidade:** `tests/lots.ts` mostrou que o problema não era a largura (o plano dizia), e sim lotes **mais largos que fundos** (30%) e altos e finos (5,5%). O corte americano (pontas para a avenida, fileiras de costas, quintal no miolo) resolveu os dois.
 - **`doorOf` guarda cache pelo índice do prédio** (módulo): um teste que gera duas cidades no mesmo processo lê portas da cidade anterior. Uma semente por execução nos testes que usam `doorOf`/`planOf`.

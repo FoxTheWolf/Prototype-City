@@ -853,7 +853,9 @@ var<private> gSDglass: bool = false;
 fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   var res = InC(Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0), 0u, 0.0, 0.0, vec3f(0.0), false, 0.0, 0.0, 0.0, 0.0);
   let o = V.o; let inside = V.IB != 0u; let full = V.full;
-  let z0 = V.z0; let zc = z0 + CEIL; let nRooms = fx[o + 4u];
+  // (the viewer's head up the stairwell, over the ceiling and under the next floor: the walls and the open ceiling go
+  // on to the slab's top, where the walk passes to the storey above)
+  let z0 = V.z0; let zc = z0 + select(CEIL, FLOOR_H, inside && u.eye > z0 + CEIL); let nRooms = fx[o + 4u];
   // the lift car (13.2d, world.ts liftCars): the floor it shows, where it rides to, how many floors; whether it stands
   // on this storey (its doors open; always, for the viewer riding it), whether it was called here
   let carW = fx[FX_TAB + 3u * fx[0] + u32(V.lot)];

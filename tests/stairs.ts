@@ -1,9 +1,9 @@
 /**
- * The stairs of the drawn plans (rework of the interiors, step 4), in Node:
+ * The stairs of the drawn plans (rework of the interiors, step 4; the U stair of 2026-10-08), in Node:
  *   npx rolldown tests/stairs.ts --format esm --platform node -o tests/.out/stairs.mjs && node tests/.out/stairs.mjs [seed]
- * In walk-ups of every family: from the landing, walk onto the flight's low end and up it to the next floor; the
- * feet climb step by step and arrive a storey up; walking into the flight's side (its rail) is stopped; back down
- * again to the ground. Exits with 1 on a failure.
+ * In walk-ups of every family: from the landing, up the first flight to the half landing, across, up the second to
+ * the next floor's landing, at the same end; back down the same way; the rail between the flights holds; from the
+ * ground's landing the second flight (over the head) is out of reach.
  */
 import { FLOOR_H } from '../src/sim/city';
 import { feetZ, floorsOf, planOf, stackOf } from '../src/sim/interior';
@@ -24,26 +24,30 @@ for (let k = 0; k < w.city.buildings.length && seen.size < 6; k++) {
   const S = planOf(w.city, k, 0)!.furn.find((f) => f.kind === 'stair');
   if (!S) { fail(`${St.ground.id} (lot ${k}): no stair`); continue; }
   const up = Math.atan2(S.s, S.c), at = `${St.ground.id} (lot ${k})`;
-  // on the first step, then up the flight to its flat top, and off it onto the landing beside (the rail's side)
-  const lx = S.seed === 1 ? S.s : -S.s, ly = S.seed === 1 ? -S.c : S.c, steps = Math.ceil(((2 * S.hx) / 3.5) * 60) + 30;
-  put(k, S.x - S.c * (S.hx - 0.35), S.y - S.s * (S.hx - 0.35), 0);
-  stepWorld(w, { forward: 0, strafe: 0, run: false, heading: up });
-  walk(up, steps);
-  walk(Math.atan2(ly, lx), 40);
-  if (Math.abs(p.z - FLOOR_H) > 0.05 || p.floor !== 1) fail(`${at}: up the flight the feet are at ${p.z.toFixed(2)} m, floor ${p.floor}`);
-  // back down: from the flat top's middle down the flight to its foot (the last step's 2 cm included: the foot may be a
-  // corridor narrower than the flight, D, where walking straight on meets its wall)
-  put(k, S.x + S.c * (S.hx - 0.25), S.y + S.s * (S.hx - 0.25), FLOOR_H);
-  walk(up + Math.PI, steps);
-  if (Math.abs(p.z) > 0.1 || p.floor !== 0) fail(`${at}: down again the feet are at ${p.z.toFixed(2)} m, floor ${p.floor} (u ${((p.x - S.x) * S.c + (p.y - S.y) * S.s).toFixed(2)}, v ${(-(p.x - S.x) * S.s + (p.y - S.y) * S.c).toFixed(2)})`);
-  // from beside the flight's middle, walking into its side: stopped (the rail), at the floor's level
-  const rx = -S.s, ry = S.c;
-  for (const side of [1, -1]) {
-    put(k, S.x + rx * side * (S.hy + 0.5), S.y + ry * side * (S.hy + 0.5), 0);
-    const [lo, hi] = walk(Math.atan2(-ry * side, -rx * side), 60);
-    if (hi > 0.05 || lo < -0.05) fail(`${at}: walking into the flight's side from ${side > 0 ? 'the right' : 'the left'}, the feet went to ${hi.toFixed(2)} m`);
-  }
-  console.log(`  ${at}: up and down the flight, its side holds`);
+  // a point of the piece's frame (u along the first flight's climb, v across: the first flight on v < 0)
+  const P = (u: number, v: number): [number, number] => [S.x + S.c * u - S.s * v, S.y + S.s * u + S.c * v];
+  const toward = (u: number, v: number) => Math.atan2(P(u, v)[1] - p.y, P(u, v)[0] - p.x);
+  const lane = (S.hy + 0.05) / 2 + 0.05, n = Math.ceil((S.hx * 2 + 1) / 3.5 * 60) + 20;
+  /** Walk to the piece point (u, v) in a straight line (n ticks at most). */
+  const go = (u: number, v: number) => { let lo = 1e9, hi = -1e9; for (let t = 0; t < n && Math.hypot(P(u, v)[0] - p.x, P(u, v)[1] - p.y) > 0.08; t++) { stepWorld(w, { forward: 1, strafe: 0, run: false, heading: toward(u, v) }); lo = Math.min(lo, p.z); hi = Math.max(hi, p.z); } return [lo, hi]; };
+  // up: the landing, the first flight, the half landing, the second flight, the next floor's landing
+  put(k, ...P(-S.hx - 0.5, -lane), 0);
+  go(-S.hx + 0.1, -lane); go(S.hx - 0.4, -lane);
+  if (Math.abs(p.z - FLOOR_H / 2) > 0.05) fail(`${at}: on the half landing the feet are at ${p.z.toFixed(2)} m`);
+  go(S.hx - 0.4, lane); go(-S.hx + 0.1, lane); go(-S.hx - 0.5, lane);
+  if (Math.abs(p.z - FLOOR_H) > 0.05 || p.floor !== 1) fail(`${at}: up the stair the feet are at ${p.z.toFixed(2)} m, floor ${p.floor}`);
+  // and down the same way
+  go(-S.hx + 0.1, lane); go(S.hx - 0.4, lane); go(S.hx - 0.4, -lane); go(-S.hx + 0.1, -lane); go(-S.hx - 0.5, -lane);
+  if (Math.abs(p.z) > 0.05 || p.floor !== 0) fail(`${at}: down again the feet are at ${p.z.toFixed(2)} m, floor ${p.floor}`);
+  // the rail: from the first flight's middle, walking across to the second: stopped at the first's height
+  put(k, ...P(-S.hx + 1.1, -lane), 0.9);
+  const z1 = p.z, [lo1, hi1] = go(-S.hx + 1.1, lane);
+  if (hi1 - lo1 > 0.05 || Math.abs(p.z - z1) > 0.05) fail(`${at}: across the rail the feet went from ${z1.toFixed(2)} to ${p.z.toFixed(2)} m`);
+  // from the ground's landing into the second flight (it starts at the next floor): stopped
+  put(k, ...P(-S.hx - 0.5, lane), 0);
+  const [, hi2] = go(-S.hx + 1, lane);
+  if (hi2 > 0.05) fail(`${at}: from the landing under the second flight the feet went to ${hi2.toFixed(2)} m`);
+  console.log(`  ${at}: up and down the U, the rail holds, the second flight out of reach from below`);
 }
 if (!tried) fail('no walk-up of three floors or more on a drawn plan');
 console.log(fails ? `${fails} failure(s)` : 'OK');

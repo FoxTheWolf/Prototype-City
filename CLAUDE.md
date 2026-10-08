@@ -272,7 +272,7 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 
 ### Etapa 20: Refinamento e variedade
 - **Perguntar no começo:** as opiniões do usuário sobre a etapa 6 (interiores).
-- **Letreiros de lâmpadas em dois tipos** (2026-10-05): lâmpadas atrás dos glifos com o núcleo claro do diodo (hoje só pontinhos) e lâmpadas 3D de verdade, como as das coberturas de obra; **holofotes nos marcos** (iluminação de baixo para cima).
+- **Letreiros de lâmpadas em dois tipos** (2026-10-05; nota F8 de 2026-10-08: no rework das fachadas, os letreiros com **lâmpadas redondas** em vez de glifos): lâmpadas atrás dos glifos com o núcleo claro do diodo (hoje só pontinhos) e lâmpadas 3D de verdade, como as das coberturas de obra; **holofotes nos marcos** (iluminação de baixo para cima).
 - Fachadas mais complexas, muito mais letreiros e outdoors ligados à simulação, topos acesos, neon, um distrito estilo Times Square, greebles, chaminés, cabine telefônica, mais marcos, mais celulares (BlackBerry, flip), carros menos arcaicos, animais (`Household.pet`) (texto inteiro em `docs/historico.md`, "Texto enxugado").
 - **Efeitos da surge (retorno do usuário em 2026-10-04):** como os telões que dão tela azul, durante a surge os aparelhos falham: alguns postes apagam soltando faíscas, letreiros e placas de publicidade também, e luzes de janelas se apagam (`render/power.ts`, `SURGE`).
 - **Distrito de entretenimento** (2026-10-03): o Theater District com a densidade de Kamurocho, sem portal; o portal aceso num distrito de periferia com ruelas só a pé. Base: `docs/tarefas/retorno/05-distrito-entretenimento.json`; o texto inteiro em `docs/historico.md`.
@@ -373,7 +373,7 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 - **Interiores (capturas de 2026-10-05):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho.
 - **Porta e elevador (`referencias/52–60`):** ao cruzar a porta, **um quadro mostra a fachada de fora** no lugar do interior (52), e depois **o vidro da vitrine some** (53); a rua vista de dentro parece água (55, 59); o resto em `docs/feedback-claude.md` (olhar cego); elevador dentro de um cômodo, **oco**, de frente para a janela de um apartamento, e uma cunha preta na borda do corredor (56–57).
 - **A silhueta das janelas da fachada aparece através de NPCs e objetos** (`referencias/74`, `75`; de novo em 2026-10-08 num poste e na placa de rua): **corrigido em 0.13.10l, falta o usuário ver no PC** (a vista através da janela, 13.10b2, era misturada no fim do `main` do shader mesmo com um objeto na frente; agora só onde a célula ainda mostra o cômodo).
-- **Placa de rua ainda pouco legível de longe (usuário, 2026-10-08):** melhorou, mas não basta; retocar na 13.7 (o nível de longe das letras).
+- **Placa de rua ainda pouco legível de longe (usuário, 2026-10-08):** melhorou, mas não basta; retocar na 13.7 (o nível de longe das letras). **Notas F8 de 2026-10-08** (`playtest/2026-10-08_12-31-47_seed459610738_note1-2.png`): o "7" quase ilegível; nas placas de sinalização usar o **fundo do glifo pintado** (como nos letreiros), não só o glifo, e onde o letreiro seria emissivo a placa é **retrorrefletiva**.
 - **Placas cinza soltas no ar** no alto à esquerda (semente 711445483, `POS 771.2,971.9`, 21:08, comparação de 2026-10-05): parecem pedaços de fachada ou sacada sem prédio embaixo.
 - **Luzes do táxi no chão (2026-10-05):** a luz do teto estoura num retângulo amarelo e as duas lanternas traseiras se somam no asfalto até ficar esbranquiçado; a traseira lilás pelo farol de trás.
 - **Travada à meia-noite (retorno do usuário em 2026-10-04):** a simulação recalcula muita coisa na virada do dia e o jogo trava um instante. Espalhar esse trabalho por vários quadros (como o carregamento do começo), em vez de um fade com barra (que atrapalharia numa perseguição). Achar o que roda na virada (provavelmente as rotinas do dia em `sim/citizens.ts`/`world.ts`).
@@ -388,6 +388,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições da escada em U (o prédio sumindo com a cabeça no poço, escada que não empilha, R11, testes que empacotam o JSON), para não repetir
 - Lições do rework dos interiores (corte americano, ambiente aberto, janelas fantasmas, Shape.Vox, física da escada), para não repetir
 - Lições do manual de interiores (toda célula alcançável, porta contra parede, contornos por script, texto barato gerado pelo Claude), para não repetir
 - Lições das placas de rua (0.13.7: Board é de outdoor, `plate`, direita = -y, poste perto parece o mesmo), para não repetir

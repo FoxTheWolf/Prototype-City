@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10n — A escada em U (2026-10-08)
+- **A escada dos prédios de escada é em U, como nos prédios de verdade:** entra-se num patamar, sobe-se um lance até o patamar do meio, vira-se e sobe-se o outro, chegando ao andar de cima do mesmo lado em que se entrou. Acabou a escada que começava em cima da porta e chegava numa parede.
+- **O prédio não some mais no meio da subida:** com a cabeça já acima do teto e ainda abaixo do andar de cima, as paredes continuam lá (antes aparecia a rua).
+- **Um corrimão de verdade entre os dois lances**, contínuo, e não dá para pular de um lance para o outro nem andar por baixo da escada.
+- **As plantas acompanham:** nos prédios de 10 × 12 m a escada ficou maior; nos de 12 × 12 m o hall dos moradores foi para o lado da escada; a lavanderia dos térreos com loja agora se alcança por um corredor atrás da loja; a porta da casinha do telhado fica no patamar.
+
 ## 0.13.10m — A escada volta, em cubinhos (2026-10-08)
 - **Os prédios de escada (walk-ups) têm escada de novo:** um lance reto de madeira nos fundos, feito de cubinhos, com os degraus vazados por baixo, as longarinas de aço e um corrimão do lado do corredor. Sobe-se andando de verdade, degrau por degrau, e o lance termina num patamar plano; pelo lado, o corrimão segura. Sobre o lance, o teto é aberto: de baixo vê-se o andar de cima, e de cima, o lance descendo até o térreo; no meio da subida, a vista já passa para o andar de cima.
 - **Objetos de cubinhos no mundo:** o desenho por cubinhos, que já servia ao celular e ao relógio na mão, agora vale para objetos da cidade. A escada é o primeiro; os móveis vêm depois pelo mesmo caminho.

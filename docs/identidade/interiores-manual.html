@@ -50,7 +50,7 @@
 <header class="cover">
   <div>
     <svg id="cover" viewBox="0 0 720 300"></svg>
-    <p>Manual de interiores · a cidade de GRID DOWN · v1.1 · 2026-10-08</p>
+    <p>Manual de interiores · a cidade de GRID DOWN · v1.2 · 2026-10-08</p>
   </div>
 </header>
 <nav class="toc">
@@ -115,6 +115,7 @@
     <tr><td>R7</td><td>Móvel alto (guarda-roupa, geladeira, estante) nunca na frente de janela.</td><td>A janela é vista de fora.</td></tr>
     <tr><td>R8</td><td>Todo móvel com posto tem a célula do posto livre e alcançável.</td><td>O morador chega à cama, ao fogão, à TV (seção 8).</td></tr>
     <tr><td>R9</td><td>A escada (S) e o elevador (L) ocupam as mesmas células em todos os andares do prédio, e a escada chega a todo andar e ao telhado.</td><td>Nenhuma escada que dá em parede.</td></tr>
+    <tr><td>R11</td><td>A escada é em U: a área S tem pelo menos 4,25 m de comprido (o patamar, um lance de 2,25 m, o patamar do meio de 1 m) e, em todos os andares, as entradas dela dão no patamar, todas na mesma ponta.</td><td>Sobe-se um lance, vira-se no meio, sobe-se o outro e chega-se do mesmo lado onde se entrou (playtest de 2026-10-08: a escada reta começava na porta e chegava numa parede).</td></tr>
     <tr><td>R10</td><td>O interruptor fica na primeira parede que não é vidro, do lado da maçaneta de cada porta de cômodo.</td><td>Apagar a luz é parte do stealth; ele tem de estar onde se espera.</td></tr>
   </table>
 </section>
@@ -251,7 +252,7 @@ const FLOORS = [
     ],
   },
   {
-    id: 'A0', title: '8 × 10 m · o térreo com loja', note: 'A porta dos moradores e um corredor de 1 m pela esquerda até a escada; a loja na frente (o miolo dela vem das plantas de loja); a lavanderia, as caixas de luz e de telefone e o zelador nos fundos, abrindo na escada (nunca na loja).',
+    id: 'A0', title: '8 × 10 m · o térreo com loja', note: 'A porta dos moradores e um corredor de 1 m pela esquerda até a escada; a loja na frente (o miolo dela vem das plantas de loja); a lavanderia, as caixas de luz e de telefone e o zelador nos fundos, por um hall de 1 m atrás da loja (nunca pela loja; a ponta de lá da escada é o patamar do meio).',
     rep: [6, 10], depths: [10, 12],
     rooms: [
       '#RR#GGGGGRRGGGG#',
@@ -265,13 +266,13 @@ const FLOORS = [
       '#cc+ooooooooooo#',
       '#cc+ooooooooooo#',
       '#cc+ooooooooooo#',
-      '#cc+ooooooooooo#',
-      '#cc+ooooooooooo#',
-      '#cc+ooooooooooo#',
       '#cc++++++++++++#',
+      '#cc............#',
+      '#cc............#',
+      '#cc+++++++++DD+#',
       '#SSSSSSSSSS+uuu#',
-      '#SSSSSSSSSSDuuu#',
-      '#SSSSSSSSSSDuuu#',
+      '#SSSSSSSSSS+uuu#',
+      '#SSSSSSSSSS+uuu#',
       '#SSSSSSSSSS+uuu#',
       '#WW##WW##WW##WW#',
     ],
@@ -280,7 +281,7 @@ const FLOORS = [
       '................', '................', '................', '................', '................', '................',
       '................', '................', '................', '................', '................', '................',
       '................', '................',
-      '............wwX.',
+      '..............X.',
       '..............y.',
       '..............y.',
       '............wwP.',
@@ -288,7 +289,7 @@ const FLOORS = [
     ],
   },
   {
-    id: 'B1', title: '12 × 12 m · walk-up, andar de cima · duas quitinetes', note: 'A escada atravessa o meio e chega a um hall de 2 × 2 m; uma quitinete para a rua, outra para os fundos, cada uma com o seu banheiro no miolo. A de trás é a da frente espelhada, com o banheiro do outro lado.',
+    id: 'B1', title: '12 × 12 m · walk-up, andar de cima · duas quitinetes', note: 'A escada atravessa o meio e chega a um hall de 2 × 2 m à esquerda (o lado do corredor do térreo); uma quitinete para a rua, outra para os fundos, cada uma com o seu banheiro no miolo. A de trás é a da frente espelhada, com o banheiro do outro lado.',
     rooms: [
       '#WW##WW##WW##WW##WW##WW#',
       '#ssssssssssssssssssssss#',
@@ -299,12 +300,12 @@ const FLOORS = [
       '#ssssssssssssssssssssss#',
       '#ssssssssssssssssssssss#',
       '#ssssssssssssssssssssss#',
-      '#+++++++++++EE++DD+++++#',
-      '#SSSSSSSSSS....+hhh+hhh#',
-      '#SSSSSSSSSS....+hhh+hhh#',
-      '#SSSSSSSSSS....+hhh+hhh#',
-      '#SSSSSSSSSS....+hhh+hhh#',
-      '#+++++++++++EE+++++++DD#',
+      '#+EE++++++++++++DD+++++#',
+      '#....SSSSSSSSSS+hhh+hhh#',
+      '#....SSSSSSSSSS+hhh+hhh#',
+      '#....SSSSSSSSSS+hhh+hhh#',
+      '#....SSSSSSSSSS+hhh+hhh#',
+      '#+EE+++++++++++++++++DD#',
       '#ssssssssssssssssssssss#',
       '#ssssssssssssssssssssss#',
       '#ssssssssssssssssssssss#',
@@ -324,14 +325,14 @@ const FLOORS = [
       '......................A.',
       '......................A.',
       '......................A.',
-      '.KKKKONGG...............',
+      '......KKKKONGG..........',
       '........................',
       '..................V.CHH.',
       '.....................HH.',
       '................HH......',
       '................HHC.V...',
       '........................',
-      '.KKKKONGG...............',
+      '......KKKKONGG..........',
       '......................A.',
       '......................A.',
       '......................A.',
@@ -382,7 +383,7 @@ const FLOORS = [
     ],
   },
   {
-    id: "D1", title: "10 × 12 m · walk-up, andar de cima · 2 quartos", note: "Um quarto para a rua, outro para os fundos (os dois com janela; as laterais são parede de vizinho). A sala e a cozinha abertas no meio; o banheiro comprido, com a banheira, abre na sala.",
+    id: "D1", title: "10 × 12 m · walk-up, andar de cima · 2 quartos", note: "Um quarto para a rua, outro para os fundos (os dois com janela; as laterais são parede de vizinho). A sala e a cozinha abertas no meio; o banheiro comprido, com a banheira, abre na sala. A escada tem 3 × 4,5 m (a cozinha ficou com 1,5 m) para caber em U; entra-se em casa pelo patamar.",
     rooms: [
       "#WW##WW##WW##WW##WW#",
       "#bbbbbbb+llllllllll#",
@@ -397,9 +398,9 @@ const FLOORS = [
       "#kkkkkkkkllllllllll#",
       "#kkkkkkkkllllllllll#",
       "#kkkkkkkkllllllllll#",
-      "#kkkkkkkkllllllllll#",
-      "#kkkkkkkkllllllllll#",
-      "#+EE+++++DD++DD++++#",
+      "#+EE+++++llllllllll#",
+      "#SSSSSS++llllllllll#",
+      "#SSSSSS++DD++DD++++#",
       "#SSSSSS+hhh+bbbbbbb#",
       "#SSSSSS+hhh+bbbbbbb#",
       "#SSSSSS+hhh+bbbbbbb#",
@@ -548,7 +549,7 @@ const FLOORS = [
       "#xxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxx#",
-      "#++++DD+++++xxx#",
+      "#+DD++++++++xxx#",
       "#SSSSSSSSSS+xxx#",
       "#SSSSSSSSSS+xxx#",
       "#SSSSSSSSSS+xxx#",
@@ -820,7 +821,7 @@ const FLOORS = [
       "#xxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxx#",
-      "#++++DD+++++xxx#",
+      "#+DD++++++++xxx#",
       "#SSSSSSSSSS+xxx#",
       "#SSSSSSSSSS+xxx#",
       "#SSSSSSSSSS+xxx#",
@@ -847,7 +848,7 @@ const FLOORS = [
     ],
   },
   {
-    id: "F0", title: "10 × 10 m · o térreo com loja", note: "Como o A0, mais largo: a loja de 7,5 m, o corredor dos moradores, e nos fundos a lavanderia do prédio com o quadro de luz e a caixa de telefone (X), abrindo na escada.",
+    id: "F0", title: "10 × 10 m · o térreo com loja", note: "Como o A0, mais largo: a loja de 7,5 m, o corredor dos moradores, e nos fundos a lavanderia do prédio com o quadro de luz e a caixa de telefone (X), pelo hall atrás da loja, como no A0.",
     rooms: [
       "#RR#GGGGGRRGGGGGGGG#",
       "#cc+ooooooooooooooo#",
@@ -860,13 +861,13 @@ const FLOORS = [
       "#cc+ooooooooooooooo#",
       "#cc+ooooooooooooooo#",
       "#cc+ooooooooooooooo#",
-      "#cc+ooooooooooooooo#",
-      "#cc+ooooooooooooooo#",
-      "#cc+ooooooooooooooo#",
       "#cc++++++++++++++++#",
+      "#cc................#",
+      "#cc................#",
+      "#cc+++++++++DD+++++#",
       "#SSSSSSSSSS+uuuuuuu#",
-      "#SSSSSSSSSSDuuuuuuu#",
-      "#SSSSSSSSSSDuuuuuuu#",
+      "#SSSSSSSSSS+uuuuuuu#",
+      "#SSSSSSSSSS+uuuuuuu#",
       "#SSSSSSSSSS+uuuuuuu#",
       "#WW##WW##WW##WW##WW#",
     ],
@@ -910,7 +911,7 @@ const FLOORS = [
       "#xxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxx#",
-      "#++++DD+++++xxxxxxx#",
+      "#+DD++++++++xxxxxxx#",
       "#SSSSSSSSSS+xxxxxxx#",
       "#SSSSSSSSSS+xxxxxxx#",
       "#SSSSSSSSSS+xxxxxxx#",
@@ -956,13 +957,13 @@ const FLOORS = [
       "#cc+ooooooooooooooo#",
       "#cc+ooooooooooooooo#",
       "#cc+ooooooooooooooo#",
-      "#cc+ooooooooooooooo#",
-      "#cc+ooooooooooooooo#",
       "#cc++++++++++++++++#",
-      "#SSSSSS+uuuuuuuuuuu#",
-      "#SSSSSS+uuuuuuuuuuu#",
       "#SSSSSSDuuuuuuuuuuu#",
       "#SSSSSSDuuuuuuuuuuu#",
+      "#SSSSSS+uuuuuuuuuuu#",
+      "#SSSSSS+uuuuuuuuuuu#",
+      "#SSSSSS+uuuuuuuuuuu#",
+      "#SSSSSS+uuuuuuuuuuu#",
       "#SSSSSS+uuuuuuuuuuu#",
       "#SSSSSS+uuuuuuuuuuu#",
       "#SSSSSS+uuuuuuuuuuu#",
@@ -996,7 +997,7 @@ const FLOORS = [
     ],
   },
   {
-    id: "DT", title: "10 × 12 m · o telhado", note: "A casinha da escada nos fundos, à esquerda.",
+    id: "DT", title: "10 × 12 m · o telhado", note: "A casinha da escada nos fundos, à esquerda, com a porta na ponta do patamar.",
     rooms: [
       "####################",
       "#xxxxxxxxxxxxxxxxxx#",
@@ -1011,9 +1012,9 @@ const FLOORS = [
       "#xxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxx#",
-      "#xxxxxxxxxxxxxxxxxx#",
-      "#xxxxxxxxxxxxxxxxxx#",
-      "#++DD+++xxxxxxxxxxx#",
+      "#+DD++++xxxxxxxxxxx#",
+      "#SSSSSS+xxxxxxxxxxx#",
+      "#SSSSSS+xxxxxxxxxxx#",
       "#SSSSSS+xxxxxxxxxxx#",
       "#SSSSSS+xxxxxxxxxxx#",
       "#SSSSSS+xxxxxxxxxxx#",
@@ -1063,11 +1064,11 @@ const FLOORS = [
       "#cc+ooooooooooooooooooo#",
       "#cc+ooooooooooooooooooo#",
       "#cc+++++++++++++DD+++++#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#+++++++++++EE+++++++DD#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#+EE+++++++++++++++++DD#",
       "#ssssssssssssssssssssss#",
       "#ssssssssssssssssssssss#",
       "#ssssssssssssssssssssss#",
@@ -1094,7 +1095,7 @@ const FLOORS = [
       "................HH......",
       "................HHC.V...",
       "........................",
-      ".KKKKONGG...............",
+      "......KKKKONGG..........",
       "......................A.",
       "......................A.",
       "......................A.",
@@ -1106,7 +1107,7 @@ const FLOORS = [
     ],
   },
   {
-    id: "BT", title: "12 × 12 m · o telhado", note: "A escada chega no meio do telhado, numa casinha com a porta para a frente.",
+    id: "BT", title: "12 × 12 m · o telhado", note: "A escada chega no meio do telhado, numa casinha com o hall à esquerda e a porta para a frente.",
     rooms: [
       "########################",
       "#xxxxxxxxxxxxxxxxxxxxxx#",
@@ -1117,12 +1118,12 @@ const FLOORS = [
       "#xxxxxxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxxxxxx#",
-      "#++++DD+++++xxxxxxxxxxx#",
-      "#SSSSSSSSSS+xxxxxxxxxxx#",
-      "#SSSSSSSSSS+xxxxxxxxxxx#",
-      "#SSSSSSSSSS+xxxxxxxxxxx#",
-      "#SSSSSSSSSS+xxxxxxxxxxx#",
-      "#+++++++++++xxxxxxxxxxx#",
+      "#+DD++++++++++++xxxxxxx#",
+      "#....SSSSSSSSSS+xxxxxxx#",
+      "#....SSSSSSSSSS+xxxxxxx#",
+      "#....SSSSSSSSSS+xxxxxxx#",
+      "#....SSSSSSSSSS+xxxxxxx#",
+      "#+++++++++++++++xxxxxxx#",
       "#xxxxxxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxxxxxx#",
       "#xxxxxxxxxxxxxxxxxxxxxx#",
@@ -1366,9 +1367,9 @@ const FLOORS = [
       "#cc+lllllllllllllll#",
       "#cc+lllllllllllllll#",
       "#cc+lllllllllllllll#",
-      "#cc+lllllllllllllll#",
-      "#cc+lllllllllllllll#",
       "#cc++++++DD++DD++++#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
       "#SSSSSS+hhh+bbbbbbb#",
       "#SSSSSS+hhh+bbbbbbb#",
       "#SSSSSS+hhh+bbbbbbb#",
@@ -1390,9 +1391,9 @@ const FLOORS = [
       "................tt..",
       "....................",
       "....................",
-      "....................",
-      "....................",
       ".....KKKONGG........",
+      "....................",
+      "....................",
       "....................",
       "....................",
       "..................A.",
@@ -1418,11 +1419,11 @@ const FLOORS = [
       "#cc+sssssssssssssssssss#",
       "#cc+sssssssssssssssssss#",
       "#cc+++++++++++++DD+++++#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#SSSSSSSSSS....+hhh+hhh#",
-      "#+++++++++++EE+++++++DD#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#....SSSSSSSSSS+hhh+hhh#",
+      "#+EE+++++++++++++++++DD#",
       "#ssssssssssssssssssssss#",
       "#ssssssssssssssssssssss#",
       "#ssssssssssssssssssssss#",
@@ -1449,7 +1450,7 @@ const FLOORS = [
       "................HH......",
       "................HHC.V...",
       "........................",
-      ".KKKKONGG...............",
+      "......KKKKONGG..........",
       "......................A.",
       "......................A.",
       "......................A.",
@@ -1478,6 +1479,23 @@ const BUILDINGS = [
   { name: '10 × 12 m (walk-up residencial)', floors: ['D0R', 'D1', 'DT'] },
   { name: '12 × 12 m (walk-up residencial)', floors: ['B0R', 'B1', 'BT'] },
 ];
+// R11: the U stair fits: S at least 4.25 m long, and on every floor the ways into it on the landing, at one end
+function checkU(fl) {
+  const R0 = fl[0].rooms;
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  R0.forEach((r, y) => [...r].forEach((c, x) => { if (c === 'S') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+  if (x1 < 0) return '';
+  const along = x1 - x0 >= y1 - y0, n = (along ? x1 - x0 : y1 - y0) + 1, land = n - 6.5;
+  if (land < 2) return `a escada tem ${n / 2} m; a U precisa de 4,25`;
+  const at = [];
+  for (const F of fl) {
+    const R = F.rooms, way = (x, y) => { const c = R[y]?.[x]; return !!c && c !== 'S' && c !== 'x' && /[a-z.DER]/.test(c); };
+    for (let x = x0; x <= x1; x++) for (const y of [y0 - 1, y1 + 1]) if (way(x, y)) at.push(along ? x - x0 : y < y0 ? -1 : n);
+    for (let y = y0; y <= y1; y++) for (const x of [x0 - 1, x1 + 1]) if (way(x, y)) at.push(along ? (x < x0 ? -1 : n) : y - y0);
+  }
+  if (at.every((a) => a < land) || at.every((a) => n - 1 - a < land)) return '';
+  return 'as entradas da escada não ficam todas no patamar de uma ponta';
+}
 /** A plan with its repeated rows (rep) grown to depth d (m): each extra 2 m is 4 rows, shared among the rep rows. */
 function grow(F, d) {
   if (!F.rep) return F;
@@ -1713,7 +1731,8 @@ function build() {
       const fl = fl0.map((F) => (d ? grow(F, d) : F)), base = cells(fl[0]);
       fl.filter((F) => cells(F) !== base).forEach((F) => bad.push(`${F.id}${d ? ` (${d} m)` : ''}`));
     }
-    return `<div class="checks"><span class="${bad.length ? 'bad' : 'ok'}">${bad.length ? '✗' : '✓'} R9 · ${B.name}: ${B.floors.join(' → ')}${bad.length ? ', escada fora do lugar em ' + bad.join(', ') : ', a escada no mesmo lugar do térreo ao telhado'}</span></div>`;
+    const u = checkU(fl0);
+    return `<div class="checks"><span class="${u ? 'bad' : 'ok'}">${u ? '✗' : '✓'} R11 · ${B.name}: ${u || 'a escada em U, todas as entradas no patamar'}</span></div>` + `<div class="checks"><span class="${bad.length ? 'bad' : 'ok'}">${bad.length ? '✗' : '✓'} R9 · ${B.name}: ${B.floors.join(' → ')}${bad.length ? ', escada fora do lugar em ' + bad.join(', ') : ', a escada no mesmo lugar do térreo ao telhado'}</span></div>`;
   }).join('');
   // the palettes by building style
   const PAL = [

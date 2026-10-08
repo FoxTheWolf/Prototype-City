@@ -1,5 +1,5 @@
 /**
- * The interiors manual's floors and room arrangements against its rules R1-R9, in Node without the browser:
+ * The interiors manual's floors and room arrangements against its rules R1-R9 and R11, in Node without the browser:
  *   npx rolldown tests/floorplans.ts --format esm --platform node -o tests/.out/floorplans.mjs && node tests/.out/floorplans.mjs
  * Every drawn floor (at each depth it serves), every building's stack of floors and every arrangement must pass;
  * then a few plans broken on purpose must fail, so a rule that stops catching its error is noticed. Exits with 1 on a failure.
@@ -38,6 +38,10 @@ for (const [what, F, rule] of broken) {
 const stack = { name: 'moved stair', floors: ['A0', 'A1'] };
 const moved = FLOORS.map((F) => (F.id === 'A1' ? edit(F, 'rooms', 15, '#+SSSSSSSSS+hhh#') : F));
 if (!checkBuilding(stack, moved).length) fail('a stair moved between floors: R9 did not catch it');
+// the roof's door at the stair's far end, over the half landing (the plans before the U stair): R11
+const roofT1 = FLOORS.find((F) => F.id === 'T1')!, farDoor = roofT1.rooms.findIndex((r) => r.startsWith('#+DD'));
+const far = FLOORS.map((F) => (F.id === 'T1' ? edit(F, 'rooms', farDoor, '#++++DD+++++' + roofT1.rooms[farDoor].slice(12)) : F));
+if (!checkBuilding({ name: 'far roof door', floors: ['A0', 'A1', 'T1'] }, far).some((m) => m.startsWith('R11'))) fail('a roof door over the half landing: R11 did not catch it');
 const bed = ARRANGEMENTS.find((A) => A.room === 'A1 quarto')!;
 if (!checkArrangement({ ...bed, rows: ['......', 'BBB...', 'BBB...', 'BBB..A', 'BBB..A', '......', 'AAA...'] }).length) fail('an arrangement blocking its door passed');
 

@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import { type DistrictType, type RGB } from '../sim/city';
 import { type Population } from '../sim/citizens';
 import { looksOf } from '../sim/looks';
-import { FLIGHT_TOP } from '../sim/interior';
+import { STAIR_GAP, STAIR_RUN } from '../sim/interior';
 import { Mat, part, Shape, type Part, type Vox } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
@@ -607,30 +607,41 @@ export function poweredFurniture(kind: string, k: number): Part[] {
 }
 
 const GOODS: RGB[] = [[200, 60, 50], [60, 120, 200], [230, 200, 60], [80, 170, 90], [220, 220, 210]];
-/** Steps of a flight a storey high (FLOOR_H = 3.5 m, 20 risers of 17.5 cm). */
+/** Steps of a storey (FLOOR_H = 3.5 m, 20 risers of 17.5 cm): ten a flight. */
 const RISERS = 20;
 /**
- * A flight of stairs in little cubes (rework of the interiors, step 4): it climbs a storey along +x over its length
- * (2 hx, the last FLIGHT_TOP of it flat), hy either side. Each step is a tread one riser thick, so its underside is stepped and open (never solid
- * to the floor); two steel stringers run under the treads' ends, and on the +y side (-y with railLeft) a rail of posts and a handrail.
+ * A U stair in little cubes (rework of the interiors, step 4): along +x, the first flight on -y climbs half a storey
+ * from -hx over STAIR_RUN to the half landing at the +x end; the second, on +y, climbs from the half landing back to
+ * the next floor at -hx. Each tread is a slab one riser thick (open underneath, never solid to the floor), on steel
+ * stringers; in the gap between the flights, a rail of posts and a handrail for each flight.
  */
-function stairModel(hx: number, hy: number, railLeft: boolean): Part {
-  // two cells a tread, and the flat top (FLIGHT_TOP) in cells of the same length
-  const H = 3.5, flat = Math.round(FLIGHT_TOP / ((2 * hx - FLIGHT_TOP) / (RISERS * 2))), nx = RISERS * 2 + flat, nz = RISERS * 2 + 10, ny = Math.max(4, Math.round((2 * hy) / 0.125));
+function stairModel(hx: number, hy: number): Part {
+  // cells of 12.5 cm across and along (two a tread), of half a riser up
+  const H = 3.5, tread = STAIR_RUN / 9, cx = tread / 2, nx = Math.round((2 * hx) / cx), ny = Math.max(5, Math.round((2 * hy) / 0.125)), nz = RISERS * 2 + 12;
   const cells = new Uint8Array(nx * ny * nz), at = (x: number, y: number, z: number, v: number) => { if (x >= 0 && y >= 0 && z >= 0 && x < nx && y < ny && z < nz) cells[(z * ny + y) * nx + x] = v; };
+  // the gap: gw cells in the middle; the first flight below it (y < g0), the second above (y >= g1)
+  const gw = Math.max(1, Math.round(STAIR_GAP / 0.125)), g0 = Math.floor((ny - gw) / 2), g1 = g0 + gw, runN = 18;
   // 1 the treads' wood, 2 the risers (darker), 3 the steel stringers, 4 the rail
+  const rail = Math.round(0.9 / (H / RISERS / 2));
   for (let x = 0; x < nx; x++) {
-    const s = Math.min(RISERS - 1, x >> 1), top = (s + 1) * 2; // a step's top, in cells of half a riser (the flat top is the last)
-    for (let y = 0; y < ny; y++) { at(x, y, top - 1, 1); at(x, y, top - 2, (x & 1) === 0 ? 2 : 1); }
-    // the stringers: a band under the treads at both ends
-    for (const y of [0, ny - 1]) for (let z = top - 5; z < top - 2; z++) at(x, y, z, 3);
-    // the rail on +y: a post every fourth step, the handrail ~0.9 m over the treads' line
-    const rail = Math.round(top + 0.9 / (H / RISERS / 2));
-    const ry = railLeft ? 0 : ny - 1;
-    at(x, ry, rail, 4);
-    if (s % 4 === 1 && (x & 1) === 0) for (let z = top; z < rail; z++) at(x, ry, z, 4);
+    const k = x >> 1, onRun = x < runN;
+    // the first flight's step k (0..8) tops at k + 1 risers; the half landing at ten; the second's from eleven to nineteen
+    const topA = onRun ? (k + 1) * 2 : RISERS, topB = onRun ? RISERS + (9 - k) * 2 : RISERS;
+    for (let y = 0; y < ny; y++) {
+      if (onRun && y >= g0 && y < g1) continue;
+      const top = y < g0 ? topA : topB;
+      at(x, y, top - 1, 1); at(x, y, top - 2, (x & 1) === 0 && onRun ? 2 : 1);
+    }
+    if (!onRun) continue;
+    // the stringers: under the treads at the walls and at both edges of the gap
+    for (const [y, top] of [[0, topA], [g0 - 1, topA], [g1, topB], [ny - 1, topB]]) for (let z = top - 5; z < top - 2; z++) at(x, y, z, 3);
+    // the rails on the gap's edges: each flight's handrail ~0.9 m over the line of its nosings (one cell up a cell
+    // along, so it runs on unbroken), two cells thick; a post every fourth step
+    for (const [y, top, line] of [[g0 - 1, topA, x + 2], [g1, topB, RISERS * 2 - 2 - x]]) {
+      at(x, y, line + rail, 4); at(x, y, line + rail - 1, 4);
+      if (k % 4 === 1 && (x & 1) === 0) for (let z = top; z < line + rail; z++) at(x, y, z, 4);
+    }
   }
-  // (the rail in dark varnished wood: grey steel vanished against the stairwell's grey walls)
   const vox: Vox = { nx, ny, nz, pal: [[120, 86, 56], [82, 60, 42], [72, 74, 80], [58, 36, 24]], cells };
   return { ...part(Shape.Vox, -hx, -hy, 0, hx, hy, (H * nz) / (RISERS * 2), [120, 86, 56], Mat.Solid, '#', '=', '|'), vox };
 }
@@ -672,7 +683,7 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
     }
   };
   switch (kind) {
-    case 'stair': m = [stairModel(hx, hy, seed % 2 === 1)]; break;
+    case 'stair': m = [stairModel(hx, hy)]; break;
     case 'bed': m = [
       part(Box, -hx, -hy, 0, hx, hy, 0.3, WOOD, Solid, '=', '='),
       part(Box, -hx + 0.05, -hy + 0.05, 0.3, hx - 0.05, hy - 0.05, 0.5, FAB, Solid, '~', '~'),

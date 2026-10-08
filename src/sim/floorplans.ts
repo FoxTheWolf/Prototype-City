@@ -150,8 +150,32 @@ export function checkBuilding(B: BuildingStack, floors: Floor[] = FLOORS): strin
   for (const d of fl0[0].depths ?? [0]) {
     const fl = fl0.map((F) => (d ? grow(F, d) : F)), base = cells(fl[0]);
     for (const F of fl) if (cells(F) !== base) out.push(`R9 ${B.name}: the stair moves on ${F.id}${d ? ` (${d} m)` : ''}`);
+    const r11 = checkU(fl);
+    if (r11) out.push(`R11 ${B.name}${d ? ` (${d} m)` : ''}: ${r11}`);
   }
   return out;
+}
+
+/**
+ * R11: the U stair fits (2026-10-08): the S rectangle is at least 4.25 m long (a landing, a flight's 2.25 m run, the
+ * 1 m half landing), and on every floor the ways into it open on the landing, all at the same end.
+ */
+function checkU(fl: Floor[]): string {
+  const R0 = fl[0].rooms;
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  R0.forEach((r, y) => [...r].forEach((c, x) => { if (c === 'S') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+  if (x1 < 0) return '';
+  const along = x1 - x0 >= y1 - y0, n = (along ? x1 - x0 : y1 - y0) + 1, land = n - 6.5;
+  if (land < 2) return `the stair is ${n / 2} m long; a U needs 4.25`;
+  // each way in, as its distance (characters) from the low end and from the high end
+  const at: number[] = [];
+  for (const F of fl) {
+    const R = F.rooms, way = (x: number, y: number) => { const c = R[y]?.[x]; return !!c && c !== 'S' && c !== 'x' && /[a-z.DER]/.test(c); };
+    for (let x = x0; x <= x1; x++) for (const y of [y0 - 1, y1 + 1]) if (way(x, y)) at.push(along ? x - x0 : y < y0 ? -1 : n);
+    for (let y = y0; y <= y1; y++) for (const x of [x0 - 1, x1 + 1]) if (way(x, y)) at.push(along ? (x < x0 ? -1 : n) : y - y0);
+  }
+  if (at.every((a) => a < land) || at.every((a) => n - 1 - a < land)) return '';
+  return `the ways into the stair (${[...new Set(at)].join(', ')}) are not all on one landing (${land / 2} m at one end)`;
 }
 
 /** The rules on one room arrangement inside its frame: doors clear, tall pieces off the windows, open sides mostly free, every floor cell reached, chairs at a table, every posto reachable. */

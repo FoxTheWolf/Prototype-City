@@ -986,7 +986,8 @@ function syncMusic() {
   barks.music = s ? { gen: T.gen, band: T.cur < TRACKS.length ? s.band : '', song: s.title, reach: r === 'phones' ? 0 : (r === 'hand' ? 7 : 2.5) * (0.4 + 0.6 * T.vol) } : null;
 }
 /** The storey drawn around the viewer: on the stairs, the one above once past the middle landing. */
-const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + FLOOR_H / 2) / FLOOR_H));
+// the storey the eye is in (on a flight, the head passes into the one above before the feet do)
+const viewFloor = () => (world.player.liftTo >= 0 ? world.player.floor : Math.floor((world.player.z + eyeNow() + 0.01) / FLOOR_H));
 /** The debug lines (status, clock, substation, where): F3 shows them; the game always opens with them hidden. */
 let hudOn = false;
 // [HACKING] the last arrest shown (its game time) and when (real time) the banner started, to time it

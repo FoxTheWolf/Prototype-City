@@ -575,11 +575,15 @@ const FURN_OF: Record<string, FurnKind> = {
 const PLAN_WALLS = new Set(['#', 'W', 'G', '+']);
 
 /**
- * The flight of a stack's stair (plano-interiores step 4), in plan characters: the S rectangle's long side split in
- * a landing at the floor's level (the side its floors' doors open on) and the flight beside it (1 m wide, a straight
- * run along the long side), climbing from the end nearer the doors. The same on every floor (R9).
+ * A stack's stair (plano-interiores step 4, redrawn as a U in 2026-10-08): along the S rectangle's long side, a landing
+ * at the floor's level at the end its floors' doors open on, then two flights side by side, the first climbing away
+ * from the landing to a half landing at the far end, the second climbing back to the next floor's landing, at the same
+ * end. Here, in plan metres (u along the face, v in from it), the rectangle of the two flights and the half landing
+ * (the stairwell), and the first flight's climb (du, dv). The same on every floor (R9).
  */
-export interface Flight { x0: number; y0: number; x1: number; y1: number; du: number; dv: number }
+export interface Flight { u0: number; v0: number; u1: number; v1: number; du: number; dv: number }
+/** A flight's run (9 treads of 25 cm) and the half landing past it, m. */
+export const STAIR_RUN = 2.25, STAIR_MID = 1;
 const flightCache = new Map<Stack, Flight | null>();
 function flightOf(St: Stack): Flight | null {
   let F = flightCache.get(St);
@@ -588,23 +592,19 @@ function flightOf(St: Stack): Flight | null {
   const R0 = St.ground.rooms;
   let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
   R0.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === 'S') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
-  if (x1 >= 0) {
-    const along = x1 - x0 >= y1 - y0;
-    // the ways in, on every floor: a door or a room right outside the rectangle
-    let a = 0, b = 0, sx = 0, sy = 0, n = 0;
+  const along = x1 - x0 >= y1 - y0, len = ((along ? x1 - x0 : y1 - y0) + 1) / 2;
+  if (x1 >= 0 && len >= STAIR_RUN + STAIR_MID + 1) {
+    // the ways in, on every floor: a door or a room right outside the rectangle; the landing is at the end nearer them
+    let sx = 0, sy = 0, n = 0;
     for (const Fl of [St.ground, St.upper, St.roof]) {
       if (!Fl) continue;
       const R = Fl.rooms, way = (x: number, y: number) => { const ch = R[y]?.[x]; return !!ch && (ch in ROOM_OF || 'DER'.includes(ch)) && ch !== 'S'; };
-      for (let x = x0; x <= x1; x++) for (const [y, lo] of [[y0 - 1, true], [y1 + 1, false]] as const) if (way(x, y)) { if (along) { if (lo) a++; else b++; } sx += x; sy += y; n++; }
-      for (let y = y0; y <= y1; y++) for (const [x, lo] of [[x0 - 1, true], [x1 + 1, false]] as const) if (way(x, y)) { if (!along) { if (lo) a++; else b++; } sx += x; sy += y; n++; }
+      for (let x = x0; x <= x1; x++) for (const y of [y0 - 1, y1 + 1]) if (way(x, y)) { sx += x; sy += y; n++; }
+      for (let y = y0; y <= y1; y++) for (const x of [x0 - 1, x1 + 1]) if (way(x, y)) { sx += x; sy += y; n++; }
     }
-    // the landing on the long side with more ways in; the flight is the rest; it starts at the end nearer them
     const mid = n ? (along ? sx / n : sy / n) : along ? x0 : y0, lowEnd = mid <= (along ? (x0 + x1) / 2 : (y0 + y1) / 2);
-    // the flight 1 m wide against the far long side, the landing the rest (a wider S, the D's, keeps a wider landing);
-    // with no door on either long side, the flight on the side nearer the ways in, so its foot meets them
-    const across = n ? (along ? sy / n : sx / n) : 0, lowSide = a !== b ? a < b : across <= (along ? (y0 + y1) / 2 : (x0 + x1) / 2);
-    if (along) { if (lowSide) y1 = y0 + 1; else y0 = y1 - 1; F = { x0, y0, x1, y1, du: lowEnd ? 1 : -1, dv: 0 }; }
-    else { if (lowSide) x1 = x0 + 1; else x0 = x1 - 1; F = { x0, y0, x1, y1, du: 0, dv: lowEnd ? 1 : -1 }; }
+    const lo = (along ? x0 : y0) / 2, hi = ((along ? x1 : y1) + 1) / 2, a0 = lowEnd ? hi - STAIR_RUN - STAIR_MID : lo, a1 = lowEnd ? hi : lo + STAIR_RUN + STAIR_MID;
+    F = along ? { u0: a0, v0: y0 / 2, u1: a1, v1: (y1 + 1) / 2, du: lowEnd ? 1 : -1, dv: 0 } : { u0: x0 / 2, v0: a0, u1: (x1 + 1) / 2, v1: a1, du: 0, dv: lowEnd ? 1 : -1 };
   }
   flightCache.set(St, F);
   return F;
@@ -763,14 +763,12 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
     const [px, py] = stackXY(St, B, (x + x1 + 1) / 4, (y + y1 + 1) / 4);
     P.furn.push({ kind: FURN_OF[ch], x: px, y: py, c, s: s2, hx: along * 0.25 - 0.05, hy: across * 0.25 - 0.05, seed: (rnd() * 1e6) | 0 });
   }
-  // the stair's flight, a piece of its own (drawn in little cubes; walked by its steps, not round it)
+  // the stair's two flights and half landing, a piece of its own (drawn in little cubes; walked by its steps, not round it)
   const Fg = flightOf(St);
   if (Fg) {
-    const [px, py] = stackXY(St, B, (Fg.x0 + Fg.x1 + 1) / 4, (Fg.y0 + Fg.y1 + 1) / 4), [c, s2] = stackDir(St, Fg.du, Fg.dv);
-    const run = (Fg.du ? Fg.x1 - Fg.x0 + 1 : Fg.y1 - Fg.y0 + 1) / 2, wide = (Fg.du ? Fg.y1 - Fg.y0 + 1 : Fg.x1 - Fg.x0 + 1) / 2;
-    // the rail goes on the landing's side: the model's +y is the climb's right hand ((-s, c) in the city); seed 1 puts it on -y
-    const lane = Fg.du ? (R[Fg.y0 - 1]?.[Fg.x0] === 'S' ? [0, -1] : [0, 1]) : R[Fg.y0]?.[Fg.x0 - 1] === 'S' ? [-1, 0] : [1, 0], [lx, ly] = stackDir(St, lane[0], lane[1]);
-    P.furn.push({ kind: 'stair', x: px, y: py, c, s: s2, hx: run / 2, hy: wide / 2 - 0.05, seed: -s2 * lx + c * ly > 0 ? 0 : 1 });
+    const [px, py] = stackXY(St, B, (Fg.u0 + Fg.u1) / 2, (Fg.v0 + Fg.v1) / 2), [c, s2] = stackDir(St, Fg.du, Fg.dv);
+    const run = Fg.du ? Fg.u1 - Fg.u0 : Fg.v1 - Fg.v0, wide = Fg.du ? Fg.v1 - Fg.v0 : Fg.u1 - Fg.u0;
+    P.furn.push({ kind: 'stair', x: px, y: py, c, s: s2, hx: run / 2, hy: wide / 2 - 0.05, seed: 0 });
   }
   // where a piece stands on the seam of an open plan (the fridge at the edge of the open kitchen), that stretch is no way through
   for (const c of seam) if (inFurniture(P, (gx + (c % nx) + 0.5) * CELL, (gy + Math.floor(c / nx) + 0.5) * CELL)) cells[c] &= ~DOOR;
@@ -1512,25 +1510,36 @@ export function reach(P: Plan, r: number, sx: number, sy: number, tx: number, ty
 }
 
 /** Whether (x, y) is inside a piece of the plan's furniture. */
-/** How far the feet may rise or drop in one step (a riser is 17.5 cm; more is a rail, or the flight's underside). */
+/** How far the feet may rise or drop in one step (a riser is 17.5 cm; more is a rail, or a flight's underside). */
 export const STEP_UP = 0.45;
-/** The flat top of a flight, m: the steps take the rest of its run, so the climb ends on a landing, not at the wall. */
-export const FLIGHT_TOP = 0.5;
+/** The gap between a stair's two flights, m (a rail runs in it). */
+export const STAIR_GAP = 0.125;
 /**
- * The height of the feet at (x, y) in lot k, for someone at height z (plano-interiores step 4): on a stair's flight,
- * the step under them, of the flight nearest their height (the one they are on); elsewhere the level of the
- * floor nearest z. A flight climbs a storey from its low end; the top floor's leads to the roof, not yet a floor.
+ * The height of the feet over their storey's floor on a stair piece (model frame: u along the first flight's climb,
+ * from -hx; v across, the first flight on v < 0): the first flight ramps up to the half landing (half a storey), the
+ * second, beside it, on up to the next floor; NaN in the gap between the two flights (the rail).
+ */
+export function stairRise(hx: number, u: number, v: number): number {
+  const w = Math.max(0, Math.min(1, (u + hx) / STAIR_RUN)), half = FLOOR_H / 2;
+  if (w >= 1) return half;
+  if (Math.abs(v) < STAIR_GAP / 2 + 0.15) return NaN;
+  return v < 0 ? w * half : FLOOR_H - w * half;
+}
+/**
+ * The height of the feet at (x, y) in lot k, for someone at height z (plano-interiores step 4): on a stair, the step
+ * under them, of the storey nearest their height (the one they are on); elsewhere the level of the floor nearest z.
+ * The top floor's stair leads to the roof, not yet a floor. In the gap between the flights, out of reach (the rail).
  */
 export function feetZ(city: City, k: number, x: number, y: number, z: number): number {
   const top = floorsOf(city.buildings[k]), f0 = Math.max(0, Math.min(top - 1, Math.round(z / FLOOR_H))), P = planOf(city, k, f0);
   const S = P?.furn.find((f) => f.kind === 'stair');
-  if (S) {
+  if (S && top >= 2) {
     const dx = x - S.x, dy = y - S.y, u = dx * S.c + dy * S.s, v = -dx * S.s + dy * S.c;
-    // across: to the rail on the landing's side (seed 0: +v), on the other side up to the wall (the wall stops the rest)
-    const lo = S.seed === 1 ? -(S.hy + 0.05) : -(S.hy + 0.4), hi = S.seed === 1 ? S.hy + 0.4 : S.hy + 0.05;
-    if (Math.abs(u) <= S.hx && v >= lo && v <= hi) {
-      const t = Math.min(1, (u + S.hx) / (2 * S.hx - FLIGHT_TOP)), f = Math.max(0, Math.min(top - 2, Math.round(z / FLOOR_H - t)));
-      if (top >= 2) return (f + t) * FLOOR_H;
+    if (u >= -S.hx && u <= S.hx && Math.abs(v) <= S.hy + 0.05) {
+      const r = stairRise(S.hx, u, v);
+      if (Number.isNaN(r)) return z + 9;
+      const f = Math.max(0, Math.min(top - 2, Math.round((z - r) / FLOOR_H)));
+      return f * FLOOR_H + r;
     }
   }
   return f0 * FLOOR_H;
