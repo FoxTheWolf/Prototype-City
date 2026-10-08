@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-08 — a 13.18 (Opus 5.5)
+- **A 13.19 e as portas estreitas mexem de novo nas plantas:** a porta `D` tem 2 caracteres (1 m) no manual; se no jogo ela sai estreita, é a conversão para células (moldura, parede de 0,25 m), não o desenho. Medir primeiro no `tests/stack-print.ts` a largura livre de cada vão, e só então decidir entre alargar no leitor ou redesenhar (redesenhar 25 plantas custa caro).
+- **O hall de entrada da R12 é pequeno (1 m):** lê como entrada, mas é um corredor junto da cozinha. Quando a 13.20 trouxer a biblioteca de arrumações, vale dar ao hall um cabideiro e um capacho (dois objetos baratos) para ele se ler como entrada mesmo no escuro.
+- **A face da laje no topo da escada sai cinza (é teto):** o certo é madeira, como o último degrau; ficou para a 23.3 junto da parte de baixo dos lances, que vista de baixo fica quase preta.
+
 ## 2026-10-07 — o notebook em cubinhos (Opus 5.5)
 - **As legendas na fonte 5 × 7 combinam com o resto (letreiros, Ferret), mas são pequenas:** as de 3+ letras saem a 1,75 mm (BKSP, SHIFT). Se no 1080p ficarem ilegíveis, o caminho barato é subir o decalque para 6 px/mm só nessas; não vale trocar por fonte do sistema (fugiria do "tudo em pixels do jogo").
 - **Falta um realce da peça sob o cursor** (como o celular tem): com 86 peças clicáveis, o jogador não sabe o que é botão e o que é enfeite. Um brilho leve na paleta (o `mul` já existe) resolve com poucas linhas.
