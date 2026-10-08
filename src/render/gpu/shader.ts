@@ -2938,9 +2938,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let handD = select(cl.depth, max(cl.depth, gPeekT), cl.kind == KIND_ROOM);
   // ---- (13.10b2) a room seen through a window or an open street door, and through a window on its far side: the
   // street behind, by a second ray on from that glass (as the reflection's, R.24), lit on its own
-  var thru = vec3f(0.0); var thruCh = 32u; var thruK = 0.0; var thruPane = 1.0;
+  var thru = vec3f(0.0); var thruCh = 32u; var thruK = 0.0; var thruPane = 1.0; var thruD = -1.0;
   if (inc.state != 1u && gBackT > 0.0 && cl.kind == KIND_ROOM && abs(cl.depth - gBackW) < 1e-3) {
-    let tb = gBackT + 0.05; thruK = abs(gBackK); thruPane = select(0.62 - 0.2 * u.day, 1.0, gBackK < 0.0) * 0.8;
+    let tb = gBackT + 0.05; thruK = abs(gBackK); thruD = cl.depth; thruPane = select(0.62 - 0.2 * u.day, 1.0, gBackK < 0.0) * 0.8;
     let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sEK = gEmK; let sMat = gMat; let sN = gNrm; let sWet = gWet;
     gOX = u.px + rdx * tb; gOY = u.py + rdy * tb; gOZ = u.eye - m * tb + A * tb * tb;
     var tg = 1e9;
@@ -3040,7 +3040,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
   let paint = gMat == MAT_PAINT;
   var lit = light(cl);
-  if (thruK > 0.0) {
+  // (only where the room is still what this cell shows: a pole, a sign or a person in front of the window hides it)
+  if (thruK > 0.0 && cl.depth == thruD) {
     lit.c = mix(lit.c, thru * thruPane * vec3f(0.9, 0.95, 1.0) + vec3f(4.0, 6.0, 9.0), thruK);
     if (thruK > 0.5 && lit.ch == EQ) { lit.ch = thruCh; }  }
   if (paint) { refl *= mix(vec3f(1.0), gTint, CAR_METAL); }

@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10l — Janelas fantasmas (2026-10-08)
+- **As janelas dos prédios de trás não aparecem mais desenhadas em cima de postes, placas e pessoas** que estão na frente delas.
+
 ## 0.13.10j — Quarteirões de cidade americana (2026-10-08)
 - **Os quarteirões são loteados como nas cidades americanas de verdade:** nas pontas, lotes virados para a avenida (as esquinas inclusas); no meio, duas fileiras de lotes estreitos e fundos, de costas uma para a outra, cada um com a porta na rua, e os quintais no miolo do quarteirão. Acabaram os prédios rasos e largos com a porta no lado comprido.
 - **Torres no centro, sobrados na periferia:** perto do centro os lotes são largos (16 a 24 m), onde nascem as torres; longe dele os lotes têm 8 a 12 m de frente e no máximo 5 andares (prédio de escada, sem elevador). De vez em quando sobra um beco estreito entre dois prédios.
