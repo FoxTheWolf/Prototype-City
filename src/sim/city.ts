@@ -753,10 +753,10 @@ export function generateCity(seed: number, size: number): City {
         if (rest > 0) out.splice((br() * (out.length + 1)) | 0, 0, -rest);
         return out;
       };
-      /** A lot's depth for its width w in a zone Z deep: mostly a little deeper than wide, sometimes up to 24 m. */
+      /** A lot's depth for its width w in a zone Z deep: as the catalog has them, mostly up to 12 m (8 x 8 to 12 x 12), a quarter deep up to 24 m. */
       const depthFor = (w: number, Z: number): number => {
         if (w >= 16) { const D = (w === 16 ? [16, 24] : w === 20 ? [20] : [24, 32]).filter((d) => d <= Z); return D.length ? D[(br() * D.length) | 0] : Z; }
-        const hi = Math.min(24, Z, br() < 0.7 ? w + 4 : 24);
+        const hi = Math.min(24, Z, br() < 0.75 ? 12 : 24);
         return hi < w ? Z : w + 2 * Math.round((br() * (hi - w)) / 2);
       };
       const rect = (u0: number, u1: number, v0: number, v1: number): [number, number, number, number] => (alongX ? [u0, v0, u1, v1] : [v0, u0, v1, u1]);
