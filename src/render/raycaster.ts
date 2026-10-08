@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, overheadBlade, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, overheadBlade, bannerModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -909,6 +909,8 @@ function seen(x: number, y: number, r: number): boolean {
   return sx + hw >= C.x0 && sx - hw <= C.x1;
 }
 
+/** Each lamp's district (by lamp), for its banners. */
+const lampDistrict = new Map<number, number>();
 function collectObjects(world: World, v: View): Obj[] {
   const out: Obj[] = [];
   const { city } = world;
@@ -925,6 +927,14 @@ function collectObjects(world: World, v: View): Obj[] {
         const L = LAMP_LIGHT[p.lampType ?? 'hps'], hc = [0, 1, 2].map((k) => L.cold[k] + (L.warm[k] - L.cold[k]) * wm);
         const s = 255 / Math.max(...hc), head: RGB = [Math.max(30, hc[0] * s * lv), Math.max(30, hc[1] * s * lv), Math.max(30, hc[2] * s * lv)];
         out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lampModel(head), r: 2.1, h: 6.7, seed: 0 });
+        // on the avenues (their arm reaching across x: the avenues run along y), the district's banners, both ways
+        if (Math.abs(Math.cos(p.a)) > 0.7 && Math.hypot(p.x - v.x, p.y - v.y) < SIGNAL_FAR) {
+          let d = lampDistrict.get(n);
+          if (d === undefined) { d = nearestDistrict(city.districts, p.x, p.y); lampDistrict.set(n, d); }
+          const B = bannerModel(d);
+          out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: B, r: 0.7, h: 4.7, z0: 3.3, seed: 0 });
+          out.push({ x: p.x, y: p.y, c: -Math.cos(p.a), s: -Math.sin(p.a), parts: B, r: 0.7, h: 4.7, z0: 3.3, seed: 0 });
+        }
       }
       else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
       else if (p.kind === 'blade') {

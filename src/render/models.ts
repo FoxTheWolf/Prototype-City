@@ -280,6 +280,28 @@ export function lampModel(head: RGB): Part[] {
   return m;
 }
 
+/**
+ * The district's banner on an avenue's lamp post (the signage manual, section 5): two cloths hanging on brackets
+ * either side of the pole, below the arm, in the district's color with its number; read from +x (the arm's side;
+ * a second one turned round shows the other). Says the neighbourhood from far off, from any angle.
+ */
+export function bannerModel(district: number): Part[] {
+  const key = `banner|${district}`;
+  let m = lamps.get(key);
+  if (m) return m;
+  const col = DISTRICT_COLS[district % DISTRICT_COLS.length], ink: RGB = [22, 23, 26];
+  m = [];
+  for (const sy of [-1, 1]) {
+    const y0 = sy * 0.1, y1 = sy * 0.62;
+    m.push(part(Box, -0.02, Math.min(y0, y1), 4.62, 0.02, Math.max(y0, y1), 4.66, STEEL, Solid, '-'));
+    const cloth = part(Box, -0.01, Math.min(y0, y1) + 0.04, 3.3, 0.01, Math.max(y0, y1) - 0.02, 4.6, col, Board, '#');
+    cloth.text = String(district + 1); cloth.col2 = ink; cloth.lamp = 0;
+    m.push(cloth);
+  }
+  lamps.set(key, m);
+  return m;
+}
+
 const trees = new Map<number, Part[]>();
 /** Street and park tree: a trunk under a crown of one to three leafy ellipsoids, varied by seed. */
 export function treeModel(seed: number, w: number, h: number): Part[] {
@@ -792,7 +814,7 @@ export const SIGNAL_POLE: Part[] = [
 ];
 const walks: Part[][] = [];
 /**
- * A walk signal on a pole, facing +x: a lamp panel that reads GO in green when people may cross,
+ * A walk signal on a pole, facing +x: a lamp panel that reads GO in green when people may cross, XX in red when not (two letters as GO, the signage manual),
  * a red X when they may not, like the shop signs (bulbs up close, glyphs farther). 1 GO, 2 X, 0 dark.
  * The panel is a little larger than a real one, so the word reads from across an avenue.
  */
@@ -800,7 +822,7 @@ export function walkSignal(w: number): Part[] {
   let m = walks[w];
   if (m) return m;
   const plate = part(Box, 0.38, -0.35, 2.38, 0.41, 0.35, 2.98, [16, 15, 14], Board, '.');
-  if (w) { plate.text = w === 1 ? 'GO' : 'X'; plate.col2 = w === 1 ? [70, 255, 120] : [255, 45, 35]; plate.bulbs = true; }
+  if (w) { plate.text = w === 1 ? 'GO' : 'XX'; plate.col2 = w === 1 ? [70, 255, 120] : [255, 45, 35]; plate.bulbs = true; }
   m = walks[w] = [part(Box, 0.1, -0.37, 2.35, 0.38, 0.37, 3.0, HOUSING, Solid, '#', '=', '#'), plate];
   return m;
 }

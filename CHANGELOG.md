@@ -7,6 +7,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **A centena do quarteirão** à direita do nome ("BLACKMOOR BLVD 1200"): os números daquele trecho vão de 1200 a 1299. A **faixa colorida do distrito** corre no topo da placa.
 - **Placa suspensa no fim do braço do semáforo**, depois da última lanterna, com o nome da rua que se cruza, para quem vem dirigindo.
 - **O PARE é octogonal**, com STOP em branco.
+- **O semáforo de pedestre mostra XX** em vermelho (era um X só), do mesmo tamanho do GO.
+- **Banners do distrito nos postes das avenidas:** dois panos na cor do distrito, com o número dele, dos dois lados do poste.
 
 ## 0.15.59 — GRID DOWN na tela de título (2026-10-08)
 - **O título agora é GRID DOWN: TERMINAL STATE.** Em vez do antigo "TERMINAL CITY", a tela de título mostra a abertura do manual da GridLink, como um letreiro de lâmpadas direto no escuro: GRID acende letra por letra, a haste desce até o LINK, POWER · TELECOM é digitado, alguém sacode a lata e picha o OWN em tinta laranja, risca o LINK, e a energia cai: as lâmpadas e o console do fundo se apagam, TERMINAL STATE acende em âmbar sozinho, e a luz volta piscando. Uns 8 segundos, com os sons sintetizados (bipes, o zumbido do transformador, as teclas, a lata, o spray, o zumbido caindo e o relé religando). Clique no logo para ver de novo.
