@@ -101,6 +101,20 @@
    **oficina** (`autoparts`), **escritório grande e as outras torres**, e plantas de loja próprias para os que caem na
    genérica (farmácia, penhores, eletrônicos, celulares, livraria, alfaiate). O cinema fica para depois da 1.0.
 
+8. **Portas, saída e orientação (pedido do usuário em 2026-10-08, depois do playtest):**
+   - **A porta dos moradores precisa ser achável:** hoje, num prédio com loja, a escada só se alcança pela porta dos
+     moradores, ao lado da vitrine, e a loja é uma caixa fechada; o usuário entrou em lojas e em prédios ainda sem planta
+     (torres, lotes fundos) e nunca viu a escada. Dar à porta dos moradores cara de porta de prédio (número, interfone,
+     luz em cima) e conferir se ela se distingue da loja.
+   - **O vão entre o alto da porta e a fachada está alto demais** (a porta fica quase invisível): baixar o topo da
+     fachada sobre a porta / a altura da verga.
+   - **O vidro da porta não mostra o que está atrás** (outras portas, o cômodo seguinte): o vidro da folha tem de
+     passar pelo mesmo caminho do vidro unificado (lições da 0.15.56).
+   - **Placas EXIT pelo manual de sinalização** (regra 4 de `docs/identidade/sinalizacao-manual.html`: vermelho aceso,
+     o homem saindo à esquerda, sobre as portas de saída e as escadas, aceso no apagão; a placa de andar ao lado da
+     escada/elevador). O gerador traça o caminho de cada cômodo comum até a porta da rua (BFS na planta) e põe a placa
+     sobre cada porta desse caminho e uma seta onde o caminho vira, como em prédio real. Absorve "EXIT e diretório" da 13.7.
+
 ## Riscos e o que conferir
 
 - **A cidade muda em cada semente** (o catálogo mexe nos lotes): os saves de teste não importam (decidido), mas as

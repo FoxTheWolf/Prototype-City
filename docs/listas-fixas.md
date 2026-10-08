@@ -25,6 +25,8 @@
 - **A barra de status do notebook some com o navegador aberto (feedback 2026-10-06):** o "negocinho no canto" com os status do notebook (specs/rede/hora) desaparece quando o Lodestar está aberto. Casa com a limitação conhecida de que, com o wm aberto, o terminal é desenhado por `wm.cells()`; a barra de status deve continuar por cima do navegador. **Provavelmente `src/laptop/draw.ts`/`wm.ts` (camada de UI, NÃO o shell** — não abrir `shell.ts`).
 - **O celular usa o plano de dados mesmo no Wi-Fi (feedback 2026-10-06):** ao navegar no Lodestar conectado a um Wi-Fi, o celular parece consumir o plano de dados móvel em vez do Wi-Fi. Conferir o roteamento de rede do celular (`src/phone/`, a escolha Wi-Fi x dados; não é o `cellLog`/telco de hacking).
 
+- **OPEN/CLOSED longe da porta (nota F8 de 2026-10-08, `playtest/2026-10-08_11-43-54_seed1383928503_note1.png`):** afastar a placa ~20% mais da porta, para ficar no vidro da vitrine.
+
 ### Da caixa de feedback de 2026-10-06 (playtest seed656322502)
 - **Webmail: erro mudo com senha < 6 caracteres** no cadastro — mostrar a mensagem de "senha curta" (`src/web/webmail.ts`/`sim/mail.ts`).
 - **Endereço de e-mail longo demais:** o domínio usa o nome inteiro da cidade ("newlockwoodonline.com"). Encurtar para 6–8 caracteres do nome (`sim/mail.ts`, a geração do domínio).
