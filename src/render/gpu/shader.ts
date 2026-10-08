@@ -853,9 +853,13 @@ var<private> gSDglass: bool = false;
 fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   var res = InC(Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0), 0u, 0.0, 0.0, vec3f(0.0), false, 0.0, 0.0, 0.0, 0.0);
   let o = V.o; let inside = V.IB != 0u; let full = V.full;
-  // (the viewer's head up the stairwell, over the ceiling and under the next floor: the walls and the open ceiling go
-  // on to the slab's top, where the walk passes to the storey above)
-  let z0 = V.z0; let zc = z0 + select(CEIL, FLOOR_H, inside && u.eye > z0 + CEIL); let nRooms = fx[o + 4u];
+  let z0 = V.z0; let zc = z0 + CEIL; let ztop = z0 + FLOOR_H; let nRooms = fx[o + 4u];
+  // the stairwell's shaft (2026-10-08): over the flights the slab is open, so a ray that is above the ceiling's height
+  // there (rising through the opening, or come down it from the storey above, or the viewer's head up the stair) still
+  // meets this storey's walls, up to the floor above; one space from storey to storey, not two boxes with a gap
+  let zs = u.eye - m * tIn; let tz = select(tIn, (zc - u.eye) / -m, zs <= zc && m < 0.0);
+  let shaft = gWR.z > gWR.x && (zs > zc || m < 0.0) && inWellRect(u.px + rdx * tz, u.py + rdy * tz);
+  let zw = select(zc, ztop, shaft);
   // the lift car (13.2d, world.ts liftCars): the floor it shows, where it rides to, how many floors; whether it stands
   // on this storey (its doors open; always, for the viewer riding it), whether it was called here
   let carW = fx[FX_TAB + 3u * fx[0] + u32(V.lot)];
@@ -1030,7 +1034,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
             }
           }
         }
-        if (z > z0 && z <= zc) {
+        if (z > z0 && z <= zw) {
           // the wall; on the lift car's long wall at the low coordinate, its panel
           var pw = -1.0;
           if (full && kind == R_LIFT && carN > 0) {
@@ -1083,7 +1087,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     // seen from the street, the far side's glass: dark, with the night city's glow (or the day) beyond it
     let farGlass = vec3f(20.0, 24.0, 40.0) + vec3f(90.0, 100.0, 115.0) * u.day;
     let z = u.eye - m * t;
-    if (z > z0 && z <= zc) {
+    if (z > z0 && z <= zw) {
       let fz = z / FLOOR_H - floor(z / FLOOR_H);
       done = true; res.state = 1u;
       if (isDoor) {
@@ -1098,7 +1102,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           let frame = du < 0.04 || du > 0.96 || zz > DOOR_H - 0.06;
           if (frame) { res.cl = roomCell(BAR, vec3f(95.0, 98.0, 105.0) * Lt, t); }
           // (an open doorway with no leaf in the way has no glass: gdoor)
-          else if (inside) { res.state = 2u; res.gdoor = !leafGlass; }
+          else if (inside || gThru) { res.state = 2u; res.gdoor = !leafGlass; }
           else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
         } else {
           // above the door and its sign: wall, never a window
@@ -1106,7 +1110,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           res.cl = roomCell(p.ch, p.c * Lt * shade, t);
         }
       } else if ((liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(st, shop, fw, fz, z - z0, ground))) {
-        if (inside) { res.state = 2u; } else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
+        if (inside || gThru) { res.state = 2u; } else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
       } else {
         let zr = zrOf(z, z0);
         // the sill: just under a window
@@ -1118,14 +1122,16 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   if (!done) {
     // floor and ceiling in what is left: each row meets them at its own distance
     let below = m > 0.0;
-    let t = select((zc - u.eye) / -m, (u.eye - z0) / m, below);
+    var t = select(select((zc - u.eye) / -m, (ztop - u.eye) / -m, shaft && inside), (u.eye - z0) / m, below);
     if (!(t > tIn) || t > 200.0) { return res; }
-    let wx = u.px + rdx * t; let wy = u.py + rdy * t;
-    // (step 4 of the interiors' rework) the viewer's stairwell: over the flight the ceiling is open to the storey above,
-    // and the floor to the one below; the main walk goes on there (gWell)
-    if (inside && wx > fxf(V.IB + 18u) && wx < fxf(V.IB + 20u) && wy > fxf(V.IB + 19u) && wy < fxf(V.IB + 21u)) {
+    var wx = u.px + rdx * t; var wy = u.py + rdy * t;
+    // (step 4 of the interiors' rework) the viewer's stairwell: over the flights the ceiling is open to the storey above
+    // (met where that storey's floor is), and the floor to the one below; the main walk goes on there (gWell). A
+    // storey seen through it shows its own floor and ceiling there (one walk on at most)
+    if (inside && ((shaft && !below) || (below && inWellRect(wx, wy)))) {
       let to = fx[V.IB + select(16u, 17u, below)];
       if (to != 0u) { gWell = select(1, -1, below); gWellT = t; gWellO = to; return res; }
+      if (!below) { t = (zc - u.eye) / -m; if (!(t > tIn)) { return res; } wx = u.px + rdx * t; wy = u.py + rdy * t; }
     }
     var c = planCell(o, ifloor(wx / PCELL) - gx, ifloor(wy / PCELL) - gy);
     if (c == 0u) { c = select(1u, cur, cur != 0u); }
@@ -2916,6 +2922,10 @@ var<private> gPeekEm: vec3f = vec3f(0.0);
 var<private> gPeekT: f32 = 0.0;
 /** The viewer's stairwell (roomWalk): the walk left the storey through it (1 up, -1 down, 0 not), where, and the plan it went into. */
 var<private> gWell: i32 = 0;
+/** The viewer's stairwell (x0, y0, x1, y1; empty when none), the same on every storey; and whether the walk is a storey seen through it. */
+var<private> gWR: vec4f = vec4f(0.0);
+var<private> gThru: bool = false;
+fn inWellRect(x: f32, y: f32) -> bool { return x > gWR.x && x < gWR.z && y > gWR.y && y < gWR.w; }
 var<private> gWellT: f32 = 0.0;
 var<private> gWellO: u32 = 0u;
 
@@ -2948,15 +2958,16 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     // the viewer's storey; through its stairwell, the storey above or below, as a room seen from outside it is (its
     // furniture met by the walk). One call in a loop: WGSL inlines roomWalk at each call, and the shader is slow to compile
     var V = inView(IB); var tIn = 0.0; var thruWell = false;
+    gWR = vec4f(fxf(IB + 18u), fxf(IB + 19u), fxf(IB + 20u), fxf(IB + 21u)); gThru = false;
     for (var walkN = 0; walkN < 2; walkN++) {
       gWell = 0;
       inc = roomWalk(V, rdx, rdy, m, tIn);
       if (gWell == 0 || thruWell) { break; }
       let f2 = V.f + gWell;
-      V = RView(gWellO, V.lot, V.box, f2, f32(f2) * FLOOR_H, false, V.elec, -1, 0u, true); tIn = gWellT; thruWell = true;
+      V = RView(gWellO, V.lot, V.box, f2, f32(f2) * FLOOR_H, false, V.elec, -1, 0u, true); tIn = gWellT; thruWell = true; gThru = true;
     }
-    if (thruWell && inc.state != 1u) { inc.state = 1u; inc.cl = roomCell(32u, vec3f(0.0), tIn); }
-    gWell = 0;
+    if (thruWell && inc.state == 0u) { inc.state = 1u; inc.cl = roomCell(32u, vec3f(0.0), tIn); }
+    gWell = 0; gWR = vec4f(0.0); gThru = false;
   }
   var cl = inc.cl;
   gBackT = 0.0;

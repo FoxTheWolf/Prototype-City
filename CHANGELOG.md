@@ -5,6 +5,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 ## 0.13.10n — A escada em U (2026-10-08)
 - **A escada dos prédios de escada é em U, como nos prédios de verdade:** entra-se num patamar, sobe-se um lance até o patamar do meio, vira-se e sobe-se o outro, chegando ao andar de cima do mesmo lado em que se entrou. Acabou a escada que começava em cima da porta e chegava numa parede.
 - **O prédio não some mais no meio da subida:** com a cabeça já acima do teto e ainda abaixo do andar de cima, as paredes continuam lá (antes aparecia a rua).
+- **O vão da escada é um espaço só, do térreo ao último andar:** olhando por ele, as paredes do poço continuam entre o teto de um andar e o piso do outro (antes, no meio da subida, o prédio sumia e aparecia a rua), e as janelas do andar visto pelo vão mostram a rua lá fora.
 - **Um corrimão de verdade entre os dois lances**, contínuo, e não dá para pular de um lance para o outro nem andar por baixo da escada.
 - **As plantas acompanham:** nos prédios de 10 × 12 m a escada ficou maior; nos de 12 × 12 m o hall dos moradores foi para o lado da escada; a lavanderia dos térreos com loja agora se alcança por um corredor atrás da loja; a porta da casinha do telhado fica no patamar.
 
