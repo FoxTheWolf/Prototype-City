@@ -63,14 +63,14 @@ function check(P: Plan, at: string, doors: [number, number, number, number][] | 
     const i = c % nx, j = (c - i) / nx;
     free[c] = cells[c] && !inFurniture(P, (P.gx + i + 0.5) * CELL, (P.gy + j + 0.5) * CELL) ? 1 : 0;
   }
-  // where the walk starts: just inside each street door, or anywhere in the lift
+  // where the walk starts: just inside each street door, or anywhere in the lift or the stair (the walk-ups)
   const seen = new Uint8Array(n), stack: number[] = [];
   const start = (c: number) => { if (c >= 0 && c < n && free[c] && !seen[c]) { seen[c] = 1; stack.push(c); } };
   if (doors) for (const [x, y, nX, nY] of doors) {
     const c = (Math.floor((y - nY * 0.4) / CELL) - P.gy) * nx + Math.floor((x - nX * 0.4) / CELL) - P.gx;
     if (!cells[c] || cells[c] & WALL) fail(`${at}: a street door at (${x.toFixed(1)}, ${y.toFixed(1)}) opens onto ${cells[c] ? 'a wall' : 'nothing'}`);
     start(c);
-  } else for (let c = 0; c < n; c++) if (cells[c] && P.rooms[(cells[c] & ROOM) - 1].kind === 'lift' && !(cells[c] & WALL)) start(c);
+  } else for (let c = 0; c < n; c++) if (cells[c] && ['lift', 'stair'].includes(P.rooms[(cells[c] & ROOM) - 1].kind) && !(cells[c] & WALL)) start(c);
   while (stack.length) {
     const c = stack.pop()!, i = c % nx, v = cells[c];
     for (const d of [1, -1, nx, -nx]) {

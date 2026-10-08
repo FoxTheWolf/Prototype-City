@@ -1,6 +1,7 @@
 import { hash3, mulberry32 } from '../core/rng';
 import { BAY, blockAt, blockHundred, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
 import { FRONT, layoutsFor, MAXLEN, PIECES, SINGLE, stretch } from './layouts';
+import { BUILDINGS, FLOORS, grow, type Floor } from './floorplans';
 import { COLD, OUTLETS, PLACES } from './placeTypes';
 
 /**
@@ -155,6 +156,9 @@ export function toStreet(city: City, k: number, face: number, a: number): boolea
 
 export function doorOf(city: City, k: number): Door | null {
   if (doorCache.has(k)) return doorCache.get(k)!;
+  // a drawn plan: its residents' street door (rework of the interiors, step 2)
+  const St = stackOf(city, k);
+  if (St) { const D = stackDoors(city, St).main; doorCache.set(k, D); return D; }
   const B = city.buildings[k], blk = blockAt(city, (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2)!;
   let best: Door | null = null, bestGap = 1e9;
   for (let face = 0; face < (B.cut ? 5 : 4); face++) {
@@ -469,6 +473,13 @@ export function planOf(city: City, k: number, f: number): Plan | null {
   if (j < 0) return null;
   // the floors of one box above the ground are alike
   const key = j * 2 + (f === 0 ? 0 : 1);
+  const St = stackOf(city, k);
+  if (St) {
+    // a drawn plan: the ground floor and the floors above are each one plan, cached as the cut ones are
+    let P = planCache.get(key);
+    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1); planCache.set(key, P); }
+    return P;
+  }
   let P = planCache.get(key);
   if (P === undefined) {
     P = makePlan(city, k, j, f === 0);
@@ -482,6 +493,263 @@ export function planOf(city: City, k: number, f: number): Plan | null {
 export function cachedPlan(city: City, k: number, f: number): Plan | null | undefined {
   const j = storeyBox(city, k, f);
   return j < 0 ? null : planCache.get(j * 2 + (f === 0 ? 0 : 1));
+}
+
+// ---------- the drawn plans (the interiors manual; plano-interiores, step 2) ----------
+
+/** A lot's drawn floors (the manual's building stacks), turned to its street face and maybe mirrored. */
+export interface Stack {
+  k: number;
+  /** The street face (0..3) the plans' first row stands on; the lot's width along it and depth from it, m. */
+  face: number;
+  W: number;
+  D: number;
+  mirror: boolean;
+  /** The ground floor, the floors above it (all alike), the roof: grown to the lot's depth. */
+  ground: Floor;
+  upper: Floor | null;
+  roof: Floor | null;
+}
+const floorById = new Map(FLOORS.map((F) => [F.id, F]));
+const hasShop = (F: Floor) => F.rooms.some((r) => r.includes('o'));
+/** Whether a drawn floor fits a lot W x D m (along its street face, then deep). */
+const fitsLot = (F: Floor, W: number, D: number) => F.rooms[0].length === W * 2 && (F.depths ? F.depths.includes(D) : F.rooms.length === D * 2);
+const stackCache = new Map<number, Stack | null>();
+/**
+ * The drawn stack of lot k, or null when the manual has none for it yet (its size, a shop or not, an office, a tower
+ * with setbacks): those keep the old cut plans until their plan is drawn. The stack and the mirror come from the
+ * lot's seed, so every floor of a building is the same plan (R9).
+ */
+export function stackOf(city: City, k: number): Stack | null {
+  let S = stackCache.get(k);
+  if (S !== undefined) return S;
+  S = null;
+  const B = city.buildings[k];
+  if (habitable(B) && !isOffice(B) && B.way && !B.cut && tiersOf(city, k).length === 1) {
+    const face = B.way[0], W = Math.round(face < 2 ? B.y1 - B.y0 : B.x1 - B.x0), D = Math.round(face < 2 ? B.x1 - B.x0 : B.y1 - B.y0);
+    const cands = BUILDINGS.filter((T) => { const G = floorById.get(T.floors[0]); return !!G && fitsLot(G, W, D) && hasShop(G) === B.shop; });
+    if (cands.length) {
+      const T = cands[Math.floor(hash3(city.nameSeed ^ 0x5a17, k, 3) * cands.length)], at = (n: number) => grow(floorById.get(T.floors[n])!, D);
+      S = { k, face, W, D, mirror: hash3(city.nameSeed ^ 0x5a17, k, 4) < 0.5, ground: at(0), upper: T.floors.length > 2 ? at(1) : null, roof: T.floors.length > 1 ? at(T.floors.length - 1) : null };
+    }
+  }
+  stackCache.set(k, S);
+  return S;
+}
+
+/** A point (u along the street face, v in from it, m) of a stack's plan, in the city. */
+function stackXY(St: Stack, B: Building, u: number, v: number): [number, number] {
+  if (St.mirror) u = St.W - u;
+  return St.face === 2 ? [B.x0 + u, B.y0 + v] : St.face === 3 ? [B.x1 - u, B.y1 - v] : St.face === 0 ? [B.x0 + v, B.y1 - u] : [B.x1 - v, B.y0 + u];
+}
+/** A direction (du, dv) of a stack's plan, in the city. */
+function stackDir(St: Stack, du: number, dv: number): [number, number] {
+  if (St.mirror) du = -du;
+  return St.face === 2 ? [du, dv] : St.face === 3 ? [-du, -dv] : St.face === 0 ? [dv, -du] : [-dv, du];
+}
+/** The street doors of a stack's ground floor: the residents' (behind it a room that is not the shop) and the shop's own. */
+function stackDoors(city: City, St: Stack): { main: Door | null; shops: Door[] } {
+  const B = city.buildings[St.k], row = St.ground.rooms[0], below = St.ground.rooms[1];
+  let main: Door | null = null;
+  const shops: Door[] = [];
+  for (let c = 0; c < row.length; c++) {
+    if (row[c] !== 'R' || row[c - 1] === 'R') continue;
+    let e = c;
+    while (row[e + 1] === 'R') e++;
+    // along the face as faceSpan measures it
+    const a = stackXY(St, B, c * 0.5, 0), b = stackXY(St, B, (e + 1) * 0.5, 0), along = (p: [number, number]) => (St.face < 2 ? p[1] : p[0]);
+    const D: Door = { face: St.face, a0: Math.min(along(a), along(b)), a1: Math.max(along(a), along(b)) };
+    if (below.slice(c, e + 1).includes('o')) shops.push(D); else if (!main) main = D;
+  }
+  return { main, shops };
+}
+
+const ROOM_OF: Record<string, RoomKind> = {
+  l: 'living', k: 'kitchen', b: 'bedroom', h: 'bath', s: 'living', e: 'foyer', c: 'lobby', '.': 'hall', S: 'stair', L: 'lift',
+  o: 'shop', p: 'open', m: 'office', n: 'office', q: 'kitchen', u: 'hall', r: 'office',
+};
+const FURN_OF: Record<string, FurnKind> = {
+  B: 'bed', A: 'shelf', Q: 'desk', h: 'chair', F: 'sofa', r: 'sofa', T: 'tv', t: 'table', K: 'counter', O: 'oven', N: 'counter',
+  G: 'fridge', V: 'counter', C: 'toilet', H: 'tub', P: 'plant', S: 'shelf', w: 'washer', y: 'dryer',
+};
+const PLAN_WALLS = new Set(['#', 'W', 'G', '+']);
+
+/**
+ * Floor f (0 the ground, 1 any above) of lot k read from its drawn plan (the manual's grammar): one character is
+ * 2 x 2 cells; a wall or door character's cells go to the nearest room character (so an inner wall is the low room's
+ * last cell, as walls() makes it); the rooms are the letters' rectangles, their units the homes behind each entry
+ * door E; the furniture is the plan's own layer, each piece facing out of the wall it stands against. The shop's
+ * floor is furnished by its kind, as before (its layouts join this grammar later: one generator, plano-interiores).
+ */
+function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
+  const Fl = f === 0 ? St.ground : St.upper ?? St.ground;
+  const B = city.buildings[k], R = Fl.rooms, M = Fl.furn, H = R.length, Wc = R[0].length;
+  const gx = Math.floor(B.x0 / CELL), gy = Math.floor(B.y0 / CELL), nx = Math.ceil(B.x1 / CELL) - gx, ny = Math.ceil(B.y1 / CELL) - gy;
+  const cells = new Uint16Array(nx * ny);
+  const isRoom = (ch: string | undefined) => !!ch && ch in ROOM_OF;
+  // the rooms: each letter's connected rectangle
+  const id = new Int16Array(Wc * H).fill(-1), rooms: Room[] = [], letter: string[] = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wc; x++) {
+    if (!isRoom(R[y][x]) || id[y * Wc + x] >= 0) continue;
+    const ch = R[y][x], n = rooms.length, q = [[x, y]];
+    id[y * Wc + x] = n;
+    while (q.length) {
+      const [a, b] = q.pop()!;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const c = a + dx, d = b + dy;
+        if (c < 0 || d < 0 || c >= Wc || d >= H || R[d][c] !== ch || id[d * Wc + c] >= 0) continue;
+        id[d * Wc + c] = n; q.push([c, d]);
+      }
+    }
+    rooms.push({ kind: ROOM_OF[ch], unit: -1, x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+    letter.push(ch);
+  }
+  /** The room a cell at plan point (u, v) (in characters) belongs to: its own character's, or the nearest room character's. */
+  const roomAt = (u: number, v: number) => {
+    const x = Math.floor(u), y = Math.floor(v);
+    if (isRoom(R[y]?.[x])) return id[y * Wc + x];
+    let best = -1, bd = Infinity;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const c = x + dx, d = y + dy;
+      if (!isRoom(R[d]?.[c])) continue;
+      const e = (c + 0.5 - u) ** 2 + (d + 0.5 - v) ** 2 + (dx && dy ? 0.01 : 0);
+      if (e < bd) { bd = e; best = id[d * Wc + c]; }
+    }
+    return best;
+  };
+  /** The plan point (characters) of the city point (x, y). */
+  const planUV = (x: number, y: number): [number, number] => {
+    let u: number, v: number;
+    if (St.face === 2) { u = x - B.x0; v = y - B.y0; } else if (St.face === 3) { u = B.x1 - x; v = B.y1 - y; } else if (St.face === 0) { v = x - B.x0; u = B.y1 - y; } else { v = B.x1 - x; u = y - B.y0; }
+    if (St.mirror) u = St.W - u;
+    return [u * 2, v * 2];
+  };
+  const doorCells: number[] = [], bare = new Uint8Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const cx = (gx + i + 0.5) * CELL, cy = (gy + j + 0.5) * CELL, [u, v] = planUV(cx, cy), ch = R[Math.floor(v)]?.[Math.floor(u)];
+    if (ch === undefined) continue;
+    if (isRoom(ch)) bare[j * nx + i] = 1;
+    const r = roomAt(u, v);
+    if (r < 0) continue;
+    cells[j * nx + i] = r + 1;
+    const RR = rooms[r];
+    RR.x0 = Math.min(RR.x0, cx - CELL / 2); RR.x1 = Math.max(RR.x1, cx + CELL / 2); RR.y0 = Math.min(RR.y0, cy - CELL / 2); RR.y1 = Math.max(RR.y1, cy + CELL / 2);
+    if (ch === 'D' || ch === 'E') doorCells.push(j * nx + i);
+  }
+  // the units: the common parts are what the stair, the lift and the halls reach through plain doors; the other
+  // rooms fall into homes (or the shop) by what joins them without an entry door
+  const link: [number, number, string][] = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wc; x++) {
+    const ch = R[y][x];
+    for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      // two rooms meet side by side with no wall (an open plan), or across a door character
+      if (isRoom(ch) && isRoom(R[y + dy]?.[x + dx]) && id[y * Wc + x] !== id[(y + dy) * Wc + x + dx]) link.push([id[y * Wc + x], id[(y + dy) * Wc + x + dx], '']);
+      if ((ch === 'D' || ch === 'E') && isRoom(R[y - dy]?.[x - dx]) && isRoom(R[y + dy]?.[x + dx])) link.push([id[(y - dy) * Wc + x - dx], id[(y + dy) * Wc + x + dx], ch]);
+    }
+  }
+  const group = new Int16Array(rooms.length).fill(-2);
+  const spread = (start: number, g: number) => {
+    const q = [start];
+    group[start] = g;
+    while (q.length) {
+      const a = q.pop()!;
+      for (const [p, r, kind] of link) {
+        if (kind === 'E') continue;
+        const b = p === a ? r : r === a ? p : -1;
+        if (b >= 0 && group[b] === -2) { group[b] = g; q.push(b); }
+      }
+    }
+  };
+  letter.forEach((ch, r) => { if (group[r] === -2 && (ch === 'S' || ch === 'L' || ch === '.' || ch === 'c')) spread(r, -1); });
+  let unit = 0;
+  letter.forEach((_, r) => { if (group[r] === -2) spread(r, unit++); });
+  rooms.forEach((RR, r) => { RR.unit = group[r]; });
+  walls(cells, nx, ny);
+  for (const c of doorCells) cells[c] = (cells[c] | DOOR) & ~WALL;
+  // two rooms side by side with no wall character between them are one space (the open kitchen, a corridor
+  // running into the stair): their meeting cells are a doorway as long as they meet
+  const seam: number[] = [];
+  for (let c = 0; c < nx * ny; c++) for (const d of [1, nx]) {
+    const e = c + d;
+    if ((d === 1 && c % nx === nx - 1) || e >= nx * ny || !bare[c] || !bare[e] || (cells[c] & ROOM) === (cells[e] & ROOM)) continue;
+    cells[c] = (cells[c] | DOOR) & ~WALL; cells[e] = (cells[e] | DOOR) & ~WALL;
+    seam.push(c, e);
+  }
+  // the outer wall opens at the street doors, and up the fire escapes at their windows
+  const { main, shops } = stackDoors(city, St);
+  const open = (D: Door, f0: number, f1: number) => {
+    const [px, py, nX, nY] = facePoint(B, D.face, 0);
+    for (let jj = 0; jj < ny; jj++) for (let i = 0; i < nx; i++) {
+      const k2 = jj * nx + i;
+      if (!(cells[k2] & WALL)) continue;
+      const cx = (gx + i + 0.5) * CELL, cy = (gy + jj + 0.5) * CELL;
+      if ((px - cx) * nX + (py - cy) * nY > CELL) continue;
+      const fw = (alongFace(B, D.face, cx, cy) - D.a0) / (D.a1 - D.a0);
+      if (fw > f0 && fw < f1) cells[k2] &= ~WALL;
+    }
+  };
+  if (f === 0) for (const D of main ? [main, ...shops] : shops) open(D, 0, 1);
+  else for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
+  const P: Plan = { box: k, rooms, exits: f === 0 ? shops : [], furn: [], cells, gx, gy, nx, ny };
+  // the furniture: each letter's rectangle, facing out of the wall it stands against
+  const seen = new Uint8Array(Wc * H), wallish = (x: number, y: number) => x < 0 || y < 0 || x >= Wc || y >= H || PLAN_WALLS.has(R[y][x]);
+  const rnd = mulberry32((hash3(city.nameSeed ^ 0x77f1, k, f) * 4294967296) | 0);
+  const OUT: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wc; x++) {
+    const ch = M[y][x];
+    if (seen[y * Wc + x] || !(ch in FURN_OF)) continue;
+    let x1 = x, y1 = y;
+    while (M[y][x1 + 1] === ch) x1++;
+    while (M[y1 + 1]?.[x] === ch) y1++;
+    for (let b = y; b <= y1; b++) for (let a = x; a <= x1; a++) seen[b * Wc + a] = 1;
+    const w = x1 - x + 1, h = y1 - y + 1, mx = (x + x1) >> 1, my = (y + y1) >> 1;
+    // the sides: 0 left, 1 right, 2 top (toward the street), 3 bottom; how much wall touches each
+    const touch = [0, 0, 0, 0];
+    for (let b = y; b <= y1; b++) { if (wallish(x - 1, b)) touch[0]++; if (wallish(x1 + 1, b)) touch[1]++; }
+    for (let a = x; a <= x1; a++) { if (wallish(a, y - 1)) touch[2]++; if (wallish(a, y1 + 1)) touch[3]++; }
+    /** The side within n characters on which one of the letters stands, or -1. */
+    const look = (ls: string, n: number) => {
+      for (let d = 1; d <= n; d++) for (let s2 = 0; s2 < 4; s2++) {
+        const cx2 = s2 === 0 ? x - d : s2 === 1 ? x1 + d : mx, cy2 = s2 === 2 ? y - d : s2 === 3 ? y1 + d : my;
+        if (!wallish(cx2, cy2) && ls.includes(M[cy2][cx2])) return s2;
+      }
+      return -1;
+    };
+    const dist = (sx: number, sy: number, dx: number, dy: number) => { let d = 0; while (!wallish(sx + dx * (d + 1), sy + dy * (d + 1)) && d < 40) d++; return d; };
+    let back = touch.indexOf(Math.max(...touch));
+    if (ch === 'h') { const s2 = look('tQ', 2); if (s2 >= 0) back = s2 ^ 1; }
+    else if (ch === 'F' || ch === 'r') { const s2 = look('T', 14); if (s2 >= 0) back = s2 ^ 1; }
+    // a bed's head is on a short side, the one nearer a wall
+    else if (ch === 'B') back = h >= w ? (dist(mx, y, 0, -1) <= dist(mx, y1, 0, 1) ? 2 : 3) : dist(x, my, -1, 0) <= dist(x1, my, 1, 0) ? 0 : 1;
+    else if (Math.max(...touch) === 0) back = h > w ? 0 : 2;
+    // it faces away from its back: along that, its depth; across, its width (characters are half a metre)
+    const [du, dv] = OUT[back], [c, s2] = stackDir(St, du, dv), along = du ? w : h, across = du ? h : w;
+    const [px, py] = stackXY(St, B, (x + x1 + 1) / 4, (y + y1 + 1) / 4);
+    P.furn.push({ kind: FURN_OF[ch], x: px, y: py, c, s: s2, hx: along * 0.25 - 0.05, hy: across * 0.25 - 0.05, seed: (rnd() * 1e6) | 0 });
+  }
+  // where a piece stands on the seam of an open plan (the fridge at the edge of the open kitchen), that stretch is no way through
+  for (const c of seam) if (inFurniture(P, (gx + (c % nx) + 0.5) * CELL, (gy + Math.floor(c / nx) + 0.5) * CELL)) cells[c] &= ~DOOR;
+  // the shop: furnished by its kind, as before, keeping a way clear from its street door to each of its inner doors
+  // (the staff's bathroom): in along the door's normal to that door's depth, then across to it
+  if (f === 0 && B.shop) {
+    const streets = shops.map((D) => facePoint(B, D.face, (D.a0 + D.a1) / 2)), aisle: [number, number][] = [];
+    const shopRoom = rooms.findIndex((RR) => RR.kind === 'shop');
+    for (const [sx, sy, nX, nY] of streets) {
+      const inner: [number, number][] = [];
+      for (let c = 0; c < nx * ny; c++) {
+        if (!(cells[c] & DOOR) || (cells[c] & ROOM) !== shopRoom + 1) continue;
+        // a shop doorway cell next to another room's doorway cell
+        const i = c % nx, j = (c - i) / nx;
+        if ([c + 1, c - 1, c + nx, c - nx].some((e, n) => e >= 0 && e < nx * ny && !(n === 0 && i === nx - 1) && !(n === 1 && i === 0) && cells[e] & DOOR && (cells[e] & ROOM) !== shopRoom + 1 && (cells[e] & ROOM) !== 0)) inner.push([(gx + i + 0.5) * CELL, (gy + j + 0.5) * CELL]);
+      }
+      if (!inner.length) continue;
+      const tx = inner.reduce((a, p) => a + p[0], 0) / inner.length, ty = inner.reduce((a, p) => a + p[1], 0) / inner.length;
+      const x0 = sx - nX * 0.6, y0 = sy - nY * 0.6, depth = (tx - x0) * -nX + (ty - y0) * -nY, mx = x0 - nX * depth, my = y0 - nY * depth;
+      for (let t = 0; t <= 1; t += 0.05) { aisle.push([x0 + (mx - x0) * t, y0 + (my - y0) * t]); aisle.push([mx + (tx - mx) * t, my + (ty - my) * t]); }
+    }
+    furnish(P, rnd, false, streets, B.biz >= 0 ? city.businesses[B.biz]?.kind : undefined, (x, y) => !isSolid(city, x, y), aisle, new Set(['shop', 'store']));
+  }
+  return P;
 }
 
 function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
@@ -820,7 +1088,7 @@ function connect(cells: Uint16Array, nx: number, ny: number, rooms: Room[]) {
 /** Metres kept clear around doorways when furnishing. */
 const CLEAR = 0.9;
 /** open: whether a point outside the building is open air (a wall there can be glass), not a neighbour's wall. */
-function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number, number, number][], biz?: BusinessKind, open: (x: number, y: number) => boolean = () => true, aisle: [number, number][] = []) {
+function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, number, number, number][], biz?: BusinessKind, open: (x: number, y: number) => boolean = () => true, aisle: [number, number][] = [], only?: Set<RoomKind>) {
   const F = P.furn;
   const free = (r: number, x0: number, y0: number, x1: number, y1: number) => {
     // every cell the piece covers (13.10a: a wall is one cell thick, a looser sampling missed it)
@@ -1139,6 +1407,7 @@ function furnish(P: Plan, rnd: () => number, office: boolean, streets: [number, 
   };
   P.rooms.forEach((R, r) => {
     const w = R.x1 - R.x0, d = R.y1 - R.y0;
+    if (only && !only.has(R.kind)) return;
     switch (R.kind) {
       case 'bedroom': {
         const b = wall(r, R, 'bed', 2.05, w > 2.6 && d > 2.6 ? 1.5 : 1, 0.6);

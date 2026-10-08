@@ -44,7 +44,11 @@
    24 × 32). Prédios sem planta desenhada para o tamanho/estilo continuam no gerador velho até a planta existir
    (a lista do que falta está na seção 11 do manual). Teste: `tests/city.ts` em 5 sementes, contando quantos prédios
    ficam fora do catálogo (a meta é 0) e se o motel com o cybercafé a 300–500 m continua existindo.
-2. **Ler a planta** (`planFromFloor` novo em `interior.ts`, no lugar de `makePlan` para os prédios do catálogo).
+2. ✅ **(0.13.10k) Ler a planta** (`stackOf`, `planFromFloor`, `stackDoors` em `interior.ts`; `planOf` e `doorOf` passam por eles).
+   Feito: a porta da rua é o `R` da planta; ambientes abertos (sem `+`) viram uma divisa de passagem, menos onde há
+   móvel; a loja ganha um corredor livre até as portas de dentro dela (o banheiro dos funcionários); `tests/plans.ts`
+   começa a andar também pela escada; 0 falhas em 3 sementes. **Cobertura: 12% dos prédios** (faltam os térreos
+   residenciais e as faixas `*`; `tests/.out/cover.ts` mede). Os andares de cima só se alcançam com a escada (passo 4).
    - Um caractere = 0,5 m = 2 × 2 células de 25 cm (`CELL`).
    - **Parede de dentro `+`:** fica na célula de baixo do caractere (a de menor x ou y), como hoje ("a wall between
      two rooms is the low room's last cell"); a outra célula é do cômodo vizinho.
