@@ -79,6 +79,9 @@
     <div class="card"><svg id="dirC" viewBox="0 0 360 220"></svg><div class="sw" id="swC"></div><div class="cap"><b>C · Retrofuturo.</b> O 2008 imaginado nos anos 80: laca preta, cromo, a tela verde do terminal, o neon da rua tingindo o teto em magenta e ciano. Combina com as torres de vidro. Risco: cansar se for em todo apartamento.</div></div>
   </div>
   <p><b>Decidido pelo usuário (2026-10-08), pela recomendação do Claude:</b> <b>A como base</b> (o tom noir do jogo e a luz de sódio que já existe), com <b>os objetos de B</b> (a época é a de 2008: a TV de tubo, o PC bege, o radiador são as coisas que contam quem mora), e <b>C só nas torres de vidro e escritórios novos</b>. Assim cada tipo de prédio tem uma cara, e o apartamento de tijolo não parece um escritório.</p>
+  <h3>As paletas por tipo de prédio</h3>
+  <p>Cada casa sorteia (pela semente) uma das três paredes do seu tipo de prédio; o piso vem da renda do morador; a luz, do tipo de lâmpada da época. Os tons são escuros de propósito: quem ilumina é a lâmpada (os cômodos claros são os acesos, e a luz é parte do stealth).</p>
+  <table id="paltab"></table>
 </section>
 
 <section id="cat">
@@ -156,7 +159,6 @@
 <section id="falta">
   <h2>11 · O que falta <small>para a v2</small></h2>
   <ul>
-    <li>As paletas de parede e piso de cada tipo de prédio, pela direção escolhida (A + objetos de B; C nas torres e escritórios).</li>
     <li>Plantas para o resto do catálogo: o 10 × 10, os fundos maiores com <code>*</code> (e a leitura das faixas <code>*</code> no teste), as torres (residencial com corredor e elevador), o escritório grande, o hotel; uma segunda e terceira planta para cada tamanho comum.</li>
     <li>O térreo com loja nos tamanhos maiores e o telhado dos outros tamanhos; a regra R9 (escada nas mesmas células em todos os andares) no teste, que hoje confere um andar por vez.</li>
     <li>Mais arrumações por sala (hoje 3) e as das salas novas (10 × 10, lote fundo, torre).</li>
@@ -977,8 +979,8 @@ function build() {
   // the catalog
   const CAT = [
     ['8 × 10', 2126, 'walk-up de tijolo e residencial baixo', 'A1, A0, T1 (telhado)'], ['8 × 12', 1406, 'walk-up', 'A1 com uma faixa *'], ['8 × 8', 1335, 'walk-up, casa', 'C1'],
-    ['10 × 12', 1058, 'walk-up, residencial', 'D1'], ['10 × 10', 766, 'walk-up, residencial', 'a fazer'], ['12 × 12', 360, 'walk-up de duas casas por andar, escritório baixo', 'B1, O1'],
-    ['8 × 14 … 8 × 24', 517, 'walk-up fundo', 'faixas *'], ['10 × 14 … 10 × 24', 389, 'residencial fundo', 'faixas *'], ['12 × 14 … 12 × 24', 397, 'residencial, escritório baixo', 'faixas *'],
+    ['10 × 12', 1058, 'walk-up, residencial', 'D1'], ['10 × 10', 766, 'walk-up, residencial', 'F1'], ['12 × 12', 360, 'walk-up de duas casas por andar, escritório baixo', 'B1, O1'],
+    ['8 × 14 … 8 × 24', 517, 'walk-up fundo', 'E1 (16 a 20 m); o 14 e o 22–24 a fazer'], ['10 × 14 … 10 × 24', 389, 'residencial fundo', 'faixas *'], ['12 × 14 … 12 × 24', 397, 'residencial, escritório baixo', 'faixas *'],
     ['16 × 8 (motel)', '—', 'motel de um andar', 'M1'],
     ['torres: 16 × 16, 16 × 24, 20 × 20, 24 × 24, 24 × 32', 431, 'vidro, escritório, residencial alto (com elevador)', 'G1 (16 × 16); o resto a fazer'],
   ];
@@ -1002,6 +1004,17 @@ function build() {
     const bad = fl.filter((F) => cells(F) !== base).map((F) => F.id);
     return `<div class="checks"><span class="${bad.length ? 'bad' : 'ok'}">${bad.length ? '✗' : '✓'} R9 · ${B.name}: ${B.floors.join(' → ')}${bad.length ? ', escada fora do lugar em ' + bad.join(', ') : ', a escada no mesmo lugar do térreo ao telhado'}</span></div>`;
   }).join('');
+  // the palettes by building style
+  const PAL = [
+    ['walk-up de tijolo', 'A + objetos de B', ['#4a3328', '#454232', '#5c4c3a'], ['#58543f', '#5b3a20', '#3d2414'], ['#ffb860', 'incandescente 2700 K'], 'radiador de ferro, janela de guilhotina, rodapé de madeira'],
+    ['residencial comum', 'A', ['#3a2f26', '#33302e', '#46403a'], ['#4a3a32', '#5b4630', '#3a2a1c'], ['#ffc27a', 'incandescente 2900 K'], 'carpete gasto, porta de madeira pintada'],
+    ['histórico', 'A, mais madeira', ['#2a1d14', '#3b2a20', '#432528'], ['#4a2c16', '#5a3518', '#3a200e'], ['#ffad52', 'abajur de cúpula, 2600 K'], 'lambri, sanca, parquete em espinha'],
+    ['torre de vidro e escritório', 'C', ['#0f1218', '#1a1f28', '#22262e'], ['#1c2230', '#151a22', '#2a2f38'], ['#d8e6ff', 'fluorescente fria + neon da rua'], 'forro com luminária embutida, carpete em placas, persiana de alumínio'],
+    ['motel', 'B', ['#8f866a', '#7d8574', '#8a7660'], ['#5a4034', '#6a4a3a', '#4a3a30'], ['#eef6ff', 'fluorescente esverdeada'], 'colcha estampada, TV presa na cômoda, quadro de paisagem'],
+  ];
+  const chips = (cs) => `<div class="sw" style="margin:0">${cs.map((c) => `<i style="background:${c}" title="${c}"></i>`).join('')}</div>`;
+  $('paltab').innerHTML = '<tr><th>prédio</th><th>direção</th><th>paredes (pela semente)</th><th>piso (renda baixa, média, alta)</th><th>luz</th><th>o que marca</th></tr>' +
+    PAL.map(([n, d, w, f, l, m]) => `<tr><td>${n}</td><td>${d}</td><td>${chips(w)}</td><td>${chips(f)}</td><td>${chips([l[0]])}${l[1]}</td><td>${m}</td></tr>`).join('');
   // the library: each room in its frame, three arrangements side by side
   const groups = {};
   for (const A of ROOMLIB) (groups[A.room] = groups[A.room] || []).push(A);
