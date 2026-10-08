@@ -295,7 +295,7 @@ export function bannerModel(district: number): Part[] {
     const y0 = sy * 0.1, y1 = sy * 0.62;
     m.push(part(Box, -0.02, Math.min(y0, y1), 4.62, 0.02, Math.max(y0, y1), 4.66, STEEL, Solid, '-'));
     const cloth = part(Box, -0.01, Math.min(y0, y1) + 0.04, 3.3, 0.01, Math.max(y0, y1) - 0.02, 4.6, col, Board, '#');
-    cloth.text = String(district + 1); cloth.col2 = ink; cloth.lamp = 0;
+    cloth.text = String(district + 1); cloth.col2 = ink; cloth.lamp = 0; cloth.plate = true;
     m.push(cloth);
   }
   lamps.set(key, m);
@@ -830,10 +830,12 @@ export function walkSignal(w: number): Part[] {
 const streetSigns = new Map<string, Part[]>();
 /** The districts' stripe colors (the signage manual, section 3: a fixed palette, a color a district by its index). */
 export const DISTRICT_COLS: RGB[] = [[216, 162, 29], [194, 54, 122], [122, 79, 196], [42, 159, 208], [210, 85, 42], [95, 174, 59]];
+/** A street blade's height (m). */
+export const BLADE_H = 0.3;
 /** The street green and the letters' white (the manual: #1f6b45, #f2f1ec; the white a little brighter, as reflective). */
 const SIGN_GREEN: RGB = [31, 107, 69], SIGN_WHITE: RGB = [242, 241, 236];
 /** A street blade's half width for its name and hundred (m). */
-export const bladeHalf = (name: string, hund: string) => (0.11 * name.length + 0.08 * hund.length + 0.4) / 2;
+export const bladeHalf = (name: string, hund: string) => (0.135 * name.length + 0.1 * hund.length + 0.3) / 2;
 /**
  * A street-name blade (the signage manual, section 4), its name read from the front (+x): green with white
  * letters (dots up close, a glyph a letter farther), the district's stripe along its top and the block's
@@ -845,15 +847,16 @@ export function streetBlade(name: string, hund: string, district: number, z0: nu
   let m = streetSigns.get(key);
   if (m) return m;
   // (read from +x, the reader's right is -y: the hundred there)
-  const hw = bladeHalf(name, hund), H = 0.26, split = -hw + (0.08 * hund.length + 0.12);
+  const hw = bladeHalf(name, hund), H = BLADE_H, split = -hw + (0.1 * hund.length + 0.08);
   const b = part(Box, 0, -hw, z0, 0.02, hw, z0 + H, SIGN_GREEN, Solid, '=');
-  // the name on the left part, the hundred smaller on the right, the stripe on top (a little proud of the face)
-  const nm = part(Box, 0.02, split, z0 + 0.03, 0.022, hw - 0.04, z0 + H - 0.05, SIGN_GREEN, Board, '=');
-  nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0;
-  const hn = part(Box, 0.02, -hw + 0.05, z0 + 0.05, 0.022, split, z0 + H - 0.08, SIGN_GREEN, Board, '=');
-  hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0;
+  // the name on the left part, the hundred smaller on the right (plates: no frame), the stripe on top
+  const nm = part(Box, 0.02, split, z0 + 0.02, 0.022, hw - 0.02, z0 + H - 0.05, SIGN_GREEN, Board, '=');
+  nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0; nm.plate = true;
+  const hn = part(Box, 0.02, -hw + 0.03, z0 + 0.05, 0.022, split, z0 + H - 0.09, SIGN_GREEN, Board, '=');
+  hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0; hn.plate = true;
   m = [b, nm, hn, part(Box, 0.02, -hw, z0 + H - 0.035, 0.024, hw, z0 + H, DISTRICT_COLS[district % DISTRICT_COLS.length], Solid, '-')];
-  if (pole) m.push(part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, z0 + 0.3, STEEL, Solid, '|', '.'));
+  // the pole stops under the blade: the sign sits on its cap, nothing crosses its face
+  if (pole) m.push(part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, z0, STEEL, Solid, '|', '.'));
   streetSigns.set(key, m);
   return m;
 }
@@ -870,10 +873,10 @@ export function overheadBlade(name: string, hund: string, district: number, y0: 
   // (read from +x, the reader's right is -y, toward the pole: the hundred there)
   const hw = bladeHalf(name, hund) * 1.6, H = 0.42, z0 = 5.45, y1 = y0 + 0.15 + hw * 2, split = y0 + 0.15 + (0.13 * hund.length + 0.18);
   const b = part(Box, 0.07, y0 + 0.15, z0, 0.09, y1, z0 + H, SIGN_GREEN, Solid, '=');
-  const nm = part(Box, 0.09, split, z0 + 0.05, 0.092, y1 - 0.05, z0 + H - 0.08, SIGN_GREEN, Board, '=');
-  nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0;
-  const hn = part(Box, 0.09, y0 + 0.21, z0 + 0.08, 0.092, split, z0 + H - 0.13, SIGN_GREEN, Board, '=');
-  hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0;
+  const nm = part(Box, 0.09, split, z0 + 0.03, 0.092, y1 - 0.03, z0 + H - 0.07, SIGN_GREEN, Board, '=');
+  nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0; nm.plate = true;
+  const hn = part(Box, 0.09, y0 + 0.18, z0 + 0.07, 0.092, split, z0 + H - 0.12, SIGN_GREEN, Board, '=');
+  hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0; hn.plate = true;
   m = [
     // the arm carried on to it, and the two clamps it hangs from
     part(Box, -0.06, y0, 5.95, 0.06, y1 + 0.05, 6.12, HOUSING, Solid, '-', '=', '|'),
@@ -911,7 +914,7 @@ export const STOP_SIGN: Part[] = (() => {
     m.push(part(Box, 0.05, -hw, z0, 0.08, hw, z0 + dz, red, Solid, '#', '=', '#'));
   }
   const band = part(Box, 0.05, -R, zc - side, 0.08, R, zc + side, red, Board, '#', '=', '#');
-  band.text = 'STOP'; band.col2 = SIGN_WHITE; band.lamp = 0;
+  band.text = 'STOP'; band.col2 = SIGN_WHITE; band.lamp = 0; band.plate = true;
   m.push(band);
   return m;
 })();

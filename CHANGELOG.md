@@ -3,7 +3,8 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.13.7 — Placas de rua pelo manual de sinalização (2026-10-08)
-- **A placa da esquina tem poste próprio** na quina da calçada; não fica mais presa no poste do semáforo, onde o braço e o semáforo de pedestre a cortavam.
+- **A placa da esquina tem poste próprio**, uns 3 m calçada acima do semáforo: o poste para embaixo da placa (nada atravessa o nome), e as duas placas se cruzam em cima dele.
+- **As placas de rua se leem:** sem a moldura escura dos outdoors (que fazia faixas pretas), letras mais altas e refletivas, que continuam legíveis à noite.
 - **A centena do quarteirão** à direita do nome ("BLACKMOOR BLVD 1200"): os números daquele trecho vão de 1200 a 1299. A **faixa colorida do distrito** corre no topo da placa.
 - **Placa suspensa no fim do braço do semáforo**, depois da última lanterna, com o nome da rua que se cruza, para quem vem dirigindo.
 - **O PARE é octogonal**, com STOP em branco.

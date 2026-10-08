@@ -48,6 +48,11 @@ export interface Part {
   lamp?: number;
   /** Board: the letters are lamps (bulbs up close, lit glyphs farther), not paint. Glow: a sign's bulb (it looks lit as signs do). */
   bulbs?: boolean;
+  /**
+   * Board: a painted plate (a street sign, the signage manual): no dark frame round its edge (a billboard's), the
+   * letters taller in it, and reflective (they catch the light back toward the eye, so they read at night).
+   */
+  plate?: boolean;
   /** Skin: the body part (0 head, 1 body, 2 arm, 3 leg), its style bits from bit 4, and from bit 12 the rows above it when a limb is in two (see mcSkin). */
   skin?: number;
   /** A box turned (13.11c) by `swing` radians about the y axis through (pivX, pivZ): a limb at its joint; the bottom swings toward +x. */
@@ -272,7 +277,7 @@ export function drawObjects(grid: CharGrid, objs: Obj[], v: Cam) {
           const u = q.y1 - hy - start, li = Math.floor(u / lw), fz = ((q.z0 + q.z1) / 2 + lh / 2 - hz) / lh;
           // lamp letters (a walk signal) have no rim, are bulbs only when they span 4 rows, and keep
           // a glyph per letter as long as each has a column, even when shorter than a row
-          const frame = !q.bulbs && (Math.min(hy - q.y0, q.y1 - hy) < Math.max(Math.min(0.2, W * 0.05), perCol / 2) || Math.min(hz - q.z0, q.z1 - hz) < Math.max(Math.min(0.2, H * 0.08), perRow / 2));
+          const frame = !q.bulbs && !q.plate && (Math.min(hy - q.y0, q.y1 - hy) < Math.max(Math.min(0.2, W * 0.05), perCol / 2) || Math.min(hz - q.z0, q.z1 - hz) < Math.max(Math.min(0.2, H * 0.08), perRow / 2));
           let fg = false;
           ch = C('.');
           if (frame) ch = C('=');

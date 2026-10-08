@@ -457,10 +457,12 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     else if (mat == M_BOARD && face == 0 && ox > q1.x && tLen > 0u) {
       // the billboard's face, read left to right from the front (+x): from +y toward -y
       let W = q1.y - q0.y; let H = q1.z - q0.z; let n = f32(tLen); let bulbs = fx[p + 22u] == 1u;
+      // a painted plate (a street sign): no frame, its letters filling more of it, reflective
+      let plate = fx[p + 22u] == 2u;
       let perCol = (u.colW * best) / max(1e-6, abs(dx)); let perRow = best / u.scale;
-      let lw = min((W - min(0.8, W * 0.2)) / n, (H * 0.62) / 1.4); let lh = lw * 1.4; let start = (W - n * lw) / 2.0;
+      let lw = min((W - min(select(0.8, 0.1, plate), W * select(0.2, 0.04, plate))) / n, (H * select(0.62, 0.86, plate)) / 1.4); let lh = lw * 1.4; let start = (W - n * lw) / 2.0;
       let uu = q1.y - hp.y - start; let li = ifloor(uu / lw); let fz = ((q0.z + q1.z) / 2.0 + lh / 2.0 - hp.z) / lh;
-      let frame = !bulbs && (min(hp.y - q0.y, q1.y - hp.y) < max(min(0.2, W * 0.05), perCol / 2.0) || min(hp.z - q0.z, q1.z - hp.z) < max(min(0.2, H * 0.08), perRow / 2.0));
+      let frame = !bulbs && !plate && (min(hp.y - q0.y, q1.y - hp.y) < max(min(0.2, W * 0.05), perCol / 2.0) || min(hp.z - q0.z, q1.z - hp.z) < max(min(0.2, H * 0.08), perRow / 2.0));
       var fg = false;
       // the board's face between the letters is solid (a sparse glyph read as tinted glass, 13.7)
       ch = select(HASH, DOT, bulbs);
@@ -483,6 +485,8 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       // gooseneck lamps along the bottom light it from below, fading upward
       kk = (0.55 + 0.25 * hash3(ifloor(hp.y * 2.0), ifloor(hp.z * 2.0), 7)) * fog + fxf(p + 21u) * 1.3 * max(0.0, 1.0 - (hp.z - q0.z) / H);
       if (bulbs && fg) { kk = 0.75 + 0.45 * fog; }
+      // reflective letters: what light there is comes back to the eye, so they stay legible at night
+      if (plate && fg) { kk = max(kk, 0.8 * fog); }
     }
     else if (mat == M_SCREEN) {
       // a video screen on its faces across y (a bus shelter's advert, both sides), the telões' animations; the edges a dark frame

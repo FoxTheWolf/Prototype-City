@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, overheadBlade, bannerModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -773,17 +773,18 @@ function districtOf(world: World, i: number, j: number): number {
 function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
   const { city } = world, stop = S.state === Sig.Stop;
   if (S.hd === 0 || S.hd === 2) {
-    const ave = roadName(city, true, S.i).toUpperCase(), st = roadName(city, false, S.j).toUpperCase(), z = 2.6;
+    // (above the walk lights' heads, 3.0 m, so nothing of the light's pole meets them)
+    const ave = roadName(city, true, S.i).toUpperCase(), st = roadName(city, false, S.j).toUpperCase(), z = 3.1;
     const ah = String(blockHundred(S.j)), sh = String(blockHundred(S.i)), dk = districtOf(world, S.i, S.j);
     // the pole on the sidewalk's corner: away from the crossing (a stop sign stands before it, a light past it)
-    // and a little further from the road than the light's
-    const ax = stop ? S.c : -S.c, ay = stop ? S.s : -S.s, px = S.x + ax * 0.9 + S.s * 0.5, py = S.y + ay * 0.9 - S.c * 0.5;
-    const ra = streetBlade(ave, ah, dk, z, true), rs = streetBlade(st, sh, dk, z + 0.28, false), ha = bladeHalf(ave, ah), hs = bladeHalf(st, sh);
+    // and a little further from the road than the light's; 3 m up the sidewalk, so from no angle does it read as stuck on the light's pole
+    const ax = stop ? S.c : -S.c, ay = stop ? S.s : -S.s, px = S.x + ax * 3.2 + S.s * 0.6, py = S.y + ay * 3.2 - S.c * 0.6;
+    const zs = z + BLADE_H + 0.02, ra = streetBlade(ave, ah, dk, z, true), rs = streetBlade(st, sh, dk, zs, false), ha = bladeHalf(ave, ah), hs = bladeHalf(st, sh);
     // the avenue runs along y: its blade faces x both ways; the street's, turned a quarter, faces y
-    out.push({ x: px, y: py, c: 1, s: 0, parts: ra, r: ha + 0.1, h: z + 0.3, seed: 0 });
-    out.push({ x: px, y: py, c: -1, s: 0, parts: streetBlade(ave, ah, dk, z, false), r: ha + 0.1, h: z + 0.3, z0: z, seed: 0 });
-    out.push({ x: px, y: py, c: 0, s: 1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.28, seed: 0 });
-    out.push({ x: px, y: py, c: 0, s: -1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.28, seed: 0 });
+    out.push({ x: px, y: py, c: 1, s: 0, parts: ra, r: ha + 0.1, h: z + BLADE_H, seed: 0 });
+    out.push({ x: px, y: py, c: -1, s: 0, parts: streetBlade(ave, ah, dk, z, false), r: ha + 0.1, h: z + BLADE_H, z0: z, seed: 0 });
+    out.push({ x: px, y: py, c: 0, s: 1, parts: rs, r: hs + 0.1, h: zs + BLADE_H, z0: zs, seed: 0 });
+    out.push({ x: px, y: py, c: 0, s: -1, parts: rs, r: hs + 0.1, h: zs + BLADE_H, z0: zs, seed: 0 });
     return;
   }
   if (S.hd !== 1) return;
