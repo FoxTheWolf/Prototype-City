@@ -3,6 +3,14 @@
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
 
+## 15.21 O relógio, passos 2–3: corpo em cubinhos e visor em pixels (0.15.52, 2026-10-07)
+- **Juntei os passos 2 e 3 do manual:** o LCD na camada HD sairia com 3 pixels por célula e teria de ser refeito como textura; foi direto para textura (8 px/mm) num passe próprio.
+- **`src/render/gpu/voxWatch.ts`** (novo): `WATCH_WGSL` (bindings 22–25: o uniform `WatchU`, as células `wvox`, a impressão `wFace`, o visor `wLcd`), `wcast` (ortográfico: `o = eye + R·x + D·y` ao longo de `F`), `wshade` (a luz do alto à esquerda, o aço riscado, a impressão da face pela flag 8, o LCD pela flag 4: refletivo com o joelho ou aceso, o azul vazando na face).
+- **`src/watch/body3d.ts`** (novo): o modelo de 52 × 96 × 13 mm (a caixa 46 × 40 de cantos arredondados, o aro de 4 mm com o chanfro, a face, o LCD 32 × 16 rebaixado, os 4 botões que afundam pelas células guardadas, a pulseira com nervuras e furos), `paintFace` (as legendas ao lado dos botões, a marca, o filete dourado, WATER RESIST), `watchGpu` (a pose inclinada de `voxAxes`, a paleta), `watchProject`.
+- **`src/watch/watch.ts`:** saiu o desenho em células; `paintLcd` (segmentos chanfrados com fantasma, a lua em 8 fatias, o coração, as setas do sol; repinta só quando o que mostra muda), `pressedAt` por botão, `drawWatch` devolve o `WatchGpu` e marca os botões e o LCD aceso em células (para o mouse e o brilho).
+- **Compositor:** o passe do relógio depois dos aparelhos, antes da interface (o relógio fica na frente do notebook).
+- **Teste:** `tests/watch3d.ts` (modelo, botão afundando, os 4 mostradores, aceso; PNGs `tests/.out/watch-lcd-*.png`).
+
 ## 15.21 O relógio, passo 1: manual, 4º botão e mostradores (0.15.51, 2026-10-07)
 - **Manual:** `docs/identidade/relogio-manual.html` (o relógio de hoje refinado, desenhado em SVG com os 4 botões funcionando e as teclas J K L Ç, os quatro mostradores, cores, LCD, sons, o plano do 3D, regras). **Decidido com o usuário:** um 4º botão (DISPLAY, tecla Ç = `Semicolon`) para o mostrador; os batimentos entram agora, só como visual.
 - **`watch/watch.ts`:** `face` (`compass`/`sun`/`moon`/`pulse`, no save), `displayKey`, o pulso (`pulse`, `beatAt`) que segue o fôlego de `needs.breath` (sobe quando ele cai: correr; desce devagar, `PULSE_S`), `sunTimes` (o nascer e o pôr pelo `sunDir`, varrendo o dia de 10 em 10 min, uma vez por dia), `MOON` (a fase em oitavos em células); as legendas ao lado de cada botão e a marca no meio; o botão `display` no `WATCH_BTN` (clique com Alt).

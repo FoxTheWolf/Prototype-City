@@ -30,6 +30,7 @@ import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawWatch, Watch, WATCH_BTN, WATCH_LCD, WATCH_ON } from './watch/watch';
+import { type WatchGpu } from './watch/body3d';
 import { drawLaptop3d, glassBox, lapGpu, laptopAnchor, laptopPitch, screenAt } from './laptop/look3d';
 import { keyOfCode, lapPartAt } from './laptop/body3d';
 import { TERM_H, TERM_W } from './laptop/shell';
@@ -314,6 +315,8 @@ const TERM_ASPECT = 16 / 10;
 let termFb: CharGrid, termTx: CharGrid, termCells: Record<'fb' | 'tx', [number, number]> = { fb: [8, 16], tx: [16, 32] }, termMode: 'fb' | 'tx' | '' = '';
 /** The notebook screen's size on the interface grid (cells), kept from the last frame so a click can be mapped to a terminal cell (15.7). */
 let scrTermW = 0, scrTermH = 0;
+/** The watch's body for the GPU this frame (15.21), or null. */
+let watchG: WatchGpu | null = null;
 function termLayout() {
   const w = canvas.width, h = canvas.height;
   // whole pixels a cell, as near the screen's shape (TERM_ASPECT) as they come: from the height (about two
@@ -477,7 +480,7 @@ let altFree = false, watchStartHeld = false;
 function watchClick(e: MouseEvent): boolean {
   if (e.button !== 0 || input.locked || !WATCH_ON || !WATCH_BTN.length) return false;
   const [x, y] = cellAtClient(e.clientX, e.clientY), now = performance.now() / 1000;
-  const b = WATCH_BTN.find(([bx, by]) => by === y && Math.abs(bx - x) <= 1)?.[2];
+  const b = WATCH_BTN.find(([bx, by]) => Math.abs(by - y) <= 1 && Math.abs(bx - x) <= 1)?.[2];
   if (b === 'light') watch.light(now);
   else if (b === 'mode') watch.modeKey(now);
   else if (b === 'display') watch.displayKey(now);
@@ -1407,7 +1410,7 @@ function frame(now: number) {
   }
   watch.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
-  if (running && WATCH_ON) drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, VIEW_GLINT, watchMakerName(world.city), camera.yaw);
+  watchG = running && WATCH_ON ? drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city), camera.yaw, [uiLayout.originX, uiLayout.originY, uiLayout.cellW, uiLayout.cellH]) : null;
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null; PHONE_PIC.on = false; PHONE_BODY.on = false;
   if (!phoneOnTop) drawPhone(ui, phone, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);
@@ -1568,7 +1571,7 @@ function frame(now: number) {
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu);
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu, watchG);
   else renderer.draw(grid, ui, hd, termAt);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }

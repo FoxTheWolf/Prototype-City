@@ -9,6 +9,8 @@ import type { GpuWorld } from './world';
 import { EYE } from '../eye';
 import { BODY_U_FLOATS, BODY_WGSL } from './voxBody';
 import { LAP_U_FLOATS, LAP_WGSL } from './voxLap';
+import { WATCH_U_FLOATS, WATCH_WGSL } from './voxWatch';
+import { type WatchGpu } from '../../watch/body3d';
 import { type LapGpu } from '../../laptop/body3d';
 import { GLASS_MAT, type BodyGpu } from '../../phone/body3d';
 
@@ -104,6 +106,7 @@ ${CU}
 @group(0) @binding(17) var phPx: texture_2d<f32>;
 ${BODY_WGSL}
 ${LAP_WGSL}
+${WATCH_WGSL}
 // a screen's bloom at f (in its cells, from their centers): the cells' blur (from base, a grid of g cells),
 // between cell centers, within the cells a to b
 fn scrAt(f: vec2f, base: u32, g: vec2i, a: vec2i, b: vec2i) -> vec3f {
@@ -205,6 +208,11 @@ fn phBloom(uv: vec2f) -> vec3f {
       if (bh.mat != 0u) { col = bshade(bh, bq); }
       // on the glass: where on the screen's picture, so it leans and sways with the body
       if (bh.mat == ${GLASS_MAT}u && u.px1.x > u.px0.x) { phUv = (bh.p.xy - bu.scr.xy) / bu.scr.zw; }
+    }
+    // the watch's body in cubes (15.21), over the devices behind it
+    if (all(vec2f(s) >= wu.rect.xy) && all(vec2f(s) < wu.rect.zw)) {
+      let wh = wcast(vec2f(s) + 0.5);
+      if (wh.mat != 0u) { col = wshade(wh); }
     }
     let ub = textureLoad(uiBg, uc, 0);
     // (the interface's cells under the phone's glass only carry its light for the glow; the glass leans off them.
@@ -446,7 +454,7 @@ export class GpuCompositor {
   private pipe: GPURenderPipeline;
   private uni: GPUBuffer;
   private U = new Int32Array(48);
-  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic' | 'phCells' | 'phBg' | 'phAtlas' | 'phHd' | 'phPic' | 'bDecal' | 'phPx' | 'lDecal' | 'lOut', GPUTexture>;
+  private t: Record<'atlas' | 'uiCells' | 'uiBg' | 'uiAtlas' | 'hd' | 'tmCells' | 'tmBg' | 'tmAtlas' | 'tmHd' | 'tmPic' | 'phCells' | 'phBg' | 'phAtlas' | 'phHd' | 'phPic' | 'bDecal' | 'phPx' | 'lDecal' | 'lOut' | 'wFace' | 'wLcd', GPUTexture>;
   /** The phone screen's picture (15.19b): its grid, cell size, pass uniform and bindings (the same pass as the notebook's). */
   private ph = { cols: 1, rows: 1, cw: 1, ch: 1 };
   private phUni: GPUBuffer;
@@ -461,6 +469,10 @@ export class GpuCompositor {
   private lapVox: GPUBuffer | null = null;
   private lapUni: GPUBuffer | null = null;
   private lapVer = -1; private lapDecalVer = -1; private lapOutVer = -1;
+  /** The watch body's cubes and uniform (voxWatch.ts), and the versions last sent up. */
+  private wVox: GPUBuffer | null = null;
+  private wUni: GPUBuffer | null = null;
+  private wVer = -1; private wFaceVer = -1; private wLcdVer = -1;
   private pxVer = -1;
   /** The notebook screen's picture: its pass, uniform (SU) and bindings; the glass's inverse homography; the sampler. */
   private picPipe: GPURenderPipeline;
@@ -515,7 +527,7 @@ export class GpuCompositor {
     this.rayPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: rm, entryPoint: 'main' } });
     this.rayUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const one = () => this.tex(1, 1);
-    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one(), phCells: one(), phBg: one(), phAtlas: one(), phHd: one(), phPic: one(), bDecal: one(), phPx: one(), lDecal: one(), lOut: one() };
+    this.t = { atlas: one(), uiCells: one(), uiBg: one(), uiAtlas: one(), hd: one(), tmCells: one(), tmBg: one(), tmAtlas: one(), tmHd: one(), tmPic: one(), phCells: one(), phBg: one(), phAtlas: one(), phHd: one(), phPic: one(), bDecal: one(), phPx: one(), lDecal: one(), lOut: one(), wFace: one(), wLcd: one() };
     this.phUni = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const pm = dev.createShaderModule({ code: SCREEN_WGSL });
     pm.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL screen ${m.lineNum}:${m.linePos} ${m.message}`)));
@@ -582,7 +594,7 @@ export class GpuCompositor {
    */
   draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null,
     pic: { grid: CharGrid; hd: HdLayer; rect: readonly number[]; full: readonly number[]; px: { img: { w: number; h: number; px: Uint8ClampedArray }; ver: number } } | null = null,
-    body: { g: BodyGpu; x: number; y: number } | null = null, lap: LapGpu | null = null) {
+    body: { g: BodyGpu; x: number; y: number } | null = null, lap: LapGpu | null = null, watch: WatchGpu | null = null) {
     const L = this.ui!, gw = this.gw;
     this.up(this.t.uiCells, ui.cells, L.cols, L.rows);
     this.up(this.t.uiBg, ui.bg, L.cols, L.rows);
@@ -672,6 +684,24 @@ export class GpuCompositor {
       }
       this.dev.queue.writeBuffer(this.lapUni!, 0, lap.uni);
     } else this.dev.queue.writeBuffer(this.lapUni!, 0, new Float32Array(4));
+    // the watch's body: its cubes and pictures sent up when they changed, its view and light every frame
+    if (!this.wVox) {
+      this.wVox = this.dev.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+      this.wUni = this.dev.createBuffer({ size: WATCH_U_FLOATS * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    }
+    if (watch) {
+      if (this.wVox.size !== watch.vox.byteLength) { this.wVox.destroy(); this.wVox = this.dev.createBuffer({ size: watch.vox.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST }); this.bind = null; this.wVer = -1; }
+      if (this.wVer !== watch.voxVer) { this.dev.queue.writeBuffer(this.wVox, 0, watch.vox); this.wVer = watch.voxVer; }
+      if (this.wFaceVer !== watch.faceVer) {
+        if (this.t.wFace.width !== watch.face.w || this.t.wFace.height !== watch.face.h) this.set('wFace', this.tex(watch.face.w, watch.face.h));
+        this.up(this.t.wFace, watch.face.px, watch.face.w, watch.face.h); this.wFaceVer = watch.faceVer;
+      }
+      if (this.wLcdVer !== watch.lcdVer) {
+        if (this.t.wLcd.width !== watch.lcd.w || this.t.wLcd.height !== watch.lcd.h) this.set('wLcd', this.tex(watch.lcd.w, watch.lcd.h));
+        this.up(this.t.wLcd, watch.lcd.px, watch.lcd.w, watch.lcd.h); this.wLcdVer = watch.lcdVer;
+      }
+      this.dev.queue.writeBuffer(this.wUni!, 0, watch.uni);
+    } else this.dev.queue.writeBuffer(this.wUni!, 0, new Float32Array(4));
     const boost = phone?.[4] ?? 1;
     this.U[33] = Math.round(100 * boost); this.U[34] = Math.round(100 * Math.sqrt(boost));
     this.U[32] = Math.round(EYE.k * 1000);
@@ -711,7 +741,8 @@ export class GpuCompositor {
           { binding: 10, resource: { buffer: G.glow } }, { binding: 11, resource: { buffer: this.meanBuf } },
           { binding: 12, resource: { buffer: this.scrBuf } }, { binding: 13, resource: T.phPic.createView() }, { binding: 14, resource: T.bDecal.createView() },
           { binding: 15, resource: { buffer: this.bodyUni! } }, { binding: 16, resource: { buffer: this.bodyVox! } }, { binding: 17, resource: T.phPx.createView() },
-          { binding: 18, resource: { buffer: this.lapUni! } }, { binding: 19, resource: { buffer: this.lapVox! } }, { binding: 20, resource: T.lDecal.createView() }, { binding: 21, resource: T.lOut.createView() }],
+          { binding: 18, resource: { buffer: this.lapUni! } }, { binding: 19, resource: { buffer: this.lapVox! } }, { binding: 20, resource: T.lDecal.createView() }, { binding: 21, resource: T.lOut.createView() },
+          { binding: 22, resource: { buffer: this.wUni! } }, { binding: 23, resource: { buffer: this.wVox! } }, { binding: 24, resource: T.wFace.createView() }, { binding: 25, resource: T.wLcd.createView() }],
       });
     }
     const enc = this.dev.createCommandEncoder();

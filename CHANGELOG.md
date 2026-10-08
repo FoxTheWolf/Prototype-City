@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.52 — O relógio em cubinhos (2026-10-07)
+- **O relógio virou um objeto de verdade:** a caixa de aço escovado com o aro chanfrado, a face escura com as legendas impressas, o visor rebaixado, os quatro botões de metal nos lados e a pulseira de resina com nervuras e furos, tudo em cubinhos de 1 mm, levemente inclinado na mão, com a luz da cena batendo de cima e da esquerda.
+- **O visor em pixels:** os números agora são segmentos de verdade, com as pontas chanfradas e os apagados aparecendo de leve; a lua em fatias, o coração que pisca a cada batida, as setas do sol.
+- **Os botões afundam** quando você aperta (com a tecla ou com o clique).
+- **Com a luz acesa, o visor fica legível:** o azul não lava mais a caixa inteira.
+- **O relógio por cima do notebook:** com o notebook aberto, o relógio fica na frente dele.
+
 ## 0.15.51 — O relógio ganha um quarto botão (2026-10-07)
 - **DISPLAY (tecla Ç, ou clique com o Alt):** o novo botão embaixo à direita troca a linha de baixo do relógio, em qualquer modo: **bússola e temperatura → nascer e pôr do sol → lua → pulso**.
 - **Sol:** a hora em que o sol nasce e se põe hoje, pelo céu de verdade do jogo; serve para saber quanto falta para a noite.

@@ -1,6 +1,7 @@
 import { type CharGrid } from '../render/grid';
 import { calendar, moonPhase, sunDir } from '../sim/clock';
-import { type C3 } from '../phone/lcd';
+import { Img, Paint, type C3 } from '../render/paint2d';
+import { BTNS, NX, watchGpu, watchProject, WATCH_CASE, WATCH_GPU, WATCH_LCD_MM, type WatchGpu, type WBtn } from './body3d';
 
 /**
  * The digital watch on the player's left wrist (F.4, a HUD for good since F.6): a cheap 2008 resin
@@ -61,6 +62,8 @@ export class Watch {
   private breath = 1;
   /** The thermometer's reading (degrees C, NaN: not yet): it follows the air slowly, as a real one on a wrist does. */
   temp = NaN;
+  /** When each button was last pressed (real seconds): it shows sunk for a moment. */
+  readonly pressedAt: Partial<Record<WBtn, number>> = {};
   /** Sounds asked for this frame: 'up', 'down', 'light', 'chime', 'beep', 'alarm'. */
   sfx: string[] = [];
 
@@ -82,10 +85,11 @@ export class Watch {
     if (this.ringing(now)) { this.ringUntil = 0; return false; }
     return true;
   }
-  light(now: number) { if (this.raise > 0.5) { if (this.ringing(now)) this.ringUntil = 0; this.lightAt = now; this.sfx.push('light'); } }
+  light(now: number) { this.pressedAt.light = now; if (this.raise > 0.5) { if (this.ringing(now)) this.ringUntil = 0; this.lightAt = now; this.sfx.push('light'); } }
   lit(now: number) { return now - this.lightAt < LIGHT_S; }
   /** MODE: the next mode, or (setting the alarm) the next field. */
   modeKey(now: number) {
+    this.pressedAt.mode = now;
     if (!this.reach(now)) return;
     this.sfx.push('beep');
     if (this.setting) { this.setting = this.setting === 1 ? 2 : 0; return; }
@@ -93,12 +97,14 @@ export class Watch {
   }
   /** DISPLAY: the next face of the bottom row. */
   displayKey(now: number) {
+    this.pressedAt.display = now;
     if (!this.reach(now)) return;
     this.sfx.push('beep');
     this.face = FACES[(FACES.indexOf(this.face) + 1) % FACES.length];
   }
   /** The right button pressed (repeat: the key held down, stepping a field being set). */
   startDown(now: number, repeat: boolean) {
+    if (!repeat) this.pressedAt.start = now;
     if (!repeat && !this.reach(now)) return;
     if (repeat && this.raise < 0.5) return;
     if (this.setting) { this.step(); if (!repeat) this.sfx.push('beep'); return; }
@@ -178,205 +184,124 @@ function sunTimes(time: number, hour: number): [number, number] {
   return [sunDay.up, sunDay.down];
 }
 const hhmm = (h: number) => (Number.isNaN(h) ? '--:--' : `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`);
-/** The moon on the LCD's cells by its phase in eighths (new, waxing crescent, first quarter, waxing gibbous, full, then waning). */
-const MOON = ['( )', ' )', ' D', '(D', '(O)', 'C)', 'C ', '( '];
 /** The compass reads its sensor this often (real seconds), like a watch's: the number does not follow every turn of the head. */
 const COMPASS_S = 0.6;
 const compass = { at: -1e9, deg: 0 };
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-/** Size of the watch on the interface's grid (the case; one row of strap above it, one below at the screen's edge). */
-const W = 32, CASE_Y = 1, CASE_H = 15;
-/** The LCD window, inside the case. */
-const LX = 4, LY = CASE_Y + 3, LW = 24, LH = 9;
 
 /** Seven segments per digit (a top, b top right, c bottom right, d bottom, e bottom left, f top left, g middle). */
 const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-
-const STEEL: C3 = [92, 94, 100], FACE: C3 = [26, 26, 29], STRAP: C3 = [24, 24, 26], LABEL: C3 = [150, 150, 150], BRAND: C3 = [230, 226, 214], GOLD: C3 = [170, 140, 70];
 const LCD_BG: C3 = [66, 72, 58], INK: C3 = [24, 28, 24], BACKLIT: C3 = [70, 150, 245];
-/** How much of the glint each surface gives back: the brushed steel, the face's print, the crystal over the LCD. */
-const G_STEEL = 0.45, G_FACE = 0.12, G_GLASS = 0.5;
-/** How far (cells) the backlight's blue spills over the case round the LCD, and how strong. */
-const SPILL = 4, SPILL_K = 0.5;
 /** The lit LCD glows over the case and the world like the phone's screen, but it is small: its glow reaches this much further (and the square root of it stronger). */
 const GLOW_BOOST = 3;
-/**
- * An unlit LCD only reflects: below LCD_KNEE of light it goes dark faster than the scene (the light times its share
- * of the knee), so at night the light (L) is needed; above it (day, a lit shop) it reads as the scene.
- */
-const LCD_KNEE = 0.35;
-/** The LCD's paper is pale: in good light it reads a little brighter than the scene's light alone. */
-const LCD_GAIN = 1.3;
-/** The segments that are off still show faintly (a cheap LCD): their cells this much darker than the paper. */
-const GHOST = 0.8;
-
-/** The glint (VIEW_GLINT), eased so it does not jump from frame to frame (as the phone's). */
-const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0 };
+/** The segments that are off still show faintly (a cheap LCD): this much darker than the paper. */
+const GHOST = 0.86;
+/** The case's width on the interface's grid (cells), where it sits from the left edge, and how far it comes up (rows, from the bottom). */
+const CASE_COLS = 32, CASE_X = 6, CASE_ROWS = 17;
+/** A button shows pressed this long after it was. */
+const PRESS_S = 0.12;
 
 /** Where this frame drew the lit LCD (interface cells: x, y, w, h, and GLOW_BOOST), for the compositor's glow; null when unlit. */
 export const WATCH_LCD: { at: number[] | null } = { at: null };
-
-/**
- * The watch on the interface grid g, in the scene's light like the phone (F.7): a brushed steel case
- * lit on its top and left rim, the brightest light nearby sliding over it as a sheen, the LCD sunk
- * under its crystal (the face's shadow on it, away from the light). `light` is the scene's light at the
- * hands (VIEW_LIGHT), `glint` VIEW_GLINT, `brand` the maker printed on the face.
- */
 /** Where the watch's buttons were drawn on the grid this frame (for the mouse, with the cursor free: 15.9a). */
-export const WATCH_BTN: [x: number, y: number, b: 'light' | 'mode' | 'start' | 'display'][] = [];
+export const WATCH_BTN: [x: number, y: number, b: WBtn][] = [];
 
-export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, glint: Float32Array, brand: string, yaw: number) {
-  WATCH_LCD.at = null;
-  WATCH_BTN.length = 0;
-  if (Wt.raise < 0.01) return;
-  const e = 1 - (1 - Wt.raise) ** 3;
-  const ox = 6, oy = g.rows - Math.round((CASE_Y + CASE_H + 1) * e);
-  const L = [Math.max(0.03, light[0]), Math.max(0.03, light[1]), Math.max(0.03, light[2])];
-  const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
-  GL.at = now;
-  GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
-  GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
-  // the sheen: a soft diagonal band on the side the light comes from
-  const s0 = 16 + GL.lat * 14, amp = GL.str * 55;
-  const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 4) ** 2)) * amp;
-  const lit = Wt.lit(now);
-  // the LCD's backlight spilling blue over the case round it
-  const spill = (x: number, y: number) => {
-    if (!lit) return 0;
-    const dx = Math.max(LX - x, 0, x - (LX + LW - 1)), dy = Math.max(LY - y, 0, y - (LY + LH - 1));
-    return Math.max(0, 1 - Math.hypot(dx * 0.6, dy) / SPILL) * SPILL_K;
-  };
-  const at = (x: number, y: number) => { const gx = ox + x, gy = oy + y; return gx >= 0 && gy >= 0 && gx < g.cols && gy < g.rows ? gy * g.cols + gx : -1; };
-  // a cell of the watch in the scene's light, with the sheen by its gloss and the backlight's spill;
-  // `own` is light of its own (the backlight) the scene does not dim; `Lk` the light it takes (the LCD's is darker)
-  const cell = (x: number, y: number, c: string, fg: C3, bg: C3, gloss = G_FACE, own = 0, Lk = L) => {
-    const i = at(x, y);
-    if (i < 0) return;
-    const sh = sheen(x, y) * gloss, sp = own ? 0 : spill(x, y), G = [GL.r, GL.g, GL.b];
-    const v = (c3: C3, n: number) => c3[n] * Math.max(own, Lk[n]) + sh * G[n] + sp * BACKLIT[n];
-    g.setBg(i, v(bg, 0), v(bg, 1), v(bg, 2));
-    g.put(i, c.charCodeAt(0), v(fg, 0), v(fg, 1), v(fg, 2));
-  };
-  const shade = (x: number, y: number, f: number) => {
-    const i = at(x, y);
-    if (i < 0) return;
-    const k = i * 4;
-    for (let c = 0; c < 3; c++) { g.bg[k + c] *= 1 - f; g.cells[k + c + 1] *= 1 - f; }
-  };
-  const text = (x: number, y: number, s: string, fg: C3, bg: C3) => { for (let k = 0; k < s.length; k++) cell(x + k, y, s[k], fg, bg); };
-  const mul = (c: C3, k: number): C3 => [c[0] * k, c[1] * k, c[2] * k];
-
-  // the strap: a row above the case, and below it to the screen's edge
-  for (let y = 0; y < g.rows - oy; y++) {
-    if (y >= CASE_Y && y < CASE_Y + CASE_H) continue;
-    for (let x = 8; x < W - 8; x++) cell(x, y, (x + y) % 4 === 0 ? ':' : ' ', [40, 40, 44], STRAP, 0.05);
-  }
-  // the case: brushed steel, two cells on the sides, a row top and bottom, its corners rounded off (the
-  // world shows there); its rim lit on top and left, dark on the right and below; the dark face inside
-  for (let y = 0; y < CASE_H; y++) for (let x = 0; x < W; x++) {
-    if ((y === 0 || y === CASE_H - 1) && (x === 0 || x === W - 1)) continue;
-    const steel = y === 0 || y === CASE_H - 1 || x < 2 || x > W - 3;
-    if (!steel) { cell(x, CASE_Y + y, ' ', FACE, FACE); continue; }
-    const top = y === 0 || x === 0, low = y === CASE_H - 1 || x === W - 1;
-    let c = mul(STEEL, 1 + (((x * 7 + y * 13) % 5) - 2) * 0.03);
-    if (top) c = [c[0] * 1.45 + 16, c[1] * 1.45 + 16, c[2] * 1.45 + 16]; else if (low) c = mul(c, 0.55);
-    cell(x, CASE_Y + y, (x + y * 3) % 7 === 0 && !top && !low ? '-' : ' ', mul(c, 1.12), c, top ? 0.9 : G_STEEL);
-  }
-  // the buttons on its sides, in steel too
-  for (const [x, y, b] of [[-1, LY + 1, 'light'], [-1, LY + LH - 2, 'mode'], [W, LY + 1, 'start'], [W, LY + LH - 2, 'display']] as const) {
-    cell(x, y, x < 0 ? '[' : ']', mul(STEEL, 1.3), mul(STEEL, 0.8), G_STEEL);
-    if (Wt.raise > 0.5) WATCH_BTN.push([ox + x, oy + y, b]);
-  }
-  // each button's name by it (the manual): LIGHT and START over the LCD, MODE and DISPLAY under it; the maker between the top two
-  text(3, CASE_Y + 1, 'LIGHT', LABEL, FACE);
-  text(W - 8, CASE_Y + 1, 'START', LABEL, FACE);
-  text(3, CASE_Y + CASE_H - 2, 'MODE', LABEL, FACE);
-  text(W - 10, CASE_Y + CASE_H - 2, 'DISPLAY', LABEL, FACE);
-  const b = brand.toUpperCase().slice(0, 14);
-  text((W - b.length) >> 1, CASE_Y + 1, b, BRAND, FACE);
-  for (let x = 3; x < W - 3; x++) cell(x, CASE_Y + 2, '-', GOLD, FACE);
-  text(8, CASE_Y + CASE_H - 2, 'WATER RESIST', LABEL, FACE);
-
-  // the LCD: lit from its left edge while the light is on (blue), else only reflecting what is around, darker
-  const Ld = L.map((v) => Math.min(1, v * LCD_GAIN) * Math.min(1, v / LCD_KNEE));
-  const lcd = (x: number): [C3, number] => {
-    if (!lit) return [LCD_BG, 0];
-    const k = 1 - (x / LW) * 0.35;
-    return [[BACKLIT[0] * k, BACKLIT[1] * k, BACKLIT[2] * k], 1];
-  };
-  const lc = (x: number, y: number, c: string, fg: C3, bg: C3, own: number) => cell(x, y, c, fg, bg, G_GLASS * (own ? 0.4 : 1), own, Ld);
-  for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) { const [c, own] = lcd(x); lc(LX + x, LY + y, ' ', INK, c, own); }
-  // a segment cell: dark where on, and very faintly so where off (the ghost of a cheap LCD)
-  const seg = (x: number, y: number, on: boolean) => {
-    const [c, own] = lcd(x - LX);
-    lc(x, y, ' ', INK, on ? INK : [c[0] * GHOST, c[1] * GHOST, c[2] * GHOST], own);
-  };
-  // a digit, 4 columns by 5 rows
-  const digit = (x: number, y: number, n: number) => {
-    const s = SEG[n] ?? 0;
-    for (let k = 0; k < 4; k++) { seg(x + k, y, !!(s & 1) && k > 0 && k < 3); seg(x + k, y + 2, !!(s & 64) && k > 0 && k < 3); seg(x + k, y + 4, !!(s & 8) && k > 0 && k < 3); }
-    seg(x + 3, y + 1, !!(s & 2)); seg(x + 3, y + 3, !!(s & 4)); seg(x, y + 3, !!(s & 16)); seg(x, y + 1, !!(s & 32));
-    // the corners belong to whichever side or bar is on
-    seg(x, y, !!(s & 33)); seg(x + 3, y, !!(s & 3)); seg(x, y + 4, !!(s & 24)); seg(x + 3, y + 4, !!(s & 12));
-    seg(x, y + 2, !!(s & 112)); seg(x + 3, y + 2, !!(s & 70));
-  };
-  const C = calendar(time), dx = LX, dy = LY + 3;
-  const ink = (x: number, y: number, s: string) => { for (let k = 0; k < s.length; k++) { const [c, own] = lcd(x + k - LX); lc(x + k, y, s[k], INK, c, own); } };
-  // the small fields' segments while off: every one of them faintly, as '8's (the marks keep their shape)
-  const ghost = (x: number, y: number, s: string) => { for (let k = 0; k < s.length; k++) if (s[k] !== ' ') { const [c, own] = lcd(x + k - LX); lc(x + k, y, s[k], [c[0] * GHOST, c[1] * GHOST, c[2] * GHOST], c, own); } };
-  ghost(LX + 1, LY + 1, '88'); ghost(LX + 8, LY + 1, '(*) SIG'); ghost(LX + LW - 6, LY + 1, '88-88');
-  ghost(dx + 22, dy + 4, '88'); ghost(LX + 1, LY + LH - 1, '88 888'); ghost(LX + LW - 6, LY + LH - 1, '-88:88');
-  // hh:mm in big digits, either pair blank (the field blinking while it is set); `zero`: a leading zero on the hour
-  const big = (h: number, m: number, hideH = false, hideM = false, zero = false) => {
-    digit(dx, dy, hideH || (h < 10 && !zero) ? -1 : Math.floor(h / 10)); digit(dx + 5, dy, hideH ? -1 : h % 10);
-    seg(dx + 10, dy + 1, true); seg(dx + 10, dy + 3, true);
-    digit(dx + 12, dy, hideM ? -1 : Math.floor(m / 10)); digit(dx + 17, dy, hideM ? -1 : m % 10);
-  };
-  // the marks, top middle: the alarm's while it is on, the hourly signal's while it is on
-  if (Wt.alarm.on) ink(LX + 8, LY + 1, '(*)');
-  if (Wt.chime) ink(LX + 12, LY + 1, 'SIG');
-  if (Wt.mode === 'time' || Wt.ringing(now)) {
+// ---- the LCD's picture (LCD_W x LCD_H pixels, 8 a millimetre), painted only when what it shows changes ----
+let lcdKey = '';
+/** A seven-segment digit (n < 0: blank) at x, y, w x h, its bars t thick with chamfered ends; the ones off as ghosts. */
+function digit(P: Paint, x: number, y: number, w: number, h: number, t: number, n: number, ink: C3, ghost: C3) {
+  const s = n < 0 ? 0 : SEG[n], m = (h - t) / 2, g = 1;
+  const hor = (x0: number, y0: number, len: number) => [x0 + t / 2, y0, x0 + len - t / 2, y0, x0 + len, y0 + t / 2, x0 + len - t / 2, y0 + t, x0 + t / 2, y0 + t, x0, y0 + t / 2];
+  const ver = (x0: number, y0: number, len: number) => [x0 + t / 2, y0, x0 + t, y0 + t / 2, x0 + t, y0 + len - t / 2, x0 + t / 2, y0 + len, x0, y0 + len - t / 2, x0, y0 + t / 2];
+  const bars = [hor(x + g, y, w - 2 * g), ver(x + w - t, y + g, m + t / 2 - 2 * g), ver(x + w - t, y + m + t / 2 + g, m + t / 2 - 2 * g), hor(x + g, y + h - t, w - 2 * g),
+    ver(x, y + m + t / 2 + g, m + t / 2 - 2 * g), ver(x, y + g, m + t / 2 - 2 * g), hor(x + g, y + m, w - 2 * g)];
+  bars.forEach((b, k) => P.poly(b, s & (1 << k) ? ink : ghost));
+}
+/** The LCD as the watch shows it now into I; true if it changed (a new picture to send up). */
+function paintLcd(I: Img, Wt: Watch, time: number, now: number, yaw: number, lit: boolean): boolean {
+  const C = calendar(time), blink = Math.floor(now * 2) & 1;
+  if (now - compass.at >= COMPASS_S || now < compass.at) { compass.at = now; compass.deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360; }
+  // what it shows: the top row, the big pair, the small pair, the bottom row
+  let top = '', date = '', big: [number, number, boolean, boolean, boolean] = [0, 0, false, false, false], small = '';
+  const ringing = Wt.mode === 'time' || Wt.ringing(now);
+  if (ringing) {
     const hh = Math.floor(C.hour), mm = Math.floor((C.hour % 1) * 60), ss = Math.floor((((C.hour % 1) * 60) % 1) * 60);
-    ink(LX + 1, LY + 1, DAYS[C.weekday]);
-    const date = `${C.month}-${String(C.day).padStart(2, ' ')}`;
-    ink(LX + LW - 1 - date.length, LY + 1, date);
-    big(hh, mm);
-    ink(dx + 22, dy + 4, String(ss).padStart(2, '0'));
+    top = DAYS[C.weekday]; date = `${C.month}-${String(C.day).padStart(2, ' ')}`; big = [hh, mm, false, false, false]; small = String(ss).padStart(2, '0');
   } else if (Wt.mode === 'alarm') {
-    const blink = Math.floor(now * 2) & 1;
-    ink(LX + 1, LY + 1, 'AL');
-    if (Wt.setting) ink(LX + LW - 4, LY + 1, 'SET');
-    big(Math.floor(Wt.alarm.min / 60), Wt.alarm.min % 60, Wt.setting === 1 && !blink, Wt.setting === 2 && !blink);
-    ink(dx + 22, dy + 4, Wt.alarm.on ? 'ON' : '--');
+    top = 'AL'; date = Wt.setting ? 'SET' : ''; big = [Math.floor(Wt.alarm.min / 60), Wt.alarm.min % 60, Wt.setting === 1 && !blink, Wt.setting === 2 && !blink, false]; small = Wt.alarm.on ? 'ON' : '--';
   } else {
     const sw = Wt.swAcc + (Wt.swAt >= 0 ? now - Wt.swAt : 0);
-    ink(LX + 1, LY + 1, 'ST');
-    // past an hour, the hours go up beside the label
-    if (sw >= 3600) ink(LX + LW - 4, LY + 1, `${Math.floor(sw / 3600) % 100}H`.padStart(3, ' '));
-    big(Math.floor(sw / 60) % 60, Math.floor(sw) % 60, false, false, true);
-    ink(dx + 22, dy + 4, String(Math.floor((sw % 1) * 100)).padStart(2, '0'));
+    top = 'ST'; date = sw >= 3600 ? `${Math.floor(sw / 3600) % 100}H` : ''; big = [Math.floor(sw / 60) % 60, Math.floor(sw) % 60, false, false, true]; small = String(Math.floor((sw % 1) * 100)).padStart(2, '0');
   }
-  // the bottom row, in every mode, one face at a time (DISPLAY): where the player faces (the compass) and the
-  // thermometer; the day's sunrise and sunset; the moon and its age in days; the pulse, its mark blinking with each beat
-  const right = (t: string) => ink(LX + LW - 1 - t.length, LY + LH - 1, t);
-  if (Wt.face === 'compass') {
-    if (now - compass.at >= COMPASS_S || now < compass.at) { compass.at = now; compass.deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360; }
-    const deg = compass.deg;
-    ink(LX + 1, LY + LH - 1, COMPASS[Math.round(deg / 45) % 8].padEnd(2, ' ') + ' ' + String(deg).padStart(3, '0'));
-    if (!Number.isNaN(Wt.temp)) right(`${Math.round(Wt.temp) || 0}C`);
-  } else if (Wt.face === 'sun') {
-    const [up, down] = sunTimes(time, C.hour);
-    ink(LX + 1, LY + LH - 1, `^${hhmm(up)}`); right(`v${hhmm(down)}`);
-  } else if (Wt.face === 'moon') {
-    const p = moonPhase(time);
-    ink(LX + 1, LY + LH - 1, MOON[Math.round(p * 8) % 8]); right(`AGE ${String(Math.floor(p * 29.53)).padStart(2, '0')}`);
-  } else {
-    ink(LX + 1, LY + LH - 1, now - Wt.beatAt < 0.12 ? '+' : ' '); ink(LX + 3, LY + LH - 1, String(Math.round(Wt.pulse)).padStart(3, '0')); right('BPM');
+  let lo = '', ro = '', icon = '';
+  if (Wt.face === 'compass') { lo = `${COMPASS[Math.round(compass.deg / 45) % 8].padEnd(2, ' ')} ${String(compass.deg).padStart(3, '0')}`; ro = Number.isNaN(Wt.temp) ? '' : `${Math.round(Wt.temp) || 0}C`; }
+  else if (Wt.face === 'sun') { const [u, d] = sunTimes(time, C.hour); lo = hhmm(u); ro = hhmm(d); icon = 'sun'; }
+  else if (Wt.face === 'moon') { const p = moonPhase(time); icon = `moon${Math.round(p * 8) % 8}`; ro = `AGE ${String(Math.floor(p * 29.53)).padStart(2, '0')}`; }
+  else { icon = now - Wt.beatAt < 0.12 ? 'beat' : 'heart'; lo = String(Math.round(Wt.pulse)).padStart(3, '0'); ro = 'BPM'; }
+  const key = [top, date, big.join(), small, lo, ro, icon, Wt.alarm.on, Wt.chime, lit].join('|');
+  if (key === lcdKey) return false;
+  lcdKey = key;
+
+  const P = new Paint(I), W = I.w, H = I.h;
+  // the paper: olive, or backlit blue (brighter at its left edge, where the light comes in)
+  for (let x = 0; x < W; x++) { const k = lit ? 1 - (x / W) * 0.35 : 1, c: C3 = lit ? [BACKLIT[0] * k, BACKLIT[1] * k, BACKLIT[2] * k] : LCD_BG; P.rect(x, 0, 1, H, c); }
+  const paper: C3 = lit ? [BACKLIT[0] * 0.85, BACKLIT[1] * 0.85, BACKLIT[2] * 0.85] : LCD_BG, ghost: C3 = [paper[0] * GHOST, paper[1] * GHOST, paper[2] * GHOST];
+  const text = (x: number, y: number, s: string, right = false) => P.text(right ? x - Paint.textW(s, 2) : x, y, s, 2, INK);
+  // the top row: the day or the mode, the alarm's and the signal's marks (ghosts when off), the date
+  text(8, 8, top);
+  P.text(90, 8, '(*)', 2, Wt.alarm.on ? INK : ghost); P.text(134, 8, 'SIG', 2, Wt.chime ? INK : ghost);
+  text(W - 8, 8, date, true);
+  // the big pair, hh:mm (a field blank while it blinks being set), and the small pair or word beside it
+  const [h, m, hideH, hideM, zero] = big;
+  digit(P, 8, 30, 34, 62, 7, hideH || (h < 10 && !zero) ? -1 : Math.floor(h / 10), INK, ghost);
+  digit(P, 49, 30, 34, 62, 7, hideH ? -1 : h % 10, INK, ghost);
+  P.rect(90, 46, 7, 7, INK); P.rect(90, 70, 7, 7, INK);
+  digit(P, 104, 30, 34, 62, 7, hideM ? -1 : Math.floor(m / 10), INK, ghost);
+  digit(P, 145, 30, 34, 62, 7, hideM ? -1 : m % 10, INK, ghost);
+  if (/^\d\d$/.test(small)) { digit(P, 192, 62, 20, 30, 5, +small[0], INK, ghost); digit(P, 218, 62, 20, 30, 5, +small[1], INK, ghost); }
+  else { digit(P, 192, 62, 20, 30, 5, -1, INK, ghost); digit(P, 218, 62, 20, 30, 5, -1, INK, ghost); text(200, 72, small); }
+  // the bottom row: the face DISPLAY picked, its icon in pixels
+  const by = 104;
+  if (icon === 'sun') {
+    P.poly([10, by + 12, 16, by + 2, 22, by + 12], INK); text(26, by, lo);
+    const rx = W - 8 - Paint.textW(ro, 2) - 16; P.poly([rx, by + 2, rx + 12, by + 2, rx + 6, by + 12], INK); text(W - 8, by, ro, true);
+  } else if (icon.startsWith('moon')) {
+    // the moon as 8 slices of a disc, lit from the right while it waxes
+    const p = +icon.slice(4) / 8, lit8 = Math.round((p < 0.5 ? p * 2 : (1 - p) * 2) * 8), cx = 18, cy = by + 7, r = 7;
+    for (let i = 0; i < 8; i++) {
+      const x0 = cx - r + (i * 2 * r) / 8, on = p < 0.5 ? i >= 8 - lit8 : i < lit8, hw = Math.sqrt(Math.max(0, r * r - (x0 + r / 8 - cx) ** 2));
+      P.rect(Math.round(x0), Math.round(cy - hw), 1, Math.round(hw * 2), on ? INK : ghost);
+    }
+    text(W - 8, by, ro, true);
+  } else if (icon === 'heart' || icon === 'beat') {
+    P.disc(13, by + 5, 4, icon === 'beat' ? INK : ghost); P.disc(20, by + 5, 4, icon === 'beat' ? INK : ghost); P.poly([9, by + 6, 24, by + 6, 16.5, by + 14], icon === 'beat' ? INK : ghost);
+    text(30, by, lo); text(W - 8, by, ro, true);
+  } else { text(8, by, lo); text(W - 8, by, ro, true); }
+  return true;
+}
+
+/**
+ * The watch for this frame (15.21: its body in cubes on the GPU, watch/body3d.ts and render/gpu/voxWatch.ts,
+ * as its manual draws it): its place at the bottom left of the view (rising from below as it comes up),
+ * the LCD's picture painted when it changes, the buttons' places for the mouse and the lit LCD's for the
+ * glow. `px`: the interface grid's origin and cell on the monitor (pixels: x, y, w, h). Null when down.
+ */
+export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, brand: string, yaw: number, px: readonly number[]): WatchGpu | null {
+  WATCH_LCD.at = null;
+  WATCH_BTN.length = 0;
+  if (Wt.raise < 0.01) return null;
+  const e = 1 - (1 - Wt.raise) ** 3, [ox, oy, cw, ch] = px;
+  // as wide as the case was in cells, its middle where the old case's was
+  const k = (CASE_COLS * cw) / WATCH_CASE.w, cx = ox + (CASE_X + CASE_COLS / 2) * cw, cy = oy + (g.rows - CASE_ROWS * e + 1 + 7.5) * ch;
+  const lit = Wt.lit(now), L = [Math.max(0.03, light[0]), Math.max(0.03, light[1]), Math.max(0.03, light[2])];
+  if (paintLcd(WATCH_GPU.lcd, Wt, time, now, yaw, lit)) WATCH_GPU.lcdVer++;
+  const G = watchGpu(cx, cy, k, L, lit, (b) => now - (Wt.pressedAt[b] ?? -9) < PRESS_S, brand);
+  const toCell = (p: [number, number]): [number, number] => [Math.floor((p[0] - ox) / cw), Math.floor((p[1] - oy) / ch)];
+  if (Wt.raise > 0.5) for (const B of BTNS) WATCH_BTN.push([...toCell(watchProject(B.left ? 1 : NX - 1, B.y0 + 2.5, 5, cx, cy, k)), B.b]);
+  if (lit) {
+    const M = WATCH_LCD_MM, a = toCell(watchProject(M.x0, M.y0, 9, cx, cy, k)), b = toCell(watchProject(M.x0 + M.w, M.y0 + M.h, 9, cx, cy, k));
+    WATCH_LCD.at = [a[0], a[1], b[0] - a[0] + 1, b[1] - a[1] + 1, GLOW_BOOST];
   }
-  // the LCD sits under the face: the face's edge shades its top row, and the side away from the light
-  for (let x = 0; x < LW; x++) shade(LX + x, LY, 0.3);
-  const vx = -GL.lat;
-  if (Math.abs(vx) > 0.3) for (let y = 0; y < LH; y++) shade(vx < 0 ? LX : LX + LW - 1, LY + y, (0.15 + 0.35 * GL.str) * Math.abs(vx));
-  if (lit) WATCH_LCD.at = [ox + LX, oy + LY, LW, LH, GLOW_BOOST];
+  return G;
 }
