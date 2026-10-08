@@ -471,6 +471,20 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Interiores: o usuário está muito insatisfeito** (parecem aleatórios, sem variação, fáceis de quebrar). Com stealth, o código de interiores (apartamentos inclusive) tem de estar **impecável**. **Decidido:** antes de aplicar no jogo, um **manual de design dos interiores** no estilo dos manuais de identidade (`docs/identidade/`), e o jogo segue o manual.
 - **Mais manuais pedidos (2026-10-08):** (1) **aplicar o manual da GridLink** no jogo (ainda não foi); (2) um manual de **placas em geral** (ruas, avenidas, direção; hoje quebradas); (3) um manual de **landmarks** (marcos; hoje quebrados); (4) **fachadas e variações de prédio**, no rework das fachadas (etapa 20).
 
+## Entrevista do manual de interiores (2026-10-08)
+- **O objetivo (usuário):** "algo muito bem feito que elimine os bugs de geração", com bastante variação para evitar a mesmice, **contanto que faça sentido**.
+- **Andares desenhados à mão, salas por tamanho (ideia do usuário):** cada andar é uma planta desenhada (onde ficam o corredor, o elevador e as vagas de sala); cada vaga tem um tamanho e recebe uma **sala desenhada** daquele tamanho. Variação nos dois níveis (vários andares por tamanho de prédio, várias salas por tamanho de vaga).
+- **Catálogo fixo de tamanhos de prédio (aceito):** o gerador da cidade só faz prédios com tamanhos do catálogo, e cada tamanho tem os seus andares. Medido na semente 42: 8.848 prédios com interior em 143 tamanhos, mas seis (8×10, 8×12, 8×8, 10×12, 10×10, 12×12 m) cobrem 80% e os 20 mais comuns 92% (o módulo de 2 m já agrupa). A cidade de cada semente muda um pouco; os saves de teste não importam.
+- **Autoria:** o Claude escreve as regras e o primeiro conjunto no manual (planta em texto, como as lojas de `layouts.ts`); as variações vêm do Gemini por briefing e só entram se passarem num teste automático (portas alcançáveis, nada bloqueando passagem, postos acessíveis).
+- **Tipos de prédio no manual:** residencial (walk-up de tijolo e torres), escritórios, térreo com loja (o hall e o elevador junto da loja) e motel/hotel.
+- **Apartamentos da 1.0:** quitinete, 1 quarto, 2 quartos; cobertura/loft só se der antes da 1.0.
+- **O que varia entre casas do mesmo modelo:** a renda, quem mora (idade, trabalho, hobby: pistas para investigação), o distrito/prédio (tijolo velho x vidro) e a cor/decoração pela semente.
+- **Móveis em cubinhos no manual:** cada móvel com medidas e a versão em cubinhos; o jogo segue quando o render de cubinhos do mundo chegar.
+- **Escadas internas voltam em todos os prédios;** elevador só nos de 6+ andares, como em 2008 (o walk-up de tijolo não tem). Caminho alternativo para o stealth e para fugir.
+- **Extras:** telhado acessível pela escada; lavanderia do prédio, as caixas de luz e telefone e a sala do zelador **nos fundos do térreo** (ou no 1º andar quando o térreo é loja); o subsolo de verdade fica para depois (a cidade não desenha nada abaixo da rua).
+- **Objetos pequenos:** a maioria é cenário que diz quem mora ali; poucos se pegam ou se leem (bilhete, conta, post-it com senha), tirados dos dados do morador.
+- **Referências visuais:** o Claude propõe 2–3 direções no manual e o usuário escolhe.
+
 ## Modo cozy (conversa de 2026-10-08)
 - **Pedido do usuário:** o jogo mais aconchegante para quando o jogador quiser descansar (ele gosta de andar na rua ouvindo a música do celular, olhando os letreiros). Pode virar **uma etapa própria, curta, depois da 16**; as outras ideias (sentar e olhar, ouvir conversas, chuva sob a marquise, fotos, diner, lavanderia, telhado, trem elevado) se conversa quando virar etapa.
 - **Pesquisa (Cyberpunk 2077, Shadows of Doubt):** sentar em bancos e bares e só olhar é o pedido mais comum (virou mod); o rádio com DJ e comerciais é o que mais dá imersão; minijogos de bar (estilo Yakuza); no SoD, a chuva, o guarda-chuva, o apartamento decorável (com bugs) e o "melancólico, mas com calor humano".

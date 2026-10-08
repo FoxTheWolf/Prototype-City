@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de interiores</title>
+<style>
+  :root {
+    --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f; --ok: #6fd08c; --bad: #ff6a13; --amber: #ffb347;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', Consolas, monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { min-height: 50vh; display: grid; place-items: center; text-align: center; padding: 40px 0; border-bottom: 1px solid var(--line); }
+  header.cover svg { width: min(720px, 100%); height: auto; }
+  header.cover p { color: var(--dim); margin: 8px 0 0; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 800 26px 'Arial Black', 'Segoe UI', sans-serif; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Segoe UI', sans-serif; margin: 22px 0 6px; }
+  p, li { max-width: 80ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--amber); }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  pre { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 0; overflow-x: auto; line-height: 1.1; font-size: 12px; }
+  .checks { font-size: 12px; margin-top: 8px; }
+  .checks .ok { color: var(--ok); }
+  .checks .bad { color: var(--bad); }
+  .sw { display: flex; gap: 4px; margin: 8px 0; }
+  .sw i { flex: 1; height: 22px; border-radius: 3px; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 4px 14px; font-size: 12px; }
+  .legend span b { display: inline-block; width: 18px; color: var(--amber); }
+  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .plans { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+<header class="cover">
+  <div>
+    <svg id="cover" viewBox="0 0 720 300"></svg>
+    <p>Manual de interiores · a cidade de GRID DOWN · v1 (rascunho para a escolha do usuário) · 2026-10-08</p>
+  </div>
+</header>
+<nav class="toc">
+  <a href="#p">1 · Princípios</a><a href="#dir">2 · Direção visual</a><a href="#cat">3 · O catálogo</a><a href="#gram">4 · Como se escreve uma planta</a>
+  <a href="#regras">5 · As regras conferidas</a><a href="#andares">6 · Andares de exemplo</a><a href="#salas">7 · Salas por tamanho</a>
+  <a href="#postos">8 · Os postos</a><a href="#var">9 · Variação</a><a href="#moveis">10 · Móveis</a><a href="#falta">11 · O que falta</a>
+</nav>
+
+<section id="p">
+  <h2>1 · Princípios <small>por que este manual existe</small></h2>
+  <p class="lead">Os interiores de hoje são cortados por regras no momento em que o jogador chega: parecem aleatórios, se repetem e quebram (portas que dão em parede, móveis na frente da porta, salas sem saída). Com o stealth da etapa 16, um cômodo quebrado é um jogo quebrado. Daqui para a frente, todo andar é desenhado e conferido antes de entrar no jogo.</p>
+  <div class="rule"><b>1</b><span><b>Nada é cortado na hora.</b> Cada andar é uma planta desenhada para um tamanho de prédio do catálogo; o jogo só escolhe, gira e espelha. O que não estiver desenhado não existe.</span></div>
+  <div class="rule"><b>2</b><span><b>Duas camadas de variação:</b> vários andares por tamanho de prédio, e várias arrumações de móveis por sala (pelo tipo e pelo tamanho dela). Um prédio de 8 × 10 m pode ter 3 andares diferentes, cada um com salas de 4 arrumações: 3 × 4<sup>n</sup> casas.</span></div>
+  <div class="rule"><b>3</b><span><b>Faz sentido como uma casa de 2008:</b> o banheiro não abre na cozinha, o quarto tem janela, a geladeira não fica na frente da janela, a escada é a mesma em todos os andares, o morador consegue chegar a cada posto.</span></div>
+  <div class="rule"><b>4</b><span><b>Toda regra é conferida por programa.</b> Uma planta (do Claude, do Gemini ou do usuário) só entra no jogo se passar no teste da seção 5. Esta página já roda o teste nas plantas de exemplo.</span></div>
+  <div class="rule"><b>5</b><span><b>A casa conta quem mora.</b> A renda, a idade, o trabalho e o hobby do morador (dados da simulação) escolhem a arrumação e os objetos: a casa é uma pista, nunca um sorteio solto.</span></div>
+  <div class="rule"><b>6</b><span><b>O mesmo espaço do mundo</b> (o princípio da 13.10): as paredes de fora são as da fachada, as janelas caem na grade de 2 m dela, e de fora vê-se exatamente o que há dentro.</span></div>
+</section>
+
+<section id="dir">
+  <h2>2 · Direção visual <small>escolha do usuário</small></h2>
+  <p>Três direções para o clima dos interiores. A mesma sala (sala de estar de um walk-up, 22h) em cada uma. Dá para escolher uma, ou misturar pelo tipo de prédio (a recomendação no fim).</p>
+  <div class="row">
+    <div class="card"><svg id="dirA" viewBox="0 0 360 220"></svg><div class="sw" id="swA"></div><div class="cap"><b>A · Âmbar noir.</b> Cômodos escuros com poças de luz quente de abajur (tungstênio 2700 K), madeira, papel de parede, a luz de sódio da rua entrando em faixas pela persiana. O mais perto do tom do jogo e do Shadows of Doubt. Risco: ficar escuro demais para ler o cômodo no stealth.</div></div>
+    <div class="card"><svg id="dirB" viewBox="0 0 360 220"></svg><div class="sw" id="swB"></div><div class="cap"><b>B · 2008 gasto.</b> Paredes pintadas de creme amarelado, linóleo na cozinha, a lâmpada fluorescente esverdeada, o radiador, a TV de tubo azulada, o PC bege. Realista e cheio de objetos da época. Risco: parecer comum, sem o noir.</div></div>
+    <div class="card"><svg id="dirC" viewBox="0 0 360 220"></svg><div class="sw" id="swC"></div><div class="cap"><b>C · Retrofuturo.</b> O 2008 imaginado nos anos 80: laca preta, cromo, a tela verde do terminal, o neon da rua tingindo o teto em magenta e ciano. Combina com as torres de vidro. Risco: cansar se for em todo apartamento.</div></div>
+  </div>
+  <p><b>Recomendação do Claude:</b> <b>A como base</b> (o tom noir do jogo e a luz de sódio que já existe), com <b>os objetos de B</b> (a época é a de 2008: a TV de tubo, o PC bege, o radiador são as coisas que contam quem mora), e <b>C só nas torres de vidro e escritórios novos</b>. Assim cada tipo de prédio tem uma cara, e o apartamento de tijolo não parece um escritório.</p>
+</section>
+
+<section id="cat">
+  <h2>3 · O catálogo <small>os tamanhos de prédio</small></h2>
+  <p>Medido na semente 42: 8.848 prédios com interior em 143 tamanhos, mas <b>seis tamanhos cobrem 80%</b> e os 20 mais comuns, 92% (o módulo de 2 m já os agrupa). <b>92% têm até 5 andares</b> (sem elevador pela regra nova). O gerador da cidade passa a escolher só tamanhos do catálogo; o resto se arredonda para o vizinho mais próximo.</p>
+  <table id="cattab"></table>
+  <p class="lead">As linhas com <code>*</code> (como nas lojas de hoje) deixam uma planta servir a vários fundos: o 8 × 16, o 8 × 18 e o 8 × 20 podem ser a mesma planta com a faixa do meio repetida. Isso corta o trabalho de desenho mais ou menos pela metade.</p>
+</section>
+
+<section id="gram">
+  <h2>4 · Como se escreve uma planta <small>o texto que o jogo lê</small></h2>
+  <p>Uma planta é texto, como as lojas de <code>sim/layouts.ts</code>: <b>cada caractere é meio metro</b>. A primeira linha é a fachada da rua; a coluna 0 é a parede da esquerda de quem olha da rua. Cada andar tem <b>duas camadas do mesmo tamanho</b>: a <b>planta</b> (paredes, portas, cômodos) e os <b>móveis</b>. As janelas não se escolhem: caem no meio de cada vão de 2 m da fachada (os caracteres 1–2 de cada grupo de 4), e uma parede de dentro só encosta na fachada nos pilares (os caracteres 3–4).</p>
+  <div class="row">
+    <div class="card"><b>Planta</b><div class="legend" id="legRooms"></div></div>
+    <div class="card"><b>Móveis</b><div class="legend" id="legFurn"></div></div>
+  </div>
+  <p>No jogo, a parede de dentro (<code>+</code>) vira uma célula de 25 cm, a metade de baixo do caractere, como hoje; a outra metade é do cômodo vizinho. Letras de cômodo diferentes sem <code>+</code> entre elas formam um ambiente aberto (a cozinha americana).</p>
+</section>
+
+<section id="regras">
+  <h2>5 · As regras conferidas <small>o teste que toda planta passa</small></h2>
+  <p>Cada regra vira uma linha de <code>tests/plans.ts</code>. Esta página roda as mesmas regras nas plantas da seção 6 (o resultado aparece embaixo de cada uma).</p>
+  <table>
+    <tr><th>#</th><th>regra</th><th>por quê</th></tr>
+    <tr><td>R1</td><td>Todas as linhas com a mesma largura; a moldura (fachadas e laterais) inteira.</td><td>A planta cabe no prédio.</td></tr>
+    <tr><td>R2</td><td>Janelas só no meio dos vãos de 2 m; parede de dentro só nos pilares.</td><td>A fachada de fora e o cômodo de dentro concordam.</td></tr>
+    <tr><td>R3</td><td>Cada cômodo é um retângulo.</td><td>Paredes retas; nada de cômodo em L que confunde a luz e as portas.</td></tr>
+    <tr><td>R4</td><td>De cada porta de entrada (E) chega-se a todo cômodo da unidade andando, sem atravessar móvel.</td><td>Nenhum cômodo trancado por um sofá.</td></tr>
+    <tr><td>R5</td><td>As duas células na frente de cada porta ficam livres.</td><td>A folha abre e o jogador passa.</td></tr>
+    <tr><td>R6</td><td>Todo quarto tem janela; o banheiro nunca abre na cozinha.</td><td>Faz sentido (e é lei de obra).</td></tr>
+    <tr><td>R7</td><td>Móvel alto (guarda-roupa, geladeira, estante) nunca na frente de janela.</td><td>A janela é vista de fora.</td></tr>
+    <tr><td>R8</td><td>Todo móvel com posto tem a célula do posto livre e alcançável.</td><td>O morador chega à cama, ao fogão, à TV (seção 8).</td></tr>
+    <tr><td>R9</td><td>A escada (S) e o elevador (L) ocupam as mesmas células em todos os andares do prédio, e a escada chega a todo andar e ao telhado.</td><td>Nenhuma escada que dá em parede.</td></tr>
+    <tr><td>R10</td><td>O interruptor fica na primeira parede que não é vidro, do lado da maçaneta de cada porta de cômodo.</td><td>Apagar a luz é parte do stealth; ele tem de estar onde se espera.</td></tr>
+  </table>
+</section>
+
+<section id="andares">
+  <h2>6 · Andares de exemplo <small>o primeiro conjunto</small></h2>
+  <p>Três plantas para os tamanhos mais comuns. Os desenhos abaixo saem do texto ao lado, e as regras rodam nelas ao abrir a página.</p>
+  <div id="floors"></div>
+</section>
+
+<section id="salas">
+  <h2>7 · Salas por tamanho <small>a segunda camada de variação</small></h2>
+  <p>A planta do andar diz <b>onde</b> fica cada cômodo e de que tipo ele é; a <b>arrumação</b> dos móveis vem de uma biblioteca por tipo e tamanho (com a porta e as janelas no lugar). O jogo escolhe uma que caiba (girada ou espelhada), pela renda e pelo jeito do morador, e roda as regras de novo. Exemplo: o quarto de 3 × 3,5 m com a porta na direita e a janela em cima.</p>
+  <div class="row" id="rooms"></div>
+</section>
+
+<section id="postos">
+  <h2>8 · Os postos <small>onde os moradores ficam</small></h2>
+  <p>Cada móvel com posto diz <b>onde</b> o morador fica (a célula livre do lado da frente), <b>para onde olha</b>, a animação e a duração. O caminho entre postos é sempre o mais curto pela planta: nunca vaga. Barulho ou luz interrompem; o morador olha, vai até a origem e volta ao posto (entrevista da etapa 16).</p>
+  <table id="posttab"></table>
+</section>
+
+<section id="var">
+  <h2>9 · Variação <small>o que faz duas casas iguais parecerem diferentes</small></h2>
+  <table>
+    <tr><th>o que muda</th><th>de onde vem</th><th>o que se vê</th></tr>
+    <tr><td><b>Renda</b></td><td>o salário do morador (13.x, etapa 17)</td><td>a arrumação (colchão no chão x cama de casal), o piso (linóleo x tábua), quantos objetos, a TV (14" de tubo x tela plana rara de 2008).</td></tr>
+    <tr><td><b>Quem mora</b></td><td>idade, trabalho, hobby, quantos moram</td><td>o gamer (o console, as caixas de jogo), o leitor (a estante cheia), o bagunceiro (roupas no chão), o casal (dois travesseiros), o aposentado (a poltrona e o rádio). Os objetos que se leem (seção 10) saem dos dados dele.</td></tr>
+    <tr><td><b>Prédio</b></td><td>o estilo do prédio (tijolo, residencial, histórico, vidro)</td><td>tijolo: radiador, janela de guilhotina, piso de tábua; vidro: piso frio, cozinha aberta, luz embutida.</td></tr>
+    <tr><td><b>Cor e decoração</b></td><td>a semente da casa</td><td>a paleta das paredes (dentro da direção escolhida), os quadros, as plantas, os tapetes.</td></tr>
+  </table>
+</section>
+
+<section id="moveis">
+  <h2>10 · Móveis <small>medidas e cubinhos</small></h2>
+  <p>Cada móvel tem as medidas reais (em células de meio metro na planta) e um modelo em cubinhos para ver de perto, como o celular e o relógio; o de hoje (poucas caixas) vira o modelo de longe. Esta versão lista as medidas; os desenhos em cubinhos entram na v2 do manual, um por móvel.</p>
+  <table id="furntab"></table>
+  <h3>Objetos pequenos</h3>
+  <p>A maioria é cenário (canecas, controle, revistas, remédios) e diz quem mora ali. Poucos se pegam ou se leem, e todos vêm dos dados do morador: a conta de luz com o nome e o endereço, o bilhete na geladeira, o post-it com a senha do Wi-Fi colado no roteador, a agenda no criado-mudo. No máximo três por casa, para continuarem especiais.</p>
+</section>
+
+<section id="falta">
+  <h2>11 · O que falta <small>para a v2</small></h2>
+  <ul>
+    <li>A escolha da direção visual (seção 2), e a partir dela as paletas de parede e piso de cada tipo de prédio.</li>
+    <li>Plantas para o resto do catálogo: o 8 × 8, o 10 × 10, o 10 × 12, os fundos maiores com <code>*</code>, as torres (residencial com corredor e elevador), o escritório (open space, salas, copa, recepção), o motel e o hotel.</li>
+    <li>O térreo dos prédios com loja nos tamanhos maiores, e o telhado (a porta da escada, a caixa d'água, o parapeito).</li>
+    <li>A biblioteca de arrumações: 3–4 por tipo de cômodo e tamanho (o briefing para o Gemini sai daqui).</li>
+    <li>Os móveis em cubinhos, um desenho por móvel.</li>
+    <li>As portas (madeira, aço, vidro) e o interruptor desenhados, junto da 13.10d e da 13.10g.</li>
+  </ul>
+</section>
+</main>
+
+<script>
+// ---------- the plans ----------
+// rooms layer: '#' outer wall, 'W' window, 'G' shop glass, '+' inner wall, 'D' door, 'E' a home's entry door,
+// 'R' street door, 'S' stair, 'L' lift, '.' common hall; lowercase letters are rooms
+const ROOMS = {
+  l: ['sala de estar', '#3a2f26'], k: ['cozinha', '#3b3a2a'], b: ['quarto', '#2c3140'], h: ['banheiro', '#25393b'],
+  s: ['quitinete (sala + quarto)', '#33302e'], c: ['corredor de moradores', '#2a2a2a'], u: ['lavanderia / zelador / caixas de luz', '#2f2a35'],
+  o: ['loja (planta das lojas)', '#3a2a2a'],
+};
+const TILES = {
+  '#': ['parede de fora', '#8d8b84'], W: ['janela (só no meio do vão de 2 m)', '#6fb3d9'], G: ['vitrine da loja', '#4f8fb0'], '+': ['parede de dentro', '#c9c4b8'],
+  D: ['porta entre cômodos', '#ffb347'], E: ['porta de entrada da casa (tranca)', '#ff6a13'], R: ['porta da rua', '#ff3b2f'],
+  S: ['escada (as mesmas células em todos os andares)', '#5a5f66'], L: ['elevador', '#7a6a9a'], '.': ['hall comum', '#24262a'],
+};
+// furniture layer: [name, size note, tall, posto kind]
+const FURN = {
+  B: ['cama', 'casal 1,5 × 2 m (3 × 4)', 0, 'sleep'], A: ['guarda-roupa', '1,5 × 0,5 m (3 × 1)', 1, ''], Q: ['escrivaninha', '1 × 0,5 m (2 × 1)', 0, 'desk'],
+  h: ['cadeira', '0,5 × 0,5 m', 0, 'sit'], F: ['sofá', '2 × 0,5 m (4 × 1)', 0, 'sofa'], T: ['TV na estante', '2 × 0,5 m (4 × 1)', 0, ''],
+  t: ['mesa', '1 × 1 m (2 × 2)', 0, 'eat'], K: ['bancada', '0,5 m de fundo', 0, ''], O: ['fogão', '0,5 × 0,5 m', 0, 'cook'], N: ['pia', '0,5 × 0,5 m', 0, 'dishes'],
+  G: ['geladeira', '0,75 × 0,5 m (2 × 1)', 1, ''], V: ['lavatório', '0,5 × 0,5 m', 0, ''], C: ['vaso', '0,5 × 0,5 m', 0, ''], H: ['chuveiro', '1 × 1 m (2 × 2)', 0, 'shower'],
+  P: ['planta', '0,5 × 0,5 m', 0, ''], w: ['lavadora', '0,5 × 0,5 m', 0, ''], y: ['secadora', '0,5 × 0,5 m', 0, ''], X: ['quadro de luz e caixa de telefone', 'na parede', 1, ''],
+};
+const POSTS = {
+  sleep: ['dormir', 'deitado na cama, de frente para o teto', 'a noite'], sofa: ['ver TV / ler / telefone', 'sentado, de frente para a TV', '30–120 min'],
+  desk: ['computador', 'sentado na cadeira, de frente para a mesa', '30–180 min'], cook: ['cozinhar', 'em pé na frente do fogão', '15–40 min'],
+  dishes: ['lavar louça', 'em pé na frente da pia', '10–20 min'], eat: ['comer', 'sentado à mesa', '15–30 min'],
+  shower: ['banho', 'porta fechada, só o som', '10–20 min'], window: ['olhar pela janela / fumar', 'em pé na frente de uma janela livre', '5–15 min'],
+  sit: ['(a cadeira é o posto da mesa ou da escrivaninha)', '', ''],
+};
+
+const FLOORS = [
+  {
+    id: 'A1', title: '8 × 10 m · walk-up, andar de cima · 1 quarto', note: 'A escada nos fundos, com janela; a casa inteira na frente. Entra-se pela cozinha, como nos walk-ups. O banheiro abre na sala, nunca na cozinha.',
+    rooms: [
+      '#WW##WW##WW##WW#',
+      '#bbbbbb+lllllll#',
+      '#bbbbbb+lllllll#',
+      '#bbbbbbDlllllll#',
+      '#bbbbbbDlllllll#',
+      '#bbbbbb+lllllll#',
+      '#bbbbbb+lllllll#',
+      '#bbbbbb+lllllll#',
+      '#+++++++lllllll#',
+      '#kkkkkkklllllll#',
+      '#kkkkkkklllllll#',
+      '#kkkkkkklllllll#',
+      '#kkkkkkklllllll#',
+      '#kkkkkkklllllll#',
+      '#+EE++++++++DD+#',
+      '#SSSSSSSSSS+hhh#',
+      '#SSSSSSSSSS+hhh#',
+      '#SSSSSSSSSS+hhh#',
+      '#SSSSSSSSSS+hhh#',
+      '#WW##WW##WW##WW#',
+    ],
+    furn: [
+      '................',
+      '.....QQ..TTTT...',
+      '.BBB.h..........',
+      '.BBB............',
+      '.BBB............',
+      '.BBB.....FFFF...',
+      '................',
+      '.AAA............',
+      '................',
+      '.KKKONGG........',
+      '................',
+      '..........htt...',
+      '...........tt...',
+      '................',
+      '................',
+      '..............V.',
+      '..............C.',
+      '............HH..',
+      '............HH..',
+      '................',
+    ],
+  },
+  {
+    id: 'A0', title: '8 × 10 m · o térreo com loja', note: 'A porta dos moradores e um corredor de 1 m pela esquerda até a escada; a loja na frente (o miolo dela vem das plantas de loja); a lavanderia, as caixas de luz e de telefone e o zelador nos fundos, abrindo na escada (nunca na loja).',
+    rooms: [
+      '#RR#GGGGGRRGGGG#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc+ooooooooooo#',
+      '#cc++++++++++++#',
+      '#SSSSSSSSSS+uuu#',
+      '#SSSSSSSSSSDuuu#',
+      '#SSSSSSSSSSDuuu#',
+      '#SSSSSSSSSS+uuu#',
+      '#WW##WW##WW##WW#',
+    ],
+    furn: [
+      '................',
+      '................', '................', '................', '................', '................', '................',
+      '................', '................', '................', '................', '................', '................',
+      '................', '................',
+      '............wwX.',
+      '..............y.',
+      '..............y.',
+      '............wwP.',
+      '................',
+    ],
+  },
+  {
+    id: 'B1', title: '12 × 12 m · walk-up, andar de cima · duas quitinetes', note: 'A escada atravessa o meio e chega a um hall de 2 × 2 m; uma quitinete para a rua, outra para os fundos, cada uma com o seu banheiro no miolo. A de trás é a da frente espelhada, com o banheiro do outro lado.',
+    rooms: [
+      '#WW##WW##WW##WW##WW##WW#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#+++++++++++EE++DD+++++#',
+      '#SSSSSSSSSS....+hhh+hhh#',
+      '#SSSSSSSSSS....+hhh+hhh#',
+      '#SSSSSSSSSS....+hhh+hhh#',
+      '#SSSSSSSSSS....+hhh+hhh#',
+      '#+++++++++++EE+++++++DD#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#ssssssssssssssssssssss#',
+      '#WW##WW##WW##WW##WW##WW#',
+    ],
+    furn: [
+      '........................',
+      '........TTTT..QQ...BBB..',
+      '..tt.h........h....BBB..',
+      '..tt...............BBB..',
+      '........FFFF.......BBB..',
+      '......................A.',
+      '......................A.',
+      '......................A.',
+      '.KKKKONGG...............',
+      '........................',
+      '..................V.HH..',
+      '..................C.HH..',
+      '................HH...C..',
+      '................HHV.....',
+      '........................',
+      '.KKKKONGG...............',
+      '......................A.',
+      '......................A.',
+      '......................A.',
+      '........FFFF.......BBB..',
+      '..tt...............BBB..',
+      '..tt.h........h....BBB..',
+      '........TTTT..QQ...BBB..',
+      '........................',
+    ],
+  },
+];
+
+// the bedroom's arrangements (3 x 3.5 m, door on the right at rows 3-4, windows over cols 0-1 and 4-5)
+const BEDROOMS = [
+  { name: 'padrão', who: 'renda média', rows: ['....QQ', 'BBB.h.', 'BBB...', 'BBB...', 'BBB...', '......', 'AAA...'] },
+  { name: 'estudo', who: 'estudante, programador', rows: ['....QQ', 'A...h.', 'A.....', 'A.....', '..BBBB', '..BBBB', '..BBBB'] },
+  { name: 'aperto', who: 'renda baixa: colchão no chão, sem mesa', rows: ['.....P', 'BBB...', 'BBB...', 'BBB...', 'BBB...', '......', '.AA...'] },
+];
+
+// ---------- drawing ----------
+const $ = (id) => document.getElementById(id);
+const PX = 14;
+function draw(rooms, furn, px = PX) {
+  const H = rooms.length, W = rooms[0].length;
+  let o = `<svg viewBox="0 0 ${W * px} ${H * px}" xmlns="http://www.w3.org/2000/svg">`;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const ch = rooms[y][x], t = TILES[ch], r = ROOMS[ch];
+    const col = t ? t[1] : r ? r[1] : '#000';
+    o += `<rect x="${x * px}" y="${y * px}" width="${px}" height="${px}" fill="${col}"/>`;
+    if (ch === 'S') o += `<line x1="${x * px}" y1="${y * px + px / 2}" x2="${x * px + px}" y2="${y * px + px / 2}" stroke="#7d828a" stroke-width="1"/>`;
+  }
+  if (furn) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const f = furn[y] && furn[y][x];
+    if (!f || f === '.' || !FURN[f]) continue;
+    const tall = FURN[f][2];
+    o += `<rect x="${x * px + 1}" y="${y * px + 1}" width="${px - 2}" height="${px - 2}" rx="2" fill="${tall ? '#d9c08a' : '#b98a5a'}" opacity=".9"/><text x="${x * px + px / 2}" y="${y * px + px * 0.72}" font-size="${px * 0.62}" text-anchor="middle" fill="#1a1410" font-family="Consolas,monospace">${f}</text>`;
+  }
+  // room names at the centre of each room's box
+  const seen = new Set();
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const ch = rooms[y][x];
+    if (!ROOMS[ch]) continue;
+    const comp = component(rooms, x, y);
+    const key = comp.key;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (comp.cells.length < 6) continue;
+    const cx = (comp.x0 + comp.x1 + 1) / 2 * px, cy = (comp.y0 + comp.y1 + 1) / 2 * px;
+    o += `<text x="${cx}" y="${cy}" font-size="${px * 0.75}" text-anchor="middle" fill="#e8e6df" opacity=".55" font-family="Segoe UI,sans-serif">${ROOMS[ch][0].split(' ')[0]}</text>`;
+  }
+  return o + '</svg>';
+}
+function component(rows, sx, sy) {
+  const ch = rows[sy][sx], H = rows.length, W = rows[0].length, seen = new Set([sy * W + sx]), q = [[sx, sy]], cells = [];
+  let x0 = sx, x1 = sx, y0 = sy, y1 = sy;
+  while (q.length) {
+    const [x, y] = q.pop();
+    cells.push([x, y]);
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H || rows[ny][nx] !== ch || seen.has(ny * W + nx)) continue;
+      seen.add(ny * W + nx); q.push([nx, ny]);
+    }
+  }
+  return { cells, x0, x1, y0, y1, key: Math.min(...[...seen]) + ch };
+}
+
+// ---------- the rules ----------
+const WALLS = new Set(['#', 'W', 'G', '+']);
+const DOORS = new Set(['D', 'E', 'R']);
+function check(F) {
+  const R = F.rooms, M = F.furn, H = R.length, W = R[0].length, out = [];
+  const add = (id, ok, msg) => out.push([id, ok, msg]);
+  // R1
+  const widths = R.every((r) => r.length === W) && M.length === H && M.every((r) => r.length === W);
+  let frame = true;
+  for (let x = 0; x < W; x++) if (!WALLS.has(R[0][x]) && !DOORS.has(R[0][x]) || !WALLS.has(R[H - 1][x]) && !DOORS.has(R[H - 1][x])) frame = false;
+  for (let y = 0; y < H; y++) if (R[y][0] !== '#' && !DOORS.has(R[y][0]) || R[y][W - 1] !== '#' && !DOORS.has(R[y][W - 1])) frame = false;
+  add('R1', widths && frame, widths ? (frame ? 'moldura inteira' : 'moldura aberta') : 'linhas de larguras diferentes');
+  // R2: windows mid-bay, inner walls meet the facades only at piers
+  let r2 = [];
+  for (const y of [0, H - 1]) for (let x = 0; x < W; x++) {
+    const m = x % 4;
+    if (R[y][x] === 'W' && m !== 1 && m !== 2) r2.push(`janela fora do vão em x${x}`);
+    const iy = y === 0 ? 1 : H - 2;
+    if (R[iy][x] === '+' && (m === 1 || m === 2) && x > 0 && x < W - 1) r2.push(`parede contra a janela em x${x}`);
+  }
+  add('R2', !r2.length, r2.length ? r2.join(', ') : 'janelas e pilares no lugar');
+  // R3 rooms are rectangles
+  const comps = [], seen = new Set();
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (ROOMS[R[y][x]] && !seen.has(y * W + x)) {
+    const c = component(R, x, y);
+    c.cells.forEach(([a, b]) => seen.add(b * W + a));
+    c.ch = R[y][x];
+    comps.push(c);
+  }
+  const notRect = comps.filter((c) => c.cells.length !== (c.x1 - c.x0 + 1) * (c.y1 - c.y0 + 1));
+  add('R3', !notRect.length, notRect.length ? notRect.map((c) => ROOMS[c.ch][0] + ' não é retângulo').join(', ') : `${comps.length} cômodos retangulares`);
+  // walking: room, hall, stair and door cells, minus furniture (doors always walkable)
+  const free = (x, y) => x >= 0 && y >= 0 && x < W && y < H && !WALLS.has(R[y][x]) && (DOORS.has(R[y][x]) || M[y][x] === '.');
+  const flood = (starts) => {
+    const S = new Set(starts.map(([x, y]) => y * W + x)), q = [...starts];
+    while (q.length) {
+      const [x, y] = q.pop();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (!free(nx, ny) || S.has(ny * W + nx)) continue;
+        S.add(ny * W + nx); q.push([nx, ny]);
+      }
+    }
+    return S;
+  };
+  // R4: from the stair and the street doors, every room with a free cell is reached
+  const starts = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (R[y][x] === 'S' || R[y][x] === 'R') starts.push([x, y]);
+  const reach = flood(starts);
+  const lost = comps.filter((c) => !c.cells.some(([x, y]) => reach.has(y * W + x)));
+  add('R4', !lost.length, lost.length ? lost.map((c) => ROOMS[c.ch][0] + ' sem acesso').join(', ') : 'todos os cômodos alcançáveis da escada ou da rua');
+  // R5: both sides of each door free
+  const blockedDoors = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (DOORS.has(R[y][x])) {
+    const horiz = R[y][x - 1] && (DOORS.has(R[y][x - 1]) || DOORS.has(R[y][x + 1])) && !(R[y - 1] && DOORS.has(R[y - 1][x]));
+    const sides = horiz ? [[x, y - 1], [x, y + 1]] : [[x - 1, y], [x + 1, y]];
+    for (const [a, b] of sides) if (b >= 0 && b < H && a >= 0 && a < W && !WALLS.has(R[b][a]) && M[b][a] !== '.') blockedDoors.push(`porta em (${x},${y})`);
+  }
+  add('R5', !blockedDoors.length, blockedDoors.length ? blockedDoors.join(', ') + ' bloqueada' : 'portas livres');
+  // R6: bedrooms have a window; a bathroom never opens into a kitchen
+  const r6 = [];
+  for (const c of comps) if (c.ch === 'b') {
+    const win = c.cells.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => R[y + dy] && R[y + dy][x + dx] === 'W'));
+    if (!win) r6.push('quarto sem janela');
+  }
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (R[y][x] === 'D') {
+    const n = [R[y - 1][x], R[y + 1][x], R[y][x - 1], R[y][x + 1]];
+    if (n.includes('h') && n.includes('k')) r6.push('banheiro abrindo na cozinha');
+  }
+  add('R6', !r6.length, r6.length ? r6.join(', ') : 'quartos com janela, banheiros fora da cozinha');
+  // R7: tall furniture never right inside a window
+  const r7 = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (R[y][x] === 'W') for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+    const f = M[y + dy] && M[y + dy][x + dx];
+    if (f && FURN[f] && FURN[f][2]) r7.push(`${FURN[f][0]} na janela`);
+  }
+  add('R7', !r7.length, r7.length ? r7.join(', ') : 'janelas livres de móvel alto');
+  // R8: each posto's furniture touches a free, reached cell (or its chair does)
+  const r8 = [];
+  const pieces = new Set();
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const f = M[y][x];
+    if (!FURN[f] || !FURN[f][3] || FURN[f][3] === 'sit') continue;
+    const k = `${f}@${component(M, x, y).key}`;
+    if (pieces.has(k)) continue;
+    pieces.add(k);
+    const comp = component(M, x, y);
+    const ok = comp.cells.some(([a, b]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+      const nx = a + dx, ny = b + dy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) return false;
+      if (M[ny][nx] === 'h') return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => reach.has((ny + ey) * W + nx + ex));
+      return reach.has(ny * W + nx);
+    }));
+    if (!ok) r8.push(`${FURN[f][0]} sem posto alcançável`);
+  }
+  add('R8', !r8.length, r8.length ? r8.join(', ') : `${pieces.size} postos alcançáveis`);
+  return out;
+}
+
+// ---------- page ----------
+function build() {
+  // cover: a lit window in a dark wall, a plan glowing behind
+  {
+    let o = `<rect width="720" height="300" fill="#0b0c0f"/>`;
+    o += `<g opacity=".35" transform="translate(470 30) scale(0.9)">${draw(FLOORS[0].rooms, FLOORS[0].furn, 12).replace(/<\/?svg[^>]*>/g, '')}</g>`;
+    o += `<rect x="70" y="60" width="240" height="180" fill="#2a1d12"/><rect x="80" y="70" width="220" height="160" fill="#ffb347" opacity=".22"/>`;
+    for (let i = 0; i < 9; i++) o += `<rect x="80" y="${74 + i * 18}" width="220" height="7" fill="#1a120b" opacity=".85"/>`;
+    o += `<text x="420" y="270" fill="#e8e6df" font-family="Arial Black,Segoe UI" font-size="34" text-anchor="middle">INTERIORS</text>`;
+    $('cover').innerHTML = o;
+  }
+  // the three directions: the same living room
+  const room = (P) => {
+    let o = `<rect width="360" height="220" fill="${P.wall}"/><rect y="170" width="360" height="50" fill="${P.floor}"/>`;
+    // window with blinds, the street's light
+    o += `<rect x="40" y="40" width="110" height="90" fill="${P.out}"/>`;
+    for (let i = 0; i < 8; i++) o += `<rect x="40" y="${42 + i * 11}" width="110" height="5" fill="${P.blind}" opacity=".9"/>`;
+    o += `<polygon points="40,130 150,130 210,220 0,220" fill="${P.out}" opacity="${P.spill}"/>`;
+    // lamp and its pool
+    o += `<radialGradient id="g${P.id}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="${P.lamp}" stop-opacity="${P.pool}"/><stop offset="1" stop-color="${P.lamp}" stop-opacity="0"/></radialGradient>`;
+    o += `<ellipse cx="300" cy="120" rx="120" ry="110" fill="url(#g${P.id})"/>`;
+    o += `<rect x="296" y="90" width="4" height="80" fill="${P.metal}"/><polygon points="282,90 314,90 306,70 290,70" fill="${P.lamp}"/>`;
+    // sofa, TV glow, picture
+    o += `<rect x="170" y="140" width="110" height="34" rx="6" fill="${P.sofa}"/><rect x="170" y="128" width="110" height="18" rx="6" fill="${P.sofa}" opacity=".8"/>`;
+    o += `<rect x="20" y="150" width="60" height="22" fill="${P.wood}"/><rect x="28" y="122" width="44" height="30" rx="3" fill="#111"/><rect x="31" y="125" width="38" height="24" fill="${P.screen}" opacity=".9"/>`;
+    o += `<rect x="200" y="50" width="50" height="38" fill="${P.wood}"/><rect x="204" y="54" width="42" height="30" fill="${P.art}"/>`;
+    if (P.neon) o += `<rect x="0" y="0" width="360" height="30" fill="${P.neon}" opacity=".18"/>`;
+    return o;
+  };
+  const DIRS = {
+    A: { id: 'A', wall: '#24190f', floor: '#3a2716', out: '#ffb04a', blind: '#1a120b', spill: '.16', lamp: '#ffb860', pool: '.55', metal: '#6b5a44', sofa: '#5a2e22', wood: '#5b3a20', screen: '#6f8fb0', art: '#7a5a3a' },
+    B: { id: 'B', wall: '#b8ae8c', floor: '#7f8574', out: '#ffcf86', blind: '#d8d2bc', spill: '.12', lamp: '#eef6ff', pool: '.45', metal: '#9a9a96', sofa: '#6a6f86', wood: '#8a6a44', screen: '#8fb4ff', art: '#a9b3a0' },
+    C: { id: 'C', wall: '#0f1218', floor: '#151a22', out: '#ff3d7f', blind: '#07080b', spill: '.2', lamp: '#36f2a0', pool: '.3', metal: '#c8d0dc', sofa: '#1c2230', wood: '#0b0c10', screen: '#36f2a0', art: '#243a5a', neon: '#3ad0ff' },
+  };
+  for (const k of 'ABC') {
+    $('dir' + k).innerHTML = room(DIRS[k]);
+    $('sw' + k).innerHTML = ['wall', 'floor', 'wood', 'sofa', 'lamp', 'out'].map((n) => `<i style="background:${DIRS[k][n]}"></i>`).join('');
+  }
+  // the catalog
+  const CAT = [
+    ['8 × 10', 2126, 'walk-up de tijolo e residencial baixo', 'A1, A0'], ['8 × 12', 1406, 'walk-up', 'A1 com uma faixa *'], ['8 × 8', 1335, 'walk-up, casa', 'a fazer'],
+    ['10 × 12', 1058, 'walk-up, residencial', 'a fazer'], ['10 × 10', 766, 'walk-up, residencial', 'a fazer'], ['12 × 12', 360, 'walk-up de duas casas por andar', 'B1'],
+    ['8 × 14 … 8 × 24', 517, 'walk-up fundo', 'faixas *'], ['10 × 14 … 10 × 24', 389, 'residencial fundo', 'faixas *'], ['12 × 14 … 12 × 24', 397, 'residencial, escritório baixo', 'faixas *'],
+    ['torres: 16 × 16, 16 × 24, 20 × 20, 24 × 24, 24 × 32', 431, 'vidro, escritório, residencial alto (com elevador)', 'a fazer'],
+  ];
+  $('cattab').innerHTML = '<tr><th>tamanho (m)</th><th>prédios (semente 42)</th><th>quem usa</th><th>plantas</th></tr>' + CAT.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+  // legends
+  $('legRooms').innerHTML = Object.entries(TILES).map(([k, v]) => `<span><b>${k}</b>${v[0]}</span>`).join('') + Object.entries(ROOMS).map(([k, v]) => `<span><b>${k}</b>${v[0]}</span>`).join('');
+  $('legFurn').innerHTML = Object.entries(FURN).map(([k, v]) => `<span><b>${k}</b>${v[0]}</span>`).join('') + '<span><b>.</b>chão livre</span>';
+  // floors
+  $('floors').innerHTML = FLOORS.map((F) => {
+    const res = check(F);
+    const all = res.every((r) => r[1]);
+    return `<div class="card" style="margin:14px 0"><b>${F.id} · ${F.title}</b><p class="cap" style="margin:4px 0 10px">${F.note}</p>
+      <div class="plans"><div>${draw(F.rooms, F.furn)}</div><div><pre>${F.rooms.map((r, i) => r + '   ' + F.furn[i]).join('\n')}</pre></div></div>
+      <div class="checks">${res.map(([id, ok, m]) => `<div class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${id} · ${m}</div>`).join('')}<div class="${all ? 'ok' : 'bad'}"><b>${all ? 'passa em todas as regras' : 'NÃO entra no jogo'}</b></div></div></div>`;
+  }).join('');
+  // bedrooms: framed in their walls (door right at rows 3-4, windows on top)
+  $('rooms').innerHTML = BEDROOMS.map((B) => {
+    const rooms = ['#WW##WW#', ...B.rows.map((r, i) => '#' + 'b'.repeat(6) + (i === 2 || i === 3 ? 'D' : '+')), '########'];
+    const furn = ['........', ...B.rows.map((r) => '.' + r + '.'), '........'];
+    return `<div class="card">${draw(rooms, furn, 22)}<div class="cap"><b>${B.name}</b> · ${B.who}</div></div>`;
+  }).join('');
+  // postos
+  $('posttab').innerHTML = '<tr><th>posto</th><th>móvel</th><th>onde e para onde olha</th><th>duração</th></tr>' +
+    Object.entries(POSTS).filter(([k]) => k !== 'sit').map(([k, v]) => `<tr><td>${v[0]}</td><td>${Object.values(FURN).filter((f) => f[3] === k).map((f) => f[0]).join(', ') || 'janela (W) com o chão livre na frente'}</td><td>${v[1]}</td><td>${v[2]}</td></tr>`).join('');
+  $('furntab').innerHTML = '<tr><th>letra</th><th>móvel</th><th>medida</th><th>alto</th><th>posto</th></tr>' +
+    Object.entries(FURN).map(([k, v]) => `<tr><td>${k}</td><td>${v[0]}</td><td>${v[1]}</td><td>${v[2] ? 'sim' : ''}</td><td>${v[3] && POSTS[v[3]] ? POSTS[v[3]][0] : ''}</td></tr>`).join('');
+}
+build();
+</script>
+</body>
+</html>
