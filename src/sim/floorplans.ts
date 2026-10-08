@@ -241,3 +241,50 @@ export function checkArrangement(A: Arrangement): string[] {
   }
   return out;
 }
+
+/** The room letter an arrangement of the library furnishes, read from its name (the manual's section 7). */
+export function arrangementKind(A: Arrangement): string {
+  const n = A.room.toLowerCase();
+  return n.includes('quitinete') ? 's' : n.includes('banheiro') ? 'h' : n.includes('cozinha') ? 'k' : n.includes('open space') ? 'p'
+    : n.includes('reunião') ? 'n' : n.includes('gerente') ? 'm' : n.includes('quarto') ? 'b' : n.includes('sala') ? 'l' : '?';
+}
+
+const rot = (g: string[]) => [...g[0]].map((_, x) => g.map((r) => r[x]).reverse().join(''));
+const mirror = (g: string[]) => g.map((r) => [...r].reverse().join(''));
+/** The eight ways a grid turns and flips. */
+function symmetries(g: string[]): string[][] {
+  const out: string[][] = [];
+  let a = g;
+  for (let i = 0; i < 4; i++) { out.push(a, mirror(a)); a = rot(a); }
+  return out;
+}
+
+/**
+ * The arrangements of the library that furnish the room of a floor in the rectangle x0..x1, y0..y1 (characters):
+ * of its kind, turned or flipped to its size, and passing the arrangement rules again inside the room's real frame
+ * (its walls, windows, doors and open sides as the floor draws them). The library's frames were drawn on earlier
+ * plans; what counts is that the furniture fits this room (the manual's section 7: "o jogo escolhe uma que caiba").
+ */
+export function fitArrangements(F: Floor, x0: number, y0: number, x1: number, y1: number): { A: Arrangement; rows: string[] }[] {
+  const R = F.rooms, ch = R[y0][x0], W = x1 - x0 + 1, D = y1 - y0 + 1, frame: string[] = [];
+  for (let y = y0 - 1; y <= y1 + 1; y++) {
+    let row = '';
+    for (let x = x0 - 1; x <= x1 + 1; x++) {
+      const c = R[y]?.[x];
+      row += x >= x0 && x <= x1 && y >= y0 && y <= y1 ? '.' : c === 'W' || c === 'G' ? 'W' : c && DOORS.has(c) ? 'D' : !c || WALLS.has(c) ? '#' : 'o';
+    }
+    frame.push(row);
+  }
+  const out: { A: Arrangement; rows: string[] }[] = [];
+  for (const A of ARRANGEMENTS) {
+    if (arrangementKind(A) !== ch) continue;
+    const seen = new Set<string>();
+    for (const rows of symmetries(A.rows)) {
+      const key = rows.join('/');
+      if (rows.length !== D || rows[0].length !== W || seen.has(key)) continue;
+      seen.add(key);
+      if (!checkArrangement({ room: A.room, who: A.who, frame, rows }).length) out.push({ A, rows });
+    }
+  }
+  return out;
+}

@@ -3,6 +3,13 @@
 > Pedido do usuário em 2026-10-06 (item 30): ao processar `FEEDBACK.md`, em vez de só apagar, mover os itens crus para cá, com a data. Assim a caixa fica só com o que ainda não foi processado, e o texto original não se perde. O mais novo em cima.
 
 
+## 2026-10-08 (noite — playtests 18-01-34 e 18-06-57, 8 notas F8)
+
+Texto cru nos relatórios `playtest/2026-10-08_18-01-34_seed1393987109_report.md` e `..._18-06-57_..._report.md`. Triagem:
+agora (13.20) = notas 4 (móveis espaçados) e 5 (mesa e cadeira colados na porta), prédio 4375;
+C2 = notas 1–2 (escada que some), 3 (cor da parede da porta), 6 (motel: porta recuada e parede invisível), 7 (porta esconde as de trás) e a nota do 4085 (vão entre parede e porta).
+O softlock do motel (C1) não voltou. `teste-porta-13.19.bat` e `teste-motel-porta.bat` apagados.
+
 ## 2026-10-08 (tarde — playtest 14-37-49, 12 notas F8)
 
 Texto cru no relatório `playtest/2026-10-08_14-37-49_seed1393987109_report.md`. Triagem em `docs/plano-interiores.md` passo 9:

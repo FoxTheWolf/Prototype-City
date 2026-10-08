@@ -2,6 +2,12 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 13.20 (biblioteca de arrumações, postos) — 2026-10-08
+- **As molduras da biblioteca envelhecem:** foram copiadas das plantas antes da v1.3 (R12 mudou portas). Casar a arrumação pela moldura exata é frágil; o critério certo (o do manual) é rodar `checkArrangement` com a moldura **real** do cômodo, depois de girar.
+- **Passar nas regras do texto não basta:** o canto onde duas paredes de dentro se cruzam fica serrilhado nas células do jogo (o `+` vai para a sala mais perto), e um vaso no canto caía na parede. Conferir cada arrumação também nas células (`cellAt`) antes de escolher.
+- **`planOf` guardava um plano para todos os andares de cima:** qualquer coisa por andar (o morador) precisa de chave por andar (`stackKey`).
+- `tests/plans.ts` ignora `SEED` (roda a 42 sempre; o argumento é a semente). Comparar com o código antigo: `git stash`, empacotar com outro nome, `git stash pop`.
+
 ### Lições da 13.19 (EXIT pelo caminho, porta dos moradores) — 2026-10-08
 - **Um dado novo por cômodo na GPU = mudar o tamanho do registro em 4 lugares:** `roomRec`, `planCell` e `leafBase` no shader e o `putPlan` em `gpu/world.ts`. Agora é a constante `ROOM_REC` (7). A regra "a CPU calcula, a GPU lê" valeu: o caminho até a rua (`Plan.exitTo`) é um BFS no `planOf`, e o shader só compara um número.
 - **As folhas da rua eram supostas em pares** (`n >> 1` no `raycaster.ts`, 2 × 7 floats por porta na tabela da fachada): uma porta de uma folha precisa de `Leaf.door` e da 2ª vaga zerada (o shader pula a largura 0). O tipo da folha vai no sinal da largura, nos dois pacotes (com sinais opostos: cuidado ao ler).

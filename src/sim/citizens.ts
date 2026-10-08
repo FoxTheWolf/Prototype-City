@@ -482,3 +482,45 @@ export function residentsOf(P: Population, building: number): number[] {
   for (const H of P.households) if (H.building === building) for (let k = 0; k < H.n; k++) out.push(H.m0 + k);
   return out;
 }
+
+const unitIndex = new WeakMap<Population, Map<number, number>>();
+/**
+ * The household living in home `unit` of floor f of building k, or -1 (empty): a floor's homes are its plan's units
+ * in order, and the households' slots count them (13.20; a floor with more slots than drawn homes keeps the rest
+ * off the plan for now).
+ */
+export function homeUnit(P: Population, k: number, f: number, unit: number): number {
+  let M = unitIndex.get(P);
+  if (!M) {
+    M = new Map();
+    P.households.forEach((H, h) => M!.set((H.building * 128 + H.floor) * 64 + H.slot, h));
+    unitIndex.set(P, M);
+  }
+  return M.get((k * 128 + f) * 64 + unit) ?? -1;
+}
+
+/**
+ * What a home says about who lives there, in the words of the interiors manual's arrangements ("renda média",
+ * "casal", "estudante", "gamer"…), to pick its furniture (13.20). The income is read from the best job in the house
+ * until the economy (19) gives people wages: an office pays well, a shop or a plant pays middling, no job pays little.
+ * The hobby is drawn from the seed (the etapa 17 gives people real ones).
+ */
+export function householdTags(P: Population, h: number): string[] {
+  const H = P.households[h], tags: string[] = [];
+  let inc = 0, couple = false, kids = false, student = false;
+  for (let i = H.m0; i < H.m0 + H.n; i++) {
+    const r = P.role[i] as Role, w = P.job[i] >= 0 ? P.workplaces[P.job[i]] : null;
+    if (r === Role.Child) kids = true;
+    if (r === Role.Student) student = true;
+    if (P.spouse[i] >= 0) couple = true;
+    inc = Math.max(inc, w ? (w.kind === 'office' ? 2 : 1) : r === Role.Retired ? 1 : 0);
+  }
+  tags.push(['renda baixa', 'renda média', 'renda alta'][inc], inc === 2 ? 'banheira' : 'chuveiro');
+  if (inc === 0) tags.push('barato');
+  if (couple) tags.push('casal');
+  if (kids) tags.push('família', 'criança');
+  if (student) tags.push('estudante');
+  const hobby = hash3(P.seed ^ 0x6b1e, h, 3);
+  if (hobby < 0.2) tags.push('gamer'); else if (hobby < 0.35) tags.push('leitor'); else if (hobby < 0.45) tags.push('bagunceiro');
+  return tags;
+}

@@ -1,7 +1,7 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { drain, type Steps } from '../core/steps';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, feetZ, planOf, ROOM, STEP_UP } from './interior';
+import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, feetZ, planOf, ROOM, setResidents, STEP_UP } from './interior';
 import { type Sit } from './seats';
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
@@ -16,7 +16,7 @@ import { buildTelco, type Telco } from './telco';
 import { leafBlocks, stepDoors, streetOpen } from './doors';
 import { carHere, inLift, stepLifts, type LiftCar } from './lifts';
 import { buildWifi, type AccessPoint } from './wifi';
-import { noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
+import { householdTags, homeUnit, noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { newFeed, stepSocial, type Feed } from './social';
 import { newHeat, recordAct, stepHeat, type Heat } from './heat'; // [HACKING]
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
@@ -173,6 +173,8 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   }
   yield 0.95;
   telco.people = pop.byNum;
+  // the drawn homes are furnished by who lives in them (13.20)
+  setResidents(pop.n ? (k, f, u) => { const h = homeUnit(pop, k, f, u); return h < 0 ? [] : householdTags(pop, h); } : null);
   const peds = spawnPeds(city, pop, rng, time, x, y);
   return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), forum: { me: null, mine: [] }, cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), mail: newMail(), talks: new Map(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }

@@ -2,6 +2,16 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.20 — mobiliar pela biblioteca, com postos (0.13.20, 2026-10-08)
+
+- **A biblioteca no jogo:** `fitArrangements` (`sim/floorplans.ts`) dá, para um cômodo de casa (l, k, b, h, s) de um andar, as arrumações do mesmo tipo (`arrangementKind`, pelo nome) giradas/espelhadas ao tamanho dele que **passam de novo em `checkArrangement` na moldura real** do cômodo. As molduras da biblioteca foram desenhadas em plantas antigas (antes da v1.3): casar a moldura exata cobria só 33 de 68 cômodos; pelas regras, 52. O resto fica com a camada do próprio andar.
+- **Pelo morador:** `homeUnit(pop, k, f, unit)` e `householdTags` em `sim/citizens.ts` (a renda pelo melhor trabalho da casa até a 19 dar salários: escritório alta, loja/fábrica média, sem trabalho baixa; casal, família/criança, estudante; o hobby pela semente: gamer, leitor, bagunceiro). `whoScore` em `interior.ts` pontua o "who" da arrumação; o desempate é pela semente. O mundo liga com `setResidents` (`world.ts`), que refaz as plantas desenhadas já feitas.
+- **Um plano por andar** para as pilhas desenhadas (`stackKey`; antes todos os andares de cima eram um plano só).
+- **De novo nas células do jogo:** uma arrumação cujo móvel cairia numa célula de parede ou de vão (o canto serrilhado de duas paredes de dentro) é pulada (`clear` em `planFromFloor`); sem isso, 30 vasos "na parede" no `tests/plans.ts`.
+- **Os postos** (`Furn.posto`: `kind`, ponto, direção; seção 8 do manual): na cama, no sofá, no chuveiro; na cadeira junto da mesa ou da escrivaninha; em pé na célula livre na frente do fogão e da pia, de frente para eles. `tests/furnish.ts`: cobertura da biblioteca e, na semente 42, 70 mil postos dados, os em pé em chão livre.
+- **Notas 4–5 do playtest 18-01 (a quitinete F0R do térreo, prédio 4375):** três arrumações novas no manual (média, casal/alta, estudante/baixa), com a sala e a cama agrupadas e a mesa longe da porta E. `teste-moveis-13.20.bat`.
+- Faltam arrumações (ficam com a camada do andar): B1/B0/B0R s 22×8, G1 (as cozinhas e a quitinete dos fundos), C0, A2, A0R, B0R s 19×8, F2 (quarto, cozinha, sala), D0R (sala e banheiro), O1 banheiro.
+
 ## C1 — o que quebra (0.13.19b, 2026-10-08)
 
 - **Softlock do motel:** o F já abria a porta (0.13.10o), mas a dica do balcão vencia a da porta e dizia "TALK TO THE CLERK"; agora a dica segue a mesma prioridade (`till` só sem `doorAhead`). Visto no painel: "[F] OPEN" e a porta abre.

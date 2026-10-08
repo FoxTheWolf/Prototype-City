@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.20 — Cada casa mobiliada por quem mora nela (2026-10-08)
+- **Os apartamentos escolhem a arrumação pelo morador:** a mesma planta mobilia diferente para um casal de renda alta, um estudante ou um gamer (as arrumações do manual de interiores, giradas e espelhadas para caber no cômodo).
+- **A quitinete do térreo ficou arrumada:** a sala, a cama e o guarda-roupa agrupados, e a mesa longe da porta de entrada.
+- **Cada móvel sabe onde se usa** (a cama, o sofá, o fogão, a pia, a mesa com a cadeira): é onde os moradores vão ficar quando a cidade ganhar vida dentro dos prédios.
+
 ## 0.13.19b — Correções (C1) (2026-10-08)
 - **Na recepção do motel, olhando para a porta, a dica diz "[F] OPEN"** (antes dizia para falar com o recepcionista, embora o F já abrisse a porta).
 - **O jogo não congela mais** se o jogador aparecer dentro de uma loja por um atalho de teste.

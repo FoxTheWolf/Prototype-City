@@ -1,7 +1,7 @@
 import { hash3, mulberry32 } from '../core/rng';
 import { BAY, blockAt, blockHundred, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
 import { FRONT, layoutsFor, MAXLEN, PIECES, SINGLE, stretch } from './layouts';
-import { BUILDINGS, FLOORS, grow, type Floor } from './floorplans';
+import { BUILDINGS, FLOORS, FURN as FURN_RULES, fitArrangements, grow, type Floor } from './floorplans';
 import { COLD, OUTLETS, PLACES } from './placeTypes';
 
 /**
@@ -76,7 +76,11 @@ export interface Furn {
   seed: number;
   /** What a shelf, cooler or display case holds: goods of the shop (placeTypes), a few per piece. */
   stock?: string[];
+  /** Where the one who uses it stays and the way they look (the manual's section 8; drawn plans, 13.20). */
+  posto?: Posto;
 }
+/** A posto: what is done there (sleep, sofa, desk, eat, cook, dishes, shower), the point and the way one faces. */
+export interface Posto { kind: string; x: number; y: number; c: number; s: number }
 
 /** The street door: on face 0..4 (as faceSpan numbers them), from a0 to a1 along it. */
 export interface Door {
@@ -473,19 +477,37 @@ function escapeWindow(city: City, k: number, face: number, along: number, f: num
 }
 
 const planCache = new Map<number, Plan | null>();
+/** A drawn stack's floor in the plan cache: apart from the cut plans' keys. */
+const stackKey = (j: number, f: number) => -1 - (j * 128 + f);
+/** Who lives in home `unit` of floor f of lot k, in the manual's words (citizens' householdTags); null before the people exist. */
+let residents: ((k: number, f: number, unit: number) => string[]) | null = null;
+/** The world gives the plans its people (13.20): the drawn homes made before are made again, furnished by them. */
+export function setResidents(fn: typeof residents) {
+  residents = fn;
+  for (const key of [...planCache.keys()]) if (key < 0) planCache.delete(key);
+}
+/** How well an arrangement's "who" ("casal, renda alta") fits a home's tags: 2 per word in common, -1 for another income. */
+function whoScore(who: string, tags: string[]): number {
+  const w = who.toLowerCase(), inc = /renda (baixa|média|alta)/.exec(w), mine = tags.find((t) => t.startsWith('renda '));
+  let s = 0;
+  for (const t of tags) if (w.includes(t)) s += 2;
+  return inc && mine && inc[0] !== mine ? s - 1 : s;
+}
 /** Plans kept at most; the oldest go first (they are remade the same when needed again). */
 const PLAN_KEEP = 4000;
 /** Floor f of lot k (its ground volume's index), or null above the roof. */
 export function planOf(city: City, k: number, f: number): Plan | null {
   const j = storeyBox(city, k, f);
   if (j < 0) return null;
-  // the floors of one box above the ground are alike
+  // the floors of one box above the ground are alike (but for the furniture of the drawn ones)
   const key = j * 2 + (f === 0 ? 0 : 1);
   const St = stackOf(city, k);
   if (St) {
     // a drawn plan: the ground floor and the floors above are each one plan, cached as the cut ones are
-    let P = planCache.get(key);
-    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1); P.exitTo = exitWay(city, k, P, f === 0); planCache.set(key, P); }
+    // per floor: the homes on each are furnished by who lives there (13.20)
+    const sk = stackKey(j, f);
+    let P = planCache.get(sk);
+    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1, f); P.exitTo = exitWay(city, k, P, f === 0); planCache.set(sk, P); }
     return P;
   }
   let P = planCache.get(key);
@@ -524,7 +546,7 @@ function exitWay(city: City, k: number, P: Plan, ground: boolean): Uint16Array {
 /** Floor f of lot k if it was already made (undefined if not yet), so a caller can spread the work over frames. */
 export function cachedPlan(city: City, k: number, f: number): Plan | null | undefined {
   const j = storeyBox(city, k, f);
-  return j < 0 ? null : planCache.get(j * 2 + (f === 0 ? 0 : 1));
+  return j < 0 ? null : planCache.get(stackOf(city, k) ? stackKey(j, f) : j * 2 + (f === 0 ? 0 : 1));
 }
 
 // ---------- the drawn plans (the interiors manual; plano-interiores, step 2) ----------
@@ -662,7 +684,7 @@ function flightOf(St: Stack): Flight | null {
  * door E; the furniture is the plan's own layer, each piece facing out of the wall it stands against. The shop's
  * floor is furnished by its kind, as before (its layouts join this grammar later: one generator, plano-interiores).
  */
-function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
+function planFromFloor(city: City, k: number, St: Stack, f: number, fl = f): Plan {
   const Fl = f === 0 ? St.ground : St.upper ?? St.ground;
   const B = city.buildings[k], R = Fl.rooms, M = Fl.furn, H = R.length, Wc = R[0].length;
   const gx = Math.floor(B.x0 / CELL), gy = Math.floor(B.y0 / CELL), nx = Math.ceil(B.x1 / CELL) - gx, ny = Math.ceil(B.y1 / CELL) - gy;
@@ -772,7 +794,30 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
   if (f === 0) for (const D of main ? [main, ...shops] : shops) open(D, 0, 1);
   else for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
   const P: Plan = { box: k, rooms, exits: f === 0 ? shops : [], furn: [], cells, gx, gy, nx, ny, seams };
+  // each home room furnished by an arrangement of the manual's library that fits it (turned or flipped), the one
+  // that best fits who lives there (13.20); where none fits, the floor's own layer
+  const MF = M.map((r) => [...r]), rect = rooms.map(() => [Infinity, Infinity, -1, -1]);
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wc; x++) {
+    const r = id[y * Wc + x];
+    if (r >= 0) { const q = rect[r]; q[0] = Math.min(q[0], x); q[1] = Math.min(q[1], y); q[2] = Math.max(q[2], x); q[3] = Math.max(q[3], y); }
+  }
+  rooms.forEach((RR, r) => {
+    if (!'lkbhs'.includes(letter[r]) || RR.unit < 0) return;
+    const [x0, y0, x1, y1] = rect[r], fits = fitArrangements(Fl, x0, y0, x1, y1);
+    if (!fits.length) return;
+    const tags = residents?.(k, fl, RR.unit) ?? [];
+    // and again in the game's own cells: no piece on a cell the walls or a doorway took (a jagged corner of inner walls)
+    const clear = (rows: string[]) => rows.every((row, y) => [...row].every((c, x) => c === '.' || [0.125, 0.375].every((du) => [0.125, 0.375].every((dv) => {
+      const [cx, cy] = stackXY(St, B, (x0 + x) / 2 + du, (y0 + y) / 2 + dv), v = cellAt(P, cx, cy);
+      return (v & ROOM) && !(v & (WALL | DOOR));
+    }))));
+    let pick = -1, bs = -Infinity;
+    fits.forEach((Fa, i) => { const sc = whoScore(Fa.A.who, tags) + hash3(city.nameSeed ^ 0x3c1d, k * 64 + r, fl * 97 + i) * 0.5; if (sc > bs && clear(Fa.rows)) { bs = sc; pick = i; } });
+    if (pick < 0) return;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) MF[y][x] = fits[pick].rows[y - y0][x - x0];
+  });
   // the furniture: each letter's rectangle, facing out of the wall it stands against
+  const pieces: { ch: string; x: number; y: number; x1: number; y1: number; back: number; i: number }[] = [];
   const seen = new Uint8Array(Wc * H), wallish = (x: number, y: number) => x < 0 || y < 0 || x >= Wc || y >= H || PLAN_WALLS.has(R[y][x]);
   const rnd = mulberry32((hash3(city.nameSeed ^ 0x77f1, k, f) * 4294967296) | 0);
   const OUT: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -790,11 +835,11 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
     return CELL;
   };
   for (let y = 0; y < H; y++) for (let x = 0; x < Wc; x++) {
-    const ch = M[y][x];
+    const ch = MF[y][x];
     if (seen[y * Wc + x] || !(ch in FURN_OF)) continue;
     let x1 = x, y1 = y;
-    while (M[y][x1 + 1] === ch) x1++;
-    while (M[y1 + 1]?.[x] === ch) y1++;
+    while (MF[y][x1 + 1] === ch) x1++;
+    while (MF[y1 + 1]?.[x] === ch) y1++;
     for (let b = y; b <= y1; b++) for (let a = x; a <= x1; a++) seen[b * Wc + a] = 1;
     const w = x1 - x + 1, h = y1 - y + 1, mx = (x + x1) >> 1, my = (y + y1) >> 1;
     // the sides: 0 left, 1 right, 2 top (toward the street), 3 bottom; how much wall touches each
@@ -805,7 +850,7 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
     const look = (ls: string, n: number) => {
       for (let d = 1; d <= n; d++) for (let s2 = 0; s2 < 4; s2++) {
         const cx2 = s2 === 0 ? x - d : s2 === 1 ? x1 + d : mx, cy2 = s2 === 2 ? y - d : s2 === 3 ? y1 + d : my;
-        if (!wallish(cx2, cy2) && ls.includes(M[cy2][cx2])) return s2;
+        if (!wallish(cx2, cy2) && ls.includes(MF[cy2][cx2])) return s2;
       }
       return -1;
     };
@@ -827,7 +872,28 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
       return lo && hi ? [(a0 + a1 + hi - lo) / 2, e + (lo + hi) / 2] : [(a0 + a1) / 2 + (hi ? hi + 0.04 : lo ? -lo - 0.04 : 0), e];
     };
     const [cu, eu] = fit(u0, u1, gl, gr), [cv, ev] = fit(v0, v1, gt, gb), [px, py] = stackXY(St, B, cu, cv);
+    pieces.push({ ch, x, y, x1, y1, back, i: P.furn.length });
     P.furn.push({ kind: FURN_OF[ch], x: px, y: py, c, s: s2, hx: du ? eu : ev, hy: du ? ev : eu, seed: (rnd() * 1e6) | 0 });
+  }
+  // the postos (the manual's section 8): in bed, on the sofa, in the shower; on the chair at a table or a desk;
+  // standing on the free cell in front of the stove or the sink, facing it
+  for (const p of pieces) {
+    const kind = FURN_RULES[p.ch]?.posto, Fu = P.furn[p.i];
+    if (!kind || kind === 'sit') continue;
+    if (kind === 'sleep' || kind === 'sofa' || kind === 'shower') { Fu.posto = { kind, x: Fu.x, y: Fu.y, c: Fu.c, s: Fu.s }; continue; }
+    const chair = kind === 'eat' || kind === 'desk' ? pieces.find((q) => q.ch === 'h' && ((q.x <= p.x1 + 1 && q.x1 >= p.x - 1 && q.y <= p.y1 && q.y1 >= p.y) || (q.y <= p.y1 + 1 && q.y1 >= p.y - 1 && q.x <= p.x1 && q.x1 >= p.x))) : undefined;
+    if (chair) { const Ch = P.furn[chair.i]; Fu.posto = { kind, x: Ch.x, y: Ch.y, c: Ch.c, s: Ch.s }; continue; }
+    const front = p.back ^ 1;
+    for (const side of [front, ...[0, 1, 2, 3].filter((q) => q !== front && q !== p.back), p.back]) {
+      const along = side < 2, n = along ? p.y1 - p.y + 1 : p.x1 - p.x + 1, cells: [number, number][] = [];
+      for (let t = 0; t < n; t++) cells.push(along ? [side === 0 ? p.x - 1 : p.x1 + 1, p.y + t] : [p.x + t, side === 2 ? p.y - 1 : p.y1 + 1]);
+      cells.sort((a, b) => Math.abs(a[0] - (p.x + p.x1) / 2) + Math.abs(a[1] - (p.y + p.y1) / 2) - Math.abs(b[0] - (p.x + p.x1) / 2) - Math.abs(b[1] - (p.y + p.y1) / 2));
+      const c0 = cells.find(([x, y]) => !wallish(x, y) && isRoom(R[y][x]) && MF[y][x] === '.');
+      if (!c0) continue;
+      const [px, py] = stackXY(St, B, (c0[0] + 0.5) / 2, (c0[1] + 0.5) / 2), [c, s2] = stackDir(St, OUT[side][0], OUT[side][1]);
+      Fu.posto = { kind, x: px, y: py, c, s: s2 };
+      break;
+    }
   }
   // the stair's two flights and half landing, a piece of its own (drawn in little cubes; walked by its steps, not round it)
   const Fg = flightOf(St);

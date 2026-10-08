@@ -65,7 +65,7 @@
      u `store`, r `office`. `unit` sai das portas `E` (cada E abre uma unidade).
    - Portas: `D` → vão com folha (`leavesOf`), `E` → porta de casa que tranca (`doorLocked`, a regra dos 75%),
      `R` → porta de rua (`exitsOf`). Janelas não se leem da planta: continuam saindo da fachada (R2 garante que batem).
-3. **(13.20) Mobiliar pela biblioteca** (no lugar de `furnish` para as casas): para cada cômodo, as arrumações do mesmo
+3. ✅ **(13.20, 0.13.20; feito como está em `docs/historico.md`) Mobiliar pela biblioteca** (no lugar de `furnish` para as casas): para cada cômodo, as arrumações do mesmo
    contorno (o `frame` da arrumação, girado/espelhado) e escolher pela renda e pelo jeito do morador (`citizens.ts`;
    `homeUnit` ainda não existe, é preciso criar). Letras → `FurnKind`: B bed, A shelf (alto), Q desk, h chair,
    F sofa, r sofa (poltrona: tamanho 1), T tv, t table, K counter, O oven, N counter (pia), G fridge, V toilet?
