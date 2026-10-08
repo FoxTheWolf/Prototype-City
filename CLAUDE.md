@@ -259,6 +259,9 @@ Ficam em `docs/feedback-claude.md`. Ler só quando for planejar.
 - **Polícia e calor como experiência** (decidido em 2026-10-05, `docs/visao.md`): abordagem com conversa; prisão = noite + fiança + confisco (nunca o notebook) + ficha; fuga pela linha de visão, roupa, multidão; calor sentido pelo bairro, notícias, rádio da polícia e SMS; cerco na 1.0, helicóptero depois.
 - **Refinamento da polícia** (pedido em 2026-10-03): como ela procura, o que a atrai, como se despista. **Luz deixada acesa como rastro** (ideia do Claude aceita pelo usuário em 2026-10-04, mas só quando as missões e a investigação chegarem a esse ponto): precisa dos interruptores (13.10g) e de uma polícia mais madura; não fazer antes. Easter egg: música tocando no celular chama a atenção quando o jogador se esconde.
 
+### Etapa cozy (curta, depois da 16; pedida em 2026-10-08, `docs/visao.md` "Modo cozy")
+- Para descansar na cidade: o rádio da cidade como modo do app de música, com vozes em síntese no estilo Animal Crossing (cada letra com o som dela) e o DJ lendo os eventos reais; o "the usual?" só com memória de verdade e depois de várias idas; o resto (sentar e olhar, ouvir conversas, chuva sob a marquise, fotos, diner, telhado) conversado quando a etapa abrir. Antes: legendas dos NPCs maiores (retoques da 14).
+
 ### Etapa 17: Economia
 - **Economia do jogador** (2026-10-05, `docs/visao.md`): apartamento em ~5–7 dias de jogo, aluguel semanal; custo apertado no começo; hacking ~5x a TI; dinheiro vivo e no banco; os preços valem para o jogador.
 - **Decidido em 2026-10-05** (`docs/visao.md`): cadeia curta (fornecedor → loja → cliente, estoque, reposição, salários); a bolsa segue as empresas, e o jogador compra ações.
