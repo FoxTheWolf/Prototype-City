@@ -318,6 +318,21 @@ export function doorNumberModel(num: string): Part[] {
   return m;
 }
 
+/**
+ * The yellow "CCTV" notice under a security camera (the signage manual, section 7): it tells the player there is a
+ * camera there, as such notices do; read from +x, its foot at z0.
+ */
+export function cctvSignModel(z0: number): Part[] {
+  const key = `cctvsign|${z0}`;
+  let m = lamps.get(key);
+  if (m) return m;
+  const p = part(Box, 0, -0.27, z0, 0.012, 0.27, z0 + 0.3, [242, 194, 48], Board, '=');
+  p.text = 'CCTV'; p.col2 = [22, 23, 26]; p.lamp = 0; p.plate = true;
+  m = [p];
+  lamps.set(key, m);
+  return m;
+}
+
 const trees = new Map<number, Part[]>();
 /** Street and park tree: a trunk under a crown of one to three leafy ellipsoids, varied by seed. */
 export function treeModel(seed: number, w: number, h: number): Part[] {

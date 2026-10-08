@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -528,6 +528,9 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
     const arm = Math.hypot(C.x - C.mx, C.y - C.my), a = Math.atan2(C.y - C.my, C.x - C.mx), yaw = cctvYaw(C, frameSec);
     boardList.push({ x: C.mx, y: C.my, c: Math.cos(a), s: Math.sin(a), parts: cctvMount(C.z, arm, C.kind === 0), r: arm + 0.2, h: C.z + 0.4, z0: C.kind === 0 ? 0 : C.z - 0.15, seed: 9700 + k });
     boardList.push({ x: C.x, y: C.y, c: Math.cos(yaw), s: Math.sin(yaw), parts: cctvModel(C.z, (frameSec + k * 0.29) % 2 < 1, CAMS[C.model].shape), r: 0.45, h: C.z + 0.15, z0: C.z - 0.22, seed: 9800 + k });
+    // its notice below it, on the wall or the pole, facing the way it looks out (the signage manual, section 7)
+    const sz = Math.max(2.2, C.z - 1.0), off = C.kind === 0 ? 0.1 : 0.02;
+    boardList.push({ x: C.mx + Math.cos(a) * off, y: C.my + Math.sin(a) * off, c: Math.cos(a), s: Math.sin(a), parts: cctvSignModel(sz), r: 0.35, h: sz + 0.3, z0: sz, seed: 9900 + k });
   });
   // the substations' yards
   world.power.subs.forEach((S, k) => {
