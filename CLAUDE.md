@@ -411,6 +411,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições das placas de rua (0.13.7: Board é de outdoor, `plate`, direita = -y, poste perto parece o mesmo), para não repetir
 - Lições do moiré e do fantasma (0.15.58: média na pegada do pixel, amostras tremidas, centro de botão redondo), para não repetir
 - Lições do vidro unificado (0.15.56: manchas, select int no WGSL, efeito só nas células, canto atrás do olho), para não repetir
 - Lições da 15.20a (barra do Osprey, áreas, várias artes numa chave), para não repetir

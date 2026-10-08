@@ -9,6 +9,13 @@
 - **Brilho que se mexe:** um reflexo só parece metal se andar quando o objeto se move; o deslocamento sai da inclinação (`HandSway` em `render/sway.ts`: a mão atrasada em relação à câmera + o balanço do braço pela velocidade do jogador). O mesmo `slide` desloca o degradê do cromo do celular (`brand.w` no uniform do corpo).
 - **LCD reflexivo:** o joelho de 0,35 deixava o visor legível na rua escura (a luz nas mãos é ~0,3 de noite, ~0,6–1,6 sob o poste); 0,8 com expoente 1,6 o apaga no escuro e o deixa fraco sob o poste.
 
+### Lições das placas de rua (0.13.7) — 2026-10-08
+- **O material `Board` é de outdoor:** desenha uma moldura escura nas bordas (até 0,2 m ou 5 % da largura) e limita a letra a 62 % da altura. Em peças pequenas (o nome e a centena da placa) a moldura virou faixas pretas. Placa pintada usa `plate: true` (sem moldura, letra a 86 % da altura, letras refletivas `kk >= 0.8 * fog`), empacotado como `bulbs = 2` em `gpu/world.ts`.
+- **Lido de +x, a direita do leitor é -y** no quadro do objeto: o que vai "à direita" numa placa fica em -y.
+- **Um poste perto de outro parece o mesmo de vários ângulos:** a placa a 1 m do poste do semáforo lia como presa nele; a 3 m lê como outro objeto.
+- **O olhar de jogador vale mais na captura feita "para ver se funciona":** a primeira foto das placas mostrava o poste atravessando a placa, as faixas pretas e o texto ilegível, e foi relatada como certa.
+- **Teste por script:** pôr o jogador dentro de uma loja congela o laço (`aimedGood`); usar posições de calçada já conhecidas. Clicar no CONTINUE escondido sem save também quebra (bug anotado).
+
 ### Lições do moiré e do fantasma (0.15.58) — 2026-10-08
 - **Textura mais fina que o pixel = moiré:** a tela do Jackdaw (896 px de pontos com vão) cabe em ~270 px do monitor; uma amostra por pixel bate com os vãos. Média 4 × 4 sobre a pegada do pixel (`length(R)`/`length(D)/|F.z|` sobre o tamanho do LCD) resolve sem mips (`voxPassWgsl`, vale para o relógio).
 - **Desfoque com poucas amostras numa grade fixa = cópias:** o `phBloom` (5 × 5, passo de 2 células) repetia os números grandes do relógio do celular. Tremer cada amostra dentro do seu quadrado por pixel (ruído IGN) troca as cópias por um brilho liso; com o teto de 7 % o ruído não aparece.
