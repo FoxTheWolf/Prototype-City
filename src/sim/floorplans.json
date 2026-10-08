@@ -997,6 +997,107 @@
     "........................",
     "........................"
    ]
+  },
+  {
+   "id": "A2",
+   "rooms": [
+    "#WW##WW##WW##WW#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#ssssssssssssss#",
+    "#+EE++++++++DD+#",
+    "#SSSSSSSSSS+hhh#",
+    "#SSSSSSSSSS+hhh#",
+    "#SSSSSSSSSS+hhh#",
+    "#SSSSSSSSSS+hhh#",
+    "#WW##WW##WW##WW#"
+   ],
+   "furn": [
+    "................",
+    ".BBB.....TTTT...",
+    ".BBB............",
+    ".BBB............",
+    ".BBB............",
+    ".........FFFF...",
+    ".AAA............",
+    ".G..............",
+    ".G........QQ.SS.",
+    ".K..tth...h.....",
+    ".K..tt..........",
+    ".O..............",
+    ".N..............",
+    "................",
+    "................",
+    "..............V.",
+    "................",
+    "............HH..",
+    "............HHC.",
+    "................"
+   ],
+   "rep": [
+    13
+   ],
+   "depths": [
+    10,
+    12
+   ]
+  },
+  {
+   "id": "F2",
+   "rooms": [
+    "#WW##WW##WW##WW##WW#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#bbbbbbb+bbbbbbbbbb#",
+    "#+++DD+++++DD++++++#",
+    "#kkkkkkkkllllllllll#",
+    "#kkkkkkkkllllllllll#",
+    "#kkkkkkkkllllllllll#",
+    "#kkkkkkkkllllllllll#",
+    "#+EE++++++++DD++DD+#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#WW##WW##WW##WW##WW#"
+   ],
+   "furn": [
+    "....................",
+    ".BBB.........QQBBB..",
+    ".BBB.........h.BBB..",
+    ".BBB...........BBB..",
+    ".BBB...........BBB..",
+    ".......A.A..........",
+    ".......A.A..........",
+    ".......A.A..........",
+    "....................",
+    "....................",
+    ".KKK..ON......TTTT..",
+    ".G..................",
+    ".G...tth............",
+    ".....tt..FFF........",
+    "....................",
+    "..............V...w.",
+    "..................y.",
+    "............HH......",
+    "............HHC.....",
+    "...................."
+   ]
   }
  ],
  "arrangements": [
@@ -2816,6 +2917,22 @@
     "B0",
     "B1",
     "BT"
+   ]
+  },
+  {
+   "name": "8 × 10 e 8 × 12 m, com lofts",
+   "floors": [
+    "A0",
+    "A2",
+    "T1"
+   ]
+  },
+  {
+   "name": "10 × 10 m, com 2 quartos",
+   "floors": [
+    "F0",
+    "F2",
+    "FT"
    ]
   }
  ]
