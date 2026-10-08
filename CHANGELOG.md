@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10o — A porta do motel (2026-10-08)
+- **Não fica mais preso no balcão do motel:** olhando para a porta, o F abre a porta; antes ele puxava conversa com o recepcionista, cujo alcance ia até a porta.
+
 ## 0.13.10n — A escada em U (2026-10-08)
 - **A escada dos prédios de escada é em U, como nos prédios de verdade:** entra-se num patamar, sobe-se um lance até o patamar do meio, vira-se e sobe-se o outro, chegando ao andar de cima do mesmo lado em que se entrou. Acabou a escada que começava em cima da porta e chegava numa parede.
 - **O prédio não some mais no meio da subida:** com a cabeça já acima do teto e ainda abaixo do andar de cima, as paredes continuam lá (antes aparecia a rua).
