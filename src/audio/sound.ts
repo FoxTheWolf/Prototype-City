@@ -255,6 +255,38 @@ export class Sound {
   }
 
   /** A wristwatch button: one short pip, as the cheap ones beep on every press. */
+  /**
+   * 15.22: the Jackdaw Mini's sounds, by its manual's recipes (docs/identidade/jackdaw-manual.html, section 5):
+   * the keys' dry click (down and up), the lever's clack, the opening's three notes, entering and going back,
+   * the jackdaw's two chirps (up content, down sulky), the "can't" low note, the low battery's pairs, and the
+   * TONE app's note (`f`, Hz). All short square waves and bursts of noise, chiptune.
+   */
+  jackdaw(kind: 'down' | 'up' | 'lever' | 'boot' | 'enter' | 'back' | 'happy' | 'sad' | 'err' | 'low' | 'tone', f = 440) {
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.005;
+    const env = (g: GainNode, t: number, a: number, p: number, dec: number) => { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(p, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); };
+    const noise = (t: number, type: BiquadFilterType, fq: number, p: number, dec: number, q = 0.7) => {
+      const s = ctx.createBufferSource(), g = gain(ctx, 0, this.master); s.buffer = this.noise;
+      s.connect(filter(ctx, type, fq, q)).connect(g); env(g, t, 0.001, p * 0.25, dec); s.start(t, Math.random() * 1.5); s.stop(t + dec + 0.05);
+    };
+    const tone = (t: number, type: OscillatorType, f0: number, f1: number, p: number, dec: number) => {
+      const o = ctx.createOscillator(), g = gain(ctx, 0, this.master); o.type = type; o.frequency.setValueAtTime(f0, t);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dec);
+      o.connect(g); env(g, t, 0.002, p, dec); o.start(t); o.stop(t + dec + 0.05);
+    };
+    if (kind === 'down') { noise(t0, 'highpass', 2600, 0.45, 0.016); tone(t0, 'square', 2300, 2300, 0.025, 0.007); }
+    else if (kind === 'up') noise(t0, 'highpass', 3400, 0.2, 0.011);
+    else if (kind === 'lever') { noise(t0, 'bandpass', 900, 0.7, 0.05, 2); tone(t0, 'triangle', 160, 90, 0.25, 0.06); }
+    else if (kind === 'boot') [880, 1320, 1760].forEach((fq, i) => tone(t0 + i * 0.07, 'square', fq, fq, 0.035, 0.06));
+    else if (kind === 'enter') tone(t0, 'square', 1320, 1320, 0.05, 0.035);
+    else if (kind === 'back') tone(t0, 'square', 660, 660, 0.05, 0.05);
+    else if (kind === 'err') tone(t0, 'square', 220, 220, 0.05, 0.14);
+    else if (kind === 'tone') tone(t0, 'square', f, f, 0.06, 0.3);
+    else if (kind === 'happy' || kind === 'sad') {
+      const up = kind === 'happy';
+      tone(t0, 'square', up ? 1800 : 1400, up ? 2600 : 900, 0.035, 0.07); tone(t0 + 0.09, 'square', up ? 2200 : 1100, up ? 3000 : 700, 0.03, 0.06);
+    } else if (kind === 'low') [0, 0.3].forEach((d) => { tone(t0 + d, 'square', 1200, 1200, 0.04, 0.08); tone(t0 + d + 0.11, 'square', 800, 800, 0.04, 0.1); });
+  }
+
   watchBeep() {
     const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
     o.type = 'square'; o.frequency.value = 4096;
