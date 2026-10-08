@@ -73,6 +73,7 @@ import TIPS from './locale/tips.json';
 import TODAY_2008 from './locale/today2008.json';
 import { Menu, type Option } from './menu';
 import { deleteSave, readSave, SAVE_V, writeSave, type GameSave } from './saveGame';
+import { titleLogo } from './titleLogo';
 import { TitleFx } from './titleFx';
 import { applyWorld, snapWorld } from './sim/save';
 import { NotePanel, Playtest } from './playtest';
@@ -138,6 +139,7 @@ function showTip(load: boolean) {
 const params = new URLSearchParams(location.search), seedParam = params.get('seed');
 const saved = await readSave();
 const titleFx = new TitleFx(document.getElementById('overlay')!);
+titleLogo(document.getElementById('logo')!, params.has('mute') || OPTS.mute);
 const choice = await titleChoice();
 const seed = choice !== 'new' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 document.getElementById('ready')!.hidden = true;
