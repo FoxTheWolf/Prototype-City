@@ -523,11 +523,12 @@ function touchDown(cx: number, cy: number): boolean {
 }
 /** The touch let go: acted on if over what it lit (the tick and a last flash), else let go of. */
 function touchUp(cx: number, cy: number) {
-  const t = touchHeld, at = glassAt(cx, cy), now = performance.now() / 1000;
+  const t = touchHeld, at = glassAt(cx, cy);
   touchHeld = null;
   if (!t) return;
-  if (at && at[0] >= t.x && at[0] < t.x + t.w && at[1] >= t.y && at[1] < t.y + t.h) { tapFlash(t, now); t.act(); }
-  else tapFlash(t, -1);
+  // (the light goes as the finger lifts: a last flash after it lay over the app the touch had just opened, playtest 2026-10-07)
+  tapFlash(t, -1);
+  if (at && at[0] >= t.x && at[0] < t.x + t.w && at[1] >= t.y && at[1] < t.y + t.h) t.act();
 }
 /** The interface's cell under the system cursor. */
 function cellAtClient(cx: number, cy: number): [number, number] {

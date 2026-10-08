@@ -402,19 +402,21 @@ export class Browser {
     if (T.laid && f > 0) {
       const kb = T.got?.page?.kb ?? 1, tf = Math.min(1, (f * (kb + this.itemsKb(T))) / kb);
       const R = T.laid.rows, upto = tf >= 1 ? R.length : Math.floor(R.length * tf), on = this.picks()[T.sel];
+      // a link lit whole: its pieces on the rows round it too (a headline broken over two lines)
+      const lit = on && 'url' in on ? T.laid.links.filter((l) => l.url === on.url && Math.abs(l.y - on.y) <= 2) : [];
       for (let r = 0; r < view; r++) {
         const y = T.top + r, row = R[y];
         if (!row || y >= upto) { S.paint(0, PAGE_Y + r, ' '.repeat(W), INK, WHITE); continue; }
         for (let x = 0; x < W - 1; x++) {
-          const c = row[x], hit = on && on.y === y && x >= on.x && x < on.x + on.w;
-          S.paint(x, PAGE_Y + r, c.ch, hit && 'url' in on ? c.bg : c.fg, hit && 'url' in on ? c.fg : c.bg);
+          const c = row[x], hit = lit.some((l) => l.y === y && x >= l.x && x < l.x + l.w);
+          S.paint(x, PAGE_Y + r, c.ch, hit ? c.bg : c.fg, hit ? c.fg : c.bg);
         }
         S.paint(W - 1, PAGE_Y + r, ' ', INK, row[W - 2]?.bg ?? WHITE);
         // a link already seen is purple (the history), as in every browser of the time: the links written
         // in the site's link color (a menu button keeps its own colors, as the sites' CSS made it)
         const LC = T.got?.page?.theme.link, linkInk = (c: C3) => !!LC && c[0] === LC[0] && c[1] === LC[1] && c[2] === LC[2];
         for (const l of T.laid.links) {
-          if (l.y !== y || l.url.startsWith(SUBMIT) || !this.seen.has(this.abs(l.url)) || (on === l)) continue;
+          if (l.y !== y || l.url.startsWith(SUBMIT) || !this.seen.has(this.abs(l.url)) || lit.includes(l)) continue;
           for (let x = l.x; x < Math.min(W - 1, l.x + l.w); x++) { const c = row[x]; if (c && c.ch !== ' ' && linkInk(c.fg)) S.paint(x, PAGE_Y + r, c.ch, VISITED, c.bg); }
         }
         // what is typed in the boxes on this row (stars for a password)

@@ -1850,8 +1850,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
 const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 4.2; const DAY_GROUND = 1.8;
 /** The brightest a surface reflects (its hue kept), how much more saturated the day shows the colors, and the exposure. */
-// (playtest 2026-10-07: the day read dark and too contrasted; brighter and less saturated, the night untouched; was 1.3 and 0.75)
-const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.12; const DAY_EXPO = 0.95;
+// (playtest 2026-10-07: the day read dark and too contrasted; brighter and less saturated, the night untouched; was 1.3 and 0.75; the user asked for 1.2)
+const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.12; const DAY_EXPO = 1.2;
 /** Night: where the highlights start to roll off, and how far a color past 1 goes toward white. */
 const NIGHT_KNEE = 0.3; const NIGHT_WHITE = 0.15;
 /** The night's curve, on display-linear light, on the luminance: untouched below the knee (the night's look),
@@ -1897,7 +1897,8 @@ fn sunGloss() -> f32 {
 }
 // ---- the sun's color by its color temperature: a warm yellow-white high up, orange toward the horizon
 /** The sun's color temperature (K) at noon high and at the horizon, and the elevation (rad) where it is fully the high one. */
-const SUN_K_HIGH = 4700.0; const SUN_K_LOW = 1900.0; const SUN_K_EL = 0.55;
+// (playtest 2026-10-07: the afternoon read too yellow, the sky too; real noon sun is ~5500-5800 K; was 4700)
+const SUN_K_HIGH = 5800.0; const SUN_K_LOW = 1900.0; const SUN_K_EL = 0.55;
 fn sunTemp() -> f32 { return mix(SUN_K_LOW, SUN_K_HIGH, smoothK(-0.02, SUN_K_EL, u.sunEl)); }
 /** A black body's color at T kelvin, in sRGB 0-1 (Tanner Helland's fit), the strongest channel 1. */
 fn kelvin(T: f32) -> vec3f {

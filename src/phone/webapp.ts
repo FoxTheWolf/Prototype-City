@@ -313,7 +313,8 @@ export function paintFerretMini(P: Paint, d: FerretMini) {
     P.rect(F.x * PX, y + PY - 1, F.w * PX, 1, [150, 150, 150]);
     ptext(P, F.x * PX + 1, y + 2, F.text, [0, 0, 0]);
   }
-  for (const it of d.items) HITS.push({ x: it.x * PX - 2, y: top + it.y * PY - 2, w: it.w * PX + 4, h: PY + 4, pre: it.pre, key: it.sel ? 'ok' : undefined });
+  // one touch follows a link (or opens a box to type in): nobody taps a phone's screen twice (the user, 2026-10-07)
+  for (const it of d.items) HITS.push({ x: it.x * PX - 2, y: top + it.y * PY - 2, w: it.w * PX + 4, h: PY + 4, pre: it.pre, key: 'ok' });
   P.clip(0, 0, SCR_W, SCR_H);
   if (d.say.length) {
     P.rect(0, top, SCR_W, Y1 - top, [255, 255, 255]);

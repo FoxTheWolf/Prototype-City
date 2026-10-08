@@ -239,7 +239,12 @@ export function layout(P: Page, width: number, full = false): Laid {
       if (indent) { put(cx, y + k, k ? ' '.repeat(indent.length) : indent, T.dim, bg); cx += indent.length; }
       for (const g of segs) {
         put(cx, y + k, g.text, g.url ? T.link : fg, bg);
-        if (g.url) { const lead = g.text.length - g.text.trimStart().length; links.push({ x: cx + lead, y: y + k, w: g.text.trim().length, url: g.url }); }
+        if (g.url) {
+          // the words of one link on one row are one link (its whole box lights, not a word of it; playtest 2026-10-07)
+          const lead = g.text.length - g.text.trimStart().length, l = links[links.length - 1], x0 = cx + lead, w0 = g.text.trim().length;
+          if (l && l.url === g.url && l.y === y + k && x0 - (l.x + l.w) <= 1) l.w = x0 + w0 - l.x;
+          else links.push({ x: x0, y: y + k, w: w0, url: g.url });
+        }
         cx += g.text.length;
       }
     });
