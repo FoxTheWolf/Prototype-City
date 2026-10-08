@@ -2,6 +2,7 @@ import L from '../locale/laptop.en.json';
 import { type Laptop } from './laptop';
 import { St } from './screen';
 import { hash3 } from '../core/rng';
+import { barOn, drawBar } from './osprey';
 
 /** The notebook's shared pieces: its keyboard, the terminal's inks, and the screen's content (look3d.ts draws the body). */
 export type C3 = [number, number, number];
@@ -27,28 +28,6 @@ const FW: Record<number, [C3, C3]> = {
   [St.Help]: [[110, 200, 230], NAVY], [St.Box]: [[0, 0, 0], GRAY], [St.BoxPick]: [[255, 255, 255], NAVY], [St.White]: [[250, 250, 255], NAVY],
   [St.Gray]: [[120, 124, 160], NAVY], [St.Yellow]: [[255, 230, 80], NAVY],
 };
-/**
- * The BIOS's logos (our own, after the old POST screens): the maker's blue ribbon top left, and top
- * right the power-saving program's: a yellow sweep with a star, a green rule and its name.
- */
-const RIBBON = [' _ ', '(O)', '/V\\'];
-const POWER = [
-  '        _.--------._    /\\    ',
-  '     .-\'            \'-_/  \\_  ',
-  '    /    powersave    \\     / ',
-  '   |    ~~~~~~~~~~~    > /\\ < ',
-  '    \\                 /_/  \\_\\ ',
-  '   ===========================',
-  '     EFFICIENCY  PARTNER      ',
-];
-function biosArt(put: (x: number, y: number, ch: number, fg: readonly number[], bg: readonly number[]) => void, sx: number, sy: number, W: number) {
-  RIBBON.forEach((row, r) => { for (let c = 0; c < row.length; c++) if (row[c] !== ' ') put(sx + c, sy + r, row.charCodeAt(c), [60, 110, 255], BIOS_BG); });
-  const px = sx + W - 31;
-  POWER.forEach((row, r) => {
-    for (let c = 0; c < row.length; c++) if (row[c] !== ' ') put(px + c, sy + r, row.charCodeAt(c), r >= 5 ? [70, 220, 90] : [255, 230, 40], BIOS_BG);
-  });
-}
-
 /** The keys' hint over the notebook: how to close it, and while it is off, that Enter is the power button. */
 export const hintOf = (P: Laptop) => (P.shell.halted ? `${L.seat.power}   ${L.seat.close}` : L.seat.close);
 
@@ -90,22 +69,24 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
     const s = S.prompt + (S.mask ? '*'.repeat(S.input.length) : S.input);
     for (let k = 0; k === 0 || k < s.length + 1; k += W) { lines.push({ text: s.slice(k, k + W), ink: 0 }); if (promptRow < 0) promptRow = lines.length - 1; }
   }
-  const first = Math.max(0, lines.length - H - S.scroll);
-  for (let r = 0; r < H; r++) {
-    const ln = on ? lines[first + r] : undefined, scan = r & 1 ? 0.9 : 1;
+  // the Osprey's bar takes the top row once the system runs (15.20a); the console's lines sit under it
+  const bar = on && barOn(S), top = bar ? 1 : 0, HR = H - top;
+  const first = Math.max(0, lines.length - HR - S.scroll);
+  for (let r = 0; r < HR; r++) {
+    const ln = on ? lines[first + r] : undefined, base = S.bios ? BIOS_BG : sbg;
     for (let c = 0; c < W; c++) {
-      const ch = ln ? ln.text.charCodeAt(c) || 32 : 32, col = S.bios ? BIOS_INK : ink[ln?.ink ?? 0], k = scan, base = S.bios ? BIOS_BG : sbg;
+      const ch = ln ? ln.text.charCodeAt(c) || 32 : 32;
+      let col: readonly number[] = S.bios ? BIOS_INK : ink[ln?.ink ?? 0];
+      if (ln && 'rgb' in ln && ln.rgb) for (const [a, b, v] of ln.rgb) if (c >= a && c < b) col = [v >> 16, (v >> 8) & 255, v & 255];
       // the paper is the same under a letter as round it: the letters are lit dots on the glass, not a strip of their own
       const bg: C3 = on ? base : [12, 12, 14];
-      put(sx + c, sy + r, ch, [col[0] * k, col[1] * k, col[2] * k], bg);
+      put(sx + c, sy + top + r, ch, col, bg);
     }
   }
-  if (on && S.bios) biosArt(put, sx, sy, W);
   // a program owning the whole screen (SETUP, the editor) draws instead of the lines
   if (full) {
     const F = full.scr;
     for (let r = 0; r < Math.min(H, F.h); r++) {
-      const scan = r & 1 ? 0.9 : 1;
       for (let c = 0; c < Math.min(W, F.w); c++) {
         const st = F.st[r][c], ch = F.ch[r][c].charCodeAt(0);
         let fg: C3, bg: C3;
@@ -113,7 +94,7 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
         else if (st >= 10) [fg, bg] = FW[st];
         else if (st === St.Inverse) { fg = [sbg[0] + 4, sbg[1] + 4, sbg[2] + 4]; bg = [ink[0][0] * 0.85, ink[0][1] * 0.85, ink[0][2] * 0.85]; }
         else { fg = ink[st]; bg = sbg; }
-        put(sx + c, sy + r, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], [bg[0] * scan, bg[1] * scan, bg[2] * scan]);
+        put(sx + c, sy + r, ch, fg, bg);
       }
     }
     if (full.cy >= 0 && Math.floor(now * 2.5) & 1 && full.cx >= 0 && full.cx < W) put(sx + full.cx, sy + full.cy, 32, ink[0], ink[0]);
@@ -129,7 +110,7 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
     for (const t of S.hiTokens(istr)) for (let j = t.s; j < t.e && j < istr.length; j++) kindAt[j] = t.k;
     const cell = (idx: number, ch: number, fg: C3) => {
       const row = promptRow + Math.floor(idx / W) - first, col = idx % W;
-      if (row >= 0 && row < H && col >= 0 && col < W) { const scan = row & 1 ? 0.9 : 1; put(sx + col, sy + row, ch, [fg[0] * scan, fg[1] * scan, fg[2] * scan], sbg); }
+      if (row >= 0 && row < HR && col >= 0 && col < W) put(sx + col, sy + top + row, ch, fg, sbg);
     };
     for (let j = 0; j < istr.length; j++) cell(plen + j, istr.charCodeAt(j), tokCol(kindAt[j]));
     const g = S.ghost(), dim: C3 = [ink[1][0] * 0.8, ink[1][1] * 0.8, ink[1][2] * 0.8];
@@ -148,33 +129,20 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
       const lit: C3 = [sbg[0] + 16, sbg[1] + 18, sbg[2] + 16];
       for (let r = 0; r < rows; r++) {
         const srow = pr - rows + r, it = M.items[top + r], on2 = top + r === M.sel;
-        if (srow < 0 || srow >= H) continue;
+        if (srow < 0 || srow >= HR) continue;
         const fg: C3 = on2 ? sbg : ink[0], bg: C3 = on2 ? ink[0] : lit;
-        for (let c = 0; c < box; c++) put(sx + bx + c, sy + srow, c >= 1 && c <= it.length ? it.charCodeAt(c - 1) : 32, fg, bg);
+        for (let c = 0; c < box; c++) put(sx + bx + c, sy + top + srow, c >= 1 && c <= it.length ? it.charCodeAt(c - 1) : 32, fg, bg);
       }
     }
   }
   // the cursor: a block blinking where the next character goes
   if (on && !full && ready && S.scroll === 0 && Math.floor(now * 2.5) & 1) {
     const pos = S.prompt.length + S.cur, row = lines.length - 1 - (Math.floor((S.prompt.length + S.input.length) / W) - Math.floor(pos / W)) - first;
-    if (row >= 0 && row < H) put(sx + (pos % W), sy + row, 32, ink[0], ink[0]);
+    if (row >= 0 && row < HR) put(sx + (pos % W), sy + top + row, 32, ink[0], ink[0]);
   }
-  if (on && S.scroll > 0) text(sx + W - 14, sy, ` SCROLLBACK ${S.scroll} `.slice(0, 14), sbg, ink[1]);
-  // a status strip in the top-right corner, once the system has finished booting (not before the OS loads)
-  if (S.state === 'ready' && !full) {
-    const pc = P.pc, N = S.net, cpu = Math.round(pc.load * 100), temp = Math.round(pc.tempC);
-    const mem = `${Math.round(pc.usedKB() / 1024)}/${Math.round(pc.hw.ramMB)}M`, batt = Math.round(pc.charge * 100);
-    const bars = N.state === 'up' ? '|'.repeat(N.bars) + '.'.repeat(4 - N.bars) : N.state === 'assoc' || N.state === 'dhcp' ? '~~~~' : '----';
-    const red: C3 = [255, 110, 80], grn: C3 = [120, 255, 150], dim = ink[1], val = ink[0], pbg: C3 = [sbg[0] + 10, sbg[1] + 14, sbg[2] + 10];
-    const segs: [string, C3][] = [
-      [' CPU ', dim], [`${String(cpu).padStart(3)}%`, cpu > 80 ? red : val], ['  ', dim],
-      [`${temp}C`, temp > 70 ? red : val], ['  MEM ', dim], [mem, val],
-      ['  NET ', dim], [bars, N.state === 'up' ? grn : dim],
-      ['  BAT ', dim], [`${batt}%${pc.plugged ? (batt >= 100 ? ' AC' : '+') : ''}`, batt < 10 && !pc.plugged ? red : pc.plugged ? grn : val], [' ', dim],
-    ];
-    let x = sx + W - segs.reduce((n, g) => n + g[0].length, 0);
-    for (const [t, c] of segs) { for (let k = 0; k < t.length; k++) put(x + k, sy, t.charCodeAt(k), c, pbg); x += t.length; }
-  }
+  if (on && S.scroll > 0) text(sx + W - 14, sy + top, ` SCROLLBACK ${S.scroll} `.slice(0, 14), sbg, ink[1]);
+  // the Osprey's bar over the console, the window manager and an empty desktop alike
+  if (bar && !(full && (S.editor || S.fw.mode))) drawBar(S, (x, ch, fg, bg) => put(sx + x, sy, ch, fg, bg), W, now, ink);
   // powered off: a dark glass (the light's reflection lies on it, see glass above)
   if (!on) for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) put(sx + c, sy + r, 32, [0, 0, 0], [10, 10, 12]);
 }

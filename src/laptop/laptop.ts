@@ -182,6 +182,9 @@ export class Laptop {
       if (code === 'Enter' || code === 'Space') { this.sfx.push('power'); if (this.dead) { this.deadAt = now; return; } this.shell.halted = false; this.shell.boot(now); }
       return;
     }
+    // the desktops (15.20a): Ctrl+1..3 shows one, with Shift sends the focused window there
+    const desk = /^Digit([123])$/.exec(code);
+    if (ctrl && desk && this.shell.state === 'ready' && !this.shell.fw.mode && !this.shell.editor) { this.shell.goDesk(+desk[1] - 1, key !== desk[1]); return; }
     if ((code === 'PageUp' || code === 'PageDown') && !this.owns) { this.scroll(code === 'PageUp' ? TERM_H - 2 : -(TERM_H - 2)); return; }
     this.shell.key(key, ctrl, now);
   }

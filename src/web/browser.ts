@@ -321,6 +321,8 @@ export class Browser {
     const host = T.got?.host ?? '', S = host ? webOf(this.world).hosts.get(host) : undefined;
     return iconOf(S?.kind ?? (host ? 'other' : 'ferret'), host.replace(/^www\./, ''), hash3(host.length, host.charCodeAt(4) || 0, host.charCodeAt(host.length - 5) || 0));
   }
+  /** The open tab's title (the Osprey bar shows it). */
+  title(now: number) { return this.titleOf(this.T, now); }
   private titleOf(T: Tab, now: number) {
     const [f] = this.progress(now, T), G = T.got;
     return G?.page && f >= 1 ? G.page.title : G?.error || T.offline ? 'Problem loading page' : !G ? 'New Tab' : 'Loading...';

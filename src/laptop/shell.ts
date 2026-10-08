@@ -1,4 +1,4 @@
-import { type Paint } from '../render/paint2d';
+import { Paint } from '../render/paint2d';
 import { hash3 } from '../core/rng';
 import { DEBUG } from '../debug';
 import { calendar } from '../sim/clock';
@@ -7,7 +7,10 @@ import { Firmware, type FwAction } from './bios';
 import { Editor } from './editor';
 import { Browser } from '../web/browser';
 import { WM } from './wm';
-import { type Scr } from './screen';
+import { barArt, barOn, below, edgesArt, postArt } from './osprey';
+import { INKS } from './draw';
+import { Scr as Screen, St } from './screen';
+type Scr = Screen;
 import { type World } from '../sim/world';
 import L from '../locale/laptop.en.json';
 import { businessName, computerMakerName, districtName, wifiName } from '../locale/names';
@@ -35,7 +38,8 @@ const KEEP = 800;
 
 /** 0 normal, 1 dim, 2 bright. */
 export type Ink = 0 | 1 | 2;
-export interface Line { text: string; ink: Ink }
+/** A line of the console; `rgb`: runs drawn in a color of their own ([start, end, 0xRRGGBB], the boot's logo). */
+export interface Line { text: string; ink: Ink; rgb?: [number, number, number][] }
 /** A sound the shell asks for: a seek of the drive, the BIOS beep, the drive spinning up or down. */
 export type LapSfx = 'seek' | 'beep' | 'spin' | 'spindown' | 'thump' | 'tick';
 
@@ -158,6 +162,15 @@ const ANT_GAIN = 9;
 /** What the shell does itself, with no program on the disk. */
 const BUILTINS = new Set(['cd', 'help', 'history', 'job', 'exit', 'logout']);
 const PATH = ['/bin', '/usr/bin', '/sbin'];
+/** The Osprey's mark at boot (manual, section 7): the M of the wings with the fingers open, the head, the body, the tail. */
+const OSPREY_ASCII = [
+  "      __.._         _..__",
+  " _.-'     `-.  _  .-'     `-._",
+  "/_/\\/\\/\\_    `(_)'    _/\\/\\/\\_\\",
+  "         `-.__/ \\__.-'        OSprey",
+  "             |   |            UX 4.2",
+  "             /_._\\",
+];
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -260,22 +273,57 @@ export class Shell {
   browser: Browser | null = null;
   /** The window manager (15.7): composes the terminal and the browser into the one screen while Ferret runs. */
   wm: WM | null = null;
+  /** The tiling manager's three desktops (15.20a, the Osprey bar's [1] 2 3; Ctrl+1..3 shows one, Ctrl+Shift+1..3 sends the focused window there). */
+  desk = 0;
+  /** Which desktop each window sits on: the terminal, and the browser while it runs. */
+  termDesk = 0;
+  webDesk = 0;
 
   constructor(readonly pc: Computer, private world: World) {
     this.cwd = `/home/${pc.hw.user}`;
     this.fw = new Firmware(pc, world, (a) => this.fwDone(a));
   }
   /** The machine's own clock: the city's, moved by what was set in the BIOS. */
-  private get clock() { return this.world.time + this.pc.bios.clockOffset; }
+  get clock() { return this.world.time + this.pc.bios.clockOffset; }
+  /** The joined network's name (the Osprey bar), '' when not joined. */
+  get netName() { return this.net.ap >= 0 ? wifiName(this.world.city, this.world.wifi[this.net.ap]) : ''; }
+  /** Whether a desktop holds a window. */
+  deskUsed(d: number) { return this.termDesk === d || (!!this.browser && this.webDesk === d); }
+  /** The focused window's title on the bar: the terminal's directory, or the page's. */
+  deskTitle(now: number) {
+    const t = this.termDesk === this.desk, b = !!this.browser && this.webDesk === this.desk;
+    if (b && (!t || this.wm?.focus === 'web')) return `ferret: ${this.browser!.title(now)}`;
+    if (!t) return '';
+    const H = `/home/${this.pc.hw.user}`;
+    return `term: ${this.cwd === H ? '~' : this.cwd.startsWith(H + '/') ? '~' + this.cwd.slice(H.length) : this.cwd}`;
+  }
+  /** Ctrl+1..3 (15.20a): show desktop n; with Shift, send the focused window there instead. */
+  goDesk(n: number, send: boolean) {
+    if (send) {
+      const web = !!this.browser && this.webDesk === this.desk && (this.termDesk !== this.desk || this.wm?.focus === 'web');
+      if (web) this.webDesk = n; else if (this.termDesk === this.desk) this.termDesk = n;
+    } else this.desk = n;
+  }
   /** A program drawing the whole screen (SETUP, the editor), with its cursor; null for the scrolling lines. */
   screen(): { scr: Scr; cx: number; cy: number } | null {
     this.art = null;
     if (this.fw.mode) return { scr: this.fw.cells(), cx: -1, cy: -1 };
+    if (this.bios) { this.art = postArt; return null; }
     if (this.editor && this.state === 'ready') return this.editor.cells();
-    const now = performance.now() / 1000;
-    if (this.wm && this.state === 'ready') { this.art = this.wm.art(now); return this.wm.cells(now); }
-    if (this.browser && this.state === 'ready') { const a = this.browser.art(now); this.art = { key: a.key, paint: (P) => a.paint(P, 0) }; return this.browser.cells(now); }
-    return null;
+    const now = performance.now() / 1000, ink = INKS[this.ink], arts: { key: string; paint(P: Paint): void }[] = [];
+    if (barOn(this)) arts.push(barArt(this, TERM_W, ink));
+    let out: { scr: Scr; cx: number; cy: number } | null = null;
+    const termOn = this.termDesk === this.desk, webOn = !!this.browser && this.webDesk === this.desk;
+    if (this.wm && this.state === 'ready' && (termOn || webOn)) {
+      this.wm.vis.term = termOn; this.wm.vis.web = webOn;
+      const a = this.wm.art(now);
+      if (a) arts.unshift({ key: a.key, paint: (P) => a.paint(new Paint(below(P.s, 16))) });
+      out = this.wm.cells(now);
+      const e = edgesArt(this.wm.panes(), this.wm.focus, 1, TERM_H - 1, ink);
+      if (e) arts.push(e);
+    } else if (this.state === 'ready' && !termOn) out = { scr: new Screen(TERM_W, TERM_H, St.Ink), cx: -1, cy: -1 }; // an empty desktop: the bar alone
+    if (arts.length) this.art = { key: arts.map((a) => a.key).join('|'), paint: (P) => { for (const a of arts) a.paint(P); } };
+    return out;
   }
   /** The pixels the program on the screen paints on the screen's HD layer (the browser's frame, 15.17c), as of the last screen(). */
   art: { key: string; paint(P: Paint): void } | null = null;
@@ -481,6 +529,14 @@ export class Shell {
     this.then(now, () => { this.lines = []; }, 0.2);
     this.seeks(now, 1.2, 9);
     this.at(now, 1.2);
+    // the system's mark (manual, section 7): the osprey gliding, OS in amber and prey in white
+    for (const [i, t] of ['', ...OSPREY_ASCII, ''].entries()) {
+      const k = t.indexOf('OSprey'), u = t.indexOf('UX 4.2'), rgb: [number, number, number][] = [];
+      if (k >= 0) rgb.push([k + 2, k + 6, 0xe8e6df]);
+      if (u >= 0) rgb.push([u, u + 6, 0x8d8b84]);
+      this.then(now, () => { this.lines.push({ text: t, ink: 0, rgb }); }, i === 0 ? 0 : 0.07);
+    }
+    this.at(now, 0.9);
     this.say(now, `Loading ${H.os} ${H.kernel} .....`, 0, 0.3);
     this.seeks(now, 1.4, 6);
     // the kernel: timestamped as it goes; the slower the machine, the longer it takes
@@ -583,6 +639,8 @@ export class Shell {
     }
     if (this.state !== 'ready') return;
     if (this.editor) { this.editor.key(key, ctrl); return; }
+    const termOn = this.termDesk === this.desk, webOn = !!this.browser && this.webDesk === this.desk;
+    if (!termOn && !webOn) return; // an empty desktop: only Ctrl+1..3 (laptop.ts) does anything
     if (this.wm) { this.wm.key(key, ctrl, now); return; }
     if (this.browser) { this.browser.key(key, ctrl, now); return; }
     this.termKey(key, ctrl, now);
@@ -1403,6 +1461,7 @@ export class Shell {
           this.browser = new Browser(w, () => ({ up: this.net.state === 'up', kbps: this.net.kbps() }), () => { this.browser = null; this.wm = null; pc.kill(pid); }, TERM_W, TERM_H, files);
           this.browser.go(args[0] ?? '', performance.now() / 1000);
           this.wm = new WM(this, this.browser, TERM_W, TERM_H);
+          this.webDesk = this.desk;
         });
         return pc.workS(9800, 1);
       }

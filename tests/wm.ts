@@ -1,8 +1,8 @@
 /**
  * The notebook's window manager (15.7), in Node:
  *   npx rolldown tests/wm.ts --format esm --platform node -o tests/.out/wm.mjs && node tests/.out/wm.mjs [seed]
- * The terminal and the browser sit side by side with a '|' divider; the focus marker points at the
- * pane with the keys; Ctrl+Left/Right moves it; Ctrl+Up maximizes a pane (no divider, full width) and
+ * The terminal and the browser sit side by side under the bar's row, a blank column between (the
+ * screen's pixels draw the rule and ring the focused pane, 15.20a); Ctrl+Left/Right moves it; Ctrl+Up maximizes a pane (no divider, full width) and
  * again restores the split; PageUp walks the terminal's scrollback; keys reach the focused pane.
  * Prints the top rows of the composed screen.
  */
@@ -42,8 +42,11 @@ const rowStr = (scr: { ch: string[][] }, r: number) => scr.ch[r].join('');
 // --- split layout, web focused by default ---
 let out = wm.cells(1);
 if (out.scr.w !== W || out.scr.h !== H) fail('composed screen is the console size');
-if (rowStr(out.scr, 0)[split] !== '|') fail('a divider column between the panes');
-if (out.scr.ch[H >> 1][split] !== '>') fail('the marker points at the web pane when it has the focus');
+if (rowStr(out.scr, 0).trim() !== '') fail('the top row is left for the Osprey bar');
+if (out.scr.ch[H >> 1][split] !== ' ') fail('a blank gap column between the panes (the rule is pixels)');
+let P = wm.panes();
+if (P.tw !== split || P.wx !== split + 1) fail('the panes split round the gap');
+if (wm.focus !== 'web') fail('the web pane has the focus at first');
 // the terminal pane holds the prompt line on the left; the browser's title bar is on the right
 const leftHasPrompt = out.scr.ch.some((row) => row.slice(0, split).join('').includes('user@host:~$ who'));
 if (!leftHasPrompt) fail('the terminal pane shows the prompt and what is typed');
@@ -53,7 +56,7 @@ if (!rightHasChrome) fail('the browser pane shows its chrome');
 // --- move the focus to the terminal ---
 wm.key('ArrowLeft', true, 1);
 out = wm.cells(1);
-if (out.scr.ch[H >> 1][split] !== '<') fail('the marker points at the terminal once it has the focus');
+if (wm.focus !== 'term') fail('Ctrl+Left gives the terminal the focus');
 if (out.cx !== 13 + 3 || out.cy !== H - 1) fail(`the caret sits after the prompt on the last row (got ${out.cx},${out.cy})`);
 
 // a letter typed reaches the terminal, not the browser
@@ -69,12 +72,20 @@ term.scroll = 0;
 // --- Ctrl+Up maximizes the terminal: full width, no divider ---
 wm.key('ArrowUp', true, 1);
 out = wm.cells(1);
-if (rowStr(out.scr, 0).includes('|') && rowStr(out.scr, 0)[split] === '|') fail('no divider when a pane is maximized');
+P = wm.panes();
+if (P.ww !== 0 || P.tw !== W) fail('a maximized terminal takes the whole width');
 if (out.scr.ch[2].slice(split).join('').includes('Lookwise')) fail('the browser is hidden when the terminal is maximized');
 // restore
 wm.key('ArrowUp', true, 1);
 out = wm.cells(1);
-if (out.scr.ch[0][split] !== '|') fail('Ctrl+Up again restores the split');
+if (wm.panes().ww === 0) fail('Ctrl+Up again restores the split');
+
+// --- desktops (15.20a): the browser on another desktop leaves the terminal the whole width ---
+wm.vis.web = false; wm.cells(1);
+if (wm.panes().tw !== W || wm.focus !== 'term') fail('with the browser elsewhere, the terminal fills the screen');
+wm.vis.web = true; wm.vis.term = false; wm.cells(1);
+if (wm.panes().ww !== W || wm.focus !== 'web') fail('with the terminal elsewhere, the browser fills the screen');
+wm.vis.term = true;
 
 // --- mouse: a press on a pane focuses it; the wheel scrolls the pane under the cursor ---
 wm.cells(1); // compose so the selection can read the grid
@@ -92,7 +103,7 @@ term.scroll = 0;
 wm.focus = 'term';
 wm.cells(1);
 // the top row of the terminal pane reads "line 12" in the printout above; drag across it
-wm.down(0, 0); wm.drag(6, 0); wm.up(6, 0, 1);
+wm.down(0, 1); wm.drag(6, 1); wm.up(6, 1, 1);
 if (!/^line \d/.test(wm.clip)) fail(`a drag copies the text under it (got "${wm.clip}")`);
 term.input = ''; term.cur = 0;
 wm.key('v', true, 1); // Ctrl+V pastes into the prompt

@@ -3,8 +3,9 @@
  * the one console, the way a tiling manager of 2008 split an xterm and a browser. The shell owns it
  * while Ferret runs (shell.wm); it composes both panes into the one screen the firmware draws.
  *
- * Layout: the terminal on the left, the browser on the right, a '|' divider between with a '<'/'>'
- * marker pointing at the pane that has the keys. Ctrl+Up maximizes the focused pane; Ctrl+Left/Right
+ * Layout: the Osprey's bar on the top row (osprey.ts), under it the terminal on the left and the
+ * browser on the right, a blank column between them where the screen's pixels draw a fine rule and
+ * ring the pane that has the keys (15.20a, osprey.ts edgesArt). Ctrl+Up maximizes the focused pane; Ctrl+Left/Right
  * moves the focus (Ctrl+Tab is the browser's, for its tabs). The focused pane takes the keys; while the terminal has them, PageUp and
  * PageDown walk its scrollback. The browser keeps its own keys (F6 address, Tab link, F10 closes).
  *
@@ -31,6 +32,8 @@ export interface TermIO {
 }
 
 const GAP = 1;
+/** Rows over the panes, for the Osprey's bar (15.20a). */
+export const BAR = 1;
 
 export class WM {
   /** Which pane has the keys. */
@@ -49,6 +52,8 @@ export class WM {
   private sel: { ax: number; ay: number; hx: number; hy: number; down: boolean; moved: boolean } | null = null;
   /** The last composed screen, so a released selection can read its characters. */
   private lastScr: Scr | null = null;
+  /** Which windows sit on the desktop on screen (15.20a; the shell sets it): a hidden one gives the other the whole width. */
+  readonly vis = { term: true, web: true };
 
   constructor(private term: TermIO, private browser: Browser, private w: number, private h: number) {
     this.split = Math.floor((w - GAP) / 2);
@@ -56,11 +61,17 @@ export class WM {
 
   /** The panes' rectangles for the current layout: a pane with width 0 is hidden. */
   private rects(): { tx: number; tw: number; wx: number; ww: number } {
+    if (!this.vis.term && !this.vis.web) return { tx: -1, tw: 0, wx: -1, ww: 0 };
+    if (!this.vis.web) { this.focus = 'term'; return { tx: 0, tw: this.w, wx: -1, ww: 0 }; }
+    if (!this.vis.term) { this.focus = 'web'; return { tx: -1, tw: 0, wx: 0, ww: this.w }; }
     if (this.max === 'term') return { tx: 0, tw: this.w, wx: -1, ww: 0 };
     if (this.max === 'web') return { tx: -1, tw: 0, wx: 0, ww: this.w };
     const tw = this.split, ww = this.w - tw - GAP;
     return { tx: 0, tw, wx: tw + GAP, ww };
   }
+
+  /** The panes' columns now (the edges' pixels follow them). */
+  panes() { return this.rects(); }
 
   key(key: string, ctrl: boolean, now: number) {
     // Ctrl+Up maximizes the focused pane and restores the split (not F11: the Electron shell owns F11 for its own fullscreen)
@@ -72,7 +83,7 @@ export class WM {
     if (this.viewer && key === 'Escape') { this.viewer = false; return; }
     if (this.focus === 'web') { this.browser.key(key, ctrl, now); return; }
     if (key === 'PageUp' || key === 'PageDown') {
-      const page = this.h - 2, cap = Math.max(0, this.term.lines.length - 4);
+      const page = this.h - BAR - 2, cap = Math.max(0, this.term.lines.length - 4);
       this.term.scroll = Math.max(0, Math.min(cap, this.term.scroll + (key === 'PageUp' ? page : -page)));
       return;
     }
@@ -104,7 +115,7 @@ export class WM {
     // a plain click: clear the mark and act on the pane
     this.sel = null;
     const R = this.rects();
-    if (this.focus === 'web' && R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.browser.click(x - R.wx, y, now); return; }
+    if (this.focus === 'web' && R.ww > 0 && x >= R.wx && x < R.wx + R.ww) { this.browser.click(x - R.wx, y - BAR, now); return; }
     // clicking a field in the terminal output (an IP, host, MAC/BSSID, a quoted ESSID, a WEP key, a
     // port, e.g. in a scan or a Wi-Fi listing) types it at the prompt — plain text insertion, so the
     // player need not retype it; the command itself is the player's to run (15.7d, widened in 15.7e-c)
@@ -173,7 +184,7 @@ export class WM {
   art(now: number): { key: string; paint(P: Paint): void } | null {
     const R = this.rects();
     if (R.ww <= 0) return null;
-    if (R.ww !== this.bw) { this.browser.resize(R.ww, this.h); this.bw = R.ww; }
+    if (R.ww !== this.bw) { this.browser.resize(R.ww, this.h - BAR); this.bw = R.ww; }
     const a = this.browser.art(now);
     return { key: `${R.wx}:${a.key}`, paint: (P) => a.paint(P, R.wx) };
   }
@@ -184,15 +195,10 @@ export class WM {
     let cx = -1, cy = -1;
     if (R.tw > 0) { const t = this.drawTerm(S, R.tx, R.tw); if (this.focus === 'term') { cx = t.cx; cy = t.cy; } }
     if (R.ww > 0) {
-      if (R.ww !== this.bw) { this.browser.resize(R.ww, this.h); this.bw = R.ww; }
+      if (R.ww !== this.bw) { this.browser.resize(R.ww, this.h - BAR); this.bw = R.ww; }
       const b = this.browser.cells(now);
       this.blit(S, b.scr, R.wx, R.ww);
-      if (this.focus === 'web' && b.cx >= 0) { cx = R.wx + b.cx; cy = b.cy; }
-    }
-    if (R.tw > 0 && R.ww > 0) {
-      const dx = R.tx + R.tw, mid = this.h >> 1;
-      for (let r = 0; r < this.h; r++) S.text(dx, r, '|', St.Dim);
-      S.text(dx, mid, this.focus === 'term' ? '<' : '>', St.Bright);
+      if (this.focus === 'web' && b.cx >= 0) { cx = R.wx + b.cx; cy = b.cy + BAR; }
     }
     this.lastScr = S;
     if (this.sel) this.mark(S);
@@ -231,7 +237,7 @@ export class WM {
 
   /** The terminal's visible lines (re-wrapped to the pane's width), prompt and caret, drawn into S. */
   private drawTerm(S: Scr, x0: number, w: number): { cx: number; cy: number } {
-    const T = this.term, H = this.h, disp: { t: string; ink: number }[] = [];
+    const T = this.term, H = this.h - BAR, disp: { t: string; ink: number }[] = [];
     const wrap = (text: string, ink: number) => { for (let k = 0; k === 0 || k < text.length; k += w) disp.push({ t: text.slice(k, k + w), ink }); };
     for (const ln of T.lines) wrap(ln.text, ln.ink);
     let caretRow = -1, caretCol = -1;
@@ -242,17 +248,18 @@ export class WM {
       caretRow = start + Math.floor(pos / w); caretCol = pos % w;
     }
     const first = Math.max(0, disp.length - H - T.scroll);
-    for (let r = 0; r < H; r++) { const ln = disp[first + r]; if (ln) S.text(x0, r, ln.t, ln.ink); }
+    for (let r = 0; r < H; r++) { const ln = disp[first + r]; if (ln) S.text(x0, BAR + r, ln.t, ln.ink); }
     const cy = caretRow - first;
     const show = caretRow >= 0 && cy >= 0 && cy < H && T.scroll === 0;
-    return { cx: show ? x0 + caretCol : -1, cy: show ? cy : -1 };
+    return { cx: show ? x0 + caretCol : -1, cy: show ? BAR + cy : -1 };
   }
 
-  /** Copy a pane's own screen into the composite at (x0, 0), clipped to the pane's width. */
+  /** Copy a pane's own screen into the composite at (x0, BAR), clipped to the pane's width. */
   private blit(S: Scr, src: Scr, x0: number, w: number) {
-    for (let r = 0; r < Math.min(S.h, src.h); r++) {
+    for (let r = 0; r < Math.min(S.h - BAR, src.h); r++) {
+      const y = BAR + r;
       for (let c = 0; c < Math.min(w, src.w); c++) {
-        S.ch[r][x0 + c] = src.ch[r][c]; S.st[r][x0 + c] = src.st[r][c]; S.fg[r][x0 + c] = src.fg[r][c]; S.bg[r][x0 + c] = src.bg[r][c];
+        S.ch[y][x0 + c] = src.ch[r][c]; S.st[y][x0 + c] = src.st[r][c]; S.fg[y][x0 + c] = src.fg[r][c]; S.bg[y][x0 + c] = src.bg[r][c];
       }
     }
   }

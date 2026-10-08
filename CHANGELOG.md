@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.47 — O Osprey no notebook (2026-10-07)
+- **A barra do Osprey** no alto da tela do notebook, como no manual: as três áreas de trabalho, o título da janela em foco (o diretório do terminal ou a página do Ferret), a rede Wi-Fi com as barras de sinal, a CPU, a memória (acende acima de 85%), a bateria com o tempo restante (um raio na tomada; pisca abaixo de 10%) e a hora. Tudo vem da máquina e do mundo; as linhas finas entre os campos são pixels.
+- **Áreas de trabalho:** **Ctrl+1..3** mostra uma área; **Ctrl+Shift+1..3** manda a janela em foco para outra (o Ferret numa, o terminal noutra, cada um em tela cheia).
+- **As bordas das janelas em pixels:** com o terminal e o Ferret lado a lado, uma linha fina entre eles e a janela em foco contornada em âmbar claro (saíram o `|` e a setinha `<`/`>`).
+- **O logo do Osprey no boot:** a águia-pescadora em ASCII, com "OS" em âmbar e "prey" em branco, antes de o sistema carregar.
+- **O POST com os selos nítidos:** a fita azul do fabricante e o selo "powersave" de economia de energia, desenhados em pixels (antes eram letras).
+- **A tela é LCD:** saíram as linhas de varredura do terminal.
+
 ## 0.15.46 — Glare de verdade, galeria na câmera, banco e Maps (2026-10-07)
 - **O reflexo do celular agora vem das luzes de verdade:** sumiu o brilho fixo no canto da tela (e a faixa falsa). No lugar, as lâmpadas de rua acesas e o sol refletem no vidro conforme o ângulo: uma mancha de luz na cor da lâmpada (âmbar no sódio), que desliza pela tela quando você vira e só aparece quando a luz está atrás e acima de você, como num espelho. Mais forte nas partes escuras da tela.
 - **Câmera com galeria:** embaixo do botão, uma tira com as últimas fotos (a mais nova primeiro), três por vez; as setas nas pontas e a roda do mouse sobre a tira a fazem correr, e tocar numa foto a abre inteira.

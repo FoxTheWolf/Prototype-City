@@ -17,6 +17,8 @@
 
 > Números pós-readline (Bloco 3): `sniffStep` ~359, `finishSniff` ~375, `tdumpMon` ~384, `remote` ~849 (`cellLog` ~898); switch: `job` ~1070, `mmap` ~1225, `bruter` ~1243, `wcrack` ~1261, `tdump` ~1281, `tnet` ~1312, `mbus` ~1326. (A lista detalhada abaixo é da f3; ancore pelos nomes.)
 
+> **15.20a (2026-10-07):** ~+40 linhas em seções neutras (`OSPREY_ASCII` depois de `PATH`, os campos de área depois de `wm`, `netName`/`deskUsed`/`deskTitle`/`goDesk` depois de `clock`, `screen()`, o logo no `load()`): as faixas sensíveis abaixo andaram ~+40; ancorar pelos nomes.
+
 **SENSÍVEIS (`[HACKING]`, não abrir numa sessão normal):**
 - **linha ~16** — `import ... from '../sim/network'` (`lanHosts`, `modbusRegs`, `setBreaker`, `setSignals`, `cellLog`, `WORDS`).
 - **~59–68** — `HACK_TOOLS` (bruter, wcrack) e `WEP_IVS`; a instalação no `/bin` do jogador fica em ~182.

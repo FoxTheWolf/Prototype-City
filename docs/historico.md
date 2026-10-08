@@ -3,6 +3,14 @@
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
 
+## 15.20a O Osprey (0.15.47, 2026-10-07)
+- **`src/laptop/osprey.ts`** (novo): `drawBar` (o texto da barra na linha 0, colunas fixas para as réguas não andarem), `barArt` (réguas, linha de baixo, as quatro barras de sinal, o raio; chave só muda com sinal/tomada/tinta), `edgesArt` (régua entre painéis e o contorno do painel em foco), `below` (uma superfície deslocada para baixo, para o quadro do Ferret ficar sob a barra), `postArt` (fita azul e selo powersave em pixels, nas células 16 × 32 do modo texto).
+- **Áreas de trabalho:** `desk`/`termDesk`/`webDesk`, `goDesk`, `deskUsed`, `deskTitle` no `Shell` (seção neutra); Ctrl+1..3 em `laptop.ts` (pelo `code`; Shift = enviar). O `WM` ganhou `BAR = 1` (os painéis da linha 1 em diante), `vis` (qual janela está na área) e `panes()`; o `|` e o marcador saíram. `screen()` compõe as artes (Ferret, barra, bordas) numa chave só; área vazia = uma `Scr` em branco.
+- **`draw.ts`:** o console sob a barra (`top`), as corridas `rgb` de uma `Line` (o logo), sem linhas de varredura (regra do manual: LCD), sem a faixa de status antiga e sem o ASCII da BIOS.
+- **Boot:** `OSPREY_ASCII` em `shell.ts`, impresso antes do "Loading" (neutro).
+- **Testes:** `tests/osprey.ts` (barra, bordas, áreas, POST; PNGs em `tests/.out/osprey-*.png`); `tests/wm.ts` atualizado (a linha de cima livre, a coluna vazia, `panes()`, as áreas).
+- **Fica para depois:** o "vazamento" do backlight e o ângulo de visão do LCD (seção 6 do manual), a chave do rádio física (15.20b, com o corpo), o editor ainda sem a barra (é tela cheia).
+
 ## 3b do celular: os últimos apps em pixels (0.15.33–41, 2026-10-07)
 - **0.15.33 Streetwire** (`paintWireFeed/Post/Profile` em `pixpages.ts`; a paleta saiu de `wire.ts`): cartões com o rosto (iniciais na cor da pessoa), o coração como botão, a foto do post quando já tirada, comentários em cartões, o perfil com tabela e posts.
 - **0.15.34 Banco** (`paintBank`): papel creme, verde e ouro, o emblema de colunas; saldo grande, extrato, agência com botão de ligar. **0.15.37:** a recarga saiu (pedido do usuário: o banco não sabe o chip; a recarga é da operadora, pelo USSD); entrou "Branches nearby" (`branchesNear` em `sim/bank.ts`; a tecla verde liga para a escolhida). Saíram `TOPUPS`, `BANK_PAY_KB`, o SMS `topup` e o `note` do `bk`; o tipo `topup` do extrato ficou (saves antigos).
