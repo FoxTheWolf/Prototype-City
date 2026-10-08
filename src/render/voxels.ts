@@ -43,52 +43,75 @@ export interface GBuf { w: number; h: number; mat: Uint8Array; face: Uint8Array;
 export interface VoxView { w: number; h: number; sx: number; sy: number; yaw: number; pitch: number; /** the model's point at pixel (0, 0)'s corner, untilted (mm; 0 by default) */ x0?: number; y0?: number }
 
 export function castVox(V: Vox, view: VoxView): GBuf {
-  const { w, h, sx, sy } = view, n = w * h, X0 = view.x0 ?? 0, Y0 = view.y0 ?? 0;
-  const G: GBuf = { w, h, mat: new Uint8Array(n), face: new Uint8Array(n), ao: new Uint8Array(n), vx: new Uint8Array(n), vy: new Uint8Array(n) };
-  const cy = Math.cos(view.yaw), syw = Math.sin(view.yaw), cp = Math.cos(view.pitch), sp = Math.sin(view.pitch);
-  // the camera's axes in the model's frame: R = Ry(yaw) * Rx(pitch) applied to the screen's right, down and the view
-  const rot = (x: number, y: number, z: number): [number, number, number] => {
-    const y1 = y * cp - z * sp, z1 = y * sp + z * cp;
-    return [x * cy + z1 * syw, y1, -x * syw + z1 * cy];
-  };
-  const R = rot(1, 0, 0), D = rot(0, 1, 0), dir = rot(0, 0, -1), mx = V.nx / 2, my = V.ny / 2, mz = V.nz / 2, far = V.nx + V.ny + V.nz;
-  const [dx, dy, dz] = dir, NX = V.nx, NY = V.ny, NZ = V.nz, C = V.cells;
+  const { w, h, sx, sy } = view, X0 = view.x0 ?? 0, Y0 = view.y0 ?? 0, G = gbuf(w, h);
+  const [R, D, dir] = voxAxes(view.yaw, view.pitch), mx = V.nx / 2, my = V.ny / 2, mz = V.nz / 2, far = V.nx + V.ny + V.nz;
+  const [dx, dy, dz] = dir;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const u = X0 + (i + 0.5) * sx - mx, v = Y0 + (j + 0.5) * sy - my;
+    voxRay(V, G, j * w + i, mx + R[0] * u + D[0] * v - dx * far, my + R[1] * u + D[1] * v - dy * far, mz + R[2] * u + D[2] * v - dz * far, dx, dy, dz);
+  }
+  return G;
+}
+
+/**
+ * 15.20b: a model seen in perspective (the notebook on the lap): w x h pixels from an eye at `eye` (cells,
+ * in the model's frame), each pixel's ray F + R * (i + 0.5 - w / 2) + D * (j + 0.5 - h / 2): F from the eye
+ * to the picture's middle, R and D a pixel's step right and down (voxLookAt makes them).
+ */
+export interface VoxCam { w: number; h: number; eye: readonly number[]; F: readonly number[]; R: readonly number[]; D: readonly number[] }
+export function castVoxPersp(V: Vox, cam: VoxCam): GBuf {
+  const { w, h, eye, F, R, D } = cam, G = gbuf(w, h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const u = i + 0.5 - w / 2, v = j + 0.5 - h / 2;
+    let dx = F[0] + R[0] * u + D[0] * v, dy = F[1] + R[1] * u + D[1] * v, dz = F[2] + R[2] * u + D[2] * v;
+    const l = Math.hypot(dx, dy, dz); dx /= l; dy /= l; dz /= l;
+    voxRay(V, G, j * w + i, eye[0], eye[1], eye[2], dx, dy, dz);
+  }
+  return G;
+}
+/** A perspective camera at eye looking at target (cells; z up), fov radians across w pixels: the screen's right is the model's right seen from the eye. */
+export function voxLookAt(w: number, h: number, eye: readonly number[], target: readonly number[], fov: number): VoxCam {
+  const n = (a: number[]) => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[1] / l, a[2] / l]; };
+  const cr = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const f = n([target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]]), r = n(cr([0, 0, 1], f)), d = cr(r, f);
+  const k = w / 2 / Math.tan(fov / 2);
+  return { w, h, eye, F: [f[0] * k, f[1] * k, f[2] * k], R: r, D: d };
+}
+
+const gbuf = (w: number, h: number): GBuf => { const n = w * h; return { w, h, mat: new Uint8Array(n), face: new Uint8Array(n), ao: new Uint8Array(n), vx: new Uint8Array(n), vy: new Uint8Array(n) }; };
+/** One ray from (ox, oy, oz) along (dx, dy, dz) (cells): into the grid's box (slabs), then cell by cell to the first filled one, written at G[k]. */
+function voxRay(V: Vox, G: GBuf, k: number, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number) {
+  const NX = V.nx, NY = V.ny, NZ = V.nz, C = V.cells;
   const ix = Math.abs(dx) < 1e-9 ? 1e9 : 1 / dx, iy = Math.abs(dy) < 1e-9 ? 1e9 : 1 / dy, iz = Math.abs(dz) < 1e-9 ? 1e9 : 1 / dz;
   const stx = dx > 0 ? 1 : -1, sty = dy > 0 ? 1 : -1, stz = dz > 0 ? 1 : -1, tdx = Math.abs(ix), tdy = Math.abs(iy), tdz = Math.abs(iz);
   // the face a step along each axis comes in through
   const fX = stx > 0 ? Face.XN : Face.XP, fY = sty > 0 ? Face.YN : Face.YP, fZ = stz > 0 ? Face.ZN : Face.ZP;
   const slab = (o: number, i: number, n: number): [number, number] => { const a = -o * i, b = (n - o) * i; return a < b ? [a, b] : [b, a]; };
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    const u = X0 + (i + 0.5) * sx - mx, v = Y0 + (j + 0.5) * sy - my;
-    const ox = mx + R[0] * u + D[0] * v - dx * far, oy = my + R[1] * u + D[1] * v - dy * far, oz = mz + R[2] * u + D[2] * v - dz * far;
-    // into the grid's box (slabs), then cell by cell
-    const [ax, bx] = slab(ox, ix, NX), [ay, by] = slab(oy, iy, NY), [az, bz] = slab(oz, iz, NZ);
-    const t0 = Math.max(ax, ay, az), t1 = Math.min(bx, by, bz);
-    if (t0 >= t1) continue;
-    let face = t0 === ax ? fX : t0 === ay ? fY : fZ;
-    const t = t0 + 1e-6, px = ox + dx * t, py = oy + dy * t, pz = oz + dz * t;
-    let cx = Math.min(NX - 1, Math.max(0, Math.floor(px))), cy = Math.min(NY - 1, Math.max(0, Math.floor(py))), cz = Math.min(NZ - 1, Math.max(0, Math.floor(pz)));
-    let mX = t0 + ((stx > 0 ? cx + 1 : cx) - px) * ix, mY = t0 + ((sty > 0 ? cy + 1 : cy) - py) * iy, mZ = t0 + ((stz > 0 ? cz + 1 : cz) - pz) * iz;
-    for (;;) {
-      const m = C[(cz * NY + cy) * NX + cx];
-      if (m) {
-        const k = j * w + i, N = FACE_N[face];
-        G.mat[k] = m; G.face[k] = face; G.vx[k] = cx; G.vy[k] = cy;
-        // hemmed in: the cells in front of the face, beside it, that are filled (the crevices round the keys)
-        const fx = cx + N[0], fy = cy + N[1], fz = cz + N[2];
-        let ao = 0;
-        if (!N[0]) ao += (V.at(fx - 1, fy, fz) ? 1 : 0) + (V.at(fx + 1, fy, fz) ? 1 : 0);
-        if (!N[1]) ao += (V.at(fx, fy - 1, fz) ? 1 : 0) + (V.at(fx, fy + 1, fz) ? 1 : 0);
-        if (!N[2]) ao += (V.at(fx, fy, fz - 1) ? 1 : 0) + (V.at(fx, fy, fz + 1) ? 1 : 0);
-        G.ao[k] = ao;
-        break;
-      }
-      if (mX < mY && mX < mZ) { cx += stx; if (cx < 0 || cx >= NX) break; mX += tdx; face = fX; }
-      else if (mY < mZ) { cy += sty; if (cy < 0 || cy >= NY) break; mY += tdy; face = fY; }
-      else { cz += stz; if (cz < 0 || cz >= NZ) break; mZ += tdz; face = fZ; }
+  const [ax, bx] = slab(ox, ix, NX), [ay, by] = slab(oy, iy, NY), [az, bz] = slab(oz, iz, NZ);
+  const t0 = Math.max(ax, ay, az, 0), t1 = Math.min(bx, by, bz);
+  if (t0 >= t1) return;
+  let face = t0 === ax ? fX : t0 === ay ? fY : fZ;
+  const t = t0 + 1e-6, px = ox + dx * t, py = oy + dy * t, pz = oz + dz * t;
+  let cx = Math.min(NX - 1, Math.max(0, Math.floor(px))), cy = Math.min(NY - 1, Math.max(0, Math.floor(py))), cz = Math.min(NZ - 1, Math.max(0, Math.floor(pz)));
+  let mX = t0 + ((stx > 0 ? cx + 1 : cx) - px) * ix, mY = t0 + ((sty > 0 ? cy + 1 : cy) - py) * iy, mZ = t0 + ((stz > 0 ? cz + 1 : cz) - pz) * iz;
+  for (;;) {
+    const m = C[(cz * NY + cy) * NX + cx];
+    if (m) {
+      const N = FACE_N[face];
+      G.mat[k] = m; G.face[k] = face; G.vx[k] = cx; G.vy[k] = cy;
+      // hemmed in: the cells in front of the face, beside it, that are filled (the crevices round the keys)
+      const fx = cx + N[0], fy = cy + N[1], fz = cz + N[2];
+      let ao = 0;
+      if (!N[0]) ao += (V.at(fx - 1, fy, fz) ? 1 : 0) + (V.at(fx + 1, fy, fz) ? 1 : 0);
+      if (!N[1]) ao += (V.at(fx, fy - 1, fz) ? 1 : 0) + (V.at(fx, fy + 1, fz) ? 1 : 0);
+      if (!N[2]) ao += (V.at(fx, fy, fz - 1) ? 1 : 0) + (V.at(fx, fy, fz + 1) ? 1 : 0);
+      G.ao[k] = ao;
+      return;
     }
+    if (mX < mY && mX < mZ) { cx += stx; if (cx < 0 || cx >= NX) return; mX += tdx; face = fX; }
+    else if (mY < mZ) { cy += sty; if (cy < 0 || cy >= NY) return; mY += tdy; face = fY; }
+    else { cz += stz; if (cz < 0 || cz >= NZ) return; mZ += tdz; face = fZ; }
   }
-  return G;
 }
 
 /** The camera's axes in the model's frame for a yaw and pitch (castVox's): the screen's right, its down, and the view. */
