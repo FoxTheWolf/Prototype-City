@@ -113,7 +113,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **21.3 Os carros refeitos em cubinhos,** ocos, faróis variados, os dois cones, as luzes do táxi no chão.
 - **21.4 Os carros dos cidadãos:** todo carro com dono e destino, a placa, o estacionamento.
 - **21.5 O táxi por dentro:** pedir, o banco de trás, o taxímetro, a conversa, pular pagando.
-- **21.6 Reavaliar o ritmo do tempo** (no playtest de 2026-10-08, 75% do tempo de jogo foi andando, 42 min/km).
+- **21.6 Reavaliar o ritmo do tempo** (no playtest de 2026-10-08, 75% do tempo de jogo foi andando, 42 min/km). **Decidido (2026-10-08): esperar até aqui.** Até lá, os trabalhos da 18 com prazo muito folgado; não balancear antes de os sistemas existirem (o balanço é a 25).
 - **Depois da 1.0:** o jogador dirigir (pelo mesmo sistema) e o metrô elevado.
 
 ## Etapa 22: Vida do personagem (7 subetapas)
