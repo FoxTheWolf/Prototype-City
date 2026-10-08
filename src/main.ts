@@ -1410,7 +1410,7 @@ function frame(now: number) {
   }
   watch.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
-  watchG = running && WATCH_ON ? drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city), camera.yaw, [uiLayout.originX, uiLayout.originY, uiLayout.cellW, uiLayout.cellH]) : null;
+  watchG = running && WATCH_ON ? drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city), camera.yaw, [uiLayout.originX, uiLayout.originY, uiLayout.cellW, uiLayout.cellH], { yaw: camera.yaw, pitch: camera.pitch, glint: VIEW_GLINT, speed: world.player.speed }) : null;
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null; PHONE_PIC.on = false; PHONE_BODY.on = false;
   if (!phoneOnTop) drawPhone(ui, phone, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, camera);

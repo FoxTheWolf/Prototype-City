@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.53 — Metal que reflete (2026-10-07)
+- **O brilho do aço do relógio:** a luz mais forte por perto vira uma faixa de reflexo na caixa, que escorrega quando você vira a câmera e **sobe e desce com o balanço do braço** quando você anda (mais forte correndo).
+- **O relógio balança como o celular:** ao virar a câmera ele se inclina um pouco para o outro lado e volta; andando e correndo, sobe e desce com o braço.
+- **O visor como um LCD de verdade:** só reflete, então numa rua escura quase some (é para isso que serve o LIGHT); sob o poste fica apagado, de dia lê bem. O cristal por cima tem um leve véu de luz e o reflexo da luz passa por ele, lavando os números.
+- **O cromo do celular reflete:** o degradê do aro, do botão central e das teclas de música escorrega com o balanço do aparelho, junto com o brilho.
+
 ## 0.15.52 — O relógio em cubinhos (2026-10-07)
 - **O relógio virou um objeto de verdade:** a caixa de aço escovado com o aro chanfrado, a face escura com as legendas impressas, o visor rebaixado, os quatro botões de metal nos lados e a pulseira de resina com nervuras e furos, tudo em cubinhos de 1 mm, levemente inclinado na mão, com a luz da cena batendo de cima e da esquerda.
 - **O visor em pixels:** os números agora são segmentos de verdade, com as pontas chanfradas e os apagados aparecendo de leve; a lua em fatias, o coração que pisca a cada batida, as setas do sol.

@@ -294,9 +294,11 @@ export function drawBody3d(kx: number, ky: number, S: Shell, look: number, body:
   const [R, D, dir] = voxAxes(yaw, pitch);
   B.w = Math.round(NX * kx); B.h = Math.round(NY * ky); B.dx = -Math.round(OFF * kx); B.dy = -Math.round(OFF * ky);
   U.set([R[0], R[1], R[2], 1 / kx, D[0], D[1], D[2], 1 / ky, dir[0], dir[1], dir[2], Math.round(railPx)], 4);
-  U.set([B.w, B.h, DK, 0.68 + L.lat * 0.44, L.rgb[0], L.rgb[1], L.rgb[2], L.lat, L.glint[0], L.glint[1], L.glint[2], L.str], 16);
+  // the metal mirrors: as the body sways off its pose its chrome's gradient and the glint slide over it (as the watch's)
+  const slide = -(pitch - PITCH) * 9 + (yaw - YAW) * 5;
+  U.set([B.w, B.h, DK, 0.68 + L.lat * 0.44 + slide, L.rgb[0], L.rgb[1], L.rgb[2], L.lat, L.glint[0], L.glint[1], L.glint[2], L.str], 16);
   const ice = on ? ICE : ICE_OFF, bc = brand?.col ?? [0, 0, 0];
-  U.set([ice[0], ice[1], ice[2], on ? 1 : 0, bc[0], bc[1], bc[2], 0], 28);
+  U.set([ice[0], ice[1], ice[2], on ? 1 : 0, bc[0], bc[1], bc[2], slide], 28);
   // the glass's cells (model cells: x0, y0, width, height): those whose centre is on SCREEN_MM, as base() lays them
   const [s0, t0, s1, t1] = SCREEN_MM, g = (v: number) => Math.ceil(v + OFF - 0.5);
   U.set([g(s0), g(t0), g(s1) - g(s0), g(t1) - g(t0)], 36);

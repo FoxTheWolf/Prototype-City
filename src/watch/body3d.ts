@@ -81,12 +81,17 @@ let built: { up: Uint8Array; dn: Uint8Array; cols: Map<WBtn, number[]>; sunk: Se
 
 /** The watch's pose: tilted a little (its lower side shows), as the hand holds it up. */
 const YAW = 0.05, PITCH = -0.16;
+/** This frame's pose (the rest pose swayed by the view's turn and the arm's swing), for watchProject. */
+const POSE = { yaw: YAW, pitch: PITCH };
+/** The light glinting off it (as the phone's VoxLight: side, strength, color) and the sway off its pose (yaw, pitch, rad). */
+export interface WatchMotion { lat: number; str: number; glint: readonly [number, number, number]; tilt: readonly [number, number] }
 /**
  * The body for this frame into WATCH_GPU: its middle on the monitor (cx, cy, pixels), k pixels a millimetre,
  * the scene's light (rgb), the backlight on, the buttons pressed, the maker. The LCD's picture is painted by
  * the caller into WATCH_GPU.lcd (bumping lcdVer when it changed).
  */
-export function watchGpu(cx: number, cy: number, k: number, light: ArrayLike<number>, lit: boolean, down: (b: WBtn) => boolean, brand: string): WatchGpu {
+export function watchGpu(cx: number, cy: number, k: number, light: ArrayLike<number>, lit: boolean, down: (b: WBtn) => boolean, brand: string,
+  mo: WatchMotion = { lat: 0, str: 0, glint: [1, 1, 1], tilt: [0, 0] }): WatchGpu {
   const B = WATCH_GPU, U = B.uni, bytes = new Uint8Array(B.vox.buffer);
   if (!built) {
     const up = model(() => false).cells, dn = model(() => true).cells, cols = new Map<WBtn, number[]>();
@@ -107,11 +112,13 @@ export function watchGpu(cx: number, cy: number, k: number, light: ArrayLike<num
   }
   if (faceFor !== brand) { faceFor = brand; B.face = paintFace(brand); B.faceVer++; }
   // an orthographic view of the model's middle at (cx, cy): a pixel is 1 / k cells along the screen's right and down
-  const [R, D, dir] = voxAxes(YAW, PITCH), m = [NX / 2, NY / 2, NZ / 2], far = NX + NY + NZ;
+  POSE.yaw = YAW + mo.tilt[0]; POSE.pitch = PITCH + mo.tilt[1];
+  const [R, D, dir] = voxAxes(POSE.yaw, POSE.pitch), m = [NX / 2, NY / 2, NZ / 2], far = NX + NY + NZ;
   const eye = [0, 1, 2].map((i) => m[i] - (R[i] * cx + D[i] * cy) / k - dir[i] * far);
   U.set([cx - NX * k * 0.55, cy - NY * k * 0.55, cx + NX * k * 0.55, cy + NY * k * 0.55], WATCH_AT.rect);
   U.set([eye[0], eye[1], eye[2], NX, dir[0], dir[1], dir[2], NY, R[0] / k, R[1] / k, R[2] / k, NZ, D[0] / k, D[1] / k, D[2] / k, 0], WATCH_AT.eye);
-  U.set([-0.55, -0.6, 0.75, 0, light[0], light[1], light[2], lit ? 1 : 0, LCD.x0, LCD.y0, LCD.w, LCD.h, 0.35, 1.3, 0, 0], WATCH_AT.ldir);
+  U.set([-0.55 + mo.lat * 0.5, -0.6, 0.75, 0, light[0], light[1], light[2], lit ? 1 : 0, LCD.x0, LCD.y0, LCD.w, LCD.h, LCD_KNEE, LCD_GAIN, glintAt(mo), mo.str,
+    mo.glint[0], mo.glint[1], mo.glint[2], 0], WATCH_AT.ldir);
   const pal = (i: number, col: C3, gloss: number, flags: number, mul = 1) => { U.set([col[0], col[1], col[2], gloss, flags, 0, 0, mul], WATCH_AT.pal + i * 8); };
   pal(M.Steel, [92, 94, 100], 0.6, 1);
   pal(M.Chamfer, [70, 72, 77], 0.5, 1);
@@ -124,9 +131,21 @@ export function watchGpu(cx: number, cy: number, k: number, light: ArrayLike<num
 }
 /** Where a point of the model (mm) falls on the monitor, as watchGpu laid it (cx, cy, k as given there). */
 export function watchProject(x: number, y: number, z: number, cx: number, cy: number, k: number): [number, number] {
-  const [R, D] = voxAxes(YAW, PITCH), d = [x - NX / 2, y - NY / 2, z - NZ / 2];
+  const [R, D] = voxAxes(POSE.yaw, POSE.pitch), d = [x - NX / 2, y - NY / 2, z - NZ / 2];
   return [cx + k * (d[0] * R[0] + d[1] * R[1] + d[2] * R[2]), cy + k * (d[0] * D[0] + d[1] * D[1] + d[2] * D[2])];
 }
+/**
+ * The unlit LCD only reflects (the manual's section 5): below LCD_KNEE of the scene's light it goes dark
+ * faster than the scene (as the light's share of the knee to the power 1.6), so under a street lamp it is
+ * dim and in a dark street it is lost: the light (L) is needed. Above it (day, a lit shop) it reads paler than the scene by LCD_GAIN.
+ */
+const LCD_KNEE = 0.8, LCD_GAIN = 1.3;
+/**
+ * Where the glint's diagonal band crosses the case (0 its top-left corner .. ~1.5 its bottom-right): on the
+ * light's side, and sliding as the watch tilts off its pose (the view's turn, the arm swinging as one runs),
+ * as a mirror's highlight does.
+ */
+const glintAt = (mo: WatchMotion) => 0.75 + mo.lat * 0.45 - mo.tilt[1] * 9 + mo.tilt[0] * 5;
 /** The case's middle, its width (mm) and the LCD's window (mm), for the layout. */
 export const WATCH_CASE = { cx: (CASE.x0 + CASE.x1) / 2, cy: (CASE.y0 + CASE.y1) / 2, w: CASE.x1 - CASE.x0, h: CASE.y1 - CASE.y0 };
 export const WATCH_LCD_MM = LCD;

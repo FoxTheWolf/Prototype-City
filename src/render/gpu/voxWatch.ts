@@ -20,8 +20,9 @@ struct WatchU {
   eye: vec4f, F: vec4f, R: vec4f, D: vec4f,
   // toward the light (the model's frame), the scene's light (rgb) and whether the backlight is on (w)
   ldir: vec4f, light: vec4f,
-  // the LCD's window on the face (cells: x0, y0, width, height); its knee and gain (x, y)
-  lcd: vec4f, knee: vec4f, pad: vec4f,
+  // the LCD's window on the face (cells: x0, y0, width, height); its knee and gain (x, y), the glint's band (its place, z) and strength (w);
+  // the glint's color (rgb)
+  lcd: vec4f, knee: vec4f, glint: vec4f,
   pal: array<vec4f, 64>,
 };
 @group(0) @binding(22) var<uniform> wu: WatchU;
@@ -74,6 +75,11 @@ fn wshade(h: BHit) -> vec3f {
   let A = wu.pal[h.mat * 2u]; let B = wu.pal[h.mat * 2u + 1u]; let fl = u32(B.x);
   let L = wu.light.rgb; let N = vec3f(BFACE_N[h.face]); let l = normalize(wu.ldir.xyz);
   let nl = dot(N, l);
+  // the glint: the brightest light nearby mirrored as a soft diagonal band across the case, where the
+  // watch's tilt puts it (it slides as the view turns and the arm swings); sharper and stronger on the
+  // polished steel than the brushed, on the crystal over the LCD a glare that washes the digits out
+  let uu = (h.p.x - 3.0) / 46.0 + ((h.p.y - 28.0) / 40.0) * 0.55 - wu.knee.z;
+  let band = exp(-pow(uu / 0.09, 2.0)); let G = wu.glint.rgb * band * wu.knee.w * 300.0;
   var d = (0.4 + 0.6 * max(0.0, nl)) * (1.0 - 0.1 * h.ao) * B.w;
   if ((fl & 1u) != 0u) { d *= 1.0 + (fract(sin(f32(h.c.y) * 12.9898 + f32(h.c.x >> 2u) * 78.233) * 43758.5453) - 0.5) * 0.14; }
   let n = vec2f(wdim().xy);
@@ -81,15 +87,17 @@ fn wshade(h: BHit) -> vec3f {
     // the LCD: its picture over its window; reflective (darker than the scene below the knee), or backlit
     let uv = (h.p.xy - wu.lcd.xy) / wu.lcd.zw;
     let t = textureSampleLevel(wLcd, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0).rgb * 255.0;
-    if (wu.light.w > 0.5) { return t * max(vec3f(1.0), L) / 255.0; }
-    let Ld = min(vec3f(1.0), L * wu.knee.y) * min(vec3f(1.0), L / wu.knee.x);
-    return t * Ld * select(0.9, 1.0, h.face == 5u) / 255.0;
+    // the crystal over it: a faint veil of the scene's light (it greys the digits in bright light) and the glint's glare
+    let veil = L * 9.0 + G * 0.55;
+    if (wu.light.w > 0.5) { return (t * max(vec3f(1.0), L) + veil) / 255.0; }
+    let Ld = min(vec3f(1.0), L * wu.knee.y) * pow(min(vec3f(1.0), L / wu.knee.x), vec3f(1.6));
+    return (t * Ld * select(0.9, 1.0, h.face == 5u) + veil) / 255.0;
   }
   var base = A.rgb;
   if (h.face == 5u && (fl & 8u) != 0u) { let dc = textureSampleLevel(wFace, tmSamp, h.p.xy / n, 0.0); base = mix(base, dc.rgb * 255.0, dc.a); }
   // the steel's rim: its top face a little brighter than flat (a polished bevel)
   let sp = select(0.0, pow(max(0.0, nl), 6.0) * A.w * 40.0, nl > 0.0);
-  var col = base * L * d + L * sp;
+  var col = base * L * d + L * sp + G * A.w * select(0.35, 0.7, (fl & 1u) != 0u) * select(0.6, 1.0, h.face == 5u);
   // the backlight spills a little blue over the face round the LCD
   if (wu.light.w > 0.5 && h.face == 5u) {
     let q = max(vec2f(0.0), max(wu.lcd.xy - h.p.xy, h.p.xy - (wu.lcd.xy + wu.lcd.zw)));

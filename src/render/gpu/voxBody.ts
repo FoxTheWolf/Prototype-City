@@ -22,7 +22,7 @@ struct BodyU {
   size: vec4f,
   // the scene's light (rgb) and its side (lat); the glint's color and strength
   light: vec4f, glint: vec4f,
-  // the legends' ice (0..255) and whether it glows; the maker's name's color (0..255)
+  // the legends' ice (0..255) and whether it glows; the maker's name's color (0..255) and how far the sway slides the chrome (w)
   ice: vec4f, brand: vec4f,
   // the glass's cells in the upper model (x0, y0, width, height): the screen's picture lies on them
   scr: vec4f,
@@ -99,7 +99,7 @@ fn bshade(h: BHit, q: vec2f) -> vec3f {
   let sh = exp(-pow(uu / 0.1, 2.0)) * A.w * bu.glint.w * 55.0 * select(0.5, 1.0, h.face == 5u);
   let G = bu.glint.rgb * sh;
   var col: vec3f;
-  if ((fl & 4u) != 0u) { col = bchrome((f32(h.c.y) + 0.5 - B.y) / max(1.0, B.z - B.y)) * (0.55 + 0.45 * L) * select(0.82, 1.0, h.face == 5u) * B.w + G; }
+  if ((fl & 4u) != 0u) { col = bchrome((f32(h.c.y) + 0.5 - B.y) / max(1.0, B.z - B.y) - bu.brand.w * 0.6) * (0.55 + 0.45 * L) * select(0.82, 1.0, h.face == 5u) * B.w + G; }
   else if ((fl & 2u) != 0u) { col = A.rgb * max(vec3f(1.0), L) + G; }
   // in strong light (the sun on the hand) dark plastic shows its grey, not a black hole (playtest 2026-10-07)
   // (only the plastic: the glass and the screen's black surround stay black; and only in the sun, not under a street lamp)
