@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.57 — Tudo virado para o olho (2026-10-08)
+- **Jackdaw menor e inteiro na vista:** mais uns 25 % menor e mais alto, dá para ler a tela inteira.
+- **Os aparelhos viram para o centro da tela:** o celular (à direita) gira para a esquerda, o relógio (à esquerda) para a direita, o Jackdaw (no meio) fica de frente.
+- **Brilho da tela do notebook:** duas teclas novas (sol − e sol +) à esquerda da tecla da luz, 8 níveis, guardados no save. A luz que a tela joga no teclado caiu a um terço: a luz do teclado volta a fazer diferença, mesmo com uma página branca.
+- **O teclado do notebook sente o sol:** o plástico escuro clareia no sol forte, como o do celular.
+- **Botões com o que fazem escrito:** no notebook, VOL-, VOL+, MUTE, as duas de brilho com um solzinho e LIGHT; no celular, as três teclas de música do topo com |<, >|| e >|.
+
 ## 0.15.56 — Um vidro só para tudo (2026-10-08)
 - **Glare no Jackdaw e no notebook:** como no celular, os postes acesos e o sol aparecem refletidos onde estão de verdade no visor do Jackdaw e na tela do notebook. O centro do reflexo agora estoura quase em branco (a cor da lâmpada fica no halo), também no celular.
 - **Fim das manchas marrons na tela do notebook:** saíram a faixa diagonal antiga, as "marcas de dedo" e o reflexo borrado do mundo, que juntos pareciam sujeira.

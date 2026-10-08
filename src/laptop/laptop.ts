@@ -87,6 +87,8 @@ export class Laptop {
   private lowSaid = false;
   /** The speakers' volume (0..10) and mute, from the keys on the deck's top strip; the keyboard's lamp on the lid (15.20b). */
   vol = 7;
+  /** The screen's backlight, 1 to 8 (its two keys left of the lamp's, 2026-10-08). */
+  bright = 6;
   muted = false;
   lamp = false;
   private critSaid = false;
@@ -98,16 +100,16 @@ export class Laptop {
     this.shell = new Shell(this.pc, world);
   }
   /** What the save keeps of the notebook (F.6): its disk, its firmware's settings and its battery; it comes back off, in the backpack. */
-  snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge, vol: this.vol, muted: this.muted, lamp: this.lamp }; }
+  snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge, vol: this.vol, muted: this.muted, lamp: this.lamp, bright: this.bright }; }
   restore(d: ReturnType<Laptop['snapshot']>) {
     this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; syncPrograms(this.pc, this.world.time);
-    this.vol = d.vol ?? 7; this.muted = d.muted ?? false; this.lamp = d.lamp ?? false;
+    this.vol = d.vol ?? 7; this.muted = d.muted ?? false; this.lamp = d.lamp ?? false; this.bright = d.bright ?? 6;
   }
   /** How loud the speakers are (0..1): the system's beep and the browser's clicks go through them. */
   get loud() { return this.muted ? 0 : this.vol / 10; }
   /**
    * A part of the body pressed with the mouse (15.20b; the manual, section 5): the volume keys and mute
-   * (a rubber click and the system's beep at the new volume), the lamp's key, the nub's three buttons and
+   * (a rubber click and the system's beep at the new volume), the screen's brightness keys, the lamp's key, the nub's three buttons and
    * the touchpad's two (a click each). The keys and the power button go by key() and the shell.
    */
   part(id: string, now: number) {
@@ -116,6 +118,7 @@ export class Laptop {
     const say = (s: string) => { this.notice = s; this.noticeAt = now; };
     if (id === 'volDown' || id === 'volUp') { this.vol = Math.max(0, Math.min(10, this.vol + (id === 'volUp' ? 1 : -1))); this.muted = false; this.sfx.push('button', 'beep'); say(L.parts.vol.replace('{n}', String(this.vol))); }
     else if (id === 'mute') { this.muted = !this.muted; this.sfx.push('button'); if (!this.muted) this.sfx.push('beep'); say(this.muted ? L.parts.mute : L.parts.unmute); }
+    else if (id === 'brtDown' || id === 'brtUp') { this.bright = Math.max(1, Math.min(8, this.bright + (id === 'brtUp' ? 1 : -1))); this.sfx.push('button'); say(L.parts.bright.replace('{n}', String(this.bright))); }
     else if (id === 'lamp') { this.lamp = !this.lamp; this.sfx.push('lamp'); say(this.lamp ? L.parts.lampOn : L.parts.lampOff); }
     else if (/^nub/.test(id)) this.sfx.push('nub');
     else if (/^pad/.test(id)) this.sfx.push('pad');

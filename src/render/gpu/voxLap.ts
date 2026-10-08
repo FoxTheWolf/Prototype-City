@@ -118,7 +118,9 @@ fn lshade(h: LHit, m: i32, s: vec2f) -> vec3f {
   if ((fl & 2u) != 0u) { col = base * max(vec3f(1.0), L); }
   else {
     let sp = pow(max(0.0, dot(reflect(-l, N), v)), 24.0) * A.w * 60.0;
-    col = base * L * d + L * sp * select(1.0, 0.0, nl <= 0.0);
+    // in strong light (the sun on the hands) the dark plastic shows its grey, as the phone's does (voxBody.ts bshade)
+    let lift = select(0.0, 60.0 * clamp((dot(L, vec3f(0.333)) - 1.05) / 0.45, 0.0, 1.0), A.w < 0.65);
+    col = (base + lift) * L * d + L * sp * select(1.0, 0.0, nl <= 0.0);
   }
   if (m == 0) {
     // the screen's light, falling off with the distance to the glass (cells: 25 cells = 5 cm)

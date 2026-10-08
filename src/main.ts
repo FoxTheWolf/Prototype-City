@@ -612,7 +612,7 @@ addEventListener('mousedown', (e) => {
       const now = performance.now() / 1000;
       // the power button: off, it powers on (Enter is the same button); on, it halts the system (or cuts the power outside it)
       if (pa === 'power') { if (laptop.shell.halted) laptop.key('Enter', 'Enter', false, now); else { laptop.shell.powerButton(now); sound?.powerClick(); } }
-      else if (/^(vol|mute|lamp|nub|pad)/.test(pa)) laptop.part(pa, now);
+      else if (/^(vol|mute|brt|lamp|nub|pad)/.test(pa)) laptop.part(pa, now);
       else laptop.key(pa, keyOfCode(pa), false, now);
       return;
     }

@@ -124,8 +124,9 @@ export interface JackGpu { vox: Uint32Array; voxVer: number; face: Img; faceVer:
 export const JACK_GPU: JackGpu = { vox: new Uint32Array(Math.ceil((NX * NY * NZ) / 4)), voxVer: 0, face: new Img(1, 1), faceVer: 0, lcd: new Img(LCD_W, LCD_H), lcdVer: 0, uni: new Float32Array(VOXP_U_FLOATS) };
 let builtKey = '';
 
-/** Its pose in the hand: the top toward the eye (the lever and the cap show), turned a little. */
-const YAW = 0.05, PITCH = 0.24;
+/** Its pose in the hand: the top toward the eye (the lever and the cap show), square to the eye. */
+// (square to the eye: it is held in the view's middle, 2026-10-08)
+const YAW = 0, PITCH = 0.24;
 const POSE = { yaw: YAW, pitch: PITCH };
 
 /**
@@ -174,16 +175,17 @@ let lcdFor = '';
 /** A key shows pressed this long after it was (s). */
 const PRESS_S = 0.12;
 /**
- * The Jackdaw for this frame (15.22): held up in the middle of the view's bottom, about 38 % of its width,
+ * The Jackdaw for this frame (15.22): held up in the middle of the view's bottom, about 29 % of its width,
  * rising from below as it comes out (the manual's "two thirds"); its LCD painted when the screen changed, the
  * LED blinking while it is on (the manual's 1.6 s). `px`: the interface's origin and cell (pixels), `cols` and
  * `rows` the grid's size. Null when it is in the pocket.
  */
 export function drawJack(J: Jackdaw, now: number, light: ArrayLike<number>, px: readonly number[], cols: number, rows: number, view?: HandView): JackGpu | null {
   if (J.raise < 0.01) { SWAY.reset(); return null; }
-  const e = 1 - (1 - J.raise) ** 3, [ox, oy, cw, ch] = px, wide = cols * cw, k = (wide * 0.38) / NX;
+  const e = 1 - (1 - J.raise) ** 3, [ox, oy, cw, ch] = px, wide = cols * cw, k = (wide * 0.29) / NX;
   const mo = SWAY.step(now, view);
-  const cx = ox + wide * 0.5, cy2 = oy + rows * ch + NY * k * 0.5 - NY * k * 0.82 * e + SWAY.lift * k * 1.2;
+  // (all of it in view, a little over the bottom edge, so the LCD reads, 2026-10-08)
+  const cx = ox + wide * 0.5, cy2 = oy + rows * ch + NY * k * 0.5 - NY * k * 1.12 * e + SWAY.lift * k * 1.2;
   const lit = J.lit, key = `${J.ver}|${lit}`;
   if (key !== lcdFor) { lcdFor = key; paintLcd(JACK_GPU.lcd, J.screen, lit); JACK_GPU.lcdVer++; }
   const L = [Math.max(0.03, light[0]), Math.max(0.03, light[1]), Math.max(0.03, light[2])];

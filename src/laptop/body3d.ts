@@ -72,6 +72,9 @@ export const PARTS: { id: string; x0: number; y0: number; x1: number; y1: number
   { id: 'volDown', x0: 20, y0: 6, x1: 33, y1: 11.5 },
   { id: 'volUp', x0: 36, y0: 6, x1: 49, y1: 11.5 },
   { id: 'mute', x0: 52, y0: 6, x1: 65, y1: 11.5 },
+  // the screen's brightness, down and up, left of the lamp's key (2026-10-08, the user's)
+  { id: 'brtDown', x0: 212, y0: 6, x1: 225, y1: 11.5 },
+  { id: 'brtUp', x0: 228, y0: 6, x1: 241, y1: 11.5 },
   { id: 'lamp', x0: 244, y0: 6, x1: 257, y1: 11.5 },
   { id: 'power', x0: 270, y0: 4, x1: 280, y1: 14, round: true },
 ];
@@ -143,7 +146,7 @@ export function deckPalette(ids: Map<number, string>, on: boolean, lampOn: boole
   pal[M.LedOff] = { col: [27, 42, 30], gloss: 0.3 };
   pal[M.Ring] = on ? { col: [90, 255, 120], gloss: 0.3, glow: true } : { col: [46, 48, 52], gloss: 0.2 };
   for (const [i, id] of ids) {
-    pal[i] = id === 'lamp' && lampOn ? { col: [58, 51, 38], gloss: 0.2 } : /^(nub|pad)[LMR]$|^vol|^mute|^lamp|^power/.test(id) ? { col: [16, 17, 19], gloss: 0.12 }
+    pal[i] = id === 'lamp' && lampOn ? { col: [58, 51, 38], gloss: 0.2 } : /^(nub|pad)[LMR]$|^vol|^mute|^brt|^lamp|^power/.test(id) ? { col: [16, 17, 19], gloss: 0.12 }
       : { col: CAP, gloss: WORN.has(id) ? 0.4 : 0.15 };
   }
   return pal;
@@ -296,6 +299,18 @@ function paintDecal(maker: string): Img {
     if (s) P.text(x, y, s, 2, LEG);
     if (K.label === 'UpDown') P.text(x, y + 20, 'V', 2, LEG);
   }
+  // the strip's keys: what each does printed on it (2026-10-08, the user's: as the manual names them, with a mark)
+  for (const [id, s] of [['volDown', 'VOL-'], ['volUp', 'VOL+'], ['mute', 'MUTE'], ['brtDown', '-'], ['brtUp', '+'], ['lamp', 'LIGHT']] as const) {
+    const p = PARTS.find((q) => q.id === id)!, sun = id.startsWith('brt'), w = Paint.textW(s, 1) + (sun ? 12 : 0);
+    const x = Math.round(((p.x0 + p.x1) / 2) * k - w / 2), y = Math.round(((p.y0 + p.y1) / 2) * k - 3);
+    if (sun) {
+      // the backlight's mark: a little sun (a disc and eight rays)
+      const cx = x + 4, cy = y + 3;
+      P.rect(cx - 1, cy - 1, 3, 3, LEG);
+      for (let a = 0; a < 8; a++) P.rect(Math.round(cx + Math.cos((a * Math.PI) / 4) * 3.4), Math.round(cy + Math.sin((a * Math.PI) / 4) * 3.4), 1, 1, LEG);
+    }
+    P.text(x + (sun ? 12 : 0), y, s, 1, LEG);
+  }
   // the seal: cream paper, OS in burnt orange and prey in graphite, UX 4 under it
   const sx = 262 * k, sy = (PAD.y1 - 12) * k;
   P.rect(sx, sy, 28 * k, 11 * k, SEAL);
@@ -371,7 +386,8 @@ export function laptopGpu(cams: readonly (LapCam | null)[], rect: readonly numbe
     U.set([c.eye[0], c.eye[1], c.eye[2], LAP_OFF[m] + 1, c.F[0], c.F[1], c.F[2], N[0], c.R[0], c.R[1], c.R[2], N[1], c.D[0], c.D[1], c.D[2], N[2], c.light[0], c.light[1], c.light[2], 0], at);
   });
   U.set([light[0], light[1], light[2], o.on ? 1 : 0], LAP_AT.light);
-  U.set([o.ink[0], o.ink[1], o.ink[2], 0.9], LAP_AT.ink);
+  // (a third of what it was: a white page washed the keys out and the lamp's light was lost in it, 2026-10-08)
+  U.set([o.ink[0], o.ink[1], o.ink[2], 0.3], LAP_AT.ink);
   // the glass over the hinge (deck cells): its sides, its foot and top (the lid's glass rows, standing)
   U.set([GLASS.x0 / CELL_MM, GLASS.x1 / CELL_MM, KEY_TOP + NY - GLASS.y1 / CELL_MM, KEY_TOP + NY - GLASS.y0 / CELL_MM], LAP_AT.scr);
   // the lamp: over the glass's top middle, at the lid's face, looking down onto the keys

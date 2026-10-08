@@ -137,7 +137,7 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
       term.put(i, ch, fg[0], fg[1], fg[2]); term.setBg(i, bg[0], bg[1], bg[2]);
     };
     drawScreen(tput, (x, y, s, fg, bg) => { for (let k = 0; k < s.length; k++) tput(x + k, y, s.charCodeAt(k), fg, bg); }, 0, 0, P, now, lit, light, TW, TH);
-    glassOver(term, light, glint, now, on);
+    glassOver(term, light, glint, now, on, P.bright);
   }
 
   // ---- the body, in little cubes on the GPU: each model's camera from the eye's rays ----
@@ -205,14 +205,15 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
  * beside dimmed text). The lights it mirrors are the compositor's glare (raycaster.ts LAP_GLARE, in place of a
  * diagonal band drawn here a cell at a time: blurred by the screen's bloom it read as brown smudges).
  */
-function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: number, on: boolean) {
+function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: number, on: boolean, bright: number) {
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
   GL.lat += (glint[0] - GL.lat) * q;
   const Lm = (light[0] + light[1] + light[2]) / 3;
   // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by day dimmer
   // (by day a screen looks washed out more than dark: the floor raised from 0.55, 2026-10-08)
-  const gain = Math.min(1.3, 0.8 + 0.5 * Math.min(1, EYE.k / 0.6));
+  // times the backlight's level (1 to 8: a quarter at the lowest, all of it at the top)
+  const gain = Math.min(1.3, 0.8 + 0.5 * Math.min(1, EYE.k / 0.6)) * (0.25 + 0.75 * (bright / 8));
   const W = T.cols, H = T.rows;
   // a broad veil of the light too, whatever its direction: a lit room washes the glass (0..255)
   const veil = Math.min(1.6, Lm) * (on ? 6 : 9);

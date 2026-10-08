@@ -24,8 +24,11 @@ import { Img, Paint, type Px } from '../render/paint2d';
 const LOW = 8, UP = 7, NZ = LOW + UP + 1;
 /** Room round the body in the model for the case and the music keys (mm), and the model's size. */
 const OFF = 3, NX = BODY_MM[0] + 2 * OFF + 1, NY = RAIL_MM + BODY_MM[1] + 2 * OFF;
-/** A slight tilt, its top toward the eye: the top edge and the keys' tops show, as held below the eye. */
-const PITCH = 0.16, YAW = -0.05;
+/**
+ * A slight tilt, its top toward the eye: the top edge and the keys' tops show, as held below the eye; turned
+ * toward the view's middle, where the eye is (2026-10-08: everything held faces the middle by where it is).
+ */
+const PITCH = 0.16, YAW = 0.12;
 
 /** Palette indices. */
 const enum P { Plate = 1, Low, LowGrain, Rim, RimHome, RimVol, Bezel, Glass, Slot, Lens, Ice, Send, End, Case, CaseAlt, Glitter, Jack }
@@ -122,6 +125,13 @@ function caseOn(V: Vox, K: Case, y0: number, z0: number, z1: number) {
   }
 }
 
+/** The music keys' marks on their tops (a row a millimetre, across): back, play/pause, forward. */
+const MUSIC_MARK: Partial<Record<Key, string[]>> = {
+  prev: ['#..#', '#.##', '#..#'],
+  play: ['#..#.#', '##.#.#', '#..#.#'],
+  next: ['#..#', '##.#', '#..#'],
+};
+
 /** A key's top: the plate it is on, its face's layer, the layer its top is at (sunk when pressed). */
 function keyZ(K: KeyMm, down: boolean): [onUp: boolean, face: number, z: number] {
   const onUp = K.box[1] < BODY_MM[1], face = onUp ? LOW + UP - 1 : LOW - 1;
@@ -141,6 +151,12 @@ function withKeys([lo0, up0]: [Vox, Vox], down: (k: Key) => boolean, ids: Map<nu
       for (let y = Math.floor(y0) + OFF + sink; y < OFF; y++) for (let x = Math.floor(x0) + OFF; x <= Math.ceil(x1) + OFF; x++) {
         if (!onKey(K, mm(x), mm(y))) continue;
         for (let zz = LOW + 1; zz < LOW + UP - 1; zz++) V.set(x, y, zz, col);
+      }
+      // what it does, cut into its top in dark (2026-10-08, the user's): |< , >|| , >|
+      const mark = MUSIC_MARK[K.k];
+      if (mark) {
+        const y = Math.floor(y0) + OFF + sink, xs = Math.round((x0 + x1) / 2 + OFF - mark[0].length / 2);
+        mark.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#' && V.at(xs + i, y, LOW + 4 - j) === col) V.set(xs + i, y, LOW + 4 - j, P.Slot); }));
       }
       return;
     }

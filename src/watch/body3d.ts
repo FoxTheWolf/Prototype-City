@@ -81,7 +81,8 @@ export const WATCH_GPU: WatchGpu = { vox: new Uint32Array(Math.ceil((NX * NY * N
 let built: { up: Uint8Array; dn: Uint8Array; cols: Map<WBtn, number[]>; sunk: Set<WBtn> } | null = null, faceFor = '';
 
 /** The watch's pose: tilted a little (its lower side shows), as the hand holds it up. */
-const YAW = 0.05, PITCH = -0.16;
+// (turned toward the view's middle: it sits at the bottom left, 2026-10-08)
+const YAW = -0.12, PITCH = -0.16;
 /** This frame's pose (the rest pose swayed by the view's turn and the arm's swing), for watchProject. */
 const POSE = { yaw: YAW, pitch: PITCH };
 /** The light glinting off it and the sway off its pose (render/sway.ts). */
