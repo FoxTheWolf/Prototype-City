@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.20b — A borda sem fogo (2026-10-08)
+- **A zona de fogo e o Sarcófago saíram:** em volta da cidade agora há chão de terra, sem rachaduras acesas, fumaça, cerca nem a cúpula no horizonte; as manchetes sobre eles também saíram. (O mar vem depois.)
+- **Atalhos de teste podem destrancar todas as portas**, para visitar qualquer apartamento.
+
 ## 0.13.20 — Cada casa mobiliada por quem mora nela (2026-10-08)
 - **Os apartamentos escolhem a arrumação pelo morador:** a mesma planta mobilia diferente para um casal de renda alta, um estudante ou um gamer (as arrumações do manual de interiores, giradas e espelhadas para caber no cômodo).
 - **A quitinete do térreo ficou arrumada:** a sala, a cama e o guarda-roupa agrupados, e a mesa longe da porta de entrada.

@@ -1,4 +1,5 @@
 import { hash3 } from '../core/rng';
+import { DEBUG } from '../debug';
 import { baseAt, CELL, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, type Door, type Leaf, type Room } from './interior';
 import type { Building } from './city';
 import { isOpen } from './telco';
@@ -100,6 +101,7 @@ export function doorAhead(w: World, heading: number): DoorRef | null {
 const HOME_KINDS = new Set(['living', 'bedroom', 'kitchen', 'bath', 'foyer']);
 /** Whether a door is locked against the player now. Inside, a street door always lets them out. */
 export function doorLocked(w: World, d: DoorRef): boolean {
+  if (DEBUG.unlockDoors) return false;
   const hour = (w.time / 3600) % 24, B = w.city.buildings[d.k];
   if (d.street) {
     // the shop's own door, outside its hours; the building's main door is open, unless the whole ground floor is the shop (13.10i)

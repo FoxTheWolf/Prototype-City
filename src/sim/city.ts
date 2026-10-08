@@ -293,6 +293,9 @@ export interface Sarcophagus {
 
 /** Outside the city the ground burns; this far past the fence it starts to crack and glow. */
 export const BURN_START = 40;
+/** (2026-10-08) The fire zone, its smoke, the cordon fence and the Sarcophagus are switched off: the border is now
+ *  plain ground (the sea comes in 23.4). true brings them back as they were. */
+export const FIRE_ZONE = false;
 
 export type LandmarkKind = 'tower' | 'hall' | 'memorial' | 'power' | 'park' | 'clock' | 'church' | 'mast' | 'gasworks';
 
@@ -1226,7 +1229,7 @@ function generateBorder(seed: number, w: number, h: number) {
   const GAP = 120, OFF = 3;
   for (let x = GAP / 2; x < w; x += GAP) floodlights.push({ x, y: -OFF }, { x, y: h + OFF });
   for (let y = GAP / 2; y < h; y += GAP) floodlights.push({ x: -OFF, y }, { x: w + OFF, y });
-  return { vents, floodlights, sarcophagus };
+  return { vents: FIRE_ZONE ? vents : [], floodlights, sarcophagus };
 }
 
 /** District of the block nearest to a point (roads belong to the block beside them). */

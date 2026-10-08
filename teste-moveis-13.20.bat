@@ -12,7 +12,8 @@ echo   e tocado.
 echo.
 echo   1. Olhe a sala: a TV, o sofa e a cama devem estar agrupados,
 echo      e a mesa com a cadeira LONGE da porta de entrada.
-echo   2. Suba a escada e entre em alguns apartamentos: cada um
+echo   2. Suba a escada e entre em alguns apartamentos (neste teste
+echo      TODAS as portas estao destrancadas): cada um
 echo      agora escolhe a arrumacao pelo morador (renda, casal,
 echo      estudante, gamer...), entao dois iguais podem variar.
 echo   3. Procure movel dentro de parede, na frente de porta ou
@@ -22,4 +23,4 @@ echo   Achou algo estranho? F8 e escreva.
 echo  ============================================================
 echo.
 pause
-call npm run build && npx electron electron/main.cjs playtest seed=1393987109 pos=860.5,1182.5,0 look=270 at=2008-07-03T22:00
+call npm run build && npx electron electron/main.cjs playtest unlock seed=1393987109 pos=860.5,1182.5,0 look=270 at=2008-07-03T22:00

@@ -1,4 +1,4 @@
-import { BAY, BURN_START, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
+import { BAY, BURN_START, FIRE_ZONE, FLOOR_H, LANE_W, SIDEWALK } from '../../sim/city';
 import STARS from '../stars.json';
 import { PENUMBRA, UMBRA } from '../sky';
 import { LAT } from '../../sim/clock';
@@ -131,6 +131,7 @@ const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.
 const LAMP_GLOSS = 1.2; const CAR_GLOSS = 1.5;
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u; const KIND_ROOM = 5u;
 const BURN_START = ${f(BURN_START)};
+const FIRE_ZONE = ${FIRE_ZONE};
 const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
 const LIT_B = array<vec3f, ${LITTER.length}>(${LITTER.map((L) => `vec3f(${L.slice(4).map(f).join(', ')})`).join(', ')});
 const LITTER_FAR = ${f(LITTER_FAR)};
@@ -1777,7 +1778,9 @@ fn burnGround(wx: f32, wy: f32, rd: f32, W: f32, Hh: f32) -> Cell {
   let fog = 1.0 - min(1.0, rd / 2500.0) * 0.85; let day = u.day;
   let hv = hash3(ifloor(wx / 6.0), ifloor(wy / 6.0), 5); let tex = (0.9 + 0.15 * hv) * fog * (0.45 + 0.55 * day);
   var ch = 32u; var c = vec3f(42.0 - 14.0 * day, 32.0 - 5.0 * day, 30.0 - 2.0 * day) * tex;
-  let heat = clamp((out - BURN_START) / 200.0, 0.0, 1.0);
+  // with the fire zone off (FIRE_ZONE in sim/city.ts): plain dusty ground, no cracks
+  if (!FIRE_ZONE) { c = mix(vec3f(55.0, 55.0, 60.0), vec3f(110.0, 106.0, 96.0), day) * tex; }
+  let heat = select(0.0, clamp((out - BURN_START) / 200.0, 0.0, 1.0), FIRE_ZONE);
   if (heat > 0.0) {
     // cracks are the edges of a cellular pattern: where the two nearest feature points are almost equally far
     let S = 14.0; let gx = ifloor(wx / S); let gy = ifloor(wy / S);
@@ -2208,7 +2211,7 @@ fn glowBelow(x: f32, y: f32) -> vec3f {
   let cd = length(vec2f(x - u.ccx, y - u.ccy)) / (min(u.cityW, u.cityH) * 0.6);
   let city = spread * (0.75 + 0.25 * exp(-cd * cd)) * u.cityLit;
   let sd = length(vec2f(x - u.sarX, y - u.sarY)) / (u.sarR * 1.3);
-  let fire = 1.6 * exp(-sd * sd);
+  let fire = select(0.0, 1.6 * exp(-sd * sd), FIRE_ZONE);
   return vec3f(48.0 * city + 70.0 * fire, 33.0 * city + 24.0 * fire, 10.0 * city + 12.0 * fire);
 }
 // the cloud's column at (x, y): its cover c (from the cover's noise, as the flat deck had it), base and top; the
@@ -2420,7 +2423,7 @@ fn span2(cx: f32, cy: f32, r: f32, ux: f32, uy: f32) -> vec2f {
 }
 // apparent height above the eye of a surface point z at distance d, over the curve, as a slope
 fn slopeAt(z: f32, d: f32) -> f32 { return (z - u.eye - d * d / (2.0 * u.curveR)) / d; }
-fn sarcVis() -> f32 { return smoothK(u.sarR + 3700.0, u.sarR + 3100.0, length(vec2f(u.sarX - u.px, u.sarY - u.py))); }
+fn sarcVis() -> f32 { if (!FIRE_ZONE) { return 0.0; } return smoothK(u.sarR + 3700.0, u.sarR + 3100.0, length(vec2f(u.sarX - u.px, u.sarY - u.py))); }
 // the dome or tower in this cell (want: the cell's slope; sL: rows per unit of slope), depth 1e9 if none
 fn sarcCell(want: f32, sL: f32, L: f32, ux: f32, uy: f32, col: f32, bg: vec3f, vis: f32) -> Cell {
   var o = Cell(32u, vec3f(0.0), bg, 1e9, KIND_BLOCK, 0.0);
@@ -2747,7 +2750,7 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
   let tf = min(fX, fY);
   var cl = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
   var done = false;
-  if (tf > 0.05 && tf <= 2000.0 && tf < min(min(select(1e9, best, bk >= 0), tG), far.depth)) {
+  if (FIRE_ZONE && tf > 0.05 && tf <= 2000.0 && tf < min(min(select(1e9, best, bk >= 0), tG), far.depth)) {
     let z = gOZ - m * tf + A * tf * tf;
     if (z >= 0.0 && z < 4.2) {
       let along = select(gOX + tf * rdx, gOY + tf * rdy, fX < fY);

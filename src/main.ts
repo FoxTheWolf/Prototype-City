@@ -142,6 +142,8 @@ const titleFx = new TitleFx(document.getElementById('overlay')!);
 titleLogo(document.getElementById('logo')!, params.has('mute') || OPTS.mute, (k) => { titleFx.power = k; });
 // ?pos=... (a test launcher, teste-*.bat) goes straight in, past the title, never touching the save (testMode)
 const testMode = params.has('pos');
+// ?unlock (a test launcher): every door opens, to see all kinds of rooms
+if (params.has('unlock')) DEBUG.unlockDoors = true;
 const choice = testMode ? 'new' : await titleChoice();
 const seed = choice !== 'new' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 document.getElementById('ready')!.hidden = true;

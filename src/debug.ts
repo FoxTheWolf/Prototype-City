@@ -30,4 +30,7 @@ export const DEBUG = {
   webMarks: true,
   /** (15.22) The Jackdaw Mini in the pocket (G takes it out), to test it before stage 19 gives it in the game. */
   jackdaw: true,
+  /** (2026-10-08) Every door opens (homes, offices, shops after hours), to visit all kinds of rooms in a test.
+   *  Turned on by `unlock` on a test launcher (teste-*.bat), never by default. */
+  unlockDoors: false,
 };
