@@ -1,10 +1,8 @@
 import { type CharGrid } from '../render/grid';
 import { calendar, moonPhase, sunDir } from '../sim/clock';
 import { Img, Paint, type C3 } from '../render/paint2d';
-import { BTNS, NX, watchGpu, watchProject, WATCH_CASE, WATCH_GPU, WATCH_LCD_MM, type WatchGpu, type WatchMotion, type WBtn } from './body3d';
-
-/** The view and the walk this frame, for the watch's sway and glint: the camera's angles, the glint (VIEW_GLINT), the player's speed (m/s). */
-export interface WatchView { yaw: number; pitch: number; glint: ArrayLike<number>; speed: number }
+import { BTNS, NX, watchGpu, watchProject, WATCH_CASE, WATCH_GPU, WATCH_LCD_MM, type WatchGpu, type WBtn } from './body3d';
+import { HandSway, type HandView } from '../render/sway';
 
 /**
  * The digital watch on the player's left wrist (F.4, a HUD for good since F.6): a cheap 2008 resin
@@ -205,32 +203,8 @@ const CASE_COLS = 32, CASE_X = 6, CASE_ROWS = 17;
 /** A button shows pressed this long after it was. */
 const PRESS_S = 0.12;
 
-/**
- * The watch's motion: the glint eased (as the phone's), the sway (the wrist lags the eye: as the view turns
- * it leans the other way and eases back, as the phone does) and the arm's swing as the player walks and
- * runs (a stride's tilt and lift, stronger running), which slides the glint up and down the case.
- */
-const MOT = { at: 0, lat: 0, str: 0, r: 1, g: 1, b: 1, yaw: NaN, pitch: 0, ty: 0, tp: 0, ph: 0, amp: 0, lift: 0 };
-/** The arm's swing: a stride's length (m) and, at full (running), its tilt (rad) and lift (mm). */
-const STRIDE_M = 1.4, SWING_TILT = 0.05, SWING_LIFT = 2.2;
-function motion(now: number, v?: WatchView): WatchMotion {
-  const M = MOT, dt = Math.min(0.1, Math.max(0, now - M.at));
-  M.at = now;
-  if (!v) return { lat: 0, str: 0, glint: [1, 1, 1], tilt: [0, 0] };
-  const q = 1 - Math.exp(-dt / 0.25), G = v.glint;
-  M.lat += (G[0] - M.lat) * q; M.str += (G[1] - M.str) * q; M.r += (G[2] - M.r) * q; M.g += (G[3] - M.g) * q; M.b += (G[4] - M.b) * q;
-  const dy = Number.isNaN(M.yaw) ? 0 : Math.atan2(Math.sin(v.yaw - M.yaw), Math.cos(v.yaw - M.yaw)), dp = Number.isNaN(M.yaw) ? 0 : v.pitch - M.pitch;
-  M.yaw = v.yaw; M.pitch = v.pitch;
-  const inv = dt > 1e-4 ? 1 / dt : 0, k = 1 - Math.exp(-dt / 0.12);
-  M.ty += (Math.max(-0.06, Math.min(0.06, dy * inv * 0.012)) - M.ty) * k;
-  M.tp += (Math.max(-0.045, Math.min(0.045, dp * inv * 0.012)) - M.tp) * k;
-  // the swing: a cycle each two strides, its size eased in and out with the pace (walking a third of running's)
-  M.ph += (v.speed * dt * Math.PI) / STRIDE_M;
-  M.amp += (Math.min(1, Math.max(0, (v.speed - 0.5) / 4.5)) - M.amp) * (1 - Math.exp(-dt / 0.3));
-  const s = Math.sin(M.ph);
-  M.lift = s * SWING_LIFT * M.amp;
-  return { lat: M.lat, str: M.str, glint: [M.r, M.g, M.b], tilt: [M.ty + Math.sin(M.ph * 0.5) * SWING_TILT * 0.3 * M.amp, M.tp + Math.cos(M.ph) * SWING_TILT * M.amp] };
-}
+/** The watch's sway and the arm's swing (render/sway.ts), and how far the swing lifts it at full (mm). */
+const SWAY = new HandSway(), SWING_LIFT = 2.2;
 
 /** Where this frame drew the lit LCD (interface cells: x, y, w, h, and GLOW_BOOST), for the compositor's glow; null when unlit. */
 export const WATCH_LCD: { at: number[] | null } = { at: null };
@@ -317,14 +291,14 @@ function paintLcd(I: Img, Wt: Watch, time: number, now: number, yaw: number, lit
  * the LCD's picture painted when it changes, the buttons' places for the mouse and the lit LCD's for the
  * glow. `px`: the interface grid's origin and cell on the monitor (pixels: x, y, w, h). Null when down.
  */
-export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, brand: string, yaw: number, px: readonly number[], view?: WatchView): WatchGpu | null {
+export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, brand: string, yaw: number, px: readonly number[], view?: HandView): WatchGpu | null {
   WATCH_LCD.at = null;
   WATCH_BTN.length = 0;
-  if (Wt.raise < 0.01) { MOT.yaw = NaN; return null; }
+  if (Wt.raise < 0.01) { SWAY.reset(); return null; }
   const e = 1 - (1 - Wt.raise) ** 3, [ox, oy, cw, ch] = px;
-  const mo = motion(now, view);
+  const mo = SWAY.step(now, view);
   // as wide as the case was in cells, its middle where the old case's was (and up and down with the arm's swing)
-  const k = (CASE_COLS * cw) / WATCH_CASE.w, cx = ox + (CASE_X + CASE_COLS / 2) * cw, cy = oy + (g.rows - CASE_ROWS * e + 1 + 7.5) * ch + MOT.lift * k;
+  const k = (CASE_COLS * cw) / WATCH_CASE.w, cx = ox + (CASE_X + CASE_COLS / 2) * cw, cy = oy + (g.rows - CASE_ROWS * e + 1 + 7.5) * ch + SWAY.lift * SWING_LIFT * k;
   const lit = Wt.lit(now), L = [Math.max(0.03, light[0]), Math.max(0.03, light[1]), Math.max(0.03, light[2])];
   if (paintLcd(WATCH_GPU.lcd, Wt, time, now, yaw, lit)) WATCH_GPU.lcdVer++;
   const G = watchGpu(cx, cy, k, L, lit, (b) => now - (Wt.pressedAt[b] ?? -9) < PRESS_S, brand, mo);

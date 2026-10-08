@@ -15,6 +15,8 @@ export interface GameSave {
   phone: unknown;
   laptop: unknown;
   watch: unknown;
+  /** The Jackdaw Mini (15.22); missing in saves before it. */
+  jack?: unknown;
   cam: { yaw: number; pitch: number };
 }
 

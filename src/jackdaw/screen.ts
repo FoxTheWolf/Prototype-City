@@ -57,6 +57,28 @@ function raster(draw: (g: Vec) => void, b: Buf) {
   }
 }
 
+/** The jackdaw alone in a pose, rasterized once and kept (the scenes copy it and write their text over it). */
+const birds = new Map<string, Buf>();
+function bird(o: BirdOpt): Buf {
+  const key = JSON.stringify(o);
+  let b = birds.get(key);
+  if (!b) { b = new Buf(); raster((g) => gralha(g, o), b); if (birds.size > 200) birds.clear(); birds.set(key, b); }
+  return b;
+}
+/** The home screen's poses (the look, the hop, the blink) and the loading screen's, drawn ahead one at a time (the opening does it, a pose a tick): false when all are. */
+export function warmHome(): boolean {
+  for (const look of [0, 1, -1]) for (const hop of [false, true]) for (const blink of [false, true]) {
+    const o: BirdOpt = { x: 32, y: 33 + (hop ? -2.5 : 0), s: 1.22, look, blink };
+    if (!birds.has(JSON.stringify(o))) { bird(o); return true; }
+  }
+  // and the loading screen's (the bird hopping across the bar)
+  for (let t = 0; t <= 10; t++) {
+    const o: BirdOpt = { x: 14 + Math.min(1, t / 9) * 100, y: 23 + (t % 4 < 2 ? -2.5 : 0), s: 0.5, look: 1 };
+    if (!birds.has(JSON.stringify(o))) { bird(o); return true; }
+  }
+  return false;
+}
+
 // ---- the jackdaw (the manual's `gralha`, line for line) ----
 function fluff(g: Vec, cx: number, cy: number, r: number, n: number, amp: number, rot = 0) {
   g.beginPath();
@@ -147,7 +169,7 @@ function gralha(g: Vec, o: BirdOpt) {
   g.restore();
 }
 /** The logo's head (the manual's headVec): a stamp's silhouette, not the mascot. */
-function headVec(g: Vec, x: number, y: number, s: number) {
+export function headVec(g: Vec, x: number, y: number, s: number) {
   g.save(); g.translate(x, y); g.scale(s, s);
   g.beginPath(); g.moveTo(13, 8); g.quadraticCurveTo(9, 1, 8, -2); g.quadraticCurveTo(14, 2, 17, 7); g.quadraticCurveTo(18, -1, 20, -4); g.quadraticCurveTo(23, 2, 22, 7); g.quadraticCurveTo(26, 2, 31, 1); g.quadraticCurveTo(28, 6, 26, 9); g.closePath(); g.fill(INK);
   circ(g, 20, 22, 15, INK);
@@ -193,26 +215,26 @@ export interface SceneSt { hop?: boolean; look?: number; blink?: boolean; z?: nu
 const hopY = (st: SceneSt) => (st.hop ? -2.5 : 0);
 const SC: Record<string, (b: Buf, st: SceneSt) => void> = {
   home: (b, st) => {
-    raster((g) => gralha(g, { x: 32, y: 33 + hopY(st), s: 1.22, look: st.look || 0, blink: !!st.blink }), b);
+    b.copy(bird({ x: 32, y: 33 + hopY(st), s: 1.22, look: st.look || 0, blink: !!st.blink }));
     b.text(66, 6, st.time ?? '00:00', 2); b.text(66, 20, st.date ?? ''); b.text(66, 34, `SHINIES ${st.shinies ?? 0}/${st.of ?? 40}`); b.fill(64, 43, 64, 1);
     TRINKETS.slice(0, st.found ?? 0).forEach((t, i) => b.spr(66 + i * 12, 47, t)); batIcon(b, 114, 0, st.bat ?? 3);
   },
-  neutral: (b, st) => raster((g) => gralha(g, { x: 34, y: 33 + hopY(st), s: 1.22, look: st.look || 0, blink: !!st.blink }), b),
+  neutral: (b, st) => b.copy(bird({ x: 34, y: 33 + hopY(st), s: 1.22, look: st.look || 0, blink: !!st.blink })),
   happy: (b, st) => { raster((g) => gralha(g, { x: 34, y: 33 + hopY(st), s: 1.22, mood: 'happy', coin: true, sparkle: st.sp !== false }), b); b.text(72, 18, 'FOUND A'); b.text(72, 27, 'SHINY!', 2); },
   smug: (b) => { raster((g) => gralha(g, { x: 34, y: 33, s: 1.22, mood: 'smug' }), b); b.text(72, 22, 'TOO', 2); b.text(72, 36, 'EASY.', 2); },
   surprised: (b, st) => { raster((g) => gralha(g, { x: 34, y: 33 + hopY(st), s: 1.22, mood: 'surprised' }), b); b.text(80, 20, '!?', 3); },
   sulky: (b, st) => { raster((g) => gralha(g, { x: 34, y: 33, s: 1.22, mood: 'sulky', blink: !!st.blink }), b); b.text(76, 22, 'HMPH.', 2); b.text(76, 40, "IT DIDN'T"); b.text(76, 47, 'WORK.'); },
   sleepy: (b, st) => {
-    const z = st.z || 0; raster((g) => gralha(g, { x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -0.14 }), b);
+    const z = st.z || 0; b.copy(bird({ x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -0.14 }));
     b.text(74, 12 - z * 3, 'Z', 2); if (z > 0) b.text(88, 8 - z * 2, 'Z'); b.text(72, 40, '5 MORE'); b.text(72, 48, 'MINUTES');
   },
   bootlogo: (b) => { raster((g) => headVec(g, 6, 9, 1.15), b); b.text(56, 14, 'JACKDAW', 2); b.box(56, 30, 21, 11); b.text(59, 33, 'MINI'); b.text(56, 52, `FW ${FW}`); },
   loading: (b, st) => {
-    const p = st.p || 0; raster((g) => gralha(g, { x: 14 + p * 100, y: 23 + hopY(st), s: 0.5, look: 1 }), b);
+    const p = st.p || 0; b.copy(bird({ x: 14 + p * 100, y: 23 + hopY(st), s: 0.5, look: 1 }));
     b.text(64 - Buf.tw('LOADING') / 2, 0, 'LOADING'); b.box(8, 56, 112, 7); b.fill(10, 58, Math.round(108 * p), 3);
   },
   lowbat: (b, st) => {
-    const z = st.z || 0; raster((g) => gralha(g, { x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -0.14 }), b);
+    const z = st.z || 0; b.copy(bird({ x: 34, y: 35, s: 1.22, mood: 'sleepy', tilt: -0.14 }));
     b.text(74, 14 - z * 3, 'Z', 2); if (z > 0) b.text(88, 10 - z * 2, 'Z'); batIcon(b, 114, 0, st.on ? 1 : 0);
     b.text(72, 40, `BATTERY ${st.bat ?? 4}%`); b.text(72, 48, 'PLUG ME IN');
   },

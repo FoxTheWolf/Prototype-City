@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.54 — O Jackdaw Mini (2026-10-07)
+- **Um bichinho virtual de bolso:** o Jackdaw Mini, amarelo-sinal, em cubinhos de 2 mm, com a tela verde de 128 × 64 pontos onde mora a gralha. Por enquanto vem no bolso pelo modo debug (no jogo de verdade ele chega mais adiante). **G** tira e guarda; **O** é a alavanca de ligar; na mão, as **setas**, **Enter** (OK) e **Backspace** (VOLTAR).
+- **A gralha:** pisca, olha para os lados, pula sozinha (ou com ↑), cochila depois de 2 minutos sem tecla ou com a bateria fraca, e comemora quando acha uma bugiganga.
+- **O sistema:** a abertura com o logo e as linhas digitadas, a tela inicial com a hora, a data e as bugigangas, o menu de ícones, a tela de carregando com a gralha pulando pela barra e o aviso de bateria fraca.
+- **Os apps de fábrica:** PET (troque a expressão com ←→, OK faz carinho), TONE (um gerador de bipe), LIGHT (a tela vira lanterna), CLOCK (a gralha olha o relógio), FILES (o cartão de memória) e SETTINGS. Cada app abre com a sua cena da gralha.
+- **Toda tecla faz clique**, a alavanca faz clac, e há os bipes de entrar, voltar, o piado contente e o emburrado, tudo sintetizado. Qualquer tecla acende a luz verde da tela por 5 s; no escuro, sem a luz, a tela quase some. O LED vermelho pisca enquanto está ligado.
+
 ## 0.15.53 — Metal que reflete (2026-10-07)
 - **O brilho do aço do relógio:** a luz mais forte por perto vira uma faixa de reflexo na caixa, que escorrega quando você vira a câmera e **sobe e desce com o balanço do braço** quando você anda (mais forte correndo).
 - **O relógio balança como o celular:** ao virar a câmera ele se inclina um pouco para o outro lado e volta; andando e correndo, sobe e desce com o braço.

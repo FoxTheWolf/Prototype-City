@@ -2,6 +2,7 @@ import { Vox } from '../render/voxels';
 import { Img, Paint, type C3 } from '../render/paint2d';
 import { WATCH_AT, WATCH_U_FLOATS } from '../render/gpu/voxWatch';
 import { voxAxes } from '../render/voxels';
+import { type HandMotion } from '../render/sway';
 
 /**
  * 15.21: the wristwatch in little cubes of 1 mm, as its manual draws it (docs/identidade/relogio-manual.html):
@@ -83,8 +84,8 @@ let built: { up: Uint8Array; dn: Uint8Array; cols: Map<WBtn, number[]>; sunk: Se
 const YAW = 0.05, PITCH = -0.16;
 /** This frame's pose (the rest pose swayed by the view's turn and the arm's swing), for watchProject. */
 const POSE = { yaw: YAW, pitch: PITCH };
-/** The light glinting off it (as the phone's VoxLight: side, strength, color) and the sway off its pose (yaw, pitch, rad). */
-export interface WatchMotion { lat: number; str: number; glint: readonly [number, number, number]; tilt: readonly [number, number] }
+/** The light glinting off it and the sway off its pose (render/sway.ts). */
+export type WatchMotion = HandMotion;
 /**
  * The body for this frame into WATCH_GPU: its middle on the monitor (cx, cy, pixels), k pixels a millimetre,
  * the scene's light (rgb), the backlight on, the buttons pressed, the maker. The LCD's picture is painted by
@@ -119,6 +120,8 @@ export function watchGpu(cx: number, cy: number, k: number, light: ArrayLike<num
   U.set([eye[0], eye[1], eye[2], NX, dir[0], dir[1], dir[2], NY, R[0] / k, R[1] / k, R[2] / k, NZ, D[0] / k, D[1] / k, D[2] / k, 0], WATCH_AT.eye);
   U.set([-0.55 + mo.lat * 0.5, -0.6, 0.75, 0, light[0], light[1], light[2], lit ? 1 : 0, LCD.x0, LCD.y0, LCD.w, LCD.h, LCD_KNEE, LCD_GAIN, glintAt(mo), mo.str,
     mo.glint[0], mo.glint[1], mo.glint[2], 0], WATCH_AT.ldir);
+  // the glint runs across the case; the backlight spills blue round the LCD
+  U.set([CASE.x0, CASE.y0, CASE.x1 - CASE.x0, CASE.y1 - CASE.y0, 70, 150, 245, 5], WATCH_AT.box);
   const pal = (i: number, col: C3, gloss: number, flags: number, mul = 1) => { U.set([col[0], col[1], col[2], gloss, flags, 0, 0, mul], WATCH_AT.pal + i * 8); };
   pal(M.Steel, [92, 94, 100], 0.6, 1);
   pal(M.Chamfer, [70, 72, 77], 0.5, 1);

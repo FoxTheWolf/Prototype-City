@@ -9,6 +9,8 @@ import { writeFileSync } from 'node:fs';
 import { Jackdaw, type JKey } from '../src/jackdaw/jackdaw';
 import { H, LCD_DAY, W } from '../src/jackdaw/screen';
 import { png } from './png';
+import { jackGpu, NX, NY, NZ, paintLcd } from '../src/jackdaw/body3d';
+import { VOXP_AT } from '../src/render/gpu/voxWatch';
 
 let fails = 0;
 const fail = (m: string) => { if (++fails <= 30) console.log('FAIL ' + m); };
@@ -63,5 +65,28 @@ shots.forEach(([, p], k) => {
   }
 });
 writeFileSync('tests/.out/jackdaw.png', png(out, cols * PW, rows * PH));
+// the body from the front (each column's top cube in its palette color, the print over it, the LCD's picture in its window)
+{
+  D.batt = 1; D.lever(); run(9);
+  const G = jackGpu(0, 0, 1, [1, 1, 1], false, (k) => k === 'ok', true, true, { lat: 0, str: 0, glint: [1, 1, 1], tilt: [0, 0] });
+  paintLcd(G.lcd, D.screen, false);
+  const cells = new Uint8Array(G.vox.buffer), S = 16, out2 = new Uint8ClampedArray(NX * S * NY * S * 4), U = G.uni, P = VOXP_AT.pal;
+  let n = 0;
+  for (const v of cells.subarray(0, NX * NY * NZ)) if (v) n++;
+  if (n < 12000) fail(`the model has its cubes (${n})`);
+  const L = [U[VOXP_AT.lcd], U[VOXP_AT.lcd + 1], U[VOXP_AT.lcd + 2], U[VOXP_AT.lcd + 3]];
+  for (let Y = 0; Y < NY * S; Y++) for (let X = 0; X < NX * S; X++) {
+    const x = (X / S) | 0, y = (Y / S) | 0, o = (Y * NX * S + X) * 4;
+    let m = 0, zt = -1;
+    for (let z = NZ - 1; z >= 0; z--) { const v = cells[(z * NY + y) * NX + x]; if (v) { m = v; zt = z; break; } }
+    if (!m) { out2[o] = 20; out2[o + 1] = 21; out2[o + 2] = 24; out2[o + 3] = 255; continue; }
+    let col = [U[P + m * 8], U[P + m * 8 + 1], U[P + m * 8 + 2]].map((v) => v * (0.75 + zt * 0.025));
+    const fl = U[P + m * 8 + 4];
+    if (fl & 4) { const u = (X / S - L[0]) / L[2], v = (Y / S - L[1]) / L[3], lx = Math.min(G.lcd.w - 1, Math.max(0, (u * G.lcd.w) | 0)), ly = Math.min(G.lcd.h - 1, Math.max(0, (v * G.lcd.h) | 0)), q = (ly * G.lcd.w + lx) * 4; col = [G.lcd.px[q], G.lcd.px[q + 1], G.lcd.px[q + 2]]; }
+    if (fl & 8) { const fx = ((X / S) * G.face.w / NX) | 0, fy = ((Y / S) * G.face.h / NY) | 0, q = (fy * G.face.w + fx) * 4; if (G.face.px[q + 3]) col = [G.face.px[q], G.face.px[q + 1], G.face.px[q + 2]]; }
+    out2[o] = col[0]; out2[o + 1] = col[1]; out2[o + 2] = col[2]; out2[o + 3] = 255;
+  }
+  writeFileSync('tests/.out/jackdaw-body.png', png(out2, NX * S, NY * S));
+}
 console.log(shots.map(([n], k) => `${k + 1}. ${n}`).join('  '));
 console.log(fails ? `\n${fails} FAILED` : 'jackdaw: all passed (tests/.out/jackdaw.png)');

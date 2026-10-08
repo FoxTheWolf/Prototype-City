@@ -1,5 +1,5 @@
 import { calendar, TIME_SCALE } from '../sim/clock';
-import { batIcon, bootFrame, Buf, FW, hdr, ICONS, menuFrame, scene, TRINKETS, type Mood, type SceneSt } from './screen';
+import { warmHome, batIcon, bootFrame, Buf, FW, hdr, ICONS, menuFrame, scene, TRINKETS, type Mood, type SceneSt } from './screen';
 
 /**
  * 15.22: the Jackdaw Mini, the pocket gadget of docs/identidade/jackdaw-manual.html (and docs/dispositivo.md),
@@ -166,6 +166,8 @@ export class Jackdaw {
     if (this.mode === 'off') return BLANK;
     if (this.mode === 'boot') {
       if (this.t === 1) this.sfx.push('boot');
+      // the home screen's poses drawn ahead while the lines type, one a tick (a pose costs ~10 ms)
+      warmHome();
       const [b, done] = bootFrame(this.t, [`JACKDAW FW ${FW}`, 'BOARD JKD-M REV.C', 'SD CARD....... OK', `APPS${'.'.repeat(Math.max(1, 12 - String(this.apps.length).length))}${this.apps.length}`, 'PET......... AWAKE']);
       if (done) { this.mode = 'home'; this.t = 0; this.idle = 0; this.sfx.push('happy'); }
       return b;

@@ -30,6 +30,8 @@ import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawWatch, Watch, WATCH_BTN, WATCH_LCD, WATCH_ON } from './watch/watch';
+import { Jackdaw, type JKey } from './jackdaw/jackdaw';
+import { drawJack, type JackGpu } from './jackdaw/body3d';
 import { type WatchGpu } from './watch/body3d';
 import { drawLaptop3d, glassBox, lapGpu, laptopAnchor, laptopPitch, screenAt } from './laptop/look3d';
 import { keyOfCode, lapPartAt } from './laptop/body3d';
@@ -235,6 +237,9 @@ function gearBattery(fresh = false) {
 }
 const laptop = new Laptop(world);
 const watch = new Watch();
+/** The Jackdaw Mini (15.22): G takes it out; while it is in the hand the arrows, Enter and Backspace are its keys, O its lever. */
+const jack = new Jackdaw();
+if (DEBUG.jackdaw) jack.owned = true;
 /** Sitting down (13.10f): 0 standing .. 1 seated, and the seat's eye height (kept while getting up). */
 let sitK = 0, sitEye = EYE;
 /** Eye height over the feet: lower while seated (13.10f), or sitting at the notebook (or leaning on a counter). */
@@ -316,7 +321,7 @@ let termFb: CharGrid, termTx: CharGrid, termCells: Record<'fb' | 'tx', [number, 
 /** The notebook screen's size on the interface grid (cells), kept from the last frame so a click can be mapped to a terminal cell (15.7). */
 let scrTermW = 0, scrTermH = 0;
 /** The watch's body for the GPU this frame (15.21), or null. */
-let watchG: WatchGpu | null = null;
+let watchG: WatchGpu | null = null, jackG: JackGpu | null = null;
 function termLayout() {
   const w = canvas.width, h = canvas.height;
   // whole pixels a cell, as near the screen's shape (TERM_ASPECT) as they come: from the height (about two
@@ -426,6 +431,7 @@ function phoneBack() {
 }
 function phoneToggle() {
   const r = phone.toggle(performance.now() / 1000);
+  if (r !== 'in') jack.out = false;
   // flat (13.9): it stays dark
   if (r === 'out' && phone.screen === 'off') { shelfNote = en.bag.flat; shelfNoteAt = performance.now() / 1000; }
   // with the phone out the system cursor is free to click its keys; put away, the view takes the mouse again
@@ -805,6 +811,17 @@ addEventListener('keydown', (e) => {
     phonePress(pk);
     return;
   }
+  // the Jackdaw in the hand (15.22): its keys and its lever; G takes it out and puts it away
+  if (jack.out && running && !paused) {
+    const jk = ({ ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', NumpadEnter: 'ok', Backspace: 'back' } as Record<string, JKey>)[e.code];
+    if (jk) { e.preventDefault(); if (!e.repeat) jack.press(jk); return; }
+    if (e.code === 'KeyO') { if (!e.repeat) jack.lever(); return; }
+  }
+  if (e.code === 'KeyG' && running && !e.repeat && jack.owned && !payphone.active) {
+    if (phone.out && !jack.out) phoneToggle();
+    jack.out = !jack.out; sound?.phoneSlide(jack.out);
+    return;
+  }
   // the wristwatch's right button (K): held, it repeats while a field of the alarm is being set
   if (e.code === 'KeyK' && running && WATCH_ON) { watch.startDown(performance.now() / 1000, e.repeat); return; }
   if (e.repeat) return;
@@ -826,6 +843,7 @@ addEventListener('keydown', (e) => {
 
 addEventListener('keyup', (e) => {
   if (e.code === 'KeyK' && WATCH_ON) watch.startUp();
+  if (jack.out && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'NumpadEnter', 'Backspace'].includes(e.code)) jack.release();
   if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); altUp(); }
   if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') phone.release();
 });
@@ -1029,7 +1047,7 @@ function begin() {
 const AUTOSAVE_S = 180;
 let lastSave = 0, continued = false;
 function gameSave(): GameSave {
-  return { v: SAVE_V, seed, at: Date.now(), world: snapWorld(world), phone: phone.snapshot(), laptop: laptop.snapshot(), watch: watch.snapshot(), cam: { yaw: camera.yaw, pitch: camera.pitch } };
+  return { v: SAVE_V, seed, at: Date.now(), world: snapWorld(world), phone: phone.snapshot(), laptop: laptop.snapshot(), watch: watch.snapshot(), jack: jack.save(), cam: { yaw: camera.yaw, pitch: camera.pitch } };
 }
 async function saveNow(): Promise<boolean> {
   if (!running || cctv) return false;
@@ -1043,6 +1061,8 @@ function applySave(s: GameSave) {
   laptop.restore(s.laptop as ReturnType<Laptop['snapshot']>);
   gearBattery();
   watch.restore(s.watch as ReturnType<Watch['snapshot']>, performance.now() / 1000);
+  jack.restore(s.jack as ReturnType<Jackdaw['save']> | undefined);
+  if (DEBUG.jackdaw) jack.owned = true;
   camera.yaw = camera.targetYaw = s.cam.yaw; camera.pitch = camera.targetPitch = s.cam.pitch;
   sitEye = world.player.sit?.eye ?? EYE; sitK = world.player.sit ? 1 : 0;
 }
@@ -1409,7 +1429,11 @@ function frame(now: number) {
     else if (f === 'light') sound?.phoneKey(false, true, false);
   }
   watch.sfx.length = 0;
+  jack.update(dt, world.time);
+  for (const f of jack.sfx) if (typeof f === 'string') sound?.jackdaw(f); else sound?.jackdaw('tone', f[1]);
+  jack.sfx.length = 0;
   // in the game only (not over the title or the loading screen)
+  jackG = running ? drawJack(jack, now / 1000, VIEW_LIGHT, [uiLayout.originX, uiLayout.originY, uiLayout.cellW, uiLayout.cellH], ui.cols, ui.rows, { yaw: camera.yaw, pitch: camera.pitch, glint: VIEW_GLINT, speed: world.player.speed }) : null;
   watchG = running && WATCH_ON ? drawWatch(ui, watch, world.time, now / 1000, VIEW_LIGHT, watchMakerName(world.city), camera.yaw, [uiLayout.originX, uiLayout.originY, uiLayout.cellW, uiLayout.cellH], { yaw: camera.yaw, pitch: camera.pitch, glint: VIEW_GLINT, speed: world.player.speed }) : null;
   const phoneOnTop = laptop.open;
   PHONE_SCREEN.at = null; PHONE_PIC.on = false; PHONE_BODY.on = false;
@@ -1571,7 +1595,7 @@ function frame(now: number) {
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu, watchG);
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu, watchG, jackG);
   else renderer.draw(grid, ui, hd, termAt);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }

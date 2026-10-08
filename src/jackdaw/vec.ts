@@ -57,43 +57,49 @@ export class Vec {
     this.closePath();
   }
 
-  /** The path's coverage (non-zero), one sample a pixel's centre. */
-  private cover(): Uint8Array {
-    const W = this.w, H = this.h, out = new Uint8Array(W * H);
+  /** The path's spans (non-zero), a sample at each pixel's centre: each covered run of a row to `span(y, x0, x1)`. */
+  private spans(span: (y: number, x0: number, x1: number) => void) {
+    const W = this.w, H = this.h;
     let y0 = H, y1 = 0;
     for (const s of this.subs) for (let i = 1; i < s.p.length; i += 2) { y0 = Math.min(y0, s.p[i]); y1 = Math.max(y1, s.p[i]); }
-    const xs: { x: number; d: number }[] = [];
+    const xs: number[] = [], ds: number[] = [], ord: number[] = [];
     for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(H - 1, Math.ceil(y1)); y++) {
       const py = y + 0.5;
-      xs.length = 0;
+      xs.length = 0; ds.length = 0;
       for (const s of this.subs) {
         const p = s.p, n = p.length / 2;
         for (let i = 0; i < n; i++) {
-          const j = (i + 1) % n, ax = p[i * 2], ay = p[i * 2 + 1], bx = p[j * 2], by = p[j * 2 + 1];
+          const j = i + 1 === n ? 0 : i + 1, ay = p[i * 2 + 1], by = p[j * 2 + 1];
           if ((ay <= py) === (by <= py)) continue;
-          xs.push({ x: ax + ((py - ay) / (by - ay)) * (bx - ax), d: by > ay ? 1 : -1 });
+          const ax = p[i * 2];
+          xs.push(ax + ((py - ay) / (by - ay)) * (p[j * 2] - ax)); ds.push(by > ay ? 1 : -1);
         }
       }
-      xs.sort((a, b) => a.x - b.x);
+      ord.length = xs.length;
+      for (let i = 0; i < xs.length; i++) ord[i] = i;
+      ord.sort((a, b) => xs[a] - xs[b]);
       let wn = 0;
-      for (let i = 0; i < xs.length - 1; i++) {
-        wn += xs[i].d;
+      for (let k = 0; k < ord.length - 1; k++) {
+        wn += ds[ord[k]];
         if (!wn) continue;
-        for (let x = Math.max(0, Math.ceil(xs[i].x - 0.5)); x <= Math.min(W - 1, Math.floor(xs[i + 1].x - 0.5)); x++) out[y * W + x] = 1;
+        const xa = Math.max(0, Math.ceil(xs[ord[k]] - 0.5)), xb = Math.min(W - 1, Math.floor(xs[ord[k + 1]] - 0.5));
+        if (xb >= xa) span(y, xa, xb);
       }
     }
-    return out;
   }
-  private put(cov: Uint8Array, v: number) {
-    const C = this.clipM;
-    for (let i = 0; i < cov.length; i++) if (cov[i] && (!C || C[i])) this.g[i] = v;
+  fill(v: number) {
+    const g = this.g, C = this.clipM, W = this.w;
+    this.spans((y, x0, x1) => { for (let i = y * W + x0, e = y * W + x1; i <= e; i++) if (!C || C[i]) g[i] = v; });
   }
-  fill(v: number) { this.put(this.cover(), v); }
-  clip() { const c = this.cover(); if (this.clipM) for (let i = 0; i < c.length; i++) c[i] &= this.clipM[i]; this.clipM = c; }
+  clip() {
+    const c = new Uint8Array(this.w * this.h), C = this.clipM, W = this.w;
+    this.spans((y, x0, x1) => { for (let i = y * W + x0, e = y * W + x1; i <= e; i++) if (!C || C[i]) c[i] = 1; });
+    this.clipM = c;
+  }
   fillRect(x: number, y: number, w: number, h: number, v: number) { this.beginPath(); this.moveTo(x, y); this.lineTo(x + w, y); this.lineTo(x + w, y + h); this.lineTo(x, y + h); this.closePath(); this.fill(v); }
   /** The path stroked w wide (in the current units), round caps and joins. */
   stroke(w: number, v: number) {
-    const r = (w * this.k) / 2, W = this.w, H = this.h, cov = new Uint8Array(W * H);
+    const r = (w * this.k) / 2, W = this.w, H = this.h, g = this.g, C = this.clipM;
     for (const s of this.subs) {
       const p = s.p, n = p.length / 2, segs = s.closed ? n : n - 1;
       for (let i = 0; i < Math.max(1, segs); i++) {
@@ -102,10 +108,9 @@ export class Vec {
         for (let y = Math.max(0, Math.floor(Math.min(ay, by) - r)); y <= Math.min(H - 1, Math.ceil(Math.max(ay, by) + r)); y++)
           for (let x = Math.max(0, Math.floor(Math.min(ax, bx) - r)); x <= Math.min(W - 1, Math.ceil(Math.max(ax, bx) + r)); x++) {
             const qx = x + 0.5 - ax, qy = y + 0.5 - ay, t = L2 ? Math.max(0, Math.min(1, (qx * dx + qy * dy) / L2)) : 0;
-            if ((qx - t * dx) ** 2 + (qy - t * dy) ** 2 <= r * r) cov[y * W + x] = 1;
+            if ((qx - t * dx) ** 2 + (qy - t * dy) ** 2 <= r * r && (!C || C[y * W + x])) g[y * W + x] = v;
           }
       }
     }
-    this.put(cov, v);
   }
 }

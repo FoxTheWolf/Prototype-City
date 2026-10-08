@@ -28,4 +28,6 @@ export const DEBUG = {
   /** (15.17h) The canonical sites in the Ferret's bookmarks (Streetwire, GridLink, the Switchboard), marked '(dbg)',
    *  so they are a click away while testing; the real game comes with only Lookwise, the mail and the portal. */
   webMarks: true,
+  /** (15.22) The Jackdaw Mini in the pocket (G takes it out), to test it before stage 19 gives it in the game. */
+  jackdaw: true,
 };
