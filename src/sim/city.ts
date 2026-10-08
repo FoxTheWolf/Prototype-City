@@ -47,7 +47,7 @@ export interface Cut {
  * box can be cut by it (`cut`), which gives wedge-shaped buildings on the sharp corners.
  */
 export interface Building {
-  /** (13.10e) A lot reached from the street by an alley: the face its street door must be on and the stretch of it along the alley (from, to); else the door takes the face nearest the street. */
+  /** The face a lot's street door must be on and the stretch of it (from, to): the street the lot fronts (plano-interiores step 1), or the alley that reaches it (13.10e); else the door takes the face nearest the street. */
   way?: [number, number, number];
   x0: number;
   y0: number;
@@ -726,79 +726,75 @@ export function generateCity(seed: number, size: number): City {
     const ix0 = x0 + SIDEWALK, iy0 = y0 + SIDEWALK, ix1 = x1 - SIDEWALK, iy1 = y1 - SIDEWALK;
     const tree = (x: number, y: number) => block.props.push({ kind: 'tree', x, y, w: 3.5 + br() * 2, z1: 5 + br() * 4, seed: (br() * 1e6) | 0, a: 0 });
 
-    // split the block into lots; downtown lots are bigger, for towers
-    const maxLot = K.lot + K.lotCore * core;
-    const leaves: [number, number, number, number][] = [];
-    const split = (ax0: number, ay0: number, ax1: number, ay1: number) => {
-      const lw = ax1 - ax0, lh = ay1 - ay0;
-      if (Math.max(lw, lh) > maxLot) {
-        const t = 0.35 + br() * 0.3;
-        if (lw >= lh) { const s = ax0 + bays(lw * t); split(ax0, ay0, s, ay1); split(s, ay0, ax1, ay1); }
-        else { const s = ay0 + bays(lh * t); split(ax0, ay0, ax1, s); split(ax0, s, ax1, ay1); }
-        return;
-      }
-      leaves.push([ax0, ay0, ax1, ay1]);
-    };
     /**
-     * (13.10e) The lots of a block: split, then each lot that would be built is checked for a way in from
-     * the street: a side on the street, or a side along open ground (a lot too narrow to build on, or an
-     * empty one) that itself reaches the street, the block's alleys. A lot with neither joins a neighbour
-     * that has one and shares its whole side with it, as its back (more rooms, the stock room); the ones
-     * still closed in stay open ground, a yard behind the buildings (block.yards: no door opens onto them, no substation stands in them).
+     * (plano-interiores, step 1) The lots of a block, cut the American way: at each end a column of lots facing the
+     * avenue (the corners with them), in the middle two rows back to back facing the streets, every lot narrow and
+     * deep, the ground behind them a yard (block.yards: no door opens onto them, no substation stands in them).
+     * Downtown the lots are wide (16, 20, 24 m: the towers), at the edges narrow (8, 10, 12 m, five floors at most).
+     * Every lot is a size of the interiors catalog (docs/identidade/interiores-manual.html, section 3); a stretch no
+     * lot fits leaves a gap under 8 m, an alley between two lots. A lot's `way` is the face its door goes on.
      */
     const lots = () => {
-      split(ix0, iy0, ix1, iy1);
-      const E = 1e-6, near = (a: number, b: number) => Math.abs(a - b) < E;
-      const onStreet = (L: number[]) => L[0] <= ix0 + E || L[1] <= iy0 + E || L[2] >= ix1 - E || L[3] >= iy1 - E;
-      /** How long a side two lots share (0 when they do not touch). */
-      const shared = (A: number[], B: number[]) =>
-        near(A[2], B[0]) || near(A[0], B[2]) ? Math.min(A[3], B[3]) - Math.max(A[1], B[1]) : near(A[3], B[1]) || near(A[1], B[3]) ? Math.min(A[2], B[2]) - Math.max(A[0], B[0]) : 0;
-      const L = leaves.map((r) => { const empty = br() < K.empty; return { r, empty, open: empty || Math.min(r[2] - r[0], r[3] - r[1]) < 8, ok: false }; });
-      // the open ground that reaches the street, through open ground a bay wide at least
-      const reach = L.filter((l) => l.open && onStreet(l.r));
-      for (const l of reach) l.ok = true;
-      while (reach.length) {
-        const a = reach.pop()!;
-        for (const l of L) if (l.open && !l.ok && shared(a.r, l.r) >= BAY - E) { l.ok = true; reach.push(l); }
-      }
-      // a door needs two bays of the alley (the bay at a corner takes none)
-      for (const l of L) if (!l.open) l.ok = onStreet(l.r) || L.some((o) => o.open && o.ok && shared(o.r, l.r) >= 2 * BAY - E);
-      for (let joined = true; joined;) {
-        joined = false;
-        for (let i = L.length - 1; i >= 0; i--) {
-          const l = L[i];
-          if (l.open || l.ok) continue;
-          let best = -1, area = Infinity;
-          L.forEach((n, j) => {
-            if (j === i || n.open || !n.ok) return;
-            const A = n.r, B = l.r;
-            const full = (near(A[0], B[0]) && near(A[2], B[2]) && (near(A[3], B[1]) || near(A[1], B[3]))) || (near(A[1], B[1]) && near(A[3], B[3]) && (near(A[2], B[0]) || near(A[0], B[2])));
-            const s = (A[2] - A[0]) * (A[3] - A[1]);
-            if (full && s < area) { area = s; best = j; }
-          });
-          if (best < 0) continue;
-          const A = L[best].r, B = l.r;
-          L[best].r = [Math.min(A[0], B[0]), Math.min(A[1], B[1]), Math.max(A[2], B[2]), Math.max(A[3], B[3])];
-          L.splice(i, 1);
-          joined = true;
+      const big = K.lot + K.lotCore * core >= 24, NARROW = [8, 10, 12];
+      const alongX = ix1 - ix0 >= iy1 - iy0, U0 = alongX ? ix0 : iy0, U1 = alongX ? ix1 : iy1, V0 = alongX ? iy0 : ix0, V1 = alongX ? iy1 : ix1;
+      /** The widths along a stretch of length L, in order; a negative one is a gap. */
+      const widths = (L: number, wide: number[]): number[] => {
+        const out: number[] = [];
+        let rest = L;
+        const fits = (o: number) => o <= rest && (rest - o === 0 || rest - o >= 8);
+        while (rest >= 8) {
+          let opts = (big ? wide : NARROW).filter(fits);
+          if (!opts.length) opts = NARROW.filter(fits);
+          if (!opts.length) opts = [Math.max(...NARROW.filter((o) => o <= rest))];
+          const o = opts[(br() * opts.length) | 0];
+          out.push(o);
+          rest -= o;
+        }
+        if (rest > 0) out.splice((br() * (out.length + 1)) | 0, 0, -rest);
+        return out;
+      };
+      /** A lot's depth for its width w in a zone Z deep: mostly a little deeper than wide, sometimes up to 24 m. */
+      const depthFor = (w: number, Z: number): number => {
+        if (w >= 16) { const D = (w === 16 ? [16, 24] : w === 20 ? [20] : [24, 32]).filter((d) => d <= Z); return D.length ? D[(br() * D.length) | 0] : Z; }
+        const hi = Math.min(24, Z, br() < 0.7 ? w + 4 : 24);
+        return hi < w ? Z : w + 2 * Math.round((br() * (hi - w)) / 2);
+      };
+      const rect = (u0: number, u1: number, v0: number, v1: number): [number, number, number, number] => (alongX ? [u0, v0, u1, v1] : [v0, u0, v1, u1]);
+      const yards: [number, number, number, number][] = [];
+      /** A lot from (u0, v0) to (u1, v1) with its door on `face`, along [a0, a1]. */
+      const put = (r: [number, number, number, number], face: number, a0: number, a1: number) => lot(r[0], r[1], r[2], r[3], br() < K.empty, [face, a0, a1]);
+      // the faces of the four sides: the u ends are the avenues', the v sides the streets'
+      const fU0 = alongX ? 0 : 2, fU1 = alongX ? 1 : 3, fV0 = alongX ? 2 : 0, fV1 = alongX ? 3 : 1;
+      const H = V1 - V0, single = H < 20;
+      // the ends: a column of lots facing the avenue, as deep as E
+      const endE = () => (big ? 24 : 12 + 2 * Math.round(br() * 3));
+      const E0 = Math.min(endE(), (U1 - U0) / 2), E1 = Math.min(endE(), (U1 - U0) / 2);
+      for (const [end, E] of [[0, E0], [1, E1]] as const) {
+        let v = V0;
+        for (const w of widths(H, [16, 24])) {
+          const a = Math.abs(w);
+          if (w > 0) {
+            const r = end === 0 ? rect(U0, U0 + E, v, v + a) : rect(U1 - E, U1, v, v + a);
+            put(r, end === 0 ? fU0 : fU1, v, v + a);
+          }
+          v += a;
         }
       }
-      const yards = L.filter((l) => !l.ok).map((l) => l.r as [number, number, number, number]);
+      // the middle: two rows back to back (one, through the block, when it is shallow)
+      const M0 = U0 + E0, M1 = U1 - E1, Z0 = single ? H : 2 * Math.floor(H / 4), rows: [number, number][] = single ? [[0, H]] : [[0, Z0], [1, H - Z0]];
+      for (const [row, Z] of rows) {
+        let u = M0;
+        for (const w of widths(M1 - M0, [16, 20, 24])) {
+          const a = Math.abs(w);
+          if (w > 0) {
+            const d = single ? Z : depthFor(a, Z);
+            if (row === 0) { put(rect(u, u + a, V0, V0 + d), fV0, u, u + a); if (d < Z) yards.push(rect(u, u + a, V0 + d, V0 + Z)); }
+            else { put(rect(u, u + a, V1 - d, V1), fV1, u, u + a); if (d < Z) yards.push(rect(u, u + a, V1 - Z, V1 - d)); }
+          }
+          u += a;
+        }
+      }
       if (yards.length) block.yards = yards;
-      for (const l of L) {
-        if (!l.ok) continue;
-        // the alley's side and stretch, for a lot with no side on the street (its longest stretch along open ground that reaches it)
-        let way: [number, number, number] | undefined, best = 2 * BAY - E;
-        if (!l.open && !onStreet(l.r)) for (const o of L) {
-          if (!o.open || !o.ok) continue;
-          const s = shared(o.r, l.r), A = l.r, B = o.r;
-          if (s < best) continue;
-          best = s;
-          if (near(A[0], B[2]) || near(A[2], B[0])) way = [near(A[0], B[2]) ? 0 : 1, Math.max(A[1], B[1]), Math.min(A[3], B[3])];
-          else way = [near(A[1], B[3]) ? 2 : 3, Math.max(A[0], B[0]), Math.min(A[2], B[2])];
-        }
-        lot(l.r[0], l.r[1], l.r[2], l.r[3], l.empty, way);
-      }
     };
     const lot = (ax0: number, ay0: number, ax1: number, ay1: number, empty: boolean, way?: [number, number, number]) => {
       const lw = ax1 - ax0, lh = ay1 - ay0;
@@ -813,6 +809,8 @@ export function generateCity(seed: number, size: number): City {
       let floors = Math.max(1, Math.round((K.base + 55 * K.tall * core ** 1.5) * (0.35 + br() * 0.9)));
       if (br() < 0.05) floors = Math.round(floors * 1.5);
       floors = Math.min(floors, K.cap);
+      // a narrow lot is a walk-up: no lift, so five floors at most (the interiors manual; the towers stand on 16 m and up)
+      if (Math.min(lw, lh) < 16) floors = Math.min(floors, 5);
       const facade = pickStyle(br(), MIX[districts[district].type]), look = LOOK[facade]!;
       const style = {
         style: facade, win: pick(look.win), frame: pick(look.frame), lit: look.lit[0] + br() * (look.lit[1] - look.lit[0]),

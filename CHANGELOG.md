@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.10j — Quarteirões de cidade americana (2026-10-08)
+- **Os quarteirões são loteados como nas cidades americanas de verdade:** nas pontas, lotes virados para a avenida (as esquinas inclusas); no meio, duas fileiras de lotes estreitos e fundos, de costas uma para a outra, cada um com a porta na rua, e os quintais no miolo do quarteirão. Acabaram os prédios rasos e largos com a porta no lado comprido.
+- **Torres no centro, sobrados na periferia:** perto do centro os lotes são largos (16 a 24 m), onde nascem as torres; longe dele os lotes têm 8 a 12 m de frente e no máximo 5 andares (prédio de escada, sem elevador). De vez em quando sobra um beco estreito entre dois prédios.
+- **A cidade de cada semente muda** (é a base para os interiores desenhados que vêm a seguir: todo prédio agora tem um tamanho que existe no catálogo de plantas).
+
 ## 0.13.7 — Placas de rua pelo manual de sinalização (2026-10-08)
 - **A placa da esquina tem poste próprio**, uns 3 m calçada acima do semáforo: o poste para embaixo da placa (nada atravessa o nome), e as duas placas se cruzam em cima dele.
 - **As placas de rua se leem:** sem a moldura escura dos outdoors (que fazia faixas pretas), letras mais altas e refletivas, que continuam legíveis à noite.

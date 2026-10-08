@@ -11,11 +11,18 @@
   copiado do manual por `node tests/floorplans-sync.mjs`. O teste `tests/floorplans.ts` roda R1–R9 em tudo e confere
   que 7 plantas estragadas de propósito falham. **O manual é onde se desenha; o JSON é cópia.**
 - **O gerador de hoje** (`makePlan` em `src/sim/interior.ts`) corta o andar por regras e mobilia por sorteio (`furnish`).
-  As lojas já leem modelos em texto (`src/sim/layouts.ts`, 13.10c), que continuam valendo dentro da `o` do térreo.
+  As lojas já leem modelos em texto (`src/sim/layouts.ts`, 13.10c).
+- **Um gerador só (regra do usuário em 2026-10-08):** a loja do térreo e os andares de cima saem do **mesmo** leitor e
+  do mesmo formato. Os modelos de `layouts.ts` passam para a gramática das plantas (a camada de móveis dentro da `o`,
+  com as letras de loja acrescentadas à tabela `FURN`) e são lidos por `planFromFloor`, não por um caminho à parte;
+  `layoutShop` some quando a migração terminar. Vale também para o mobiliário: a biblioteca de arrumações e as
+  arrumações de loja são a mesma coisa (uma sala de um tipo, com o contorno e os móveis).
 
 ## Os passos, em ordem (cada um com o seu commit e o seu teste)
 
-1. **O catálogo na geração da cidade** (`src/sim/city.ts`).
+1. ✅ **(0.13.10j) O catálogo na geração da cidade** (`src/sim/city.ts`, `lots` no laço dos quarteirões). Feito: 100% dos
+   prédios com porta num tamanho do catálogo em 3 sementes (sobram 2 torres recuadas, que ficam para as plantas de torre); a população segue
+   em ~94 mil (o teto é a meta); as lojas caíram 14% (1.618 → 1.387 na 42); motel + cybercafé em todas as sementes.
    **Como os lotes nascem hoje (lido em 2026-10-08):** `split` (dentro do laço dos quarteirões, ~linha 730) corta o
    quarteirão ao meio recursivamente em `bays(lw * t)` (múltiplos de 2 m, t entre 0,35 e 0,65) até `maxLot`
    (`K.lot + K.lotCore * core`); `lots()` marca como aberto o lote com lado < 8 m e junta lotes sem rua ao vizinho.
@@ -25,6 +32,13 @@
    (um beco de ventilação, comum em 2008). Então: no `split`, ao cortar ao longo da rua, escolher o corte entre
    as larguras do catálogo, não por `t`. A junção de lotes de `lots()` (o vizinho sem rua vira os fundos) pode
    gerar fundos fora do catálogo: limitar o fundo a 24 m ou fazer o resto virar quintal.
+   **Medido e decidido com o usuário (2026-10-08):** na semente 42 só 58% dos prédios caíam no catálogo; 30% eram
+   mais largos que fundos (fileiras rasas do corte ao meio) e 5,5% tinham 6+ andares em lote de 8–12 m (precisariam de
+   elevador). **Decisão:** o quarteirão passa a ser cortado como nas cidades americanas: lotes na ponta virados para a
+   avenida (as esquinas inclusas), e no meio duas fileiras de costas, cada lote estreito e fundo virado para a rua, o
+   resto do fundo vira quintal. **No centro os lotes são largos (16/20/24 m, as torres); na periferia, estreitos
+   (8/10/12 m) e com no máximo 5 andares** (ideia do usuário: empurrar os finos para a periferia, sem mudar muito o
+   horizonte). A face da porta fica gravada em `way`. Medição: `tests/lots.ts`.
    Antes, medir quantos lotes mudam de tamanho e se o motel/cybercafé continuam (o `tests/city.ts` já confere). O lote de cada prédio com interior é arredondado para o
    tamanho do catálogo mais perto (a tabela da seção 3 do manual; torres em 16 × 16, 16 × 24, 20 × 20, 24 × 24,
    24 × 32). Prédios sem planta desenhada para o tamanho/estilo continuam no gerador velho até a planta existir
@@ -57,6 +71,13 @@
 6. **Testes:** `tests/plans.ts` (as invariantes de hoje) passa a rodar também `checkFloor` nas plantas lidas do jogo
    (depois de girar e converter), numa semente inteira. É o que garante "nada quebrado": a mesma regra no manual,
    no JSON e no jogo.
+
+7. **Os tipos que faltam (decidido com o usuário em 2026-10-08: o leitor primeiro, depois desenhar estes no manual
+   e só então ler no jogo):** o leitor dos passos 1–2 serve a todos, então nada se refaz. Faltam desenhar: **hotel**
+   (saguão + andares de quartos), **banco** (hoje na loja genérica), **delegacia** (a prisão da etapa 16: balcão,
+   cela, sala de interrogatório, o caderno da fiança), **galpão industrial** (os lotes de 30 m), **estacionamento**,
+   **oficina** (`autoparts`), **escritório grande e as outras torres**, e plantas de loja próprias para os que caem na
+   genérica (farmácia, penhores, eletrônicos, celulares, livraria, alfaiate). O cinema fica para depois da 1.0.
 
 ## Riscos e o que conferir
 
