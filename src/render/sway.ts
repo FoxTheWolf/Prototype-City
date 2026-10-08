@@ -16,6 +16,8 @@ export class HandSway {
   private yaw = NaN; private pitch = 0; private ty = 0; private tp = 0; private ph = 0; private amp = 0;
   /** The swing's lift this frame (-1 .. 1 at full: the caller scales it to its size). */
   lift = 0;
+  /** `k`: how much it sways (1 the Jackdaw's; the watch on the wrist less). */
+  constructor(private readonly k = 1) {}
   /** Put away: the next frame starts without a jump. */
   reset() { this.yaw = NaN; }
   step(now: number, v?: HandView): HandMotion {
@@ -32,7 +34,7 @@ export class HandSway {
     // the swing: a cycle each two strides, its size eased in and out with the pace (walking a third of running's)
     this.ph += (v.speed * dt * Math.PI) / STRIDE_M;
     this.amp += (Math.min(1, Math.max(0, (v.speed - 0.5) / 4.5)) - this.amp) * (1 - Math.exp(-dt / 0.3));
-    this.lift = Math.sin(this.ph) * this.amp;
-    return { lat: this.lat, str: this.str, glint: [this.r, this.g, this.b], tilt: [this.ty + Math.sin(this.ph * 0.5) * SWING_TILT * 0.3 * this.amp, this.tp + Math.cos(this.ph) * SWING_TILT * this.amp] };
+    this.lift = Math.sin(this.ph) * this.amp * this.k;
+    return { lat: this.lat, str: this.str, glint: [this.r, this.g, this.b], tilt: [(this.ty + Math.sin(this.ph * 0.5) * SWING_TILT * 0.3 * this.amp) * this.k, (this.tp + Math.cos(this.ph) * SWING_TILT * this.amp) * this.k] };
   }
 }

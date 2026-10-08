@@ -204,7 +204,7 @@ const CASE_COLS = 32, CASE_X = 6, CASE_ROWS = 17;
 const PRESS_S = 0.12;
 
 /** The watch's sway and the arm's swing (render/sway.ts), and how far the swing lifts it at full (mm). */
-const SWAY = new HandSway(), SWING_LIFT = 2.2;
+const SWAY = new HandSway(0.55), SWING_LIFT = 2.2;
 
 /** Where this frame drew the lit LCD (interface cells: x, y, w, h, and GLOW_BOOST), for the compositor's glow; null when unlit. */
 export const WATCH_LCD: { at: number[] | null } = { at: null };

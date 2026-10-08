@@ -124,7 +124,7 @@ export const JACK_GPU: JackGpu = { vox: new Uint32Array(Math.ceil((NX * NY * NZ)
 let builtKey = '';
 
 /** Its pose in the hand: the top toward the eye (the lever and the cap show), turned a little. */
-const YAW = -0.1, PITCH = 0.24;
+const YAW = 0.05, PITCH = 0.24;
 const POSE = { yaw: YAW, pitch: PITCH };
 
 /**
@@ -171,14 +171,14 @@ let lcdFor = '';
 /** A key shows pressed this long after it was (s). */
 const PRESS_S = 0.12;
 /**
- * The Jackdaw for this frame (15.22): held up in the middle of the view's bottom, about 60 % of its width,
+ * The Jackdaw for this frame (15.22): held up in the middle of the view's bottom, about 38 % of its width,
  * rising from below as it comes out (the manual's "two thirds"); its LCD painted when the screen changed, the
  * LED blinking while it is on (the manual's 1.6 s). `px`: the interface's origin and cell (pixels), `cols` and
  * `rows` the grid's size. Null when it is in the pocket.
  */
 export function drawJack(J: Jackdaw, now: number, light: ArrayLike<number>, px: readonly number[], cols: number, rows: number, view?: HandView): JackGpu | null {
   if (J.raise < 0.01) { SWAY.reset(); return null; }
-  const e = 1 - (1 - J.raise) ** 3, [ox, oy, cw, ch] = px, wide = cols * cw, k = (wide * 0.6) / NX;
+  const e = 1 - (1 - J.raise) ** 3, [ox, oy, cw, ch] = px, wide = cols * cw, k = (wide * 0.38) / NX;
   const mo = SWAY.step(now, view);
   const cx = ox + wide * 0.5, cy2 = oy + rows * ch + NY * k * 0.5 - NY * k * 0.82 * e + SWAY.lift * k * 1.2;
   const lit = J.lit, key = `${J.ver}|${lit}`;

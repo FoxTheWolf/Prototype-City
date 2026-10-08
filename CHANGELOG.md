@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.55 — Retoques do Jackdaw e do relógio (2026-10-08)
+- O Jackdaw na mão ficou ~35 % menor e de frente, sem virar para o lado.
+- O relógio balança menos ao virar a câmera e ao andar/correr.
+
 ## 0.15.54 — O Jackdaw Mini (2026-10-07)
 - **Um bichinho virtual de bolso:** o Jackdaw Mini, amarelo-sinal, em cubinhos de 2 mm, com a tela verde de 128 × 64 pontos onde mora a gralha. Por enquanto vem no bolso pelo modo debug (no jogo de verdade ele chega mais adiante). **G** tira e guarda; **O** é a alavanca de ligar; na mão, as **setas**, **Enter** (OK) e **Backspace** (VOLTAR).
 - **A gralha:** pisca, olha para os lados, pula sozinha (ou com ↑), cochila depois de 2 minutos sem tecla ou com a bateria fraca, e comemora quando acha uma bugiganga.
