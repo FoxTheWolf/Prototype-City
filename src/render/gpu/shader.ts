@@ -860,6 +860,15 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   let zs = u.eye - m * tIn; let tz = select(tIn, (zc - u.eye) / -m, zs <= zc && m < 0.0);
   let shaft = gWR.z > gWR.x && (zs > zc || m < 0.0) && inWellRect(u.px + rdx * tz, u.py + rdy * tz);
   let zw = select(zc, ztop, shaft);
+  // the slab's cut face round the opening (playtest of 2026-10-08): a ray in it that leaves it sideways between this
+  // storey's ceiling and the next floor meets the slab there (the last riser up to a landing is that face), not what
+  // is beyond it: before it, the walk stops (tSlab)
+  var tSlab = 1e9;
+  if (shaft) {
+    let te = min(select((gWR.x - u.px) / rdx, (gWR.z - u.px) / rdx, rdx > 0.0), select((gWR.y - u.py) / rdy, (gWR.w - u.py) / rdy, rdy > 0.0));
+    let ze = u.eye - m * te;
+    if (te > tIn && ze > zc && ze < ztop) { tSlab = te; }
+  }
   // the lift car (13.2d, world.ts liftCars): the floor it shows, where it rides to, how many floors; whether it stands
   // on this storey (its doors open; always, for the viewer riding it), whether it was called here
   let carW = fx[FX_TAB + 3u * fx[0] + u32(V.lot)];
@@ -878,7 +887,8 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   let knx = bld[q + 7u]; let kny = bld[q + 8u];
   if (bld[q + 6u] > 0.5) { let dn = knx * rdx + kny * rdy; if (dn > 0.0) { let t = (bld[q + 9u] - knx * u.px - kny * u.py) / dn; if (t < tExit) { tExit = t; face = 4; } } }
   tExit = max(tExit, tIn + 0.02);
-  // the nearest door leaf the ray meets (the plan's, swung as far as each is open; the viewer's street doors' glass ones)
+  // the nearest door leaf the ray meets (the plan's, swung as far as each is open; the viewer's street doors' glass ones);
+  // a leaf is lit by the room on the side it is seen from (5 cm back along the ray: it stands on the cells' border)
   var lh = LHit(1e9, 0.0, 1.0, 0u, false);
   if (full) {
     let t0 = max(0.05, tIn); let lb = leafBase(o);
@@ -912,11 +922,13 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   if (!inside && cur == 0u) { return res; }
   for (var g = 0; g < 400; g++) {
     let xs = tX < tY; let tn = select(tY, tX, xs);
+    // (met before the outer wall too: not on to it)
+    if (tSlab < min(tn, tExit)) { wall = true; break; }
     if (lt < min(tn, tExit)) {
       let z = u.eye - m * lt;
       if (ledge && z > z0 && z <= z0 + DOOR_H - 0.02) {
         // the leaf's free edge, seen along it as it stands open: its frame, or the wood's end grain
-        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
         let ec = select(select(select(vec3f(150.0, 108.0, 70.0), vec3f(95.0, 98.0, 105.0), lkind == 0u), vec3f(120.0, 126.0, 132.0), lkind == 2u), vec3f(140.0, 144.0, 150.0), lkind == 3u);
         res.cl = roomCell(BAR, ec * Lt * lk, lt); res.state = 1u; done = true; break;
@@ -926,14 +938,14 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let frame = lu > 0.93 || lu < 0.05 || zz > DOOR_H - 0.12 || zz < 0.1;
         let bar = zz > 0.95 && zz < 1.08 && lu > 0.12 && lu < 0.85;
         if (frame || bar) {
-          let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+          let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
           let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
           res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt * lk, lt); res.state = 1u; done = true; break;
         }
         leafGlass = true; gSDglass = true;
       } else if (lkind == 2u && z > z0 && z <= z0 + DOOR_H - 0.02) {
         // a steel door (a stockroom's): a plain sheet in a darker edge, a kick plate, the bar across it
-        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
         let edge = lu < 0.04 || lu > 0.96 || zz > DOOR_H - 0.07;
         let kick = zz < 0.28; let bar = zz > 0.95 && zz < 1.06 && lu > 0.1 && lu < 0.88;
@@ -942,7 +954,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         res.state = 1u; done = true; break;
       } else if (z > z0 && z <= z0 + DOOR_H - 0.02) {
         // a panel door (wood in a home, a painted panel in an office): its edges, two recessed panels, the knob
-        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx, hy)) - 1);
+        let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
         let edge = lu < 0.06 || lu > 0.94 || zz > DOOR_H - 0.1 || zz < 0.06;
         let knob = lu > 0.82 && lu < 0.9 && zz > 0.92 && zz < 1.06;
@@ -1123,12 +1135,15 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     // floor and ceiling in what is left: each row meets them at its own distance
     let below = m > 0.0;
     var t = select(select((zc - u.eye) / -m, (ztop - u.eye) / -m, shaft && inside), (u.eye - z0) / m, below);
+    // (the slab's cut face, tSlab above, before the floor or the ceiling)
+    let slab = tSlab < 1e8 && (tSlab < t || !(t > tIn));
+    if (slab) { t = tSlab; }
     if (!(t > tIn) || t > 200.0) { return res; }
     var wx = u.px + rdx * t; var wy = u.py + rdy * t;
     // (step 4 of the interiors' rework) the viewer's stairwell: over the flights the ceiling is open to the storey above
     // (met where that storey's floor is), and the floor to the one below; the main walk goes on there (gWell). A
     // storey seen through it shows its own floor and ceiling there (one walk on at most)
-    if (inside && ((shaft && !below) || (below && inWellRect(wx, wy)))) {
+    if (inside && !slab && ((shaft && !below) || (below && inWellRect(wx, wy)))) {
       let to = fx[V.IB + select(16u, 17u, below)];
       if (to != 0u) { gWell = select(1, -1, below); gWellT = t; gWellO = to; return res; }
       if (!below) { t = (zc - u.eye) / -m; if (!(t > tIn)) { return res; } wx = u.px + rdx * t; wy = u.py + rdy * t; }
@@ -1139,8 +1154,9 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     if (r < 0 || u32(r) >= nRooms) { return res; }
     let ro = roomRec(o, r); let kind = fx[ro + 4u];
     var p = Px(0u, vec3f(0.0));
-    if (below) { p = floorPx(kind, office, wx, wy); } else { let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here); p = ceilPx(ro, kind, office, lp.x + lp.y > 0.05, wx, wy); }
-    res.cl = roomCell(p.ch, p.c * roomLit(V, ro, r, wx, wy, t - tIn), t); res.state = 1u;
+    if (below && !slab) { p = floorPx(kind, office, wx, wy); } else { let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here); p = ceilPx(ro, kind, office, lp.x + lp.y > 0.05, wx, wy); }
+    // (the slab's face, a little darker than the ceiling it is the edge of)
+    res.cl = roomCell(p.ch, p.c * roomLit(V, ro, r, wx, wy, t - tIn) * select(1.0, 0.7, slab), t); res.state = 1u;
   }
   // seen from the street, the furniture in front of what the walk met (the viewer's own storey has it as objects)
   if (!inside && full && res.state == 1u) {

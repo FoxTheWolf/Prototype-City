@@ -47,7 +47,7 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 
 ## Etapa 13: Interiores, o fechamento (7 subetapas)
 > Fecha o rework pelo manual (`docs/plano-interiores.md`) com o que a 17 precisa, e congela. O resto do rework (tipos que faltam, faixas `*` dos lotes fundos, escritórios e torres) vai para a 23.
-- **13.18 O retorno do playtest de 2026-10-08:** a escada em U (vão no topo, o piso de cima invisível pelo poço), o travamento perto da escada, o apartamento sem porta e a porta principal na cozinha (e uma regra nova no validador para isso), o recuo dos móveis e da escada da parede. (`plano-interiores.md` passo 9)
+- ✅ **13.18 O retorno do playtest de 2026-10-08 (0.13.18; a porta na cozinha virou hall nas 5 plantas e a regra R12; falta o usuário ver no PC):** a escada em U (vão no topo, o piso de cima invisível pelo poço), o travamento perto da escada, o apartamento sem porta e a porta principal na cozinha (e uma regra nova no validador para isso), o recuo dos móveis e da escada da parede. (`plano-interiores.md` passo 9)
 - **13.19 Portas e saída (passo 8):** a porta dos moradores achável, a verga, portas e entradas mais largas (~0,9 m), o vidro da porta, o EXIT vermelho só no caminho comum até a rua.
 - → **C1**
 - **13.20 Mobiliar pela biblioteca, com postos (passo 3):** as arrumações do manual nos cômodos, pela renda e pelo morador (`homeUnit` nasce aqui), e **cada móvel com o posto dele** (onde o NPC fica, para onde olha), que é a base da casa da 17.
@@ -129,7 +129,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 ## Etapa 23: Refinamento e variedade (8 subetapas)
 - **23.1 Manual de fachadas e de landmarks.**
 - **23.2 Fachadas:** a loja virada para a rua com a blade no beco (13.16), o letreiro só do lado certo, as lâmpadas redondas, a fachada que muda ao chegar perto, as placas cinza soltas.
-- **23.3 Materiais PBR** (uma tabela só: textura, passo, molhado).
+- **23.3 Materiais PBR** (uma tabela só: textura, passo, molhado); junto, a parte de baixo dos lances da escada (hoje quase preta vista de baixo, sem luz de rebote) e o último espelho da escada, que é a face da laje e sai cinza em vez de madeira (13.18).
 - **23.4 A praia e o mar** (13.15), o calçadão e o píer; o Sarcófago desligado por chave.
 - **23.5 Clima, 2ª passada:** chuva volumétrica, relâmpagos, a roupa molhada e as poças; a lua e as estrelas (os mares, os god rays, o rastro).
 - **23.6 Letreiros, neon e outdoors** com notícias, a surge apagando aparelhos, o neon de dia.

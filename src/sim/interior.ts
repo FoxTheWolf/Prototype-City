@@ -52,6 +52,8 @@ export interface Plan {
   gy: number;
   nx: number;
   ny: number;
+  /** The cells where two rooms of a drawn plan meet with no wall (an open plan): a way through, never a door leaf. */
+  seams?: Uint8Array;
 }
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
@@ -704,12 +706,12 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
   for (const c of doorCells) cells[c] = (cells[c] | DOOR) & ~WALL;
   // two rooms side by side with no wall character between them are one space (the open kitchen, a corridor
   // running into the stair): their meeting cells are a doorway as long as they meet
-  const seam: number[] = [];
+  const seam: number[] = [], seams = new Uint8Array(nx * ny);
   for (let c = 0; c < nx * ny; c++) for (const d of [1, nx]) {
     const e = c + d;
     if ((d === 1 && c % nx === nx - 1) || e >= nx * ny || !bare[c] || !bare[e] || (cells[c] & ROOM) === (cells[e] & ROOM)) continue;
     cells[c] = (cells[c] | DOOR) & ~WALL; cells[e] = (cells[e] | DOOR) & ~WALL;
-    seam.push(c, e);
+    seam.push(c, e); seams[c] = seams[e] = 1;
   }
   // the outer wall opens at the street doors, and up the fire escapes at their windows
   const { main, shops } = stackDoors(city, St);
@@ -726,11 +728,24 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
   };
   if (f === 0) for (const D of main ? [main, ...shops] : shops) open(D, 0, 1);
   else for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
-  const P: Plan = { box: k, rooms, exits: f === 0 ? shops : [], furn: [], cells, gx, gy, nx, ny };
+  const P: Plan = { box: k, rooms, exits: f === 0 ? shops : [], furn: [], cells, gx, gy, nx, ny, seams };
   // the furniture: each letter's rectangle, facing out of the wall it stands against
   const seen = new Uint8Array(Wc * H), wallish = (x: number, y: number) => x < 0 || y < 0 || x >= Wc || y >= H || PLAN_WALLS.has(R[y][x]);
   const rnd = mulberry32((hash3(city.nameSeed ^ 0x77f1, k, f) * 4294967296) | 0);
   const OUT: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  // a wall character is half a metre but its wall one cell, on its low side in the city: on the other side the room
+  // runs a cell into it, and a piece drawn against it would stand that far off the wall (playtest of 2026-10-08)
+  /**
+   * How far the floor runs past a piece's side into the wall character beyond, all along it (plan metres: the side
+   * at u = a, from v0 to v1, or at v = a from u0 to u1 when across): a cell, or 0 if a wall cell is there anywhere.
+   */
+  const pastWall = (across: boolean, a: number, b0: number, b1: number) => {
+    for (let b = b0 + CELL / 2; b < b1; b += CELL) {
+      const [cx, cy] = across ? stackXY(St, B, b, a) : stackXY(St, B, a, b), c = cellAt(P, cx, cy);
+      if (!(c & ROOM) || c & WALL) return 0;
+    }
+    return CELL;
+  };
   for (let y = 0; y < H; y++) for (let x = 0; x < Wc; x++) {
     const ch = M[y][x];
     if (seen[y * Wc + x] || !(ch in FURN_OF)) continue;
@@ -759,16 +774,29 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
     else if (ch === 'B') back = h >= w ? (dist(mx, y, 0, -1) <= dist(mx, y1, 0, 1) ? 2 : 3) : dist(x, my, -1, 0) <= dist(x1, my, 1, 0) ? 0 : 1;
     else if (Math.max(...touch) === 0) back = h > w ? 0 : 2;
     // it faces away from its back: along that, its depth; across, its width (characters are half a metre)
-    const [du, dv] = OUT[back], [c, s2] = stackDir(St, du, dv), along = du ? w : h, across = du ? h : w;
-    const [px, py] = stackXY(St, B, (x + x1 + 1) / 4, (y + y1 + 1) / 4);
-    P.furn.push({ kind: FURN_OF[ch], x: px, y: py, c, s: s2, hx: along * 0.25 - 0.05, hy: across * 0.25 - 0.05, seed: (rnd() * 1e6) | 0 });
+    const [du, dv] = OUT[back], [c, s2] = stackDir(St, du, dv);
+    // against a wall it stands right at the wall (a centimetre off); from wall to wall it fills the room
+    const u0 = x / 2, u1 = (x1 + 1) / 2, v0 = y / 2, v1 = (y1 + 1) / 2;
+    const gl = touch[0] ? pastWall(false, u0 - CELL / 2, v0, v1) : 0, gr = touch[1] ? pastWall(false, u1 + CELL / 2, v0, v1) : 0;
+    const gt = touch[2] ? pastWall(true, v0 - CELL / 2, u0, u1) : 0, gb = touch[3] ? pastWall(true, v1 + CELL / 2, u0, u1) : 0;
+    const fit = (a0: number, a1: number, lo: number, hi: number): [number, number] => {
+      const e = (a1 - a0) / 2 - 0.05;
+      return lo && hi ? [(a0 + a1 + hi - lo) / 2, e + (lo + hi) / 2] : [(a0 + a1) / 2 + (hi ? hi + 0.04 : lo ? -lo - 0.04 : 0), e];
+    };
+    const [cu, eu] = fit(u0, u1, gl, gr), [cv, ev] = fit(v0, v1, gt, gb), [px, py] = stackXY(St, B, cu, cv);
+    P.furn.push({ kind: FURN_OF[ch], x: px, y: py, c, s: s2, hx: du ? eu : ev, hy: du ? ev : eu, seed: (rnd() * 1e6) | 0 });
   }
   // the stair's two flights and half landing, a piece of its own (drawn in little cubes; walked by its steps, not round it)
   const Fg = flightOf(St);
   if (Fg) {
-    const [px, py] = stackXY(St, B, (Fg.u0 + Fg.u1) / 2, (Fg.v0 + Fg.v1) / 2), [c, s2] = stackDir(St, Fg.du, Fg.dv);
-    const run = Fg.du ? Fg.u1 - Fg.u0 : Fg.v1 - Fg.v0, wide = Fg.du ? Fg.v1 - Fg.v0 : Fg.u1 - Fg.u0;
-    P.furn.push({ kind: 'stair', x: px, y: py, c, s: s2, hx: run / 2, hy: wide / 2 - 0.05, seed: 0 });
+    // out to the walls on its long sides and at its far end (the half landing), as the furniture
+    let { u0, v0, u1, v1 } = Fg;
+    const L = pastWall(false, u0 - CELL / 2, v0, v1), Rr = pastWall(false, u1 + CELL / 2, v0, v1), T = pastWall(true, v0 - CELL / 2, u0, u1), Bm = pastWall(true, v1 + CELL / 2, u0, u1);
+    if (Fg.du) { v0 -= T; v1 += Bm; if (Fg.du > 0) u1 += Rr; else u0 -= L; }
+    else { u0 -= L; u1 += Rr; if (Fg.dv > 0) v1 += Bm; else v0 -= T; }
+    const [px, py] = stackXY(St, B, (u0 + u1) / 2, (v0 + v1) / 2), [c, s2] = stackDir(St, Fg.du, Fg.dv);
+    const run = Fg.du ? u1 - u0 : v1 - v0, wide = Fg.du ? v1 - v0 : u1 - u0;
+    P.furn.push({ kind: 'stair', x: px, y: py, c, s: s2, hx: run / 2, hy: wide / 2 - 0.01, seed: 0 });
   }
   // where a piece stands on the seam of an open plan (the fridge at the edge of the open kitchen), that stretch is no way through
   for (const c of seam) if (inFurniture(P, (gx + (c % nx) + 0.5) * CELL, (gy + Math.floor(c / nx) + 0.5) * CELL)) cells[c] &= ~DOOR;
@@ -1560,7 +1588,8 @@ export function inFurniture(P: Plan, x: number, y: number, walking = false): boo
 /**
  * A door in a doorway between two rooms: hinged at (hx, hy) on the wall, lying along (ax, ay) when
  * shut and swinging open toward (nx, ny) (into the private room, off the corridor); w wide; its
- * middle at (cx, cy). Wide openings (over 1.7 m) and the lift's and stairs' openings have none.
+ * middle at (cx, cy). Wide openings (over 1.7 m) and the lift's and stairs' openings have none (but a home's own
+ * door off the stair's landing).
  */
 /** What a door leaf is made of (13.10d): the street doors' glass, a home's wood, the steel of a stockroom, an office's painted panel. */
 export const DOOR_GLASS = 0, DOOR_WOOD = 1, DOOR_METAL = 2, DOOR_OFFICE = 3;
@@ -1576,7 +1605,7 @@ export function leavesOf(P: Plan): Leaf[] {
   let L = leafCache.get(P);
   if (L) return L;
   L = [];
-  const { cells, nx, ny, rooms } = P;
+  const { cells, nx, ny, rooms, seams } = P;
   // d 0: walls between columns i and i + 1 (the run goes along y); d 1: between rows j and j + 1
   for (let d = 0; d < 2; d++) {
     const nA = d ? ny - 1 : nx - 1, nB = d ? nx : ny;
@@ -1584,12 +1613,14 @@ export function leavesOf(P: Plan): Leaf[] {
       let run = -1, ra = 0, rb = 0;
       for (let b = 0; b <= nB; b++) {
         const p = b < nB ? (d ? cells[a * nx + b] : cells[b * nx + a]) : 0, q = b < nB ? (d ? cells[(a + 1) * nx + b] : cells[b * nx + a + 1]) : 0;
-        const ok = !!(p & q & DOOR) && (p & ROOM) !== (q & ROOM);
+        const ok = !!(p & q & DOOR) && (p & ROOM) !== (q & ROOM) && !(seams && b < nB && seams[d ? a * nx + b : b * nx + a]);
         if (run >= 0 && (!ok || (p & ROOM) !== ra || (q & ROOM) !== rb)) {
           const w = (b - run) * CELL, A = rooms[ra - 1], B = rooms[rb - 1];
-          if (w <= 1.7 && A && B && A.kind !== 'lift' && B.kind !== 'lift' && A.kind !== 'stair' && B.kind !== 'stair') {
+          // a home's own door may open right off the stair's landing (the drawn plans, R12): that one has its leaf
+          const entry = (S: Room, H: Room) => S.kind === 'stair' && H.unit >= 0 && HOME.has(H.kind);
+          if (w <= 1.7 && A && B && A.kind !== 'lift' && B.kind !== 'lift' && ((A.kind !== 'stair' && B.kind !== 'stair') || entry(A, B) || entry(B, A))) {
             // it swings into the room off the common parts; between two private rooms, into the later one
-            const intoB = COMMON.has(A.kind) !== COMMON.has(B.kind) ? COMMON.has(A.kind) : rb > ra, n = intoB ? 1 : -1;
+            const intoB = entry(A, B) || (!entry(B, A) && (COMMON.has(A.kind) !== COMMON.has(B.kind) ? COMMON.has(A.kind) : rb > ra)), n = intoB ? 1 : -1;
             const wc = ((d ? P.gy : P.gx) + a + 1) * CELL, s0 = ((d ? P.gx : P.gy) + run) * CELL;
             const kind = leafKind(A, B);
             L.push(d ? { hx: s0, hy: wc, ax: 1, ay: 0, nx: 0, ny: n, w, cx: s0 + w / 2, cy: wc, ra: ra - 1, rb: rb - 1, kind } : { hx: wc, hy: s0, ax: 0, ay: 1, nx: n, ny: 0, w, cx: wc, cy: s0 + w / 2, ra: ra - 1, rb: rb - 1, kind });

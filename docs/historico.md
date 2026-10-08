@@ -2,6 +2,17 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.18 — o retorno do playtest de 2026-10-08 (0.13.18, 2026-10-08)
+
+- **Antes, o passe de alinhamento dos docs** ao cronograma (numeração nova, polícia e calor depois da 1.0, canais, celular barato e Tunes): `visao.md` (mapa no topo, notas ⚠ nas seções), `plano-interiores`, `plano-interfaces`, `roteiro`, `listas-fixas`, `retoques-14-15`, `dispositivo`, `design`.
+- **Casa sem porta:** o `E` do A1 abre no patamar da escada, e o `leavesOf` não punha folha em vão de escada. Agora põe quando o outro lado é um cômodo de casa (`unit >= 0`), abrindo para dentro da casa; as divisas abertas de uma planta lida (`Plan.seams`) nunca têm folha (o hall `e` aberto para a sala ganhava uma).
+- **Porta na cozinha (decidido com o usuário: redesenhar):** A1, D1, E1, F1, F2 ganharam um hall de entrada `e` (a cozinha aberta ao lado, a sala em frente), com as arrumações das cozinhas dessas plantas refeitas; manual v1.3 com a **R12** (a porta da casa é um `E` e dá num hall, na sala ou na quitinete; nenhuma casa aberta para as partes comuns sem `E`), no `checkFloor` e no `check()` da página; `tests/floorplans.ts` com dois casos estragados para ela.
+- **Móveis e escada a 25 cm da parede:** o caractere de parede tem 0,5 m e vira uma célula de parede de 0,25 m do lado de baixo da cidade; o móvel ficava na borda do caractere. `pastWall` (sonda o lado inteiro) encosta o móvel na parede (1 cm), ou o estica de parede a parede; a escada vai até as paredes dos lados compridos e da ponta do patamar do meio.
+- **Fresta no topo da escada (notas 3, 4):** o último espelho até o patamar de cima é a face cortada da laje, e o shader não a desenhava: o raio passava pela fresta e mostrava o andar de baixo (de cima) ou o de cima (de baixo). `tSlab` no `roomWalk`: onde o raio sai do retângulo do poço entre o teto e o piso de cima, desenha a laje (um pouco mais escura que o teto).
+- **Folhas de porta pretas:** a folha fica na divisa exata entre duas células, e o shader a iluminava pela sala da célula do ponto de contato, que vista de um dos lados é a do outro lado (às vezes apagada: a folha saía preta). Agora a amostra recua 5 cm ao longo do raio.
+- **Preso no alto do lance pela beirada:** a colisão usava `p.floor` (arredondado para baixo) e, com os pés a 3,45 m, as paredes do andar de baixo; agora o andar mais perto dos pés. O travamento do playtest (andar 2, 869,9/1144,8) não se reproduziu no Node.
+- Testes: `tests/plans.ts` (0 falhas em 42 e 1393987109), `tests/stairs.ts` (com o percurso pela beirada), `tests/floorplans.ts`; `tests/stack-print.ts` novo (a pilha de plantas de um lote, a planta lida, os móveis e as folhas).
+
 
 ## 13.7 (texto completo tirado do CLAUDE.md em 2026-10-08)
 

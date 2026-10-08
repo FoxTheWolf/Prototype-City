@@ -1,5 +1,5 @@
 /**
- * The interiors manual's floors and room arrangements against its rules R1-R9 and R11, in Node without the browser:
+ * The interiors manual's floors and room arrangements against its rules R1-R9, R11 and R12, in Node without the browser:
  *   npx rolldown tests/floorplans.ts --format esm --platform node -o tests/.out/floorplans.mjs && node tests/.out/floorplans.mjs
  * Every drawn floor (at each depth it serves), every building's stack of floors and every arrangement must pass;
  * then a few plans broken on purpose must fail, so a rule that stops catching its error is noticed. Exits with 1 on a failure.
@@ -30,6 +30,8 @@ const broken: [string, Floor, string][] = [
   ['a pocket behind the shower', edit(A1, 'furn', 16, '..............C.'), 'R4'],
   ['a wardrobe at the window', edit(A1, 'furn', 1, '.AAAQQ..TTTT....'), 'R7'],
   ['a bedroom walled off', edit(edit(A1, 'rooms', 3, '#bbbbbb+lllllll#'), 'rooms', 4, '#bbbbbb+lllllll#'), 'R4'],
+  ['the front door on the kitchen', edit(edit(A1, 'rooms', 12, '#kkkkkkklllllll#'), 'rooms', 13, '#kkkkkkklllllll#'), 'R12'],
+  ['a home with no door of its own', edit(A1, 'rooms', 14, '#+DD++++++++DD+#'), 'R12'],
 ];
 for (const [what, F, rule] of broken) {
   const e = checkFloor(F);

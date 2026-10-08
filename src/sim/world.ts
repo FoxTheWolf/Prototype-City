@@ -292,7 +292,10 @@ export function stepWorld(w: World, input: PlayerInput) {
   const liftShut = (x: number, y: number) => p.liftTo < 0 && inLift(w, x, y) && !inLift(w, p.x, p.y) && !carHere(w, p.inside, p.floor);
   // and the stairs: no step up or down higher than a riser or two (a flight is entered at its ends; its rail and underside stop the rest)
   const steep = (x: number, y: number) => p.inside >= 0 && p.liftTo < 0 && Math.abs(feetZ(w.city, p.inside, x, y, p.z) - p.z) > STEP_UP;
-  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y) || steep(x, y);
+  // the walls are those of the storey nearest the feet: at the top of a flight (feet a few centimetres under the next
+  // floor) the walls around are the next floor's, not those of the one below
+  const near = Math.round(p.z / FLOOR_H);
+  const hit = (x: number, y: number) => blocked(w.city, near, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y) || steep(x, y);
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;

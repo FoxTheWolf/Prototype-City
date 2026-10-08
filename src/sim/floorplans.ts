@@ -140,6 +140,26 @@ export function checkFloor(F: Floor): string[] {
     }));
     if (!ok) out.push(`R8 ${f} at (${x},${y}) has no posto`);
   }
+  // R12 (playtest of 2026-10-08): a home is entered through its own door E, never straight from the stair or a hall
+  // through a plain doorway, and the E opens on an entry, the living room or the studio (not the kitchen, a bathroom
+  // or a bedroom)
+  // (a bathroom off a hall is an office's or a motel's shared one)
+  const COMMON = '.cS', HOMES = 'lkbse';
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (R[y][x] === 'E') for (const [dx, dy] of N4) {
+    const a = R[y + dy]?.[x + dx], b = R[y - dy]?.[x - dx];
+    if (a && b && COMMON.includes(b) && 'khb'.includes(a)) out.push(`R12 entry door at (${x},${y}) opens on the ${ROOM_KINDS[a]}`);
+  }
+  const common = new Set<number>(), cq: [number, number][] = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (COMMON.includes(R[y][x])) { common.add(y * W + x); cq.push([x, y]); }
+  while (cq.length) {
+    const [x, y] = cq.pop()!;
+    for (const [dx, dy] of N4) {
+      const nx = x + dx, ny = y + dy, c = R[ny]?.[nx];
+      if (!c || common.has(ny * W + nx) || !(c === 'D' || COMMON.includes(c) || HOMES.includes(c))) continue;
+      if (HOMES.includes(c)) { out.push(`R12 the ${ROOM_KINDS[c]} at (${nx},${ny}) opens on the common parts without an entry door`); return out; }
+      common.add(ny * W + nx); cq.push([nx, ny]);
+    }
+  }
   return out;
 }
 

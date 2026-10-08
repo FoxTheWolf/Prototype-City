@@ -122,15 +122,20 @@
    - **Agora (antes do passo 8 ou junto dele):**
      - ✅ (nota 1) softlock no motel: o F abria a conversa com o clerk antes da porta, cujo alcance ia até a porta;
        agora a porta vem primeiro (`main.ts`). Falta o usuário confirmar.
-     - (notas 3, 4) **vão entre o topo da escada e o piso de cima**, e o piso de cima **não aparece pelo vão** (prédio
-       4085, andares 1–2): é a escada em U recém-feita; conferir `stairRise`/`FLIGHT_TOP` e o poço (`gWell`/`shaft`).
-     - (notas 5, 6) **apartamento sem porta** (andar 3 do 4085) e **porta principal dando na cozinha**: conferir
-       `planFromFloor`/as unidades (`E`) nas plantas desse tamanho; R1–R9 deveriam pegar a casa sem porta (falta uma regra?).
+     - ✅ (0.13.18, notas 3, 4) **vão entre o topo da escada e o piso de cima**: o raio que saía do buraco pela lateral
+       entre o teto (3,2 m) e o piso de cima (3,5 m) pulava para o andar de cima; agora encontra a face da laje (`slab`
+       no `roomWalk`). O "piso de cima invisível" deve ser a mesma fresta; conferir no PC.
+     - ✅ (0.13.18, notas 5, 6) **apartamento sem porta**: o `E` abria no patamar da escada e o `leavesOf` não punha folha
+       em vão de escada (agora põe, se do outro lado for uma casa; as divisas abertas, `Plan.seams`, nunca têm folha).
+       **Porta na cozinha:** era o desenho do A1, D1, E1, F1, F2; ganharam um hall `e` (manual v1.3) e a regra **R12**.
      - (nota 6) **EXIT verde sobre a porta do apartamento**: resolvido pelo passo 8 (EXIT só no caminho comum até a rua, vermelho).
-     - (notas 2, 7) **móveis e escada muito afastados da parede**: medir o recuo no leitor/`flightOf` (provável meia célula a mais).
+     - ✅ (0.13.18, notas 2, 7) **móveis e escada afastados da parede**: o caractere de parede tem 0,5 m e a parede, uma
+       célula de 0,25 m; o móvel e a escada agora vão até a parede real (`pastWall` em `planFromFloor`).
      - (notas 8, 9) **portas e entrada estreitas**: a largura do vão `D`/`R`/`E` (hoje ~1 caractere = 0,5 m?); um vão
        de porta real tem ~0,9 m; decidir junto da verga do passo 8.
-     - (travou) "andando sem sair do lugar" no 4085, andar 2, `POS 869.9,1144.8` (perto da escada).
+     - (travou) "andando sem sair do lugar" no 4085, andar 2, `POS 869.9,1144.8`: não se reproduziu no Node; achado e
+       corrigido um parecido (0.13.18: no alto do lance, encostado na parede, a colisão usava a planta do andar de baixo).
+       `tests/stairs.ts` ganhou o percurso pela beirada.
    - **Depois (ficam no Plano, não agora):**
      - (nota 12) **escadas de incêndio coerentes com as plantas desenhadas** (as janelas e o patamar batendo com os
        cômodos): 13.24.

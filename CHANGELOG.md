@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.18 — A escada encostada e a porta de casa (2026-10-08)
+- **Os apartamentos que abriam direto no patamar da escada ganharam a porta:** a entrada da casa tem folha de madeira, que tranca na maioria das casas, como as outras.
+- **Não se entra mais em casa pela cozinha:** nos apartamentos de 1 e 2 quartos a porta dá num hall de entrada, com a cozinha aberta ao lado e a sala em frente. Uma regra nova das plantas (R12) garante isso daqui para a frente: toda casa tem a porta própria, num hall ou na sala.
+- **Móveis e escada encostados na parede:** antes ficavam a um palmo dela; agora a cama, os armários, a geladeira e a escada vão até a parede (e a escada não deixa mais uma faixa de chão ao lado do lance).
+- **Sem fresta no topo da escada:** olhando para cima pelo vão, a borda da laje do andar de cima aparece inteira (antes via-se uma fresta entre o teto e o piso de cima).
+- **As portas fechadas não ficam mais pretas de um dos lados:** a folha pegava a luz do cômodo do outro lado (às vezes apagado); agora pega a do lado de onde se olha.
+- **Não se prende mais no alto do lance encostado na parede:** chegando ao andar de cima pela beirada da escada, as paredes que contam são as desse andar.
+
 ## 0.13.10o — A porta do motel (2026-10-08)
 - **Não fica mais preso no balcão do motel:** olhando para a porta, o F abre a porta; antes ele puxava conversa com o recepcionista, cujo alcance ia até a porta.
 

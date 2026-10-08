@@ -39,6 +39,14 @@ for (let k = 0; k < w.city.buildings.length && seen.size < 6; k++) {
   // and down the same way
   go(-S.hx + 0.1, lane); go(S.hx - 0.4, lane); go(S.hx - 0.4, -lane); go(-S.hx + 0.1, -lane); go(-S.hx - 0.5, -lane);
   if (Math.abs(p.z) > 0.05 || p.floor !== 0) fail(`${at}: down again the feet are at ${p.z.toFixed(2)} m, floor ${p.floor}`);
+  // the same along the walls (the outer edge of each flight): the shoulder must not catch on the floor beside it
+  // (playtest of 2026-10-08: stuck going down by the back wall)
+  const edge = S.hy - 0.3;
+  put(k, ...P(-S.hx - 0.5, -edge), 0);
+  go(-S.hx + 0.1, -edge); go(S.hx - 0.4, -edge); go(S.hx - 0.4, edge); go(-S.hx + 0.1, edge); go(-S.hx - 0.5, edge);
+  if (Math.abs(p.z - FLOOR_H) > 0.05 || p.floor !== 1) fail(`${at}: up by the walls the feet are at ${p.z.toFixed(2)} m, floor ${p.floor}`);
+  go(-S.hx + 0.1, edge); go(S.hx - 0.4, edge); go(S.hx - 0.4, -edge); go(-S.hx + 0.1, -edge); go(-S.hx - 0.5, -edge);
+  if (Math.abs(p.z) > 0.05 || p.floor !== 0) fail(`${at}: down by the walls the feet are at ${p.z.toFixed(2)} m, floor ${p.floor}`);
   // the rail: from the first flight's middle, walking across to the second: stopped at the first's height
   put(k, ...P(-S.hx + 1.1, -lane), 0.9);
   const z1 = p.z, [lo1, hi1] = go(-S.hx + 1.1, lane);
