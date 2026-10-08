@@ -162,7 +162,6 @@
     <li>Plantas para o resto do catálogo: o 10 × 10, os fundos maiores com <code>*</code> (e a leitura das faixas <code>*</code> no teste), as torres (residencial com corredor e elevador), o escritório grande, o hotel; uma segunda e terceira planta para cada tamanho comum.</li>
     <li>O térreo com loja nos tamanhos maiores e o telhado dos outros tamanhos; a regra R9 (escada nas mesmas células em todos os andares) no teste, que hoje confere um andar por vez.</li>
     <li>Mais arrumações por sala (hoje 3) e as salas que ainda não têm (os banheiros e as entradas da torre, a lavanderia do 10 × 10).</li>
-    <li>O hall da torre ficou largo e vazio: a lixeira do andar, as caixas de luz e telefone (alvo de hacking físico) e o quadro de avisos cabem ali.</li>
     <li>Portar o formato para o jogo (<code>sim/</code>) e rodar estas mesmas regras em <code>tests/plans.ts</code>.</li>
     <li>Os móveis em cubinhos, um desenho por móvel.</li>
     <li>As portas (madeira, aço, vidro) e o interruptor desenhados, junto da 13.10d e da 13.10g.</li>
@@ -192,7 +191,7 @@ const FURN = {
   t: ['mesa', '1 × 1 m (2 × 2)', 0, 'eat'], K: ['bancada', '0,5 m de fundo', 0, ''], O: ['fogão', '0,5 × 0,5 m', 0, 'cook'], N: ['pia', '0,5 × 0,5 m', 0, 'dishes'],
   G: ['geladeira', '0,75 × 0,5 m (2 × 1)', 1, ''], V: ['lavatório', '0,5 × 0,5 m', 0, ''], C: ['vaso', '0,5 × 0,5 m', 0, ''], H: ['chuveiro', '1 × 1 m (2 × 2)', 0, 'shower'],
   P: ['planta', '0,5 × 0,5 m', 0, ''], S: ['estante', '1 × 0,5 m (2 × 1)', 1, ''], r: ['poltrona', '0,5 × 0,5 m', 0, 'sofa'], w: ['lavadora', '0,5 × 0,5 m', 0, ''], y: ['secadora', '0,5 × 0,5 m', 0, ''], X: ['quadro de luz e caixa de telefone', 'na parede', 1, ''],
-  Z: ["caixa d'água", '1,5 × 1,5 m (3 × 3)', 1, ''], U: ['ar-condicionado', '1 × 1 m (2 × 2)', 0, ''],
+  Z: ["caixa d'água", '1,5 × 1,5 m (3 × 3)', 1, ''], J: ['lixeira do andar (a boca do duto)', '0,5 × 0,5 m', 0, ''], U: ['ar-condicionado', '1 × 1 m (2 × 2)', 0, ''],
 };
 const POSTS = {
   sleep: ['dormir', 'deitado na cama, de frente para o teto', 'a noite'], sofa: ['ver TV / ler / telefone', 'sentado, de frente para a TV', '30–120 min'],
@@ -699,7 +698,7 @@ const FLOORS = [
     ],
   },
   {
-    id: "G1", title: "16 × 16 m · torre residencial, andar-tipo (6+ andares) · 4 apartamentos", note: "Direção C. Um corredor de cada lado do núcleo (a escada e o elevador); quatro apartamentos de sala-e-quarto juntos, cada um com a entrada, o banheiro e a cozinha do lado do corredor e o cômodo de viver nas janelas. Os da frente são 1 m mais fundos que os dos fundos.",
+    id: "G1", title: "16 × 16 m · torre residencial, andar-tipo (6+ andares) · 4 apartamentos", note: "Direção C. Um corredor de cada lado do núcleo (a escada e o elevador); quatro apartamentos de sala-e-quarto juntos, cada um com a entrada, o banheiro e a cozinha do lado do corredor e o cômodo de viver nas janelas. Os da frente são 1 m mais fundos que os dos fundos. No hall, o quadro de luz e a caixa de telefone do andar (X) e a boca do duto de lixo (J).",
     rooms: [
       "#WW##WW##WW##WW##WW##WW##WW##WW#",
       "#sssssssssssssss+ssssssssssssss#",
@@ -750,10 +749,10 @@ const FLOORS = [
       "................................",
       "................................",
       "................................",
+      "..............................X.",
+      "..............................X.",
       "................................",
-      "................................",
-      "................................",
-      "................................",
+      "..............................J.",
       "................................",
       "................................",
       "................................",

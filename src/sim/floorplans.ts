@@ -33,7 +33,7 @@ export const ROOM_KINDS: Record<string, string> = {
 export const FURN: Record<string, { tall?: boolean; posto?: string }> = {
   B: { posto: 'sleep' }, A: { tall: true }, Q: { posto: 'desk' }, h: { posto: 'sit' }, F: { posto: 'sofa' }, T: {}, t: { posto: 'eat' },
   K: {}, O: { posto: 'cook' }, N: { posto: 'dishes' }, G: { tall: true }, V: {}, C: {}, H: { posto: 'shower' }, P: {}, w: {}, y: {},
-  X: { tall: true }, Z: { tall: true }, U: {}, S: { tall: true }, r: { posto: 'sofa' },
+  X: { tall: true }, Z: { tall: true }, U: {}, S: { tall: true }, r: { posto: 'sofa' }, J: {},
 };
 
 const WALLS = new Set(['#', 'W', 'G', '+']);
