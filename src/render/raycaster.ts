@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { BAY, BLADE_LETTER, blockAt, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { streetLeaves } from '../sim/doors';
 import { baseAt, doorOf, escapesOf, exitsOf, leavesOf, planOf } from '../sim/interior';
@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, overheadBlade, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -751,22 +751,39 @@ const atCache = new Map<string, number[]>();
  */
 /** The street signs' texts, by intersection and corner (they never change for a city). */
 const cornerText = new Map<string, string>();
+/** The district of an intersection (its middle), for the signs' stripe; by intersection, never changing for a city. */
+const cornerDistrict = new Map<string, number>();
+function districtOf(world: World, i: number, j: number): number {
+  const key = `${i},${j}`;
+  let d = cornerDistrict.get(key);
+  if (d === undefined) {
+    const { city } = world;
+    d = nearestDistrict(city.districts, (city.xb[2 * i] + city.xb[2 * i + 1]) / 2, (city.yb[2 * j] + city.yb[2 * j + 1]) / 2);
+    cornerDistrict.set(key, d);
+  }
+  return d;
+}
 /**
- * The signs at a corner (13.7): on two opposite corners of each intersection the names of both
- * roads, blades back to back high on the pole (on its own pole at a stop sign's corner); and where
- * a wide road crosses, a guide sign a little up the sidewalk toward the nearest landmark, with an
- * arrow from where the traffic comes and the distance in miles.
+ * The signs at a corner (the signage manual, section 4): on two opposite corners of each intersection the
+ * names of both roads, blades back to back on top of a pole of their own at the sidewalk's corner (not on the
+ * light's pole, where the arm and the walk lights cut them), each with the district's stripe and the block's
+ * hundred; and where a wide road crosses, a guide sign a little up the sidewalk toward the nearest landmark,
+ * with an arrow from where the traffic comes and the distance in miles.
  */
 function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
   const { city } = world, stop = S.state === Sig.Stop;
   if (S.hd === 0 || S.hd === 2) {
-    const ave = roadName(city, true, S.i).toUpperCase(), st = roadName(city, false, S.j).toUpperCase(), z = stop ? 2.95 : 3.1;
-    const ra = streetBlade(ave, z, stop), rs = streetBlade(st, z + 0.26, false), ha = Math.max(0.7, 0.11 * ave.length + 0.25) / 2, hs = Math.max(0.7, 0.11 * st.length + 0.25) / 2;
+    const ave = roadName(city, true, S.i).toUpperCase(), st = roadName(city, false, S.j).toUpperCase(), z = 2.6;
+    const ah = String(blockHundred(S.j)), sh = String(blockHundred(S.i)), dk = districtOf(world, S.i, S.j);
+    // the pole on the sidewalk's corner: away from the crossing (a stop sign stands before it, a light past it)
+    // and a little further from the road than the light's
+    const ax = stop ? S.c : -S.c, ay = stop ? S.s : -S.s, px = S.x + ax * 0.9 + S.s * 0.5, py = S.y + ay * 0.9 - S.c * 0.5;
+    const ra = streetBlade(ave, ah, dk, z, true), rs = streetBlade(st, sh, dk, z + 0.28, false), ha = bladeHalf(ave, ah), hs = bladeHalf(st, sh);
     // the avenue runs along y: its blade faces x both ways; the street's, turned a quarter, faces y
-    out.push({ x: S.x, y: S.y, c: 1, s: 0, parts: ra, r: ha + 0.1, h: z + 0.3, seed: 0 });
-    out.push({ x: S.x, y: S.y, c: -1, s: 0, parts: streetBlade(ave, z, false), r: ha + 0.1, h: z + 0.3, z0: z, seed: 0 });
-    out.push({ x: S.x, y: S.y, c: 0, s: 1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.26, seed: 0 });
-    out.push({ x: S.x, y: S.y, c: 0, s: -1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.26, seed: 0 });
+    out.push({ x: px, y: py, c: 1, s: 0, parts: ra, r: ha + 0.1, h: z + 0.3, seed: 0 });
+    out.push({ x: px, y: py, c: -1, s: 0, parts: streetBlade(ave, ah, dk, z, false), r: ha + 0.1, h: z + 0.3, z0: z, seed: 0 });
+    out.push({ x: px, y: py, c: 0, s: 1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.28, seed: 0 });
+    out.push({ x: px, y: py, c: 0, s: -1, parts: rs, r: hs + 0.1, h: z + 0.56, z0: z + 0.28, seed: 0 });
     return;
   }
   if (S.hd !== 1) return;
@@ -965,6 +982,12 @@ function collectObjects(world: World, v: View): Obj[] {
     // the arm and its heads, around the arm's middle, hanging above the street (far off, just the lit lamps)
     const m = (Math.max(...S.at) + 0.4) / 2, at = S.at.map((y) => y - m);
     out.push({ x: S.x - S.s * m, y: S.y + S.c * m, c: S.c, s: S.s, parts: near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), r: m + 0.3, h: 6.2, z0: 4.7, seed: 0 });
+    // the crossing road's name at the arm's end, past its last head (the signage manual, section 4)
+    if (near && S.i >= 0) {
+      const ave = (S.hd & 1) === 0, name = roadName(world.city, ave, ave ? S.i : S.j).toUpperCase(), hund = String(blockHundred(ave ? S.j : S.i));
+      const tip = 2 * m, w = bladeHalf(name, hund) * 3.2 + 0.3;
+      out.push({ x: S.x - S.s * (tip + w / 2), y: S.y + S.c * (tip + w / 2), c: S.c, s: S.s, parts: overheadBlade(name, hund, districtOf(world, S.i, S.j), -w / 2), r: w / 2 + 0.3, h: 6.2, z0: 5.4, seed: 0 });
+    }
   });
   for (const f of city.floodlights) {
     if (Math.abs(f.x - v.x) > SPRITE_FAR * 2 || Math.abs(f.y - v.y) > SPRITE_FAR * 2) continue;

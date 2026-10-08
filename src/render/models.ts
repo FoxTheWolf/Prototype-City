@@ -806,20 +806,59 @@ export function walkSignal(w: number): Part[] {
 }
 
 const streetSigns = new Map<string, Part[]>();
+/** The districts' stripe colors (the signage manual, section 3: a fixed palette, a color a district by its index). */
+export const DISTRICT_COLS: RGB[] = [[216, 162, 29], [194, 54, 122], [122, 79, 196], [42, 159, 208], [210, 85, 42], [95, 174, 59]];
+/** The street green and the letters' white (the manual: #1f6b45, #f2f1ec; the white a little brighter, as reflective). */
+const SIGN_GREEN: RGB = [31, 107, 69], SIGN_WHITE: RGB = [242, 241, 236];
+/** A street blade's half width for its name and hundred (m). */
+export const bladeHalf = (name: string, hund: string) => (0.11 * name.length + 0.08 * hund.length + 0.4) / 2;
 /**
- * A street-name blade (13.7), its name read from the front (+x): green with white letters, as the
- * board letters go (dots up close, a glyph a letter farther). Its back is plain: a corner gets two,
- * back to back. `z0` its foot; `pole`: with its own pole under it (at a stop sign's corner).
+ * A street-name blade (the signage manual, section 4), its name read from the front (+x): green with white
+ * letters (dots up close, a glyph a letter farther), the district's stripe along its top and the block's
+ * hundred at its right. Its back is plain: a corner gets two, back to back. `z0` its foot; `pole`: with its
+ * own pole under it.
  */
-export function streetBlade(name: string, z0: number, pole: boolean): Part[] {
-  const key = `${name}|${z0}|${pole}`;
+export function streetBlade(name: string, hund: string, district: number, z0: number, pole: boolean): Part[] {
+  const key = `${name}|${hund}|${district}|${z0}|${pole}`;
   let m = streetSigns.get(key);
   if (m) return m;
-  const hw = Math.max(0.7, 0.11 * name.length + 0.25) / 2;
-  const b = part(Box, 0, -hw, z0, 0.02, hw, z0 + 0.24, [20, 95, 50], Board, '=');
-  b.text = name; b.col2 = [235, 240, 235]; b.lamp = 0;
-  m = [b];
+  // (read from +x, the reader's right is -y: the hundred there)
+  const hw = bladeHalf(name, hund), H = 0.26, split = -hw + (0.08 * hund.length + 0.12);
+  const b = part(Box, 0, -hw, z0, 0.02, hw, z0 + H, SIGN_GREEN, Solid, '=');
+  // the name on the left part, the hundred smaller on the right, the stripe on top (a little proud of the face)
+  const nm = part(Box, 0.02, split, z0 + 0.03, 0.022, hw - 0.04, z0 + H - 0.05, SIGN_GREEN, Board, '=');
+  nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0;
+  const hn = part(Box, 0.02, -hw + 0.05, z0 + 0.05, 0.022, split, z0 + H - 0.08, SIGN_GREEN, Board, '=');
+  hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0;
+  m = [b, nm, hn, part(Box, 0.02, -hw, z0 + H - 0.035, 0.024, hw, z0 + H, DISTRICT_COLS[district % DISTRICT_COLS.length], Solid, '-')];
   if (pole) m.push(part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, z0 + 0.3, STEEL, Solid, '|', '.'));
+  streetSigns.set(key, m);
+  return m;
+}
+
+/**
+ * The overhead blade (the manual, section 4): at the end of a light's arm, past its last head, hanging under the
+ * arm's piece carried on to it; the crossing road's name for the traffic it faces (+x). In the arm's frame:
+ * y from `y0` outward.
+ */
+export function overheadBlade(name: string, hund: string, district: number, y0: number): Part[] {
+  const key = `over|${name}|${hund}|${district}|${y0}`;
+  let m = streetSigns.get(key);
+  if (m) return m;
+  // (read from +x, the reader's right is -y, toward the pole: the hundred there)
+  const hw = bladeHalf(name, hund) * 1.6, H = 0.42, z0 = 5.45, y1 = y0 + 0.15 + hw * 2, split = y0 + 0.15 + (0.13 * hund.length + 0.18);
+  const b = part(Box, 0.07, y0 + 0.15, z0, 0.09, y1, z0 + H, SIGN_GREEN, Solid, '=');
+  const nm = part(Box, 0.09, split, z0 + 0.05, 0.092, y1 - 0.05, z0 + H - 0.08, SIGN_GREEN, Board, '=');
+  nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0;
+  const hn = part(Box, 0.09, y0 + 0.21, z0 + 0.08, 0.092, split, z0 + H - 0.13, SIGN_GREEN, Board, '=');
+  hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0;
+  m = [
+    // the arm carried on to it, and the two clamps it hangs from
+    part(Box, -0.06, y0, 5.95, 0.06, y1 + 0.05, 6.12, HOUSING, Solid, '-', '=', '|'),
+    part(Box, 0.0, y0 + 0.3, z0 + H, 0.07, y0 + 0.34, 5.95, STEEL, Solid, '|'),
+    part(Box, 0.0, y1 - 0.19, z0 + H, 0.07, y1 - 0.15, 5.95, STEEL, Solid, '|'),
+    b, nm, hn, part(Box, 0.09, y0 + 0.15, z0 + H - 0.05, 0.094, y1, z0 + H, DISTRICT_COLS[district % DISTRICT_COLS.length], Solid, '-'),
+  ];
   streetSigns.set(key, m);
   return m;
 }
@@ -837,12 +876,23 @@ export function guideSign(text: string): Part[] {
   return m;
 }
 
-/** A stop sign facing +x on its post. */
-export const STOP_SIGN: Part[] = [
-  part(Cyl, -0.05, -0.05, 0, 0.05, 0.05, 2.5, STEEL, Solid, '|', '.'),
-  part(Box, 0.05, -0.38, 2.1, 0.1, 0.38, 2.86, [200, 30, 30], Solid, '#', '=', '#'),
-  part(Box, 0.1, -0.26, 2.42, 0.12, 0.26, 2.54, [235, 235, 235], Solid, '=', '=', '='),
-];
+/**
+ * A stop sign facing +x on its post: an octagon 0.76 m across (the signage manual, section 4), built of thin
+ * slices as the city's objects are (cubes), its middle band carrying STOP in white.
+ */
+export const STOP_SIGN: Part[] = (() => {
+  const D = 0.76, R = D / 2, side = R * 0.4142, zc = 2.48, red: RGB = [200, 38, 43], n = 10, dz = D / n;
+  const m = [part(Cyl, -0.05, -0.05, 0, 0.05, 0.05, zc + 0.3, STEEL, Solid, '|', '.')];
+  for (let k = 0; k < n; k++) {
+    const z0 = zc - R + k * dz, mid = Math.abs(z0 + dz / 2 - zc), hw = mid <= side ? R : R - (mid - side);
+    if (mid + dz / 2 <= side + 1e-6) continue; // the middle band is one board, below
+    m.push(part(Box, 0.05, -hw, z0, 0.08, hw, z0 + dz, red, Solid, '#', '=', '#'));
+  }
+  const band = part(Box, 0.05, -R, zc - side, 0.08, R, zc + side, red, Board, '#', '=', '#');
+  band.text = 'STOP'; band.col2 = SIGN_WHITE; band.lamp = 0;
+  m.push(band);
+  return m;
+})();
 
 /** The turn signal's amber lamps on one side (sg: -1 left, 1 right; +y of a car is its right), and the high beams flashing. */
 const LAMPS = new Map<string, Part[]>();

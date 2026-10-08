@@ -421,7 +421,7 @@ function placeDistricts(rng: Rng, w: number, h: number, cx: number, cy: number, 
 }
 
 /** Index of the district whose point is nearest to (x, y). */
-function nearestDistrict(districts: District[], x: number, y: number): number {
+export function nearestDistrict(districts: District[], x: number, y: number): number {
   let best = 0;
   districts.forEach((d, k) => { if (Math.hypot(d.x - x, d.y - y) < Math.hypot(districts[best].x - x, districts[best].y - y)) best = k; });
   return best;
@@ -1263,3 +1263,10 @@ export function isSolid(city: City, x: number, y: number): boolean {
   }
   return false;
 }
+
+/**
+ * The hundred of the addresses on a road past its k-th crossing (the signage manual, 2026-10-08: the corner sign
+ * shows it, so 412 is found without a map): the block after crossing 0 holds 100..199, after crossing 1, 200..299.
+ * The door numbers (13.9) count from it.
+ */
+export const blockHundred = (k: number) => (k + 1) * 100;
