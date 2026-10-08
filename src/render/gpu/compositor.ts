@@ -161,9 +161,13 @@ fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 2
 fn phBloom(uv: vec2f) -> vec3f {
   let r = vec2f(f32(${SCR_RX}), f32(${SCR_RY})) * vec2f(u.uiCell) / vec2f(u.px1 - u.px0);
   var s = vec3f(0.0); var ws = 0.0;
+  // each tap jittered within its own square by the pixel (interleaved gradient noise): on a fixed grid the
+  // big clock's digits came back as faint copies two cells apart (2026-10-08); jittered they blur into the glow
+  let g = uv * vec2f(u.px1 - u.px0);
+  let jn = vec2f(fract(52.9829189 * fract(dot(g, vec2f(0.06711056, 0.00583715)))), fract(52.9829189 * fract(dot(g, vec2f(0.00583715, 0.06711056))))) - 0.5;
   for (var j = -2; j <= 2; j++) {
     for (var i = -2; i <= 2; i++) {
-      let o = vec2f(f32(i), f32(j)) * 0.5; let w = exp(-dot(o, o) * 2.5); ws += w;
+      let o = (vec2f(f32(i), f32(j)) + jn) * 0.5; let w = exp(-dot(o, o) * 2.5); ws += w;
       let q = uv + o * r;
       if (all(q >= vec2f(0.0)) && all(q < vec2f(1.0))) {
         let pc = (vec2f(u.px0) + q * vec2f(u.px1 - u.px0) - vec2f(u.ps0)) / vec2f(u.ps1 - u.ps0);

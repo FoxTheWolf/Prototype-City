@@ -9,6 +9,11 @@
 - **Brilho que se mexe:** um reflexo só parece metal se andar quando o objeto se move; o deslocamento sai da inclinação (`HandSway` em `render/sway.ts`: a mão atrasada em relação à câmera + o balanço do braço pela velocidade do jogador). O mesmo `slide` desloca o degradê do cromo do celular (`brand.w` no uniform do corpo).
 - **LCD reflexivo:** o joelho de 0,35 deixava o visor legível na rua escura (a luz nas mãos é ~0,3 de noite, ~0,6–1,6 sob o poste); 0,8 com expoente 1,6 o apaga no escuro e o deixa fraco sob o poste.
 
+### Lições do moiré e do fantasma (0.15.58) — 2026-10-08
+- **Textura mais fina que o pixel = moiré:** a tela do Jackdaw (896 px de pontos com vão) cabe em ~270 px do monitor; uma amostra por pixel bate com os vãos. Média 4 × 4 sobre a pegada do pixel (`length(R)`/`length(D)/|F.z|` sobre o tamanho do LCD) resolve sem mips (`voxPassWgsl`, vale para o relógio).
+- **Desfoque com poucas amostras numa grade fixa = cópias:** o `phBloom` (5 × 5, passo de 2 células) repetia os números grandes do relógio do celular. Tremer cada amostra dentro do seu quadrado por pixel (ruído IGN) troca as cópias por um brilho liso; com o teto de 7 % o ruído não aparece.
+- **Botão redondo em cubinhos:** o centro tem de cair numa fronteira entre células (mm inteiro com células em +0,5); fora disso o círculo ganha uma ponta de um lado (o OK do Jackdaw, também com 2 mm).
+
 ### Lições do vidro unificado (0.15.56) — 2026-10-08
 - **As "manchas marrons" do notebook não eram o `SCREEN_REFL`:** zerá-lo não mudou nada. Achado isolando no shader (devolver só a `tmPic` dentro de `inTerm`): a imagem tinha uma faixa diagonal de brilho pintada **por célula** na CPU (`glassOver`), e o bloom da tela (`scrAt`) a borrava em blocos. Ao caçar um efeito, isolar a camada no shader antes de mexer nas constantes.
 - **WGSL: `select(${A}, ${B}, c)` com as duas constantes inteiras (`0`) vira `i32`** e o shader inteiro falha (tela preta, sem erro no console). Envolver em `f32(...)`.

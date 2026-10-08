@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.58 — Sem moiré nem fantasma (2026-10-08)
+- **Tela do Jackdaw sem moiré:** cada pixel da tela agora é a média dos pontos que cobre; as listras que dançavam sobre a gralha somem.
+- **Jackdaw em cubinhos de 1 mm** (eram de 2 mm), como o relógio: o OK fica redondo e centrado, a borda chanfrada em dois degraus, a alavanca inclina aos poucos.
+- **O brilho da tela do celular não repete mais o relógio:** o halo era feito de cópias numa grade fixa, e os números grandes reapareciam fracos em volta; agora ele se espalha liso.
+
 ## 0.15.57 — Tudo virado para o olho (2026-10-08)
 - **Jackdaw menor e inteiro na vista:** mais uns 25 % menor e mais alto, dá para ler a tela inteira.
 - **Os aparelhos viram para o centro da tela:** o celular (à direita) gira para a esquerda, o relógio (à esquerda) para a direita, o Jackdaw (no meio) fica de frente.

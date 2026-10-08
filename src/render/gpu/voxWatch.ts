@@ -102,7 +102,15 @@ fn ${p}shade(h: BHit) -> vec3f {
   if ((fl & 4u) != 0u) {
     // the LCD: its picture over its window; reflective (darker than the scene below the knee), or backlit
     let uv = (h.p.xy - ${p}u.lcd.xy) / ${p}u.lcd.zw;
-    let t = textureSampleLevel(${p}Lcd, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0).rgb * 255.0;
+    // averaged over the monitor pixel's footprint (4 x 4 taps): the dots' gaps are finer than a pixel and,
+    // sampled once, beat into moiré (2026-10-08); tilted away, the footprint is longer down the LCD
+    let fp = vec2f(length(${p}u.R.xyz), length(${p}u.D.xyz) / max(abs(${p}u.F.z), 0.3)) / ${p}u.lcd.zw;
+    var t = vec3f(0.0);
+    for (var j = 0; j < 4; j++) { for (var i = 0; i < 4; i++) {
+      let q = uv + (vec2f(f32(i), f32(j)) - 1.5) * 0.25 * fp;
+      t += textureSampleLevel(${p}Lcd, tmSamp, clamp(q, vec2f(0.0), vec2f(1.0)), 0.0).rgb;
+    } }
+    t *= 255.0 / 16.0;
     // the crystal over it: a faint veil of the scene's light (it greys the digits in bright light) and the glint's glare
     // (the glint a little only: over the whole LCD it washed the digits out white and looked false, 2026-10-08)
     var veil = L * 9.0 + G * 0.15;

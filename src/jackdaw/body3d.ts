@@ -8,7 +8,7 @@ import { headVec, H, LCD_DAY, LCD_LIT, W, type Buf } from './screen';
 import { type Jackdaw, type JKey } from './jackdaw';
 
 /**
- * 15.22: the Jackdaw Mini in little cubes of 2 mm, as its manual lays it (docs/identidade/jackdaw-manual.html,
+ * 15.22: the Jackdaw Mini in little cubes of 1 mm (2 mm until 2026-10-08: OK came out lopsided), as its manual lays it (docs/identidade/jackdaw-manual.html,
  * sections 1–3 and 9): the yellow slab of 110 x 50 x 22 mm with its corners in steps and its front edge
  * bevelled, the screen's dark frame with the LCD sunk into it, the darker yellow dish round the cross of
  * graphite keys and OK, the red BACK, the red LED, and on top the rubber cap and the aluminium lever in its
@@ -16,17 +16,17 @@ import { type Jackdaw, type JKey } from './jackdaw';
  * is its own picture (the 128 x 64 dots, 7 pixels each with the gap). The model's frame: x right, y down,
  * z out of the front toward the eye; the body's top-left corner at cell (0, TOP).
  */
-export const NX = 56, NY = 30, NZ = 13;
+export const NX = 112, NY = 60, NZ = 26;
 /** The body's top row (cells; the lever and the cap stand above it), its thickness (the front at z = FRONT). */
-const TOP = 4, FRONT = 10;
+const TOP = 8, FRONT = 20;
 /** A point of the body in mm (the manual's front view, from the body's top-left) as model cells. */
-const c = (mm: number) => mm / 2;
-const cy = (mm: number) => TOP + mm / 2;
+const c = (mm: number) => mm;
+const cy = (mm: number) => TOP + mm;
 /** The LCD's window (cells, exactly the manual's 54 x 27 mm), and the dots' picture: 7 pixels a dot, the last one the gap. */
 const LCD = { x0: c(9.7), y0: cy(8.5), w: c(54.2), h: c(27) };
 const DOT = 7;
 export const LCD_W = W * DOT, LCD_H = H * DOT;
-/** The keys (cells): the cross, OK and BACK; their tops one cell proud of what they sit on. */
+/** The keys (cells): the cross, OK and BACK; their tops 2 mm proud of what they sit on. */
 const KEYS: { k: JKey; x0: number; y0: number; x1: number; y1: number; round?: number }[] = [
   { k: 'up', x0: c(85.2), y0: cy(10.2), x1: c(92.8), y1: cy(17.3) },
   { k: 'down', x0: c(85.2), y0: cy(26.2), x1: c(92.8), y1: cy(33.4) },
@@ -35,48 +35,55 @@ const KEYS: { k: JKey; x0: number; y0: number; x1: number; y1: number; round?: n
   { k: 'ok', x0: c(89 - 3.6), y0: cy(21.8 - 3.6), x1: c(89 + 3.6), y1: cy(21.8 + 3.6), round: c(3.6) },
   { k: 'back', x0: c(102 - 3.2), y0: cy(40.6 - 3.2), x1: c(102 + 3.2), y1: cy(40.6 + 3.2), round: c(3.2) },
 ];
-const DISH = { x: c(89), y: cy(21.8), r: c(14.6) };
+const DISH = { x: c(89), y: Math.round(cy(21.8)), r: c(14.6) };
 /** Palette indices. */
 const enum M { Body = 1, Edge, Dish, Frame, Lcd, Key, Ok, Back, Led, LedOff, Cap, Housing, Lever }
 
 const inBody = (x: number, y: number, inset = 0) => {
-  const r = 3 - inset, x0 = inset, y0 = TOP + inset, x1 = 55 - inset, y1 = TOP + 25 - inset;
+  const r = 6 - inset, x0 = inset, y0 = TOP + inset, x1 = 110 - inset, y1 = TOP + 50 - inset;
   if (x < x0 || y < y0 || x >= x1 || y >= y1) return false;
   const qx = Math.min(Math.max(x, x0 + r), x1 - r), qy = Math.min(Math.max(y, y0 + r), y1 - r);
   return (x - qx) ** 2 + (y - qy) ** 2 <= r * r;
 };
-const onKey = (K: (typeof KEYS)[number], x: number, y: number) => K.round ? (x - (K.x0 + K.x1) / 2) ** 2 + (y - (K.y0 + K.y1) / 2) ** 2 <= K.round ** 2 : x >= K.x0 && x < K.x1 && y >= K.y0 && y < K.y1;
+// (a round key's middle on a whole mm, between cells: off it, the circle grew a nub on one side)
+const onKey = (K: (typeof KEYS)[number], x: number, y: number) => K.round ? (x - Math.round((K.x0 + K.x1) / 2)) ** 2 + (y - Math.round((K.y0 + K.y1) / 2)) ** 2 <= K.round ** 2 : x >= K.x0 && x < K.x1 && y >= K.y0 && y < K.y1;
 
-/** The model; `down` the keys pressed (they sink a cell), `on` where the lever leans, `led` lit. */
+/** The model; `down` the keys pressed (they sink 2 mm), `on` where the lever leans, `led` lit. */
 function model(down: (k: JKey) => boolean, on: boolean, led: boolean): Vox {
   const V = new Vox(NX, NY, NZ);
   for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
     const mx = x + 0.5, my = y + 0.5;
     if (!inBody(mx, my)) continue;
-    const edge = !inBody(mx, my, 1), dish = (mx - DISH.x) ** 2 + (my - DISH.y) ** 2 <= DISH.r ** 2;
+    // the front edge bevelled in two 1 mm steps
+    const edge = !inBody(mx, my, 1), edge2 = !inBody(mx, my, 2), dish = (mx - DISH.x) ** 2 + (my - DISH.y) ** 2 <= DISH.r ** 2;
     const frame = mx >= c(5.1) && mx < c(68.5) && my >= cy(4.2) && my < cy(39.7), lcd = mx >= LCD.x0 && mx < LCD.x0 + LCD.w && my >= LCD.y0 && my < LCD.y0 + LCD.h;
-    const top = edge ? FRONT - 1 : dish || lcd ? FRONT - 1 : FRONT;
-    for (let z = 0; z < top; z++) V.set(x, y, z, edge ? M.Edge : z === top - 1 ? (lcd ? M.Lcd : frame ? M.Frame : dish ? M.Dish : M.Body) : M.Body);
+    const top = edge ? FRONT - 2 : edge2 ? FRONT - 1 : dish || lcd ? FRONT - 2 : FRONT;
+    for (let z = 0; z < top; z++) V.set(x, y, z, edge || edge2 ? M.Edge : z === top - 1 ? (lcd ? M.Lcd : frame ? M.Frame : dish ? M.Dish : M.Body) : M.Body);
     // the LED, beside the screen's frame
-    if (Math.abs(mx - c(72.3)) < 0.6 && Math.abs(my - cy(6.3)) < 0.6) V.set(x, y, FRONT - 1, led ? M.Led : M.LedOff);
-    // the keys: on the dish's floor (the cross and OK) or the body (BACK), one cell proud; pressed, flush
+    if (Math.abs(mx - c(72.3)) < 1.2 && Math.abs(my - cy(6.3)) < 1.2) V.set(x, y, FRONT - 1, led ? M.Led : M.LedOff);
+    // the keys: on the dish's floor (the cross and OK) or the body (BACK), 2 mm proud; pressed, flush
     for (const K of KEYS) if (onKey(K, mx, my)) {
-      const base = K.k === 'back' ? FRONT : FRONT - 1, h = down(K.k) ? 0 : 1, m = K.k === 'back' ? M.Back : K.k === 'ok' ? M.Ok : M.Key;
-      for (let z = base - 1; z < base + h; z++) V.set(x, y, z, m);
+      const base = K.k === 'back' ? FRONT : FRONT - 2, h = down(K.k) ? 0 : 2, m = K.k === 'back' ? M.Back : K.k === 'ok' ? M.Ok : M.Key;
+      for (let z = base - 2; z < base + h; z++) V.set(x, y, z, m);
     }
   }
   // on top: the rubber cap, and the lever's housing with the lever leaning left (off) or right (on)
-  for (let x = Math.round(c(12.7)); x < Math.round(c(46.5)); x++) for (let z = 3; z < 8; z++) { V.set(x, TOP - 1, z, M.Cap); if (z > 3 && z < 7 && x > Math.round(c(12.7)) && x < Math.round(c(46.5)) - 1) V.set(x, TOP - 2, z, M.Cap); }
-  for (let x = Math.round(c(91.4)); x < Math.round(c(101.1)); x++) for (let z = 3; z < 8; z++) V.set(x, TOP - 1, z, M.Housing);
-  const lx = Math.round(c(96)), lean = on ? 1 : -1;
-  for (let j = 0; j < 3; j++) for (let z = 4; z < 7; z++) V.set(lx + (j === 2 ? lean : 0), TOP - 2 - j, z, M.Lever);
+  const cx0 = Math.round(c(12.7)), cx1 = Math.round(c(46.5));
+  for (let x = cx0; x < cx1; x++) for (let z = 6; z < 16; z++) {
+    V.set(x, TOP - 1, z, M.Cap); V.set(x, TOP - 2, z, M.Cap);
+    if (z > 7 && z < 14 && x > cx0 + 1 && x < cx1 - 2) { V.set(x, TOP - 3, z, M.Cap); V.set(x, TOP - 4, z, M.Cap); }
+  }
+  for (let x = Math.round(c(91.4)); x < Math.round(c(101.1)); x++) for (let z = 6; z < 16; z++) { V.set(x, TOP - 1, z, M.Housing); V.set(x, TOP - 2, z, M.Housing); }
+  // the lever 2 mm square, 6 mm tall, leaning a step every 2 mm up
+  const lx = Math.round(c(95)), lean = on ? 1 : -1;
+  for (let j = 0; j < 6; j++) for (let z = 8; z < 14; z++) for (let d = 0; d < 2; d++) V.set(lx + d + lean * (j >> 1), TOP - 3 - j, z, M.Lever);
   return V;
 }
 
-/** The front's print (8 pixels a cell): the logo (the head, JACKDAW, MINI in its box) under the screen, JKD-M · REV.C, the keys' arrows. */
+/** The front's print (4 pixels a mm): the logo (the head, JACKDAW, MINI in its box) under the screen, JKD-M · REV.C, the keys' arrows. */
 function paintFace(): Img {
-  const k = 8, I = new Img(NX * k, NY * k), P = new Paint(I), INK: C3 = [0x1d, 0x1e, 0x20], ARROW: C3 = [0x7d, 0x81, 0x88];
-  const mm = (v: number) => v * (k / 2), Y = (v: number) => (TOP + v / 2) * k;
+  const k = 4, I = new Img(NX * k, NY * k), P = new Paint(I), INK: C3 = [0x1d, 0x1e, 0x20], ARROW: C3 = [0x7d, 0x81, 0x88];
+  const mm = (v: number) => v * k, Y = (v: number) => (TOP + v) * k;
   // the logo as the manual's front lays it (42 mm from x 5.5, y 40.6): the head 5.6 mm tall (a stamp: its cuts the
   // body's color), JACKDAW from 12.6 to 40.8 mm, MINI in its box from 41.6 to 47.6 mm
   const V = new Vec(I.w, I.h);
@@ -146,7 +153,7 @@ export function jackGpu(cx: number, cy2: number, k: number, light: ArrayLike<num
   U.set([eye[0], eye[1], eye[2], NX, dir[0], dir[1], dir[2], NY, R[0] / k, R[1] / k, R[2] / k, NZ, D[0] / k, D[1] / k, D[2] / k, 0], VOXP_AT.eye);
   // the light from above and a little behind the hand; the LCD reads by it below the knee as the watch's does
   U.set([-0.3 + mo.lat * 0.5, -0.7, 0.65, 0, light[0], light[1], light[2], lit ? 1 : 0, LCD.x0, LCD.y0, LCD.w, LCD.h, 0.8, 1.15, 0.6 + mo.lat * 0.4 - mo.tilt[1] * 9 + mo.tilt[0] * 5, mo.str,
-    mo.glint[0], mo.glint[1], mo.glint[2], 0, 0, TOP, 55, 25, 0xc4, 0xdc, 0x62, 3], VOXP_AT.ldir);
+    mo.glint[0], mo.glint[1], mo.glint[2], 0, 0, TOP, 110, 50, 0xc4, 0xdc, 0x62, 6], VOXP_AT.ldir);
   // the lights its LCD mirrors (raycaster.ts viewGlare)
   U.set(JACK_GLARE, VOXP_AT.glare);
   const pal = (i: number, col: C3, gloss: number, flags: number, mul = 1) => U.set([col[0], col[1], col[2], gloss, flags, 0, 0, mul], VOXP_AT.pal + i * 8);
