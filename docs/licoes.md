@@ -15,6 +15,11 @@
 - **Extrair os contornos das plantas por script** (paredes, portas, janelas, lados abertos) em vez de copiar à mão: foi a extração que mostrou a porta torta.
 - **Contar caracteres de cabeça erra:** montar as linhas por script com `assert` de largura, e só então colar no manual.
 - **Texto barato o Claude gera ele mesmo** (pedido do usuário): 51 arrumações com o validador custaram pouco, menos que um briefing e a conferência do retorno.
+- **O manual é a fonte; o JSON é cópia:** `node tests/floorplans-sync.mjs` lê os arrays `FLOORS`/`ROOMLIB`/`BUILDINGS` do `<script>` do manual. O arquivo tem fim de linha CRLF: procurar o fim de um array com `/;?
+/`, não com `";
+"`. Dentro do template literal da página, a quebra de linha está escrita `'\n'` (duas barras): um `replace` por script tem de procurar isso.
+- **Duas implementações das mesmas regras concordaram** (o validador em Python das arrumações e `checkArrangement` em TypeScript passaram nas mesmas 72); quando uma regra mudar, mudar nas duas ou apagar a de Python.
+- **A extração de contornos copia o canto diagonal de uma porta como `D`:** desenha uma porta falsa no canto do cômodo; trocar o canto por `#`.
 
 ### Lições das placas de rua (0.13.7) — 2026-10-08
 - **O material `Board` é de outdoor:** desenha uma moldura escura nas bordas (até 0,2 m ou 5 % da largura) e limita a letra a 62 % da altura. Em peças pequenas (o nome e a centena da placa) a moldura virou faixas pretas. Placa pintada usa `plate: true` (sem moldura, letra a 86 % da altura, letras refletivas `kk >= 0.8 * fog`), empacotado como `bulbs = 2` em `gpu/world.ts`.
