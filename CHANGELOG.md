@@ -2,6 +2,11 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.19 — A porta do prédio e a saída (2026-10-08)
+- **A porta dos moradores parece porta de prédio:** uma folha de madeira de 1 m com um vidro em cima, uma bandeira de vidro acesa sobre ela com o número da casa e o interfone ao lado. Dá para distinguir de longe da porta de vidro da loja.
+- **Placas EXIT de verdade:** vermelhas, com o homenzinho saindo, só no caminho das partes comuns até a rua (da escada para o saguão, sobre a porta da rua). Acabou o EXIT verde dentro dos apartamentos.
+- **Portas da rua menos apertadas:** o batente ficou mais fino em todas.
+
 ## 0.13.18 — A escada encostada e a porta de casa (2026-10-08)
 - **Os apartamentos que abriam direto no patamar da escada ganharam a porta:** a entrada da casa tem folha de madeira, que tranca na maioria das casas, como as outras.
 - **Não se entra mais em casa pela cozinha:** nos apartamentos de 1 e 2 quartos a porta dá num hall de entrada, com a cozinha aberta ao lado e a sala em frente. Uma regra nova das plantas (R12) garante isso daqui para a frente: toda casa tem a porta própria, num hall ou na sala.

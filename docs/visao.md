@@ -526,3 +526,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O ASCII:** o usuário gosta da mistura atual com o PSX; a fidelidade maior veio para cortar a fadiga visual do ASCII grande em movimento, e ainda não cortou toda. O charme hoje é ser renderizado em ASCII e tudo ser sintetizado (nenhum arquivo de mídia), não ser 100% ASCII. **De dia, o fundo dos glifos deve seguir a luz do sol** (hoje fica escuro de dia; parece ser a cor do fundo dos glifos).
 - **Travadas:** medir antes de mexer (um gravador de quadros lentos no registro de playtest, com o tempo de cada fase); se o culpado for a simulação, ela vai para um Web Worker. Entra na 16.1.
 - **Os canais:** os trabalhos de hacking se pegam no fórum; a conversa com os fixers e o mentor, depois de aceitar, é no Reynard (se o primeiro contato começa por SMS ou já no Reynard, decidir antes da 1.0); o lado legítimo (TI, NPCs comuns) fica no SMS. NPCs comuns pedindo trabalhos pequenos: em aberto.
+
+## Portas da 13.19 (2026-10-08)
+- **A porta da rua dos moradores** é **uma folha de madeira de 1 m** com um vidro em cima (como a de um walk-up de 2008), não mais a dupla de vidro; as lojas, os escritórios e o motel continuam com a dupla de vidro.
+- **Sobre ela, uma bandeira de vidro** acesa pelo saguão, com o número em vinil branco (manual de sinalização, seção 5), e o interfone ao lado; é o que a distingue da porta da loja e encurta a parede alta sobre a porta.
+- **As portas de dentro ficam com 1 m** (a medida real: folha de 80–90 cm mais o batente); o aperto vinha da porta da rua e do hall estreito.

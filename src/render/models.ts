@@ -320,6 +320,20 @@ export function doorNumberModel(num: string): Part[] {
 }
 
 /**
+ * The intercom by the residents' street door (13.19): a steel plate at hand height beside the jamb, a speaker grille
+ * and a column of buttons, one per floor above; read from +x.
+ */
+export function intercomModel(floors: number): Part[] {
+  const n = Math.max(1, Math.min(6, floors - 1)), key = `intercom|${n}`;
+  let m = lamps.get(key);
+  if (m) return m;
+  m = [part(Box, 0, -0.07, 1.2, 0.02, 0.07, 1.25 + 0.05 * n + 0.1, [150, 154, 158], Solid, '='), part(Box, 0.02, -0.04, 1.23, 0.026, 0.04, 1.29, [40, 42, 46], Solid, ':')];
+  for (let b = 0; b < n; b++) m.push(part(Box, 0.02, -0.025, 1.31 + 0.05 * b, 0.03, 0.025, 1.34 + 0.05 * b, [205, 200, 180], Solid, 'o'));
+  lamps.set(key, m);
+  return m;
+}
+
+/**
  * A shop's OPEN / CLOSED card in the glass by its door, its hours under it (the signage manual, section 6): it
  * says from the sidewalk whether the shop is worth walking in; read from +x, letters about 6 cm.
  */

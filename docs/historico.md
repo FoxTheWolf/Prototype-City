@@ -2,6 +2,16 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.19 — portas e saída (0.13.19, 2026-10-08)
+
+- **Decisões do usuário (perguntadas antes):** a porta da rua dos moradores vira uma folha de madeira de 1 m; uma bandeira de vidro sobre ela, com o número; as portas de dentro ficam com 1 m (medido: todo `D`/`R`/`E` tem 2 caracteres). Em `docs/visao.md`.
+- **EXIT só no caminho comum:** `Plan.exitTo` (`exitWay` em `sim/interior.ts`, calculado no `planOf` para os dois geradores): por cômodo, o próximo cômodo pelas partes comuns até a porta da rua (térreo) ou até a escada (andares de cima). A GPU lê como o 7º campo do registro do cômodo (`ROOM_REC` em `gpu/shader.ts`, `putPlan`); o shader só põe a placa onde `exitTo` do cômodo de onde se olha é o cômodo do outro lado. `tests/exits.ts`: 0 placas dentro de casa ou loja e todas as partes comuns com saída, nas sementes 42 e 1393987109.
+- **A placa pelo manual de sinalização:** vermelha, 0,85 × 0,235 m (letras de ~16 cm), o homem saindo (15 × 15 meios pontos, `EXIT_MAN`) à esquerda; de perto as lâmpadas, de longe uma letra por célula.
+- **A porta dos moradores (`entryDoor`):** a principal de uma planta desenhada que dá no saguão; `doorLeaves(B, D, entry)` dá uma folha só (`DOOR_ENTRY`, dobradiça em `a0`), empacotada com a largura negativa na tabela da fachada (a 2ª vaga com 0) e positiva nas folhas do jogador (as de vidro ao contrário). O shader: carvalho escuro com o vidro em cima (o raio atravessa, como na de vidro), a moldura, a almofada e a maçaneta de latão; de longe pintada, com o vidro aceso; aberta, o vão depois da ponta da folha. `Leaf.door` diz de qual porta da rua é cada folha (antes o `n >> 1` supunha pares). Som e tempos de madeira (`OPEN_S`/`SHUT_S`).
+- **A bandeira:** vidro aceso pelo saguão de `DOOR_H + 0,1` a `+0,5` (`TRANSOM_Z`), com o número (o objeto que já existia) nela; de dentro, a rua através dela, com o EXIT na frente. **Batentes de 7 cm** (eram 12) em todas as portas da rua. **O interfone** (`intercomModel`, um botão por andar) ao lado da ponta livre.
+- **Vidro da porta:** o da folha dos moradores mostra o saguão de fora e a rua de dentro; as portas de vidro das lojas não foram mexidas.
+- **Visto no jogo** (semente 1393987109, prédio 4085, 22h): a porta de madeira com vidro, bandeira e interfone; o EXIT da porta da rua e o da escada→saguão; nenhum no apartamento do andar 3 (nota 6).
+
 ## 13.18 — o retorno do playtest de 2026-10-08 (0.13.18, 2026-10-08)
 
 - **Antes, o passe de alinhamento dos docs** ao cronograma (numeração nova, polícia e calor depois da 1.0, canais, celular barato e Tunes): `visao.md` (mapa no topo, notas ⚠ nas seções), `plano-interiores`, `plano-interfaces`, `roteiro`, `listas-fixas`, `retoques-14-15`, `dispositivo`, `design`.

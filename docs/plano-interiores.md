@@ -103,7 +103,7 @@
    **oficina** (`autoparts`), **escritório grande e as outras torres**, e plantas de loja próprias para os que caem na
    genérica (farmácia, penhores, eletrônicos, celulares, livraria, alfaiate). O cinema fica para depois da 1.0.
 
-8. **(13.19) Portas, saída e orientação (pedido do usuário em 2026-10-08, depois do playtest):**
+8. ✅ **(13.19, 0.13.19) Portas, saída e orientação (pedido do usuário em 2026-10-08, depois do playtest):**
    - **A porta dos moradores precisa ser achável:** hoje, num prédio com loja, a escada só se alcança pela porta dos
      moradores, ao lado da vitrine, e a loja é uma caixa fechada; o usuário entrou em lojas e em prédios ainda sem planta
      (torres, lotes fundos) e nunca viu a escada. Dar à porta dos moradores cara de porta de prédio (número, interfone,
@@ -131,8 +131,8 @@
      - (nota 6) **EXIT verde sobre a porta do apartamento**: resolvido pelo passo 8 (EXIT só no caminho comum até a rua, vermelho).
      - ✅ (0.13.18, notas 2, 7) **móveis e escada afastados da parede**: o caractere de parede tem 0,5 m e a parede, uma
        célula de 0,25 m; o móvel e a escada agora vão até a parede real (`pastWall` em `planFromFloor`).
-     - (notas 8, 9) **portas e entrada estreitas**: a largura do vão `D`/`R`/`E` (hoje ~1 caractere = 0,5 m?); um vão
-       de porta real tem ~0,9 m; decidir junto da verga do passo 8.
+     - (notas 8, 9) **portas e entrada estreitas**: medido, todo vão `D`/`R`/`E` tem 2 caracteres (1 m). Decidido
+       (13.19): as de dentro ficam; a da rua dos moradores vira uma folha de madeira de 1 m com bandeira (`docs/visao.md`).
      - (travou) "andando sem sair do lugar" no 4085, andar 2, `POS 869.9,1144.8`: não se reproduziu no Node; achado e
        corrigido um parecido (0.13.18: no alto do lance, encostado na parede, a colisão usava a planta do andar de baixo).
        `tests/stairs.ts` ganhou o percurso pela beirada.

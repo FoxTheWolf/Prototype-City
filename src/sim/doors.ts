@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { baseAt, CELL, DOOR_GLASS, DOOR_METAL, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, type Door, type Leaf, type Room } from './interior';
+import { baseAt, CELL, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, type Door, type Leaf, type Room } from './interior';
 import type { Building } from './city';
 import { isOpen } from './telco';
 import { PLACES } from './placeTypes';
@@ -17,12 +17,12 @@ const STREET = 100;
 /** Reach of F, m; how far off an open door swings shut by itself. */
 const REACH = 1.7, LEAVE = 3;
 /** Seconds to open and to shut, by what the leaf is made of (DOOR_*): the steel one is heavy and its closer slow. */
-const OPEN_S = [0.6, 0.6, 0.9, 0.6], SHUT_S = [0.9, 0.8, 1.6, 0.8];
+const OPEN_S = [0.6, 0.6, 0.9, 0.6, 0.7], SHUT_S = [0.9, 0.8, 1.6, 0.8, 1.2];
 
-/** What door key's leaf is made of: the street doors are glass, the rest as leavesOf says. */
+/** What door key's leaf is made of: the street doors are glass (the residents' own wood: entryDoor), the rest as leavesOf says. */
 export function doorKind(w: World, key: number): number {
   const n = key % 128, f = Math.floor(key / 128) % 256, k = Math.floor(key / 128 / 256);
-  if (n >= STREET) return DOOR_GLASS;
+  if (n >= STREET) return n === STREET && entryDoor(w.city, k) ? DOOR_ENTRY : DOOR_GLASS;
   const P = planOf(w.city, k, f);
   return (P && leavesOf(P)[n]?.kind) ?? DOOR_GLASS;
 }
@@ -49,23 +49,25 @@ export interface DoorRef { key: number; x: number; y: number; k: number; f: numb
 /**
  * A street door's pair of glass leaves (13.10d2): hinged at the jambs on the wall's inside face (the outer wall is
  * CELL thick), half a leaf's thickness in from the jamb and from the face, so the leaf never swings through the
- * wall; shut they meet in the middle, open they turn into the building (against the outward normal). The one
- * source of their geometry: the renderer's walk from inside and from the street both read these.
+ * wall; shut they meet in the middle, open they turn into the building (against the outward normal). The residents'
+ * own door (`entry`, 13.19) is one wooden leaf the whole width, hinged at the a0 jamb. The one source of their
+ * geometry: the renderer's walk from inside and from the street both read these.
  */
-export function doorLeaves(B: Building, D: Door): [Leaf, Leaf] {
+export function doorLeaves(B: Building, D: Door, entry = false): Leaf[] {
   const [x0, y0, nx, ny] = facePoint(B, D.face, D.a0), [x1, y1] = facePoint(B, D.face, D.a1);
   const half = Math.hypot(x1 - x0, y1 - y0) / 2, ux = (x1 - x0) / (2 * half), uy = (y1 - y0) / (2 * half);
   const inK = CELL + LEAF_TH / 2, ix = -nx * inK, iy = -ny * inK, j = LEAF_TH / 2, w = half - j;
+  if (entry) return [{ hx: x0 + ix + ux * j, hy: y0 + iy + uy * j, ax: ux, ay: uy, nx: -nx, ny: -ny, w: 2 * w, cx: x0 + ix + ux * half, cy: y0 + iy + uy * half, ra: -1, rb: -1, kind: DOOR_ENTRY }];
   return [
     { hx: x0 + ix + ux * j, hy: y0 + iy + uy * j, ax: ux, ay: uy, nx: -nx, ny: -ny, w, cx: x0 + ix + ux * half / 2, cy: y0 + iy + uy * half / 2, ra: -1, rb: -1, kind: DOOR_GLASS },
     { hx: x1 + ix - ux * j, hy: y1 + iy - uy * j, ax: -ux, ay: -uy, nx: -nx, ny: -ny, w, cx: x1 + ix - ux * half / 2, cy: y1 + iy - uy * half / 2, ra: -1, rb: -1, kind: DOOR_GLASS },
   ];
 }
 
-/** The street doors' leaves of lot k, two per door of exitsOf, for the renderer and the walls. */
+/** The street doors' leaves of lot k, by exitsOf (each knows its door: Leaf.door), for the renderer and the walls. */
 export function streetLeaves(w: World, k: number): Leaf[] {
-  const B = w.city.buildings[k];
-  return exitsOf(w.city, k).flatMap((D) => doorLeaves(B, D));
+  const B = w.city.buildings[k], entry = entryDoor(w.city, k);
+  return exitsOf(w.city, k).flatMap((D, n) => doorLeaves(B, D, entry && n === 0).map((L) => ({ ...L, door: n })));
 }
 
 /** The doors the player could reach: the leaves of the floor they stand on, and the street doors of the lot they are in or before. */

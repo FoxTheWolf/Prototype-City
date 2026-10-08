@@ -48,7 +48,7 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 ## Etapa 13: Interiores, o fechamento (7 subetapas)
 > Fecha o rework pelo manual (`docs/plano-interiores.md`) com o que a 17 precisa, e congela. O resto do rework (tipos que faltam, faixas `*` dos lotes fundos, escritórios e torres) vai para a 23.
 - ✅ **13.18 O retorno do playtest de 2026-10-08 (0.13.18; a porta na cozinha virou hall nas 5 plantas e a regra R12; falta o usuário ver no PC):** a escada em U (vão no topo, o piso de cima invisível pelo poço), o travamento perto da escada, o apartamento sem porta e a porta principal na cozinha (e uma regra nova no validador para isso), o recuo dos móveis e da escada da parede. (`plano-interiores.md` passo 9)
-- **13.19 Portas e saída (passo 8):** a porta dos moradores achável, a verga, portas e entradas mais largas (~0,9 m), o vidro da porta, o EXIT vermelho só no caminho comum até a rua.
+- ✅ **13.19 Portas e saída (passo 8; 0.13.19, falta o usuário ver no PC):** a porta dos moradores achável, a verga, portas e entradas mais largas (~0,9 m), o vidro da porta, o EXIT vermelho só no caminho comum até a rua.
 - → **C1**
 - **13.20 Mobiliar pela biblioteca, com postos (passo 3):** as arrumações do manual nos cômodos, pela renda e pelo morador (`homeUnit` nasce aqui), e **cada móvel com o posto dele** (onde o NPC fica, para onde olha), que é a base da casa da 17.
 - **13.21 Um gerador só: as lojas na gramática das plantas** (regra "um sistema só"): `sim/layouts.ts` entra em `sim/floorplans.ts`; os postos de balconista e de cliente no mesmo formato.

@@ -4,7 +4,7 @@ import { doorLeaves, shutterAt } from '../../sim/doors';
 import { siderealTime } from '../../sim/clock';
 import STARS from '../stars.json';
 import { PLACES } from '../../sim/placeTypes';
-import { cachedPlan, cellAt, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
+import { cachedPlan, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
 import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
@@ -31,7 +31,7 @@ import { eyeHold, eyePush } from '../power';
 import { subAt } from '../../sim/power';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
-import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
+import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
  * Stage R: the world drawn on the GPU (WebGPU). The city goes up once as lists (street boundaries,
@@ -610,8 +610,9 @@ export class GpuWorld {
           const ex = Math.abs(S.c) * S.hx + Math.abs(S.s) * S.hy, ey = Math.abs(S.s) * S.hx + Math.abs(S.c) * S.hy;
           F[ib + 18] = S.x - ex; F[ib + 19] = S.y - ey; F[ib + 20] = S.x + ex; F[ib + 21] = S.y + ey;
         }
-        // (a street door's glass leaves have their width negative: the shader draws them as glass in a frame)
-        for (let k = 0; k < nL; k++) { const L = I.leaves[own + k]; F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, -L.w, I.leafA[own + k]], ib + IN_LEAVES + k * 8); }
+        // (a street door's glass leaves have their width negative: the shader draws them as glass in a frame; the residents'
+        // wooden one positive)
+        for (let k = 0; k < nL; k++) { const L = I.leaves[own + k]; F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.kind === DOOR_ENTRY ? L.w : -L.w, I.leafA[own + k]], ib + IN_LEAVES + k * 8); }
       }
     } else ib = 0;
     // by day, the grid of the objects' shadows on the ground (see shadowGrid)
@@ -705,7 +706,7 @@ export class GpuWorld {
     let mSize = 0;
     for (const m of list) if (!mods.has(m)) { mods.set(m, 0); mSize += partsSize(m); }
     // (after the cells, its door leaves: their count, then per leaf its hinge, the way it lies shut, the way it swings, its width and what it is made of)
-    const leaves = leavesOf(P), nCells = Math.ceil(P.cells.length / 2), lo = 6 + P.rooms.length * 6 + nCells, fo = lo + 1 + leaves.length * LEAF_W;
+    const leaves = leavesOf(P), nCells = Math.ceil(P.cells.length / 2), lo = 6 + P.rooms.length * ROOM_REC + nCells, fo = lo + 1 + leaves.length * LEAF_W;
     const n = fo + 1 + P.furn.length * 6 + mSize, o = this.fxTake(n);
     if (o < 0) return -1;
     W[o + lo] = leaves.length;
@@ -715,9 +716,9 @@ export class GpuWorld {
     W[o + fo] = P.furn.length;
     P.furn.forEach((f, k) => { const e = o + fo + 1 + k * 6; F[e] = f.x; F[e + 1] = f.y; F[e + 2] = f.c; F[e + 3] = f.s; F[e + 4] = Math.hypot(f.hx, f.hy) + 0.4; W[e + 5] = mods.get(list[k])!; });
     W[o] = P.gx; W[o + 1] = P.gy; W[o + 2] = P.nx; W[o + 3] = P.ny; W[o + 4] = P.rooms.length; W[o + 5] = lot;
-    P.rooms.forEach((R, r) => { const w = o + 6 + r * 6; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind === 'store' ? 'office' : R.kind); W[w + 5] = R.unit; });
-    W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 1), o + 6 + P.rooms.length * 6);
-    if (P.cells.length & 1) W[o + 6 + P.rooms.length * 6 + (P.cells.length >> 1)] = P.cells[P.cells.length - 1];
+    P.rooms.forEach((R, r) => { const w = o + 6 + r * ROOM_REC; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind === 'store' ? 'office' : R.kind); W[w + 5] = R.unit; W[w + 6] = P.exitTo?.[r] ?? 0; });
+    W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 1), o + 6 + P.rooms.length * ROOM_REC);
+    if (P.cells.length & 1) W[o + 6 + P.rooms.length * ROOM_REC + (P.cells.length >> 1)] = P.cells[P.cells.length - 1];
     this.fxPlan[s] = 1; W[t] = o;
     q.writeBuffer(this.fx, o * 4, W, o, n); q.writeBuffer(this.fx, t * 4, W, t, 1);
     return o;
@@ -848,7 +849,9 @@ export class GpuWorld {
           W[o + 1 + e * 3] = (D.face << 4) | (e > 0 && biz >= 0 ? 1 << 24 : 0); F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1;
           if (e > 0 && biz >= 0) this.shutters.set(o + 1 + e * 3, PLACES[C.businesses[biz].kind]?.hours ?? [9, 17]);
         });
-        doors.forEach((D, e) => doorLeaves(B, D).forEach((L, h) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.w], o + 1 + n * 3 + e * 14 + h * 7)));
+        // (the residents' own door is one wooden leaf, its width negative; the second slot's width 0: entryDoor, 13.19)
+        const entry = entryDoor(C, k);
+        doors.forEach((D, e) => { F.fill(0, o + 1 + n * 3 + e * 14, o + 1 + n * 3 + e * 14 + 14); doorLeaves(B, D, entry && e === 0).forEach((L, h) => F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, L.kind === DOOR_ENTRY ? -L.w : L.w], o + 1 + n * 3 + e * 14 + h * 7)); });
         escs.forEach((E, e) => { const w = o + 1 + (doors.length + e) * 3; W[w] = 1 | (E.face << 4); F[w + 1] = E.a0; F[w + 2] = E.a0 + 2 * BAY; });
         W[FX_TAB + k] = o; slots.push(FX_TAB + k);
         q.writeBuffer(this.fx, start * 4, W, start, size);

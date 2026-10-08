@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { streetLeaves } from '../sim/doors';
-import { baseAt, cachedPlan, doorNumber, doorOf, escapesOf, facePoint, exitsOf, leavesOf, planOf } from '../sim/interior';
+import { baseAt, cachedPlan, doorNumber, doorOf, entryDoor, escapesOf, facePoint, exitsOf, floorsOf, leavesOf, planOf } from '../sim/interior';
 import { insideLight, interiorColumn, prepareInside, type Inside } from './interior';
 import { CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, intercomModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -283,11 +283,11 @@ function insideOf(world: World, v: View, colW: number, day: number, rain: number
   const base = city.buildings[kIn];
   const I: Inside = { city, k: kIn, plan, base, box: city.buildings[plan.box], boxId: plan.box, floor: v.floor, z0: v.lift ? v.z : v.floor * FLOOR_H, closed: v.lift, liftN: liftFloors(world), liftTo: world.player.liftTo, colW, door: doorOf(city, kIn), exits: exitsOf(city, kIn), elec: buildingPower(world, kIn, frameSec), backup: world.power.backup[kIn], day, sec: frameSec, rain, leaves: [], leafA: [] };
   // the doors between rooms, swung as far as they are open (eased: fast at first, settling at the end)
-  // and on the ground floor the street doors' pairs of glass leaves (each pair one door, keyed from 100)
+  // and on the ground floor the street doors' leaves (a pair of glass ones, or the residents' wooden one; keyed from 100)
   const own = leavesOf(plan), street = v.floor === 0 && !v.lift ? streetLeaves(world, kIn) : [];
   I.leaves = [...own, ...street];
   const swing = (a: number) => (1 - (1 - a) ** 2) * Math.PI * 0.5;
-  I.leafA = [...own.map((_, n) => swing(world.doors.get(doorKey(kIn, v.floor, n)) ?? 0)), ...street.map((_, n) => swing(world.doors.get(doorKey(kIn, 0, 100 + (n >> 1))) ?? 0))];
+  I.leafA = [...own.map((_, n) => swing(world.doors.get(doorKey(kIn, v.floor, n)) ?? 0)), ...street.map((L) => swing(world.doors.get(doorKey(kIn, 0, 100 + L.door!)) ?? 0))];
   prepareInside(I, v.x, v.y);
   return I;
 }
@@ -988,6 +988,8 @@ function collectObjects(world: World, v: View): Obj[] {
       const [x, y, nx, ny] = facePoint(B, D.face, (D.a0 + D.a1) / 2), X = x + nx * 0.03, Y = y + ny * 0.03;
       if (Math.hypot(X - v.x, Y - v.y) > DOOR_NUM_FAR || !seen(X, Y, 0.5)) continue;
       out.push({ x: X, y: Y, c: nx, s: ny, parts: doorNumberModel(String(num)), r: 0.3, h: 2.6, z0: 2.4, seed: 0 });
+      // the residents' door (13.19): the intercom beside its free edge, past the frame
+      if (entryDoor(city, k)) { const [ix, iy] = facePoint(B, D.face, D.a1 + 0.16); out.push({ x: ix + nx * 0.01, y: iy + ny * 0.01, c: nx, s: ny, parts: intercomModel(floorsOf(B)), r: 0.2, h: 1.7, z0: 1.2, seed: 0 }); }
     }
     // the shop's OPEN / CLOSED card in the glass beside its own door (its last exit), by its real hours
     for (let k = blk.b0; k < blk.b1; k++) {

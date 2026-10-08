@@ -54,6 +54,12 @@ export interface Plan {
   ny: number;
   /** The cells where two rooms of a drawn plan meet with no wall (an open plan): a way through, never a door leaf. */
   seams?: Uint8Array;
+  /**
+   * The way out (13.19; the signage manual's EXIT): per room, the next room + 1 on the shortest way through the
+   * common parts to the street (on the ground floor, to the main street door; above, to the stair), 0 where there is
+   * none (a home's or a shop's rooms, the way's end). An EXIT sign hangs over each doorway on it.
+   */
+  exitTo?: Uint16Array;
 }
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
@@ -479,16 +485,40 @@ export function planOf(city: City, k: number, f: number): Plan | null {
   if (St) {
     // a drawn plan: the ground floor and the floors above are each one plan, cached as the cut ones are
     let P = planCache.get(key);
-    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1); planCache.set(key, P); }
+    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1); P.exitTo = exitWay(city, k, P, f === 0); planCache.set(key, P); }
     return P;
   }
   let P = planCache.get(key);
   if (P === undefined) {
     P = makePlan(city, k, j, f === 0);
+    if (P) P.exitTo = exitWay(city, k, P, f === 0);
     planCache.set(key, P);
     if (planCache.size > PLAN_KEEP) { let n = 500; for (const old of planCache.keys()) { planCache.delete(old); if (--n === 0) break; } }
   }
   return P;
+}
+
+/** Plan.exitTo: a search from the way's end (the rooms at the main street door, or the stair) out through the common rooms' doorways. */
+function exitWay(city: City, k: number, P: Plan, ground: boolean): Uint16Array {
+  const n = P.rooms.length, next = new Uint16Array(n), seen = new Uint8Array(n), q: number[] = [];
+  const common = (r: number) => r >= 0 && P.rooms[r].unit < 0;
+  const end = (r: number) => { if (common(r) && !seen[r]) { seen[r] = 1; q.push(r); } };
+  if (ground) {
+    const D = doorOf(city, k);
+    if (D) { const [x, y, nx, ny] = facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2); end((cellAt(P, x - nx * 0.4, y - ny * 0.4) & ROOM) - 1); }
+  } else P.rooms.forEach((R, r) => { if (R.kind === 'stair') end(r); });
+  // two rooms meet at a doorway where neighbouring cells of each have the DOOR bit
+  const adj = P.rooms.map(() => new Set<number>());
+  for (let j = 0; j < P.ny; j++) for (let i = 0; i < P.nx; i++) {
+    const c = P.cells[j * P.nx + i];
+    if (!(c & DOOR)) continue;
+    for (const e of [i + 1 < P.nx ? P.cells[j * P.nx + i + 1] : 0, j + 1 < P.ny ? P.cells[(j + 1) * P.nx + i] : 0]) {
+      const a = (c & ROOM) - 1, b = (e & ROOM) - 1;
+      if (e & DOOR && a >= 0 && b >= 0 && a !== b) { adj[a].add(b); adj[b].add(a); }
+    }
+  }
+  for (let h = 0; h < q.length; h++) for (const b of adj[q[h]]) if (common(b) && !seen[b]) { seen[b] = 1; next[b] = q[h] + 1; q.push(b); }
+  return next;
 }
 
 /** Floor f of lot k if it was already made (undefined if not yet), so a caller can spread the work over frames. */
@@ -550,6 +580,19 @@ function stackDir(St: Stack, du: number, dv: number): [number, number] {
   return St.face === 2 ? [du, dv] : St.face === 3 ? [-du, -dv] : St.face === 0 ? [dv, -du] : [-dv, du];
 }
 /** The street doors of a stack's ground floor: the residents' (behind it a room that is not the shop) and the shop's own. */
+/**
+ * Whether lot k's main street door is the residents' own (13.19): a drawn plan's, into its lobby or hall (not a
+ * shop's, an office's or the motel's, which stay a pair of glass leaves). It is one wooden leaf with a glass light, a
+ * glass transom over it with the street number (the signage manual, section 5). Read as stackDoors finds the main door.
+ */
+export function entryDoor(city: City, k: number): boolean {
+  const St = stackOf(city, k);
+  if (!St) return false;
+  const row = St.ground.rooms[0], below = St.ground.rooms[1];
+  for (let c = 0; c < row.length; c++) if (row[c] === 'R' && below[c] !== 'o') return '.cS'.includes(below[c]);
+  return false;
+}
+
 function stackDoors(city: City, St: Stack): { main: Door | null; shops: Door[] } {
   const B = city.buildings[St.k], row = St.ground.rooms[0], below = St.ground.rooms[1];
   let main: Door | null = null;
@@ -1592,10 +1635,10 @@ export function inFurniture(P: Plan, x: number, y: number, walking = false): boo
  * door off the stair's landing).
  */
 /** What a door leaf is made of (13.10d): the street doors' glass, a home's wood, the steel of a stockroom, an office's painted panel. */
-export const DOOR_GLASS = 0, DOOR_WOOD = 1, DOOR_METAL = 2, DOOR_OFFICE = 3;
+export const DOOR_GLASS = 0, DOOR_WOOD = 1, DOOR_METAL = 2, DOOR_OFFICE = 3, DOOR_ENTRY = 4;
 /** A door leaf's thickness, m (the renderer draws its free edge as a strip when it stands open). */
 export const LEAF_TH = 0.05;
-export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number; /** The rooms on either side (indexes; -1 for a street door). */ ra: number; rb: number; kind: number }
+export interface Leaf { hx: number; hy: number; ax: number; ay: number; nx: number; ny: number; w: number; cx: number; cy: number; /** The rooms on either side (indexes; -1 for a street door). */ ra: number; rb: number; kind: number; /** A street door's leaf: which of exitsOf it is. */ door?: number }
 const HOME = new Set<RoomKind>(['living', 'bedroom', 'kitchen', 'bath', 'foyer']);
 /** Steel onto a stockroom, wood in and into a home, a painted panel elsewhere (offices, lobbies, a shop's own rooms). */
 const leafKind = (A: Room, B: Room) => A.kind === 'store' || B.kind === 'store' ? DOOR_METAL : HOME.has(A.kind) || HOME.has(B.kind) ? DOOR_WOOD : DOOR_OFFICE;
