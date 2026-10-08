@@ -52,7 +52,7 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 - → **C1**
 - ✅ **13.20 (0.13.20) Mobiliar pela biblioteca, com postos (passo 3):** as arrumações do manual nos cômodos, pela renda e pelo morador (`homeUnit` nasce aqui), e **cada móvel com o posto dele** (onde o NPC fica, para onde olha), que é a base da casa da 17.
 - **13.S A arrumação do shader (adiantada da 16.1 na reunião de 2026-10-08):** separar `gpu/shader.ts` por assunto, caber em 8 storage buffers, cortar a compilação de 3–4 min (as funções grandes copiadas em cada chamada); aproveitar e tirar o código desligado da zona de fogo e do Sarcófago (`FIRE_ZONE`). Por partes, comparando as posições de ouro antes e depois de cada passo. Motivo: o C2, a 13.22, a 16 e a 23 são quase só shader.
-- **13.21 Um gerador só: as lojas na gramática das plantas** (regra "um sistema só"): `sim/layouts.ts` entra em `sim/floorplans.ts`; os postos de balconista e de cliente no mesmo formato.
+- **13.21 Um gerador só: as lojas na gramática das plantas** (regra "um sistema só"): `sim/layouts.ts` entra em `sim/floorplans.ts`; os postos de balconista e de cliente no mesmo formato. **Reunião de 2026-10-08:** o **cybercafé e o motel** são obrigatórios (a primeira hora); se cortar tipos, esses ficam.
 - → **C2**
 - **13.22 Interruptores e luz por cômodo (passo 5, R10):** um por cômodo, sala vazia e loja fechada apagadas; é a regra de luz do stealth. **Da reunião de 2026-10-08:** o morador acende ao entrar e apaga ao sair ou dormir, o jogador aperta F no interruptor; e **as janelas acesas da fachada passam a ler o estado real da luz dos cômodos** (um sistema só; hoje são sorteio por `hash3`), com prédios de luz automática (escada e saguão 24 h por norma de incêndio, escritórios com timer ou sensor de presença, vitrines com timer; pesquisar antes). Longe do jogador, a luz sai da rotina, como a posição das pessoas.
 - **13.23 O telhado (passo 4d)** e a última escada chegando nele.
@@ -87,7 +87,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - → **teste do usuário da 17**
 
 ## Etapa 18: `[HACKING]` Hacking completo e a TI (Opus 4.8)
-> O antigo 19, a Trilha de hacking (`docs/roteiro.md`); **o coração da 1.0**: profundo, realista, tudo simulado, a dificuldade vinda de achar o caminho no sistema. Fixar as 5–8 subetapas numa sessão do Opus 4.8 ou com o agente `hacking`. Recebe: **a TI legítima** (computadores e modems físicos com defeito, a base comum dos dois lados), o e-mail e o app cifrado do contratante (Reynard), `tests/apt.ts`, os trabalhos no registro de playtest (13.10p), o semáforo que reverte, o Ferret com o lado escondido, a antena direcional.
+> O antigo 19, a Trilha de hacking (`docs/roteiro.md`); **o coração da 1.0**: profundo, realista, tudo simulado, a dificuldade vinda de achar o caminho no sistema. Fixar as 5–8 subetapas numa sessão do Opus 4.8 ou com o agente `hacking`. Recebe: **a TI legítima** (computadores e modems físicos com defeito, a base comum dos dois lados), o e-mail e o app cifrado do contratante (Reynard), `tests/apt.ts`, os trabalhos no registro de playtest (13.10p), o semáforo que reverte, o Ferret com o lado escondido, a antena direcional. **Reunião de 2026-10-08:** (a) **fixar as subetapas desta etapa já, numa sessão do Opus 4.8** (numa conta com folga), para que as etapas 13–17 construam o que o hacking pede (portas eletrônicas, câmeras, a luz por cômodo, os registros dos moradores); (b) **uma lista de conferência:** cada sistema hackeável tem pelo menos uma reação visível (manchete, NPC reclamando, luz apagando, fila na loja), o teste das duas camadas aplicado ao hacking.
 
 ## Etapa 19: Economia (6 subetapas)
 > O antigo 17 (`plano-antigo.md`, `visao.md` "A economia"). Logo depois do hacking porque é o que ele mexe (preços, entregas, a bolsa); hackear o banco é da 18.
@@ -119,7 +119,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **Depois da 1.0:** o jogador dirigir (pelo mesmo sistema) e o metrô elevado.
 
 ## Etapa 22: Vida do personagem (7 subetapas)
-- **22.1 O caderno.**
+- **22.1 O caderno.** As janelas acesas da 13.22 viram reconhecimento ("o 4º andar apaga às 23h"): anotar no caderno o que se vê da rua.
 - **22.2 Dormir no motel e esperar acelerando a simulação** (medir antes no Node).
 - **22.3 Necessidades:** sede leve, sono, frio e molhado leves; o app de fitness.
 - **22.4 Roupas** (casaco e cabeça) **e o editor no espelho do motel.**
@@ -131,10 +131,10 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **23.1 Manual de fachadas e de landmarks.**
 - **23.2 Fachadas:** a loja virada para a rua com a blade no beco (13.16), o letreiro só do lado certo, as lâmpadas redondas, a fachada que muda ao chegar perto, as placas cinza soltas.
 - **23.3 Materiais PBR** (uma tabela só: textura, passo, molhado); junto, a parte de baixo dos lances da escada (hoje quase preta vista de baixo, sem luz de rebote) e o último espelho da escada, que é a face da laje e sai cinza em vez de madeira (13.18).
-- **23.4 A praia e o mar** (13.15), o calçadão e o píer; o mar **sempre do mesmo lado** (reunião de 2026-10-08; qual lado, decidir na 23.4). (O Sarcófago e a zona de fogo já foram desligados pela chave `FIRE_ZONE` em `sim/city.ts`, 2026-10-08; a borda é chão liso.)
+- **23.4 A praia e o mar** (13.15), o calçadão e o píer; o mar **sempre a oeste** (reunião de 2026-10-08: o pôr do sol no mar visto da cidade). (O Sarcófago e a zona de fogo já foram desligados pela chave `FIRE_ZONE` em `sim/city.ts`, 2026-10-08; a borda é chão liso.)
 - **23.5 Clima, 2ª passada:** chuva volumétrica, relâmpagos, a roupa molhada e as poças; a lua e as estrelas (os mares, os god rays, o rastro).
 - **23.6 Letreiros, neon e outdoors** com notícias, a surge apagando aparelhos, o neon de dia.
-- **23.7 Sinalização e orientação:** o totem YOU ARE HERE, os símbolos 15×15, o diretório e o zoom de ler placas (13.17), a lista telefônica; os terrenos vazios virando feiras, mercados e quadras (nota 10); **a rua mais cheia** (essencial): bancas de jornal, vendedores de comida, as plaquinhas de calçada do Kamurocho.
+- **23.7 Sinalização e orientação:** o totem YOU ARE HERE, os símbolos 15×15, o diretório e o zoom de ler placas (13.17), a lista telefônica; os terrenos vazios virando feiras, mercados e quadras (nota 10); **a rua mais cheia** (essencial): bancas de jornal, vendedores de comida, as plaquinhas de calçada do Kamurocho. **O zoom do olhar (reunião de 2026-10-08, troca o binóculo):** segurar o botão direito sem nada na mão aproxima a vista um pouco (para ler o que o ASCII embaralha; é o mesmo zoom de ler placas); para ver longe, a câmera do celular com zoom (que estimula usar a câmera). E dar zoom nas fotos da galeria do celular, como no relógio. Um zoom só para os três.
 - **23.8 Os tipos de prédio que faltam** (hotel, banco, galpão, estacionamento, oficina, escritórios e torres, as faixas `*`) e o distrito de entretenimento.
 
 ## Etapa 24: Som (5 subetapas)
