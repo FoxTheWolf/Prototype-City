@@ -81,6 +81,10 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 
 **Regra de originalidade:** copiar a técnica e o gênero é permitido. Os nomes, a história, os marcos e a identidade visual específica do ASCII City **não** devem ser copiados. Criamos os nossos.
 
+## Escadas (79–93, enviadas pelo usuário em 2026-10-08, para o rework da escada)
+
+`referencias/79-escada-ref-1` … `93-escada-ref-15`: 79 escada de prédio em U (dois lances, patamar no meio, corrimão de aço); 80 vidro; 81 escada externa de aço galvanizado (degrau de chapa xadrez, guarda-corpo de tubo); 82 madeira com quina em leque; 83–86 e 87 diagramas de quarter-turn, three-quarter, bifurcada; 88 medidas (largura ≥ 0,9 m por pessoa, patamar ≥ 0,9 m); 89 plantas de vários tipos com medidas (a de dois lances com patamar: 2,00 × 3,75 m); 90–91 plantas de escada de incêndio em U; 92 lance reto com medidas (espelho ~21 cm, piso 25 cm, ~40°, altura livre 2,4 m); 93 seções de escada de madeira.
+
 ## Inspirações (jogos de que o usuário gosta)
 
 Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simulação. O que tirar de cada um é uma leitura inicial, a confirmar com ele quando a etapa chegar. A mesma regra de originalidade vale para todos.
