@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do desempenho do celular (0.15.42–44) — 2026-10-07
+- **O DRAW do F3 não é só a GPU:** é o tempo do `submit` até `onSubmittedWorkDone` voltar (no thread principal), e o "GPU x ms" cronometra só o passe do mundo. Para achar quem pesa, medir a CPU do quadro embrulhando o `requestAnimationFrame` no console (duração de cada callback) e pôr cronômetros temporários (`globalThis.__pt`) dentro da função suspeita; com o celular, a CPU passou de ~4 para ~11 ms.
+- **O culpado foi o pintor 2D (`paint2d.ts`), não os cubinhos:** `rect` e `grad` iam ponto a ponto por `dot` → `Px.has`/`set` (chamadas virtuais, um array por pixel no degradê): 1,8 ms para encher a tela de 240 × 432, 4,7 ms um degradê. O celular repinta a tela inteira a cada quadro (`paintChrome` + a página). Caminho rápido para `Img` (`fillRow`, linha a linha) e a cor do degradê uma vez por linha: páginas de 5,5 para ~1 ms. **`tests/paint-bench.ts`** mede as páginas mais pesadas.
+- **Otimizar desenho sem mudar o desenho:** antes, rodar os testes que geram PNG (paint2d, phone-pages, phone-rey, phone-map, phoneweb, screens, web-canon, lookwise, web-seals, web-errors, web-layout), copiar `tests/.out/*.png` para o scratchpad e, depois, `cmp` arquivo a arquivo: 67 imagens idênticas.
+- **O painel do navegador oculto estrangula os quadros** (3–10 quadros em 3 s) e os números de quadro inteiro ficam inúteis; as somas por chamada (`__pt` / n) ainda servem. Cada edição faz o HMR recarregar e pedir CONTINUE de novo; no painel, `resize_window` 1920 × 1080 nem sempre vale para o canvas.
+- **Mensagens sorteadas pela hora do jogo** (`hash3(seed, hr, …)` em `phone.ts`) repetem quando a hora volta (Shift+T): disparar só com `hr > última`.
+
 ### Lições da 15.19 (cubinhos, corpo do celular) — 2026-10-07
 - **Medir aquecido:** o 1º `castVox` custa ~7 ms (JIT), os seguintes ~2,7 ms. Num teste de tempo, repetir e descartar as primeiras.
 - **Paleta com objetos de formas diferentes** (`metal` às vezes ausente) e um callback por pixel pesavam: achatar a paleta em arrays tipados por chamada e trocar o fator por pixel por uma tabela por índice (`mul[m]`).
