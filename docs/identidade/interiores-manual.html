@@ -205,6 +205,7 @@ const POSTS = {
 const FLOORS = [
   {
     id: 'A1', title: '8 × 10 m · walk-up, andar de cima · 1 quarto', note: 'A escada nos fundos, com janela; a casa inteira na frente. Entra-se pela cozinha, como nos walk-ups. O banheiro abre na sala, nunca na cozinha.',
+    rep: [6, 10], depths: [10, 12],
     rooms: [
       '#WW##WW##WW##WW#',
       '#bbbbbb+lllllll#',
@@ -252,6 +253,7 @@ const FLOORS = [
   },
   {
     id: 'A0', title: '8 × 10 m · o térreo com loja', note: 'A porta dos moradores e um corredor de 1 m pela esquerda até a escada; a loja na frente (o miolo dela vem das plantas de loja); a lavanderia, as caixas de luz e de telefone e o zelador nos fundos, abrindo na escada (nunca na loja).',
+    rep: [6, 10], depths: [10, 12],
     rooms: [
       '#RR#GGGGGRRGGGG#',
       '#cc+ooooooooooo#',
@@ -531,6 +533,7 @@ const FLOORS = [
   },
   {
     id: "T1", title: "8 × 10 m · o telhado", note: "A escada termina numa casinha com porta; o resto é laje com parapeito (#), a caixa d'água e o ar-condicionado. Uma cadeira de plástico e um vaso: alguém do prédio sobe para fumar (e o modo cozy).",
+    rep: [6, 10], depths: [10, 12],
     rooms: [
       "################",
       "#xxxxxxxxxxxxxx#",
@@ -769,7 +772,7 @@ const FLOORS = [
 ];
 
 // R9: the floors of one building, from the street up; the stair (S) must stand on the same cells in all of them
-const BUILDINGS = [{ name: '8 × 10 m (walk-up com loja)', floors: ['A0', 'A1', 'T1'] }];
+const BUILDINGS = [{ name: '8 × 10 e 8 × 12 m (walk-up com loja)', floors: ['A0', 'A1', 'T1'] }];
 /** A plan with its repeated rows (rep) grown to depth d (m): each extra 2 m is 4 rows, shared among the rep rows. */
 function grow(F, d) {
   if (!F.rep) return F;
@@ -978,7 +981,7 @@ function build() {
   }
   // the catalog
   const CAT = [
-    ['8 × 10', 2126, 'walk-up de tijolo e residencial baixo', 'A1, A0, T1 (telhado)'], ['8 × 12', 1406, 'walk-up', 'A1 com uma faixa *'], ['8 × 8', 1335, 'walk-up, casa', 'C1'],
+    ['8 × 10', 2126, 'walk-up de tijolo e residencial baixo', 'A1, A0, T1 (telhado)'], ['8 × 12', 1406, 'walk-up', 'A0, A1, T1 com as linhas *'], ['8 × 8', 1335, 'walk-up, casa', 'C1'],
     ['10 × 12', 1058, 'walk-up, residencial', 'D1'], ['10 × 10', 766, 'walk-up, residencial', 'F1'], ['12 × 12', 360, 'walk-up de duas casas por andar, escritório baixo', 'B1, O1'],
     ['8 × 14 … 8 × 24', 517, 'walk-up fundo', 'E1 (16 a 20 m); o 14 e o 22–24 a fazer'], ['10 × 14 … 10 × 24', 389, 'residencial fundo', 'faixas *'], ['12 × 14 … 12 × 24', 397, 'residencial, escritório baixo', 'faixas *'],
     ['16 × 8 (motel)', '—', 'motel de um andar', 'M1'],
@@ -1000,8 +1003,11 @@ function build() {
   // R9: the stair on the same cells on every floor of a building, up to the roof
   $('floors').innerHTML += BUILDINGS.map((B) => {
     const cells = (F) => F.rooms.flatMap((r, y) => [...r].map((c, x) => (c === 'S' ? `${x},${y}` : null)).filter(Boolean)).join(' ');
-    const fl = B.floors.map((id) => FLOORS.find((F) => F.id === id)), base = cells(fl[0]);
-    const bad = fl.filter((F) => cells(F) !== base).map((F) => F.id);
+    const fl0 = B.floors.map((id) => FLOORS.find((F) => F.id === id)), bad = [];
+    for (const d of fl0[0].depths ?? [0]) {
+      const fl = fl0.map((F) => (d ? grow(F, d) : F)), base = cells(fl[0]);
+      fl.filter((F) => cells(F) !== base).forEach((F) => bad.push(`${F.id}${d ? ` (${d} m)` : ''}`));
+    }
     return `<div class="checks"><span class="${bad.length ? 'bad' : 'ok'}">${bad.length ? '✗' : '✓'} R9 · ${B.name}: ${B.floors.join(' → ')}${bad.length ? ', escada fora do lugar em ' + bad.join(', ') : ', a escada no mesmo lugar do térreo ao telhado'}</span></div>`;
   }).join('');
   // the palettes by building style

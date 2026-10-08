@@ -55,5 +55,5 @@
 - **O render lê a planta pela GPU** (`putPlan` em `gpu/world.ts`): manter o formato `Plan` (células, salas, móveis)
   para não mexer no shader no passo 2; só a origem dos dados muda.
 - **Desempenho:** `planOf` é chamado sob demanda e em cache; ler texto é mais barato que o gerador de hoje.
-- **Fora do catálogo hoje:** o 8 × 12 (usar A1 + uma faixa `*`), o 10 × 14…24 e o 12 × 14…24 (faixas), as outras
+- **Fora do catálogo hoje:** o 10 × 14…24 e o 12 × 14…24 (faixas), as outras
   torres, o hotel, o escritório grande, os térreos com loja maiores. Até existirem, ficam no gerador velho.

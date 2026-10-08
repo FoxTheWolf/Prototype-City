@@ -146,9 +146,12 @@ export function checkFloor(F: Floor): string[] {
 /** R9: the stair stands on the same cells on every floor of a building, up to the roof. */
 export function checkBuilding(B: BuildingStack, floors: Floor[] = FLOORS): string[] {
   const cells = (F: Floor) => F.rooms.flatMap((r, y) => [...r].map((c, x) => (c === 'S' ? `${x},${y}` : ''))).filter(Boolean).join(' ');
-  const fl = B.floors.map((id) => floors.find((F) => F.id === id)!);
-  const base = cells(fl[0]);
-  return fl.filter((F) => cells(F) !== base).map((F) => `R9 ${B.name}: the stair moves on ${F.id}`);
+  const fl0 = B.floors.map((id) => floors.find((F) => F.id === id)!), out: string[] = [];
+  for (const d of fl0[0].depths ?? [0]) {
+    const fl = fl0.map((F) => (d ? grow(F, d) : F)), base = cells(fl[0]);
+    for (const F of fl) if (cells(F) !== base) out.push(`R9 ${B.name}: the stair moves on ${F.id}${d ? ` (${d} m)` : ''}`);
+  }
+  return out;
 }
 
 /** The rules on one room arrangement inside its frame: doors clear, tall pieces off the windows, open sides mostly free, every floor cell reached, chairs at a table, every posto reachable. */
