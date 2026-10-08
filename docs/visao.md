@@ -484,6 +484,8 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Extras:** telhado acessível pela escada; lavanderia do prédio, as caixas de luz e telefone e a sala do zelador **nos fundos do térreo** (ou no 1º andar quando o térreo é loja); o subsolo de verdade fica para depois (a cidade não desenha nada abaixo da rua).
 - **Objetos pequenos:** a maioria é cenário que diz quem mora ali; poucos se pegam ou se leem (bilhete, conta, post-it com senha), tirados dos dados do morador.
 - **Referências visuais:** o Claude propõe 2–3 direções no manual e o usuário escolhe.
+- **Direção visual escolhida (2026-10-08, pela recomendação do Claude):** **A, âmbar noir, como base** (abajur quente, madeira, sódio pela persiana), com **os objetos de 2008 da B** (TV de tubo, PC bege, radiador), e **C, retrofuturo, só nas torres de vidro e escritórios**.
+- **As arrumações das salas o Claude gera ele mesmo** (pedido do usuário: "se é só texto não deve consumir muito"), com o validador das regras rodando junto; o briefing para o Gemini foi descartado.
 
 ## Modo cozy (conversa de 2026-10-08)
 - **Pedido do usuário:** o jogo mais aconchegante para quando o jogador quiser descansar (ele gosta de andar na rua ouvindo a música do celular, olhando os letreiros). Pode virar **uma etapa própria, curta, depois da 16**; as outras ideias (sentar e olhar, ouvir conversas, chuva sob a marquise, fotos, diner, lavanderia, telhado, trem elevado) se conversa quando virar etapa.

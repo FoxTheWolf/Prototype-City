@@ -50,7 +50,7 @@
 <header class="cover">
   <div>
     <svg id="cover" viewBox="0 0 720 300"></svg>
-    <p>Manual de interiores · a cidade de GRID DOWN · v1 (rascunho para a escolha do usuário) · 2026-10-08</p>
+    <p>Manual de interiores · a cidade de GRID DOWN · v1.1 · 2026-10-08</p>
   </div>
 </header>
 <nav class="toc">
@@ -78,7 +78,7 @@
     <div class="card"><svg id="dirB" viewBox="0 0 360 220"></svg><div class="sw" id="swB"></div><div class="cap"><b>B · 2008 gasto.</b> Paredes pintadas de creme amarelado, linóleo na cozinha, a lâmpada fluorescente esverdeada, o radiador, a TV de tubo azulada, o PC bege. Realista e cheio de objetos da época. Risco: parecer comum, sem o noir.</div></div>
     <div class="card"><svg id="dirC" viewBox="0 0 360 220"></svg><div class="sw" id="swC"></div><div class="cap"><b>C · Retrofuturo.</b> O 2008 imaginado nos anos 80: laca preta, cromo, a tela verde do terminal, o neon da rua tingindo o teto em magenta e ciano. Combina com as torres de vidro. Risco: cansar se for em todo apartamento.</div></div>
   </div>
-  <p><b>Recomendação do Claude:</b> <b>A como base</b> (o tom noir do jogo e a luz de sódio que já existe), com <b>os objetos de B</b> (a época é a de 2008: a TV de tubo, o PC bege, o radiador são as coisas que contam quem mora), e <b>C só nas torres de vidro e escritórios novos</b>. Assim cada tipo de prédio tem uma cara, e o apartamento de tijolo não parece um escritório.</p>
+  <p><b>Decidido pelo usuário (2026-10-08), pela recomendação do Claude:</b> <b>A como base</b> (o tom noir do jogo e a luz de sódio que já existe), com <b>os objetos de B</b> (a época é a de 2008: a TV de tubo, o PC bege, o radiador são as coisas que contam quem mora), e <b>C só nas torres de vidro e escritórios novos</b>. Assim cada tipo de prédio tem uma cara, e o apartamento de tijolo não parece um escritório.</p>
 </section>
 
 <section id="cat">
@@ -106,8 +106,8 @@
     <tr><td>R1</td><td>Todas as linhas com a mesma largura; a moldura (fachadas e laterais) inteira.</td><td>A planta cabe no prédio.</td></tr>
     <tr><td>R2</td><td>Janelas só no meio dos vãos de 2 m; parede de dentro só nos pilares.</td><td>A fachada de fora e o cômodo de dentro concordam.</td></tr>
     <tr><td>R3</td><td>Cada cômodo é um retângulo.</td><td>Paredes retas; nada de cômodo em L que confunde a luz e as portas.</td></tr>
-    <tr><td>R4</td><td>De cada porta de entrada (E) chega-se a todo cômodo da unidade andando, sem atravessar móvel.</td><td>Nenhum cômodo trancado por um sofá.</td></tr>
-    <tr><td>R5</td><td>As duas células na frente de cada porta ficam livres.</td><td>A folha abre e o jogador passa.</td></tr>
+    <tr><td>R4</td><td>Da escada ou da rua chega-se a todo cômodo e a toda célula de chão andando, sem atravessar móvel.</td><td>Nenhum cômodo trancado por um sofá, nenhum bolsão atrás da cama.</td></tr>
+    <tr><td>R5</td><td>Os dois lados de cada porta são chão (nunca parede) e ficam livres de móvel.</td><td>A folha abre e o jogador passa.</td></tr>
     <tr><td>R6</td><td>Todo quarto tem janela; o banheiro nunca abre na cozinha.</td><td>Faz sentido (e é lei de obra).</td></tr>
     <tr><td>R7</td><td>Móvel alto (guarda-roupa, geladeira, estante) nunca na frente de janela.</td><td>A janela é vista de fora.</td></tr>
     <tr><td>R8</td><td>Todo móvel com posto tem a célula do posto livre e alcançável.</td><td>O morador chega à cama, ao fogão, à TV (seção 8).</td></tr>
@@ -118,13 +118,13 @@
 
 <section id="andares">
   <h2>6 · Andares de exemplo <small>o primeiro conjunto</small></h2>
-  <p>Três plantas para os tamanhos mais comuns. Os desenhos abaixo saem do texto ao lado, e as regras rodam nelas ao abrir a página.</p>
+  <p>Oito plantas: os tamanhos mais comuns, o térreo com loja, o escritório, o motel e um telhado. Os desenhos abaixo saem do texto ao lado, e as regras rodam nelas ao abrir a página.</p>
   <div id="floors"></div>
 </section>
 
 <section id="salas">
   <h2>7 · Salas por tamanho <small>a segunda camada de variação</small></h2>
-  <p>A planta do andar diz <b>onde</b> fica cada cômodo e de que tipo ele é; a <b>arrumação</b> dos móveis vem de uma biblioteca por tipo e tamanho (com a porta e as janelas no lugar). O jogo escolhe uma que caiba (girada ou espelhada), pela renda e pelo jeito do morador, e roda as regras de novo. Exemplo: o quarto de 3 × 3,5 m com a porta na direita e a janela em cima.</p>
+  <p>A planta do andar diz <b>onde</b> fica cada cômodo e de que tipo ele é; a <b>arrumação</b> dos móveis vem de uma biblioteca por tipo e tamanho (com a porta e as janelas no lugar). O jogo escolhe uma que caiba (girada ou espelhada), pela renda e pelo jeito do morador, e roda as regras de novo. Abaixo, a primeira biblioteca: as salas das plantas da seção 6, cada uma com três arrumações para moradores diferentes, todas conferidas pelas mesmas regras (porta livre, móvel alto longe da janela, todo o chão alcançável, cada posto com lugar para ficar).</p>
   <div class="row" id="rooms"></div>
 </section>
 
@@ -156,9 +156,9 @@
 <section id="falta">
   <h2>11 · O que falta <small>para a v2</small></h2>
   <ul>
-    <li>A escolha da direção visual (seção 2), e a partir dela as paletas de parede e piso de cada tipo de prédio.</li>
-    <li>Plantas para o resto do catálogo: o 8 × 8, o 10 × 10, o 10 × 12, os fundos maiores com <code>*</code>, as torres (residencial com corredor e elevador), o escritório (open space, salas, copa, recepção), o motel e o hotel.</li>
-    <li>O térreo dos prédios com loja nos tamanhos maiores, e o telhado (a porta da escada, a caixa d'água, o parapeito).</li>
+    <li>As paletas de parede e piso de cada tipo de prédio, pela direção escolhida (A + objetos de B; C nas torres e escritórios).</li>
+    <li>Plantas para o resto do catálogo: o 10 × 10, os fundos maiores com <code>*</code> (e a leitura das faixas <code>*</code> no teste), as torres (residencial com corredor e elevador), o escritório grande, o hotel; uma segunda e terceira planta para cada tamanho comum.</li>
+    <li>O térreo com loja nos tamanhos maiores e o telhado dos outros tamanhos; a regra R9 (escada nas mesmas células em todos os andares) no teste, que hoje confere um andar por vez.</li>
     <li>A biblioteca de arrumações: 3–4 por tipo de cômodo e tamanho (o briefing para o Gemini sai daqui).</li>
     <li>Os móveis em cubinhos, um desenho por móvel.</li>
     <li>As portas (madeira, aço, vidro) e o interruptor desenhados, junto da 13.10d e da 13.10g.</li>
@@ -173,12 +173,13 @@
 const ROOMS = {
   l: ['sala de estar', '#3a2f26'], k: ['cozinha', '#3b3a2a'], b: ['quarto', '#2c3140'], h: ['banheiro', '#25393b'],
   s: ['quitinete (sala + quarto)', '#33302e'], c: ['corredor de moradores', '#2a2a2a'], u: ['lavanderia / zelador / caixas de luz', '#2f2a35'],
-  o: ['loja (planta das lojas)', '#3a2a2a'],
+  o: ['loja (planta das lojas)', '#3a2a2a'], p: ['open space', '#232c38'], m: ['sala do gerente', '#2a3242'], n: ['sala de reunião', '#26303e'],
+  q: ['copa', '#2f3a3a'], r: ['recepção do motel', '#3a2f26'],
 };
 const TILES = {
   '#': ['parede de fora', '#8d8b84'], W: ['janela (só no meio do vão de 2 m)', '#6fb3d9'], G: ['vitrine da loja', '#4f8fb0'], '+': ['parede de dentro', '#c9c4b8'],
   D: ['porta entre cômodos', '#ffb347'], E: ['porta de entrada da casa (tranca)', '#ff6a13'], R: ['porta da rua', '#ff3b2f'],
-  S: ['escada (as mesmas células em todos os andares)', '#5a5f66'], L: ['elevador', '#7a6a9a'], '.': ['hall comum', '#24262a'],
+  S: ['escada (as mesmas células em todos os andares)', '#5a5f66'], L: ['elevador', '#7a6a9a'], '.': ['hall comum', '#24262a'], x: ['laje do telhado', '#1d2024'],
 };
 // furniture layer: [name, size note, tall, posto kind]
 const FURN = {
@@ -186,7 +187,8 @@ const FURN = {
   h: ['cadeira', '0,5 × 0,5 m', 0, 'sit'], F: ['sofá', '2 × 0,5 m (4 × 1)', 0, 'sofa'], T: ['TV na estante', '2 × 0,5 m (4 × 1)', 0, ''],
   t: ['mesa', '1 × 1 m (2 × 2)', 0, 'eat'], K: ['bancada', '0,5 m de fundo', 0, ''], O: ['fogão', '0,5 × 0,5 m', 0, 'cook'], N: ['pia', '0,5 × 0,5 m', 0, 'dishes'],
   G: ['geladeira', '0,75 × 0,5 m (2 × 1)', 1, ''], V: ['lavatório', '0,5 × 0,5 m', 0, ''], C: ['vaso', '0,5 × 0,5 m', 0, ''], H: ['chuveiro', '1 × 1 m (2 × 2)', 0, 'shower'],
-  P: ['planta', '0,5 × 0,5 m', 0, ''], w: ['lavadora', '0,5 × 0,5 m', 0, ''], y: ['secadora', '0,5 × 0,5 m', 0, ''], X: ['quadro de luz e caixa de telefone', 'na parede', 1, ''],
+  P: ['planta', '0,5 × 0,5 m', 0, ''], S: ['estante', '1 × 0,5 m (2 × 1)', 1, ''], r: ['poltrona', '0,5 × 0,5 m', 0, 'sofa'], w: ['lavadora', '0,5 × 0,5 m', 0, ''], y: ['secadora', '0,5 × 0,5 m', 0, ''], X: ['quadro de luz e caixa de telefone', 'na parede', 1, ''],
+  Z: ["caixa d'água", '1,5 × 1,5 m (3 × 3)', 1, ''], U: ['ar-condicionado', '1 × 1 m (2 × 2)', 0, ''],
 };
 const POSTS = {
   sleep: ['dormir', 'deitado na cama, de frente para o teto', 'a noite'], sofa: ['ver TV / ler / telefone', 'sentado, de frente para a TV', '30–120 min'],
@@ -238,9 +240,9 @@ const FLOORS = [
       '................',
       '................',
       '..............V.',
-      '..............C.',
+      '................',
       '............HH..',
-      '............HH..',
+      '............HHC.',
       '................',
     ],
   },
@@ -310,39 +312,270 @@ const FLOORS = [
     ],
     furn: [
       '........................',
-      '........TTTT..QQ...BBB..',
-      '..tt.h........h....BBB..',
-      '..tt...............BBB..',
-      '........FFFF.......BBB..',
+      '........TTTT..QQ....BBB.',
+      '..tt.h........h.....BBB.',
+      '..tt................BBB.',
+      '........FFFF........BBB.',
       '......................A.',
       '......................A.',
       '......................A.',
       '.KKKKONGG...............',
       '........................',
-      '..................V.HH..',
-      '..................C.HH..',
-      '................HH...C..',
-      '................HHV.....',
+      '..................V.CHH.',
+      '.....................HH.',
+      '................HH......',
+      '................HHC.V...',
       '........................',
       '.KKKKONGG...............',
       '......................A.',
       '......................A.',
       '......................A.',
-      '........FFFF.......BBB..',
-      '..tt...............BBB..',
-      '..tt.h........h....BBB..',
-      '........TTTT..QQ...BBB..',
+      '........FFFF........BBB.',
+      '..tt................BBB.',
+      '..tt.h........h.....BBB.',
+      '........TTTT..QQ....BBB.',
       '........................',
+    ],
+  },
+  {
+    id: "C1", title: "8 × 8 m · walk-up, andar de cima · quitinete", note: "O menor: a escada e o banheiro nos fundos, um cômodo só para a rua, com a cama encostada nas janelas e a cozinha junto da porta.",
+    rooms: [
+      "#WW##WW##WW##WW#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#ssssssssssssss#",
+      "#+EE++++++++DD+#",
+      "#SSSSSSSSSS+hhh#",
+      "#SSSSSSSSSS+hhh#",
+      "#SSSSSSSSSS+hhh#",
+      "#SSSSSSSSSS+hhh#",
+      "#WW##WW##WW##WW#",
+    ],
+    furn: [
+      "................",
+      "..TTTT.....BBBB.",
+      "...........BBBB.",
+      "...........BBBB.",
+      "..FFFF..........",
+      "......htt.....A.",
+      ".......tt.....A.",
+      "..............A.",
+      "................",
+      "....KKKKONGG....",
+      "................",
+      "..............V.",
+      "................",
+      "............HH..",
+      "............HHC.",
+      "................",
+    ],
+  },
+  {
+    id: "D1", title: "10 × 12 m · walk-up, andar de cima · 2 quartos", note: "Um quarto para a rua, outro para os fundos (os dois com janela; as laterais são parede de vizinho). A sala e a cozinha abertas no meio; o banheiro comprido, com a banheira, abre na sala.",
+    rooms: [
+      "#WW##WW##WW##WW##WW#",
+      "#bbbbbbb+llllllllll#",
+      "#bbbbbbb+llllllllll#",
+      "#bbbbbbbDllllllllll#",
+      "#bbbbbbbDllllllllll#",
+      "#bbbbbbb+llllllllll#",
+      "#bbbbbbb+llllllllll#",
+      "#bbbbbbb+llllllllll#",
+      "#bbbbbbb+llllllllll#",
+      "#++++++++llllllllll#",
+      "#kkkkkkkkllllllllll#",
+      "#kkkkkkkkllllllllll#",
+      "#kkkkkkkkllllllllll#",
+      "#kkkkkkkkllllllllll#",
+      "#kkkkkkkkllllllllll#",
+      "#+EE+++++DD++DD++++#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#SSSSSS+hhh+bbbbbbb#",
+      "#WW##WW##WW##WW##WW#",
+    ],
+    furn: [
+      "....................",
+      ".....QQ...TTTT......",
+      ".BBB.h..............",
+      ".BBB................",
+      ".BBB................",
+      ".BBB......FFFF......",
+      "....................",
+      "....................",
+      ".AAA................",
+      "....................",
+      ".KKKONGG............",
+      "..............htt...",
+      "...............tt...",
+      "....................",
+      "....................",
+      "....................",
+      "..................A.",
+      "........V.........A.",
+      "..................A.",
+      "........C.......BBB.",
+      "................BBB.",
+      ".........HH..h..BBB.",
+      ".........HH..QQ.BBB.",
+      "....................",
+    ],
+  },
+  {
+    id: "O1", title: "12 × 12 m · escritório baixo (até 5 andares, sem elevador)", note: "Direção C. A escada e o hall no meio; o open space com a copa na frente; a sala de reunião e a do gerente nos fundos; um banheiro no miolo. A porta do escritório (E) tranca fora do horário.",
+    rooms: [
+      "#WW##WW##WW##WW##WW##WW#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#qqqqqqpppppppppppppppp#",
+      "#++++++++++++EE++++++++#",
+      "#SSSSSSSS........+hhhhh#",
+      "#SSSSSSSS........Dhhhhh#",
+      "#SSSSSSSS........Dhhhhh#",
+      "#SSSSSSSS........+hhhhh#",
+      "#+++++++++DD++DD+++++++#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#nnnnnnnnnnn+mmmmmmmmmm#",
+      "#WW##WW##WW##WW##WW##WW#",
+    ],
+    furn: [
+      "........................",
+      ".KKKN.................P.",
+      ".........QQ..QQ..QQ.....",
+      ".........h...h...h......",
+      ".G......................",
+      ".G.tth...h...h...h......",
+      "...tt....QQ..QQ..QQ.....",
+      "........................",
+      "........................",
+      "........................",
+      "......................C.",
+      "........................",
+      "........................",
+      "......................V.",
+      "........................",
+      "........................",
+      "....h.h.h...........FFF.",
+      "....ttttt...............",
+      "....ttttt...............",
+      "....ttttt........QQ...A.",
+      "....h.h.h........h....A.",
+      "......................A.",
+      "...TTTT.................",
+      "........................",
+    ],
+  },
+  {
+    id: "M1", title: "16 × 8 m · motel, um andar (o começo do jogo)", note: "Cada quarto abre direto para o estacionamento (R), com a janela ao lado da porta e o banheiro nos fundos; a recepção na ponta, com o balcão e a sala do gerente. O quarto do jogador é um destes.",
+    rooms: [
+      "#WW##RR##WW##RR##WW##RR##RR##WW#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#bbbbbbb+bbbbbbb+bbbbbbb+rrrrrr#",
+      "#++DD++++++DD++++++DD++++rrrrrr#",
+      "#hhhhhhh+hhhhhhh+hhhhhhh+rrrrrr#",
+      "#hhhhhhh+hhhhhhh+hhhhhhh+rrrrrr#",
+      "#hhhhhhh+hhhhhhh+hhhhhhh+rrrrrr#",
+      "#hhhhhhh+hhhhhhh+hhhhhhh+rrrrrr#",
+      "#WW##WW##WW##WW##WW##WW##WW##WW#",
+    ],
+    furn: [
+      "................................",
+      "................................",
+      ".....htt.....htt.....htt....FFF.",
+      "................................",
+      ".BBBB....BBBB....BBBB...........",
+      ".BBBB....BBBB....BBBB....KKKK...",
+      ".BBBB....BBBB....BBBB...........",
+      "..........................h.....",
+      "................................",
+      ".....TTT.....TTT.....TTT........",
+      ".............................h..",
+      ".V.......V.......V...........QQ.",
+      ".........................A......",
+      ".C....HH.C....HH.C....HH.A......",
+      "......HH......HH......HH........",
+      "................................",
+    ],
+  },
+  {
+    id: "T1", title: "8 × 10 m · o telhado", note: "A escada termina numa casinha com porta; o resto é laje com parapeito (#), a caixa d'água e o ar-condicionado. Uma cadeira de plástico e um vaso: alguém do prédio sobe para fumar (e o modo cozy).",
+    rooms: [
+      "################",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#xxxxxxxxxxxxxx#",
+      "#++++DD+++++xxx#",
+      "#SSSSSSSSSS+xxx#",
+      "#SSSSSSSSSS+xxx#",
+      "#SSSSSSSSSS+xxx#",
+      "#SSSSSSSSSS+xxx#",
+      "################",
+    ],
+    furn: [
+      "................",
+      "................",
+      "..UU............",
+      "..UU......ZZZ...",
+      "..........ZZZ...",
+      "..........ZZZ...",
+      "................",
+      "................",
+      "................",
+      "......hP........",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
     ],
   },
 ];
 
-// the bedroom's arrangements (3 x 3.5 m, door on the right at rows 3-4, windows over cols 0-1 and 4-5)
-const BEDROOMS = [
-  { name: 'padrão', who: 'renda média', rows: ['....QQ', 'BBB.h.', 'BBB...', 'BBB...', 'BBB...', '......', 'AAA...'] },
-  { name: 'estudo', who: 'estudante, programador', rows: ['....QQ', 'A...h.', 'A.....', 'A.....', '..BBBB', '..BBBB', '..BBBB'] },
-  { name: 'aperto', who: 'renda baixa: colchão no chão, sem mesa', rows: ['.....P', 'BBB...', 'BBB...', 'BBB...', 'BBB...', '......', '.AA...'] },
-];
+// the arrangements by room (section 7): each room's frame (walls, W windows, D doors, o open sides) and three ways to furnish it
+const ROOMLIB = [{"room": "A1 quarto", "who": "renda média", "frame": ["#WW##WW#", "#......#", "#......#", "#......D", "#......D", "#......#", "#......#", "#......#", "########"], "rows": ["....QQ", "BBB.h.", "BBB...", "BBB...", "BBB...", "......", "AAA..."]}, {"room": "A1 quarto", "who": "estudante", "frame": ["#WW##WW#", "#......#", "#......#", "#......D", "#......D", "#......#", "#......#", "#......#", "########"], "rows": ["....QQ", "A...h.", "A.....", "A.....", "..BBBB", "..BBBB", "..BBBB"]}, {"room": "A1 quarto", "who": "renda baixa", "frame": ["#WW##WW#", "#......#", "#......#", "#......D", "#......D", "#......#", "#......#", "#......#", "########"], "rows": [".....P", "BBB...", "BBB...", "BBB...", "BBB...", "......", ".AA..."]}, {"room": "A1 sala", "who": "renda média", "frame": ["##WW##WW#", "#.......#", "#.......#", "D.......#", "D.......#", "#.......#", "#.......#", "#.......#", "#.......#", "o.......#", "o.......#", "o.......#", "o.......#", "o.......#", "#####DD##"], "rows": [".TTTT..", ".......", ".......", ".......", ".FFFF.r", ".......", "......S", "......S", ".......", "...htt.", "....tt.", ".......", "......P"]}, {"room": "A1 sala", "who": "casal, renda alta", "frame": ["##WW##WW#", "#.......#", "#.......#", "D.......#", "D.......#", "#.......#", "#.......#", "#.......#", "#.......#", "o.......#", "o.......#", "o.......#", "o.......#", "o.......#", "#####DD##"], "rows": [".TTTT..", ".......", ".......", "......P", ".FFFF..", ".......", ".r..r..", ".......", ".......", "..htth.", "..htth.", ".......", "SS....."]}, {"room": "A1 sala", "who": "gamer", "frame": ["##WW##WW#", "#.......#", "#.......#", "D.......#", "D.......#", "#.......#", "#.......#", "#.......#", "#.......#", "o.......#", "o.......#", "o.......#", "o.......#", "o.......#", "#####DD##"], "rows": [".TTT.QQ", ".....h.", ".FFF...", ".......", ".......", ".......", ".......", ".......", ".......", "....tt.", "...htt.", ".......", "......."]}, {"room": "A1 cozinha", "who": "padrão", "frame": ["########o", "#.......o", "#.......o", "#.......o", "#.......o", "#.......o", "##DD#####"], "rows": ["GGKKON.", ".......", ".......", ".......", "......."]}, {"room": "A1 cozinha", "who": "família", "frame": ["########o", "#.......o", "#.......o", "#.......o", "#.......o", "#.......o", "##DD#####"], "rows": ["KKKONK.", "G......", "G.tt...", ".htth..", "......."]}, {"room": "A1 cozinha", "who": "bagunceiro", "frame": ["########o", "#.......o", "#.......o", "#.......o", "#.......o", "#.......o", "##DD#####"], "rows": ["KONKK..", ".......", ".......", ".......", "...GG.."]}, {"room": "A1 banheiro", "who": "chuveiro", "frame": ["#DD##", "#...#", "#...#", "#...#", "#...#", "##WW#"], "rows": ["..V", "...", "HH.", "HHC"]}, {"room": "A1 banheiro", "who": "chuveiro, vaso ao lado da pia", "frame": ["#DD##", "#...#", "#...#", "#...#", "#...#", "##WW#"], "rows": ["..V", "C..", "HH.", "HH."]}, {"room": "A1 banheiro", "who": "banheira", "frame": ["#DD##", "#...#", "#...#", "#...#", "#...#", "##WW#"], "rows": ["..V", "C..", "HHH", "HHH"]}, {"room": "B1 quitinete da frente", "who": "renda média", "frame": ["#WW##WW##WW##WW##WW##WW#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "############DD##DD######"], "rows": [".......TTTT..QQ....BBB", ".tth.........h.....BBB", ".tt................BBB", ".......FFFF........BBB", ".....................A", ".....................A", ".....................A", "KKKKONGG.............."]}, {"room": "B1 quitinete da frente", "who": "casal, renda alta", "frame": ["#WW##WW##WW##WW##WW##WW#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "############DD##DD######"], "rows": ["..TTTT.............BBB", "...................BBB", ".r.................BBB", "..FFFF.............BBB", "...................AAA", ".......htth...........", ".......htth...........", "GGKKKONK.............."]}, {"room": "B1 quitinete da frente", "who": "gamer", "frame": ["#WW##WW##WW##WW##WW##WW#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "############DD##DD######"], "rows": ["QQ......TTT.......BB..", "h.................BB..", "........FFF.......BB..", "..................BB..", "......................", ".....................P", "......................", "KKONGG................"]}, {"room": "B1 quitinete dos fundos", "who": "renda média", "frame": ["############DD#######DD#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#WW##WW##WW##WW##WW##WW#"], "rows": ["KKKKONGG..............", ".....................A", ".....................A", ".....................A", ".......FFFF........BBB", ".tt................BBB", ".tth.........h.....BBB", ".......TTTT..QQ....BBB"]}, {"room": "B1 quitinete dos fundos", "who": "casal, renda alta", "frame": ["############DD#######DD#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#WW##WW##WW##WW##WW##WW#"], "rows": ["GGKKKONK..............", ".......htth...........", ".......htth...........", "...................AAA", "..FFFF.............BBB", ".r.................BBB", "...................BBB", "..TTTT.............BBB"]}, {"room": "B1 quitinete dos fundos", "who": "gamer", "frame": ["############DD#######DD#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#......................#", "#WW##WW##WW##WW##WW##WW#"], "rows": ["KKONGG................", ".....................P", "......................", "..................BB..", "..................BB..", "........FFF.......BB..", "h.................BB..", "QQ......TTT..........."]}, {"room": "C1 quitinete", "who": "renda média", "frame": ["#WW##WW##WW##WW#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "##DD########DD##"], "rows": [".TTTT.....BBBB", "..........BBBB", "..........BBBB", ".FFFF.........", ".....htt.....A", "......tt.....A", ".............A", "..............", "...KKKKONGG..."]}, {"room": "C1 quitinete", "who": "estudante", "frame": ["#WW##WW##WW##WW#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "##DD########DD##"], "rows": ["QQ.......BB...", "h........BB...", ".........BB...", "S........BB...", "S.............", "..FFF.........", ".........tt...", "........htt...", "...KKONGG....."]}, {"room": "C1 quitinete", "who": "renda baixa", "frame": ["#WW##WW##WW##WW#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "#..............#", "##DD########DD##"], "rows": [".TTT..........", "..............", "..........BBB.", "..........BBB.", "..........BBB.", "..........BBB.", ".r............", "..............", "...KONGG......"]}, {"room": "D1 quarto da frente", "who": "renda média", "frame": ["#WW##WW##", "#.......#", "#.......#", "#.......D", "#.......D", "#.......#", "#.......#", "#.......#", "#.......#", "#########"], "rows": ["....QQ.", "BBB.h..", "BBB....", "BBB....", "BBB....", ".......", ".......", "AAA...."]}, {"room": "D1 quarto da frente", "who": "casal", "frame": ["#WW##WW##", "#.......#", "#.......#", "#.......D", "#.......D", "#.......#", "#.......#", "#.......#", "#.......#", "#########"], "rows": ["......P", "BBBB...", "BBBB...", "BBBB...", ".......", ".r.....", ".......", ".AAA..."]}, {"room": "D1 quarto da frente", "who": "leitor", "frame": ["#WW##WW##", "#.......#", "#.......#", "#.......D", "#.......D", "#.......#", "#.......#", "#.......#", "#.......#", "#########"], "rows": ["....QQ.", "....h..", "SS.....", ".......", ".BBB...", ".BBB..r", ".BBB...", ".BBB..."]}, {"room": "D1 sala", "who": "renda média", "frame": ["#WW##WW##WW#", "#..........#", "#..........#", "D..........#", "D..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "o..........#", "o..........#", "o..........#", "o..........#", "o..........#", "#DD##DD#####"], "rows": [".TTTT.....", "..........", "..........", "..........", ".FFFF.....", "..........", "..........", "..........", "..........", "..........", ".....htt..", "......tt..", "..........", ".........."]}, {"room": "D1 sala", "who": "família", "frame": ["#WW##WW##WW#", "#..........#", "#..........#", "D..........#", "D..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "o..........#", "o..........#", "o..........#", "o..........#", "o..........#", "#DD##DD#####"], "rows": ["..TTTT..P.", "..........", "..........", ".r........", "..FFFF..r.", "..........", "..........", "SS........", "..........", "...htth...", "...htth...", "..........", ".........P", ".........."]}, {"room": "D1 sala", "who": "gamer", "frame": ["#WW##WW##WW#", "#..........#", "#..........#", "D..........#", "D..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "o..........#", "o..........#", "o..........#", "o..........#", "o..........#", "#DD##DD#####"], "rows": [".TTT..QQ..", "......h...", "..........", ".FFF......", "..........", "..........", ".......r..", "..........", "..........", "..........", "......tt..", "......tth.", "..........", ".........."]}, {"room": "D1 cozinha", "who": "padrão", "frame": ["#########o", "#........o", "#........o", "#........o", "#........o", "#........o", "##DD######"], "rows": ["KKKONGG.", "........", "........", "........", "........"]}, {"room": "D1 cozinha", "who": "família", "frame": ["#########o", "#........o", "#........o", "#........o", "#........o", "#........o", "##DD######"], "rows": ["GGKKKON.", "........", "...tth..", "...tt...", "........"]}, {"room": "D1 cozinha", "who": "bagunceiro", "frame": ["#########o", "#........o", "#........o", "#........o", "#........o", "#........o", "##DD######"], "rows": ["KONKK...", "........", "........", "........", "....GG.."]}, {"room": "D1 banheiro com banheira", "who": "chuveiro", "frame": ["##DD#", "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", "##WW#"], "rows": ["...", "V..", "...", "C..", "...", ".HH", ".HH"]}, {"room": "D1 banheiro com banheira", "who": "banheira", "frame": ["##DD#", "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", "##WW#"], "rows": ["...", "V..", "C..", "...", "HH.", "HH.", "HH."]}, {"room": "D1 banheiro com banheira", "who": "chuveiro, pia e vaso juntos", "frame": ["##DD#", "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", "##WW#"], "rows": ["...", "..V", "..C", "...", "...", "HH.", "HH."]}, {"room": "D1 quarto dos fundos", "who": "renda média", "frame": ["##DD#####", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "##WW##WW#"], "rows": ["......A", "......A", "......A", "....BBB", "....BBB", ".h..BBB", ".QQ.BBB"]}, {"room": "D1 quarto dos fundos", "who": "criança", "frame": ["##DD#####", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "##WW##WW#"], "rows": ["......A", "......A", "BBB...A", "BBB....", "BBB....", "BBB....", ".....P."]}, {"room": "D1 quarto dos fundos", "who": "leitor", "frame": ["##DD#####", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "##WW##WW#"], "rows": [".......", ".....SS", ".......", "...BBBB", "...BBBB", "...BBBB", "r......"]}, {"room": "M1 quarto do motel", "who": "padrão", "frame": ["#WW##DD##", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "###DD####"], "rows": [".......", "....htt", ".......", "BBBB...", "BBBB...", "BBBB...", ".......", ".......", "....TTT"]}, {"room": "M1 quarto do motel", "who": "barato, duas de solteiro", "frame": ["#WW##DD##", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "###DD####"], "rows": [".......", ".......", "BB...BB", "BB...BB", "BB...BB", "BB...BB", ".......", ".......", "....TTT"]}, {"room": "M1 quarto do motel", "who": "bem cuidado", "frame": ["#WW##DD##", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", "###DD####"], "rows": ["......P", ".......", "BBBB...", "BBBB...", "BBBB...", ".....r.", "tth....", "tt.....", "....TTT"]}, {"room": "M1 banheiro do motel", "who": "padrão", "frame": ["###DD####", "#.......#", "#.......#", "#.......#", "#.......#", "#WW##WW##"], "rows": ["V......", ".......", "C....HH", ".....HH"]}, {"room": "M1 banheiro do motel", "who": "banheira", "frame": ["###DD####", "#.......#", "#.......#", "#.......#", "#.......#", "#WW##WW##"], "rows": ["V....HH", ".....HH", "C....HH", "......."]}, {"room": "M1 banheiro do motel", "who": "barato", "frame": ["###DD####", "#.......#", "#.......#", "#.......#", "#.......#", "#WW##WW##"], "rows": ["V.....C", ".......", "HH.....", "HH....."]}, {"room": "O1 open space", "who": "padrão", "frame": ["W##WW##WW##WW##WW#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "#######DD#########"], "rows": ["...............P", "..QQ..QQ..QQ....", "..h...h...h.....", "................", "..h...h...h.....", "..QQ..QQ..QQ....", "................", "................"]}, {"room": "O1 open space", "who": "baias", "frame": ["W##WW##WW##WW##WW#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "#######DD#########"], "rows": ["..QQ.QQ.QQ.QQ...", "..h..h..h..h....", "................", "................", "..h..h..h..h....", "..QQ.QQ.QQ.QQ...", "................", ".............SS."]}, {"room": "O1 open space", "who": "barato", "frame": ["W##WW##WW##WW##WW#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "o................#", "#######DD#########"], "rows": ["................", "..QQ....QQ......", "..h.....h.......", "................", ".........htt....", "..........tt....", "................", "...........P...."]}, {"room": "O1 sala de reunião", "who": "padrão", "frame": ["##########DD#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#WW##WW##WW##"], "rows": ["...........", "...h.h.h...", "...ttttt...", "...ttttt...", "...ttttt...", "...h.h.h...", "...........", "..TTTT....."]}, {"room": "O1 sala de reunião", "who": "grande", "frame": ["##########DD#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#WW##WW##WW##"], "rows": ["...........", ".h.h.h.h...", ".tttttttt..", ".tttttttt..", ".h.h.h.h...", "...........", ".........P.", "..........."]}, {"room": "O1 sala de reunião", "who": "barato", "frame": ["##########DD#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#...........#", "#WW##WW##WW##"], "rows": ["SS.........", "...........", "..htth.....", "..htth.....", "...........", ".r.r.......", "...........", "..........."]}, {"room": "O1 sala do gerente", "who": "padrão", "frame": ["##DD########", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#WW##WW##WW#"], "rows": ["..........", ".......FFF", "..........", "..........", "....QQ...A", "....h....A", ".........A", ".........."]}, {"room": "O1 sala do gerente", "who": "estante", "frame": ["##DD########", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#WW##WW##WW#"], "rows": ["........SS", "..........", "...QQ.....", "...h......", "..........", ".FFF......", "..........", ".........P"]}, {"room": "O1 sala do gerente", "who": "arquivo", "frame": ["##DD########", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#WW##WW##WW#"], "rows": ["..........", ".........A", "....QQ...A", ".....h...A", "..........", "..........", ".r.r......", ".........."]}];
 
 // ---------- drawing ----------
 const $ = (id) => document.getElementById(id);
@@ -373,7 +606,8 @@ function draw(rooms, furn, px = PX) {
     seen.add(key);
     if (comp.cells.length < 6) continue;
     const cx = (comp.x0 + comp.x1 + 1) / 2 * px, cy = (comp.y0 + comp.y1 + 1) / 2 * px;
-    o += `<text x="${cx}" y="${cy}" font-size="${px * 0.75}" text-anchor="middle" fill="#e8e6df" opacity=".55" font-family="Segoe UI,sans-serif">${ROOMS[ch][0].split(' ')[0]}</text>`;
+    const label = ROOMS[ch][0].split(' (')[0].split(' / ')[0], fs = Math.min(px * 0.75, (comp.x1 - comp.x0 + 1) * px * 0.9 / (label.length * 0.55));
+    o += `<text x="${cx}" y="${cy}" font-size="${fs}" text-anchor="middle" fill="#e8e6df" opacity=".6" font-family="Segoe UI,sans-serif">${label}</text>`;
   }
   return o + '</svg>';
 }
@@ -443,15 +677,23 @@ function check(F) {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (R[y][x] === 'S' || R[y][x] === 'R') starts.push([x, y]);
   const reach = flood(starts);
   const lost = comps.filter((c) => !c.cells.some(([x, y]) => reach.has(y * W + x)));
-  add('R4', !lost.length, lost.length ? lost.map((c) => ROOMS[c.ch][0] + ' sem acesso').join(', ') : 'todos os cômodos alcançáveis da escada ou da rua');
+  let shut = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (free(x, y) && !reach.has(y * W + x)) shut++;
+  const r4 = lost.map((c) => ROOMS[c.ch][0] + ' sem acesso');
+  if (shut) r4.push(`${shut} células de chão fechadas por móveis`);
+  add('R4', !r4.length, r4.length ? r4.join(', ') : 'todo o chão alcançável da escada ou da rua');
   // R5: both sides of each door free
   const blockedDoors = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (DOORS.has(R[y][x])) {
     const horiz = R[y][x - 1] && (DOORS.has(R[y][x - 1]) || DOORS.has(R[y][x + 1])) && !(R[y - 1] && DOORS.has(R[y - 1][x]));
     const sides = horiz ? [[x, y - 1], [x, y + 1]] : [[x - 1, y], [x + 1, y]];
-    for (const [a, b] of sides) if (b >= 0 && b < H && a >= 0 && a < W && !WALLS.has(R[b][a]) && M[b][a] !== '.') blockedDoors.push(`porta em (${x},${y})`);
+    for (const [a, b] of sides) {
+      if (b < 0 || b >= H || a < 0 || a >= W) continue; // a street door's outside
+      if (WALLS.has(R[b][a])) blockedDoors.push(`porta em (${x},${y}) contra parede`);
+      else if (M[b][a] !== '.') blockedDoors.push(`porta em (${x},${y}) bloqueada por móvel`);
+    }
   }
-  add('R5', !blockedDoors.length, blockedDoors.length ? blockedDoors.join(', ') + ' bloqueada' : 'portas livres');
+  add('R5', !blockedDoors.length, blockedDoors.length ? blockedDoors.join(', ') : 'portas livres, com chão dos dois lados');
   // R6: bedrooms have a window; a bathroom never opens into a kitchen
   const r6 = [];
   for (const c of comps) if (c.ch === 'b') {
@@ -532,9 +774,10 @@ function build() {
   }
   // the catalog
   const CAT = [
-    ['8 × 10', 2126, 'walk-up de tijolo e residencial baixo', 'A1, A0'], ['8 × 12', 1406, 'walk-up', 'A1 com uma faixa *'], ['8 × 8', 1335, 'walk-up, casa', 'a fazer'],
-    ['10 × 12', 1058, 'walk-up, residencial', 'a fazer'], ['10 × 10', 766, 'walk-up, residencial', 'a fazer'], ['12 × 12', 360, 'walk-up de duas casas por andar', 'B1'],
+    ['8 × 10', 2126, 'walk-up de tijolo e residencial baixo', 'A1, A0, T1 (telhado)'], ['8 × 12', 1406, 'walk-up', 'A1 com uma faixa *'], ['8 × 8', 1335, 'walk-up, casa', 'C1'],
+    ['10 × 12', 1058, 'walk-up, residencial', 'D1'], ['10 × 10', 766, 'walk-up, residencial', 'a fazer'], ['12 × 12', 360, 'walk-up de duas casas por andar, escritório baixo', 'B1, O1'],
     ['8 × 14 … 8 × 24', 517, 'walk-up fundo', 'faixas *'], ['10 × 14 … 10 × 24', 389, 'residencial fundo', 'faixas *'], ['12 × 14 … 12 × 24', 397, 'residencial, escritório baixo', 'faixas *'],
+    ['16 × 8 (motel)', '—', 'motel de um andar', 'M1'],
     ['torres: 16 × 16, 16 × 24, 20 × 20, 24 × 24, 24 × 32', 431, 'vidro, escritório, residencial alto (com elevador)', 'a fazer'],
   ];
   $('cattab').innerHTML = '<tr><th>tamanho (m)</th><th>prédios (semente 42)</th><th>quem usa</th><th>plantas</th></tr>' + CAT.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
@@ -549,11 +792,16 @@ function build() {
       <div class="plans"><div>${draw(F.rooms, F.furn)}</div><div><pre>${F.rooms.map((r, i) => r + '   ' + F.furn[i]).join('\n')}</pre></div></div>
       <div class="checks">${res.map(([id, ok, m]) => `<div class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${id} · ${m}</div>`).join('')}<div class="${all ? 'ok' : 'bad'}"><b>${all ? 'passa em todas as regras' : 'NÃO entra no jogo'}</b></div></div></div>`;
   }).join('');
-  // bedrooms: framed in their walls (door right at rows 3-4, windows on top)
-  $('rooms').innerHTML = BEDROOMS.map((B) => {
-    const rooms = ['#WW##WW#', ...B.rows.map((r, i) => '#' + 'b'.repeat(6) + (i === 2 || i === 3 ? 'D' : '+')), '########'];
-    const furn = ['........', ...B.rows.map((r) => '.' + r + '.'), '........'];
-    return `<div class="card">${draw(rooms, furn, 22)}<div class="cap"><b>${B.name}</b> · ${B.who}</div></div>`;
+  // the library: each room in its frame, three arrangements side by side
+  const groups = {};
+  for (const A of ROOMLIB) (groups[A.room] = groups[A.room] || []).push(A);
+  $('rooms').innerHTML = Object.entries(groups).map(([name, list]) => {
+    const px = Math.max(8, Math.min(18, Math.floor(300 / list[0].frame[0].length)));
+    return `<div class="card" style="grid-column:1/-1"><b>${name}</b> <span class="cap">(${list[0].frame[0].length - 2} × ${list[0].frame.length - 2})</span><div class="row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">` + list.map((A) => {
+      const rooms = A.frame.map((r) => r.replace(/\./g, 'b').replace(/o/g, '.'));
+      const furn = A.frame.map((r, y) => y === 0 || y === A.frame.length - 1 ? '.'.repeat(r.length) : '.' + A.rows[y - 1] + '.');
+      return `<div>${draw(rooms, furn, px).replace(/<text[^>]*opacity="\.6"[^>]*>[^<]*<\/text>/g, '')}<div class="cap">${A.who}</div></div>`;
+    }).join('') + '</div></div>';
   }).join('');
   // postos
   $('posttab').innerHTML = '<tr><th>posto</th><th>móvel</th><th>onde e para onde olha</th><th>duração</th></tr>' +

@@ -9,6 +9,13 @@
 - **Brilho que se mexe:** um reflexo só parece metal se andar quando o objeto se move; o deslocamento sai da inclinação (`HandSway` em `render/sway.ts`: a mão atrasada em relação à câmera + o balanço do braço pela velocidade do jogador). O mesmo `slide` desloca o degradê do cromo do celular (`brand.w` no uniform do corpo).
 - **LCD reflexivo:** o joelho de 0,35 deixava o visor legível na rua escura (a luz nas mãos é ~0,3 de noite, ~0,6–1,6 sob o poste); 0,8 com expoente 1,6 o apaga no escuro e o deixa fraco sob o poste.
 
+### Lições do manual de interiores (v1.1) — 2026-10-08
+- **"Todo cômodo alcançável" não basta:** o teste passava com um bolsão de chão fechado atrás da cama e do guarda-roupa. A regra certa é **toda célula de chão alcançável**; achou bolsões em 4 das 8 plantas que já "passavam".
+- **Porta contra parede:** uma porta de 2 caracteres deslocada em um fica metade sobre a parede, e o teste antigo pulava as células de parede. Os dois lados de toda porta têm de ser chão.
+- **Extrair os contornos das plantas por script** (paredes, portas, janelas, lados abertos) em vez de copiar à mão: foi a extração que mostrou a porta torta.
+- **Contar caracteres de cabeça erra:** montar as linhas por script com `assert` de largura, e só então colar no manual.
+- **Texto barato o Claude gera ele mesmo** (pedido do usuário): 51 arrumações com o validador custaram pouco, menos que um briefing e a conferência do retorno.
+
 ### Lições das placas de rua (0.13.7) — 2026-10-08
 - **O material `Board` é de outdoor:** desenha uma moldura escura nas bordas (até 0,2 m ou 5 % da largura) e limita a letra a 62 % da altura. Em peças pequenas (o nome e a centena da placa) a moldura virou faixas pretas. Placa pintada usa `plate: true` (sem moldura, letra a 86 % da altura, letras refletivas `kk >= 0.8 * fog`), empacotado como `bulbs = 2` em `gpu/world.ts`.
 - **Lido de +x, a direita do leitor é -y** no quadro do objeto: o que vai "à direita" numa placa fica em -y.
