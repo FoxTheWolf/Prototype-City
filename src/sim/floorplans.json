@@ -1098,6 +1098,218 @@
     "............HHC.....",
     "...................."
    ]
+  },
+  {
+   "id": "A0R",
+   "rooms": [
+    "#RR##WW##WW##WW#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#ccEsssssssssss#",
+    "#ccEsssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+sssssssssss#",
+    "#cc+++++++++DD+#",
+    "#SSSSSSSSSS+hhh#",
+    "#SSSSSSSSSS+hhh#",
+    "#SSSSSSSSSS+hhh#",
+    "#SSSSSSSSSS+hhh#",
+    "#WW##WW##WW##WW#"
+   ],
+   "furn": [
+    "................",
+    ".....TTTT..BBBB.",
+    "...........BBBB.",
+    "...........BBBB.",
+    ".....FFFF.......",
+    "..............A.",
+    "..............A.",
+    ".....htt......A.",
+    "......tt........",
+    "................",
+    "................",
+    "................",
+    "....KKKKONGG....",
+    "................",
+    "................",
+    "..............V.",
+    "................",
+    "............HH..",
+    "............HHC.",
+    "................"
+   ],
+   "rep": [
+    10,
+    11
+   ],
+   "depths": [
+    10,
+    12
+   ]
+  },
+  {
+   "id": "F0R",
+   "rooms": [
+    "#RR##WW##WW##WW##WW#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#ccEsssssssssssssss#",
+    "#ccEsssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+sssssssssssssss#",
+    "#cc+++++++++DD++DD+#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#SSSSSSSSSS+hhh+uuu#",
+    "#WW##WW##WW##WW##WW#"
+   ],
+   "furn": [
+    "....................",
+    ".....TTTT......BBBB.",
+    "...............BBBB.",
+    "...............BBBB.",
+    ".....FFFF...........",
+    "..................A.",
+    "..................A.",
+    ".....htt..........A.",
+    "......tt............",
+    "....................",
+    "....................",
+    "....................",
+    "....KKKKONGG........",
+    "....................",
+    "....................",
+    "..............V...w.",
+    "..................y.",
+    "............HH......",
+    "............HHC.....",
+    "...................."
+   ]
+  },
+  {
+   "id": "D0R",
+   "rooms": [
+    "#RR##WW##WW##WW##WW#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#ccElllllllllllllll#",
+    "#ccElllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc+lllllllllllllll#",
+    "#cc++++++DD++DD++++#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#SSSSSS+hhh+bbbbbbb#",
+    "#WW##WW##WW##WW##WW#"
+   ],
+   "furn": [
+    "....................",
+    ".....TTTT...........",
+    "....................",
+    "....................",
+    ".....FFFF...........",
+    "....................",
+    "....................",
+    "...............htt..",
+    "................tt..",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".....KKKONGG........",
+    "....................",
+    "....................",
+    "..................A.",
+    "........V.........A.",
+    "..................A.",
+    "........C.......BBB.",
+    "................BBB.",
+    ".........HH..h..BBB.",
+    ".........HH..QQ.BBB.",
+    "...................."
+   ]
+  },
+  {
+   "id": "B0R",
+   "rooms": [
+    "#RR##WW##WW##WW##WW##WW#",
+    "#cc+sssssssssssssssssss#",
+    "#cc+sssssssssssssssssss#",
+    "#cc+sssssssssssssssssss#",
+    "#ccEsssssssssssssssssss#",
+    "#ccEsssssssssssssssssss#",
+    "#cc+sssssssssssssssssss#",
+    "#cc+sssssssssssssssssss#",
+    "#cc+sssssssssssssssssss#",
+    "#cc+++++++++++++DD+++++#",
+    "#SSSSSSSSSS....+hhh+hhh#",
+    "#SSSSSSSSSS....+hhh+hhh#",
+    "#SSSSSSSSSS....+hhh+hhh#",
+    "#SSSSSSSSSS....+hhh+hhh#",
+    "#+++++++++++EE+++++++DD#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#ssssssssssssssssssssss#",
+    "#WW##WW##WW##WW##WW##WW#"
+   ],
+   "furn": [
+    "........................",
+    "........TTTT..QQ....BBB.",
+    ".....tt.......h.....BBB.",
+    ".....tth............BBB.",
+    "........FFFF........BBB.",
+    "......................A.",
+    "......................A.",
+    "......................A.",
+    ".....KKKKONGG...........",
+    "........................",
+    "..................V.CHH.",
+    ".....................HH.",
+    "................HH......",
+    "................HHC.V...",
+    "........................",
+    ".KKKKONGG...............",
+    "......................A.",
+    "......................A.",
+    "......................A.",
+    "........FFFF........BBB.",
+    "..tt................BBB.",
+    "..tt.h........h.....BBB.",
+    "........TTTT..QQ....BBB.",
+    "........................"
+   ]
   }
  ],
  "arrangements": [
@@ -2933,6 +3145,54 @@
     "F0",
     "F2",
     "FT"
+   ]
+  },
+  {
+   "name": "8 × 10 e 8 × 12 m (walk-up residencial)",
+   "floors": [
+    "A0R",
+    "A1",
+    "T1"
+   ]
+  },
+  {
+   "name": "8 × 10 e 8 × 12 m, residencial com lofts",
+   "floors": [
+    "A0R",
+    "A2",
+    "T1"
+   ]
+  },
+  {
+   "name": "10 × 10 m (walk-up residencial)",
+   "floors": [
+    "F0R",
+    "F1",
+    "FT"
+   ]
+  },
+  {
+   "name": "10 × 10 m, residencial com 2 quartos",
+   "floors": [
+    "F0R",
+    "F2",
+    "FT"
+   ]
+  },
+  {
+   "name": "10 × 12 m (walk-up residencial)",
+   "floors": [
+    "D0R",
+    "D1",
+    "DT"
+   ]
+  },
+  {
+   "name": "12 × 12 m (walk-up residencial)",
+   "floors": [
+    "B0R",
+    "B1",
+    "BT"
    ]
   }
  ]

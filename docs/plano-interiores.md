@@ -49,6 +49,9 @@
    móvel; a loja ganha um corredor livre até as portas de dentro dela (o banheiro dos funcionários); `tests/plans.ts`
    começa a andar também pela escada; 0 falhas em 3 sementes. **Cobertura: 12% dos prédios** (faltam os térreos
    residenciais e as faixas `*`; `tests/.out/cover.ts` mede). Os andares de cima só se alcançam com a escada (passo 4).
+   **Térreos residenciais desenhados (2026-10-08):** A0R (8×10/12), F0R, D0R, B0R, no padrão do C0, e 6 pilhas novas;
+   a cobertura subiu para ~50% (48–53% em 2 sementes). Falta: as faixas `*` dos lotes fundos (~25%), o 8×8 com loja,
+   escritórios e torres.
    - Um caractere = 0,5 m = 2 × 2 células de 25 cm (`CELL`).
    - **Parede de dentro `+`:** fica na célula de baixo do caractere (a de menor x ou y), como hoje ("a wall between
      two rooms is the low room's last cell"); a outra célula é do cômodo vizinho.
