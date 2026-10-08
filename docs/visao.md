@@ -1,6 +1,8 @@
 # Visão do jogo (entrevista com o usuário, 2026-10-04)
 
 > Respostas do usuário na reunião + entrevista. É a base para planejar; ler ao começar uma etapa nova. As decisões curtas também estão no CLAUDE.md.
+>
+> **Atenção (2026-10-08):** a numeração das etapas aqui é a antiga, e várias decisões foram revistas na "Entrevista do cronograma" (no fim deste arquivo): polícia e calor depois da 1.0, os canais fórum/Reynard/SMS, um sistema só para veículo, física, roupa e vozes. Em caso de conflito, vale o fim do arquivo e o `docs/cronograma.md`.
 
 ## O que é a 1.0
 - **Um mundo vivo que existe sem o jogador** (por isso o modo CCTV): as pessoas trabalham, ganham dinheiro e vivem. O jogador é **mais uma pessoa comum** nesse mundo. Faz quase tudo o que um NPC faz (dormir, trabalhar, comer, comprar, andar de carro, talvez lazer e minigames). O que o diferencia é **saber hackear e ter contatos**.
@@ -502,3 +504,4 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **A rua mais cheia (essencial na etapa de refinamento):** bancas de jornal, vendedores de comida, as plaquinhas de calçada do Kamurocho, os terrenos vazios virando quadras e feiras.
 - **O ASCII:** o usuário gosta da mistura atual com o PSX; a fidelidade maior veio para cortar a fadiga visual do ASCII grande em movimento, e ainda não cortou toda. O charme hoje é ser renderizado em ASCII e tudo ser sintetizado (nenhum arquivo de mídia), não ser 100% ASCII. **De dia, o fundo dos glifos deve seguir a luz do sol** (hoje fica escuro de dia; parece ser a cor do fundo dos glifos).
 - **Travadas:** medir antes de mexer (um gravador de quadros lentos no registro de playtest, com o tempo de cada fase); se o culpado for a simulação, ela vai para um Web Worker. Entra na 16.1.
+- **Os canais:** os trabalhos de hacking se pegam no fórum; a conversa com os fixers e o mentor, depois de aceitar, é no Reynard (se o primeiro contato começa por SMS ou já no Reynard, decidir antes da 1.0); o lado legítimo (TI, NPCs comuns) fica no SMS. NPCs comuns pedindo trabalhos pequenos: em aberto.
