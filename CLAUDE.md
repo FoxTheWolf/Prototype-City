@@ -388,6 +388,7 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas, `docs/listas-fixas.md`). Bugs novos entram aqui até a próxima organização.
+- **Dica do título desatualizada (visto em 2026-10-08):** "Stay away from the fire zone beyond the fence…" em `src/locale/tips.json`, mas a zona de fogo saiu (borda = mar). Tirar ou trocar as dicas da zona de fogo.
 - **`tests/makers.ts` falha (visto em 2026-10-07, já antes da 15.20b):** "the player starts on the giant" (3 vezes); olhar o que mudou no fabricante do celular inicial.
 - **CONTINUE escondido clicável sem save (visto em 2026-10-07):** no título, sem save, existe um botão CONTINUE invisível; clicado (por script), `saved` é `undefined` e o `main.ts` quebra em `saved.seed`. Para o jogador não acontece (não dá para clicar no invisível), mas o `titleChoice` devia ignorar CONTINUE sem save.
 - **Posts repetidos no Streetwire (visto na 15.17g, semente 42):** a mesma pessoa posta quase a mesma frase duas vezes em poucos minutos ("tried to fix the sink…" às 3 e às 4 min; o Eric Shi duas vezes aos 3 min). Olhar a geração em `sim/social.ts` (um intervalo mínimo por autor, ou não repetir o `pick`).
