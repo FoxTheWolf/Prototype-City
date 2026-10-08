@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de sinalização</title>
+<style>
+  :root {
+    --bg: #101113; --panel: #17181b; --ink: #e8e6df; --dim: #8d8b84; --line: #2a2b2f;
+    --street: #1f6b45; --white: #f2f1ec; --stop: #c8262b; --warn: #f2c230; --brown: #6b3e22; --serv: #1f4f9c;
+    --work: #f07d1e; --navy: #1d3a6e; --cyan: #3aa6d8; --spray: #ff6a13;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 'IBM Plex Mono', Consolas, monospace; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  header.cover { min-height: 60vh; display: grid; place-items: center; text-align: center; padding: 40px 0; border-bottom: 1px solid var(--line); }
+  header.cover svg { width: min(720px, 100%); height: auto; }
+  header.cover p { color: var(--dim); margin: 8px 0 0; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  nav.toc a { color: var(--dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--ink); }
+  section { padding: 44px 0 12px; border-bottom: 1px solid var(--line); }
+  h2 { font: 800 26px 'Arial Black', 'Segoe UI', sans-serif; margin: 0 0 6px; }
+  h2 small { font: 400 12px 'IBM Plex Mono', monospace; color: var(--dim); margin-left: 10px; }
+  h3 { font: 700 15px 'Segoe UI', sans-serif; margin: 22px 0 6px; }
+  p, li { max-width: 80ch; }
+  p.lead { color: var(--dim); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .card svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .card .cap { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .card .cap b { color: var(--ink); }
+  .rule { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0; }
+  .rule b { color: var(--spray); }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .sw i { display: block; height: 60px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+  .sw span b { display: block; color: var(--ink); }
+  .sw span em { color: var(--dim); font-style: normal; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  pre.ascii { background: #07080a; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 0; overflow-x: auto; line-height: 1.15; font-size: 14px; }
+  .bug { color: var(--spray); }
+</style>
+</head>
+<body>
+<main>
+<header class="cover">
+  <div>
+    <svg id="cover" viewBox="0 0 720 300"></svg>
+    <p>Manual de sinalização · a cidade de GRID DOWN · v1 · 2026-10-08</p>
+  </div>
+</header>
+<nav class="toc">
+  <a href="#p">1 · Princípios</a><a href="#letra">2 · A letra</a><a href="#cores">3 · Cores</a><a href="#ruas">4 · Ruas e trânsito</a>
+  <a href="#pe">5 · Orientação a pé</a><a href="#lojas">6 · Lojas e prédios</a><a href="#avisos">7 · Serviços e avisos</a>
+  <a href="#dist">8 · De perto e de longe</a><a href="#bugs">9 · O que conserta</a><a href="#regras">10 · Regras rápidas</a>
+</nav>
+
+<section id="p">
+  <h2>1 · Princípios <small>por que as placas existem</small></h2>
+  <p class="lead">No começo o jogador não tem o Maps, e quando a bateria acaba ele também não tem. A cidade precisa se explicar sozinha, como uma cidade americana de verdade em 2008: pelas placas. Cada placa responde a uma pergunta do jogador.</p>
+  <div class="rule"><b>1</b><span><b>Lê-se sem aprender.</b> As formas e as cores são as que o jogador conhece da vida real (a placa verde de rua, o PARE octogonal, a placa amarela de cuidado, a marrom dos marcos, o EXIT vermelho). Nenhum código inventado que precise de tutorial.</span></div>
+  <div class="rule"><b>2</b><span><b>O toque desta cidade é um só, a faixa do distrito:</b> cada distrito tem uma cor, e as placas de rua, os banners e os totens levam uma faixa fina dessa cor com o número do distrito. Quem presta atenção aprende os bairros pela cor; quem não presta não perde nada.</span></div>
+  <div class="rule"><b>3</b><span><b>Toda placa vem da simulação.</b> O nome da rua é o da grade, o número da porta é o do terreno, o OPEN/CLOSED segue o <code>isOpen</code>, a placa de câmera fica onde há câmera. Uma placa que mente quebra o jogo.</span></div>
+  <div class="rule"><b>4</b><span><b>Pontos de perto, ASCII de longe</b> (o princípio do texto no mundo): de perto cada letra é a grade 5 × 7 da cidade, em pontos de tinta ou de lâmpada; de longe, uma letra por célula; mais longe, uma faixa da cor da placa. Nunca esticar uma letra por várias células.</span></div>
+  <div class="rule"><b>5</b><span><b>Retrorrefletiva.</b> As placas de rua e de trânsito devolvem a luz para quem olha (como as de verdade): à noite, sob o poste ou com uma luz na mão, o branco acende; contra o sol, não ficam pretas.</span></div>
+  <div class="rule"><b>6</b><span><b>Sempre do lado certo e à vista.</b> Uma placa nunca fica dentro de outra peça (o braço do semáforo, a parede), atrás de um prédio, nem virada para a parede.</span></div>
+</section>
+
+<section id="letra">
+  <h2>2 · A letra <small>a 5 × 7 da cidade</small></h2>
+  <p>Uma fonte só para tudo o que é placa: a grade de 5 × 7 pontos que os letreiros de lâmpadas já usam (<code>FONT</code> em <code>render/signs.ts</code>). Pintada, cada ponto é um quadrado de tinta com um vão pequeno; acesa, é uma lâmpada. Não há outra fonte nas placas: a cidade inteira fala com a mesma voz, e o jogo desenha uma só.</p>
+  <div class="row">
+    <div class="card"><svg id="alpha" viewBox="0 0 520 150"></svg><div class="cap">O alfabeto pintado (branco sobre o verde de rua). Espaço entre letras: 1 ponto; entre palavras: 3.</div></div>
+    <div class="card"><svg id="sizes" viewBox="0 0 520 150"></svg><div class="cap"><b>Altura da letra</b> = 7 pontos. Placa de rua: 10 cm (o ponto, 1,4 cm). Suspensa: 20 cm. Número de porta: 8 cm. Aviso pequeno: 4 cm. A altura decide de onde se lê (seção 8).</div></div>
+  </div>
+  <h3>Símbolos</h3>
+  <p>Ícones em 9 × 9 pontos, no mesmo traço dos <code>SYMBOLS</code> das blades (P, as três bolas da casa de penhores, a cruz da farmácia, o copo do bar). Novos para a sinalização: o homem andando e a mão do semáforo de pedestre, a seta, o ônibus, o telefone, a câmera, o raio e o boneco saindo pela porta.</p>
+  <div class="card"><svg id="icons" viewBox="0 0 720 110"></svg><div class="cap">Os símbolos novos, 9 × 9. De longe, cada um vira um caractere (entre parênteses).</div></div>
+</section>
+
+<section id="cores">
+  <h2>3 · Cores <small>cada cor responde a uma pergunta</small></h2>
+  <div class="sw" id="swatches"></div>
+  <h3>A faixa do distrito</h3>
+  <p>Seis distritos, seis cores, todas fortes e diferentes do verde de rua. A faixa tem a altura de 2 pontos em cima da placa de rua, com o número do distrito à esquerda. Os banners dos postes e os totens são da mesma cor, inteiros.</p>
+  <div class="card"><svg id="districts" viewBox="0 0 720 120"></svg><div class="cap">Exemplo de nomes; os nomes e as cores de cada cidade saem da semente, a paleta é fixa.</div></div>
+</section>
+
+<section id="ruas">
+  <h2>4 · Ruas e trânsito</h2>
+  <h3>A placa de esquina</h3>
+  <p>Duas placas verdes no topo de um poste próprio, na quina da calçada, em cruz: a da avenida em cima, a da rua embaixo, cada uma paralela à sua via e legível dos dois lados. Leva a faixa do distrito e, à direita, a <b>centena do quarteirão</b> (400 = os números 400 a 499 daquele trecho): é assim que o jogador sabe se está perto do 412 sem mapa. Pé da placa a 2,6 m; nada a cobre.</p>
+  <div class="row">
+    <div class="card"><svg id="corner" viewBox="0 0 520 300"></svg><div class="cap">A placa de esquina, de frente e o par em cruz no poste.</div></div>
+    <div class="card"><svg id="mast" viewBox="0 0 520 300"></svg><div class="cap">A suspensa, no <b>fim do braço do semáforo, do lado de fora</b> (a ponta sobre a pista), presa por baixo do braço, com o nome da rua transversal e a seta de mão única quando houver. Nunca dentro do braço nem na frente do grupo focal.</div></div>
+  </div>
+  <h3>Regulamentação e advertência</h3>
+  <div class="card"><svg id="reg" viewBox="0 0 720 200"></svg><div class="cap">PARE (octógono, 75 cm), ONE WAY (seta branca no preto), NO PARKING (P cortado), cuidado (losango amarelo: escola, pedestres, obras adiante), DO NOT ENTER (círculo vermelho com a barra). Em postes próprios, a 2,1 m; o PARE só nos cruzamentos sem semáforo, como hoje.</div></div>
+  <h3>O semáforo de pedestre</h3>
+  <p>A caixa preta com os dois símbolos acesos, em lâmpadas: <b>o homem andando em branco</b> quando se pode atravessar, <b>a mão laranja</b> quando não, piscando antes de fechar. Sai o "GO" e o "X" de texto: o símbolo se lê de longe e é o que o jogador já conhece. A contagem regressiva (dois dígitos laranja) fica para as avenidas.</p>
+  <div class="card"><svg id="walk" viewBox="0 0 720 150"></svg><div class="cap">Andar, piscando, parado, e com a contagem nas avenidas.</div></div>
+  <h3>A placa de direção</h3>
+  <p>Marrom com letra branca, só para marcos e lugares públicos (museu, parque, estação): a seta, o nome e a distância ("&#8593; OLD MARLOW 0.3 MI"). No braço do semáforo, ao lado da suspensa, ou num poste próprio uma esquina antes. Nunca para uma loja.</p>
+</section>
+
+<section id="pe">
+  <h2>5 · Orientação a pé <small>achar o lugar sem o Maps</small></h2>
+  <div class="row">
+    <div class="card"><svg id="door" viewBox="0 0 520 260"></svg><div class="cap"><b>O número da porta:</b> branco, em vinil, no vidro de cima da porta (bandeira), ou em latão ao lado dela nas portas de madeira. Todo prédio tem, igual ao endereço da simulação. Par de um lado da rua, ímpar do outro.</div></div>
+    <div class="card"><svg id="banner" viewBox="0 0 520 260"></svg><div class="cap"><b>O banner do distrito:</b> dois panos verticais nos postes de luz das avenidas, na cor do distrito, com o nome e um desenho simples. Diz em que bairro se está de longe, de qualquer ângulo.</div></div>
+  </div>
+  <div class="row">
+    <div class="card"><svg id="totem" viewBox="0 0 520 300"></svg><div class="cap"><b>O totem YOU ARE HERE:</b> nas praças, nas saídas de estação e nas esquinas grandes: o mapa do bairro em volta (as ruas da grade, os marcos em marrom, o ponto vermelho), na cor do distrito. Ler o totem é o gesto de "olhar" (o mesmo de ler o preço).</div></div>
+    <div class="card"><svg id="dir" viewBox="0 0 520 300"></svg><div class="cap"><b>O diretório do prédio:</b> no saguão, ao lado do elevador: letras brancas encaixadas no feltro preto, atrás do vidro (o de 2008), andar por andar, com o nome de quem está lá (empresa ou apartamento). Vem da simulação: uma sala vazia fica em branco.</div></div>
+  </div>
+  <div class="row">
+    <div class="card"><svg id="bus" viewBox="0 0 520 220"></svg><div class="cap"><b>O ponto de ônibus:</b> a bandeira no poste com o ônibus, o número das linhas e o nome do ponto; no abrigo, o quadro de horários.</div></div>
+    <div class="card"><svg id="phone" viewBox="0 0 520 220"></svg><div class="cap"><b>O orelhão:</b> a placa PHONE com o fone, em cima da cabine ou na parede; a lista telefônica presa por um cabo embaixo (13.9).</div></div>
+  </div>
+</section>
+
+<section id="lojas">
+  <h2>6 · Lojas e prédios</h2>
+  <div class="rule"><b>1</b><span><b>O letreiro da fachada só na fachada que dá para a rua</b> e acima da porta da loja. Se esse lado está coberto por outro prédio, não há letreiro ali (a 13.16 gira o prédio para a porta dar para a rua).</span></div>
+  <div class="rule"><b>2</b><span><b>Loja sem frente para a rua (no beco):</b> uma blade vertical na esquina do beco com a rua, com o nome e uma <b>seta</b> apontando para a entrada.</span></div>
+  <div class="rule"><b>3</b><span><b>OPEN / CLOSED</b> na porta, pendurada por dentro do vidro, com o horário embaixo; segue o horário de verdade da loja. É o que diz ao jogador, da calçada, se vale entrar.</span></div>
+  <div class="rule"><b>4</b><span><b>EXIT</b> vermelho aceso sobre as portas de saída e as escadas (luz de emergência: fica acesa no apagão, como as de verdade). Nos corredores, a placa de andar ao lado do elevador e da escada ("3").</span></div>
+  <div class="row">
+    <div class="card"><svg id="shop" viewBox="0 0 520 260"></svg><div class="cap">A fachada: letreiro sobre a porta, o número, OPEN com o horário, e a blade com seta no beco.</div></div>
+    <div class="card"><svg id="exit" viewBox="0 0 520 260"></svg><div class="cap">EXIT aceso, a placa de andar e a botoeira do elevador.</div></div>
+  </div>
+</section>
+
+<section id="avisos">
+  <h2>7 · Serviços e avisos</h2>
+  <div class="row">
+    <div class="card"><svg id="danger" viewBox="0 0 520 240"></svg><div class="cap"><b>Da GridLink:</b> DANGER / HIGH VOLTAGE / KEEP OUT nas subestações e o selo do setor nas caixas dos postes (o manual da GridLink manda no logo).</div></div>
+    <div class="card"><svg id="cctv" viewBox="0 0 520 240"></svg><div class="cap"><b>CCTV IN OPERATION:</b> amarela, na parede embaixo de cada câmera de segurança dos prédios. Avisa o jogador que há câmera ali, como na vida real: é a parte legível do stealth.</div></div>
+  </div>
+  <div class="row">
+    <div class="card"><svg id="works" viewBox="0 0 520 220"></svg><div class="cap"><b>Obras:</b> laranja (ROAD WORK AHEAD, o cavalete listrado). <b>Polícia:</b> a fita amarela POLICE LINE DO NOT CROSS numa batida ou numa investigação.</div></div>
+    <div class="card"><svg id="plaque" viewBox="0 0 520 220"></svg><div class="cap"><b>A placa do marco:</b> bronze com letra em relevo, na base do marco, com o nome e o ano. (O marco em si fica para o manual de landmarks.)</div></div>
+  </div>
+</section>
+
+<section id="dist">
+  <h2>8 · De perto e de longe</h2>
+  <p>Cada placa tem três aparências pela distância, contadas em <b>pontos por célula</b> da tela (quantos pontos da letra caem numa célula do ASCII): com 3 ou mais, desenham-se os pontos; entre 3 e 0,7, uma letra por célula; abaixo, a placa vira uma faixa da sua cor (com o branco misturado). As distâncias abaixo são para a tela de 1080p com a grade de 80 linhas.</p>
+  <table>
+    <tr><th>placa</th><th>letra</th><th>pontos até</th><th>uma letra por célula até</th><th>faixa depois</th></tr>
+    <tr><td>esquina</td><td>10 cm</td><td>~4 m</td><td>~18 m</td><td>sim (verde)</td></tr>
+    <tr><td>suspensa</td><td>20 cm</td><td>~8 m</td><td>~36 m</td><td>sim (verde)</td></tr>
+    <tr><td>número da porta</td><td>8 cm</td><td>~3 m</td><td>~14 m</td><td>some</td></tr>
+    <tr><td>banner do distrito</td><td>12 cm</td><td>~5 m</td><td>~22 m</td><td>sim (a cor do distrito)</td></tr>
+    <tr><td>EXIT</td><td>15 cm</td><td>~6 m</td><td>~27 m</td><td>um ponto vermelho aceso</td></tr>
+    <tr><td>aviso pequeno (CCTV, OPEN)</td><td>4 cm</td><td>~1,5 m</td><td>~7 m</td><td>some (o símbolo fica)</td></tr>
+  </table>
+  <h3>No ASCII</h3>
+  <pre class="ascii" id="asc"></pre>
+  <p>De longe a placa de esquina é <span style="color:#6fd08c">=</span> verde, e o semáforo de pedestre é um <span style="color:#f2f1ec">i</span> branco ou uma <span style="color:#f07d1e">m</span> laranja. Mais perto, cada letra cai na célula do centro dela.</p>
+  <h3>Segurar o botão direito</h3>
+  <p>Segurar o botão direito por meio segundo aproxima a vista (o "apertar os olhos"): a placa do outro lado da rua passa a ser lida em uma letra por célula (13.17). Não entra no lugar do celular: é segurar, não clicar.</p>
+</section>
+
+<section id="bugs">
+  <h2>9 · O que este manual conserta <small>no jogo de hoje</small></h2>
+  <table>
+    <tr><th>hoje</th><th>pelo manual</th></tr>
+    <tr><td class="bug">A placa de rua dentro do braço do semáforo (<code>streetBlade</code>).</td><td>A de esquina num poste próprio; a suspensa no fim do braço, por baixo (seção 4).</td></tr>
+    <tr><td class="bug">O GO e o X do pedestre quase invisíveis.</td><td>O homem andando e a mão, em lâmpadas 9 × 9 (seção 4).</td></tr>
+    <tr><td class="bug">Placas escuras contra o sol.</td><td>Retrorrefletivas (princípio 5).</td></tr>
+    <tr><td class="bug">O PARE quadrado.</td><td>O octógono (seção 4).</td></tr>
+    <tr><td class="bug">Letreiro do lado errado ou coberto por outro prédio.</td><td>Só na fachada da rua; a blade com seta no beco (seção 6).</td></tr>
+    <tr><td class="bug">Sem número nas portas nem diretório.</td><td>Seção 5.</td></tr>
+    <tr><td>Placas de direção marrons com a fonte do sistema.</td><td>A 5 × 7 em tudo (seção 2).</td></tr>
+  </table>
+</section>
+
+<section id="regras">
+  <h2>10 · Regras rápidas</h2>
+  <div class="rule"><b>1</b><span>Uma fonte: a 5 × 7. Uma cor por função (seção 3). O único enfeite é a faixa do distrito.</span></div>
+  <div class="rule"><b>2</b><span>Tudo o que a placa diz sai da simulação; uma placa nunca mente.</span></div>
+  <div class="rule"><b>3</b><span>Nenhuma placa dentro de outra peça, atrás de prédio ou virada para a parede.</span></div>
+  <div class="rule"><b>4</b><span>Pontos de perto, uma letra por célula de longe, faixa mais longe.</span></div>
+  <div class="rule"><b>5</b><span>Retrorrefletiva na rua; acesa (lâmpadas) só no que tem luz própria: semáforo de pedestre, EXIT, letreiros.</span></div>
+  <div class="rule"><b>6</b><span>Tudo em código: placas são caixas e pontos, nunca imagem.</span></div>
+</section>
+</main>
+
+<script>
+// the city's 5x7 (a copy of FONT in src/render/signs.ts), and the new 9x9 symbols
+const FONT = {
+  A: [14, 17, 17, 31, 17, 17, 17], B: [30, 17, 17, 30, 17, 17, 30], C: [14, 17, 16, 16, 16, 17, 14],
+  D: [30, 17, 17, 17, 17, 17, 30], E: [31, 16, 16, 30, 16, 16, 31], F: [31, 16, 16, 30, 16, 16, 16],
+  G: [14, 17, 16, 23, 17, 17, 15], H: [17, 17, 17, 31, 17, 17, 17], I: [14, 4, 4, 4, 4, 4, 14],
+  J: [7, 2, 2, 2, 2, 18, 12], K: [17, 18, 20, 24, 20, 18, 17], L: [16, 16, 16, 16, 16, 16, 31],
+  M: [17, 27, 21, 21, 17, 17, 17], N: [17, 17, 25, 21, 19, 17, 17], O: [14, 17, 17, 17, 17, 17, 14],
+  P: [30, 17, 17, 30, 16, 16, 16], Q: [14, 17, 17, 17, 21, 18, 13], R: [30, 17, 17, 30, 20, 18, 17],
+  S: [15, 16, 16, 14, 1, 1, 30], T: [31, 4, 4, 4, 4, 4, 4], U: [17, 17, 17, 17, 17, 17, 14],
+  V: [17, 17, 17, 17, 17, 10, 4], W: [17, 17, 17, 21, 21, 21, 10], X: [17, 17, 10, 4, 10, 17, 17],
+  Y: [17, 17, 17, 10, 4, 4, 4], Z: [31, 1, 2, 4, 8, 16, 31],
+  0: [14, 17, 19, 21, 25, 17, 14], 1: [4, 12, 4, 4, 4, 4, 14], 2: [14, 17, 1, 2, 4, 8, 31],
+  3: [31, 2, 4, 2, 1, 17, 14], 4: [2, 6, 10, 18, 31, 2, 2], 5: [31, 16, 30, 1, 1, 17, 14],
+  6: [6, 8, 16, 30, 17, 17, 14], 7: [31, 1, 2, 4, 8, 8, 8], 8: [14, 17, 17, 14, 17, 17, 14],
+  9: [14, 17, 17, 15, 1, 2, 12], '&': [12, 18, 20, 8, 21, 18, 13], "'": [4, 4, 8, 0, 0, 0, 0], '.': [0, 0, 0, 0, 0, 12, 12],
+  '-': [0, 0, 0, 31, 0, 0, 0], ':': [0, 12, 12, 0, 12, 12, 0], '/': [1, 1, 2, 4, 8, 16, 16], '!': [4, 4, 4, 4, 4, 0, 4],
+  '^': [4, 14, 21, 4, 4, 4, 4], '>': [8, 4, 2, 31, 2, 4, 8], '<': [2, 4, 8, 31, 8, 4, 2],
+};
+const ICON = {
+  walk: { rows: [24, 24, 62, 89, 152, 24, 36, 66, 129], far: 'i' },
+  hand: { rows: [84, 84, 341, 341, 511, 510, 254, 124, 56], far: 'm' },
+  arrow: { rows: [16, 56, 124, 254, 56, 56, 56, 56, 56], far: '^' },
+  bus: { rows: [254, 511, 273, 273, 511, 511, 511, 238, 68], far: 'B' },
+  phone: { rows: [0, 448, 360, 288, 16, 8, 6, 3, 1], far: 'T' },
+  camera: { rows: [0, 508, 510, 511, 510, 508, 32, 112, 0], far: 'o' },
+  bolt: { rows: [24, 48, 96, 252, 24, 48, 96, 64, 128], far: 'Z' },
+  exit: { rows: [6, 6, 28, 52, 84, 12, 20, 34, 66], far: 'E' },
+};
+const C = { street: '#1f6b45', white: '#f2f1ec', stop: '#c8262b', warn: '#f2c230', brown: '#6b3e22', serv: '#1f4f9c', work: '#f07d1e', black: '#16171a', navy: '#1d3a6e', cyan: '#3aa6d8', red: '#ff3b2f', orange: '#ff8a2a', sky: '#0d1220', wall: '#3b3734', glass: '#1c2a33', bronze: '#8a6a3a' };
+const DIST = [['1', 'DOWNTOWN', '#d8a21d'], ['2', 'THEATER DIST', '#c2367a'], ['3', 'OLD MARLOW', '#7a4fc4'], ['4', 'HARBOR', '#2a9fd0'], ['5', 'IRONWORKS', '#d2552a'], ['6', 'NORTH GREEN', '#5fae3b']];
+const textW = (s, d) => [...s].reduce((w, ch) => w + (ch === ' ' ? 3 : 6) * d, -d);
+/** The 5x7 dots of a string, from x (left), y (top), d a dot's pitch; anchor 'm' centres it. */
+function txt(s, x, y, d, col, anchor) {
+  if (anchor === 'm') x -= textW(s, d) / 2; else if (anchor === 'e') x -= textW(s, d);
+  let o = '';
+  for (const ch of s) {
+    if (ch === ' ') { x += 3 * d; continue; }
+    const r = FONT[ch] || FONT['-'];
+    r.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row & (16 >> i)) o += `<rect x="${(x + i * d + d * 0.08).toFixed(2)}" y="${(y + j * d + d * 0.08).toFixed(2)}" width="${(d * 0.84).toFixed(2)}" height="${(d * 0.84).toFixed(2)}" fill="${col}"/>`; });
+    x += 6 * d;
+  }
+  return o;
+}
+function icon(name, x, y, d, col, round) {
+  let o = '';
+  ICON[name].rows.forEach((row, j) => { for (let i = 0; i < 9; i++) if (row & (256 >> i)) o += round ? `<circle cx="${x + i * d + d / 2}" cy="${y + j * d + d / 2}" r="${d * 0.42}" fill="${col}"/>` : `<rect x="${x + i * d + d * 0.08}" y="${y + j * d + d * 0.08}" width="${d * 0.84}" height="${d * 0.84}" fill="${col}"/>`; });
+  return o;
+}
+const S = (id, h) => { const e = document.getElementById(id); e.innerHTML = h; };
+const rr = (x, y, w, h, r, f, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${f}" ${extra}/>`;
+const night = (w, h) => `<rect width="${w}" height="${h}" fill="${C.sky}"/>`;
+const pole = (x, y0, y1, w = 8) => rr(x - w / 2, y0, w, y1 - y0, 2, '#7d8287');
+
+/** The street blade: green, the district's stripe with its number, the name, the block's hundred. */
+function blade(x, y, name, hund, dn, d = 3) {
+  const dc = DIST[dn - 1][2], w = textW(name, d) + textW(String(hund), d * 0.7) + d * 16, h = d * 13;
+  let o = rr(x, y, w, h, d, C.street, `stroke="${C.white}" stroke-width="${d * 0.5}"`);
+  o += rr(x + d * 0.5, y + d * 0.5, w - d, d * 2, 0, dc);
+  o += txt(String(dn), x + d * 1.5, y + d * 0.65, d * 0.24, C.black);
+  o += txt(name, x + d * 3, y + d * 4, d, C.white);
+  o += txt(String(hund), x + w - d * 2, y + d * 6, d * 0.7, C.white, 'e');
+  return { o, w, h };
+}
+
+function build() {
+  // cover: a night corner, the blades lit by the lamp
+  {
+    let o = night(720, 300) + rr(0, 250, 720, 50, 0, '#1a1b1e') + `<radialGradient id="lampg" cx=".5" cy=".2" r=".6"><stop offset="0" stop-color="#ffb347" stop-opacity=".35"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient><rect width="720" height="300" fill="url(#lampg)"/>`;
+    o += pole(360, 60, 250, 10);
+    const a = blade(0, 0, '5TH AVE', 400, 1, 4), b = blade(0, 0, 'MARLOW ST', 200, 3, 4);
+    o += blade(360 - a.w / 2, 30, '5TH AVE', 400, 1, 4).o + blade(360 - b.w / 2, 30 + a.h + 6, 'MARLOW ST', 200, 3, 4).o;
+    o += txt('SIGNAGE', 360, 200, 4, '#f2f1ec', 'm');
+    S('cover', o);
+  }
+  S('alpha', rr(0, 0, 520, 150, 6, C.street) + txt('ABCDEFGHIJKLM', 16, 14, 6, C.white) + txt('NOPQRSTUVWXYZ', 16, 64, 6, C.white) + txt('0123456789 &.-', 16, 110, 4, C.white));
+  S('sizes', night(520, 150) + [[10, 3], [20, 6], [8, 2.4], [4, 1.2]].map(([cm, d], i) => txt(`${cm} CM`, 20 + i * 125, 70 - d * 3.5, d, C.white)).join('') + txt('STREET  OVERHEAD  DOOR  NOTICE', 260, 125, 1.6, '#8d8b84', 'm'));
+  S('icons', night(720, 110) + Object.keys(ICON).map((k, i) => icon(k, 14 + i * 88, 12, 6, k === 'hand' ? C.orange : k === 'exit' ? '#62d26f' : C.white, k === 'walk' || k === 'hand') + txt(`(${ICON[k].far})`, 41 + i * 88, 80, 2.4, '#8d8b84', 'm')).join(''));
+  // swatches
+  document.getElementById('swatches').innerHTML = [
+    ['Verde de rua', '#1f6b45', 'nome de rua, suspensa'], ['Branco', '#f2f1ec', 'letra, borda'], ['Vermelho PARE', '#c8262b', 'parar, proibido, EXIT'],
+    ['Amarelo cuidado', '#f2c230', 'advertência, CCTV'], ['Marrom', '#6b3e22', 'marcos e lugares públicos'], ['Azul serviço', '#1f4f9c', 'ônibus, orelhão, hospital'],
+    ['Laranja obra', '#f07d1e', 'obras, desvio'], ['Preto', '#16171a', 'mão única, diretório'],
+  ].map(([n, c, u]) => `<div><i style="background:${c}"></i><span><b>${n}</b>${c}<br><em>${u}</em></span></div>`).join('');
+  S('districts', night(720, 120) + DIST.map(([n, name, c], i) => { const x = 12 + (i % 3) * 236, y = 12 + Math.floor(i / 3) * 52; return rr(x, y, 226, 42, 4, c) + txt(n, x + 10, y + 11, 3, C.black) + txt(name, x + 34, y + 14, 2.2, C.black); }).join(''));
+  // the corner
+  {
+    const a = blade(0, 0, '5TH AVE', 400, 1), b = blade(0, 0, 'MARLOW ST', 200, 3);
+    let o = night(520, 300) + blade(20, 20, '5TH AVE', 400, 1).o + txt('FRONT', 20, 70, 1.6, '#8d8b84');
+    o += pole(380, 120, 300) + blade(380 - a.w / 2 + 20, 90, '5TH AVE', 400, 1).o;
+    // the street's blade under it, square to it: seen edge-on from here, a thin green bar across the pole
+    o += rr(380 - 8, 132, 16, 39, 2, '#17553a', `stroke="${C.white}" stroke-width="1"`) + txt('MARLOW ST (EDGE-ON)', 400, 146, 1.4, '#8d8b84');
+    o += txt('2.6 M', 410, 250, 1.6, '#8d8b84');
+    S('corner', o);
+  }
+  // the mast arm
+  {
+    let o = night(520, 300) + pole(470, 40, 300, 14) + rr(60, 40, 418, 12, 3, '#7d8287');
+    o += rr(380, 52, 30, 70, 4, '#222') + [0, 1, 2].map((i) => `<circle cx="395" cy="${66 + i * 21}" r="7" fill="${['#3a1010', '#3a3010', '#42e06c'][i]}"/>`).join('');
+    const b = blade(0, 0, 'MARLOW ST', 200, 3, 4);
+    o += rr(110, 52, 3, 8, 0, '#aaa') + rr(250, 52, 3, 8, 0, '#aaa');
+    o += blade(70, 60, 'MARLOW ST', 200, 3, 4).o;
+    o += rr(70, 130, 110, 34, 3, C.black, `stroke="${C.white}" stroke-width="1.5"`) + txt('ONE WAY', 80, 140, 2, C.white) + icon('arrow', 156, 133, 3, C.white).replace(/rect/g, 'rect transform="rotate(90 169 146)"');
+    o += txt('THE END OF THE ARM - UNDER IT', 260, 270, 1.8, '#8d8b84', 'm');
+    S('mast', o);
+  }
+  // regulatory
+  {
+    const oct = (cx, cy, r) => { let p = ''; for (let i = 0; i < 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; p += `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)} `; } return p; };
+    let o = night(720, 200);
+    o += `<polygon points="${oct(80, 90, 62)}" fill="${C.stop}" stroke="${C.white}" stroke-width="4"/>` + txt('STOP', 80, 80, 5, C.white, 'm');
+    o += rr(175, 66, 130, 48, 4, C.black, `stroke="${C.white}" stroke-width="2"`) + `<polygon points="190,90 270,90 270,80 292,90 270,100 270,90" fill="${C.white}" stroke="${C.white}" stroke-width="8" stroke-linejoin="round"/>` + txt('ONE WAY', 200, 85, 2.4, C.black);
+    o += rr(330, 40, 90, 110, 4, C.white) + txt('NO', 375, 50, 3, C.stop, 'm') + `<circle cx="375" cy="105" r="28" fill="none" stroke="${C.stop}" stroke-width="5"/>` + txt('P', 375, 92, 4, C.black, 'm') + `<line x1="356" y1="86" x2="394" y2="124" stroke="${C.stop}" stroke-width="5"/>`;
+    o += `<polygon points="500,30 560,90 500,150 440,90" fill="${C.warn}" stroke="${C.black}" stroke-width="3"/>` + icon('walk', 478, 68, 5, C.black);
+    o += `<circle cx="650" cy="90" r="58" fill="${C.stop}" stroke="${C.white}" stroke-width="3"/>` + rr(605, 82, 90, 16, 2, C.white) + txt('DO NOT', 650, 50, 2.4, C.white, 'm') + txt('ENTER', 650, 112, 2.4, C.white, 'm');
+    S('reg', o);
+  }
+  // the walk signal
+  {
+    let o = night(720, 150);
+    const box = (x, inner) => rr(x, 15, 150, 120, 6, '#1b1c1f', 'stroke="#333" stroke-width="2"') + inner;
+    o += box(15, icon('walk', 45, 30, 10, C.white, true));
+    o += box(195, icon('hand', 225, 30, 10, C.orange, true) + `<text x="270" y="130" fill="#8d8b84" font-size="10" text-anchor="middle">piscando</text>`);
+    o += box(375, icon('hand', 405, 30, 10, C.orange, true));
+    o += box(555, icon('hand', 563, 40, 7, C.orange, true) + txt('12', 655, 50, 5.5, C.orange));
+    S('walk', o);
+  }
+  // door number
+  {
+    let o = rr(0, 0, 520, 260, 0, C.wall) + rr(180, 40, 160, 220, 2, '#2b2724') + rr(190, 50, 140, 40, 0, C.glass) + txt('412', 260, 60, 3.4, C.white, 'm');
+    o += rr(198, 100, 124, 160, 0, C.glass) + rr(320, 160, 10, 4, 1, '#c9b27a');
+    o += rr(380, 120, 70, 30, 3, C.bronze) + txt('414', 415, 128, 2, '#2a1f10', 'm') + txt('BRASS ON WOOD', 415, 158, 1.4, '#8d8b84', 'm');
+    S('door', o);
+  }
+  // district banner
+  {
+    let o = night(520, 260) + pole(260, 0, 260, 12);
+    const [n, name, c] = DIST[1];
+    for (const sx of [-1, 1]) {
+      const x = sx < 0 ? 168 : 272;
+      o += rr(x, 30, 80, 180, 2, c) + rr(sx < 0 ? 248 : 266, 34, 6, 3, 0, '#999') + txt(n, x + 40, 46, 5, C.black, 'm') + txt('THEATER', x + 40, 110, 1.8, C.black, 'm') + txt('DISTRICT', x + 40, 128, 1.8, C.black, 'm');
+      o += `<path d="M${x + 25} 165 q15 -20 30 0 q-15 20 -30 0" fill="${C.black}" opacity=".5"/>`;
+    }
+    S('banner', o);
+  }
+  // totem
+  {
+    const c = DIST[2][2];
+    let o = night(520, 300) + rr(170, 20, 180, 270, 6, c) + rr(180, 60, 160, 180, 2, '#efeee9');
+    o += txt('YOU ARE HERE', 260, 34, 1.9, C.black, 'm');
+    for (let i = 0; i < 5; i++) o += rr(180, 70 + i * 36, 160, 6, 0, '#b9b6ad') + rr(188 + i * 36, 60, 6, 180, 0, '#b9b6ad');
+    o += rr(232, 108, 26, 20, 0, C.brown) + `<circle cx="263" cy="150" r="6" fill="${C.stop}"/>` + txt('3 OLD MARLOW', 260, 255, 1.6, C.black, 'm');
+    S('totem', o);
+  }
+  // building directory
+  {
+    let o = night(520, 300) + rr(130, 20, 260, 260, 4, '#7a6a52') + rr(142, 32, 236, 236, 2, '#111');
+    const rows = [['DIRECTORY', ''], ['8 VOSS & HALE', 'LAW'], ['7 KESTREL INS', ''], ['6', ''], ['5 APT 5A-5D', ''], ['4 PINE DENTAL', ''], ['3 APT 3A-3D', ''], ['2 NOVA TRAVEL', ''], ['L LOBBY', '']];
+    rows.forEach(([t], i) => { o += txt(t, 156, 44 + i * 24, i ? 1.9 : 2.3, i ? '#e8e6df' : C.warn); });
+    o += `<line x1="142" y1="268" x2="378" y2="32" stroke="#fff" stroke-opacity=".08" stroke-width="40"/>`;
+    S('dir', o);
+  }
+  // bus stop
+  {
+    let o = night(520, 220) + pole(140, 20, 220);
+    o += rr(150, 24, 110, 120, 4, C.serv) + icon('bus', 160, 34, 4, C.white) + txt('12', 230, 38, 2.6, C.white) + txt('34', 230, 64, 2.6, C.white) + txt('MARLOW', 205, 102, 1.8, C.white, 'm') + txt('& 5TH', 205, 120, 1.8, C.white, 'm');
+    o += rr(320, 70, 150, 120, 2, '#0e1a26', 'stroke="#555"') + txt('ROUTE 12', 330, 80, 1.6, C.white) + [0, 1, 2, 3, 4].map((i) => txt(`${6 + i}:15  ${6 + i}:45`, 330, 100 + i * 16, 1.4, '#b8c7d4')).join('');
+    S('bus', o);
+  }
+  // payphone
+  {
+    let o = night(520, 220) + rr(190, 20, 140, 46, 4, C.serv) + icon('phone', 202, 25, 4, C.white) + txt('PHONE', 290, 36, 2.4, C.white, 'm');
+    o += rr(205, 70, 110, 140, 4, '#5f646a') + rr(220, 85, 50, 70, 3, '#30343a') + rr(280, 90, 22, 60, 3, '#16171a') + rr(225, 170, 70, 28, 2, '#c9b27a') + txt('BOOK', 260, 180, 1.4, '#3a2b10', 'm');
+    S('phone', o);
+  }
+  // shop
+  {
+    let o = rr(0, 0, 520, 260, 0, C.sky) + rr(40, 40, 300, 220, 0, C.wall) + rr(60, 60, 260, 36, 2, '#1c1c1c') + txt("KESTREL'S DELI", 190, 70, 2.6, '#ffd36a', 'm');
+    o += rr(70, 110, 120, 150, 0, C.glass) + rr(210, 110, 100, 150, 0, C.glass) + txt('214', 140, 118, 2, C.white, 'm');
+    o += rr(220, 150, 60, 26, 2, '#fff') + txt('OPEN', 250, 155, 2, C.stop, 'm') + txt('7-22', 250, 182, 1.6, C.white, 'm');
+    o += rr(380, 40, 8, 220, 0, '#2a2928') + rr(392, 50, 40, 150, 3, '#c2367a') + [..."PAWN"].map((ch, i) => txt(ch, 412, 62 + i * 26, 2.6, C.white, 'm')).join('') + icon('arrow', 398, 168, 3, C.white).replace(/<rect /g, '<rect transform="rotate(90 412 182)" ');
+    o += txt('ALLEY', 420, 236, 1.6, '#8d8b84', 'm');
+    S('shop', o);
+  }
+  // exit
+  {
+    let o = rr(0, 0, 520, 260, 0, '#24262a') + rr(60, 30, 130, 50, 4, '#111') + `<rect x="60" y="30" width="130" height="50" rx="4" fill="${C.red}" opacity=".12"/>` + txt('EXIT', 125, 42, 4.4, C.red, 'm') + icon('exit', 168, 38, 2.4, C.red);
+    o += `<ellipse cx="125" cy="88" rx="80" ry="12" fill="${C.red}" opacity=".12"/>` + rr(70, 100, 110, 160, 0, '#3a3c40');
+    o += rr(300, 60, 140, 200, 0, '#6f7378') + rr(305, 65, 64, 195, 0, '#7f8388') + rr(371, 65, 64, 195, 0, '#7f8388');
+    o += rr(460, 120, 40, 60, 4, '#1a1b1e') + txt('3', 480, 130, 4, C.white, 'm') + rr(460, 190, 40, 50, 4, '#9aa0a6') + `<circle cx="480" cy="205" r="7" fill="#e8e6df"/><circle cx="480" cy="225" r="7" fill="#e8e6df"/>`;
+    S('exit', o);
+  }
+  // GridLink danger
+  {
+    let o = night(520, 240) + rr(110, 20, 300, 200, 6, C.white, 'stroke="#222" stroke-width="2"') + rr(110, 20, 300, 56, 6, C.stop) + rr(110, 60, 300, 16, 0, C.stop);
+    o += txt('DANGER', 260, 30, 5, C.white, 'm') + icon('bolt', 130, 100, 6, C.black) + txt('HIGH VOLTAGE', 290, 100, 2.6, C.black, 'm') + txt('KEEP OUT', 290, 130, 2.6, C.black, 'm');
+    o += txt('GRIDLINK', 395, 196, 1.5, C.navy, 'e') + txt('REPORT 1-800-555-0148', 125, 196, 1.3, '#555');
+    S('danger', o);
+  }
+  // cctv
+  {
+    let o = rr(0, 0, 520, 240, 0, C.wall) + icon('camera', 300, 20, 6, '#202022');
+    o += rr(170, 90, 180, 130, 4, C.warn, 'stroke="#222" stroke-width="2"') + icon('camera', 224, 100, 8, C.black) + txt('CCTV IN', 260, 180, 2.6, C.black, 'm') + txt('OPERATION', 260, 202, 2.2, C.black, 'm');
+    S('cctv', o);
+  }
+  // works & police tape
+  {
+    let o = night(520, 220) + `<polygon points="120,20 200,100 120,180 40,100" fill="${C.work}" stroke="${C.black}" stroke-width="3"/>` + txt('ROAD', 120, 70, 2.6, C.black, 'm') + txt('WORK', 120, 94, 2.6, C.black, 'm') + txt('AHEAD', 120, 118, 2.6, C.black, 'm');
+    o += `<g transform="rotate(-6 380 110)">${rr(250, 96, 260, 30, 0, C.warn)}${txt('POLICE LINE DO NOT CROSS', 380, 104, 1.8, C.black, 'm')}</g>`;
+    S('works', o);
+  }
+  // plaque
+  {
+    let o = rr(0, 0, 520, 220, 0, '#4a4640') + rr(130, 30, 260, 160, 10, C.bronze, 'stroke="#5a4320" stroke-width="6"');
+    o += txt('MARLOW', 260, 60, 3.4, '#3a2b10', 'm') + txt('CLOCK TOWER', 260, 100, 2.4, '#3a2b10', 'm') + txt('1931', 260, 140, 2.4, '#3a2b10', 'm');
+    S('plaque', o);
+  }
+  // the ascii view
+  document.getElementById('asc').innerHTML =
+`<span style="color:#555">             .  .   :    .</span>
+<span style="color:#8d8b84">   |</span>        <span style="color:#6fd08c">5TH AVE</span>          <span style="color:#6fd08c">=====</span>      <span style="color:#6fd08c">==</span>
+<span style="color:#8d8b84">   |</span>       <span style="color:#6fd08c">MARLOW ST</span>         <span style="color:#6fd08c">===</span>       <span style="color:#6fd08c">=</span>
+<span style="color:#8d8b84">   |</span>  <span style="color:#f2f1ec">i</span>                       <span style="color:#f07d1e">m</span>          <span style="color:#f07d1e">.</span>
+<span style="color:#8d8b84">   |    3 m             15 m            40 m</span>`;
+}
+build();
+</script>
+</body>
+</html>
