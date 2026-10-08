@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-08 — a 13.20 (Opus 5.5)
+- **A biblioteca precisa de uma passada no manual:** as molduras dela são das plantas antigas, e 16 cômodos de casa (as quitinetes grandes do térreo, o F2, o D0R, o G1) ficam com a camada fixa do andar, então todos os moradores deles têm a mesma casa. Sugiro, numa folga do C2/C3, que eu escreva 3 arrumações para cada um (texto conferido por script, barato) e atualize as molduras da biblioteca pelo jogo.
+- **A renda é provisória:** sai do tipo de trabalho (escritório = alta). Na 19 (economia) o salário de verdade substitui isso; a casa passa a ser pista de quanto a pessoa ganha, que é ótimo para o hacking (quem vale a pena investigar).
+- **O posto em pé é um ponto e uma direção, sem animação nem duração ainda:** a 17 lê isso. Se quiser, a duração da tabela da seção 8 do manual entra junto quando os NPCs entrarem nas casas.
+
 ## 2026-10-08 — a 13.19 (Opus 5.5)
 - **A luz sobre a porta:** o manual pede "luz em cima"; hoje quem faz esse papel é a bandeira acesa pelo saguão. Uma arandela de verdade seria mais uma fonte de luz por prédio (o orçamento de luzes da rua): proponho deixar para a 23 e ver se a bandeira já basta no PC.
 - **O EXIT no apagão:** a placa é desenhada sempre acesa (como deve, é bateria), mas não ilumina nada em volta; numa escada às escuras, um brilho vermelho fraco no chão e nas paredes perto da placa seria a cena mais noir do prédio. Barato se entrar junto da luz por cômodo da 13.22.
