@@ -69,10 +69,20 @@
    F sofa, r sofa (poltrona: tamanho 1), T tv, t table, K counter, O oven, N counter (pia), G fridge, V toilet?
    (precisa de `basin`), C toilet, H tub (chuveiro 2 × 2), P plant, w washer, y dryer, S shelf, X/Z/U novos.
    Rodar `checkArrangement` de novo depois de girar (deve passar sempre; se não passar é bug do giro).
-4. **A escada volta** (decisão da entrevista: escada em todos; elevador só com 6+ andares). O desenho do poço está
-   dormente em `render/interior.ts` (nenhum cômodo `stair` era gerado desde 2026-10-01) e no shader (`roomWalk`).
-   Subir e descer: como o elevador hoje muda `v.floor`, a escada muda o andar ao chegar no patamar. **Medir antes**
-   (o shader é caro de compilar). Telhado: a planta T1 (laje `x`, casinha da escada, parapeito).
+4. **A escada volta, em cubinhos (replanejado com o usuário em 2026-10-08).** Por que a antiga saiu: era feita de
+   primitivas sólidas até o chão (atravessava-se parte dela), não mostrava o andar de cima, e via-se a janela atrás
+   dela. O desenho antigo só existia no render da CPU; **o shader da GPU não tem escada.** O plano:
+   - **(a) Primeiro, os objetos do mundo em cubinhos na GPU** (o mesmo caminho dos aparelhos na mão, `gpu/voxBody.ts`,
+     com uma grade de ocupação por modelo): a escada é o primeiro modelo, os móveis do manual (seção 10) vêm depois
+     pelo **mesmo** sistema (um sistema só). Cada degrau é um bloco com o vão embaixo, nada sólido até o chão.
+   - **(b) O lance:** dentro da área `S`, um lance reto ao longo do lado comprido (~35°, escada de prédio antigo) e um
+     corredor no nível do andar ao lado, com corrimão; a ponta baixa fica do lado das entradas. A simulação dá a altura
+     dos pés pelo degrau (como `escapeZ` da escada de incêndio: o andar mais perto da altura atual) e só deixa entrar
+     no lance pelas pontas (entrar pelo meio ou por baixo bate).
+   - **(c) O poço:** sobre o lance, o teto fica aberto e o shader desenha o andar de cima por ele (`roomWalk` com o
+     andar vizinho só dentro do retângulo do poço). Medir a compilação antes e depois (o shader é caro de compilar).
+   - **(d) O telhado** (a planta T1: a laje `x`, a casinha da escada, o parapeito) entra junto: é onde a última escada chega.
+   - Antes do (a), a correção das janelas fantasmas (0.13.10l), que afetava qualquer objeto, a escada inclusa.
 5. **Interruptores (R10, 13.10g):** um por cômodo, na primeira parede que não é vidro, do lado da maçaneta; sala vazia
    e loja fechada apagadas.
 6. **Testes:** `tests/plans.ts` (as invariantes de hoje) passa a rodar também `checkFloor` nas plantas lidas do jogo
