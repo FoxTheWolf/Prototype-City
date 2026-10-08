@@ -2,6 +2,14 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-08 — brainstorming da reunião (Opus 5.5)
+- **As janelas reais viram reconhecimento:** com a fachada lendo a luz dos cômodos (13.22), olhar um prédio da rua conta a rotina de quem mora lá ("o 4º andar apaga às 23h"). É a primeira ferramenta orgânica de reconhecimento, de graça para a 18; anotar no caderno (22.1).
+- **Um binóculo (2008, barato):** aproximar a vista para ler a etiqueta da caixa da GridLink, a janela, a placa do carro. Alimenta o reconhecimento sem exigir chegar perto. Candidato a side grade na 19.
+- **Fixar já as subetapas da 18 com o Opus 4.8** (numa conta com folga): pela regra 5, as etapas 13–17 deveriam saber o que o hacking vai pedir delas (portas com controle eletrônico, câmeras nos postos, a luz por cômodo, os registros dos moradores). Hoje a 18 é a única etapa sem plano fixo, e é o coração.
+- **A 13.21 precisa do cybercafé e do motel como lojas de primeira classe:** são as duas do laço da primeira hora (a internet e a diária). Se a 13.21 tiver que cortar tipos, esses dois ficam.
+- **Toda reação implícita da 18 com um rosto:** uma lista de conferência na 18: cada sistema hackeável tem pelo menos uma reação visível (manchete, NPC reclamando, luz apagando, fila na loja). É o teste das duas camadas aplicado ao hacking.
+- **O mar a oeste:** o sol se pondo no mar visto da cidade no fim da tarde é a hora mais noir do dia; o leste daria o nascer, quando o jogador costuma estar dormindo.
+
 ## 2026-10-08 — a 13.20 (Opus 5.5)
 - **A biblioteca precisa de uma passada no manual:** as molduras dela são das plantas antigas, e 16 cômodos de casa (as quitinetes grandes do térreo, o F2, o D0R, o G1) ficam com a camada fixa do andar, então todos os moradores deles têm a mesma casa. Sugiro, numa folga do C2/C3, que eu escreva 3 arrumações para cada um (texto conferido por script, barato) e atualize as molduras da biblioteca pelo jogo.
 - **A renda é provisória:** sai do tipo de trabalho (escritório = alta). Na 19 (economia) o salário de verdade substitui isso; a casa passa a ser pista de quanto a pessoa ganha, que é ótimo para o hacking (quem vale a pena investigar).
