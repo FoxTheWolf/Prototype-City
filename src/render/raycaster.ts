@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -775,7 +775,7 @@ function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
   if (S.hd === 0 || S.hd === 2) {
     // (above the walk lights' heads, 3.0 m, so nothing of the light's pole meets them)
     const ave = roadName(city, true, S.i).toUpperCase(), st = roadName(city, false, S.j).toUpperCase(), z = 3.1;
-    const ah = String(blockHundred(S.j)), sh = String(blockHundred(S.i)), dk = districtOf(world, S.i, S.j);
+    const ah = String(blockHundred(S.j)), sh = String(blockHundred(S.i)), dk = DISTRICT_COLS[city.districts[districtOf(world, S.i, S.j)].type];
     // the pole on the sidewalk's corner: away from the crossing (a stop sign stands before it, a light past it)
     // and a little further from the road than the light's; 3 m up the sidewalk, so from no angle does it read as stuck on the light's pole
     const ax = stop ? S.c : -S.c, ay = stop ? S.s : -S.s, px = S.x + ax * 3.2 + S.s * 0.6, py = S.y + ay * 3.2 - S.c * 0.6;
@@ -932,7 +932,7 @@ function collectObjects(world: World, v: View): Obj[] {
         if (Math.abs(Math.cos(p.a)) > 0.7 && Math.hypot(p.x - v.x, p.y - v.y) < SIGNAL_FAR) {
           let d = lampDistrict.get(n);
           if (d === undefined) { d = nearestDistrict(city.districts, p.x, p.y); lampDistrict.set(n, d); }
-          const B = bannerModel(d);
+          const B = bannerModel(d, DISTRICT_COLS[city.districts[d].type]);
           out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: B, r: 0.7, h: 4.7, z0: 3.3, seed: 0 });
           out.push({ x: p.x, y: p.y, c: -Math.cos(p.a), s: -Math.sin(p.a), parts: B, r: 0.7, h: 4.7, z0: 3.3, seed: 0 });
         }
@@ -997,7 +997,7 @@ function collectObjects(world: World, v: View): Obj[] {
     if (near && S.i >= 0) {
       const ave = (S.hd & 1) === 0, name = roadName(world.city, ave, ave ? S.i : S.j).toUpperCase(), hund = String(blockHundred(ave ? S.j : S.i));
       const tip = 2 * m, w = bladeHalf(name, hund) * 3.2 + 0.3;
-      out.push({ x: S.x - S.s * (tip + w / 2), y: S.y + S.c * (tip + w / 2), c: S.c, s: S.s, parts: overheadBlade(name, hund, districtOf(world, S.i, S.j), -w / 2), r: w / 2 + 0.3, h: 6.2, z0: 5.4, seed: 0 });
+      out.push({ x: S.x - S.s * (tip + w / 2), y: S.y + S.c * (tip + w / 2), c: S.c, s: S.s, parts: overheadBlade(name, hund, DISTRICT_COLS[world.city.districts[districtOf(world, S.i, S.j)].type], -w / 2), r: w / 2 + 0.3, h: 6.2, z0: 5.4, seed: 0 });
     }
   });
   for (const f of city.floodlights) {

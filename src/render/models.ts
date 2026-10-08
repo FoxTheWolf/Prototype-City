@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { type RGB } from '../sim/city';
+import { type DistrictType, type RGB } from '../sim/city';
 import { type Population } from '../sim/citizens';
 import { looksOf } from '../sim/looks';
 import { Mat, part, Shape, type Part } from './objects';
@@ -285,11 +285,11 @@ export function lampModel(head: RGB): Part[] {
  * either side of the pole, below the arm, in the district's color with its number; read from +x (the arm's side;
  * a second one turned round shows the other). Says the neighbourhood from far off, from any angle.
  */
-export function bannerModel(district: number): Part[] {
-  const key = `banner|${district}`;
+export function bannerModel(district: number, col: RGB): Part[] {
+  const key = `banner|${district}|${col.join()}`;
   let m = lamps.get(key);
   if (m) return m;
-  const col = DISTRICT_COLS[district % DISTRICT_COLS.length], ink: RGB = [22, 23, 26];
+  const ink: RGB = [22, 23, 26];
   m = [];
   for (const sy of [-1, 1]) {
     const y0 = sy * 0.1, y1 = sy * 0.62;
@@ -828,8 +828,8 @@ export function walkSignal(w: number): Part[] {
 }
 
 const streetSigns = new Map<string, Part[]>();
-/** The districts' stripe colors (the signage manual, section 3: a fixed palette, a color a district by its index). */
-export const DISTRICT_COLS: RGB[] = [[216, 162, 29], [194, 54, 122], [122, 79, 196], [42, 159, 208], [210, 85, 42], [95, 174, 59]];
+/** The districts' stripe colors (the signage manual, section 3; a color a district type, decided 2026-10-08: the color says the kind of neighbourhood, the number which one). */
+export const DISTRICT_COLS: Record<DistrictType, RGB> = { financial: [216, 162, 29], commercial: [42, 159, 208], residential: [95, 174, 59], historic: [122, 79, 196], industrial: [210, 85, 42], theater: [194, 54, 122] };
 /** A street blade's height (m). */
 export const BLADE_H = 0.3;
 /** The street green and the letters' white (the manual: #1f6b45, #f2f1ec; the white a little brighter, as reflective). */
@@ -842,8 +842,8 @@ export const bladeHalf = (name: string, hund: string) => (0.135 * name.length + 
  * hundred at its right. Its back is plain: a corner gets two, back to back. `z0` its foot; `pole`: with its
  * own pole under it.
  */
-export function streetBlade(name: string, hund: string, district: number, z0: number, pole: boolean): Part[] {
-  const key = `${name}|${hund}|${district}|${z0}|${pole}`;
+export function streetBlade(name: string, hund: string, stripe: RGB, z0: number, pole: boolean): Part[] {
+  const key = `${name}|${hund}|${stripe.join()}|${z0}|${pole}`;
   let m = streetSigns.get(key);
   if (m) return m;
   // (read from +x, the reader's right is -y: the hundred there)
@@ -854,7 +854,7 @@ export function streetBlade(name: string, hund: string, district: number, z0: nu
   nm.text = name; nm.col2 = SIGN_WHITE; nm.lamp = 0; nm.plate = true;
   const hn = part(Box, 0.02, -hw + 0.03, z0 + 0.05, 0.022, split, z0 + H - 0.09, SIGN_GREEN, Board, '=');
   hn.text = hund; hn.col2 = SIGN_WHITE; hn.lamp = 0; hn.plate = true;
-  m = [b, nm, hn, part(Box, 0.02, -hw, z0 + H - 0.035, 0.024, hw, z0 + H, DISTRICT_COLS[district % DISTRICT_COLS.length], Solid, '-')];
+  m = [b, nm, hn, part(Box, 0.02, -hw, z0 + H - 0.035, 0.024, hw, z0 + H, stripe, Solid, '-')];
   // the pole stops under the blade: the sign sits on its cap, nothing crosses its face
   if (pole) m.push(part(Cyl, -0.04, -0.04, 0, 0.04, 0.04, z0, STEEL, Solid, '|', '.'));
   streetSigns.set(key, m);
@@ -866,8 +866,8 @@ export function streetBlade(name: string, hund: string, district: number, z0: nu
  * arm's piece carried on to it; the crossing road's name for the traffic it faces (+x). In the arm's frame:
  * y from `y0` outward.
  */
-export function overheadBlade(name: string, hund: string, district: number, y0: number): Part[] {
-  const key = `over|${name}|${hund}|${district}|${y0}`;
+export function overheadBlade(name: string, hund: string, stripe: RGB, y0: number): Part[] {
+  const key = `over|${name}|${hund}|${stripe.join()}|${y0}`;
   let m = streetSigns.get(key);
   if (m) return m;
   // (read from +x, the reader's right is -y, toward the pole: the hundred there)
@@ -882,7 +882,7 @@ export function overheadBlade(name: string, hund: string, district: number, y0: 
     part(Box, -0.06, y0, 5.95, 0.06, y1 + 0.05, 6.12, HOUSING, Solid, '-', '=', '|'),
     part(Box, 0.0, y0 + 0.3, z0 + H, 0.07, y0 + 0.34, 5.95, STEEL, Solid, '|'),
     part(Box, 0.0, y1 - 0.19, z0 + H, 0.07, y1 - 0.15, 5.95, STEEL, Solid, '|'),
-    b, nm, hn, part(Box, 0.09, y0 + 0.15, z0 + H - 0.05, 0.094, y1, z0 + H, DISTRICT_COLS[district % DISTRICT_COLS.length], Solid, '-'),
+    b, nm, hn, part(Box, 0.09, y0 + 0.15, z0 + H - 0.05, 0.094, y1, z0 + H, stripe, Solid, '-'),
   ];
   streetSigns.set(key, m);
   return m;
