@@ -451,3 +451,10 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 
 ### O banco e a linha (decisão do usuário, 2026-10-07)
 - O app do banco **não** recarrega o celular: os chips se trocam e o banco não teria como saber qual está no aparelho; a recarga é só pela operadora (o *100#). No lugar, o app mostra as agências do banco por perto (onde se saca dinheiro vivo no balcão).
+
+
+## Entrevista rápida de 2026-10-07 (fim da sessão da 15.20)
+- **Teclado do notebook:** 80 teclas (o desenho do manual) e o nub entre G, H e B (o texto do manual); corrigir a ficha do manual para 80.
+- **Escopo da 15.20b:** o corpo na GPU, as teclas afundando, as peças clicáveis com som e a luz do teclado. O desgaste fino por tecla e o LOD na mesa ficam para as etapas 18 e 20.
+- **Ordem dos aparelhos:** 15.20b → 15.20c (adesivos do jogador) → **15.21 o relógio** (manual primeiro, depois o 3D) → **15.22 o Jackdaw Mini** (era a 15.21).
+- **O relógio:** o de hoje (de aço, com termômetro e barras), refinado e levado ao 3D, com o manual fixando a forma, as cores e os botões. **Botões:** luz de fundo (de longe, uma luzinha que entrega o jogador), alarme/despertador (dormir no motel, esperar), cronômetro (a janela de um trabalho) e trocar o mostrador (hora, data, temperatura, fase da lua). **Ideias do Claude, a confirmar no manual:** bússola (achar o caminho sem o Maps, 13.9), a hora do nascer e do pôr do sol (quando a noite protege) e os batimentos (o fôlego da corrida, ligado ao app de fitness da etapa 22).
