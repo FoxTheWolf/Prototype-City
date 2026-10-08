@@ -1,7 +1,6 @@
 import L from '../locale/laptop.en.json';
 import { type Laptop } from './laptop';
 import { St } from './screen';
-import { hash3 } from '../core/rng';
 import { barOn, drawBar } from './osprey';
 
 /** The notebook's shared pieces: its keyboard, the terminal's inks, and the screen's content (look3d.ts draws the body). */
@@ -38,17 +37,17 @@ export type Text = (x: number, y: number, s: string, fg: readonly number[], bg: 
 /**
  * The screen's content, its top-left character at (sx, sy): the terminal's lines (or a program that
  * owns the screen: SETUP, the editor), the cursor, the status strip; off, a dark glass. The glass
- * follows the scene: a faint wash of the light at the player's hands over it, smudges of fingerprints
- * that catch that light, and off, the light's reflection across it. Every look of the notebook draws its screen with this.
+ * follows the scene: a faint wash of the light at the player's hands over it, and off, the light's reflection
+ * across it (the fingerprints' smudges went in 2026-10-08: they read as brown dirt). Every look of the notebook draws its screen with this.
  */
 export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Laptop, now: number, lit: (c: readonly number[], k?: number) => C3, light: Float32Array, W: number, H: number) {
   const S = P.shell, ink = INKS[S.ink], sbg = SCREEN_BG[S.ink];
-  // the glass over every cell: the light's wash, the smudges, and (off) the reflection
+  // the glass over every cell: the light's wash and (off) the reflection
   const Lr = Math.min(1.6, light[0]), Lg = Math.min(1.6, light[1]), Lb = Math.min(1.6, light[2]);
   // what the glass adds lies over the letters as much as over the paper: they are inside it
   const glass = (c: number, r: number, off: boolean): number => {
-    const sm = smudge(c / W, r / H), band = off ? Math.max(0, 1 - Math.abs(((c * 0.6 - r * 1.4 + 18) % 40) - 20) / 5) : 0;
-    return 3 + sm * 22 + band * 26;
+    const band = off ? Math.max(0, 1 - Math.abs(((c * 0.6 - r * 1.4 + 18) % 40) - 20) / 5) : 0;
+    return 3 + band * 26;
   };
   const raw = put;
   put = (x, y, ch, fg, bg) => {
@@ -147,13 +146,3 @@ export function drawScreen(put: Put, text: Text, sx: number, sy: number, P: Lapt
   if (!on) for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) put(sx + c, sy + r, 32, [0, 0, 0], [10, 10, 12]);
 }
 
-/** Fingerprints on the glass: a few oval smudges, 0..1 at (u, v), fractions of the screen's width and height. */
-function smudge(u: number, v: number): number {
-  let s = 0;
-  for (let k = 0; k < 7; k++) {
-    const cx = hash3(k, 41, 1), cy = hash3(k, 41, 2), rx = (2.5 + hash3(k, 41, 3) * 4) / 80, ry = (1 + hash3(k, 41, 4) * 1.6) / 22;
-    const d = ((u - cx) / rx) ** 2 + ((v - cy) / ry) ** 2;
-    if (d < 1) s += (1 - d) * (0.5 + 0.5 * hash3(Math.floor(u * 400), Math.floor(v * 200), k + 90));
-  }
-  return Math.min(1, s);
-}

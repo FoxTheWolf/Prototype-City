@@ -1,6 +1,7 @@
 import { Vox, voxAxes } from '../render/voxels';
 import { Img, Paint, type C3 } from '../render/paint2d';
 import { VOXP_AT, VOXP_U_FLOATS } from '../render/gpu/voxWatch';
+import { JACK_GLARE } from '../render/raycaster';
 import { HandSway, type HandMotion, type HandView } from '../render/sway';
 import { Vec } from './vec';
 import { headVec, H, LCD_DAY, LCD_LIT, W, type Buf } from './screen';
@@ -145,6 +146,8 @@ export function jackGpu(cx: number, cy2: number, k: number, light: ArrayLike<num
   // the light from above and a little behind the hand; the LCD reads by it below the knee as the watch's does
   U.set([-0.3 + mo.lat * 0.5, -0.7, 0.65, 0, light[0], light[1], light[2], lit ? 1 : 0, LCD.x0, LCD.y0, LCD.w, LCD.h, 0.8, 1.15, 0.6 + mo.lat * 0.4 - mo.tilt[1] * 9 + mo.tilt[0] * 5, mo.str,
     mo.glint[0], mo.glint[1], mo.glint[2], 0, 0, TOP, 55, 25, 0xc4, 0xdc, 0x62, 3], VOXP_AT.ldir);
+  // the lights its LCD mirrors (raycaster.ts viewGlare)
+  U.set(JACK_GLARE, VOXP_AT.glare);
   const pal = (i: number, col: C3, gloss: number, flags: number, mul = 1) => U.set([col[0], col[1], col[2], gloss, flags, 0, 0, mul], VOXP_AT.pal + i * 8);
   const SIG: C3 = [0xff, 0xd0, 0x2e];
   // matte plastic (a weak wide sheen), its print; the dish a darker yellow; the keys graphite rubber, OK lighter; BACK glossy red

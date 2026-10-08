@@ -9,6 +9,14 @@
 - **Brilho que se mexe:** um reflexo só parece metal se andar quando o objeto se move; o deslocamento sai da inclinação (`HandSway` em `render/sway.ts`: a mão atrasada em relação à câmera + o balanço do braço pela velocidade do jogador). O mesmo `slide` desloca o degradê do cromo do celular (`brand.w` no uniform do corpo).
 - **LCD reflexivo:** o joelho de 0,35 deixava o visor legível na rua escura (a luz nas mãos é ~0,3 de noite, ~0,6–1,6 sob o poste); 0,8 com expoente 1,6 o apaga no escuro e o deixa fraco sob o poste.
 
+### Lições do vidro unificado (0.15.56) — 2026-10-08
+- **As "manchas marrons" do notebook não eram o `SCREEN_REFL`:** zerá-lo não mudou nada. Achado isolando no shader (devolver só a `tmPic` dentro de `inTerm`): a imagem tinha uma faixa diagonal de brilho pintada **por célula** na CPU (`glassOver`), e o bloom da tela (`scrAt`) a borrava em blocos. Ao caçar um efeito, isolar a camada no shader antes de mexer nas constantes.
+- **WGSL: `select(${A}, ${B}, c)` com as duas constantes inteiras (`0`) vira `i32`** e o shader inteiro falha (tela preta, sem erro no console). Envolver em `f32(...)`.
+- **Ajuste feito só nas células não vale para os pixels HD:** o ganho do olho na `glassOver` escurecia o texto e deixava a web (HD) intacta. Efeito sobre a tela inteira vai no compositor (`lapGlass`).
+- **`project()` devolve null para um canto atrás do olho**, e o `glassBox` inteiro sumia (a tela apagava ao virar). Recorte do vidro à parte à frente (`glassSub`) e a homografia composta com a escala do recorte.
+- **Com o notebook aberto, o ponteiro ainda fica preso ~60 ms depois de soltar o direito:** o mouse nesse intervalo girava a vista para fora do centro. Só girar com `input.drag`.
+- **Teleportar o jogador para testar pode cair dentro de um prédio** (`player.inside >= 0`), e aí o glare desliga: conferir `inside` antes.
+
 ### Lições da 15.21 (o relógio em cubinhos) — 2026-10-07
 - **A camada HD tem só 3 pixels por célula** (`HD` em `render/hd.ts`): para um visor pequeno com detalhe (segmentos chanfrados, ícones), uma textura própria a 8 px/mm amostrada na resolução do monitor fica muito melhor; não vale passar pela HD e refazer depois.
 - **Um passe por aparelho, com o próprio uniform e as próprias células** (relógio: bindings 22–25), em vez de enfiar mais modelos no passe do notebook: as câmeras são de tipos diferentes (ortográfica e perspectiva) e o `t` dos dois não se compara.

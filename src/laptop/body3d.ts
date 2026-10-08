@@ -2,6 +2,7 @@ import { castVoxPersp, Vox, type VoxMat } from '../render/voxels';
 import { Img, Paint, star, type C3 } from '../render/paint2d';
 import { hash3 } from '../core/rng';
 import { LAP_AT, LAP_U_FLOATS } from '../render/gpu/voxLap';
+import { LAP_GLARE } from '../render/raycaster';
 
 /**
  * 15.20b: the notebook's body in little cubes of 2 mm, as the notebook's manual draws it
@@ -334,7 +335,8 @@ export const KEY_TOP = TOP + 1;
  */
 export function laptopGpu(cams: readonly (LapCam | null)[], rect: readonly number[], light: ArrayLike<number>, o: {
   on: boolean; lamp: boolean; disk: boolean; radio: boolean; charging: boolean; /** the stick's light */ usb: boolean;
-  /** the screen's mean light (0..255) */ ink: C3; down: (code: string) => boolean;
+  /** the screen's mean light (0..255) */ ink: C3;
+  /** the eye's gain on the screen's picture and the light's veil over it (0..255; look3d.ts glassOver) */ gain: number; veil: C3; down: (code: string) => boolean;
   maker: string; seed: number; bands: readonly string[]; shops: readonly string[];
 }): LapGpu {
   const B = LAP_GPU, U = B.uni, n = NX * NY * NZ, bytes = new Uint8Array(B.vox.buffer);
@@ -374,6 +376,9 @@ export function laptopGpu(cams: readonly (LapCam | null)[], rect: readonly numbe
   U.set([GLASS.x0 / CELL_MM, GLASS.x1 / CELL_MM, KEY_TOP + NY - GLASS.y1 / CELL_MM, KEY_TOP + NY - GLASS.y0 / CELL_MM], LAP_AT.scr);
   // the lamp: over the glass's top middle, at the lid's face, looking down onto the keys
   U.set([NX / 2, 1, KEY_TOP + NY - 3, o.lamp ? 1.1 : 0], LAP_AT.lamp);
+  // the lights its glass mirrors (raycaster.ts viewGlare), drawn over the screen by the compositor
+  U.set(LAP_GLARE, LAP_AT.glare);
+  U.set([o.veil[0], o.veil[1], o.veil[2], o.gain], LAP_AT.glass);
   const pal = lidPalette(deckPalette(built.ids, o.on, o.lamp), o);
   pal[M.Usb] = { col: [28, 28, 32], gloss: 0.2 };
   pal[M.UsbLed] = o.usb ? { col: [90, 160, 255], gloss: 0.3, glow: true } : { col: [50, 60, 80], gloss: 0.3 };

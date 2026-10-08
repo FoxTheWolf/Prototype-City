@@ -30,9 +30,9 @@ const GLOW_K = 1.4;
  * world (R.36: drawn after the interface layers, so the device does not hide it): the screen's mean light
  * (worked out each frame) times a tight core and a wide halo falling off with the distance from the screen's
  * edge, their reach a share of the screen's height. SCREEN_REFL: how strongly the glass reflects the frame's
- * bright lights (mirrored, blurred: the glow), where the screen is dark.
+ * bright lights (mirrored, blurred: the glow), where the screen is dark; LAP_REFL the same on the notebook's.
  */
-const CORE_K = 1.0, CORE_R = 0.06, HALO_K = 0.8, HALO_R = 0.4, SCREEN_REFL = 0.5;
+const CORE_K = 1.0, CORE_R = 0.06, HALO_K = 0.8, HALO_R = 0.4, SCREEN_REFL = 0.5, LAP_REFL = 0;
 /** How much the phone's and the watch's glow tints what it falls on before adding to it (a bright case would clip it away). */
 const HALO_TINT = 3;
 /**
@@ -42,7 +42,7 @@ const HALO_TINT = 3;
  * user, 2026-10-07: it hid the details). The same for every handheld screen: the phone, the notebook, the Jackdaw.
  */
 const SCR_K = 0.35, SCR_CAP = 0.07, SCR_RX = 4, SCR_RY = 3;
-/** The glare on the phone's glass: how bright its core and its halo (times the light's color and strength). */
+/** The glare on the phone's glass (and the notebook's): how bright its core and its halo (times the light's color and strength). */
 const GLARE_CORE = 0.55, GLARE_HALO = 0.08;
 
 const CU = /* wgsl */ `
@@ -145,6 +145,15 @@ fn glassUv(f: vec2f) -> vec2f {
   let w = dot(qi[2].xyz, q);
   return vec2f(dot(qi[0].xyz, q), dot(qi[1].xyz, q)) / select(w, 1e-6, abs(w) < 1e-6);
 }
+// the notebook screen's picture under its glass: the eye's gain (dimmer by day, brighter in the dark, its bright parts
+// rolled off) and the light's veil, over the cells and the pixels alike (look3d.ts glassOver)
+// a glare's core: a bright light seen in the glass burns almost white, its color only in the halo (2026-10-08)
+fn glareHot(c: vec3f) -> vec3f { return mix(c, vec3f(max(c.r, max(c.g, c.b))), 0.65); }
+fn lapGlass(c: vec3f) -> vec3f {
+  let g = select(1.0, lu.glass.w, lu.glass.w > 0.0);
+  let v = c * g; let r = select(v, 0.784 + (v - 0.784) * 0.35, v > vec3f(0.784));
+  return r + lu.glass.rgb / 255.0;
+}
 fn rgb(w: u32) -> vec3f { return vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0; }
 
 // the phone screen's bloom at u, v (across the whole glass): its bright parts blurred round it, from what shows
@@ -193,12 +202,12 @@ fn phBloom(uv: vec2f) -> vec3f {
       let sz = vec2i(textureDimensions(tmPic)); let m = s - u.tmOrigin;
       if (u.tmShow.x > 0) {
         // faced squarely: pixel for pixel
-        if (all(m >= vec2i(0)) && all(m < sz)) { let t = textureLoad(tmPic, m, 0); col = mix(col, t.rgb, t.a); }
+        if (all(m >= vec2i(0)) && all(m < sz)) { let t = textureLoad(tmPic, m, 0); col = mix(col, lapGlass(t.rgb), t.a); }
       } else {
         // from aside: leaning with the glass (the interface's cells the glass touches are left clear for it)
         let f = vec2f(s) + 0.5; let uv = glassUv(f);
         let d = sdQuad(f, vec2f(u.g0), vec2f(u.g1), vec2f(u.g2), vec2f(u.g3));
-        if (d <= 0.0) { let t = textureSampleLevel(tmPic, tmSamp, uv, 0.0); col = mix(col, t.rgb, t.a); }
+        if (d <= 0.0) { let t = textureSampleLevel(tmPic, tmSamp, uv, 0.0); col = mix(col, lapGlass(t.rgb), t.a); }
       }
     }
     // the phone's body, over the notebook's screen and under the interface as the HD layer's under-pixels were
@@ -243,7 +252,7 @@ fn phBloom(uv: vec2f) -> vec3f {
         let gp = select(bu.gp1, bu.gp0, k == 0); let gc = select(bu.gc1, bu.gc0, k == 0);
         if (gc.r + gc.g + gc.b > 0.0) {
           let e = (uv - gp.xy) / max(gp.zw, vec2f(1e-3)); let e2 = dot(e, e);
-          col += gc.rgb * (exp(-e2) * ${GLARE_CORE} + exp(-e2 / 9.0) * ${GLARE_HALO}) * gm;
+          col += (glareHot(gc.rgb) * exp(-e2) * ${GLARE_CORE} + gc.rgb * exp(-e2 / 9.0) * ${GLARE_HALO}) * gm;
         }
       }
     }
@@ -259,13 +268,24 @@ fn phBloom(uv: vec2f) -> vec3f {
     var f = (vec2f(s - u.tmOrigin) + 0.5) / vec2f(u.tmCell) - 0.5;
     if (u.tmShow.x == 0) { f = glassUv(vec2f(s) + 0.5) * vec2f(u.tmGrid) - 0.5; }
     col += min(scrAt(f, u32(u.uiGrid.x * u.uiGrid.y), u.tmGrid, vec2i(0), u.tmGrid) * ${SCR_K} * kTm, vec3f(${SCR_CAP}));
+    // the glare (2026-10-08, as the phone's): the lights its glass mirrors toward the eye (raycaster.ts LAP_GLARE)
+    let uv = (f + 0.5) / vec2f(u.tmGrid);
+    let gl = dot(col, vec3f(0.3, 0.5, 0.2)); let gm = max(0.3, 1.0 - gl * 1.6);
+    for (var k = 0; k < 2; k++) {
+      let gp = select(lu.gp1, lu.gp0, k == 0); let gc = select(lu.gc1, lu.gc0, k == 0);
+      if (gc.r + gc.g + gc.b > 0.0) {
+        let e = (uv - gp.xy) / max(gp.zw, vec2f(1e-3)); let e2 = dot(e, e);
+        col += (glareHot(gc.rgb) * exp(-e2) * ${GLARE_CORE} + gc.rgb * exp(-e2 / 9.0) * ${GLARE_HALO}) * gm;
+      }
+    }
   }
   if (phUv.x >= 0.0 || inTerm(s)) {
     // the screen's glass: the frame's bright lights mirrored on it, blurred (the world's glow only, in .a),
     // seen where the screen is dark
     let mx = clamp(u.grid.x - 1 - c.x, 0, u.grid.x - 1); let my = clamp(c.y, 0, u.grid.y - 1);
     let r = glow[u32(my * u.grid.x + mx)].a; let l = dot(col, vec3f(0.3, 0.5, 0.2));
-    col += vec3f(0.85, 0.9, 1.0) * r * ${SCREEN_REFL} * max(0.0, 1.0 - l * 2.5);
+    // (on the notebook only a trace of it: its big glass showed the blurred lights as brown smudges, the glare is the reflection now)
+    col += vec3f(0.85, 0.9, 1.0) * r * select(f32(${LAP_REFL}), f32(${SCREEN_REFL}), phUv.x >= 0.0) * max(0.0, 1.0 - l * 2.5);
   } else {
     // round the screens: their glow, over the device and the world alike
     let f = vec2f(s) + 0.5;
@@ -619,7 +639,7 @@ export class GpuCompositor {
    * clockwise, which also give its glow); phone: the phone's screen, in
    * interface cells (a fifth number: how much further and stronger it glows, the watch's LCD).
    */
-  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[] } | null = null, phone: readonly number[] | null = null,
+  draw(world: World, v: View, ui: CharGrid, hd: HdLayer, term: { grid: CharGrid; hd: HdLayer; x: number; y: number; show: boolean; glass: readonly number[]; sub?: readonly number[] } | null = null, phone: readonly number[] | null = null,
     pic: { grid: CharGrid; hd: HdLayer; rect: readonly number[]; full: readonly number[]; px: { img: { w: number; h: number; px: Uint8ClampedArray }; ver: number } } | null = null,
     body: { g: BodyGpu; x: number; y: number } | null = null, lap: LapGpu | null = null, watch: WatchGpu | null = null, jack: JackGpu | null = null) {
     const L = this.ui!, gw = this.gw;
@@ -648,6 +668,12 @@ export class GpuCompositor {
       }
       th.lo = Infinity; th.hi = -1;
       const qi = quadInverse(term.glass);
+      // the quad only the part of the glass in front of the eye (look3d.ts glassSub): its u, v onto the whole glass's
+      const S = term.sub;
+      if (qi && S && (S[0] > 0 || S[1] > 0 || S[2] < 1 || S[3] < 1)) {
+        const du = S[2] - S[0], dv = S[3] - S[1];
+        for (let c = 0; c < 3; c++) { qi[c] = qi[c] * du + qi[6 + c] * S[0]; qi[3 + c] = qi[3 + c] * dv + qi[6 + c] * S[1]; }
+      }
       if (qi) { for (let r = 0; r < 3; r++) this.QI.set(qi.slice(r * 3, r * 3 + 3), r * 4); this.dev.queue.writeBuffer(this.qiUni, 0, this.QI); }
       this.dev.queue.writeBuffer(this.picUni, 0, new Int32Array([this.U[12], this.U[13], this.tm.cols, this.tm.rows, th.w, th.h, 0, 0]));
     } else { this.U[16] = 0; this.U[17] = 0; this.U[22] = 0; }

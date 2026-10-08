@@ -14,9 +14,9 @@
 /** How many models: the deck, the lid, the Wi-Fi stick, the battery. */
 export const LAP_MODELS = 4;
 /** The uniform's floats: rect, 4 x 5 vec4 of camera and light, light, ink, screen, lamp; then the palette (2 vec4 an entry, 256 entries). */
-export const LAP_U_FLOATS = (1 + LAP_MODELS * 5 + 4) * 4 + 512 * 4;
+export const LAP_U_FLOATS = (1 + LAP_MODELS * 5 + 9) * 4 + 512 * 4;
 /** Where each part starts in the uniform (floats). */
-export const LAP_AT = { rect: 0, cam: 4, light: 4 + LAP_MODELS * 20, ink: 8 + LAP_MODELS * 20, scr: 12 + LAP_MODELS * 20, lamp: 16 + LAP_MODELS * 20, pal: 20 + LAP_MODELS * 20 } as const;
+export const LAP_AT = { rect: 0, cam: 4, light: 4 + LAP_MODELS * 20, ink: 8 + LAP_MODELS * 20, scr: 12 + LAP_MODELS * 20, lamp: 16 + LAP_MODELS * 20, glare: 20 + LAP_MODELS * 20, glass: 36 + LAP_MODELS * 20, pal: 40 + LAP_MODELS * 20 } as const;
 
 export const LAP_WGSL = /* wgsl */ `
 struct LapU {
@@ -33,6 +33,11 @@ struct LapU {
   scr: vec4f,
   // the keyboard's lamp: where it is (deck cells), w its strength (0 off)
   lamp: vec4f,
+  // the glare on the glass (2026-10-08, as the phone's; raycaster.ts LAP_GLARE): two lights mirrored in it, each its place
+  // (u, v on the glass, from its top-left), its size (u, v) and its color times its strength
+  gp0: vec4f, gc0: vec4f, gp1: vec4f, gc1: vec4f,
+  // the glass over the screen's picture (look3d.ts glassOver): the light's veil (rgb, 0..255) and the eye's gain (w)
+  glass: vec4f,
   pal: array<vec4f, 512>,
 };
 @group(0) @binding(18) var<uniform> lu: LapU;

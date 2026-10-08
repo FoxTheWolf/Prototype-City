@@ -136,27 +136,39 @@ export const VIEW_GLINT = new Float32Array([0, 0, 1, 1, 1, 0]);
  * u, v on the glass (0 to 1, from its top-left), its size there (u, v), and its color times its strength (0: none).
  */
 export const VIEW_GLARE = new Float32Array(16);
+/** The same for the Jackdaw's LCD (15.22) and the notebook's glass (the same layout). */
+export const JACK_GLARE = new Float32Array(16), LAP_GLARE = new Float32Array(16);
+/**
+ * The notebook's glass this frame, set by laptop/look3d.ts while it is open (one frame late is fine): the view's yaw
+ * it rests square to and the pitch it faces, its middle's direction from the eye (yaw, pitch), how far (m), and its
+ * size as seen (tan, wide and tall). `on` false: put away.
+ */
+export const LAP_GLASS = { on: false, yaw: 0, pitch: 0, cy: 0, cp: 0, dist: 0.5, w: 0.6, h: 0.4 };
 /** How wide and tall the phone's glass looks from the eye (radians), and how far it is held (m): right, down, ahead. */
 const GLASS_W = 0.19, GLASS_H = 0.34, HOLD = [0.14, 0.18, 0.4];
+/** The Jackdaw's LCD (render as jackdaw/body3d.ts holds it: low in the middle, a little left, its top tilted toward the eye). */
+const JACK_W = 0.24, JACK_H = 0.13, JACK_HOLD = [-0.04, 0.16, 0.38], JACK_TILT = 0.25;
 
-/** The glare's spots for this frame (outdoors; none indoors yet): the mirror of each light in the held glass. */
-function viewGlare(city: City, v: View, sky: SkyFrame) {
-  VIEW_GLARE.fill(0);
-  const cy = Math.cos(v.yaw), sy = Math.sin(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);
-  const f = [cy * cp, sy * cp, sp], r = [-sy, cy, 0], u = [-cy * sp, -sy * sp, cp];
-  const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-  const norm = (a: number[]) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
-  // the glass: in the hand, low and to the right, square to the eye: it mirrors back over the shoulder, as high as it is held low
-  const P = [0, 1, 2].map((k) => (k === 0 ? v.x : k === 1 ? v.y : v.eye) + f[k] * HOLD[2] + r[k] * HOLD[0] - u[k] * HOLD[1]);
-  const V = norm([P[0] - v.x, P[1] - v.y, P[2] - v.eye]), N = norm([-V[0] + u[0] * 0.05, -V[1] + u[1] * 0.05, -V[2] + u[2] * 0.05]);
-  const vn = dot(V, N), R = [V[0] - 2 * vn * N[0], V[1] - 2 * vn * N[1], V[2] - 2 * vn * N[2]];
-  const rr = norm([r[0] - R[0] * dot(r, R), r[1] - R[1] * dot(r, R), r[2] - R[2] * dot(r, R)]);
-  const ur = norm([u[0] - R[0] * dot(u, R) - rr[0] * dot(u, rr), u[1] - R[1] * dot(u, R) - rr[1] * dot(u, rr), u[2] - R[2] * dot(u, R) - rr[2] * dot(u, rr)]);
+type V3g = number[];
+const gdot = (a: V3g, b: V3g) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const gnorm = (a: V3g) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+
+/**
+ * The glare's spots on one held glass into `out` (VIEW_GLARE's layout): the glass at P facing N, its right and up
+ * r, u, seen gw x gh wide from the eye E: each light it mirrors toward the eye (the street lamps lit within 40 m,
+ * the sun), the two brightest.
+ */
+function glareOn(out: Float32Array, city: City, sky: SkyFrame, E: V3g, P: V3g, N: V3g, r: V3g, u: V3g, gw: number, gh: number) {
+  out.fill(0);
+  const V = gnorm([P[0] - E[0], P[1] - E[1], P[2] - E[2]]);
+  const vn = gdot(V, N), R = [V[0] - 2 * vn * N[0], V[1] - 2 * vn * N[1], V[2] - 2 * vn * N[2]];
+  const rr = gnorm([r[0] - R[0] * gdot(r, R), r[1] - R[1] * gdot(r, R), r[2] - R[2] * gdot(r, R)]);
+  const ur = gnorm([u[0] - R[0] * gdot(u, R) - rr[0] * gdot(u, rr), u[1] - R[1] * gdot(u, R) - rr[1] * gdot(u, rr), u[2] - R[2] * gdot(u, R) - rr[2] * gdot(u, rr)]);
   const best: { u: number; v: number; rad: number; c: number[]; s: number }[] = [];
-  const consider = (L: number[], rad: number, c: number[], s: number) => {
-    if (s <= 0.02 || dot(L, R) < 0.6) return;
+  const consider = (L: V3g, rad: number, c: number[], s: number) => {
+    if (s <= 0.02 || gdot(L, R) < 0.6) return;
     // (seen as far as its halo reaches past the glass's edge: three times its size)
-    const su = 0.5 + dot(L, rr) / GLASS_W, sv = 0.5 - dot(L, ur) / GLASS_H, mu = (3 * rad) / GLASS_W, mv = (3 * rad) / GLASS_H;
+    const su = 0.5 + gdot(L, rr) / gw, sv = 0.5 - gdot(L, ur) / gh, mu = (3 * rad) / gw, mv = (3 * rad) / gh;
     if (su < -mu || su > 1 + mu || sv < -mv || sv > 1 + mv) return;
     best.push({ u: su, v: sv, rad, c, s });
   };
@@ -172,9 +184,31 @@ function viewGlare(city: City, v: View, sky: SkyFrame) {
     consider([dx / d, dy / d, dz / d], Math.max(0.07, 0.35 / d), [C[n * 3] / m, C[n * 3 + 1] / m, C[n * 3 + 2] / m], Math.min(1, lv) * Math.min(1, 0.55 + 5 / d));
   });
   // the sun, when it is up and not behind cloud (sunlit or not, the sky round it still mirrors: half under cloud)
-  if (SUN[2] > 0) consider(norm([SUN[0], SUN[1], SUN[2]]), 0.07, [1, 0.96, 0.88], 2.2 * sky.day * (1 - 0.8 * sky.cloud));
+  if (SUN[2] > 0) consider(gnorm([SUN[0], SUN[1], SUN[2]]), 0.07, [1, 0.96, 0.88], 2.2 * sky.day * (1 - 0.8 * sky.cloud));
   best.sort((a, b) => b.s - a.s);
-  best.slice(0, 2).forEach((b, k) => VIEW_GLARE.set([b.u, b.v, b.rad / GLASS_W, b.rad / GLASS_H, b.c[0] * b.s, b.c[1] * b.s, b.c[2] * b.s, 0], k * 8));
+  best.slice(0, 2).forEach((b, k) => out.set([b.u, b.v, b.rad / gw, b.rad / gh, b.c[0] * b.s, b.c[1] * b.s, b.c[2] * b.s, 0], k * 8));
+}
+
+/** The glare's spots for this frame (outdoors; none indoors yet): the mirror of each light in each held glass. */
+function viewGlare(city: City, v: View, sky: SkyFrame) {
+  const cy = Math.cos(v.yaw), sy = Math.sin(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);
+  const f = [cy * cp, sy * cp, sp], r = [-sy, cy, 0], u = [-cy * sp, -sy * sp, cp], E = [v.x, v.y, v.eye];
+  // a glass in the hand at H (right, down, ahead of the eye), square to the eye but for its top tilted toward it by t
+  const held = (out: Float32Array, H: number[], t: number, gw: number, gh: number) => {
+    const P = [0, 1, 2].map((k) => E[k] + f[k] * H[2] + r[k] * H[0] - u[k] * H[1]);
+    const V = gnorm([P[0] - E[0], P[1] - E[1], P[2] - E[2]]), N = gnorm([-V[0] + u[0] * t, -V[1] + u[1] * t, -V[2] + u[2] * t]);
+    glareOn(out, city, sky, E, P, N, r, u, gw, gh);
+  };
+  // the phone: low and to the right, square to the eye: it mirrors back over the shoulder, as high as it is held low
+  held(VIEW_GLARE, HOLD, 0.05, GLASS_W, GLASS_H);
+  held(JACK_GLARE, JACK_HOLD, JACK_TILT, JACK_W, JACK_H);
+  // the notebook: resting where it was opened, its glass square to the view at its pitch
+  if (LAP_GLASS.on) {
+    const G = LAP_GLASS, dir = (yw: number, pt: number) => [Math.cos(yw) * Math.cos(pt), Math.sin(yw) * Math.cos(pt), Math.sin(pt)];
+    const m = dir(G.cy, G.cp), P = [E[0] + m[0] * G.dist, E[1] + m[1] * G.dist, E[2] + m[2] * G.dist], n = dir(G.yaw, G.pitch);
+    const lr = [-Math.sin(G.yaw), Math.cos(G.yaw), 0], lu = [-Math.cos(G.yaw) * Math.sin(G.pitch), -Math.sin(G.yaw) * Math.sin(G.pitch), Math.cos(G.pitch)];
+    glareOn(LAP_GLARE, city, sky, E, P, [-n[0], -n[1], -n[2]], lr, lu, G.w, G.h);
+  } else LAP_GLARE.fill(0);
 }
 
 
@@ -290,7 +324,7 @@ export function gpuPrepare(world: World, v: View) {
   gatherLights(world, v, frameSec);
   glFrame = (glFrame + 1) >>> 0 || 1;
   viewLight(null, v.x, v.y, Math.cos(v.yaw), Math.sin(v.yaw), sky);
-  if (world.player.inside < 0) viewGlare(city, v, sky); else VIEW_GLARE.fill(0);
+  if (world.player.inside < 0) viewGlare(city, v, sky); else { VIEW_GLARE.fill(0); JACK_GLARE.fill(0); LAP_GLARE.fill(0); }
   return { sky, light, dyn, sun: SUN, ticker: frameTicker };
 }
 

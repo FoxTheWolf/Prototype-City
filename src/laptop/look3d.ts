@@ -4,6 +4,7 @@ import { drawScreen, hintOf, type C3 } from './draw';
 import { type Laptop } from './laptop';
 import { businessName, computerMakerName } from '../locale/names';
 import { EYE } from '../render/eye';
+import { LAP_GLASS } from '../render/raycaster';
 import { CELL_MM, GLASS, KEY_TOP, LID_NZ, NX, NY, laptopGpu, type LapCam, type LapGpu } from './body3d';
 import SONGS from '../locale/music.en.json';
 
@@ -30,7 +31,7 @@ export let lapGpu: LapGpu | null = null;
 let anchor = 0, wasOpen = false;
 const L3 = new Float32Array(3);
 /** The glint on the screen, eased over time (as on the phone, see phone/draw.ts; stronger here). */
-const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0, mean: [0, 0, 0] as C3 };
+const GL = { lat: 0, at: 0, mean: [0, 0, 0] as C3, gain: 1, veil: [0, 0, 0] as C3 };
 /** The view's yaw the notebook was set down facing, and the pitch that centres its screen: where the view comes back to. */
 export const laptopAnchor = () => anchor;
 export const laptopPitch = () => PITCH0;
@@ -38,6 +39,11 @@ export const laptopPitch = () => PITCH0;
 export let screenAt: [number, number] | null = null;
 /** The glass's corners on the interface's grid (cells: x, y from the top-left, clockwise), faced or from aside, while the lid is open; null otherwise. */
 export let glassBox: number[] | null = null;
+/**
+ * The part of the glass glassBox covers (u0, v0, u1, v1, 0 to 1 from its top-left): all of it, but for a view turned so
+ * far that some of it is behind the eye: then only the part in front (its screen stays lit there, 2026-10-08).
+ */
+export const glassSub = [0, 0, 1, 1];
 /** The gear fitted from the bag (13.6) waiting to be seen going in, and when each slid in (seconds). */
 const pending = new Set<string>(), plugAt: Record<string, number> = { antenna: -9, battery: -9 };
 /** Gear just fitted: it slides into place the next time the notebook comes up. */
@@ -59,6 +65,7 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   screenAt = null; glassBox = null; lapGpu = null;
   if (P.open && !wasOpen) anchor = view.yaw;
   wasOpen = P.open;
+  LAP_GLASS.on = false;
   if (P.raise < 0.01) return;
   const S = P.shell, rows = g.rows, cols = g.cols, scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * view.aspect) / scale;
   const xh = DD / 2, HALF_W = W / 2;
@@ -71,6 +78,10 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   const aOpen = Math.PI / 2 - PITCH0, lift = Math.atan((rows * 0.03) / scale), G = lidAt(aOpen, (gx0 + gx1) / 2, (gy0 + gy1) / 2, gz);
   const toG = T / Math.cos(lift), X = Math.cos(PITCH0 + lift) * toG - G[0], DESK = G[2] - Math.sin(PITCH0 + lift) * toG;
   const a = P.lid * aOpen;
+  // where the glass is for its glare (raycaster.ts viewGlare): open, square to the view at PITCH0 along the anchor
+  if (P.lid >= 1 && P.raise > 0.9) {
+    Object.assign(LAP_GLASS, { on: true, yaw: anchor, pitch: PITCH0, cy: anchor, cp: PITCH0 + lift, dist: toG, w: GW / T, h: (GLASS.y1 - GLASS.y0) / 1000 / T });
+  }
   const off = view.yaw - anchor, dirX = Math.cos(off), dirY = Math.sin(off);
   // the object comes up from below as it is taken out
   const ease = 1 - (1 - P.raise) ** 3, eye = DESK + (1 - ease) * 0.3;
@@ -89,9 +100,31 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
 
   // ---- the screen's place: faced squarely, the screen layer goes over the glass ----
   const tl = P.lid >= 1 ? project(lidAt(a, gx0, gy0, gz)) : null, br = P.lid >= 1 ? project(lidAt(a, gx1, gy1, gz)) : null;
+  glassSub[0] = glassSub[1] = 0; glassSub[2] = glassSub[3] = 1;
   if (tl && br) {
     const tr = project(lidAt(a, gx1, gy0, gz)), bl = project(lidAt(a, gx0, gy1, gz));
     if (tr && bl) glassBox = [tl[0], tl[1], tr[0], tr[1], br[0], br[1], bl[0], bl[1]];
+  }
+  if (P.lid >= 1 && !glassBox) {
+    // a corner behind the eye: the glass cut to the part in front of it (its depth is linear across the glass)
+    const at = (u: number, v: number) => lidAt(a, gx0 + (gx1 - gx0) * u, gy0 + (gy1 - gy0) * v, gz);
+    const depth = (u: number, v: number) => { const p = at(u, v); return (X + p[0]) * fw[0] + p[1] * fw[1] + (p[2] - eye) * fw[2]; };
+    const NEAR = 0.06;
+    // the range of t in 0..1 where f(t) = fa + (fb - fa) t stays in front
+    const keep = (fa: number, fb: number, r: number[]) => {
+      if (fa >= NEAR && fb >= NEAR) return;
+      if (fa < NEAR && fb < NEAR) { r[0] = 1; r[1] = 0; return; }
+      const t = (NEAR * 1.05 - fa) / (fb - fa);
+      if (fa < NEAR) r[0] = Math.max(r[0], t); else r[1] = Math.min(r[1], t);
+    };
+    const ur = [0, 1];
+    keep(depth(0, 0), depth(1, 0), ur); keep(depth(0, 1), depth(1, 1), ur);
+    const vr = [0, 1];
+    if (ur[1] - ur[0] > 0.02) { keep(depth(ur[0], 0), depth(ur[0], 1), vr); keep(depth(ur[1], 0), depth(ur[1], 1), vr); }
+    if (ur[1] - ur[0] > 0.02 && vr[1] - vr[0] > 0.02) {
+      const c = [project(at(ur[0], vr[0])), project(at(ur[1], vr[0])), project(at(ur[1], vr[1])), project(at(ur[0], vr[1]))];
+      if (c.every((q) => q)) { glassBox = c.flatMap((q) => q!); glassSub[0] = ur[0]; glassSub[1] = vr[0]; glassSub[2] = ur[1]; glassSub[3] = vr[1]; }
+    }
   }
   const square = !!glassBox && view.still && Math.abs(br![0] - tl![0] - view.termW) < 1.5 && Math.abs(br![1] - tl![1] - view.termH) < 1
     && Math.abs(glassBox[2] - glassBox[4]) < 0.5 && Math.abs(glassBox[1] - glassBox[3]) < 0.5;
@@ -149,7 +182,7 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   for (let k = 0; k < Math.min(24, world.city.businesses.length); k++) shops.push(businessName(world.city, k));
   lapGpu = laptopGpu([flat([xh, -HALF_W, 0]), lid, ant, bat], rect, L3, {
     on, lamp: P.lamp && on, disk: busy, radio: on, charging: (pc.plugged && pc.charge < 0.995) || (on && pc.charge < 0.1 && !!blink),
-    usb: on && !!blink, ink: GL.mean, down: (code) => now - (P.pressed.get(code) ?? -9) < 0.12,
+    usb: on && !!blink, ink: GL.mean, gain: GL.gain, veil: GL.veil, down: (code) => now - (P.pressed.get(code) ?? -9) < 0.12,
     maker: computerMakerName(world.city, P.pc.hw.maker), seed: world.seed, bands: Object.values(SONGS).map((s) => s.band), shops,
   });
 
@@ -166,40 +199,27 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
 
 /**
  * The glass over the screen, as on the phone but stronger: the eye's adaptation (in the dark the
- * screen looks brighter, and the compositor blooms it; under a strong light it looks washed and dimmer),
- * and the glint: the brightest light nearby mirrored as a soft diagonal band on the side it comes
- * from, in its color, stronger for a light behind the player (the glass faces them). Off, the glint
- * shows plainly on the dark glass.
+ * screen looks brighter, and the compositor blooms it; under a strong light it looks washed and dimmer)
+ * and a veil of the light, both worked out here and laid by the compositor over the whole picture, the cells
+ * and the pixels alike (2026-10-08: done on the cells only, a web page's pixels kept their full light by day
+ * beside dimmed text). The lights it mirrors are the compositor's glare (raycaster.ts LAP_GLARE, in place of a
+ * diagonal band drawn here a cell at a time: blurred by the screen's bloom it read as brown smudges).
  */
 function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: number, on: boolean) {
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
-  GL.lat += (glint[0] - GL.lat) * q; GL.str += (glint[1] - GL.str) * q;
-  GL.back += (glint[5] - GL.back) * q; GL.r += (glint[2] - GL.r) * q; GL.g += (glint[3] - GL.g) * q; GL.b += (glint[4] - GL.b) * q;
+  GL.lat += (glint[0] - GL.lat) * q;
   const Lm = (light[0] + light[1] + light[2]) / 3;
   // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by day dimmer
-  const gain = Math.min(1.3, 0.55 + 0.65 * Math.min(1, EYE.k / 0.6));
-  // the band: across the glass, leaning; where it lies follows the side the light comes from
-  const W = T.cols, H = T.rows, s0 = 0.5 + GL.lat * 0.38, amp = (on ? 70 : 110) * GL.str * (0.6 + 0.6 * GL.back);
-  // a broad veil of the light too, whatever its direction: a lit room washes the glass
+  // (by day a screen looks washed out more than dark: the floor raised from 0.55, 2026-10-08)
+  const gain = Math.min(1.3, 0.8 + 0.5 * Math.min(1, EYE.k / 0.6));
+  const W = T.cols, H = T.rows;
+  // a broad veil of the light too, whatever its direction: a lit room washes the glass (0..255)
   const veil = Math.min(1.6, Lm) * (on ? 6 : 9);
-  const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
+  GL.gain = gain; GL.veil = [veil * light[0], veil * light[1], veil * light[2]];
   let ar = 0, ag = 0, ab = 0;
-  for (let r = 0; r < H; r++) {
-    const v = r / H;
-    for (let c = 0; c < W; c++) {
-      const u = c / W, k = (r * W + c) * 4, C = T.cells, B = T.bg;
-      const band = Math.exp(-(((u + (v - 0.5) * 0.45 - s0) / 0.11) ** 2)) + 0.35 * Math.exp(-(((u + (v - 0.5) * 0.45 - s0 - 0.2) / 0.04) ** 2));
-      const sh = band * amp;
-      for (let n = 1; n < 4; n++) C[k + n] = roll(C[k + n] * gain);
-      for (let n = 0; n < 3; n++) B[k + n] = roll(B[k + n] * gain);
-      ar += B[k] + C[k + 1] * 0.25; ag += B[k + 1] + C[k + 2] * 0.25; ab += B[k + 2] + C[k + 3] * 0.25;
-      // the reflection adds the same over a letter as over the paper (the letters are under the glass)
-      const ar2 = sh * GL.r + veil * light[0], ag2 = sh * GL.g + veil * light[1], ab2 = sh * GL.b + veil * light[2];
-      B[k] += ar2; B[k + 1] += ag2; B[k + 2] += ab2;
-      C[k + 1] += ar2; C[k + 2] += ag2; C[k + 3] += ab2;
-    }
-  }
+  const C = T.cells, B = T.bg;
+  for (let k = 0; k < W * H * 4; k += 4) { ar += B[k] + C[k + 1] * 0.25; ag += B[k + 1] + C[k + 2] * 0.25; ab += B[k + 2] + C[k + 3] * 0.25; }
   // the screen's mean light: what it casts on the keys (a dark console a little, a white page a lot)
-  GL.mean = [ar / (W * H), ag / (W * H), ab / (W * H)];
+  GL.mean = [(ar / (W * H)) * gain + GL.veil[0], (ag / (W * H)) * gain + GL.veil[1], (ab / (W * H)) * gain + GL.veil[2]];
 }

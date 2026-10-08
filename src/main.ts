@@ -33,7 +33,7 @@ import { drawWatch, Watch, WATCH_BTN, WATCH_LCD, WATCH_ON } from './watch/watch'
 import { Jackdaw, type JKey } from './jackdaw/jackdaw';
 import { drawJack, type JackGpu } from './jackdaw/body3d';
 import { type WatchGpu } from './watch/body3d';
-import { drawLaptop3d, glassBox, lapGpu, laptopAnchor, laptopPitch, screenAt } from './laptop/look3d';
+import { drawLaptop3d, glassBox, glassSub, lapGpu, laptopAnchor, laptopPitch, screenAt } from './laptop/look3d';
 import { keyOfCode, lapPartAt } from './laptop/body3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
@@ -435,7 +435,8 @@ function phoneToggle() {
   // flat (13.9): it stays dark
   if (r === 'out' && phone.screen === 'off') { shelfNote = en.bag.flat; shelfNoteAt = performance.now() / 1000; }
   // with the phone out the system cursor is free to click its keys; put away, the view takes the mouse again
-  if (r === 'in') input.lock(); else input.unlock();
+  // (over the open notebook the cursor stays free: it works the notebook's screen too)
+  if (r === 'in') { if (!laptop.open) input.lock(); } else input.unlock();
   sound?.phoneSlide(r !== 'in');
   if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
 }
@@ -594,8 +595,9 @@ addEventListener('mousedown', (e) => {
     if (k) { phonePress(k); return; }
   }
   if (laptop.open) {
-    // the middle button puts the notebook away too (a click can lock the pointer again at once)
-    if (e.button === 1) { e.preventDefault(); laptop.close(performance.now() / 1000); input.lock(); return; }
+    // the middle button works the phone as it does away from the notebook (a stage up; held, it goes away), in place of
+    // the Insert key (the user, 2026-10-08); Esc closes the lid
+    if (e.button === 1) { e.preventDefault(); if (!payphone.active) midAt = performance.now(); return; }
     if (e.button === 2) { rightAt = performance.now(); rightMoved = 0; input.drag = true; input.lock(); }
     // the phone stays usable by the mouse over the notebook (a call coming in, or taken out before):
     // a click on one of its keys presses it, and takes it into the hand if it was only up for the call
@@ -652,10 +654,10 @@ addEventListener('mouseup', (e) => {
   if (e.button === 0 && lapDrag) { lapDrag = false; const wm = laptop.shell.wm, cell = laptopCell(e.clientX, e.clientY); if (wm && cell) wm.up(cell[0], cell[1], performance.now() / 1000); }
   if (e.button === 1 && midAt >= 0) { midAt = -1; if (!payphone.active) phoneMiddle(); }
   if (e.button !== 2 || rightAt < 0) return;
-  if (phone.out && !payphone.active && !laptop.open && performance.now() - rightAt < 300 && rightMoved < 40) phoneBack();
+  if (phone.out && !payphone.active && performance.now() - rightAt < 300 && rightMoved < 40) phoneBack();
   rightAt = -1; input.drag = false;
   // the 3D notebook: let go, the view comes back to it, its screen centred
-  if (laptop.open) { camera.targetYaw = laptopAnchor(); camera.targetPitch = laptopPitch(); }
+  if (laptop.open) { const d = laptopAnchor() - camera.yaw; camera.targetYaw = camera.yaw + Math.atan2(Math.sin(d), Math.cos(d)); camera.targetPitch = laptopPitch(); }
   // the pointer was held while looking around; the cursor is free again over the phone or the payphone,
   // a moment later: freed during the click, the browser could still open its menu where the cursor lands
   if (phone.out || payphone.active || laptop.open) setTimeout(() => { if (rightAt < 0 && (phone.out || payphone.active || laptop.open)) input.unlock(); }, 60);
@@ -696,13 +698,6 @@ addEventListener('keydown', (e) => {
   // the notebook open takes the whole keyboard; Esc closes the lid and stands up
   if (laptop.open) {
     e.preventDefault();
-    // Insert: the phone up beside it (or down), worked by the mouse while the keys stay the notebook's
-    if (e.code === 'Insert' && !e.repeat && !payphone.active) {
-      const r = phone.toggle(performance.now() / 1000);
-      sound?.phoneSlide(r !== 'in');
-      if (r === 'boot') sound?.phoneBoot(0.35 + BOOT_LOG_S);
-      return;
-    }
     if (e.code === 'Escape' && !laptop.shell.fw.mode) { if (!e.repeat) { laptop.close(performance.now() / 1000); input.lock(); relock = true; } return; }
     if (e.repeat && !['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'].includes(e.code) && e.key.length !== 1) return;
     if (pt && laptop.shell.ready && !laptop.shell.screen()) pt.termKey(e.code, e.ctrlKey);
@@ -1241,7 +1236,9 @@ function frame(now: number) {
   // (the user, 2026-10-07) the middle button held with the phone in the hand puts it away at once, as it is; the right one held only looks around
   if (midAt >= 0 && performance.now() - midAt > 350) { midAt = -1; if (phone.out && !payphone.active) phoneToggle(); }
   const [mx, my] = input.takeMouse();
-  if (!uiBusy()) camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
+  // (with the notebook open the view turns only while the right button is held: let go, the pointer is still locked a
+  // moment and its last moves turned the view off the screen it was coming back to, 2026-10-08)
+  if (!uiBusy() && (!laptop.open || input.drag)) camera.look(mx * MOUSE_SENS, -my * MOUSE_SENS);
   if (rightAt >= 0) rightMoved += Math.abs(mx) + Math.abs(my);
   // (2026-10-06) the keyboard no longer turns the view, unless the debug switch brings it back
   const turn = !DEBUG.keyTurn ? 0 : (input.down(phone.out ? 'KeyE' : 'ArrowRight', 'KeyE') ? 1 : 0) - (input.down(phone.out ? 'KeyQ' : 'ArrowLeft', 'KeyQ') ? 1 : 0);
@@ -1592,7 +1589,7 @@ function frame(now: number) {
   const termAt = screenAt ? { grid: T3, x: uiLayout.originX + screenAt[0] * uiLayout.cellW, y: uiLayout.originY + screenAt[1] * uiLayout.cellH } : null;
   // the GPU's compositor also takes the screen seen from aside (not shown as a layer), for its glow
   const G = glassBox, toPx = (c: number, k: number) => (k & 1 ? uiLayout.originY + c * uiLayout.cellH : uiLayout.originX + c * uiLayout.cellW);
-  const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
+  const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx), sub: glassSub } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
   if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu, watchG, jackG);

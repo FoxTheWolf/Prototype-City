@@ -16,7 +16,7 @@
     "plug": "The adapter goes into the wall outlet.",
     "hint": "[N] OPEN THE NOTEBOOK",
     "power": "[ENTER] OR CLICK THE BUTTON: POWER",
-    "close": "[ESC] OR [MIDDLE MOUSE] CLOSE THE LID   [RIGHT MOUSE] LOOK AROUND   [WHEEL] SCROLL"
+    "close": "[ESC] CLOSE THE LID   [MIDDLE MOUSE] PHONE   [RIGHT MOUSE] LOOK AROUND   [WHEEL] SCROLL"
   },
   "motd": [
     "",

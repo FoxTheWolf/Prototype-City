@@ -10,11 +10,11 @@
 
 /**
  * The uniform's floats: rect, eye, ray, right, down, light dir, light, LCD rect, LCD light, glint, the glint's
- * box, the backlight's spill; then the palette (2 vec4 an entry, 32 entries). The same for every device the
+ * box, the backlight's spill, the glare's two spots on the LCD (as the phone's glass, raycaster.ts JACK_GLARE); then the palette (2 vec4 an entry, 32 entries). The same for every device the
  * pass draws (the watch; the Jackdaw, 15.22).
  */
-export const VOXP_U_FLOATS = 12 * 4 + 64 * 4;
-export const VOXP_AT = { rect: 0, eye: 4, F: 8, R: 12, D: 16, ldir: 20, light: 24, lcd: 28, knee: 32, glint: 36, box: 40, spill: 44, pal: 48 } as const;
+export const VOXP_U_FLOATS = 16 * 4 + 64 * 4;
+export const VOXP_AT = { rect: 0, eye: 4, F: 8, R: 12, D: 16, ldir: 20, light: 24, lcd: 28, knee: 32, glint: 36, box: 40, spill: 44, glare: 48, pal: 64 } as const;
 export const WATCH_U_FLOATS = VOXP_U_FLOATS, WATCH_AT = VOXP_AT;
 
 /**
@@ -35,6 +35,8 @@ struct ${p}U {
   lcd: vec4f, knee: vec4f, glint: vec4f,
   // the glint's band runs across this box (cells: x0, y0, width, height); the backlight's spill: its color (rgb, 0..255) and reach (cells)
   box: vec4f, spill: vec4f,
+  // the glare on the LCD (2026-10-08, as the phone's): two lights mirrored in it, each its place (u, v), its size (u, v) and its color times its strength
+  gp0: vec4f, gc0: vec4f, gp1: vec4f, gc1: vec4f,
   pal: array<vec4f, 64>,
 };
 @group(0) @binding(${b0}) var<uniform> ${p}u: ${p}U;
@@ -92,7 +94,9 @@ fn ${p}shade(h: BHit) -> vec3f {
   // polished steel than the brushed, on the crystal over the LCD a glare that washes the digits out
   let uu = (h.p.x - ${p}u.box.x) / ${p}u.box.z + ((h.p.y - ${p}u.box.y) / ${p}u.box.w) * 0.55 - ${p}u.knee.z;
   let band = exp(-pow(uu / 0.09, 2.0)); let G = ${p}u.glint.rgb * band * ${p}u.knee.w * 300.0;
-  var d = (0.4 + 0.6 * max(0.0, nl)) * (1.0 - 0.1 * h.ao) * B.w;
+  // the phone's light (voxBody.ts bshade, 2026-10-08: one rule for every held thing): the faces turned to the light
+  // brighter, the sides it catches more so, the crevices darker
+  var d = (0.42 + 0.58 * max(0.0, nl)) * select(1.0, 1.3, N.z != 1.0 && nl > 0.3) * (1.0 - 0.11 * h.ao) * B.w;
   if ((fl & 1u) != 0u) { d *= 1.0 + (fract(sin(f32(h.c.y) * 12.9898 + f32(h.c.x >> 2u) * 78.233) * 43758.5453) - 0.5) * 0.14; }
   let n = vec2f(${p}dim().xy);
   if ((fl & 4u) != 0u) {
@@ -100,9 +104,20 @@ fn ${p}shade(h: BHit) -> vec3f {
     let uv = (h.p.xy - ${p}u.lcd.xy) / ${p}u.lcd.zw;
     let t = textureSampleLevel(${p}Lcd, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0).rgb * 255.0;
     // the crystal over it: a faint veil of the scene's light (it greys the digits in bright light) and the glint's glare
-    let veil = L * 9.0 + G * 0.55;
+    // (the glint a little only: over the whole LCD it washed the digits out white and looked false, 2026-10-08)
+    var veil = L * 9.0 + G * 0.15;
+    // and the lights it mirrors toward the eye, where they really are (the phone's glare, compositor.ts)
+    for (var k = 0; k < 2; k++) {
+      let gp = select(${p}u.gp1, ${p}u.gp0, k == 0); let gc = select(${p}u.gc1, ${p}u.gc0, k == 0);
+      if (gc.r + gc.g + gc.b > 0.0) {
+        let e = (uv - gp.xy) / max(gp.zw, vec2f(1e-3)); let e2 = dot(e, e);
+        let hot = mix(gc.rgb, vec3f(max(gc.r, max(gc.g, gc.b))), 0.65);
+        veil += (hot * exp(-e2) * 0.55 + gc.rgb * exp(-e2 / 9.0) * 0.08) * 255.0;
+      }
+    }
     if (${p}u.light.w > 0.5) { return (t * max(vec3f(1.0), L) + veil) / 255.0; }
-    let Ld = min(vec3f(1.0), L * ${p}u.knee.y) * pow(min(vec3f(1.0), L / ${p}u.knee.x), vec3f(1.6));
+    // (no ceiling at its painted paper: in the sun it reads brighter, as the phone's screen does, 2026-10-08)
+    let Ld = min(vec3f(1.8), L * ${p}u.knee.y) * pow(min(vec3f(1.0), L / ${p}u.knee.x), vec3f(1.6));
     return (t * Ld * select(0.9, 1.0, h.face == 5u) + veil) / 255.0;
   }
   // light of its own (the LED): the scene does not dim it
@@ -111,7 +126,9 @@ fn ${p}shade(h: BHit) -> vec3f {
   if (h.face == 5u && (fl & 8u) != 0u) { let dc = textureSampleLevel(${p}Face, tmSamp, h.p.xy / n, 0.0); base = mix(base, dc.rgb * 255.0, dc.a); }
   // the steel's rim: its top face a little brighter than flat (a polished bevel)
   let sp = select(0.0, pow(max(0.0, nl), 6.0) * A.w * 40.0, nl > 0.0);
-  var col = base * L * d + L * sp + G * A.w * select(0.35, 0.7, (fl & 1u) != 0u) * select(0.6, 1.0, h.face == 5u);
+  // in strong light (the sun on the hand) dark plastic and steel show their grey, not a black hole (as the phone's)
+  let lift = select(0.0, 60.0 * clamp((dot(L, vec3f(0.333)) - 1.05) / 0.45, 0.0, 1.0), A.w < 0.65);
+  var col = (base + lift) * L * d + L * sp + G * A.w * select(0.35, 0.7, (fl & 1u) != 0u) * select(0.6, 1.0, h.face == 5u);
   // the backlight spills a little of its color over the face round the LCD
   if (${p}u.light.w > 0.5 && h.face == 5u) {
     let q = max(vec2f(0.0), max(${p}u.lcd.xy - h.p.xy, h.p.xy - (${p}u.lcd.xy + ${p}u.lcd.zw)));

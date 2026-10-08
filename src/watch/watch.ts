@@ -200,6 +200,8 @@ const GLOW_BOOST = 3;
 const GHOST = 0.86;
 /** The case's width on the interface's grid (cells), where it sits from the left edge, and how far it comes up (rows, from the bottom). */
 const CASE_COLS = 32, CASE_X = 6, CASE_ROWS = 17;
+/** The watch on screen, of the old case's size (the user, 2026-10-08: 20 % smaller). */
+const WATCH_SIZE = 0.8;
 /** A button shows pressed this long after it was. */
 const PRESS_S = 0.12;
 
@@ -297,8 +299,9 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   if (Wt.raise < 0.01) { SWAY.reset(); return null; }
   const e = 1 - (1 - Wt.raise) ** 3, [ox, oy, cw, ch] = px;
   const mo = SWAY.step(now, view);
-  // as wide as the case was in cells, its middle where the old case's was (and up and down with the arm's swing)
-  const k = (CASE_COLS * cw) / WATCH_CASE.w, cx = ox + (CASE_X + CASE_COLS / 2) * cw, cy = oy + (g.rows - CASE_ROWS * e + 1 + 7.5) * ch + SWAY.lift * SWING_LIFT * k;
+  // WATCH_SIZE of as wide as the case was in cells, its left and bottom where the old case's were (and up and down with the arm's swing)
+  const k0 = (CASE_COLS * cw) / WATCH_CASE.w, k = k0 * WATCH_SIZE, cx = ox + (CASE_X + (CASE_COLS / 2) * WATCH_SIZE) * cw;
+  const cy = oy + (g.rows - CASE_ROWS * e + 1 + 7.5) * ch + (1 - WATCH_SIZE) * WATCH_CASE.h * k0 * 0.5 + SWAY.lift * SWING_LIFT * k;
   const lit = Wt.lit(now), L = [Math.max(0.03, light[0]), Math.max(0.03, light[1]), Math.max(0.03, light[2])];
   if (paintLcd(WATCH_GPU.lcd, Wt, time, now, yaw, lit)) WATCH_GPU.lcdVer++;
   const G = watchGpu(cx, cy, k, L, lit, (b) => now - (Wt.pressedAt[b] ?? -9) < PRESS_S, brand, mo);

@@ -2,6 +2,16 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.56 — Um vidro só para tudo (2026-10-08)
+- **Glare no Jackdaw e no notebook:** como no celular, os postes acesos e o sol aparecem refletidos onde estão de verdade no visor do Jackdaw e na tela do notebook. O centro do reflexo agora estoura quase em branco (a cor da lâmpada fica no halo), também no celular.
+- **Fim das manchas marrons na tela do notebook:** saíram a faixa diagonal antiga, as "marcas de dedo" e o reflexo borrado do mundo, que juntos pareciam sujeira.
+- **De dia o notebook não escurece mais pela metade:** o ajuste do olho (mais claro no escuro, mais lavado no sol) vale para a tela inteira, texto e páginas da web juntos; de dia a tela fica bem menos escura.
+- **Relógio e Jackdaw com a luz do celular:** o mesmo sombreamento (laterais que pegam a luz, plástico e aço que clareiam no sol) e o visor que fica mais claro de dia em vez de parar na cor pintada; menos lavagem branca do brilho sobre o visor do relógio.
+- **Relógio 20 % menor.**
+- **Notebook aberto:** o **botão do meio** ergue o celular (segurado, guarda) e um clique do **direito** o abaixa, como fora do notebook; o Insert ficou livre (a área de transferência do Osprey). Fechar a tampa é só no **Esc**.
+- **A tela do notebook não apaga mais** ao virar a vista até metade dela sair da tela: a parte ainda à frente continua acesa.
+- **Soltar o botão direito recentraliza o notebook direito:** o último movimento do mouse não desvia mais a vista, e ela volta pelo caminho curto.
+
 ## 0.15.55 — Retoques do Jackdaw e do relógio (2026-10-08)
 - O Jackdaw na mão ficou ~35 % menor e de frente, sem virar para o lado.
 - O relógio balança menos ao virar a câmera e ao andar/correr.
