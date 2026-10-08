@@ -1,5 +1,6 @@
 import { Vox, type VoxMat } from '../render/voxels';
-import { type C3 } from '../render/paint2d';
+import { Img, Paint, star, type C3 } from '../render/paint2d';
+import { hash3 } from '../core/rng';
 
 /**
  * 15.20b: the notebook's body in little cubes of 2 mm, as the notebook's manual draws it
@@ -186,4 +187,47 @@ export function lidPalette(pal: VoxMat[], o: { on: boolean; lamp: boolean; disk:
   pal[M.LedRadio] = led([90, 255, 120], o.on && o.radio, [27, 42, 30]);
   pal[M.LedBatt] = led([255, 176, 48], o.charging, [43, 36, 22]);
   return pal;
+}
+
+/**
+ * The lid's outside (the manual, section 4): grafite with wear (scratches, a rubbed corner), the maker's
+ * name, and the one or two stickers the previous owner left, by the seed: a band of the city (circle,
+ * banner or starburst), a business that exists in the simulation (a pill), or a symbol (a bolt, NO SIGNAL,
+ * the waves); and the ghost of glue where one was peeled off. 1 pixel a millimetre (310 x 225); the GPU
+ * lays it on the lid's back as a decal. Not turned yet (the manual tilts them up to 20 degrees).
+ */
+export function paintLidOutside(seed: number, maker: string, bands: readonly string[], shops: readonly string[]): { img: Img; names: string[] } {
+  const img = new Img(W_MM, D_MM), P = new Paint(img), r = (k: number) => hash3(seed, 911, k);
+  for (let y = 0; y < D_MM; y++) for (let x = 0; x < W_MM; x++) if (inDeck(x + 0.5, y + 0.5)) img.set(x, y, GRAPHITE[0], GRAPHITE[1], GRAPHITE[2]);
+  for (let i = 0; i < 14; i++) { const x = 10 + r(i) * (W_MM - 30), y = 10 + r(i + 20) * (D_MM - 20), l = 3 + r(i + 40) * 20, a = r(i + 60) * Math.PI; P.line(x, y, x + Math.cos(a) * l, y + Math.sin(a) * l, 0.6, [52, 54, 59]); }
+  // a rubbed corner: a quarter arc at the bottom left
+  P.clip(0, D_MM - 20, 20, D_MM); P.ring(20, D_MM - 20, 18, 1.5, [58, 60, 65], 0.6); P.clip(0, 0, W_MM, D_MM);
+  const mw = Paint.textW(maker.toUpperCase(), 1, 3);
+  P.text(W_MM - 15 - mw, D_MM - 17, maker.toUpperCase(), 1, [123, 127, 134], 1, 3);
+  const PALS: [C3, C3][] = [[[255, 106, 19], [26, 27, 30]], [[94, 200, 232], [13, 34, 48]], [[242, 213, 60], [26, 27, 30]], [[233, 75, 123], [255, 255, 255]], [[126, 224, 138], [16, 48, 26]]];
+  const WHITE: C3 = [250, 248, 240], spots = [[80, 60], [240, 150], [70, 165]], names: string[] = [];
+  const n = 1 + Math.floor(r(1) * 2);
+  for (let i = 0; i < n; i++) {
+    const [cx, cy] = spots[i], [bg, fg] = PALS[Math.floor(r(10 + i) * PALS.length)], kind = r(20 + i);
+    const center = (s: string, y: number, sz: number, c: C3) => P.text(cx - Paint.textW(s, sz, sz) / 2, y, s, sz, c);
+    if (kind < 0.45 && bands.length) {
+      const name = bands[Math.floor(r(30 + i) * bands.length)], shape = Math.floor(r(40 + i) * 3), words = name.replace(/^The /, '').toUpperCase().split(' ');
+      if (shape === 0) { P.disc(cx, cy, 22, WHITE); P.disc(cx, cy, 20, bg); words.forEach((w, k) => center(w, cy - 8 + k * 9, 1, fg)); }
+      else if (shape === 1) { P.rrect(cx - 36, cy - 10, 72, 20, 3, WHITE); P.rrect(cx - 34, cy - 8, 68, 16, 2, fg); center(words.join(' ').slice(0, 11), cy - 3, 1, bg); }
+      else { P.poly(star(cx, cy, 25, 20, 12), WHITE); P.disc(cx, cy, 17, bg); words.forEach((w, k) => center(w.slice(0, 6), cy - 8 + k * 9, 1, fg)); }
+      names.push(name);
+    } else if (kind < 0.8 && shops.length) {
+      const name = shops[Math.floor(r(50 + i) * shops.length)];
+      P.rrect(cx - 32, cy - 12, 64, 24, 12, WHITE); P.rrect(cx - 30, cy - 10, 60, 20, 10, bg); center(name.toUpperCase().slice(0, 9), cy - 3, 1, fg);
+      names.push(name);
+    } else {
+      const sym = Math.floor(r(60 + i) * 3);
+      if (sym === 0) { const b = [cx + 4, cy - 20, cx - 11, cy + 3, cx - 1, cy + 3, cx - 5, cy + 20, cx + 12, cy - 4, cx + 2, cy - 4]; P.poly(b.map((v, k) => v + (k & 1 ? 0 : 0)), WHITE); P.poly(b, bg); names.push('bolt'); }
+      else if (sym === 1) { P.rrect(cx - 20, cy - 13, 40, 26, 3, WHITE); P.rect(cx - 18, cy - 11, 36, 22, [26, 27, 30]); [[255, 255, 255], [242, 213, 60], [94, 200, 232], [126, 224, 138], [233, 75, 123], [255, 106, 19]].forEach((c, k) => P.rect(cx - 15 + k * 5, cy - 7, 5, 11, c as unknown as C3)); names.push('NO SIGNAL'); }
+      else { P.disc(cx, cy, 15, WHITE); P.disc(cx, cy, 13, bg); P.clip(0, 0, W_MM, cy + 5); for (const rr of [4, 7.5, 11]) P.ring(cx, cy + 5, rr, 1.5, fg); P.clip(0, 0, W_MM, D_MM); P.disc(cx, cy + 5, 1.5, fg); names.push('waves'); }
+    }
+  }
+  // the ghost of a peeled sticker: a darker patch of glue
+  P.rrect(200, 70, 35, 23, 4, [42, 43, 47], 0.7);
+  return { img, names };
 }

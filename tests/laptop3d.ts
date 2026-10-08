@@ -6,7 +6,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { castVox, castVoxPersp, shadeVox, voxLookAt } from '../src/render/voxels';
-import { CELL_MM, deckModel, deckPalette, KEYS, lidModel, lidPalette, NX, NY, NZ, TOP } from '../src/laptop/body3d';
+import { CELL_MM, deckModel, deckPalette, KEYS, lidModel, lidPalette, paintLidOutside, NX, NY, NZ, TOP } from '../src/laptop/body3d';
 import { Img } from '../src/render/paint2d';
 import { png } from './png';
 
@@ -43,4 +43,13 @@ if (hit < GP.mat.length * 0.2) fail(`the deck fills a good part of the view (${h
 shot(GP, 'tests/.out/laptop3d.png');
 shot(castVox(V, { w: NX * 4, h: NY * 4, sx: 0.25, sy: 0.25, yaw: 0, pitch: 0 }), 'tests/.out/laptop3d-top.png');
 shot(castVox(lidModel(), { w: NX * 4, h: NY * 4, sx: 0.25, sy: 0.25, yaw: 0, pitch: 0 }), 'tests/.out/laptop3d-lid.png');
+const L1 = paintLidOutside(42, 'Halden', ['Neon Paycheck', 'The Overpass Kids', 'Grid Orphans'], ["Petrov's Coffee", 'Lookwise']);
+if (L1.names.length < 1 || L1.names.length > 2) fail(`one or two factory stickers (got ${L1.names.length})`);
+const L2 = paintLidOutside(42, 'Halden', ['Neon Paycheck'], ['Lookwise']);
+if (L1.names.join() !== paintLidOutside(42, 'Halden', ['Neon Paycheck', 'The Overpass Kids', 'Grid Orphans'], ["Petrov's Coffee", 'Lookwise']).names.join()) fail('the same seed, the same stickers');
+void L2;
+const big = new Img(310 * 3, 225 * 3);
+for (let y = 0; y < big.h; y++) for (let x = 0; x < big.w; x++) { const k = (Math.floor(y / 3) * 310 + Math.floor(x / 3)) * 4; big.set(x, y, L1.img.px[k], L1.img.px[k + 1], L1.img.px[k + 2]); }
+writeFileSync('tests/.out/laptop3d-lidout.png', png(big.px, big.w, big.h));
+console.log('lid stickers (seed 42): ' + L1.names.join(', '));
 console.log(fails ? `\n${fails} FAILED` : 'laptop3d: all passed (pictures in tests/.out/laptop3d.png, laptop3d-top.png)');
