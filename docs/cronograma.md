@@ -19,7 +19,7 @@
 
 ## A ordem e a estimativa
 
-Uma "sessão" = uma janela de 5 h. Uma subetapa ≈ 1 sessão; um bloco de correção ≈ ½ sessão. Estimativa inicial, para recalibrar pela regra 7.
+Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horário de cada uma sai do `get_usage` dela, nunca deste arquivo). Uma subetapa ≈ 1 sessão; um bloco de correção ≈ ½ sessão. Estimativa inicial, para recalibrar pela regra 7.
 
 | # | Etapa | Subetapas | Blocos | Sessões (estim.) | Antes era |
 |---|---|---|---|---|---|

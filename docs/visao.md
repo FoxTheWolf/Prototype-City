@@ -46,7 +46,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 ## Esperar o tempo passar
 - **Esperar acelera a simulação de verdade** (num banco, num café, no motel), parando sozinha quando algo diz respeito ao jogador (SMS, calor subindo, alguém se aproximando, a janela de um trabalho abrindo). Pular o tempo sem simular (como o T) invalida o calor, então não serve.
 - **Primeiro passo:** medir no Node quantas vezes mais rápido a simulação aguenta (60× faria uma hora de jogo em um minuto real). Se não aguentar, apoiar-se no nível de detalhe longe do jogador.
-- O tamanho do dia (48 min) é decidido depois disso; o Claude traz propostas.
+- O tamanho do dia (hoje 2 h reais, `DAY_REAL_MIN`) é revisto depois disso; o Claude traz propostas.
 
 ## Dirigir
 - **Decidir no rework de carros e transporte (etapa 18)** se entra antes ou depois da 1.0. As peças já convergem: a câmera no carro vem do táxi, a física do trânsito perto do jogador, o estacionamento dos carros ligados aos NPCs, as fotos do Streetwire. **Multas por foto da placa** (radar) também são alvo de hacking. Dá mais um destino ao dinheiro e combate o tédio do transporte público.
@@ -306,7 +306,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O pior caso é recomeçar a vida, não o jogo:** prisão com ficha pesada, despejo, contatos perdidos, chip queimado levam de volta ao motel e ao pouco dinheiro; o mundo, o conhecimento e o equipamento escondido continuam. Nunca game over.
 
 ### Dificuldade e ajuda (conversa de 2026-10-05)
-- **Uma dificuldade só:** o jogo como foi pensado, sem níveis nem alavancas (o tamanho da cidade continua parâmetro da geração).
+- **Uma dificuldade só:** o jogo como foi pensado, sem níveis nem alavancas (o tamanho da cidade é fixo desde 2026-10-06).
 - **Quem ajuda o jogador travado:** contatos por SMS (no máximo um por dia), o fórum de tutoriais, perguntar aos NPCs pela caixa de texto ("where can I find work?") e as dicas da tela de carregamento (`tips.json`).
 - **Nenhum objetivo na tela:** o que fazer está nos SMS, no e-mail, no caderno e na conversa; sem lista de missões no HUD.
 
