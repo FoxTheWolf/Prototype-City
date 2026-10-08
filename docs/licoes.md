@@ -15,6 +15,10 @@
 - **Um poste perto de outro parece o mesmo de vários ângulos:** a placa a 1 m do poste do semáforo lia como presa nele; a 3 m lê como outro objeto.
 - **O olhar de jogador vale mais na captura feita "para ver se funciona":** a primeira foto das placas mostrava o poste atravessando a placa, as faixas pretas e o texto ilegível, e foi relatada como certa.
 - **Teste por script:** pôr o jogador dentro de uma loja congela o laço (`aimedGood`); usar posições de calçada já conhecidas. Clicar no CONTINUE escondido sem save também quebra (bug anotado).
+- **A placa só se lê de +x:** num móvel que olha para -x (o orelhão) ou num plano ao longo de y (a bandeira do ponto), empurrar um `Obj` a mais no mesmo lugar com o quadro girado (`c: -c, s: -s`, ou `c: s, s: -c`) em vez de mexer no modelo do móvel.
+- **Modelo como constante do módulo (IIFE) que usa um `const` declarado mais abaixo** (`SIGN_WHITE`) quebra no carregamento (TDZ): fazer preguiçoso, numa função com o cache `lamps`.
+- **Antes de pôr uma placa, perguntar se a simulação tem o que ela diz:** ONE WAY/NO PARKING ficaram de fora porque não há mão única nem estacionamento na rua. A rua do ponto de ônibus saiu do mesmo cálculo de `stopsOf` (`sim/traffic.ts`), para a placa e o ônibus concordarem.
+- **No painel, cada edição recarrega o título:** clicar NEW GAME pelas coordenadas da captura (as do `getBoundingClientRect` não batem com as da captura) e esperar `world.tick`.
 
 ### Lições do moiré e do fantasma (0.15.58) — 2026-10-08
 - **Textura mais fina que o pixel = moiré:** a tela do Jackdaw (896 px de pontos com vão) cabe em ~270 px do monitor; uma amostra por pixel bate com os vãos. Média 4 × 4 sobre a pegada do pixel (`length(R)`/`length(D)/|F.z|` sobre o tamanho do LCD) resolve sem mips (`voxPassWgsl`, vale para o relógio).
