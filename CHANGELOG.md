@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.50 — O notebook no mundo de verdade (2026-10-07)
+- **Perspectiva certa:** o notebook agora é visto pela mesma câmera do mundo, e não mais pela projeção antiga que esticava tudo ao olhar para baixo; de perto, de lado ou olhando para o teclado, ele parece um objeto na mesa.
+- **A tampa abre inclinada,** uns 114°, de frente para os olhos, como se ajusta uma tela; o console continua nítido, pixel por pixel.
+- **A tela não vaza mais para a moldura:** sumiu a faixa em volta da imagem em que a primeira coluna e a barra de cima se esticavam até a borda.
+- **Todas as teclas com legenda,** todas no mesmo tamanho: apareceram `= [ ] \ ; < > ^` (as setas, com o ^ e o V empilhados), e F10, BKSP, SHIFT e as outras palavras saíram da letra miúda.
+- **A antena USB e a bateria grande** agora também são de cubinhos (a haste preta, o LED azul piscando), e ficam escondidas atrás do corpo como deveriam.
+
 ## 0.15.49 — As peças do notebook se apertam (2026-10-07)
 - **Clique nas peças do notebook** com o mouse: cada tecla digita (e afunda), o botão de ligar liga e desliga, e as teclas da faixa de cima funcionam: **volume − e +** (um clique de borracha e o bipe do sistema já no volume novo; o aviso no alto mostra o volume) e **mudo**.
 - **A luz do teclado:** a tecla da luz na faixa de cima acende o LED da tampa, que joga um leque quente sobre as teclas (só com o notebook ligado).

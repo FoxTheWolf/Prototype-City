@@ -3,6 +3,13 @@
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
 
+## 15.20b Correções do retorno do usuário (0.15.50, 2026-10-07)
+- **Retorno (capturas do usuário):** o texto da tela esticado para a esquerda e para cima; teclas sem legenda e F10 numa fonte menor que o F9; a perspectiva distorcida ao olhar para baixo (a do raycaster antigo). E a regra das capturas reescrita (CLAUDE.md, "TODA captura de tela dentro do jogo").
+- **Câmera 3D de verdade (`look3d.ts`):** o raio e o `project()` do notebook são os do `cam3d` do mundo (`fw`, `rt`, `up` pelo pitch, como em `gpu/shader.ts`). Para o console continuar pixel por pixel, a tampa abre até o vidro ficar de frente para a vista em `PITCH0 = −0,42` (≈114°), e a altura do olho e a distância saem dessa conta (o vidro na profundidade `T`, o meio dele um pouco acima do meio da vista); antes o olho era fixo em 30 cm e uma iteração descia até o limite. O modo "de frente" também exige o quadrilátero sem trapézio.
+- **Quatro modelos no passe (`voxLap.ts`):** cada um com o próprio tamanho e o começo das células no uniform (`cam[m*5].w`, `F.w/R.w/D.w`), `lnear` escolhe o mais perto; a antena USB (`ANT_N`) e a bateria grande (`BAT_N`) em cubos em `body3d.ts` (saíram as caixas do `drawObjects` e as duas grades de profundidade).
+- **A tela sem a faixa esticada (`compositor.ts`):** saíram os dois ramos que pintavam uma célula em volta da imagem com o pixel da borda (servia ao corpo antigo em células).
+- **Legendas:** todas no tamanho 2; glifos novos na fonte de pontos (`signs.ts`): `= [ ] \ ; < > ^ \` _ "`.
+
 ## 15.20b O corpo do notebook, passo 5: peças clicáveis e sons (0.15.49, 2026-10-07)
 - **Clique pelo raio:** `lapPartAt(px, py)` em `laptop/body3d.ts` lança na CPU o mesmo raio da GPU (a última câmera da base, `castVoxPersp` com 1 × 1) e devolve o código da tecla ou o id da peça (a paleta); `keyOfCode` dá o `key` de uma tecla clicada. Em `main.ts` o clique esquerdo com o notebook aberto vai para o botão de ligar (o código de antes), `laptop.part` ou `laptop.key`. Saiu o `power3d` (a caixa do botão de ligar na grade).
 - **`Laptop`:** `vol` (0..10), `muted`, `lamp` (no save, opcionais), `loud`, `part(id)` (volume/mudo com o bipe, a luz, os botões do nub e do touchpad, com os avisos de `locale/laptop.en.json` > `parts`).

@@ -18,7 +18,7 @@ const W_MM = 310, D_MM = 225;
 export const NX = Math.round(W_MM / CELL_MM), NY = Math.round(D_MM / CELL_MM), TOP = 9, NZ = TOP + 2;
 
 /** Palette indices. */
-export const enum M { Shell = 1, ShellWorn, Well, Hinge, Nub, NubTip, Button, Pad, PadStrip, Seal, SealInk, LedOn, LedOff, Ring, Bezel, Glass, Lamp, Latch, LedDisk, LedRadio, LedBatt }
+export const enum M { Shell = 1, ShellWorn, Well, Hinge, Nub, NubTip, Button, Pad, PadStrip, Seal, SealInk, LedOn, LedOff, Ring, Bezel, Glass, Lamp, Latch, LedDisk, LedRadio, LedBatt, Usb, UsbLed, Whip, Batt }
 export const KEY0 = 32;
 /** The manual's colors (section 3). */
 const GRAPHITE: C3 = [28, 29, 32], CAP: C3 = [35, 37, 40], WELL: C3 = [14, 15, 16], AMBER: C3 = [255, 154, 31], HINGE: C3 = [85, 89, 95], SEAL: C3 = [233, 230, 220];
@@ -249,12 +249,34 @@ export function paintLidOutside(seed: number, maker: string, bands: readonly str
 
 /** The decal's pixels a cell (4 a millimetre): the keys' legends, the seal, the maker's name under the glass. */
 const DKL = 8;
-/** What the GPU needs this frame: the two models' cells (the deck's, then the lid's padded to its height), the decals, the uniform; each with a version. */
-export interface LapGpu { vox: Uint32Array; voxVer: number; decal: Img; decalVer: number; out: Img; outVer: number; uni: Float32Array }
-export const LAP_GPU: LapGpu = { vox: new Uint32Array(Math.ceil((2 * NX * NY * NZ) / 4)), voxVer: 0, decal: new Img(1, 1), decalVer: 0, out: new Img(1, 1), outVer: 0, uni: new Float32Array(LAP_U_FLOATS) };
-new Int32Array(LAP_GPU.uni.buffer, 0, 4).set([NX, NY, NZ, NX * NY * NZ]);
+/**
+ * The gear fitted from the bag (13.6), in the deck's frame and cells: the USB Wi-Fi stick in the right
+ * side's port with its whip (and its blue light), the extended battery standing out behind the hinge.
+ */
+export const ANT_N = [20, 12, 76] as const, BAT_N = [124, 13, 9] as const;
+function antennaModel(): Vox {
+  const V = new Vox(ANT_N[0], ANT_N[1], ANT_N[2]);
+  for (let x = 0; x < 18; x++) for (let y = 1; y < 12; y++) for (let z = 2; z < 7; z++) V.set(x, y, z, M.Usb);
+  for (let x = 4; x < 6; x++) for (let y = 6; y < 8; y++) V.set(x, y, 7, M.UsbLed);
+  for (let x = 15; x < 18; x++) for (let y = 5; y < 8; y++) for (let z = 7; z < ANT_N[2]; z++) V.set(x, y, z, M.Whip);
+  return V;
+}
+function batteryModel(): Vox {
+  const V = new Vox(BAT_N[0], BAT_N[1], BAT_N[2]);
+  for (let x = 0; x < BAT_N[0]; x++) for (let y = 0; y < BAT_N[1]; y++) for (let z = 0; z < BAT_N[2]; z++) V.set(x, y, z, M.Batt);
+  return V;
+}
+/** Each model's size (cells): the deck, the lid, the stick, the battery; and where its cells start in the buffer. */
+export const LAP_N: readonly (readonly [number, number, number])[] = [[NX, NY, NZ], [NX, NY, LID_NZ], ANT_N, BAT_N];
+const LAP_OFF: number[] = [];
+for (let i = 0, o = 0; i < LAP_N.length; i++) { LAP_OFF.push(o); o += LAP_N[i][0] * LAP_N[i][1] * LAP_N[i][2]; }
+const LAP_CELLS = LAP_OFF[3] + BAT_N[0] * BAT_N[1] * BAT_N[2];
 
-/** A model's camera, in its cells: the eye, the ray at pixel (0, 0) and its step right and down, the light's direction. */
+/** What the GPU needs this frame: the models' cells (one after the other, a byte each), the decals, the uniform; each with a version. */
+export interface LapGpu { vox: Uint32Array; voxVer: number; decal: Img; decalVer: number; out: Img; outVer: number; uni: Float32Array }
+export const LAP_GPU: LapGpu = { vox: new Uint32Array(Math.ceil(LAP_CELLS / 4)), voxVer: 0, decal: new Img(1, 1), decalVer: 0, out: new Img(1, 1), outVer: 0, uni: new Float32Array(LAP_U_FLOATS) };
+
+/** A model's camera, in its cells: the eye, the ray at monitor pixel (0, 0) and its step right and down, the light's direction. */
 export interface LapCam { eye: readonly number[]; F: readonly number[]; R: readonly number[]; D: readonly number[]; light: readonly number[] }
 
 let built: { V: Vox; ids: Map<number, string>; up: Uint8Array; dn: Uint8Array; cols: Map<string, number[]>; sunk: Set<string> } | null = null, lastDeck: LapCam | null = null;
@@ -267,10 +289,11 @@ const legendOf = (l: string) => ({ ShiftR: 'SHIFT', AltR: 'ALT', CtrlR: 'CTRL', 
 /** The deck's top (the legends, the seal) over the lid's inside (the maker's name, the LEDs' marks), DKL pixels a cell. */
 function paintDecal(maker: string): Img {
   const W = NX * DKL, H = NY * DKL, D = new Img(W, H * 2), P = new Paint(D), k = DKL / CELL_MM;
-  // the legends, at the key's top left as the manual prints them (2.5 mm in); long ones smaller
+  // the legends, all in one size (3.5 mm), at the key's top left as the manual prints them; the up and down keys stacked
   for (const K of KEYS) {
-    const s = legendOf(K.label);
-    if (s) P.text(Math.round((K.x0 + 2) * k), Math.round((K.y0 + 2) * k), s, s.length > 2 ? 1 : 2, LEG, 1, s.length > 2 ? 1 : 2);
+    const s = legendOf(K.label), x = Math.round((K.x0 + 2) * k), y = Math.round((K.y0 + 2) * k);
+    if (s) P.text(x, y, s, 2, LEG);
+    if (K.label === 'UpDown') P.text(x, y + 20, 'V', 2, LEG);
   }
   // the seal: cream paper, OS in burnt orange and prey in graphite, UX 4 under it
   const sx = 262 * k, sy = (PAD.y1 - 12) * k;
@@ -304,16 +327,18 @@ export function keyOfCode(code: string): string {
 export const KEY_TOP = TOP + 1;
 
 /**
- * The body for this frame into LAP_GPU: the deck and the lid's cameras (cells, from the eye's rays in
- * monitor pixels), where on the monitor it is drawn, the scene's light, the screen lit or not (its ink),
- * the keys sunk (`down`), the lamp, the LEDs, the maker's name and the outside's stickers.
+ * The body for this frame into LAP_GPU: each model's camera (the deck, the lid, the stick, the battery,
+ * in LAP_N's order; null for one not there), where on the monitor it is drawn, the scene's light, the
+ * screen lit or not (its mean light), the keys sunk (`down`), the lamp, the LEDs, the maker's name and
+ * the outside's stickers.
  */
-export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly number[], light: ArrayLike<number>, o: {
-  on: boolean; lamp: boolean; disk: boolean; radio: boolean; charging: boolean; /** the screen's mean light (0..255) */ ink: C3; down: (code: string) => boolean;
+export function laptopGpu(cams: readonly (LapCam | null)[], rect: readonly number[], light: ArrayLike<number>, o: {
+  on: boolean; lamp: boolean; disk: boolean; radio: boolean; charging: boolean; /** the stick's light */ usb: boolean;
+  /** the screen's mean light (0..255) */ ink: C3; down: (code: string) => boolean;
   maker: string; seed: number; bands: readonly string[]; shops: readonly string[];
 }): LapGpu {
   const B = LAP_GPU, U = B.uni, n = NX * NY * NZ, bytes = new Uint8Array(B.vox.buffer);
-  lastDeck = deck;
+  lastDeck = cams[0];
   if (!built) {
     // built once, all keys up and all down; a key sinking only copies its own cells from the other
     const up = deckModel(() => false), dn = deckModel(() => true).V.cells, cols = new Map<string, number[]>();
@@ -322,9 +347,8 @@ export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly numbe
       if (a) { let l = cols.get(a); if (!l) cols.set(a, (l = [])); l.push(i); }
     }
     built = { V: up.V, ids: up.ids, up: up.V.cells, dn, cols, sunk: new Set() };
-    bytes.set(up.V.cells, 0);
-    const L = lidModel().cells, per = NX * NY * LID_NZ;
-    bytes.set(L.subarray(0, per), n);
+    bytes.set(up.V.cells, LAP_OFF[0]); bytes.set(lidModel().cells, LAP_OFF[1]);
+    bytes.set(antennaModel().cells, LAP_OFF[2]); bytes.set(batteryModel().cells, LAP_OFF[3]);
     B.voxVer++;
   }
   for (const [code, idx] of built.cols) {
@@ -339,11 +363,11 @@ export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly numbe
   const ok = `${o.seed}|${o.maker}|${o.bands.join()}|${o.shops.join()}`;
   if (outFor !== ok) { outFor = ok; B.out = paintLidOutside(o.seed, o.maker, o.bands, o.shops).img; B.outVer++; }
   U.set(rect, LAP_AT.rect);
-  const cam = (c: LapCam | null, at: number) => {
+  cams.forEach((c, m) => {
+    const at = LAP_AT.cam + m * 20, N = LAP_N[m];
     if (!c) { U.fill(0, at, at + 20); return; }
-    U.set([c.eye[0], c.eye[1], c.eye[2], 1, ...c.F, 0, ...c.R, 0, ...c.D, 0, ...c.light, 0], at);
-  };
-  cam(deck, LAP_AT.cam); cam(lid, LAP_AT.cam + 20);
+    U.set([c.eye[0], c.eye[1], c.eye[2], LAP_OFF[m] + 1, c.F[0], c.F[1], c.F[2], N[0], c.R[0], c.R[1], c.R[2], N[1], c.D[0], c.D[1], c.D[2], N[2], c.light[0], c.light[1], c.light[2], 0], at);
+  });
   U.set([light[0], light[1], light[2], o.on ? 1 : 0], LAP_AT.light);
   U.set([o.ink[0], o.ink[1], o.ink[2], 0.9], LAP_AT.ink);
   // the glass over the hinge (deck cells): its sides, its foot and top (the lid's glass rows, standing)
@@ -351,6 +375,10 @@ export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly numbe
   // the lamp: over the glass's top middle, at the lid's face, looking down onto the keys
   U.set([NX / 2, 1, KEY_TOP + NY - 3, o.lamp ? 1.1 : 0], LAP_AT.lamp);
   const pal = lidPalette(deckPalette(built.ids, o.on, o.lamp), o);
+  pal[M.Usb] = { col: [28, 28, 32], gloss: 0.2 };
+  pal[M.UsbLed] = o.usb ? { col: [90, 160, 255], gloss: 0.3, glow: true } : { col: [50, 60, 80], gloss: 0.3 };
+  pal[M.Whip] = { col: [22, 22, 25], gloss: 0.15 };
+  pal[M.Batt] = { col: [24, 25, 28], gloss: 0.12 };
   for (let i = 1; i < pal.length; i++) {
     const m = pal[i]; if (!m) continue;
     const id = built.ids.get(i), at = LAP_AT.pal + i * 8;

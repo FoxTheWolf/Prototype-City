@@ -178,13 +178,10 @@ fn phBloom(uv: vec2f) -> vec3f {
   if (q.x >= 0 && q.y >= 0 && uc.x < u.uiGrid.x && uc.y < u.uiGrid.y) {
     let hp = textureLoad(hd, (q * ${HD}) / u.uiCell, 0);
     if (hp.a > 0.25 && hp.a < 0.75) { col = hp.rgb; }
-    // the notebook's body in cubes (15.20b), under its screen: the deck's ray and the lid's, the nearer hit
+    // the notebook's body in cubes (15.20b), under its screen: every model's ray, the nearest hit
     if (all(vec2f(s) >= lu.rect.xy) && all(vec2f(s) < lu.rect.zw)) {
-      let sp = vec2f(s) + 0.5;
-      let h0 = lcast(0, sp); let h1 = lcast(1, sp);
-      if (h0.mat != 0u || h1.mat != 0u) {
-        if (h1.mat != 0u && h1.t < h0.t) { col = lshade(h1, 1, sp); } else { col = lshade(h0, 0, sp); }
-      }
+      let sp = vec2f(s) + 0.5; let hn = lnear(sp);
+      if (hn.m >= 0) { col = lshade(hn.h, hn.m, sp); }
     }
     if (u.tmGrid.x > 0) {
       // the notebook's screen: its picture (a clear pixel shows what is under it; a glyph alone lies over it)
@@ -192,20 +189,11 @@ fn phBloom(uv: vec2f) -> vec3f {
       if (u.tmShow.x > 0) {
         // faced squarely: pixel for pixel
         if (all(m >= vec2i(0)) && all(m < sz)) { let t = textureLoad(tmPic, m, 0); col = mix(col, t.rgb, t.a); }
-        else if (all(m >= -u.uiCell) && all(m < sz + u.uiCell)) {
-          // within an interface cell round it: its nearest edge pixel (the screen's black edge)
-          let t = textureLoad(tmPic, clamp(m, vec2i(0), sz - 1), 0);
-          if (t.a > 0.75) { col = t.rgb; }
-        }
       } else {
         // from aside: leaning with the glass (the interface's cells the glass touches are left clear for it)
         let f = vec2f(s) + 0.5; let uv = glassUv(f);
         let d = sdQuad(f, vec2f(u.g0), vec2f(u.g1), vec2f(u.g2), vec2f(u.g3));
         if (d <= 0.0) { let t = textureSampleLevel(tmPic, tmSamp, uv, 0.0); col = mix(col, t.rgb, t.a); }
-        else if (d < f32(max(u.uiCell.x, u.uiCell.y))) {
-          let t = textureSampleLevel(tmPic, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0);
-          if (t.a > 0.75) { col = t.rgb; }
-        }
       }
     }
     // the phone's body, over the notebook's screen and under the interface as the HD layer's under-pixels were
@@ -682,7 +670,7 @@ export class GpuCompositor {
         this.up(this.t.lOut, lap.out.px, lap.out.w, lap.out.h); this.lapOutVer = lap.outVer;
       }
       this.dev.queue.writeBuffer(this.lapUni!, 0, lap.uni);
-    } else this.dev.queue.writeBuffer(this.lapUni!, 16, new Float32Array(4));
+    } else this.dev.queue.writeBuffer(this.lapUni!, 0, new Float32Array(4));
     const boost = phone?.[4] ?? 1;
     this.U[33] = Math.round(100 * boost); this.U[34] = Math.round(100 * Math.sqrt(boost));
     this.U[32] = Math.round(EYE.k * 1000);

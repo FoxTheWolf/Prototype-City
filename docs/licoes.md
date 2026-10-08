@@ -6,6 +6,9 @@
 - **Câmera da GPU = a do `project()`:** a projeção dos objetos (`cols/2·(1 + tX/tY)`, `hor − (z − eye)·scale/tY`) é linear no pixel do monitor, então o raio de cada pixel é `F + R·x + D·y` com três vetores calculados na CPU (o raio nos pixels (0,0), (1,0), (0,1)). Assim o corpo em cubinhos cai exatamente onde o `glassBox` e a tela já caíam, sem homografia nova.
 - **Um modelo que gira (a tampa) = outra câmera,** não outra grade: a CPU leva o olho e o raio ao quadro da tampa (os eixos `u`, `n` da dobradiça), e o shader fica com dois `lcast` e o `t` mais perto. A luz também vai ao quadro de cada modelo na CPU (só uma direção por modelo).
 - **Tecla que afunda sem refazer o modelo:** construir uma vez com todas em cima e todas embaixo e guardar, por peça, as células que mudam; refazer o `deckModel` a cada tecla custaria milissegundos (procura em `KEYS` por célula).
+- **Câmera do mundo é 3D de verdade (`cam3d`), não cisalhada:** o `project()` antigo do `render/objects.ts` (o horizonte que sobe e desce com o pitch) distorce ao olhar para baixo. Para algo novo em perspectiva, usar `fw = (dirX·cos p, dirY·cos p, sin p)`, `rt = (−dirY, dirX, 0)`, `up = (−dirX·sin p, −dirY·sin p, cos p)`, como em `gpu/shader.ts`.
+- **Tela pixel por pixel com câmera inclinada:** a superfície tem de ficar perpendicular à vista (aqui, a tampa inclinada); senão o retângulo vira trapézio.
+- **Não deixar código de "faixa de borda" que só servia a uma camada que saiu:** a célula esticada em volta da tela era coberta pelo corpo antigo em células; quando ele saiu, ela apareceu.
 - **Clique em peça 3D:** o mesmo raio na CPU com `castVoxPersp` de 1 × 1 pixel (a última câmera). Barato e sempre igual ao que se vê.
 - **A luz da tela no teclado deve seguir a cor média da tela,** e não a tinta: com âmbar fixo o descanso ficou bege no POST (tela quase preta).
 - **Ordem no compositor:** o corpo do celular depois da tela do notebook, senão a tela do notebook cobria o celular erguido.
