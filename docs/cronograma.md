@@ -45,26 +45,27 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 
 ---
 
-## Etapa 13: Interiores, o fechamento (7 subetapas)
+## Etapa 13: Interiores, o fechamento (8 subetapas)
 > Fecha o rework pelo manual (`docs/plano-interiores.md`) com o que a 17 precisa, e congela. O resto do rework (tipos que faltam, faixas `*` dos lotes fundos, escritórios e torres) vai para a 23.
 - ✅ **13.18 O retorno do playtest de 2026-10-08 (0.13.18; a porta na cozinha virou hall nas 5 plantas e a regra R12; falta o usuário ver no PC):** a escada em U (vão no topo, o piso de cima invisível pelo poço), o travamento perto da escada, o apartamento sem porta e a porta principal na cozinha (e uma regra nova no validador para isso), o recuo dos móveis e da escada da parede. (`plano-interiores.md` passo 9)
 - ✅ **13.19 Portas e saída (passo 8; 0.13.19, falta o usuário ver no PC):** a porta dos moradores achável, a verga, portas e entradas mais largas (~0,9 m), o vidro da porta, o EXIT vermelho só no caminho comum até a rua.
 - → **C1**
 - ✅ **13.20 (0.13.20) Mobiliar pela biblioteca, com postos (passo 3):** as arrumações do manual nos cômodos, pela renda e pelo morador (`homeUnit` nasce aqui), e **cada móvel com o posto dele** (onde o NPC fica, para onde olha), que é a base da casa da 17.
+- **13.S A arrumação do shader (adiantada da 16.1 na reunião de 2026-10-08):** separar `gpu/shader.ts` por assunto, caber em 8 storage buffers, cortar a compilação de 3–4 min (as funções grandes copiadas em cada chamada); aproveitar e tirar o código desligado da zona de fogo e do Sarcófago (`FIRE_ZONE`). Por partes, comparando as posições de ouro antes e depois de cada passo. Motivo: o C2, a 13.22, a 16 e a 23 são quase só shader.
 - **13.21 Um gerador só: as lojas na gramática das plantas** (regra "um sistema só"): `sim/layouts.ts` entra em `sim/floorplans.ts`; os postos de balconista e de cliente no mesmo formato.
 - → **C2**
 - **13.22 Interruptores e luz por cômodo (passo 5, R10):** um por cômodo, sala vazia e loja fechada apagadas; é a regra de luz do stealth.
 - **13.23 O telhado (passo 4d)** e a última escada chegando nele.
 - → **C3**
 - **13.24 Escadas de incêndio coerentes com as plantas** (nota 12): as janelas e os patamares batendo com os cômodos; é o caminho alternativo do stealth e da fuga.
-- → **teste do usuário da 13**
+- → **teste do usuário da 13** (reunião de 2026-10-08: o usuário já testou a maior parte da fila antiga "falta ver no PC"; o que for refeito sai em `teste-*.bat` com instruções claras, um por assunto, e não numa lista solta)
 
 ## Etapa 15: fechada
 Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo mouse e o Maps escuro → C4; a moldura nova do manual do Ferret, favoritos/abas/links roxos e as notas de versão → C5; as fotos das notícias apontadas → C6; o brilho do aço e o cristal do relógio → C9; postar na rede social e o eclipse no Streetwire → 18; os adesivos do notebook (15.20c) → 22; a tomada, o infravermelho, o brilho no mundo e o som abafado do Jackdaw, e o CCTV gravado no título → 23; o e-mail e o app cifrado do contratante, `tests/apt.ts` → 21. A pasta de música no navegador sai (o alvo é o Electron).
 
 ## Etapa 16: Pessoas, o manual e o rework (6 subetapas)
 > Um rework só, planejado para tudo o que as etapas 17, 20 e 22 vão pedir do corpo. Junta 13.8, 13.11 e 13.14.
-- **16.1 Travadas e o shader:** primeiro **medir as travadas** (um gravador dos quadros acima de ~8 ms no registro de playtest, com o tempo de cada fase: simulação, preparação, GPU, telas, e a posição); se a simulação for o culpado, levá-la para um **Web Worker**. Depois **arrumar o shader** (antes da demo no plano antigo; sobe para cá): separar `gpu/shader.ts` por assunto, caber em 8 storage buffers, e cortar a compilação de 2–4 min (as funções grandes copiadas em cada chamada). O rework das pessoas mexe muito no shader; cada recarga mais rápida paga o resto do projeto. Logo depois, **o documento da engine** (pedido de 2026-10-08) sai daqui, com o shader já arrumado: o raio por célula, a luz, os interiores, os cubinhos, a camada HD e por que os bugs típicos acontecem.
+- **16.1 Travadas e o shader:** primeiro **medir as travadas** (um gravador dos quadros acima de ~8 ms no registro de playtest, com o tempo de cada fase: simulação, preparação, GPU, telas, e a posição); se a simulação for o culpado, levá-la para um **Web Worker**. (A arrumação do shader foi adiantada para a 13.S.) Logo depois, **o documento da engine** (pedido de 2026-10-08) sai daqui, com o shader já arrumado: o raio por célula, a luz, os interiores, os cubinhos, a camada HD e por que os bugs típicos acontecem.
 - **16.2 O manual de pessoas** (`docs/identidade/pessoas-manual.html`): o corpo e as proporções variáveis (altos, baixos, braços), o esqueleto e as poses, os traços combináveis (cabelo, cor forte, óculos, chapéu, barba com a boca à mostra, tatuagem, cicatriz: a maioria com um, poucos com dois), a roupa em camadas 3D (cubos e esferas), como a roupa vira descrição em palavras, **um sistema só de roupa** (vestir, trocar de roupa, o disfarce e a customização são a mesma coisa; o disfarce e o editor só ganham uso depois), o corpo sentado no carro e o taxista (20), o jogador e o espelho (22). Regras testáveis, como R1–R9.
 - → **C4**
 - **16.3 O corpo novo:** o modelo, as proporções pela semente, o LOD de longe, a cabeça que vira de forma visível (a linha de visão da 17).
