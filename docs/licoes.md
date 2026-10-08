@@ -8,6 +8,10 @@
 - **Otimizar desenho sem mudar o desenho:** antes, rodar os testes que geram PNG (paint2d, phone-pages, phone-rey, phone-map, phoneweb, screens, web-canon, lookwise, web-seals, web-errors, web-layout), copiar `tests/.out/*.png` para o scratchpad e, depois, `cmp` arquivo a arquivo: 67 imagens idênticas.
 - **O painel do navegador oculto estrangula os quadros** (3–10 quadros em 3 s) e os números de quadro inteiro ficam inúteis; as somas por chamada (`__pt` / n) ainda servem. Cada edição faz o HMR recarregar e pedir CONTINUE de novo; no painel, `resize_window` 1920 × 1080 nem sempre vale para o canvas.
 - **Mensagens sorteadas pela hora do jogo** (`hash3(seed, hr, …)` em `phone.ts`) repetem quando a hora volta (Shift+T): disparar só com `hr > última`.
+- **Um `P.clip` que uma página deixa vale para o que vem depois:** o Maps devolvia o recorte até `Y1` e a barra de baixo, pintada em seguida pelo `paintChrome` com o mesmo `Paint`, sumia. O `paintChrome` agora restaura a tela inteira depois da página.
+- **Glare por espelho:** com a tela inclinada 20° para trás, o reflexo apontava ao céu e nenhuma lâmpada caía no vidro; de frente para o olho, ele volta por cima do ombro, ~25° acima. Um espelho perfeito é estreito demais (±5°): o vidro "fosco" (mancha de ≥0,07 rad, válida até 3 raios) faz a luz aparecer com o ângulo quase certo. Testar a conta no console com `world.city.lamps` é rápido; o glare em si só se vê com o painel visível.
+- **No título, `find`/`querySelector` acham botões escondidos** (um CONTINUE sem save): filtrar por `offsetParent !== null` antes de clicar.
+
 
 ### Lições da 15.19 (cubinhos, corpo do celular) — 2026-10-07
 - **Medir aquecido:** o 1º `castVox` custa ~7 ms (JIT), os seguintes ~2,7 ms. Num teste de tempo, repetir e descartar as primeiras.
