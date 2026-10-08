@@ -55,8 +55,8 @@ const idles: { a: Rec; b: Rec }[] = [];
 let leg: Leg | null = null, still = 0;
 for (let i = 1; i < pos.length; i++) {
   const P = pos[i - 1], Q = pos[i], dgt = Q.gt - P.gt, drt = Q.rt - P.rt, d = Math.hypot(Q.x - P.x, Q.y - P.y);
-  // time moved faster than the clock's 30x: a skip (sleeping, T), not walking
-  if (dgt > Math.max(120, drt * 30 * 3)) { skipped += dgt; leg = null; continue; }
+  // time moved faster than the clock's 30x, or back (Shift+T): a skip (sleeping, T), not walking
+  if (dgt < 0 || dgt > Math.max(120, drt * 30 * 3)) { skipped += dgt; leg = null; continue; }
   if (d > 0.4 && d < 30) {
     dist += d; gameMoving += dgt; still = 0;
     if (!leg) { leg = { a: P, b: Q, dist: 0, game: 0 }; legs.push(leg); }

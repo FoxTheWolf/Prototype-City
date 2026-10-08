@@ -566,7 +566,8 @@ export class Phone {
     // now and then a citizen gets the player's number wrong: a call, or a text (one hour in a few)
     if (this.screen !== 'off' && this.radio.state === 'service') {
       const hr = Math.floor(this.world.time / 3600), h = (q: number) => hash3(this.world.seed, hr, q);
-      if (hr !== this.oddHour) {
+      // (only a new hour: one gone back to with Shift+T and passed again sent the same texts twice, playtest 2026-10-07)
+      if (hr > this.oddHour) {
         if (this.oddHour >= 0) {
           if (h(0x11c) < 0.08) this.wrongAt = now + h(0x11e) * 90;
           // most of the texts nobody asked for are a shop's advertising (from its own number); the rest a wrong number
