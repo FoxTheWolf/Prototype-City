@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.51 — O relógio ganha um quarto botão (2026-10-07)
+- **DISPLAY (tecla Ç, ou clique com o Alt):** o novo botão embaixo à direita troca a linha de baixo do relógio, em qualquer modo: **bússola e temperatura → nascer e pôr do sol → lua → pulso**.
+- **Sol:** a hora em que o sol nasce e se põe hoje, pelo céu de verdade do jogo; serve para saber quanto falta para a noite.
+- **Lua:** o desenho da fase e a idade da lua em dias.
+- **Pulso:** o coração bate mais rápido quando você corre e quando o fôlego está acabando, e desce devagar parado; o sinal pisca a cada batida. É o jeito de ver o fôlego sem barra nenhuma.
+- **As legendas ao lado de cada botão:** LIGHT e START em cima, MODE e DISPLAY embaixo; a marca foi para o meio.
+- **A luz do relógio voltou a mostrar o visor:** com o LIGHT aceso, o LCD sumia e aparecia a rua através dele; agora os números ficam na luz azul.
+
 ## 0.15.50 — O notebook no mundo de verdade (2026-10-07)
 - **Perspectiva certa:** o notebook agora é visto pela mesma câmera do mundo, e não mais pela projeção antiga que esticava tudo ao olhar para baixo; de perto, de lado ou olhando para o teclado, ele parece um objeto na mesa.
 - **A tampa abre inclinada,** uns 114°, de frente para os olhos, como se ajusta uma tela; o console continua nítido, pixel por pixel.

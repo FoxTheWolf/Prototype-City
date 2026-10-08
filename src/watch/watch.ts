@@ -1,5 +1,5 @@
 import { type CharGrid } from '../render/grid';
-import { calendar } from '../sim/clock';
+import { calendar, moonPhase, sunDir } from '../sim/clock';
 import { type C3 } from '../phone/lcd';
 
 /**
@@ -12,12 +12,18 @@ import { type C3 } from '../phone/lcd';
  * alarm and the hourly signal on and off as a Casio does (alarm, signal, both, neither; held, it sets
  * the alarm: K steps the blinking field, J moves to the next) and runs the stopwatch (held while
  * stopped, it clears it). The stopwatch counts real seconds, so it times what the player does.
+ * The fourth button (DISPLAY, Ç; 15.21, docs/identidade/relogio-manual.html) steps the bottom row in
+ * every mode: the compass and the thermometer, the day's sunrise and sunset, the moon's age, the pulse
+ * (which follows the breath: up running, down resting).
  */
 /** The watch is in the game (F.4); off, its keys do nothing and it is never drawn. */
 export const WATCH_ON = true;
 
 export type WatchMode = 'time' | 'alarm' | 'chrono';
 const MODES: WatchMode[] = ['time', 'alarm', 'chrono'];
+/** The bottom row's faces, stepped by DISPLAY. */
+export type WatchFace = 'compass' | 'sun' | 'moon' | 'pulse';
+const FACES: WatchFace[] = ['compass', 'sun', 'moon', 'pulse'];
 
 export class Watch {
   /** In sight (the player's choice; I). */
@@ -47,15 +53,22 @@ export class Watch {
   /** The game hour and minute last seen (-1: not yet). */
   private hour = -1;
   private minute = -1;
+  /** The bottom row's face (DISPLAY). */
+  face: WatchFace = 'compass';
+  /** The pulse (beats a minute), eased after the breath; the last beat (real seconds); the breath last seen. */
+  pulse = 70;
+  beatAt = 0;
+  private breath = 1;
   /** The thermometer's reading (degrees C, NaN: not yet): it follows the air slowly, as a real one on a wrist does. */
   temp = NaN;
   /** Sounds asked for this frame: 'up', 'down', 'light', 'chime', 'beep', 'alarm'. */
   sfx: string[] = [];
 
   /** What the save keeps (the stopwatch is real time, so it comes back stopped, with what it had counted). */
-  snapshot() { return { up: this.up, mode: this.mode, alarm: { ...this.alarm }, sw: this.swAcc, chime: this.chime }; }
+  snapshot() { return { up: this.up, mode: this.mode, alarm: { ...this.alarm }, sw: this.swAcc, chime: this.chime, face: this.face }; }
   restore(d: ReturnType<Watch['snapshot']>, now: number) {
     this.up = d.up; this.mode = d.mode; this.alarm = { ...d.alarm }; this.swAcc = d.sw; this.chime = d.chime ?? true; this.swAt = -1; this.setting = 0; this.ringUntil = 0;
+    this.face = d.face ?? 'compass';
     this.lightAt = now - 99;
   }
 
@@ -77,6 +90,12 @@ export class Watch {
     this.sfx.push('beep');
     if (this.setting) { this.setting = this.setting === 1 ? 2 : 0; return; }
     this.mode = MODES[(MODES.indexOf(this.mode) + 1) % MODES.length];
+  }
+  /** DISPLAY: the next face of the bottom row. */
+  displayKey(now: number) {
+    if (!this.reach(now)) return;
+    this.sfx.push('beep');
+    this.face = FACES[(FACES.indexOf(this.face) + 1) % FACES.length];
   }
   /** The right button pressed (repeat: the key held down, stepping a field being set). */
   startDown(now: number, repeat: boolean) {
@@ -107,9 +126,14 @@ export class Watch {
   /** A step of the field being set: an hour, or a minute. */
   private step() { const A = this.alarm; A.min = this.setting === 1 ? (A.min + 60) % 1440 : A.min - (A.min % 60) + ((A.min % 60) + 1) % 60; }
 
-  /** `air`: the temperature round the player (the weather's outdoors, a room's indoors). */
-  update(dt: number, time: number, now: number, air: number) {
+  /** `air`: the temperature round the player (the weather's outdoors, a room's indoors); `breath`: the player's (sim/needs.ts, 0..1). */
+  update(dt: number, time: number, now: number, air: number, breath = 1) {
     this.temp = Number.isNaN(this.temp) ? air : this.temp + (air - this.temp) * Math.min(1, dt / TEMP_S);
+    // the pulse: resting ~68, higher the less breath is left, and higher still while it is being spent (running)
+    const bpm = 68 + (1 - breath) * 70 + (breath < this.breath - 1e-6 ? 35 : 0);
+    this.breath = breath;
+    this.pulse += (bpm - this.pulse) * Math.min(1, dt / PULSE_S);
+    if (now - this.beatAt >= 60 / this.pulse || now < this.beatAt) this.beatAt = now;
     // held: in alarm mode it starts setting it; on a stopped stopwatch it clears it
     if (this.bDown >= 0 && !this.bHeld && now - this.bDown > HOLD_S) {
       this.bHeld = true;
@@ -134,8 +158,28 @@ export class Watch {
 const HOLD_S = 1.2, POP_S = 3.5, RING_S = 20;
 /** How long the light stays on. */
 const LIGHT_S = 3;
-/** How slowly the thermometer follows the air (real seconds). */
-const TEMP_S = 20;
+/** How slowly the thermometer follows the air, and the pulse the breath (real seconds). */
+const TEMP_S = 20, PULSE_S = 4;
+/** The day's sunrise and sunset (hours of the day, NaN when the sun does not cross), worked out once a game day. */
+const sunDay = { day: NaN, up: NaN, down: NaN };
+const SUN_H = (-0.833 * Math.PI) / 180, sunTmp = new Float64Array(2);
+function sunTimes(time: number, hour: number): [number, number] {
+  const day = Math.floor((time - hour * 3600) / 60 + 0.5);
+  if (day !== sunDay.day) {
+    sunDay.day = day; sunDay.up = NaN; sunDay.down = NaN;
+    const t0 = time - hour * 3600;
+    let prev = sunDir(t0, sunTmp)[0] - SUN_H;
+    for (let k = 1; k <= 144; k++) {
+      const e = sunDir(t0 + k * 600, sunTmp)[0] - SUN_H;
+      if ((prev < 0) !== (e < 0)) { const h = ((k - 1) + prev / (prev - e)) / 6; if (e > 0) sunDay.up = h; else sunDay.down = h; }
+      prev = e;
+    }
+  }
+  return [sunDay.up, sunDay.down];
+}
+const hhmm = (h: number) => (Number.isNaN(h) ? '--:--' : `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`);
+/** The moon on the LCD's cells by its phase in eighths (new, waxing crescent, first quarter, waxing gibbous, full, then waning). */
+const MOON = ['( )', ' )', ' D', '(D', '(O)', 'C)', 'C ', '( '];
 /** The compass reads its sensor this often (real seconds), like a watch's: the number does not follow every turn of the head. */
 const COMPASS_S = 0.6;
 const compass = { at: -1e9, deg: 0 };
@@ -180,7 +224,7 @@ export const WATCH_LCD: { at: number[] | null } = { at: null };
  * hands (VIEW_LIGHT), `glint` VIEW_GLINT, `brand` the maker printed on the face.
  */
 /** Where the watch's buttons were drawn on the grid this frame (for the mouse, with the cursor free: 15.9a). */
-export const WATCH_BTN: [x: number, y: number, b: 'light' | 'mode' | 'start'][] = [];
+export const WATCH_BTN: [x: number, y: number, b: 'light' | 'mode' | 'start' | 'display'][] = [];
 
 export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, light: Float32Array, glint: Float32Array, brand: string, yaw: number) {
   WATCH_LCD.at = null;
@@ -240,18 +284,19 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
     cell(x, CASE_Y + y, (x + y * 3) % 7 === 0 && !top && !low ? '-' : ' ', mul(c, 1.12), c, top ? 0.9 : G_STEEL);
   }
   // the buttons on its sides, in steel too
-  for (const [x, y, b] of [[-1, LY + 1, 'light'], [-1, LY + LH - 2, 'mode'], [W, LY + 1, 'start']] as const) {
+  for (const [x, y, b] of [[-1, LY + 1, 'light'], [-1, LY + LH - 2, 'mode'], [W, LY + 1, 'start'], [W, LY + LH - 2, 'display']] as const) {
     cell(x, y, x < 0 ? '[' : ']', mul(STEEL, 1.3), mul(STEEL, 0.8), G_STEEL);
     if (Wt.raise > 0.5) WATCH_BTN.push([ox + x, oy + y, b]);
   }
+  // each button's name by it (the manual): LIGHT and START over the LCD, MODE and DISPLAY under it; the maker between the top two
   text(3, CASE_Y + 1, 'LIGHT', LABEL, FACE);
-  // the buttons' names along the case: MODE by the lower left one, START/STOP by the right one
+  text(W - 8, CASE_Y + 1, 'START', LABEL, FACE);
   text(3, CASE_Y + CASE_H - 2, 'MODE', LABEL, FACE);
-  text(W - 8, CASE_Y + CASE_H - 2, 'START', LABEL, FACE);
+  text(W - 10, CASE_Y + CASE_H - 2, 'DISPLAY', LABEL, FACE);
   const b = brand.toUpperCase().slice(0, 14);
-  text(W - 3 - b.length, CASE_Y + 1, b, BRAND, FACE);
+  text((W - b.length) >> 1, CASE_Y + 1, b, BRAND, FACE);
   for (let x = 3; x < W - 3; x++) cell(x, CASE_Y + 2, '-', GOLD, FACE);
-  text((W - 12) >> 1, CASE_Y + CASE_H - 2, 'WATER RESIST', LABEL, FACE);
+  text(8, CASE_Y + CASE_H - 2, 'WATER RESIST', LABEL, FACE);
 
   // the LCD: lit from its left edge while the light is on (blue), else only reflecting what is around, darker
   const Ld = L.map((v) => Math.min(1, v * LCD_GAIN) * Math.min(1, v / LCD_KNEE));
@@ -281,7 +326,7 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
   // the small fields' segments while off: every one of them faintly, as '8's (the marks keep their shape)
   const ghost = (x: number, y: number, s: string) => { for (let k = 0; k < s.length; k++) if (s[k] !== ' ') { const [c, own] = lcd(x + k - LX); lc(x + k, y, s[k], [c[0] * GHOST, c[1] * GHOST, c[2] * GHOST], c, own); } };
   ghost(LX + 1, LY + 1, '88'); ghost(LX + 8, LY + 1, '(*) SIG'); ghost(LX + LW - 6, LY + 1, '88-88');
-  ghost(dx + 22, dy + 4, '88'); ghost(LX + 1, LY + LH - 1, '88 888'); ghost(LX + LW - 5, LY + LH - 1, '-88C');
+  ghost(dx + 22, dy + 4, '88'); ghost(LX + 1, LY + LH - 1, '88 888'); ghost(LX + LW - 6, LY + LH - 1, '-88:88');
   // hh:mm in big digits, either pair blank (the field blinking while it is set); `zero`: a leading zero on the hour
   const big = (h: number, m: number, hideH = false, hideM = false, zero = false) => {
     digit(dx, dy, hideH || (h < 10 && !zero) ? -1 : Math.floor(h / 10)); digit(dx + 5, dy, hideH ? -1 : h % 10);
@@ -312,11 +357,23 @@ export function drawWatch(g: CharGrid, Wt: Watch, time: number, now: number, lig
     big(Math.floor(sw / 60) % 60, Math.floor(sw) % 60, false, false, true);
     ink(dx + 22, dy + 4, String(Math.floor((sw % 1) * 100)).padStart(2, '0'));
   }
-  // the bottom row, in every mode: where the player faces (the compass) and the thermometer
-  if (now - compass.at >= COMPASS_S || now < compass.at) { compass.at = now; compass.deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360; }
-  const deg = compass.deg;
-  ink(LX + 1, LY + LH - 1, COMPASS[Math.round(deg / 45) % 8].padEnd(2, ' ') + ' ' + String(deg).padStart(3, '0'));
-  if (!Number.isNaN(Wt.temp)) { const t = `${Math.round(Wt.temp) || 0}C`; ink(LX + LW - 1 - t.length, LY + LH - 1, t); }
+  // the bottom row, in every mode, one face at a time (DISPLAY): where the player faces (the compass) and the
+  // thermometer; the day's sunrise and sunset; the moon and its age in days; the pulse, its mark blinking with each beat
+  const right = (t: string) => ink(LX + LW - 1 - t.length, LY + LH - 1, t);
+  if (Wt.face === 'compass') {
+    if (now - compass.at >= COMPASS_S || now < compass.at) { compass.at = now; compass.deg = Math.round((((yaw * 180) / Math.PI + 90) % 360 + 360) % 360) % 360; }
+    const deg = compass.deg;
+    ink(LX + 1, LY + LH - 1, COMPASS[Math.round(deg / 45) % 8].padEnd(2, ' ') + ' ' + String(deg).padStart(3, '0'));
+    if (!Number.isNaN(Wt.temp)) right(`${Math.round(Wt.temp) || 0}C`);
+  } else if (Wt.face === 'sun') {
+    const [up, down] = sunTimes(time, C.hour);
+    ink(LX + 1, LY + LH - 1, `^${hhmm(up)}`); right(`v${hhmm(down)}`);
+  } else if (Wt.face === 'moon') {
+    const p = moonPhase(time);
+    ink(LX + 1, LY + LH - 1, MOON[Math.round(p * 8) % 8]); right(`AGE ${String(Math.floor(p * 29.53)).padStart(2, '0')}`);
+  } else {
+    ink(LX + 1, LY + LH - 1, now - Wt.beatAt < 0.12 ? '+' : ' '); ink(LX + 3, LY + LH - 1, String(Math.round(Wt.pulse)).padStart(3, '0')); right('BPM');
+  }
   // the LCD sits under the face: the face's edge shades its top row, and the side away from the light
   for (let x = 0; x < LW; x++) shade(LX + x, LY, 0.3);
   const vx = -GL.lat;

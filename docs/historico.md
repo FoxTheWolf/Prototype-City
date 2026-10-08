@@ -3,6 +3,11 @@
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
 
+## 15.21 O relógio, passo 1: manual, 4º botão e mostradores (0.15.51, 2026-10-07)
+- **Manual:** `docs/identidade/relogio-manual.html` (o relógio de hoje refinado, desenhado em SVG com os 4 botões funcionando e as teclas J K L Ç, os quatro mostradores, cores, LCD, sons, o plano do 3D, regras). **Decidido com o usuário:** um 4º botão (DISPLAY, tecla Ç = `Semicolon`) para o mostrador; os batimentos entram agora, só como visual.
+- **`watch/watch.ts`:** `face` (`compass`/`sun`/`moon`/`pulse`, no save), `displayKey`, o pulso (`pulse`, `beatAt`) que segue o fôlego de `needs.breath` (sobe quando ele cai: correr; desce devagar, `PULSE_S`), `sunTimes` (o nascer e o pôr pelo `sunDir`, varrendo o dia de 10 em 10 min, uma vez por dia), `MOON` (a fase em oitavos em células); as legendas ao lado de cada botão e a marca no meio; o botão `display` no `WATCH_BTN` (clique com Alt).
+- **Correção no compositor:** o `underGlass` (as células sob o vidro do celular não são desenhadas) valia também para o retângulo do LCD aceso do relógio, e o visor sumia com a luz; agora só com a imagem da tela do celular (`px0..px1`).
+
 ## 15.20b Correções do retorno do usuário (0.15.50, 2026-10-07)
 - **Retorno (capturas do usuário):** o texto da tela esticado para a esquerda e para cima; teclas sem legenda e F10 numa fonte menor que o F9; a perspectiva distorcida ao olhar para baixo (a do raycaster antigo). E a regra das capturas reescrita (CLAUDE.md, "TODA captura de tela dentro do jogo").
 - **Câmera 3D de verdade (`look3d.ts`):** o raio e o `project()` do notebook são os do `cam3d` do mundo (`fw`, `rt`, `up` pelo pitch, como em `gpu/shader.ts`). Para o console continuar pixel por pixel, a tampa abre até o vidro ficar de frente para a vista em `PITCH0 = −0,42` (≈114°), e a altura do olho e a distância saem dessa conta (o vidro na profundidade `T`, o meio dele um pouco acima do meio da vista); antes o olho era fixo em 30 cm e uma iteração descia até o limite. O modo "de frente" também exige o quadrilátero sem trapézio.

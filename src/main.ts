@@ -480,6 +480,7 @@ function watchClick(e: MouseEvent): boolean {
   const b = WATCH_BTN.find(([bx, by]) => by === y && Math.abs(bx - x) <= 1)?.[2];
   if (b === 'light') watch.light(now);
   else if (b === 'mode') watch.modeKey(now);
+  else if (b === 'display') watch.displayKey(now);
   else if (b === 'start') { watch.startDown(now, false); watchStartHeld = true; }
   return !!b;
 }
@@ -808,6 +809,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyI' && running && WATCH_ON) { watch.toggle(); return; }
   if (e.code === 'KeyL' && running && WATCH_ON) { watch.light(performance.now() / 1000); return; }
   if (e.code === 'KeyJ' && running && WATCH_ON) { watch.modeKey(performance.now() / 1000); return; }
+  if (e.code === 'Semicolon' && running && WATCH_ON) { watch.displayKey(performance.now() / 1000); return; }
   if (e.code === 'ArrowUp' && !phone.out && running) phoneToggle();
   else if (e.code === 'KeyP' && running && !payphone.active) phoneToggle();
   // debug: T / shift+T move the clock an hour, Y steps through the weather presets
@@ -1396,7 +1398,7 @@ function frame(now: number) {
   }
   phone.hover = phone.out || (laptop.open && phone.raise > 0.5) || phone.handy > 0.5 ? phoneKeyAt(cursorX, cursorY) : null;
   // over the notebook while it is open (to be clicked), under it otherwise
-  watch.update(dt, world.time, now / 1000, world.player.inside >= 0 ? 21 : world.weather.temp);
+  watch.update(dt, world.time, now / 1000, world.player.inside >= 0 ? 21 : world.weather.temp, world.needs.breath);
   for (const f of watch.sfx) {
     if (f === 'chime') sound?.watchChime();
     else if (f === 'alarm') sound?.watchAlarm();
