@@ -84,6 +84,14 @@
 - **Heredoc com aspas no Bash do Windows quebra** (de novo): scripts Python grandes vão por Write no scratchpad e `python <arquivo>`.
 - **A sombra do sol nas mãos:** o `VIEW_LIGHT` só sabia "é dia"; o teste de sombra só existia no shader. Copiar o `dirLit` para a CPU (`handSun`) com cache por passo é barato.
 
+### Lições da 15.20a (o Osprey: barra, áreas, bordas, POST) — 2026-10-07
+- **A barra com colunas fixas:** os campos têm largura fixa (`padStart`), então as réguas em pixels não andam quando um número muda, e a chave da camada HD (`barArt.key`) só muda com o sinal, a tomada ou a tinta. Se as colunas mudassem, o Ferret seria repintado inteiro (~17 ms) a cada mudança da CPU.
+- **Várias artes numa só chave:** `shell.screen()` junta o quadro do Ferret (com `below(P.s, 16)`, uma superfície deslocada para baixo), a barra e as bordas em `{ key: a|b|c, paint }`; o `main.ts` não mudou.
+- **Uma linha reservada no alto:** o `WM` tem `BAR = 1`. É preciso subtrair a linha no clique do browser (`y - BAR`), no `resize`, no `blit` e no cursor (`cy + BAR`). Os testes que arrastavam na linha 0 passaram para a 1.
+- **Ctrl+1..3 vai pelo `code` em `laptop.ts`:** o `shell.key` só recebe `key` e `ctrl`. O Shift aparece porque o `key` deixa de ser o dígito ('!' '@' '#'). No Chrome comum, Ctrl+1..8 troca de aba e não dá para interceptar; no Electron funciona.
+- **`private essid` já existia no shell:** o getter novo virou `netName`. Antes de dar nome a um campo novo no `shell.ts`, conferir com o grep.
+- **Testado por PNG no Node** (`tests/osprey.ts`, a mesma fonte 5×7 de `png.ts`; `~` e `@` não aparecem nela). Não foi visto no PC.
+
 ### Lições da 15.16–15.17f (tela como textura, pintor 2D, Ferret) — 2026-10-07
 - **A tela do notebook virou textura sem mexer no shader do mundo:** um passe próprio (`SCREEN_WGSL` em `gpu/compositor.ts`) desenha células + átlas + camada HD numa textura do tamanho da tela de frente (`cols*cw × rows*ch`, o átlas do monitor, nítido); o compositor a lê pixel a pixel quando `show` (de frente) e por **homografia inversa** do quadrilátero do vidro quando de lado (`quadInverse` em `render/screens.ts`, 3 vec4f num uniform; `tests/screens.ts`). De lado, o `look3d` deixa limpas as células que tocam o vidro (`touches`) e o compositor preenche a lasca em volta com a borda da textura.
 - **Não use uma textura 1280×800 fixa para o texto num monitor 1080p:** o vidro mede ~1120×700 lá e o texto de 1 px borraria. A tela de pixels "do aparelho" (1280×800) é só a camada HD; o texto continua no átlas do monitor.
