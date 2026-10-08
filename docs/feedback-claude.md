@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-08 — a 13.19 (Opus 5.5)
+- **A luz sobre a porta:** o manual pede "luz em cima"; hoje quem faz esse papel é a bandeira acesa pelo saguão. Uma arandela de verdade seria mais uma fonte de luz por prédio (o orçamento de luzes da rua): proponho deixar para a 23 e ver se a bandeira já basta no PC.
+- **O EXIT no apagão:** a placa é desenhada sempre acesa (como deve, é bateria), mas não ilumina nada em volta; numa escada às escuras, um brilho vermelho fraco no chão e nas paredes perto da placa seria a cena mais noir do prédio. Barato se entrar junto da luz por cômodo da 13.22.
+- **Número repetido nas portas vizinhas** (522 duas vezes): o quarteirão longo não cabe em 49 números por lado. Sugiro "522A" para o segundo lote no mesmo número, como nas cidades americanas; decidir no bloco de correção.
+
 ## 2026-10-08 — a 13.18 (Opus 5.5)
 - **A 13.19 e as portas estreitas mexem de novo nas plantas:** a porta `D` tem 2 caracteres (1 m) no manual; se no jogo ela sai estreita, é a conversão para células (moldura, parede de 0,25 m), não o desenho. Medir primeiro no `tests/stack-print.ts` a largura livre de cada vão, e só então decidir entre alargar no leitor ou redesenhar (redesenhar 25 plantas custa caro).
 - **O hall de entrada da R12 é pequeno (1 m):** lê como entrada, mas é um corredor junto da cozinha. Quando a 13.20 trouxer a biblioteca de arrumações, vale dar ao hall um cabideiro e um capacho (dois objetos baratos) para ele se ler como entrada mesmo no escuro.
