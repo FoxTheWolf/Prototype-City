@@ -83,6 +83,11 @@
      andar vizinho só dentro do retângulo do poço). Medir a compilação antes e depois (o shader é caro de compilar).
    - **(d) O telhado** (a planta T1: a laje `x`, a casinha da escada, o parapeito) entra junto: é onde a última escada chega.
    - Antes do (a), a correção das janelas fantasmas (0.13.10l), que afetava qualquer objeto, a escada inclusa.
+   - **Estado (2026-10-08):** (a) ✅ `Shape.Vox` em `gpu/objects.ts` (DDA na caixa da parte; a grade vai no lugar do texto,
+     `world.ts` `packParts`), `stairModel` em `render/models.ts`; (b) ✅ `feetZ`/`STEP_UP`/`FLIGHT_TOP` em `sim/interior.ts`, `steep`
+     em `world.ts`, `flightOf` (o lance de 1 m do lado oposto às entradas, a ponta baixa do lado delas), `tests/stairs.ts`;
+     (c) ✅ (visto no painel; falta o usuário no PC) o buraco no piso/teto (`gWell` no `roomWalk`, campos 16–21 do bloco `IB`, `IN_LEAVES` = 22) e as
+     escadas dos andares vizinhos como objetos, `roomWalk` num laço de duas voltas no `main` (compila em ~2 min); (d) falta (o telhado; hoje o lance do último andar entra no teto).
 5. **Interruptores (R10, 13.10g):** um por cômodo, na primeira parede que não é vidro, do lado da maçaneta; sala vazia
    e loja fechada apagadas.
 6. **Testes:** `tests/plans.ts` (as invariantes de hoje) passa a rodar também `checkFloor` nas plantas lidas do jogo

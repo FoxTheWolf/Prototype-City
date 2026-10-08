@@ -2,6 +2,19 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do rework dos interiores (passos 1, 2 e 4) — 2026-10-08
+- **Medir antes de mudar o corte da cidade:** `tests/lots.ts` mostrou que o problema não era a largura (o plano dizia), e sim lotes **mais largos que fundos** (30%) e altos e finos (5,5%). O corte americano (pontas para a avenida, fileiras de costas, quintal no miolo) resolveu os dois.
+- **`doorOf` guarda cache pelo índice do prédio** (módulo): um teste que gera duas cidades no mesmo processo lê portas da cidade anterior. Uma semente por execução nos testes que usam `doorOf`/`planOf`.
+- **O `walls()` antigo põe parede entre quaisquer dois cômodos:** o gerador velho não tinha ambiente aberto. Na planta lida, a divisa entre letras sem `+` vira passagem (`DOOR` nos dois lados), menos onde há móvel (senão a geladeira fica "sobre um vão").
+- **Um modelo de loja não sabe das portas de dentro da loja:** a lavanderia fechava o banheiro dos funcionários. O `aisle` (corredor livre) da porta da rua até cada porta interna resolve sem mexer nos modelos.
+- **A vista através da janela (13.10b2) era misturada no fim do `main` mesmo com objeto na frente** (as "janelas fantasmas" em postes e pessoas, bug antigo): guardar a profundidade da célula do cômodo e só misturar se ela não mudou.
+- **Cubinhos no mundo = `Shape.Vox` no `objectsOver`:** a grade vai no lugar do texto da parte (`W[w+14]`), e o raio anda célula a célula na caixa (DDA). Sombra, reflexo e `furnHit` (vista pela janela) não sabem dela: `furnHit` a pula.
+- **Cinza sobre cinza some:** o corrimão de aço não aparecia contra as paredes cinza do poço; madeira escura resolve. Ao escolher a cor de um detalhe fino, olhar contra o fundo onde ele vai estar.
+- **Física da escada:** a altura dos pés vem do lance mais perto da altura atual (como `escapeZ`), e o bloqueio é "mais de 45 cm de diferença" num ponto de sonda — isso faz corrimão, pontas e o vão de baixo de uma vez. Armadilhas: o lance precisa de **patamar plano no alto** (o corpo de 30 cm não chega ao último degrau contra a parede); do lado da parede a faixa do lance vai até a parede (o ombro sai da faixa e trava); o lance tem **1 m de largura alinhado com a entrada** (no D, com 3 m, o pé dele dava numa parede).
+- **`pass` é palavra reservada no WGSL** (e outras: `loop`, `continuing`...). Com erro no shader, a barra de carregamento para em 98% para sempre e o erro só aparece no console (`read_console_messages`): conferir o console antes de esperar minutos.
+- **Chamar `roomWalk` duas vezes no `main` (para o poço) duplica o código inlinado:** um laço de duas voltas com uma chamada só.
+- **Teste de movimento no Node (`tests/stairs.ts`):** ao teleportar, pôr `p.inside` e a altura certa (`feetZ`); sem `inside`, o jogo acha que se entrou por uma janela e joga a altura para o andar.
+
 ### Lições da 15.22 (o Jackdaw Mini) e do metal que reflete — 2026-10-07
 - **Um passe de cubinhos para vários aparelhos:** o WGSL do relógio virou `voxPassWgsl(prefixo, binding)` em `gpu/voxWatch.ts` (o relógio é `w` em 22–25, o Jackdaw `j` em 26–29); o uniform ganhou `box` (onde corre a faixa do brilho) e `spill` (a cor da luz de fundo vazando), e a flag 2 = brilho próprio (LED). No compositor, `voxPass(k, g, face, lcd)` sobe os dois. O fragment shader está com 8 storage buffers (o limite padrão; pedimos 16).
 - **Validar o WGSL sem o painel visível:** com o painel escondido o jogo não roda, mas `await import('/src/render/gpu/compositor.ts')` no console do painel e `dev.createShaderModule({ code }).getCompilationInfo()` compila o shader na GPU de verdade (o `WGSL` precisa estar exportado só durante o teste). O rolldown no Node não serve: o módulo usa `GPUTextureUsage` no topo.
@@ -15,7 +28,8 @@
 - **Extrair os contornos das plantas por script** (paredes, portas, janelas, lados abertos) em vez de copiar à mão: foi a extração que mostrou a porta torta.
 - **Contar caracteres de cabeça erra:** montar as linhas por script com `assert` de largura, e só então colar no manual.
 - **Texto barato o Claude gera ele mesmo** (pedido do usuário): 51 arrumações com o validador custaram pouco, menos que um briefing e a conferência do retorno.
-- **O manual é a fonte; o JSON é cópia:** `node tests/floorplans-sync.mjs` lê os arrays `FLOORS`/`ROOMLIB`/`BUILDINGS` do `<script>` do manual. O arquivo tem fim de linha CRLF: procurar o fim de um array com `/;?
+- **O manual é a fonte; o JSON é cópia:** `node tests/floorplans-sync.mjs` lê os arrays `FLOORS`/`ROOMLIB`/`BUILDINGS` do `<script>` do manual. O arquivo tem fim de linha CRLF: procurar o fim de um array com `/;
+?
 /`, não com `";
 "`. Dentro do template literal da página, a quebra de linha está escrita `'\n'` (duas barras): um `replace` por script tem de procurar isso.
 - **Duas implementações das mesmas regras concordaram** (o validador em Python das arrumações e `checkArrangement` em TypeScript passaram nas mesmas 72); quando uma regra mudar, mudar nas duas ou apagar a de Python.

@@ -505,7 +505,12 @@ export class GpuWorld {
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
     const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // indoors, the floor's furniture, lit by its rooms' lamps
-    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
+    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
+    // and the flights of the storeys below and above, seen through the stairwell (the one below rises into this one)
+    if (I && !I.closed) for (const d of [-1, 1]) {
+      const f = I.floor + d, S = f >= 0 && f < floorsOf(this.city.buildings[I.k]) - 1 ? planOf(this.city, I.k, f)?.furn.find((q) => q.kind === 'stair') : undefined;
+      if (S) list.push({ o: { x: S.x, y: S.y, c: S.c, s: S.s, parts: furnitureModel(S.kind, S.seed, S.hx, S.hy), r: Math.hypot(S.hx, S.hy) + 0.4, h: 4.4, seed: S.seed }, far: 40, zoff: I.z0 + d * FLOOR_H, indoor: true });
+    }
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
     // the floodlit facades near enough for their lamps' shadows: who stands in front of one casts them
     const lit: number[] = [];
@@ -595,6 +600,16 @@ export class GpuWorld {
         W[ib] = po; W[ib + 1] = I.k; W[ib + 2] = I.boxId; W[ib + 3] = I.floor; F[ib + 4] = I.z0; W[ib + 5] = I.closed ? 1 : 0;
         W[ib + 6] = 0; W[ib + 7] = I.liftTo; W[ib + 8] = nL; W[ib + 9] = (cellAt(I.plan, v.x, v.y) & ROOM) - 1;
         W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; F[ib + 15] = I.elec;
+        // the stairwell (step 4 of the interiors' rework): the plans of the storeys above and below (0: none), and the
+        // flight's footprint, where the ceiling and the floor are open
+        const S = I.plan.furn.find((f) => f.kind === 'stair'), top = floorsOf(this.city.buildings[I.k]);
+        W[ib + 16] = 0; W[ib + 17] = 0; F.fill(0, ib + 18, ib + 22);
+        if (S && !I.closed) {
+          const up = I.floor + 1 < top ? planOf(this.city, I.k, I.floor + 1) : null, dn = I.floor > 0 ? planOf(this.city, I.k, I.floor - 1) : null;
+          W[ib + 16] = up ? Math.max(0, this.putPlan(up, true, I.k)) : 0; W[ib + 17] = dn ? Math.max(0, this.putPlan(dn, I.floor - 1 !== 0, I.k)) : 0;
+          const ex = Math.abs(S.c) * S.hx + Math.abs(S.s) * S.hy, ey = Math.abs(S.s) * S.hx + Math.abs(S.c) * S.hy;
+          F[ib + 18] = S.x - ex; F[ib + 19] = S.y - ey; F[ib + 20] = S.x + ex; F[ib + 21] = S.y + ey;
+        }
         // (a street door's glass leaves have their width negative: the shader draws them as glass in a frame)
         for (let k = 0; k < nL; k++) { const L = I.leaves[own + k]; F.set([L.hx, L.hy, L.ax, L.ay, L.nx, L.ny, -L.w, I.leafA[own + k]], ib + IN_LEAVES + k * 8); }
       }
