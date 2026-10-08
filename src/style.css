@@ -36,13 +36,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--mono); overfl
 #loading .shine { position: absolute; inset: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 236, 200, .55), transparent);
   animation: shine 1.4s linear infinite; mix-blend-mode: screen; }
 /* the title's logo (titleLogo.ts): the identity manual's opening */
-#overlay h1#logo { width: min(560px, 80vw); margin: 0 auto 14px; cursor: pointer; letter-spacing: 0; }
-#overlay h1#logo svg { display: block; width: 100%; height: auto; border-radius: 6px; box-shadow: 0 0 40px rgba(0,0,0,.6); }
-@keyframes gdUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@keyframes gdIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes gdOut { from { opacity: 1; } to { opacity: 0; } }
-@keyframes gdDraw { to { stroke-dashoffset: 0; } }
-@keyframes gdGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+#overlay h1#logo { width: min(620px, 86vw); margin: 0 auto 6px; cursor: pointer; letter-spacing: 0; }
 @keyframes shine { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 #loading .status { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; letter-spacing: .1em; color: var(--amber-dim); }
 #loading .pct { color: var(--amber); }

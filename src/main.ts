@@ -139,7 +139,7 @@ function showTip(load: boolean) {
 const params = new URLSearchParams(location.search), seedParam = params.get('seed');
 const saved = await readSave();
 const titleFx = new TitleFx(document.getElementById('overlay')!);
-titleLogo(document.getElementById('logo')!, params.has('mute') || OPTS.mute);
+titleLogo(document.getElementById('logo')!, params.has('mute') || OPTS.mute, (k) => { titleFx.power = k; });
 const choice = await titleChoice();
 const seed = choice !== 'new' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 document.getElementById('ready')!.hidden = true;

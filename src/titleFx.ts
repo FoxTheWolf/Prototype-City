@@ -27,6 +27,8 @@ export class TitleFx {
   private lines: { text: string; x: number; y: number; z: number; shown: number; color: string }[] = [];
   private raf = 0;
   private last = 0;
+  /** The city's power, 0..1 (titleLogo.ts: GRID DOWN puts the console out for a moment). */
+  power = 1;
 
   constructor(before: HTMLElement) {
     // out of focus and dim, behind the buttons (it must not read through them)
@@ -66,9 +68,9 @@ export class TitleFx {
 
   private spawn(z: number) {
     const k = Math.random();
-    // anywhere across, but not straight down the middle, where the title and the buttons are
+    // anywhere across, but not straight down the middle, where the logo and the buttons are (the logo is wide)
     let x = 0, y = 0;
-    do { x = (Math.random() * 2 - 1) * 1.6; y = (Math.random() * 2 - 1) * 1.0; } while (Math.abs(x) < 0.5 && Math.abs(y) < 0.35);
+    do { x = (Math.random() * 2 - 1) * 1.6; y = (Math.random() * 2 - 1) * 1.0; } while (Math.abs(x) < 0.85 && Math.abs(y) < 0.5);
     this.lines.push({ text: this.line(), x, y, z, shown: 0, color: k < 0.1 ? CYAN : k < 0.65 ? DIM : AMBER });
   }
 
@@ -92,7 +94,7 @@ export class TitleFx {
       if (fs < 2) continue;
       // faint far away (fog), brightest in the middle distance, fading as it comes too near (and blurred)
       const fog = Math.min(1, (FAR - L.z) / 3), near = Math.min(1, (L.z - NEAR) / 1.2);
-      g.globalAlpha = 0.85 * fog * near;
+      g.globalAlpha = 0.85 * fog * near * this.power;
       g.filter = L.z < 2.2 ? `blur(${((2.2 - L.z) * 2.5).toFixed(1)}px)` : 'none';
       g.font = `${fs.toFixed(1)}px 'IBM Plex Mono', Consolas, monospace`;
       g.fillStyle = L.color;

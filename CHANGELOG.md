@@ -3,7 +3,7 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.15.59 — GRID DOWN na tela de título (2026-10-08)
-- **O título agora é GRID DOWN: TERMINAL STATE.** Em vez do antigo "TERMINAL CITY", a tela de título mostra a abertura do manual da GridLink: GRID sobe letra por letra, a haste desce até o LINK, POWER · TELECOM é digitado, alguém sacode a lata e picha o OWN, risca o LINK, e surge TERMINAL STATE. Uns 6 segundos, com os sons sintetizados (bipes, o zumbido do transformador, as teclas, a lata, o spray e o zumbido caindo no fim). Clique no logo para ver de novo.
+- **O título agora é GRID DOWN: TERMINAL STATE.** Em vez do antigo "TERMINAL CITY", a tela de título mostra a abertura do manual da GridLink, como um letreiro de lâmpadas direto no escuro: GRID acende letra por letra, a haste desce até o LINK, POWER · TELECOM é digitado, alguém sacode a lata e picha o OWN em tinta laranja, risca o LINK, e a energia cai: as lâmpadas e o console do fundo se apagam, TERMINAL STATE acende em âmbar sozinho, e a luz volta piscando. Uns 8 segundos, com os sons sintetizados (bipes, o zumbido do transformador, as teclas, a lata, o spray, o zumbido caindo e o relé religando). Clique no logo para ver de novo.
 - **O nome da janela e da aba também mudou** para GRID DOWN: Terminal State.
 
 ## 0.15.58 — Sem moiré nem fantasma (2026-10-08)
