@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { streetLeaves } from '../sim/doors';
-import { baseAt, doorNumber, doorOf, escapesOf, facePoint, exitsOf, leavesOf, planOf } from '../sim/interior';
+import { baseAt, cachedPlan, doorNumber, doorOf, escapesOf, facePoint, exitsOf, leavesOf, planOf } from '../sim/interior';
 import { insideLight, interiorColumn, prepareInside, type Inside } from './interior';
 import { CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -10,12 +10,13 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, openSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
 import { bsod, power } from './power';
 import { subAt } from '../sim/power';
+import { BIZ_HOURS, isOpen } from '../sim/telco';
 import { CAMS, cctvYaw } from '../sim/cctv';
 import { daylight, prepareSky, type SkyFrame } from './sky';
 import { BLADE_SYMBOL, signLight, signMode, signText } from './signs';
@@ -915,6 +916,8 @@ function seen(x: number, y: number, r: number): boolean {
 
 /** How far the door numbers are drawn (m): past it their 8 cm letters are below a cell. */
 const DOOR_NUM_FAR = 30;
+/** How far the shops' OPEN / CLOSED cards are drawn (m). */
+const OPEN_FAR = 15;
 /** Each lamp's district (by lamp), for its banners. */
 const lampDistrict = new Map<number, number>();
 function collectObjects(world: World, v: View): Obj[] {
@@ -975,6 +978,20 @@ function collectObjects(world: World, v: View): Obj[] {
       const [x, y, nx, ny] = facePoint(B, D.face, (D.a0 + D.a1) / 2), X = x + nx * 0.03, Y = y + ny * 0.03;
       if (Math.hypot(X - v.x, Y - v.y) > DOOR_NUM_FAR || !seen(X, Y, 0.5)) continue;
       out.push({ x: X, y: Y, c: nx, s: ny, parts: doorNumberModel(String(num)), r: 0.3, h: 2.6, z0: 2.4, seed: 0 });
+    }
+    // the shop's OPEN / CLOSED card in the glass beside its own door (its last exit), by its real hours
+    for (let k = blk.b0; k < blk.b1; k++) {
+      const B = city.buildings[k];
+      if (B.biz < 0 || !cachedPlan(city, k, 0) || Math.abs((B.x0 + B.x1) / 2 - v.x) > OPEN_FAR + 40 || Math.abs((B.y0 + B.y1) / 2 - v.y) > OPEN_FAR + 40) continue;
+      const ex = exitsOf(city, k, true), D = ex[ex.length - 1], [lo, hi] = faceSpan(B, D.face);
+      // on the side of the door with more glass, clear of the leaf's swing
+      const a = D.a1 + 0.3 <= hi - 0.2 ? D.a1 + 0.3 : D.a0 - 0.3;
+      if (a < lo + 0.2) continue;
+      const [x, y, nx, ny] = facePoint(B, D.face, a), X = x + nx * 0.03, Y = y + ny * 0.03;
+      if (Math.hypot(X - v.x, Y - v.y) > OPEN_FAR || !seen(X, Y, 0.5)) continue;
+      const kind = city.businesses[B.biz].kind, [h0, h1] = BIZ_HOURS[kind] ?? [9, 17];
+      const hours = h0 === 0 && h1 >= 24 ? '24H' : `${h0}-${h1 % 24}`;
+      out.push({ x: X, y: Y, c: nx, s: ny, parts: openSignModel(isOpen(kind, (world.time / 3600) % 24), hours), r: 0.3, h: 1.6, z0: 1.3, seed: 0 });
     }
   }
   // the floodlights at the foot of lit facades (their lens lit in eighths, so the models are reused)

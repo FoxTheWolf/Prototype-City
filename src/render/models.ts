@@ -319,6 +319,24 @@ export function doorNumberModel(num: string): Part[] {
 }
 
 /**
+ * A shop's OPEN / CLOSED card in the glass by its door, its hours under it (the signage manual, section 6): it
+ * says from the sidewalk whether the shop is worth walking in; read from +x, letters about 6 cm.
+ */
+export function openSignModel(open: boolean, hours: string): Part[] {
+  const key = `open|${open}|${hours}`;
+  let m = lamps.get(key);
+  if (m) return m;
+  const word = open ? 'OPEN' : 'CLOSED', hw = (0.06 * word.length + 0.05) / 2, hh = (0.045 * hours.length + 0.04) / 2;
+  const card = part(Box, 0, -hw, 1.42, 0.012, hw, 1.52, [242, 241, 236], Board, '=');
+  card.text = word; card.col2 = open ? [200, 38, 43] : [22, 23, 26]; card.lamp = 0; card.plate = true;
+  const hrs = part(Box, 0, -hh, 1.35, 0.012, hh, 1.4, [26, 34, 40], Board, '.');
+  hrs.text = hours; hrs.col2 = [236, 236, 230]; hrs.lamp = 0; hrs.plate = true;
+  m = [card, hrs];
+  lamps.set(key, m);
+  return m;
+}
+
+/**
  * The yellow "CCTV" notice under a security camera (the signage manual, section 7): it tells the player there is a
  * camera there, as such notices do; read from +x, its foot at z0.
  */
