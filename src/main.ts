@@ -776,13 +776,13 @@ addEventListener('keydown', (e) => {
       sound?.phoneKey(false);
       return;
     }
-    const c = counter.near();
-    // the clerk: a conversation (14.3), the till through it
-    if (c?.staffed && !phone.out) { talkView.start(staffOn(world.pop, world.city, c.k, world.time)[0], c.k, performance.now() / 1000); input.unlock(); return; }
-    // a door in front: open it, close it, or find it locked (13.2c)
+    // a door in front: open it, close it, or find it locked (13.2c); before the clerk, whose reach runs to the door
     // the lift's doors in front, its car elsewhere: call it (13.2d)
     if (!phone.out && liftAhead(world, camera.yaw)) { if (callCar(world)) sound?.beep(true); return; }
     if (!phone.out) { const r = useDoor(world, camera.yaw); if (r) { doorNote = r === 'locked' ? en.doors.locked : ''; doorNoteAt = performance.now() / 1000; return; } }
+    const c = counter.near();
+    // the clerk: a conversation (14.3), the till through it
+    if (c?.staffed && !phone.out) { talkView.start(staffOn(world.pop, world.city, c.k, world.time)[0], c.k, performance.now() / 1000); input.unlock(); return; }
     // someone on the sidewalk in front: talk to them (14.4); crossing or going in, or late at night, some walk on
     if (!phone.out) {
       const q = ask.near(camera.yaw), t = performance.now() / 1000, h = (world.time / 3600) % 24;

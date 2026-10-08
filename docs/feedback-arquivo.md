@@ -2,6 +2,13 @@
 
 > Pedido do usuário em 2026-10-06 (item 30): ao processar `FEEDBACK.md`, em vez de só apagar, mover os itens crus para cá, com a data. Assim a caixa fica só com o que ainda não foi processado, e o texto original não se perde. O mais novo em cima.
 
+
+## 2026-10-08 (tarde — playtest 14-37-49, 12 notas F8)
+
+Texto cru no relatório `playtest/2026-10-08_14-37-49_seed1393987109_report.md`. Triagem em `docs/plano-interiores.md` passo 9:
+agora = notas 1 (feito), 2–9 e o travamento; depois = 10 (etapa 20), 11 (13.7 render), 12 (escadas de incêndio, depois do passo 8).
+Pedido no chat: um documento técnico e bonito (com infográficos) explicando a engine, a rasterização, a luz e os interiores → Plano, "Documento da engine".
+
 ## 2026-10-06 (tarde — processado por Opus 4.8, durante a entrevista do Jackdaw)
 
 Destino de cada item entre colchetes no fim.

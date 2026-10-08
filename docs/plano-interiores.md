@@ -116,6 +116,27 @@
      sobre cada porta desse caminho e uma seta onde o caminho vira, como em prédio real. Absorve "EXIT e diretório" da 13.7.
      **Hoje o EXIT sobre a porta da rua é verde** (`exitPx` no `roomWalk`, visto no playtest de 2026-10-08); o manual de sinalização pede vermelho.
 
+9. **Retorno do playtest de 2026-10-08 à tarde (`playtest/2026-10-08_14-37-49_seed1393987109_report.md`), triado:**
+   - **Agora (antes do passo 8 ou junto dele):**
+     - ✅ (nota 1) softlock no motel: o F abria a conversa com o clerk antes da porta, cujo alcance ia até a porta;
+       agora a porta vem primeiro (`main.ts`). Falta o usuário confirmar.
+     - (notas 3, 4) **vão entre o topo da escada e o piso de cima**, e o piso de cima **não aparece pelo vão** (prédio
+       4085, andares 1–2): é a escada em U recém-feita; conferir `stairRise`/`FLIGHT_TOP` e o poço (`gWell`/`shaft`).
+     - (notas 5, 6) **apartamento sem porta** (andar 3 do 4085) e **porta principal dando na cozinha**: conferir
+       `planFromFloor`/as unidades (`E`) nas plantas desse tamanho; R1–R9 deveriam pegar a casa sem porta (falta uma regra?).
+     - (nota 6) **EXIT verde sobre a porta do apartamento**: resolvido pelo passo 8 (EXIT só no caminho comum até a rua, vermelho).
+     - (notas 2, 7) **móveis e escada muito afastados da parede**: medir o recuo no leitor/`flightOf` (provável meia célula a mais).
+     - (notas 8, 9) **portas e entrada estreitas**: a largura do vão `D`/`R`/`E` (hoje ~1 caractere = 0,5 m?); um vão
+       de porta real tem ~0,9 m; decidir junto da verga do passo 8.
+     - (travou) "andando sem sair do lugar" no 4085, andar 2, `POS 869.9,1144.8` (perto da escada).
+   - **Depois (ficam no Plano, não agora):**
+     - (nota 12) **escadas de incêndio coerentes com as plantas desenhadas** (as janelas e o patamar batendo com os
+       cômodos): redesenhar depois do passo 8, antes da etapa 16.
+     - (nota 10) **os vãos grandes entre prédios** (terrenos abertos) viram feiras, mercados, quadras, barracos:
+       etapa 20 (variedade), com um manual de lotes vazios.
+     - (nota 11) **ASCII nas placas só quando só uma linha de pontos da letra é visível** (placas, semáforos de
+       pedestre, letreiros): retoque de render da 13.7, numa sessão de render.
+
 ## Riscos e o que conferir
 
 - **A cidade muda em cada semente** (o catálogo mexe nos lotes): os saves de teste não importam (decidido), mas as
