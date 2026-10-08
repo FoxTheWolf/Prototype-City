@@ -1,33 +1,34 @@
 import { CharGrid } from '../render/grid';
 import { drawObjects, Mat, part, Shape, type Cam, type Obj, type Part } from '../render/objects';
 import { type World } from '../sim/world';
-import { drawScreen, hintOf, INKS, ROWS, type C3 } from './draw';
+import { drawScreen, hintOf, type C3 } from './draw';
 import { type Laptop } from './laptop';
-import { computerMakerName } from '../locale/names';
-import { EYE, pageDim } from '../render/eye';
+import { businessName, computerMakerName } from '../locale/names';
+import { EYE } from '../render/eye';
+import { CELL_MM, GLASS, KEY_TOP, LID_NZ, NX, NY, TOP, laptopGpu, type LapCam, type LapGpu } from './body3d';
+import SONGS from '../locale/music.en.json';
 
 /**
- * The notebook's 3D look: its body is an object with volume (render/objects.ts) set down in front of
- * the player where they sat, drawn into the interface's grid from the real camera, so it takes the
- * scene's light and stays put while the player looks around (right mouse; let go, the view comes back
- * to it). It sits close: the screen fills most of the view and the keyboard is below it, seen by
- * looking down. Faced squarely, the screen's characters are a layer of their own (glRenderer.ts), as
- * big as a real screen's, laid where the lid's glass falls: the system's console (160 x 50) or the
- * firmware's text mode (80 x 25). From aside, they are painted onto the glass in perspective (not to be
- * read then anyway, and the screen stays alive). The screen's light falls on the deck and the keys.
+ * The notebook's 3D look: its body in little cubes (laptop/body3d.ts, drawn on the GPU by
+ * render/gpu/voxLap.ts, 15.20b) set down in front of the player where they sat, seen from the real
+ * camera, so it takes the scene's light and stays put while the player looks around (right mouse; let
+ * go, the view comes back to it). It sits close: the screen fills most of the view and the keyboard is
+ * below it, seen by looking down. Faced squarely, the screen's picture is laid pixel for pixel where the
+ * lid's glass falls: the system's console (160 x 50) or the firmware's text mode (80 x 25). From aside,
+ * it is laid onto the glass in perspective. The screen's light falls on the deck and the keys.
  */
-/** Metres: the eye over the desk, the glass's width (16:10, a 13" screen), the deck's depth and thickness, the lid's. */
-const DESK = 0.3, GLASS_W = 0.29, DECK_D = 0.2, DECK_H = 0.02, LID_T = 0.007;
-/** The bezel round the glass: at the bottom (over the hinge), at the top, at the sides. */
-const BEZ_B = 0.014, BEZ_T = 0.01, BEZ_S = 0.007;
-/** The keyboard: depth of a row, of a key; keys are wider than deep, as they look on a real deck. */
-const ROW_D = 0.0135, KEY_D = 0.0105, KEYS_W = 0.28;
+/** Metres: the eye over the desk; a cube; the deck's width and depth (the manual's 310 x 225 mm), the keys' top. */
+const DESK = 0.3, C = CELL_MM / 1000, W = NX * C, DD = NY * C, ZH = KEY_TOP * C;
+/** The glass's width (the lid model's: 286 mm). */
+const GW = (GLASS.x1 - GLASS.x0) / 1000;
 const VFOV = Math.PI / 3;
+/** What the GPU draws of the body this frame (null when nothing). */
+export let lapGpu: LapGpu | null = null;
 
-let anchor = 0, pitch0 = -0.6, wasOpen = false, tmp: CharGrid | null = null;
+let anchor = 0, pitch0 = -0.6, wasOpen = false, tmp: CharGrid | null = null, tmp2: CharGrid | null = null;
 const L3 = new Float32Array(3);
-/** The glint on the screen, eased over time, and the screen's bloom and mean light (as on the phone, see phone/draw.ts; stronger here). */
-const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0, bloom: 0, mean: [0, 0, 0] as C3 };
+/** The glint on the screen, eased over time (as on the phone, see phone/draw.ts; stronger here). */
+const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0, mean: [0, 0, 0] as C3 };
 /** Where the power button falls on the interface's grid (cells), for a click; null when not shown. */
 export let power3d: [number, number, number, number] | null = null;
 /** The view's yaw the notebook was set down facing, and the pitch that centres its screen: where the view comes back to. */
@@ -42,21 +43,25 @@ const pending = new Set<string>(), plugAt: Record<string, number> = { antenna: -
 /** Gear just fitted: it slides into place the next time the notebook comes up. */
 export function plugIn(id: 'antenna' | 'battery') { pending.add(id); plugAt[id] = Infinity; }
 
-/** The view; termW and termH: the screen layer's size on the interface's grid (cells, fractional). */
-export interface View3d { yaw: number; pitch: number; aspect: number; still: boolean; termW: number; termH: number }
+/** The view; termW and termH: the screen layer's size on the interface's grid (cells, fractional); px: the grid's origin and cell on the monitor (pixels: x, y, w, h). */
+export interface View3d { yaw: number; pitch: number; aspect: number; still: boolean; termW: number; termH: number; px: readonly number[] }
 
 /** term: the screen layer's characters, filled here (its size: the console's or the text mode's). */
 export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: World, now: number, light: Float32Array, glint: Float32Array, view: View3d) {
-  power3d = null; screenAt = null; glassBox = null;
+  power3d = null; screenAt = null; glassBox = null; lapGpu = null;
   if (P.open && !wasOpen) anchor = view.yaw;
   wasOpen = P.open;
   if (P.raise < 0.01) return;
-  const H = P.pc.hw, S = P.shell, ink = INKS[S.ink][0], BODY = H.body;
+  const H = P.pc.hw, S = P.shell, BODY = H.body;
   const rows = g.rows, cols = g.cols, scale = rows / 2 / Math.tan(VFOV / 2), plane = ((cols / 2) * view.aspect) / scale;
-  // the glass: a real screen's width, as near as it must be to cover the screen layer; its height follows
-  const T = (GLASS_W * scale) / (view.aspect * view.termW), GW = GLASS_W, GH = (view.termH * T) / scale;
-  const halfLid = GW / 2 + BEZ_S, LID_H = BEZ_B + GH + BEZ_T, HALF_W = halfLid + 0.006;
-  const glass0 = DECK_H + BEZ_B, glass1 = glass0 + GH;
+  // the glass: a real screen's width, as near as it must be to cover the screen layer
+  const T = (GW * scale) / (view.aspect * view.termW), xh = DD / 2, x0 = -xh, HALF_W = W / 2;
+  // the lid turns on the hinge (at the deck's back, at the keys' top): u along it from its top edge to the hinge, n out of its inside
+  const a = (P.lid * Math.PI) / 2, ux = Math.cos(a), uz = -Math.sin(a), nx = -Math.sin(a), nz = -Math.cos(a);
+  const lidPt = (lx: number, ly: number, lz: number): [number, number, number] =>
+    [xh + (ux * (ly - NY) + nx * (lz - LID_NZ)) * C, lx * C - HALF_W, ZH + (uz * (ly - NY) + nz * (lz - LID_NZ)) * C];
+  // the glass's rows standing (open): its foot and top over the desk
+  const glass0 = ZH + (NY - GLASS.y1 / CELL_MM) * C, glass1 = ZH + (NY - GLASS.y0 / CELL_MM) * C;
   // the pitch that puts the glass's middle a little above the middle of the view: row = hor + (eye - z) * scale / T
   pitch0 = Math.max(-0.69, Math.atan((rows * 0.47 - (DESK - (glass0 + glass1) / 2) * scale / T - rows / 2) / scale));
   const off = view.yaw - anchor, dirX = Math.cos(off), dirY = Math.sin(off);
@@ -66,57 +71,15 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   L3[0] = Math.min(1.5, 0.3 + light[0]); L3[1] = Math.min(1.5, 0.3 + light[1]); L3[2] = Math.min(1.5, 0.3 + light[2]);
   const lit = (c: readonly number[], k = 1): C3 => [c[0] * L3[0] * k, c[1] * L3[1] * k, c[2] * L3[2] * k];
   const on = S.state !== 'off' && P.pc.bootAt >= 0 && P.lid >= 1;
-
-  // ---- the model, in the object's frame: +x away from the player, +y to the right, z up from the desk (at 0) ----
-  const parts: Part[] = [], xh = DECK_D / 2, x0 = -DECK_D / 2; // the hinge and the deck's near edge, about the middle
-  const col = (k: number): [number, number, number] => [BODY[0] * k, BODY[1] * k, BODY[2] * k];
-  parts.push(part(Shape.Box, x0, -HALF_W, 0, xh, HALF_W, DECK_H, col(1), Mat.Solid, '#', '.', '#'));
-  const U = KEYS_W / 15, keyCells: [number, number, string, boolean][] = [];
-  ROWS.forEach((row, ri) => {
-    const kx1 = xh - 0.022 - ri * ROW_D, kx0 = kx1 - KEY_D;
-    let u = 0;
-    for (const [code, lab, wu] of row) {
-      const y0 = -KEYS_W / 2 + u * U + 0.0015, y1 = -KEYS_W / 2 + (u + wu) * U - 0.0015, down = now - (P.pressed.get(code) ?? -9) < 0.12;
-      u += wu;
-      parts.push(part(Shape.Box, kx0, y0, DECK_H, kx1, y1, DECK_H + (down ? 0.0012 : 0.0035), down ? [22, 22, 25] : [34, 34, 38], Mat.Solid, ' ', ' ', ' '));
-      if (lab) keyCells.push([(kx0 + kx1) / 2, (y0 + y1) / 2, lab, down]);
-    }
-  });
-  // the touchpad; the power button at the back right, beside the keys, its ring lit while the system runs
-  const padX1 = xh - 0.022 - ROWS.length * ROW_D - 0.008;
-  parts.push(part(Shape.Box, padX1 - 0.05, -0.045, DECK_H, padX1, 0.045, DECK_H + 0.0006, col(0.78), Mat.Solid, ' ', ' ', ' '));
-  const PB: [number, number] = [xh - 0.02, KEYS_W / 2 + (HALF_W - KEYS_W / 2) / 2];
-  parts.push(part(Shape.Cyl, PB[0] - 0.005, PB[1] - 0.005, DECK_H, PB[0] + 0.005, PB[1] + 0.005, DECK_H + 0.0015, on ? [80, 220, 120] : [110, 112, 120], on ? Mat.Glow : Mat.Solid, ' ', 'o', ' '));
-  parts.push(part(Shape.Cyl, PB[0] - 0.003, PB[1] - 0.003, DECK_H, PB[0] + 0.003, PB[1] + 0.003, DECK_H + 0.004, [44, 44, 50], Mat.Solid, ' ', 'O', ' '));
-  // the lid: lying over the keys when shut, upright when open; strips along its length
-  const a = (P.lid * Math.PI) / 2, N = P.lid >= 1 ? 1 : 10, zh = DECK_H;
-  for (let k = 0; k < N; k++) {
-    const s0 = (k / N) * LID_H, s1 = ((k + 1) / N) * LID_H;
-    const ax = xh - Math.cos(a) * s0, bx = xh - Math.cos(a) * s1, az = zh + Math.sin(a) * s0, bz = zh + Math.sin(a) * s1;
-    const face = a > Math.PI / 4;
-    parts.push(part(Shape.Box, Math.min(ax, bx), -halfLid, Math.min(az, bz), Math.max(ax, bx) + LID_T, halfLid, Math.max(az, bz) + (face ? 0 : LID_T),
-      face ? [BODY[0] * 0.4, BODY[1] * 0.4, BODY[2] * 0.4] : col(0.95), Mat.Solid, face ? ' ' : '#', ' ', ' '));
-  }
-  // the gear fitted to it (13.6): a USB Wi-Fi stick with its whip in the right side's port, the
-  // extended battery standing out behind the hinge; each slides in the first time it is seen
-  for (const id of pending) if (P.raise > 0.9) { plugAt[id] = now; pending.delete(id); }
-  const slid = (id: string) => { const k = Math.max(0, Math.min(1, (now - plugAt[id]) / 0.7)); return 1 - (1 - k) ** 3; };
-  if (world.gear.antenna) {
-    const o = (1 - slid('antenna')) * 0.06, y0 = HALF_W - 0.004 + o, lit = on && Math.floor(now * 3) % 2 === 0;
-    parts.push(part(Shape.Box, -0.012, y0, 0.004, 0.01, y0 + 0.036, 0.013, [28, 28, 32], Mat.Solid, '=', '-', '#'));
-    parts.push(part(Shape.Box, -0.004, y0 + 0.008, 0.013, 0.0, y0 + 0.012, 0.0145, lit ? [90, 160, 255] : [50, 60, 80], lit ? Mat.Glow : Mat.Solid, '.', '.', '.'));
-    parts.push(part(Shape.Cyl, -0.003, y0 + 0.03, 0.013, 0.003, y0 + 0.036, 0.15, [22, 22, 25], Mat.Solid, '|', 'o', '|'));
-  }
-  if (world.gear.battery) {
-    const o = (1 - slid('battery')) * 0.08;
-    parts.push(part(Shape.Box, xh + 0.004 + o, -HALF_W * 0.8, 0, xh + 0.03 + o, HALF_W * 0.8, 0.017, col(0.55), Mat.Solid, '#', '=', '#'));
-  }
-  const obj: Obj = { x: T - xh, y: 0, c: 1, s: 0, parts, r: Math.hypot(DECK_D, HALF_W), h: DECK_H + LID_H + 0.02, seed: 7, z0: 0 };
+  // the glass one cell behind the lid's face: that plane at the distance T
+  const obj: Obj = { x: T - xh - C, y: 0, c: 1, s: 0, parts: [], r: Math.hypot(DD, HALF_W), h: ZH + DD + 0.02, seed: 7, z0: 0 };
 
   // ---- the screen's place: faced squarely, the screen layer goes over the glass ----
-  const tl = P.lid >= 1 ? project(cam, obj, xh - 0.0005, -GW / 2, glass1, cols) : null, br = P.lid >= 1 ? project(cam, obj, xh - 0.0005, GW / 2, glass0, cols) : null;
+  const gz = LID_NZ - 1, gx0 = GLASS.x0 / CELL_MM, gx1 = GLASS.x1 / CELL_MM, gy0 = GLASS.y0 / CELL_MM, gy1 = GLASS.y1 / CELL_MM;
+  const pj = (q: [number, number, number]) => project(cam, obj, q[0], q[1], q[2], cols);
+  const tl = P.lid >= 1 ? pj(lidPt(gx0, gy0, gz)) : null, br = P.lid >= 1 ? pj(lidPt(gx1, gy1, gz)) : null;
   if (tl && br) {
-    const tr = project(cam, obj, xh - 0.0005, GW / 2, glass1, cols), bl = project(cam, obj, xh - 0.0005, -GW / 2, glass0, cols);
+    const tr = pj(lidPt(gx1, gy0, gz)), bl = pj(lidPt(gx0, gy1, gz));
     if (tr && bl) glassBox = [tl[0], tl[1], tr[0], tr[1], br[0], br[1], bl[0], bl[1]];
   }
   const square = !!tl && !!br && view.still && Math.abs(br[0] - tl[0] - view.termW) < 1.5 && Math.abs(br[1] - tl[1] - view.termH) < 1;
@@ -132,73 +95,87 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
     glassOver(term, light, glint, now, on);
   }
 
-  // ---- the body, drawn into a grid of the interface's size, copied over it as solid blocks (the soft look) ----
-  if (!tmp || tmp.cols !== cols || tmp.rows !== rows) tmp = new CharGrid(cols, rows);
-  tmp.depth.fill(1e9);
-  drawObjects(tmp, [obj], cam);
-  // the cells the screen layer shows through: every cell it touches (rounded out, so no row of the
-  // body cuts its edge; the renderer fills the sliver round the layer with its edge's color)
-  const gx0 = square ? Math.floor(tl![0]) : 0, gy0 = square ? Math.floor(tl![1]) : 0, gx1 = square ? Math.ceil(tl![0] + view.termW) : 0, gy1 = square ? Math.ceil(tl![1] + view.termH) : 0;
-  for (let i = 0; i < cols * rows; i++) {
-    if (tmp.depth[i] > 1e8) continue;
-    const k = i * 4, x = i % cols, y = Math.floor(i / cols);
-    if (square && x >= gx0 && x < gx1 && y >= gy0 && y < gy1) continue; // the screen layer shows there
-    let r = tmp.cells[k + 1], gg = tmp.cells[k + 2], b = tmp.cells[k + 3];
-    const t = tmp.depth[i], camX = (2 * (x + 0.5)) / cols - 1, rx = dirX + cam.plX * camX, ry = dirY + cam.plY * camX, z = eye + ((cam.hor - (y + 0.5)) * t) / scale;
-    const ox = rx * t - obj.x, wy = ry * t;
-    // from aside (15.16): every cell the glass touches is left clear, and the GPU lays the screen's own
-    // picture there in perspective (the compositor fills the sliver round it with its edge)
-    if (!square && glassBox && touches(glassBox, x, y)) continue;
-    if (on && ox < xh - 0.001) {
-      // the screen's light, falling off with the distance to the glass
-      const d = Math.hypot(xh - ox, Math.max(0, Math.abs(wy) - halfLid), Math.max(0, glass0 - z, z - glass1));
-      const f = 0.32 / (1 + (d / 0.05) ** 2);
-      r += ink[0] * f; gg += ink[1] * f; b += ink[2] * f;
+  // ---- the body, in little cubes on the GPU: each model's camera from the eye's rays ----
+  const [ox, oy, cw, ch] = view.px;
+  // the ray through monitor pixel (px, py), in the object's frame (as project() sees it)
+  const ray = (px: number, py: number) => {
+    const camX = (2 * (px - ox)) / (cw * cols) - 1;
+    return [dirX + cam.plX * camX, dirY + cam.plY * camX, (cam.hor - (py - oy) / ch) / scale];
+  };
+  const r0 = ray(0, 0), r1 = ray(1, 0), r2 = ray(0, 1), RX = r1.map((v, k) => v - r0[k]), DY = r2.map((v, k) => v - r0[k]);
+  // the eye in the object's frame; the light from above, a little from behind the player and from the glint's side
+  const E = [-obj.x, 0, eye], Lo = [-0.35, GL.lat * 0.5, 1];
+  const deckDir = (d: number[]) => [d[1] / C, -d[0] / C, d[2] / C];
+  const lidDir = (d: number[]) => [d[1] / C, (d[0] * ux + d[2] * uz) / C, (d[0] * nx + d[2] * nz) / C];
+  const deck: LapCam = { eye: [(E[1] + HALF_W) / C, (xh - E[0]) / C, E[2] / C], F: deckDir(r0), R: deckDir(RX), D: deckDir(DY), light: deckDir(Lo) };
+  const lid: LapCam = {
+    eye: [(E[1] + HALF_W) / C, NY + ((E[0] - xh) * ux + (E[2] - ZH) * uz) / C, LID_NZ + ((E[0] - xh) * nx + (E[2] - ZH) * nz) / C],
+    F: lidDir(r0), R: lidDir(RX), D: lidDir(DY), light: lidDir(Lo),
+  };
+  // where on the monitor: the box round both (the whole view if a corner is behind the eye)
+  let rect = [0, 0, 1e5, 1e5];
+  {
+    let c0 = Infinity, c1 = -Infinity, w0 = Infinity, w1 = -Infinity, behind = false;
+    for (const bx of [x0, xh + 0.012]) for (const by of [-HALF_W, HALF_W]) for (const bz of [0, ZH + DD + 0.012]) {
+      const p = project(cam, obj, bx, by, bz, cols);
+      if (!p) { behind = true; continue; }
+      c0 = Math.min(c0, p[0]); c1 = Math.max(c1, p[0]); w0 = Math.min(w0, p[1]); w1 = Math.max(w1, p[1]);
     }
-    g.put(i, tmp.cells[k], r * 0.85, gg * 0.85, b * 0.85);
-    g.setBg(i, r * 0.72, gg * 0.72, b * 0.72);
+    if (!behind) rect = [Math.floor(ox + c0 * cw) - 2, Math.floor(oy + w0 * ch) - 2, Math.ceil(ox + c1 * cw) + 2, Math.ceil(oy + w1 * ch) + 2];
   }
-  const put = (x: number, y: number, ch: number, fg: readonly number[], bg: readonly number[]) => {
+  const pc = P.pc, blink = Math.floor(now * 3) & 1, busy = on && now - P.hddAt < 0.07 + 0.05 * ((now * 37) % 1);
+  const shops: string[] = [];
+  for (let k = 0; k < Math.min(24, world.city.businesses.length); k++) shops.push(businessName(world.city, k));
+  lapGpu = laptopGpu(deck, lid, rect, L3, {
+    on, lamp: false, disk: busy, radio: on, charging: (pc.plugged && pc.charge < 0.995) || (on && pc.charge < 0.1 && !!blink), ink: GL.mean,
+    down: (code) => now - (P.pressed.get(code) ?? -9) < 0.12,
+    maker: computerMakerName(world.city, H.maker), seed: world.seed, bands: Object.values(SONGS).map((s) => s.band), shops,
+  });
+
+  // ---- the gear fitted to it (13.6), still boxes in the interface's cells, hidden where the body is nearer ----
+  // a USB Wi-Fi stick with its whip in the right side's port, the extended battery standing out behind the
+  // hinge; each slides in the first time it is seen
+  for (const id of pending) if (P.raise > 0.9) { plugAt[id] = now; pending.delete(id); }
+  const slid = (id: string) => { const k = Math.max(0, Math.min(1, (now - plugAt[id]) / 0.7)); return 1 - (1 - k) ** 3; };
+  const col = (k: number): [number, number, number] => [BODY[0] * k, BODY[1] * k, BODY[2] * k];
+  const gear: Part[] = [];
+  if (world.gear.antenna) {
+    const o = (1 - slid('antenna')) * 0.06, y0 = HALF_W - 0.004 + o, blinkOn = on && Math.floor(now * 3) % 2 === 0;
+    gear.push(part(Shape.Box, -0.012, y0, 0.004, 0.01, y0 + 0.036, 0.013, [28, 28, 32], Mat.Solid, '=', '-', '#'));
+    gear.push(part(Shape.Box, -0.004, y0 + 0.008, 0.013, 0.0, y0 + 0.012, 0.0145, blinkOn ? [90, 160, 255] : [50, 60, 80], blinkOn ? Mat.Glow : Mat.Solid, '.', '.', '.'));
+    gear.push(part(Shape.Cyl, -0.003, y0 + 0.03, 0.013, 0.003, y0 + 0.036, 0.15, [22, 22, 25], Mat.Solid, '|', 'o', '|'));
+  }
+  if (world.gear.battery) {
+    const o = (1 - slid('battery')) * 0.08;
+    gear.push(part(Shape.Box, xh + 0.004 + o, -HALF_W * 0.8, 0, xh + 0.03 + o, HALF_W * 0.8, 0.017, col(0.55), Mat.Solid, '#', '=', '#'));
+  }
+  if (gear.length) {
+    if (!tmp || !tmp2 || tmp.cols !== cols || tmp.rows !== rows) { tmp = new CharGrid(cols, rows); tmp2 = new CharGrid(cols, rows); }
+    // the body as plain boxes, only for its depth: the deck, and the lid in strips along its length
+    const body: Part[] = [part(Shape.Box, x0, -HALF_W, 0, xh, HALF_W, TOP * C, col(1), Mat.Solid, '#', '.', '#')];
+    for (let k = 0; k < 6; k++) {
+      const p0 = lidPt(0, (k / 6) * NY, LID_NZ), p1 = lidPt(NX, ((k + 1) / 6) * NY, 0);
+      body.push(part(Shape.Box, Math.min(p0[0], p1[0]), -HALF_W, Math.min(p0[2], p1[2]), Math.max(p0[0], p1[0]), HALF_W, Math.max(p0[2], p1[2]), col(1), Mat.Solid, '#', '#', '#'));
+    }
+    tmp.depth.fill(1e9); tmp2.depth.fill(1e9);
+    drawObjects(tmp, [{ ...obj, parts: body }], cam);
+    drawObjects(tmp2, [{ ...obj, parts: gear }], cam);
+    for (let i = 0; i < cols * rows; i++) {
+      if (tmp2.depth[i] > 1e8 || tmp2.depth[i] > tmp.depth[i]) continue;
+      const k = i * 4, c = tmp2.cells;
+      g.put(i, c[k], c[k + 1] * 0.85, c[k + 2] * 0.85, c[k + 3] * 0.85);
+      g.setBg(i, c[k + 1] * 0.72, c[k + 2] * 0.72, c[k + 3] * 0.72);
+    }
+  }
+  const put = (x: number, y: number, chr: number, fg: readonly number[], bg: readonly number[]) => {
     if (x < 0 || y < 0 || x >= cols || y >= rows) return;
     const i = y * cols + x;
-    g.put(i, ch, fg[0], fg[1], fg[2]); g.setBg(i, bg[0], bg[1], bg[2]);
+    g.put(i, chr, fg[0], fg[1], fg[2]); g.setBg(i, bg[0], bg[1], bg[2]);
   };
   const text = (x: number, y: number, s: string, fg: readonly number[], bg: readonly number[]) => { for (let k = 0; k < s.length; k++) put(x + k, y, s.charCodeAt(k), fg, bg); };
-  const glyph = (x: number, y: number, ch: number, c: readonly number[]) => { if (x >= 0 && y >= 0 && x < cols && y < rows && tmp!.depth[y * cols + x] < 1e8) g.put(y * cols + x, ch, c[0], c[1], c[2]); };
-  // key labels: a glyph where each key's top falls
-  for (const [kx, ky, lab, down] of keyCells) {
-    const p = project(cam, obj, kx, ky, DECK_H + 0.0035, cols);
-    if (!p || p[1] >= rows) continue;
-    const x = Math.round(p[0]) - (lab.length >> 1), y = Math.floor(p[1]), c = down ? lit([255, 255, 255]) : lit([200, 200, 206]);
-    for (let n = 0; n < Math.min(lab.length, 3); n++) glyph(x + n, y, lab.charCodeAt(n), c);
-  }
-  { const p = project(cam, obj, PB[0], PB[1], DECK_H, cols); if (p) power3d = [Math.floor(p[0]) - 2, Math.floor(p[1]) - 1, Math.floor(p[0]) + 3, Math.floor(p[1]) + 2]; }
-  if (square) {
-    screenAt = [tl![0], tl![1]];
-    // bloom in the dark: the screen's light haloes over the bezel round it
-    if (on && GL.bloom > 0.01) {
-      const x0 = Math.round(tl![0]), y0 = Math.round(tl![1]), x1 = Math.round(br![0]), y1 = Math.round(br![1]), [ar, ag, ab] = GL.mean;
-      for (let y = y0 - 4; y <= y1 + 3; y++) for (let x = x0 - 6; x <= x1 + 5; x++) {
-        if (x < 0 || y < 0 || x >= cols || y >= rows || tmp.depth[y * cols + x] > 1e8) continue;
-        const d = Math.max(x0 - x, x - x1 + 1, (y0 - y) * 1.6, (y - y1 + 1) * 1.6, 0);
-        if (d <= 0) continue;
-        const w = GL.bloom * 1.1 / (d + 0.6), k = (y * cols + x) * 4;
-        g.bg[k] += ar * w; g.bg[k + 1] += ag * w; g.bg[k + 2] += ab * w;
-        g.cells[k + 1] += ar * w; g.cells[k + 2] += ag * w; g.cells[k + 3] += ab * w;
-      }
-    }
-    // the bezel: the webcam over the glass; the maker's name and the lights under it
-    const cx = Math.round((tl![0] + br![0]) / 2), below = Math.round(br![1]);
-    glyph(cx, Math.round(tl![1]) - 1, 111, [40, 40, 44]);
-    const brand = computerMakerName(world.city, H.maker).toUpperCase();
-    for (let n = 0; n < brand.length; n++) glyph(cx - (brand.length >> 1) + n, below, brand.charCodeAt(n), lit([150, 150, 156]));
-    const pc = P.pc, blink = Math.floor(now * 3) & 1, busy = on && now - P.hddAt < 0.07 + 0.05 * ((now * 37) % 1);
-    const chg: C3 = pc.plugged ? (pc.charge >= 0.995 ? [120, 255, 140] : [255, 170, 50]) : on && pc.charge < 0.1 ? (blink ? [255, 150, 40] : [50, 30, 10]) : [40, 30, 16];
-    const rx = Math.round(br![0]) - 2;
-    glyph(rx, below, 46, on ? [120, 255, 140] : [60, 40, 20]);
-    glyph(rx - 2, below, 46, busy ? [255, 190, 70] : [50, 36, 18]);
-    glyph(rx - 4, below, 46, chg);
-  }
+  // the power button (the manual: 275, 9 mm on the deck's top strip), for a click
+  { const p = project(cam, obj, xh - 0.009, 0.275 - HALF_W, KEY_TOP * C, cols); if (p) power3d = [Math.floor(p[0]) - 2, Math.floor(p[1]) - 1, Math.floor(p[0]) + 3, Math.floor(p[1]) + 2]; }
+  if (square) screenAt = [tl![0], tl![1]];
   if (P.open && now - P.noticeAt < 3) text((cols - P.notice.length - 2) >> 1, 1, ` ${P.notice} `, [255, 220, 140], [20, 16, 10]);
   else if (P.open && P.lid >= 1) { const hh = hintOf(P); text((cols - hh.length - 2) >> 1, 1, ` ${hh} `, [150, 140, 120], [14, 12, 10]); }
 }
@@ -214,23 +191,11 @@ function project(v: Cam, o: Obj, x: number, y: number, z: number, cols: number):
 
 /**
  * The glass over the screen, as on the phone but stronger: the eye's adaptation (in the dark the
- * screen looks brighter and blooms on the bezel; under a strong light it looks washed and dimmer),
+ * screen looks brighter, and the compositor blooms it; under a strong light it looks washed and dimmer),
  * and the glint: the brightest light nearby mirrored as a soft diagonal band on the side it comes
  * from, in its color, stronger for a light behind the player (the glass faces them). Off, the glint
  * shows plainly on the dark glass.
  */
-/** Whether the interface cell (x, y) touches the convex quad q (cells, from the top-left clockwise): a corner or its middle inside. */
-function touches(q: readonly number[], x: number, y: number): boolean {
-  const inside = (px: number, py: number) => {
-    for (let k = 0; k < 4; k++) {
-      const ax = q[k * 2], ay = q[k * 2 + 1], bx = q[((k + 1) % 4) * 2], by = q[((k + 1) % 4) * 2 + 1];
-      if ((bx - ax) * (py - ay) - (by - ay) * (px - ax) < 0) return false;
-    }
-    return true;
-  };
-  return inside(x + 0.5, y + 0.5) || inside(x, y) || inside(x + 1, y) || inside(x, y + 1) || inside(x + 1, y + 1);
-}
-
 function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: number, on: boolean) {
   const dt = Math.min(0.1, Math.max(0, now - GL.at)), q = 1 - Math.exp(-dt / 0.25);
   GL.at = now;
@@ -260,8 +225,6 @@ function glassOver(T: CharGrid, light: Float32Array, glint: Float32Array, now: n
       C[k + 1] += ar2; C[k + 2] += ag2; C[k + 3] += ab2;
     }
   }
-  const n = W * H;
-  GL.mean = [ar / n, ag / n, ab / n];
-  // (less bloom for a bright page: the eye adapts to what it looks at)
-  GL.bloom = Math.min(1, 1.5 * EYE.k * pageDim(0.3 * GL.mean[0] + 0.59 * GL.mean[1] + 0.11 * GL.mean[2]));
+  // the screen's mean light: what it casts on the keys (a dark console a little, a white page a lot)
+  GL.mean = [ar / (W * H), ag / (W * H), ab / (W * H)];
 }

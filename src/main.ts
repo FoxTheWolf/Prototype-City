@@ -30,7 +30,7 @@ import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawWatch, Watch, WATCH_BTN, WATCH_LCD, WATCH_ON } from './watch/watch';
-import { drawLaptop3d, glassBox, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
+import { drawLaptop3d, glassBox, lapGpu, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
 import { FONT } from './render/atlas';
@@ -1430,7 +1430,7 @@ function frame(now: number) {
     if (mode !== termMode) { termMode = mode; renderer.setTerm(T.cols, T.rows, cw, chh); comp?.setTerm(T.cols, T.rows, cw, chh); }
     scrTermW = (T.cols * cw) / uiLayout.cellW; scrTermH = (T.rows * chh) / uiLayout.cellH;
     laptop.shell.art = null;
-    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: scrTermW, termH: scrTermH });
+    drawLaptop3d(ui, T, laptop, world, now / 1000, VIEW_LIGHT, VIEW_GLINT, { yaw: camera.yaw, pitch: camera.pitch, aspect: uiLayout.cellW / uiLayout.cellH, still: !input.drag, termW: scrTermW, termH: scrTermH, px: [uiLayout.originX, uiLayout.originY, uiLayout.cellW, uiLayout.cellH] });
     // the screen's own pixels (15.17c: the browser's frame), painted again only when what they show changes
     const art = laptop.shell.art as { key: string; paint(P: Paint): void } | null, akey = DEBUG.screenTest && laptop.open ? 'test' : art?.key ?? '';
     if (akey !== termHdKey) {
@@ -1563,7 +1563,7 @@ function frame(now: number) {
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx) } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
-  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt);
+  if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu);
   else renderer.draw(grid, ui, hd, termAt);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }

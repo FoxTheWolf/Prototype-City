@@ -1,6 +1,7 @@
 import { Vox, type VoxMat } from '../render/voxels';
 import { Img, Paint, star, type C3 } from '../render/paint2d';
 import { hash3 } from '../core/rng';
+import { LAP_AT, LAP_U_FLOATS } from '../render/gpu/voxLap';
 
 /**
  * 15.20b: the notebook's body in little cubes of 2 mm, as the notebook's manual draws it
@@ -242,4 +243,102 @@ export function paintLidOutside(seed: number, maker: string, bands: readonly str
   // the ghost of a peeled sticker: a darker patch of glue
   lid.rrect(200, 70, 35, 23, 4, [42, 43, 47], 0.7);
   return { img, names };
+}
+
+// ---- on the GPU (render/gpu/voxLap.ts) ----
+
+/** The decal's pixels a cell (4 a millimetre): the keys' legends, the seal, the maker's name under the glass. */
+const DKL = 8;
+/** What the GPU needs this frame: the two models' cells (the deck's, then the lid's padded to its height), the decals, the uniform; each with a version. */
+export interface LapGpu { vox: Uint32Array; voxVer: number; decal: Img; decalVer: number; out: Img; outVer: number; uni: Float32Array }
+export const LAP_GPU: LapGpu = { vox: new Uint32Array(Math.ceil((2 * NX * NY * NZ) / 4)), voxVer: 0, decal: new Img(1, 1), decalVer: 0, out: new Img(1, 1), outVer: 0, uni: new Float32Array(LAP_U_FLOATS) };
+new Int32Array(LAP_GPU.uni.buffer, 0, 4).set([NX, NY, NZ, NX * NY * NZ]);
+
+/** A model's camera, in its cells: the eye, the ray at pixel (0, 0) and its step right and down, the light's direction. */
+export interface LapCam { eye: readonly number[]; F: readonly number[]; R: readonly number[]; D: readonly number[]; light: readonly number[] }
+
+let built: { ids: Map<number, string>; up: Uint8Array; dn: Uint8Array; cols: Map<string, number[]>; sunk: Set<string> } | null = null;
+let decalFor = '', outFor = '';
+/** The legends' grey (the manual: #A7A9AD). */
+const LEG: C3 = [167, 169, 173];
+/** A key's legend as printed: the right-hand twins named as the left, the arrows as marks. */
+const legendOf = (l: string) => ({ ShiftR: 'SHIFT', AltR: 'ALT', CtrlR: 'CTRL', Left: '<', Right: '>', UpDown: '^', Bksp: 'BKSP', Caps: 'CAPS', ' ': '' } as Record<string, string>)[l] ?? l.toUpperCase();
+
+/** The deck's top (the legends, the seal) over the lid's inside (the maker's name, the LEDs' marks), DKL pixels a cell. */
+function paintDecal(maker: string): Img {
+  const W = NX * DKL, H = NY * DKL, D = new Img(W, H * 2), P = new Paint(D), k = DKL / CELL_MM;
+  // the legends, at the key's top left as the manual prints them (2.5 mm in); long ones smaller
+  for (const K of KEYS) {
+    const s = legendOf(K.label);
+    if (s) P.text(Math.round((K.x0 + 2) * k), Math.round((K.y0 + 2) * k), s, s.length > 2 ? 1 : 2, LEG, 1, s.length > 2 ? 1 : 2);
+  }
+  // the seal: cream paper, OS in burnt orange and prey in graphite, UX 4 under it
+  const sx = 262 * k, sy = (PAD.y1 - 12) * k;
+  P.rect(sx, sy, 28 * k, 11 * k, SEAL);
+  const os = P.text(sx + 8, sy + 6, 'OS', 2, [201, 122, 16]); P.text(sx + 8 + os + 2, sy + 6, 'PREY', 2, [26, 27, 30]);
+  P.text(sx + 8, sy + 26, 'UX 4', 1, [85, 88, 94]);
+  // the lid's inside: the maker's name at the left under the glass, the LEDs' marks under them
+  const ly = H + Math.round(204 * k);
+  P.text(Math.round(56 * k), ly, maker.toUpperCase(), 2, [108, 111, 117], 1, 4);
+  ['O', '=', ')', '+'].forEach((m, i) => P.text(Math.round((205 + i * 13) * k) - 2, H + Math.round(211 * k), m, 1, [85, 88, 94]));
+  return D;
+}
+
+/** The keys' top over the desk (cells): where the lid's inside rests when shut, and its hinge's axis. */
+export const KEY_TOP = TOP + 1;
+
+/**
+ * The body for this frame into LAP_GPU: the deck and the lid's cameras (cells, from the eye's rays in
+ * monitor pixels), where on the monitor it is drawn, the scene's light, the screen lit or not (its ink),
+ * the keys sunk (`down`), the lamp, the LEDs, the maker's name and the outside's stickers.
+ */
+export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly number[], light: ArrayLike<number>, o: {
+  on: boolean; lamp: boolean; disk: boolean; radio: boolean; charging: boolean; /** the screen's mean light (0..255) */ ink: C3; down: (code: string) => boolean;
+  maker: string; seed: number; bands: readonly string[]; shops: readonly string[];
+}): LapGpu {
+  const B = LAP_GPU, U = B.uni, n = NX * NY * NZ, bytes = new Uint8Array(B.vox.buffer);
+  if (!built) {
+    // built once, all keys up and all down; a key sinking only copies its own cells from the other
+    const up = deckModel(() => false), dn = deckModel(() => true).V.cells, cols = new Map<string, number[]>();
+    for (let i = 0; i < n; i++) {
+      const a = up.ids.get(up.V.cells[i]) ?? up.ids.get(dn[i]);
+      if (a) { let l = cols.get(a); if (!l) cols.set(a, (l = [])); l.push(i); }
+    }
+    built = { ids: up.ids, up: up.V.cells, dn, cols, sunk: new Set() };
+    bytes.set(up.V.cells, 0);
+    const L = lidModel().cells, per = NX * NY * LID_NZ;
+    bytes.set(L.subarray(0, per), n);
+    B.voxVer++;
+  }
+  for (const [code, idx] of built.cols) {
+    const d = o.down(code);
+    if (d === built.sunk.has(code)) continue;
+    if (d) built.sunk.add(code); else built.sunk.delete(code);
+    const src = d ? built.dn : built.up;
+    for (const i of idx) bytes[i] = src[i];
+    B.voxVer++;
+  }
+  if (decalFor !== o.maker) { decalFor = o.maker; B.decal = paintDecal(o.maker); B.decalVer++; }
+  const ok = `${o.seed}|${o.maker}|${o.bands.join()}|${o.shops.join()}`;
+  if (outFor !== ok) { outFor = ok; B.out = paintLidOutside(o.seed, o.maker, o.bands, o.shops).img; B.outVer++; }
+  U.set(rect, LAP_AT.rect);
+  const cam = (c: LapCam | null, at: number) => {
+    if (!c) { U.fill(0, at, at + 20); return; }
+    U.set([c.eye[0], c.eye[1], c.eye[2], 1, ...c.F, 0, ...c.R, 0, ...c.D, 0, ...c.light, 0], at);
+  };
+  cam(deck, LAP_AT.cam); cam(lid, LAP_AT.cam + 20);
+  U.set([light[0], light[1], light[2], o.on ? 1 : 0], LAP_AT.light);
+  U.set([o.ink[0], o.ink[1], o.ink[2], 0.9], LAP_AT.ink);
+  // the glass over the hinge (deck cells): its sides, its foot and top (the lid's glass rows, standing)
+  U.set([GLASS.x0 / CELL_MM, GLASS.x1 / CELL_MM, KEY_TOP + NY - GLASS.y1 / CELL_MM, KEY_TOP + NY - GLASS.y0 / CELL_MM], LAP_AT.scr);
+  // the lamp: over the glass's top middle, at the lid's face, looking down onto the keys
+  U.set([NX / 2, 1, KEY_TOP + NY - 3, o.lamp ? 1.1 : 0], LAP_AT.lamp);
+  const pal = lidPalette(deckPalette(built.ids, o.on, o.lamp), o);
+  for (let i = 1; i < pal.length; i++) {
+    const m = pal[i]; if (!m) continue;
+    const id = built.ids.get(i), at = LAP_AT.pal + i * 8;
+    U[at] = m.col[0]; U[at + 1] = m.col[1]; U[at + 2] = m.col[2]; U[at + 3] = m.gloss;
+    U[at + 4] = (m.metal ? 1 : 0) | (m.glow ? 2 : 0); U[at + 5] = 0; U[at + 6] = 0; U[at + 7] = id && o.down(id) ? 0.75 : 1;
+  }
+  return B;
 }

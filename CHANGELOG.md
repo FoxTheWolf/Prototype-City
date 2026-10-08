@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.48 — O notebook em cubinhos (2026-10-07)
+- **O notebook ganhou corpo de verdade:** a base e a tampa agora são feitas de cubinhos de 2 mm, como no manual, desenhados na resolução do monitor: as 80 teclas com legenda cinza (as mais usadas pelo dono anterior brilham um pouco), o nub âmbar entre G, H e B com os três botões, o touchpad, a faixa de cima com volume, mudo, a tecla da luz e o botão de ligar com o anel verde aceso, as dobradiças de metal e o selo do Osprey no descanso de pulso.
+- **As teclas afundam** quando você digita, tecla por tecla, e a luz da cena bate nelas de cima (as laterais das teclas aparecem).
+- **A tampa gira de verdade** na dobradiça ao abrir e fechar; por fora, a marca, os riscos e os um ou dois adesivos de fábrica do dono anterior. Embaixo da tela, a marca do fabricante e os quatro LEDs (ligado, disco, rádio, bateria).
+- **A luz da tela cai no teclado** conforme o que ela mostra: um console escuro acende pouco, uma página branca acende bem.
+- **O celular na frente do notebook:** com os dois erguidos, o corpo do celular fica por cima da tela do notebook.
+
 ## 0.15.47 — O Osprey no notebook (2026-10-07)
 - **A barra do Osprey** no alto da tela do notebook, como no manual: as três áreas de trabalho, o título da janela em foco (o diretório do terminal ou a página do Ferret), a rede Wi-Fi com as barras de sinal, a CPU, a memória (acende acima de 85%), a bateria com o tempo restante (um raio na tomada; pisca abaixo de 10%) e a hora. Tudo vem da máquina e do mundo; as linhas finas entre os campos são pixels.
 - **Áreas de trabalho:** **Ctrl+1..3** mostra uma área; **Ctrl+Shift+1..3** manda a janela em foco para outra (o Ferret numa, o terminal noutra, cada um em tela cheia).
