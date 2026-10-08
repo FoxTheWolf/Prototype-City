@@ -30,14 +30,14 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 | 17 | NPCs vivendo a cidade (sem polícia) | 5 | C7–C8 | ~6 | 16 (parte) |
 | 18 | `[HACKING]` Hacking completo + TI (Opus 4.8) | o Opus 4.8 fixa | C9–C10 | ~10 | 19 |
 | 19 | Economia | 6 | C11 | ~7 | 17 |
-| 20 | Cozy e a física | 5 | C12 | ~6 | cozy |
+| 20 | Cozy e a física | 6 | C12 | ~7 | cozy |
 | 21 | Transporte: um sistema de veículo para todos | 6 | 1 | ~7 | 18 |
 | 22 | Vida do personagem | 7 | 2 | ~9 | 22 |
 | 23 | Refinamento e variedade | 8 | 2 | ~10 | 20 |
 | 24 | Som | 5 | 1 | ~6 | 21 |
 | 25 | A primeira hora e o laço (integração e balanço) | 5 | — | ~6 | novo |
 
-**Total até a 1.0: ~84 sessões**, contadas em sessões (cada conta tem o seu limite). A 18 é do Opus 4.8; partes dela podem correr em paralelo quando o limite deixar.
+**Total até a 1.0: ~85 sessões**, contadas em sessões (cada conta tem o seu limite). A 18 é do Opus 4.8; partes dela podem correr em paralelo quando o limite deixar.
 
 **Decisões que mudaram a ordem (usuário, 2026-10-08, na entrevista do cronograma):** (1) **polícia, calor, testemunha, stealth, prisão e disfarce ficam para depois da 1.0**: a dificuldade é a profundidade do hacking, não fugir da polícia ("isto não é GTA; se esconder é chato"); a 1.0 é simulação profunda e hacking realista que a influencia. O calor que já existe (`heat.ts`) fica como está, congelado. (2) **Um sistema só de controle de veículo** para NPCs, táxi e, um dia, o jogador (motor, tração, rodas), com pesquisa e manual antes; o jogador dirigir pode ficar para depois da 1.0, mas pelo mesmo sistema. (3) O hacking sobe para logo depois dos NPCs, com a TI legítima dentro; uma etapa final monta a primeira hora e o balanço.
 
@@ -64,7 +64,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 
 ## Etapa 16: Pessoas, o manual e o rework (6 subetapas)
 > Um rework só, planejado para tudo o que as etapas 17, 20 e 22 vão pedir do corpo. Junta 13.8, 13.11 e 13.14.
-- **16.1 Arrumar o shader** (antes da demo no plano antigo; sobe para cá): separar `gpu/shader.ts` por assunto, caber em 8 storage buffers, e cortar a compilação de 2–4 min (as funções grandes copiadas em cada chamada). O rework das pessoas mexe muito no shader; cada recarga mais rápida paga o resto do projeto. Logo depois, **o documento da engine** (pedido de 2026-10-08) sai daqui, com o shader já arrumado: o raio por célula, a luz, os interiores, os cubinhos, a camada HD e por que os bugs típicos acontecem.
+- **16.1 Travadas e o shader:** primeiro **medir as travadas** (um gravador dos quadros acima de ~8 ms no registro de playtest, com o tempo de cada fase: simulação, preparação, GPU, telas, e a posição); se a simulação for o culpado, levá-la para um **Web Worker**. Depois **arrumar o shader** (antes da demo no plano antigo; sobe para cá): separar `gpu/shader.ts` por assunto, caber em 8 storage buffers, e cortar a compilação de 2–4 min (as funções grandes copiadas em cada chamada). O rework das pessoas mexe muito no shader; cada recarga mais rápida paga o resto do projeto. Logo depois, **o documento da engine** (pedido de 2026-10-08) sai daqui, com o shader já arrumado: o raio por célula, a luz, os interiores, os cubinhos, a camada HD e por que os bugs típicos acontecem.
 - **16.2 O manual de pessoas** (`docs/identidade/pessoas-manual.html`): o corpo e as proporções variáveis (altos, baixos, braços), o esqueleto e as poses, os traços combináveis (cabelo, cor forte, óculos, chapéu, barba com a boca à mostra, tatuagem, cicatriz: a maioria com um, poucos com dois), a roupa em camadas 3D (cubos e esferas), como a roupa vira descrição em palavras, **um sistema só de roupa** (vestir, trocar de roupa, o disfarce e a customização são a mesma coisa; o disfarce e o editor só ganham uso depois), o corpo sentado no carro e o taxista (20), o jogador e o espelho (22). Regras testáveis, como R1–R9.
 - → **C4**
 - **16.3 O corpo novo:** o modelo, as proporções pela semente, o LOD de longe, a cabeça que vira de forma visível (a linha de visão da 17).
@@ -105,6 +105,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - → **C12**
 - **20.4 "The usual?"** com memória de verdade, depois de várias idas.
 - **20.5 Fotos e postar no Streetwire** (a rede social da 1.0: comentar e postar), e os cidadãos comentando o eclipse.
+- **20.6 O jornal de papel:** um manual antes; na banca de manhã, as manchetes reais de ontem em páginas por assunto, com as fotos impressas; uma edição na 1.0, variações depois.
 
 ## Etapa 21: Transporte, um sistema de veículo para todos (6 subetapas)
 > O antigo 18. **Regra (usuário, 2026-10-08):** um sistema só de controle de veículo (motor, tração, rodas, freio) para os NPCs, o táxi e o jogador; o táxi é um NPC dirigindo. Pesquisa e manual antes de implementar, pegando o melhor de vários jogos (originalidade: a técnica sim, a identidade não).
@@ -132,7 +133,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **23.4 A praia e o mar** (13.15), o calçadão e o píer; o Sarcófago desligado por chave.
 - **23.5 Clima, 2ª passada:** chuva volumétrica, relâmpagos, a roupa molhada e as poças; a lua e as estrelas (os mares, os god rays, o rastro).
 - **23.6 Letreiros, neon e outdoors** com notícias, a surge apagando aparelhos, o neon de dia.
-- **23.7 Sinalização e orientação:** o totem YOU ARE HERE, os símbolos 15×15, o diretório e o zoom de ler placas (13.17), a lista telefônica; os terrenos vazios virando feiras, mercados e quadras (nota 10).
+- **23.7 Sinalização e orientação:** o totem YOU ARE HERE, os símbolos 15×15, o diretório e o zoom de ler placas (13.17), a lista telefônica; os terrenos vazios virando feiras, mercados e quadras (nota 10); **a rua mais cheia** (essencial): bancas de jornal, vendedores de comida, as plaquinhas de calçada do Kamurocho.
 - **23.8 Os tipos de prédio que faltam** (hotel, banco, galpão, estacionamento, oficina, escritórios e torres, as faixas `*`) e o distrito de entretenimento.
 
 ## Etapa 24: Som (5 subetapas)
@@ -160,7 +161,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **C4 (celular):** atender e rejeitar pelo mouse; o nome por cima do número no discador; o misclick; o plano de dados gasto no Wi-Fi; o T9 sem "motel"; o Jackdaw 100% pelo mouse; o boot do celular em pixels; o Maps escuro e buscar esquinas.
 - **C5 (web e notebook):** a senha curta no webmail; o domínio de e-mail longo; o link "find" do portal; a barra de status do notebook com o navegador; favoritos, abas e links roxos no Ferret; a moldura nova no manual do Ferret; as notas de versão.
 - **C6 (simulação e notícias):** limite de manchetes por assunto (e a do apagão depois da luz voltar); posts repetidos no Streetwire; fotos das notícias apontadas; o som do apagão só no quarteirão; a travada à meia-noite.
-- **C7 (luz 1):** a tela do celular clara demais; o bloom do relógio; o blackout claro demais; postes acesos no blackout; a lâmpada das marquises verdes.
+- **C7 (luz 1):** **o fundo dos glifos seguindo a luz do sol de dia** (hoje escuro; a fadiga visual); a tela do celular clara demais; o bloom do relógio; o blackout claro demais; postes acesos no blackout; a lâmpada das marquises verdes.
 - **C8 (placas):** a letra vira ASCII só com uma linha de pontos visível (nota 11, vale para semáforos de pedestre e letreiros); as placas retrorrefletivas (e o fundo pintado do glifo); a placa dentro do braço do semáforo; o OPEN/CLOSED longe da porta; a placa de rua de longe e o "7".
 - **C9 (relógio e camadas):** os dígitos em sete segmentos na HD; as barras de fome, cansaço e batimento; a luz acendendo com o alarme; o relógio e as legendas atrás do notebook; o brilho do aço e o cristal.
 - **C10 (o resto):** o menu com o CCTV de fundo; o botão "voltar" do mouse no Electron; o custo da ligação no orelhão; os agradecimentos pelo sobrenome; os itens do notebook em `draw.ts` (olhar para baixo, teclas através da tampa, luzes maiores).
