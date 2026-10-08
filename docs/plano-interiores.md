@@ -7,7 +7,7 @@
 ## O que já existe
 
 - **As plantas e as regras no código:** `src/sim/floorplans.ts` (os tipos, as tabelas de letras, `grow`, `checkFloor`,
-  `checkBuilding`, `checkArrangement`) e `src/sim/floorplans.json` (11 andares, 72 arrumações, 1 pilha de prédio),
+  `checkBuilding`, `checkArrangement`) e `src/sim/floorplans.json` (19 andares, 72 arrumações, 5 prédios inteiros: 8×8, 8×10/12, 10×10, 10×12, 12×12),
   copiado do manual por `node tests/floorplans-sync.mjs`. O teste `tests/floorplans.ts` roda R1–R9 em tudo e confere
   que 7 plantas estragadas de propósito falham. **O manual é onde se desenha; o JSON é cópia.**
 - **O gerador de hoje** (`makePlan` em `src/sim/interior.ts`) corta o andar por regras e mobilia por sorteio (`furnish`).
