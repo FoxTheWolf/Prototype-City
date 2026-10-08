@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-07 — o notebook em cubinhos (Opus 5.5)
+- **As legendas na fonte 5 × 7 combinam com o resto (letreiros, Ferret), mas são pequenas:** as de 3+ letras saem a 1,75 mm (BKSP, SHIFT). Se no 1080p ficarem ilegíveis, o caminho barato é subir o decalque para 6 px/mm só nessas; não vale trocar por fonte do sistema (fugiria do "tudo em pixels do jogo").
+- **Falta um realce da peça sob o cursor** (como o celular tem): com 86 peças clicáveis, o jogador não sabe o que é botão e o que é enfeite. Um brilho leve na paleta (o `mul` já existe) resolve com poucas linhas.
+- **A luz do teclado é a primeira "luz do jogador" de verdade:** quando a etapa 16 fizer o stealth, ela e a tela já são as fontes que o entregam; vale dar desde já à polícia a regra "um leque quente num banco escuro chama atenção".
+- **A chave do rádio na frente** (do manual) é um ótimo botão para o laço de hacking (cortar o rádio para sumir do log de um ponto de acesso), mas é `[HACKING]` no efeito: fica para o agente `hacking` decidir o que ela desliga na máquina virtual.
+
 ## 2026-10-07 — o fim da 3b (Opus 5.5)
 - **"Branches nearby" alimenta o laço do dinheiro vivo:** hoje o saque é no balcão da agência; com a lista por distância e "aberta agora", o jogador aprende sozinho que de madrugada não há onde sacar, uma pressão orgânica para andar com dinheiro na mochila (e um alvo para quando houver caixas eletrônicos hackeáveis).
 - **A câmera agora mostra exatamente o que a foto vai ser** (o visor no tamanho da foto): quando as fotos virarem pistas nas investigações, isso evita a frustração de "não era isso que eu enquadrei".
