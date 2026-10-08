@@ -2,6 +2,15 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## C1 — o que quebra (0.13.19b, 2026-10-08)
+
+- **Softlock do motel:** o F já abria a porta (0.13.10o), mas a dica do balcão vencia a da porta e dizia "TALK TO THE CLERK"; agora a dica segue a mesma prioridade (`till` só sem `doorAhead`). Visto no painel: "[F] OPEN" e a porta abre.
+- **`aimedGood`:** um `p.inside` que não é prédio (deixado por script) derrubava o quadro; agora devolve null.
+- **CONTINUE/WATCH CCTV sem save:** os botões escondidos só escutam o clique quando há save.
+- **A dica da zona de fogo** saiu de `locale/tips.json` (não trocada por uma do mar: não sei se o mar já existe).
+- **`tests/makers.ts`:** o teste esperava o celular do gigante; desde a 15.19b o jogador começa com o Slate do executivo (decisão do usuário); o teste foi atualizado.
+- **Pedido do usuário: atalhos de teste por lugar.** `pos=x,y[,andar]` e `look=graus` (a bússola do debug) na URL/Electron; com `pos` o jogo pula o título, nunca apaga nem grava o save (`testMode` em `main.ts`). `teste-porta-13.19.bat` e `teste-motel-porta.bat`, com instruções na janela.
+
 ## 13.19 — portas e saída (0.13.19, 2026-10-08)
 
 - **Decisões do usuário (perguntadas antes):** a porta da rua dos moradores vira uma folha de madeira de 1 m; uma bandeira de vidro sobre ela, com o número; as portas de dentro ficam com 1 m (medido: todo `D`/`R`/`E` tem 2 caracteres). Em `docs/visao.md`.

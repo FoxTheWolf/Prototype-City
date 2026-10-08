@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.19b — Correções (C1) (2026-10-08)
+- **Na recepção do motel, olhando para a porta, a dica diz "[F] OPEN"** (antes dizia para falar com o recepcionista, embora o F já abrisse a porta).
+- **O jogo não congela mais** se o jogador aparecer dentro de uma loja por um atalho de teste.
+- **Sai a dica da zona de fogo** da tela de carregamento (a borda da cidade não é mais a zona de fogo).
+- **Atalhos de teste:** `teste-*.bat` abrem o jogo direto num lugar, num andar e numa direção, sem tocar no save.
+
 ## 0.13.19 — A porta do prédio e a saída (2026-10-08)
 - **A porta dos moradores parece porta de prédio:** uma folha de madeira de 1 m com um vidro em cima, uma bandeira de vidro acesa sobre ela com o número da casa e o interfone ao lado. Dá para distinguir de longe da porta de vidro da loja.
 - **Placas EXIT de verdade:** vermelhas, com o homenzinho saindo, só no caminho das partes comuns até a rua (da escada para o saguão, sobre a porta da rua). Acabou o EXIT verde dentro dos apartamentos.

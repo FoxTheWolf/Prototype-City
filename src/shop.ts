@@ -19,8 +19,10 @@ export interface Aimed { f: Furn; good: string; cents: number; k: number; x: num
  */
 export function aimedGood(w: World, yaw: number, pitch: number, eye: number): Aimed | null {
   const p = w.player;
-  if (p.inside < 0 || p.floor !== 0) return null;
-  const k = w.city.buildings[p.inside].biz, P = planOf(w.city, p.inside, 0);
+  // (an index that is no building, as a script can leave it, is no shop: never a thrown frame)
+  const B = p.inside >= 0 && p.floor === 0 ? w.city.buildings[p.inside] : undefined;
+  if (!B) return null;
+  const k = B.biz, P = planOf(w.city, p.inside, 0);
   if (k < 0 || !P) return null;
   const dx = Math.cos(yaw) * Math.cos(pitch), dy = Math.sin(yaw) * Math.cos(pitch), dz = Math.sin(pitch);
   let best: Aimed | null = null, bt = REACH;

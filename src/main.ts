@@ -60,7 +60,7 @@ import { spawnPeds } from './sim/peds';
 import { businessName, operatorName, cityName, compass, diagonalName, districtName, districtType, landmarkName, roadName, sectorCode } from './locale/names';
 import { diagS, districtAt, FLOOR_H, nearestRoad, SIDEWALK } from './sim/city';
 import { calendar, sunDir } from './sim/clock';
-import { isOffice } from './sim/interior';
+import { baseAt, isOffice } from './sim/interior';
 import { lightning, PRESETS } from './sim/weather';
 import { crawl } from './web/sites';
 import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, TICK, togglePower, worldSteps, CITY_SIZE, type PlayerInput } from './sim/world';
@@ -140,7 +140,9 @@ const params = new URLSearchParams(location.search), seedParam = params.get('see
 const saved = await readSave();
 const titleFx = new TitleFx(document.getElementById('overlay')!);
 titleLogo(document.getElementById('logo')!, params.has('mute') || OPTS.mute, (k) => { titleFx.power = k; });
-const choice = await titleChoice();
+// ?pos=... (a test launcher, teste-*.bat) goes straight in, past the title, never touching the save (testMode)
+const testMode = params.has('pos');
+const choice = testMode ? 'new' : await titleChoice();
 const seed = choice !== 'new' ? saved!.seed : seedParam !== null ? Number(seedParam) | 0 : (Math.random() * 2 ** 31) | 0;
 document.getElementById('ready')!.hidden = true;
 document.getElementById('loading')!.hidden = false;
@@ -164,8 +166,11 @@ function titleChoice(): Promise<'continue' | 'new' | 'cctv'> {
   addEventListener('keydown', (e) => { if (e.code === 'Escape' && titleMenu.isOpen) titleMenu.back(); });
   return new Promise((ok) => {
     const go = (c: 'continue' | 'new' | 'cctv') => { titleMenu.dispose(); ok(c); };
-    cont.addEventListener('click', (e) => { e.stopPropagation(); go('continue'); }, { once: true });
-    cam.addEventListener('click', (e) => { e.stopPropagation(); go('cctv'); }, { once: true });
+    // (hidden without a save, and then deaf too: a script's click on them must not start a game with no save)
+    if (saved) {
+      cont.addEventListener('click', (e) => { e.stopPropagation(); go('continue'); }, { once: true });
+      cam.addEventListener('click', (e) => { e.stopPropagation(); go('cctv'); }, { once: true });
+    }
     let sure = !saved;
     nb.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -189,9 +194,13 @@ if (params.has('sarcnear')) {
   S.x += dx * k; S.y += dy * k; S.tx += dx * k; S.ty += dy * k;
   for (const c of S.cranes) { c.x += dx * k; c.y += dy * k; }
 }
-// ?pos=771.2,971.9 starts a new game standing there (the comparison launchers, comparar-*.bat)
+// ?pos=771.2,971.9 starts a new game standing there (the comparison and test launchers, *.bat); a third number is the
+// floor (inside the building there): pos=867,1152.6,3
 const posParam = params.get('pos')?.split(',').map(Number);
-if (posParam?.length === 2 && posParam.every(Number.isFinite)) Object.assign(world.player, { x: posParam[0], y: posParam[1], px: posParam[0], py: posParam[1] });
+if (posParam && posParam.length >= 2 && posParam.every(Number.isFinite)) {
+  const [x, y, f = 0] = posParam, k = baseAt(world.city, x, y);
+  Object.assign(world.player, { x, y, px: x, py: y, inside: k, floor: k >= 0 ? f : 0, z: k >= 0 ? f * FLOOR_H : 0 });
+}
 if (atParam && !Number.isNaN(Date.parse(atParam + 'Z'))) skipHours(world, (Date.parse(atParam + 'Z') - Date.UTC(2008, 0, 1)) / 3.6e6 - world.time / 3600);
 // the world is drawn on the GPU (WebGPU; stage R), from the moment the device is ready. Its compositor
 // draws on a canvas of its own over the WebGL one (events pass through to the WebGL canvas), which
@@ -205,6 +214,9 @@ const overlay = document.getElementById('overlay')!;
 const renderer = new GlyphRenderer(canvas);
 const input = new Input(canvas);
 const camera = new Camera();
+// ?look=180 faces that way, in degrees as the debug lines show it (0 north, 90 east)
+const lookParam = Number(params.get('look'));
+if (params.has('look') && Number.isFinite(lookParam)) camera.yaw = camera.targetYaw = ((lookParam - 90) * Math.PI) / 180;
 const phone = new Phone(world);
 const payphone = new Payphone(world);
 const counter = new Counter(world);
@@ -1048,7 +1060,7 @@ function gameSave(): GameSave {
   return { v: SAVE_V, seed, at: Date.now(), world: snapWorld(world), phone: phone.snapshot(), laptop: laptop.snapshot(), watch: watch.snapshot(), jack: jack.save(), cam: { yaw: camera.yaw, pitch: camera.pitch } };
 }
 async function saveNow(): Promise<boolean> {
-  if (!running || cctv) return false;
+  if (!running || cctv || testMode) return false;
   lastSave = performance.now();
   return writeSave(gameSave());
 }
@@ -1375,8 +1387,8 @@ function frame(now: number) {
   if (shelfMsg && !bagView.open && !talkView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
   if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
   if (tagOn) drawTag(ui, aim!, world, view, layout, uiLayout, VIEW_LIGHT);
-  // a shop's till in front: how to use the counter, or when the shop opens
-  const till = !talkView.open && !phone.out && !counter.active && !bagView.open ? counter.near() : null;
+  // a shop's till in front: how to use the counter, or when the shop opens (a door in front comes first, as F does: 0.13.10o)
+  const till = !talkView.open && !phone.out && !counter.active && !bagView.open && !doorAhead(world, camera.yaw) ? counter.near() : null;
   if (till) { const s = ` ${counterPrompt(world, till)} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 6, s, [255, 220, 140], [20, 16, 10]); }
   // a door in front: F to open or close it, or that it is locked (for a moment after trying)
   if (!till && !talkView.open && !phone.out && !counter.active && !payphone.active) {

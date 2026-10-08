@@ -25,7 +25,7 @@ for (const seed of [42, 7, 711445483]) {
   }
   check(`seed ${seed}: same seed, same model`, phoneModel(seed, 2, 1).model === phoneModel(seed, 2, 1).model);
   for (let l = 0; l < LOOKS; l++) check(`look ${l} is its maker's`, lookPhone(seed, l).maker === LOOK_MAKER[l] && lookPhone(seed, l).look === l);
-  check('the player starts on the giant', playerPhone(seed).maker === 0);
+  check("the player starts on the executive's Slate (the phone's manual; 2026-10-07)", playerPhone(seed).maker === 1);
   const L = playerLaptop(seed);
   check(`seed ${seed}: the notebook is the work brick, "${L.model}"`, L.maker === 0 && /^[TXR]\d{2,3}$/.test(L.model));
 }

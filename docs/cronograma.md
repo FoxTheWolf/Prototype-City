@@ -155,7 +155,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 ## Os blocos de correção (o backlog, já atribuído)
 > ~5 itens cada. Detalhe de cada item em `docs/listas-fixas.md`, `docs/retoques-14-15.md` ou "Bugs conhecidos" do CLAUDE.md. Os que forem feitos saem de lá. Os blocos podem ir ao agente `bugfix` quando forem só correções localizadas.
 
-- **C1 (o que quebra):** confirmar o softlock do motel; `aimedGood` congelando o jogo; CONTINUE sem save; a dica da zona de fogo no título; `tests/makers.ts` falhando.
+- ✅ **C1 (o que quebra; 0.13.19b):** confirmar o softlock do motel; `aimedGood` congelando o jogo; CONTINUE sem save; a dica da zona de fogo no título; `tests/makers.ts` falhando.
 - **C2 (interiores):** colunas coladas na parede; móveis vazando o relevo (`POS 806.4,905.9`); a chuva nas paredes internas e a chuva decidindo o "dentro" pelo raio (13.10b); as portas de rua que não abrem sozinhas; os postes do andaime e do ponto que não são sólidos.
 - **C3 (diálogo):** a memória de follow-up ("who won?"); ESC fechando a conversa antes do menu; recapturar o mouse ao despausar; tirar "unrecognized" e centralizar o quadrante do tom (com cor); letras maiores na fala e nas legendas.
 - **C4 (celular):** atender e rejeitar pelo mouse; o nome por cima do número no discador; o misclick; o plano de dados gasto no Wi-Fi; o T9 sem "motel"; o Jackdaw 100% pelo mouse; o boot do celular em pixels; o Maps escuro e buscar esquinas.
