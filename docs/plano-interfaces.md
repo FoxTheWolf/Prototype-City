@@ -1,6 +1,8 @@
 # Plano: os manuais de identidade no jogo (15.16 a 15.21)
 
 > Planejado em 2026-10-07, depois dos cinco manuais (`docs/identidade/`: celular, notebook e Osprey, fabricantes, Ferret, Jackdaw) e do da GridLink. O Plano do CLAUDE.md tem uma linha por subetapa; o detalhe técnico fica aqui. Ao fechar uma subetapa, o texto dela vai para `docs/historico.md`. A numeração começa em 15.16 porque o CHANGELOG já usou até a 0.15.15.
+>
+> **Etapa 15 fechada; numeração nova (cronograma de 2026-10-08, `docs/cronograma.md`):** neste doc, "etapa 16" (NPCs) = **17**; "etapa 17" (economia) = **19**; "etapa 18" (transporte, carros) = **21**; "etapa 19" (hacking) = **18**; "etapa 20" (refinamento) = **23**; a 22 continua 22. O stealth e a polícia ficam para depois da 1.0. O que falta daqui está nos blocos C4/C5/C9/C10 e nas etapas acima.
 
 ## A ordem geral, e por quê
 
@@ -12,15 +14,15 @@
 | **15.19** | Os objetos de cubinhos na GPU e o celular em 3D (manual do celular) | 15.16, 15.18 | PC |
 | **15.20** | O notebook em 3D e o Osprey (manual do notebook) | 15.16, 15.18, 15.19 | PC |
 | **15.21** | O Jackdaw Mini, a fundação não-hacking (manual do Jackdaw, `docs/dispositivo.md`) | 15.16, 15.19 | PC |
-| etapa 19 | Os apps de hacking do Jackdaw e os GridLinks `[HACKING]` | 15.21 | agente `hacking` / Opus 4.8 |
+| etapa 18 | Os apps de hacking do Jackdaw e os GridLinks `[HACKING]` | 15.21 | agente `hacking` / Opus 4.8 |
 | gradual | A GridLink no mundo (abertura, caixas nos postes, vans, conta, site) | ver abaixo | — |
 
 - **Por que as telas primeiro:** os três aparelhos pedem a mesma coisa (a tela como textura própria, nítida e inclinada com o corpo, que recorta o ASCII do mundo). Feita uma vez, serve ao notebook (1280 × 800), ao celular (240 × 400) e ao Jackdaw (128 × 64). Ela estava na etapa 20 ("telas em perspectiva"); sobe para cá.
 - **Por que o Ferret antes dos corpos:** o navegador é o centro do laço da 1.0 (receber trabalho, ver a cidade reagir) e só precisa da tela, não do corpo novo. O usuário pediu o Ferret primeiro.
 - **Por que os fabricantes antes dos corpos:** o nome no aro do celular e na tampa do notebook é um decalque das fontes de pontos de cada família; os dados (`MAKERS = 4`, séries por família) são pequenos e testáveis no Node.
-- **Por que o celular antes do notebook e do Jackdaw:** é o objeto que está sempre na tela, e o pipeline de cubinhos nasce nele (o maior: 4–5 mil cubos de face, grade de 1 mm). **Muda a regra antiga** ("1º alvo dos cubinhos: os carros, etapa 20"): o 1º alvo passa a ser o celular; os carros vêm na etapa 18 já com o pipeline pronto.
+- **Por que o celular antes do notebook e do Jackdaw:** é o objeto que está sempre na tela, e o pipeline de cubinhos nasce nele (o maior: 4–5 mil cubos de face, grade de 1 mm). **Muda a regra antiga** ("1º alvo dos cubinhos: os carros, etapa 20"): o 1º alvo passa a ser o celular; os carros vêm na etapa 21 já com o pipeline pronto.
 - **O Osprey pode adiantar:** a barra de cima, as bordas em HD e os selos do firmware só precisam da 15.16 (não do corpo). Se sobrar fôlego depois da 15.17, a 15.20a vem antes da 15.19.
-- **Depois da 15.21: a etapa 16** (NPCs usando a cidade), como no Plano.
+- **Depois da 15.21:** a 13 fecha, depois a 16 (pessoas) e a 17 (NPCs usando a cidade), pelo cronograma.
 
 ## 15.16 Telas como textura própria
 
@@ -124,7 +126,7 @@
 - O molde continua sorteado entre os prováveis do tipo (`TPLS`, `h(n)` pela semente da empresa); cada molde monta os seus blocos com a `era` certa.
 - **Foto pelo tipo do lugar:** a tabela `GROUP` do manual (`food`, `store`, `bar`, `tech`, `room`) liga ao `PLACES` de `sim/placeTypes.ts`; a semente é a da empresa.
 - **Conteúdo da simulação:** horário e "OPEN NOW" (`isOpen`), endereço (`addressOf`), o que vendem com preço (`PLACES[kind].sells` e os preços da 13.1), a oferta do dia pela gramática (`locale/text/`, `#web.special.<kind>#`), as notícias do blog pelos eventos da cidade perto da loja.
-- **Anúncios de empresas que existem:** escolher em `city.businesses` (pela semente e pelo dia); na etapa 17 o anúncio vira um gasto da empresa e some quando ela vai mal.
+- **Anúncios de empresas que existem:** escolher em `city.businesses` (pela semente e pelo dia); na etapa 19 (economia) o anúncio vira um gasto da empresa e some quando ela vai mal.
 - O mapa do "Find us" usa o raster do Maps (`phone/mapdata.ts`, `mapRaster`/`groundAt`) recortado em volta do endereço, com o pino.
 - Textos novos entram como peças da gramática (regra "toda frase pela gramática").
 
@@ -132,7 +134,7 @@
 
 ### 15.17g As páginas canônicas
 
-- **Portal** (`portalPage`): brilho, o anúncio do provedor, a manchete com foto (o assunto pela notícia: apagão → cidade escura, batida → rua), o tempo com o ícone (`sim/weather`), a busca com a coruja, o diretório. **As ações só depois da etapa 17** (sem provisório).
+- **Portal** (`portalPage`): brilho, o anúncio do provedor, a manchete com foto (o assunto pela notícia: apagão → cidade escura, batida → rua), o tempo com o ícone (`sim/weather`), a busca com a coruja, o diretório. **As ações só depois da etapa 19 (economia)** (sem provisório).
 - **Streetwire** (`web/streetwire.ts`): o selo "beta", a caixa "What are you doing right now?", **avatares tirados da aparência do cidadão** (`pedLook`: pele, cabelo, roupa viram o rosto pixelado), a foto do post quando houver, os assuntos em alta pelas palavras dos posts do dia.
 - **Webmail** (`web/webmail.ts`): o login em caixa com degradê, os campos afundados, o botão aqua, o "25 MB!".
 - **GridLink** (o site da empresa de energia e telefone fixo, pelo manual `manual.html`: a marca sem a pichação, POWER · TELECOM, o mapa dos 9 setores, "report an outage"); fora do ar quando o setor dela apaga.
@@ -158,7 +160,7 @@
 
 ### 15.17j Os selos e a Burrow Labs
 
-> **Feito em 2026-10-07.** Mudança do plano, decidida com o usuário: a Burrow Labs **não** fica em cima da lavanderia (o Ferret é o navegador de todo mundo, e uma empresa de fundo de quintal destoava dos selos nos sites grandes). Meio-termo: começou numa sala sobre uma lavanderia em 2004 (a história no "About"), hoje é um andar de um prédio de escritórios (`burrowHome`: um `Workplace` de escritório pela semente, a equipe = 10 do `staff`). Um modo/plugin escondido que os hackers conhecem fica para a etapa 19 (`[HACKING]`).
+> **Feito em 2026-10-07.** Mudança do plano, decidida com o usuário: a Burrow Labs **não** fica em cima da lavanderia (o Ferret é o navegador de todo mundo, e uma empresa de fundo de quintal destoava dos selos nos sites grandes). Meio-termo: começou numa sala sobre uma lavanderia em 2004 (a história no "About"), hoje é um andar de um prédio de escritórios (`burrowHome`: um `Workplace` de escritório pela semente, a equipe = 10 do `staff`). Um modo/plugin escondido que os hackers conhecem fica para a etapa 18 (`[HACKING]`).
 
 - Os selos de 88 × 31 (manual, seção 9) como operações de HD de frente, pela semente e pelo molde ("Best viewed with Ferret", "Get Ferret", "Valid HTML 4.01", o contador que cresce com o tempo de jogo, o "under construction" com 2 quadros, o "powered by" do provedor).
 - **burrow-labs.net:** o site da empresa (o "Get Ferret", as notas de versão, o fórum de bugs), num prédio de escritórios de verdade, para cair no apagão como os outros. É o "Ferret Help" dos favoritos.
@@ -195,7 +197,7 @@
     4. **LOD:** na mão, os cubinhos; na mesa a 1–3 m, as caixas atuais (`render/objects.ts`); de longe, a luz da tela (o manual, seção 10).
     5. **Peças e sons:** cada peça clicável pelo mouse, como o `pickBody` do celular (o id da paleta = a peça); os sons novos da tabela da seção 5 (vol, mudo, luz, nub, touchpad, rádio, disco, ventilador; o teste de ouvido é do usuário).
     6. **Desgaste e adesivos de fábrica:** as teclas gastas (W A S D, E, Enter, Espaço, Bksp, Ctrl) com 7% de brilho; 1–2 adesivos pela semente (bandas da cidade, empresas de `city.businesses`, símbolos), pintados num decal da tampa (`paint2d`), como no `drawLid` do manual.
-  - **Feito (0.15.48–49, 2026-10-07):** passos 1–3, 5 e 6 (o passe `render/gpu/voxLap.ts`, a base e a tampa com câmeras próprias, a tela pelo `glassBox` do modelo, as peças clicáveis com os sons do manual, a luz do teclado, o desgaste e os adesivos). **Falta:** o LOD (passo 4: só existe o notebook na mão; entra quando houver notebooks na mesa do mundo), a chave do rádio na frente (o "tlec" e o LED da antena; precisa de o rádio poder desligar na máquina virtual), um realce da peça sob o cursor, a luz do teclado vista de longe (etapa 16, o stealth).
+  - **Feito (0.15.48–49, 2026-10-07):** passos 1–3, 5 e 6 (o passe `render/gpu/voxLap.ts`, a base e a tampa com câmeras próprias, a tela pelo `glassBox` do modelo, as peças clicáveis com os sons do manual, a luz do teclado, o desgaste e os adesivos). **Falta:** o LOD (passo 4: só existe o notebook na mão; entra quando houver notebooks na mesa do mundo), a chave do rádio na frente (o "tlec" e o LED da antena; precisa de o rádio poder desligar na máquina virtual), um realce da peça sob o cursor, a luz do teclado vista de longe (o stealth, depois da 1.0).
   - **Ordem sugerida:** (1)+(2) só a base com as teclas (o que mais aparece) → a tampa e a dobradiça → as peças clicáveis e os sons → o desgaste e os adesivos. Medir o DRAW antes e depois (o notebook ocupa metade da tela).
 - **15.20c Os adesivos do jogador (adiada pelo usuário em 2026-10-07):** só depois de dar para pôr o notebook numa mesa e se afastar dele, porque hoje a tampa por fora só aparece por meio segundo, ao fechar. Conteúdo: a interface 2D da tampa na mochila (arrastar e colar), adesivos achados ou comprados, e os importados do PC (até 64 × 64, até 16 cores, borda branca, guardados no save como dados, pela pasta ao lado do jogo, como o cartão SD da música).
 - **De longe:** poucas caixas na mesa, a tela como um retângulo âmbar, de noite só a luz.
@@ -206,7 +208,7 @@
 - **A tela 128 × 64** (já da 15.16), atualizada no máximo 10 vezes por segundo, seguindo a luz da cena com o fundo apagado.
 - **O shell:** boot verboso, o menu de ícones pelo D-pad, a gralha na tela inicial (animações, `pet.react('win'|'fail'|'idle')`, `pet.collect(trofeu)`), arquivos do cartão SD, ajustes, bateria e as tomadas da 13.9c.
 - **Apps não-hacking:** o controle de infravermelho para as TVs e os telões, a gralha como mini-jogo, a lanterna, o relógio, o tocador de tom.
-- **A interface de apps** (`docs/dispositivo.md`, "onde as duas metades se encontram"): fica pronta e documentada aqui, para os apps de hacking da etapa 19 (agente `hacking`, Opus 4.8) só se encaixarem. Até lá o aparelho se obtém pelo debug (como o Reynard).
+- **A interface de apps** (`docs/dispositivo.md`, "onde as duas metades se encontram"): fica pronta e documentada aqui, para os apps de hacking da etapa 18 (agente `hacking`, Opus 4.8) só se encaixarem. Até lá o aparelho se obtém pelo debug (como o Reynard).
 - **Sons:** todo botão clica; o chirp do boot; a gralha. O teste de ouvido é do usuário.
 
 ## A GridLink, aos poucos (manual `manual.html`)
@@ -214,8 +216,8 @@
 Sem subetapa própria: cada peça entra junto do sistema em que ela aparece.
 - **A abertura animada no título** (o roteiro de som do manual): a qualquer momento, numa sessão curta (`src/titleFx.ts`).
 - **O site da GridLink** no Ferret: na 15.17g, como uma página canônica (a empresa de energia e telefone fixo; nunca celular).
-- **As caixas nos postes com o código do setor** (os 9 setores da grade 3 × 3 de `sim/power.ts`): junto da 13.9 (placas e endereços) ou da etapa 16 (as pessoas reagindo a quem mexe nos postes).
-- **As vans:** com os carros refeitos (etapa 18).
+- **As caixas nos postes com o código do setor** (os 9 setores da grade 3 × 3 de `sim/power.ts`): junto da 13.9 (placas e endereços) ou da etapa 17 (as pessoas reagindo a quem mexe nos postes).
+- **As vans:** com os carros refeitos (etapa 21).
 - **A conta** (energia e HOME PHONE, sem o 0179): quando o jogador tiver apartamento (etapa 22), pelo correio ou pelo webmail.
 - **No ASCII e de longe:** a regra do texto no mundo (pontos de perto, uma letra por célula de longe).
 

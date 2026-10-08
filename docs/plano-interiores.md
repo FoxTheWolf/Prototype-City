@@ -1,7 +1,9 @@
 # Plano técnico: o rework dos interiores pelo manual
 
-> Escrito em 2026-10-08, no fim da sessão do manual de interiores. É o passo (2) da ordem antes da etapa 16
-> (manual → **rework dos interiores** → rework das pessoas → 16). Absorve as subetapas 13.10c, d, d2, g e h.
+> Escrito em 2026-10-08, no fim da sessão do manual de interiores. Absorve as subetapas 13.10c, d, d2, g e h.
+> **Numeração nova (cronograma de 2026-10-08):** este plano fecha na etapa 13 (13.18–13.24, `docs/cronograma.md`):
+> passo 9 → 13.18; passo 8 → 13.19; passo 3 → 13.20; o gerador único → 13.21; passo 5 → 13.22; passo 4d → 13.23;
+> as escadas de incêndio → 13.24. O passo 7 (tipos que faltam) e as faixas `*` vão para a 23. Depois vem a 16 (pessoas).
 > **Manual = lei:** ler `docs/identidade/interiores-manual.html` inteiro antes de começar.
 
 ## O que já existe
@@ -63,7 +65,7 @@
      u `store`, r `office`. `unit` sai das portas `E` (cada E abre uma unidade).
    - Portas: `D` → vão com folha (`leavesOf`), `E` → porta de casa que tranca (`doorLocked`, a regra dos 75%),
      `R` → porta de rua (`exitsOf`). Janelas não se leem da planta: continuam saindo da fachada (R2 garante que batem).
-3. **Mobiliar pela biblioteca** (no lugar de `furnish` para as casas): para cada cômodo, as arrumações do mesmo
+3. **(13.20) Mobiliar pela biblioteca** (no lugar de `furnish` para as casas): para cada cômodo, as arrumações do mesmo
    contorno (o `frame` da arrumação, girado/espelhado) e escolher pela renda e pelo jeito do morador (`citizens.ts`;
    `homeUnit` ainda não existe, é preciso criar). Letras → `FurnKind`: B bed, A shelf (alto), Q desk, h chair,
    F sofa, r sofa (poltrona: tamanho 1), T tv, t table, K counter, O oven, N counter (pia), G fridge, V toilet?
@@ -88,20 +90,20 @@
      em `world.ts`, `flightOf` (o lance de 1 m do lado oposto às entradas, a ponta baixa do lado delas), `tests/stairs.ts`;
      (c) ✅ (visto no painel; falta o usuário no PC); **(e) ✅ 0.13.10n, a escada em U** (pedido do usuário no playtest de 2026-10-08, referências `referencias/79–93`): dois lances lado a lado e o patamar do meio (`flightOf`/`stairRise` em `sim/interior.ts`, `stairModel` em `render/models.ts`), as entradas no patamar da mesma ponta (R11), a cabeça no poço sem o prédio sumir; o D com a escada de 3 × 4,5 m, o B com o hall à esquerda, o A0/F0 com um hall até a lavanderia, as portas dos telhados no patamar o buraco no piso/teto (`gWell` no `roomWalk`, campos 16–21 do bloco `IB`, `IN_LEAVES` = 22) e as
      escadas dos andares vizinhos como objetos, `roomWalk` num laço de duas voltas no `main` (compila em ~2 min); (d) falta (o telhado; hoje o lance do último andar entra no teto).
-5. **Interruptores (R10, 13.10g):** um por cômodo, na primeira parede que não é vidro, do lado da maçaneta; sala vazia
+5. **(13.22) Interruptores (R10, 13.10g):** um por cômodo, na primeira parede que não é vidro, do lado da maçaneta; sala vazia
    e loja fechada apagadas.
 6. **Testes:** `tests/plans.ts` (as invariantes de hoje) passa a rodar também `checkFloor` nas plantas lidas do jogo
    (depois de girar e converter), numa semente inteira. É o que garante "nada quebrado": a mesma regra no manual,
    no JSON e no jogo.
 
-7. **Os tipos que faltam (decidido com o usuário em 2026-10-08: o leitor primeiro, depois desenhar estes no manual
+7. **(etapa 23) Os tipos que faltam (decidido com o usuário em 2026-10-08: o leitor primeiro, depois desenhar estes no manual
    e só então ler no jogo):** o leitor dos passos 1–2 serve a todos, então nada se refaz. Faltam desenhar: **hotel**
-   (saguão + andares de quartos), **banco** (hoje na loja genérica), **delegacia** (a prisão da etapa 16: balcão,
-   cela, sala de interrogatório, o caderno da fiança), **galpão industrial** (os lotes de 30 m), **estacionamento**,
+   (saguão + andares de quartos), **banco** (hoje na loja genérica), **delegacia** (a prisão fica para depois da 1.0:
+   balcão, cela, sala de interrogatório, o caderno da fiança), **galpão industrial** (os lotes de 30 m), **estacionamento**,
    **oficina** (`autoparts`), **escritório grande e as outras torres**, e plantas de loja próprias para os que caem na
    genérica (farmácia, penhores, eletrônicos, celulares, livraria, alfaiate). O cinema fica para depois da 1.0.
 
-8. **Portas, saída e orientação (pedido do usuário em 2026-10-08, depois do playtest):**
+8. **(13.19) Portas, saída e orientação (pedido do usuário em 2026-10-08, depois do playtest):**
    - **A porta dos moradores precisa ser achável:** hoje, num prédio com loja, a escada só se alcança pela porta dos
      moradores, ao lado da vitrine, e a loja é uma caixa fechada; o usuário entrou em lojas e em prédios ainda sem planta
      (torres, lotes fundos) e nunca viu a escada. Dar à porta dos moradores cara de porta de prédio (número, interfone,
@@ -116,7 +118,7 @@
      sobre cada porta desse caminho e uma seta onde o caminho vira, como em prédio real. Absorve "EXIT e diretório" da 13.7.
      **Hoje o EXIT sobre a porta da rua é verde** (`exitPx` no `roomWalk`, visto no playtest de 2026-10-08); o manual de sinalização pede vermelho.
 
-9. **Retorno do playtest de 2026-10-08 à tarde (`playtest/2026-10-08_14-37-49_seed1393987109_report.md`), triado:**
+9. **(13.18) Retorno do playtest de 2026-10-08 à tarde (`playtest/2026-10-08_14-37-49_seed1393987109_report.md`), triado:**
    - **Agora (antes do passo 8 ou junto dele):**
      - ✅ (nota 1) softlock no motel: o F abria a conversa com o clerk antes da porta, cujo alcance ia até a porta;
        agora a porta vem primeiro (`main.ts`). Falta o usuário confirmar.
@@ -131,11 +133,11 @@
      - (travou) "andando sem sair do lugar" no 4085, andar 2, `POS 869.9,1144.8` (perto da escada).
    - **Depois (ficam no Plano, não agora):**
      - (nota 12) **escadas de incêndio coerentes com as plantas desenhadas** (as janelas e o patamar batendo com os
-       cômodos): redesenhar depois do passo 8, antes da etapa 16.
+       cômodos): 13.24.
      - (nota 10) **os vãos grandes entre prédios** (terrenos abertos) viram feiras, mercados, quadras, barracos:
-       etapa 20 (variedade), com um manual de lotes vazios.
+       etapa 23 (variedade), com um manual de lotes vazios.
      - (nota 11) **ASCII nas placas só quando só uma linha de pontos da letra é visível** (placas, semáforos de
-       pedestre, letreiros): retoque de render da 13.7, numa sessão de render.
+       pedestre, letreiros): bloco C8.
 
 ## Riscos e o que conferir
 

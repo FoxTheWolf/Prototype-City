@@ -3,6 +3,8 @@
 > Respostas do usuário na reunião + entrevista. É a base para planejar; ler ao começar uma etapa nova. As decisões curtas também estão no CLAUDE.md.
 >
 > **Atenção (2026-10-08):** a numeração das etapas aqui é a antiga, e várias decisões foram revistas na "Entrevista do cronograma" (no fim deste arquivo): polícia e calor depois da 1.0, os canais fórum/Reynard/SMS, um sistema só para veículo, física, roupa e vozes. Em caso de conflito, vale o fim do arquivo e o `docs/cronograma.md`.
+>
+> **Mapa da numeração (antiga → nova):** 16 NPCs → **17** (e as pessoas, antes 13.8/13.11/13.14, → **16**); 17 economia → **19**; 18 transporte → **21**; 19 hacking → **18**; 20 refinamento → **23**; 21 som → **24**; 22 vida do personagem → **22**; "cozy" → **20**; nova **25** (a primeira hora e o laço). As seções abaixo marcadas com **⚠ 2026-10-08** tiveram a decisão revista.
 
 ## O que é a 1.0
 - **Um mundo vivo que existe sem o jogador** (por isso o modo CCTV): as pessoas trabalham, ganham dinheiro e vivem. O jogador é **mais uma pessoa comum** nesse mundo. Faz quase tudo o que um NPC faz (dormir, trabalhar, comer, comprar, andar de carro, talvez lazer e minigames). O que o diferencia é **saber hackear e ter contatos**.
@@ -18,6 +20,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O gancho tem que ser garantido, não sutil** (o jogador não é Sherlock Holmes; com 100 mil pessoas e milhares de prédios, uma anomalia escondida nunca é achada). **O gancho é a primeira quest:** o contratante comenta de passagem algo estranho que viu. O resto (posts, notícias, anomalias nos dados) é **confirmação** para quem foi atrás, não a porta de entrada.
 
 ## Os trabalhos
+> **⚠ 2026-10-08:** Canais: os trabalhos de hacking vêm só do **fórum** (anônimo, nível pelas avaliações), menos na primeira hora; a conversa com fixers e o mentor é no **Reynard**; o lado legítimo (TI) fica no **SMS**.
 - **Lado legítimo: TI** (consertar modem, resolver conexão, montar a rede de um prédio, na linha do Tower Networking Inc). Paga pouco, é seguro, ensina as ferramentas.
 - **Lado hacking:** paga bem mais e dá o equipamento melhor. O jogador é empurrado um pouco, mas a ideia é que, depois de sentir o poder de influenciar, ele mesmo vá atrás.
 - **A ponte é orgânica:** um cliente satisfeito de TI vira o primeiro contato do outro lado.
@@ -25,6 +28,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Ordem de construção:** o hacking veio primeiro porque é só mudar um estado que já existe. A TI precisa de **computadores e modems físicos, ligados entre si, com telas de login e configuração e defeitos**: é a base comum dos dois lados e o foco da **próxima sessão da Trilha de hacking**.
 
 ## O começo do jogo
+> **⚠ 2026-10-08:** O **celular barato** inicial fica para depois da 1.0 (o jogador começa com o celular de hoje); o SMS do cliente de TI continua (é o lado legítimo).
 - O jogador **acabou de chegar à cidade**, num **quarto de motel** com poucos dias pagos, o notebook, um celular barato e pouco dinheiro (pressão suave: despejo, nunca game over).
 - **O primeiro SMS é do cliente de TI**, o mentor que depois apresenta o hacking. O começo é mais guiado que o resto.
 - **Pulável:** nada que a primeira quest ensina fica trancado por ela; quem já conhece o jogo vai direto.
@@ -35,6 +39,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Realismo no nível do Hacknet, sem modo fácil nem comandos simplificados.** A ajuda ao iniciante vem de explicar melhor os conceitos e de qualidade de vida no terminal (ex.: clicar num IP o cola na linha de comando). Isso vem depois do hacking realista existir.
 
 ## Moral e violência (regra global, não caso a caso)
+> **⚠ 2026-10-08:** Calor e polícia ficam para depois da 1.0 (o `heat.ts` de hoje, congelado); na 1.0 a reação vem das notícias, do Streetwire, da reputação no fórum e da rede que reage.
 - **Nada de violência explícita; nunca mencionar feridos ou mortos.** Sem atropelamento (os carros freiam de forma progressiva). Batidas viram notícia sem vítimas.
 - **Dilemas pesados se resolvem pelo mundo:** o hospital, se existir, tem gerador próprio fora da rede (sem acesso); um site com registros médicos basta.
 - **O jogador é livre dentro disso;** o jogo não dá sermão. A reação da cidade é mecânica e implícita (calor, polícia, notícias, raiva no Streetwire).
@@ -51,6 +56,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - O tamanho do dia (hoje 2 h reais, `DAY_REAL_MIN`) é revisto depois disso; o Claude traz propostas.
 
 ## Dirigir
+> **⚠ 2026-10-08:** Transporte = etapa **21**, com **um sistema de veículo** para NPCs, táxi e jogador (pesquisa e manual antes); o jogador dirigir pode ficar para depois da 1.0, mas pelo mesmo sistema.
 - **Decidir no rework de carros e transporte (etapa 18)** se entra antes ou depois da 1.0. As peças já convergem: a câmera no carro vem do táxi, a física do trânsito perto do jogador, o estacionamento dos carros ligados aos NPCs, as fotos do Streetwire. **Multas por foto da placa** (radar) também são alvo de hacking. Dá mais um destino ao dinheiro e combate o tédio do transporte público.
 
 ## Visual
@@ -60,6 +66,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O Sarcófago e o lado de fora estão em aberto** (o usuário duvida: a megaestrutura contrasta com 2008). Revisitar depois; hoje é só uma barreira. A luz de aviação sai da lista até lá.
 
 ## Pessoas
+> **⚠ 2026-10-08:** Disfarce fica para depois da 1.0; vestir, trocar de roupa e customizar são **um sistema só de roupa** (16.4). O corpo das pessoas é a etapa **16**.
 - **O jogador aparece antes da 1.0, no mesmo modelo dos NPCs** (sem importar skins: a roupa pintada da skin brigaria com o disfarce); aparência pelo criador dentro do jogo; o rework dos NPCs vem antes.
 - **Disfarce:** a roupa é dado (testemunhas e câmeras guardam a descrição); trocar de roupa confunde quem não conhece bem o jogador. O nome e o rosto ficam guardados separados do número: com chip novo, "Who are you?" → o nome → "Oh, it's you!".
 - **Os NPCs ganham um formato próprio**, mais próximo de gente real (ainda em bloco), com proporções variáveis (altos, baixos, braços longos/curtos).
@@ -92,14 +99,17 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Afetado pelo escuro como o relógio.** Resolve o T9 do celular (ruim de propósito) e anotar senhas. Semente do mural de pistas (etapa 22).
 
 ### Stealth e luz
+> **⚠ 2026-10-08:** Stealth fica para **depois da 1.0** (a 1.0 é simulação e hacking, não fuga).
 - **Em aberto, mas o Claude recomenda:** um medidor de exposição (como Thief) lendo a luz no lugar do jogador; a polícia acha mais fácil no claro. **As próprias luzes entregam o jogador** (tela do celular, luz do relógio, o celular tocando com uma ligação por engano). Depende da polícia sair dos trilhos (etapa 16).
 
 ### Sem trilhos (pedestres e carros)
+> **⚠ 2026-10-08:** "Etapa 16" aqui = **17** (NPCs vivendo a cidade, sem polícia); os carros = **21**.
 - **A cidade muda devagar, puxada pela reação:** o fundo muda pouco (lojas fecham e abrem, pessoas se mudam); as mudanças grandes vêm das consequências do jogador. O save guarda só o que mudou em relação à semente (kilobytes). Empurrar a simulação até achar um limite real (como a população, de 20 para 100 mil).
 - **Pedestres com objetivo:** um destino ("ir até a batida e fotografar para o Streetwire") e uma área caminhável com custos (calçada barata, rua cara mas permitida, praças), com desvio local entre todos; só perto do jogador. **É a fundação da etapa 16** (curiosos, polícia procurando, stealth): começar a 16 por ela.
 - **Carros que decidem:** dar ré, contornar uma batida ou um carro parado, desviar do jogador no meio da rua (como o Cyberpunk depois do rework). Vai para o rework de carros (18), junto da freada progressiva.
 
 ### Prisão
+> **⚠ 2026-10-08:** Prisão fica para **depois da 1.0** (a regra "nunca apreender o notebook" continua valendo quando vier).
 - **Nunca apreender o notebook** (softlock: sem ele não há como ganhar dinheiro sem tédio). O custo da prisão é decidido no rework do calor e da polícia.
 
 ### Lazer (prioridade baixa, só por diversão)
@@ -183,6 +193,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Músicas inclusas:** chiptune sintetizado pelo jogo, com nomes de bandas fictícias da cidade, mais as do jogador pela pasta.
 
 ### Os NPCs usando a cidade (etapa 16; conversa de 2026-10-05)
+> **⚠ 2026-10-08:** Hoje é a etapa **17**, **sem polícia**: a polícia procurando pela descrição e o "ligar para a polícia" ficam para depois da 1.0; as reações (estranhar, comentar, "Employees only") ficam.
 - **Dentro dos prédios:** trabalhar e comprar primeiro (funcionários nos postos, clientes comprando), depois morar (dormindo, vendo TV, luzes da rotina vistas de fora) e sentar e esperar (bancos, mesas, ponto, orelhões).
 - **A polícia procura pela descrição:** testemunhas e câmeras dão roupa, lugar e hora; a polícia vai ao lugar e olha quem bate com a descrição; trocar de roupa e sair da área despista. Sem estrela de procurado na tela.
 - **As pessoas reagem quando o jogador:** mexe num poste ou numa caixa (estranham, comentam, alguns ligam para a polícia, conforme a hora e quem é), corre ou esbarra, fica parado encarando ("Can I help you?") e entra onde não pode ("Employees only").
@@ -197,6 +208,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Carros dos cidadãos (princípio do usuário: tudo é simulado):** só alguns moradores têm carro, mas **todo carro na rua tem dono e está indo a algum lugar**; nenhum carro anônimo. Quem vê uma placa pode pesquisá-la e achar o dono. Os táxis e os veículos de empresa têm a empresa e o motorista como dono.
 
 ### A vida do personagem (etapa 22; conversa de 2026-10-05)
+> **⚠ 2026-10-08:** As roupas "despistam a polícia" só depois da 1.0; na 1.0 a roupa é o sistema único da 16.4 (frio, chuva, aparência).
 - **Apartamento na 1.0 = base segura + mural de pistas** (dormir sem pagar motel, guardar hardware, esfriar o calor; o mural para o que se descobriu). Mobiliar livremente fica para depois da 1.0; o apartamento vem mobiliado.
 - **A mochila tem limite por design** (foi o motivo de ela ter física): os itens devem ganhar o formato real e colisão pela silhueta, girar ao encaixar, como a mochila do Cairn (`referencias/44`); hoje são quadrados. Guardar no apartamento só faz sentido por causa desse limite.
 - **Necessidades, no modelo do Shadows of Doubt:** fome (fôlego rende menos, estômago ronca); sono (piscadas lentas, cochilar parado); **sede fica, bem mais leve que a fome**; frio e molhado com **efeito leve, nunca a tela tremendo** (incomoda no Shadows of Doubt), e que passa fácil entrando num prédio ou com roupa quente. Nada de erro aleatório: só lentidão previsível.
@@ -207,6 +219,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O mural:** aberto para o jogador usar quando quiser, mesmo fora de um caso; só aceita coisas físicas (páginas do caderno, recortes, cartões, fotos impressas **só na impressora do apartamento**, que é mais uma compra). **Não prometido na 1.0** (contestação do Claude): casos de 3–6 pistas cabem no caderno; o mural só se os casos bons ficarem longos (mais de 10 pistas, várias pessoas) no teste. Um mural digital estilo Maltego seria atmosférico também, mas o usuário prefere o físico.
 
 ### O som (etapa 21; rodada rápida de 2026-10-05)
+> **⚠ 2026-10-08:** Hoje é a etapa **24**; as vozes saem de **um sintetizador só** (o murmúrio, o DJ do rádio, os NPCs); a perseguição com sirenes espera a polícia (depois da 1.0).
 - **Música só diegética:** sai de algo no mundo (rádio de loja, bar, carro passando, o celular); nada de trilha de fundo.
 - **Perseguição só com sirenes no mundo**, em som 3D de onde a polícia está; sem música de tensão.
 - **O murmúrio das falas com timbre pela semente** (altura, velocidade e forma de onda pela idade, gênero e personalidade).
@@ -246,10 +259,12 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Fórum de perguntas e respostas** (estilo Stack Overflow) com tutoriais das ferramentas, no lugar do manual em PDF; gerado da mesma fonte que a ajuda dos comandos, para não desatualizar. **O texto dos tutoriais é `[HACKING]`**: escrito pelo agente `hacking`/Opus 4.8; o fórum em si (páginas, usuários, datas) pode ser feito nas sessões normais.
 
 ### O jogador é só mais um (reforçado pelo usuário em 2026-10-05)
+> **⚠ 2026-10-08:** O fixer que observava fala pelo **Reynard** ou pelo fórum (se o primeiro contato é SMS ou Reynard, decidir antes da 1.0).
 - **A cidade existe sem o jogador:** toda a web (fóruns, sites, páginas escondidas) nasce na geração, antes do primeiro segundo de jogo; o jogador influencia um sistema que já existe, nunca é o motivo de ele funcionar.
 - **O veterano que pula a TI:** se ele começa a hackear sozinho, **um fixer que observava manda um SMS** ("vi o que você fez; tenho um trabalho"), pelo que o jogador fez de fato (não por um placar visível). Risco anotado pelo usuário: quem quer pular pode ficar perdido sem saber como "começar logo"; a decidir como dar uma pista sem tutorial (ideias: o cliente de TI menciona de passagem onde "o outro tipo de trabalho" se acha; um cartão ou pichação no motel com o endereço do fórum).
 
 ### A polícia e o calor como experiência (conversa de 2026-10-05)
+> **⚠ 2026-10-08:** **Tudo nesta seção fica para depois da 1.0** (polícia, calor, fuga, prisão). Os GridLinks e as câmeras como objetos continuam na trilha de hacking (18).
 - **Abordagem com conversa:** o policial que alcança o jogador manda parar e pergunta; a resposta vai pela caixa de texto (etapa 14): explicar, mentir ou fugir. Prisão se a roupa bate e a conversa falha.
 - **Prisão = noite + fiança + confisco:** acorda de manhã na delegacia; fiança pelo calor; o ilegal da mochila é confiscado (pendrive, ferramentas, cabos), **nunca o notebook**; o calor zera, mas o jogador fica fichado (a próxima abordagem pega mais pesado).
 - **A fuga a pé diverte por:** quebrar a linha de visão (a polícia vai ao último lugar visto e procura dali), trocar de roupa no caminho, sumir na multidão e no transporte (a vantagem do dia). **Usar a cidade contra eles** não é improviso: hackear na hora é lento e expõe; o caminho é a preparação (backdoors deixadas antes, ativadas por um aparelho; Trilha de hacking, `docs/feedback-opus48.md`).
@@ -287,6 +302,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Dinheiro no começo:** a noite de hoje paga e dinheiro para 1–2 diárias e comida; o pagamento da TI chega antes de acabar.
 
 ### O ritmo de um dia comum (conversa de 2026-10-05)
+> **⚠ 2026-10-08:** "O calor esfria" vale quando o calor voltar (depois da 1.0); na 1.0 o peso de cada trabalho vem da reputação no fórum e da rede que reage.
 - **Sem trabalho marcado, o jogador vai para a rua por:** reconhecimento (ler a rua: caixas da GridLink, câmeras, redes no Wi-Fi, horários; anotar no caderno), chamados de TI por SMS (renda limpa, contatos novos), vida comum (comer, roupa, carregar no café, conversar com conhecidos) e boatos (conversas na rua e Streetwire viram trabalho por conta própria).
 - **Um trabalho grande de hacking a cada 1–2 dias de jogo,** com TI e preparação no meio; o calor esfria entre um e outro e cada trabalho pesa.
 
@@ -364,6 +380,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Só a roupa e o estado mudam o tratamento** (molhada, suja, suspeita à noite), nunca idade ou rosto. **A roupa molhada tem que aparecer para o jogador** (manga escurecida, gotas no relógio), e **os carros passando em poças jogam água** e podem molhar o jogador (etapa 20, clima).
 
 ### Rosto, memória e testemunhas (conversa de 2026-10-05)
+> **⚠ 2026-10-08:** A memória do NPC fica (diálogo); a testemunha e a perseguição ficam para depois da 1.0.
 - **O rosto vale para as relações, não para a perseguição:** conhecidos reconhecem o jogador de qualquer roupa; a polícia, o calor e a perseguição funcionam só pela descrição (roupa, lugar, hora). O contato que entrega o jogador por medo (decidido antes) dá **informação** (onde mora, o número), não reconhecimento na perseguição.
 - **A memória do NPC dura pelo peso do que aconteceu:** uma pergunta casual some em 1–2 dias; uma conversa boa, semanas; mentira descoberta ou prejuízo, muito tempo. O NPC diz o que lembra ("you asked me about the bus yesterday").
 - **A testemunha reconhece só pela mesma roupa** perto do lugar ("that's him!"); com outra roupa, passa reto.
@@ -373,6 +390,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Decidido:** a geração garante **um cybercafé a 300–500 m do motel** inicial (2–3 h de jogo a pé), conferido por um teste em `tests/`. **A escala geral se mede com o registro de playtest (13.10p)**: quanto tempo de jogo os deslocamentos comem numa sessão real, e decidir com números, sem esperar a etapa 18 (ideia a testar: o tempo correr mais devagar na rua e mais rápido ao esperar).
 
 ### Os celulares do jogador (conversa de 2026-10-05)
+> **⚠ 2026-10-08:** O **celular barato** e o **BlackBerry** ficam para depois da 1.0; na 1.0 o jogador usa o celular de hoje (os tiers vêm depois).
 - **O celular inicial é barato:** ligação, SMS e pouco mais; dura pouco no jogo e serve para apresentar as mecânicas (placas, endereços, perguntar o caminho, o mapa de papel; a primeira noite é achar o cybercafé pelo endereço do SMS).
 - **Depois, upgrades por tiers, não side grades** (o usuário: "chamar atenção" não é interessante, e o plano de dados caro não pesa para quem ganha mais): o **smartphone atual** (o celular de hoje, com Maps e apps) vira o padrão; o topo é um **modelo BlackBerry com teclado**, que cumpre algumas funções do notebook. Ficam como porém o plano de dados mais caro e a bateria menor.
 - **Um celular só:** dois aparelhos seriam dois números e duas reputações, confuso demais.
@@ -383,6 +401,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - O inventário da tela e as zonas estão em `docs/mapa-da-tela.md`. Decidido: ao telefone o celular abaixa até a espiada e a conversa fica embaixo, como ao vivo; a conversa é uma legenda de filme (sem moldura, só a caixa de texto com borda); balões na rua até ~12 m (no máximo 3) e, a menos de ~3 m, a frase também vira legenda apagada embaixo; o close-up de um objeto aparece sozinho ao olhar ~0,5 s a até ~1,5 m.
 
 ### O tocador e o app cifrado (entrevista de 2026-10-06, 15.9)
+> **⚠ 2026-10-08:** O **Tunes continua de fábrica** no celular (não é da loja). O Reynard é o canal dos fixers e do mentor.
 - **Tocador:** é o **Tunes Player da loja** (14 MB, $4.99, só baixa no Wi-Fi), e não um app de fábrica. As músicas inclusas são **6–8 faixas chiptune compostas à mão** numa notação de tracker no código, com bandas fictícias da cidade; o usuário ouve e aprova.
 - **Por onde sai:** sem fone, pelo **alto-falante** do celular (fraco, metálico; os NPCs ouvem, que é a base do easter egg do esconderijo); com fone (`headphones`/`hands_free`, que já são vendidos), só para o jogador. Continua tocando com o celular no bolso.
 - **As músicas do jogador** ficam num **cartão SD**, fora da memória principal (decisão do usuário: ocupar a memória geraria soft lock e o jogador teria que gerenciar a pasta). O cartão espelha a pasta do PC (no Electron, uma pasta fixa ao lado do jogo; no navegador, escolhida).
@@ -462,6 +481,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **O relógio:** o de hoje (de aço, com termômetro e barras), refinado e levado ao 3D, com o manual fixando a forma, as cores e os botões. **Botões:** luz de fundo (de longe, uma luzinha que entrega o jogador), alarme/despertador (dormir no motel, esperar), cronômetro (a janela de um trabalho) e trocar o mostrador (hora, data, temperatura, fase da lua). **Ideias do Claude, a confirmar no manual:** bússola (achar o caminho sem o Maps, 13.9), a hora do nascer e do pôr do sol (quando a noite protege) e os batimentos (o fôlego da corrida, ligado ao app de fitness da etapa 22).
 
 ## Entrevista da etapa 16 (2026-10-08)
+> **⚠ 2026-10-08:** Era a etapa dos NPCs (hoje **17**). A escada da testemunha, o disfarce de técnico e o stealth ficam para **depois da 1.0**; os postos da casa entram na 13.20 e na 17.
 - **Tamanho da 1.0 ("médio", opção B):** perto do jogador os pedestres saem do trilho para reagir a eventos **e** entram e saem dos prédios de verdade (lojas, casa, trabalho); longe, como hoje. Andar livre o tempo todo (atravessar fora da faixa) fica para depois.
 - **A escada da testemunha (aprovada "por enquanto"):** a desconfiança é escondida, mas cada degrau aparece. (1) **Notar:** o NPC para, olha e solta um balão. (2) **Desconfiar:** ele se afasta e liga para a polícia, e o jogador **ouve a ligação**. Ainda dá para interromper. (3) **Denunciar:** a ligação termina e o calor sobe com a descrição (roupa, lugar, hora), que reaparece no rádio da polícia e no SMS do mentor. **Gatilhos:** mexer em poste ou caixa da rede, entrar onde não pode, correr perto das pessoas, encarar demais, ficar parado muito tempo no mesmo lugar à noite.
 - **Interromper a testemunha (degrau 2):** sair da vista (a ligação sai vaga, calor menor e sem a descrição completa); **conversar** pelo diálogo da 14 (uma desculpa plausível faz ela desligar; vale mais com cara de técnico e menos se ela viu algo grave; ela lembra da mentira); **pagar** (às vezes funciona, mas ela passa a saber e pode falar depois). Sem intimidar. Cortar a ligação é um upgrade do Jackdaw (`[HACKING]`, anotado em `docs/feedback-opus48.md`).
@@ -490,6 +510,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **As arrumações das salas o Claude gera ele mesmo** (pedido do usuário: "se é só texto não deve consumir muito"), com o validador das regras rodando junto; o briefing para o Gemini foi descartado.
 
 ## Modo cozy (conversa de 2026-10-08)
+> **⚠ 2026-10-08:** Virou a etapa **20** (cozy e a física). As vozes do rádio saem do mesmo sintetizador das outras vozes.
 - **Pedido do usuário:** o jogo mais aconchegante para quando o jogador quiser descansar (ele gosta de andar na rua ouvindo a música do celular, olhando os letreiros). Pode virar **uma etapa própria, curta, depois da 16**; as outras ideias (sentar e olhar, ouvir conversas, chuva sob a marquise, fotos, diner, lavanderia, telhado, trem elevado) se conversa quando virar etapa.
 - **Pesquisa (Cyberpunk 2077, Shadows of Doubt):** sentar em bancos e bares e só olhar é o pedido mais comum (virou mod); o rádio com DJ e comerciais é o que mais dá imersão; minijogos de bar (estilo Yakuza); no SoD, a chuva, o guarda-chuva, o apartamento decorável (com bugs) e o "melancólico, mas com calor humano".
 - **"The usual?" (o usuário pôs a condição):** só vale se o NPC **lembrar de verdade** o que o jogador pede, e só aparece depois de **várias idas ao mesmo lugar**. Precisa da memória do diálogo (14) guardando o pedido por cliente.

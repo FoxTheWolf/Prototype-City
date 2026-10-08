@@ -14,7 +14,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - **estilos de fachada** por tipo de distrito: torre de vidro, prédio histórico ornamentado, tijolo, residencial, galpão (referências 18, 19 e 22);
    - variedade de forma: topos de torre, pontas, cúpulas;
    - parques variados e marcos da cidade (referências 17, 20, 21 e 26);
-   - a borda: zona de fogo subterrâneo com o cordão (veja as decisões). Nesta etapa, a geometria e o visual do horizonte; o medidor de CO e as patrulhas vêm depois;
+   - a borda: zona de fogo subterrâneo com o cordão (trocada pelo mar num lado em 2026-10-05; veja as decisões). Nesta etapa, a geometria e o visual do horizonte; o medidor de CO e as patrulhas vêm depois;
    - nomes em inglês já lidos de um arquivo de locale.
 4. ✅ **Visual sólido:** fundo colorido atrás dos glifos (alternável) e paleta final. Objetos pseudo-volumétricos montados com várias faces (carros, árvores, bancos, postes, cabines) no lugar dos billboards atuais. Entulho e mobiliário urbano espalhados. Letreiros nas fachadas com luzes que piscam e fazem efeitos. Base da iluminação dinâmica (postes que iluminam o que passa perto).
 5. ✅ **Clima e céu** (o grupo 5.1–5.3 trouxe antes a avenida diagonal, as placas perpendiculares e os holofotes de fachada): chuva (fraca e forte), neve e outros efeitos atmosféricos, com partículas que caem e **batem no chão** (respingos na chuva, marcas ou acúmulo na neve). Lua com **fases** visíveis no céu. O horizonte atual agradou ao usuário e deve ser mantido. Curvatura leve do horizonte e a megaestrutura da zona de fogo, visível só perto da borda (veja as inspirações).
@@ -36,7 +36,7 @@ A ordem segue a evolução do ASCII City até o Update 4, porque cada etapa depe
    - ✅ **Antes do grupo B: 12.4–12.6** (celular, notebook, camada HD, sistema de arquivos do celular).
    - ✅ **Grupo B (12.7–12.13, aprovado em 2026-10-03):** câmeras de segurança e o modo CCTV, pedestres usando o celular, sons de ambiente (carros e sirenes distantes, o celular de quem passa), manchetes clicáveis com texto e foto, e o bug dos pedestres na diagonal (veja "Plano das próximas sessões").
    - **O que falta da web foi para a etapa 15** (renumerada em 2026-10-04).
-13–22. **O que falta, renumerado em 2026-10-04:** veja "Plano: etapas 13 a 22" (13 Lugares e lojas, 14 Diálogo, 15 Web e celular, 16 NPCs usando a cidade, 17 Economia, 18 Transporte e carros, 19 Hacking completo, 20 Refinamento e variedade, 21 Sound design, 22 Vida do personagem). Os números antigos (12b, 12c, 13, 13b, 13c, 14, 15, 15b, 16) aparecem no histórico e em comentários do código com o sentido antigo.
+13–25. **O que falta está em `docs/cronograma.md` (numeração de 2026-10-08):** 13 interiores (fechamento), 14 ✅, 15 ✅, 16 pessoas, 17 NPCs vivendo a cidade, 18 hacking completo + TI, 19 economia, 20 cozy e física, 21 transporte, 22 vida do personagem, 23 refinamento, 24 som, 25 a primeira hora. A numeração de 2026-10-04 (16 NPCs, 17 economia, 18 transporte, 19 hacking, 20 refinamento, 21 som) e a mais antiga (12b, 13b, …) aparecem no histórico e nos comentários do código com o sentido antigo.
 
 ### Trilha de hacking (criada em 2026-10-02)
 
@@ -83,10 +83,10 @@ O módulo de áudio já existe (`src/audio/`, Web Audio, tudo sintetizado, sem a
 ## Perguntas em aberto
 
 Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa correspondente chegar.
-- **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar. O jogador **pode dormir e pular o tempo**.
+- **Etapa 5 (respondido em 2026-09-30, implementado na 5.5):** um dia do jogo dura **48 minutos reais**, como no GTA IV, mas numa variável fácil de mudar (hoje 2 h reais, `DAY_REAL_MIN`). O jogador **pode dormir e pular o tempo**.
 - **Etapa 6 (respondido em 2026-09-30):** interiores no espaço físico; câmera 3D depois; começar por residencial e escritório.
 - **Etapa 8 (respondido em 2026-10-01):** o painel é o celular, não pausa, GPS exato primeiro e os limites de 2008 no grupo 8C.
-- **Etapa 18 (respondido em 2026-10-05):** transporte aéreo só depois da 1.0 (um helicóptero de passeio, não táxi aéreo).
+- **Transporte, hoje etapa 21 (respondido em 2026-10-05):** transporte aéreo só depois da 1.0 (um helicóptero de passeio, não táxi aéreo).
 
 ## Ideias futuras (não decididas)
 
@@ -95,10 +95,10 @@ Consolidadas aqui para não se perderem. Pergunte ao usuário quando a etapa cor
 - Notebook do hacker como objeto físico no jogo, com teclado, tela de terminal e sons.
 - Transmissão ao vivo determinística (como o "ASCII City Live"): a mesma semente e a mesma hora mostram a mesma cena.
 
-## Refinamento: anotações (para a etapa 20)
+## Refinamento: anotações (para a etapa 23; era a 20)
 
 Ajustes que o usuário pediu para deixar para a etapa de refinamento e variedade (não são bugs):
-- **Opiniões sobre a etapa 6:** o usuário testou e tem opiniões; perguntar no começo da etapa 20.
+- **Opiniões sobre a etapa 6:** o usuário testou e tem opiniões; perguntar no começo da etapa 23.
 - **Carros ocos por dentro:** a carroceria é um bloco sólido; pelo vidro se veem o motorista e os passageiros, mas cortados pela caixa do corpo (só o que fica acima de 0,95 m aparece). Fazer o interior oco (laterais, piso, painel) para ver as pessoas inteiras.
 - **Dois cones de farol:** hoje cada carro tem um só cone de luz. Devem ser dois, um por farol, com o da direita mais longo (o facho assimétrico de verdade).
 - **A praça do X do theater district** e o X em geral: mais decoração (veja a 7.5 e a 7.6).

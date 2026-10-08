@@ -1,6 +1,8 @@
 # Listas fixas: correções pequenas e retoques de luz
 
 > Saíram do CLAUDE.md em 2026-10-06 (enxugamento). Lá fica só o ponteiro. Ao fechar um item, levá-lo para `docs/historico.md` e apagar daqui; itens novos entram aqui direto.
+>
+> **Desde o cronograma (2026-10-08):** estes itens já estão distribuídos nos blocos de correção C1–C10 de `docs/cronograma.md` (a lista diz qual bloco faz o quê); os retoques grandes de luz (nuvens, cones, sombras, saturação da noite, lua e estrelas) vão para a **etapa 23**. Item novo passa pela triagem (quebra / ajuste / depois) e entra no bloco seguinte com vaga, não aqui solto.
 
 ## Lista fixa: correções pequenas (Sonnet)
 > Correções localizadas, sem sistemas novos. **Feitas pelo agente `bugfix`** (`.claude/agents/bugfix.md`: Sonnet 5.5, esforço médio) chamado de dentro de uma sessão normal, com um pedido curto (o bug, os arquivos, como conferir); não precisa de sessão própria. Juntar vários bugs num pedido só, porque cada chamada relê o contexto.

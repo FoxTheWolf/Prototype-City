@@ -1,6 +1,8 @@
 # Retoques das etapas 14 (diálogo) e 15 (web/celular)
 
 > Vindos do playtest e da caixa de feedback de 2026-10-06 (texto cru em `docs/feedback-arquivo.md`). O Plano no CLAUDE.md aponta para cá numa linha só, para não inchar. Ao fazer um item, mover para `docs/historico.md` e apagar daqui.
+>
+> **Desde o cronograma (2026-10-08):** a memória de follow-up, o "unrecognized", o quadrante do tom e as letras maiores vão no **C3**; favoritos, abas e roxo no **C5** (conferir: a moldura da 15.17c–g já fez boa parte). O highlight, o autocomplete, as intenções que faltaram e as legendas noutro lugar ficam para a **etapa 23**. A grade do celular e o botão do meio parecem feitos (15.17j; `phoneMiddle`): conferir e apagar.
 
 ## Etapa 14 — diálogo
 

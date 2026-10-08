@@ -64,10 +64,10 @@ Ideia do usuário: o celular do jogador tem vários apps com funções reais e u
 - **Etapa 9:** discador, SMS e câmera. A foto é um render pequeno e pode ser postada.
 - **Etapa 5:** clima, que lê o estado real do clima.
 - **Etapa 8:** mapa e GPS, com a posição dada pelas antenas ou pelo GPS.
-- **Etapa 18 (transporte):** táxi, que liga para a central, e horários do metrô, com os horários reais dos trens.
+- **Etapa 21 (transporte; numeração de 2026-10-08):** táxi, que liga para a central, e horários do metrô, com os horários reais dos trens.
 - **Nome do jogo:** o usuário quer um termo técnico direto, que se entenda sem pensar (como Uplink e Defcon). BACKDOOR não (conotação); WIRETAP mais ou menos; **GRID DOWN é o favorito**, mas fica em aberto (falta a análise legal e a identidade do logo).
 - **Feitos:** rede social (Streetwire), banco, notícias.
-- **Etapa 15:** tocador de música.
+- **Etapa 15 ✅:** tocador de música (o Tunes, de fábrica no celular).
 
 **Apps de hacker não estão na loja.** São instalados por fora, pelo cabo do notebook (um "desbloqueio", como o jailbreak da época). Exemplos: scanner de Wi-Fi, farejador de Bluetooth e captura de pacotes, todos limitados pelo hardware fraco do celular. O notebook continua sendo a ferramenta principal.
 

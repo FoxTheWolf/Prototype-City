@@ -26,7 +26,7 @@ Um aparelho de bolso (~10 cm), plástico laranja e branco, com:
 Seguir a **regra dos cubinhos** (CLAUDE.md, 2026-10-04): a silhueta e os detalhes feitos de muitos cubos pequenos, com LOD por distância. O relógio, o celular e o notebook são o molde do "aparelho na mão" (tirar do bolso, pose em primeira pessoa, física de caixa — ver as decisões de aparelhos 3D em `docs/visao.md`). Peças: a carcaça, a **tela** como um recorte próprio (ver abaixo), o **D-pad e o botão voltar como peças que afundam e fazem clique** (o esqueuomorfismo é prioridade do usuário — botão que aperta e faz barulho), o conector da base, o slot do cartão, os pinos do topo. Não modelar parafusos < ~10 cm a distância.
 
 ### 2. A tela
-Reusar a técnica das **telas em perspectiva** já decidida (`docs/visao.md`, etapa 20): o contorno da tela recorta o ASCII e o conteúdo é desenhado em **pixels na resolução do monitorzinho** (matriz de pontos monocromática, verde/âmbar sobre escuro, com o granulado de LCD de 2008). O conteúdo da tela é um buffer de pixels que o shell desenha — a mesma base do celular/notebook. Os **efeitos de brilho/bloom por cima** (regra do usuário), nunca embaixo.
+Reusar a técnica das **telas em perspectiva** (feita na 15.16: a tela como textura, `render/screens.ts`): o contorno da tela recorta o ASCII e o conteúdo é desenhado em **pixels na resolução do monitorzinho** (matriz de pontos monocromática, verde/âmbar sobre escuro, com o granulado de LCD de 2008). O conteúdo da tela é um buffer de pixels que o shell desenha — a mesma base do celular/notebook. Os **efeitos de brilho/bloom por cima** (regra do usuário), nunca embaixo.
 
 ### 3. O shell: boot, menu, mascote, arquivos, ajustes
 - **Boot verboso e progressivo** (o usuário adora): o texto do boot compondo aos poucos (nome do firmware fictício, versão, "mounting /sd", "loading apps…") antes de cair no mascote. Deve corresponder a algo real do aparelho.
@@ -35,7 +35,7 @@ Reusar a técnica das **telas em perspectiva** já decidida (`docs/visao.md`, et
 - **Gerenciador de arquivos** do cartão SD (lista as capturas e os apps) e **Ajustes** (brilho, som, firmware). Apps instalados aparecem no menu — ver a interface abaixo.
 - **Bateria**, como no celular (o aparelho descarrega e carrega nas tomadas da 13.9c).
 
-### 4. Som (etapa 21, mas os cliques já)
+### 4. Som (etapa 24, mas os cliques já)
 Tudo sintetizado (Web Audio, chiptune): o **clique de cada botão** (prioridade), o chirp do boot, tons de sucesso/erro, o chilrear do mascote. O Claude não ouve áudio — o teste de ouvido é do usuário.
 
 ### 5. Apps não-hacking (o que o Opus 5.5 pode encher sozinho)
@@ -65,7 +65,7 @@ interface DeviceApp {
 
 ## Onde encaixa no plano
 
-Grande sistema da **Trilha de hacking / etapa 19**, mas a **fundação (o objeto + o shell) é não-hacking e pode começar quando o usuário quiser**, em paralelo. Depende de: aparelhos 3D (celular/relógio/notebook em 3D — decidido para antes do caderno, `docs/visao.md`), tomadas (13.9c ✅, para carregar), e a técnica de telas em perspectiva (etapa 20). A parte de hacking depende da web (etapa 15, em andamento) e das pessoas/carros (16/18) para ter alvos ricos.
+Grande sistema da **Trilha de hacking / etapa 18** (numeração de 2026-10-08), mas a **fundação (o objeto + o shell) é não-hacking e pode começar quando o usuário quiser**, em paralelo. Depende de: aparelhos 3D (celular/relógio/notebook em 3D — decidido para antes do caderno, `docs/visao.md`), tomadas (13.9c ✅, para carregar), e a técnica de telas em perspectiva (15.16 ✅). A parte de hacking depende da web (etapa 15 ✅) e das pessoas e NPCs (16/17) para ter alvos ricos.
 
 ## Visual decidido (2026-10-06, com o usuário)
 
