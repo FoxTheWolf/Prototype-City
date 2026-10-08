@@ -90,6 +90,8 @@
 - **Uma linha reservada no alto:** o `WM` tem `BAR = 1`. É preciso subtrair a linha no clique do browser (`y - BAR`), no `resize`, no `blit` e no cursor (`cy + BAR`). Os testes que arrastavam na linha 0 passaram para a 1.
 - **Ctrl+1..3 vai pelo `code` em `laptop.ts`:** o `shell.key` só recebe `key` e `ctrl`. O Shift aparece porque o `key` deixa de ser o dígito ('!' '@' '#'). No Chrome comum, Ctrl+1..8 troca de aba e não dá para interceptar; no Electron funciona.
 - **`private essid` já existia no shell:** o getter novo virou `netName`. Antes de dar nome a um campo novo no `shell.ts`, conferir com o grep.
+- **(15.20b) Na grade de 2 mm, uma folga menor que 2 mm some:** as teclas com 0,6 mm de folga se fundiam. Com 1 mm de recuo de cada lado, sempre sobra uma célula entre elas. Com peças vizinhas acontece o mesmo: a dobradiça do manual invadia o botão de ligar.
+- **(15.20b) Um comentário `//` no meio de uma linha que continua engole o resto da linha:** o rolldown deu PARSE_ERROR e o `> /dev/null` escondeu o erro, então rodou o `.mjs` velho e saiu a mesma imagem. Não esconder a saída do build; conferir que a imagem mudou.
 - **Testado por PNG no Node** (`tests/osprey.ts`, a mesma fonte 5×7 de `png.ts`; `~` e `@` não aparecem nela). Não foi visto no PC.
 
 ### Lições da 15.16–15.17f (tela como textura, pintor 2D, Ferret) — 2026-10-07

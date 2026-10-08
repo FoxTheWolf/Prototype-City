@@ -16,7 +16,7 @@ const W_MM = 310, D_MM = 225;
 export const NX = Math.round(W_MM / CELL_MM), NY = Math.round(D_MM / CELL_MM), TOP = 9, NZ = TOP + 2;
 
 /** Palette indices. */
-export const enum M { Shell = 1, ShellWorn, Well, Hinge, Nub, NubTip, Button, Pad, PadStrip, Seal, SealInk, LedOn, LedOff, Ring }
+export const enum M { Shell = 1, ShellWorn, Well, Hinge, Nub, NubTip, Button, Pad, PadStrip, Seal, SealInk, LedOn, LedOff, Ring, Bezel, Glass, Lamp, Latch, LedDisk, LedRadio, LedBatt }
 export const KEY0 = 32;
 /** The manual's colors (section 3). */
 const GRAPHITE: C3 = [28, 29, 32], CAP: C3 = [35, 37, 40], WELL: C3 = [14, 15, 16], AMBER: C3 = [255, 154, 31], HINGE: C3 = [85, 89, 95], SEAL: C3 = [233, 230, 220];
@@ -143,5 +143,47 @@ export function deckPalette(ids: Map<number, string>, on: boolean, lampOn: boole
     pal[i] = id === 'lamp' && lampOn ? { col: [58, 51, 38], gloss: 0.2 } : /^(nub|pad)[LMR]$|^vol|^mute|^lamp|^power/.test(id) ? { col: [16, 17, 19], gloss: 0.12 }
       : { col: CAP, gloss: WORN.has(id) ? 0.4 : 0.15 };
   }
+  return pal;
+}
+
+/**
+ * The lid seen from inside (open), in the same frame: x to the right, y from its top edge down to the
+ * hinge, z toward the eye; 8 mm thick (4 cells). The glass (286 x 179 mm, 12 mm from the sides, 20 from the
+ * top) sunk one cell: the screen's picture is laid there (its own palette entry, as the phone's GLASS_MAT);
+ * over it the keyboard's lamp and the two latches; under it, at the right, the four status LEDs (power,
+ * disk, radio, battery). The maker's name goes on a decal at the left.
+ */
+export const LID_NZ = 4;
+export const GLASS = { x0: 12, y0: 20, x1: 298, y1: 199 };
+export function lidModel(): Vox {
+  const V = new Vox(NX, NY, LID_NZ), C = CELL_MM;
+  V.draw(0, LID_NZ - 1, (x, y) => (inDeck(x * C, y * C) ? M.Shell : 0));
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    const mx = (x + 0.5) * C, my = (y + 0.5) * C;
+    if (!inDeck(mx, my)) continue;
+    const glass = inBox(mx, my, GLASS), rim = inBox(mx, my, { x0: GLASS.x0 - 1.5, y0: GLASS.y0 - 1.5, x1: GLASS.x1 + 1.5, y1: GLASS.y1 + 1.5 });
+    // the frame stands one cell over the glass; a thin black bezel round it
+    V.set(x, y, LID_NZ - 1, glass ? 0 : rim ? M.Bezel : M.Shell);
+    if (glass) V.set(x, y, LID_NZ - 2, M.Glass);
+    // the keyboard's lamp (top middle), the latches
+    if (inBox(mx, my, { x0: 148, y0: 4, x1: 162, y1: 8 })) V.set(x, y, LID_NZ - 1, M.Lamp);
+    if (inBox(mx, my, { x0: 35, y0: 2, x1: 45, y1: 5 }) || inBox(mx, my, { x0: 265, y0: 2, x1: 275, y1: 5 })) V.set(x, y, LID_NZ - 1, M.Latch);
+    // the status LEDs under the glass, at the right: power, disk, radio, battery
+    const leds = [M.LedOn, M.LedDisk, M.LedRadio, M.LedBatt];
+    for (let i = 0; i < 4; i++) if ((mx - (205 + i * 13)) ** 2 + (my - 207.5) ** 2 <= 1.6 ** 2) V.set(x, y, LID_NZ - 1, leds[i]);
+  }
+  return V;
+}
+/** The lid's own entries over the deck's palette: the lamp lit or not, the LEDs by the machine's state. */
+export function lidPalette(pal: VoxMat[], o: { on: boolean; lamp: boolean; disk: boolean; radio: boolean; charging: boolean }) {
+  const led = (c: C3, lit: boolean, dim: C3): VoxMat => (lit ? { col: c, gloss: 0.3, glow: true } : { col: dim, gloss: 0.3 });
+  pal[M.Bezel] = { col: [11, 11, 12], gloss: 0.4 };
+  pal[M.Glass] = { col: o.on ? [10, 6, 2] : [18, 19, 21], gloss: 0.9 };
+  pal[M.Lamp] = led([255, 233, 196], o.lamp, [42, 43, 46]);
+  pal[M.Latch] = { col: [15, 16, 17], gloss: 0.2 };
+  pal[M.LedOn] = led([90, 255, 120], o.on, [27, 42, 30]);
+  pal[M.LedDisk] = led([255, 176, 48], o.on && o.disk, [43, 36, 22]);
+  pal[M.LedRadio] = led([90, 255, 120], o.on && o.radio, [27, 42, 30]);
+  pal[M.LedBatt] = led([255, 176, 48], o.charging, [43, 36, 22]);
   return pal;
 }

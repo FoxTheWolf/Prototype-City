@@ -6,7 +6,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { castVox, castVoxPersp, shadeVox, voxLookAt } from '../src/render/voxels';
-import { CELL_MM, deckModel, deckPalette, KEYS, NX, NY, NZ, TOP } from '../src/laptop/body3d';
+import { CELL_MM, deckModel, deckPalette, KEYS, lidModel, lidPalette, NX, NY, NZ, TOP } from '../src/laptop/body3d';
 import { Img } from '../src/render/paint2d';
 import { png } from './png';
 
@@ -30,7 +30,7 @@ const shot = (G2: ReturnType<typeof castVox>, file: string) => {
   const img = new Img(G2.w, G2.h);
   img.px.fill(0); for (let k = 3; k < img.px.length; k += 4) img.px[k] = 255;
   for (let k = 0; k < img.px.length; k += 4) { img.px[k] = 12; img.px[k + 1] = 12; img.px[k + 2] = 14; }
-  shadeVox(G2, deckPalette(ids, true, false), light, (x, y, r, g, b) => img.set(x, y, r, g, b));
+  shadeVox(G2, lidPalette(deckPalette(ids, true, false), { on: true, lamp: true, disk: true, radio: true, charging: false }), light, (x, y, r, g, b) => img.set(x, y, r, g, b));
   writeFileSync(file, png(img.px, G2.w, G2.h));
 };
 // from the eye: 40 cm in front of the hinge and 35 cm over the deck, looking at its middle
@@ -42,4 +42,5 @@ let hit = 0; for (const m of GP.mat) if (m) hit++;
 if (hit < GP.mat.length * 0.2) fail(`the deck fills a good part of the view (${hit} pixels)`);
 shot(GP, 'tests/.out/laptop3d.png');
 shot(castVox(V, { w: NX * 4, h: NY * 4, sx: 0.25, sy: 0.25, yaw: 0, pitch: 0 }), 'tests/.out/laptop3d-top.png');
+shot(castVox(lidModel(), { w: NX * 4, h: NY * 4, sx: 0.25, sy: 0.25, yaw: 0, pitch: 0 }), 'tests/.out/laptop3d-lid.png');
 console.log(fails ? `\n${fails} FAILED` : 'laptop3d: all passed (pictures in tests/.out/laptop3d.png, laptop3d-top.png)');
