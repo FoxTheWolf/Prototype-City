@@ -34,6 +34,16 @@ export class Img implements Px {
   }
 }
 
+/** Paint.dot along row j from x0 to x1 (inside the picture), straight into its pixels. */
+function fillRow(S: Img, j: number, x0: number, x1: number, c: C3, a: number) {
+  if (a <= 0) return;
+  const P = S.px, r = c[0], g = c[1], b = c[2];
+  for (let k = (j * S.w + x0) * 4, e = (j * S.w + x1) * 4; k < e; k += 4) {
+    if (a >= 1 || (P[k + 3] === 0 && a >= 0.5)) { P[k] = r; P[k + 1] = g; P[k + 2] = b; P[k + 3] = 255; }
+    else if (P[k + 3] !== 0) { P[k] = P[k] + (r - P[k]) * a; P[k + 1] = P[k + 1] + (g - P[k + 1]) * a; P[k + 2] = P[k + 2] + (b - P[k + 2]) * a; P[k + 3] = 255; }
+  }
+}
+
 /** An HD layer seen as a surface, every pixel at one order (under the text, or over it). */
 export const onHd = (hd: HdLayer, order: HdOrder = HdOrder.Over): Px => ({
   w: hd.w, h: hd.h, px: hd.px,
@@ -70,7 +80,10 @@ export class Paint {
   }
 
   rect(x: number, y: number, w: number, h: number, c: C3, a = 1) {
-    const X0 = Math.round(x), Y0 = Math.round(y), X1 = Math.round(x + w), Y1 = Math.round(y + h);
+    const X0 = Math.max(this.x0, Math.round(x)), Y0 = Math.max(this.y0, Math.round(y)), X1 = Math.min(this.x1, Math.round(x + w)), Y1 = Math.min(this.y1, Math.round(y + h));
+    if (a <= 0 || X1 <= X0 || Y1 <= Y0) return;
+    // (on a plain picture, straight into its pixels: the phone repaints its whole screen every frame, playtest 2026-10-07)
+    if (this.s instanceof Img) { for (let j = Y0; j < Y1; j++) fillRow(this.s, j, X0, X1, c, a); return; }
     for (let j = Y0; j < Y1; j++) for (let i = X0; i < X1; i++) this.dot(i, j, c, a);
   }
 
@@ -128,7 +141,21 @@ export class Paint {
   /** A gradient across (vertical: top to bottom) a rectangle with round corners (r 0 for square). */
   grad(x: number, y: number, w: number, h: number, stops: Stops, vertical = true, r = 0) {
     r = Math.max(0, Math.min(r, w / 2, h / 2));
-    this.spans(y, y + h, (py) => Paint.rrX(x, y, w, h, r, py), (i, j) => stopAt(stops, vertical ? (j + 0.5 - y) / h : (i + 0.5 - x) / w));
+    // square and on whole pixels, on a plain picture: a row (or a column) at a time, the same pixels as the spans give
+    if (r === 0 && this.s instanceof Img && Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(w) && Number.isInteger(h)) {
+      const S = this.s, X0 = Math.max(this.x0, x), Y0 = Math.max(this.y0, y), X1 = Math.min(this.x1, x + w), Y1 = Math.min(this.y1, y + h);
+      if (X1 <= X0 || Y1 <= Y0) return;
+      if (vertical) for (let j = Y0; j < Y1; j++) { const [c, ca] = stopAt(stops, (j + 0.5 - y) / h); fillRow(S, j, X0, X1, c, ca); }
+      else for (let i = X0; i < X1; i++) { const [c, ca] = stopAt(stops, (i + 0.5 - x) / w); for (let j = Y0; j < Y1; j++) fillRow(S, j, i, i + 1, c, ca); }
+      return;
+    }
+    // (the color looked up once a row, or a column, not once a pixel)
+    let at = NaN, was: [C3, number] = [[0, 0, 0], 0];
+    this.spans(y, y + h, (py) => Paint.rrX(x, y, w, h, r, py), (i, j) => {
+      const n = vertical ? j : i;
+      if (n !== at) { at = n; was = stopAt(stops, vertical ? (j + 0.5 - y) / h : (i + 0.5 - x) / w); }
+      return was;
+    });
   }
 
   /** A line w pixels thick, with round ends. */
