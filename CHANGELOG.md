@@ -9,7 +9,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Placa suspensa no fim do braço do semáforo**, depois da última lanterna, com o nome da rua que se cruza, para quem vem dirigindo.
 - **O PARE é octogonal**, com STOP em branco.
 - **O semáforo de pedestre mostra XX** em vermelho (era um X só), do mesmo tamanho do GO.
-- **Banners do distrito nos postes das avenidas:** dois panos na cor do distrito, com o número dele, dos dois lados do poste.
+- **Banners do distrito nos postes das avenidas:** dois panos com o número do distrito, dos dois lados do poste. A cor diz o tipo de bairro (dourado o financeiro, azul o comercial, verde o residencial, roxo o histórico, laranja o industrial, magenta o dos teatros), e a mesma cor corre no topo das placas de rua.
+- **Número sobre a porta de cada prédio**, contando da centena do quarteirão (o 531 fica no quarteirão do 500), par de um lado da rua e ímpar do outro.
 
 ## 0.15.59 — GRID DOWN na tela de título (2026-10-08)
 - **O título agora é GRID DOWN: TERMINAL STATE.** Em vez do antigo "TERMINAL CITY", a tela de título mostra a abertura do manual da GridLink, como um letreiro de lâmpadas direto no escuro: GRID acende letra por letra, a haste desce até o LINK, POWER · TELECOM é digitado, alguém sacode a lata e picha o OWN em tinta laranja, risca o LINK, e a energia cai: as lâmpadas e o console do fundo se apagam, TERMINAL STATE acende em âmbar sozinho, e a luz volta piscando. Uns 8 segundos, com os sons sintetizados (bipes, o zumbido do transformador, as teclas, a lata, o spray, o zumbido caindo e o relé religando). Clique no logo para ver de novo.

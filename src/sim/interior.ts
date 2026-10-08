@@ -1,5 +1,5 @@
 import { hash3, mulberry32 } from '../core/rng';
-import { BAY, blockAt, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
+import { BAY, blockAt, blockHundred, faceSpan, FLOOR_H, isSolid, type Building, type BusinessKind, type City } from './city';
 import { FRONT, layoutsFor, MAXLEN, PIECES, SINGLE, stretch } from './layouts';
 import { COLD, OUTLETS, PLACES } from './placeTypes';
 
@@ -180,6 +180,31 @@ export function doorOf(city: City, k: number): Door | null {
   }
   doorCache.set(k, best);
   return best;
+}
+
+const numCache = new Map<number, number>();
+/**
+ * The street number on a lot's door (the signage manual, section 5): counted from the block's hundred along the
+ * road its door faces (blockHundred: the corner sign shows it), by how far along the block it stands; even on
+ * one side of the road, odd on the other. 0 when the lot has no street door.
+ */
+export function doorNumber(city: City, k: number): number {
+  let n = numCache.get(k);
+  if (n !== undefined) return n;
+  n = 0;
+  const D = doorOf(city, k);
+  if (D) {
+    const [x, y, nx, ny] = facePoint(city.buildings[k], D.face, (D.a0 + D.a1) / 2);
+    // a face turned across x looks onto an avenue (they run along y): counted along y between its crossings
+    const onAve = Math.abs(nx) > Math.abs(ny), t = onAve ? y : x, b = onAve ? city.yb : city.xb;
+    let c = -1;
+    for (let q = 0; q < b.length / 2; q++) if (b[2 * q + 1] <= t) c = q;
+    const from = c >= 0 ? b[2 * c + 1] : 0, to = c + 1 < b.length / 2 ? b[2 * c + 2] : (onAve ? city.h : city.w);
+    const f = Math.min(0.999, Math.max(0, (t - from) / Math.max(1, to - from)));
+    n = Math.max(1, blockHundred(c) + 2 * Math.floor(f * 48) + 2 + ((onAve ? nx : ny) < 0 ? 1 : 0));
+  }
+  numCache.set(k, n);
+  return n;
 }
 
 /**

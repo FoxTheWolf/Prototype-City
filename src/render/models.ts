@@ -302,6 +302,22 @@ export function bannerModel(district: number, col: RGB): Part[] {
   return m;
 }
 
+/**
+ * A lot's street number over its door (the signage manual, section 5): white on the dark glass of the transom,
+ * read from +x; letters about 8 cm.
+ */
+export function doorNumberModel(num: string): Part[] {
+  const key = `door|${num}`;
+  let m = lamps.get(key);
+  if (m) return m;
+  const hw = (0.075 * num.length + 0.08) / 2;
+  const p = part(Box, 0, -hw, 2.42, 0.012, hw, 2.58, [26, 34, 40], Board, '=');
+  p.text = num; p.col2 = [236, 236, 230]; p.lamp = 0; p.plate = true;
+  m = [p];
+  lamps.set(key, m);
+  return m;
+}
+
 const trees = new Map<number, Part[]>();
 /** Street and park tree: a trunk under a crown of one to three leafy ellipsoids, varied by seed. */
 export function treeModel(seed: number, w: number, h: number): Part[] {
