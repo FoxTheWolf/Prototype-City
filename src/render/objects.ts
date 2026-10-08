@@ -12,7 +12,13 @@ import { BULB_COLS, BULB_ROWS, bulbGlyph, bulbsIn, fontRows, SYMBOLS } from './s
  * the column's ray, rising (hor - row) / scale per metre. So each part is hit exactly, and t is
  * the same depth the walls and ground write to the depth buffer.
  */
-export const Shape = { Box: 0, Cyl: 1, Ball: 2 } as const;
+export const Shape = { Box: 0, Cyl: 1, Ball: 2, Vox: 3 } as const;
+/**
+ * A model in little cubes (Shape.Vox, rework of the interiors step 4): a grid of nx x ny x nz cells filling the
+ * part's box, each cell a byte (0 empty, else 1 + its index into `pal`), x fastest then y then z. Only the GPU draws it
+ * (a ray walks the grid cell by cell to the first one filled); the rest (shadows, the CPU) see the box.
+ */
+export interface Vox { nx: number; ny: number; nz: number; pal: RGB[]; cells: Uint8Array }
 /**
  * Solid: shaded glyphs. Leaf: glyph noise fixed to the surface. Glow: a light, unshaded. Text: a lit
  * panel with the part's text stacked top to bottom on its two broad (y) faces, under a square
@@ -59,6 +65,8 @@ export interface Part {
   swing?: number;
   pivX?: number;
   pivZ?: number;
+  /** Shape.Vox: its grid of little cubes. */
+  vox?: Vox;
 }
 
 export interface Obj {

@@ -96,6 +96,8 @@ function check(P: Plan, at: string, doors: [number, number, number, number][] | 
     if (!seen[c]) fail(`${at}: the till at (${f.x.toFixed(1)}, ${f.y.toFixed(1)}) cannot be walked up to`);
   }
   for (const f of P.furn) {
+    // the stair's flight is walked on, not round: it may run over a doorway's cells at its ends
+    if (f.kind === 'stair') continue;
     const ex = Math.abs(f.c) * f.hx + Math.abs(f.s) * f.hy, ey = Math.abs(f.s) * f.hx + Math.abs(f.c) * f.hy;
     for (let y = f.y - ey + 0.05; y < f.y + ey; y += CELL) for (let x = f.x - ex + 0.05; x < f.x + ex; x += CELL) {
       const i = Math.floor(x / CELL) - P.gx, j = Math.floor(y / CELL) - P.gy, v = i >= 0 && j >= 0 && i < nx && j < ny ? cells[j * nx + i] : 0;

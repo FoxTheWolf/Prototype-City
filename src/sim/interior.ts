@@ -56,7 +56,7 @@ export interface Plan {
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
 export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table'
-  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet';
+  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet' | 'stair';
 export interface Furn {
   kind: FurnKind;
   x: number;
@@ -575,6 +575,42 @@ const FURN_OF: Record<string, FurnKind> = {
 const PLAN_WALLS = new Set(['#', 'W', 'G', '+']);
 
 /**
+ * The flight of a stack's stair (plano-interiores step 4), in plan characters: the S rectangle's long side split in
+ * a landing at the floor's level (the side its floors' doors open on) and the flight beside it (1 m wide, a straight
+ * run along the long side), climbing from the end nearer the doors. The same on every floor (R9).
+ */
+export interface Flight { x0: number; y0: number; x1: number; y1: number; du: number; dv: number }
+const flightCache = new Map<Stack, Flight | null>();
+function flightOf(St: Stack): Flight | null {
+  let F = flightCache.get(St);
+  if (F !== undefined) return F;
+  F = null;
+  const R0 = St.ground.rooms;
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  R0.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === 'S') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+  if (x1 >= 0) {
+    const along = x1 - x0 >= y1 - y0;
+    // the ways in, on every floor: a door or a room right outside the rectangle
+    let a = 0, b = 0, sx = 0, sy = 0, n = 0;
+    for (const Fl of [St.ground, St.upper, St.roof]) {
+      if (!Fl) continue;
+      const R = Fl.rooms, way = (x: number, y: number) => { const ch = R[y]?.[x]; return !!ch && (ch in ROOM_OF || 'DER'.includes(ch)) && ch !== 'S'; };
+      for (let x = x0; x <= x1; x++) for (const [y, lo] of [[y0 - 1, true], [y1 + 1, false]] as const) if (way(x, y)) { if (along) { if (lo) a++; else b++; } sx += x; sy += y; n++; }
+      for (let y = y0; y <= y1; y++) for (const [x, lo] of [[x0 - 1, true], [x1 + 1, false]] as const) if (way(x, y)) { if (!along) { if (lo) a++; else b++; } sx += x; sy += y; n++; }
+    }
+    // the landing on the long side with more ways in; the flight is the rest; it starts at the end nearer them
+    const mid = n ? (along ? sx / n : sy / n) : along ? x0 : y0, lowEnd = mid <= (along ? (x0 + x1) / 2 : (y0 + y1) / 2);
+    // the flight 1 m wide against the far long side, the landing the rest (a wider S, the D's, keeps a wider landing);
+    // with no door on either long side, the flight on the side nearer the ways in, so its foot meets them
+    const across = n ? (along ? sy / n : sx / n) : 0, lowSide = a !== b ? a < b : across <= (along ? (y0 + y1) / 2 : (x0 + x1) / 2);
+    if (along) { if (lowSide) y1 = y0 + 1; else y0 = y1 - 1; F = { x0, y0, x1, y1, du: lowEnd ? 1 : -1, dv: 0 }; }
+    else { if (lowSide) x1 = x0 + 1; else x0 = x1 - 1; F = { x0, y0, x1, y1, du: 0, dv: lowEnd ? 1 : -1 }; }
+  }
+  flightCache.set(St, F);
+  return F;
+}
+
+/**
  * Floor f (0 the ground, 1 any above) of lot k read from its drawn plan (the manual's grammar): one character is
  * 2 x 2 cells; a wall or door character's cells go to the nearest room character (so an inner wall is the low room's
  * last cell, as walls() makes it); the rooms are the letters' rectangles, their units the homes behind each entry
@@ -726,6 +762,15 @@ function planFromFloor(city: City, k: number, St: Stack, f: number): Plan {
     const [du, dv] = OUT[back], [c, s2] = stackDir(St, du, dv), along = du ? w : h, across = du ? h : w;
     const [px, py] = stackXY(St, B, (x + x1 + 1) / 4, (y + y1 + 1) / 4);
     P.furn.push({ kind: FURN_OF[ch], x: px, y: py, c, s: s2, hx: along * 0.25 - 0.05, hy: across * 0.25 - 0.05, seed: (rnd() * 1e6) | 0 });
+  }
+  // the stair's flight, a piece of its own (drawn in little cubes; walked by its steps, not round it)
+  const Fg = flightOf(St);
+  if (Fg) {
+    const [px, py] = stackXY(St, B, (Fg.x0 + Fg.x1 + 1) / 4, (Fg.y0 + Fg.y1 + 1) / 4), [c, s2] = stackDir(St, Fg.du, Fg.dv);
+    const run = (Fg.du ? Fg.x1 - Fg.x0 + 1 : Fg.y1 - Fg.y0 + 1) / 2, wide = (Fg.du ? Fg.y1 - Fg.y0 + 1 : Fg.x1 - Fg.x0 + 1) / 2;
+    // the rail goes on the landing's side: the model's +y is the climb's right hand ((-s, c) in the city); seed 1 puts it on -y
+    const lane = Fg.du ? (R[Fg.y0 - 1]?.[Fg.x0] === 'S' ? [0, -1] : [0, 1]) : R[Fg.y0]?.[Fg.x0 - 1] === 'S' ? [-1, 0] : [1, 0], [lx, ly] = stackDir(St, lane[0], lane[1]);
+    P.furn.push({ kind: 'stair', x: px, y: py, c, s: s2, hx: run / 2, hy: wide / 2 - 0.05, seed: -s2 * lx + c * ly > 0 ? 0 : 1 });
   }
   // where a piece stands on the seam of an open plan (the fridge at the edge of the open kitchen), that stretch is no way through
   for (const c of seam) if (inFurniture(P, (gx + (c % nx) + 0.5) * CELL, (gy + Math.floor(c / nx) + 0.5) * CELL)) cells[c] &= ~DOOR;
@@ -1467,10 +1512,36 @@ export function reach(P: Plan, r: number, sx: number, sy: number, tx: number, ty
 }
 
 /** Whether (x, y) is inside a piece of the plan's furniture. */
+/** How far the feet may rise or drop in one step (a riser is 17.5 cm; more is a rail, or the flight's underside). */
+export const STEP_UP = 0.45;
+/** The flat top of a flight, m: the steps take the rest of its run, so the climb ends on a landing, not at the wall. */
+export const FLIGHT_TOP = 0.5;
+/**
+ * The height of the feet at (x, y) in lot k, for someone at height z (plano-interiores step 4): on a stair's flight,
+ * the step under them, of the flight nearest their height (the one they are on); elsewhere the level of the
+ * floor nearest z. A flight climbs a storey from its low end; the top floor's leads to the roof, not yet a floor.
+ */
+export function feetZ(city: City, k: number, x: number, y: number, z: number): number {
+  const top = floorsOf(city.buildings[k]), f0 = Math.max(0, Math.min(top - 1, Math.round(z / FLOOR_H))), P = planOf(city, k, f0);
+  const S = P?.furn.find((f) => f.kind === 'stair');
+  if (S) {
+    const dx = x - S.x, dy = y - S.y, u = dx * S.c + dy * S.s, v = -dx * S.s + dy * S.c;
+    // across: to the rail on the landing's side (seed 0: +v), on the other side up to the wall (the wall stops the rest)
+    const lo = S.seed === 1 ? -(S.hy + 0.05) : -(S.hy + 0.4), hi = S.seed === 1 ? S.hy + 0.4 : S.hy + 0.05;
+    if (Math.abs(u) <= S.hx && v >= lo && v <= hi) {
+      const t = Math.min(1, (u + S.hx) / (2 * S.hx - FLIGHT_TOP)), f = Math.max(0, Math.min(top - 2, Math.round(z / FLOOR_H - t)));
+      if (top >= 2) return (f + t) * FLOOR_H;
+    }
+  }
+  return f0 * FLOOR_H;
+}
+
 export function inFurniture(P: Plan, x: number, y: number, walking = false): boolean {
   for (const f of P.furn) {
     // walking, chairs and stools are pushed aside, not walked round (bars and diners are full of them)
     if (walking && (f.kind === 'chair' || f.kind === 'stool')) continue;
+    // the stair is walked by its steps (world.ts), not round
+    if (f.kind === 'stair') continue;
     const dx = x - f.x, dy = y - f.y, u = dx * f.c + dy * f.s, v = -dx * f.s + dy * f.c;
     if (Math.abs(u) < f.hx + 0.05 && Math.abs(v) < f.hy + 0.05) return true;
   }

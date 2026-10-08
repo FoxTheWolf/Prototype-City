@@ -367,14 +367,49 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     let bo = vec3f(ox - pt * (oz - PIVOT), oy - rl * (oz - PIVOT), oz + pt * ox + rl * oy - lift);
     let bd = vec3f(dx - pt * dz, dy - rl * dz, dz + pt * dx + rl * dy);
     let mo = fx[ob + 15u]; let np = fx[mo];
-    var best = cl.depth; var bk = -1; var face = 0; var nrm = vec3f(0.0); var glassT = 1e9;
+    var best = cl.depth; var bk = -1; var face = 0; var nrm = vec3f(0.0); var glassT = 1e9; var vcol = vec3f(0.0);
     for (var k = 0u; k < np; k++) {
       let p = mo + 1u + k * PW;
       let shape = fx[p]; let q0 = fx3(p + 1u); let q1 = fx3(p + 4u);
       let cen = (q0 + q1) * 0.5; let hs = max((q1 - q0) * 0.5, vec3f(mh, mh, mz));
       let body = lean && q0.z > 0.0; let glassy = fx[p + 10u] == M_GLASS;
       let o = select(vec3f(ox, oy, oz), bo, body); let d = select(vec3f(dx, dy, dz), bd, body);
-      if (shape == 0u) {
+      if (shape == 3u) {
+        // little cubes: the ray into the part's box (its true size), then cell by cell to the first one filled
+        var tin = 0.05; var tout = best; var ax = 0; var miss = false;
+        for (var a = 0; a < 3; a++) {
+          if (abs(d[a]) < 1e-9) { if (o[a] < q0[a] || o[a] > q1[a]) { miss = true; } }
+          else {
+            var t0 = (q0[a] - o[a]) / d[a]; var t1 = (q1[a] - o[a]) / d[a];
+            if (t0 > t1) { let t = t0; t0 = t1; t1 = t; }
+            if (t0 > tin) { tin = t0; ax = a; }
+            tout = min(tout, t1);
+          }
+        }
+        if (miss || tin >= tout) { continue; }
+        let V = fx[p + 14u]; let nv = vec3i(i32(fx[V]), i32(fx[V + 1u]), i32(fx[V + 2u])); let C0 = V + 4u + fx[V + 3u] * 3u;
+        let cs = (q1 - q0) / vec3f(nv); let g = d / cs;
+        let pos = (o + d * tin - q0) / cs;
+        var c = clamp(vec3i(floor(pos)), vec3i(0), nv - 1);
+        let st = select(vec3i(-1), vec3i(1), g > vec3f(0.0));
+        let inv = select(vec3f(1e9), abs(1.0 / g), abs(g) > vec3f(1e-9));
+        var tn = select(vec3f(1e9), tin + (vec3f(c + select(vec3i(0), vec3i(1), g > vec3f(0.0))) - pos) / g, abs(g) > vec3f(1e-9));
+        var t = tin; var hitV = 0u;
+        for (var n = 0; n < nv.x + nv.y + nv.z; n++) {
+          let idx = u32((c.z * nv.y + c.y) * nv.x + c.x);
+          let v = (fx[C0 + (idx >> 2u)] >> ((idx & 3u) * 8u)) & 255u;
+          if (v != 0u) { hitV = v; break; }
+          // the next cell: across the nearest of the three walls
+          if (tn.x <= tn.y && tn.x <= tn.z) { t = tn.x; tn.x += inv.x; c.x += st.x; ax = 0; }
+          else if (tn.y <= tn.z) { t = tn.y; tn.y += inv.y; c.y += st.y; ax = 1; }
+          else { t = tn.z; tn.z += inv.z; c.z += st.z; ax = 2; }
+          if (any(c < vec3i(0)) || any(c >= nv) || t >= tout) { break; }
+        }
+        if (hitV == 0u || t <= 0.05 || t >= best) { continue; }
+        best = t; bk = i32(k); face = select(select(1, 2, ax == 2), 0, ax == 0);
+        nrm = vec3f(0.0); nrm[ax] = -sign(d[ax]);
+        let pi = V + 4u + (hitV - 1u) * 3u; vcol = vec3f(fxf(pi), fxf(pi + 1u), fxf(pi + 2u));
+      } else if (shape == 0u) {
         // a limb turned at its joint (13.11c): the ray turned the other way about it
         let sw = fxf(p + 24u); var o = o; var d = d;
         if (sw != 0.0) {
@@ -435,7 +470,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     let mat = fx[p + 10u]; let shape = fx[p]; let q0 = fx3(p + 1u); let q1 = fx3(p + 4u);
     let cen = (q0 + q1) * 0.5; let hs = max((q1 - q0) * 0.5, vec3f(mh, mh, mz));
     let tOff = fx[p + 14u]; let tLen = fx[p + 15u]; let sym = fx[p + 16u];
-    var col = fx3(p + 7u);
+    var col = select(fx3(p + 7u), vcol, shape == 3u);
     let col2 = select(col, fx3(p + 17u), fx[p + 20u] == 1u);
     // the hit, unleaned, in the object's frame (as the CPU shades it)
     let hp = vec3f(ox, oy, oz) + vec3f(dx, dy, dz) * best;
@@ -536,7 +571,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
         let h = hash3(ifloor(hp.x / 0.35) + seed, ifloor(hp.y / 0.35), ifloor(hp.z / 0.35));
         ch = LEAF[min(4u, u32(h * 5.0))];
         kk *= 0.55 + 0.45 * h + 0.25 * nrm.z;
-      } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && shape == 0u), fx[p + 12u], face == 2); }
+      } else { ch = select(select(fx[p + 11u], fx[p + 13u], face == 0 && (shape == 0u || shape == 3u)), fx[p + 12u], face == 2); }
       if (mat == M_SKIN) {
         // a turned limb's skin is read where the hit is on the limb, not in the object
         let sw = fxf(p + 24u); var hl = hp;

@@ -2,7 +2,8 @@ import { hash3 } from '../core/rng';
 import { type DistrictType, type RGB } from '../sim/city';
 import { type Population } from '../sim/citizens';
 import { looksOf } from '../sim/looks';
-import { Mat, part, Shape, type Part } from './objects';
+import { FLIGHT_TOP } from '../sim/interior';
+import { Mat, part, Shape, type Part, type Vox } from './objects';
 
 const { Box, Cyl, Ball } = Shape;
 const { Solid, Leaf, Glow, Text, Board, Wheel, Glass, Screen, Skin } = Mat;
@@ -606,6 +607,34 @@ export function poweredFurniture(kind: string, k: number): Part[] {
 }
 
 const GOODS: RGB[] = [[200, 60, 50], [60, 120, 200], [230, 200, 60], [80, 170, 90], [220, 220, 210]];
+/** Steps of a flight a storey high (FLOOR_H = 3.5 m, 20 risers of 17.5 cm). */
+const RISERS = 20;
+/**
+ * A flight of stairs in little cubes (rework of the interiors, step 4): it climbs a storey along +x over its length
+ * (2 hx, the last FLIGHT_TOP of it flat), hy either side. Each step is a tread one riser thick, so its underside is stepped and open (never solid
+ * to the floor); two steel stringers run under the treads' ends, and on the +y side (-y with railLeft) a rail of posts and a handrail.
+ */
+function stairModel(hx: number, hy: number, railLeft: boolean): Part {
+  // two cells a tread, and the flat top (FLIGHT_TOP) in cells of the same length
+  const H = 3.5, flat = Math.round(FLIGHT_TOP / ((2 * hx - FLIGHT_TOP) / (RISERS * 2))), nx = RISERS * 2 + flat, nz = RISERS * 2 + 10, ny = Math.max(4, Math.round((2 * hy) / 0.125));
+  const cells = new Uint8Array(nx * ny * nz), at = (x: number, y: number, z: number, v: number) => { if (x >= 0 && y >= 0 && z >= 0 && x < nx && y < ny && z < nz) cells[(z * ny + y) * nx + x] = v; };
+  // 1 the treads' wood, 2 the risers (darker), 3 the steel stringers, 4 the rail
+  for (let x = 0; x < nx; x++) {
+    const s = Math.min(RISERS - 1, x >> 1), top = (s + 1) * 2; // a step's top, in cells of half a riser (the flat top is the last)
+    for (let y = 0; y < ny; y++) { at(x, y, top - 1, 1); at(x, y, top - 2, (x & 1) === 0 ? 2 : 1); }
+    // the stringers: a band under the treads at both ends
+    for (const y of [0, ny - 1]) for (let z = top - 5; z < top - 2; z++) at(x, y, z, 3);
+    // the rail on +y: a post every fourth step, the handrail ~0.9 m over the treads' line
+    const rail = Math.round(top + 0.9 / (H / RISERS / 2));
+    const ry = railLeft ? 0 : ny - 1;
+    at(x, ry, rail, 4);
+    if (s % 4 === 1 && (x & 1) === 0) for (let z = top; z < rail; z++) at(x, ry, z, 4);
+  }
+  // (the rail in dark varnished wood: grey steel vanished against the stairwell's grey walls)
+  const vox: Vox = { nx, ny, nz, pal: [[120, 86, 56], [82, 60, 42], [72, 74, 80], [58, 36, 24]], cells };
+  return { ...part(Shape.Vox, -hx, -hy, 0, hx, hy, (H * nz) / (RISERS * 2), [120, 86, 56], Mat.Solid, '#', '=', '|'), vox };
+}
+
 const furns = new Map<string, Part[]>();
 /** Each good has its own packaging color, from its name (so the same good looks the same everywhere). */
 const goodColors = new Map<string, RGB>();
@@ -643,6 +672,7 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
     }
   };
   switch (kind) {
+    case 'stair': m = [stairModel(hx, hy, seed % 2 === 1)]; break;
     case 'bed': m = [
       part(Box, -hx, -hy, 0, hx, hy, 0.3, WOOD, Solid, '=', '='),
       part(Box, -hx + 0.05, -hy + 0.05, 0.3, hx - 0.05, hy - 0.05, 0.5, FAB, Solid, '~', '~'),

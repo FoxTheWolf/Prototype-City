@@ -11,7 +11,7 @@ import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLI
 import { CharGrid } from '../grid';
 import { type Inside } from '../interior';
 import { furnitureModel } from '../models';
-import type { Obj, Part } from '../objects';
+import type { Obj, Part, Vox } from '../objects';
 import { OW, PW, TILE } from './objects';
 /** By day, how much wider the objects are gathered than the view (their shadows reach in from the sides), and how near an off-screen one must be to cast (m). */
 const SHADOW_CONE = 1.6, SHADOW_CASTERS = 150;
@@ -505,7 +505,7 @@ export class GpuWorld {
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
     const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // indoors, the floor's furniture, lit by its rooms' lamps
-    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
+    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
     // the floodlit facades near enough for their lamps' shadows: who stands in front of one casts them
     const lit: number[] = [];
@@ -860,12 +860,15 @@ interface Shot {
 /** Words a model takes in fx (packParts). */
 function partsSize(parts: Part[]) {
   let chars = 0;
-  for (const p of parts) chars += p.text?.length ?? 0;
+  for (const p of parts) chars += p.vox ? voxWords(p.vox) : p.text?.length ?? 0;
   return 1 + parts.length * PW + chars;
 }
 
+/** Words a grid of little cubes takes after the parts: its size and palette count, the palette (rgb), the cells (four a word). */
+const voxWords = (v: Vox) => 4 + v.pal.length * 3 + Math.ceil(v.cells.length / 4);
+
 /**
- * A model into W at o (W[0] is fx[base]): its part count, PW words per part, then the parts' texts;
+ * A model into W at o (W[0] is fx[base]): its part count, PW words per part, then the parts' texts (and grids);
  * returns where it ends.
  */
 function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], base: number) {
@@ -879,6 +882,16 @@ function packParts(W: Uint32Array, F: Float32Array, o: number, parts: Part[], ba
     const t = p.text ?? '';
     W[w + 14] = base + tx; W[w + 15] = t.length;
     for (let c = 0; c < t.length; c++) W[tx++] = code(t, c);
+    if (p.vox) {
+      // the grid where a text would go (Shape.Vox has none): W[w + 14] points at it
+      const v = p.vox;
+      W[tx] = v.nx; W[tx + 1] = v.ny; W[tx + 2] = v.nz; W[tx + 3] = v.pal.length;
+      v.pal.forEach((c, n) => { F[tx + 4 + n * 3] = c[0]; F[tx + 5 + n * 3] = c[1]; F[tx + 6 + n * 3] = c[2]; });
+      const c0 = tx + 4 + v.pal.length * 3;
+      for (let n = 0; n < Math.ceil(v.cells.length / 4); n++) W[c0 + n] = 0;
+      for (let n = 0; n < v.cells.length; n++) W[c0 + (n >> 2)] |= v.cells[n] << ((n & 3) * 8);
+      tx += voxWords(v);
+    }
     W[w + 16] = p.sym === undefined || p.sym < 0 ? 0 : p.sym + 1;
     const c2 = p.col2;
     F[w + 17] = c2?.[0] ?? 0; F[w + 18] = c2?.[1] ?? 0; F[w + 19] = c2?.[2] ?? 0; W[w + 20] = c2 ? 1 : 0;

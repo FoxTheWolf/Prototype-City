@@ -1,7 +1,7 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { drain, type Steps } from '../core/steps';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, planOf, ROOM } from './interior';
+import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, feetZ, planOf, ROOM, STEP_UP } from './interior';
 import { type Sit } from './seats';
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
@@ -290,7 +290,9 @@ export function stepWorld(w: World, input: PlayerInput) {
   const open = (k: number, n: number) => streetOpen(w, k, n);
   // and the lift's doors are shut on this floor while its car is elsewhere (lifts.ts)
   const liftShut = (x: number, y: number) => p.liftTo < 0 && inLift(w, x, y) && !inLift(w, p.x, p.y) && !carHere(w, p.inside, p.floor);
-  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y);
+  // and the stairs: no step up or down higher than a riser or two (a flight is entered at its ends; its rail and underside stop the rest)
+  const steep = (x: number, y: number) => p.inside >= 0 && p.liftTo < 0 && Math.abs(feetZ(w.city, p.inside, x, y, p.z) - p.z) > STEP_UP;
+  const hit = (x: number, y: number) => blocked(w.city, p.floor, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y) || steep(x, y);
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
@@ -304,6 +306,8 @@ export function stepWorld(w: World, input: PlayerInput) {
   }
   // in through a fire escape's window: onto that floor
   if (p.inside >= 0 && wasOut && p.liftTo < 0) p.z = p.floor * FLOOR_H;
+  // indoors the feet follow the floor, or the stair's steps; the storey is the one the feet are in
+  else if (p.inside >= 0 && p.liftTo < 0 && (p.x !== p.px || p.y !== p.py)) { p.z = feetZ(w.city, p.inside, p.x, p.y, p.z); p.floor = Math.floor((p.z + 0.01) / FLOOR_H); }
   stepBag(w);
   stepDoors(w, TICK);
   stepLifts(w, TICK);
