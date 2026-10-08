@@ -1,6 +1,6 @@
 # Plano antigo: etapas 13 a 22 (substituído em 2026-10-08)
 
-> Saiu do CLAUDE.md quando o usuário aprovou o cronograma mestre (`docs/cronograma.md`). Fica aqui **só como fonte dos detalhes** de cada pedido; a ordem e as subetapas valem pelo cronograma. **Numeração nova:** antigo 16 → 17, cozy → 18, 17 → 19, 18 → 20, 19 → 21, 20 → 23, 21 → 24; a 22 continua 22; as pessoas (13.8/13.11/13.14) viraram a etapa 16. Os itens `[HACKING]` aqui seguem a regra de sempre.
+> Saiu do CLAUDE.md quando o usuário aprovou o cronograma mestre (`docs/cronograma.md`). Fica aqui **só como fonte dos detalhes** de cada pedido; a ordem e as subetapas valem pelo cronograma. **Numeração nova:** pessoas (13.8/13.11/13.14) → 16; antigo 16 → 17 (só a vida dos NPCs; polícia, calor, testemunha e stealth depois da 1.0); 19 hacking → 18; 17 economia → 19; cozy → 20; 18 transporte → 21; a 22 continua 22; 20 → 23; 21 → 24; nova 25 (a primeira hora e o laço). Os itens `[HACKING]` aqui seguem a regra de sempre.
 
 ## Plano: etapas 13 a 22 (renumerado em 2026-10-04)
 

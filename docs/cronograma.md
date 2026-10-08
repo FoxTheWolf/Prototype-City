@@ -21,24 +21,27 @@
 
 Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horário de cada uma sai do `get_usage` dela, nunca deste arquivo). Uma subetapa ≈ 1 sessão; um bloco de correção ≈ ½ sessão. Estimativa inicial, para recalibrar pela regra 7.
 
-| # | Etapa | Subetapas | Blocos | Sessões (estim.) | Antes era |
+| # | Etapa | Subetapas | Blocos | Sessões (estim.) | Plano antigo |
 |---|---|---|---|---|---|
 | 13 | Interiores: fechamento | 7 | C1–C3 | ~9 | 13 |
 | 14 | Diálogo | ✅ | — | — | 14 |
 | 15 | Web e celular | ✅ (fechada; restos distribuídos) | — | — | 15 |
-| 16 | **Pessoas (manual + rework)** | 6 | C4–C6 | ~8 | 13.8/13.11/13.14 |
-| 17 | NPCs usando a cidade, testemunha, stealth, polícia | 8 | C7–C10 | ~11 | 16 |
-| 18 | Cozy (curta) | 4 | C11 | ~5 | cozy |
-| 19 | Economia | 6 | C12 | ~7 | 17 |
-| 20 | Transporte e carros | 8 | 2 | ~10 | 18 |
-| 21 | `[HACKING]` Hacking completo (Opus 4.8) | o Opus 4.8 fixa | — | ~8–10 | 19 |
-| 22 | Vida do personagem | 8 | 2 | ~10 | 22 |
+| 16 | Pessoas (shader, manual, rework) | 6 | C4–C6 | ~8 | 13.8/13.11/13.14 |
+| 17 | NPCs vivendo a cidade (sem polícia) | 5 | C7–C8 | ~6 | 16 (parte) |
+| 18 | `[HACKING]` Hacking completo + TI (Opus 4.8) | o Opus 4.8 fixa | C9–C10 | ~10 | 19 |
+| 19 | Economia | 6 | C11 | ~7 | 17 |
+| 20 | Cozy (curta) | 4 | C12 | ~5 | cozy |
+| 21 | Transporte: um sistema de veículo para todos | 6 | 1 | ~7 | 18 |
+| 22 | Vida do personagem | 7 | 2 | ~9 | 22 |
 | 23 | Refinamento e variedade | 8 | 2 | ~10 | 20 |
 | 24 | Som | 5 | 1 | ~6 | 21 |
+| 25 | A primeira hora e o laço (integração e balanço) | 5 | — | ~6 | novo |
 
-**Total até a 1.0: ~85 sessões.** No ritmo de ~8 sessões por semana, ~11 semanas. A 21 pode correr em paralelo, em sessões do Opus 4.8, quando o limite semanal deixar.
+**Total até a 1.0: ~83 sessões**, contadas em sessões (cada conta tem o seu limite). A 18 é do Opus 4.8; partes dela podem correr em paralelo quando o limite deixar.
 
-**Por que esta ordem:** a 16 (pessoas) vem antes da 17 porque quase tudo da 17 depende do corpo (a cabeça que vira na linha de visão, as 11 atividades animadas, a roupa como descrição, o disfarce em camadas, os traços combináveis). Fazer a 17 com o boneco atual e refazer depois seria o erro dos interiores. Os interiores fecham antes porque a 17 precisa dos postos dentro das casas e das lojas, das portas e dos interruptores.
+**Decisões que mudaram a ordem (usuário, 2026-10-08, na entrevista do cronograma):** (1) **polícia, calor, testemunha, stealth, prisão e disfarce ficam para depois da 1.0**: a dificuldade é a profundidade do hacking, não fugir da polícia ("isto não é GTA; se esconder é chato"); a 1.0 é simulação profunda e hacking realista que a influencia. O calor que já existe (`heat.ts`) fica como está, congelado. (2) **Um sistema só de controle de veículo** para NPCs, táxi e, um dia, o jogador (motor, tração, rodas), com pesquisa e manual antes; o jogador dirigir pode ficar para depois da 1.0, mas pelo mesmo sistema. (3) O hacking sobe para logo depois dos NPCs, com a TI legítima dentro; uma etapa final monta a primeira hora e o balanço.
+
+**Por que esta ordem:** a 16 (pessoas) vem antes da 17 porque a vida dos NPCs depende do corpo (as 11 atividades animadas, sentar, a cabeça que olha, os traços combináveis). Os interiores fecham antes porque a 17 precisa dos postos nas casas e nas lojas. O hacking vem logo depois porque é o coração do jogo e precisa de pessoas e prédios vivos como alvo (registros, rotinas, luzes, portas).
 
 ---
 
@@ -71,54 +74,48 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **16.6 O corpo do jogador** no mesmo modelo (visto ao olhar para baixo e no espelho, aparência pela semente) e os balconistas dentro das lojas, nos postos da 13.21.
 - → **C6** → **teste do usuário da 16**
 
-## Etapa 17: NPCs usando a cidade e reagindo ao jogador (8 subetapas)
-> O antigo 16 inteiro (`plano-antigo.md`, entrevista em `docs/visao.md`). **Cuidado:** o calor e a polícia moram em `src/sim/heat.ts`, que é `[HACKING]`: a 17.7 e a 17.8 combinam a parte do mundo (Opus 5.5) com o agente `hacking` para o que toca o calor.
+## Etapa 17: NPCs vivendo a cidade (5 subetapas, sem polícia)
+> A parte de vida do antigo 16. A testemunha, o stealth, a polícia, a prisão e o disfarce foram para depois da 1.0 (decisão de 2026-10-08).
 - **17.1 Pesquisa e pedestres sem trilhos:** como outros jogos fazem (GDC/postmortems: Hitman, Assassin's Creed, Shadows of Doubt, RDR2), depois o destino próprio, a área caminhável com custos e o desvio local.
 - **17.2 Pessoas dentro dos prédios:** trabalhar e comprar nos postos das lojas; o elevador com NPCs (o jogador com prioridade).
 - → **C7**
-- **17.3 A casa em postos e as 11 atividades** (ver TV, cozinhar, comer, lavar louça, computador, telefone, ler, dormir, banho, janela, fumar), a interrupção por barulho e luz e a volta ao posto.
-- **17.4 Reações:** a eventos (olhar a batida, fotografar, postar; correr no apagão) e ao jogador (correr, esbarrar, encarar, entrar onde não pode, mexer num poste); quem está perto ouve (sussurrar, o barulho do lugar).
+- **17.3 A casa em postos e as 11 atividades** (ver TV, cozinhar, comer, lavar louça, computador, telefone, ler, dormir, banho, janela, fumar), as luzes da rotina vistas de fora.
+- **17.4 Reações a eventos** (olhar a batida, fotografar, postar; correr no apagão) **e ao jogador, sem polícia** ("Can I help you?", "Employees only", o morador que pede para sair).
 - → **C8**
-- **17.5 A escada da testemunha** (notar → ligar, ouvida → denunciar) e as saídas (sair da vista, conversar, pagar).
-- **17.6 Stealth B e apartamentos alheios:** luz, barulho e linha de visão previsíveis, "Who's there?", acender a luz; as luzes do próprio jogador o entregam.
-- → **C9**
-- **17.7 A polícia:** procura pela descrição, vai ao último lugar visto, abordagem com conversa; o calor sentido no bairro (viaturas, notícias, SMS do mentor).
-- **17.8 Prisão e disfarce:** a planta da delegacia (do manual), noite + fiança + confisco + ficha (a cópia da ocorrência na mochila); o colete e o capacete da GridLink numa loja; as caixas da GridLink nos postes (o manual dela aplicado no mundo).
-- → **C10** → **teste do usuário da 17**
+- **17.5 As caixas da GridLink nos postes** (o manual dela aplicado no mundo: caixas, vans, uniformes nos técnicos), a base física dos alvos da 18.
+- → **teste do usuário da 17**
 
-## Etapa 18: Cozy (4 subetapas, curta)
-- **18.1 Sentar e olhar** (bancos, mesas, balcão do diner), a chuva sob a marquise, ouvir conversas.
-- **18.2 O rádio da cidade** no Tunes, com o DJ lendo os eventos reais e as vozes estilo Animal Crossing.
-- → **C11**
-- **18.3 "The usual?"** com memória de verdade, depois de várias idas.
-- **18.4 Fotos e postar no Streetwire** (a rede social da 1.0: comentar e postar), e os cidadãos comentando o eclipse.
+## Etapa 18: `[HACKING]` Hacking completo e a TI (Opus 4.8)
+> O antigo 19, a Trilha de hacking (`docs/roteiro.md`); **o coração da 1.0**: profundo, realista, tudo simulado, a dificuldade vinda de achar o caminho no sistema. Fixar as 5–8 subetapas numa sessão do Opus 4.8 ou com o agente `hacking`. Recebe: **a TI legítima** (computadores e modems físicos com defeito, a base comum dos dois lados), o e-mail e o app cifrado do contratante (Reynard), `tests/apt.ts`, os trabalhos no registro de playtest (13.10p), o semáforo que reverte, o Ferret com o lado escondido, a antena direcional.
 
 ## Etapa 19: Economia (6 subetapas)
-> O antigo 17 (`plano-antigo.md`, `visao.md` "A economia"). O hackear do banco é da 21.
+> O antigo 17 (`plano-antigo.md`, `visao.md` "A economia"). Logo depois do hacking porque é o que ele mexe (preços, entregas, a bolsa); hackear o banco é da 18.
 - **19.1 A cadeia curta:** fornecedor → loja → cliente, estoque, o caminhão que repõe.
 - **19.2 Preços pela falta, visíveis:** a prateleira meio vazia com a etiqueta riscada, o balconista que explica, a notícia.
 - **19.3 Salários e o dinheiro dos NPCs;** os bancos com os dias da semana.
-- → **C12**
+- → **C11**
 - **19.4 O custo de vida do jogador:** a diária do motel, a comida, o crédito do celular; apertado no começo.
 - **19.5 A bolsa** (app e site), seguindo as empresas.
 - **19.6 Medir:** um teste em `tests/` que simula a semana do jogador (~5–7 dias até o apartamento, o hacking ~5x a TI).
 
-## Etapa 20: Transporte e carros (8 subetapas)
-> O antigo 18. Começa com 2–3 referências escolhidas pelo usuário.
-- **20.1 Pesquisa da IA de trânsito** (GTA IV/V, Cities: Skylines) e **o manual do carro** (por fora, por dentro, o painel e o banco).
-- **20.2 Os carros refeitos em cubinhos,** ocos por dentro, faróis variados, os dois cones, as luzes do táxi no chão.
-- **20.3 A direção:** a correção suave depois da curva, a freada progressiva, as batidas menos frequentes, o carro batido que some; dar ré e contornar.
-- **20.4 Os carros dos cidadãos:** todo carro com dono e destino, a placa, o estacionamento.
-- **20.5 O táxi** por dentro: pedir, o banco de trás, o taxímetro, a conversa, pular pagando.
-- **20.6 O metrô elevado,** uma linha de 6–8 estações.
-- **20.7 Dirigir.**
-- **20.8 Reavaliar o ritmo do tempo** com o usuário (o registro de playtest mede).
-- Blocos: os bugs que aparecerem nas 20.x.
+## Etapa 20: Cozy (4 subetapas, curta)
+- **20.1 Sentar e olhar** (bancos, mesas, balcão do diner), a chuva sob a marquise, ouvir conversas.
+- **20.2 O rádio da cidade** no Tunes, com o DJ lendo os eventos reais e as vozes estilo Animal Crossing.
+- → **C12**
+- **20.3 "The usual?"** com memória de verdade, depois de várias idas.
+- **20.4 Fotos e postar no Streetwire** (a rede social da 1.0: comentar e postar), e os cidadãos comentando o eclipse.
 
-## Etapa 21: `[HACKING]` Hacking completo
-> O antigo 19, a Trilha de hacking (`docs/roteiro.md`). Fixar as subetapas numa sessão do Opus 4.8 ou com o agente `hacking`, seguindo as mesmas regras (5–8, blocos). Recebe: o e-mail e o app cifrado do contratante (Reynard), `tests/apt.ts`, os trabalhos no registro de playtest (13.10p), o semáforo que reverte e a pressão da polícia no trabalho 2, o Ferret com o lado escondido, a primeira hora (o dono do cybercafé, o mentor, o fixer).
+## Etapa 21: Transporte, um sistema de veículo para todos (6 subetapas)
+> O antigo 18. **Regra (usuário, 2026-10-08):** um sistema só de controle de veículo (motor, tração, rodas, freio) para os NPCs, o táxi e o jogador; o táxi é um NPC dirigindo. Pesquisa e manual antes de implementar, pegando o melhor de vários jogos (originalidade: a técnica sim, a identidade não).
+- **21.1 Pesquisa** (GTA IV/V, Cities: Skylines, a física de BeamNG e My Summer Car) **e o manual do veículo:** o controle (motor, tração, rodas), a IA que dirige por ele, o carro por fora e por dentro (2–3 referências do usuário).
+- **21.2 O controle de veículo único** aplicado a todos os carros de hoje; a correção suave depois da curva, a freada progressiva, as batidas menos frequentes, ré e contornar.
+- **21.3 Os carros refeitos em cubinhos,** ocos, faróis variados, os dois cones, as luzes do táxi no chão.
+- **21.4 Os carros dos cidadãos:** todo carro com dono e destino, a placa, o estacionamento.
+- **21.5 O táxi por dentro:** pedir, o banco de trás, o taxímetro, a conversa, pular pagando.
+- **21.6 Reavaliar o ritmo do tempo** (no playtest de 2026-10-08, 75% do tempo de jogo foi andando, 42 min/km).
+- **Depois da 1.0:** o jogador dirigir (pelo mesmo sistema) e o metrô elevado.
 
-## Etapa 22: Vida do personagem (8 subetapas)
+## Etapa 22: Vida do personagem (7 subetapas)
 - **22.1 O caderno.**
 - **22.2 Dormir no motel e esperar acelerando a simulação** (medir antes no Node).
 - **22.3 Necessidades:** sede leve, sono, frio e molhado leves; o app de fitness.
@@ -126,7 +123,6 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **22.5 O apartamento:** aluguel semanal, base segura, mobiliado; os adesivos do notebook (15.20c) com ele numa mesa.
 - **22.6 A mochila com o formato real** (Cairn) e o mapa de papel com marcas.
 - **22.7 Contatos e fofoca:** virar e perder um contato, a mentira pelos fatos, a fofoca pelas relações.
-- **22.8 Investigações geradas** (o começo guiado, o gerador que confere o caminho).
 
 ## Etapa 23: Refinamento e variedade (8 subetapas)
 - **23.1 Manual de fachadas e de landmarks.**
@@ -141,8 +137,16 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 ## Etapa 24: Som (5 subetapas)
 - **24.1 A batida** por análise por síntese. **24.2 Os passos** por material. **24.3 A chuva e o trânsito.** **24.4 Reverb por lugar e mixagem.** **24.5 O murmúrio das falas** pela semente e a interferência GSM no notebook.
 
+## Etapa 25: A primeira hora e o laço (5 subetapas)
+> Nova (2026-10-08): a etapa que transforma os sistemas num jogo. Partes tocam o contratante (`[HACKING]`): combinar com o agente `hacking`.
+- **25.1 A primeira hora:** acordar no motel, o SMS da diária, o dono do cybercafé às 18h, a máquina de vendas, o mentor (`visao.md`).
+- **25.2 O caminho do veterano** (o fórum desde o começo, o fixer que observa) e a ajuda ao jogador travado (contatos, fórum, perguntar aos NPCs).
+- **25.3 Investigações geradas** (o começo guiado, o gerador que confere o caminho).
+- **25.4 Balanço:** a economia, o ritmo dos trabalhos (um grande a cada 1–2 dias), o tempo andando, pelo registro de playtest.
+- **25.5 A sessão longa de teste** com o usuário, do motel ao apartamento.
+
 ## Depois da 1.0
-Cinema, shopping e o resto do catálogo de lojas, a diagonal, o helicóptero, a represa e o porto, o notebook montado, mobiliar livremente, o mural (só se os casos ficarem longos), o stealth estilo SoD completo.
+**Polícia e calor completos** (a testemunha, o stealth B, a abordagem, a prisão, o disfarce; o plano está no antigo 16 e na entrevista da etapa 16 em `visao.md`), o jogador dirigir e o metrô elevado, cinema, shopping e o resto do catálogo de lojas, a diagonal, o helicóptero, a represa e o porto, o notebook montado, mobiliar livremente, o mural (só se os casos ficarem longos), o stealth estilo SoD completo.
 
 ---
 
@@ -159,7 +163,7 @@ Cinema, shopping e o resto do catálogo de lojas, a diagonal, o helicóptero, a 
 - **C8 (placas):** a letra vira ASCII só com uma linha de pontos visível (nota 11, vale para semáforos de pedestre e letreiros); as placas retrorrefletivas (e o fundo pintado do glifo); a placa dentro do braço do semáforo; o OPEN/CLOSED longe da porta; a placa de rua de longe e o "7".
 - **C9 (relógio e camadas):** os dígitos em sete segmentos na HD; as barras de fome, cansaço e batimento; a luz acendendo com o alarme; o relógio e as legendas atrás do notebook; o brilho do aço e o cristal.
 - **C10 (o resto):** o menu com o CCTV de fundo; o botão "voltar" do mouse no Electron; o custo da ligação no orelhão; os agradecimentos pelo sobrenome; os itens do notebook em `draw.ts` (olhar para baixo, teclas através da tampa, luzes maiores).
-- **C11, C12 e os blocos das etapas 19–24:** os bugs novos daquelas etapas. Ficam fora do backlog: os retoques de luz grandes (nuvens, cones, sombras, saturação da noite) → 23; o semáforo que reverte → 21.
+- **C9 e C10** caem durante a 18 (hacking), mas são correções normais (Opus 5.5 ou agente `bugfix`). **C11, C12 e os blocos das etapas seguintes:** os bugs novos daquelas etapas. Ficam fora do backlog: os retoques grandes de luz (nuvens, cones, sombras, saturação da noite) → 23; o semáforo que reverte → 18.
 
 ## O ritmo medido
 | Etapa | Estimado | Real | Nota |
