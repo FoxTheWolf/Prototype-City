@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, openSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -962,7 +962,17 @@ function collectObjects(world: World, v: View): Obj[] {
         // the shelter's poster and the phone's sign are on the street's power
         const P = world.power, lit = p.kind === 'shelter' || p.kind === 'payphone' || p.kind === 'steps';
         const parts = lit ? poweredFurniture(p.kind, power(P, subAt(P, city, p.x, p.y), p.x, p.y, p.seed, 0, frameSec)[0]) : f.parts;
-        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts, r: f.r, h: f.h, seed: p.seed });
+        const c = Math.cos(p.a), s = Math.sin(p.a);
+        out.push({ x: p.x, y: p.y, c, s, parts, r: f.r, h: f.h, seed: p.seed });
+        // the payphone's PHONE sign faces the sidewalk (-x): drawn turned round
+        if (p.kind === 'payphone') out.push({ x: p.x, y: p.y, c: -c, s: -s, parts: phoneSignModel(), r: f.r, h: f.h, seed: 0 });
+        // the bus stop's flag on its post, over the roof (clear of the lamp at the curb), one face each way, with the street it serves (as stopsOf in sim/traffic)
+        if (p.kind === 'shelter') {
+          const e = [p.y - blk.y0, blk.y1 - p.y, p.x - blk.x0, blk.x1 - p.x], side = e.indexOf(Math.min(...e)), i = cx >> 1, j = cy >> 1;
+          const name = roadName(city, side >= 2, [j, j + 1, i, i + 1][side]).toUpperCase();
+          out.push({ x: p.x, y: p.y, c: s, s: -c, parts: busFlagModel(name, 1.956, -0.05, 0.85), r: f.r, h: f.h, seed: 0 });
+          out.push({ x: p.x, y: p.y, c: -s, s: c, parts: busFlagModel(name, -1.956, -0.85, 0.05), r: f.r, h: f.h, seed: 0 });
+        }
       }
     }
   }

@@ -336,6 +336,35 @@ export function openSignModel(open: boolean, hours: string): Part[] {
   return m;
 }
 
+const SERV_BLUE: RGB = [31, 79, 156];
+/**
+ * The bus stop's flag on the shelter's post (the signage manual, section 5): blue, BUS / STOP and the street the
+ * stop serves. One face, read from +x, its plane at x0, spanning y0..y1 along it; the stop draws two, back to back.
+ */
+export function busFlagModel(name: string, x0: number, y0: number, y1: number): Part[] {
+  const key = `busflag|${name}|${x0}|${y0}`;
+  let m = lamps.get(key);
+  if (m) return m;
+  m = [['BUS', 2.93, 3.15], ['STOP', 2.72, 2.93], [name, 2.55, 2.72]].map(([t, z0, z1]) => {
+    const p = part(Box, x0, y0, z0 as number, x0 + 0.012, y1, z1 as number, SERV_BLUE, Board, '=');
+    p.text = t as string; p.col2 = SIGN_WHITE; p.lamp = 0; p.plate = true;
+    return p;
+  });
+  lamps.set(key, m);
+  return m;
+}
+
+/** The PHONE sign on a payphone's hood (the signage manual, section 5), read from +x: the payphone turned round. */
+export function phoneSignModel(): Part[] {
+  let m = lamps.get('phonesign');
+  if (m) return m;
+  const p = part(Box, 0.32, -0.3, 1.84, 0.332, 0.3, 2.06, SERV_BLUE, Board, '=');
+  p.text = 'PHONE'; p.col2 = SIGN_WHITE; p.lamp = 0; p.plate = true;
+  m = [p];
+  lamps.set('phonesign', m);
+  return m;
+}
+
 /**
  * The yellow "CCTV" notice under a security camera (the signage manual, section 7): it tells the player there is a
  * camera there, as such notices do; read from +x, its foot at z0.
@@ -450,13 +479,13 @@ export const FURNITURE: Record<string, { parts: Part[]; r: number; h: number }> 
     ],
   },
   shelter: {
-    // bus shelter: a roof on posts, a glass back and a lit poster at one end
-    r: 2.3, h: 2.5, parts: [
+    // bus shelter: a roof on posts, a glass back and a lit poster at one end; the post carries the stop's flag
+    r: 2.3, h: 3.2, parts: [
       part(Box, -0.95, -2.05, 2.3, 0.95, 2.05, 2.45, STEEL, Solid, '=', '_'),
       part(Box, -0.95, -2.0, 0.25, -0.88, 2.0, 2.3, GLASS, Solid, ':'),
       // the advert: a small video screen showing the same animations as the big ones (both sides); its color is its power (white: on)
       part(Box, -0.88, 1.92, 0.3, 0.55, 2.0, 2.15, [255, 255, 255], Screen, '='),
-      part(Box, 0.8, -2.0, 0, 0.9, -1.9, 2.3, STEEL, Solid, '|'),
+      part(Box, 0.8, -2.0, 0, 0.9, -1.9, 3.2, STEEL, Solid, '|'),
       part(Box, -0.6, -1.5, 0.42, -0.2, 1.3, 0.5, STEEL, Solid, '=', '='),
     ],
   },
