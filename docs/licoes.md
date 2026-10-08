@@ -6,6 +6,8 @@
 - **Um dado novo por cômodo na GPU = mudar o tamanho do registro em 4 lugares:** `roomRec`, `planCell` e `leafBase` no shader e o `putPlan` em `gpu/world.ts`. Agora é a constante `ROOM_REC` (7). A regra "a CPU calcula, a GPU lê" valeu: o caminho até a rua (`Plan.exitTo`) é um BFS no `planOf`, e o shader só compara um número.
 - **As folhas da rua eram supostas em pares** (`n >> 1` no `raycaster.ts`, 2 × 7 floats por porta na tabela da fachada): uma porta de uma folha precisa de `Leaf.door` e da 2ª vaga zerada (o shader pula a largura 0). O tipo da folha vai no sinal da largura, nos dois pacotes (com sinais opostos: cuidado ao ler).
 - **Tabelas indexadas pelo tipo de porta** (`OPEN_S`/`SHUT_S` em `sim/doors.ts`) davam `NaN` com um tipo novo: procurar `[kd]` ao criar um `DOOR_*`.
+- **A dica na tela e a ação do F decidem a prioridade em lugares diferentes** (`main.ts`: a dica do balcão vinha antes da porta; o F abria a porta). Ao mudar a prioridade de um, procurar o outro (`doorAhead`, `counter.near()`).
+- **Testar num lugar exato:** `?pos=x,y,andar&look=graus` entra direto, sem título e sem save; serve para o painel e para os `teste-*.bat` do usuário.
 - **Medir antes de discutir largura:** todo vão das plantas tinha 2 caracteres (1 m); o "estreito" era a porta dupla de 2 × 0,5 m com batente de 12 cm.
 
 ### Lições da 13.18 (porta de casa, móveis na parede, laje do poço) — 2026-10-08
