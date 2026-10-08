@@ -30,7 +30,8 @@ import { SPARE_WH } from './sim/gear';
 import { type Sfx } from './phone/call';
 import { Laptop, type LapSound } from './laptop/laptop';
 import { drawWatch, Watch, WATCH_BTN, WATCH_LCD, WATCH_ON } from './watch/watch';
-import { drawLaptop3d, glassBox, lapGpu, laptopAnchor, laptopPitch, power3d, screenAt } from './laptop/look3d';
+import { drawLaptop3d, glassBox, lapGpu, laptopAnchor, laptopPitch, screenAt } from './laptop/look3d';
+import { keyOfCode, lapPartAt } from './laptop/body3d';
 import { TERM_H, TERM_W } from './laptop/shell';
 import en from './locale/en.json';
 import { FONT } from './render/atlas';
@@ -392,12 +393,14 @@ function playLap(list: LapSound[]) {
       case 'open': sound.lid(true); break;
       case 'close': sound.lid(false); break;
       case 'seek': sound.seek(); break;
-      case 'beep': sound.biosBeep(); break;
+      // through the notebook's speakers: at its volume, silent when muted (15.20b)
+      case 'beep': if (laptop.loud) sound.biosBeep(laptop.loud / 0.7); break;
       case 'power': sound.powerClick(); break;
       case 'spin': sound.hddSpinUp(); break;
       case 'spindown': sound.hddPark(); break; // the hum follows the power (laptopHum)
-      case 'thump': sound.ferretBack(); break;
-      case 'tick': sound.ferretTab(); break;
+      case 'thump': if (laptop.loud) sound.ferretBack(laptop.loud / 0.7); break;
+      case 'tick': if (laptop.loud) sound.ferretTab(laptop.loud / 0.7); break;
+      case 'button': case 'nub': case 'pad': case 'lamp': sound.lapPart(f); break;
     }
   }
   list.length = 0;
@@ -590,16 +593,16 @@ addEventListener('mousedown', (e) => {
       const k = phoneKeyAt(e.clientX, e.clientY);
       if (k) { if (!phone.out) phone.out = true; phonePress(k); return; }
     }
-    // the notebook's power button
-    const pw = power3d;
-    if (e.button === 0 && pw) {
-      const [x, y] = cellAtClient(e.clientX, e.clientY);
-      // off, it powers on (Enter is the same button); on, it halts the system (or cuts the power outside it)
-      if (x >= pw[0] && x < pw[2] && y >= pw[1] && y < pw[3]) {
-        if (laptop.shell.halted) laptop.key('Enter', 'Enter', false, performance.now() / 1000);
-        else { laptop.shell.powerButton(performance.now() / 1000); sound?.powerClick(); }
-        return;
-      }
+    // a part of the notebook's body under the cursor (15.20b): the ray of that pixel through its cubes
+    const pr = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+    const pa = e.button === 0 && lapGpu ? lapPartAt((e.clientX - pr.left) * dpr, (e.clientY - pr.top) * dpr) : null;
+    if (pa) {
+      const now = performance.now() / 1000;
+      // the power button: off, it powers on (Enter is the same button); on, it halts the system (or cuts the power outside it)
+      if (pa === 'power') { if (laptop.shell.halted) laptop.key('Enter', 'Enter', false, now); else { laptop.shell.powerButton(now); sound?.powerClick(); } }
+      else if (/^(vol|mute|lamp|nub|pad)/.test(pa)) laptop.part(pa, now);
+      else laptop.key(pa, keyOfCode(pa), false, now);
+      return;
     }
     // the window manager (15.7): press on the screen focuses a pane and starts a selection
     const wm = laptop.shell.wm;

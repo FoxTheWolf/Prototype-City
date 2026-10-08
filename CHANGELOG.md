@@ -2,6 +2,12 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.49 — As peças do notebook se apertam (2026-10-07)
+- **Clique nas peças do notebook** com o mouse: cada tecla digita (e afunda), o botão de ligar liga e desliga, e as teclas da faixa de cima funcionam: **volume − e +** (um clique de borracha e o bipe do sistema já no volume novo; o aviso no alto mostra o volume) e **mudo**.
+- **A luz do teclado:** a tecla da luz na faixa de cima acende o LED da tampa, que joga um leque quente sobre as teclas (só com o notebook ligado).
+- **Os botões do nub e do touchpad** clicam, cada um com o seu som (o do nub seco, o do touchpad abafado).
+- **O som do notebook segue o volume dele:** o bipe do firmware e os cliques do Ferret saem pelas caixinhas, mais altos ou mais baixos, e somem no mudo. O volume, o mudo e a luz ficam no save.
+
 ## 0.15.48 — O notebook em cubinhos (2026-10-07)
 - **O notebook ganhou corpo de verdade:** a base e a tampa agora são feitas de cubinhos de 2 mm, como no manual, desenhados na resolução do monitor: as 80 teclas com legenda cinza (as mais usadas pelo dono anterior brilham um pouco), o nub âmbar entre G, H e B com os três botões, o touchpad, a faixa de cima com volume, mudo, a tecla da luz e o botão de ligar com o anel verde aceso, as dobradiças de metal e o selo do Osprey no descanso de pulso.
 - **As teclas afundam** quando você digita, tecla por tecla, e a luz da cena bate nelas de cima (as laterais das teclas aparecem).

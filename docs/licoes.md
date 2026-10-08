@@ -2,6 +2,16 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.20b (o notebook em cubinhos na GPU) — 2026-10-07
+- **Câmera da GPU = a do `project()`:** a projeção dos objetos (`cols/2·(1 + tX/tY)`, `hor − (z − eye)·scale/tY`) é linear no pixel do monitor, então o raio de cada pixel é `F + R·x + D·y` com três vetores calculados na CPU (o raio nos pixels (0,0), (1,0), (0,1)). Assim o corpo em cubinhos cai exatamente onde o `glassBox` e a tela já caíam, sem homografia nova.
+- **Um modelo que gira (a tampa) = outra câmera,** não outra grade: a CPU leva o olho e o raio ao quadro da tampa (os eixos `u`, `n` da dobradiça), e o shader fica com dois `lcast` e o `t` mais perto. A luz também vai ao quadro de cada modelo na CPU (só uma direção por modelo).
+- **Tecla que afunda sem refazer o modelo:** construir uma vez com todas em cima e todas embaixo e guardar, por peça, as células que mudam; refazer o `deckModel` a cada tecla custaria milissegundos (procura em `KEYS` por célula).
+- **Clique em peça 3D:** o mesmo raio na CPU com `castVoxPersp` de 1 × 1 pixel (a última câmera). Barato e sempre igual ao que se vê.
+- **A luz da tela no teclado deve seguir a cor média da tela,** e não a tinta: com âmbar fixo o descanso ficou bege no POST (tela quase preta).
+- **Ordem no compositor:** o corpo do celular depois da tela do notebook, senão a tela do notebook cobria o celular erguido.
+- **Vite com HMR:** depois de editar, o app importa `body3d.ts?t=…`; um `import('/src/laptop/body3d.ts')` no console pega outra instância (estado vazio). Achar a URL com `performance.getEntriesByType('resource')`.
+- **Teste no painel do app (este PC tem WebGPU):** `?seed=42&mute`, NEW GAME (duas vezes com save), ~25 s, `KeyN` por `dispatchEvent`; travar a tampa a meio com `Object.defineProperty(laptop, 'lid', { get: () => 0.45, set() {}, configurable: true })` e soltar com `delete laptop.lid`.
+
 ### Lições do desempenho do celular (0.15.42–44) — 2026-10-07
 - **O DRAW do F3 não é só a GPU:** é o tempo do `submit` até `onSubmittedWorkDone` voltar (no thread principal), e o "GPU x ms" cronometra só o passe do mundo. Para achar quem pesa, medir a CPU do quadro embrulhando o `requestAnimationFrame` no console (duração de cada callback) e pôr cronômetros temporários (`globalThis.__pt`) dentro da função suspeita; com o celular, a CPU passou de ~4 para ~11 ms.
 - **O culpado foi o pintor 2D (`paint2d.ts`), não os cubinhos:** `rect` e `grad` iam ponto a ponto por `dot` → `Px.has`/`set` (chamadas virtuais, um array por pixel no degradê): 1,8 ms para encher a tela de 240 × 432, 4,7 ms um degradê. O celular repinta a tela inteira a cada quadro (`paintChrome` + a página). Caminho rápido para `Img` (`fillRow`, linha a linha) e a cor do degradê uma vez por linha: páginas de 5,5 para ~1 ms. **`tests/paint-bench.ts`** mede as páginas mais pesadas.

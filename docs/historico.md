@@ -3,6 +3,12 @@
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
 
+## 15.20b O corpo do notebook, passo 5: peças clicáveis e sons (0.15.49, 2026-10-07)
+- **Clique pelo raio:** `lapPartAt(px, py)` em `laptop/body3d.ts` lança na CPU o mesmo raio da GPU (a última câmera da base, `castVoxPersp` com 1 × 1) e devolve o código da tecla ou o id da peça (a paleta); `keyOfCode` dá o `key` de uma tecla clicada. Em `main.ts` o clique esquerdo com o notebook aberto vai para o botão de ligar (o código de antes), `laptop.part` ou `laptop.key`. Saiu o `power3d` (a caixa do botão de ligar na grade).
+- **`Laptop`:** `vol` (0..10), `muted`, `lamp` (no save, opcionais), `loud`, `part(id)` (volume/mudo com o bipe, a luz, os botões do nub e do touchpad, com os avisos de `locale/laptop.en.json` > `parts`).
+- **Sons (`sound.ts`):** `lapPart('button' | 'nub' | 'pad' | 'lamp')` pelas receitas do manual (seção 5, o `SFX` do `<script>`), a 40% do volume de lá; `biosBeep`, `ferretBack` e `ferretTab` ganharam um ganho, e o `playLap` os passa pelo volume do notebook.
+- **Visto no painel:** as 86 peças achadas pelo raio, volume 7 → 8, mudo e de volta, a luz acesa, um clique no Q digitou "q".
+
 ## 15.20b O corpo do notebook, passos 1–3 (0.15.48, 2026-10-07)
 - **`src/render/gpu/voxLap.ts`** (novo): `LAP_WGSL` (bindings 18–21: o uniform `LapU`, as células `lvox`, os decalques `lDecal`/`lOut`), `lcast` (o raio em perspectiva por pixel do monitor: `dir = F + R·x + D·y`, um olho e uma câmera por modelo, o DDA do `castVoxPersp`) e `lshade` (a luz da cena de cima no quadro do modelo, AO, um especular leve pelo gloss, os decalques, a luz da tela pela cor média e o leque da luz do teclado). Precisa do `BODY_WGSL` antes (`BFACE_N`).
 - **`src/laptop/body3d.ts`:** `laptopGpu` (os modelos feitos uma vez, com todas as teclas em cima e todas embaixo; uma tecla que afunda só copia as próprias células), `paintDecal` (legendas na fonte 5 × 7, o selo OSprey, a marca e as marcas dos LEDs na tampa, 4 px/mm), `LAP_GPU`, `KEY_TOP`.

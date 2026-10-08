@@ -1,4 +1,4 @@
-import { Vox, type VoxMat } from '../render/voxels';
+import { castVoxPersp, Vox, type VoxMat } from '../render/voxels';
 import { Img, Paint, star, type C3 } from '../render/paint2d';
 import { hash3 } from '../core/rng';
 import { LAP_AT, LAP_U_FLOATS } from '../render/gpu/voxLap';
@@ -257,7 +257,7 @@ new Int32Array(LAP_GPU.uni.buffer, 0, 4).set([NX, NY, NZ, NX * NY * NZ]);
 /** A model's camera, in its cells: the eye, the ray at pixel (0, 0) and its step right and down, the light's direction. */
 export interface LapCam { eye: readonly number[]; F: readonly number[]; R: readonly number[]; D: readonly number[]; light: readonly number[] }
 
-let built: { ids: Map<number, string>; up: Uint8Array; dn: Uint8Array; cols: Map<string, number[]>; sunk: Set<string> } | null = null;
+let built: { V: Vox; ids: Map<number, string>; up: Uint8Array; dn: Uint8Array; cols: Map<string, number[]>; sunk: Set<string> } | null = null, lastDeck: LapCam | null = null;
 let decalFor = '', outFor = '';
 /** The legends' grey (the manual: #A7A9AD). */
 const LEG: C3 = [167, 169, 173];
@@ -284,6 +284,22 @@ function paintDecal(maker: string): Img {
   return D;
 }
 
+/**
+ * The key or part of the deck under monitor pixel (px, py) as last drawn: its code (KeyboardEvent.code)
+ * or its id (PARTS), or null (the lid, the shell, nothing). The same ray the GPU casts, on the CPU.
+ */
+export function lapPartAt(px: number, py: number): string | null {
+  if (!built || !lastDeck) return null;
+  const c = lastDeck, x = px + 0.5, y = py + 0.5, d = [0, 1, 2].map((k) => c.F[k] + c.R[k] * x + c.D[k] * y);
+  const G = castVoxPersp(built.V, { w: 1, h: 1, eye: c.eye, F: d, R: [0, 0, 0], D: [0, 0, 0] });
+  return built.ids.get(G.mat[0]) ?? null;
+}
+/** What a key types (KeyboardEvent.key) from its code, for a key clicked on the model. */
+export function keyOfCode(code: string): string {
+  const k = KEYS.find((b) => b.code === code), l = k?.label ?? '';
+  if (l.length === 1) return l === ' ' ? ' ' : l.toLowerCase();
+  return ({ Esc: 'Escape', Del: 'Delete', Bksp: 'Backspace', Caps: 'CapsLock', PgUp: 'PageUp', PgDn: 'PageDown', ShiftR: 'Shift', Ctrl: 'Control', CtrlR: 'Control', AltR: 'Alt', Left: 'ArrowLeft', Right: 'ArrowRight', UpDown: 'ArrowUp' } as Record<string, string>)[l] ?? l;
+}
 /** The keys' top over the desk (cells): where the lid's inside rests when shut, and its hinge's axis. */
 export const KEY_TOP = TOP + 1;
 
@@ -297,6 +313,7 @@ export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly numbe
   maker: string; seed: number; bands: readonly string[]; shops: readonly string[];
 }): LapGpu {
   const B = LAP_GPU, U = B.uni, n = NX * NY * NZ, bytes = new Uint8Array(B.vox.buffer);
+  lastDeck = deck;
   if (!built) {
     // built once, all keys up and all down; a key sinking only copies its own cells from the other
     const up = deckModel(() => false), dn = deckModel(() => true).V.cells, cols = new Map<string, number[]>();
@@ -304,7 +321,7 @@ export function laptopGpu(deck: LapCam, lid: LapCam | null, rect: readonly numbe
       const a = up.ids.get(up.V.cells[i]) ?? up.ids.get(dn[i]);
       if (a) { let l = cols.get(a); if (!l) cols.set(a, (l = [])); l.push(i); }
     }
-    built = { ids: up.ids, up: up.V.cells, dn, cols, sunk: new Set() };
+    built = { V: up.V, ids: up.ids, up: up.V.cells, dn, cols, sunk: new Set() };
     bytes.set(up.V.cells, 0);
     const L = lidModel().cells, per = NX * NY * LID_NZ;
     bytes.set(L.subarray(0, per), n);

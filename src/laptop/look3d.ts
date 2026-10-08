@@ -29,8 +29,6 @@ let anchor = 0, pitch0 = -0.6, wasOpen = false, tmp: CharGrid | null = null, tmp
 const L3 = new Float32Array(3);
 /** The glint on the screen, eased over time (as on the phone, see phone/draw.ts; stronger here). */
 const GL = { lat: 0, str: 0, r: 1, g: 1, b: 1, back: 0, at: 0, mean: [0, 0, 0] as C3 };
-/** Where the power button falls on the interface's grid (cells), for a click; null when not shown. */
-export let power3d: [number, number, number, number] | null = null;
 /** The view's yaw the notebook was set down facing, and the pitch that centres its screen: where the view comes back to. */
 export const laptopAnchor = () => anchor;
 export const laptopPitch = () => pitch0;
@@ -48,7 +46,7 @@ export interface View3d { yaw: number; pitch: number; aspect: number; still: boo
 
 /** term: the screen layer's characters, filled here (its size: the console's or the text mode's). */
 export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: World, now: number, light: Float32Array, glint: Float32Array, view: View3d) {
-  power3d = null; screenAt = null; glassBox = null; lapGpu = null;
+  screenAt = null; glassBox = null; lapGpu = null;
   if (P.open && !wasOpen) anchor = view.yaw;
   wasOpen = P.open;
   if (P.raise < 0.01) return;
@@ -127,7 +125,7 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
   const shops: string[] = [];
   for (let k = 0; k < Math.min(24, world.city.businesses.length); k++) shops.push(businessName(world.city, k));
   lapGpu = laptopGpu(deck, lid, rect, L3, {
-    on, lamp: false, disk: busy, radio: on, charging: (pc.plugged && pc.charge < 0.995) || (on && pc.charge < 0.1 && !!blink), ink: GL.mean,
+    on, lamp: P.lamp && on, disk: busy, radio: on, charging: (pc.plugged && pc.charge < 0.995) || (on && pc.charge < 0.1 && !!blink), ink: GL.mean,
     down: (code) => now - (P.pressed.get(code) ?? -9) < 0.12,
     maker: computerMakerName(world.city, H.maker), seed: world.seed, bands: Object.values(SONGS).map((s) => s.band), shops,
   });
@@ -173,8 +171,6 @@ export function drawLaptop3d(g: CharGrid, term: CharGrid, P: Laptop, world: Worl
     g.put(i, chr, fg[0], fg[1], fg[2]); g.setBg(i, bg[0], bg[1], bg[2]);
   };
   const text = (x: number, y: number, s: string, fg: readonly number[], bg: readonly number[]) => { for (let k = 0; k < s.length; k++) put(x + k, y, s.charCodeAt(k), fg, bg); };
-  // the power button (the manual: 275, 9 mm on the deck's top strip), for a click
-  { const p = project(cam, obj, xh - 0.009, 0.275 - HALF_W, KEY_TOP * C, cols); if (p) power3d = [Math.floor(p[0]) - 2, Math.floor(p[1]) - 1, Math.floor(p[0]) + 3, Math.floor(p[1]) + 2]; }
   if (square) screenAt = [tl![0], tl![1]];
   if (P.open && now - P.noticeAt < 3) text((cols - P.notice.length - 2) >> 1, 1, ` ${P.notice} `, [255, 220, 140], [20, 16, 10]);
   else if (P.open && P.lid >= 1) { const hh = hintOf(P); text((cols - hh.length - 2) >> 1, 1, ` ${hh} `, [150, 140, 120], [14, 12, 10]); }

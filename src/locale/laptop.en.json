@@ -1,4 +1,5 @@
 {
+  "parts": { "vol": "Volume {n}", "mute": "Sound muted", "unmute": "Sound on", "lampOn": "Keyboard light on", "lampOff": "Keyboard light off" },
   "seat": {
     "bench": "You sit on the bench and open the notebook.",
     "table": "You set the notebook on the table.",

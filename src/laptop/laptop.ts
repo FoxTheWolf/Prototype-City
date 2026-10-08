@@ -61,7 +61,7 @@ export function findSeat(w: World): Seat | 'road' | 'lift' {
   return { kind: 'ground', eye: 0.9 };
 }
 
-export type LapSound = LapSfx | 'zip' | 'open' | 'close' | 'key' | 'space' | 'enter' | 'power';
+export type LapSound = LapSfx | 'zip' | 'open' | 'close' | 'key' | 'space' | 'enter' | 'power' | 'button' | 'nub' | 'pad' | 'lamp';
 
 export class Laptop {
   readonly pc: Computer;
@@ -85,6 +85,10 @@ export class Laptop {
   /** The power button pressed with a flat battery and no outlet: the charge light blinks, nothing else. */
   deadAt = -9;
   private lowSaid = false;
+  /** The speakers' volume (0..10) and mute, from the keys on the deck's top strip; the keyboard's lamp on the lid (15.20b). */
+  vol = 7;
+  muted = false;
+  lamp = false;
   private critSaid = false;
 
   constructor(private world: World) {
@@ -94,8 +98,28 @@ export class Laptop {
     this.shell = new Shell(this.pc, world);
   }
   /** What the save keeps of the notebook (F.6): its disk, its firmware's settings and its battery; it comes back off, in the backpack. */
-  snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge }; }
-  restore(d: ReturnType<Laptop['snapshot']>) { this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; syncPrograms(this.pc, this.world.time); }
+  snapshot() { return { kids: this.pc.root.kids, bios: { ...this.pc.bios }, charge: this.pc.charge, vol: this.vol, muted: this.muted, lamp: this.lamp }; }
+  restore(d: ReturnType<Laptop['snapshot']>) {
+    this.pc.root.kids = d.kids; this.pc.bios = { ...this.pc.bios, ...d.bios }; this.pc.charge = d.charge; syncPrograms(this.pc, this.world.time);
+    this.vol = d.vol ?? 7; this.muted = d.muted ?? false; this.lamp = d.lamp ?? false;
+  }
+  /** How loud the speakers are (0..1): the system's beep and the browser's clicks go through them. */
+  get loud() { return this.muted ? 0 : this.vol / 10; }
+  /**
+   * A part of the body pressed with the mouse (15.20b; the manual, section 5): the volume keys and mute
+   * (a rubber click and the system's beep at the new volume), the lamp's key, the nub's three buttons and
+   * the touchpad's two (a click each). The keys and the power button go by key() and the shell.
+   */
+  part(id: string, now: number) {
+    if (this.lid < 1) return;
+    this.pressed.set(id, now);
+    const say = (s: string) => { this.notice = s; this.noticeAt = now; };
+    if (id === 'volDown' || id === 'volUp') { this.vol = Math.max(0, Math.min(10, this.vol + (id === 'volUp' ? 1 : -1))); this.muted = false; this.sfx.push('button', 'beep'); say(L.parts.vol.replace('{n}', String(this.vol))); }
+    else if (id === 'mute') { this.muted = !this.muted; this.sfx.push('button'); if (!this.muted) this.sfx.push('beep'); say(this.muted ? L.parts.mute : L.parts.unmute); }
+    else if (id === 'lamp') { this.lamp = !this.lamp; this.sfx.push('lamp'); say(this.lamp ? L.parts.lampOn : L.parts.lampOff); }
+    else if (/^nub/.test(id)) this.sfx.push('nub');
+    else if (/^pad/.test(id)) this.sfx.push('pad');
+  }
   /**
    * Is there a live outlet where the player sits: a wall outlet within the adapter's cable (13.9c),
    * in a building whose power is on (its substation, or a generator that feeds more than the

@@ -600,29 +600,54 @@ export class Sound {
     this.seek(0.12, false);
   }
   /** The BIOS's beep from the little speaker: short, square and thin. */
-  biosBeep() {
+  biosBeep(k = 1) {
     const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
     o.type = 'square'; o.frequency.value = 1000; o.connect(filter(ctx, 'bandpass', 1400, 1)).connect(g);
-    g.gain.setValueAtTime(0.035, t); g.gain.setValueAtTime(0.035, t + 0.12); g.gain.linearRampToValueAtTime(0, t + 0.13);
+    g.gain.setValueAtTime(0.035 * k, t); g.gain.setValueAtTime(0.035 * k, t + 0.12); g.gain.linearRampToValueAtTime(0, t + 0.13);
     o.start(t); o.stop(t + 0.15);
   }
   /** The Ferret's back button (15.17c): a low, soft "tum", a pitch falling under a felt click. */
-  ferretBack() {
+  ferretBack(k = 1) {
     const ctx = this.ctx, t = ctx.currentTime, o = ctx.createOscillator(), g = gain(ctx, 0, this.master);
     o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(65, t + 0.11); o.connect(g);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.16);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11 * k, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.16);
     o.start(t); o.stop(t + 0.18);
     const s = ctx.createBufferSource(), c = gain(ctx, 0, this.master);
     s.buffer = this.noise; s.connect(filter(ctx, 'lowpass', 1800, 0.7)).connect(c);
-    c.gain.setValueAtTime(0.03, t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.02);
+    c.gain.setValueAtTime(0.03 * k, t); c.gain.exponentialRampToValueAtTime(0.0005, t + 0.02);
     s.start(t, Math.random()); s.stop(t + 0.03);
   }
   /** A Ferret tab picked, opened or closed: a small, bright plastic tick. */
-  ferretTab() {
+  ferretTab(k = 1) {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
     s.buffer = this.noise; s.connect(filter(ctx, 'bandpass', 2600, 2.5)).connect(g);
-    g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.012);
+    g.gain.setValueAtTime(0.06 * k, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.012);
     s.start(t, Math.random()); s.stop(t + 0.02);
+  }
+  /**
+   * The notebook's parts (15.20b), as the manual's script makes them (section 5): a band of noise that dies
+   * away (its cube) and a falling tone, here a little quieter than there to sit with the keys.
+   * button: the volume keys and mute, a small rubber click with the system's beep in it; nub: short and dry;
+   * pad: the touchpad's buttons, muffled; lamp: a fine tick and the LED's very low hum.
+   */
+  lapPart(kind: 'button' | 'nub' | 'pad' | 'lamp') {
+    const ctx = this.ctx, K = 0.4;
+    const noise = (dur: number, f: number, q: number, g: number, t0 = 0) => {
+      const n = Math.ceil(ctx.sampleRate * dur), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 3;
+      const s = ctx.createBufferSource(); s.buffer = b; s.connect(filter(ctx, 'bandpass', f, q)).connect(gain(ctx, g * K, this.master));
+      s.start(ctx.currentTime + t0);
+    };
+    const tone = (f0: number, f1: number, dur: number, g: number, type: OscillatorType) => {
+      const t = ctx.currentTime, o = ctx.createOscillator(), h = gain(ctx, 0, this.master);
+      o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); o.connect(h);
+      h.gain.setValueAtTime(g * K, t); h.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o.stop(t + dur + 0.02);
+    };
+    if (kind === 'button') { noise(0.02, 4200, 3, 0.45); tone(1800, 900, 0.03, 0.06, 'square'); }
+    else if (kind === 'nub') noise(0.02, 3200, 2.5, 0.4);
+    else if (kind === 'pad') { noise(0.025, 1600, 2, 0.4); noise(0.04, 420, 2, 0.2, 0.01); }
+    else { noise(0.015, 5000, 4, 0.4); tone(60, 50, 0.08, 0.03, 'sine'); }
   }
   /** The power button's click. */
   powerClick() {
