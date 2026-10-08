@@ -17,6 +17,8 @@ import { CASES, COL_MM, keysOf, PHONE_H, PHONE_W, ROW_MM, SCREEN_MM, SHELLS, UP_
 import { CharGrid } from '../render/grid';
 import { HdLayer } from '../render/hd';
 import { BODY_GPU, brandColor, drawBody3d, glassUv, nearRocker, pickBody } from './body3d';
+import { VIEW_GLARE } from '../render/raycaster';
+import { BODY_GLARE_AT } from '../render/gpu/voxBody';
 import { CHROME as BARS, CONTENT_Y0, CONTENT_Y1, paintChrome, PHONE_PX, ptextW, SCR_H } from './pixui';
 import { APP_COL, HITS, PAGED, paintCall, paintCompose, paintDial, paintMenu, paintContactEdit, paintContacts, paintMsgHome, paintMsgList, paintMsgRead, paintTunes, paintStandby, paintVolume, edHint, type CallPage, type Card, type Dial, type Standby, type Tile } from './pixpages';
 import { artColors } from './hdicons';
@@ -179,10 +181,6 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, now: number, ligh
   // the world's eye (its exposure and adaptation): in the dark the screen looks brighter and blooms, by
   // day it looks dimmer (capped: a bright page must not wash out in the dark, see the ceiling on the glass below)
   const gain = Math.min(1.18, 0.85 + 0.35 * Math.min(1, EYE.k / 0.6)), bloom = EYE.k;
-  // the glint: the brightest light nearby mirrored in the phone, a soft diagonal band on the side
-  // it comes from, in its color, stronger for a light behind the player
-  const s0 = 34 + GL.lat * 22, amp = GL.str * 55;
-  const sheen = (x: number, y: number) => Math.exp(-(((x + y * 0.55 - s0) / 5) ** 2));
   const inG = (x: number, y: number) => { const gx = ox + x, gy = oy + y; return gx >= 0 && gy >= 0 && gx < g.cols && gy < g.rows ? gy * g.cols + gx : -1; };
 
 
@@ -197,6 +195,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, now: number, ligh
     drawBody3d(PHONE_BODY.cw / COL_MM, PHONE_BODY.ch / ROW_MM, SHL, P.look, BODY, P.case ? CASES[P.case] : null, isDown, P.hover,
       { rgb: light, lat: GL.lat, str: GL.str, glint: [GL.r, GL.g, GL.b] }, [SWAY.ty, SWAY.tp], (railRows(P) - KP_ROWS) * PHONE_BODY.ch, on,
       { fam, name: P.maker, col: brandColor(fam, lum(top)) });
+    // the lights mirrored in the glass, where they are (raycaster.ts viewGlare); none while the screen is a torch's white
+    BODY_GPU.uni.set(VIEW_GLARE, BODY_GLARE_AT);
     PHONE_BODY.on = true; PHONE_BODY.ox = ox; PHONE_BODY.oy = oy;
   }
   // the earphones plugged in (2026-10-06), in HD pixels: a chrome plug in the jack on top, its black
@@ -266,7 +266,8 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, now: number, ligh
     else {
       statusBar(S, world, P.gps.state, now, P.radio, P.inbox.some((m) => !m.read), P.wifi, P.batt, P.charging, P.earphones);
       // the screens redrawn in pixels by the manual v2 (pixpages.ts) paint over the cells; the others still draw on them
-      if (P.screen === 'standby') { const d = standbyData(P, world, t, now); page = (Pt) => paintStandby(Pt, d, now); softKeys(S, T.menu, T.hide); }
+      // (the standby screen names the network under the date already: not twice)
+      if (P.screen === 'standby') { const st = BARS.status as { op: string } | null; if (st) st.op = ''; const d = standbyData(P, world, t, now); page = (Pt) => paintStandby(Pt, d, now); softKeys(S, T.menu, T.hide); }
       else if (P.screen === 'menu') {
         const tiles = APPS.map((a, n): Tile => ({ label: appLabel(a), col: APP_COL[n], art: artColors(a), sel: n === P.sel, pre: () => { P.sel = n; } }));
         page = (Pt) => paintMenu(Pt, tiles, t); softKeys(S, T.open, T.back);
@@ -298,21 +299,21 @@ export function drawPhone(g: CharGrid, P: Phone, world: World, now: number, ligh
   }
   // the glass over the screen: the eye's adaptation, a faint wash of the scene's light, and the glint
   for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
-    const k = (y * SW + x) * 4, sh = sheen(SX + (x * SWC) / SW, CY + (y * CHC) / SH) * amp * 0.45, C = PG.cells, B = PG.bg;
+    // (the glint's band that sat here is the GPU's glare now, from the lights themselves, 2026-10-07)
+    const k = (y * SW + x) * 4, C = PG.cells, B = PG.bg;
     // the glass's ceiling: past 200 the light rolls off, so the brightest pages keep their detail
     const roll = (v: number) => (v > 200 ? 200 + (v - 200) * 0.35 : v);
     for (let c = 1; c < 4; c++) C[k + c] = roll(C[k + c] * gain);
     for (let c = 0; c < 3; c++) B[k + c] = roll(B[k + c] * gain);
     // (no fingerprints here: drawn a cell at a time they were grey blocks over the page; the manual puts them on the plate)
-    B[k] += 3 * Lr + sh * GL.r; B[k + 1] += 3 * Lg + sh * GL.g; B[k + 2] += 4 * Lb + sh * GL.b;
-    C[k + 1] += sh * 0.5 * GL.r; C[k + 2] += sh * 0.5 * GL.g; C[k + 3] += sh * 0.5 * GL.b;
+    B[k] += 3 * Lr; B[k + 1] += 3 * Lg; B[k + 2] += 4 * Lb;
     // the pixels over this cell (a photo) under the same glass
     for (let iy = 0; iy < HD; iy++) for (let ix = 0; ix < HD; ix++) {
       const q = PH.at(x * HD + ix, y * HD + iy);
       if (q < 0) continue;
       const X = PH.px;
       for (let c = 0; c < 3; c++) X[q + c] = roll(X[q + c] * gain);
-      X[q] += 3 * Lr + sh * GL.r; X[q + 1] += 3 * Lg + sh * GL.g; X[q + 2] += 4 * Lb + sh * GL.b;
+      X[q] += 3 * Lr; X[q + 1] += 3 * Lg; X[q + 2] += 4 * Lb;
     }
   }
   // the bars and a touch's answer, in pixels over the cells (the manual's section 6), and the screens drawn in pixels

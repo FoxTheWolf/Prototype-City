@@ -3,6 +3,7 @@ import { type CharGrid } from '../render/grid';
 import { HD, HdOrder, type HdLayer } from '../render/hd';
 import { fontRows } from '../render/signs';
 import { calendar } from '../sim/clock';
+import { operatorName } from '../locale/names';
 import { type World } from '../sim/world';
 import { type GpsState } from './gps';
 import { type Radio } from './radio';
@@ -93,6 +94,8 @@ export function statusBar(_S: Lcd, world: World, gps: GpsState, now: number, rad
     bars: radio.bars, service: radio.state === 'service', search: radio.state === 'search', edge: !!J && (J.state === 'connecting' || J.state === 'loading'),
     gps: gps === 'off' ? '' : gps, unread, wifi: wifi && (wifi.state === 'up' || ((wifi.state === 'assoc' || wifi.state === 'dhcp') && blink)) ? Math.ceil(wifi.bars * 0.75) : -1,
     phones, time: hhmm(calendar(world.time).hour), batt, charging, blink,
+    // the network's name by the bars, its first word (the user, 2026-10-07)
+    op: radio.state === 'service' ? operatorName(world.city, world.telco.player.op ?? 0).split(' ')[0].toUpperCase().slice(0, 8) : '',
   };
 }
 

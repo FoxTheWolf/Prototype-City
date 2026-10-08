@@ -20,7 +20,7 @@ export const PHONE_PX = { img: new Img(SCR_W, SCR_H), ver: 0 };
 
 /** What the status bar shows this frame (set by lcd.ts statusBar), and the footer's labels (softKeys). */
 export const CHROME = {
-  status: null as null | { bars: number; service: boolean; search: boolean; edge: boolean; gps: string; unread: boolean; wifi: number; phones: boolean; time: string; batt: number; charging: boolean; blink: boolean },
+  status: null as null | { bars: number; service: boolean; search: boolean; edge: boolean; gps: string; unread: boolean; wifi: number; phones: boolean; time: string; batt: number; charging: boolean; blink: boolean; op: string },
   soft: ['', ''] as [string, string],
 };
 
@@ -48,6 +48,8 @@ export function paintChrome(now: number, gain: number, plain: C3 | null = null, 
   I.px.fill(0);
   // a screen drawn in pixels (pixpages.ts) under the bars, over the cells
   if (page && !plain) page(P);
+  // (whatever clip a page left, the bars are drawn on the whole screen: the map's hid the footer, playtest 2026-10-07)
+  P.clip(0, 0, SCR_W, SCR_H);
   // off, or starting: no bars, the screen's own dark round the cells
   if (plain) { P.rect(0, 0, SCR_W, CONTENT_Y0, plain); P.rect(0, CONTENT_Y1, SCR_W, SCR_H - CONTENT_Y1, plain); PHONE_PX.ver++; return; }
   const S = CHROME.status;
@@ -59,6 +61,7 @@ export function paintChrome(now: number, gain: number, plain: C3 | null = null, 
     if (S.service) for (let i = 0; i < 4; i++) P.rect(6 + i * 5, 12 - i * 2.5, 3, 3 + i * 2.5, i < S.bars ? W : OFF);
     else if (!S.search || S.blink) ptext(P, 6, 5, 'x', [255, 120, 90]);
     let x = 30;
+    if (S.op) x += ptext(P, x, 5, S.op, [150, 165, 180]) + 6;
     x += ptext(P, x, 5, S.edge ? 'EDGE' : '', S.blink ? [255, 196, 90] : W) + 4;
     if (S.gps) x += ptext(P, x, 5, 'GPS', S.gps === 'fix' ? [120, 255, 150] : S.gps === 'search' ? [255, 220, 120] : [110, 110, 110]) + 4;
     if (S.unread) { P.rect(x, 6, 9, 6, S.blink ? [255, 196, 90] : W); P.line(x, 6, x + 4.5, 9.5, 1, [6, 10, 14]); P.line(x + 9, 6, x + 4.5, 9.5, 1, [6, 10, 14]); x += 13; }

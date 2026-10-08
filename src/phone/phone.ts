@@ -348,6 +348,8 @@ export class Phone {
   /** The camera's zoom (1 .. MAX_ZOOM) and whether its flash fires. */
   camZoom = 1;
   camFlash = true;
+  /** The camera's strip of photos under the shutter (2026-10-07): the first one shown (the newest is 0). */
+  camStrip = 0;
   light = 1;
   readonly photos: Photo[] = [];
   phsel = 0;
@@ -1291,7 +1293,6 @@ export class Phone {
     if ((k === 'up' || k === 'down') && rows) { B.sel = Math.max(0, Math.min(rows - 1, B.sel + (k === 'up' ? -1 : 1))); return true; }
     if (B.view === 'home' && (k === 'ok' || k === 'lsoft')) { B.view = (['stmt', 'near', 'branch'] as const)[B.sel]; B.sel = 0; this.since = now; return true; }
     // the branch's page: the green key calls it
-    if (B.view === 'branch' && k === 'send') { this.open('calls', now); this.place(W.telco.bizNum[W.bank.branch], now); return true; }
     // the branches nearby: the green key calls the one picked
     if (B.view === 'near' && k === 'send') { const P = W.player; this.open('calls', now); this.place(W.telco.bizNum[branchesNear(W.city, W.bank.bank, P.x, P.y)[B.sel]], now); return true; }
     return false;

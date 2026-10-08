@@ -3,7 +3,7 @@ import { Input } from './input';
 import { drawPhone, mapView, onDial, onRocker, pickPhone, screenUv, PHONE_BODY, PHONE_PIC, SCREEN as PHONE_SCREEN } from './phone/draw';
 import { BODY_GPU } from './phone/body3d';
 import { CONTENT_Y0, CONTENT_Y1, FOOT_L, FOOT_R, PHONE_PX, SCR_H, SCR_W, tapFlash } from './phone/pixui';
-import { HITS, PAGED } from './phone/pixpages';
+import { CAM_STRIP, HITS, PAGED } from './phone/pixpages';
 import { COL_MM, ROW_MM, SCREEN_MM } from './phone/shells';
 import { BOOT_LOG_S, Phone, phoneKey, type Key } from './phone/phone';
 import { TRACKS } from './audio/tracks';
@@ -458,6 +458,8 @@ addEventListener('wheel', (e) => {
     const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1, px = (e.clientX - r.left) * dpr - uiLayout.originX, py = (e.clientY - r.top) * dpr - uiLayout.originY;
     if (onRocker(px, py, uiLayout.cellW, uiLayout.cellH)) { phonePress(vk); return; }
     const g = screenUv(px, py, uiLayout.cellW, uiLayout.cellH);
+    // over the camera's strip of photos, it slides the strip
+    if (phone.screen === 'camera' && g && g[0] >= 0 && g[0] < 1 && g[1] * SCR_H >= CAM_STRIP.y0 && g[1] * SCR_H < CAM_STRIP.y1) { phone.camStrip = Math.max(0, phone.camStrip + d); return; }
     if (phone.screen === 'map' && g && g[0] >= 0 && g[1] >= 0 && g[0] < 1 && g[1] < 1) { if (phone.setZoom(phone.zoom + d, performance.now() / 1000)) sound?.phoneKey(false); return; }
     phonePress(phone.screen === 'menu' ? (d > 0 ? 'right' : 'left') : d > 0 ? 'down' : 'up');
   } else if (phone.tn.playing && running && !paused && !payphone.active && !bagView.open && !talkView.open) musicKey(vk);
@@ -514,7 +516,7 @@ function touchDown(cx: number, cy: number): boolean {
   } else if (sy >= CONTENT_Y0) {
     // a screen drawn in pixels (pixpages.ts) says where its items are; one of the cells' apps: OK on the row touched
     const h = HITS.find((r) => sx >= r.x && sx < r.x + r.w && sy >= r.y && sy < r.y + r.h);
-    if (h) { h.pre?.(); t = { x: h.x, y: h.y, w: h.w, h: h.h, act: () => (h.key ? phonePress(h.key, true) : tap()) }; }
+    if (h) { h.pre?.(); t = { x: h.x, y: h.y, w: h.w, h: h.h, act: () => (h.act ? (tap(), h.act()) : h.key ? phonePress(h.key, true) : tap()) }; }
     else if (!PAGED.on) t = { x: 0, y: CONTENT_Y0 + Math.floor((sy - CONTENT_Y0) / 12) * 12, w: SCR_W, h: 12, act: () => phonePress('ok', true) };
   }
   touchHeld = t;

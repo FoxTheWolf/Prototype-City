@@ -130,6 +130,52 @@ export const VIEW_LIGHT = new Float32Array([1, 1, 1]);
  * and how much it is behind them (-1 ahead .. 1 behind).
  */
 export const VIEW_GLINT = new Float32Array([0, 0, 1, 1, 1, 0]);
+/**
+ * The glare on the phone's glass (2026-10-07, the fixed reflection's place): the two brightest lights its
+ * glass mirrors toward the eye, from where they really are (the street lamps lit, the sun), each 8 floats:
+ * u, v on the glass (0 to 1, from its top-left), its size there (u, v), and its color times its strength (0: none).
+ */
+export const VIEW_GLARE = new Float32Array(16);
+/** How wide and tall the phone's glass looks from the eye (radians), and how far it is held (m): right, down, ahead. */
+const GLASS_W = 0.19, GLASS_H = 0.34, HOLD = [0.14, 0.18, 0.4];
+
+/** The glare's spots for this frame (outdoors; none indoors yet): the mirror of each light in the held glass. */
+function viewGlare(city: City, v: View, sky: SkyFrame) {
+  VIEW_GLARE.fill(0);
+  const cy = Math.cos(v.yaw), sy = Math.sin(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);
+  const f = [cy * cp, sy * cp, sp], r = [-sy, cy, 0], u = [-cy * sp, -sy * sp, cp];
+  const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const norm = (a: number[]) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  // the glass: in the hand, low and to the right, square to the eye: it mirrors back over the shoulder, as high as it is held low
+  const P = [0, 1, 2].map((k) => (k === 0 ? v.x : k === 1 ? v.y : v.eye) + f[k] * HOLD[2] + r[k] * HOLD[0] - u[k] * HOLD[1]);
+  const V = norm([P[0] - v.x, P[1] - v.y, P[2] - v.eye]), N = norm([-V[0] + u[0] * 0.05, -V[1] + u[1] * 0.05, -V[2] + u[2] * 0.05]);
+  const vn = dot(V, N), R = [V[0] - 2 * vn * N[0], V[1] - 2 * vn * N[1], V[2] - 2 * vn * N[2]];
+  const rr = norm([r[0] - R[0] * dot(r, R), r[1] - R[1] * dot(r, R), r[2] - R[2] * dot(r, R)]);
+  const ur = norm([u[0] - R[0] * dot(u, R) - rr[0] * dot(u, rr), u[1] - R[1] * dot(u, R) - rr[1] * dot(u, rr), u[2] - R[2] * dot(u, R) - rr[2] * dot(u, rr)]);
+  const best: { u: number; v: number; rad: number; c: number[]; s: number }[] = [];
+  const consider = (L: number[], rad: number, c: number[], s: number) => {
+    if (s <= 0.02 || dot(L, R) < 0.6) return;
+    // (seen as far as its halo reaches past the glass's edge: three times its size)
+    const su = 0.5 + dot(L, rr) / GLASS_W, sv = 0.5 - dot(L, ur) / GLASS_H, mu = (3 * rad) / GLASS_W, mv = (3 * rad) / GLASS_H;
+    if (su < -mu || su > 1 + mu || sv < -mv || sv > 1 + mv) return;
+    best.push({ u: su, v: sv, rad, c, s });
+  };
+  // the street lamps lit, their heads at the end of the arm (models.ts lampModel), within 40 m
+  const C = light.colors;
+  city.lamps.forEach((p, n) => {
+    const hx = p.x + Math.cos(p.a) * 1.6, hy = p.y + Math.sin(p.a) * 1.6, dx = hx - P[0], dy = hy - P[1];
+    if (Math.abs(dx) > 40 || Math.abs(dy) > 40) return;
+    const lv = light.level[n] ?? 0;
+    if (lv < 0.05) return;
+    const dz = 6.35 - P[2], d = Math.hypot(dx, dy, dz), m = Math.max(1e-3, C[n * 3], C[n * 3 + 1], C[n * 3 + 2]);
+    // (the glass a little frosted by the hand: no light is a pin-point in it)
+    consider([dx / d, dy / d, dz / d], Math.max(0.07, 0.35 / d), [C[n * 3] / m, C[n * 3 + 1] / m, C[n * 3 + 2] / m], Math.min(1, lv) * Math.min(1, 0.55 + 5 / d));
+  });
+  // the sun, when it is up and not behind cloud (sunlit or not, the sky round it still mirrors: half under cloud)
+  if (SUN[2] > 0) consider(norm([SUN[0], SUN[1], SUN[2]]), 0.07, [1, 0.96, 0.88], 2.2 * sky.day * (1 - 0.8 * sky.cloud));
+  best.sort((a, b) => b.s - a.s);
+  best.slice(0, 2).forEach((b, k) => VIEW_GLARE.set([b.u, b.v, b.rad / GLASS_W, b.rad / GLASS_H, b.c[0] * b.s, b.c[1] * b.s, b.c[2] * b.s, 0], k * 8));
+}
 
 
 /**
@@ -244,6 +290,7 @@ export function gpuPrepare(world: World, v: View) {
   gatherLights(world, v, frameSec);
   glFrame = (glFrame + 1) >>> 0 || 1;
   viewLight(null, v.x, v.y, Math.cos(v.yaw), Math.sin(v.yaw), sky);
+  if (world.player.inside < 0) viewGlare(city, v, sky); else VIEW_GLARE.fill(0);
   return { sky, light, dyn, sun: SUN, ticker: frameTicker };
 }
 

@@ -3,7 +3,7 @@ import { diagS, districtAt, type City } from '../sim/city';
 import { cellAt, DOOR, ROOM, type Plan, type RoomKind } from '../sim/interior';
 import { type C3, type Paint } from '../render/paint2d';
 import { Ground, groundAt, MAP_RES, type MapRaster } from './mapdata';
-import { ICE, ptext, ptextW, SCR_W } from './pixui';
+import { ICE, ptext, ptextW, SCR_H, SCR_W } from './pixui';
 import { PICK, PICK_DIM, PICK_INK } from './ui';
 import { appHeader, APP_COL, BG, ctext, DIM, HITS, INK, M, paintHint, Y0, Y1, type Rgb, type TypeHint } from './pixpages';
 
@@ -216,7 +216,7 @@ export function paintMap(P: Paint, d: MapPage) {
       P.poly([...pt(7, 0), ...pt(-4, 4), ...pt(-2, 0), ...pt(-4, -4)], blink ? [60, 140, 255] : [30, 100, 220]);
     }
   }
-  P.clip(0, 0, SCR_W, Y1);
+  P.clip(0, 0, SCR_W, SCR_H);
   // zoom, as buttons on the map's right
   for (const [sym, key, on, y] of [['+', '*', d.zoomIn, MAP_T + 8], ['-', '#', d.zoomOut, MAP_T + 40]] as const) {
     HITS.push({ x: SCR_W - 40, y: y - 2, w: 38, h: 30, key });

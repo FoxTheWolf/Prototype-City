@@ -8,8 +8,10 @@
  * models when they change (a key sinks) and fills the uniform each frame (phone/body3d.ts).
  */
 
-/** How many floats the body's uniform holds: 10 vec4 of view and light, then the palette (2 vec4 an entry, 256 entries). */
-export const BODY_U_FLOATS = 10 * 4 + 512 * 4;
+/** How many floats the body's uniform holds: 10 vec4 of view and light, 4 of the glare on the glass, then the palette (2 vec4 an entry, 256 entries). */
+export const BODY_U_FLOATS = 14 * 4 + 512 * 4;
+/** Where in the body's uniform the glare's two spots go (raycaster.ts VIEW_GLARE: 8 floats each). */
+export const BODY_GLARE_AT = 40;
 
 export const BODY_WGSL = /* wgsl */ `
 struct BodyU {
@@ -24,6 +26,8 @@ struct BodyU {
   ice: vec4f, brand: vec4f,
   // the glass's cells in the upper model (x0, y0, width, height): the screen's picture lies on them
   scr: vec4f,
+  // the glare on the glass (2026-10-07): two lights mirrored in it, each its place (u, v on the glass), its size (u, v) and its color times its strength
+  gp0: vec4f, gc0: vec4f, gp1: vec4f, gc1: vec4f,
   // per entry: color (0..255) and gloss; flags (1 metal, 2 glow, 4 chrome), the chrome's rows (y0, y1), the light multiplier
   pal: array<vec4f, 512>,
 };

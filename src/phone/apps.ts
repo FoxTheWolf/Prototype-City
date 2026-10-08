@@ -18,7 +18,7 @@ import { secretCodes } from './codes';
 import { freeVoucher } from './ussd';
 import { expose, OPTICAL, photoCols, type Photo } from './camera';
 import { CONVERT, SNAKE_H, SNAKE_W } from './store';
-import { APP_COL, INK as PINK_INK, paintBank, paintGpsTest, paintKeyTest, paintLcdTest, type GpsTest, type KeyTest, type LcdTest, paintCamera, paintPhotos, type CamPage, type PhotosPage, type Rgb, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
+import { APP_COL, INK as PINK_INK, paintBank, paintGpsTest, paintKeyTest, paintLcdTest, type GpsTest, type KeyTest, type LcdTest, paintCamera, paintPhotos, type CamPage, type PhotosPage, STRIP_N, type Rgb, type BankPage, type BankView, paintConvert, paintSnake, paintTorch, type Convert, type SnakePage, paintCalc, paintList, paintMenu, paintNotes, paintStore, edHint, type ListPage, type Row, type Tile, type TunesPage } from './pixpages';
 import { type Paint } from '../render/paint2d';
 import { EDGE_LIMIT_KB, money, STORE, fmtDist, PREF_ROWS, SET_PAGES, type App, type Key, type Phone } from './phone';
 import { HD } from '../render/hd';
@@ -316,22 +316,30 @@ function cameraScreen(S: Lcd, P: Phone, now: number): Pg {
     finderAt = now;
   }
   const left = Math.max(0, Math.floor(P.freeKB() / (P.device.cameraMP * 340)));
+  // the strip of the photos taken (newest first): a touch opens one in Photos
+  const n = P.photos.length; P.camStrip = Math.max(0, Math.min(P.camStrip, n - STRIP_N));
+  const strip: CamPage['strip'] = { first: P.camStrip, total: n, empty: A.noPhotos,
+    back: () => { P.camStrip = Math.max(0, P.camStrip - 1); }, fwd: () => { P.camStrip = Math.min(Math.max(0, n - STRIP_N), P.camStrip + 1); },
+    pics: P.photos.slice(P.camStrip, P.camStrip + STRIP_N).map((p, k) => ({ pic: picOf(p), ar: cellsAr(p.w, p.h), open: () => { P.phsel = P.camStrip + k; P.open('photos', now); } })) };
   const d: CamPage = { pic: finder, ar: cellsAr(w, h), flash: now - P.shotAt < 0.15, info: `${P.device.cameraMP}MP  ${left}`, mode: P.camFlash ? A.flashOn : A.flashOff, flashOn: P.camFlash,
-    zoom: P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? ' digital' : ''}` : '' };
+    zoom: P.camZoom > 1 ? `${P.camZoom.toFixed(1)}x${P.camZoom > OPTICAL ? ' digital' : ''}` : '', strip };
   softKeys(S, `${A.photos} (${P.photos.length})`, T.back);
   return (Pt) => paintCamera(Pt, d);
 }
 
 /** The pictures of the photos, made once each. */
 const photoPics = new WeakMap<Photo, Rgb>();
+function picOf(p: Photo): Rgb {
+  let pic = photoPics.get(p);
+  if (!pic) { pic = blockRgb(p.cells, p.bg, p.w, p.h); photoPics.set(p, pic); }
+  return pic;
+}
 /** The photos taken: one at a time, with when it was taken. */
 function photosScreen(S: Lcd, P: Phone): Pg {
   const p: Photo | undefined = P.photos[P.phsel];
   const d: PhotosPage = { title: A.photos, count: p ? `${P.phsel + 1}/${P.photos.length}` : '', col: APP_COL[2], pic: null, ar: 1, date: '', kb: '', del: A.del, empty: A.noPhotos };
   if (p) {
-    let pic = photoPics.get(p);
-    if (!pic) { pic = blockRgb(p.cells, p.bg, p.w, p.h); photoPics.set(p, pic); }
-    const c = calendar(p.at);
+    const pic = picOf(p), c = calendar(p.at);
     Object.assign(d, { pic, ar: cellsAr(p.w, p.h), date: `${String(c.day).padStart(2, '0')} ${MONTHS[c.month - 1]}  ${hhmm(c.hour)}`, kb: `${p.kb} KB` });
   }
   softKeys(S, '', T.back);
@@ -448,23 +456,29 @@ function bankApp(S: Lcd, P: Phone, world: World, t: number): Pg {
     }) });
   }
   if (B.view === 'near') {
-    // the bank's branches, nearest the player first: where to take cash out
-    const me = world.player, hour = calendar(world.time).hour;
+    // the bank's branches, nearest the player first: where to take cash out; the one the account is at, and the head office, marked
+    const me = world.player, hour = calendar(world.time).hour, chain = city.banks[Acc.bank];
     softKeys(S, '', T.back);
     return page({ kind: 'near', title: BK.near, hint: BK.nearHint, call: BK.call, rows: branchesNear(city, Acc.bank, me.x, me.y).map((k, n) => {
       const Bd = city.buildings[city.businesses[k].building], [a, b2] = corner(k), open = isOpen('bank', hour);
-      return { name: businessName(city, k), where: `${a} ${b2}`, dist: fmtDist(Math.hypot((Bd.x0 + Bd.x1) / 2 - me.x, (Bd.y0 + Bd.y1) / 2 - me.y), P.prefs.dist), open, openLabel: open ? BK.open : BK.closed, sel: n === B.sel, pre: pick(n) };
+      const tag = k === Acc.branch ? BK.yours : k === chain.hq ? BK.hqTag : '';
+      return { name: businessName(city, k), where: `${a} ${b2}`, tag, dist: fmtDist(Math.hypot((Bd.x0 + Bd.x1) / 2 - me.x, (Bd.y0 + Bd.y1) / 2 - me.y), P.prefs.dist), open, openLabel: open ? BK.open : BK.closed, sel: n === B.sel, pre: pick(n) };
     }) });
   }
-  // the branch where the account is, and the head office
-  const k = Acc.branch, chain = city.banks[Acc.bank], hq = chain.hq;
-  const lines: Extract<BankView, { kind: 'branch' }>['lines'] = corner(k).map((text) => ({ text, kind: 'ink' as const }));
-  lines.push({ text: '', kind: 'ink' }, { text: BK.hours, kind: 'dim' }, { text: formatNumber(world.telco, world.telco.bizNum[k]), kind: 'num' });
-  if (hq !== k) { lines.push({ text: BK.hq, kind: 'head' }); for (const l of corner(hq)) lines.push({ text: l, kind: 'ink' }); }
-  else lines.push({ text: BK.isHq, kind: 'head' });
-  lines.push({ text: '', kind: 'ink' }, { text: BK.branches.replace('{n}', String(chain.branches.length)), kind: 'dim' });
+  // the account itself (the user, 2026-10-07: its branch was already in the list above): the numbers, the card, where and when it was opened
+  const h = (a: number) => Math.floor(hash3(world.seed ^ 0xba4c, a, 7) * 10), c0 = calendar(Acc.ledger[0]?.at ?? world.time);
+  const routing = `0${Acc.bank + 1}${Array.from({ length: 7 }, (_, i) => h(i)).join('')}`, card = Array.from({ length: 4 }, (_, i) => h(10 + i)).join('');
+  const lines: Extract<BankView, { kind: 'branch' }>['lines'] = [
+    { text: BK.acctType, kind: 'head' },
+    { text: `${BK.acctNo}  ${Acc.number}`, kind: 'num' }, { text: `${BK.routing}  ${routing}`, kind: 'num' },
+    { text: `${BK.card}  **** ${card}`, kind: 'ink' }, { text: '', kind: 'ink' },
+    { text: BK.opened.replace('{d}', `${String(c0.month).padStart(2, '0')}/${String(c0.day).padStart(2, '0')}/${c0.year}`), kind: 'dim' },
+    { text: BK.openedAt.replace('{b}', businessName(city, Acc.branch)), kind: 'dim' },
+    ...corner(Acc.branch).map((text) => ({ text, kind: 'dim' as const })),
+    { text: '', kind: 'ink' }, { text: BK.branches.replace('{n}', String(city.banks[Acc.bank].branches.length)), kind: 'dim' },
+  ];
   softKeys(S, '', T.back);
-  return page({ kind: 'branch', title: BK.branch, lines, call: BK.call });
+  return page({ kind: 'branch', title: BK.acct, lines, call: '' });
 }
 
 const WF = A.wifi;

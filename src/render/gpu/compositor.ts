@@ -37,6 +37,8 @@ const HALO_TINT = 3;
  * user, 2026-10-07: it hid the details). The same for every handheld screen: the phone, the notebook, the Jackdaw.
  */
 const SCR_K = 0.35, SCR_CAP = 0.07, SCR_RX = 4, SCR_RY = 3;
+/** The glare on the phone's glass: how bright its core and its halo (times the light's color and strength). */
+const GLARE_CORE = 0.55, GLARE_HALO = 0.08;
 
 const CU = /* wgsl */ `
 struct CU {
@@ -219,8 +221,16 @@ fn phBloom(uv: vec2f) -> vec3f {
       if (all(pc >= vec2f(0.0)) && all(pc < vec2f(1.0))) { let t = textureSampleLevel(phPic, tmSamp, pc, 0.0); col = mix(col, t.rgb, t.a); }
       let t = textureSampleLevel(phPx, tmSamp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0);
       col = mix(col, t.rgb, t.a);
-      let b = 1.0 - uv.x; let edge = (1.0 - b) * (1.0 - b) * 0.286 + 2.0 * b * (1.0 - b) * 0.207 + b * b * 0.35;
-      if (uv.y < edge) { col += vec3f(0.05); }
+      // the glare (2026-10-07, in place of a fixed reflection in the top corner): the lights the glass mirrors toward the
+      // eye, where they really are (raycaster.ts viewGlare), a bright core in a soft halo, plainest on a dark page
+      let gl = dot(col, vec3f(0.3, 0.5, 0.2)); let gm = max(0.3, 1.0 - gl * 1.6);
+      for (var k = 0; k < 2; k++) {
+        let gp = select(bu.gp1, bu.gp0, k == 0); let gc = select(bu.gc1, bu.gc0, k == 0);
+        if (gc.r + gc.g + gc.b > 0.0) {
+          let e = (uv - gp.xy) / max(gp.zw, vec2f(1e-3)); let e2 = dot(e, e);
+          col += gc.rgb * (exp(-e2) * ${GLARE_CORE} + exp(-e2 / 9.0) * ${GLARE_HALO}) * gm;
+        }
+      }
     }
     if (hp.a > 0.75) { col = hp.rgb; }
   }

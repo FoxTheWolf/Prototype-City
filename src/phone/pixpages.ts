@@ -12,7 +12,8 @@ import { faceOf, PICK, PICK_INK } from './ui';
  * Each records where a touch lands (HITS): a rectangle, and the key it presses (after `pre`, which picks
  * the item touched; no key: the touch only picks it).
  */
-export interface Hit { x: number; y: number; w: number; h: number; key?: Key; pre?: () => void }
+/** A touch's place: `pre` runs as it is pressed (picking), `key` or `act` as it lets go on it. */
+export interface Hit { x: number; y: number; w: number; h: number; key?: Key; pre?: () => void; act?: () => void }
 export const HITS: Hit[] = [];
 /** Whether this frame's screen is drawn in pixels: a touch off its items does nothing (on the cells' screens it is OK on the row touched). */
 export const PAGED = { on: false };
@@ -981,7 +982,7 @@ const BANK = { page: [242, 238, 226] as C3, card: [251, 249, 242] as C3, green: 
 export type BankView = { kind: 'wait'; lines: string[]; bar: number | null }
   | { kind: 'home'; acct: string; label: string; balance: string; asOf: string; menu: { label: string; sel: boolean; pre: () => void }[] }
   | { kind: 'stmt'; title: string; rows: { date: string; what: string; amt: string; plus: boolean; sel: boolean; pre: () => void }[] }
-  | { kind: 'near'; title: string; rows: { name: string; where: string; dist: string; open: boolean; openLabel: string; sel: boolean; pre: () => void }[]; hint: string; call: string }
+  | { kind: 'near'; title: string; rows: { name: string; where: string; tag: string; dist: string; open: boolean; openLabel: string; sel: boolean; pre: () => void }[]; hint: string; call: string }
   | { kind: 'branch'; title: string; lines: { text: string; kind: 'head' | 'ink' | 'dim' | 'num' }[]; call: string };
 export interface BankPage { name: string; view: BankView; t: number }
 /** The bank's little emblem: a pediment on three columns, in gold. */
@@ -1055,7 +1056,10 @@ export function paintBank(P: Paint, d: BankPage) {
       const dw = ptextW(r.dist, 1, true);
       ptext(P, M + 8, y + 7, r.name.slice(0, Math.floor((SCR_W - 2 * M - 24 - dw) / 7)), r.sel ? BANK.gold : BANK.ink, 1, true);
       ptext(P, SCR_W - M - 8 - dw, y + 7, r.dist, r.sel ? BANK.gold : BANK.green, 1, true);
-      ptext(P, M + 8, y + 22, r.where.slice(0, 22), r.sel ? BANK.pale : BANK.grey);
+      // the account's own branch, or the head office: a gold tag before the corner
+      const tw = r.tag ? ptextW(r.tag, 1, true) + 6 : 0;
+      if (r.tag) ptext(P, M + 8, y + 22, r.tag, BANK.gold, 1, true);
+      ptext(P, M + 8 + tw, y + 22, r.where.slice(0, 22 - Math.ceil(tw / 6)), r.sel ? BANK.pale : BANK.grey);
       const ow = ptextW(r.openLabel);
       P.disc(SCR_W - M - 14 - ow, y + 25.5, 2.5, r.open ? [80, 200, 110] : BANK.red);
       ptext(P, SCR_W - M - 8 - ow, y + 22, r.openLabel, r.sel ? BANK.pale : BANK.grey);
@@ -1072,7 +1076,7 @@ export function paintBank(P: Paint, d: BankPage) {
     ptext(P, M, y, tx(l.text, k * 0.04).slice(0, 36), l.kind === 'dim' ? BANK.grey : BANK.ink, 1, l.kind === 'num');
     y += 13;
   });
-  callButton(P, V.call);
+  if (V.call) callButton(P, V.call);
 }
 /** The bank's call button (the green key's): a handset and the words, at the page's foot. */
 function callButton(P: Paint, label: string) {
@@ -1146,7 +1150,13 @@ export function paintConvert(P: Paint, d: Convert) {
 }
 
 /** The camera: the viewfinder as wide as the screen (what the photo will be), corner marks, the megapixels and photos left, the zoom and flash; under it the flash, shutter and zoom buttons. */
-export interface CamPage { pic: Rgb | null; ar: number; flash: boolean; info: string; mode: string; flashOn: boolean; zoom: string }
+export interface CamPage { pic: Rgb | null; ar: number; flash: boolean; info: string; mode: string; flashOn: boolean; zoom: string;
+  /** The photos taken, in a strip under the buttons (the newest first, from `first`): a touch opens one; the arrows (and the wheel) slide it. */
+  strip: { pics: { pic: Rgb; ar: number; open: () => void }[]; first: number; total: number; back: () => void; fwd: () => void; empty: string } }
+/** Where the camera's strip of photos is (screen pixels, top to bottom), for the wheel over it; 0, 0 when not drawn. */
+export const CAM_STRIP = { y0: 0, y1: 0 };
+/** How many photos the camera's strip shows at once. */
+export const STRIP_N = 3;
 export function paintCamera(P: Paint, d: CamPage) {
   P.rect(0, 0, SCR_W, Y1, [0, 0, 0]);
   const h = Math.round(SCR_W / d.ar), y = Y0 + 26;
@@ -1174,6 +1184,22 @@ export function paintCamera(P: Paint, d: CamPage) {
     ptext(P, x + 12 - ptextW(sym, 2, true) / 2, by + 18, sym, INK, 2, true);
   }
   ctext(P, by + 62, d.zoom, DIM);
+  // the strip: the last photos, three at a time in the black under the buttons, arrows at its ends while there are more
+  const S = d.strip, sy = by + 78, th = Math.max(24, Math.min(48, Y1 - 6 - sy)), tw = Math.round(th * 1.2), gap = 4, sx = (SCR_W - (STRIP_N * tw + (STRIP_N - 1) * gap)) >> 1;
+  CAM_STRIP.y0 = sy - 4; CAM_STRIP.y1 = sy + th + 4;
+  if (!S.total) ctext(P, sy + th / 2 - 4, S.empty, DIM);
+  S.pics.forEach((t, k) => {
+    const x = sx + k * (tw + gap);
+    P.rect(x - 1, sy - 1, tw + 2, th + 2, [44, 62, 80]);
+    paintRgb(P, t.pic, x, sy, tw, th);
+    HITS.push({ x, y: sy, w: tw, h: th, act: t.open });
+  });
+  for (const [on, x, dir, go] of [[S.first > 0, 4, -1, S.back], [S.first + STRIP_N < S.total, SCR_W - 4 - 16, 1, S.fwd]] as const) {
+    if (!on) continue;
+    HITS.push({ x: x - 4, y: sy, w: 24, h: th, act: go });
+    const mx = x + 8, my = sy + th / 2;
+    P.poly(dir < 0 ? [mx - 5, my, mx + 3, my - 7, mx + 3, my + 7] : [mx + 5, my, mx - 3, my - 7, mx - 3, my + 7], ICE);
+  }
   if (d.flash) P.rect(0, 0, SCR_W, Y1, [255, 255, 255]);
 }
 

@@ -254,7 +254,7 @@ export function drawBody3d(kx: number, ky: number, S: Shell, look: number, body:
   // the palette
   const plate: C3 = S.face ?? S.body ?? body, gloss = { matte: 0.2, gloss: 0.6, metal: 0.42, rubber: 0.05 }[S.material];
   const U = B.uni, pal = (i: number, m: VoxMat, mul = 1) => {
-    const o = 40 + i * 8;
+    const o = 56 + i * 8;
     U[o] = m.col[0]; U[o + 1] = m.col[1]; U[o + 2] = m.col[2]; U[o + 3] = m.gloss;
     U[o + 4] = (m.metal ? 1 : 0) | (m.glow ? 2 : 0) | (m.chrome ? 4 : 0); U[o + 5] = m.chrome?.[0] ?? 0; U[o + 6] = m.chrome?.[1] ?? 0; U[o + 7] = mul;
   };

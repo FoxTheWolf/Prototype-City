@@ -112,9 +112,10 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
     .map(([date, what, amt, plus], n) => ({ date: date as string, what: what as string, amt: amt as string, plus: plus as boolean, sel: n === 1, pre: f })) } }));
   shot('bank-near', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'near', title: 'BRANCHES NEARBY', hint: 'Take cash out at the counter. Green key calls.', call: 'Call the branch',
     rows: [['Halvard Savings', '5th Avenue & Mercer St', '240m', true], ['Halvard Savings Downtown', 'Kell Street & 2nd Avenue', '1.2km', true], ['Halvard Savings', 'Bay Road & 9th St', '2.1km', false]]
-      .map(([name, where, dist, open], n) => ({ name: name as string, where: where as string, dist: dist as string, open: open as boolean, openLabel: open ? 'Open now' : 'Closed', sel: n === 0, pre: f })) } }));
-  shot('bank-branch', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'branch', title: 'YOUR BRANCH', call: 'Call the branch', lines: [{ text: '5th Avenue &', kind: 'ink' }, { text: 'Mercer Street', kind: 'ink' }, { text: 'Riverside', kind: 'ink' },
-    { text: '', kind: 'ink' }, { text: 'Mon-Fri 9am-5pm', kind: 'dim' }, { text: '(555) 014-2233', kind: 'num' }, { text: 'Head office', kind: 'head' }, { text: 'Kell Street &', kind: 'ink' }, { text: '2nd Avenue', kind: 'ink' }, { text: 'Downtown', kind: 'ink' },
+      .map(([name, where, dist, open], n) => ({ name: name as string, where: where as string, tag: ['YOURS', 'HQ', ''][n], dist: dist as string, open: open as boolean, openLabel: open ? 'Open now' : 'Closed', sel: n === 0, pre: f })) } }));
+  shot('bank-acct', (Q) => paintBank(Q, { name: nm, t: 5, view: { kind: 'branch', title: 'ACCOUNT DETAILS', call: '', lines: [{ text: 'Checking account', kind: 'head' },
+    { text: 'Account no.  4813920576', kind: 'num' }, { text: 'Routing no.  014829301', kind: 'num' }, { text: 'Debit card  **** 7731', kind: 'ink' }, { text: '', kind: 'ink' },
+    { text: 'Opened 08/17/2008', kind: 'dim' }, { text: 'at Halvard Savings', kind: 'dim' }, { text: '5th Avenue &', kind: 'dim' }, { text: 'Mercer Street', kind: 'dim' }, { text: 'Riverside', kind: 'dim' },
     { text: '', kind: 'ink' }, { text: '6 branches in the city', kind: 'dim' }] } }));
 }
 
@@ -146,7 +147,8 @@ writeFileSync('tests/.out/tunes.png', png(out, 240, 432));
     hd[i] = c[0]; hd[i + 1] = c[1]; hd[i + 2] = c[2];
   }
   const pic = { hd, w, h };
-  shot('camera', (Q) => paintCamera(Q, { pic, ar: 1.2, flash: false, info: '2MP  34', mode: 'FLASH', flashOn: true, zoom: '1.6x digital' }));
+  shot('camera', (Q) => paintCamera(Q, { pic, ar: 1.2, flash: false, info: '2MP  34', mode: 'FLASH', flashOn: true, zoom: '1.6x digital',
+    strip: { pics: [pic, pic, pic].map((q) => ({ pic: q, ar: 1.2, open: () => {} })), first: 1, total: 5, back: () => {}, fwd: () => {}, empty: 'No photos yet' } }));
   shot('photos', (Q) => paintPhotos(Q, { title: 'Photos', count: '3/7', col: [154, 159, 168], pic, ar: 1.2, date: '14 Oct  21:04', kb: '612 KB', del: '* delete', empty: 'No photos yet' }));
 }
 

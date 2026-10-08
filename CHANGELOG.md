@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.46 — Glare de verdade, galeria na câmera, banco e Maps (2026-10-07)
+- **O reflexo do celular agora vem das luzes de verdade:** sumiu o brilho fixo no canto da tela (e a faixa falsa). No lugar, as lâmpadas de rua acesas e o sol refletem no vidro conforme o ângulo: uma mancha de luz na cor da lâmpada (âmbar no sódio), que desliza pela tela quando você vira e só aparece quando a luz está atrás e acima de você, como num espelho. Mais forte nas partes escuras da tela.
+- **Câmera com galeria:** embaixo do botão, uma tira com as últimas fotos (a mais nova primeiro), três por vez; as setas nas pontas e a roda do mouse sobre a tira a fazem correr, e tocar numa foto a abre inteira.
+- **Maps:** a barra de baixo (Search/Back) voltou a aparecer e a funcionar; o mapa a cortava.
+- **Banco:** "Branches nearby" marca a sua agência (YOURS) e a sede (HQ); no lugar de "Branch & contact" entra **"Account details"**: o número da conta, o routing number, o cartão de débito, quando e em que agência a conta foi aberta.
+- **A operadora na barra de cima** do celular, ao lado do sinal (na tela inicial ela já aparece embaixo da hora, então lá não repete).
+
 ## 0.15.45 — Dia mais branco, toques e links (2026-10-07)
 - **O dia ainda mais claro** (exposição 1,2) e **o sol do meio-dia mais branco** (5800 K em vez de 4700 K): a tarde e o céu perto do sol deixam de ficar amarelados; o amanhecer e o pôr do sol continuam alaranjados.
 - **Tocar a tela do celular:** o botão acende enquanto o mouse está apertado e some ao soltar; o app abre sem o destaque do toque por cima.
