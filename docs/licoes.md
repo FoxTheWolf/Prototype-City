@@ -2,6 +2,12 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 15.21 (o relógio em cubinhos) — 2026-10-07
+- **A camada HD tem só 3 pixels por célula** (`HD` em `render/hd.ts`): para um visor pequeno com detalhe (segmentos chanfrados, ícones), uma textura própria a 8 px/mm amostrada na resolução do monitor fica muito melhor; não vale passar pela HD e refazer depois.
+- **Um passe por aparelho, com o próprio uniform e as próprias células** (relógio: bindings 22–25), em vez de enfiar mais modelos no passe do notebook: as câmeras são de tipos diferentes (ortográfica e perspectiva) e o `t` dos dois não se compara.
+- **O `underGlass` do compositor esconde as células sob o vidro do celular:** qualquer coisa que passe o retângulo dela pelo mesmo uniform (o LCD aceso do relógio) some junto; olhar esse caso quando um aparelho novo usar o brilho de tela.
+- **Para testar o relógio sem o jogo:** `tests/watch3d.ts` chama `drawWatch` com uma `CharGrid` qualquer e grava o visor de cada mostrador em PNG.
+
 ### Lições da 15.20b (o notebook em cubinhos na GPU) — 2026-10-07
 - **Câmera da GPU = a do `project()`:** a projeção dos objetos (`cols/2·(1 + tX/tY)`, `hor − (z − eye)·scale/tY`) é linear no pixel do monitor, então o raio de cada pixel é `F + R·x + D·y` com três vetores calculados na CPU (o raio nos pixels (0,0), (1,0), (0,1)). Assim o corpo em cubinhos cai exatamente onde o `glassBox` e a tela já caíam, sem homografia nova.
 - **Um modelo que gira (a tampa) = outra câmera,** não outra grade: a CPU leva o olho e o raio ao quadro da tampa (os eixos `u`, `n` da dobradiça), e o shader fica com dois `lcast` e o `t` mais perto. A luz também vai ao quadro de cada modelo na CPU (só uma direção por modelo).

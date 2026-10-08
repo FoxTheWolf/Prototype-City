@@ -403,6 +403,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
 - Lições da 15.20a (barra do Osprey, áreas, várias artes numa chave), para não repetir
+- Lições da 15.21 (relógio: textura no lugar da HD, um passe por aparelho, underGlass), para não repetir
 - Lições da 15.20b (notebook em cubinhos: câmera linear no pixel, tampa como outra câmera, clique pelo raio), para não repetir
 - Lições do desempenho do celular (DRAW, pintor 2D, PNG idênticos), para não repetir
 - Lições do fim da 3b (mapa em cache por grade, camadas da web, testes por `last`), para não repetir
