@@ -1850,7 +1850,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */
 const DAY_ALBEDO = 2.0; const DAY_SKY = 1.1; const DAY_SUN = 4.2; const DAY_GROUND = 1.8;
 /** The brightest a surface reflects (its hue kept), how much more saturated the day shows the colors, and the exposure. */
-const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.3; const DAY_EXPO = 0.75;
+// (playtest 2026-10-07: the day read dark and too contrasted; brighter and less saturated, the night untouched; was 1.3 and 0.75)
+const DAY_ALB_MAX = 0.8; const DAY_SAT = 1.12; const DAY_EXPO = 0.95;
 /** Night: where the highlights start to roll off, and how far a color past 1 goes toward white. */
 const NIGHT_KNEE = 0.3; const NIGHT_WHITE = 0.15;
 /** The night's curve, on display-linear light, on the luminance: untouched below the knee (the night's look),

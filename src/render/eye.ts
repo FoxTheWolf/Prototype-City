@@ -7,7 +7,7 @@
 export const EYE = { k: 0.6 };
 
 /** gpu/shader.ts's EV_NIGHT (1 / (DAY_ALBEDO * AMB_N)), AMB_N, DAY_EXPO and NIGHT_ADAPT. */
-const EV_NIGHT = 125, AMB_N = 0.004, DAY_EXPO = 0.75, NIGHT_ADAPT = 0.3;
+const EV_NIGHT = 125, AMB_N = 0.004, DAY_EXPO = 0.95, NIGHT_ADAPT = 0.3;
 
 /** After the eye moves: day and cityLit as the world's uniforms have them, adapt the eye's adaptation. */
 export function setEye(day: number, cityLit: number, adapt: number) {

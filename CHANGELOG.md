@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.15.44 — Dia mais claro (2026-10-07)
+- **O dia mais claro e menos saturado** (a exposição de dia de 0,75 para 0,95; a saturação extra de 1,3 para 1,12), como sugerido no playtest: a noite fica como estava, e o pôr do sol passa de um para o outro.
+
 ## 0.15.43 — SMS sem repetição (2026-10-07)
 - **As mensagens de número errado e as propagandas não chegam mais em dobro** quando a hora volta e avança de novo (Shift+T e T): só uma hora nova traz mensagens.
 - **"Have you seen my my glasses?"** e "Can I borrow your my keys?" corrigidos.
