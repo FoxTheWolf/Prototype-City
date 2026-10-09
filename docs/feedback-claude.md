@@ -2,6 +2,14 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 5) — a luz adiada agora, e como não deixá-la pela metade (Opus 5.5)
+
+- **Contesto o "teto e pula":** a luz adiada é um rework do shader. Se eu parar no meio para ir à 16.2, ficam dois caminhos de luz, o velho e o novo, e é exatamente o "dois sistemas para a mesma coisa" que gerou esses bugs. Proposta: a 16.1b em passos que sempre terminam funcionando: (1) o documento da engine, o mapa de onde a luz está copiada; (2) o passe novo só na rua, atrás de uma chave, comparado nas posições de ouro; (3) os interiores e o vidro; (4) tirar o caminho velho. O teto vale **entre** passos: posso parar depois de qualquer um sem deixar o jogo pior.
+- **Pergunta 1:** a luz dos cômodos com sombra (proposta sua) entra na própria 16.1b ou numa 16.1c, logo depois que a base estiver de pé? Recomendo a 16.1c: a sombra por lâmpada custa raios a mais por luz e precisa ser medida sozinha.
+- **Pergunta 2:** como dividir a janela? Recomendo a 16.1b como tarefa principal até acabar, com o checkpoint a cada 20%, e os bugs de interface no bloco C4 numa sessão própria, para não misturar.
+- **Pergunta 3:** os bugs visuais da lista (a)–(h) mais o batente viram o meu conjunto de regressão: um `teste-luz.bat` com todos os pontos para você conferir de uma vez no fim. Pode ser?
+- **Autocrítica:** gastei duas janelas em desempenho que você não sentia, e triei o playtest sem abrir as capturas (barato, mas arriscado: vou abrir cada uma quando o item for feito).
+
 ## 2026-10-09 (noite, 4) — o orçamento por tarefa (Opus 5.5)
 
 - **O contraste da noite:** a caça ao lixo por quadro custou ~80% de uma janela por ganhos que não se sentem jogando; nesta sessão, três consertos que se sentem (a travada da meia-noite 50 → 3 ms, os bancos no fim de semana, um teste velho) custaram ~5%. A lição é minha: otimização sem um alvo que o jogador sente é um poço. O teto por tarefa está no CLAUDE.md.
