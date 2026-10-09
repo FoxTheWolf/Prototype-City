@@ -144,7 +144,8 @@ const cause = (r: Rec) => {
   const [k, v] = ph.reduce((a, b) => (b[1] > a[1] ? b : a));
   // the frame's own work against how late it came: short work, a long wait, was something outside it (or the GPU behind)
   const own = r.sim + r.ui + r.draw, usual = r.usual ?? 6;
-  if (own < r.gap - usual) return r.gpu > r.gap * 0.6 ? 'GPU (a fila atrasada)' : 'fora do quadro (coletor, compilação, o navegador)';
+  // (the GPU's number is its queue, waiting for the screen included: it cannot tell a slow GPU from a full queue, 16.1)
+  if (own < r.gap - usual) return 'fora do quadro (coletor, o navegador ou a GPU)';
   return k === 'GPU' ? 'várias fases somadas' : v >= own * 0.5 ? k : 'várias fases somadas';
 };
 if (!slow.length) say('Nenhum quadro lento registrado (ou o registro é de antes da 16.1).');

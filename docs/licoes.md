@@ -4,7 +4,8 @@
 
 ### Lições da 16.1 (o gravador de travadas) — 2026-10-09
 - **Quadro lento é o que o jogador sente:** o intervalo entre quadros comparado com a mediana recente (1,6×), não a soma de CPU contra um número fixo. A 180 Hz o normal é 5,6 ms; o primeiro critério (CPU > 8 ms) marcava quase todo quadro sem que nenhum atrasasse.
-- **`comp.ms` é a fila da GPU, assíncrona** (de um ou dois quadros antes, contando a espera): só culpa a GPU quando o trabalho do próprio quadro foi curto e ele atrasou assim mesmo (o relatório faz essa conta).
+- **`comp.ms` não mede a GPU:** é a fila até o `onSubmittedWorkDone`, contando a espera pela tela (~13 ms a 180 Hz mesmo com a GPU folgada). O tempo real do passe do mundo é o `gpuMs` (timestamp, ~3 ms; o F3 mostra). Eu concluí "a GPU é o gargalo" pelo número errado e tive de voltar atrás: conferir com o timestamp e o fps antes de culpar a GPU.
+- **Cronometrar por dentro:** um `_m('passo')` temporário em `globalThis.__gp` e um `await` de 30 s pelo `javascript_tool` dão média e máximo por passo; a edição recarrega a página (voltar ao jogo pelo CONTINUE, ~292,500). Tirar antes do commit (guardar uma cópia do arquivo).
 - **Testar o gravador no painel:** `?seed=42&mute&playtest&new`, clicar NEW GAME (~345,532 na janela de 800 px), esperar; o Vite grava em `playtest/` a cada 5 s. Os números do painel em modo dev são indicativos; a medida que vale é a do usuário no Electron.
 
 ### Lições do C3c — 2026-10-09
