@@ -61,8 +61,6 @@ const SKY_BOUNCE = 0.35;
 const BOUNCE_SKY = 2.0; const BOUNCE_SUN = 2.5;
 /** The lamps' highlight on what is glossy. */
 const LAMP_SPEC = 0.03;
-/** How much of the day's exposure a room's own light follows (0: it reads as drawn by day too; 1: only its lamps, dark by day). */
-const ROOM_DAY = 0.3;
 /** The night's exposure with the city lit: the night's palette shows as drawn under AMB_N. */
 const EV_NIGHT = 1.0 / (DAY_ALBEDO * AMB_N);
 fn lin(c: vec3f) -> vec3f { return pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2)); }
@@ -168,13 +166,12 @@ fn light(cl: Cell) -> Cell {
   let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
   // (16.1b) the deferred light: the street lamps', headlights' and signs' light on the surface, here once for all of them
   // (the cell's color is its albedo; gIl keeps only what a facade paints on itself: its neon, floodlights, a lit window's spill)
-  let def = defOn() && tagged && o.kind != KIND_ROOM && (o.kind != KIND_OTHER || max(emit.x, max(emit.y, emit.z)) < 1.0);
+  let def = tagged && o.kind != KIND_ROOM && (o.kind != KIND_OTHER || max(emit.x, max(emit.y, emit.z)) < 1.0);
   if (def && o.depth < LIT_FAR) { lamp += lightAt(gPos.x, gPos.y, gPos.z, gNrm) * LAMP_RECV; }
-  gDbg = vec3f(luma(select(vec3f(0.0), gIl, tagged)) / 255.0 * 4.0, luma(lamp) / 255.0 * 4.0, select(0.0, 1.0, def));
+  gDbg = vec3f(luma(select(vec3f(0.0), gIl, tagged)) / 255.0 * 4.0, luma(lamp) / 255.0 * 4.0, gSky);
   // the surface's hue (its palette color, saturated, max channel 1), for the paint's reflection
   if (mb > 12.0) { let s0 = max(vec3f(0.0), mix(vec3f(luma(base)), base, LIT_SAT)); gTint = s0 / max(1.0, max(s0.x, max(s0.y, s0.z))); }
   let day = u.day; let night = 1.0 - day; let g = dayGrade();
-  let haze = vec3f(150.0, 160.0, 176.0);
   let objSun = o.sun >= 2.0;
   let sunlit = o.kind == KIND_WALL || objSun;
   // the blackout's darkening of what is not lit this way (what is lit, below, darkens by its light)
@@ -217,7 +214,7 @@ fn light(cl: Cell) -> Cell {
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
     // (a sign keeps most of its brightness when the eye closes down in a bright street: it still reads as lit)
     // (16.1b) a lit window is a room's light: by day as the room's lamps are (artK), not as a sign
-    let roomGlow = defOn() && (gMat == MAT_GLASS || gMat == MAT_WINDOW) && gEmK <= 1.0;
+    let roomGlow = (gMat == MAT_GLASS || gMat == MAT_WINDOW) && gEmK <= 1.0;
     let Le = lin(emit) * (select(pow(EV_NIGHT / evDayNight(), EMIT_KEEP), artK(), roomGlow) / EV_NIGHT) * select(1.0, gEmK * pow(max(1.0, 1.0 / u.adapt), SIGN_EYE), tagged && gEmK > 1.0);
     var Lr = A * (E + El) + Le;
     // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color, and the sun's
@@ -233,49 +230,34 @@ fn light(cl: Cell) -> Cell {
     }
     o.c = srgb(toneMap(Lr * ev, g));
     gGlow = max(gGlow, clamp(dot(srgb(Le * ev), vec3f(0.3, 0.5, 0.2)) / 255.0 + spG, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged));
-    // the haze: by day with distance, at its most far away
-    let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
-    // (the bare ground past the city's edge goes all the way to the horizon's haze: it lay cream under the sky)
-    let fd = select((1.0 - exp(-o.depth / 1800.0)) * 0.6, 1.0 - exp(-o.depth / 500.0), o.kind == KIND_BLOCK);
-    if (!defOn()) { o.c = mix(o.c, haze * rS, (1.0 - g) * f + g * fd); }
-  } else if (defOn() && o.kind == KIND_ROOM) {
-    // ---- (16.1b) a room: its color is its paint lit by roomLit in the street's units (roomMul): exposed and toned as the street
-    // (what glows in it, a screen or a lamp, is its own light, brighter by gEmK as the signs are)
+  } else if (o.kind == KIND_ROOM) {
+    // ---- a room: its paint lit here, once (roomE, from roomLit's note), in the street's units; or, without a note (the
+    // roof's open air), lit by roomLit itself (roomMul). Exposed and toned as the street; what glows in it (a screen, a
+    // lamp) is its own light, brighter by gEmK as the signs are, and by day as the artificial light is (artK)
     var Lr = (lin(max(vec3f(0.0), o.c - emit)) + lin(emit) * (select(1.0, gEmK, tagged) * artK())) / EV_NIGHT;
-    // (its paint lit here, once: roomE)
     if (gRUse) { Lr = lin(max(vec3f(0.0), o.c - emit)) * DAY_ALBEDO * roomE() + lin(emit) * (select(1.0, gEmK, tagged) * artK() / EV_NIGHT); }
     o.c = srgb(toneMap(Lr * ev, g));
     gGlow = clamp(dot(srgb(lin(emit) / EV_NIGHT * ev), vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * select(1.0, gGlowK, tagged);
   } else {
-    // ---- kept as drawn: the moon on it, brighter by day (rooms keep their own lamps' light), the blackout,
-    // and the eye's adaptation
+    // ---- kept as drawn (what glows, painted boards, a person or a pole not lit as a solid): the lamps' light, the moon on
+    // it, brighter by day, the blackout, and the eye's adaptation
     var c = o.c;
-    if (def) { c += lamp - select(vec3f(0.0), gIl, tagged); } // (16.1b) the lamps' light, here and no longer in the cell
+    if (def) { c += lamp - select(vec3f(0.0), gIl, tagged); }
     if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; c += vec3f(m * 0.7, m * 0.8, m * 1.15); }
-    let amb = 1.0 + select(0.7, 0.1, o.kind == KIND_ROOM) * day + u.flash * 0.6;
+    let amb = 1.0 + 0.7 * day + u.flash * 0.6;
     c *= amb;
     let lit = min(c, emit + lamp);
     let up = pow(evRef() / evDayNight(), 1.0 / 2.2); // how much the eye opened in the blackout
     c = (c - lit) * dark + lit * up * select(1.0, gEmK, tagged);
     gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged) * up;
-    let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
-    if (!defOn()) { c = c * (1.0 - f) + haze * f; }
-    // a room has its own lamps, much dimmer than the day outside: by day it reads darker at the day's exposure
-    // (a share of the daylight comes in by the windows, until the light bounces: L.5), and the eye opens up inside
-    let roomK = select(1.0, pow(evDayNight() / EV_NIGHT, ROOM_DAY), o.kind == KIND_ROOM);
-    let k = u.adapt * roomK;
-    if (abs(k - 1.0) > 0.001) { c = srgb(lin(c) * k); }
+    if (abs(u.adapt - 1.0) > 0.001) { c = srgb(lin(c) * u.adapt); }
     o.c = c;
   }
   o.bg *= dark;
   gGlow = min(1.0, gGlow * rS);
-  // the city's sodium glow in the air: far things sink into a low orange haze (as a big city seen at night)
-  if (night > 0.01 && o.kind != KIND_ROOM && !defOn()) {
-    let hk = (1.0 - exp(-o.depth / 900.0)) * NIGHT_HAZE * night * (0.15 + 0.85 * u.cityLit) * (0.8 + 0.4 * u.precip);
-    o.c = o.c * (1.0 - hk) + vec3f(120.0, 64.0, 26.0) * (hk * rS);
-  }
-  // (16.1b) one haze for everything, in the sky's own color at the horizon that way: far things melt into the sky behind them
-  if (defOn()) { o.c = aerial(o.c, o.depth, o.kind == KIND_BLOCK); }
+  // one haze for everything, in the sky's own color at the horizon that way (by night the city's glow): far things melt
+  // into the sky behind them
+  o.c = aerial(o.c, o.depth, o.kind == KIND_BLOCK);
   // bright sums roll off on the luminance (the hue kept) instead of each channel clipping at 255
   if (max(o.c.x, max(o.c.y, o.c.z)) > 255.0) { o.c = srgb(nightTone(lin(o.c))); }
   return o;

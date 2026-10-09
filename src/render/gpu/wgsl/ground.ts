@@ -16,7 +16,6 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let bg = vec3f(7.0, 8.0, 12.0);
   if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return outsideGround(wx, wy, rd); }
   if (rd > GROUND_FAR) { return Cell(DOT, mix(vec3f(28.0, 24.0, 32.0), vec3f(70.0, 72.0, 78.0), u.day), bg, rd, KIND_GROUND, 0.0); }
-  let fog = select(1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day), 1.0, defOn());
   let gx = i32(xcU(u32(u32(wx)))); let gy = i32(ycU(u32(u32(wy))));
   let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
   var ch = DOT; var c = vec3f(38.0, 38.0, 46.0); var mat = MAT_CONCRETE;
@@ -106,7 +105,6 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       if (hit) { ch = u32(La.x); c = La.yzw; }
     }
   }
-  var lk = 1.0;
   if (u.snow > 0.02) {
     let sk = u.snow * select(1.0, 0.5, roadX || roadY || pastD < 0.0);
     c += (vec3f(200.0, 205.0, 218.0) - c) * sk;
@@ -116,7 +114,6 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     let wk = u.wet * (1.0 - u.snow);
     // (darker, less than before the reflections: the mirror now takes its share of the light)
     c *= vec3f(1.0 - 0.2 * wk, 1.0 - 0.2 * wk, 1.0 - 0.17 * wk);
-    lk = 1.0 + 1.1 * wk * select(1.0, 0.75 + 0.25 * sin(u.sec * 7.0 + hv * 30.0), u.rain > 0.0);
     if (u.rain > 0.0 && rd < 22.0 && !underRoof(wx, wy, 0.1)) {
       // splashes: each 0.33 m square takes a drop now and then at its own pace (0.3-1.1 s), each at a new
       // random spot: a small faint ring for a blink; a cell at a distance covers more ground (e), so there a dot
@@ -131,15 +128,14 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     }
   }
   c = sat(c);
-  let gl = select(lightAt(wx, wy, 0.0, vec3f(0.0, 0.0, 1.0)) * (lk * fog), vec3f(0.0), defOn());
-  gEm = vec3f(0.0); gEmK = 1.0; gIl = gl; gTag = rd; gPos = vec3f(wx, wy, 0.0); gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
+  gEm = vec3f(0.0); gEmK = 1.0; gIl = vec3f(0.0); gTag = rd; gPos = vec3f(wx, wy, 0.0); gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
   // how wet the spot is: a film everywhere it rains, puddles in the low spots (more on the asphalt)
   gWet = 0.0;
   if (u.wet > 0.02 && mat != MAT_LEAF) {
     let pd = smoothK(select(0.62, 0.55, mat == MAT_ASPHALT), 0.72, noise(wx / 5.0 + 13.0, wy / 5.0 + 7.0) * 0.7 + noise(wx / 1.7, wy / 1.7) * 0.3);
     gWet = u.wet * (1.0 - u.snow) * select(0.15 + 0.6 * pd, 0.45 + 0.55 * pd, mat == MAT_ASPHALT);
   }
-  return Cell(ch, c * fog + gl, bg, rd, KIND_GROUND, 0.0);
+  return Cell(ch, c, bg, rd, KIND_GROUND, 0.0);
 }
 
 /** The day's light (finish): how the surface's color reads as albedo, and the sky's and the sun's strength. */

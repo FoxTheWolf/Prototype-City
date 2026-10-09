@@ -12,6 +12,7 @@
 - **A normal no cômodo sai da planta:** piso/teto pela altura (`CEIL`), parede pela linha da grade (`PCELL`) mais perto, virada para o raio; o móvel tem a própria (`gRObj`). A porta aberta vista da rua devolvia a normal da **fachada**: não usar `tagged` para decidir a normal do cômodo.
 - **O batente da porta da rua é geometria, não luz:** a porta é pintada no plano da fachada, sem espessura; a face de dentro do batente não existe.
 - **No telhado o jogador está "dentro" (`R_ROOF` é um cômodo):** os objetos do telhado passam pelo `insideLight`; para depurar a luz de lá, é o caminho dos cômodos.
+- **Um erro no WGSL deixa a tela de carga parada em "COMPILING 90%" para sempre, sem aviso** (o console do painel guardava só erros velhos). Antes de esperar minutos, validar fora: `tests/wgsl-dump.ts` grava o WGSL e `scratchpad/wb/bench.cjs` (Electron escondido, servidor em 127.0.0.1, porque o WebGPU exige origem segura; cache novo) diz o erro ou o tempo. Medido: o shader do começo da sessão 37 s, com as duas luzes 82 s, só a nova **21 s**.
 - **O usuário:** não se prender a lugares que vão mudar (a borda da cidade vira praia); o código velho da luz não precisa de cuidado (vai ser apagado).
 
 ### Lições da 16.1 (o gravador de travadas) — 2026-10-09

@@ -28,10 +28,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   var f0 = -1e9; var f1 = 1e9;
   if (side != 2) { f0 = bldF(u32(q + 36u + u32(face) * 2u)); f1 = bldF(u32(q + 37u + u32(face) * 2u)); }
   let dAlong = u.colW * t / max(1e-6, abs(dn));
-  let fogK = 1.0 - exp(-t / FOG);
-  // (16.1b: with the deferred light, neither: the face's light is its normal's, the haze the sky's, both in light())
-  let shade0 = select(lightK * (1.0 - fogK * 0.6 * (1.0 - u.day)), 1.0, defOn()); var shade = shade0; // by day the haze is the finish's
-  let winLight = select(1.0 - fogK * 0.45, 1.0, defOn());
+  // (16.1b) the face's own color: its light comes from its normal and the haze from the sky, both in light()
+  let shade0 = 1.0; var shade = shade0;
+  let winLight = 1.0;
   // the building's power now, its signs' (never on the generator), and each window's
   let sub = i32(bldF(u32(q + 46u))); let gen = bldF(u32(q + 47u)) > 0.5;
   let cx = (x0 + x1) * 0.5; let cy = (y0 + y1) * 0.5;
@@ -528,7 +527,6 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
-  if (t < LIT_FAR && !defOn()) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
   // the street behind, through the room's far window (main sends the ray on)
   gBackT = select(0.0, backT, isWin && T == t && backT > t); gBackW = t; gBackK = peekK;
   if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; gEmK = emK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0; }

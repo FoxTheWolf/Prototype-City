@@ -35,33 +35,19 @@ fn outView(o: u32, lot: i32, box: i32, f: i32, elec: f32, full: bool) -> RView {
   if (IB != 0u && i32(fx[IB + 1u]) == lot && i32(fx[IB + 3u]) == f) { here = bitcast<i32>(fx[IB + 9u]); }
   return RView(o, lot, box, f, f32(f) * FLOOR_H, false, elec, here, 0u, full);
 }
-/** The daylight in a room (L.5): strong by the windows, falling off with the distance to the nearest outer wall of
- *  its box (DAYLIGHT_FALL m), and what reaches deep in; whiter than the night's ambient. */
-const DAYLIGHT_WIN = 2.2; const DAYLIGHT_DEEP = 0.2; const DAYLIGHT_FALL = 4.0;
-fn dayIn(box: i32, x: f32, y: f32) -> f32 {
-  let q = u32(box * ${BLD});
-  let d = max(0.0, min(min(x - bldF(u32(q)), bldF(u32(q + 2u)) - x), min(y - bldF(u32(q + 1u)), bldF(u32(q + 3u)) - y)));
-  return u.day * (DAYLIGHT_DEEP + DAYLIGHT_WIN * exp(-d / DAYLIGHT_FALL)) * (1.0 - 0.4 * u.cloud);
-}
-/** The light at a point of room r: its lamps, falling off with the distance to the nearest and along the ray inside (d); the ambient; the daylight. */
-/** The light from lightAt (color units) as a multiplier of the roof's slab (C3). */
-const ROOF_LIT = 30.0;
 /** (16.1b) How much of the sky's light comes in by the windows: next to them, and what reaches deep in. */
 const SKY_IN_WIN = 0.3; const SKY_IN_DEEP = 0.04; const SUN_IN = 0.25;
+/** How fast the daylight falls off away from the windows (m to the nearest outer wall of the box). */
+const DAYLIGHT_FALL = 4.0;
+/**
+ * The light at a point of room r (16.1b, the deferred light): only a note of the surface (the storey, the room, the point,
+ * how far along the ray inside), which roomCell takes for the cell it makes; light() lights it once, with its height and
+ * which way it faces (roomE). Its paint comes back as it is (1). The roof is outdoors: lit here, by the sky and the sun
+ * (roofE, in roomMul's units: no note).
+ */
 fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
-  // (13.23) the roof is outdoors: the sky's light, the city's glow at night
-  // (and the street's lights that reach it: the bulb over its stair house door, C3)
-  if (fx[ro + 4u] == R_ROOF) {
-    if (defOn()) { return roomMul(roofE(x, y, V.z0 + 0.05)); }
-    let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud) + lightAt(x, y, V.z0 + 0.05, vec3f(0.0, 0.0, 1.0)) / ROOF_LIT;
-  }
-  // (16.1b) the new light: only a note of the surface; light() lights it once, with its height and which way it faces (roomE)
-  if (defOn()) { gRV = V; gRO = ro; gRR = r; gRX = vec3f(x, y, d); gRPend = true; return vec3f(1.0); }
-  let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
-  let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day);
-  let la = lp * k + vec3f(a, a * 1.05, a * 1.25);
-  let dl = dayIn(V.box, x, y);
-  return la + vec3f(dl * 0.92, dl * 0.97, dl);
+  if (fx[ro + 4u] == R_ROOF) { return roomMul(roofE(x, y, V.z0 + 0.05)); }
+  gRV = V; gRO = ro; gRR = r; gRX = vec3f(x, y, d); gRPend = true; return vec3f(1.0);
 }
 /** The light on the floor's furniture (insideLight), as a multiplier. */
 fn insideLight(x: f32, y: f32) -> vec3f {
@@ -73,7 +59,7 @@ fn insideLight(x: f32, y: f32) -> vec3f {
 }
 // (not clamped: by the windows the daylight takes a room past 255, and the finish takes it down with its hue kept)
 fn roomCell(ch: u32, c: vec3f, t: f32) -> Cell {
-  if (defOn()) { gRUse = gRPend; gRPend = false; gRObj = false; } // (16.1b) this cell is lit by roomLit's note, if one was taken for it
+  gRUse = gRPend; gRPend = false; gRObj = false; // (16.1b) this cell is lit by roomLit's note, if one was taken for it
   return Cell(ch, max(c, vec3f(0.0)), vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0);
 }
 fn zrOf(z: f32, z0: f32) -> f32 { return (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H; }

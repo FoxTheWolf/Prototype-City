@@ -44,9 +44,6 @@ const FLOOR_H = ${FLOOR_H};
 const BAY = ${BAY};
 const SIDEWALK = ${SIDEWALK};
 const LANE_W = ${LANE_W};
-const FOG = 1500.0;
-// how much of a far thing the city's orange glow covers at night (finish)
-const NIGHT_HAZE = 0.42;
 const LIT_H = 9.0;
 const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
@@ -83,8 +80,6 @@ const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
 const LIT_SAT = 1.5;
 /** How much of a lamp's own hue a facade takes (0: only its brightness). */
 const WALL_LAMP_HUE = 0.9;
-/** At night, how much darker the street objects' paint reads than its palette color (as the walls' palette is). */
-const OBJ_NIGHT = 0.3;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
 /** The walls of the shops seen through their windows: mint, butter, salmon, sky, cream, red. */
 const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.0, 120.0), vec3f(220.0, 140.0, 115.0), vec3f(135.0, 180.0, 215.0), vec3f(220.0, 205.0, 170.0), vec3f(190.0, 80.0, 70.0));
@@ -103,8 +98,6 @@ fn hash3(a: i32, b: i32, c: i32) -> f32 {
   return f32(h) / 4294967296.0;
 }
 fn ifloor(x: f32) -> i32 { return i32(floor(x)); }
-/** (16.1b) The deferred light on (DEBUG.deferredLight, F7): the cells give their surface (gPos, gNrm, the albedo) and light() lights it. */
-fn defOn() -> bool { return u.defer > 0.5; }
 
 `;
 }

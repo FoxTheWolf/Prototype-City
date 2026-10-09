@@ -359,9 +359,7 @@ fn objRefl(cl0: Cell, O: vec3f, D: vec3f) -> Cell {
   let glow = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;
   var col = fx3(bp + 7u);
   if (mat == M_SCREEN) { col = vec3f(150.0, 160.0, 190.0) * (col / 255.0); }
-  var rgb = col * select((0.72 + 0.28 * abs(wn.x)) * (1.0 - OBJ_NIGHT * (1.0 - u.day)), 1.0, glow || defOn());
-  var oIl = vec3f(0.0);
-  if (!glow && !defOn()) { oIl = lightAt(H.x, H.y, H.z, wn) * 1.1; rgb += oIl; }
+  let rgb = col; let oIl = vec3f(0.0);
   gEm = select(vec3f(0.0), sat(rgb), glow); gIl = oIl; gTag = best; gPos = H; gWet = 0.0; gMat = MAT_NONE; gNrm = wn;
   gGlowK = 1.0; gEmK = select(1.0, SIGN_EMIT, mat == M_TEXT);
   let ch = select(fx[bp + 11u], LEAF[1], mat == M_LEAF);
@@ -385,11 +383,10 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     let ob = objs + fx[list + li] * OW;
     if (gx < fx[ob + 16u] || gx >= fx[ob + 17u] || gy < fx[ob + 18u] || gy >= fx[ob + 19u]) { continue; }
     let x = fxf(ob); let y = fxf(ob + 1u); let c = fxf(ob + 2u); let s = fxf(ob + 3u); let r = fxf(ob + 4u);
-    let seed = bitcast<i32>(fx[ob + 7u]); let far = fxf(ob + 8u); let zoff = fxf(ob + 9u);
+    let seed = bitcast<i32>(fx[ob + 7u]); let zoff = fxf(ob + 9u);
     let tYr = (x - u.px) * u.dirX + (y - u.py) * u.dirY; let tY = max(tYr, 0.3);
     // parts thinner than a cell at this distance are widened to half a cell, so poles do not flicker
     let mh = 0.5 * u.colW * tY; let mz = 0.5 * tY / u.scale;
-    let fog = select(1.0 - min(1.0, tYr / far) * 0.8, 1.0, defOn());
     // the camera and this cell's ray in the object's frame (+x forward, +y right, z up)
     let ox = (u.px - x) * c + (u.py - y) * s; let oy = -(u.px - x) * s + (u.py - y) * c; let oz = u.eye - zoff;
     let dx = rdx * c + rdy * s; let dy = -rdx * s + rdy * c;
@@ -484,12 +481,12 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     // the hit, unleaned, in the object's frame (as the CPU shades it)
     let hp = vec3f(ox, oy, oz) + vec3f(dx, dy, dz) * best;
     var ch = 32u; var kk = 1.0;
-    if (mat == M_GLOW) { ch = fx[p + 11u]; kk = 0.6 + 0.4 * fog; }
+    if (mat == M_GLOW) { ch = fx[p + 11u]; kk = 1.0; }
     else if (mat == M_WHEEL) {
       // from the side: the hub, five spokes and the tyre with a scuff, turned by the wheel angle; from the front or back, the tread
       let wx = (hp.x - cen.x) / hs.x; let wz = (hp.z - cen.z) / hs.z;
       let rr = length(vec2f(wx, wz)); let ang = atan2(wz, wx) + fxf(ob + 13u); let sec = fract(ang / TAU);
-      kk = select(0.75 + 0.25 * abs(nrm.y), 1.0, defOn()) * fog;
+      kk = 1.0;
       if (abs(nrm.y) < 0.55) { ch = select(DASH, EQ, (ifloor(sec * 16.0) & 1) == 1); col = TYRE; }
       else if (rr < 0.28) { ch = O; col = HUB; }
       else if (rr < 0.62) { let f = fract(sec * 5.0); ch = select(DOT, SPOKES[u32(ifloor(sec * 20.0) & 3)], f < 0.3); col = select(TYRE, RIM, f < 0.3); }
@@ -527,15 +524,15 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       }
       if (frame) { col = vec3f(60.0, 58.0, 55.0); } else if (fg) { col = col2; }
       // gooseneck lamps along the bottom light it from below, fading upward
-      kk = (0.55 + 0.25 * hash3(ifloor(hp.y * 2.0), ifloor(hp.z * 2.0), 7)) * fog + fxf(p + 21u) * 1.3 * max(0.0, 1.0 - (hp.z - q0.z) / H);
-      if (bulbs && fg) { kk = 0.75 + 0.45 * fog; }
+      kk = (0.55 + 0.25 * hash3(ifloor(hp.y * 2.0), ifloor(hp.z * 2.0), 7)) + fxf(p + 21u) * 1.3 * max(0.0, 1.0 - (hp.z - q0.z) / H);
+      if (bulbs && fg) { kk = 1.2; }
       // reflective letters: what light there is comes back to the eye, so they stay legible at night
-      if (plate && fg) { kk = max(kk, 0.8 * fog); }
+      if (plate && fg) { kk = max(kk, 0.8); }
     }
     else if (mat == M_SCREEN) {
       // a video screen on its faces across y (a bus shelter's advert, both sides), the telões' animations; the edges a dark frame
       let pw = col / 255.0; // the part's color is its power (dims in a blackout)
-      ch = EQ; col = vec3f(40.0, 40.0, 44.0); kk = fog;
+      ch = EQ; col = vec3f(40.0, 40.0, 44.0); kk = 1.0;
       if (face == 1) {
         let W = q1.x - q0.x; let H = q1.z - q0.z;
         let uu = select(q1.x - hp.x, hp.x - q0.x, oy > cen.y); // read left to right from either side
@@ -573,9 +570,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       }
     }
     else {
-      // lit like the buildings: faces turned along x brighter, tops brightest
-      let wn = abs(nrm.x * c - nrm.y * s) / select(length(nrm.xy), 1.0, length(nrm.xy) == 0.0);
-      kk = select(select(0.72 + 0.28 * wn, 1.15, face == 2), 1.0, defOn()) * fog;
+      kk = 1.0;
       if (mat == M_LEAF) {
         let h = hash3(ifloor(hp.x / 0.35) + seed, ifloor(hp.y / 0.35), ifloor(hp.z / 0.35));
         ch = LEAF[min(4u, u32(h * 5.0))];
@@ -590,16 +585,9 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     }
     // a board's printed face is a surface like any other (lit, shaded, its own sun), lit at night by its lamps too
     let painted = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;
-    // at night the paint reads darker, as the walls' palette does (the lamps' light comes on top, by its color)
-    var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW && mat != M_BOARD && !defOn()); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
+    var rgb = col * kk; var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
-    if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); if (defOn()) { gRUse = gRPend; gRPend = false; gRObj = true; } } // the room's lamps
-    else if (!painted && !defOn()) {
-      // the light where the ray hit, strongest on tops
-      let wn = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z);
-      let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff, wn / max(1e-4, length(wn)));
-      rgb += L * (select(1.1, 1.5, face == 2) * fog); oIl = L * (select(1.1, 1.5, face == 2) * fog);
-    }
+    if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); gRUse = gRPend; gRPend = false; gRObj = true; } // the room's lamps (the street's are light()'s)
     if (mat == M_GLOW || mat == M_TEXT || (mat == M_SCREEN && face == 1)) { oEm = rgb; }
     // seen through glass: darker and colder, with a faint sheen
     if (glassT < best) { rgb = rgb * vec3f(0.6, 0.66, 0.72) + vec3f(16.0, 24.0, 34.0); oEm *= 0.66; oIl *= 0.66; }

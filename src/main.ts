@@ -691,8 +691,8 @@ addEventListener('keydown', (e) => {
     return;
   }
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
-  // debug (16.1b): F7 flips the deferred light, to compare it with the old one in place
-  if (e.code === 'F7') { e.preventDefault(); if (!e.repeat) { if (e.shiftKey) DEBUG.lightKinds = !DEBUG.lightKinds; else DEBUG.deferredLight = !DEBUG.deferredLight; } return; }
+  // debug (16.1b): F7 paints each kind of surface in a flat color
+  if (e.code === 'F7') { e.preventDefault(); if (!e.repeat) DEBUG.lightKinds = !DEBUG.lightKinds; return; }
   // F8: a playtest note (the game pauses while it is written)
   if (e.code === 'F8') { e.preventDefault(); if (!e.repeat) openNote(); return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
@@ -1558,7 +1558,7 @@ function frame(now: number) {
     };
     head('DEBUG', `v${__VERSION__}`);
     row(`SEED ${seed}  GRID ${grid.cols}x${grid.rows}  ${STYLES[style].name} ${look.fuse ? 'SOFT' : 'SHARP'}`, AMBER);
-    row(`${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}  LIGHT ${DEBUG.deferredLight ? 'NEW' : 'OLD'}`);
+    row(`${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}`);
     head('PLAYER');
     row(`POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}` : 'OUTSIDE'}${p.liftTo >= 0 ? `  LIFT TO ${p.liftTo}` : ''}`, AMBER);
     const deg = (r: number) => Math.round((r * 180) / Math.PI), bearing = ((deg(camera.yaw) + 90) % 360 + 360) % 360;

@@ -387,7 +387,7 @@ export class GpuWorld {
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
-      homeLit: this.shares.home, workLit: this.shares.work, defer: DEBUG.lightProbe ? 3 : DEBUG.lightKinds ? 2 : DEBUG.deferredLight ? 1 : 0,
+      homeLit: this.shares.home, workLit: this.shares.work, lightDbg: DEBUG.lightProbe ? 2 : DEBUG.lightKinds ? 1 : 0,
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];

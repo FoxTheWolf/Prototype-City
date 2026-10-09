@@ -19,7 +19,6 @@ import { subAt } from '../sim/power';
 import { BIZ_HOURS, isOpen } from '../sim/telco';
 import { CAMS, cctvYaw } from '../sim/cctv';
 import { daylight, prepareSky, type SkyFrame } from './sky';
-import { DEBUG } from '../debug';
 import { BLADE_SYMBOL, signLight, signMode, signText } from './signs';
 import { tickerText } from '../locale/news';
 import { blinkOn, carPose, diagPoint, diagRoad, DIRS, flashing, Sig, signal, zoneSignal } from '../sim/traffic';
@@ -230,10 +229,10 @@ function viewLight(I: Inside | null, px: number, py: number, dirX: number, dirY:
   };
   const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
   const here = sample(px, py, S), g = Math.hypot(ex, ey);
-  // (16.1b, the new light) just inside, by the outer wall (a doorway, a shop window), the street's light still reaches the
+  // (16.1b) just inside, by the outer wall (a doorway, a shop window), the street's light still reaches the
   // hands and fades in over WALL_FADE m, instead of going out in one step (the neon's tint lost on the threshold)
   const b = I?.box, dw = b ? Math.min(px - b.x0, b.x1 - px, py - b.y0, b.y1 - py) : 0;
-  const w = !I ? 1 : DEBUG.deferredLight ? Math.max(0, Math.min(1, 1 - dw / WALL_FADE)) : 0;
+  const w = !I ? 1 : Math.max(0, Math.min(1, 1 - dw / WALL_FADE));
   if (I) {
     const L = insideLight(I, px, py);
     for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c];

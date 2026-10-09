@@ -2,6 +2,15 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 6) — a luz adiada de pé numa sessão (Opus 5.5)
+
+- **O que saiu:** os três passos da 16.1b numa janela, não em duas. A luz nova é a única; o shader tem uma função de luz para a rua, os objetos, os telhados e os cômodos, e a névoa tem a cor do céu. O que você vai sentir: o horizonte emenda no céu, as janelas de dia ficam escuras atrás do vidro, os cômodos ganharam volume (teto escuro, móveis com lado claro e escuro).
+- **Onde você acertou e eu não:** "não hiperfoque" e "não conserte a velha" pouparam muito. Eu ia caçar o escurecimento do telhado e equilibrar a média dos cômodos com um ganho chutado; o primeiro era o sistema de cômodos (passo 2), o segundo é trabalho da GI.
+- **Onde eu errei:** troquei arquivos de `src/` com `git checkout` enquanto o painel compilava, e cada recarga empilhou outra compilação no processo da GPU. Perdi uns 15 min achando que o shader tinha ficado lento. Ficou nas lições.
+- **Contesto:** os bugs (c), (f), (g), (h) e o batente não são de luz, são de geometria (a porta da rua não tem espessura, a laje e o poço). Eles não deveriam ficar presos na 16.1b. Proponho um bloco C só de geometria de interiores, depois da 16.2.
+- **O risco que vejo:** a escala da noite é comprimida (a noite do jogo é clara demais em termos físicos, de propósito). Toda luz física nova vai bater nisso; o `artK` é a muleta honesta, num lugar só. Quando vier a GI, vale rever se a noite pode ficar mais escura e as lâmpadas mais fortes, que é o noir que você quer.
+- **Dúvida para você:** o teto escuro à noite agrada (é o realista) ou incomoda até a GI chegar?
+
 ## 2026-10-09 (noite, 5) — a luz adiada agora, e como não deixá-la pela metade (Opus 5.5)
 
 - **Contesto o "teto e pula":** a luz adiada é um rework do shader. Se eu parar no meio para ir à 16.2, ficam dois caminhos de luz, o velho e o novo, e é exatamente o "dois sistemas para a mesma coisa" que gerou esses bugs. Proposta: a 16.1b em passos que sempre terminam funcionando: (1) o documento da engine, o mapa de onde a luz está copiada; (2) o passe novo só na rua, atrás de uma chave, comparado nas posições de ouro; (3) os interiores e o vidro; (4) tirar o caminho velho. O teto vale **entre** passos: posso parar depois de qualquer um sem deixar o jogo pior.
