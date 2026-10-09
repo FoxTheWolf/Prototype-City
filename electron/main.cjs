@@ -21,8 +21,13 @@ const MUSIC = app.isPackaged ? path.join(path.dirname(process.execPath), 'music'
 const TYPES = { '.mp3': 'audio/mpeg', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const ISOLATE = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' };
 
+// the game window, for /relock: the pause menu closed by Esc asks for the pointer again as a user gesture
+// (the page's own request from the Esc key is refused; main.ts, resume)
+let win = null;
+
 function serve() {
   const server = http.createServer((req, res) => {
+    if (req.url === '/relock') { win?.webContents.executeJavaScript('window.__relock?.()', true).catch(() => {}); res.writeHead(204, ISOLATE); res.end(); return; }
     if (playtest(PLAYTEST, req, res, ISOLATE)) return;
     if (sdcard(MUSIC, req, res, ISOLATE)) return;
     const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -53,7 +58,7 @@ app.whenReady().then(async () => {
   const port = await serve();
   // TC_CHECK=1: no window; prints whether WebGPU and the isolation work here, then quits (for testing)
   const check = !!process.env.TC_CHECK;
-  const win = new BrowserWindow({ fullscreen: !check, show: !check, autoHideMenuBar: false, backgroundColor: '#000000', title: 'GRID DOWN: Terminal State' });
+  win = new BrowserWindow({ fullscreen: !check, show: !check, autoHideMenuBar: false, backgroundColor: '#000000', title: 'GRID DOWN: Terminal State' });
   if (check) win.webContents.once('did-finish-load', async () => {
     console.log(await win.webContents.executeJavaScript(`(async () => { while (document.getElementById('ready')?.hidden !== false && performance.now() < 60000) await new Promise((r) => setTimeout(r, 50)); return JSON.stringify({ isolated: crossOriginIsolated, adapter: !!(await navigator.gpu?.requestAdapter()), title: document.title, readyMs: Math.round(performance.now()), origin: location.origin }); })()`));
     app.quit();

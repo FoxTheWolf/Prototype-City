@@ -1096,7 +1096,10 @@ function pause() {
   input.unlock();
   menu.open(false);
 }
-function resume() { paused = false; menu.close(); input.lock(); }
+// Esc is not a user gesture, so the lock asked from it is refused: in Electron the main process asks again as
+// one (/relock in electron/main.cjs); elsewhere the next key or click takes the pointer back (relock)
+function resume() { paused = false; menu.close(); input.lock(); relock = true; void fetch('/relock').catch(() => {}); }
+(window as unknown as { __relock: () => void }).__relock = () => { if (running && !paused && !input.locked && !phone.out && !payphone.active && !laptop.open) input.lock(); };
 /** F8 (13.10p): the game pauses, the screen is kept as it is, and the note waits for its text. */
 function openNote() {
   if (!pt || !running || paused || cctv || notePanel.isOpen) return;

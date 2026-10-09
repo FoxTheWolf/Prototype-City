@@ -2,6 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.C3b — Diálogo e controles (em andamento)
+- **Fechar o menu de pausa com Esc devolve o mouse ao jogo** (no Electron na hora; no navegador, na próxima tecla ou clique), sem precisar clicar na tela.
+
 ## 0.13.C2 — Correções de interiores (2026-10-09)
 - **As portas da rua ficam na fachada**, não mais afundadas num recesso sem laterais.
 - **Ao cruzar uma porta, o interior não some mais por um quadro** (aparecia a rua do outro lado do prédio).

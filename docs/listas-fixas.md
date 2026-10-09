@@ -39,7 +39,6 @@
 - **Diálogo — quadrante de tom descentralizado:** o plano cartesiano do tom está com o centro na parte de baixo, não no meio; centralizar.
 - **Diálogo — tirar o rótulo "unrecognized":** sem reconhecer, mostrar só "type what you want to say" (ver `docs/retoques-14-15.md`).
 - **ESC durante a conversa ainda abre o menu:** deveria fechar o diálogo primeiro.
-- **Recapturar o mouse ao despausar:** se o mouse estava capturado antes do ESC, ao apertar ESC de novo (fechar o menu) recapturar automaticamente — exceto com o notebook aberto.
 - **Colunas geram muito perto da parede** (nota F8 5): fundir colunas coladas na parede com a própria parede (`sim/interior.ts`/geometria).
 - **Legibilidade de placas por blocos:** a placa "GO" e as letras do semáforo de pedestre e da placa ao lado ficam quase invisíveis de perto/por tamanho (notas F8 8, 9) — compor por pontos/blocos como os letreiros (princípio "pontos de perto, ASCII de longe"), e a placa ao lado retrorreflexiva.
 
