@@ -655,10 +655,11 @@ function gatherLights(world: World, v: View, sec: number) {
         if (q > 0.01) floodSpots(B, (x, y, nx, ny) => dyn.flood(x, y, nx, ny, B.floodH, fr * q, fg * q, fb * q));
       }
       const cx = (B.x0 + B.x1) / 2, cy = (B.y0 + B.y1) / 2, dist = Math.hypot(cx - v.x, cy - v.y);
-      // neon tubes up its corners light the sidewalk and the street round them, all round
+      // neon tubes up its corners light the sidewalk and the street round them, all round (their light stops a storey
+      // under the top: the parapet hides them from the roof, which they flooded pink, C3)
       if (B.neon && !B.cut && dist < NEON_LIGHT_FAR) {
         const q = NEON_LIGHT * signPower(world, k, sec), [nr, ng, nb] = B.neon;
-        if (q > 0.005) for (const [x, y] of [[B.x0, B.y0], [B.x1, B.y0], [B.x0, B.y1], [B.x1, B.y1]]) dyn.panel(x, y, x, y, 1, 0, 0, B.h, NEON_RANGE, 0.99, linC(nr, q), linC(ng, q), linC(nb, q));
+        if (q > 0.005) for (const [x, y] of [[B.x0, B.y0], [B.x1, B.y0], [B.x0, B.y1], [B.x1, B.y1]]) dyn.panel(x, y, x, y, 1, 0, 0, Math.max(1, B.h - FLOOR_H), NEON_RANGE, 0.99, linC(nr, q), linC(ng, q), linC(nb, q));
       }
       if (B.biz < 0 || B.round) continue;
       const blkB = blockAt(city, cx, cy);

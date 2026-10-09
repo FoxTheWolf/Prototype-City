@@ -102,7 +102,10 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         let ce = mix(max(0.0, (v.x * enx + v.y * eny) / d), 1.0, wrap);
         let cr = select(1.0, mix(max(0.0, -dot(nr, v) / d), 1.0, PANEL_RECV_WRAP), dot(nr, nr) > 0.25);
         // (only the part of it within ~d of the point counts: a long tube falls off as 1 / d, a wide panel up close is even)
-        let ext = 2.0 * d + 0.3; let S = PANEL_S * clamp(sqrt(L2), 0.3, ext) * clamp(zt - zf, 0.3, ext); let w = 1.0 - d2 / (R * R);
+        // (a neon tube up a corner, wrap ~1, lights nothing above its top: the cornice and the parapet hide it from
+        // the roof, which it flooded pink, C3)
+        if (wrap > 0.9 && pz > zt + 1.0) { continue; }
+        let ext = 2.0 * d + 0.3; let S = PANEL_S * clamp(sqrt(L2), 0.3, ext) * clamp(zt - zf, 0.3, ext); let w = (1.0 - d2 / (R * R)) * select(1.0, zt + 1.0 - pz, wrap > 0.9 && pz > zt);
         var lv = 1.0;
         let n = u32(dlF(u32(o + 14u)));
         if (n > 0u) {

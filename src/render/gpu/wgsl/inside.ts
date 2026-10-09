@@ -44,9 +44,12 @@ fn dayIn(box: i32, x: f32, y: f32) -> f32 {
   return u.day * (DAYLIGHT_DEEP + DAYLIGHT_WIN * exp(-d / DAYLIGHT_FALL)) * (1.0 - 0.4 * u.cloud);
 }
 /** The light at a point of room r: its lamps, falling off with the distance to the nearest and along the ray inside (d); the ambient; the daylight. */
+/** The light from lightAt (color units) as a multiplier of the roof's slab (C3). */
+const ROOF_LIT = 110.0;
 fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
   // (13.23) the roof is outdoors: the sky's light, the city's glow at night
-  if (fx[ro + 4u] == R_ROOF) { let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud); }
+  // (and the street's lights that reach it: the bulb over its stair house door, C3)
+  if (fx[ro + 4u] == R_ROOF) { let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud) + lightAt(x, y, V.z0 + 0.05, vec3f(0.0, 0.0, 1.0)) / ROOF_LIT; }
   let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
   let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day); let dl = dayIn(V.box, x, y);
   return lp * k + vec3f(a, a * 1.05, a * 1.25) + vec3f(dl * 0.92, dl * 0.97, dl);

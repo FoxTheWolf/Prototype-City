@@ -10,7 +10,7 @@ import type { World } from '../../sim/world';
 import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
 import { CharGrid } from '../grid';
 import { type Inside } from '../interior';
-import { furnitureModel, stairHouseModel } from '../models';
+import { furnitureModel, roofBulbModel, stairHouseModel } from '../models';
 import type { Obj, Part, Vox } from '../objects';
 import { OW, PW, TILE } from './objects';
 /** By day, how much wider the objects are gathered than the view (their shadows reach in from the sides), and how near an off-screen one must be to cast (m). */
@@ -27,9 +27,10 @@ const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 const OG_N = 64, OG_CELL = 2;
 import { setEye } from '../eye';
 import { eyeHold, eyePush } from '../power';
-import { subAt } from '../../sim/power';
+import { Backup, subAt } from '../../sim/power';
 import { lightShares, lightsOf } from '../../sim/lights';
 import { fallShape } from '../precip';
+import { daylight } from '../sky';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
@@ -329,6 +330,14 @@ export class GpuWorld {
     if (F.light.version !== this.lmapVersion) { this.lmapVersion = F.light.version; q.writeBuffer(this.lmap, 0, F.light.packMap()); }
     { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * 6] = c[n * 3]; L[n * 6 + 1] = c[n * 3 + 1]; L[n * 6 + 2] = c[n * 3 + 2]; } }
     this.facades(world, v.x, v.y);
+    // (C3) the bulb over each near roof's stair house door, at night on the building's power: it lights the slab
+    { const dark = 1 - daylight(world.time);
+      if (dark > 0.05) for (const [k, R] of this.roofs) {
+        const L = roofLamp(R), Pw = world.power;
+        if (!L || !(Pw.subs[Pw.building[k]].on || Pw.backup[k] >= Backup.Generator)) continue;
+        const [x, y, nx, ny] = L, z = floorsOf(C.buildings[k]) * FLOOR_H, q = ROOF_LAMP * dark;
+        F.dyn.panel(x - ny, y + nx, x + ny, y - nx, nx, ny, z + 0.3, z + 2.6, 9, 0.25, (255 / 255) ** 2.2 * q, (190 / 255) ** 2.2 * q, (120 / 255) ** 2.2 * q);
+      } }
     this.streetDoors(world);
     this.liftCars(world);
     this.openDoors(world);
@@ -538,6 +547,14 @@ export class GpuWorld {
       }
       for (const f of R.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: ROOF_FAR, zoff: top * FLOOR_H, roof: true });
     }
+    // (C3) and the bulb over each stair house door, the viewer's roof's too: lit at night on the building's power
+    { const dark = 1 - daylight(world.time), Pw = world.power;
+      for (const [k, R] of this.roofs) {
+        const L = roofLamp(R);
+        if (!L) continue;
+        const on = Pw.subs[Pw.building[k]].on || Pw.backup[k] >= Backup.Generator ? dark : 0;
+        list.push({ o: { x: L[0], y: L[1], c: L[2], s: L[3], parts: roofBulbModel(on), r: 0.3, h: 2.6, seed: k }, far: ROOF_FAR, zoff: floorsOf(this.city.buildings[k]) * FLOOR_H, roof: true });
+      } }
     // indoors, the floor's furniture, lit by its rooms' lamps
     // (on the roof, C3: in the open air, lit by the sun on their own faces as the neighbours' roofs are; the flight
     // stays lit as indoors, under its stair house)
@@ -1023,6 +1040,29 @@ const FX_NEAR = 250, FX_PLAN = 130, FX_PLANS = 6;
 const LIGHT_MS = 1.0;
 /** How far the roofs' stair houses and tanks are drawn (m). */
 const ROOF_FAR = 160;
+/** The bulb over a roof's stair house door: how bright (C3). */
+const ROOF_LAMP = 1.0;
+const roofLamps = new WeakMap<Plan, number[] | null>();
+/**
+ * (C3) Where the bulb over a roof's stair house door is: [x, y, nx, ny], the middle of the door's way and out onto the
+ * roof (the user's idea, 2026-10-09: the slab was too dark at night). Null on a roof without one.
+ */
+export function roofLamp(P: Plan): number[] | null {
+  let L = roofLamps.get(P);
+  if (L !== undefined) return L;
+  L = null;
+  for (const f of leavesOf(P)) {
+    const s = P.rooms[f.ra]?.kind === 'stair' ? f.ra : P.rooms[f.rb]?.kind === 'stair' ? f.rb : -1;
+    if (s < 0) continue;
+    const R = P.rooms[s];
+    let nx = f.nx, ny = f.ny;
+    if ((f.cx - (R.x0 + R.x1) / 2) * nx + (f.cy - (R.y0 + R.y1) / 2) * ny < 0) { nx = -nx; ny = -ny; }
+    L = [f.cx + nx * 0.1, f.cy + ny * 0.1, nx, ny];
+    break;
+  }
+  roofLamps.set(P, L);
+  return L;
+}
 /** The room kinds, numbered as the shader has them. */
 const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop', 'roof'];
 

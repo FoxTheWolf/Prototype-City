@@ -681,6 +681,17 @@ export function stairHouseModel(hx: number, hy: number): Part[] {
   }
   return m;
 }
+/** (C3) The caged bulb over a roof's stair house door, on its wall (+x out of it): lit at `on` (0..1, in eighths). */
+export function roofBulbModel(on: number): Part[] {
+  const q = Math.round(Math.min(1, on) * 8) / 8, key = 'bulb' + q;
+  let m = furns.get(key);
+  if (!m) {
+    m = [part(Box, 0, -0.07, 2.42, 0.06, 0.07, 2.5, [70, 70, 72], Solid, '='),
+      q > 0 ? part(Box, 0.06, -0.05, 2.36, 0.15, 0.05, 2.46, [255 * q, 200 * q, 130 * q], Glow, 'o') : part(Box, 0.06, -0.05, 2.36, 0.15, 0.05, 2.46, [190, 186, 170], Solid, 'o')];
+    furns.set(key, m);
+  }
+  return m;
+}
 export function furnitureModel(kind: string, seed: number, hx: number, hy: number, stock?: string[]): Part[] {
   const v = seed % 4, key = kind + v + hx.toFixed(2) + hy.toFixed(2) + (stock ? stock.join() : '');
   let m = furns.get(key);
