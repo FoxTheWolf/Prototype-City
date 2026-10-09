@@ -20,7 +20,7 @@ fn roomRec(o: u32, r: i32) -> u32 { return o + 6u + u32(r) * ROOM_REC; }
 fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32, on: bool) -> vec3f {
   let kind = fx[ro + 4u]; let commonPart = bitcast<i32>(fx[ro + 5u]) < 0; let h = hash3(boxId, r * 31 + f, 12);
   let lq = u32(lot * ${BLD});
-  let backup = i32(bld[lq + 63u]);
+  let backup = i32(bldF(u32(lq + 63u)));
   var elec = elecIn;
   if (elec < 0.8 && backup == 3) { elec = 0.85; }
   else if (elec < 0.8) {
@@ -31,11 +31,11 @@ fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32, on: bool
     let c = select(select(vec3f(70.0, 85.0, 110.0), vec3f(190.0, 120.0, 60.0), gen), vec3f(150.0, 22.0, 16.0), commonPart && h < select(0.4, 0.3, gen));
     return c / 255.0 * select(0.6, min(1.0, elec * 1.1), gen);
   }
-  let st = i32(bld[lq + 10u]); let office = st == 0 || st == 1;
+  let st = i32(bldF(u32(lq + 10u))); let office = st == 0 || st == 1;
   // a home's lamps go out by day; an office's stay on through the working day (L.5)
   let onK = select(1.0 - 0.75 * u.day, 1.0 + 0.6 * u.day, office);
   // (a shop's lamps are always on: the same seen from the street and from inside, 13.10d2)
-  if (!(commonPart || on || kind == R_SHOP || hash3(boxId, r * 31 + f, 11) < bld[lq + 11u] * onK * 1.3)) { return vec3f(0.0); }
+  if (!(commonPart || on || kind == R_SHOP || hash3(boxId, r * 31 + f, 11) < bldF(u32(lq + 11u)) * onK * 1.3)) { return vec3f(0.0); }
   let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(222.0, 240.0, 232.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
   return c / 255.0 * elec;
 }

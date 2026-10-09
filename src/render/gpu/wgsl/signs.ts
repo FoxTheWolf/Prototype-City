@@ -23,7 +23,7 @@ const SCAF_D = ${f(SCAF_D)}; const SHED_Z = ${f(SHED_Z)}; const SCAF_STEEL = ${v
 const NETS = array<vec3f, ${NETS.length}>(${NETS.map(v3).join(', ')});
 fn bulbOn(c: u32, bx: i32, by: i32) -> bool {
   if (bx < 0 || bx > 4 || by < 0 || by > 6) { return false; }
-  return ((sg[SG_FONT + min(c, 255u) * 7u + u32(by)] >> u32(4 - bx)) & 1u) == 1u;
+  return ((sgU(u32(SG_FONT + min(c, 255u) * 7u + u32(by))) >> u32(4 - bx)) & 1u) == 1u;
 }
 // the bulbs of letter c whose centers fall in a cell's footprint (center px, pz, half sizes hx, hz, in bulb units)
 fn bulbsIn(c: u32, px: f32, pz: f32, hx: f32, hz: f32) -> u32 {
@@ -46,9 +46,9 @@ fn bulbHue(c: vec3f) -> vec3f {
 }
 // a business's sign text for a face that fits \`fit\` letters (signText): (pool offset, length)
 fn bizText(biz: i32, fit: i32) -> vec2u {
-  let o = SG_BIZ + u32(biz) * 3u; let full = sg[o];
+  let o = SG_BIZ + u32(biz) * 3u; let full = sgU(u32(o));
   if (i32(full & 255u) <= fit) { return vec2u(full >> 8u, full & 255u); }
-  let w = sg[o + 1u];
+  let w = sgU(u32(o + 1u));
   return vec2u(w >> 8u, u32(min(i32(w & 255u), max(0, fit))));
 }
 fn signStutter(biz: i32, sec: f32) -> bool {
@@ -79,14 +79,14 @@ fn screenPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dAlong: f32, dz: f32) -> 
   let a = SCREEN_PAL[ifloor(hash3(id, scene, 94) * NP)]; let b = SCREEN_PAL[ifloor(hash3(id, scene, 95) * NP)];
   let st = sec % 6.0;
   let px = floor(uu / 0.3) * 0.3; let pz = floor(v / 0.3) * 0.3;
-  let nb = sg[2];
+  let nb = sgU(u32(2));
   if (kind == 0 && nb > 0u) {
     let tx = bizText(ifloor(hash3(id, scene, 93) * f32(nb)), max(1, ifloor((W - 1.0) / 1.2)));
     let n = f32(max(1u, tx.y)); let lw = min((W - 1.0) / n, (H * 0.55) / 1.4); let lh = lw * 1.4;
     let x0 = (W - n * lw) / 2.0; let y0 = (H - lh) / 2.0;
     let li = ifloor((uu - x0) / lw); let fu = ((uu - x0) / lw - f32(li)) * 1.25 - 0.12; let fv = (v - y0) / lh;
     let typed = li >= 0 && li < i32(tx.y) && f32(li) < st / 0.12;
-    var lc = 32u; if (typed) { lc = sg[tx.x + u32(li)]; }
+    var lc = 32u; if (typed) { lc = sgU(u32(tx.x + u32(li))); }
     let on = typed && fu >= 0.0 && fu < 1.0 && fv >= 0.0 && fv < 1.0 && bulbOn(lc, ifloor(fu * 5.0), ifloor(fv * 7.0));
     let glyphs = lw / dAlong >= 3.0 && lh / dz >= 2.6;
     if (!glyphs && lw / dAlong >= 0.9 && typed && abs(uu - x0 - (f32(li) + 0.5) * lw) < dAlong / 2.0 && abs(v - H / 2.0) < dz / 2.0 + 0.01) {
@@ -108,11 +108,11 @@ fn screenPix(id: i32, uu: f32, v: f32, W: f32, H: f32, dAlong: f32, dz: f32) -> 
  *  power goes (and through its flicker), and for a few seconds after it comes back, as it reboots (timed as power()). */
 fn bsod(sub: i32, x: f32, y: f32, id: i32, spread: f32) -> bool {
   let o = u32(sub) * 4u;
-  let changed = subs[o];
+  let changed = subsF(u32(o));
   if (changed < 0.0) { return false; }
-  let since = u.sec - changed; let d = length(vec2f(x - subs[o + 2u], y - subs[o + 3u]));
+  let since = u.sec - changed; let d = length(vec2f(x - subsF(u32(o + 2u)), y - subsF(u32(o + 3u))));
   let hb = hash3(id, sub, 404); let hw = hash3(id, sub, 407);
-  if (subs[o + 1u] < 0.5) {
+  if (subsF(u32(o + 1u)) < 0.5) {
     // (L.12) some of them crash through the surge already
     if (since < ${SURGE + 0.5} && hash3(id, sub, 410) < 0.35 && since > 0.3 + hash3(id, sub, 411) * 1.2) { return true; }
     let t = since - ${SURGE} - d / 120.0 - hb * 0.3 - hw * spread; return t > -0.5 && t < 0.32;

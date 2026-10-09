@@ -3,11 +3,11 @@ import { SURGE, SURGE_K } from '../../power';
 export const powerWGSL = (): string => /* wgsl */ `// ---- power (render/power.ts): one element's light level now, from its substation's state
 fn power(sub: i32, x: f32, y: f32, id: i32, gen: bool, group: i32, spread: f32) -> f32 {
   let o = u32(sub) * 4u;
-  let changed = subs[o];
+  let changed = subsF(u32(o));
   if (changed < 0.0) { return 1.0; }
-  let since = u.sec - changed; let d = length(vec2f(x - subs[o + 2u], y - subs[o + 3u]));
+  let since = u.sec - changed; let d = length(vec2f(x - subsF(u32(o + 2u)), y - subsF(u32(o + 3u))));
   let hb = hash3(group, sub, 404); let hw = hash3(id, sub, 407);
-  if (subs[o + 1u] < 0.5) {
+  if (subsF(u32(o + 1u)) < 0.5) {
     // (L.12) the surge: everything swells together, then holds brighter until the ring arrives (render/power.ts)
     if (since < ${SURGE}) { return 1.0 + ${SURGE_K.toFixed(3)} * smoothstep(0.0, ${SURGE}, since); }
     let t = since - ${SURGE} - d / 120.0 - hb * 0.3 - hw * spread;

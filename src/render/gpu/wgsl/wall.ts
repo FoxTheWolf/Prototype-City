@@ -5,10 +5,10 @@ export const wallWGSL = (): string => /* wgsl */ `// ---- a wall (wallColumn): t
 // (m and A: the ray's drop and the curve's, to find heights on it a little nearer, at a relief or the scaffolding)
 fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m: f32, A: f32) -> Cell {
   let q = u32(bk * ${BLD});
-  let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let H = bld[q + 4u];
+  let x0 = bldF(u32(q)); let y0 = bldF(u32(q + 1u)); let x1 = bldF(u32(q + 2u)); let y1 = bldF(u32(q + 3u)); let H = bldF(u32(q + 4u));
   let hx = gOX + t * rdx; let hy = gOY + t * rdy;
-  let style = i32(bld[q + 10u]); let lit = bld[q + 11u]; let feat = bld[q + 18u];
-  let shop = bld[q + 19u] > 0.5;
+  let style = i32(bldF(u32(q + 10u))); let lit = bldF(u32(q + 11u)); let feat = bldF(u32(q + 18u));
+  let shop = bldF(u32(q + 19u)) > 0.5;
   let win = colAt(q + 12u); let frame = colAt(q + 15u); let sign = colAt(q + 21u);
   // where along the face, its light, the face's span
   var along = 0.0; var lightK = 1.0; var face = 0; var dn = 1.0; var wsun = 0.0; var nw = vec2f(0.0);
@@ -17,7 +17,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     along = (atan2(ny, nx) + 3.14159265) * rr; lightK = 0.72 + 0.28 * abs(nx);
     wsun = nx * u.sunX + ny * u.sunY; nw = normalize(vec2f(nx, ny));
   } else if (side == 3) {
-    let kx = bld[q + 7u]; let ky = bld[q + 8u];
+    let kx = bldF(u32(q + 7u)); let ky = bldF(u32(q + 8u));
     along = hx * ky - hy * kx; lightK = 0.72 + 0.28 * abs(kx); face = 4; dn = kx * rdx + ky * rdy;
     wsun = kx * u.sunX + ky * u.sunY; nw = vec2f(kx, ky);
   } else {
@@ -26,18 +26,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     wsun = select(select(select(u.sunY, -u.sunY, face == 2), u.sunX, face == 1), -u.sunX, face == 0);
   }
   var f0 = -1e9; var f1 = 1e9;
-  if (side != 2) { f0 = bld[q + 36u + u32(face) * 2u]; f1 = bld[q + 37u + u32(face) * 2u]; }
+  if (side != 2) { f0 = bldF(u32(q + 36u + u32(face) * 2u)); f1 = bldF(u32(q + 37u + u32(face) * 2u)); }
   let dAlong = u.colW * t / max(1e-6, abs(dn));
   let fogK = 1.0 - exp(-t / FOG);
   let shade0 = lightK * (1.0 - fogK * 0.6 * (1.0 - u.day)); var shade = shade0; // by day the haze is the finish's
   let winLight = 1.0 - fogK * 0.45;
   // the building's power now, its signs' (never on the generator), and each window's
-  let sub = i32(bld[q + 46u]); let gen = bld[q + 47u] > 0.5;
+  let sub = i32(bldF(u32(q + 46u))); let gen = bldF(u32(q + 47u)) > 0.5;
   let cx = (x0 + x1) * 0.5; let cy = (y0 + y1) * 0.5;
   let pw = power(sub, cx, cy, bk, gen, bk, 0.25);
   let ad = select(pw, power(sub, cx, cy, bk, false, bk, 0.25), gen);
   let elec = winLight * pw; let adElec = winLight * ad;
-  let switched = subs[u32(sub) * 4u] >= 0.0;
+  let switched = subsF(u32(u32(sub) * 4u)) >= 0.0;
   let litK = lit * (1.0 - 0.75 * u.day);
   let rpf = FLOOR_H * u.scale / t; let cpb = BAY / (u.colW * t);
   // the facade's detail is the building's, not the cell's: it comes in by the distance to the nearest point of
@@ -52,14 +52,14 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let detailed = t < tCut * 3.2 && detK > hash3(i32(floor(along * 4.0)), i32(floor(zw * 2.0)), bk + 913);
   // how fast the hit moves along the face, per unit of t
   var da = 0.0;
-  if (side == 0) { da = rdy; } else if (side == 1) { da = rdx; } else if (side == 3) { da = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }
+  if (side == 0) { da = rdy; } else if (side == 1) { da = rdx; } else if (side == 3) { da = rdx * bldF(u32(q + 8u)) - rdy * bldF(u32(q + 7u)); }
   let along0 = along; var z = zw; var T = t;
   // a bay, pilaster or pier in front of the wall plane (reliefOf): where the ray meets it first, its
   // front (rs 1) or its side (rs 2); there it is nearer, at its own spot along the face, lit by its own side
   var rs = 0;
-  if (detailed && side != 2 && bld[q + 62u] > 0.5) {
-    let per = bld[q + 55u] * BAY; let o = bld[q + 56u] * BAY + bld[q + 57u]; let rw = bld[q + 58u];
-    let sb = bld[q + 59u] / max(1e-6, abs(dn)); let af = along - da * sb;
+  if (detailed && side != 2 && bldF(u32(q + 62u)) > 0.5) {
+    let per = bldF(u32(q + 55u)) * BAY; let o = bldF(u32(q + 56u)) * BAY + bldF(u32(q + 57u)); let rw = bldF(u32(q + 58u));
+    let sb = bldF(u32(q + 59u)) / max(1e-6, abs(dn)); let af = along - da * sb;
     let lo = min(af, along); let hi = max(af, along);
     var bl = 2.0;
     let k0 = ifloor((lo - o - rw) / per); let k1 = min(ifloor((hi - o) / per), k0 + 64);
@@ -73,7 +73,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     }
     if (bl <= 1.0) {
       let rT = t - sb + sb * bl; let zr = gOZ - m * rT + A * rT * rT;
-      if (zr > bld[q + 60u] && zr < bld[q + 61u]) {
+      if (zr > bldF(u32(q + 60u)) && zr < bldF(u32(q + 61u))) {
         rs = select(2, 1, bl < 1e-6); T = rT; z = zr; along = af + (along - af) * bl;
         shade = shade0 * select(0.68, 1.08, rs == 1);
       }
@@ -107,7 +107,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let band = select(0, 1 + ifloor(fract(feat * 53.0) * 3.0), fract(feat * 311.0) < 0.35);
   // the glass mirrors the sky: bands slide over it as the viewer moves
   var tang = 0.0;
-  if (side == 0) { tang = rdy; } else if (side == 1) { tang = rdx; } else if (side == 3) { tang = rdx * bld[q + 8u] - rdy * bld[q + 7u]; }
+  if (side == 0) { tang = rdy; } else if (side == 1) { tang = rdx; } else if (side == 3) { tang = rdx * bldF(u32(q + 8u)) - rdy * bldF(u32(q + 7u)); }
   else { let nx = hx - cx; let ny = hy - cy; let n = max(1e-6, length(vec2f(nx, ny))); tang = (rdx * -ny + rdy * nx) / n; }
   let sheen = 0.5 + 0.5 * sin(tang * 6.0 + ((z - gOZ) / t) * 4.0 + f32(bk % 7));
   let fl = ifloor(z / FLOOR_H); let fz = z / FLOOR_H - f32(fl);
@@ -129,20 +129,20 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let rev = side < 2 && (face == 1 || face == 2);
   let sec = u.sec; let scol = sign;
   // the shop sign on this face: the business name centered on it, if at least 3 letters fit
-  let biz = i32(bld[q + 48u]);
+  let biz = i32(bldF(u32(q + 48u)));
   var signN = 0; var signU = 0.0; var stx = vec2u(0u); var smode = 0u; var sfull = 0.0;
   if (biz >= 0 && side != 2) {
     stx = bizText(biz, ifloor((f1 - f0 - 1.2) / LETTER_W) - 2);
     signN = select(0, i32(stx.y), stx.y >= 3u);
     signU = along - (f0 + f1) * 0.5 + f32(signN + 2) * LETTER_W * 0.5;
     if (signU < 0.0 || signU >= f32(signN + 2) * LETTER_W) { signN = 0; }
-    smode = sg[SG_BIZ + u32(biz) * 3u + 2u]; sfull = f32(sg[SG_BIZ + u32(biz) * 3u] & 255u);
+    smode = sgU(u32(SG_BIZ + u32(biz) * 3u + 2u)); sfull = f32(sgU(u32(SG_BIZ + u32(biz) * 3u)) & 255u);
   }
   let letters = LETTER_W / dAlong >= 0.9;
   // a painted ad high on one face: the business's name in big block letters on a colored board
-  let adB = i32(bld[q + 49u]);
+  let adB = i32(bldF(u32(q + 49u)));
   var adN = 0; var adTx = vec2u(0u); var adA0 = 0.0; var adA1 = 0.0; var adZ0 = 0.0; var adZ1 = 0.0;
-  if (adB >= 0 && side != 2 && face == ifloor(hash3(bk, 7, 77) * select(4.0, 5.0, bld[q + 6u] > 0.5))) {
+  if (adB >= 0 && side != 2 && face == ifloor(hash3(bk, 7, 77) * select(4.0, 5.0, bldF(u32(q + 6u)) > 0.5))) {
     let w = min(f1 - f0 - 2.0, 16.0); let mid = (f0 + f1) * 0.5;
     if (w > 5.0) {
       adTx = bizText(adB, ifloor((w - 1.0) / AD_LETTER)); adN = i32(adTx.y);
@@ -150,9 +150,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     }
   }
   // a video screen on this face, above the shop sign (and the ticker), as wide as the face allows
-  let ticker = bld[q + 51u] > 0.5;
+  let ticker = bldF(u32(q + 51u)) > 0.5;
   var scA0 = 0.0; var scA1 = 0.0; var scZ0 = 0.0; var scZ1 = 0.0;
-  if (side != 2 && ((u32(bld[q + 50u]) >> u32(face)) & 1u) == 1u) {
+  if (side != 2 && ((u32(bldF(u32(q + 50u))) >> u32(face)) & 1u) == 1u) {
     let w = min(f1 - f0 - 1.5, 16.0); let mid = (f0 + f1) * 0.5;
     if (w > 4.0) { scA0 = mid - w / 2.0; scA1 = mid + w / 2.0; scZ0 = select(5.2, TICK_Z1 + 1.2, ticker); scZ1 = min(H - 1.5, scZ0 + min(12.0, w * 0.75)); }
   }
@@ -207,7 +207,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     em = adElec > 0.02; emK = SIGN_EMIT; glowK = SIGN_GLOW;
     let col = ifloor(signU / LETTER_W) - 1; let inText = col >= 0 && col < signN && z > 2.75 && z < 3.25;
     let kk = select(col, signN - 1 - col, rev);
-    var cc = 32u; if (col >= 0 && col < signN) { cc = sg[stx.x + u32(kk)]; }
+    var cc = 32u; if (col >= 0 && col < signN) { cc = sgU(u32(stx.x + u32(kk))); }
     let lit = signLight(biz, smode, select(-1, kk, inText), sfull, sec) * adElec;
     // up close a letter covers several cells: the glyph goes in the one holding its center, the others glow
     let center = abs((signU / LETTER_W - f32(col) - 1.5) * LETTER_W) < dAlong / 2.0 && abs(z - 3.0) < dz / 2.0 + 0.01;
@@ -237,7 +237,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else {
       em = adElec > 0.02; emK = SIGN_EMIT; glowK = SIGN_GLOW;
       let n = i32(u.tickN); let p = select(along, -along, rev) + sec * TICK_SPEED; let li = ifloor(p / TICK_LW); let fu = p / TICK_LW - f32(li);
-      var lc = 32u; if (n > 0) { lc = sg[sg[0] + u32(((li % n) + n) % n)]; }
+      var lc = 32u; if (n > 0) { lc = sgU(sgU(0u) + u32(((li % n) + n) % n)); }
       let lh = TICK_Z1 - TICK_Z0; let on = adElec;
       if (TICK_LW / dAlong >= BULB_COLS && lh / dz >= BULB_ROWS) {
         // up close, bulbs (0.14 m apart), counted per cell like the shop signs'
@@ -305,7 +305,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let col = ifloor((along - start) / lw); let kk = select(col, adN - 1 - col, rev);
     let fu = ((along - start) / lw - f32(col)) * 1.25 - 0.12; let fzz = (zc + 1.1 - z) / 2.2;
     var on = false;
-    if (col >= 0 && col < adN && fu >= 0.0 && fu < 1.0 && fzz >= 0.0 && fzz < 1.0) { on = bulbOn(sg[adTx.x + u32(kk)], ifloor(select(fu, 1.0 - fu, rev) * 5.0), ifloor(fzz * 7.0)); }
+    if (col >= 0 && col < adN && fu >= 0.0 && fu < 1.0 && fzz >= 0.0 && fzz < 1.0) { on = bulbOn(sgU(u32(adTx.x + u32(kk))), ifloor(select(fu, 1.0 - fu, rev) * 5.0), ifloor(fzz * 7.0)); }
     let edge = along - adA0 < 0.25 || adA1 - along < 0.25 || z - adZ0 < 0.25 || adZ1 - z < 0.25;
     let hp = ifloor(hash3(bk, 8, 77) * ${AD_BG.length}.0);
     var ac = select(AD_BG[hp], AD_FG[hp], on); if (edge) { ac = FRAME_AD; }
@@ -453,7 +453,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     }
   }
   // neon tubes up the corners and along the roof line, and their glow on the wall
-  if (bld[q + 27u] > 0.5) {
+  if (bldF(u32(q + 27u)) > 0.5) {
     let neon = colAt(q + 24u);
     let eA = min(along - f0, f1 - along); let dTop = abs(z - (H - 0.3));
     let tw = max(0.1, dAlong * 0.6); let tz = max(0.1, dz * 0.6);
@@ -466,11 +466,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else { let e = max(0.0, 1.0 - min(eA, dTop) / 1.6); c += neon * (e * e * 0.5 * k); il += neon * (e * e * 0.5 * k); }
   }
   // the top washed in light at night
-  if (bld[q + 31u] > 0.5 && z > H - CROWN_H) {
+  if (bldF(u32(q + 31u)) > 0.5 && z > H - CROWN_H) {
     let cw = colAt(q + 28u) * (pow((z - (H - CROWN_H)) / CROWN_H, 1.4) * 0.95 * ad * (1.0 - 0.85 * u.day)); c += cw; il += cw;
   }
   // floodlights at the foot of the wall, each a cone of light widening upward
-  let floodH = bld[q + 35u];
+  let floodH = bldF(u32(q + 35u));
   if (floodH > 0.0 && z < floodH) {
     let w = 1.4 + 0.55 * z; let fzz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / floodH), 1.2);
     var I = 0.0;
@@ -482,7 +482,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       // two nearest lamps (FLOOD_OUT m out, at its lens) past the objects in front of the floodlit facades
       var v1 = 1.0; var v2 = 1.0;
       if (t < FLOOD_SHADOW_FAR && side != 2) {
-        var tg = vec2f(0.0, 1.0); if (side == 1) { tg = vec2f(1.0, 0.0); } else if (side == 3) { tg = vec2f(bld[q + 8u], -bld[q + 7u]); }
+        var tg = vec2f(0.0, 1.0); if (side == 1) { tg = vec2f(1.0, 0.0); } else if (side == 3) { tg = vec2f(bldF(u32(q + 8u)), -bldF(u32(q + 7u))); }
         let a1 = (0.5 - fr) * FLOOD_GAP; let a2 = a1 + select(-FLOOD_GAP, FLOOD_GAP, fr > 0.5);
         let P = vec3f(hx + nw.x * 0.02, hy + nw.y * 0.02, z);
         v1 = floodShadow(P, vec3f(hx + tg.x * a1 + nw.x * FLOOD_OUT, hy + tg.y * a1 + nw.y * FLOOD_OUT, 0.32));
@@ -498,8 +498,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   // the scaffolding 1 m out from a street face: steel tubes (standards every 2.4 m, ledgers every 2 m,
   // a brace in every other bay), boards on each lift, and over the rest a mesh net or nothing
-  let scH = bld[q + 52u];
-  if (scH > 0.0 && side != 2 && face < 4 && ((u32(bld[q + 54u]) >> u32(face)) & 1u) == 1u) {
+  let scH = bldF(u32(q + 52u));
+  if (scH > 0.0 && side != 2 && face < 4 && ((u32(bldF(u32(q + 54u))) >> u32(face)) & 1u) == 1u) {
     let sb = SCAF_D / max(1e-6, abs(dn)); let sA = along0 - da * sb; let sT = t - sb;
     let zs = gOZ - m * sT + A * sT * sT;
     if (sA > f0 + 0.1 && sA < f1 - 0.1 && zs > SHED_Z + 1.1 && zs < scH) {
@@ -510,9 +510,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
         let plank = board && !led && !upright;
         ch = select(select(select(DASH, SL, brace), EQ, plank), BAR, upright);
         c = select(SCAF_STEEL * 1.1, SCAF_BOARD * 0.9, plank) * shade0; T = sT; emC = vec3f(0.0); il = vec3f(0.0);
-      } else if (bld[q + 53u] > 0.5) {
+      } else if (bldF(u32(q + 53u)) > 0.5) {
         // the net veils the wall behind it
-        c = c * 0.45 + NETS[u32(bld[q + 53u]) - 1u] * (0.55 * shade0); emC *= 0.45; il *= 0.45;
+        c = c * 0.45 + NETS[u32(bldF(u32(q + 53u))) - 1u] * (0.55 * shade0); emC *= 0.45; il *= 0.45;
         if (t < 40.0 && ch != AT && ch != HASH) { ch = select(DOT, COL, ((ifloor(uu / 0.3) + ifloor(zs / 0.3)) & 1) == 1); }
       }
     }

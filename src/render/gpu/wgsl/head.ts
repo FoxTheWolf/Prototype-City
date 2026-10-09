@@ -9,22 +9,35 @@ export function headWGSL(): string {
   return /* wgsl */ `
 struct U { ${UNIFORMS.map((n) => `${n}: f32`).join(', ')} };
 @group(0) @binding(0) var<uniform> u: U;
-@group(0) @binding(1) var<storage, read> xb: array<f32>;
-@group(0) @binding(2) var<storage, read> yb: array<f32>;
-@group(0) @binding(3) var<storage, read> xc: array<u32>;
-@group(0) @binding(4) var<storage, read> yc: array<u32>;
-@group(0) @binding(5) var<storage, read> blk: array<f32>;
-@group(0) @binding(6) var<storage, read> bld: array<f32>;
-@group(0) @binding(7) var<storage, read_write> outp: array<u32>;
-@group(0) @binding(8) var<storage, read> subs: array<f32>;
-@group(0) @binding(9) var<storage, read> lmap: array<u32>;
-@group(0) @binding(10) var<storage, read> lampCol: array<f32>;
-@group(0) @binding(11) var<storage, read> dl: array<f32>;
-@group(0) @binding(12) var<storage, read> dlv: array<f32>;
-@group(0) @binding(13) var<storage, read> doff: array<u32>;
-@group(0) @binding(14) var<storage, read> didx: array<u32>;
-@group(0) @binding(15) var<storage, read> sg: array<u32>;
-@group(0) @binding(16) var<storage, read> fx: array<u32>;
+// five storage buffers (13.S; the weakest adapters allow eight): the city's fixed lists in cty and this frame's in dyb,
+// each starting with a header of where its lists start (world.ts, CTY_* and DYB_*), read into these at the start of main
+@group(0) @binding(1) var<storage, read> cty: array<u32>;
+@group(0) @binding(2) var<storage, read_write> outp: array<u32>;
+@group(0) @binding(3) var<storage, read> lmap: array<u32>;
+@group(0) @binding(4) var<storage, read> dyb: array<u32>;
+@group(0) @binding(5) var<storage, read> fx: array<u32>;
+var<private> oXB: u32; var<private> oYB: u32; var<private> oXC: u32; var<private> oYC: u32; var<private> oBLK: u32;
+var<private> oBLD: u32; var<private> oSG: u32; var<private> nXC: u32; var<private> nYC: u32;
+var<private> oSUBS: u32; var<private> oLC: u32; var<private> oDL: u32; var<private> oDLV: u32; var<private> oDOFF: u32; var<private> oDIDX: u32;
+fn heads() {
+  oXB = cty[0]; oYB = cty[1]; oXC = cty[2]; oYC = cty[3]; oBLK = cty[4]; oBLD = cty[5]; oSG = cty[6]; nXC = cty[7]; nYC = cty[8];
+  oSUBS = dyb[0]; oLC = dyb[1]; oDL = dyb[2]; oDLV = dyb[3]; oDOFF = dyb[4]; oDIDX = dyb[5];
+}
+// the street grid's edges (xb, yb), the cell-to-road tables (xc, yc), the blocks, the buildings, the signs
+fn xbF(i: u32) -> f32 { return bitcast<f32>(cty[oXB + i]); }
+fn ybF(i: u32) -> f32 { return bitcast<f32>(cty[oYB + i]); }
+fn xcU(i: u32) -> u32 { return cty[oXC + i]; }
+fn ycU(i: u32) -> u32 { return cty[oYC + i]; }
+fn blkF(i: u32) -> f32 { return bitcast<f32>(cty[oBLK + i]); }
+fn bldF(i: u32) -> f32 { return bitcast<f32>(cty[oBLD + i]); }
+fn sgU(i: u32) -> u32 { return cty[oSG + i]; }
+// the substations, the lamps' colors, the dynamic lights (dl, their light levels dlv, and the grid of them: doff, didx)
+fn subsF(i: u32) -> f32 { return bitcast<f32>(dyb[oSUBS + i]); }
+fn lampColF(i: u32) -> f32 { return bitcast<f32>(dyb[oLC + i]); }
+fn dlF(i: u32) -> f32 { return bitcast<f32>(dyb[oDL + i]); }
+fn dlvF(i: u32) -> f32 { return bitcast<f32>(dyb[oDLV + i]); }
+fn doffU(i: u32) -> u32 { return dyb[oDOFF + i]; }
+fn didxU(i: u32) -> u32 { return dyb[oDIDX + i]; }
 
 ${glyphs}
 const FLOOR_H = ${FLOOR_H};

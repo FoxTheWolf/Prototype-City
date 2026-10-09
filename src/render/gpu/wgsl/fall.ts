@@ -137,12 +137,12 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
   // ---- walk the street grid front to back, as the CPU does, but for this one cell's ray
   let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
   let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
-  let W = arrayLength(&xc); let H = arrayLength(&yc);
-  var cx = i32(xc[u32(clamp(gOX, 0.0, f32(W - 1u)))]);
-  var cy = i32(yc[u32(clamp(gOY, 0.0, f32(H - 1u)))]);
+  let W = nXC; let H = nYC;
+  var cx = i32(xcU(u32(clamp(gOX, 0.0, f32(W - 1u)))));
+  var cy = i32(ycU(u32(clamp(gOY, 0.0, f32(H - 1u)))));
   let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
-  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - gOX) * ix;
-  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - gOY) * iy;
+  var tx = (select(xbF(u32(cx + 1)), xbF(u32(cx)), rdx < 0.0) - gOX) * ix;
+  var ty = (select(ybF(u32(cy + 1)), ybF(u32(cy)), rdy < 0.0) - gOY) * iy;
   var tIn = 0.0;
   var best = 1e9; var bk = -1; var bside = 0; var roof = false;
   for (var s = 0; s < 1024; s++) {
@@ -150,15 +150,15 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
     let tOut = min(tx, ty);
     if ((cx & 1) == 1 && (cy & 1) == 1) {
       let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
-      let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]); let maxH = blk[o + 6u];
+      let b0 = i32(blkF(u32(o + 4u))); let b1 = i32(blkF(u32(o + 5u))); let maxH = blkF(u32(o + 6u));
       let zMin = min(gOZ - m * tIn + A * tIn * tIn, gOZ - m * tOut + A * tOut * tOut);
       if (b1 > b0 && zMin < maxH) {
         for (var k = b0; k < b1; k++) {
           let q = u32(k * ${BLD});
-          let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let h = bld[q + 4u];
+          let x0 = bldF(u32(q)); let y0 = bldF(u32(q + 1u)); let x1 = bldF(u32(q + 2u)); let y1 = bldF(u32(q + 3u)); let h = bldF(u32(q + 4u));
           if ((x0 >= u.inX0 - 0.01) && (x1 <= u.inX1 + 0.01) && (y0 >= u.inY0 - 0.01) && (y1 <= u.inY1 + 0.01)) { continue; }
           var tN = 0.0; var tF = 0.0; var side = 0;
-          if (bld[q + 5u] > 0.5) {
+          if (bldF(u32(q + 5u)) > 0.5) {
             let rr = (x1 - x0) * 0.5; let ox = gOX - (x0 + rr); let oy = gOY - (y0 + rr);
             let qa = rdx * rdx + rdy * rdy; let qb = ox * rdx + oy * rdy;
             let disc = qb * qb - qa * (ox * ox + oy * oy - rr * rr);
@@ -168,8 +168,8 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
             let ax = (x0 - gOX) * ix; let bx = (x1 - gOX) * ix; let ay = (y0 - gOY) * iy; let by = (y1 - gOY) * iy;
             let nnx = min(ax, bx); let nny = min(ay, by);
             tF = min(max(ax, bx), max(ay, by)); tN = max(nnx, nny); side = select(1, 0, nnx > nny);
-            if (bld[q + 6u] > 0.5) {
-              let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
+            if (bldF(u32(q + 6u)) > 0.5) {
+              let knx = bldF(u32(q + 7u)); let kny = bldF(u32(q + 8u)); let kc = bldF(u32(q + 9u));
               let dn = knx * rdx + kny * rdy; let th = (kc - knx * gOX - kny * gOY) / dn;
               if (dn < 0.0) { if (th > tN) { tN = th; side = 3; } }
               else if (dn > 0.0) { tF = min(tF, th); }
@@ -187,8 +187,8 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
         if (bk >= 0) { break; }
       }
     }
-    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - gOX) * ix; }
-    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - gOY) * iy; }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xbF(u32(cx + 1)), xbF(u32(cx)), rdx < 0.0) - gOX) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(ybF(u32(cy + 1)), ybF(u32(cy)), rdy < 0.0) - gOY) * iy; }
   }
 
   var cl: Cell;
@@ -219,25 +219,25 @@ fn dirLit(px: f32, py: f32, pz: f32, S: vec3f) -> f32 {
   let rdx = S.x / L; let rdy = S.y / L; let k = S.z / L;
   let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
   let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
-  let W = arrayLength(&xc); let H = arrayLength(&yc);
+  let W = nXC; let H = nYC;
   if (px < 0.0 || py < 0.0 || px >= f32(W) || py >= f32(H)) { return 1.0; }
-  var cx = i32(xc[u32(px)]); var cy = i32(yc[u32(py)]);
+  var cx = i32(xcU(u32(px))); var cy = i32(ycU(u32(py)));
   let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
-  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix;
-  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy;
+  var tx = (select(xbF(u32(cx + 1)), xbF(u32(cx)), rdx < 0.0) - px) * ix;
+  var ty = (select(ybF(u32(cy + 1)), ybF(u32(cy)), rdy < 0.0) - py) * iy;
   var tIn = 0.0;
   for (var s = 0; s < 256; s++) {
     let z = pz + k * tIn;
     if (z > SHADOW_TOP) { break; }
     if ((cx & 1) == 1 && (cy & 1) == 1) {
       let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
-      let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]);
-      if (b1 > b0 && z < blk[o + 6u]) {
+      let b0 = i32(blkF(u32(o + 4u))); let b1 = i32(blkF(u32(o + 5u)));
+      if (b1 > b0 && z < blkF(u32(o + 6u))) {
         for (var q0 = b0; q0 < b1; q0++) {
           let q = u32(q0 * ${BLD});
-          let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let h = bld[q + 4u];
+          let x0 = bldF(u32(q)); let y0 = bldF(u32(q + 1u)); let x1 = bldF(u32(q + 2u)); let y1 = bldF(u32(q + 3u)); let h = bldF(u32(q + 4u));
           var tN = 0.0; var tF = 0.0;
-          if (bld[q + 5u] > 0.5) {
+          if (bldF(u32(q + 5u)) > 0.5) {
             let rr = (x1 - x0) * 0.5; let ox = px - (x0 + rr); let oy = py - (y0 + rr);
             let qb = ox * rdx + oy * rdy; let disc = qb * qb - (ox * ox + oy * oy - rr * rr);
             if (disc <= 0.0) { continue; }
@@ -245,8 +245,8 @@ fn dirLit(px: f32, py: f32, pz: f32, S: vec3f) -> f32 {
           } else {
             let ax = (x0 - px) * ix; let bx = (x1 - px) * ix; let ay = (y0 - py) * iy; let by = (y1 - py) * iy;
             tN = max(min(ax, bx), min(ay, by)); tF = min(max(ax, bx), max(ay, by));
-            if (bld[q + 6u] > 0.5) {
-              let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
+            if (bldF(u32(q + 6u)) > 0.5) {
+              let knx = bldF(u32(q + 7u)); let kny = bldF(u32(q + 8u)); let kc = bldF(u32(q + 9u));
               let dn = knx * rdx + kny * rdy; let th = (kc - knx * px - kny * py) / dn;
               if (dn < 0.0) { tN = max(tN, th); } else if (dn > 0.0) { tF = min(tF, th); } else if (knx * px + kny * py > kc) { continue; }
             }
@@ -256,8 +256,8 @@ fn dirLit(px: f32, py: f32, pz: f32, S: vec3f) -> f32 {
         }
       }
     }
-    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix; }
-    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy; }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xbF(u32(cx + 1)), xbF(u32(cx)), rdx < 0.0) - px) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(ybF(u32(cy + 1)), ybF(u32(cy)), rdy < 0.0) - py) * iy; }
   }
   return 1.0;
 }

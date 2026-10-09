@@ -40,7 +40,7 @@ fn outView(o: u32, lot: i32, box: i32, f: i32, elec: f32, full: bool) -> RView {
 const DAYLIGHT_WIN = 2.2; const DAYLIGHT_DEEP = 0.2; const DAYLIGHT_FALL = 4.0;
 fn dayIn(box: i32, x: f32, y: f32) -> f32 {
   let q = u32(box * ${BLD});
-  let d = max(0.0, min(min(x - bld[q], bld[q + 2u] - x), min(y - bld[q + 1u], bld[q + 3u] - y)));
+  let d = max(0.0, min(min(x - bldF(u32(q)), bldF(u32(q + 2u)) - x), min(y - bldF(u32(q + 1u)), bldF(u32(q + 3u)) - y)));
   return u.day * (DAYLIGHT_DEEP + DAYLIGHT_WIN * exp(-d / DAYLIGHT_FALL)) * (1.0 - 0.4 * u.cloud);
 }
 /** The light at a point of room r: its lamps, falling off with the distance to the nearest and along the ray inside (d); the ambient; the daylight. */
@@ -142,12 +142,12 @@ fn exitPx(uu: f32, v: f32, du: f32, dv: f32) -> Px {
 /** Whether a building stands at (x, y) taller than z (builtUp). */
 fn builtUp(x: f32, y: f32, z: f32) -> bool {
   if (x < 0.0 || y < 0.0 || x >= u.cityW || y >= u.cityH) { return false; }
-  let gx = i32(xc[u32(x)]); let gy = i32(yc[u32(y)]);
+  let gx = i32(xcU(u32(u32(x)))); let gy = i32(ycU(u32(u32(y))));
   if ((gx & 1) == 0 || (gy & 1) == 0) { return false; }
   let o = u32(((gy >> 1) * i32(u.nbx) + (gx >> 1)) * ${BLK});
-  for (var k = i32(blk[o + 4u]); k < i32(blk[o + 5u]); k++) {
+  for (var k = i32(blkF(u32(o + 4u))); k < i32(blkF(u32(o + 5u))); k++) {
     let q = u32(k * ${BLD});
-    if (bld[q + 4u] > z && x >= bld[q] && x < bld[q + 2u] && y >= bld[q + 1u] && y < bld[q + 3u] && (bld[q + 6u] < 0.5 || bld[q + 7u] * x + bld[q + 8u] * y <= bld[q + 9u])) { return true; }
+    if (bldF(u32(q + 4u)) > z && x >= bldF(u32(q)) && x < bldF(u32(q + 2u)) && y >= bldF(u32(q + 1u)) && y < bldF(u32(q + 3u)) && (bldF(u32(q + 6u)) < 0.5 || bldF(u32(q + 7u)) * x + bldF(u32(q + 8u)) * y <= bldF(u32(q + 9u)))) { return true; }
   }
   return false;
 }
@@ -228,15 +228,15 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   // (riding it, the viewer's own pick lights its button)
   let panelTo = select(carTo, bitcast<i32>(fx[V.IB + 7u]), inside && V.shut);
   let q = u32(V.box * ${BLD}); let lq = u32(V.lot * ${BLD});
-  let st = i32(bld[lq + 10u]); let shop = bld[lq + 19u] > 0.5; let office = st == 0 || st == 1;
+  let st = i32(bldF(u32(lq + 10u))); let shop = bldF(u32(lq + 19u)) > 0.5; let office = st == 0 || st == 1;
   let rl = sqrt(rdx * rdx + rdy * rdy);
   res.gz0 = f32(V.f) * FLOOR_H;
   // where the ray leaves the box (and the cut): that outer wall closes the column
   var tExit = 1e9; var face = 0;
-  if (rdx > 0.0) { let t = (bld[q + 2u] - u.px) / rdx; if (t < tExit) { tExit = t; face = 1; } } else if (rdx < 0.0) { let t = (bld[q] - u.px) / rdx; if (t < tExit) { tExit = t; face = 0; } }
-  if (rdy > 0.0) { let t = (bld[q + 3u] - u.py) / rdy; if (t < tExit) { tExit = t; face = 3; } } else if (rdy < 0.0) { let t = (bld[q + 1u] - u.py) / rdy; if (t < tExit) { tExit = t; face = 2; } }
-  let knx = bld[q + 7u]; let kny = bld[q + 8u];
-  if (bld[q + 6u] > 0.5) { let dn = knx * rdx + kny * rdy; if (dn > 0.0) { let t = (bld[q + 9u] - knx * u.px - kny * u.py) / dn; if (t < tExit) { tExit = t; face = 4; } } }
+  if (rdx > 0.0) { let t = (bldF(u32(q + 2u)) - u.px) / rdx; if (t < tExit) { tExit = t; face = 1; } } else if (rdx < 0.0) { let t = (bldF(u32(q)) - u.px) / rdx; if (t < tExit) { tExit = t; face = 0; } }
+  if (rdy > 0.0) { let t = (bldF(u32(q + 3u)) - u.py) / rdy; if (t < tExit) { tExit = t; face = 3; } } else if (rdy < 0.0) { let t = (bldF(u32(q + 1u)) - u.py) / rdy; if (t < tExit) { tExit = t; face = 2; } }
+  let knx = bldF(u32(q + 7u)); let kny = bldF(u32(q + 8u));
+  if (bldF(u32(q + 6u)) > 0.5) { let dn = knx * rdx + kny * rdy; if (dn > 0.0) { let t = (bldF(u32(q + 9u)) - knx * u.px - kny * u.py) / dn; if (t < tExit) { tExit = t; face = 4; } } }
   tExit = max(tExit, tIn + 0.02);
   // the nearest door leaf the ray meets (the plan's, swung as far as each is open; the viewer's street doors' glass ones);
   // a leaf is lit by the room on the side it is seen from (5 cm back along the ray: it stands on the cells' border)
@@ -438,7 +438,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     let r0 = select(0, i32(cur & 255u) - 1, cur != 0u); let ro = roomRec(o, r0); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
     let t = tExit; let hx = u.px + rdx * t; let hy = u.py + rdy * t;
     let along = select(select(hx * kny - hy * knx, hx, face < 4), hy, face < 2);
-    let corner = along - bld[q + 36u + u32(face) * 2u] < 0.35 || bld[q + 37u + u32(face) * 2u] - along < 0.35;
+    let corner = along - bldF(u32(q + 36u + u32(face) * 2u)) < 0.35 || bldF(u32(q + 37u + u32(face) * 2u)) - along < 0.35;
     let bay = along / BAY; let fw = bay - floor(bay); let ground = V.f == 0;
     var isDoor = false; var du = 0.0; var doorW = 1.0; var entryD = false;
     let fo = fx[FX_TAB + u32(V.lot)];

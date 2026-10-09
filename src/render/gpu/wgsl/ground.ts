@@ -10,12 +10,12 @@ fn outsideGround(wx: f32, wy: f32, rd: f32) -> Cell {
 }
 fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let wx = gOX + rdx * rd; let wy = gOY + rdy * rd;
-  let W = f32(arrayLength(&xc)); let Hh = f32(arrayLength(&yc));
+  let W = f32(nXC); let Hh = f32(nYC);
   let bg = vec3f(7.0, 8.0, 12.0);
   if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return outsideGround(wx, wy, rd); }
   if (rd > GROUND_FAR) { return Cell(DOT, mix(vec3f(28.0, 24.0, 32.0), vec3f(70.0, 72.0, 78.0), u.day), bg, rd, KIND_GROUND, 0.0); }
   let fog = 1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day);
-  let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);
+  let gx = i32(xcU(u32(u32(wx)))); let gy = i32(ycU(u32(u32(wy))));
   let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
   var ch = DOT; var c = vec3f(38.0, 38.0, 46.0); var mat = MAT_CONCRETE;
   var dens = 0.0; // litter per 0.5 m square
@@ -35,8 +35,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     ch = asphalt; mat = MAT_ASPHALT;
     if (roadX != roadY && rd < 200.0) {
       var b0a = 0.0; var b0b = 0.0; var e0a = 0.0; var e0b = 0.0; var across = 0.0; var along = 0.0;
-      if (roadX) { b0a = xb[gx]; b0b = xb[gx + 1]; e0a = yb[gy]; e0b = yb[gy + 1]; across = wx - (b0a + b0b) * 0.5; along = wy; }
-      else { b0a = yb[gy]; b0b = yb[gy + 1]; e0a = xb[gx]; e0b = xb[gx + 1]; across = wy - (b0a + b0b) * 0.5; along = wx; }
+      if (roadX) { b0a = xbF(u32(gx)); b0b = xbF(u32(gx + 1)); e0a = ybF(u32(gy)); e0b = ybF(u32(gy + 1)); across = wx - (b0a + b0b) * 0.5; along = wy; }
+      else { b0a = ybF(u32(gy)); b0b = ybF(u32(gy + 1)); e0a = xbF(u32(gx)); e0b = xbF(u32(gx + 1)); across = wy - (b0a + b0b) * 0.5; along = wx; }
       var dEnd = 1e9;
       if (!roadX && abs(u.dnx) > 0.05) {
         let hw = (b0b - b0a) * 0.5; let ycn = (b0a + b0b) * 0.5; let sg = select(-1.0, 1.0, sD > 0.0);
@@ -48,7 +48,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       let mark = select(DASH, BAR, roadX); let markX = select(BAR, EQ, roadX);
       // an avenue the diagonal crosses in an X: where the diagonal's lanes end, and the stop lines before it
       var xa0 = 0.0; var xa1 = 0.0;
-      if (roadX) { let xo = sg[7] + u32(gx >> 1) * 2u; xa0 = bitcast<f32>(sg[xo]); xa1 = bitcast<f32>(sg[xo + 1u]); }
+      if (roadX) { let xo = sgU(u32(7)) + u32(gx >> 1) * 2u; xa0 = bitcast<f32>(sgU(u32(xo))); xa1 = bitcast<f32>(sgU(u32(xo + 1u))); }
       let hasX = xa1 > xa0;
       if (hasX && pastD < 0.25 && along > xa0 && along < xa1) { ch = BAR; c = vec3f(175.0); }
       else if (dEnd < 1.0) { }
@@ -61,8 +61,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     }
   } else {
     let o = u32(((gy >> 1) * i32(u.nbx) + (gx >> 1)) * ${BLK});
-    let flags = u32(blk[o + 7u]); let opk = flags & 3u; let diag = (flags >> 2u) & 7u; let square = (flags & 64u) != 0u;
-    var edge = min(min(wx - blk[o], blk[o + 2u] - wx), min(wy - blk[o + 1u], blk[o + 3u] - wy));
+    let flags = u32(blkF(u32(o + 7u))); let opk = flags & 3u; let diag = (flags >> 2u) & 7u; let square = (flags & 64u) != 0u;
+    var edge = min(min(wx - blkF(u32(o)), blkF(u32(o + 2u)) - wx), min(wy - blkF(u32(o + 1u)), blkF(u32(o + 3u)) - wy));
     if (diag != 0u) { edge = min(edge, pastD); }
     if (edge < SIDEWALK) {
       let fx = fract(wx / 1.5); let fy = fract(wy / 1.5);
@@ -74,7 +74,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       if (square) { let dark = ((ifloor(wx / 2.5) + ifloor(wy / 2.5)) & 1) == 1; c = select(vec3f(108.0, 104.0, 108.0), vec3f(62.0, 60.0, 66.0), dark); if (!dark && fx > 0.45 && fx < 0.55 && fy > 0.45 && fy < 0.55) { ch = O; } }
     } else if (opk == 1u) {
       dens = 0.01;
-      let mx = (blk[o] + blk[o + 2u]) * 0.5; let my = (blk[o + 1u] + blk[o + 3u]) * 0.5;
+      let mx = (blkF(u32(o)) + blkF(u32(o + 2u))) * 0.5; let my = (blkF(u32(o + 1u)) + blkF(u32(o + 3u))) * 0.5;
       if (abs(wx - mx) < 1.5 || abs(wy - my) < 1.5) { ch = select(COM, DOT, hv < 0.5); c = vec3f(95.0, 85.0, 70.0); }
       else { ch = select(select(SEMI, COM, hv < 0.7), QUO, hv < 0.4); c = vec3f(40.0, 95.0 + hv * 40.0, 45.0); mat = MAT_LEAF; }
     } else if (opk == 2u) {
@@ -82,8 +82,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       ch = select(COL, PLUS, fx < 0.06 || fy < 0.06); c = vec3f(92.0, 86.0, 80.0);
       if (square) { let dark = ((ifloor(wx / 2.5) + ifloor(wy / 2.5)) & 1) == 1; c = select(vec3f(108.0, 104.0, 108.0), vec3f(62.0, 60.0, 66.0), dark); if (!dark && fx > 0.45 && fx < 0.55 && fy > 0.45 && fy < 0.55) { ch = O; } }
     } else if (opk == 3u) {
-      let long = blk[o + 2u] - blk[o] > blk[o + 3u] - blk[o + 1u];
-      let a = (select(wx, wy, long) - select(blk[o], blk[o + 1u], long)) % 4.5; let uu = select(wy, wx, long);
+      let long = blkF(u32(o + 2u)) - blkF(u32(o)) > blkF(u32(o + 3u)) - blkF(u32(o + 1u));
+      let a = (select(wx, wy, long) - select(blkF(u32(o)), blkF(u32(o + 1u)), long)) % 4.5; let uu = select(wy, wx, long);
       if (abs(a - 1.5) < 0.12 || abs(a - 2.95) < 0.12) { ch = select(BAR, EQ, long); c = vec3f(120.0, 115.0, 115.0); }
       else if (a > 1.2 && a < 3.3 && uu % 0.8 < 0.25) { ch = select(EQ, BAR, long); c = vec3f(70.0, 52.0, 40.0); }
       else { ch = select(COM, DOT, hv < 0.6); c = vec3f(55.0, 50.0, 48.0); }

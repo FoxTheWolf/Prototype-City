@@ -2,6 +2,7 @@ export const mainWGSL = (): string => /* wgsl */ `@compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let cols = u32(u.cols); let rows = u32(u.rows);
   if (gid.x >= cols || gid.y >= rows) { return; }
+  heads();
   let n = cols * rows; let i = gid.y * cols + gid.x;
   let camX = 2.0 * (f32(gid.x) + 0.5) / u.cols - 1.0;
   // the ray: on the ground plane (rdx, rdy), and how fast it drops per unit of that (m):

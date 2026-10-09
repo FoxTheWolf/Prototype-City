@@ -52,6 +52,8 @@ import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BI
  */
 
 type UName = (typeof UNIFORMS)[number];
+/** Words before the lists in cty (seven starts, then the cells of xc and yc) and in dyb (six starts): head.ts's heads(). */
+const CTY_HEAD = 9, DYB_HEAD = 6;
 const UIDX = Object.fromEntries(UNIFORMS.map((n, k) => [n, k])) as Record<UName, number>;
 
 /**
@@ -101,12 +103,17 @@ export class GpuWorld {
   sunScreen = [0, 0, 0, 0.22];
   private pipe!: GPUComputePipeline;
   private mod: GPUShaderModule;
-  /** The city's lists (fixed), then what changes: substations, light map, lamp colors, dynamic lights. */
-  private fixed: GPUBuffer[];
-  private subs: GPUBuffer;
+  /**
+   * The city's fixed lists in one buffer (13.S: the weakest adapters allow eight storage buffers), after a header of
+   * where each starts (CTY_HEAD words: the grid's edges xb and yb, the cell-to-road tables xc and yc, the blocks, the
+   * buildings, the signs, then how many cells xc and yc have); the light map; and this frame's lists in another
+   * (dyb, after DYB_HEAD words: the substations, the lamps' colors, the dynamic lights, their levels, their grid).
+   */
+  private cty: GPUBuffer;
+  private ctyAt: number[];
   private lmap: GPUBuffer;
-  private lampCol: GPUBuffer;
-  private dyn: GPUBuffer[] = [];
+  private dyb: GPUBuffer | null = null;
+  private dybW = new Uint32Array(0);
   private lmapVersion = -1;
   private bind: GPUBindGroup | null = null;
   /** Bumped when a list's buffer is made again: every bind group made before is stale. */
@@ -117,12 +124,11 @@ export class GpuWorld {
   /** The buildings' floats, kept to write the power grid's part into (substation, generator). */
   private blds: Float32Array;
   private powerSet = false;
-  /** The signs' buffer (see signData) and the ticker text last written into it. */
-  private sg: GPUBuffer;
+  /** Where the ticker starts in cty (see signData), and the text last written into it. */
   private tickOff = 0;
   private ticker = '';
   /**
-   * What is near and changes as the viewer moves (binding 16, the last the adapters allow: later lists
+   * What is near and changes as the viewer moves (binding 5; it began as the last binding the adapters allowed, so later lists
    * go in here too, after their own header word): at FX_TAB, one word per building, where its facade
    * features start (0: none); each is a count, then per feature its kind | face << 4 (0 a street door,
    * 1 a fire escape) and its span along the face (two f32). Then two words per box, where its plans
@@ -184,7 +190,9 @@ export class GpuWorld {
     if (!adapter) throw new Error('no WebGPU adapter');
     // the GPU's own clock on the world's pass, where the adapter has it (the real cost of the shader, L.0)
     const ts = adapter.features.has('timestamp-query');
-    const device = await adapter.requestDevice({ requiredFeatures: ts ? ['timestamp-query'] : [], requiredLimits: { maxStorageBuffersPerShaderStage: Math.min(16, adapter.limits.maxStorageBuffersPerShaderStage) } });
+    // (no limits asked past WebGPU's defaults: every pass fits in its eight storage buffers per stage since 13.S, so the
+    // weakest adapters run it too)
+    const device = await adapter.requestDevice({ requiredFeatures: ts ? ['timestamp-query'] : [] });
     const g = new GpuWorld(device, city);
     // compiled off the main thread (the first compile takes seconds)
     g.pipe = await device.createComputePipelineAsync({ layout: 'auto', compute: { module: g.mod, entryPoint: 'main' } });
@@ -223,13 +231,15 @@ export class GpuWorld {
       }
     });
     this.blds = blds;
-    const store = (a: Float32Array | Uint32Array) => {
-      const b = dev.createBuffer({ size: Math.max(16, a.byteLength), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-      dev.queue.writeBuffer(b, 0, a); return b;
-    };
     const S = signData(city);
-    this.sg = store(S.data); this.tickOff = S.tick;
-    this.fixed = [new Float32Array(C.xb), new Float32Array(C.yb), Uint32Array.from(C.xCell), Uint32Array.from(C.yCell), blocks, blds].map(store);
+    const lists = [new Float32Array(C.xb), new Float32Array(C.yb), Uint32Array.from(C.xCell), Uint32Array.from(C.yCell), blocks, blds, S.data];
+    const at: number[] = [];
+    let end = CTY_HEAD;
+    for (const a of lists) { at.push(end); end += a.length; }
+    this.ctyAt = at; this.tickOff = at[6] + S.tick;
+    this.cty = dev.createBuffer({ size: end * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    dev.queue.writeBuffer(this.cty, 0, Uint32Array.from([...at, C.xCell.length, C.yCell.length]));
+    lists.forEach((a, k) => dev.queue.writeBuffer(this.cty, at[k] * 4, a));
     const nb = C.buildings.length;
     this.fxW = new Uint32Array(this.fxHead() + (1 << 22)); this.fxF = new Float32Array(this.fxW.buffer); // room for many plans: when full, all start over
     this.fxW[0] = nb;
@@ -241,9 +251,7 @@ export class GpuWorld {
     dev.queue.writeBuffer(this.fx, 0, this.fxW);
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    this.subs = sz(64 * 16);
     this.lmap = sz(1024 * 1024 * 4 * 2);
-    this.lampCol = sz(C.lamps.length * 24);
     this.lampBuf = new Float32Array(C.lamps.length * 6);
     // the head hangs at the end of the arm (lampModel: 1.6 m out, 6.4 m up)
     C.lamps.forEach((p, n) => this.lampBuf.set([0, 0, 0, p.x + Math.cos(p.a) * 1.6, p.y + Math.sin(p.a) * 1.6, 6.37], n * 6));
@@ -271,15 +279,20 @@ export class GpuWorld {
     this.bind = null;
   }
 
-  /** A buffer for a list that changes size: grown (by doubling) when it no longer fits; the bind group follows. */
-  private fit(k: number, bytes: number) {
-    const b = this.dyn[k];
-    if (b && b.size >= bytes) return b;
-    b?.destroy();
-    let size = 256; while (size < bytes) size *= 2;
-    this.dyn[k] = this.dev.createBuffer({ size, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    this.gen++;
-    return this.dyn[k];
+  /** This frame's lists into dyb (see cty), its buffer grown (by doubling) when they no longer fit; the bind group follows. */
+  private putDyn(lists: (Float32Array | Uint32Array)[]) {
+    let end = DYB_HEAD;
+    for (const a of lists) end += a.length;
+    if (this.dybW.length < end) { let n = 256; while (n < end) n *= 2; this.dybW = new Uint32Array(n); }
+    const W = this.dybW, F = new Float32Array(W.buffer);
+    end = DYB_HEAD;
+    lists.forEach((a, k) => { W[k] = end; if (a instanceof Float32Array) F.set(a, end); else W.set(a, end); end += a.length; });
+    if (!this.dyb || this.dyb.size < W.byteLength) {
+      this.dyb?.destroy();
+      this.dyb = this.dev.createBuffer({ size: W.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+      this.gen++;
+    }
+    this.dev.queue.writeBuffer(this.dyb, 0, W, 0, end);
   }
 
   /** This frame's world into `out`, as the first pass of the encoder (the compositor draws it in the same submit). */
@@ -290,31 +303,29 @@ export class GpuWorld {
       this.ticker = F.ticker;
       const T = new Uint32Array(Math.min(TICK_MAX, F.ticker.length));
       for (let k = 0; k < T.length; k++) T[k] = code(F.ticker, k);
-      if (T.length) q.writeBuffer(this.sg, this.tickOff * 4, T);
+      if (T.length) q.writeBuffer(this.cty, this.tickOff * 4, T);
     }
     if (!this.powerSet) {
       // which substation feeds each building, and whether it has a generator: fixed once the grid exists
       for (let k = 0; k < C.buildings.length; k++) { this.blds[k * BLD + 46] = P.building[k]; this.blds[k * BLD + 47] = P.generator[k]; this.blds[k * BLD + 63] = P.backup[k]; }
-      q.writeBuffer(this.fixed[5], 0, this.blds);
+      q.writeBuffer(this.cty, this.ctyAt[5] * 4, this.blds);
       this.powerSet = true;
     }
     const S = new Float32Array(P.subs.length * 4);
     P.subs.forEach((s, k) => S.set([s.changed < 0 ? -1 : s.changed / 60, s.on ? 1 : 0, s.ox, s.oy], k * 4));
-    q.writeBuffer(this.subs, 0, S);
     if (F.light.version !== this.lmapVersion) { this.lmapVersion = F.light.version; q.writeBuffer(this.lmap, 0, F.light.packMap()); }
     { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * 6] = c[n * 3]; L[n * 6 + 1] = c[n * 3 + 1]; L[n * 6 + 2] = c[n * 3 + 2]; } }
-    q.writeBuffer(this.lampCol, 0, this.lampBuf);
     this.facades(world, v.x, v.y);
     this.streetDoors(world);
     this.liftCars(world);
     this.openDoors(world);
     const D = F.dyn.pack();
-    [D.lights, D.lv, D.off, D.idx].forEach((a, k) => { const b = this.fit(k, a.byteLength); q.writeBuffer(b, 0, a); });
+    this.putDyn([S, this.lampBuf, D.lights, D.lv, D.off, D.idx]);
     if (!this.bind || this.bindGen !== this.gen) {
       this.bindGen = this.gen;
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
-        entries: [this.uni, ...this.fixed, this.out, this.subs, this.lmap, this.lampCol, ...this.dyn, this.sg, this.fx].map((buffer, binding) => ({ binding, resource: { buffer } })),
+        entries: [this.uni, this.cty, this.out, this.lmap, this.dyb!, this.fx].map((buffer, binding) => ({ binding, resource: { buffer } })),
       });
     }
     if (timed) {

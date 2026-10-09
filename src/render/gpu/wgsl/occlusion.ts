@@ -8,25 +8,25 @@ const SKY_R = 110.0; const SKY_FAR = 700.0;
 fn horizonTan(px: f32, py: f32, pz: f32, rdx: f32, rdy: f32) -> f32 {
   let ix = select(1e12, 1.0 / rdx, rdx != 0.0); let iy = select(1e12, 1.0 / rdy, rdy != 0.0);
   let stX = select(1, -1, rdx < 0.0); let stY = select(1, -1, rdy < 0.0);
-  let W = arrayLength(&xc); let H = arrayLength(&yc);
+  let W = nXC; let H = nYC;
   if (px < 0.0 || py < 0.0 || px >= f32(W) || py >= f32(H)) { return 0.0; }
-  var cx = i32(xc[u32(px)]); var cy = i32(yc[u32(py)]);
+  var cx = i32(xcU(u32(u32(px)))); var cy = i32(ycU(u32(u32(py))));
   let nx = i32(u.nxb) - 1; let ny = i32(u.nyb) - 1;
-  var tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix;
-  var ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy;
+  var tx = (select(xbF(u32(cx + 1)), xbF(u32(cx)), rdx < 0.0) - px) * ix;
+  var ty = (select(ybF(u32(cy + 1)), ybF(u32(cy)), rdy < 0.0) - py) * iy;
   var tIn = 0.0; var best = 0.0; gHzQ = -1;
   for (var s = 0; s < 64; s++) {
     if (tIn > SKY_R || (SHADOW_TOP - pz) < best * tIn) { break; }
     if ((cx & 1) == 1 && (cy & 1) == 1) {
       let o = u32(((cy >> 1) * i32(u.nbx) + (cx >> 1)) * ${BLK});
-      let b0 = i32(blk[o + 4u]); let b1 = i32(blk[o + 5u]);
-      if (b1 > b0 && blk[o + 6u] - pz > best * max(tIn, 0.5)) {
+      let b0 = i32(blkF(u32(o + 4u))); let b1 = i32(blkF(u32(o + 5u)));
+      if (b1 > b0 && blkF(u32(o + 6u)) - pz > best * max(tIn, 0.5)) {
         for (var q0 = b0; q0 < b1; q0++) {
           let q = u32(q0 * ${BLD});
-          let x0 = bld[q]; let y0 = bld[q + 1u]; let x1 = bld[q + 2u]; let y1 = bld[q + 3u]; let h = bld[q + 4u];
+          let x0 = bldF(u32(q)); let y0 = bldF(u32(q + 1u)); let x1 = bldF(u32(q + 2u)); let y1 = bldF(u32(q + 3u)); let h = bldF(u32(q + 4u));
           if (h - pz <= best * max(tIn, 0.5)) { continue; }
           var tN = 0.0; var tF = 0.0;
-          if (bld[q + 5u] > 0.5) {
+          if (bldF(u32(q + 5u)) > 0.5) {
             let rr = (x1 - x0) * 0.5; let ox = px - (x0 + rr); let oy = py - (y0 + rr);
             let qb = ox * rdx + oy * rdy; let disc = qb * qb - (ox * ox + oy * oy - rr * rr);
             if (disc <= 0.0) { continue; }
@@ -34,8 +34,8 @@ fn horizonTan(px: f32, py: f32, pz: f32, rdx: f32, rdy: f32) -> f32 {
           } else {
             let ax = (x0 - px) * ix; let bx = (x1 - px) * ix; let ay = (y0 - py) * iy; let by = (y1 - py) * iy;
             tN = max(min(ax, bx), min(ay, by)); tF = min(max(ax, bx), max(ay, by));
-            if (bld[q + 6u] > 0.5) {
-              let knx = bld[q + 7u]; let kny = bld[q + 8u]; let kc = bld[q + 9u];
+            if (bldF(u32(q + 6u)) > 0.5) {
+              let knx = bldF(u32(q + 7u)); let kny = bldF(u32(q + 8u)); let kc = bldF(u32(q + 9u));
               let dn = knx * rdx + kny * rdy; let th = (kc - knx * px - kny * py) / dn;
               if (dn < 0.0) { tN = max(tN, th); } else if (dn > 0.0) { tF = min(tF, th); } else if (knx * px + kny * py > kc) { continue; }
             }
@@ -45,16 +45,16 @@ fn horizonTan(px: f32, py: f32, pz: f32, rdx: f32, rdy: f32) -> f32 {
           if (tb > best) {
             // the face the ray meets (a round tower's, or the cut's, roughly: back along the ray)
             best = tb; gHzQ = i32(q);
-            if (bld[q + 5u] > 0.5) { gHzN = vec2f(-rdx, -rdy); }
-            else if (bld[q + 6u] > 0.5 && tN > max(min((x0 - px) * ix, (x1 - px) * ix), min((y0 - py) * iy, (y1 - py) * iy)) + 1e-3) { gHzN = vec2f(bld[q + 7u], bld[q + 8u]); }
+            if (bldF(u32(q + 5u)) > 0.5) { gHzN = vec2f(-rdx, -rdy); }
+            else if (bldF(u32(q + 6u)) > 0.5 && tN > max(min((x0 - px) * ix, (x1 - px) * ix), min((y0 - py) * iy, (y1 - py) * iy)) + 1e-3) { gHzN = vec2f(bldF(u32(q + 7u)), bldF(u32(q + 8u))); }
             else if (min((x0 - px) * ix, (x1 - px) * ix) > min((y0 - py) * iy, (y1 - py) * iy)) { gHzN = vec2f(select(1.0, -1.0, rdx > 0.0), 0.0); }
             else { gHzN = vec2f(0.0, select(1.0, -1.0, rdy > 0.0)); }
           }
         }
       }
     }
-    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xb[cx + 1], xb[cx], rdx < 0.0) - px) * ix; }
-    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - py) * iy; }
+    if (tx < ty) { cx += stX; tIn = tx; if (cx < 0 || cx >= nx) { break; } tx = (select(xbF(u32(cx + 1)), xbF(u32(cx)), rdx < 0.0) - px) * ix; }
+    else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(ybF(u32(cy + 1)), ybF(u32(cy)), rdy < 0.0) - py) * iy; }
   }
   return best;
 }

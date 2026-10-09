@@ -10,6 +10,8 @@
 - **Script Python que escreve TypeScript:** `'
 '` dentro de um heredoc virou uma quebra de linha de verdade no `.ts` (quebrou o `head.ts`); para barras invertidas, a ferramenta Edit.
 - **Posições de ouro** em `docs/tecnico.md`; fotos em `playtest/ouro/13S-*`. Entram em ~8 s com o shader em cache.
+- **Juntar buffers sem errar índice:** trocar `nome[expr]` por `nomeF(u32(expr))` por script com casamento de colchetes; o script não troca o colchete de dentro de outro (`sg[sg[0] + ...]`), conferir com grep depois. `arrayLength` some (o tamanho vai no cabeçalho). Testar o limite de verdade criando o dispositivo sem `requiredLimits`.
+- **O console do painel guarda erros de recargas antigas:** o HMR recompila a cada edição, e um estado do meio da edição deixa erros de WGSL que continuam lá; olhar se o jogo desenha e compilar o WGSL final à parte antes de concluir.
 
 ### Lições da 13.20 (biblioteca de arrumações, postos) — 2026-10-08
 - **As molduras da biblioteca envelhecem:** foram copiadas das plantas antes da v1.3 (R12 mudou portas). Casar a arrumação pela moldura exata é frágil; o critério certo (o do manual) é rodar `checkArrangement` com a moldura **real** do cômodo, depois de girar.

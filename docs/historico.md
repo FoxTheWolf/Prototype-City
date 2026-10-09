@@ -2,6 +2,15 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.S — a arrumação do shader (0.13.S, 2026-10-08)
+
+- **Separado por assunto:** `gpu/shader.ts` virou um juntador de `gpu/wgsl/*.ts` (head, power, lamps, roof, signs, rooms, inside, wall, ground, shading, sky, fall, occlusion, main; `common.ts` com o que o `world.ts` usa). `tests/wgsl-dump.ts` provou o WGSL idêntico (sha1).
+- **A zona de fogo saiu de vez:** o chão em brasa (`outsideGround` no lugar), a cerca, a fumaça, o Sarcófago e os guindastes no WGSL; `Vent`/`Sarcophagus`/`generateBorder`/`BURN_START`/`FIRE_ZONE` em `sim/city.ts`; `render/sarcophagus.ts` (o `CURVE_R` foi para `wgsl/common.ts`); as torres de holofote da cerca (`FLOOD`); o rugido do fogo no som; o `?sarcnear` e o `ver-sarcofago.bat`.
+- **Compilação 35 → 16 s:** uma chamada só de `cityCell` (um laço de 3 raios no `main`: o da vista, o através da janela, o reflexo) e de `peekRoom` (no `wallCell`); `tests/wgsl-inline.ts` mede as cópias (590 → 261 mil tokens).
+- **16 → 5 storage buffers:** `cty` (xb, yb, xc, yc, blocos, prédios, letreiros, com cabeçalho) e `dyb` (subestações, cores dos postes, luzes dinâmicas, uma escrita por quadro), além de `outp`, `lmap` e `fx`; o acesso por funções (`xbF`, `bldF`, `sgU`...) e os deslocamentos lidos em `heads()` no começo do `main`. O `requestDevice` não pede mais limites: o jogo inteiro cabe no padrão (8).
+- **Posições de ouro** em `docs/tecnico.md` (fotos em `playtest/ouro/`).
+- **Decidido com o usuário:** a luz adiada (deferred) e os efeitos na camada de pixels vão para a 16.1.
+
 ## 13.20 — mobiliar pela biblioteca, com postos (0.13.20, 2026-10-08)
 
 - **A biblioteca no jogo:** `fitArrangements` (`sim/floorplans.ts`) dá, para um cômodo de casa (l, k, b, h, s) de um andar, as arrumações do mesmo tipo (`arrangementKind`, pelo nome) giradas/espelhadas ao tamanho dele que **passam de novo em `checkArrangement` na moldura real** do cômodo. As molduras da biblioteca foram desenhadas em plantas antigas (antes da v1.3): casar a moldura exata cobria só 33 de 68 cômodos; pelas regras, 52. O resto fica com a camada do próprio andar.

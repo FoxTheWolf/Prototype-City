@@ -105,11 +105,11 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     // (exactly half a cell each way: any overlap lit a star in two cells as it crossed between them)
     let hw = u.plane / u.cols / Dl; let hh = 0.5 / u.scale / Dl; let cut = cos(2.0 * max(hw, hh));
     for (var k = 0u; k < N_STARS; k++) {
-      let w = SG_STARS + k * 4u; let sv = vec3f(bitcast<f32>(sg[w]), bitcast<f32>(sg[w + 1u]), bitcast<f32>(sg[w + 2u]));
+      let w = SG_STARS + k * 4u; let sv = vec3f(bitcast<f32>(sgU(u32(w))), bitcast<f32>(sgU(u32(w + 1u))), bitcast<f32>(sgU(u32(w + 2u))));
       let c = dot(sv, sd);
       if (c < cut) { continue; }
       if (abs(dot(sv, sr)) < hw * c && abs(dot(sv, su)) < hh * c) {
-        let p = sg[w + 3u]; starC = vec3f(f32(p & 255u), f32((p >> 8u) & 255u), f32((p >> 16u) & 255u));
+        let p = sgU(u32(w + 3u)); starC = vec3f(f32(p & 255u), f32((p >> 8u) & 255u), f32((p >> 16u) & 255u));
         // a slight twinkle, more the lower it is (more air)
         let tw = 1.0 - (0.08 + 0.25 * (1.0 - min(1.0, up * 2.0))) * hash3(i32(k), ifloor(u.sec * 6.0), 9);
         // brighter than drawn, and more so in a blackout (no city glow washing them out)

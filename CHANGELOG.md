@@ -2,8 +2,9 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
-## 0.13.S — O shader arrumado (2026-10-08, em andamento)
+## 0.13.S — O shader arrumado (2026-10-08)
 - **O jogo abre mais rápido na primeira vez depois de uma atualização:** o shader do mundo compila na metade do tempo.
+- **Roda em placas de vídeo mais fracas:** o jogo não pede mais à placa um limite acima do padrão do WebGPU.
 - **A borda da cidade sem as torres de holofote da antiga cerca nem o rugido do fogo** (sobras da zona de fogo).
 
 ## 0.13.20b — A borda sem fogo (2026-10-08)
