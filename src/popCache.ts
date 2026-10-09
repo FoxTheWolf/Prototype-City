@@ -11,13 +11,15 @@ import device from './sim/device.ts?raw';
 import rng from './core/rng.ts?raw';
 import world from './sim/world.ts?raw';
 import placeTypes from './sim/placeTypes.ts?raw';
+import floorplans from './sim/floorplans.ts?raw';
+import floorplansJson from './sim/floorplans.json?raw';
 
 const DB = 'terminal-city', STORE = 'population';
 
 /** FNV-1a over the sources the population depends on. */
 const CODE = (() => {
   let h = 0x811c9dc5;
-  for (const s of [city, citizens, telco, power, interior, device, rng, world, placeTypes]) for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  for (const s of [city, citizens, telco, power, interior, device, rng, world, placeTypes, floorplans, floorplansJson]) for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
   return (h >>> 0).toString(36);
 })();
 

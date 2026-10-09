@@ -29,12 +29,21 @@ export const ROOM_KINDS: Record<string, string> = {
   l: 'living', e: 'entry', k: 'kitchen', b: 'bedroom', h: 'bath', s: 'studio', c: 'residents corridor', u: 'utility',
   o: 'shop', p: 'open office', m: 'manager office', n: 'meeting room', q: 'pantry', r: 'motel office',
 };
-/** Furniture letters: tall pieces (never against a window) and the posto a piece gives its user. */
-export const FURN: Record<string, { tall?: boolean; posto?: string }> = {
+/**
+ * Furniture letters: tall pieces (never against a window), the posto a piece gives its user, the shop counters that
+ * face the street whatever wall they touch (the clerk behind them; serve: the customer in front), and the pieces that
+ * come in units: the longest one, in letters, and the gap left between them along a longer run.
+ */
+export const FURN: Record<string, { tall?: boolean; posto?: string; front?: boolean; serve?: boolean; unit?: [number, number] }> = {
   B: { posto: 'sleep' }, A: { tall: true }, Q: { posto: 'desk' }, h: { posto: 'sit' }, F: { posto: 'sofa' }, T: {}, t: { posto: 'eat' },
-  K: {}, O: { posto: 'cook' }, N: { posto: 'dishes' }, G: { tall: true }, V: {}, C: {}, H: { posto: 'shower' }, P: {}, w: {}, y: {},
-  X: { tall: true }, Z: { tall: true }, U: {}, S: { tall: true }, r: { posto: 'sofa' }, J: {},
+  K: {}, O: { posto: 'cook' }, N: { posto: 'dishes' }, G: { tall: true }, V: {}, C: {}, H: { posto: 'shower' }, P: {}, w: { unit: [2, 0] }, y: { unit: [2, 0] },
+  X: { tall: true }, Z: { tall: true }, U: {}, S: { tall: true, unit: [10, 1] }, r: { posto: 'sofa' }, J: {},
+  // the shops' (section 7b)
+  $: { posto: 'clerk', front: true, serve: true }, '=': { posto: 'clerk', front: true }, v: { posto: 'clerk', front: true, unit: [4, 0] },
+  m: { front: true, unit: [8, 1] }, I: { tall: true, unit: [2, 0] }, L: { tall: true, unit: [6, 0] }, s: { posto: 'sit' },
 };
+/** One piece per letter, however they touch (chairs, stools, plants). */
+export const SINGLE = new Set(['h', 's', 'P']);
 
 const WALLS = new Set(['#', 'W', 'G', '+']);
 const DOORS = new Set(['D', 'E', 'R']);
@@ -287,4 +296,108 @@ export function fitArrangements(F: Floor, x0: number, y0: number, x1: number, y1
     }
   }
   return out;
+}
+
+// ---------- the shops (the manual's section 7b: one grammar with the rooms; 13.21) ----------
+
+/** A shop model: the businesses it serves (or the default one), a header row (* the columns that repeat) and the rows from the shop front to the back wall (* a row that repeats). */
+export interface ShopModel { shop: string; for: string[] | 'default' | 'any'; rows: string[] }
+export const SHOPS = data.shops as ShopModel[];
+
+/** The models for a business: its own, else the default one (the shops that sell off shelves and cases); then the shallow ones any shop falls back on. */
+export function shopModelsFor(biz: string | undefined): ShopModel[][] {
+  const own = SHOPS.filter((L) => Array.isArray(L.for) && !!biz && L.for.includes(biz));
+  return [own.length ? own : SHOPS.filter((L) => L.for === 'default'), SHOPS.filter((L) => L.for === 'any')];
+}
+
+/**
+ * A shop model stretched to cols x rows letters (the manual's stretchShop, the same code), or null if it does not fit:
+ * the extra width in the repeating columns (the leftover carries on a run, else floor), the extra depth in the
+ * repeating rows (or floor just behind the front row).
+ */
+export function stretchShop(L: ShopModel, cols: number, rows: number): string[] | null {
+  const head = L.rows[0].slice(1), body = L.rows.slice(1);
+  const b0 = Math.max(0, head.indexOf('*')), b1 = head.lastIndexOf('*') + 1, bw = Math.max(0, b1 - b0);
+  const w0 = head.length - bw, rb = body.filter((r) => r[0] === '*'), h0 = body.length - rb.length;
+  if (cols < w0 || rows < h0) return null;
+  const kc = bw ? Math.floor((cols - w0) / bw) : 0, kr = rb.length ? Math.floor((rows - h0) / rb.length) : 0;
+  const padC = cols - w0 - kc * bw, padR = rows - h0 - kr * rb.length;
+  const wide = (r: string) => {
+    const s = r.slice(1), c = s[b0], pad = bw && c && c !== '.' && !'hsP'.includes(c) ? c : '.';
+    return s.slice(0, b0) + s.slice(b0, b1).repeat(kc) + pad.repeat(padC) + s.slice(b0 + bw);
+  };
+  const out: string[] = [];
+  let done = false;
+  for (const r of body) {
+    if (r[0] !== '*') { out.push(wide(r)); continue; }
+    if (done) continue;
+    done = true;
+    for (let k = 0; k < kr; k++) for (const q of rb) out.push(wide(q));
+    for (let k = 0; k < padR; k++) out.push('.'.repeat(cols));
+  }
+  if (!rb.length) for (let k = 0; k < padR; k++) out.splice(1, 0, '.'.repeat(cols));
+  return out;
+}
+
+/**
+ * The shops' own rules on top of the arrangement rules: a till (the shop's counter, kept when a door took pieces away);
+ * each counter facing the street has its clerk's cell behind it (the row below) free and reached, and the till its
+ * customer's cell in front (the row above).
+ */
+export function checkShop(frame: string[], g: string[]): string[] {
+  const out = checkArrangement({ room: 'shop', who: '', frame, rows: g });
+  if (!g.some((r) => r.includes('$'))) out.push('no till');
+  const W = g[0].length, D = g.length, seen = new Set<number>(), q: [number, number][] = [];
+  for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) {
+    if (g[y][x] !== '.') continue;
+    if (N4.some(([dx, dy]) => 'Do'.includes(frame[y + dy + 1][x + dx + 1]))) { seen.add(y * W + x); q.push([x, y]); }
+  }
+  while (q.length) {
+    const [x, y] = q.pop()!;
+    for (const [dx, dy] of N4) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= D || g[ny][nx] !== '.' || seen.has(ny * W + nx)) continue;
+      seen.add(ny * W + nx); q.push([nx, ny]);
+    }
+  }
+  const done = new Set<number>();
+  for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) {
+    const ch = g[y][x], R = FURN[ch];
+    if (!R?.front || R.posto !== 'clerk' || done.has(y * W + x)) continue;
+    const c = component(g, x, y);
+    c.cells.forEach(([a, b]) => done.add(b * W + a));
+    const row = (yy: number) => { for (let a = c.x0; a <= c.x1; a++) if (seen.has(yy * W + a)) return true; return false; };
+    if (c.y1 + 1 >= D || !row(c.y1 + 1)) out.push(`${ch} at (${x},${y}): no clerk's place behind it`);
+    if (R.serve && (c.y0 === 0 || !row(c.y0 - 1))) out.push(`${ch} at (${x},${y}): no customer's place in front`);
+  }
+  return out;
+}
+
+/**
+ * The ways to furnish a shop room of this frame ((W + 2) x (D + 2): its walls '#', the shop front's glass 'W' on the
+ * first row, doors 'D', open sides 'o'): its business's models stretched to it, in the order the dice pick, each as
+ * drawn and mirrored; what stands within a metre inside a door taken away (a whole piece, or the units of a run); only
+ * those passing the rules.
+ */
+export function* shopFits(frame: string[], biz: string | undefined, dice: number): Generator<string[]> {
+  const W = frame[0].length - 2, D = frame.length - 2, flip = dice * 7 % 1 < 0.5;
+  for (const models of shopModelsFor(biz)) for (let t = 0, start = Math.floor(dice * models.length); t < models.length * 2; t++) {
+    const g0 = stretchShop(models[(start + (t >> 1)) % models.length], W, D);
+    if (!g0) continue;
+    const g = ((t & 1) === 1) !== flip ? g0.map((r) => [...r].reverse()) : g0.map((r) => [...r]);
+    // a metre clear inside every door
+    for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) {
+      for (const [dx, dy] of N4) {
+        if (frame[y + dy + 1][x + dx + 1] !== 'D') continue;
+        for (let k = 0; k < 2; k++) {
+          const a = x - dx * k, b = y - dy * k, ch = g[b]?.[a];
+          if (!ch || ch === '.') continue;
+          if (FURN[ch]?.unit) g[b][a] = '.';
+          else { const rows = g.map((r) => r.join('')); for (const [u, v] of component(rows, a, b).cells) g[v][u] = '.'; }
+        }
+      }
+    }
+    const rows = g.map((r) => r.join(''));
+    if (!checkShop(frame, rows).length) yield rows;
+  }
 }

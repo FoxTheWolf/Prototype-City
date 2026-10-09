@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-08 — as lojas na gramática das plantas (13.21)
+- **A recepção do motel ficou certa, mas vazia:** numa loja larga sobra muito chão entre o sofá e o balcão. É a primeira sala que o jogador vê com gente (o gerente); na 25.1, junto do prédio M1, merece um modelo próprio com mais vida (o quadro de chaves, a máquina de vendas, o folheto de turismo, o sino do balcão), e o clutter depois da 1.0 completa.
+- **Modelos próprios faltam para a farmácia, a livraria, a loja de celulares e a oficina:** hoje usam o das prateleiras. Barato agora (texto conferido por script); vale no C2 ou na 23.8, por ordem de quanto o jogador entra nelas (a farmácia e a de celulares primeiro, pelo laço: comprar chip).
+- **O gerador de cortes é o que ainda produz lixo** (tiras de 1 m chamadas de loja, o elevador na porta): cada tamanho que ganha planta desenhada some com um pedaço dele. O 8 × 16 (62 lojas) e o 12 × 12/12 × 16 são os próximos que mais rendem.
+
 ## 2026-10-08 — uma camada de efeitos acima do ASCII (pergunta do usuário na 13.S)
 - **Já existe e já é assim para o bloom:** o shader do mundo só grava quanto cada célula brilha (`gGlow`), e o borrado e a soma são do compositor (`gpu/compositor.ts`, `GLOW_K`), por cima das letras; o halo e o glare dos aparelhos também.
 - **Não simplifica o shader do mundo:** medido com `tests/wgsl-inline.ts`, os cones das lâmpadas, a chuva por cima, o `display` e a mão somam menos de 2% do shader expandido. O peso está na geometria (a cidade, os interiores, os objetos, a luz), que precisa ficar onde está.

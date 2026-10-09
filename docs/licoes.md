@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 13.21 (as lojas na gramática das plantas) — 2026-10-08
+- **Medir onde as lojas estão antes de escolher o caminho:** 63% caíam no gerador de cortes (torres, tamanhos sem planta), então o leitor novo tinha de servir aos dois. O `shopGrid` monta a moldura pelas células (o que está logo além da face de dentro, em dois pontos por caractere), e as regras das arrumações fazem o resto.
+- **Classificar as falhas antes de consertar:** "sem modelo" era três coisas: a porta da rua caindo noutro cômodo (o elevador do gerador velho na porta dos lotes de 8 × 8), lojas rasas sem modelo, e a folga da porta apagando o próprio caixa (o modelo passava sem caixa). Resolver com a planta que faltava (C0L), dois modelos rasos de último recurso e a regra "tem caixa", não com remendos no gerador velho.
+- **Uma faixa `*` de colunas que passa por um balcão estica o balcão:** numa loja larga a recepção virou um balcão de parede a parede. A faixa vai no chão livre; ver o modelo esticado no jogo, não só no tamanho mínimo.
+- **`'\n'` em Python dentro de heredoc no Bash virou quebra de linha de verdade de novo** (o TS quebrou com "Unterminated string"): para scripts com barras, escrever o `.py` com Write no scratchpad e rodar.
+- **Teste de um lote no Node:** um `globalThis.X === P.box` dentro do código imprime a moldura e os candidatos; empacotar de dentro de `tests/` (de `tests/.out/` o rolldown não resolve os caminhos).
+- **`?pos=` com `look`:** `look` = graus do `atan2` da direção + 90 (0 é o norte, -y). Para entrar numa loja: a porta pelo `facePoint` e 0,6 m para dentro.
+
 ### Lições da 13.S (arrumação do shader, primeira parte) — 2026-10-08
 - **Provar que uma arrumação não muda o shader:** `tests/wgsl-dump.ts` gera o WGSL no Node e tira o sha1; separar `shader.ts` em `gpu/wgsl/*.ts` deu o mesmo hash (d2a7fe5). Para mexer só no TypeScript do shader, é a prova barata, sem GPU.
 - **Medir a compilação de verdade:** no console do painel, `createShaderModule` com um comentário aleatório no topo (fura o cache do Chromium) e `await createComputePipelineAsync({ layout: 'auto', ... })`; ler o texto por `import('/tests/.out/x.wgsl?raw')`. O tempo do jogo engana: o HMR do Vite recarrega a página a cada edição e o jogo já compila (e guarda) o shader novo em segundo plano. Aqui: 35 s antes, 16,8 s depois (não 3–4 min: aquilo era com o jogo rodando junto ou no PC do usuário).

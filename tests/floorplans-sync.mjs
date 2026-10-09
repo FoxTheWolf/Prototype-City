@@ -10,6 +10,6 @@ const grab = (name) => {
   return new Function('return ' + s.slice(i + k.length, m.exec(s).index))();
 };
 const floors = grab('FLOORS').map((f) => ({ id: f.id, rooms: f.rooms, furn: f.furn, ...(f.rep ? { rep: f.rep, depths: f.depths } : {}) }));
-const out = { floors, arrangements: grab('ROOMLIB'), buildings: grab('BUILDINGS') };
+const out = { floors, arrangements: grab('ROOMLIB'), shops: grab('SHOPLIB'), buildings: grab('BUILDINGS') };
 fs.writeFileSync('src/sim/floorplans.json', JSON.stringify(out, null, 1));
-console.log(`${floors.length} floors, ${out.arrangements.length} arrangements, ${out.buildings.length} building stacks`);
+console.log(`${floors.length} floors, ${out.arrangements.length} arrangements, ${out.shops.length} shop models, ${out.buildings.length} building stacks`);

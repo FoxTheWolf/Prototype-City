@@ -53,7 +53,7 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 - → **C1**
 - ✅ **13.20 (0.13.20) Mobiliar pela biblioteca, com postos (passo 3):** as arrumações do manual nos cômodos, pela renda e pelo morador (`homeUnit` nasce aqui), e **cada móvel com o posto dele** (onde o NPC fica, para onde olha), que é a base da casa da 17.
 - ✅ **13.S A arrumação do shader (0.13.S, 2026-10-08: separado por assunto em `gpu/wgsl/`, a zona de fogo fora, compilação 35 → 16 s, 16 → 5 storage buffers e o jogo inteiro no limite padrão do WebGPU):** separar `gpu/shader.ts` por assunto, caber em 8 storage buffers, cortar a compilação de 3–4 min (as funções grandes copiadas em cada chamada); aproveitar e tirar o código desligado da zona de fogo e do Sarcófago (`FIRE_ZONE`). Por partes, comparando as posições de ouro antes e depois de cada passo. Motivo: o C2, a 13.22, a 16 e a 23 são quase só shader.
-- **13.21 Um gerador só: as lojas na gramática das plantas** (regra "um sistema só"): `sim/layouts.ts` entra em `sim/floorplans.ts`; os postos de balconista e de cliente no mesmo formato. **Reunião de 2026-10-08:** o **cybercafé e o motel** são obrigatórios (a primeira hora); se cortar tipos, esses ficam.
+- ✅ **13.21 Um gerador só: as lojas na gramática das plantas** (0.13.21; os modelos na seção 7b do manual, `placeGrid` lê casas e lojas, o C0L; o prédio M1 do motel ficou para a 25.1) (regra "um sistema só"): `sim/layouts.ts` entra em `sim/floorplans.ts`; os postos de balconista e de cliente no mesmo formato. **Reunião de 2026-10-08:** o **cybercafé e o motel** são obrigatórios (a primeira hora); se cortar tipos, esses ficam.
 - → **C2**
 - **13.22 Interruptores e luz por cômodo (passo 5, R10):** um por cômodo, sala vazia e loja fechada apagadas; é a regra de luz do stealth. **Da reunião de 2026-10-08:** o morador acende ao entrar e apaga ao sair ou dormir, o jogador aperta F no interruptor; e **as janelas acesas da fachada passam a ler o estado real da luz dos cômodos** (um sistema só; hoje são sorteio por `hash3`), com prédios de luz automática (escada e saguão 24 h por norma de incêndio, escritórios com timer ou sensor de presença, vitrines com timer; pesquisar antes). Longe do jogador, a luz sai da rotina, como a posição das pessoas.
 - **13.23 O telhado (passo 4d)** e a última escada chegando nele.
@@ -173,7 +173,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 
 ## Etapa 25: A primeira hora e o laço (5 subetapas)
 > Nova (2026-10-08): a etapa que transforma os sistemas num jogo. Partes tocam o contratante (`[HACKING]`): combinar com o agente `hacking`.
-- **25.1 A primeira hora:** acordar no motel, o SMS da diária, o dono do cybercafé às 18h, a máquina de vendas, o mentor (`visao.md`).
+- **25.1 A primeira hora:** o prédio do motel (a planta M1 do manual, com os quartos e o estacionamento, num lote próprio; decidido na 13.21) e a recepção menos vazia; acordar no motel, o SMS da diária, o dono do cybercafé às 18h, a máquina de vendas, o mentor (`visao.md`).
 - **25.2 O caminho do veterano** (o fórum desde o começo, o fixer que observa) e a ajuda ao jogador travado (contatos, fórum, perguntar aos NPCs).
 - **25.3 Investigações geradas** (o começo guiado, o gerador que confere o caminho).
 - **25.4 Balanço:** a economia, o ritmo dos trabalhos (um grande a cada 1–2 dias), o tempo andando, pelo registro de playtest.
@@ -181,6 +181,7 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 
 ## Depois da 1.0
 **Polícia e calor completos** (a testemunha, o stealth B, a abordagem, a prisão, o disfarce; o plano está no antigo 16 e na entrevista da etapa 16 em `visao.md`), o jogador dirigir e o metrô elevado, cinema, shopping e o resto do catálogo de lojas, a diagonal, o helicóptero, a represa e o porto, o celular inicial barato e o modelo BlackBerry com teclado (tiers), o notebook montado, o mural (só se os casos ficarem longos), o stealth estilo SoD completo.
+- **Clutter (ideia do usuário, 2026-10-08):** um segundo gerador que roda **depois** do das plantas e dos móveis (não concorrente: a camada fina de detalhe por cima), espalhando objetos sobre os móveis (copos, talheres, plantinhas, papéis no balcão, como no Shadows of Doubt), pela semente e pelos dados do morador/loja, **sob demanda pelo LOD** (só perto do jogador, como os detalhes "gerados sob demanda"). Precisa antes dos objetos em cubinhos (muito trabalho de modelos) e do manual (seção 10, "Objetos pequenos": os poucos que se leem continuam vindo dos dados). Encaixe: os móveis do formato das plantas ganham "superfícies" (o tampo do balcão, a mesa) onde o clutter pousa.
 
 ---
 

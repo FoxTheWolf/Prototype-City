@@ -2,6 +2,16 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.21 — um gerador só: as lojas na gramática das plantas (0.13.21, 2026-10-08)
+
+- **Os modelos de loja no manual:** seção 7b do `interiores-manual.html` (`SHOPLIB`, 14 modelos), copiada pelo `floorplans-sync.mjs` para `floorplans.json` (`shops`). Mesmo texto das arrumações: meio metro por caractere, **a linha 0 é a vitrine e a porta** (os modelos antigos de `layouts.ts` foram virados por script), o cabeçalho com `*` nas colunas que repetem e `*` nas linhas que repetem. Letras novas no `FURN` (manual e `floorplans.ts`): `$` caixa, `=` balcão, `v` vitrine, `m` expositor (prateleira ou vitrine pelo tipo), `I` geladeira de bebidas, `L` garrafas, `s` banqueta; `front` (de frente para a rua), `serve` (o cliente na frente) e `unit` (peças em unidades, o antigo `MAXLEN`). Novos: cybercafé (fileiras de mesas com cadeira), recepção do motel, saguão (hotel, cinema, estacionamento), banco, e dois balcões rasos de último recurso (`for: 'any'`).
+- **Um leitor só:** `placeGrid` em `sim/interior.ts` (extraído do `planFromFloor`) lê as letras das casas das plantas desenhadas e das lojas, com um `GridMap` (metros por caractere, ponto e direção na cidade, `pastWall`). `shopGrid` (no `furnish`) monta a grade da loja dentro das paredes, a moldura pelas células (vitrine, vãos, porta da rua) e pega o primeiro modelo de `shopFits` que passa nas regras e fica fora de parede e vão nas células. Serve às plantas desenhadas e às de cortes (63% das lojas). Saíram `layouts.ts`, `layoutShop`, `shopFloor`, `fillShop`, `clearTill`, `tables`, `counterStools`, `shelves`, `islands`, `covered` e o `aisle` (o metro livre dentro de cada porta e "todo chão alcançável" fazem o papel).
+- **Postos de loja:** `checkShop` exige um caixa, o lugar do balconista atrás de cada balcão de frente (`clerk`) e o do cliente na frente do caixa (`Furn.serve`). `SINGLE` (cadeira, banqueta, vaso: uma peça por letra) vale também para as casas.
+- **C0L (8 × 8 m, térreo com loja)** no manual e na pilha `8 × 8 m (walk-up com loja)`: os lotes de 8 × 8 com loja caíam no gerador velho, que punha o elevador dentro da loja, na porta (era a maioria dos cybercafés e motels sem modelo).
+- **Decidido com o usuário:** a recepção do motel agora; o prédio M1 com os quartos na 25.1.
+- `tests/shops.ts`: na semente 42, 1.566 lojas, 1,1% sem modelo (as tiras de 1 m de largura que o gerador velho chama de loja), os 43 cybercafés e motels com caixa, balconista e cliente em chão livre (sementes 7 e 1393987109 iguais). O `popCache` passou a contar `floorplans.ts`/`.json`.
+- **Ideia do usuário anotada para depois da 1.0:** o clutter, um segundo gerador por cima dos móveis, sob demanda pelo LOD (`docs/cronograma.md`).
+
 ## 13.S — a arrumação do shader (0.13.S, 2026-10-08)
 
 - **Separado por assunto:** `gpu/shader.ts` virou um juntador de `gpu/wgsl/*.ts` (head, power, lamps, roof, signs, rooms, inside, wall, ground, shading, sky, fall, occlusion, main; `common.ts` com o que o `world.ts` usa). `tests/wgsl-dump.ts` provou o WGSL idêntico (sha1).
