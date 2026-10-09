@@ -133,6 +133,47 @@ say();
 const stuck = of('stuck');
 say(stuck.length ? stuck.map((r) => `- ${clock(r.gt)}: POS ${at(r)}, andar ${r.floor}, ${where(r)} (andando sem sair do lugar)`).join('\n') : 'Nenhum lugar em que andou sem sair do lugar.');
 say();
+// ---- the slow frames (16.1): which phase took the time, and where
+say('## Quadros lentos (as travadas)');
+say();
+const slow = of('slow');
+const realMin = Math.max(1e-6, (last.rt - (recs[0].rt ?? 0)) / 60);
+/** What held a slow frame up: its biggest phase, or, when its own work was short, the pause before it (outside the frame). */
+const cause = (r: Rec) => {
+  const ph: [string, number][] = [['simulação', r.sim], ['interface (CPU)', r.ui], ['entregar à GPU', r.draw]];
+  const [k, v] = ph.reduce((a, b) => (b[1] > a[1] ? b : a));
+  // the frame's own work against how late it came: short work, a long wait, was something outside it (or the GPU behind)
+  const own = r.sim + r.ui + r.draw, usual = r.usual ?? 6;
+  if (own < r.gap - usual) return r.gpu > r.gap * 0.6 ? 'GPU (a fila atrasada)' : 'fora do quadro (coletor, compilação, o navegador)';
+  return k === 'GPU' ? 'várias fases somadas' : v >= own * 0.5 ? k : 'várias fases somadas';
+};
+if (!slow.length) say('Nenhum quadro lento registrado (ou o registro é de antes da 16.1).');
+else {
+  say(`${slow.length} quadros lentos (${(slow.length / realMin).toFixed(1)} por minuto real); intervalo maior ${Math.max(...slow.map((r) => r.gap)).toFixed(0)} ms; o intervalo normal era ~${(slow[slow.length >> 1].usual ?? 0).toFixed(1)} ms.`);
+  say();
+  const byCause = new Map<string, number>();
+  for (const r of slow) byCause.set(cause(r), (byCause.get(cause(r)) ?? 0) + 1);
+  say('**Pelo que segurou o quadro:**');
+  for (const [k, v] of [...byCause].sort((a, b) => b[1] - a[1])) say(`- ${k}: ${v}`);
+  say();
+  const byHands = new Map<string, number>();
+  for (const r of slow) byHands.set(r.hands || 'nada nas mãos', (byHands.get(r.hands || 'nada nas mãos') ?? 0) + 1);
+  say('**Pelo que estava nas mãos:** ' + [...byHands].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
+  say();
+  // the places: the slow frames in 20 m squares, the five with most
+  const sq = new Map<string, Rec[]>();
+  for (const r of slow) { const k = `${Math.floor(r.x / 20)},${Math.floor(r.y / 20)}`; sq.set(k, [...(sq.get(k) ?? []), r]); }
+  say('**Onde (quadrados de 20 m, os cinco com mais):**');
+  for (const [, L] of [...sq].sort((a, b) => b[1].length - a[1].length).slice(0, 5)) say(`- POS ${at(L[0])} (${L[0].inside >= 0 ? `prédio ${L[0].inside}, andar ${L[0].floor}` : 'rua'}): ${L.length}`);
+  say();
+  say('**Os dez piores:**');
+  say();
+  say('| quando | intervalo | sim (ticks) | interface | entregar | GPU | mãos | onde |');
+  say('|---|---|---|---|---|---|---|---|');
+  for (const r of [...slow].sort((a, b) => b.gap + b.sim + b.ui + b.draw - (a.gap + a.sim + a.ui + a.draw)).slice(0, 10))
+    say(`| ${clock(r.gt)} | ${r.gap.toFixed(0)} ms | ${r.sim.toFixed(1)} (${r.ticks}) | ${r.ui.toFixed(1)} | ${r.draw.toFixed(1)} | ${r.gpu >= 0 ? r.gpu.toFixed(1) : '?'} | ${r.hands || '-'} | POS ${at(r)}${r.inside >= 0 ? `, prédio ${r.inside} andar ${r.floor}` : ''} |`);
+}
+say();
 say('## Onde ficou parado (1 min real ou mais, sem nada nas mãos)');
 say();
 say(idles.length ? idles.map((I) => `- ${clock(I.a.gt)}: POS ${at(I.a)}, ${mins(I.b.rt - I.a.rt)}${I.a.in >= 0 ? `, dentro do prédio ${I.a.in}` : ''}`).join('\n') : 'Nenhum.');
@@ -233,6 +274,7 @@ say();
 const flags: string[] = [];
 for (const l of walks) if (l.game > 2 * 3600) flags.push(`Um deslocamento de ${Math.round(l.dist)} m comeu ${hm(l.game)} de jogo (${at(l.a)} → ${at(l.b)}).`);
 if (stuck.length) flags.push(`Travou ${stuck.length} vez(es) andando contra algo.`);
+if (slow.length / realMin > 6) flags.push(`Muitos quadros lentos: ${(slow.length / realMin).toFixed(1)} por minuto (veja "Quadros lentos").`);
 if (of('hunger').some((r) => r.stage >= 3)) flags.push('A fome chegou ao último estágio.');
 if (gameAll > 0 && gameMoving / gameAll > 0.5) flags.push(`Mais da metade do tempo de jogo foi andando (${Math.round((gameMoving / gameAll) * 100)}%).`);
 if (takes.length > buys.length + thefts.reduce((s, r) => s + r.items, 0)) flags.push('Pegou coisas que não pagou nem levou (devolveu ou largou).');

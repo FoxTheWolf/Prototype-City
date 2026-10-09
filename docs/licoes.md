@@ -2,6 +2,11 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 16.1 (o gravador de travadas) — 2026-10-09
+- **Quadro lento é o que o jogador sente:** o intervalo entre quadros comparado com a mediana recente (1,6×), não a soma de CPU contra um número fixo. A 180 Hz o normal é 5,6 ms; o primeiro critério (CPU > 8 ms) marcava quase todo quadro sem que nenhum atrasasse.
+- **`comp.ms` é a fila da GPU, assíncrona** (de um ou dois quadros antes, contando a espera): só culpa a GPU quando o trabalho do próprio quadro foi curto e ele atrasou assim mesmo (o relatório faz essa conta).
+- **Testar o gravador no painel:** `?seed=42&mute&playtest&new`, clicar NEW GAME (~345,532 na janela de 800 px), esperar; o Vite grava em `playtest/` a cada 5 s. Os números do painel em modo dev são indicativos; a medida que vale é a do usuário no Electron.
+
 ### Lições do C3c — 2026-10-09
 - **As sondas de colisão do jogador ficam nos ombros** (`R = 0.3`, ±0,21 m de lado, em `world.ts`): um poste fino passa entre elas. Ao criar um obstáculo fino, engordá-lo (`postAt(..., 0.18)`) em vez de mexer nas sondas.
 - **Nenhum objeto da rua era sólido** (`isSolid` só vê prédios); a geometria dos postes estava só no render. Agora `shedFaces` (o andaime) mora em `sim/city.ts` e o render lê dela; o abrigo e o poste seguem as medidas dos modelos (`models.ts`), com `tests/posts.ts` conferindo que `postAt` bate com o modelo.

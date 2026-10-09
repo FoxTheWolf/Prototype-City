@@ -1238,6 +1238,26 @@ canvas.addEventListener('click', () => { if (!cctv?.title && !input.locked && !a
 const bolt = new Float64Array(2);
 let last = performance.now();
 let acc = 0;
+/**
+ * The slow frames (16.1), into the playtest log, to find the hitches the player feels: a frame that came SLOW_K times
+ * later than the usual interval of late (the median of the last GAPS_N; and at least SLOW_MS), so a 180 Hz screen and a
+ * 60 Hz one are judged each by its own pace. Each one with its phases: the simulation (and how many ticks it caught up),
+ * the interface drawn on the CPU (the hands, the phone, the notebook, the HUD), the world's frame handed to the GPU, and
+ * the GPU's queue (async: a frame or two old; it holds the frame only when the frame's own work was short).
+ */
+const SLOW_K = 1.6, SLOW_MS = 8, SLOW_MAX = 3000, GAPS_N = 61;
+const gaps = new Float32Array(GAPS_N), gapSort = new Float32Array(GAPS_N);
+let slowN = 0, gapAt = 0, gapN = 0;
+function logSlow(gap: number, ticks: number, sim: number, uiMs: number, draw: number) {
+  gaps[gapAt] = gap; gapAt = (gapAt + 1) % GAPS_N; gapN = Math.min(GAPS_N, gapN + 1);
+  if (!pt || !ptPrimed || !running || paused || cctv || document.hidden || slowN >= SLOW_MAX || gapN < GAPS_N) return;
+  gapSort.set(gaps); gapSort.sort();
+  const usual = gapSort[GAPS_N >> 1];
+  if (gap < Math.max(SLOW_MS, usual * SLOW_K)) return;
+  slowN++;
+  const p = world.player, r2 = (v: number) => Math.round(v * 100) / 100;
+  pt.log('slow', { gap: r2(gap), usual: r2(usual), sim: r2(sim), ticks, ui: r2(uiMs), draw: r2(draw), gpu: comp && comp.ms >= 0 ? r2(comp.ms) : -1, hands: handsOn(), x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, floor: p.floor, inside: p.inside, hour: Math.round(((world.time / 3600) % 24) * 10) / 10 });
+}
 let fps = 60;
 /** Time spent drawing the world: smoothed, and the worst of the last second. */
 let renderMs = 0, worstMs = 0, worstShown = 0, worstAt = 0;
@@ -1249,7 +1269,9 @@ let talkedCall: unknown = null;
 /** The good the sight rests on, and since when (real s), for its tag (14.5). */
 let tagWas = '', tagSince = 0;
 function frame(now: number) {
-  const dt = Math.min(0.1, (now - last) / 1000);
+  // (16.1) the gap since the last frame and when this one's work starts, for the slow frames' log
+  const gapMs = now - last, f0 = performance.now();
+  const dt = Math.min(0.1, gapMs / 1000);
   last = now;
   fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
 
@@ -1275,10 +1297,12 @@ function frame(now: number) {
   if (cctv) cmd.heading = world.cctv[cctv.k].yaw;
   // paused (the menu): the world waits
   if (paused) acc = 0;
-  while (acc >= TICK) { stepWorld(world, cmd); acc -= TICK; }
+  let ticks = 0;
+  while (acc >= TICK) { stepWorld(world, cmd); acc -= TICK; ticks++; }
   // Lookwise's crawler sees what went up on the web (posts, headlines) about once a game minute (15.17h)
   if (Math.floor(world.time / 60) !== crawlMin) { crawlMin = Math.floor(world.time / 60); crawl(world); }
   if (running && !paused && !cctv && now - lastSave > AUTOSAVE_S * 1000) void saveNow();
+  const f1 = performance.now();
   const alpha = acc / TICK;
 
   const p = world.player;
@@ -1617,8 +1641,10 @@ function frame(now: number) {
   const lapAt = G && termMode ? { grid: T3, hd: termHd, x: termAt?.x ?? 0, y: termAt?.y ?? 0, show: !!termAt, glass: G.map(toPx), sub: glassSub } : null;
   // the watch's lit LCD glows like a screen, when the phone's is not up (the compositor takes one)
   const bodyAt = PHONE_BODY.on ? { g: BODY_GPU, x: uiLayout.originX + PHONE_BODY.ox * uiLayout.cellW + BODY_GPU.dx, y: uiLayout.originY + PHONE_BODY.oy * uiLayout.cellH + BODY_GPU.dy } : null;
+  const f2 = performance.now();
   if (onGpu) comp!.draw(world, view, ui, hd, lapAt, PHONE_SCREEN.at ?? WATCH_LCD.at, PHONE_PIC.on ? { ...PHONE_PIC, px: PHONE_PX } : null, bodyAt, lapGpu, watchG, jackG);
   else renderer.draw(grid, ui, hd, termAt);
+  logSlow(gapMs, ticks, f1 - f0, f2 - f1, performance.now() - f2);
   // the note's picture: read in the same task the frame was drawn in (the GPU's canvas is cleared once shown)
   if (shotWanted) { shotWanted = false; try { noteShot = (onGpu ? gpuCanvas : canvas).toDataURL('image/png'); } catch { noteShot = null; } }
   requestAnimationFrame(frame);
