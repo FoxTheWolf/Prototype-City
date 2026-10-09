@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 2) — C3b e o adiamento do shading (Opus 5.5)
+- **Adiar os bugs de shading foi certo, e eu devia ter proposto antes.** Gastei várias rodadas remendando o vidro, a escada e a coluna, e os sintomas têm uma raiz só: a luz calculada em vários lugares com regras diferentes. Esse é o caso de "morder a bala": eles ficam na 16.1b, que reescreve justamente isso. Não remendar antes.
+- **O diálogo melhorou mais com dados do que com biblioteca.** As 70 frases dos seus playtests mostraram que o problema era léxico, não gramática. A compromise não ajudaria. O corpus agora é um teste e cresce a cada playtest: é o jeito barato de o diálogo ficar bom.
+- **O jogo da noite é um "fato da cidade"** (o mesmo vencedor para todo mundo): é pouco código e é bem o "orgânico" do princípio central. Dá para estender a outros assuntos (o apagão de ontem, a manchete do dia), e as notícias poderiam publicar o placar do mesmo jogo. Fica para a 17 ou para a 19.
+- **Contesto as "letras maiores":** a grade não tem tamanho de letra; aumentar exige uma segunda camada de texto em escala maior (um recurso de render). Sugiro juntar com "as legendas noutro lugar" na 23, ou uma opção de escala da interface.
+
 ## 2026-10-09 (noite) — C3 parte 2, C3a e 13.24 (Opus 5.5)
 
 - **Errei sobre as batidas:** apostei numa regressão; era uma calibragem minha de 01/10 (a placa de PARE com a taxa do semáforo apagado) que só piorou quando a cidade ganhou 60% mais carros. Medir na versão antiga foi o que separou as duas coisas, em 2 minutos. Vale como hábito: "não era assim antes" → medir as duas versões antes de mexer.
