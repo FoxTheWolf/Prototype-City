@@ -2,6 +2,13 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (tarde) — o C3 pela metade (Opus 5.5)
+- **O playtest curto com F8 rende muito:** 13 notas em ~10 min deram 7 consertos, e quase todos tinham uma causa só e pequena (um valor inicial errado na chuva, um cone largo demais no interruptor, um sinal herdado do fundo). Vale repetir esse formato a cada bloco.
+- **Contesto de leve a luz mista dos prédios agora:** a ideia é ótima (corredor por sensor, o acaso que simula gente; e a automação vira alvo de hacking), mas é sistema novo. Mandei para a 17.3, junto das luzes da rotina, em vez de inflar a 13.
+- **O telhado à mão já é pelo manual:** a cadeira e o vaso estavam desenhados no T1 de propósito (o fumante, o cozy); o erro era só a cadeira encarar o vaso. A arrumação de verdade dos telhados (varal, antena, mesa de plástico, as escadas de incêndio chegando lá) cabe na 13.24.
+- **Um risco que apareceu:** dar uma luz nova a uma superfície revela as outras luzes que a atingem (o neon rosa no telhado). A correção física (o tubo não ilumina acima do topo) mexe um pouco no neon visto da rua no último andar; se notar diferença, me diga.
+- **O que me incomodou:** gastei boa parte da janela esperando o shader compilar com o painel do navegador escondido. Daqui para a frente, abro o painel antes e, se ele sumir, peço que você o traga para a frente em vez de esperar.
+
 ## 2026-10-09 — a revisão dos docs, a 13.22 e a 13.23 (Opus 5.5)
 - **Duas subetapas numa janela (~60%)**, com o ajuste do mouse e a revisão dos docs. Quando a subetapa é bem cercada e o sistema já existe (a rotina dos moradores, as plantas T do manual), anda mais rápido que a estimativa de "1 sessão por subetapa"; recalibrar no fim da 13 (regra 7).
 - **A luz pela rotina e o telhado são o que a visão nova pede:** a cidade dormindo às 3h, a janela que acende quando alguém chega, a vista do telhado na chuva. Também são reconhecimento para a 18 (as janelas contam quem está em casa).

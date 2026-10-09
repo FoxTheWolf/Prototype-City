@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do C3 (playtest de 2026-10-09) — 2026-10-09
+- **O painel do navegador escondido trava tudo:** sem ele visível, o laço não anda (`world.tick` em 0), os `setTimeout` do `javascript_tool` estouram, e a compilação do shader leva ~1–2 min. A captura de tela força um quadro, mas é o mesmo quadro velho até o laço andar. Para esperar, `computer wait` de 10 s em vez de `await` no JS. Antes de concluir "não mudou", conferir se o `tick` subiu.
+- **Luz de painel é linear (1 = branco), não 0–255:** usar `(c / 255) ** 2.2 * q` (`linC`), senão estoura.
+- **Luz de ponto não tem limite de baixo** (ilumina tudo abaixo de `zFull` no raio); para uma luz no alto, usar painel, que mede a distância em 3D.
+- **Ao dar a uma superfície uma luz que ela não tinha, olhar a noite inteira em volta:** somar o `lightAt` na laje revelou o neon das quinas (wrap 0,99, do chão ao topo) pintando o telhado de rosa.
+- **Objeto que herda algo do que está atrás dele** (o sol, `cl.sun`) mostra a cidade "através" dele: a pista é a mancha ter o formato exato do perfil de trás.
+- **Reproduzir o bug por script antes de consertar** (o softlock: `fixtureAhead` e `doorAhead` verdadeiros no mesmo ponto) e deixar o ponto no teste.
+
 ### Lições da 13.23 (o telhado) — 2026-10-09
 - **Inserir uma linha depois de `let x = ...;` por substituição de texto quebra a linha original quando ela tem mais de um `let`:** o resto da linha virou comentário e o WGSL acusou `unresolved value`. Inserir sempre depois do fim da linha.
 - **O console do painel importa outra cópia do módulo** depois de uma recarga do Vite (`?t=`): o cache de plantas do jogo não aparece ali. Para ver o estado do jogo, expor por um momento em `globalThis` no próprio código (e tirar).

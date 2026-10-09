@@ -2,6 +2,13 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.C3 — O retorno do playtest de 2026-10-09 (em andamento)
+- **O interruptor não prende mais você na sala:** acender e apagar agora é mirando na placa do interruptor (aparece a mira); o F na porta abre a porta.
+- **Interruptores que brilham no escuro:** a tecla tem um verde fosforescente fraquinho, como os de verdade, para achar a luz num cômodo apagado.
+- **Não chove mais dentro de casa:** a chuva aparece só lá fora, pelas janelas e pela porta aberta.
+- **O telhado mais limpo:** sumiram as caixas d'água velhas que atravessavam as novas; a caixa d'água não tem mais manchas da cidade pintadas nela; a cadeira de plástico olha para a rua (antes encarava o vaso).
+- **Uma lâmpada sobre a porta da casinha** ilumina a laje de noite, enquanto o prédio tiver luz; o neon das quinas não pinta mais o telhado de rosa.
+
 ## 0.13.23 — O telhado (2026-10-09)
 - **Chove em cima do telhado:** na laje a chuva cai na sua frente; dentro da casinha da escada, não.
 - **Os telhados em volta mostram a casinha da escada e a caixa d'água** de cada prédio, vistos de outro telhado ou da rua.

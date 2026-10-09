@@ -2,6 +2,17 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## C3 — o playtest de 2026-10-09, primeira metade (0.13.C3, 2026-10-09)
+
+- **O softlock do 491:** o interruptor era o mais perto num cone de 53° a 1,4 m (`fixtureAhead`), e quem olhava a porta pegava o interruptor ao lado (reproduzido por script: interruptor e porta no mesmo F). Agora `switchAimed` (`sim/lights.ts`): o raio do olho passa a menos de 16 cm da placa (a 1,2 m do piso, alcance 1,6 m), como `aimedGood`; a mira "+" aparece. `tests/lights.ts` confere os 446 interruptores perto do centro (pegos mirando, nunca olhando 0,5 m ao lado) e o ponto do playtest.
+- **A tecla fosforescente:** a tecla do interruptor virou `Glow` verde-pálido fraco (`models.ts`), a ideia do usuário em vez do piscar do Shadows of Doubt.
+- **A chuva dentro de casa:** `roomWalk` começava o `nearT` em 0, e todo raio que terminava numa parede interna, num móvel ou no teto tinha chuva desde o olho; agora começa em 1e9 (sem chuva) e só a janela ou a parede de fora o põem.
+- **O telhado velho por cima do novo:** as peças de telhado do gerador antigo (`city.ts roof`: caixa d'água, máquinas, chaminé, entradas `tier 0` logo depois do prédio) encolhem a nada nos lotes com telhado do manual (`clearDrawnRoofs` em `sim/interior.ts`, chamado no `createWorld`; 692 das 1164 caixas da semente 42).
+- **As manchas da cidade na caixa d'água:** os objetos fora do chão herdavam o sol (`cl.sun`) do que estava atrás; no telhado em que o jogador está, os móveis da planta eram `indoor` e herdavam também. Agora os objetos de telhado levam a marca 3 (`roof`) e calculam o sol pela própria normal; os móveis do telhado do jogador (menos a escada) também.
+- **A cadeira virada para o vaso:** uma cadeira sem mesa e sem parede caía no lado 0 por acaso; agora olha para a rua (`placeGrid`). A cadeira e o vaso do T1 são de propósito no manual (o fumante, o cozy).
+- **O holofote do usuário:** uma lâmpada com grade sobre a porta da casinha (`roofLamp`/`roofBulbModel`; luz de painel quente de 0,3 a 2,6 m acima da laje, alcance 9 m, só de noite e com energia). A laje do jogador passou a somar o `lightAt` (`ROOF_LIT`), e isso mostrou o neon das quinas (tubo do chão ao topo, wrap 0,99) inundando o telhado de rosa: a luz do tubo agora para um andar abaixo do topo e não sobe acima dele (o parapeito o esconde).
+- **Falta (próxima sessão):** o horizonte branco de dia (nota 3), o vidro da porta × o do relógio (nota 1 do 10-56), conferir a mancha no teto do último andar do 288 (talvez fosse a caixa velha), e ver a lâmpada no PC (não deu para ver com o painel escondido). `teste-c3.bat`.
+
 ## 13.23 — o telhado (0.13.23, 2026-10-09)
 
 - **O telhado vira um andar** (as plantas T1, CT, FT, DT e BT do manual; só os lotes de planta desenhada): `planOf(k, top)` lê a planta T da pilha (`planFromFloor` com `f = 2`, cacheada por `stackKey(k, top)`), o cômodo `x` é o tipo novo `roof`, sem a escada própria (a do último andar sobe até ela: `feetZ` olha a escada do andar de baixo e deixa `f` chegar a `top - 1`). A colisão é a de sempre (o parapeito é a parede de fora). `tests/roof.ts`: nas 6 famílias, subir, andar até o parapeito nos 4 sentidos sem sair do lote, descer.
