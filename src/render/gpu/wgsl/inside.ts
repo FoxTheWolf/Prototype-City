@@ -240,18 +240,19 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   tExit = max(tExit, tIn + 0.02);
   // the nearest door leaf the ray meets (the plan's, swung as far as each is open; the viewer's street doors' glass ones);
   // a leaf is lit by the room on the side it is seen from (5 cm back along the ray: it stands on the cells' border)
-  var lh = LHit(1e9, 0.0, 1.0, 0u, false);
+  // (and the next one behind it: a ray through a leaf's glass goes on to the leaves behind, playtest of 2026-10-08)
+  var lh = LHit(1e9, 0.0, 1.0, 0u, false); var lh2 = lh;
   if (full) {
     let t0 = max(0.05, tIn); let lb = leafBase(o);
     for (var n = 0u; n < fx[lb]; n++) {
       let w = lb + 1u + n * LEAF_W;
-      lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), leafSwing(V.lot, V.f, n), u32(fxf(w + 7u)), rdx, rdy, rl, t0);
+      { let nh = leafTest(LHit(1e9, 0.0, 1.0, 0u, false), fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), leafSwing(V.lot, V.f, n), u32(fxf(w + 7u)), rdx, rdy, rl, t0); if (nh.t < lh.t) { lh2 = lh; lh = nh; } else if (nh.t < lh2.t) { lh2 = nh; } }
     }
     if (inside) {
       for (var n = 0u; n < fx[V.IB + 8u]; n++) {
         let w = V.IB + IN_LEAVES + n * 8u;
         // (the glass leaves' width is negative; the residents' wooden one's positive)
-        lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), fxf(w + 7u), select(LEAF_ENTRY, 0u, fxf(w + 6u) < 0.0), rdx, rdy, rl, t0);
+        { let nh = leafTest(LHit(1e9, 0.0, 1.0, 0u, false), fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), fxf(w + 6u), fxf(w + 7u), select(LEAF_ENTRY, 0u, fxf(w + 6u) < 0.0), rdx, rdy, rl, t0); if (nh.t < lh.t) { lh2 = lh; lh = nh; } else if (nh.t < lh2.t) { lh2 = nh; } }
       }
     } else if (gSDo != 0u) {
       // the street door the ray came in by, seen from outside: the same leaves as from inside (two of glass, or the
@@ -259,11 +260,11 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       for (var n = 0u; n < 2u; n++) {
         let w = gSDo + n * 7u; let lw = fxf(w + 6u);
         if (lw == 0.0) { continue; }
-        lh = leafTest(lh, fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), -abs(lw), gSDang, select(0u, LEAF_ENTRY, lw < 0.0), rdx, rdy, rl, t0);
+        { let nh = leafTest(LHit(1e9, 0.0, 1.0, 0u, false), fxf(w), fxf(w + 1u), fxf(w + 2u), fxf(w + 3u), fxf(w + 4u), fxf(w + 5u), -abs(lw), gSDang, select(0u, LEAF_ENTRY, lw < 0.0), rdx, rdy, rl, t0); if (nh.t < lh.t) { lh2 = lh; lh = nh; } else if (nh.t < lh2.t) { lh2 = nh; } }
       }
     }
   }
-  var lt = lh.t; let lu = lh.u; let lk = lh.k; let lg = lh.kind == 0u; let lkind = lh.kind; let ledge = lh.edge;
+  var lt = lh.t; var lu = lh.u; var lk = lh.k; var lg = lh.kind == 0u; var lkind = lh.kind; var ledge = lh.edge;
   // walk the plan's cells from where the ray is in it; a change of room is a wall, unless both cells are a doorway
   let gx = i32(fx[o]); let gy = i32(fx[o + 1u]);
   let s0 = tIn + select(0.0, 0.03 / rl, tIn > 0.0);
@@ -331,7 +332,8 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         if (knob) { res.cl = roomCell(O, vec3f(210.0, 175.0, 90.0) * Lt, lt); } else { res.cl = roomCell(select(select(EQ, COL, panel), BAR, edge), col * Lt, lt); }
         res.state = 1u; done = true; break;
       }
-      lt = 1e9;
+      // (through its glass, or past it over or under: on to the next leaf behind)
+      lt = lh2.t; lu = lh2.u; lk = lh2.k; lg = lh2.kind == 0u; lkind = lh2.kind; ledge = lh2.edge; lh2.t = 1e9;
     }
     if (tn >= tExit) { break; }
     if (xs) { i += stX; tX += dX; } else { j += stY; tY += dY; }

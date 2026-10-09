@@ -285,7 +285,18 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       let hwd = (dA1 - dA0) * 0.5; let sw = (1.0 - (1.0 - dOp) * (1.0 - dOp)) * 1.5707963; let edgeIn = hwd * cos(sw);
       // (the gap an open door leaves: between the two leaves' free edges, or past the one leaf's)
       let gap = select(e - edgeIn, along - dA0 - 2.0 * edgeIn, dEn);
-      if (near || (pkR >= 0 && dOp > 0.0 && gap > 0.08)) {
+      // the reveal (C2): the wall is PCELL thick and the leaves stand halfway through it (sim/doors.ts), so a ray that
+      // leaves the opening's span, or rises past its head, before that depth meets the jamb's side or the head's
+      // underside, in the facade's own stuff (the walk would show the lobby there: the "see-through recess")
+      let sR = PCELL * 0.5 / max(1e-6, abs(dn)); let aR = along + da * sR; let zR = z - m * sR; let hz = select(DOOR_H + 0.22, DOOR_H, dEn);
+      let reveal = side != 2 && (aR < dA0 || aR > dA1 || zR > hz);
+      if (reveal) {
+        let sSide = select(1e9, select(dA0 - along, dA1 - along, da > 0.0) / da, abs(da) > 1e-6);
+        let sHead = select(1e9, (hz - z) / -m, m < 0.0);
+        let head = sHead < sSide;
+        ch = select(BAR, DASH, head); c = frame * (select(0.85, 0.6, head) * shade);
+      }
+      else if (near || (pkR >= 0 && dOp > 0.0 && gap > 0.08)) {
         // (the walk itself is made once below, for the door and the windows alike)
         gSDo = select(0u, dLf, near); gSDang = sw; gSDglass = false; doorPeek = true;
       }
