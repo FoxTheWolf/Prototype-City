@@ -3,6 +3,11 @@
 > Pedido do usuário em 2026-10-06 (item 30): ao processar `FEEDBACK.md`, em vez de só apagar, mover os itens crus para cá, com a data. Assim a caixa fica só com o que ainda não foi processado, e o texto original não se perde. O mais novo em cima.
 
 
+## 2026-10-09 (tarde — retorno do teste-c3.bat no chat, playtest 11-49-30)
+
+O usuário: o painel da GridLink com as leituras ao vivo de tudo o que ela controla; no telhado o som é de dentro (chuva e ambiente); o holofote da casinha não aparece; a mancha branca continua e vira coluna infinita; descendo a escada ainda se vê a rua pela laje; os cômodos ainda acendem por partes → luz das texturas só para LOD, dentro luz dinâmica com sombra; o interruptor com bloom forte no escuro e o emissivo deve sumir com a luz acesa (no apagão está certo); o neon está ótimo; a escada só aparece ao entrar (LOD); o céu e outras coisas apagam pelo vidro (comparar as duas capturas); TVs ligadas no apagão.
+Triagem: C3 (5b, 8–13), luz dinâmica dos cômodos → 16.1b, TVs → C7, GridLink → 17.5.
+
 ## 2026-10-09 (manhã — playtests 10-56-27 e 11-02-56, 13 notas F8, e recado no chat)
 
 Texto cru nos relatórios `playtest/2026-10-09_10-56-27_seed42_report.md` e `..._11-02-56_seed42_report.md`. No chat, o usuário: o C3 pode mudar (o softlock e a chuva dentro de casa quebram a imersão da noite chuvosa; agrupar os bugs de shader); a laje escura de noite → um holofote saindo da casinha; a luz dos cômodos mista: escritório acende sozinho, corredor por presença, corredores que acendem ao acaso de noite para simular gente (param quando alguém entra), prédios velhos no interruptor; o interruptor que brilha no escuro, fluorescente puxado para o verde, melhor que o piscar do Shadows of Doubt.
