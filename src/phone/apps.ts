@@ -457,10 +457,10 @@ function bankApp(S: Lcd, P: Phone, world: World, t: number): Pg {
   }
   if (B.view === 'near') {
     // the bank's branches, nearest the player first: where to take cash out; the one the account is at, and the head office, marked
-    const me = world.player, hour = calendar(world.time).hour, chain = city.banks[Acc.bank];
+    const me = world.player, chain = city.banks[Acc.bank];
     softKeys(S, '', T.back);
     return page({ kind: 'near', title: BK.near, hint: BK.nearHint, call: BK.call, rows: branchesNear(city, Acc.bank, me.x, me.y).map((k, n) => {
-      const Bd = city.buildings[city.businesses[k].building], [a, b2] = corner(k), open = isOpen('bank', hour);
+      const Bd = city.buildings[city.businesses[k].building], [a, b2] = corner(k), open = isOpen('bank', world.time);
       const tag = k === Acc.branch ? BK.yours : k === chain.hq ? BK.hqTag : '';
       return { name: businessName(city, k), where: `${a} ${b2}`, tag, dist: fmtDist(Math.hypot((Bd.x0 + Bd.x1) / 2 - me.x, (Bd.y0 + Bd.y1) / 2 - me.y), P.prefs.dist), open, openLabel: open ? BK.open : BK.closed, sel: n === B.sel, pre: pick(n) };
     }) });

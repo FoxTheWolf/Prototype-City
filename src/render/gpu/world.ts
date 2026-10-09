@@ -3,7 +3,7 @@ import { carOf, liftTop } from '../../sim/lifts';
 import { doorLeaves, shutterAt } from '../../sim/doors';
 import { siderealTime } from '../../sim/clock';
 import STARS from '../stars.json';
-import { PLACES } from '../../sim/placeTypes';
+import { hoursOn } from '../../sim/telco';
 import { cachedPlan, stackOf, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, WALL, CELL, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
@@ -810,7 +810,7 @@ export class GpuWorld {
   /** The street doors' word in each lot's list (face << 4) gets how open the door is in bits 8..15 (13.2c), written only when it changes. */
   private doorOpen = new Map<number, number>();
   /** The shops' doors with a shutter (their word in fx) and the shop's hours, to roll it by the time (13.10d). */
-  private shutters = new Map<number, [number, number]>();
+  private shutters = new Map<number, string>();
   private streetDoors(world: World) {
     const W = this.fxW, q = this.dev.queue, now = new Map<number, number>();
     for (const [key, a] of world.doors) {
@@ -827,9 +827,9 @@ export class GpuWorld {
     }
     // the shutters, down as far as the hour says (only those whose word is still this lot's)
     const hour = (world.time / 3600) % 24;
-    for (const [i, hrs] of this.shutters) {
+    for (const [i, kind] of this.shutters) {
       if (!(W[i] & (1 << 24))) { this.shutters.delete(i); continue; }
-      const v = (W[i] & ~0xff0000) | (Math.round(shutterAt(hrs, hour) * 255) << 16);
+      const v = (W[i] & ~0xff0000) | (Math.round(shutterAt(hoursOn(kind, world.time), hour) * 255) << 16);
       if (v !== W[i]) { W[i] = v; q.writeBuffer(this.fx, i * 4, W, i, 1); }
     }
   }
@@ -969,7 +969,7 @@ export class GpuWorld {
         const biz = C.buildings[k].biz;
         doors.forEach((D, e) => {
           W[o + 1 + e * 3] = (D.face << 4) | (e > 0 && biz >= 0 ? 1 << 24 : 0); F[o + 2 + e * 3] = D.a0; F[o + 3 + e * 3] = D.a1;
-          if (e > 0 && biz >= 0) this.shutters.set(o + 1 + e * 3, PLACES[C.businesses[biz].kind]?.hours ?? [9, 17]);
+          if (e > 0 && biz >= 0) this.shutters.set(o + 1 + e * 3, C.businesses[biz].kind);
         });
         // (the residents' own door is one wooden leaf, its width negative; the second slot's width 0: entryDoor, 13.19)
         const entry = entryDoor(C, k);

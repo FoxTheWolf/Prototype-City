@@ -4,7 +4,6 @@ import { Doing, whereIs } from '../sim/citizens';
 import C from '../locale/calls.json';
 import en from '../locale/en.json';
 import { districtAt } from '../sim/city';
-import { calendar } from '../sim/clock';
 import { BIZ_HOURS, isOpen, lookup, type Callee } from '../sim/telco';
 import { type World } from '../sim/world';
 import { expand, pickW, rngOf, selOf, type Grammar, type Sel } from '../locale/gen';
@@ -91,7 +90,7 @@ export class Call {
     if (this.state === 'dialing') {
       if (now < this.start + 1.5) return;
       const c = this.callee;
-      if ((c.kind === 'self' && !this.landline) || (c.kind === 'biz' && isOpen(this.kindOf(), this.hour()) && this.h(1) < 0.08)) { sfx.push(['busy']); this.end(now, C.busy); return; }
+      if ((c.kind === 'self' && !this.landline) || (c.kind === 'biz' && isOpen(this.kindOf(), this.world.time) && this.h(1) < 0.08)) { sfx.push(['busy']); this.end(now, C.busy); return; }
       if (c.kind === 'none') {
         sfx.push(['intercept']);
         this.state = 'talk'; this.connectAt = now;
@@ -188,7 +187,6 @@ export class Call {
   }
 
   private end(now: number, why: string) { this.state = 'ended'; this.endAt = now; this.reason = why; this.q = []; this.holdUntil = -1; this.waitUntil = -1; }
-  private hour() { return calendar(this.world.time).hour; }
   private kindOf() { const c = this.callee; return c.kind === 'biz' ? this.world.city.businesses[c.k].kind : ''; }
   /**
    * A line from a list, put together by the text grammar (see locale/gen.ts): pieces fit for who is
@@ -217,7 +215,7 @@ export class Call {
       for (const p of this.world.peds) { const d = Math.hypot(p.x - ph.x, p.y - ph.y); if (d < best) { best = d; this.who = p.id; } }
       return this.who >= 0 && this.h(5) < 0.7 ? 3 + Math.floor(this.h(2) * 3) : -1;
     }
-    if (c.kind === 'biz') return isOpen(this.kindOf(), this.hour()) ? 1 + Math.floor(this.h(2) * 3) : 2 + Math.floor(this.h(2) * 3);
+    if (c.kind === 'biz') return isOpen(this.kindOf(), this.world.time) ? 1 + Math.floor(this.h(2) * 3) : 2 + Math.floor(this.h(2) * 3);
     if (c.kind === 'home' || c.kind === 'cell') return this.pickUp();
     return -1;
   }
@@ -268,7 +266,7 @@ export class Call {
     switch (c.kind) {
       case 'biz': {
         const kind = this.kindOf();
-        if (!isOpen(kind, this.hour())) return [rec(this.pick(C.closed, 20)), end];
+        if (!isOpen(kind, this.world.time)) return [rec(this.pick(C.closed, 20)), end];
         if (IVR_KINDS.includes(kind)) { this.menu = kind; return this.menuSteps(true); }
         const G = C.greet as Record<string, string[]>, B = C.background as Record<string, string[]>;
         const steps = [them(this.pick([...(G[kind] ?? []), ...C.greet.generic], 21))];

@@ -66,7 +66,7 @@ export class Counter {
     if (!B.shop || B.biz < 0) return null;
     const P = planOf(w.city, p.inside, 0);
     if (!P || !P.furn.some((f) => f.kind === 'till' && Math.hypot(f.x - p.x, f.y - p.y) < REACH + Math.max(f.hx, f.hy))) return null;
-    const open = isOpen(w.city.businesses[B.biz].kind, (w.time / 3600) % 24);
+    const open = isOpen(w.city.businesses[B.biz].kind, w.time);
     return { k: B.biz, open, staffed: open && staffOn(w.pop, w.city, B.biz, w.time).length > 0 };
   }
 

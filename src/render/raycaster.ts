@@ -1042,7 +1042,7 @@ function collectObjects(world: World, v: View): Obj[] {
       if (Math.hypot(X - v.x, Y - v.y) > OPEN_FAR || !seen(X, Y, 0.5)) continue;
       const kind = city.businesses[B.biz].kind, [h0, h1] = BIZ_HOURS[kind] ?? [9, 17];
       const hours = h0 === 0 && h1 >= 24 ? '24H' : `${h0}-${h1 % 24}`;
-      out.push(ob(X, Y, nx, ny, openSignModel(isOpen(kind, (world.time / 3600) % 24), hours), 0.3, 1.6, 0, 1.3));
+      out.push(ob(X, Y, nx, ny, openSignModel(isOpen(kind, world.time), hours), 0.3, 1.6, 0, 1.3));
     }
   }
   // the floodlights at the foot of lit facades (their lens lit in eighths, so the models are reused)

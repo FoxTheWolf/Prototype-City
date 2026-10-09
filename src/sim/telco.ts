@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { type City } from './city';
-import { TIME_SCALE } from './clock';
+import { calendar, TIME_SCALE } from './clock';
 import { subAt, type PowerGrid } from './power';
 import { PLACES } from './placeTypes';
 
@@ -139,9 +139,20 @@ export function mastNear(T: Telco, px: number, py: number): number {
 
 /** Opening hours of each kind of business (from, to; to past 24 for after midnight; 0-24 always open). */
 export const BIZ_HOURS: Record<string, [number, number]> = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [k, p.hours]));
-export function isOpen(kind: string, hour: number): boolean {
-  const [a, b] = BIZ_HOURS[kind] ?? [9, 17];
-  return (hour >= a && hour < b) || hour + 24 < b;
+/** Whether a kind of business is open at game time t: its hours, and not on the weekend where it closes then. */
+export function isOpen(kind: string, t: number): boolean {
+  const [a, b] = BIZ_HOURS[kind] ?? [9, 17], c = calendar(t), h = c.hour;
+  // open today, or still open from yesterday's hours past midnight; a weekend day closes where the type says so
+  const day = (wd: number) => !closesWeekends(kind) || (wd !== 0 && wd !== 6);
+  return (h >= a && h < b && day(c.weekday)) || (h + 24 < b && day((c.weekday + 6) % 7));
+}
+
+const SHUT: [number, number] = [0, 0];
+const closesWeekends = (kind: string) => (PLACES as Record<string, { weekends?: false } | undefined>)[kind]?.weekends === false;
+/** A kind's hours on the day of game time t: none on a weekend day where it closes then (the shutters follow these). */
+export function hoursOn(kind: string, t: number): [number, number] {
+  const wd = calendar(t).weekday;
+  return closesWeekends(kind) && (wd === 0 || wd === 6) ? SHUT : BIZ_HOURS[kind] ?? [9, 17];
 }
 
 /** Who a dialed number reaches. */

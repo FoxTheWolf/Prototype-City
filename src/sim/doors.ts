@@ -2,8 +2,7 @@ import { hash3 } from '../core/rng';
 import { DEBUG } from '../debug';
 import { baseAt, cellAt, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, WALL, type Door, type Leaf, type Room } from './interior';
 import type { Building } from './city';
-import { isOpen } from './telco';
-import { PLACES } from './placeTypes';
+import { hoursOn, isOpen } from './telco';
 import type { World } from './world';
 
 /**
@@ -107,7 +106,7 @@ export function doorLocked(w: World, d: DoorRef): boolean {
   if (d.street) {
     // the shop's own door, outside its hours; the building's main door is open, unless the whole ground floor is the shop (13.10i)
     const G = d.n === 0 && B.biz >= 0 ? planOf(w.city, d.k, 0) : null, whole = !!G && !G.exits.length && G.rooms.some((R) => R.kind === 'shop');
-    return w.player.inside < 0 && (d.n > 0 || whole) && B.biz >= 0 && !isOpen(w.city.businesses[B.biz].kind, hour);
+    return w.player.inside < 0 && (d.n > 0 || whole) && B.biz >= 0 && !isOpen(w.city.businesses[B.biz].kind, w.time);
   }
   const P = planOf(w.city, d.k, d.f), L = P && leavesOf(P)[d.n];
   if (!P || !L) return false;
@@ -117,7 +116,7 @@ export function doorLocked(w: World, d: DoorRef): boolean {
   // the residents' way through a shop to their lift (13.10i)
   if (R.kind === 'shop' && (A.kind === 'hall' || C.kind === 'hall')) return false;
   if (R.kind === 'office' || R.kind === 'open') return hour < 7 || hour >= 19;
-  if (R.kind === 'store' || R.kind === 'shop') return B.biz < 0 || !isOpen(w.city.businesses[B.biz].kind, hour);
+  if (R.kind === 'store' || R.kind === 'shop') return B.biz < 0 || !isOpen(w.city.businesses[B.biz].kind, w.time);
   // a home's front door: most are locked, a few left on the latch (fixed per home)
   return HOME_KINDS.has(R.kind) && hash3(d.k * 64 + d.f, R.unit, 77) < 0.75;
 }
@@ -191,7 +190,7 @@ function stepShutters(w: World, tick: number) {
   for (const z of w.city.businesses) {
     const B = w.city.buildings[z.building];
     if (Math.abs((B.x0 + B.x1) / 2 - p.x) > SHUTTER_NEAR + 30 || Math.abs((B.y0 + B.y1) / 2 - p.y) > SHUTTER_NEAR + 30) continue;
-    const hrs = PLACES[z.kind]?.hours ?? [9, 17], s0 = shutterAt(hrs, h0), s1 = shutterAt(hrs, h1);
+    const hrs = hoursOn(z.kind, w.time), s0 = shutterAt(hrs, h0), s1 = shutterAt(hrs, h1);
     if (s0 === s1 || (s0 > 0 && s0 < 1)) continue;
     const k = z.building, D = exitsOf(w.city, k), Bk = w.city.buildings[k];
     for (let n = 1; n < D.length; n++) {

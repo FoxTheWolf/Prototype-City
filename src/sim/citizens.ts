@@ -152,7 +152,7 @@ export function* peopleSteps(seed: number, city: City, T: Telco, target = PEOPLE
   });
   city.businesses.forEach((b, k) => {
     const [o, c] = BIZ_HOURS[b.kind] ?? [9, 17];
-    places.push({ kind: 'shop', building: b.building, biz: k, name: 0, shifts: shiftsFor(o, c), weekends: b.kind !== 'bank', staff: [] });
+    places.push({ kind: 'shop', building: b.building, biz: k, name: 0, shifts: shiftsFor(o, c), weekends: PLACES[b.kind]?.weekends !== false, staff: [] });
     (places[places.length - 1] as Workplace & { cap: number }).cap = SHOP_STAFF[b.kind] ?? 3;
   });
 

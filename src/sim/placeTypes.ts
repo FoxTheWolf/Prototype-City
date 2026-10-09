@@ -11,6 +11,8 @@ export interface PlaceType {
   catalog: string;
   /** Opening hours (from, to; to past 24 for after midnight; 0-24 always open). */
   hours: [number, number];
+  /** Closed on Saturday and Sunday (staff off too); open every day if left out. */
+  weekends?: false;
   /** Staff it needs, all shifts together. */
   staff: number;
   /** Chance it hangs a blade sign next to its shop sign. */
@@ -58,7 +60,7 @@ export const PLACES: Record<BusinessKind, PlaceType> = {
     sells: [['internet_hour', 300], ['print_page', 15], ['soda_can', 125], ['chips', 125]] },
   motel: { catalog: 'budget_motel', hours: [0, 24], staff: 4, rare: 0.4, blade: 1, wifi: [0.3, 0.6], cctv: 0.3, order: true,
     sells: [['room_night', 4900], ['vending_snack', 125]] },
-  bank: { catalog: 'bank_branch', hours: [9, 17], staff: 12, cctv: 0.9, visit: ['errand'], sells: [] },
+  bank: { catalog: 'bank_branch', hours: [9, 17], weekends: false, staff: 12, cctv: 0.9, visit: ['errand'], sells: [] },
   // Not in the first pass of interiors (Sessão E): only what they already had.
   liquor: { catalog: '', hours: [10, 23], staff: 3, blade: 0.4, cctv: 0.4, visit: ['errand'], sells: [] },
   hotel: { catalog: '', hours: [0, 24], staff: 20, blade: 1, wifi: [0.8, 0.1], cctv: 0.3, sells: [] },
