@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 4) — o orçamento por tarefa (Opus 5.5)
+
+- **O contraste da noite:** a caça ao lixo por quadro custou ~80% de uma janela por ganhos que não se sentem jogando; nesta sessão, três consertos que se sentem (a travada da meia-noite 50 → 3 ms, os bancos no fim de semana, um teste velho) custaram ~5%. A lição é minha: otimização sem um alvo que o jogador sente é um poço. O teto por tarefa está no CLAUDE.md.
+- **O que eu contesto em mim mesmo:** a 16.1 tinha que ter parado na hora em que o gravador mostrou que a simulação "quase nunca" é a culpada. O resto do lixo do render só vale com a sua medida no Electron; sem ela, eu estava otimizando no escuro.
+- **Sugestão:** quando der, o `jogar-playtest.bat` de ~5 min andando (de preferência passando da meia-noite, com T); se os quadros lentos estiverem perto de ~1%, eu fecho a 16.1 com o documento da engine e sigo para a 16.2 sem mais caça.
+
 ## 2026-10-09 (noite, 3) — 16.1, o lixo por quadro (Opus 5.5)
 - **Medir antes de mexer pagou de novo.** O palpite natural era "a GPU" ou "a simulação no Worker"; a medida mostrou o coletor de memória, e o perfilador por função mostrou quem: as rotinas dos moradores, as luzes, os objetos do quadro. O maior culpado era invisível no código: uma função com closures paga o contexto delas a cada chamada, mesmo saindo cedo pelo cache.
 - **Ainda não sei se você vai sentir.** Cortei o lixo de forma grande (a simulação ~7×, o render quase pela metade), mas o que importa é o quadro lento que você nota a 180 Hz. Só o seu playtest de 5 min andando responde. Não vou declarar vitória antes dele.
