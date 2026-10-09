@@ -20,5 +20,5 @@
 ## Último snapshot observado (atualizar a cada sessão)
 
 - **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
-- **C** — (sem observação ainda)
+- **C** — 2026-10-08 ~22h (sessão nova; o usuário disse que é a C): semanal **~49–50%**, janela de 5 h **~1%**. ⚠ O `get_usage` desta sessão mostra a renovação em **sábado 10/10 ~02h (Brasília)**, que bate com a linha da **V**, não com "terça ~13h" — confirmar com o usuário qual linha da tabela está trocada.
 - **V** — (sem observação ainda)
