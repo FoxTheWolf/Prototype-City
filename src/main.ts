@@ -23,8 +23,8 @@ import { drawTag, TAG_NEAR, TAG_WAIT } from './tag';
 import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
-import { fixtureAhead, outletAhead, outletPower } from './sim/outlets';
-import { switchOn, turnSwitch } from './sim/lights';
+import { outletAhead, outletPower } from './sim/outlets';
+import { switchAimed, switchOn, turnSwitch } from './sim/lights';
 import { seatAhead, sitDown, standUp } from './sim/seats';
 import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
@@ -775,7 +775,7 @@ addEventListener('keydown', (e) => {
       return;
     }
     // a light switch in front: the room's light the other way (13.22)
-    const sw = !phone.out ? fixtureAhead(world, camera.yaw, 'switch') : null;
+    const sw = !phone.out ? switchAimed(world, camera.yaw, camera.pitch, eyeNow()) : null;
     if (sw) { turnSwitch(world, sw); sound?.lightSwitch(); return; }
     // a wall outlet in front: plug the phone in, or out (13.9c)
     const o = !phone.out ? outletAhead(world, camera.yaw) : null;
@@ -1377,7 +1377,7 @@ function frame(now: number) {
   const aim = running && !phone.out && !counter.active && !bagView.open && !laptop.open ? aimedGood(world, camera.yaw, camera.pitch, eyeNow()) : null;
   if (world.bag.stolenAt !== theftSeen) { theftSeen = world.bag.stolenAt; shelfNote = en.bag.stole.replace('{n}', String(world.bag.stolen)); shelfNoteAt = now / 1000; }
   const plugAt = !aim && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? outletAhead(world, camera.yaw) : null;
-  const swAt = !aim && !plugAt && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? fixtureAhead(world, camera.yaw, 'switch') : null;
+  const swAt = !aim && !plugAt && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? switchAimed(world, camera.yaw, camera.pitch, eyeNow()) : null;
   // its tag, close up (14.5): after the sight rests on it a moment, within reach; before that only what F does
   const tagKey = aim ? `${aim.f.x},${aim.f.y},${aim.good}` : '';
   if (tagKey !== tagWas) { tagWas = tagKey; tagSince = now / 1000; }
@@ -1389,7 +1389,7 @@ function frame(now: number) {
     : !running || phone.out || counter.active || bagView.open || laptop.open || payphone.active || doorAhead(world, camera.yaw) || liftAhead(world, camera.yaw) || counter.near() ? ''
     : world.player.sit ? (sitK >= 1 ? en.seat.stand : '') : seatAhead(world, camera.yaw) ? en.seat.sit : '';
   if (shelfMsg && !bagView.open && !talkView.open) { const s = ` ${shelfMsg} `; ui.text((ui.cols - s.length) >> 1, ui.rows - 8, s, [255, 220, 140], [20, 16, 10]); }
-  if (aim) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
+  if (aim || swAt) { const i = (ui.rows >> 1) * ui.cols + (ui.cols >> 1); ui.put(i, '+'.charCodeAt(0), 255, 200, 80); }
   if (tagOn) drawTag(ui, aim!, world, view, layout, uiLayout, VIEW_LIGHT);
   // a shop's till in front: how to use the counter, or when the shop opens (a door in front comes first, as F does: 0.13.10o)
   const till = !talkView.open && !phone.out && !counter.active && !bagView.open && !doorAhead(world, camera.yaw) ? counter.near() : null;

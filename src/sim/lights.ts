@@ -11,7 +11,7 @@
  */
 import { calendar } from './clock';
 import { Doing, homeUnit, whereIs, type Population } from './citizens';
-import { type City } from './city';
+import { type City, FLOOR_H } from './city';
 import { cellAt, planOf, ROOM, type Furn } from './interior';
 import { type World } from './world';
 import { isOpen } from './telco';
@@ -110,6 +110,27 @@ export function switchOn(w: World, f: Furn): boolean {
   if (v !== undefined) return v;
   const P = planOf(w.city, p.inside, p.floor);
   return !!P && (cellAt(P, p.x, p.y) & ROOM) - 1 === f.seed;
+}
+/** The plate's middle above its floor, m (render/models.ts 'switch'); how far a hand reaches it; how near the sight must pass. */
+const PLATE_Z = 1.2, SWITCH_REACH = 1.6, SWITCH_AIM = 0.16;
+/**
+ * The switch under the sight (C3, 2026-10-09): the ray from the eye must pass within a hand's width of its plate, as
+ * a good on a shelf is aimed at. (It was the nearest switch in a wide cone, which took F from the door beside it.)
+ */
+export function switchAimed(w: World, yaw: number, pitch: number, eye: number): Furn | null {
+  const p = w.player;
+  if (p.inside < 0) return null;
+  const dx = Math.cos(yaw) * Math.cos(pitch), dy = Math.sin(yaw) * Math.cos(pitch), dz = Math.sin(pitch);
+  const ez = p.z - p.floor * FLOOR_H + eye;
+  let best: Furn | null = null, bm = SWITCH_AIM;
+  for (const f of planOf(w.city, p.inside, p.floor)?.furn ?? []) {
+    if (f.kind !== 'switch') continue;
+    const vx = f.x - p.x, vy = f.y - p.y, vz = PLATE_Z - ez, t = vx * dx + vy * dy + vz * dz;
+    if (t <= 0 || t > SWITCH_REACH) continue;
+    const miss = Math.hypot(vx - dx * t, vy - dy * t, vz - dz * t);
+    if (miss < bm) { bm = miss; best = f; }
+  }
+  return best;
 }
 /** The player turns switch f: its room's light the other way, written to the GPU at once (gpu/world.ts putLights). */
 export function turnSwitch(w: World, f: Furn) {
