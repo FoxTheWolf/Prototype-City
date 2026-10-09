@@ -786,7 +786,9 @@ function placeGrid(P: Plan, MF: string[][], G: GridMap, rnd: () => number, goods
     const dist = (sx: number, sy: number, dx: number, dy: number) => { let d = 0; while (!wallish(sx + dx * (d + 1), sy + dy * (d + 1)) && d < 40) d++; return d; };
     let back = touch.indexOf(Math.max(...touch));
     if (rule?.front) back = 3;
-    else if (ch === 'h' || ch === 's') { const s2 = look('tQ=v$', 2); if (s2 >= 0) back = s2 ^ 1; }
+    // (a chair with nothing to sit at and no wall at its back faces the street: the view; on a roof, over the parapet,
+    // where it faced whatever stood beside it, C3)
+    else if (ch === 'h' || ch === 's') { const s2 = look('tQ=v$', 2); if (s2 >= 0) back = s2 ^ 1; else if (Math.max(...touch) === 0) back = 3; }
     else if (ch === 'F' || ch === 'r') { const s2 = look('T', 14); if (s2 >= 0) back = s2 ^ 1; }
     // a bed's head is on a short side, the one nearer a wall
     else if (ch === 'B') back = h >= w ? (dist(mx, y, 0, -1) <= dist(mx, y1, 0, 1) ? 2 : 3) : dist(x, my, -1, 0) <= dist(x1, my, 1, 0) ? 0 : 1;
