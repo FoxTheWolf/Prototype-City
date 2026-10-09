@@ -2,6 +2,14 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.23 — o telhado (0.13.23, 2026-10-09)
+
+- **O telhado vira um andar** (as plantas T1, CT, FT, DT e BT do manual; só os lotes de planta desenhada): `planOf(k, top)` lê a planta T da pilha (`planFromFloor` com `f = 2`, cacheada por `stackKey(k, top)`), o cômodo `x` é o tipo novo `roof`, sem a escada própria (a do último andar sobe até ela: `feetZ` olha a escada do andar de baixo e deixa `f` chegar a `top - 1`). A colisão é a de sempre (o parapeito é a parede de fora). `tests/roof.ts`: nas 6 famílias, subir, andar até o parapeito nos 4 sentidos sem sair do lote, descer.
+- **O shader:** `R_ROOF` (12): sem lâmpada, a luz de fora (`roomLit`: o céu de dia, o brilho da cidade à noite), o piso de manta com cascalho e o parapeito de reboco com a pingadeira (`floorPx`/`wallPx`); acima de `PARAPET_H` (1,05 m) e onde haveria teto, o raio sai para a cidade e o céu (`return res` no `roomWalk`). A planta do telhado fica fora da tabela das caixas (`roofAt` no `putPlan`); o poço da escada do último andar chega a ela, e os lances são vistos de cima.
+- **Os telhados vistos de fora:** a casinha da escada (`stairHouseModel`) e os móveis da planta T (caixa d'água `tank`, ar-condicionado `ac`, cadeira, vaso) viram objetos do mundo para os lotes a até 130 m (juntados na varredura das fachadas, `this.roofs`), menos o telhado onde o jogador está.
+- **A chuva no telhado:** o prédio não protege da chuva quem está na laje (`sk` no `gpu/world.ts`, `inc.nearT = 0` no `main`); dentro da casinha, sim.
+- **Não feito / para depois:** a casinha não tem porta desenhada vista de fora; os prédios sem planta desenhada (torres, escritórios, cortados) continuam sem telhado; a laje molhada refletindo o neon vai para a 20.1; a laje e o parapeito ficam muito escuros de noite.
+
 ## 13.22 — interruptores e luz por cômodo (0.13.22, 2026-10-09)
 
 - **O olho:** `ADAPT_DOWN_S` 0,45 → 1,2 s (`gpu/world.ts`); a adaptação continua automática pelo medidor.

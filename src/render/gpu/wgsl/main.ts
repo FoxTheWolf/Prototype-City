@@ -37,6 +37,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       V = RView(gWellO, V.lot, V.box, f2, f32(f2) * FLOOR_H, false, V.elec, -1, 0u, true); tIn = gWellT; thruWell = true; gThru = true;
     }
     if (thruWell && inc.state == 0u) { inc.state = 1u; inc.cl = roomCell(32u, vec3f(0.0), tIn); }
+    // (13.23) standing on a roof, the rain falls from the eye on
+    { let V0 = inView(IB); if (V0.here >= 0 && u32(V0.here) < fx[V0.o + 4u] && fx[roomRec(V0.o, V0.here) + 4u] == R_ROOF) { inc.nearT = 0.0; } }
     gWell = 0; gWR = vec4f(0.0); gThru = false;
   }
   var cl = inc.cl;

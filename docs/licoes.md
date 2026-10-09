@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 13.23 (o telhado) — 2026-10-09
+- **Inserir uma linha depois de `let x = ...;` por substituição de texto quebra a linha original quando ela tem mais de um `let`:** o resto da linha virou comentário e o WGSL acusou `unresolved value`. Inserir sempre depois do fim da linha.
+- **O console do painel importa outra cópia do módulo** depois de uma recarga do Vite (`?t=`): o cache de plantas do jogo não aparece ali. Para ver o estado do jogo, expor por um momento em `globalThis` no próprio código (e tirar).
+- **A varredura das fachadas faz poucas plantas por vez** (`FX_PLANS` = 6): com o painel escondido o jogo quase não anda, e o que depende delas (os telhados vizinhos) parece não funcionar. Fazer o painel andar com capturas pequenas em lote antes de concluir.
+- **"Dentro" para a chuva é o retângulo do prédio** (`inX0..inY1`): quem está na laje precisa sair dele, senão não chove na frente.
+- **O cômodo do telhado não é retângulo** (a laje contorna a casinha): R3 não vale para `x`; a caixa do cômodo é a do lote inteiro.
+
 ### Lições da 13.22 (luz por cômodo, vidro, interruptores) — 2026-10-09
 - **A rotina das pessoas é cara de perguntar em lote:** `lightsOf` de 340 lotes custa ~350 ms (`whereIs` por morador). Perto do jogador, em rodízio com teto de tempo por quadro (`LIGHT_MS`); longe, uma amostra fixa de ~400 casas (`lightShares`), recalculada a cada 10 min de jogo. Medir no Node antes de pôr no quadro.
 - **A planta dos andares de cima é uma só para todos os andares** (planta cortada): qualquer estado por andar (luz, interruptor) precisa de tabela própria, por lote e andar, fora da planta.

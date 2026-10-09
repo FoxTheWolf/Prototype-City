@@ -309,7 +309,9 @@ export class GpuWorld {
   /** This frame's world into `out`, as the first pass of the encoder (the compositor draws it in the same submit). */
   encode(enc: GPUCommandEncoder, world: World, v: View, timed = false) {
     const { cols, rows } = this, C = this.city, q = this.dev.queue;
-    const F = gpuPrepare(world, v), sky = F.sky, P = world.power, I = gpuInside(world, v, cols, rows, sky), sk = I?.base;
+    const F = gpuPrepare(world, v), sky = F.sky, P = world.power, I = gpuInside(world, v, cols, rows, sky);
+    // (the building keeps the rain off its storeys and its stair house, not off the roof the viewer stands on, 13.23)
+    const hereR = I ? (cellAt(I.plan, v.x, v.y) & ROOM) - 1 : -1, sk = I && !(hereR >= 0 && I.plan.rooms[hereR]?.kind === 'roof') ? I.base : undefined;
     if (F.ticker !== this.ticker) {
       this.ticker = F.ticker;
       const T = new Uint32Array(Math.min(TICK_MAX, F.ticker.length));
