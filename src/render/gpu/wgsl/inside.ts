@@ -45,7 +45,7 @@ fn dayIn(box: i32, x: f32, y: f32) -> f32 {
 }
 /** The light at a point of room r: its lamps, falling off with the distance to the nearest and along the ray inside (d); the ambient; the daylight. */
 /** The light from lightAt (color units) as a multiplier of the roof's slab (C3). */
-const ROOF_LIT = 110.0;
+const ROOF_LIT = 30.0;
 fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
   // (13.23) the roof is outdoors: the sky's light, the city's glow at night
   // (and the street's lights that reach it: the bulb over its stair house door, C3)

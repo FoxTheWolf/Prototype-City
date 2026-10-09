@@ -4,7 +4,7 @@ import { doorLeaves, shutterAt } from '../../sim/doors';
 import { siderealTime } from '../../sim/clock';
 import STARS from '../stars.json';
 import { PLACES } from '../../sim/placeTypes';
-import { cachedPlan, stackOf, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
+import { cachedPlan, stackOf, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, WALL, CELL, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
 import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
@@ -336,7 +336,7 @@ export class GpuWorld {
         const L = roofLamp(R), Pw = world.power;
         if (!L || !(Pw.subs[Pw.building[k]].on || Pw.backup[k] >= Backup.Generator)) continue;
         const [x, y, nx, ny] = L, z = floorsOf(C.buildings[k]) * FLOOR_H, q = ROOF_LAMP * dark;
-        F.dyn.panel(x - ny, y + nx, x + ny, y - nx, nx, ny, z + 0.3, z + 2.6, 9, 0.25, (255 / 255) ** 2.2 * q, (190 / 255) ** 2.2 * q, (120 / 255) ** 2.2 * q);
+        F.dyn.panel(x - ny, y + nx, x + ny, y - nx, nx, ny, z + 2.6, z + 3.0, 9, 0.6, (255 / 255) ** 2.2 * q, (190 / 255) ** 2.2 * q, (120 / 255) ** 2.2 * q);
       } }
     this.streetDoors(world);
     this.liftCars(world);
@@ -1041,7 +1041,7 @@ const LIGHT_MS = 1.0;
 /** How far the roofs' stair houses and tanks are drawn (m). */
 const ROOF_FAR = 160;
 /** The bulb over a roof's stair house door: how bright (C3). */
-const ROOF_LAMP = 1.0;
+const ROOF_LAMP = 1.5;
 const roofLamps = new WeakMap<Plan, number[] | null>();
 /**
  * (C3) Where the bulb over a roof's stair house door is: [x, y, nx, ny], the middle of the door's way and out onto the
@@ -1051,15 +1051,23 @@ export function roofLamp(P: Plan): number[] | null {
   let L = roofLamps.get(P);
   if (L !== undefined) return L;
   L = null;
-  for (const f of leavesOf(P)) {
-    const s = P.rooms[f.ra]?.kind === 'stair' ? f.ra : P.rooms[f.rb]?.kind === 'stair' ? f.rb : -1;
-    if (s < 0) continue;
-    const R = P.rooms[s];
-    let nx = f.nx, ny = f.ny;
-    if ((f.cx - (R.x0 + R.x1) / 2) * nx + (f.cy - (R.y0 + R.y1) / 2) * ny < 0) { nx = -nx; ny = -ny; }
-    L = [f.cx + nx * 0.1, f.cy + ny * 0.1, nx, ny];
-    break;
+  // the way out of the stair house: the cell edges between the roof and a room of the house, with no wall on either side
+  // (a door leaf from its hall, or an open way from its stair); the bulb over the middle of the first run, facing the roof
+  const { cells, nx: W, ny: H } = P, roofOf = (c: number) => P.rooms[(c & ROOM) - 1]?.kind === 'roof';
+  let sx = 0, sy = 0, n = 0, ex = 0, ey = 0;
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const p = cells[j * W + i];
+    for (const [di, dj] of [[1, 0], [0, 1]]) {
+      if (i + di >= W || j + dj >= H) continue;
+      const q = cells[(j + dj) * W + i + di];
+      if (!(p & ROOM) || !(q & ROOM) || (p | q) & WALL || roofOf(p) === roofOf(q)) continue;
+      const ox = roofOf(q) ? di : -di, oy = roofOf(q) ? dj : -dj;
+      const x = (P.gx + i + 0.5 + di * 0.5) * CELL, y = (P.gy + j + 0.5 + dj * 0.5) * CELL;
+      if (n && (ox !== ex || oy !== ey || Math.hypot(x - sx / n, y - sy / n) > 2)) continue;
+      ex = ox; ey = oy; sx += x; sy += y; n++;
+    }
   }
+  if (n) L = [sx / n + ex * 0.1, sy / n + ey * 0.1, ex, ey];
   roofLamps.set(P, L);
   return L;
 }

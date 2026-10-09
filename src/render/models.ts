@@ -686,8 +686,8 @@ export function roofBulbModel(on: number): Part[] {
   const q = Math.round(Math.min(1, on) * 8) / 8, key = 'bulb' + q;
   let m = furns.get(key);
   if (!m) {
-    m = [part(Box, 0, -0.07, 2.42, 0.06, 0.07, 2.5, [70, 70, 72], Solid, '='),
-      q > 0 ? part(Box, 0.06, -0.05, 2.36, 0.15, 0.05, 2.46, [255 * q, 200 * q, 130 * q], Glow, 'o') : part(Box, 0.06, -0.05, 2.36, 0.15, 0.05, 2.46, [190, 186, 170], Solid, 'o')];
+    m = [part(Box, 0, -0.07, 2.84, 0.06, 0.07, 2.92, [70, 70, 72], Solid, '='),
+      q > 0 ? part(Box, 0.06, -0.05, 2.76, 0.15, 0.05, 2.86, [255 * q, 200 * q, 130 * q], Glow, 'o') : part(Box, 0.06, -0.05, 2.76, 0.15, 0.05, 2.86, [190, 186, 170], Solid, 'o')];
     furns.set(key, m);
   }
   return m;
