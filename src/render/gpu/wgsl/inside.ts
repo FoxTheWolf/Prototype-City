@@ -377,8 +377,12 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
               res.cl = roomCell(ep.ch, ep.c, tn); res.state = 1u; done = true; break;
             }
           }
-          let k = select(1.0, 1.3, z < z0 + DOOR_H + 0.08);
-          res.cl = roomCell(EQ, vec3f(120.0, 95.0, 70.0) * roomLit(V, ro, r, hx, hy, tn - tIn) * k, tn); res.state = 1u; done = true; break;
+          // the head's trim, 8 cm of wood; over it the room's own wall up to the ceiling (it was all wood: a band of
+          // another color over every doorway, playtest of 2026-10-08)
+          let rl2 = roomLit(V, ro, r, hx, hy, tn - tIn);
+          if (z < z0 + DOOR_H + 0.08) { res.cl = roomCell(EQ, vec3f(120.0, 95.0, 70.0) * rl2 * 1.3, tn); }
+          else { let wp = wallPx(kind, unit, zrOf(z, z0), uu); res.cl = roomCell(wp.ch, wp.c * rl2 * shade, tn); }
+          res.state = 1u; done = true; break;
         }
       } else {
         if (full && z > z0 && z <= zc && nk == R_LIFT && kind != R_LIFT) {
