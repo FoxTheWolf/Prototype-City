@@ -212,10 +212,13 @@ export function checkArrangement(A: Arrangement): string[] {
   const fr = A.frame, W = fr[0].length - 2, D = fr.length - 2, g = A.rows, out: string[] = [];
   if (g.length !== D || g.some((r) => r.length !== W)) return [`size: ${g.length} rows, want ${D} of ${W}`];
   const fc = (x: number, y: number) => fr[y + 1][x + 1];
-  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < D;
+  // (a wall inside the frame: the roof's stair house, 13.24) no piece on it, and no floor
+  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < D && fc(x, y) === '.';
+  const roof = arrangementKind(A) === 'x';
   const entries: [number, number][] = [], open: [number, number][] = [];
   for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) {
     if (g[y][x] !== '.' && !FURN[g[y][x]]) out.push(`unknown letter ${g[y][x]}`);
+    if (!inside(x, y)) { if (g[y][x] !== '.') out.push(`a piece on a wall at (${x},${y})`); continue; }
     for (const [dx, dy] of N4) {
       const c = fc(x + dx, y + dy);
       if (c === 'D') { if (g[y][x] !== '.') out.push(`door blocked at (${x},${y})`); entries.push([x, y]); }
@@ -234,13 +237,14 @@ export function checkArrangement(A: Arrangement): string[] {
     }
   }
   let shut = 0;
-  for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) if (g[y][x] === '.' && !seen.has(key(x, y))) shut++;
+  for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) if (inside(x, y) && g[y][x] === '.' && !seen.has(key(x, y))) shut++;
   if (shut) out.push(`${shut} floor cells shut in`);
   const near = (x: number, y: number, p: (a: number, b: number) => boolean) => N4.some(([dx, dy]) => inside(x + dx, y + dy) && p(x + dx, y + dy));
   const done = new Set<number>();
   for (let y = 0; y < D; y++) for (let x = 0; x < W; x++) {
     const c = g[y][x];
-    if (c === 'h' && !near(x, y, (a, b) => g[b][a] === 't' || g[b][a] === 'Q')) out.push(`chair without a table at (${x},${y})`);
+    // (on a roof a chair stands alone: someone comes up to smoke)
+    if (c === 'h' && !roof && !near(x, y, (a, b) => g[b][a] === 't' || g[b][a] === 'Q')) out.push(`chair without a table at (${x},${y})`);
     if (!FURN[c]?.posto || c === 'h' || done.has(key(x, y))) continue;
     const comp = component(g, x, y);
     comp.cells.forEach(([a, b]) => done.add(key(a, b)));
@@ -254,7 +258,7 @@ export function checkArrangement(A: Arrangement): string[] {
 /** The room letter an arrangement of the library furnishes, read from its name (the manual's section 7). */
 export function arrangementKind(A: Arrangement): string {
   const n = A.room.toLowerCase();
-  return n.includes('quitinete') ? 's' : n.includes('banheiro') ? 'h' : n.includes('cozinha') ? 'k' : n.includes('open space') ? 'p'
+  return n.includes('telhado') ? 'x' : n.includes('quitinete') ? 's' : n.includes('banheiro') ? 'h' : n.includes('cozinha') ? 'k' : n.includes('open space') ? 'p'
     : n.includes('reunião') ? 'n' : n.includes('gerente') ? 'm' : n.includes('quarto') ? 'b' : n.includes('sala') ? 'l' : '?';
 }
 
@@ -280,7 +284,9 @@ export function fitArrangements(F: Floor, x0: number, y0: number, x1: number, y1
     let row = '';
     for (let x = x0 - 1; x <= x1 + 1; x++) {
       const c = R[y]?.[x];
-      row += x >= x0 && x <= x1 && y >= y0 && y <= y1 ? '.' : c === 'W' || c === 'G' ? 'W' : c && DOORS.has(c) ? 'D' : !c || WALLS.has(c) ? '#' : 'o';
+      // (inside its box, what is not the room is wall: the roof's stair house, 13.24; a home's room fills its box)
+      const box = x >= x0 && x <= x1 && y >= y0 && y <= y1;
+      row += box && c === ch ? '.' : c === 'W' || c === 'G' ? 'W' : c && DOORS.has(c) ? 'D' : !c || WALLS.has(c) || box ? '#' : 'o';
     }
     frame.push(row);
   }

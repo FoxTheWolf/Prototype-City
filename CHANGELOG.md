@@ -2,7 +2,17 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.24 — Escadas de incêndio e telhados pelo manual (2026-10-09)
+- **As escadas de incêndio levam a algum lugar:** cada patamar fica diante das janelas de uma sala, um quarto ou uma cozinha (antes podia dar num banheiro, num corredor ou na parede entre dois apartamentos); e há mais delas nos prédios de tijolo.
+- **Três tipos de telhado:** o de sempre (a cadeira de quem sobe para fumar), o jardim de um morador (vasos no parapeito e uma mesa com duas cadeiras) e o esquecido, só com as máquinas.
+
 ## 0.13.C3 — O retorno do playtest de 2026-10-09 (em andamento)
+- **O horizonte de dia sem a faixa creme:** a terra fora da cidade some na névoa até a cor do céu.
+- **Um vidro só:** as janelas e as portas de vidro não tingem mais de azul o que está atrás; é o mesmo vidro do relógio.
+- **No telhado o som é de rua:** a chuva e a cidade não ficam mais abafadas depois de sair da casinha.
+- **O verde do interruptor mais discreto** no escuro.
+- **A escada no fundo do corredor aparece de fora,** pela porta da rua, antes de entrar no prédio.
+- **Bem menos batidas de carro:** as esquinas com placa de PARE eram tratadas como semáforo apagado; agora a cidade tem poucos acidentes, e muitos só quando o semáforo apaga (no blackout ou no hacking).
 - **O interruptor não prende mais você na sala:** acender e apagar agora é mirando na placa do interruptor (aparece a mira); o F na porta abre a porta.
 - **Interruptores que brilham no escuro:** a tecla tem um verde fosforescente fraquinho, como os de verdade, para achar a luz num cômodo apagado.
 - **Não chove mais dentro de casa:** a chuva aparece só lá fora, pelas janelas e pela porta aberta.

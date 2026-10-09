@@ -2,6 +2,21 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 13.24 — escadas de incêndio e telhados pelo manual (0.13.24, 2026-10-09)
+
+- **Escadas de incêndio pelas plantas:** `escapesOf` nascia a cada 7 vãos sem olhar a planta, e a planta abria a parede onde ela caía (`open` de 0,3 a 0,7 de cada vão): banheiro, corredor, parede entre dois apartamentos. Agora monta a planta dos andares de cima antes das aberturas (`upperBare`, com `bareEsc` desligando a abertura; fora do cache) e percorre todo vão, aceitando só onde as duas janelas dão em sala, quarto ou cozinha (`ESC_ROOMS`), 7 vãos entre uma e outra. Como a planta dos andares de cima é uma só, a escada bate em todos os andares. `tests/escapes.ts` (semente 42): antes 107 escadas e 290 janelas erradas; agora 196 e nenhuma.
+- **Os telhados na biblioteca de arrumações (manual v1.4):** o telhado era a camada fixa da planta T; agora é um cômodo como os de casa (`arrangementKind` 'x'), com três arrumações por telhado (padrão, jardim, esquecido; o T1 também crescido para 8 × 12), geradas por script a partir das plantas T e conferidas pelas regras. O `fitArrangements` marca como parede o que, dentro do retângulo do cômodo, não é ele (a casinha), e o `checkArrangement` trata isso como parede e aceita a cadeira sem mesa só no telhado. Semente 42, 400 telhados: 197 padrão, 85 jardim, 118 esquecidos.
+
+## C3, segunda metade e C3a (0.13.C3, 2026-10-09 à tarde)
+
+- **O horizonte creme:** a terra de fora da cidade (`outsideGround`, 110,106,96) sob o sol ficava mais clara que o céu; agora marrom de campo seco (74,70,62), a névoa até 100% por `1 - exp(-d/500)` só nela (`KIND_BLOCK`), e o escurecimento por distância só de noite. Diagnóstico pelos pixels de um zoom salvo (o horizonte já era a névoa; mais perto ficava mais claro).
+- **Um vidro só:** `GLASS_TINT` 0,8/0,88/0,95 → quase neutro, `GLASS_SHEEN` cinza fraco, como o cristal do relógio.
+- **O som no telhado:** `GpuWorld.onRoof` (o mesmo teste da chuva) entra no `indoors` do som e dos passos.
+- **O interruptor:** o verde pela metade.
+- **A escada vista de fora:** `voxMarch` (em `objects.ts`) serve os objetos do jogador e os cômodos vistos de fora (`furnHit` pulava o `shape 3`).
+- **C3a, as batidas:** `tests/crashes.ts`. Não era regressão desde 03/10; a placa de PARE comum usava `RECKLESS_DARK` (2%) desde 01/10. Agora `RECKLESS_STOP` 0,2%, `RECKLESS` 0,015%, `MISJUDGE` 2%; o apagado continua 2%. Semente 42: 3,3 → 0,7 batidas por minuto, ~20 → 4 destroços.
+- **Ficou:** a coluna infinita (9) não se reproduziu (o "buraco" no andar 2 do 45 era a janela a 0,8 m); espera o F8 do usuário. `teste-c3b.bat`.
+
 ## C3 — o playtest de 2026-10-09, primeira metade (0.13.C3, 2026-10-09)
 
 - **O softlock do 491:** o interruptor era o mais perto num cone de 53° a 1,4 m (`fixtureAhead`), e quem olhava a porta pegava o interruptor ao lado (reproduzido por script: interruptor e porta no mesmo F). Agora `switchAimed` (`sim/lights.ts`): o raio do olho passa a menos de 16 cm da placa (a 1,2 m do piso, alcance 1,6 m), como `aimedGood`; a mira "+" aparece. `tests/lights.ts` confere os 446 interruptores perto do centro (pegos mirando, nunca olhando 0,5 m ao lado) e o ponto do playtest.

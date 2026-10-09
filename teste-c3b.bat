@@ -27,6 +27,13 @@ echo      escurece: o mesmo vidro do relogio.
 echo   7. ESCADA DE FORA: predio 84 (perto de x 289, y 80). Da
 echo      porta da rua, olhando o corredor, a escada no fundo ja
 echo      aparece antes de entrar.
+echo   8. TELHADOS (13.24): suba a alguns telhados de tijolo. Ha
+echo      tres arrumacoes: a padrao (cadeira de quem fuma), o
+echo      jardim (vasos no parapeito, mesa com duas cadeiras) e o
+echo      esquecido (so as maquinas).
+echo   9. ESCADAS DE INCENDIO (13.24): pelas janelas de um patamar
+echo      voce entra numa sala, quarto ou cozinha; nunca banheiro,
+echo      corredor ou parede. (Ha mais escadas que antes.)
 echo.
 echo   Achou algo estranho? F8 e escreva.
 echo  ============================================================

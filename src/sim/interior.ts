@@ -999,10 +999,11 @@ function planFromFloor(city: City, k: number, St: Stack, f: number, fl = f): Pla
     if (r >= 0) { const q = rect[r]; q[0] = Math.min(q[0], x); q[1] = Math.min(q[1], y); q[2] = Math.max(q[2], x); q[3] = Math.max(q[3], y); }
   }
   rooms.forEach((RR, r) => {
-    if (!'lkbhs'.includes(letter[r]) || RR.unit < 0) return;
+    // (and the roof, 13.24: one of the arrangements drawn for it, by the lot alone)
+    if (!('lkbhs'.includes(letter[r]) && RR.unit >= 0) && letter[r] !== 'x') return;
     const [x0, y0, x1, y1] = rect[r], fits = fitArrangements(Fl, x0, y0, x1, y1);
     if (!fits.length) return;
-    const tags = residents?.(k, fl, RR.unit) ?? [];
+    const tags = RR.unit >= 0 ? residents?.(k, fl, RR.unit) ?? [] : [];
     // and again in the game's own cells: no piece on a cell the walls or a doorway took (a jagged corner of inner walls)
     const clear = (rows: string[]) => rows.every((row, y) => [...row].every((c, x) => c === '.' || [0.125, 0.375].every((du) => [0.125, 0.375].every((dv) => {
       const [cx, cy] = stackXY(St, B, (x0 + x) / 2 + du, (y0 + y) / 2 + dv), v = cellAt(P, cx, cy);
