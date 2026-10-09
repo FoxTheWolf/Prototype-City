@@ -2,6 +2,12 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do C3c — 2026-10-09
+- **As sondas de colisão do jogador ficam nos ombros** (`R = 0.3`, ±0,21 m de lado, em `world.ts`): um poste fino passa entre elas. Ao criar um obstáculo fino, engordá-lo (`postAt(..., 0.18)`) em vez de mexer nas sondas.
+- **Nenhum objeto da rua era sólido** (`isSolid` só vê prédios); a geometria dos postes estava só no render. Agora `shedFaces` (o andaime) mora em `sim/city.ts` e o render lê dela; o abrigo e o poste seguem as medidas dos modelos (`models.ts`), com `tests/posts.ts` conferindo que `postAt` bate com o modelo.
+- **Teste de "andou livre":** medir quanto o jogador andou desde o começo, não a distância até o alvo (ele passa do alvo).
+- **Item velho da lista fixa pode estar superado por decisão nova:** "as portas de rua não abrem sozinhas" era de antes da 13.2c (portas pela tecla F). Antes de consertar, achar a origem no `historico.md`.
+
 ### Lições do C3b (diálogo) — 2026-10-09
 - **Os registros de playtest são o corpus do diálogo:** `grep '"k":"say"' playtest/*.jsonl` dá cada frase que o usuário digitou, com a intenção lida na época. Reler pelo leitor **atual** antes de concluir (metade das falhas do registro já tinha sido consertada). Frase nova que falhar vai para `tests/dialog-corpus.ts`.
 - **A tolerância a digitação já existe** (`spell`/`near1` em `sim/intent.ts`, palavras de 4+ letras): antes de propor biblioteca de NLP, ver onde estão as falhas. Aqui eram léxico e intenções faltando; a compromise não resolveria.

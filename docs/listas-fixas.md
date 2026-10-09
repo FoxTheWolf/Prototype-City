@@ -11,9 +11,7 @@
 - **Discador: o nome do contato aparece por cima do número digitado:** levar o nome para cima ou para baixo do número (`calls` em `src/phone/apps.ts`).
 - **Misclick no celular confirma/cancela:** clicar fora do teclado não deve confirmar nem cancelar (`phone.ts`, o clique do ponteiro livre).
 - **Som de apagão só no quarteirão afetado** (`audio/blackout.ts`/`sound.ts`, pela distância ao corte).
-- **As portas de rua não abrem sozinhas** quando o jogador chega perto.
 - **Rede social:** espaçar posts com o mesmo motivo (`sim/social.ts`); juntar as peças de `docs/tarefas/retorno/03-posts-streetwire.json` (conferir por script).
-- **Postes do andaime e dos pontos de ônibus não são sólidos.**
 - **Notebook** (só `src/laptop/draw.ts`/`laptop.ts`, não o shell): limitar o olhar para baixo com ele aberto; os nomes das teclas aparecem através da tampa fechada; luzes de energia e disco, marca e câmera maiores, botão de ligar acima do Delete.
 - **Chuva vista nas paredes internas** dos interiores (provavelmente o `fallOver` em `gpu/shader.ts`).
 - **Agradecimentos pelo sobrenome** onde o nome inteiro soa estranho (`thanks()` em `locale/names.ts`).

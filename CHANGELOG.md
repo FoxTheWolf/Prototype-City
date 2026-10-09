@@ -2,6 +2,10 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.C3c — Os restos de interiores (2026-10-09)
+- **Os postes da calçada são sólidos:** o poste de luz, o abrigo de ônibus (o poste e o vidro do fundo) e os postes do andaime param você; por baixo do andaime, junto da parede, continua livre.
+- **As cadeiras do cybercafé no meio das mesas** (e em qualquer mesa com uma cadeira só de um lado), não mais na ponta.
+
 ## 0.13.C3b — Conversas que lembram (2026-10-09)
 - **"Who won?" funciona:** depois de falar do jogo, a pessoa responde à pergunta seguinte no mesmo assunto; quem viu o jogo diz o vencedor e o placar (a cidade inteira concorda sobre o jogo da noite), quem não viu diz que não viu. O mesmo com o tempo ("are you sure?").
 - **"What do you sell?"** e "can I see the menu?": o atendente diz o que vende, com os preços da loja, e abre o balcão. No motel, "can I rent a room?" dá o preço da noite; na rua, "where can I stay the night?" aponta o motel mais perto.
