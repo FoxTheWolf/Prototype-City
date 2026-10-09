@@ -2,6 +2,13 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 — a revisão dos docs, a 13.22 e a 13.23 (Opus 5.5)
+- **Duas subetapas numa janela (~60%)**, com o ajuste do mouse e a revisão dos docs. Quando a subetapa é bem cercada e o sistema já existe (a rotina dos moradores, as plantas T do manual), anda mais rápido que a estimativa de "1 sessão por subetapa"; recalibrar no fim da 13 (regra 7).
+- **A luz pela rotina e o telhado são o que a visão nova pede:** a cidade dormindo às 3h, a janela que acende quando alguém chega, a vista do telhado na chuva. Também são reconhecimento para a 18 (as janelas contam quem está em casa).
+- **Para o usuário julgar no PC:** as janelas vistas da rua ficaram ~30% mais claras de noite (o vidro único); a laje e o parapeito ficam muito escuros de noite; o salto do "aceso de longe" para o "apagado de perto" na faixa de transição da fachada (`capaLit` ainda é sorteio por janela).
+- **Contesto o C3 do jeito que está:** são 8 itens para um teto de 5. Proponho fazer os que quebram a imersão (a faixa da rua com o olho na escada do 4375, as portas da rua que não abrem sozinhas, os postes que não são sólidos, a chuva nas paredes internas) e o saguão vazio; os modelos da farmácia e da loja de celulares descem para a 23.8.
+- **Uma dúvida de design:** hoje o cômodo onde o jogador está acende sozinho ("achou o interruptor"). Com interruptores de verdade, entrar numa casa vazia e escura e ter de acender a luz é mais real (e combina com o stealth de depois da 1.0), mas é um passo a mais em todo cômodo. Fica para o usuário decidir.
+
 ## 2026-10-09 — fim do C2 (Opus 5.5)
 - **O C2 rendeu, mas foi o retrato do problema que o cronograma quer evitar:** ~5 itens viraram 12+, porque eu consertei nota por nota em vez de triar. As portas agora estão sólidas, mas a 13 vai passar da estimativa de ~9 sessões; medir no fim (regra 7).
 - **A 13.22 é a próxima candidata a inchar:** interruptores + janelas lendo a luz real + o vidro único + o olho. Ordem proposta: primeiro o olho (uma constante) e o vidro único (é bug relatado), depois os interruptores, e por último as janelas da fachada; se estourar, as janelas da fachada são o que pode encolher (luz automática por tipo de prédio primeiro, rotina por morador depois).
