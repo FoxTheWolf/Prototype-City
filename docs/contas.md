@@ -6,18 +6,19 @@
 >
 > **Limitação honesta:** só vejo ao vivo a conta **atual**; das outras duas, só sei o último snapshot (datado abaixo). Para espaçar, o que conta mesmo é a **hora de renovação** (fixa) de cada uma.
 
-## As contas (renovação dita pelo usuário em 2026-10-08)
+## As contas (nomes e renovação ditos pelo usuário em 2026-10-08)
 
 | Conta | Renova (semanal, Brasília) | Observação |
 |---|---|---|
-| **A** | **terça, ~13h** | — |
-| **B** | **terça, ~23h** (o usuário disse "11"; o `get_usage` desta sessão mostra terça à noite) | é a conta desta sessão (2026-10-08) |
-| **C** | **sábado** | o usuário vai passar para ela na próxima sessão (tem folga até sábado) |
+| **C** | **terça, ~13h** | — |
+| **F** | **terça, ~23h** (o usuário disse "11"; o `get_usage` desta sessão mostra terça à noite) | é a conta desta sessão (2026-10-08) |
+| **V** | **sábado** | o usuário vai passar para ela na próxima sessão (tem folga até sábado) |
 
-> A e B renovam as duas na **terça**, diferenciadas pela hora (A ~13h, B ~23h). C é a do **sábado**.
+> C e F renovam as duas na **terça**, diferenciadas pela hora (C ~13h, F ~23h). V é a do **sábado**.
+> (Nomes escolhidos pelo usuário por motivos pessoais; antes eram A/B/C — A→C, B→F, C→V.)
 
 ## Último snapshot observado (atualizar a cada sessão)
 
-- **B** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
-- **A** — (sem observação ainda)
+- **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
 - **C** — (sem observação ainda)
+- **V** — (sem observação ainda)
