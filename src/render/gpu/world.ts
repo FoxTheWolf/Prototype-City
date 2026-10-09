@@ -88,7 +88,8 @@ fn ch(w: u32, k: u32) -> f32 { return pow(f32((w >> k) & 255u) / 255.0, 2.2); }
  *  strength of the difference (opening up in the dark, closing in bright light), within the range; and how fast (s):
  *  it closes quickly in bright light and opens slowly in the dark. */
 const ADAPT_BAND_NIGHT = [0.007, 0.05], ADAPT_BAND_DAY = [0.05, 0.12], ADAPT_DARK = 0.7, ADAPT_BRIGHT = 0.75, ADAPT_MIN = 1 / 8, ADAPT_MAX = 16;
-const ADAPT_DOWN_S = 0.45, ADAPT_UP_S = 2.2;
+// closing: 1.2 s (13.22; was 0.45, a jump on walking into a lit room or out to the street)
+const ADAPT_DOWN_S = 1.2, ADAPT_UP_S = 2.2;
 
 export class GpuWorld {
   /** The cells of the last frame: glyph + fg per cell, then bg per cell (CharGrid's layout), read by the compositor. */

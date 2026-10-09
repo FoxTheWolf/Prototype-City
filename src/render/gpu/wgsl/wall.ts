@@ -321,12 +321,13 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // walks the room: two calls made the shader much slower to compile, 13.S)
   let winPeek = body && detailed && !(fl == 0 && dA1 > dA0 && z < FLOOR_H) && pkR >= 0 && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0);
   var P = Px(32u, vec3f(0.0));
-  if (doorPeek || winPeek) { P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, winPeek); }
+  let gcW = abs(dn) / max(1e-4, length(vec2f(rdx, rdy)));
+  if (doorPeek || winPeek) { P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, winPeek, gcW); }
   if (doorPeek) {
     gSDo = 0u;
     ch = P.ch; c = P.c; isWin = true; backT = gBack; winGlow = gPeekEm;
     // through a shut leaf's glass: a little darker and cooler, and it takes the street's reflection
-    if (gSDglass) { c = c * 0.82 + vec3f(8.0, 12.0, 18.0); glass = true; }
+    if (gSDglass) { c = glassSeen(c, vec3f(0.0), gcW, 0.0, u.day); glass = true; }
     else {
       // (13.10d2) the open doorway: the room as the walk met it, nothing of the facade's light on it (no glass,
       // no lamps, neon or floodlights on a wall that is not there), the same cell as seen from inside
@@ -370,9 +371,12 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let capaLit = hh < litK && wp > 0.04;
     let capa = select(darkPane, wc * wk, capaLit);
     ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
-    c = mix(capa, P.c, peekK); isWin = true; glass = true; winGlow = gPeekEm * peekK * (0.62 - 0.2 * u.day);
+    c = mix(capa, P.c, peekK); isWin = true; glass = true; winGlow = gPeekEm * peekK * glassKeep(gcW, u.day);
     // (the lit pane is light, as in the far look, until the room takes over)
     if (capaLit) { let gk = WIN_GLOW * peekK * smoothstep(GLOW_NEAR, GLOW_FULL, tRef); c += wc * wk * gk; winGlow += wc * wk * (1.0 - peekK + gk); }
+    // the rain on the pane's outer face, the same drops as seen from inside (glassRain)
+    let dr = glassRain(along, z, f32(fl) * FLOOR_H, t);
+    if (dr > 0u && peekK > 0.5) { ch = select(DOT, COM, dr == 2u); c += vec3f(50.0, 55.0, 65.0); }
   } else if (S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
     ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;

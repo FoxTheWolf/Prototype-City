@@ -60,7 +60,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     else if (ray == 1) {
       handD = select(cl.depth, max(cl.depth, gPeekT), cl.kind == KIND_ROOM);
       if (inc.state != 1u && gBackT > 0.0 && cl.kind == KIND_ROOM && abs(cl.depth - gBackW) < 1e-3) {
-        tr = gBackT + 0.05; thruK = abs(gBackK); thruD = cl.depth; thruPane = select(0.62 - 0.2 * u.day, 1.0, gBackK < 0.0) * 0.8;
+        tr = gBackT + 0.05; thruK = abs(gBackK); thruD = cl.depth; thruPane = select(1.0, 0.0, gBackK < 0.0);
         sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet;
         gOX = u.px + rdx * tr; gOY = u.py + rdy * tr; gOZ = u.eye - m * tr + A * tr * tr;
         qg = 1e9;
@@ -167,7 +167,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var lit = light(cl);
   // (only where the room is still what this cell shows: a pole, a sign or a person in front of the window hides it)
   if (thruK > 0.0 && cl.depth == thruD) {
-    lit.c = mix(lit.c, thru * thruPane * vec3f(0.9, 0.95, 1.0) + vec3f(4.0, 6.0, 9.0), thruK);
+    var tc = glassSeen(thru, vec3f(0.0), 1.0, 0.0, 0.0);
+    if (thruPane > 0.0) { tc = glassSeen(tc, vec3f(0.0), 1.0, 0.0, u.day); }
+    lit.c = mix(lit.c, tc, thruK);
     if (thruK > 0.5 && lit.ch == EQ) { lit.ch = thruCh; }  }
   if (paint) { refl *= mix(vec3f(1.0), gTint, CAR_METAL); }
   if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }

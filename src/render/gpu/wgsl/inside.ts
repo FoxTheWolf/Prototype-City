@@ -471,7 +471,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     let Lt = roomLit(V, ro, r0, hx, hy, t - tIn);
     res.nearT = t; res.gt = t; res.ga = along; res.gl = Lt; res.gc = abs(nX * rdx + nY * rdy) / rl; res.gh = atan2(rdy, rdx);
     // seen from the street, the far side's glass: dark, with the night city's glow (or the day) beyond it
-    let farGlass = vec3f(20.0, 24.0, 40.0) + vec3f(90.0, 100.0, 115.0) * u.day;
+    let farGlass = glassSeen(glassBeyond(), Lt, res.gc, 0.0, 0.0);
     let z = u.eye - m * t;
     if (z > z0 && z <= zw) {
       let fz = z / FLOOR_H - floor(z / FLOOR_H);
@@ -553,37 +553,52 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   return res;
 }
 /**
- * One window cell's view of storey f of the box behind it (o its plan, entered at distance t): the walk from the
- * glass, under a faint cold tint (the reflection itself is the finish's, R.24); through an open doorway (pane false)
- * as it is, the same as from inside.
+ * The window glass (13.22): one pane, drawn the same from both sides. What is behind comes through tinted, a little less
+ * of it the more edge on it is seen (gc: the cosine to the pane's normal), and the light on the viewer's side is
+ * reflected in it (near; streak: the highlight following the view). From the street by day (fromDay = u.day) what is
+ * behind is the dim side, and the eye, set for the street, sees into it darker.
  */
-fn peekRoom(o: u32, lot: i32, box: i32, f: i32, rdx: f32, rdy: f32, m: f32, t: f32, elec: f32, full: bool, pane: bool) -> Px {
+const GLASS_TINT = vec3f(0.8, 0.88, 0.95); const GLASS_SHEEN = vec3f(10.0, 16.0, 22.0);
+fn glassFres(gc: f32) -> f32 { return 0.14 + 0.6 * pow(max(1e-6, 1.0 - gc), 3.0); }
+/** How much of what is behind a pane comes through (before the tint). */
+fn glassKeep(gc: f32, fromDay: f32) -> f32 { return (1.0 - 0.55 * glassFres(gc)) * (1.0 - 0.45 * fromDay); }
+fn glassSeen(behind: vec3f, near: vec3f, gc: f32, streak: f32, fromDay: f32) -> vec3f {
+  return behind * glassKeep(gc, fromDay) * GLASS_TINT + GLASS_SHEEN + glassFres(gc) * (60.0 + 150.0 * streak) * near;
+}
+/** Beyond a pane, past where the walk looks: the night city's glow, or the day. */
+fn glassBeyond() -> vec3f { return vec3f(12.0, 10.0, 22.0) + vec3f(100.0, 110.0, 125.0) * u.day; }
+/** The rain on a pane (the outer face, so seen from both sides) at ga along it and height z (its storey from z0),
+ *  t away: 0 dry, 1 a bead that stays, 2 a drop sliding down (longer far away, where a cell is taller). */
+fn glassRain(ga: f32, z: f32, z0: f32, t: f32) -> u32 {
+  if (u.rain <= 0.0) { return 0u; }
+  let col = ifloor(ga * 9.0); let speed = 0.25 + hash3(col, 1, 7) * 0.5; let ph = hash3(col, 2, 7) * 9.0;
+  let dzr = (z - z0) + u.sec * speed + ph; let dz = dzr - 3.0 * floor(dzr / 3.0);
+  if (hash3(col, 3, 7) < u.rain * 0.5 && dz < (t / u.scale) * 1.2) { return 2u; }
+  if (hash3(ifloor(ga * 14.0), ifloor(z * 14.0), 8) < u.rain * 0.06) { return 1u; }
+  return 0u;
+}
+/**
+ * One window cell's view of storey f of the box behind it (o its plan, entered at distance t, gc the cosine to the
+ * glass): the walk from the glass, through the pane from the street (the reflection itself is the finish's, R.24);
+ * through an open doorway (pane false) as it is, the same as from inside.
+ */
+fn peekRoom(o: u32, lot: i32, box: i32, f: i32, rdx: f32, rdy: f32, m: f32, t: f32, elec: f32, full: bool, pane: bool, gc: f32) -> Px {
   gBack = 0.0; gPeekEm = vec3f(0.0);
   let R = roomWalk(outView(o, lot, box, f, elec, full), rdx, rdy, m, t);
   if (R.state == 1u) { gPeekT = R.cl.depth; }
-  if (R.state != 1u) { gBack = 0.0; return Px(EQ, vec3f(20.0, 24.0, 40.0)); }
+  if (R.state != 1u) { gBack = 0.0; return Px(EQ, glassSeen(glassBeyond(), vec3f(0.0), gc, 0.0, u.day)); }
   if (!pane) { return Px(R.cl.ch, R.cl.c); }
-  let gk = 0.62 - 0.2 * u.day;
-  return Px(R.cl.ch, R.cl.c * gk + vec3f(8.0, 12.0, 18.0));
+  return Px(R.cl.ch, glassSeen(R.cl.c, vec3f(0.0), gc, 0.0, u.day));
 }
-/**
- * The window glass seen from inside, over what is behind it (glassPass): a little darker, the room's light reflected
- * more the more it is seen edge on, following the view; in the rain, drops sliding down and beads that stay.
- */
+/** The window glass seen from inside, over what is behind it (glassPass): glassSeen with the room's light, and the rain. */
 fn glassOver(cl: Cell, g: InC, m: f32) -> Cell {
   var o = cl;
   if (o.depth < g.gt - 0.05) { return o; } // the furniture in front of the window
-  let col = ifloor(g.ga * 9.0); let speed = 0.25 + hash3(col, 1, 7) * 0.5; let ph = hash3(col, 2, 7) * 9.0; let slides = hash3(col, 3, 7) < u.rain * 0.5;
-  let fres = 0.14 + 0.6 * pow(max(1e-6, 1.0 - g.gc), 3.0); let keep = 1.0 - 0.55 * fres;
   let e = -m; let z = u.eye + e * g.gt;
-  let streak = pow(max(1e-6, 0.5 + 0.5 * sin(g.gh * 2.2 + e * 1.7 + 0.6)), 10.0); let mm = fres * (60.0 + 150.0 * streak);
-  o.c = sat(o.c) * keep * vec3f(0.8, 0.88, 0.95) + vec3f(10.0, 16.0, 22.0) + mm * g.gl;
-  if (u.rain > 0.0) {
-    let dzr = (z - g.gz0) + u.sec * speed + ph; let dz = dzr - 3.0 * floor(dzr / 3.0);
-    let slide = slides && dz < (g.gt / u.scale) * 1.2;
-    let bead = hash3(ifloor(g.ga * 14.0), ifloor(z * 14.0), 8) < u.rain * 0.06;
-    if (slide || bead) { o.ch = select(DOT, COM, slide); o.c += vec3f(50.0, 55.0, 65.0); }
-  }
+  let streak = pow(max(1e-6, 0.5 + 0.5 * sin(g.gh * 2.2 + e * 1.7 + 0.6)), 10.0);
+  o.c = glassSeen(sat(o.c), g.gl, g.gc, streak, 0.0);
+  let dr = glassRain(g.ga, z, g.gz0, g.gt);
+  if (dr > 0u) { o.ch = select(DOT, COM, dr == 2u); o.c += vec3f(50.0, 55.0, 65.0); }
   return o;
 }
 
