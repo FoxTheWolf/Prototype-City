@@ -2,6 +2,13 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (tarde, fim da janela)
+
+- A lâmpada da casinha nunca tinha existido: o bug era de busca, não de força. Lição para mim: "não aparece" se confere primeiro pela existência, depois pela calibração.
+- O painel da GridLink é das melhores ideias recentes: vitrine da simulação e reconhecimento para a 18. Condição: só dados reais.
+- As batidas (C3a): aposto numa regressão de parâmetro; vale procurar no Git antes de culpar a física.
+- O vidro em cadeia (4 travessias) é o item mais caro do C3; se passar de meia sessão, proponho deixar para a 16.1b, onde o vidro vira um material só no deferred.
+
 ## 2026-10-09 (tarde) — o C3 pela metade (Opus 5.5)
 - **O playtest curto com F8 rende muito:** 13 notas em ~10 min deram 7 consertos, e quase todos tinham uma causa só e pequena (um valor inicial errado na chuva, um cone largo demais no interruptor, um sinal herdado do fundo). Vale repetir esse formato a cada bloco.
 - **Contesto de leve a luz mista dos prédios agora:** a ideia é ótima (corredor por sensor, o acaso que simula gente; e a automação vira alvo de hacking), mas é sistema novo. Mandei para a 17.3, junto das luzes da rotina, em vez de inflar a 13.
