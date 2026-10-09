@@ -4,6 +4,14 @@
 
 ### Lições da 16.1 (o gravador de travadas) — 2026-10-09
 
+- **O critério é o que o usuário sente, não o número (a lição maior da 16.1):** duas janelas foram para lixo por quadro e GPU com o jogo a 180 fps; o playtest dele mostrou que nem era o grosso (2/3 em "entregar à GPU"). Desempenho puro só na 23.9; medir antes/depois do que for pesado só para avisar.
+- **O painel do app mede diferente do PC do usuário:** ~100 quadros lentos/min no painel × ~195/min no Electron dele. Conclusões de desempenho só pelo playtest dele.
+- **O `planAhead` não cobre pulo de tempo** (T, dormir): a meia-noite pulada ainda trava (~120 ms em 6 ticks). Anotado na 23.9.
+- **Teste que falha pode ser teste velho:** o `tests/barks.ts` supunha alguém a 20 m do ponto de nascimento; levar o jogador para perto do que se testa em vez de depender do nascimento.
+- **Horário de abrir é por tempo do jogo, não por hora do dia:** `isOpen(kind, t)` e `hoursOn` (persianas); a regra de fim de semana mora na tabela (`weekends: false`), não em `if` espalhado.
+- **Triar playtest sem abrir as capturas é barato e funciona** quando as notas têm posição; abrir cada imagem quando o item for feito.
+- **Rework que substitui se faz de uma vez; adição pode intercalar** (decisão da luz adiada com o usuário).
+
 - **A travada da meia-noite era a varredura dos pedestres** (3 300 pessoas por tick, 100 mil ÷ `SCAN_TICKS`): na virada cada consulta pedia o plano do dia novo (~12 µs cada, ~40 ms por tick por 30 ticks). Medir no Node primeiro (`tests/midnight.ts`, 2 min) achou a causa sem o navegador. Cache por vagas `day % k`: fazer amanhã adiantado exige k = 3, porque o `whereIs` lê ontem o dia todo.
 - **Orçamento (regra do usuário):** a caça ao lixo por quadro desta mesma subetapa gastou ~80% de uma janela; esta correção, ~5%. Teto por tarefa e sanity check a cada 20%.
 - **Quem alimenta o coletor, por nome:** `TC_HEAP=1 npx electron electron/main.cjs` (depois de `npx vite build --minify false`: os nomes de função) abre a rua de noite numa janela fora da tela e imprime as funções que mais alocam por quadro (`electron/heap.cjs`, o perfilador de memória do Chromium; `TC_HEAP_PATHS=1` dá as pilhas, `TC_HEAP_EVAL`/`TC_HEAP_DURING` rodam código antes e durante). Janela escondida roda a ~1 fps (o `requestAnimationFrame` é segurado): tem de estar visível, fora da tela, com `CalculateNativeWinOcclusion` desligado. No build de produção `window.world` não existe.
