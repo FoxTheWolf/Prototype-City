@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 3) — 16.1, o lixo por quadro (Opus 5.5)
+- **Medir antes de mexer pagou de novo.** O palpite natural era "a GPU" ou "a simulação no Worker"; a medida mostrou o coletor de memória, e o perfilador por função mostrou quem: as rotinas dos moradores, as luzes, os objetos do quadro. O maior culpado era invisível no código: uma função com closures paga o contexto delas a cada chamada, mesmo saindo cedo pelo cache.
+- **Ainda não sei se você vai sentir.** Cortei o lixo de forma grande (a simulação ~7×, o render quase pela metade), mas o que importa é o quadro lento que você nota a 180 Hz. Só o seu playtest de 5 min andando responde. Não vou declarar vitória antes dele.
+- **Contesto a mim mesmo:** o pool das faixas do trânsito não ganhou nada e eu desfiz. Mudança de desempenho sem ganho medido não fica, mesmo que pareça certa.
+- **Sugestão:** a travada da meia-noite agora tem causa clara (todos os planos do dia novo de uma vez, ~1 s de trabalho); espalhar a montagem por vários ticks é barato e vale fazer na mesma 16.1.
+
 ## 2026-10-09 (noite, 2) — C3b e o adiamento do shading (Opus 5.5)
 - **Adiar os bugs de shading foi certo, e eu devia ter proposto antes.** Gastei várias rodadas remendando o vidro, a escada e a coluna, e os sintomas têm uma raiz só: a luz calculada em vários lugares com regras diferentes. Esse é o caso de "morder a bala": eles ficam na 16.1b, que reescreve justamente isso. Não remendar antes.
 - **O diálogo melhorou mais com dados do que com biblioteca.** As 70 frases dos seus playtests mostraram que o problema era léxico, não gramática. A compromise não ajudaria. O corpus agora é um teste e cresce a cada playtest: é o jeito barato de o diálogo ficar bom.
