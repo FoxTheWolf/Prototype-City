@@ -87,6 +87,12 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 
 `referencias/94-brownstone-ref-1` … `97-brownstone-ref-4` (do usuário, 2026-10-09, para a 23.2): fileiras de brownstones de Nova York. O térreo de moradia não fica no nível da calçada: a porta principal sobe por uma escadinha externa (stoop, 5–8 degraus de pedra com corrimão de ferro) até o andar nobre (parlor floor), e embaixo dela fica o andar do porão meio enterrado (garden level), com a própria porta sob o stoop e janelas com grade; na frente, um pátio estreito com grade de ferro baixa e canteiros; janelas altas com molduras de pedra, cornijas no topo, bay windows em algumas. Explica por que é estranho uma cama na janela da rua (nota 6 de 2026-10-09).
 
+## Iluminação global (98–101, enviadas pelo usuário em 2026-10-09, para a luz indireta da 16.1c)
+- **98** (Sponza com cortinas): o vermelho, o verde e o azul das cortinas **tingem o chão e as colunas** sem serem emissivos: a luz rebatida, o exemplo que o usuário quer.
+- **99** (rua de noite, molhada): as janelas acesas e os postes iluminando a calçada, o asfalto molhado refletindo os faróis, a névoa.
+- **100** (direta / indireta / as duas): a sombra que não é preta, preenchida pelo céu e pelo verde das árvores.
+- **101** (pátio, "Old Fund"): a parede ao sol joga luz quente na parede da sombra; cantos escurecidos (oclusão).
+
 ## Inspirações (jogos de que o usuário gosta)
 
 Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simulação. O que tirar de cada um é uma leitura inicial, a confirmar com ele quando a etapa chegar. A mesma regra de originalidade vale para todos.
