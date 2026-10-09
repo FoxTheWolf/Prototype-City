@@ -128,15 +128,18 @@ export function drawTalk(g: CharGrid, V: TalkView, w: World, now: number) {
   const R = V.reading(), ry = g.rows - 10;
   // after a line they did not understand, what one might talk about instead (14.9), quietly, in place of the hint
   const lost = !R && V.last && (V.last.reading.intent === 'unrecognized' || V.last.reading.intent === 'not_understood');
-  const label = !R ? (lost ? (T.biz >= 0 ? L.suggestShop : V.phone ? L.suggestPhone : L.suggestStreet) : L.hint) : R.intent === 'unrecognized' ? L.unrecognized : R.banter ? L.banter : R.label;
+  const label = !R ? (lost ? (T.biz >= 0 ? L.suggestShop : V.phone ? L.suggestPhone : L.suggestStreet) : L.hint) : R.intent === 'unrecognized' ? L.hint : R.banter ? L.banter : R.label;
   text(x0 + 2, ry, label.slice(0, W - 30), R && R.intent !== 'unrecognized' ? [140, 210, 230] : DIM);
-  if (R) text(x0 + 2 + Math.min(label.length, W - 30) + 2, ry, `${L.tone} ${R.toneLabel}`, DIM);
-  const PW = 9, PH = 5, px = x1 - PW - 2, py = ry - PH + 1;
+  // the tone in its color: green respectful, amber neutral, red hostile
+  const toneFg: RGB = !R ? DIM : R.respect >= 2 ? [120, 230, 140] : R.respect >= 1 ? [150, 210, 140] : R.respect <= -2 ? [240, 90, 80] : R.respect <= -1 ? [230, 140, 90] : [220, 190, 130];
+  if (R) { const tx = x0 + 2 + Math.min(label.length, W - 30) + 2; text(tx, ry, L.tone, DIM); text(tx + L.tone.length + 1, ry, R.toneLabel, toneFg); }
+  // the plane: a calm, neutral line sits at its center, pressing goes up
+  const PW = 9, PH = 5, MID = (PH - 1) >> 1, px = x1 - PW - 2, py = ry - PH + 1;
   for (let j = 0; j < PH; j++) for (let i = 0; i < PW; i++) {
-    const u = i / (PW - 1), v = 1 - j / (PH - 1), c = (k: number) => Math.round(((POLES[0][k] * (1 - u) + POLES[1][k] * u) * (1 - v) + (POLES[2][k] * (1 - u) + POLES[3][k] * u) * v) * 0.8);
-    const dot = R && Math.round(((R.respect + 3) / 6) * (PW - 1)) === i && Math.round((1 - R.pressure / 3) * (PH - 1)) === j;
+    const u = i / (PW - 1), v = Math.max(0, 1 - j / MID), c = (k: number) => Math.round(((POLES[0][k] * (1 - u) + POLES[1][k] * u) * (1 - v) + (POLES[2][k] * (1 - u) + POLES[3][k] * u) * v) * 0.8);
+    const dot = R && Math.round(((R.respect + 3) / 6) * (PW - 1)) === i && Math.round((1 - R.pressure / 3) * MID) === j;
     const k = at(px + i, py + j);
-    g.put(k, (dot ? '@' : i === (PW >> 1) || j === PH - 1 ? '.' : ' ').charCodeAt(0), dot ? 255 : 120, dot ? 240 : 110, dot ? 200 : 95);
+    g.put(k, (dot ? '@' : i === (PW >> 1) || j === MID ? '.' : ' ').charCodeAt(0), dot ? toneFg[0] : 120, dot ? toneFg[1] : 110, dot ? toneFg[2] : 95);
     g.setBg(k, c(0), c(1), c(2));
   }
   // the player's box: the only thing with a border

@@ -223,13 +223,15 @@ const talkView = new TalkView(world);
 /** The balloons over the heads of the people around (14.4). */
 const barks = new Barks(world);
 /** Walking off a talk: someone stopped on the sidewalk goes on their way after a moment (unless still pointing it). */
-function endTalk() {
+function endTalk(byEsc = false) {
   const T = talkView.talk;
   // on the phone (14.7): walking off is hanging up; the phone comes back up, the cursor stays free
   if (talkView.phone) { const c = phone.call; if (c && c.state !== 'ended') { c.hangUp(performance.now() / 1000); } phone.atEar = false; talkView.close(); return; }
   if (T && T.biz < 0) { const q = world.peds.find((e) => e.id === T.who); if (q && (q.hold ?? 0) > 300) { q.hold = 30; q.pdx = q.pdy = 0; } }
   // (if the browser will not lock the pointer without a click, the next key does: relock)
-  talkView.close(); input.lock(); relock = true;
+  talkView.close(); relock = true;
+  if (byEsc) setTimeout(() => { if (!talkView.open && !menu.isOpen) input.lock(); }, 250);
+  else input.lock();
 }
 // the gear fitted from the bag (13.6): the notebook's battery grows; the antenna slides into its port when the notebook comes up
 bagView.onEar = (good) => { phone.earphones = !phone.earphones || phone.earGood !== good; phone.earGood = good; return phone.earphones; };
@@ -726,7 +728,9 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     if (counter.active) return;
     const T = talkView.talk!, r = talkView.key(e.code, e.key, performance.now() / 1000);
-    if (r === 'leave') endTalk();
+    // (Esc is also the browser's key to free the pointer: a lock asked for in this same key is freed at once
+    // and the loss would open the pause menu, so it waits a moment and that loss is not a pause)
+    if (r === 'leave') { input.unlockedAt = performance.now(); endTalk(true); }
     // Tab: the till at a shop; on the sidewalk, the list of places to ask the way to (13.9), the same person
     else if (r === 'till') { if (T.biz >= 0) counter.open(T.biz); else { talkView.close(); ask.who = T.who; ask.pick = 0; relock = true; } }
     else if (r) {

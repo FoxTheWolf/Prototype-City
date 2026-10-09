@@ -1,6 +1,6 @@
 {
   "lang": "en",
-  "talk": { "clerk": "Clerk", "someone": "Stranger", "passerby": "Passerby", "keysStreet": "[ENTER] SAY   [TAB] ASK THE WAY   [ESC] WALK OFF", "keysPhone": "[ENTER] SAY   [ESC] HANG UP", "caller": "On the phone", "suggestShop": "Try: a price - what they sell - who works here - their name - pay", "suggestStreet": "Try: the way to a place - their name - their job - the weather - their phone number", "suggestPhone": "Try: who you are - their name - their job - their number", "hint": "Type what you want to say.", "unrecognized": "Unrecognized", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
+  "talk": { "clerk": "Clerk", "someone": "Stranger", "passerby": "Passerby", "keysStreet": "[ENTER] SAY   [TAB] ASK THE WAY   [ESC] WALK OFF", "keysPhone": "[ENTER] SAY   [ESC] HANG UP", "caller": "On the phone", "suggestShop": "Try: a price - what they sell - who works here - their name - pay", "suggestStreet": "Try: the way to a place - their name - their job - the weather - their phone number", "suggestPhone": "Try: who you are - their name - their job - their number", "hint": "Type what you want to say.", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
   "tag": { "each": "EACH", "take": "[F] TAKE", "takeName": "[F] TAKE {x}" },
   "seat": { "sit": "[F] SIT DOWN", "stand": "[F] STAND UP" },
   "lights": { "on": "[F] LIGHT ON", "off": "[F] LIGHT OFF" },

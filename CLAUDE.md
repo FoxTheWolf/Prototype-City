@@ -239,6 +239,7 @@ Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles ag
 
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas, `docs/listas-fixas.md`). Bugs novos entram aqui até a próxima organização.
 - **Tiras de 1 m chamadas de loja (visto na 13.21):** o gerador de cortes (prédios sem planta desenhada) às vezes corta "lojas" de 6 × 2 m com 1 m de largura útil; ficam vazias (~1% das lojas, `tests/shops.ts`). Somem quando esses tamanhos ganharem planta (23.8).
+- **`tests/barks.ts` falha ("nobody near the player to hear"; visto no C3b, já falhava antes):** conferir se o teste ficou velho ou se as legendas perderam quem as ouve.
 - **Posts repetidos no Streetwire (visto na 15.17g, semente 42):** a mesma pessoa posta quase a mesma frase duas vezes em poucos minutos ("tried to fix the sink…" às 3 e às 4 min; o Eric Shi duas vezes aos 3 min). Olhar a geração em `sim/social.ts` (um intervalo mínimo por autor, ou não repetir o `pick`).
 - **Relógio e legendas atrás do notebook ao mover a câmera (feedback 2026-10-06):** com o notebook levantado, o relógio de pulso e as legendas (barks/legendas de pedestres) são desenhados **atrás** da tela do notebook quando a câmera se move. Fere o princípio "efeitos/UI por cima": a ordem de composição do relógio e das legendas deve vir **depois** do notebook. Visual, conferir no PC (GPU/compositor).
 - **Interiores (capturas de 2026-10-05):** coluna escura no meio de alguns vãos; folhas parecendo um módulo à frente; uma porta esconde as de trás (`peekRoom` não segue?); vão preto entre salas; a lavagem dos holofotes (`floodH` no `wallCell`) ainda pinta faces encostadas no vizinho.
@@ -260,6 +261,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições do C3b (o corpus dos playtests, `spell` já existe, `` no Python, ESC e a trava do mouse, fato da cidade igual para todos)
 - Lições do C3 (o painel escondido trava o laço e o `await`, luz de painel linear, ponto sem limite de baixo, o neon no telhado, o objeto que herda o sol de trás)
 - Lições da 13.23 (linha com dois `let`, o módulo duplicado no console, a varredura lenta com o painel escondido, a chuva e o retângulo do prédio)
 - Lições da 13.22 (a rotina é cara em lote, estado por andar fora da planta, peça de parede pela folha)
