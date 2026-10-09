@@ -1,3 +1,4 @@
+import { BLD } from './common';
 export const shadingWGSL = (): string => /* wgsl */ `// ---- materials: Fresnel (Schlick), the highlight's spread (GGX), the roughness with the wet film
 fn fres(f0: f32, cosT: f32) -> f32 { let k = 1.0 - clamp(cosT, 0.0, 1.0); let k2 = k * k; return f0 + (1.0 - f0) * k2 * k2 * k; }
 fn ggx(nh: f32, r: f32) -> f32 { let a = max(r * r, 0.002); let a2 = a * a; let d = nh * nh * (a2 - 1.0) + 1.0; return a2 / (3.14159265 * d * d); }
@@ -117,6 +118,41 @@ fn roofE(x: f32, y: f32, z: f32) -> vec3f {
   // (not the lamps yet: lightAt here was inlined in every one of roomWalk's roomLit calls, and the shader took minutes to compile)
   return sky + sun + vec3f(cityAmb() * (1.0 - g));
 }
+/** (16.1b) How much of a room lamp's light a surface turned away from it still gets (the other lamps, the bounce off the room). */
+const ROOM_WRAP = 0.35;
+/**
+ * (16.1b) The light on a room's surface (the street's units), from roomLit's note (gRV..gRX): its lamps, by the distance to
+ * the nearest and its angle to the surface (so a door's jamb, a wall and the ceiling read apart), the city's glow at night
+ * and the daylight by its windows. The surface's normal: a piece of furniture's own (tagged); else from the plan: the floor,
+ * the ceiling, or a wall on the plan's grid lines, facing the ray.
+ */
+fn roomE(tagged: bool) -> vec3f {
+  let V = gRV; let ro = gRO; let r = gRR; let x = gRX.x; let y = gRX.y; let d = gRX.z;
+  let z = gOZ + gRay.z / max(1e-4, length(gRay.xy)) * length(vec2f(x - gOX, y - gOY));
+  var N = gNrm;
+  if (!tagged) {
+    let zr = z - V.z0;
+    if (zr < 0.03) { N = vec3f(0.0, 0.0, 1.0); }
+    else if (zr > CEIL - 0.03) { N = vec3f(0.0, 0.0, -1.0); }
+    else {
+      let ax = abs(fract(x / PCELL + 0.5) - 0.5); let ay = abs(fract(y / PCELL + 0.5) - 0.5);
+      N = select(vec3f(0.0, -sign(gRay.y), 0.0), vec3f(-sign(gRay.x), 0.0, 0.0), ax < ay);
+    }
+  }
+  let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
+  let off = lampOff(ro, x, y);
+  let Lv = vec3f(-off, V.z0 + CEIL - 0.05 - z);
+  let nl = mix(ROOM_WRAP, 1.0, max(0.0, dot(N, Lv) / max(1e-3, length(Lv))));
+  let k = (0.5 + 0.9 / (1.0 + dot(off, off) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day);
+  let la = lp * (k * nl) + vec3f(a, a * 1.05, a * 1.25);
+  let q = u32(V.box * ${BLD});
+  let dw = max(0.0, min(min(x - bldF(u32(q)), bldF(u32(q + 2u)) - x), min(y - bldF(u32(q + 1u)), bldF(u32(q + 3u)) - y)));
+  let g = dayGrade(); let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
+  // (the daylight outside: the sky's, and the sun's off the street and the walls round, SUN_IN of it)
+  let out = DAY_SKY + DAY_SUN * SUN_IN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ);
+  let sky = mix(vec3f(0.6, 0.66, 0.8), vec3f(0.82, 0.84, 0.88), u.cloud) * (out * ds * (SKY_IN_DEEP + SKY_IN_WIN * exp(-dw / DAYLIGHT_FALL)));
+  return AMB_N * artK() * pow(la, vec3f(2.2)) + sky;
+}
 fn light(cl: Cell) -> Cell {
   var o = cl;
   gGlow = 0.0; gTint = vec3f(1.0); var spG = 0.0; // spG: the bloom of a lamp's highlight on glossy paint, metal or glass
@@ -205,7 +241,9 @@ fn light(cl: Cell) -> Cell {
   } else if (defOn() && o.kind == KIND_ROOM) {
     // ---- (16.1b) a room: its color is its paint lit by roomLit in the street's units (roomMul): exposed and toned as the street
     // (what glows in it, a screen or a lamp, is its own light, brighter by gEmK as the signs are)
-    let Lr = (lin(max(vec3f(0.0), o.c - emit)) + lin(emit) * (select(1.0, gEmK, tagged) * artK())) / EV_NIGHT;
+    var Lr = (lin(max(vec3f(0.0), o.c - emit)) + lin(emit) * (select(1.0, gEmK, tagged) * artK())) / EV_NIGHT;
+    // (its paint lit here, once: roomE)
+    if (gRUse) { Lr = lin(max(vec3f(0.0), o.c - emit)) * DAY_ALBEDO * roomE(tagged) + lin(emit) * (select(1.0, gEmK, tagged) * artK() / EV_NIGHT); }
     o.c = srgb(toneMap(Lr * ev, g));
     gGlow = clamp(dot(srgb(lin(emit) / EV_NIGHT * ev), vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * select(1.0, gGlowK, tagged);
   } else {

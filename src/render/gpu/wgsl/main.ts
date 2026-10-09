@@ -53,6 +53,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var thru = vec3f(0.0); var thruCh = 32u; var thruK = 0.0; var thruPane = 1.0; var thruD = -1.0;
   var refl = vec3f(0.0); var rw = 0.0; var rGlow = 0.0;
   // what a second ray overwrites of the view's hit, put back after it
+  // (16.1b) and the note of the room surface it hit, for the new light (roomE)
+  var sRU = false; var sRV: RView; var sRO = 0u; var sRR = 0; var sRX = vec3f(0.0);
   var sEm = vec3f(0.0); var sIl = vec3f(0.0); var sTag = 0.0; var sGK = 0.0; var sEK = 0.0; var sMat = 0u; var sN = vec3f(0.0); var sWet = 0.0; var sRay = vec3f(0.0);
   // the reflection's ray (2): where it starts along the view's ray, and how much sky it fades into
   var tr = 0.0; var skyK = 0.0; var mR = 0.0; var rx = 0.0; var ry = 0.0;
@@ -63,7 +65,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       handD = select(cl.depth, max(cl.depth, gPeekT), cl.kind == KIND_ROOM);
       if (inc.state != 1u && gBackT > 0.0 && cl.kind == KIND_ROOM && abs(cl.depth - gBackW) < 1e-3) {
         tr = gBackT + 0.05; thruK = abs(gBackK); thruD = cl.depth; thruPane = select(1.0, 0.0, gBackK < 0.0);
-        sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet;
+        sRU = gRUse; sRV = gRV; sRO = gRO; sRR = gRR; sRX = gRX; sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet;
         gOX = u.px + rdx * tr; gOY = u.py + rdy * tr; gOZ = u.eye - m * tr + A * tr * tr;
         qg = 1e9;
         if (m > 0.0) { let disc = m * m - 4.0 * A * gOZ; if (disc > 0.0) { qg = 2.0 * gOZ / (m + sqrt(disc)); } }
@@ -98,7 +100,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           let farR = select(select(REFL_FAR_WALL, REFL_FAR_GROUND, ground), REFL_FAR_CAR, gMat == MAT_PAINT);
           skyK = smoothstep(0.65 * farR, farR, tr);
           let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05 || gMat == MAT_PAINT) && tr < farR && LR > 0.05;
-          sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet; sRay = gRay;
+          sRU = gRUse; sRV = gRV; sRO = gRO; sRR = gRR; sRX = gRX; sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet; sRay = gRay;
           if (mirror) {
             gRefl = true;
             gOX = u.px + rdx * tr + N.x * 0.05; gOY = u.py + rdy * tr + N.y * 0.05; gOZ = max(0.02, u.eye - m * tr + A * tr * tr + N.z * 0.02);
@@ -108,7 +110,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             go = true;
           } else {
             refl = skyCell(mR, rx, ry).bg;
-            gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
+            gRUse = sRU; gRV = sRV; gRO = sRO; gRR = sRR; gRX = sRX; gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
           }
         }
       }
@@ -133,7 +135,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       if (skyK > 0.0) { refl = mix(refl, skyCell(mR, rx, ry).bg, skyK); rGlow *= 1.0 - skyK; }
       gRay = sRay;
     }
-    gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet;
+    gRUse = sRU; gRV = sRV; gRO = sRO; gRR = sRR; gRX = sRX; gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet;
   }
   // how much sky what this cell shows sees (the sky and the rooms keep theirs; it fades out far away)
   gSky = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);

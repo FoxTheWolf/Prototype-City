@@ -55,21 +55,11 @@ fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
     if (defOn()) { return roomMul(roofE(x, y, V.z0 + 0.05)); }
     let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud) + lightAt(x, y, V.z0 + 0.05, vec3f(0.0, 0.0, 1.0)) / ROOF_LIT;
   }
+  // (16.1b) the new light: only a note of the surface; light() lights it once, with its height and which way it faces (roomE)
+  if (defOn()) { gRV = V; gRO = ro; gRR = r; gRX = vec3f(x, y, d); gRPend = true; return vec3f(1.0); }
   let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
   let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day);
-  // (one call of roomLamp for both lights: WGSL inlines roomLit at each of roomWalk's calls, two branches made it slow to compile)
   let la = lp * k + vec3f(a, a * 1.05, a * 1.25);
-  if (defOn()) {
-    // (16.1b) in the street's units (roomMul): its lamps as before (they read the same at night), the city's glow at
-    // night, and the sky's light through its windows, falling off away from them
-    let q = u32(V.box * ${BLD});
-    let dw = max(0.0, min(min(x - bldF(u32(q)), bldF(u32(q + 2u)) - x), min(y - bldF(u32(q + 1u)), bldF(u32(q + 3u)) - y)));
-    let g = dayGrade(); let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
-    // (the daylight outside: the sky's, and the sun's off the street and the walls round, SUN_IN of it)
-    let out = DAY_SKY + DAY_SUN * SUN_IN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ);
-    let sky = mix(vec3f(0.6, 0.66, 0.8), vec3f(0.82, 0.84, 0.88), u.cloud) * (out * ds * (SKY_IN_DEEP + SKY_IN_WIN * exp(-dw / DAYLIGHT_FALL)));
-    return roomMul(AMB_N * artK() * pow(la, vec3f(2.2)) + sky);
-  }
   let dl = dayIn(V.box, x, y);
   return la + vec3f(dl * 0.92, dl * 0.97, dl);
 }
@@ -82,7 +72,10 @@ fn insideLight(x: f32, y: f32) -> vec3f {
   return roomLit(V, roomRec(V.o, r), r, x, y, 0.0);
 }
 // (not clamped: by the windows the daylight takes a room past 255, and the finish takes it down with its hue kept)
-fn roomCell(ch: u32, c: vec3f, t: f32) -> Cell { return Cell(ch, max(c, vec3f(0.0)), vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0); }
+fn roomCell(ch: u32, c: vec3f, t: f32) -> Cell {
+  if (defOn()) { gRUse = gRPend; gRPend = false; } // (16.1b) this cell is lit by roomLit's note, if one was taken for it
+  return Cell(ch, max(c, vec3f(0.0)), vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0);
+}
 fn zrOf(z: f32, z0: f32) -> f32 { return (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H; }
 /** Whether a reading direction along a wall runs to the viewer's right. */
 fn toRight(ax: f32, ay: f32, rdx: f32, rdy: f32) -> bool { return ax * -rdy + ay * rdx >= 0.0; }
@@ -575,6 +568,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let ro = roomRec(o, r); let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
         // a lamp keeps its own color: lit when the room is
         let lc = select(F.c * roomLit(V, ro, r, x, y, F.t - tIn), F.c * select(0.25, 1.0, lp.x + lp.y > 0.05), F.glow);
+        if (F.glow) { gRPend = false; } // (a lamp is its own light: not lit as a surface)
         res.cl = roomCell(F.ch, lc, F.t); gBack = 0.0; if (F.glow) { gPeekEm = lc; }
       }
     }

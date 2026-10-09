@@ -68,6 +68,12 @@ fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32, on: bool
   let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(222.0, 240.0, 232.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
   return c / 255.0 * elec;
 }
+/** Where (x, y) is from the nearest of room ro's ceiling lamps (lampD2's grid), on the ground plane. */
+fn lampOff(ro: u32, x: f32, y: f32) -> vec2f {
+  let x0 = bitcast<f32>(fx[ro]); let y0 = bitcast<f32>(fx[ro + 1u]); let w = bitcast<f32>(fx[ro + 2u]) - x0; let h = bitcast<f32>(fx[ro + 3u]) - y0;
+  let sx = w / max(1.0, floor(w / 4.0 + 0.5)); let sy = h / max(1.0, floor(h / 4.0 + 0.5));
+  return vec2f((((x - x0) % sx) + sx) % sx - sx / 2.0, (((y - y0) % sy) + sy) % sy - sy / 2.0);
+}
 fn lampD2(ro: u32, x: f32, y: f32) -> f32 {
   let x0 = bitcast<f32>(fx[ro]); let y0 = bitcast<f32>(fx[ro + 1u]); let w = bitcast<f32>(fx[ro + 2u]) - x0; let h = bitcast<f32>(fx[ro + 3u]) - y0;
   // (floor(x + 0.5): JS rounds halves up, WGSL round() to even)

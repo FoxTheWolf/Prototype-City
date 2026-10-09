@@ -6,6 +6,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Uma luz só para a rua (em teste, F7 troca a velha e a nova):** o chão, as fachadas, os carros e as pessoas passam a receber a luz dos postes, faróis e letreiros de uma única função, em vez de cada um calcular a sua. A cara deve ficar quase igual; é a base para a luz dos cômodos.
 - **O horizonte emenda no céu:** a névoa ao longe agora tem a cor do próprio céu naquela direção (de dia azulada, ao entardecer quente, de noite o brilho da cidade, na chuva o cinza), em vez de duas cores fixas. Some a faixa clara no fim do mundo.
 - **Os cômodos na mesma luz da rua (F7):** de noite iguais; de dia, a luz que entra pelas janelas (o céu e o sol refletido na rua) cai com a distância da janela, e as lâmpadas, telas e janelas acesas seguem uma regra só. Visto da rua de dia, o interior fica escuro atrás do vidro, como num prédio de verdade, em vez de um buraco claro.
+- **Volume dentro dos cômodos (F7):** a luz das luminárias depende de para onde a superfície está virada: o teto fica mais escuro que as paredes, as paredes clareiam perto das luminárias, os móveis ganham lados claros e escuros.
 - **Telhados ao ar livre (F7):** o telhado recebe o céu e o sol como a rua.
 - **Debug:** Shift+F7 pinta cada tipo de superfície de uma cor.
 

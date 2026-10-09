@@ -124,6 +124,10 @@ var<private> gTag: f32 = -1.0;
 var<private> gPos: vec3f = vec3f(0.0);
 // (16.1b, debug) what light() measured of the view's cell, shown by the probe view (DEBUG.lightProbe)
 var<private> gDbg: vec3f = vec3f(0.0);
+// (16.1b) the deferred light in the rooms: roomLit only notes what it was asked (the storey, the room, the point and how
+// far along the ray inside), roomCell takes the note for the cell it makes (gRUse), and light() lights it once (roomE)
+var<private> gRV: RView; var<private> gRO: u32 = 0u; var<private> gRR: i32 = 0; var<private> gRX: vec3f = vec3f(0.0);
+var<private> gRPend: bool = false; var<private> gRUse: bool = false;
 // how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)
 var<private> gGlow: f32 = 0.0;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
