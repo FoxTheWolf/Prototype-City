@@ -140,10 +140,14 @@ function stepBody(c: Car, a: number, dt: number) {
 /**
  * Careless drivers: the chance one runs a given red light (or a stop sign, or a dark signal, where
  * it is likelier), times more at night and on a slippery road. Wrecks wait this long to be towed.
+ * (C3a, 2026-10-09: with 1210 cars the 4x of 2026-10-01 made ~3 crashes a minute and ~20 wrecks standing in the city;
+ *  the everyday ones back near the old rate, the dark signal's kept: that is the blackout's and the hack's doing)
  */
-const RECKLESS = 0.0006, RECKLESS_DARK = 0.02, TOW = 240;
+const RECKLESS = 0.00015, RECKLESS_DARK = 0.02, TOW = 240;
+/** A plain stop sign (C3a: it took the dark signal's 2%, and the calm corners, many of them, made most of the crashes). */
+const RECKLESS_STOP = 0.002;
 /** Chance the first in line at an all-way stop goes while another car is still crossing. */
-const MISJUDGE = 0.08;
+const MISJUDGE = 0.02;
 /** Crashes this tick, for the event queue: where, how hard (closing speed, m/s), and the cars. */
 export const crashes: { x: number; y: number; v: number }[] = [];
 /** Half width of a vehicle. */
@@ -740,7 +744,7 @@ export function stepCars(city: City, power: PowerGrid, cars: Car[], rng: Rng, dt
       if (c.arrive >= 0 && c.gate !== G.key) c.arrive = -1; // past the stop it was waiting at
       const dStop = G.start - STOP_BACK - front;
       // a new stop ahead: is this driver going to ignore it? And one past its line on red could not stop
-      if (c.rgate !== G.key) { c.rgate = G.key; c.reckless = rng() < (stopLike(G.sig) ? RECKLESS_DARK : RECKLESS) * careless; }
+      if (c.rgate !== G.key) { c.rgate = G.key; c.reckless = rng() < (G.sig === Sig.Stop ? RECKLESS_STOP : stopLike(G.sig) ? RECKLESS_DARK : RECKLESS) * careless; }
       if (c.lastD > -0.5 && dStop <= -0.5 && G.sig === Sig.Red && c.v > 2) c.reckless = true;
       c.lastD = dStop;
       if (dStop > -0.5 && dStop < 60 && !mayGo(city, c, dStop, tick, lead)) obstacle(dStop + GAP0, 0);
