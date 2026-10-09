@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 13.22 (luz por cômodo, vidro, interruptores) — 2026-10-09
+- **A rotina das pessoas é cara de perguntar em lote:** `lightsOf` de 340 lotes custa ~350 ms (`whereIs` por morador). Perto do jogador, em rodízio com teto de tempo por quadro (`LIGHT_MS`); longe, uma amostra fixa de ~400 casas (`lightShares`), recalculada a cada 10 min de jogo. Medir no Node antes de pôr no quadro.
+- **A planta dos andares de cima é uma só para todos os andares** (planta cortada): qualquer estado por andar (luz, interruptor) precisa de tabela própria, por lote e andar, fora da planta.
+- **Peça de parede pela folha da porta:** a folha (`leavesOf`) já sabe a dobradiça, a borda livre e para que cômodo abre; dali se acha a face da parede andando pelas células até o chão do cômodo. Cômodos sem folha (vãos abertos, portas de mais de 1,7 m) precisam de uma 2ª passada pelas células de porta.
+- **`cat > arquivo` sem nada no stdin trava o Bash** (esperou o tempo todo): nunca começar um comando com ele por engano.
+- **O painel escondido para o jogo e devolve capturas velhas** (`world.tick` 0): conferir o tick antes de comparar imagens; a verificação fina vai para o `.bat` do usuário.
+- **Posicionar o jogador dentro de um apartamento pelo console:** `p.inside = lote; p.floor = f; p.z = f * 3.5` e a posição a partir de um móvel da planta (`planOf(...).furn`), com `camera.yaw = atan2(-s, -c)` para olhar para ele.
+
 ### Lições do C2 (portas) — 2026-10-09
 - **`a || b && c` no WGSL compilou e valeu como `(a || b) && c`:** um `true ||` de depuração não ligou o ramo inteiro e me fez achar que o desenho vinha de outro lugar. Na depuração, pôr parênteses, ou trocar a condição inteira.
 - **Pintar o ramo de magenta é o jeito barato de saber quem desenha um pixel** (uma compilação, ~40 s): mostrou que o vão da porta vinha do `wallCell` e que só faltavam as faces do recesso.
