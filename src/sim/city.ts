@@ -1185,6 +1185,55 @@ export function isSolid(city: City, x: number, y: number): boolean {
   return false;
 }
 
+/** The sidewalk sheds: a deck SHED_D deep along a building's street faces, on posts, in pieces of about SHED_SEG m. */
+export const SHED_SEG = 4.8, SHED_D = 2.6;
+export interface ShedFace { f: number; nx: number; ny: number; edge: number; lo: number; hi: number; n: number; seg: number }
+/** The faces of B under a sidewalk shed (none if it has no shed); one source for the render and for walking into its posts. */
+export function shedFaces(blk: Block, B: Building): ShedFace[] {
+  const out: ShedFace[] = [];
+  if (!B.shed) return out;
+  for (let f = 0; f < 4; f++) {
+    const gap = f === 0 ? B.x0 - blk.x0 : f === 1 ? blk.x1 - B.x1 : f === 2 ? B.y0 - blk.y0 : blk.y1 - B.y1;
+    if (gap > SIDEWALK + 0.5) continue;
+    const sp = faceSpan(B, f), lo = sp[0] + 0.3, hi = sp[1] - 0.3;
+    if (hi - lo < 3) continue;
+    const n = Math.max(1, Math.round((hi - lo) / SHED_SEG));
+    out.push({ f, nx: f === 0 ? -1 : f === 1 ? 1 : 0, ny: f === 2 ? -1 : f === 3 ? 1 : 0, edge: f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1, lo, hi, n, seg: (hi - lo) / n });
+  }
+  return out;
+}
+
+/**
+ * Whether (x, y) on the sidewalk is inside a post one cannot walk through (C3c), with `pad` m around it: a
+ * lamp's pole, a bus shelter's post and glass back, a sidewalk shed's posts. The shapes are those of the
+ * models (render/models.ts: lampModel, FURNITURE.shelter, shedModel).
+ */
+export function postAt(city: City, x: number, y: number, pad: number): boolean {
+  const b = blockAt(city, x, y);
+  if (!b) return false;
+  const box = (lx: number, ly: number, x0: number, y0: number, x1: number, y1: number) => lx > x0 - pad && lx < x1 + pad && ly > y0 - pad && ly < y1 + pad;
+  for (const p of b.props) {
+    const dx = x - p.x, dy = y - p.y;
+    if (dx * dx + dy * dy > 9) continue;
+    if (p.kind === 'lamp') { if (Math.hypot(dx, dy) < 0.18 + pad) return true; continue; }
+    if (p.kind !== 'shelter') continue;
+    const c = Math.cos(p.a), s = Math.sin(p.a), lx = dx * c + dy * s, ly = -dx * s + dy * c;
+    if (box(lx, ly, 0.8, -2.0, 0.9, -1.9) || box(lx, ly, -0.95, -2.0, -0.88, 2.0)) return true;
+  }
+  for (let k = b.b0; k < b.b1; k++) {
+    const B = city.buildings[k];
+    if (!B.shed) continue;
+    for (const F of shedFaces(b, B)) {
+      // out from the wall and along it; the posts stand 2.45–2.55 m out, at both ends of each piece
+      const out = F.f < 2 ? (x - F.edge) * F.nx : (y - F.edge) * F.ny, a = F.f < 2 ? y : x;
+      if (out < 2.45 - pad || out > 2.55 + pad || a < F.lo - pad || a > F.hi + pad) continue;
+      const u = (a - F.lo) / F.seg, q = Math.min(F.n - 1, Math.max(0, Math.floor(u))), a0 = F.lo + q * F.seg;
+      if (a - a0 < 0.15 + pad || a0 + F.seg - a < 0.15 + pad) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * The hundred of the addresses on a road past its k-th crossing (the signage manual, 2026-10-08: the corner sign
  * shows it, so 412 is found without a map): the block after crossing 0 holds 100..199, after crossing 1, 200..299.

@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, SHED_D, shedFaces, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { streetLeaves } from '../sim/doors';
 import { baseAt, cachedPlan, doorLabel, doorNumber, doorOf, entryDoor, escapesOf, facePoint, exitsOf, floorsOf, leavesOf, planOf } from '../sim/interior';
@@ -461,7 +461,6 @@ function buildingPower(world: World, k: number, sec: number) {
  * objects, in pieces of SHED_SEG metres: a plywood deck on posts, with a bulb under it.
  */
 export const SHED_Z = 3;
-const SHED_SEG = 4.8, SHED_D = 2.6;
 const sheds: Obj[] = [];
 function gatherRoofs(world: World, v: View) {
   roofs.length = 0; sheds.length = 0;
@@ -471,20 +470,13 @@ function gatherRoofs(world: World, v: View) {
     for (const p of blk.props) if (p.kind === 'shelter' && Math.hypot(p.x - v.x, p.y - v.y) < 40) roofs.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), hx: 0.95, hy: 2.05, z: 2.3 });
     for (let k = blk.b0; k < blk.b1; k++) {
       const B = city.buildings[k];
-      if (!B.shed) continue;
-      for (let f = 0; f < 4; f++) {
-        const gap = f === 0 ? B.x0 - blk.x0 : f === 1 ? blk.x1 - B.x1 : f === 2 ? B.y0 - blk.y0 : blk.y1 - B.y1;
-        if (gap > SIDEWALK + 0.5) continue;
-        const sp = faceSpan(B, f), lo = sp[0] + 0.3, hi = sp[1] - 0.3;
-        if (hi - lo < 3) continue;
-        const nx = f === 0 ? -1 : f === 1 ? 1 : 0, ny = f === 2 ? -1 : f === 3 ? 1 : 0, edge = f === 0 ? B.x0 : f === 1 ? B.x1 : f === 2 ? B.y0 : B.y1;
+      for (const { f, nx, ny, edge, lo, hi, n, seg } of shedFaces(blk, B)) {
         const at = (a: number, out: number): [number, number] => (f < 2 ? [edge + nx * out, a] : [a, edge + ny * out]);
         const [mx, my] = at((lo + hi) / 2, SHED_D / 2);
         if (Math.hypot(mx - v.x, my - v.y) > 60 + (hi - lo) / 2) continue;
         // local +x out from the wall, +y along it (for the rain: one roof for the whole face)
         const c = nx, s = ny;
         roofs.push({ x: mx, y: my, c, s, hx: SHED_D / 2, hy: (hi - lo) / 2, z: SHED_Z });
-        const n = Math.max(1, Math.round((hi - lo) / SHED_SEG)), seg = (hi - lo) / n;
         for (let q = 0; q < n; q++) {
           const [x, y] = at(lo + (q + 0.5) * seg, SHED_D / 2);
           if (Math.hypot(x - v.x, y - v.y) > SPRITE_FAR) continue;

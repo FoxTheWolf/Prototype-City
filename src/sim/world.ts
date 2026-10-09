@@ -1,6 +1,6 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { drain, type Steps } from '../core/steps';
-import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
+import { FLOOR_H, generateCity, nearestRoad, postAt, SIDEWALK, type City } from './city';
 import { baseAt, blocked, cellAt, clearDrawnRoofs, ESC_AT, escapeAt, escapeZ, feetZ, planOf, ROOM, setResidents, STEP_UP } from './interior';
 import { type Sit } from './seats';
 import { TIME_SCALE } from './clock';
@@ -302,7 +302,10 @@ export function stepWorld(w: World, input: PlayerInput) {
   // the walls are those of the storey nearest the feet: at the top of a flight (feet a few centimetres under the next
   // floor) the walls around are the next floor's, not those of the one below
   const near = Math.round(p.z / FLOOR_H);
-  const hit = (x: number, y: number) => blocked(w.city, near, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y) || steep(x, y);
+  // and on the sidewalk the posts: lamps, bus shelters, the sidewalk sheds (city.ts, postAt), widened so a thin one
+  // cannot slip between the two shoulder probes (0.42 m apart)
+  const post = (x: number, y: number) => p.inside < 0 && p.z < 2.6 && baseAt(w.city, x, y) < 0 && postAt(w.city, x, y, 0.18);
+  const hit = (x: number, y: number) => blocked(w.city, near, p.x, p.y, x, y, open) || leafBlocks(w, p.x, p.y, x, y) || liftShut(x, y) || yard(x, y) || steep(x, y) || post(x, y);
   if (!hit(nx + Math.sign(vx) * R, p.y - R * 0.7) && !hit(nx + Math.sign(vx) * R, p.y + R * 0.7)) p.x = nx;
   const ny = p.y + vy * TICK;
   if (!hit(p.x - R * 0.7, ny + Math.sign(vy) * R) && !hit(p.x + R * 0.7, ny + Math.sign(vy) * R)) p.y = ny;
