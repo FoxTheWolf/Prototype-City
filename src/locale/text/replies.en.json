@@ -937,5 +937,71 @@
   "Look outside.",
   "It's weather. It changes.",
   "I'm not the forecast."
+ ],
+ "reply.ask_menu.nice": [
+  "Sure! We've got {list}.",
+  "[atwork] Let's see, there's {list}. What can I get you?",
+  "#g.smile# There's {list}. Anything catch your eye?",
+  "Well, there's {list}, for starters."
+ ],
+ "reply.ask_menu.plain": [
+  "We've got {list}.",
+  "There's {list}. What'll it be?",
+  "There's {list}.",
+  "Board's right there: {list}, mostly."
+ ],
+ "reply.ask_menu.rude": [
+  "It's on the board. There's {list}.",
+  "Read the board.",
+  "#g.sigh# We've got {list}."
+ ],
+ "reply.insult.nice": [
+  "Wow. Okay.",
+  "Excuse me? There's no need for that.",
+  "#g.frown# I'm going to pretend I didn't hear that.",
+  "That's uncalled for."
+ ],
+ "reply.insult.plain": [
+  "Hey. Watch it.",
+  "Excuse me?",
+  "Real nice.",
+  "#g.frown# Okay, we're done here."
+ ],
+ "reply.insult.rude": [
+  "Get out of my face.",
+  "Same to you.",
+  "Beat it.",
+  "We're done."
+ ],
+ "reply.tellname.nice": [
+  "Nice to meet you, {name}.",
+  "{name}. I'll remember that.",
+  "#g.smile# {name}? Good to meet you.",
+  "Hi, {name}."
+ ],
+ "reply.tellname.plain": [
+  "Okay, {name}.",
+  "{name}. Got it.",
+  "Hey, {name}."
+ ],
+ "reply.tellname.rude": [
+  "Sure, {name}. Whatever.",
+  "Didn't ask, but okay.",
+  "{name}. Great."
+ ],
+ "reply.room.nice": [
+  "Sure! A room's {price} a night.",
+  "[atwork] We've got rooms. {price} a night, checkout at eleven.",
+  "Of course. That's {price} for the night."
+ ],
+ "reply.room.plain": [
+  "Room's {price} a night.",
+  "{price} a night. Cash or card?",
+  "Sure. {price}, one night."
+ ],
+ "reply.room.rude": [
+  "{price}. Up front.",
+  "Rooms are {price}. Pay first.",
+  "#g.sigh# {price} a night."
  ]
 }

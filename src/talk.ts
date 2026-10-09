@@ -161,6 +161,7 @@ export function reply(w: World, T: Talk, line: string): Answer {
     return { text, reading: R, end: !!extra.end, ...extra };
   };
   if (T.over) return done('', { end: true });
+  const kind = T.biz >= 0 ? c.businesses[T.biz].kind : null;
   // a short question on the same subject as the last line ("who won?" after the game) is answered in it
   const ws = words(line), was0 = T.last, F = was0 ? FOLLOW[was0] : undefined;
   T.last = R.intent.startsWith('talk_') ? R.intent : null;
@@ -169,12 +170,20 @@ export function reply(w: World, T: Talk, line: string): Answer {
     if (R.intent === 'unrecognized') T.patience++;
     return done(say(`reply.${was0}.more.${style}`));
   }
+  // their name asked, the next short line is the player's ("Mel", "I'm Mel")
+  const nm = was0 === 'ask_name' && R.intent === 'unrecognized' ? /^(?:i'?m |i am |my name'?s |my name is |call me |it'?s )?([a-z][a-z'-]{1,15})[.!]?$/i.exec(line.trim()) : null;
+  if (nm) {
+    T.patience++;
+    return done(say(`reply.tellname.${style}`, { name: nm[1][0].toUpperCase() + nm[1].slice(1).toLowerCase() }));
+  }
+  if (R.intent === 'ask_name') T.last = 'ask_name';
+  // a room asked for away from a motel: where the nearest one is
+  if (R.intent === 'buy_request' && kind !== 'motel' && ws.some((x) => x === 'room' || x === 'night')) R.intent = 'ask_where', R.slots.kind = { words: ['motel'], kind: 'kind', id: KINDS.indexOf('motel') };
   // the same thing asked again
   const key = `${R.intent}:${R.slots.place?.id ?? ''}:${R.slots.kind?.id ?? ''}:${R.slots.thing?.id ?? ''}:${R.slots.street?.id ?? ''}`;
   const again = FACTS.has(R.intent) && T.said.includes(key);
   T.said.push(key);
   if (again) return done(say('reply.again'));
-  const kind = T.biz >= 0 ? c.businesses[T.biz].kind : null;
   const you = ws.includes('you') || ws.includes('your');
   // what they remember of the last talk, said at the first line of this one (14.9)
   const was = T.said.length === 1 && T.met && mem.topic && w.time - mem.met > 1800 ? mem.topic : '';
@@ -215,6 +224,9 @@ export function reply(w: World, T: Talk, line: string): Answer {
       if (R.intent === 'ask_price') return sold ? done(say(`reply.ask_price.${style}`, { number: dollars(sold[1]), thing })) : done(say('reply.whatthing'));
       // to buy: made to order at the counter, else it is on the shelves
       if (!sold && (ws.includes('pay') || /check ?out|ring (me|this|it) up/.test(ws.join(' ')))) return done(say('reply.pay'), { counter: true });
+      // a room at a motel: its price for the night
+      const room = PLACES[kind].sells.find(([s]) => s === 'room_night');
+      if (room && ws.some((x) => x === 'room' || x === 'night' || x === 'stay')) return done(say(`reply.room.${style}`, { price: `$${dollars(room[1])}` }), { counter: true });
       if (PLACES[kind].order) return done(say('reply.order'), { counter: true });
       if (sold) return done(say('reply.onshelf', { thing }));
       return done(say(`reply.buy_request.${style}`), { counter: true });
@@ -240,6 +252,15 @@ export function reply(w: World, T: Talk, line: string): Answer {
       if (S.street) D.ctx.road = roadName(c, S.street.id >= 0, S.street.id >= 0 ? S.street.id : -S.street.id - 1);
       return done(say(D.key, { ...D.ctx, place: pl === null ? (S.street ? roadName(c, S.street.id >= 0, S.street.id >= 0 ? S.street.id : -S.street.id - 1) : '') : placeName(c, pl) }), { point: [D.px, D.py] });
     }
+    case 'ask_menu': {
+      // what is sold here, three things with their prices; where it is made to order, the counter
+      if (!kind) return done(say(`reply.deflect.${style}`));
+      const G = en.goods as Record<string, string>, S = PLACES[kind].sells;
+      const list = S.slice(0, 3).map(([g, p]) => `${(G[g] ?? g.replace(/_/g, ' ')).toLowerCase()} for $${dollars(p)}`);
+      const text = say(`reply.ask_menu.${style}`, { list: list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}` : list[0] ?? '' });
+      return PLACES[kind].order ? done(text, { counter: true }) : done(text);
+    }
+    case 'insult': return done(say(`reply.insult.${style}`), { end: style === 'rude' || mem.rude >= 3 });
     case 'unrecognized': return done(say(`reply.unrecognized.${style}`));
     default:
       if (LATER.has(R.intent)) return done(say(`reply.deflect.${style}`));

@@ -203,7 +203,14 @@
     "check out": 3,
     "ring me up": 4,
     "ring this up": 4,
-    "pay for": 4
+    "pay for": 4,
+    "rent a room": 6,
+    "a room": 3,
+    "room for the night": 6,
+    "stay the night": 4,
+    "stay for a night": 6,
+    "for the night": 3,
+    "for a night": 3
    },
    "question": false,
    "slots": [
@@ -344,7 +351,8 @@
     "occupation": 4,
     "where do you work": 4,
     "what's your job": 4,
-    "profession": 4
+    "profession": 4,
+    "are you a": 3
    },
    "question": true,
    "slots": [
@@ -370,7 +378,15 @@
     "love your": 3,
     "well done": 3,
     "look great": 3,
-    "you look": 2
+    "you look": 2,
+    "lovely name": 6,
+    "nice name": 6,
+    "beautiful name": 6,
+    "pretty name": 6,
+    "lovely": 3,
+    "be friends": 4,
+    "be your friend": 6,
+    "your friend": 3
    },
    "question": false,
    "slots": [
@@ -419,7 +435,12 @@
     "help out": 3,
     "could i ask": 3,
     "i need a favor": 5,
-    "mind helping": 4
+    "mind helping": 4,
+    "work for me": 6,
+    "got work": 5,
+    "any work": 5,
+    "need work": 5,
+    "looking for work": 5
    },
    "question": false,
    "slots": [
@@ -566,7 +587,11 @@
     "digits": 3,
     "number": 2,
     "call you": 3,
-    "text you": 3
+    "text you": 3,
+    "share numbers": 6,
+    "exchange numbers": 6,
+    "swap numbers": 6,
+    "numbers": 3
    },
    "question": true,
    "slots": [],
@@ -717,7 +742,11 @@
     "how are things": 4,
     "you okay": 3,
     "you alright": 3,
-    "you good": 2
+    "you good": 2,
+    "how's your night": 5,
+    "hows your night": 5,
+    "how is your night": 5,
+    "your night going": 4
    },
    "question": true,
    "slots": [],
@@ -869,6 +898,59 @@
     "blah blah, anyway"
    ]
   },
+  "ask_menu": {
+   "label": "Asking what they sell",
+   "keywords": {
+    "menu": 5,
+    "what do you sell": 6,
+    "what do you serve": 6,
+    "what do you have": 5,
+    "what's on offer": 6,
+    "on offer": 4,
+    "something to eat": 5,
+    "eat something": 5,
+    "what can i get": 5,
+    "what can i eat": 5,
+    "sell": 3,
+    "serve": 3,
+    "food": 2,
+    "eat": 2,
+    "hungry": 3
+   },
+   "question": true,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "Can I see the menu?",
+    "What do you sell?",
+    "I wanna eat something"
+   ]
+  },
+  "insult": {
+   "label": "Insult",
+   "keywords": {
+    "fuck you": 6,
+    "fuck": 4,
+    "bitch": 5,
+    "asshole": 5,
+    "idiot": 4,
+    "moron": 4,
+    "stupid": 3,
+    "screw you": 5,
+    "loser": 3,
+    "jerk": 3,
+    "dumb": 3
+   },
+   "question": false,
+   "slots": [
+    "none"
+   ],
+   "examples": [
+    "You idiot",
+    "Screw you"
+   ]
+  },
   "unrecognized": {
    "label": "Unrecognized",
    "keywords": {},
@@ -908,7 +990,16 @@
    "give me": 2,
    "listen": 1,
    "you better": 2,
-   "whatever": 1
+   "whatever": 1,
+   "fuck": 3,
+   "bitch": 3,
+   "asshole": 3,
+   "idiot": 2,
+   "moron": 2,
+   "screw you": 3,
+   "stupid": 1,
+   "loser": 2,
+   "jerk": 2
   },
   "urgent": {
    "quick": 2,
@@ -987,12 +1078,12 @@
   }
  },
  "toneLabels": {
-  "-3": "Hostile",
-  "-2": "Aggressive",
-  "-1": "Curt",
   "0": "Neutral",
   "1": "Polite",
   "2": "Friendly",
-  "3": "Respectful"
+  "3": "Respectful",
+  "-3": "Hostile",
+  "-2": "Aggressive",
+  "-1": "Curt"
  }
 }
