@@ -437,6 +437,21 @@ export interface Escape {
   top: number;
 }
 const escCache = new Map<number, Escape[]>();
+/** While the plan the escapes are fitted to is made: the walls are not opened for them yet. */
+let bareEsc = false;
+/** The rooms a fire escape's window may give onto (13.24): a home's, never a bathroom, a hall or the stair. */
+const ESC_ROOMS = new Set<RoomKind>(['living', 'bedroom', 'kitchen']);
+/** The plan of the floors above the ground of lot k as made before its fire escapes open its walls (not cached). */
+function upperBare(city: City, k: number): Plan | null {
+  if (floorsOf(city.buildings[k]) < 2) return null;
+  bareEsc = true;
+  try {
+    const St = stackOf(city, k);
+    if (St) return planFromFloor(city, k, St, 1, 1);
+    const j = storeyBox(city, k, 1);
+    return j < 0 ? null : makePlan(city, k, j, false);
+  } finally { bareEsc = false; }
+}
 /** Lots whose escapes were worked out before their ground floor's plan (its shop doors) existed. */
 const escEarly = new Set<number>();
 export function escapesOf(city: City, k: number): Escape[] {
@@ -448,15 +463,33 @@ export function escapesOf(city: City, k: number): Escape[] {
   // never in front of a street door (the shops' are known once the ground floor's plan is made)
   const plan = cachedPlan(city, k, 0), doors = B.tier === 1 && B.style === 'brick' ? exitsOf(city, k, true) : [];
   if (B.tier === 1 && B.style === 'brick' && B.feat < 0.45 && B.h > 12) {
+    // (13.24) each of its two windows gives onto a home's room on the floors above (one plan for them all), so the
+    // landings meet a living room, a bedroom or a kitchen, not a bathroom, a hall or the wall between two homes
+    const up = upperBare(city, k);
+    const homeAt = (face: number, a: number) => {
+      if (!up) return true;
+      const [x, y, nx, ny] = facePoint(B, face, a);
+      for (let d = CELL / 2; d < 1.2; d += CELL) {
+        const c = cellAt(up, x - nx * d, y - ny * d);
+        if (c & WALL) continue;
+        const r = (c & ROOM) - 1;
+        return r >= 0 && ESC_ROOMS.has(up.rooms[r].kind);
+      }
+      return false;
+    };
     for (let face = 0; face < 4; face++) {
       const sp = faceSpan(B, face), lo = sp[0], hi = sp[1];
-      for (let m = Math.floor(lo / BAY / 7) - 1; (7 * m + 2) * BAY < hi; m++) {
-        const a0 = (7 * m + 2) * BAY;
-        if (a0 < lo + 0.35 || a0 + 2 * BAY > hi - 0.35) continue;
+      // every bay along the face, the next escape at least seven bays past the last
+      let next = -1e9;
+      for (let m = Math.ceil(lo / BAY); m * BAY < hi; m++) {
+        const a0 = m * BAY;
+        if (a0 < next || a0 < lo + 0.35 || a0 + 2 * BAY > hi - 0.35) continue;
         const [x, y, nx, ny] = facePoint(B, face, a0), [mx, my] = facePoint(B, face, a0 + BAY);
         if (isSolid(city, mx + nx * 0.6, my + ny * 0.6) || (B.cut && B.cut.nx * mx + B.cut.ny * my > B.cut.c - 0.1)) continue;
         if (doors.some((D) => D.face === face && D.a1 > a0 - 0.3 && D.a0 < a0 + 2 * BAY + 0.3)) continue;
+        if (!homeAt(face, a0 + 0.5 * BAY) || !homeAt(face, a0 + 1.5 * BAY)) continue;
         E.push({ k, face, a0, ox: x, oy: y, nx, ny, ux: face < 2 ? 0 : 1, uy: face < 2 ? 1 : 0, top: floorsOf(B) - 1 });
+        next = a0 + 7 * BAY;
       }
     }
   }
@@ -956,7 +989,7 @@ function planFromFloor(city: City, k: number, St: Stack, f: number, fl = f): Pla
     }
   };
   if (f === 0) for (const D of main ? [main, ...shops] : shops) open(D, 0, 1);
-  else if (f === 1) for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
+  else if (f === 1 && !bareEsc) for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
   const P: Plan = { box: k, rooms, exits: f === 0 ? shops : [], furn: [], cells, gx, gy, nx, ny, seams };
   // each home room furnished by an arrangement of the manual's library that fits it (turned or flipped), the one
   // that best fits who lives there (13.20); where none fits, the floor's own layer
@@ -1264,7 +1297,7 @@ function makePlan(city: City, k: number, j: number, ground: boolean): Plan {
     }
   };
   if (ground) { const main = doorOf(city, k); for (const D of main ? [main, ...exits] : exits) open(D, 0, 1); }
-  else if (j === k) for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
+  else if (j === k && !bareEsc) for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
   connect(cells, nx, ny, rooms);
   const P: Plan = { box: j, rooms, exits, furn: [], cells, gx, gy, nx, ny };
   // the street doors (the main one and the shops'), so nothing is put in front of them
