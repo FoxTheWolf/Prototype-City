@@ -2,6 +2,14 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
+## 0.13.C3b — Conversas que lembram (2026-10-09)
+- **"Who won?" funciona:** depois de falar do jogo, a pessoa responde à pergunta seguinte no mesmo assunto; quem viu o jogo diz o vencedor e o placar (a cidade inteira concorda sobre o jogo da noite), quem não viu diz que não viu. O mesmo com o tempo ("are you sure?").
+- **"What do you sell?"** e "can I see the menu?": o atendente diz o que vende, com os preços da loja, e abre o balcão. No motel, "can I rent a room?" dá o preço da noite; na rua, "where can I stay the night?" aponta o motel mais perto.
+- **Diga o seu nome:** quando perguntam "And yours?", responder só "Mel" basta.
+- **Palavrão tem resposta** (limpa): a pessoa se ofende em vez de dizer que não entendeu.
+- **Sem o rótulo "Unrecognized"** enquanto você digita; o tom aparece colorido (verde educado, vermelho grosso) e o ponto do quadradinho do tom fica no meio quando a frase é neutra.
+- **ESC no meio de uma conversa** encerra só a conversa, sem abrir o menu de pausa.
+
 ## 0.13.24 — Escadas de incêndio e telhados pelo manual (2026-10-09)
 - **As escadas de incêndio levam a algum lugar:** cada patamar fica diante das janelas de uma sala, um quarto ou uma cozinha (antes podia dar num banheiro, num corredor ou na parede entre dois apartamentos); e há mais delas nos prédios de tijolo.
 - **Três tipos de telhado:** o de sempre (a cadeira de quem sobe para fumar), o jardim de um morador (vasos no parapeito e uma mesa com duas cadeiras) e o esquecido, só com as máquinas.

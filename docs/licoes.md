@@ -2,6 +2,13 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do C3b (diálogo) — 2026-10-09
+- **Os registros de playtest são o corpus do diálogo:** `grep '"k":"say"' playtest/*.jsonl` dá cada frase que o usuário digitou, com a intenção lida na época. Reler pelo leitor **atual** antes de concluir (metade das falhas do registro já tinha sido consertada). Frase nova que falhar vai para `tests/dialog-corpus.ts`.
+- **A tolerância a digitação já existe** (`spell`/`near1` em `sim/intent.ts`, palavras de 4+ letras): antes de propor biblioteca de NLP, ver onde estão as falhas. Aqui eram léxico e intenções faltando; a compromise não resolveria.
+- **Python com `\b` dentro de `"""..."""` sem `r`** grava o caractere de controle 0x08 no TS: a regex nunca casa e não dá erro. Para trechos com regex, usar o Edit. E heredoc com travessão no Bash do Windows quebra a codificação: script em arquivo.
+- **ESC e a trava do mouse:** pedir `requestPointerLock` dentro do keydown do ESC faz o navegador conceder e soltar na hora; a perda dispara a pausa (`pointerlockchange`). Adiar a trava (~250 ms) e marcar `input.unlockedAt`.
+- **Fato da cidade igual para todos:** o jogo da noite sai de `hash3(seed, dia)`, não do `rng` da fala, para dois NPCs concordarem; o "viu o jogo" é `hash3(quem, dia)` e vira a tag `saw` na `Sel`, para a primeira fala e o follow-up baterem.
+
 ### Lições do C3 (playtest de 2026-10-09) — 2026-10-09
 - **Girar a câmera pelo console:** `camera.yaw = camera.targetYaw = …; camera.pitch = camera.targetPitch = …` (só o `yaw` é desfeito pelo alvo no quadro seguinte; parecia que o console falava com outra cópia do módulo).
 - **Cada `navigate` no painel recompila o shader (~1,5 min) e a câmera deriva no título enquanto isso:** reposicionar depois que o jogo entra. E o Vite pode servir uma versão intermediária de um arquivo editado em dois passos (o erro `unresolved voxMarch` era da edição pela metade): antes de caçar o erro, montar o WGSL no Node (`worldWGSL()` com rolldown) e conferir.
