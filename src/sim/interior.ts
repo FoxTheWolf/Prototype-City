@@ -631,6 +631,24 @@ export function stackOf(city: City, k: number): Stack | null {
   return S;
 }
 
+/**
+ * (C3, playtest of 2026-10-09) The rooftop shapes of the old generator (sim/city.ts roof: a water tank, machinery, a
+ * chimney: tier-0 parts pushed right after their building) on the lots whose roof is drawn (the stack's roof plan has
+ * its own tank and stair house): shrunk to nothing, so the old tank does not stand through the new roof. Indices kept.
+ */
+export function clearDrawnRoofs(city: City) {
+  const bs = city.buildings;
+  for (let k = 0; k < bs.length; k++) {
+    if (!stackOf(city, k)?.roof) continue;
+    const B = bs[k];
+    for (let j = k + 1; j < bs.length && bs[j].tier === 0; j++) {
+      const P = bs[j], cx = (P.x0 + P.x1) / 2, cy = (P.y0 + P.y1) / 2;
+      if (cx <= B.x0 || cx >= B.x1 || cy <= B.y0 || cy >= B.y1 || P.h <= B.h) break;
+      P.x0 = P.x1 = cx; P.y0 = P.y1 = cy; P.h = 0;
+    }
+  }
+}
+
 /** A point (u along the street face, v in from it, m) of a stack's plan, in the city. */
 function stackXY(St: Stack, B: Building, u: number, v: number): [number, number] {
   if (St.mirror) u = St.W - u;

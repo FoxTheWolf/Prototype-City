@@ -1,7 +1,7 @@
 import { hash3, mulberry32, type Rng } from '../core/rng';
 import { drain, type Steps } from '../core/steps';
 import { FLOOR_H, generateCity, nearestRoad, SIDEWALK, type City } from './city';
-import { baseAt, blocked, cellAt, ESC_AT, escapeAt, escapeZ, feetZ, planOf, ROOM, setResidents, STEP_UP } from './interior';
+import { baseAt, blocked, cellAt, clearDrawnRoofs, ESC_AT, escapeAt, escapeZ, feetZ, planOf, ROOM, setResidents, STEP_UP } from './interior';
 import { type Sit } from './seats';
 import { TIME_SCALE } from './clock';
 import { buildCctv, type Cctv } from './cctv';
@@ -155,6 +155,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   const rng = mulberry32(seed);
   yield 0;
   const city = generateCity(seed, size);
+  clearDrawnRoofs(city);
   yield 0.05;
   // every city starts on a day of 2008 of its own, at nine in the evening
   const time = (Math.floor(hash3(seed, 2008, 9) * 366) * 24 + 21) * 3600;

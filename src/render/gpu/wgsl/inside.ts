@@ -204,7 +204,9 @@ var<private> gSDglass: bool = false;
  * outer wall's windows are dark glass and the furniture is met here.
  */
 fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
-  var res = InC(Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0), 0u, 0.0, 0.0, vec3f(0.0), false, 0.0, 0.0, 0.0, 0.0);
+  // (C3) nearT: where the rain may begin along the ray; none until the walk reaches a window or the open air (it was 0,
+  // so a ray ending on an inner wall, a piece of furniture or the ceiling had rain from the eye on: raining indoors)
+  var res = InC(Cell(32u, vec3f(0.0), vec3f(7.0, 8.0, 12.0), 1e9, KIND_OTHER, 0.0), 0u, 0.0, 0.0, vec3f(0.0), false, 0.0, 0.0, 0.0, 1e9);
   let o = V.o; let inside = V.IB != 0u; let full = V.full;
   let z0 = V.z0; let zc = z0 + CEIL; let ztop = z0 + FLOOR_H; let nRooms = fx[o + 4u];
   // the stairwell's shaft (2026-10-08): over the flights the slab is open, so a ray that is above the ceiling's height
