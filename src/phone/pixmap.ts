@@ -123,7 +123,7 @@ export function streetMap(city: City, m: MapRaster, VX: number, VY: number, mpp:
 /** Floor colours of the rooms on the indoor map, by kind. */
 export const ROOM_BG: Record<RoomKind, C3> = {
   lobby: [222, 214, 196], hall: [210, 204, 194], stair: [190, 196, 206], lift: [184, 196, 220], foyer: [230, 214, 190], living: [240, 216, 180],
-  bedroom: [214, 204, 236], kitchen: [214, 230, 196], bath: [190, 226, 234], office: [204, 214, 230], open: [212, 222, 236], shop: [248, 226, 170], store: [222, 208, 180],
+  bedroom: [214, 204, 236], kitchen: [214, 230, 196], bath: [190, 226, 234], office: [204, 214, 230], open: [212, 222, 236], shop: [248, 226, 170], store: [222, 208, 180], roof: [176, 178, 182],
 };
 let indoorCache: { key: string; pic: Rgb } | null = null;
 /**

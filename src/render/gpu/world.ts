@@ -150,6 +150,8 @@ export class GpuWorld {
   private fxCar: Uint8Array;
   /** (13.22) Where each lot's lights are in fx (sim/lights.ts lightsOf, putLights) and the game minute they were looked up at. */
   private lightAt = new Map<number, { o: number; n: number; min: number }>();
+  /** (13.23) Where each lot's roof plan is in fx (putPlan), apart from the boxes' table. */
+  private roofAt = new Map<number, number>();
   /** The people's average for what is too far to look up (sim/lights.ts lightShares), and the ten game minutes it is for. */
   private shares = { home: 0.5, work: 0.5 };
   private sharesAt = -1;
@@ -523,10 +525,11 @@ export class GpuWorld {
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
     const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // indoors, the floor's furniture, lit by its rooms' lamps
-    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
+    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     // and the flights of the storeys below and above, seen through the stairwell (the one below rises into this one)
     if (I && !I.closed) for (const d of [-1, 1]) {
-      const f = I.floor + d, S = f >= 0 && f < floorsOf(this.city.buildings[I.k]) - 1 ? planOf(this.city, I.k, f)?.furn.find((q) => q.kind === 'stair') : undefined;
+      // (the top floor's leads to the roof where the lot has one, 13.23)
+      const f = I.floor + d, S = f >= 0 && f < floorsOf(this.city.buildings[I.k]) - (planOf(this.city, I.k, floorsOf(this.city.buildings[I.k])) ? 0 : 1) ? planOf(this.city, I.k, f)?.furn.find((q) => q.kind === 'stair') : undefined;
       if (S) list.push({ o: { x: S.x, y: S.y, c: S.c, s: S.s, parts: furnitureModel(S.kind, S.seed, S.hx, S.hy), r: Math.hypot(S.hx, S.hy) + 0.4, h: 4.4, seed: S.seed }, far: 40, zoff: I.z0 + d * FLOOR_H, indoor: true });
     }
     const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
@@ -620,10 +623,12 @@ export class GpuWorld {
         W[ib + 10] = G ? (G.alongX ? 1 : 2) : 0; F[ib + 11] = G?.u0 ?? 0; F[ib + 12] = G?.u1 ?? 0; F[ib + 13] = G?.v0 ?? 0; F[ib + 14] = G?.v1 ?? 0; F[ib + 15] = I.elec;
         // the stairwell (step 4 of the interiors' rework): the plans of the storeys above and below (0: none), and the
         // flight's footprint, where the ceiling and the floor are open
-        const S = I.plan.furn.find((f) => f.kind === 'stair'), top = floorsOf(this.city.buildings[I.k]);
+        // (13.23: the roof has no stair of its own; its well is over the top floor's flights)
+        const top = floorsOf(this.city.buildings[I.k]);
+        const S = I.plan.furn.find((f) => f.kind === 'stair') ?? (I.floor === top && I.floor > 0 ? planOf(this.city, I.k, I.floor - 1)?.furn.find((f) => f.kind === 'stair') : undefined);
         W[ib + 16] = 0; W[ib + 17] = 0; F.fill(0, ib + 18, ib + 22);
         if (S && !I.closed) {
-          const up = I.floor + 1 < top ? planOf(this.city, I.k, I.floor + 1) : null, dn = I.floor > 0 ? planOf(this.city, I.k, I.floor - 1) : null;
+          const up = I.floor + 1 <= top ? planOf(this.city, I.k, I.floor + 1) : null, dn = I.floor > 0 ? planOf(this.city, I.k, I.floor - 1) : null;
           W[ib + 16] = up ? Math.max(0, this.putPlan(up, true, I.k)) : 0; W[ib + 17] = dn ? Math.max(0, this.putPlan(dn, I.floor - 1 !== 0, I.k)) : 0;
           const ex = Math.abs(S.c) * S.hx + Math.abs(S.s) * S.hy, ey = Math.abs(S.s) * S.hx + Math.abs(S.c) * S.hy;
           F[ib + 18] = S.x - ex; F[ib + 19] = S.y - ey; F[ib + 20] = S.x + ex; F[ib + 21] = S.y + ey;
@@ -717,7 +722,9 @@ export class GpuWorld {
   /** Plan P (a lot's ground floor, or its box's upper floors) into fx unless it is there: its offset, or -1 if fx had to start over. */
   private putPlan(P: Plan, upper: boolean, lot: number): number {
     const W = this.fxW, F = this.fxF, s = P.box * 2 + (upper ? 1 : 0), t = FX_TAB + this.city.buildings.length + s, q = this.dev.queue;
-    if (this.fxPlan[s]) return W[t];
+    // (13.23) a roof's plan is kept apart: the box's table has the ground floor's and the upper floors' only
+    const roof = P.rooms.some((R) => R.kind === 'roof');
+    if (roof ? this.roofAt.has(lot) : this.fxPlan[s]) return roof ? this.roofAt.get(lot)! : W[t];
     // after the cells, the furniture (seen through the windows): its count, then per piece x, y, c, s,
     // its radius and its model's offset; then the models, each once
     const mods = new Map<Part[], number>(), list = P.furn.map((f) => furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock));
@@ -737,15 +744,16 @@ export class GpuWorld {
     P.rooms.forEach((R, r) => { const w = o + 6 + r * ROOM_REC; F[w] = R.x0; F[w + 1] = R.y0; F[w + 2] = R.x1; F[w + 3] = R.y1; W[w + 4] = ROOMS.indexOf(R.kind === 'store' ? 'office' : R.kind); W[w + 5] = R.unit; W[w + 6] = P.exitTo?.[r] ?? 0; });
     W.set(new Uint32Array(P.cells.buffer, P.cells.byteOffset, P.cells.length >> 1), o + 6 + P.rooms.length * ROOM_REC);
     if (P.cells.length & 1) W[o + 6 + P.rooms.length * ROOM_REC + (P.cells.length >> 1)] = P.cells[P.cells.length - 1];
-    this.fxPlan[s] = 1; W[t] = o;
-    q.writeBuffer(this.fx, o * 4, W, o, n); q.writeBuffer(this.fx, t * 4, W, t, 1);
+    q.writeBuffer(this.fx, o * 4, W, o, n);
+    if (roof) this.roofAt.set(lot, o);
+    else { this.fxPlan[s] = 1; W[t] = o; q.writeBuffer(this.fx, t * 4, W, t, 1); }
     return o;
   }
 
   /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
   private fxReset() {
     const nb = this.city.buildings.length;
-    this.fxState.fill(0); this.fxPlan.fill(0); this.shutters.clear(); this.lightAt.clear();
+    this.fxState.fill(0); this.fxPlan.fill(0); this.shutters.clear(); this.lightAt.clear(); this.roofAt.clear();
     this.fxW.fill(0, this.lightTab(), this.lightTab() + nb);
     this.fxW.fill(0, FX_TAB, FX_TAB + 3 * nb); this.fxEnd = this.fxHead();
     this.dev.queue.writeBuffer(this.fx, 0, this.fxW, 0, this.fxEnd);
@@ -994,7 +1002,7 @@ const FX_NEAR = 250, FX_PLAN = 130, FX_PLANS = 6;
 /** The time the lots' lights may take a frame (ms; putLights). */
 const LIGHT_MS = 1.0;
 /** The room kinds, numbered as the shader has them. */
-const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop'];
+const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop', 'roof'];
 
 /** A character as the atlas has it (Latin-1): an accent outside it falls back to its plain letter. */
 function code(s: string, k: number) {

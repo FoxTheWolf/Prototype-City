@@ -2,7 +2,9 @@ import { BLD, FX_DOORS, LEAF_W, ROOM_REC } from './common';
 
 export const roomsWGSL = (): string => /* wgsl */ `// ---- the rooms of the plans in fx (render/interior.ts: roomLamp, the paints), for roomWalk
 const PAINT = array<vec3f, 6>(vec3f(190.0, 170.0, 135.0), vec3f(150.0, 170.0, 160.0), vec3f(175.0, 150.0, 165.0), vec3f(185.0, 185.0, 175.0), vec3f(150.0, 160.0, 185.0), vec3f(195.0, 160.0, 120.0));
-const R_LOBBY = 0u; const R_HALL = 1u; const R_STAIR = 2u; const R_LIFT = 3u; const R_BEDROOM = 6u; const R_KITCHEN = 7u; const R_BATH = 8u; const R_OFFICE = 9u; const R_OPEN = 10u; const R_SHOP = 11u;
+const R_LOBBY = 0u; const R_HALL = 1u; const R_STAIR = 2u; const R_LIFT = 3u; const R_BEDROOM = 6u; const R_KITCHEN = 7u; const R_BATH = 8u; const R_OFFICE = 9u; const R_OPEN = 10u; const R_SHOP = 11u; const R_ROOF = 12u;
+/** (13.23) The roof's parapet, m over its slab. */
+const PARAPET_H = 1.05;
 /** Cell (i, j) of the plan at o: its room + 1 (0 outside), with the DOOR bit. */
 fn planCell(o: u32, i: i32, j: i32) -> u32 {
   let nx = i32(fx[o + 2u]);
@@ -29,7 +31,9 @@ fn litShare(office: bool) -> f32 {
 }
 /** The lamp of room r on floor f of box boxId (0..1 per channel, times the power), as roomLamp; "on": the room the viewer stands in. */
 fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32, on: bool) -> vec3f {
-  let kind = fx[ro + 4u]; let commonPart = bitcast<i32>(fx[ro + 5u]) < 0; let h = hash3(boxId, r * 31 + f, 12);
+  let kind = fx[ro + 4u];
+  if (kind == R_ROOF) { return vec3f(0.0); } // (13.23) open air: lit by the sky (roomLit)
+  let commonPart = bitcast<i32>(fx[ro + 5u]) < 0; let h = hash3(boxId, r * 31 + f, 12);
   let lq = u32(lot * ${BLD});
   let backup = i32(bldF(u32(lq + 63u)));
   var elec = elecIn;
@@ -73,6 +77,8 @@ fn lampD2(ro: u32, x: f32, y: f32) -> f32 {
 }
 /** A room's floor at (x, y) (floorPaint). */
 fn floorPx(kind: u32, office: bool, x: f32, y: f32) -> Px {
+  // (13.23) the roof: tar paper in strips, gravel on it
+  if (kind == R_ROOF) { let h = hash3(ifloor(x * 5.0), ifloor(y * 5.0), 41); return Px(select(select(DOT, COM, h < 0.35), DASH, ((x / 0.9) % 1.0 + 1.0) % 1.0 < 0.05), vec3f(66.0, 66.0, 70.0) * (0.85 + 0.3 * h)); }
   if (kind == R_BATH || kind == R_KITCHEN) {
     let ix = ifloor(x / 0.3); let iy = ifloor(y / 0.3); let seam = x / 0.3 - f32(ix) < 0.12 || y / 0.3 - f32(iy) < 0.12;
     let dark = kind == R_KITCHEN && ((ix + iy) & 1) == 1;
@@ -105,6 +111,8 @@ fn ceilPx(ro: u32, kind: u32, office: bool, on: bool, x: f32, y: f32) -> Px {
 }
 /** A room's wall at zr above its floor, uu along it (wallPaint). */
 fn wallPx(kind: u32, unit: i32, zr: f32, uu: f32) -> Px {
+  // (13.23) on the roof: the parapet and the stair house, rendered concrete, a coping on the parapet's top
+  if (kind == R_ROOF) { if (zr > PARAPET_H - 0.08 && zr <= PARAPET_H) { return Px(EQ, vec3f(150.0, 146.0, 138.0)); } let h = hash3(ifloor(uu * 6.0), ifloor(zr * 6.0), 43); return Px(select(COL, DOT, h < 0.55), vec3f(118.0, 112.0, 104.0) * (0.92 + 0.16 * h)); }
   if (zr < 0.12) { return Px(US, vec3f(70.0, 52.0, 40.0)); } // skirting board
   if (zr > CEIL - 0.1) { return Px(DASH, vec3f(120.0)); } // cornice
   if (kind == R_BATH || kind == R_KITCHEN) {

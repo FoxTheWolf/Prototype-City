@@ -45,6 +45,8 @@ fn dayIn(box: i32, x: f32, y: f32) -> f32 {
 }
 /** The light at a point of room r: its lamps, falling off with the distance to the nearest and along the ray inside (d); the ambient; the daylight. */
 fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
+  // (13.23) the roof is outdoors: the sky's light, the city's glow at night
+  if (fx[ro + 4u] == R_ROOF) { let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud); }
   let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
   let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day); let dl = dayIn(V.box, x, y);
   return lp * k + vec3f(a, a * 1.05, a * 1.25) + vec3f(dl * 0.92, dl * 0.97, dl);
@@ -473,6 +475,8 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     // seen from the street, the far side's glass: dark, with the night city's glow (or the day) beyond it
     let farGlass = glassSeen(glassBeyond(), Lt, res.gc, 0.0, 0.0);
     let z = u.eye - m * t;
+    // (13.23) on the roof the outer wall is the parapet; over it, the open air (the city's)
+    if (kind == R_ROOF && z > z0 + PARAPET_H) { return res; }
     if (z > z0 && z <= zw) {
       let fz = z / FLOOR_H - floor(z / FLOOR_H);
       done = true; res.state = 1u;
@@ -500,12 +504,12 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           let p = wallPx(kind, unit, zrOf(z, z0), along);
           res.cl = roomCell(p.ch, p.c * Lt * shade, t);
         }
-      } else if ((liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(st, shop, fw, fz, z - z0, ground))) {
+      } else if (kind != R_ROOF && ((liftGlass && z > z0 + 0.12 && z < zc - 0.08) || (!corner && !blind && !liftGlass && windowHole(st, shop, fw, fz, z - z0, ground)))) {
         if (inside || gThru) { res.state = 2u; } else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
       } else {
         let zr = zrOf(z, z0);
         // the sill: just under a window
-        if (!corner && !blind && zr < 1.5 && windowHole(st, shop, fw, fz + 0.1 / FLOOR_H, zr + 0.1, ground)) { res.cl = roomCell(EQ, vec3f(150.0, 140.0, 125.0) * Lt, t); }
+        if (kind != R_ROOF && !corner && !blind && zr < 1.5 && windowHole(st, shop, fw, fz + 0.1 / FLOOR_H, zr + 0.1, ground)) { res.cl = roomCell(EQ, vec3f(150.0, 140.0, 125.0) * Lt, t); }
         else { let p = wallPx(kind, unit, zr, along); res.cl = roomCell(p.ch, p.c * Lt * shade, t); }
       }
     }
@@ -532,6 +536,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     let r = i32(c & 255u) - 1;
     if (r < 0 || u32(r) >= nRooms) { return res; }
     let ro = roomRec(o, r); let kind = fx[ro + 4u];
+    if (kind == R_ROOF && !below) { return res; } // (13.23) no ceiling over the roof: the sky
     var p = Px(0u, vec3f(0.0));
     if (below && !slab) { p = floorPx(kind, office, wx, wy); } else { let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here); p = ceilPx(ro, kind, office, lp.x + lp.y > 0.05, wx, wy); }
     // (the slab's face, a little darker than the ceiling it is the edge of)

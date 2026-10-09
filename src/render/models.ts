@@ -775,6 +775,14 @@ export function furnitureModel(kind: string, seed: number, hx: number, hy: numbe
     }
     case 'till': m = [part(Box, -hx, -hy, 0, hx, hy, 1.0, WOOD, Solid, '#', '='), part(Box, -0.15, -0.2, 1.0, 0.1, 0.2, 1.25, DARK, Solid, '#'), part(Box, 0.1, -0.15, 1.05, 0.12, 0.15, 1.2, [120, 255, 140], Glow, ':')]; break;
     case 'reception': m = [part(Box, -hx, -hy, 0, hx, hy, 1.05, [70, 60, 55], Solid, '#', '='), part(Box, -hx, -hy, 1.05, hx + 0.1, hy, 1.12, [170, 160, 140], Solid, '-', '_')]; break;
+    // (13.23) on the roof: a water tank of wooden staves on a steel stand, its flat lid and the hatch; a condenser in its sheet-metal box with the fan's grille on top
+    case 'tank': m = [
+      part(Box, -hx, -hy, 0, -hx + 0.1, -hy + 0.1, 1.2, STEEL, Solid, '|'), part(Box, hx - 0.1, -hy, 0, hx, -hy + 0.1, 1.2, STEEL, Solid, '|'),
+      part(Box, -hx, hy - 0.1, 0, -hx + 0.1, hy, 1.2, STEEL, Solid, '|'), part(Box, hx - 0.1, hy - 0.1, 0, hx, hy, 1.2, STEEL, Solid, '|'),
+      part(Box, -hx, -hy, 1.2, hx, hy, 1.3, [70, 66, 62], Solid, '=', '='),
+      part(Cyl, -hx + 0.05, -hy + 0.05, 1.3, hx - 0.05, hy - 0.05, 3.1, [112, 82, 56], Solid, '|', '='),
+      part(Cyl, -hx, -hy, 3.1, hx, hy, 3.25, [80, 76, 72], Solid, '=', '='), part(Cyl, -0.25, -0.25, 3.25, 0.25, 0.25, 3.45, [80, 76, 72], Solid, '^', 'o')]; break;
+    case 'ac': m = [part(Box, -hx, -hy, 0, hx, hy, 0.8, [170, 172, 168], Solid, '#', '='), part(Cyl, -hx + 0.12, -hy + 0.12, 0.8, hx - 0.12, hy - 0.12, 0.84, [60, 62, 66], Solid, '+', '+')]; break;
     // (13.22) a light switch: an ivory plate at shoulder height (sim/interior SWITCH_Z), its rocker
     case 'switch': m = [part(Box, -hx, -hy, 1.14, hx, hy, 1.26, [222, 214, 196], Solid, ':', '='), part(Box, hx, -0.012, 1.18, hx + 0.008, 0.012, 1.22, [190, 182, 166], Solid, '|')]; break;
     // (13.9c) a wall outlet: a plate at knee height, two dark sockets

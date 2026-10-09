@@ -25,7 +25,7 @@ export const DOOR = 0x100;
 /** On the cells a wall stands on. */
 export const WALL = 0x200;
 
-export type RoomKind = 'lobby' | 'hall' | 'stair' | 'lift' | 'foyer' | 'living' | 'bedroom' | 'kitchen' | 'bath' | 'office' | 'open' | 'shop' | 'store';
+export type RoomKind = 'lobby' | 'hall' | 'stair' | 'lift' | 'foyer' | 'living' | 'bedroom' | 'kitchen' | 'bath' | 'office' | 'open' | 'shop' | 'store' | 'roof';
 
 export interface Room {
   kind: RoomKind;
@@ -63,7 +63,7 @@ export interface Plan {
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
 export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table'
-  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet' | 'stair' | 'switch';
+  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet' | 'stair' | 'switch' | 'tank' | 'ac';
 export interface Furn {
   kind: FurnKind;
   x: number;
@@ -528,7 +528,15 @@ const PLAN_KEEP = 4000;
 /** Floor f of lot k (its ground volume's index), or null above the roof. */
 export function planOf(city: City, k: number, f: number): Plan | null {
   const j = storeyBox(city, k, f);
-  if (j < 0) return null;
+  if (j < 0) {
+    // (13.23) a drawn stack's roof: the storey over the top floor, where its stair ends (the manual's T plans)
+    const St = f === floorsOf(city.buildings[k]) ? stackOf(city, k) : null;
+    if (!St?.roof) return null;
+    const sk = stackKey(k, f);
+    let P = planCache.get(sk);
+    if (P === undefined) { P = planFromFloor(city, k, St, 2, f); P.exitTo = exitWay(city, k, P, false); planCache.set(sk, P); }
+    return P;
+  }
   // the floors of one box above the ground are alike (but for the furniture of the drawn ones)
   const key = j * 2 + (f === 0 ? 0 : 1);
   const St = stackOf(city, k);
@@ -663,12 +671,12 @@ function stackDoors(city: City, St: Stack): { main: Door | null; shops: Door[] }
 
 const ROOM_OF: Record<string, RoomKind> = {
   l: 'living', k: 'kitchen', b: 'bedroom', h: 'bath', s: 'living', e: 'foyer', c: 'lobby', '.': 'hall', S: 'stair', L: 'lift',
-  o: 'shop', p: 'open', m: 'office', n: 'office', q: 'kitchen', u: 'hall', r: 'office',
+  o: 'shop', p: 'open', m: 'office', n: 'office', q: 'kitchen', u: 'hall', r: 'office', x: 'roof',
 };
 const FURN_OF: Record<string, FurnKind> = {
   B: 'bed', A: 'shelf', Q: 'desk', h: 'chair', F: 'sofa', r: 'sofa', T: 'tv', t: 'table', K: 'counter', O: 'oven', N: 'counter',
   G: 'fridge', V: 'counter', C: 'toilet', H: 'tub', P: 'plant', S: 'shelf', w: 'washer', y: 'dryer',
-  $: 'till', '=': 'bar', v: 'case', m: 'shelf', I: 'cooler', L: 'bottles', s: 'stool',
+  $: 'till', '=': 'bar', v: 'case', m: 'shelf', I: 'cooler', L: 'bottles', s: 'stool', Z: 'tank', U: 'ac',
 };
 const PLAN_WALLS = new Set(['#', 'W', 'G', '+']);
 
@@ -818,7 +826,8 @@ function placeGrid(P: Plan, MF: string[][], G: GridMap, rnd: () => number, goods
  * floor is one of the manual's shop models (7b), read by the same placeGrid (13.21).
  */
 function planFromFloor(city: City, k: number, St: Stack, f: number, fl = f): Plan {
-  const Fl = f === 0 ? St.ground : St.upper ?? St.ground;
+  // (f: 0 the ground floor, 1 the floors above, 2 the roof)
+  const Fl = f === 2 ? St.roof! : f === 0 ? St.ground : St.upper ?? St.ground;
   const B = city.buildings[k], R = Fl.rooms, M = Fl.furn, H = R.length, Wc = R[0].length;
   const gx = Math.floor(B.x0 / CELL), gy = Math.floor(B.y0 / CELL), nx = Math.ceil(B.x1 / CELL) - gx, ny = Math.ceil(B.y1 / CELL) - gy;
   const cells = new Uint16Array(nx * ny);
@@ -925,7 +934,7 @@ function planFromFloor(city: City, k: number, St: Stack, f: number, fl = f): Pla
     }
   };
   if (f === 0) for (const D of main ? [main, ...shops] : shops) open(D, 0, 1);
-  else for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
+  else if (f === 1) for (const e of escapesOf(city, k)) for (let b = 0; b < 2; b++) open({ face: e.face, a0: e.a0 + b * BAY, a1: e.a0 + (b + 1) * BAY }, 0.3, 0.7);
   const P: Plan = { box: k, rooms, exits: f === 0 ? shops : [], furn: [], cells, gx, gy, nx, ny, seams };
   // each home room furnished by an arrangement of the manual's library that fits it (turned or flipped), the one
   // that best fits who lives there (13.20); where none fits, the floor's own layer
@@ -967,7 +976,7 @@ function planFromFloor(city: City, k: number, St: Stack, f: number, fl = f): Pla
   const wallish = (x: number, y: number) => x < 0 || y < 0 || x >= Wc || y >= H || PLAN_WALLS.has(R[y][x]);
   placeGrid(P, MF, { su: 0.5, sv: 0.5, at: (u, v) => stackXY(St, B, u, v), dir: (du, dv) => stackDir(St, du, dv), past: pastWall, wallish, floor: (x, y) => !wallish(x, y) && isRoom(R[y][x]) && MF[y][x] === '.' }, rnd);
   // the stair's two flights and half landing, a piece of its own (drawn in little cubes; walked by its steps, not round it)
-  const Fg = flightOf(St);
+  const Fg = f === 2 ? null : flightOf(St);
   if (Fg) {
     // out to the walls on its long sides and at its far end (the half landing), as the furniture
     let { u0, v0, u1, v1 } = Fg;
@@ -1556,17 +1565,19 @@ export function stairRise(hx: number, u: number, v: number): number {
 /**
  * The height of the feet at (x, y) in lot k, for someone at height z (plano-interiores step 4): on a stair, the step
  * under them, of the storey nearest their height (the one they are on); elsewhere the level of the floor nearest z.
- * The top floor's stair leads to the roof, not yet a floor. In the gap between the flights, out of reach (the rail).
+ * The top floor's stair leads to the roof where the lot has one (a drawn stack, 13.23). In the gap between the flights,
+ * out of reach (the rail).
  */
 export function feetZ(city: City, k: number, x: number, y: number, z: number): number {
-  const top = floorsOf(city.buildings[k]), f0 = Math.max(0, Math.min(top - 1, Math.round(z / FLOOR_H))), P = planOf(city, k, f0);
-  const S = P?.furn.find((f) => f.kind === 'stair');
+  const top = floorsOf(city.buildings[k]), roof = !!stackOf(city, k)?.roof, f0 = Math.max(0, Math.min(roof ? top : top - 1, Math.round(z / FLOOR_H))), P = planOf(city, k, f0);
+  // (on the roof, whose plan has no stair of its own: the top floor's, whose flights rise into the stair house)
+  const S = P?.furn.find((f) => f.kind === 'stair') ?? (f0 > 0 ? planOf(city, k, f0 - 1)?.furn.find((f) => f.kind === 'stair') : undefined);
   if (S && top >= 2) {
     const dx = x - S.x, dy = y - S.y, u = dx * S.c + dy * S.s, v = -dx * S.s + dy * S.c;
     if (u >= -S.hx && u <= S.hx && Math.abs(v) <= S.hy + 0.05) {
       const r = stairRise(S.hx, u, v);
       if (Number.isNaN(r)) return z + 9;
-      const f = Math.max(0, Math.min(top - 2, Math.round((z - r) / FLOOR_H)));
+      const f = Math.max(0, Math.min(roof ? top - 1 : top - 2, Math.round((z - r) / FLOOR_H)));
       return f * FLOOR_H + r;
     }
   }
@@ -1635,8 +1646,8 @@ export function leavesOf(P: Plan): Leaf[] {
   return L;
 }
 
-/** Rooms lit all the time (the fire code: the ways out), without a switch. */
-const ALWAYS_LIT = new Set<RoomKind>(['hall', 'lobby', 'stair', 'lift']);
+/** Rooms lit all the time (the fire code: the ways out), and the roof (open air): without a switch. */
+const ALWAYS_LIT = new Set<RoomKind>(['hall', 'lobby', 'stair', 'lift', 'roof']);
 /** A switch's plate: how high its middle is, m. */
 export const SWITCH_Z = 1.2;
 /**
