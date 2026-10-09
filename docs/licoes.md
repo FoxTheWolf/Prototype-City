@@ -11,6 +11,9 @@
 - **O painel oculto começa o jogo com largura 0 e quebra o compositor:** `resize_window` com um tamanho fixo e recarregar.
 - **O olho exatamente no plano da fachada via através do prédio:** o raio da cidade pula caixas com `tN <= 0.01` e o `baseAt` diz "fora" no plano (`y < y1` estrito). Com a folha na fachada, o jogador para justo ali ao cruzar: o quadro em que o interior sumia. Agora a caixa conta como a 1 cm quando o olho está a menos de 2 cm da face.
 - **Um mesmo vidro com dois desenhos** (de fora `farGlass`, de dentro `glassOver`) faz o interior e a rua parecerem lugares diferentes: o usuário percebe na hora.
+- **Uma mesma porta tem de ser igual dos dois lados:** o batente de fora (7 cm, cor da fachada) e o de dentro (4% da largura, aço) eram desenhados por códigos diferentes, e o usuário viu a diferença como uma fresta. Medidas em metros nos dois lados.
+- **`DOOR_H - 0.02` nas folhas deixava 2 cm de fresta sob a verga**, e a verga era pintada de madeira até o teto: as duas coisas apareceram como "a porta não fecha" e "faixa de outra cor".
+- **Teleportar para um lance de escada:** `?pos=x,y,andar` põe os pés no piso; para a altura de um degrau, `world.player.z = …` depois de carregar (ela se mantém).
 - **As portas fecham sozinhas:** teleportar para a soleira mostra a folha fechada colada no olho; para testar uma porta aberta, abrir com F de frente e andar.
 
 ### Lições da 13.21 (as lojas na gramática das plantas) — 2026-10-08

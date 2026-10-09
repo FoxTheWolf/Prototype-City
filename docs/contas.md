@@ -21,7 +21,7 @@
 
 - **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
 - **C** — 2026-10-08 (dito pelo usuário, não medido): semanal **~50%**. Renova terça ~13h.
-- **V** — 2026-10-09 ~03h (fim da parte das portas do C2, medido): semanal **~57%**, janela de 5 h ~69%. Renova **sábado 10/10 ~02h** (Brasília).
+- **V** — 2026-10-09 ~03h20 (C2, perto do fim da janela, medido): semanal **~59%**, janela de 5 h ~83%. Renova **sábado 10/10 ~02h** (Brasília).
 
 ## Ritmo combinado (2026-10-08)
 
