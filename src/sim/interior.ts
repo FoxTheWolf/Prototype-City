@@ -224,6 +224,35 @@ export function doorNumber(city: City, k: number): number {
   return n;
 }
 
+let labels: Map<number, string> | null = null, labelsOf: City | null = null;
+/**
+ * The number as the door shows it: where two lots of one side of a block come out with the same number (49 numbers
+ * a side, more lots on a long block), the second along the road gets an A, the third a B (522, 522A; C2, reunion of
+ * 2026-10-08). Made once per city for every lot with a door.
+ */
+export function doorLabel(city: City, k: number): string {
+  if (labelsOf !== city || !labels) {
+    labels = new Map(); labelsOf = city;
+    const groups = new Map<string, { k: number; t: number }[]>();
+    for (let q = 0; q < city.buildings.length; q++) {
+      const B = city.buildings[q], n = B.tier === 1 ? doorNumber(city, q) : 0, D = n ? doorOf(city, q) : null;
+      if (!D) continue;
+      const [x, y, nx, ny] = facePoint(B, D.face, (D.a0 + D.a1) / 2), onAve = Math.abs(nx) > Math.abs(ny);
+      // (the same road: the block column or row the face stands in)
+      const b = onAve ? city.xb : city.yb, c = onAve ? x : y;
+      let r = -1;
+      for (let i = 0; i < b.length / 2; i++) if (b[2 * i + 1] <= c) r = i;
+      const key = `${n}|${onAve ? 'a' : 's'}|${r}`, g = groups.get(key) ?? [];
+      g.push({ k: q, t: onAve ? y : x }); groups.set(key, g);
+    }
+    for (const [key, g] of groups) {
+      g.sort((a, b) => a.t - b.t);
+      g.forEach((e, i) => labels!.set(e.k, key.split('|')[0] + (i ? String.fromCharCode(64 + i) : '')));
+    }
+  }
+  return labels.get(k) ?? String(doorNumber(city, k));
+}
+
 /**
  * Every floor of a lot shares one frame, set by the ground volume and its door: the long axis, the
  * corridor along it, and the core (stairs, and a lift in taller buildings) so the stairs line up.

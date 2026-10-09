@@ -2,7 +2,7 @@ import { hash3 } from '../core/rng';
 import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { streetLeaves } from '../sim/doors';
-import { baseAt, cachedPlan, doorNumber, doorOf, entryDoor, escapesOf, facePoint, exitsOf, floorsOf, leavesOf, planOf } from '../sim/interior';
+import { baseAt, cachedPlan, doorLabel, doorNumber, doorOf, entryDoor, escapesOf, facePoint, exitsOf, floorsOf, leavesOf, planOf } from '../sim/interior';
 import { insideLight, interiorColumn, prepareInside, type Inside } from './interior';
 import { CharGrid } from './grid';
 import { BLOCK } from './atlas';
@@ -987,7 +987,7 @@ function collectObjects(world: World, v: View): Obj[] {
       if (!D || !num) continue;
       const [x, y, nx, ny] = facePoint(B, D.face, (D.a0 + D.a1) / 2), X = x + nx * 0.03, Y = y + ny * 0.03;
       if (Math.hypot(X - v.x, Y - v.y) > DOOR_NUM_FAR || !seen(X, Y, 0.5)) continue;
-      out.push({ x: X, y: Y, c: nx, s: ny, parts: doorNumberModel(String(num)), r: 0.3, h: 2.6, z0: 2.4, seed: 0 });
+      out.push({ x: X, y: Y, c: nx, s: ny, parts: doorNumberModel(doorLabel(city, k)), r: 0.3, h: 2.6, z0: 2.4, seed: 0 });
       // the residents' door (13.19): the intercom beside its free edge, past the frame
       if (entryDoor(city, k)) { const [ix, iy] = facePoint(B, D.face, D.a1 + 0.16); out.push({ x: ix + nx * 0.01, y: iy + ny * 0.01, c: nx, s: ny, parts: intercomModel(floorsOf(B)), r: 0.2, h: 1.7, z0: 1.2, seed: 0 }); }
     }

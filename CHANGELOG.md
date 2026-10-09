@@ -5,6 +5,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 ## 0.13.C2 — Correções de interiores (2026-10-09)
 - **As portas da rua ficaram no meio da parede**, não mais afundadas num recesso; as laterais e o alto do vão têm a cor da fachada, em vez de deixar ver o saguão através delas.
 - **Uma porta de vidro não esconde mais as portas atrás dela:** olhando por uma folha de vidro, as portas de dentro aparecem.
+- **Dois prédios do mesmo lado da quadra não têm mais o mesmo número:** o segundo vira 522A, o terceiro 522B.
 - **O mouse não dá um tranco ao ser capturado** (o giro rápido ao entrar no jogo).
 
 ## 0.13.21 — As lojas desenhadas como as casas (2026-10-08)
