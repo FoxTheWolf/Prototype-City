@@ -2,6 +2,15 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 13.S (arrumação do shader, primeira parte) — 2026-10-08
+- **Provar que uma arrumação não muda o shader:** `tests/wgsl-dump.ts` gera o WGSL no Node e tira o sha1; separar `shader.ts` em `gpu/wgsl/*.ts` deu o mesmo hash (d2a7fe5). Para mexer só no TypeScript do shader, é a prova barata, sem GPU.
+- **Medir a compilação de verdade:** no console do painel, `createShaderModule` com um comentário aleatório no topo (fura o cache do Chromium) e `await createComputePipelineAsync({ layout: 'auto', ... })`; ler o texto por `import('/tests/.out/x.wgsl?raw')`. O tempo do jogo engana: o HMR do Vite recarrega a página a cada edição e o jogo já compila (e guarda) o shader novo em segundo plano. Aqui: 35 s antes, 16,8 s depois (não 3–4 min: aquilo era com o jogo rodando junto ou no PC do usuário).
+- **O que pesa na compilação é a cópia, não o tamanho escrito:** o compilador do Windows copia o corpo de uma função em cada chamada. `tests/wgsl-inline.ts` conta as cópias: o shader escrito tinha 62 mil tokens e virava 590 mil. `cityCell` chamado 3× no `main` (raio principal, raio através da janela, reflexo) e `peekRoom` 2× no `wallCell` eram mais da metade. Juntar cada um numa chamada só (um laço de 3 raios no `main`; decidir a flag antes e chamar uma vez no `wallCell`) levou a 261 mil. **Regra: função grande, uma chamada só; o resto se arruma em volta.** Tirar 200 linhas mortas (a zona de fogo) quase não mudou nada (35,8 → 34,6 s).
+- **`pass` é palavra reservada no WGSL** (o `getCompilationInfo` acusa; o `tsc` não vê).
+- **Script Python que escreve TypeScript:** `'
+'` dentro de um heredoc virou uma quebra de linha de verdade no `.ts` (quebrou o `head.ts`); para barras invertidas, a ferramenta Edit.
+- **Posições de ouro** em `docs/tecnico.md`; fotos em `playtest/ouro/13S-*`. Entram em ~8 s com o shader em cache.
+
 ### Lições da 13.20 (biblioteca de arrumações, postos) — 2026-10-08
 - **As molduras da biblioteca envelhecem:** foram copiadas das plantas antes da v1.3 (R12 mudou portas). Casar a arrumação pela moldura exata é frágil; o critério certo (o do manual) é rodar `checkArrangement` com a moldura **real** do cômodo, depois de girar.
 - **Passar nas regras do texto não basta:** o canto onde duas paredes de dentro se cruzam fica serrilhado nas células do jogo (o `+` vai para a sala mais perto), e um vaso no canto caía na parede. Conferir cada arrumação também nas células (`cellAt`) antes de escolher.

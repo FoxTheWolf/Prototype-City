@@ -2,6 +2,11 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-08 — uma camada de efeitos acima do ASCII (pergunta do usuário na 13.S)
+- **Já existe e já é assim para o bloom:** o shader do mundo só grava quanto cada célula brilha (`gGlow`), e o borrado e a soma são do compositor (`gpu/compositor.ts`, `GLOW_K`), por cima das letras; o halo e o glare dos aparelhos também.
+- **Não simplifica o shader do mundo:** medido com `tests/wgsl-inline.ts`, os cones das lâmpadas, a chuva por cima, o `display` e a mão somam menos de 2% do shader expandido. O peso está na geometria (a cidade, os interiores, os objetos, a luz), que precisa ficar onde está.
+- **Mas é o lugar certo para os efeitos novos** (lens flare, god rays, o brilho do sol no vidro): em pixels, no compositor, como manda a regra da camada HD. God rays em tela são baratos (uma máscara do sol e um borrado radial a partir dele, com o céu e os prédios do buffer de saída). Recomendo fazer assim quando entrarem (23, refinamento), e passar para lá o que for só efeito ao revisar bugs como o do relógio atrás do notebook (que é de ordem de composição, e a camada de cima resolve).
+
 ## 2026-10-08 — brainstorming da reunião (Opus 5.5)
 - **As janelas reais viram reconhecimento:** com a fachada lendo a luz dos cômodos (13.22), olhar um prédio da rua conta a rotina de quem mora lá ("o 4º andar apaga às 23h"). É a primeira ferramenta orgânica de reconhecimento, de graça para a 18; anotar no caderno (22.1).
 - **Um binóculo (2008, barato):** aproximar a vista para ler a etiqueta da caixa da GridLink, a janela, a placa do carro. Alimenta o reconhecimento sem exigir chegar perto. Candidato a side grade na 19.
