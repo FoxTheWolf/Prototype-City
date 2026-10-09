@@ -59,6 +59,27 @@ Ideias para pesar depois; nem todas entram:
 5. **GridLinks:** a backdoor por GridLink, a ativação sincronizada, a coleção dos nove, a sidequest. É o grande sistema; depende de 1–4 e da calibragem de `power.ts`/`heat.ts`.
 6. **Firmware/apps como recompensa** amarrando tudo ao fórum e ao mentor.
 
+## Funções do Jackdaw definidas (2026-10-08, Opus 4.8) — depois de a rede ter forma
+
+> Feito depois da rodada 1 da entrevista da rede (`docs/design-rede-hacking.md`). **O papel do Jackdaw, agora claro:** o notebook é a bancada que alcança **a rede** (tudo o que tem `Link`/Wi-Fi/web admin — o doc da rede). O Jackdaw é a ferramenta de campo que alcança **o que não está nessa rede**: os dispositivos que respondem a sinais sem estar ligados a nada (a "IoT antes da IoT" de 2008). É a 2ª parte do Hack the Planet. Com o calor congelado (pós-1.0), a justificativa dele **não** é fugir — é **alcançar o inalcançável pelo notebook** (correção do usuário, 2026-10-08).
+
+Cada função é um `DeviceApp` que se registra em `device.apps` de um módulo `[HACKING]` (o chassi da 15.22 já existe; ver o estado real acima). Cada uma pede uma **cena da gralha** (os briefings visuais, sem termo técnico, vão para `docs/tarefas/jackdaw-cenas.md`, que o Opus 5.5 desenha). **Regra de ouro:** o sucesso depende só do que o jogador controla (ler o sinal certo, plugar na porta certa), nunca do sorteio da sim.
+
+| App | O que faz | Sistema da sim | Dependência | Cena |
+|---|---|---|---|---|
+| **Radar de sinais** | "sente" os sinais em volta (um portão, um crachá, uma câmera, uma fechadura); é o **sentido** que torna os outros usáveis (retorno orgânico, sem HUD). Por padrão só Wi-Fi (câmeras IP); o **leitor de lentes óptico** é upgrade e revela as CCTV analógicas (R1 item 4). | `wifi.ts` (APs) + uma camada nova de "sinais" dos objetos | o radar de Wi-Fi já tem base; a camada de sinais é nova | CENA 1 |
+| **Sub-GHz: portão** | lê o controle de um portão e **repete** para abrir (tutorial de campo). Chaveiro de carro (código rolante → só janela de brute) vem com os carros (21). | NOVO: **portão de garagem/estacionamento com controle** (`doors.ts` só tem shutter por horário, não serve) | o objeto portão-com-controle (visual 5.5, lógica minha) | CENA 2 |
+| **Plugar na porta física** | o conector de campo dos sistemas **offline**: semáforo e subestação. Pluga em vez de montar o notebook na rua. É aqui que mora o **backdoor do GridLink**. | `network.ts` (`setSignals`/`setBreaker`/`modbusRegs`, já existem) | nada novo para semáforo/subestação | CENA 3 |
+| **Crachá RFID/NFC** | lê / clona / emula o crachá de acesso de um funcionário; o cartão do cybercafé e o do metrô. | NOVO: crachás nos NPCs + leitores nas portas | NPCs com crachá (16/17), portas com leitor | CENA 4 |
+| **iButton: interfone** | lê a chavinha e abre a porta de rua de um prédio residencial (plausível em 2008). | NOVO: interfones nas portas de rua | interfones no mundo (visual 5.5) | CENA 5 |
+| **IR: TV/telão** | desliga/troca a TV (mais pegadinha que hack; a versão de brinquedo pode ser do Opus 5.5). | telões/TVs (já dão tela azul na surge) | — | CENA 6 |
+
+**O GridLink (a assinatura, 18.7/sidequest opcional):** usa o "plugar na porta física" na subestação → instala a backdoor → de um modo do Jackdaw, ativa apagões **à distância**; coletar as 9 (grade 3×3 de `power.ts`) = apagão geral. O mascote guarda **uma bugiganga por GridLink** (um `TRINKET` novo; o chassi já tem `shinies`/`collect`). Isso já estava na rodada 1 (itens 2 e 3); segue valendo.
+
+**Firmware/apps vêm do fórum** (progressão): o aparelho nasce capado; os apps de hacking e o upgrade do leitor de lentes chegam como recompensa/achado, amarrados ao fórum e ao mentor — o mesmo princípio dos binários clandestinos do notebook (`bruter`/`wcrack`).
+
+**Dependências, em resumo (quando a etapa do Jackdaw pode rodar):** o chassi ✅; o radar, o sub-GHz de portão e o plugar na porta física podem ser feitos **assim que a rede (18) existir** (os alvos semáforo/subestação já existem; o portão é um objeto pequeno); crachás e interfones precisam dos objetos de mundo de 16/17; o chaveiro de carro, da 21. Por isso a etapa do Jackdaw vem **depois da 18** e pode interligar com 17–21 conforme os objetos entram.
+
 ## Decisões da entrevista — rodada 1 (2026-10-06, Opus 4.8)
 
 Primeira rodada feita (limite de uso curto; dá para continuar quando renovar). Decidido com o usuário:
