@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { DEBUG } from '../debug';
-import { baseAt, CELL, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, type Door, type Leaf, type Room } from './interior';
+import { baseAt, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, type Door, type Leaf, type Room } from './interior';
 import type { Building } from './city';
 import { isOpen } from './telco';
 import { PLACES } from './placeTypes';
@@ -48,9 +48,9 @@ const PASS = 0.8;
 export interface DoorRef { key: number; x: number; y: number; k: number; f: number; n: number; street: boolean }
 
 /**
- * A street door's pair of glass leaves (13.10d2): hinged at the jambs halfway through the wall (the outer wall is
- * CELL thick; at its inside face the door sat deep in a recess, playtest of 2026-10-08), half a leaf's thickness in
- * from the jamb, so the leaf never swings through the
+ * A street door's pair of glass leaves (13.10d2): hinged at the jambs at the wall's outer face (the outer wall is
+ * CELL thick; set back in it, the door sat in a recess with no sides, playtests of 2026-10-08), half a leaf's
+ * thickness in from the jamb and from the face, so the leaf never swings through the
  * wall; shut they meet in the middle, open they turn into the building (against the outward normal). The residents'
  * own door (`entry`, 13.19) is one wooden leaf the whole width, hinged at the a0 jamb. The one source of their
  * geometry: the renderer's walk from inside and from the street both read these.
@@ -58,7 +58,7 @@ export interface DoorRef { key: number; x: number; y: number; k: number; f: numb
 export function doorLeaves(B: Building, D: Door, entry = false): Leaf[] {
   const [x0, y0, nx, ny] = facePoint(B, D.face, D.a0), [x1, y1] = facePoint(B, D.face, D.a1);
   const half = Math.hypot(x1 - x0, y1 - y0) / 2, ux = (x1 - x0) / (2 * half), uy = (y1 - y0) / (2 * half);
-  const inK = CELL / 2, ix = -nx * inK, iy = -ny * inK, j = LEAF_TH / 2, w = half - j;
+  const inK = LEAF_TH / 2, ix = -nx * inK, iy = -ny * inK, j = LEAF_TH / 2, w = half - j;
   if (entry) return [{ hx: x0 + ix + ux * j, hy: y0 + iy + uy * j, ax: ux, ay: uy, nx: -nx, ny: -ny, w: 2 * w, cx: x0 + ix + ux * half, cy: y0 + iy + uy * half, ra: -1, rb: -1, kind: DOOR_ENTRY }];
   return [
     { hx: x0 + ix + ux * j, hy: y0 + iy + uy * j, ax: ux, ay: uy, nx: -nx, ny: -ny, w, cx: x0 + ix + ux * half / 2, cy: y0 + iy + uy * half / 2, ra: -1, rb: -1, kind: DOOR_GLASS },

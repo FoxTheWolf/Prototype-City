@@ -176,6 +176,9 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
               else if (knx * gOX + kny * gOY > kc) { continue; }
             }
           }
+          // (the eye right on a face, as it is in a doorway on the threshold: the face just ahead, so the door shows the
+          // room behind it, not the street beyond the building for a frame; playtest of 2026-10-08)
+          if (tN > -0.02 && tN <= 0.01 && tF > 0.02) { tN = 0.011; }
           if (tN <= 0.01 || tN >= tF || tN >= best) { continue; }
           let zN = gOZ - m * tN + A * tN * tN;
           if (zN >= 0.0 && zN <= h) { best = tN; bk = k; bside = side; roof = false; }

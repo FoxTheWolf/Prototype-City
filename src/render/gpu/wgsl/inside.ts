@@ -482,7 +482,8 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         } else if (zz < DOOR_H) {
           // the jambs and the head: the leaves (drawn above, as they swing) carry the stiles and the push bars
           let frame = du < 0.04 || du > 0.96 || zz > DOOR_H - 0.06;
-          if (frame) { res.cl = roomCell(BAR, vec3f(95.0, 98.0, 105.0) * Lt, t); }
+          // (the residents' door's frame is of its wood: in steel grey, the strip over the leaf read as a gap)
+          if (frame) { res.cl = roomCell(BAR, select(vec3f(95.0, 98.0, 105.0), vec3f(75.0, 45.0, 27.0), entryD) * Lt, t); }
           // (an open doorway with no leaf in the way has no glass: gdoor)
           else if (inside || gThru) { res.state = 2u; res.gdoor = !leafGlass; }
           else { res.cl = roomCell(EQ, farGlass, t); gBack = t; }
