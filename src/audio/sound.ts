@@ -674,6 +674,18 @@ export class Sound {
     else if (kind === 'pad') { noise(0.025, 1600, 2, 0.4); noise(0.04, 420, 2, 0.2, 0.01); }
     else { noise(0.015, 5000, 4, 0.4); tone(60, 50, 0.08, 0.03, 'sine'); }
   }
+  /** A wall light switch (13.22): the rocker's sharp snap in its plastic plate, and the knock of it in the wall. */
+  lightSwitch() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    const snap = ctx.createBufferSource(), g = gain(ctx, 0, this.master);
+    snap.buffer = this.noise; snap.connect(filter(ctx, 'bandpass', 2600, 1.8)).connect(g);
+    g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.018);
+    snap.start(t, Math.random()); snap.stop(t + 0.03);
+    const o = ctx.createOscillator(), h = gain(ctx, 0, this.master);
+    o.type = 'sine'; o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.04); o.connect(h);
+    h.gain.setValueAtTime(0.12, t); h.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    o.start(t); o.stop(t + 0.07);
+  }
   /** The power button's click. */
   powerClick() {
     const ctx = this.ctx, t = ctx.currentTime, s = ctx.createBufferSource(), g = gain(ctx, 0, this.master);

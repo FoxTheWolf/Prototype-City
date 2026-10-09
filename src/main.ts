@@ -23,7 +23,8 @@ import { drawTag, TAG_NEAR, TAG_WAIT } from './tag';
 import { fit, swapSim } from './sim/gear';
 import { plugIn } from './laptop/look3d';
 import { aimedGood, takeGood } from './shop';
-import { outletAhead, outletPower } from './sim/outlets';
+import { fixtureAhead, outletAhead, outletPower } from './sim/outlets';
+import { switchOn, turnSwitch } from './sim/lights';
 import { seatAhead, sitDown, standUp } from './sim/seats';
 import { hungerStage } from './sim/needs';
 import { SPARE_WH } from './sim/gear';
@@ -773,6 +774,9 @@ addEventListener('keydown', (e) => {
       if (r === 'ok') sound?.phoneKey(false);
       return;
     }
+    // a light switch in front: the room's light the other way (13.22)
+    const sw = !phone.out ? fixtureAhead(world, camera.yaw, 'switch') : null;
+    if (sw) { turnSwitch(world, sw); sound?.lightSwitch(); return; }
     // a wall outlet in front: plug the phone in, or out (13.9c)
     const o = !phone.out ? outletAhead(world, camera.yaw) : null;
     if (o) {
@@ -1373,12 +1377,14 @@ function frame(now: number) {
   const aim = running && !phone.out && !counter.active && !bagView.open && !laptop.open ? aimedGood(world, camera.yaw, camera.pitch, eyeNow()) : null;
   if (world.bag.stolenAt !== theftSeen) { theftSeen = world.bag.stolenAt; shelfNote = en.bag.stole.replace('{n}', String(world.bag.stolen)); shelfNoteAt = now / 1000; }
   const plugAt = !aim && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? outletAhead(world, camera.yaw) : null;
+  const swAt = !aim && !plugAt && running && !phone.out && !counter.active && !bagView.open && !laptop.open ? fixtureAhead(world, camera.yaw, 'switch') : null;
   // its tag, close up (14.5): after the sight rests on it a moment, within reach; before that only what F does
   const tagKey = aim ? `${aim.f.x},${aim.f.y},${aim.good}` : '';
   if (tagKey !== tagWas) { tagWas = tagKey; tagSince = now / 1000; }
   const tagOn = !!aim && aim.d <= TAG_NEAR && now / 1000 - tagSince >= TAG_WAIT && !talkView.open;
   const shelfMsg = now / 1000 - shelfNoteAt < 2.5 ? shelfNote : aim ? (tagOn ? '' : en.tag.takeName.replace('{x}', (en.goods as Record<string, string>)[aim.good] ?? aim.good))
     : plugAt ? (phone.plug?.f === plugAt ? en.bag.unplug : en.bag.plug)
+    : swAt ? (switchOn(world, swAt) ? en.lights.off : en.lights.on)
     // a seat in front, or getting up from one (13.10f), when nothing else here takes F
     : !running || phone.out || counter.active || bagView.open || laptop.open || payphone.active || doorAhead(world, camera.yaw) || liftAhead(world, camera.yaw) || counter.near() ? ''
     : world.player.sit ? (sitK >= 1 ? en.seat.stand : '') : seatAhead(world, camera.yaw) ? en.seat.sit : '';

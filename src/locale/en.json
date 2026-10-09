@@ -3,6 +3,7 @@
   "talk": { "clerk": "Clerk", "someone": "Stranger", "passerby": "Passerby", "keysStreet": "[ENTER] SAY   [TAB] ASK THE WAY   [ESC] WALK OFF", "keysPhone": "[ENTER] SAY   [ESC] HANG UP", "caller": "On the phone", "suggestShop": "Try: a price - what they sell - who works here - their name - pay", "suggestStreet": "Try: the way to a place - their name - their job - the weather - their phone number", "suggestPhone": "Try: who you are - their name - their job - their number", "hint": "Type what you want to say.", "unrecognized": "Unrecognized", "banter": "Banter", "tone": "Tone:", "keys": "[ENTER] SAY   [TAB] TILL   [ESC] WALK OFF", "over": "[ESC] WALK OFF" },
   "tag": { "each": "EACH", "take": "[F] TAKE", "takeName": "[F] TAKE {x}" },
   "seat": { "sit": "[F] SIT DOWN", "stand": "[F] STAND UP" },
+  "lights": { "on": "[F] LIGHT ON", "off": "[F] LIGHT OFF" },
   "doors": { "open": "[F] OPEN", "close": "[F] CLOSE", "locked": "LOCKED", "call": "[F] CALL THE LIFT", "coming": "THE LIFT IS COMING" },
   "counter": {
     "hello": "What can I get you?", "nothing": "Just looking? Take what you need off the shelves.", "ok": "Paid. Thank you!", "funds": "Card declined: not enough in the account.", "noCash": "You don't have enough cash on you.",

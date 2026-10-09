@@ -28,10 +28,14 @@ export function outletNear(w: World, x: number, y: number, r = CABLE): Furn | nu
 }
 
 /** The outlet the player faces, within a hand's reach, or null. */
-export function outletAhead(w: World, yaw: number): Furn | null {
+export const outletAhead = (w: World, yaw: number) => fixtureAhead(w, yaw, 'outlet');
+/** The wall fixture of this kind the player faces (an outlet, a light switch), within a hand's reach, or null. */
+export function fixtureAhead(w: World, yaw: number, kind: Furn['kind']): Furn | null {
   const p = w.player, c = Math.cos(yaw), s = Math.sin(yaw);
   let best: Furn | null = null, bd = HAND;
-  for (const f of outletsHere(w)) {
+  if (p.inside < 0) return null;
+  for (const f of planOf(w.city, p.inside, p.floor)?.furn ?? []) {
+    if (f.kind !== kind) continue;
     const dx = f.x - p.x, dy = f.y - p.y, d = Math.hypot(dx, dy);
     if (d < bd && (dx * c + dy * s) / Math.max(d, 1e-6) > 0.6) { bd = d; best = f; }
   }

@@ -63,7 +63,7 @@ export interface Plan {
 
 /** Furniture: what it is, where it stands, the way it faces (c, s) and its half sizes along and across that. */
 export type FurnKind = 'bed' | 'nightstand' | 'sofa' | 'coffee' | 'tv' | 'counter' | 'fridge' | 'tub' | 'toilet' | 'desk' | 'chair' | 'shelf' | 'till' | 'plant' | 'reception' | 'table'
-  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet' | 'stair';
+  | 'bar' | 'stool' | 'bottles' | 'cooler' | 'case' | 'oven' | 'washer' | 'dryer' | 'outlet' | 'stair' | 'switch';
 export interface Furn {
   kind: FurnKind;
   x: number;
@@ -537,13 +537,13 @@ export function planOf(city: City, k: number, f: number): Plan | null {
     // per floor: the homes on each are furnished by who lives there (13.20)
     const sk = stackKey(j, f);
     let P = planCache.get(sk);
-    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1, f); P.exitTo = exitWay(city, k, P, f === 0); planCache.set(sk, P); }
+    if (P === undefined) { P = planFromFloor(city, k, St, f === 0 ? 0 : 1, f); P.exitTo = exitWay(city, k, P, f === 0); addSwitches(P); planCache.set(sk, P); }
     return P;
   }
   let P = planCache.get(key);
   if (P === undefined) {
     P = makePlan(city, k, j, f === 0);
-    if (P) P.exitTo = exitWay(city, k, P, f === 0);
+    if (P) { P.exitTo = exitWay(city, k, P, f === 0); addSwitches(P); }
     planCache.set(key, P);
     if (planCache.size > PLAN_KEEP) { let n = 500; for (const old of planCache.keys()) { planCache.delete(old); if (--n === 0) break; } }
   }
@@ -1633,6 +1633,73 @@ export function leavesOf(P: Plan): Leaf[] {
   }
   leafCache.set(P, L);
   return L;
+}
+
+/** Rooms lit all the time (the fire code: the ways out), without a switch. */
+const ALWAYS_LIT = new Set<RoomKind>(['hall', 'lobby', 'stair', 'lift']);
+/** A switch's plate: how high its middle is, m. */
+export const SWITCH_Z = 1.2;
+/**
+ * (13.22, the manual's R10) The light switches: one in each room but the ways out, inside it on the wall by the free edge
+ * of the leaf that swings into it (the handle's side), or by the hinge when there is no wall there. Furniture of kind
+ * 'switch' facing into the room, its seed the room's index (sim/lights.ts toggles it). A room with no leaf (an open
+ * doorway) has none yet.
+ */
+function addSwitches(P: Plan) {
+  const done = new Set<number>();
+  for (const L of leavesOf(P)) {
+    if (L.ra < 0 || L.rb < 0) continue;
+    const r = L.nx + L.ny > 0 ? L.rb : L.ra, R = P.rooms[r];
+    if (!R || done.has(r) || ALWAYS_LIT.has(R.kind)) continue;
+    for (const u of [L.w + 0.15, -0.15]) {
+      const bx = L.hx + L.ax * u, by = L.hy + L.ay * u;
+      if (!(cellAt(P, bx, by) & WALL) && !(cellAt(P, bx - L.nx * 0.1, by - L.ny * 0.1) & WALL)) continue;
+      // from the leaf's line into the room, to the wall's face
+      let t = -1;
+      for (let s = 0.02; s < 0.6; s += 0.05) {
+        const c = cellAt(P, bx + L.nx * s, by + L.ny * s);
+        if (c & DOOR) break;
+        if (!(c & WALL) && (c & ROOM) === r + 1) { t = s; break; }
+      }
+      if (t < 0) continue;
+      const px = bx + L.nx * t, py = by + L.ny * t;
+      // the face is the edge of the room's first cell
+      const face = (v: number, n: number) => (n > 0 ? Math.floor(v / CELL) : Math.floor(v / CELL) + 1) * CELL + n * 0.015;
+      const x = L.nx ? face(px, L.nx) : px, y = L.ny ? face(py, L.ny) : py;
+      P.furn.push({ kind: 'switch', x, y, c: L.nx, s: L.ny, hx: 0.015, hy: 0.045, seed: r });
+      done.add(r);
+      break;
+    }
+  }
+  // a room with no leaf of its own (an open doorway, a wide one, a shop off the street): on the wall beside its first doorway
+  const { cells, nx, ny } = P, at = (i: number, j: number) => (i < 0 || j < 0 || i >= nx || j >= ny ? 0 : cells[j * nx + i]);
+  const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  P.rooms.forEach((R, r) => {
+    if (done.has(r) || ALWAYS_LIT.has(R.kind)) return;
+    for (let j = 0; j < ny && !done.has(r); j++) for (let i = 0; i < nx && !done.has(r); i++) {
+      const c = cells[j * nx + i];
+      if ((c & ROOM) !== r + 1 || !(c & DOOR)) continue;
+      for (const [dx, dy] of D4) {
+        if ((at(i + dx, j + dy) & ROOM) === r + 1) continue; // (dx, dy) leads out of the room: the wall runs across it
+        for (const sg of [1, -1]) {
+          const ax = dy * sg, ay = -dx * sg;
+          for (let k = 1; k < 9; k++) {
+            const wi = i + ax * k, wj = j + ay * k, w = at(wi, wj);
+            if ((w & ROOM) === r + 1 && (w & DOOR)) continue;
+            const fl = at(wi - dx, wj - dy);
+            if ((w & ROOM) === r + 1 && (w & WALL) && (fl & ROOM) === r + 1 && !(fl & (WALL | DOOR))) {
+              const x = (P.gx + wi + 0.5) * CELL - dx * (CELL / 2 + 0.015), y = (P.gy + wj + 0.5) * CELL - dy * (CELL / 2 + 0.015);
+              P.furn.push({ kind: 'switch', x, y, c: -dx, s: -dy, hx: 0.015, hy: 0.045, seed: r });
+              done.add(r);
+            }
+            break;
+          }
+          if (done.has(r)) break;
+        }
+        if (done.has(r)) break;
+      }
+    }
+  });
 }
 
 /** The cell value at a point (room + 1 with the DOOR and WALL bits), 0 outside the plan. */

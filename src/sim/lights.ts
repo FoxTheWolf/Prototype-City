@@ -12,6 +12,8 @@
 import { calendar } from './clock';
 import { Doing, homeUnit, whereIs, type Population } from './citizens';
 import { type City } from './city';
+import { cellAt, planOf, ROOM, type Furn } from './interior';
+import { type World } from './world';
 import { isOpen } from './telco';
 
 /** Bits of a home in a floor's word, two per home (16 homes a floor): someone up and about; someone going to bed. */
@@ -97,4 +99,21 @@ export function lightShares(P: Population, city: City, t: number): { home: numbe
   let on = 0;
   for (const k of lots) if (officeOn(P, k, t)) on++;
   return { home: up / Math.max(1, n), work: lots.length ? on / lots.length : 0.5 };
+}
+
+/**
+ * Whether the room of switch f (on the player's floor) is lit now, as far as its switch knows: as the player last set
+ * it, else lit when it is the room they stand in (the shader lights the viewer's room as if they had found the switch).
+ */
+export function switchOn(w: World, f: Furn): boolean {
+  const p = w.player, v = w.lights.get(switchKey(p.inside, p.floor, f.seed));
+  if (v !== undefined) return v;
+  const P = planOf(w.city, p.inside, p.floor);
+  return !!P && (cellAt(P, p.x, p.y) & ROOM) - 1 === f.seed;
+}
+/** The player turns switch f: its room's light the other way, written to the GPU at once (gpu/world.ts putLights). */
+export function turnSwitch(w: World, f: Furn) {
+  const p = w.player;
+  w.lights.set(switchKey(p.inside, p.floor, f.seed), !switchOn(w, f));
+  w.lightsDirty = p.inside;
 }
