@@ -527,19 +527,22 @@ export class GpuWorld {
     const den = cp - Math.abs(sp) * Math.tan(VFOV / 2);
     // (by day wider: what stands just off the screen casts its shadow into it)
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
-    const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
+    const list: { o: Obj; far: number; zoff: number; indoor?: boolean; roof?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // (13.23) the roofs near, but the one the viewer is on: each stair house as a block, its tank and the rest, in the open air
     for (const [k, R] of this.roofs) {
       const top = floorsOf(this.city.buildings[k]);
       if (I && I.k === k && I.floor === top) continue;
       for (const S of R.rooms) if (S.kind === 'stair') {
         const hx = (S.x1 - S.x0) / 2 + 0.125, hy = (S.y1 - S.y0) / 2 + 0.125;
-        list.push({ o: { x: (S.x0 + S.x1) / 2, y: (S.y0 + S.y1) / 2, c: 1, s: 0, parts: stairHouseModel(hx, hy), r: Math.hypot(hx, hy) + 0.4, h: 3.7, seed: k }, far: ROOF_FAR, zoff: top * FLOOR_H });
+        list.push({ o: { x: (S.x0 + S.x1) / 2, y: (S.y0 + S.y1) / 2, c: 1, s: 0, parts: stairHouseModel(hx, hy), r: Math.hypot(hx, hy) + 0.4, h: 3.7, seed: k }, far: ROOF_FAR, zoff: top * FLOOR_H, roof: true });
       }
-      for (const f of R.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: ROOF_FAR, zoff: top * FLOOR_H });
+      for (const f of R.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: ROOF_FAR, zoff: top * FLOOR_H, roof: true });
     }
     // indoors, the floor's furniture, lit by its rooms' lamps
-    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
+    // (on the roof, C3: in the open air, lit by the sun on their own faces as the neighbours' roofs are; the flight
+    // stays lit as indoors, under its stair house)
+    const onRoof = !!I && I.floor === floorsOf(this.city.buildings[I.k]) && this.roofs.some(([k]) => k === I.k);
+    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: !onRoof || f.kind === 'stair', roof: onRoof && f.kind !== 'stair' });
     // and the flights of the storeys below and above, seen through the stairwell (the one below rises into this one)
     if (I && !I.closed) for (const d of [-1, 1]) {
       // (the top floor's leads to the roof where the lot has one, 13.23)
@@ -613,11 +616,11 @@ export class GpuWorld {
     const fill = cnt.fill(0);
     for (let j = 0; j < n; j++) {
       for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) W[lst + W[tab + t] + fill[t]++] = j;
-      const { o, far, zoff, indoor } = list[picked[j]], w = ob + j * OW, lean = o.lift !== undefined;
+      const { o, far, zoff, indoor, roof } = list[picked[j]], w = ob + j * OW, lean = o.lift !== undefined;
       F[w] = o.x; F[w + 1] = o.y; F[w + 2] = o.c; F[w + 3] = o.s; F[w + 4] = o.r; F[w + 5] = o.h; F[w + 6] = o.z0 ?? 0;
       W[w + 7] = o.seed | 0; F[w + 8] = far; F[w + 9] = zoff;
       F[w + 10] = lean ? o.pitch ?? 0 : 0; F[w + 11] = lean ? o.roll ?? 0 : 0; F[w + 12] = lean ? o.lift ?? 0 : 0; F[w + 13] = o.wheel ?? 0;
-      W[w + 14] = lean ? 1 : indoor ? 2 : 0; W[w + 15] = mods[j];
+      W[w + 14] = lean ? 1 : indoor ? 2 : roof ? 3 : 0; W[w + 15] = mods[j];
       W[w + 16] = box[j * 4]; W[w + 17] = box[j * 4 + 1]; W[w + 18] = box[j * 4 + 2]; W[w + 19] = box[j * 4 + 3];
     }
     // then the floor the viewer stands in (see the shader's IN_ words): its plan, lot, box, storey, floor height, doors
