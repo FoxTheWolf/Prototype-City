@@ -531,3 +531,11 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **A porta da rua dos moradores** é **uma folha de madeira de 1 m** com um vidro em cima (como a de um walk-up de 2008), não mais a dupla de vidro; as lojas, os escritórios e o motel continuam com a dupla de vidro.
 - **Sobre ela, uma bandeira de vidro** acesa pelo saguão, com o número em vinil branco (manual de sinalização, seção 5), e o interfone ao lado; é o que a distingue da porta da loja e encurta a parede alta sobre a porta.
 - **As portas de dentro ficam com 1 m** (a medida real: folha de 80–90 cm mais o batente); o aperto vinha da porta da rua e do hall estreito.
+
+## Reunião do fim da janela (2026-10-09)
+- **O olho:** a exposição é uma função só, automática, gradual e pela luz do ambiente (já é: o medidor na GPU); nunca um valor posto à mão ao entrar num lugar. Override só em momentos muito específicos (o apagão). O salto ao entrar é o fechamento rápido demais (0,45 s) → ~1,2 s na 13.22.
+- **O mesmo lugar de fora e de dentro:** o vidro do cômodo num sistema só, na 13.22, junto da luz por cômodo.
+- **C2 fechado:** o que o usuário não reclamou depois do `teste-portas-C2.bat` está concluído; se voltar, ele mostra. O que ficou aberto foi para o C3 (agora de interiores, o fim da 13), e o diálogo virou o C3b.
+- **Triagem:** quebra → na hora; ajuste rápido e relevante (ou que mexe pouco código) → na hora; ajuste com mais trabalho → próximo bloco. Não sair fazendo tudo o que o usuário relata.
+- **Design antes do visual, sempre:** os brownstones (o stoop, o térreo meio andar acima) vão primeiro para o manual de fachadas (23.1), com pesquisa de referências na hora (as refs 94–97 estão em `referencias/`). Vale para tudo o que for visual daqui em diante: os móveis em cubinhos, a identidade visual, as fachadas: uma concept art no manual antes do jogo.
+- **A 23 é enorme** (refinamento de quase tudo e o rework das fachadas): ao chegar perto, revisar e dividir; por ora fica como está.
