@@ -2,6 +2,15 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite) — C3 parte 2, C3a e 13.24 (Opus 5.5)
+
+- **Errei sobre as batidas:** apostei numa regressão; era uma calibragem minha de 01/10 (a placa de PARE com a taxa do semáforo apagado) que só piorou quando a cidade ganhou 60% mais carros. Medir na versão antiga foi o que separou as duas coisas, em 2 minutos. Vale como hábito: "não era assim antes" → medir as duas versões antes de mexer.
+- **O horizonte creme também não era o que eu achava:** eu ia mexer na névoa, e os pixels mostraram que a névoa estava certa e o chão perto é que brilhava. Dois diagnósticos seguidos em que medir antes economizou um conserto errado.
+- **As escadas de incêndio agora são caminho de verdade,** mas contesto o rótulo "caminho do stealth e da fuga" no cronograma: isso é pós-1.0. Na 1.0 elas valem como acesso ao telhado e às casas (onde estão os roteadores e os PCs dos moradores, matéria da 18). Proponho que a 18 use isso: um trabalho cujo alvo é um roteador num apartamento de cima, alcançado pela escada de incêndio.
+- **Os telhados entraram na biblioteca das casas,** e isso abre uma porta barata: o "jardim" e o "esquecido" contam quem mora no prédio. Quando a etapa 17 der rotina aos moradores, o do jardim pode subir de tarde, e uma antena caseira no telhado (um morador radioamador) vira uma pista da 18J.
+- **Uma crítica ao processo de hoje:** gastei ~20 min tentando dirigir a câmera no painel antes de descobrir o `targetYaw`. A regra "visual simples vai para o `.bat` do usuário" está certa, e eu devia ter seguido mais cedo; anotei a lição.
+- **Dúvida:** a coluna infinita (9) não se reproduziu. Se aparecer no teste, um F8 com ela na tela resolve; se não aparecer, pode ter sido a caixa d'água velha (já tirada no C3) vista por baixo.
+
 ## 2026-10-09 (tarde, fim da janela)
 
 - A lâmpada da casinha nunca tinha existido: o bug era de busca, não de força. Lição para mim: "não aparece" se confere primeiro pela existência, depois pela calibração.
