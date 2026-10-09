@@ -130,6 +130,8 @@ export class GpuWorld {
   /** Where the ticker starts in cty (see signData), and the text last written into it. */
   private tickOff = 0;
   private ticker = '';
+  /** Whether the viewer stands on a roof (inside the lot, but under the sky): the rain falls there, and the sound is the street's. */
+  onRoof = false;
   /**
    * What is near and changes as the viewer moves (binding 5; it began as the last binding the adapters allowed, so later lists
    * go in here too, after their own header word): at FX_TAB, one word per building, where its facade
@@ -312,7 +314,9 @@ export class GpuWorld {
     const { cols, rows } = this, C = this.city, q = this.dev.queue;
     const F = gpuPrepare(world, v), sky = F.sky, P = world.power, I = gpuInside(world, v, cols, rows, sky);
     // (the building keeps the rain off its storeys and its stair house, not off the roof the viewer stands on, 13.23)
-    const hereR = I ? (cellAt(I.plan, v.x, v.y) & ROOM) - 1 : -1, sk = I && !(hereR >= 0 && I.plan.rooms[hereR]?.kind === 'roof') ? I.base : undefined;
+    const hereR = I ? (cellAt(I.plan, v.x, v.y) & ROOM) - 1 : -1;
+    this.onRoof = !!I && hereR >= 0 && I.plan.rooms[hereR]?.kind === 'roof';
+    const sk = I && !this.onRoof ? I.base : undefined;
     if (F.ticker !== this.ticker) {
       this.ticker = F.ticker;
       const T = new Uint32Array(Math.min(TICK_MAX, F.ticker.length));

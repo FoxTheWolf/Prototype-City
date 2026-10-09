@@ -4,9 +4,11 @@ import { LITTER } from '../../raycaster';
 export const groundWGSL = (): string => /* wgsl */ `// ---- the ground (renderWorld's ground loop)
 // past the city's edge: bare dusty ground
 fn outsideGround(wx: f32, wy: f32, rd: f32) -> Cell {
-  let fog = 1.0 - min(1.0, rd / 2500.0) * 0.85; let day = u.day;
+  // (the darkening with distance is the night's; by day finish's haze takes it to the horizon's color. By day a dry
+  //  field's brown, near the asphalt's: at 110 the sunlit plain lay brighter than the sky, a cream band under it, C3)
+  let day = u.day; let fog = 1.0 - min(1.0, rd / 2500.0) * 0.85 * (1.0 - day);
   let hv = hash3(ifloor(wx / 6.0), ifloor(wy / 6.0), 5); let tex = (0.9 + 0.15 * hv) * fog * (0.45 + 0.55 * day);
-  return Cell(32u, mix(vec3f(55.0, 55.0, 60.0), vec3f(110.0, 106.0, 96.0), day) * tex, vec3f(7.0, 8.0, 12.0), rd, KIND_BLOCK, u.sunZ);
+  return Cell(32u, mix(vec3f(55.0, 55.0, 60.0), vec3f(74.0, 70.0, 62.0), day) * tex, vec3f(7.0, 8.0, 12.0), rd, KIND_BLOCK, u.sunZ);
 }
 fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let wx = gOX + rdx * rd; let wy = gOY + rdy * rd;

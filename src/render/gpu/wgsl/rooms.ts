@@ -169,9 +169,13 @@ fn furnHit(o: u32, f: i32, rdx: f32, rdy: f32, kz: f32, t0: f32, t1: f32) -> FHi
       let shape = fx[p]; let q0 = fx3(p + 1u); let q1 = fx3(p + 4u);
       let cen = (q0 + q1) * 0.5; let hs = max((q1 - q0) * 0.5, vec3f(mh, mh, mz));
       var t = 1e9; var fc = 0; var nn = vec3f(0.0);
-      // (a model in little cubes, the stair, is the viewer's objects' only: seen from outside its storey it is left out)
-      if (shape == 3u) { continue; }
-      if (shape == 0u) {
+      // (a model in little cubes, the stair: the same march as the viewer's objects, in the part's own color; C3: it
+      //  was left out, and a stair was there only once inside its storey)
+      if (shape == 3u) {
+        let vm = voxMarch(o3, d3, q0, q1, fx[p + 14u], t0, h.t);
+        if (vm.y == 0.0 || vm.x <= t0) { continue; }
+        t = vm.x; let ax = i32(vm.z); fc = select(select(1, 2, ax == 2), 0, ax == 0); nn = vec3f(0.0); nn[ax] = -sign(d3[ax]);
+      } else if (shape == 0u) {
         let ta = (cen - hs - o3) / d3; let tb = (cen + hs - o3) / d3;
         let lo = min(ta, tb); let hi = max(ta, tb);
         let tn = max(lo.x, max(lo.y, lo.z)); let tf = min(hi.x, min(hi.y, hi.z));

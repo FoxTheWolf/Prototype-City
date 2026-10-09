@@ -1584,7 +1584,9 @@ function frame(now: number) {
   // footsteps: one every stride, longer when running
   stride += Math.hypot(p.x - lastX, p.y - lastY);
   lastX = p.x; lastY = p.y;
-  if (stride > (p.speed > 4 ? 2.6 : 1.6)) { stride = 0; sound?.step(p.inside >= 0, world.weather.wet, p.z % FLOOR_H > 0.05); }
+  // (on a roof the player is in the lot but under the sky: it sounds as the street, as the rain falls there)
+  const indoors = p.inside >= 0 && !gpu?.onRoof;
+  if (stride > (p.speed > 4 ? 2.6 : 1.6)) { stride = 0; sound?.step(indoors, world.weather.wet, p.z % FLOOR_H > 0.05); }
   const W = world.weather;
   // indoors: office tubes buzz while the building has power
   let tubes = 0;
@@ -1593,7 +1595,7 @@ function frame(now: number) {
     tubes = power(P, P.building[p.inside], (B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, p.inside, P.generator[p.inside], (world.tick + alpha) / 60)[0];
   }
   sound?.traffic(world.cars, world.events, p.x, p.y, camera.yaw, world.weather.wet, world.tick, world.peds);
-  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power, p.inside >= 0, tubes);
+  sound?.update(world.city, p.x, p.y, camera.yaw, (world.tick + alpha) / 60, daylight(world.time), W, lightning(world.seed, world.time, W.snow ? 0 : W.precip, bolt)[1], world.power, indoors, tubes);
   // the opening, over everything the first seconds
   if (introAt >= 0 && now / 1000 - introAt < INTRO_S) {
     const c = calendar(world.time), hh = String(Math.floor(c.hour)).padStart(2, '0'), mm = String(Math.floor((c.hour % 1) * 60)).padStart(2, '0');

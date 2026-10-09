@@ -148,7 +148,8 @@ fn light(cl: Cell) -> Cell {
     gGlow = max(gGlow, clamp(dot(srgb(Le * ev), vec3f(0.3, 0.5, 0.2)) / 255.0 + spG, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged));
     // the haze: by day with distance, at its most far away
     let f = day * (0.1 + 0.42 * (1.0 - exp(-o.depth / 2500.0)));
-    let fd = (1.0 - exp(-o.depth / 1800.0)) * 0.6;
+    // (the bare ground past the city's edge goes all the way to the horizon's haze: it lay cream under the sky)
+    let fd = select((1.0 - exp(-o.depth / 1800.0)) * 0.6, 1.0 - exp(-o.depth / 500.0), o.kind == KIND_BLOCK);
     o.c = mix(o.c, haze * rS, (1.0 - g) * f + g * fd);
   } else {
     // ---- kept as drawn: the moon on it, brighter by day (rooms keep their own lamps' light), the blackout,

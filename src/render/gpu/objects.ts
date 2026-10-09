@@ -24,6 +24,43 @@ export function objectsWGSL(): string {
   return /* wgsl */ `
 const OW = ${OW}u; const PW = ${PW}u; const TILE = ${TILE}u; const PIVOT = 0.7;
 const M_SOLID = 0u; const M_LEAF = 1u; const M_GLOW = 2u; const M_TEXT = 3u; const M_BOARD = 4u; const M_WHEEL = 5u; const M_GLASS = 6u; const M_SCREEN = 7u; const M_SKIN = 8u;
+/**
+ * Little cubes (Shape.Vox): the ray (o, d, in the model's frame) into the part's box q0..q1 (its true size) from tmin,
+ * then cell by cell to the first one filled before tmax. Returns (t, the cube's palette entry + 1 or 0: none, the axis
+ * of the wall crossed last). One march for the viewer's objects and the rooms seen from outside (C3: the stair).
+ */
+fn voxMarch(o: vec3f, d: vec3f, q0: vec3f, q1: vec3f, V: u32, tmin: f32, tmax: f32) -> vec3f {
+  var tin = tmin; var tout = tmax; var ax = 0; var miss = false;
+  for (var a = 0; a < 3; a++) {
+    if (abs(d[a]) < 1e-9) { if (o[a] < q0[a] || o[a] > q1[a]) { miss = true; } }
+    else {
+      var t0 = (q0[a] - o[a]) / d[a]; var t1 = (q1[a] - o[a]) / d[a];
+      if (t0 > t1) { let t = t0; t0 = t1; t1 = t; }
+      if (t0 > tin) { tin = t0; ax = a; }
+      tout = min(tout, t1);
+    }
+  }
+  if (miss || tin >= tout) { return vec3f(0.0); }
+  let nv = vec3i(i32(fx[V]), i32(fx[V + 1u]), i32(fx[V + 2u])); let C0 = V + 4u + fx[V + 3u] * 3u;
+  let cs = (q1 - q0) / vec3f(nv); let g = d / cs;
+  let pos = (o + d * tin - q0) / cs;
+  var c = clamp(vec3i(floor(pos)), vec3i(0), nv - 1);
+  let st = select(vec3i(-1), vec3i(1), g > vec3f(0.0));
+  let inv = select(vec3f(1e9), abs(1.0 / g), abs(g) > vec3f(1e-9));
+  var tn = select(vec3f(1e9), tin + (vec3f(c + select(vec3i(0), vec3i(1), g > vec3f(0.0))) - pos) / g, abs(g) > vec3f(1e-9));
+  var t = tin;
+  for (var n = 0; n < nv.x + nv.y + nv.z; n++) {
+    let idx = u32((c.z * nv.y + c.y) * nv.x + c.x);
+    let v = (fx[C0 + (idx >> 2u)] >> ((idx & 3u) * 8u)) & 255u;
+    if (v != 0u) { return vec3f(t, f32(v), f32(ax)); }
+    // the next cell: across the nearest of the three walls
+    if (tn.x <= tn.y && tn.x <= tn.z) { t = tn.x; tn.x += inv.x; c.x += st.x; ax = 0; }
+    else if (tn.y <= tn.z) { t = tn.y; tn.y += inv.y; c.y += st.y; ax = 1; }
+    else { t = tn.z; tn.z += inv.z; c.z += st.z; ax = 2; }
+    if (any(c < vec3i(0)) || any(c >= nv) || t >= tout) { break; }
+  }
+  return vec3f(0.0);
+}
 // A person's body part in the blocky style (13.8): the hit's pixel on the skin's grid (1.8/32 m) on
 // the face it is on, colored by the part (0 head, 1 body, 2 arm, 3 leg) and its style bits (see pedLook).
 // c: the main color (skin tone, shirt, sleeve, trousers); c2: the second (hair, jacket, hand, shoes).
@@ -375,36 +412,8 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let body = lean && q0.z > 0.0; let glassy = fx[p + 10u] == M_GLASS;
       let o = select(vec3f(ox, oy, oz), bo, body); let d = select(vec3f(dx, dy, dz), bd, body);
       if (shape == 3u) {
-        // little cubes: the ray into the part's box (its true size), then cell by cell to the first one filled
-        var tin = 0.05; var tout = best; var ax = 0; var miss = false;
-        for (var a = 0; a < 3; a++) {
-          if (abs(d[a]) < 1e-9) { if (o[a] < q0[a] || o[a] > q1[a]) { miss = true; } }
-          else {
-            var t0 = (q0[a] - o[a]) / d[a]; var t1 = (q1[a] - o[a]) / d[a];
-            if (t0 > t1) { let t = t0; t0 = t1; t1 = t; }
-            if (t0 > tin) { tin = t0; ax = a; }
-            tout = min(tout, t1);
-          }
-        }
-        if (miss || tin >= tout) { continue; }
-        let V = fx[p + 14u]; let nv = vec3i(i32(fx[V]), i32(fx[V + 1u]), i32(fx[V + 2u])); let C0 = V + 4u + fx[V + 3u] * 3u;
-        let cs = (q1 - q0) / vec3f(nv); let g = d / cs;
-        let pos = (o + d * tin - q0) / cs;
-        var c = clamp(vec3i(floor(pos)), vec3i(0), nv - 1);
-        let st = select(vec3i(-1), vec3i(1), g > vec3f(0.0));
-        let inv = select(vec3f(1e9), abs(1.0 / g), abs(g) > vec3f(1e-9));
-        var tn = select(vec3f(1e9), tin + (vec3f(c + select(vec3i(0), vec3i(1), g > vec3f(0.0))) - pos) / g, abs(g) > vec3f(1e-9));
-        var t = tin; var hitV = 0u;
-        for (var n = 0; n < nv.x + nv.y + nv.z; n++) {
-          let idx = u32((c.z * nv.y + c.y) * nv.x + c.x);
-          let v = (fx[C0 + (idx >> 2u)] >> ((idx & 3u) * 8u)) & 255u;
-          if (v != 0u) { hitV = v; break; }
-          // the next cell: across the nearest of the three walls
-          if (tn.x <= tn.y && tn.x <= tn.z) { t = tn.x; tn.x += inv.x; c.x += st.x; ax = 0; }
-          else if (tn.y <= tn.z) { t = tn.y; tn.y += inv.y; c.y += st.y; ax = 1; }
-          else { t = tn.z; tn.z += inv.z; c.z += st.z; ax = 2; }
-          if (any(c < vec3i(0)) || any(c >= nv) || t >= tout) { break; }
-        }
+        let V = fx[p + 14u]; let vm = voxMarch(o, d, q0, q1, V, 0.05, best);
+        let hitV = u32(vm.y); let t = vm.x; let ax = i32(vm.z);
         if (hitV == 0u || t <= 0.05 || t >= best) { continue; }
         best = t; bk = i32(k); face = select(select(1, 2, ax == 2), 0, ax == 0);
         nrm = vec3f(0.0); nrm[ax] = -sign(d[ax]);

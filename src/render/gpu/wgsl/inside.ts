@@ -563,12 +563,13 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
   return res;
 }
 /**
- * The window glass (13.22): one pane, drawn the same from both sides. What is behind comes through tinted, a little less
+ * The window glass (13.22): one pane, drawn the same from both sides. What is behind comes through clear (the same glass as
+ * the watch's crystal: no blue tint, C3 2026-10-09; only the office towers' curtain walls are tinted), a little less
  * of it the more edge on it is seen (gc: the cosine to the pane's normal), and the light on the viewer's side is
  * reflected in it (near; streak: the highlight following the view). From the street by day (fromDay = u.day) what is
  * behind is the dim side, and the eye, set for the street, sees into it darker.
  */
-const GLASS_TINT = vec3f(0.8, 0.88, 0.95); const GLASS_SHEEN = vec3f(10.0, 16.0, 22.0);
+const GLASS_TINT = vec3f(0.97, 0.98, 0.97); const GLASS_SHEEN = vec3f(5.0, 5.0, 6.0);
 fn glassFres(gc: f32) -> f32 { return 0.14 + 0.6 * pow(max(1e-6, 1.0 - gc), 3.0); }
 /** How much of what is behind a pane comes through (before the tint). */
 fn glassKeep(gc: f32, fromDay: f32) -> f32 { return (1.0 - 0.55 * glassFres(gc)) * (1.0 - 0.45 * fromDay); }
