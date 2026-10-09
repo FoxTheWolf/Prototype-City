@@ -9,6 +9,8 @@
 - **A caminhada guardava só a folha mais perto:** depois de atravessar o vidro dela, as portas de trás sumiam. Agora guarda as duas mais perto (`lh2`).
 - **O "giro" no painel do navegador era do Vite:** cada edição recarrega o `main.ts` por cima, e a instância nova fica na deriva do título (`dt * 0.08`) enquanto o shader compila; ela é a que o `window.camera` mostra. Não confundir com o giro do jogo de verdade.
 - **O painel oculto começa o jogo com largura 0 e quebra o compositor:** `resize_window` com um tamanho fixo e recarregar.
+- **O olho exatamente no plano da fachada via através do prédio:** o raio da cidade pula caixas com `tN <= 0.01` e o `baseAt` diz "fora" no plano (`y < y1` estrito). Com a folha na fachada, o jogador para justo ali ao cruzar: o quadro em que o interior sumia. Agora a caixa conta como a 1 cm quando o olho está a menos de 2 cm da face.
+- **Um mesmo vidro com dois desenhos** (de fora `farGlass`, de dentro `glassOver`) faz o interior e a rua parecerem lugares diferentes: o usuário percebe na hora.
 - **As portas fecham sozinhas:** teleportar para a soleira mostra a folha fechada colada no olho; para testar uma porta aberta, abrir com F de frente e andar.
 
 ### Lições da 13.21 (as lojas na gramática das plantas) — 2026-10-08
