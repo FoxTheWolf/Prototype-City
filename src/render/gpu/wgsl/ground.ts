@@ -16,7 +16,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let bg = vec3f(7.0, 8.0, 12.0);
   if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return outsideGround(wx, wy, rd); }
   if (rd > GROUND_FAR) { return Cell(DOT, mix(vec3f(28.0, 24.0, 32.0), vec3f(70.0, 72.0, 78.0), u.day), bg, rd, KIND_GROUND, 0.0); }
-  let fog = 1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day);
+  let fog = select(1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day), 1.0, defOn());
   let gx = i32(xcU(u32(u32(wx)))); let gy = i32(ycU(u32(u32(wy))));
   let hv = hash3(ifloor(wx * 1.2), ifloor(wy * 1.2), 3);
   var ch = DOT; var c = vec3f(38.0, 38.0, 46.0); var mat = MAT_CONCRETE;
@@ -131,8 +131,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
     }
   }
   c = sat(c);
-  let gl = lightAt(wx, wy, 0.0, vec3f(0.0, 0.0, 1.0)) * (lk * fog);
-  gEm = vec3f(0.0); gEmK = 1.0; gIl = gl; gTag = rd; gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
+  let gl = select(lightAt(wx, wy, 0.0, vec3f(0.0, 0.0, 1.0)) * (lk * fog), vec3f(0.0), defOn());
+  gEm = vec3f(0.0); gEmK = 1.0; gIl = gl; gTag = rd; gPos = vec3f(wx, wy, 0.0); gMat = mat; gNrm = vec3f(0.0, 0.0, 1.0);
   // how wet the spot is: a film everywhere it rains, puddles in the low spots (more on the asphalt)
   gWet = 0.0;
   if (u.wet > 0.02 && mat != MAT_LEAF) {

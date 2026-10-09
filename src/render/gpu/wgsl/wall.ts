@@ -29,8 +29,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   if (side != 2) { f0 = bldF(u32(q + 36u + u32(face) * 2u)); f1 = bldF(u32(q + 37u + u32(face) * 2u)); }
   let dAlong = u.colW * t / max(1e-6, abs(dn));
   let fogK = 1.0 - exp(-t / FOG);
-  let shade0 = lightK * (1.0 - fogK * 0.6 * (1.0 - u.day)); var shade = shade0; // by day the haze is the finish's
-  let winLight = 1.0 - fogK * 0.45;
+  // (16.1b: with the deferred light, neither: the face's light is its normal's, the haze the sky's, both in light())
+  let shade0 = select(lightK * (1.0 - fogK * 0.6 * (1.0 - u.day)), 1.0, defOn()); var shade = shade0; // by day the haze is the finish's
+  let winLight = select(1.0 - fogK * 0.45, 1.0, defOn());
   // the building's power now, its signs' (never on the generator), and each window's
   let sub = i32(bldF(u32(q + 46u))); let gen = bldF(u32(q + 47u)) > 0.5;
   let cx = (x0 + x1) * 0.5; let cy = (y0 + y1) * 0.5;
@@ -527,11 +528,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   // (not clamped here: the finish takes the light back out to tint it by the wall's color)
   // street lamps, headlights and signs light the lower floors
-  if (t < LIT_FAR) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
+  if (t < LIT_FAR && !defOn()) { let L = lightAt(hx, hy, z, vec3f(nw, 0.0)) * (1.3 * shade); c += L; il += L; }
   // the street behind, through the room's far window (main sends the ray on)
   gBackT = select(0.0, backT, isWin && T == t && backT > t); gBackW = t; gBackK = peekK;
   if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; gEmK = emK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0; }
-  gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0;
+  gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0; gPos = vec3f(gOX + rdx * T, gOY + rdy * T, gOZ - m * T + A * T * T);
   gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));

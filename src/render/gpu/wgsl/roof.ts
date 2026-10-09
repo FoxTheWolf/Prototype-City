@@ -1,6 +1,7 @@
 export const roofWGSL = (): string => /* wgsl */ `// ---- a roof seen from above (roofRows)
 fn roofCell(q: u32, t: f32, wx: f32, wy: f32) -> Cell {
-  let fogK = 1.0 - exp(-t / FOG); let k = 1.0 - fogK * 0.6 * (1.0 - u.day);
+  let fogK = 1.0 - exp(-t / FOG); let k = select(1.0 - fogK * 0.6 * (1.0 - u.day), 1.0, defOn());
+  if (defOn()) { gEm = vec3f(0.0); gIl = vec3f(0.0); gTag = t; gPos = vec3f(wx, wy, bldF(u32(q + 4u))); gNrm = vec3f(0.0, 0.0, 1.0); gMat = MAT_NONE; gWet = 0.0; gGlowK = 1.0; gEmK = 1.0; }
   let x0 = bldF(u32(q)); let y0 = bldF(u32(q + 1u)); let x1 = bldF(u32(q + 2u)); let y1 = bldF(u32(q + 3u));
   var edge = min(min(wx - x0, x1 - wx), min(wy - y0, y1 - wy));
   if (bldF(u32(q + 6u)) > 0.5) { edge = min(edge, bldF(u32(q + 9u)) - bldF(u32(q + 7u)) * wx - bldF(u32(q + 8u)) * wy); }

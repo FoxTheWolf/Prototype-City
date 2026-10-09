@@ -120,6 +120,10 @@ var<private> gSky: f32 = 1.0;
 var<private> gEm: vec3f = vec3f(0.0);
 var<private> gIl: vec3f = vec3f(0.0);
 var<private> gTag: f32 = -1.0;
+// (16.1b) where in the world the cell at gTag is (for the one light function, light())
+var<private> gPos: vec3f = vec3f(0.0);
+// (16.1b, debug) what light() measured of the view's cell, shown by the probe view (DEBUG.lightProbe)
+var<private> gDbg: vec3f = vec3f(0.0);
 // how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)
 var<private> gGlow: f32 = 0.0;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)

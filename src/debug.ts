@@ -33,4 +33,11 @@ export const DEBUG = {
   /** (2026-10-08) Every door opens (homes, offices, shops after hours), to visit all kinds of rooms in a test.
    *  Turned on by `unlock` on a test launcher (teste-*.bat), never by default. */
   unlockDoors: false,
+  /** (16.1b) The deferred light: one light function for every surface (the lamps' light out of the cells' colors, the albedo
+   *  without the faked face shading, the haze in the sky's own color). F7 flips it in the game, to compare with the old. */
+  deferredLight: false,
+  /** (16.1b) With it, the surfaces' kinds in flat colors (Shift+F7), to tell what a cell is. */
+  lightKinds: false,
+  /** (16.1b) The light function's factors of each cell as a color (the sky by the face, the sky seen, the sun), set from the console. */
+  lightProbe: false,
 };

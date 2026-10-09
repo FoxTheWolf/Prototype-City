@@ -103,6 +103,8 @@ fn hash3(a: i32, b: i32, c: i32) -> f32 {
   return f32(h) / 4294967296.0;
 }
 fn ifloor(x: f32) -> i32 { return i32(floor(x)); }
+/** (16.1b) The deferred light on (DEBUG.deferredLight, F7): the cells give their surface (gPos, gNrm, the albedo) and light() lights it. */
+fn defOn() -> bool { return u.defer > 0.5; }
 
 `;
 }

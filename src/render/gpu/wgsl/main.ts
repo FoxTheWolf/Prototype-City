@@ -167,6 +167,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
   let paint = gMat == MAT_PAINT;
   var lit = light(cl);
+  let dbg = gDbg;
   // (only where the room is still what this cell shows: a pole, a sign or a person in front of the window hides it)
   if (thruK > 0.0 && cl.depth == thruD) {
     var tc = glassSeen(thru, vec3f(0.0), 1.0, 0.0, 0.0);
@@ -177,6 +178,13 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (rw > 0.03) { lit.c = lit.c * (1.0 - rw) + refl * rw; gGlow = max(gGlow, rGlow * rw); }
   // the lamps' cones in the air (stronger in the rain), over all of it (as bright as the eye takes them)
   if (inc.state == 0u) { lit.c += lampCones(gid.x, gid.y, rdx, rdy, m, cl.depth) * pow(u.adapt, 1.0 / 2.2); }
+  // (16.1b, debug: Shift+F7) what each cell is: ground grey, the plain past the city brown, walls blue, objects green, rooms
+  // yellow, the sky and the rest dark; brighter the nearer
+  if (u.defer > 2.5) { lit.c = dbg * 255.0; lit.bg = lit.c * 0.5; lit.ch = 35u; }
+  else if (u.defer > 1.5) {
+    let kc = array<vec3f, 6>(vec3f(30.0), vec3f(160.0), vec3f(70.0, 110.0, 230.0), vec3f(200.0, 120.0, 40.0), vec3f(60.0, 210.0, 80.0), vec3f(230.0, 210.0, 60.0));
+    lit.c = kc[min(cl.kind, 5u)] * select(1.0, 0.4 + 0.6 * exp(-cl.depth / 400.0), cl.depth < 1e8); lit.bg = lit.c * 0.5; lit.ch = 35u;
+  }
   store(i, n, fallOver(handOver(display(lit), gid.x, gid.y, handD), rdx, rdy, m, inc.nearT));
 }
 `;

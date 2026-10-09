@@ -285,7 +285,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp, soundNow: () => sound,
+  world, camera, DEBUG, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp, soundNow: () => sound,
   // the GPU world's characters (J on), read back from its output buffer, to compare with gridText
   gpuText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
     if (!gpu) return '';
@@ -691,6 +691,8 @@ addEventListener('keydown', (e) => {
     return;
   }
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
+  // debug (16.1b): F7 flips the deferred light, to compare it with the old one in place
+  if (e.code === 'F7') { e.preventDefault(); if (!e.repeat) { if (e.shiftKey) DEBUG.lightKinds = !DEBUG.lightKinds; else DEBUG.deferredLight = !DEBUG.deferredLight; } return; }
   // F8: a playtest note (the game pauses while it is written)
   if (e.code === 'F8') { e.preventDefault(); if (!e.repeat) openNote(); return; }
   // debug: F4 shows the view at noon, sunset and night side by side (to judge the colors)
@@ -1556,7 +1558,7 @@ function frame(now: number) {
     };
     head('DEBUG', `v${__VERSION__}`);
     row(`SEED ${seed}  GRID ${grid.cols}x${grid.rows}  ${STYLES[style].name} ${look.fuse ? 'SOFT' : 'SHARP'}`, AMBER);
-    row(`${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}`);
+    row(`${Math.round(fps)} FPS (WORLD ${Math.round(worldFps)})  DRAW ${renderMs.toFixed(1)} ms (MAX ${worstShown.toFixed(1)})${gpu && gpu.gpuMs >= 0 ? `  GPU ${gpu.gpuMs.toFixed(2)} ms` : ''}${gpu ? `  EYE x${gpu.adapt.toFixed(2)}` : ''}  LIGHT ${DEBUG.deferredLight ? 'NEW' : 'OLD'}`);
     head('PLAYER');
     row(`POS ${p.x.toFixed(1)},${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}  ${p.inside >= 0 ? `INSIDE FLOOR ${p.floor}` : 'OUTSIDE'}${p.liftTo >= 0 ? `  LIFT TO ${p.liftTo}` : ''}`, AMBER);
     const deg = (r: number) => Math.round((r * 180) / Math.PI), bearing = ((deg(camera.yaw) + 90) % 360 + 360) % 360;

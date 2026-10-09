@@ -359,10 +359,10 @@ fn objRefl(cl0: Cell, O: vec3f, D: vec3f) -> Cell {
   let glow = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;
   var col = fx3(bp + 7u);
   if (mat == M_SCREEN) { col = vec3f(150.0, 160.0, 190.0) * (col / 255.0); }
-  var rgb = col * select((0.72 + 0.28 * abs(wn.x)) * (1.0 - OBJ_NIGHT * (1.0 - u.day)), 1.0, glow);
+  var rgb = col * select((0.72 + 0.28 * abs(wn.x)) * (1.0 - OBJ_NIGHT * (1.0 - u.day)), 1.0, glow || defOn());
   var oIl = vec3f(0.0);
-  if (!glow) { oIl = lightAt(H.x, H.y, H.z, wn) * 1.1; rgb += oIl; }
-  gEm = select(vec3f(0.0), sat(rgb), glow); gIl = oIl; gTag = best; gWet = 0.0; gMat = MAT_NONE; gNrm = wn;
+  if (!glow && !defOn()) { oIl = lightAt(H.x, H.y, H.z, wn) * 1.1; rgb += oIl; }
+  gEm = select(vec3f(0.0), sat(rgb), glow); gIl = oIl; gTag = best; gPos = H; gWet = 0.0; gMat = MAT_NONE; gNrm = wn;
   gGlowK = 1.0; gEmK = select(1.0, SIGN_EMIT, mat == M_TEXT);
   let ch = select(fx[bp + 11u], LEAF[1], mat == M_LEAF);
   return Cell(ch, max(rgb, vec3f(0.0)), cl.bg, best, select(KIND_OBJECT, KIND_OTHER, glow), 2.0 + max(0.0, dot(wn, vec3f(u.sunX, u.sunY, u.sunZ))));
@@ -389,7 +389,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     let tYr = (x - u.px) * u.dirX + (y - u.py) * u.dirY; let tY = max(tYr, 0.3);
     // parts thinner than a cell at this distance are widened to half a cell, so poles do not flicker
     let mh = 0.5 * u.colW * tY; let mz = 0.5 * tY / u.scale;
-    let fog = 1.0 - min(1.0, tYr / far) * 0.8;
+    let fog = select(1.0 - min(1.0, tYr / far) * 0.8, 1.0, defOn());
     // the camera and this cell's ray in the object's frame (+x forward, +y right, z up)
     let ox = (u.px - x) * c + (u.py - y) * s; let oy = -(u.px - x) * s + (u.py - y) * c; let oz = u.eye - zoff;
     let dx = rdx * c + rdy * s; let dy = -rdx * s + rdy * c;
@@ -489,7 +489,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       // from the side: the hub, five spokes and the tyre with a scuff, turned by the wheel angle; from the front or back, the tread
       let wx = (hp.x - cen.x) / hs.x; let wz = (hp.z - cen.z) / hs.z;
       let rr = length(vec2f(wx, wz)); let ang = atan2(wz, wx) + fxf(ob + 13u); let sec = fract(ang / TAU);
-      kk = (0.75 + 0.25 * abs(nrm.y)) * fog;
+      kk = select(0.75 + 0.25 * abs(nrm.y), 1.0, defOn()) * fog;
       if (abs(nrm.y) < 0.55) { ch = select(DASH, EQ, (ifloor(sec * 16.0) & 1) == 1); col = TYRE; }
       else if (rr < 0.28) { ch = O; col = HUB; }
       else if (rr < 0.62) { let f = fract(sec * 5.0); ch = select(DOT, SPOKES[u32(ifloor(sec * 20.0) & 3)], f < 0.3); col = select(TYRE, RIM, f < 0.3); }
@@ -575,7 +575,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     else {
       // lit like the buildings: faces turned along x brighter, tops brightest
       let wn = abs(nrm.x * c - nrm.y * s) / select(length(nrm.xy), 1.0, length(nrm.xy) == 0.0);
-      kk = select(0.72 + 0.28 * wn, 1.15, face == 2) * fog;
+      kk = select(select(0.72 + 0.28 * wn, 1.15, face == 2), 1.0, defOn()) * fog;
       if (mat == M_LEAF) {
         let h = hash3(ifloor(hp.x / 0.35) + seed, ifloor(hp.y / 0.35), ifloor(hp.z / 0.35));
         ch = LEAF[min(4u, u32(h * 5.0))];
@@ -591,10 +591,10 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     // a board's printed face is a surface like any other (lit, shaded, its own sun), lit at night by its lamps too
     let painted = mat == M_GLOW || mat == M_TEXT || mat == M_SCREEN;
     // at night the paint reads darker, as the walls' palette does (the lamps' light comes on top, by its color)
-    var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW && mat != M_BOARD); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
+    var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW && mat != M_BOARD && !defOn()); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
     if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); } // the room's lamps
-    else if (!painted) {
+    else if (!painted && !defOn()) {
       // the light where the ray hit, strongest on tops
       let wn = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z);
       let L = lightAt(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff, wn / max(1e-4, length(wn)));
@@ -612,7 +612,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
-    gEm = sat(oEm); gIl = oIl; gTag = best; gWet = 0.0;
+    gEm = sat(oEm); gIl = oIl; gTag = best; gWet = 0.0; gPos = vec3f(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c, hp.z + zoff);
     // a blade sign and the bulbs up its edges look lit, as the shop signs do (SIGN_EMIT); an advert screen as the telões do
     let signLit = mat == M_TEXT || (mat == M_GLOW && fx[p + 22u] == 1u);
     gGlowK = select(1.0, SIGN_GLOW, signLit); gEmK = select(select(1.0, SCREEN_EMIT, mat == M_SCREEN && face == 1), SIGN_EMIT, signLit);

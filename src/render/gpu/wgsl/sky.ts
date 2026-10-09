@@ -57,19 +57,10 @@ fn eqDir(v: vec3f) -> vec3f {
   let cl = cos(u.lst); let sl = sin(u.lst);
   return vec3f(cl * P + sl * Q, sl * P - cl * Q, R);
 }
-fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
-  let L = length(vec2f(rdx, rdy)); let night = 1.0 - u.day; let day = u.day;
-  let up = -m / L; // tan of the elevation
-  // the row relative to the horizon (the CPU's y + 0.5 - hor); the 3D camera takes it from the elevation
-  let rowF = select(m * u.scale, -up * u.scale, u.cam3d > 0.5);
-  // (the 3D camera's by the elevation alone: by u.hor, looking up stretched the horizon's glow over the whole sky)
-  let hor0 = select(max(1.0, u.hor), u.rows * 0.5, u.cam3d > 0.5);
-  let t = clamp((hor0 + rowF) / hor0, 0.0, 1.0);
-  let az = atan2(rdy, rdx);
-  let dA = wrapA(az - u.moonA);
-  let moonCol = u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
-  let dS = wrapA(az - u.sunA);
-  let toSun = 0.5 + 0.5 * cos(dS);
+/** The clear sky's color at t (0 the zenith's side, 1 the horizon) toward (rdx, rdy): the day's and the night's gradient, the dusk, and the city's glow. */
+fn skyGrad(t: f32, rdx: f32, rdy: f32, L: f32, up: f32) -> vec3f {
+  let night = 1.0 - u.day; let day = u.day;
+  let toSun = 0.5 + 0.5 * cos(wrapA(atan2(rdy, rdx) - u.sunA));
   let t2 = t * t; let t4 = t2 * t2;
   let cl = 0.3 + 0.7 * u.cityLit;
   // (A.2) the day: still a hazy sky, but a bluer zenith fading to a pale horizon
@@ -87,6 +78,30 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     let dome = away * (0.3 + 0.7 * toC * toC) * exp(-max(0.0, up) / 0.16) * u.cityLit * night;
     r += 150.0 * dome; g += 72.0 * dome; b += 22.0 * dome;
   }
+  return vec3f(r, g, b);
+}
+/** (16.1b) The sky right at the horizon toward (rdx, rdy), the clouds' far haze over it as they cover the sky: what the air between the eye and a far thing takes its color from (aerial in shading.ts). */
+fn horizonCol(rdx: f32, rdy: f32) -> vec3f {
+  let night = 1.0 - u.day;
+  let L = max(1e-4, length(vec2f(rdx, rdy)));
+  let hk = 0.4 * night * (0.6 + 0.6 * u.precip) * (0.25 + 0.75 * u.cityLit);
+  let cf = vec3f(26.0 + 55.0 * hk + 90.0 * u.day, 22.0 + 32.0 * hk + 95.0 * u.day, 26.0 + 22.0 * hk + 102.0 * u.day);
+  return mix(skyGrad(1.0, rdx, rdy, L, 0.0), cf, min(1.0, u.cloud * 1.3) * (0.55 + 0.45 * min(1.0, u.cloud * 1.3)));
+}
+fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
+  let L = length(vec2f(rdx, rdy)); let night = 1.0 - u.day; let day = u.day;
+  let up = -m / L; // tan of the elevation
+  // the row relative to the horizon (the CPU's y + 0.5 - hor); the 3D camera takes it from the elevation
+  let rowF = select(m * u.scale, -up * u.scale, u.cam3d > 0.5);
+  // (the 3D camera's by the elevation alone: by u.hor, looking up stretched the horizon's glow over the whole sky)
+  let hor0 = select(max(1.0, u.hor), u.rows * 0.5, u.cam3d > 0.5);
+  let t = clamp((hor0 + rowF) / hor0, 0.0, 1.0);
+  let az = atan2(rdy, rdx);
+  let dA = wrapA(az - u.moonA);
+  let moonCol = u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
+  let dS = wrapA(az - u.sunA);
+  let sg = skyGrad(t, rdx, rdy, L, up);
+  var r = sg.x; var g = sg.y; var b = sg.z;
   var ch = 0u; var cc = vec3f(0.0);
   var sunK = 0.0; var cover = 0.0;
   let el = atan(up);
