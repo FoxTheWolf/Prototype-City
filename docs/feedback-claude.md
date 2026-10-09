@@ -2,6 +2,13 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 — fim do C2 (Opus 5.5)
+- **O C2 rendeu, mas foi o retrato do problema que o cronograma quer evitar:** ~5 itens viraram 12+, porque eu consertei nota por nota em vez de triar. As portas agora estão sólidas, mas a 13 vai passar da estimativa de ~9 sessões; medir no fim (regra 7).
+- **A 13.22 é a próxima candidata a inchar:** interruptores + janelas lendo a luz real + o vidro único + o olho. Ordem proposta: primeiro o olho (uma constante) e o vidro único (é bug relatado), depois os interruptores, e por último as janelas da fachada; se estourar, as janelas da fachada são o que pode encolher (luz automática por tipo de prédio primeiro, rotina por morador depois).
+- **O laço não é jogado de ponta a ponta há várias etapas:** proponho, no teste do usuário do fim de cada etapa, jogar a fatia vertical inteira (trabalho → ir → hackear → reação → dinheiro) para pegar o que quebrou sem ninguém ver. Custa pouco e protege a 1.0.
+- **A 23 é o maior risco do cronograma:** quando for dividida, o critério deve ser "o que o jogador vê na primeira hora e no laço", e o resto vai para depois da 1.0, senão ela vira a nova 13.
+- **Ajuste rápido no começo da próxima sessão:** recapturar o mouse ao despausar (C3b) incomoda em todo teste; pela regra nova de triagem, cabe fazer logo.
+
 ## 2026-10-08 — as lojas na gramática das plantas (13.21)
 - **A recepção do motel ficou certa, mas vazia:** numa loja larga sobra muito chão entre o sofá e o balcão. É a primeira sala que o jogador vê com gente (o gerente); na 25.1, junto do prédio M1, merece um modelo próprio com mais vida (o quadro de chaves, a máquina de vendas, o folheto de turismo, o sino do balcão), e o clutter depois da 1.0 completa.
 - **Modelos próprios faltam para a farmácia, a livraria, a loja de celulares e a oficina:** hoje usam o das prateleiras. Barato agora (texto conferido por script); vale no C2 ou na 23.8, por ordem de quanto o jogador entra nelas (a farmácia e a de celulares primeiro, pelo laço: comprar chip).
