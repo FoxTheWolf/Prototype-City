@@ -11,8 +11,8 @@
 | Conta | Renova (semanal, Brasília) | Observação |
 |---|---|---|
 | **C** | **terça, ~13h** | — |
-| **F** | **terça, ~23h** (o usuário disse "11"; o `get_usage` desta sessão mostra terça à noite) | é a conta desta sessão (2026-10-08) |
-| **V** | **sábado** | o usuário vai passar para ela na próxima sessão (tem folga até sábado) |
+| **F** | **terça, ~23h** (o usuário disse "11"; o `get_usage` mostrou terça à noite) | — |
+| **V** | **sábado, ~02h** (medido em 2026-10-08) | — |
 
 > C e F renovam as duas na **terça**, diferenciadas pela hora (C ~13h, F ~23h). V é a do **sábado**.
 > (Nomes escolhidos pelo usuário por motivos pessoais; antes eram A/B/C — A→C, B→F, C→V.)
@@ -20,5 +20,11 @@
 ## Último snapshot observado (atualizar a cada sessão)
 
 - **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
-- **C** — 2026-10-08 ~22h (sessão nova; o usuário disse que é a C): semanal **~49–50%**, janela de 5 h **~1%**. ⚠ O `get_usage` desta sessão mostra a renovação em **sábado 10/10 ~02h (Brasília)**, que bate com a linha da **V**, não com "terça ~13h" — confirmar com o usuário qual linha da tabela está trocada.
-- **V** — (sem observação ainda)
+- **C** — 2026-10-08 (dito pelo usuário, não medido): semanal **~50%**. Renova terça ~13h.
+- **V** — 2026-10-08 ~22h (sessão desta noite, medido): semanal **~50%**, janela de 5 h ~12%. Renova **sábado 10/10 ~02h** (Brasília; bate com a tabela).
+
+## Ritmo combinado (2026-10-08)
+
+- **Qui/sex:** usar a **V** (50% livres, renova sábado ~02h): ~20–25% por dia.
+- **Sáb–seg:** a **V** de novo (renovada, 100%), ~25% por dia; a **C** e a **F** guardadas.
+- **Ter–qui:** a **C** (renova ter ~13h) e a **F** (renova ter ~23h), revezando, enquanto a V espera o sábado.
