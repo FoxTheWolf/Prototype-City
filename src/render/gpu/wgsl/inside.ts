@@ -46,13 +46,32 @@ fn dayIn(box: i32, x: f32, y: f32) -> f32 {
 /** The light at a point of room r: its lamps, falling off with the distance to the nearest and along the ray inside (d); the ambient; the daylight. */
 /** The light from lightAt (color units) as a multiplier of the roof's slab (C3). */
 const ROOF_LIT = 30.0;
+/** (16.1b) How much of the sky's light comes in by the windows: next to them, and what reaches deep in. */
+const SKY_IN_WIN = 0.3; const SKY_IN_DEEP = 0.04; const SUN_IN = 0.25;
 fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
   // (13.23) the roof is outdoors: the sky's light, the city's glow at night
   // (and the street's lights that reach it: the bulb over its stair house door, C3)
-  if (fx[ro + 4u] == R_ROOF) { let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud) + lightAt(x, y, V.z0 + 0.05, vec3f(0.0, 0.0, 1.0)) / ROOF_LIT; }
+  if (fx[ro + 4u] == R_ROOF) {
+    if (defOn()) { return roomMul(roofE(x, y, V.z0 + 0.05)); }
+    let n = 1.0 - u.day; return vec3f(0.34, 0.32, 0.38) * n + vec3f(3.4, 3.45, 3.5) * u.day * (1.0 - 0.4 * u.cloud) + lightAt(x, y, V.z0 + 0.05, vec3f(0.0, 0.0, 1.0)) / ROOF_LIT;
+  }
   let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here);
-  let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day); let dl = dayIn(V.box, x, y);
-  return lp * k + vec3f(a, a * 1.05, a * 1.25) + vec3f(dl * 0.92, dl * 0.97, dl);
+  let k = (0.5 + 0.9 / (1.0 + lampD2(ro, x, y) / 5.0)) / (1.0 + d * 0.03); let a = 0.14 * (1.0 - u.day);
+  // (one call of roomLamp for both lights: WGSL inlines roomLit at each of roomWalk's calls, two branches made it slow to compile)
+  let la = lp * k + vec3f(a, a * 1.05, a * 1.25);
+  if (defOn()) {
+    // (16.1b) in the street's units (roomMul): its lamps as before (they read the same at night), the city's glow at
+    // night, and the sky's light through its windows, falling off away from them
+    let q = u32(V.box * ${BLD});
+    let dw = max(0.0, min(min(x - bldF(u32(q)), bldF(u32(q + 2u)) - x), min(y - bldF(u32(q + 1u)), bldF(u32(q + 3u)) - y)));
+    let g = dayGrade(); let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
+    // (the daylight outside: the sky's, and the sun's off the street and the walls round, SUN_IN of it)
+    let out = DAY_SKY + DAY_SUN * SUN_IN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ);
+    let sky = mix(vec3f(0.6, 0.66, 0.8), vec3f(0.82, 0.84, 0.88), u.cloud) * (out * ds * (SKY_IN_DEEP + SKY_IN_WIN * exp(-dw / DAYLIGHT_FALL)));
+    return roomMul(AMB_N * artK() * pow(la, vec3f(2.2)) + sky);
+  }
+  let dl = dayIn(V.box, x, y);
+  return la + vec3f(dl * 0.92, dl * 0.97, dl);
 }
 /** The light on the floor's furniture (insideLight), as a multiplier. */
 fn insideLight(x: f32, y: f32) -> vec3f {

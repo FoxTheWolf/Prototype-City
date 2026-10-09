@@ -96,6 +96,27 @@ fn aerial(c: vec3f, d: f32, edge: bool) -> vec3f {
   if (k < 0.002) { return c; }
   return mix(c, horizonSeen(), k);
 }
+/** The street lamps' light (lightAt's color units, dimmed by day) as light in the same units as the sun's and the sky's. */
+fn lampE(lamp: vec3f) -> vec3f {
+  let lx = lamp / max(0.15, 1.0 - 0.85 * u.day) / 255.0;
+  return pow(min(lx, vec3f(1.0) + max(lx - vec3f(1.0), vec3f(0.0)) * LAMP_OVER), vec3f(2.2)) * LAMP_E;
+}
+/** (16.1b) A room's light E (the sun's and the sky's units) as roomLit's multiplier of its paint: lin(paint x M) = lin(paint) x E / AMB_N,
+ *  so that light() takes the room back to E and exposes it as it does the street (the night's lamps come out as before). */
+/** (16.1b) The game's night is brighter than a real one (its palette shows under AMB_N), so a lamp or a screen, drawn
+ *  for the night, is too faint next to the day's light: by day the artificial light (a room's lamps, its screens, a lit
+ *  window seen from afar) keeps this much of the eye's change from night to day (0: none, as a real light; 1: all). */
+const ART_KEEP = 0.6;
+fn artK() -> f32 { return pow(EV_NIGHT / evDayNight(), ART_KEEP); }
+fn roomMul(E: vec3f) -> vec3f { return pow(max(E, vec3f(0.0)) / AMB_N, vec3f(1.0 / 2.2)); }
+/** (16.1b) The open air's light on a roof, the street's: the sky, the sun (no shadows yet), the city's glow at night. */
+fn roofE(x: f32, y: f32, z: f32) -> vec3f {
+  let g = dayGrade(); let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
+  let sky = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud) * ds;
+  let sun = sunLin() * (DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * max(0.0, u.sunZ));
+  // (not the lamps yet: lightAt here was inlined in every one of roomWalk's roomLit calls, and the shader took minutes to compile)
+  return sky + sun + vec3f(cityAmb() * (1.0 - g));
+}
 fn light(cl: Cell) -> Cell {
   var o = cl;
   gGlow = 0.0; gTint = vec3f(1.0); var spG = 0.0; // spG: the bloom of a lamp's highlight on glossy paint, metal or glass
@@ -155,12 +176,13 @@ fn light(cl: Cell) -> Cell {
     // the lamps (lightAt dims its light by day; the eye does that now): their light takes the surface's color;
     // on a facade most of its hue (each street takes its lamps' tone; all of it under the old sRGB light made scorched-paper greys)
     // (past white the sum of lamps grows slowly: a few headlights together raised to the 2.2 blew a car out to white)
-    let lx = lamp / max(0.15, 1.0 - 0.85 * day) / 255.0;
-    var El = pow(min(lx, vec3f(1.0) + max(lx - vec3f(1.0), vec3f(0.0)) * LAMP_OVER), vec3f(2.2)) * LAMP_E;
+    var El = lampE(lamp);
     if (o.kind == KIND_WALL) { El = mix(vec3f(luma(El)), El, WALL_LAMP_HUE); }
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
     // (a sign keeps most of its brightness when the eye closes down in a bright street: it still reads as lit)
-    let Le = lin(emit) * (pow(EV_NIGHT / evDayNight(), EMIT_KEEP) / EV_NIGHT) * select(1.0, gEmK * pow(max(1.0, 1.0 / u.adapt), SIGN_EYE), tagged && gEmK > 1.0);
+    // (16.1b) a lit window is a room's light: by day as the room's lamps are (artK), not as a sign
+    let roomGlow = defOn() && (gMat == MAT_GLASS || gMat == MAT_WINDOW) && gEmK <= 1.0;
+    let Le = lin(emit) * (select(pow(EV_NIGHT / evDayNight(), EMIT_KEEP), artK(), roomGlow) / EV_NIGHT) * select(1.0, gEmK * pow(max(1.0, 1.0 / u.adapt), SIGN_EYE), tagged && gEmK > 1.0);
     var Lr = A * (E + El) + Le;
     // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color, and the sun's
     if (gMat != MAT_NONE && tagged) {
@@ -180,6 +202,12 @@ fn light(cl: Cell) -> Cell {
     // (the bare ground past the city's edge goes all the way to the horizon's haze: it lay cream under the sky)
     let fd = select((1.0 - exp(-o.depth / 1800.0)) * 0.6, 1.0 - exp(-o.depth / 500.0), o.kind == KIND_BLOCK);
     if (!defOn()) { o.c = mix(o.c, haze * rS, (1.0 - g) * f + g * fd); }
+  } else if (defOn() && o.kind == KIND_ROOM) {
+    // ---- (16.1b) a room: its color is its paint lit by roomLit in the street's units (roomMul): exposed and toned as the street
+    // (what glows in it, a screen or a lamp, is its own light, brighter by gEmK as the signs are)
+    let Lr = (lin(max(vec3f(0.0), o.c - emit)) + lin(emit) * (select(1.0, gEmK, tagged) * artK())) / EV_NIGHT;
+    o.c = srgb(toneMap(Lr * ev, g));
+    gGlow = clamp(dot(srgb(lin(emit) / EV_NIGHT * ev), vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * select(1.0, gGlowK, tagged);
   } else {
     // ---- kept as drawn: the moon on it, brighter by day (rooms keep their own lamps' light), the blackout,
     // and the eye's adaptation

@@ -21,7 +21,7 @@
 
 - **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
 - **C** — 2026-10-08 (dito pelo usuário, não medido): semanal **~50%**. Renova terça ~13h.
-- **V** — 2026-10-09 ~18h40 (medido): semanal **~84%**, janela de 5 h ~87% (renova ~19h20 Brasília). Renova o semanal **sábado 10/10 ~02h** (Brasília): o que sobrar hoje se perde.
+- **V** — 2026-10-09 ~20h40 (medido): semanal **87%**, janela de 5 h 14% (renova ~00h20 Brasília). Renova o semanal **sábado 10/10 ~02h**: gastar à vontade até lá.
 
 ## Ritmo combinado (2026-10-08)
 
