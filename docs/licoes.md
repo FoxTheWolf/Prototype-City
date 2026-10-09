@@ -3,6 +3,7 @@
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
 ### Lições do C3 (playtest de 2026-10-09) — 2026-10-09
+- **A lâmpada que nunca nascia (C3, 2026-10-09):** `roofLamp` procurava a folha da escada, mas a porta da casinha fica entre o telhado e um **corredor** (ou é uma abertura sem folha), então voltava null em todos os telhados. Antes de calibrar a força de uma luz que "não aparece", conferir se ela existe (um global de debug com a posição). E a laje dividia toda luz por 110: a força 20 não mexia nela.
 - **O painel do navegador escondido trava tudo:** sem ele visível, o laço não anda (`world.tick` em 0), os `setTimeout` do `javascript_tool` estouram, e a compilação do shader leva ~1–2 min. A captura de tela força um quadro, mas é o mesmo quadro velho até o laço andar. Para esperar, `computer wait` de 10 s em vez de `await` no JS. Antes de concluir "não mudou", conferir se o `tick` subiu.
 - **Luz de painel é linear (1 = branco), não 0–255:** usar `(c / 255) ** 2.2 * q` (`linC`), senão estoura.
 - **Luz de ponto não tem limite de baixo** (ilumina tudo abaixo de `zFull` no raio); para uma luz no alto, usar painel, que mede a distância em 3D.
