@@ -528,3 +528,7 @@ Só se simula fundo o que o jogador **percebe, toca, ou que alimenta a curiosida
 - **Necessidades:** a fome fica (dá rumo); o sono e o frio descem.
 - **Luz adiada:** entra junto dos efeitos que a usam (16.1b), nunca pronta e sem uso.
 - **O olhar:** o caderno e os zooms da câmera e da galeria sobem para a 20.2 (cozy e reconhecimento são a mesma coisa).
+
+## A estrela-guia do render (usuário, 2026-10-09 à noite)
+
+"Um jogo 3D com primitivas e cubinhos e luz realista, como no Unity ou no Unreal, com um transformador de imagem ASCII por cima." Um espaço físico só e **uma luz só** para dentro e fora (a luz adiada da 16.1b é o passo que faltava; a separação dentro/fora nasceu de os interiores terem chegado depois, com cópias da luz). A diferença consciente: o render calcula só o que cada caractere precisa (um raio por célula) em vez de desenhar milhões de pixels e reduzir; por isso o texto do mundo em dois níveis e o custo baixo funcionam. Bibliotecas prontas para o que é genérico (física Jolt/Rapier na 21.2, navegação recast na 17.1; `docs/pesquisa-bibliotecas.md`); o render e a simulação continuam nossos.
