@@ -4,7 +4,7 @@
 
 ## 16.1 — a travada da meia-noite (2026-10-09, noite)
 
-`planAhead` em `sim/citizens.ts` (chamado em `stepWorld` antes da varredura dos pedestres) faz os planos de amanhã, 40 por tick, a partir das 23h; o cache de planos passou de 2 para 3 vagas por cidadão (`day % 3`), senão amanhã pisaria no ontem que o `whereIs` ainda lê. `tests/midnight.ts`: pior tick 50 → 3 ms, média 5,2 → 1,6 ms na virada. Pulo de tempo depois das 23h cai no caminho antigo (feito quando pedido). Atendeu o bug "Travada à meia-noite" (2026-10-04).
+`planAhead` em `sim/citizens.ts` (chamado em `stepWorld` antes da varredura dos pedestres) faz os planos de amanhã, 40 por tick, a partir das 23h; o cache de planos passou de 2 para 3 vagas por cidadão (`day % 3`), senão amanhã pisaria no ontem que o `whereIs` ainda lê. `tests/midnight.ts`: pior tick 50 → 3 ms, média 5,2 → 1,6 ms na virada. Pulo de tempo depois das 23h cai no caminho antigo (feito quando pedido). Atendeu o bug "Travada à meia-noite" (2026-10-04). E o `tests/barks.ts` (falhava desde o C3b): era o teste velho, o pedestre mais próximo do ponto de nascimento a 41 m (a audição é 20 m); agora o teste leva o jogador para o lado de quem anda, e as falas da chuva voltaram a ser cobertas.
 
 ## 13.24 — escadas de incêndio e telhados pelo manual (0.13.24, 2026-10-09)
 

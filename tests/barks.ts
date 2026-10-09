@@ -18,6 +18,9 @@ const clean = (s: string) => !/[#{}]/.test(s) && s.trim().length > 0;
 // an evening on the street, people around
 w.time = Math.floor(w.time / 86400) * 86400 + 86400 + 18 * 3600;
 for (let i = 0; i < 600; i++) stepWorld(w, { forward: 0, strafe: 0, run: false, heading: 0 });
+// beside the nearest walker (the spawn point alone may have nobody within hearing)
+{ const p = w.player, q = w.peds.reduce((a, b) => Math.hypot(b.x - p.x, b.y - p.y) < Math.hypot(a.x - p.x, a.y - p.y) ? b : a);
+  p.x = p.px = q.x + 1.5; p.y = p.py = q.y; }
 const B = new Barks(w);
 console.log(`  ${w.peds.length} people on the street, ${B.near().length} within hearing`);
 if (!B.near().length) fail('nobody near the player to hear');
