@@ -14,6 +14,7 @@
 - **Uma mesma porta tem de ser igual dos dois lados:** o batente de fora (7 cm, cor da fachada) e o de dentro (4% da largura, aço) eram desenhados por códigos diferentes, e o usuário viu a diferença como uma fresta. Medidas em metros nos dois lados.
 - **`DOOR_H - 0.02` nas folhas deixava 2 cm de fresta sob a verga**, e a verga era pintada de madeira até o teto: as duas coisas apareceram como "a porta não fecha" e "faixa de outra cor".
 - **Teleportar para um lance de escada:** `?pos=x,y,andar` põe os pés no piso; para a altura de um degrau, `world.player.z = …` depois de carregar (ela se mantém).
+- **Limitar "quanto abre" em vez de mexer no desenho:** a folha que entrava na parede se resolveu na simulação (`openCap`), porque a GPU, a vista de dentro e a passagem já leem o mesmo `world.doors`. Atenção à curva: 0,8 de abertura já é 86° de giro; a passagem (`streetOpen`) passou a comparar com o próprio limite.
 - **As portas fecham sozinhas:** teleportar para a soleira mostra a folha fechada colada no olho; para testar uma porta aberta, abrir com F de frente e andar.
 
 ### Lições da 13.21 (as lojas na gramática das plantas) — 2026-10-08
