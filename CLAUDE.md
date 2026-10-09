@@ -257,6 +257,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições do C2 (portas: WGSL `||`/`&&`, magenta para achar quem desenha, a folha no meio da parede, o giro do Vite)
 - Lições da 13.20 (molduras velhas da biblioteca, canto serrilhado, plano por andar), para não repetir
 - Lições da 13.19 (dado novo por cômodo no registro da GPU, folhas da rua em pares), para não repetir
 - Lições da 13.18 (parede de 0,5 m que vira célula de 0,25 m, folha que falta, `p.floor` no alto do lance, a laje do poço), para não repetir

@@ -2,6 +2,15 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do C2 (portas) — 2026-10-09
+- **`a || b && c` no WGSL compilou e valeu como `(a || b) && c`:** um `true ||` de depuração não ligou o ramo inteiro e me fez achar que o desenho vinha de outro lugar. Na depuração, pôr parênteses, ou trocar a condição inteira.
+- **Pintar o ramo de magenta é o jeito barato de saber quem desenha um pixel** (uma compilação, ~40 s): mostrou que o vão da porta vinha do `wallCell` e que só faltavam as faces do recesso.
+- **Uma correção de geometria pode virar mudança de desenho:** o usuário preferiu a folha no meio da parede (`inK` em `doorLeaves`) a desenhar um recesso de 25 cm; menos caso estranho para o resto do código.
+- **A caminhada guardava só a folha mais perto:** depois de atravessar o vidro dela, as portas de trás sumiam. Agora guarda as duas mais perto (`lh2`).
+- **O "giro" no painel do navegador era do Vite:** cada edição recarrega o `main.ts` por cima, e a instância nova fica na deriva do título (`dt * 0.08`) enquanto o shader compila; ela é a que o `window.camera` mostra. Não confundir com o giro do jogo de verdade.
+- **O painel oculto começa o jogo com largura 0 e quebra o compositor:** `resize_window` com um tamanho fixo e recarregar.
+- **As portas fecham sozinhas:** teleportar para a soleira mostra a folha fechada colada no olho; para testar uma porta aberta, abrir com F de frente e andar.
+
 ### Lições da 13.21 (as lojas na gramática das plantas) — 2026-10-08
 - **Medir onde as lojas estão antes de escolher o caminho:** 63% caíam no gerador de cortes (torres, tamanhos sem planta), então o leitor novo tinha de servir aos dois. O `shopGrid` monta a moldura pelas células (o que está logo além da face de dentro, em dois pontos por caractere), e as regras das arrumações fazem o resto.
 - **Classificar as falhas antes de consertar:** "sem modelo" era três coisas: a porta da rua caindo noutro cômodo (o elevador do gerador velho na porta dos lotes de 8 × 8), lojas rasas sem modelo, e a folga da porta apagando o próprio caixa (o modelo passava sem caixa). Resolver com a planta que faltava (C0L), dois modelos rasos de último recurso e a regra "tem caixa", não com remendos no gerador velho.
