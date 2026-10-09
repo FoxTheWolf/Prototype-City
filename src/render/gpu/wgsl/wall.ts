@@ -276,7 +276,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       // the transom: its frame, and the pane lit from the lobby
       if (e < 0.07 || z < DOOR_H + 0.1 || z > DOOR_H + TRANSOM_Z) { ch = select(EQ, BAR, e < 0.07); c = frame * 1.5 * shade; }
       else { ch = EQ; c = vec3f(20.0, 24.0, 32.0) + vec3f(255.0, 215.0, 150.0) * (0.3 * elec); em = true; glowK = 0.2; glass = true; }
-    } else if (e < 0.07 || z > DOOR_H + 0.22) { ch = select(EQ, BAR, e < 0.07); c = frame * 1.5 * shade; }
+    } else if (e < 0.07 || z > DOOR_H + 0.22) {
+      // the frame: the residents' door's of its wood, as from inside (the same door both ways, playtest of 2026-10-09)
+      ch = select(EQ, BAR, e < 0.07); c = select(frame * 1.5, vec3f(75.0, 45.0, 27.0), dEn && z < DOOR_H + 0.1) * shade;
+    }
     else {
       // up close, the door itself (13.10d): the walk into the lobby meets the same two glass leaves as from inside,
       // hinged at the jambs and turned in as far as the door is open. Far, the door painted: open, each leaf a strip

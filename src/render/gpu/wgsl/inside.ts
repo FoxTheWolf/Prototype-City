@@ -281,13 +281,13 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     if (tSlab < min(tn, tExit)) { wall = true; break; }
     if (lt < min(tn, tExit)) {
       let z = u.eye - m * lt;
-      if (ledge && z > z0 && z <= z0 + DOOR_H - 0.02) {
+      if (ledge && z > z0 && z <= z0 + DOOR_H) {
         // the leaf's free edge, seen along it as it stands open: its frame, or the wood's end grain
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
         let ec = select(select(select(vec3f(150.0, 108.0, 70.0), vec3f(95.0, 98.0, 105.0), lkind == 0u), vec3f(120.0, 126.0, 132.0), lkind == 2u), vec3f(140.0, 144.0, 150.0), lkind == 3u);
         res.cl = roomCell(BAR, ec * Lt * lk, lt); res.state = 1u; done = true; break;
-      } else if (lg && z > z0 && z <= z0 + DOOR_H - 0.02) {
+      } else if (lg && z > z0 && z <= z0 + DOOR_H) {
         // a street door's leaf: a metal frame and a push bar round the glass, which the ray goes on through
         let zz = z - z0;
         let frame = lu > 0.93 || lu < 0.05 || zz > DOOR_H - 0.12 || zz < 0.1;
@@ -298,10 +298,10 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt * lk, lt); res.state = 1u; done = true; break;
         }
         leafGlass = true; gSDglass = true;
-      } else if (lkind == LEAF_ENTRY && z > z0 && z <= z0 + DOOR_H - 0.02 && lu > 0.2 && lu < 0.8 && z - z0 > 1.1 && z - z0 < DOOR_H - 0.28) {
+      } else if (lkind == LEAF_ENTRY && z > z0 && z <= z0 + DOOR_H && lu > 0.2 && lu < 0.8 && z - z0 > 1.1 && z - z0 < DOOR_H - 0.28) {
         // the residents' street door's glass light (13.19): the ray goes on through it, as through a glass leaf
         leafGlass = true; gSDglass = true;
-      } else if (lkind == LEAF_ENTRY && z > z0 && z <= z0 + DOOR_H - 0.02) {
+      } else if (lkind == LEAF_ENTRY && z > z0 && z <= z0 + DOOR_H) {
         // the residents' street door (13.19): dark oak in its edge, the light's moulding, a panel under it, the knob
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
@@ -312,7 +312,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let col = vec3f(96.0, 58.0, 34.0) * lk * select(select(1.0, 1.12, panel), 0.78, edge || rim);
         if (knob) { res.cl = roomCell(O, vec3f(210.0, 175.0, 90.0) * Lt, lt); } else { res.cl = roomCell(select(select(EQ, COL, panel), BAR, edge || rim), col * Lt, lt); }
         res.state = 1u; done = true; break;
-      } else if (lkind == 2u && z > z0 && z <= z0 + DOOR_H - 0.02) {
+      } else if (lkind == 2u && z > z0 && z <= z0 + DOOR_H) {
         // a steel door (a stockroom's): a plain sheet in a darker edge, a kick plate, the bar across it
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
@@ -321,7 +321,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let col = vec3f(112.0, 120.0, 126.0) * lk * select(select(select(1.0, 0.8, kick), 1.45, bar), 0.7, edge);
         res.cl = roomCell(select(select(select(HASH, EQ, kick), BAR, bar), BAR, edge), col * Lt, lt);
         res.state = 1u; done = true; break;
-      } else if (z > z0 && z <= z0 + DOOR_H - 0.02) {
+      } else if (z > z0 && z <= z0 + DOOR_H) {
         // a panel door (wood in a home, a painted panel in an office): its edges, two recessed panels, the knob
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
         let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
@@ -481,7 +481,8 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           res.cl = roomCell(ep.ch, ep.c, t);
         } else if (zz < DOOR_H) {
           // the jambs and the head: the leaves (drawn above, as they swing) carry the stiles and the push bars
-          let frame = du < 0.04 || du > 0.96 || zz > DOOR_H - 0.06;
+          // (the frame as wide as from outside, 7 cm: the same door both ways)
+          let frame = du * doorW < 0.07 || (1.0 - du) * doorW < 0.07 || zz > DOOR_H - 0.06;
           // (the residents' door's frame is of its wood: in steel grey, the strip over the leaf read as a gap)
           if (frame) { res.cl = roomCell(BAR, select(vec3f(95.0, 98.0, 105.0), vec3f(75.0, 45.0, 27.0), entryD) * Lt, t); }
           // (an open doorway with no leaf in the way has no glass: gdoor)

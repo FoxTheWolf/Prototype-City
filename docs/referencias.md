@@ -85,6 +85,8 @@ O vídeo original está em `E:\Downloads\Everything in ASCII CITY So Far ｜ The
 
 `referencias/79-escada-ref-1` … `93-escada-ref-15`: 79 escada de prédio em U (dois lances, patamar no meio, corrimão de aço); 80 vidro; 81 escada externa de aço galvanizado (degrau de chapa xadrez, guarda-corpo de tubo); 82 madeira com quina em leque; 83–86 e 87 diagramas de quarter-turn, three-quarter, bifurcada; 88 medidas (largura ≥ 0,9 m por pessoa, patamar ≥ 0,9 m); 89 plantas de vários tipos com medidas (a de dois lances com patamar: 2,00 × 3,75 m); 90–91 plantas de escada de incêndio em U; 92 lance reto com medidas (espelho ~21 cm, piso 25 cm, ~40°, altura livre 2,4 m); 93 seções de escada de madeira.
 
+`referencias/94-brownstone-ref-1` … `97-brownstone-ref-4` (do usuário, 2026-10-09, para a 23.2): fileiras de brownstones de Nova York. O térreo de moradia não fica no nível da calçada: a porta principal sobe por uma escadinha externa (stoop, 5–8 degraus de pedra com corrimão de ferro) até o andar nobre (parlor floor), e embaixo dela fica o andar do porão meio enterrado (garden level), com a própria porta sob o stoop e janelas com grade; na frente, um pátio estreito com grade de ferro baixa e canteiros; janelas altas com molduras de pedra, cornijas no topo, bay windows em algumas. Explica por que é estranho uma cama na janela da rua (nota 6 de 2026-10-09).
+
 ## Inspirações (jogos de que o usuário gosta)
 
 Lista dada pelo usuário em 2026-09-30, pelo estilo visual e pelo nível de simulação. O que tirar de cada um é uma leitura inicial, a confirmar com ele quando a etapa chegar. A mesma regra de originalidade vale para todos.
