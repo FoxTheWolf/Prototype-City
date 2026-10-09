@@ -1,6 +1,6 @@
 import { hash3 } from '../core/rng';
 import { DEBUG } from '../debug';
-import { baseAt, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, type Door, type Leaf, type Room } from './interior';
+import { baseAt, cellAt, DOOR_ENTRY, DOOR_GLASS, DOOR_METAL, entryDoor, exitsOf, facePoint, LEAF_TH, leavesOf, planOf, WALL, type Door, type Leaf, type Room } from './interior';
 import type { Building } from './city';
 import { isOpen } from './telco';
 import { PLACES } from './placeTypes';
@@ -134,6 +134,33 @@ export function useDoor(w: World, heading: number): 'open' | 'close' | 'locked' 
 }
 
 /** Doors swing toward open or shut; an open one shuts by itself once the player is a few metres off it (or on another floor). */
+/**
+ * How far a street door may open (0..1, as world.doors): a leaf swung in meets a wall standing against the jamb
+ * (playtest of 2026-10-08, note 7), so it stops short of it. The largest opening at which every leaf of the door
+ * stays over open floor of the ground plan; cached by key. Never under OPEN_MIN (a leaf at ~45 degrees: still a way
+ * through, as streetOpen counts it against this cap).
+ */
+const capCache = new Map<number, number>(), OPEN_MIN = 0.3;
+function openCap(w: World, key: number): number {
+  const n = key % 128;
+  if (n < STREET || Math.floor(key / 128) % 256 !== 0) return 1;
+  let c = capCache.get(key);
+  if (c !== undefined) return c;
+  const k = Math.floor(key / 128 / 256), P = planOf(w.city, k, 0);
+  c = 1;
+  if (P) {
+    const L = streetLeaves(w, k).filter((l) => l.door === n - STREET);
+    const clear = (a: number) => L.every((l) => {
+      const g = (1 - (1 - a) ** 2) * Math.PI * 0.5, dx = l.ax * Math.cos(g) + l.nx * Math.sin(g), dy = l.ay * Math.cos(g) + l.ny * Math.sin(g);
+      for (let t = 0.25; t <= 1.001; t += 0.25) { const v = cellAt(P, l.hx + dx * l.w * t, l.hy + dy * l.w * t); if (!v || v & WALL) return false; }
+      return true;
+    });
+    while (c > OPEN_MIN && !clear(c)) c = Math.max(OPEN_MIN, c - 0.05);
+  }
+  capCache.set(key, c);
+  return c;
+}
+
 export function stepDoors(w: World, tick: number) {
   const p = w.player;
   for (const key of w.doorWant) {
@@ -143,7 +170,8 @@ export function stepDoors(w: World, tick: number) {
   for (const key of w.doorWant) {
     const a = w.doors.get(key) ?? 0, kd = doorKind(w, key);
     if (a === 0) { const at = w.doorAt.get(key)!; w.doorSfx.push([1, at[0], at[1], kd]); }
-    if (a < 1) w.doors.set(key, Math.min(1, a + tick / OPEN_S[kd]));
+    const cap = openCap(w, key);
+    if (a < cap) w.doors.set(key, Math.min(cap, a + tick / OPEN_S[kd]));
   }
   for (const [key, a] of w.doors) {
     if (w.doorWant.has(key)) continue;
@@ -174,7 +202,7 @@ function stepShutters(w: World, tick: number) {
 }
 
 /** Whether the street door n of lot k is open enough to walk through. */
-export const streetOpen = (w: World, k: number, n: number) => (w.doors.get(doorKey(k, 0, STREET + n)) ?? 0) >= PASS;
+export const streetOpen = (w: World, k: number, n: number) => { const key = doorKey(k, 0, STREET + n); return (w.doors.get(key) ?? 0) >= Math.min(PASS, openCap(w, key) - 1e-6); };
 
 /** Whether the step from (ax, ay) to (bx, by) on the player's floor goes through a shut leaf between rooms. */
 export function leafBlocks(w: World, ax: number, ay: number, bx: number, by: number): boolean {

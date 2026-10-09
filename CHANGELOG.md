@@ -7,6 +7,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Ao cruzar uma porta, o interior não some mais por um quadro** (aparecia a rua do outro lado do prédio).
 - **A porta de madeira dos moradores tem o mesmo batente de madeira por dentro e por fora**, em vez de uma faixa cinza que parecia fresta.
 - **As portas dos cômodos fecham até em cima**, sem a fresta escura sob o batente.
+- **Uma porta da rua com uma parede logo atrás do batente abre só até a parede**, em vez de a folha entrar nela.
 - **Acima de cada porta interna, a parede do cômodo**, com uma moldura fina de madeira, em vez de uma faixa de madeira até o teto.
 - **Uma porta de vidro não esconde mais as portas atrás dela:** olhando por uma folha de vidro, as portas de dentro aparecem.
 - **Dois prédios do mesmo lado da quadra não têm mais o mesmo número:** o segundo vira 522A, o terceiro 522B.
