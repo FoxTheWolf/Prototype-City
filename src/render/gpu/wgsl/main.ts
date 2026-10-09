@@ -41,79 +41,96 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var cl = inc.cl;
   gBackT = 0.0;
   gPeekT = 0.0;
-  if (inc.state != 1u) { cl = cityCell(gid.x, gid.y, rdx, rdy, m, L, A, tG); }
-  let handD = select(cl.depth, max(cl.depth, gPeekT), cl.kind == KIND_ROOM);
-  // ---- (13.10b2) a room seen through a window or an open street door, and through a window on its far side: the
-  // street behind, by a second ray on from that glass (as the reflection's, R.24), lit on its own
+  var handD = 0.0;
+  // the rays this cell sends through the city, in one loop with one call of cityCell (WGSL inlines it at each call, and
+  // three calls made the shader three times as slow to compile, 13.S): 0 the view's own; 1 (13.10b2) on through a
+  // room seen through a window or an open street door, from the window on its far side, to the street behind; 2 (R.24)
+  // the reflection: glass and wet ground mirror the city along a ray from where the view's hit; anything else glossy
+  // (a car's paint, metal) mirrors the sky. Weighed by Fresnel and the roughness.
   var thru = vec3f(0.0); var thruCh = 32u; var thruK = 0.0; var thruPane = 1.0; var thruD = -1.0;
-  if (inc.state != 1u && gBackT > 0.0 && cl.kind == KIND_ROOM && abs(cl.depth - gBackW) < 1e-3) {
-    let tb = gBackT + 0.05; thruK = abs(gBackK); thruD = cl.depth; thruPane = select(0.62 - 0.2 * u.day, 1.0, gBackK < 0.0) * 0.8;
-    let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sEK = gEmK; let sMat = gMat; let sN = gNrm; let sWet = gWet;
-    gOX = u.px + rdx * tb; gOY = u.py + rdy * tb; gOZ = u.eye - m * tb + A * tb * tb;
-    var tg = 1e9;
-    if (m > 0.0) { let disc = m * m - 4.0 * A * gOZ; if (disc > 0.0) { tg = 2.0 * gOZ / (m + sqrt(disc)); } }
-    var bc = cityCell(gid.x, gid.y, rdx, rdy, m, L, A, tg);
-    gOX = u.px; gOY = u.py; gOZ = u.eye;
-    if (bc.depth < 1e8) { if (bc.depth == gTag) { gTag += tb; } bc.depth += tb; }
-    bc = objectsOver(bc, gid.x, gid.y, rdx, rdy, -m);
-    gSun = 1.0; gSky = 1.0; gMoon = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
-    let lb = light(bc); thru = lb.c; thruCh = lb.ch;
-    gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet;
-  }
-  // the street objects (and the furniture) over all of it, the window glass, then rain and snow over
-  // the finished cell, only beyond the glass indoors (the sky's depth is 1e9, so the finish leaves it as it is)
-  cl = objectsOver(cl, gid.x, gid.y, rdx, rdy, -m);
-  if (inc.state == 2u && !inc.gdoor) { cl = glassOver(cl, inc, m); }
-  // ---- the reflection (R.24): glass and wet ground mirror the city along a second ray from where this one
-  // hit; anything else glossy (a car's paint, metal) mirrors the sky. Weighed by Fresnel and the roughness.
   var refl = vec3f(0.0); var rw = 0.0; var rGlow = 0.0;
-  if (cl.depth == gTag && cl.depth < 1e8 && gMat != MAT_NONE) {
-    let N = gNrm; let nv = max(1e-3, -dot(N, gRay)); let r = matRough();
-    rw = fres(MAT_F0[gMat], nv) * (1.0 - r) * (1.0 - r);
-    if (N.z > 0.5 && gMat != MAT_PAINT) { rw = min(rw, 0.7); } // a puddle never mirrors all of it
-    if (rw > 0.03) {
-      let t = cl.depth;
-      var R = gRay - 2.0 * dot(gRay, N) * N;
-      // a rough surface scatters its mirror: the ray turned a little per cell (a dithered blur)
-      if (r > 0.08) {
-        let jx = hash3(i32(gid.x), i32(gid.y), 31) - 0.5; let jy = hash3(i32(gid.x), i32(gid.y), 32) - 0.5; let jz = hash3(i32(gid.x), i32(gid.y), 33) - 0.5;
-        // on the ground it smears up and down more than sideways (the long streaks under lights on wet asphalt)
-        let an = select(vec3f(1.0), vec3f(0.35, 0.35, 1.8), N.z > 0.5);
-        R = normalize(R + vec3f(jx, jy, jz) * an * (REFL_BLUR * r));
-        if (dot(R, N) < 0.02) { R = normalize(R + N * (0.02 - dot(R, N))); }
+  // what a second ray overwrites of the view's hit, put back after it
+  var sEm = vec3f(0.0); var sIl = vec3f(0.0); var sTag = 0.0; var sGK = 0.0; var sEK = 0.0; var sMat = 0u; var sN = vec3f(0.0); var sWet = 0.0; var sRay = vec3f(0.0);
+  // the reflection's ray (2): where it starts along the view's ray, and how much sky it fades into
+  var tr = 0.0; var skyK = 0.0; var mR = 0.0; var rx = 0.0; var ry = 0.0;
+  for (var ray = 0; ray < 3; ray++) {
+    var go = false; var qx = rdx; var qy = rdy; var qm = m; var qL = L; var qA = A; var qg = tG;
+    if (ray == 0) { go = inc.state != 1u; }
+    else if (ray == 1) {
+      handD = select(cl.depth, max(cl.depth, gPeekT), cl.kind == KIND_ROOM);
+      if (inc.state != 1u && gBackT > 0.0 && cl.kind == KIND_ROOM && abs(cl.depth - gBackW) < 1e-3) {
+        tr = gBackT + 0.05; thruK = abs(gBackK); thruD = cl.depth; thruPane = select(0.62 - 0.2 * u.day, 1.0, gBackK < 0.0) * 0.8;
+        sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet;
+        gOX = u.px + rdx * tr; gOY = u.py + rdy * tr; gOZ = u.eye - m * tr + A * tr * tr;
+        qg = 1e9;
+        if (m > 0.0) { let disc = m * m - 4.0 * A * gOZ; if (disc > 0.0) { qg = 2.0 * gOZ / (m + sqrt(disc)); } }
+        go = true;
       }
-      let LR = length(R.xy); var mR = -R.z / max(LR, 1e-4);
-      // the rain ripples the puddles: the reflection wavers up and down, a streak under each light
-      if (N.z > 0.5 && u.rain > 0.0 && gMat != MAT_PAINT) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0 + 7.0 * hash3(i32(gid.x), i32(gid.y), 77))) - 0.5) * 0.05 * u.rain; } let rx = R.x / max(LR, 1e-4); let ry = R.y / max(LR, 1e-4);
-      let ground = N.z > 0.5;
-      // past its reach a surface mirrors only the sky; the city's reflection fades into it over the last stretch,
-      // so a tall tower's glass never shows a cut where its upper floors pass the reach
-      let farR = select(select(REFL_FAR_WALL, REFL_FAR_GROUND, ground), REFL_FAR_CAR, gMat == MAT_PAINT);
-      let skyK = smoothstep(0.65 * farR, farR, t);
-      let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05 || gMat == MAT_PAINT) && t < farR && LR > 0.05;
-      let sEm = gEm; let sIl = gIl; let sTag = gTag; let sGK = gGlowK; let sEK = gEmK; let sMat = gMat; let sN = gNrm; let sWet = gWet; let sRay = gRay;
-      if (mirror) {
-        gRefl = true;
-        gOX = u.px + rdx * t + N.x * 0.05; gOY = u.py + rdy * t + N.y * 0.05; gOZ = max(0.02, u.eye - m * t + A * t * t + N.z * 0.02);
-        gRay = normalize(vec3f(rx, ry, -mR));
-        let AR = 1.0 / (2.0 * u.curveR);
-        var tg = 1e9;
-        if (mR > 0.0) { let disc = mR * mR - 4.0 * AR * gOZ; if (disc > 0.0) { tg = 2.0 * gOZ / (mR + sqrt(disc)); } }
-        var rc = cityCell(gid.x, gid.y, rx, ry, mR, 1.0, AR, tg);
-        // and the street objects it meets first (the lamps' heads and the cars in the wet street)
-        rc = objRefl(rc, vec3f(gOX, gOY, gOZ), gRay);
-        gRefl = false; gOX = u.px; gOY = u.py; gOZ = u.eye;
-        if (rc.depth < 1e8) {
-          if (rc.depth == gTag) { gTag += t; } rc.depth += t;
-          gSun = 1.0; gSky = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
-          let lc = light(rc); refl = lc.c; rGlow = gGlow;
-        } else { refl = max(rc.bg, select(vec3f(0.0), rc.c, rc.ch != 32u)); }
-        if (skyK > 0.0) { refl = mix(refl, skyCell(mR, rx, ry).bg, skyK); rGlow *= 1.0 - skyK; }
-      } else {
-        let sk = skyCell(mR, rx, ry); refl = sk.bg;
+    } else {
+      // the street objects (and the furniture) over all of it, the window glass, then rain and snow over
+      // the finished cell, only beyond the glass indoors (the sky's depth is 1e9, so the finish leaves it as it is)
+      cl = objectsOver(cl, gid.x, gid.y, rdx, rdy, -m);
+      if (inc.state == 2u && !inc.gdoor) { cl = glassOver(cl, inc, m); }
+      if (cl.depth == gTag && cl.depth < 1e8 && gMat != MAT_NONE) {
+        let N = gNrm; let nv = max(1e-3, -dot(N, gRay)); let r = matRough();
+        rw = fres(MAT_F0[gMat], nv) * (1.0 - r) * (1.0 - r);
+        if (N.z > 0.5 && gMat != MAT_PAINT) { rw = min(rw, 0.7); } // a puddle never mirrors all of it
+        if (rw > 0.03) {
+          tr = cl.depth;
+          var R = gRay - 2.0 * dot(gRay, N) * N;
+          // a rough surface scatters its mirror: the ray turned a little per cell (a dithered blur)
+          if (r > 0.08) {
+            let jx = hash3(i32(gid.x), i32(gid.y), 31) - 0.5; let jy = hash3(i32(gid.x), i32(gid.y), 32) - 0.5; let jz = hash3(i32(gid.x), i32(gid.y), 33) - 0.5;
+            // on the ground it smears up and down more than sideways (the long streaks under lights on wet asphalt)
+            let an = select(vec3f(1.0), vec3f(0.35, 0.35, 1.8), N.z > 0.5);
+            R = normalize(R + vec3f(jx, jy, jz) * an * (REFL_BLUR * r));
+            if (dot(R, N) < 0.02) { R = normalize(R + N * (0.02 - dot(R, N))); }
+          }
+          let LR = length(R.xy); mR = -R.z / max(LR, 1e-4);
+          // the rain ripples the puddles: the reflection wavers up and down, a streak under each light
+          if (N.z > 0.5 && u.rain > 0.0 && gMat != MAT_PAINT) { mR += (hash3(i32(gid.x), i32(gid.y), ifloor(u.sec * 6.0 + 7.0 * hash3(i32(gid.x), i32(gid.y), 77))) - 0.5) * 0.05 * u.rain; } rx = R.x / max(LR, 1e-4); ry = R.y / max(LR, 1e-4);
+          let ground = N.z > 0.5;
+          // past its reach a surface mirrors only the sky; the city's reflection fades into it over the last stretch,
+          // so a tall tower's glass never shows a cut where its upper floors pass the reach
+          let farR = select(select(REFL_FAR_WALL, REFL_FAR_GROUND, ground), REFL_FAR_CAR, gMat == MAT_PAINT);
+          skyK = smoothstep(0.65 * farR, farR, tr);
+          let mirror = (gMat == MAT_GLASS || gMat == MAT_WINDOW || gWet > 0.05 || gMat == MAT_PAINT) && tr < farR && LR > 0.05;
+          sEm = gEm; sIl = gIl; sTag = gTag; sGK = gGlowK; sEK = gEmK; sMat = gMat; sN = gNrm; sWet = gWet; sRay = gRay;
+          if (mirror) {
+            gRefl = true;
+            gOX = u.px + rdx * tr + N.x * 0.05; gOY = u.py + rdy * tr + N.y * 0.05; gOZ = max(0.02, u.eye - m * tr + A * tr * tr + N.z * 0.02);
+            gRay = normalize(vec3f(rx, ry, -mR));
+            qx = rx; qy = ry; qm = mR; qL = 1.0; qA = 1.0 / (2.0 * u.curveR); qg = 1e9;
+            if (mR > 0.0) { let disc = mR * mR - 4.0 * qA * gOZ; if (disc > 0.0) { qg = 2.0 * gOZ / (mR + sqrt(disc)); } }
+            go = true;
+          } else {
+            refl = skyCell(mR, rx, ry).bg;
+            gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
+          }
+        }
       }
-      gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet; gRay = sRay;
     }
+    if (!go) { continue; }
+    var c = cityCell(gid.x, gid.y, qx, qy, qm, qL, qA, qg);
+    if (ray == 0) { cl = c; continue; }
+    // and the street objects the reflection meets first (the lamps' heads and the cars in the wet street)
+    if (ray == 2) { c = objRefl(c, vec3f(gOX, gOY, gOZ), gRay); }
+    gRefl = false; gOX = u.px; gOY = u.py; gOZ = u.eye;
+    if (ray == 1) {
+      if (c.depth < 1e8) { if (c.depth == gTag) { gTag += tr; } c.depth += tr; }
+      c = objectsOver(c, gid.x, gid.y, rdx, rdy, -m);
+      gSun = 1.0; gSky = 1.0; gMoon = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
+      let lb = light(c); thru = lb.c; thruCh = lb.ch;
+    } else {
+      if (c.depth < 1e8) {
+        if (c.depth == gTag) { gTag += tr; } c.depth += tr;
+        gSun = 1.0; gSky = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
+        let lc = light(c); refl = lc.c; rGlow = gGlow;
+      } else { refl = max(c.bg, select(vec3f(0.0), c.c, c.ch != 32u)); }
+      if (skyK > 0.0) { refl = mix(refl, skyCell(mR, rx, ry).bg, skyK); rGlow *= 1.0 - skyK; }
+      gRay = sRay;
+    }
+    gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet;
   }
   // how much sky what this cell shows sees (the sky and the rooms keep theirs; it fades out far away)
   gSky = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);

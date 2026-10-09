@@ -124,7 +124,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   var isWin = false; var glass = false; var backT = 0.0;
   let escCell = esc && z > FLOOR_H && (fz < 0.08 || escU < 0.04 || escU > 0.96 || abs(select(escU, 1.0 - escU, (fl & 1) == 1) - fz) < 0.1);
   var ch = 0u; var c = vec3f(0.0); var em = false; var il = vec3f(0.0); var glowK = 1.0; var emK = 1.0;
-  var body = false; var bodyEm = vec3f(-1.0); var winGlow = vec3f(0.0);
+  var body = false; var bodyEm = vec3f(-1.0); var winGlow = vec3f(0.0); var doorPeek = false;
   // seen from the other side, text reads mirrored along the face (rev in wallColumn)
   let rev = side < 2 && (face == 1 || face == 2);
   let sec = u.sec; let scol = sign;
@@ -286,20 +286,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       // (the gap an open door leaves: between the two leaves' free edges, or past the one leaf's)
       let gap = select(e - edgeIn, along - dA0 - 2.0 * edgeIn, dEn);
       if (near || (pkR >= 0 && dOp > 0.0 && gap > 0.08)) {
-        gSDo = select(0u, dLf, near); gSDang = sw; gSDglass = false;
-        let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, false);
-        gSDo = 0u;
-        ch = P.ch; c = P.c; isWin = true; backT = gBack; winGlow = gPeekEm;
-        // through a shut leaf's glass: a little darker and cooler, and it takes the street's reflection
-        if (gSDglass) { c = c * 0.82 + vec3f(8.0, 12.0, 18.0); glass = true; }
-        else {
-          // (13.10d2) the open doorway: the room as the walk met it, nothing of the facade's light on it (no glass,
-          // no lamps, neon or floodlights on a wall that is not there), the same cell as seen from inside
-          gBackT = select(0.0, gBack, gBack > t); gBackW = t; gBackK = -1.0;
-          gEm = sat(gPeekEm); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0;
-          gTag = t; gNrm = vec3f(nw, 0.0); gWet = 0.0; gMat = MAT_NONE;
-          return Cell(P.ch, P.c, vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0);
-        }
+        // (the walk itself is made once below, for the door and the windows alike)
+        gSDo = select(0u, dLf, near); gSDang = sw; gSDglass = false; doorPeek = true;
       }
       else if (dOp > 0.0 && gap > 0.08) { ch = DOT; c = vec3f(255.0, 220.0, 160.0) * (0.18 * elec); em = true; glowK = 0.2; }
       else if (dOp > 0.0 && gap > 0.0) { ch = COL; c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.2; }
@@ -326,6 +314,25 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     // lit from below by gooseneck lamps at night
     let al = vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9); c += al; il += al;
   } else { body = true; }
+  // the room behind the street door or a window: one call of peekRoom for both (WGSL inlines it at each call, and it
+  // walks the room: two calls made the shader much slower to compile, 13.S)
+  let winPeek = body && detailed && !(fl == 0 && dA1 > dA0 && z < FLOOR_H) && pkR >= 0 && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0);
+  var P = Px(32u, vec3f(0.0));
+  if (doorPeek || winPeek) { P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, winPeek); }
+  if (doorPeek) {
+    gSDo = 0u;
+    ch = P.ch; c = P.c; isWin = true; backT = gBack; winGlow = gPeekEm;
+    // through a shut leaf's glass: a little darker and cooler, and it takes the street's reflection
+    if (gSDglass) { c = c * 0.82 + vec3f(8.0, 12.0, 18.0); glass = true; }
+    else {
+      // (13.10d2) the open doorway: the room as the walk met it, nothing of the facade's light on it (no glass,
+      // no lamps, neon or floodlights on a wall that is not there), the same cell as seen from inside
+      gBackT = select(0.0, gBack, gBack > t); gBackW = t; gBackK = -1.0;
+      gEm = sat(gPeekEm); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0;
+      gTag = t; gNrm = vec3f(nw, 0.0); gWet = 0.0; gMat = MAT_NONE;
+      return Cell(P.ch, P.c, vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0);
+    }
+  }
   // the facade's body (windows and wall). Far, several floors and bays share a cell; up close, each window
   // and its room. In the band between, both are made and their colors mixed by the building's detail, so the
   // whole tower fades from one look to the other (only the glyphs still dither over the band)
@@ -352,11 +359,11 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   if (fl == 0 && dA1 > dA0 && z < FLOOR_H) {
     // over a street door: wall up to the next floor, never a window (13.10b2)
     ch = select(COL, EQ, z < DOOR_H + 0.5); c = frame * select(1.0, 1.25, z < DOOR_H + 0.5) * shade;
-  } else if (pkR >= 0 && !escCell && !corner && windowHole(style, shop, fw, fz, z - f32(fl) * FLOOR_H, fl == 0)) {
+  } else if (winPeek) {
     // a window: the room behind it, lit by its own lamps. From afar it was a pane in the building's window
     // color (lit) or dark glass: that look fades out over the whole building as it comes near, and a pane
     // that was lit keeps a glow of its color, fading closer still
-    let P = peekRoom(po, lot, bk, fl, rdx, rdy, m, t, winPw, tRef < PEEK_FULL, true); backT = gBack;
+    backT = gBack;
     let capaLit = hh < litK && wp > 0.04;
     let capa = select(darkPane, wc * wk, capaLit);
     ch = select(select(EQ, select(HASH, pat.x, hh < litK * 0.3), capaLit), P.ch, peekK > hash3(wi, fl, bk + 517));
