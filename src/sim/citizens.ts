@@ -359,8 +359,12 @@ const WX = newWeather();
 /** How hard it rains or snows (0..1) at game time t, by the forecast the city's weather follows. */
 function rainAt(seed: number, t: number) { forecast(seed, t, WX); return WX.precip; }
 
-/** Plans by citizen and day; dropped wholesale when it grows big (they are cheap to make again). */
-const plans = new Map<number, Seg[]>();
+/**
+ * Plans by citizen, two days each (slot day & 1: today and the night before, what whereIs reads), made again when another
+ * day is asked for (they are cheap). (16.1) Was a map by citizen and day, emptied at 200 000: thousands of lookups a tick
+ * in a map that size fed the garbage collector, and the whole city's plans were made again each time it emptied.
+ */
+let planPop: Population | null = null, planDay = new Int32Array(0), planSegs: Seg[][] = [];
 
 /**
  * Citizen i's day: work (with the walk there and back) on the days they work, an errand at a shop
@@ -369,10 +373,19 @@ const plans = new Map<number, Seg[]>();
  * is at home, awake or asleep.
  */
 export function dayPlan(P: Population, city: City, i: number, day: number): Seg[] {
-  const key = i * 4096 + (day & 4095);
-  const got = plans.get(key);
-  if (got) return got;
-  if (plans.size > 200000) plans.clear();
+  if (planPop !== P) { planPop = P; planDay = new Int32Array(P.n * 2).fill(-1 << 30); planSegs = new Array(P.n * 2); }
+  const slot = i * 2 + (day & 1);
+  if (planDay[slot] === day) return planSegs[slot];
+  const out = makePlan(P, city, i, day);
+  planDay[slot] = day; planSegs[slot] = out;
+  return out;
+}
+
+/**
+ * Citizen i's day, made (dayPlan keeps it). Apart from the lookup: its closures make V8 build their context on every
+ * call, before any early return, so a lookup that shared this body paid ~140 bytes each time (16.1).
+ */
+function makePlan(P: Population, city: City, i: number, day: number): Seg[] {
   const out: Seg[] = [], h = (q: number) => hash3(P.seed ^ i, day, q);
   const home = P.households[P.home[i]].building, B = city.buildings[home], hx = (B.x0 + B.x1) / 2, hy = (B.y0 + B.y1) / 2;
   const wake = P.wake[i], bedEnd = P.bed[i] > wake ? P.bed[i] : P.bed[i] + 24;
@@ -426,7 +439,6 @@ export function dayPlan(P: Population, city: City, i: number, day: number): Seg[
     if (k >= 0 && (rainAt(P.seed, (day * 24 + at) * 3600) < 0.5 || h(17) < 0.3)) trip(home, at, 1.2 + h(16) * 2, Doing.Out, city.businesses[k].building, k);
   }
   out.sort((x, y) => x.a - y.a);
-  plans.set(key, out);
   return out;
 }
 
@@ -457,9 +469,13 @@ const HERE: Whereabouts = { doing: Doing.Home, building: -1, biz: -1, from: -1, 
  * only looked up when someone asks. The result is shared: copy what you keep.
  */
 export function whereIs(P: Population, city: City, i: number, t: number): Whereabouts {
-  const day = Math.floor(t / 86400), hr = t / 3600 - day * 24, R = HERE;
-  for (const [d, x] of [[day, hr], [day - 1, hr + 24]]) {
-    for (const s of dayPlan(P, city, i, d)) {
+  // (the day as an int32: a float handed to dayPlan was boxed on every call, 16.1)
+  const day = Math.floor(t / 86400) | 0, hr = t / 3600 - day * 24, R = HERE;
+  // today's plan, then the night before's (a shift or an evening past midnight); no arrays: it runs for many people a tick (16.1)
+  for (let n = 0; n < 2; n++) {
+    const segs = dayPlan(P, city, i, (day - n) | 0), x = hr + 24 * n;
+    for (let q = 0; q < segs.length; q++) {
+      const s = segs[q];
       if (x < s.a || x >= s.b) continue;
       R.doing = s.doing; R.building = s.to; R.biz = s.biz; R.from = s.from; R.prog = (x - s.a) / (s.b - s.a);
       return R;

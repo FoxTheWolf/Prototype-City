@@ -46,14 +46,16 @@ export class DynLights {
    */
   private lv0 = new Int32Array(MAX); private lvN = new Uint16Array(MAX); private lvH = new Float32Array(MAX);
   private lv = new Float32Array(MAX * 8); private lvUsed = 0;
-  private buckets: number[][] = Array.from({ length: SIDE * SIDE }, () => []);
-  private used: number[] = [];
+  // (16.1) the buckets as (cell, light) pairs, counted into off/idx when read: lists kept from frame to frame (an array
+  // emptied by length = 0 lets its memory go, and refilling them every frame fed the garbage collector)
+  private pc = new Uint16Array(1024); private pl = new Uint16Array(1024); private np = 0;
+  private off = new Uint32Array(SIDE * SIDE + 1); private idx = new Uint32Array(1024); private sorted = true;
+  private L = new Float32Array(MAX * 16);
   private bx = 0; private by = 0;
 
   /** Start a frame centered on the viewer. */
   begin(x: number, y: number) {
-    for (const k of this.used) this.buckets[k].length = 0;
-    this.used.length = 0;
+    this.np = 0; this.sorted = false;
     this.n = 0; this.lvUsed = 0;
     this.bx = Math.floor(x / CELL) - SIDE / 2; this.by = Math.floor(y / CELL) - SIDE / 2;
   }
@@ -138,11 +140,13 @@ export class DynLights {
     this.range[i] = range; this.zFull[i] = zFull; this.zTop[i] = zTop; this.r[i] = r; this.g[i] = g; this.b[i] = b;
     const i0 = Math.max(0, Math.floor(ax / CELL) - this.bx), i1 = Math.min(SIDE - 1, Math.floor(bx / CELL) - this.bx);
     const j0 = Math.max(0, Math.floor(ay / CELL) - this.by), j1 = Math.min(SIDE - 1, Math.floor(by / CELL) - this.by);
-    for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) {
-      const c = j * SIDE + k;
-      if (this.buckets[c].length === 0) this.used.push(c);
-      this.buckets[c].push(i);
+    const need = this.np + Math.max(0, j1 - j0 + 1) * Math.max(0, i1 - i0 + 1);
+    if (need > this.pc.length) {
+      let m = this.pc.length; while (m < need) m *= 2;
+      const pc = new Uint16Array(m), pl = new Uint16Array(m); pc.set(this.pc); pl.set(this.pl); this.pc = pc; this.pl = pl;
     }
+    for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) { this.pc[this.np] = j * SIDE + k; this.pl[this.np++] = i; }
+    this.sorted = false;
   }
 
   /**
@@ -151,24 +155,39 @@ export class DynLights {
    * offsets into a list of light indices (SIDE x SIDE + 1 offsets).
    */
   pack() {
-    const n = this.n, L = new Float32Array(Math.max(1, n) * 16);
-    for (let i = 0; i < n; i++) {
-      L.set([this.kind[i], this.x[i], this.y[i], this.u[i], this.w[i], this.nx[i], this.ny[i], this.range[i], this.zFull[i], this.zTop[i], this.r[i], this.g[i], this.b[i], this.lv0[i], this.lvN[i], this.lvH[i]], i * 16);
+    const n = this.n, L = this.L;
+    for (let i = 0, o = 0; i < n; i++, o += 16) {
+      L[o] = this.kind[i]; L[o + 1] = this.x[i]; L[o + 2] = this.y[i]; L[o + 3] = this.u[i]; L[o + 4] = this.w[i]; L[o + 5] = this.nx[i]; L[o + 6] = this.ny[i]; L[o + 7] = this.range[i];
+      L[o + 8] = this.zFull[i]; L[o + 9] = this.zTop[i]; L[o + 10] = this.r[i]; L[o + 11] = this.g[i]; L[o + 12] = this.b[i]; L[o + 13] = this.lv0[i]; L[o + 14] = this.lvN[i]; L[o + 15] = this.lvH[i];
     }
-    const off = new Uint32Array(SIDE * SIDE + 1);
-    let total = 0;
-    for (let c = 0; c < SIDE * SIDE; c++) { off[c] = total; total += this.buckets[c].length; }
-    off[SIDE * SIDE] = total;
-    const idx = new Uint32Array(Math.max(1, total));
-    for (let c = 0; c < SIDE * SIDE; c++) idx.set(this.buckets[c], off[c]);
-    return { lights: L, lv: this.lv.subarray(0, Math.max(1, this.lvUsed)), off, idx, bx: this.bx, by: this.by };
+    this.index();
+    // (views of the kept lists: read before the next frame's begin, as the GPU's putDyn copies them at once)
+    return { lights: L.subarray(0, Math.max(1, n) * 16), lv: this.lv.subarray(0, Math.max(1, this.lvUsed)), off: this.off, idx: this.idx.subarray(0, Math.max(1, this.np)), bx: this.bx, by: this.by };
   }
+
+  /** The pairs counted into off (where each bucket's lights start in idx) and idx, in the order they were added. */
+  private index() {
+    if (this.sorted) return;
+    this.sorted = true;
+    const off = this.off, N = SIDE * SIDE;
+    off.fill(0);
+    for (let p = 0; p < this.np; p++) off[this.pc[p] + 1]++;
+    for (let c = 0; c < N; c++) off[c + 1] += off[c];
+    if (this.idx.length < this.np) { let m = this.idx.length; while (m < this.np) m *= 2; this.idx = new Uint32Array(m); }
+    // (filled from the back, so the lights of a bucket keep the order they came in)
+    for (let p = this.np - 1; p >= 0; p--) { const c = this.pc[p]; this.idx[off[c + 1] - 1 - (this.at[c]++)] = this.pl[p]; }
+    this.at.fill(0);
+  }
+  private at = new Uint32Array(SIDE * SIDE);
 
   /** Add the light reaching (px, py) at height pz to out[0..2]. */
   sample(px: number, py: number, pz: number, out: Float32Array) {
     const i = Math.floor(px / CELL) - this.bx, j = Math.floor(py / CELL) - this.by;
     if (i < 0 || j < 0 || i >= SIDE || j >= SIDE) return;
-    for (const k of this.buckets[j * SIDE + i]) {
+    this.index();
+    const c = j * SIDE + i;
+    for (let e = this.off[c], e1 = this.off[c + 1]; e < e1; e++) {
+      const k = this.idx[e];
       if (this.kind[k] >= LightKind.Panel) { this.samplePanel(k, px, py, pz, out); continue; }
       const zk = pz <= this.zFull[k] ? 1 : (this.zTop[k] - pz) / (this.zTop[k] - this.zFull[k]);
       if (zk <= 0) continue;

@@ -53,12 +53,17 @@ function serve() {
 
 // the title's opening plays its sounds before any click (titleLogo.ts)
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+if (process.env.TC_HEAP) app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 app.whenReady().then(async () => {
   if (!fs.existsSync(path.join(DIST, 'index.html'))) { console.error('dist/ is missing: run `npm run build` first.'); app.quit(); return; }
   const port = await serve();
   // TC_CHECK=1: no window; prints whether WebGPU and the isolation work here, then quits (for testing)
-  const check = !!process.env.TC_CHECK;
-  win = new BrowserWindow({ fullscreen: !check, show: !check, autoHideMenuBar: false, backgroundColor: '#000000', title: 'GRID DOWN: Terminal State' });
+  // TC_HEAP=1 (16.1): no window either; the night street for TC_HEAP_S s (15) under the heap sampler, then the
+  // functions that allocate the most per frame, and quits (what feeds the garbage collector's pauses)
+  const heap = !!process.env.TC_HEAP, check = !!process.env.TC_CHECK || heap;
+  // (a hidden window gets ~1 frame a second: the sampler's is shown, small and off the screen)
+  win = new BrowserWindow({ fullscreen: !check, show: !check || heap, autoHideMenuBar: false, backgroundColor: '#000000', title: 'GRID DOWN: Terminal State', ...(heap ? { x: -4000, y: 0, width: 1280, height: 720, webPreferences: { backgroundThrottling: false } } : {}) });
+  if (heap) { require('./heap.cjs').heap(win, Number(process.env.TC_HEAP_S) || 15).finally(() => app.quit()); win.loadURL(`http://127.0.0.1:${port}/?seed=42&mute&pos=828,800&look=0&at=2008-07-03T22:00`); return; }
   if (check) win.webContents.once('did-finish-load', async () => {
     console.log(await win.webContents.executeJavaScript(`(async () => { while (document.getElementById('ready')?.hidden !== false && performance.now() < 60000) await new Promise((r) => setTimeout(r, 50)); return JSON.stringify({ isolated: crossOriginIsolated, adapter: !!(await navigator.gpu?.requestAdapter()), title: document.title, readyMs: Math.round(performance.now()), origin: location.origin }); })()`));
     app.quit();

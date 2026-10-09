@@ -7,7 +7,7 @@ import { PLACES } from '../../sim/placeTypes';
 import { cachedPlan, stackOf, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, WALL, CELL, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
-import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
+import { ent, gpuInside, gpuObjects, ob as obj, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
 import { CharGrid } from '../grid';
 import { type Inside } from '../interior';
 import { furnitureModel, roofBulbModel, stairHouseModel } from '../models';
@@ -532,6 +532,8 @@ export class GpuWorld {
    * corners projected), the 8-column tiles it covers, and its model (sent once). When the model area
    * fills, it starts over and the frame is packed again.
    */
+  private lBox: number[] = []; private lMods: number[] = []; private lPicked: number[] = []; private lLit: number[] = []; private lCast: number[] = [];
+  private lCnt = new Uint32Array(0);
   private objects(world: World, v: View, scale: number, plane: number, hor: number, I: Inside | null, sun: ArrayLike<number> | null) {
     const shadows = sun !== null;
     const { cols, rows } = this, q = this.dev.queue;
@@ -540,16 +542,16 @@ export class GpuWorld {
     const den = cp - Math.abs(sp) * Math.tan(VFOV / 2);
     // (by day wider: what stands just off the screen casts its shadow into it)
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
-    const list: { o: Obj; far: number; zoff: number; indoor?: boolean; roof?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
+    const list = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
     // (13.23) the roofs near, but the one the viewer is on: each stair house as a block, its tank and the rest, in the open air
     for (const [k, R] of this.roofs) {
       const top = floorsOf(this.city.buildings[k]);
       if (I && I.k === k && I.floor === top) continue;
       for (const S of R.rooms) if (S.kind === 'stair') {
         const hx = (S.x1 - S.x0) / 2 + 0.125, hy = (S.y1 - S.y0) / 2 + 0.125;
-        list.push({ o: { x: (S.x0 + S.x1) / 2, y: (S.y0 + S.y1) / 2, c: 1, s: 0, parts: stairHouseModel(hx, hy), r: Math.hypot(hx, hy) + 0.4, h: 3.7, seed: k }, far: ROOF_FAR, zoff: top * FLOOR_H, roof: true });
+        ent(list, obj((S.x0 + S.x1) / 2, (S.y0 + S.y1) / 2, 1, 0, stairHouseModel(hx, hy), Math.hypot(hx, hy) + 0.4, 3.7, k), ROOF_FAR, top * FLOOR_H, false, true);
       }
-      for (const f of R.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: ROOF_FAR, zoff: top * FLOOR_H, roof: true });
+      for (const f of R.furn) ent(list, obj(f.x, f.y, f.c, f.s, furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), Math.hypot(f.hx, f.hy) + 0.4, f.kind === 'tank' ? 3.6 : 2, f.seed), ROOF_FAR, top * FLOOR_H, false, true);
     }
     // (C3) and the bulb over each stair house door, the viewer's roof's too: lit at night on the building's power
     { const dark = 1 - daylight(world.time), Pw = world.power;
@@ -557,31 +559,35 @@ export class GpuWorld {
         const L = roofLamp(R);
         if (!L) continue;
         const on = Pw.subs[Pw.building[k]].on || Pw.backup[k] >= Backup.Generator ? dark : 0;
-        list.push({ o: { x: L[0], y: L[1], c: L[2], s: L[3], parts: roofBulbModel(on), r: 0.3, h: 2.6, seed: k }, far: ROOF_FAR, zoff: floorsOf(this.city.buildings[k]) * FLOOR_H, roof: true });
+        ent(list, obj(L[0], L[1], L[2], L[3], roofBulbModel(on), 0.3, 2.6, k), ROOF_FAR, floorsOf(this.city.buildings[k]) * FLOOR_H, false, true);
       } }
     // indoors, the floor's furniture, lit by its rooms' lamps
     // (on the roof, C3: in the open air, lit by the sun on their own faces as the neighbours' roofs are; the flight
     // stays lit as indoors, under its stair house)
     const onRoof = !!I && I.floor === floorsOf(this.city.buildings[I.k]) && this.roofs.some(([k]) => k === I.k);
-    if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: !onRoof || f.kind === 'stair', roof: onRoof && f.kind !== 'stair' });
+    if (I) for (const f of I.plan.furn) ent(list, obj(f.x, f.y, f.c, f.s, furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), Math.hypot(f.hx, f.hy) + 0.4, f.kind === 'stair' ? 4.4 : f.kind === 'tank' ? 3.6 : 2, f.seed), 40, I.z0, !onRoof || f.kind === 'stair', onRoof && f.kind !== 'stair');
     // and the flights of the storeys below and above, seen through the stairwell (the one below rises into this one)
     if (I && !I.closed) for (const d of [-1, 1]) {
       // (the top floor's leads to the roof where the lot has one, 13.23)
       const f = I.floor + d, S = f >= 0 && f < floorsOf(this.city.buildings[I.k]) - (planOf(this.city, I.k, floorsOf(this.city.buildings[I.k])) ? 0 : 1) ? planOf(this.city, I.k, f)?.furn.find((q) => q.kind === 'stair') : undefined;
-      if (S) list.push({ o: { x: S.x, y: S.y, c: S.c, s: S.s, parts: furnitureModel(S.kind, S.seed, S.hx, S.hy), r: Math.hypot(S.hx, S.hy) + 0.4, h: 4.4, seed: S.seed }, far: 40, zoff: I.z0 + d * FLOOR_H, indoor: true });
+      if (S) ent(list, obj(S.x, S.y, S.c, S.s, furnitureModel(S.kind, S.seed, S.hx, S.hy), Math.hypot(S.hx, S.hy) + 0.4, 4.4, S.seed), 40, I.z0 + d * FLOOR_H, true);
     }
-    const nT = Math.ceil(cols / TILE), box: number[] = [], mods: number[] = [], picked: number[] = [];
+    // (16.1) the lists are the class's, kept between frames and filled by count: an array emptied by length = 0 lets its
+    // memory go, and new ones every frame fed the garbage collector
+    const nT = Math.ceil(cols / TILE), box = this.lBox, mods = this.lMods, picked = this.lPicked, lit = this.lLit, casters = this.lCast;
+    let nPick = 0, nLit = 0, nCast = 0;
     // the floodlit facades near enough for their lamps' shadows: who stands in front of one casts them
-    const lit: number[] = [];
     for (const b of this.city.blocks) {
       if (b.x1 < v.x - FLOOD_SHADOW_FAR || b.x0 > v.x + FLOOD_SHADOW_FAR || b.y1 < v.y - FLOOD_SHADOW_FAR || b.y0 > v.y + FLOOD_SHADOW_FAR) continue;
-      for (let k = b.b0; k < b.b1; k++) { const B = this.city.buildings[k]; if (B.flood && !B.round) lit.push(k); }
+      for (let k = b.b0; k < b.b1; k++) { const B = this.city.buildings[k]; if (B.flood && !B.round) lit[nLit++] = k; }
     }
-    const byFlood = (o: Obj) => lit.some((k) => {
-      const B = this.city.buildings[k], dx = Math.max(B.x0 - o.x, 0, o.x - B.x1), dy = Math.max(B.y0 - o.y, 0, o.y - B.y1);
-      return dx * dx + dy * dy < (FLOOD_REACH + o.r) ** 2;
-    });
-    const casters: number[] = [];
+    const byFlood = (o: Obj) => {
+      for (let n = 0; n < nLit; n++) {
+        const B = this.city.buildings[lit[n]], dx = Math.max(B.x0 - o.x, 0, o.x - B.x1), dy = Math.max(B.y0 - o.y, 0, o.y - B.y1);
+        if (dx * dx + dy * dy < (FLOOD_REACH + o.r) ** 2) return true;
+      }
+      return false;
+    };
     // a point on the screen, as cell edges (column, row), or false behind the eye
     let px = 0, py = 0;
     const proj = (X: number, Y: number, Z: number) => {
@@ -592,7 +598,7 @@ export class GpuWorld {
       px = (cols / 2) * (1 + lat / (d * plane)); py = rows / 2 - ((-f * sp + rz * cp) / d) * scale; return true;
     };
     for (let pass = 0; pass < 2; pass++) {
-      box.length = 0; mods.length = 0; picked.length = 0; casters.length = 0;
+      nPick = 0; nCast = 0;
       let full = false;
       for (let k = 0; k < list.length; k++) {
         const { o, far, zoff } = list[k];
@@ -612,19 +618,22 @@ export class GpuWorld {
         const bx0 = Math.max(0, Math.floor(x0) - 1), bx1 = Math.min(cols, Math.ceil(x1) + 1), by0 = Math.max(0, Math.floor(y0) - 1), by1 = Math.min(rows, Math.ceil(y1) + 1);
         // off the screen: by day still sent (with no screen box) to cast its shadow, if near enough
         const off = bx0 >= bx1 || by0 >= by1;
-        const flood = lit.length > 0 && !list[k].indoor && casters.length < FLOOD_CASTERS && byFlood(o);
+        const flood = nLit > 0 && !list[k].indoor && nCast < FLOOD_CASTERS && byFlood(o);
         if (off && !(shadows && Math.hypot(o.x - v.x, o.y - v.y) < SHADOW_CASTERS) && !flood) continue;
         const m = this.model(o.parts);
         if (m < 0) { full = true; break; }
-        if (flood) casters.push(picked.length);
-        picked.push(k); mods.push(m); if (off) box.push(0, 0, 0, 0); else box.push(bx0, bx1, by0, by1);
+        if (flood) casters[nCast++] = nPick;
+        const b4 = nPick * 4;
+        if (off) box[b4] = box[b4 + 1] = box[b4 + 2] = box[b4 + 3] = 0; else { box[b4] = bx0; box[b4 + 1] = bx1; box[b4 + 2] = by0; box[b4 + 3] = by1; }
+        picked[nPick] = k; mods[nPick++] = m;
       }
       if (!full) break;
       this.models = new WeakMap(); this.mEnd = 0; this.mSent = 0;
     }
     if (this.mEnd > this.mSent) { q.writeBuffer(this.fx, (this.mBase + this.mSent) * 4, this.mW, this.mSent, this.mEnd - this.mSent); this.mSent = this.mEnd; }
     // the tiles' lists: counted, then filled
-    const n = picked.length, W = this.oW, F = this.oF, cnt = new Uint32Array(nT + 1);
+    if (this.lCnt.length < nT + 1) this.lCnt = new Uint32Array(nT + 1);
+    const n = nPick, W = this.oW, F = this.oF, cnt = this.lCnt.fill(0, 0, nT + 1);
     for (let j = 0; j < n; j++) for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) cnt[t]++;
     const tab = 10, lst = tab + nT + 1;
     let total = 0;
@@ -633,7 +642,7 @@ export class GpuWorld {
     // after the objects, this frame's roofs that keep the rain off (gatherRoofs): x, y, c, s, hx, hy, z
     const ob = lst + total, rb = ob + n * OW, nR = roofs.length;
     if (rb + nR * 7 > OBJ_CAP) { W.fill(0, 0, 10); q.writeBuffer(this.fx, this.oBase * 4, W, 0, 10); return; }
-    roofs.forEach((R, k) => F.set([R.x, R.y, R.c, R.s, R.hx, R.hy, R.z], rb + k * 7));
+    roofs.forEach((R, k) => { const r = rb + k * 7; F[r] = R.x; F[r + 1] = R.y; F[r + 2] = R.c; F[r + 3] = R.s; F[r + 4] = R.hx; F[r + 5] = R.hy; F[r + 6] = R.z; });
     const fill = cnt.fill(0);
     for (let j = 0; j < n; j++) {
       for (let t = Math.floor(box[j * 4] / TILE); t <= Math.floor((box[j * 4 + 1] - 1) / TILE); t++) W[lst + W[tab + t] + fill[t]++] = j;
@@ -681,7 +690,7 @@ export class GpuWorld {
     if (sun) { const e = this.shadowGrid(W, F, end, ob, n, sun, v); if (e > 0) { sg = end; end = e; } }
     // and the objects that cast the floodlights' shadows: their count, then their indices
     let fl = 0;
-    if (casters.length && end + 1 + casters.length <= OBJ_CAP) { fl = end; W[end] = casters.length; W.set(casters, end + 1); end += 1 + casters.length; }
+    if (nCast && end + 1 + nCast <= OBJ_CAP) { fl = end; W[end] = nCast; for (let k = 0; k < nCast; k++) W[end + 1 + k] = casters[k]; end += 1 + nCast; }
     // the objects' footprints, for the lamps' shadows and what the wet street and the glass mirror
     let og = 0;
     { const e = this.footGrid(W, F, end, ob, n, v); if (e > 0) { og = end; end = e; } }

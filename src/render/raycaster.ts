@@ -11,7 +11,7 @@ import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
 import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, intercomModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
-import { type Obj } from './objects';
+import { type Obj, type Part } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
 import { bsod, power } from './power';
@@ -329,17 +329,41 @@ export function gpuPrepare(world: World, v: View) {
   return { sky, light, dyn, sun: SUN, ticker: frameTicker };
 }
 
+/** An object in a GPU frame's list: how far its fog ends, how high it is lifted, and whether it is a room's or a roof's. */
+export interface Ent { o: Obj; far: number; zoff: number; indoor: boolean; roof: boolean }
+// (16.1) the frame's objects and entries come from pools kept between frames, started over by gpuObjects: the lists are
+// read within the frame and never kept (a new object for each lamp, sign and person every frame fed the garbage collector)
+const OBJS: Obj[] = [], ENTS: Ent[] = [], ENT_LIST: Ent[] = [];
+let objN = 0, entN = 0;
+/** An object of this frame's (from the pool; z0 as Obj's). */
+export function ob(x: number, y: number, c: number, s: number, parts: Part[], r: number, h: number, seed: number, z0?: number): Obj {
+  let o = OBJS[objN++];
+  if (!o) { o = { x, y, c, s, parts, r, h, seed, z0, pitch: undefined, roll: undefined, lift: undefined, wheel: undefined }; OBJS.push(o); return o; }
+  o.x = x; o.y = y; o.c = c; o.s = s; o.parts = parts; o.r = r; o.h = h; o.seed = seed; o.z0 = z0;
+  o.pitch = o.roll = o.lift = o.wheel = undefined;
+  return o;
+}
+/** Object o into this frame's list (from the pool). */
+export function ent(list: Ent[], o: Obj, far: number, zoff: number, indoor = false, roof = false) {
+  let e = ENTS[entN++];
+  if (!e) { e = { o, far, zoff, indoor, roof }; ENTS.push(e); }
+  else { e.o = o; e.far = far; e.zoff = zoff; e.indoor = indoor; e.roof = roof; }
+  list.push(e);
+}
+
 /**
  * The objects a GPU frame draws (after gpuPrepare): the same lists renderWorld draws, each with the
  * distance its fog ends at and how high it is lifted (a fire escape's floors: zoff).
  */
-export function gpuObjects(world: World, v: View, cols: number, plane: number, near = 0): { o: Obj; far: number; zoff: number }[] {
+export function gpuObjects(world: World, v: View, cols: number, plane: number, near = 0): Ent[] {
   // what is outside the view's cone is not even built (seen), as in a render worker's strip
   Object.assign(CULL, { px: v.x, py: v.y, dirX: Math.cos(v.yaw), dirY: Math.sin(v.yaw), plane, cols, x0: 0, x1: cols, all: false, near });
+  objN = 0; entN = 0; ENT_LIST.length = 0;
+  const out = ENT_LIST;
   gatherRoofs(world, v);
-  const out = collectObjects(world, v).map((o) => ({ o, far: SPRITE_FAR, zoff: 0 }));
-  for (const o of gatherBoards(world, v, frameDay)) out.push({ o, far: BOARD_FAR, zoff: 0 });
-  for (const o of sheds) out.push({ o, far: SPRITE_FAR, zoff: 0 });
+  for (const o of collectObjects(world, v)) ent(out, o, SPRITE_FAR, 0);
+  for (const o of gatherBoards(world, v, frameDay)) ent(out, o, BOARD_FAR, 0);
+  for (const o of sheds) ent(out, o, SPRITE_FAR, 0);
   // the fire escapes, one object per floor (drawEscapes)
   const { city } = world;
   for (const blk of city.blocks) {
@@ -353,7 +377,7 @@ export function gpuObjects(world: World, v: View, cols: number, plane: number, n
         const flip = e.nx * e.uy - e.ny * e.ux > 0 ? 1 : -1;
         for (let f = 0; f <= e.top; f++) {
           const parts = escapeModel(f > 0, f < e.top ? (f & 1 ? -flip : flip) : 0, BAY, (f & 1) === 1);
-          out.push({ o: { x: cx, y: cy, c: e.nx, s: e.ny, parts, r: 2, h: 4.6, seed: 0 }, far: 60, zoff: f * FLOOR_H });
+          ent(out, ob(cx, cy, e.nx, e.ny, parts, 2, 4.6, 0), 60, f * FLOOR_H);
         }
       }
     }
@@ -480,7 +504,7 @@ function gatherRoofs(world: World, v: View) {
         for (let q = 0; q < n; q++) {
           const [x, y] = at(lo + (q + 0.5) * seg, SHED_D / 2);
           if (Math.hypot(x - v.x, y - v.y) > SPRITE_FAR) continue;
-          sheds.push({ x, y, c, s, parts: shedModel(seg), r: Math.hypot(SHED_D, seg) / 2 + 0.3, h: SHED_Z + 0.5, seed: 0 });
+          sheds.push(ob(x, y, c, s, shedModel(seg), Math.hypot(SHED_D, seg) / 2 + 0.3, SHED_Z + 0.5, 0));
         }
       }
     }
@@ -506,30 +530,30 @@ function gatherBoards(world: World, v: View, day: number): Obj[] {
       const pal = Math.floor(hash3(k, Bd.biz, 79) * AD_BG.length);
       const lamp = Math.round(Math.max(0, Math.min(1, (1 - day) * signPower(world, k, frameSec))) * 8) / 8;
       const B = city.buildings[k];
-      boardList.push({ x: Bd.x, y: Bd.y, c: Math.cos(Bd.a), s: Math.sin(Bd.a), parts: boardModel(text, Bd.w, Bd.h, B.h, Bd.z, AD_BG[pal], AD_FG[pal], lamp), r: Bd.w / 2 + 1.2, h: Bd.z + Bd.h + 0.1, z0: B.h, seed: k });
+      boardList.push(ob(Bd.x, Bd.y, Math.cos(Bd.a), Math.sin(Bd.a), boardModel(text, Bd.w, Bd.h, B.h, Bd.z, AD_BG[pal], AD_FG[pal], lamp), Bd.w / 2 + 1.2, Bd.z + Bd.h + 0.1, k, B.h));
     }
   }
   // the cell sites' masts, their red lights blinking (on batteries, so through a blackout too)
   world.telco.sites.forEach((S, k) => {
     if (Math.hypot(S.x - v.x, S.y - v.y) > BOARD_FAR) return;
     const base = city.buildings[S.building].h, lit = (frameSec + k * 0.37) % 1.5 < 0.5;
-    boardList.push({ x: S.x, y: S.y, c: 1, s: 0, parts: mastModel(base, lit), r: 1.8, h: base + 8.6, z0: base, seed: 9000 + k });
+    boardList.push(ob(S.x, S.y, 1, 0, mastModel(base, lit), 1.8, base + 8.6, 9000 + k, base));
   });
   // the security cameras, panning, their red light blinking while they record
   world.cctv.forEach((C, k) => {
     if (Math.abs(C.x - v.x) > CCTV_FAR || Math.abs(C.y - v.y) > CCTV_FAR) return;
     const arm = Math.hypot(C.x - C.mx, C.y - C.my), a = Math.atan2(C.y - C.my, C.x - C.mx), yaw = cctvYaw(C, frameSec);
-    boardList.push({ x: C.mx, y: C.my, c: Math.cos(a), s: Math.sin(a), parts: cctvMount(C.z, arm, C.kind === 0), r: arm + 0.2, h: C.z + 0.4, z0: C.kind === 0 ? 0 : C.z - 0.15, seed: 9700 + k });
-    boardList.push({ x: C.x, y: C.y, c: Math.cos(yaw), s: Math.sin(yaw), parts: cctvModel(C.z, (frameSec + k * 0.29) % 2 < 1, CAMS[C.model].shape), r: 0.45, h: C.z + 0.15, z0: C.z - 0.22, seed: 9800 + k });
+    boardList.push(ob(C.mx, C.my, Math.cos(a), Math.sin(a), cctvMount(C.z, arm, C.kind === 0), arm + 0.2, C.z + 0.4, 9700 + k, C.kind === 0 ? 0 : C.z - 0.15));
+    boardList.push(ob(C.x, C.y, Math.cos(yaw), Math.sin(yaw), cctvModel(C.z, (frameSec + k * 0.29) % 2 < 1, CAMS[C.model].shape), 0.45, C.z + 0.15, 9800 + k, C.z - 0.22));
     // its notice below it, on the wall or the pole, facing the way it looks out (the signage manual, section 7)
     const sz = Math.max(2.2, C.z - 1.0), off = C.kind === 0 ? 0.1 : 0.02;
-    boardList.push({ x: C.mx + Math.cos(a) * off, y: C.my + Math.sin(a) * off, c: Math.cos(a), s: Math.sin(a), parts: cctvSignModel(sz), r: 0.35, h: sz + 0.3, z0: sz, seed: 9900 + k });
+    boardList.push(ob(C.mx + Math.cos(a) * off, C.my + Math.sin(a) * off, Math.cos(a), Math.sin(a), cctvSignModel(sz), 0.35, sz + 0.3, 9900 + k, sz));
   });
   // the substations' yards
   world.power.subs.forEach((S, k) => {
     if (!S.yard || Math.hypot(S.x - v.x, S.y - v.y) > BOARD_FAR) return;
     const [D, W] = yardSize(S.yard);
-    boardList.push({ x: S.x, y: S.y, c: Math.cos(S.yard.a), s: Math.sin(S.yard.a), parts: substationModel(D, W, S.on, yardFlood(S.on, day), `GRIDLINK SUB ${String(k + 1).padStart(2, '0')}`), r: Math.hypot(D, W) / 2, h: 9.1, seed: 9500 + k });
+    boardList.push(ob(S.x, S.y, Math.cos(S.yard.a), Math.sin(S.yard.a), substationModel(D, W, S.on, yardFlood(S.on, day), `GRIDLINK SUB ${String(k + 1).padStart(2, '0')}`), Math.hypot(D, W) / 2, 9.1, 9500 + k));
   });
   return boardList;
 }
@@ -543,32 +567,39 @@ function yardSize(Y: { x0: number; y0: number; x1: number; y1: number; a: number
 const yardFlood = (on: boolean, day: number) => (on ? Math.round(Math.max(0, 1 - day * 1.4) * 8) / 8 : 0);
 
 /** This frame's moving and flickering lights: car headlights and tail lights, and the neon signs. */
+const NEAR2: number[] = [], BLOCKER = new Float64Array(2), byNum = (a: number, b: number) => a - b;
+let NEAR = new Float64Array(96);
 function gatherLights(world: World, v: View, sec: number) {
   const { city } = world;
   dyn.begin(v.x, v.y);
   // the squared distance within which cars get a cone per headlamp: CAR_TWIN_FAR, or nearer when
   // more than CAR_TWIN_MAX are that close
-  const near2: number[] = [];
+  // (16.1: lists kept between frames, no array nor object a car: this runs every frame)
+  const near2 = NEAR2;
+  near2.length = 0;
   for (const c of world.cars) { const d2 = (c.x - v.x) ** 2 + (c.y - v.y) ** 2; if (d2 < CAR_TWIN_FAR * CAR_TWIN_FAR && c.kind !== 'bike') near2.push(d2); }
-  const twinD2 = near2.length > CAR_TWIN_MAX ? near2.sort((a, b) => a - b)[CAR_TWIN_MAX - 1] : CAR_TWIN_FAR * CAR_TWIN_FAR;
+  const twinD2 = near2.length > CAR_TWIN_MAX ? near2.sort(byNum)[CAR_TWIN_MAX - 1] : CAR_TWIN_FAR * CAR_TWIN_FAR;
   // where the nearby cars are, for the headlights they block (L.6)
-  const near: { x: number; y: number; hl: number }[] = [];
+  let nNear = 0;
   for (const c of world.cars) {
     if (c.kind === 'bike') continue;
     carPose(c, v.alpha, POSE);
-    if (Math.abs(POSE[0] - v.x) < CAR_LIGHT_FAR + 40 && Math.abs(POSE[1] - v.y) < CAR_LIGHT_FAR + 40) near.push({ x: POSE[0], y: POSE[1], hl: c.len / 2 });
+    if (Math.abs(POSE[0] - v.x) < CAR_LIGHT_FAR + 40 && Math.abs(POSE[1] - v.y) < CAR_LIGHT_FAR + 40) {
+      if (nNear * 3 >= NEAR.length) { const N = new Float64Array(NEAR.length * 2); N.set(NEAR); NEAR = N; }
+      NEAR[nNear * 3] = POSE[0]; NEAR[nNear * 3 + 1] = POSE[1]; NEAR[nNear * 3 + 2] = c.len / 2; nNear++;
+    }
   }
-  /** The nearest car standing in a beam from (lx, ly) along (dx, dy) within range: [how far its back is, its side offset / that], or [0, 0]. */
-  const blocker = (lx: number, ly: number, dx: number, dy: number, range: number): [number, number] => {
+  /** The nearest car standing in a beam from (lx, ly) along (dx, dy) within range: into BLOCK, how far its back is and its side offset / that, or 0, 0. */
+  const blocker = (lx: number, ly: number, dx: number, dy: number, range: number) => {
     let best = 0, sl = 0;
-    for (const o of near) {
-      const ox = o.x - lx, oy = o.y - ly, s = ox * dx + oy * dy - o.hl;
+    for (let n = 0; n < nNear; n++) {
+      const ox = NEAR[n * 3] - lx, oy = NEAR[n * 3 + 1] - ly, s = ox * dx + oy * dy - NEAR[n * 3 + 2];
       if (s < 0.3 || s > range || (best > 0 && s >= best)) continue;
       const a = -ox * dy + oy * dx;
       if (Math.abs(a) > 0.6 * s + 1.2) continue; // outside the beam's spread
       best = s; sl = a / s;
     }
-    return [best, sl];
+    BLOCKER[0] = best; BLOCKER[1] = sl;
   };
   for (const c of world.cars) {
     carPose(c, v.alpha, POSE);
@@ -580,17 +611,21 @@ function gatherLights(world: World, v: View, sec: number) {
     if (!bike && (x - v.x) ** 2 + (y - v.y) ** 2 <= twinD2) {
       // up close, a cone from each headlamp (each a little more than half the pair's light); the dipped
       // beam is asymmetric: the right lamp's reaches further and higher, a little toward the curb (the signs)
-      for (const sd of [-hw, hw]) {
-        const rt = sd > 0, ax = rt ? dx - dy * 0.08 : dx, ay = rt ? dy + dx * 0.08 : dy, an = Math.hypot(ax, ay);
-        const lx = x + dx * hl - dy * sd, ly = y + dy * hl + dx * sd, R = range * (rt ? 1.35 : 1), [cut, sl] = blocker(lx, ly, ax / an, ay / an, R);
-        dyn.cone(lx, ly, ax / an, ay / an, 0.87, R, 1, rt ? 6 : 4, hr * 0.6, hg * 0.6, hb * 0.6, cut, sl);
+      for (let k = 0; k < 2; k++) {
+        const sd = k ? hw : -hw, rt = sd > 0, ax = rt ? dx - dy * 0.08 : dx, ay = rt ? dy + dx * 0.08 : dy, an = Math.hypot(ax, ay);
+        const lx = x + dx * hl - dy * sd, ly = y + dy * hl + dx * sd, R = range * (rt ? 1.35 : 1);
+        blocker(lx, ly, ax / an, ay / an, R);
+        dyn.cone(lx, ly, ax / an, ay / an, 0.87, R, 1, rt ? 6 : 4, hr * 0.6, hg * 0.6, hb * 0.6, BLOCKER[0], BLOCKER[1]);
       }
-    } else { const [cut, sl] = bike ? [0, 0] : blocker(x + dx * hl, y + dy * hl, dx, dy, range); dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb, cut, sl); }
+    } else {
+      if (bike) BLOCKER[0] = BLOCKER[1] = 0; else blocker(x + dx * hl, y + dy * hl, dx, dy, range);
+      dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb, BLOCKER[0], BLOCKER[1]);
+    }
     if (!bike) dyn.point(x - dx * (hl + 0.1), y - dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
     // the turn signal blinking amber at its front and back corners on that side
     if (!bike && blinkOn(c, sec)) {
       const sd = c.sig * hw;
-      for (const f of [hl + 0.05, -hl - 0.05]) dyn.point(x + dx * f - dy * sd, y + dy * f + dx * sd, 2.5, 0.5, 1.5, 110, 60, 0);
+      for (let k = 0; k < 2; k++) { const f = k ? -hl - 0.05 : hl + 0.05; dyn.point(x + dx * f - dy * sd, y + dy * f + dx * sd, 2.5, 0.5, 1.5, 110, 60, 0); }
     }
     // a police beacon throws red and blue around it in turns
     // a wreck's hazard lights blink amber
@@ -651,7 +686,7 @@ function gatherLights(world: World, v: View, sec: number) {
       // under the top: the parapet hides them from the roof, which they flooded pink, C3)
       if (B.neon && !B.cut && dist < NEON_LIGHT_FAR) {
         const q = NEON_LIGHT * signPower(world, k, sec), [nr, ng, nb] = B.neon;
-        if (q > 0.005) for (const [x, y] of [[B.x0, B.y0], [B.x1, B.y0], [B.x0, B.y1], [B.x1, B.y1]]) dyn.panel(x, y, x, y, 1, 0, 0, Math.max(1, B.h - FLOOR_H), NEON_RANGE, 0.99, linC(nr, q), linC(ng, q), linC(nb, q));
+        if (q > 0.005) for (let k = 0; k < 4; k++) { const x = k & 1 ? B.x1 : B.x0, y = k & 2 ? B.y1 : B.y0; dyn.panel(x, y, x, y, 1, 0, 0, Math.max(1, B.h - FLOOR_H), NEON_RANGE, 0.99, linC(nr, q), linC(ng, q), linC(nb, q)); }
       }
       if (B.biz < 0 || B.round) continue;
       const blkB = blockAt(city, cx, cy);
@@ -778,10 +813,10 @@ function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
     const ax = stop ? S.c : -S.c, ay = stop ? S.s : -S.s, px = S.x + ax * 3.2 + S.s * 0.6, py = S.y + ay * 3.2 - S.c * 0.6;
     const zs = z + BLADE_H + 0.02, ra = streetBlade(ave, ah, dk, z, true), rs = streetBlade(st, sh, dk, zs, false), ha = bladeHalf(ave, ah), hs = bladeHalf(st, sh);
     // the avenue runs along y: its blade faces x both ways; the street's, turned a quarter, faces y
-    out.push({ x: px, y: py, c: 1, s: 0, parts: ra, r: ha + 0.1, h: z + BLADE_H, seed: 0 });
-    out.push({ x: px, y: py, c: -1, s: 0, parts: streetBlade(ave, ah, dk, z, false), r: ha + 0.1, h: z + BLADE_H, z0: z, seed: 0 });
-    out.push({ x: px, y: py, c: 0, s: 1, parts: rs, r: hs + 0.1, h: zs + BLADE_H, z0: zs, seed: 0 });
-    out.push({ x: px, y: py, c: 0, s: -1, parts: rs, r: hs + 0.1, h: zs + BLADE_H, z0: zs, seed: 0 });
+    out.push(ob(px, py, 1, 0, ra, ha + 0.1, z + BLADE_H, 0));
+    out.push(ob(px, py, -1, 0, streetBlade(ave, ah, dk, z, false), ha + 0.1, z + BLADE_H, 0, z));
+    out.push(ob(px, py, 0, 1, rs, hs + 0.1, zs + BLADE_H, 0, zs));
+    out.push(ob(px, py, 0, -1, rs, hs + 0.1, zs + BLADE_H, 0, zs));
     return;
   }
   if (S.hd !== 1) return;
@@ -803,7 +838,7 @@ function cornerSigns(world: World, S: SignalPost, out: Obj[]) {
   }
   // up the sidewalk, away from the crossing: a stop sign's corner is the near one, a light's the far one
   const back = stop ? 1.6 : -1.6;
-  if (text) out.push({ x: S.x + S.c * back, y: S.y + S.s * back, c: S.c, s: S.s, parts: guideSign(text), r: 0.12 * text.length / 2 + 0.4, h: 2.6, seed: 0 });
+  if (text) out.push(ob(S.x + S.c * back, S.y + S.s * back, S.c, S.s, guideSign(text), 0.12 * text.length / 2 + 0.4, 2.6, 0));
 }
 
 function forSignals(world: World, v: View, far: number, cb: (S: SignalPost) => void) {
@@ -913,8 +948,19 @@ const DOOR_NUM_FAR = 30;
 const OPEN_FAR = 15;
 /** Each lamp's district (by lamp), for its banners. */
 const lampDistrict = new Map<number, number>();
+const COLLECTED: Obj[] = [];
+// (16.1) a body with its blinking lamps, the same array while both are: a new one every frame was a new model sent to the GPU
+const LAMPED = new WeakMap<Part[], WeakMap<Part[], Part[]>>();
+function withLamps(body: Part[], lamps: Part[]) {
+  let m = LAMPED.get(body);
+  if (!m) { m = new WeakMap(); LAMPED.set(body, m); }
+  let both = m.get(lamps);
+  if (!both) { both = [...body, ...lamps]; m.set(lamps, both); }
+  return both;
+}
 function collectObjects(world: World, v: View): Obj[] {
-  const out: Obj[] = [];
+  const out = COLLECTED;
+  out.length = 0;
   const { city } = world;
   const cl = (a: number, n: number) => Math.min(n - 1, Math.max(0, a | 0));
   const cx0 = city.xCell[cl(v.x - SPRITE_FAR, city.w)], cx1 = city.xCell[cl(v.x + SPRITE_FAR, city.w)];
@@ -928,17 +974,17 @@ function collectObjects(world: World, v: View): Obj[] {
         const n = lampId(city, p), lv = Math.round(light.level[n] * 8) / 8, wm = Math.round(light.warm[n] * 8) / 8;
         const L = LAMP_LIGHT[p.lampType ?? 'hps'], hc = [0, 1, 2].map((k) => L.cold[k] + (L.warm[k] - L.cold[k]) * wm);
         const s = 255 / Math.max(...hc), head: RGB = [Math.max(30, hc[0] * s * lv), Math.max(30, hc[1] * s * lv), Math.max(30, hc[2] * s * lv)];
-        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: lampModel(head), r: 2.1, h: 6.7, seed: 0 });
+        out.push(ob(p.x, p.y, Math.cos(p.a), Math.sin(p.a), lampModel(head), 2.1, 6.7, 0));
         // on the avenues (their arm reaching across x: the avenues run along y), the district's banners, both ways
         if (Math.abs(Math.cos(p.a)) > 0.7 && Math.hypot(p.x - v.x, p.y - v.y) < SIGNAL_FAR) {
           let d = lampDistrict.get(n);
           if (d === undefined) { d = nearestDistrict(city.districts, p.x, p.y); lampDistrict.set(n, d); }
           const B = bannerModel(d, DISTRICT_COLS[city.districts[d].type]);
-          out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: B, r: 0.7, h: 4.7, z0: 3.3, seed: 0 });
-          out.push({ x: p.x, y: p.y, c: -Math.cos(p.a), s: -Math.sin(p.a), parts: B, r: 0.7, h: 4.7, z0: 3.3, seed: 0 });
+          out.push(ob(p.x, p.y, Math.cos(p.a), Math.sin(p.a), B, 0.7, 4.7, 0, 3.3));
+          out.push(ob(p.x, p.y, -Math.cos(p.a), -Math.sin(p.a), B, 0.7, 4.7, 0, 3.3));
         }
       }
-      else if (p.kind === 'tree') out.push({ x: p.x, y: p.y, c: 1, s: 0, parts: treeModel(p.seed, p.w, p.z1), r: p.w * 0.75, h: p.z1, seed: p.seed });
+      else if (p.kind === 'tree') out.push(ob(p.x, p.y, 1, 0, treeModel(p.seed, p.w, p.z1), p.w * 0.75, p.z1, p.seed));
       else if (p.kind === 'blade') {
         // lit and flickering like the business's shop sign (brightness in eighths, so models are reused)
         const bi = city.businesses[p.seed].building, B = city.buildings[bi], text = bladeText(city, p.seed), letter = p.z1 || BLADE_LETTER;
@@ -947,24 +993,24 @@ function collectObjects(world: World, v: View): Obj[] {
         const sym = BLADE_SYMBOL[city.businesses[p.seed].kind] ?? -1;
         // a tall sign's edge bulbs climb, on the building's power
         const chase = letter > 1 && pw > 0.05 ? Math.floor(frameSec * 6) % 3 : letter > 1 ? 1.5 : 0;
-        out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: bladeModel(text, sym, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, letter, chase), r: bladeReach(letter) + 0.3, h: BLADE_Z + bladeHeight(text, sym, letter), seed: 0 });
+        out.push(ob(p.x, p.y, Math.cos(p.a), Math.sin(p.a), bladeModel(text, sym, [B.sign[0] * lit, B.sign[1] * lit, B.sign[2] * lit], BLADE_Z, letter, chase), bladeReach(letter) + 0.3, BLADE_Z + bladeHeight(text, sym, letter), 0));
       }
-      else if (p.kind === 'debris') out.push({ x: p.x, y: p.y, c: Math.cos(p.a), s: Math.sin(p.a), parts: debrisModel(p.seed), r: 1.8, h: 1.2, seed: p.seed });
+      else if (p.kind === 'debris') out.push(ob(p.x, p.y, Math.cos(p.a), Math.sin(p.a), debrisModel(p.seed), 1.8, 1.2, p.seed));
       else {
         const f = FURNITURE[p.kind];
         // the shelter's poster and the phone's sign are on the street's power
         const P = world.power, lit = p.kind === 'shelter' || p.kind === 'payphone' || p.kind === 'steps';
         const parts = lit ? poweredFurniture(p.kind, power(P, subAt(P, city, p.x, p.y), p.x, p.y, p.seed, 0, frameSec)[0]) : f.parts;
         const c = Math.cos(p.a), s = Math.sin(p.a);
-        out.push({ x: p.x, y: p.y, c, s, parts, r: f.r, h: f.h, seed: p.seed });
+        out.push(ob(p.x, p.y, c, s, parts, f.r, f.h, p.seed));
         // the payphone's PHONE sign faces the sidewalk (-x): drawn turned round
-        if (p.kind === 'payphone') out.push({ x: p.x, y: p.y, c: -c, s: -s, parts: phoneSignModel(), r: f.r, h: f.h, seed: 0 });
+        if (p.kind === 'payphone') out.push(ob(p.x, p.y, -c, -s, phoneSignModel(), f.r, f.h, 0));
         // the bus stop's flag on its post, over the roof (clear of the lamp at the curb), one face each way, with the street it serves (as stopsOf in sim/traffic)
         if (p.kind === 'shelter') {
           const e = [p.y - blk.y0, blk.y1 - p.y, p.x - blk.x0, blk.x1 - p.x], side = e.indexOf(Math.min(...e)), i = cx >> 1, j = cy >> 1;
           const name = roadName(city, side >= 2, [j, j + 1, i, i + 1][side]).toUpperCase();
-          out.push({ x: p.x, y: p.y, c: s, s: -c, parts: busFlagModel(name, 1.956, -0.05, 0.85), r: f.r, h: f.h, seed: 0 });
-          out.push({ x: p.x, y: p.y, c: -s, s: c, parts: busFlagModel(name, -1.956, -0.85, 0.05), r: f.r, h: f.h, seed: 0 });
+          out.push(ob(p.x, p.y, s, -c, busFlagModel(name, 1.956, -0.05, 0.85), f.r, f.h, 0));
+          out.push(ob(p.x, p.y, -s, c, busFlagModel(name, -1.956, -0.85, 0.05), f.r, f.h, 0));
         }
       }
     }
@@ -980,9 +1026,9 @@ function collectObjects(world: World, v: View): Obj[] {
       if (!D || !num) continue;
       const [x, y, nx, ny] = facePoint(B, D.face, (D.a0 + D.a1) / 2), X = x + nx * 0.03, Y = y + ny * 0.03;
       if (Math.hypot(X - v.x, Y - v.y) > DOOR_NUM_FAR || !seen(X, Y, 0.5)) continue;
-      out.push({ x: X, y: Y, c: nx, s: ny, parts: doorNumberModel(doorLabel(city, k)), r: 0.3, h: 2.6, z0: 2.4, seed: 0 });
+      out.push(ob(X, Y, nx, ny, doorNumberModel(doorLabel(city, k)), 0.3, 2.6, 0, 2.4));
       // the residents' door (13.19): the intercom beside its free edge, past the frame
-      if (entryDoor(city, k)) { const [ix, iy] = facePoint(B, D.face, D.a1 + 0.16); out.push({ x: ix + nx * 0.01, y: iy + ny * 0.01, c: nx, s: ny, parts: intercomModel(floorsOf(B)), r: 0.2, h: 1.7, z0: 1.2, seed: 0 }); }
+      if (entryDoor(city, k)) { const [ix, iy] = facePoint(B, D.face, D.a1 + 0.16); out.push(ob(ix + nx * 0.01, iy + ny * 0.01, nx, ny, intercomModel(floorsOf(B)), 0.2, 1.7, 0, 1.2)); }
     }
     // the shop's OPEN / CLOSED card in the glass beside its own door (its last exit), by its real hours
     for (let k = blk.b0; k < blk.b1; k++) {
@@ -996,7 +1042,7 @@ function collectObjects(world: World, v: View): Obj[] {
       if (Math.hypot(X - v.x, Y - v.y) > OPEN_FAR || !seen(X, Y, 0.5)) continue;
       const kind = city.businesses[B.biz].kind, [h0, h1] = BIZ_HOURS[kind] ?? [9, 17];
       const hours = h0 === 0 && h1 >= 24 ? '24H' : `${h0}-${h1 % 24}`;
-      out.push({ x: X, y: Y, c: nx, s: ny, parts: openSignModel(isOpen(kind, (world.time / 3600) % 24), hours), r: 0.3, h: 1.6, z0: 1.3, seed: 0 });
+      out.push(ob(X, Y, nx, ny, openSignModel(isOpen(kind, (world.time / 3600) % 24), hours), 0.3, 1.6, 0, 1.3));
     }
   }
   // the floodlights at the foot of lit facades (their lens lit in eighths, so the models are reused)
@@ -1011,7 +1057,7 @@ function collectObjects(world: World, v: View): Obj[] {
         if (Math.abs(x - v.x) >= FLOOD_FIX_FAR || Math.abs(y - v.y) >= FLOOD_FIX_FAR || !seen(x, y, 0.5)) return;
         // not on a face against a neighbor's lot (the spot would stand inside its rooms)
         for (let j = blk.b0; j < blk.b1; j++) { const N = city.buildings[j]; if (j !== k && x > N.x0 && x < N.x1 && y > N.y0 && y < N.y1) return; }
-        out.push({ x, y, c: nx, s: ny, parts, r: 0.35, h: 0.35, seed: 0 });
+        out.push(ob(x, y, nx, ny, parts, 0.35, 0.35, 0));
       });
     }
   }
@@ -1019,7 +1065,7 @@ function collectObjects(world: World, v: View): Obj[] {
     if (!seen(S.x, S.y, 16)) return;
     const near = Math.hypot(S.x - v.x, S.y - v.y) < SIGNAL_NEAR;
     if (near && S.i >= 0) cornerSigns(world, S, out);
-    if (S.state === Sig.Stop) { if (near) out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: STOP_SIGN, r: 0.5, h: 2.9, seed: 0 }); return; }
+    if (S.state === Sig.Stop) { if (near) out.push(ob(S.x, S.y, S.c, S.s, STOP_SIGN, 0.5, 2.9, 0)); return; }
     if (!near && S.lit < 0) return;
     // the walk light shows the people across the street when they may cross alongside this traffic (blinking on its yellow)
     const walkOf = (st: number) => st === Sig.Green ? 1 : st === Sig.Yellow ? (Math.floor(frameSec * 2) & 1 ? 2 : 0) : st === Sig.Red ? 2 : 0;
@@ -1027,18 +1073,18 @@ function collectObjects(world: World, v: View): Obj[] {
       // two walk signals, one for each crosswalk starting at this corner, facing the people at its far
       // end: one facing the traffic (the crosswalk alongside it), one along the arm (+y: across this
       // traffic's road beyond the intersection), turned a quarter for that
-      out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: SIGNAL_POLE, r: 0.25, h: 6.3, seed: 0 });
-      out.push({ x: S.x, y: S.y, c: S.c, s: S.s, parts: walkSignal(walkOf(S.state)), r: 0.6, h: 3, z0: 2.35, seed: 0 });
-      out.push({ x: S.x, y: S.y, c: -S.s, s: S.c, parts: walkSignal(walkOf(S.cross)), r: 0.6, h: 3, z0: 2.35, seed: 0 });
+      out.push(ob(S.x, S.y, S.c, S.s, SIGNAL_POLE, 0.25, 6.3, 0));
+      out.push(ob(S.x, S.y, S.c, S.s, walkSignal(walkOf(S.state)), 0.6, 3, 0, 2.35));
+      out.push(ob(S.x, S.y, -S.s, S.c, walkSignal(walkOf(S.cross)), 0.6, 3, 0, 2.35));
     }
     // the arm and its heads, around the arm's middle, hanging above the street (far off, just the lit lamps)
     const m = (Math.max(...S.at) + 0.4) / 2, at = S.at.map((y) => y - m);
-    out.push({ x: S.x - S.s * m, y: S.y + S.c * m, c: S.c, s: S.s, parts: near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), r: m + 0.3, h: 6.2, z0: 4.7, seed: 0 });
+    out.push(ob(S.x - S.s * m, S.y + S.c * m, S.c, S.s, near ? signalModel(at, -m, S.lit) : signalFarModel(at, S.lit), m + 0.3, 6.2, 0, 4.7));
     // the crossing road's name at the arm's end, past its last head (the signage manual, section 4)
     if (near && S.i >= 0) {
       const ave = (S.hd & 1) === 0, name = roadName(world.city, ave, ave ? S.i : S.j).toUpperCase(), hund = String(blockHundred(ave ? S.j : S.i));
       const tip = 2 * m, w = bladeHalf(name, hund) * 3.2 + 0.3;
-      out.push({ x: S.x - S.s * (tip + w / 2), y: S.y + S.c * (tip + w / 2), c: S.c, s: S.s, parts: overheadBlade(name, hund, DISTRICT_COLS[world.city.districts[districtOf(world, S.i, S.j)].type], -w / 2), r: w / 2 + 0.3, h: 6.2, z0: 5.4, seed: 0 });
+      out.push(ob(S.x - S.s * (tip + w / 2), S.y + S.c * (tip + w / 2), S.c, S.s, overheadBlade(name, hund, DISTRICT_COLS[world.city.districts[districtOf(world, S.i, S.j)].type], -w / 2), w / 2 + 0.3, 6.2, 0, 5.4));
     }
   });
   // the people on the sidewalks, under umbrellas in the rain
@@ -1047,7 +1093,7 @@ function collectObjects(world: World, v: View): Obj[] {
     const x = p.px + (p.x - p.px) * v.alpha, y = p.py + (p.y - p.py) * v.alpha;
     if (Math.abs(x - v.x) > PED_DRAW || Math.abs(y - v.y) > PED_DRAW || !seen(x, y, 1)) continue;
     const far = Math.abs(x - v.x) > PED_NEAR || Math.abs(y - v.y) > PED_NEAR, step = p.v > 0.1 ? 1 + (Math.floor(p.stride / 0.225) & 7) : 0;
-    out.push({ x, y, c: p.dx, s: p.dy, parts: pedModel(world.pop, p.id, step, wet && (p.id & 7) < 6, far, far ? 0 : p.use === 3 && Math.floor(frameSec * 4) & 1 ? 2 : p.use), r: 0.8, h: 2.3, seed: 0 });
+    out.push(ob(x, y, p.dx, p.dy, pedModel(world.pop, p.id, step, wet && (p.id & 7) < 6, far, far ? 0 : p.use === 3 && Math.floor(frameSec * 4) & 1 ? 2 : p.use), 0.8, 2.3, 0));
   }
   for (const c of world.cars) {
     // interpolate between ticks so motion is smooth at any frame rate (a driven car's body, near the player)
@@ -1060,7 +1106,7 @@ function collectObjects(world: World, v: View): Obj[] {
       : c.kind === 'sedan' || c.kind === 'taxi' ? (near ? carModel(c.col, c.taxi, who) : carFarModel(c.col, c.taxi)) : vehicleModel(c.kind, c.col, c.beacon ? 1 + (Math.floor(frameSec * 3) & 1) : 0, near ? who : 0);
     // the turn signal's lamps, front and back on its side, lit in the blink; the headlights flashing
     const blink = c.kind !== 'bike' && blinkOn(c, frameSec), flash = c.kind !== 'bike' && flashing(c, world.tick);
-    const o: Obj = { x, y, c: POSE[2], s: POSE[3], parts: blink || flash ? [...parts, ...signalLamps(hl, halfW(c.kind), blink ? c.sig : 0, flash)] : parts, r: hl + 0.3, h: h + 0.1, seed: 0 };
+    const o = ob(x, y, POSE[2], POSE[3], blink || flash ? withLamps(parts, signalLamps(hl, halfW(c.kind), blink ? c.sig : 0, flash)) : parts, hl + 0.3, h + 0.1, 0);
     if (near) { o.pitch = c.pitch; o.roll = c.roll; o.lift = c.lift; o.wheel = c.wheel; }
     out.push(o);
   }
@@ -1071,3 +1117,4 @@ function cityBlock(city: City, cx: number, cy: number) {
   const i = cx >> 1, j = cy >> 1;
   return i < city.nbx && j < city.nby ? city.blocks[j * city.nbx + i] : null;
 }
+

@@ -3,6 +3,8 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.16.1 — O gravador de travadas (2026-10-09)
+- **Menos engasgos:** o jogo cria muito menos lixo na memória a cada quadro (a simulação ~10× menos, o desenho dos objetos e das luzes bem menos), então o coletor de memória do navegador para o jogo com menos frequência. A simulação também ficou um pouco mais rápida.
+- **As rotinas dos moradores não são mais refeitas todas de uma vez** quando a lista enchia (a cada ~15 min de jogo, uma travada).
 - **O registro de playtest anota as travadas:** cada quadro que chega bem depois do normal, com o tempo da simulação, da interface, do desenho e da GPU, e onde você estava. O relatório mostra o que mais segura o jogo e onde.
 
 ## 0.13.C3c — Os restos de interiores (2026-10-09)

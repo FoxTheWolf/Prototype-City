@@ -160,12 +160,13 @@ function overlap(a: Car, b: Car): boolean {
 /** Two rectangles, each a center, a heading (unit) and half its length and width: do they overlap. */
 function boxes(ax: number, ay: number, ac: number, as: number, al: number, aw: number, bx: number, by: number, bc: number, bs: number, bl: number, bw: number): boolean {
   const tx = bx - ax, ty = by - ay;
-  for (const [nx, ny] of [[ac, as], [-as, ac], [bc, bs], [-bs, bc]]) {
-    const ra = al * Math.abs(ac * nx + as * ny) + aw * Math.abs(-as * nx + ac * ny);
-    const rb = bl * Math.abs(bc * nx + bs * ny) + bw * Math.abs(-bs * nx + bc * ny);
-    if (Math.abs(tx * nx + ty * ny) > ra + rb) return false;
-  }
-  return true;
+  // (the four axes one by one, with no array nor closure: it runs hundreds of times a tick, 16.1)
+  return !(apart(tx, ty, ac, as, al, aw, bc, bs, bl, bw, ac, as) || apart(tx, ty, ac, as, al, aw, bc, bs, bl, bw, -as, ac)
+    || apart(tx, ty, ac, as, al, aw, bc, bs, bl, bw, bc, bs) || apart(tx, ty, ac, as, al, aw, bc, bs, bl, bw, -bs, bc));
+}
+/** Whether the two rectangles of boxes (b's center at (tx, ty) from a's) stand apart along axis (nx, ny). */
+function apart(tx: number, ty: number, ac: number, as: number, al: number, aw: number, bc: number, bs: number, bl: number, bw: number, nx: number, ny: number) {
+  return Math.abs(tx * nx + ty * ny) > (al * Math.abs(ac * nx + as * ny) + aw * Math.abs(-as * nx + ac * ny)) + (bl * Math.abs(bc * nx + bs * ny) + bw * Math.abs(-bs * nx + bc * ny));
 }
 
 /**
