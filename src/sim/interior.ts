@@ -855,7 +855,21 @@ function placeGrid(P: Plan, MF: string[][], G: GridMap, rnd: () => number, goods
     if (!kind || kind === 'sit') continue;
     if (kind === 'sleep' || kind === 'sofa' || kind === 'shower') { Fu.posto = { kind, x: Fu.x, y: Fu.y, c: Fu.c, s: Fu.s }; continue; }
     const chair = kind === 'eat' || kind === 'desk' ? pieces.find((q) => q.ch === 'h' && ((q.x <= p.x1 + 1 && q.x1 >= p.x - 1 && q.y <= p.y1 && q.y1 >= p.y) || (q.y <= p.y1 + 1 && q.y1 >= p.y - 1 && q.x <= p.x1 && q.x1 >= p.x))) : undefined;
-    if (chair) { const Ch = P.furn[chair.i]; Fu.posto = { kind, x: Ch.x, y: Ch.y, c: Ch.c, s: Ch.s }; continue; }
+    if (chair) {
+      const Ch = P.furn[chair.i];
+      // the one chair on its side of a wider table or desk sits at its middle, not at the cell it was drawn in (C3c): when
+      // the rest of that side is free floor, it slides along the side to the piece's center
+      const beside = chair.x1 === p.x - 1 || chair.x === p.x1 + 1, n = beside ? p.y1 - p.y + 1 : p.x1 - p.x + 1;
+      let alone = n > 1;
+      for (let t = 0; t < n && alone; t++) {
+        const a = beside ? chair.x : p.x + t, b = beside ? p.y + t : chair.y;
+        if (a >= chair.x && a <= chair.x1 && b >= chair.y && b <= chair.y1) continue;
+        if (!G.floor(a, b) || MF[b]?.[a] !== '.') alone = false;
+      }
+      if (alone) { const tx = -Ch.s, ty = Ch.c, o = (Fu.x - Ch.x) * tx + (Fu.y - Ch.y) * ty; Ch.x += o * tx; Ch.y += o * ty; }
+      Fu.posto = { kind, x: Ch.x, y: Ch.y, c: Ch.c, s: Ch.s };
+      continue;
+    }
     /** The posto on the free cell nearest the middle of one of the piece's sides, facing it. */
     const stand = (side: number, k: string): Posto | null => {
       const along = side < 2, n = along ? p.y1 - p.y + 1 : p.x1 - p.x + 1, cells: [number, number][] = [];
