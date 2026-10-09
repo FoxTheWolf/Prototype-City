@@ -23,15 +23,13 @@ fn noise(x: f32, y: f32) -> f32 {
 }
 fn smoothK(a: f32, b: f32, v: f32) -> f32 { let t = clamp((v - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
 fn wrapA(a: f32) -> f32 { return a - round(a / TAU) * TAU; }
-// how much the ground under a point lights the clouds: the city's glow, and the crater under the Sarcophagus
+// how much the ground under a point lights the clouds: the city's glow
 fn glowBelow(x: f32, y: f32) -> vec3f {
   let half = min(u.cityW, u.cityH) * 0.5; let rc = length(vec2f(x - u.cityW * 0.5, y - u.cityH * 0.5)) / half;
   let spread = exp(-(rc / 2.6) * (rc / 2.6));
   let cd = length(vec2f(x - u.ccx, y - u.ccy)) / (min(u.cityW, u.cityH) * 0.6);
   let city = spread * (0.75 + 0.25 * exp(-cd * cd)) * u.cityLit;
-  let sd = length(vec2f(x - u.sarX, y - u.sarY)) / (u.sarR * 1.3);
-  let fire = select(0.0, 1.6 * exp(-sd * sd), FIRE_ZONE);
-  return vec3f(48.0 * city + 70.0 * fire, 33.0 * city + 24.0 * fire, 10.0 * city + 12.0 * fire);
+  return vec3f(48.0, 33.0, 10.0) * city;
 }
 // the cloud's column at (x, y): its cover c (from the cover's noise, as the flat deck had it), base and top; the
 // finer scales slide with height z (so it billows instead of standing as columns); k1, k2 fade them with distance
@@ -69,7 +67,7 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let t = clamp((hor0 + rowF) / hor0, 0.0, 1.0);
   let az = atan2(rdy, rdx);
   let dA = wrapA(az - u.moonA);
-  let moonCol = !gNoMoon && u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
+  let moonCol = u.moonEl > -MOON_R && abs(dA) * cos(u.moonEl) < MOON_R * 3.0;
   let dS = wrapA(az - u.sunA);
   let toSun = 0.5 + 0.5 * cos(dS);
   let t2 = t * t; let t4 = t2 * t2;

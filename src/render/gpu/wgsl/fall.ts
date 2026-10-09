@@ -11,6 +11,19 @@ fn h3(a: i32, b: i32, c: i32) -> f32 {
   h ^= h >> 16u; h *= 0x85ebca6bu; h ^= h >> 13u; h *= 0xc2b2ae35u; h ^= h >> 16u;
   return f32(h) / 4294967296.0;
 }
+// whether (x, y, z) is under one of this frame's roofs (bus shelters, sidewalk sheds), as precip.ts's underRoof
+fn underRoof(x: f32, y: f32, z: f32) -> bool {
+  let OB = fx[1];
+  if (OB == 0u) { return false; }
+  let rb = OB + fx[OB + 4u]; let nr = fx[OB + 5u];
+  for (var k = 0u; k < nr; k++) {
+    let w = rb + k * 7u;
+    if (z > fxf(w + 6u)) { continue; }
+    let dx = x - fxf(w); let dy = y - fxf(w + 1u); let c = fxf(w + 2u); let s = fxf(w + 3u);
+    if (abs(dx * c + dy * s) < fxf(w + 4u) && abs(-dx * s + dy * c) < fxf(w + 5u)) { return true; }
+  }
+  return false;
+}
 fn fallOver(cl: Cell, rdx: f32, rdy: f32, m: f32, nearT: f32) -> Cell {
   var o = cl;
   if (u.fall <= 0.01) { return o; }
@@ -178,51 +191,16 @@ fn cityCell(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, L: f32, A: f32, tG: f3
     else { cy += stY; tIn = ty; if (cy < 0 || cy >= ny) { break; } ty = (select(yb[cy + 1], yb[cy], rdy < 0.0) - gOY) * iy; }
   }
 
-  // the Sarcophagus and its cranes, far past the fence, behind whatever is nearer
-  var far = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
-  let vis = select(sarcVis(), 0.0, gRefl);
-  if (vis > 0.0) {
-    // the haze it fades into is the sky without the moon (else the moon shows through it, like glass)
-    var bgS = vec3f(7.0, 8.0, 12.0); if (m <= 0.0) { gNoMoon = true; bgS = skyCell(m, rdx, rdy).bg; gNoMoon = false; }
-    far = sarcCell(-m / L, u.scale * L, L, rdx / L, rdy / L, f32(gx), bgS, vis);
-    let cr = craneCell(i32(gx), i32(gy), vis);
-    if (cr.depth < far.depth) { far = cr; }
+  var cl: Cell;
+  if (bk >= 0 && best < tG) {
+    if (roof) { cl = roofCell(u32(bk * ${BLD}), best, gOX + rdx * best, gOY + rdy * best); }
+    // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
+    else { cl = wallCell(bk, best, bside, rdx, rdy, gOZ - m * best + A * best * best, best / u.scale, m, A); }
   }
-  // the cordon fence on the city edge (fenceColumn): chain link on posts, barbed wire on top, where nothing nearer is hit
-  let fX = select(select(1e9, -gOX / rdx, rdx < 0.0), (u.cityW - gOX) / rdx, rdx > 0.0);
-  let fY = select(select(1e9, -gOY / rdy, rdy < 0.0), (u.cityH - gOY) / rdy, rdy > 0.0);
-  let tf = min(fX, fY);
-  var cl = Cell(32u, vec3f(0.0), vec3f(0.0), 1e9, KIND_OTHER, 0.0);
-  var done = false;
-  if (FIRE_ZONE && tf > 0.05 && tf <= 2000.0 && tf < min(min(select(1e9, best, bk >= 0), tG), far.depth)) {
-    let z = gOZ - m * tf + A * tf * tf;
-    if (z >= 0.0 && z < 4.2) {
-      let along = select(gOX + tf * rdx, gOY + tf * rdy, fX < fY);
-      var ch = 0u;
-      if (z > 3.7) { ch = select(TILDE, X, (ifloor(along / 0.4) & 1) == 1); }
-      else if (along % 3.0 < 0.15 + tf * 0.002) { ch = BAR; }
-      else if (tf < 30.0) {
-        let a = (((along + z) % 0.6) + 0.6) % 0.6 < 0.07; let b = (((along - z) % 0.6) + 0.6) % 0.6 < 0.07;
-        ch = select(select(select(0u, BS, b), SL, a), X, a && b);
-      }
-      if (ch != 0u) {
-        let k = 1.0 - min(1.0, tf / 1500.0) * 0.7;
-        cl = Cell(ch, vec3f(120.0, 120.0, 130.0) * k, vec3f(7.0, 8.0, 12.0), tf, KIND_OTHER, 0.0); done = true;
-      }
-    }
-  }
-  if (!done) {
-    if (bk >= 0 && best < tG && best < far.depth) {
-      if (roof) { cl = roofCell(u32(bk * ${BLD}), best, gOX + rdx * best, gOY + rdy * best); }
-      // (the last argument: the metres of wall one row covers there, for edges thinner than a row)
-      else { cl = wallCell(bk, best, bside, rdx, rdy, gOZ - m * best + A * best * best, best / u.scale, m, A); }
-    }
-    else if (tG < 1e8 && tG < far.depth) { cl = groundCell(tG, rdx, rdy); }
-    else if (far.depth < 1e9) { cl = far; }
-    // below the horizon, a ray the curve carries past the ground: the far ground, as on the CPU
-    else if (m > 0.0) { cl = groundCell(1e7, rdx, rdy); }
-    else { cl = skyCell(m, rdx, rdy); }
-  }
+  else if (tG < 1e8) { cl = groundCell(tG, rdx, rdy); }
+  // below the horizon, a ray the curve carries past the ground: the far ground, as on the CPU
+  else if (m > 0.0) { cl = groundCell(1e7, rdx, rdy); }
+  else { cl = skyCell(m, rdx, rdy); }
   return cl;
 }
 /**

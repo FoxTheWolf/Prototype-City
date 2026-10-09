@@ -64,6 +64,14 @@ Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n
   - As faixas acesas das coroas e as costuras do cilindro (onde o ângulo dá a volta) podem tremer ao longe.
 - **Textos dentro do jogo:** os nomes de lugares já vêm de `src/locale/en.json`. A tela de título e a linha de status ainda têm textos fixos em inglês no código.
 
+## Posições de ouro (13.S, 2026-10-08)
+
+Vistas fixas para comparar antes e depois de mexer no render (abrir no painel com `?seed=42&mute&...`; o shader em cache entra em ~8 s). As fotos ficam em `playtest/ouro/<etapa>-antes|depois/` (fora do Git). Os carros e as pessoas mudam de uma foto para outra; comparar o resto.
+1. **Rua de noite:** `pos=828,800&look=0&at=2008-07-03T22:00` (a avenida olhando para o norte).
+2. **Interior:** `pos=908,580,0&look=0&at=2008-07-03T21:00` (o escritório aberto do térreo do prédio 1721, com monitores).
+3. **Do alto:** `pos=849,786,59&look=270&at=2008-07-03T22:00`, depois `camera.pitch=camera.targetPitch=-0.25` (andar 59 do prédio 2577; o quadro de avisos na frente e os prédios vizinhos lá fora).
+4. **Dia com chuva:** `pos=828,800&look=0&at=2008-07-03T12:00`, e a tecla Y até `world.weather.preset` = 4 (chuva 0,55; dispara com `dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyY'}))`).
+
 ## Como testar no navegador do app
 
 - O painel tem só ~800×450, então as células ficam com ~3×5 px e o texto da linha de status é ilegível nas capturas. Serve para ver a composição, não para ler detalhes.

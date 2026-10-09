@@ -260,43 +260,6 @@ const KIND: Record<DistrictType, { base: number; tall: number; cap: number; lot:
   theater: { base: 5, tall: 0.8, cap: 45, lot: 14, lotCore: 18, open: 'plaza', openP: 0.02, empty: 0.02, shop: 0.95 },
 };
 
-/**
- * A crack in the burning coal seam outside the city, where smoke and gas come out. (x, y) is
- * outside the city; r is the width of the smoke column at its base and h how high it rises.
- */
-export interface Vent {
-  x: number;
-  y: number;
-  r: number;
-  h: number;
-}
-
-/**
- * The Sarcophagus: a colossal containment dome, never finished, over the main crater of the fire,
- * some 5 km past the fence on one side. A shallow cap of radius r and height h centered at (x, y);
- * beside it, joined to it, a squat draft tower (center tx, ty, radius tr, height th) meant to turn
- * the fire's heat into power. Work stopped (bankruptcy or graft, for the story to tell); its cranes
- * still stand on top, and its telemetry and sensors are still live.
- */
-export interface Sarcophagus {
-  x: number;
-  y: number;
-  r: number;
-  h: number;
-  tx: number;
-  ty: number;
-  tr: number;
-  th: number;
-  /** Tower cranes standing on the dome: position and height of the mast top. */
-  cranes: { x: number; y: number; z: number; a: number }[];
-}
-
-/** Outside the city the ground burns; this far past the fence it starts to crack and glow. */
-export const BURN_START = 40;
-/** (2026-10-08) The fire zone, its smoke, the cordon fence and the Sarcophagus are switched off: the border is now
- *  plain ground (the sea comes in 23.4). true brings them back as they were. */
-export const FIRE_ZONE = false;
-
 export type LandmarkKind = 'tower' | 'hall' | 'memorial' | 'power' | 'park' | 'clock' | 'church' | 'mast' | 'gasworks';
 
 /**
@@ -384,10 +347,6 @@ export interface City {
   cy: number;
   districts: District[];
   landmarks: Landmark[];
-  /** The burning seam around the city: smoke vents, and floodlight towers on the cordon fence (which runs along the city edge). */
-  vents: Vent[];
-  floodlights: { x: number; y: number }[];
-  sarcophagus: Sarcophagus;
   diagonal: Diagonal;
   sectors: number;
   /** Chooses the words of every place name (see locale/names.ts). */
@@ -1070,8 +1029,7 @@ export function generateCity(seed: number, size: number): City {
 
   const xCell = cellTable(xb), yCell = cellTable(yb);
   diagonalLamps(seed, diagonal, w, h, xb, yb, xCell, yCell, nbx, blocks, districts);
-  const { vents, floodlights, sarcophagus } = generateBorder(seed, w, h);
-  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, empties, cx, cy, districts, landmarks, vents, floodlights, sarcophagus, diagonal, businesses, banks, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
+  return { w, h, xb, yb, xCell, yCell, nbx, nby, blocks, buildings, empties, cx, cy, districts, landmarks, diagonal, businesses, banks, lamps: blocks.flatMap((b) => b.props.filter((p) => p.kind === 'lamp')), sectors: SECTORS, nameSeed };
 }
 
 /** Faces of a building on the sidewalk: the sides on the block's edge, and a face cut by the diagonal. */
@@ -1192,44 +1150,6 @@ function diagonalLamps(seed: number, d: Diagonal, w: number, h: number, xb: numb
       blk.props.push({ kind: 'lamp', x, y, w: 0.3, z1: 6.5, seed: 0, a, lampType });
     }
   }
-}
-
-/**
- * The burning seam that surrounds the city, and the cordon on its edge. It has its own random
- * stream, so it never shifts the city itself.
- */
-function generateBorder(seed: number, w: number, h: number) {
-  const rng = mulberry32((hash3(seed, 7777, 1) * 4294967296) | 0);
-  const vents: Vent[] = [];
-  const n = Math.round((w + h) / 50);
-  for (let k = 0; k < n; k++) {
-    // a point on the perimeter, pushed outward
-    let s = rng() * 2 * (w + h), x: number, y: number, nx: number, ny: number;
-    if (s < w) { x = s; y = 0; nx = 0; ny = -1; } else if ((s -= w) < h) { x = w; y = s; nx = 1; ny = 0; }
-    else if ((s -= h) < w) { x = s; y = h; nx = 0; ny = 1; } else { s -= w; x = 0; y = s; nx = -1; ny = 0; }
-    const out = BURN_START + 40 + rng() ** 1.5 * 900;
-    vents.push({ x: x + nx * out, y: y + ny * out, r: 4 + rng() * 10, h: 50 + rng() * 110 });
-  }
-  // the Sarcophagus on one side: its near edge 2.5 km past the fence
-  const a = rng() * 2 * Math.PI, dx = Math.cos(a), dy = Math.sin(a);
-  const edge = Math.min(Math.abs(w / 2 / (dx || 1e-9)), Math.abs(h / 2 / (dy || 1e-9)));
-  const R = 1500, H = 600, far = edge + 2500 + R;
-  const sx = w / 2 + dx * far, sy = h / 2 + dy * far;
-  const side = rng() < 0.5 ? -1 : 1;
-  const tr = 420, tower = { tx: sx + dx * 300 - dy * side * (R + tr * 0.6), ty: sy + dy * 300 + dx * side * (R + tr * 0.6), tr, th: 230 };
-  const cranes: Sarcophagus['cranes'] = [];
-  for (let k = 0; k < 5; k++) {
-    // on the dome's upper slopes, where the work stopped
-    const ca = rng() * 2 * Math.PI, cr = (0.15 + rng() * 0.45) * R;
-    const Rs = (R * R + H * H) / (2 * H), surf = Math.sqrt(Rs * Rs - cr * cr) - (Rs - H);
-    cranes.push({ x: sx + Math.cos(ca) * cr, y: sy + Math.sin(ca) * cr, z: surf + 60 + rng() * 30, a: rng() * 2 * Math.PI });
-  }
-  const sarcophagus: Sarcophagus = { x: sx, y: sy, r: R, h: H, ...tower, cranes };
-  const floodlights: { x: number; y: number }[] = [];
-  const GAP = 120, OFF = 3;
-  for (let x = GAP / 2; x < w; x += GAP) floodlights.push({ x, y: -OFF }, { x, y: h + OFF });
-  for (let y = GAP / 2; y < h; y += GAP) floodlights.push({ x: -OFF, y }, { x: w + OFF, y });
-  return { vents: FIRE_ZONE ? vents : [], floodlights, sarcophagus };
 }
 
 /** District of the block nearest to a point (roads belong to the block beside them). */

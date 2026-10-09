@@ -6,16 +6,14 @@ import { signsWGSL } from './wgsl/signs';
 import { roomsWGSL } from './wgsl/rooms';
 import { insideWGSL } from './wgsl/inside';
 import { wallWGSL } from './wgsl/wall';
-import { burnWGSL } from './wgsl/burn';
 import { groundWGSL } from './wgsl/ground';
 import { shadingWGSL } from './wgsl/shading';
 import { skyWGSL } from './wgsl/sky';
-import { sarcophagusWGSL } from './wgsl/sarcophagus';
 import { fallWGSL } from './wgsl/fall';
 import { occlusionWGSL } from './wgsl/occlusion';
 import { mainWGSL } from './wgsl/main';
 
-export { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS } from './wgsl/common';
+export { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS } from './wgsl/common';
 
 /**
  * The world's compute shader (stage R): one invocation per cell. The walk through the street grid and
@@ -24,5 +22,5 @@ export { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FON
  * Its WGSL is split by subject in gpu/wgsl/ (13.S) and joined here in the order the functions are declared.
  */
 export function worldWGSL(): string {
-  return [headWGSL, powerWGSL, lampsWGSL, roofWGSL, signsWGSL, roomsWGSL, insideWGSL, wallWGSL, burnWGSL, groundWGSL, shadingWGSL, skyWGSL, sarcophagusWGSL, fallWGSL, occlusionWGSL, mainWGSL].map((w) => w()).join('');
+  return [headWGSL, powerWGSL, lampsWGSL, roofWGSL, signsWGSL, roomsWGSL, insideWGSL, wallWGSL, groundWGSL, shadingWGSL, skyWGSL, fallWGSL, occlusionWGSL, mainWGSL].map((w) => w()).join('');
 }

@@ -25,13 +25,12 @@ const FLOOD_REACH = 3, FLOOD_SHADOW_FAR = 60, FLOOD_CASTERS = 64;
 const SG_N = 128, SG_CELL = 2, SG_LONG = 60;
 /** The objects' footprints on the ground (footGrid): OG_N x OG_N cells of OG_CELL metres round the viewer, for the lamps' shadows and the reflections. */
 const OG_N = 64, OG_CELL = 2;
-import { CURVE_R } from '../sarcophagus';
 import { setEye } from '../eye';
 import { eyeHold, eyePush } from '../power';
 import { subAt } from '../../sim/power';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
-import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
+import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
  * Stage R: the world drawn on the GPU (WebGPU). The city goes up once as lists (street boundaries,
@@ -45,10 +44,10 @@ import { BLD, BLK, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FON
  * floodlights, the power per window in a blackout), the lamps' and the dynamic lights, the finish
  * (daylight, moonlight, haze, a whole-city blackout, the display modes), a true 3D camera, and
  * the sky (gradient, stars, moon, clouds), the shop signs, painted ads, video screens and the news
- * ticker, the burnt ground, the fence, the Sarcophagus and its cranes, scaffolding and reliefs, the street doors and the fire escapes
+ * ticker, scaffolding and reliefs, the street doors and the fire escapes
  * drawn on the facades, the rooms seen through the windows, and the objects (gpu/objects.ts: lamps, trees, furniture, blade
- * signs, billboards, signals, cars, people, cameras, substations, sheds, the fire escapes' frames), the smoke of the fire
- * zone, rain and snow falling, and the floor the viewer stands in (shader.ts, interiorCell: its walls, doors, the
+ * signs, billboards, signals, cars, people, cameras, substations, sheds, the fire escapes' frames),
+ * rain and snow falling, and the floor the viewer stands in (shader.ts, interiorCell: its walls, doors, the
  * lift's panel, the windows with the city through them and their glass, floor and ceiling; its furniture as objects).
  */
 
@@ -344,8 +343,7 @@ export class GpuWorld {
       sunX: F.sun[0], sunY: F.sun[1], sunZ: F.sun[2], sunEl: sky.sunEl, cloud: sky.cloud, moonlight: sky.moonlight, cityLit: 0.65 * F.light.litShare + 0.35 * sky.cityLit, flash: sky.flash,
       snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, adapt: timed ? this.adapt : 1,
       dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, eclU: sky.eclU, eclV: sky.eclV, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
-      cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy, sarX: C.sarcophagus.x, sarY: C.sarcophagus.y, sarR: C.sarcophagus.r,
-      sarH: C.sarcophagus.h, towX: C.sarcophagus.tx, towY: C.sarcophagus.ty, towR: C.sarcophagus.tr, towH: C.sarcophagus.th,
+      cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy,
       lst: siderealTime(world.time), tickN: Math.min(TICK_MAX, this.ticker.length),
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
@@ -940,9 +938,9 @@ function code(s: string, k: number) {
 
 /**
  * The signs' data, one u32 each: a header (the ticker's and the text pool's offsets, the number of
- * businesses, the cranes' offset and count), the 5x7 font for codes 0..255 at SG_FONT, three words per business at SG_BIZ (its
+ * businesses, then 0s and the diagonal's offset at [7]), the 5x7 font for codes 0..255 at SG_FONT, three words per business at SG_BIZ (its
  * full sign name and its longest word, as offset << 8 | length into the pool, and its sign mode),
- * room for the ticker, then the pool, then the Sarcophagus's cranes (four floats each), the smoke vents and the diagonal's X per avenue. The shader cuts the name to a face as signText does.
+ * room for the ticker, then the pool, then the diagonal's X per avenue. The shader cuts the name to a face as signText does.
  */
 function signData(city: City) {
   const nb = city.businesses.length, tick = SG_BIZ + nb * 3, pool = tick + TICK_MAX;
@@ -957,15 +955,12 @@ function signData(city: City) {
     const full = signText(city, b, 255), word = full.split(' ').sort((x, y) => y.length - x.length)[0];
     words.push(put(full), put(word), signMode(city, b));
   }
-  // the Sarcophagus's cranes after the pool: x, y, z, a as floats
-  // then the smoke vents (x, y, r, h), then per avenue the X the diagonal makes on it (a0, a1; 0, 0 if none)
-  const cranes = city.sarcophagus.cranes, cr0 = pool + chars.length, v0 = cr0 + cranes.length * 4, x0 = v0 + city.vents.length * 4;
+  // after the pool, per avenue the X the diagonal makes on it (a0, a1; 0, 0 if none)
+  const x0 = pool + chars.length;
   const nAv = (city.xb.length >> 1) + 1, zones = diagRoad(city).byRoad;
   const out = new Uint32Array(x0 + nAv * 2);
-  out[0] = tick; out[1] = pool; out[2] = nb; out[3] = cr0; out[4] = cranes.length; out[5] = v0; out[6] = city.vents.length; out[7] = x0;
+  out[0] = tick; out[1] = pool; out[2] = nb; out[7] = x0;
   const OF = new Float32Array(out.buffer);
-  OF.set(cranes.flatMap((k) => [k.x, k.y, k.z, k.a]), cr0);
-  OF.set(city.vents.flatMap((s) => [s.x, s.y, s.r, s.h]), v0);
   for (let k = 0; k < nAv; k++) { const X = zones.get(1024 + k)?.find((z) => z.isX); if (X) { OF[x0 + k * 2] = X.a0; OF[x0 + k * 2 + 1] = X.a1; } }
   for (let c = 0; c < 256; c++) { const r = fontRows(c); if (r) for (let k = 0; k < 7; k++) out[SG_FONT + c * 7 + k] = r[k]; }
   // the stars (sky.ts STARS: RA and declination in degrees, magnitude, B-V): a unit vector in the equator's frame, then

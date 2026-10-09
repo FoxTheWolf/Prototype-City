@@ -10,8 +10,7 @@ export const UNIFORMS = [
   'sunX', 'sunY', 'sunZ', 'sunEl', 'cloud', 'moonlight', 'cityLit', 'flash',
   'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'adapt',
   'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
-  'cityW', 'cityH', 'ccx', 'ccy', 'sarX', 'sarY', 'sarR', 'lst',
-  'tickN', 'sarH', 'towX', 'towY', 'towR', 'towH', 'yaw', 'fall',
+  'cityW', 'cityH', 'ccx', 'ccy', 'lst', 'tickN', 'yaw', 'fall',
   'fallSnow', 'windX', 'windY', 'fallB', 'fallR', 'fallSpeed', 'fallStreak', 'fallDens',
   'fallPeriod', 'inX0', 'inY0', 'inX1', 'inY1', 'hand', 'eclU', 'eclV',
 ] as const;
@@ -40,3 +39,5 @@ export const G = {
   HASH: C('#'), PCT: C('%'), AT: C('@'), BAR: C('|'), US: C('_'), STAR: C('*'), QUO: C('"'),
   O: C('o'), TILDE: C('~'), LB: C('['), RB: C(']'), SL: C('/'), BS: C('\\'), CARET: C('^'), X: C('x'),
 };
+/** The fake radius of the earth: things far away sink d^2 / 2R (barely, at the city's scale). */
+export const CURVE_R = 400000;

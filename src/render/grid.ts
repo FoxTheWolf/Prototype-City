@@ -1,7 +1,7 @@
 /**
- * What drew a cell: other (sky, signs, lights, fence), the ground (and roofs seen from above), a wall,
- * a solid object, a room indoors, or a block: a big far surface drawn as solid color (the fire zone's
- * ground, the Sarcophagus), its glyph shown only where something glints.
+ * What drew a cell: other (sky, signs, lights), the ground (and roofs seen from above), a wall,
+ * a solid object, a room indoors, or a block: a big far surface drawn as solid color (the ground past the
+ * city's edge), its glyph shown only where something glints.
  */
 export const KIND = { other: 0, ground: 1, wall: 2, object: 3, room: 4, block: 5 } as const;
 

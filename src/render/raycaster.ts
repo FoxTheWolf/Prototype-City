@@ -10,7 +10,7 @@ import { LAMP_LIGHT, lampId } from './lamps';
 import { DynLights, FLOOD_OUT } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
-import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, intercomModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FLOOD, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
+import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, intercomModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
 import { type Obj } from './objects';
 import { type Look } from './palette';
 import { type Roof } from './precip';
@@ -1048,12 +1048,6 @@ function collectObjects(world: World, v: View): Obj[] {
       out.push({ x: S.x - S.s * (tip + w / 2), y: S.y + S.c * (tip + w / 2), c: S.c, s: S.s, parts: overheadBlade(name, hund, DISTRICT_COLS[world.city.districts[districtOf(world, S.i, S.j)].type], -w / 2), r: w / 2 + 0.3, h: 6.2, z0: 5.4, seed: 0 });
     }
   });
-  for (const f of city.floodlights) {
-    if (Math.abs(f.x - v.x) > SPRITE_FAR * 2 || Math.abs(f.y - v.y) > SPRITE_FAR * 2) continue;
-    // lamps face the city
-    const a = Math.atan2(city.h / 2 - f.y, city.w / 2 - f.x);
-    out.push({ x: f.x, y: f.y, c: Math.cos(a), s: Math.sin(a), parts: FLOOD, r: 1.2, h: 14.2, seed: 0 });
-  }
   // the people on the sidewalks, under umbrellas in the rain
   const W = world.weather, wet = W.precip > 0.1 && !W.snow;
   for (const p of world.peds) {

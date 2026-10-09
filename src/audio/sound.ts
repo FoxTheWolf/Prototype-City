@@ -26,12 +26,11 @@ const SIREN_R = 1500;
 
 /**
  * Ambient sound, all synthesized with Web Audio: the city's distant rumble, the hum of the nearest
- * sodium lamp, the buzz of the nearest neon sign (cutting out with its flicker) and the low roar of
- * the burning seam near the city edge. Nearby sources are panned left/right from the listener.
+ * sodium lamp and the buzz of the nearest neon sign (cutting out with its flicker). Nearby sources are panned left/right from the listener.
  */
 
 /** Hearing distances in metres. */
-const LAMP_R = 8, SIGN_R = 16, FIRE_R = 300;
+const LAMP_R = 8, SIGN_R = 16;
 
 export class Sound {
   private ctx: AudioContext;
@@ -43,7 +42,6 @@ export class Sound {
   private neon: GainNode;
   private crackle: GainNode;
   private neonPan: StereoPannerNode;
-  private fire: GainNode;
   private city: GainNode;
   private rain: GainNode;
   private rainLow: GainNode;
@@ -149,11 +147,6 @@ export class Sound {
     this.whistle = gain(ctx, 0, this.out);
     this.whistleBp = filter(ctx, 'bandpass', 700, 6);
     src().connect(this.whistleBp).connect(this.whistle);
-
-    // burning seam: a deep roar
-    this.fire = gain(ctx, 0, this.out);
-    tone(ctx, 'sine', 38, 0.6, this.fire);
-    src().connect(filter(ctx, 'lowpass', 110, 0.8)).connect(gain(ctx, 1.2, this.fire));
 
     // the nearest vehicles: a motor each (a sawtooth through a low-pass that opens with speed),
     // tyres on the asphalt and, on a wet road, their hiss
@@ -1223,9 +1216,6 @@ export class Sound {
       if (this.nextSiren > 0) this.siren(now, 0.015 + Math.random() * 0.02, (Math.random() - 0.5) * 1.6);
       this.nextSiren = now + 90 + Math.random() * 180;
     }
-
-    const edge = Math.min(x, y, city.w - x, city.h - y);
-    this.fire.gain.setTargetAtTime(edge < FIRE_R ? 0.3 * (1 - edge / FIRE_R) ** 1.5 : 0, now, 0.5);
   }
 }
 

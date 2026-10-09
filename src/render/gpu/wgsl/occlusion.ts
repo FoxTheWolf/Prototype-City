@@ -122,8 +122,6 @@ var<private> gIl: vec3f = vec3f(0.0);
 var<private> gTag: f32 = -1.0;
 // how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)
 var<private> gGlow: f32 = 0.0;
-/** skyCell without the moon (the haze behind the Sarcophagus). */
-var<private> gNoMoon: bool = false;
 // how much of a cell's light blooms (a lit doorway or a floodlight's lamp less than a sign)
 var<private> gGlowK: f32 = 1.0;
 // how much brighter than drawn a cell's own light looks (the signs: lit to the eye, apart from the light they cast)

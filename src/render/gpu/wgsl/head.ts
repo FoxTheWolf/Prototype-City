@@ -1,4 +1,4 @@
-import { BAY, BURN_START, FIRE_ZONE, FLOOR_H, LANE_W, SIDEWALK } from '../../../sim/city';
+import { BAY, FLOOR_H, LANE_W, SIDEWALK } from '../../../sim/city';
 import { CELL, FLOOD_OUT, PANEL_S, SIDE } from '../../lights';
 import { BLOCKS, FLOOD_FIX_FAR, FLOOD_GAP, LITTER, LITTER_FAR } from '../../raycaster';
 import { G, UNIFORMS, f } from './common';
@@ -77,8 +77,6 @@ const OBJ_NIGHT = 0.3;
 const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.0, 120.0), vec3f(220.0, 140.0, 115.0), vec3f(135.0, 180.0, 215.0), vec3f(220.0, 205.0, 170.0), vec3f(190.0, 80.0, 70.0));
 const LAMP_GLOSS = 1.2; const CAR_GLOSS = 1.5;
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u; const KIND_ROOM = 5u;
-const BURN_START = ${f(BURN_START)};
-const FIRE_ZONE = ${FIRE_ZONE};
 const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
 const LIT_B = array<vec3f, ${LITTER.length}>(${LITTER.map((L) => `vec3f(${L.slice(4).map(f).join(', ')})`).join(', ')});
 const LITTER_FAR = ${f(LITTER_FAR)};

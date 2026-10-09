@@ -2,11 +2,17 @@ import { BLK } from './common';
 import { LITTER } from '../../raycaster';
 
 export const groundWGSL = (): string => /* wgsl */ `// ---- the ground (renderWorld's ground loop)
+// past the city's edge: bare dusty ground
+fn outsideGround(wx: f32, wy: f32, rd: f32) -> Cell {
+  let fog = 1.0 - min(1.0, rd / 2500.0) * 0.85; let day = u.day;
+  let hv = hash3(ifloor(wx / 6.0), ifloor(wy / 6.0), 5); let tex = (0.9 + 0.15 * hv) * fog * (0.45 + 0.55 * day);
+  return Cell(32u, mix(vec3f(55.0, 55.0, 60.0), vec3f(110.0, 106.0, 96.0), day) * tex, vec3f(7.0, 8.0, 12.0), rd, KIND_BLOCK, u.sunZ);
+}
 fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
   let wx = gOX + rdx * rd; let wy = gOY + rdy * rd;
   let W = f32(arrayLength(&xc)); let Hh = f32(arrayLength(&yc));
   let bg = vec3f(7.0, 8.0, 12.0);
-  if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return burnGround(wx, wy, rd, W, Hh); }
+  if (wx < 0.0 || wy < 0.0 || wx >= W || wy >= Hh) { return outsideGround(wx, wy, rd); }
   if (rd > GROUND_FAR) { return Cell(DOT, mix(vec3f(28.0, 24.0, 32.0), vec3f(70.0, 72.0, 78.0), u.day), bg, rd, KIND_GROUND, 0.0); }
   let fog = 1.0 - (rd / GROUND_FAR) * 0.9 * (1.0 - 0.8 * u.day);
   let gx = i32(xc[u32(wx)]); let gy = i32(yc[u32(wy)]);

@@ -189,13 +189,6 @@ const world = await pace(worldSteps(seed, CITY_SIZE, true, savedPop), (f) => loa
 if (!savedPop) void savePop(seed, world.pop);
 // ?at=2008-02-20T22:30 starts a new game at that time of the city's clock (the eclipse launchers, jogar-eclipse-*.bat)
 const atParam = params.get('at');
-// ?sarcnear: only to look at the Sarcophagus up close (13.15): pulls the dome, tower and cranes to 200 m past the fence
-if (params.has('sarcnear')) {
-  const S = world.city.sarcophagus, C = world.city;
-  const dx = S.x - C.w / 2, dy = S.y - C.h / 2, d = Math.hypot(dx, dy), k = -2300 / d;
-  S.x += dx * k; S.y += dy * k; S.tx += dx * k; S.ty += dy * k;
-  for (const c of S.cranes) { c.x += dx * k; c.y += dy * k; }
-}
 // ?pos=771.2,971.9 starts a new game standing there (the comparison and test launchers, *.bat); a third number is the
 // floor (inside the building there): pos=867,1152.6,3
 const posParam = params.get('pos')?.split(',').map(Number);

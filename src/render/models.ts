@@ -533,13 +533,6 @@ export function debrisModel(seed: number): Part[] {
   return m;
 }
 
-/** Cordon floodlight tower: a lattice mast with a bank of lamps facing +x. */
-export const FLOOD: Part[] = [
-  part(Box, -0.25, -0.25, 0, 0.25, 0.25, 13, STEEL, Solid, 'x', '=', 'x'),
-  part(Box, -0.1, -0.9, 12.6, 0.2, 0.9, 12.8, STEEL, Solid, '=', '='),
-  part(Box, 0.2, -0.8, 12.8, 0.5, 0.8, 14.2, [255, 250, 225], Glow, '#'),
-];
-
 const floods = new Map<string, Part[]>();
 /**
  * A floodlight at the foot of a lit facade (+x out from the wall, the lamp's spot at the origin): a low steel

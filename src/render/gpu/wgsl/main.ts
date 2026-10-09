@@ -60,9 +60,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let lb = light(bc); thru = lb.c; thruCh = lb.ch;
     gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet;
   }
-  // the smoke, then the street objects (and the furniture) over all of it, the window glass, then rain and snow over
+  // the street objects (and the furniture) over all of it, the window glass, then rain and snow over
   // the finished cell, only beyond the glass indoors (the sky's depth is 1e9, so the finish leaves it as it is)
-  cl = objectsOver(smokeOver(cl, rdx, rdy, m), gid.x, gid.y, rdx, rdy, -m);
+  cl = objectsOver(cl, gid.x, gid.y, rdx, rdy, -m);
   if (inc.state == 2u && !inc.gdoor) { cl = glassOver(cl, inc, m); }
   // ---- the reflection (R.24): glass and wet ground mirror the city along a second ray from where this one
   // hit; anything else glossy (a car's paint, metal) mirrors the sky. Weighed by Fresnel and the roughness.

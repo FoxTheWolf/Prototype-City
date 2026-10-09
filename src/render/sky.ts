@@ -9,7 +9,7 @@ import {  } from './grid';
 /**
  * The sky: a gradient that follows the sun (night is the main look; dusk and dawn are colored,
  * the day pale and hazy), stars, the moon with its phase, and a cloud layer whose cover comes from
- * the weather. Clouds are lit from below by the city's sodium glow and by the burning seam, the way
+ * the weather. Clouds are lit from below by the city's sodium glow, the way
  * a real city lights its overcast.
  */
 

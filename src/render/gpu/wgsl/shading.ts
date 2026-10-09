@@ -29,7 +29,7 @@ fn sunLin() -> vec3f { let l = pow(kelvin(sunTemp()), vec3f(2.2)); return l / ma
 // ---- the light (L.1): one for day and night. A surface's palette color is its albedo; it gets the ambient light
 // (the sky's by day, the city's glow and the moon's by night), the sun's, and the lamps'; what glows adds its own.
 // The sum is radiance, in linear light; the eye's exposure (EV) takes it to the screen through one tone curve.
-// What is not lit this way (the rooms seen inside, painted signs, smoke) keeps its color as it looks at the
+// What is not lit this way (the rooms seen inside, painted signs) keeps its color as it looks at the
 // exposure the time of day expects, and follows the eye's adaptation only.
 /** The night's ambient light with the city lit (its glow on everything; the night's palette is drawn for it), and the full moon's. */
 const AMB_N = 0.004; const MOON_E = 0.003;
