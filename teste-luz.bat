@@ -22,8 +22,16 @@ echo   3. T ate umas 22h. F7 de novo: as calcadas sob os postes,
 echo      as fachadas, os carros, as pessoas.
 echo   4. Y ate chover (RAIN). F7 com o asfalto molhado: o
 echo      brilho dos postes no chao ficou fraco demais na nova?
-echo   5. NAO vale ainda: telhados e dentro dos predios (sao o
-echo      passo 2, a luz dos comodos).
+echo   5. Dentro (passo 2): entre num escritorio ou loja de dia.
+echo      F7: a luz entra pelas janelas e cai longe delas; as
+echo      lampadas e telas continuam visiveis. De noite deve
+echo      ficar igual a velha.
+echo   6. De dia, da rua, olhe as janelas: na nova o interior
+echo      fica escuro atras do vidro (antes: buraco claro).
+echo   7. Suba num telhado: o chao do telhado com sol e ceu.
+echo   8. A porta com neon rosa do predio 45 (canto noroeste da
+echo      cidade): de noite, com F7 ligado, entre devagar e olhe
+echo      o relogio. A cor rosa some aos poucos, nao num passo.
 echo.
 echo   Achou algo estranho? F8 e escreva (diga OLD ou NEW).
 echo  ============================================================

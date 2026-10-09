@@ -19,6 +19,7 @@ import { subAt } from '../sim/power';
 import { BIZ_HOURS, isOpen } from '../sim/telco';
 import { CAMS, cctvYaw } from '../sim/cctv';
 import { daylight, prepareSky, type SkyFrame } from './sky';
+import { DEBUG } from '../debug';
 import { BLADE_SYMBOL, signLight, signMode, signText } from './signs';
 import { tickerText } from '../locale/news';
 import { blinkOn, carPose, diagPoint, diagRoad, DIRS, flashing, Sig, signal, zoneSignal } from '../sim/traffic';
@@ -123,6 +124,8 @@ for (const [c, b] of [['@', BLOCK.full], ['#', BLOCK.dark], ['%', BLOCK.mid], ['
 /** This frame's roofs near the viewer that keep the rain off. */
 export const roofs: Roof[] = [];
 
+/** (16.1b) How far in from a building's outer wall the street's light still reaches the hands. */
+const WALL_FADE = 2.5;
 /** The light on the viewer's hands after the last renderWorld, per channel (~0.3 in the dark, 1 in daylight). */
 export const VIEW_LIGHT = new Float32Array([1, 1, 1]);
 /**
@@ -227,13 +230,21 @@ function viewLight(I: Inside | null, px: number, py: number, dirX: number, dirY:
   };
   const S = new Float32Array(3), ex = sample(px + 2, py, S) - sample(px - 2, py, S), ey = sample(px, py + 2, S) - sample(px, py - 2, S);
   const here = sample(px, py, S), g = Math.hypot(ex, ey);
-  if (I) { const L = insideLight(I, px, py); for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c]; }
-  else {
+  // (16.1b, the new light) just inside, by the outer wall (a doorway, a shop window), the street's light still reaches the
+  // hands and fades in over WALL_FADE m, instead of going out in one step (the neon's tint lost on the threshold)
+  const b = I?.box, dw = b ? Math.min(px - b.x0, b.x1 - px, py - b.y0, b.y1 - py) : 0;
+  const w = !I ? 1 : DEBUG.deferredLight ? Math.max(0, Math.min(1, 1 - dw / WALL_FADE)) : 0;
+  if (I) {
+    const L = insideLight(I, px, py);
+    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = 0.3 + 0.85 * L[c];
+  }
+  if (w > 0) {
+    const So = I ? (lightAt(px, py, 1.6), LT) : S;
     // in a building's shadow the hands keep the sky's light but lose the sun's; clouds spread the sun into the sky's.
     // The sun on them warms and brightens them as it does the street (playtest 2026-10-07: the phone in the sun stayed grey); low, it is amber
     const sun = sky.day > 0 ? sky.day * handSun(sky.city, px, py) * (1 - 0.85 * sky.cloud) : 0, low = Math.max(0, 1 - Math.max(0, sky.sunEl) / 0.5);
     const base = 0.3 + sky.day * (0.25 + 0.3 * sky.cloud) + 0.08 * sky.moonlight + 0.8 * sky.flash, tint = [1, 0.95 - 0.13 * low, 0.86 - 0.3 * low];
-    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = Math.min(1.6, base + 0.55 * sun * tint[c] + S[c] / 150);
+    for (let c = 0; c < 3; c++) VIEW_LIGHT[c] = VIEW_LIGHT[c] * (1 - w) + Math.min(1.6, base + 0.55 * sun * tint[c] + So[c] / 150) * w;
   }
   const lat = g > 1e-3 ? (ex * -dirY + ey * dirX) / g : 0, back = g > 1e-3 ? -(ex * dirX + ey * dirY) / g : 0;
   const m = Math.max(1, S[0], S[1], S[2]);
