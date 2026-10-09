@@ -21,6 +21,7 @@ O padrão é o mesmo em quase todos: **o núcleo da simulação é escrito em ca
 |---|---|---|---|
 | Simulação num Worker | **Comlink** (minúscula) | 16.1, se a simulação for para um Web Worker | Esconde as mensagens entre a thread e o Worker atrás de chamadas normais. |
 | Entender a frase do jogador | **compromise** (NLP leve em JS) | C3b / diálogo | Separa verbos, nomes, perguntas; pode reduzir o "unrecognized" do texto livre. Testar contra as frases do registro de playtest antes. |
+| Ferramentas de desenvolvimento | **Tweakpane** ou **lil-gui** (só no modo debug, nunca no jogo) | qualquer etapa visual | O equivalente web do Dear ImGui: um painel para mexer nas constantes ao vivo (a adaptação do olho, o bloom, a chuva) sem recompilar. Ideia tirada do Car Park Capital (abaixo). |
 | Salvar compacto | **fflate** | quando o save crescer | Compressão rápida para "semente + mudanças". |
 
 ## Não recomendadas (e por quê)
@@ -32,3 +33,8 @@ O padrão é o mesmo em quase todos: **o núcleo da simulação é escrito em ca
 - **xterm.js:** o terminal é diegético e nosso.
 
 Fontes: [recast-navigation (npm)](https://npmjs.com/package/recast-navigation), [JoltPhysics.js (README)](https://unpkg.com/jolt-physics@1.1.0/README.md), [comparação de físicas para a web](https://app.cinevva.com/tutorials/game-physics-libraries), [RAGE (Wikipedia)](https://en.wikipedia.org/wiki/Rockstar_Advanced_Game_Engine), [Shadows of Doubt devblog 15](https://colepowered.itch.io/shadows/devlog/78044/shadows-of-doubt-devblog-15-moving-in-the-citizens).
+
+## O Car Park Capital (o usuário mostrou a pasta de licenças, 2026-10-09)
+Um jogo em C++ com motor próprio. O que ele usa: **GLFW** (janela e entrada), **GLM** (matemática de vetores e matrizes), **nlohmann_json**, **csv-parser**, **stb_image** e **tiny_gltf** (ler dados, imagens e modelos), **EnTT** (ECS), **Lua + sol2** (scripts), **FMOD** (som) e a família **Dear ImGui** (**ImPlot** para gráficos, **Im3d** para desenhar linhas no mundo, **ImGuiColorTextEdit** para editar código dentro do jogo).
+- **A lição:** não há física nem navegação de fora; as bibliotecas são encanamento (que o navegador já nos dá: janela, entrada, JSON) e **ferramentas de desenvolvimento**. O investimento deles em ferramentas internas (painéis, gráficos de desempenho, desenho de depuração no mundo) é o que vale copiar.
+- **Para nós:** o encanamento já vem do navegador; carregar imagens e modelos fere "tudo é código"; Lua não precisa (o Vite já recarrega o TypeScript na hora); FMOD não serve à web. O que vale é o painel de constantes (Tweakpane) e, na 17, desenhar a navmesh e os caminhos no mundo (o nosso F3).
