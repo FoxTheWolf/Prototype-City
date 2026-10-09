@@ -73,7 +73,7 @@ fn insideLight(x: f32, y: f32) -> vec3f {
 }
 // (not clamped: by the windows the daylight takes a room past 255, and the finish takes it down with its hue kept)
 fn roomCell(ch: u32, c: vec3f, t: f32) -> Cell {
-  if (defOn()) { gRUse = gRPend; gRPend = false; } // (16.1b) this cell is lit by roomLit's note, if one was taken for it
+  if (defOn()) { gRUse = gRPend; gRPend = false; gRObj = false; } // (16.1b) this cell is lit by roomLit's note, if one was taken for it
   return Cell(ch, max(c, vec3f(0.0)), vec3f(7.0, 8.0, 12.0), t, KIND_ROOM, 0.0);
 }
 fn zrOf(z: f32, z0: f32) -> f32 { return (((z - z0) % FLOOR_H) + FLOOR_H) % FLOOR_H; }

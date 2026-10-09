@@ -32,6 +32,9 @@ echo   7. Suba num telhado: o chao do telhado com sol e ceu.
 echo   8. A porta com neon rosa do predio 45 (canto noroeste da
 echo      cidade): de noite, com F7 ligado, entre devagar e olhe
 echo      o relogio. A cor rosa some aos poucos, nao num passo.
+echo   9. A escada do mesmo predio 45 (atras da porta rosa),
+echo      andares 1 a 3: com F7 ligado, a cor da escada muda
+echo      de um andar para o outro? tem chuvisco?
 echo.
 echo   Achou algo estranho? F8 e escreva (diga OLD ou NEW).
 echo  ============================================================

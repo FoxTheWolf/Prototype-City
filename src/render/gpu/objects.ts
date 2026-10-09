@@ -593,7 +593,7 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     // at night the paint reads darker, as the walls' palette does (the lamps' light comes on top, by its color)
     var rgb = col * kk * select(1.0, 1.0 - OBJ_NIGHT * (1.0 - u.day), !painted && !indoor && mat != M_GLOW && mat != M_BOARD && !defOn()); var oEm = vec3f(0.0); var oIl = vec3f(0.0);
     if (face == 2 && u.snow > 0.0 && !painted && !indoor) { rgb += (vec3f(185.0, 190.0, 200.0) - rgb) * (u.snow * 0.85); }
-    if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); if (defOn()) { gRUse = gRPend; gRPend = false; } } // the room's lamps
+    if (!painted && indoor) { rgb *= insideLight(x + hp.x * c - hp.y * s, y + hp.x * s + hp.y * c); if (defOn()) { gRUse = gRPend; gRPend = false; gRObj = true; } } // the room's lamps
     else if (!painted && !defOn()) {
       // the light where the ray hit, strongest on tops
       let wn = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z);

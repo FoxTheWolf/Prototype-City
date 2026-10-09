@@ -123,14 +123,14 @@ const ROOM_WRAP = 0.35;
 /**
  * (16.1b) The light on a room's surface (the street's units), from roomLit's note (gRV..gRX): its lamps, by the distance to
  * the nearest and its angle to the surface (so a door's jamb, a wall and the ceiling read apart), the city's glow at night
- * and the daylight by its windows. The surface's normal: a piece of furniture's own (tagged); else from the plan: the floor,
+ * and the daylight by its windows. The surface's normal: a piece of furniture's own (gRObj); else from the plan: the floor,
  * the ceiling, or a wall on the plan's grid lines, facing the ray.
  */
-fn roomE(tagged: bool) -> vec3f {
+fn roomE() -> vec3f {
   let V = gRV; let ro = gRO; let r = gRR; let x = gRX.x; let y = gRX.y; let d = gRX.z;
   let z = gOZ + gRay.z / max(1e-4, length(gRay.xy)) * length(vec2f(x - gOX, y - gOY));
   var N = gNrm;
-  if (!tagged) {
+  if (!gRObj) {
     let zr = z - V.z0;
     if (zr < 0.03) { N = vec3f(0.0, 0.0, 1.0); }
     else if (zr > CEIL - 0.03) { N = vec3f(0.0, 0.0, -1.0); }
@@ -243,7 +243,7 @@ fn light(cl: Cell) -> Cell {
     // (what glows in it, a screen or a lamp, is its own light, brighter by gEmK as the signs are)
     var Lr = (lin(max(vec3f(0.0), o.c - emit)) + lin(emit) * (select(1.0, gEmK, tagged) * artK())) / EV_NIGHT;
     // (its paint lit here, once: roomE)
-    if (gRUse) { Lr = lin(max(vec3f(0.0), o.c - emit)) * DAY_ALBEDO * roomE(tagged) + lin(emit) * (select(1.0, gEmK, tagged) * artK() / EV_NIGHT); }
+    if (gRUse) { Lr = lin(max(vec3f(0.0), o.c - emit)) * DAY_ALBEDO * roomE() + lin(emit) * (select(1.0, gEmK, tagged) * artK() / EV_NIGHT); }
     o.c = srgb(toneMap(Lr * ev, g));
     gGlow = clamp(dot(srgb(lin(emit) / EV_NIGHT * ev), vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * select(1.0, gGlowK, tagged);
   } else {
