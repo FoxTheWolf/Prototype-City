@@ -80,6 +80,25 @@ Cada função é um `DeviceApp` que se registra em `device.apps` de um módulo `
 
 **Dependências, em resumo (quando a etapa do Jackdaw pode rodar):** o chassi ✅; o radar, o sub-GHz de portão e o plugar na porta física podem ser feitos **assim que a rede (18) existir** (os alvos semáforo/subestação já existem; o portão é um objeto pequeno); crachás e interfones precisam dos objetos de mundo de 16/17; o chaveiro de carro, da 21. Por isso a etapa do Jackdaw vem **depois da 18** e pode interligar com 17–21 conforme os objetos entram.
 
+## Sistemas só do Jackdaw — confirmados e futuros (2026-10-08, com o usuário)
+
+**Princípio (usuário, 2026-10-08): readaptar o que já existe, não criar do zero.** Preferir **interligar** sistemas que já existem a escrever objetos novos. Ex.: o **shutter de loja** (`doors.ts`, hoje por horário) pode **ganhar um controle operável pelo Jackdaw** sem deixar de ter o horário — não precisa de um objeto "portão" separado se a porta/shutter já serve. Vale a regra "um sistema só".
+
+**O problema que resolvem:** o Jackdaw precisa de **alvos que só ele alcança e que mexem na cidade viva**, senão vira um molho de chaves de acesso que o notebook já abriria. Os dois escolhidos na entrevista:
+
+- **⭐ O armário de rua do telefone (phreaking físico).** O pedestal/caixa da operadora na calçada. Plugar o Jackdaw ali deixa **escutar/desviar a linha** de quem mora perto — o **complemento físico** do lado da rede (o OMC da operadora, já em `telco.ts`/`network.ts` `cellLog`). O notebook não chega lá. Liga no diálogo (fingir ser alguém com o que ouviu) e na investigação. **Readaptar, não criar:** o pedestal é um `Device` do doc da rede (`design-rede-hacking.md`), só que **offline** (sem `Link`), alcançável só plugando; reusa o modelo de host/linha que já existe.
+- **⭐ Acesso predial em camadas (crachá + interfone + maglock + elevador).** O Jackdaw põe o jogador **para dentro** fisicamente; o notebook faz a máquina lá dentro — a sinergia Jackdaw↔notebook. **Readaptar:** as portas (`doors.ts`, `doorLocked`) e o elevador (já nos interiores) ganham uma **propriedade de leitor/controle** que o crachá/iButton/modo-de-serviço opera; não é objeto novo, é um campo novo no que já está lá.
+
+**Funções futuras (quando os sistemas existirem — considerar ao desenhá-los):**
+- **carros (21)** → chaveiro/alarme sub-GHz (destravar, buzinar; código rolante = só janela de brute).
+- **economia (19)** → **máquina de vendas** (liberar item; liga na fome/crédito da 1ª hora) e **BadUSB num POS** de loja (ler/mexer no preço no caixa).
+- **metrô (pós-1.0) / cybercafé** → cartão de aproximação (reusa o RFID/NFC).
+- **borda (pós-1.0: represa/porto)** → comportas e guindastes por sinal (plugar na porta física).
+- **câmeras como objeto (23/pós)** → o radar as detecta; invadir a IP é pela rede (notebook) e mostra a imagem.
+- **telões/placas (23)** → trocar a mensagem exibida (liga na fama, pós-1.0).
+
+**Funções não-hacking (deixar o Jackdaw útil e fofo — usuário, 2026-10-08):** são do Opus 5.5; a lista e o bug da lanterna estão em `docs/dispositivo.md` (seção 5).
+
 ## Decisões da entrevista — rodada 1 (2026-10-06, Opus 4.8)
 
 Primeira rodada feita (limite de uso curto; dá para continuar quando renovar). Decidido com o usuário:

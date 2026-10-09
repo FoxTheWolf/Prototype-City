@@ -45,6 +45,8 @@ São apps "de brinquedo" e utilitários que não acionam o classificador e dão 
 - **Lanterna / tela branca**, **relógio/cronômetro**, um **tocador de tom** (gerador de bip) — bugigangas de aparelho de 2008.
 - **Leitor de "tag" genérico** só de leitura/curiosidade (mostra um id na tela) — a versão hacking (clonar/emular) é minha; a leitura passiva pode ser dele se preferir, ou deixar tudo de crachá comigo. **Alinhar comigo na fronteira** (ver a interface).
 
+**Mais apps úteis e fofos (pedido do usuário, 2026-10-08):** o Jackdaw deve **dar vontade de interagir** — além do pet, utilidades fofas e inofensivas, cada uma com a cena da gralha e som: um **despertador/timer** (cochilar, lembrar da janela de um trabalho), uma **bússola**, um **nível de bolha**, um **termômetro**, um **bloco de notas** curto, um **leitor do cartão SD** (ver as capturas), joguinhos do pet. São todos do Opus 5.5 (não-hacking). **BUG (usuário, 2026-10-08):** a **lanterna (LIGHT)** em `src/jackdaw/jackdaw.ts`/`screen.ts` só clareia a **tela** (um facho verde desenhado), mas **não lança luz no mundo 3D** — deveria iluminar como lanterna de verdade, pela regra "um material e uma luz para tudo o que se segura" (o glare/luz dos aparelhos na mão). Resolver depois.
+
 ## A interface de apps (onde as duas metades se encontram) — IMPORTANTE
 
 Para o Opus 5.5 e o Opus 4.8 não colidirem, o aparelho deve ter um **registro de apps** simples. O shell (Opus 5.5) é dono da navegação, da tela, do mascote, dos botões e do som; cada **app** é um objeto que desenha o próprio conteúdo e trata o próprio input:
