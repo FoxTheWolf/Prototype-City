@@ -2,7 +2,7 @@ import { BLD, FX_DOORS, LEAF_W, ROOM_REC } from './common';
 
 export const roomsWGSL = (): string => /* wgsl */ `// ---- the rooms of the plans in fx (render/interior.ts: roomLamp, the paints), for roomWalk
 const PAINT = array<vec3f, 6>(vec3f(190.0, 170.0, 135.0), vec3f(150.0, 170.0, 160.0), vec3f(175.0, 150.0, 165.0), vec3f(185.0, 185.0, 175.0), vec3f(150.0, 160.0, 185.0), vec3f(195.0, 160.0, 120.0));
-const R_LOBBY = 0u; const R_HALL = 1u; const R_STAIR = 2u; const R_LIFT = 3u; const R_KITCHEN = 7u; const R_BATH = 8u; const R_OFFICE = 9u; const R_OPEN = 10u; const R_SHOP = 11u;
+const R_LOBBY = 0u; const R_HALL = 1u; const R_STAIR = 2u; const R_LIFT = 3u; const R_BEDROOM = 6u; const R_KITCHEN = 7u; const R_BATH = 8u; const R_OFFICE = 9u; const R_OPEN = 10u; const R_SHOP = 11u;
 /** Cell (i, j) of the plan at o: its room + 1 (0 outside), with the DOOR bit. */
 fn planCell(o: u32, i: i32, j: i32) -> u32 {
   let nx = i32(fx[o + 2u]);
@@ -16,6 +16,17 @@ const LEAF_W = ${LEAF_W}u; const ROOM_REC = ${ROOM_REC}u; const FX_DOORS = ${FX_
 fn leafBase(o: u32) -> u32 { return o + 6u + fx[o + 4u] * ROOM_REC + (fx[o + 2u] * fx[o + 3u] + 1u) / 2u; }
 /** Room r's record in the plan at o (its box as four f32, its kind and unit, the next room + 1 on the way out: Plan.exitTo). */
 fn roomRec(o: u32, r: i32) -> u32 { return o + 6u + u32(r) * ROOM_REC; }
+/** Where lot k's lights are in fx (gpu/world.ts putLights, sim/lights.ts lightsOf; 0 not looked up): floors, the lot's
+ *  word, then three words a floor (its homes, two bits each; which rooms the player switched, and how). */
+fn lightTab(lot: i32) -> u32 { return fx[FX_TAB + 4u * fx[0] + 2u * FX_DOORS + 1u + u32(lot)]; }
+const L_SHOP = 1u; const L_OFFICE = 2u;
+/** The share of an office's rooms still lit out of hours (cleaning, someone late). */
+const OFFICE_LATE = 0.3;
+/** How much of a building's lit share (its lamps' chance) is on now, by the people's average (sim/lights.ts
+ *  lightShares): homes by who is up, offices by who is working; by day the daylight does, and few lamps show. */
+fn litShare(office: bool) -> f32 {
+  return select(min(1.6, u.homeLit / 0.7) * (1.0 - 0.75 * u.day), (OFFICE_LATE * 2.0 + (1.0 - OFFICE_LATE * 2.0) * u.workLit) * (1.0 - 0.75 * u.day), office);
+}
 /** The lamp of room r on floor f of box boxId (0..1 per channel, times the power), as roomLamp; "on": the room the viewer stands in. */
 fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32, on: bool) -> vec3f {
   let kind = fx[ro + 4u]; let commonPart = bitcast<i32>(fx[ro + 5u]) < 0; let h = hash3(boxId, r * 31 + f, 12);
@@ -32,10 +43,24 @@ fn roomLamp(lot: i32, boxId: i32, ro: u32, r: i32, f: i32, elecIn: f32, on: bool
     return c / 255.0 * select(0.6, min(1.0, elec * 1.1), gen);
   }
   let st = i32(bldF(u32(lq + 10u))); let office = st == 0 || st == 1;
-  // a home's lamps go out by day; an office's stay on through the working day (L.5)
-  let onK = select(1.0 - 0.75 * u.day, 1.0 + 0.6 * u.day, office);
-  // (a shop's lamps are always on: the same seen from the street and from inside, 13.10d2)
-  if (!(commonPart || on || kind == R_SHOP || hash3(boxId, r * 31 + f, 11) < bldF(u32(lq + 11u)) * onK * 1.3)) { return vec3f(0.0); }
+  // (13.22) who is in the room lights it (sim/lights.ts): near, the lot's own words; far, the same rule as an average
+  var lit = commonPart || on;
+  let lt = lightTab(lot);
+  if (lt != 0u && u32(f) < fx[lt]) {
+    let fw = lt + 2u + u32(f) * 3u; let hd = fx[lt + 1u]; let unit = bitcast<i32>(fx[ro + 5u]);
+    if (r < 32 && ((fx[fw + 1u] >> u32(r)) & 1u) == 1u) { lit = ((fx[fw + 2u] >> u32(r)) & 1u) == 1u; } // the player's switch
+    else if (kind == R_SHOP) { lit = lit || (hd & L_SHOP) != 0u; }
+    else if (office) { lit = lit || (hd & L_OFFICE) != 0u || h < OFFICE_LATE; }
+    else if (!lit && unit >= 0 && unit < 16) {
+      let s = (fx[fw] >> (2u * u32(unit))) & 3u;
+      // someone up: the living spaces (by day the daylight does, few lamps on); going to bed: the bedroom
+      let up = (s & 1u) != 0u && (u.day < 0.5 || h < 0.25);
+      lit = select(up && (kind != R_BATH || h < 0.3), (s & 2u) != 0u || (up && h < 0.2), kind == R_BEDROOM);
+    }
+  } else if (!lit) {
+    lit = kind == R_SHOP || hash3(boxId, r * 31 + f, 11) < bldF(u32(lq + 11u)) * litShare(office) * 1.3;
+  }
+  if (!lit) { return vec3f(0.0); }
   let c = select(select(vec3f(255.0, 205.0, 140.0), vec3f(222.0, 240.0, 232.0), (office && kind != R_SHOP) || kind == R_STAIR || kind == R_LIFT), vec3f(255.0, 222.0, 165.0), kind == R_LOBBY);
   return c / 255.0 * elec;
 }

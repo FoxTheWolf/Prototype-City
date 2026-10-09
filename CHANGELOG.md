@@ -4,6 +4,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 
 ## 0.13.22 — Interruptores e luz por cômodo (em andamento)
 - **O vidro é o mesmo visto de fora e de dentro:** a mesma cor, o mesmo reflexo e, na chuva, as mesmas gotas também por fora; de dia, da rua, o cômodo atrás do vidro parece mais escuro, como na vida real.
+- **As luzes dos cômodos seguem quem está neles:** a casa acende quando alguém está acordado em casa, o quarto antes de dormir, e de madrugada os bairros apagam (o saguão e a escada ficam acesos a noite toda); os escritórios acendem no expediente, as lojas enquanto estão abertas. De longe, a cidade segue a mesma regra, em média.
 - **O olho se acostuma mais devagar ao entrar num lugar claro** (cerca de 1 s), sem o tranco de antes.
 
 ## 0.13.C3b — Diálogo e controles (em andamento)

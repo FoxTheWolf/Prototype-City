@@ -38,7 +38,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   let ad = select(pw, power(sub, cx, cy, bk, false, bk, 0.25), gen);
   let elec = winLight * pw; let adElec = winLight * ad;
   let switched = subsF(u32(u32(sub) * 4u)) >= 0.0;
-  let litK = lit * (1.0 - 0.75 * u.day);
+  // (13.22) the far windows by the people's average, as the rooms seen near (litShare)
+  let litK = lit * litShare(style == 0 || style == 1);
   let rpf = FLOOR_H * u.scale / t; let cpb = BAY / (u.colW * t);
   // the facade's detail is the building's, not the cell's: it comes in by the distance to the nearest point of
   // its footprint, faded with a dither over a band, so a tower never shows a diagonal cut between the two looks

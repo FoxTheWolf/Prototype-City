@@ -28,6 +28,7 @@ const OG_N = 64, OG_CELL = 2;
 import { setEye } from '../eye';
 import { eyeHold, eyePush } from '../power';
 import { subAt } from '../../sim/power';
+import { lightShares, lightsOf } from '../../sim/lights';
 import { fallShape } from '../precip';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
@@ -147,6 +148,11 @@ export class GpuWorld {
   private fxPlan: Uint8Array;
   /** Per lot: 1 once its lift car's word is kept up in fx (liftWord). */
   private fxCar: Uint8Array;
+  /** (13.22) Where each lot's lights are in fx (sim/lights.ts lightsOf, putLights) and the game minute they were looked up at. */
+  private lightAt = new Map<number, { o: number; n: number; min: number }>();
+  /** The people's average for what is too far to look up (sim/lights.ts lightShares), and the ten game minutes it is for. */
+  private shares = { home: 0.5, work: 0.5 };
+  private sharesAt = -1;
   /** The open doors' list last written (openDoors), as text to compare. */
   private doorsSent = '';
   private fxScan = 0;
@@ -320,6 +326,7 @@ export class GpuWorld {
     this.streetDoors(world);
     this.liftCars(world);
     this.openDoors(world);
+    this.putLights(world, v.x, v.y);
     const D = F.dyn.pack();
     this.putDyn([S, this.lampBuf, D.lights, D.lv, D.off, D.idx]);
     if (!this.bind || this.bindGen !== this.gen) {
@@ -360,6 +367,7 @@ export class GpuWorld {
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
+      homeLit: this.shares.home, workLit: this.shares.work,
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
@@ -737,7 +745,8 @@ export class GpuWorld {
   /** Start over when the near buffer is full: the tables cleared, everything written again as it is looked at. */
   private fxReset() {
     const nb = this.city.buildings.length;
-    this.fxState.fill(0); this.fxPlan.fill(0); this.shutters.clear();
+    this.fxState.fill(0); this.fxPlan.fill(0); this.shutters.clear(); this.lightAt.clear();
+    this.fxW.fill(0, this.lightTab(), this.lightTab() + nb);
     this.fxW.fill(0, FX_TAB, FX_TAB + 3 * nb); this.fxEnd = this.fxHead();
     this.dev.queue.writeBuffer(this.fx, 0, this.fxW, 0, this.fxEnd);
   }
@@ -771,7 +780,52 @@ export class GpuWorld {
   }
 
   /** Where the plans start in fx: after the tables (the buildings', the boxes' plans, the lots' cars) and the open doors. */
-  private fxHead() { return FX_TAB + 4 * this.city.buildings.length + FX_DOORS * 2 + 1; }
+  private fxHead() { return FX_TAB + 5 * this.city.buildings.length + FX_DOORS * 2 + 1; }
+  /** Where the lots' lights table starts (one word a lot, where its lights are: lightTab in the shader). */
+  private lightTab() { return FX_TAB + 4 * this.city.buildings.length + FX_DOORS * 2 + 1; }
+
+  /**
+   * (13.22) The lots' lights near (x, y), from who is in their rooms (sim/lights.ts): each lot within FX_PLAN whose plans
+   * are made, looked up again every game minute (or at once when the player turns a switch), the nearest first, within
+   * LIGHT_MS a frame (a tall tower full of homes takes about a millisecond). And every ten game minutes, the average.
+   */
+  private putLights(world: World, x: number, y: number) {
+    const C = this.city, W = this.fxW, q = this.dev.queue, tab = this.lightTab(), min = Math.floor(world.time / 60);
+    if (Math.floor(min / 10) !== this.sharesAt) { this.sharesAt = Math.floor(min / 10); this.shares = lightShares(world.pop, C, world.time); }
+    // a switch turned: its lot at once, first
+    const first = world.lightsDirty;
+    if (first < 0 && this.fxScan % 3) return;
+    const want: [number, number][] = [];
+    for (const b of C.blocks) {
+      if (b.b1 <= b.b0 || Math.max(b.x0 - x, x - b.x1, b.y0 - y, y - b.y1) > FX_PLAN) continue;
+      for (let k = b.b0; k < b.b1; k++) {
+        const B = C.buildings[k];
+        if (B.tier !== 1 || !habitable(B) || !cachedPlan(C, k, 0)) continue;
+        const d = Math.max(B.x0 - x, x - B.x1, B.y0 - y, y - B.y1);
+        if (d > FX_PLAN) continue;
+        const L = this.lightAt.get(k);
+        if (k === first || !L || L.min !== min) want.push([k === first ? -1 : d, k]);
+      }
+    }
+    want.sort((a, b) => a[0] - b[0]);
+    const t0 = performance.now();
+    for (const [, k] of want) {
+      if (performance.now() - t0 > LIGHT_MS) break;
+      let floors = 1;
+      for (const j of tiersOf(C, k)) floors = Math.max(floors, floorsOf(C.buildings[j]));
+      const A = lightsOf(world.pop, C, world.lights, k, floors, world.time);
+      let L = this.lightAt.get(k);
+      if (!L || L.n !== A.length + 1) {
+        const o = this.fxTake(A.length + 1);
+        if (o < 0) return;
+        L = { o, n: A.length + 1, min }; this.lightAt.set(k, L);
+        W[tab + k] = o; q.writeBuffer(this.fx, (tab + k) * 4, W, tab + k, 1);
+      }
+      if (k === first) world.lightsDirty = -1;
+      L.min = min; W[L.o] = floors; W.set(A, L.o + 1);
+      q.writeBuffer(this.fx, L.o * 4, W, L.o, L.n);
+    }
+  }
 
   /**
    * Each lift car's word in fx (one per lot, after the plans' table), written when it changes: the floor it shows
@@ -937,6 +991,8 @@ const MODEL_CAP = 1 << 20, OBJ_CAP = 1 << 19;
  * plan never arrives where its rooms would show at once.
  */
 const FX_NEAR = 250, FX_PLAN = 130, FX_PLANS = 6;
+/** The time the lots' lights may take a frame (ms; putLights). */
+const LIGHT_MS = 1.0;
 /** The room kinds, numbered as the shader has them. */
 const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop'];
 

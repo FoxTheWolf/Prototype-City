@@ -98,6 +98,10 @@ export interface World {
   /** The doors the player opened (they swing toward open), and where each one is. */
   doorWant: Set<number>;
   doorAt: Map<number, [number, number]>;
+  /** The light switches the player turned (13.22; lights.ts), by switchKey: on or off, over what the room's people would do. */
+  lights: Map<number, boolean>;
+  /** The lot whose switch was just turned (its lights looked up again at once), or -1. */
+  lightsDirty: number;
   /** Each building's lift car (lifts.ts), by lot, made when first looked at. */
   lifts: Map<number, LiftCar>;
   /** Doors that just started to open (+1), just closed (-1) or would not open (2, locked), lift cars that came when called (3), shop shutters starting to roll down (4) or up (5), with where and what the door is made of (DOOR_*), for main to sound. */
@@ -176,7 +180,7 @@ export function* worldSteps(seed: number, size = CITY_SIZE, people = true, saved
   // the drawn homes are furnished by who lives in them (13.20)
   setResidents(pop.n ? (k, f, u) => { const h = homeUnit(pop, k, f, u); return h < 0 ? [] : householdTags(pop, h); } : null);
   const peds = spawnPeds(city, pop, rng, time, x, y);
-  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), forum: { me: null, mine: [] }, cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), mail: newMail(), talks: new Map(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
+  return { seed, tick: 0, rng, city, cars, peds, player: { x, y, px: x, py: y, speed: 0, floor: 0, inside: -1, z: 0, liftTo: -1, cash: 1250 }, time, ptime: time, weather, power, doors: new Map(), lights: new Map(), lightsDirty: -1, doorWant: new Set(), doorAt: new Map(), lifts: new Map(), doorSfx: [], telco, wifi: buildWifi(seed, city, x, y, power), events: newEventLog(), pop, feed: newFeed(), forum: { me: null, mine: [] }, cctv: buildCctv(seed, city), bank: openAccount(seed, city, x, y, time), gear: newGear(), bag: newBag(), needs: newNeeds(), mail: newMail(), talks: new Map(), jobs: buildJobs(seed, city, power, pop, telco, x, y, time), heat: newHeat() };
 }
 
 /** Debug: jump the clock by some hours (sleeping will do this for real). */

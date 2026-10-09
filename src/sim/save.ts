@@ -38,6 +38,8 @@ export interface WorldSave {
   /** Missing in saves from before 15.8c. */
   forum?: World['forum'];
   weather: World['weather'];
+  /** The light switches (missing in saves from before 13.22). */
+  lights?: World['lights'];
   /** [HACKING] The fixer's jobs and the heat, as their modules keep them. */
   jobs: unknown;
   heat: unknown;
@@ -47,7 +49,7 @@ export function snapWorld(w: World): WorldSave {
   return {
     time: w.time, tick: w.tick, player: { ...w.player },
     subs: w.power.subs.map((s) => ({ on: s.on, changed: s.changed, ox: s.ox, oy: s.oy, sig: s.sig, offAt: s.offAt })),
-    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, needs: { ...w.needs }, talks: w.talks, mail: w.mail, bag: { ...w.bag, items: w.bag.items.map(({ vx: _x, vy: _y, ...i }) => i) }, events: w.events, feed: w.feed, forum: w.forum, weather: { ...w.weather },
+    line: { ...w.telco.player }, spent: w.telco.spent, bank: w.bank, gear: { ...w.gear }, needs: { ...w.needs }, talks: w.talks, mail: w.mail, bag: { ...w.bag, items: w.bag.items.map(({ vx: _x, vy: _y, ...i }) => i) }, events: w.events, feed: w.feed, forum: w.forum, weather: { ...w.weather }, lights: w.lights,
     jobs: saveJobs(w.jobs), heat: saveHeat(w.heat),
   };
 }
@@ -72,6 +74,7 @@ export function applyWorld(w: World, d: WorldSave) {
   w.events = d.events;
   w.feed = d.feed;
   if (d.forum) w.forum = d.forum;
+  if (d.lights) w.lights = d.lights;
   Object.assign(w.weather, d.weather);
   loadJobs(w.jobs, d.jobs);
   loadHeat(w.heat, d.heat);
