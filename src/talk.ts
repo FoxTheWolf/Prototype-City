@@ -47,6 +47,21 @@ const LATER = new Set<IntentId>(['ask_about_person', 'ask_what_saw', 'ask_event'
 const FACTS = new Set<IntentId>(['ask_time', 'ask_name', 'ask_job', 'ask_who_works_here', 'ask_price', 'ask_where', 'ask_directions']);
 const KINDS = Object.keys(en.phone.find.kinds) as BusinessKind[];
 const GOODS = Object.keys(en.goods);
+/** Small talk a short question can follow (C3b): the words that keep it on the subject ("who won?" after the game). */
+const FOLLOW: Partial<Record<IntentId, RegExp>> = {
+  talk_sports: /\b(won|win|winner|lost|lose|beat|score|scored|final|play|played|close|good|tied?)\b/,
+  talk_weather: /\b(sure|really|serious|tomorrow|tonight|later|forecast|rain|snow|cold|hot|warm|umbrella|stay|last)\b/,
+};
+/** Last night's game, the same for the whole city that day: the home team, who they played, who won and the score. */
+function lastGame(w: World): Record<string, string> {
+  const day = Math.floor((w.time - 6 * 3600) / 86400), M = TEXT.mascot, Rv = TEXT.rivalCity;
+  const nice = (s: string) => s[0] + s.slice(1).toLowerCase();
+  const home = nice(M[Math.floor(hash3(w.pop.seed, 0x7ea, 1) * M.length)]);
+  let away = nice(M[Math.floor(hash3(w.pop.seed, day, 2) * M.length)]);
+  if (away === home) away = nice(M[(M.indexOf(home.toUpperCase()) + 1) % M.length]);
+  const won = hash3(w.pop.seed, day, 3) < 0.55, a = 2 + Math.floor(hash3(w.pop.seed, day, 4) * 6), b = Math.max(0, a - 1 - Math.floor(hash3(w.pop.seed, day, 5) * 3));
+  return { team: home, rival: `${nice(Rv[Math.floor(hash3(w.pop.seed, day, 6) * Rv.length)])} ${away}`, winner: won ? home : away, loser: won ? away : home, score: `${a} to ${b}` };
+}
 
 /** One conversation: with whom, where, what was asked, how much patience is left. */
 export class Talk {
@@ -55,6 +70,8 @@ export class Talk {
   over = false;
   /** Met before this talk (for "you again"). */
   readonly met: boolean;
+  /** The small talk of the last line, for a follow-up ("who won?"). */
+  last: IntentId | null = null;
   /** `sms`: by text message (14.6) or on the phone (14.7), where they cannot see where the player is. */
   constructor(private w: World, readonly who: number, readonly biz: number, readonly sms = false) {
     const warm = w.pop.social[who] / 255, mem = w.talks.get(who);
@@ -131,9 +148,11 @@ export function reply(w: World, T: Talk, line: string): Answer {
   // patience: every line costs some, more when pushed, rude or not understood
   T.patience -= 1 + (R.intent === 'unrecognized' ? 1 : 0) + (R.pressure >= 2 ? 1 : 0) + (R.respect <= -1 ? 1 : 0);
   const tags = [...(T.met ? ['met'] : []), ...(mem.rude >= 2 ? ['wasrude'] : []), ...(T.biz >= 0 ? ['atwork'] : [])];
+  // whether they watched last night's game: fixed for the day, so the follow-up agrees with the first answer
+  if (hash3(who, Math.floor((w.time - 6 * 3600) / 86400), 0x5b0) < 0.45) tags.push('saw');
   const sel = selFor(P, who, w.time, W.temp, W.precip, W.snow, tags);
   // (spoken: no typing habits, so not voice())
-  const say = (key: string, ctx: Record<string, string> = {}) => tidy(expand(`#${key}#`, TEXT, r, { first: citizenNames(c, P, who)[0], ...ctx }, sel));
+  const say = (key: string, ctx: Record<string, string> = {}) => tidy(expand(`#${key}#`, TEXT, r, { first: citizenNames(c, P, who)[0], ...lastGame(w), ...ctx }, sel));
   const done = (text: string, extra: Partial<Answer> = {}): Answer => {
     mem.met = w.time;
     if (!T.sms) mem.face = true;
@@ -142,13 +161,21 @@ export function reply(w: World, T: Talk, line: string): Answer {
     return { text, reading: R, end: !!extra.end, ...extra };
   };
   if (T.over) return done('', { end: true });
+  // a short question on the same subject as the last line ("who won?" after the game) is answered in it
+  const ws = words(line), was0 = T.last, F = was0 ? FOLLOW[was0] : undefined;
+  T.last = R.intent.startsWith('talk_') ? R.intent : null;
+  if (F && ws.length <= 7 && (R.intent === 'unrecognized' || R.intent === was0 || R.intent === 'yes' || R.intent.startsWith('ask_about')) && F.test(ws.join(' '))) {
+    T.last = was0;
+    if (R.intent === 'unrecognized') T.patience++;
+    return done(say(`reply.${was0}.more.${style}`));
+  }
   // the same thing asked again
   const key = `${R.intent}:${R.slots.place?.id ?? ''}:${R.slots.kind?.id ?? ''}:${R.slots.thing?.id ?? ''}:${R.slots.street?.id ?? ''}`;
   const again = FACTS.has(R.intent) && T.said.includes(key);
   T.said.push(key);
   if (again) return done(say('reply.again'));
   const kind = T.biz >= 0 ? c.businesses[T.biz].kind : null;
-  const ws = words(line), you = ws.includes('you') || ws.includes('your');
+  const you = ws.includes('you') || ws.includes('your');
   // what they remember of the last talk, said at the first line of this one (14.9)
   const was = T.said.length === 1 && T.met && mem.topic && w.time - mem.met > 1800 ? mem.topic : '';
   const recall = (text: string) => (was ? say('reply.remember', { what: was, when: w.time - mem.met > 86400 * 1.5 ? 'the other day' : calendar(w.time).day !== calendar(mem.met).day ? 'yesterday' : 'earlier' }) + ' ' + text : text);

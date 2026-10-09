@@ -822,16 +822,18 @@
   "Not telling you that."
  ],
  "reply.talk_sports.nice": [
-  "Didn't catch it, sorry. Was it good?",
-  "Oh, I missed it. Who won?",
-  "[m] Yeah, what a finish!",
-  "Not really a sports person, but I heard it was close."
+  "[!saw] Didn't catch it, sorry. Was it good?",
+  "[!saw] Oh, I missed it. Did the {team} win?",
+  "[saw] Yeah, what a finish!",
+  "[saw] I did! The {winner} took it.",
+  "[!saw] Not really a sports person, but I heard it was close."
  ],
  "reply.talk_sports.plain": [
-  "Didn't see it.",
-  "Not really into that.",
-  "[m] Yeah, saw some of it.",
-  "Heard about it."
+  "[!saw] Didn't see it.",
+  "[!saw] Not really into that.",
+  "[saw] Yeah, saw some of it.",
+  "[saw] The {team} game? Yeah.",
+  "[!saw] Heard about it."
  ],
  "reply.talk_sports.rude": [
   "Don't care.",
@@ -899,5 +901,41 @@
   "No way.",
   "Not happening.",
   "Why would I give you my number?"
+ ],
+ "reply.talk_sports.more.nice": [
+  "[saw] The {winner} won, {score}. You missed a good one.",
+  "[saw] The {winner} beat the {loser}, {score}. What a night.",
+  "[saw] The {winner}! {score}, right at the end.",
+  "[!saw] Like I said, I missed it. Ask someone at the bar.",
+  "[!saw] No idea, sorry. I think it was in the paper."
+ ],
+ "reply.talk_sports.more.plain": [
+  "[saw] The {winner}. {score}.",
+  "[saw] The {winner} won, {score}.",
+  "[saw] {winner} beat the {loser}.",
+  "[!saw] I told you, I didn't see it.",
+  "[!saw] No idea. Check the paper."
+ ],
+ "reply.talk_sports.more.rude": [
+  "I said I don't care.",
+  "How would I know?",
+  "Ask someone else."
+ ],
+ "reply.talk_weather.more.nice": [
+  "That's what the radio said, anyway.",
+  "[wet] I'd bring an umbrella if I were you.",
+  "Sure as I can be. You never know in this city.",
+  "[evening/late] Supposed to stay like this all night."
+ ],
+ "reply.talk_weather.more.plain": [
+  "That's what they said on the radio.",
+  "Pretty sure.",
+  "[wet] Take an umbrella.",
+  "Who knows. It changes."
+ ],
+ "reply.talk_weather.more.rude": [
+  "Look outside.",
+  "It's weather. It changes.",
+  "I'm not the forecast."
  ]
 }
