@@ -16,7 +16,7 @@ import { buildTelco, type Telco } from './telco';
 import { leafBlocks, stepDoors, streetOpen } from './doors';
 import { carHere, inLift, stepLifts, type LiftCar } from './lifts';
 import { buildWifi, type AccessPoint } from './wifi';
-import { householdTags, homeUnit, noPeople, peopleSteps, PEOPLE as PEOPLE_AT, type Population } from './citizens';
+import { householdTags, homeUnit, noPeople, peopleSteps, planAhead, PEOPLE as PEOPLE_AT, type Population } from './citizens';
 import { newFeed, stepSocial, type Feed } from './social';
 import { newHeat, recordAct, stepHeat, type Heat } from './heat'; // [HACKING]
 import { lastEvent, logEvent, newEventLog, type EventLog } from './events';
@@ -326,6 +326,7 @@ export function stepWorld(w: World, input: PlayerInput) {
   stepLifts(w, TICK);
 
   const hour = (w.time / 3600) % 24;
+  planAhead(w.pop, w.city, w.time); // tomorrow's plans before midnight, a few a tick (16.1)
   stepPeds(w.city, w.power, w.pop, w.peds, w.cars, w.rng, TICK, w.tick, w.time, p.x, p.y, Math.cos(input.heading), Math.sin(input.heading));
   stepCars(w.city, w.power, w.cars, w.rng, TICK, w.tick, p.x, p.y, roadGrip(w.weather.wet, w.weather.snowCover), hour < 5, crossers);
   // the streets fill up and empty with the hour, out of the player's sight

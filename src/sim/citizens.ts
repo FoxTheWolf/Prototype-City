@@ -360,11 +360,12 @@ const WX = newWeather();
 function rainAt(seed: number, t: number) { forecast(seed, t, WX); return WX.precip; }
 
 /**
- * Plans by citizen, two days each (slot day & 1: today and the night before, what whereIs reads), made again when another
- * day is asked for (they are cheap). (16.1) Was a map by citizen and day, emptied at 200 000: thousands of lookups a tick
- * in a map that size fed the garbage collector, and the whole city's plans were made again each time it emptied.
+ * Plans by citizen, three days each (slot day % 3: the night before and today, what whereIs reads, and tomorrow, made
+ * ahead by planAhead), made again when another day is asked for. (16.1) Was a map by citizen and day, emptied at 200 000:
+ * thousands of lookups a tick in a map that size fed the garbage collector, and the whole city's plans were made again
+ * each time it emptied.
  */
-let planPop: Population | null = null, planDay = new Int32Array(0), planSegs: Seg[][] = [];
+let planPop: Population | null = null, planDay = new Int32Array(0), planSegs: Seg[][] = [], aheadDay = -1, aheadAt = 0;
 
 /**
  * Citizen i's day: work (with the walk there and back) on the days they work, an errand at a shop
@@ -373,12 +374,27 @@ let planPop: Population | null = null, planDay = new Int32Array(0), planSegs: Se
  * is at home, awake or asleep.
  */
 export function dayPlan(P: Population, city: City, i: number, day: number): Seg[] {
-  if (planPop !== P) { planPop = P; planDay = new Int32Array(P.n * 2).fill(-1 << 30); planSegs = new Array(P.n * 2); }
-  const slot = i * 2 + (day & 1);
+  if (planPop !== P) { planPop = P; planDay = new Int32Array(P.n * 3).fill(-1 << 30); planSegs = new Array(P.n * 3); aheadDay = -1; }
+  const slot = i * 3 + (((day % 3) + 3) % 3);
   if (planDay[slot] === day) return planSegs[slot];
   const out = makePlan(P, city, i, day);
   planDay[slot] = day; planSegs[slot] = out;
   return out;
+}
+
+/** Plans made ahead a tick in the day's last hour: the city's in ~40 s real. */
+const AHEAD_PER_TICK = 40;
+
+/**
+ * Tomorrow's plans, a few each tick in the day's last hour (16.1): the pedestrians' scan asks ~3 000 people a tick, and
+ * making all their new days at midnight at once was a hitch of ~40 ms a tick for half a second. A skip in time past the
+ * hour leaves the rest to be made when asked, as before.
+ */
+export function planAhead(P: Population, city: City, t: number) {
+  const day = Math.floor(t / 86400) | 0;
+  if (t - day * 86400 < 23 * 3600 || !P.n) return;
+  if (aheadDay !== day + 1) { aheadDay = day + 1; aheadAt = 0; }
+  for (const end = Math.min(P.n, aheadAt + AHEAD_PER_TICK); aheadAt < end; aheadAt++) dayPlan(P, city, aheadAt, aheadDay);
 }
 
 /**

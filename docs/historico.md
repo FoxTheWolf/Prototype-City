@@ -2,6 +2,10 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 16.1 — a travada da meia-noite (2026-10-09, noite)
+
+`planAhead` em `sim/citizens.ts` (chamado em `stepWorld` antes da varredura dos pedestres) faz os planos de amanhã, 40 por tick, a partir das 23h; o cache de planos passou de 2 para 3 vagas por cidadão (`day % 3`), senão amanhã pisaria no ontem que o `whereIs` ainda lê. `tests/midnight.ts`: pior tick 50 → 3 ms, média 5,2 → 1,6 ms na virada. Pulo de tempo depois das 23h cai no caminho antigo (feito quando pedido). Atendeu o bug "Travada à meia-noite" (2026-10-04).
+
 ## 13.24 — escadas de incêndio e telhados pelo manual (0.13.24, 2026-10-09)
 
 - **Escadas de incêndio pelas plantas:** `escapesOf` nascia a cada 7 vãos sem olhar a planta, e a planta abria a parede onde ela caía (`open` de 0,3 a 0,7 de cada vão): banheiro, corredor, parede entre dois apartamentos. Agora monta a planta dos andares de cima antes das aberturas (`upperBare`, com `bareEsc` desligando a abertura; fora do cache) e percorre todo vão, aceitando só onde as duas janelas dão em sala, quarto ou cozinha (`ESC_ROOMS`), 7 vãos entre uma e outra. Como a planta dos andares de cima é uma só, a escada bate em todos os andares. `tests/escapes.ts` (semente 42): antes 107 escadas e 290 janelas erradas; agora 196 e nenhuma.

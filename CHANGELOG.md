@@ -4,6 +4,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 
 ## 0.16.1 — O gravador de travadas (2026-10-09)
 - **Menos engasgos:** o jogo cria muito menos lixo na memória a cada quadro (a simulação ~7× menos, o desenho dos objetos e das luzes bem menos), então o coletor de memória do navegador para o jogo com menos frequência. A simulação também ficou um pouco mais rápida.
+- **Sem travada à meia-noite:** as rotinas do dia seguinte são preparadas aos poucos na última hora do dia, em vez de todas na virada (o pior quadro da simulação caiu de ~50 para ~3 ms).
 - **As rotinas dos moradores não são mais refeitas todas de uma vez** quando a lista enchia (a cada ~15 min de jogo, uma travada).
 - **O registro de playtest anota as travadas:** cada quadro que chega bem depois do normal, com o tempo da simulação, da interface, do desenho e da GPU, e onde você estava. O relatório mostra o que mais segura o jogo e onde.
 
