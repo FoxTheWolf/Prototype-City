@@ -27,19 +27,19 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 | 13 | Interiores: fechamento | 7 | C1–C3 | ~9 | 13 |
 | 14 | Diálogo | ✅ | — | — | 14 |
 | 15 | Web e celular | ✅ (fechada; restos distribuídos) | — | — | 15 |
-| 16 | Pessoas (shader, manual, rework) | 6 | C4–C6 | ~8 | 13.8/13.11/13.14 |
+| 16 | Pessoas (shader, luz adiada, manual, rework) | 7 | C4–C6 | ~9 | 13.8/13.11/13.14 |
 | 17 | NPCs vivendo a cidade (sem polícia) | 5 | C7–C8 | ~6 | 16 (parte) |
 | 18 | `[HACKING]` Hacking no notebook: a rede e o risco (Opus 4.8) | 6 (fixadas 2026-10-08) | C9–C10 | ~8 | 19 |
 | 18J | `[HACKING]` O Jackdaw: dispositivos físicos (a numerar) | a fixar na 18 | — | ~4 | 19 |
 | 19 | Economia | 6 | C11 | ~7 | 17 |
-| 20 | Cozy e a física | 6 | C12 | ~7 | cozy |
-| 21 | Transporte: um sistema de veículo para todos | 6 | 1 | ~7 | 18 |
-| 22 | Vida do personagem | 7 | 2 | ~9 | 22 |
+| 20 | Cozy e o olhar (a noite chuvosa) | 6 | C12 | ~7 | cozy |
+| 21 | Transporte: a física e um sistema de veículo para todos | 7 | 1 | ~8 | 18 |
+| 22 | Vida do personagem | 6 | 2 | ~8 | 22 |
 | 23 | Refinamento e variedade | 8 | 2 | ~10 | 20 |
 | 24 | Som | 5 | 1 | ~6 | 21 |
 | 25 | A primeira hora e o laço (integração e balanço) | 5 | — | ~6 | novo |
 
-**Total até a 1.0: ~85 sessões**, contadas em sessões (cada conta tem o seu limite). A 18 é do Opus 4.8; partes dela podem correr em paralelo quando o limite deixar.
+**Total até a 1.0: ~86 sessões** (revisão de 2026-10-09), contadas em sessões (cada conta tem o seu limite). A 18 é do Opus 4.8; partes dela podem correr em paralelo quando o limite deixar.
 
 **Decisões que mudaram a ordem (usuário, 2026-10-08, na entrevista do cronograma):** (1) **polícia, calor, testemunha, stealth, prisão e disfarce ficam para depois da 1.0**: a dificuldade é a profundidade do hacking, não fugir da polícia ("isto não é GTA; se esconder é chato"); a 1.0 é simulação profunda e hacking realista que a influencia. O calor que já existe (`heat.ts`) fica como está, congelado. (2) **Um sistema só de controle de veículo** para NPCs, táxi e, um dia, o jogador (motor, tração, rodas), com pesquisa e manual antes; o jogador dirigir pode ficar para depois da 1.0, mas pelo mesmo sistema. (3) O hacking sobe para logo depois dos NPCs, com a TI legítima dentro; uma etapa final monta a primeira hora e o balanço.
 
@@ -66,9 +66,10 @@ Uma "sessão" = uma janela de 5 h, em qualquer das contas do usuário (o horári
 ## Etapa 15: fechada
 Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo mouse e o Maps escuro → C4; a moldura nova do manual do Ferret, favoritos/abas/links roxos e as notas de versão → C5; as fotos das notícias apontadas → C6; o brilho do aço e o cristal do relógio → C9; postar na rede social e o eclipse no Streetwire → 18; os adesivos do notebook (15.20c) → 22; a tomada, o infravermelho, o brilho no mundo e o som abafado do Jackdaw, e o CCTV gravado no título → 23; o e-mail e o app cifrado do contratante, `tests/apt.ts` → 21. A pasta de música no navegador sai (o alvo é o Electron).
 
-## Etapa 16: Pessoas, o manual e o rework (6 subetapas)
+## Etapa 16: Pessoas, o manual e o rework (7 subetapas)
 > Um rework só, planejado para tudo o que as etapas 17, 20 e 22 vão pedir do corpo. Junta 13.8, 13.11 e 13.14.
-- **16.1 Travadas e o shader:** primeiro **medir as travadas** (um gravador dos quadros acima de ~8 ms no registro de playtest, com o tempo de cada fase: simulação, preparação, GPU, telas, e a posição); se a simulação for o culpado, levá-la para um **Web Worker**. (A arrumação do shader foi adiantada para a 13.S.) Logo depois, **o documento da engine** (pedido de 2026-10-08) sai daqui, com o shader já arrumado: o raio por célula, a luz, os interiores, os cubinhos, a camada HD e por que os bugs típicos acontecem. **A luz adiada (deferred; decidido pelo usuário em 2026-10-08, "bite the bullet"):** um passe acha as superfícies (posição, normal, material; também as do raio através da janela e do reflexo) e outro ilumina com uma função de luz só; encolhe o shader (a luz é copiada em vários lugares) e unifica a luz, a fonte de muitos remendos. **Junto, os efeitos na camada de pixels de cima** (o compositor): do olho (estrela de brilho nos faróis e postes na chuva, ofuscamento, chuva no rosto), god rays do sol entre prédios e da luz da janela no pó, e o lens flare de verdade só nas câmeras de segurança (o borrão dos faróis no sensor, as linhas de vídeo); nada de lens flare no olho do personagem. Os reflexos continuam por raio 3D (o reflexo em tela, SSR, perde o que está fora da vista e não ganha resolução).
+- **16.1 Travadas e o shader:** primeiro **medir as travadas** (um gravador dos quadros acima de ~8 ms no registro de playtest, com o tempo de cada fase: simulação, preparação, GPU, telas, e a posição); se a simulação for o culpado, levá-la para um **Web Worker**. (A arrumação do shader foi adiantada para a 13.S.) Logo depois, **o documento da engine** (pedido de 2026-10-08) sai daqui, com o shader já arrumado: o raio por célula, a luz, os interiores, os cubinhos, a camada HD e por que os bugs típicos acontecem.
+- **16.1b A luz adiada e os primeiros efeitos** (separada da 16.1 na revisão de 2026-10-09; o usuário: o deferred entra **junto** dos efeitos que o usam, nunca pronto e sem uso). **A luz adiada (deferred; decidido pelo usuário em 2026-10-08, "bite the bullet"):** um passe acha as superfícies (posição, normal, material; também as do raio através da janela e do reflexo) e outro ilumina com uma função de luz só; encolhe o shader (a luz é copiada em vários lugares) e unifica a luz, a fonte de muitos remendos. **Junto, os efeitos na camada de pixels de cima** (o compositor): do olho (estrela de brilho nos faróis e postes na chuva, ofuscamento, chuva no rosto), god rays do sol entre prédios e da luz da janela no pó, e o lens flare de verdade só nas câmeras de segurança (o borrão dos faróis no sensor, as linhas de vídeo); nada de lens flare no olho do personagem. Os reflexos continuam por raio 3D (o reflexo em tela, SSR, perde o que está fora da vista e não ganha resolução).
 - **16.2 O manual de pessoas** (`docs/identidade/pessoas-manual.html`): o corpo e as proporções variáveis (altos, baixos, braços), o esqueleto e as poses, os traços combináveis (cabelo, cor forte, óculos, chapéu, barba com a boca à mostra, tatuagem, cicatriz: a maioria com um, poucos com dois), a roupa em camadas 3D (cubos e esferas), como a roupa vira descrição em palavras, **um sistema só de roupa** (vestir, trocar de roupa, o disfarce e a customização são a mesma coisa; o disfarce e o editor só ganham uso depois), o corpo sentado no carro e o taxista (20), o jogador e o espelho (22). Regras testáveis, como R1–R9.
 - → **C4**
 - **16.3 O corpo novo:** o modelo, as proporções pela semente, o LOD de longe, a cabeça que vira de forma visível (a linha de visão da 17).
@@ -80,11 +81,11 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 
 ## Etapa 17: NPCs vivendo a cidade (5 subetapas, sem polícia)
 > A parte de vida do antigo 16. A testemunha, o stealth, a polícia, a prisão e o disfarce foram para depois da 1.0 (decisão de 2026-10-08).
-- **17.1 Pesquisa e pedestres sem trilhos:** como outros jogos fazem (GDC/postmortems: Hitman, Assassin's Creed, Shadows of Doubt, RDR2), depois o destino próprio, a área caminhável com custos e o desvio local.
+- **17.1 Pesquisa e pedestres sem trilhos:** como outros jogos fazem (GDC/postmortems: Hitman, Assassin's Creed, Shadows of Doubt, RDR2), depois o destino próprio, a área caminhável com custos e o desvio local; **candidato: `recast-navigation`** (Recast/Detour em WASM, o padrão da indústria; `docs/pesquisa-bibliotecas.md`).
 - **17.2 Pessoas dentro dos prédios:** trabalhar e comprar nos postos das lojas; o elevador com NPCs (o jogador com prioridade).
 - → **C7**
 - **17.3 A casa em postos e as 11 atividades** (ver TV, cozinhar, comer, lavar louça, computador, telefone, ler, dormir, banho, janela, fumar), as luzes da rotina vistas de fora.
-- **17.4 Reações a eventos** (olhar a batida, fotografar, postar; correr no apagão) **e ao jogador, sem polícia** ("Can I help you?", "Employees only", o morador que pede para sair).
+- **17.4 Reações a eventos** (olhar a batida, fotografar, postar; correr no apagão), **ouvir as conversas dos NPCs em volta** (da antiga 20.2; sentar já existe desde a 13.10f) **e ao jogador, sem polícia** ("Can I help you?", "Employees only", o morador que pede para sair).
 - → **C8**
 - **17.5 As caixas da GridLink nos postes** (o manual dela aplicado no mundo: caixas, vans, uniformes nos técnicos), a base física dos alvos da 18.
 - → **teste do usuário da 17**
@@ -132,31 +133,33 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **19.5 A bolsa** (app e site), seguindo as empresas.
 - **19.6 Medir:** um teste em `tests/` que simula a semana do jogador (~5–7 dias até o apartamento, o hacking ~5x a TI).
 
-## Etapa 20: Cozy e a física (5 subetapas)
-- **20.1 Um sistema só de física** (usuário, 2026-10-08), sobre os cubinhos: o celular, o notebook, uma bola de basquete, as bolas de sinuca e os itens de decoração caem, rolam e batem pelo mesmo código, que depois conversa com o controle de veículo (21). Manual e pesquisa antes; **a pesquisa começa por usar um motor pronto em WASM em vez de escrever do zero** (pergunta do usuário em 2026-10-08: Jolt, o favorito pelo veículo com motor/câmbio/diferencial e ragdoll com motores; ou Rapier; Havok e Euphoria não existem para a web), com um teste curto: determinismo pela semente, rodar no Node dos `tests/`, custo com centenas de carros (física só perto, como o resto do LOD). O "Euphoria" (ragdoll ativo: tropeçar, se equilibrar, se segurar) é uma camada nossa por cima dos motores das juntas, sem feridos. Primeiros usos: pôr o celular para carregar na tomada (fica lá com o cabo), pôr o notebook na mesa antes de sentar e clicar no que se quer pegar. Os itens de decoração ficam como clutter; os que se usam (a comida no micro-ondas, a sinuca) entram **um por vez**, cada um com o seu modelo e a sua animação, nas etapas seguintes.
-- **20.2 Sentar e olhar** (bancos, mesas, balcão do diner), a chuva sob a marquise, ouvir conversas.
+## Etapa 20: Cozy e o olhar (6 subetapas; revista em 2026-10-09)
+> O cozy do usuário (`visao.md`, reunião de 2026-10-09): andar ouvindo o Tunes, ver a cidade viva, a noite e a chuva. **Cozy e hacking são o mesmo olhar:** observar a cidade é também o reconhecimento do hacking. A física saiu daqui para a 21 (usuário, 2026-10-09: no mínimo junto dos veículos).
+- **20.1 A noite chuvosa, um sistema só** (revisão de 2026-10-09; junta o que estava no C3, na 20.2, na 23.5 e na 24.3). **Um manual curto antes.** A simulação já faz a chuva gradual (`precip` 0..1 em ondas de horas, `sim/weather.ts`); falta **mostrar e fazer ouvir** a intensidade (garoa → chuva → tempestade, e de volta, sem saltos): a chuva volumétrica em volta do jogador, as poças e o molhado, **a janela molhada vista de dentro** (o abajur aceso, a rua borrada), a chuva sob a marquise, os NPCs abrindo guarda-chuva e entrando no café, a roupa molhada aparecendo (manga escura, gotas no relógio), os relâmpagos, e **a tempestade derrubando a energia** (`visao.md` 2026-10-05: o apagão natural que esconde o provocado; estava decidido e fora do cronograma). **O som da chuva** pela análise por síntese (a referência CC0 só para medir; o jogo sintetiza), variando com a intensidade e com o lugar (no toldo, na janela, na rua aberta).
+- **20.2 O olhar: o caderno e o zoom** (da 22.1 e da 23.7): o caderno (anotar o que se vê da rua: "o 4º andar apaga às 23h", as janelas reais da 13.22), a câmera do celular com zoom e o zoom nas fotos da galeria, num zoom só com o do olhar (C8).
 - **20.3 O rádio da cidade** no Tunes, com o DJ lendo os eventos reais, e **as vozes num sistema só**: o murmúrio das falas dos NPCs (pela semente) e a voz do DJ estilo Animal Crossing saem do mesmo sintetizador.
 - → **C12**
 - **20.4 "The usual?"** com memória de verdade, depois de várias idas.
 - **20.5 Fotos e postar no Streetwire** (a rede social da 1.0: comentar e postar), e os cidadãos comentando o eclipse.
 - **20.6 O jornal de papel:** um manual antes; na banca de manhã, as manchetes reais de ontem em páginas por assunto, com as fotos impressas; uma edição na 1.0, variações depois.
 
-## Etapa 21: Transporte, um sistema de veículo para todos (6 subetapas)
+## Etapa 21: Transporte, um sistema de veículo para todos (7 subetapas)
 > O antigo 18. **Regra (usuário, 2026-10-08):** um sistema só de controle de veículo (motor, tração, rodas, freio) para os NPCs, o táxi e o jogador; o táxi é um NPC dirigindo. Pesquisa e manual antes de implementar, pegando o melhor de vários jogos (originalidade: a técnica sim, a identidade não).
 - **21.1 Pesquisa** (GTA IV/V, Cities: Skylines, a física de BeamNG e My Summer Car) **e o manual do veículo:** o controle (motor, tração, rodas), a IA que dirige por ele, o carro por fora e por dentro (2–3 referências do usuário).
-- **21.2 O controle de veículo único** aplicado a todos os carros de hoje; a correção suave depois da curva, a freada progressiva, as batidas menos frequentes, ré e contornar.
+- **21.2 O motor de física e o controle de veículo único** (a física veio da antiga 20.1; usuário, 2026-10-09: "no mínimo quando colocar veículos"). **Um sistema só de física** sobre os cubinhos, que depois serve aos objetos, aos NPCs e ao resto; **a pesquisa começa por um motor pronto em WASM** (Jolt, o favorito pelo veículo com motor/câmbio/diferencial e ragdoll com motores; ou Rapier), com um teste curto: determinismo pela semente, rodar no Node dos `tests/`, custo com centenas de carros (física só perto, como o resto do LOD). O "Euphoria" (ragdoll ativo) é uma camada nossa por cima, sem feridos. Aplicado a todos os carros de hoje: a correção suave depois da curva, a freada progressiva, as batidas menos frequentes, ré e contornar. **O carro de debug (usuário, 2026-10-09):** uma tecla do `src/debug.ts` dá ao jogador um carro para dirigir pelo mesmo sistema, para ele testar a física com as próprias mãos e separar o que é culpa da física do que é culpa da IA dos NPCs.
 - **21.3 Os carros refeitos em cubinhos,** ocos, faróis variados, os dois cones, as luzes do táxi no chão.
 - **21.4 Os carros dos cidadãos:** todo carro com dono e destino, a placa, o estacionamento.
 - **21.5 O táxi por dentro:** pedir, o banco de trás, o taxímetro, a conversa, pular pagando.
-- **21.6 Reavaliar o ritmo do tempo** (no playtest de 2026-10-08, 75% do tempo de jogo foi andando, 42 min/km). **Decidido (2026-10-08): esperar até aqui.** Até lá, os trabalhos da 18 com prazo muito folgado; não balancear antes de os sistemas existirem (o balanço é a 25).
-- **Depois da 1.0:** o jogador dirigir (pelo mesmo sistema) e o metrô elevado.
+- **21.6 A física nos objetos do jogador** (o resto da antiga 20.1): o celular, o notebook, uma bola e a decoração caindo e rolando pelo mesmo motor; pôr o celular para carregar na tomada (fica lá com o cabo), o notebook na mesa antes de sentar, clicar no que se quer pegar. Os itens que se usam (a comida no micro-ondas, a sinuca) entram um por vez, depois.
+- **21.7 Reavaliar o ritmo do tempo** (no playtest de 2026-10-08, 75% do tempo de jogo foi andando, 42 min/km). **Decidido (2026-10-08): esperar até aqui.** Até lá, os trabalhos da 18 com prazo muito folgado; não balancear antes de os sistemas existirem (o balanço é a 25).
+- **Depois da 1.0:** o jogador dirigir de verdade (o carro próprio, comprar, estacionar, multas: pelo mesmo sistema; na 1.0 só o carro de debug da 21.2, decidido em 2026-10-09) e o metrô elevado.
 
-## Etapa 22: Vida do personagem (7 subetapas)
-- **22.1 O caderno.** As janelas acesas da 13.22 viram reconhecimento ("o 4º andar apaga às 23h"): anotar no caderno o que se vê da rua.
-- **22.2 Dormir no motel e esperar acelerando a simulação** (medir antes no Node).
-- **22.3 Necessidades:** sede leve, sono, frio e molhado leves; o app de fitness.
+## Etapa 22: Vida do personagem (6 subetapas)
+- ~~22.1 O caderno~~ → subiu para a **20.2** (o olhar; revisão de 2026-10-09).
+- **22.2 Dormir no motel e esperar acelerando a simulação** (medir antes no Node); também **deixar o tempo correr sentado** (num banco, no café; da antiga 20.2).
+- **22.3 Necessidades:** **a fome primeiro** (o usuário, 2026-10-09: dá rumo na cidade, ir comprar o que comer); sede leve e o app de fitness; **o sono e o frio descem** (os últimos; se a 22 estourar, saem para depois da 1.0). O molhado aparece na 20.1.
 - **22.4 Roupas** (casaco e cabeça) **e o editor no espelho do motel.**
-- **22.5 O apartamento:** aluguel semanal, base segura, mobiliado; decorar com itens comprados ou achados, soltos pela física (20.1) e salvos onde ficaram; os adesivos do notebook (15.20c) com ele numa mesa.
+- **22.5 O apartamento:** aluguel semanal, base segura, mobiliado; decorar com itens comprados ou achados, soltos pela física (21.6) e salvos onde ficaram; os adesivos do notebook (15.20c) com ele numa mesa.
 - **22.6 A mochila com o formato real** (Cairn) e o mapa de papel com marcas.
 - **22.7 Contatos e fofoca:** virar e perder um contato, a mentira pelos fatos, a fofoca pelas relações.
 
@@ -165,13 +168,13 @@ Os restos foram distribuídos: o boot do celular em pixels, o Jackdaw 100% pelo 
 - **23.2 Fachadas:** **os prédios baixos de moradia como brownstones** (refs 94–97, usuário 2026-10-09): stoop até o andar nobre, o porão meio enterrado com porta sob o stoop, a grade de ferro e os canteiros na frente; hoje há quartos com cama na janela do nível da rua, o que ninguém faz (nota 6 do playtest `2026-10-09_00-02-49`); a loja virada para a rua com a blade no beco (13.16), o letreiro só do lado certo, as lâmpadas redondas, a fachada que muda ao chegar perto, as placas cinza soltas.
 - **23.3 Materiais PBR** (uma tabela só: textura, passo, molhado); junto, a parte de baixo dos lances da escada (hoje quase preta vista de baixo, sem luz de rebote) e o último espelho da escada, que é a face da laje e sai cinza em vez de madeira (13.18).
 - **23.4 A praia e o mar** (13.15), o calçadão e o píer; o mar **sempre a oeste** (reunião de 2026-10-08: o pôr do sol no mar visto da cidade). (O Sarcófago e a zona de fogo já foram desligados pela chave `FIRE_ZONE` em `sim/city.ts`, 2026-10-08; a borda é chão liso.)
-- **23.5 Clima, 2ª passada:** chuva volumétrica, relâmpagos, a roupa molhada e as poças; a lua e as estrelas (os mares, os god rays, o rastro).
+- **23.5 Clima, 2ª passada:** a neve; a lua e as estrelas (os mares, os god rays, o rastro). (A chuva, as poças, a roupa molhada e os relâmpagos subiram para a 20.1.)
 - **23.6 Letreiros, neon e outdoors** com notícias, a surge apagando aparelhos, o neon de dia.
-- **23.7 Sinalização e orientação:** o totem YOU ARE HERE, os símbolos 15×15, o diretório e o zoom de ler placas (13.17), a lista telefônica; os terrenos vazios virando feiras, mercados e quadras (nota 10); **a rua mais cheia** (essencial): bancas de jornal, vendedores de comida, as plaquinhas de calçada do Kamurocho. **O zoom (reunião de 2026-10-08, troca o binóculo):** o zoom do olhar subiu para o C8; aqui, para ver longe, a câmera do celular com zoom (que estimula usar a câmera). E dar zoom nas fotos da galeria do celular, como no relógio. Um zoom só para os três.
+- **23.7 Sinalização e orientação:** o totem YOU ARE HERE, os símbolos 15×15, o diretório e o zoom de ler placas (13.17), a lista telefônica; os terrenos vazios virando feiras, mercados e quadras (nota 10); **a rua mais cheia** (essencial): bancas de jornal, vendedores de comida, as plaquinhas de calçada do Kamurocho. **O zoom:** o do olhar está no C8; a câmera do celular com zoom e o zoom da galeria subiram para a 20.2.
 - **23.8 Os tipos de prédio que faltam** (hotel, banco, galpão, estacionamento, oficina, escritórios e torres, as faixas `*`) e o distrito de entretenimento.
 
 ## Etapa 24: Som (5 subetapas)
-- **24.1 A batida** por análise por síntese. **24.2 Os passos** por material. **24.3 A chuva e o trânsito.** **24.4 Reverb por lugar e mixagem.** **24.5 A interferência GSM no notebook** e a revisão de ouvido dos sons com o usuário (o murmúrio das falas foi para a 20.3).
+- **24.1 A batida** por análise por síntese. **24.2 Os passos** por material. **24.3 O trânsito** (a chuva subiu para a 20.1). **24.4 Reverb por lugar e mixagem.** **24.5 A interferência GSM no notebook** e a revisão de ouvido dos sons com o usuário (o murmúrio das falas foi para a 20.3).
 
 ## Etapa 25: A primeira hora e o laço (5 subetapas)
 > Nova (2026-10-08): a etapa que transforma os sistemas num jogo. Partes tocam o contratante (`[HACKING]`): combinar com o agente `hacking`.
