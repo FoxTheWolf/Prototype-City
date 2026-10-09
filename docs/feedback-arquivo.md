@@ -3,6 +3,11 @@
 > Pedido do usuário em 2026-10-06 (item 30): ao processar `FEEDBACK.md`, em vez de só apagar, mover os itens crus para cá, com a data. Assim a caixa fica só com o que ainda não foi processado, e o texto original não se perde. O mais novo em cima.
 
 
+## 2026-10-09 (manhã — playtests 10-56-27 e 11-02-56, 13 notas F8, e recado no chat)
+
+Texto cru nos relatórios `playtest/2026-10-09_10-56-27_seed42_report.md` e `..._11-02-56_seed42_report.md`. No chat, o usuário: o C3 pode mudar (o softlock e a chuva dentro de casa quebram a imersão da noite chuvosa; agrupar os bugs de shader); a laje escura de noite → um holofote saindo da casinha; a luz dos cômodos mista: escritório acende sozinho, corredor por presença, corredores que acendem ao acaso de noite para simular gente (param quando alguém entra), prédios velhos no interruptor; o interruptor que brilha no escuro, fluorescente puxado para o verde, melhor que o piscar do Shadows of Doubt.
+Triagem: **C3 novo** = softlock (interruptor por mirar), interruptor fosforescente, chuva dentro, telhado velho sobre o novo e a mancha no teto, telhado sem móveis + holofote, horizonte branco, vidro porta × relógio; o C3 antigo virou **C3c** e 23.8; telhados à mão pelo manual → 13.24; luz mista dos prédios → 17.3; o vidro que distorce a luz → 20.1; rebind das teclas → 25.4.
+
 ## 2026-10-08 (noite — playtests 18-01-34 e 18-06-57, 8 notas F8)
 
 Texto cru nos relatórios `playtest/2026-10-08_18-01-34_seed1393987109_report.md` e `..._18-06-57_..._report.md`. Triagem:
