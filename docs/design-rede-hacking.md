@@ -88,6 +88,23 @@ As respostas do usuário, uma a uma (continua; grava a cada 3–4):
 
 **Rodada 1 da entrevista fechada (2026-10-08).** O esqueleto do hacking da 1.0 está decidido: alcance híbrido, verbo em duas camadas (senha fraca + exploit), exploits que se desgastam local, risco orgânico pelo sysadmin, espólio cru com QoL, TI profunda com escala começando enxuta, credencial achada só de fontes prontas, equipamento físico onde importa. **Forks finos para uma rodada 2** (quando for implementar): de onde vêm os exploits e se são finitos/compráveis; o que exatamente mora nos servidores internos de cada tipo de empresa; o custo em tempo de apagar logs e de pivotar; como o nível no fórum escala os alvos.
 
+## Influências estudadas (2026-10-08, a pedido do usuário)
+
+Dois jogos que o usuário citou. Pesquisados; o que **pegar**, o que **deixar**, mapeado aos nossos sistemas.
+
+### Quadrilateral Cowboy — o notebook como objeto físico, posicionável e programável
+O que o usuário quer daqui é **só o uso livre do deck**, não o stealth nem a estrutura de puzzle-room. No QC o "deck" é um laptop em que se digitam comandos (lista curta, memorizável) que mexem no **ambiente físico** (portas, lasers, um robô e uma torre remotos); dá para **encadear comandos numa linha** (`;`), **vincular a uma tecla** e disparar remoto, e — o ponto — **o deck nem sempre vai com você**: você **monta a sequência com esperas, deixa rodando e se afasta**.
+- **PEGAR:** (1) o notebook é **objeto físico que você larga onde quiser** e continua funcionando — nós já temos isso (é objeto; o GTA-IV "acesso físico"); reforçar que dá para **pousar numa mesa, plugar, e deixar trabalhando**. (2) **Montar e deixar rodando:** começar um brute/captura/pivô que leva tempo, deixar o notebook plugado no ponto de acesso e **ir fazer outra coisa** (casa com os trabalhos de prazo longo, o "esperar" com a sim rodando, e o rastro — o MAC do notebook fica logado onde ele está, que é a tensão: você o deixou lá, exposto). (3) **Preparar e disparar depois** (vincular/agendar) — é exatamente o que o usuário já quer para as **backdoors deixadas antes e ativadas depois** (o GridLink remoto, o Jackdaw). (4) O **manual/ajuda como professor** — bate com a nossa decisão de tutoriais no fórum.
+- **DEIXAR:** o scripting mágico "programo o mundo" (nós somos realistas Hacknet — comandos reais, não uma linguagem de domínio que liga robôs); o stealth e os puzzles-sala.
+
+### Welcome to the Game — a tensão da sessão noturna e a rede que revida
+Loop: explorar a *deep web* procurando **chaves escondidas** que formam uma URL, num **limite de tempo**; você **é hackeado de volta** o tempo todo e se defende (minigames, ou **resetar o IP no modem** — demorado e te deixa vulnerável); o **perigo escala com o quão fundo você vai**; no II, **pula entre os Wi-Fis dos vizinhos** depois de invadi-los.
+- **PEGAR:** (1) **a rede revida** — é a nossa 18.4 (o sysadmin que reage), só que WttG faz por minigame e nós fazemos **orgânico** (a senha muda, o trace, o post); pegar o *sentimento* de "você não está seguro enquanto cutuca". (2) **A ação defensiva deliberada e custosa** — o "resetar o IP (demorado, vulnerável)" espelha o nosso **trocar o chip (zera reputação)** e o **apagar logs (custa tempo)**. (3) **O perigo escala com o progresso** — bate com a dificuldade pelo nível no fórum + a cidade que aprende. (4) **Pular entre Wi-Fis dos vizinhos** — é literalmente o nosso **pivô** e o "acesso físico por proximidade". (5) **Páginas que mudam pela hora / decidir onde gastar o tempo** — pressão boa: um site só no ar em certas horas, um servidor que cai no apagão (já temos o server-down-on-blackout); casa com as **páginas escondidas** achadas só pelo endereço de uma pista.
+- **DEIXAR (regra de conteúdo + nossa pegada):** o terror (o sequestrador invadindo a casa), a **red room**/tortura (fere a regra sem-violência, inegociável), o hacking como **minigames abstratos** (QTE) — nós queremos terminal realista —, e a moeda própria (DOSCoin).
+
+### A síntese para nós
+O estilo-alvo continua **Uplink** (achar o caminho); o QC dá o **gesto físico** (largar o notebook, montar, deixar rodando, preparar-e-disparar) e o WttG dá a **tensão viva** (a rede revida enquanto você cutuca, a defesa custosa, o perigo que cresce) — os dois **sem** o que cada um tem de stealth/terror. Nada aqui muda as 8 decisões da entrevista; tudo reforça o rumo (o "montar e deixar rodando" entra como nota na 18.2; a tensão da rede já é a 18.4).
+
 ## 9. O que NÃO entra agora (profundidade onde se percebe)
 
 - A simulação completa de pacotes do `design-hacking.md` — a 10.11 já materializa o bastante; só expandir se um hack precisar.
