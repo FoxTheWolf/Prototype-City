@@ -584,7 +584,9 @@ function exitWay(city: City, k: number, P: Plan, ground: boolean): Uint16Array {
 /** Floor f of lot k if it was already made (undefined if not yet), so a caller can spread the work over frames. */
 export function cachedPlan(city: City, k: number, f: number): Plan | null | undefined {
   const j = storeyBox(city, k, f);
-  return j < 0 ? null : planCache.get(stackOf(city, k) ? stackKey(j, f) : j * 2 + (f === 0 ? 0 : 1));
+  // (a drawn stack's roof, 13.23, is cached under the lot)
+  if (j < 0) return f === floorsOf(city.buildings[k]) && stackOf(city, k)?.roof ? planCache.get(stackKey(k, f)) : null;
+  return planCache.get(stackOf(city, k) ? stackKey(j, f) : j * 2 + (f === 0 ? 0 : 1));
 }
 
 // ---------- the drawn plans (the interiors manual; plano-interiores, step 2) ----------

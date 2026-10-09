@@ -4,13 +4,13 @@ import { doorLeaves, shutterAt } from '../../sim/doors';
 import { siderealTime } from '../../sim/clock';
 import STARS from '../stars.json';
 import { PLACES } from '../../sim/placeTypes';
-import { cachedPlan, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
+import { cachedPlan, stackOf, cellAt, DOOR_ENTRY, entryDoor, escapesOf, exitsOf, floorsOf, habitable, leavesOf, liftGlassBox, planOf, ROOM, tiersOf, type Plan } from '../../sim/interior';
 import { diagRoad } from '../../sim/traffic';
 import type { World } from '../../sim/world';
 import { gpuInside, gpuObjects, gpuPrepare, REL, reliefOf, roofs, VFOV, VIEW_GLINT, VIEW_LIGHT, type View } from '../raycaster';
 import { CharGrid } from '../grid';
 import { type Inside } from '../interior';
-import { furnitureModel } from '../models';
+import { furnitureModel, stairHouseModel } from '../models';
 import type { Obj, Part, Vox } from '../objects';
 import { OW, PW, TILE } from './objects';
 /** By day, how much wider the objects are gathered than the view (their shadows reach in from the sides), and how near an off-screen one must be to cast (m). */
@@ -150,6 +150,8 @@ export class GpuWorld {
   private fxCar: Uint8Array;
   /** (13.22) Where each lot's lights are in fx (sim/lights.ts lightsOf, putLights) and the game minute they were looked up at. */
   private lightAt = new Map<number, { o: number; n: number; min: number }>();
+  /** (13.23) The roofs near the viewer (gathered in the facades' scan) with their plans: their stair houses and furniture are objects. */
+  private roofs: [number, Plan][] = [];
   /** (13.23) Where each lot's roof plan is in fx (putPlan), apart from the boxes' table. */
   private roofAt = new Map<number, number>();
   /** The people's average for what is too far to look up (sim/lights.ts lightShares), and the ten game minutes it is for. */
@@ -524,6 +526,16 @@ export class GpuWorld {
     // (by day wider: what stands just off the screen casts its shadow into it)
     const cone = (!c3 ? plane : den > 0.15 ? plane / den : 1e3) * (shadows ? SHADOW_CONE : 1);
     const list: { o: Obj; far: number; zoff: number; indoor?: boolean }[] = gpuObjects(world, v, cols, cone, shadows ? SHADOW_BACK : 0);
+    // (13.23) the roofs near, but the one the viewer is on: each stair house as a block, its tank and the rest, in the open air
+    for (const [k, R] of this.roofs) {
+      const top = floorsOf(this.city.buildings[k]);
+      if (I && I.k === k && I.floor === top) continue;
+      for (const S of R.rooms) if (S.kind === 'stair') {
+        const hx = (S.x1 - S.x0) / 2 + 0.125, hy = (S.y1 - S.y0) / 2 + 0.125;
+        list.push({ o: { x: (S.x0 + S.x1) / 2, y: (S.y0 + S.y1) / 2, c: 1, s: 0, parts: stairHouseModel(hx, hy), r: Math.hypot(hx, hy) + 0.4, h: 3.7, seed: k }, far: ROOF_FAR, zoff: top * FLOOR_H });
+      }
+      for (const f of R.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: ROOF_FAR, zoff: top * FLOOR_H });
+    }
     // indoors, the floor's furniture, lit by its rooms' lamps
     if (I) for (const f of I.plan.furn) list.push({ o: { x: f.x, y: f.y, c: f.c, s: f.s, parts: furnitureModel(f.kind, f.seed, f.hx, f.hy, f.stock), r: Math.hypot(f.hx, f.hy) + 0.4, h: f.kind === 'stair' ? 4.4 : f.kind === 'tank' ? 3.6 : 2, seed: f.seed }, far: 40, zoff: I.z0, indoor: true });
     // and the flights of the storeys below and above, seen through the stairwell (the one below rises into this one)
@@ -881,7 +893,8 @@ export class GpuWorld {
     if (this.fxScan++ % 6) return;
     const C = this.city, W = this.fxW, F = this.fxF, q = this.dev.queue;
     let plans = FX_PLANS, cars = 2;
-    const slots: number[] = [];
+    const slots: number[] = [], roofs: [number, Plan][] = [];
+    this.roofs = roofs;
     const make = (k: number, f: number) => { if (plans > 0 && cachedPlan(C, k, f) === undefined) { planOf(C, k, f); plans--; } };
     for (const b of C.blocks) {
       if (b.b1 <= b.b0 || Math.max(b.x0 - x, x - b.x1, b.y0 - y, y - b.y1) > FX_NEAR) continue;
@@ -901,6 +914,8 @@ export class GpuWorld {
             }
             f0 = Math.max(f0, top);
           }
+          // (13.23) and a drawn stack's roof, whose stair house and tank show from around
+          if (stackOf(C, k)?.roof) { const top = floorsOf(B); make(k, top); const R = cachedPlan(C, k, top); if (R) roofs.push([k, R]); }
           // once its ground plan is made, its lift car is kept up in fx too (liftWord)
           // (a few a scan: its first count of floors makes the plans of every floor it serves)
           if (!this.fxCar[k] && cars > 0 && cachedPlan(C, k, 0)) { this.fxCar[k] = 1; carOf(world, k); cars--; }
@@ -1001,6 +1016,8 @@ const MODEL_CAP = 1 << 20, OBJ_CAP = 1 << 19;
 const FX_NEAR = 250, FX_PLAN = 130, FX_PLANS = 6;
 /** The time the lots' lights may take a frame (ms; putLights). */
 const LIGHT_MS = 1.0;
+/** How far the roofs' stair houses and tanks are drawn (m). */
+const ROOF_FAR = 160;
 /** The room kinds, numbered as the shader has them. */
 const ROOMS = ['lobby', 'hall', 'stair', 'lift', 'foyer', 'living', 'bedroom', 'kitchen', 'bath', 'office', 'open', 'shop', 'roof'];
 

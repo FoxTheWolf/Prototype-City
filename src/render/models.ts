@@ -671,6 +671,16 @@ export function goodColor(g: string): RGB {
  * Furniture, facing +x (its front), centered, hx deep and hy wide (half sizes), as volumes like the
  * street furniture. Colors vary a little with the seed.
  */
+/** (13.23) A roof's stair house seen from outside (its plan's stair room, CEIL high and its slab): rendered walls, a cap. */
+export function stairHouseModel(hx: number, hy: number): Part[] {
+  const key = 'house' + hx.toFixed(2) + hy.toFixed(2);
+  let m = furns.get(key);
+  if (!m) {
+    m = [part(Box, -hx, -hy, 0, hx, hy, 3.5, [118, 112, 104], Solid, '#', '='), part(Box, -hx - 0.05, -hy - 0.05, 3.5, hx + 0.05, hy + 0.05, 3.62, [92, 90, 86], Solid, '=', '=')];
+    furns.set(key, m);
+  }
+  return m;
+}
 export function furnitureModel(kind: string, seed: number, hx: number, hy: number, stock?: string[]): Part[] {
   const v = seed % 4, key = kind + v + hx.toFixed(2) + hy.toFixed(2) + (stock ? stock.join() : '');
   let m = furns.get(key);

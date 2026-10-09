@@ -2,7 +2,8 @@
 
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
-## 0.13.23 — O telhado (em andamento)
+## 0.13.23 — O telhado (2026-10-09)
+- **Os telhados em volta mostram a casinha da escada e a caixa d'água** de cada prédio, vistos de outro telhado ou da rua.
 - **A escada do último andar sobe até o telhado** nos prédios de planta desenhada: uma casinha com porta, a laje de cascalho com parapeito, a caixa d'água no suporte de aço, o ar-condicionado e uma cadeira de plástico com um vaso. De dia, o centro inteiro na frente; de noite, as janelas acesas em volta.
 
 ## 0.13.22 — Interruptores e luz por cômodo (2026-10-09)
