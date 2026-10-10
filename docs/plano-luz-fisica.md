@@ -39,8 +39,13 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
   (`AMB_N`, `MOON_E`, `LAMP_E`, a luz do dia dos cômodos e do telhado): elas saem nos passos seguintes. Shader 26 s de
   compilação (era 34). Conferido: 13 h (como antes, as fachadas na sombra mais frias), 17h33 (a rua na sombra escura e
   azulada: o asfalto real na sombra; se ficar escuro demais, o ajuste é o olho, não luz falsa), 21h30 (igual).
-  **Próximo:** a noite pelos raios (as luzes e as janelas no ponto atingido; sai o `AMB_N`/`aCity`/`AMB_FACE`), a normal
-  das células de janela, os albedos por material (parte 1), medir o `DRAW` no PC do usuário.
+- **2026-10-10, a noite pelos raios:** o ponto atingido recebe as poças dos postes (`giLamps`, a mesma conta do `lightAt`
+  pela `lampPools` separada dele) e a fachada atingida dá a luz das janelas acesas (a média: `lit × litShare × WIN_AREA`).
+  **Saiu o ambiente falso da noite** (`cityAmb` como luz em tudo, `aCity`, `AMB_FACE`); a lua fica. O xadrez de ruído que
+  o usuário viu (print de 17h47, `POS 792.7,354.2`): a leitura do cache agora interpola as 4 células vizinhas no plano da
+  superfície (`giRead`), e a média conta as amostras de cada célula (`gir` com 5 palavras; `GI_BLEND` 0,04 de piso).
+  **Próximo:** a normal das células de janela, os albedos por material (parte 1), as luzes como fontes (parte 3), os
+  cômodos (parte 4: `AMB_N` ainda está no `roomE`/`roofE`, e `E_UNIT` nas constantes velhas que sobram).
 
 ## As partes, na ordem
 

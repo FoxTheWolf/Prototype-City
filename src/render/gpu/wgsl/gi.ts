@@ -2,7 +2,7 @@ import { BLD, BLK } from './common';
 import { SKY_K } from '../../atmosphere';
 
 /** (16.1c) The indirect light's world cache (docs/plano-luz-fisica.md, part 2): slots, and words per slot in each buffer. */
-export const GI_SLOTS = 1 << 18, GI_ACC_W = 5, GI_RES_W = 4;
+export const GI_SLOTS = 1 << 18, GI_ACC_W = 5, GI_RES_W = 5;
 
 /**
  * (16.1c) The indirect light by rays (docs/plano-luz-fisica.md, part 2): each cell sends rays from its point into its
@@ -14,6 +14,8 @@ export const GI_SLOTS = 1 << 18, GI_ACC_W = 5, GI_RES_W = 4;
  * radiance over the hemisphere (the irradiance over pi), so a surface sends back albedo x it.
  */
 export const giWGSL = (): string => /* wgsl */ `// ---- (16.1c) the indirect light by rays and the world cache (gi.ts)
+/** How much of a facade is window (the lit windows' light it gives off, its mean). */
+const WIN_AREA = 0.35;
 const GI_SLOTS = ${GI_SLOTS}u; const GI_FAR = 400.0; const GI_FIX = 1024.0; const GI_SUN = ${(SKY_K * 0.9).toFixed(3)};
 /** The sky's light along d (unit), from its harmonics (never below zero: their ringing near the horizon's step). */
 fn skySH(d: vec3f) -> vec3f {
@@ -96,15 +98,39 @@ fn giTrace(P: vec3f, D: vec3f) {
   if (giQ < 0 && giT >= 0.0) { giN = vec3f(0.0, 0.0, 1.0); }
 }
 // ---- the cache: a slot by the place (cells from 0.5 m near the eye to 8 m far) and the face it looks to
-fn giKey(P: vec3f, N: vec3f) -> u32 {
-  let d = length(P.xy - vec2f(u.px, u.py));
-  let lv = u32(clamp(floor(log2(max(d, 1.0) / 6.0)), 0.0, 4.0)); let s = 0.5 * f32(1u << lv);
-  let a = abs(N); var face = select(select(4u, 2u, a.y > a.z), 0u, a.x > a.y && a.x > a.z);
-  face += select(0u, 1u, (face == 0u && N.x < 0.0) || (face == 2u && N.y < 0.0) || (face == 4u && N.z < 0.0));
-  let ix = i32(floor(P.x / s)); let iy = i32(floor(P.y / s)); let iz = i32(floor(P.z / s));
-  var h = (u32(ix) * 73856093u) ^ (u32(iy) * 19349663u) ^ (u32(iz) * 83492791u) ^ (face * 2654435761u) ^ (lv * 2246822519u);
+/** The cache's cell size at P (by its distance from the eye: 0.5 m within ~12 m, doubling to 8 m), its level, and N's face (0..5). */
+fn giLevel(P: vec3f) -> u32 { return u32(clamp(floor(log2(max(length(P.xy - vec2f(u.px, u.py)), 1.0) / 6.0)), 0.0, 4.0)); }
+fn giFace(N: vec3f) -> u32 {
+  let a = abs(N); let face = select(select(4u, 2u, a.y > a.z), 0u, a.x > a.y && a.x > a.z);
+  return face + select(0u, 1u, (face == 0u && N.x < 0.0) || (face == 2u && N.y < 0.0) || (face == 4u && N.z < 0.0));
+}
+fn giKeyI(c: vec3i, face: u32, lv: u32) -> u32 {
+  var h = (u32(c.x) * 73856093u) ^ (u32(c.y) * 19349663u) ^ (u32(c.z) * 83492791u) ^ (face * 2654435761u) ^ (lv * 2246822519u);
   h = (h ^ (h >> 15u)) * 2246822519u; h = h ^ (h >> 13u);
   return max(h, 1u);
+}
+fn giKey(P: vec3f, N: vec3f) -> u32 {
+  let lv = giLevel(P); let s = 0.5 * f32(1u << lv);
+  return giKeyI(vec3i(floor(P / s)), giFace(N), lv);
+}
+/** The cache's light at P (normal N), blended between the 4 cells round it in the surface's plane (no steps between cells). */
+fn giRead(P: vec3f, N: vec3f) -> vec4f {
+  let lv = giLevel(P); let s = 0.5 * f32(1u << lv); let face = giFace(N);
+  let f = P / s - 0.5; let i0 = vec3i(floor(f)); let w = f - floor(f);
+  let fixed = vec3i(floor(P / s));
+  // the two axes along the surface (the normal's axis stays at the point's own cell)
+  let ax = face / 2u;
+  var acc = vec3f(0.0); var wt = 0.0;
+  for (var k = 0u; k < 4u; k++) {
+    let b0 = f32(k & 1u); let b1 = f32(k >> 1u);
+    var c = i0; var wk = 1.0;
+    if (ax == 0u) { c.x = fixed.x; c.y += i32(b0); c.z += i32(b1); wk = mix(1.0 - w.y, w.y, b0) * mix(1.0 - w.z, w.z, b1); }
+    else if (ax == 1u) { c.y = fixed.y; c.x += i32(b0); c.z += i32(b1); wk = mix(1.0 - w.x, w.x, b0) * mix(1.0 - w.z, w.z, b1); }
+    else { c.z = fixed.z; c.x += i32(b0); c.y += i32(b1); wk = mix(1.0 - w.x, w.x, b0) * mix(1.0 - w.y, w.y, b1); }
+    let g = giGet(giKeyI(c, face, lv));
+    if (g.w > 0.0 && wk > 0.0) { acc += g.xyz * wk; wt += wk; }
+  }
+  return select(vec4f(0.0, 0.0, 0.0, -1.0), vec4f(acc / wt, 1.0), wt > 1e-4);
 }
 /** Adds a sample (the mean radiance over the hemisphere seen, x the exposure for the fixed point) to its slot. */
 fn giAdd(key: u32, L: vec3f) {
@@ -149,10 +175,19 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   var E = vec3f(0.0);
   let ns = dot(giN, S);
   if (ns > 0.0 && S.z > 0.0) { E += sunLin() * (GI_SUN / 3.14159 * ns * (1.0 - 0.85 * u.cloud)) * dirLit(H.x, H.y, H.z, S); }
+  // the street lamps' light there (their pools on the asphalt are what lights a street's facades at night)
+  E += giLamps(H.x, H.y, H.z);
   let c = giGet(giKey(H, giN));
   if (c.w > 0.0) { E += c.xyz / evDayNight(); }
   let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
-  return A * E;
+  var Lo = A * E;
+  // a facade's lit windows: their light, the face's mean (the lit share x the windows' part of it, as wallCell lights
+  // them), going with the city's power
+  if (giQ >= 0 && giN.z < 0.5) {
+    let q = u32(giQ); let style = i32(bldF(u32(q + 10u)));
+    Lo += lin(colAt(q + 12u)) * (bldF(u32(q + 11u)) * litShare(style == 0 || style == 1) * WIN_AREA * 0.82 * u.cityLit * artK() / EV_NIGHT);
+  }
+  return Lo;
 }
 /** This cell's indirect light at P (normal N): two rays now into the cache, and the cache's light back (the mean radiance). */
 fn giSample(P: vec3f, N: vec3f, gx: u32, gy: u32) -> vec3f {
@@ -167,9 +202,8 @@ fn giSample(P: vec3f, N: vec3f, gx: u32, gy: u32) -> vec3f {
     let D = normalize(T * (cos(ph) * sr) + B * (sin(ph) * sr) + N * sqrt(max(0.0, 1.0 - r2)));
     acc += giHit(O, D);
   }
-  let key = giKey(P, N);
-  giAdd(key, acc * 0.5);
-  let c = giGet(key);
+  giAdd(giKey(P, N), acc * 0.5);
+  let c = giRead(P, N);
   return select(acc * 0.5, c.xyz / evDayNight(), c.w > 0.0 && u.giDbg < 2.5);
 }
 `;
@@ -178,8 +212,9 @@ fn giSample(P: vec3f, N: vec3f, gx: u32, gy: u32) -> vec3f {
 export const GI_RESOLVE_WGSL = /* wgsl */ `
 @group(0) @binding(0) var<storage, read_write> gia: array<u32>;
 @group(0) @binding(1) var<storage, read_write> gir: array<u32>;
-/** How much of a slot's light this frame's samples replace (~0.3 s to settle at 60 fps). */
-const GI_BLEND = 0.12; const GI_FIX = 1024.0;
+/** How much of a slot's light this frame's samples replace, at least (a mean of all its samples until it has ~1/GI_BLEND
+ *  frames' worth, then a mean that forgets: ~0.5 s to follow a change at 60 fps), weighted by how many samples it got. */
+const GI_BLEND = 0.04; const GI_FIX = 1024.0;
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) g: vec3u) {
   let s = g.x; if (s >= ${GI_SLOTS}u) { return; }
@@ -187,9 +222,14 @@ fn main(@builtin(global_invocation_id) g: vec3u) {
   let n = gia[a + 4u]; let key = gia[a];
   if (n > 0u) {
     let L = vec3f(f32(gia[a + 1u]), f32(gia[a + 2u]), f32(gia[a + 3u])) / (GI_FIX * f32(n));
-    var o = L;
-    if (gir[r] == key) { o = mix(vec3f(bitcast<f32>(gir[r + 1u]), bitcast<f32>(gir[r + 2u]), bitcast<f32>(gir[r + 3u])), L, max(GI_BLEND, 1.0 / f32(n + 1u))); }
-    gir[r] = key; gir[r + 1u] = bitcast<u32>(o.x); gir[r + 2u] = bitcast<u32>(o.y); gir[r + 3u] = bitcast<u32>(o.z);
+    var o = L; var m = f32(n);
+    if (gir[r] == key) {
+      // the samples it holds (capped: past that it forgets) and this frame's, weighted by their counts
+      let held = min(bitcast<f32>(gir[r + 4u]), f32(n) / GI_BLEND);
+      o = mix(vec3f(bitcast<f32>(gir[r + 1u]), bitcast<f32>(gir[r + 2u]), bitcast<f32>(gir[r + 3u])), L, f32(n) / (held + f32(n)));
+      m = held + f32(n);
+    }
+    gir[r] = key; gir[r + 1u] = bitcast<u32>(o.x); gir[r + 2u] = bitcast<u32>(o.y); gir[r + 3u] = bitcast<u32>(o.z); gir[r + 4u] = bitcast<u32>(m);
   }
   gia[a] = 0u; gia[a + 1u] = 0u; gia[a + 2u] = 0u; gia[a + 3u] = 0u; gia[a + 4u] = 0u;
 }

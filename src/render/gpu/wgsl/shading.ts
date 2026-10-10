@@ -96,8 +96,8 @@ fn grade(c: vec3f) -> vec3f {
   x = mix(x, xs * xs * (3.0 - 2.0 * xs), 0.12 * GRADE_K);
   return clamp(x, vec3f(0.0), vec3f(1.0)) * 255.0;
 }
-/** (16.1b) How strongly the street lamps' light (lightAt) shows on what it falls on, and how much of the ambient a face turned away from its source keeps. */
-const LAMP_RECV = 1.5; const AMB_FACE = 0.72; // (LAMP_RECV: 1.2 on the old sRGB light, now linear: 1.2^2.2)
+/** (16.1b) How strongly the street lamps' light (lightAt) shows on what it falls on. */
+const LAMP_RECV = 1.5; // (1.2 on the old sRGB light, now linear: 1.2^2.2)
 /** (16.1b) The air between the eye and a thing: how far until most of it is haze, by night and by day (shorter in rain), and the most of it a thing takes. */
 const AIR_NIGHT = 900.0; const AIR_DAY = 1800.0; const AIR_MAX_N = 0.5; const AIR_MAX_D = 0.65; const AIR_EDGE = 220.0;
 /** The sky's color at the horizon toward the ray, as the eye sees it (the sky follows the adaptation only). */
@@ -197,16 +197,9 @@ fn light(cl: Cell) -> Cell {
     // (16.1c) the albedo: the color x K_PAL, its hue kept under ALB_MAX (the same by day and by night)
     var A = lin(base) * K_PAL;
     let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
-    // the night's ambient: the city's glow (neutral: the palette is drawn under it) and the moon (bluish), past the
-    // buildings round it for the moon (gMoon); (16.1b) the city's glow comes most from downtown
-    // (16.1c: these two go when the night's light comes by the rays too: docs/plano-luz-fisica.md part 2)
-    var aCity = 1.0;
-    if (def && abs(gNrm.z) < 0.7) {
-      let Nh = normalize(gNrm.xy + vec2f(1e-5, 0.0));
-      let tc = vec2f(u.ccx - gPos.x, u.ccy - gPos.y); let tl = length(tc);
-      aCity = AMB_FACE + (1.0 - AMB_FACE) * select(0.5, 0.5 + 0.5 * dot(Nh, tc / tl), tl > 1.0);
-    }
-    let En = vec3f(cityAmb() * aCity) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * mix(MOON_SHADE, 1.0, gMoon));
+    // the moon (bluish), past the buildings round it (gMoon); (16.1c) the city's glow is no longer an ambient on everything:
+    // the night is lit by what is there (the lamps, their pools bouncing up the facades, the lit windows: by the rays, giE)
+    let En = vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * mix(MOON_SHADE, 1.0, gMoon));
     // (16.1c) the day's: the sun's through the air on what faces it out of the shadows (gSun), and the sky's and every
     // bounce's by the rays (giE: gi.ts, the world cache; past its reach, the open sky's light that way)
     let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);

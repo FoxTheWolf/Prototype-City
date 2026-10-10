@@ -95,6 +95,25 @@ fn linL(s: vec3f) -> vec3f { return pow(max(s, vec3f(0.0)) / 255.0, vec3f(2.2));
 // nr: the lit surface's normal (zero: none, a raindrop; it takes the light as if it faced it)
 // (16.1b) the light in LINEAR units (1 = white), every light made linear before it is summed: summed as sRGB and raised
 // to 2.2 after, two equal lamps gave 4.6 times one, and two knees squeezed the sum back
+/** The street lamps' pools at a metre of the light map (ix, iy; tx, ty within it): the two strongest lamps on each metre (the
+ *  second layer at LW * LW), summed, linear; sh: the two shading lamps' ids and their light past the objects (lightAt). */
+fn lampPools(ix: i32, iy: i32, tx: f32, ty: f32, sh: vec4f) -> vec3f {
+  var L = vec3f(0.0);
+  for (var ly = 0u; ly < 2u; ly++) {
+    let i0 = u32(iy * LW + ix) + ly * u32(LW * LW);
+    // (each layer's corners summed before linL, as they were: the same lamp's light across the metre)
+    L += linL(lampCorner(i0, (1.0 - tx) * (1.0 - ty), sh) + lampCorner(i0 + 1u, tx * (1.0 - ty), sh) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty, sh) + lampCorner(i0 + u32(LW) + 1u, tx * ty, sh));
+  }
+  return L;
+}
+/** (16.1c) The street lamps' light at a point a ray of the indirect light met (gi.ts), without their object shadows, in light()'s units. */
+fn giLamps(px: f32, py: f32, pz: f32) -> vec3f {
+  let zk = select(1.0 - (pz - 1.0) / (LIT_H - 1.0), 1.0, pz <= 1.0);
+  if (zk <= 0.0) { return vec3f(0.0); }
+  let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
+  if (ix < 0 || iy < 0 || ix >= LW - 1 || iy >= LW - 1) { return vec3f(0.0); }
+  return lampPools(ix, iy, fx - f32(ix), fy - f32(iy), vec4f(-1.0, 1.0, -1.0, 1.0)) * (pow(zk, 2.2) * LAMP_RECV * LAMP_E);
+}
 fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
   var L = vec3f(0.0);
   // the panels add up in linear light (their colors come linear; 1 = white): summed as sRGB, raised to 2.2 in the
@@ -116,11 +135,7 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         if (w0 != 0u) { sh.x = f32(w0 >> 8u); sh.y = mix(lampShadow(P, w0 >> 8u), 1.0, fade); }
         if (w1 != 0u) { sh.z = f32(w1 >> 8u); sh.w = mix(lampShadow(P, w1 >> 8u), 1.0, fade); }
       }
-      // the two strongest lamps on each metre (the second layer at LW * LW), summed
-      for (var ly = 0u; ly < 2u; ly++) {
-        let i0 = u32(iy * LW + ix) + ly * u32(LW * LW);
-        L += linL((lampCorner(i0, (1.0 - tx) * (1.0 - ty), sh) + lampCorner(i0 + 1u, tx * (1.0 - ty), sh) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty, sh) + lampCorner(i0 + u32(LW) + 1u, tx * ty, sh)) * zk);
-      }
+      L += lampPools(ix, iy, tx, ty, sh) * pow(zk, 2.2); // (zk was inside the sRGB light: linL(x zk))
     }
   }
   let bi = ifloor(px / DCELL) - i32(u.dbx); let bj = ifloor(py / DCELL) - i32(u.dby);
