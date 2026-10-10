@@ -73,17 +73,17 @@ fn skyGrad(t: f32, rdx: f32, rdy: f32, L: f32, up: f32) -> vec3f {
     let e = atan(max(0.0, up)); let ce = cos(e);
     Lk += atmo(2.0, vec3f(rdx / L * ce, rdy / L * ce, sin(e)), sunVec()) * SKY_K;
   }
-  var c = srgb(toneMap(Lk * evDayNight(), dayGrade()));
   // the city's glow on the haze over it: seen only from its edges and beyond, low over the center, and it
-  // fades as the lamps go out (cityLit)
+  // fades as the lamps go out (cityLit); (16.1c) as light, so the dusk's sky, far brighter, outshines it (it showed
+  // as strong at sunset as at midnight, over the earth's shadow)
   let tcx = u.cityW * 0.5 - u.px; let tcy = u.cityH * 0.5 - u.py; let dcen = length(vec2f(tcx, tcy));
   let away = smoothK(0.2, 1.2, dcen / (min(u.cityW, u.cityH) * 0.5));
-  if (away > 0.0 && night > 0.0) {
+  if (away > 0.0) {
     let toC = max(0.0, (tcx * rdx + tcy * rdy) / (max(1.0, dcen) * L));
-    let dome = away * (0.3 + 0.7 * toC * toC) * exp(-max(0.0, up) / 0.16) * u.cityLit * night;
-    c += vec3f(150.0, 72.0, 22.0) * dome;
+    let dome = away * (0.3 + 0.7 * toC * toC) * exp(-max(0.0, up) / 0.16) * u.cityLit;
+    Lk += lin(vec3f(180.0, 86.0, 26.0) * dome) / EV_NIGHT; // (a fifth brighter than the old one summed in gamma, to keep the night's look)
   }
-  return c;
+  return srgb(toneMap(Lk * evDayNight(), dayGrade()));
 }
 /** (16.1b) The sky right at the horizon toward (rdx, rdy), the clouds' far haze over it as they cover the sky: what the air between the eye and a far thing takes its color from (aerial in shading.ts). */
 fn horizonCol(rdx: f32, rdy: f32) -> vec3f {
