@@ -2,6 +2,15 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 7) — o reset da luz (Opus 5.5)
+
+- **O que saiu:** os reflexos do molhado (o bug de verdade era a luz do poste calculada no ponto refletido, não o espelho), a normal dos cômodos anotada, a gradação de cor, o vidro de fora, o rastro na chuva, e a auditoria com o primeiro reset: a soma das luzes agora é linear e saíram oito remendos.
+- **Sua intuição valeu:** "a coluna infinita dá uma dica" e "isso é antigo, não devia existir" levaram direto a duas raízes (o `gPos` e a soma em gama). Remendo em cima de remendo esconde a causa; tirar os dois remendos que se anulavam foi o que mostrou que o resto era físico.
+- **Onde eu errei:** pus um "piso" no escuro das poças antes de achar a causa; tirei logo, mas era o reflexo de remendar primeiro. E pus o portão de horário no transbordo da vitrine em vez de perguntar se ele devia existir; você perguntou por mim.
+- **Contesto:** a paleta feita para a noite (`DAY_ALBEDO` e companhia) é o maior remendo que sobrou e não é barato: mexe na cara do dia inteiro. Recomendo fazer junto da 16.1c (a luz indireta precisa de albedos reais para o rebote), não agora sozinha.
+- **O rumo:** a luz está ficando um sistema só e físico; o que falta para a "noite chuvosa cozy" é a 16.1c (as janelas acesas iluminando a rua de verdade) e o som da chuva (20.1). As pessoas (16.2–16.6) já nascem nessa luz, que era o objetivo de fazer a 16.1b de uma vez.
+- **Dúvidas:** a gradação (sombras frias à noite) agradou ou ficou azul demais? O rastro na chuva: forte, fraco? (itens 9–11 do `teste-luz.bat`)
+
 ## 2026-10-09 (noite, 6) — a luz adiada de pé numa sessão (Opus 5.5)
 
 - **O que saiu:** os três passos da 16.1b numa janela, não em duas. A luz nova é a única; o shader tem uma função de luz para a rua, os objetos, os telhados e os cômodos, e a névoa tem a cor do céu. O que você vai sentir: o horizonte emenda no céu, as janelas de dia ficam escuras atrás do vidro, os cômodos ganharam volume (teto escuro, móveis com lado claro e escuro).
