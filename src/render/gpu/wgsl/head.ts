@@ -73,6 +73,8 @@ const REFL_FAR_WALL = 260.0; const REFL_FAR_GROUND = 160.0;
 const REFL_FAR_CAR = 90.0; const CAR_METAL = 0.25;
 /** How far a rough surface's mirror ray is scattered per unit of roughness (a blurred reflection, dithered per cell). */
 const REFL_BLUR = 0.1;
+/** The most of the wet ground's color its mirror takes, times how wet it is (a puddle 1, the film ~0.45), and its least blur (as a roughness). */
+const WET_MIRROR = 0.4; const WET_BLUR_MIN = 0.3;
 /** How much of a lamp's highlight on glossy paint, metal or glass blooms, and where the sun's glint starts blooming and how fast it grows. */
 const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
 /** How saturated the palette color reads as albedo under a light: the palettes are near grey (their hue shows
