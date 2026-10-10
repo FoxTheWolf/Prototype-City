@@ -466,12 +466,13 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   if (bldF(u32(q + 31u)) > 0.5 && z > H - CROWN_H) {
     let cw = colAt(q + 28u) * (pow((z - (H - CROWN_H)) / CROWN_H, 1.4) * 0.95 * ad * (1.0 - 0.85 * u.day)); c += cw; il += cw;
   }
-  // floodlights at the foot of the wall, each a cone of light widening upward
+  // floodlights at the foot of the wall, each a cone of light (floodWall): a fan up the wall from an arc ~2.4 m up
   let floodH = bldF(u32(q + 35u));
   if (floodH > 0.0 && z < floodH) {
-    let w = 1.4 + 0.55 * z; let fzz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / floodH), 1.2);
+    let fzz = pow(max(0.0, 1.0 - z / floodH), 1.2);
     var I = 0.0;
-    if (dAlong > FLOOD_GAP * 0.4) { I = fzz * (0.3 + 0.7 * min(1.0, 1.77 * w / FLOOD_GAP)); }
+    // (far: the fans' mean across the gap between two lamps)
+    if (dAlong > FLOOD_GAP * 0.4) { I = fzz * (floodWall(0.0, z) + 2.0 * floodWall(FLOOD_GAP * 0.25, z) + floodWall(FLOOD_GAP * 0.5, z)) * 0.25 * 2.0; }
     else {
       let fb = select(f0, 0.0, side == 2);
       let fr = (((along - fb) / FLOOD_GAP) % 1.0 + 1.0) % 1.0; let d = abs(fr - 0.5) * FLOOD_GAP; let d2 = FLOOD_GAP - d;
@@ -485,8 +486,8 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
         v1 = floodShadow(P, vec3f(hx + tg.x * a1 + nw.x * FLOOD_OUT, hy + tg.y * a1 + nw.y * FLOOD_OUT, 0.32));
         v2 = floodShadow(P, vec3f(hx + tg.x * a2 + nw.x * FLOOD_OUT, hy + tg.y * a2 + nw.y * FLOOD_OUT, 0.32));
       }
-      // each lamp's cone, and some light between them, so the wall is scalloped and never left dark
-      I = fzz * (0.3 + 0.7 * min(1.2, exp(-(d / w) * (d / w)) * v1 + exp(-(d2 / w) * (d2 / w)) * v2));
+      // each lamp's cone on the wall (16.1c: a fan from an arc, dark between the fans until they meet up high)
+      I = fzz * (floodWall(d, z) * v1 + floodWall(d2, z) * v2);
       // (the lamp itself: near, a fixture standing in front of the wall)
       if (z < 0.35 && d < 0.3 && t > FLOOD_FIX_FAR) { ch = STAR; c = vec3f(200.0, 190.0, 165.0); emC = c; il = vec3f(0.0); glowK = 0.3; }
     }

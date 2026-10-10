@@ -9,6 +9,8 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **As nuvens pegam o sol na altura delas:** as baixas ficam rosadas por alguns segundos depois do pôr do sol e viram silhuetas contra o céu roxo.
 - **Véu alto de nuvem (cirro):** em alguns dias, um véu fino a 8 km em estrias com o vento. Logo depois do pôr do sol, o céu inteiro fica rosa por uns dois minutos e depois roxo.
 - **Umidade:** o ar fica mais enevoado com nuvens e chuva (halo leitoso em volta do sol) e limpo depois da chuva.
+- **Faróis com o padrão do farol baixo:** o facho é uma faixa longa à frente do carro (escura bem no para-choque) e, nas paredes e nos carros da frente, ilumina só até a altura do farol, com o degrau subindo do lado direito. No pisca-alto passa por cima.
+- **Holofotes de fachada em leque:** cada um desenha na parede um arco a ~2,4 m que abre para cima, com escuro entre um e outro, como as luminárias de verdade. A luz cai com a altura: o prédio alto brilha embaixo, não até o topo.
 
 ## 0.16.1b — A luz nova (2026-10-09)
 - **O brilho em cruz das luzes:** agora aparece também de noite sem chuva, discreto; quase some de dia; e na tempestade para no nível da chuva média, para os letreiros brancos continuarem legíveis. As lâmpadas longe ganham uma cruz curta, e ela cresce conforme você chega perto.

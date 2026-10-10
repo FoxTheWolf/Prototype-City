@@ -7,7 +7,7 @@ import { insideLight, interiorColumn, prepareInside, type Inside } from './inter
 import { CharGrid } from './grid';
 import { BLOCK } from './atlas';
 import { LAMP_LIGHT, lampId } from './lamps';
-import { DynLights, FLOOD_OUT } from './lights';
+import { DynLights, FLOOD_OUT, HEAD_H, HEAD_HIGH, HEAD_DIP } from './lights';
 import { LightWindow } from './lightmap';
 import { bladeText, landmarkName, roadName } from '../locale/names';
 import { signalLamps, mastModel, substationModel, streetBlade, bladeHalf, BLADE_H, overheadBlade, bannerModel, DISTRICT_COLS, doorNumberModel, intercomModel, openSignModel, busFlagModel, phoneSignModel, cctvSignModel, guideSign, cctvModel, cctvMount, bladeHeight, bladeModel, bladeReach, bikeModel, boardModel, carFarModel, carModel, pedModel, VEHICLE_SIZE, vehicleModel, debrisModel, escapeModel, shedModel, FURNITURE, lampModel, poweredFurniture, SIGNAL_POLE, walkSignal, signalFarModel, signalModel, STOP_SIGN, treeModel, wallFloodModel } from './models';
@@ -617,19 +617,19 @@ function gatherLights(world: World, v: View, sec: number) {
     if (Math.abs(x - v.x) > CAR_LIGHT_FAR || Math.abs(y - v.y) > CAR_LIGHT_FAR) continue;
     const hl = c.len / 2, bike = c.kind === 'bike', fl = !bike && flashing(c, world.tick) ? 2.2 : 1, hw = halfW(c.kind) - 0.25;
     // a flash of the headlights: the high beams, brighter and further for a blink
-    const range = bike ? 8 : 24 * (fl > 1 ? 1.6 : 1), hr = (bike ? 60 : 150) * fl, hg = (bike ? 58 : 140) * fl, hb = (bike ? 50 : 115) * fl;
+    // (16.1c) the beam's pattern (headBeam): the dipped beam's cutoff, or over it in a flash of the high beams
+    const range = bike ? 12 : 40 * (fl > 1 ? 1.4 : 1), tc = fl > 1 ? HEAD_HIGH : HEAD_DIP, hr = (bike ? 60 : 150) * fl, hg = (bike ? 58 : 140) * fl, hb = (bike ? 50 : 115) * fl;
     if (!bike && (x - v.x) ** 2 + (y - v.y) ** 2 <= twinD2) {
-      // up close, a cone from each headlamp (each a little more than half the pair's light); the dipped
-      // beam is asymmetric: the right lamp's reaches further and higher, a little toward the curb (the signs)
+      // up close, a beam from each headlamp (each a little more than half the pair's light; the dipped beam's step up
+      // on the right is in the pattern, headBeam)
       for (let k = 0; k < 2; k++) {
-        const sd = k ? hw : -hw, rt = sd > 0, ax = rt ? dx - dy * 0.08 : dx, ay = rt ? dy + dx * 0.08 : dy, an = Math.hypot(ax, ay);
-        const lx = x + dx * hl - dy * sd, ly = y + dy * hl + dx * sd, R = range * (rt ? 1.35 : 1);
-        blocker(lx, ly, ax / an, ay / an, R);
-        dyn.cone(lx, ly, ax / an, ay / an, 0.87, R, 1, rt ? 6 : 4, hr * 0.6, hg * 0.6, hb * 0.6, BLOCKER[0], BLOCKER[1]);
+        const sd = k ? hw : -hw, lx = x + dx * hl - dy * sd, ly = y + dy * hl + dx * sd;
+        blocker(lx, ly, dx, dy, range);
+        dyn.cone(lx, ly, dx, dy, HEAD_H, range, tc, hr * 0.6, hg * 0.6, hb * 0.6, BLOCKER[0], BLOCKER[1]);
       }
     } else {
       if (bike) BLOCKER[0] = BLOCKER[1] = 0; else blocker(x + dx * hl, y + dy * hl, dx, dy, range);
-      dyn.cone(x + dx * hl, y + dy * hl, dx, dy, 0.87, range, 1, 4, hr, hg, hb, BLOCKER[0], BLOCKER[1]);
+      dyn.cone(x + dx * hl, y + dy * hl, dx, dy, bike ? 0.9 : HEAD_H, range, tc, hr, hg, hb, BLOCKER[0], BLOCKER[1]);
     }
     if (!bike) dyn.point(x - dx * (hl + 0.1), y - dy * (hl + 0.1), 4, 1, 2, 120, 12, 8);
     // the turn signal blinking amber at its front and back corners on that side

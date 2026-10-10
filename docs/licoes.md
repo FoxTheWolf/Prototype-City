@@ -8,6 +8,7 @@
 - **Calibrar fora do jogo:** um script `npx tsx` no scratchpad, importando `src/render/atmosphere.ts` pelo caminho absoluto (`cygpath -m`), imprime o zênite, o horizonte e a cor do sol por altura do sol em segundos; a constante (`SKY_K`) sai da conta com a curva de tom, sem recompilar o shader.
 - **O relógio encurta os efeitos do céu:** 1 dia = 2 h reais, então 1° de sol ≈ 20 s reais. Um efeito que depende de poucos graus (as nuvens baixas rosa) dura segundos; pensar em graus × 20 s antes de prometer um efeito.
 - **O domo laranja da cidade** perto da borda engana: parece o pôr do sol na direção errada. Conferir a direção do sol (`sunDir` no console) antes de concluir.
+- **Para ver uma luz de fachada sob o sódio:** `DEBUG.lightProbe = true` no console (o `DEBUG` global, não o `import` do módulo, que duplica o estado) pinta em vermelho a luz que a fachada pinta em si e em verde a dos postes; para o farol, um apagão (F6) tira os postes.
 - **Para olhar um pôr do sol no painel:** `world.time = T0 + h*3600` (T0 = o `world.time` às 12h02 do dia), `camera.yaw/targetYaw`, `world.weather.preset` (7 = o véu alto); o painel aceita a troca na hora, sem recarregar.
 
 ### Lições da 16.1b (a luz adiada, passos 1 e 2) — 2026-10-09

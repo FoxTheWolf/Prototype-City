@@ -10,6 +10,7 @@
 - O véu alto: `Weather.high` (com semente, `wave` 7; preset `high`), desenhado plano a 8 km em estrias pelo vento, com o sol a 8 km (`hiT`).
 - A umidade: `mie` = 0,6 + 0,6·nuvem + chuva − 0,3·molhado depois da chuva (0,3–2), igual na CPU e no shader.
 - Conferido no painel (semente 42, `pos=810.9,344.8`, 3/7/2008, pôr do sol 19h28): meio-dia, 17h, 19h09, 19h28, 19h34–19h46 com o véu, 19h54, 21h30 (a noite igual). Shader 36 s de compilação. Teste do usuário: `teste-ceu.bat`.
+- **Os fachos (recado 1 da noite de 09/10):** o farol com o padrão do farol baixo (`headBeam` em `render/lights.ts` e o gêmeo em `lightAt`: a linha de corte `HEAD_DIP`, o degrau à direita, `HEAD_HIGH` no pisca-alto, alcance 40 m) e o holofote de fachada como cone de verdade (`floodCone`/`floodWall`: a 1,2 m da parede, meio-ângulo 15°, o arco a ~2,4 m, `FLOOD_KC` 200; o mesmo cone na parede, nos objetos e na CPU). Conferido: o farol no apagão (F6) e os leques com `DEBUG.lightProbe` (o canal vermelho = a luz que a fachada pinta). Consequência física: o prédio alto com holofote brilha só embaixo (o projetor do outro lado da rua seria outra luminária, depois).
 - Ficou: o cinturão de Vênus não aparece (o múltiplo barato apaga cedo o lado oposto; perto da borda o domo da cidade cobre); a gradação (`grade()`) ainda usa `u.dusk` para o dourado; a luz nas mãos (`viewLight`) ainda usa a cor velha.
 
 ## 16.1 — fechada pelo usuário (2026-10-09, noite)

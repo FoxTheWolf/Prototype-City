@@ -13,15 +13,42 @@ export const PANEL_S = 0.6;
 /** A wall floodlight's spot stands this far out from its wall (the shader's FLOOD_OUT). */
 export const FLOOD_OUT = 1.2;
 /**
- * A wall floodlight's beam at (a along the wall, s out from the lamp, height z): as wide as the shader paints it
- * on the wall, leaning in from the lamp to meet the wall by 4 m up, fading to the top it reaches (h).
+ * (16.1c) A wall floodlight's beam, a cone (the shader's floodCone): the lamp FLOOD_Z up at its spot, FLOOD_OUT out from
+ * the wall, aimed up and into it so that the cone's outer edge runs up the wall (FLOOD_HALF its half angle, FLOOD_EDGE the
+ * soft edge, brighter toward its middle). On the wall it draws the fan of a real uplight: an arc at the bottom (~2.4 m up,
+ * the scallop) opening upward, the light falling with the distance; KC: ~5 at its brightest, ~3 m up (a wall washer 1.2 m out lights its wall ~10x what the street lamps do).
+ * (a along the wall, s out from the lamp, z the height): the light on what faces the lamp there.
  */
+export const FLOOD_Z = 0.3, FLOOD_HALF = 0.2618, FLOOD_EDGE = 0.05, FLOOD_KC = 200;
+const FAX = [0, -Math.sin(FLOOD_HALF), Math.cos(FLOOD_HALF)];
+export function floodCone(a: number, s: number, z: number) {
+  const vz = z - FLOOD_Z, l = Math.hypot(a, s, vz);
+  if (l < 0.05) return 0;
+  const th = Math.acos(Math.max(-1, Math.min(1, (s * FAX[1] + vz * FAX[2]) / l)));
+  const cut = 1 - smh(FLOOD_HALF - FLOOD_EDGE, FLOOD_HALF + FLOOD_EDGE, th);
+  return cut * (0.35 + 0.65 * Math.exp(-((th / (FLOOD_HALF * 0.6)) ** 2))) * FLOOD_KC / (l * l + 0.5);
+}
+const smh = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** A wall floodlight's light at (a, s, z) as floodCone, up to the top it reaches (h), with a little spill round the lamp on the pavement. */
 export function floodBeam(a: number, s: number, z: number, h: number) {
-  const w = 1.4 + 0.55 * z, fz = Math.min(1, z / 1.5) * Math.max(0, 1 - z / h) ** 1.2;
   // (not the fixture's own housing, within ~0.25 m of the spot)
   const own = Math.min(1, Math.max(0, (a * a + s * s - 0.06) / 0.1));
-  const sc = s + FLOOD_OUT * Math.min(1, z / 4);
-  return own * (fz * Math.exp(-(a * a + sc * sc * 4) / (w * w)) + 0.3 * Math.exp(-(a * a + s * s) / 0.6) * Math.max(0, 1 - z));
+  return own * (floodCone(a, s, z) * Math.max(0, 1 - z / h) ** 1.2 + 0.3 * Math.exp(-(a * a + s * s) / 0.6) * Math.max(0, 1 - z));
+}
+
+/**
+ * (16.1c) A headlight's beam pattern (what a lamp maker's photometry gives), the same in the shader's lightAt: s along the
+ * beam, a across it (+ to the right), z the height; h the lamp's height, tc the cutoff's slope (HEAD_DIP: the dipped beam
+ * lights what stands ahead only below the lamp, a line on the walls and the cars, stepping up on the right toward the
+ * signs; HEAD_HIGH: the high beam over it), R its reach. Dark right at the bumper, even far down the road.
+ */
+export const HEAD_H = 0.65, HEAD_DIP = -0.01, HEAD_HIGH = 0.04;
+const sm = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+export function headBeam(s: number, a: number, z: number, h: number, tc: number, R: number) {
+  if (s <= 0.05 || s >= R) return 0;
+  const phi = Math.atan2(a, s);
+  const zc = h + s * (tc + 0.27 * Math.min(0.12, Math.max(0, phi - 0.02))), soft = 0.04 + 0.015 * s;
+  return Math.exp(-(((phi - 0.05) / 0.33) ** 2)) * sm(0.3, 4, s) * (1 - s / R) ** 1.5 * (1 - sm(zc - soft, zc + soft, z));
 }
 
 export const CELL = 8, SIDE = 64; // buckets cover 512 m around the viewer
@@ -65,11 +92,12 @@ export class DynLights {
   }
 
   /**
-   * A beam from (x, y) along (dx, dy). If something stands in it (a car ahead), cut is how far along the beam its back is
-   * and slope where it is across (its side offset / cut): past it the beam is shadowed behind it (the shader's lightAt).
+   * A headlight's beam from (x, y) along (dx, dy), the lamp h up, its cutoff's slope tc (headBeam). If something stands in it
+   * (a car ahead), cut is how far along the beam its back is and slope where it is across (its side offset / cut): past it
+   * the beam is shadowed behind it (the shader's lightAt).
    */
-  cone(x: number, y: number, dx: number, dy: number, cosHalf: number, range: number, zFull: number, zTop: number, r: number, g: number, b: number, cut = 0, slope = 0) {
-    this.add(LightKind.Cone, x, y, dx, dy, cosHalf, cut, range, zFull, zTop, r, g, b, x - range, y - range, x + range, y + range);
+  cone(x: number, y: number, dx: number, dy: number, h: number, range: number, tc: number, r: number, g: number, b: number, cut = 0, slope = 0) {
+    this.add(LightKind.Cone, x, y, dx, dy, h, cut, range, tc, 99, r, g, b, x - range, y - range, x + range, y + range);
     this.lvH[this.n - 1] = slope;
   }
 
@@ -189,6 +217,12 @@ export class DynLights {
     for (let e = this.off[c], e1 = this.off[c + 1]; e < e1; e++) {
       const k = this.idx[e];
       if (this.kind[k] >= LightKind.Panel) { this.samplePanel(k, px, py, pz, out); continue; }
+      if (Math.floor(this.kind[k]) === LightKind.Cone) {
+        const dx = px - this.x[k], dy = py - this.y[k], u = this.u[k], w = this.w[k];
+        const f = headBeam(dx * u + dy * w, -dx * w + dy * u, pz, this.nx[k], this.zFull[k], this.range[k]);
+        out[0] += this.r[k] * f; out[1] += this.g[k] * f; out[2] += this.b[k] * f;
+        continue;
+      }
       const zk = pz <= this.zFull[k] ? 1 : (this.zTop[k] - pz) / (this.zTop[k] - this.zFull[k]);
       if (zk <= 0) continue;
       const R = this.range[k];
@@ -204,13 +238,7 @@ export class DynLights {
       }
       const d = Math.hypot(dx, dy);
       if (d >= R) continue;
-      f = (1 - d / R) ** 2;
-      if (kind === LightKind.Cone) {
-        const c = (dx * this.u[k] + dy * this.w[k]) / (d || 1), c0 = this.nx[k];
-        if (c <= c0) continue;
-        f *= Math.min(1, (c - c0) / ((1 - c0) * 0.5));
-      }
-      f *= zk;
+      f = (1 - d / R) ** 2 * zk;
       out[0] += this.r[k] * f; out[1] += this.g[k] * f; out[2] += this.b[k] * f;
     }
   }

@@ -1,4 +1,16 @@
+import { FLOOD_EDGE, FLOOD_HALF, FLOOD_KC, FLOOD_Z } from '../../lights';
 export const lampsWGSL = (): string => /* wgsl */ `// ---- light (lightmap.ts, lights.ts, lightAt): the street lamps' pools and this frame's dynamic lights
+// (16.1c) a wall floodlight's cone (floodCone in lights.ts): a along the wall, s out from the lamp, z the height
+const FLOOD_Z = ${FLOOD_Z}; const FLOOD_HALF = ${FLOOD_HALF}; const FLOOD_EDGE = ${FLOOD_EDGE}; const FLOOD_KC = ${FLOOD_KC.toFixed(1)};
+fn floodCone(a: f32, s: f32, z: f32) -> f32 {
+  let v = vec3f(a, s, z - FLOOD_Z); let l = length(v);
+  if (l < 0.05) { return 0.0; }
+  let th = acos(clamp(dot(v, vec3f(0.0, -sin(FLOOD_HALF), cos(FLOOD_HALF))) / l, -1.0, 1.0));
+  let k = th / (FLOOD_HALF * 0.6);
+  return (1.0 - smoothK(FLOOD_HALF - FLOOD_EDGE, FLOOD_HALF + FLOOD_EDGE, th)) * (0.35 + 0.65 * exp(-k * k)) * FLOOD_KC / (l * l + 0.5);
+}
+/** The same cone on its wall (FLOOD_OUT in from the lamp): with the slant it meets the wall at. */
+fn floodWall(a: f32, z: f32) -> f32 { let l = length(vec3f(a, FLOOD_OUT, z - FLOOD_Z)); return floodCone(a, -FLOOD_OUT, z) * FLOOD_OUT / max(l, 0.05); }
 fn lampCorner(i: u32, f: f32, sh: vec4f) -> vec3f {
   let w = lmap[i];
   if (w == 0u || f <= 0.0) { return vec3f(0.0); }
@@ -120,41 +132,42 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         Lp += vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * (ce * cr * (S / (d2 + S)) * w * w * lv);
         continue;
       }
-      let lz = select((zt - pz) / (zt - zf), 1.0, pz <= zf);
-      if (lz <= 0.0) { continue; }
       let kind = u32(dlF(u32(o))); let R = dlF(u32(o + 7u));
       let dx = px - dlF(u32(o + 1u)); let dy = py - dlF(u32(o + 2u));
+      if (kind == 1u) {
+        // (16.1c) a headlight: its beam's pattern (headBeam in lights.ts; zf here is its cutoff's slope, o + 5 its height)
+        let ux = dlF(u32(o + 3u)); let uy = dlF(u32(o + 4u));
+        let s = dx * ux + dy * uy; let a = -dx * uy + dy * ux;
+        if (s <= 0.05 || s >= R) { continue; }
+        let phi = atan2(a, s);
+        let zc = dlF(u32(o + 5u)) + s * (zf + 0.27 * clamp(phi - 0.02, 0.0, 0.12)); let soft = 0.04 + 0.015 * s;
+        let pa = (phi - 0.05) / 0.33;
+        var f = exp(-pa * pa) * smoothK(0.3, 4.0, s) * pow(1.0 - s / R, 1.5) * (1.0 - smoothK(zc - soft, zc + soft, pz));
+        // a car ahead in the beam (dlF(u32(6)): how far its back is, dlF(u32(15)): its side offset over that) shadows what is behind it,
+        // a wedge as wide as a car at its back, widening behind; its back itself stays lit
+        let cut = dlF(u32(o + 6u));
+        if (cut > 0.0 && s > cut) {
+          let w = 1.0 / cut;
+          f *= 1.0 - (1.0 - smoothK(0.85 * w, 1.25 * w, abs(a / s - dlF(u32(o + 15u))))) * smoothK(cut + 0.1, cut + 0.7, s);
+        }
+        L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * f);
+        continue;
+      }
+      let lz = select((zt - pz) / (zt - zf), 1.0, pz <= zf);
+      if (lz <= 0.0) { continue; }
       if (kind == 3u) {
-        // a wall floodlight (floodBeam in lights.ts): the beam up the wall, thin out from it, and a little
+        // a wall floodlight (floodBeam in lights.ts): its cone (floodCone) on what stands in it, and a little
         // spill round the lamp on the pavement; the wall itself is painted in wallCell with the same cone
         let s = dx * dlF(u32(o + 5u)) + dy * dlF(u32(o + 6u));
         if (s < 0.1 - FLOOD_OUT) { continue; }
         let a = -dx * dlF(u32(o + 6u)) + dy * dlF(u32(o + 5u)); let z = max(pz, 0.0);
-        let w = 1.4 + 0.55 * z; let fz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / zf), 1.2);
         let own = clamp((a * a + s * s - 0.06) / 0.1, 0.0, 1.0); // not the fixture's own housing
-        let sc = s + FLOOD_OUT * min(1.0, z / 4.0); // the beam leans in to meet the wall
-        L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * own * (fz * exp(-(a * a + sc * sc * 4.0) / (w * w)) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z)));
+        L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * own * (floodCone(a, s, z) * pow(max(0.0, 1.0 - z / zf), 1.2) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z)));
         continue;
       }
       let d = length(vec2f(dx, dy));
       if (d >= R) { continue; }
-      var f = (1.0 - d / R) * (1.0 - d / R);
-      if (kind == 1u) {
-        let cs = (dx * dlF(u32(o + 3u)) + dy * dlF(u32(o + 4u))) / select(d, 1.0, d == 0.0); let c0 = dlF(u32(o + 5u));
-        if (cs <= c0) { continue; }
-        f *= min(1.0, (cs - c0) / ((1.0 - c0) * 0.5));
-        // a car ahead in the beam (dlF(u32(6)): how far its back is, dlF(u32(15)): its side offset over that) shadows what is behind it,
-        // a wedge as wide as a car at its back, widening behind; its back itself stays lit
-        let cut = dlF(u32(o + 6u));
-        if (cut > 0.0) {
-          let s = dx * dlF(u32(o + 3u)) + dy * dlF(u32(o + 4u));
-          if (s > cut) {
-            let a = -dx * dlF(u32(o + 4u)) + dy * dlF(u32(o + 3u)); let w = 1.0 / cut;
-            f *= 1.0 - (1.0 - smoothK(0.85 * w, 1.25 * w, abs(a / s - dlF(u32(o + 15u))))) * smoothK(cut + 0.1, cut + 0.7, s);
-          }
-        }
-      }
-      f *= lz;
+      let f = (1.0 - d / R) * (1.0 - d / R) * lz;
       L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * f);
     }
   }
