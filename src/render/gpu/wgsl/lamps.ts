@@ -216,7 +216,10 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         if (s < 0.1 - FLOOD_OUT) { continue; }
         let a = -dx * dlF(u32(o + 6u)) + dy * dlF(u32(o + 5u)); let z = max(pz, 0.0);
         let own = clamp((a * a + s * s - 0.06) / 0.1, 0.0, 1.0); // not the fixture's own housing
-        L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * own * (floodCone(a, s, z) * pow(max(0.0, 1.0 - z / zf), 1.2) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z)));
+        // (16.1c, part 3) the angle its light meets the surface at (the lamp FLOOD_Z up at its spot)
+        let Lv = vec3f(-dx, -dy, FLOOD_Z - z);
+        let ci = select(1.0, max(0.0, dot(nr, Lv)) * inverseSqrt(max(dot(Lv, Lv), 1e-4)), dot(nr, nr) > 0.25);
+        L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * own * (floodCone(a, s, z) * pow(max(0.0, 1.0 - z / zf), 1.2) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z))) * ci;
         continue;
       }
       let d = length(vec2f(dx, dy));

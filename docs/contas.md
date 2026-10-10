@@ -20,7 +20,7 @@
 ## Último snapshot observado (atualizar a cada sessão)
 
 - **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
-- **C** — 2026-10-10 ~01h25 (medido, sessão do painel F12): semanal **~59%**, janela de 5 h 67% (renova 03h10). Renova terça ~13h (`get_usage`: 16:00Z).
+- **C** — 2026-10-10 ~02h00 (medido, fim da sessão do painel F12 e dos postes): semanal **~62%**, janela de 5 h ~86% (renova 03h10). Renova terça ~13h. Renova terça ~13h (`get_usage`: 16:00Z).
 - **V** — 2026-10-09 ~21h50 (medido): semanal **95%**, janela de 5 h 75% (renova ~00h20 Brasília). Renova o semanal **sábado 10/10 ~02h**.
 
 ## Decisão (2026-10-09 à noite): a próxima é a **C**

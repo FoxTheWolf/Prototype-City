@@ -4,6 +4,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 
 ## 0.16.1c — O céu de verdade (2026-10-10)
 - **Postes de verdade:** a luz dos postes cai com a distância como a de uma lâmpada real, depende do ângulo em que bate e se espalha ao longo da rua (pouco para o lado das casas); nada acima da cabeça do poste se ilumina, e o próprio poste não brilha mais.
+- **Holofotes das fachadas:** a luz deles também depende do ângulo em que bate.
 - **Faróis pela mesma física:** a luz do farol cai com a distância como a dos postes, mais forte perto e mais suave longe, e o asfalto colado ao para-choque fica escuro porque o facho mira à frente.
 - **Oclusão e cor dos objetos:** embaixo e em volta dos carros, bancos e pessoas a luz do céu escurece, e um carro colorido ao sol tinge de leve o chão em volta.
 - **Fachadas:** os lados das colunas e reentrâncias recebem a luz pelo lado para onde viram, não por um escurecimento fixo; a sombra da lua escurece de verdade.

@@ -2,6 +2,14 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-10 (madrugada) — o painel e os postes de verdade (Opus 5.5, conta C)
+
+- **O que mais rendeu hoje foi o painel F12, não a luz.** Os ajustes de gosto (o quanto o dia é claro, o quanto a GI aparece) estavam passando por mim e por uma recompilação de 26 s cada. Agora você mexe ao vivo e me manda os números. Quero que todo pedido do tipo "está escuro/forte demais" passe a chegar com o valor do slider.
+- **Seu olho acertou dois bugs de verdade:** as faixas presas no teto do asfalto e a falta de AO (os raios da GI nem viam os objetos da rua). O carro azul que não tinge o chão era o mesmo buraco; o AO por bola de volume resolveu os dois de uma vez.
+- **Contestação:** a "GI sutil" não é para aumentar no braço. O rebote está na força física; o que estava errado era o olho parando cedo. Teste o `giK`, mas se ficar bom só acima de 1,3, eu desconfio de outra coisa (o albedo da paleta, o `K_PAL`) antes de aceitar luz extra.
+- **Uma dúvida que fica:** o mapa de luz guarda só dois postes por metro. Com a mancha nova mais longa, onde três postes se cruzam pode aparecer uma emenda. Se você vir uma linha reta no chão à noite, é isso, e o conserto é guardar três.
+- **O rumo:** a parte 3 está na metade boa. As sombras com penumbra (o seu CHSS) e as janelas/neon como luzes de área são o que falta para a noite cozy ficar como as suas referências.
+
 ## 2026-10-10 — a luz física, do céu ao rebote (Opus 5.5, conta C)
 
 - **O que mudou de verdade hoje:** pela primeira vez o céu, o sol, a luz que rebate e a noite saem do mesmo modelo físico. O pôr do sol de Miami saiu da física (com o véu alto), e a noite sem o ambiente falso ficou mais noir e mais parecida com a sua referência da rua molhada.
