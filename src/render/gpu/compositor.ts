@@ -321,6 +321,8 @@ fn phBloom(uv: vec2f) -> vec3f {
 const GLOW_RX = 14, GLOW_RY = 7;
 /** (16.1b) The lights' streaks in the rain: how far up and down (rows) and across (columns), and how strong. */
 const STREAK_V = 14, STREAK_H = 20, STREAK_K = 0.3;
+/** (16.1b, the user) a far light's tail, as a share of a near one's: the streak grows as the lamp nears. */
+const STREAK_LEN = 0.2;
 /** (16.1b, the user) the streak's strength (as rain): a floor by night even when dry (the eye's own scatter, a bit
  * under the drizzle preset's 0.2), almost none by day, and a ceiling at the rain preset (0.55) so a storm
  * doesn't wash the white signs out. */
@@ -336,6 +338,13 @@ fn src(x: i32, y: i32) -> vec4f {
   let i = u32(y) * g.cols + u32(x); let w = world[i]; let a = f32(world[g.cols * g.rows + i] >> 24u) / 255.0;
   let wc = vec3f(f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) / 255.0 * a;
   return vec4f(wc, dot(wc, vec3f(0.3, 0.5, 0.2)));
+}
+// (16.1b) a streak's source at (x, y): what glows there (only the brightest) and in .a its tail's length (STREAK_LEN..1)
+// by how near the light is: a far lamp is a cell or two on screen, a near one many, and the across pass (tmp,
+// already blurred) over the cell's own brightness is that share of the row it covers
+fn sSrc(x: i32, y: i32) -> vec4f {
+  let a = src(x, y); let t = tmp[u32(y) * g.cols + u32(x)].a;
+  return vec4f(a.rgb * smoothstep(0.12, 0.5, a.a), mix(${STREAK_LEN}, 1.0, smoothstep(0.08, 0.6, t / max(a.a, 0.0001))));
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= g.cols || id.y >= g.rows) { return; }
@@ -357,14 +366,12 @@ fn src(x: i32, y: i32) -> vec4f {
     if (g.rain > 0u) {
       var st = vec3f(0.0);
       for (var d = 1; d <= ${STREAK_V}; d++) {
-        let w = exp(-f32(d) / ${STREAK_V * 0.35});
-        if (y - d >= 0) { let a = src(x, y - d); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
-        if (y + d < i32(g.rows)) { let a = src(x, y + d); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
+        if (y - d >= 0) { let a = sSrc(x, y - d); st += a.rgb * exp(-f32(d) / (${STREAK_V * 0.35} * a.a)); }
+        if (y + d < i32(g.rows)) { let a = sSrc(x, y + d); st += a.rgb * exp(-f32(d) / (${STREAK_V * 0.35} * a.a)); }
       }
       for (var d = 1; d <= ${STREAK_H}; d++) {
-        let w = 0.35 * exp(-f32(d) / ${STREAK_H * 0.3});
-        if (x - d >= 0) { let a = src(x - d, y); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
-        if (x + d < i32(g.cols)) { let a = src(x + d, y); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
+        if (x - d >= 0) { let a = sSrc(x - d, y); st += a.rgb * 0.35 * exp(-f32(d) / (${STREAK_H * 0.3} * a.a)); }
+        if (x + d < i32(g.cols)) { let a = sSrc(x + d, y); st += a.rgb * 0.35 * exp(-f32(d) / (${STREAK_H * 0.3} * a.a)); }
       }
       o = vec4f(o.rgb + st * (f32(g.rain) / 1000.0 * ${STREAK_K}), o.a);
     }

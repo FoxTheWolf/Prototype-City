@@ -3,7 +3,7 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.16.1b — A luz nova (2026-10-09)
-- **O brilho em cruz das luzes:** agora aparece também de noite sem chuva, discreto; quase some de dia; e na tempestade para no nível da chuva média, para os letreiros brancos continuarem legíveis.
+- **O brilho em cruz das luzes:** agora aparece também de noite sem chuva, discreto; quase some de dia; e na tempestade para no nível da chuva média, para os letreiros brancos continuarem legíveis. As lâmpadas longe ganham uma cruz curta, e ela cresce conforme você chega perto.
 - **A luz velha saiu:** a nova é a única, e o jogo carrega mais rápido (o shader compila em cerca de metade do tempo).
 - **Uma luz só para tudo:** o chão, as fachadas, os carros e as pessoas passam a receber a luz dos postes, faróis e letreiros de uma única função, em vez de cada um calcular a sua. A cara fica quase igual; é a base para a luz dos cômodos.
 - **O horizonte emenda no céu:** a névoa ao longe agora tem a cor do próprio céu naquela direção (de dia azulada, ao entardecer quente, de noite o brilho da cidade, na chuva o cinza), em vez de duas cores fixas. Some a faixa clara no fim do mundo.
