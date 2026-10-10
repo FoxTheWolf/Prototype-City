@@ -56,7 +56,7 @@ fn fallOver(cl: Cell, rdx: f32, rdy: f32, m: f32, nearT: f32) -> Cell {
       if (Y < 0.0 || Y >= max(len, 1.0)) { continue; }
       if (underRoof(wx, wy, zd)) { continue; } // sheltered
       // see-through: the drop is the color behind it lightened (snow: whitened), plus the light it catches
-      let lt = lightAt(wx, wy, zd, vec3f(0.0));
+      let lt = srgb(lightAt(wx, wy, zd, vec3f(0.0))) * (1.0 - 0.85 * u.day);
       let q = (0.5 + 0.5 * near) * select(0.8, 1.0, snow); let add = select(60.0, 120.0, snow) * q + 200.0 * u.flash;
       o.ch = select(select(glyph, COL, s > 5), select(DOT, STAR, s < 3), snow);
       o.c = max(sat(o.bg), sat(o.c) * 0.5) * 1.2 + vec3f(add, add, add * 1.1) + lt * select(2.2, 1.4, snow);
@@ -103,7 +103,7 @@ fn fallOver(cl: Cell, rdx: f32, rdy: f32, m: f32, nearT: f32) -> Cell {
         // no drip where the next roof goes on (scaffold sheds of two faces meeting, end to end)
         let qx = lx + ox * 0.2; let qy = ly + oy * 0.2;
         if (underRoof(Rx + qx * Rc - qy * Rs, Ry + qx * Rs + qy * Rc, Rz - 0.1)) { continue; }
-        let lt = lightAt(wx + u.px, wy + u.py, z, vec3f(0.0));
+        let lt = srgb(lightAt(wx + u.px, wy + u.py, z, vec3f(0.0))) * (1.0 - 0.85 * u.day);
         o.ch = select(BAR, COM, Y < 1.0);
         o.c = max(sat(o.bg), sat(o.c) * 0.5) * 1.2 + vec3f(70.0, 75.0, 85.0) + lt * 2.0;
         return o;

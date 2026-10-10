@@ -40,8 +40,6 @@ const MOON_SHADE = 0.25;
 const NIGHT_ADAPT = 0.3;
 /** The lamps' light (lightAt's) in the same units: under a street lamp ~3% of the day's sky. */
 const LAMP_E = 0.45;
-/** How fast the lamps' summed light still grows past white (lightAt's 255). */
-const LAMP_OVER = 0.3;
 /** How much of the eye's change from night to day what glows keeps up with (1: as bright on the screen by day as at night). */
 const EMIT_KEEP = 0.95;
 /** The signs (shop signs, blade signs and their bulbs, the ticker, the neon tubes up the corners): how much brighter they look than drawn, and their bloom (only to the eye: their light on the street is SIGN_LIGHT in raycaster.ts). */
@@ -106,7 +104,7 @@ fn grade(c: vec3f) -> vec3f {
   return clamp(x, vec3f(0.0), vec3f(1.0)) * 255.0;
 }
 /** (16.1b) How strongly the street lamps' light (lightAt) shows on what it falls on, and how much of the ambient a face turned away from its source keeps. */
-const LAMP_RECV = 1.2; const AMB_FACE = 0.72;
+const LAMP_RECV = 1.5; const AMB_FACE = 0.72; // (LAMP_RECV: 1.2 on the old sRGB light, now linear: 1.2^2.2)
 /** (16.1b) The air between the eye and a thing: how far until most of it is haze, by night and by day (shorter in rain), and the most of it a thing takes. */
 const AIR_NIGHT = 900.0; const AIR_DAY = 1800.0; const AIR_MAX_N = 0.5; const AIR_MAX_D = 0.65; const AIR_EDGE = 220.0;
 /** The sky's color at the horizon toward the ray, as the eye sees it (the sky follows the adaptation only). */
@@ -120,11 +118,8 @@ fn aerial(c: vec3f, d: f32, edge: bool) -> vec3f {
   if (k < 0.002) { return c; }
   return mix(c, horizonSeen(), k);
 }
-/** The street lamps' light (lightAt's color units, dimmed by day) as light in the same units as the sun's and the sky's. */
-fn lampE(lamp: vec3f) -> vec3f {
-  let lx = lamp / max(0.15, 1.0 - 0.85 * u.day) / 255.0;
-  return pow(min(lx, vec3f(1.0) + max(lx - vec3f(1.0), vec3f(0.0)) * LAMP_OVER), vec3f(2.2)) * LAMP_E;
-}
+/** The lamps' light (lightAt's linear units) as light in the same units as the sun's and the sky's. */
+fn lampE(lampL: vec3f) -> vec3f { return lampL * LAMP_E; }
 /** (16.1b) A room's light E (the sun's and the sky's units) as roomLit's multiplier of its paint: lin(paint x M) = lin(paint) x E / AMB_N,
  *  so that light() takes the room back to E and exposes it as it does the street (the night's lamps come out as before). */
 /** (16.1b) The game's night is brighter than a real one (its palette shows under AMB_N), so a lamp or a screen, drawn
@@ -188,13 +183,15 @@ fn light(cl: Cell) -> Cell {
   }
   let tagged = o.depth == gTag;
   // the light this cell gives off and gets from the lamps, if it was made where it was marked
-  let emit = select(vec3f(0.0), gEm, tagged); var lamp = select(vec3f(0.0), gIl, tagged);
+  let emit = select(vec3f(0.0), gEm, tagged); let lamp = select(vec3f(0.0), gIl, tagged);
   let base = max(vec3f(0.0), o.c - emit - lamp); let mb = max(base.x, max(base.y, base.z));
   // (16.1b) the deferred light: the street lamps', headlights' and signs' light on the surface, here once for all of them
   // (the cell's color is its albedo; gIl keeps only what a facade paints on itself: its neon, floodlights, a lit window's spill)
   let def = tagged && o.kind != KIND_ROOM && (o.kind != KIND_OTHER || max(emit.x, max(emit.y, emit.z)) < 1.0);
-  if (def && o.depth < LIT_FAR) { lamp += lightAt(gPos.x, gPos.y, gPos.z, gNrm) * LAMP_RECV; }
-  gDbg = vec3f(luma(select(vec3f(0.0), gIl, tagged)) / 255.0 * 4.0, luma(lamp) / 255.0 * 4.0, gSky);
+  // (lamp: what the facade paints on itself, sRGB; lampL: the lights', linear)
+  var lampL = vec3f(0.0);
+  if (def && o.depth < LIT_FAR) { lampL = lightAt(gPos.x, gPos.y, gPos.z, gNrm) * LAMP_RECV; }
+  gDbg = vec3f(luma(lamp) / 255.0 * 4.0, luma(srgb(lampL)) / 255.0 * 4.0, gSky);
   // the surface's hue (its palette color, saturated, max channel 1), for the paint's reflection
   if (mb > 12.0) { let s0 = max(vec3f(0.0), mix(vec3f(luma(base)), base, LIT_SAT)); gTint = s0 / max(1.0, max(s0.x, max(s0.y, s0.z))); }
   let day = u.day; let night = 1.0 - day; let g = dayGrade();
@@ -232,11 +229,8 @@ fn light(cl: Cell) -> Cell {
     let sunOpen = DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * max(0.0, u.sunZ);
     let Eb = SKY_BOUNCE * (skyC * (ds * BOUNCE_SKY) * gBncA + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * BOUNCE_SUN * smoothK(-0.02, 0.04, u.sunZ)) * gBncS);
     let E = (En * (1.0 - g) + skyC * (ds * gSky * aSky) + Eb + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
-    // the lamps (lightAt dims its light by day; the eye does that now): their light takes the surface's color;
-    // on a facade most of its hue (each street takes its lamps' tone; all of it under the old sRGB light made scorched-paper greys)
-    // (past white the sum of lamps grows slowly: a few headlights together raised to the 2.2 blew a car out to white)
-    var El = lampE(lamp);
-    if (o.kind == KIND_WALL) { El = mix(vec3f(luma(El)), El, WALL_LAMP_HUE); }
+    // the lamps: their light takes the surface's color (by day the sun outshines them: the eye does that)
+    let El = lampE(linL(lamp) + lampL);
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
     // (a sign keeps most of its brightness when the eye closes down in a bright street: it still reads as lit)
     // (16.1b) a lit window is a room's light: by day as the room's lamps are (artK), not as a sign
@@ -268,11 +262,14 @@ fn light(cl: Cell) -> Cell {
     // ---- kept as drawn (what glows, painted boards, a person or a pole not lit as a solid): the lamps' light, the moon on
     // it, brighter by day, the blackout, and the eye's adaptation
     var c = o.c;
-    if (def) { c += lamp - select(vec3f(0.0), gIl, tagged); }
+    // (what is drawn is not lit as a solid: the lamps' light is added to its color, toned down by day as the old light was;
+    //  auditoria-luz.md C1: the new people are lit as solids, and this path goes)
+    let lampS = srgb(lampL) * (1.0 - 0.85 * day);
+    if (def) { c += lampS; }
     if (u.moonlight > 0.02 && o.depth > 0.0) { let m = u.moonlight * (1.0 - 0.7 * u.cloud) * 14.0; c += vec3f(m * 0.7, m * 0.8, m * 1.15); }
     let amb = 1.0 + 0.7 * day + u.flash * 0.6;
     c *= amb;
-    let lit = min(c, emit + lamp);
+    let lit = min(c, emit + lamp + lampS);
     let up = pow(evRef() / evDayNight(), 1.0 / 2.2); // how much the eye opened in the blackout
     c = (c - lit) * dark + lit * up * select(1.0, gEmK, tagged);
     gGlow = clamp(dot(emit, vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * (1.0 - 0.75 * day) * select(1.0, gGlowK, tagged) * up;

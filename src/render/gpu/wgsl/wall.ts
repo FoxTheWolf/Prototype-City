@@ -450,7 +450,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   }
   var emC = select(select(vec3f(0.0), c, em), bodyEm, bodyEm.x >= 0.0);
-  // neon tubes up the corners and along the roof line, and their glow on the wall
+  // neon tubes up the corners and along the roof line (their light on the wall is a real light: the dyn panel, 16.1b)
   if (bldF(u32(q + 27u)) > 0.5) {
     let neon = colAt(q + 24u);
     let eA = min(along - f0, f1 - along); let dTop = abs(z - (H - 0.3));
@@ -461,7 +461,6 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let chase = hash3(bk, 3, 31) < 0.35 && ifloor((s - u.sec * 5.0) / 1.4) % 3 == 0;
     let k = ad * (1.0 - 0.55 * u.day) * select(1.0, 0.25, chase);
     if (onTube) { ch = select(DASH, BAR, eA < tw); c = neon * k + vec3f(70.0 * k); emC = c; il = vec3f(0.0); emK = SIGN_EMIT; glowK = SIGN_GLOW; }
-    else { let e = max(0.0, 1.0 - min(eA, dTop) / 1.6); c += neon * (e * e * 0.5 * k); il += neon * (e * e * 0.5 * k); }
   }
   // the top washed in light at night
   if (bldF(u32(q + 31u)) > 0.5 && z > H - CROWN_H) {

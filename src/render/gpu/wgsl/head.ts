@@ -47,7 +47,6 @@ const LANE_W = ${LANE_W};
 const LIT_H = 9.0;
 const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
-const LIGHT_KNEE = 150.0;
 /** A panel light's size factor (PANEL_S in lights.ts), and how much of it a surface turned away from it still gets (it is not a point: some of it always shows). */
 const PANEL_S = ${f(PANEL_S)}; const PANEL_RECV_WRAP = 0.15;
 const CROWN_H = 16.0;
@@ -80,8 +79,6 @@ const SPEC_BLOOM = 1.6; const SPEC_BLOOM_MIN = 0.4; const SPEC_BLOOM_SUN = 0.5;
 /** How saturated the palette color reads as albedo under a light: the palettes are near grey (their hue shows
  *  mostly through the city's orange haze), so a lit wall went grey; the light now takes a stronger version of the hue. */
 const LIT_SAT = 1.5;
-/** How much of a lamp's own hue a facade takes (0: only its brightness). */
-const WALL_LAMP_HUE = 0.9;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
 /** The walls of the shops seen through their windows: mint, butter, salmon, sky, cream, red. */
 const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.0, 120.0), vec3f(220.0, 140.0, 115.0), vec3f(135.0, 180.0, 215.0), vec3f(220.0, 205.0, 170.0), vec3f(190.0, 80.0, 70.0));

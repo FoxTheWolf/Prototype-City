@@ -52,7 +52,11 @@ fn lvSum(o: u32, n: u32, p: f32) -> f32 {
   if (k >= n) { return dlvF(u32(o + k)); }
   return dlvF(u32(o + k)) + (dlvF(u32(o + k + 1u)) - dlvF(u32(o + k))) * (p - f32(k));
 }
+/** A light's value as the old sRGB-coded light (0-255, its falloff in it) made linear (1 = white), to be summed. */
+fn linL(s: vec3f) -> vec3f { return pow(max(s, vec3f(0.0)) / 255.0, vec3f(2.2)); }
 // nr: the lit surface's normal (zero: none, a raindrop; it takes the light as if it faced it)
+// (16.1b) the light in LINEAR units (1 = white), every light made linear before it is summed: summed as sRGB and raised
+// to 2.2 after, two equal lamps gave 4.6 times one, and two knees squeezed the sum back
 fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
   var L = vec3f(0.0);
   // the panels add up in linear light (their colors come linear; 1 = white): summed as sRGB, raised to 2.2 in the
@@ -77,7 +81,7 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
       // the two strongest lamps on each metre (the second layer at LW * LW), summed
       for (var ly = 0u; ly < 2u; ly++) {
         let i0 = u32(iy * LW + ix) + ly * u32(LW * LW);
-        L += (lampCorner(i0, (1.0 - tx) * (1.0 - ty), sh) + lampCorner(i0 + 1u, tx * (1.0 - ty), sh) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty, sh) + lampCorner(i0 + u32(LW) + 1u, tx * ty, sh)) * zk;
+        L += linL((lampCorner(i0, (1.0 - tx) * (1.0 - ty), sh) + lampCorner(i0 + 1u, tx * (1.0 - ty), sh) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty, sh) + lampCorner(i0 + u32(LW) + 1u, tx * ty, sh)) * zk);
       }
     }
   }
@@ -129,7 +133,7 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         let w = 1.4 + 0.55 * z; let fz = min(1.0, z / 1.5) * pow(max(0.0, 1.0 - z / zf), 1.2);
         let own = clamp((a * a + s * s - 0.06) / 0.1, 0.0, 1.0); // not the fixture's own housing
         let sc = s + FLOOD_OUT * min(1.0, z / 4.0); // the beam leans in to meet the wall
-        L += vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * own * (fz * exp(-(a * a + sc * sc * 4.0) / (w * w)) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z));
+        L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * own * (fz * exp(-(a * a + sc * sc * 4.0) / (w * w)) + 0.3 * exp(-(a * a + s * s) / 0.6) * max(0.0, 1.0 - z)));
         continue;
       }
       let d = length(vec2f(dx, dy));
@@ -151,14 +155,10 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         }
       }
       f *= lz;
-      L += vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * f;
+      L += linL(vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * f);
     }
   }
-  if (Lp.x + Lp.y + Lp.z > 0.0) { L = pow(pow(max(L, vec3f(0.0)) / 255.0, vec3f(2.2)) + Lp, vec3f(1.0 / 2.2)) * 255.0; }
-  let m = max(L.x, max(L.y, L.z));
-  if (m > LIGHT_KNEE) { L *= (LIGHT_KNEE + (m - LIGHT_KNEE) * 0.3) / m; }
-  if (u.day > 0.0) { L *= 1.0 - 0.85 * u.day; }
-  return L;
+  return L + Lp;
 }
 
 // what a cell ends up with before the finish
