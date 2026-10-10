@@ -137,10 +137,12 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   if (giT < 0.0) { return skySH(D); }
   let Lh = max(length(D.xy), 1e-4);
   let H = P + D * (giT / Lh) + giN * 0.05;
-  var A = vec3f(0.18, 0.18, 0.2); // (the ground: asphalt and pavement, part 1 gives the real ones)
+  // the albedo there as light() takes it (the color x K_PAL): the ground's asphalt and pavement, a facade's wall darkened a
+  // little by its windows, a roof's grey (part 1 of docs/plano-luz-fisica.md gives each material its own)
+  var A = lin(vec3f(40.0, 40.0, 46.0)) * K_PAL;
   if (giQ >= 0) {
     let q = u32(giQ);
-    A = lin(mix(colAt(q + 15u), vec3f(55.0, 62.0, 78.0), 0.3)) * 1.6;
+    A = lin(mix(colAt(q + 15u), vec3f(55.0, 62.0, 78.0), 0.3)) * K_PAL;
     if (giN.z > 0.5) { A = vec3f(0.25); }
   }
   let S = sunVec();
@@ -149,7 +151,8 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   if (ns > 0.0 && S.z > 0.0) { E += sunLin() * (GI_SUN / 3.14159 * ns * (1.0 - 0.85 * u.cloud)) * dirLit(H.x, H.y, H.z, S); }
   let c = giGet(giKey(H, giN));
   if (c.w > 0.0) { E += c.xyz / evDayNight(); }
-  return min(A, vec3f(0.9)) * E;
+  let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
+  return A * E;
 }
 /** This cell's indirect light at P (normal N): two rays now into the cache, and the cache's light back (the mean radiance). */
 fn giSample(P: vec3f, N: vec3f, gx: u32, gy: u32) -> vec3f {

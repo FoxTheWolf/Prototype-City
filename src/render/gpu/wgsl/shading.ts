@@ -22,13 +22,20 @@ fn skyHue() -> vec3f { return mix(vec3f(u.zenR, u.zenG, u.zenB), vec3f(0.82, 0.8
 // What is not lit this way (the rooms seen inside, painted signs) keeps its color as it looks at the
 // exposure the time of day expects, and follows the eye's adaptation only.
 /** The night's ambient light with the city lit (its glow on everything; the night's palette is drawn for it), and the full moon's. */
-const AMB_N = 0.004; const MOON_E = 0.003;
+/** (16.1c) The sun's irradiance in these units (the atmosphere's: gi.ts GI_SUN, over pi for a Lambert surface), and what the
+ *  old units (the sun's 4.2, DAY_SUN) are in these: the night's constants below were set in the old ones. */
+const SUN_E = GI_SUN / 3.14159265; const E_UNIT = SUN_E / 4.2;
+/** (16.1c) The palette's colors were drawn ~6x darker than real reflectances (the asphalt's (38, 38, 46) is 0.02 linear;
+ *  the real one 0.07-0.12): a surface's albedo is its color x K_PAL, its hue kept under ALB_MAX (part 1 of
+ *  docs/plano-luz-fisica.md gives each material its own). */
+const K_PAL = 6.0; const ALB_MAX = 0.85;
+const AMB_N = 0.004 * E_UNIT; const MOON_E = 0.003 * E_UNIT;
 /** How much of the moonlight a point in the buildings' moon shadow still gets (the sky's part of it). */
 const MOON_SHADE = 0.25;
 /** How much the eye opens up as the city's glow fails (0: not at all, 1: as much as the light fell). */
 const NIGHT_ADAPT = 0.3;
 /** The lamps' light (lightAt's) in the same units: under a street lamp ~3% of the day's sky. */
-const LAMP_E = 0.45;
+const LAMP_E = 0.45 * E_UNIT;
 /** How much of the eye's change from night to day what glows keeps up with (1: as bright on the screen by day as at night). */
 const EMIT_KEEP = 0.95;
 /** The signs (shop signs, blade signs and their bulbs, the ticker, the neon tubes up the corners): how much brighter they look than drawn, and their bloom (only to the eye: their light on the street is SIGN_LIGHT in raycaster.ts). */
@@ -41,15 +48,10 @@ const SCREEN_DAY_EMIT = 0.6;
 const SIGN_FILL = 0.5;
 /** How much of the eye closing down a sign makes up for (0: none, 1: all). */
 const SIGN_EYE = 0.6;
-/** How much of the light on what hides the sky comes back (its albedo), and the share of it in the sun (L.4). */
-const SKY_BOUNCE = 0.35;
-/** The bounce off the buildings round (L.8): how much of the sky's light they send back (per albedo: L.4 took albedo 1), and
- *  of the sun's on a face turned to it (about half of it in the sun, past the other buildings' shadows). */
-const BOUNCE_SKY = 2.0; const BOUNCE_SUN = 2.5;
 /** The lamps' highlight on what is glossy. */
 const LAMP_SPEC = 0.03;
 /** The night's exposure with the city lit: the night's palette shows as drawn under AMB_N. */
-const EV_NIGHT = 1.0 / (DAY_ALBEDO * AMB_N);
+const EV_NIGHT = 1.0 / (K_PAL * AMB_N);
 fn lin(c: vec3f) -> vec3f { return pow(max(c, vec3f(0.0)) / 255.0, vec3f(2.2)); }
 fn srgb(x: vec3f) -> vec3f { return pow(max(x, vec3f(0.0)), vec3f(1.0 / 2.2)) * 255.0; }
 fn luma(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
@@ -124,7 +126,8 @@ fn roofE(x: f32, y: f32, z: f32) -> vec3f {
   let sky = skyHue() * (DAY_SKY + 0.35 * u.cloud);
   let sun = sunLin() * (DAY_SUN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ));
   // (not the lamps yet: lightAt here was inlined in every one of roomWalk's roomLit calls, and the shader took minutes to compile)
-  return sky + sun + vec3f(cityAmb());
+  // (16.1c: the sky and the sun still in the old units until part 4, the rooms, brings them onto the rays)
+  return (sky + sun) * E_UNIT + vec3f(cityAmb());
 }
 /** (16.1b) How much of a room lamp's light a surface turned away from it still gets (the other lamps, the bounce off the room). */
 const ROOM_WRAP = 0.35;
@@ -160,7 +163,7 @@ fn roomE() -> vec3f {
   // (the daylight outside: the sky's, and the sun's off the street and the walls round, SUN_IN of it)
   let out = DAY_SKY + DAY_SUN * SUN_IN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ);
   let sky = mix(vec3f(0.6, 0.66, 0.8), vec3f(0.82, 0.84, 0.88), u.cloud) * (out * ds * (SKY_IN_DEEP + SKY_IN_WIN * exp(-dw / DAYLIGHT_FALL)));
-  return AMB_N * artK() * pow(la, vec3f(2.2)) + sky;
+  return AMB_N * artK() * pow(la, vec3f(2.2)) + sky * E_UNIT; // (16.1c: the daylight in the old units until part 4)
 }
 fn light(cl: Cell) -> Cell {
   var o = cl;
@@ -181,7 +184,7 @@ fn light(cl: Cell) -> Cell {
   // (lamp: what the facade paints on itself, sRGB; lampL: the lights', linear)
   var lampL = vec3f(0.0);
   if (def && o.depth < LIT_FAR) { lampL = lightAt(gPos.x, gPos.y, gPos.z, gNrm) * LAMP_RECV; }
-  gDbg = vec3f(luma(lamp) / 255.0 * 4.0, luma(srgb(lampL)) / 255.0 * 4.0, gSky);
+  gDbg = vec3f(luma(lamp) / 255.0 * 4.0, luma(srgb(lampL)) / 255.0 * 4.0, luma(giE));
   // the surface's hue (its palette color, saturated, max channel 1), for the paint's reflection
   if (mb > 12.0) { let s0 = max(vec3f(0.0), mix(vec3f(luma(base)), base, LIT_SAT)); gTint = s0 / max(1.0, max(s0.x, max(s0.y, s0.z))); }
   let day = u.day; let night = 1.0 - day; let g = dayGrade();
@@ -191,32 +194,25 @@ fn light(cl: Cell) -> Cell {
   let dark = 1.0 - 0.72 * pow(1.0 - u.cityLit, 1.5) * night;
   if (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit) {
     // ---- lit: albedo x the light on it
-    var A = lin(base) * DAY_ALBEDO;
-    // the colors were made for the night: by day a bit more saturated, and never brighter than a white wall
-    A = max(vec3f(0.0), mix(vec3f(luma(A)), A, mix(1.0, DAY_SAT, g)));
-    let am = max(A.x, max(A.y, A.z)); if (am > DAY_ALB_MAX) { A *= DAY_ALB_MAX / am; }
-    // the ground's colors were made for the night (dark, bluish asphalt): by day, lighter and greyer
-    if (o.kind == KIND_GROUND) { A = mix(A, vec3f(dot(A, vec3f(0.3, 0.5, 0.2))), 0.2 * g) * mix(1.0, DAY_GROUND, g); }
-    // the night's ambient: the city's glow (neutral: the palette is drawn under it) and the moon (bluish)
-    // (the moon and the sky are cut by the buildings round it, gSky; the city's glow, half from the lit air, a little less)
-    // (16.1b) the ambient by the face's normal: the city's glow comes most from downtown, the sky's most from the sun's side
-    var aCity = 1.0; var aSky = 1.0;
+    // (16.1c) the albedo: the color x K_PAL, its hue kept under ALB_MAX (the same by day and by night)
+    var A = lin(base) * K_PAL;
+    let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
+    // the night's ambient: the city's glow (neutral: the palette is drawn under it) and the moon (bluish), past the
+    // buildings round it for the moon (gMoon); (16.1b) the city's glow comes most from downtown
+    // (16.1c: these two go when the night's light comes by the rays too: docs/plano-luz-fisica.md part 2)
+    var aCity = 1.0;
     if (def && abs(gNrm.z) < 0.7) {
       let Nh = normalize(gNrm.xy + vec2f(1e-5, 0.0));
       let tc = vec2f(u.ccx - gPos.x, u.ccy - gPos.y); let tl = length(tc);
       aCity = AMB_FACE + (1.0 - AMB_FACE) * select(0.5, 0.5 + 0.5 * dot(Nh, tc / tl), tl > 1.0);
-      let sl = length(vec2f(u.sunX, u.sunY));
-      aSky = AMB_FACE + (1.0 - AMB_FACE) * select(0.5, 0.5 + 0.5 * dot(Nh, vec2f(u.sunX, u.sunY) / sl), sl > 1e-3);
     }
-    let En = vec3f(cityAmb() * aCity) * mix(1.0, gSky, 0.5) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * gSky * mix(MOON_SHADE, 1.0, gMoon));
-    // the day's: the sky's (its hue and strength from the air, skyHue) and the sun's (through the air, sunLin) on what
-    // faces it out of the shadows (gSun); they fade with the dusk by themselves, and the eye opens as they do (u.dayEv)
+    let En = vec3f(cityAmb() * aCity) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * mix(MOON_SHADE, 1.0, gMoon));
+    // (16.1c) the day's: the sun's through the air on what faces it out of the shadows (gSun), and the sky's and every
+    // bounce's by the rays (giE: gi.ts, the world cache; past its reach, the open sky's light that way)
     let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
-    let sunC = sunLin(); let sunK = DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun;
-    let skyC = skyHue() * (DAY_SKY + 0.35 * u.cloud);
-    // what hides the sky gives some back: the walls and the street round it, lit by the sky and by the sun on part of them
-    let Eb = SKY_BOUNCE * (skyC * BOUNCE_SKY * gBncA + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * BOUNCE_SUN * smoothK(-0.02, 0.04, u.sunZ)) * gBncS);
-    let E = (En + skyC * (gSky * aSky) + Eb + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
+    let sunC = sunLin(); let sunK = SUN_E * (1.0 - 0.85 * u.cloud) * gSun;
+    let Ei = select(skySH(select(vec3f(0.0, 0.0, 1.0), gNrm, def)), giE, giOn);
+    let E = (En + Ei + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps: their light takes the surface's color (by day the sun outshines them: the eye does that)
     let El = lampE(linL(lamp) + lampL);
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
@@ -246,7 +242,7 @@ fn light(cl: Cell) -> Cell {
     // roof's open air), lit by roomLit itself (roomMul). Exposed and toned as the street; what glows in it (a screen, a
     // lamp) is its own light, brighter by gEmK as the signs are, and by day as the artificial light is (artK)
     var Lr = (lin(max(vec3f(0.0), o.c - emit)) + lin(emit) * (select(1.0, gEmK, tagged) * artK())) / EV_NIGHT;
-    if (gRUse) { Lr = lin(max(vec3f(0.0), o.c - emit)) * DAY_ALBEDO * roomE() + lin(emit) * (select(1.0, gEmK, tagged) * artK() / EV_NIGHT); }
+    if (gRUse) { Lr = lin(max(vec3f(0.0), o.c - emit)) * K_PAL * roomE() + lin(emit) * (select(1.0, gEmK, tagged) * artK() / EV_NIGHT); }
     o.c = srgb(toneMap(Lr * ev, g));
     gGlow = clamp(dot(srgb(lin(emit) / EV_NIGHT * ev), vec3f(0.3, 0.5, 0.2)) / 255.0, 0.0, 1.0) * select(1.0, gGlowK, tagged);
   } else {

@@ -30,6 +30,18 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
   não divide por π e tem `DAY_ALBEDO 2`: o chão ~2× mais claro que a física em relação ao céu visto), e a noite (as
   luzes e as janelas no ponto atingido). Aí troca o padrão e apagam-se `skyView`/`bounceFrom` e o resto da lista.
 
+- **2026-10-10, mais tarde: a luz de dia trocada** (o padrão, não mais só debug): o céu e todo rebote vêm dos raios
+  (`giE` no `light()`; longe de `SKY_FAR` 700 m, `skySH` pela normal); o sol com a força física (`SUN_E = GI_SUN/π`,
+  a mesma do céu); o albedo = cor × `K_PAL` (6: a paleta foi desenhada ~6× mais escura que as refletâncias reais) sob
+  `ALB_MAX` 0,85. **Apagados:** `skyView`, `horizonTan`, `bounceFrom`, `gBncA`/`gBncS`/`gSky`, `SKY_BOUNCE`,
+  `BOUNCE_SKY`, `BOUNCE_SUN`, `DAY_ALBEDO`, `DAY_SAT`, `DAY_ALB_MAX`, `DAY_GROUND`, o `aSky` e o fade `ds`.
+  **A noite ficou igual** por um fator de unidade (`E_UNIT` = o sol novo / o velho 4,2) nas constantes ainda velhas
+  (`AMB_N`, `MOON_E`, `LAMP_E`, a luz do dia dos cômodos e do telhado): elas saem nos passos seguintes. Shader 26 s de
+  compilação (era 34). Conferido: 13 h (como antes, as fachadas na sombra mais frias), 17h33 (a rua na sombra escura e
+  azulada: o asfalto real na sombra; se ficar escuro demais, o ajuste é o olho, não luz falsa), 21h30 (igual).
+  **Próximo:** a noite pelos raios (as luzes e as janelas no ponto atingido; sai o `AMB_N`/`aCity`/`AMB_FACE`), a normal
+  das células de janela, os albedos por material (parte 1), medir o `DRAW` no PC do usuário.
+
 ## As partes, na ordem
 
 ### 1. Materiais e unidades (a base de tudo)

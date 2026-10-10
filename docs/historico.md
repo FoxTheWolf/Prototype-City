@@ -14,6 +14,7 @@
 - **O facho no ar (recado 3, a parte dos faróis):** `headAir` na marcha dos cones dos postes (`lampCones`), só com chuva/neve, pelos baldes das luzes do quadro; `HEAD_AIR` 4. A luz da janela no pó ficou para depois.
 - O domo de luz da cidade virou luz antes da exposição (era somado depois: no pôr do sol aparecia tão forte quanto à meia-noite e cobria o lado oposto); com ele, o arco rosa-laranja do lado oposto ao sol aparece no pôr do sol.
 - Saiu o dourado pintado da gradação (`grade()`, `u.dusk`, e o uniform `dusk` com ele): o dourado é o do sol pelo ar.
+- **A luz do dia por raios (16.1c, parte 2, primeiro passo):** `wgsl/gi.ts` (o traço, o cache no mundo, o céu em harmônicos `skySH` de `atmosphere.ts`); o rebote velho por horizontes apagado; o albedo = cor × `K_PAL` 6; o sol físico `SUN_E`; a noite igual pelo `E_UNIT`. Detalhe em `docs/plano-luz-fisica.md` (Andamento).
 - Ficou: a faixa escura da sombra da Terra é curta (o múltiplo barato apaga cedo o lado oposto); a luz nas mãos (`viewLight`) ainda usa a cor velha.
 
 ## 16.1 — fechada pelo usuário (2026-10-09, noite)

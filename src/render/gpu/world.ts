@@ -440,8 +440,8 @@ export class GpuWorld {
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
-    // (16.1c) the cache's samples of this frame into its light (only while the new indirect light is on: DEBUG.giView)
-    if (DEBUG.giView && this.giPipe) { const gp = enc.beginComputePass(); gp.setPipeline(this.giPipe); gp.setBindGroup(0, this.giBind!); gp.dispatchWorkgroups(Math.ceil(GI_SLOTS / 64)); gp.end(); }
+    // (16.1c) the cache's samples of this frame into its light
+    if (this.giPipe) { const gp = enc.beginComputePass(); gp.setPipeline(this.giPipe); gp.setBindGroup(0, this.giBind!); gp.dispatchWorkgroups(Math.ceil(GI_SLOTS / 64)); gp.end(); }
     if (T) { enc.resolveQuerySet(T.set, 0, 2, T.res, 0); enc.copyBufferToBuffer(T.res, 0, T.read, 0, 16); T.busy = true; this.tqPending = true; }
     // the eye's meter over what this frame shows
     const M = timed && this.meter && !this.meter.busy ? this.meter : null;

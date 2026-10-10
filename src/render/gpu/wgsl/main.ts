@@ -133,12 +133,12 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     if (ray == 1) {
       if (c.depth < 1e8) { if (c.depth == gTag) { gTag += tr; } c.depth += tr; }
       c = objectsOver(c, gid.x, gid.y, rdx, rdy, -m);
-      gSun = 1.0; gSky = 1.0; gMoon = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
+      gSun = 1.0; gMoon = 1.0; giOn = false;
       let lb = light(c); thru = lb.c; thruCh = lb.ch;
     } else {
       if (c.depth < 1e8) {
         if (c.depth == gTag) { gTag += tr; } c.depth += tr;
-        gSun = 1.0; gSky = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
+        gSun = 1.0; giOn = false;
         let lc = light(c); refl = lc.c; rGlow = gGlow;
       } else { refl = max(c.bg, select(vec3f(0.0), c.c, c.ch != 32u)); }
       if (skyK > 0.0) { refl = mix(refl, skyCell(mR, rx, ry).bg, skyK); rGlow *= 1.0 - skyK; }
@@ -146,16 +146,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
     gRUse = sRU; gRObj = sRB; gRV = sRV; gRO = sRO; gRR = sRR; gRX = sRX; gRN = sRN; gEm = sEm; gIl = sIl; gTag = sTag; gGlowK = sGK; gEmK = sEK; gMat = sMat; gNrm = sN; gWet = sWet; gPos = sP;
   }
-  // how much sky what this cell shows sees (the sky and the rooms keep theirs; it fades out far away)
-  gSky = 1.0; gBncA = vec3f(0.0); gBncS = vec3f(0.0);
+  // (16.1c) the sky's light and every bounce on what this cell shows, by rays into the world cache (gi.ts); past SKY_FAR
+  // (and for the sky and the rooms) the open sky's light that way
+  giOn = false;
   if (cl.depth < SKY_FAR && cl.kind != KIND_ROOM && cl.kind != KIND_OTHER) {
     let t = cl.depth;
     let P = vec3f(u.px + rdx * t, u.py + rdy * t, max(0.0, u.eye - m * t + A * t * t));
-    let Nn = select(vec3f(0.0, 0.0, 1.0), gNrm, cl.depth == gTag && cl.kind == KIND_WALL);
-    let fk = smoothK(SKY_FAR * 0.65, SKY_FAR, t);
-    gSky = mix(skyView(P, Nn), 1.0, fk); gBncA *= 1.0 - fk; gBncS *= 1.0 - fk;
-    // (16.1c, debug: DEBUG.giView) the indirect light by rays and the world cache (gi.ts)
-    if (u.giDbg > 0.5) { giE = select(giSample(P, Nn, gid.x, gid.y), skySH(Nn), u.giDbg > 1.5 && u.giDbg < 2.5); giOn = true; }
+    let Nn = select(vec3f(0.0, 0.0, 1.0), gNrm, cl.kind == KIND_WALL);
+    giE = select(giSample(P, Nn, gid.x, gid.y), skySH(Nn), u.giDbg > 1.5 && u.giDbg < 2.5); giOn = true;
   }
   // by day, whether the sun reaches what this cell shows (the sky and the rooms keep theirs)
   gSun = 1.0;
