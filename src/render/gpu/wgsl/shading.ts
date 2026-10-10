@@ -240,7 +240,10 @@ fn light(cl: Cell) -> Cell {
     // a glossy surface (wet asphalt, a car's paint, glass) also shines with the lamps' own color, and the sun's
     if (gMat != MAT_NONE && tagged) {
       let r = matRough();
-      let sp = El * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * select(LAMP_GLOSS, CAR_GLOSS, gMat == MAT_PAINT) * LAMP_SPEC);
+      // (16.1b) not where the reflection ray mirrors the city (glass, a window, a car's paint, the wet ground): there the
+      // lamps are seen in the mirror itself, and this, with no direction, counted them twice (auditoria-luz.md)
+      let mirrors = gMat == MAT_GLASS || gMat == MAT_WINDOW || gMat == MAT_PAINT || gWet > 0.05;
+      let sp = select(El * (fres(MAT_F0[gMat], max(0.0, dot(gNrm, -gRay))) * (1.0 - r) * (1.0 - r) * LAMP_GLOSS * LAMP_SPEC), vec3f(0.0), mirrors);
       Lr += sp; spG = dot(srgb(sp * ev), vec3f(0.3, 0.5, 0.2)) / 255.0 * SPEC_BLOOM;
       if (day > 0.01) {
         let gloss = sunGloss() * sunK;

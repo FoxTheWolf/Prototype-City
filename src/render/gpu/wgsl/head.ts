@@ -84,7 +84,7 @@ const LIT_SAT = 1.5;
 /** How strongly a glossy surface shows the lamps' light at night, on top of the light it scatters. */
 /** The walls of the shops seen through their windows: mint, butter, salmon, sky, cream, red. */
 const SHOP_PAINT = array<vec3f, 6>(vec3f(150.0, 205.0, 175.0), vec3f(225.0, 205.0, 120.0), vec3f(220.0, 140.0, 115.0), vec3f(135.0, 180.0, 215.0), vec3f(220.0, 205.0, 170.0), vec3f(190.0, 80.0, 70.0));
-const LAMP_GLOSS = 1.2; const CAR_GLOSS = 1.5;
+const LAMP_GLOSS = 1.2;
 const KIND_OTHER = 0u; const KIND_GROUND = 1u; const KIND_WALL = 2u; const KIND_BLOCK = 3u; const KIND_OBJECT = 4u; const KIND_ROOM = 5u;
 const LIT_A = array<vec4f, ${LITTER.length}>(${LITTER.map((L) => `vec4f(${L.slice(0, 4).map(f).join(', ')})`).join(', ')});
 const LIT_B = array<vec3f, ${LITTER.length}>(${LITTER.map((L) => `vec3f(${L.slice(4).map(f).join(', ')})`).join(', ')});

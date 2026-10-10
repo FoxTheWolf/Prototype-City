@@ -43,4 +43,4 @@
 - **A escala comprimida:** `artK`/`ART_KEEP`, `EMIT_KEEP`, `SIGN_EYE`, `EV_NIGHT`/`evDayNight` (a noite do jogo é ~300× mais escura que o dia, não 10 000×: escolha de jogo, nas lições da 16.1b).
 - **O estilo do ASCII:** o `display()` (fundo e glifo por tipo), `SIGN_FILL`, o brilho do glifo nos blocos.
 - **O espelho do chão molhado:** `WET_MIRROR`/`WET_BLUR_MIN` (o Fresnel é físico; o teto é pela falta de várias amostras por célula) e `WIN_MIRROR` (o olho ajustado para a rua: o cômodo atrás parece mais escuro).
-- **O brilho especular dos postes nas superfícies lisas** (`LAMP_GLOSS`/`CAR_GLOSS`/`LAMP_SPEC`): hoje sem direção (o `El` vezes o Fresnel); o físico é o GGX por luz. Rever junto da soma linear (barato fazer junto).
+- **O brilho especular dos postes** (`sp`, `LAMP_GLOSS`/`LAMP_SPEC`): sem direção (a luz vezes o Fresnel). ~~Nas superfícies que espelham (vidro, janela, pintura, chão molhado)~~ saiu: lá o raio de reflexo já mostra os postes (contava duas vezes; `CAR_GLOSS` saiu junto). Fica no metal e no seco liso; o físico seria o GGX pela direção da luz mais forte (rever com a luz indireta).
