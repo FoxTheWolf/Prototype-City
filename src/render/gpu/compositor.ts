@@ -321,12 +321,13 @@ fn phBloom(uv: vec2f) -> vec3f {
 const GLOW_RX = 14, GLOW_RY = 7;
 /** (16.1b) The lights' streaks in the rain: how far up and down (rows) and across (columns), and how strong. */
 const STREAK_V = 14, STREAK_H = 20, STREAK_K = 0.3;
-/** (16.1b, the user) a far light's tail, as a share of a near one's: the streak grows as the lamp nears. */
+/** (16.1b, the user) a far light's tail and strength, as a share of the peak's: the streak grows as the lamp nears,
+ * peaks at middle distance and shrinks again when the lamp fills the view (as with a car coming at you). */
 const STREAK_LEN = 0.2;
 /** (16.1b, the user) the streak's strength (as rain): a floor by night even when dry (the eye's own scatter, a bit
  * under the drizzle preset's 0.2), almost none by day, and a ceiling at the rain preset (0.55) so a storm
  * doesn't wash the white signs out. */
-const STREAK_NIGHT = 0.15, STREAK_DAY = 0.02, STREAK_MAX = 0.55;
+const STREAK_NIGHT = 0.1, STREAK_DAY = 0.05, STREAK_MAX = 0.4;
 const GLOW_WGSL = /* wgsl */ `
 struct GU { cols: u32, rows: u32, dir: u32, rain: u32 };
 @group(0) @binding(0) var<uniform> g: GU;
@@ -341,10 +342,12 @@ fn src(x: i32, y: i32) -> vec4f {
 }
 // (16.1b) a streak's source at (x, y): what glows there (only the brightest) and in .a its tail's length (STREAK_LEN..1)
 // by how near the light is: a far lamp is a cell or two on screen, a near one many, and the across pass (tmp,
-// already blurred) over the cell's own brightness is that share of the row it covers
+// already blurred) over the cell's own brightness is that share of the row it covers (one cell ~0.085); the streak
+// rises with it, peaks around a third and fades again as the lamp fills the row
 fn sSrc(x: i32, y: i32) -> vec4f {
-  let a = src(x, y); let t = tmp[u32(y) * g.cols + u32(x)].a;
-  return vec4f(a.rgb * smoothstep(0.12, 0.5, a.a), mix(${STREAK_LEN}, 1.0, smoothstep(0.08, 0.6, t / max(a.a, 0.0001))));
+  let a = src(x, y); let r = tmp[u32(y) * g.cols + u32(x)].a / max(a.a, 0.0001);
+  let b = smoothstep(0.06, 0.3, r) * (1.0 - 0.75 * smoothstep(0.45, 0.9, r));
+  return vec4f(a.rgb * smoothstep(0.12, 0.5, a.a) * mix(${STREAK_LEN + 0.1}, 1.0, b), mix(${STREAK_LEN}, 1.0, b));
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= g.cols || id.y >= g.rows) { return; }
