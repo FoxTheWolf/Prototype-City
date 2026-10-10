@@ -7,6 +7,7 @@ import type { World } from '../../sim/world';
 import type { View } from '../raycaster';
 import type { GpuWorld } from './world';
 import { EYE } from '../eye';
+import { daylight } from '../sky';
 import { BODY_U_FLOATS, BODY_WGSL } from './voxBody';
 import { LAP_U_FLOATS, LAP_WGSL } from './voxLap';
 import { JACK_WGSL, VOXP_U_FLOATS, WATCH_WGSL } from './voxWatch';
@@ -320,6 +321,10 @@ fn phBloom(uv: vec2f) -> vec3f {
 const GLOW_RX = 14, GLOW_RY = 7;
 /** (16.1b) The lights' streaks in the rain: how far up and down (rows) and across (columns), and how strong. */
 const STREAK_V = 14, STREAK_H = 20, STREAK_K = 0.3;
+/** (16.1b, the user) the streak's strength (as rain): a floor by night even when dry (the eye's own scatter, a bit
+ * under the drizzle preset's 0.2), almost none by day, and a ceiling at the rain preset (0.55) so a storm
+ * doesn't wash the white signs out. */
+const STREAK_NIGHT = 0.15, STREAK_DAY = 0.02, STREAK_MAX = 0.55;
 const GLOW_WGSL = /* wgsl */ `
 struct GU { cols: u32, rows: u32, dir: u32, rain: u32 };
 @group(0) @binding(0) var<uniform> g: GU;
@@ -810,8 +815,9 @@ export class GpuCompositor {
     }
     const enc = this.dev.createCommandEncoder();
     gw.encode(enc, world, v, true);
-    // the rain's streaks (the down pass's word 3): only falling rain, not snow
-    const rain = world.weather.snow ? 0 : Math.round(Math.min(1, world.weather.precip) * 1000);
+    // the streaks (the down pass's word 3): falling rain (not snow) up to a ceiling, over a floor that rises at night
+    const fl = STREAK_NIGHT + (STREAK_DAY - STREAK_NIGHT) * daylight(world.time);
+    const rain = Math.round(Math.max(fl, world.weather.snow ? 0 : Math.min(STREAK_MAX, world.weather.precip)) * 1000);
     if (rain !== this.rainK) { this.rainK = rain; this.dev.queue.writeBuffer(this.glowUni[1], 12, new Uint32Array([rain])); }
     for (const b of this.glowBind) {
       const cp = enc.beginComputePass();

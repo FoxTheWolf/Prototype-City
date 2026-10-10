@@ -2,6 +2,12 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-09 (noite, 8) — a ordem da imagem (Opus 5.5)
+
+- **Concordo em subir a 16.1c antes das mãos e das pessoas**, com uma ressalva: a atmosfera física entra **antes** da luz indireta, como passo 0. O céu é a maior lâmpada da cidade; afinar o rebote contra o céu de hoje (cores pintadas) seria afinar duas vezes.
+- **O pôr do sol de Miami sai de graça da física:** não é cor pintada, é o sol baixo atravessando muito ar (só o vermelho chega), as nuvens altas ainda pegando esse vermelho depois que o sol some, o azul do céu por trás misturando em roxo, e a umidade do mar. Precisa de três coisas: a atmosfera, uma camada de nuvens iluminada por ela, e o mar/chão molhado refletindo. As duas primeiras cabem na 16.1c; o mar é a 23.4.
+- **Uma contestação pequena:** a cruz de noite no seco é real (o espalhamento no olho e nos cílios), mas uma cruz perfeita de 4 pontas é mais lente de câmera que olho. Se ficar "filtro de Instagram" no teste, o olho de verdade faz um halo com raios finos irregulares (a coroa ciliar); dá para trocar depois.
+
 ## 2026-10-09 (noite, 7) — o reset da luz (Opus 5.5)
 
 - **O que saiu:** os reflexos do molhado (o bug de verdade era a luz do poste calculada no ponto refletido, não o espelho), a normal dos cômodos anotada, a gradação de cor, o vidro de fora, o rastro na chuva, e a auditoria com o primeiro reset: a soma das luzes agora é linear e saíram oito remendos.
