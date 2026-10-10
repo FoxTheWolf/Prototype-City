@@ -37,9 +37,25 @@ fn coneLamp(w: u32, Q: vec3f) -> vec3f {
   let e = 1.0 - rr / R;
   return vec3f(lampColF(u32(n)), lampColF(u32(n + 1u)), lampColF(u32(n + 2u))) * (e * e / (1.0 + (dz * dz + rr * rr) / 12.0));
 }
+/** (16.1c) A headlight's beam in the air (o: its record in the frame's lights): the pattern of headBeam (lights.ts) in 3D,
+ *  between its cutoff and the road, brightest near the lamp. HEAD_AIR: its strength next to the street lamps' cones. */
+const HEAD_AIR = 4.0; // (a headlight's beam is far more intense than a street lamp's spread: ~20000 cd against ~3000)
+fn headAir(o: u32, Q: vec3f) -> vec3f {
+  let dx = Q.x - dlF(u32(o + 1u)); let dy = Q.y - dlF(u32(o + 2u)); let ux = dlF(u32(o + 3u)); let uy = dlF(u32(o + 4u));
+  let s = dx * ux + dy * uy; let R = dlF(u32(o + 7u));
+  if (s <= 0.1 || s >= R) { return vec3f(0.0); }
+  let a = -dx * uy + dy * ux; let phi = atan2(a, s); let pa = (phi - 0.05) / 0.33;
+  let h = dlF(u32(o + 5u)); let zc = h + s * (dlF(u32(o + 8u)) + 0.27 * clamp(phi - 0.02, 0.0, 0.12));
+  let below = (h - Q.z) / s; // the ray's slope down from the lamp: the beam fills 0 (the cutoff) to ~0.18 (the road nearby)
+  let f = exp(-pa * pa) * (1.0 - smoothK(zc - 0.05, zc + 0.05, Q.z)) * (1.0 - smoothK(0.12, 0.2, below)) * (1.0 - s / R) / (1.0 + s * s / 30.0);
+  return vec3f(dlF(u32(o + 10u)), dlF(u32(o + 11u)), dlF(u32(o + 12u))) * f;
+}
 fn lampCones(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, depth: f32) -> vec3f {
   let k = (CONE_DRY + CONE_WET * u.precip) * (1.0 - u.day);
   if (k < 0.03) { return vec3f(0.0); }
+  // (16.1c) the headlights' beams show only in falling rain or snow (in the dry air they hardly do)
+  let kh = CONE_WET * u.precip * (1.0 - u.day) * HEAD_AIR;
+  var accH = vec3f(0.0);
   let tEnd = min(depth, CONE_FAR); let dt = tEnd / f32(CONE_STEPS);
   let j = fract(52.9829189 * fract(0.06711056 * f32(gx) + 0.00583715 * f32(gy)));
   var acc = vec3f(0.0);
@@ -51,8 +67,18 @@ fn lampCones(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, depth: f32) -> vec3f 
     if (ix < 0 || iy < 0 || ix >= LW || iy >= LW) { continue; }
     let i0 = u32(iy * LW + ix);
     acc += (coneLamp(lmap[i0], Q) + coneLamp(lmap[i0 + u32(LW * LW)], Q)) * dt;
+    if (kh > 0.01 && Q.z < 2.5) {
+      let bi = ifloor(Q.x / DCELL) - i32(u.dbx); let bj = ifloor(Q.y / DCELL) - i32(u.dby);
+      if (bi >= 0 && bj >= 0 && bi < DSIDE && bj < DSIDE) {
+        let c = u32(bj * DSIDE + bi);
+        for (var q = doffU(u32(c)); q < doffU(u32(c + 1u)); q++) {
+          let o = didxU(u32(q)) * 16u;
+          if (u32(dlF(u32(o))) == 1u) { accH += headAir(o, Q) * dt; }
+        }
+      }
+    }
   }
-  return acc * (CONE_K * k);
+  return acc * (CONE_K * k) + accH * (CONE_K * kh);
 }
 /** How much of lamp id's light reaches P past the street objects (1 clear). */
 fn lampShadow(P: vec3f, id: u32) -> f32 {
