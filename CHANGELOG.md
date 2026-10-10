@@ -10,6 +10,13 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Volume dentro dos cômodos:** a luz das luminárias depende de para onde a superfície está virada: o teto fica mais escuro que as paredes, as paredes clareiam perto das luminárias, os móveis ganham lados claros e escuros.
 - **Telhados ao ar livre:** o telhado recebe o céu e o sol como a rua.
 - **Debug:** F7 pinta cada tipo de superfície de uma cor.
+- **Chão molhado mais natural:** as poças não viram mais buracos pretos (a luz dos postes no molhado era calculada no lugar errado) e os reflexos ficam mais suaves e um pouco borrados, como a chuva faz.
+- **Portas sem listras:** a luz dentro dos cômodos sabe para onde cada parede e cada porta está virada.
+- **Gradação de cor:** de noite sombras um pouco frias e o sódio quente, dourado no fim de tarde, mais cinza na chuva; de dia quase neutro.
+- **Janelas parecem vidro:** vistas da rua refletem o céu e a cidade, em vez de parecer buracos na parede.
+- **Letreiros mais contidos:** iluminam a calçada e a parede perto deles, não a rua inteira; saiu a luz falsa das vitrines e das janelas acesas pintada na calçada e na parede (vai voltar de verdade com a luz indireta).
+- **As luzes se somam certo:** dois postes juntos dão o dobro de luz, não quatro vezes e meia (antes era espremido para não estourar).
+- **As luzes riscam na chuva:** postes e faróis ganham um rastro fino, como a água no olho.
 
 ## 0.16.1 — O gravador de travadas (2026-10-09)
 - **Menos engasgos:** o jogo cria muito menos lixo na memória a cada quadro (a simulação ~7× menos, o desenho dos objetos e das luzes bem menos), então o coletor de memória do navegador para o jogo com menos frequência. A simulação também ficou um pouco mais rápida.

@@ -31,6 +31,13 @@ echo      cor rosa some aos poucos, nao num passo.
 echo   8. A escada do mesmo predio 45, andares 1 a 3: a cor da
 echo      escada muda de um andar para o outro? tem chuvisco?
 echo.
+echo   9. (NOVO) Y ate chover, de noite: as pocas nao ficam mais
+echo      pretas; os reflexos mais suaves; os postes riscam um
+echo      rastro fino na chuva. Forte ou fraco demais?
+echo  10. (NOVO) Letreiros: iluminam so perto deles? As janelas
+echo      vistas da rua parecem vidro escuro (nao buraco)?
+echo  11. (NOVO) A cor geral: de noite um pouco fria nas sombras,
+echo      dourada no fim de tarde. Gostou? Exagerado?
 echo   Achou algo estranho? F8 e escreva.
 echo  ============================================================
 echo.
