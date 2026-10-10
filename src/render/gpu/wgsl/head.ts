@@ -48,10 +48,8 @@ const LIT_H = 9.0;
 const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
 const LIGHT_KNEE = 150.0;
-/** How much of a lamp's light a surface sends back once tinted by its color (finish), and how strongly a lit room's light spills onto the wall around its window. */
 /** A panel light's size factor (PANEL_S in lights.ts), and how much of it a surface turned away from it still gets (it is not a point: some of it always shows). */
 const PANEL_S = ${f(PANEL_S)}; const PANEL_RECV_WRAP = 0.15;
-const WIN_SPILL = 70.0;
 const CROWN_H = 16.0;
 const FLOOD_GAP = ${f(FLOOD_GAP)}; const FLOOD_OUT = ${f(FLOOD_OUT)}; const FLOOD_FIX_FAR = ${f(FLOOD_FIX_FAR)}; const FLOOD_SHADOW_FAR = 45.0;
 const LW = ${LIGHT_W};

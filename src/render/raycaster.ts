@@ -1,5 +1,5 @@
 import { hash3 } from '../core/rng';
-import { BAY, BLADE_LETTER, blockAt, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, SHED_D, shedFaces, LANE_W, lanesOf, SIDEWALK, type Building, type City, type RGB } from '../sim/city';
+import { BAY, BLADE_LETTER, blockHundred, nearestDistrict, BLADE_Z, diagS, faceSpan, FLOOR_H, SHED_D, shedFaces, LANE_W, lanesOf, type Building, type City, type RGB } from '../sim/city';
 import { doorKey, liftFloors, type World } from '../sim/world';
 import { streetLeaves } from '../sim/doors';
 import { baseAt, cachedPlan, doorLabel, doorNumber, doorOf, entryDoor, escapesOf, facePoint, exitsOf, floorsOf, leavesOf, planOf } from '../sim/interior';
@@ -460,10 +460,12 @@ const LIGHT_KNEE = 150;
 const SIGN_LETTER_LIGHT = 40, LEVELS: number[] = [];
 /**
  * The lit panels' strength (x their color) and reach (m): shop signs, video screens, blade signs, neon tubes up
- * the corners, shop windows (DynLights.panel), and how far off screens and neon still light.
+ * the corners (DynLights.panel), and how far off screens and neon still light.
  */
-const SIGN_LIGHT = 3.75, SIGN_RANGE = 22, SCREEN_LIGHT = 0.7, SCREEN_RANGE = 50, SCREEN_LIGHT_FAR = 140;
-const BLADE_LIGHT = 3.75, BLADE_RANGE = 22, NEON_LIGHT = 1.5, NEON_RANGE = 16, NEON_LIGHT_FAR = 120, SHOP_LIGHT = 1.2, SHOP_RANGE = 10;
+// (16.1b: the deferred light sums the signs on every surface round them; 3.75 and 22 m washed the poles and the facades
+// across, playtest 2026-10-09)
+const SIGN_LIGHT = 1.6, SIGN_RANGE = 14, SCREEN_LIGHT = 0.7, SCREEN_RANGE = 50, SCREEN_LIGHT_FAR = 140;
+const BLADE_LIGHT = 1.6, BLADE_RANGE = 14, NEON_LIGHT = 1.5, NEON_RANGE = 16, NEON_LIGHT_FAR = 120;
 /** A color (0-255, sRGB) at strength q as linear light (1 = white), for the panels. */
 const MARQUEE_LIGHT = 0.6, TICKER_LIGHT = 0.8;
 /** By day the screens turn up their brightness (as real LED screens do): their light on the street x (1 + this) at noon, so it shows in the shade. */
@@ -699,19 +701,6 @@ function gatherLights(world: World, v: View, sec: number) {
         if (q > 0.005) for (let k = 0; k < 4; k++) { const x = k & 1 ? B.x1 : B.x0, y = k & 2 ? B.y1 : B.y0; dyn.panel(x, y, x, y, 1, 0, 0, Math.max(1, B.h - FLOOR_H), NEON_RANGE, 0.99, linC(nr, q), linC(ng, q), linC(nb, q)); }
       }
       if (B.biz < 0 || B.round) continue;
-      const blkB = blockAt(city, cx, cy);
-      if (B.shop && dist < 60) {
-        // the lit shop windows spill warm light on the sidewalk in front of them (faces on the street)
-        const w = SHOP_LIGHT * buildingPower(world, k, sec);
-        for (let f = 0; f < (B.cut ? 5 : 4); f++) {
-          const sp = faceSpan(B, f), lo = sp[0], hi = sp[1];
-          if (hi - lo < 2) continue;
-          const gap = !blkB ? 0 : f === 0 ? B.x0 - blkB.x0 : f === 1 ? blkB.x1 - B.x1 : f === 2 ? B.y0 - blkB.y0 : f === 3 ? blkB.y1 - B.y1 : 0;
-          if (gap > SIDEWALK + 0.5) continue;
-          const L = faceLine(B, f, lo, hi);
-          dyn.panel(L[0], L[1], L[2], L[3], L[4], L[5], 0.3, 2.6, SHOP_RANGE, 0.1, linC(200, w), linC(165, w), linC(110, w));
-        }
-      }
       const mode = signMode(city, B.biz), full = signText(city, B.biz, 255).length;
       if (B.screen && dist < SCREEN_LIGHT_FAR) {
         // the screens wash the street and the facades across it with their current scene's color, from where they hang

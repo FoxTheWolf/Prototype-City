@@ -450,16 +450,6 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   }
   }
   var emC = select(select(vec3f(0.0), c, em), bodyEm, bodyEm.x >= 0.0);
-  // a lit room's light spills onto the wall around its window
-  // (only where this floor has a window in this bay: a stone base or a blind wall has none to spill from;
-  // and only from the mains: the emergency lamps of a blackout are too faint to light the wall outside)
-  if (pkR >= 0 && !isWin && winPw >= 0.8 && !corner && z < H - 0.6 && windowHole(style, shop, 0.5, 0.54, 0.54 * FLOOR_H, fl == 0)) {
-    let GL = roomLamp(lot, bk, roomRec(po, pkR), pkR, fl, winPw, false);
-    if (GL.x + GL.y + GL.z > 0.02) {
-      let d = length(vec2f((fw - 0.5) * BAY, (fz - 0.54) * FLOOR_H)); let e = max(0.0, 1.0 - d / 1.5);
-      c += GL * (WIN_SPILL * e * e); il += GL * (WIN_SPILL * e * e);
-    }
-  }
   // neon tubes up the corners and along the roof line, and their glow on the wall
   if (bldF(u32(q + 27u)) > 0.5) {
     let neon = colAt(q + 24u);
