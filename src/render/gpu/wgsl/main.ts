@@ -82,6 +82,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         // a puddle never mirrors all of it, and the thin film far less (playtest 2026-10-09: 0.7 everywhere read as
         // a sharp black mirror over the whole street at night)
         if (N.z > 0.5 && gMat != MAT_PAINT) { rw = min(rw, WET_MIRROR * gWet); }
+        // (16.1b) a window seen from the street mirrors more than its F0: the eye is set for the street, and the room
+        // behind reads dimmer, so the pane reads as glass and not as a hole in the wall (playtest 2026-10-09, note 4)
+        if ((gMat == MAT_WINDOW || gMat == MAT_GLASS) && inc.state == 0u) { rw = max(rw, WIN_MIRROR); }
         if (rw > 0.03) {
           tr = cl.depth;
           var R = gRay - 2.0 * dot(gRay, N) * N;
