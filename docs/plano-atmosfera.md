@@ -49,4 +49,6 @@
 
 ## Depois (não neste passo)
 
+- **(Usuário, 2026-10-10; ele ama simuladores de voo) Nuvens por camadas no formato METAR:** o clima (`sim/weather.ts`) passa a ter camadas (FEW/SCT/BKN/OVC, a altura de cada uma, o tipo: cúmulo, estrato, altocúmulo, cirro), e o céu desenha cada camada pela mesma física (um sistema só: o que o céu desenha é o que o METAR diz). No jogo: o boletim do aeroporto (ATIS) por telefone, um site de METAR em 2008, e a estação meteorológica como sistema da cidade. Lugar: a 20.1 (o clima). A camada alta fina deste passo já é a primeira dessas camadas.
+
 O mar refletindo (23.4), a luz indireta recebendo esse céu (16.1c passo 1), as estrelas/lua sob a mesma extinção (23.5).

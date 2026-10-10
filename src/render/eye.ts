@@ -9,11 +9,11 @@ export const EYE = { k: 0.6 };
 /** gpu/shader.ts's EV_NIGHT (1 / (DAY_ALBEDO * AMB_N)), AMB_N, DAY_EXPO and NIGHT_ADAPT. */
 const EV_NIGHT = 125, AMB_N = 0.004, DAY_EXPO = 1.2, NIGHT_ADAPT = 0.3;
 
-/** After the eye moves: day and cityLit as the world's uniforms have them, adapt the eye's adaptation. */
-export function setEye(day: number, cityLit: number, adapt: number) {
+/** After the eye moves: day and cityLit as the world's uniforms have them, adapt the eye's adaptation, dayEv the day's exposure (atmosphere.ts). */
+export function setEye(day: number, cityLit: number, adapt: number, dayEv = DAY_EXPO) {
   const t = Math.min(1, Math.max(0, day / 0.35)), g = t * t * (3 - 2 * t);
   const amb = AMB_N * (0.02 + 0.98 * Math.pow(Math.min(1, Math.max(0, cityLit)), 1.5));
-  const ev = Math.exp((1 - g) * Math.log(EV_NIGHT * Math.pow(amb / AMB_N, -NIGHT_ADAPT)) + g * Math.log(DAY_EXPO)) * adapt;
+  const ev = Math.exp((1 - g) * Math.log(EV_NIGHT * Math.pow(amb / AMB_N, -NIGHT_ADAPT)) + g * Math.log(dayEv)) * adapt;
   // in stops from the lit night's exposure
   const x = Math.log2(ev / EV_NIGHT);
   const s = Math.min(1, Math.max(0, (x + 6) / 6));

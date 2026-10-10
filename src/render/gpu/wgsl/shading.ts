@@ -11,22 +11,11 @@ fn sunGloss() -> f32 {
   let H = normalize(Ls + V); let lh = max(dot(Ls, H), 0.1);
   return min(40.0, ggx(max(dot(N, H), 0.0), matRough()) * fres(MAT_F0[gMat], lh) * 0.25 / (lh * lh) * nl);
 }
-// ---- the sun's color by its color temperature: a warm yellow-white high up, orange toward the horizon
-/** The sun's color temperature (K) at noon high and at the horizon, and the elevation (rad) where it is fully the high one. */
-// (playtest 2026-10-07: the afternoon read too yellow, the sky too; real noon sun is ~5500-5800 K; was 4700)
-const SUN_K_HIGH = 5800.0; const SUN_K_LOW = 1900.0; const SUN_K_EL = 0.55;
-fn sunTemp() -> f32 { return mix(SUN_K_LOW, SUN_K_HIGH, smoothK(-0.02, SUN_K_EL, u.sunEl)); }
-/** A black body's color at T kelvin, in sRGB 0-1 (Tanner Helland's fit), the strongest channel 1. */
-fn kelvin(T: f32) -> vec3f {
-  let t = clamp(T, 1000.0, 15000.0) / 100.0;
-  var c = vec3f(1.0);
-  if (t > 66.0) { c.x = 329.698727446 * pow(t - 60.0, -0.1332047592) / 255.0; c.y = 288.1221695283 * pow(t - 60.0, -0.0755148492) / 255.0; }
-  else { c.y = (99.4708025861 * log(t) - 161.1195681661) / 255.0; c.z = select(select((138.5177312231 * log(t - 10.0) - 305.0447927307) / 255.0, 0.0, t <= 19.0), 1.0, t >= 66.0); }
-  c = clamp(c, vec3f(0.0), vec3f(1.0));
-  return c / max(c.x, max(c.y, c.z));
-}
-/** The sunlight's color in linear light, its luminance 1 (the brightness is DAY_SUN's). */
-fn sunLin() -> vec3f { let l = pow(kelvin(sunTemp()), vec3f(2.2)); return l / max(1e-3, dot(l, vec3f(0.2126, 0.7152, 0.0722))); }
+// ---- (16.1c) the sunlight's color: the sun's through the air to here (atmosphere.ts, on the CPU each frame), its
+// luminance ~1 at noon; golden in the late afternoon, red and dim in its last minute, nothing once it is down
+fn sunLin() -> vec3f { return vec3f(u.sunTR, u.sunTG, u.sunTB); }
+/** The sky's light, its hue the dome's (blue at noon, violet in the twilight; whiter under clouds) and its strength over noon's (skyL). */
+fn skyHue() -> vec3f { return mix(vec3f(u.zenR, u.zenG, u.zenB), vec3f(0.82, 0.84, 0.88), u.cloud) * min(1.0, u.skyL); }
 // ---- the light (L.1): one for day and night. A surface's palette color is its albedo; it gets the ambient light
 // (the sky's by day, the city's glow and the moon's by night), the sun's, and the lamps'; what glows adds its own.
 // The sum is radiance, in linear light; the eye's exposure (EV) takes it to the screen through one tone curve.
@@ -69,9 +58,11 @@ fn dayGrade() -> f32 { return smoothK(0.0, 0.35, u.day); }
 /** The city's glow on everything (it fades with the lamps in a blackout). */
 fn cityAmb() -> f32 { return AMB_N * (0.02 + 0.98 * pow(clamp(u.cityLit, 0.0, 1.0), 1.5)); }
 /** The exposure from night to day (on a log scale), without the blackout's. */
-fn evDayNight() -> f32 { return exp(mix(log(EV_NIGHT), log(DAY_EXPO), dayGrade())); }
+fn evDayNight() -> f32 { return u.dayEv; }
+/** (16.1c) How far the eye is from the day's exposure toward the night's (0 day, 1 night), by the sky's light. */
+fn evNight() -> f32 { return clamp(log(u.dayEv / DAY_EXPO) / log(EV_NIGHT / DAY_EXPO), 0.0, 1.0); }
 /** The exposure the time of day expects: the night's opened up a little when the city goes dark. */
-fn evRef() -> f32 { return exp(mix(log(EV_NIGHT * pow(cityAmb() / AMB_N, -NIGHT_ADAPT)), log(DAY_EXPO), dayGrade())); }
+fn evRef() -> f32 { return u.dayEv * pow(cityAmb() / AMB_N, -NIGHT_ADAPT * evNight()); }
 /** One tone curve: the night's (untouched below a knee) toward the day's filmic one with the day. */
 fn toneMap(x: vec3f, g: f32) -> vec3f {
   if (g <= 0.0) { return nightTone(x); }
@@ -130,11 +121,10 @@ fn artK() -> f32 { return pow(EV_NIGHT / evDayNight(), ART_KEEP); }
 fn roomMul(E: vec3f) -> vec3f { return pow(max(E, vec3f(0.0)) / AMB_N, vec3f(1.0 / 2.2)); }
 /** (16.1b) The open air's light on a roof, the street's: the sky, the sun (no shadows yet), the city's glow at night. */
 fn roofE(x: f32, y: f32, z: f32) -> vec3f {
-  let g = dayGrade(); let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
-  let sky = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud) * ds;
-  let sun = sunLin() * (DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * max(0.0, u.sunZ));
+  let sky = skyHue() * (DAY_SKY + 0.35 * u.cloud);
+  let sun = sunLin() * (DAY_SUN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ));
   // (not the lamps yet: lightAt here was inlined in every one of roomWalk's roomLit calls, and the shader took minutes to compile)
-  return sky + sun + vec3f(cityAmb() * (1.0 - g));
+  return sky + sun + vec3f(cityAmb());
 }
 /** (16.1b) How much of a room lamp's light a surface turned away from it still gets (the other lamps, the bounce off the room). */
 const ROOM_WRAP = 0.35;
@@ -166,7 +156,7 @@ fn roomE() -> vec3f {
   let la = lp * (k * nl) + vec3f(a, a * 1.05, a * 1.25);
   let q = u32(V.box * ${BLD});
   let dw = max(0.0, min(min(x - bldF(u32(q)), bldF(u32(q + 2u)) - x), min(y - bldF(u32(q + 1u)), bldF(u32(q + 3u)) - y)));
-  let g = dayGrade(); let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
+  let ds = min(1.0, u.skyL); // (16.1c) the daylight's strength, from the air
   // (the daylight outside: the sky's, and the sun's off the street and the walls round, SUN_IN of it)
   let out = DAY_SKY + DAY_SUN * SUN_IN * (1.0 - 0.85 * u.cloud) * max(0.0, u.sunZ);
   let sky = mix(vec3f(0.6, 0.66, 0.8), vec3f(0.82, 0.84, 0.88), u.cloud) * (out * ds * (SKY_IN_DEEP + SKY_IN_WIN * exp(-dw / DAYLIGHT_FALL)));
@@ -219,16 +209,14 @@ fn light(cl: Cell) -> Cell {
       aSky = AMB_FACE + (1.0 - AMB_FACE) * select(0.5, 0.5 + 0.5 * dot(Nh, vec2f(u.sunX, u.sunY) / sl), sl > 1e-3);
     }
     let En = vec3f(cityAmb() * aCity) * mix(1.0, gSky, 0.5) + vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * gSky * mix(MOON_SHADE, 1.0, gMoon));
-    // the day's: the sky's (bluish; whiter under clouds) and the sun's on what faces it out of the shadows (gSun);
-    // it fades in on a log scale with the exposure (ds), so dusk never dips darker than night or day
-    let ds = pow(AMB_N / DAY_SKY, 1.0 - g) * min(1.0, 4.0 * g);
+    // the day's: the sky's (its hue and strength from the air, skyHue) and the sun's (through the air, sunLin) on what
+    // faces it out of the shadows (gSun); they fade with the dusk by themselves, and the eye opens as they do (u.dayEv)
     let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
-    let sunC = sunLin(); let sunK = DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun * ds;
-    let skyC = mix(vec3f(0.48, 0.6, 0.92), vec3f(0.82, 0.84, 0.88), u.cloud) * (DAY_SKY + 0.35 * u.cloud);
+    let sunC = sunLin(); let sunK = DAY_SUN * (1.0 - 0.85 * u.cloud) * gSun;
+    let skyC = skyHue() * (DAY_SKY + 0.35 * u.cloud);
     // what hides the sky gives some back: the walls and the street round it, lit by the sky and by the sun on part of them
-    let sunOpen = DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * max(0.0, u.sunZ);
-    let Eb = SKY_BOUNCE * (skyC * (ds * BOUNCE_SKY) * gBncA + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * ds * BOUNCE_SUN * smoothK(-0.02, 0.04, u.sunZ)) * gBncS);
-    let E = (En * (1.0 - g) + skyC * (ds * gSky * aSky) + Eb + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
+    let Eb = SKY_BOUNCE * (skyC * BOUNCE_SKY * gBncA + sunC * (DAY_SUN * (1.0 - 0.85 * u.cloud) * BOUNCE_SUN * smoothK(-0.02, 0.04, u.sunZ)) * gBncS);
+    let E = (En + skyC * (gSky * aSky) + Eb + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps: their light takes the surface's color (by day the sun outshines them: the eye does that)
     let El = lampE(linL(lamp) + lampL);
     // what glows: at night as drawn; by day almost as bright on the screen (a sign is not lost in the sun)
@@ -248,7 +236,7 @@ fn light(cl: Cell) -> Cell {
       if (day > 0.01) {
         let gloss = sunGloss() * sunK;
         Lr += sunC * gloss;
-        gGlow = clamp((gloss / max(ds, 1e-3) - SPEC_BLOOM_MIN) * SPEC_BLOOM_SUN, 0.0, 1.0); // a strong glint on metal blooms
+        gGlow = clamp((gloss - SPEC_BLOOM_MIN) * SPEC_BLOOM_SUN, 0.0, 1.0); // a strong glint on metal blooms
       }
     }
     o.c = srgb(toneMap(Lr * ev, g));

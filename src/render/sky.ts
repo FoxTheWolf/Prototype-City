@@ -4,6 +4,7 @@ import { moonDir, moonPhase, sunDir } from '../sim/clock';
 import { lightning, type Weather } from '../sim/weather';
 import { type PowerGrid } from '../sim/power';
 import { smoothPower } from './power';
+import { atmoFrame } from './atmosphere';
 import {  } from './grid';
 
 /**
@@ -49,6 +50,8 @@ export interface SkyFrame {
   sec: number;
   /** Share of the city with its lights on: the haze over it glows with them. */
   cityLit: number;
+  /** (16.1c) The air: the sun's color on the ground and at the clouds, the zenith's hue (atmosphere.ts). */
+  air: ReturnType<typeof atmoFrame>;
 }
 
 const tmp = new Float64Array(2);
@@ -78,6 +81,7 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
   const umbra = 1 - smooth(UMBRA - 0.8, UMBRA + 1, Math.hypot(eclU, eclV));
   // real-time drift, so clouds move at the wind's speed as you watch
   return {
+    air: atmoFrame(sunEl, sunA),
     day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase, eclU, eclV,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) * (1 - 0.92 * umbra) : 0,
     cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,

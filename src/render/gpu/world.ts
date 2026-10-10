@@ -387,11 +387,13 @@ export class GpuWorld {
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,
       fallB: Math.floor(Fs.fallen / Fs.period), fallR: Fs.fallen - Math.floor(Fs.fallen / Fs.period) * Fs.period,
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
+      sunTR: sky.air.sun[0], sunTG: sky.air.sun[1], sunTB: sky.air.sun[2], cldTR: sky.air.cloud[0], cldTG: sky.air.cloud[1], cldTB: sky.air.cloud[2],
+      zenR: sky.air.zen[0], zenG: sky.air.zen[1], zenB: sky.air.zen[2], skyL: sky.air.skyL, dayEv: sky.air.dayEv,
       homeLit: this.shares.home, workLit: this.shares.work, lightDbg: DEBUG.lightProbe ? 2 : DEBUG.lightKinds ? 1 : 0,
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
-    if (timed) setEye(sky.day, vals.cityLit, vals.adapt);
+    if (timed) setEye(sky.day, vals.cityLit, vals.adapt, sky.air.dayEv);
     // the sun on the screen (cell x, y) and how strongly its rays show, for the compositor's (B.2)
     {
       const [sx, sy, sz] = F.sun, f = sx * dirX + sy * dirY, lat = sy * dirX - sx * dirY, cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);

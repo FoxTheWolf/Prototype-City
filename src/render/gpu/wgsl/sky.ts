@@ -57,18 +57,23 @@ fn eqDir(v: vec3f) -> vec3f {
   let cl = cos(u.lst); let sl = sin(u.lst);
   return vec3f(cl * P + sl * Q, sl * P - cl * Q, R);
 }
-/** The clear sky's color at t (0 the zenith's side, 1 the horizon) toward (rdx, rdy): the day's and the night's gradient, the dusk, and the city's glow. */
+/** (16.1c) The sky's light (atmosphere.ts) in the units of light() (shading.ts): calibrated so the clear zenith at noon reads as the old sky's (~54, 88, 142). */
+const SKY_K = 4.7;
+/** The sun's unit direction (x east, y south, z up), from its heading and elevation. */
+fn sunVec() -> vec3f { let ce = cos(u.sunEl); return vec3f(cos(u.sunA) * ce, sin(u.sunA) * ce, sin(u.sunEl)); }
+/** The clear sky's color at t (0 the zenith's side, 1 the horizon) toward (rdx, rdy), on the screen at the exposure the hour expects (the eye's adaptation comes after): the air's scattering of the sun (atmo), the night's own glow and the city's. */
 fn skyGrad(t: f32, rdx: f32, rdy: f32, L: f32, up: f32) -> vec3f {
-  let night = 1.0 - u.day; let day = u.day;
-  let toSun = 0.5 + 0.5 * cos(wrapA(atan2(rdy, rdx) - u.sunA));
+  let night = 1.0 - u.day;
   let t2 = t * t; let t4 = t2 * t2;
   let cl = 0.3 + 0.7 * u.cityLit;
-  // (A.2) the day: still a hazy sky, but a bluer zenith fading to a pale horizon
-  var r = (5.0 + 21.0 * t2 + 30.0 * t4 * cl) * night + (54.0 + 96.0 * t2) * day;
-  var g = (6.0 + 10.0 * t2 + 8.0 * t4 * cl) * night + (88.0 + 80.0 * t2) * day;
-  var b = (11.0 + 21.0 * t2 - 6.0 * t4 * cl) * night + (142.0 + 42.0 * t2) * day;
-  let dk = u.dusk * t4 * (0.35 + 0.65 * toSun);
-  r += 190.0 * dk; g += 80.0 * dk; b += 30.0 * dk - 10.0 * dk * toSun;
+  // the night's sky (the airglow and the haze's own faint light, as it was drawn), as light: under the night's exposure it shows as drawn
+  let nr = 5.0 + 21.0 * t2 + 30.0 * t4 * cl; let ng = 6.0 + 10.0 * t2 + 8.0 * t4 * cl; let nb = 11.0 + 21.0 * t2 - 6.0 * t4 * cl;
+  var Lk = lin(vec3f(nr, ng, nb)) * (night / EV_NIGHT);
+  if (u.sunEl > -0.35) {
+    let e = atan(max(0.0, up)); let ce = cos(e);
+    Lk += atmo(2.0, vec3f(rdx / L * ce, rdy / L * ce, sin(e)), sunVec()) * SKY_K;
+  }
+  var c = srgb(toneMap(Lk * evDayNight(), dayGrade()));
   // the city's glow on the haze over it: seen only from its edges and beyond, low over the center, and it
   // fades as the lamps go out (cityLit)
   let tcx = u.cityW * 0.5 - u.px; let tcy = u.cityH * 0.5 - u.py; let dcen = length(vec2f(tcx, tcy));
@@ -76,17 +81,23 @@ fn skyGrad(t: f32, rdx: f32, rdy: f32, L: f32, up: f32) -> vec3f {
   if (away > 0.0 && night > 0.0) {
     let toC = max(0.0, (tcx * rdx + tcy * rdy) / (max(1.0, dcen) * L));
     let dome = away * (0.3 + 0.7 * toC * toC) * exp(-max(0.0, up) / 0.16) * u.cityLit * night;
-    r += 150.0 * dome; g += 72.0 * dome; b += 22.0 * dome;
+    c += vec3f(150.0, 72.0, 22.0) * dome;
   }
-  return vec3f(r, g, b);
+  return c;
 }
 /** (16.1b) The sky right at the horizon toward (rdx, rdy), the clouds' far haze over it as they cover the sky: what the air between the eye and a far thing takes its color from (aerial in shading.ts). */
 fn horizonCol(rdx: f32, rdy: f32) -> vec3f {
   let night = 1.0 - u.day;
   let L = max(1e-4, length(vec2f(rdx, rdy)));
+  let sh = skyGrad(1.0, rdx, rdy, L, 0.0);
+  return mix(sh, overcastCol(sh), min(1.0, u.cloud * 1.3) * (0.55 + 0.45 * min(1.0, u.cloud * 1.3)));
+}
+/** The overcast's far haze over a clear horizon h: grey by day (as bright as the clear sky is), the city's glow by night. */
+fn overcastCol(h: vec3f) -> vec3f {
+  let night = 1.0 - u.day;
   let hk = 0.4 * night * (0.6 + 0.6 * u.precip) * (0.25 + 0.75 * u.cityLit);
-  let cf = vec3f(26.0 + 55.0 * hk + 90.0 * u.day, 22.0 + 32.0 * hk + 95.0 * u.day, 26.0 + 22.0 * hk + 102.0 * u.day);
-  return mix(skyGrad(1.0, rdx, rdy, L, 0.0), cf, min(1.0, u.cloud * 1.3) * (0.55 + 0.45 * min(1.0, u.cloud * 1.3)));
+  let kd = clamp(luma(h) / 160.0, 0.0, 1.0) * u.day;
+  return vec3f(26.0 + 55.0 * hk + 90.0 * kd, 22.0 + 32.0 * hk + 95.0 * kd, 26.0 + 22.0 * hk + 102.0 * kd);
 }
 fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let L = length(vec2f(rdx, rdy)); let night = 1.0 - u.day; let day = u.day;
@@ -107,7 +118,8 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   let el = atan(up);
   if (u.sunEl > -0.15) {
     let ang = length(vec2f(dS * cos(el), el - u.sunEl));
-    sunK = (exp(-ang / 0.09) * 0.8 + exp(-ang / 0.35) * 0.25) * min(1.0, (u.sunEl + 0.15) / 0.2);
+    // (the wide aureole is the haze's forward scattering now, in atmo; this is the disc, smeared to a cell)
+    sunK = exp(-ang / 0.09) * 0.8 * min(1.0, (u.sunEl + 0.15) / 0.2);
   }
   // the stars where they stand in the sky of 2008: the ray (and the cell's sides) turned into the equator's frame by
   // the sidereal time, then each star (a unit vector there, its light and color: world.ts signData) in this cell?
@@ -178,9 +190,11 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
     let cosS = dot(normalize(vec3f(ux, uy, up)), Ls);
     // forward scattering: the edges between the eye and the sun light up (silver lining)
     let phase = 0.75 + 1.4 * pow(max(0.0, cosS), 10.0) + 0.3 * pow(max(0.0, cosS), 2.0);
-    let sunOn = smoothK(-0.1, 0.03, u.sunEl) * (1.0 - 0.45 * u.precip);
-    let sunC = kelvin(sunTemp()) * (235.0 * sunOn * phase);
-    let amb = vec3f(118.0, 124.0, 140.0) * day * (1.0 - 0.4 * u.precip) + vec3f(60.0 * u.dusk, 30.0 * u.dusk, 22.0 * u.dusk);
+    // (16.1c) the sun through the air at the clouds' height (atmosphere.ts): golden, then red, and still lighting them for
+    // a few minutes after the street has lost it; on the screen as the eye opens up with the dusk
+    let sunC = min(vec3f(u.cldTR, u.cldTG, u.cldTB) * pow(evDayNight() / DAY_EXPO, 1.0 / 2.2), vec3f(1.6)) * (235.0 * phase * (1.0 - 0.45 * u.precip));
+    // the sky's light on them: the clear sky's own color here, whiter (the whole dome lights a cloud)
+    let amb = mix(vec3f(luma(sg)), sg, 0.6) * (1.4 * smoothK(-0.25, 0.05, u.sunEl) * (1.0 - 0.4 * u.precip));
     let GL = glowBelow(wx, wy) * ((0.9 + 0.5 * u.precip) * night);
     // the clouds' own floor of light: lower in a blackout (no city to light them, only the moon)
     let base = 12.0 - 9.0 * (1.0 - u.cityLit) * night;
@@ -220,8 +234,8 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
       let thick = 1.0 - tr;
       q += vec3f(190.0, 185.0, 230.0) * u.flash;
       if (moonA) { q += cc * (0.3 * (1.0 - thick)); }
-      let hz = 1.0 - exp(-D / 12000.0); let hk = 0.4 * night * (0.6 + 0.6 * u.precip) * (0.25 + 0.75 * u.cityLit);
-      q += (vec3f(26.0 + 55.0 * hk + 90.0 * day, 22.0 + 32.0 * hk + 95.0 * day, 26.0 + 22.0 * hk + 102.0 * day) - q) * hz;
+      let hz = 1.0 - exp(-D / 12000.0);
+      q += (overcastCol(skyGrad(1.0, rdx, rdy, L, 0.0)) - q) * hz;
       r += (q.x - r) * a; g += (q.y - g) * a; b += (q.z - b) * a;
       cover = a;
       star *= 1.0 - a;
@@ -231,7 +245,7 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
   if (sunK > 0.003) {
     let sk = sunK * (1.0 - 0.55 * cover);
     // toward the sun's own color (not added on top of the blue sky, which burned it to white)
-    let kc = kelvin(sunTemp()) * 245.0; let m = min(1.0, sk);
+    let st = vec3f(u.sunTR, u.sunTG, u.sunTB); let kc = st / max(1e-4, max(st.x, max(st.y, st.z))) * 245.0; let m = min(1.0, sk);
     r += (kc.x - r) * m; g += (kc.y - g) * m; b += (kc.z - b) * m;
   }
   var o = Cell(32u, vec3f(0.0), vec3f(r, g, b), 1e9, KIND_OTHER, 0.0);
