@@ -175,6 +175,26 @@ fn skyCell(m: f32, rdx: f32, rdy: f32) -> Cell {
       r += hk; g += hk; b += hk * 1.2;
     }
   }
+  // (16.1c) the high veil (cirrus at CIRRUS_H): a thin sheet of ice in streaks along the wind, lit by the sun through the air
+  // at its height (hiT: it keeps the sun's red for minutes after the street and the low deck have lost it) and by the sky
+  if (u.high > 0.01 && up > 0.004) {
+    let D = (CIRRUS_H - u.eye) / up; let ux = rdx / L; let uy = rdy / L;
+    let hx = u.px + ux * D + u.driftX * 2.0; let hy = u.py + uy * D + u.driftY * 2.0;
+    let wl = length(vec2f(u.windX, u.windY)); let wd = select(vec2f(1.0, 0.0), vec2f(u.windX, u.windY) / max(wl, 1e-3), wl > 0.05);
+    let a1 = hx * wd.x + hy * wd.y; let a2 = hy * wd.x - hx * wd.y;
+    let n = 0.6 * noise(a1 / 9000.0 + 13.0, a2 / 2200.0 + 5.0) + 0.3 * noise(a1 / 2500.0 + 51.0, a2 / 600.0 + 27.0) + 0.1 * noise(a1 / 700.0 + 3.0, a2 / 180.0 + 71.0);
+    let hd = smoothK(1.0 - 0.85 * u.high, 1.15 - 0.6 * u.high, n) * smoothK(0.004, 0.06, up);
+    if (hd > 0.01) {
+      let cosS = dot(normalize(vec3f(ux, uy, up)), sunVec());
+      let ph = 0.6 + 1.6 * pow(max(0.0, cosS), 8.0) + 0.3 * max(0.0, cosS);
+      let sunH = min(vec3f(u.hiTR, u.hiTG, u.hiTB) * pow(evDayNight() / DAY_EXPO, 1.0 / 2.2), vec3f(1.6)) * (215.0 * ph);
+      var q = sunH + mix(vec3f(luma(sg)), sg, 0.5) * 1.2 + glowBelow(hx, hy) * (0.25 * night);
+      q += (horizonCol(rdx, rdy) - q) * (1.0 - exp(-D / 60000.0));
+      let a = hd * 0.55;
+      r += (q.x - r) * a; g += (q.y - g) * a; b += (q.z - b) * a;
+      star *= 1.0 - a;
+    }
+  }
   // (B.1) the cloud layer, marched: CLOUD_H up to as thick as its cover makes it, each sample lit by the sun
   // through the cloud between it and the sun (lit edges, dark bases) and, at night, by the city from below
   if (u.cloud > 0.01 && up > 0.002) {

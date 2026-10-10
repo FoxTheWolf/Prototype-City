@@ -39,6 +39,8 @@ export interface SkyFrame {
   /** Moonlight 0..1 (up, bright phase), for the scene later (blackout). */
   moonlight: number;
   cloud: number;
+  /** (16.1c) The high veil's cover (weather.ts). */
+  high: number;
   precip: number;
   /** Lightning flash 0..1. */
   flash: number;
@@ -81,10 +83,11 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
   const umbra = 1 - smooth(UMBRA - 0.8, UMBRA + 1, Math.hypot(eclU, eclV));
   // real-time drift, so clouds move at the wind's speed as you watch
   return {
-    air: atmoFrame(sunEl, sunA),
+    // (16.1c) the haze by the humidity: thicker under clouds and in rain, the air washed clean after it
+    air: atmoFrame(sunEl, sunA, Math.max(0.3, Math.min(2, 0.6 + 0.6 * w.cloud + 1.0 * w.precip - 0.3 * w.wet * (1 - w.precip)))),
     day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase, eclU, eclV,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) * (1 - 0.92 * umbra) : 0,
-    cloud: w.cloud, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,
+    cloud: w.cloud, high: w.high, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,
     cityLit: grid.subs.reduce((a, _, k) => a + smoothPower(grid, k, sec, city.w, city.h), 0) / grid.subs.length,
   };
 }

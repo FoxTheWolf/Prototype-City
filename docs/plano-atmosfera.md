@@ -1,5 +1,7 @@
 # Plano da atmosfera física (16.1c, passo 0)
 
+> **✅ Feito em 2026-10-10 (0.16.1c).** O que entrou, o que ficou e por quê: `docs/historico.md`. Diferenças do plano: sem LUT (a marcha por célula é barata: são células, não pixels); a exposição e a luz do céu nas superfícies passaram a seguir o ar (`skyL`/`dayEv`), senão o fim de tarde ficava escuro e o crepúsculo mais claro que o pôr do sol; e o véu alto (cirro a 8 km), porque com o relógio de 12× as nuvens a 1,5 km ficam rosa só ~25 s reais.
+
 > Escrito em 2026-10-09 à noite (Opus 5.5, conta V no fim do semanal) para a próxima sessão começar direto no código.
 > Pedido do usuário: o céu pela física (ele "comprou" a ideia) e o pôr do sol rosa de Miami (fotos dele no chat:
 > céu rosa-roxo com nuvens tingidas, água refletindo). Depois disso vem a luz indireta (GI) e as luzes com sombra.

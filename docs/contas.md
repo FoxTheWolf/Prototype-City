@@ -20,7 +20,7 @@
 ## Último snapshot observado (atualizar a cada sessão)
 
 - **F** — 2026-10-08 (esta sessão): semanal **~56%**, janela de 5 h **~34%**. Renova terça.
-- **C** — 2026-10-08 (dito pelo usuário, não medido): semanal **~50%**. Renova terça ~13h.
+- **C** — 2026-10-10 ~01h (medido, sessão da atmosfera): semanal **~52%** no meio da sessão, janela de 5 h ~15%. Renova terça ~13h (`get_usage`: 16:00Z).
 - **V** — 2026-10-09 ~21h50 (medido): semanal **95%**, janela de 5 h 75% (renova ~00h20 Brasília). Renova o semanal **sábado 10/10 ~02h**.
 
 ## Decisão (2026-10-09 à noite): a próxima é a **C**

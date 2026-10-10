@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 16.1c, passo 0 (a atmosfera física) — 2026-10-10
+
+- **Céu físico pede olho físico:** trocar só a cor do céu deixou o fim de tarde escuro (o céu a 4° tem 1/3 da luz do meio-dia, e a exposição ficava a do dia) e o crepúsculo a −4,5° **mais claro** que o pôr do sol (a exposição pulava para a da noite, 100×, pelo `dayGrade` da altura do sol). A saída de princípio: a exposição e a luz do céu nas superfícies seguem a luz calculada do céu (`skyL`/`dayEv`), o mesmo número para os dois. Ao trocar uma fonte de luz por uma física, procurar quem decidia o brilho pela hora.
+- **Calibrar fora do jogo:** um script `npx tsx` no scratchpad, importando `src/render/atmosphere.ts` pelo caminho absoluto (`cygpath -m`), imprime o zênite, o horizonte e a cor do sol por altura do sol em segundos; a constante (`SKY_K`) sai da conta com a curva de tom, sem recompilar o shader.
+- **O relógio encurta os efeitos do céu:** 1 dia = 2 h reais, então 1° de sol ≈ 20 s reais. Um efeito que depende de poucos graus (as nuvens baixas rosa) dura segundos; pensar em graus × 20 s antes de prometer um efeito.
+- **O domo laranja da cidade** perto da borda engana: parece o pôr do sol na direção errada. Conferir a direção do sol (`sunDir` no console) antes de concluir.
+- **Para olhar um pôr do sol no painel:** `world.time = T0 + h*3600` (T0 = o `world.time` às 12h02 do dia), `camera.yaw/targetYaw`, `world.weather.preset` (7 = o véu alto); o painel aceita a troca na hora, sem recarregar.
+
 ### Lições da 16.1b (a luz adiada, passos 1 e 2) — 2026-10-09
 
 - **O mapa de onde a luz estava copiada (antes da 16.1b):** a luz dos postes (`lightAt`) era chamada em 5 geradores (chão, parede, objetos ×2, telhado) e somada na cor; as luzes de fachada (neon, holofote, transbordo da janela, coroa) pintadas na cor (`il`); um sombreamento falso por face (`lightK` 0,72/1, `kk` nos objetos, `OBJ_NIGHT`) e uma névoa por distância (`fog`) multiplicados no albedo; duas névoas de cor fixa no `light()` (`haze` e o laranja da noite); os cômodos num sistema à parte ("como desenhado", `roomLit` multiplicador, `ROOM_DAY`); e a luz nas mãos na CPU (`viewLight`), com outra cópia do `roomLit` (`lit3`).

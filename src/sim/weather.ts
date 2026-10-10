@@ -10,6 +10,8 @@ import { calendar } from './clock';
 export interface Weather {
   /** Share of the sky covered, 0..1. */
   cloud: number;
+  /** (16.1c) The high thin cloud (cirrus, ~8 km) over it, 0..1: the veil that keeps the sun's red after the sunset. */
+  high: number;
   /** Rain or snow falling, 0 (none) .. 1 (a storm). */
   precip: number;
   /** Air temperature in degrees C; below about 1 degree it snows. */
@@ -25,14 +27,14 @@ export interface Weather {
   preset: number;
 }
 
-/** Fixed skies to test with: [name, cloud, precip, temperature]. */
-export const PRESETS: [string, number, number, number][] = [
-  ['clear', 0, 0, 12], ['partly', 0.45, 0, 12], ['overcast', 1, 0, 10], ['drizzle', 1, 0.2, 9],
-  ['rain', 1, 0.55, 9], ['storm', 1, 1, 8], ['snow', 1, 0.5, -3],
+/** Fixed skies to test with: [name, cloud, precip, temperature, high cloud]. */
+export const PRESETS: [string, number, number, number, number][] = [
+  ['clear', 0, 0, 12, 0], ['partly', 0.45, 0, 12, 0.3], ['overcast', 1, 0, 10, 0], ['drizzle', 1, 0.2, 9, 0],
+  ['rain', 1, 0.55, 9, 0], ['storm', 1, 1, 8, 0], ['snow', 1, 0.5, -3, 0], ['high', 0.12, 0, 14, 0.85],
 ];
 
 export function newWeather(): Weather {
-  return { cloud: 0, precip: 0, temp: 10, snow: false, windX: 0, windY: 0, wet: 0, snowCover: 0, preset: -1 };
+  return { cloud: 0, high: 0, precip: 0, temp: 10, snow: false, windX: 0, windY: 0, wet: 0, snowCover: 0, preset: -1 };
 }
 
 /** Smooth 1D noise 0..1 over x, a different curve for every k. */
@@ -51,11 +53,13 @@ export function forecast(seed: number, t: number, out: Weather) {
   const system = wave(seed, 1, h / 14), local = wave(seed, 2, h / 3);
   out.cloud = clamp(0.1 + 1.2 * (system - 0.35) + 0.5 * (local - 0.5) + 0.1 * season);
   out.precip = clamp((wave(seed, 3, h / 4) - 0.45) * 2.2) * clamp((out.cloud - 0.75) * 5);
+  // the high veil comes and goes on its own (often ahead of a system), hidden when the low deck closes
+  out.high = clamp((wave(seed, 7, h / 9) - 0.45) * 2.5) * (1 - 0.7 * clamp((out.cloud - 0.6) * 2.5));
   // New York-like seasons: about -1 C in January and 25 C in July, warmest mid-afternoon
   out.temp = 12 - 13 * season + 4 * Math.cos((2 * Math.PI * (c.hour - 15)) / 24) + 10 * (wave(seed, 4, h / 30) - 0.5) - 3 * out.precip;
   const speed = 1.5 + 9 * wave(seed, 5, h / 8) + 8 * out.precip, dir = 4 * Math.PI * wave(seed, 6, h / 40);
   out.windX = Math.cos(dir) * speed; out.windY = Math.sin(dir) * speed;
-  if (out.preset >= 0) { const P = PRESETS[out.preset]; out.cloud = P[1]; out.precip = P[2]; out.temp = P[3]; }
+  if (out.preset >= 0) { const P = PRESETS[out.preset]; out.cloud = P[1]; out.precip = P[2]; out.temp = P[3]; out.high = P[4]; }
   out.snow = out.temp < 1;
 }
 

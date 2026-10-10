@@ -18,8 +18,9 @@ export const ATMO = {
   /** The march's samples along the view. */
   STEPS: 10,
 };
-/** The clouds' height (sky.ts's CLOUD_H .. CLOUD_TOP, the middle): where their sun color is taken. */
+/** The clouds' height (sky.ts's CLOUD_H .. CLOUD_TOP, the middle): where their sun color is taken; and the high veil's (cirrus). */
 const CLOUD_MID = 1500;
+export const CIRRUS_H = 8000;
 
 /**
  * The air's density along a ray to space from radius r at cos mu from the vertical, over the scale height H:
@@ -38,15 +39,15 @@ function ozoneCol(r: number, mu: number) {
   return (ATMO.OW / s) * (mu < 0 ? 2 : 1);
 }
 /** The sunlight left after the air from radius r toward the sun at cos mu from the vertical (r, g, b). */
-export function transmittance(r: number, mu: number, out: number[] = [0, 0, 0]) {
+export function transmittance(r: number, mu: number, out: number[] = [0, 0, 0], mie = 1) {
   const dR = chapman(r, mu, ATMO.HR) * ATMO.HR, dM = chapman(r, mu, ATMO.HM) * ATMO.HM, dO = ozoneCol(r, mu);
-  for (let c = 0; c < 3; c++) out[c] = Math.exp(-(ATMO.BR[c] * dR + (ATMO.BMS + ATMO.BMA) * dM + ATMO.BO[c] * dO));
+  for (let c = 0; c < 3; c++) out[c] = Math.exp(-(ATMO.BR[c] * dR + (ATMO.BMS + ATMO.BMA) * mie * dM + ATMO.BO[c] * dO));
   return out;
 }
 const PR = (c: number) => (3 / (16 * Math.PI)) * (1 + c * c);
 const PM = (c: number) => { const g = ATMO.G; return ((3 / (8 * Math.PI)) * ((1 - g * g) * (1 + c * c))) / ((2 + g * g) * Math.pow(1 + g * g - 2 * g * c, 1.5)); };
 /** The sky's radiance seen from height h0 along v (unit, z up) with the sun along s (unit): the CPU twin of atmoWGSL's atmo(). */
-export function skyRadiance(h0: number, v: number[], s: number[], out: number[] = [0, 0, 0]) {
+export function skyRadiance(h0: number, v: number[], s: number[], out: number[] = [0, 0, 0], mie = 1) {
   const r0 = ATMO.R + h0, b = r0 * v[2], tMax = -b + Math.sqrt(b * b - (r0 * r0 - ATMO.TOP * ATMO.TOP));
   const cs = v[0] * s[0] + v[1] * s[1] + v[2] * s[2], pr = PR(cs), pm = PM(cs);
   const tv = [0, 0, 0], T = [0, 0, 0]; out[0] = out[1] = out[2] = 0;
@@ -56,11 +57,11 @@ export function skyRadiance(h0: number, v: number[], s: number[], out: number[] 
     const px = v[0] * t, py = v[1] * t, pz = r0 + v[2] * t, r = Math.hypot(px, py, pz), h = r - ATMO.R;
     const mu = (px * s[0] + py * s[1] + pz * s[2]) / r;
     const dR = Math.exp(-h / ATMO.HR), dM = Math.exp(-h / ATMO.HM), dO = Math.max(0, 1 - Math.abs(h - ATMO.OH) / ATMO.OW);
-    transmittance(r, mu, T);
+    transmittance(r, mu, T, mie);
     for (let c = 0; c < 3; c++) {
-      const ext = ATMO.BR[c] * dR + (ATMO.BMS + ATMO.BMA) * dM + ATMO.BO[c] * dO;
+      const ext = ATMO.BR[c] * dR + (ATMO.BMS + ATMO.BMA) * mie * dM + ATMO.BO[c] * dO;
       tv[c] += ext * dt * 0.5;
-      const sc = ATMO.BR[c] * dR, sm = ATMO.BMS * dM;
+      const sc = ATMO.BR[c] * dR, sm = ATMO.BMS * mie * dM;
       out[c] += Math.exp(-tv[c]) * T[c] * (sc * pr + sm * pm + (sc + sm) * (ATMO.MS / (4 * Math.PI))) * dt;
       tv[c] += ext * dt * 0.5;
     }
@@ -79,12 +80,12 @@ const DAY_EXPO = 1.2, EV_NIGHT = 125;
 const EYE_DAY = 0.7;
 const sv = [0, 0, 0], zv = [0, 0, 1], dv = [0, 0, 0], acc = [0, 0, 0];
 /** The sky's light on the ground (a few directions of the dome, the zenith most), seen from 2 m with the sun along s. */
-function skyLight(s: number[]) {
-  const z = skyRadiance(2, zv, s); acc[0] = z[0] * 0.4; acc[1] = z[1] * 0.4; acc[2] = z[2] * 0.4;
+function skyLight(s: number[], mie = 1) {
+  const z = skyRadiance(2, zv, s, undefined, mie); acc[0] = z[0] * 0.4; acc[1] = z[1] * 0.4; acc[2] = z[2] * 0.4;
   const e = 0.5, ce = Math.cos(e);
   for (let k = 0; k < 4; k++) {
     const a = (k * Math.PI) / 2 + 0.3; dv[0] = Math.cos(a) * ce; dv[1] = Math.sin(a) * ce; dv[2] = Math.sin(e);
-    const r = skyRadiance(2, dv, s); for (let c = 0; c < 3; c++) acc[c] += r[c] * 0.15;
+    const r = skyRadiance(2, dv, s, undefined, mie); for (let c = 0; c < 3; c++) acc[c] += r[c] * 0.15;
   }
   return acc;
 }
@@ -95,16 +96,18 @@ let lastHue = [0.48, 0.6, 0.92];
  * The frame's air: the sun's color on the ground and at the clouds (over noon's luminance), the sky's light (its hue at
  * luminance SKY_HUE_L, and how bright over noon's), and the day's exposure that follows it (the eye opening at dusk).
  */
-export function atmoFrame(sunEl: number, sunA: number) {
+/** mie: the haze's (Mie) share over the standard air's, from the humidity (sky.ts). */
+export function atmoFrame(sunEl: number, sunA: number, mie = 1) {
   const ce = Math.cos(sunEl);
   sv[0] = Math.cos(sunA) * ce; sv[1] = Math.sin(sunA) * ce; sv[2] = Math.sin(sunEl);
-  const sun = transmittance(ATMO.R + 2, sv[2]).map((x) => x / NOON);
-  const cloud = transmittance(ATMO.R + CLOUD_MID, sv[2]).map((x) => x / NOON);
-  const z = skyLight(sv), l = lum(z);
+  const sun = transmittance(ATMO.R + 2, sv[2], undefined, mie).map((x) => x / NOON);
+  const cloud = transmittance(ATMO.R + CLOUD_MID, sv[2], undefined, mie).map((x) => x / NOON);
+  const high = transmittance(ATMO.R + CIRRUS_H, sv[2], undefined, mie).map((x) => x / NOON);
+  const z = skyLight(sv, mie), l = lum(z);
   // (the hue alone; past the twilight there is no sky light to take it from, so the last one stays)
   if (l > 1e-9) lastHue = z.map((x) => (x / l) * SKY_HUE_L);
   const skyL = Math.max(1e-5, l / NOON_SKY);
-  return { sun, cloud, zen: lastHue, skyL, dayEv: Math.min(EV_NIGHT, DAY_EXPO * Math.pow(Math.min(1, skyL), -EYE_DAY)) };
+  return { sun, cloud, high, mie, zen: lastHue, skyL, dayEv: Math.min(EV_NIGHT, DAY_EXPO * Math.pow(Math.min(1, skyL), -EYE_DAY)) };
 }
 
 const f = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : `${x}`);
@@ -115,7 +118,7 @@ const A_R = ${f(ATMO.R)}; const A_TOP = ${f(ATMO.TOP)};
 const A_BR = ${v3(ATMO.BR)}; const A_HR = ${f(ATMO.HR)};
 const A_BMS = ${f(ATMO.BMS)}; const A_BMA = ${f(ATMO.BMA)}; const A_HM = ${f(ATMO.HM)}; const A_G = ${f(ATMO.G)};
 const A_BO = ${v3(ATMO.BO)}; const A_OH = ${f(ATMO.OH)}; const A_OW = ${f(ATMO.OW)};
-const A_MS = ${f(ATMO.MS)}; const A_STEPS = ${ATMO.STEPS};
+const A_MS = ${f(ATMO.MS)}; const A_STEPS = ${ATMO.STEPS}; const CIRRUS_H = ${f(CIRRUS_H)};
 fn chapman(r: f32, mu: f32, H: f32) -> f32 {
   let X = A_R / H; let h = (r - A_R) / H; let c = sqrt(X + h);
   if (mu >= 0.0) { return c / (c * mu + 1.0) * exp(-h); }
@@ -124,7 +127,7 @@ fn chapman(r: f32, mu: f32, H: f32) -> f32 {
 }
 fn atmoT(r: f32, mu: f32) -> vec3f {
   let k = r / (A_R + A_OH); let oz = A_OW / sqrt(max(1e-3, 1.0 - k * k * (1.0 - mu * mu))) * select(1.0, 2.0, mu < 0.0);
-  return exp(-(A_BR * (chapman(r, mu, A_HR) * A_HR) + vec3f((A_BMS + A_BMA) * chapman(r, mu, A_HM) * A_HM) + A_BO * oz));
+  return exp(-(A_BR * (chapman(r, mu, A_HR) * A_HR) + vec3f((A_BMS + A_BMA) * u.mie * chapman(r, mu, A_HM) * A_HM) + A_BO * oz));
 }
 /** The sky's radiance seen from height h0 along v (unit, z up) with the sun along s (unit), relative to the sun's irradiance. */
 fn atmo(h0: f32, v: vec3f, s: vec3f) -> vec3f {
@@ -137,9 +140,9 @@ fn atmo(h0: f32, v: vec3f, s: vec3f) -> vec3f {
     let fi = f32(i); let t = tMax * ((fi + 0.5) / N) * ((fi + 0.5) / N); let dt = tMax * (2.0 * fi + 1.0) / (N * N);
     let p = vec3f(v.xy * t, r0 + v.z * t); let r = length(p); let h = r - A_R;
     let dR = exp(-h / A_HR); let dM = exp(-h / A_HM); let dO = max(0.0, 1.0 - abs(h - A_OH) / A_OW);
-    let ext = A_BR * dR + vec3f((A_BMS + A_BMA) * dM) + A_BO * dO;
+    let ext = A_BR * dR + vec3f((A_BMS + A_BMA) * u.mie * dM) + A_BO * dO;
     tv += ext * (dt * 0.5);
-    let sc = A_BR * dR; let sm = A_BMS * dM;
+    let sc = A_BR * dR; let sm = A_BMS * u.mie * dM;
     L += exp(-tv) * atmoT(r, dot(p, s) / r) * (sc * pr + vec3f(sm * pm) + (sc + vec3f(sm)) * (A_MS * 0.0795775)) * dt;
     tv += ext * (dt * 0.5);
   }

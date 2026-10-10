@@ -2,6 +2,16 @@
 
 > Registro detalhado por etapa. **Entradas marcadas `[HACKING]` só devem ser lidas numa sessão da Trilha de hacking** (veja o CLAUDE.md). Ler só a parte da etapa atual. Entradas novas vão no topo do Histórico.
 
+## 16.1c, passo 0 — a atmosfera física (0.16.1c, 2026-10-10, conta C)
+
+- `src/render/atmosphere.ts`: Rayleigh + Mie + ozônio (constantes de Hillaire 2020), espalhamento simples + um múltiplo isotrópico barato (`ATMO.MS`), a transmitância pela aproximação de Chapman (Schüler). Um modelo, dois lugares: a CPU (`atmoFrame`, por quadro) dá a cor do sol no chão, nas nuvens (1,5 km) e no véu alto (8 km), o tom e a força da luz do céu (`skyL`, sobre o meio-dia) e a exposição do dia (`dayEv`, o olho abrindo com `EYE_DAY` 0,7 até o EV da noite); o shader (`atmoWGSL`, as mesmas constantes) marcha o céu por célula (10 passos).
+- Saíram: o `dusk` pintado no céu, o `kelvin`/`sunTemp`/`SUN_K_*`, o `ds` (o fade da luz do dia pela altura do sol) e o `dayGrade` na exposição; a luz do céu nas superfícies = `skyHue()` (tom e força do ar) + o brilho da cidade sempre.
+- As nuvens: o sol na altura delas (`cldT`), a luz do céu = a cor do céu claro daquela célula, a névoa de longe = `overcastCol` sobre o horizonte físico.
+- O véu alto: `Weather.high` (com semente, `wave` 7; preset `high`), desenhado plano a 8 km em estrias pelo vento, com o sol a 8 km (`hiT`).
+- A umidade: `mie` = 0,6 + 0,6·nuvem + chuva − 0,3·molhado depois da chuva (0,3–2), igual na CPU e no shader.
+- Conferido no painel (semente 42, `pos=810.9,344.8`, 3/7/2008, pôr do sol 19h28): meio-dia, 17h, 19h09, 19h28, 19h34–19h46 com o véu, 19h54, 21h30 (a noite igual). Shader 36 s de compilação. Teste do usuário: `teste-ceu.bat`.
+- Ficou: o cinturão de Vênus não aparece (o múltiplo barato apaga cedo o lado oposto; perto da borda o domo da cidade cobre); a gradação (`grade()`) ainda usa `u.dusk` para o dourado; a luz nas mãos (`viewLight`) ainda usa a cor velha.
+
 ## 16.1 — fechada pelo usuário (2026-10-09, noite)
 
 O usuário: o jogo roda a 180 fps, as quedas não se sentem; conteúdo antes de otimização. O que ficou foi para a 23.9 (veja o cronograma).
