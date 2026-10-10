@@ -2,6 +2,14 @@
 
 > O feedback do Claude sobre o jogo: técnico, de jogabilidade, criativo e temático. Datado, o mais novo em cima. Nada aqui está decidido: quando o usuário decidir algo, vai para o CLAUDE.md (Decisões ou Plano) e fica marcado aqui. Tudo o que entra aqui também é mandado no chat. O feedback antigo (até 2026-10-04) está na seção "Opiniões e sugestões do Claude" do CLAUDE.md.
 
+## 2026-10-10 — a luz física, do céu ao rebote (Opus 5.5, conta C)
+
+- **O que mudou de verdade hoje:** pela primeira vez o céu, o sol, a luz que rebate e a noite saem do mesmo modelo físico. O pôr do sol de Miami saiu da física (com o véu alto), e a noite sem o ambiente falso ficou mais noir e mais parecida com a sua referência da rua molhada.
+- **Contestação, para você pesar jogando:** física não é sinônimo de bonito. Duas coisas vão parecer "escuras demais": a sombra dos cânions ao meio-dia e os becos de noite longe dos postes. As duas são corretas; o ajuste certo, se incomodar, é o olho (adaptar mais e mais rápido à sombra), como a visão humana faz, e não devolver luz falsa.
+- **A vantagem da engine se confirmou:** 4 raios por célula com cache custam ~2–3 ms de GPU, porque sombreamos ~70 mil células, não 2 milhões de pixels. Dá para pôr mais (um segundo rebote explícito, os cômodos) sem medo.
+- **O que eu quero discutir:** a escala comprimida da noite (o olho ~125× entre dia e noite em vez de ~10 000×). Mantive, mas com a luz física ela é a última "escolha de jogo" grande da imagem; vale uma conversa quando você tiver jogado a noite nova.
+- **Sugestão:** a parte 3 (os postes como luminárias reais com sombra) é a que mais vai mudar a noite cozy; eu faria ela antes dos cômodos.
+
 ## 2026-10-09 (noite, 8) — a ordem da imagem (Opus 5.5)
 
 - **Concordo em subir a 16.1c antes das mãos e das pessoas**, com uma ressalva: a atmosfera física entra **antes** da luz indireta, como passo 0. O céu é a maior lâmpada da cidade; afinar o rebote contra o céu de hoje (cores pintadas) seria afinar duas vezes.
