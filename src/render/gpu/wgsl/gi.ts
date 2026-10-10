@@ -16,6 +16,9 @@ export const GI_SLOTS = 1 << 18, GI_ACC_W = 5, GI_RES_W = 5;
 export const giWGSL = (): string => /* wgsl */ `// ---- (16.1c) the indirect light by rays and the world cache (gi.ts)
 /** How much of a facade is window (the lit windows' light it gives off, its mean). */
 const WIN_AREA = 0.35;
+/** A glass or metal curtain wall's roughness for the indirect light (its panels never quite flat), and the most its sun's glint
+ *  counts in one ray (the few rays near the mirror direction would otherwise flicker as fireflies). */
+const GI_GLASS_ROUGH = 0.18; const GI_SPEC_MAX = 6.0;
 const GI_SLOTS = ${GI_SLOTS}u; const GI_FAR = 400.0; const GI_FIX = 1024.0; const GI_SUN = ${(SKY_K * 0.9).toFixed(3)};
 /** The sky's light along d (unit), from its harmonics (never below zero: their ringing near the horizon's step). */
 fn skySH(d: vec3f) -> vec3f {
@@ -166,20 +169,34 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   // the albedo there as light() takes it (the color x K_PAL): the ground's asphalt and pavement, a facade's wall darkened a
   // little by its windows, a roof's grey (part 1 of docs/plano-luz-fisica.md gives each material its own)
   var A = albedoOf(vec3f(40.0, 40.0, 46.0), MAT_ASPHALT);
+  var mat = MAT_ASPHALT;
   if (giQ >= 0) {
     let q = u32(giQ);
-    A = albedoOf(mix(colAt(q + 15u), vec3f(55.0, 62.0, 78.0), 0.3), WALL_MAT[u32(clamp(i32(bldF(u32(q + 10u))), 0, 15))]);
-    if (giN.z > 0.5) { A = vec3f(0.25); }
+    mat = WALL_MAT[u32(clamp(i32(bldF(u32(q + 10u))), 0, 15))];
+    A = albedoOf(mix(colAt(q + 15u), vec3f(55.0, 62.0, 78.0), 0.3), mat);
+    if (giN.z > 0.5) { A = vec3f(0.25); mat = MAT_CONCRETE; }
   }
   let S = sunVec();
-  var E = vec3f(0.0);
+  var E = vec3f(0.0); var Ls = vec3f(0.0);
   let ns = dot(giN, S);
-  if (ns > 0.0 && S.z > 0.0) { E += sunLin() * (GI_SUN / 3.14159 * ns * (1.0 - 0.85 * u.cloud)) * dirLit(H.x, H.y, H.z, S); }
+  // a glass or metal facade also mirrors: the sun off it toward where the ray came from (its GGX lobe, as sunGloss, with a
+  // curtain wall's waviness GI_GLASS_ROUGH) and the sky it mirrors (Fresnel)
+  let glossy = mat == MAT_METAL || mat == MAT_GLASS;
+  if (ns > 0.0 && S.z > 0.0) {
+    let vis = dirLit(H.x, H.y, H.z, S) * (1.0 - 0.85 * u.cloud);
+    E += sunLin() * (GI_SUN / 3.14159 * ns) * vis;
+    if (glossy) {
+      let V = -D; let Hh = normalize(S + V); let lh = max(dot(S, Hh), 0.1);
+      let sp = min(GI_SPEC_MAX, ggx(max(dot(giN, Hh), 0.0), GI_GLASS_ROUGH) * fres(MAT_F0[mat], lh) * 0.25 / (lh * lh) * ns);
+      Ls += sunLin() * (GI_SUN * sp) * vis;
+    }
+  }
+  if (glossy) { let R = reflect(D, giN); Ls += skySH(R) * fres(MAT_F0[mat], max(0.0, dot(giN, -D))); }
   // the street lamps' light there (their pools on the asphalt are what lights a street's facades at night)
   E += giLamps(H.x, H.y, H.z);
   let c = giGet(giKey(H, giN));
   if (c.w > 0.0) { E += c.xyz / evDayNight(); }
-  var Lo = A * E;
+  var Lo = A * E + Ls;
   // a facade's lit windows: their light, the face's mean (the lit share x the windows' part of it, as wallCell lights
   // them), going with the city's power
   if (giQ >= 0 && giN.z < 0.5) {

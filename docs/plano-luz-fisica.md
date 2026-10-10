@@ -51,7 +51,11 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
   0,65, pintura 0,75), igual no `light()` e nos raios. GPU ~2,7 ms no painel (mais fraco que o PC do usuário).
   **A sombra no cânion de torres ao meio-dia sai quase preta:** falta o **reflexo especular do sol nas torres de vidro**
   nos raios (hoje as paredes são foscas para a luz indireta): o próximo item da parte 2.
-  **Próximo:** o especular nos raios (vidro/metal), as luzes como fontes (parte 3), os
+- **O especular nos raios:** a fachada de vidro/metal atingida devolve o sol pelo lóbulo GGX (`GI_GLASS_ROUGH` 0,18, teto
+  `GI_SPEC_MAX`) e o céu espelhado (Fresnel). Na avenida do centro ao meio-dia muda pouco (o sol a ~70° manda o reflexo
+  ao pé da torre): **a sombra do cânion é escura pela física** (a luz do céu ~1/3 da rua aberta × asfalto 0,13); se o
+  usuário achar escuro demais jogando, o ajuste é o olho (adaptar mais à sombra), não luz falsa.
+  **Próximo:** as luzes como fontes (parte 3), os
   cômodos (parte 4: `AMB_N` ainda está no `roomE`/`roofE`, e `E_UNIT` nas constantes velhas que sobram).
 
 ## As partes, na ordem
