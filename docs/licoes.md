@@ -2,6 +2,16 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 16.1c, partes 1 e 2 (a luz indireta por raios) — 2026-10-10
+
+- **Uma chave de recálculo com `NaN` nunca dispara:** `Math.abs(x - NaN) > eps` é falso; os harmônicos do céu ficavam zerados e a luz indireta preta. Começar a chave com um número fora do alcance (`1e9`). Pista: o modo `giView = 2` (o céu pela normal) todo preto.
+- **Diagnosticar por modos de debug que isolam cada termo** (`DEBUG.giView` 1 o cache, 2 o céu, 3 a amostra crua): achar o erro levou um quadro em vez de suposições.
+- **Unidades:** a luz velha não dividia por π e tinha `DAY_ALBEDO` 2 (o chão ~2× mais claro que a física em relação ao céu visto). Ao trocar para a física, **todas** as constantes ainda velhas (`AMB_N`, `MOON_E`, `LAMP_E`, a luz do dia dos cômodos) precisam do mesmo fator de unidade (`E_UNIT`), senão a noite muda sem querer; e `EV_NIGHT = 1/(K_PAL·AMB_N)` fica ~125 (a escala comprimida intacta).
+- **O xadrez do cache:** um valor por célula do cache vira tabuleiro; ler interpolando as 4 vizinhas no plano da superfície tira o degrau, e a média pelas contagens + raios estratificados tiram o ruído. (O usuário viu na hora pelo PC dele: ele testa ao vivo puxando a `main`.)
+- **Extrair a parte compartilhada em vez de copiar:** a luz dos postes no ponto do raio usa a `lampPools` separada do `lightAt` (cuidado: o `zk` estava dentro do `linL`, ou seja ao quadrado-e-pouco; ao tirar para fora, `pow(zk, 2.2)`).
+- **O painel não mostra o `DRAW` pelo `gridText`** (a linha de debug é da GPU); o `zoom` da captura lê o canto da linha de debug (F3), mal.
+- **Patch de remendo no sistema velho:** antes de remendar (as janelas pelo rebote de horizontes), perguntar se aquilo vai ser apagado; o usuário pediu exatamente isso e a edição foi desfeita.
+
 ### Lições da 16.1c, passo 0 (a atmosfera física) — 2026-10-10
 
 - **Céu físico pede olho físico:** trocar só a cor do céu deixou o fim de tarde escuro (o céu a 4° tem 1/3 da luz do meio-dia, e a exposição ficava a do dia) e o crepúsculo a −4,5° **mais claro** que o pôr do sol (a exposição pulava para a da noite, 100×, pelo `dayGrade` da altura do sol). A saída de princípio: a exposição e a luz do céu nas superfícies seguem a luz calculada do céu (`skyL`/`dayEv`), o mesmo número para os dois. Ao trocar uma fonte de luz por uma física, procurar quem decidia o brilho pela hora.

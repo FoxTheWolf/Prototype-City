@@ -259,6 +259,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições da 16.1c partes 1 e 2 (a chave com NaN, os modos de debug, o fator de unidade, o xadrez do cache, extrair em vez de copiar)
 - Lições da 16.1c passo 0 (céu físico pede olho físico, calibrar com `tsx`, o relógio encurta os efeitos, o domo da cidade)
 - Lições da 16.1b (o mapa da luz copiada, a chave F7 e ler cores do `out`, o inline que mata a compilação e o cômodo deferido, a escala comprimida e o `artK`, a normal pela planta)
 - Lições da 16.1 (quadro lento pelo intervalo relativo, `comp.ms` é a fila assíncrona, testar o gravador no painel, `TC_HEAP` e quem aloca, closures alocam na entrada, `length = 0` solta a memória)
