@@ -490,8 +490,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       // (the lamp itself: near, a fixture standing in front of the wall)
       if (z < 0.35 && d < 0.3 && t > FLOOD_FIX_FAR) { ch = STAR; c = vec3f(200.0, 190.0, 165.0); emC = c; il = vec3f(0.0); glowK = 0.3; }
     }
-    // the light takes the wall's color (light times albedo, plus a little of its own): a stone wall glows warm, not white
-    let fl = colAt(q + 32u) * (I * adElec) * (vec3f(0.2) + 1.5 * frame / 255.0); c += fl; il += fl;
+    // (16.1b) the lamps' light only: light() multiplies it by the wall's albedo (it was taken by the albedo here too:
+    // the wall's color squared)
+    let fl = colAt(q + 32u) * (I * adElec * FLOOD_K); c += fl; il += fl;
   }
   // the scaffolding 1 m out from a street face: steel tubes (standards every 2.4 m, ledgers every 2 m,
   // a brace in every other bay), boards on each lift, and over the rest a mesh net or nothing

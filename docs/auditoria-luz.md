@@ -12,18 +12,17 @@
 - ~~O brilho do neon pintado na parede~~ (`wall.ts`, em volta do tubo): contava duas vezes, porque o neon já é uma luz de verdade (`dyn.panel` em `raycaster.ts`) que ilumina a parede.
 - ~~`SIGN_DAY`~~ (o letreiro iluminando a rua 2,5× mais forte ao meio-dia "para aparecer na sombra"): de dia um letreiro mal ilumina a rua.
 - ~~`WALL_LAMP_HUE`~~ (tirava 10% da cor dos postes nas fachadas: resto da luz velha em sRGB).
+- ~~**A raiz maior: as luzes somadas em gama**~~ (`lightAt`, `lamps.ts`): cada luz agora vira linear antes de somar (`linL`: uma luz sozinha sai idêntica; duas iguais dão 2×, não 4,6×); com isso saíram os dois joelhos que espremiam a soma (`LIGHT_KNEE`, `LAMP_OVER`). O `lightAt` devolve luz linear; o caminho "como desenhado" e a chuva (`fall.ts`) a convertem de volta (`srgb`) com o escurecer de dia deles. `LAMP_RECV` 1,2 → 1,5 (= 1,2^2,2). Conferido: a avenida de noite (semente 42, 828,800, 22h) igual antes e depois. **Falta:** a cópia na CPU para as mãos (`viewLight`/`lightAt` em `raycaster.ts`, ainda com o joelho), que vai junto da luz nas mãos pela GPU.
+- ~~O holofote multiplicado pelo albedo duas vezes~~ (`wall.ts`): a luz já vinha "vezes a cor da parede" e o `light()` multiplica de novo; agora é só a luz (`FLOOD_K`).
 
-## A raiz maior: as luzes somadas em gama (fazer na próxima sessão de luz)
+## Luzes calculadas na própria parede (são luz de verdade, com sombra; não são pintura)
 
-- **`lightAt` (`lamps.ts`) soma as luzes em valores sRGB (gama) e só depois lineariza** (`lampE`: `pow(·, 2.2)`). Somar em gama é errado: duas luzes iguais dão 2^2,2 ≈ 4,6× a luz de uma, não 2×. Daí os dois remendos de compressão:
-  - `LIGHT_KNEE` (150, `lamps.ts`, e a cópia na CPU em `raycaster.ts`) e `LAMP_OVER` (0,3, `lampE`): comprimem a soma para os faróis não estourarem no branco.
-- **O certo:** cada luz vira linear antes de somar (`pow(c·f/255, 2,2)` por luz: uma luz sozinha sai idêntica, a soma passa a ser física), o `lampE` não eleva mais, e os dois joelhos saem. Quem lê o `lightAt`: o `light()` (o caminho aceso e o "como desenhado"), a chuva e a neve (`fall.ts`), o mapa de luz dos postes (a parte de cima do `lightAt`, que lê uma tabela feita na CPU, `lightmap.ts`). Conferir: avenida de noite com faróis (o carro não estoura), o cruzamento com 4 postes.
+> Revisto: entram no `light()` pelo `gIl` como luz (vezes o albedo), então não são remendo. Ficam como estão; o
+> que poderia mudar é passar para a lista de luzes (`DynLights`) se um dia a luz indireta precisar delas como fonte.
 
-## Luzes que são pintadas na cor em vez de ser luz (converter em luz de verdade)
-
-- **B1. Holofotes na base da fachada** (`wall.ts`, o cone pintado com sombra, `floodH`): a `dyn.flood` só ilumina a calçada e quem passa; a parede é pintada. Converter: a `dyn.flood` ilumina a parede (o cone com a sombra que já existe) e a pintura sai.
-- **B2. A coroa iluminada no topo** (`cw`, `wall.ts`): uma lavagem pintada nos últimos 16 m. Converter num holofote para cima (uma luz como a B1).
-- **B3. As luminárias de pescoço dos outdoors** (`al`, `wall.ts`): pintadas de baixo para cima. Converter em luzes pequenas sob o outdoor.
+- **B1. Holofotes na base da fachada** (`wall.ts`, o cone pintado com sombra, `floodH`): a `dyn.flood` só ilumina a calçada e quem passa; a parede é pintada. 
+- **B2. A coroa iluminada no topo** (`cw`, `wall.ts`): uma lavagem pintada nos últimos 16 m. 
+- **B3. As luminárias de pescoço dos outdoors** (`al`, `wall.ts`): pintadas de baixo para cima. 
 
 ## O caminho "como desenhado" (o `else` do `light()`)
 

@@ -50,6 +50,8 @@ const GROUND_FAR = 600.0;
 /** A panel light's size factor (PANEL_S in lights.ts), and how much of it a surface turned away from it still gets (it is not a point: some of it always shows). */
 const PANEL_S = ${f(PANEL_S)}; const PANEL_RECV_WRAP = 0.15;
 const CROWN_H = 16.0;
+/** How strong the floodlights at a facade's foot are (their color's scale, as a lamp's in lightAt's units). */
+const FLOOD_K = 0.9;
 const FLOOD_GAP = ${f(FLOOD_GAP)}; const FLOOD_OUT = ${f(FLOOD_OUT)}; const FLOOD_FIX_FAR = ${f(FLOOD_FIX_FAR)}; const FLOOD_SHADOW_FAR = 45.0;
 const LW = ${LIGHT_W};
 const DSIDE = ${SIDE};
