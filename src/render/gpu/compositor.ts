@@ -318,8 +318,10 @@ fn phBloom(uv: vec2f) -> vec3f {
  * compositor adds over the world.
  */
 const GLOW_RX = 14, GLOW_RY = 7;
+/** (16.1b) The lights' streaks in the rain: how far up and down (rows) and across (columns), and how strong. */
+const STREAK_V = 14, STREAK_H = 20, STREAK_K = 0.3;
 const GLOW_WGSL = /* wgsl */ `
-struct GU { cols: u32, rows: u32, dir: u32, pad: u32 };
+struct GU { cols: u32, rows: u32, dir: u32, rain: u32 };
 @group(0) @binding(0) var<uniform> g: GU;
 @group(0) @binding(1) var<storage, read> world: array<u32>;
 @group(0) @binding(2) var<storage, read_write> tmp: array<vec4f>;
@@ -344,7 +346,24 @@ fn src(x: i32, y: i32) -> vec4f {
       let w = exp(-f32(d * d) / ${(GLOW_RY * GLOW_RY) / 4.5}); ws += w;
       let yy = y + d; if (yy >= 0 && yy < i32(g.rows)) { s += tmp[u32(yy) * g.cols + u32(x)] * w; }
     }
-    glow[u32(y) * g.cols + u32(x)] = s / ws;
+    var o = s / ws;
+    // (16.1b) in the rain the bright lights streak (the water on the eye): a long thin trail up and down from each
+    // bright light, a weaker one across; only the brightest (a lamp's head, a headlight), by how hard it rains (g.rain/1000)
+    if (g.rain > 0u) {
+      var st = vec3f(0.0);
+      for (var d = 1; d <= ${STREAK_V}; d++) {
+        let w = exp(-f32(d) / ${STREAK_V * 0.35});
+        if (y - d >= 0) { let a = src(x, y - d); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
+        if (y + d < i32(g.rows)) { let a = src(x, y + d); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
+      }
+      for (var d = 1; d <= ${STREAK_H}; d++) {
+        let w = 0.35 * exp(-f32(d) / ${STREAK_H * 0.3});
+        if (x - d >= 0) { let a = src(x - d, y); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
+        if (x + d < i32(g.cols)) { let a = src(x + d, y); st += a.rgb * smoothstep(0.12, 0.5, a.a) * w; }
+      }
+      o = vec4f(o.rgb + st * (f32(g.rain) / 1000.0 * ${STREAK_K}), o.a);
+    }
+    glow[u32(y) * g.cols + u32(x)] = o;
   }
 }
 `;
@@ -520,6 +539,7 @@ export class GpuCompositor {
   private glowUni: GPUBuffer[];
   private glowBuf: { tmp: GPUBuffer; glow: GPUBuffer; n: number } | null = null;
   private glowBind: GPUBindGroup[] = [];
+  private rainK = -1;
   private meanPipe: GPUComputePipeline;
   private meanBuf: GPUBuffer;
   private meanBind: GPUBindGroup | null = null;
@@ -759,7 +779,7 @@ export class GpuCompositor {
       this.outFor = gw.out;
       const T = this.t, G = this.glowBuf;
       this.glowBind = this.glowUni.map((b, k) => {
-        this.dev.queue.writeBuffer(b, 0, new Uint32Array([gw.cols, gw.rows, k, 0]));
+        this.dev.queue.writeBuffer(b, 0, new Uint32Array([gw.cols, gw.rows, k, k === 1 ? Math.max(0, this.rainK) : 0]));
         return this.dev.createBindGroup({ layout: this.glowPipe.getBindGroupLayout(0), entries:
           [b, gw.out, G.tmp, G.glow].map((buffer, binding) => ({ binding, resource: { buffer } })) });
       });
@@ -790,6 +810,9 @@ export class GpuCompositor {
     }
     const enc = this.dev.createCommandEncoder();
     gw.encode(enc, world, v, true);
+    // the rain's streaks (the down pass's word 3): only falling rain, not snow
+    const rain = world.weather.snow ? 0 : Math.round(Math.min(1, world.weather.precip) * 1000);
+    if (rain !== this.rainK) { this.rainK = rain; this.dev.queue.writeBuffer(this.glowUni[1], 12, new Uint32Array([rain])); }
     for (const b of this.glowBind) {
       const cp = enc.beginComputePass();
       cp.setPipeline(this.glowPipe); cp.setBindGroup(0, b); cp.dispatchWorkgroups(Math.ceil(gw.cols / 8), Math.ceil(gw.rows / 8));
