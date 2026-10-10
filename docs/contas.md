@@ -23,6 +23,12 @@
 - **C** — 2026-10-08 (dito pelo usuário, não medido): semanal **~50%**. Renova terça ~13h.
 - **V** — 2026-10-09 ~21h50 (medido): semanal **95%**, janela de 5 h 75% (renova ~00h20 Brasília). Renova o semanal **sábado 10/10 ~02h**.
 
+## Decisão (2026-10-09 à noite): a próxima é a **C**
+
+- **C agora** (sex-noite, sáb, dom): ~50% livres e é a primeira a renovar (ter ~13h), então é a que mais perde se ficar parada.
+- **F depois** (seg e ter até ~23h): ~44% livres, renova por último.
+- **V** (renova sáb ~02h): só de ter a sex.
+
 ## Ritmo revisto (2026-10-09 à noite)
 
 - A **C** (~50% livres) e a **F** (~44%) renovam na **terça**: o que não for gasto até lá se perde. **Gastar as duas sex-noite/sáb/dom/seg** (16.1c: a atmosfera, `docs/plano-atmosfera.md`), ~30% por dia entre as duas.
