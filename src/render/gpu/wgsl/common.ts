@@ -1,4 +1,5 @@
 import STARS from '../../stars.json';
+import { GPU_KNOBS } from '../../tune';
 /** What the world's shader (gpu/shader.ts) shares with world.ts, which fills its buffers, and its pieces' helpers. */
 
 /** The uniform block, one f32 each, in this order (world.ts fills it by these names). */
@@ -16,6 +17,7 @@ export const UNIFORMS = [
   'homeLit', 'workLit', 'lightDbg',
   'sunTR', 'sunTG', 'sunTB', 'cldTR', 'cldTG', 'cldTB', 'zenR', 'zenG', 'zenB', 'skyL', 'dayEv', 'mie', 'high', 'hiTR', 'hiTG', 'hiTB',
   'sh0', 'sh1', 'sh2', 'sh3', 'sh4', 'sh5', 'sh6', 'sh7', 'sh8', 'sh9', 'sh10', 'sh11', 'sh12', 'sh13', 'sh14', 'sh15', 'sh16', 'sh17', 'sh18', 'sh19', 'sh20', 'sh21', 'sh22', 'sh23', 'sh24', 'sh25', 'sh26', 'giDbg',
+  ...GPU_KNOBS.map((k) => `tk_${k}` as const),
 ] as const;
 
 /** Words of the viewer's floor's block (world.ts) before its street doors' leaves (16..21: the stairwell, see roomWalk). */

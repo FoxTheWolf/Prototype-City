@@ -238,6 +238,8 @@ O registro detalhado de tudo o que foi feito, etapa por etapa (com nomes de fun�
 Pedido do usuário em 2026-09-30: registrar os bugs sem perder tempo com eles agora; haverá uma etapa de correção de bugs mais para frente.
 
 - **A sombra do poste perde as placas ao andar (usuário, 2026-10-09 à noite, captura no painel):** semente 42, `POS 843.8,728.0` → `844.0,728.7`, olhando S (162), 22h com chuva: a sombra do poste no chão tem as placas ("bandeiras") num quadro e, um passo à frente, elas somem e fica só a haste. Provável: as placas ficam fora da lista de objetos que fazem sombra (por distância/LOD) ou o raio de sombra pula objetos finos. → bloco C.
+- **Cirros esticados demais (playtest de 2026-10-09 23h32, nota 3, 18h20):** o véu alto parece pinceladas borradas, não fibras; rever a forma em `atmosphere.ts`/o shader do céu. → bloco C.
+- **O vidro da porta perde o reflexo visto de dentro (mesmo playtest, notas 4–5, prédio 2806, `POS 809.8,901.2`, 19h36):** por fora reflete; ao entrar, o vidro fica opaco e liso. De dentro, com a loja acesa e o fim do dia lá fora, devia refletir o cômodo. → bloco C (o vidro visto de dentro, `main` do shader).
 - Os bugs abertos agora estão no **Plano** (nas etapas e nas listas fixas, `docs/listas-fixas.md`). Bugs novos entram aqui até a próxima organização.
 - **Tiras de 1 m chamadas de loja (visto na 13.21):** o gerador de cortes (prédios sem planta desenhada) às vezes corta "lojas" de 6 × 2 m com 1 m de largura útil; ficam vazias (~1% das lojas, `tests/shops.ts`). Somem quando esses tamanhos ganharem planta (23.8).
 - **Posts repetidos no Streetwire (visto na 15.17g, semente 42):** a mesma pessoa posta quase a mesma frase duas vezes em poucos minutos ("tried to fix the sink…" às 3 e às 4 min; o Eric Shi duas vezes aos 3 min). Olhar a geração em `sim/social.ts` (um intervalo mínimo por autor, ou não repetir o `pick`).
@@ -259,6 +261,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições do painel de ajustes F12 (material herdado pelas faixas, botões como uniforms, Tweakpane, a adaptação parando cedo)
 - Lições da 16.1c partes 1 e 2 (a chave com NaN, os modos de debug, o fator de unidade, o xadrez do cache, extrair em vez de copiar)
 - Lições da 16.1c passo 0 (céu físico pede olho físico, calibrar com `tsx`, o relógio encurta os efeitos, o domo da cidade)
 - Lições da 16.1b (o mapa da luz copiada, a chave F7 e ler cores do `out`, o inline que mata a compilação e o cômodo deferido, a escala comprimida e o `artK`, a normal pela planta)

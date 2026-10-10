@@ -64,12 +64,13 @@ const PATS = array<vec3u, 5>(vec3u(AT, HASH, PCT), vec3u(56u, O, COL), vec3u(88u
 // materials (R.23): how rough a surface is (0 a mirror, 1 matte) and how much it reflects head-on (F0)
 const MAT_NONE = 0u; const MAT_ASPHALT = 1u; const MAT_CONCRETE = 2u; const MAT_BRICK = 3u; const MAT_GLASS = 4u; const MAT_METAL = 5u;
 const MAT_PAINT = 6u; const MAT_LEAF = 7u; const MAT_STONE = 8u; const MAT_WINDOW = 9u;
+const MAT_MARK = 10u; // the road's painted lines: matte like the asphalt, but white/yellow paint (real ~0.5-0.6)
 // (a car's paint: a clear coat over a satin color, not chrome; its mirror only shows toward the edges, blurred)
-const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.35, 1.0, 0.75, 0.05);
-const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.05, 0.25, 0.1, 0.02, 0.03, 0.04);
+const MAT_ROUGH = array<f32, 11>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.35, 1.0, 0.75, 0.05, 0.7);
+const MAT_F0 = array<f32, 11>(0.0, 0.03, 0.03, 0.025, 0.05, 0.25, 0.1, 0.02, 0.03, 0.04, 0.04);
 /** (16.1c) The most a material reflects (its albedo's luminance, real ranges: asphalt ~0.05-0.15, concrete ~0.3-0.4,
  *  brick ~0.25-0.35, stone ~0.3-0.45, leaves ~0.15-0.25); a brighter palette color keeps its hue at this. None: 0.85. */
-const MAT_ALB = array<f32, 10>(0.85, 0.15, 0.4, 0.35, 0.3, 0.65, 0.75, 0.25, 0.45, 0.3);
+const MAT_ALB = array<f32, 11>(0.85, 0.15, 0.4, 0.35, 0.3, 0.65, 0.75, 0.25, 0.45, 0.3, 0.6);
 /** (16.1c) A color as albedo: x K_PAL (the palette was drawn ~6x darker than real reflectances), its luminance under the
  *  material's MAT_ALB and no channel past ALB_MAX (shading.ts), its hue kept. */
 fn albedoOf(c: vec3f, mat: u32) -> vec3f {

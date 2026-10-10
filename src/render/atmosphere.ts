@@ -5,6 +5,7 @@
  * the clouds' height) and the zenith's hue; the shader (atmoWGSL, from the same constants) marches it per sky cell.
  * Lengths in metres; the sun's irradiance is 1 (the radiance comes out relative to it).
  */
+import { TUNE } from './tune';
 export const ATMO = {
   R: 6360e3, TOP: 6460e3,
   /** Rayleigh: scattering per metre at sea level (r, g, b), scale height. */
@@ -106,10 +107,8 @@ const lum = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 const NOON = lum(transmittance(ATMO.R + 2, 1));
 /** The old fixed sky hue's luminance (shading.ts's skyC): the zenith's hue is scaled to it. */
 const SKY_HUE_L = 0.598;
-/** The day's exposure (ground.ts's DAY_EXPO) and the night's (EV_NIGHT): the eye opens between them as the sky dims. */
-const DAY_EXPO = 1.2, EV_NIGHT = 125;
-/** How much of the sky's dimming at the end of the day the eye makes up for (0: none, 1: all): a sunset reads as dimmer than noon, not as dark as it is. */
-const EYE_DAY = 0.7;
+/** The night's exposure (EV_NIGHT): the eye opens toward it from the day's (TUNE.dayExpo) as the sky dims. */
+const EV_NIGHT = 125;
 const sv = [0, 0, 0], zv = [0, 0, 1], dv = [0, 0, 0], acc = [0, 0, 0];
 /** The sky's light on the ground (a few directions of the dome, the zenith most), seen from 2 m with the sun along s. */
 function skyLight(s: number[], mie = 1) {
@@ -139,7 +138,7 @@ export function atmoFrame(sunEl: number, sunA: number, mie = 1) {
   // (the hue alone; past the twilight there is no sky light to take it from, so the last one stays)
   if (l > 1e-9) lastHue = z.map((x) => (x / l) * SKY_HUE_L);
   const skyL = Math.max(1e-5, l / NOON_SKY);
-  return { sun, cloud, high, mie, zen: lastHue, skyL, dayEv: Math.min(EV_NIGHT, DAY_EXPO * Math.pow(Math.min(1, skyL), -EYE_DAY)) };
+  return { sun, cloud, high, mie, zen: lastHue, skyL, dayEv: Math.min(EV_NIGHT, TUNE.dayExpo * Math.pow(Math.min(1, skyL), -TUNE.eyeDay)) };
 }
 
 const f = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : `${x}`);

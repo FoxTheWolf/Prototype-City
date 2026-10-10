@@ -23,6 +23,12 @@ echo      acesas saltam, a luz dos postes rebate do asfalto nas
 echo      paredes. Diga se esta bonito ou escuro demais.
 echo   6. Andando, a luz nao pode "arrastar" (atrasar) visivelmente.
 echo.
+echo   7. NOVO: F12 abre o painel de ajustes (sliders). Mexa em
+echo      dayExpo/bandDayLo (o dia mais claro ou escuro) e giK
+echo      (a luz rebatida mais forte). Gostou? Botao "copy
+echo      changes" e cole para o Claude. F12 de novo fecha.
+echo   8. As faixas amarelas/brancas da rua brilham no sol?
+echo.
 echo   Achou algo estranho? F8 e escreva.
 echo  ============================================================
 echo.

@@ -10,12 +10,14 @@
     "electron": "npm run build && electron electron/main.cjs"
   },
   "devDependencies": {
+    "@tweakpane/core": "^2.0.5",
     "@webgpu/types": "^0.1.74",
     "electron": "^44.5.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"
   },
   "dependencies": {
-    "@fontsource/ibm-plex-mono": "^5.3.0"
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "tweakpane": "^4.0.5"
   }
 }

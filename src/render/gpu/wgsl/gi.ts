@@ -220,7 +220,10 @@ fn giSample(P: vec3f, N: vec3f, gx: u32, gy: u32) -> vec3f {
     let r1 = fract((f32(i) + hash3(i32(gx), i32(gy), fr * 8 + i)) / f32(GI_RAYS) + rot); let r2 = hash3(i32(gy) + 911, i32(gx), fr * 8 + i + 7);
     let ph = 6.2831853 * r1; let sr = sqrt(r2);
     let D = normalize(T * (cos(ph) * sr) + B * (sin(ph) * sr) + N * sqrt(max(0.0, 1.0 - r2)));
-    acc += giHit(O, D);
+    // (a ray's light held under tk_giRayMax on screen (tune.ts): a ray that catches the sun in a glass tower is a spark that the
+    // cache keeps for a second as a bright patch on the ground; capped, it still brightens, as a smooth mean)
+    let h = giHit(O, D); let hl = luma(h) * evDayNight();
+    acc += h * min(1.0, u.tk_giRayMax / max(hl, 1e-6));
   }
   let mean = acc / f32(GI_RAYS);
   giAdd(giKey(P, N), mean);

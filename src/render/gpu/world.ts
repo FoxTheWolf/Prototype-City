@@ -34,6 +34,7 @@ import { DEBUG } from '../../debug';
 import { GI_ACC_W, GI_RES_W, GI_RESOLVE_WGSL, GI_SLOTS } from './wgsl/gi';
 import { daylight } from '../sky';
 import { fontRows, signMode, signText } from '../signs';
+import { GPU_KNOBS, TUNE } from '../tune';
 import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
@@ -93,7 +94,7 @@ fn ch(w: u32, k: u32) -> f32 { return pow(f32((w >> k) & 255u) / 255.0, 2.2); }
  *  meter reads it, at adaptation 1) is within the band (by night, by day); past its edges the eye moves by the
  *  strength of the difference (opening up in the dark, closing in bright light), within the range; and how fast (s):
  *  it closes quickly in bright light and opens slowly in the dark. */
-const ADAPT_BAND_NIGHT = [0.007, 0.05], ADAPT_BAND_DAY = [0.05, 0.12], ADAPT_DARK = 0.7, ADAPT_BRIGHT = 0.75, ADAPT_MIN = 1 / 8, ADAPT_MAX = 16;
+const ADAPT_BAND_NIGHT = [0.007, 0.05], ADAPT_MIN = 1 / 8, ADAPT_MAX = 16;
 // closing: 1.2 s (13.22; was 0.45, a jump on walking into a lit room or out to the street)
 const ADAPT_DOWN_S = 1.2, ADAPT_UP_S = 2.2;
 
@@ -409,6 +410,7 @@ export class GpuWorld {
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
     for (let k = 0; k < 27; k++) U[UIDX.sh0 + k] = sky.sh[k];
+    for (const k of GPU_KNOBS) U[UIDX[`tk_${k}`]] = TUNE[k];
     if (timed) setEye(sky.day, vals.cityLit, vals.adapt, sky.air.dayEv);
     // the sun on the screen (cell x, y) and how strongly its rays show, for the compositor's (B.2)
     {
@@ -475,9 +477,9 @@ export class GpuWorld {
         M.read.unmap(); M.busy = false;
         // the mean light the scene would have at adaptation 1 (the curve's shoulder ignored), and where that sends the eye
         this.meterLog = r[0] - Math.log(M.adapt); this.meterHot = r[1];
-        const g = Math.min(1, Math.max(0, M.day / 0.35)), edge = (k: number) => Math.log(ADAPT_BAND_NIGHT[k]) * (1 - g) + Math.log(ADAPT_BAND_DAY[k]) * g;
+        const g = Math.min(1, Math.max(0, M.day / 0.35)), day = [TUNE.bandDayLo, TUNE.bandDayHi], edge = (k: number) => Math.log(ADAPT_BAND_NIGHT[k]) * (1 - g) + Math.log(day[k]) * g;
         const lo = edge(0), hi = edge(1), m = this.meterLog;
-        const over = m < lo ? (m - lo) * ADAPT_DARK : m > hi ? (m - hi) * ADAPT_BRIGHT : 0;
+        const over = m < lo ? (m - lo) * TUNE.adaptDark : m > hi ? (m - hi) * TUNE.adaptBright : 0;
         this.adaptTarget = Math.min(ADAPT_MAX, Math.max(ADAPT_MIN, Math.exp(-over)));
       }, () => { M.busy = false; });
     }

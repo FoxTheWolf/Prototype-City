@@ -3,6 +3,10 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.16.1c — O céu de verdade (2026-10-10)
+- **As faixas do asfalto voltam a brilhar no sol:** a tinta tinha a refletância do asfalto; agora é tinta.
+- **O dia mais claro:** o olho se adapta mais à sombra das ruas entre os prédios.
+- **Menos manchas na luz rebatida:** um raio que pega o sol refletido numa torre de vidro não pinta mais um losango claro no chão.
+- **(debug) F12 abre um painel de ajustes ao vivo** (a exposição do dia, a adaptação do olho, a força da luz rebatida), sem recompilar; o botão "copy changes" copia os valores mudados.
 - **O céu sai da física:** azul ao meio-dia com o horizonte claro, dourado no fim da tarde, laranja e vermelho no pôr do sol, violeta e roxo no crepúsculo. Nenhuma cor é pintada: tudo sai da posição do sol e do ar (o espalhamento do ar, a névoa e o ozônio).
 - **A luz do sol atravessa o ar:** no fim da tarde as fachadas ficam douradas e, no último minuto, vermelho-alaranjadas, e o sol escurece ao baixar.
 - **O olho acompanha o céu:** o entardecer fica mais escuro que o meio-dia sem ficar mais escuro que a noite, e a luz do céu nas paredes muda de cor junto com ele.

@@ -68,6 +68,8 @@ import { callLift, cycleWeather, debugFloor, liftFloors, skipHours, stepWorld, T
 import { tierOf } from './sim/heat'; // [HACKING]
 import { addToBag } from './sim/bag';
 import { DEBUG } from './debug';
+import { toggleTune } from './tunePanel';
+import { TUNE } from './render/tune';
 import { loadPop, savePop } from './popCache';
 import { pace } from './core/steps';
 import TIPS from './locale/tips.json';
@@ -285,7 +287,7 @@ function handLightNow(): number {
 // Dev-only handles for testing from the browser console (pointer lock does not work in the app's preview pane).
 // gridText(x0, y0, x1, y1) returns the glyphs of a screen region as text, to inspect detail the pane is too small to show.
 if (import.meta.env.DEV) Object.assign(window, {
-  world, camera, DEBUG, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp, soundNow: () => sound,
+  world, camera, DEBUG, tune: TUNE, pickedButton, callLift, phone, payphone, laptop, bagView, counter, ask, VIEW_LIGHT, VIEW_GLINT, gpuNow: () => gpu, compNow: () => comp, soundNow: () => sound,
   // the GPU world's characters (J on), read back from its output buffer, to compare with gridText
   gpuText: async (x0 = 0, y0 = 0, x1?: number, y1?: number) => {
     if (!gpu) return '';
@@ -691,6 +693,8 @@ addEventListener('keydown', (e) => {
     return;
   }
   if (e.code === 'F3') { e.preventDefault(); if (!e.repeat) hudOn = !hudOn; return; }
+  // debug (16.1c): F12 the tuning panel (render/tune.ts's live knobs, sliders; the mouse freed to use it)
+  if (e.code === 'F12') { e.preventDefault(); if (!e.repeat) void toggleTune().then((on) => { if (on) input.unlock(); }); return; }
   // debug (16.1b): F7 paints each kind of surface in a flat color
   if (e.code === 'F7') { e.preventDefault(); if (!e.repeat) DEBUG.lightKinds = !DEBUG.lightKinds; return; }
   // F8: a playtest note (the game pauses while it is written)

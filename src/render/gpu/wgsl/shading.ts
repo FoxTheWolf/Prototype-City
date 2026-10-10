@@ -203,7 +203,7 @@ fn light(cl: Cell) -> Cell {
     // bounce's by the rays (giE: gi.ts, the world cache; past its reach, the open sky's light that way)
     let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
     let sunC = sunLin(); let sunK = SUN_E * (1.0 - 0.85 * u.cloud) * gSun;
-    let Ei = select(skySH(select(vec3f(0.0, 0.0, 1.0), gNrm, def)), giE, giOn);
+    let Ei = select(skySH(select(vec3f(0.0, 0.0, 1.0), gNrm, def)), giE, giOn) * u.tk_giK;
     let E = (En + Ei + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps: their light takes the surface's color (by day the sun outshines them: the eye does that)
     let El = lampE(linL(lamp) + lampL);

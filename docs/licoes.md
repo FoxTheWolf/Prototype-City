@@ -2,6 +2,14 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições do painel de ajustes (F12, Tweakpane) — 2026-10-10
+
+- **Material herdado do pedaço de baixo:** as faixas do asfalto mudavam só a cor (`c`) e ficavam com `MAT_ASPHALT`, então o teto de refletância do asfalto (0,15) as apagava ao introduzir `albedoOf`. Ao criar um teto por material, conferir os lugares que pintam por cima de um material (faixas, manchas, sujeira).
+- **Botões do shader como uniforms (`src/render/tune.ts`, `GPU_KNOBS` → `u.tk_<nome>`):** ligar um botão novo recompila uma vez; mexer no valor, nunca. Constantes usadas em outras `const` do WGSL (como `K_PAL` em `EV_NIGHT`) não viram uniform sem desmontar a cadeia.
+- **Tweakpane 4 no TypeScript precisa de `@tweakpane/core` (dev)**, senão `addBinding`/`addButton` não existem no tipo `Pane`.
+- **Teclas e cliques num painel por cima do jogo:** os ouvintes do jogo estão no `window` (bolha); `stopPropagation` no contêiner do painel basta.
+- **A adaptação do olho de dia parava cedo:** a média da cena num cânion era ~0,01 (log −4,7), a faixa começava em 0,05 e só 70% da diferença era corrigida. Ler `gpuNow().meterLog`/`adapt` antes de mexer no sol.
+
 ### Lições da 16.1c, partes 1 e 2 (a luz indireta por raios) — 2026-10-10
 
 - **Uma chave de recálculo com `NaN` nunca dispara:** `Math.abs(x - NaN) > eps` é falso; os harmônicos do céu ficavam zerados e a luz indireta preta. Começar a chave com um número fora do alcance (`1e9`). Pista: o modo `giView = 2` (o céu pela normal) todo preto.

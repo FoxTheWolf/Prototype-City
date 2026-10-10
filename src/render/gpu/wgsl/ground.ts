@@ -32,6 +32,7 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       else if (pastD > -1.2) { dens = 0.07; }
       else if (min(m, LANE_W - m) < 0.12 && aD < floor(u.dw * 0.5 / LANE_W) * LANE_W - 1.0 && ifloor(al / 3.0) % 2 == 0) { ch = diagGlyph; c = vec3f(150.0); }
     }
+    if (any(c != vec3f(38.0, 38.0, 46.0))) { mat = MAT_MARK; }
   } else if (roadX || roadY) {
     ch = asphalt; mat = MAT_ASPHALT;
     if (roadX != roadY && rd < 200.0) {
@@ -60,6 +61,8 @@ fn groundCell(rd: f32, rdx: f32, rdy: f32) -> Cell {
       else if ((b0b - b0a) * 0.5 - a < 1.2) { dens = 0.07; } // the gutter collects what the wind blows
       else if (min(m, LANE_W - m) < 0.12 && a < lanes * LANE_W - 1.0 && ifloor(along / 3.0) % 2 == 0) { ch = mark; c = vec3f(150.0); }
     }
+    // a painted line (its color changed from the asphalt's): paint, not asphalt, for the albedo
+    if (any(c != vec3f(38.0, 38.0, 46.0))) { mat = MAT_MARK; }
   } else {
     let o = u32(((gy >> 1) * i32(u.nbx) + (gx >> 1)) * ${BLK});
     let flags = u32(blkF(u32(o + 7u))); let opk = flags & 3u; let diag = (flags >> 2u) & 7u; let square = (flags & 64u) != 0u;
