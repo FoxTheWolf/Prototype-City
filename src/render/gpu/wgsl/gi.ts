@@ -189,22 +189,27 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   }
   return Lo;
 }
-/** This cell's indirect light at P (normal N): two rays now into the cache, and the cache's light back (the mean radiance). */
+/** Rays per cell per frame, one in each quarter of the hemisphere (stratified, the strata turning every frame). */
+const GI_RAYS = 4;
+/** This cell's indirect light at P (normal N): GI_RAYS rays now into the cache, and the cache's light back (the mean radiance). */
 fn giSample(P: vec3f, N: vec3f, gx: u32, gy: u32) -> vec3f {
   let t = vec3f(select(vec3f(0.0, 0.0, 1.0), vec3f(1.0, 0.0, 0.0), abs(N.z) > 0.9));
   let T = normalize(cross(t, N)); let B = cross(N, T);
   let fr = ifloor(u.sec * 60.0);
   let O = P + N * 0.06;
   var acc = vec3f(0.0);
-  for (var i = 0; i < 2; i++) {
-    let r1 = hash3(i32(gx), i32(gy), fr * 2 + i); let r2 = hash3(i32(gy) + 911, i32(gx), fr * 2 + i + 7);
+  let rot = hash3(i32(gx), i32(gy), fr);
+  for (var i = 0; i < GI_RAYS; i++) {
+    // (the angle round the normal in its quarter, turned by a per-cell, per-frame offset; the height free)
+    let r1 = fract((f32(i) + hash3(i32(gx), i32(gy), fr * 8 + i)) / f32(GI_RAYS) + rot); let r2 = hash3(i32(gy) + 911, i32(gx), fr * 8 + i + 7);
     let ph = 6.2831853 * r1; let sr = sqrt(r2);
     let D = normalize(T * (cos(ph) * sr) + B * (sin(ph) * sr) + N * sqrt(max(0.0, 1.0 - r2)));
     acc += giHit(O, D);
   }
-  giAdd(giKey(P, N), acc * 0.5);
+  let mean = acc / f32(GI_RAYS);
+  giAdd(giKey(P, N), mean);
   let c = giRead(P, N);
-  return select(acc * 0.5, c.xyz / evDayNight(), c.w > 0.0 && u.giDbg < 2.5);
+  return select(mean, c.xyz / evDayNight(), c.w > 0.0 && u.giDbg < 2.5);
 }
 `;
 
@@ -213,8 +218,8 @@ export const GI_RESOLVE_WGSL = /* wgsl */ `
 @group(0) @binding(0) var<storage, read_write> gia: array<u32>;
 @group(0) @binding(1) var<storage, read_write> gir: array<u32>;
 /** How much of a slot's light this frame's samples replace, at least (a mean of all its samples until it has ~1/GI_BLEND
- *  frames' worth, then a mean that forgets: ~0.5 s to follow a change at 60 fps), weighted by how many samples it got. */
-const GI_BLEND = 0.04; const GI_FIX = 1024.0;
+ *  frames' worth, then a mean that forgets: ~0.7 s to follow a change at 60 fps), weighted by how many samples it got. */
+const GI_BLEND = 0.025; const GI_FIX = 1024.0;
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) g: vec3u) {
   let s = g.x; if (s >= ${GI_SLOTS}u) { return; }
