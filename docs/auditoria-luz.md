@@ -26,7 +26,7 @@
 
 ## O caminho "como desenhado" (o `else` do `light()`)
 
-- **C1.** Pessoas, postes e placas pintadas não são iluminados como sólidos: a luz é **somada** à cor (`c += lamp`), a lua somada como cor, `amb = 1 + 0,7·dia`. Não é físico. **Quando:** as pessoas novas (16.3) já nascem no caminho aceso (albedo × luz, com normal); os postes e as placas vão junto (verificar quais objetos ainda caem aqui pelo F7).
+- **C1.** O `else` do `light()` (a luz **somada** à cor, a lua como cor, `amb = 1 + 0,7·dia`). Conferido: só caem nele o que brilha (`M_GLOW`, certo: é fonte) e os cômodos têm o caminho deles; ~~os objetos levantados (`zoff`: as coisas no telhado) herdavam o sol da parede atrás~~ e agora usam a própria normal. Se algo além do que brilha aparecer nele (F7: verde = objeto), passar para o caminho aceso.
 
 ## A paleta feita para a noite (correções do dia)
 

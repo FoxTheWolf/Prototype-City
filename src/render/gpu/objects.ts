@@ -595,8 +595,9 @@ fn objectsOver(cl0: Cell, gx: u32, gy: u32, rdx: f32, rdy: f32, dz: f32) -> Cell
     // what was under them showed the wall's shadows through them, 13.7); a fire escape keeps what was under it
     var sun = select(0.0, cl.sun, cl.sun >= 2.0);
     if (cl.kind == KIND_WALL && !indoor) { sun = 2.0 + cl.sun; }
-    // (C3) a roof's tank and stair house too (flag 3): they kept the sun of what was behind them, the roofs far off
-    if (mat != M_GLOW && (zoff == 0.0 || fx[ob + 14u] == 3u) && !indoor) {
+    // (C3) a roof's tank and stair house too: they kept the sun of what was behind them, the roofs far off; (16.1b) and
+    // a fire escape (lifted, zoff): by its own normal, lit as a solid, not by the wall behind it
+    if (mat != M_GLOW && !indoor) {
       let w = vec3f(nrm.x * c - nrm.y * s, nrm.x * s + nrm.y * c, nrm.z); let nl = select(length(w), 1.0, length(w) == 0.0);
       sun = 2.0 + max(0.0, dot(w, vec3f(u.sunX, u.sunY, u.sunZ)) / nl);
     }
