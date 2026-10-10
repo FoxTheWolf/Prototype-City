@@ -190,6 +190,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let kc = array<vec3f, 6>(vec3f(30.0), vec3f(160.0), vec3f(70.0, 110.0, 230.0), vec3f(200.0, 120.0, 40.0), vec3f(60.0, 210.0, 80.0), vec3f(230.0, 210.0, 60.0));
     lit.c = kc[min(cl.kind, 5u)] * select(1.0, 0.4 + 0.6 * exp(-cl.depth / 400.0), cl.depth < 1e8); lit.bg = lit.c * 0.5; lit.ch = 35u;
   }
-  store(i, n, fallOver(handOver(display(lit), gid.x, gid.y, handD), rdx, rdy, m, inc.nearT));
+  var fin = fallOver(handOver(display(lit), gid.x, gid.y, handD), rdx, rdy, m, inc.nearT);
+  if (u.lightDbg < 0.5) { fin.c = grade(fin.c); fin.bg = grade(fin.bg); }
+  store(i, n, fin);
 }
 `;

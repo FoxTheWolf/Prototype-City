@@ -80,6 +80,31 @@ fn toneMap(x: vec3f, g: f32) -> vec3f {
   if (g >= 1.0) { return tone(x); }
   return mix(nightTone(x), tone(x), g);
 }
+/**
+ * (16.1b) The color grade, the last step of the world's picture (the film's look): made by code from the hour and the
+ * weather, not a table. At night the shadows lean cold (blue-teal) and the lit parts keep the sodium's warmth; at
+ * dusk and dawn the lights go golden; rain greys and cools it; by day it is nearly neutral. A soft S-curve gives the
+ * mids their contrast without crushing the blacks. GRADE_K scales all of it (0: off).
+ */
+const GRADE_K = 1.0;
+fn grade(c: vec3f) -> vec3f {
+  var x = clamp(c / 255.0, vec3f(0.0), vec3f(1.0));
+  let night = 1.0 - u.day; let wet = u.precip; let gold = u.dusk * (1.0 - 0.6 * u.cloud);
+  let l = dot(x, vec3f(0.2126, 0.7152, 0.0722));
+  // the shadows' tint (lift, fading out by the mids) and the highlights' (gain)
+  let lift = (vec3f(-0.004, 0.006, 0.022) * night + vec3f(-0.004, 0.0, 0.012) * wet) * GRADE_K;
+  let gain = vec3f(1.0) + (vec3f(0.03, 0.0, -0.04) * night * (1.0 - 0.5 * wet) + vec3f(0.07, 0.01, -0.08) * gold) * GRADE_K;
+  let sh = (1.0 - l) * (1.0 - l);
+  x = x + lift * sh;
+  x = x * mix(vec3f(1.0), gain, smoothstep(0.15, 0.8, l));
+  // the saturation: a little less in the rain, a little more in the golden hour
+  let l2 = dot(x, vec3f(0.2126, 0.7152, 0.0722));
+  x = mix(vec3f(l2), x, 1.0 + (0.08 * gold - 0.18 * wet) * GRADE_K);
+  // the S-curve on the mids
+  let xs = clamp(x, vec3f(0.0), vec3f(1.0));
+  x = mix(x, xs * xs * (3.0 - 2.0 * xs), 0.12 * GRADE_K);
+  return clamp(x, vec3f(0.0), vec3f(1.0)) * 255.0;
+}
 /** (16.1b) How strongly the street lamps' light (lightAt) shows on what it falls on, and how much of the ambient a face turned away from its source keeps. */
 const LAMP_RECV = 1.2; const AMB_FACE = 0.72;
 /** (16.1b) The air between the eye and a thing: how far until most of it is haze, by night and by day (shorter in rain), and the most of it a thing takes. */
