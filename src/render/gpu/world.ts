@@ -381,7 +381,7 @@ export class GpuWorld {
       dnx: Dg.nx, dny: Dg.ny, dw: Dg.w, blocks: v.look.blocks ? 1 : 0, lox: F.light.ox, loy: F.light.oy, dbx: D.bx, dby: D.by,
       sunX: F.sun[0], sunY: F.sun[1], sunZ: F.sun[2], sunEl: sky.sunEl, cloud: sky.cloud, moonlight: sky.moonlight, cityLit: 0.65 * F.light.litShare + 0.35 * sky.cityLit, flash: sky.flash,
       snow: W.snowCover, wet: W.wet, rain: W.snow ? 0 : W.precip, cam3d: this.cam3d ? 1 : 0, pitch: v.pitch, colW: (2 * plane) / cols, plane, adapt: timed ? this.adapt : 1,
-      dusk: sky.dusk, sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, eclU: sky.eclU, eclV: sky.eclV, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
+      sunA: sky.sunA, moonA: sky.moonA, moonEl: sky.moonEl, phase: sky.phase, eclU: sky.eclU, eclV: sky.eclV, precip: sky.precip, driftX: sky.driftX, driftY: sky.driftY,
       cityW: C.w, cityH: C.h, ccx: C.cx, ccy: C.cy,
       lst: siderealTime(world.time), tickN: Math.min(TICK_MAX, this.ticker.length),
       yaw: v.yaw, fall: W.precip, fallSnow: W.snow ? 1 : 0, windX: W.windX, windY: W.windY,

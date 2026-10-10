@@ -26,8 +26,7 @@ const smooth = (a: number, b: number, v: number) => { const t = Math.max(0, Math
 export interface SkyFrame {
   /** 0 at night, 1 in daylight (the sun a few degrees up). */
   day: number;
-  /** How much of the dusk or dawn color there is, and the sun's heading (world angle) and elevation. */
-  dusk: number;
+  /** The sun's heading (world angle) and elevation. */
   sunA: number;
   sunEl: number;
   moonA: number;
@@ -85,7 +84,7 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
   return {
     // (16.1c) the haze by the humidity: thicker under clouds and in rain, the air washed clean after it
     air: atmoFrame(sunEl, sunA, Math.max(0.3, Math.min(2, 0.6 + 0.6 * w.cloud + 1.0 * w.precip - 0.3 * w.wet * (1 - w.precip)))),
-    day, dusk: Math.exp(-((sunEl / 0.13) ** 2)), sunA, sunEl, moonA, moonEl, phase, eclU, eclV,
+    day, sunA, sunEl, moonA, moonEl, phase, eclU, eclV,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) * (1 - 0.92 * umbra) : 0,
     cloud: w.cloud, high: w.high, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,
     cityLit: grid.subs.reduce((a, _, k) => a + smoothPower(grid, k, sec, city.w, city.h), 0) / grid.subs.length,

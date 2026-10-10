@@ -9,7 +9,7 @@ export const UNIFORMS = [
   'dnx', 'dny', 'dw', 'blocks', 'lox', 'loy', 'dbx', 'dby',
   'sunX', 'sunY', 'sunZ', 'sunEl', 'cloud', 'moonlight', 'cityLit', 'flash',
   'snow', 'wet', 'rain', 'cam3d', 'pitch', 'colW', 'plane', 'adapt',
-  'dusk', 'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
+  'sunA', 'moonA', 'moonEl', 'phase', 'precip', 'driftX', 'driftY',
   'cityW', 'cityH', 'ccx', 'ccy', 'lst', 'tickN', 'yaw', 'fall',
   'fallSnow', 'windX', 'windY', 'fallB', 'fallR', 'fallSpeed', 'fallStreak', 'fallDens',
   'fallPeriod', 'inX0', 'inY0', 'inX1', 'inY1', 'hand', 'eclU', 'eclV',

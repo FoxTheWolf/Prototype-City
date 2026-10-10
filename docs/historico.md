@@ -13,7 +13,8 @@
 - **Os fachos (recado 1 da noite de 09/10):** o farol com o padrão do farol baixo (`headBeam` em `render/lights.ts` e o gêmeo em `lightAt`: a linha de corte `HEAD_DIP`, o degrau à direita, `HEAD_HIGH` no pisca-alto, alcance 40 m) e o holofote de fachada como cone de verdade (`floodCone`/`floodWall`: a 1,2 m da parede, meio-ângulo 15°, o arco a ~2,4 m, `FLOOD_KC` 200; o mesmo cone na parede, nos objetos e na CPU). Conferido: o farol no apagão (F6) e os leques com `DEBUG.lightProbe` (o canal vermelho = a luz que a fachada pinta). Consequência física: o prédio alto com holofote brilha só embaixo (o projetor do outro lado da rua seria outra luminária, depois).
 - **O facho no ar (recado 3, a parte dos faróis):** `headAir` na marcha dos cones dos postes (`lampCones`), só com chuva/neve, pelos baldes das luzes do quadro; `HEAD_AIR` 4. A luz da janela no pó ficou para depois.
 - O domo de luz da cidade virou luz antes da exposição (era somado depois: no pôr do sol aparecia tão forte quanto à meia-noite e cobria o lado oposto); com ele, o arco rosa-laranja do lado oposto ao sol aparece no pôr do sol.
-- Ficou: a faixa escura da sombra da Terra é curta (o múltiplo barato apaga cedo o lado oposto); a gradação (`grade()`) ainda usa `u.dusk` para o dourado; a luz nas mãos (`viewLight`) ainda usa a cor velha.
+- Saiu o dourado pintado da gradação (`grade()`, `u.dusk`, e o uniform `dusk` com ele): o dourado é o do sol pelo ar.
+- Ficou: a faixa escura da sombra da Terra é curta (o múltiplo barato apaga cedo o lado oposto); a luz nas mãos (`viewLight`) ainda usa a cor velha.
 
 ## 16.1 — fechada pelo usuário (2026-10-09, noite)
 
