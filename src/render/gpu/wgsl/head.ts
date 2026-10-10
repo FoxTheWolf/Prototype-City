@@ -67,6 +67,17 @@ const MAT_PAINT = 6u; const MAT_LEAF = 7u; const MAT_STONE = 8u; const MAT_WINDO
 // (a car's paint: a clear coat over a satin color, not chrome; its mirror only shows toward the edges, blurred)
 const MAT_ROUGH = array<f32, 10>(1.0, 0.8, 0.85, 0.9, 0.04, 0.45, 0.35, 1.0, 0.75, 0.05);
 const MAT_F0 = array<f32, 10>(0.0, 0.03, 0.03, 0.025, 0.05, 0.25, 0.1, 0.02, 0.03, 0.04);
+/** (16.1c) The most a material reflects (its albedo's luminance, real ranges: asphalt ~0.05-0.15, concrete ~0.3-0.4,
+ *  brick ~0.25-0.35, stone ~0.3-0.45, leaves ~0.15-0.25); a brighter palette color keeps its hue at this. None: 0.85. */
+const MAT_ALB = array<f32, 10>(0.85, 0.15, 0.4, 0.35, 0.3, 0.65, 0.75, 0.25, 0.45, 0.3);
+/** (16.1c) A color as albedo: x K_PAL (the palette was drawn ~6x darker than real reflectances), its luminance under the
+ *  material's MAT_ALB and no channel past ALB_MAX (shading.ts), its hue kept. */
+fn albedoOf(c: vec3f, mat: u32) -> vec3f {
+  var A = lin(c) * K_PAL;
+  let l = luma(A); if (l > MAT_ALB[mat]) { A *= MAT_ALB[mat] / l; }
+  let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
+  return A;
+}
 // each facade style's wall (office, glass, brick, historic, residential, warehouse, lit stripes, spire, ...)
 const WALL_MAT = array<u32, 16>(2u, 5u, 3u, 8u, 2u, 5u, 2u, 5u, 2u, 5u, 5u, 8u, 8u, 5u, 2u, 2u);
 /** How far a mirroring surface traces its reflection (m); past it, it mirrors the sky only. */

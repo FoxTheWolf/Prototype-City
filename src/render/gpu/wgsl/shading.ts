@@ -194,9 +194,8 @@ fn light(cl: Cell) -> Cell {
   let dark = 1.0 - 0.72 * pow(1.0 - u.cityLit, 1.5) * night;
   if (o.kind == KIND_GROUND || o.kind == KIND_BLOCK || sunlit) {
     // ---- lit: albedo x the light on it
-    // (16.1c) the albedo: the color x K_PAL, its hue kept under ALB_MAX (the same by day and by night)
-    var A = lin(base) * K_PAL;
-    let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
+    // (16.1c) the albedo: the color x K_PAL under its material's reflectance (albedoOf; the same by day and by night)
+    let A = albedoOf(base, gMat);
     // the moon (bluish), past the buildings round it (gMoon); (16.1c) the city's glow is no longer an ambient on everything:
     // the night is lit by what is there (the lamps, their pools bouncing up the facades, the lit windows: by the rays, giE)
     let En = vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * mix(MOON_SHADE, 1.0, gMoon));

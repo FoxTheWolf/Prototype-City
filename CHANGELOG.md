@@ -11,6 +11,7 @@ Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por 
 - **Umidade:** o ar fica mais enevoado com nuvens e chuva (halo leitoso em volta do sol) e limpo depois da chuva.
 - **Faróis com o padrão do farol baixo:** o facho é uma faixa longa à frente do carro (escura bem no para-choque) e, nas paredes e nos carros da frente, ilumina só até a altura do farol, com o degrau subindo do lado direito. No pisca-alto passa por cima.
 - **A luz do dia por raios (luz indireta física):** o céu e a luz que rebate das paredes e do chão agora vêm de raios de verdade lançados de cada ponto contra a cidade, guardados num cache preso ao mundo (sem pisca-pisca). A sombra fica azulada pelo céu, as bases das paredes ganham sombra de contato, e uma parede de frente para outra ensolarada esquenta. De noite, a luz vem do que existe (os postes rebatendo do asfalto nas fachadas, as janelas acesas), sem a claridade falsa que havia em tudo: as fachadas longe escurecem e as janelas saltam.
+- **Materiais com refletância real:** asfalto, concreto, tijolo, pedra, folhas e metal refletem no máximo o que o material real reflete; a calçada clara não brilha mais que concreto.
 - **O facho dos faróis na chuva:** com chuva ou neve, a luz dos faróis aparece no ar à frente do carro, com o mesmo formato do facho no chão.
 - **Holofotes de fachada em leque:** cada um desenha na parede um arco a ~2,4 m que abre para cima, com escuro entre um e outro, como as luminárias de verdade. A luz cai com a altura: o prédio alto brilha embaixo, não até o topo.
 

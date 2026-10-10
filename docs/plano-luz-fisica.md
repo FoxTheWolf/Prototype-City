@@ -44,7 +44,14 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
   **Saiu o ambiente falso da noite** (`cityAmb` como luz em tudo, `aCity`, `AMB_FACE`); a lua fica. O xadrez de ruído que
   o usuário viu (print de 17h47, `POS 792.7,354.2`): a leitura do cache agora interpola as 4 células vizinhas no plano da
   superfície (`giRead`), e a média conta as amostras de cada célula (`gir` com 5 palavras; `GI_BLEND` 0,04 de piso).
-  **Próximo:** a normal das células de janela, os albedos por material (parte 1), as luzes como fontes (parte 3), os
+- **2026-10-10, mais:** 4 raios estratificados por célula e `GI_BLEND` 0,025 (o usuário: o xadrez "diminuiu bastante,
+  ainda visível"; se sobrar, o próximo é um filtro espacial no cache, que suaviza um pouco as transições). A normal das
+  janelas já estava certa desde a troca (o `Nn` pela `KIND_WALL`). **Parte 1 começada:** `albedoOf` (`wgsl/head.ts`), o
+  teto de refletância por material (`MAT_ALB`: asfalto 0,15, concreto 0,4, tijolo 0,35, pedra 0,45, folha 0,25, metal
+  0,65, pintura 0,75), igual no `light()` e nos raios. GPU ~2,7 ms no painel (mais fraco que o PC do usuário).
+  **A sombra no cânion de torres ao meio-dia sai quase preta:** falta o **reflexo especular do sol nas torres de vidro**
+  nos raios (hoje as paredes são foscas para a luz indireta): o próximo item da parte 2.
+  **Próximo:** o especular nos raios (vidro/metal), as luzes como fontes (parte 3), os
   cômodos (parte 4: `AMB_N` ainda está no `roomE`/`roofE`, e `E_UNIT` nas constantes velhas que sobram).
 
 ## As partes, na ordem

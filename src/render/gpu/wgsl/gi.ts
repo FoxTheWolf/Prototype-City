@@ -165,10 +165,10 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   let H = P + D * (giT / Lh) + giN * 0.05;
   // the albedo there as light() takes it (the color x K_PAL): the ground's asphalt and pavement, a facade's wall darkened a
   // little by its windows, a roof's grey (part 1 of docs/plano-luz-fisica.md gives each material its own)
-  var A = lin(vec3f(40.0, 40.0, 46.0)) * K_PAL;
+  var A = albedoOf(vec3f(40.0, 40.0, 46.0), MAT_ASPHALT);
   if (giQ >= 0) {
     let q = u32(giQ);
-    A = lin(mix(colAt(q + 15u), vec3f(55.0, 62.0, 78.0), 0.3)) * K_PAL;
+    A = albedoOf(mix(colAt(q + 15u), vec3f(55.0, 62.0, 78.0), 0.3), WALL_MAT[u32(clamp(i32(bldF(u32(q + 10u))), 0, 15))]);
     if (giN.z > 0.5) { A = vec3f(0.25); }
   }
   let S = sunVec();
@@ -179,7 +179,6 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   E += giLamps(H.x, H.y, H.z);
   let c = giGet(giKey(H, giN));
   if (c.w > 0.0) { E += c.xyz / evDayNight(); }
-  let am = max(A.x, max(A.y, A.z)); if (am > ALB_MAX) { A *= ALB_MAX / am; }
   var Lo = A * E;
   // a facade's lit windows: their light, the face's mean (the lit share x the windows' part of it, as wallCell lights
   // them), going with the city's power
