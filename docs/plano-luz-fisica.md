@@ -58,6 +58,19 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
   **Próximo:** as luzes como fontes (parte 3), os
   cômodos (parte 4: `AMB_N` ainda está no `roomE`/`roofE`, e `E_UNIT` nas constantes velhas que sobram).
 
+- **2026-10-10, de madrugada (conta C): a parte 3 começada.** Os postes como luminárias (`lampLum` em `wgsl/lamps.ts`):
+  1/d², o ângulo de incidência pela normal, o perfil tipo II feito da mancha na rua (`LAMP_S/F/B` × a altura; o `mh` das
+  praças redondo, `LAMP_O`), corte total acima da cabeça; o registro do poste com 8 floats (`LAMP_REC`: + a direção do
+  braço); cada ponto soma todos os postes das 4 quinas do mapa (cada um uma vez), os 2 mais fortes com sombra; o mapa
+  de luz alcança 17 m (`LAMP_R`). Os fachos no ar (`coneLamp`) pela mesma luminária (`CONE_AIR`). Saíram `lampCorner`, o
+  `zk`/`LIT_H`, o fade da sombra. **O AO e o tingimento dos objetos** (`objAO` em `objects.ts`): cada objeto perto como
+  uma bola do seu volume esconde o céu e mostra a própria cor acesa (o sol no lado que vira para o ponto + a mesma luz
+  do ponto), só na luz indireta, até 45 m (`AO_FAR`); botão `aoK` no F12. **Sombras velhas apagadas:** `MOON_SHADE`, o
+  `shade` 0,68/1,08 das reentrâncias (`wall.ts`: o lado do pilar com a normal de verdade). Falta: a função de luminária
+  única (farol, holofote), as sombras com penumbra (CHSS), as janelas/neon como emissores, o `dark` do apagão (vai com
+  o caminho C1 na 16.2), `LAMP_E`/`LAMP_RECV` numa constante só, e a mão (`LightWindow.add` ainda usa o mapa velho; o
+  alcance novo de 17 m deixa a poça da mão maior: parte 5).
+
 ## As partes, na ordem
 
 ### 1. Materiais e unidades (a base de tudo)
@@ -98,6 +111,19 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
     pescoço pintadas (B2, B3) viram luzes.
   - **"As muitas luzes"** (cronograma): todas por ladrilho (cada pedaço da tela só olha as luzes perto dele).
   - Saem `LAMP_E`, `LAMP_RECV` e a soma em sRGB que sobrar.
+  - **Uma função de luminária para todos (usuário, 2026-10-10):** o poste (`lampLum`, feito), o farol (`headBeam`) e o
+    holofote (`floodCone`) pelo mesmo cálculo: perfil do facho × 1/d² × o ângulo de incidência pela normal; saem as
+    quedas inventadas do farol e do holofote (`(1 - s/R)`, `1/(1 + s²/30)`, o `linL` da cor sRGB × queda).
+  - **A oclusão de curto alcance (AO; pedido do usuário em 2026-10-10):** só na luz indireta, corrigindo o que o cache
+    (células de 0,5 m+) não vê: o canto parede-calçada, embaixo de bancos e carros. Pela geometria conhecida (a
+    distância até a parede/o objeto), não pintada.
+  - **Sombras que endurecem no contato (CHSS/PCSS; pedido do usuário em 2026-10-10):** a luz tem tamanho (o disco do
+    sol 0,53°, a cabeça do poste ~0,5 m): a penumbra cresce com a distância entre o que bloqueia e o que recebe
+    (medida no próprio raio de sombra), nítida no pé do objeto.
+  - **Apagar as sombras e escurecimentos da luz velha (pedido do usuário em 2026-10-10):** `MOON_SHADE` (a sombra da
+    lua que só ia a 25%), o `shade` 0,68/1,08 das reentrâncias da fachada (`wall.ts`: virar normal de verdade), o
+    `dark` do apagão no `light()` (o apagão já apaga as luzes de verdade), o `shade` por face dos interiores
+    (`inside.ts`, na parte 4).
 
 ### 4. Os cômodos na mesma luz
 - As lâmpadas do cômodo como fontes com sombra (a planta já é percorrida em `roomWalk`); a luz do dia entra pelos raios

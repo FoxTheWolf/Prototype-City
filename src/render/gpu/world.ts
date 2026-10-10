@@ -35,6 +35,7 @@ import { GI_ACC_W, GI_RES_W, GI_RESOLVE_WGSL, GI_SLOTS } from './wgsl/gi';
 import { daylight } from '../sky';
 import { fontRows, signMode, signText } from '../signs';
 import { GPU_KNOBS, TUNE } from '../tune';
+import { LAMP_REC } from './wgsl/common';
 import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
 
 /**
@@ -276,9 +277,13 @@ export class GpuWorld {
     this.uni = dev.createBuffer({ size: this.U.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const sz = (n: number) => dev.createBuffer({ size: Math.max(16, n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
     this.lmap = sz(1024 * 1024 * 4 * 2);
-    this.lampBuf = new Float32Array(C.lamps.length * 6);
-    // the head hangs at the end of the arm (lampModel: 1.6 m out, 6.4 m up)
-    C.lamps.forEach((p, n) => this.lampBuf.set([0, 0, 0, p.x + Math.cos(p.a) * 1.6, p.y + Math.sin(p.a) * 1.6, 6.37], n * 6));
+    this.lampBuf = new Float32Array(C.lamps.length * LAMP_REC);
+    // the head hangs at the end of the arm (lampModel: 1.6 m out, 6.4 m up); (16.1c) and its beam's facing: a cobra head
+    // throws its light along the street, the arm's way (ax, ay); a metal halide post top all round (0, 0)
+    C.lamps.forEach((p, n) => {
+      const sym = p.lampType === 'mh';
+      this.lampBuf.set([0, 0, 0, p.x + Math.cos(p.a) * 1.6, p.y + Math.sin(p.a) * 1.6, 6.37, sym ? 0 : Math.cos(p.a), sym ? 0 : Math.sin(p.a)], n * LAMP_REC);
+    });
     if (dev.features.has('timestamp-query')) {
       this.tq = { set: dev.createQuerySet({ type: 'timestamp', count: 2 }), res: dev.createBuffer({ size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC }),
         read: dev.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), busy: false };
@@ -347,7 +352,7 @@ export class GpuWorld {
     const S = new Float32Array(P.subs.length * 4);
     P.subs.forEach((s, k) => S.set([s.changed < 0 ? -1 : s.changed / 60, s.on ? 1 : 0, s.ox, s.oy], k * 4));
     if (F.light.version !== this.lmapVersion) { this.lmapVersion = F.light.version; q.writeBuffer(this.lmap, 0, F.light.packMap()); }
-    { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * 6] = c[n * 3]; L[n * 6 + 1] = c[n * 3 + 1]; L[n * 6 + 2] = c[n * 3 + 2]; } }
+    { const c = F.light.colors, L = this.lampBuf; for (let n = 0, m = c.length / 3; n < m; n++) { L[n * LAMP_REC] = c[n * 3]; L[n * LAMP_REC + 1] = c[n * 3 + 1]; L[n * LAMP_REC + 2] = c[n * 3 + 2]; } }
     this.facades(world, v.x, v.y);
     // (C3) the bulb over each near roof's stair house door, at night on the building's power: it lights the slab
     { const dark = 1 - daylight(world.time);

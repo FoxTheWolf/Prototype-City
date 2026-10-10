@@ -28,6 +28,11 @@ echo      dayExpo/bandDayLo (o dia mais claro ou escuro) e giK
 echo      (a luz rebatida mais forte). Gostou? Botao "copy
 echo      changes" e cole para o Claude. F12 de novo fecha.
 echo   8. As faixas amarelas/brancas da rua brilham no sol?
+echo   9. Embaixo dos carros e em volta dos bancos e pessoas o chao
+echo      escurece (AO)? Um carro colorido ao sol tinge o chao?
+echo      F12: aoK em 0 desliga, em 2 exagera (para comparar).
+echo  10. De noite (T ate 22h): os postes jogam a luz ao longo da
+echo      rua, pouco para o lado das casas; o poste nao brilha.
 echo.
 echo   Achou algo estranho? F8 e escreva.
 echo  ============================================================

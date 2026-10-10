@@ -30,8 +30,6 @@ const SUN_E = GI_SUN / 3.14159265; const E_UNIT = SUN_E / 4.2;
  *  docs/plano-luz-fisica.md gives each material its own). */
 const K_PAL = 6.0; const ALB_MAX = 0.85;
 const AMB_N = 0.004 * E_UNIT; const MOON_E = 0.003 * E_UNIT;
-/** How much of the moonlight a point in the buildings' moon shadow still gets (the sky's part of it). */
-const MOON_SHADE = 0.25;
 /** How much the eye opens up as the city's glow fails (0: not at all, 1: as much as the light fell). */
 const NIGHT_ADAPT = 0.3;
 /** The lamps' light (lightAt's) in the same units: under a street lamp ~3% of the day's sky. */
@@ -97,6 +95,8 @@ fn grade(c: vec3f) -> vec3f {
   return clamp(x, vec3f(0.0), vec3f(1.0)) * 255.0;
 }
 /** (16.1b) How strongly the street lamps' light (lightAt) shows on what it falls on. */
+/** (16.1c) How far from the eye the street objects darken the indirect light round them (objAO; m). */
+const AO_FAR = 45.0;
 const LAMP_RECV = 1.5; // (1.2 on the old sRGB light, now linear: 1.2^2.2)
 /** (16.1b) The air between the eye and a thing: how far until most of it is haze, by night and by day (shorter in rain), and the most of it a thing takes. */
 const AIR_NIGHT = 900.0; const AIR_DAY = 1800.0; const AIR_MAX_N = 0.5; const AIR_MAX_D = 0.65; const AIR_EDGE = 220.0;
@@ -198,12 +198,17 @@ fn light(cl: Cell) -> Cell {
     let A = albedoOf(base, gMat);
     // the moon (bluish), past the buildings round it (gMoon); (16.1c) the city's glow is no longer an ambient on everything:
     // the night is lit by what is there (the lamps, their pools bouncing up the facades, the lit windows: by the rays, giE)
-    let En = vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * mix(MOON_SHADE, 1.0, gMoon));
+    let En = vec3f(0.875, 1.0, 1.44) * (MOON_E * u.moonlight * (1.0 - 0.7 * u.cloud) * gMoon);
     // (16.1c) the day's: the sun's through the air on what faces it out of the shadows (gSun), and the sky's and every
     // bounce's by the rays (giE: gi.ts, the world cache; past its reach, the open sky's light that way)
     let share = select(select(u.sunZ, o.sun, sunlit || o.kind == KIND_BLOCK), o.sun - 2.0, objSun);
     let sunC = sunLin(); let sunK = SUN_E * (1.0 - 0.85 * u.cloud) * gSun;
-    let Ei = select(skySH(select(vec3f(0.0, 0.0, 1.0), gNrm, def)), giE, giOn) * u.tk_giK;
+    var Ei = select(skySH(select(vec3f(0.0, 0.0, 1.0), gNrm, def)), giE, giOn) * u.tk_giK;
+    // (the street objects near the viewer, what the cache can't see: the sky they hide, and their own lit color in its place)
+    if (def && o.depth < AO_FAR && (o.kind == KIND_GROUND || o.kind == KIND_WALL)) {
+      let og = objAO(gPos, gNrm); let k = u.tk_aoK;
+      Ei = Ei * mix(1.0, og.vis, k) + (Ei * og.aE + sunLin() * (SUN_E * (1.0 - 0.85 * u.cloud)) * og.sunL) * k;
+    }
     let E = (En + Ei + sunC * (sunK * max(0.0, share))) * (1.0 + 0.6 * u.flash);
     // the lamps: their light takes the surface's color (by day the sun outshines them: the eye does that)
     let El = lampE(linL(lamp) + lampL);

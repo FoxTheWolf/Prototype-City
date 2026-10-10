@@ -296,6 +296,46 @@ fn footShadow(P: vec3f, H: vec3f) -> f32 {
   }
   return lit;
 }
+/**
+ * (16.1c) The street objects in the indirect light at P (normal N): what the light cache can't see (its rays meet only
+ * the buildings and the ground; its cells are 0.5 m and more): under a car, by a bench, at a person's feet. Each object
+ * nearby as a ball of its volume (its radius and height, the body low in it): how much of the sky it hides from P, by
+ * the angle it is seen at, gone at the edge of its footprint (so the grid's cells leave no step). What it hides shows
+ * the object instead, its own color lit: by the sun on its side toward P (a blue car in the sun tints the road blue) and
+ * by the same light P gets. ObjGI: vis (the sky left), aE (x P's light: the objects' albedos it sees), sunL (their sunlit sides).
+ */
+struct ObjGI { vis: f32, aE: vec3f, sunL: vec3f };
+fn objAO(P: vec3f, N: vec3f) -> ObjGI {
+  var res = ObjGI(1.0, vec3f(0.0), vec3f(0.0));
+  let OB = fx[1];
+  if (OB == 0u || fx[OB] == 0u || fx[OB + 9u] == 0u) { return res; }
+  let G = OB + fx[OB + 9u]; let NG = i32(fx[G + 2u]); let cs = fxf(G + 3u);
+  let ci = i32(floor((P.x - fxf(G)) / cs)); let cj = i32(floor((P.y - fxf(G + 1u)) / cs));
+  if (ci < 0 || cj < 0 || ci >= NG || cj >= NG) { return res; }
+  let objs = OB + fx[OB + 2u]; let list = G + 4u + u32(NG * NG) + 1u; let c = u32(cj * NG + ci);
+  let S = vec3f(u.sunX, u.sunY, u.sunZ);
+  for (var li = fx[G + 4u + c]; li < fx[G + 4u + c + 1u]; li++) {
+    let ob = objs + fx[list + li] * OW;
+    if (fx[ob + 14u] == 2u) { continue; } // indoor furniture (the rooms: part 4)
+    let r = fxf(ob + 4u); let h = fxf(ob + 5u);
+    let dh = length(vec2f(fxf(ob) - P.x, fxf(ob + 1u) - P.y));
+    if (dh >= r) { continue; }
+    let re = 0.75 * pow(max(r * r * h, 1e-4), 1.0 / 3.0);
+    let C = vec3f(fxf(ob), fxf(ob + 1u), fxf(ob + 6u) + fxf(ob + 9u) + h * 0.4);
+    let V = C - P; let d2 = max(dot(V, V), 1e-4);
+    let occ = min(1.0, re * re / d2) * max(0.0, dot(N, V) * inverseSqrt(d2)) * (1.0 - (dh / r) * (dh / r));
+    if (occ < 0.004) { continue; }
+    let w = 0.9 * occ;
+    res.vis *= 1.0 - w;
+    // its look: the model's first part (a car's body), matte; the sun on its side that faces P, past the buildings
+    let mo = fx[ob + 15u]; let pm = fx[mo + 1u + 10u];
+    let A = select(vec3f(0.15), albedoOf(fx3(mo + 1u + 7u), MAT_NONE), pm == M_SOLID || pm == M_LEAF || pm == M_SKIN);
+    res.aE += A * w;
+    let cs = -dot(V, S) * inverseSqrt(d2);
+    if (u.sunZ > 0.0 && cs > 0.0) { res.sunL += A * (w * cs * sunLit(C.x, C.y, C.z)); }
+  }
+  return res;
+}
 /** How far the wet street and the glass mirror the street objects (m along the mirrored ray). */
 const REFL_OBJ_FAR = 60.0;
 /**

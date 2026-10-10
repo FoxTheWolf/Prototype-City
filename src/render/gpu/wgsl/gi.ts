@@ -193,7 +193,7 @@ fn giHit(P: vec3f, D: vec3f) -> vec3f {
   }
   if (glossy) { let R = reflect(D, giN); Ls += skySH(R) * fres(MAT_F0[mat], max(0.0, dot(giN, -D))); }
   // the street lamps' light there (their pools on the asphalt are what lights a street's facades at night)
-  E += giLamps(H.x, H.y, H.z);
+  E += giLamps(H, giN);
   let c = giGet(giKey(H, giN));
   if (c.w > 0.0) { E += c.xyz / evDayNight(); }
   var Lo = A * E + Ls;

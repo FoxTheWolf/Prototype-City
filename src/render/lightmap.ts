@@ -6,8 +6,8 @@ import { type PowerGrid } from '../sim/power';
 /** Side of the baked window in metres. */
 export const LIGHT_W = 1024;
 const W = LIGHT_W;
-/** Radius of one street lamp's pool of light on the ground. */
-export const LAMP_R = 11;
+/** How far round a pole the light map names its lamp (m): its footprint's reach along the street (16.1c, lamps.ts LAMP_S), past the arm. */
+export const LAMP_R = 17;
 const R = LAMP_R;
 
 /**

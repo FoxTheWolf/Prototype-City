@@ -47,7 +47,6 @@ const FLOOR_H = ${FLOOR_H};
 const BAY = ${BAY};
 const SIDEWALK = ${SIDEWALK};
 const LANE_W = ${LANE_W};
-const LIT_H = 9.0;
 const LIT_FAR = 600.0;
 const GROUND_FAR = 600.0;
 /** A panel light's size factor (PANEL_S in lights.ts), and how much of it a surface turned away from it still gets (it is not a point: some of it always shows). */

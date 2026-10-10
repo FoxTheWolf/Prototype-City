@@ -2,6 +2,15 @@
 
 > Movido do CLAUDE.md em 2026-10-04 para pesar menos em cada mensagem. **Não ler inteiro:** achar a seção com `grep -n "^### " docs/licoes.md` e ler só ela (Read com offset/limit). A seção `[HACKING]` só é lida na Trilha de hacking. Lições novas entram aqui, uma seção por etapa, e ganham uma linha no índice do CLAUDE.md ("Notas técnicas").
 
+### Lições da 16.1c, parte 3 (os postes, o AO) — 2026-10-10
+
+- **Variável local com nome de função embutida:** o `wallCell` tem um `let sign`, então `sign(...)` ali não compila ("cannot use 'let sign' as call target"); usar `select`. O erro só aparece no console do painel (a tela fica em "COMPILING SHADERS 98%").
+- **O console do painel guarda erros de recargas anteriores:** conferir a tela (ou filtrar pelo texto novo) antes de achar que o erro ainda existe.
+- **Trocar o nome de uma variável por regex num arquivo de shader grande:** conferir que só existe uma declaração (`git show HEAD:arquivo | grep "let x\|var x"`) e procurar as variantes (`shade0`) que o `` deixou.
+- **`camera.look(yaw, pitch)` é relativo;** para mirar, escrever `camera.yaw = camera.targetYaw` (e o pitch).
+- **O perfil de uma luminária a partir da mancha que ela deve fazer:** I(direção) = E_chão × h² / cos³θ no ponto onde a direção bate no chão; dá uma luz física (1/d² e o ângulo nas paredes) com a forma desejada, e é finita sozinha (fora da mancha, zero), sem quinas no mapa.
+- **Os raios da luz indireta não veem os objetos da rua:** por isso nada escurecia embaixo dos carros. O AO por bola de volume equivalente, só na luz indireta, e a cor do objeto no lugar do céu que ele esconde, resolvem as duas coisas no mesmo cálculo.
+
 ### Lições do painel de ajustes (F12, Tweakpane) — 2026-10-10
 
 - **Material herdado do pedaço de baixo:** as faixas do asfalto mudavam só a cor (`c`) e ficavam com `MAT_ASPHALT`, então o teto de refletância do asfalto (0,15) as apagava ao introduzir `albedoOf`. Ao criar um teto por material, conferir os lugares que pintam por cima de um material (faixas, manchas, sujeira).

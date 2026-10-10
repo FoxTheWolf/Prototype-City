@@ -20,6 +20,8 @@ export const UNIFORMS = [
   ...GPU_KNOBS.map((k) => `tk_${k}` as const),
 ] as const;
 
+/** Floats per street lamp in the lamps' buffer (world.ts): its color, its head (x, y, z) and its beam's facing (x, y; 0 0: all round). */
+export const LAMP_REC = 8;
 /** Words of the viewer's floor's block (world.ts) before its street doors' leaves (16..21: the stairwell, see roomWalk). */
 export const IN_LEAVES = 22;
 /** Floats per door leaf in a plan (world.ts putPlan), and how many open doors fx lists (openDoors). */

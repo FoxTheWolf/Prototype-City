@@ -1,4 +1,5 @@
 import { FLOOD_EDGE, FLOOD_HALF, FLOOD_KC, FLOOD_Z } from '../../lights';
+import { LAMP_REC } from './common';
 export const lampsWGSL = (): string => /* wgsl */ `// ---- light (lightmap.ts, lights.ts, lightAt): the street lamps' pools and this frame's dynamic lights
 // (16.1c) a wall floodlight's cone (floodCone in lights.ts): a along the wall, s out from the lamp, z the height
 const FLOOD_Z = ${FLOOD_Z}; const FLOOD_HALF = ${FLOOD_HALF}; const FLOOD_EDGE = ${FLOOD_EDGE}; const FLOOD_KC = ${FLOOD_KC.toFixed(1)};
@@ -11,31 +12,49 @@ fn floodCone(a: f32, s: f32, z: f32) -> f32 {
 }
 /** The same cone on its wall (FLOOD_OUT in from the lamp): with the slant it meets the wall at. */
 fn floodWall(a: f32, z: f32) -> f32 { let l = length(vec3f(a, FLOOD_OUT, z - FLOOD_Z)); return floodCone(a, -FLOOD_OUT, z) * FLOOD_OUT / max(l, 0.05); }
-fn lampCorner(i: u32, f: f32, sh: vec4f) -> vec3f {
-  let w = lmap[i];
-  if (w == 0u || f <= 0.0) { return vec3f(0.0); }
-  let id = w >> 8u; let n = (id - 1u) * 6u; let g = f32(w & 255u) / 255.0 * f;
-  // (the shadow of what stands between it and the lamp, for the two lamps of the nearest metre: sh = id, lit, id, lit)
-  let k = select(select(1.0, sh.w, f32(id) == sh.z), sh.y, f32(id) == sh.x);
-  return vec3f(lampColF(u32(n)), lampColF(u32(n + 1u)), lampColF(u32(n + 2u))) * (g * k);
+// ---- (16.1c, part 3) a street lamp as a luminaire: its light by the inverse square, the angle it meets the surface at, and
+// its beam's profile (as an IES file would give it), nothing painted. The profile is made from the footprint it is designed
+// to throw on the road (an ellipse round the point under the head, in mounting heights): a cobra head's type II, long along
+// the street, some way across it, little to the house side; a post top's round. The intensity toward a direction is
+// what gives that footprint where the direction meets the ground: E h^2 / cos^3(theta). Full cutoff: nothing above the head.
+const LAMP_REC = ${LAMP_REC}u;
+/** The footprint's reach, x the mounting height: along the street, to the street side, to the house side, and round (a post top). */
+const LAMP_S = 2.3; const LAMP_F = 1.4; const LAMP_B = 0.45; const LAMP_O = 1.8;
+/** Lamp id's light at P (normal N; zero: a point in the air, taking it as if it faced it), linear, 1 = the old pool's middle. */
+fn lampLum(id: u32, P: vec3f, N: vec3f) -> vec3f {
+  let n = (id - 1u) * LAMP_REC;
+  let H = vec3f(lampColF(n + 3u), lampColF(n + 4u), lampColF(n + 5u));
+  let V = H - P;
+  if (V.z <= 0.05) { return vec3f(0.0); }
+  // where the ray from the head through P meets the ground, from under the head, in mounting heights
+  let g = -V.xy / V.z;
+  let a = vec2f(lampColF(n + 6u), lampColF(n + 7u));
+  var r2 = dot(g, g) / (LAMP_O * LAMP_O);
+  if (dot(a, a) > 0.25) {
+    let f = dot(g, a); let s = g.x * a.y - g.y * a.x; let rf = select(LAMP_B, LAMP_F, f > 0.0);
+    r2 = (s * s) / (LAMP_S * LAMP_S) + (f * f) / (rf * rf);
+  }
+  if (r2 >= 1.0) { return vec3f(0.0); }
+  let d2 = dot(V, V); let d = sqrt(d2);
+  // the intensity that way (in the units where the ground under the head gets 1): (1 - r^2)^2 h^2 / cos^3 theta
+  let ct = V.z / d; let I = (1.0 - r2) * (1.0 - r2) * H.z * H.z / (ct * ct * ct);
+  let ci = select(1.0, max(0.0, dot(N, V) / d), dot(N, N) > 0.25);
+  return linL(vec3f(lampColF(n), lampColF(n + 1u), lampColF(n + 2u))) * (I * ci / (d2 + 0.25));
 }
-/** How far from the viewer the street lamps' shadows of the objects are traced (m), and from how far they fade out. */
+/** How far from the viewer the street lamps' shadows of the objects are traced (m). */
 const LAMP_SH_FAR = 40.0;
 /**
  * The street lamps' cones in the air at night (CONE_DRY), stronger in falling rain or snow (CONE_WET by the precipitation): a short march along the view ray (to CONE_FAR),
  * each step lit by the two lamps of its metre if it is in the cone under their heads, the brighter near them.
  * The steps start at a fine-grained offset per cell (interleaved gradient noise), as the sun's rays do.
  */
-const CONE_FAR = 32.0; const CONE_STEPS = 12; const CONE_TAN = 1.6; const CONE_K = 0.1; const CONE_DRY = 0.8; const CONE_WET = 1.6;
+const CONE_FAR = 32.0; const CONE_STEPS = 12; const CONE_K = 0.1; const CONE_DRY = 0.8; const CONE_WET = 1.6;
+/** How much of the lamp's light the air sends to the eye (calibrated by eye against the old cone). */
+const CONE_AIR = 0.35;
+/** (16.1c) The air at Q lit by the lamp of light-map word w: the same luminaire as on the ground (lampLum), the air taking it from every side. */
 fn coneLamp(w: u32, Q: vec3f) -> vec3f {
   if (w == 0u) { return vec3f(0.0); }
-  let n = ((w >> 8u) - 1u) * 6u;
-  let dz = lampColF(u32(n + 5u)) - Q.z;
-  if (dz <= 0.1) { return vec3f(0.0); }
-  let rr = length(vec2f(Q.x - lampColF(u32(n + 3u)), Q.y - lampColF(u32(n + 4u)))); let R = dz * CONE_TAN;
-  if (rr >= R) { return vec3f(0.0); }
-  let e = 1.0 - rr / R;
-  return vec3f(lampColF(u32(n)), lampColF(u32(n + 1u)), lampColF(u32(n + 2u))) * (e * e / (1.0 + (dz * dz + rr * rr) / 12.0));
+  return lampLum(w >> 8u, Q, vec3f(0.0)) * CONE_AIR;
 }
 /** (16.1c) A headlight's beam in the air (o: its record in the frame's lights): the pattern of headBeam (lights.ts) in 3D,
  *  between its cutoff and the road, brightest near the lamp. HEAD_AIR: its strength next to the street lamps' cones. */
@@ -82,7 +101,7 @@ fn lampCones(gx: u32, gy: u32, rdx: f32, rdy: f32, m: f32, depth: f32) -> vec3f 
 }
 /** How much of lamp id's light reaches P past the street objects (1 clear). */
 fn lampShadow(P: vec3f, id: u32) -> f32 {
-  let n = (id - 1u) * 6u;
+  let n = (id - 1u) * LAMP_REC;
   return footShadow(P, vec3f(lampColF(u32(n + 3u)), lampColF(u32(n + 4u)), lampColF(u32(n + 5u))));
 }
 fn lvSum(o: u32, n: u32, p: f32) -> f32 {
@@ -95,49 +114,40 @@ fn linL(s: vec3f) -> vec3f { return pow(max(s, vec3f(0.0)) / 255.0, vec3f(2.2));
 // nr: the lit surface's normal (zero: none, a raindrop; it takes the light as if it faced it)
 // (16.1b) the light in LINEAR units (1 = white), every light made linear before it is summed: summed as sRGB and raised
 // to 2.2 after, two equal lamps gave 4.6 times one, and two knees squeezed the sum back
-/** The street lamps' pools at a metre of the light map (ix, iy; tx, ty within it): the two strongest lamps on each metre (the
- *  second layer at LW * LW), summed, linear; sh: the two shading lamps' ids and their light past the objects (lightAt). */
-fn lampPools(ix: i32, iy: i32, tx: f32, ty: f32, sh: vec4f) -> vec3f {
-  var L = vec3f(0.0);
-  for (var ly = 0u; ly < 2u; ly++) {
-    let i0 = u32(iy * LW + ix) + ly * u32(LW * LW);
-    // (each layer's corners summed before linL, as they were: the same lamp's light across the metre)
-    L += linL(lampCorner(i0, (1.0 - tx) * (1.0 - ty), sh) + lampCorner(i0 + 1u, tx * (1.0 - ty), sh) + lampCorner(i0 + u32(LW), (1.0 - tx) * ty, sh) + lampCorner(i0 + u32(LW) + 1u, tx * ty, sh));
+/** (16.1c) The street lamps' light at P (normal N): every lamp the light map names round P (its metre's four corners, two
+ *  each, each lamp once), by lampLum; the two that light it most shaded by what stands between (shade: near the viewer). */
+fn lampPools(P: vec3f, N: vec3f, shade: bool) -> vec3f {
+  let fx = P.x - u.lox; let fy = P.y - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
+  if (ix < 0 || iy < 0 || ix >= LW - 1 || iy >= LW - 1) { return vec3f(0.0); }
+  var ids = array<u32, 8>(0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u); var ls = array<vec3f, 8>();
+  var m = 0u; var L = vec3f(0.0);
+  for (var k = 0u; k < 8u; k++) {
+    let w = lmap[u32(iy * LW + ix) + (k & 1u) + u32(LW) * ((k >> 1u) & 1u) + (k >> 2u) * u32(LW * LW)];
+    if (w == 0u) { continue; }
+    let id = w >> 8u; var seen = false;
+    for (var j = 0u; j < m; j++) { if (ids[j] == id) { seen = true; } }
+    if (seen) { continue; }
+    ids[m] = id; ls[m] = lampLum(id, P, N); L += ls[m]; m++;
   }
+  if (!shade || m == 0u) { return L; }
+  // the two brightest, shaded (the others light it a fraction as much)
+  var b0 = 0u; var b1 = 8u;
+  for (var j = 1u; j < m; j++) { if (luma(ls[j]) > luma(ls[b0])) { b0 = j; } }
+  for (var j = 0u; j < m; j++) { if (j != b0 && (b1 == 8u || luma(ls[j]) > luma(ls[b1]))) { b1 = j; } }
+  let Ps = vec3f(P.x, P.y, max(P.z, 0.03)) + N * 0.06;
+  if (luma(ls[b0]) > 1e-4) { L -= ls[b0] * (1.0 - lampShadow(Ps, ids[b0])); }
+  if (b1 < 8u) { if (luma(ls[b1]) > 1e-4) { L -= ls[b1] * (1.0 - lampShadow(Ps, ids[b1])); } }
   return L;
 }
 /** (16.1c) The street lamps' light at a point a ray of the indirect light met (gi.ts), without their object shadows, in light()'s units. */
-fn giLamps(px: f32, py: f32, pz: f32) -> vec3f {
-  let zk = select(1.0 - (pz - 1.0) / (LIT_H - 1.0), 1.0, pz <= 1.0);
-  if (zk <= 0.0) { return vec3f(0.0); }
-  let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
-  if (ix < 0 || iy < 0 || ix >= LW - 1 || iy >= LW - 1) { return vec3f(0.0); }
-  return lampPools(ix, iy, fx - f32(ix), fy - f32(iy), vec4f(-1.0, 1.0, -1.0, 1.0)) * (pow(zk, 2.2) * LAMP_RECV * LAMP_E);
-}
+fn giLamps(P: vec3f, N: vec3f) -> vec3f { return lampPools(P, N, false) * (LAMP_RECV * LAMP_E); }
 fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
   var L = vec3f(0.0);
   // the panels add up in linear light (their colors come linear; 1 = white): summed as sRGB, raised to 2.2 in the
   // finish, a light fell off as 1 / d^4.4 and a sign lit only the wall it hung on
   var Lp = vec3f(0.0);
-  let zk = select(1.0 - (pz - 1.0) / (LIT_H - 1.0), 1.0, pz <= 1.0);
-  if (zk > 0.0) {
-    let fx = px - u.lox; let fy = py - u.loy; let ix = ifloor(fx); let iy = ifloor(fy);
-    if (ix >= 0 && iy >= 0 && ix < LW - 1 && iy < LW - 1) {
-      let tx = fx - f32(ix); let ty = fy - f32(iy);
-      // near the viewer at night, what stands between a point and its lamps shades it: the two lamps of the nearest metre
-      var sh = vec4f(-1.0, 1.0, -1.0, 1.0);
-      let dv = length(vec2f(px - u.px, py - u.py));
-      if (u.day < 0.95 && dv < LAMP_SH_FAR) {
-        let k = u32((iy + i32(ty >= 0.5)) * LW + ix + i32(tx >= 0.5));
-        let w0 = lmap[k]; let w1 = lmap[k + u32(LW * LW)];
-        let P = vec3f(px, py, max(pz, 0.03)) + nr * 0.06;
-        let fade = smoothK(LAMP_SH_FAR * 0.75, LAMP_SH_FAR, dv);
-        if (w0 != 0u) { sh.x = f32(w0 >> 8u); sh.y = mix(lampShadow(P, w0 >> 8u), 1.0, fade); }
-        if (w1 != 0u) { sh.z = f32(w1 >> 8u); sh.w = mix(lampShadow(P, w1 >> 8u), 1.0, fade); }
-      }
-      L += lampPools(ix, iy, tx, ty, sh) * pow(zk, 2.2); // (zk was inside the sRGB light: linL(x zk))
-    }
-  }
+  // (16.1c) the street lamps, as luminaires; what stands between shades them out to LAMP_SH_FAR from the viewer (the cost)
+  L += lampPools(vec3f(px, py, pz), nr, u.day < 0.95 && length(vec2f(px - u.px, py - u.py)) < LAMP_SH_FAR);
   let bi = ifloor(px / DCELL) - i32(u.dbx); let bj = ifloor(py / DCELL) - i32(u.dby);
   if (bi >= 0 && bj >= 0 && bi < DSIDE && bj < DSIDE) {
     let c = u32(bj * DSIDE + bi);

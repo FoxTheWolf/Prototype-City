@@ -3,6 +3,9 @@
 Versão `0.ETAPA.SUB` (por exemplo, `0.12.4` é a subetapa 12.4). Uma linha por novidade, escrita para quem joga; o mais novo em cima. As regras de como manter este arquivo estão no CLAUDE.md, em "Como trabalhar neste projeto". Entradas da Trilha de hacking são escritas por uma sessão com o Opus 4.8; fora dela aparecem só como "(entrada da Trilha de hacking)". As versões até a 0.12.3 foram montadas depois, a partir do histórico e dos commits.
 
 ## 0.16.1c — O céu de verdade (2026-10-10)
+- **Postes de verdade:** a luz dos postes cai com a distância como a de uma lâmpada real, depende do ângulo em que bate e se espalha ao longo da rua (pouco para o lado das casas); nada acima da cabeça do poste se ilumina, e o próprio poste não brilha mais.
+- **Oclusão e cor dos objetos:** embaixo e em volta dos carros, bancos e pessoas a luz do céu escurece, e um carro colorido ao sol tinge de leve o chão em volta.
+- **Fachadas:** os lados das colunas e reentrâncias recebem a luz pelo lado para onde viram, não por um escurecimento fixo; a sombra da lua escurece de verdade.
 - **As faixas do asfalto voltam a brilhar no sol:** a tinta tinha a refletância do asfalto; agora é tinta.
 - **O dia mais claro:** o olho se adapta mais à sombra das ruas entre os prédios.
 - **Menos manchas na luz rebatida:** um raio que pega o sol refletido numa torre de vidro não pinta mais um losango claro no chão.

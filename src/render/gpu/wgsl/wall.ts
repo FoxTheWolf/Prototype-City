@@ -29,7 +29,6 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   if (side != 2) { f0 = bldF(u32(q + 36u + u32(face) * 2u)); f1 = bldF(u32(q + 37u + u32(face) * 2u)); }
   let dAlong = u.colW * t / max(1e-6, abs(dn));
   // (16.1b) the face's own color: its light comes from its normal and the haze from the sky, both in light()
-  let shade0 = 1.0; var shade = shade0;
   let winLight = 1.0;
   // the building's power now, its signs' (never on the generator), and each window's
   let sub = i32(bldF(u32(q + 46u))); let gen = bldF(u32(q + 47u)) > 0.5;
@@ -76,7 +75,6 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       let rT = t - sb + sb * bl; let zr = gOZ - m * rT + A * rT * rT;
       if (zr > bldF(u32(q + 60u)) && zr < bldF(u32(q + 61u))) {
         rs = select(2, 1, bl < 1e-6); T = rT; z = zr; along = af + (along - af) * bl;
-        shade = shade0 * select(0.68, 1.08, rs == 1);
       }
     }
   }
@@ -163,45 +161,45 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   var wp = 0.0;
   if (hh < litK) { wp = select(winLight, power(sub, cx, cy, winGroup(bk, wi, fl), gen, bk, 0.5) * winLight, switched); }
   let wk = wp * (0.65 + 0.35 * hash3(wi, fl, bk));
-  let darkPane = vec3f(30.0 * shade + 8.0, 36.0 * shade + 8.0, 58.0 * shade + 12.0);
+  let darkPane = vec3f(38.0, 44.0, 70.0);
   if (S == 7 || S == 10) {
     if (z > H - 1.0) { ch = STAR; c = win * winLight; em = true; }
-    else if (S == 10 && ((z > H - 6.0 && z < H - 4.5) || (z > H - 10.0 && z < H - 8.5))) { ch = EQ; c = frame * 1.9 * shade; }
-    else { ch = select(BAR, EQ, S == 10 && detailed); c = frame * select(1.0, 1.2, S == 7) * shade; }
+    else if (S == 10 && ((z > H - 6.0 && z < H - 4.5) || (z > H - 10.0 && z < H - 8.5))) { ch = EQ; c = frame * 1.9; }
+    else { ch = select(BAR, EQ, S == 10 && detailed); c = frame * select(1.0, 1.2, S == 7); }
   } else if (z > H - max(0.6, dz)) {
-    ch = US; c = frame * 1.5 * shade;
+    ch = US; c = frame * 1.5;
     if (u.snow > 0.05) { c += (vec3f(190.0, 195.0, 205.0) - c) * (u.snow * 0.8); }
-  } else if (rs == 2) { ch = select(BAR, EQ, S == 2); c = frame * shade; } // the side of a bay or pier
+  } else if (rs == 2) { ch = select(BAR, EQ, S == 2); c = frame; } // the side of a bay or pier
   else if (clockR > 0.0 && length(vec2f(du, z - clockZ)) < clockR) {
     let cz = z - clockZ; let d = length(vec2f(du, cz));
     let a1 = 150.0 * 3.14159265 / 180.0; let a2 = 30.0 * 3.14159265 / 180.0;
     let s1 = du * cos(a1) + cz * sin(a1); let s2 = du * cos(a2) + cz * sin(a2);
     let hand = (s1 > 0.0 && s1 < clockR * 0.5 && abs(-du * sin(a1) + cz * cos(a1)) < 0.22) || (s2 > 0.0 && s2 < clockR * 0.75 && abs(-du * sin(a2) + cz * cos(a2)) < 0.22);
-    if (d > clockR * 0.82) { ch = O; c = frame * 1.6 * shade; }
+    if (d > clockR * 0.82) { ch = O; c = frame * 1.6; }
     else if (hand) { ch = HASH; c = vec3f(40.0, 30.0, 20.0); }
     else { ch = select(COL, O, d < 0.3); c = vec3f(250.0, 230.0, 170.0) * elec; em = true; }
   } else if (S == 13) {
     if (z % 30.0 < 1.0 && corner) { ch = STAR; c = win * winLight; em = true; }
-    else if (!detailed) { ch = BAR; c = frame * shade; }
-    else if (corner) { ch = BAR; c = frame * 1.3 * shade; }
+    else if (!detailed) { ch = BAR; c = frame; }
+    else if (corner) { ch = BAR; c = frame * 1.3; }
     else {
       let a = ((along + z) % 3.0 + 3.0) % 3.0 < 0.35; let b = ((along - z) % 3.0 + 3.0) % 3.0 < 0.35;
-      ch = select(select(select(DOT, BS, b), SL, a), X, a && b); c = frame * select(0.35, 1.2, a || b) * shade;
+      ch = select(select(select(DOT, BS, b), SL, a), X, a && b); c = frame * select(0.35, 1.2, a || b);
     }
   } else if (S == 14) {
-    if (along % 7.0 < 0.5) { ch = BAR; c = frame * 1.4 * shade; }
-    else if (z % 6.0 < 0.45) { ch = EQ; c = frame * 1.3 * shade; }
-    else { ch = select(DOT, COL, detailed); c = frame * 0.75 * shade; }
+    if (along % 7.0 < 0.5) { ch = BAR; c = frame * 1.4; }
+    else if (z % 6.0 < 0.45) { ch = EQ; c = frame * 1.3; }
+    else { ch = select(DOT, COL, detailed); c = frame * 0.75; }
   } else if (S == 6) {
     if ((ifloor(along / select(1.6, 0.8, detailed)) & 1) == 1) { ch = BAR; c = win * adElec * 0.9; em = true; }
-    else { ch = BAR; c = frame * 1.2 * shade; }
-  } else if (S == 8) { ch = select(COL, BAR, detailed && along % 2.0 < 0.3); c = frame * 1.2 * shade; }
-  else if (S == 11) { ch = select(HASH, EQ, detailed && fw < 0.5); c = frame * 0.9 * shade; }
+    else { ch = BAR; c = frame * 1.2; }
+  } else if (S == 8) { ch = select(COL, BAR, detailed && along % 2.0 < 0.3); c = frame * 1.2; }
+  else if (S == 11) { ch = select(HASH, EQ, detailed && fw < 0.5); c = frame * 0.9; }
   else if (S == 9) {
     let tr = (x1 - x0) * 0.5; let lid = H - 0.6 * tr; let base = lid - 1.7 * tr;
-    if (z < base) { ch = select(DOT, BAR, along % 1.6 < 0.3); c = frame * 0.6 * shade; }
-    else if (z > lid) { ch = CARET; c = frame * shade; }
-    else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame * shade; }
+    if (z < base) { ch = select(DOT, BAR, along % 1.6 < 0.3); c = frame * 0.6; }
+    else if (z > lid) { ch = CARET; c = frame; }
+    else { ch = select(BAR, EQ, abs(z - (base + 0.33 * (lid - base))) < 0.2 || abs(z - (base + 0.7 * (lid - base))) < 0.2); c = frame; }
   } else if (signN > 0 && z > SIGN_Z0 && z < SIGN_Z1) {
     // neon sign: letters on the middle row, a frame (or marquee bulbs) around them
     // (switched off, a dark board lit by what is round it: emitting, its dark panel glowed brighter than the dead bulbs)
@@ -234,7 +232,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     else { ch = DOT; c = vec3f(14.0, 12.0, 16.0); }
   } else if (ticker && side != 2 && z > TICK_Z0 - 0.15 && z < TICK_Z1 + 0.15) {
     // the news ticker: headlines in amber bulbs running right to left around the building
-    if (z < TICK_Z0 || z > TICK_Z1) { ch = EQ; c = frame * 0.7 * shade; }
+    if (z < TICK_Z0 || z > TICK_Z1) { ch = EQ; c = frame * 0.7; }
     else {
       em = adElec > 0.02; emK = SIGN_EMIT; glowK = SIGN_GLOW;
       let n = i32(u.tickN); let p = select(along, -along, rev) + sec * TICK_SPEED; let li = ifloor(p / TICK_LW); let fu = p / TICK_LW - f32(li);
@@ -253,7 +251,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     }
   } else if (scZ1 > scZ0 && along > scA0 && along < scA1 && z > scZ0 && z < scZ1) {
     // a video screen behind a dark bezel
-    if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45 * shade; }
+    if (along - scA0 < 0.25 || scA1 - along < 0.25 || z - scZ0 < 0.25 || scZ1 - z < 0.25) { ch = HASH; c = frame * 0.45; }
     else {
       let su = select(along - scA0, scA1 - along, rev);
       var P = screenPix(bk, su, scZ1 - z, scA1 - scA0, scZ1 - scZ0, dAlong, dz);
@@ -267,19 +265,19 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let shTop = DOOR_H + 0.22; let shBot = shTop - dSh * shTop;
     if (dHasSh && z > shTop) {
       // a shop's shutter box over the door
-      ch = select(EQ, BAR, z > DOOR_H + 0.31); c = vec3f(96.0, 100.0, 104.0) * shade;
+      ch = select(EQ, BAR, z > DOOR_H + 0.31); c = vec3f(96.0, 100.0, 104.0);
     } else if (dSh > 0.0 && z >= shBot) {
       // the steel shutter rolled down (as far as it is), slats across the whole door and a bar along its bottom
       let slat = fract((shTop - z) / 0.09);
       ch = select(select(DASH, EQ, slat < 0.6), BAR, z - shBot < 0.07 && dSh < 0.999);
-      c = vec3f(128.0, 132.0, 136.0) * select(select(0.75, 1.0, slat < 0.6), 0.6, z - shBot < 0.07) * shade;
+      c = vec3f(128.0, 132.0, 136.0) * select(select(0.75, 1.0, slat < 0.6), 0.6, z - shBot < 0.07);
     } else if (dEn && z > DOOR_H) {
       // the transom: its frame, and the pane lit from the lobby
-      if (e < 0.07 || z < DOOR_H + 0.1 || z > DOOR_H + TRANSOM_Z) { ch = select(EQ, BAR, e < 0.07); c = frame * 1.5 * shade; }
+      if (e < 0.07 || z < DOOR_H + 0.1 || z > DOOR_H + TRANSOM_Z) { ch = select(EQ, BAR, e < 0.07); c = frame * 1.5; }
       else { ch = EQ; c = vec3f(20.0, 24.0, 32.0) + vec3f(255.0, 215.0, 150.0) * (0.3 * elec); em = true; glowK = 0.2; glass = true; }
     } else if (e < 0.07 || z > DOOR_H + 0.22) {
       // the frame: the residents' door's of its wood, as from inside (the same door both ways, playtest of 2026-10-09)
-      ch = select(EQ, BAR, e < 0.07); c = select(frame * 1.5, vec3f(75.0, 45.0, 27.0), dEn && z < DOOR_H + 0.1) * shade;
+      ch = select(EQ, BAR, e < 0.07); c = select(frame * 1.5, vec3f(75.0, 45.0, 27.0), dEn && z < DOOR_H + 0.1);
     }
     else {
       // up close, the door itself (13.10d): the walk into the lobby meets the same two glass leaves as from inside,
@@ -299,7 +297,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
         // far, the residents' door painted: dark oak, its glass light lit from the lobby, the brass knob
         let lu = (along - dA0) / (dA1 - dA0);
         if (lu > 0.2 && lu < 0.8 && z > 1.1 && z < DOOR_H - 0.28) { ch = COL; c = vec3f(255.0, 215.0, 150.0) * (0.35 * elec); em = true; glowK = 0.2; }
-        else { ch = select(EQ, O, lu > 0.84 && lu < 0.92 && abs(z - 1.0) < 0.07); c = select(vec3f(96.0, 58.0, 34.0), vec3f(210.0, 175.0, 90.0), ch == O) * shade; }
+        else { ch = select(EQ, O, lu > 0.84 && lu < 0.92 && abs(z - 1.0) < 0.07); c = select(vec3f(96.0, 58.0, 34.0), vec3f(210.0, 175.0, 90.0), ch == O); }
       }
       else { ch = select(select(COL, BAR, abs(along - (dA0 + dA1) * 0.5) < 0.06), DASH, z > DOOR_H); c = vec3f(255.0, 220.0, 160.0) * (0.4 * elec); em = true; glowK = 0.3; }
     }
@@ -314,7 +312,7 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     let hp = ifloor(hash3(bk, 8, 77) * ${AD_BG.length}.0);
     var ac = select(AD_BG[hp], AD_FG[hp], on); if (edge) { ac = FRAME_AD; }
     ch = select(select(select(DOT, COL, hash3(ifloor(along * 2.0), ifloor(z * 2.0), 5) < 0.2), HASH, on), EQ, edge);
-    c = ac * ((0.75 + 0.25 * hash3(ifloor(along * 3.0), ifloor(z * 3.0), bk)) * shade);
+    c = ac * ((0.75 + 0.25 * hash3(ifloor(along * 3.0), ifloor(z * 3.0), bk)));
     // lit from below by gooseneck lamps at night
     let al = vec3f(120.0, 105.0, 80.0) * ((1.0 - u.day) * ad * max(0.0, 1.0 - (z - adZ0) / (adZ1 - adZ0)) * 0.9); c += al; il += al;
   } else { body = true; }
@@ -356,14 +354,14 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     } else {
       // the average of what up close is wall and dark panes, so the color holds when the detail comes in
       let paneK = select(select(select(0.3, 0.2, S == 2), 0.24, S == 4), 0.0, S == 1 || S == 5);
-      chF = farWall; cF = mix(frame * select(farK, 1.15, S == 1) * shade, darkPane, paneK); glassF = S == 1;
+      chF = farWall; cF = mix(frame * select(farK, 1.15, S == 1), darkPane, paneK); glassF = S == 1;
     }
   }
   if (body && !detailed) { ch = chF; c = cF; em = emF; glass = glassF; }
   else if (body) {
   if (fl == 0 && dA1 > dA0 && z < FLOOR_H) {
     // over a street door: wall up to the next floor, never a window (13.10b2)
-    ch = select(COL, EQ, z < DOOR_H + 0.5); c = frame * select(1.0, 1.25, z < DOOR_H + 0.5) * shade;
+    ch = select(COL, EQ, z < DOOR_H + 0.5); c = frame * select(1.0, 1.25, z < DOOR_H + 0.5);
   } else if (winPeek) {
     // a window: the room behind it, lit by its own lamps. From afar it was a pane in the building's window
     // color (lit) or dark glass: that look fades out over the whole building as it comes near, and a pane
@@ -380,70 +378,70 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
     if (dr > 0u && peekK > 0.5) { ch = select(DOT, COM, dr == 2u); c += vec3f(50.0, 55.0, 65.0); }
   } else if (S != 1 && S != 5 && S != 3 && z > H - 1.3) {
     // cornice with dentils
-    ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4 * shade;
+    ch = select(select(DOT, QUO, (i32(along * 4.0) & 1) == 1), EQ, z > H - 0.95); c = frame * 1.4;
   } else if ((S == 0 || S == 2 || S == 4) && fl > 1 && fl % (4 + i32(feat * 3.0)) == 0 && fz < 0.07) {
-    ch = EQ; c = frame * 1.3 * shade; // a belt course every few floors
+    ch = EQ; c = frame * 1.3; // a belt course every few floors
   } else if (S == 2 && !corner && fw > 0.27 && fw < 0.73 && ((fz > 0.78 && fz < 0.86) || (fz > 0.25 && fz < 0.3))) {
-    ch = select(US, DASH, fz > 0.5); c = frame * 1.3 * shade; // stone lintel and sill
+    ch = select(US, DASH, fz > 0.5); c = frame * 1.3; // stone lintel and sill
   } else if (S == 0 && feat > 0.6 && wi % 2 == 0 && fw < 0.18) {
-    ch = BAR; c = frame * 1.3 * shade; // art deco piers
+    ch = BAR; c = frame * 1.3; // art deco piers
   } else if ((S == 0 || S == 4) && z < FLOOR_H && !shop && !corner) {
-    ch = select(HASH, EQ, (ifloor(z / 0.5) & 1) == 1); c = frame * 0.95 * shade; // a stone base
+    ch = select(HASH, EQ, (ifloor(z / 0.5) & 1) == 1); c = frame * 0.95; // a stone base
   } else if (z < FLOOR_H && shop) {
     if (fw > 0.12 && fw < 0.88 && z > 0.2 && z < 2.6 && !corner) { ch = select(select(COL, RB, fw > 0.8), LB, fw < 0.2); c = vec3f(180.0, 150.0, 100.0) * elec; em = true; glass = true; }
-    else { ch = BAR; c = frame * shade; }
+    else { ch = BAR; c = frame; }
   } else if (S == 1) {
     // curtain wall: mullions and floor slabs over tinted glass with a diagonal sheen
-    if (fz < 0.08) { ch = DASH; c = frame * 0.8 * shade; }
-    else if (fw < 0.07 || corner) { ch = BAR; c = frame * 1.5 * shade; }
+    if (fz < 0.08) { ch = DASH; c = frame * 0.8; }
+    else if (fw < 0.07 || corner) { ch = BAR; c = frame * 1.5; }
     else if (hh < litK) {
       if (wp > 0.04) { ch = select(select(COL, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
-    } else { ch = select(select(DOT, COL, sheen > 0.4), SL, sheen > 0.85); c = frame * (1.0 + 0.3 * sheen) * shade; glass = true; }
+    } else { ch = select(select(DOT, COL, sheen > 0.4), SL, sheen > 0.85); c = frame * (1.0 + 0.3 * sheen); glass = true; }
   } else if (S == 5) {
     let dp = along % 6.0;
     if (z > H - 3.2 && z < H - 1.4) {
       if (fw > 0.08 && fw < 0.92) {
         let p0 = select(winLight, power(sub, cx, cy, winGroup(bk, wi, 0), gen, bk, 0.5) * winLight, switched);
         if (hash3(bk, wi, 0) < litK * 2.0 && p0 > 0.04) { ch = HASH; c = win * p0 * 0.75; em = true; }
-        else { ch = EQ; c = vec3f(22.0 * shade + 8.0, 26.0 * shade + 8.0, 36.0 * shade + 10.0); }
-      } else { ch = BAR; c = frame * 1.2 * shade; }
+        else { ch = EQ; c = vec3f(22.0 + 8.0, 26.0 + 8.0, 36.0 + 10.0); }
+      } else { ch = BAR; c = frame * 1.2; }
     } else if (z < 4.5 && ifloor(along / 6.0) % 3 == 1 && !corner) {
       let edge = dp < 0.4 || dp > 5.6;
-      ch = select(select(DASH, EQ, z > 4.1), BAR, edge); c = frame * select(1.15, 1.3, edge) * shade;
-    } else { ch = BAR; c = frame * select(0.78, 1.0, (ifloor(along / 0.6) & 1) == 1) * shade; }
+      ch = select(select(DASH, EQ, z > 4.1), BAR, edge); c = frame * select(1.15, 1.3, edge);
+    } else { ch = BAR; c = frame * select(0.78, 1.0, (ifloor(along / 0.6) & 1) == 1); }
   } else if (escCell) {
     // fire escape: landings, rails and a zigzag stair between floors
     ch = select(select(select(SL, BS, (fl & 1) == 1), BAR, escU < 0.04 || escU > 0.96), EQ, fz < 0.08);
-    c = vec3f(95.0, 95.0, 105.0) * shade;
+    c = vec3f(95.0, 95.0, 105.0);
   } else if (S == 3) {
-    if (z > H - 2.2) { ch = select(select(QUO, COL, (i32(fw * 4.0) & 1) == 1), EQ, z > H - 1.2); c = frame * 1.3 * shade; }
-    else if (z < FLOOR_H * 1.2) { ch = select(HASH, EQ, (ifloor(z / 0.7) & 1) == 1); c = frame * 0.9 * shade; }
-    else if ((wi % 3 == 0 && fw < 0.28) || corner) { ch = BAR; c = frame * 1.25 * shade; }
-    else if (fz < 0.08) { ch = DASH; c = frame * 1.1 * shade; }
+    if (z > H - 2.2) { ch = select(select(QUO, COL, (i32(fw * 4.0) & 1) == 1), EQ, z > H - 1.2); c = frame * 1.3; }
+    else if (z < FLOOR_H * 1.2) { ch = select(HASH, EQ, (ifloor(z / 0.7) & 1) == 1); c = frame * 0.9; }
+    else if ((wi % 3 == 0 && fw < 0.28) || corner) { ch = BAR; c = frame * 1.25; }
+    else if (fz < 0.08) { ch = DASH; c = frame * 1.1; }
     else if (fw > 0.3 && fw < 0.7 && fz > 0.18 && fz < 0.82) {
-      if (fz > 0.7) { ch = CARET; c = frame * 1.3 * shade; }
+      if (fz > 0.7) { ch = CARET; c = frame * 1.3; }
       else if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
-    } else { ch = COL; c = frame * shade; }
+    } else { ch = COL; c = frame; }
   } else if (S == 2) {
     if (fw > 0.3 && fw < 0.7 && fz > 0.3 && fz < 0.78 && !corner) {
       if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
     } else {
       let course = ifloor(z / 0.5); let off = f32(course & 1) * 0.6;
-      ch = select(EQ, BAR, corner); c = frame * (0.8 + 0.35 * hash3(course, ifloor((along + off) / 1.2), bk)) * shade;
+      ch = select(EQ, BAR, corner); c = frame * (0.8 + 0.35 * hash3(course, ifloor((along + off) / 1.2), bk));
     }
   } else if (S == 4) {
     let balAt = balK == 3 || select(fw > 0.1 && fw < 0.9 && (balK != 1 || (fl & 1) == 1), wi % 4 < 2 && fw > 0.04 && fw < 0.96, balK == 2);
     if (balcony && z > FLOOR_H && fz < 0.25 && balAt) {
-      if (fz < 0.07) { ch = EQ; c = frame * 1.35 * shade; }
-      else if (balK == 1) { ch = HASH; c = frame * 1.1 * shade; }
-      else if (balK == 2) { ch = COL; c = vec3f(110.0 * shade + 10.0, 140.0 * shade + 10.0, 160.0 * shade + 12.0); }
-      else { ch = select(BAR, DASH, balK == 3); c = frame * 1.3 * shade; }
+      if (fz < 0.07) { ch = EQ; c = frame * 1.35; }
+      else if (balK == 1) { ch = HASH; c = frame * 1.1; }
+      else if (balK == 2) { ch = COL; c = vec3f(110.0 + 10.0, 140.0 + 10.0, 160.0 + 12.0); }
+      else { ch = select(BAR, DASH, balK == 3); c = frame * 1.3; }
     } else if (fw > 0.25 && fw < 0.75 && fz > 0.3 && fz < 0.78 && !corner) {
       if (wp > 0.04) { ch = select(select(HASH, pat.y, pIdx != 0), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
-    } else { ch = select(DOT, BAR, corner); c = frame * shade; }
+    } else { ch = select(DOT, BAR, corner); c = frame; }
   } else if (fw > 0.2 && fw < 0.8 && fz > 0.28 && fz < 0.8 && !corner) {
     if (wp > 0.04) { ch = select(select(pat.z, pat.y, hh < litK * 0.7), pat.x, hh < litK * 0.3); c = wc * wk; em = true; glass = true; } else { ch = EQ; c = darkPane; glass = true; }
-  } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame * shade; }
+  } else { ch = select(select(COL, DOT, t > 60.0), BAR, corner); c = frame; }
   if (detK < 1.0) {
     bodyEm = mix(select(vec3f(0.0), cF, emF), select(vec3f(0.0), c, em), detK);
     c = mix(cF, c, detK); em = em || emF;
@@ -508,10 +506,10 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
       if (upright || led || brace || board) {
         let plank = board && !led && !upright;
         ch = select(select(select(DASH, SL, brace), EQ, plank), BAR, upright);
-        c = select(SCAF_STEEL * 1.1, SCAF_BOARD * 0.9, plank) * shade0; T = sT; emC = vec3f(0.0); il = vec3f(0.0);
+        c = select(SCAF_STEEL * 1.1, SCAF_BOARD * 0.9, plank); T = sT; emC = vec3f(0.0); il = vec3f(0.0);
       } else if (bldF(u32(q + 53u)) > 0.5) {
         // the net veils the wall behind it
-        c = c * 0.45 + NETS[u32(bldF(u32(q + 53u))) - 1u] * (0.55 * shade0); emC *= 0.45; il *= 0.45;
+        c = c * 0.45 + NETS[u32(bldF(u32(q + 53u))) - 1u] * 0.55; emC *= 0.45; il *= 0.45;
         if (t < 40.0 && ch != AT && ch != HASH) { ch = select(DOT, COL, ((ifloor(uu / 0.3) + ifloor(zs / 0.3)) & 1) == 1); }
       }
     }
@@ -521,7 +519,9 @@ fn wallCell(bk: i32, t: f32, side: i32, rdx: f32, rdy: f32, zw: f32, dz: f32, m:
   // the street behind, through the room's far window (main sends the ray on)
   gBackT = select(0.0, backT, isWin && T == t && backT > t); gBackW = t; gBackK = peekK;
   if (!isWin) { gEm = sat(emC); gIl = il; gGlowK = glowK; gEmK = emK; } else { gEm = sat(winGlow); gIl = vec3f(0.0); gGlowK = 1.0; gEmK = 1.0; }
-  gTag = T; gNrm = vec3f(nw, 0.0); gWet = 0.0; gPos = vec3f(gOX + rdx * T, gOY + rdy * T, gOZ - m * T + A * T * T);
+  // (16.1c) the side of a bay or pier (rs 2) faces along the wall, toward the ray: lit by that normal, not a painted shade
+  let tg = vec2f(-nw.y, nw.x);
+  gTag = T; gNrm = select(vec3f(nw, 0.0), vec3f(select(tg, -tg, dot(vec2f(rdx, rdy), tg) > 0.0), 0.0), rs == 2); gWet = 0.0; gPos = vec3f(gOX + rdx * T, gOY + rdy * T, gOZ - m * T + A * T * T);
   gMat = select(select(WALL_MAT[u32(clamp(S, 0, 15))], MAT_METAL, escCell || (rs == 2 && S == 1)), select(MAT_GLASS, MAT_WINDOW, isWin), glass);
   // a room seen through a window keeps its own lamps' light: by day the sun on the facade is not on it
   return Cell(ch, c, vec3f(7.0, 8.0, 12.0), T, select(KIND_WALL, KIND_ROOM, isWin), select(max(0.0, wsun), 0.0, isWin));

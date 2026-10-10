@@ -19,6 +19,8 @@ export const TUNE = {
   giK: 1.0,
   /** (GPU) The most one GI ray's light may be on the screen (1 = white): lower, fewer sparks, a little less bounce. */
   giRayMax: 2.0,
+  /** (GPU) The street objects in the indirect light round them (their AO and the color they bounce): 0 off, 1 as computed. */
+  aoK: 1.0,
 };
 /** The knobs the shader reads (each one a uniform `tk_<name>`, filled from TUNE every frame). */
-export const GPU_KNOBS = ['giK', 'giRayMax'] as const;
+export const GPU_KNOBS = ['giK', 'giRayMax', 'aoK'] as const;

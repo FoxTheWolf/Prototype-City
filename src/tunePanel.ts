@@ -8,7 +8,7 @@ import { TUNE } from './render/tune';
 /** Each knob's slider range and step. */
 const RANGE: Record<keyof typeof TUNE, [number, number, number]> = {
   dayExpo: [0.3, 5, 0.05], eyeDay: [0, 1, 0.05], bandDayLo: [0.005, 0.4, 0.005], bandDayHi: [0.01, 0.6, 0.005],
-  adaptDark: [0, 1, 0.05], adaptBright: [0, 1, 0.05], giK: [0, 4, 0.05], giRayMax: [0.25, 8, 0.25],
+  adaptDark: [0, 1, 0.05], adaptBright: [0, 1, 0.05], giK: [0, 4, 0.05], giRayMax: [0.25, 8, 0.25], aoK: [0, 2, 0.05],
 };
 const DEFAULTS = { ...TUNE };
 

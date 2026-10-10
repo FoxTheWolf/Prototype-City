@@ -261,6 +261,7 @@ O resto das notas técnicas (projeção, unidades, atlas, onde mexer na variedad
 ### Lições aprendidas: índice (o texto está em `docs/licoes.md`)
 
 Antes de mexer num sistema, ler só a seção dele em `docs/licoes.md` (`grep -n "^### " docs/licoes.md` dá as linhas). A seção `[HACKING]` só na Trilha de hacking.
+- Lições da 16.1c parte 3 (`let sign` no wallCell, erros velhos no console, `camera.look` relativo, perfil pela mancha, AO dos objetos)
 - Lições do painel de ajustes F12 (material herdado pelas faixas, botões como uniforms, Tweakpane, a adaptação parando cedo)
 - Lições da 16.1c partes 1 e 2 (a chave com NaN, os modos de debug, o fator de unidade, o xadrez do cache, extrair em vez de copiar)
 - Lições da 16.1c passo 0 (céu físico pede olho físico, calibrar com `tsx`, o relógio encurta os efeitos, o domo da cidade)
