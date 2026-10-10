@@ -69,6 +69,38 @@ export function skyRadiance(h0: number, v: number[], s: number[], out: number[] 
   return out;
 }
 
+/** The sky's light in the units of the shader's light() (sky.ts's SKY_K): calibrated so the clear zenith at noon reads as the old sky's. */
+export const SKY_K = 4.7;
+/** The night sky's own faint light (the airglow, the haze over the city: sky.ts's night gradient, its mean), in light() units at full night. */
+const NIGHT_SKY = [0.004, 0.0035, 0.006].map((x) => x / 125);
+const FIB = 256, FIB_D: number[][] = [];
+for (let i = 0; i < FIB; i++) { const z = 1 - (2 * i + 1) / FIB, r = Math.sqrt(1 - z * z), a = i * 2.39996323; FIB_D.push([Math.cos(a) * r, Math.sin(a) * r, z]); }
+/** The 9 real spherical harmonics (L2) of a unit direction. */
+export function shBasis(d: number[], o: number[] = []) {
+  const [x, y, z] = d;
+  o[0] = 0.282095; o[1] = 0.488603 * y; o[2] = 0.488603 * z; o[3] = 0.488603 * x;
+  o[4] = 1.092548 * x * y; o[5] = 1.092548 * y * z; o[6] = 0.315392 * (3 * z * z - 1); o[7] = 1.092548 * x * z; o[8] = 0.546274 * (x * x - y * y);
+  return o;
+}
+/**
+ * (16.1c) The whole sky's light by direction as 27 numbers (L2 spherical harmonics, 9 per channel, c[k * 3 + ch]): what a
+ * ray of the indirect light that escapes the city meets (the shader's skySH). Below the horizon, the horizon's light
+ * (those rays hit the ground first anyway). night: 0..1, the night sky's own light (1 - day).
+ */
+export function skySH(sunEl: number, sunA: number, mie: number, night: number, out = new Float32Array(27)) {
+  out.fill(0);
+  const ce = Math.cos(sunEl), s = [Math.cos(sunA) * ce, Math.sin(sunA) * ce, Math.sin(sunEl)], Y: number[] = [], L = [0, 0, 0], v = [0, 0, 0];
+  const w = (4 * Math.PI) / FIB;
+  for (const d of FIB_D) {
+    v[0] = d[0]; v[1] = d[1]; v[2] = Math.max(0.02, d[2]);
+    const n = Math.hypot(v[0], v[1], v[2]); v[0] /= n; v[1] /= n; v[2] /= n;
+    if (sunEl > -0.35) skyRadiance(2, v, s, L, mie); else L[0] = L[1] = L[2] = 0;
+    shBasis(d, Y);
+    for (let c = 0; c < 3; c++) { const r = L[c] * SKY_K + NIGHT_SKY[c] * night; for (let k = 0; k < 9; k++) out[k * 3 + c] += r * Y[k] * w; }
+  }
+  return out;
+}
+
 const lum = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 /** The sun straight overhead's light on the ground: the sun colors below are over its luminance (noon's stays ~1). */
 const NOON = lum(transmittance(ATMO.R + 2, 1));

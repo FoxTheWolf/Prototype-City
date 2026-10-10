@@ -1,4 +1,7 @@
-export const mainWGSL = (): string => /* wgsl */ `@compute @workgroup_size(8, 8)
+export const mainWGSL = (): string => /* wgsl */ `/** (16.1c, debug) this cell's indirect light (giSample) and whether it was worked out. */
+var<private> giE: vec3f = vec3f(0.0);
+var<private> giOn: bool = false;
+@compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let cols = u32(u.cols); let rows = u32(u.rows);
   if (gid.x >= cols || gid.y >= rows) { return; }
@@ -151,6 +154,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let Nn = select(vec3f(0.0, 0.0, 1.0), gNrm, cl.depth == gTag && cl.kind == KIND_WALL);
     let fk = smoothK(SKY_FAR * 0.65, SKY_FAR, t);
     gSky = mix(skyView(P, Nn), 1.0, fk); gBncA *= 1.0 - fk; gBncS *= 1.0 - fk;
+    // (16.1c, debug: DEBUG.giView) the indirect light by rays and the world cache (gi.ts)
+    if (u.giDbg > 0.5) { giE = select(giSample(P, Nn, gid.x, gid.y), skySH(Nn), u.giDbg > 1.5 && u.giDbg < 2.5); giOn = true; }
   }
   // by day, whether the sun reaches what this cell shows (the sky and the rooms keep theirs)
   gSun = 1.0;
@@ -193,6 +198,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let kc = array<vec3f, 6>(vec3f(30.0), vec3f(160.0), vec3f(70.0, 110.0, 230.0), vec3f(200.0, 120.0, 40.0), vec3f(60.0, 210.0, 80.0), vec3f(230.0, 210.0, 60.0));
     lit.c = kc[min(cl.kind, 5u)] * select(1.0, 0.4 + 0.6 * exp(-cl.depth / 400.0), cl.depth < 1e8); lit.bg = lit.c * 0.5; lit.ch = 35u;
   }
+  // (16.1c, debug) only the new indirect light, on a grey of albedo 0.5
+  if (u.giDbg > 0.5) { if (giOn) { lit.c = srgb(toneMap(giE * (0.5 * evRef() * u.adapt), dayGrade())); lit.bg = lit.c * 0.5; lit.ch = 35u; } }
   var fin = fallOver(handOver(display(lit), gid.x, gid.y, handD), rdx, rdy, m, inc.nearT);
   if (u.lightDbg < 0.5) { fin.c = grade(fin.c); fin.bg = grade(fin.bg); }
   store(i, n, fin);

@@ -31,6 +31,7 @@ import { Backup, subAt } from '../../sim/power';
 import { lightShares, lightsOf } from '../../sim/lights';
 import { fallShape } from '../precip';
 import { DEBUG } from '../../debug';
+import { GI_ACC_W, GI_RES_W, GI_RESOLVE_WGSL, GI_SLOTS } from './wgsl/gi';
 import { daylight } from '../sky';
 import { fontRows, signMode, signText } from '../signs';
 import { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BIZ, SG_FONT, SG_STARS, STYLES, TICK_MAX, UNIFORMS, worldWGSL } from './shader';
@@ -58,6 +59,8 @@ type UName = (typeof UNIFORMS)[number];
 /** Words before the lists in cty (seven starts, then the cells of xc and yc) and in dyb (six starts): head.ts's heads(). */
 const CTY_HEAD = 9, DYB_HEAD = 6;
 const UIDX = Object.fromEntries(UNIFORMS.map((n, k) => [n, k])) as Record<UName, number>;
+/** (16.1c) The sky's harmonics' uniforms, zero (the frame's are copied in after, from the sky frame). */
+const SH_ZERO = Object.fromEntries(Array.from({ length: 27 }, (_, k) => [`sh${k}`, 0])) as Record<UName, number>;
 
 /**
  * The eye's light meter (L.3): the mean of the log of each cell's light on the screen, as the frame was shown
@@ -188,6 +191,11 @@ export class GpuWorld {
   gpuMs = -1;
   private tq: { set: GPUQuerySet; res: GPUBuffer; read: GPUBuffer; busy: boolean } | null = null;
   /** The meter's pipeline, result and read-back, the frame's adaptation it saw, and the target it gives. */
+  /** (16.1c) The indirect light's world cache (gi.ts) and its pass. */
+  private gia: GPUBuffer | null = null;
+  private gir: GPUBuffer | null = null;
+  private giPipe: GPUComputePipeline | null = null;
+  private giBind: GPUBindGroup | null = null;
   private meter: { pipe: GPUComputePipeline; res: GPUBuffer; read: GPUBuffer; uni: GPUBuffer; bind: GPUBindGroup | null; busy: boolean; pending: boolean; adapt: number; day: number } | null = null;
   /** The last reading: mean log light at adaptation 1, and the share of cells blown out (debug). */
   meterLog = 0;
@@ -280,6 +288,11 @@ export class GpuWorld {
         read: dev.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
         uni: dev.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }), bind: null, busy: false, pending: false, adapt: 1, day: 0 };
     }
+    // (16.1c) the indirect light's world cache (gi.ts): this frame's samples, the light read back, and the pass between
+    this.gia = dev.createBuffer({ size: GI_SLOTS * GI_ACC_W * 4, usage: GPUBufferUsage.STORAGE });
+    this.gir = dev.createBuffer({ size: GI_SLOTS * GI_RES_W * 4, usage: GPUBufferUsage.STORAGE });
+    this.giPipe = dev.createComputePipeline({ layout: 'auto', compute: { module: dev.createShaderModule({ code: GI_RESOLVE_WGSL }), entryPoint: 'main' } });
+    this.giBind = dev.createBindGroup({ layout: this.giPipe.getBindGroupLayout(0), entries: [this.gia, this.gir].map((buffer, binding) => ({ binding, resource: { buffer } })) });
     const mod = (this.mod = dev.createShaderModule({ code: worldWGSL() }));
     mod.getCompilationInfo().then((info) => info.messages.forEach((m) => console[m.type === 'error' ? 'error' : 'warn'](`WGSL ${m.lineNum}:${m.linePos} ${m.message}`)));
   }
@@ -353,7 +366,7 @@ export class GpuWorld {
       this.bindGen = this.gen;
       this.bind = this.dev.createBindGroup({
         layout: this.pipe.getBindGroupLayout(0),
-        entries: [this.uni, this.cty, this.out, this.lmap, this.dyb!, this.fx].map((buffer, binding) => ({ binding, resource: { buffer } })),
+        entries: [this.uni, this.cty, this.out, this.lmap, this.dyb!, this.fx, this.gia!, this.gir!].map((buffer, binding) => ({ binding, resource: { buffer } })),
       });
     }
     if (timed) {
@@ -375,6 +388,7 @@ export class GpuWorld {
     // how far the rain has fallen, shared with the CPU's drawFall (split into whole bands and the rest, for the f32s)
     const Fs = fallShape({ amount: W.precip, snow: W.snow, windX: W.windX, windY: W.windY, sec: (world.tick + v.alpha) / 60, flash: sky.flash });
     const vals: Record<UName, number> = {
+      ...SH_ZERO,
       px: v.x, py: v.y, eye: v.eye, dirX, dirY, plX: -dirY * plane, plY: dirX * plane, hor: rows / 2 + Math.tan(v.pitch) * scale,
       scale, cols, rows, sec: (world.tick + v.alpha) / 60, day: sky.day, solid: v.look.solid, sharp: v.look.sharp, fuse: v.look.fuse ? 1 : 0,
       nbx: C.nbx, nxb: C.xb.length, nyb: C.yb.length, curveR: CURVE_R, dox: Dg.ox, doy: Dg.oy, dex: Dg.ex, dey: Dg.ey,
@@ -389,10 +403,12 @@ export class GpuWorld {
       fallSpeed: Fs.speed, fallStreak: Fs.streak, fallDens: Fs.dens, fallPeriod: Fs.period,
       sunTR: sky.air.sun[0], sunTG: sky.air.sun[1], sunTB: sky.air.sun[2], cldTR: sky.air.cloud[0], cldTG: sky.air.cloud[1], cldTB: sky.air.cloud[2],
       zenR: sky.air.zen[0], zenG: sky.air.zen[1], zenB: sky.air.zen[2], skyL: sky.air.skyL, dayEv: sky.air.dayEv, mie: sky.air.mie, high: sky.high, hiTR: sky.air.high[0], hiTG: sky.air.high[1], hiTB: sky.air.high[2],
+      giDbg: +DEBUG.giView,
       homeLit: this.shares.home, workLit: this.shares.work, lightDbg: DEBUG.lightProbe ? 2 : DEBUG.lightKinds ? 1 : 0,
       hand: v.hand ?? 0, inX0: sk ? sk.x0 : 1e9, inY0: sk ? sk.y0 : 1e9, inX1: sk ? sk.x1 : -1e9, inY1: sk ? sk.y1 : -1e9,
     };
     for (const k of UNIFORMS) U[UIDX[k]] = vals[k];
+    for (let k = 0; k < 27; k++) U[UIDX.sh0 + k] = sky.sh[k];
     if (timed) setEye(sky.day, vals.cityLit, vals.adapt, sky.air.dayEv);
     // the sun on the screen (cell x, y) and how strongly its rays show, for the compositor's (B.2)
     {
@@ -424,6 +440,8 @@ export class GpuWorld {
     pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind);
     pass.dispatchWorkgroups(Math.ceil(cols / 8), Math.ceil(rows / 8));
     pass.end();
+    // (16.1c) the cache's samples of this frame into its light (only while the new indirect light is on: DEBUG.giView)
+    if (DEBUG.giView && this.giPipe) { const gp = enc.beginComputePass(); gp.setPipeline(this.giPipe); gp.setBindGroup(0, this.giBind!); gp.dispatchWorkgroups(Math.ceil(GI_SLOTS / 64)); gp.end(); }
     if (T) { enc.resolveQuerySet(T.set, 0, 2, T.res, 0); enc.copyBufferToBuffer(T.res, 0, T.read, 0, 16); T.busy = true; this.tqPending = true; }
     // the eye's meter over what this frame shows
     const M = timed && this.meter && !this.meter.busy ? this.meter : null;

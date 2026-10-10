@@ -16,6 +16,9 @@ struct U { ${UNIFORMS.map((n) => `${n}: f32`).join(', ')} };
 @group(0) @binding(3) var<storage, read> lmap: array<u32>;
 @group(0) @binding(4) var<storage, read> dyb: array<u32>;
 @group(0) @binding(5) var<storage, read> fx: array<u32>;
+// (16.1c) the indirect light's world cache (gi.ts): this frame's samples (added atomically) and the light read back
+@group(0) @binding(6) var<storage, read_write> gia: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read> gir: array<u32>;
 var<private> oXB: u32; var<private> oYB: u32; var<private> oXC: u32; var<private> oYC: u32; var<private> oBLK: u32;
 var<private> oBLD: u32; var<private> oSG: u32; var<private> nXC: u32; var<private> nYC: u32;
 var<private> oSUBS: u32; var<private> oLC: u32; var<private> oDL: u32; var<private> oDLV: u32; var<private> oDOFF: u32; var<private> oDIDX: u32;

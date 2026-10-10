@@ -4,7 +4,7 @@ import { moonDir, moonPhase, sunDir } from '../sim/clock';
 import { lightning, type Weather } from '../sim/weather';
 import { type PowerGrid } from '../sim/power';
 import { smoothPower } from './power';
-import { atmoFrame } from './atmosphere';
+import { atmoFrame, skySH } from './atmosphere';
 import {  } from './grid';
 
 /**
@@ -53,6 +53,8 @@ export interface SkyFrame {
   cityLit: number;
   /** (16.1c) The air: the sun's color on the ground and at the clouds, the zenith's hue (atmosphere.ts). */
   air: ReturnType<typeof atmoFrame>;
+  /** (16.1c) The whole sky's light as spherical harmonics (atmosphere.ts skySH), for the indirect light's rays. */
+  sh: Float32Array;
 }
 
 const tmp = new Float64Array(2);
@@ -68,6 +70,14 @@ export function daylight(t: number) {
 }
 
 const bolt = new Float64Array(2);
+// the sky's harmonics, worked out again only when the sun, the haze or the night have moved enough
+const SH = new Float32Array(27); let shKey = [1e9, 1e9, 1e9, 1e9];
+function skyHarmonics(sunEl: number, sunA: number, mie: number, night: number) {
+  if (Math.abs(sunEl - shKey[0]) > 0.002 || Math.abs(sunA - shKey[1]) > 0.01 || Math.abs(mie - shKey[2]) > 0.02 || Math.abs(night - shKey[3]) > 0.02) {
+    skySH(sunEl, sunA, mie, night, SH); shKey = [sunEl, sunA, mie, night];
+  }
+  return SH;
+}
 export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number, t: number, sec: number): SkyFrame {
   sunDir(t, tmp);
   const sunEl = tmp[0], sunA = heading(tmp[1]);
@@ -80,10 +90,12 @@ export function prepareSky(city: City, grid: PowerGrid, w: Weather, seed: number
   const eclU = (dA * Math.cos(moonEl)) / MOON_REAL, eclV = (-sunEl - geoEl) / MOON_REAL;
   // in the umbra the moon dims to a copper glow (and the night with it)
   const umbra = 1 - smooth(UMBRA - 0.8, UMBRA + 1, Math.hypot(eclU, eclV));
+  // (16.1c) the haze by the humidity: thicker under clouds and in rain, the air washed clean after it
+  const mie = Math.max(0.3, Math.min(2, 0.6 + 0.6 * w.cloud + 1.0 * w.precip - 0.3 * w.wet * (1 - w.precip)));
   // real-time drift, so clouds move at the wind's speed as you watch
   return {
-    // (16.1c) the haze by the humidity: thicker under clouds and in rain, the air washed clean after it
-    air: atmoFrame(sunEl, sunA, Math.max(0.3, Math.min(2, 0.6 + 0.6 * w.cloud + 1.0 * w.precip - 0.3 * w.wet * (1 - w.precip)))),
+    air: atmoFrame(sunEl, sunA, mie),
+    sh: skyHarmonics(sunEl, sunA, mie, 1 - day),
     day, sunA, sunEl, moonA, moonEl, phase, eclU, eclV,
     moonlight: moonEl > 0 ? (1 - Math.cos(2 * Math.PI * phase)) / 2 * Math.min(1, moonEl * 5) * (1 - day) * (1 - 0.92 * umbra) : 0,
     cloud: w.cloud, high: w.high, precip: w.precip, flash: lightning(seed, t, w.snow ? 0 : w.precip, bolt)[0], driftX: w.windX * sec * 3, driftY: w.windY * sec * 3, city, grid, sec,

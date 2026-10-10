@@ -15,6 +15,7 @@ export const UNIFORMS = [
   'fallPeriod', 'inX0', 'inY0', 'inX1', 'inY1', 'hand', 'eclU', 'eclV',
   'homeLit', 'workLit', 'lightDbg',
   'sunTR', 'sunTG', 'sunTB', 'cldTR', 'cldTG', 'cldTB', 'zenR', 'zenG', 'zenB', 'skyL', 'dayEv', 'mie', 'high', 'hiTR', 'hiTG', 'hiTB',
+  'sh0', 'sh1', 'sh2', 'sh3', 'sh4', 'sh5', 'sh6', 'sh7', 'sh8', 'sh9', 'sh10', 'sh11', 'sh12', 'sh13', 'sh14', 'sh15', 'sh16', 'sh17', 'sh18', 'sh19', 'sh20', 'sh21', 'sh22', 'sh23', 'sh24', 'sh25', 'sh26', 'giDbg',
 ] as const;
 
 /** Words of the viewer's floor's block (world.ts) before its street doors' leaves (16..21: the stairwell, see roomWalk). */

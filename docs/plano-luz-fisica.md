@@ -17,6 +17,19 @@ olho/a câmera (a exposição), não a luz (lições da 16.1b).
 **Como reescrever sem quebrar o jogo:** por tipo de coisa, de uma vez ("um sistema só"): cada parte entra pela função
 nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões convivendo.
 
+## Andamento
+
+- **2026-10-10 (conta C): a infraestrutura da parte 2, só no debug (`DEBUG.giView` no console; o visual padrão não mudou).**
+  `src/render/gpu/wgsl/gi.ts`: `skySH` (os harmônicos do céu, de `atmosphere.ts skySH`, recalculados quando o sol anda),
+  `giTrace` (prédios + chão), `giHit` (o sol com sombra + o cache no ponto atingido), `giSample` (2 raios por célula, o
+  cache por `giKey`/`giAdd`/`giGet`), e o passe `GI_RESOLVE_WGSL` (a média que esquece, 0,12 por quadro); dois buffers
+  novos (`gia`, `gir`: 6º e 7º dos 8). `giView`: 1 o cache, 2 o céu pela normal, 3 a amostra crua. Conferido ao meio-dia
+  (13 h, semente 42, `pos=810.9,344.8`): o chão aberto azulado pelo céu, as paredes mais escuras, a sombra de contato na
+  base, sem ruído. **Falta antes de virar o padrão:** a normal das células de janela (usam a de cima: aparecem no debug),
+  a parte 1 (os albedos reais; hoje `giHit` usa a cor da fachada × 1,6 e o chão 0,18), a convenção do `light()` (hoje
+  não divide por π e tem `DAY_ALBEDO 2`: o chão ~2× mais claro que a física em relação ao céu visto), e a noite (as
+  luzes e as janelas no ponto atingido). Aí troca o padrão e apagam-se `skyView`/`bounceFrom` e o resto da lista.
+
 ## As partes, na ordem
 
 ### 1. Materiais e unidades (a base de tudo)

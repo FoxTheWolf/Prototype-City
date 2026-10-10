@@ -10,6 +10,7 @@ import { groundWGSL } from './wgsl/ground';
 import { shadingWGSL } from './wgsl/shading';
 import { skyWGSL } from './wgsl/sky';
 import { atmoWGSL } from '../atmosphere';
+import { giWGSL } from './wgsl/gi';
 import { fallWGSL } from './wgsl/fall';
 import { occlusionWGSL } from './wgsl/occlusion';
 import { mainWGSL } from './wgsl/main';
@@ -23,5 +24,5 @@ export { BLD, BLK, CURVE_R, FX_DOORS, FX_TAB, IN_LEAVES, LEAF_W, ROOM_REC, SG_BI
  * Its WGSL is split by subject in gpu/wgsl/ (13.S) and joined here in the order the functions are declared.
  */
 export function worldWGSL(): string {
-  return [headWGSL, powerWGSL, lampsWGSL, roofWGSL, signsWGSL, roomsWGSL, insideWGSL, wallWGSL, groundWGSL, shadingWGSL, atmoWGSL, skyWGSL, fallWGSL, occlusionWGSL, mainWGSL].map((w) => w()).join('');
+  return [headWGSL, powerWGSL, lampsWGSL, roofWGSL, signsWGSL, roomsWGSL, insideWGSL, wallWGSL, groundWGSL, shadingWGSL, atmoWGSL, skyWGSL, giWGSL, fallWGSL, occlusionWGSL, mainWGSL].map((w) => w()).join('');
 }

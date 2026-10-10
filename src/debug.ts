@@ -37,4 +37,6 @@ export const DEBUG = {
   lightKinds: false,
   /** (16.1b) The light function's factors of each cell as a color (the sky by the face, the sky seen, the sun), set from the console. */
   lightProbe: false,
+  /** (16.1c) Show only the new indirect light (the rays and the world cache, docs/plano-luz-fisica.md part 2). */
+  giView: 0 as number | boolean, // (1: the cache's light, 2: the sky's harmonics along the normal, 3: this frame's raw samples)
 };

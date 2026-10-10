@@ -1,5 +1,6 @@
 import { LAT } from '../../../sim/clock';
 import { PENUMBRA, UMBRA } from '../../sky';
+import { SKY_K } from '../../atmosphere';
 
 export const skyWGSL = (): string => /* wgsl */ `// ---- the sky (sky.ts): gradient, stars, the moon with its phase, the cloud deck lit from below, the sun's glow
 const CLOUD_H = 1200.0;
@@ -58,7 +59,7 @@ fn eqDir(v: vec3f) -> vec3f {
   return vec3f(cl * P + sl * Q, sl * P - cl * Q, R);
 }
 /** (16.1c) The sky's light (atmosphere.ts) in the units of light() (shading.ts): calibrated so the clear zenith at noon reads as the old sky's (~54, 88, 142). */
-const SKY_K = 4.7;
+const SKY_K = ${SKY_K};
 /** The sun's unit direction (x east, y south, z up), from its heading and elevation. */
 fn sunVec() -> vec3f { let ce = cos(u.sunEl); return vec3f(cos(u.sunA) * ce, sin(u.sunA) * ce, sin(u.sunEl)); }
 /** The clear sky's color at t (0 the zenith's side, 1 the horizon) toward (rdx, rdy), on the screen at the exposure the hour expects (the eye's adaptation comes after): the air's scattering of the sun (atmo), the night's own glow and the city's. */
