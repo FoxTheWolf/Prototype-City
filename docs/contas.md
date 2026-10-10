@@ -23,6 +23,12 @@
 - **C** — 2026-10-08 (dito pelo usuário, não medido): semanal **~50%**. Renova terça ~13h.
 - **V** — 2026-10-09 ~21h50 (medido): semanal **95%**, janela de 5 h 75% (renova ~00h20 Brasília). Renova o semanal **sábado 10/10 ~02h**.
 
+## Ritmo revisto (2026-10-09 à noite)
+
+- A **C** (~50% livres) e a **F** (~44%) renovam na **terça**: o que não for gasto até lá se perde. **Gastar as duas sex-noite/sáb/dom/seg** (16.1c: a atmosfera, `docs/plano-atmosfera.md`), ~30% por dia entre as duas.
+- A **V** renova sábado ~02h com 100%: **guardar para ter–sex**, junto da C e da F renovadas (é ela que cobre os dias depois que as duas acabarem de novo).
+- Snapshots da C e da F são de 2026-10-08: conferir com `get_usage` ao abrir a sessão.
+
 ## Ritmo combinado (2026-10-08)
 
 - **Qui/sex:** usar a **V** (50% livres, renova sábado ~02h): ~20–25% por dia.
