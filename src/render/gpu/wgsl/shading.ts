@@ -128,7 +128,8 @@ fn roomE() -> vec3f {
   let V = gRV; let ro = gRO; let r = gRR; let x = gRX.x; let y = gRX.y; let d = gRX.z;
   let z = gOZ + gRay.z / max(1e-4, length(gRay.xy)) * length(vec2f(x - gOX, y - gOY));
   var N = gNrm;
-  if (!gRObj) {
+  if (!gRObj && dot(gRN, gRN) > 0.5) { N = gRN; }
+  else if (!gRObj) {
     let zr = z - V.z0;
     if (zr < 0.03) { N = vec3f(0.0, 0.0, 1.0); }
     else if (zr > CEIL - 0.03) { N = vec3f(0.0, 0.0, -1.0); }

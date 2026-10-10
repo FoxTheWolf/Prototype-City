@@ -128,6 +128,9 @@ var<private> gDbg: vec3f = vec3f(0.0);
 // far along the ray inside), roomCell takes the note for the cell it makes (gRUse), and light() lights it once (roomE)
 var<private> gRV: RView; var<private> gRO: u32 = 0u; var<private> gRR: i32 = 0; var<private> gRX: vec3f = vec3f(0.0);
 var<private> gRPend: bool = false; var<private> gRUse: bool = false;
+// (16.1b) the room surface's normal, set by what met it before roomLit takes the note (gRNs), kept in the note (gRN);
+// zero: unknown (roomE guesses it from the plan)
+var<private> gRNs: vec3f = vec3f(0.0); var<private> gRN: vec3f = vec3f(0.0);
 // (whether the room surface is a piece of furniture, with its own normal in gNrm; else roomE takes it from the plan)
 var<private> gRObj: bool = false;
 // how strongly the finished cell glows onto its neighbors (0..1), written with it (the background's alpha)

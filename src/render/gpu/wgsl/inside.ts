@@ -46,8 +46,8 @@ const DAYLIGHT_FALL = 4.0;
  * (roofE, in roomMul's units: no note).
  */
 fn roomLit(V: RView, ro: u32, r: i32, x: f32, y: f32, d: f32) -> vec3f {
-  if (fx[ro + 4u] == R_ROOF) { return roomMul(roofE(x, y, V.z0 + 0.05)); }
-  gRV = V; gRO = ro; gRR = r; gRX = vec3f(x, y, d); gRPend = true; return vec3f(1.0);
+  if (fx[ro + 4u] == R_ROOF) { gRNs = vec3f(0.0); return roomMul(roofE(x, y, V.z0 + 0.05)); }
+  gRV = V; gRO = ro; gRR = r; gRX = vec3f(x, y, d); gRN = gRNs; gRNs = vec3f(0.0); gRPend = true; return vec3f(1.0);
 }
 /** The light on the floor's furniture (insideLight), as a multiplier. */
 fn insideLight(x: f32, y: f32) -> vec3f {
@@ -289,7 +289,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       if (ledge && z > z0 && z <= z0 + DOOR_H) {
         // the leaf's free edge, seen along it as it stands open: its frame, or the wood's end grain
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
-        let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
+        gRNs = vec3f(-rdx / rl, -rdy / rl, 0.0); let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
         let ec = select(select(select(vec3f(150.0, 108.0, 70.0), vec3f(95.0, 98.0, 105.0), lkind == 0u), vec3f(120.0, 126.0, 132.0), lkind == 2u), vec3f(140.0, 144.0, 150.0), lkind == 3u);
         res.cl = roomCell(BAR, ec * Lt * lk, lt); res.state = 1u; done = true; break;
       } else if (lg && z > z0 && z <= z0 + DOOR_H) {
@@ -299,7 +299,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
         let bar = zz > 0.95 && zz < 1.08 && lu > 0.12 && lu < 0.85;
         if (frame || bar) {
           let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
-          let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
+          gRNs = vec3f(-rdx / rl, -rdy / rl, 0.0); let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn);
           res.cl = roomCell(select(EQ, BAR, frame), select(vec3f(95.0, 98.0, 105.0), vec3f(190.0, 190.0, 195.0), bar) * Lt * lk, lt); res.state = 1u; done = true; break;
         }
         leafGlass = true; gSDglass = true;
@@ -309,7 +309,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       } else if (lkind == LEAF_ENTRY && z > z0 && z <= z0 + DOOR_H) {
         // the residents' street door (13.19): dark oak in its edge, the light's moulding, a panel under it, the knob
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
-        let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
+        gRNs = vec3f(-rdx / rl, -rdy / rl, 0.0); let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
         let edge = lu < 0.05 || lu > 0.95 || zz > DOOR_H - 0.1 || zz < 0.06;
         let rim = !edge && lu > 0.15 && lu < 0.85 && zz > 1.04 && zz < DOOR_H - 0.22;
         let panel = !edge && lu > 0.16 && lu < 0.84 && zz > 0.25 && zz < 0.85;
@@ -320,7 +320,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       } else if (lkind == 2u && z > z0 && z <= z0 + DOOR_H) {
         // a steel door (a stockroom's): a plain sheet in a darker edge, a kick plate, the bar across it
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
-        let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
+        gRNs = vec3f(-rdx / rl, -rdy / rl, 0.0); let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
         let edge = lu < 0.04 || lu > 0.96 || zz > DOOR_H - 0.07;
         let kick = zz < 0.28; let bar = zz > 0.95 && zz < 1.06 && lu > 0.1 && lu < 0.88;
         let col = vec3f(112.0, 120.0, 126.0) * lk * select(select(select(1.0, 0.8, kick), 1.45, bar), 0.7, edge);
@@ -329,7 +329,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       } else if (z > z0 && z <= z0 + DOOR_H) {
         // a panel door (wood in a home, a painted panel in an office): its edges, two recessed panels, the knob
         let hx = u.px + rdx * lt; let hy = u.py + rdy * lt; let rr = max(0, i32(roomAt(o, hx - rdx * 0.05 / rl, hy - rdy * 0.05 / rl)) - 1);
-        let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
+        gRNs = vec3f(-rdx / rl, -rdy / rl, 0.0); let Lt = roomLit(V, roomRec(o, rr), rr, hx, hy, lt - tIn); let zz = z - z0;
         let edge = lu < 0.06 || lu > 0.94 || zz > DOOR_H - 0.1 || zz < 0.06;
         let knob = lu > 0.82 && lu < 0.9 && zz > 0.92 && zz < 1.06;
         let panel = !edge && lu > 0.16 && lu < 0.84 && ((zz > 0.25 && zz < 0.85) || (zz > 1.2 && zz < DOOR_H - 0.3));
@@ -358,6 +358,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       let r = i32(cur & 255u) - 1; let ro = roomRec(o, r); let kind = fx[ro + 4u]; let unit = bitcast<i32>(fx[ro + 5u]);
       let hx = u.px + rdx * tn; let hy = u.py + rdy * tn; let uu = select(hx, hy, xs); let shade = select(0.82, 1.0, xs);
       let z = u.eye - m * tn;
+      let wN = select(vec3f(0.0, -f32(stY), 0.0), vec3f(-f32(stX), 0.0, 0.0), xs); // (16.1b) the wall's normal, toward the ray
       let nk = fx[roomRec(o, i32(met & 255u) - 1) + 4u];
       // the lift's doorway is shut on this floor while its car is elsewhere
       let liftShut = !carHereF && (nk == R_LIFT || kind == R_LIFT);
@@ -384,7 +385,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           }
           // the head's trim, 8 cm of wood; over it the room's own wall up to the ceiling (it was all wood: a band of
           // another color over every doorway, playtest of 2026-10-08)
-          let rl2 = roomLit(V, ro, r, hx, hy, tn - tIn);
+          gRNs = wN; let rl2 = roomLit(V, ro, r, hx, hy, tn - tIn);
           if (z < z0 + DOOR_H + 0.08) { res.cl = roomCell(EQ, vec3f(120.0, 95.0, 70.0) * rl2 * 1.3, tn); }
           else { let wp = wallPx(kind, unit, zrOf(z, z0), uu); res.cl = roomCell(wp.ch, wp.c * rl2 * shade, tn); }
           res.state = 1u; done = true; break;
@@ -392,7 +393,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       } else {
         if (full && z > z0 && z <= zc && nk == R_LIFT && kind != R_LIFT) {
           // the hall side of the lift (13.2d): its steel doors, the floor display over them, the call button beside
-          let zz = z - z0; let rlt = roomLit(V, ro, r, hx, hy, tn - tIn);
+          let zz = z - z0; gRNs = wN; let rlt = roomLit(V, ro, r, hx, hy, tn - tIn);
           var off = 0; var found = doorBoth(o, xs, wi, wj, ci, cj, 0);
           for (var q2 = 1; q2 <= 3 && !found; q2++) {
             if (doorBoth(o, xs, wi, wj, ci, cj, q2)) { off = q2; found = true; } else if (doorBoth(o, xs, wi, wj, ci, cj, -q2)) { off = -q2; found = true; }
@@ -436,6 +437,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
           var p = Px(0u, vec3f(0.0)); var b = -2;
           if (pw >= 0.0 && pw <= 1.0) { let pp = panelPaint(carFl, carN, panelTo, pw, z - z0, u.colW * tn / max(1e-6, abs(select(rdy, rdx, xs))) / PANEL_W, tn / u.scale); b = pp.b; p = pp.p; }
           if (b == -2) { p = wallPx(kind, unit, zrOf(z, z0), uu); }
+          gRNs = wN;
           res.cl = roomCell(p.ch, p.c * roomLit(V, ro, r, hx, hy, tn - tIn) * shade, tn); res.state = 1u; done = true; break;
         }
         wall = true; break;
@@ -473,7 +475,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
       if (kind == R_LIFT && gk != 0u) { let gu = select(hy, hx, gk == 1u); let gv = select(hx, hy, gk == 1u); liftGlass = gu > fxf(V.IB + 11u) && gu < fxf(V.IB + 12u) && gv > fxf(V.IB + 13u) && gv < fxf(V.IB + 14u); }
     }
     let shade = select(select(0.82, 1.0, face < 2), 0.9, face == 4);
-    let Lt = roomLit(V, ro, r0, hx, hy, t - tIn);
+    gRNs = vec3f(-nX, -nY, 0.0); let Lt = roomLit(V, ro, r0, hx, hy, t - tIn);
     res.nearT = t; res.gt = t; res.ga = along; res.gl = Lt; res.gc = abs(nX * rdx + nY * rdy) / rl; res.gh = atan2(rdy, rdx);
     // seen from the street, the far side's glass: dark, with the night city's glow (or the day) beyond it
     let farGlass = glassSeen(glassBeyond(), Lt, res.gc, 0.0, 0.0);
@@ -543,6 +545,7 @@ fn roomWalk(V: RView, rdx: f32, rdy: f32, m: f32, tIn: f32) -> InC {
     var p = Px(0u, vec3f(0.0));
     if (below && !slab) { p = floorPx(kind, office, wx, wy); } else { let lp = roomLamp(V.lot, V.box, ro, r, V.f, V.elec, r == V.here); p = ceilPx(ro, kind, office, lp.x + lp.y > 0.05, wx, wy); }
     // (the slab's face, a little darker than the ceiling it is the edge of)
+    gRNs = select(vec3f(0.0, 0.0, select(-1.0, 1.0, below)), vec3f(-rdx / rl, -rdy / rl, 0.0), slab);
     res.cl = roomCell(p.ch, p.c * roomLit(V, ro, r, wx, wy, t - tIn) * select(1.0, 0.7, slab), t); res.state = 1u;
   }
   // seen from the street, the furniture in front of what the walk met (the viewer's own storey has it as objects)
