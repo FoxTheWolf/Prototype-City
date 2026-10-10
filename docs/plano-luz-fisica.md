@@ -66,8 +66,9 @@ nova e **o caminho velho dela é apagado no mesmo passo**, nunca duas versões c
   `zk`/`LIT_H`, o fade da sombra. **O AO e o tingimento dos objetos** (`objAO` em `objects.ts`): cada objeto perto como
   uma bola do seu volume esconde o céu e mostra a própria cor acesa (o sol no lado que vira para o ponto + a mesma luz
   do ponto), só na luz indireta, até 45 m (`AO_FAR`); botão `aoK` no F12. **Sombras velhas apagadas:** `MOON_SHADE`, o
-  `shade` 0,68/1,08 das reentrâncias (`wall.ts`: o lado do pilar com a normal de verdade). Falta: a função de luminária
-  única (farol, holofote), as sombras com penumbra (CHSS), as janelas/neon como emissores, o `dark` do apagão (vai com
+  `shade` 0,68/1,08 das reentrâncias (`wall.ts`: o lado do pilar com a normal de verdade). **O farol** (`headBeam`, CPU e GPU): 1/d² (`HEAD_K` 39), a borda de baixo do facho
+  (o asfalto colado ao para-choque escuro pela mira, não por uma rampa), o ângulo de incidência no shader; o fim em R
+  suave. Falta: o holofote na mesma conta, as sombras com penumbra (CHSS), as janelas/neon como emissores, o `dark` do apagão (vai com
   o caminho C1 na 16.2), `LAMP_E`/`LAMP_RECV` numa constante só, e a mão (`LightWindow.add` ainda usa o mapa velho; o
   alcance novo de 17 m deixa a poça da mão maior: parte 5).
 

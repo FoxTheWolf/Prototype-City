@@ -40,15 +40,18 @@ export function floodBeam(a: number, s: number, z: number, h: number) {
  * (16.1c) A headlight's beam pattern (what a lamp maker's photometry gives), the same in the shader's lightAt: s along the
  * beam, a across it (+ to the right), z the height; h the lamp's height, tc the cutoff's slope (HEAD_DIP: the dipped beam
  * lights what stands ahead only below the lamp, a line on the walls and the cars, stepping up on the right toward the
- * signs; HEAD_HIGH: the high beam over it), R its reach. Dark right at the bumper, even far down the road.
+ * signs; HEAD_HIGH: the high beam over it), R its reach. (16.1c, part 3) Its light falls off by the inverse square (HEAD_K:
+ * its strength, the street lamps' units), and its beam's lower edge (what it aims at, ~7-11° under the lamp) leaves the road
+ * right at the bumper dark; past R it is culled, softly. The value is the old sRGB-coded light's (the shader takes linL of it).
  */
-export const HEAD_H = 0.65, HEAD_DIP = -0.01, HEAD_HIGH = 0.04;
+export const HEAD_H = 0.65, HEAD_DIP = -0.01, HEAD_HIGH = 0.04, HEAD_K = 39;
 const sm = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 export function headBeam(s: number, a: number, z: number, h: number, tc: number, R: number) {
   if (s <= 0.05 || s >= R) return 0;
   const phi = Math.atan2(a, s);
   const zc = h + s * (tc + 0.27 * Math.min(0.12, Math.max(0, phi - 0.02))), soft = 0.04 + 0.015 * s;
-  return Math.exp(-(((phi - 0.05) / 0.33) ** 2)) * sm(0.3, 4, s) * (1 - s / R) ** 1.5 * (1 - sm(zc - soft, zc + soft, z));
+  const d2 = s * s + a * a + (z - h) ** 2, below = (h - z) / s;
+  return Math.exp(-(((phi - 0.05) / 0.33) ** 2)) * (HEAD_K / (d2 + 1)) ** (1 / 2.2) * (1 - sm(0.12, 0.2, below)) * (1 - sm(0.8 * R, R, s)) * (1 - sm(zc - soft, zc + soft, z));
 }
 
 export const CELL = 8, SIDE = 64; // buckets cover 512 m around the viewer

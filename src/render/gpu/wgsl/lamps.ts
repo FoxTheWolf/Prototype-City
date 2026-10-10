@@ -1,8 +1,8 @@
-import { FLOOD_EDGE, FLOOD_HALF, FLOOD_KC, FLOOD_Z } from '../../lights';
+import { FLOOD_EDGE, FLOOD_HALF, FLOOD_KC, FLOOD_Z, HEAD_K } from '../../lights';
 import { LAMP_REC } from './common';
 export const lampsWGSL = (): string => /* wgsl */ `// ---- light (lightmap.ts, lights.ts, lightAt): the street lamps' pools and this frame's dynamic lights
 // (16.1c) a wall floodlight's cone (floodCone in lights.ts): a along the wall, s out from the lamp, z the height
-const FLOOD_Z = ${FLOOD_Z}; const FLOOD_HALF = ${FLOOD_HALF}; const FLOOD_EDGE = ${FLOOD_EDGE}; const FLOOD_KC = ${FLOOD_KC.toFixed(1)};
+const HEAD_K = ${HEAD_K.toFixed(1)}; const FLOOD_Z = ${FLOOD_Z}; const FLOOD_HALF = ${FLOOD_HALF}; const FLOOD_EDGE = ${FLOOD_EDGE}; const FLOOD_KC = ${FLOOD_KC.toFixed(1)};
 fn floodCone(a: f32, s: f32, z: f32) -> f32 {
   let v = vec3f(a, s, z - FLOOD_Z); let l = length(v);
   if (l < 0.05) { return 0.0; }
@@ -193,7 +193,10 @@ fn lightAt(px: f32, py: f32, pz: f32, nr: vec3f) -> vec3f {
         let phi = atan2(a, s);
         let zc = dlF(u32(o + 5u)) + s * (zf + 0.27 * clamp(phi - 0.02, 0.0, 0.12)); let soft = 0.04 + 0.015 * s;
         let pa = (phi - 0.05) / 0.33;
-        var f = exp(-pa * pa) * smoothK(0.3, 4.0, s) * pow(1.0 - s / R, 1.5) * (1.0 - smoothK(zc - soft, zc + soft, pz));
+        // (16.1c, part 3) by the inverse square (HEAD_K), its lower edge, the angle it meets the surface at (headBeam in lights.ts)
+        let h = dlF(u32(o + 5u)); let d2 = s * s + a * a + (pz - h) * (pz - h);
+        let ci = select(1.0, max(0.0, -dot(nr, vec3f(dx, dy, pz - h))) * inverseSqrt(d2), dot(nr, nr) > 0.25);
+        var f = exp(-pa * pa) * pow(HEAD_K / (d2 + 1.0) * ci, 1.0 / 2.2) * (1.0 - smoothK(0.12, 0.2, (h - pz) / s)) * (1.0 - smoothK(0.8 * R, R, s)) * (1.0 - smoothK(zc - soft, zc + soft, pz));
         // a car ahead in the beam (dlF(u32(6)): how far its back is, dlF(u32(15)): its side offset over that) shadows what is behind it,
         // a wedge as wide as a car at its back, widening behind; its back itself stays lit
         let cut = dlF(u32(o + 6u));
